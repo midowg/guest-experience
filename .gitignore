@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.env*
+!.env.example
+.claude/settings.local.json
+*.tsbuildinfo
+coverage/
+test-results/
+playwright-report/
