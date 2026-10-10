@@ -12,6 +12,23 @@ describe('RSVP', () => {
 describe('event publication', () => {
   it('accepts source draft', () => expect(eventSchema.safeParse(createSeedEvent()).success).toBe(true));
   it('blocks enabled survey without questions', () => expect(eventSchema.safeParse({...createSeedEvent(), status:'published', feedback_enabled:true}).success).toBe(false));
+  it('requires manual fields only for a published manual location', () => {
+    const event = { ...createSeedEvent(), status: 'published' as const, venue_name: '', address: '', location_url: '' };
+    const manual = eventSchema.safeParse(event);
+    expect(manual.success).toBe(false);
+    if (!manual.success) expect(manual.error.issues.map(issue => issue.path.join('.'))).toEqual(expect.arrayContaining(['venue_name', 'address', 'location_url']));
+    const embed = { ...event, location_display: 'embed' as const, location_embed_url: 'https://www.google.com/maps/embed?pb=!1m18' };
+    expect(eventSchema.safeParse(embed).success).toBe(true);
+    expect(eventSchema.safeParse({ ...embed, location_embed_url: '' }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...embed, status: 'draft' as const, location_embed_url: '' }).success).toBe(false);
+  });
+  it('preserves explicit manual mode with a saved embed and infers legacy documents', () => {
+    const event = { ...createSeedEvent(), location_embed_url: 'https://www.google.com/maps/embed?pb=!1m18' };
+    expect(eventSchema.parse(event).location_display).toBe('manual');
+    const legacy = { ...event } as Partial<typeof event>;
+    delete legacy.location_display;
+    expect(eventSchema.parse(legacy).location_display).toBe('embed');
+  });
   it('blocks unsafe URL schemes and duplicate sections', () => { expect(eventSchema.safeParse({...createSeedEvent(), location_url:'javascript:alert(1)'}).success).toBe(false); const e=createSeedEvent(); e.sections.push(e.sections[0]); expect(eventSchema.safeParse(e).success).toBe(false); });
 });
 describe('URL fields never throw on partial input', () => {

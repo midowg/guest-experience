@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "re
 import { ArrowUp, ArrowUpRight, Copy, Images, MapPin } from "lucide-react";
 import { Button, ButtonLink, Notice, SectionHeading } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
+import { parseLocationEmbed } from "@/lib/location-embed";
 import type { EventRecord, SectionKey } from "@/lib/types";
 import { Gallery, venuePhotos } from "./Gallery";
 import { InvitationHero, TimeRange, visibleSections } from "./InvitationHero";
@@ -85,7 +86,9 @@ function BackToTop({ shown }: { shown: boolean }) {
 
 function Location({ event }: { event: EventRecord }) {
   const [copyStatus, setCopyStatus] = useState("");
-  // One sequence of venue photographs: the standalone venue column plus the gallery rows.
+  const [mapFailed, setMapFailed] = useState(false);
+  const mapEmbedUrl = parseLocationEmbed(event.location_embed_url ?? "");
+  const showEmbed = (event.location_display ?? (event.location_embed_url ? "embed" : "manual")) === "embed";
   const photos = venuePhotos(event);
   async function copyAddress() {
     try {
@@ -95,18 +98,21 @@ function Location({ event }: { event: EventRecord }) {
       setCopyStatus("Alamat belum dapat disalin. Pilih dan salin teks alamat di atas.");
     }
   }
-  return <div className={styles.locationContent}>
-    <div className={styles.addressPanel}>
-      <MapPin size={28} aria-hidden="true" />
-      <h3>{event.venue_name || "Lokasi belum ditentukan"}</h3>
-      {event.address && <address>{event.address}</address>}
-      {event.arrival_notes && <p className={styles.multiline}>{event.arrival_notes}</p>}
-      <div className={styles.actions}>
-        {event.location_url && <ButtonLink href={event.location_url} target="_blank" rel="noopener noreferrer">Buka petunjuk lokasi <ArrowUpRight size={18} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></ButtonLink>}
-        {event.address && <Button variant="secondary" onClick={copyAddress}><Copy size={16} aria-hidden="true" /> Salin alamat</Button>}
-      </div>
-      <p className={styles.copyStatus} role="status">{copyStatus}</p>
+  const address = <div className={styles.addressPanel}>
+    <MapPin size={28} aria-hidden="true" />
+    <h3>{event.venue_name || "Lokasi belum ditentukan"}</h3>
+    {event.address && <address>{event.address}</address>}
+    {event.arrival_notes && <p className={styles.multiline}>{event.arrival_notes}</p>}
+    <div className={styles.actions}>
+      {event.location_url && <ButtonLink href={event.location_url} target="_blank" rel="noopener noreferrer">Buka petunjuk lokasi <ArrowUpRight size={18} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></ButtonLink>}
+      {event.address && <Button variant="secondary" onClick={copyAddress}><Copy size={16} aria-hidden="true" /> Salin alamat</Button>}
     </div>
+    <p className={styles.copyStatus} role="status">{copyStatus}</p>
+  </div>;
+  return <div className={styles.locationContent}>
+    {showEmbed && mapEmbedUrl ? <div className={styles.locationMapFrame}>
+      {mapFailed ? <p>Peta tidak dapat ditampilkan. {event.location_url && <a href={event.location_url} target="_blank" rel="noopener noreferrer">Buka petunjuk lokasi di Google Maps</a>}.</p> : <iframe src={mapEmbedUrl} title={`Peta lokasi ${event.venue_name || "acara"}`} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" onError={() => setMapFailed(true)} />}
+    </div> : address}
     {photos.length > 0 && <div className={styles.venuePhotos}>
       <h3 className={styles.venuePhotosTitle}><Images size={18} aria-hidden="true" /> Foto lokasi {event.venue_name || "acara"}</h3>
       <Gallery images={photos} label={`Foto lokasi ${event.venue_name || "acara"}`} />

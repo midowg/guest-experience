@@ -45,6 +45,7 @@ function OrderButtons({ label, index, length, onMove }: { label: string; index: 
 export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
   const router = useRouter();
   const [event, setEvent] = useState(() => completeSections(initialEvent));
+  const [embedDraft, setEmbedDraft] = useState(initialEvent.location_embed_url ?? "");
   const [dirty, setDirty] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
@@ -105,7 +106,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
     try {
       const result = await adminRequest<EventRecord>(`/api/admin/events/${event.id}`, { method: "PUT", body: JSON.stringify(parsed.data) });
       if (!result.data) throw new Error("Missing saved event");
-      setEvent(completeSections(result.data)); setDirty(false); setMessage(result.message || "Perubahan tersimpan."); router.refresh();
+      setEvent(completeSections(result.data)); setEmbedDraft(result.data.location_embed_url ?? ""); setDirty(false); setMessage(result.message || "Perubahan tersimpan."); router.refresh();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) { setError(errorMessage(err)); if (err instanceof AdminApiError) setErrors(err.fieldErrors || {}); }
     finally { setPending(false); }
@@ -165,10 +166,16 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         <Button type="button" variant="secondary" disabled={event.agenda.length >= 100} onClick={() => update("agenda", [...event.agenda, { id: crypto.randomUUID(), starts_at: "", ends_at: "", title: "", description: "", sort_order: event.agenda.length }])}>Tambah sesi</Button>
       </div>)}
       {block("venue", "Lokasi", <div className="stack">
-        {text("venue_name", "Nama tempat", 200)}{text("address", "Alamat", 1000, true)}{text("location_url", "Tautan lokasi HTTPS", 8000)}{text("arrival_notes", "Petunjuk kedatangan", 2000, true)}
+        {choices("location_display", "Tampilan lokasi", [{ value: "manual", label: "Alamat & tombol" }, { value: "embed", label: "Peta sematan Google" }], event.location_display, value => update("location_display", value), value => value === "embed" ? "Peta Google tampil tanpa kartu alamat dan tombol dari undangan. Google dapat tetap menampilkan informasi lokasinya sendiri." : "Nama tempat, alamat, petunjuk, dan tombol Maps tampil seperti semula.")}
+        {event.location_display === "manual" ? <>
+          {text("venue_name", "Nama tempat", 200)}{text("address", "Alamat", 1000, true)}{text("location_url", "Tautan lokasi Maps", 8000)}{text("arrival_notes", "Petunjuk kedatangan (opsional)", 2000, true)}
+        </> : <div className="stack">
+          <p>Buka Google Maps, pilih lokasinya, klik Bagikan (Share), pilih Sematkan peta (Embed a map), lalu Salin HTML dan tempel di sini.</p>
+          {control("location_embed_url", "Kode sematan Google Maps", embedDraft, value => { setEmbedDraft(value); update("location_embed_url", value); }, { multiline: true, maxLength: 10000, hint: "Tempel kode iframe lengkap dari Google Maps atau URL sematannya. Yang disimpan hanya URL peta, bukan kode HTML." })}
+        </div>}
       </div>)}
-      {block("gallery", "Galeri foto lokasi Werkudara (tampil di bawah peta)", <div className="stack">
-        <p>Foto-foto di sini tampil di bagian Lokasi, di bawah tombol Maps dan petunjuk lokasi. Satu foto ditampilkan diam; dua foto atau lebih bergantian otomatis dan dapat dihentikan tamu. Baris foto yang benar-benar kosong dilewati saat menyimpan; jika sudah diisi keterangannya, tambahkan foto dengan tautan HTTPS atau hapus baris tersebut.</p>
+      {block("gallery", "Galeri foto lokasi Werkudara", <div className="stack">
+        <p>Foto-foto di sini tampil di bagian Lokasi, di bawah informasi alamat atau peta sematan. Satu foto ditampilkan diam; dua foto atau lebih bergantian otomatis dan dapat dihentikan tamu. Baris foto yang benar-benar kosong dilewati saat menyimpan; jika sudah diisi keterangannya, tambahkan foto dengan tautan HTTPS atau hapus baris tersebut.</p>
         {event.gallery.map((image, index) => <div className={styles.item} key={image.id}>
           <div className={styles.itemHeader}><h3>Foto lokasi {index + 1}</h3><OrderButtons label={`foto lokasi ${index + 1}`} index={index} length={event.gallery.length} onMove={direction => update("gallery", moveItem(event.gallery, index, direction))} /></div>
           <PhotoField name={`gallery.${index}.url`} label="Foto lokasi" value={image.url} srcset={image.srcset} onChange={value => update("gallery", event.gallery.map((item, i) => i === index ? { ...item, url: value.url, srcset: value.srcset } : item))} error={errors[`gallery.${index}.url`]?.join(" ")} />
@@ -210,7 +217,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
       {block("publication", "Status & penyimpanan", <div className="stack">
         <Field name="status" label="Status acara" hint="Draft dan arsip tidak tampil di URL undangan publik. Semua perubahan berlaku setelah disimpan."><select className="select" id="status" aria-describedby="status-hint" value={event.status} onChange={e => update("status", e.target.value as EventStatus)}><option value="draft">Draft — belum publik</option><option value="published">Dipublikasikan — dapat dibuka melalui tautan</option><option value="archived">Diarsipkan — tidak publik</option></select></Field>
         {hidden.length > 0 && <div><h3>Bagian yang belum ditampilkan</h3><Notice tone="warning"><ul>{hidden.map(reason => <li key={reason}>{reason}</li>)}</ul></Notice></div>}
-        <p>Publikasi memerlukan penyelenggara, isi undangan, nama tempat, alamat, serta tautan lokasi. Draft tidak harus melengkapi seluruh isian publikasi.</p>
+        <p>Publikasi memerlukan penyelenggara dan isi undangan. Mode alamat memerlukan nama tempat, alamat, dan tautan Maps; mode sematan memerlukan kode peta Google yang valid.</p>
         <div className={styles.actions}><Button type="submit">{pending ? "Menyimpan…" : event.status === "published" ? "Simpan & publikasikan" : "Simpan perubahan"}</Button><span className="muted">{dirty ? "Perubahan belum disimpan" : "Versi tersimpan"}</span></div>
       </div>)}
     </fieldset>

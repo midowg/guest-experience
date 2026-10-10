@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { eventSchema, photoFrameSchema } from "./validation";
+import { eventBaseSchema, photoFrameSchema } from "./validation";
 
-export const heroPreviewSchema = z.object(eventSchema.shape).pick({
+export const heroPreviewSchema = eventBaseSchema.pick({
   hero: true, title: true, subtitle: true, greeting: true, starts_at: true, ends_at: true,
   timezone: true, venue_name: true, address: true, sections: true, rsvp_enabled: true,
   feedback_enabled: true, feedback_questions: true,

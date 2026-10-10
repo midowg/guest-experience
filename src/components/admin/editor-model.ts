@@ -1,5 +1,6 @@
 import type { EventRecord, HeroTextPosition, ImageFocus, ImageSource, SectionKey } from "@/lib/types";
 import { getFraming, normalizeEvent } from "@/lib/hero-framing";
+import { parseLocationEmbed } from "@/lib/location-embed";
 
 export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", agenda: "Rundown", location: "Lokasi", rsvp: "Konfirmasi kehadiran", feedback: "Survei feedback" };
 export const sectionKeys = Object.keys(sectionLabels) as SectionKey[];
@@ -47,6 +48,7 @@ export function moveItem<T>(items: T[], index: number, direction: -1 | 1): T[] {
 export function prepareEvent(event: EventRecord): EventRecord {
   return {
     ...event,
+    location_embed_url: parseLocationEmbed(event.location_embed_url) ?? event.location_embed_url,
     // Generated sizes belong to a photo; without a hero photo they are stale and the schema rejects them.
     // `focus` is no longer an editor control, so a saved event always carries the centred crop,
     // including older events whose stored value was top or bottom.
@@ -64,6 +66,6 @@ export function hiddenSectionReasons(event: EventRecord): string[] {
   else if (!event.feedback_questions.length) reasons.push("Survei belum memiliki pertanyaan; lengkapi atau nonaktifkan sebelum publikasi.");
   if (!event.review_enabled || !event.review_url) reasons.push("Tautan review tidak ditampilkan sampai diaktifkan dan diisi.");
   if (!event.hero.url) reasons.push("Tidak ada foto latar; pembuka memakai tata letak editorial tanpa foto.");
-  if (!event.gallery.length) reasons.push("Galeri foto lokasi kosong; informasi alamat dan tautan tetap tersedia.");
+  if (!event.gallery.length) reasons.push("Galeri foto lokasi kosong; informasi lokasi tetap tersedia sesuai tampilan yang dipilih.");
   return reasons;
 }

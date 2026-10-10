@@ -16,13 +16,14 @@ const sampleGallery = [1, 2, 3].map((n, index) => ({
 }));
 
 const POSITIONS = new Set<HeroTextPosition>(["left", "center"]);
+const MAP_EMBED_URL = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2350.7163428830067!2d110.40227360184343!3d-7.745421472090749!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e7a575cc5c60b55%3A0x857e128884471468!2sWerkudara%20Group!5e0!3m2!1sid!2sid!4v1791620156842!5m2!1sid!2sid";
 
 /**
  * Development-only rendering check for the guest layout. Never reachable in a production
  * build, and never a stand-in for a real published event.
  *
  * ?photos=0..3 gallery size · ?hero=0 text-only opening · ?pos=left|center text placement
- * ?venue=0 drop the separate venue photo · ?preview=0 hide the admin banner
+ * ?venue=0 drop the separate venue photo · ?preview=0 hide the admin banner · ?map=0 show the manual location
  */
 export default async function DevPreviewPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if (process.env.NODE_ENV === "production") notFound();
@@ -44,7 +45,7 @@ export default async function DevPreviewPage({ searchParams }: { searchParams: P
     ? { venue_image_url: "", venue_image_alt: "", venue_image_credit: "" }
     : { venue_image_url: "https://picsum.photos/seed/werkudara-venue/1600/1000", venue_image_alt: "", venue_image_credit: "Contoh kredit foto" };
   return <EventExperience
-    event={{ ...createSeedEvent(), status: "published", hero, ...venue, gallery: sampleGallery.slice(0, count) }}
+    event={{ ...createSeedEvent(), status: "published", hero, ...venue, gallery: sampleGallery.slice(0, count), location_display: read("map") === "0" ? "manual" : "embed", location_embed_url: MAP_EMBED_URL }}
     preview={read("preview") !== "0"}
   />;
 }

@@ -8,6 +8,12 @@ const id = (n: number) => `b1d26d64-2ab8-4d7a-80b5-328a132ea2c${n}`;
 const image = (n: number, over: Partial<GalleryImage> = {}): GalleryImage => ({ id: id(n), url: `https://example.test/foto-${n}.webp`, alt: `Foto ${n}`, caption: "", sort_order: 99, srcset: [], ...over });
 
 describe("prepareEvent", () => {
+  it("keeps only the URL when an iframe is pasted", () => {
+    const url = "https://www.google.com/maps/embed?pb=!1m18";
+    const prepared = prepareEvent({ ...createSeedEvent(), location_embed_url: `<iframe src="${url}" width="800" height="600"></iframe>` });
+    expect(prepared.location_embed_url).toBe(url);
+    expect(eventSchema.safeParse(prepared).success).toBe(true);
+  });
   it("renumbers gallery sort_order from the displayed order", () => {
     const event: EventRecord = { ...createSeedEvent(), gallery: [image(1), image(2), image(3)] };
     expect(prepareEvent(event).gallery.map(item => item.sort_order)).toEqual([0, 1, 2]);
