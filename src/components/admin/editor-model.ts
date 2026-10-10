@@ -52,7 +52,7 @@ export function prepareEvent(event: EventRecord): EventRecord {
     // including older events whose stored value was top or bottom.
     hero: { ...event.hero, focus: HERO_FOCUS, framing: getFraming(event.hero), srcset: event.hero.url ? event.hero.srcset : [] },
     agenda: event.agenda.map((item, sort_order) => ({ ...item, sort_order })),
-    gallery: event.gallery.map((item, sort_order) => ({ ...item, sort_order })),
+    gallery: event.gallery.filter(item => item.url.trim() || item.caption.trim() || item.alt.trim() || item.srcset.length).map((item, sort_order) => ({ ...item, sort_order })),
     feedback_questions: event.feedback_questions.map((item, sort_order) => ({ ...item, options: item.kind === "choice" ? item.options.map(option => option.trim()).filter(Boolean) : [], sort_order })),
   };
 }

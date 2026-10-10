@@ -17,6 +17,26 @@ describe("prepareEvent", () => {
     const moved = { ...event, gallery: moveItem(event.gallery, 0, 1) };
     expect(prepareEvent(moved).gallery.map(item => [item.id, item.sort_order])).toEqual([[id(2), 0], [id(1), 1], [id(3), 2]]);
   });
+  it("skips a completely empty second gallery row and renumbers the remaining photos", () => {
+    const empty = image(2, { url: "", alt: "", caption: "", srcset: [] });
+    const event: EventRecord = { ...createSeedEvent(), gallery: [image(1), empty, image(3)] };
+    const prepared = prepareEvent(event);
+    expect(prepared.gallery.map(item => [item.id, item.sort_order])).toEqual([[id(1), 0], [id(3), 1]]);
+    expect(event.gallery).toHaveLength(3);
+    expect(eventSchema.safeParse(prepared).success).toBe(true);
+  });
+  it("keeps an incomplete gallery row with a caption so validation reports its missing photo", () => {
+    const event: EventRecord = { ...createSeedEvent(), gallery: [image(1), image(2, { url: "", alt: "", caption: "Tampak depan" })] };
+    const prepared = prepareEvent(event);
+    expect(prepared.gallery).toHaveLength(2);
+    const parsed = eventSchema.safeParse(prepared);
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) expect(parsed.error.issues.some(issue => issue.path.join(".") === "gallery.1.url")).toBe(true);
+  });
+  it("rejects a non-HTTPS gallery photo", () => {
+    const event: EventRecord = { ...createSeedEvent(), gallery: [image(1, { url: "http://example.test/foto.webp" })] };
+    expect(eventSchema.safeParse(prepareEvent(event)).success).toBe(false);
+  });
   it("still renumbers agenda and feedback questions", () => {
     const prepared = prepareEvent(createSeedEvent());
     expect(prepared.agenda.map(item => item.sort_order)).toEqual(prepared.agenda.map((_, index) => index));

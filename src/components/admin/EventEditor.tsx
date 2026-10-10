@@ -168,7 +168,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         {text("venue_name", "Nama tempat", 200)}{text("address", "Alamat", 1000, true)}{text("location_url", "Tautan lokasi HTTPS", 8000)}{text("arrival_notes", "Petunjuk kedatangan", 2000, true)}
       </div>)}
       {block("gallery", "Galeri foto lokasi Werkudara (tampil di bawah peta)", <div className="stack">
-        <p>Foto-foto di sini adalah foto lokasi Werkudara. Semuanya tampil di bagian Lokasi, di bawah tombol Maps dan petunjuk lokasi, bukan sebagai latar pembuka. Satu foto ditampilkan diam; dua foto atau lebih bergantian otomatis dan dapat dihentikan tamu. Galeri tidak memiliki pilihan posisi teks.</p>
+        <p>Foto-foto di sini tampil di bagian Lokasi, di bawah tombol Maps dan petunjuk lokasi. Satu foto ditampilkan diam; dua foto atau lebih bergantian otomatis dan dapat dihentikan tamu. Baris foto yang benar-benar kosong dilewati saat menyimpan; jika sudah diisi keterangannya, tambahkan foto dengan tautan HTTPS atau hapus baris tersebut.</p>
         {event.gallery.map((image, index) => <div className={styles.item} key={image.id}>
           <div className={styles.itemHeader}><h3>Foto lokasi {index + 1}</h3><OrderButtons label={`foto lokasi ${index + 1}`} index={index} length={event.gallery.length} onMove={direction => update("gallery", moveItem(event.gallery, index, direction))} /></div>
           <PhotoField name={`gallery.${index}.url`} label="Foto lokasi" value={image.url} srcset={image.srcset} onChange={value => update("gallery", event.gallery.map((item, i) => i === index ? { ...item, url: value.url, srcset: value.srcset } : item))} error={errors[`gallery.${index}.url`]?.join(" ")} />
