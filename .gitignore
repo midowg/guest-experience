@@ -7,3 +7,9 @@ node_modules/
 coverage/
 test-results/
 playwright-report/
+
+# Local source material and visual checks: do not publish in the public repository.
+/Handbook Digital Rapat Panitia Inti dan Koordinator Hari Suci Nyepi Saka 1949 DIY.docx
+/WhatsApp Image 2026-10-09 at 15.26.18.jpeg
+/contents.md
+/screenshots/

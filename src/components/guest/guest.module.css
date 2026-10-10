@@ -1,0 +1,240 @@
+.experience { background: var(--color-background); color: var(--color-text); overflow-wrap: anywhere; }
+.experience h1, .experience h2, .experience h3, .experience h4, .experience p { margin-top: 0; }
+.experience h3, .experience h4 { line-height: 1.25; }
+.experience h3 { font-size: var(--text-lg); }
+.experience h4 { font-size: var(--text-lg); margin-bottom: var(--space-2); }
+.experience a, .experience button, .experience input, .experience select, .experience textarea { scroll-margin-top: var(--nav-height); }
+.skipLink { position: fixed; top: var(--space-3); left: var(--space-4); z-index: var(--z-dialog); padding: var(--space-4); background: var(--color-primary); color: var(--paper); transform: translateY(-200%); }
+.skipLink:focus { transform: translateY(0); }
+.preview { padding: var(--space-4); }
+/* Fixed, not sticky: a sticky bar still occupies a row at the top of the document, which
+   would push the opening down by its own height while it is meant to be absent. */
+.siteHeader { position: fixed; top: 0; left: 0; right: 0; z-index: var(--z-nav); border-bottom: var(--border); background: var(--color-background); transition: transform var(--motion-fast) ease, opacity var(--motion-fast) ease; }
+.siteHeaderHidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+.siteHeaderShown { transform: translateY(0); opacity: 1; }
+/* Hidden from pointer and screen reader alike, so tabbing cannot land on an unseen bar. */
+.siteHeaderHidden a { visibility: hidden; }
+.headerInner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); min-height: var(--nav-height); }
+.brand { display: inline-flex; align-items: center; gap: var(--space-3); color: var(--color-primary); text-decoration: none; font-family: var(--font-label); font-size: var(--text-sm); font-weight: 700; letter-spacing: .06em; flex-shrink: 0; }
+.brand img { width: 3.25rem; height: 3.25rem; object-fit: contain; }
+.brandSub { display: block; font-family: var(--font-body); font-weight: 400; color: var(--color-muted); letter-spacing: 0; }
+.navigation { display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap; }
+.navigation a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; font-size: var(--text-sm); color: var(--color-text); border-bottom: 2px solid transparent; }
+.navigation a:hover { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+.hero { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: var(--space-8); align-items: end; padding-top: var(--space-9); padding-bottom: var(--space-9); }
+.heroMain { min-width: 0; }
+.heroMain > :global(.eyebrow) { margin-bottom: var(--space-7); }
+.greeting { font-size: var(--text-lg); margin-bottom: var(--space-4); }
+.hero h1 { font-size: var(--text-hero); line-height: 1.04; font-weight: 600; letter-spacing: -.035em; color: var(--color-primary); margin-bottom: var(--space-5); }
+.subtitle { font-size: clamp(1.25rem, 2.1vw, 1.75rem); line-height: 1.45; max-width: var(--reading); margin-bottom: var(--space-7); }
+
+/* Cinematic opening used when the event supplies a backdrop photo (hero.url). */
+/* Full screen on every size: at 86svh the next section showed at the bottom of a laptop
+   window, the same fault already fixed for phones. `svh` keeps it within the screen. */
+.heroImage { position: relative; isolation: isolate; min-height: 100svh; display: flex; align-items: flex-end; color: var(--paper); }
+.heroBackdrop { position: absolute; inset: 0; z-index: -2; overflow: hidden; background: var(--blue); }
+/* Position and zoom share an anchor so panning never reveals empty edges. */
+.heroBackdrop img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.92) brightness(.88); object-position: var(--desktop-x, 50%) var(--desktop-y, 50%); transform: scale(var(--desktop-zoom, 1)); transform-origin: var(--desktop-x, 50%) var(--desktop-y, 50%); }
+
+/* The dimming layer is structural: it is always rendered and has no "off" state.
+   background-color is the floor over the whole frame, so no corner of any photo is
+   left undimmed. Alpha .66 of the overlay navy holds paper-white text at 5.36:1 against
+   a pure white photo, past the 4.5:1 AA threshold for body text and for the small
+   uppercase labels. background-image then deepens the band where the words sit — which,
+   now that both placements stand at the foot of the opening, is always the bottom.
+   Alphas compose as a1 + a2(1 - a1), so the .47 band reads .82 (9.3:1, matching the
+   --overlay-strong token). Each stop fades to a transparent navy, never the `transparent`
+   keyword: that keyword is transparent black, and interpolating towards it would wash a
+   grey haze across the photo. */
+.heroScrim {
+  position: absolute; inset: 0; z-index: -1; background-color: rgba(10, 32, 62, .66);
+  background-image: linear-gradient(to top, rgba(10, 32, 62, .47) 0%, rgba(10, 32, 62, .18) 42%, rgba(10, 32, 62, 0) 78%);
+}
+
+.heroImage .heroInner { width: min(var(--container), calc(100% - 3rem)); margin-inline: auto; padding-block: var(--space-9) var(--space-8); }
+/* hero.text_position: `left` is the bare .heroInner above, `center` adds the class below.
+   Meta pairs stay left-read beside their icon. */
+/* Centring has to reach every child, not just the paragraphs: an element left at its
+   natural width sits off-axis and makes the whole block look crooked. */
+.heroInnerCenter { text-align: center; display: flex; flex-direction: column; align-items: center; }
+.heroInnerCenter > * { margin-inline: auto; }
+.heroInnerCenter h1, .heroInnerCenter .subtitle { margin-inline: auto; }
+.heroInnerCenter .heroMeta, .heroInnerCenter .actions, .heroInnerCenter .savedHint { justify-content: center; width: 100%; }
+/* On a wide screen the three facts sit side by side, so each one reads left-to-right
+   from its icon while the row as a whole is centred. On a phone they stack full-width,
+   where that same rule would leave the text hugging the left edge — see the phone block. */
+.heroInnerCenter .heroMetaItem { text-align: left; }
+.heroInnerCenter .scrollCue { align-self: center; }
+/* Sky blue is a decorative accent, not small-text colour: on the photo every string
+   that has to be read is paper white, and hierarchy comes from size and weight. */
+.heroImage :global(.eyebrow) { color: var(--paper); }
+.heroImage .greeting { color: var(--paper); font-size: var(--text-lg); letter-spacing: .01em; }
+.heroImage h1 { color: var(--paper); max-width: 18ch; text-wrap: balance; }
+.heroImage .subtitle { color: var(--paper); }
+.heroMeta { display: flex; flex-wrap: wrap; gap: var(--space-5) var(--space-7); margin-bottom: var(--space-7); padding-top: var(--space-6); border-top: 1px solid rgba(255, 255, 255, .28); }
+.heroMetaItem { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
+.heroMetaItem > svg { flex-shrink: 0; margin-top: 3px; color: var(--sky); }
+.heroMetaItem span { display: block; font-family: var(--font-label); font-size: .6875rem; letter-spacing: .14em; text-transform: uppercase; color: var(--paper); }
+.heroMetaItem p { margin: var(--space-1) 0 0; font-size: var(--text-lg); font-weight: 600; line-height: 1.35; }
+.heroImage .textLink { color: var(--paper); }
+.heroImage .savedHint { color: var(--paper); }
+.scrollCue { display: inline-flex; align-items: center; gap: var(--space-3); margin-top: var(--space-7); font-family: var(--font-label); font-size: .6875rem; letter-spacing: .16em; text-transform: uppercase; color: var(--paper); text-decoration: none; min-height: 44px; }
+.scrollCue svg { animation: nudge 2.4s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-4); }
+.textLink { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-primary); min-height: 44px; text-underline-offset: var(--space-1); }
+.facts { background: var(--color-surface); padding: var(--space-6); border-top: 4px solid var(--color-primary); }
+.facts > :global(.eyebrow) { margin-bottom: var(--space-6); }
+.fact { display: flex; gap: var(--space-4); margin-top: var(--space-5); }
+.fact > svg { flex-shrink: 0; color: var(--color-primary); margin-top: var(--space-1); }
+.fact span { font-family: var(--font-label); font-size: var(--text-sm); }
+.fact p { font-size: var(--text-lg); line-height: 1.4; margin-bottom: 0; margin-top: var(--space-1); font-weight: 600; }
+.fact .factAddress { font-size: var(--text-base); font-weight: 400; margin-top: var(--space-2); }
+.section { padding-block: var(--space-8); border-top: var(--border); scroll-margin-top: var(--nav-height); }
+.section:focus, .experience main:focus { outline: none; }
+.sectionGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); gap: var(--space-7); }
+.sectionLabel { display: flex; gap: var(--space-3); align-items: baseline; color: var(--color-primary); }
+.sectionNumber { font-family: var(--font-label); font-size: var(--text-sm); }
+.sectionBody { min-width: 0; }
+.sectionBody :global(.section-heading) { max-width: var(--reading); margin-bottom: var(--space-6); }
+.sectionBody :global(.section-heading h2) { color: var(--color-primary); font-size: var(--text-heading); line-height: 1.12; font-weight: 600; letter-spacing: -.025em; margin-bottom: var(--space-4); }
+.sectionBody :global(.section-description) { font-size: var(--text-lg); }
+.introduction { max-width: var(--reading); font-size: var(--text-lg); line-height: 1.65; margin-bottom: var(--space-7); }
+.multiline { white-space: pre-line; }
+.topics { margin-top: var(--space-7); }
+.topics > h3 { margin-bottom: var(--space-5); }
+.topics ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
+.topics li { display: flex; align-items: flex-start; gap: var(--space-4); padding-top: var(--space-5); border-top: var(--border); }
+.topicNumber { font-family: var(--font-label); font-size: var(--text-sm); color: var(--color-primary); }
+.topics p { margin-bottom: 0; }
+.agenda { list-style: none; margin: 0; padding: 0; }
+.agenda li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-5); padding-block: var(--space-5); border-top: var(--border); }
+.agenda li:last-child { border-bottom: var(--border); }
+.agendaTime { font-family: var(--font-label); font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); padding-top: var(--space-1); }
+.agenda h3 { margin-bottom: var(--space-2); }
+.agenda p { margin-bottom: 0; }
+.locationContent { display: grid; gap: var(--space-6); }
+.addressPanel { padding: var(--space-6); background: var(--color-surface); }
+.addressPanel > svg { color: var(--color-primary); margin-bottom: var(--space-5); }
+.addressPanel h3 { font-size: clamp(1.5rem, 2.5vw, 2rem); margin-bottom: var(--space-3); }
+.addressPanel address { font-style: normal; max-width: var(--reading); margin-bottom: var(--space-5); font-size: var(--text-lg); }
+.addressPanel .multiline { margin-bottom: var(--space-5); }
+.copyStatus { min-height: 1.5em; margin-top: var(--space-3); margin-bottom: 0; font-size: var(--text-sm); }
+/* The venue column and the gallery rows are one run of photographs of the same place,
+   so they share a single heading rather than appearing as two unrelated blocks. */
+.venuePhotos { min-width: 0; }
+.venuePhotosTitle { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); font-size: var(--text-lg); }
+.venuePhotosTitle svg { flex-shrink: 0; color: var(--color-primary); }
+.gallery { margin: 0; }
+.galleryFigure { margin: 0; }
+.galleryFigure img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.galleryFigure figcaption, .gallerySlide figcaption { font-size: var(--text-sm); padding-top: var(--space-3); color: var(--ink-soft); }
+.galleryViewport { position: relative; aspect-ratio: 16 / 10; background: var(--color-surface); overflow: hidden; }
+.gallerySlide { position: absolute; inset: 0; margin: 0; opacity: 0; transition: opacity 700ms ease; }
+.gallerySlide[aria-hidden='false'] { opacity: 1; }
+.gallerySlide img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.gallerySlide figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: var(--space-6) var(--space-5) var(--space-4); color: var(--paper); background: linear-gradient(to top, var(--overlay-strong), transparent); }
+.galleryControls { display: flex; align-items: center; gap: var(--space-3); padding-top: var(--space-4); }
+.galleryArrow { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--color-border); background: var(--paper); color: var(--color-primary); }
+.galleryArrow:hover { background: var(--sky); }
+.galleryDots { display: flex; align-items: center; gap: var(--space-2); margin-inline: auto; }
+.galleryDot, .galleryDotActive { width: 44px; height: 44px; border: 0; background: transparent; position: relative; padding: 0; }
+.galleryDot::after, .galleryDotActive::after { content: ''; position: absolute; inset: 50% 6px auto; transform: translateY(-50%); height: 3px; }
+.galleryDot::after { background: var(--color-border); }
+.galleryDotActive::after { background: var(--color-primary); }
+@media (prefers-reduced-motion: reduce) { .gallerySlide { transition: none; } .scrollCue svg { animation: none; } }
+.rsvpSection { background: var(--color-surface); }
+.deadline { margin-bottom: var(--space-5); font-size: var(--text-sm); }
+.form { max-width: var(--reading); }
+.fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: var(--space-5); }
+.fields > button { justify-self: start; }
+.fields:disabled { opacity: .65; }
+.formGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); }
+.choiceGroup { border: 0; margin: 0; padding: 0; min-width: 0; }
+.choiceGroup legend { margin-bottom: var(--space-3); font-weight: 600; }
+.choices { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.choices label { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-muted); background: var(--color-background); cursor: pointer; }
+.choices label:has(input:checked) { border-color: var(--color-primary); color: var(--color-primary); outline: 1px solid var(--color-primary); }
+.choices input, .consent input { accent-color: var(--color-primary); width: 1.2rem; height: 1.2rem; flex-shrink: 0; }
+.consent { display: flex; align-items: flex-start; gap: var(--space-3); cursor: pointer; min-height: 44px; }
+.consent input { margin-top: var(--space-1); }
+.privacy { font-size: var(--text-sm); line-height: 1.5; margin-top: var(--space-3); margin-bottom: 0; }
+.formStatus:empty { display: none; }
+.formStatus:not(:empty) { margin-bottom: var(--space-5); }
+.formStatus ul { padding-left: var(--space-5); margin-bottom: 0; }
+.formStatus p { margin-bottom: 0; }
+.honeypot { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.savedHint { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-4); font-size: var(--text-sm); color: var(--color-success); }
+/* Room at the foot of the page for the fixed back-to-top disc, which is at its most visible
+   here: without it the button would sit on top of the footer's own "kembali ke atas" link. */
+.closing { background: var(--color-background); border-top: var(--border); padding-top: var(--space-8); padding-bottom: calc(var(--space-7) + env(safe-area-inset-bottom, 0px)); }
+.closingText { max-width: var(--reading); font-size: clamp(1.5rem, 2.75vw, 2.5rem); line-height: 1.35; color: var(--color-primary); margin-bottom: var(--space-5); }
+.organizer { margin-bottom: var(--space-6); max-width: var(--reading); }
+.footerLine { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); border-top: var(--border); margin-top: var(--space-8); padding-block: var(--space-5); font-size: var(--text-sm); }
+.footerLine a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; }
+/* A soft arrival for sections still below the fold. Only script applies .revealPending, and
+   only when motion is welcome, so markup rendered without JavaScript carries neither class and
+   every section is visible at full opacity. The shift is small on purpose: 12px reads as the
+   block settling into place, where a longer travel would make the guest wait to read it. */
+.revealPending { opacity: 0; transform: translateY(12px); }
+.revealShown { opacity: 1; transform: none; transition: opacity 520ms ease, transform 520ms ease; }
+/* Back to the top of the invitation. Fixed bottom-right, inset from the edge so it clears the
+   phone's home indicator; the RSVP form and its submit button occupy the left of the column,
+   and at 390px a 48px disc at the right margin does not reach them. */
+.toTop {
+  position: fixed; right: var(--space-4); bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-nav); display: inline-flex; align-items: center; justify-content: center;
+  /* Comfortably past the 44px minimum, and the icon is centred inside it. */
+  width: 48px; height: 48px; border: 1px solid var(--color-primary);
+  background: var(--color-primary); color: var(--paper); text-decoration: none;
+  transition: opacity var(--motion-fast) ease, transform var(--motion-fast) ease;
+}
+.toTop:hover { background: var(--blue-support); border-color: var(--blue-support); }
+/* visibility, not display: a hidden control that still occupies no tab stop and no pointer
+   target, while the opacity transition remains available when it comes back. */
+.toTopHidden { opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(var(--space-3)); }
+.toTopShown { opacity: 1; visibility: visible; transform: none; }
+@media (max-width: 960px) {
+  .headerInner { gap: var(--space-4); }
+  .navigation { gap: var(--space-4); }
+  .hero { gap: var(--space-6); grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  .facts { padding: var(--space-5); }
+  .sectionGrid { grid-template-columns: 1fr; gap: var(--space-4); }
+}
+@media (max-width: 720px) {
+  .heroBackdrop img { object-position: var(--mobile-x, 50%) var(--mobile-y, 50%); transform: scale(var(--mobile-zoom, 1)); transform-origin: var(--mobile-x, 50%) var(--mobile-y, 50%); }
+  /* Full viewport height on phones: at 80svh the next section peeked in at the bottom,
+     which broke the opening. `svh` is the small viewport, so the browser chrome
+     collapsing on scroll cannot make this taller than the screen. */
+  .heroImage { min-height: 100svh; }
+  .heroImage .heroInner { width: calc(100% - 2rem); padding-block: var(--space-8) var(--space-7); }
+  .heroMeta { gap: var(--space-4); padding-top: var(--space-5); margin-bottom: var(--space-6); }
+  /* Stacked on a phone, each fact spans the row, so it follows the block's alignment
+     instead of pinning its label to the left. The icon sits above the label rather than
+     beside it: left of a centred label it reads as a stray mark on the left margin. */
+  .heroInnerCenter .heroMeta { flex-direction: column; }
+  .heroInnerCenter .heroMetaItem { flex-direction: column; align-items: center; gap: var(--space-2); text-align: center; justify-content: center; width: 100%; }
+  .heroInnerCenter .heroMetaItem > svg { margin-top: 0; }
+  .galleryViewport { aspect-ratio: 4 / 3; }
+  /* The bar stays fixed on phones too; it is absent at the top and only appears on scroll,
+     so it costs no opening height and does not need to be unpinned here. */
+  .headerInner { align-items: flex-start; flex-direction: column; gap: var(--space-3); padding-top: var(--space-4); padding-bottom: var(--space-3); min-height: 0; }
+  .navigation { gap: var(--space-4); }
+  .hero { grid-template-columns: 1fr; padding-top: var(--space-7); padding-bottom: var(--space-7); gap: var(--space-7); }
+  .heroMain > :global(.eyebrow) { margin-bottom: var(--space-5); }
+  .subtitle { margin-bottom: var(--space-5); }
+  .section { padding-block: var(--space-7); scroll-margin-top: var(--nav-height); }
+  .topics ol { grid-template-columns: 1fr; }
+  .formGrid { grid-template-columns: 1fr; }
+  .agenda li { grid-template-columns: 1fr; gap: var(--space-2); }
+  .addressPanel { padding: var(--space-5); }
+  .closing { padding-top: var(--space-7); }
+  .footerLine { margin-top: var(--space-7); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .experience *, .experience *::before, .experience *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  /* Belt and braces. Script does not arm the reveal under reduced motion, but the setting can
+     also be turned on after the page has loaded; with transitions off, a block left pending
+     would never fade in. Showing it outright is the only safe resting state. */
+  .revealPending { opacity: 1 !important; transform: none !important; }
+}

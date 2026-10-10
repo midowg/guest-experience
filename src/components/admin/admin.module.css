@@ -1,0 +1,141 @@
+.shell { min-height: 100vh; }
+.header { border-bottom: var(--border); background: var(--color-background); }
+.headerInner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-4); padding-block: var(--space-4); }
+.brand { display: flex; align-items: center; gap: var(--space-3); text-decoration: none; color: var(--color-primary); font-family: var(--font-label); font-size: var(--text-sm); }
+.logo { width: 3rem; height: 3rem; object-fit: contain; }
+.main { padding-block: var(--space-7); }
+.navigation { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-block: var(--space-5); }
+.navigation a { overflow-wrap: anywhere; }
+.title { font-size: var(--text-heading); line-height: 1.12; margin-block: var(--space-3); overflow-wrap: anywhere; }
+.login { max-width: var(--reading); margin-inline: auto; padding-block: var(--space-8); }
+.form { display: grid; gap: var(--space-6); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); }
+.block { padding: var(--space-5); border: var(--border); min-width: 0; scroll-margin-top: calc(var(--nav-height) + var(--space-5)); }
+.block > h2 { margin-top: 0; }
+.block > * + * { margin-top: var(--space-5); }
+.item { border: var(--border); padding: var(--space-4); display: grid; gap: var(--space-4); min-width: 0; }
+.itemHeader { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: space-between; align-items: center; }
+.itemHeader h3 { margin: 0; }
+.check { display: flex; align-items: flex-start; gap: var(--space-3); min-height: 2.75rem; padding-block: var(--space-2); cursor: pointer; }
+.check input { margin-top: var(--space-1); width: 1.25rem; height: 1.25rem; accent-color: var(--color-primary); flex-shrink: 0; }
+
+/* Toggle switch: clear active (green) / inactive (grey) states. */
+.toggle { display: flex; align-items: center; gap: var(--space-3); min-height: 2.75rem; padding-block: var(--space-2); cursor: pointer; flex-wrap: wrap; }
+.toggle input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.toggleSwitch { position: relative; width: 3rem; height: 1.625rem; border-radius: 1rem; flex-shrink: 0; transition: background-color var(--motion-fast) ease; }
+.toggleOn { background: var(--green); }
+.toggleOff { background: var(--surface); border: 1px solid var(--ink-soft); }
+.toggleKnob { position: absolute; top: 2px; left: 2px; width: 1.25rem; height: 1.25rem; border-radius: 50%; background: var(--paper); box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform var(--motion-fast) ease; }
+.toggleOn .toggleKnob { transform: translateX(1.375rem); }
+.toggleText { font-weight: 600; }
+.toggleBadge { font-size: var(--text-sm); font-weight: 600; padding: var(--space-1) var(--space-3); border-radius: 1rem; flex-shrink: 0; }
+.toggleBadgeOn { background: var(--green); color: var(--paper); }
+.toggleBadgeOff { background: var(--surface); color: var(--ink-soft); }
+
+/* Order buttons: large touch targets with icons and text. */
+.orderGroup { display: flex; gap: var(--space-2); }
+.orderBtn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 3rem; height: 3rem; border: 1px solid var(--blue); background: var(--paper); color: var(--blue); cursor: pointer; transition: background-color var(--motion-fast), color var(--motion-fast); }
+.orderBtn:hover:not(:disabled) { background: var(--blue); color: var(--paper); }
+.orderBtn:disabled { border-color: var(--ink-soft); color: var(--ink-soft); cursor: not-allowed; }
+.orderBtnText { font-size: .625rem; font-weight: 600; letter-spacing: .02em; }
+
+/* One row per section in the ordering block: a bordered card so the toggle and the
+   order buttons never crowd each other. On phones the toggle takes the full row and
+   the order buttons sit below it, right-aligned. */
+.sectionRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-4); border: var(--border); }
+.sectionRow .toggle { flex: 1 1 auto; min-width: 0; }
+.sectionRow .orderGroup { flex-shrink: 0; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.status { font-family: var(--font-label); font-size: var(--text-sm); padding: var(--space-1) var(--space-2); background: var(--color-surface); border: var(--border); }
+.eventList { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5); }
+.eventCard { padding: var(--space-5); border: var(--border); overflow-wrap: anywhere; }
+.eventCard h2 { margin-block: var(--space-3) var(--space-2); font-size: var(--text-lg); }
+.eventWhen { margin: 0; font-weight: 600; }
+.eventSlug { margin: var(--space-1) 0 0; font-size: var(--text-sm); color: var(--ink-soft); }
+/* Two label/value pairs, each on its own row so the dates never run together. */
+.eventCard .eventMeta { display: grid; gap: var(--space-2); margin: var(--space-4) 0 0; padding-top: var(--space-4); border-top: var(--border); font-size: var(--text-sm); color: var(--ink-soft); }
+.eventCard .eventMeta > div { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
+.eventCard .eventMeta dt { font-family: var(--font-label); font-size: .6875rem; letter-spacing: .1em; text-transform: uppercase; min-width: 9rem; }
+.eventCard .eventMeta dd { margin: 0; }
+.eventCard .actions { margin-top: var(--space-5); }
+.filters { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-4); margin-block: var(--space-5); }
+.filters > div { flex: 1 1 12rem; }
+.tableWrap { max-width: 100%; overflow-x: auto; border: var(--border); }
+.table { width: 100%; border-collapse: collapse; text-align: left; }
+.table caption { text-align: left; padding: var(--space-4); font-weight: 600; }
+.table th, .table td { padding: var(--space-4); border-bottom: var(--border); vertical-align: top; overflow-wrap: anywhere; min-width: 9rem; }
+.table th { background: var(--color-surface); }
+.table td p { margin: 0 0 var(--space-2); }
+.table tbody tr:last-child td { border-bottom: 0; }
+.pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); margin-top: var(--space-5); }
+.answers { margin: 0; }
+.answers dt { font-weight: 600; margin-top: var(--space-4); }
+.answers dd { margin: var(--space-2) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Set apart from the editor so a destructive action is never mistaken for a save. */
+.danger { margin-top: var(--space-7); padding: var(--space-5); border: 1px solid var(--burgundy); }
+.danger > * + * { margin-top: var(--space-4); }
+.danger h2 { margin: 0; font-size: var(--text-lg); color: var(--burgundy); }
+.eventMeta { margin: var(--space-2) 0 0; font-size: var(--text-sm); color: var(--ink-soft); }
+.photoField { display: grid; gap: var(--space-4); }
+.photoModes { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.photoStatus { margin: 0; min-height: 1.4em; font-size: var(--text-sm); }
+.photoStatus:empty { min-height: 0; }
+.photoPreview { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-4); padding: var(--space-4); border: var(--border); background: var(--color-background); }
+.photoPreview img { width: 10rem; aspect-ratio: 16 / 10; object-fit: cover; flex-shrink: 0; background: var(--color-surface); }
+.photoPreview > div { min-width: 0; flex: 1 1 14rem; }
+.photoPreview p { margin: 0 0 var(--space-3); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.photoGuide { padding: var(--space-4); border: var(--border); background: var(--color-surface); }
+.photoGuide h3 { margin: 0 0 var(--space-3); font-size: var(--text-base); }
+.photoGuide ul { margin: 0; padding-left: var(--space-5); font-size: var(--text-sm); }
+
+/* Text placement belongs to the hero alone; the gallery has no such control. */
+.choiceSet { border: var(--border); padding: var(--space-4); margin: 0; min-width: 0; }
+.choiceSet legend { padding-inline: var(--space-2); font-weight: 600; }
+.choiceSet p { margin: 0 0 var(--space-3); }
+.choiceRow { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); }
+.choice { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; padding-block: var(--space-2); cursor: pointer; }
+.choice input { width: 1.25rem; height: 1.25rem; accent-color: var(--color-primary); flex-shrink: 0; }
+
+/* One stage that resembles the real opening, not a crop simulator: the photo in a landscape
+   frame, the dim layer over it, and the title where the chosen text position puts it. */
+.heroPreview { margin: 0; display: grid; gap: var(--space-3); min-width: 0; }
+.heroPreview figcaption { font-size: var(--text-sm); }
+.heroPreviewEmpty { margin: 0; padding: var(--space-4); border: var(--border); background: var(--color-surface); font-size: var(--text-sm); }
+.heroStage { position: relative; isolation: isolate; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; border: var(--border); background: var(--blue); }
+/* Centre crop, matching the saved hero focus, which is no longer a choice. */
+.heroStagePhoto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center center; filter: saturate(.92) brightness(.88); }
+/* Same two layers as the guest view: a floor over the whole frame so no corner is undimmed,
+   then a deeper band under the words. The dim layer is always on and has no "off" state. */
+.heroStageScrim { position: absolute; inset: 0; background-color: rgba(10, 32, 62, .66); background-image: linear-gradient(to top, rgba(10, 32, 62, .47) 0%, rgba(10, 32, 62, .18) 42%, rgba(10, 32, 62, 0) 78%); }
+/* Both positions sit at the bottom of the opening, as in the guest view. */
+.heroStageText { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: clamp(var(--space-4), 3.5%, var(--space-6)); color: var(--paper); gap: var(--space-2); }
+.heroStageEyebrow { margin: 0; font-family: var(--font-label); font-size: .6875rem; letter-spacing: .14em; text-transform: uppercase; color: var(--paper); }
+.heroStageGreeting { margin: 0; font-size: var(--text-base); letter-spacing: .01em; }
+.heroStageTitle { margin: 0; font-size: clamp(1.25rem, 3.4vw, 2rem); font-weight: 600; line-height: 1.08; letter-spacing: -.02em; max-width: 18ch; overflow-wrap: anywhere; }
+.heroTextLeft { align-items: flex-start; text-align: left; }
+.heroTextCenter { align-items: center; text-align: center; }
+.heroTextCenter > * { margin-inline: auto; }
+.featured { padding: var(--space-5); border: var(--border); background: var(--color-surface); margin-bottom: var(--space-6); }
+.featured > * + * { margin-top: var(--space-4); }
+.featured h2 { margin: 0; font-size: var(--text-lg); }
+.featuredNow { margin: 0; }
+.featuredList { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.featuredList li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-background); border: var(--border); }
+.errorSummary { scroll-margin-top: var(--space-5); }
+.errorSummary ul { margin-bottom: 0; padding-left: var(--space-5); }
+.errorSummary a { color: inherit; }
+.fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: var(--space-6); }
+.help { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 42rem) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .main { padding-block: var(--space-5); }
+  .block, .eventCard { padding: var(--space-4); }
+  .headerInner { align-items: flex-start; }
+  /* Section ordering rows stack: toggle on its own line, order buttons below it. */
+  .sectionRow { flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3); }
+  .sectionRow .toggle { flex: 1 1 100%; }
+  .sectionRow .orderGroup { margin-left: auto; }
+  /* Item headers (topic/session/photo/question) keep their title clear of the buttons. */
+  .itemHeader { align-items: flex-start; }
+  .itemHeader h3 { flex: 1 1 100%; }
+}
