@@ -20,5 +20,5 @@ export default function DevCardsPage() {
       updated_at: "2026-10-09T01:30:00Z",
     },
   ];
-  return <main className="container" style={{ paddingBlock: "3rem" }}><EventList events={events} /></main>;
+  return <main className="container" style={{ paddingBlock: "3rem" }}><EventList events={events} featuredId={events[0].id} /></main>;
 }

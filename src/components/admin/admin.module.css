@@ -47,6 +47,8 @@
 .sectionRow .orderGroup { flex-shrink: 0; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 .status { font-family: var(--font-label); font-size: var(--text-sm); padding: var(--space-1) var(--space-2); background: var(--color-surface); border: var(--border); }
+.statusLive { display: inline-flex; align-items: center; gap: var(--space-2); }
+.statusDot { width: .5rem; height: .5rem; flex: none; border-radius: 50%; background: #208650; }
 .eventList { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-5); }
 .eventCard { padding: var(--space-5); border: var(--border); overflow-wrap: anywhere; }
 .eventCard h2 { margin-block: var(--space-3) var(--space-2); font-size: var(--text-lg); }

@@ -14,6 +14,6 @@ export default async function AdminPage() {
     <p className="eyebrow">Pengelolaan acara</p>
     <h1 className={styles.title}>Acara Anda</h1>
     <FeaturedControl events={events} featuredId={featuredId} />
-    <EventList events={events} />
+    <EventList events={events} featuredId={featuredId} />
   </AdminShell>;
 }

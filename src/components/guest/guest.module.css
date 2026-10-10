@@ -115,6 +115,9 @@
 .agenda p { margin-bottom: 0; }
 .locationContent { display: grid; gap: var(--space-6); }
 .addressPanel { padding: var(--space-6); background: var(--color-surface); }
+.locationMapFrame { min-width: 0; height: 560px; background: var(--color-surface); }
+.locationMapFrame iframe { display: block; width: 100%; height: 100%; border: 0; }
+.locationMapFrame p { max-width: 32ch; padding: var(--space-6); }
 .addressPanel > svg { color: var(--color-primary); margin-bottom: var(--space-5); }
 .addressPanel h3 { font-size: clamp(1.5rem, 2.5vw, 2rem); margin-bottom: var(--space-3); }
 .addressPanel address { font-style: normal; max-width: var(--reading); margin-bottom: var(--space-5); font-size: var(--text-lg); }
@@ -228,6 +231,7 @@
   .formGrid { grid-template-columns: 1fr; }
   .agenda li { grid-template-columns: 1fr; gap: var(--space-2); }
   .addressPanel { padding: var(--space-5); }
+  .locationMapFrame { height: 300px; }
   .closing { padding-top: var(--space-7); }
   .footerLine { margin-top: var(--space-7); }
 }

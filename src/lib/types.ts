@@ -18,7 +18,7 @@ export type EventRecord = {
   id: string; slug: string; status: EventStatus; title: string; subtitle: string;
   organizer: string; greeting: string; introduction: string; closing: string;
   starts_at: string; ends_at: string | null; timezone: string;
-  venue_name: string; address: string; location_url: string; arrival_notes: string;
+  venue_name: string; address: string; location_url: string; location_embed_url: string; location_display: "manual" | "embed"; arrival_notes: string;
   review_url: string; review_enabled: boolean; rsvp_enabled: boolean; rsvp_closes_at: string | null;
   feedback_enabled: boolean; feedback_opens_at: string | null;
   sections: SectionConfig[]; topics: DiscussionTopic[]; agenda: AgendaItem[];

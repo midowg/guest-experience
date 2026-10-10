@@ -133,6 +133,36 @@ describe("hero.text_position", () => {
   });
 });
 
+describe("location display", () => {
+  const mapEmbedUrl = "https://www.google.com/maps/embed?pb=!1m18";
+
+  test("keeps the address card and navigation button without an embed", () => {
+    const markup = renderToStaticMarkup(<EventExperience event={event({ gallery: [galleryImage(1)] })} />);
+    expect(markup).not.toContain("<iframe");
+    expect(markup).toContain(styles.addressPanel);
+    expect(markup).toContain('href="https://maps.app.goo.gl/');
+    expect(markup).toContain(styles.galleryFigure);
+  });
+
+  test("keeps manual controls when a saved embed is inactive", () => {
+    const markup = renderToStaticMarkup(<EventExperience event={event({ location_display: "manual", location_embed_url: mapEmbedUrl })} />);
+    expect(markup).not.toContain("<iframe");
+    expect(markup).toContain(styles.addressPanel);
+  });
+
+  test("shows only the Google iframe above the original photo gallery when embedded", () => {
+    const markup = renderToStaticMarkup(<EventExperience event={event({ location_display: "embed", location_embed_url: mapEmbedUrl, gallery: [galleryImage(1), galleryImage(2)] })} preview />);
+    expect(markup).toContain(`src="${mapEmbedUrl}"`);
+    expect(markup).toContain('loading="lazy"');
+    expect(markup).toContain('referrerPolicy="strict-origin-when-cross-origin"');
+    expect(markup).toContain(styles.locationMapFrame);
+    expect(markup).not.toContain(styles.addressPanel);
+    expect(markup).not.toContain('href="https://maps.app.goo.gl/');
+    expect(markup).toContain(styles.galleryViewport);
+    expect(markup).toContain('aria-roledescription="carousel"');
+  });
+});
+
 describe("gallery", () => {
   test("a single photo renders as a still figure with no controls", () => {
     const markup = renderToStaticMarkup(<Gallery images={[galleryImage(1)]} />);
