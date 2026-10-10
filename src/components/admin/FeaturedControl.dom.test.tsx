@@ -39,20 +39,21 @@ describe("taking an event off the front page", () => {
     expect(JSON.parse(init.body)).toEqual({ eventId: null });
   });
 
-  it("says the event and its answers survive the take-down", () => {
+  it("says other public links remain available", () => {
     render(<FeaturedControl events={[live]} featuredId={live.id} />);
-    expect(screen.getByText(/tidak terhapus/i)).toBeTruthy();
+    expect(screen.getByText(/tautan acara lain tetap aktif/i)).toBeTruthy();
   });
 
-  it("states that the schedule does not take an event down by itself", () => {
+  it("explains that only one event occupies the homepage", () => {
     render(<FeaturedControl events={[live]} featuredId={live.id} />);
-    expect(screen.getByText(/jadwal acara tidak menurunkannya secara otomatis/i)).toBeTruthy();
+    expect(screen.getByText(/halaman utama menampilkan satu acara/i)).toBeTruthy();
   });
 
-  it("never offers an unpublished event for the front page", () => {
-    render(<FeaturedControl events={[live, draft]} featuredId={null} />);
-    expect(screen.queryByText(draft.title)).toBeNull();
+  it("shows only the selected event and leaves selection to event cards", () => {
+    render(<FeaturedControl events={[live, draft]} featuredId={live.id} />);
     expect(screen.getByText(live.title)).toBeTruthy();
+    expect(screen.queryByText(draft.title)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Tayangkan ini" })).toBeNull();
   });
 
   it("reports a refusal instead of claiming success", async () => {
