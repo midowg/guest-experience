@@ -205,7 +205,7 @@ export function EventExperience({ event, preview = false }: { event: EventRecord
               <noscript><p>Aktifkan JavaScript untuk mengirim konfirmasi kehadiran.</p></noscript>
             </>}
             {section.key === "contact" && event.contact && <>
-              <div id="contact-heading"><SectionHeading title="Ada pertanyaan?"><p>Hubungi PIC untuk informasi lebih lanjut.</p></SectionHeading></div>
+              <div id="contact-heading"><SectionHeading title=""><p>Hubungi PIC untuk informasi lebih lanjut.</p></SectionHeading></div>
               <Contact contact={event.contact} />
             </>}
             {section.key === "feedback" && <>
