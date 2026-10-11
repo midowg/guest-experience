@@ -45,6 +45,6 @@ it("omits the contact section and navigation until contact details are filled", 
   const event = createSeedEvent();
   event.sections = event.sections.map(section => section.key === "contact" ? { ...section, enabled: true } : section);
   render(<EventExperience event={event} preview />);
-  expect(screen.queryByRole("heading", { name: "Ada pertanyaan tentang acara?" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Ada pertanyaan?" })).toBeNull();
   expect(screen.queryByRole("link", { name: "Kontak" })).toBeNull();
 });
