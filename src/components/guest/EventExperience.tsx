@@ -5,6 +5,7 @@ import { ArrowUp, ArrowUpRight, Copy, Images, MapPin } from "lucide-react";
 import { Button, ButtonLink, Notice, SectionHeading } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { parseLocationEmbed } from "@/lib/location-embed";
+import { parseContactPhone } from "@/lib/contact-phone";
 import type { EventRecord, SectionKey } from "@/lib/types";
 import { Gallery, venuePhotos } from "./Gallery";
 import { InvitationHero, TimeRange, visibleSections } from "./InvitationHero";
@@ -12,7 +13,7 @@ import { FeedbackForm, RsvpForm } from "./GuestForms";
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
 import styles from "./guest.module.css";
 
-const sectionLabels: Record<SectionKey, string> = { about: "Acara", agenda: "Jadwal", location: "Lokasi", rsvp: "Konfirmasi", feedback: "Masukan" };
+const sectionLabels: Record<SectionKey, string> = { about: "Acara", agenda: "Jadwal", location: "Lokasi", rsvp: "Konfirmasi", contact: "Kontak", feedback: "Masukan" };
 
 function focusAnchor(e: MouseEvent<HTMLAnchorElement>) {
   const id = e.currentTarget.hash.slice(1);
@@ -82,6 +83,19 @@ function BackToTop({ shown }: { shown: boolean }) {
   >
     <ArrowUp size={20} aria-hidden="true" />
   </a>;
+}
+
+function Contact({ contact }: { contact: EventRecord["contact"] }) {
+  const phone = parseContactPhone(contact.phone);
+  if (!phone) return null;
+  const whatsapp = contact.channel === "whatsapp";
+  return <div className={styles.contactPanel}>
+    <h3>{contact.name}</h3>
+    <p>{phone.local}</p>
+    <ButtonLink href={whatsapp ? `https://wa.me/${phone.international}` : `tel:${phone.local}`} target={whatsapp ? "_blank" : undefined} rel={whatsapp ? "noopener noreferrer" : undefined}>
+      {whatsapp ? "Hubungi via WhatsApp" : "Telepon PIC"}{whatsapp && <><ArrowUpRight size={18} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></>}
+    </ButtonLink>
+  </div>;
 }
 
 function Location({ event }: { event: EventRecord }) {
@@ -189,6 +203,10 @@ export function EventExperience({ event, preview = false }: { event: EventRecord
               {event.rsvp_closes_at && <p className={styles.deadline}>Batas konfirmasi: {formatDate(event.rsvp_closes_at, event.timezone)}, {formatTime(event.rsvp_closes_at, event.timezone)} WIB.</p>}
               {!event.rsvp_enabled ? <Notice>Konfirmasi kehadiran belum dibuka oleh panitia.</Notice> : now !== null && !rsvpOpen && !preview ? <Notice>Konfirmasi kehadiran telah ditutup. Informasi acara tetap dapat dibaca di halaman ini.</Notice> : <RsvpForm key={event.id} event={event} disabled={preview || !rsvpOpen} onSaved={() => setRsvpSaved(true)} />}
               <noscript><p>Aktifkan JavaScript untuk mengirim konfirmasi kehadiran.</p></noscript>
+            </>}
+            {section.key === "contact" && event.contact && <>
+              <div id="contact-heading"><SectionHeading title="Ada pertanyaan tentang acara?"><p>Hubungi PIC untuk informasi lebih lanjut.</p></SectionHeading></div>
+              <Contact contact={event.contact} />
             </>}
             {section.key === "feedback" && <>
               <div id="feedback-heading"><SectionHeading title="Bagaimana pengalaman Anda?"><p>Bagikan masukan untuk membantu pertemuan berikutnya.</p></SectionHeading></div>

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { EMBED_ERROR, parseLocationEmbed } from "./location-embed";
+import { parseContactPhone } from "./contact-phone";
 
 const text = (max: number) => z.string().trim().max(max);
 /** `new URL()` throws on malformed input, so a half-typed address must never reach it. */
@@ -15,6 +16,11 @@ const srcsetSchema = z.array(z.object({ width: z.number().int().min(16).max(8000
 export const photoFrameSchema = z.object({ x: z.number().min(0).max(100), y: z.number().min(0).max(100), zoom: z.number().min(1).max(3) });
 const timestamp = z.iso.datetime({ offset: true });
 const optionalTime = timestamp.nullable();
+const contactSchema = z.object({
+  name: text(150),
+  phone: text(30).refine(value => !value || parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890."),
+  channel: z.enum(["whatsapp", "phone"]),
+});
 export const eventBaseSchema = z.object({
   id: z.uuid(), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),
   status: z.enum(["draft", "published", "archived"]), title: text(180).min(1), subtitle: text(250),
@@ -23,7 +29,8 @@ export const eventBaseSchema = z.object({
   venue_name: text(200), address: text(1000), location_url: httpsUrl, location_embed_url: locationEmbed.default(""), location_display: z.enum(["manual", "embed"]).optional(), arrival_notes: text(2000),
   review_url: httpsUrl, review_enabled: z.boolean(), rsvp_enabled: z.boolean(), rsvp_closes_at: optionalTime,
   feedback_enabled: z.boolean(), feedback_opens_at: optionalTime,
-  sections: z.array(z.object({ key: z.enum(["about", "agenda", "location", "rsvp", "feedback"]), enabled: z.boolean() })).max(5),
+  contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp" }),
+  sections: z.array(z.object({ key: z.enum(["about", "agenda", "location", "rsvp", "contact", "feedback"]), enabled: z.boolean() })).max(6),
   topics: z.array(z.object({ title: text(200).min(1), description: text(1500) })).max(20),
   agenda: z.array(z.object({ id: z.uuid(), starts_at: timestamp, ends_at: timestamp, title: text(200).min(1), description: text(1500), sort_order: z.number().int().min(0).max(1000) })).max(100),
   feedback_questions: z.array(z.object({ id: z.uuid(), label: text(500).min(1), kind: z.enum(["rating", "choice", "text"]), required: z.boolean(), options: z.array(text(200).min(1)).max(20), sort_order: z.number().int().min(0).max(1000) })).max(30),
@@ -40,6 +47,7 @@ export const eventBaseSchema = z.object({
 export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
   const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: "custom", path, message });
   if (new Set(event.sections.map(s => s.key)).size !== event.sections.length) issue(["sections"], "Bagian tidak boleh berulang.");
+  if (Boolean(event.contact.name) !== Boolean(event.contact.phone)) issue([event.contact.name ? "contact.phone" : "contact.name"], "Isi nama dan nomor PIC bersama-sama.");
   if (event.ends_at && Date.parse(event.ends_at) <= Date.parse(event.starts_at)) issue(["ends_at"], "Waktu selesai harus setelah waktu mulai.");
   for (const [index, item] of event.agenda.entries()) if (Date.parse(item.ends_at) <= Date.parse(item.starts_at)) issue(["agenda", index, "ends_at"], "Waktu selesai harus setelah waktu mulai.");
   for (const key of ["agenda", "feedback_questions", "gallery"] as const) if (new Set(event[key].map(i => i.id)).size !== event[key].length) issue([key], "ID tidak boleh berulang.");

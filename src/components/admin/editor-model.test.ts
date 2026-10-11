@@ -100,6 +100,15 @@ describe("sections", () => {
     expect(completed.sections.map(section => section.key)).toEqual(sectionKeys);
     expect(completed.sections.every(section => !section.enabled)).toBe(true);
   });
+  it("adds a hidden contact after RSVP for legacy events and defaults its fields", () => {
+    const legacy = createSeedEvent();
+    legacy.sections = legacy.sections.filter(section => section.key !== "contact");
+    delete (legacy as Partial<EventRecord>).contact;
+    const completed = completeSections(legacy);
+    expect(completed.contact).toEqual({ name: "", phone: "", channel: "whatsapp" });
+    expect(completed.sections.map(section => section.key)).toEqual(sectionKeys);
+    expect(completed.sections.find(section => section.key === "contact")?.enabled).toBe(false);
+  });
   it("reports a missing hero photo so the editorial fallback is not a surprise", () => {
     expect(hiddenSectionReasons(createSeedEvent()).some(reason => reason.includes("foto latar"))).toBe(true);
     const withHero: EventRecord = { ...createSeedEvent(), hero: { url: "https://example.test/hero.webp", alt: "Panggung", srcset: [], focus: "center", text_position: "left" } };
