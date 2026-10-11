@@ -22,6 +22,25 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+it("saves the PIC and chosen telephone channel", async () => {
+  render(<EventEditor event={createSeedEvent()} />);
+  fireEvent.change(screen.getByRole("textbox", { name: "Nama PIC" }), { target: { value: "Koordinator Acara" } });
+  fireEvent.change(screen.getByRole("textbox", { name: "Nomor PIC" }), { target: { value: "0812 3456 7890" } });
+  fireEvent.click(screen.getByRole("radio", { name: "Telepon" }));
+  fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
+  await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+  const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+  expect(JSON.parse(init.body).contact).toEqual({ name: "Koordinator Acara", phone: "0812 3456 7890", channel: "phone" });
+});
+
+it("flags incomplete PIC details without sending the event", () => {
+  render(<EventEditor event={createSeedEvent()} />);
+  fireEvent.change(screen.getByRole("textbox", { name: "Nama PIC" }), { target: { value: "Koordinator Acara" } });
+  fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
+  expect(screen.getByRole("textbox", { name: "Nomor PIC" }).getAttribute("aria-invalid")).toBe("true");
+  expect(globalThis.fetch).not.toHaveBeenCalled();
+});
+
 it("requires an embed before saving the selected map mode", () => {
   render(<EventEditor event={createSeedEvent()} />);
   fireEvent.click(screen.getByRole("radio", { name: "Peta sematan Google" }));

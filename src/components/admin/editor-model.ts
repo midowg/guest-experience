@@ -2,7 +2,7 @@ import type { EventRecord, HeroTextPosition, ImageFocus, ImageSource, SectionKey
 import { getFraming, normalizeEvent } from "@/lib/hero-framing";
 import { parseLocationEmbed } from "@/lib/location-embed";
 
-export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", agenda: "Rundown", location: "Lokasi", rsvp: "Konfirmasi kehadiran", feedback: "Survei feedback" };
+export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", agenda: "Rundown", location: "Lokasi", rsvp: "Konfirmasi kehadiran", contact: "Kontak", feedback: "Survei feedback" };
 export const sectionKeys = Object.keys(sectionLabels) as SectionKey[];
 
 /**
@@ -34,7 +34,13 @@ export function srcsetAttribute(srcset: ImageSource[]): string | undefined {
 }
 
 export function completeSections(event: EventRecord): EventRecord {
-  return { ...normalizeEvent(event), sections: [...event.sections, ...sectionKeys.filter(key => !event.sections.some(section => section.key === key)).map(key => ({ key, enabled: false }))] };
+  const sections = [...event.sections];
+  for (const key of sectionKeys) {
+    if (sections.some(section => section.key === key)) continue;
+    const index = key === "contact" ? sections.findIndex(section => section.key === "feedback") : -1;
+    sections.splice(index < 0 ? sections.length : index, 0, { key, enabled: false });
+  }
+  return { ...normalizeEvent(event), sections };
 }
 
 export function moveItem<T>(items: T[], index: number, direction: -1 | 1): T[] {
@@ -62,6 +68,7 @@ export function prepareEvent(event: EventRecord): EventRecord {
 export function hiddenSectionReasons(event: EventRecord): string[] {
   const reasons = event.sections.filter(section => !section.enabled).map(section => `${sectionLabels[section.key]} disembunyikan melalui pengaturan bagian.`);
   if (!event.rsvp_enabled) reasons.push("Formulir RSVP dinonaktifkan.");
+  if (event.sections.some(section => section.key === "contact" && section.enabled) && (!event.contact?.name || !event.contact.phone)) reasons.push("Kontak PIC belum diisi; bagian kontak tidak ditampilkan.");
   if (!event.feedback_enabled) reasons.push("Survei feedback dinonaktifkan.");
   else if (!event.feedback_questions.length) reasons.push("Survei belum memiliki pertanyaan; lengkapi atau nonaktifkan sebelum publikasi.");
   if (!event.review_enabled || !event.review_url) reasons.push("Tautan review tidak ditampilkan sampai diaktifkan dan diisi.");

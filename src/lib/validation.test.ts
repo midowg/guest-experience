@@ -31,6 +31,26 @@ describe('event publication', () => {
   });
   it('blocks unsafe URL schemes and duplicate sections', () => { expect(eventSchema.safeParse({...createSeedEvent(), location_url:'javascript:alert(1)'}).success).toBe(false); const e=createSeedEvent(); e.sections.push(e.sections[0]); expect(eventSchema.safeParse(e).success).toBe(false); });
 });
+describe('PIC contact', () => {
+  it('keeps older events valid without a contact field', () => {
+    const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
+    delete legacy.contact;
+    expect(eventSchema.parse(legacy).contact).toEqual({ name: '', phone: '', channel: 'whatsapp' });
+  });
+  it('accepts an empty contact, local 08, and older +62 contacts for either channel', () => {
+    expect(eventSchema.safeParse(createSeedEvent()).success).toBe(true);
+    for (const channel of ['whatsapp', 'phone'] as const) for (const phone of ['0812 3456 7890', '+62 812 3456 7890', '6281234567890']) expect(eventSchema.safeParse({ ...createSeedEvent(), contact: { name: 'Panitia', phone, channel } }).success).toBe(true);
+  });
+  it('requires the name and number together and rejects invalid numbers', () => {
+    for (const contact of [
+      { name: 'Panitia', phone: '', channel: 'phone' },
+      { name: '', phone: '+62 812 3456 7890', channel: 'phone' },
+      { name: 'Panitia', phone: '071234567890', channel: 'whatsapp' },
+      { name: 'Panitia', phone: '+62;alert(1)', channel: 'phone' },
+    ]) expect(eventSchema.safeParse({ ...createSeedEvent(), contact }).success).toBe(false);
+  });
+});
+
 describe('URL fields never throw on partial input', () => {
   // Typing an address a character at a time must mark the field, not crash the editor.
   const partials = ['h', 'ht', 'http', 'https', 'https:', 'https:/', 'https://', 'contoh.test', '://x', 'https://', ' '];

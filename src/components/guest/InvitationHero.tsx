@@ -5,13 +5,13 @@ import { ArrowDown, ArrowRight, CalendarDays, Check, Clock3, MapPin } from "luci
 import { ButtonLink } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { getFraming } from "@/lib/hero-framing";
-import type { SectionKey } from "@/lib/types";
+import type { EventContact, SectionKey } from "@/lib/types";
 import type { HeroPreviewEvent } from "@/lib/hero-preview";
 import { imageSrcSet } from "./Gallery";
 import styles from "./guest.module.css";
 
-export function visibleSections(event: HeroPreviewEvent) {
-  return event.sections.filter(section => section.enabled && (section.key !== "feedback" || (event.feedback_enabled && event.feedback_questions.length > 0)));
+export function visibleSections(event: HeroPreviewEvent & { contact?: EventContact }) {
+  return event.sections.filter(section => section.enabled && (section.key !== "feedback" || (event.feedback_enabled && event.feedback_questions.length > 0)) && (section.key !== "contact" || (!!event.contact?.name && !!event.contact.phone)));
 }
 export function TimeRange({ start, end, timezone }: { start: string; end: string | null; timezone: string }) {
   if (!start) return <>Waktu belum diisi</>;

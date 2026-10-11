@@ -12,7 +12,8 @@ export function createSeedEvent(): EventRecord {
     location_url: "https://maps.app.goo.gl/ctLcnKszth9QX83AA", location_embed_url: "", location_display: "manual",
     arrival_notes: "", review_url: "", review_enabled: false, rsvp_enabled: true, rsvp_closes_at: null,
     feedback_enabled: false, feedback_opens_at: null,
-    sections: ["about", "agenda", "location", "rsvp", "feedback"].map(key => ({ key: key as EventRecord["sections"][number]["key"], enabled: true })),
+    contact: { name: "", phone: "", channel: "whatsapp" },
+    sections: ["about", "agenda", "location", "rsvp", "contact", "feedback"].map(key => ({ key: key as EventRecord["sections"][number]["key"], enabled: key !== "contact" })),
     topics: [
       { title: "Agenda kegiatan", description: "Meninjau seluruh rangkaian kegiatan yang direncanakan dalam Grand Design." },
       { title: "Penyederhanaan kegiatan", description: "Mengidentifikasi kegiatan yang dapat digabung atau disederhanakan." },
