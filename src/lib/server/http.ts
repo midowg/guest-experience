@@ -59,6 +59,8 @@ export function databaseError(error: { message: string; code?: string }): never 
     EVENT_IS_FEATURED: [409, "Acara ini sedang tayang di halaman utama. Hentikan tayangnya terlebih dahulu, lalu hapus."],
     INVALID_ANSWERS: [422, "Jawaban tidak sesuai pertanyaan aktif. Muat ulang halaman."],
     INVALID_EVENT: [422, "Konten acara tidak valid."],
+    INVALID_INVITATION: [422, "Data undangan tamu tidak valid."],
+    INVITATION_LIMIT: [409, "Batas 1000 undangan per acara tercapai."],
   };
   if (messages[error.message]) { const [status, message] = messages[error.message]; throw new ServiceError(status, message); }
   if (error.code === "23505") throw new ServiceError(409, "Slug atau ID sudah digunakan. Gunakan nilai berbeda.");

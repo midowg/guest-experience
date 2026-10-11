@@ -17,7 +17,7 @@ export function TimeRange({ start, end, timezone }: { start: string; end: string
   if (!start) return <>Waktu belum diisi</>;
   return <><time dateTime={start}>{formatTime(start, timezone)}</time>{end && <> – <time dateTime={end}>{formatTime(end, timezone)}</time></>} WIB</>;
 }
-export function InvitationHero({ event, rsvpSaved = false, inert = false }: { event: HeroPreviewEvent; rsvpSaved?: boolean; inert?: boolean }) {
+export function InvitationHero({ event, rsvpSaved = false, inert = false, invitee }: { event: HeroPreviewEvent; rsvpSaved?: boolean; inert?: boolean; invitee?: string }) {
   const sections = visibleSections(event);
   const has = (key: SectionKey) => sections.some(section => section.key === key);
   const cta = has("rsvp") && event.rsvp_enabled && !rsvpSaved ? { href: "#rsvp", label: "Konfirmasi kehadiran" } : has("location") ? { href: "#location", label: "Menuju lokasi" } : has("agenda") ? { href: "#agenda", label: "Lihat jadwal acara" } : null;
@@ -34,6 +34,7 @@ export function InvitationHero({ event, rsvpSaved = false, inert = false }: { ev
   const intro = <>
     <p className="eyebrow">Undangan pertemuan</p>
     {event.greeting && <p className={styles.greeting}>{event.greeting}</p>}
+    {invitee && <p className={styles.greeting}>Kepada {invitee}</p>}
     <h1 id="event-title">{event.title}</h1>
     {event.subtitle && <p className={styles.subtitle}>{event.subtitle}</p>}
   </>;

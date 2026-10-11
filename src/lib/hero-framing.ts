@@ -8,7 +8,7 @@ export function getFraming(hero: HeroImage): HeroFraming {
   return hero.framing ?? defaultFraming(hero.focus);
 }
 export function normalizeEvent(event: EventRecord): EventRecord {
-  return { ...event, contact: event.contact ?? { name: "", phone: "", channel: "whatsapp" }, location_embed_url: event.location_embed_url ?? "", location_display: event.location_display ?? (event.location_embed_url ? "embed" : "manual"), hero: { ...event.hero, framing: getFraming(event.hero) } };
+  return { ...event, invitation_mode: event.invitation_mode ?? "open", contact: event.contact ?? { name: "", phone: "", channel: "whatsapp" }, location_embed_url: event.location_embed_url ?? "", location_display: event.location_display ?? (event.location_embed_url ? "embed" : "manual"), hero: { ...event.hero, framing: getFraming(event.hero) } };
 }
 export function dragFrame(frame: PhotoFrame, dx: number, dy: number, width: number, height: number, naturalWidth: number, naturalHeight: number): PhotoFrame {
   const cover = Math.max(width / naturalWidth, height / naturalHeight) * frame.zoom;

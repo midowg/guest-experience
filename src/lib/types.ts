@@ -1,4 +1,5 @@
 export type EventStatus = "draft" | "published" | "archived";
+export type InvitationMode = "open" | "personal";
 export type SectionKey = "about" | "agenda" | "location" | "rsvp" | "contact" | "feedback";
 export type SectionConfig = { key: SectionKey; enabled: boolean };
 export type AgendaItem = { id: string; starts_at: string; ends_at: string; title: string; description: string; sort_order: number };
@@ -21,6 +22,7 @@ export type EventRecord = {
   starts_at: string; ends_at: string | null; timezone: string;
   venue_name: string; address: string; location_url: string; location_embed_url: string; location_display: "manual" | "embed"; arrival_notes: string;
   review_url: string; review_enabled: boolean; rsvp_enabled: boolean; rsvp_closes_at: string | null;
+  invitation_mode: InvitationMode;
   feedback_enabled: boolean; feedback_opens_at: string | null;
   contact: EventContact;
   sections: SectionConfig[]; topics: DiscussionTopic[]; agenda: AgendaItem[];
@@ -34,7 +36,7 @@ export type RsvpInput = {
   phone: string; email: string; has_allergy: boolean; allergy_details: string;
   consent: boolean; website: string; idempotency_key: string;
 };
-export type RsvpRecord = Omit<RsvpInput, "website" | "consent"> & { id: string; event_id: string; created_at: string };
+export type RsvpRecord = Omit<RsvpInput, "website" | "consent" | "idempotency_key"> & { id: string; event_id: string; invitation_id?: string | null; created_at: string; updated_at?: string };
 export type FeedbackInput = { idempotency_key: string; website: string; answers: { question_id: string; value: string }[] };
 export type FeedbackRecord = { id: string; event_id: string; created_at: string; answers: { question_id: string; label: string; value: string }[] };
 export type ApiResult<T = undefined> = { ok: true; data?: T; message: string } | { ok: false; message: string; fieldErrors?: Record<string, string[]> };

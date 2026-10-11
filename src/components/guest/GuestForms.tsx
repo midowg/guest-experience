@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Button, Field, Notice } from "@/components/ui";
-import type { EventRecord } from "@/lib/types";
+import type { EventRecord, RsvpRecord } from "@/lib/types";
 import { feedbackSchema, rsvpSchema } from "@/lib/validation";
 import { feedbackErrors, feedbackIsOpen, firstErrors, postSubmission, rsvpIsOpen, submissionIdentity, type FieldErrors, type RetryIdentity } from "./form-utils";
 import styles from "./guest.module.css";
@@ -61,11 +61,12 @@ function ErrorSummary({ summary, state, prefix }: { summary: SummaryRef; state: 
   </div>;
 }
 
-export function RsvpForm({ event, disabled, onSaved }: { event: EventRecord; disabled: boolean; onSaved: () => void }) {
+export function RsvpForm({ event, disabled, onSaved, invitation }: { event: EventRecord; disabled: boolean; onSaved: () => void; invitation?: { name: string; token: string; rsvp: RsvpRecord | null } }) {
   const { state, summary, fail, send } = useSubmission();
   const { pending, saved, errors } = state;
-  const [attendance, setAttendance] = useState("yes");
-  const [allergy, setAllergy] = useState(false);
+  const [currentRsvp, setCurrentRsvp] = useState(invitation?.rsvp ?? null);
+  const [attendance, setAttendance] = useState(invitation?.rsvp?.attendance ?? "yes");
+  const [allergy, setAllergy] = useState(invitation?.rsvp?.has_allergy ?? false);
   const field = (name: string, label: string, control: ReactNode, hint?: string) => <Field name={`rsvp-${name}`} label={label} error={errors[name]} hint={hint}>{control}</Field>;
   const a11y = (name: string, hint = false) => ({ id: `rsvp-${name}`, "aria-invalid": !!errors[name], "aria-describedby": [hint ? `rsvp-${name}-hint` : "", errors[name] ? `rsvp-${name}-error` : ""].filter(Boolean).join(" ") || undefined });
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -77,16 +78,20 @@ export function RsvpForm({ event, disabled, onSaved }: { event: EventRecord; dis
     if (!result.success) return fail("Periksa kembali isian yang ditandai.", Object.fromEntries(result.error.issues.map(issue => [String(issue.path[0]), issue.message])));
     const { idempotency_key: ignored, ...payload } = result.data;
     void ignored;
-    await send(`/api/events/${encodeURIComponent(event.slug)}/rsvp`, payload, onSaved);
+    await send(invitation ? `/api/events/${encodeURIComponent(event.slug)}/i/${encodeURIComponent(invitation.token)}/rsvp` : `/api/events/${encodeURIComponent(event.slug)}/rsvp`, payload, () => {
+      if (invitation) setCurrentRsvp({ ...(currentRsvp ?? { id: "", event_id: event.id, created_at: new Date().toISOString() }), ...result.data, updated_at: new Date().toISOString() });
+      onSaved();
+    });
   }
-  if (saved) return <div ref={summary} tabIndex={-1}><Notice tone="success"><h3>Konfirmasi Anda tersimpan.</h3><p>Terima kasih. Jawaban ini merupakan RSVP, bukan pencatatan kehadiran di lokasi.</p></Notice><p className={styles.privacy}>Jawaban tidak disimpan di browser. Setelah halaman dimuat ulang, status pengiriman tidak ditampilkan kembali.</p></div>;
+  if (saved) return <div ref={summary} tabIndex={-1}><Notice tone="success"><h3>Konfirmasi Anda tersimpan.</h3><p>Terima kasih. Jawaban ini merupakan RSVP, bukan pencatatan kehadiran di lokasi.</p></Notice>{invitation ? <p className={styles.privacy}>Buka kembali tautan ini untuk memuat dan memperbarui jawaban sampai batas RSVP.</p> : <p className={styles.privacy}>Jawaban tidak disimpan di browser. Setelah halaman dimuat ulang, status pengiriman tidak ditampilkan kembali.</p>}</div>;
   return <form onSubmit={submit} noValidate aria-label="Konfirmasi kehadiran" aria-busy={pending} className={styles.form}>
     <ErrorSummary summary={summary} state={state} prefix="rsvp" />
+    {invitation && <Notice>{currentRsvp ? "Jawaban sebelumnya telah dimuat. Anda dapat mengubahnya sampai batas RSVP." : "Tautan ini khusus untuk undangan Anda. RSVP ini bukan check-in di lokasi."} Siapa pun yang memiliki tautan ini dapat melihat dan memperbarui jawaban; jangan bagikan sembarangan.</Notice>}
     <fieldset disabled={disabled || pending} className={styles.fields}>
       <legend className="sr-only">Data konfirmasi kehadiran</legend>
       <div className={styles.formGrid}>
-        {field("name", "Nama lengkap", <input {...a11y("name")} className="input" name="name" autoComplete="name" required minLength={2} maxLength={150} />)}
-        {field("organization", "Instansi / komunitas", <input {...a11y("organization")} className="input" name="organization" autoComplete="organization" required maxLength={200} />)}
+        {field("name", "Nama lengkap", <input {...a11y("name")} className="input" name="name" autoComplete="name" defaultValue={invitation?.rsvp?.name ?? invitation?.name ?? ""} required minLength={2} maxLength={150} />)}
+        {field("organization", "Instansi / komunitas", <input {...a11y("organization")} className="input" name="organization" autoComplete="organization" defaultValue={invitation?.rsvp?.organization ?? ""} required maxLength={200} />)}
       </div>
       <fieldset id="rsvp-attendance" className={styles.choiceGroup} aria-describedby={errors.attendance ? "rsvp-attendance-error" : undefined}>
         <legend>Apakah Anda akan hadir?</legend>
@@ -94,23 +99,23 @@ export function RsvpForm({ event, disabled, onSaved }: { event: EventRecord; dis
         {errors.attendance && <p id="rsvp-attendance-error" className="field-error">{errors.attendance}</p>}
       </fieldset>
       <div className={styles.formGrid}>
-        {field("phone", "Nomor HP (opsional)", <input {...a11y("phone")} className="input" name="phone" type="tel" autoComplete="tel" maxLength={30} />)}
-        {field("email", "Email (opsional)", <input {...a11y("email")} className="input" name="email" type="email" autoComplete="email" maxLength={254} />)}
+        {field("phone", "Nomor HP (opsional)", <input {...a11y("phone")} className="input" name="phone" type="tel" autoComplete="tel" defaultValue={invitation?.rsvp?.phone ?? ""} maxLength={30} />)}
+        {field("email", "Email (opsional)", <input {...a11y("email")} className="input" name="email" type="email" autoComplete="email" defaultValue={invitation?.rsvp?.email ?? ""} maxLength={254} />)}
       </div>
       {attendance === "yes" && <>
         <fieldset id="rsvp-has_allergy" className={styles.choiceGroup}>
           <legend>Apakah ada alergi makanan?</legend>
           <div className={styles.choices}><label><input type="radio" name="has_allergy" value="no" checked={!allergy} onChange={() => setAllergy(false)} /> Tidak ada</label><label><input type="radio" name="has_allergy" value="yes" checked={allergy} onChange={() => setAllergy(true)} /> Ada</label></div>
         </fieldset>
-        {allergy && field("allergy_details", "Alergi yang perlu diperhatikan", <textarea {...a11y("allergy_details", true)} className="textarea" name="allergy_details" rows={3} maxLength={1000} required />, "Sebutkan hanya informasi yang diperlukan untuk persiapan konsumsi.")}
+        {allergy && field("allergy_details", "Alergi yang perlu diperhatikan", <textarea {...a11y("allergy_details", true)} className="textarea" name="allergy_details" rows={3} defaultValue={invitation?.rsvp?.allergy_details ?? ""} maxLength={1000} required />, "Sebutkan hanya informasi yang diperlukan untuk persiapan konsumsi.")}
       </>}
       <div>
         <label className={styles.consent}><input {...a11y("consent", true)} type="checkbox" name="consent" value="yes" required /><span>Saya menyetujui penggunaan data ini oleh panitia untuk koordinasi acara dan kebutuhan konsumsi.</span></label>
-        <p id="rsvp-consent-hint" className={styles.privacy}>Jawaban dan informasi alergi tidak ditampilkan kepada tamu lain. Kontak bersifat opsional.</p>
+        <p id="rsvp-consent-hint" className={styles.privacy}>Kontak bersifat opsional. Panel pengelolaan saat ini tanpa login, sehingga jawaban dan informasi alergi dapat diakses oleh siapa pun yang membuka panel admin.</p>
         {errors.consent && <p id="rsvp-consent-error" className="field-error">{errors.consent}</p>}
       </div>
       <Honeypot prefix="rsvp" />
-      <Button type="submit" disabled={disabled || pending}>{pending ? "Menyimpan konfirmasi…" : "Kirim konfirmasi"}</Button>
+      <Button type="submit" disabled={disabled || pending}>{pending ? "Menyimpan konfirmasi…" : currentRsvp ? "Perbarui konfirmasi" : "Kirim konfirmasi"}</Button>
     </fieldset>
     <span role="status" className="sr-only">{pending ? "Konfirmasi sedang dikirim." : ""}</span>
   </form>;

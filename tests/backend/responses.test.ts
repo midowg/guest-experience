@@ -14,10 +14,12 @@ describe("CSV export", () => {
   });
   it("keeps ordinary text unchanged", () => expect(csvCell("Werkudara")).toBe('"Werkudara"'));
   it("emits one header plus one row per RSVP", () => {
-    const row: RsvpRecord = { id: "a", event_id: "b", name: "Tamu", organization: "Panitia", attendance: "yes", phone: "", email: "", has_allergy: false, allergy_details: "", idempotency_key: "k", created_at: "2026-10-12T11:00:00Z" };
+    const row: RsvpRecord = { id: "a", event_id: "b", name: "Tamu", organization: "Panitia", attendance: "yes", phone: "", email: "", has_allergy: false, allergy_details: "", created_at: "2026-10-12T11:00:00Z" };
     const lines = rsvpCsv([row]).trimEnd().split("\r\n");
     expect(lines).toHaveLength(2);
     expect(lines[1]).toContain('"Hadir"');
+    expect(lines[0]).toContain('"Jenis RSVP"');
+    expect(lines[1]).toContain('"Umum"');
     expect(lines[1]).not.toContain("undefined");
   });
 });

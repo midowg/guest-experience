@@ -19,7 +19,7 @@ Di Vercel, isi keempatnya pada Project Settings → Environment Variables untuk 
 
 ## 2. Migrasi database
 
-Instalasi baru: jalankan migrasi `supabase/migrations/` secara berurutan (001–007). Instalasi yang sudah sampai 006: jalankan hanya `202610090007_server_managed_admin.sql`. Jangan jalankan ulang seed karena bisa menimpa konten yang sudah diedit.
+Instalasi baru: jalankan seluruh migrasi `supabase/migrations/` menurut nama berkas secara berurutan. Untuk instalasi yang sudah berjalan, terapkan hanya berkas migrasi yang belum diterapkan, termasuk `202610110001_personal_invitations.sql` bila ingin memakai undangan per tamu. Jangan jalankan ulang seed karena bisa menimpa konten yang sudah diedit. **Migrasi personal belum diterapkan oleh perubahan kode ini**; tinjau dan minta izin tersendiri sebelum menerapkannya ke Supabase remote.
 
 Tinjau isinya sebelum diterapkan. Setelah disetujui, jalankan melalui Supabase Dashboard → SQL Editor, atau Supabase CLI. Migrasi membuat tabel acara, rundown, pertanyaan survei, RSVP, feedback, audit, dan pembatasan laju, lengkap dengan Row Level Security.
 
@@ -62,6 +62,14 @@ Halaman `/dev-preview` adalah pemeriksaan tampilan untuk pengembangan dan tidak 
 6. Pantau jawaban di tab RSVP dan Feedback; unduh CSV bila diperlukan.
 
 Mengubah slug membuat tautan lama tidak berlaku. Semua waktu memakai WIB.
+
+### Undangan per tamu
+
+Acara lama tetap memakai mode **Tautan umum**. Untuk undangan individual, pilih **Tautan per tamu** pada editor, simpan, lalu buka tab **Undangan tamu** untuk menambah nama sapaan satu per satu (maksimal 1000 per acara). Salin tautan aktif setiap tamu dan bagikan secara individual; jangan kirim daftar tautan. Halaman `/e/<slug>` tetap menampilkan informasi acara, tetapi RSVP umumnya disembunyikan. Undangan individual memakai `/e/<slug>/i/<token>`: siapa pun yang memegang tautan dapat melihat jawaban sebelumnya dan mengubah RSVP sampai batas penutupan. Ini **bukan** verifikasi identitas ataupun check-in di lokasi. Cabut tautan untuk menonaktifkannya; terbitkan ulang untuk mengganti token lama tanpa menghapus RSVP.
+
+**Penting:** `/admin` dan API pengelolaannya tetap tanpa login. Siapa pun di domain publik dapat membaca nama, token, dan data RSVP, membuat/mencabut tautan, atau mengubah acara. Token acak hanya mengaitkan jawaban ke undangan; token tidak membuat data rahasia selama admin publik. Feedback tetap anonim dan tidak diikat ke tamu. Formulir saat ini menanyakan *alergi makanan*, bukan seluruh pantangan diet.
+
+Untuk kembali ke alur umum, ubah mode menjadi **Tautan umum** dan simpan. Data undangan serta jawaban personal lama tetap tersimpan dan diberi label berbeda pada RSVP/CSV; tautan personal berhenti berlaku saat mode umum aktif. Mengaktifkan kembali mode personal memungkinkan tautan aktif dipakai lagi, kecuali sudah dicabut atau diterbitkan ulang. Jangan menghapus acara bila ingin menjaga data RSVP. Migrasi personal perlu diterapkan sebelum mode ini dipakai; jika belum, pengelolaan tautan dan RSVP personal akan gagal.
 
 ## 6. Spesifikasi foto
 

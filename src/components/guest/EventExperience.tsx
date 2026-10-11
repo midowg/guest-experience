@@ -6,7 +6,7 @@ import { Button, ButtonLink, Notice, SectionHeading } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { parseLocationEmbed } from "@/lib/location-embed";
 import { parseContactPhone } from "@/lib/contact-phone";
-import type { EventRecord, SectionKey } from "@/lib/types";
+import type { EventRecord, RsvpRecord, SectionKey } from "@/lib/types";
 import { Gallery, venuePhotos } from "./Gallery";
 import { InvitationHero, TimeRange, visibleSections } from "./InvitationHero";
 import { FeedbackForm, RsvpForm } from "./GuestForms";
@@ -134,7 +134,7 @@ function Location({ event }: { event: EventRecord }) {
   </div>;
 }
 
-export function EventExperience({ event, preview = false }: { event: EventRecord; preview?: boolean }) {
+export function EventExperience({ event, preview = false, invitation }: { event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; rsvp: RsvpRecord | null } }) {
   const [now, setNow] = useState<number | null>(null);
   const [rsvpSaved, setRsvpSaved] = useState(false);
   // The opening should arrive uninterrupted, so the bar stays away until the guest scrolls.
@@ -183,7 +183,7 @@ export function EventExperience({ event, preview = false }: { event: EventRecord
       </div>
     </header>
     <main id="event-content" tabIndex={-1}>
-      <InvitationHero event={event} rsvpSaved={rsvpSaved} />
+      <InvitationHero event={event} rsvpSaved={rsvpSaved} invitee={invitation?.name} />
       {sections.map((section, index) => <RevealSection id={section.key} key={section.key} className={`${styles.section} ${section.key === "rsvp" ? styles.rsvpSection : ""}`.trimEnd()} labelledBy={`${section.key}-heading`}>
         <div className={`container ${styles.sectionGrid}`}>
           <div className={styles.sectionLabel}><span className={styles.sectionNumber}>{String(index + 1).padStart(2, "0")}</span><p className="eyebrow">{sectionLabels[section.key]}</p></div>
@@ -201,7 +201,7 @@ export function EventExperience({ event, preview = false }: { event: EventRecord
             {section.key === "rsvp" && <>
               <div id="rsvp-heading"><SectionHeading title="Kabarkan kehadiran Anda."><p>Konfirmasi membantu panitia mempersiapkan pertemuan dan konsumsi.</p></SectionHeading></div>
               {event.rsvp_closes_at && <p className={styles.deadline}>Batas konfirmasi: {formatDate(event.rsvp_closes_at, event.timezone)}, {formatTime(event.rsvp_closes_at, event.timezone)} WIB.</p>}
-              {!event.rsvp_enabled ? <Notice>Konfirmasi kehadiran belum dibuka oleh panitia.</Notice> : now !== null && !rsvpOpen && !preview ? <Notice>Konfirmasi kehadiran telah ditutup. Informasi acara tetap dapat dibaca di halaman ini.</Notice> : <RsvpForm key={event.id} event={event} disabled={preview || !rsvpOpen} onSaved={() => setRsvpSaved(true)} />}
+              {event.invitation_mode === "personal" && !invitation && !preview ? <Notice>Konfirmasi kehadiran menggunakan tautan undangan masing-masing tamu. Mintalah tautan pribadi kepada panitia; halaman ini tetap memuat informasi acara.</Notice> : !event.rsvp_enabled || (now !== null && !rsvpOpen && !preview) ? <Notice>{invitation?.rsvp ? <>RSVP tersimpan: {invitation.rsvp.attendance === "yes" ? "Hadir" : "Tidak hadir"}. Konfirmasi tidak dapat diubah saat ini.</> : event.rsvp_enabled ? "Konfirmasi kehadiran telah ditutup. Informasi acara tetap dapat dibaca di halaman ini." : "Konfirmasi kehadiran belum dibuka oleh panitia."}</Notice> : <RsvpForm key={event.id} event={event} disabled={preview || !rsvpOpen} invitation={invitation} onSaved={() => setRsvpSaved(true)} />}
               <noscript><p>Aktifkan JavaScript untuk mengirim konfirmasi kehadiran.</p></noscript>
             </>}
             {section.key === "contact" && event.contact && <>

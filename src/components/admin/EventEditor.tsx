@@ -122,6 +122,9 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         {text("title", "Judul acara", 180)}{text("subtitle", "Subjudul", 250)}
         <div className={styles.grid}>{text("slug", "Alamat singkat undangan (slug)", 100, false, "Huruf kecil, angka, dan tanda hubung. Mengubah slug membuat tautan lama tidak berlaku.")}{text("organizer", "Penyelenggara", 250)}</div>
         {text("greeting", "Sapaan", 150)}{text("introduction", "Isi undangan", 5000, true)}{text("closing", "Penutup", 2000, true)}
+        {choices("invitation_mode", "Cara mengundang", [{ value: "open", label: "Tautan umum" }, { value: "personal", label: "Tautan per tamu" }], event.invitation_mode, value => update("invitation_mode", value), value => value === "personal" ? "RSVP hanya lewat tautan per tamu; halaman umum tetap dapat dibaca." : "Formulir RSVP tersedia di halaman umum bila diaktifkan.")}
+        {event.invitation_mode === "personal" && <Notice tone="warning">Panel admin belum memakai login. Siapa pun yang dapat membuka domain ini dapat melihat daftar tamu dan tautannya, serta menggunakan tautan untuk mengubah RSVP. Tautan personal bukan verifikasi identitas.</Notice>}
+        <ButtonLink href={`/admin/events/${event.id}/invitations`} variant="secondary">Kelola undangan tamu</ButtonLink>
       </div>)}
       {block("schedule", "Waktu acara", <div className={styles.grid}>{time("starts_at", "Mulai (WIB)")}{time("ends_at", "Selesai (WIB)", "Opsional bila waktu selesai belum ditentukan.")}</div>)}
       {block("hero", "Foto latar pembuka", <div className="stack">

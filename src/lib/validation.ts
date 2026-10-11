@@ -28,6 +28,7 @@ export const eventBaseSchema = z.object({
   starts_at: timestamp, ends_at: optionalTime, timezone: z.literal("Asia/Jakarta"),
   venue_name: text(200), address: text(1000), location_url: httpsUrl, location_embed_url: locationEmbed.default(""), location_display: z.enum(["manual", "embed"]).optional(), arrival_notes: text(2000),
   review_url: httpsUrl, review_enabled: z.boolean(), rsvp_enabled: z.boolean(), rsvp_closes_at: optionalTime,
+  invitation_mode: z.enum(["open", "personal"]).default("open"),
   feedback_enabled: z.boolean(), feedback_opens_at: optionalTime,
   contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp" }),
   sections: z.array(z.object({ key: z.enum(["about", "agenda", "location", "rsvp", "contact", "feedback"]), enabled: z.boolean() })).max(6),

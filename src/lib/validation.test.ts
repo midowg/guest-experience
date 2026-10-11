@@ -31,6 +31,18 @@ describe('event publication', () => {
   });
   it('blocks unsafe URL schemes and duplicate sections', () => { expect(eventSchema.safeParse({...createSeedEvent(), location_url:'javascript:alert(1)'}).success).toBe(false); const e=createSeedEvent(); e.sections.push(e.sections[0]); expect(eventSchema.safeParse(e).success).toBe(false); });
 });
+describe('invitation mode', () => {
+  it('defaults older event documents to open', () => {
+    const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
+    delete legacy.invitation_mode;
+    expect(eventSchema.parse(legacy).invitation_mode).toBe('open');
+  });
+  it('accepts personal mode and rejects unknown modes', () => {
+    expect(eventSchema.parse({ ...createSeedEvent(), invitation_mode: 'personal' }).invitation_mode).toBe('personal');
+    expect(eventSchema.safeParse({ ...createSeedEvent(), invitation_mode: 'private' }).success).toBe(false);
+  });
+});
+
 describe('PIC contact', () => {
   it('keeps older events valid without a contact field', () => {
     const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;

@@ -14,11 +14,12 @@ export function SetupNotice() {
     <ButtonLink href="/admin" variant="secondary">Periksa koneksi</ButtonLink>
   </section>;
 }
-export function EventNavigation({ event, current }: { event: EventRecord; current: "edit" | "responses" | "feedback" | "preview" }) {
+export function EventNavigation({ event, current }: { event: EventRecord; current: "edit" | "invitations" | "responses" | "feedback" | "preview" }) {
   const base = `/admin/events/${event.id}`;
   return <nav className={styles.navigation} aria-label="Pengelolaan acara">
     <a href="/admin">Semua acara</a>
     {current !== "edit" && <a href={base}>Edit acara</a>}
+    <a href={`${base}/invitations`} aria-current={current === "invitations" ? "page" : undefined}>Undangan tamu</a>
     <a href={`${base}/responses`} aria-current={current === "responses" ? "page" : undefined}>RSVP</a>
     <a href={`${base}/feedback`} aria-current={current === "feedback" ? "page" : undefined}>Feedback</a>
     <a href={`${base}/preview`} aria-current={current === "preview" ? "page" : undefined}>Preview tersimpan</a>

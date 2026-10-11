@@ -46,9 +46,9 @@ export function ResponsesView({ eventId, initial, initialFilters }: { eventId: s
     {!initial.items.length ? <Notice>Belum ada konfirmasi yang sesuai filter ini.</Notice> : <>
       <div className={styles.tableWrap}><table className={styles.table}>
         <caption>Konfirmasi kehadiran tamu</caption>
-        <thead><tr><th scope="col">Waktu</th><th scope="col">Nama</th><th scope="col">Instansi</th><th scope="col">Kehadiran</th><th scope="col">Kontak</th><th scope="col">Alergi</th></tr></thead>
+        <thead><tr><th scope="col">Waktu</th><th scope="col">Nama</th><th scope="col">Jenis</th><th scope="col">Instansi</th><th scope="col">Kehadiran</th><th scope="col">Kontak</th><th scope="col">Alergi</th></tr></thead>
         <tbody>{initial.items.map(row => <tr key={row.id}>
-          <td>{timestamp(row.created_at)}</td><td>{row.name}</td><td>{row.organization}</td>
+          <td>{timestamp(row.updated_at ?? row.created_at)}</td><td>{row.name}</td><td>{row.invitation_id ? "Personal" : "Umum"}</td><td>{row.organization}</td>
           <td>{row.attendance === "yes" ? "Hadir" : "Tidak hadir"}</td>
           <td>{row.phone || row.email ? <>{row.phone && <p>{row.phone}</p>}{row.email && <p>{row.email}</p>}</> : <span className="muted">Tidak diisi</span>}</td>
           <td>{row.has_allergy ? row.allergy_details : <span className="muted">Tidak ada</span>}</td>

@@ -10,7 +10,7 @@ export function createSeedEvent(): EventRecord {
     starts_at: "2026-10-12T18:00:00+07:00", ends_at: "2026-10-12T21:00:00+07:00", timezone: "Asia/Jakarta",
     venue_name: "PT. Werkudara", address: "Jl. Bhinneka No. 09 RT 03/RW 07, Pondok, Condong Catur, Depok, Sleman",
     location_url: "https://maps.app.goo.gl/ctLcnKszth9QX83AA", location_embed_url: "", location_display: "manual",
-    arrival_notes: "", review_url: "", review_enabled: false, rsvp_enabled: true, rsvp_closes_at: null,
+    arrival_notes: "", review_url: "", review_enabled: false, rsvp_enabled: true, rsvp_closes_at: null, invitation_mode: "open",
     feedback_enabled: false, feedback_opens_at: null,
     contact: { name: "", phone: "", channel: "whatsapp" },
     sections: ["about", "agenda", "location", "rsvp", "contact", "feedback"].map(key => ({ key: key as EventRecord["sections"][number]["key"], enabled: key !== "contact" })),

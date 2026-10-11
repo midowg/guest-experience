@@ -19,6 +19,13 @@ export async function submitPublicResponse(kind: "rsvp" | "feedback", slug: stri
   return { id: data };
 }
 
+export async function submitInvitationResponse(slug: string, token: string, payload: Record<string, unknown>) {
+  const { data, error } = await createPrivilegedClient().rpc("submit_invitation_rsvp", { p_slug: slug, p_token: token, p_payload: payload, p_hash: payloadHash(payload) });
+  if (error) databaseError(error);
+  if (typeof data !== "string") throw new ServiceError(503, "Jawaban belum dapat dipastikan tersimpan. Coba kirim kembali.");
+  return { id: data };
+}
+
 async function eventExists(client: Awaited<ReturnType<typeof createPrivilegedClient>>, eventId: string) {
   const { data, error } = await client.from("events").select("id").eq("id", eventId).maybeSingle();
   if (error) databaseError(error);
@@ -29,7 +36,7 @@ export async function listRsvps(eventId: string, options: { page: number; attend
   const client = await createPrivilegedClient();
   await eventExists(client, eventId);
   const page = Math.max(1, options.page);
-  let query = client.from("rsvps").select("id,event_id,name,organization,attendance,phone,email,has_allergy,allergy_details,created_at", { count: "exact" }).eq("event_id", eventId);
+  let query = client.from("rsvps").select("id,event_id,invitation_id,name,organization,attendance,phone,email,has_allergy,allergy_details,created_at,updated_at", { count: "exact" }).eq("event_id", eventId);
   if (options.attendance) query = query.eq("attendance", options.attendance);
   // Escaped so a search term cannot alter the filter expression.
   if (options.q) { const term = options.q.replace(/[\\%_,()]/g, ch => `\\${ch}`); query = query.or(`name.ilike.%${term}%,organization.ilike.%${term}%`); }
@@ -41,7 +48,7 @@ export async function listRsvps(eventId: string, options: { page: number; attend
 export async function listAllRsvps(eventId: string): Promise<RsvpRecord[]> {
   const client = await createPrivilegedClient();
   await eventExists(client, eventId);
-  const { data, error } = await client.from("rsvps").select("id,event_id,name,organization,attendance,phone,email,has_allergy,allergy_details,created_at").eq("event_id", eventId).order("created_at", { ascending: false }).limit(5000);
+  const { data, error } = await client.from("rsvps").select("id,event_id,invitation_id,name,organization,attendance,phone,email,has_allergy,allergy_details,created_at,updated_at").eq("event_id", eventId).order("created_at", { ascending: false }).limit(5000);
   if (error) databaseError(error);
   return (data ?? []) as RsvpRecord[];
 }
@@ -74,7 +81,7 @@ export function csvCell(value: string) {
 }
 
 export function rsvpCsv(rows: RsvpRecord[]) {
-  const header = ["Waktu", "Nama", "Instansi", "Kehadiran", "Telepon", "Email", "Alergi", "Catatan alergi"];
-  const lines = rows.map(row => [row.created_at, row.name, row.organization, row.attendance === "yes" ? "Hadir" : "Tidak hadir", row.phone, row.email, row.has_allergy ? "Ada" : "Tidak ada", row.allergy_details].map(csvCell).join(","));
+  const header = ["Waktu", "Nama", "Instansi", "Kehadiran", "Telepon", "Email", "Alergi", "Catatan alergi", "Jenis RSVP", "Terakhir diperbarui"];
+  const lines = rows.map(row => [row.created_at, row.name, row.organization, row.attendance === "yes" ? "Hadir" : "Tidak hadir", row.phone, row.email, row.has_allergy ? "Ada" : "Tidak ada", row.allergy_details, row.invitation_id ? "Personal" : "Umum", row.updated_at ?? row.created_at].map(csvCell).join(","));
   return `﻿${[header.map(csvCell).join(","), ...lines].join("\r\n")}\r\n`;
 }
