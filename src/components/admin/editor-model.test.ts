@@ -100,12 +100,20 @@ describe("sections", () => {
     expect(completed.sections.map(section => section.key)).toEqual(sectionKeys);
     expect(completed.sections.every(section => !section.enabled)).toBe(true);
   });
+  it("adds one hidden team section to older events without duplicating it", () => {
+    const legacy = createSeedEvent();
+    legacy.sections = legacy.sections.filter(section => section.key !== "team");
+    const completed = completeSections(legacy);
+    expect(completed.sections.filter(section => section.key === "team")).toEqual([{ key: "team", enabled: false }]);
+    expect(completed.sections.findIndex(section => section.key === "team")).toBeLessThan(completed.sections.findIndex(section => section.key === "rsvp"));
+    expect(completeSections(completed).sections.filter(section => section.key === "team")).toHaveLength(1);
+  });
   it("adds a hidden contact after RSVP for legacy events and defaults its fields", () => {
     const legacy = createSeedEvent();
     legacy.sections = legacy.sections.filter(section => section.key !== "contact");
     delete (legacy as Partial<EventRecord>).contact;
     const completed = completeSections(legacy);
-    expect(completed.contact).toEqual({ name: "", phone: "", channel: "whatsapp" });
+    expect(completed.contact).toEqual({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "" });
     expect(completed.sections.map(section => section.key)).toEqual(sectionKeys);
     expect(completed.sections.find(section => section.key === "contact")?.enabled).toBe(false);
   });

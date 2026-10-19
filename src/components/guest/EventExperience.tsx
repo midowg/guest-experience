@@ -7,13 +7,13 @@ import { formatDate, formatTime } from "@/lib/format";
 import { parseLocationEmbed } from "@/lib/location-embed";
 import { parseContactPhone } from "@/lib/contact-phone";
 import type { EventRecord, RsvpRecord, SectionKey } from "@/lib/types";
-import { Gallery, venuePhotos } from "./Gallery";
+import { Gallery, imageSrcSet, venuePhotos } from "./Gallery";
 import { InvitationHero, TimeRange, visibleSections } from "./InvitationHero";
 import { FeedbackForm, RsvpForm } from "./GuestForms";
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
 import styles from "./guest.module.css";
 
-const sectionLabels: Record<SectionKey, string> = { about: "Acara", agenda: "Jadwal", location: "Lokasi", rsvp: "Konfirmasi", contact: "Kontak", feedback: "Masukan" };
+const sectionLabels: Record<SectionKey, string> = { about: "Acara", agenda: "Jadwal", location: "Lokasi", team: "Our Team", rsvp: "Konfirmasi", contact: "Kontak", feedback: "Masukan" };
 
 function focusAnchor(e: MouseEvent<HTMLAnchorElement>) {
   const id = e.currentTarget.hash.slice(1);
@@ -91,7 +91,9 @@ function Contact({ contact }: { contact: EventRecord["contact"] }) {
   const whatsapp = contact.channel === "whatsapp";
   return <div className={styles.contactPanel}>
     <h3>{contact.name}</h3>
-    <p>{phone.local}</p>
+    {contact.role && <p className={styles.contactDetail}>{contact.role}</p>}
+    {contact.organization && <p className={styles.contactDetail}>{contact.organization}</p>}
+    <p className={styles.contactPhone}>{phone.local}</p>
     <ButtonLink href={whatsapp ? `https://wa.me/${phone.international}` : `tel:${phone.local}`} target={whatsapp ? "_blank" : undefined} rel={whatsapp ? "noopener noreferrer" : undefined}>
       {whatsapp ? "Hubungi via WhatsApp" : "Telepon PIC"}{whatsapp && <><ArrowUpRight size={18} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></>}
     </ButtonLink>
@@ -198,6 +200,19 @@ export function EventExperience({ event, preview = false, invitation }: { event:
               {event.agenda.length === 0 ? <p>Rundown belum tersedia. Silakan periksa kembali undangan ini.</p> : <ol className={styles.agenda}>{[...event.agenda].sort((a, b) => a.sort_order - b.sort_order).map(item => <li key={item.id}><div className={styles.agendaTime}><TimeRange start={item.starts_at} end={item.ends_at} timezone={event.timezone} /></div><div><h3>{item.title}</h3>{item.description && <p className={styles.multiline}>{item.description}</p>}</div></li>)}</ol>}
             </>}
             {section.key === "location" && <><div id="location-heading"><SectionHeading title="Sampai jumpa di lokasi." /></div><Location event={event} /></>}
+            {section.key === "team" && <>
+              <div id="team-heading"><SectionHeading title="Our Team"><p>Everyone Belongs</p></SectionHeading></div>
+              {event.team_image?.url && <figure className={styles.teamPhoto}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={event.team_image.url} {...imageSrcSet(event.team_image.srcset, "(max-width: 960px) 100vw, 852px")} alt={event.team_image.alt} loading="lazy" referrerPolicy="no-referrer" />
+              </figure>}
+              <div className={styles.teamCopy}>
+                <p>Di Werkudara, Anda akan bertemu dengan rekan-rekan dari berbagai latar belakang, termasuk rekan Tuli dan pengguna kursi roda.</p>
+                <p>Kami terbiasa bekerja bersama dalam lingkungan yang inklusif dan saling menghargai.</p>
+                <p>Silakan berinteraksi seperti biasa. Jika membutuhkan bantuan komunikasi, tim kami dengan senang hati akan membantu.</p>
+                <p>Kami percaya setiap orang memiliki peran dan nilai yang berarti.</p>
+              </div>
+            </>}
             {section.key === "rsvp" && <>
               <div id="rsvp-heading"><SectionHeading title="Kabarkan kehadiran Anda."><p>Konfirmasi membantu panitia mempersiapkan pertemuan dan konsumsi.</p></SectionHeading></div>
               {event.rsvp_closes_at && <p className={styles.deadline}>Batas konfirmasi: {formatDate(event.rsvp_closes_at, event.timezone)}, {formatTime(event.rsvp_closes_at, event.timezone)} WIB.</p>}
@@ -205,11 +220,11 @@ export function EventExperience({ event, preview = false, invitation }: { event:
               <noscript><p>Aktifkan JavaScript untuk mengirim konfirmasi kehadiran.</p></noscript>
             </>}
             {section.key === "contact" && event.contact && <>
-              <div id="contact-heading"><SectionHeading title=""><p>Hubungi PIC untuk informasi lebih lanjut.</p></SectionHeading></div>
+              <div id="contact-heading"><SectionHeading title={event.contact.heading || "Ada pertanyaan?"}><p className={styles.multiline}>{event.contact.description || "Hubungi PIC untuk informasi lebih lanjut."}</p></SectionHeading></div>
               <Contact contact={event.contact} />
             </>}
             {section.key === "feedback" && <>
-              <div id="feedback-heading"><SectionHeading title="Bagaimana pengalaman Anda?"><p>Bagikan masukan untuk membantu pertemuan berikutnya.</p></SectionHeading></div>
+              <div id="feedback-heading"><SectionHeading title="Bagaimana pengalaman Anda?"><p className={styles.multiline}>{event.feedback_description || "Bagikan masukan untuk membantu pertemuan berikutnya."}</p></SectionHeading></div>
               {preview || feedbackOpen ? <FeedbackForm key={event.id} event={event} disabled={preview || !feedbackOpen} /> : <Notice>{event.feedback_opens_at ? <>Survei dibuka pada {formatDate(event.feedback_opens_at, event.timezone)}, {formatTime(event.feedback_opens_at, event.timezone)} WIB.</> : "Survei sedang disiapkan."}</Notice>}
               <noscript><p>Aktifkan JavaScript untuk mengirim masukan.</p></noscript>
             </>}
@@ -220,7 +235,13 @@ export function EventExperience({ event, preview = false, invitation }: { event:
         <div className="container">
           {event.closing && <p className={`${styles.closingText} ${styles.multiline}`}>{event.closing}</p>}
           {event.organizer && <p className={styles.organizer}>{event.organizer}</p>}
-          {event.review_enabled && event.review_url && <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">Bagikan ulasan Anda <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></ButtonLink>}
+          {event.review_enabled && event.review_url && <>
+            {(event.review_heading || event.review_description) && <div className={styles.reviewCallout}>
+              {event.review_heading && <h2>{event.review_heading}</h2>}
+              {event.review_description && <p className={styles.multiline}>{event.review_description}</p>}
+            </div>}
+            <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">{event.review_button_label || "Bagikan ulasan Anda"} <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></ButtonLink>
+          </>}
           <div className={styles.footerLine}><span>WERKUDARA · Guest experience</span><a href="#event-content" onClick={focusAnchor}>Kembali ke atas <ArrowUp size={15} aria-hidden="true" /></a></div>
         </div>
       </footer>

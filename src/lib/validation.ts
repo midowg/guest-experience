@@ -20,6 +20,8 @@ const contactSchema = z.object({
   name: text(150),
   phone: text(30).refine(value => !value || parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890."),
   channel: z.enum(["whatsapp", "phone"]),
+  heading: text(200).default(""), description: text(1000).default(""),
+  role: text(150).default(""), organization: text(200).default(""),
 });
 export const eventBaseSchema = z.object({
   id: z.uuid(), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),
@@ -27,11 +29,12 @@ export const eventBaseSchema = z.object({
   organizer: text(250), greeting: text(150), introduction: text(5000), closing: text(2000),
   starts_at: timestamp, ends_at: optionalTime, timezone: z.literal("Asia/Jakarta"),
   venue_name: text(200), address: text(1000), location_url: httpsUrl, location_embed_url: locationEmbed.default(""), location_display: z.enum(["manual", "embed"]).optional(), arrival_notes: text(2000),
-  review_url: httpsUrl, review_enabled: z.boolean(), rsvp_enabled: z.boolean(), rsvp_closes_at: optionalTime,
+  review_url: httpsUrl, review_enabled: z.boolean(), review_heading: text(200).default(""), review_description: text(1000).default(""), review_button_label: text(100).default(""), rsvp_enabled: z.boolean(), rsvp_closes_at: optionalTime,
   invitation_mode: z.enum(["open", "personal"]).default("open"),
-  feedback_enabled: z.boolean(), feedback_opens_at: optionalTime,
-  contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp" }),
-  sections: z.array(z.object({ key: z.enum(["about", "agenda", "location", "rsvp", "contact", "feedback"]), enabled: z.boolean() })).max(6),
+  feedback_enabled: z.boolean(), feedback_opens_at: optionalTime, feedback_description: text(1000).default(""),
+  contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "" }),
+  team_image: z.object({ url: httpsUrl, alt: text(300).default(""), srcset: srcsetSchema.default([]) }).default({ url: "", alt: "", srcset: [] }),
+  sections: z.array(z.object({ key: z.enum(["about", "agenda", "location", "rsvp", "contact", "feedback", "team"]), enabled: z.boolean() })).max(7),
   topics: z.array(z.object({ title: text(200).min(1), description: text(1500) })).max(20),
   agenda: z.array(z.object({ id: z.uuid(), starts_at: timestamp, ends_at: timestamp, title: text(200).min(1), description: text(1500), sort_order: z.number().int().min(0).max(1000) })).max(100),
   feedback_questions: z.array(z.object({ id: z.uuid(), label: text(500).min(1), kind: z.enum(["rating", "choice", "text"]), required: z.boolean(), options: z.array(text(200).min(1)).max(20), sort_order: z.number().int().min(0).max(1000) })).max(30),
@@ -54,6 +57,8 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
   for (const key of ["agenda", "feedback_questions", "gallery"] as const) if (new Set(event[key].map(i => i.id)).size !== event[key].length) issue([key], "ID tidak boleh berulang.");
   for (const [index, q] of event.feedback_questions.entries()) if (q.kind === "choice" && (q.options.length < 2 || new Set(q.options).size !== q.options.length)) issue(["feedback_questions", index, "options"], "Isi minimal dua pilihan berbeda.");
   if (!event.hero.url && event.hero.srcset.length) issue(["hero", "srcset"], "Ukuran foto tidak boleh ada tanpa foto latar.");
+  if (event.team_image.url && !event.team_image.alt) issue(["team_image", "alt"], "Isi deskripsi foto tim.");
+  if (!event.team_image.url && event.team_image.srcset.length) issue(["team_image", "srcset"], "Ukuran foto tidak boleh ada tanpa foto tim.");
   const locationDisplay = event.location_display ?? (event.location_embed_url ? "embed" : "manual");
   if (locationDisplay === "embed" && !event.location_embed_url) issue(["location_embed_url"], "Isi kode sematan Google Maps.");
   if (event.status === "published") {

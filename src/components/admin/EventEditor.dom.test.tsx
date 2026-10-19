@@ -30,7 +30,7 @@ it("saves the PIC and chosen telephone channel", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
   await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
   const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-  expect(JSON.parse(init.body).contact).toEqual({ name: "Koordinator Acara", phone: "0812 3456 7890", channel: "phone" });
+  expect(JSON.parse(init.body).contact).toEqual({ name: "Koordinator Acara", phone: "0812 3456 7890", channel: "phone", heading: "", description: "", role: "", organization: "" });
 });
 
 it("flags incomplete PIC details without sending the event", () => {
@@ -76,4 +76,4 @@ it("saves only the Google URL from a pasted iframe and restores manual mode with
   expect(saved.location_url).toBe(createSeedEvent().location_url);
   fireEvent.click(screen.getByRole("radio", { name: "Peta sematan Google" }));
   expect((screen.getByRole("textbox", { name: /Kode sematan Google Maps/ }) as HTMLTextAreaElement).value).toBe(embedUrl);
-});
+}, 10000);

@@ -14,7 +14,7 @@ import { completeSections, heroTextPositionHints, heroTextPositionOptions, hidde
 import { PhotoField } from "./PhotoField";
 import styles from "./admin.module.css";
 
-type TextKey = "title" | "slug" | "subtitle" | "organizer" | "greeting" | "introduction" | "closing" | "venue_name" | "address" | "location_url" | "arrival_notes" | "review_url" | "venue_image_url" | "venue_image_alt" | "venue_image_credit";
+type TextKey = "title" | "slug" | "subtitle" | "organizer" | "greeting" | "introduction" | "closing" | "venue_name" | "address" | "location_url" | "arrival_notes" | "review_url" | "review_heading" | "review_description" | "review_button_label" | "feedback_description" | "venue_image_url" | "venue_image_alt" | "venue_image_credit";
 type TimeKey = "starts_at" | "ends_at" | "rsvp_closes_at" | "feedback_opens_at";
 type BooleanKey = "rsvp_enabled" | "feedback_enabled" | "review_enabled";
 
@@ -189,18 +189,29 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         <Button type="button" variant="secondary" disabled={event.gallery.length >= 12} onClick={() => update("gallery", [...event.gallery, { id: crypto.randomUUID(), url: "", alt: "", caption: "", sort_order: event.gallery.length, srcset: [] }])}>Tambah foto lokasi</Button>
         {photoHelp}
       </div>)}
+      {block("team", "Our Team", <div className="stack">
+        <p>Bagian ini memakai teks tetap tentang lingkungan kerja Werkudara yang inklusif. Aktifkan dan atur urutannya di bawah. Foto tim opsional; unggah hanya foto yang boleh ditampilkan publik. Panel admin belum memakai login.</p>
+        <PhotoField name="team_image.url" label="Foto tim (opsional)" value={event.team_image.url} srcset={event.team_image.srcset} onChange={value => update("team_image", { ...event.team_image, ...value, alt: value.url ? event.team_image.alt : "" })} error={errors["team_image.url"]?.join(" ")} />
+        {control("team_image.alt", "Deskripsi foto tim", event.team_image.alt, value => update("team_image", { ...event.team_image, alt: value }), { maxLength: 300, hint: "Wajib bila foto diisi. Jelaskan isi foto untuk pembaca layar." })}
+        {photoHelp}
+      </div>)}
       {block("sections", "Urutan & tampilan bagian", <div className="stack"><p>Sambutan dan penutup tetap berada di awal dan akhir undangan. Bagian pendukung dapat disembunyikan atau diurutkan.</p>
         {event.sections.map((section, index) => <div className={styles.sectionRow} key={section.key}><Check label={sectionLabels[section.key]} checked={section.enabled} onChange={enabled => update("sections", event.sections.map(item => item.key === section.key ? { ...item, enabled } : item))} /><OrderButtons label={sectionLabels[section.key]} index={index} length={event.sections.length} onMove={direction => update("sections", moveItem(event.sections, index, direction))} /></div>)}
       </div>)}
       {block("rsvp", "Penerimaan RSVP", <div className="stack"><p>RSVP adalah konfirmasi kehadiran tamu (dari bahasa Prancis, <i lang="fr">répondez s&apos;il vous plaît</i>). Formulir ini memungkinkan tamu mengabari panitia apakah mereka dapat hadir.</p>{toggle("rsvp_enabled", "Aktifkan penerimaan konfirmasi kehadiran")}{time("rsvp_closes_at", "Batas RSVP (WIB)", "Kosongkan jika tidak ada batas waktu. Bagian RSVP juga harus ditampilkan agar formulir terlihat.")}</div>)}
       {block("contact", "Kontak", <div className="stack">
         <p>Isi nama dan nomor untuk menampilkan bagian kontak tersendiri setelah konfirmasi. Aktifkan juga bagian Kontak pada pengaturan tampilan. Kontak tetap tersedia meskipun RSVP ditutup.</p>
+        {control("contact.heading", "Judul pengantar kontak (opsional)", event.contact.heading, value => update("contact", { ...event.contact, heading: value }), { maxLength: 200, hint: "Contoh: Any questions before your visit? Kosongkan untuk tampilan lama." })}
+        {control("contact.description", "Deskripsi kontak (opsional)", event.contact.description, value => update("contact", { ...event.contact, description: value }), { multiline: true, maxLength: 1000, hint: "Misalnya bantuan arah, akses, atau informasi kunjungan." })}
         {control("contact.name", "Nama PIC", event.contact.name, value => update("contact", { ...event.contact, name: value }), { maxLength: 150 })}
+        {control("contact.role", "Jabatan PIC (opsional)", event.contact.role, value => update("contact", { ...event.contact, role: value }), { maxLength: 150 })}
+        {control("contact.organization", "Organisasi PIC (opsional)", event.contact.organization, value => update("contact", { ...event.contact, organization: value }), { maxLength: 200 })}
         {control("contact.phone", "Nomor PIC", event.contact.phone, value => update("contact", { ...event.contact, phone: value }), { maxLength: 30, hint: "Cukup isi nomor HP 08, misalnya 0812 3456 7890. WhatsApp otomatis memakai kode 62; telepon tetap memakai 0. Kosongkan nama dan nomor untuk menyembunyikan kontak." })}
         {choices("contact.channel", "Cara menghubungi PIC", [{ value: "whatsapp", label: "WhatsApp" }, { value: "phone", label: "Telepon" }], event.contact.channel, value => update("contact", { ...event.contact, channel: value }), value => value === "whatsapp" ? "Tombol membuka percakapan WhatsApp." : "Tombol membuka aplikasi telepon.")}
       </div>)}
       {block("feedback_questions", "Survei feedback", <div className="stack">
         {toggle("feedback_enabled", "Aktifkan survei feedback")}{time("feedback_opens_at", "Mulai menerima feedback (WIB)", "Kosongkan agar tersedia setelah diaktifkan dan dipublikasikan.")}
+        {text("feedback_description", "Pengantar survei (opsional)", 1000, true, "Kosongkan untuk memakai pengantar yang sekarang. Survei aplikasi bukan pesan WhatsApp.")}
         <Notice>Gunakan pertanyaan yang telah disetujui GA. Jangan mengganti makna atau jenis pertanyaan yang telah menerima jawaban; buat acara duplikat untuk survei baru. Server dapat menolak perubahan pertanyaan yang sudah digunakan.</Notice>
         {event.feedback_questions.map((question, index) => {
           function change<K extends keyof FeedbackQuestion>(key: K, value: FeedbackQuestion[K]) { update("feedback_questions", event.feedback_questions.map(item => item.id === question.id ? { ...item, [key]: value } : item)); }
@@ -220,6 +231,9 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         <p>Menampilkan tombol “Bagikan ulasan Anda” di penutup undangan, menuju halaman ulasan Google Werkudara. Berbeda dari survei feedback: ulasan disimpan oleh Google, dapat tampil publik di Google, dan tidak masuk ke panel ini. Google dapat meminta tamu masuk ke akun Google.</p>
         <ol><li>Buka profil bisnis Google Werkudara yang Anda kelola, lalu pilih “Minta ulasan” atau bagikan tautan ulasan.</li><li>Salin tautan resmi dan tempel di bawah. Gunakan “Periksa tautan” untuk memastikan tujuan benar.</li><li>Aktifkan pilihan berikut, lalu simpan dan publikasikan acara. Tombol muncul di bagian penutup undangan.</li></ol>
         {toggle("review_enabled", "Tampilkan tombol ulasan Google")}
+        {text("review_heading", "Judul ulasan (opsional)", 200, false, "Kosongkan untuk tidak menampilkan judul tambahan.")}
+        {text("review_description", "Deskripsi ulasan (opsional)", 1000, true, "Contoh: Jika berkenan, bagikan pengalaman Anda melalui Google Review. Ulasan di Google dapat tampil publik.")}
+        {text("review_button_label", "Teks tombol ulasan (opsional)", 100, false, "Kosongkan untuk memakai Bagikan ulasan Anda.")}
         {text("review_url", "Tautan ulasan Google HTTPS", 8000, false, "Opsional. Tersedia untuk semua tamu tanpa menyaring skor feedback. Nonaktifkan pilihan di atas dan simpan untuk menyembunyikan tombol.")}
         {/^https:\/\/[^\s/]+/.test(event.review_url) && <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">Periksa tautan <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></ButtonLink>}
       </div>)}

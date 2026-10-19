@@ -71,12 +71,19 @@ Acara lama tetap memakai mode **Tautan umum**. Untuk undangan individual, pilih 
 
 Untuk kembali ke alur umum, ubah mode menjadi **Tautan umum** dan simpan. Data undangan serta jawaban personal lama tetap tersimpan dan diberi label berbeda pada RSVP/CSV; tautan personal berhenti berlaku saat mode umum aktif. Mengaktifkan kembali mode personal memungkinkan tautan aktif dipakai lagi, kecuali sudah dicabut atau diterbitkan ulang. Jangan menghapus acara bila ingin menjaga data RSVP. Migrasi personal perlu diterapkan sebelum mode ini dipakai; jika belum, pengelolaan tautan dan RSVP personal akan gagal.
 
+### Konten e-guide opsional
+
+Editor menyediakan pengantar kontak, jabatan dan organisasi PIC, pengantar survei, serta judul/deskripsi/teks tombol ulasan Google. Bila dibiarkan kosong, konten yang sudah ada tetap memakai tampilan dan redaksi sebelumnya. Kontak hanya tampil bila nama dan nomor diisi dan bagian Kontak diaktifkan; survei tetap memerlukan pertanyaan; ulasan Google tetap memerlukan URL HTTPS dan pilihan aktif. Survei internal bukan pesan WhatsApp kepada PIC.
+
+Bagian **Our Team** memakai teks tetap tentang lingkungan kerja Werkudara yang inklusif. Bagian ini **nonaktif secara default** termasuk pada acara lama. Aktifkan lewat Urutan & tampilan bagian. Foto tim boleh ditambahkan kemudian melalui unggahan atau tautan HTTPS; isi deskripsi foto untuk aksesibilitas. Tanpa foto, teks tetap dapat tampil. Foto dan teks yang dipublikasikan perlu persetujuan penyelenggara. Form RSVP hanya menanyakan alergi makanan, bukan seluruh preferensi makanan atau kebutuhan aksesibilitas; arahkan kebutuhan lain kepada PIC melalui kanal kontak yang tersedia. Penambahan konten ini disimpan pada JSONB acara dan tidak memerlukan migrasi database baru.
+
 ## 6. Spesifikasi foto
 
 | Keperluan | Ukuran | Rasio | Catatan |
 |---|---|---|---|
 | Foto latar pembuka | 2400 × 1500 px | 16:10 mendatar | Beri ruang lapang untuk teks |
 | Foto lokasi Werkudara | 1600 × 1000 px | 16:10 mendatar | Tampil di bawah peta; dipotong ke 4:3 di ponsel |
+| Foto tim | 1600 × 1000 px | 16:10 mendatar | Opsional di Our Team; tampil satu foto tanpa carousel |
 
 Foto lokasi dapat diisi lebih dari satu. Satu foto tampil diam; dua atau lebih bergantian otomatis dan dapat dihentikan tamu.
 

@@ -2,7 +2,7 @@ import type { EventRecord, HeroTextPosition, ImageFocus, ImageSource, SectionKey
 import { getFraming, normalizeEvent } from "@/lib/hero-framing";
 import { parseLocationEmbed } from "@/lib/location-embed";
 
-export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", agenda: "Rundown", location: "Lokasi", rsvp: "Konfirmasi kehadiran", contact: "Kontak", feedback: "Survei feedback" };
+export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", agenda: "Rundown", location: "Lokasi", team: "Our Team", rsvp: "Konfirmasi kehadiran", contact: "Kontak", feedback: "Survei feedback" };
 export const sectionKeys = Object.keys(sectionLabels) as SectionKey[];
 
 /**
@@ -37,7 +37,8 @@ export function completeSections(event: EventRecord): EventRecord {
   const sections = [...event.sections];
   for (const key of sectionKeys) {
     if (sections.some(section => section.key === key)) continue;
-    const index = key === "contact" ? sections.findIndex(section => section.key === "feedback") : -1;
+    const before = key === "contact" ? "feedback" : key === "team" ? "rsvp" : null;
+    const index = before ? sections.findIndex(section => section.key === before) : -1;
     sections.splice(index < 0 ? sections.length : index, 0, { key, enabled: false });
   }
   return { ...normalizeEvent(event), sections };
@@ -59,6 +60,7 @@ export function prepareEvent(event: EventRecord): EventRecord {
     // `focus` is no longer an editor control, so a saved event always carries the centred crop,
     // including older events whose stored value was top or bottom.
     hero: { ...event.hero, focus: HERO_FOCUS, framing: getFraming(event.hero), srcset: event.hero.url ? event.hero.srcset : [] },
+    team_image: { ...event.team_image, srcset: event.team_image.url ? event.team_image.srcset : [] },
     agenda: event.agenda.map((item, sort_order) => ({ ...item, sort_order })),
     gallery: event.gallery.filter(item => item.url.trim() || item.caption.trim() || item.alt.trim() || item.srcset.length).map((item, sort_order) => ({ ...item, sort_order })),
     feedback_questions: event.feedback_questions.map((item, sort_order) => ({ ...item, options: item.kind === "choice" ? item.options.map(option => option.trim()).filter(Boolean) : [], sort_order })),

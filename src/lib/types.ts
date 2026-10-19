@@ -1,10 +1,10 @@
 export type EventStatus = "draft" | "published" | "archived";
 export type InvitationMode = "open" | "personal";
-export type SectionKey = "about" | "agenda" | "location" | "rsvp" | "contact" | "feedback";
+export type SectionKey = "about" | "agenda" | "location" | "rsvp" | "contact" | "feedback" | "team";
 export type SectionConfig = { key: SectionKey; enabled: boolean };
 export type AgendaItem = { id: string; starts_at: string; ends_at: string; title: string; description: string; sort_order: number };
 export type DiscussionTopic = { title: string; description: string };
-export type EventContact = { name: string; phone: string; channel: "whatsapp" | "phone" };
+export type EventContact = { name: string; phone: string; channel: "whatsapp" | "phone"; heading: string; description: string; role: string; organization: string };
 export type FeedbackQuestion = { id: string; label: string; kind: "rating" | "choice" | "text"; required: boolean; options: string[]; sort_order: number };
 export type ImageSource = { width: number; url: string };
 export type ImageFocus = "top" | "center" | "bottom";
@@ -21,10 +21,10 @@ export type EventRecord = {
   organizer: string; greeting: string; introduction: string; closing: string;
   starts_at: string; ends_at: string | null; timezone: string;
   venue_name: string; address: string; location_url: string; location_embed_url: string; location_display: "manual" | "embed"; arrival_notes: string;
-  review_url: string; review_enabled: boolean; rsvp_enabled: boolean; rsvp_closes_at: string | null;
+  review_url: string; review_enabled: boolean; review_heading: string; review_description: string; review_button_label: string; rsvp_enabled: boolean; rsvp_closes_at: string | null;
   invitation_mode: InvitationMode;
-  feedback_enabled: boolean; feedback_opens_at: string | null;
-  contact: EventContact;
+  feedback_enabled: boolean; feedback_opens_at: string | null; feedback_description: string;
+  contact: EventContact; team_image: { url: string; alt: string; srcset: ImageSource[] };
   sections: SectionConfig[]; topics: DiscussionTopic[]; agenda: AgendaItem[];
   feedback_questions: FeedbackQuestion[];
   venue_image_url: string; venue_image_alt: string; venue_image_credit: string;

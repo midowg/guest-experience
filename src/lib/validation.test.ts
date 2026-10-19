@@ -47,7 +47,7 @@ describe('PIC contact', () => {
   it('keeps older events valid without a contact field', () => {
     const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
     delete legacy.contact;
-    expect(eventSchema.parse(legacy).contact).toEqual({ name: '', phone: '', channel: 'whatsapp' });
+    expect(eventSchema.parse(legacy).contact).toEqual({ name: '', phone: '', channel: 'whatsapp', heading: '', description: '', role: '', organization: '' });
   });
   it('accepts an empty contact, local 08, and older +62 contacts for either channel', () => {
     expect(eventSchema.safeParse(createSeedEvent()).success).toBe(true);
@@ -60,6 +60,34 @@ describe('PIC contact', () => {
       { name: 'Panitia', phone: '071234567890', channel: 'whatsapp' },
       { name: 'Panitia', phone: '+62;alert(1)', channel: 'phone' },
     ]) expect(eventSchema.safeParse({ ...createSeedEvent(), contact }).success).toBe(false);
+  });
+});
+
+describe('optional guide content', () => {
+  it('defaults new fields on an older document without changing its sections', () => {
+    const legacy = { ...createSeedEvent(), contact: { name: 'Raja', phone: '0811 2831 929', channel: 'whatsapp' } } as Partial<ReturnType<typeof createSeedEvent>>;
+    delete legacy.team_image;
+    delete legacy.review_heading;
+    delete legacy.review_description;
+    delete legacy.review_button_label;
+    delete legacy.feedback_description;
+    legacy.sections = legacy.sections?.filter(section => section.key !== 'team');
+    const parsed = eventSchema.parse(legacy);
+    expect(parsed.contact).toMatchObject({ heading: '', description: '', role: '', organization: '' });
+    expect(parsed.team_image).toEqual({ url: '', alt: '', srcset: [] });
+    expect(parsed.sections.some(section => section.key === 'team')).toBe(false);
+    expect(parsed.review_description).toBe('');
+  });
+  it('accepts custom descriptions and a team photo with alt text', () => {
+    const event = createSeedEvent();
+    event.contact = { ...event.contact, heading: 'Any questions?', role: 'Hospitality Specialist', organization: 'Werkudara Group' };
+    event.review_description = 'Bagikan pengalaman Anda.';
+    event.team_image = { url: 'https://example.test/team.jpg', alt: 'Tim Werkudara', srcset: [] };
+    expect(eventSchema.safeParse(event).success).toBe(true);
+    expect(eventSchema.safeParse({ ...event, team_image: { ...event.team_image, alt: '' } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, contact: { ...event.contact, description: 'a'.repeat(1001) } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, team_image: { ...event.team_image, url: 'javascript:alert(1)' } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, team_image: { url: '', alt: '', srcset: [{ width: 100, url: 'https://example.test/x.jpg' }] } }).success).toBe(false);
   });
 });
 

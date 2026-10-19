@@ -150,7 +150,14 @@
 .contactPanel { max-width: var(--reading); padding: var(--space-6); background: var(--color-surface); }
 .contactPanel h3 { margin-bottom: var(--space-2); }
 .contactPanel p { margin-bottom: var(--space-5); }
+.contactPanel .contactDetail { margin-bottom: var(--space-2); }
+.contactPanel .contactPhone { margin-top: var(--space-5); }
 .contactPanel a { overflow-wrap: anywhere; }
+.teamPhoto { margin: 0 0 var(--space-6); }
+.teamPhoto img { display: block; width: 100%; height: auto; }
+.teamCopy { max-width: var(--reading); display: grid; gap: var(--space-4); }
+.reviewCallout { max-width: var(--reading); margin-bottom: var(--space-5); }
+.reviewCallout h2 { margin-bottom: var(--space-4); }
 .deadline { margin-bottom: var(--space-5); font-size: var(--text-sm); }
 .form { max-width: var(--reading); }
 .fields { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: var(--space-5); }
