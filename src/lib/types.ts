@@ -1,6 +1,6 @@
 export type EventStatus = "draft" | "published" | "archived";
 export type InvitationMode = "open" | "personal";
-export type SectionKey = "about" | "agenda" | "location" | "rsvp" | "contact" | "feedback" | "team";
+export type SectionKey = "about" | "experience" | "agenda" | "location" | "rsvp" | "contact" | "feedback" | "team";
 export type SectionConfig = { key: SectionKey; enabled: boolean };
 export type AgendaItem = { id: string; starts_at: string; ends_at: string; title: string; description: string; sort_order: number };
 export type DiscussionTopic = { title: string; description: string };
@@ -16,6 +16,24 @@ export type PhotoFrame = { x: number; y: number; zoom: number };
 export type HeroFraming = { mobile: PhotoFrame; desktop: PhotoFrame };
 /** Optional framing preserves compatibility with previously saved invitations. */
 export type HeroImage = { url: string; alt: string; srcset: ImageSource[]; focus: ImageFocus; text_position: HeroTextPosition; framing?: HeroFraming };
+/** The form of the event. Audience is a separate choice: an internal event can take any form. */
+export type EventKind = "kunjungan" | "acara" | "program";
+export type EventAudience = "external" | "internal";
+export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar";
+export type EventTheme = { key: ThemeKey; corners: "square" | "soft" };
+export type EventPhase = "before" | "day" | "after";
+export type PhaseOverride = "auto" | EventPhase;
+export type PlainImage = { url: string; alt: string; srcset: ImageSource[] };
+export type MomentIcon = "coffee" | "utensils" | "gift" | "users" | "camera" | "music" | "map" | "sparkles" | "presentation" | "heart";
+export type ExperienceMoment = { icon: MomentIcon; title: string; description: string };
+/** Hospitality's story for the guest to read; never a form the guest fills in. */
+export type EventExperienceContent = { title: string; story: string; image: PlainImage; moments: ExperienceMoment[] };
+export type RouteStep = { title: string; description: string; image: PlainImage };
+export type RouteGuide = { map_image: PlainImage; steps: RouteStep[] };
+export type AfterContent = {
+  title: string; message: string; image: PlainImage;
+  collaboration: { enabled: boolean; title: string; description: string; button_label: string };
+};
 export type EventRecord = {
   id: string; slug: string; status: EventStatus; title: string; subtitle: string;
   organizer: string; greeting: string; introduction: string; closing: string;
@@ -29,6 +47,8 @@ export type EventRecord = {
   feedback_questions: FeedbackQuestion[];
   venue_image_url: string; venue_image_alt: string; venue_image_credit: string;
   hero: HeroImage; gallery: GalleryImage[];
+  event_kind: EventKind; audience: EventAudience; theme: EventTheme; phase_override: PhaseOverride;
+  experience: EventExperienceContent; route: RouteGuide; day_note: string; after: AfterContent;
   created_at: string; updated_at: string;
 };
 export type RsvpInput = {

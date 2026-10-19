@@ -4,7 +4,7 @@ import { eventBaseSchema, photoFrameSchema } from "./validation";
 export const heroPreviewSchema = eventBaseSchema.pick({
   hero: true, title: true, subtitle: true, greeting: true, starts_at: true, ends_at: true,
   timezone: true, venue_name: true, address: true, sections: true, rsvp_enabled: true,
-  feedback_enabled: true, feedback_questions: true,
+  feedback_enabled: true, feedback_questions: true, event_kind: true, theme: true,
 }).extend({
   title: z.string().max(180),
   starts_at: z.union([z.literal(""), z.iso.datetime({ offset: true })]),

@@ -6,6 +6,10 @@
   --color-background: var(--paper); --color-surface: var(--surface); --color-border: var(--sky);
   --color-danger: var(--burgundy); --color-success: var(--blue); --color-focus: var(--blue);
   --font-body: 'Source Sans Pro', sans-serif; --font-label: 'Montserrat', sans-serif;
+  /* Theme surface: the guest root overrides these per event (src/lib/themes.ts); admin keeps the defaults. */
+  --color-heading: var(--blue); --color-primary-hover: var(--blue-support); --color-on-primary: var(--paper);
+  --color-soft: var(--sky); --color-caption: #6c6765; --color-hero: var(--blue); --color-on-hero: var(--paper);
+  --color-hero-accent: var(--sky); --scrim-rgb: 10, 32, 62; --font-heading: var(--font-body); --heading-weight: 300;
   --ink-soft: #6c6765; --overlay: rgba(10, 32, 62, .62); --overlay-strong: rgba(10, 32, 62, .82);
   --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem; --space-5: 1.5rem;
   --space-6: 2rem; --space-7: 3rem; --space-8: 4rem; --space-9: 6rem;

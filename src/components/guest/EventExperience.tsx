@@ -6,14 +6,16 @@ import { Button, ButtonLink, Notice, SectionHeading } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { parseLocationEmbed } from "@/lib/location-embed";
 import { parseContactPhone } from "@/lib/contact-phone";
-import type { EventRecord, RsvpRecord, SectionKey } from "@/lib/types";
+import type { EventPhase, EventRecord, RsvpRecord, SectionKey } from "@/lib/types";
+import { themeStyle } from "@/lib/themes";
 import { Gallery, imageSrcSet, venuePhotos } from "./Gallery";
 import { InvitationHero, TimeRange, visibleSections } from "./InvitationHero";
 import { FeedbackForm, RsvpForm } from "./GuestForms";
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
+import { AfterPanel, ExperienceContent, RouteGuideContent, TodayPanel, teamPoints } from "./JourneyPanels";
 import styles from "./guest.module.css";
 
-const sectionLabels: Record<SectionKey, string> = { about: "Acara", agenda: "Jadwal", location: "Lokasi", team: "Our Team", rsvp: "Konfirmasi", contact: "Kontak", feedback: "Masukan" };
+const sectionLabels: Record<SectionKey, string> = { about: "Acara", experience: "Pengalaman", agenda: "Jadwal", location: "Lokasi", team: "Our Team", rsvp: "Konfirmasi", contact: "Kontak", feedback: "Masukan" };
 
 function focusAnchor(e: MouseEvent<HTMLAnchorElement>) {
   const id = e.currentTarget.hash.slice(1);
@@ -129,6 +131,7 @@ function Location({ event }: { event: EventRecord }) {
     {showEmbed && mapEmbedUrl ? <div className={styles.locationMapFrame}>
       {mapFailed ? <p>Peta tidak dapat ditampilkan. {event.location_url && <a href={event.location_url} target="_blank" rel="noopener noreferrer">Buka petunjuk lokasi di Google Maps</a>}.</p> : <iframe src={mapEmbedUrl} title={`Peta lokasi ${event.venue_name || "acara"}`} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" onError={() => setMapFailed(true)} />}
     </div> : address}
+    <RouteGuideContent event={event} />
     {photos.length > 0 && <div className={styles.venuePhotos}>
       <h3 className={styles.venuePhotosTitle}><Images size={18} aria-hidden="true" /> Foto lokasi {event.venue_name || "acara"}</h3>
       <Gallery images={photos} label={`Foto lokasi ${event.venue_name || "acara"}`} />
@@ -136,7 +139,14 @@ function Location({ event }: { event: EventRecord }) {
   </div>;
 }
 
-export function EventExperience({ event, preview = false, invitation }: { event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; rsvp: RsvpRecord | null } }) {
+/** After the event only what still serves the guest stays below the thank-you. */
+const afterSections = new Set<SectionKey>(["feedback", "contact"]);
+
+/**
+ * `phase` is decided by the page on the server (see lib/event-phase.ts) so the first paint is
+ * already the right part of the journey; components rendered without it show the invitation.
+ */
+export function EventExperience({ event, preview = false, invitation, phase = "before" }: { event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; rsvp: RsvpRecord | null }; phase?: EventPhase }) {
   const [now, setNow] = useState<number | null>(null);
   const [rsvpSaved, setRsvpSaved] = useState(false);
   // The opening should arrive uninterrupted, so the bar stays away until the guest scrolls.
@@ -168,10 +178,13 @@ export function EventExperience({ event, preview = false, invitation }: { event:
     window.addEventListener("resize", sync);
     return () => { window.removeEventListener("scroll", sync); window.removeEventListener("resize", sync); };
   }, []);
-  const sections = visibleSections(event);
+  const external = event.audience !== "internal";
+  const allSections = visibleSections(event);
+  const sections = phase === "after" ? allSections.filter(section => afterSections.has(section.key)) : allSections;
+  const rsvpVisible = allSections.some(section => section.key === "rsvp") && event.rsvp_enabled;
   const rsvpOpen = now !== null && rsvpIsOpen(event, now);
   const feedbackOpen = now !== null && feedbackIsOpen(event, now);
-  return <div className={styles.experience}>
+  return <div className={styles.experience} data-theme={event.theme?.key ?? "werkudara"} data-phase={phase} style={themeStyle(event.theme)}>
     <a className={styles.skipLink} href="#event-content" onClick={focusAnchor}>Lewati navigasi</a>
     {preview && <div className={styles.preview}><Notice>Pratinjau admin — undangan ini belum tentu dipublikasikan. Pengiriman RSVP dan survei dinonaktifkan.</Notice></div>}
     <header className={`${styles.siteHeader} ${headerShown ? styles.siteHeaderShown : styles.siteHeaderHidden}`}>
@@ -185,7 +198,9 @@ export function EventExperience({ event, preview = false, invitation }: { event:
       </div>
     </header>
     <main id="event-content" tabIndex={-1}>
-      <InvitationHero event={event} rsvpSaved={rsvpSaved} invitee={invitation?.name} />
+      {phase === "day" ? <TodayPanel event={event} invitee={invitation?.name} now={now} firstSection={sections[0]?.key} />
+        : phase === "after" ? <AfterPanel event={event} invitee={invitation?.name} />
+        : <InvitationHero event={event} rsvpSaved={rsvpSaved} invitee={invitation?.name} />}
       {sections.map((section, index) => <RevealSection id={section.key} key={section.key} className={`${styles.section} ${section.key === "rsvp" ? styles.rsvpSection : ""}`.trimEnd()} labelledBy={`${section.key}-heading`}>
         <div className={`container ${styles.sectionGrid}`}>
           <div className={styles.sectionLabel}><span className={styles.sectionNumber}>{String(index + 1).padStart(2, "0")}</span><p className="eyebrow">{sectionLabels[section.key]}</p></div>
@@ -194,6 +209,10 @@ export function EventExperience({ event, preview = false, invitation }: { event:
               <div id="about-heading"><SectionHeading title="Bertemu, berdiskusi, menyusun langkah bersama." /></div>
               {event.introduction && <p className={`${styles.introduction} ${styles.multiline}`}>{event.introduction}</p>}
               {event.topics.length > 0 && <div className={styles.topics}><h3>Pokok pembahasan</h3><ol>{event.topics.map((topic, topicIndex) => <li key={`${topicIndex}-${topic.title}`}><span className={styles.topicNumber}>{String(topicIndex + 1).padStart(2, "0")}</span><div><h4>{topic.title}</h4>{topic.description && <p className={styles.multiline}>{topic.description}</p>}</div></li>)}</ol></div>}
+            </>}
+            {section.key === "experience" && <>
+              <div id="experience-heading"><SectionHeading title={event.experience.title || "Ada yang sedang kami siapkan untuk Anda."} /></div>
+              <ExperienceContent event={event} rsvpVisible={rsvpVisible} />
             </>}
             {section.key === "agenda" && <>
               <div id="agenda-heading"><SectionHeading title="Rangkaian pertemuan"><p>Waktu ditampilkan dalam WIB.</p></SectionHeading></div>
@@ -206,12 +225,9 @@ export function EventExperience({ event, preview = false, invitation }: { event:
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={event.team_image.url} {...imageSrcSet(event.team_image.srcset, "(max-width: 960px) 100vw, 852px")} alt={event.team_image.alt} loading="lazy" referrerPolicy="no-referrer" />
               </figure>}
-              <div className={styles.teamCopy}>
-                <p>Di Werkudara, Anda akan bertemu dengan rekan-rekan dari berbagai latar belakang, termasuk rekan Tuli dan pengguna kursi roda.</p>
-                <p>Kami terbiasa bekerja bersama dalam lingkungan yang inklusif dan saling menghargai.</p>
-                <p>Silakan berinteraksi seperti biasa. Jika membutuhkan bantuan komunikasi, tim kami dengan senang hati akan membantu.</p>
-                <p>Kami percaya setiap orang memiliki peran dan nilai yang berarti.</p>
-              </div>
+              <ul className={styles.teamCopy}>
+                {teamPoints.map(({ icon: Icon, text }) => <li key={text}><span className={styles.momentIcon} aria-hidden="true"><Icon size={18} /></span><p>{text}</p></li>)}
+              </ul>
             </>}
             {section.key === "rsvp" && <>
               <div id="rsvp-heading"><SectionHeading title="Kabarkan kehadiran Anda."><p>Konfirmasi membantu panitia mempersiapkan pertemuan dan konsumsi.</p></SectionHeading></div>
@@ -233,9 +249,9 @@ export function EventExperience({ event, preview = false, invitation }: { event:
       </RevealSection>)}
       <footer className={styles.closing}>
         <div className="container">
-          {event.closing && <p className={`${styles.closingText} ${styles.multiline}`}>{event.closing}</p>}
+          {phase !== "after" && event.closing && <p className={`${styles.closingText} ${styles.multiline}`}>{event.closing}</p>}
           {event.organizer && <p className={styles.organizer}>{event.organizer}</p>}
-          {event.review_enabled && event.review_url && <>
+          {phase !== "after" && external && event.review_enabled && event.review_url && <>
             {(event.review_heading || event.review_description) && <div className={styles.reviewCallout}>
               {event.review_heading && <h2>{event.review_heading}</h2>}
               {event.review_description && <p className={styles.multiline}>{event.review_description}</p>}

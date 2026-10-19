@@ -8,11 +8,14 @@ import { getFraming } from "@/lib/hero-framing";
 import type { EventContact, SectionKey } from "@/lib/types";
 import type { HeroPreviewEvent } from "@/lib/hero-preview";
 import { imageSrcSet } from "./Gallery";
+import { HeroShortcuts } from "./JourneyPanels";
 import styles from "./guest.module.css";
 
 export function visibleSections(event: HeroPreviewEvent & { contact?: EventContact }) {
   return event.sections.filter(section => section.enabled && (section.key !== "feedback" || (event.feedback_enabled && event.feedback_questions.length > 0)) && (section.key !== "contact" || (!!event.contact?.name && !!event.contact.phone)));
 }
+const kindEyebrow = { kunjungan: "Undangan kunjungan", acara: "Undangan acara", program: "Undangan program" } as const;
+
 export function TimeRange({ start, end, timezone }: { start: string; end: string | null; timezone: string }) {
   if (!start) return <>Waktu belum diisi</>;
   return <><time dateTime={start}>{formatTime(start, timezone)}</time>{end && <> – <time dateTime={end}>{formatTime(end, timezone)}</time></>} WIB</>;
@@ -32,7 +35,7 @@ export function InvitationHero({ event, rsvpSaved = false, inert = false, invite
     [`--${device}-x`, `${frame.x}%`], [`--${device}-y`, `${frame.y}%`], [`--${device}-zoom`, frame.zoom],
   ])) as CSSProperties;
   const intro = <>
-    <p className="eyebrow">Undangan pertemuan</p>
+    <p className="eyebrow">{kindEyebrow[event.event_kind ?? "acara"]}</p>
     {event.greeting && <p className={styles.greeting}>{event.greeting}</p>}
     {invitee && <p className={styles.greeting}>Kepada {invitee}</p>}
     <h1 id="event-title">{event.title}</h1>
@@ -40,6 +43,7 @@ export function InvitationHero({ event, rsvpSaved = false, inert = false, invite
   </>;
   const actions = <>
     <div className={styles.actions}>{cta && <ButtonLink href={cta.href} onClick={focusAnchor} tabIndex={inert ? -1 : undefined}>{cta.label} <ArrowRight size={18} aria-hidden="true" /></ButtonLink>}{has("about") && <a href="#about" className={styles.textLink} onClick={focusAnchor} tabIndex={inert ? -1 : undefined}>Tentang pertemuan <ArrowDown size={16} aria-hidden="true" /></a>}</div>
+    <HeroShortcuts keys={sections.map(section => section.key)} inert={inert} />
     {rsvpSaved && <p className={styles.savedHint}><Check size={17} aria-hidden="true" /> Konfirmasi Anda telah tersimpan.</p>}
   </>;
   const facts = (photographic: boolean) => <>

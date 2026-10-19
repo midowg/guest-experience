@@ -1,3 +1,4 @@
+import { emptyAfter, emptyExperience, emptyRoute } from "./validation";
 import type { EventRecord, HeroFraming, HeroImage, PhotoFrame } from "./types";
 
 export function defaultFraming(focus: HeroImage["focus"] = "center"): HeroFraming {
@@ -18,6 +19,11 @@ export function normalizeEvent(event: EventRecord): EventRecord {
     },
     review_heading: event.review_heading ?? "", review_description: event.review_description ?? "", review_button_label: event.review_button_label ?? "",
     feedback_description: event.feedback_description ?? "", team_image: event.team_image ?? { url: "", alt: "", srcset: [] },
+    event_kind: event.event_kind ?? "acara", audience: event.audience ?? "external",
+    theme: { key: event.theme?.key ?? "werkudara", corners: event.theme?.corners ?? "square" },
+    phase_override: event.phase_override ?? "auto",
+    experience: { ...emptyExperience, ...event.experience }, route: { ...emptyRoute, ...event.route },
+    day_note: event.day_note ?? "", after: { ...emptyAfter, ...event.after, collaboration: { ...emptyAfter.collaboration, ...event.after?.collaboration } },
     location_embed_url: event.location_embed_url ?? "", location_display: event.location_display ?? (event.location_embed_url ? "embed" : "manual"),
     hero: { ...event.hero, framing: getFraming(event.hero) },
   };

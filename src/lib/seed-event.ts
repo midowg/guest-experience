@@ -14,7 +14,7 @@ export function createSeedEvent(): EventRecord {
     feedback_enabled: false, feedback_opens_at: null, feedback_description: "",
     contact: { name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "" },
     team_image: { url: "", alt: "", srcset: [] },
-    sections: ["about", "agenda", "location", "team", "rsvp", "contact", "feedback"].map(key => ({ key: key as EventRecord["sections"][number]["key"], enabled: key !== "contact" && key !== "team" })),
+    sections: ["about", "experience", "agenda", "location", "team", "rsvp", "contact", "feedback"].map(key => ({ key: key as EventRecord["sections"][number]["key"], enabled: !["contact", "team", "experience"].includes(key) })),
     topics: [
       { title: "Agenda kegiatan", description: "Meninjau seluruh rangkaian kegiatan yang direncanakan dalam Grand Design." },
       { title: "Penyederhanaan kegiatan", description: "Mengidentifikasi kegiatan yang dapat digabung atau disederhanakan." },
@@ -29,6 +29,10 @@ export function createSeedEvent(): EventRecord {
     ],
     feedback_questions: [], venue_image_url: "", venue_image_alt: "", venue_image_credit: "",
     hero: { url: "", alt: "", srcset: [], focus: "center", text_position: "left" }, gallery: [],
+    event_kind: "acara", audience: "external", theme: { key: "werkudara", corners: "square" }, phase_override: "auto",
+    experience: { title: "", story: "", image: { url: "", alt: "", srcset: [] }, moments: [] },
+    route: { map_image: { url: "", alt: "", srcset: [] }, steps: [] }, day_note: "",
+    after: { title: "", message: "", image: { url: "", alt: "", srcset: [] }, collaboration: { enabled: false, title: "", description: "", button_label: "" } },
     created_at: "2026-10-09T00:00:00Z", updated_at: "2026-10-09T00:00:00Z",
   };
 }

@@ -150,3 +150,34 @@ describe('WIB dates', () => {
   it('round trips local input without OS timezone dependence', () => expect(toJakartaInput(fromJakartaInput('2026-10-12T18:00'))).toBe('2026-10-12T18:00'));
 });
 it('rejects duplicated feedback questions', () => expect(feedbackSchema.safeParse({idempotency_key:rsvp.idempotency_key, website:'', answers:[{question_id:rsvp.idempotency_key,value:'1'},{question_id:rsvp.idempotency_key,value:'2'}]}).success).toBe(false));
+
+describe('journey content', () => {
+  it('fills kind, audience, theme, phase, and content defaults for an older document', () => {
+    const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
+    for (const key of ['event_kind', 'audience', 'theme', 'phase_override', 'experience', 'route', 'day_note', 'after'] as const) delete legacy[key];
+    legacy.sections = legacy.sections?.filter(section => section.key !== 'experience');
+    const parsed = eventSchema.parse(legacy);
+    expect(parsed).toMatchObject({ event_kind: 'acara', audience: 'external', theme: { key: 'werkudara', corners: 'square' }, phase_override: 'auto', day_note: '' });
+    expect(parsed.experience).toEqual({ title: '', story: '', image: { url: '', alt: '', srcset: [] }, moments: [] });
+    expect(parsed.route.steps).toEqual([]);
+    expect(parsed.after.collaboration.enabled).toBe(false);
+  });
+  it('accepts a full journey and rejects unknown themes, icons, and too many items', () => {
+    const event = createSeedEvent();
+    event.theme = { key: 'gala', corners: 'soft' };
+    event.experience.moments = [{ icon: 'coffee', title: 'Sambutan', description: '' }];
+    event.route.steps = [{ title: 'Belok kiri', description: '', image: { url: 'https://example.test/turn.jpg', alt: 'Titik belok', srcset: [] } }];
+    expect(eventSchema.safeParse(event).success).toBe(true);
+    expect(eventSchema.safeParse({ ...event, theme: { key: 'neon', corners: 'square' } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, experience: { ...event.experience, moments: [{ icon: 'rocket', title: 'X', description: '' }] } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, route: { ...event.route, steps: Array.from({ length: 7 }, () => event.route.steps[0]) } }).success).toBe(false);
+  });
+  it('requires a description for every journey photo', () => {
+    const event = createSeedEvent();
+    event.route.steps = [{ title: 'Belok kiri', description: '', image: { url: 'https://example.test/turn.jpg', alt: '', srcset: [] } }];
+    const result = eventSchema.safeParse(event);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map(issue => issue.path.join('.'))).toContain('route.steps.0.image.alt');
+    expect(eventSchema.safeParse({ ...createSeedEvent(), after: { ...createSeedEvent().after, image: { url: 'https://example.test/a.jpg', alt: '', srcset: [] } } }).success).toBe(false);
+  });
+});
