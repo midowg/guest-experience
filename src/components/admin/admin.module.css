@@ -141,3 +141,33 @@
   .itemHeader { align-items: flex-start; }
   .itemHeader h3 { flex: 1 1 100%; }
 }
+
+/* Journey blocks: plain-words intro, choice cards with icons, and an amber help box. */
+.blockIntro { display: grid; gap: var(--space-2); }
+.blockWhy { margin: 0; padding: var(--space-4); background: var(--sky); color: var(--blue); }
+.blockWhy > span { display: block; font-family: var(--font-label); font-size: .6875rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; margin-bottom: var(--space-1); }
+.blockWho { margin: 0; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--ink-soft); }
+.helpBox { margin: 0; display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); background: color-mix(in srgb, var(--yellow) 22%, var(--paper)); color: #6b4a0e; font-size: var(--text-sm); }
+.helpBox svg { flex-shrink: 0; margin-top: 2px; }
+.cardSet { border: 0; padding: 0; margin: 0; min-width: 0; }
+.cardSet legend { font-weight: 600; margin-bottom: var(--space-3); padding: 0; }
+.cardRow { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: var(--space-3); }
+.choiceCard { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4); border: 1px solid var(--sky); background: var(--paper); cursor: pointer; min-height: 48px; }
+.choiceCard:hover { border-color: var(--blue-support); }
+.choiceCard:focus-within { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.choiceCardOn { border: 2px solid var(--blue); background: color-mix(in srgb, var(--sky) 45%, var(--paper)); }
+.choiceIcon { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 40px; height: 40px; background: var(--sky); color: var(--blue); }
+.choiceCardOn .choiceIcon { background: var(--blue); color: var(--paper); }
+.themeSwatch { position: relative; flex-shrink: 0; width: 40px; height: 40px; border: 1px solid rgba(0, 0, 0, .12); }
+.themeSwatch > span { position: absolute; right: 6px; bottom: 6px; width: 16px; height: 8px; }
+.choiceText { display: grid; gap: var(--space-1); min-width: 0; }
+.choiceTitle { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-weight: 600; }
+.choiceDescription { font-size: var(--text-sm); color: var(--ink-soft); }
+.recommended { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--yellow) 35%, var(--paper)); color: #6b4a0e; font-size: .6875rem; font-weight: 600; }
+.iconSet { border: 0; padding: 0; margin: 0; }
+.iconSet legend { font-weight: 600; margin-bottom: var(--space-2); padding: 0; }
+.iconRow { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.iconChoice { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--sky); color: var(--blue); cursor: pointer; }
+.iconChoice:focus-within { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.iconChoiceOn { background: var(--blue); color: var(--paper); border-color: var(--blue); }
+.itemHeader h4 { margin: 0; }

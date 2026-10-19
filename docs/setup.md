@@ -77,6 +77,24 @@ Editor menyediakan pengantar kontak, jabatan dan organisasi PIC, pengantar surve
 
 Bagian **Our Team** memakai teks tetap tentang lingkungan kerja Werkudara yang inklusif. Bagian ini **nonaktif secara default** termasuk pada acara lama. Aktifkan lewat Urutan & tampilan bagian. Foto tim boleh ditambahkan kemudian melalui unggahan atau tautan HTTPS; isi deskripsi foto untuk aksesibilitas. Tanpa foto, teks tetap dapat tampil. Foto dan teks yang dipublikasikan perlu persetujuan penyelenggara. Form RSVP hanya menanyakan alergi makanan, bukan seluruh preferensi makanan atau kebutuhan aksesibilitas; arahkan kebutuhan lain kepada PIC melalui kanal kontak yang tersedia. Penambahan konten ini disimpan pada JSONB acara dan tidak memerlukan migrasi database baru.
 
+### Jenis acara, tema, dan fase
+
+Blok **Jenis, audiens, dan tampilan** di editor menentukan:
+
+- **Jenis acara** (Kunjungan, Acara, Program). Jenis mengubah label pembuka undangan.
+- **Audiens**. Acara **Internal** tidak pernah menampilkan ulasan Google maupun ajakan kolaborasi.
+- **Tema** (Werkudara, Pulang ke Rumah Nenek, Malam Apresiasi, Khidmat, Segar) dan **sudut** (persegi atau lembut). Tema hanya mengganti warna, huruf judul, dan sudut; urutan halaman, tombol, ukuran teks, dan lapisan redup foto tetap sama. Nilai tema ada di `src/lib/themes.ts` dan diuji kontras WCAG AA.
+- **Fase**. Bawaannya *Otomatis* menurut tanggal WIB:
+  - sebelum tanggal mulai: undangan;
+  - pada tanggal acara (seluruh tanggal untuk Program beberapa hari): panduan "Hari ini" dengan jadwal hari itu dan penanda sesi yang sedang berlangsung;
+  - mulai keesokan hari setelah tanggal selesai: halaman terima kasih.
+
+Hospitality dapat mengunci fase secara manual. Preview undangan menyediakan tombol untuk melihat ketiga fase.
+
+Konten baru (Pengalaman kunjungan, panduan rute bergambar di bagian Lokasi, catatan hari H, halaman setelah acara) disimpan pada JSONB acara tanpa migrasi database. Acara lama memakai nilai bawaan: jenis Acara, audiens Eksternal, tema Werkudara, fase Otomatis, dan bagian Pengalaman kunjungan nonaktif. Galeri foto acara belum tersedia karena menunggu penyimpanan Cloudflare R2.
+
+Untuk memeriksa tampilan secara lokal, buka `/dev-preview?fase=before|day|after&tema=werkudara|nenek|gala|khidmat|segar` (tambahkan `&audiens=internal` atau `&sudut=soft`). Halaman itu memakai foto contoh dan hanya tersedia saat pengembangan.
+
 ## 6. Spesifikasi foto
 
 | Keperluan | Ukuran | Rasio | Catatan |

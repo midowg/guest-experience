@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink, Field, Notice } from "@/components/ui";
-import { ArrowDown, ArrowUp, ArrowUpRight, Trash2 } from "lucide-react";
+import { ArrowUpRight, Trash2 } from "lucide-react";
+import { Check, OrderButtons } from "./controls";
 import { defaultFraming } from "@/lib/hero-framing";
 import { HeroPreview } from "./HeroPreview";
 import { fromJakartaInput, toJakartaInput } from "@/lib/format";
@@ -12,35 +13,12 @@ import { eventSchema } from "@/lib/validation";
 import { AdminApiError, adminRequest, errorMessage } from "./api";
 import { completeSections, heroTextPositionHints, heroTextPositionOptions, hiddenSectionReasons, moveItem, photoGuidance, prepareEvent, sectionLabels } from "./editor-model";
 import { PhotoField } from "./PhotoField";
+import { AfterBlock, AppearanceBlock, DayBlock, ExperienceBlock, RouteFields } from "./JourneyEditor";
 import styles from "./admin.module.css";
 
 type TextKey = "title" | "slug" | "subtitle" | "organizer" | "greeting" | "introduction" | "closing" | "venue_name" | "address" | "location_url" | "arrival_notes" | "review_url" | "review_heading" | "review_description" | "review_button_label" | "feedback_description" | "venue_image_url" | "venue_image_alt" | "venue_image_credit";
 type TimeKey = "starts_at" | "ends_at" | "rsvp_closes_at" | "feedback_opens_at";
 type BooleanKey = "rsvp_enabled" | "feedback_enabled" | "review_enabled";
-
-function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
-  return <label className={styles.toggle}>
-    <input type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} />
-    <span className={`${styles.toggleSwitch} ${checked ? styles.toggleOn : styles.toggleOff}`}>
-      <span className={styles.toggleKnob} />
-    </span>
-    <span className={styles.toggleText}>{label}</span>
-    <span className={`${styles.toggleBadge} ${checked ? styles.toggleBadgeOn : styles.toggleBadgeOff}`}>{checked ? "Aktif" : "Nonaktif"}</span>
-  </label>;
-}
-
-function OrderButtons({ label, index, length, onMove }: { label: string; index: number; length: number; onMove: (direction: -1 | 1) => void }) {
-  return <div className={styles.orderGroup}>
-    <button type="button" className={styles.orderBtn} disabled={index === 0} aria-label={`Naikkan ${label}`} onClick={() => onMove(-1)}>
-      <ArrowUp size={20} aria-hidden="true" />
-      <span className={styles.orderBtnText}>Naik</span>
-    </button>
-    <button type="button" className={styles.orderBtn} disabled={index === length - 1} aria-label={`Turunkan ${label}`} onClick={() => onMove(1)}>
-      <ArrowDown size={20} aria-hidden="true" />
-      <span className={styles.orderBtnText}>Turun</span>
-    </button>
-  </div>;
-}
 
 export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
   const router = useRouter();
@@ -126,6 +104,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         {event.invitation_mode === "personal" && <Notice tone="warning">Panel admin belum memakai login. Siapa pun yang dapat membuka domain ini dapat melihat daftar tamu dan tautannya, serta menggunakan tautan untuk mengubah RSVP. Tautan personal bukan verifikasi identitas.</Notice>}
         <ButtonLink href={`/admin/events/${event.id}/invitations`} variant="secondary">Kelola undangan tamu</ButtonLink>
       </div>)}
+      {block("appearance", "Jenis, audiens, dan tampilan", <AppearanceBlock event={event} update={update} />)}
       {block("schedule", "Waktu acara", <div className={styles.grid}>{time("starts_at", "Mulai (WIB)")}{time("ends_at", "Selesai (WIB)", "Opsional bila waktu selesai belum ditentukan.")}</div>)}
       {block("hero", "Foto latar pembuka", <div className="stack">
         <p>Foto latar adalah gambar pembuka undangan, dan satu-satunya foto yang memiliki pilihan posisi teks. Foto lokasi di galeri tidak memakai pilihan ini. Atur posisi dan zoom foto secara terpisah untuk HP dan desktop melalui pratinjau asli di bawah.</p>
@@ -153,6 +132,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         </div>)}
         <Button type="button" variant="secondary" disabled={event.topics.length >= 20} onClick={() => update("topics", [...event.topics, { title: "", description: "" }])}>Tambah topik</Button>
       </div>)}
+      {block("experience", "Pengalaman kunjungan", <ExperienceBlock event={event} update={update} control={control} errors={errors} />)}
       {block("agenda", "Rundown", <div className="stack">
         <p>Urutan tampilan mengikuti susunan di bawah. Waktu setiap sesi tetap perlu diperiksa.</p>
         {event.agenda.map((item, index) => {
@@ -176,7 +156,9 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
           <p>Buka Google Maps, pilih lokasinya, klik Bagikan (Share), pilih Sematkan peta (Embed a map), lalu Salin HTML dan tempel di sini.</p>
           {control("location_embed_url", "Kode sematan Google Maps", embedDraft, value => { setEmbedDraft(value); update("location_embed_url", value); }, { multiline: true, maxLength: 10000, hint: "Tempel kode iframe lengkap dari Google Maps atau URL sematannya. Yang disimpan hanya URL peta, bukan kode HTML." })}
         </div>}
+        <RouteFields event={event} update={update} control={control} errors={errors} />
       </div>)}
+      {block("day", "Hari H", <DayBlock event={event} update={update} control={control} />)}
       {block("gallery", "Galeri foto lokasi Werkudara", <div className="stack">
         <p>Foto-foto di sini tampil di bagian Lokasi, di bawah informasi alamat atau peta sematan. Satu foto ditampilkan diam; dua foto atau lebih bergantian otomatis dan dapat dihentikan tamu. Baris foto yang benar-benar kosong dilewati saat menyimpan; jika sudah diisi keterangannya, tambahkan foto dengan tautan HTTPS atau hapus baris tersebut.</p>
         {event.gallery.map((image, index) => <div className={styles.item} key={image.id}>
@@ -237,6 +219,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         {text("review_url", "Tautan ulasan Google HTTPS", 8000, false, "Opsional. Tersedia untuk semua tamu tanpa menyaring skor feedback. Nonaktifkan pilihan di atas dan simpan untuk menyembunyikan tombol.")}
         {/^https:\/\/[^\s/]+/.test(event.review_url) && <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">Periksa tautan <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></ButtonLink>}
       </div>)}
+      {block("after", "Setelah acara", <AfterBlock event={event} update={update} control={control} errors={errors} />)}
       {block("publication", "Status & penyimpanan", <div className="stack">
         <Field name="status" label="Status acara" hint="Draft dan arsip tidak tampil di URL undangan publik. Semua perubahan berlaku setelah disimpan."><select className="select" id="status" aria-describedby="status-hint" value={event.status} onChange={e => update("status", e.target.value as EventStatus)}><option value="draft">Draft — belum publik</option><option value="published">Dipublikasikan — dapat dibuka melalui tautan</option><option value="archived">Diarsipkan — tidak publik</option></select></Field>
         {hidden.length > 0 && <div><h3>Bagian yang belum ditampilkan</h3><Notice tone="warning"><ul>{hidden.map(reason => <li key={reason}>{reason}</li>)}</ul></Notice></div>}
