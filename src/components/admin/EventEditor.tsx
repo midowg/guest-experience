@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } 
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink, Field, Notice } from "@/components/ui";
 import { ArrowUpRight, CalendarCheck, ChevronRight, CircleAlert, CircleDashed, Pencil, X, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, MessageSquare, Palette, Phone, Rocket, Save, Shirt, Sparkles, Star, Trash2, Users, type LucideIcon } from "lucide-react";
-import { Check, OrderButtons } from "./controls";
+import { Check, OrderButtons, SuggestionChips } from "./controls";
+import { chipLabel, fieldExamples, fieldPattern, fieldSuggestions, fillSuggestion, WERKUDARA_OFFICE } from "./suggestions";
 import { defaultFraming } from "@/lib/hero-framing";
 import { HeroPreview } from "./HeroPreview";
 import { formatDate, formatTime, fromZoneInput, toZoneInput } from "@/lib/format";
@@ -110,9 +111,16 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
   const themeName = themeDefinition(event.theme?.key ?? "werkudara").name;
   const formatWhen = (iso: string) => `${formatDate(iso, event.timezone)}, ${formatTime(iso, event.timezone)}`;
   function described(name: string, hint?: string) { return [hint ? `${name}-hint` : "", errors[name] ? `${name}-error` : ""].filter(Boolean).join(" ") || undefined; }
-  function control(name: string, label: string, value: string, onChange: (value: string) => void, options: { multiline?: boolean; hint?: string; type?: "text" | "url" | "datetime-local"; maxLength?: number } = {}) {
-    const props = { id: name, value, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value), "aria-describedby": described(name, options.hint), "aria-invalid": !!errors[name], maxLength: options.maxLength };
-    return <Field name={name} label={label} hint={options.hint} error={errors[name]?.join(" ")}>{options.multiline ? <textarea {...props} className="textarea" rows={4} /> : <input {...props} className="input" type={options.type || "text"} />}</Field>;
+  /** Chips and example sentences come from suggestions.ts by field name, so call sites stay short. */
+  function control(name: string, label: string, value: string, onChange: (value: string) => void, options: { multiline?: boolean; hint?: string; type?: "text" | "url" | "datetime-local"; maxLength?: number; suggestions?: string[] } = {}) {
+    const pattern = fieldPattern(name);
+    const placeholder = options.type === "datetime-local" ? undefined : fieldExamples[pattern];
+    const suggestions = (options.suggestions ?? fieldSuggestions[pattern] ?? []).map(text => fillSuggestion(text, event.title));
+    const props = { id: name, value, placeholder, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value), "aria-describedby": described(name, options.hint), "aria-invalid": !!errors[name], maxLength: options.maxLength };
+    return <Field name={name} label={label} hint={options.hint} error={errors[name]?.join(" ")}>
+      {options.multiline ? <textarea {...props} className="textarea" rows={4} /> : <input {...props} className="input" type={options.type || "text"} />}
+      {suggestions.length > 0 && <SuggestionChips field={label} value={value} onPick={onChange} options={suggestions.map(text => ({ label: chipLabel(text), value: text }))} />}
+    </Field>;
   }
   function text(key: TextKey, label: string, maxLength: number, multiline = false, hint?: string) {
     return control(key, label, event[key], value => update(key, value), { multiline, maxLength, hint, type: key.endsWith("_url") ? "url" : "text" });
@@ -291,6 +299,11 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
       {block("venue", "Lokasi", <div className="stack">
         {choices("location_display", "Tampilan lokasi", [{ value: "manual", label: "Alamat & tombol" }, { value: "embed", label: "Peta sematan Google" }], event.location_display, value => update("location_display", value), value => value === "embed" ? "Peta Google tampil tanpa kartu alamat dan tombol dari undangan. Google dapat tetap menampilkan informasi lokasinya sendiri." : "Nama tempat, alamat, petunjuk, dan tombol Maps tampil seperti semula.")}
         {event.location_display === "manual" ? <>
+          {(event.venue_name !== WERKUDARA_OFFICE.venue_name || event.address !== WERKUDARA_OFFICE.address) && <div className={styles.chips}>
+            <button type="button" className={styles.chip} onClick={() => { update("venue_name", WERKUDARA_OFFICE.venue_name); update("address", WERKUDARA_OFFICE.address); update("location_url", WERKUDARA_OFFICE.location_url); }}>
+              <MapPin size={14} aria-hidden="true" /> Pakai alamat kantor Werkudara
+            </button>
+          </div>}
           {text("venue_name", "Nama tempat", 200)}{text("address", "Alamat", 1000, true)}{text("location_url", "Tautan lokasi Maps", 8000)}{text("arrival_notes", "Petunjuk kedatangan (opsional)", 2000, true)}
         </> : <div className="stack">
           <p>Buka Google Maps, pilih lokasinya, klik Bagikan (Share), pilih Sematkan peta (Embed a map), lalu Salin HTML dan tempel di sini.</p>

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
 import { EventEditor } from "./EventEditor";
 
@@ -121,4 +121,31 @@ it("summarises blocks on cards and marks unsaved changes", () => {
   fireEvent.click(screen.getByRole("button", { name: "Selesai" }));
   expect(screen.queryByRole("textbox", { name: "Nama PIC" })).toBeNull();
   expect(screen.getAllByText("Belum disimpan").length).toBeGreaterThan(0);
+});
+
+it("offers known greetings as chips that replace the text, with a way back to what was typed", () => {
+  render(<EventEditor event={{ ...createSeedEvent(), greeting: "" }} />);
+  openPanel("Identitas & undangan");
+  const greeting = screen.getByRole("textbox", { name: "Sapaan" }) as HTMLInputElement;
+  expect(greeting.placeholder).toMatch(/^Contoh: /);
+  const chips = screen.getByRole("group", { name: "Pilihan cepat: Sapaan" });
+  fireEvent.click(within(chips).getByRole("button", { name: "Dengan hormat" }));
+  expect(greeting.value).toBe("Dengan hormat");
+  expect(within(chips).getByRole("button", { name: "Dengan hormat" }).getAttribute("aria-pressed")).toBe("true");
+  expect(within(chips).queryByRole("button", { name: /Kembalikan/ })).toBeNull();
+  fireEvent.change(greeting, { target: { value: "Salam hangat dari kami" } });
+  fireEvent.click(within(chips).getByRole("button", { name: "Selamat datang" }));
+  expect(greeting.value).toBe("Selamat datang");
+  fireEvent.click(within(chips).getByRole("button", { name: /Kembalikan teks sebelumnya/ }));
+  expect(greeting.value).toBe("Salam hangat dari kami");
+});
+
+it("fills the Werkudara office in one click", () => {
+  render(<EventEditor event={{ ...createSeedEvent(), venue_name: "", address: "", location_url: "" }} />);
+  openPanel("Lokasi");
+  fireEvent.click(screen.getByRole("button", { name: /Pakai alamat kantor Werkudara/ }));
+  expect((screen.getByRole("textbox", { name: "Nama tempat" }) as HTMLInputElement).value).toBe("PT. Werkudara");
+  expect((screen.getByRole("textbox", { name: "Alamat" }) as HTMLTextAreaElement).value).toMatch(/^Jl\. Bhinneka/);
+  expect((screen.getByRole("textbox", { name: "Tautan lokasi Maps" }) as HTMLInputElement).value).toMatch(/^https:\/\/maps\.app\.goo\.gl\//);
+  expect(screen.queryByRole("button", { name: /Pakai alamat kantor Werkudara/ })).toBeNull();
 });

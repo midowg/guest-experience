@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { useState } from "react";
+import { ArrowDown, ArrowUp, Undo2 } from "lucide-react";
 import styles from "./admin.module.css";
 
 export function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
@@ -24,5 +25,23 @@ export function OrderButtons({ label, index, length, onMove }: { label: string; 
       <ArrowDown size={20} aria-hidden="true" />
       <span className={styles.orderBtnText}>Turun</span>
     </button>
+  </div>;
+}
+
+/**
+ * Known answers for a field as chips: one click replaces the field's text. When that click
+ * overwrote something the admin had typed, a link brings the typed text back.
+ */
+export function SuggestionChips({ field, options, value, onPick }: { field: string; options: { label: string; value: string }[]; value: string; onPick: (value: string) => void }) {
+  const [previous, setPrevious] = useState<{ text: string; replacedBy: string } | null>(null);
+  const known = options.some(option => option.value === value);
+  return <div className={styles.chips} role="group" aria-label={`Pilihan cepat: ${field}`}>
+    {options.map(option => <button key={option.value} type="button" className={styles.chip} title={option.value} aria-pressed={option.value === value}
+      onClick={() => { setPrevious(value.trim() && !known ? { text: value, replacedBy: option.value } : null); onPick(option.value); }}>
+      {option.label}
+    </button>)}
+    {previous && previous.replacedBy === value && <button type="button" className={styles.chipUndo} onClick={() => { onPick(previous.text); setPrevious(null); }}>
+      <Undo2 size={14} aria-hidden="true" /> Kembalikan teks sebelumnya
+    </button>}
   </div>;
 }
