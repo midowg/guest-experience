@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { importInvitations, listInvitations, manageInvitation } from "@/lib/server/invitations";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
-import { requireApiAdmin, requireEventAccess } from "@/lib/server/admin-session";
+import { requireEventAccess } from "@/lib/server/admin-session";
 import { MAX_IMPORT } from "@/lib/guest-import";
+import { disabledModulesFor } from "@/lib/server/admin-settings";
+import { readAdminEvent } from "@/lib/server/events";
+import { ServiceError } from "@/lib/server/config";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
@@ -25,10 +28,12 @@ export async function GET(_request: Request, { params }: Params) {
 
 export async function POST(request: Request, { params }: Params) {
   return handle(async () => {
-    await requireApiAdmin();
     checkOrigin(request);
     const id = validate(idSchema, (await params).id);
-    await requireEventAccess(id);
+    const role = await requireEventAccess(id);
+    if ((await disabledModulesFor(role)).includes("personal") && (await readAdminEvent(id))?.invitation_mode !== "personal") {
+      throw new ServiceError(403, "Modul Tautan per tamu dinonaktifkan oleh super admin.");
+    }
     const input = validate(bodySchema, await readJson(request, 200_000));
     if ("rows" in input) {
       const created = await importInvitations(id, input.rows);

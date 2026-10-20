@@ -7,6 +7,7 @@ import { DeleteEvent } from "@/components/admin/DeleteEvent";
 import { formatDateTime } from "@/lib/format";
 import styles from "@/components/admin/admin.module.css";
 import { requireAdminPage, requireEventPage } from "@/lib/server/admin-session";
+import { disabledModulesFor } from "@/lib/server/admin-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function EventEditorPage({ params }: { params: Promise<{ id
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const { id } = await params;
-  await requireEventPage(id);
+  const role = await requireEventPage(id);
   const event = await getAdminEvent(id);
   if (!event) notFound();
   const featuredId = await getFeaturedEventId();
@@ -23,7 +24,7 @@ export default async function EventEditorPage({ params }: { params: Promise<{ id
     <h1 className={styles.title}>{event.title}</h1>
     <p className={styles.eventMeta}>Dibuat {formatDateTime(event.created_at)} · Terakhir disimpan {formatDateTime(event.updated_at)}</p>
     <EventNavigation event={event} current="edit" />
-    <EventEditor key={event.id} event={event} />
+    <EventEditor key={event.id} event={event} disabledModules={await disabledModulesFor(role)} />
     <DeleteEvent event={event} isFeatured={featuredId === event.id} />
   </AdminShell>;
 }

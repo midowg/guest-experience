@@ -482,3 +482,16 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .superSwitch input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .superSwitch input:disabled { opacity: .5; cursor: default; }
 @media (prefers-reduced-motion: reduce) { .superSwitch input, .superSwitch input::after { transition: none; } }
+.superTabs { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2) var(--space-4); }
+.superTabs a { padding: var(--space-2) var(--space-4); border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--blue); font-weight: 600; text-decoration: none; }
+.superSectionTitle { margin: var(--space-6) 0 var(--space-2); font-size: 1.25rem; color: var(--color-text); scroll-margin-top: var(--space-9); }
+.moduleSettings { display: grid; gap: var(--space-3); scroll-margin-top: var(--space-9); }
+.moduleGroups { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); }
+.moduleGroup { display: grid; gap: 0; margin: 0; padding: var(--space-2) var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.moduleGroup legend { padding: 0 var(--space-2); font-weight: 700; color: var(--st-settings); }
+.moduleRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.moduleRow:last-child { border-bottom: 0; }
+.moduleText { display: grid; gap: 2px; }
+.moduleText span { color: var(--ink-soft); font-size: .8125rem; }
+.moduleFooter { position: sticky; bottom: var(--space-3); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 6px 24px rgba(20, 30, 50, .12); }
+.moduleGroups { align-items: start; } .moduleGroup { align-content: start; }

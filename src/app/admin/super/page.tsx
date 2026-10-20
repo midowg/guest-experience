@@ -6,6 +6,8 @@ import { isSupabaseConfigured } from "@/lib/server/config";
 import { listAdminEvents } from "@/lib/server/events";
 import { hiddenEventIds } from "@/lib/server/event-visibility";
 import { requireAdminPage } from "@/lib/server/admin-session";
+import { getDisabledModules } from "@/lib/server/admin-settings";
+import { ModuleSettings } from "@/components/admin/ModuleSettings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard super admin" };
@@ -14,7 +16,7 @@ export const metadata = { title: "Dashboard super admin" };
 export default async function SuperAdminPage() {
   if ((await requireAdminPage()) !== "super") notFound();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
-  const [events, hidden] = await Promise.all([listAdminEvents(), hiddenEventIds()]);
+  const [events, hidden, modules] = await Promise.all([listAdminEvents(), hiddenEventIds(), getDisabledModules()]);
   // Only what the dashboard shows travels to the browser.
   const rows: SuperEventRow[] = events.map(event => ({
     id: event.id, title: event.title, slug: event.slug, status: event.status, starts_at: event.starts_at, timezone: event.timezone,
@@ -23,7 +25,13 @@ export default async function SuperAdminPage() {
   return <AdminShell>
     <p className="eyebrow">Super admin</p>
     <h1 className={styles.title}>Dashboard super admin</h1>
-    <p className={styles.lead}>Atur acara mana yang terlihat oleh admin biasa. Acara yang disembunyikan tidak muncul di panel mereka dan tidak bisa mereka buka, ubah, atau salin. Halaman tamu tidak berubah: acara yang sudah dipublikasikan tetap bisa dibuka lewat tautannya.</p>
-    <SuperDashboard events={rows} initialHidden={[...hidden.ids]} migrated={hidden.migrated} />
+    <p className={styles.lead}>Atur apa yang bisa dilihat dan dipakai admin biasa: acara mana yang terlihat, dan modul mana yang boleh dipakai saat membuat atau mengubah acara.</p>
+    <nav className={styles.superTabs} aria-label="Bagian dashboard"><a href="#visibilitas">Visibilitas acara</a><a href="#modul">Modul admin</a></nav>
+    <section id="visibilitas" aria-labelledby="visibility-title" className="stack">
+      <h2 id="visibility-title" className={styles.superSectionTitle}>Visibilitas acara</h2>
+      <p className={styles.lead}>Acara yang disembunyikan tidak muncul di panel admin biasa dan tidak bisa mereka buka, ubah, atau salin. Halaman tamu tidak berubah: acara yang sudah dipublikasikan tetap bisa dibuka lewat tautannya.</p>
+      <SuperDashboard events={rows} initialHidden={[...hidden.ids]} migrated={hidden.migrated} />
+    </section>
+    <div id="modul"><ModuleSettings initialDisabled={modules.modules} migrated={modules.migrated} /></div>
   </AdminShell>;
 }

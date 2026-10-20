@@ -13,6 +13,7 @@ import type { EventRecord, SectionKey } from "@/lib/types";
 import { AdminApiError, adminRequest, errorMessage } from "./api";
 import { Check, SuggestionChips } from "./controls";
 import { sectionLabels } from "./editor-model";
+import type { AdminModule } from "@/lib/admin-modules";
 import { chipLabel, fieldExamples, fieldSuggestions, fillSuggestion, WERKUDARA_OFFICE } from "./suggestions";
 import styles from "./admin.module.css";
 
@@ -65,7 +66,9 @@ function toSetup(draft: Draft, start: Start): unknown {
 }
 
 /** Survey for a new event (board 11). Text answers start empty; known answers are chips. */
-export function CreateEventDialog({ events, onClose }: { events: EventRecord[]; onClose: () => void }) {
+export function CreateEventDialog({ events, onClose, disabledModules = [] }: { events: EventRecord[]; onClose: () => void; disabledModules?: AdminModule[] }) {
+  // Modules the super admin switched off are not offered; the server removes them as well.
+  const allowed = (key: AdminModule) => !disabledModules.includes(key);
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [start, setStart] = useState<Start | null>(null);
@@ -88,7 +91,10 @@ export function CreateEventDialog({ events, onClose }: { events: EventRecord[]; 
   const fieldError = (name: string) => errors[name]?.join(" ");
 
   function pick(next: Start) {
-    setStart(next); setDraft(draftFor(next, events)); setErrors({}); setStep(1);
+    const base = draftFor(next, events);
+    setStart(next); setErrors({}); setStep(1);
+    setDraft({ ...base, modules: base.modules.filter(key => key === "about" || allowed(key as AdminModule)),
+      language: allowed("bilingual") ? base.language : "id", invitation_mode: allowed("personal") ? base.invitation_mode : "open" });
   }
   /** Each step checks only its own fields; the server checks everything again. */
   function next() {
@@ -190,11 +196,11 @@ export function CreateEventDialog({ events, onClose }: { events: EventRecord[]; 
         { value: "internal", label: "Internal", description: "Tim Werkudara. Tanpa ulasan Google dan ajakan mitra." },
       ], draft.audience, audience => set({ audience }))}
       {radios("setup-language", "Bahasa halaman tamu", [
-        { value: "id", label: "Bahasa Indonesia" }, { value: "id_en", label: "Dua bahasa (ID + EN)" }, { value: "en", label: "English saja" },
+        { value: "id" as const, label: "Bahasa Indonesia" }, ...(allowed("bilingual") ? [{ value: "id_en" as const, label: "Dua bahasa (ID + EN)" }, { value: "en" as const, label: "English saja" }] : []),
       ], draft.language, language => set({ language }))}
       {radios("setup-mode", "Cara mengundang", [
         { value: "open", label: "Satu tautan umum", description: "Semua tamu memakai tautan yang sama." },
-        { value: "personal", label: "Tautan per tamu", description: "Nama tamu tampil di undangan; daftar tamu diisi di tab Undangan tamu." },
+        ...(allowed("personal") ? [{ value: "personal" as const, label: "Tautan per tamu", description: "Nama tamu tampil di undangan; daftar tamu diisi di tab Undangan tamu." }] : []),
       ], draft.invitation_mode, invitation_mode => set({ invitation_mode }))}
     </div>,
 
@@ -206,7 +212,7 @@ export function CreateEventDialog({ events, onClose }: { events: EventRecord[]; 
       {input("closing", "Penutup", { multiline: true, chips: sentenceChips("closing", "closing"), example: template && templateText(template.key, "closing") })}
       <fieldset className={styles.wizardModules}>
         <legend>Bagian yang tampil di halaman tamu</legend>
-        {setupSectionKeys.map(key => <Check key={key} label={sectionLabels[key]} checked={draft.modules.includes(key)} onChange={on => toggleModule(key, on)} />)}
+        {setupSectionKeys.filter(key => key === "about" || allowed(key as AdminModule)).map(key => <Check key={key} label={sectionLabels[key]} checked={draft.modules.includes(key)} onChange={on => toggleModule(key, on)} />)}
         <p className={styles.soonRow}>{soon.map(label => <span key={label} className={styles.soonChip}><Lock size={12} aria-hidden="true" /> {label} · Segera</span>)}</p>
       </fieldset>
       {draft.modules.includes("rsvp") && <div className={styles.grid}>

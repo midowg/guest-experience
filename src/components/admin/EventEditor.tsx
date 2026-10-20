@@ -18,6 +18,7 @@ import { blockOfPath, blockStatusLabels, blockStatuses, blockSummary, completeSe
 import { PhotoField } from "./PhotoField";
 import { AfterBlock, AppearanceBlock, DayBlock, ExperienceBlock, PrepareBlock, RouteFields } from "./JourneyEditor";
 import { TranslationBlock } from "./TranslationEditor";
+import { moduleActive, moduleBlocks, type AdminModule } from "@/lib/admin-modules";
 import styles from "./admin.module.css";
 
 type TextKey = "title" | "slug" | "subtitle" | "organizer" | "greeting" | "introduction" | "closing" | "venue_name" | "address" | "location_url" | "arrival_notes" | "review_url" | "review_heading" | "review_description" | "review_button_label" | "feedback_description" | "venue_image_url" | "venue_image_alt" | "venue_image_credit";
@@ -33,9 +34,9 @@ const blockIcons: Record<string, LucideIcon> = {
 const statusIcons: Record<BlockStatus, LucideIcon> = { error: CircleAlert, dirty: CircleDot, todo: CircleAlert, optional: CircleDashed, done: CircleCheck };
 
 /** What still blocks publishing, each line opening the block that fixes it. */
-function Readiness({ statuses, onOpen }: { statuses: Record<string, BlockStatus>; onOpen: (id: string, from?: HTMLElement | null) => void }) {
-  const todo = editorBlocks.filter(item => statuses[item.id] === "todo" || statuses[item.id] === "error");
-  const required = editorBlocks.filter(item => statuses[item.id] !== "optional");
+function Readiness({ blocks, statuses, onOpen }: { blocks: typeof editorBlocks; statuses: Record<string, BlockStatus>; onOpen: (id: string, from?: HTMLElement | null) => void }) {
+  const todo = blocks.filter(item => statuses[item.id] === "todo" || statuses[item.id] === "error");
+  const required = blocks.filter(item => statuses[item.id] !== "optional");
   const ready = required.length - todo.length;
   return <section className={styles.readiness} aria-labelledby="kesiapan-title">
     <div className={styles.readinessHead}><h2 id="kesiapan-title">Kesiapan tayang</h2><span>{ready} dari {required.length} siap</span></div>
@@ -55,7 +56,18 @@ function PanelHeader({ open, titleRef, onClose }: { open: string | null; titleRe
   </header>;
 }
 
-export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
+/**
+ * `disabledModules` comes from the super admin and is empty for them. A switched-off module
+ * that this event does not use is not offered at all; one it already uses stays visible with a
+ * note, may be switched off, and cannot come back (the server checks the same rule on save).
+ */
+export function EventEditor({ event: initialEvent, disabledModules = [] }: { event: EventRecord; disabledModules?: AdminModule[] }) {
+  const unavailable = (key: AdminModule) => disabledModules.includes(key) && !moduleActive(initialEvent, key);
+  const restricted = (key: AdminModule) => disabledModules.includes(key) && moduleActive(initialEvent, key);
+  const blocks = editorBlocks.filter(item => !(Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, id]) => id === item.id && unavailable(key)));
+  const restrictedBlock = (id: string) => (Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, block]) => block === id && restricted(key));
+  const sectionModule: Partial<Record<string, AdminModule>> = { experience: "experience", agenda: "agenda", location: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback: "feedback" };
+  const sectionUnavailable = (key: string) => { const owner = sectionModule[key]; return !!owner && unavailable(owner); };
   const router = useRouter();
   const [event, setEvent] = useState(() => completeSections(initialEvent));
   const [embedDraft, setEmbedDraft] = useState(initialEvent.location_embed_url ?? "");
@@ -165,7 +177,10 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
   function block(id: string, title: string, children: ReactNode) {
     if (open !== id) return null;
     const stage = editorBlocks.find(item => item.id === id)?.stage ?? "prep";
-    return <section id={id} data-block={id} className={`${styles.block} ${styles[`stage_${stage}`]}`} aria-label={title}>{children}</section>;
+    return <section id={id} data-block={id} className={`${styles.block} ${styles[`stage_${stage}`]}`} aria-label={title}>
+      {restrictedBlock(id) && <Notice tone="warning">Modul ini dinonaktifkan oleh super admin. Acara ini sudah memakainya, jadi isinya tetap ada dan masih bisa diubah atau dimatikan, tetapi setelah dimatikan tidak bisa dinyalakan lagi.</Notice>}
+      {children}
+    </section>;
   }
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); if (pending) return;
@@ -199,7 +214,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
     <nav className={styles.editorMenu} aria-label="Daftar isi editor">
       {editorStages.map(stage => <div key={stage.key} className={`${styles.menuGroup} ${styles[`stage_${stage.key}`]}`}>
         <p className={styles.menuStage}>{stage.label}</p>
-        <ul>{editorBlocks.filter(item => item.stage === stage.key).map(item => {
+        <ul>{blocks.filter(item => item.stage === stage.key).map(item => {
           const Icon = blockIcons[item.id] ?? FileText;
           const status = statuses[item.id];
           return <li key={item.id}><button type="button" onClick={e => openBlock(item.id, e.currentTarget)} aria-current={open === item.id ? "true" : undefined}>
@@ -211,10 +226,10 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
     </nav>
     <div className={styles.summary}>
       <nav className={styles.stageChips} aria-label="Pintasan tahap">{editorStages.map(stage => <a key={stage.key} href={`#tahap-${stage.key}`} className={styles[`stage_${stage.key}`]}>{stage.label}</a>)}</nav>
-      <Readiness statuses={statuses} onOpen={openBlock} />
+      <Readiness blocks={blocks} statuses={statuses} onOpen={openBlock} />
       {editorStages.map(stage => <section key={stage.key} id={`tahap-${stage.key}`} className={`${styles.stageGroup} ${styles[`stage_${stage.key}`]}`} aria-labelledby={`tahap-${stage.key}-title`}>
         <h2 id={`tahap-${stage.key}-title`} className={styles.stageTitle}>{stage.label}</h2>
-        <ul className={styles.cards}>{editorBlocks.filter(item => item.stage === stage.key).map(item => {
+        <ul className={styles.cards}>{blocks.filter(item => item.stage === stage.key).map(item => {
           const Icon = blockIcons[item.id] ?? FileText;
           const status = statuses[item.id];
           const StatusIcon = statusIcons[status];
@@ -240,8 +255,8 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         {text("title", "Judul acara", 180)}{text("subtitle", "Subjudul", 250)}
         <div className={styles.grid}>{text("slug", "Alamat singkat undangan (slug)", 100, false, "Huruf kecil, angka, dan tanda hubung. Mengubah slug membuat tautan lama tidak berlaku.")}{text("organizer", "Penyelenggara", 250)}</div>
         {text("greeting", "Sapaan", 150)}{text("introduction", "Isi undangan", 5000, true)}{text("closing", "Penutup", 2000, true)}
-        {choices("invitation_mode", "Cara mengundang", [{ value: "open", label: "Tautan umum" }, { value: "personal", label: "Tautan per tamu" }], event.invitation_mode, value => update("invitation_mode", value), value => value === "personal" ? "RSVP hanya lewat tautan per tamu; halaman umum tetap dapat dibaca." : "Formulir RSVP tersedia di halaman umum bila diaktifkan.")}
-        {event.invitation_mode === "personal" && <Notice tone="warning">Panel admin belum memakai login. Siapa pun yang dapat membuka domain ini dapat melihat daftar tamu dan tautannya, serta menggunakan tautan untuk mengubah RSVP. Tautan personal bukan verifikasi identitas.</Notice>}
+        {choices("invitation_mode", "Cara mengundang", [{ value: "open" as const, label: "Tautan umum" }, ...(unavailable("personal") ? [] : [{ value: "personal" as const, label: "Tautan per tamu" }])], event.invitation_mode, value => update("invitation_mode", value), value => value === "personal" ? "RSVP hanya lewat tautan per tamu; halaman umum tetap dapat dibaca." : "Formulir RSVP tersedia di halaman umum bila diaktifkan.")}
+        {event.invitation_mode === "personal" && <Notice tone="warning">Siapa pun yang memegang tautan personal dapat membuka undangan dan mengubah RSVP tamu itu. Tautan personal bukan verifikasi identitas; kirim satu per satu.</Notice>}
         <ButtonLink href={`/admin/events/${event.id}/invitations`} variant="secondary">Kelola undangan tamu</ButtonLink>
       </div>)}
       {block("appearance", "Jenis, audiens, dan tampilan", <AppearanceBlock event={event} update={update} />)}
@@ -309,7 +324,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
           <p>Buka Google Maps, pilih lokasinya, klik Bagikan (Share), pilih Sematkan peta (Embed a map), lalu Salin HTML dan tempel di sini.</p>
           {control("location_embed_url", "Kode sematan Google Maps", embedDraft, value => { setEmbedDraft(value); update("location_embed_url", value); }, { multiline: true, maxLength: 10000, hint: "Tempel kode iframe lengkap dari Google Maps atau URL sematannya. Yang disimpan hanya URL peta, bukan kode HTML." })}
         </div>}
-        <RouteFields event={event} update={update} control={control} errors={errors} />
+        {!unavailable("route") && <RouteFields event={event} update={update} control={control} errors={errors} />}
       </div>)}
       {block("gallery", "Galeri foto lokasi Werkudara", <div className="stack">
         <p>Foto-foto di sini tampil di bagian Lokasi, di bawah informasi alamat atau peta sematan. Satu foto ditampilkan diam; dua foto atau lebih bergantian otomatis dan dapat dihentikan tamu. Baris foto yang benar-benar kosong dilewati saat menyimpan; jika sudah diisi keterangannya, tambahkan foto dengan tautan HTTPS atau hapus baris tersebut.</p>
@@ -370,10 +385,10 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         {text("review_url", "Tautan ulasan Google HTTPS", 8000, false, "Opsional. Tersedia untuk semua tamu tanpa menyaring skor feedback. Nonaktifkan pilihan di atas dan simpan untuk menyembunyikan tombol.")}
         {/^https:\/\/[^\s/]+/.test(event.review_url) && <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">Periksa tautan <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></ButtonLink>}
       </div>)}
-      {block("after", "Setelah acara", <AfterBlock event={event} update={update} control={control} errors={errors} />)}
+      {block("after", "Setelah acara", <AfterBlock event={event} update={update} control={control} errors={errors} collaboration={!unavailable("collaboration")} />)}
       {block("language", "Bahasa & terjemahan", <TranslationBlock event={event} update={update} control={control} />)}
       {block("sections", "Urutan & tampilan bagian", <div className="stack"><p>Sambutan dan penutup tetap berada di awal dan akhir undangan. Bagian pendukung dapat disembunyikan atau diurutkan.</p>
-        {event.sections.map((section, index) => <div className={styles.sectionRow} key={section.key}><Check label={sectionLabels[section.key]} checked={section.enabled} onChange={enabled => update("sections", event.sections.map(item => item.key === section.key ? { ...item, enabled } : item))} /><OrderButtons label={sectionLabels[section.key]} index={index} length={event.sections.length} onMove={direction => update("sections", moveItem(event.sections, index, direction))} /></div>)}
+        {event.sections.map((section, index) => sectionUnavailable(section.key) ? null : <div className={styles.sectionRow} key={section.key}><Check label={sectionLabels[section.key]} checked={section.enabled} onChange={enabled => update("sections", event.sections.map(item => item.key === section.key ? { ...item, enabled } : item))} /><OrderButtons label={sectionLabels[section.key]} index={index} length={event.sections.length} onMove={direction => update("sections", moveItem(event.sections, index, direction))} /></div>)}
       </div>)}
       {block("publication", "Status & penyimpanan", <div className="stack">
         <Field name="status" label="Status acara" hint="Draft dan arsip tidak tampil di URL undangan publik. Semua perubahan berlaku setelah disimpan."><select className="select" id="status" aria-describedby="status-hint" value={event.status} onChange={e => update("status", e.target.value as EventStatus)}><option value="draft">Draft — belum publik</option><option value="published">Dipublikasikan — dapat dibuka melalui tautan</option><option value="archived">Diarsipkan — tidak publik</option></select></Field>

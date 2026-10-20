@@ -184,7 +184,7 @@ export function DayBlock({ event, update, control }: Pick<Props, "event" | "upda
   </div>;
 }
 
-export function AfterBlock({ event, update, control, errors }: Props) {
+export function AfterBlock({ event, update, control, errors, collaboration: allowCollaboration = true }: Props & { collaboration?: boolean }) {
   const after = event.after;
   const set = (patch: Partial<EventRecord["after"]>) => update("after", { ...after, ...patch });
   const collaboration = after.collaboration;
@@ -196,7 +196,7 @@ export function AfterBlock({ event, update, control, errors }: Props) {
     <ImageInput name="after.image" label="Foto (opsional)" image={after.image} onChange={image => set({ image })} control={control} errors={errors} />
     <h3>Ajakan kolaborasi</h3>
     {internal ? <Notice>Acara internal: ajakan kolaborasi dan ulasan Google tidak ditampilkan.</Notice> : <>
-      <Check label="Tampilkan ajakan kolaborasi" checked={collaboration.enabled} onChange={enabled => set({ collaboration: { ...collaboration, enabled } })} />
+      {allowCollaboration && <Check label="Tampilkan ajakan kolaborasi" checked={collaboration.enabled} onChange={enabled => set({ collaboration: { ...collaboration, enabled } })} />}
       {collaboration.enabled && <>
         {control("after.collaboration.title", "Judul (opsional)", collaboration.title, title => set({ collaboration: { ...collaboration, title } }), { maxLength: 200, hint: "Kosongkan untuk memakai: Mari lanjutkan percakapannya." })}
         {control("after.collaboration.description", "Deskripsi (opsional)", collaboration.description, description => set({ collaboration: { ...collaboration, description } }), { multiline: true, maxLength: 1000 })}
