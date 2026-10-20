@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { eventSchema, rsvpSchema, feedbackSchema } from './validation';
 import { createSeedEvent } from './seed-event';
-import { formatDate, formatTime, toJakartaInput, fromJakartaInput } from './format';
+import { formatDate, formatDateTime, formatTime, fromZoneInput, toZoneInput } from './format';
 const rsvp = { name: 'Tamu Pengujian', organization: 'Organisasi Pengujian', attendance: 'yes', phone: '', email: '', has_allergy: false, allergy_details: '', consent: true, website: '', idempotency_key: 'f0d26d64-2ab8-4d7a-80b5-328a132ea2cc' };
 describe('RSVP', () => {
   it('accepts optional contacts', () => expect(rsvpSchema.safeParse(rsvp).success).toBe(true));
@@ -31,11 +31,23 @@ describe('event publication', () => {
   });
   it('blocks unsafe URL schemes and duplicate sections', () => { expect(eventSchema.safeParse({...createSeedEvent(), location_url:'javascript:alert(1)'}).success).toBe(false); const e=createSeedEvent(); e.sections.push(e.sections[0]); expect(eventSchema.safeParse(e).success).toBe(false); });
 });
+describe('invitation mode', () => {
+  it('defaults older event documents to open', () => {
+    const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
+    delete legacy.invitation_mode;
+    expect(eventSchema.parse(legacy).invitation_mode).toBe('open');
+  });
+  it('accepts personal mode and rejects unknown modes', () => {
+    expect(eventSchema.parse({ ...createSeedEvent(), invitation_mode: 'personal' }).invitation_mode).toBe('personal');
+    expect(eventSchema.safeParse({ ...createSeedEvent(), invitation_mode: 'private' }).success).toBe(false);
+  });
+});
+
 describe('PIC contact', () => {
   it('keeps older events valid without a contact field', () => {
     const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
     delete legacy.contact;
-    expect(eventSchema.parse(legacy).contact).toEqual({ name: '', phone: '', channel: 'whatsapp' });
+    expect(eventSchema.parse(legacy).contact).toEqual({ name: '', phone: '', channel: 'whatsapp', heading: '', description: '', role: '', organization: '' });
   });
   it('accepts an empty contact, local 08, and older +62 contacts for either channel', () => {
     expect(eventSchema.safeParse(createSeedEvent()).success).toBe(true);
@@ -48,6 +60,34 @@ describe('PIC contact', () => {
       { name: 'Panitia', phone: '071234567890', channel: 'whatsapp' },
       { name: 'Panitia', phone: '+62;alert(1)', channel: 'phone' },
     ]) expect(eventSchema.safeParse({ ...createSeedEvent(), contact }).success).toBe(false);
+  });
+});
+
+describe('optional guide content', () => {
+  it('defaults new fields on an older document without changing its sections', () => {
+    const legacy = { ...createSeedEvent(), contact: { name: 'Raja', phone: '0811 2831 929', channel: 'whatsapp' } } as Partial<ReturnType<typeof createSeedEvent>>;
+    delete legacy.team_image;
+    delete legacy.review_heading;
+    delete legacy.review_description;
+    delete legacy.review_button_label;
+    delete legacy.feedback_description;
+    legacy.sections = legacy.sections?.filter(section => section.key !== 'team');
+    const parsed = eventSchema.parse(legacy);
+    expect(parsed.contact).toMatchObject({ heading: '', description: '', role: '', organization: '' });
+    expect(parsed.team_image).toEqual({ url: '', alt: '', srcset: [] });
+    expect(parsed.sections.some(section => section.key === 'team')).toBe(false);
+    expect(parsed.review_description).toBe('');
+  });
+  it('accepts custom descriptions and a team photo with alt text', () => {
+    const event = createSeedEvent();
+    event.contact = { ...event.contact, heading: 'Any questions?', role: 'Hospitality Specialist', organization: 'Werkudara Group' };
+    event.review_description = 'Bagikan pengalaman Anda.';
+    event.team_image = { url: 'https://example.test/team.jpg', alt: 'Tim Werkudara', srcset: [] };
+    expect(eventSchema.safeParse(event).success).toBe(true);
+    expect(eventSchema.safeParse({ ...event, team_image: { ...event.team_image, alt: '' } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, contact: { ...event.contact, description: 'a'.repeat(1001) } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, team_image: { ...event.team_image, url: 'javascript:alert(1)' } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, team_image: { url: '', alt: '', srcset: [{ width: 100, url: 'https://example.test/x.jpg' }] } }).success).toBe(false);
   });
 });
 
@@ -107,6 +147,87 @@ describe('gallery', () => {
 describe('WIB dates', () => {
   it('uses confirmed Monday date', () => expect(formatDate(createSeedEvent().starts_at)).toContain('Senin'));
   it('shows arrival 18.00 WIB', () => expect(formatTime(createSeedEvent().starts_at)).toBe('18.00'));
-  it('round trips local input without OS timezone dependence', () => expect(toJakartaInput(fromJakartaInput('2026-10-12T18:00'))).toBe('2026-10-12T18:00'));
+  it('round trips local input without OS timezone dependence', () => expect(toZoneInput(fromZoneInput('2026-10-12T18:00', 'Asia/Jakarta'), 'Asia/Jakarta')).toBe('2026-10-12T18:00'));
+});
+
+describe('WITA and WIT', () => {
+  it('reads input as wall-clock time in the event zone', () => {
+    expect(fromZoneInput('2026-11-02T09:00', 'Asia/Makassar')).toBe('2026-11-02T01:00:00.000Z');
+    expect(fromZoneInput('2026-11-02T09:00', 'Asia/Jayapura')).toBe('2026-11-02T00:00:00.000Z');
+    expect(toZoneInput('2026-11-02T01:00:00.000Z', 'Asia/Makassar')).toBe('2026-11-02T09:00');
+    expect(toZoneInput('2026-11-02T01:00:00.000Z', 'Asia/Jakarta')).toBe('2026-11-02T08:00');
+  });
+  it('labels times with the event zone', () => {
+    expect(formatDateTime('2026-11-02T01:00:00.000Z', 'Asia/Makassar')).toBe('Senin, 2 November 2026, 09.00 WITA');
+    expect(formatDateTime('2026-11-02T01:00:00.000Z', 'Asia/Jayapura')).toMatch(/10\.00 WIT$/);
+  });
+  it('accepts the three Indonesian zones only', () => {
+    for (const timezone of ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']) expect(eventSchema.safeParse({ ...createSeedEvent(), timezone }).success).toBe(true);
+    for (const timezone of ['Europe/London', 'UTC', '']) expect(eventSchema.safeParse({ ...createSeedEvent(), timezone }).success).toBe(false);
+  });
 });
 it('rejects duplicated feedback questions', () => expect(feedbackSchema.safeParse({idempotency_key:rsvp.idempotency_key, website:'', answers:[{question_id:rsvp.idempotency_key,value:'1'},{question_id:rsvp.idempotency_key,value:'2'}]}).success).toBe(false));
+
+describe('journey content', () => {
+  it('defaults the preparation cards and limits their size', () => {
+    const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
+    delete legacy.prepare;
+    expect(eventSchema.parse(legacy).prepare).toEqual({ title: '', intro: '', items: [] });
+    const card = { icon: 'shirt', title: 'Dress code', description: 'Batik', list: ['Kemeja berkerah'] };
+    expect(eventSchema.safeParse({ ...createSeedEvent(), prepare: { title: '', intro: '', items: [card] } }).success).toBe(true);
+    expect(eventSchema.safeParse({ ...createSeedEvent(), prepare: { title: '', intro: '', items: Array(9).fill(card) } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...createSeedEvent(), prepare: { title: '', intro: '', items: [{ ...card, icon: 'rocket' }] } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...createSeedEvent(), prepare: { title: '', intro: '', items: [{ ...card, list: Array(16).fill('x') }] } }).success).toBe(false);
+  });
+  it('fills kind, audience, theme, phase, and content defaults for an older document', () => {
+    const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
+    for (const key of ['event_kind', 'audience', 'theme', 'phase_override', 'experience', 'route', 'day_note', 'after'] as const) delete legacy[key];
+    legacy.sections = legacy.sections?.filter(section => section.key !== 'experience');
+    const parsed = eventSchema.parse(legacy);
+    expect(parsed).toMatchObject({ event_kind: 'acara', audience: 'external', theme: { key: 'werkudara', corners: 'square' }, phase_override: 'auto', day_note: '' });
+    expect(parsed.experience).toEqual({ title: '', story: '', image: { url: '', alt: '', srcset: [] }, moments: [] });
+    expect(parsed.route.steps).toEqual([]);
+    expect(parsed.after.collaboration.enabled).toBe(false);
+  });
+  it('accepts a full journey and rejects unknown themes, icons, and too many items', () => {
+    const event = createSeedEvent();
+    event.theme = { key: 'gala', corners: 'soft' };
+    event.experience.moments = [{ icon: 'coffee', title: 'Sambutan', description: '' }];
+    event.route.steps = [{ title: 'Belok kiri', description: '', image: { url: 'https://example.test/turn.jpg', alt: 'Titik belok', srcset: [] } }];
+    expect(eventSchema.safeParse(event).success).toBe(true);
+    expect(eventSchema.safeParse({ ...event, theme: { key: 'neon', corners: 'square' } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, experience: { ...event.experience, moments: [{ icon: 'rocket', title: 'X', description: '' }] } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, route: { ...event.route, steps: Array.from({ length: 7 }, () => event.route.steps[0]) } }).success).toBe(false);
+  });
+  it('requires a description for every journey photo', () => {
+    const event = createSeedEvent();
+    event.route.steps = [{ title: 'Belok kiri', description: '', image: { url: 'https://example.test/turn.jpg', alt: '', srcset: [] } }];
+    const result = eventSchema.safeParse(event);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map(issue => issue.path.join('.'))).toContain('route.steps.0.image.alt');
+    expect(eventSchema.safeParse({ ...createSeedEvent(), after: { ...createSeedEvent().after, image: { url: 'https://example.test/a.jpg', alt: '', srcset: [] } } }).success).toBe(false);
+  });
+});
+
+describe('rsvp needs', () => {
+  it('turns an older allergy answer into the food list', () => {
+    const parsed = rsvpSchema.parse({ ...rsvp, has_allergy: true, allergy_details: 'Udang' });
+    expect(parsed).toMatchObject({ dietary: ['allergy'], has_allergy: true, allergy_details: 'Udang', party_size: 1, access: [] });
+  });
+  it('keeps has_allergy in step with the allergy choice', () => {
+    expect(rsvpSchema.parse({ ...rsvp, dietary: ['vegetarian', 'allergy'], allergy_details: 'Kacang' })).toMatchObject({ has_allergy: true, dietary: ['vegetarian', 'allergy'] });
+    expect(rsvpSchema.safeParse({ ...rsvp, dietary: ['allergy'] }).success).toBe(false);
+  });
+  it('clears party and needs when the guest cannot come', () => {
+    const parsed = rsvpSchema.parse({ ...rsvp, attendance: 'no', party_size: 3, companion_names: ['Raka'], dietary: ['allergy'], allergy_details: 'Kacang', access: ['wheelchair'] });
+    expect(parsed).toMatchObject({ party_size: 1, companion_names: [], dietary: [], access: [], has_allergy: false, allergy_details: '' });
+  });
+  it('asks for a description when "other" is chosen and drops it otherwise', () => {
+    expect(rsvpSchema.safeParse({ ...rsvp, access: ['other'] }).success).toBe(false);
+    expect(rsvpSchema.parse({ ...rsvp, access: ['other'], access_other: 'Kruk' }).access_other).toBe('Kruk');
+    expect(rsvpSchema.parse({ ...rsvp, access_other: 'Sisa ketikan' }).access_other).toBe('');
+  });
+  it('keeps companion names within the party', () => {
+    expect(rsvpSchema.parse({ ...rsvp, party_size: 2, companion_names: ['Raka', 'Dinda', ''] }).companion_names).toEqual(['Raka']);
+  });
+});

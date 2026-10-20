@@ -21,7 +21,7 @@ Sumber utama: handbook DOCX lokal (tidak disertakan dalam repository publik), se
 Jangan isi dengan contoh yang tampak nyata. Foto, review dan survei tidak ditampilkan jika belum ada konten/aktivasi. Simpan draft sampai konten inti diverifikasi.
 
 ## Pemeriksaan operasional
-- Keputusan akses tanpa login ditinjau: `/admin` dan API admin pada domain publik dapat dipakai siapa pun, termasuk untuk melihat/mengekspor data tamu dan menghapus acara. Repository privat tidak membatasi akses tersebut.
+- `ADMIN_PASSWORD` dan `ADMIN_SESSION_SECRET` sudah diisi di server, password hanya dibagikan kepada panitia yang perlu, dan Log akses (`/admin/akses`) mencatat login pertama.
 - Persetujuan penyelenggara untuk pemrosesan data RSVP/kontak/kebutuhan makanan dan kebijakan retensinya sudah ada sebelum menerima data nyata.
 - Bila suatu saat Preview memakai Supabase yang sama dengan Production, pengujian di Preview tidak mengubah atau menghapus data produksi.
 - URL acara diterbitkan dengan sengaja, tidak dari seed otomatis.

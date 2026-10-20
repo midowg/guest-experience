@@ -20,9 +20,19 @@ export async function adminRequest<T>(url: string, init: RequestInit = {}): Prom
   catch { throw new AdminApiError("Server belum dapat memberikan jawaban. Coba lagi atau hubungi pengelola aplikasi.", undefined, response.status); }
   if (!result || typeof result.ok !== "boolean") throw new AdminApiError("Respons server tidak dikenali. Penyimpanan belum dapat dikonfirmasi.", undefined, response.status);
   if (!response.ok || !result.ok) {
-    throw new AdminApiError(response.status === 401 ? "Sesi berakhir. Masuk kembali sebelum melanjutkan." : result.message || "Permintaan gagal. Coba lagi.", result.ok ? undefined : result.fieldErrors, response.status);
+    const expired = response.status === 401 && url.startsWith("/api/admin/");
+    if (expired) redirectToLogin();
+    throw new AdminApiError(expired ? "Sesi berakhir. Masuk kembali sebelum melanjutkan." : result.message || "Permintaan gagal. Coba lagi.", result.ok ? undefined : result.fieldErrors, response.status);
   }
   return result;
+}
+
+/** A hard navigation on purpose: the editor's beforeunload warning still guards unsaved edits. */
+function redirectToLogin() {
+  if (typeof window === "undefined") return;
+  const next = `${window.location.pathname}${window.location.search}`;
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- see above
+  window.location.href = `/admin/login?next=${encodeURIComponent(next)}&berakhir=1`;
 }
 
 export function errorMessage(error: unknown) {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import type { EventRecord, GalleryImage, ImageSource } from "@/lib/types";
 import styles from "./guest.module.css";
+import { useWording } from "./language";
 
 const INTERVAL = 6000;
 /** The carousel sits in the wide column of the section grid; below that breakpoint it spans the screen. */
@@ -39,7 +40,9 @@ export function venuePhotos(event: Pick<EventRecord, "gallery">): GalleryImage[]
  * A single image renders as a plain figure — there is nothing to slide between.
  * Two or more advance on their own, and stop as soon as the viewer takes over.
  */
-export function Gallery({ images, label = "Foto lokasi" }: { images: GalleryImage[]; label?: string }) {
+export function Gallery({ images, label }: { images: GalleryImage[]; label?: string }) {
+  const { t } = useWording();
+  label ??= t("gallery.label");
   const slides = [...images].sort((a, b) => a.sort_order - b.sort_order);
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -85,7 +88,7 @@ export function Gallery({ images, label = "Foto lokasi" }: { images: GalleryImag
         aria-hidden={position !== index}
         inert={position !== index}
         aria-roledescription="slide"
-        aria-label={`${position + 1} dari ${total}`}
+        aria-label={t("gallery.position", { n: position + 1, total })}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={slide.url} {...imageSrcSet(slide.srcset, GALLERY_SIZES)} alt={slide.alt} loading={position === 0 ? "eager" : "lazy"} referrerPolicy="no-referrer" />
@@ -93,20 +96,20 @@ export function Gallery({ images, label = "Foto lokasi" }: { images: GalleryImag
       </figure>)}
     </div>
     <div className={styles.galleryControls}>
-      <button type="button" className={styles.galleryArrow} onClick={() => takeOver(() => go(index - 1))} aria-label="Foto sebelumnya"><ChevronLeft size={20} aria-hidden="true" /></button>
-      <div className={styles.galleryDots} role="tablist" aria-label="Pilih foto">
+      <button type="button" className={styles.galleryArrow} onClick={() => takeOver(() => go(index - 1))} aria-label={t("gallery.prev")}><ChevronLeft size={20} aria-hidden="true" /></button>
+      <div className={styles.galleryDots} role="tablist" aria-label={t("gallery.pick")}>
         {slides.map((slide, position) => <button
           key={slide.id}
           type="button"
           role="tab"
           aria-selected={position === index}
-          aria-label={`Foto ${position + 1}`}
+          aria-label={t("gallery.photo", { n: position + 1 })}
           className={position === index ? styles.galleryDotActive : styles.galleryDot}
           onClick={() => takeOver(() => go(position))}
         />)}
       </div>
-      <button type="button" className={styles.galleryArrow} onClick={() => takeOver(() => go(index + 1))} aria-label="Foto berikutnya"><ChevronRight size={20} aria-hidden="true" /></button>
-      {!reduced && <button type="button" className={styles.galleryArrow} onClick={() => setPlaying(current => !current)} aria-label={playing ? "Hentikan pergantian otomatis" : "Jalankan pergantian otomatis"}>
+      <button type="button" className={styles.galleryArrow} onClick={() => takeOver(() => go(index + 1))} aria-label={t("gallery.next")}><ChevronRight size={20} aria-hidden="true" /></button>
+      {!reduced && <button type="button" className={styles.galleryArrow} onClick={() => setPlaying(current => !current)} aria-label={playing ? t("gallery.pause") : t("gallery.play")}>
         {playing ? <Pause size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />}
       </button>}
     </div>

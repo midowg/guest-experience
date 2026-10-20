@@ -7,7 +7,7 @@ afterEach(cleanup);
 
 function eventWithContact(channel: "whatsapp" | "phone") {
   const event = createSeedEvent();
-  event.contact = { name: "Koordinator Acara", phone: "0812 3456 7890", channel };
+  event.contact = { ...event.contact, name: "Koordinator Acara", phone: "0812 3456 7890", channel };
   event.sections = event.sections.map(section => section.key === "contact" ? { ...section, enabled: true } : section);
   return event;
 }
@@ -20,6 +20,8 @@ it("opens WhatsApp with a clean international number and keeps contact when RSVP
   const link = screen.getByRole("link", { name: /Hubungi via WhatsApp/ });
   expect(link.getAttribute("href")).toBe("https://wa.me/6281234567890");
   expect(link.getAttribute("target")).toBe("_blank");
+  expect(screen.getByRole("heading", { name: "Ada pertanyaan?" })).toBeTruthy();
+  expect(screen.getByText("Hubungi PIC untuk informasi lebih lanjut.")).toBeTruthy();
   expect(screen.getByText("Koordinator Acara")).toBeTruthy();
   expect(screen.getByText("081234567890")).toBeTruthy();
   expect(screen.queryByRole("heading", { name: "Kabarkan kehadiran Anda." })).toBeNull();
@@ -39,6 +41,19 @@ it("uses local 08 for calls even when an older event stores +62", () => {
   render(<EventExperience event={event} preview />);
   expect(screen.getByRole("link", { name: "Telepon PIC" }).getAttribute("href")).toBe("tel:081234567890");
   expect(screen.getByText("081234567890")).toBeTruthy();
+});
+
+it("renders optional contact introduction, role, and organization", () => {
+  const event = eventWithContact("whatsapp");
+  event.contact.heading = "Any questions before your visit?";
+  event.contact.description = "If you need directions or help with access, please contact our Hospitality Specialist.";
+  event.contact.role = "Hospitality Specialist";
+  event.contact.organization = "Werkudara Group";
+  render(<EventExperience event={event} preview />);
+  expect(screen.getByRole("heading", { name: "Any questions before your visit?" })).toBeTruthy();
+  expect(screen.getByText(event.contact.description)).toBeTruthy();
+  expect(screen.getByText("Hospitality Specialist")).toBeTruthy();
+  expect(screen.getByText("Werkudara Group")).toBeTruthy();
 });
 
 it("omits the contact section and navigation until contact details are filled", () => {

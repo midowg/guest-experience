@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink, Field, Notice } from "@/components/ui";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import type { FeedbackRecord, PageResult, RsvpRecord } from "@/lib/types";
 import styles from "./admin.module.css";
+import { accessText, foodText, partyText } from "@/lib/rsvp-labels";
 
 function Pagination({ page, total, pageSize, onPage, busy }: { page: number; total: number; pageSize: number; onPage: (page: number) => void; busy: boolean }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
@@ -16,7 +17,7 @@ function Pagination({ page, total, pageSize, onPage, busy }: { page: number; tot
   </nav>;
 }
 
-function timestamp(value: string) { return `${formatDate(value)}, ${formatTime(value)} WIB`; }
+function timestamp(value: string) { return formatDateTime(value); }
 
 export function ResponsesView({ eventId, initial, initialFilters }: { eventId: string; initial: PageResult<RsvpRecord>; initialFilters: { attendance: string; q: string } }) {
   const router = useRouter();
@@ -42,16 +43,17 @@ export function ResponsesView({ eventId, initial, initialFilters }: { eventId: s
       <Field name="attendance" label="Kehadiran"><select className="select" id="attendance" value={attendance} onChange={e => { setAttendance(e.target.value); navigate({ page: 1, attendance: e.target.value }); }}><option value="">Semua</option><option value="yes">Hadir</option><option value="no">Tidak hadir</option></select></Field>
       <div className={styles.actions}><Button type="submit" disabled={busy}>Terapkan</Button><ButtonLink variant="secondary" href={`/api/admin/events/${eventId}/responses/export`}>Unduh CSV</ButtonLink></div>
     </form>
-    <Notice>Daftar ini memuat data pribadi tamu, termasuk kebutuhan alergi. Gunakan hanya untuk koordinasi acara dan jangan membagikannya di luar panitia.</Notice>
+    <Notice>Daftar ini memuat data pribadi tamu, termasuk kebutuhan makanan dan akses. Gunakan hanya untuk koordinasi acara dan jangan membagikannya di luar panitia.</Notice>
     {!initial.items.length ? <Notice>Belum ada konfirmasi yang sesuai filter ini.</Notice> : <>
       <div className={styles.tableWrap}><table className={styles.table}>
         <caption>Konfirmasi kehadiran tamu</caption>
-        <thead><tr><th scope="col">Waktu</th><th scope="col">Nama</th><th scope="col">Instansi</th><th scope="col">Kehadiran</th><th scope="col">Kontak</th><th scope="col">Alergi</th></tr></thead>
+        <thead><tr><th scope="col">Waktu</th><th scope="col">Nama</th><th scope="col">Jenis</th><th scope="col">Instansi</th><th scope="col">Kehadiran</th><th scope="col">Rombongan</th><th scope="col">Kontak</th><th scope="col">Kebutuhan</th></tr></thead>
         <tbody>{initial.items.map(row => <tr key={row.id}>
-          <td>{timestamp(row.created_at)}</td><td>{row.name}</td><td>{row.organization}</td>
+          <td>{timestamp(row.updated_at ?? row.created_at)}</td><td>{row.name}</td><td>{row.invitation_id ? "Personal" : "Umum"}</td><td>{row.organization}</td>
           <td>{row.attendance === "yes" ? "Hadir" : "Tidak hadir"}</td>
-          <td>{row.phone || row.email ? <>{row.phone && <p>{row.phone}</p>}{row.email && <p>{row.email}</p>}</> : <span className="muted">Tidak diisi</span>}</td>
-          <td>{row.has_allergy ? row.allergy_details : <span className="muted">Tidak ada</span>}</td>
+          <td>{partyText(row) || <span className="muted">—</span>}</td>
+          <td>{row.phone || row.email ? <>{row.phone && <p>{row.phone}{row.whatsapp_consent && " · boleh WA"}</p>}{row.email && <p>{row.email}</p>}</> : <span className="muted">Tidak diisi</span>}</td>
+          <td>{foodText(row) || accessText(row) || row.photo_opt_out ? <>{foodText(row) && <p>{foodText(row)}</p>}{accessText(row) && <p>{accessText(row)}</p>}{row.photo_opt_out && <p>Jangan tampilkan foto</p>}</> : <span className="muted">Tidak ada</span>}</td>
         </tr>)}</tbody>
       </table></div>
       <Pagination page={initial.page} total={initial.total} pageSize={initial.pageSize} busy={busy} onPage={page => navigate({ page })} />

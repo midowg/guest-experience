@@ -1,0 +1,246 @@
+<title>Rancangan Alur Kunjungan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* A review sheet: mobile guest journey beside a compact hospitality work surface. */
+:root {
+  --bg:#f7f9fc; --surface:#ffffff; --surface-alt:#eef4fa; --ink:#263c58; --muted:#5c6e82; --line:#cbd8e8; --accent:#1551a0; --accent-ink:#ffffff; --notice:#e3f3f0; --notice-ink:#1e605a; --attention:#fff1d9; --attention-ink:#704e13;
+  --font-display:'Montserrat',Arial,sans-serif; --font-body:'Source Sans 3','Source Sans Pro',Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#131d2c; --surface:#1d2c40; --surface-alt:#253b55; --ink:#f0f5fb; --muted:#b3c5d8; --line:#4a6380; --accent:#91befd; --accent-ink:#14263e; --notice:#183c3b; --notice-ink:#b7f1e4; --attention:#493a23; --attention-ink:#f9e2aa; color-scheme:dark;
+} }
+:root[data-theme="dark"] {
+  --bg:#131d2c; --surface:#1d2c40; --surface-alt:#253b55; --ink:#f0f5fb; --muted:#b3c5d8; --line:#4a6380; --accent:#91befd; --accent-ink:#14263e; --notice:#183c3b; --notice-ink:#b7f1e4; --attention:#493a23; --attention-ink:#f9e2aa; color-scheme:dark;
+}
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--ink); font: 1rem/1.48 var(--font-body); padding-block:2.2rem 4rem; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+button { font:inherit; cursor:pointer }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline:3px solid var(--accent); outline-offset:3px }
+h1,h2,h3,h4,p { margin:0 }
+h1,h2,h3,h4 { font-family:var(--font-display); line-height:1.2; text-wrap:balance }
+h1 { font-size:clamp(1.85rem,4vw,3rem); letter-spacing:-.035em; max-width:18ch }
+h2 { font-size:clamp(1.4rem,2.5vw,2rem); letter-spacing:-.02em }
+h3 { font-size:1.1rem }
+h4 { font-size:.95rem }
+p { max-width:67ch }
+small,.small { font-size:.86rem; color:var(--muted) }
+.wrap { width:min(100%,1120px); margin-inline:auto; display:grid; gap:1.7rem }
+.header { display:grid; gap:.65rem; border-bottom:1px solid var(--line); padding-bottom:1.5rem }
+.eyebrow { color:var(--accent); font:700 .72rem/1.4 var(--font-display); text-transform:uppercase; letter-spacing:.12em }
+.lead { font-size:1.08rem; color:var(--muted) }
+.tabs { display:flex; flex-wrap:wrap; gap:.5rem }
+.tab { background:var(--surface); border:1px solid var(--line); color:var(--ink); padding:.5rem .9rem; border-radius:.35rem; font-weight:700 }
+.tab[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--accent-ink) }
+.panel { display:grid; gap:1.5rem }
+.panelIntro { display:grid; gap:.45rem }
+.layout { display:grid; grid-template-columns:minmax(0,360px) minmax(0,1fr); gap:clamp(1.25rem,3vw,2.4rem); align-items:start }
+.layout > * { min-width:0 }
+.phone { border:1px solid var(--line); border-radius:1.25rem; background:var(--surface); box-shadow:0 14px 36px rgba(25,55,95,.09); overflow:hidden }
+.phoneTop { height:1.75rem; background:var(--surface-alt); text-align:center; font-size:.68rem; line-height:1.75rem; color:var(--muted); letter-spacing:.04em }
+.phoneBody { min-height:490px }
+.guestHero { display:grid; gap:.8rem; background:var(--surface-alt); padding:1.4rem 1.15rem 1.2rem }
+.guestHero h3 { font-size:1.6rem }
+.guestHero .eventFacts { font-weight:700 }
+.miniNav { display:flex; justify-content:space-between; gap:.4rem; padding:.65rem 1.15rem; border-bottom:1px solid var(--line); font-size:.8rem; font-weight:700 }
+.miniNav span:last-child { color:var(--accent) }
+.mockAction { display:block; padding:.65rem .8rem; border:1px solid var(--accent); border-radius:.25rem; background:var(--accent); color:var(--accent-ink); font-weight:700; text-align:center; font-size:.91rem }
+.mockAction.secondary { background:transparent; color:var(--accent) }
+.actions { display:grid; gap:.45rem }
+.cardlet { padding:1rem 1.15rem; display:grid; gap:.35rem; border-top:1px solid var(--line) }
+.cardlet h4 { color:var(--accent) }
+.pageBreak { height:1.2rem; background:linear-gradient(var(--surface),var(--surface-alt)) }
+.mockSection { padding:1.05rem 1.15rem; border-top:1px solid var(--line); display:grid; gap:.4rem }
+.mockSection .teaser { color:var(--accent); font-weight:700; font-size:.89rem }
+.disclosure { border:1px solid var(--line); border-radius:.25rem; background:var(--surface); min-width:0 }
+.disclosure summary { cursor:pointer; padding:.65rem .8rem; color:var(--accent); font-weight:700; list-style:revert }
+.disclosureBody { padding:.4rem .8rem .85rem; display:grid; gap:.65rem }
+.notes { display:grid; gap:.8rem; align-content:start }
+.note { padding:.9rem 1rem; border-left:3px solid var(--accent); background:var(--surface); display:grid; gap:.25rem }
+.note h3 { font-size:.91rem }
+.note p { color:var(--muted); font-size:.94rem }
+.callout { padding:1rem 1.1rem; background:var(--notice); color:var(--notice-ink); border-radius:.3rem; font-size:.93rem }
+.callout p { color:inherit }
+.formMock { display:grid; gap:.7rem; padding:1.15rem; border-top:1px solid var(--line) }
+.optionGroup { border:0; padding:0; margin:0; display:grid; gap:.45rem; min-width:0 }
+.optionGroup legend { font:700 .95rem/1.35 var(--font-display); padding:0 0 .35rem }
+.option { display:flex; align-items:start; gap:.55rem; border:1px solid var(--line); padding:.55rem .7rem; border-radius:.2rem; font-size:.9rem; cursor:pointer }
+.option:has(input:checked) { border-color:var(--accent); background:var(--surface-alt) }
+.option input { margin-top:.19rem; accent-color:var(--accent); flex:none }
+.detailField { display:grid; gap:.25rem; font-size:.85rem; font-weight:700 }
+.detailField textarea { width:100%; min-height:4rem; resize:vertical; border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:.65rem; font:inherit }
+.textField { border:1px solid var(--line); padding:.7rem; color:var(--muted); min-height:3rem; font-size:.85rem }
+.adminSurface { border:1px solid var(--line); background:var(--surface); border-radius:.5rem; overflow:hidden }
+.adminHeader { padding:.85rem 1rem; display:flex; align-items:center; gap:.75rem; justify-content:space-between; flex-wrap:wrap; border-bottom:1px solid var(--line) }
+.adminHeader strong { font-family:var(--font-display); font-size:.94rem }
+.adminNav { display:flex; gap:.35rem; padding:.55rem 1rem; overflow-x:auto; border-bottom:1px solid var(--line); white-space:nowrap }
+.adminNav span { padding:.32rem .55rem; color:var(--muted); font-size:.83rem }
+.adminNav .active { background:var(--surface-alt); color:var(--accent); font-weight:700 }
+.adminContent { padding:1.1rem; display:grid; gap:1rem }
+.toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; justify-content:space-between }
+.toolbar h3 { font-size:1.12rem }
+.chip { font-size:.76rem; padding:.18rem .48rem; border:1px solid var(--line); border-radius:.2rem; color:var(--muted); white-space:nowrap }
+.chip.warn { background:var(--attention); border-color:var(--attention); color:var(--attention-ink) }
+.chip.ok { background:var(--notice); border-color:var(--notice); color:var(--notice-ink) }
+.rowline { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.6rem; border-bottom:1px solid var(--line); padding:.55rem 0; align-items:center; font-size:.91rem }
+.rowline > * { min-width:0 }
+.rowline:last-child { border-bottom:0 }
+.sub { color:var(--muted); font-size:.81rem }
+.mockLink { color:var(--accent); font-weight:700; font-size:.84rem }
+.stacked { display:grid; gap:.2rem }
+.dataGrid { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,.7fr) minmax(0,1.2fr); border-top:1px solid var(--line); font-size:.88rem }
+.dataGrid > span { min-width:0; overflow-wrap:anywhere; padding:.52rem .3rem; border-bottom:1px solid var(--line) }
+.dataGrid .th { font-weight:700; color:var(--muted); font-size:.76rem }
+.dataGrid .num { text-align:right; font-variant-numeric:tabular-nums }
+.alert { background:var(--attention); color:var(--attention-ink); padding:.6rem .75rem; font-size:.84rem }
+.alert p { color:inherit }
+.sectionTitle { font-weight:700; font-size:.9rem }
+.footer { border-top:1px solid var(--line); padding-top:1.3rem; display:grid; gap:.45rem }
+.footer p { color:var(--muted); font-size:.92rem }
+@media(max-width:740px) { .layout { grid-template-columns:1fr } .phone { width:min(100%,380px); margin-inline:auto } }
+@media(prefers-reduced-motion:no-preference) { .tab { transition:background-color .15s, color .15s } }
+</style>
+<div class="wrap">
+  <header class="header">
+    <span class="eyebrow">Prototipe alur · bahan diskusi</span>
+    <h1>Satu perjalanan tamu, satu meja kerja hospitality.</h1>
+    <p class="lead">Contoh tampilan, bukan aplikasi aktif. Identitas acara, nama, angka, dan kebutuhan di bawah hanya ilustrasi. Pilih tahap untuk melihat prioritas setiap layar.</p>
+  </header>
+  <nav class="tabs" aria-label="Layar rancangan">
+    <button class="tab" type="button" data-tab="guest" aria-pressed="true">Tamu · sebelum acara</button>
+    <button class="tab" type="button" data-tab="diet" aria-pressed="false">Tamu · kebutuhan</button>
+    <button class="tab" type="button" data-tab="after" aria-pressed="false">Tamu · setelah acara</button>
+    <button class="tab" type="button" data-tab="admin" aria-pressed="false">Admin · acara</button>
+    <button class="tab" type="button" data-tab="beo" aria-pressed="false">Admin · BEO</button>
+    <button class="tab" type="button" data-tab="photos" aria-pressed="false">Admin · foto acara</button>
+    <button class="tab" type="button" data-tab="shared" aria-pressed="false">Admin · konten bersama</button>
+  </nav>
+  <section class="panel" id="guest">
+    <div class="panelIntro"><span class="eyebrow">Tamu / sebelum acara</span><h2>Yang perlu diketahui lebih dulu.</h2><p>Halaman dimulai dengan keputusan praktis, lalu mengantar tamu ke informasi berikutnya. Pada tautan personal, nama dapat disapa tanpa memaksa pengisian ulang; tautan umum tetap bisa dibaca semua tamu.</p></div>
+    <div class="layout">
+      <div class="phone"><div class="phoneTop">PRATINJAU PONSEL · CONTOH</div><div class="phoneBody">
+        <div class="miniNav"><span>Undangan acara</span><span>Bahasa: ID / EN</span></div>
+        <div class="guestHero"><span class="eyebrow">Undangan kunjungan</span><h3>Perjumpaan &amp; Percakapan</h3><p class="eventFacts">Kamis, 12 November · 10.00 WIB</p><p>Kantor penyelenggara · Yogyakarta</p><p>Datang untuk mengenal ruang, orang, dan gagasan yang sedang kami bangun.</p><div class="actions"><span class="mockAction">Konfirmasi kehadiran</span><span class="mockAction secondary">Sampaikan kebutuhan kunjungan</span></div></div>
+        <div class="cardlet"><h4>Setelah ini</h4><p>Perjalanan ke kantor → Pengalaman kunjungan → Kontak bantuan</p></div>
+        <div class="mockSection"><h4>Panduan perjalanan</h4><p>Alamat dan titik kedatangan tersedia tanpa harus mengisi RSVP.</p><span class="teaser">Buka rute dan foto penunjuk →</span></div>
+        <div class="mockSection"><h4>Pengalaman kunjungan</h4><p>Konsep acara: “Pulang ke Rumah Nenek” (contoh). Cerita singkat dan foto pendukung mengantar tamu mengenal pengalaman yang disiapkan.</p><p class="small">Di bagian yang sama, pilihan kebutuhan makanan dan akses dibuka bila tamu ingin menyampaikannya.</p><span class="teaser">Sampaikan kebutuhan kunjungan ▾</span></div>
+        <div class="mockSection"><h4>Our Team</h4><p>Bagian terpisah; hanya muncul bila diaktifkan untuk acara ini.</p></div>
+      </div></div>
+      <div class="notes"><div class="note"><h3>Layar awal tidak terasa selesai</h3><p>Bagian “Setelah ini” mulai tampak setelah tindakan utama, memberi petunjuk alami bahwa masih ada informasi di bawah.</p></div><div class="note"><h3>Satu bagian Pengalaman kunjungan</h3><p>Cerita tema dan pilihan kebutuhan berada bersama: cerita terlihat terlebih dahulu; isian makanan/akses terbuka bila diketuk. Tombol dari pembuka langsung menuju bagian itu.</p></div><div class="note"><h3>Modul yang bisa dipilih</h3><p>Panduan perjalanan dan Our Team memiliki sakelar berbeda. Tema mengubah suasana, bukan letak tindakan penting.</p></div><div class="callout"><p><strong>Catatan desain:</strong> ini sketsa kepadatan konten, belum visual tema acara final. Foto dan naskah asli harus ditinjau hospitality.</p></div></div>
+    </div>
+  </section>
+  <section class="panel" id="diet" hidden>
+    <div class="panelIntro"><span class="eyebrow">Tamu / pengalaman kunjungan</span><h2>Cerita acara dan kebutuhan dalam satu alur.</h2><p>Cerita konsep langsung terbaca. Formulir opsional di bawahnya tetap ringkas: ketuk dropdown makanan atau akses untuk memilih lebih dari satu kebutuhan.</p></div>
+    <div class="layout"><div class="phone"><div class="phoneTop">PRATINJAU PONSEL · CONTOH</div><div class="phoneBody">
+      <div class="miniNav"><span>Pengalaman kunjungan</span><span>Bahasa: ID / EN</span></div>
+      <div class="mockSection"><span class="eyebrow">Konsep acara · contoh</span><h3>Pulang ke Rumah Nenek</h3><p>Suasana rumah klasik, gelas tempo dulu, dan limasan sebagai ruang berkumpul menjadi inspirasi perjumpaan ini.</p><span class="small">Foto pendukung ditampilkan setelah disetujui tim.</span></div>
+      <form class="formMock" id="needs-form"><h3>Ada yang dapat kami siapkan untuk kunjungan Anda?</h3><p class="small">Opsional. Pilih seperlunya; tim hospitality akan meninjau jawaban Anda.</p>
+        <details class="disclosure" id="food-disclosure"><summary>Kebutuhan makanan · pilih bila perlu</summary><div class="disclosureBody"><fieldset class="optionGroup"><legend>Pilih lebih dari satu bila sesuai</legend>
+          <label class="option"><input type="checkbox" id="food-none" checked> Tidak ada kebutuhan khusus</label>
+          <label class="option"><input type="checkbox" name="food" value="vegetarian"> Vegetarian</label>
+          <label class="option"><input type="checkbox" name="food" value="vegan"> Vegan</label>
+          <label class="option"><input type="checkbox" name="food" value="allergy"> Alergi makanan</label>
+          <label class="option"><input type="checkbox" name="food" value="other"> Lainnya</label>
+        </fieldset>
+        <label class="detailField" id="allergy-detail" hidden>Alergi terhadap apa? <textarea id="allergy-text" placeholder="Contoh: kacang tanah"></textarea></label>
+        <label class="detailField" id="food-detail" hidden>Kebutuhan makanan lainnya <textarea id="food-text" placeholder="Jelaskan kebutuhan Anda"></textarea></label></div></details>
+        <details class="disclosure" id="access-disclosure"><summary>Kebutuhan akses · pilih bila perlu</summary><div class="disclosureBody"><fieldset class="optionGroup"><legend>Bantuan akses yang diperlukan</legend>
+          <label class="option"><input type="checkbox" id="access-wheelchair"> Saya menggunakan kursi roda</label>
+          <label class="option"><input type="checkbox" id="access-other"> Saya memerlukan bantuan akses lainnya</label>
+        </fieldset>
+        <label class="detailField" id="access-detail" hidden>Bantuan akses apa yang dapat kami siapkan? <textarea id="access-text" placeholder="Ceritakan kebutuhan akses Anda, tanpa perlu menyebut diagnosis"></textarea></label></div></details>
+        <p class="small">Tidak perlu menjelaskan kondisi medis. Kami mungkin menghubungi Anda untuk memastikan bantuan yang sesuai.</p>
+        <button class="mockAction" type="submit">Lihat contoh konfirmasi</button><p class="small" id="needs-message" role="status">Prototipe ini tidak mengirim atau menyimpan jawaban.</p>
+      </form></div></div>
+      <div class="notes"><div class="note"><h3>Satu bagian, dua tujuan</h3><p>Gambaran pengalaman menarik tamu untuk membaca. Kebutuhan makanan dan akses berada tepat di bawahnya, tetapi tidak mengambil ruang sebelum diketuk.</p></div><div class="note"><h3>Dropdown multi-pilih</h3><p>Makanan dan akses adalah dua panel lipat terpisah. Kotak centang tetap terlihat saat dibuka sehingga tamu tahu mereka boleh memilih lebih dari satu.</p></div><div class="note"><h3>Kolom tambahan kontekstual</h3><p>“Lainnya” membuka kolom bebas; “Alergi” meminta alergen. Kebutuhan akses lain meminta bantuan yang diperlukan, bukan diagnosis.</p></div><div class="note"><h3>Personal dan umum</h3><p>Tautan personal mengaitkan jawaban pada undangan. Pada tautan umum, jawaban perlu terhubung ke RSVP atau identitas yang dapat ditindaklanjuti. Data lama tidak diubah artinya.</p></div></div>
+    </div>
+  </section>
+  <section class="panel" id="after" hidden>
+    <div class="panelIntro"><span class="eyebrow">Tamu / setelah acara</span><h2>Kenangan bisa diakses tanpa syarat.</h2><p>Pengalaman pasca-acara memakai tautan general per acara. Ulasan Google merupakan ajakan sukarela, bukan gerbang untuk foto asli.</p></div>
+    <div class="layout"><div class="phone"><div class="phoneTop">PRATINJAU PONSEL · CONTOH</div><div class="phoneBody">
+      <div class="miniNav"><span>Galeri acara</span><span>ID / EN</span></div><div class="guestHero"><span class="eyebrow">Terima kasih sudah hadir</span><h3>Sampai berjumpa lagi.</h3><p>Foto-foto pilihan dari pertemuan tersedia di bawah.</p></div>
+      <div class="mockSection"><h4>Galeri foto</h4><p class="small">Hanya foto yang sudah ditinjau dan diterbitkan · contoh susunan</p><div class="rowline"><span>Foto pertemuan 01<br><span class="sub">Keterangan singkat foto</span></span><span class="mockLink">Lihat asli →</span></div><div class="rowline"><span>Foto pertemuan 02<br><span class="sub">Keterangan singkat foto</span></span><span class="mockLink">Lihat asli →</span></div></div>
+      <div class="mockSection"><h4>Bagikan pengalaman Anda</h4><p>Jika berkenan, ceritakan pengalaman kunjungan melalui ulasan Google.</p><span class="mockAction secondary">Tulis ulasan (opsional)</span></div>
+    </div></div><div class="notes"><div class="note"><h3>Tautan tersendiri</h3><p>Halaman galeri tidak membanjiri undangan sebelum acara. Petugas lapangan mengunggah dari admin; tautan galeri dibagikan setelah foto ditinjau.</p></div><div class="note"><h3>Keterangan dan ukuran foto</h3><p>Keterangan tampil bersama foto. Pratinjau ponsel memakai versi yang ringan; “Lihat asli” menuju berkas asli yang tersedia.</p></div><div class="note"><h3>Batas akses perlu diputuskan</h3><p>“General” berarti satu galeri per acara; apakah tautan bisa dibuka publik atau hanya dibagikan ke peserta masih perlu keputusan dan izin penggunaan foto.</p></div></div></div>
+  </section>
+  <section class="panel" id="admin" hidden>
+    <div class="panelIntro"><span class="eyebrow">Admin / daftar acara</span><h2>Ringkas untuk dipindai, lengkap saat dibuka.</h2><p>Satu baris per acara dengan status dan aksi utama. Pengaturan detail tidak dipajang sebagai deretan tombol besar.</p></div>
+    <div class="layout"><div class="adminSurface"><div class="adminHeader"><strong>Pengelolaan acara</strong><span class="chip warn">Akses terbuka · rancangan</span></div><div class="adminNav"><span class="active">Acara</span><span>Konten bersama</span></div><div class="adminContent"><div class="toolbar"><h3>Daftar acara</h3><span class="mockLink">+ Buat acara</span></div><div class="rowline"><div class="stacked"><strong>Perjumpaan &amp; Percakapan</strong><span class="sub">12 Nov · tautan personal · Yogyakarta</span></div><span class="chip ok">Tayang</span></div><div class="rowline"><div class="stacked"><strong>Kunjungan berikutnya</strong><span class="sub">26 Nov · tautan umum</span></div><span class="chip">Draft</span></div><p class="small">Buka satu acara untuk menyunting undangan, modul, BEO, tamu, foto pasca-acara, serta pratinjau ponsel.</p></div></div>
+      <div class="notes"><div class="note"><h3>Editor per kelompok</h3><p>Informasi inti dan bahasa default · Tema, cerita konsep, dan foto · Modul tamu · RSVP dan kebutuhan · BEO. Simpan/pratinjau dekat area kerja.</p></div><div class="note"><h3>Cerita konsep untuk tamu</h3><p>Judul dan deskripsi tema diisi di editor tema/acara, tampil ringkas di pembuka dan lebih lengkap di “Pengalaman kunjungan”, tepat di atas panel kebutuhan tamu.</p></div><div class="note"><h3>Perubahan tema aman</h3><p>Acara memakai pilihan tema yang bisa disesuaikan. Mengedit tema sumber tidak otomatis mengubah undangan yang telah tayang.</p></div></div>
+    </div>
+  </section>
+  <section class="panel" id="beo" hidden>
+    <div class="panelIntro"><span class="eyebrow">Admin / BEO</span><h2>Angka kerja, bukan angka yang diam-diam berubah.</h2><p>Banquet Event Order merangkum keputusan hospitality. Data RSVP membantu, tetapi jumlah persiapan diputuskan oleh tim dan revisinya terlihat.</p></div>
+    <div class="layout"><div class="adminSurface"><div class="adminHeader"><strong>BEO · Perjumpaan &amp; Percakapan</strong><span class="chip warn">Perlu ditinjau</span></div><div class="adminNav"><span>Undangan</span><span>Tamu</span><span class="active">BEO</span><span>Pratinjau</span></div><div class="adminContent">
+      <div class="stacked"><h3>Persiapan konsumsi</h3><span class="sub">Kamis, 12 Nov · 10.00 WIB · lokasi contoh</span></div>
+      <div class="dataGrid"><span class="th">Sumber angka</span><span class="th num">Jumlah</span><span class="th">Keterangan</span><span>Perkiraan atasan</span><span class="num">35</span><span>Diisi tim</span><span>RSVP hadir</span><span class="num">29</span><span>Terhitung otomatis</span><span><strong>Untuk penyedia makanan</strong></span><span class="num"><strong>38</strong></span><span>Diputuskan hospitality</span></div>
+      <div class="alert"><p>RSVP berubah sejak angka persiapan ditetapkan. Periksa sebelum memfinalkan BEO.</p></div>
+      <div class="stacked"><span class="sectionTitle">Rekap makanan untuk penyedia · contoh</span><div class="rowline"><span>Vegetarian</span><strong>3</strong></div><div class="rowline"><span>Alergi yang perlu tindak lanjut</span><strong>2</strong></div><span class="sub">Kategori dapat tumpang tindih; total kategori bukan jumlah tamu unik.</span><span class="mockLink">Lihat rincian makanan →</span></div>
+      <div class="stacked"><span class="sectionTitle">Tindak lanjut akses · internal</span><div class="rowline"><span>Pengguna kursi roda</span><strong>1</strong></div><div class="rowline"><span>Bantuan akses lain</span><strong>1</strong></div><span class="sub">Terpisah dari rekap penyedia makanan; periksa jalur masuk dan bantuan yang diminta.</span></div>
+      <div class="stacked"><span class="sectionTitle">Layanan</span><span class="sub">10.00 kedatangan · 12.00 konsumsi · PIC hospitality belum ditetapkan</span></div><p class="small">Status contoh: Draft → Ditinjau → Final. Perubahan setelah final memerlukan revisi yang tercatat.</p>
+    </div></div><div class="notes"><div class="note"><h3>Jumlah fleksibel dan terlacak</h3><p>Perkiraan atasan, RSVP hadir, dan jumlah pesanan sengaja berbeda. Hospitality dapat mengubah jumlah pesanan dengan alasan, tanpa mengubah jawaban tamu.</p></div><div class="note"><h3>Ringkasan dan rincian terpisah</h3><p>Penyedia makanan mendapat rekap kategori; satu tamu dapat muncul pada beberapa kategori. Bantuan akses merupakan tindak lanjut internal, bukan item pesanan makanan.</p></div><div class="callout"><p><strong>Batas penting:</strong> admin/API saat ini terbuka. Layar ini tidak membuat informasi alergi, kebutuhan akses, atau kontak menjadi privat.</p></div></div></div>
+  </section>
+  <section class="panel" id="photos" hidden>
+    <div class="panelIntro"><span class="eyebrow">Admin / dokumentasi acara</span><h2>Unggah dahulu, tinjau sebelum dibagikan.</h2><p>Petugas lapangan menambahkan beberapa foto ke acara yang benar, menulis keterangan, lalu hospitality memilih dan mengurutkan yang siap tayang. Ini terpisah dari foto lokasi di undangan.</p></div>
+    <div class="layout"><div class="adminSurface"><div class="adminHeader"><strong>Foto pasca-acara · contoh</strong><span class="chip warn">Galeri belum tayang</span></div><div class="adminNav"><span>Undangan</span><span>Tamu</span><span>BEO</span><span class="active">Foto acara</span></div><div class="adminContent"><div class="toolbar"><h3>Dokumentasi</h3><span class="mockLink">+ Unggah foto</span></div><p class="small">Pilih beberapa berkas → lihat progres dan hasil tiap foto → isi keterangan → tinjau → terbitkan galeri. Unggahan yang gagal tidak masuk daftar siap tayang.</p><div class="rowline"><div class="stacked"><strong>Foto kedatangan · contoh</strong><span class="sub">Keterangan: tamu berkumpul di limasan · deskripsi alternatif belum diisi</span></div><span class="chip warn">Tinjau</span></div><div class="rowline"><div class="stacked"><strong>Foto diskusi · contoh</strong><span class="sub">Keterangan: sesi perkenalan · versi asli tersimpan</span></div><span class="chip ok">Siap tayang</span></div><p class="small">Ubah urutan dan cek izin/kepantasan foto sebelum membuka tautan galeri general.</p></div></div>
+      <div class="notes"><div class="note"><h3>Alur petugas lapangan</h3><p>Unggah massal dengan status per berkas, pratinjau, keterangan, deskripsi alternatif, dan kesempatan memperbaiki foto yang gagal.</p></div><div class="note"><h3>Kontrol tayang</h3><p>Unggah tidak langsung berarti publik. Hospitality meninjau, mengurutkan, lalu menerbitkan galeri acara.</p></div><div class="note"><h3>Foto ringan dan asli</h3><p>Galeri menggunakan turunan foto sesuai layar; tombol “Lihat asli” membuka berkas asli setelah foto tayang.</p></div><div class="callout"><p><strong>Catatan akses:</strong> admin tetap tanpa login sesuai keputusan saat ini; pembagian tautan internal bukan pembatasan teknis.</p></div></div>
+    </div>
+  </section>
+  <section class="panel" id="shared" hidden>
+    <div class="panelIntro"><span class="eyebrow">Admin / konten bersama</span><h2>Dikelola sekali, dipilih per acara.</h2><p>Panduan perjalanan dan Our Team berdiri sendiri. Setiap modul punya isi, bahasa, dan sakelar per acara yang terpisah.</p></div>
+    <div class="layout"><div class="adminSurface"><div class="adminHeader"><strong>Konten bersama</strong><span class="chip">Contoh rancangan</span></div><div class="adminNav"><span>Acara</span><span class="active">Konten bersama</span></div><div class="adminContent"><div class="rowline"><div class="stacked"><strong>Panduan perjalanan ke kantor</strong><span class="sub">Alamat · rute · peta · foto titik belok</span></div><span class="mockLink">Sunting →</span></div><div class="rowline"><div class="stacked"><strong>Our Team</strong><span class="sub">Cerita tim · foto yang disetujui</span></div><span class="mockLink">Sunting →</span></div><div class="rowline"><div class="stacked"><strong>Pustaka tema acara</strong><span class="sub">Judul konsep · cerita untuk tamu · foto · nuansa visual</span></div><span class="mockLink">Lihat tema →</span></div><div class="stacked"><span class="sectionTitle">Pada editor tiap acara · contoh pilihan</span><span class="sub">Panduan perjalanan: Tampilkan · Pakai bersama / Salin &amp; sesuaikan / Buat sendiri</span><span class="sub">Our Team: Sembunyikan · Pakai bersama / Salin &amp; sesuaikan / Buat sendiri</span><span class="sub">Bahasa default: Indonesia · bahasa lain ditawarkan setelah terjemahan diperiksa</span></div></div></div>
+      <div class="notes"><div class="note"><h3>Pilihan sumber per modul</h3><p>Masing-masing bisa memakai konten bersama, menyalin dan menyesuaikan untuk acara ini, atau dibuat manual. Sakelar tampil tetap terpisah.</p></div><div class="note"><h3>Konsep acara ditempatkan jelas</h3><p>Cerita tema diisi di pustaka tema atau editor acara. Di halaman tamu, cerita dan panel kebutuhan berada dalam satu bagian Pengalaman kunjungan.</p></div><div class="note"><h3>Bahasa default per acara</h3><p>Admin menetapkan bahasa awal; tamu tetap dapat berganti bahasa. Terjemahan yang belum tersedia ditandai sebelum bahasa itu ditawarkan.</p></div><div class="note"><h3>Bahan sumber</h3><p>Rute dan narasi tim dari proyek panduan kunjungan atasan perlu diverifikasi sebelum digunakan; foto orang dan informasi kontak tidak dipindahkan otomatis.</p></div></div>
+    </div>
+  </section>
+  <footer class="footer"><strong>Keputusan yang belum final</strong><p>Daftar opsi makanan dan kebutuhan akses yang dapat ditangani, bahasa pertama yang didukung, batas waktu revisi RSVP/kebutuhan, aturan finalisasi BEO, ukuran dan izin foto, serta akses galeri pasca-acara. Prototipe ini tidak mengunggah foto, mengirim data, menyimpan jawaban, atau mengganti aplikasi yang sedang berjalan.</p></footer>
+</div>
+<script>
+(() => {
+  const buttons = [...document.querySelectorAll('[data-tab]')];
+  const panels = [...document.querySelectorAll('.panel')];
+  buttons.forEach(button => button.addEventListener('click', () => {
+    const id = button.dataset.tab;
+    buttons.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    panels.forEach(panel => { panel.hidden = panel.id !== id; });
+  }));
+  const form = document.getElementById('needs-form');
+  const none = document.getElementById('food-none');
+  const foods = [...form.querySelectorAll('input[name="food"]')];
+  const wheelchair = document.getElementById('access-wheelchair');
+  const accessOther = document.getElementById('access-other');
+  const message = document.getElementById('needs-message');
+  const conditional = [
+    { checked: () => foods.find(input => input.value === 'allergy').checked, wrap: 'allergy-detail', field: 'allergy-text' },
+    { checked: () => foods.find(input => input.value === 'other').checked, wrap: 'food-detail', field: 'food-text' },
+    { checked: () => accessOther.checked, wrap: 'access-detail', field: 'access-text' }
+  ];
+  const refresh = () => conditional.forEach(item => {
+    const active = item.checked();
+    document.getElementById(item.wrap).hidden = !active;
+    const field = document.getElementById(item.field);
+    if (!active) field.value = '';
+  });
+  none.addEventListener('change', () => {
+    if (none.checked) foods.forEach(input => { input.checked = false; });
+    refresh();
+  });
+  foods.forEach(input => input.addEventListener('change', () => {
+    if (input.checked) none.checked = false;
+    if (!foods.some(option => option.checked)) none.checked = true;
+    refresh();
+  }));
+  wheelchair.addEventListener('change', refresh);
+  accessOther.addEventListener('change', refresh);
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const missing = conditional.filter(item => item.checked() && !document.getElementById(item.field).value.trim());
+    if (missing.length) {
+      missing.forEach(item => { document.getElementById(item.wrap).closest('details').open = true; });
+      message.textContent = 'Lengkapi penjelasan pada pilihan Lainnya atau alergi yang dipilih.';
+      document.getElementById(missing[0].field).focus();
+      return;
+    }
+    message.textContent = 'Contoh konfirmasi: kebutuhan telah dicatat untuk ditinjau hospitality. Prototipe ini tidak menyimpan atau mengirim jawaban.';
+  });
+  refresh();
+})();
+</script>

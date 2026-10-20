@@ -4,6 +4,7 @@ import { publicConfig, ServiceError } from "@/lib/server/config";
 import { checkOrigin, databaseError, failure, success } from "@/lib/server/http";
 import { resizeImage } from "@/lib/server/images";
 import type { ImageSource } from "@/lib/types";
+import { requireApiAdmin } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ async function store(storage: Storage, path: string, bytes: Uint8Array, contentT
 
 export async function POST(request: Request) {
   try {
+    await requireApiAdmin();
     checkOrigin(request);
     const length = request.headers.get("content-length");
     if (length && Number(length) > MAX_BYTES + 8192) throw new ServiceError(413, "Ukuran foto maksimal 8 MB.");
