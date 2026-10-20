@@ -66,9 +66,14 @@ export type EventRecord = {
   experience: EventExperienceContent; route: RouteGuide; day_note: string; after: AfterContent; prepare: PrepareContent; language: EventLanguage; translations: EventTranslations; guest_estimate: number | null;
   created_at: string; updated_at: string;
 };
+export type Dietary = "vegetarian" | "allergy" | "other";
+export type AccessNeed = "wheelchair" | "companion" | "sign_interpreter" | "other";
 export type RsvpInput = {
   name: string; organization: string; attendance: "yes" | "no";
   phone: string; email: string; has_allergy: boolean; allergy_details: string;
+  /** Since 202610200004; absent on answers read before that migration. */
+  party_size?: number; companion_names?: string[]; dietary?: Dietary[]; dietary_other?: string;
+  access?: AccessNeed[]; access_other?: string; photo_opt_out?: boolean; whatsapp_consent?: boolean;
   consent: boolean; website: string; idempotency_key: string;
 };
 export type RsvpRecord = Omit<RsvpInput, "website" | "consent" | "idempotency_key"> & { id: string; event_id: string; invitation_id?: string | null; created_at: string; updated_at?: string };

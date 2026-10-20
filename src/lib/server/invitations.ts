@@ -4,6 +4,7 @@ import type { RsvpRecord } from "@/lib/types";
 import type { GuestRow } from "@/lib/guest-import";
 import { createPrivilegedClient } from "./supabase/admin";
 import { databaseError } from "./http";
+import { rsvpFields as currentRsvpFields } from "./responses";
 import { ServiceError } from "./config";
 
 export type EventInvitation = {
@@ -98,7 +99,7 @@ export async function getPersonalInvitation(slug: string, token: string): Promis
   if (error) databaseError(error);
   if (!invitation) return null;
   const row = invitation as unknown as { id: string; name: string; party_size_max?: number };
-  const { data: rsvp, error: rsvpError } = await client.from("rsvps").select(rsvpFields).eq("invitation_id", row.id).maybeSingle();
+  const { data: rsvp, error: rsvpError } = await client.from("rsvps").select(await currentRsvpFields()).eq("invitation_id", row.id).maybeSingle();
   if (rsvpError) databaseError(rsvpError);
-  return { name: row.name, token, rsvp: (rsvp as RsvpRecord | null) ?? null, party_size_max: row.party_size_max ?? 1 };
+  return { name: row.name, token, rsvp: (rsvp as unknown as RsvpRecord | null) ?? null, party_size_max: row.party_size_max ?? 1 };
 }

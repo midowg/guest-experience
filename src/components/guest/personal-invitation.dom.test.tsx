@@ -24,10 +24,12 @@ it("shows the invitee and restores a saved response on a personal link", () => {
     allergy_details: "", created_at: new Date().toISOString(),
   } }} />);
   expect(screen.getByText("Kepada Tamu Acara")).toBeTruthy();
+  expect(screen.getByText("Terima kasih sudah mengabari.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Ubah jawaban/ }));
+  expect((screen.getByRole("radio", { name: "Maaf, tidak bisa" }) as HTMLInputElement).checked).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Lanjut" }));
   expect((screen.getByRole("textbox", { name: "Nama lengkap" }) as HTMLInputElement).value).toBe("Nama Jawaban");
   expect((screen.getByRole("textbox", { name: "Instansi / komunitas" }) as HTMLInputElement).value).toBe("Komunitas");
-  expect((screen.getByRole("radio", { name: "Belum dapat hadir" }) as HTMLInputElement).checked).toBe(true);
-  expect(screen.getByRole("button", { name: "Perbarui konfirmasi" })).toBeTruthy();
 });
 
 it("sends the personal token to the personal endpoint, not the generic one", async () => {
@@ -35,9 +37,14 @@ it("sends the personal token to the personal endpoint, not the generic one", asy
   event.invitation_mode = "personal";
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true, message: "Tersimpan", data: { id: crypto.randomUUID() } }), { status: 200 })));
   render(<EventExperience event={event} invitation={{ name: "Tamu Acara", token, rsvp: null }} />);
+  fireEvent.click(screen.getByRole("button", { name: "Mulai konfirmasi" }));
+  fireEvent.click(screen.getByRole("radio", { name: "Ya, saya hadir" }));
+  fireEvent.click(screen.getByRole("button", { name: "Lanjut" }));
   fireEvent.change(screen.getByRole("textbox", { name: "Instansi / komunitas" }), { target: { value: "Komunitas" } });
-  fireEvent.click(screen.getByRole("checkbox", { name: /menyetujui penggunaan data/ }));
-  fireEvent.click(screen.getByRole("button", { name: "Kirim konfirmasi" }));
+  fireEvent.click(screen.getByRole("button", { name: "Lanjut" }));
+  fireEvent.click(screen.getByRole("button", { name: "Tidak ada kebutuhan khusus" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: /setuju data ini dipakai/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Kirim" }));
   const urls = () => (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.map(call => call[0]);
   await waitFor(() => expect(urls()).toContain(`/api/events/${event.slug}/i/${token}/rsvp`));
   expect(urls()).not.toContain(`/api/events/${event.slug}/rsvp`);

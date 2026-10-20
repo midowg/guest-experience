@@ -22,6 +22,19 @@ describe("CSV export", () => {
     expect(lines[1]).toContain('"Umum"');
     expect(lines[1]).not.toContain("undefined");
   });
+  it("exports party, food, access, and photo choices", () => {
+    const row: RsvpRecord = { id: "a", event_id: "b", invitation_id: "c", name: "Sari", organization: "Mitra", attendance: "yes", phone: "0812", email: "", has_allergy: true, allergy_details: "Kacang", created_at: "2026-10-12T11:00:00Z",
+      party_size: 3, companion_names: ["Raka", "Dinda"], dietary: ["vegetarian", "allergy"], dietary_other: "", access: ["sign_interpreter"], access_other: "", photo_opt_out: true, whatsapp_consent: true };
+    const [header, line] = rsvpCsv([row]).trimEnd().split("\r\n");
+    const cells = (text: string) => text.slice(1, -1).split('","');
+    const value = (name: string) => cells(line)[cells(header).indexOf(name)];
+    expect(value("Jumlah orang")).toBe("3");
+    expect(value("Nama pendamping")).toBe("Raka, Dinda");
+    expect(value("Makanan")).toBe("Vegetarian; Alergi: Kacang");
+    expect(value("Akses")).toBe("Juru bahasa isyarat");
+    expect(value("Jangan tampilkan foto")).toBe("Ya");
+    expect(value("Boleh dihubungi WA")).toBe("Ya");
+  });
 });
 
 describe("idempotency binding", () => {

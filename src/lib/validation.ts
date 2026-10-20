@@ -134,12 +134,39 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
     if (event.review_enabled && !event.review_url) issue(["review_url"], "Isi tautan review resmi.");
   }
 }).transform(event => ({ ...event, location_display: event.location_display ?? (event.location_embed_url ? "embed" : "manual") }));
+export const dietaryOptions = ["vegetarian", "allergy", "other"] as const;
+export const accessOptions = ["wheelchair", "companion", "sign_interpreter", "other"] as const;
+const uniqueList = <T extends string>(values: readonly [T, ...T[]]) => z.array(z.enum(values)).max(values.length).refine(list => new Set(list).size === list.length, "Pilihan tidak boleh berulang.");
+/**
+ * One RSVP. The stepped form sends party, needs and photo choices; older clients send only the
+ * allergy pair. Either way `has_allergy` follows the "allergy" choice, and a guest who declines
+ * carries no party or needs.
+ */
 export const rsvpSchema = z.object({
   name: text(150).min(2, "Isi nama lengkap."), organization: text(200).min(1, "Isi instansi atau komunitas."),
   attendance: z.enum(["yes", "no"]), phone: text(30).refine(v => !v || /^[+\d\s().-]{6,30}$/.test(v), "Periksa nomor telepon."),
-  email: z.union([z.literal(""), z.email().max(254)]), has_allergy: z.boolean(), allergy_details: text(1000),
+  email: z.union([z.literal(""), z.email().max(254)]), has_allergy: z.boolean().default(false), allergy_details: text(1000).default(""),
+  party_size: z.number().int().min(1).max(10).default(1),
+  companion_names: z.array(text(150)).max(9).default([]),
+  dietary: uniqueList(dietaryOptions).default([]), dietary_other: text(300).default(""),
+  access: uniqueList(accessOptions).default([]), access_other: text(300).default(""),
+  photo_opt_out: z.boolean().default(false), whatsapp_consent: z.boolean().default(false),
   consent: z.literal(true, { error: "Persetujuan penggunaan data diperlukan." }), website: z.string().max(0), idempotency_key: z.uuid(),
+}).transform(v => {
+  const attending = v.attendance === "yes";
+  const dietary = attending ? [...new Set<(typeof dietaryOptions)[number]>([...v.dietary, ...(v.has_allergy ? ["allergy" as const] : [])])] : [];
+  const allergy = dietary.includes("allergy");
+  return {
+    ...v,
+    party_size: attending ? v.party_size : 1,
+    companion_names: attending ? v.companion_names.filter(Boolean).slice(0, v.party_size - 1) : [],
+    dietary, dietary_other: dietary.includes("other") ? v.dietary_other : "",
+    access: attending ? v.access : [], access_other: attending && v.access.includes("other") ? v.access_other : "",
+    has_allergy: allergy, allergy_details: allergy ? v.allergy_details : "",
+  };
 }).superRefine((v, ctx) => {
-  if (v.attendance === "yes" && v.has_allergy && !v.allergy_details) ctx.addIssue({ code: "custom", path: ["allergy_details"], message: "Jelaskan alergi makanan yang perlu diperhatikan." });
-}).transform(v => ({ ...v, has_allergy: v.attendance === "yes" && v.has_allergy, allergy_details: v.attendance === "yes" && v.has_allergy ? v.allergy_details : "" }));
+  if (v.has_allergy && !v.allergy_details) ctx.addIssue({ code: "custom", path: ["allergy_details"], message: "Jelaskan alergi makanan yang perlu diperhatikan." });
+  if (v.dietary.includes("other") && !v.dietary_other) ctx.addIssue({ code: "custom", path: ["dietary_other"], message: "Jelaskan kebutuhan makanan lainnya." });
+  if (v.access.includes("other") && !v.access_other) ctx.addIssue({ code: "custom", path: ["access_other"], message: "Jelaskan kebutuhan akses lainnya." });
+});
 export const feedbackSchema = z.object({ idempotency_key: z.uuid(), website: z.string().max(0), answers: z.array(z.object({ question_id: z.uuid(), value: text(3000) })).max(30) }).refine(v => new Set(v.answers.map(a => a.question_id)).size === v.answers.length, "Pertanyaan tidak boleh dijawab dua kali.");

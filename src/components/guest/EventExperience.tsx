@@ -10,7 +10,7 @@ import type { EventPhase, EventRecord, RsvpRecord, SectionKey } from "@/lib/type
 import { themeStyle } from "@/lib/themes";
 import { Gallery, imageSrcSet, venuePhotos } from "./Gallery";
 import { InvitationHero, TimeRange, visibleSections } from "./InvitationHero";
-import { FeedbackForm, RsvpForm } from "./GuestForms";
+import { FeedbackPanel, RsvpPanel } from "./GuestForms";
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
 import { AfterPanel, ExperienceContent, PrepareCards, RouteGuideContent, TodayPanel, teamPoints } from "./JourneyPanels";
 import { LanguageSwitch, WordingProvider, useEventLanguage, useWording } from "./language";
@@ -153,7 +153,11 @@ const afterSections = new Set<SectionKey>(["feedback", "contact"]);
  * `phase` is decided by the page on the server (see lib/event-phase.ts) so the first paint is
  * already the right part of the journey; components rendered without it show the invitation.
  */
-type ExperienceProps = { event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; rsvp: RsvpRecord | null }; phase?: EventPhase };
+type ExperienceProps = {
+  event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; rsvp: RsvpRecord | null; party_size_max?: number }; phase?: EventPhase;
+  /** False until migration 202610200004: the RSVP then asks only about allergies, as before. */
+  rsvpNeeds?: boolean;
+};
 
 /** Holds the guest's language; everything below reads its words and the event's texts in it. */
 export function EventExperience({ event: source, ...props }: ExperienceProps) {
@@ -164,7 +168,7 @@ export function EventExperience({ event: source, ...props }: ExperienceProps) {
   </WordingProvider>;
 }
 
-function ExperienceBody({ event, preview = false, invitation, phase = "before", fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
+function ExperienceBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
   const { lang, t, dateTime } = useWording();
   // Counts the opening of a personal link once per browser session. Never in the admin preview.
   const openedToken = !preview && invitation ? invitation.token : null;
@@ -266,7 +270,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             {section.key === "rsvp" && <>
               <div id="rsvp-heading"><SectionHeading title={t("section.rsvp.title")}><p>{t("section.rsvp.sub")}</p></SectionHeading></div>
               {event.rsvp_closes_at && <p className={styles.deadline}>{t("rsvp.deadline", { when: dateTime(event.rsvp_closes_at, event.timezone) })}</p>}
-              {event.invitation_mode === "personal" && !invitation && !preview ? <Notice>{t("rsvp.personalOnly")}</Notice> : !event.rsvp_enabled || (now !== null && !rsvpOpen && !preview) ? <Notice>{invitation?.rsvp ? t("rsvp.locked", { answer: t(invitation.rsvp.attendance === "yes" ? "rsvp.answer.yes" : "rsvp.answer.no") }) : event.rsvp_enabled ? t("rsvp.closed") : t("rsvp.notOpen")}</Notice> : <RsvpForm key={event.id} event={event} disabled={preview || !rsvpOpen} invitation={invitation} onSaved={() => setRsvpSaved(true)} />}
+              {event.invitation_mode === "personal" && !invitation && !preview ? <Notice>{t("rsvp.personalOnly")}</Notice> : !event.rsvp_enabled || (now !== null && !rsvpOpen && !preview) ? <Notice>{invitation?.rsvp ? t("rsvp.locked", { answer: t(invitation.rsvp.attendance === "yes" ? "rsvp.answer.yes" : "rsvp.answer.no") }) : event.rsvp_enabled ? t("rsvp.closed") : t("rsvp.notOpen")}</Notice> : <RsvpPanel key={event.id} event={event} disabled={preview || !rsvpOpen} invitation={invitation} needs={rsvpNeeds} onSaved={() => setRsvpSaved(true)} />}
               <noscript><p>{t("rsvp.noscript")}</p></noscript>
             </>}
             {section.key === "contact" && event.contact && <>
@@ -275,7 +279,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             </>}
             {section.key === "feedback" && <>
               <div id="feedback-heading"><SectionHeading title={t("section.feedback.title")}><p className={styles.multiline}>{event.feedback_description || t("section.feedback.sub")}</p></SectionHeading></div>
-              {preview || feedbackOpen ? <FeedbackForm key={event.id} event={event} disabled={preview || !feedbackOpen} /> : <Notice>{event.feedback_opens_at ? t("feedback.opensAt", { when: dateTime(event.feedback_opens_at, event.timezone) }) : t("feedback.notReady")}</Notice>}
+              {preview || feedbackOpen ? <FeedbackPanel key={event.id} event={event} disabled={preview || !feedbackOpen} /> : <Notice>{event.feedback_opens_at ? t("feedback.opensAt", { when: dateTime(event.feedback_opens_at, event.timezone) }) : t("feedback.notReady")}</Notice>}
               <noscript><p>{t("feedback.noscript")}</p></noscript>
             </>}
           </div>

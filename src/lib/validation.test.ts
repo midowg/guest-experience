@@ -208,3 +208,26 @@ describe('journey content', () => {
     expect(eventSchema.safeParse({ ...createSeedEvent(), after: { ...createSeedEvent().after, image: { url: 'https://example.test/a.jpg', alt: '', srcset: [] } } }).success).toBe(false);
   });
 });
+
+describe('rsvp needs', () => {
+  it('turns an older allergy answer into the food list', () => {
+    const parsed = rsvpSchema.parse({ ...rsvp, has_allergy: true, allergy_details: 'Udang' });
+    expect(parsed).toMatchObject({ dietary: ['allergy'], has_allergy: true, allergy_details: 'Udang', party_size: 1, access: [] });
+  });
+  it('keeps has_allergy in step with the allergy choice', () => {
+    expect(rsvpSchema.parse({ ...rsvp, dietary: ['vegetarian', 'allergy'], allergy_details: 'Kacang' })).toMatchObject({ has_allergy: true, dietary: ['vegetarian', 'allergy'] });
+    expect(rsvpSchema.safeParse({ ...rsvp, dietary: ['allergy'] }).success).toBe(false);
+  });
+  it('clears party and needs when the guest cannot come', () => {
+    const parsed = rsvpSchema.parse({ ...rsvp, attendance: 'no', party_size: 3, companion_names: ['Raka'], dietary: ['allergy'], allergy_details: 'Kacang', access: ['wheelchair'] });
+    expect(parsed).toMatchObject({ party_size: 1, companion_names: [], dietary: [], access: [], has_allergy: false, allergy_details: '' });
+  });
+  it('asks for a description when "other" is chosen and drops it otherwise', () => {
+    expect(rsvpSchema.safeParse({ ...rsvp, access: ['other'] }).success).toBe(false);
+    expect(rsvpSchema.parse({ ...rsvp, access: ['other'], access_other: 'Kruk' }).access_other).toBe('Kruk');
+    expect(rsvpSchema.parse({ ...rsvp, access_other: 'Sisa ketikan' }).access_other).toBe('');
+  });
+  it('keeps companion names within the party', () => {
+    expect(rsvpSchema.parse({ ...rsvp, party_size: 2, companion_names: ['Raka', 'Dinda', ''] }).companion_names).toEqual(['Raka']);
+  });
+});
