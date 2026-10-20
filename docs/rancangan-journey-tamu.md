@@ -2,7 +2,7 @@
 
 Status: rangkuman diskusi per 19 Oktober 2026, memperbarui rangkuman 15 Oktober 2026. Dokumen ini mencatat tujuan, keputusan yang sudah disepakati, usulan yang masih menunggu tinjauan, dan hal yang belum diputuskan. **Bukan** pernyataan bahwa seluruh fitur di bawah sudah tersedia atau siap digunakan pada data tamu nyata.
 
-Visual pendukung ada di `docs/journey-platform.pen` (Pencil): papan 00 ringkasan keputusan, 01 peta platform, 02 pola tautan dan fase, 03 layar tamu, 04 layar admin, 05 design system admin, 06 tema tamu, 07 kebijakan BEO, data tamu, dan foto. Nama tamu, tanggal, dan angka di papan itu hanya contoh.
+Visual pendukung ada di `docs/journey-platform.pen` (Pencil): papan 00 ringkasan keputusan, 01 peta platform, 02 pola tautan dan fase, 03 layar tamu, 04 layar admin, 05 design system admin, 06 tema tamu, 07 kebijakan BEO, data tamu, dan foto, 08 desain final alur tamu, 09 admin ringkasan dan panel, 10 form tamu bertahap, 11 survei Buat acara, 12 detail kegiatan, kalender, dan slide. Nama tamu, tanggal, dan angka di papan itu hanya contoh.
 
 ## Tujuan
 
@@ -133,6 +133,50 @@ Modul baru yang disepakati: **titik kumpul dan transport**, **daftar bawaan**, *
 - Tema baru dibuat oleh tim desain, bukan oleh hospitality. Saran tema awal per acara: Kunjungan memakai Werkudara atau Rumah Nenek, gala memakai Malam Apresiasi, nyadran memakai Khidmat, CSR memakai Segar.
 - Penyesuaian per acara tidak boleh diam-diam mengubah tema sumber atau acara lain yang sudah tayang.
 
+## Admin: ringkasan, panel, dan survei Buat acara
+
+Disepakati 19 Oktober setelah tinjauan tata letak editor yang terlalu panjang (papan 09 dan 11).
+
+- **Editor menampilkan ringkasan, bukan semua form.** Setiap bagian tampil sebagai kartu: ikon, judul, satu baris isi saat ini, status (Lengkap, Perlu dilengkapi, Opsional, atau Belum disimpan), dan tombol **Ubah**.
+- **Ubah membuka panel** di samping (desktop) atau **bottom sheet** (ponsel) berisi form bagian itu saja, tanpa pindah halaman. Panel ditutup dengan **Selesai**.
+- **Satu tombol Simpan** di bilah bawah yang selalu terlihat menyimpan semua perubahan. Kartu yang diubah ditandai Belum disimpan sampai disimpan.
+- **Daftar isi** per tahap: menu samping di desktop; di ponsel baris pintasan tahap dan tombol Daftar isi.
+- **Kesiapan tayang** di atas ringkasan menyebut langkah yang belum selesai dan membuka panelnya langsung.
+- **Buat acara** berupa survei 4 langkah di dialog (desktop) atau layar penuh (ponsel):
+  1. Acara apa: 8 templat (Kunjungan klien, Gala dinner, Seminar/launching, Annual meeting, Nyadran, CSR/kegiatan sosial, Pelatihan/bootcamp, Trip klien), **Salin dari acara sebelumnya** (isi tersalin, data tamu dikosongkan), atau **Mulai dari draf kosong**. Templat terpilih menyebut apa saja yang termasuk.
+  2. Untuk siapa, bahasa awal, cara mengundang, nama acara, waktu, dan lokasi (Kantor Werkudara mengisi alamat dan rute; Tempat lain diisi nanti).
+  3. Modul yang dibutuhkan (sudah dipilihkan sesuai templat; fitur yang belum ada ditandai Segera). Bila RSVP aktif: perkiraan jumlah tamu (angka awal BEO), batas konfirmasi, dan PIC hospitality. Titik kumpul ditanyakan bila lokasi bukan kantor dan acara butuh transport.
+  4. Ringkasan: bagian yang tampil, isi awal yang sudah ditulis (dalam Indonesia dan English), pratinjau tema, dan daftar **Setelah ini, lengkapi**. Isi awal adalah contoh yang perlu ditinjau.
+- **Lombok Guidebook** dipakai ulang sebagai **struktur templat Trip klien**, tanpa data pribadi tamu, setelah modul jadwal per hari dan handbook tersedia.
+
+## Form tamu bertahap
+
+Disepakati 19 Oktober (papan 10).
+
+- Di halaman undangan, RSVP dan survei tampil sebagai **kartu ringkas**. Form dibuka di **bottom sheet** (ponsel) atau **dialog** (desktop), hanya satu sheet per form, bukan rangkaian pop-up.
+- RSVP dibagi 4 langkah: hadir atau tidak; data diri (terisi dari undangan personal); kebutuhan makanan dan akses; periksa lalu kirim (persetujuan dan opsi foto). Setelah terkirim, kartu menjadi **Anda terkonfirmasi** dengan tombol Ubah jawaban.
+- Pilihan makanan jamak, akses, dan opsi foto **butuh migrasi database**; keputusan kapan migrasi dilakukan masih terbuka.
+
+## Wording dan bahasa
+
+- **Semua teks sistem** (pertanyaan form, tombol, judul langkah, pesan) diambil dari **satu kamus per bahasa** dengan kunci tetap; komponen tidak memuat teks langsung. Wording resmi tim cukup mengganti isi kamus.
+- Draf kamus ada di `docs/wording-draf.xlsx`: sheet Antarmuka tamu (teks sistem ID dan EN) dan Isi awal templat (isi contoh per templat dan pertanyaan survei). Semua baris berstatus Draf sampai ditinjau tim. Teks dalam kurung kurawal, misalnya `{nama}`, diganti otomatis dan harus ada di kedua bahasa.
+- Admin tetap berbahasa Indonesia; kamus dua bahasa untuk tampilan tamu.
+
+## Detail kegiatan, pengingat, dan slide
+
+Dari evaluasi rapat Lombok Guidebook, 19 Oktober (papan 12). Diterapkan pada modul Program dan templat Trip klien; berguna juga untuk rundown acara satu hari.
+
+- **Hanya info yang belum diketahui.** Jam, nama kegiatan, dan lokasi sudah terlihat di daftar, jadi tidak diulang besar. Kegiatan **dibuka di tempat** (tanpa sheet atau layar baru) dan hanya menampilkan:
+  - di daftar: **"Kenali lebih dekat: {cuplikan}"**, satu frasa yang membuat tamu ingin membuka, misalnya "tradisi suku Sasak";
+  - saat dibuka: kotak **Tahukah Anda?** berisi ringkasan 2–3 kalimat tentang tradisi, keistimewaan tempat, atau alasan kita memilihnya, ditulis untuk tamu;
+  - lokasi dan durasi sebagai keterangan kecil.
+- **Tambahan opsional.** Cerita lengkap (tautan **Selengkapnya**) dan tautan ke halaman PDF presentasi (**Hal. N presentasi**) hanya tampil bila diisi. Di admin, keduanya berada di bagian **Tambahan (opsional)** yang tertutup secara bawaan, karena belum tentu dipakai hospitality.
+- **Pengingat lewat kalender.** Tombol **Tambahkan ke kalender** menyimpan semua kegiatan atau hari ini saja ke kalender ponsel (berkas .ics) dengan pengingat yang bisa dipilih, misalnya 30 menit sebelumnya. Kalender tidak berubah otomatis bila jadwal diubah; halaman mengabarkan perubahan dan tamu menyimpan ulang.
+- **Kartu Berikutnya** pada hari H menampilkan kegiatan berikutnya dan berapa menit lagi, selama halaman dibuka.
+- **Notifikasi push** (termasuk kabar perubahan jadwal) adalah tahap berikutnya: butuh penjadwal di server, tabel langganan, dan di iPhone tamu harus menambahkan web ke layar utama. WhatsApp otomatis tidak termasuk karena butuh WhatsApp Business API berbayar.
+- **Slide terkait.** Bila diisi, tautan `#page=N` membuka PDF presentasi versi tamu di halaman terkait. Deck untuk tamu tidak boleh berisi harga atau catatan internal, karena siapa pun yang membuka tautan bisa melihat seluruh PDF.
+
 ## Kebijakan operasional dan data — usulan, menunggu tinjauan
 
 Disusun untuk skala platform ini (acara di bawah 500 orang, tamu eksternal dan internal, admin sementara tanpa login). Angka hari dan bulan adalah usulan awal. Ini bukan nasihat hukum; sebaiknya dicek terhadap UU Pelindungan Data Pribadi (UU No. 27 Tahun 2022) dan kebijakan perusahaan sebelum dipakai.
@@ -198,6 +242,10 @@ Rekomendasi (belum diputuskan): fitur yang menyimpan data peserta atau dapat dis
 ## Hal yang masih terbuka
 
 - Tinjauan usulan: font admin, warna per tahap, serta kebijakan BEO, retensi data, dan izin foto.
+- Tinjauan draf wording (`docs/wording-draf.xlsx`) oleh tim, termasuk istilah tradisi untuk templat Nyadran.
+- Kapan migrasi database untuk form tamu bertahap (makanan jamak, akses, opsi foto) dan tiket dilakukan.
+- Notifikasi push: kapan dibangun, dan siapa yang boleh mengirim kabar perubahan jadwal.
+- Cara tautan per halaman untuk deck selain PDF (Google Slides, Canva).
 - Nama domain baru.
 - Bucket R2 baru dan kredensialnya (dibuat oleh pemilik), diperlukan sebelum galeri acara dibangun.
 - Login umum dan pembagian peran (ditunda).
