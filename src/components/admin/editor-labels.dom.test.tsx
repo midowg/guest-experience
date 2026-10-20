@@ -6,6 +6,8 @@ import { EventEditor } from "./EventEditor";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
 afterEach(cleanup);
+// Opens all eighteen panels in turn; slow under a parallel suite, not stuck.
+vi.setConfig({ testTimeout: 20000 });
 
 it("keeps spaces in every destructive editor label", () => {
   const event = createSeedEvent();

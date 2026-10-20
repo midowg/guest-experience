@@ -6,9 +6,11 @@ import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/Adm
 import { Notice } from "@/components/ui";
 import { currentPhase, isPhase, phaseLabels } from "@/lib/event-phase";
 import type { EventPhase } from "@/lib/types";
+import { requireAdminPage } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 export default async function PreviewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const { id } = await params;
   const event = await getAdminEvent(id);

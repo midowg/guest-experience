@@ -5,10 +5,12 @@ import { EventList } from "@/components/admin/EventList";
 import { FeaturedControl } from "@/components/admin/FeaturedControl";
 import styles from "@/components/admin/admin.module.css";
 import { currentPhase } from "@/lib/event-phase";
+import { requireAdminPage } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
+  await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const [events, featuredId] = await Promise.all([listAdminEvents(), getFeaturedEventId()]);
   return <AdminShell>

@@ -6,10 +6,12 @@ import { EventEditor } from "@/components/admin/EventEditor";
 import { DeleteEvent } from "@/components/admin/DeleteEvent";
 import { formatDate, formatTime } from "@/lib/format";
 import styles from "@/components/admin/admin.module.css";
+import { requireAdminPage } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 
 export default async function EventEditorPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const { id } = await params;
   const event = await getAdminEvent(id);

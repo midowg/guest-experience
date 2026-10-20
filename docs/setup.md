@@ -12,10 +12,12 @@ Salin `.env.example` menjadi `.env.local`, lalu isi dari Supabase Dashboard → 
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable/anon key | Boleh terlihat publik. Dibatasi oleh RLS. |
 | `SUPABASE_SECRET_KEY` | Secret/service-role key | **Rahasia.** Hanya di server. Jangan pernah diberi awalan `NEXT_PUBLIC_`. |
 | `RATE_LIMIT_SECRET` | Buat sendiri, acak minimal 32 karakter | Menyamarkan identitas jaringan pada pembatasan laju. |
+| `ADMIN_PASSWORD` | Buat sendiri, minimal 12 karakter | **Rahasia.** Password bersama untuk masuk ke `/admin`. Mengganti nilainya mengeluarkan semua sesi. |
+| `ADMIN_SESSION_SECRET` | Buat sendiri, acak minimal 32 karakter | **Rahasia.** Menandatangani cookie sesi admin. |
 
 `.env*` sudah masuk `.gitignore`, kecuali `.env.example` yang hanya berisi template. Jangan mengirim kunci apa pun melalui chat. `NEXT_PUBLIC_SITE_URL` tercantum di template tetapi saat ini tidak digunakan aplikasi.
 
-Di Vercel, isi keempatnya pada Project Settings → Environment Variables untuk **Production** (dan Preview jika kelak digunakan), lalu deploy ulang. Variabel `NEXT_PUBLIC_*` dibekukan pada saat build, sehingga perubahan nilainya memerlukan build/deploy baru. Tanpa variabel ini, aplikasi menampilkan status "belum terhubung" dan **tidak** memakai data contoh. Lihat [rencana deployment berbasis tag](deployment.md); workflow deploy belum dibuat.
+Di Vercel, isi semuanya pada Project Settings → Environment Variables untuk **Production** (dan Preview jika kelak digunakan), lalu deploy ulang. Variabel `NEXT_PUBLIC_*` dibekukan pada saat build, sehingga perubahan nilainya memerlukan build/deploy baru. Tanpa variabel ini, aplikasi menampilkan status "belum terhubung" dan **tidak** memakai data contoh. Lihat [rencana deployment berbasis tag](deployment.md); workflow deploy belum dibuat.
 
 ## 2. Migrasi database
 
@@ -25,17 +27,28 @@ Tinjau isinya sebelum diterapkan. Setelah disetujui, jalankan melalui Supabase D
 
 Yang dijamin skema ini:
 - Tamu anonim hanya membaca acara berstatus `published`.
-- Database menolak pembacaan RSVP/feedback langsung oleh anon, tetapi **API dan panel aplikasi kini tanpa login**, sehingga data tersebut dapat dibaca siapa pun yang mengakses aplikasi.
+- Database menolak pembacaan RSVP/feedback langsung oleh anon. Panel dan API admin aplikasi dilindungi password admin (lihat bagian 3).
 - Tidak ada izin tulis langsung dari browser; penulisan hanya lewat fungsi transaksional yang diperiksa.
 - Pertanyaan survei yang sudah menerima jawaban tidak dapat diubah.
 
-## 3. Akses pengelolaan tanpa login
+## 3. Login admin dan log akses
 
-Sesuai keputusan pemilik, buka `/admin` langsung tanpa akun. Header email/logout dihapus; `/admin/login` mengarah ke `/admin`. Tidak ada batas akses internal: pada domain publik siapa pun bisa membaca data RSVP, mengekspor kontak, mengunggah foto, mengubah dan menghapus acara. Origin check dan URL yang tidak ditautkan bukan autentikasi.
+`/admin` dan semua `/api/admin/*` memerlukan **password admin** dari `ADMIN_PASSWORD`. Tanpa `ADMIN_PASSWORD` (minimal 12 karakter) dan `ADMIN_SESSION_SECRET` (minimal 32 karakter) panel **terkunci** dan halaman login menampilkan petunjuk pengaturan. Setelah masuk, sesi berlaku 12 jam (cookie httpOnly `wk_admin`). Percobaan login dibatasi 5 per 10 menit per IP.
 
-Operasi database memakai service-role client **hanya di server**. Jangan pernah membagikan secret key ke browser. Migrasi 007 memberi RPC pengelolaan izin service_role; aturan publikasi, pertanyaan terjawab dan larangan menghapus acara featured tetap berlaku. Audit baru tanpa sesi mempunyai actor_id null dan tidak bisa mengidentifikasi orang yang melakukan tindakan. Akun/keanggotaan lama tidak dihapus otomatis.
+Pemeriksaan berlapis: `src/proxy.ts` menolak permintaan tanpa sesi, lalu setiap halaman dan route admin memeriksa sesi lagi.
 
-**Repository publik maupun privat tidak membatasi akses ke deployment.** URL Preview Vercel juga dapat membuka panel dan API admin. Jangan menyimpan data pribadi nyata bila akses publik ini belum diterima oleh penyelenggara dan pihak terkait. Jika nanti diperlukan akses internal sungguhan, pasang autentikasi atau gerbang akses yang melindungi halaman **dan API**, bukan hanya menyembunyikan URL.
+Setiap login berhasil, password salah, dan keluar dicatat di tabel `admin_access_log` (migrasi `202610200001_admin_access_log.sql`) dan dapat dilihat di **Log akses** (`/admin/akses`): waktu, IP, perkiraan kota/wilayah/negara dari header Vercel, browser dan OS, serta **ID perangkat** acak yang tersimpan di cookie `wk_device` (berlaku 2 tahun). Perangkat yang pertama kali berhasil masuk diberi tanda **Perangkat baru**. Keterbatasan yang perlu dipahami:
+- Password dipakai bersama, jadi log menunjukkan perangkat dan lokasi, bukan nama orang.
+- Browser tidak dapat membaca nomor seri, MAC, atau kode perangkat keras laptop. ID perangkat berganti bila cookie dihapus, memakai mode penyamaran, atau browser lain.
+- Lokasi berasal dari IP (perkiraan) dan hanya tersedia saat berjalan di Vercel. Di lokal kolom lokasi kosong.
+- Sebelum migrasi log diterapkan, login tetap berjalan tetapi belum tercatat; halaman Log akses memberi peringatan.
+- Log hanya bisa ditambah oleh server (tanpa izin ubah/hapus). Hapus catatan lama secara manual lewat SQL Editor bila diperlukan.
+
+Bila password bocor: ganti `ADMIN_PASSWORD` di Vercel lalu deploy ulang; semua sesi lama otomatis tidak berlaku.
+
+Operasi database memakai service-role client **hanya di server**. Jangan pernah membagikan secret key ke browser. Migrasi 007 memberi RPC pengelolaan izin service_role; aturan publikasi, pertanyaan terjawab dan larangan menghapus acara featured tetap berlaku. Audit acara mempunyai actor_id null karena tidak ada akun per orang. Akun/keanggotaan Supabase lama tidak dipakai lagi dan tidak dihapus otomatis.
+
+URL Preview Vercel memakai password yang sama bila variabelnya diisi untuk Preview; tanpa variabel itu, admin di Preview terkunci.
 
 Jika branch `dev` dan `master` memakai satu project Supabase, perubahan undangan, unggahan, dan data tamu pada Preview akan langsung memengaruhi Production. Jangan menguji aksi hapus atau mengirim data RSVP contoh ke database bersama.
 
@@ -54,7 +67,7 @@ Halaman `/dev-preview` adalah pemeriksaan tampilan untuk pengembangan dan tidak 
 
 ## 5. Alur penggunaan
 
-1. Buka `/admin` (tanpa login).
+1. Buka `/admin` dan masuk dengan password admin.
 2. Buat acara, isi undangan, rundown, lokasi, dan pengaturan.
 3. Periksa `/admin/events/<id>/preview` — menampilkan versi tersimpan, pengiriman dinonaktifkan.
 4. Ubah status menjadi **Dipublikasikan** dan simpan.
@@ -67,7 +80,7 @@ Mengubah slug membuat tautan lama tidak berlaku. Semua waktu memakai WIB.
 
 Acara lama tetap memakai mode **Tautan umum**. Untuk undangan individual, pilih **Tautan per tamu** pada editor, simpan, lalu buka tab **Undangan tamu** untuk menambah nama sapaan satu per satu (maksimal 1000 per acara). Salin tautan aktif setiap tamu dan bagikan secara individual; jangan kirim daftar tautan. Halaman `/e/<slug>` tetap menampilkan informasi acara, tetapi RSVP umumnya disembunyikan. Undangan individual memakai `/e/<slug>/i/<token>`: siapa pun yang memegang tautan dapat melihat jawaban sebelumnya dan mengubah RSVP sampai batas penutupan. Ini **bukan** verifikasi identitas ataupun check-in di lokasi. Cabut tautan untuk menonaktifkannya; terbitkan ulang untuk mengganti token lama tanpa menghapus RSVP.
 
-**Penting:** `/admin` dan API pengelolaannya tetap tanpa login. Siapa pun di domain publik dapat membaca nama, token, dan data RSVP, membuat/mencabut tautan, atau mengubah acara. Token acak hanya mengaitkan jawaban ke undangan; token tidak membuat data rahasia selama admin publik. Feedback tetap anonim dan tidak diikat ke tamu. Formulir saat ini menanyakan *alergi makanan*, bukan seluruh pantangan diet.
+**Penting:** siapa pun yang memegang password admin dapat membaca nama, token, dan data RSVP, membuat/mencabut tautan, atau mengubah acara; bagikan password hanya kepada panitia yang perlu. Token acak hanya mengaitkan jawaban ke undangan. Feedback tetap anonim dan tidak diikat ke tamu. Formulir saat ini menanyakan *alergi makanan*, bukan seluruh pantangan diet.
 
 Untuk kembali ke alur umum, ubah mode menjadi **Tautan umum** dan simpan. Data undangan serta jawaban personal lama tetap tersimpan dan diberi label berbeda pada RSVP/CSV; tautan personal berhenti berlaku saat mode umum aktif. Mengaktifkan kembali mode personal memungkinkan tautan aktif dipakai lagi, kecuali sudah dicabut atau diterbitkan ulang. Jangan menghapus acara bila ingin menjaga data RSVP. Migrasi personal perlu diterapkan sebelum mode ini dipakai; jika belum, pengelolaan tautan dan RSVP personal akan gagal.
 

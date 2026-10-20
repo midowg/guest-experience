@@ -1,7 +1,8 @@
 -- PostgreSQL-only substitutes for Supabase-owned schemas, for isolated migration tests.
 create role anon nologin;
 create role authenticated nologin;
-create role service_role nologin;
+-- Supabase gives service_role BYPASSRLS; RLS-enabled tables depend on that.
+create role service_role nologin bypassrls;
 create schema auth;
 create schema storage;
 create table auth.users (id uuid primary key);

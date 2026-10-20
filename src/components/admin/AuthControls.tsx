@@ -2,13 +2,15 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff, LogIn, LogOut } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
 import { adminRequest, errorMessage } from "./api";
 import styles from "./admin.module.css";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [error, setError] = useState("");
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -16,16 +18,21 @@ export function LoginForm() {
     const data = new FormData(event.currentTarget);
     setPending(true); setError("");
     try {
-      await adminRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ email: data.get("email"), password: data.get("password") }) });
-      router.replace("/admin"); router.refresh();
+      await adminRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ password: data.get("password") }) });
+      router.replace(next); router.refresh();
     } catch (err) { setError(errorMessage(err)); setPending(false); }
   }
-  return <form onSubmit={submit} className={styles.form} aria-busy={pending}>
+  return <form onSubmit={submit} className={styles.loginForm} aria-busy={pending}>
     {error && <Notice tone="error">{error}</Notice>}
-    <Field label="Email admin" name="email"><input className="input" id="email" name="email" type="email" autoComplete="username" required maxLength={254} disabled={pending} /></Field>
-    <Field label="Kata sandi" name="password"><input className="input" id="password" name="password" type="password" autoComplete="current-password" required disabled={pending} /></Field>
-    <Button type="submit" disabled={pending}>{pending ? "Memeriksa akses…" : "Masuk"}</Button>
-    <p className="muted">Akses hanya untuk akun yang terdaftar sebagai admin. Tidak ada pendaftaran admin publik.</p>
+    <Field label="Password admin" name="password">
+      <span className={styles.passwordRow}>
+        <input className="input" id="password" name="password" type={visible ? "text" : "password"} autoComplete="current-password" required maxLength={200} disabled={pending} autoFocus />
+        <button type="button" className={styles.passwordToggle} onClick={() => setVisible(value => !value)} aria-pressed={visible} aria-label={visible ? "Sembunyikan password" : "Tampilkan password"}>
+          {visible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+        </button>
+      </span>
+    </Field>
+    <Button type="submit" disabled={pending}><LogIn size={17} aria-hidden="true" /> {pending ? "Memeriksa…" : "Masuk"}</Button>
   </form>;
 }
 
@@ -38,5 +45,8 @@ export function LogoutButton() {
     try { await adminRequest("/api/auth/logout", { method: "POST" }); router.replace("/admin/login"); router.refresh(); }
     catch (err) { setError(errorMessage(err)); setPending(false); }
   }
-  return <div className="stack"><Button type="button" variant="quiet" disabled={pending} onClick={logout}>{pending ? "Keluar…" : "Keluar"}</Button>{error && <Notice tone="error">{error}</Notice>}</div>;
+  return <>
+    <button type="button" className={styles.headerLink} disabled={pending} onClick={logout}><LogOut size={16} aria-hidden="true" /> {pending ? "Keluar…" : "Keluar"}</button>
+    {error && <span role="alert" className={styles.headerError}>{error}</span>}
+  </>;
 }

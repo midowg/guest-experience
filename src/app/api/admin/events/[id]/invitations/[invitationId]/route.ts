@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { manageInvitation } from "@/lib/server/invitations";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
+import { requireApiAdmin } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string; invitationId: string }> };
@@ -12,6 +13,7 @@ const updateSchema = z.discriminatedUnion("action", [
 
 export async function PATCH(request: Request, { params }: Params) {
   return handle(async () => {
+    await requireApiAdmin();
     checkOrigin(request);
     const { id, invitationId } = await params;
     validate(z.uuid(), id); validate(z.uuid(), invitationId);

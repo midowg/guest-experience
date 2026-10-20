@@ -330,3 +330,34 @@
 .panelBody .block { padding: 0; border: 0; border-radius: 0; background: transparent; }
 .panelFooter { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-5) var(--space-5); border-top: 1px solid var(--line); }
 .panelFooter .muted { font-size: .8125rem; color: var(--ink-soft); }
+
+/* Login and access log (Tahap 1). */
+.headerNav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+.headerNav button.headerLink { border: 0; background: transparent; font: inherit; cursor: pointer; }
+.headerError { color: var(--burgundy); font-size: .8125rem; }
+.loginCard { display: grid; gap: var(--space-4); max-width: 26rem; margin: var(--space-8) auto; padding: var(--space-6); border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: 0 10px 30px rgba(20, 30, 50, .06); }
+.loginIcon { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 14px; background: var(--st-guest-bg); color: var(--blue); }
+.loginTitle { margin: 0; font-size: 1.5rem; color: var(--color-text); }
+.loginLead { margin: 0; color: var(--ink-soft); }
+.loginNote { margin: 0; font-size: .8125rem; color: var(--ink-soft); }
+.loginSteps { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); }
+.loginForm { display: grid; gap: var(--space-4); }
+.loginForm button[type="submit"] { justify-content: center; }
+.passwordRow { position: relative; display: block; }
+.passwordRow input { width: 100%; padding-right: 48px; }
+.passwordToggle { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-soft); }
+.passwordToggle:hover { background: var(--page); color: var(--color-text); }
+.filterChips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-4); }
+.filterChips a { padding: var(--space-1) var(--space-4); border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--color-text); font-size: .875rem; font-weight: 600; text-decoration: none; }
+.filterChips a[aria-current="page"] { border-color: var(--blue); background: var(--blue); color: #fff; }
+.accessList { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.accessItem { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.accessIcon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; }
+.access_success { background: var(--st-after-bg); color: var(--st-after); }
+.access_failure { background: color-mix(in srgb, var(--burgundy) 12%, #fff); color: var(--burgundy); }
+.access_logout { background: var(--st-settings-bg); color: var(--st-settings); }
+.accessText { display: grid; gap: 2px; min-width: 0; }
+.accessText p { margin: 0; }
+.accessHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.accessNew { display: inline-flex; align-items: center; gap: 4px; padding: 1px var(--space-2); border-radius: 999px; background: color-mix(in srgb, var(--yellow) 25%, #fff); color: #6b4a0e; font-size: .75rem; font-weight: 700; }
+.accessMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--ink-soft); font-size: .8125rem; overflow-wrap: anywhere; }

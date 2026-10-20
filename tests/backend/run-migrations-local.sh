@@ -40,7 +40,6 @@ run_sql() {
 printf 'Menyiapkan shim Supabase di PostgreSQL sementara...\n'
 docker cp tests/backend/personal-invitations-bootstrap.sql "$cid:/tmp/bootstrap.sql"
 docker cp tests/backend/personal-invitations-before.sql "$cid:/tmp/before.sql"
-docker cp tests/backend/personal-invitations-check.sql "$cid:/tmp/check.sql"
 run_sql /tmp/bootstrap.sql
 
 for migration in supabase/migrations/*.sql; do
@@ -54,6 +53,10 @@ for migration in supabase/migrations/*.sql; do
   run_sql /tmp/current.sql > /dev/null
 done
 
-printf 'Menguji kompatibilitas RSVP lama, token, revokasi, pembaruan, idempotensi, dan batas waktu...\n'
-run_sql /tmp/check.sql
+# Every *-check.sql runs in its own transaction and rolls back, so their order does not matter.
+for check in tests/backend/*-check.sql; do
+  printf 'Menjalankan %s...\n' "${check##*/}"
+  docker cp "$check" "$cid:/tmp/check.sql"
+  run_sql /tmp/check.sql
+done
 printf 'PASS: semua migrasi dan pemeriksaan SQL lokal selesai.\n'

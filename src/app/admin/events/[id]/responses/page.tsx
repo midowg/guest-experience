@@ -5,10 +5,12 @@ import { isSupabaseConfigured } from "@/lib/server/config";
 import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/AdminShell";
 import { ResponsesView } from "@/components/admin/ResponseViews";
 import styles from "@/components/admin/admin.module.css";
+import { requireAdminPage } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 
 export default async function ResponsesPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const { id } = await params;
   const event = await getAdminEvent(id);

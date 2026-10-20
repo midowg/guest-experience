@@ -13,12 +13,12 @@ Implement src/lib/server/events.ts:
 - getPublicEvent(slug: string): Promise<EventRecord|null> (only published, no cached drafts)
 - getAdminEvent(id: string): Promise<EventRecord|null> (requires admin)
 - listAdminEvents(): Promise<EventRecord[]> (requires admin)
-Implement src/lib/server/auth.ts:
-- getAdmin(): Promise<{id:string;email:string}|null> (verified user + protected membership, no user metadata)
-- requireAdmin(): Promise<{id:string;email:string}> (throws/redirects appropriately; API catches auth failure)
+Implement src/lib/server/admin-session.ts (shared-password session; replaced the old Supabase-account auth.ts):
+- hasAdminSession(): Promise<boolean>; requireAdminPage() redirects to /admin/login; requireApiAdmin() throws a 401/503 ServiceError
+- src/proxy.ts gates /admin/:path* and /api/admin/:path* first; pages and routes still check (defence in depth)
 Implement src/lib/server/config.ts: isSupabaseConfigured(): boolean (URL+publishable key only); privileged mutations additionally require secret and RATE_LIMIT_SECRET where needed.
 Implement API handlers:
-POST /api/auth/login {email,password}; POST /api/auth/logout
+POST /api/auth/login {password} (rate limited, logged to admin_access_log); POST /api/auth/logout
 GET /api/admin/events -> ApiResult<EventRecord[]>
 POST /api/admin/events -> ApiResult<EventRecord> create a draft using server seed then slug unique; no cloning answers. Optional body {duplicateId:string} clones content to draft/new IDs, never answers.
 GET /api/admin/events/[id] -> ApiResult<EventRecord>
@@ -34,7 +34,7 @@ All JSON errors use ApiResult. Unconfigured service gives actionable 503, never 
 Export EventExperience({event,preview=false}:{event:EventRecord;preview?:boolean}) from src/components/guest/EventExperience.tsx. Preview shows explicit notice and disables submission. /e/[slug] page calls getPublicEvent, handles unconfigured setup gracefully (not a seed fallback), notFound for unknown/unpublished; use dynamic rendering to avoid draft/cache leakage. May import backend contract before files exist, but do not implement stubs in backend territory. Include server metadata noindex by default for invitation privacy; route still publicly accessible via URL. Guest form respects event controls/deadlines, server remains authoritative.
 
 ## Admin-owned contract
-Admin pages and components only. Login page renders setup guidance if unavailable; protected pages check getAdmin/requireAdmin. No global protected admin layout that redirects login to itself. Preview path /admin/events/[id]/preview requires admin and imports SAME EventExperience. Admin editor edits supported content, topics, agenda, section ordering/enabled state, survey questions, location image URL/credit, RSVP/feedback dates, status. Editing draft should not demand complete publish fields. On publish validation strict; explain omitted sections. File upload is deferred if backend secure Storage upload cannot be completed; don't present a fake functioning upload control. UI can use validated approved HTTPS image URL initially and clearly document limitation.
+Admin pages and components only. Login page renders setup guidance if unavailable; protected pages call requireAdminPage. No global protected admin layout that redirects login to itself. Preview path /admin/events/[id]/preview requires admin and imports SAME EventExperience. Admin editor edits supported content, topics, agenda, section ordering/enabled state, survey questions, location image URL/credit, RSVP/feedback dates, status. Editing draft should not demand complete publish fields. On publish validation strict; explain omitted sections. File upload is deferred if backend secure Storage upload cannot be completed; don't present a fake functioning upload control. UI can use validated approved HTTPS image URL initially and clearly document limitation.
 
 ## Agent reporting and safety
 Report changed files, tests run, missing interfaces and limitations honestly. No remote migrations, deployment, commits, dependency install or secret access. Two failed attempts on same approach => stop and ask parent, no third variant. No sub-delegation. Parent integrates after all ownership handoffs. Use test fixtures only in tests; no mock-success production paths.

@@ -179,7 +179,7 @@ Dari evaluasi rapat Lombok Guidebook, 19 Oktober (papan 12). Diterapkan pada mod
 
 ## Kebijakan operasional dan data — usulan, menunggu tinjauan
 
-Disusun untuk skala platform ini (acara di bawah 500 orang, tamu eksternal dan internal, admin sementara tanpa login). Angka hari dan bulan adalah usulan awal. Ini bukan nasihat hukum; sebaiknya dicek terhadap UU Pelindungan Data Pribadi (UU No. 27 Tahun 2022) dan kebijakan perusahaan sebelum dipakai.
+Disusun untuk skala platform ini (acara di bawah 500 orang, tamu eksternal dan internal, admin dengan password bersama). Angka hari dan bulan adalah usulan awal. Ini bukan nasihat hukum; sebaiknya dicek terhadap UU Pelindungan Data Pribadi (UU No. 27 Tahun 2022) dan kebijakan perusahaan sebelum dipakai.
 
 ### BEO (Banquet Event Order)
 
@@ -223,13 +223,11 @@ Prinsipnya: kumpulkan seperlunya dan simpan sesingkat mungkin. Selama admin belu
 - **Setelah galeri terbit:** tombol "Minta foto dihapus" di galeri menuju PIC. Foto disembunyikan dalam 2 hari kerja dan dihapus dari R2. Galeri ditutup untuk tamu 6 bulan setelah acara; arsip internal mengikuti kebijakan dokumentasi perusahaan.
 - Foto Our Team memerlukan persetujuan setiap karyawan yang terlihat sebelum dipakai di undangan.
 
-## Akses dan login — ditunda
+## Akses dan login
 
-**Login admin ditunda.** Pemilik akan membuat login umum nanti; untuk sementara admin dibiarkan tanpa login. Kode login sudah ada di `src/lib/server/auth.ts`, tetapi belum dipasang di halaman maupun API admin mana pun.
+**Keputusan 20 Okt:** admin masuk dengan **satu password bersama** (`ADMIN_PASSWORD` di environment server), tanpa nama pengguna. Tanpa password dan secret sesi, panel terkunci. Sesi berlaku 12 jam. Halaman dan API admin dijaga dua lapis: `src/proxy.ts` dan pemeriksaan di setiap halaman/route.
 
-Secara teknis, pada deployment publik panel dan API admin saat ini dapat diakses tanpa login, termasuk data RSVP dan kontak, kebutuhan akses, unggahan foto, dan aksi pengelolaan. Pembatasan siapa yang menerima tautan bukan kontrol akses teknis. Keputusan ini dicatat apa adanya tanpa menganggap data tamu atau foto sudah terlindungi.
-
-Rekomendasi (belum diputuskan): fitur yang menyimpan data peserta atau dapat disalahgunakan sebaiknya menunggu login, yaitu check-in, penempatan kursi, galeri terbatas, dan materi. Undangan, panduan, dan galeri umum dapat dibangun lebih dulu.
+Setiap login berhasil, password salah, dan keluar dicatat di **Log akses** (`/admin/akses`): waktu, IP, perkiraan kota dan negara, browser dan OS, serta ID perangkat acak di cookie browser, dengan tanda **Perangkat baru**. Nomor seri atau MAC laptop tidak bisa dibaca dari browser, jadi ID perangkat adalah pengenal terbaik yang tersedia; ia berganti bila cookie dihapus atau memakai browser lain. Karena password dipakai bersama, log menunjukkan perangkat dan lokasi, bukan nama orang. Akun admin per orang dan pembagian peran dicatat sebagai tahap lanjutan.
 
 ## Kondisi proyek saat rangkuman dibuat
 
@@ -248,7 +246,7 @@ Rekomendasi (belum diputuskan): fitur yang menyimpan data peserta atau dapat dis
 - Cara tautan per halaman untuk deck selain PDF (Google Slides, Canva).
 - Nama domain baru.
 - Bucket R2 baru dan kredensialnya (dibuat oleh pemilik), diperlukan sebelum galeri acara dibangun.
-- Login umum dan pembagian peran (ditunda).
+- Akun admin per orang dan pembagian peran (tahap lanjutan; sekarang password bersama).
 - Tampilan fase otomatis (digambar dulu sebelum dibangun).
 - Bahasa pertama yang didukung, penanggung jawab dan proses persetujuan terjemahan, serta perilaku saat terjemahan belum tersedia.
 - Daftar pilihan makanan dan aksesibilitas final yang benar-benar dapat ditangani tim; pengaitan jawaban kebutuhan dengan RSVP pada tautan umum, cara memperbarui jawaban, dan tenggat perubahan.

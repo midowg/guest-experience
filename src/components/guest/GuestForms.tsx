@@ -111,7 +111,7 @@ export function RsvpForm({ event, disabled, onSaved, invitation }: { event: Even
       </>}
       <div>
         <label className={styles.consent}><input {...a11y("consent", true)} type="checkbox" name="consent" value="yes" required /><span>Saya menyetujui penggunaan data ini oleh panitia untuk koordinasi acara dan kebutuhan konsumsi.</span></label>
-        <p id="rsvp-consent-hint" className={styles.privacy}>Kontak bersifat opsional. Panel pengelolaan saat ini tanpa login, sehingga jawaban dan informasi alergi dapat diakses oleh siapa pun yang membuka panel admin.</p>
+        <p id="rsvp-consent-hint" className={styles.privacy}>Kontak bersifat opsional. Jawaban dan informasi alergi hanya dapat dilihat panitia melalui panel admin yang dilindungi password.</p>
         {errors.consent && <p id="rsvp-consent-error" className="field-error">{errors.consent}</p>}
       </div>
       <Honeypot prefix="rsvp" />
