@@ -3,11 +3,11 @@
 import type { ReactNode } from "react";
 import { Building2, CalendarRange, CircleHelp, DoorOpen, Globe, Lightbulb, PartyPopper, ThumbsUp, Trash2, UserRound, type LucideIcon } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
-import { momentIconComponents } from "@/components/guest/JourneyPanels";
+import { momentIconComponents, prepareIconComponents } from "@/components/guest/JourneyPanels";
 import { phaseLabels } from "@/lib/event-phase";
 import { themes } from "@/lib/themes";
-import { momentIcons } from "@/lib/validation";
-import type { EventRecord, MomentIcon, PlainImage } from "@/lib/types";
+import { momentIcons, prepareIcons } from "@/lib/validation";
+import type { EventRecord, MomentIcon, PlainImage, PrepareIcon, PrepareItem } from "@/lib/types";
 import { Check, OrderButtons } from "./controls";
 import { moveItem } from "./editor-model";
 import { PhotoField } from "./PhotoField";
@@ -112,6 +112,49 @@ export function ExperienceBlock({ event, update, control, errors }: Props) {
     </div>)}
     <Button type="button" variant="secondary" disabled={experience.moments.length >= 6} onClick={() => set({ moments: [...experience.moments, { icon: "sparkles", title: "", description: "" }] })}>Tambah momen</Button>
     <p className="field-hint">Aktifkan bagian &quot;Pengalaman kunjungan&quot; di Urutan &amp; tampilan bagian agar tampil.</p>
+  </div>;
+}
+
+const prepareIconLabels: Record<PrepareIcon, string> = {
+  shirt: "Pakaian", backpack: "Bawaan", gift: "Disiapkan panitia", "id-card": "Identitas", umbrella: "Cuaca hujan", sun: "Cuaca panas",
+  footprints: "Alas kaki", utensils: "Makanan", camera: "Foto", pill: "Obat pribadi", package: "Barang", info: "Info lain",
+};
+/** Starting points only: every card stays fully editable, and "Kartu kustom" starts empty. */
+const preparePresets: { label: string; item: PrepareItem }[] = [
+  { label: "Dress code", item: { icon: "shirt", title: "Dress code", description: "", list: [] } },
+  { label: "Yang perlu dibawa", item: { icon: "backpack", title: "Yang perlu dibawa", description: "", list: [] } },
+  { label: "Yang kami siapkan", item: { icon: "gift", title: "Yang kami siapkan untuk Anda", description: "", list: [] } },
+  { label: "Kartu kustom", item: { icon: "info", title: "", description: "", list: [] } },
+];
+
+export function PrepareBlock({ event, update, control }: Pick<Props, "event" | "update" | "control">) {
+  const prepare = event.prepare;
+  const set = (patch: Partial<EventRecord["prepare"]>) => update("prepare", { ...prepare, ...patch });
+  const setItem = (index: number, patch: Partial<PrepareItem>) => set({ items: prepare.items.map((item, i) => i === index ? { ...item, ...patch } : item) });
+  const full = prepare.items.length >= 8;
+  return <div className="stack">
+    <BlockIntro why="Kartu bebas untuk hal yang perlu tamu siapkan atau ketahui: dress code, barang yang dibawa, perlengkapan yang panitia siapkan (kaos, topi, goodie bag), cuaca, alas kaki, atau hal lain." who="panitia atau hospitality" />
+    {control("prepare.title", "Judul bagian (opsional)", prepare.title, title => set({ title }), { maxLength: 200, hint: "Kosongkan untuk memakai: Yang perlu Anda ketahui sebelum datang." })}
+    {control("prepare.intro", "Pengantar (opsional)", prepare.intro, intro => set({ intro }), { multiline: true, maxLength: 1000 })}
+    {prepare.items.map((item, index) => <div className={styles.item} key={index}>
+      <div className={styles.itemHeader}><h4>{item.title || `Kartu ${index + 1}`}</h4><OrderButtons label={`kartu ${index + 1}`} index={index} length={prepare.items.length} onMove={direction => set({ items: moveItem(prepare.items, index, direction) })} /></div>
+      <fieldset className={styles.iconSet}><legend>Ikon</legend><div className={styles.iconRow}>{prepareIcons.map(icon => {
+        const Icon = prepareIconComponents[icon];
+        return <label key={icon} className={`${styles.iconChoice} ${item.icon === icon ? styles.iconChoiceOn : ""}`.trimEnd()} title={prepareIconLabels[icon]}>
+          <input type="radio" name={`prepare.items.${index}.icon`} value={icon} checked={item.icon === icon} onChange={() => setItem(index, { icon })} className="sr-only" />
+          <Icon size={20} aria-hidden="true" /><span className="sr-only">{prepareIconLabels[icon]}</span>
+        </label>;
+      })}</div></fieldset>
+      {control(`prepare.items.${index}.title`, "Judul kartu", item.title, title => setItem(index, { title }), { maxLength: 150, hint: "Contoh: Dress code, Yang perlu dibawa, Perlengkapan dari panitia." })}
+      {control(`prepare.items.${index}.description`, "Keterangan (opsional)", item.description, description => setItem(index, { description }), { multiline: true, maxLength: 1000, hint: "Contoh: Batik atau kemeja berkerah. Hindari sandal karena ada sesi jalan kaki." })}
+      {control(`prepare.items.${index}.list`, "Daftar (opsional, satu per baris)", item.list.join("\n"), value => setItem(index, { list: value.split("\n") }), { multiline: true, hint: "Tampil sebagai daftar centang, maksimal 15 baris. Contoh: KTP, Payung, Botol minum." })}
+      <Button type="button" variant="danger" onClick={() => set({ items: prepare.items.filter((_, i) => i !== index) })}><Trash2 size={17} aria-hidden="true" /><span>Hapus kartu {index + 1}</span></Button>
+    </div>)}
+    <div className={styles.presetRow} role="group" aria-label="Tambah kartu persiapan">
+      {preparePresets.map(preset => <Button key={preset.label} type="button" variant="secondary" disabled={full} onClick={() => set({ items: [...prepare.items, { ...preset.item, list: [] }] })}>+ {preset.label}</Button>)}
+    </div>
+    {full && <p className="field-hint">Maksimal 8 kartu.</p>}
+    <p className="field-hint">Aktifkan bagian &quot;Persiapan tamu&quot; di Urutan &amp; tampilan bagian agar tampil. Bagian ini tidak tampil selama belum ada kartu.</p>
   </div>;
 }
 

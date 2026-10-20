@@ -169,6 +169,16 @@ describe('WITA and WIT', () => {
 it('rejects duplicated feedback questions', () => expect(feedbackSchema.safeParse({idempotency_key:rsvp.idempotency_key, website:'', answers:[{question_id:rsvp.idempotency_key,value:'1'},{question_id:rsvp.idempotency_key,value:'2'}]}).success).toBe(false));
 
 describe('journey content', () => {
+  it('defaults the preparation cards and limits their size', () => {
+    const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
+    delete legacy.prepare;
+    expect(eventSchema.parse(legacy).prepare).toEqual({ title: '', intro: '', items: [] });
+    const card = { icon: 'shirt', title: 'Dress code', description: 'Batik', list: ['Kemeja berkerah'] };
+    expect(eventSchema.safeParse({ ...createSeedEvent(), prepare: { title: '', intro: '', items: [card] } }).success).toBe(true);
+    expect(eventSchema.safeParse({ ...createSeedEvent(), prepare: { title: '', intro: '', items: Array(9).fill(card) } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...createSeedEvent(), prepare: { title: '', intro: '', items: [{ ...card, icon: 'rocket' }] } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...createSeedEvent(), prepare: { title: '', intro: '', items: [{ ...card, list: Array(16).fill('x') }] } }).success).toBe(false);
+  });
   it('fills kind, audience, theme, phase, and content defaults for an older document', () => {
     const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
     for (const key of ['event_kind', 'audience', 'theme', 'phase_override', 'experience', 'route', 'day_note', 'after'] as const) delete legacy[key];

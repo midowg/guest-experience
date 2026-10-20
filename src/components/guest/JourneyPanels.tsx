@@ -1,12 +1,12 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import { ArrowDown, ArrowUpRight, CalendarCheck, CalendarDays, Camera, Check, Coffee, Gift, Hand, Handshake, Heart, HeartHandshake, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Phone, Presentation, Salad, Sparkles, Star, Users, Utensils, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Backpack, CalendarCheck, CalendarDays, Camera, Check, Coffee, Gift, Footprints, Hand, Handshake, Heart, HeartHandshake, IdCard, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Package, Phone, Pill, Presentation, Salad, Shirt, Sparkles, Star, Sun, Umbrella, Users, Utensils, type LucideIcon } from "lucide-react";
 import { ButtonLink } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { localDay } from "@/lib/event-phase";
-import type { EventRecord, MomentIcon, PlainImage } from "@/lib/types";
+import type { EventRecord, MomentIcon, PlainImage, PrepareIcon, PrepareItem } from "@/lib/types";
 import { imageSrcSet } from "./Gallery";
 import styles from "./guest.module.css";
 
@@ -14,6 +14,28 @@ export const momentIconComponents: Record<MomentIcon, LucideIcon> = {
   coffee: Coffee, utensils: Utensils, gift: Gift, users: Users, camera: Camera,
   music: Music, map: MapIcon, sparkles: Sparkles, presentation: Presentation, heart: Heart,
 };
+
+export const prepareIconComponents: Record<PrepareIcon, LucideIcon> = {
+  shirt: Shirt, backpack: Backpack, gift: Gift, "id-card": IdCard, umbrella: Umbrella, sun: Sun,
+  footprints: Footprints, utensils: Utensils, camera: Camera, pill: Pill, package: Package, info: Info,
+};
+
+/** Free-form preparation cards: dress code, what to bring, what is provided, or anything else. */
+export function PrepareCards({ items }: { items: PrepareItem[] }) {
+  return <ul className={styles.prepareCards}>
+    {items.map((item, index) => {
+      const Icon = prepareIconComponents[item.icon] ?? Info;
+      return <li key={`${index}-${item.title}`} className={styles.prepareCard}>
+        <span className={styles.momentIcon} aria-hidden="true"><Icon size={20} /></span>
+        <div>
+          <h3>{item.title}</h3>
+          {item.description && <p className={styles.multiline}>{item.description}</p>}
+          {item.list.length > 0 && <ul className={styles.prepareList}>{item.list.map((line, i) => <li key={`${i}-${line}`}><Check size={15} aria-hidden="true" /> {line}</li>)}</ul>}
+        </div>
+      </li>;
+    })}
+  </ul>;
+}
 
 function focusAnchor(e: MouseEvent<HTMLAnchorElement>) {
   const id = e.currentTarget.hash.slice(1);

@@ -78,3 +78,20 @@ it("never shows the Google review or collaboration for an internal event", () =>
   rerender(<EventExperience event={event} phase="before" />);
   expect(screen.queryByRole("link", { name: /Bagikan ulasan Anda/ })).toBeNull();
 });
+
+it("shows custom preparation cards with their checklist, and hides the section while empty", () => {
+  const sections = journeyEvent().sections.map(section => section.key === "prepare" ? { ...section, enabled: true } : section);
+  const prepare = { title: "", intro: "Mohon disiapkan sebelum berangkat.", items: [
+    { icon: "shirt" as const, title: "Dress code", description: "Batik atau kemeja berkerah.", list: [] },
+    { icon: "backpack" as const, title: "Yang perlu dibawa", description: "", list: ["KTP", "Botol minum"] },
+    { icon: "gift" as const, title: "Yang kami siapkan untuk Anda", description: "", list: ["Kaos acara", "Topi"] },
+  ] };
+  const { unmount } = render(<EventExperience event={journeyEvent({ sections, prepare })} preview />);
+  expect(screen.getByRole("heading", { name: "Yang perlu Anda ketahui sebelum datang." })).toBeTruthy();
+  expect(screen.getByText("Batik atau kemeja berkerah.")).toBeTruthy();
+  for (const line of ["KTP", "Botol minum", "Kaos acara", "Topi"]) expect(screen.getByText(line)).toBeTruthy();
+  expect(screen.getByRole("navigation", { name: "Bagian undangan" }).querySelector('a[href="#prepare"]')).toBeTruthy();
+  unmount();
+  render(<EventExperience event={journeyEvent({ sections, prepare: { title: "", intro: "", items: [] } })} preview />);
+  expect(document.getElementById("prepare")).toBeNull();
+});

@@ -1,6 +1,6 @@
 export type EventStatus = "draft" | "published" | "archived";
 export type InvitationMode = "open" | "personal";
-export type SectionKey = "about" | "experience" | "agenda" | "location" | "rsvp" | "contact" | "feedback" | "team";
+export type SectionKey = "about" | "experience" | "agenda" | "location" | "prepare" | "rsvp" | "contact" | "feedback" | "team";
 export type SectionConfig = { key: SectionKey; enabled: boolean };
 export type AgendaItem = { id: string; starts_at: string; ends_at: string; title: string; description: string; sort_order: number };
 export type DiscussionTopic = { title: string; description: string };
@@ -28,6 +28,10 @@ export type MomentIcon = "coffee" | "utensils" | "gift" | "users" | "camera" | "
 export type ExperienceMoment = { icon: MomentIcon; title: string; description: string };
 /** Hospitality's story for the guest to read; never a form the guest fills in. */
 export type EventExperienceContent = { title: string; story: string; image: PlainImage; moments: ExperienceMoment[] };
+export type PrepareIcon = "shirt" | "backpack" | "gift" | "id-card" | "umbrella" | "sun" | "footprints" | "utensils" | "camera" | "pill" | "package" | "info";
+/** One free-form card: dress code, what to bring, what the organiser provides, or anything else. */
+export type PrepareItem = { icon: PrepareIcon; title: string; description: string; list: string[] };
+export type PrepareContent = { title: string; intro: string; items: PrepareItem[] };
 export type RouteStep = { title: string; description: string; image: PlainImage };
 export type RouteGuide = { map_image: PlainImage; steps: RouteStep[] };
 export type AfterContent = {
@@ -48,7 +52,7 @@ export type EventRecord = {
   venue_image_url: string; venue_image_alt: string; venue_image_credit: string;
   hero: HeroImage; gallery: GalleryImage[];
   event_kind: EventKind; audience: EventAudience; theme: EventTheme; phase_override: PhaseOverride;
-  experience: EventExperienceContent; route: RouteGuide; day_note: string; after: AfterContent;
+  experience: EventExperienceContent; route: RouteGuide; day_note: string; after: AfterContent; prepare: PrepareContent;
   created_at: string; updated_at: string;
 };
 export type RsvpInput = {

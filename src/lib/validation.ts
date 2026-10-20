@@ -28,6 +28,14 @@ const plainImage = z.object({ url: httpsUrl, alt: text(300).default(""), srcset:
 const emptyImage = { url: "", alt: "", srcset: [] };
 export const momentIcons = ["coffee", "utensils", "gift", "users", "camera", "music", "map", "sparkles", "presentation", "heart"] as const;
 export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar"] as const;
+export const prepareIcons = ["shirt", "backpack", "gift", "id-card", "umbrella", "sun", "footprints", "utensils", "camera", "pill", "package", "info"] as const;
+const prepareSchema = z.object({
+  title: text(200).default(""), intro: text(1000).default(""),
+  items: z.array(z.object({
+    icon: z.enum(prepareIcons).default("info"), title: text(150).min(1, "Isi judul kartu."), description: text(1000).default(""),
+    list: z.array(text(150).min(1, "Isi atau hapus baris kosong.")).max(15).default([]),
+  })).max(8).default([]),
+});
 const experienceSchema = z.object({
   title: text(200).default(""), story: text(2000).default(""), image: plainImage.default(emptyImage),
   moments: z.array(z.object({ icon: z.enum(momentIcons), title: text(150).min(1, "Isi judul momen."), description: text(300).default("") })).max(6).default([]),
@@ -43,6 +51,7 @@ const afterSchema = z.object({
 });
 export const emptyExperience = { title: "", story: "", image: emptyImage, moments: [] };
 export const emptyRoute = { map_image: emptyImage, steps: [] };
+export const emptyPrepare = { title: "", intro: "", items: [] };
 export const emptyAfter = { title: "", message: "", image: emptyImage, collaboration: { enabled: false, title: "", description: "", button_label: "" } };
 export const eventBaseSchema = z.object({
   id: z.uuid(), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),
@@ -55,7 +64,7 @@ export const eventBaseSchema = z.object({
   feedback_enabled: z.boolean(), feedback_opens_at: optionalTime, feedback_description: text(1000).default(""),
   contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "" }),
   team_image: plainImage.default(emptyImage),
-  sections: z.array(z.object({ key: z.enum(["about", "experience", "agenda", "location", "rsvp", "contact", "feedback", "team"]), enabled: z.boolean() })).max(8),
+  sections: z.array(z.object({ key: z.enum(["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback", "team"]), enabled: z.boolean() })).max(9),
   topics: z.array(z.object({ title: text(200).min(1), description: text(1500) })).max(20),
   agenda: z.array(z.object({ id: z.uuid(), starts_at: timestamp, ends_at: timestamp, title: text(200).min(1), description: text(1500), sort_order: z.number().int().min(0).max(1000) })).max(100),
   feedback_questions: z.array(z.object({ id: z.uuid(), label: text(500).min(1), kind: z.enum(["rating", "choice", "text"]), required: z.boolean(), options: z.array(text(200).min(1)).max(20), sort_order: z.number().int().min(0).max(1000) })).max(30),
@@ -75,6 +84,7 @@ export const eventBaseSchema = z.object({
   route: routeSchema.default(emptyRoute),
   day_note: text(1000).default(""),
   after: afterSchema.default(emptyAfter),
+  prepare: prepareSchema.default(emptyPrepare),
   created_at: timestamp, updated_at: timestamp,
 });
 export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {

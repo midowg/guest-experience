@@ -47,6 +47,8 @@ Setiap acara punya dua pilihan terpisah. **Internal bukan jenis acara tersendiri
 
 Modul baru yang disepakati: **titik kumpul dan transport**, **daftar bawaan**, **pembagian tugas**, dan **materi** (hanya untuk peserta). Dress code menjadi bab di Handbook, bukan modul sendiri.
 
+**Pembaruan 20 Okt — modul Persiapan tamu (sudah dibangun).** Daftar bawaan dan dress code digabung ke satu modul opsional berisi **kartu kustom** (maksimal 8): setiap kartu punya ikon, judul, keterangan, dan daftar centang (maksimal 15 baris). Admin bisa mulai dari contoh *Dress code*, *Yang perlu dibawa*, *Yang kami siapkan* (kaos, topi, goodie bag), atau *Kartu kustom* untuk hal lain seperti cuaca, alas kaki, atau obat pribadi. Bagian ini nonaktif secara bawaan dan tidak tampil selama belum ada kartu. Disimpan di JSONB acara, jadi tidak memerlukan migrasi.
+
 ### Domain, halaman depan, dan fase
 
 - Sementara memakai `invitation.werkudara.group`. Nanti diganti ke nama yang lebih cocok (belum ditentukan); domain lama tetap aktif sebagai alias agar tautan yang sudah dibagikan tidak mati. Domain diatur di Vercel dan DNS, tidak tertulis di kode.

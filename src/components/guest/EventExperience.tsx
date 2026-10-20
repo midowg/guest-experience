@@ -13,10 +13,10 @@ import { Gallery, imageSrcSet, venuePhotos } from "./Gallery";
 import { InvitationHero, TimeRange, visibleSections } from "./InvitationHero";
 import { FeedbackForm, RsvpForm } from "./GuestForms";
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
-import { AfterPanel, ExperienceContent, RouteGuideContent, TodayPanel, teamPoints } from "./JourneyPanels";
+import { AfterPanel, ExperienceContent, PrepareCards, RouteGuideContent, TodayPanel, teamPoints } from "./JourneyPanels";
 import styles from "./guest.module.css";
 
-const sectionLabels: Record<SectionKey, string> = { about: "Acara", experience: "Pengalaman", agenda: "Jadwal", location: "Lokasi", team: "Our Team", rsvp: "Konfirmasi", contact: "Kontak", feedback: "Masukan" };
+const sectionLabels: Record<SectionKey, string> = { about: "Acara", experience: "Pengalaman", agenda: "Jadwal", location: "Lokasi", prepare: "Persiapan", team: "Our Team", rsvp: "Konfirmasi", contact: "Kontak", feedback: "Masukan" };
 
 function focusAnchor(e: MouseEvent<HTMLAnchorElement>) {
   const id = e.currentTarget.hash.slice(1);
@@ -220,6 +220,10 @@ export function EventExperience({ event, preview = false, invitation, phase = "b
               {event.agenda.length === 0 ? <p>Rundown belum tersedia. Silakan periksa kembali undangan ini.</p> : <ol className={styles.agenda}>{[...event.agenda].sort((a, b) => a.sort_order - b.sort_order).map(item => <li key={item.id}><div className={styles.agendaTime}><TimeRange start={item.starts_at} end={item.ends_at} timezone={event.timezone} /></div><div><h3>{item.title}</h3>{item.description && <p className={styles.multiline}>{item.description}</p>}</div></li>)}</ol>}
             </>}
             {section.key === "location" && <><div id="location-heading"><SectionHeading title="Sampai jumpa di lokasi." /></div><Location event={event} /></>}
+            {section.key === "prepare" && <>
+              <div id="prepare-heading"><SectionHeading title={event.prepare.title || "Yang perlu Anda ketahui sebelum datang."}>{event.prepare.intro && <p className={styles.multiline}>{event.prepare.intro}</p>}</SectionHeading></div>
+              <PrepareCards items={event.prepare.items} />
+            </>}
             {section.key === "team" && <>
               <div id="team-heading"><SectionHeading title="Our Team"><p>Everyone Belongs</p></SectionHeading></div>
               {event.team_image?.url && <figure className={styles.teamPhoto}>

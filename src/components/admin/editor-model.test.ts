@@ -8,6 +8,13 @@ const id = (n: number) => `b1d26d64-2ab8-4d7a-80b5-328a132ea2c${n}`;
 const image = (n: number, over: Partial<GalleryImage> = {}): GalleryImage => ({ id: id(n), url: `https://example.test/foto-${n}.webp`, alt: `Foto ${n}`, caption: "", sort_order: 99, srcset: [], ...over });
 
 describe("prepareEvent", () => {
+  it("drops blank checklist lines and empty preparation cards before saving", () => {
+    const event = { ...createSeedEvent(), prepare: { title: "", intro: "", items: [
+      { icon: "backpack" as const, title: " Yang perlu dibawa ", description: "", list: ["KTP", "", "  ", " Payung "] },
+      { icon: "info" as const, title: "", description: " ", list: [""] },
+    ] } };
+    expect(prepareEvent(event).prepare.items).toEqual([{ icon: "backpack", title: "Yang perlu dibawa", description: "", list: ["KTP", "Payung"] }]);
+  });
   it("keeps only the URL when an iframe is pasted", () => {
     const url = "https://www.google.com/maps/embed?pb=!1m18";
     const prepared = prepareEvent({ ...createSeedEvent(), location_embed_url: `<iframe src="${url}" width="800" height="600"></iframe>` });

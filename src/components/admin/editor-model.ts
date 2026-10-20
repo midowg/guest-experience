@@ -3,7 +3,7 @@ import { getFraming, normalizeEvent } from "@/lib/hero-framing";
 import { parseLocationEmbed } from "@/lib/location-embed";
 import { tzLabel } from "@/lib/timezones";
 
-export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", experience: "Pengalaman kunjungan", agenda: "Rundown", location: "Lokasi", team: "Our Team", rsvp: "Konfirmasi kehadiran", contact: "Kontak", feedback: "Survei feedback" };
+export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", experience: "Pengalaman kunjungan", agenda: "Rundown", location: "Lokasi", prepare: "Persiapan tamu", team: "Our Team", rsvp: "Konfirmasi kehadiran", contact: "Kontak", feedback: "Survei feedback" };
 export const sectionKeys = Object.keys(sectionLabels) as SectionKey[];
 
 /**
@@ -38,7 +38,7 @@ export function completeSections(event: EventRecord): EventRecord {
   const sections = [...event.sections];
   for (const key of sectionKeys) {
     if (sections.some(section => section.key === key)) continue;
-    const before = key === "contact" ? "feedback" : key === "team" ? "rsvp" : key === "experience" ? "agenda" : null;
+    const before = key === "contact" ? "feedback" : key === "team" || key === "prepare" ? "rsvp" : key === "experience" ? "agenda" : null;
     const index = before ? sections.findIndex(section => section.key === before) : -1;
     sections.splice(index < 0 ? sections.length : index, 0, { key, enabled: false });
   }
@@ -70,6 +70,10 @@ export function prepareEvent(event: EventRecord): EventRecord {
     experience: { ...event.experience, image: cleanImage(event.experience.image), moments: event.experience.moments.filter(item => item.title.trim() || item.description.trim()) },
     route: { map_image: cleanImage(event.route.map_image), steps: event.route.steps.filter(step => step.title.trim() || step.description.trim() || step.image.url).map(step => ({ ...step, image: cleanImage(step.image) })) },
     after: { ...event.after, image: cleanImage(event.after.image) },
+    // Blank lines are kept while typing (so Enter works) and dropped here, before validation.
+    prepare: { ...event.prepare, items: event.prepare.items
+      .map(item => ({ ...item, title: item.title.trim(), list: item.list.map(line => line.trim()).filter(Boolean) }))
+      .filter(item => item.title || item.description.trim() || item.list.length) },
     agenda: event.agenda.map((item, sort_order) => ({ ...item, sort_order })),
     gallery: event.gallery.filter(item => item.url.trim() || item.caption.trim() || item.alt.trim() || item.srcset.length).map((item, sort_order) => ({ ...item, sort_order })),
     feedback_questions: event.feedback_questions.map((item, sort_order) => ({ ...item, options: item.kind === "choice" ? item.options.map(option => option.trim()).filter(Boolean) : [], sort_order })),
@@ -104,6 +108,7 @@ export const editorBlocks: { id: string; title: string; stage: EditorStage }[] =
   { id: "agenda", title: "Rundown", stage: "prep" },
   { id: "venue", title: "Lokasi", stage: "prep" },
   { id: "gallery", title: "Galeri foto lokasi Werkudara", stage: "prep" },
+  { id: "prepare", title: "Persiapan tamu", stage: "prep" },
   { id: "team", title: "Our Team", stage: "prep" },
   { id: "rsvp", title: "Penerimaan RSVP", stage: "guest" },
   { id: "contact", title: "Kontak", stage: "guest" },
@@ -126,7 +131,7 @@ const fieldBlocks: Record<string, string> = {
   team_image: "team", rsvp_enabled: "rsvp", rsvp_closes_at: "rsvp", contact: "contact", day_note: "day",
   feedback_enabled: "feedback_questions", feedback_opens_at: "feedback_questions", feedback_description: "feedback_questions", feedback_questions: "feedback_questions",
   review_url: "review", review_enabled: "review", review_heading: "review", review_description: "review", review_button_label: "review",
-  after: "after", sections: "sections", status: "publication",
+  after: "after", prepare: "prepare", sections: "sections", status: "publication",
 };
 export function blockOfPath(path: string): string {
   return fieldBlocks[path.split(".")[0]] ?? "identity";
@@ -155,6 +160,7 @@ export function blockSummary(id: string, event: EventRecord, themeName: string, 
       return event.route.steps.length ? `${place} · ${count(event.route.steps.length, "langkah rute")}` : place;
     }
     case "gallery": return event.gallery.length ? count(event.gallery.length, "foto lokasi") : "Belum ada foto lokasi";
+    case "prepare": return sectionOn(event, "prepare") ? (event.prepare.items.length ? event.prepare.items.map(item => item.title).slice(0, 3).join(" · ") : "Tampil · belum ada kartu") : "Nonaktif";
     case "team": return sectionOn(event, "team") ? (event.team_image.url ? "Tampil · dengan foto tim" : "Tampil · tanpa foto") : "Nonaktif";
     case "rsvp": return event.rsvp_enabled ? (event.rsvp_closes_at ? `Dibuka · batas ${formatWhen(event.rsvp_closes_at)}` : "Dibuka · tanpa batas waktu") : "Ditutup";
     case "contact": return event.contact.name && event.contact.phone ? `${event.contact.name} · ${event.contact.channel === "whatsapp" ? "WhatsApp" : "Telepon"}` : "Belum diisi";
@@ -175,6 +181,7 @@ function isEmptyOptional(id: string, event: EventRecord): boolean {
     case "topics": return !event.topics.length;
     case "experience": return !sectionOn(event, "experience");
     case "gallery": return !event.gallery.length;
+    case "prepare": return !sectionOn(event, "prepare");
     case "team": return !sectionOn(event, "team");
     case "day": return !event.day_note;
     case "feedback_questions": return !event.feedback_enabled;

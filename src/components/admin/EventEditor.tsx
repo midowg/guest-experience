@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink, Field, Notice } from "@/components/ui";
-import { ArrowUpRight, CalendarCheck, ChevronRight, CircleAlert, CircleDashed, Pencil, X, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Handshake, Image as ImageIcon, Images, LayoutList, ListChecks, ListOrdered, MapPin, MessageSquare, Palette, Phone, Rocket, Save, Sparkles, Star, Trash2, Users, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, CalendarCheck, ChevronRight, CircleAlert, CircleDashed, Pencil, X, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Handshake, Image as ImageIcon, Images, LayoutList, ListChecks, ListOrdered, MapPin, MessageSquare, Palette, Phone, Rocket, Save, Shirt, Sparkles, Star, Trash2, Users, type LucideIcon } from "lucide-react";
 import { Check, OrderButtons } from "./controls";
 import { defaultFraming } from "@/lib/hero-framing";
 import { HeroPreview } from "./HeroPreview";
@@ -15,7 +15,7 @@ import { eventSchema } from "@/lib/validation";
 import { AdminApiError, adminRequest, errorMessage } from "./api";
 import { blockOfPath, blockStatusLabels, blockStatuses, blockSummary, completeSections, editorBlocks, editorStages, type BlockStatus, heroTextPositionHints, heroTextPositionOptions, hiddenSectionReasons, moveItem, photoGuidance, prepareEvent, sectionLabels } from "./editor-model";
 import { PhotoField } from "./PhotoField";
-import { AfterBlock, AppearanceBlock, DayBlock, ExperienceBlock, RouteFields } from "./JourneyEditor";
+import { AfterBlock, AppearanceBlock, DayBlock, ExperienceBlock, PrepareBlock, RouteFields } from "./JourneyEditor";
 import styles from "./admin.module.css";
 
 type TextKey = "title" | "slug" | "subtitle" | "organizer" | "greeting" | "introduction" | "closing" | "venue_name" | "address" | "location_url" | "arrival_notes" | "review_url" | "review_heading" | "review_description" | "review_button_label" | "feedback_description" | "venue_image_url" | "venue_image_alt" | "venue_image_credit";
@@ -24,7 +24,7 @@ type BooleanKey = "rsvp_enabled" | "feedback_enabled" | "review_enabled";
 
 const blockIcons: Record<string, LucideIcon> = {
   identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
-  agenda: ListOrdered, venue: MapPin, gallery: Images, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
+  agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
   feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket,
 };
 
@@ -309,6 +309,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         <Button type="button" variant="secondary" disabled={event.gallery.length >= 12} onClick={() => update("gallery", [...event.gallery, { id: crypto.randomUUID(), url: "", alt: "", caption: "", sort_order: event.gallery.length, srcset: [] }])}>Tambah foto lokasi</Button>
         {photoHelp}
       </div>)}
+      {block("prepare", "Persiapan tamu", <PrepareBlock event={event} update={update} control={control} />)}
       {block("team", "Our Team", <div className="stack">
         <p>Bagian ini memakai teks tetap tentang lingkungan kerja Werkudara yang inklusif. Aktifkan dan atur urutannya di bawah. Foto tim opsional; unggah hanya foto yang boleh ditampilkan publik. Panel admin belum memakai login.</p>
         <PhotoField name="team_image.url" label="Foto tim (opsional)" value={event.team_image.url} srcset={event.team_image.srcset} onChange={value => update("team_image", { ...event.team_image, ...value, alt: value.url ? event.team_image.alt : "" })} error={errors["team_image.url"]?.join(" ")} />

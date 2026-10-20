@@ -6,14 +6,14 @@ import { ButtonLink } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
 import { tzLabel } from "@/lib/timezones";
 import { getFraming } from "@/lib/hero-framing";
-import type { EventContact, SectionKey } from "@/lib/types";
+import type { EventContact, PrepareContent, SectionKey } from "@/lib/types";
 import type { HeroPreviewEvent } from "@/lib/hero-preview";
 import { imageSrcSet } from "./Gallery";
 import { HeroShortcuts } from "./JourneyPanels";
 import styles from "./guest.module.css";
 
-export function visibleSections(event: HeroPreviewEvent & { contact?: EventContact }) {
-  return event.sections.filter(section => section.enabled && (section.key !== "feedback" || (event.feedback_enabled && event.feedback_questions.length > 0)) && (section.key !== "contact" || (!!event.contact?.name && !!event.contact.phone)));
+export function visibleSections(event: HeroPreviewEvent & { contact?: EventContact; prepare?: PrepareContent }) {
+  return event.sections.filter(section => section.enabled && (section.key !== "feedback" || (event.feedback_enabled && event.feedback_questions.length > 0)) && (section.key !== "contact" || (!!event.contact?.name && !!event.contact.phone)) && (section.key !== "prepare" || !!event.prepare?.items.length));
 }
 const kindEyebrow = { kunjungan: "Undangan kunjungan", acara: "Undangan acara", program: "Undangan program" } as const;
 

@@ -70,6 +70,11 @@ export default async function DevPreviewPage({ searchParams }: { searchParams: P
     contact: { ...base.contact, name: "Koordinator Acara", phone: "0812 3456 7890", role: "Hospitality", channel: "whatsapp" },
     day_note: "Contoh catatan hari H: Wi-Fi tamu tersedia, tanyakan ke resepsionis.",
     after: { title: "", message: "Contoh pesan terima kasih untuk tamu.", image: sample("werkudara-after", "Contoh foto penutup"), collaboration: { enabled: true, title: "", description: "Tertarik berkolaborasi? Tim kami senang mendengar ide Anda.", button_label: "" } },
+    prepare: { title: "", intro: "Contoh pengantar persiapan tamu.", items: [
+      { icon: "shirt", title: "Dress code", description: "Contoh: batik atau kemeja berkerah.", list: [] },
+      { icon: "backpack", title: "Yang perlu dibawa", description: "", list: ["Kartu identitas", "Botol minum"] },
+      { icon: "gift", title: "Yang kami siapkan untuk Anda", description: "", list: ["Kaos acara", "Topi"] },
+    ] },
     review_enabled: true, review_url: "https://example.com/ulasan",
     sections: base.sections.map(section => ({ ...section, enabled: section.key !== "feedback" })),
   };

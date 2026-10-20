@@ -361,3 +361,4 @@
 .accessHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .accessNew { display: inline-flex; align-items: center; gap: 4px; padding: 1px var(--space-2); border-radius: 999px; background: color-mix(in srgb, var(--yellow) 25%, #fff); color: #6b4a0e; font-size: .75rem; font-weight: 700; }
 .accessMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--ink-soft); font-size: .8125rem; overflow-wrap: anywhere; }
+.presetRow { display: flex; flex-wrap: wrap; gap: var(--space-2); }
