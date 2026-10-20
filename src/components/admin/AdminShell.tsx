@@ -18,7 +18,7 @@ export async function AdminShell({ children, bare = false }: { children: ReactNo
           <span><strong>Werkudara</strong><span className={styles.brandSub}>Admin pengalaman tamu</span></span>
         </a>
         {!bare && <nav className={styles.headerNav} aria-label="Admin">
-          {role === "super" && <span className={styles.roleBadge}><Crown size={14} aria-hidden="true" /> Super admin</span>}
+          {role === "super" && <a href="/admin/super" className={`${styles.headerLink} ${styles.roleLink}`}><Crown size={16} aria-hidden="true" /> Dashboard super admin</a>}
           <a href="/admin" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> Semua acara</a>
           <a href="/admin/akses" className={styles.headerLink}><ShieldCheck size={16} aria-hidden="true" /> Log akses</a>
           <LogoutButton />

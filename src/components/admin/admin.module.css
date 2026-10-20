@@ -454,3 +454,31 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 /* Super admin (Tahap 6b). */
 .roleBadge { display: inline-flex; align-items: center; gap: 4px; padding: 2px var(--space-3); border-radius: 999px; background: color-mix(in srgb, var(--yellow) 30%, #fff); color: #6b4a0e; font-size: .8125rem; font-weight: 700; }
 .statusHidden { display: inline-flex; align-items: center; gap: 4px; background: var(--st-settings-bg); color: var(--st-settings); }
+.roleLink { background: color-mix(in srgb, var(--yellow) 30%, #fff); color: #6b4a0e; }
+.roleLink:hover { background: color-mix(in srgb, var(--yellow) 45%, #fff); }
+.superStats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.superStats > div { display: grid; gap: 2px; padding: var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.superStats strong { font-size: 1.75rem; color: var(--blue); }
+.superStats span { color: var(--ink-soft); font-size: .8125rem; font-weight: 600; }
+.superToolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.superToolbar .filterChips { margin-block: 0; }
+.superSearch { position: relative; display: flex; align-items: center; flex: 1 1 18rem; max-width: 26rem; }
+.superSearch svg { position: absolute; left: 12px; color: var(--ink-soft); }
+.superSearch input { width: 100%; padding-left: 36px; }
+.superBulk { position: sticky; top: calc(var(--space-9) + var(--space-2)); z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 2px solid var(--blue); border-radius: 14px; background: var(--st-guest-bg); }
+.superTitle { font-weight: 700; color: var(--color-text); }
+.superMeta { margin: 2px 0 0; color: var(--ink-soft); font-size: .75rem; overflow-wrap: anywhere; }
+.superDate { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.superRowHidden td { background: var(--page); }
+.superRowHidden .superTitle { color: var(--ink-soft); }
+.superSwitch { display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: .8125rem; font-weight: 600; white-space: nowrap; }
+.superSwitch input { width: 40px; height: 22px; accent-color: var(--blue); cursor: pointer; }
+.superSwitch span { display: inline-flex; align-items: center; gap: 4px; }
+@media (max-width: 40rem) { .superStats { grid-template-columns: 1fr 1fr 1fr; } .superStats strong { font-size: 1.25rem; } }
+.superSwitch input { appearance: none; position: relative; flex-shrink: 0; width: 42px; height: 24px; margin: 0; border-radius: 999px; background: #c4cad6; transition: background-color .15s; }
+.superSwitch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s; }
+.superSwitch input:checked { background: var(--blue); }
+.superSwitch input:checked::after { transform: translateX(18px); }
+.superSwitch input:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.superSwitch input:disabled { opacity: .5; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .superSwitch input, .superSwitch input::after { transition: none; } }

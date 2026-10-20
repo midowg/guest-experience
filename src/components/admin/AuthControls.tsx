@@ -18,8 +18,9 @@ export function LoginForm({ next }: { next: string }) {
     const data = new FormData(event.currentTarget);
     setPending(true); setError("");
     try {
-      await adminRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ password: data.get("password") }) });
-      router.replace(next); router.refresh();
+      const result = await adminRequest<{ role: "admin" | "super" }>("/api/auth/login", { method: "POST", body: JSON.stringify({ password: data.get("password") }) });
+      // A super admin lands on their own dashboard unless they were heading somewhere specific.
+      router.replace(result.data?.role === "super" && next === "/admin" ? "/admin/super" : next); router.refresh();
     } catch (err) { setError(errorMessage(err)); setPending(false); }
   }
   return <form onSubmit={submit} className={styles.loginForm} aria-busy={pending}>

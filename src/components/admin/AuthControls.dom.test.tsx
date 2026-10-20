@@ -42,3 +42,22 @@ describe("admin login form", () => {
     expect(screen.getByRole("button", { name: "Sembunyikan password" }).getAttribute("aria-pressed")).toBe("true");
   });
 });
+
+describe("super admin login", () => {
+  it("lands on the super admin dashboard", async () => {
+    replace.mockClear();
+    vi.stubGlobal("fetch", vi.fn(async () => reply({ ok: true, data: { logged: true, role: "super" }, message: "Berhasil masuk sebagai super admin." })));
+    render(<LoginForm next="/admin" />);
+    fireEvent.change(screen.getByLabelText("Password admin"), { target: { value: "password-super-admin" } });
+    fireEvent.click(screen.getByRole("button", { name: /Masuk/ }));
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/super"));
+  });
+  it("still honours a specific destination", async () => {
+    replace.mockClear();
+    vi.stubGlobal("fetch", vi.fn(async () => reply({ ok: true, data: { logged: true, role: "super" }, message: "OK" })));
+    render(<LoginForm next="/admin/akses" />);
+    fireEvent.change(screen.getByLabelText("Password admin"), { target: { value: "password-super-admin" } });
+    fireEvent.click(screen.getByRole("button", { name: /Masuk/ }));
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/akses"));
+  });
+});

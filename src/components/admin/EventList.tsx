@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink, Notice } from "@/components/ui";
-import { Archive, Building2, CalendarDays, CalendarCheck, Eye, EyeOff, Globe, Hourglass, Images, Pencil } from "lucide-react";
+import { Archive, Building2, CalendarDays, CalendarCheck, EyeOff, Globe, Hourglass, Images, Pencil } from "lucide-react";
 import type { EventPhase, EventRecord, EventStatus } from "@/lib/types";
 import { themeDefinition } from "@/lib/themes";
 import { formatDate, formatDateTime, formatTime } from "@/lib/format";
@@ -22,25 +22,14 @@ function stageBadge(event: EventRecord, phase: EventPhase | undefined) {
   if (phase === "after") return { label: "Sesudah acara", stage: "after", Icon: Images };
   return { label: "Sebelum acara", stage: "guest", Icon: Hourglass };
 }
-/** `superAdmin` is set only for a super admin session: it adds the hide/show control. */
+/** `superAdmin` is set only for a super admin session: hidden events then carry a label. */
 export function EventList({ events, featuredId, phases = {}, superAdmin }: { events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean } }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [featured, setFeatured] = useState(featuredId);
   const [creating, setCreating] = useState(false);
-  const [hidden, setHidden] = useState(() => new Set(superAdmin?.hiddenIds ?? []));
-  async function toggleHidden(event: EventRecord) {
-    if (busy || !superAdmin) return;
-    const hide = !hidden.has(event.id);
-    if (hide && !window.confirm(`Sembunyikan “${event.title}” dari admin biasa? Mereka tidak lagi melihat atau membuka acara ini. Halaman tamu tidak berubah.`)) return;
-    setBusy(event.id); setError("");
-    try {
-      const result = await adminRequest<{ hidden: boolean }>(`/api/admin/events/${event.id}/visibility`, { method: "PUT", body: JSON.stringify({ hidden: hide }) });
-      setHidden(current => { const next = new Set(current); if (result.data?.hidden) next.add(event.id); else next.delete(event.id); return next; });
-    } catch (err) { setError(errorMessage(err)); }
-    finally { setBusy(null); }
-  }
+  const hidden = new Set(superAdmin?.hiddenIds ?? []);
   async function feature(event: EventRecord) {
     if (busy || event.status !== "published" || featured === event.id) return;
     const current = events.find(item => item.id === featured);
@@ -64,7 +53,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin }: { eve
   return <div className="stack" aria-busy={!!busy}>
     <div className={styles.itemHeader}><p>{events.length} acara. Duplikasi hanya menyalin konten sebagai draft, bukan jawaban tamu.</p><Button type="button" disabled={!!busy} onClick={() => setCreating(true)}>Buat acara</Button></div>
     {creating && <CreateEventDialog events={events} onClose={() => setCreating(false)} />}
-    {superAdmin && <Notice>{superAdmin.migrated ? `Mode super admin: ${hidden.size} acara disembunyikan dari admin biasa. Acara tersembunyi tetap bisa dibuka tamu lewat tautannya.` : "Mode super admin aktif. Menyembunyikan acara menunggu migrasi 202610200005_admin_roles.sql."}</Notice>}
+    {superAdmin && <Notice>{hidden.size ? `${hidden.size} acara disembunyikan dari admin biasa. ` : ""}Atur acara yang terlihat oleh admin biasa di <a href="/admin/super">Dashboard super admin</a>.</Notice>}
     {error && <Notice tone="error">{error}</Notice>}
     {!events.length ? <Notice>Belum ada acara. Buat draft pertama untuk meninjau dan menyunting konten sebelum publikasi.</Notice> : <ul className={styles.eventList}>
       {events.map(event => {
@@ -90,7 +79,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin }: { eve
           <div><dt>Dibuat</dt><dd>{formatDate(event.created_at)}</dd></div>
           <div><dt>Terakhir disimpan</dt><dd>{formatDateTime(event.updated_at)}</dd></div>
         </dl>
-        <div className={styles.actions}><ButtonLink href={`/admin/events/${event.id}`}>Kelola acara</ButtonLink>{event.status === "published" && event.id !== featured && <Button type="button" variant="secondary" disabled={!!busy} onClick={() => feature(event)}>{busy === event.id ? "Menayangkan…" : "Tayangkan"}</Button>}<Button type="button" variant="secondary" disabled={!!busy} onClick={() => duplicate(event.id)}>{busy === event.id ? "Menduplikasi…" : "Duplikasi ke draft"}</Button>{superAdmin?.migrated && <Button type="button" variant="quiet" disabled={!!busy} onClick={() => toggleHidden(event)}>{hidden.has(event.id) ? <><Eye size={16} aria-hidden="true" /> Tampilkan ke admin</> : <><EyeOff size={16} aria-hidden="true" /> Sembunyikan dari admin</>}</Button>}</div>
+        <div className={styles.actions}><ButtonLink href={`/admin/events/${event.id}`}>Kelola acara</ButtonLink>{event.status === "published" && event.id !== featured && <Button type="button" variant="secondary" disabled={!!busy} onClick={() => feature(event)}>{busy === event.id ? "Menayangkan…" : "Tayangkan"}</Button>}<Button type="button" variant="secondary" disabled={!!busy} onClick={() => duplicate(event.id)}>{busy === event.id ? "Menduplikasi…" : "Duplikasi ke draft"}</Button></div>
       </li>;
       })}
     </ul>}
