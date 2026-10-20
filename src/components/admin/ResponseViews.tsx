@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink, Field, Notice } from "@/components/ui";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import type { FeedbackRecord, PageResult, RsvpRecord } from "@/lib/types";
 import styles from "./admin.module.css";
 
@@ -16,7 +16,7 @@ function Pagination({ page, total, pageSize, onPage, busy }: { page: number; tot
   </nav>;
 }
 
-function timestamp(value: string) { return `${formatDate(value)}, ${formatTime(value)} WIB`; }
+function timestamp(value: string) { return formatDateTime(value); }
 
 export function ResponsesView({ eventId, initial, initialFilters }: { eventId: string; initial: PageResult<RsvpRecord>; initialFilters: { attendance: string; q: string } }) {
   const router = useRouter();

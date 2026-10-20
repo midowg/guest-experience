@@ -7,7 +7,8 @@ import { ArrowUpRight, CalendarCheck, ChevronRight, CircleAlert, CircleDashed, P
 import { Check, OrderButtons } from "./controls";
 import { defaultFraming } from "@/lib/hero-framing";
 import { HeroPreview } from "./HeroPreview";
-import { formatDate, formatTime, fromJakartaInput, toJakartaInput } from "@/lib/format";
+import { formatDate, formatTime, fromZoneInput, toZoneInput } from "@/lib/format";
+import { eventTimezones, timezoneInfo, tzLabel, zoneOf } from "@/lib/timezones";
 import { themeDefinition } from "@/lib/themes";
 import type { EventRecord, EventStatus, FeedbackQuestion } from "@/lib/types";
 import { eventSchema } from "@/lib/validation";
@@ -116,7 +117,20 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
     return control(key, label, event[key], value => update(key, value), { multiline, maxLength, hint, type: key.endsWith("_url") ? "url" : "text" });
   }
   function time(key: TimeKey, label: string, hint?: string) {
-    return control(key, label, toJakartaInput(event[key]), value => update(key, fromJakartaInput(value) || (key === "starts_at" ? "" : null)), { type: "datetime-local", hint });
+    return control(key, label, toZoneInput(event[key], event.timezone), value => update(key, fromZoneInput(value, event.timezone) || (key === "starts_at" ? "" : null)), { type: "datetime-local", hint });
+  }
+  const tz = tzLabel(event.timezone);
+  /** Switching zone keeps the wall-clock times the admin typed (09.00 stays 09.00), so every instant moves. */
+  function changeTimezone(next: string) {
+    const from = event.timezone;
+    const shift = (value: string | null) => value ? fromZoneInput(toZoneInput(value, from), next) : value;
+    setEvent(current => ({
+      ...current, timezone: zoneOf(next),
+      starts_at: shift(current.starts_at) ?? "", ends_at: shift(current.ends_at), rsvp_closes_at: shift(current.rsvp_closes_at), feedback_opens_at: shift(current.feedback_opens_at),
+      agenda: current.agenda.map(item => ({ ...item, starts_at: shift(item.starts_at) ?? "", ends_at: shift(item.ends_at) ?? "" })),
+    }));
+    setDirty(true); setMessage("");
+    setDirtyBlocks(current => new Set(current).add("schedule").add("agenda"));
   }
   function toggle(key: BooleanKey, label: string) { return <Check label={label} checked={event[key]} onChange={value => update(key, value)} />; }
   function updateHero(patch: Partial<EventRecord["hero"]>) { update("hero", { ...event.hero, ...patch }); }
@@ -222,7 +236,15 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         <ButtonLink href={`/admin/events/${event.id}/invitations`} variant="secondary">Kelola undangan tamu</ButtonLink>
       </div>)}
       {block("appearance", "Jenis, audiens, dan tampilan", <AppearanceBlock event={event} update={update} />)}
-      {block("schedule", "Waktu acara", <div className={styles.grid}>{time("starts_at", "Mulai (WIB)")}{time("ends_at", "Selesai (WIB)", "Opsional bila waktu selesai belum ditentukan.")}</div>)}
+      {block("schedule", "Waktu acara", <div className="stack">
+        <Field name="timezone" label="Zona waktu" hint={timezoneInfo[zoneOf(event.timezone)].example}>
+          <select id="timezone" className="input" value={zoneOf(event.timezone)} onChange={e => changeTimezone(e.target.value)} aria-describedby="timezone-hint">
+            {eventTimezones.map(zone => <option key={zone} value={zone}>{timezoneInfo[zone].label} · {timezoneInfo[zone].name} (UTC{timezoneInfo[zone].offset})</option>)}
+          </select>
+        </Field>
+        <div className={styles.grid}>{time("starts_at", `Mulai (${tz})`)}{time("ends_at", `Selesai (${tz})`, "Opsional bila waktu selesai belum ditentukan.")}</div>
+        <p className="muted">Semua waktu acara, rundown, batas RSVP, dan survei memakai zona ini. Mengganti zona mempertahankan jam yang sudah diketik.</p>
+      </div>)}
       {block("hero", "Foto latar pembuka", <div className="stack">
         <p>Foto latar adalah gambar pembuka undangan, dan satu-satunya foto yang memiliki pilihan posisi teks. Foto lokasi di galeri tidak memakai pilihan ini. Atur posisi dan zoom foto secara terpisah untuk HP dan desktop melalui pratinjau asli di bawah.</p>
         <PhotoField
@@ -257,7 +279,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
           return <div className={styles.item} key={item.id}>
             <div className={styles.itemHeader}><h3>Sesi {index + 1}</h3><OrderButtons label={`sesi ${index + 1}`} index={index} length={event.agenda.length} onMove={direction => update("agenda", moveItem(event.agenda, index, direction))} /></div>
             {control(`agenda.${index}.title`, "Judul sesi", item.title, value => change("title", value), { maxLength: 200 })}
-            <div className={styles.grid}>{control(`agenda.${index}.starts_at`, "Mulai sesi (WIB)", toJakartaInput(item.starts_at), value => change("starts_at", fromJakartaInput(value) || ""), { type: "datetime-local" })}{control(`agenda.${index}.ends_at`, "Selesai sesi (WIB)", toJakartaInput(item.ends_at), value => change("ends_at", fromJakartaInput(value) || ""), { type: "datetime-local" })}</div>
+            <div className={styles.grid}>{control(`agenda.${index}.starts_at`, `Mulai sesi (${tz})`, toZoneInput(item.starts_at, event.timezone), value => change("starts_at", fromZoneInput(value, event.timezone) || ""), { type: "datetime-local" })}{control(`agenda.${index}.ends_at`, `Selesai sesi (${tz})`, toZoneInput(item.ends_at, event.timezone), value => change("ends_at", fromZoneInput(value, event.timezone) || ""), { type: "datetime-local" })}</div>
             {control(`agenda.${index}.description`, "Keterangan sesi", item.description, value => change("description", value), { multiline: true, maxLength: 1500 })}
             <Button type="button" variant="danger" onClick={() => { if (window.confirm("Hapus sesi ini dari draft editor?")) update("agenda", event.agenda.filter(entry => entry.id !== item.id)); }}><Trash2 size={17} aria-hidden="true" /><span>Hapus sesi {index + 1}</span></Button>
           </div>;
@@ -293,7 +315,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         {control("team_image.alt", "Deskripsi foto tim", event.team_image.alt, value => update("team_image", { ...event.team_image, alt: value }), { maxLength: 300, hint: "Wajib bila foto diisi. Jelaskan isi foto untuk pembaca layar." })}
         {photoHelp}
       </div>)}
-      {block("rsvp", "Penerimaan RSVP", <div className="stack"><p>RSVP adalah konfirmasi kehadiran tamu (dari bahasa Prancis, <i lang="fr">répondez s&apos;il vous plaît</i>). Formulir ini memungkinkan tamu mengabari panitia apakah mereka dapat hadir.</p>{toggle("rsvp_enabled", "Aktifkan penerimaan konfirmasi kehadiran")}{time("rsvp_closes_at", "Batas RSVP (WIB)", "Kosongkan jika tidak ada batas waktu. Bagian RSVP juga harus ditampilkan agar formulir terlihat.")}</div>)}
+      {block("rsvp", "Penerimaan RSVP", <div className="stack"><p>RSVP adalah konfirmasi kehadiran tamu (dari bahasa Prancis, <i lang="fr">répondez s&apos;il vous plaît</i>). Formulir ini memungkinkan tamu mengabari panitia apakah mereka dapat hadir.</p>{toggle("rsvp_enabled", "Aktifkan penerimaan konfirmasi kehadiran")}{time("rsvp_closes_at", `Batas RSVP (${tz})`, "Kosongkan jika tidak ada batas waktu. Bagian RSVP juga harus ditampilkan agar formulir terlihat.")}</div>)}
       {block("contact", "Kontak", <div className="stack">
         <p>Isi nama dan nomor untuk menampilkan bagian kontak tersendiri setelah konfirmasi. Aktifkan juga bagian Kontak pada pengaturan tampilan. Kontak tetap tersedia meskipun RSVP ditutup.</p>
         {control("contact.heading", "Judul pengantar kontak (opsional)", event.contact.heading, value => update("contact", { ...event.contact, heading: value }), { maxLength: 200, hint: "Contoh: Any questions before your visit? Kosongkan untuk tampilan lama." })}
@@ -306,7 +328,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
       </div>)}
       {block("day", "Hari H", <DayBlock event={event} update={update} control={control} />)}
       {block("feedback_questions", "Survei feedback", <div className="stack">
-        {toggle("feedback_enabled", "Aktifkan survei feedback")}{time("feedback_opens_at", "Mulai menerima feedback (WIB)", "Kosongkan agar tersedia setelah diaktifkan dan dipublikasikan.")}
+        {toggle("feedback_enabled", "Aktifkan survei feedback")}{time("feedback_opens_at", `Mulai menerima feedback (${tz})`, "Kosongkan agar tersedia setelah diaktifkan dan dipublikasikan.")}
         {text("feedback_description", "Pengantar survei (opsional)", 1000, true, "Kosongkan untuk memakai pengantar yang sekarang. Survei aplikasi bukan pesan WhatsApp.")}
         <Notice>Gunakan pertanyaan yang telah disetujui GA. Jangan mengganti makna atau jenis pertanyaan yang telah menerima jawaban; buat acara duplikat untuk survei baru. Server dapat menolak perubahan pertanyaan yang sudah digunakan.</Notice>
         {event.feedback_questions.map((question, index) => {

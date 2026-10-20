@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { EMBED_ERROR, parseLocationEmbed } from "./location-embed";
 import { parseContactPhone } from "./contact-phone";
+import { eventTimezones } from "./timezones";
 
 const text = (max: number) => z.string().trim().max(max);
 /** `new URL()` throws on malformed input, so a half-typed address must never reach it. */
@@ -47,7 +48,7 @@ export const eventBaseSchema = z.object({
   id: z.uuid(), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),
   status: z.enum(["draft", "published", "archived"]), title: text(180).min(1), subtitle: text(250),
   organizer: text(250), greeting: text(150), introduction: text(5000), closing: text(2000),
-  starts_at: timestamp, ends_at: optionalTime, timezone: z.literal("Asia/Jakarta"),
+  starts_at: timestamp, ends_at: optionalTime, timezone: z.enum(eventTimezones, "Pilih zona waktu WIB, WITA, atau WIT."),
   venue_name: text(200), address: text(1000), location_url: httpsUrl, location_embed_url: locationEmbed.default(""), location_display: z.enum(["manual", "embed"]).optional(), arrival_notes: text(2000),
   review_url: httpsUrl, review_enabled: z.boolean(), review_heading: text(200).default(""), review_description: text(1000).default(""), review_button_label: text(100).default(""), rsvp_enabled: z.boolean(), rsvp_closes_at: optionalTime,
   invitation_mode: z.enum(["open", "personal"]).default("open"),

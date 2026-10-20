@@ -13,6 +13,14 @@ describe("eventPhase", () => {
     expect(eventPhase(base, at("2026-11-09T22:00:00+07:00"))).toBe("day");
     expect(eventPhase(base, at("2026-11-10T00:01:00+07:00"))).toBe("after");
   });
+  it("follows the event's own zone for WITA and WIT", () => {
+    const lombok = { ...base, timezone: "Asia/Makassar", starts_at: "2026-11-09T08:00:00+08:00", ends_at: "2026-11-09T12:00:00+08:00" };
+    // 23.30 WIB on the 8th is already 00.30 WITA on the 9th.
+    expect(eventPhase(lombok, at("2026-11-08T23:30:00+07:00"))).toBe("day");
+    expect(eventPhase({ ...lombok, timezone: "Asia/Jakarta" }, at("2026-11-08T23:30:00+07:00"))).toBe("before");
+    const papua = { ...base, timezone: "Asia/Jayapura", starts_at: "2026-11-09T08:00:00+09:00", ends_at: null };
+    expect(eventPhase(papua, at("2026-11-09T23:30:00+07:00"))).toBe("after");
+  });
   it("stays on the day for every date of a multi-day programme", () => {
     const programme = { ...base, ends_at: "2026-11-11T16:00:00+07:00" };
     expect(eventPhase(programme, at("2026-11-10T12:00:00+07:00"))).toBe("day");

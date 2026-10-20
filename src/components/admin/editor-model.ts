@@ -1,6 +1,7 @@
 import type { EventRecord, HeroTextPosition, ImageFocus, ImageSource, PlainImage, SectionKey } from "@/lib/types";
 import { getFraming, normalizeEvent } from "@/lib/hero-framing";
 import { parseLocationEmbed } from "@/lib/location-embed";
+import { tzLabel } from "@/lib/timezones";
 
 export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", experience: "Pengalaman kunjungan", agenda: "Rundown", location: "Lokasi", team: "Our Team", rsvp: "Konfirmasi kehadiran", contact: "Kontak", feedback: "Survei feedback" };
 export const sectionKeys = Object.keys(sectionLabels) as SectionKey[];
@@ -144,7 +145,7 @@ export function blockSummary(id: string, event: EventRecord, themeName: string, 
   switch (id) {
     case "identity": return `${event.title || "Tanpa judul"} · ${event.invitation_mode === "personal" ? "tautan per tamu" : "tautan umum"}`;
     case "appearance": return `${kindLabels[event.event_kind] ?? "Acara"} · ${event.audience === "internal" ? "Internal" : "Eksternal"} · ${themeName} · ${phaseText[event.phase_override] ?? "fase otomatis"}`;
-    case "schedule": return event.starts_at ? `${formatWhen(event.starts_at)}${event.ends_at ? ` – ${formatWhen(event.ends_at).split(", ").pop()}` : ""}` : "Waktu belum diisi";
+    case "schedule": return event.starts_at ? `${formatWhen(event.starts_at)}${event.ends_at ? ` – ${formatWhen(event.ends_at).split(", ").pop()}` : ""} ${tzLabel(event.timezone)}` : "Waktu belum diisi";
     case "hero": return event.hero.url ? `Foto terpasang · teks ${event.hero.text_position === "center" ? "rata tengah" : "rata kiri"}` : "Belum ada foto";
     case "topics": return event.topics.length ? count(event.topics.length, "topik") : "Belum ada topik";
     case "experience": return sectionOn(event, "experience") ? `${event.experience.story ? "Cerita terisi" : "Cerita belum diisi"} · ${count(event.experience.moments.length, "momen")}` : "Nonaktif";

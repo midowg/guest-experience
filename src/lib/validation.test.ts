@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { eventSchema, rsvpSchema, feedbackSchema } from './validation';
 import { createSeedEvent } from './seed-event';
-import { formatDate, formatTime, toJakartaInput, fromJakartaInput } from './format';
+import { formatDate, formatDateTime, formatTime, fromZoneInput, toZoneInput } from './format';
 const rsvp = { name: 'Tamu Pengujian', organization: 'Organisasi Pengujian', attendance: 'yes', phone: '', email: '', has_allergy: false, allergy_details: '', consent: true, website: '', idempotency_key: 'f0d26d64-2ab8-4d7a-80b5-328a132ea2cc' };
 describe('RSVP', () => {
   it('accepts optional contacts', () => expect(rsvpSchema.safeParse(rsvp).success).toBe(true));
@@ -147,7 +147,24 @@ describe('gallery', () => {
 describe('WIB dates', () => {
   it('uses confirmed Monday date', () => expect(formatDate(createSeedEvent().starts_at)).toContain('Senin'));
   it('shows arrival 18.00 WIB', () => expect(formatTime(createSeedEvent().starts_at)).toBe('18.00'));
-  it('round trips local input without OS timezone dependence', () => expect(toJakartaInput(fromJakartaInput('2026-10-12T18:00'))).toBe('2026-10-12T18:00'));
+  it('round trips local input without OS timezone dependence', () => expect(toZoneInput(fromZoneInput('2026-10-12T18:00', 'Asia/Jakarta'), 'Asia/Jakarta')).toBe('2026-10-12T18:00'));
+});
+
+describe('WITA and WIT', () => {
+  it('reads input as wall-clock time in the event zone', () => {
+    expect(fromZoneInput('2026-11-02T09:00', 'Asia/Makassar')).toBe('2026-11-02T01:00:00.000Z');
+    expect(fromZoneInput('2026-11-02T09:00', 'Asia/Jayapura')).toBe('2026-11-02T00:00:00.000Z');
+    expect(toZoneInput('2026-11-02T01:00:00.000Z', 'Asia/Makassar')).toBe('2026-11-02T09:00');
+    expect(toZoneInput('2026-11-02T01:00:00.000Z', 'Asia/Jakarta')).toBe('2026-11-02T08:00');
+  });
+  it('labels times with the event zone', () => {
+    expect(formatDateTime('2026-11-02T01:00:00.000Z', 'Asia/Makassar')).toBe('Senin, 2 November 2026, 09.00 WITA');
+    expect(formatDateTime('2026-11-02T01:00:00.000Z', 'Asia/Jayapura')).toMatch(/10\.00 WIT$/);
+  });
+  it('accepts the three Indonesian zones only', () => {
+    for (const timezone of ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura']) expect(eventSchema.safeParse({ ...createSeedEvent(), timezone }).success).toBe(true);
+    for (const timezone of ['Europe/London', 'UTC', '']) expect(eventSchema.safeParse({ ...createSeedEvent(), timezone }).success).toBe(false);
+  });
 });
 it('rejects duplicated feedback questions', () => expect(feedbackSchema.safeParse({idempotency_key:rsvp.idempotency_key, website:'', answers:[{question_id:rsvp.idempotency_key,value:'1'},{question_id:rsvp.idempotency_key,value:'2'}]}).success).toBe(false));
 

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { ArrowUp, ArrowUpRight, Copy, Images, MapPin } from "lucide-react";
 import { Button, ButtonLink, Notice, SectionHeading } from "@/components/ui";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
+import { timezoneInfo, zoneOf } from "@/lib/timezones";
 import { parseLocationEmbed } from "@/lib/location-embed";
 import { parseContactPhone } from "@/lib/contact-phone";
 import type { EventPhase, EventRecord, RsvpRecord, SectionKey } from "@/lib/types";
@@ -215,7 +216,7 @@ export function EventExperience({ event, preview = false, invitation, phase = "b
               <ExperienceContent event={event} rsvpVisible={rsvpVisible} />
             </>}
             {section.key === "agenda" && <>
-              <div id="agenda-heading"><SectionHeading title="Rangkaian pertemuan"><p>Waktu ditampilkan dalam WIB.</p></SectionHeading></div>
+              <div id="agenda-heading"><SectionHeading title="Rangkaian pertemuan"><p>Waktu ditampilkan dalam {timezoneInfo[zoneOf(event.timezone)].label} ({timezoneInfo[zoneOf(event.timezone)].name}).</p></SectionHeading></div>
               {event.agenda.length === 0 ? <p>Rundown belum tersedia. Silakan periksa kembali undangan ini.</p> : <ol className={styles.agenda}>{[...event.agenda].sort((a, b) => a.sort_order - b.sort_order).map(item => <li key={item.id}><div className={styles.agendaTime}><TimeRange start={item.starts_at} end={item.ends_at} timezone={event.timezone} /></div><div><h3>{item.title}</h3>{item.description && <p className={styles.multiline}>{item.description}</p>}</div></li>)}</ol>}
             </>}
             {section.key === "location" && <><div id="location-heading"><SectionHeading title="Sampai jumpa di lokasi." /></div><Location event={event} /></>}
@@ -231,7 +232,7 @@ export function EventExperience({ event, preview = false, invitation, phase = "b
             </>}
             {section.key === "rsvp" && <>
               <div id="rsvp-heading"><SectionHeading title="Kabarkan kehadiran Anda."><p>Konfirmasi membantu panitia mempersiapkan pertemuan dan konsumsi.</p></SectionHeading></div>
-              {event.rsvp_closes_at && <p className={styles.deadline}>Batas konfirmasi: {formatDate(event.rsvp_closes_at, event.timezone)}, {formatTime(event.rsvp_closes_at, event.timezone)} WIB.</p>}
+              {event.rsvp_closes_at && <p className={styles.deadline}>Batas konfirmasi: {formatDateTime(event.rsvp_closes_at, event.timezone)}.</p>}
               {event.invitation_mode === "personal" && !invitation && !preview ? <Notice>Konfirmasi kehadiran menggunakan tautan undangan masing-masing tamu. Mintalah tautan pribadi kepada panitia; halaman ini tetap memuat informasi acara.</Notice> : !event.rsvp_enabled || (now !== null && !rsvpOpen && !preview) ? <Notice>{invitation?.rsvp ? <>RSVP tersimpan: {invitation.rsvp.attendance === "yes" ? "Hadir" : "Tidak hadir"}. Konfirmasi tidak dapat diubah saat ini.</> : event.rsvp_enabled ? "Konfirmasi kehadiran telah ditutup. Informasi acara tetap dapat dibaca di halaman ini." : "Konfirmasi kehadiran belum dibuka oleh panitia."}</Notice> : <RsvpForm key={event.id} event={event} disabled={preview || !rsvpOpen} invitation={invitation} onSaved={() => setRsvpSaved(true)} />}
               <noscript><p>Aktifkan JavaScript untuk mengirim konfirmasi kehadiran.</p></noscript>
             </>}
@@ -241,7 +242,7 @@ export function EventExperience({ event, preview = false, invitation, phase = "b
             </>}
             {section.key === "feedback" && <>
               <div id="feedback-heading"><SectionHeading title="Bagaimana pengalaman Anda?"><p className={styles.multiline}>{event.feedback_description || "Bagikan masukan untuk membantu pertemuan berikutnya."}</p></SectionHeading></div>
-              {preview || feedbackOpen ? <FeedbackForm key={event.id} event={event} disabled={preview || !feedbackOpen} /> : <Notice>{event.feedback_opens_at ? <>Survei dibuka pada {formatDate(event.feedback_opens_at, event.timezone)}, {formatTime(event.feedback_opens_at, event.timezone)} WIB.</> : "Survei sedang disiapkan."}</Notice>}
+              {preview || feedbackOpen ? <FeedbackForm key={event.id} event={event} disabled={preview || !feedbackOpen} /> : <Notice>{event.feedback_opens_at ? <>Survei dibuka pada {formatDateTime(event.feedback_opens_at, event.timezone)}.</> : "Survei sedang disiapkan."}</Notice>}
               <noscript><p>Aktifkan JavaScript untuk mengirim masukan.</p></noscript>
             </>}
           </div>

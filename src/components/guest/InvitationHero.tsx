@@ -4,6 +4,7 @@ import type { CSSProperties, MouseEvent } from "react";
 import { ArrowDown, ArrowRight, CalendarDays, Check, Clock3, MapPin } from "lucide-react";
 import { ButtonLink } from "@/components/ui";
 import { formatDate, formatTime } from "@/lib/format";
+import { tzLabel } from "@/lib/timezones";
 import { getFraming } from "@/lib/hero-framing";
 import type { EventContact, SectionKey } from "@/lib/types";
 import type { HeroPreviewEvent } from "@/lib/hero-preview";
@@ -18,7 +19,7 @@ const kindEyebrow = { kunjungan: "Undangan kunjungan", acara: "Undangan acara", 
 
 export function TimeRange({ start, end, timezone }: { start: string; end: string | null; timezone: string }) {
   if (!start) return <>Waktu belum diisi</>;
-  return <><time dateTime={start}>{formatTime(start, timezone)}</time>{end && <> – <time dateTime={end}>{formatTime(end, timezone)}</time></>} WIB</>;
+  return <><time dateTime={start}>{formatTime(start, timezone)}</time>{end && <> – <time dateTime={end}>{formatTime(end, timezone)}</time></>} {tzLabel(timezone)}</>;
 }
 export function InvitationHero({ event, rsvpSaved = false, inert = false, invitee }: { event: HeroPreviewEvent; rsvpSaved?: boolean; inert?: boolean; invitee?: string }) {
   const sections = visibleSections(event);

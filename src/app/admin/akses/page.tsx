@@ -2,7 +2,7 @@ import { CircleAlert, CircleCheck, LogOut, MapPin, MonitorSmartphone, Sparkles }
 import { AdminShell, SetupNotice } from "@/components/admin/AdminShell";
 import { Notice } from "@/components/ui";
 import styles from "@/components/admin/admin.module.css";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { describeUserAgent } from "@/lib/user-agent";
 import { listAccessLog, type AccessEntry, type AccessFilter } from "@/lib/server/access-log";
 import { requireAdminPage } from "@/lib/server/admin-session";
@@ -47,7 +47,7 @@ export default async function AccessLogPage({ searchParams }: { searchParams: Pr
             <span className={`${styles.accessIcon} ${kind.tone}`}><kind.Icon size={18} aria-hidden="true" /></span>
             <div className={styles.accessText}>
               <p className={styles.accessHead}><strong>{kind.label}</strong>{entry.new_device && <span className={styles.accessNew}><Sparkles size={13} aria-hidden="true" /> Perangkat baru</span>}</p>
-              <p className={styles.accessMeta}><time dateTime={entry.at}>{formatDate(entry.at)}, {formatTime(entry.at)} WIB</time> · IP {entry.ip ?? "tidak tersedia"}</p>
+              <p className={styles.accessMeta}><time dateTime={entry.at}>{formatDateTime(entry.at)}</time> · IP {entry.ip ?? "tidak tersedia"}</p>
               <p className={styles.accessMeta}><MapPin size={13} aria-hidden="true" /> {place(entry)}</p>
               <p className={styles.accessMeta}><MonitorSmartphone size={13} aria-hidden="true" /> {describeUserAgent(entry.user_agent)}{entry.device_id && <> · ID perangkat <code title={entry.device_id}>{entry.device_id.slice(0, 8)}</code></>}</p>
             </div>

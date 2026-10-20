@@ -6,7 +6,8 @@ import { Button, ButtonLink, Notice } from "@/components/ui";
 import { Archive, Building2, CalendarDays, CalendarCheck, Globe, Hourglass, Images, Pencil } from "lucide-react";
 import type { EventPhase, EventRecord, EventStatus } from "@/lib/types";
 import { themeDefinition } from "@/lib/themes";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatTime } from "@/lib/format";
+import { tzLabel } from "@/lib/timezones";
 import { adminRequest, errorMessage } from "./api";
 import styles from "./admin.module.css";
 
@@ -58,7 +59,7 @@ export function EventList({ events, featuredId, phases = {} }: { events: EventRe
           {event.id === featured && event.status === "published" ? <span className={`${styles.status} ${styles.statusLive}`}><span className={styles.statusDot} aria-hidden="true" />Tayang di halaman utama</span> : <span className={styles.status}>{statuses[event.status]}</span>}
         </div>
         <h2>{event.title}</h2>
-        <p className={styles.eventWhen}><CalendarDays size={16} aria-hidden="true" /> {formatDate(event.starts_at)} · {formatTime(event.starts_at)} WIB</p>
+        <p className={styles.eventWhen}><CalendarDays size={16} aria-hidden="true" /> {formatDate(event.starts_at, event.timezone)} · {formatTime(event.starts_at, event.timezone)} {tzLabel(event.timezone)}</p>
         <p className={styles.eventChips}>
           <span>{kinds[event.event_kind ?? "acara"]}</span>
           <span>{event.audience === "internal" ? <Building2 size={13} aria-hidden="true" /> : <Globe size={13} aria-hidden="true" />} {event.audience === "internal" ? "Internal" : "Eksternal"}</span>
@@ -69,7 +70,7 @@ export function EventList({ events, featuredId, phases = {} }: { events: EventRe
             never competing with the event's own date. */}
         <dl className={styles.eventMeta}>
           <div><dt>Dibuat</dt><dd>{formatDate(event.created_at)}</dd></div>
-          <div><dt>Terakhir disimpan</dt><dd>{formatDate(event.updated_at)}, {formatTime(event.updated_at)} WIB</dd></div>
+          <div><dt>Terakhir disimpan</dt><dd>{formatDateTime(event.updated_at)}</dd></div>
         </dl>
         <div className={styles.actions}><ButtonLink href={`/admin/events/${event.id}`}>Kelola acara</ButtonLink>{event.status === "published" && event.id !== featured && <Button type="button" variant="secondary" disabled={!!busy} onClick={() => feature(event)}>{busy === event.id ? "Menayangkan…" : "Tayangkan"}</Button>}<Button type="button" variant="secondary" disabled={!!busy} onClick={() => create(event.id)}>{busy === event.id ? "Menduplikasi…" : "Duplikasi ke draft"}</Button></div>
       </li>;
