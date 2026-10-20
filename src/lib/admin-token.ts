@@ -7,7 +7,7 @@ export const SESSION_COOKIE = "wk_admin";
 export const DEVICE_COOKIE = "wk_device";
 export const SESSION_TTL_SECONDS = 12 * 60 * 60;
 export const DEVICE_TTL_SECONDS = 2 * 365 * 24 * 60 * 60;
-export const MIN_PASSWORD_LENGTH = 12;
+export const MIN_PASSWORD_LENGTH = 8;
 export const MIN_SECRET_LENGTH = 32;
 
 export type AdminAuthConfig = { password: string; secret: string };

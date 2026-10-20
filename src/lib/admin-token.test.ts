@@ -8,7 +8,8 @@ const now = Date.UTC(2026, 9, 20, 3, 0, 0);
 describe("adminAuthConfig", () => {
   it("fails closed when the password or secret is missing or short", () => {
     expect(adminAuthConfig({})).toBeNull();
-    expect(adminAuthConfig({ ...env, ADMIN_PASSWORD: "short" })).toBeNull();
+    expect(adminAuthConfig({ ...env, ADMIN_PASSWORD: "1234567" })).toBeNull();
+    expect(adminAuthConfig({ ...env, ADMIN_PASSWORD: "12345678" })).not.toBeNull();
     expect(adminAuthConfig({ ...env, ADMIN_SESSION_SECRET: "s".repeat(31) })).toBeNull();
     expect(config).toEqual({ password: env.ADMIN_PASSWORD, secret: env.ADMIN_SESSION_SECRET });
   });

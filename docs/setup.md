@@ -12,7 +12,7 @@ Salin `.env.example` menjadi `.env.local`, lalu isi dari Supabase Dashboard → 
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable/anon key | Boleh terlihat publik. Dibatasi oleh RLS. |
 | `SUPABASE_SECRET_KEY` | Secret/service-role key | **Rahasia.** Hanya di server. Jangan pernah diberi awalan `NEXT_PUBLIC_`. |
 | `RATE_LIMIT_SECRET` | Buat sendiri, acak minimal 32 karakter | Menyamarkan identitas jaringan pada pembatasan laju. |
-| `ADMIN_PASSWORD` | Buat sendiri, minimal 12 karakter | **Rahasia.** Password bersama untuk masuk ke `/admin`. Mengganti nilainya mengeluarkan semua sesi. |
+| `ADMIN_PASSWORD` | Buat sendiri, minimal 8 karakter | **Rahasia.** Password bersama untuk masuk ke `/admin`. Mengganti nilainya mengeluarkan semua sesi. |
 | `ADMIN_SESSION_SECRET` | Buat sendiri, acak minimal 32 karakter | **Rahasia.** Menandatangani cookie sesi admin. |
 
 `.env*` sudah masuk `.gitignore`, kecuali `.env.example` yang hanya berisi template. Jangan mengirim kunci apa pun melalui chat. `NEXT_PUBLIC_SITE_URL` tercantum di template tetapi saat ini tidak digunakan aplikasi.
@@ -33,7 +33,7 @@ Yang dijamin skema ini:
 
 ## 3. Login admin dan log akses
 
-`/admin` dan semua `/api/admin/*` memerlukan **password admin** dari `ADMIN_PASSWORD`. Tanpa `ADMIN_PASSWORD` (minimal 12 karakter) dan `ADMIN_SESSION_SECRET` (minimal 32 karakter) panel **terkunci** dan halaman login menampilkan petunjuk pengaturan. Setelah masuk, sesi berlaku 12 jam (cookie httpOnly `wk_admin`). Percobaan login dibatasi 5 per 10 menit per IP.
+`/admin` dan semua `/api/admin/*` memerlukan **password admin** dari `ADMIN_PASSWORD`. Tanpa `ADMIN_PASSWORD` (minimal 8 karakter) dan `ADMIN_SESSION_SECRET` (minimal 32 karakter) panel **terkunci** dan halaman login menampilkan petunjuk pengaturan. Setelah masuk, sesi berlaku 12 jam (cookie httpOnly `wk_admin`). Percobaan login dibatasi 5 per 10 menit per IP.
 
 Pemeriksaan berlapis: `src/proxy.ts` menolak permintaan tanpa sesi, lalu setiap halaman dan route admin memeriksa sesi lagi.
 
