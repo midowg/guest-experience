@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createSeedEvent } from "@/lib/seed-event";
 import { eventSchema } from "@/lib/validation";
 import type { EventRecord, GalleryImage } from "@/lib/types";
-import { completeSections, heroTextPositionOptions, hiddenSectionReasons, moveItem, photoGuidance, prepareEvent, sectionKeys, srcsetAttribute } from "./editor-model";
+import { blockStatuses, blockSummary, completeSections, heroTextPositionOptions, hiddenSectionReasons, moveItem, photoGuidance, prepareEvent, sectionKeys, srcsetAttribute } from "./editor-model";
 
 const id = (n: number) => `b1d26d64-2ab8-4d7a-80b5-328a132ea2c${n}`;
 const image = (n: number, over: Partial<GalleryImage> = {}): GalleryImage => ({ id: id(n), url: `https://example.test/foto-${n}.webp`, alt: `Foto ${n}`, caption: "", sort_order: 99, srcset: [], ...over });
@@ -140,5 +140,17 @@ describe("moveItem", () => {
     const items = [1, 2, 3];
     expect(moveItem(items, 1, 1)).toEqual([1, 3, 2]);
     expect(items).toEqual([1, 2, 3]);
+  });
+});
+
+describe("language card", () => {
+  it("is optional for Indonesian only and asks for English while texts are untranslated", () => {
+    const event = createSeedEvent();
+    const status = (e: typeof event) => blockStatuses(e, {}, new Set(), [])["language"];
+    expect(status(event)).toBe("optional");
+    expect(blockSummary("language", event, "Werkudara", iso => iso)).toBe("Bahasa Indonesia saja");
+    const bilingual = { ...event, language: "id_en" as const };
+    expect(status(bilingual)).toBe("todo");
+    expect(blockSummary("language", bilingual, "Werkudara", iso => iso)).toMatch(/^Dua bahasa \(ID \+ EN\) · 0 dari \d+ teks diterjemahkan$/);
   });
 });

@@ -1,14 +1,17 @@
 import { timezoneInfo, tzLabel, zoneOf } from "./timezones";
 
-export function formatDate(value: string, timeZone = "Asia/Jakarta") {
-  return new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone }).format(new Date(value));
+type Lang = "id" | "en";
+const locale = (lang: Lang) => (lang === "en" ? "en-GB" : "id-ID");
+
+export function formatDate(value: string, timeZone = "Asia/Jakarta", lang: Lang = "id") {
+  return new Intl.DateTimeFormat(locale(lang), { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone }).format(new Date(value));
 }
-export function formatTime(value: string, timeZone = "Asia/Jakarta") {
-  return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone }).format(new Date(value));
+export function formatTime(value: string, timeZone = "Asia/Jakarta", lang: Lang = "id") {
+  return new Intl.DateTimeFormat(locale(lang), { hour: "2-digit", minute: "2-digit", hour12: false, timeZone }).format(new Date(value));
 }
 /** "Senin, 12 Oktober 2026, 18.00 WITA" in the given zone. */
-export function formatDateTime(value: string, timeZone = "Asia/Jakarta") {
-  return `${formatDate(value, timeZone)}, ${formatTime(value, timeZone)} ${tzLabel(timeZone)}`;
+export function formatDateTime(value: string, timeZone = "Asia/Jakarta", lang: Lang = "id") {
+  return `${formatDate(value, timeZone, lang)}, ${formatTime(value, timeZone, lang)} ${tzLabel(timeZone)}`;
 }
 /** Value for a datetime-local input, as wall-clock time in the event's zone. */
 export function toZoneInput(value: string | null, timeZone: string) {

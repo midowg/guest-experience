@@ -63,6 +63,8 @@ npm test
 npm run build
 ```
 
+Setelah tim mengubah `docs/wording-draf.xlsx`, jalankan `npm run wording` untuk memperbarui kamus teks tamu, lalu jalankan tes. Skrip menolak kunci ganda, teks Indonesia yang kosong, atau variabel yang tidak dikenal.
+
 Halaman `/dev-preview` adalah pemeriksaan tampilan untuk pengembangan dan tidak dapat diakses pada build produksi.
 
 ## 5. Alur penggunaan

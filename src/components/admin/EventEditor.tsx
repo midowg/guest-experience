@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink, Field, Notice } from "@/components/ui";
-import { ArrowUpRight, CalendarCheck, ChevronRight, CircleAlert, CircleDashed, Pencil, X, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Handshake, Image as ImageIcon, Images, LayoutList, ListChecks, ListOrdered, MapPin, MessageSquare, Palette, Phone, Rocket, Save, Shirt, Sparkles, Star, Trash2, Users, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, CalendarCheck, ChevronRight, CircleAlert, CircleDashed, Pencil, X, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, MessageSquare, Palette, Phone, Rocket, Save, Shirt, Sparkles, Star, Trash2, Users, type LucideIcon } from "lucide-react";
 import { Check, OrderButtons } from "./controls";
 import { defaultFraming } from "@/lib/hero-framing";
 import { HeroPreview } from "./HeroPreview";
@@ -16,6 +16,7 @@ import { AdminApiError, adminRequest, errorMessage } from "./api";
 import { blockOfPath, blockStatusLabels, blockStatuses, blockSummary, completeSections, editorBlocks, editorStages, type BlockStatus, heroTextPositionHints, heroTextPositionOptions, hiddenSectionReasons, moveItem, photoGuidance, prepareEvent, sectionLabels } from "./editor-model";
 import { PhotoField } from "./PhotoField";
 import { AfterBlock, AppearanceBlock, DayBlock, ExperienceBlock, PrepareBlock, RouteFields } from "./JourneyEditor";
+import { TranslationBlock } from "./TranslationEditor";
 import styles from "./admin.module.css";
 
 type TextKey = "title" | "slug" | "subtitle" | "organizer" | "greeting" | "introduction" | "closing" | "venue_name" | "address" | "location_url" | "arrival_notes" | "review_url" | "review_heading" | "review_description" | "review_button_label" | "feedback_description" | "venue_image_url" | "venue_image_alt" | "venue_image_credit";
@@ -24,7 +25,7 @@ type BooleanKey = "rsvp_enabled" | "feedback_enabled" | "review_enabled";
 
 const blockIcons: Record<string, LucideIcon> = {
   identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
-  agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
+  agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, language: Languages, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
   feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket,
 };
 
@@ -357,6 +358,7 @@ export function EventEditor({ event: initialEvent }: { event: EventRecord }) {
         {/^https:\/\/[^\s/]+/.test(event.review_url) && <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">Periksa tautan <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></ButtonLink>}
       </div>)}
       {block("after", "Setelah acara", <AfterBlock event={event} update={update} control={control} errors={errors} />)}
+      {block("language", "Bahasa & terjemahan", <TranslationBlock event={event} update={update} control={control} />)}
       {block("sections", "Urutan & tampilan bagian", <div className="stack"><p>Sambutan dan penutup tetap berada di awal dan akhir undangan. Bagian pendukung dapat disembunyikan atau diurutkan.</p>
         {event.sections.map((section, index) => <div className={styles.sectionRow} key={section.key}><Check label={sectionLabels[section.key]} checked={section.enabled} onChange={enabled => update("sections", event.sections.map(item => item.key === section.key ? { ...item, enabled } : item))} /><OrderButtons label={sectionLabels[section.key]} index={index} length={event.sections.length} onMove={direction => update("sections", moveItem(event.sections, index, direction))} /></div>)}
       </div>)}

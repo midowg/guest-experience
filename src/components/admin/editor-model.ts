@@ -2,6 +2,7 @@ import type { EventRecord, HeroTextPosition, ImageFocus, ImageSource, PlainImage
 import { getFraming, normalizeEvent } from "@/lib/hero-framing";
 import { parseLocationEmbed } from "@/lib/location-embed";
 import { tzLabel } from "@/lib/timezones";
+import { translationGaps } from "@/lib/wording/localize";
 
 export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", experience: "Pengalaman kunjungan", agenda: "Rundown", location: "Lokasi", prepare: "Persiapan tamu", team: "Our Team", rsvp: "Konfirmasi kehadiran", contact: "Kontak", feedback: "Survei feedback" };
 export const sectionKeys = Object.keys(sectionLabels) as SectionKey[];
@@ -72,9 +73,11 @@ export function prepareEvent(event: EventRecord): EventRecord {
     after: { ...event.after, image: cleanImage(event.after.image) },
     // Blank lines are kept while typing (so Enter works) and dropped here, before validation.
     prepare: { ...event.prepare, items: event.prepare.items
-      .map(item => ({ ...item, title: item.title.trim(), list: item.list.map(line => line.trim()).filter(Boolean) }))
+      .map(item => ({ ...item, title: item.title.trim(), list: item.list.map(line => line.trim()).filter(Boolean), ...(item.en ? { en: { ...item.en, list: item.en.list.map(line => line.trim()).filter(Boolean) } } : {}) }))
       .filter(item => item.title || item.description.trim() || item.list.length) },
     agenda: event.agenda.map((item, sort_order) => ({ ...item, sort_order })),
+    // English rundown texts are keyed by session id; a deleted session takes its translation with it.
+    translations: { ...event.translations, en: { ...event.translations.en, agenda: Object.fromEntries(Object.entries(event.translations.en.agenda).filter(([id]) => event.agenda.some(item => item.id === id))) } },
     gallery: event.gallery.filter(item => item.url.trim() || item.caption.trim() || item.alt.trim() || item.srcset.length).map((item, sort_order) => ({ ...item, sort_order })),
     feedback_questions: event.feedback_questions.map((item, sort_order) => ({ ...item, options: item.kind === "choice" ? item.options.map(option => option.trim()).filter(Boolean) : [], sort_order })),
   };
@@ -116,6 +119,7 @@ export const editorBlocks: { id: string; title: string; stage: EditorStage }[] =
   { id: "feedback_questions", title: "Survei feedback", stage: "after" },
   { id: "review", title: "Ulasan Google (opsional)", stage: "after" },
   { id: "after", title: "Setelah acara", stage: "after" },
+  { id: "language", title: "Bahasa & terjemahan", stage: "settings" },
   { id: "sections", title: "Urutan & tampilan bagian", stage: "settings" },
   { id: "publication", title: "Status & penyimpanan", stage: "settings" },
 ];
@@ -131,7 +135,7 @@ const fieldBlocks: Record<string, string> = {
   team_image: "team", rsvp_enabled: "rsvp", rsvp_closes_at: "rsvp", contact: "contact", day_note: "day",
   feedback_enabled: "feedback_questions", feedback_opens_at: "feedback_questions", feedback_description: "feedback_questions", feedback_questions: "feedback_questions",
   review_url: "review", review_enabled: "review", review_heading: "review", review_description: "review", review_button_label: "review",
-  after: "after", prepare: "prepare", sections: "sections", status: "publication",
+  after: "after", prepare: "prepare", language: "language", translations: "language", sections: "sections", status: "publication",
 };
 export function blockOfPath(path: string): string {
   return fieldBlocks[path.split(".")[0]] ?? "identity";
@@ -168,6 +172,12 @@ export function blockSummary(id: string, event: EventRecord, themeName: string, 
     case "feedback_questions": return event.feedback_enabled ? count(event.feedback_questions.length, "pertanyaan") : "Nonaktif";
     case "review": return event.review_enabled && event.review_url ? "Aktif" : "Nonaktif";
     case "after": return [event.after.message ? "Pesan terisi" : "Pesan memakai Penutup", event.after.collaboration.enabled ? "kolaborasi aktif" : ""].filter(Boolean).join(" · ");
+    case "language": {
+      if (event.language === "id") return "Bahasa Indonesia saja";
+      const gaps = translationGaps(event);
+      const mode = event.language === "en" ? "English saja" : "Dua bahasa (ID + EN)";
+      return gaps.total ? `${mode} · ${gaps.total - gaps.missing} dari ${gaps.total} teks diterjemahkan` : mode;
+    }
     case "sections": return `${event.sections.filter(section => section.enabled).length} dari ${event.sections.length} bagian tampil`;
     case "publication": return event.status === "published" ? "Dipublikasikan" : event.status === "archived" ? "Diarsipkan" : "Draf";
     default: return "";
@@ -187,6 +197,7 @@ function isEmptyOptional(id: string, event: EventRecord): boolean {
     case "feedback_questions": return !event.feedback_enabled;
     case "review": return !event.review_enabled;
     case "after": return !event.after.message && !event.after.title && !event.after.collaboration.enabled;
+    case "language": return event.language === "id";
     default: return false;
   }
 }
@@ -195,9 +206,14 @@ function isEmptyOptional(id: string, event: EventRecord): boolean {
  * Status per block. "Perlu dilengkapi" is whatever publishing would still reject, so the cards
  * and the server agree without a second list of rules.
  */
+/** English is offered but some filled-in Indonesian text has no English yet. */
+function untranslated(event: EventRecord) {
+  return event.language !== "id" && translationGaps(event).missing > 0;
+}
+
 export function blockStatuses(event: EventRecord, errors: Record<string, string[]>, dirtyBlocks: Set<string>, publishIssues: string[]): Record<string, BlockStatus> {
   const errorBlocks = new Set(Object.keys(errors).map(blockOfPath));
   const todoBlocks = new Set(publishIssues.map(blockOfPath));
   return Object.fromEntries(editorBlocks.map(({ id }) => [id,
-    errorBlocks.has(id) ? "error" : dirtyBlocks.has(id) ? "dirty" : todoBlocks.has(id) ? "todo" : isEmptyOptional(id, event) ? "optional" : "done"]));
+    errorBlocks.has(id) ? "error" : dirtyBlocks.has(id) ? "dirty" : todoBlocks.has(id) || (id === "language" && untranslated(event)) ? "todo" : isEmptyOptional(id, event) ? "optional" : "done"]));
 }

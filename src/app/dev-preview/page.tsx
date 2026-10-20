@@ -76,6 +76,9 @@ export default async function DevPreviewPage({ searchParams }: { searchParams: P
       { icon: "gift", title: "Yang kami siapkan untuk Anda", description: "", list: ["Kaos acara", "Topi"] },
     ] },
     review_enabled: true, review_url: "https://example.com/ulasan",
+    // ?bahasa=id_en shows the ID/EN switch; ?bahasa=en opens in English.
+    language: read("bahasa") === "en" ? "en" : read("bahasa") === "id_en" ? "id_en" : "id",
+    translations: { en: { ...base.translations.en, title: "Core Committee Meeting", subtitle: "Sample English subtitle" } },
     sections: base.sections.map(section => ({ ...section, enabled: section.key !== "feedback" })),
   };
   return <EventExperience

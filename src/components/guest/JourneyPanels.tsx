@@ -3,11 +3,12 @@
 import type { MouseEvent } from "react";
 import { ArrowDown, ArrowUpRight, Backpack, CalendarCheck, CalendarDays, Camera, Check, Coffee, Gift, Footprints, Hand, Handshake, Heart, HeartHandshake, IdCard, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Package, Phone, Pill, Presentation, Salad, Shirt, Sparkles, Star, Sun, Umbrella, Users, Utensils, type LucideIcon } from "lucide-react";
 import { ButtonLink } from "@/components/ui";
-import { formatDate, formatTime } from "@/lib/format";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { localDay } from "@/lib/event-phase";
 import type { EventRecord, MomentIcon, PlainImage, PrepareIcon, PrepareItem } from "@/lib/types";
 import { imageSrcSet } from "./Gallery";
+import { useWording } from "./language";
+import type { WordKey } from "@/lib/wording";
 import styles from "./guest.module.css";
 
 export const momentIconComponents: Record<MomentIcon, LucideIcon> = {
@@ -57,15 +58,16 @@ export function contactLink(contact: EventRecord["contact"]) {
 }
 
 function PicCard({ event, title }: { event: EventRecord; title: string }) {
+  const { t } = useWording();
   const link = contactLink(event.contact);
   if (!link) return null;
   return <div className={styles.picCard}>
     <span className={styles.picAvatar} aria-hidden="true">{event.contact.name.trim().charAt(0).toUpperCase()}</span>
     <div className={styles.picText}>
-      <p className={styles.picTitle}>{title} {event.contact.name}</p>
+      <p className={styles.picTitle}>{title}</p>
       {event.contact.role && <p className={styles.picRole}>{event.contact.role}</p>}
     </div>
-    <a className={styles.picAction} href={link.href} target={link.whatsapp ? "_blank" : undefined} rel={link.whatsapp ? "noopener noreferrer" : undefined} aria-label={link.whatsapp ? `Hubungi ${event.contact.name} via WhatsApp (tab baru)` : `Telepon ${event.contact.name}`}>
+    <a className={styles.picAction} href={link.href} target={link.whatsapp ? "_blank" : undefined} rel={link.whatsapp ? "noopener noreferrer" : undefined} aria-label={link.whatsapp ? `${t("contact.whatsapp.aria", { name: event.contact.name })}${t("common.newTab")}` : t("contact.call.aria", { name: event.contact.name })}>
       {link.whatsapp ? <MessageCircle size={20} aria-hidden="true" /> : <Phone size={20} aria-hidden="true" />}
     </a>
   </div>;
@@ -73,6 +75,7 @@ function PicCard({ event, title }: { event: EventRecord; title: string }) {
 
 /** Hospitality's story: read, not filled in. The needs card points to the confirmation form. */
 export function ExperienceContent({ event, rsvpVisible }: { event: EventRecord; rsvpVisible: boolean }) {
+  const { t } = useWording();
   const { experience } = event;
   return <div className={styles.experienceBody}>
     <Photo image={experience.image} sizes="(max-width: 960px) 100vw, 852px" className={styles.experiencePhoto} />
@@ -88,20 +91,21 @@ export function ExperienceContent({ event, rsvpVisible }: { event: EventRecord; 
     </ul>}
     {rsvpVisible && <a className={styles.needsCard} href="#rsvp" onClick={focusAnchor}>
       <Salad size={22} aria-hidden="true" />
-      <span><strong>Ada kebutuhan makanan atau akses?</strong><span>Sampaikan saat konfirmasi kehadiran.</span></span>
+      <span><strong>{t("section.experience.needs")}</strong><span>{t("section.experience.needs.sub")}</span></span>
     </a>}
   </div>;
 }
 
 /** Route steps sit under the address or map; each step may carry the photo of its turn. */
 export function RouteGuideContent({ event }: { event: EventRecord }) {
+  const { t } = useWording();
   const { route } = event;
   // Without a guide there is nothing for the PIC card to accompany; the Kontak section covers it.
   if (!route.map_image.url && !route.steps.length) return null;
   return <div className={styles.routeGuide}>
     {route.map_image.url && <figure className={styles.routeMap}>
       <Photo image={route.map_image} sizes="(max-width: 960px) 100vw, 852px" />
-      <a className={styles.routeMapZoom} href={route.map_image.url} target="_blank" rel="noopener noreferrer"><Maximize2 size={14} aria-hidden="true" /> Perbesar peta<span className="sr-only"> (tab baru)</span></a>
+      <a className={styles.routeMapZoom} href={route.map_image.url} target="_blank" rel="noopener noreferrer"><Maximize2 size={14} aria-hidden="true" /> {t("location.zoom")}<span className="sr-only">{t("common.newTab")}</span></a>
     </figure>}
     {route.steps.length > 0 && <ol className={styles.routeSteps}>
       {route.steps.map((step, index) => <li key={`${index}-${step.title}`}>
@@ -113,15 +117,12 @@ export function RouteGuideContent({ event }: { event: EventRecord }) {
         </div>
       </li>)}
     </ol>}
-    <PicCard event={event} title="Tersesat? Hubungi" />
+    <PicCard event={event} title={t("location.lost", { name: event.contact.name })} />
   </div>;
 }
 
-export const teamPoints: { icon: LucideIcon; text: string }[] = [
-  { icon: Users, text: "Di Werkudara, Anda akan bertemu dengan rekan-rekan dari berbagai latar belakang, termasuk rekan Tuli dan pengguna kursi roda." },
-  { icon: HeartHandshake, text: "Kami terbiasa bekerja bersama dalam lingkungan yang inklusif dan saling menghargai." },
-  { icon: Hand, text: "Silakan berinteraksi seperti biasa. Jika membutuhkan bantuan komunikasi, tim kami dengan senang hati akan membantu." },
-  { icon: Heart, text: "Kami percaya setiap orang memiliki peran dan nilai yang berarti." },
+export const teamPoints: { icon: LucideIcon; key: WordKey }[] = [
+  { icon: Users, key: "team.p1" }, { icon: HeartHandshake, key: "team.p2" }, { icon: Hand, key: "team.p3" }, { icon: Heart, key: "team.p4" },
 ];
 
 type AgendaStatus = "done" | "now" | "next";
@@ -137,6 +138,7 @@ function agendaStatus(item: EventRecord["agenda"][number], now: number | null): 
  * stays below, so nothing the guest read before the day has gone missing.
  */
 export function TodayPanel({ event, invitee, now, firstSection }: { event: EventRecord; invitee?: string; now: number | null; firstSection?: string }) {
+  const { t, time } = useWording();
   const sorted = [...event.agenda].sort((a, b) => a.sort_order - b.sort_order);
   // A programme spans several days; the guest needs today's part of it, not the whole week.
   const today = now === null ? null : localDay(now, event.timezone);
@@ -144,26 +146,26 @@ export function TodayPanel({ event, invitee, now, firstSection }: { event: Event
   const items = todays.length ? todays : sorted;
   return <section className={styles.today} aria-labelledby="event-title" data-today-panel>
     <div className={`container ${styles.todayInner}`}>
-      <p className={styles.todayBadge}><CalendarCheck size={14} aria-hidden="true" /> Hari ini</p>
-      <h1 id="event-title" className={styles.todayTitle}>{invitee ? `Selamat datang, ${invitee}` : event.title}</h1>
-      <p className={styles.todayMeta}>{invitee && <>{event.title} · </>}{event.venue_name || "Lokasi acara"}</p>
+      <p className={styles.todayBadge}><CalendarCheck size={14} aria-hidden="true" /> {t("today.badge")}</p>
+      <h1 id="event-title" className={styles.todayTitle}>{invitee ? t("today.welcome", { name: invitee }) : event.title}</h1>
+      <p className={styles.todayMeta}>{invitee && <>{event.title} · </>}{event.venue_name || t("today.place.fallback")}</p>
       {items.length > 0 && <div className={styles.todayCard}>
-        <h2 className={styles.todayCardTitle}>Jadwal hari ini</h2>
+        <h2 className={styles.todayCardTitle}>{t("today.schedule")}</h2>
         <ol className={styles.todaySchedule}>
           {items.map(item => {
             const status = agendaStatus(item, now);
             return <li key={item.id} className={status === "done" ? styles.todayDone : status === "now" ? styles.todayNow : undefined} aria-current={status === "now" ? "step" : undefined}>
-              <time dateTime={item.starts_at} className={styles.todayTime}>{formatTime(item.starts_at, event.timezone)}</time>
+              <time dateTime={item.starts_at} className={styles.todayTime}>{time(item.starts_at, event.timezone)}</time>
               <div><h3>{item.title}</h3>{item.description && <p>{item.description}</p>}</div>
-              {status === "now" && <span className={styles.todayNowBadge}>Sekarang</span>}
-              {status === "done" && <><Check size={16} aria-hidden="true" /><span className="sr-only">Selesai</span></>}
+              {status === "now" && <span className={styles.todayNowBadge}>{t("today.now")}</span>}
+              {status === "done" && <><Check size={16} aria-hidden="true" /><span className="sr-only">{t("today.done")}</span></>}
             </li>;
           })}
         </ol>
       </div>}
       {event.day_note && <div className={styles.todayNote}><Info size={18} aria-hidden="true" /><p className={styles.multiline}>{event.day_note}</p></div>}
-      <PicCard event={event} title="Butuh bantuan? Hubungi" />
-      {firstSection && <a className={styles.todayMore} href={`#${firstSection}`} onClick={focusAnchor}>Lihat informasi lengkap <ArrowDown size={15} aria-hidden="true" /></a>}
+      <PicCard event={event} title={t("today.help", { name: event.contact.name })} />
+      {firstSection && <a className={styles.todayMore} href={`#${firstSection}`} onClick={focusAnchor}>{t("today.more")} <ArrowDown size={15} aria-hidden="true" /></a>}
     </div>
   </section>;
 }
@@ -173,6 +175,7 @@ export function TodayPanel({ event, invitee, now, firstSection }: { event: Event
  * review is never a condition for anything else on the page.
  */
 export function AfterPanel({ event, invitee }: { event: EventRecord; invitee?: string }) {
+  const { t, date } = useWording();
   const external = event.audience !== "internal";
   const image = event.after.image.url ? event.after.image : event.hero.url ? { url: event.hero.url, alt: "", srcset: event.hero.srcset } : null;
   const message = event.after.message || event.closing;
@@ -186,22 +189,22 @@ export function AfterPanel({ event, invitee }: { event: EventRecord; invitee?: s
       <img src={image.url} {...imageSrcSet(image.srcset, "100vw")} alt={image.alt} fetchPriority="high" referrerPolicy="no-referrer" />
     </div>}
     <div className={`container ${styles.afterInner}`}>
-      <p className="eyebrow">Terima kasih telah hadir</p>
-      <h1 id="event-title">{event.after.title || (invitee ? `Terima kasih, ${invitee}.` : "Terima kasih atas kehadiran Anda.")}</h1>
-      <p className={styles.afterEvent}><CalendarDays size={16} aria-hidden="true" /> {event.title}{event.starts_at && <> · {formatDate(event.starts_at, event.timezone)}</>}</p>
+      <p className="eyebrow">{t("after.eyebrow")}</p>
+      <h1 id="event-title">{event.after.title || (invitee ? t("after.title.named", { name: invitee }) : t("after.title"))}</h1>
+      <p className={styles.afterEvent}><CalendarDays size={16} aria-hidden="true" /> {event.title}{event.starts_at && <> · {date(event.starts_at, event.timezone)}</>}</p>
       {message && <p className={`${styles.afterMessage} ${styles.multiline}`}>{message}</p>}
       {showReview && <div className={styles.afterCard}>
         <p className={styles.afterStars} aria-hidden="true">{[0, 1, 2, 3, 4].map(i => <Star key={i} size={20} />)}</p>
-        <h2>{event.review_heading || "Berkenan berbagi pengalaman?"}</h2>
-        <p className={styles.multiline}>{event.review_description || "Ulasan Google sepenuhnya sukarela."}</p>
-        <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">{event.review_button_label || "Bagikan ulasan Anda"} <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only"> (tab baru)</span></ButtonLink>
+        <h2>{event.review_heading || t("after.review.title")}</h2>
+        <p className={styles.multiline}>{event.review_description || t("after.review.sub")}</p>
+        <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">{event.review_button_label || t("after.review.button")} <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only">{t("common.newTab")}</span></ButtonLink>
       </div>}
       {showCollaboration && pic && <div className={`${styles.afterCard} ${styles.afterCollaboration}`}>
         <p className={styles.afterCardIcon} aria-hidden="true"><Handshake size={22} /></p>
-        <h2>{collaboration.title || "Mari lanjutkan percakapannya"}</h2>
+        <h2>{collaboration.title || t("after.collab.title")}</h2>
         {collaboration.description && <p className={styles.multiline}>{collaboration.description}</p>}
         <ButtonLink href={pic.href} target={pic.whatsapp ? "_blank" : undefined} rel={pic.whatsapp ? "noopener noreferrer" : undefined}>
-          {pic.whatsapp ? <MessageCircle size={18} aria-hidden="true" /> : <Phone size={18} aria-hidden="true" />} {collaboration.button_label || "Hubungi tim Werkudara"}{pic.whatsapp && <span className="sr-only"> (tab baru)</span>}
+          {pic.whatsapp ? <MessageCircle size={18} aria-hidden="true" /> : <Phone size={18} aria-hidden="true" />} {collaboration.button_label || t("after.collab.button")}{pic.whatsapp && <span className="sr-only">{t("common.newTab")}</span>}
         </ButtonLink>
       </div>}
     </div>
@@ -210,13 +213,14 @@ export function AfterPanel({ event, invitee }: { event: EventRecord; invitee?: s
 
 /** Shortcut chips under the hero call to action, one per section the guest can actually reach. */
 export function HeroShortcuts({ keys, inert }: { keys: string[]; inert: boolean }) {
+  const { t } = useWording();
   const items = [
-    { key: "experience", label: "Pengalaman", icon: Sparkles },
-    { key: "location", label: "Panduan", icon: MapPin },
-    { key: "contact", label: "Kontak", icon: Phone },
+    { key: "experience", label: t("shortcut.experience"), icon: Sparkles },
+    { key: "location", label: t("shortcut.location"), icon: MapPin },
+    { key: "contact", label: t("shortcut.contact"), icon: Phone },
   ].filter(item => keys.includes(item.key));
   if (items.length < 2) return null;
-  return <nav className={styles.shortcuts} aria-label="Pintasan undangan">
+  return <nav className={styles.shortcuts} aria-label={t("shortcut.label")}>
     {items.map(({ key, label, icon: Icon }) => <a key={key} href={`#${key}`} onClick={e => { if (inert) { e.preventDefault(); return; } focusAnchor(e); }} tabIndex={inert ? -1 : undefined}><Icon size={18} aria-hidden="true" /> {label}</a>)}
   </nav>;
 }

@@ -28,17 +28,34 @@ const plainImage = z.object({ url: httpsUrl, alt: text(300).default(""), srcset:
 const emptyImage = { url: "", alt: "", srcset: [] };
 export const momentIcons = ["coffee", "utensils", "gift", "users", "camera", "music", "map", "sparkles", "presentation", "heart"] as const;
 export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar"] as const;
+const pairSchema = (title = 200, description = 1500) => z.object({ title: text(title).default(""), description: text(description).default("") });
+export const emptyEnglish = {
+  title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",
+  experience_title: "", experience_story: "", prepare_title: "", prepare_intro: "", after_title: "", after_message: "",
+  contact_heading: "", contact_description: "", feedback_description: "", review_heading: "", review_description: "", review_button_label: "",
+  agenda: {},
+};
+const englishSchema = z.object({
+  title: text(180).default(""), subtitle: text(250).default(""), greeting: text(150).default(""), introduction: text(5000).default(""), closing: text(2000).default(""),
+  arrival_notes: text(2000).default(""), day_note: text(1000).default(""),
+  experience_title: text(200).default(""), experience_story: text(2000).default(""), prepare_title: text(200).default(""), prepare_intro: text(1000).default(""),
+  after_title: text(200).default(""), after_message: text(2000).default(""),
+  contact_heading: text(200).default(""), contact_description: text(1000).default(""), feedback_description: text(1000).default(""),
+  review_heading: text(200).default(""), review_description: text(1000).default(""), review_button_label: text(100).default(""),
+  agenda: z.record(z.uuid(), pairSchema(200, 1500)).default({}),
+});
 export const prepareIcons = ["shirt", "backpack", "gift", "id-card", "umbrella", "sun", "footprints", "utensils", "camera", "pill", "package", "info"] as const;
 const prepareSchema = z.object({
   title: text(200).default(""), intro: text(1000).default(""),
   items: z.array(z.object({
     icon: z.enum(prepareIcons).default("info"), title: text(150).min(1, "Isi judul kartu."), description: text(1000).default(""),
     list: z.array(text(150).min(1, "Isi atau hapus baris kosong.")).max(15).default([]),
+    en: pairSchema(150, 1000).extend({ list: z.array(text(150)).max(15).default([]) }).optional(),
   })).max(8).default([]),
 });
 const experienceSchema = z.object({
   title: text(200).default(""), story: text(2000).default(""), image: plainImage.default(emptyImage),
-  moments: z.array(z.object({ icon: z.enum(momentIcons), title: text(150).min(1, "Isi judul momen."), description: text(300).default("") })).max(6).default([]),
+  moments: z.array(z.object({ icon: z.enum(momentIcons), title: text(150).min(1, "Isi judul momen."), description: text(300).default(""), en: pairSchema(150, 300).optional() })).max(6).default([]),
 });
 const routeSchema = z.object({
   map_image: plainImage.default(emptyImage),
@@ -65,7 +82,7 @@ export const eventBaseSchema = z.object({
   contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "" }),
   team_image: plainImage.default(emptyImage),
   sections: z.array(z.object({ key: z.enum(["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback", "team"]), enabled: z.boolean() })).max(9),
-  topics: z.array(z.object({ title: text(200).min(1), description: text(1500) })).max(20),
+  topics: z.array(z.object({ title: text(200).min(1), description: text(1500), en: pairSchema(200, 1500).optional() })).max(20),
   agenda: z.array(z.object({ id: z.uuid(), starts_at: timestamp, ends_at: timestamp, title: text(200).min(1), description: text(1500), sort_order: z.number().int().min(0).max(1000) })).max(100),
   feedback_questions: z.array(z.object({ id: z.uuid(), label: text(500).min(1), kind: z.enum(["rating", "choice", "text"]), required: z.boolean(), options: z.array(text(200).min(1)).max(20), sort_order: z.number().int().min(0).max(1000) })).max(30),
   venue_image_url: httpsUrl, venue_image_alt: text(300), venue_image_credit: text(500),
@@ -85,6 +102,8 @@ export const eventBaseSchema = z.object({
   day_note: text(1000).default(""),
   after: afterSchema.default(emptyAfter),
   prepare: prepareSchema.default(emptyPrepare),
+  language: z.enum(["id", "en", "id_en"]).default("id"),
+  translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),
   created_at: timestamp, updated_at: timestamp,
 });
 export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {

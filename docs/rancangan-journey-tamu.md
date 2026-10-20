@@ -164,6 +164,9 @@ Disepakati 19 Oktober (papan 10).
 - **Semua teks sistem** (pertanyaan form, tombol, judul langkah, pesan) diambil dari **satu kamus per bahasa** dengan kunci tetap; komponen tidak memuat teks langsung. Wording resmi tim cukup mengganti isi kamus.
 - Draf kamus ada di `docs/wording-draf.xlsx`: sheet Antarmuka tamu (teks sistem ID dan EN) dan Isi awal templat (isi contoh per templat dan pertanyaan survei). Semua baris berstatus Draf sampai ditinjau tim. Teks dalam kurung kurawal, misalnya `{nama}`, diganti otomatis dan harus ada di kedua bahasa.
 - Admin tetap berbahasa Indonesia; kamus dua bahasa untuk tampilan tamu.
+- **Sudah dibangun (20 Okt).** Kamus dibuat dari lembar xlsx dengan `npm run wording` (`scripts/wording-from-xlsx.mjs` menulis `src/lib/wording/dictionary.ts` dan `template-content.ts`; jangan mengubah keduanya manual). Variabel berbahasa Indonesia di kolom ID (`{nama}`, `{waktu}`) dipetakan otomatis ke nama yang dipakai kode (`{name}`, `{when}`). Teks English yang kosong memakai teks Indonesia.
+- Setiap acara punya pilihan **bahasa halaman tamu**: Bahasa Indonesia saja, **Dua bahasa** (tombol ID/EN di bagian atas halaman, pilihan tamu diingat di browser), atau English saja. Isi acara diterjemahkan di blok **Bahasa & terjemahan**; hanya teks yang sudah diisi dalam Bahasa Indonesia yang muncul untuk diterjemahkan. Bila ada teks yang belum diterjemahkan, halaman English menampilkan catatan bahwa sebagian informasi hanya tersedia dalam Bahasa Indonesia, dan kartu editor berstatus Perlu dilengkapi.
+- Form RSVP dan survei feedback belum memakai kamus; keduanya ditulis ulang sebagai form bertahap (Tahap 6) dan langsung memakai kamus.
 
 ## Detail kegiatan, pengingat, dan slide
 

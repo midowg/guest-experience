@@ -34,6 +34,13 @@ export function createSeedEvent(): EventRecord {
     route: { map_image: { url: "", alt: "", srcset: [] }, steps: [] }, day_note: "",
     after: { title: "", message: "", image: { url: "", alt: "", srcset: [] }, collaboration: { enabled: false, title: "", description: "", button_label: "" } },
     prepare: { title: "", intro: "", items: [] },
+    language: "id",
+    translations: { en: {
+      title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",
+      experience_title: "", experience_story: "", prepare_title: "", prepare_intro: "", after_title: "", after_message: "",
+      contact_heading: "", contact_description: "", feedback_description: "", review_heading: "", review_description: "", review_button_label: "",
+      agenda: {},
+    } },
     created_at: "2026-10-09T00:00:00Z", updated_at: "2026-10-09T00:00:00Z",
   };
 }

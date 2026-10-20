@@ -1,5 +1,5 @@
-import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
 import type { EventRecord } from "@/lib/types";
 import { EventExperience } from "./EventExperience";
@@ -94,4 +94,36 @@ it("shows custom preparation cards with their checklist, and hides the section w
   unmount();
   render(<EventExperience event={journeyEvent({ sections, prepare: { title: "", intro: "", items: [] } })} preview />);
   expect(document.getElementById("prepare")).toBeNull();
+});
+
+describe("language", () => {
+  afterEach(() => window.localStorage.clear());
+  it("has no switch for an Indonesian-only event", () => {
+    render(<EventExperience event={journeyEvent()} preview />);
+    expect(screen.queryByRole("group", { name: "Bahasa" })).toBeNull();
+    expect(document.querySelector("[data-theme]")?.getAttribute("lang")).toBe("id");
+  });
+
+  it("switches system words and translated texts to English, remembers it, and notes Indonesian leftovers", async () => {
+    const event = journeyEvent({ language: "id_en" });
+    event.translations = { en: { ...event.translations.en, title: "Core Committee Meeting" } };
+    const { unmount } = render(<EventExperience event={event} preview />);
+    expect(screen.getByRole("heading", { level: 1, name: event.title })).toBeTruthy();
+    fireEvent.click(within(screen.getByRole("group", { name: "Bahasa" })).getByRole("button", { name: /EN/ }));
+    expect(screen.getByRole("heading", { level: 1, name: "Core Committee Meeting" })).toBeTruthy();
+    expect(screen.getByText("Visit invitation")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Confirm attendance/ })).toBeTruthy();
+    expect(screen.getByText("Some details are only available in Indonesian.")).toBeTruthy();
+    expect(document.querySelector("[data-theme]")?.getAttribute("lang")).toBe("en");
+    expect(window.localStorage.getItem("wk_lang")).toBe("en");
+    unmount();
+    render(<EventExperience event={event} preview />);
+    expect(await screen.findByRole("heading", { level: 1, name: "Core Committee Meeting" })).toBeTruthy();
+  });
+
+  it("opens straight in English for an English-only event", () => {
+    render(<EventExperience event={journeyEvent({ language: "en" })} preview />);
+    expect(screen.queryByRole("group", { name: "Language" })).toBeNull();
+    expect(screen.getByText("Visit invitation")).toBeTruthy();
+  });
 });

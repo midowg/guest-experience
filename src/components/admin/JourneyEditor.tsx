@@ -32,7 +32,7 @@ function HelpBox({ children }: { children: ReactNode }) {
 type CardOption<T extends string> = { value: T; label: string; description: string; icon?: LucideIcon; recommended?: boolean; swatch?: [string, string] };
 
 /** More than two choices: every option carries an icon, one sentence, and at most one "Disarankan". */
-function ChoiceCards<T extends string>({ name, legend, options, current, onPick }: { name: string; legend: string; options: CardOption<T>[]; current: T; onPick: (value: T) => void }) {
+export function ChoiceCards<T extends string>({ name, legend, options, current, onPick }: { name: string; legend: string; options: CardOption<T>[]; current: T; onPick: (value: T) => void }) {
   return <fieldset className={styles.cardSet}>
     <legend>{legend}</legend>
     <div className={styles.cardRow}>{options.map((option, index) => {
