@@ -103,6 +103,7 @@ export const eventBaseSchema = z.object({
   after: afterSchema.default(emptyAfter),
   prepare: prepareSchema.default(emptyPrepare),
   language: z.enum(["id", "en", "id_en"]).default("id"),
+  guest_estimate: z.number().int().min(1).max(5000).nullable().default(null),
   translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),
   created_at: timestamp, updated_at: timestamp,
 });

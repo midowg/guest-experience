@@ -35,6 +35,7 @@ export function createSeedEvent(): EventRecord {
     after: { title: "", message: "", image: { url: "", alt: "", srcset: [] }, collaboration: { enabled: false, title: "", description: "", button_label: "" } },
     prepare: { title: "", intro: "", items: [] },
     language: "id",
+    guest_estimate: null,
     translations: { en: {
       title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",
       experience_title: "", experience_story: "", prepare_title: "", prepare_intro: "", after_title: "", after_message: "",

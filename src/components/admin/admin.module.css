@@ -372,3 +372,44 @@
 .chip:hover { border-color: var(--blue); color: var(--blue); }
 .chip[aria-pressed="true"] { border-color: var(--blue); background: var(--st-guest-bg); color: var(--blue); font-weight: 600; }
 .chipUndo { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 4px var(--space-2); border: 0; background: transparent; color: var(--st-day); font: inherit; font-size: .8125rem; font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+/* "Buat acara" survey (board 11): dialog on desktop, full screen on a phone. */
+.wizard { position: absolute; display: flex; flex-direction: column; background: #fff; inset: 0; }
+@media (min-width: 48rem) { .wizard { inset: 5vh auto auto 50%; transform: translateX(-50%); width: min(46rem, calc(100% - 2rem)); max-height: 90vh; border-radius: 18px; box-shadow: 0 20px 60px rgba(11, 30, 63, .25); } }
+.wizardHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--line); }
+.wizardHeader h2 { margin: 2px 0 var(--space-2); font-size: 1.25rem; color: var(--color-text); }
+.wizardHeader h2:focus { outline: none; }
+.wizardStep { margin: 0; color: var(--ink-soft); font-size: .8125rem; font-weight: 600; }
+.wizardProgress { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.wizardProgress li { width: 36px; height: 5px; border-radius: 3px; background: var(--st-settings-bg); }
+.wizardProgress .wizardProgressOn { background: var(--blue); }
+.wizardBody { flex: 1; overflow-y: auto; padding: var(--space-5); }
+.wizardFooter { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-5) var(--space-4); border-top: 1px solid var(--line); }
+.wizardLead { margin: 0; color: var(--ink-soft); }
+.wizardSub { margin: 0; font-size: 1rem; color: var(--color-text); }
+.wizardTemplate { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 var(--space-3); padding: 2px var(--space-3); border-radius: 999px; background: var(--st-guest-bg); color: var(--blue); font-size: .8125rem; font-weight: 600; }
+.templateGrid { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+.templateCard { display: flex; gap: var(--space-3); align-items: flex-start; width: 100%; height: 100%; padding: var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; color: var(--color-text); font: inherit; text-align: left; cursor: pointer; }
+.templateCard:hover, .templateCard:focus-visible { border-color: var(--blue); box-shadow: 0 0 0 3px var(--st-guest-bg); }
+.templateCard .cardIcon { --st: var(--blue); --st-bg: var(--st-guest-bg); flex-shrink: 0; }
+.templateText { display: grid; gap: 2px; }
+.templateText > span { color: var(--ink-soft); font-size: .8125rem; }
+.templateMeta { color: var(--blue) !important; font-weight: 600; }
+.templateOthers { display: grid; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px dashed var(--line); }
+.wizardChoices { display: grid; gap: var(--space-2); margin: 0; padding: 0; border: 0; }
+.wizardChoices legend { margin-bottom: var(--space-2); font-weight: 700; }
+.wizardChoice { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.wizardChoice input { margin-top: 4px; accent-color: var(--blue); }
+.wizardChoice span { display: grid; gap: 2px; }
+.wizardChoice span span { color: var(--ink-soft); font-size: .8125rem; }
+.wizardChoiceOn { border-color: var(--blue); background: var(--st-guest-bg); }
+.wizardModules { display: grid; gap: var(--space-1); margin: 0; padding: var(--space-4); border: 1px solid var(--line); border-radius: 12px; }
+.wizardModules legend { padding: 0 var(--space-2); font-weight: 700; }
+.soonRow { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 0; }
+.soonChip { display: inline-flex; align-items: center; gap: 4px; padding: 2px var(--space-3); border-radius: 999px; background: var(--page); color: var(--ink-soft); font-size: .75rem; font-weight: 600; }
+.wizardSummary { display: grid; gap: var(--space-2); margin: 0; }
+.wizardSummary div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); }
+.wizardSummary dt { color: var(--ink-soft); font-size: .875rem; }
+.wizardSummary dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.wizardTodo { padding: var(--space-4); border-radius: 12px; background: color-mix(in srgb, var(--yellow) 14%, #fff); }
+.wizardTodo ul { margin: var(--space-2) 0; padding-left: var(--space-5); display: grid; gap: var(--space-1); }

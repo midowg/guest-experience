@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import type { EventRecord } from "@/lib/types";
-import { createSeedEvent } from "@/lib/seed-event";
+import { buildEventFromSetup, copyEventWithSetup, type EventSetup } from "@/lib/event-setup";
 import { eventSchema } from "@/lib/validation";
 import { createPrivilegedClient, createPublicClient } from "./supabase/admin";
 import { normalizeEvent } from "@/lib/hero-framing";
@@ -60,10 +60,20 @@ export async function deleteEvent(id: string): Promise<{ slug: string; rsvps: nu
   return data as { slug: string; rsvps: number; feedback: number };
 }
 
-export async function createEvent(duplicateId?: string): Promise<EventRecord> {
-  const source = duplicateId ? await readAdminEvent(duplicateId) : createSeedEvent();
-  if (!source) throw new ServiceError(404, "Acara sumber tidak ditemukan.");
+/**
+ * A new draft: from the "Buat acara" answers (template or blank), or a copy of an earlier event,
+ * optionally under the survey's new name and date. Guest data is never copied.
+ */
+export async function createEvent(duplicateId?: string, setup?: EventSetup): Promise<EventRecord> {
   const id = randomUUID();
+  const ids = { id, uuid: () => randomUUID(), now: new Date().toISOString() };
+  if (!duplicateId) {
+    if (!setup) throw new ServiceError(422, "Isi survei Buat acara terlebih dahulu.");
+    return saveEvent(id, buildEventFromSetup(setup, ids), true);
+  }
+  const source = await readAdminEvent(duplicateId);
+  if (!source) throw new ServiceError(404, "Acara sumber tidak ditemukan.");
+  if (setup) return saveEvent(id, copyEventWithSetup(source, setup, ids), true);
   const draft: EventRecord = { ...source, id, status: "draft", slug: `${source.slug.slice(0, 62)}-${id}`, agenda: source.agenda.map(item => ({ ...item, id: randomUUID() })), feedback_questions: source.feedback_questions.map(question => ({ ...question, id: randomUUID() })) };
   return saveEvent(id, draft, true);
 }

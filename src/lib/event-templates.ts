@@ -1,0 +1,50 @@
+import type { EventAudience, EventKind, SectionKey, ThemeKey } from "./types";
+import { templateContent } from "./wording/template-content";
+
+export const templateKeys = ["kunjungan-klien", "gala-dinner", "seminar-launching", "annual-meeting", "nyadran", "csr-kegiatan-sosial", "pelatihan-bootcamp", "trip-klien"] as const;
+export type TemplateKey = (typeof templateKeys)[number];
+
+export type EventTemplate = {
+  key: TemplateKey; label: string; description: string;
+  /** Example event name, shown greyed in the empty title field. */
+  example: string;
+  kind: EventKind; audience: EventAudience; theme: ThemeKey;
+  /** Sections shown from the start; the rest exist but stay hidden. */
+  modules: SectionKey[];
+  /** Preparation cards to start with: titles only, the admin writes the details. */
+  prepare: { icon: "shirt" | "backpack" | "gift"; title: string }[];
+};
+
+const DRESS = { icon: "shirt", title: "Dress code" } as const;
+const BRING = { icon: "backpack", title: "Yang perlu dibawa" } as const;
+const PROVIDED = { icon: "gift", title: "Yang kami siapkan untuk Anda" } as const;
+
+// Kind, audience and theme follow the notes column of docs/wording-draf.xlsx ("Isi awal templat").
+export const eventTemplates: EventTemplate[] = [
+  { key: "kunjungan-klien", label: "Kunjungan klien", example: "Kunjungan PT Sinar Abadi ke Werkudara", description: "Tamu dari perusahaan lain berkunjung ke kantor: cerita kunjungan, rute, Our Team, RSVP, dan survei.", kind: "kunjungan", audience: "external", theme: "werkudara", modules: ["about", "experience", "agenda", "location", "team", "rsvp", "contact", "feedback"], prepare: [] },
+  { key: "gala-dinner", label: "Gala dinner", example: "Malam Apresiasi Werkudara 2026", description: "Malam apresiasi: tema Malam Apresiasi, dress code, RSVP dengan kebutuhan makanan.", kind: "acara", audience: "external", theme: "gala", modules: ["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback"], prepare: [DRESS] },
+  { key: "seminar-launching", label: "Seminar / launching", example: "Peluncuran Layanan Baru Werkudara", description: "Sesi berbagi atau peluncuran: topik, rundown, lokasi, RSVP, dan survei.", kind: "acara", audience: "external", theme: "werkudara", modules: ["about", "agenda", "location", "rsvp", "contact", "feedback"], prepare: [] },
+  { key: "annual-meeting", label: "Annual meeting", example: "Annual Meeting Werkudara 2026", description: "Pertemuan tahunan tim: agenda, lokasi, dress code, dan RSVP internal.", kind: "acara", audience: "internal", theme: "werkudara", modules: ["about", "agenda", "location", "prepare", "rsvp", "contact"], prepare: [DRESS] },
+  { key: "nyadran", label: "Nyadran", example: "Nyadran Bersama Keluarga Werkudara", description: "Tradisi bersama: tema Khidmat, pakaian dan bawaan, titik kumpul, RSVP internal.", kind: "acara", audience: "internal", theme: "khidmat", modules: ["about", "experience", "agenda", "location", "prepare", "rsvp", "contact"], prepare: [DRESS, BRING] },
+  { key: "csr-kegiatan-sosial", label: "CSR / kegiatan sosial", example: "Berbagi Bersama Anak Panti 2026", description: "Kegiatan sosial: tema Segar, barang bawaan, perlengkapan dari panitia, RSVP relawan.", kind: "acara", audience: "internal", theme: "segar", modules: ["about", "experience", "agenda", "location", "prepare", "rsvp", "contact"], prepare: [BRING, PROVIDED] },
+  { key: "pelatihan-bootcamp", label: "Pelatihan / bootcamp", example: "Sales Mastery Bootcamp Batch 3", description: "Program beberapa hari: jadwal per hari, bawaan peserta, RSVP, dan survei.", kind: "program", audience: "internal", theme: "werkudara", modules: ["about", "agenda", "location", "prepare", "rsvp", "contact", "feedback"], prepare: [BRING] },
+  { key: "trip-klien", label: "Trip klien", example: "Trip Lombok bersama PT Sinar Abadi", description: "Perjalanan bersama klien (struktur Lombok Guidebook): jadwal per hari, bawaan, perlengkapan, kontak.", kind: "program", audience: "external", theme: "nenek", modules: ["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback"], prepare: [BRING, PROVIDED] },
+];
+
+export function templateOf(key: string): EventTemplate | undefined {
+  return eventTemplates.find(template => template.key === key);
+}
+
+/** A template's own starting sentence for a field (greeting, intro, closing, …), or "". */
+export function templateText(key: string, field: "greeting" | "intro" | "closing"): string {
+  return templateContent[`${key}.${field}`]?.id ?? "";
+}
+
+/** The three standard survey questions from the wording sheet. */
+export function standardQuestions() {
+  return [
+    { label: templateContent["survey.q1"]?.id ?? "Secara keseluruhan, seberapa puas Anda dengan acara ini?", kind: "rating" as const, required: true },
+    { label: templateContent["survey.q2"]?.id ?? "Apa yang paling berkesan bagi Anda?", kind: "text" as const, required: false },
+    { label: templateContent["survey.q3"]?.id ?? "Apa yang bisa kami tingkatkan?", kind: "text" as const, required: false },
+  ];
+}

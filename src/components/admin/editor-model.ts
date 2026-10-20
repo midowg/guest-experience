@@ -132,7 +132,7 @@ const fieldBlocks: Record<string, string> = {
   hero: "hero", topics: "topics", experience: "experience", agenda: "agenda",
   venue_name: "venue", address: "venue", location_url: "venue", location_embed_url: "venue", location_display: "venue", arrival_notes: "venue", route: "venue",
   gallery: "gallery", venue_image_url: "gallery", venue_image_alt: "gallery", venue_image_credit: "gallery",
-  team_image: "team", rsvp_enabled: "rsvp", rsvp_closes_at: "rsvp", contact: "contact", day_note: "day",
+  team_image: "team", rsvp_enabled: "rsvp", rsvp_closes_at: "rsvp", guest_estimate: "rsvp", contact: "contact", day_note: "day",
   feedback_enabled: "feedback_questions", feedback_opens_at: "feedback_questions", feedback_description: "feedback_questions", feedback_questions: "feedback_questions",
   review_url: "review", review_enabled: "review", review_heading: "review", review_description: "review", review_button_label: "review",
   after: "after", prepare: "prepare", language: "language", translations: "language", sections: "sections", status: "publication",

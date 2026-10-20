@@ -63,7 +63,7 @@ export type EventRecord = {
   venue_image_url: string; venue_image_alt: string; venue_image_credit: string;
   hero: HeroImage; gallery: GalleryImage[];
   event_kind: EventKind; audience: EventAudience; theme: EventTheme; phase_override: PhaseOverride;
-  experience: EventExperienceContent; route: RouteGuide; day_note: string; after: AfterContent; prepare: PrepareContent; language: EventLanguage; translations: EventTranslations;
+  experience: EventExperienceContent; route: RouteGuide; day_note: string; after: AfterContent; prepare: PrepareContent; language: EventLanguage; translations: EventTranslations; guest_estimate: number | null;
   created_at: string; updated_at: string;
 };
 export type RsvpInput = {
