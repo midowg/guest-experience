@@ -1,4 +1,4 @@
-import { emptyAfter, emptyExperience, emptyRoute } from "./validation";
+import { emptyAfter, emptyEnglish, emptyExperience, emptyPrepare, emptyRoute } from "./validation";
 import type { EventRecord, HeroFraming, HeroImage, PhotoFrame } from "./types";
 
 export function defaultFraming(focus: HeroImage["focus"] = "center"): HeroFraming {
@@ -26,6 +26,11 @@ export function normalizeEvent(event: EventRecord): EventRecord {
     day_note: event.day_note ?? "", after: { ...emptyAfter, ...event.after, collaboration: { ...emptyAfter.collaboration, ...event.after?.collaboration } },
     location_embed_url: event.location_embed_url ?? "", location_display: event.location_display ?? (event.location_embed_url ? "embed" : "manual"),
     hero: { ...event.hero, framing: getFraming(event.hero) },
+    // Fields added on 20 Oct: documents saved before then do not carry them.
+    prepare: { ...emptyPrepare, ...event.prepare, items: event.prepare?.items ?? [] },
+    language: event.language ?? "id",
+    translations: { en: { ...emptyEnglish, ...event.translations?.en, agenda: event.translations?.en?.agenda ?? {} } },
+    guest_estimate: event.guest_estimate ?? null,
   };
 }
 export function dragFrame(frame: PhotoFrame, dx: number, dy: number, width: number, height: number, naturalWidth: number, naturalHeight: number): PhotoFrame {
