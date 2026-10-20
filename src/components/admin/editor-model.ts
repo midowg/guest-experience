@@ -86,3 +86,110 @@ export function hiddenSectionReasons(event: EventRecord): string[] {
   if (!event.gallery.length) reasons.push("Galeri foto lokasi kosong; informasi lokasi tetap tersedia sesuai tampilan yang dipilih.");
   return reasons;
 }
+
+export type EditorStage = "prep" | "guest" | "day" | "after" | "settings";
+export const editorStages: { key: EditorStage; label: string }[] = [
+  { key: "prep", label: "Persiapan" }, { key: "guest", label: "Tamu" }, { key: "day", label: "Hari H" },
+  { key: "after", label: "Sesudah acara" }, { key: "settings", label: "Pengaturan" },
+];
+/** Every editor block in page order: the side menu and each block's header read from this one list. */
+export const editorBlocks: { id: string; title: string; stage: EditorStage }[] = [
+  { id: "identity", title: "Identitas & undangan", stage: "prep" },
+  { id: "appearance", title: "Jenis, audiens, dan tampilan", stage: "prep" },
+  { id: "schedule", title: "Waktu acara", stage: "prep" },
+  { id: "hero", title: "Foto latar pembuka", stage: "prep" },
+  { id: "topics", title: "Topik pembahasan", stage: "prep" },
+  { id: "experience", title: "Pengalaman kunjungan", stage: "prep" },
+  { id: "agenda", title: "Rundown", stage: "prep" },
+  { id: "venue", title: "Lokasi", stage: "prep" },
+  { id: "gallery", title: "Galeri foto lokasi Werkudara", stage: "prep" },
+  { id: "team", title: "Our Team", stage: "prep" },
+  { id: "rsvp", title: "Penerimaan RSVP", stage: "guest" },
+  { id: "contact", title: "Kontak", stage: "guest" },
+  { id: "day", title: "Hari H", stage: "day" },
+  { id: "feedback_questions", title: "Survei feedback", stage: "after" },
+  { id: "review", title: "Ulasan Google (opsional)", stage: "after" },
+  { id: "after", title: "Setelah acara", stage: "after" },
+  { id: "sections", title: "Urutan & tampilan bagian", stage: "settings" },
+  { id: "publication", title: "Status & penyimpanan", stage: "settings" },
+];
+
+/** Which editor block owns a field: the first segment of a dotted path decides. */
+const fieldBlocks: Record<string, string> = {
+  title: "identity", slug: "identity", subtitle: "identity", organizer: "identity", greeting: "identity", introduction: "identity", closing: "identity", invitation_mode: "identity",
+  event_kind: "appearance", audience: "appearance", theme: "appearance", phase_override: "appearance",
+  starts_at: "schedule", ends_at: "schedule", timezone: "schedule",
+  hero: "hero", topics: "topics", experience: "experience", agenda: "agenda",
+  venue_name: "venue", address: "venue", location_url: "venue", location_embed_url: "venue", location_display: "venue", arrival_notes: "venue", route: "venue",
+  gallery: "gallery", venue_image_url: "gallery", venue_image_alt: "gallery", venue_image_credit: "gallery",
+  team_image: "team", rsvp_enabled: "rsvp", rsvp_closes_at: "rsvp", contact: "contact", day_note: "day",
+  feedback_enabled: "feedback_questions", feedback_opens_at: "feedback_questions", feedback_description: "feedback_questions", feedback_questions: "feedback_questions",
+  review_url: "review", review_enabled: "review", review_heading: "review", review_description: "review", review_button_label: "review",
+  after: "after", sections: "sections", status: "publication",
+};
+export function blockOfPath(path: string): string {
+  return fieldBlocks[path.split(".")[0]] ?? "identity";
+}
+
+export type BlockStatus = "error" | "dirty" | "todo" | "optional" | "done";
+export const blockStatusLabels: Record<BlockStatus, string> = { error: "Perlu diperbaiki", dirty: "Belum disimpan", todo: "Perlu dilengkapi", optional: "Opsional", done: "Lengkap" };
+
+const kindLabels = { kunjungan: "Kunjungan", acara: "Acara", program: "Program" } as const;
+const phaseText = { auto: "fase otomatis", before: "selalu undangan", day: "selalu hari H", after: "selalu terima kasih" } as const;
+const sectionOn = (event: EventRecord, key: SectionKey) => event.sections.some(section => section.key === key && section.enabled);
+const count = (n: number, noun: string) => `${n} ${noun}`;
+
+/** One line describing what a block currently holds, for its summary card. */
+export function blockSummary(id: string, event: EventRecord, themeName: string, formatWhen: (iso: string) => string): string {
+  switch (id) {
+    case "identity": return `${event.title || "Tanpa judul"} · ${event.invitation_mode === "personal" ? "tautan per tamu" : "tautan umum"}`;
+    case "appearance": return `${kindLabels[event.event_kind] ?? "Acara"} · ${event.audience === "internal" ? "Internal" : "Eksternal"} · ${themeName} · ${phaseText[event.phase_override] ?? "fase otomatis"}`;
+    case "schedule": return event.starts_at ? `${formatWhen(event.starts_at)}${event.ends_at ? ` – ${formatWhen(event.ends_at).split(", ").pop()}` : ""}` : "Waktu belum diisi";
+    case "hero": return event.hero.url ? `Foto terpasang · teks ${event.hero.text_position === "center" ? "rata tengah" : "rata kiri"}` : "Belum ada foto";
+    case "topics": return event.topics.length ? count(event.topics.length, "topik") : "Belum ada topik";
+    case "experience": return sectionOn(event, "experience") ? `${event.experience.story ? "Cerita terisi" : "Cerita belum diisi"} · ${count(event.experience.moments.length, "momen")}` : "Nonaktif";
+    case "agenda": return event.agenda.length ? count(event.agenda.length, "sesi") : "Rundown belum diisi";
+    case "venue": {
+      const place = (event.location_display === "embed" ? "Peta sematan Google" : event.venue_name) || "Lokasi belum diisi";
+      return event.route.steps.length ? `${place} · ${count(event.route.steps.length, "langkah rute")}` : place;
+    }
+    case "gallery": return event.gallery.length ? count(event.gallery.length, "foto lokasi") : "Belum ada foto lokasi";
+    case "team": return sectionOn(event, "team") ? (event.team_image.url ? "Tampil · dengan foto tim" : "Tampil · tanpa foto") : "Nonaktif";
+    case "rsvp": return event.rsvp_enabled ? (event.rsvp_closes_at ? `Dibuka · batas ${formatWhen(event.rsvp_closes_at)}` : "Dibuka · tanpa batas waktu") : "Ditutup";
+    case "contact": return event.contact.name && event.contact.phone ? `${event.contact.name} · ${event.contact.channel === "whatsapp" ? "WhatsApp" : "Telepon"}` : "Belum diisi";
+    case "day": return event.day_note ? "Catatan untuk tamu terisi" : "Belum ada catatan";
+    case "feedback_questions": return event.feedback_enabled ? count(event.feedback_questions.length, "pertanyaan") : "Nonaktif";
+    case "review": return event.review_enabled && event.review_url ? "Aktif" : "Nonaktif";
+    case "after": return [event.after.message ? "Pesan terisi" : "Pesan memakai Penutup", event.after.collaboration.enabled ? "kolaborasi aktif" : ""].filter(Boolean).join(" · ");
+    case "sections": return `${event.sections.filter(section => section.enabled).length} dari ${event.sections.length} bagian tampil`;
+    case "publication": return event.status === "published" ? "Dipublikasikan" : event.status === "archived" ? "Diarsipkan" : "Draf";
+    default: return "";
+  }
+}
+
+/** Blocks that are fine left empty: their card says Opsional instead of Lengkap. */
+function isEmptyOptional(id: string, event: EventRecord): boolean {
+  switch (id) {
+    case "hero": return !event.hero.url;
+    case "topics": return !event.topics.length;
+    case "experience": return !sectionOn(event, "experience");
+    case "gallery": return !event.gallery.length;
+    case "team": return !sectionOn(event, "team");
+    case "day": return !event.day_note;
+    case "feedback_questions": return !event.feedback_enabled;
+    case "review": return !event.review_enabled;
+    case "after": return !event.after.message && !event.after.title && !event.after.collaboration.enabled;
+    default: return false;
+  }
+}
+
+/**
+ * Status per block. "Perlu dilengkapi" is whatever publishing would still reject, so the cards
+ * and the server agree without a second list of rules.
+ */
+export function blockStatuses(event: EventRecord, errors: Record<string, string[]>, dirtyBlocks: Set<string>, publishIssues: string[]): Record<string, BlockStatus> {
+  const errorBlocks = new Set(Object.keys(errors).map(blockOfPath));
+  const todoBlocks = new Set(publishIssues.map(blockOfPath));
+  return Object.fromEntries(editorBlocks.map(({ id }) => [id,
+    errorBlocks.has(id) ? "error" : dirtyBlocks.has(id) ? "dirty" : todoBlocks.has(id) ? "todo" : isEmptyOptional(id, event) ? "optional" : "done"]));
+}

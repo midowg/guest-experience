@@ -3,13 +3,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink, Notice } from "@/components/ui";
-import type { EventRecord, EventStatus } from "@/lib/types";
+import { Archive, Building2, CalendarDays, CalendarCheck, Globe, Hourglass, Images, Pencil } from "lucide-react";
+import type { EventPhase, EventRecord, EventStatus } from "@/lib/types";
+import { themeDefinition } from "@/lib/themes";
 import { formatDate, formatTime } from "@/lib/format";
 import { adminRequest, errorMessage } from "./api";
 import styles from "./admin.module.css";
 
 const statuses: Record<EventStatus, string> = { draft: "Draft", published: "Publik via tautan", archived: "Diarsipkan" };
-export function EventList({ events, featuredId }: { events: EventRecord[]; featuredId: string | null }) {
+const kinds = { kunjungan: "Kunjungan", acara: "Acara", program: "Program" } as const;
+/** Where an event stands, in the stage colours of the editor menu. */
+function stageBadge(event: EventRecord, phase: EventPhase | undefined) {
+  if (event.status === "draft") return { label: "Draf", stage: "settings", Icon: Pencil };
+  if (event.status === "archived") return { label: "Arsip", stage: "settings", Icon: Archive };
+  if (phase === "day") return { label: "Hari H", stage: "day", Icon: CalendarCheck };
+  if (phase === "after") return { label: "Sesudah acara", stage: "after", Icon: Images };
+  return { label: "Sebelum acara", stage: "guest", Icon: Hourglass };
+}
+export function EventList({ events, featuredId, phases = {} }: { events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase> }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -38,10 +49,21 @@ export function EventList({ events, featuredId }: { events: EventRecord[]; featu
     <div className={styles.itemHeader}><p>{events.length} acara. Duplikasi hanya menyalin konten sebagai draft, bukan jawaban tamu.</p><Button type="button" disabled={!!busy} onClick={() => create()}>{busy === "new" ? "Membuat draft…" : "Buat acara"}</Button></div>
     {error && <Notice tone="error">{error} <a href="/admin/login">Halaman masuk</a></Notice>}
     {!events.length ? <Notice>Belum ada acara. Buat draft pertama untuk meninjau dan menyunting konten sebelum publikasi.</Notice> : <ul className={styles.eventList}>
-      {events.map(event => <li key={event.id} className={styles.eventCard}>
-        {event.id === featured && event.status === "published" ? <span className={`${styles.status} ${styles.statusLive}`}><span className={styles.statusDot} aria-hidden="true" />Tayang di halaman utama</span> : <span className={styles.status}>{statuses[event.status]}</span>}
+      {events.map(event => {
+        const badge = stageBadge(event, phases[event.id]);
+        const theme = themeDefinition(event.theme?.key ?? "werkudara");
+        return <li key={event.id} className={`${styles.eventCard} ${styles[`stage_${badge.stage}`]}`}>
+        <div className={styles.cardBadges}>
+          <span className={styles.stageBadge}><badge.Icon size={14} aria-hidden="true" /> {badge.label}</span>
+          {event.id === featured && event.status === "published" ? <span className={`${styles.status} ${styles.statusLive}`}><span className={styles.statusDot} aria-hidden="true" />Tayang di halaman utama</span> : <span className={styles.status}>{statuses[event.status]}</span>}
+        </div>
         <h2>{event.title}</h2>
-        <p className={styles.eventWhen}>{formatDate(event.starts_at)} · {formatTime(event.starts_at)} WIB</p>
+        <p className={styles.eventWhen}><CalendarDays size={16} aria-hidden="true" /> {formatDate(event.starts_at)} · {formatTime(event.starts_at)} WIB</p>
+        <p className={styles.eventChips}>
+          <span>{kinds[event.event_kind ?? "acara"]}</span>
+          <span>{event.audience === "internal" ? <Building2 size={13} aria-hidden="true" /> : <Globe size={13} aria-hidden="true" />} {event.audience === "internal" ? "Internal" : "Eksternal"}</span>
+          <span><span className={styles.themeDot} style={{ background: theme.tokens.hero }} aria-hidden="true" /> {theme.name}</span>
+        </p>
         <p className={styles.eventSlug}>/e/{event.slug}</p>
         {/* Housekeeping dates sit below a rule: useful for choosing between events, but
             never competing with the event's own date. */}
@@ -50,7 +72,8 @@ export function EventList({ events, featuredId }: { events: EventRecord[]; featu
           <div><dt>Terakhir disimpan</dt><dd>{formatDate(event.updated_at)}, {formatTime(event.updated_at)} WIB</dd></div>
         </dl>
         <div className={styles.actions}><ButtonLink href={`/admin/events/${event.id}`}>Kelola acara</ButtonLink>{event.status === "published" && event.id !== featured && <Button type="button" variant="secondary" disabled={!!busy} onClick={() => feature(event)}>{busy === event.id ? "Menayangkan…" : "Tayangkan"}</Button>}<Button type="button" variant="secondary" disabled={!!busy} onClick={() => create(event.id)}>{busy === event.id ? "Menduplikasi…" : "Duplikasi ke draft"}</Button></div>
-      </li>)}
+      </li>;
+      })}
     </ul>}
   </div>;
 }

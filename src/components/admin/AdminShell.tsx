@@ -1,10 +1,23 @@
 import type { ReactNode } from "react";
+import { ArrowLeft, ClipboardCheck, ExternalLink, Eye, LayoutGrid, Mail, MessageSquare, Pencil } from "lucide-react";
 import { ButtonLink, Notice } from "@/components/ui";
 import type { EventRecord } from "@/lib/types";
 import styles from "./admin.module.css";
 
 export function AdminShell({ children }: { children: ReactNode }) {
-  return <div className={styles.shell}><main id="main" className={`container ${styles.main}`}>{children}</main></div>;
+  return <div className={styles.shell}>
+    <header className={styles.header}>
+      <div className={`container ${styles.headerInner}`}>
+        <a href="/admin" className={styles.brand}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/werkudara_icon.png" alt="" width={36} height={36} className={styles.logo} />
+          <span><strong>Werkudara</strong><span className={styles.brandSub}>Admin pengalaman tamu</span></span>
+        </a>
+        <a href="/admin" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> Semua acara</a>
+      </div>
+    </header>
+    <main id="main" className={`container ${styles.main}`}>{children}</main>
+  </div>;
 }
 export function SetupNotice() {
   return <section className={styles.login}><p className="eyebrow">Pengaturan aplikasi</p><h1 className={styles.title}>Hubungkan Supabase terlebih dahulu</h1>
@@ -16,13 +29,15 @@ export function SetupNotice() {
 }
 export function EventNavigation({ event, current }: { event: EventRecord; current: "edit" | "invitations" | "responses" | "feedback" | "preview" }) {
   const base = `/admin/events/${event.id}`;
+  const tab = (key: typeof current, href: string, label: string, Icon: typeof Pencil) =>
+    <a href={href} className={styles.tab} aria-current={current === key ? "page" : undefined}><Icon size={16} aria-hidden="true" /> {label}</a>;
   return <nav className={styles.navigation} aria-label="Pengelolaan acara">
-    <a href="/admin">Semua acara</a>
-    {current !== "edit" && <a href={base}>Edit acara</a>}
-    <a href={`${base}/invitations`} aria-current={current === "invitations" ? "page" : undefined}>Undangan tamu</a>
-    <a href={`${base}/responses`} aria-current={current === "responses" ? "page" : undefined}>RSVP</a>
-    <a href={`${base}/feedback`} aria-current={current === "feedback" ? "page" : undefined}>Feedback</a>
-    <a href={`${base}/preview`} aria-current={current === "preview" ? "page" : undefined}>Preview tersimpan</a>
-    {event.status === "published" && <a href={`/e/${event.slug}`} target="_blank" rel="noopener noreferrer">Buka undangan publik</a>}
+    <a href="/admin" className={`${styles.tab} ${styles.tabBack}`}><ArrowLeft size={16} aria-hidden="true" /> Semua acara</a>
+    {tab("edit", base, "Edit acara", Pencil)}
+    {tab("invitations", `${base}/invitations`, "Undangan tamu", Mail)}
+    {tab("responses", `${base}/responses`, "RSVP", ClipboardCheck)}
+    {tab("feedback", `${base}/feedback`, "Feedback", MessageSquare)}
+    {tab("preview", `${base}/preview`, "Preview tersimpan", Eye)}
+    {event.status === "published" && <a href={`/e/${event.slug}`} target="_blank" rel="noopener noreferrer" className={styles.tab}><ExternalLink size={16} aria-hidden="true" /> Buka undangan publik<span className="sr-only"> (tab baru)</span></a>}
   </nav>;
 }
