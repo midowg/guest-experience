@@ -92,8 +92,8 @@ it("saves only the Google URL from a pasted iframe and restores manual mode with
   expect((screen.getByRole("textbox", { name: /Kode sematan Google Maps/ }) as HTMLTextAreaElement).value).toBe(embedUrl);
 }, 20000);
 
-it("saves the event kind, audience, theme, and experience story", async () => {
-  render(<EventEditor event={createSeedEvent()} />);
+it("lets the super admin save the event kind, audience, theme, and experience story", async () => {
+  render(<EventEditor event={createSeedEvent()} superAdmin />);
   openPanel("Jenis, audiens, dan tampilan");
   fireEvent.click(screen.getByRole("radio", { name: /^Kunjungan/ }));
   fireEvent.click(screen.getByRole("radio", { name: /^Internal/ }));
@@ -148,4 +148,23 @@ it("fills the Werkudara office in one click", () => {
   expect((screen.getByRole("textbox", { name: "Alamat" }) as HTMLTextAreaElement).value).toMatch(/^Jl\. Bhinneka/);
   expect((screen.getByRole("textbox", { name: "Tautan lokasi Maps" }) as HTMLInputElement).value).toMatch(/^https:\/\/maps\.app\.goo\.gl\//);
   expect(screen.queryByRole("button", { name: /Pakai alamat kantor Werkudara/ })).toBeNull();
+});
+
+it("keeps the regular editor short: no theme block, unused parts folded away", () => {
+  render(<EventEditor event={createSeedEvent()} />);
+  expect(screen.queryByRole("button", { name: "Ubah Jenis, audiens, dan tampilan" })).toBeNull();
+  const more = screen.getByText(/^Bagian lain yang bisa ditambahkan/).closest("details")!;
+  for (const title of ["Pengalaman kunjungan", "Persiapan tamu", "Our Team"]) expect(within(more).getByRole("button", { name: `Ubah ${title}` })).toBeTruthy();
+  expect(within(more).queryByRole("button", { name: "Ubah Rundown" })).toBeNull();
+});
+
+it("adds a folded part to the invitation from its own panel", () => {
+  render(<EventEditor event={createSeedEvent()} />);
+  openPanel("Our Team");
+  fireEvent.click(screen.getByRole("checkbox", { name: /Tampilkan bagian ini di undangan/ }));
+  expect(screen.queryByRole("checkbox", { name: /Tampilkan bagian ini di undangan/ })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Selesai" }));
+  const more = screen.queryByText(/^Bagian lain yang bisa ditambahkan/)?.closest("details");
+  expect(more ? within(more).queryByRole("button", { name: "Ubah Our Team" }) : null).toBeNull();
+  expect(screen.getByRole("button", { name: "Ubah Our Team" })).toBeTruthy();
 });

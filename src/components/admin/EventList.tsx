@@ -11,6 +11,7 @@ import { tzLabel } from "@/lib/timezones";
 import { adminRequest, errorMessage } from "./api";
 import { CreateEventDialog } from "./CreateEventDialog";
 import type { AdminModule } from "@/lib/admin-modules";
+import type { TemplateKey } from "@/lib/event-templates";
 import styles from "./admin.module.css";
 
 const statuses: Record<EventStatus, string> = { draft: "Draft", published: "Publik via tautan", archived: "Diarsipkan" };
@@ -24,7 +25,7 @@ function stageBadge(event: EventRecord, phase: EventPhase | undefined) {
   return { label: "Sebelum acara", stage: "guest", Icon: Hourglass };
 }
 /** `superAdmin` is set only for a super admin session: hidden events then carry a label. */
-export function EventList({ events, featuredId, phases = {}, superAdmin, disabledModules = [] }: { events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean }; disabledModules?: AdminModule[] }) {
+export function EventList({ events, featuredId, phases = {}, superAdmin, disabledModules = [], templates }: { events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean }; disabledModules?: AdminModule[]; templates?: TemplateKey[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -53,7 +54,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
   }
   return <div className="stack" aria-busy={!!busy}>
     <div className={styles.itemHeader}><p>{events.length} acara. Duplikasi hanya menyalin konten sebagai draft, bukan jawaban tamu.</p><Button type="button" disabled={!!busy} onClick={() => setCreating(true)}>Buat acara</Button></div>
-    {creating && <CreateEventDialog events={events} disabledModules={disabledModules} onClose={() => setCreating(false)} />}
+    {creating && <CreateEventDialog events={events} disabledModules={disabledModules} templates={templates} canStartBlank={!!superAdmin} onClose={() => setCreating(false)} />}
     {superAdmin && <Notice>{hidden.size ? `${hidden.size} acara disembunyikan dari admin biasa. ` : ""}Atur acara yang terlihat oleh admin biasa di <a href="/admin/super">Dashboard super admin</a>.</Notice>}
     {error && <Notice tone="error">{error}</Notice>}
     {!events.length ? <Notice>Belum ada acara. Buat draft pertama untuk meninjau dan menyunting konten sebelum publikasi.</Notice> : <ul className={styles.eventList}>

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
 import { CreateEventDialog } from "./CreateEventDialog";
 
@@ -17,48 +17,56 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-it("walks a template through four steps with empty fields, chips, and a to-do list", async () => {
-  render(<CreateEventDialog events={[createSeedEvent()]} onClose={() => {}} />);
-  fireEvent.click(screen.getByRole("button", { name: /Gala dinner/ }));
+it("offers only the allowed templates, each as a miniature card", () => {
+  render(<CreateEventDialog events={[]} templates={["kunjungan-klien", "trip-klien"]} onClose={() => {}} />);
+  expect(screen.getByRole("heading", { name: "Pilih templat acara" })).toBeTruthy();
+  expect(screen.getByText("Langkah 1 dari 2")).toBeTruthy();
+  const cards = screen.getAllByRole("button", { name: /:/ });
+  expect(cards.map(card => [...card.querySelectorAll("strong")].at(-1)?.textContent)).toEqual(["Kunjungan klien", "Trip klien"]);
+  expect(screen.queryByText("Gala dinner")).toBeNull();
+  expect(screen.queryByRole("button", { name: /draf kosong/ })).toBeNull();
+});
 
+it("creates an event from a template with only name, time, and place", async () => {
+  render(<CreateEventDialog events={[]} templates={["kunjungan-klien", "trip-klien"]} onClose={() => {}} />);
+  fireEvent.click(screen.getByRole("button", { name: /^Trip klien:/ }));
+  expect(screen.getByRole("heading", { name: "Detail acara" })).toBeTruthy();
   const title = screen.getByRole("textbox", { name: "Nama acara" }) as HTMLInputElement;
   expect(title.value).toBe("");
-  expect(title.placeholder).toMatch(/^Contoh: /);
-  fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
+  expect(title.placeholder).toBe("Contoh: Trip Lombok bersama PT Sinar Abadi");
+  expect(screen.queryByRole("radio", { name: /Eksternal|Internal/ })).toBeNull();
+  expect(screen.queryByText(/Tema|tema Werkudara/)).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Buat acara" }));
   expect(screen.getByText("Isi nama acara.")).toBeTruthy();
-  fireEvent.change(title, { target: { value: "Malam Apresiasi 2026" } });
-  fireEvent.change(screen.getByLabelText(/^Mulai/), { target: { value: "2026-12-12T18:00" } });
-  fireEvent.click(screen.getByRole("radio", { name: /Kantor Werkudara/ }));
-  fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
-
-  const greeting = screen.getByRole("textbox", { name: "Sapaan" }) as HTMLInputElement;
-  expect(greeting.value).toBe("");
-  const chips = within(screen.getByRole("group", { name: "Pilihan cepat: Sapaan" })).getAllByRole("button");
-  expect(chips[0].textContent).toBe("Dengan hormat");
-  fireEvent.click(chips[0]);
-  expect(greeting.value).toBe("Dengan hormat");
-  expect((screen.getByRole("textbox", { name: "Isi undangan" }) as HTMLTextAreaElement).value).toBe("");
-  expect(screen.getByText(/Tiket & kursi · Segera/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
-
-  expect(screen.getByText("Setelah ini, lengkapi")).toBeTruthy();
-  expect(screen.getByText("Kartu persiapan: Dress code")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Buat draf acara" }));
+  fireEvent.change(title, { target: { value: "Trip Lombok Mitra" } });
+  fireEvent.change(screen.getByLabelText(/^Mulai/), { target: { value: "2026-12-12T08:00" } });
+  fireEvent.click(screen.getByRole("button", { name: "Buat acara" }));
   await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/admin/events/5e7a0c1e-0000-4000-8000-000000000099"));
-  expect(body).toMatchObject({ setup: { template: "gala-dinner", title: "Malam Apresiasi 2026", greeting: "Dengan hormat", introduction: "", starts_at: "2026-12-12T11:00:00.000Z", venue_name: "PT. Werkudara" } });
-  expect(body).not.toHaveProperty("duplicateId");
+  expect(body).toMatchObject({ setup: { template: "trip-klien", title: "Trip Lombok Mitra", starts_at: "2026-12-12T01:00:00.000Z", audience: "external", language: "id", invitation_mode: "open", venue_name: "PT. Werkudara", greeting: "" } });
+  expect((body!.setup as { modules: string[] }).modules).toEqual(["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback"]);
+});
+
+it("can go back to choose another template", () => {
+  render(<CreateEventDialog events={[]} templates={["kunjungan-klien", "trip-klien"]} onClose={() => {}} />);
+  fireEvent.click(screen.getByRole("button", { name: /^Kunjungan klien:/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Ganti templat/ }));
+  expect(screen.getByRole("heading", { name: "Pilih templat acara" })).toBeTruthy();
 });
 
 it("copies an earlier event under a new name and date", async () => {
   const source = createSeedEvent();
-  render(<CreateEventDialog events={[source]} onClose={() => {}} />);
+  render(<CreateEventDialog events={[source]} templates={[]} onClose={() => {}} />);
+  expect(screen.getByText(/Belum ada templat yang tersedia/)).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Atau salin dari acara sebelumnya"), { target: { value: source.id } });
-  expect(screen.getByText(/Menyalin “Rapat Panitia Inti dan Koordinator”/)).toBeTruthy();
+  expect(screen.getByText(/Salinan “Rapat Panitia Inti dan Koordinator”/)).toBeTruthy();
   fireEvent.change(screen.getByRole("textbox", { name: "Nama acara" }), { target: { value: "Rapat Panitia 2027" } });
   fireEvent.change(screen.getByLabelText(/^Mulai/), { target: { value: "2027-10-12T18:00" } });
-  fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
-  fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
-  fireEvent.click(screen.getByRole("button", { name: "Buat draf acara" }));
+  fireEvent.click(screen.getByRole("button", { name: "Buat acara" }));
   await vi.waitFor(() => expect(push).toHaveBeenCalled());
   expect(body).toMatchObject({ duplicateId: source.id, setup: { template: "blank", title: "Rapat Panitia 2027" } });
+});
+
+it("lets only the super admin start from a blank draft", () => {
+  render(<CreateEventDialog events={[]} canStartBlank onClose={() => {}} />);
+  expect(screen.getByRole("button", { name: /Mulai dari draf kosong/ })).toBeTruthy();
 });

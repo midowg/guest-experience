@@ -7,5 +7,5 @@ import type { EventRecord } from "@/lib/types";
 
 export function DevCreateEvent({ events }: { events: EventRecord[] }) {
   const [open, setOpen] = useState(true);
-  return <>{!open && <Button type="button" onClick={() => setOpen(true)}>Buat acara</Button>}{open && <CreateEventDialog events={events} onClose={() => setOpen(false)} />}</>;
+  return <>{!open && <Button type="button" onClick={() => setOpen(true)}>Buat acara</Button>}{open && <CreateEventDialog events={events} templates={["kunjungan-klien", "trip-klien"]} onClose={() => setOpen(false)} />}</>;
 }

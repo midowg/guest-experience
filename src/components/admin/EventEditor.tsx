@@ -11,7 +11,7 @@ import { HeroPreview } from "./HeroPreview";
 import { formatDate, formatTime, fromZoneInput, toZoneInput } from "@/lib/format";
 import { eventTimezones, timezoneInfo, tzLabel, zoneOf } from "@/lib/timezones";
 import { themeDefinition } from "@/lib/themes";
-import type { EventRecord, EventStatus, FeedbackQuestion } from "@/lib/types";
+import type { EventRecord, EventStatus, FeedbackQuestion, SectionKey } from "@/lib/types";
 import { eventSchema } from "@/lib/validation";
 import { AdminApiError, adminRequest, errorMessage } from "./api";
 import { blockOfPath, blockStatusLabels, blockStatuses, blockSummary, completeSections, editorBlocks, editorStages, type BlockStatus, heroTextPositionHints, heroTextPositionOptions, hiddenSectionReasons, moveItem, photoGuidance, prepareEvent, sectionLabels } from "./editor-model";
@@ -61,10 +61,11 @@ function PanelHeader({ open, titleRef, onClose }: { open: string | null; titleRe
  * that this event does not use is not offered at all; one it already uses stays visible with a
  * note, may be switched off, and cannot come back (the server checks the same rule on save).
  */
-export function EventEditor({ event: initialEvent, disabledModules = [] }: { event: EventRecord; disabledModules?: AdminModule[] }) {
+export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean }) {
   const unavailable = (key: AdminModule) => disabledModules.includes(key) && !moduleActive(initialEvent, key);
   const restricted = (key: AdminModule) => disabledModules.includes(key) && moduleActive(initialEvent, key);
-  const blocks = editorBlocks.filter(item => !(Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, id]) => id === item.id && unavailable(key)));
+  // Kind, audience, and theme come from the template; only the super admin changes them (meeting of 20 Oct).
+  const blocks = editorBlocks.filter(item => (superAdmin || item.id !== "appearance") && !(Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, id]) => id === item.id && unavailable(key)));
   const restrictedBlock = (id: string) => (Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, block]) => block === id && restricted(key));
   const sectionModule: Partial<Record<string, AdminModule>> = { experience: "experience", agenda: "agenda", location: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback: "feedback" };
   const sectionUnavailable = (key: string) => { const owner = sectionModule[key]; return !!owner && unavailable(owner); };
@@ -121,6 +122,12 @@ export function EventEditor({ event: initialEvent, disabledModules = [] }: { eve
   }, [event]);
   const statuses = blockStatuses(event, errors, dirtyBlocks, publishIssues);
   const themeName = themeDefinition(event.theme?.key ?? "werkudara").name;
+  // A block for a module this event does not use waits under "Bagian lain", so the main list
+  // shows only what the event actually has. Opening, editing, or an error keeps it in view.
+  const blockModule = Object.fromEntries((Object.entries(moduleBlocks) as [AdminModule, string][]).map(([key, id]) => [id, key])) as Record<string, AdminModule>;
+  const inUse = (id: string) => !blockModule[id] || moduleActive(event, blockModule[id]) || dirtyBlocks.has(id) || statuses[id] === "error" || statuses[id] === "todo";
+  const mainBlocks = blocks.filter(item => inUse(item.id));
+  const extraBlocks = blocks.filter(item => !inUse(item.id));
   const formatWhen = (iso: string) => `${formatDate(iso, event.timezone)}, ${formatTime(iso, event.timezone)}`;
   function described(name: string, hint?: string) { return [hint ? `${name}-hint` : "", errors[name] ? `${name}-error` : ""].filter(Boolean).join(" ") || undefined; }
   /** Chips and example sentences come from suggestions.ts by field name, so call sites stay short. */
@@ -174,10 +181,20 @@ export function EventEditor({ event: initialEvent, disabledModules = [] }: { eve
    * A block's form, rendered only while its panel is open. Values live in `event`, not in the DOM,
    * so nothing is lost on close; openField() opens the owning block before it focuses a field.
    */
+  const sectionOfBlock: Partial<Record<string, SectionKey>> = { experience: "experience", agenda: "agenda", venue: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback_questions: "feedback" };
+  function showSection(key: SectionKey) {
+    update("sections", event.sections.map(section => section.key === key ? { ...section, enabled: true } : section));
+    if (key === "rsvp" && !event.rsvp_enabled) update("rsvp_enabled", true);
+    if (key === "feedback" && !event.feedback_enabled) update("feedback_enabled", true);
+  }
   function block(id: string, title: string, children: ReactNode) {
     if (open !== id) return null;
     const stage = editorBlocks.find(item => item.id === id)?.stage ?? "prep";
     return <section id={id} data-block={id} className={`${styles.block} ${styles[`stage_${stage}`]}`} aria-label={title}>
+      {sectionOfBlock[id] && !restrictedBlock(id) && !event.sections.find(section => section.key === sectionOfBlock[id])?.enabled && <div className={styles.sectionSwitch}>
+        <Check label="Tampilkan bagian ini di undangan" checked={false} onChange={() => showSection(sectionOfBlock[id]!)} />
+        <p className="field-hint">Bagian ini belum tampil untuk tamu. Isi dulu, lalu nyalakan; atau nyalakan sekarang.</p>
+      </div>}
       {restrictedBlock(id) && <Notice tone="warning">Modul ini dinonaktifkan oleh super admin. Acara ini sudah memakainya, jadi isinya tetap ada dan masih bisa diubah atau dimatikan, tetapi setelah dimatikan tidak bisa dinyalakan lagi.</Notice>}
       {children}
     </section>;
@@ -206,6 +223,20 @@ export function EventEditor({ event: initialEvent, disabledModules = [] }: { eve
     finally { setPending(false); }
   }
   const hidden = hiddenSectionReasons(event);
+  function card(item: (typeof editorBlocks)[number]) {
+    const Icon = blockIcons[item.id] ?? FileText;
+    const status = statuses[item.id];
+    const StatusIcon = statusIcons[status];
+    return <li key={item.id} className={`${styles.card} ${open === item.id ? styles.cardOpen : ""}`.trimEnd()}>
+      <span className={styles.cardIcon} aria-hidden="true"><Icon size={18} /></span>
+      <div className={styles.cardText}>
+        <h3>{item.title}</h3>
+        <p>{blockSummary(item.id, event, themeName, formatWhen)}</p>
+        <span className={`${styles.cardStatus} ${styles[`status_${status}`]}`}><StatusIcon size={12} aria-hidden="true" /> {blockStatusLabels[status]}</span>
+      </div>
+      <button type="button" className={styles.cardEdit} onClick={e => openBlock(item.id, e.currentTarget)} aria-label={`Ubah ${item.title}`}><Pencil size={14} aria-hidden="true" /> Ubah</button>
+    </li>;
+  }
   const photoHelp = <div className={styles.photoGuide}><h3>Panduan ukuran foto</h3><ul>{photoGuidance.map(line => <li key={line}>{line}</li>)}</ul></div>;
   return <form className={styles.form} onSubmit={save} noValidate aria-busy={pending}>
     {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
@@ -214,7 +245,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [] }: { eve
     <nav className={styles.editorMenu} aria-label="Daftar isi editor">
       {editorStages.map(stage => <div key={stage.key} className={`${styles.menuGroup} ${styles[`stage_${stage.key}`]}`}>
         <p className={styles.menuStage}>{stage.label}</p>
-        <ul>{blocks.filter(item => item.stage === stage.key).map(item => {
+        <ul>{mainBlocks.filter(item => item.stage === stage.key).map(item => {
           const Icon = blockIcons[item.id] ?? FileText;
           const status = statuses[item.id];
           return <li key={item.id}><button type="button" onClick={e => openBlock(item.id, e.currentTarget)} aria-current={open === item.id ? "true" : undefined}>
@@ -229,21 +260,13 @@ export function EventEditor({ event: initialEvent, disabledModules = [] }: { eve
       <Readiness blocks={blocks} statuses={statuses} onOpen={openBlock} />
       {editorStages.map(stage => <section key={stage.key} id={`tahap-${stage.key}`} className={`${styles.stageGroup} ${styles[`stage_${stage.key}`]}`} aria-labelledby={`tahap-${stage.key}-title`}>
         <h2 id={`tahap-${stage.key}-title`} className={styles.stageTitle}>{stage.label}</h2>
-        <ul className={styles.cards}>{blocks.filter(item => item.stage === stage.key).map(item => {
-          const Icon = blockIcons[item.id] ?? FileText;
-          const status = statuses[item.id];
-          const StatusIcon = statusIcons[status];
-          return <li key={item.id} className={`${styles.card} ${open === item.id ? styles.cardOpen : ""}`.trimEnd()}>
-            <span className={styles.cardIcon} aria-hidden="true"><Icon size={18} /></span>
-            <div className={styles.cardText}>
-              <h3>{item.title}</h3>
-              <p>{blockSummary(item.id, event, themeName, formatWhen)}</p>
-              <span className={`${styles.cardStatus} ${styles[`status_${status}`]}`}><StatusIcon size={12} aria-hidden="true" /> {blockStatusLabels[status]}</span>
-            </div>
-            <button type="button" className={styles.cardEdit} onClick={e => openBlock(item.id, e.currentTarget)} aria-label={`Ubah ${item.title}`}><Pencil size={14} aria-hidden="true" /> Ubah</button>
-          </li>;
-        })}</ul>
+        <ul className={styles.cards}>{mainBlocks.filter(item => item.stage === stage.key).map(card)}</ul>
       </section>)}
+      {extraBlocks.length > 0 && <details className={styles.moreBlocks}>
+        <summary>Bagian lain yang bisa ditambahkan ({extraBlocks.length})</summary>
+        <p className="field-hint">Bagian ini belum dipakai acara ini. Buka salah satu untuk menambahkannya ke undangan.</p>
+        <ul className={styles.cards}>{extraBlocks.map(card)}</ul>
+      </details>}
     </div>
     </div>
     <div className={styles.panelLayer} hidden={!open}>

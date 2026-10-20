@@ -24,7 +24,7 @@ export default async function EventEditorPage({ params }: { params: Promise<{ id
     <h1 className={styles.title}>{event.title}</h1>
     <p className={styles.eventMeta}>Dibuat {formatDateTime(event.created_at)} · Terakhir disimpan {formatDateTime(event.updated_at)}</p>
     <EventNavigation event={event} current="edit" />
-    <EventEditor key={event.id} event={event} disabledModules={await disabledModulesFor(role)} />
+    <EventEditor key={event.id} event={event} disabledModules={await disabledModulesFor(role)} superAdmin={role === "super"} />
     <DeleteEvent event={event} isFeatured={featuredId === event.id} />
   </AdminShell>;
 }

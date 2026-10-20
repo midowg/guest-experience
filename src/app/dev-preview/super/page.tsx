@@ -3,6 +3,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { SuperDashboard, type SuperEventRow } from "@/components/admin/SuperDashboard";
 import { createSeedEvent } from "@/lib/seed-event";
 import { ModuleSettings } from "@/components/admin/ModuleSettings";
+import { TemplateSettings } from "@/components/admin/TemplateSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -17,5 +18,5 @@ export default function DevSuperPage() {
     row(3, "Contoh Kunjungan Mitra", { event_kind: "kunjungan", status: "published" }),
     row(4, "Contoh Bootcamp", { event_kind: "program", audience: "internal", status: "archived" }),
   ];
-  return <AdminShell bare><h1>Dashboard super admin (contoh)</h1><SuperDashboard events={events} initialHidden={[events[1].id]} migrated /><ModuleSettings initialDisabled={["team", "review"]} migrated /></AdminShell>;
+  return <AdminShell bare><h1>Dashboard super admin (contoh)</h1><TemplateSettings initialEnabled={["kunjungan-klien", "trip-klien"]} migrated /><SuperDashboard events={events} initialHidden={[events[1].id]} migrated /><ModuleSettings initialDisabled={["team", "review"]} migrated /></AdminShell>;
 }

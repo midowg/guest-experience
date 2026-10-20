@@ -3,6 +3,8 @@ import { templateContent } from "./wording/template-content";
 
 export const templateKeys = ["kunjungan-klien", "gala-dinner", "seminar-launching", "annual-meeting", "nyadran", "csr-kegiatan-sosial", "pelatihan-bootcamp", "trip-klien"] as const;
 export type TemplateKey = (typeof templateKeys)[number];
+/** Offered to regular admins until the super admin chooses otherwise: hosting clients first. */
+export const defaultTemplates: readonly TemplateKey[] = ["kunjungan-klien", "trip-klien"];
 
 export type EventTemplate = {
   key: TemplateKey; label: string; description: string;
