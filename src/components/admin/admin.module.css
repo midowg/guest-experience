@@ -413,3 +413,40 @@
 .wizardSummary dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .wizardTodo { padding: var(--space-4); border-radius: 12px; background: color-mix(in srgb, var(--yellow) 14%, #fff); }
 .wizardTodo ul { margin: var(--space-2) 0; padding-left: var(--space-5); display: grid; gap: var(--space-1); }
+
+/* Undangan tamu (Tahap 5): stats, add/import cards, send queue, guest cards. */
+.filterChips button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: var(--space-1) var(--space-4); border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--color-text); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; }
+.filterChips button span { color: var(--ink-soft); font-weight: 700; }
+.filterChips button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: #fff; }
+.filterChips button[aria-pressed="true"] span { color: #fff; }
+.guestStats { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.guestStats span { display: inline-flex; align-items: center; gap: 6px; padding: var(--space-2) var(--space-3); border-radius: 10px; background: #fff; border: 1px solid var(--line); font-weight: 600; font-size: .875rem; }
+.guestMessage { margin: 0; color: var(--st-after); font-weight: 600; }
+.guestCard { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-5); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.guestCardTitle { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: 1rem; font-weight: 700; color: var(--color-text); cursor: default; }
+details.guestCard > summary { cursor: pointer; list-style: revert; }
+.guestFields { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+.inlineCheck { display: inline-flex; align-items: center; gap: var(--space-2); font-size: .875rem; }
+.importTableWrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.importTable { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+.importTable th, .importTable td { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.importTable th { background: var(--page); font-weight: 700; }
+.rowBad td { background: color-mix(in srgb, var(--burgundy) 8%, #fff); }
+.rowWarn td { background: color-mix(in srgb, var(--yellow) 16%, #fff); }
+.sendQueue { position: sticky; top: calc(var(--space-9) + var(--space-2)); z-index: 3; display: grid; gap: var(--space-2); padding: var(--space-4) var(--space-5); border: 2px solid var(--st-after); border-radius: 14px; background: var(--st-after-bg); }
+.sendQueue p { margin: 0; }
+.sendQueueName { font-size: 1.125rem; font-weight: 700; }
+.guestList { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.guestItem { display: grid; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.guestHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.guestBadge { padding: 1px var(--space-2); border-radius: 999px; background: var(--st-guest-bg); color: var(--blue); font-size: .75rem; font-weight: 700; }
+.badgeMuted { background: var(--st-settings-bg); color: var(--st-settings); }
+.guestMeta { margin: 0; color: var(--ink-soft); font-size: .8125rem; }
+.guestStatus { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: 0; font-size: .8125rem; font-weight: 600; }
+.guestStatus span { display: inline-flex; align-items: center; gap: 4px; }
+.statusQuiet { color: var(--ink-soft); font-weight: 500; }
+.statusYes { color: var(--st-after); }
+.statusNo { color: var(--burgundy); }
+.guestActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.guestActions > * { min-height: 40px; padding: var(--space-1) var(--space-3); font-size: .875rem; }
+.guestCard > button[type="submit"] { justify-self: start; }

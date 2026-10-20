@@ -12,6 +12,11 @@ export const langLocales: Record<Lang, string> = { id: "id-ID", en: "en-GB" };
 /** Fills {name}-style variables. A missing English text falls back to the Indonesian one. */
 export function t(lang: Lang, key: WordKey, vars: WordVars = {}): string {
   const text = (lang === "en" && en[key]) || id[key];
+  // Types rule this out; a stale or hand-edited dictionary must still not break the page.
+  if (text === undefined) {
+    if (process.env.NODE_ENV !== "production") console.warn(`wording: kunci "${key}" tidak ada di kamus.`);
+    return key;
+  }
   return text.replace(/\{(\w+)\}/g, (match, name: string) => name in vars ? String(vars[name]) : match);
 }
 

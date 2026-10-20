@@ -6,7 +6,7 @@ import { localizeEvent, translationGaps } from "./localize";
 
 describe("dictionary", () => {
   it("has Indonesian text for every key and only known variables", () => {
-    const known = new Set(["name", "date", "time", "minutes", "teaser", "when", "place", "answer", "zone", "zoneName", "n", "total", "offset"]);
+    const known = new Set(["name", "date", "time", "minutes", "teaser", "when", "place", "answer", "zone", "zoneName", "n", "total", "offset", "event", "link", "deadline"]);
     for (const key of Object.keys(id) as WordKey[]) {
       expect(id[key].trim(), key).not.toBe("");
       for (const text of [id[key], en[key]]) for (const [, name] of text.matchAll(/\{(\w+)\}/g)) expect(known.has(name), `${key}: {${name}}`).toBe(true);

@@ -15,11 +15,11 @@ export default async function InvitationsPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const event = await getAdminEvent(id);
   if (!event) notFound();
-  const invitations = await listInvitations(id);
+  const { invitations, migrated } = await listInvitations(id);
   return <AdminShell>
     <p className="eyebrow">Undangan individual</p>
     <h1 className={styles.title}>{event.title}</h1>
     <EventNavigation event={event} current="invitations" />
-    <InvitationManager event={event} initial={invitations} />
+    <InvitationManager event={event} initial={invitations} migrated={migrated} />
   </AdminShell>;
 }

@@ -166,6 +166,14 @@ export function EventExperience({ event: source, ...props }: ExperienceProps) {
 
 function ExperienceBody({ event, preview = false, invitation, phase = "before", fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
   const { lang, t, dateTime } = useWording();
+  // Counts the opening of a personal link once per browser session. Never in the admin preview.
+  const openedToken = !preview && invitation ? invitation.token : null;
+  useEffect(() => {
+    if (!openedToken) return;
+    const key = `wk_opened_${openedToken.slice(0, 16)}`;
+    try { if (window.sessionStorage.getItem(key)) return; window.sessionStorage.setItem(key, "1"); } catch { /* storage blocked: still count */ }
+    void fetch(`/api/events/${encodeURIComponent(event.slug)}/i/${openedToken}/opened`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", keepalive: true }).catch(() => {});
+  }, [openedToken, event.slug]);
   const [now, setNow] = useState<number | null>(null);
   const [rsvpSaved, setRsvpSaved] = useState(false);
   // The opening should arrive uninterrupted, so the bar stays away until the guest scrolls.

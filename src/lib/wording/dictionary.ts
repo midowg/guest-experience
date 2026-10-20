@@ -182,6 +182,9 @@ export const id = {
   "gallery.play": "Jalankan pergantian otomatis",
   "lang.label": "Bahasa",
   "lang.fallback": "Sebagian informasi hanya tersedia dalam Bahasa Indonesia.",
+  "wa.invite": "Halo {name}, dengan senang hati kami mengundang Anda ke {event} pada {when}. Undangan dan konfirmasi kehadiran ada di tautan pribadi ini: {link}",
+  "wa.reminder": "Halo {name}, sekadar mengingatkan: mohon konfirmasi kehadiran Anda untuk {event} sebelum {deadline}. Tautan undangan Anda: {link}",
+  "wa.reminder.open": "Halo {name}, sekadar mengingatkan: mohon konfirmasi kehadiran Anda untuk {event} pada {when}. Tautan undangan Anda: {link}",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -368,4 +371,7 @@ export const en: Record<WordKey, string> = {
   "gallery.play": "Play the slideshow",
   "lang.label": "Language",
   "lang.fallback": "Some details are only available in Indonesian.",
+  "wa.invite": "Hello {name}, we are delighted to invite you to {event} on {when}. Your invitation and RSVP are at this personal link: {link}",
+  "wa.reminder": "Hello {name}, a gentle reminder to confirm your attendance for {event} by {deadline}. Your invitation link: {link}",
+  "wa.reminder.open": "Hello {name}, a gentle reminder to confirm your attendance for {event} on {when}. Your invitation link: {link}",
 };

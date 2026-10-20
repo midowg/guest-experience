@@ -64,7 +64,7 @@ function readSheets(files) {
 }
 
 // The sheet uses Indonesian placeholder names in the Indonesian column; code passes one set.
-const placeholderNames = { nama: "name", tanggal: "date", jam: "time", menit: "minutes", cuplikan: "teaser", waktu: "when", tempat: "place", jawaban: "answer", zona: "zone", namaZona: "zoneName" };
+const placeholderNames = { nama: "name", tanggal: "date", jam: "time", menit: "minutes", cuplikan: "teaser", waktu: "when", tempat: "place", jawaban: "answer", zona: "zone", namaZona: "zoneName", acara: "event", tautan: "link", batas: "deadline" };
 const known = new Set([...Object.values(placeholderNames), "n", "total", "offset"]);
 const errors = [];
 function normalise(text, key, column) {
