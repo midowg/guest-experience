@@ -1,25 +1,53 @@
 import "server-only";
 import { isIP } from "node:net";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { adminAuthConfig, SESSION_COOKIE, verifySession } from "@/lib/admin-token";
+import { notFound, redirect } from "next/navigation";
+import { adminAuthConfig, SESSION_COOKIE, verifySession, type AdminRole } from "@/lib/admin-token";
 import { ServiceError } from "./config";
+import { isHiddenFromAdmins } from "./event-visibility";
 
 // src/proxy.ts already turns unauthenticated requests away; these checks are the second layer,
 // so a matcher mistake never exposes a page or API on its own.
 
-export async function hasAdminSession(): Promise<boolean> {
+/** The signed-in role, or null. */
+export async function adminRole(): Promise<AdminRole | null> {
   const store = await cookies();
   return verifySession(adminAuthConfig(), store.get(SESSION_COOKIE)?.value);
 }
-
-export async function requireAdminPage(): Promise<void> {
-  if (!(await hasAdminSession())) redirect("/admin/login");
+export async function hasAdminSession(): Promise<boolean> {
+  return (await adminRole()) !== null;
 }
 
-export async function requireApiAdmin(): Promise<void> {
+export async function requireAdminPage(): Promise<AdminRole> {
+  const role = await adminRole();
+  if (!role) redirect("/admin/login");
+  return role;
+}
+
+export async function requireApiAdmin(): Promise<AdminRole> {
   if (!adminAuthConfig()) throw new ServiceError(503, "Login admin belum disiapkan. Isi ADMIN_PASSWORD dan ADMIN_SESSION_SECRET pada server.");
-  if (!(await hasAdminSession())) throw new ServiceError(401, "Sesi berakhir. Masuk kembali sebelum melanjutkan.");
+  const role = await adminRole();
+  if (!role) throw new ServiceError(401, "Sesi berakhir. Masuk kembali sebelum melanjutkan.");
+  return role;
+}
+
+export async function requireSuperAdmin(): Promise<void> {
+  if ((await requireApiAdmin()) !== "super") throw new ServiceError(403, "Hanya super admin yang dapat melakukan ini.");
+}
+
+/**
+ * An event hidden by the super admin does not exist for a regular admin: its pages are 404 and
+ * its APIs answer as if the id were unknown.
+ */
+export async function requireEventAccess(eventId: string): Promise<AdminRole> {
+  const role = await requireApiAdmin();
+  if (role !== "super" && await isHiddenFromAdmins(eventId)) throw new ServiceError(404, "Acara tidak ditemukan.");
+  return role;
+}
+export async function requireEventPage(eventId: string): Promise<AdminRole> {
+  const role = await requireAdminPage();
+  if (role !== "super" && await isHiddenFromAdmins(eventId)) notFound();
+  return role;
 }
 
 export type ClientInfo = { ip: string | null; country: string | null; region: string | null; city: string | null; userAgent: string | null };

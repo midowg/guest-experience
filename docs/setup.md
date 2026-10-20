@@ -14,6 +14,7 @@ Salin `.env.example` menjadi `.env.local`, lalu isi dari Supabase Dashboard → 
 | `RATE_LIMIT_SECRET` | Buat sendiri, acak minimal 32 karakter | Menyamarkan identitas jaringan pada pembatasan laju. |
 | `ADMIN_PASSWORD` | Buat sendiri, minimal 8 karakter | **Rahasia.** Password bersama untuk masuk ke `/admin`. Mengganti nilainya mengeluarkan semua sesi. |
 | `ADMIN_SESSION_SECRET` | Buat sendiri, acak minimal 32 karakter | **Rahasia.** Menandatangani cookie sesi admin. |
+| `SUPER_ADMIN_PASSWORD` | Opsional, minimal 8 karakter, berbeda dari `ADMIN_PASSWORD` | **Rahasia.** Password super admin, yang bisa menyembunyikan acara dari admin biasa. |
 
 `.env*` sudah masuk `.gitignore`, kecuali `.env.example` yang hanya berisi template. Jangan mengirim kunci apa pun melalui chat. `NEXT_PUBLIC_SITE_URL` tercantum di template tetapi saat ini tidak digunakan aplikasi.
 
@@ -45,6 +46,8 @@ Setiap login berhasil, password salah, dan keluar dicatat di tabel `admin_access
 - Log hanya bisa ditambah oleh server (tanpa izin ubah/hapus). Hapus catatan lama secara manual lewat SQL Editor bila diperlukan.
 
 Bila password bocor: ganti `ADMIN_PASSWORD` di Vercel lalu deploy ulang; semua sesi lama otomatis tidak berlaku.
+
+**Super admin (migrasi `202610200005_admin_roles.sql`).** Login dengan `SUPER_ADMIN_PASSWORD` di halaman login yang sama memberi peran super admin (lencana *Super admin* di bilah atas, dicatat di Log akses). Super admin melihat semua acara dan dapat **Sembunyikan dari admin** per acara. Acara tersembunyi tidak muncul di daftar admin biasa, tidak bisa dibuka, disalin, atau diubah lewat API oleh mereka (dijawab *tidak ditemukan*). Halaman tamu tidak berubah: acara yang dipublikasikan tetap bisa dibuka lewat tautannya. Penanda sembunyi disimpan di baris acara, di luar konten, sehingga menyimpan acara tidak mengubahnya; setiap sembunyi/tampil tercatat di `event_audit`. Tanpa `SUPER_ADMIN_PASSWORD` tidak ada super admin. Mengganti atau menghapus password ini mengakhiri sesi super admin tanpa mengeluarkan admin biasa.
 
 Operasi database memakai service-role client **hanya di server**. Jangan pernah membagikan secret key ke browser. Migrasi 007 memberi RPC pengelolaan izin service_role; aturan publikasi, pertanyaan terjawab dan larangan menghapus acara featured tetap berlaku. Audit acara mempunyai actor_id null karena tidak ada akun per orang. Akun/keanggotaan Supabase lama tidak dipakai lagi dan tidak dihapus otomatis.
 

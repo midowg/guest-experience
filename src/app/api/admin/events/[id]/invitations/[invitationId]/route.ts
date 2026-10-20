@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { manageInvitation } from "@/lib/server/invitations";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
-import { requireApiAdmin } from "@/lib/server/admin-session";
+import { requireApiAdmin, requireEventAccess } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string; invitationId: string }> };
@@ -19,6 +19,7 @@ export async function PATCH(request: Request, { params }: Params) {
     checkOrigin(request);
     const { id, invitationId } = await params;
     validate(z.uuid(), id); validate(z.uuid(), invitationId);
+    await requireEventAccess(id);
     const input = validate(updateSchema, await readJson(request, 2000));
     const details = input.action === "update" ? { name: input.name, phone: input.phone, party_size_max: input.party_size_max } : input.action === "rename" ? { name: input.name } : {};
     return success(await manageInvitation(id, input.action, invitationId, details), "Undangan diperbarui.");

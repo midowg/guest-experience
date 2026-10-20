@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, ClipboardCheck, ExternalLink, Eye, LayoutGrid, Mail, MessageSquare, Pencil, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, Crown, ExternalLink, Eye, LayoutGrid, Mail, MessageSquare, Pencil, ShieldCheck } from "lucide-react";
+import { adminRole } from "@/lib/server/admin-session";
 import { ButtonLink, Notice } from "@/components/ui";
 import type { EventRecord } from "@/lib/types";
 import { LogoutButton } from "./AuthControls";
 import styles from "./admin.module.css";
 
 /** `bare` drops the signed-in links, for the login and setup screens. */
-export function AdminShell({ children, bare = false }: { children: ReactNode; bare?: boolean }) {
+export async function AdminShell({ children, bare = false }: { children: ReactNode; bare?: boolean }) {
+  const role = bare ? null : await adminRole();
   return <div className={styles.shell}>
     <header className={styles.header}>
       <div className={`container ${styles.headerInner}`}>
@@ -16,6 +18,7 @@ export function AdminShell({ children, bare = false }: { children: ReactNode; ba
           <span><strong>Werkudara</strong><span className={styles.brandSub}>Admin pengalaman tamu</span></span>
         </a>
         {!bare && <nav className={styles.headerNav} aria-label="Admin">
+          {role === "super" && <span className={styles.roleBadge}><Crown size={14} aria-hidden="true" /> Super admin</span>}
           <a href="/admin" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> Semua acara</a>
           <a href="/admin/akses" className={styles.headerLink}><ShieldCheck size={16} aria-hidden="true" /> Log akses</a>
           <LogoutButton />

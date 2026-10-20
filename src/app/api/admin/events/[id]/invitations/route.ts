@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { importInvitations, listInvitations, manageInvitation } from "@/lib/server/invitations";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
-import { requireApiAdmin } from "@/lib/server/admin-session";
+import { requireApiAdmin, requireEventAccess } from "@/lib/server/admin-session";
 import { MAX_IMPORT } from "@/lib/guest-import";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,11 @@ const guest = z.object({
 const bodySchema = z.union([z.object({ rows: z.array(guest).min(1).max(MAX_IMPORT, `Impor maksimal ${MAX_IMPORT} tamu sekaligus.`) }), guest]);
 
 export async function GET(_request: Request, { params }: Params) {
-  return handle(async () => { await requireApiAdmin(); return success(await listInvitations(validate(idSchema, (await params).id)), "Undangan dimuat."); });
+  return handle(async () => {
+    const id = validate(idSchema, (await params).id);
+    await requireEventAccess(id);
+    return success(await listInvitations(id), "Undangan dimuat.");
+  });
 }
 
 export async function POST(request: Request, { params }: Params) {
@@ -24,6 +28,7 @@ export async function POST(request: Request, { params }: Params) {
     await requireApiAdmin();
     checkOrigin(request);
     const id = validate(idSchema, (await params).id);
+    await requireEventAccess(id);
     const input = validate(bodySchema, await readJson(request, 200_000));
     if ("rows" in input) {
       const created = await importInvitations(id, input.rows);

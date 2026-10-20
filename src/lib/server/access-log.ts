@@ -7,6 +7,8 @@ export type AccessKind = "login_success" | "login_failure" | "logout";
 export type AccessEntry = {
   id: number; at: string; kind: AccessKind; ip: string | null; country: string | null; region: string | null;
   city: string | null; user_agent: string | null; device_id: string | null; new_device: boolean;
+  /** Since 202610200005; null on older rows and for failed attempts. */
+  role?: "admin" | "super" | null;
 };
 
 const TABLE = "admin_access_log";
@@ -25,12 +27,12 @@ export async function isKnownDevice(deviceId: string): Promise<boolean | null> {
  * Best effort: a log outage must not lock the owner out, so failures are reported to the
  * server console and to the caller instead of being thrown.
  */
-export async function recordAccess(kind: AccessKind, client: ClientInfo, deviceId: string, newDevice: boolean): Promise<boolean> {
+export async function recordAccess(kind: AccessKind, client: ClientInfo, deviceId: string, newDevice: boolean, role: "admin" | "super" | null = null): Promise<boolean> {
   try {
-    const { error } = await createPrivilegedClient().from(TABLE).insert({
-      kind, ip: client.ip, country: client.country, region: client.region, city: client.city,
-      user_agent: client.userAgent, device_id: deviceId, new_device: newDevice,
-    });
+    const row = { kind, ip: client.ip, country: client.country, region: client.region, city: client.city, user_agent: client.userAgent, device_id: deviceId, new_device: newDevice };
+    let { error } = await createPrivilegedClient().from(TABLE).insert({ ...row, role });
+    // Before 202610200005 there is no role column: still record the attempt.
+    if (error && /role/.test(error.message ?? "") && ["42703", "PGRST204"].includes(error.code ?? "")) ({ error } = await createPrivilegedClient().from(TABLE).insert(row));
     if (error) console.error(`admin_access_log: ${missingTable(error) ? "tabel belum dimigrasikan" : error.message}`);
     return !error;
   } catch (error) {

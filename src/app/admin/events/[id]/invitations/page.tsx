@@ -5,7 +5,7 @@ import { getAdminEvent } from "@/lib/server/events";
 import { listInvitations } from "@/lib/server/invitations";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import styles from "@/components/admin/admin.module.css";
-import { requireAdminPage } from "@/lib/server/admin-session";
+import { requireAdminPage, requireEventPage } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +13,7 @@ export default async function InvitationsPage({ params }: { params: Promise<{ id
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const { id } = await params;
+  await requireEventPage(id);
   const event = await getAdminEvent(id);
   if (!event) notFound();
   const { invitations, migrated } = await listInvitations(id);

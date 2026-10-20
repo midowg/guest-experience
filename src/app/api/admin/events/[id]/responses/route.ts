@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { listRsvps } from "@/lib/server/responses";
 import { handle, success, validate } from "@/lib/server/http";
-import { requireApiAdmin } from "@/lib/server/admin-session";
+import { requireApiAdmin, requireEventAccess } from "@/lib/server/admin-session";
 
 export const dynamic = "force-dynamic";
 const idSchema = z.uuid();
@@ -10,6 +10,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   return handle(async () => {
     await requireApiAdmin();
     const id = validate(idSchema, (await params).id);
+    await requireEventAccess(id);
     const url = new URL(request.url);
     const attendance = url.searchParams.get("attendance");
     const result = await listRsvps(id, {

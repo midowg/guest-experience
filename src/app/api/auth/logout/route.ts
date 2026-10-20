@@ -11,9 +11,10 @@ export async function POST(request: Request) {
   return handle(async () => {
     checkOrigin(request);
     const store = await cookies();
-    if (verifySession(adminAuthConfig(), store.get(SESSION_COOKIE)?.value)) {
+    const role = verifySession(adminAuthConfig(), store.get(SESSION_COOKIE)?.value);
+    if (role) {
       const device = store.get(DEVICE_COOKIE)?.value;
-      await recordAccess("logout", clientInfo(request), isDeviceId(device) ? device : randomUUID(), false);
+      await recordAccess("logout", clientInfo(request), isDeviceId(device) ? device : randomUUID(), false, role);
     }
     store.delete(SESSION_COOKIE);
     return success(null, "Anda sudah keluar.");
