@@ -10,11 +10,35 @@
 @media (min-width: 72rem) { .layout { grid-template-columns: var(--menu-width) minmax(0, 1fr) var(--phone-width); } }
 @media (min-width: 48rem) and (max-width: 71.99rem) { .layout { grid-template-columns: minmax(0, 1fr) 18rem; } }
 
-/* Menu (wide screens) */
-.menu { display: none; }
+/* Block menu: a sidebar on a wide screen (☰ hides it), a drawer from the left below that. */
+.menu { display: grid; align-content: start; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.menuHead { display: none; }
 @media (min-width: 72rem) {
-  .menu { position: sticky; top: var(--sticky-top); display: grid; gap: var(--space-3); max-height: calc(100vh - var(--sticky-top) - 6rem); overflow-y: auto; padding: var(--space-3); border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+  .menu { position: sticky; top: var(--sticky-top); max-height: calc(100vh - var(--sticky-top) - 2rem); overflow-y: auto; }
+  .menuBackdrop { display: none; }
+  .layout[data-menu="hidden"] { grid-template-columns: minmax(0, 1fr) var(--phone-width); }
+  .layout[data-menu="hidden"][data-device="web"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); }
+  .layout[data-menu="hidden"] .menu { display: none; }
 }
+@media (max-width: 71.99rem) {
+  .menu { position: fixed; top: 0; bottom: 0; left: 0; z-index: 60; width: min(20rem, 86vw); overflow-y: auto; border-radius: 0 16px 16px 0; box-shadow: 0 10px 40px rgba(15, 25, 50, .25); transform: translateX(-105%); visibility: hidden; transition: transform .2s ease, visibility .2s; }
+  .menu[data-open] { transform: none; visibility: visible; }
+  .menuHead { display: flex; align-items: center; justify-content: space-between; padding: var(--space-1) 0 var(--space-2); border-bottom: 1px solid var(--line); }
+  .menuHead button { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 10px; background: var(--page); cursor: pointer; }
+  .menuBackdrop { position: fixed; inset: 0; z-index: 59; border: 0; background: rgba(15, 20, 30, .4); }
+}
+@media (prefers-reduced-motion: reduce) { .menu { transition: none; } }
+.menuDanger { border-top: 1px solid var(--line); padding-top: var(--space-2) !important; }
+.menuDanger button { color: #9a273d; }
+.menuDanger button[aria-current="true"] { background: #9a273d; color: #fff; }
+
+/* ☰ in the toolbar */
+.menuToggle { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 42px; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--color-text); font: inherit; font-weight: 700; cursor: pointer; }
+.menuToggle:hover { border-color: var(--blue); }
+.menuToggleText { display: grid; min-width: 0; text-align: left; line-height: 1.15; }
+.menuToggleLabel { font-size: .8125rem; color: #5b6476; }
+.menuToggleText strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 71.99rem) { .menuToggle { flex: 1; min-width: 0; } .menuToggleLabel { font-size: .6875rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; } }
 .menu ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .menu button { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 38px; padding: 6px var(--space-2); border: 0; border-radius: 10px; background: transparent; color: var(--color-text); font: inherit; font-size: .9rem; font-weight: 600; text-align: left; cursor: pointer; }
 .menu button:hover { background: var(--page); }

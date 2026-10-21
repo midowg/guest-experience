@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
 import { EventEditor } from "@/components/admin/editor/EventEditor";
-import { menuButton, openBlock, otherBlocks } from "@/components/admin/editor/editor-test-helpers";
+import { editorMenu, menuButton, openBlock, otherBlocks } from "@/components/admin/editor/editor-test-helpers";
 
 // The full editor is a large DOM; role queries over it outlast the 5 s default when the
 // whole suite runs in parallel. The cost is in the queries, not in the behaviour under test.
@@ -132,9 +132,35 @@ it("switches between the form and the phone preview on a phone", () => {
   expect(layout.getAttribute("data-view")).toBe("form");
   fireEvent.click(screen.getByRole("button", { name: "Lihat" }));
   expect(layout.getAttribute("data-view")).toBe("preview");
-  fireEvent.change(screen.getByRole("combobox", { name: "Bagian yang diubah" }), { target: { value: "venue" } });
+  // ☰ opens the block menu as a drawer; picking a block closes it and shows that block's form.
+  const toggle = screen.getByRole("button", { name: /Bagian/ });
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  fireEvent.click(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(editorMenu().getAttribute("data-open")).not.toBeNull();
+  openBlock("Lokasi");
+  expect(editorMenu().getAttribute("data-open")).toBeNull();
   expect(layout.getAttribute("data-view")).toBe("form");
   expect(screen.getByRole("heading", { level: 2, name: "Lokasi" })).toBeTruthy();
+});
+
+it("closes the drawer with Escape or the backdrop", () => {
+  render(<EventEditor event={createSeedEvent()} />);
+  fireEvent.click(screen.getByRole("button", { name: /Bagian/ }));
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(editorMenu().getAttribute("data-open")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /Bagian/ }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Tutup menu" })[0]);
+  expect(editorMenu().getAttribute("data-open")).toBeNull();
+});
+
+it("keeps deleting the event in the menu, away from the forms", () => {
+  render(<EventEditor event={createSeedEvent()} dangerZone={<p>Isi hapus acara</p>} />);
+  expect(screen.queryByText("Isi hapus acara")).toBeNull();
+  openBlock("Hapus acara");
+  expect(screen.getByRole("heading", { level: 2, name: "Hapus acara" })).toBeTruthy();
+  expect(screen.getByText("Isi hapus acara")).toBeTruthy();
+  expect(screen.queryByRole("textbox", { name: "Judul acara" })).toBeNull();
 });
 
 it("offers known greetings as chips that replace the text, with a way back to what was typed", () => {

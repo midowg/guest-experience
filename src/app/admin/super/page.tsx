@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { SuperDashboard, type SuperEventRow } from "@/components/admin/super/SuperDashboard";
@@ -29,7 +30,7 @@ export default async function SuperAdminPage() {
     <p className="eyebrow">Super admin</p>
     <h1 className={styles.title}>Dashboard super admin</h1>
     <p className={styles.lead}>Atur tim yang bisa dipilih sebagai PIC, templat yang bisa dipilih admin biasa, acara yang terlihat, dan modul yang boleh dipakai saat membuat atau mengubah acara.</p>
-    <nav className={styles.superTabs} aria-label="Bagian dashboard"><a href="#tim">Tim Werkudara</a><a href="#templat">Templat</a><a href="#visibilitas">Visibilitas acara</a><a href="#modul">Modul admin</a></nav>
+    <nav className={styles.superTabs} aria-label="Bagian dashboard"><a href="#tim">Tim Werkudara</a><Link href="/admin/akses">Log akses</Link><a href="#templat">Templat</a><a href="#visibilitas">Visibilitas acara</a><a href="#modul">Modul admin</a></nav>
     <div id="tim"><StaffSettings initial={team.staff} migrated={team.migrated} /></div>
     <div id="templat"><TemplateSettings initialEnabled={templates.templates} migrated={templates.migrated} /></div>
     <section id="visibilitas" aria-labelledby="visibility-title" className="stack">

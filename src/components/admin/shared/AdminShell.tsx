@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ClipboardCheck, Crown, ExternalLink, Images, LayoutGrid, Mail, MessageSquare, Pencil, ScanLine, ShieldCheck, UtensilsCrossed } from "lucide-react";
+import { ClipboardCheck, Crown, ExternalLink, Images, LayoutGrid, Mail, MessageSquare, Pencil, ScanLine, UtensilsCrossed } from "lucide-react";
 import { adminRole } from "@/lib/server/admin-session";
 import { ButtonLink, Notice } from "@/components/ui";
 import type { EventRecord } from "@/lib/types";
@@ -26,7 +26,6 @@ export async function AdminShell({ children, bare = false, wide = false }: { chi
           {/* On a phone only the icons show; each link keeps its name for screen readers. */}
           {role === "super" && <Link href="/admin/super" aria-label="Dashboard super admin" className={`${styles.headerLink} ${styles.roleLink}`}><Crown size={16} aria-hidden="true" /> <span className={shell.linkText}>Super admin</span></Link>}
           <Link href="/admin" aria-label="Semua acara" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> <span className={shell.linkText}>Semua acara</span></Link>
-          <Link href="/admin/akses" aria-label="Log akses" className={styles.headerLink}><ShieldCheck size={16} aria-hidden="true" /> <span className={shell.linkText}>Log akses</span></Link>
           <LogoutButton />
         </nav>}
       </div>
@@ -43,16 +42,18 @@ export function SetupNotice() {
   </section>;
 }
 /**
- * The event's pages in three groups: edit the invitation, work with guests, run the event. "Semua
- * acara" is in the header, and the live preview lives in the editor, so neither is repeated here.
+ * The event's pages as plain tabs, in three runs: edit, guests (list, RSVP, check-in), operations
+ * (BEO, gallery, feedback). "Semua acara" is in the header and the live preview in the editor.
  */
 export function EventNavigation({ event, current }: { event: EventRecord; current: AdminTab }) {
   const tab = (key: AdminTab, label: string, Icon: typeof Pencil) =>
     <a href={adminEventPath(event, key)} className={nav.tab} aria-current={current === key ? "page" : undefined}><Icon size={16} aria-hidden="true" /> {label}</a>;
   return <nav className={nav.bar} aria-label="Pengelolaan acara">
-    <div className={nav.group}><span className={nav.label}>Edit</span>{tab("edit", "Undangan", Pencil)}</div>
-    <div className={nav.group}><span className={nav.label}>Tamu</span>{tab("invitations", "Daftar tamu", Mail)}{tab("responses", "RSVP", ClipboardCheck)}{tab("checkin", "Check-in", ScanLine)}</div>
-    <div className={nav.group}><span className={nav.label}>Operasional</span>{tab("beo", "BEO", UtensilsCrossed)}{tab("gallery", "Galeri", Images)}{tab("feedback", "Feedback", MessageSquare)}</div>
+    {tab("edit", "Edit acara", Pencil)}
+    <span className={nav.divider} aria-hidden="true" />
+    {tab("invitations", "Daftar tamu", Mail)}{tab("responses", "RSVP", ClipboardCheck)}{tab("checkin", "Check-in", ScanLine)}
+    <span className={nav.divider} aria-hidden="true" />
+    {tab("beo", "BEO", UtensilsCrossed)}{tab("gallery", "Galeri", Images)}{tab("feedback", "Feedback", MessageSquare)}
     {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer" className={`${nav.tab} ${nav.public}`}><ExternalLink size={16} aria-hidden="true" /> Buka undangan<span className="sr-only"> (tab baru)</span></a>}
   </nav>;
 }

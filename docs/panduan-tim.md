@@ -11,7 +11,7 @@ Setiap acara punya **kode 6 karakter**, misalnya `invitation.werkudara.group/AB2
 - Tautan lama `/e/…` masih bisa dibuka dan otomatis pindah ke alamat baru.
 - Halaman admin acara juga pendek: `/admin/acara/AB23CD`, `/admin/acara/AB23CD/undangan`, `/admin/acara/AB23CD/checkin`.
 
-Masuk lewat `/admin` dengan password tim. Setiap login dicatat (waktu, IP, perkiraan lokasi, perangkat); lihat di menu **Log akses**.
+Masuk lewat `/admin` dengan password tim. Setiap login dicatat (waktu, IP, perkiraan lokasi, perangkat); catatannya bisa dilihat super admin di **Dashboard super admin › Log akses**.
 
 ## 1. Buat acara (± 1 menit)
 
@@ -31,8 +31,10 @@ Editor terdiri dari tiga kolom: **menu bagian** di kiri, **form** di tengah, dan
 - Di atas pratinjau ada pilihan **Ponsel / Web** (bawaannya Ponsel, karena kebanyakan tamu membuka dari HP) dan **Sebelum / Hari H / Sesudah** untuk melihat tampilan tiap tahap. Blok Hari H dan Setelah acara otomatis menampilkan tahapnya.
 - Bagian yang bisa dinyalakan atau dimatikan (misalnya Rundown, Lokasi, RSVP, Kontak, Our Team, Survei, Ulasan Google) punya **switch di pojok kanan judulnya**. Bagian yang menyala diberi tanda **Aktif** di menu. Bagian yang selalu ada (misalnya Identitas, Waktu, Foto pembuka) tidak punya switch.
 - Titik di menu menandai bagian yang **belum disimpan** (biru) atau **perlu diperbaiki** sebelum dipublikasikan (kuning/merah).
-- Bilah di atas editor selalu terlihat saat menggulir. Isinya pilihan bagian (di HP dan tablet), **Isi / Lihat** (di HP: ikon pensil untuk mengisi, ikon ponsel untuk melihat), dan tombol **Simpan**. Tombol bertuliskan *Tersimpan* (atau ikon centang di HP) bila tidak ada perubahan.
-- Menu acara di atasnya: **Edit** (Undangan), **Tamu** (Daftar tamu, RSVP, Check-in), dan **Operasional** (BEO, Galeri, Feedback). Kembali ke daftar acara lewat ikon kotak-kotak di kepala halaman.
+- Bilah di atas editor selalu terlihat saat menggulir. Isinya tombol **☰** untuk menu bagian, **Isi / Lihat** (di HP: ikon pensil untuk mengisi, ikon ponsel untuk melihat), dan tombol **Simpan**. Tombol bertuliskan *Tersimpan* (atau ikon centang di HP) bila tidak ada perubahan.
+- **☰** di HP dan tablet membuka menu bagian dari kiri; ketuk bagian, atau di luar menu, untuk menutupnya. Di laptop, ☰ menyembunyikan atau menampilkan menu samping supaya form dan pratinjau lebih lebar.
+- **Hapus acara** ada di bagian paling bawah menu. Untuk konfirmasi, ketik kode acara (misalnya AB23CD).
+- Tab di atas editor: **Edit acara**, **Daftar tamu**, **RSVP**, **Check-in**, **BEO**, **Galeri**, **Feedback**. Kembali ke daftar acara lewat ikon kotak-kotak di kepala halaman.
 - Bagian yang dipakai templat tampil di menu. Bagian lain ada di lipatan **Bagian lain** di dasar menu; buka hanya bila perlu.
 - **Jadwal**: acara lebih dari sehari otomatis tampil per hari (Hari 1, Hari 2, …). Setiap sesi punya **Tambahan (opsional)**: lokasi kegiatan, cuplikan "Kenali lebih dekat", kotak **Tahukah Anda?**, dan halaman PDF presentasi.
 - **Kontak**: ketuk salah satu nama di **Pilih PIC dari tim**. Nama, jabatan, nomor WhatsApp, dan foto langsung terisi. Isi manual tetap bisa dipakai untuk PIC dari luar tim. Untuk trip, isi juga **Kontak darurat** dan rumah sakit terdekat.
@@ -88,6 +90,7 @@ Galeri aktif setelah bucket R2 disiapkan (lihat [setup](setup.md)).
 
 Menu **Dashboard super admin** (password terpisah):
 
+- **Log akses**: catatan setiap login dan keluar.
 - **Tim Werkudara**: tambah orang yang biasa menjadi PIC (nama, jabatan, nomor WhatsApp, foto). Orang yang dinonaktifkan tidak muncul di pilihan PIC. Mengubah atau menghapus data di sini tidak mengubah acara yang sudah memakai orang itu.
 - **Templat Buat acara**: pilih templat yang tampil untuk tim.
 - **Visibilitas**: sembunyikan acara dari admin biasa.

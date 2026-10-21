@@ -10,16 +10,18 @@ import styles from "@/components/admin/admin.module.css";
 import { adminApi } from "@/lib/routes";
 
 /**
- * Deleting takes the guest answers with it and cannot be undone, so the confirmation asks
- * for the slug to be typed rather than accepting a single click.
+ * Deleting takes the guest answers with it and cannot be undone, so the confirmation asks for
+ * the event's code (or its slug, before short codes) to be typed rather than a single click.
+ * `bare` drops the heading where the page already titles it (the editor's "Hapus acara").
  */
-export function DeleteEvent({ event, isFeatured }: { event: EventRecord; isFeatured: boolean }) {
+export function DeleteEvent({ event, isFeatured, bare = false }: { event: EventRecord; isFeatured: boolean; bare?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const matches = typed.trim() === event.slug;
+  const word = event.code || event.slug;
+  const matches = event.code ? typed.trim().toUpperCase() === event.code : typed.trim() === event.slug;
 
   async function remove() {
     if (pending || !matches) return;
@@ -34,8 +36,8 @@ export function DeleteEvent({ event, isFeatured }: { event: EventRecord; isFeatu
     }
   }
 
-  return <section className={styles.danger} aria-labelledby="delete-heading">
-    <h2 id="delete-heading">Hapus acara</h2>
+  return <section className={styles.danger} aria-labelledby={bare ? undefined : "delete-heading"} aria-label={bare ? "Hapus acara" : undefined}>
+    {!bare && <h2 id="delete-heading">Hapus acara</h2>}
     <p>Menghapus acara ini juga menghapus rundown, pertanyaan survei, konfirmasi kehadiran, dan masukan tamu yang sudah masuk. Tindakan ini tidak dapat dibatalkan.</p>
 
     {isFeatured
@@ -46,7 +48,7 @@ export function DeleteEvent({ event, isFeatured }: { event: EventRecord; isFeatu
           {error && <Notice tone="error">{error}</Notice>}
           <Field
             name="delete-confirm"
-            label={`Ketik ${event.slug} untuk mengonfirmasi`}
+            label={`Ketik ${word} untuk mengonfirmasi`}
             hint="Pengetikan ini mencegah penghapusan yang tidak disengaja."
           >
             <input
@@ -57,6 +59,8 @@ export function DeleteEvent({ event, isFeatured }: { event: EventRecord; isFeatu
               disabled={pending}
               aria-describedby="delete-confirm-hint"
               onChange={changed => setTyped(changed.target.value)}
+              // Inside the editor's form, Enter would save the event instead.
+              onKeyDown={key => { if (key.key === "Enter") { key.preventDefault(); void remove(); } }}
             />
           </Field>
           <div className={styles.actions}>

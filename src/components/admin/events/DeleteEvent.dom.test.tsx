@@ -70,4 +70,16 @@ describe("deleting an event", () => {
     expect(confirmField()).toBeNull();
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
+
+  it("asks for the short code, in any case, once the event has one", () => {
+    render(<DeleteEvent event={{ ...event, code: "AB23CD" }} isFeatured={false} bare />);
+    expect(screen.queryByRole("heading", { name: "Hapus acara" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Hapus acara ini/ }));
+    const field = screen.getByLabelText("Ketik AB23CD untuk mengonfirmasi");
+    const remove = screen.getByRole("button", { name: /Hapus permanen/ }) as HTMLButtonElement;
+    fireEvent.change(field, { target: { value: event.slug } });
+    expect(remove.disabled).toBe(true);
+    fireEvent.change(field, { target: { value: "ab23cd" } });
+    expect(remove.disabled).toBe(false);
+  });
 });

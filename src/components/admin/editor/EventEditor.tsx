@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Notice } from "@/components/ui";
-import { CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Shirt, Smartphone, Sparkles, Star, Users, type LucideIcon } from "lucide-react";
+import { CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
 import { Check, SuggestionChips } from "@/components/admin/editor/controls";
 import { chipLabel, fieldExamples, fieldPattern, fieldSuggestions, fillSuggestion } from "@/components/admin/editor/suggestions";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
@@ -38,18 +38,34 @@ import { absolute, adminApi, eventPath } from "@/lib/routes";
 
 
 const blockIcons: Record<string, LucideIcon> = {
-  identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
+  delete: Trash2, identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
   agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, language: Languages, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
   feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket,
 };
 
+
+const WIDE = "(min-width: 72rem)";
+/** Whether the menu is a sidebar (wide screen) or a drawer. Without matchMedia it is a drawer. */
+function useWideScreen() {
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia(WIDE);
+    const sync = () => setWide(query.matches);
+    // The server cannot know the screen; the first render is the phone layout, then this corrects it.
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+  return wide;
+}
 
 /**
  * `disabledModules` comes from the super admin and is empty for them. A switched-off module
  * that this event does not use is not offered at all; one it already uses stays visible with a
  * note, may be switched off, and cannot come back (the server checks the same rule on save).
  */
-export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false, origin = "", staff = [], previewSrc }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean; origin?: string; staff?: StaffMember[]; previewSrc?: string }) {
+export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false, origin = "", staff = [], previewSrc, dangerZone }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean; origin?: string; staff?: StaffMember[]; previewSrc?: string; dangerZone?: ReactNode }) {
   const unavailable = (key: AdminModule) => disabledModules.includes(key) && !moduleActive(initialEvent, key);
   const restricted = (key: AdminModule) => disabledModules.includes(key) && moduleActive(initialEvent, key);
   // Kind, audience, and theme come from the template; only the super admin changes them (meeting of 20 Oct).
@@ -72,6 +88,17 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const [view, setView] = useState<"form" | "preview">("form");
   // The phone is what most guests see; the web view is a second look.
   const [device, setDevice] = useState<PreviewDevice>("mobile");
+  // The block menu: a drawer behind ☰ on phone and tablet, a sidebar that ☰ hides on a wide screen.
+  const wide = useWideScreen();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarHidden, setSidebarHidden] = useState(false);
+  const menuShown = wide ? !sidebarHidden : drawerOpen;
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (key: KeyboardEvent) => { if (key.key === "Escape") setDrawerOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
   const [dirtyBlocks, setDirtyBlocks] = useState<Set<string>>(() => new Set());
   const errorSummary = useRef<HTMLDivElement>(null);
   const blockTitle = useRef<HTMLHeadingElement>(null);
@@ -89,7 +116,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   }
   /** Switch the form to another block; the preview follows with the matching part and phase. */
   function openBlock(id: string) {
-    setOpen(id); setPhase(phaseOfBlock(id)); setView("form");
+    setOpen(id); setPhase(phaseOfBlock(id)); setView("form"); setDrawerOpen(false);
     requestAnimationFrame(() => {
       const title = blockTitle.current;
       if (!title) return;
@@ -220,6 +247,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     finally { setPending(false); }
   }
   const openMeta = editorBlocks.find(item => item.id === open);
+  const openTitle = open === "delete" ? "Hapus acara" : openMeta?.title ?? "";
   function menuItem(item: (typeof editorBlocks)[number]) {
     const Icon = blockIcons[item.id] ?? FileText;
     const status = statuses[item.id];
@@ -234,30 +262,30 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
     {message && <Notice tone="success">{message}</Notice>}
     {/*
-      One bar above the editor holds what is used all the time: which part to edit (tablet and
-      phone), form or preview (phone), and Simpan. It sticks under the header and covers nothing.
+      One bar above the editor holds what is used all the time: ☰ for the block menu, form or
+      preview (phone), and Simpan. It sticks under the header and covers nothing.
     */}
     <div className={e.toolbar} role="region" aria-label="Simpan perubahan">
-      <div className={e.picker}>
-        <label htmlFor="editor-block" className="sr-only">Bagian yang diubah</label>
-        <select id="editor-block" className="input" value={open} onChange={change => openBlock(change.target.value)}>
-          {editorStages.map(stage => mainBlocks.some(item => item.stage === stage.key) && <optgroup key={stage.key} label={stage.label}>
-            {mainBlocks.filter(item => item.stage === stage.key).map(item => <option key={item.id} value={item.id}>{blockSwitch(item.id)?.on ? "● " : ""}{item.title}{["todo", "error"].includes(statuses[item.id]) ? " · perlu dilengkapi" : ""}</option>)}
-          </optgroup>)}
-          {extraBlocks.length > 0 && <optgroup label="Bagian lain">{extraBlocks.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</optgroup>}
-        </select>
-        <div className={e.viewSwitch} role="group" aria-label="Tampilan">
-          <button type="button" aria-pressed={view === "form"} aria-label="Isi" onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> <span className={e.btnText}>Isi</span></button>
-          <button type="button" aria-pressed={view === "preview"} aria-label="Lihat" onClick={() => setView("preview")}><Smartphone size={15} aria-hidden="true" /> <span className={e.btnText}>Lihat</span></button>
-        </div>
+      <button type="button" className={e.menuToggle} aria-controls="editor-menu" aria-expanded={menuShown} onClick={() => wide ? setSidebarHidden(hidden => !hidden) : setDrawerOpen(true)}>
+        <Menu size={18} aria-hidden="true" />
+        <span className={e.menuToggleText}><span className={e.menuToggleLabel}>{wide ? (sidebarHidden ? "Tampilkan menu" : "Sembunyikan menu") : "Bagian"}</span>{!wide && <strong>{openTitle}</strong>}</span>
+      </button>
+      <div className={e.viewSwitch} role="group" aria-label="Tampilan">
+        <button type="button" aria-pressed={view === "form"} aria-label="Isi" onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> <span className={e.btnText}>Isi</span></button>
+        <button type="button" aria-pressed={view === "preview"} aria-label="Lihat" onClick={() => setView("preview")}><Smartphone size={15} aria-hidden="true" /> <span className={e.btnText}>Lihat</span></button>
       </div>
       <span className={`${e.saveState} ${dirty ? e.saveStateDirty : ""}`.trimEnd()} role="status">{dirty ? <><CircleDot size={16} aria-hidden="true" /> {dirtyBlocks.size > 1 ? `${dirtyBlocks.size} bagian belum disimpan` : "Ada perubahan yang belum disimpan"}</> : <><CircleCheck size={16} aria-hidden="true" /> Semua perubahan tersimpan</>}</span>
       <Button type="submit" variant={dirty ? "primary" : "secondary"} className={e.saveButton} disabled={pending} aria-label={event.status === "published" ? "Simpan & publikasikan" : "Simpan perubahan"}>
         {pending ? "Menyimpan…" : dirty ? <><Save size={17} aria-hidden="true" /> Simpan{event.status === "published" && <span className={e.wideOnly}>&nbsp;&amp; publikasikan</span>}</> : <><CircleCheck size={17} aria-hidden="true" /> <span className={e.btnText}>Tersimpan</span></>}
       </Button>
     </div>
-    <div className={e.layout} data-view={view} data-device={device}>
-      <nav className={e.menu} aria-label="Bagian acara">
+    <div className={e.layout} data-view={view} data-device={device} data-menu={sidebarHidden ? "hidden" : undefined}>
+      {drawerOpen && <button type="button" className={e.menuBackdrop} aria-label="Tutup menu" onClick={() => setDrawerOpen(false)} />}
+      <nav id="editor-menu" className={e.menu} aria-label="Bagian acara" data-open={drawerOpen || undefined}>
+        <div className={e.menuHead}>
+          <strong>Bagian acara</strong>
+          <button type="button" aria-label="Tutup menu" onClick={() => setDrawerOpen(false)}><X size={18} aria-hidden="true" /></button>
+        </div>
         {editorStages.map(stage => {
           const items = mainBlocks.filter(item => item.stage === stage.key);
           return items.length > 0 && <div key={stage.key} className={e.menuGroup}>
@@ -270,13 +298,14 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
           <p className="field-hint">Belum dipakai acara ini. Buka untuk menambahkannya.</p>
           <ul>{extraBlocks.map(menuItem)}</ul>
         </details>}
+        {dangerZone && <ul className={e.menuDanger}><li><button type="button" onClick={() => openBlock("delete")} aria-current={open === "delete" ? "true" : undefined}><Trash2 size={16} aria-hidden="true" /><span>Hapus acara</span></button></li></ul>}
       </nav>
       <section className={e.formPane} aria-labelledby="block-title">
         <header className={e.formHeader}>
           <span className={e.formIcon} aria-hidden="true">{(() => { const Icon = blockIcons[open] ?? FileText; return <Icon size={20} />; })()}</span>
           <div>
-            <p className={e.formStage}>{editorStages.find(stage => stage.key === openMeta?.stage)?.label}</p>
-            <h2 id="block-title" ref={blockTitle} tabIndex={-1}>{openMeta?.title}</h2>
+            <p className={e.formStage}>{open === "delete" ? "Pengaturan" : editorStages.find(stage => stage.key === openMeta?.stage)?.label}</p>
+            <h2 id="block-title" ref={blockTitle} tabIndex={-1}>{openTitle}</h2>
           </div>
           {(() => {
             const toggle = blockSwitch(open);
@@ -289,6 +318,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
             </label>;
           })()}
         </header>
+    {open === "delete" ? <div className={e.formBody}>{dangerZone}</div> :
     <fieldset disabled={pending} className={`${styles.fieldset} ${e.formBody}`}>
       {block("identity", "Identitas & undangan", <IdentityBlock kit={kit} />)}
       {block("appearance", "Jenis, audiens, dan tampilan", <AppearanceBlock event={event} update={update} />)}
@@ -310,7 +340,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {block("language", "Bahasa & terjemahan", <TranslationBlock event={event} update={update} control={control} />)}
       {block("sections", "Urutan & tampilan bagian", <SectionsBlock kit={kit} />)}
       {block("publication", "Status & penyimpanan", <PublicationBlock kit={kit} />)}
-    </fieldset>
+    </fieldset>}
       </section>
       <aside className={e.previewPane} aria-label="Pratinjau undangan">
         <PhonePreview event={event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open)} onFocusArea={area => openBlock(blockOfArea[area])} src={previewSrc} />
