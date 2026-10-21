@@ -2,7 +2,8 @@ import { fireEvent, screen, within } from "@testing-library/react";
 
 /** The editor's side menu, where an admin picks which block's form to show. */
 export const editorMenu = () => screen.getByRole("navigation", { name: "Bagian acara" });
-const exact = (title: string) => new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+/** The title, followed by " Aktif" when the block is switched on. */
+const exact = (title: string) => new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}( Aktif)?$`);
 /** A block's menu button, or null when the block is not offered. */
 export const menuButton = (title: string) => within(editorMenu()).queryByRole("button", { name: exact(title) });
 /** Open a block the way an admin does: from the menu. */

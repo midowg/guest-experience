@@ -116,7 +116,8 @@ it("opens on the basics, switches blocks from the menu, and marks unsaved change
   expect(screen.getByRole("textbox", { name: "Judul acara" })).toBeTruthy();
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(screen.getByTitle("Pratinjau undangan di ponsel")).toBeTruthy();
-  expect(screen.getByText("Kesiapan tayang")).toBeTruthy();
+  // No completeness score: what an event needs differs from event to event.
+  expect(screen.queryByText("Kesiapan tayang")).toBeNull();
   openBlock("Kontak");
   expect(screen.getByRole("heading", { level: 2, name: "Kontak" })).toBeTruthy();
   expect(screen.queryByRole("textbox", { name: "Judul acara" })).toBeNull();
@@ -174,9 +175,35 @@ it("keeps the regular editor short: no theme block, unused parts folded away", (
 it("adds a folded part to the invitation from its own panel", () => {
   render(<EventEditor event={createSeedEvent()} />);
   openBlock("Our Team");
-  fireEvent.click(screen.getByRole("checkbox", { name: /Tampilkan bagian ini di undangan/ }));
-  expect(screen.queryByRole("checkbox", { name: /Tampilkan bagian ini di undangan/ })).toBeNull();
+  const toggle = screen.getByRole("switch", { name: "Tampilkan Our Team di undangan" });
+  expect((toggle as HTMLInputElement).checked).toBe(false);
+  expect(screen.getByText(/belum tampil untuk tamu/)).toBeTruthy();
+  fireEvent.click(toggle);
+  expect((toggle as HTMLInputElement).checked).toBe(true);
+  expect(screen.queryByText(/belum tampil untuk tamu/)).toBeNull();
+  expect(within(menuButton("Our Team")!).getByText("Aktif")).toBeTruthy();
   const more = otherBlocks();
   expect(more ? within(more).queryByRole("button", { name: /^Our Team/ }) : null).toBeNull();
   expect(menuButton("Our Team")).toBeTruthy();
+});
+
+it("switches RSVP on and off from the block header, together with accepting answers", async () => {
+  render(<EventEditor event={createSeedEvent()} />);
+  openBlock("Penerimaan RSVP");
+  const toggle = screen.getByRole("switch", { name: "Tampilkan Penerimaan RSVP di undangan" }) as HTMLInputElement;
+  expect(toggle.checked).toBe(true);
+  expect(within(menuButton("Penerimaan RSVP")!).getByText("Aktif")).toBeTruthy();
+  fireEvent.click(toggle);
+  expect(toggle.checked).toBe(false);
+  expect(within(menuButton("Penerimaan RSVP")!).queryByText("Aktif")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
+  await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+  const saved = JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+  expect(saved.rsvp_enabled).toBe(false);
+  expect(saved.sections.find((section: { key: string }) => section.key === "rsvp").enabled).toBe(false);
+});
+
+it("has no switch on blocks that are always part of the invitation", () => {
+  render(<EventEditor event={createSeedEvent()} />);
+  expect(screen.queryByRole("switch")).toBeNull();
 });

@@ -7,9 +7,9 @@ import type { FeedbackQuestion } from "@/lib/types";
 import styles from "@/components/admin/admin.module.css";
 
 export function FeedbackBlock({ kit }: { kit: EditorKit }) {
-  const { event, update, control, text, time, toggle, tz } = kit;
+  const { event, update, control, text, time, tz } = kit;
   return <div className="stack">
-    {toggle("feedback_enabled", "Aktifkan survei feedback")}{time("feedback_opens_at", `Mulai menerima feedback (${tz})`, "Kosongkan agar tersedia setelah diaktifkan dan dipublikasikan.")}
+    {time("feedback_opens_at", `Mulai menerima feedback (${tz})`, "Kosongkan agar tersedia setelah diaktifkan dan dipublikasikan.")}
     {text("feedback_description", "Pengantar survei (opsional)", 1000, true, "Kosongkan untuk memakai pengantar yang sekarang. Survei aplikasi bukan pesan WhatsApp.")}
     <Notice>Gunakan pertanyaan yang telah disetujui GA. Jangan mengganti makna atau jenis pertanyaan yang telah menerima jawaban; buat acara duplikat untuk survei baru. Server dapat menolak perubahan pertanyaan yang sudah digunakan.</Notice>
     {event.feedback_questions.map((question, index) => {

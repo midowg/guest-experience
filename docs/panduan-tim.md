@@ -28,7 +28,9 @@ Editor terdiri dari tiga kolom: **menu bagian** di kiri, **form** di tengah, dan
 
 - Ponsel ikut berubah saat Anda mengetik, sebelum disimpan.
 - Memilih bagian di menu menggulir ponsel ke bagian itu. Sebaliknya, **ketuk bagian di ponsel** untuk langsung membuka formnya.
-- Di atas ponsel ada pilihan **Sebelum / Hari H / Sesudah** untuk melihat tampilan tiap tahap. Blok Hari H dan Setelah acara otomatis menampilkan tahapnya.
+- Di atas pratinjau ada pilihan **Ponsel / Web** (bawaannya Ponsel, karena kebanyakan tamu membuka dari HP) dan **Sebelum / Hari H / Sesudah** untuk melihat tampilan tiap tahap. Blok Hari H dan Setelah acara otomatis menampilkan tahapnya.
+- Bagian yang bisa dinyalakan atau dimatikan (misalnya Rundown, Lokasi, RSVP, Kontak, Our Team, Survei, Ulasan Google) punya **switch di pojok kanan judulnya**. Bagian yang menyala diberi tanda **Aktif** di menu. Bagian yang selalu ada (misalnya Identitas, Waktu, Foto pembuka) tidak punya switch.
+- Titik di menu menandai bagian yang **belum disimpan** (biru) atau **perlu diperbaiki** sebelum dipublikasikan (kuning/merah).
 - Di HP, pilih bagian dari daftar di atas, lalu ketuk **Isi** untuk mengisi atau **Lihat** untuk melihat ponsel.
 - Bagian yang dipakai templat tampil di menu. Bagian lain ada di lipatan **Bagian lain** di dasar menu; buka hanya bila perlu.
 - **Jadwal**: acara lebih dari sehari otomatis tampil per hari (Hari 1, Hari 2, …). Setiap sesi punya **Tambahan (opsional)**: lokasi kegiatan, cuplikan "Kenali lebih dekat", kotak **Tahukah Anda?**, dan halaman PDF presentasi.

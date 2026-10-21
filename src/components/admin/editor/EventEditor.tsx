@@ -11,7 +11,7 @@ import { tzLabel, zoneOf } from "@/lib/timezones";
 import type { EventPhase, EventRecord, SectionKey, StaffMember } from "@/lib/types";
 import { eventSchema } from "@/lib/validation";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { blockOfPath, blockStatusLabels, blockStatuses, completeSections, editorBlocks, editorStages, type BlockStatus, prepareEvent } from "@/components/admin/editor/editor-model";
+import { blockOfPath, blockStatusLabels, blockStatuses, completeSections, editorBlocks, editorStages, prepareEvent } from "@/components/admin/editor/editor-model";
 import { AfterBlock, AppearanceBlock, DayBlock, ExperienceBlock, PrepareBlock } from "@/components/admin/editor/JourneyEditor";
 import { TranslationBlock } from "@/components/admin/editor/TranslationEditor";
 import { moduleActive, moduleBlocks, type AdminModule } from "@/lib/admin-modules";
@@ -32,9 +32,9 @@ import { VenueBlock } from "@/components/admin/editor/blocks/VenueBlock";
 import { VenueGalleryBlock } from "@/components/admin/editor/blocks/VenueGalleryBlock";
 import styles from "@/components/admin/admin.module.css";
 import e from "./editor.module.css";
-import { PhonePreview } from "@/components/admin/editor/PhonePreview";
+import { PhonePreview, type PreviewDevice } from "@/components/admin/editor/PhonePreview";
 import { areaOfBlock, blockOfArea, phaseOfBlock } from "@/lib/live-preview";
-import { adminApi, adminEventPath } from "@/lib/routes";
+import { absolute, adminApi, adminEventPath, eventPath } from "@/lib/routes";
 
 
 const blockIcons: Record<string, LucideIcon> = {
@@ -43,17 +43,6 @@ const blockIcons: Record<string, LucideIcon> = {
   feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket,
 };
 
-
-/** Publishing readiness as one line and a bar, at the top of the menu. */
-function Readiness({ blocks, statuses }: { blocks: typeof editorBlocks; statuses: Record<string, BlockStatus> }) {
-  const todo = blocks.filter(item => statuses[item.id] === "todo" || statuses[item.id] === "error");
-  const required = blocks.filter(item => statuses[item.id] !== "optional");
-  const ready = required.length - todo.length;
-  return <div className={e.readiness}>
-    <p><span>Kesiapan tayang</span><strong>{ready}/{required.length}</strong></p>
-    <span className={e.readinessBar} aria-hidden="true"><span style={{ width: `${required.length ? Math.round(ready / required.length * 100) : 100}%` }} /></span>
-  </div>;
-}
 
 /**
  * `disabledModules` comes from the super admin and is empty for them. A switched-off module
@@ -81,6 +70,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const [phase, setPhase] = useState<EventPhase>("before");
   // On a phone the form and the preview take turns on screen.
   const [view, setView] = useState<"form" | "preview">("form");
+  // The phone is what most guests see; the web view is a second look.
+  const [device, setDevice] = useState<PreviewDevice>("mobile");
   const [dirtyBlocks, setDirtyBlocks] = useState<Set<string>>(() => new Set());
   const errorSummary = useRef<HTMLDivElement>(null);
   const blockTitle = useRef<HTMLHeadingElement>(null);
@@ -99,7 +90,14 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   /** Switch the form to another block; the preview follows with the matching part and phase. */
   function openBlock(id: string) {
     setOpen(id); setPhase(phaseOfBlock(id)); setView("form");
-    requestAnimationFrame(() => { blockTitle.current?.focus({ preventScroll: true }); blockTitle.current?.scrollIntoView?.({ block: "nearest" }); });
+    requestAnimationFrame(() => {
+      const title = blockTitle.current;
+      if (!title) return;
+      title.focus({ preventScroll: true });
+      // Bring the block's title (and its on/off switch) into view below the sticky admin header.
+      const top = title.getBoundingClientRect().top;
+      if (top < 110 || top > window.innerHeight - 120) window.scrollTo({ top: Math.max(0, window.scrollY + top - 120), behavior: "smooth" });
+    });
   }
   /** Open the block that owns a field, then focus the field once it is visible. */
   function openField(key: string) {
@@ -170,19 +168,30 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
    * so nothing is lost on close; openField() opens the owning block before it focuses a field.
    */
   const sectionOfBlock: Partial<Record<string, SectionKey>> = { experience: "experience", agenda: "agenda", venue: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback_questions: "feedback" };
-  function showSection(key: SectionKey) {
-    update("sections", event.sections.map(section => section.key === key ? { ...section, enabled: true } : section));
-    if (key === "rsvp" && !event.rsvp_enabled) update("rsvp_enabled", true);
-    if (key === "feedback" && !event.feedback_enabled) update("feedback_enabled", true);
+  /**
+   * The on/off switch of a block that is a part of the guest page, or null for blocks that are
+   * always there. RSVP and the survey also open and close with it, so there is one switch, not two.
+   */
+  function blockSwitch(id: string): { on: boolean; set: (on: boolean) => void } | null {
+    if (id === "review") return { on: event.review_enabled, set: on => update("review_enabled", on) };
+    const key = sectionOfBlock[id];
+    if (!key) return null;
+    const shown = !!event.sections.find(section => section.key === key)?.enabled;
+    const on = shown && (key !== "rsvp" || event.rsvp_enabled) && (key !== "feedback" || event.feedback_enabled);
+    return {
+      on,
+      set: next => {
+        update("sections", event.sections.map(section => section.key === key ? { ...section, enabled: next } : section));
+        if (key === "rsvp") update("rsvp_enabled", next);
+        if (key === "feedback") update("feedback_enabled", next);
+      },
+    };
   }
   function block(id: string, title: string, children: ReactNode) {
     if (open !== id) return null;
     const stage = editorBlocks.find(item => item.id === id)?.stage ?? "prep";
     return <section id={id} data-block={id} className={`${styles.block} ${styles[`stage_${stage}`]}`} aria-label={title}>
-      {sectionOfBlock[id] && !restrictedBlock(id) && !event.sections.find(section => section.key === sectionOfBlock[id])?.enabled && <div className={styles.sectionSwitch}>
-        <Check label="Tampilkan bagian ini di undangan" checked={false} onChange={() => showSection(sectionOfBlock[id]!)} />
-        <p className="field-hint">Bagian ini belum tampil untuk tamu. Isi dulu, lalu nyalakan; atau nyalakan sekarang.</p>
-      </div>}
+      {blockSwitch(id)?.on === false && <p className={e.offNote}>Bagian ini belum tampil untuk tamu. Isi dulu, lalu nyalakan switch di kanan atas.</p>}
       {restrictedBlock(id) && <Notice tone="warning">Modul ini dinonaktifkan oleh super admin. Acara ini sudah memakainya, jadi isinya tetap ada dan masih bisa diubah atau dimatikan, tetapi setelah dimatikan tidak bisa dinyalakan lagi.</Notice>}
       {children}
     </section>;
@@ -216,6 +225,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     const status = statuses[item.id];
     return <li key={item.id}><button type="button" onClick={() => openBlock(item.id)} aria-current={open === item.id ? "true" : undefined}>
       <Icon size={16} aria-hidden="true" /><span>{item.title}</span>
+      {blockSwitch(item.id)?.on && <span className={e.onBadge} title="Tampil di undangan">Aktif</span>}
       {(status === "todo" || status === "error" || status === "dirty") && <span className={`${e.dot} ${e[`dot_${status}`]}`} title={blockStatusLabels[status]} />}
     </button></li>;
   }
@@ -223,9 +233,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   return <form className={`${styles.form} ${e.editor}`} onSubmit={save} noValidate aria-busy={pending}>
     {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
     {message && <Notice tone="success">{message}</Notice>}
-    <div className={e.layout} data-view={view}>
+    <div className={e.layout} data-view={view} data-device={device}>
       <nav className={e.menu} aria-label="Bagian acara">
-        <Readiness blocks={blocks} statuses={statuses} />
         {editorStages.map(stage => {
           const items = mainBlocks.filter(item => item.stage === stage.key);
           return items.length > 0 && <div key={stage.key} className={e.menuGroup}>
@@ -243,7 +252,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
         <label htmlFor="editor-block" className="sr-only">Bagian yang diubah</label>
         <select id="editor-block" className="input" value={open} onChange={change => openBlock(change.target.value)}>
           {editorStages.map(stage => mainBlocks.some(item => item.stage === stage.key) && <optgroup key={stage.key} label={stage.label}>
-            {mainBlocks.filter(item => item.stage === stage.key).map(item => <option key={item.id} value={item.id}>{item.title}{["todo", "error"].includes(statuses[item.id]) ? " · perlu dilengkapi" : ""}</option>)}
+            {mainBlocks.filter(item => item.stage === stage.key).map(item => <option key={item.id} value={item.id}>{blockSwitch(item.id)?.on ? "● " : ""}{item.title}{["todo", "error"].includes(statuses[item.id]) ? " · perlu dilengkapi" : ""}</option>)}
           </optgroup>)}
           {extraBlocks.length > 0 && <optgroup label="Bagian lain">{extraBlocks.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</optgroup>}
         </select>
@@ -259,6 +268,16 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
             <p className={e.formStage}>{editorStages.find(stage => stage.key === openMeta?.stage)?.label}</p>
             <h2 id="block-title" ref={blockTitle} tabIndex={-1}>{openMeta?.title}</h2>
           </div>
+          {(() => {
+            const toggle = blockSwitch(open);
+            if (!toggle) return null;
+            // A module the super admin switched off may be turned off here, never back on.
+            const locked = !toggle.on && restrictedBlock(open);
+            return <label className={e.blockSwitch} data-on={toggle.on || undefined}>
+              <span>{toggle.on ? "Tampil" : "Tidak tampil"}</span>
+              <input type="checkbox" role="switch" checked={toggle.on} disabled={locked || pending} onChange={change => toggle.set(change.target.checked)} aria-label={`Tampilkan ${openMeta?.title ?? "bagian ini"} di undangan`} />
+            </label>;
+          })()}
         </header>
     <fieldset disabled={pending} className={`${styles.fieldset} ${e.formBody}`}>
       {block("identity", "Identitas & undangan", <IdentityBlock kit={kit} />)}
@@ -284,7 +303,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     </fieldset>
       </section>
       <aside className={e.previewPane} aria-label="Pratinjau undangan">
-        <PhonePreview event={event} phase={phase} onPhase={setPhase} focus={areaOfBlock(open)} onFocusArea={area => openBlock(blockOfArea[area])} src={previewSrc} />
+        <PhonePreview event={event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open)} onFocusArea={area => openBlock(blockOfArea[area])} src={previewSrc} />
       </aside>
     </div>
     <div className={`${styles.saveBar} ${e.saveBar}`} role="region" aria-label="Simpan perubahan">
