@@ -6,7 +6,7 @@ Peta singkat supaya perubahan berikutnya mudah dicari dan tidak merusak bagian l
 
 | Lokasi | Isi |
 | --- | --- |
-| `src/app/` | Halaman dan rute (Next.js App Router). `e/` dan `[code]/` untuk tamu, `admin/` untuk panitia, `api/` untuk API, `dev-preview/` untuk cek tampilan tanpa login (404 di produksi). |
+| `src/app/` | Halaman dan rute (Next.js App Router). `[code]/` untuk tamu (alamat pendek), `e/` untuk alamat lama yang dialihkan, `_guest/` berisi pencarian dan perenderan halaman tamu yang dipakai keduanya, `admin/` untuk panitia (`admin/acara/[ref]` per acara), `api/` untuk API, `dev-preview/` untuk cek tampilan tanpa login (404 di produksi). |
 | `src/components/guest/` | Tampilan tamu: `EventExperience` (halaman undangan), panel per fase, RSVP, tiket, galeri. |
 | `src/components/admin/` | Tampilan admin, dibagi per fitur (lihat bawah). `admin.module.css` dipakai bersama. |
 | `src/components/ui/` | Komponen dasar bersama: `Button`, `ButtonLink`, `Field`, `Notice`. |
@@ -20,20 +20,24 @@ Peta singkat supaya perubahan berikutnya mudah dicari dan tidak merusak bagian l
 | Folder | Isi |
 | --- | --- |
 | `shared/` | `AdminShell` (kerangka dan navigasi), `api.ts` (`adminRequest`), `PhotoField`, tombol login/keluar |
-| `editor/` | Editor acara: `EventEditor` (tata letak, simpan, menu), `kit.ts` (alat bersama), `editor-model.ts` (daftar blok dan status), `blocks/` (satu berkas per blok form), `JourneyEditor`, `TranslationEditor`, `HeroPreview` |
+| `editor/` | Editor acara: `EventEditor` (menu, form, simpan), `kit.ts` (alat bersama), `editor-model.ts` (daftar blok dan status), `blocks/` (satu berkas per blok form), `PhonePreview` + `LivePreviewFrame` (pratinjau ponsel dalam iframe), `StaffPicker`, `JourneyEditor`, `TranslationEditor`, `HeroPreview`, `editor.module.css` |
 | `events/` | Daftar acara, Buat acara, galeri templat, hapus acara |
 | `invitations/` | Undangan per tamu, tautan umum dan QR |
 | `responses/` | Daftar RSVP dan feedback |
 | `beo/` | BEO, halaman cetak, dan PDF |
 | `checkin/` | Papan check-in, pemindai QR, konfirmasi tiket |
 | `gallery/` | Galeri foto R2 |
-| `super/` | Dashboard super admin (templat, visibilitas, modul) |
+| `super/` | Dashboard super admin (Tim Werkudara, templat, visibilitas, modul) |
 
 ## Alamat: selalu lewat `src/lib/routes.ts`
 
 Setiap path dibangun oleh fungsi di `routes.ts`: `eventPath`, `invitationPath`, `ticketPath`, `galleryPath`, `calendarPath`, `adminEventPath`, `adminApi`, dan `guestApi`. Tes `routes.test.ts` gagal bila ada path yang ditulis manual di berkas lain (`"/e/…"`, `` `/admin/events/…` ``, `/api/…`).
 
 Untuk mengganti bentuk alamat, cukup ubah `routes.ts` dan rute di `src/app/`.
+
+## Pratinjau ponsel di editor
+
+`PhonePreview` memuat `/admin/pratinjau-langsung` di iframe 390×844 dan mengirim draf lewat `postMessage` (kontrak pesan di `src/lib/live-preview.ts`). Iframe dipakai agar halaman tamu berjalan di lebar ponsel sungguhan: media query, `position: fixed`, dan scroll tidak bercampur dengan halaman admin. Peta bagian undangan ↔ blok editor ada di `blockOfArea`/`areaOfBlock`.
 
 ## Menambah blok baru di editor
 

@@ -10,7 +10,7 @@ Next.js 16 (App Router), React, TypeScript, Supabase (Postgres dan Storage), dan
 
 | Lokasi | Kegunaan |
 | --- | --- |
-| `src/app/e/[slug]` | Undangan yang dapat dibuka tamu untuk acara yang dipublikasikan |
+| `src/app/[code]` | Undangan tamu di alamat pendek (`/AB23CD`, `/AB23CD/k7q2mx9p`); `src/app/e/[slug]` mengalihkan alamat lama |
 | `src/app/admin` | Editor, undangan tamu, RSVP, check-in, BEO, galeri, dan dashboard super admin (perlu login) |
 | `src/app/api` | API acara, RSVP, feedback, foto, check-in, dan administrasi |
 | `src/components` | Komponen tamu, admin, dan UI bersama |
@@ -63,6 +63,7 @@ Vercel men-deploy branch `main` ke `invitation.werkudara.group`. Kerjakan peruba
 
 - [Panduan tim: menjalankan acara hosting klien](docs/panduan-tim.md)
 - [Go-live internal dan daftar migrasi](docs/go-live-internal.md)
+- [Struktur kode: letak bagian dan cara menambah fitur](docs/struktur-kode.md)
 - [Setup dan penggunaan](docs/setup.md)
 - [Deploy dan rollback](docs/deployment.md)
 - [Checklist konten](docs/content-checklist.md)

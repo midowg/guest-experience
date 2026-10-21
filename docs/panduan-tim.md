@@ -2,21 +2,37 @@
 
 Panduan singkat untuk tim internal Werkudara, dari membuat acara sampai galeri foto sesudahnya. Hal teknis (environment, migrasi, R2) ada di [setup](setup.md) dan [go-live internal](go-live-internal.md).
 
+## Alamat yang mudah diingat
+
+Setiap acara punya **kode 6 karakter**, misalnya `invitation.werkudara.group/AB23CD`. Undangan per tamu menambah 8 karakter: `invitation.werkudara.group/AB23CD/k7q2mx9p`. Kode tidak memakai huruf I, L, O, dan angka 1 atau 0, jadi tidak tertukar saat dibaca atau diketik, dan huruf kecil tetap diterima.
+
+- Kode acara terlihat di blok **Identitas & undangan** (kartu **Tautan acara**, dengan tombol Salin) dan di tab **Daftar tamu** (tautan umum dan QR).
+- Kode tidak berubah, jadi tautan yang sudah dicetak tetap berlaku.
+- Tautan lama `/e/…` masih bisa dibuka dan otomatis pindah ke alamat baru.
+- Halaman admin acara juga pendek: `/admin/acara/AB23CD`, `/admin/acara/AB23CD/undangan`, `/admin/acara/AB23CD/checkin`.
+
 Masuk lewat `/admin` dengan password tim. Setiap login dicatat (waktu, IP, perkiraan lokasi, perangkat); lihat di menu **Log akses**.
 
 ## 1. Buat acara (± 1 menit)
 
 1. **Buat acara**, lalu pilih templat: **Kunjungan klien** (satu hari, di kantor atau venue) atau **Trip klien** (beberapa hari, di luar kota). Templat lain hanya muncul bila super admin menyalakannya.
 2. Isi nama acara, waktu mulai dan selesai, zona waktu (WIB/WITA/WIT), dan lokasi.
-3. Acara tersimpan sebagai **draf** dan belum bisa dibuka tamu.
+3. Opsional: ketuk foto/nama **PIC acara** dari tim.
+4. Acara tersimpan sebagai **draf** dan belum bisa dibuka tamu.
 
 Tema, bahasa, dan bagian undangan mengikuti templat. Semuanya bisa diubah di editor.
 
 ## 2. Lengkapi isi di editor
 
-- Bagian yang dipakai templat tampil lebih dulu. Bagian lain ada di **Bagian lain yang bisa ditambahkan**; buka hanya bila perlu.
+Editor terdiri dari tiga kolom: **menu bagian** di kiri, **form** di tengah, dan **ponsel** di kanan yang menampilkan undangan persis seperti dilihat tamu.
+
+- Ponsel ikut berubah saat Anda mengetik, sebelum disimpan.
+- Memilih bagian di menu menggulir ponsel ke bagian itu. Sebaliknya, **ketuk bagian di ponsel** untuk langsung membuka formnya.
+- Di atas ponsel ada pilihan **Sebelum / Hari H / Sesudah** untuk melihat tampilan tiap tahap. Blok Hari H dan Setelah acara otomatis menampilkan tahapnya.
+- Di HP, pilih bagian dari daftar di atas, lalu ketuk **Isi** untuk mengisi atau **Lihat** untuk melihat ponsel.
+- Bagian yang dipakai templat tampil di menu. Bagian lain ada di lipatan **Bagian lain** di dasar menu; buka hanya bila perlu.
 - **Jadwal**: acara lebih dari sehari otomatis tampil per hari (Hari 1, Hari 2, …). Setiap sesi punya **Tambahan (opsional)**: lokasi kegiatan, cuplikan "Kenali lebih dekat", kotak **Tahukah Anda?**, dan halaman PDF presentasi.
-- **Kontak**: isi PIC. Untuk trip, isi juga **Kontak darurat** dan rumah sakit terdekat.
+- **Kontak**: ketuk salah satu nama di **Pilih PIC dari tim**. Nama, jabatan, nomor WhatsApp, dan foto langsung terisi. Isi manual tetap bisa dipakai untuk PIC dari luar tim. Untuk trip, isi juga **Kontak darurat** dan rumah sakit terdekat.
 - **Persiapan tamu**: dress code, barang yang dibawa, dan yang disiapkan untuk tamu.
 - Chip di bawah kolom bisa diklik untuk mengisi kalimat yang umum dipakai.
 - **Simpan**, cek di **Preview tersimpan**, lalu **Publikasikan**.
@@ -69,6 +85,7 @@ Galeri aktif setelah bucket R2 disiapkan (lihat [setup](setup.md)).
 
 Menu **Dashboard super admin** (password terpisah):
 
+- **Tim Werkudara**: tambah orang yang biasa menjadi PIC (nama, jabatan, nomor WhatsApp, foto). Orang yang dinonaktifkan tidak muncul di pilihan PIC. Mengubah atau menghapus data di sini tidak mengubah acara yang sudah memakai orang itu.
 - **Templat Buat acara**: pilih templat yang tampil untuk tim.
 - **Visibilitas**: sembunyikan acara dari admin biasa.
 - **Modul**: matikan bagian acara yang tidak boleh dipakai admin biasa.
