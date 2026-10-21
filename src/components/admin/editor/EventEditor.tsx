@@ -32,6 +32,7 @@ import { VenueBlock } from "@/components/admin/editor/blocks/VenueBlock";
 import { VenueGalleryBlock } from "@/components/admin/editor/blocks/VenueGalleryBlock";
 import styles from "@/components/admin/admin.module.css";
 import e from "./editor.module.css";
+import n from "./block-numbers.module.css";
 import { PhonePreview, type PreviewDevice } from "@/components/admin/editor/PhonePreview";
 import { areaOfBlock, blockOfArea, phaseOfBlock } from "@/lib/live-preview";
 import { absolute, adminApi, eventPath } from "@/lib/routes";
@@ -102,6 +103,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const [dirtyBlocks, setDirtyBlocks] = useState<Set<string>>(() => new Set());
   const errorSummary = useRef<HTMLDivElement>(null);
   const blockTitle = useRef<HTMLHeadingElement>(null);
+  const toolbar = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!dirty) return;
     const prevent = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
@@ -121,9 +123,10 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       const title = blockTitle.current;
       if (!title) return;
       title.focus({ preventScroll: true });
-      // Bring the block's title (and its on/off switch) into view below the sticky admin header.
+      // Bring the block's title (and its on/off switch) into view below the sticky header and toolbar.
+      const below = (toolbar.current?.getBoundingClientRect().bottom ?? 110) + 12;
       const top = title.getBoundingClientRect().top;
-      if (top < 110 || top > window.innerHeight - 120) window.scrollTo({ top: Math.max(0, window.scrollY + top - 120), behavior: "smooth" });
+      if (top < below || top > window.innerHeight - 120) window.scrollTo({ top: Math.max(0, window.scrollY + top - below), behavior: "smooth" });
     });
   }
   /** Open the block that owns a field, then focus the field once it is visible. */
@@ -143,6 +146,9 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const inUse = (id: string) => !blockModule[id] || moduleActive(event, blockModule[id]) || dirtyBlocks.has(id) || statuses[id] === "error" || statuses[id] === "todo";
   const mainBlocks = blocks.filter(item => inUse(item.id));
   const extraBlocks = blocks.filter(item => !inUse(item.id));
+  // The parts in use, numbered in menu order: the chips, the menu and the open header share it.
+  const numbered = editorStages.flatMap(stage => mainBlocks.filter(item => item.stage === stage.key));
+  const numberOf = new Map(numbered.map((item, index) => [item.id, index + 1]));
   function described(name: string, hint?: string) { return [hint ? `${name}-hint` : "", errors[name] ? `${name}-error` : ""].filter(Boolean).join(" ") || undefined; }
   /** Chips and example sentences come from suggestions.ts by field name, so call sites stay short. */
   function control(name: string, label: string, value: string, onChange: (value: string) => void, options: ControlOptions = {}) {
@@ -251,8 +257,9 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   function menuItem(item: (typeof editorBlocks)[number]) {
     const Icon = blockIcons[item.id] ?? FileText;
     const status = statuses[item.id];
+    const number = numberOf.get(item.id);
     return <li key={item.id}><button type="button" onClick={() => openBlock(item.id)} aria-current={open === item.id ? "true" : undefined}>
-      <Icon size={16} aria-hidden="true" /><span>{item.title}</span>
+      {number ? <b className={n.menuNumber} aria-hidden="true">{number}</b> : <Icon size={16} aria-hidden="true" />}<span>{item.title}</span>
       {blockSwitch(item.id)?.on && <span className={e.onBadge} title="Tampil di undangan">Aktif</span>}
       {(status === "todo" || status === "error" || status === "dirty") && <span className={`${e.dot} ${e[`dot_${status}`]}`} title={blockStatusLabels[status]} />}
     </button></li>;
@@ -265,11 +272,22 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       One bar above the editor holds what is used all the time: ☰ for the block menu, form or
       preview (phone), and Simpan. It sticks under the header and covers nothing.
     */}
-    <div className={e.toolbar} role="region" aria-label="Simpan perubahan">
+    <div ref={toolbar} className={`${e.toolbar} ${n.toolbar}`} role="region" aria-label="Simpan perubahan">
       {/* The usual ☰: a square icon button, with the open part named beside it as plain text. */}
       <button type="button" className={e.menuToggle} aria-controls="editor-menu" aria-expanded={menuShown} aria-label={wide ? (sidebarHidden ? "Tampilkan menu bagian" : "Sembunyikan menu bagian") : "Buka menu bagian"} title={wide ? (sidebarHidden ? "Tampilkan menu" : "Sembunyikan menu") : "Menu bagian"} onClick={() => wide ? setSidebarHidden(hidden => !hidden) : setDrawerOpen(true)}>
         <Menu size={20} aria-hidden="true" />
       </button>
+      {/* One chip per part in use, numbered as in the menu: a quick jump without opening ☰. */}
+      <ol className={n.chips} aria-label="Lompat ke bagian">
+        {numbered.map((item, index) => {
+          const off = blockSwitch(item.id)?.on === false;
+          const status = statuses[item.id];
+          const flagged = status === "todo" || status === "error" || status === "dirty";
+          return <li key={item.id}><button type="button" className={n.chip} data-off={off || undefined} aria-current={open === item.id ? "true" : undefined} title={`${item.title}${off ? " (tidak tampil)" : ""}`} aria-label={`Bagian ${index + 1}: ${item.title}${off ? ", tidak tampil" : ""}${flagged ? `, ${blockStatusLabels[status].toLowerCase()}` : ""}`} onClick={() => openBlock(item.id)}>
+            {index + 1}{flagged && <span className={n.chipDot} data-status={status} aria-hidden="true" />}
+          </button></li>;
+        })}
+      </ol>
       {!wide && <p className={e.currentBlock} aria-hidden="true">{openTitle}</p>}
       <div className={e.viewSwitch} role="group" aria-label="Tampilan">
         <button type="button" aria-pressed={view === "form"} aria-label="Isi" onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> <span className={e.btnText}>Isi</span></button>
@@ -302,8 +320,10 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
         {dangerZone && <ul className={e.menuDanger}><li><button type="button" onClick={() => openBlock("delete")} aria-current={open === "delete" ? "true" : undefined}><Trash2 size={16} aria-hidden="true" /><span>Hapus acara</span></button></li></ul>}
       </nav>
       <section className={e.formPane} aria-labelledby="block-title">
-        <header className={e.formHeader}>
-          <span className={e.formIcon} aria-hidden="true">{(() => { const Icon = blockIcons[open] ?? FileText; return <Icon size={20} />; })()}</span>
+        <header className={`${e.formHeader} ${n.header}`}>
+          {numberOf.has(open)
+            ? <span className={n.number} aria-hidden="true">{numberOf.get(open)}</span>
+            : <span className={e.formIcon} aria-hidden="true">{(() => { const Icon = blockIcons[open] ?? FileText; return <Icon size={20} />; })()}</span>}
           <div>
             <p className={e.formStage}>{open === "delete" ? "Pengaturan" : editorStages.find(stage => stage.key === openMeta?.stage)?.label}</p>
             <h2 id="block-title" ref={blockTitle} tabIndex={-1}>{openTitle}</h2>

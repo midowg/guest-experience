@@ -1,0 +1,29 @@
+/*
+ * The event's parts are numbered 1, 2, 3 … in menu order. The same number shows on a chip in the
+ * toolbar (a tap opens that part), in the side menu, and in the open part's header.
+ */
+.toolbar { flex-wrap: wrap; }
+
+/* Chips: a second row under ☰ below 72rem, beside ☰ on a wide screen. Scrolls sideways when full. */
+.chips { display: flex; flex: 1 1 100%; order: 10; gap: 6px; min-width: 0; margin: 0; padding: 4px 2px; list-style: none; overflow-x: auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+@media (min-width: 72rem) { .chips { flex: 1 1 auto; order: 0; } }
+.chips li { flex-shrink: 0; }
+.chip { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--color-text); font: inherit; font-size: .875rem; font-weight: 800; cursor: pointer; }
+.chip:hover { border-color: var(--blue); color: var(--blue); }
+.chip:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+/* A part that is switched off stays numbered (numbers never shift), but looks muted. */
+.chip[data-off] { border-style: dashed; background: var(--page); color: #8a93a6; }
+.chip[aria-current="true"] { border-color: var(--blue); border-style: solid; background: var(--blue); color: #fff; }
+.chipDot { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; }
+.chipDot[data-status="todo"] { background: #c27a00; }
+.chipDot[data-status="error"] { background: #9a273d; }
+.chipDot[data-status="dirty"] { background: #1f7ae0; }
+
+/* The number in the open part's header (in place of its icon), with the switch at the far right. */
+.header { justify-content: space-between; }
+.number { display: inline-grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; background: var(--blue); color: #fff; font-size: 1.125rem; font-weight: 900; }
+
+/* The number in the side menu, before the part's name. */
+.menuNumber { display: inline-grid; place-items: center; width: 22px; height: 22px; flex-shrink: 0; border-radius: 7px; background: #eef4fd; color: var(--blue); font-size: .75rem; font-weight: 900; }
+button[aria-current="true"] > .menuNumber { background: rgba(255, 255, 255, .22); color: #fff; }
