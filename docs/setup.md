@@ -154,6 +154,21 @@ Pilih HP (390×844) atau Desktop (1440×900). Preview menggunakan komponen dan s
 ### Ulasan Google opsional
 Tombol di penutup mengarah ke ulasan Google Werkudara, bukan survei internal. Dari profil bisnis Google yang dikelola, gunakan Minta ulasan/bagikan tautan ulasan. Tempel URL resmi, periksa tautan, aktifkan tombol, simpan/publikasikan. Ulasan berada di Google dan dapat tampil publik; Google mungkin meminta login. Semua tamu mendapat tautan yang sama, tidak disaring berdasarkan skor feedback. Matikan pilihan dan simpan jika tidak ingin tombol tampil.
 
+### Galeri foto acara (Cloudflare R2)
+Tab **Galeri foto** di setiap acara. Sebelum R2 disiapkan, tab ini hanya menampilkan "Penyimpanan foto belum disiapkan" dan tidak mengunggah apa pun.
+
+1. Cloudflare → R2 → **Create bucket**. Biarkan **privat** (jangan aktifkan akses publik atau r2.dev). Foto dibuka lewat alamat bertanda tangan yang berlaku beberapa jam.
+2. R2 → **Manage API tokens** → buat token dengan izin **Object Read & Write**, dibatasi ke bucket itu saja.
+3. Bucket → **Settings → CORS policy**, isi:
+   ```json
+   [{ "AllowedOrigins": ["https://invitation.werkudara.group"], "AllowedMethods": ["PUT", "GET", "HEAD"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
+   ```
+   Tambahkan `http://localhost:3000` hanya bila perlu menguji unggahan dari lokal.
+4. Di Vercel (Production), isi `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, lalu deploy ulang.
+5. Terapkan migrasi `202610210002_gallery_photos.sql`.
+
+Alur: admin memilih banyak foto sekaligus. Browser membuat versi tampilan (sisi panjang 2048 px) dan thumbnail (480 px) dalam WebP, lalu mengunggah ketiganya langsung ke R2. Server memeriksa ukuran dan isi berkas (harus JPEG, PNG, WebP, atau HEIC). Foto baru berstatus **Menunggu tinjauan**; tamu hanya melihat foto yang **Tayang**. Setelah acara, halaman undangan menampilkan tombol galeri bila ada foto tayang. Tamu bisa mengunduh berkas asli dan meminta foto dihapus lewat WhatsApp PIC. Galeri tertutup otomatis enam bulan setelah acara.
+
 ## 7. Hal yang belum tersedia
 
 - **Pembersihan tabel pembatasan laju terjadwal.** Fungsi `purge_expired_request_limits()` tersedia, tetapi penjadwalnya belum dipasang. Baris kedaluwarsa juga dihapus setiap kali fungsi dipanggil.

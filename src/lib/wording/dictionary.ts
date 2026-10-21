@@ -226,6 +226,14 @@ export const id = {
   "offline.ready": "Halaman ini tersimpan di perangkat dan tetap bisa dibuka tanpa sinyal.",
   "calendar.scope": "Yang disimpan",
   "calendar.reminder": "Pengingat",
+  "photos.title": "Galeri foto acara",
+  "photos.intro": "Terima kasih sudah hadir. Simpan foto favorit Anda; ketuk foto untuk melihat lebih besar dan mengunduh versi aslinya.",
+  "photos.empty": "Foto acara sedang kami pilih. Kembali lagi dalam beberapa hari.",
+  "photos.closed": "Galeri acara ini sudah ditutup. Hubungi panitia bila Anda membutuhkan foto tertentu.",
+  "photos.remove": "Minta foto ini dihapus",
+  "photos.removeMessage": "Halo, saya ingin meminta foto nomor {n} di galeri \"{event}\" dihapus. {link}",
+  "photos.back": "Kembali ke undangan",
+  "photos.count": "{n} foto",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -456,4 +464,12 @@ export const en: Record<WordKey, string> = {
   "offline.ready": "This page is saved on your device and opens without a signal.",
   "calendar.scope": "What to save",
   "calendar.reminder": "Reminder",
+  "photos.title": "Event photos",
+  "photos.intro": "Thank you for joining us. Tap a photo to see it larger and download the original.",
+  "photos.empty": "We're still choosing the photos. Please check back in a few days.",
+  "photos.closed": "This gallery has closed. Please contact the organisers if you need a particular photo.",
+  "photos.remove": "Ask us to remove this photo",
+  "photos.removeMessage": "Hello, please remove photo number {n} from the \"{event}\" gallery. {link}",
+  "photos.back": "Back to the invitation",
+  "photos.count": "{n} photos",
 };

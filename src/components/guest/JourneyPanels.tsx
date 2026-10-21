@@ -1,7 +1,7 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import { ArrowDown, ArrowUpRight, Backpack, CalendarCheck, CalendarDays, Camera, Check, Clock3, Coffee, Gift, Footprints, Hand, Handshake, Heart, HeartHandshake, IdCard, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Package, Phone, Pill, Presentation, Salad, Shirt, Sparkles, Star, Sun, Umbrella, Users, Utensils, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Backpack, CalendarCheck, CalendarDays, Camera, Check, Clock3, Coffee, Gift, Footprints, Hand, Handshake, Heart, HeartHandshake, IdCard, Images, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Package, Phone, Pill, Presentation, Salad, Shirt, Sparkles, Star, Sun, Umbrella, Users, Utensils, type LucideIcon } from "lucide-react";
 import { ButtonLink } from "@/components/ui";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { localDay } from "@/lib/event-phase";
@@ -182,7 +182,7 @@ export function TodayPanel({ event, invitee, now, firstSection }: { event: Event
  * After the event: thanks first. Review and collaboration are only for external guests, and the
  * review is never a condition for anything else on the page.
  */
-export function AfterPanel({ event, invitee }: { event: EventRecord; invitee?: string }) {
+export function AfterPanel({ event, invitee, photoCount = 0 }: { event: EventRecord; invitee?: string; photoCount?: number }) {
   const { t, date } = useWording();
   const external = event.audience !== "internal";
   const image = event.after.image.url ? event.after.image : event.hero.url ? { url: event.hero.url, alt: "", srcset: event.hero.srcset } : null;
@@ -201,6 +201,7 @@ export function AfterPanel({ event, invitee }: { event: EventRecord; invitee?: s
       <h1 id="event-title">{event.after.title || (invitee ? t("after.title.named", { name: invitee }) : t("after.title"))}</h1>
       <p className={styles.afterEvent}><CalendarDays size={16} aria-hidden="true" /> {event.title}{event.starts_at && <> · {date(event.starts_at, event.timezone)}</>}</p>
       {message && <p className={`${styles.afterMessage} ${styles.multiline}`}>{message}</p>}
+      {photoCount > 0 && <ButtonLink href={`/e/${event.slug}/galeri`} className={styles.afterGallery}><Images size={18} aria-hidden="true" /> {t("gallery.all")} · {t("photos.count", { n: photoCount })}</ButtonLink>}
       {showReview && <div className={styles.afterCard}>
         <p className={styles.afterStars} aria-hidden="true">{[0, 1, 2, 3, 4].map(i => <Star key={i} size={20} />)}</p>
         <h2>{event.review_heading || t("after.review.title")}</h2>

@@ -7,6 +7,7 @@ import { Notice } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import { currentPhase } from "@/lib/event-phase";
 import { rsvpNeedsReady } from "@/lib/server/responses";
+import { afterPhotos } from "@/lib/server/gallery";
 
 export const dynamic = "force-dynamic";
 
@@ -35,5 +36,5 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
   }
   const event = await getPublicEvent(slug);
   if (!event) notFound();
-  return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} />;
+  return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
 }

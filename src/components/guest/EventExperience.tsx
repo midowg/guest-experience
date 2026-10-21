@@ -159,6 +159,8 @@ type ExperienceProps = {
   event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; rsvp: RsvpRecord | null; party_size_max?: number }; phase?: EventPhase;
   /** False until migration 202610200004: the RSVP then asks only about allergies, as before. */
   rsvpNeeds?: boolean;
+  /** Photos marked Tayang in the event gallery; after the event the page links to them. */
+  photoCount?: number;
 };
 
 /** Holds the guest's language; everything below reads its words and the event's texts in it. */
@@ -170,7 +172,7 @@ export function EventExperience({ event: source, ...props }: ExperienceProps) {
   </WordingProvider>;
 }
 
-function ExperienceBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
+function ExperienceBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, photoCount = 0, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
   const { lang, t, dateTime } = useWording();
   // Keeps the last copy of this guest page for offline use (trips with weak signal). Production only.
   useEffect(() => {
@@ -240,7 +242,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
     <main id="event-content" tabIndex={-1}>
       {fallback && <p className={styles.langFallback}>{t("lang.fallback")}</p>}
       {phase === "day" ? <TodayPanel event={event} invitee={invitation?.name} now={now} firstSection={sections[0]?.key} />
-        : phase === "after" ? <AfterPanel event={event} invitee={invitation?.name} />
+        : phase === "after" ? <AfterPanel event={event} invitee={invitation?.name} photoCount={photoCount} />
         : <InvitationHero event={event} rsvpSaved={rsvpSaved} invitee={invitation?.name} />}
       {sections.map((section, index) => <RevealSection id={section.key} key={section.key} className={`${styles.section} ${section.key === "rsvp" ? styles.rsvpSection : ""}`.trimEnd()} labelledBy={`${section.key}-heading`}>
         <div className={`container ${styles.sectionGrid}`}>

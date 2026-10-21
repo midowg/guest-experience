@@ -6,6 +6,7 @@ import { getPersonalInvitation } from "@/lib/server/invitations";
 import { currentPhase } from "@/lib/event-phase";
 import { formatDate } from "@/lib/format";
 import { rsvpNeedsReady } from "@/lib/server/responses";
+import { afterPhotos } from "@/lib/server/gallery";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ slug: string; token: string }> };
@@ -28,5 +29,5 @@ export default async function PersonalInvitationPage({ params }: Params) {
   if (!invitation) notFound();
   const event = await getPublicEvent(slug);
   if (!event || event.invitation_mode !== "personal") notFound();
-  return <EventExperience event={event} invitation={invitation} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} />;
+  return <EventExperience event={event} invitation={invitation} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
 }

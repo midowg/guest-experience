@@ -16,8 +16,9 @@ self.addEventListener("fetch", event => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin")) return;
-  // Calendar files and link previews are always fresh; never served from the offline copy.
-  if (url.pathname.endsWith(".ics") || url.pathname.includes("opengraph-image")) return;
+  // Calendar files, link previews and photo downloads (short-lived addresses) are never served
+  // from the offline copy.
+  if (url.pathname.endsWith(".ics") || url.pathname.includes("opengraph-image") || url.pathname.endsWith("/unduh")) return;
 
   if (request.mode === "navigate" && url.pathname.startsWith("/e/")) {
     event.respondWith((async () => {
