@@ -32,7 +32,7 @@ function useSender() {
  * The form opens in a sheet: from the bottom on a phone, as a dialog on a larger screen. Esc and
  * the close button return focus to whatever opened it.
  */
-function GuestSheet({ title, step, onClose, children, footer }: { title: string; step?: string; onClose: () => void; children: ReactNode; footer: ReactNode }) {
+export function GuestSheet({ title, step, onClose, children, footer }: { title: string; step?: string; onClose: () => void; children: ReactNode; footer: ReactNode }) {
   const { t } = useWording();
   const heading = useRef<HTMLHeadingElement>(null);
   const opener = useRef<Element | null>(null);

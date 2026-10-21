@@ -224,6 +224,8 @@ export const id = {
   "emergency.hospital": "Rumah sakit terdekat",
   "emergency.directions": "Petunjuk arah",
   "offline.ready": "Halaman ini tersimpan di perangkat dan tetap bisa dibuka tanpa sinyal.",
+  "calendar.scope": "Yang disimpan",
+  "calendar.reminder": "Pengingat",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -452,4 +454,6 @@ export const en: Record<WordKey, string> = {
   "emergency.hospital": "Nearest hospital",
   "emergency.directions": "Directions",
   "offline.ready": "This page is saved on your device and opens without a signal.",
+  "calendar.scope": "What to save",
+  "calendar.reminder": "Reminder",
 };

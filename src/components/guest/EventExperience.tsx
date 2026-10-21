@@ -17,6 +17,7 @@ import { LanguageSwitch, WordingProvider, useEventLanguage, useWording } from ".
 import { localizeEvent } from "@/lib/wording/localize";
 import { offersSwitch, type Lang, type WordKey } from "@/lib/wording";
 import { AgendaList, EmergencyCard } from "./ProgramAgenda";
+import { CalendarButton } from "./CalendarSheet";
 import styles from "./guest.module.css";
 
 const navKeys: Record<SectionKey, WordKey> = { about: "nav.about", experience: "nav.experience", agenda: "nav.agenda", location: "nav.location", prepare: "nav.prepare", team: "nav.team", rsvp: "nav.rsvp", contact: "nav.contact", feedback: "nav.feedback" };
@@ -257,6 +258,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             {section.key === "agenda" && <>
               <div id="agenda-heading"><SectionHeading title={t("section.agenda.title")}><p>{t("section.agenda.tz", { zone: timezoneInfo[zoneOf(event.timezone)].label, zoneName: lang === "en" ? timezoneInfo[zoneOf(event.timezone)].nameEn : timezoneInfo[zoneOf(event.timezone)].name, offset: timezoneInfo[zoneOf(event.timezone)].offset })}</p></SectionHeading></div>
               {event.agenda.length === 0 ? <p>{t("section.agenda.empty")}</p> : <AgendaList event={event} now={now} />}
+              <CalendarButton event={event} now={now} />
             </>}
             {section.key === "location" && <><div id="location-heading"><SectionHeading title={t("section.location.title")} /></div><Location event={event} /></>}
             {section.key === "prepare" && <>

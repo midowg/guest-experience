@@ -421,3 +421,11 @@
   .navigation a { flex-shrink: 0; white-space: nowrap; }
 }
 .topicNumber { white-space: nowrap; }
+
+/* Add to calendar */
+.calendarButton { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; margin-top: var(--space-5); padding: var(--space-2) var(--space-4); border: 1px solid var(--color-primary); border-radius: max(var(--radius, 0px), 999px); background: transparent; color: var(--color-primary); font: inherit; font-weight: 600; cursor: pointer; }
+.calendarButton:hover { background: var(--color-soft); }
+.sheetNote { color: var(--color-caption); font-size: var(--text-sm); }
+/* Next item on the day */
+.todayNext { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); }
+.sheetLegend { margin-bottom: var(--space-2); padding: 0; font-size: var(--text-sm); font-weight: 600; color: var(--color-caption); }

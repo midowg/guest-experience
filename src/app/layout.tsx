@@ -19,8 +19,11 @@ import '@fontsource/plus-jakarta-sans/500.css';
 import '@fontsource/plus-jakarta-sans/600.css';
 import '@fontsource/plus-jakarta-sans/700.css';
 import './globals.css';
+import { siteUrl } from '@/lib/site-url';
 
 export const metadata: Metadata = {
+  // Link previews (WhatsApp) need absolute image addresses.
+  metadataBase: siteUrl(),
   title: { default: 'Guest Experience | Werkudara', template: '%s | Werkudara' },
   description: 'Informasi acara dan konfirmasi kehadiran tamu Werkudara.',
   icons: { icon: '/favicon.png' },

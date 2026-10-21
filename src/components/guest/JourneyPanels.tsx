@@ -1,7 +1,7 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import { ArrowDown, ArrowUpRight, Backpack, CalendarCheck, CalendarDays, Camera, Check, Coffee, Gift, Footprints, Hand, Handshake, Heart, HeartHandshake, IdCard, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Package, Phone, Pill, Presentation, Salad, Shirt, Sparkles, Star, Sun, Umbrella, Users, Utensils, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Backpack, CalendarCheck, CalendarDays, Camera, Check, Clock3, Coffee, Gift, Footprints, Hand, Handshake, Heart, HeartHandshake, IdCard, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Package, Phone, Pill, Presentation, Salad, Shirt, Sparkles, Star, Sun, Umbrella, Users, Utensils, type LucideIcon } from "lucide-react";
 import { ButtonLink } from "@/components/ui";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { localDay } from "@/lib/event-phase";
@@ -152,6 +152,12 @@ export function TodayPanel({ event, invitee, now, firstSection }: { event: Event
       <p className={styles.todayMeta}>{invitee && <>{event.title} · </>}{event.venue_name || t("today.place.fallback")}</p>
       {items.length > 0 && <div className={styles.todayCard}>
         <h2 className={styles.todayCardTitle}>{t("today.schedule")}</h2>
+        {(() => {
+          // "Next · in N min" for the coming hour, so the guest knows how long they have.
+          const next = now === null ? undefined : items.find(item => Date.parse(item.starts_at) > now);
+          const minutes = next && now !== null ? Math.ceil((Date.parse(next.starts_at) - now) / 60000) : 0;
+          return next && minutes <= 60 ? <p className={styles.todayNext}><Clock3 size={15} aria-hidden="true" /> {t("next.label", { minutes })}: {next.title}</p> : null;
+        })()}
         <ol className={styles.todaySchedule}>
           {items.map(item => {
             const status = agendaStatus(item, now);

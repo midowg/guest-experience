@@ -14,9 +14,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!isSupabaseConfigured()) return { title: "Undangan", robots: { index: false, follow: false } };
   const event = await getPublicEvent((await params).slug).catch(() => null);
   if (!event) return { title: "Undangan", robots: { index: false, follow: false } };
+  const description = `${formatDate(event.starts_at, event.timezone)}${event.venue_name ? ` · ${event.venue_name}` : ""}`;
+  // og:title and og:description are what WhatsApp prints beside the preview image.
   return {
     title: event.title,
-    description: `${event.title} — ${formatDate(event.starts_at, event.timezone)}${event.venue_name ? `, ${event.venue_name}` : ""}.`,
+    description: `${event.title} — ${description}.`,
+    openGraph: { title: event.title, description, type: "website", siteName: "Werkudara" },
     robots: { index: false, follow: false },
   };
 }

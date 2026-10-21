@@ -77,3 +77,33 @@ it("shows the emergency contact and nearest hospital with the contact section", 
   expect(screen.getByText("RSUD Praya")).toBeTruthy();
   expect(screen.getByRole("link", { name: /Petunjuk arah/ }).getAttribute("href")).toBe("https://maps.app.goo.gl/x");
 });
+
+it("offers the calendar file with a chosen reminder, linking the general page", () => {
+  render(<EventExperience event={trip({ slug: "trip-lombok" })} preview />);
+  fireEvent.click(screen.getByRole("button", { name: "Tambahkan jadwal ke kalender" }));
+  const sheet = screen.getByRole("dialog", { name: "Tambahkan ke kalender" });
+  const link = within(sheet).getByRole("link", { name: "Tambahkan ke kalender" });
+  expect(link.getAttribute("href")).toBe("/e/trip-lombok/kalender.ics?ingat=30");
+  // Before the trip there is no "today only".
+  expect(within(sheet).queryByLabelText("Hari ini saja")).toBeNull();
+  fireEvent.click(within(sheet).getByLabelText("Ingatkan 15 menit sebelumnya"));
+  expect(link.getAttribute("href")).toBe("/e/trip-lombok/kalender.ics?ingat=15");
+});
+
+it("lets a guest on the trip save today's part only", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-03T08:30:00+08:00"));
+  render(<EventExperience event={trip({ slug: "trip-lombok" })} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Tambahkan jadwal ke kalender" }));
+  const sheet = screen.getByRole("dialog", { name: "Tambahkan ke kalender" });
+  await vi.waitFor(() => expect(within(sheet).getByLabelText("Hari ini saja")).toBeTruthy());
+  fireEvent.click(within(sheet).getByLabelText("Hari ini saja"));
+  expect(within(sheet).getByRole("link", { name: "Tambahkan ke kalender" }).getAttribute("href")).toBe("/e/trip-lombok/kalender.ics?cakupan=hari-ini&ingat=30");
+});
+
+it("tells the guest on the day what comes next within the hour", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-03T08:35:00+08:00"));
+  render(<EventExperience event={trip()} phase="day" />);
+  expect(await screen.findByText(/Berikutnya · 25 menit lagi: Desa Sade/)).toBeTruthy();
+});
