@@ -12,6 +12,7 @@ import { EmergencyCard } from "./ProgramAgenda";
 import type { WordKey } from "@/lib/wording";
 import styles from "./guest.module.css";
 import { galleryPath } from "@/lib/routes";
+import { initials } from "@/lib/staff";
 
 export const momentIconComponents: Record<MomentIcon, LucideIcon> = {
   coffee: Coffee, utensils: Utensils, gift: Gift, users: Users, camera: Camera,
@@ -59,12 +60,21 @@ export function contactLink(contact: EventRecord["contact"]) {
   return { whatsapp, href: whatsapp ? `https://wa.me/${phone.international}` : `tel:${phone.local}`, local: phone.local };
 }
 
+/** The PIC's photo when one is set, otherwise their initials. Decorative: the name is next to it. */
+export function PicAvatar({ contact, large = false }: { contact: EventRecord["contact"]; large?: boolean }) {
+  const photo = contact.photo?.url ? contact.photo : null;
+  const className = `${styles.picAvatar} ${large ? styles.picAvatarLarge : ""}`.trimEnd();
+  // eslint-disable-next-line @next/next/no-img-element -- stored photo with its own sizes
+  return photo ? <img className={className} src={photo.srcset?.[0]?.url || photo.url} alt="" />
+    : <span className={className} aria-hidden="true">{initials(contact.name)}</span>;
+}
+
 function PicCard({ event, title }: { event: EventRecord; title: string }) {
   const { t } = useWording();
   const link = contactLink(event.contact);
   if (!link) return null;
   return <div className={styles.picCard}>
-    <span className={styles.picAvatar} aria-hidden="true">{event.contact.name.trim().charAt(0).toUpperCase()}</span>
+    <PicAvatar contact={event.contact} />
     <div className={styles.picText}>
       <p className={styles.picTitle}>{title}</p>
       {event.contact.role && <p className={styles.picRole}>{event.contact.role}</p>}

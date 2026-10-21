@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { setupSchema } from "@/lib/event-setup";
+import { getStaff } from "@/lib/server/staff";
 import { createEvent, listAdminEvents } from "@/lib/server/events";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireApiAdmin, requireEventAccess } from "@/lib/server/admin-session";
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
         throw new ServiceError(403, "Templat ini tidak tersedia. Pilih templat lain di Buat acara.");
       }
     }
-    return success(await createEvent(duplicateId, setup, await disabledModulesFor(role)), "Draft acara dibuat.");
+    const pic = setup?.pic_staff_id ? await getStaff(setup.pic_staff_id) : null;
+    return success(await createEvent(duplicateId, setup, await disabledModulesFor(role), pic?.active ? pic : null), "Draft acara dibuat.");
   });
 }

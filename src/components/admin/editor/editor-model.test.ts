@@ -120,7 +120,7 @@ describe("sections", () => {
     legacy.sections = legacy.sections.filter(section => section.key !== "contact");
     delete (legacy as Partial<EventRecord>).contact;
     const completed = completeSections(legacy);
-    expect(completed.contact).toEqual({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "" });
+    expect(completed.contact).toEqual({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "", photo: { url: "", alt: "", srcset: [] }, staff_id: "" });
     expect(completed.sections.map(section => section.key)).toEqual(sectionKeys);
     expect(completed.sections.find(section => section.key === "contact")?.enabled).toBe(false);
   });

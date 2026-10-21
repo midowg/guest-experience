@@ -11,7 +11,7 @@ const base: EventSetup = {
   timezone: "Asia/Jakarta", audience: "external", language: "id", invitation_mode: "personal", location: "other",
   venue_name: "Hotel Tentrem", address: "Jl. P. Mangkubumi 72A, Yogyakarta", location_url: "",
   greeting: "", introduction: "", closing: "", modules: ["about", "agenda", "location", "prepare", "rsvp", "contact", "feedback"],
-  guest_estimate: 120, rsvp_closes_at: "2026-12-05T10:00:00.000Z", contact_name: "", contact_phone: "",
+  guest_estimate: 120, rsvp_closes_at: "2026-12-05T10:00:00.000Z", contact_name: "", contact_phone: "", pic_staff_id: "",
 };
 
 describe("buildEventFromSetup", () => {

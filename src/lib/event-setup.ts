@@ -28,6 +28,8 @@ export const setupSchema = z.object({
   rsvp_closes_at: timestamp.nullable(),
   contact_name: text(150),
   contact_phone: text(30).refine(value => !value || parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890."),
+  /** A Tim Werkudara member to be the PIC; the server copies their details. */
+  pic_staff_id: z.union([z.uuid(), z.literal("")]).default(""),
 }).superRefine((setup, ctx) => {
   if (setup.ends_at && Date.parse(setup.ends_at) <= Date.parse(setup.starts_at)) ctx.addIssue({ code: "custom", path: ["ends_at"], message: "Waktu selesai harus setelah waktu mulai." });
   if (setup.rsvp_closes_at && Date.parse(setup.rsvp_closes_at) > Date.parse(setup.starts_at)) ctx.addIssue({ code: "custom", path: ["rsvp_closes_at"], message: "Batas RSVP sebaiknya sebelum acara dimulai." });

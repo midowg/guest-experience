@@ -4,7 +4,15 @@ export type SectionKey = "about" | "experience" | "agenda" | "location" | "prepa
 export type SectionConfig = { key: SectionKey; enabled: boolean };
 export type AgendaItem = { id: string; starts_at: string; ends_at: string; title: string; description: string; sort_order: number };
 export type DiscussionTopic = { title: string; description: string; en?: TextPair };
-export type EventContact = { name: string; phone: string; channel: "whatsapp" | "phone"; heading: string; description: string; role: string; organization: string };
+export type EventContact = {
+  name: string; phone: string; channel: "whatsapp" | "phone"; heading: string; description: string; role: string; organization: string;
+  /** Face on the PIC card; empty for an initial instead. Copied from the team list when picked there. */
+  photo?: PlainImage;
+  /** The team member this contact was filled from, or "" when typed by hand. */
+  staff_id?: string;
+};
+/** Someone in Tim Werkudara who can be an event's PIC. */
+export type StaffMember = { id: string; name: string; role: string; phone: string; photo: PlainImage; active: boolean; sort_order: number };
 export type FeedbackQuestion = { id: string; label: string; kind: "rating" | "choice" | "text"; required: boolean; options: string[]; sort_order: number };
 export type ImageSource = { width: number; url: string };
 export type ImageFocus = "top" | "center" | "bottom";

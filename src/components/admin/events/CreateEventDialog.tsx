@@ -9,13 +9,14 @@ import { setupSchema, setupSectionKeys, type EventSetup } from "@/lib/event-setu
 import { fromZoneInput } from "@/lib/format";
 import { eventTimezones, timezoneInfo } from "@/lib/timezones";
 import { themeDefinition } from "@/lib/themes";
-import type { EventRecord, SectionKey } from "@/lib/types";
+import type { EventRecord, SectionKey, StaffMember } from "@/lib/types";
 import type { AdminModule } from "@/lib/admin-modules";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { TemplateMiniature } from "@/components/admin/events/TemplateMiniature";
 import { fieldExamples, WERKUDARA_OFFICE } from "@/components/admin/editor/suggestions";
 import styles from "@/components/admin/admin.module.css";
 import { adminEventPath, adminEventsApi } from "@/lib/routes";
+import { StaffAvatar } from "@/components/admin/shared/StaffAvatar";
 
 type Start = { type: "template"; key: TemplateKey } | { type: "copy"; id: string } | { type: "blank" };
 type Details = { title: string; starts_at: string; ends_at: string; timezone: EventSetup["timezone"]; location: EventSetup["location"]; venue_name: string; address: string; location_url: string };
@@ -26,14 +27,15 @@ const isSetupKey = (key: SectionKey): key is (typeof setupSectionKeys)[number] =
  * "Buat acara" in two steps (meeting of 20 Oct): pick a ready-made template from its miniature,
  * then name, time, and place. Everything else comes from the template and is edited later.
  */
-export function CreateEventDialog({ events, onClose, disabledModules = [], templates = eventTemplates.map(t => t.key), canStartBlank = false }: {
-  events: EventRecord[]; onClose: () => void; disabledModules?: AdminModule[]; templates?: TemplateKey[]; canStartBlank?: boolean;
+export function CreateEventDialog({ events, onClose, disabledModules = [], templates = eventTemplates.map(t => t.key), canStartBlank = false, staff = [] }: {
+  events: EventRecord[]; onClose: () => void; disabledModules?: AdminModule[]; templates?: TemplateKey[]; canStartBlank?: boolean; staff?: StaffMember[];
 }) {
   const router = useRouter();
   const [start, setStart] = useState<Start | null>(null);
   const [details, setDetails] = useState<Details>(emptyDetails);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
+  const [picId, setPicId] = useState("");
   const [error, setError] = useState("");
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, [start]);
@@ -65,7 +67,7 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
       template: template?.key ?? "blank", title: details.title, starts_at: time(details.starts_at) ?? "", ends_at: time(details.ends_at), timezone: details.timezone,
       audience: template?.audience ?? source?.audience ?? "external", language: source?.language ?? "id", invitation_mode: source?.invitation_mode ?? "open",
       location: details.location, ...(details.location === "later" ? { venue_name: "", address: "", location_url: "" } : { venue_name: details.venue_name, address: details.address, location_url: details.location_url }),
-      greeting: "", introduction: "", closing: "", modules, guest_estimate: null, rsvp_closes_at: null, contact_name: "", contact_phone: "",
+      greeting: "", introduction: "", closing: "", modules, guest_estimate: null, rsvp_closes_at: null, contact_name: "", contact_phone: "", pic_staff_id: picId,
     };
   }
 
@@ -152,6 +154,14 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
                 </label>)}
             </fieldset>
             {details.location === "other" && <div className="stack">{input("venue_name", "Nama tempat")}{input("address", "Alamat", { multiline: true })}{input("location_url", "Tautan Google Maps (opsional)", { type: "url" })}</div>}
+            {staff.length > 0 && <fieldset className={styles.wizardChoices}>
+              <legend>PIC acara (opsional)</legend>
+              <div className={styles.picRow}>
+                {staff.map(person => <button key={person.id} type="button" className={styles.picChip} aria-pressed={picId === person.id} onClick={() => setPicId(picId === person.id ? "" : person.id)}>
+                  <StaffAvatar person={person} size={32} /><span>{person.name}</span>
+                </button>)}
+              </div>
+            </fieldset>}
             <p className="field-hint">Isi undangan, rundown, dan bagian lain dilengkapi di editor setelah ini. Acara dibuat sebagai draf dan belum terlihat tamu.</p>
           </div>
         </div>}

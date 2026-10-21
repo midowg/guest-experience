@@ -12,7 +12,7 @@ import { Gallery, imageSrcSet, venuePhotos } from "./Gallery";
 import { InvitationHero, visibleSections } from "./InvitationHero";
 import { FeedbackPanel, RsvpPanel } from "./GuestForms";
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
-import { AfterPanel, ExperienceContent, PrepareCards, RouteGuideContent, TodayPanel, teamPoints } from "./JourneyPanels";
+import { AfterPanel, ExperienceContent, PicAvatar, PrepareCards, RouteGuideContent, TodayPanel, teamPoints } from "./JourneyPanels";
 import { LanguageSwitch, WordingProvider, useEventLanguage, useWording } from "./language";
 import { localizeEvent } from "@/lib/wording/localize";
 import { offersSwitch, type Lang, type WordKey } from "@/lib/wording";
@@ -100,7 +100,7 @@ function Contact({ contact }: { contact: EventRecord["contact"] }) {
   if (!phone) return null;
   const whatsapp = contact.channel === "whatsapp";
   return <div className={styles.contactPanel}>
-    <h3>{contact.name}</h3>
+    <div className={styles.contactWho}><PicAvatar contact={contact} large /><h3>{contact.name}</h3></div>
     {contact.role && <p className={styles.contactDetail}>{contact.role}</p>}
     {contact.organization && <p className={styles.contactDetail}>{contact.organization}</p>}
     <p className={styles.contactPhone}>{phone.local}</p>

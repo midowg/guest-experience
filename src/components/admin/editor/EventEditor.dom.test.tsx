@@ -38,7 +38,7 @@ it("saves the PIC and chosen telephone channel", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
   await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
   const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-  expect(JSON.parse(init.body).contact).toEqual({ name: "Koordinator Acara", phone: "0812 3456 7890", channel: "phone", heading: "", description: "", role: "", organization: "" });
+  expect(JSON.parse(init.body).contact).toEqual({ name: "Koordinator Acara", phone: "0812 3456 7890", channel: "phone", heading: "", description: "", role: "", organization: "", photo: { url: "", alt: "", srcset: [] }, staff_id: "" });
 }, 10000);
 
 it("flags incomplete PIC details without sending the event", () => {

@@ -641,3 +641,27 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .eventLinkLabel { font-size: .8125rem; color: #5b6476; font-weight: 600; }
 .eventLinkUrl { font-size: 1.125rem; font-weight: 800; color: var(--color-text); overflow-wrap: anywhere; }
 @media (max-width: 30rem) { .eventLink { grid-template-columns: auto minmax(0, 1fr); } .eventLink > button { grid-column: 1 / -1; justify-self: start; } }
+
+/* Tim Werkudara (super admin) and the PIC picker */
+.staffAvatar { display: inline-grid; place-items: center; flex-shrink: 0; border-radius: 50%; object-fit: cover; background: #e6eefb; color: var(--blue); font-weight: 800; }
+.staffList { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.staffList > li { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.staffList > li[data-inactive] { opacity: .65; }
+.staffList > li > form { flex: 1 1 100%; }
+.staffText { display: grid; flex: 1 1 12rem; min-width: 0; }
+.staffText span { color: #5b6476; font-size: .875rem; }
+.staffInactive { justify-self: start; margin-top: 2px; padding: 0 var(--space-2); border-radius: 999px; background: var(--page); font-weight: 700; font-size: .75rem !important; }
+.staffActions { display: flex; gap: var(--space-2); }
+.staffForm { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px dashed #c4cad6; border-radius: 14px; background: #fff; }
+.picPicker { display: grid; gap: var(--space-2); }
+.picPicker > p { margin: 0; font-weight: 700; }
+.picOptions { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); margin: 0; padding: 0; list-style: none; }
+.picOption { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 60px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; text-align: left; cursor: pointer; }
+.picOption:hover { border-color: var(--blue); }
+.picOption[aria-pressed="true"] { border-color: var(--blue); background: #eef4fd; box-shadow: inset 0 0 0 1px var(--blue); }
+.picOption span { display: grid; min-width: 0; }
+.picOption strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picOption small { color: #5b6476; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picRow { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.picChip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 4px var(--space-3) 4px 4px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.picChip[aria-pressed="true"] { border-color: var(--blue); background: #eef4fd; box-shadow: inset 0 0 0 1px var(--blue); }

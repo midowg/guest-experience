@@ -70,3 +70,8 @@ export function adminApi(eventId: string, part = "", query: Record<string, strin
   return `/api/admin/events/${eventId}${part ? `/${part}` : ""}${search ? `?${search}` : ""}`;
 }
 export const adminEventsApi = "/api/admin/events";
+/** Tim Werkudara: the list, or one member by id. */
+export const staffApi = (id?: string, query: Record<string, string> = {}) => {
+  const search = new URLSearchParams(query).toString();
+  return `/api/admin/staff${id ? `/${id}` : ""}${search ? `?${search}` : ""}`;
+};

@@ -47,7 +47,7 @@ describe('PIC contact', () => {
   it('keeps older events valid without a contact field', () => {
     const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
     delete legacy.contact;
-    expect(eventSchema.parse(legacy).contact).toEqual({ name: '', phone: '', channel: 'whatsapp', heading: '', description: '', role: '', organization: '' });
+    expect(eventSchema.parse(legacy).contact).toEqual({ name: '', phone: '', channel: 'whatsapp', heading: '', description: '', role: '', organization: '', photo: { url: '', alt: '', srcset: [] }, staff_id: '' });
   });
   it('accepts an empty contact, local 08, and older +62 contacts for either channel', () => {
     expect(eventSchema.safeParse(createSeedEvent()).success).toBe(true);

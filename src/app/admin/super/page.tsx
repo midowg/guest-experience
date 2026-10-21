@@ -9,6 +9,8 @@ import { requireAdminPage } from "@/lib/server/admin-session";
 import { getDisabledModules, getEnabledTemplates } from "@/lib/server/admin-settings";
 import { TemplateSettings } from "@/components/admin/super/TemplateSettings";
 import { ModuleSettings } from "@/components/admin/super/ModuleSettings";
+import { StaffSettings } from "@/components/admin/super/StaffSettings";
+import { listStaff } from "@/lib/server/staff";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard super admin" };
@@ -17,7 +19,7 @@ export const metadata = { title: "Dashboard super admin" };
 export default async function SuperAdminPage() {
   if ((await requireAdminPage()) !== "super") notFound();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
-  const [events, hidden, modules, templates] = await Promise.all([listAdminEvents(), hiddenEventIds(), getDisabledModules(), getEnabledTemplates()]);
+  const [events, hidden, modules, templates, team] = await Promise.all([listAdminEvents(), hiddenEventIds(), getDisabledModules(), getEnabledTemplates(), listStaff(false)]);
   // Only what the dashboard shows travels to the browser.
   const rows: SuperEventRow[] = events.map(event => ({
     id: event.id, title: event.title, slug: event.slug, status: event.status, starts_at: event.starts_at, timezone: event.timezone,
@@ -26,8 +28,9 @@ export default async function SuperAdminPage() {
   return <AdminShell>
     <p className="eyebrow">Super admin</p>
     <h1 className={styles.title}>Dashboard super admin</h1>
-    <p className={styles.lead}>Atur apa yang bisa dilihat dan dipakai admin biasa: templat mana yang bisa dipilih, acara mana yang terlihat, dan modul mana yang boleh dipakai saat membuat atau mengubah acara.</p>
-    <nav className={styles.superTabs} aria-label="Bagian dashboard"><a href="#templat">Templat</a><a href="#visibilitas">Visibilitas acara</a><a href="#modul">Modul admin</a></nav>
+    <p className={styles.lead}>Atur tim yang bisa dipilih sebagai PIC, templat yang bisa dipilih admin biasa, acara yang terlihat, dan modul yang boleh dipakai saat membuat atau mengubah acara.</p>
+    <nav className={styles.superTabs} aria-label="Bagian dashboard"><a href="#tim">Tim Werkudara</a><a href="#templat">Templat</a><a href="#visibilitas">Visibilitas acara</a><a href="#modul">Modul admin</a></nav>
+    <div id="tim"><StaffSettings initial={team.staff} migrated={team.migrated} /></div>
     <div id="templat"><TemplateSettings initialEnabled={templates.templates} migrated={templates.migrated} /></div>
     <section id="visibilitas" aria-labelledby="visibility-title" className="stack">
       <h2 id="visibility-title" className={styles.superSectionTitle}>Visibilitas acara</h2>

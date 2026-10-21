@@ -23,9 +23,22 @@ const contactSchema = z.object({
   channel: z.enum(["whatsapp", "phone"]),
   heading: text(200).default(""), description: text(1000).default(""),
   role: text(150).default(""), organization: text(200).default(""),
+  photo: z.lazy(() => plainImage).default({ url: "", alt: "", srcset: [] }),
+  staff_id: z.union([z.uuid(), z.literal("")]).default(""),
 });
 const plainImage = z.object({ url: httpsUrl, alt: text(300).default(""), srcset: srcsetSchema.default([]) });
 const emptyImage = { url: "", alt: "", srcset: [] };
+
+/** A team member as the super admin enters them. The number must be an Indonesian mobile number. */
+export const staffInputSchema = z.object({
+  name: z.string().trim().min(2, "Isi nama minimal 2 huruf.").max(150),
+  role: z.string().trim().max(150).default(""),
+  phone: z.string().trim().max(30).refine(value => parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890."),
+  photo: plainImage.default(emptyImage),
+  active: z.boolean().default(true),
+  sort_order: z.number().int().min(0).max(10000).default(0),
+});
+export type StaffInput = z.infer<typeof staffInputSchema>;
 export const momentIcons = ["coffee", "utensils", "gift", "users", "camera", "music", "map", "sparkles", "presentation", "heart"] as const;
 export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar"] as const;
 const pairSchema = (title = 200, description = 1500) => z.object({ title: text(title).default(""), description: text(description).default("") });
@@ -90,7 +103,7 @@ export const eventBaseSchema = z.object({
   review_url: httpsUrl, review_enabled: z.boolean(), review_heading: text(200).default(""), review_description: text(1000).default(""), review_button_label: text(100).default(""), rsvp_enabled: z.boolean(), rsvp_closes_at: optionalTime,
   invitation_mode: z.enum(["open", "personal"]).default("open"),
   feedback_enabled: z.boolean(), feedback_opens_at: optionalTime, feedback_description: text(1000).default(""),
-  contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "" }),
+  contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "", photo: { url: "", alt: "", srcset: [] }, staff_id: "" }),
   team_image: plainImage.default(emptyImage),
   sections: z.array(z.object({ key: z.enum(["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback", "team"]), enabled: z.boolean() })).max(9),
   topics: z.array(z.object({ title: text(200).min(1), description: text(1500), en: pairSchema(200, 1500).optional() })).max(20),

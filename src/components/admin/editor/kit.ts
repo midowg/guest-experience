@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { AdminModule } from "@/lib/admin-modules";
-import type { EventRecord } from "@/lib/types";
+import type { EventRecord, StaffMember } from "@/lib/types";
 
 /** Changes one field of the draft; the editor tracks which block became unsaved. */
 export type Update = <K extends keyof EventRecord>(key: K, value: EventRecord[K]) => void;
@@ -34,4 +34,6 @@ export type EditorKit = {
   sectionUnavailable: (key: string) => boolean;
   /** Public site address (NEXT_PUBLIC_SITE_URL) for links shown to copy. */
   origin: string;
+  /** Active Tim Werkudara members, for picking the PIC. */
+  staff: StaffMember[];
 };

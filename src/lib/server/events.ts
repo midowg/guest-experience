@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import type { EventRecord } from "@/lib/types";
+import type { EventRecord, StaffMember } from "@/lib/types";
+import { contactFromStaff } from "@/lib/staff";
 import { buildEventFromSetup, copyEventWithSetup, type EventSetup } from "@/lib/event-setup";
 import { withoutModules, type AdminModule } from "@/lib/admin-modules";
 import { eventSchema } from "@/lib/validation";
@@ -85,9 +86,13 @@ export async function deleteEvent(id: string): Promise<{ slug: string; rsvps: nu
  * A new draft: from the "Buat acara" answers (template or blank), or a copy of an earlier event,
  * optionally under the survey's new name and date. Guest data is never copied.
  */
-export async function createEvent(duplicateId?: string, setup?: EventSetup, disabled: AdminModule[] = []): Promise<EventRecord> {
+export async function createEvent(duplicateId?: string, setup?: EventSetup, disabled: AdminModule[] = [], pic?: StaffMember | null): Promise<EventRecord> {
   // New drafts never start with a module the admin may not use, whatever the template or source had.
-  const clean = (event: EventRecord) => disabled.length ? withoutModules(event, disabled) : event;
+  // A PIC picked from the team fills the contact in the same save.
+  const clean = (event: EventRecord) => {
+    const allowed = disabled.length ? withoutModules(event, disabled) : event;
+    return pic ? { ...allowed, contact: contactFromStaff(allowed.contact, pic) } : allowed;
+  };
   const id = randomUUID();
   const ids = { id, uuid: () => randomUUID(), now: new Date().toISOString() };
   if (!duplicateId) {

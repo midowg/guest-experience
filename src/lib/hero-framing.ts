@@ -16,6 +16,7 @@ export function normalizeEvent(event: EventRecord): EventRecord {
       name: event.contact?.name ?? "", phone: event.contact?.phone ?? "", channel: event.contact?.channel ?? "whatsapp",
       heading: event.contact?.heading ?? "", description: event.contact?.description ?? "",
       role: event.contact?.role ?? "", organization: event.contact?.organization ?? "",
+      photo: event.contact?.photo ?? { url: "", alt: "", srcset: [] }, staff_id: event.contact?.staff_id ?? "",
     },
     review_heading: event.review_heading ?? "", review_description: event.review_description ?? "", review_button_label: event.review_button_label ?? "",
     feedback_description: event.feedback_description ?? "", team_image: event.team_image ?? { url: "", alt: "", srcset: [] },

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, CalendarCheck, CalendarDays, Copy, ExternalLink, EyeOff, Hourglass, Images, MoreHorizontal, Pencil, Plus, Star, StarOff } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
-import type { EventPhase, EventRecord } from "@/lib/types";
+import type { EventPhase, EventRecord, StaffMember } from "@/lib/types";
 import { formatDate, formatTime } from "@/lib/format";
 import { tzLabel } from "@/lib/timezones";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
@@ -29,7 +29,7 @@ function stageBadge(event: EventRecord, phase: EventPhase | undefined) {
  * the editor, and the rarer actions sit in each card's "⋯" menu (meeting of 20 Oct).
  * `superAdmin` is set only for a super admin session: hidden events then carry a label.
  */
-export function EventList({ events, featuredId, phases = {}, superAdmin, disabledModules = [], templates }: { events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean }; disabledModules?: AdminModule[]; templates?: TemplateKey[] }) {
+export function EventList({ events, featuredId, phases = {}, superAdmin, disabledModules = [], templates, staff = [] }: { events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean }; disabledModules?: AdminModule[]; templates?: TemplateKey[]; staff?: StaffMember[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -76,7 +76,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
       <h1 className={styles.listTitle}>Acara <span>{events.length}</span></h1>
       <Button type="button" disabled={!!busy} onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" /> Buat acara</Button>
     </div>
-    {creating && <CreateEventDialog events={events} disabledModules={disabledModules} templates={templates} canStartBlank={!!superAdmin} onClose={() => setCreating(false)} />}
+    {creating && <CreateEventDialog events={events} disabledModules={disabledModules} templates={templates} canStartBlank={!!superAdmin} staff={staff} onClose={() => setCreating(false)} />}
     {error && <Notice tone="error">{error}</Notice>}
     {message && <p role="status" className={styles.guestMessage}>{message}</p>}
     {!events.length ? <div className={styles.emptyList}>
