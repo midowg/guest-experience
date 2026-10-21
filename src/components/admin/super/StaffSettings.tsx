@@ -75,7 +75,7 @@ export function StaffSettings({ initial, migrated }: { initial: StaffMember[]; m
     {error && <Notice tone="error" role="alert">{error}</Notice>}
     {message && <p role="status" className={styles.guestMessage}>{message}</p>}
     {migrated && editing === "new" && <StaffForm initial={blank} busy={busy} onSave={draft => void save("new", draft)} onCancel={() => setEditing(null)} />}
-    {migrated && editing !== "new" && <Button type="button" onClick={() => { setEditing("new"); setMessage(""); }}><Plus size={16} aria-hidden="true" /> Tambah orang</Button>}
+    {migrated && editing !== "new" && <Button type="button" style={{ justifySelf: "start" }} onClick={() => { setEditing("new"); setMessage(""); }}><Plus size={16} aria-hidden="true" /> Tambah orang</Button>}
     {staff.length === 0 ? migrated && <p className="muted">Belum ada anggota tim. Tambahkan orang yang biasa menjadi PIC acara.</p> : <ul className={styles.staffList}>
       {staff.map(person => <li key={person.id} data-inactive={person.active ? undefined : ""}>
         {editing === person.id ? <StaffForm initial={person} busy={busy} onSave={draft => void save(person.id, draft)} onCancel={() => setEditing(null)} /> : <>

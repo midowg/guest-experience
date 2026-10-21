@@ -1,7 +1,8 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
 import { EventEditor } from "@/components/admin/editor/EventEditor";
+import { openBlock } from "@/components/admin/editor/editor-test-helpers";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
@@ -17,7 +18,7 @@ it("keeps spaces in every destructive editor label", () => {
   render(<EventEditor event={event} />);
   // Each block renders only inside its open panel, so open the one that holds each label.
   for (const [block, label] of [["Topik pembahasan", "Hapus topik 1"], ["Rundown", "Hapus sesi 1"], ["Galeri foto lokasi Werkudara", "Hapus foto lokasi 1"], ["Survei feedback", "Hapus pertanyaan 1"]]) {
-    fireEvent.click(screen.getByRole("button", { name: `Ubah ${block}` }));
+    openBlock(block);
     const span = screen.getByText(label);
     expect(span.tagName).toBe("SPAN");
     expect(span.textContent).toBe(label);

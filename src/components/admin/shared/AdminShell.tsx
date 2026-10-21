@@ -6,10 +6,12 @@ import { ButtonLink, Notice } from "@/components/ui";
 import type { EventRecord } from "@/lib/types";
 import { LogoutButton } from "@/components/admin/shared/AuthControls";
 import styles from "@/components/admin/admin.module.css";
+import nav from "./navigation.module.css";
 import { adminEventPath, eventPath, type AdminTab } from "@/lib/routes";
 
 /** `bare` drops the signed-in links, for the login and setup screens. */
-export async function AdminShell({ children, bare = false }: { children: ReactNode; bare?: boolean }) {
+/** `wide` gives pages with a side preview (the editor) more room than the usual reading width. */
+export async function AdminShell({ children, bare = false, wide = false }: { children: ReactNode; bare?: boolean; wide?: boolean }) {
   const role = bare ? null : await adminRole();
   return <div className={styles.shell}>
     <header className={styles.header}>
@@ -27,7 +29,7 @@ export async function AdminShell({ children, bare = false }: { children: ReactNo
         </nav>}
       </div>
     </header>
-    <main id="main" className={`container ${styles.main}`}>{children}</main>
+    <main id="main" className={`container ${styles.main}`} style={wide ? { ["--container" as string]: "100rem" } : undefined}>{children}</main>
   </div>;
 }
 export function SetupNotice() {
@@ -38,19 +40,15 @@ export function SetupNotice() {
     <ButtonLink href="/admin" variant="secondary">Periksa koneksi</ButtonLink>
   </section>;
 }
+/** The event's pages in three groups: edit the invitation, work with guests, run the event. */
 export function EventNavigation({ event, current }: { event: EventRecord; current: AdminTab }) {
   const tab = (key: AdminTab, label: string, Icon: typeof Pencil) =>
-    <a href={adminEventPath(event, key)} className={styles.tab} aria-current={current === key ? "page" : undefined}><Icon size={16} aria-hidden="true" /> {label}</a>;
-  return <nav className={styles.navigation} aria-label="Pengelolaan acara">
-    <Link href="/admin" className={`${styles.tab} ${styles.tabBack}`}><ArrowLeft size={16} aria-hidden="true" /> Semua acara</Link>
-    {tab("edit", "Edit acara", Pencil)}
-    {tab("invitations", "Undangan tamu", Mail)}
-    {tab("responses", "RSVP", ClipboardCheck)}
-    {tab("checkin", "Check-in", ScanLine)}
-    {tab("beo", "BEO", UtensilsCrossed)}
-    {tab("gallery", "Galeri foto", Images)}
-    {tab("feedback", "Feedback", MessageSquare)}
-    {tab("preview", "Preview tersimpan", Eye)}
-    {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer" className={styles.tab}><ExternalLink size={16} aria-hidden="true" /> Buka undangan publik<span className="sr-only"> (tab baru)</span></a>}
+    <a href={adminEventPath(event, key)} className={nav.tab} aria-current={current === key ? "page" : undefined}><Icon size={16} aria-hidden="true" /> {label}</a>;
+  return <nav className={nav.bar} aria-label="Pengelolaan acara">
+    <Link href="/admin" className={`${nav.tab} ${nav.back}`}><ArrowLeft size={16} aria-hidden="true" /> Semua acara</Link>
+    <div className={nav.group}><span className={nav.label}>Edit</span>{tab("edit", "Undangan", Pencil)}{tab("preview", "Tersimpan", Eye)}</div>
+    <div className={nav.group}><span className={nav.label}>Tamu</span>{tab("invitations", "Daftar tamu", Mail)}{tab("responses", "RSVP", ClipboardCheck)}{tab("checkin", "Check-in", ScanLine)}</div>
+    <div className={nav.group}><span className={nav.label}>Operasional</span>{tab("beo", "BEO", UtensilsCrossed)}{tab("gallery", "Galeri", Images)}{tab("feedback", "Feedback", MessageSquare)}</div>
+    {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer" className={`${nav.tab} ${nav.public}`}><ExternalLink size={16} aria-hidden="true" /> Buka undangan<span className="sr-only"> (tab baru)</span></a>}
   </nav>;
 }

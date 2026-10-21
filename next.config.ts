@@ -26,6 +26,8 @@ const config: NextConfig = {
       { source: "/admin/acara/:ref/checkin", headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }] },
       { source: "/admin/hero-preview", headers: sameOriginFrame },
       { source: "/admin/pratinjau-langsung", headers: sameOriginFrame },
+      // Development twin of the editor preview (404 in production).
+      { source: "/dev-preview/pratinjau-langsung", headers: sameOriginFrame },
     ];
   },
 };

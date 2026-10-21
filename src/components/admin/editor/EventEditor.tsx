@@ -3,16 +3,15 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink, Field, Notice } from "@/components/ui";
-import { CalendarCheck, ChevronRight, CircleAlert, CircleDashed, Pencil, X, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, MessageSquare, Palette, Phone, Rocket, Save, Shirt, Sparkles, Star, Users, type LucideIcon } from "lucide-react";
+import { CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Shirt, Smartphone, Sparkles, Star, Users, type LucideIcon } from "lucide-react";
 import { Check, SuggestionChips } from "@/components/admin/editor/controls";
 import { chipLabel, fieldExamples, fieldPattern, fieldSuggestions, fillSuggestion } from "@/components/admin/editor/suggestions";
-import { formatDate, formatTime, fromZoneInput, toZoneInput } from "@/lib/format";
+import { fromZoneInput, toZoneInput } from "@/lib/format";
 import { tzLabel, zoneOf } from "@/lib/timezones";
-import { themeDefinition } from "@/lib/themes";
-import type { EventRecord, SectionKey, StaffMember } from "@/lib/types";
+import type { EventPhase, EventRecord, SectionKey, StaffMember } from "@/lib/types";
 import { eventSchema } from "@/lib/validation";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { blockOfPath, blockStatusLabels, blockStatuses, blockSummary, completeSections, editorBlocks, editorStages, type BlockStatus, prepareEvent } from "@/components/admin/editor/editor-model";
+import { blockOfPath, blockStatusLabels, blockStatuses, completeSections, editorBlocks, editorStages, type BlockStatus, prepareEvent } from "@/components/admin/editor/editor-model";
 import { AfterBlock, AppearanceBlock, DayBlock, ExperienceBlock, PrepareBlock } from "@/components/admin/editor/JourneyEditor";
 import { TranslationBlock } from "@/components/admin/editor/TranslationEditor";
 import { moduleActive, moduleBlocks, type AdminModule } from "@/lib/admin-modules";
@@ -32,6 +31,9 @@ import { TopicsBlock } from "@/components/admin/editor/blocks/TopicsBlock";
 import { VenueBlock } from "@/components/admin/editor/blocks/VenueBlock";
 import { VenueGalleryBlock } from "@/components/admin/editor/blocks/VenueGalleryBlock";
 import styles from "@/components/admin/admin.module.css";
+import e from "./editor.module.css";
+import { PhonePreview } from "@/components/admin/editor/PhonePreview";
+import { areaOfBlock, blockOfArea, phaseOfBlock } from "@/lib/live-preview";
 import { adminApi, adminEventPath } from "@/lib/routes";
 
 
@@ -41,29 +43,16 @@ const blockIcons: Record<string, LucideIcon> = {
   feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket,
 };
 
-const statusIcons: Record<BlockStatus, LucideIcon> = { error: CircleAlert, dirty: CircleDot, todo: CircleAlert, optional: CircleDashed, done: CircleCheck };
 
-/** What still blocks publishing, each line opening the block that fixes it. */
-function Readiness({ blocks, statuses, onOpen }: { blocks: typeof editorBlocks; statuses: Record<string, BlockStatus>; onOpen: (id: string, from?: HTMLElement | null) => void }) {
+/** Publishing readiness as one line and a bar, at the top of the menu. */
+function Readiness({ blocks, statuses }: { blocks: typeof editorBlocks; statuses: Record<string, BlockStatus> }) {
   const todo = blocks.filter(item => statuses[item.id] === "todo" || statuses[item.id] === "error");
   const required = blocks.filter(item => statuses[item.id] !== "optional");
   const ready = required.length - todo.length;
-  return <section className={styles.readiness} aria-labelledby="kesiapan-title">
-    <div className={styles.readinessHead}><h2 id="kesiapan-title">Kesiapan tayang</h2><span>{ready} dari {required.length} siap</span></div>
-    <div className={styles.readinessBar} aria-hidden="true"><span style={{ width: `${required.length ? Math.round(ready / required.length * 100) : 100}%` }} /></div>
-    {todo.length ? <ul className={styles.readinessList}>{todo.map(item => <li key={item.id}><button type="button" onClick={e => onOpen(item.id, e.currentTarget)}><CircleAlert size={14} aria-hidden="true" /> {item.title}: perlu dilengkapi <ChevronRight size={14} aria-hidden="true" /></button></li>)}</ul>
-      : <p className={styles.readinessDone}><CircleCheck size={14} aria-hidden="true" /> Semua bagian wajib sudah lengkap.</p>}
-  </section>;
-}
-
-function PanelHeader({ open, titleRef, onClose }: { open: string | null; titleRef: React.RefObject<HTMLHeadingElement | null>; onClose: () => void }) {
-  const meta = editorBlocks.find(item => item.id === open);
-  const Icon = (open && blockIcons[open]) || FileText;
-  return <header className={styles.panelHeader}>
-    <span className={styles.blockIcon} aria-hidden="true"><Icon size={20} /></span>
-    <div className={styles.panelHeading}><p className={styles.blockStage}>{editorStages.find(stage => stage.key === meta?.stage)?.label}</p><h2 id="panel-title" ref={titleRef} tabIndex={-1}>{meta?.title}</h2></div>
-    <button type="button" className={styles.panelClose} onClick={onClose} aria-label="Tutup panel"><X size={18} aria-hidden="true" /></button>
-  </header>;
+  return <div className={e.readiness}>
+    <p><span>Kesiapan tayang</span><strong>{ready}/{required.length}</strong></p>
+    <span className={e.readinessBar} aria-hidden="true"><span style={{ width: `${required.length ? Math.round(ready / required.length * 100) : 100}%` }} /></span>
+  </div>;
 }
 
 /**
@@ -71,7 +60,7 @@ function PanelHeader({ open, titleRef, onClose }: { open: string | null; titleRe
  * that this event does not use is not offered at all; one it already uses stays visible with a
  * note, may be switched off, and cannot come back (the server checks the same rule on save).
  */
-export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false, origin = "", staff = [] }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean; origin?: string; staff?: StaffMember[] }) {
+export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false, origin = "", staff = [], previewSrc }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean; origin?: string; staff?: StaffMember[]; previewSrc?: string }) {
   const unavailable = (key: AdminModule) => disabledModules.includes(key) && !moduleActive(initialEvent, key);
   const restricted = (key: AdminModule) => disabledModules.includes(key) && moduleActive(initialEvent, key);
   // Kind, audience, and theme come from the template; only the super admin changes them (meeting of 20 Oct).
@@ -87,12 +76,14 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
-  // The block whose form is open in the panel; every block stays mounted so a field is always focusable.
-  const [open, setOpen] = useState<string | null>(null);
+  // One block's form is always open next to the phone preview; it starts with the event's basics.
+  const [open, setOpen] = useState<string>("identity");
+  const [phase, setPhase] = useState<EventPhase>("before");
+  // On a phone the form and the preview take turns on screen.
+  const [view, setView] = useState<"form" | "preview">("form");
   const [dirtyBlocks, setDirtyBlocks] = useState<Set<string>>(() => new Set());
   const errorSummary = useRef<HTMLDivElement>(null);
-  const panelTitle = useRef<HTMLHeadingElement>(null);
-  const returnFocus = useRef<HTMLElement | null>(null);
+  const blockTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (!dirty) return;
     const prevent = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
@@ -105,40 +96,28 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     const owner = blockOfPath(String(key));
     setDirtyBlocks(current => current.has(owner) ? current : new Set(current).add(owner));
   }
-  function openBlock(id: string, from?: HTMLElement | null) {
-    returnFocus.current = from ?? (document.activeElement as HTMLElement | null);
-    setOpen(id);
-  }
-  function closePanel() {
-    setOpen(null);
-    requestAnimationFrame(() => returnFocus.current?.focus?.());
+  /** Switch the form to another block; the preview follows with the matching part and phase. */
+  function openBlock(id: string) {
+    setOpen(id); setPhase(phaseOfBlock(id)); setView("form");
+    requestAnimationFrame(() => { blockTitle.current?.focus({ preventScroll: true }); blockTitle.current?.scrollIntoView?.({ block: "nearest" }); });
   }
   /** Open the block that owns a field, then focus the field once it is visible. */
   function openField(key: string) {
-    setOpen(blockOfPath(key));
+    setOpen(blockOfPath(key)); setView("form");
     requestAnimationFrame(() => { const field = document.getElementById(key); field?.focus(); field?.scrollIntoView?.({ block: "center" }); });
   }
-  useEffect(() => { if (open) requestAnimationFrame(() => panelTitle.current?.focus()); }, [open]);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(null); requestAnimationFrame(() => returnFocus.current?.focus?.()); } };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
   // Whatever publishing would still reject marks a card "Perlu dilengkapi".
   const publishIssues = useMemo(() => {
     const parsed = eventSchema.safeParse({ ...prepareEvent(event), status: "published" });
     return parsed.success ? [] : parsed.error.issues.map(issue => issue.path.join("."));
   }, [event]);
   const statuses = blockStatuses(event, errors, dirtyBlocks, publishIssues);
-  const themeName = themeDefinition(event.theme?.key ?? "werkudara").name;
   // A block for a module this event does not use waits under "Bagian lain", so the main list
   // shows only what the event actually has. Opening, editing, or an error keeps it in view.
   const blockModule = Object.fromEntries((Object.entries(moduleBlocks) as [AdminModule, string][]).map(([key, id]) => [id, key])) as Record<string, AdminModule>;
   const inUse = (id: string) => !blockModule[id] || moduleActive(event, blockModule[id]) || dirtyBlocks.has(id) || statuses[id] === "error" || statuses[id] === "todo";
   const mainBlocks = blocks.filter(item => inUse(item.id));
   const extraBlocks = blocks.filter(item => !inUse(item.id));
-  const formatWhen = (iso: string) => `${formatDate(iso, event.timezone)}, ${formatTime(iso, event.timezone)}`;
   function described(name: string, hint?: string) { return [hint ? `${name}-hint` : "", errors[name] ? `${name}-error` : ""].filter(Boolean).join(" ") || undefined; }
   /** Chips and example sentences come from suggestions.ts by field name, so call sites stay short. */
   function control(name: string, label: string, value: string, onChange: (value: string) => void, options: ControlOptions = {}) {
@@ -226,62 +205,62 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     try {
       const result = await adminRequest<EventRecord>(adminApi(event.id), { method: "PUT", body: JSON.stringify(parsed.data) });
       if (!result.data) throw new Error("Missing saved event");
-      setEvent(completeSections(result.data)); setEmbedDraft(result.data.location_embed_url ?? ""); setDirty(false); setDirtyBlocks(new Set()); setOpen(null); setMessage(result.message || "Perubahan tersimpan."); router.refresh();
+      setEvent(completeSections(result.data)); setEmbedDraft(result.data.location_embed_url ?? ""); setDirty(false); setDirtyBlocks(new Set()); setMessage(result.message || "Perubahan tersimpan."); router.refresh();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) { setError(errorMessage(err)); if (err instanceof AdminApiError) setErrors(err.fieldErrors || {}); }
     finally { setPending(false); }
   }
-  function card(item: (typeof editorBlocks)[number]) {
+  const openMeta = editorBlocks.find(item => item.id === open);
+  function menuItem(item: (typeof editorBlocks)[number]) {
     const Icon = blockIcons[item.id] ?? FileText;
     const status = statuses[item.id];
-    const StatusIcon = statusIcons[status];
-    return <li key={item.id} className={`${styles.card} ${open === item.id ? styles.cardOpen : ""}`.trimEnd()}>
-      <span className={styles.cardIcon} aria-hidden="true"><Icon size={18} /></span>
-      <div className={styles.cardText}>
-        <h3>{item.title}</h3>
-        <p>{blockSummary(item.id, event, themeName, formatWhen)}</p>
-        <span className={`${styles.cardStatus} ${styles[`status_${status}`]}`}><StatusIcon size={12} aria-hidden="true" /> {blockStatusLabels[status]}</span>
-      </div>
-      <button type="button" className={styles.cardEdit} onClick={e => openBlock(item.id, e.currentTarget)} aria-label={`Ubah ${item.title}`}><Pencil size={14} aria-hidden="true" /> Ubah</button>
-    </li>;
+    return <li key={item.id}><button type="button" onClick={() => openBlock(item.id)} aria-current={open === item.id ? "true" : undefined}>
+      <Icon size={16} aria-hidden="true" /><span>{item.title}</span>
+      {(status === "todo" || status === "error" || status === "dirty") && <span className={`${e.dot} ${e[`dot_${status}`]}`} title={blockStatusLabels[status]} />}
+    </button></li>;
   }
   const kit: EditorKit = { event, update, errors, control, text, time, toggle, choices, tz, unavailable, sectionUnavailable, origin, staff };
-  return <form className={styles.form} onSubmit={save} noValidate aria-busy={pending}>
+  return <form className={`${styles.form} ${e.editor}`} onSubmit={save} noValidate aria-busy={pending}>
     {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
     {message && <Notice tone="success">{message}</Notice>}
-    <div className={styles.editorLayout}>
-    <nav className={styles.editorMenu} aria-label="Daftar isi editor">
-      {editorStages.map(stage => <div key={stage.key} className={`${styles.menuGroup} ${styles[`stage_${stage.key}`]}`}>
-        <p className={styles.menuStage}>{stage.label}</p>
-        <ul>{mainBlocks.filter(item => item.stage === stage.key).map(item => {
-          const Icon = blockIcons[item.id] ?? FileText;
-          const status = statuses[item.id];
-          return <li key={item.id}><button type="button" onClick={e => openBlock(item.id, e.currentTarget)} aria-current={open === item.id ? "true" : undefined}>
-            <Icon size={16} aria-hidden="true" /><span>{item.title}</span>
-            {(status === "todo" || status === "error" || status === "dirty") && <span className={`${styles.menuDot} ${styles[`dot_${status}`]}`} title={blockStatusLabels[status]} />}
-          </button></li>;
-        })}</ul>
-      </div>)}
-    </nav>
-    <div className={styles.summary}>
-      <nav className={styles.stageChips} aria-label="Pintasan tahap">{editorStages.map(stage => <a key={stage.key} href={`#tahap-${stage.key}`} className={styles[`stage_${stage.key}`]}>{stage.label}</a>)}</nav>
-      <Readiness blocks={blocks} statuses={statuses} onOpen={openBlock} />
-      {editorStages.map(stage => <section key={stage.key} id={`tahap-${stage.key}`} className={`${styles.stageGroup} ${styles[`stage_${stage.key}`]}`} aria-labelledby={`tahap-${stage.key}-title`}>
-        <h2 id={`tahap-${stage.key}-title`} className={styles.stageTitle}>{stage.label}</h2>
-        <ul className={styles.cards}>{mainBlocks.filter(item => item.stage === stage.key).map(card)}</ul>
-      </section>)}
-      {extraBlocks.length > 0 && <details className={styles.moreBlocks}>
-        <summary>Bagian lain yang bisa ditambahkan ({extraBlocks.length})</summary>
-        <p className="field-hint">Bagian ini belum dipakai acara ini. Buka salah satu untuk menambahkannya ke undangan.</p>
-        <ul className={styles.cards}>{extraBlocks.map(card)}</ul>
-      </details>}
-    </div>
-    </div>
-    <div className={styles.panelLayer} hidden={!open}>
-      <div className={styles.panelBackdrop} onClick={closePanel} aria-hidden="true" />
-      <div className={`${styles.panel} ${styles[`stage_${editorBlocks.find(item => item.id === open)?.stage ?? "prep"}`]}`} role="dialog" aria-modal="true" aria-labelledby="panel-title">
-        <PanelHeader open={open} titleRef={panelTitle} onClose={closePanel} />
-    <fieldset disabled={pending} className={`${styles.fieldset} ${styles.panelBody}`}>
+    <div className={e.layout} data-view={view}>
+      <nav className={e.menu} aria-label="Bagian acara">
+        <Readiness blocks={blocks} statuses={statuses} />
+        {editorStages.map(stage => {
+          const items = mainBlocks.filter(item => item.stage === stage.key);
+          return items.length > 0 && <div key={stage.key} className={e.menuGroup}>
+            <p className={e.menuStage}>{stage.label}</p>
+            <ul>{items.map(menuItem)}</ul>
+          </div>;
+        })}
+        {extraBlocks.length > 0 && <details className={e.menuMore}>
+          <summary>Bagian lain ({extraBlocks.length})</summary>
+          <p className="field-hint">Belum dipakai acara ini. Buka untuk menambahkannya.</p>
+          <ul>{extraBlocks.map(menuItem)}</ul>
+        </details>}
+      </nav>
+      <div className={e.picker}>
+        <label htmlFor="editor-block" className="sr-only">Bagian yang diubah</label>
+        <select id="editor-block" className="input" value={open} onChange={change => openBlock(change.target.value)}>
+          {editorStages.map(stage => mainBlocks.some(item => item.stage === stage.key) && <optgroup key={stage.key} label={stage.label}>
+            {mainBlocks.filter(item => item.stage === stage.key).map(item => <option key={item.id} value={item.id}>{item.title}{["todo", "error"].includes(statuses[item.id]) ? " · perlu dilengkapi" : ""}</option>)}
+          </optgroup>)}
+          {extraBlocks.length > 0 && <optgroup label="Bagian lain">{extraBlocks.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</optgroup>}
+        </select>
+        <div className={e.viewSwitch} role="group" aria-label="Tampilan">
+          <button type="button" aria-pressed={view === "form"} onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> Isi</button>
+          <button type="button" aria-pressed={view === "preview"} onClick={() => setView("preview")}><Smartphone size={15} aria-hidden="true" /> Lihat</button>
+        </div>
+      </div>
+      <section className={e.formPane} aria-labelledby="block-title">
+        <header className={e.formHeader}>
+          <span className={e.formIcon} aria-hidden="true">{(() => { const Icon = blockIcons[open] ?? FileText; return <Icon size={20} />; })()}</span>
+          <div>
+            <p className={e.formStage}>{editorStages.find(stage => stage.key === openMeta?.stage)?.label}</p>
+            <h2 id="block-title" ref={blockTitle} tabIndex={-1}>{openMeta?.title}</h2>
+          </div>
+        </header>
+    <fieldset disabled={pending} className={`${styles.fieldset} ${e.formBody}`}>
       {block("identity", "Identitas & undangan", <IdentityBlock kit={kit} />)}
       {block("appearance", "Jenis, audiens, dan tampilan", <AppearanceBlock event={event} update={update} />)}
       {block("schedule", "Waktu acara", <ScheduleBlock kit={kit} onTimezone={changeTimezone} />)}
@@ -303,13 +282,15 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {block("sections", "Urutan & tampilan bagian", <SectionsBlock kit={kit} />)}
       {block("publication", "Status & penyimpanan", <PublicationBlock kit={kit} />)}
     </fieldset>
-        <footer className={styles.panelFooter}><Button type="button" onClick={closePanel}>Selesai</Button><span className="muted">Tersimpan setelah Anda menekan Simpan perubahan.</span></footer>
-      </div>
+      </section>
+      <aside className={e.previewPane} aria-label="Pratinjau undangan">
+        <PhonePreview event={event} phase={phase} onPhase={setPhase} focus={areaOfBlock(open)} onFocusArea={area => openBlock(blockOfArea[area])} src={previewSrc} />
+      </aside>
     </div>
-    <div className={styles.saveBar} role="region" aria-label="Simpan perubahan">
+    <div className={`${styles.saveBar} ${e.saveBar}`} role="region" aria-label="Simpan perubahan">
       <span className={`${styles.saveState} ${dirty ? styles.saveStateDirty : ""}`.trimEnd()}>{dirty ? <><CircleDot size={16} aria-hidden="true" /> {dirtyBlocks.size > 1 ? `${dirtyBlocks.size} bagian belum disimpan` : "Ada perubahan yang belum disimpan"}</> : <><CircleCheck size={16} aria-hidden="true" /> Semua perubahan tersimpan</>}</span>
       <div className={styles.actions}>
-        <ButtonLink href={adminEventPath(event, "preview")} variant="secondary"><Eye size={17} aria-hidden="true" /> Preview</ButtonLink>
+        <ButtonLink href={adminEventPath(event, "preview")} variant="secondary"><Eye size={17} aria-hidden="true" /> Pratinjau tersimpan</ButtonLink>
         <Button type="submit" disabled={pending}><Save size={17} aria-hidden="true" /> {pending ? "Menyimpan…" : event.status === "published" ? "Simpan & publikasikan" : "Simpan perubahan"}</Button>
       </div>
     </div>

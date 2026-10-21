@@ -4,6 +4,7 @@ import { createSeedEvent } from "@/lib/seed-event";
 import { EventEditor } from "@/components/admin/editor/EventEditor";
 import { CreateEventDialog } from "@/components/admin/events/CreateEventDialog";
 import { ModuleSettings } from "@/components/admin/super/ModuleSettings";
+import { menuButton, openBlock } from "@/components/admin/editor/editor-test-helpers";
 
 vi.setConfig({ testTimeout: 20000 });
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }) }));
@@ -12,18 +13,17 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 it("hides switched-off modules from a regular admin's editor", () => {
   render(<EventEditor event={createSeedEvent()} disabledModules={["team", "review", "personal", "bilingual"]} />);
-  for (const title of ["Our Team", "Ulasan Google (opsional)", "Bahasa & terjemahan"]) expect(screen.queryByRole("button", { name: `Ubah ${title}` })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Ubah Identitas & undangan" }));
+  for (const title of ["Our Team", "Ulasan Google (opsional)", "Bahasa & terjemahan"]) expect(menuButton(title)).toBeNull();
+  openBlock("Identitas & undangan");
   expect(screen.getByRole("radio", { name: "Tautan umum" })).toBeTruthy();
   expect(screen.queryByRole("radio", { name: "Tautan per tamu" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Selesai" }));
-  fireEvent.click(screen.getByRole("button", { name: "Ubah Urutan & tampilan bagian" }));
+  openBlock("Urutan & tampilan bagian");
   expect(screen.queryByText("Our Team")).toBeNull();
 });
 
 it("keeps a module the event already uses, with a note", () => {
   render(<EventEditor event={createSeedEvent()} disabledModules={["rsvp"]} />);
-  fireEvent.click(screen.getByRole("button", { name: "Ubah Penerimaan RSVP" }));
+  openBlock("Penerimaan RSVP");
   expect(screen.getByText(/dinonaktifkan oleh super admin\. Acara ini sudah memakainya/)).toBeTruthy();
 });
 

@@ -1,0 +1,89 @@
+/*
+ * Event editor: menu | form | phone preview on a wide screen; on a tablet the menu becomes a
+ * select above form and phone; on a phone the form and the preview take turns (Isi | Lihat).
+ */
+.editor { --menu-width: 15.5rem; --phone-width: 22rem; --sticky-top: 5.5rem; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+@media (min-width: 72rem) { .layout { grid-template-columns: var(--menu-width) minmax(0, 1fr) var(--phone-width); } }
+@media (min-width: 48rem) and (max-width: 71.99rem) { .layout { grid-template-columns: minmax(0, 1fr) 18rem; } }
+
+/* Menu (wide screens) */
+.menu { display: none; }
+@media (min-width: 72rem) {
+  .menu { position: sticky; top: var(--sticky-top); display: grid; gap: var(--space-3); max-height: calc(100vh - var(--sticky-top) - 6rem); overflow-y: auto; padding: var(--space-3); border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+}
+.menu ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.menu button { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 38px; padding: 6px var(--space-2); border: 0; border-radius: 10px; background: transparent; color: var(--color-text); font: inherit; font-size: .9rem; font-weight: 600; text-align: left; cursor: pointer; }
+.menu button:hover { background: var(--page); }
+.menu button[aria-current="true"] { background: var(--blue); color: #fff; }
+.menu button span:first-of-type { flex: 1; min-width: 0; }
+.menuGroup { display: grid; gap: 2px; }
+.menuStage { margin: 0; padding: 0 var(--space-2); color: #5b6476; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.menuMore { border-top: 1px dashed var(--line); padding-top: var(--space-2); }
+.menuMore > summary { cursor: pointer; padding: 0 var(--space-2); color: var(--blue); font-weight: 700; font-size: .875rem; }
+.menuMore > p { margin: var(--space-1) var(--space-2) var(--space-2); }
+.dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; }
+.dot_todo { background: #c27a00; }
+.dot_error { background: #9a273d; }
+.dot_dirty { background: #1f7ae0; }
+.menu button[aria-current="true"] .dot { box-shadow: 0 0 0 2px #fff; }
+
+.readiness { display: grid; gap: 6px; padding: var(--space-2); border-radius: 12px; background: var(--page); }
+.readiness p { display: flex; justify-content: space-between; margin: 0; font-size: .8125rem; font-weight: 700; color: #5b6476; }
+.readiness strong { color: var(--color-text); }
+.readinessBar { display: block; height: 6px; border-radius: 999px; background: #dfe4ee; overflow: hidden; }
+.readinessBar > span { display: block; height: 100%; border-radius: inherit; background: #208650; }
+
+/* Block picker and Isi | Lihat (tablet and phone) */
+.picker { display: flex; gap: var(--space-2); align-items: center; }
+@media (min-width: 48rem) { .picker { grid-column: 1 / -1; } }
+@media (min-width: 72rem) { .picker { display: none; } }
+.picker select { flex: 1; min-width: 0; min-height: 44px; font-weight: 700; }
+.viewSwitch { display: none; padding: 3px; border-radius: 999px; background: var(--page); border: 1px solid var(--line); }
+.viewSwitch button { display: inline-flex; align-items: center; gap: 4px; min-height: 38px; padding: 0 var(--space-3); border: 0; border-radius: 999px; background: transparent; font: inherit; font-weight: 700; color: #4a5060; cursor: pointer; }
+.viewSwitch button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+@media (max-width: 47.99rem) {
+  .picker { position: sticky; top: var(--sticky-top); z-index: 5; padding: var(--space-2) 0; background: var(--page); }
+  .viewSwitch { display: inline-flex; }
+  .layout[data-view="form"] .previewPane, .layout[data-view="preview"] .formPane { display: none; }
+}
+
+/* Form pane */
+.formPane { display: grid; gap: var(--space-4); min-width: 0; padding: var(--space-5); border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+@media (max-width: 47.99rem) { .formPane { padding: var(--space-4); } }
+.formHeader { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
+.formHeader h2 { margin: 0; font-size: 1.35rem; }
+.formHeader h2:focus { outline: none; }
+.formIcon { display: inline-grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; background: #eef4fd; color: var(--blue); }
+.formStage { margin: 0; color: #5b6476; font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.formBody { display: grid; gap: var(--space-4); min-width: 0; margin: 0; padding: 0; border: 0; }
+
+/* Phone preview */
+.previewPane { min-width: 0; }
+@media (min-width: 48rem) { .previewPane { position: sticky; top: var(--sticky-top); } }
+.preview { display: grid; gap: var(--space-2); justify-items: center; }
+.previewBar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: center; width: 100%; }
+.phaseSwitch { display: inline-flex; padding: 3px; border-radius: 999px; background: #fff; border: 1px solid var(--line); }
+.phaseSwitch button { min-height: 32px; padding: 0 var(--space-3); border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: .8125rem; font-weight: 700; color: #4a5060; cursor: pointer; }
+.phaseSwitch button[aria-pressed="true"] { background: var(--color-text); color: #fff; }
+.previewHint { font-size: .75rem; color: #5b6476; }
+.phoneStage { display: flex; justify-content: center; width: 100%; height: calc(100vh - var(--sticky-top) - 9rem); min-height: 22rem; }
+@media (max-width: 47.99rem) { .phoneStage { height: calc(100svh - 13rem); } }
+.phone { position: relative; flex-shrink: 0; }
+.phoneBody { position: absolute; top: 0; left: 0; transform-origin: top left; box-sizing: border-box; padding: 12px; border-radius: 52px; background: #15171c; box-shadow: 0 18px 40px rgba(15, 25, 50, .25), inset 0 0 0 2px #2b2f37; }
+.phoneScreen { display: flex; flex-direction: column; width: 390px; height: 844px; overflow: hidden; border-radius: 40px; background: #fff; }
+.phoneStatus { display: flex; align-items: center; justify-content: space-between; height: 34px; flex-shrink: 0; padding: 0 28px; font-size: 13px; font-weight: 700; color: #15171c; }
+.phoneNotch { width: 104px; height: 26px; border-radius: 999px; background: #15171c; }
+.phoneFrame { display: block; flex: 1; width: 390px; border: 0; background: #fff; }
+
+/* Save bar spans the form and preview */
+.saveBar { margin-top: var(--space-2); }
+
+/* The block inside the form pane is not a card of its own any more. */
+.formBody > section { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+@media (max-width: 47.99rem) {
+  .picker select { font-size: .9375rem; padding-inline: var(--space-2); }
+  .viewSwitch { flex-shrink: 0; }
+  .viewSwitch button { padding: 0 var(--space-2); }
+}

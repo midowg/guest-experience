@@ -22,7 +22,7 @@ export default async function EventEditorPage({ params }: { params: Promise<{ re
   const event = await getAdminEvent(id);
   if (!event) notFound();
   const featuredId = await getFeaturedEventId();
-  return <AdminShell>
+  return <AdminShell wide>
     <p className="eyebrow">Editor undangan</p>
     <h1 className={styles.title}>{event.title}</h1>
     <p className={styles.eventMeta}>Dibuat {formatDateTime(event.created_at)} · Terakhir disimpan {formatDateTime(event.updated_at)}</p>

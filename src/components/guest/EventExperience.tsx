@@ -133,7 +133,7 @@ function Location({ event }: { event: EventRecord }) {
     {event.arrival_notes && <p className={styles.multiline}>{event.arrival_notes}</p>}
     <div className={styles.actions}>
       {event.location_url && <ButtonLink href={event.location_url} target="_blank" rel="noopener noreferrer">{t("location.open")} <ArrowUpRight size={18} aria-hidden="true" /><span className="sr-only">{t("common.newTab")}</span></ButtonLink>}
-      {event.address && <Button variant="secondary" onClick={copyAddress}><Copy size={16} aria-hidden="true" /> {t("location.copy")}</Button>}
+      {event.address && <Button type="button" variant="secondary" onClick={copyAddress}><Copy size={16} aria-hidden="true" /> {t("location.copy")}</Button>}
     </div>
     <p className={styles.copyStatus} role="status">{copyStatus}</p>
   </div>;
@@ -162,6 +162,8 @@ type ExperienceProps = {
   rsvpNeeds?: boolean;
   /** Photos marked Tayang in the event gallery; after the event the page links to them. */
   photoCount?: number;
+  /** False inside the editor's phone frame, where the "this is a preview" banner would only take space. */
+  previewNotice?: boolean;
 };
 
 /** Holds the guest's language; everything below reads its words and the event's texts in it. */
@@ -173,7 +175,7 @@ export function EventExperience({ event: source, ...props }: ExperienceProps) {
   </WordingProvider>;
 }
 
-function ExperienceBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, photoCount = 0, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
+function ExperienceBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, photoCount = 0, previewNotice = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
   const { lang, t, dateTime } = useWording();
   // Keeps the last copy of this guest page for offline use (trips with weak signal). Production only.
   useEffect(() => {
@@ -229,7 +231,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
   const feedbackOpen = now !== null && feedbackIsOpen(event, now);
   return <div lang={lang} className={styles.experience} data-theme={event.theme?.key ?? "werkudara"} data-phase={phase} style={themeStyle(event.theme)}>
     <a className={styles.skipLink} href="#event-content" onClick={focusAnchor}>{t("nav.skip")}</a>
-    {preview && <div className={styles.preview}><Notice>{t("preview.notice")}</Notice></div>}
+    {preview && previewNotice && <div className={styles.preview}><Notice>{t("preview.notice")}</Notice></div>}
     <header className={`${styles.siteHeader} ${headerShown ? styles.siteHeaderShown : styles.siteHeaderHidden}`}>
       <div className={`container ${styles.headerInner}`}>
         <a href="#event-content" onClick={focusAnchor} className={styles.brand} aria-label="Werkudara — kembali ke awal undangan">

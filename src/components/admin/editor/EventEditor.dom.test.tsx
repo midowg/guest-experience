@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
 import { EventEditor } from "@/components/admin/editor/EventEditor";
+import { menuButton, openBlock, otherBlocks } from "@/components/admin/editor/editor-test-helpers";
 
 // The full editor is a large DOM; role queries over it outlast the 5 s default when the
 // whole suite runs in parallel. The cost is in the queries, not in the behaviour under test.
@@ -26,12 +27,10 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-/** Fields live in the side panel: open a block the way an admin does, through its card. */
-const openPanel = (title: string) => fireEvent.click(screen.getByRole("button", { name: `Ubah ${title}` }));
 
 it("saves the PIC and chosen telephone channel", async () => {
   render(<EventEditor event={createSeedEvent()} />);
-  openPanel("Kontak");
+  openBlock("Kontak");
   fireEvent.change(screen.getByRole("textbox", { name: "Nama PIC" }), { target: { value: "Koordinator Acara" } });
   fireEvent.change(screen.getByRole("textbox", { name: "Nomor PIC" }), { target: { value: "0812 3456 7890" } });
   fireEvent.click(screen.getByRole("radio", { name: "Telepon" }));
@@ -43,7 +42,7 @@ it("saves the PIC and chosen telephone channel", async () => {
 
 it("flags incomplete PIC details without sending the event", () => {
   render(<EventEditor event={createSeedEvent()} />);
-  openPanel("Kontak");
+  openBlock("Kontak");
   fireEvent.change(screen.getByRole("textbox", { name: "Nama PIC" }), { target: { value: "Koordinator Acara" } });
   fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
   expect(screen.getByRole("textbox", { name: "Nomor PIC" }).getAttribute("aria-invalid")).toBe("true");
@@ -52,7 +51,7 @@ it("flags incomplete PIC details without sending the event", () => {
 
 it("requires an embed before saving the selected map mode", () => {
   render(<EventEditor event={createSeedEvent()} />);
-  openPanel("Lokasi");
+  openBlock("Lokasi");
   fireEvent.click(screen.getByRole("radio", { name: "Peta sematan Google" }));
   fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
   expect(screen.getByText("Isi kode sematan Google Maps.")).toBeTruthy();
@@ -64,7 +63,7 @@ it("requires an embed before saving the selected map mode", () => {
 
 it("saves only the Google URL from a pasted iframe and restores manual mode without erasing the pin", async () => {
   render(<EventEditor event={createSeedEvent()} />);
-  openPanel("Lokasi");
+  openBlock("Lokasi");
   fireEvent.click(screen.getByRole("radio", { name: "Peta sematan Google" }));
   fireEvent.change(screen.getByRole("textbox", { name: /Kode sematan Google Maps/ }), { target: { value: `<iframe src="${embedUrl}" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>` } });
   fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
@@ -74,7 +73,7 @@ it("saves only the Google URL from a pasted iframe and restores manual mode with
   expect(JSON.parse(init.body).location_display).toBe("embed");
   await vi.waitFor(() => expect(screen.getByText("Perubahan tersimpan.")).toBeTruthy());
 
-  openPanel("Lokasi");
+  openBlock("Lokasi");
   fireEvent.click(screen.getByRole("radio", { name: "Alamat & tombol" }));
   expect(screen.queryByRole("textbox", { name: /Kode sematan Google Maps/ })).toBeNull();
   expect(screen.getByRole("textbox", { name: "Tautan lokasi Maps" })).toBeTruthy();
@@ -87,18 +86,18 @@ it("saves only the Google URL from a pasted iframe and restores manual mode with
   expect(saved.location_display).toBe("manual");
   expect(saved.location_url).toBe(createSeedEvent().location_url);
   await vi.waitFor(() => expect(screen.getByText("Perubahan tersimpan.")).toBeTruthy());
-  openPanel("Lokasi");
+  openBlock("Lokasi");
   fireEvent.click(screen.getByRole("radio", { name: "Peta sematan Google" }));
   expect((screen.getByRole("textbox", { name: /Kode sematan Google Maps/ }) as HTMLTextAreaElement).value).toBe(embedUrl);
 }, 20000);
 
 it("lets the super admin save the event kind, audience, theme, and experience story", async () => {
   render(<EventEditor event={createSeedEvent()} superAdmin />);
-  openPanel("Jenis, audiens, dan tampilan");
+  openBlock("Jenis, audiens, dan tampilan");
   fireEvent.click(screen.getByRole("radio", { name: /^Kunjungan/ }));
   fireEvent.click(screen.getByRole("radio", { name: /^Internal/ }));
   fireEvent.click(screen.getByRole("radio", { name: /^Malam Apresiasi/ }));
-  openPanel("Pengalaman kunjungan");
+  openBlock("Pengalaman kunjungan");
   fireEvent.change(screen.getByRole("textbox", { name: "Cerita singkat" }), { target: { value: "Kami menyambut Anda seperti kerabat." } });
   fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
   await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
@@ -106,26 +105,40 @@ it("lets the super admin save the event kind, audience, theme, and experience st
   expect(saved).toMatchObject({ event_kind: "kunjungan", audience: "internal", theme: { key: "gala", corners: "square" } });
   expect(saved.experience.story).toBe("Kami menyambut Anda seperti kerabat.");
   await vi.waitFor(() => expect(screen.getByText("Perubahan tersimpan.")).toBeTruthy());
-  openPanel("Setelah acara");
+  openBlock("Setelah acara");
   expect(screen.getByText("Acara internal: ajakan kolaborasi dan ulasan Google tidak ditampilkan.")).toBeTruthy();
 }, 10000);
 
-it("summarises blocks on cards and marks unsaved changes", () => {
+it("opens on the basics, switches blocks from the menu, and marks unsaved changes", () => {
   render(<EventEditor event={createSeedEvent()} />);
-  expect(screen.getByRole("button", { name: "Ubah Kontak" })).toBeTruthy();
-  expect(screen.getByRole("heading", { name: "Kesiapan tayang" })).toBeTruthy();
-  expect(screen.queryByRole("textbox", { name: "Nama PIC" })).toBeNull();
-  openPanel("Kontak");
-  expect(screen.getByRole("dialog", { name: "Kontak" })).toBeTruthy();
+  // A form is always on screen next to the phone preview; no cards, no dialog.
+  expect(screen.getByRole("heading", { level: 2, name: "Identitas & undangan" })).toBeTruthy();
+  expect(screen.getByRole("textbox", { name: "Judul acara" })).toBeTruthy();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.getByTitle("Pratinjau undangan di ponsel")).toBeTruthy();
+  expect(screen.getByText("Kesiapan tayang")).toBeTruthy();
+  openBlock("Kontak");
+  expect(screen.getByRole("heading", { level: 2, name: "Kontak" })).toBeTruthy();
+  expect(screen.queryByRole("textbox", { name: "Judul acara" })).toBeNull();
   fireEvent.change(screen.getByRole("textbox", { name: "Nama PIC" }), { target: { value: "Raja" } });
-  fireEvent.click(screen.getByRole("button", { name: "Selesai" }));
-  expect(screen.queryByRole("textbox", { name: "Nama PIC" })).toBeNull();
-  expect(screen.getAllByText("Belum disimpan").length).toBeGreaterThan(0);
+  expect(within(menuButton("Kontak")!).getByTitle("Belum disimpan")).toBeTruthy();
+  expect(screen.getByText("Ada perubahan yang belum disimpan")).toBeTruthy();
+});
+
+it("switches between the form and the phone preview on a phone", () => {
+  render(<EventEditor event={createSeedEvent()} />);
+  const layout = screen.getByRole("textbox", { name: "Judul acara" }).closest("[data-view]")!;
+  expect(layout.getAttribute("data-view")).toBe("form");
+  fireEvent.click(screen.getByRole("button", { name: "Lihat" }));
+  expect(layout.getAttribute("data-view")).toBe("preview");
+  fireEvent.change(screen.getByRole("combobox", { name: "Bagian yang diubah" }), { target: { value: "venue" } });
+  expect(layout.getAttribute("data-view")).toBe("form");
+  expect(screen.getByRole("heading", { level: 2, name: "Lokasi" })).toBeTruthy();
 });
 
 it("offers known greetings as chips that replace the text, with a way back to what was typed", () => {
   render(<EventEditor event={{ ...createSeedEvent(), greeting: "" }} />);
-  openPanel("Identitas & undangan");
+  openBlock("Identitas & undangan");
   const greeting = screen.getByRole("textbox", { name: "Sapaan" }) as HTMLInputElement;
   expect(greeting.placeholder).toMatch(/^Contoh: /);
   const chips = screen.getByRole("group", { name: "Pilihan cepat: Sapaan" });
@@ -142,7 +155,7 @@ it("offers known greetings as chips that replace the text, with a way back to wh
 
 it("fills the Werkudara office in one click", () => {
   render(<EventEditor event={{ ...createSeedEvent(), venue_name: "", address: "", location_url: "" }} />);
-  openPanel("Lokasi");
+  openBlock("Lokasi");
   fireEvent.click(screen.getByRole("button", { name: /Pakai alamat kantor Werkudara/ }));
   expect((screen.getByRole("textbox", { name: "Nama tempat" }) as HTMLInputElement).value).toBe("PT. Werkudara");
   expect((screen.getByRole("textbox", { name: "Alamat" }) as HTMLTextAreaElement).value).toMatch(/^Jl\. Bhinneka/);
@@ -152,19 +165,18 @@ it("fills the Werkudara office in one click", () => {
 
 it("keeps the regular editor short: no theme block, unused parts folded away", () => {
   render(<EventEditor event={createSeedEvent()} />);
-  expect(screen.queryByRole("button", { name: "Ubah Jenis, audiens, dan tampilan" })).toBeNull();
-  const more = screen.getByText(/^Bagian lain yang bisa ditambahkan/).closest("details")!;
-  for (const title of ["Pengalaman kunjungan", "Persiapan tamu", "Our Team"]) expect(within(more).getByRole("button", { name: `Ubah ${title}` })).toBeTruthy();
-  expect(within(more).queryByRole("button", { name: "Ubah Rundown" })).toBeNull();
+  expect(menuButton("Jenis, audiens, dan tampilan")).toBeNull();
+  const more = otherBlocks()!;
+  for (const title of ["Pengalaman kunjungan", "Persiapan tamu", "Our Team"]) expect(within(more).getByRole("button", { name: new RegExp(`^${title}`) })).toBeTruthy();
+  expect(within(more).queryByRole("button", { name: /^Rundown/ })).toBeNull();
 });
 
 it("adds a folded part to the invitation from its own panel", () => {
   render(<EventEditor event={createSeedEvent()} />);
-  openPanel("Our Team");
+  openBlock("Our Team");
   fireEvent.click(screen.getByRole("checkbox", { name: /Tampilkan bagian ini di undangan/ }));
   expect(screen.queryByRole("checkbox", { name: /Tampilkan bagian ini di undangan/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Selesai" }));
-  const more = screen.queryByText(/^Bagian lain yang bisa ditambahkan/)?.closest("details");
-  expect(more ? within(more).queryByRole("button", { name: "Ubah Our Team" }) : null).toBeNull();
-  expect(screen.getByRole("button", { name: "Ubah Our Team" })).toBeTruthy();
+  const more = otherBlocks();
+  expect(more ? within(more).queryByRole("button", { name: /^Our Team/ }) : null).toBeNull();
+  expect(menuButton("Our Team")).toBeTruthy();
 });
