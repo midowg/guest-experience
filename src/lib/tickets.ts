@@ -1,3 +1,5 @@
+import { absolute, ticketScanPath } from "./routes";
+
 /** 22 URL-safe characters from 16 random bytes: the whole content of a guest's QR, besides the address. */
 export function newTicketCode(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -11,7 +13,7 @@ export const isTicketCode = (value: string) => /^[A-Za-z0-9_-]{22,32}$/.test(val
  * admin; anyone else meets the login page and learns nothing about the guest.
  */
 export function ticketScanUrl(origin: string, code: string) {
-  return `${origin}/admin/checkin/${code}`;
+  return absolute(origin, ticketScanPath(code));
 }
 
 /** The code from whatever a scanner read: the check-in address, or the bare code. */

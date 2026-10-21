@@ -1,14 +1,14 @@
 import { notFound } from "next/navigation";
-import { AdminShell, SetupNotice } from "@/components/admin/AdminShell";
-import { SuperDashboard, type SuperEventRow } from "@/components/admin/SuperDashboard";
+import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
+import { SuperDashboard, type SuperEventRow } from "@/components/admin/super/SuperDashboard";
 import styles from "@/components/admin/admin.module.css";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { listAdminEvents } from "@/lib/server/events";
 import { hiddenEventIds } from "@/lib/server/event-visibility";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { getDisabledModules, getEnabledTemplates } from "@/lib/server/admin-settings";
-import { TemplateSettings } from "@/components/admin/TemplateSettings";
-import { ModuleSettings } from "@/components/admin/ModuleSettings";
+import { TemplateSettings } from "@/components/admin/super/TemplateSettings";
+import { ModuleSettings } from "@/components/admin/super/ModuleSettings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard super admin" };

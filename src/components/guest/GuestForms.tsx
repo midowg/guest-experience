@@ -9,6 +9,7 @@ import type { WordKey } from "@/lib/wording";
 import { feedbackErrors, feedbackIsOpen, firstErrors, postSubmission, rsvpIsOpen, submissionIdentity, type FieldErrors, type RetryIdentity } from "./form-utils";
 import { useWording } from "./language";
 import styles from "./guest.module.css";
+import { guestApi, ticketPath } from "@/lib/routes";
 
 function currentTime() { return new Date().getTime(); }
 
@@ -159,7 +160,7 @@ export function RsvpPanel({ event, disabled, onSaved, invitation, needs = true }
     void ignored;
     // Older databases only understand the allergy pair; extra keys would be ignored, not stored.
     const body = needs ? payload : { name: payload.name, organization: payload.organization, attendance: payload.attendance, phone: payload.phone, email: payload.email, has_allergy: payload.has_allergy, allergy_details: payload.allergy_details, consent: payload.consent, website: payload.website };
-    const result = await send(invitation ? `/api/events/${encodeURIComponent(event.slug)}/i/${encodeURIComponent(invitation.token)}/rsvp` : `/api/events/${encodeURIComponent(event.slug)}/rsvp`, body);
+    const result = await send(guestApi.rsvp(event, invitation), body);
     if (!result) return;
     if (!result.ok) {
       const found = firstErrors(result.fieldErrors);
@@ -267,7 +268,7 @@ export function RsvpPanel({ event, disabled, onSaved, invitation, needs = true }
       <p className={styles.privacy}>{invitation ? t("rsvp.saved.personal") : t("rsvp.saved.open")}</p>
     </div>
     <div className={styles.rsvpDoneActions}>
-      {invitation && saved.attendance === "yes" && <ButtonLink href={`/e/${encodeURIComponent(event.slug)}/i/${invitation.token}/tiket`}><Ticket size={16} aria-hidden="true" /> {t("ticket.view")}</ButtonLink>}
+      {invitation && saved.attendance === "yes" && <ButtonLink href={ticketPath(event, invitation)}><Ticket size={16} aria-hidden="true" /> {t("ticket.view")}</ButtonLink>}
       {invitation && !disabled && <Button type="button" variant="secondary" onClick={start}><Pencil size={16} aria-hidden="true" /> {t("rsvp.done.edit")}</Button>}
     </div>
   </div>;
@@ -316,7 +317,7 @@ export function FeedbackPanel({ event, disabled }: { event: EventRecord; disable
     if (Object.keys(found).length) { setErrors(found); requestAnimationFrame(() => document.getElementById(`feedback-${Object.keys(found)[0]}`)?.focus()); return; }
     const parsed = feedbackSchema.safeParse({ answers, website: "", idempotency_key: "00000000-0000-4000-8000-000000000000" });
     if (!parsed.success) { setMessage(t("form.error.fields")); return; }
-    const result = await send(`/api/events/${encodeURIComponent(event.slug)}/feedback`, { answers: parsed.data.answers, website: "" });
+    const result = await send(guestApi.feedback(event), { answers: parsed.data.answers, website: "" });
     if (!result) return;
     if (!result.ok) { setMessage(result.message || t("form.error.network")); setErrors(firstErrors(result.fieldErrors)); return; }
     setSaved(true); setOpen(false);

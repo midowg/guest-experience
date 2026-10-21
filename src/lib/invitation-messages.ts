@@ -1,11 +1,12 @@
 import { formatDateTime } from "./format";
 import type { EventRecord } from "./types";
 import { t, type Lang } from "./wording";
+import { absolute, invitationPath } from "@/lib/routes";
 
 export type MessageKind = "invite" | "reminder";
 
-export function invitationLink(origin: string, slug: string, token: string) {
-  return `${origin}/e/${encodeURIComponent(slug)}/i/${token}`;
+export function invitationLink(origin: string, event: Parameters<typeof invitationPath>[0], invitation: Parameters<typeof invitationPath>[1]) {
+  return absolute(origin, invitationPath(event, invitation));
 }
 
 /** The guest reads the message in the event's language; a bilingual event writes Indonesian. */

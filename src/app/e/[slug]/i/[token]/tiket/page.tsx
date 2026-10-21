@@ -7,6 +7,7 @@ import { siteUrl } from "@/lib/site-url";
 import { getPublicEvent } from "@/lib/server/events";
 import { getPersonalInvitation } from "@/lib/server/invitations";
 import { ensureTicket } from "@/lib/server/tickets";
+import { absolute, invitationPath, ticketPath } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Tiket masuk", robots: { index: false, follow: false }, referrer: "no-referrer" };
@@ -30,8 +31,8 @@ export default async function TicketPage({ params }: Params) {
     partySize: Math.max(1, invitation.rsvp.party_size ?? 1),
     qrSvg: await QRCode.toString(scan, { ...options, type: "svg" }),
     qrPng: await QRCode.toDataURL(scan, { ...options, width: 600 }),
-    pageUrl: `${origin}/e/${encodeURIComponent(event.slug)}/i/${token}/tiket`,
-    backUrl: `/e/${encodeURIComponent(event.slug)}/i/${token}`,
+    pageUrl: absolute(origin, ticketPath(event, { token })),
+    backUrl: invitationPath(event, { token }),
   };
   return <TicketView event={event} ticket={data} reason="ready" />;
 }

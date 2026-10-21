@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { CheckinBoard } from "@/components/admin/CheckinBoard";
+import { AdminShell } from "@/components/admin/shared/AdminShell";
+import { CheckinBoard } from "@/components/admin/checkin/CheckinBoard";
 import { createSeedEvent } from "@/lib/seed-event";
 import type { CheckinGuest } from "@/lib/tickets";
 

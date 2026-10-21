@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { BeoPrint } from "@/components/admin/BeoPrint";
-import { SetupNotice } from "@/components/admin/AdminShell";
+import { BeoPrint } from "@/components/admin/beo/BeoPrint";
+import { SetupNotice } from "@/components/admin/shared/AdminShell";
 import { beoDocument, beoVersionFromParam } from "@/lib/beo-document";
 import { loadBeo } from "@/lib/server/beo";
 import { isSupabaseConfigured } from "@/lib/server/config";

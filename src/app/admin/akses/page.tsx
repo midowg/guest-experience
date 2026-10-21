@@ -1,5 +1,5 @@
 import { CircleAlert, CircleCheck, LogOut, MapPin, MonitorSmartphone, Sparkles } from "lucide-react";
-import { AdminShell, SetupNotice } from "@/components/admin/AdminShell";
+import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { Notice } from "@/components/ui";
 import styles from "@/components/admin/admin.module.css";
 import { formatDateTime } from "@/lib/format";

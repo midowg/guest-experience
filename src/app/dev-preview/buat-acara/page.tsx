@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AdminShell } from "@/components/admin/AdminShell";
+import { AdminShell } from "@/components/admin/shared/AdminShell";
 import { DevCreateEvent } from "./DevCreateEvent";
 import { createSeedEvent } from "@/lib/seed-event";
 

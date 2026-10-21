@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import { getAdminEvent } from "@/lib/server/events";
 import { listFeedback } from "@/lib/server/responses";
 import { isSupabaseConfigured } from "@/lib/server/config";
-import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/AdminShell";
-import { FeedbackView } from "@/components/admin/ResponseViews";
+import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
+import { FeedbackView } from "@/components/admin/responses/ResponseViews";
 import styles from "@/components/admin/admin.module.css";
 import { requireAdminPage, requireEventPage } from "@/lib/server/admin-session";
 

@@ -10,6 +10,7 @@ import { themeStyle } from "@/lib/themes";
 import type { EventRecord } from "@/lib/types";
 import { LanguageSwitch, useEventLanguage, useWording, WordingProvider } from "./language";
 import styles from "./guest.module.css";
+import { eventPath, photoDownloadPath } from "@/lib/routes";
 
 type Props = { event: EventRecord; photos: GalleryPhoto[]; closed: boolean };
 
@@ -43,7 +44,7 @@ function GalleryBody({ event, photos, closed, lang, setLang }: Props & { lang: "
   return <div lang={lang} className={styles.experience} data-theme={event.theme?.key ?? "werkudara"} style={themeStyle(event.theme)}>
     <main className={`container ${styles.photoPage}`}>
       <div className={styles.photoTop}>
-        <a href={`/e/${event.slug}`} className={styles.photoBack}><ArrowLeft size={16} aria-hidden="true" /> {t("photos.back")}</a>
+        <a href={eventPath(event)} className={styles.photoBack}><ArrowLeft size={16} aria-hidden="true" /> {t("photos.back")}</a>
         {event.language === "id_en" && <LanguageSwitch lang={lang} onChange={setLang} />}
       </div>
       <p className="eyebrow">{title}</p>
@@ -73,7 +74,7 @@ function GalleryBody({ event, photos, closed, lang, setLang }: Props & { lang: "
       </figure>
       <div className={styles.photoViewerActions}>
         <button type="button" disabled={open === 0} onClick={() => setOpen(open - 1)} aria-label={t("gallery.prev")}><ChevronLeft size={20} aria-hidden="true" /></button>
-        <ButtonLink href={`/e/${event.slug}/galeri/${photo.id}/unduh`}><Download size={16} aria-hidden="true" /> {t("gallery.original")}</ButtonLink>
+        <ButtonLink href={photoDownloadPath(event, photo.id)}><Download size={16} aria-hidden="true" /> {t("gallery.original")}</ButtonLink>
         <button type="button" disabled={open === photos.length - 1} onClick={() => setOpen(open + 1)} aria-label={t("gallery.next")}><ChevronRight size={20} aria-hidden="true" /></button>
       </div>
       {phone && <a className={styles.photoRemove} href={whatsappUrl(phone, t("photos.removeMessage", { n: open + 1, event: title, link: page }))} target="_blank" rel="noopener noreferrer">

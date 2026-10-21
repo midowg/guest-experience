@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/AdminShell";
-import { BeoView } from "@/components/admin/BeoView";
+import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
+import { BeoView } from "@/components/admin/beo/BeoView";
 import { loadBeo } from "@/lib/server/beo";
 import { getAdminEvent } from "@/lib/server/events";
 import { isSupabaseConfigured } from "@/lib/server/config";

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/AdminShell";
-import { InvitationManager } from "@/components/admin/InvitationManager";
-import { PublicLinkCard } from "@/components/admin/PublicLinkCard";
+import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
+import { InvitationManager } from "@/components/admin/invitations/InvitationManager";
+import { PublicLinkCard } from "@/components/admin/invitations/PublicLinkCard";
 import { siteUrl } from "@/lib/site-url";
 import { getAdminEvent } from "@/lib/server/events";
 import { listInvitations } from "@/lib/server/invitations";

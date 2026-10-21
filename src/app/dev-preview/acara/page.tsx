@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { EventList } from "@/components/admin/EventList";
+import { AdminShell } from "@/components/admin/shared/AdminShell";
+import { EventList } from "@/components/admin/events/EventList";
 import { createSeedEvent } from "@/lib/seed-event";
 import type { EventRecord } from "@/lib/types";
 

@@ -19,6 +19,7 @@ import { offersSwitch, type Lang, type WordKey } from "@/lib/wording";
 import { AgendaList, EmergencyCard } from "./ProgramAgenda";
 import { CalendarButton } from "./CalendarSheet";
 import styles from "./guest.module.css";
+import { guestApi, guestServiceWorker } from "@/lib/routes";
 
 const navKeys: Record<SectionKey, WordKey> = { about: "nav.about", experience: "nav.experience", agenda: "nav.agenda", location: "nav.location", prepare: "nav.prepare", team: "nav.team", rsvp: "nav.rsvp", contact: "nav.contact", feedback: "nav.feedback" };
 
@@ -177,7 +178,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
   // Keeps the last copy of this guest page for offline use (trips with weak signal). Production only.
   useEffect(() => {
     if (preview || process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js", { scope: "/e/" }).catch(() => {});
+    navigator.serviceWorker.register(guestServiceWorker.url, { scope: guestServiceWorker.scope }).catch(() => {});
   }, [preview]);
   // Counts the opening of a personal link once per browser session. Never in the admin preview.
   const openedToken = !preview && invitation ? invitation.token : null;
@@ -185,8 +186,8 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
     if (!openedToken) return;
     const key = `wk_opened_${openedToken.slice(0, 16)}`;
     try { if (window.sessionStorage.getItem(key)) return; window.sessionStorage.setItem(key, "1"); } catch { /* storage blocked: still count */ }
-    void fetch(`/api/events/${encodeURIComponent(event.slug)}/i/${openedToken}/opened`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", keepalive: true }).catch(() => {});
-  }, [openedToken, event.slug]);
+    void fetch(guestApi.opened(event, openedToken), { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", keepalive: true }).catch(() => {});
+  }, [openedToken, event]);
   const [now, setNow] = useState<number | null>(null);
   const [rsvpSaved, setRsvpSaved] = useState(false);
   // The opening should arrive uninterrupted, so the bar stays away until the guest scrolls.

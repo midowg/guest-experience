@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/AdminShell";
-import { GalleryManager } from "@/components/admin/GalleryManager";
+import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
+import { GalleryManager } from "@/components/admin/gallery/GalleryManager";
 import { galleryReadiness, listAdminPhotos } from "@/lib/server/gallery";
 import { getAdminEvent } from "@/lib/server/events";
 import { isSupabaseConfigured } from "@/lib/server/config";

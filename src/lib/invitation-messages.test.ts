@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createSeedEvent } from "./seed-event";
 import { invitationLink, invitationMessage, whatsappUrl } from "./invitation-messages";
 
-const link = invitationLink("https://invitation.werkudara.group", "rapat panitia", "a".repeat(64));
+const link = invitationLink("https://invitation.werkudara.group", { id: "e1", slug: "rapat panitia" }, { token: "a".repeat(64) });
 
 describe("invitation messages", () => {
   it("builds the personal link", () => {

@@ -1,7 +1,7 @@
 import { getFeaturedEventId, listAdminEvents } from "@/lib/server/events";
 import { isSupabaseConfigured } from "@/lib/server/config";
-import { AdminShell, SetupNotice } from "@/components/admin/AdminShell";
-import { EventList } from "@/components/admin/EventList";
+import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
+import { EventList } from "@/components/admin/events/EventList";
 import { currentPhase } from "@/lib/event-phase";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { hiddenEventIds } from "@/lib/server/event-visibility";

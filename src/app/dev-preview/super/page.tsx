@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { SuperDashboard, type SuperEventRow } from "@/components/admin/SuperDashboard";
+import { AdminShell } from "@/components/admin/shared/AdminShell";
+import { SuperDashboard, type SuperEventRow } from "@/components/admin/super/SuperDashboard";
 import { createSeedEvent } from "@/lib/seed-event";
-import { ModuleSettings } from "@/components/admin/ModuleSettings";
-import { TemplateSettings } from "@/components/admin/TemplateSettings";
+import { ModuleSettings } from "@/components/admin/super/ModuleSettings";
+import { TemplateSettings } from "@/components/admin/super/TemplateSettings";
 
 export const dynamic = "force-dynamic";
 

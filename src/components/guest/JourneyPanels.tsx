@@ -11,6 +11,7 @@ import { useWording } from "./language";
 import { EmergencyCard } from "./ProgramAgenda";
 import type { WordKey } from "@/lib/wording";
 import styles from "./guest.module.css";
+import { galleryPath } from "@/lib/routes";
 
 export const momentIconComponents: Record<MomentIcon, LucideIcon> = {
   coffee: Coffee, utensils: Utensils, gift: Gift, users: Users, camera: Camera,
@@ -201,7 +202,7 @@ export function AfterPanel({ event, invitee, photoCount = 0 }: { event: EventRec
       <h1 id="event-title">{event.after.title || (invitee ? t("after.title.named", { name: invitee }) : t("after.title"))}</h1>
       <p className={styles.afterEvent}><CalendarDays size={16} aria-hidden="true" /> {event.title}{event.starts_at && <> · {date(event.starts_at, event.timezone)}</>}</p>
       {message && <p className={`${styles.afterMessage} ${styles.multiline}`}>{message}</p>}
-      {photoCount > 0 && <ButtonLink href={`/e/${event.slug}/galeri`} className={styles.afterGallery}><Images size={18} aria-hidden="true" /> {t("gallery.all")} · {t("photos.count", { n: photoCount })}</ButtonLink>}
+      {photoCount > 0 && <ButtonLink href={galleryPath(event)} className={styles.afterGallery}><Images size={18} aria-hidden="true" /> {t("gallery.all")} · {t("photos.count", { n: photoCount })}</ButtonLink>}
       {showReview && <div className={styles.afterCard}>
         <p className={styles.afterStars} aria-hidden="true">{[0, 1, 2, 3, 4].map(i => <Star key={i} size={20} />)}</p>
         <h2>{event.review_heading || t("after.review.title")}</h2>

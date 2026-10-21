@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { GalleryManager } from "@/components/admin/GalleryManager";
+import { AdminShell } from "@/components/admin/shared/AdminShell";
+import { GalleryManager } from "@/components/admin/gallery/GalleryManager";
 import { PhotoGallery } from "@/components/guest/PhotoGallery";
 import type { GalleryPhoto } from "@/lib/gallery";
 import { createSeedEvent } from "@/lib/seed-event";

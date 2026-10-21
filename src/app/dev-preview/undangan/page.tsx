@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { InvitationManager } from "@/components/admin/InvitationManager";
-import { PublicLinkCard } from "@/components/admin/PublicLinkCard";
+import { AdminShell } from "@/components/admin/shared/AdminShell";
+import { InvitationManager } from "@/components/admin/invitations/InvitationManager";
+import { PublicLinkCard } from "@/components/admin/invitations/PublicLinkCard";
 import { createSeedEvent } from "@/lib/seed-event";
 import type { EventInvitation } from "@/lib/server/invitations";
 

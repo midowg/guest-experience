@@ -7,6 +7,7 @@ import { themeStyle } from "@/lib/themes";
 import type { EventRecord } from "@/lib/types";
 import { LanguageSwitch, useEventLanguage, useWording, WordingProvider } from "./language";
 import styles from "./guest.module.css";
+import { eventPath } from "@/lib/routes";
 
 export type TicketData = { name: string; partySize: number; qrSvg: string; qrPng: string; pageUrl: string; backUrl: string } | null;
 type Props = { event: EventRecord; ticket: TicketData; reason: "ready" | "not-attending" | "unavailable" };
@@ -53,7 +54,7 @@ function TicketBody({ event, ticket, reason, lang, setLang }: Props & { lang: "i
   return <div lang={lang} className={styles.experience} data-theme={event.theme?.key ?? "werkudara"} style={themeStyle(event.theme)} data-ticket>
     <main className={`container ${styles.ticketPage}`}>
       <div className={styles.photoTop} data-no-print>
-        <a href={ticket?.backUrl ?? `/e/${event.slug}`} className={styles.photoBack}><ArrowLeft size={16} aria-hidden="true" /> {t("photos.back")}</a>
+        <a href={ticket?.backUrl ?? eventPath(event)} className={styles.photoBack}><ArrowLeft size={16} aria-hidden="true" /> {t("photos.back")}</a>
         {event.language === "id_en" && <LanguageSwitch lang={lang} onChange={setLang} />}
       </div>
       {!ticket ? <div className={styles.ticketCard}>

@@ -9,6 +9,7 @@ import type { EventRecord } from "@/lib/types";
 import { GuestSheet } from "./GuestForms";
 import { useWording } from "./language";
 import styles from "./guest.module.css";
+import { calendarPath } from "@/lib/routes";
 
 /**
  * "Add to calendar": the guest picks a reminder (and, on a day of a multi-day trip, today only)
@@ -24,7 +25,7 @@ export function CalendarButton({ event, now }: { event: EventRecord; now: number
   const today = now === null ? null : localDay(now, event.timezone);
   const canToday = days.size > 1 && !!today && days.has(today);
   const chosen = canToday ? scope : "all";
-  const href = `/e/${encodeURIComponent(event.slug)}/kalender.ics?${new URLSearchParams({ ...(chosen === "today" ? { cakupan: "hari-ini" } : {}), ingat: String(remind) })}`;
+  const href = calendarPath(event, { ...(chosen === "today" ? { cakupan: "hari-ini" } : {}), ingat: String(remind) });
   return <>
     <button type="button" className={styles.calendarButton} onClick={() => setOpen(true)}><CalendarPlus size={18} aria-hidden="true" /> {t("calendar.add")}</button>
     {open && <GuestSheet title={t("calendar.title")} onClose={() => setOpen(false)} footer={<ButtonLink href={href} download onClick={() => setOpen(false)}>{t("calendar.title")}</ButtonLink>}>

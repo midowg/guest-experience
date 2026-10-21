@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/AdminShell";
-import { CheckinBoard } from "@/components/admin/CheckinBoard";
+import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
+import { CheckinBoard } from "@/components/admin/checkin/CheckinBoard";
 import { getAdminEvent } from "@/lib/server/events";
 import { listCheckins } from "@/lib/server/tickets";
 import { isSupabaseConfigured } from "@/lib/server/config";

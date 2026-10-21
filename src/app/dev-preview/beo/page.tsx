@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { BeoView } from "@/components/admin/BeoView";
-import { BeoPrint } from "@/components/admin/BeoPrint";
+import { AdminShell } from "@/components/admin/shared/AdminShell";
+import { BeoView } from "@/components/admin/beo/BeoView";
+import { BeoPrint } from "@/components/admin/beo/BeoPrint";
 import { beoDocument, beoVersionFromParam } from "@/lib/beo-document";
 import { sampleBeo } from "./sample";
 

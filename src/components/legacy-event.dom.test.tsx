@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
 import { normalizeEvent } from "@/lib/hero-framing";
 import type { EventRecord } from "@/lib/types";
-import { EventEditor } from "./admin/EventEditor";
+import { EventEditor } from "@/components/admin/editor/EventEditor";
 import { EventExperience } from "./guest/EventExperience";
 
 vi.setConfig({ testTimeout: 20000 });

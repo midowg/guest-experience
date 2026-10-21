@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getAdminEvent } from "@/lib/server/events";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { EventExperience } from "@/components/guest/EventExperience";
-import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/AdminShell";
+import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { Notice } from "@/components/ui";
 import { currentPhase, isPhase, phaseLabels } from "@/lib/event-phase";
 import type { EventPhase } from "@/lib/types";

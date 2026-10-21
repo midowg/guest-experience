@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { KeyRound } from "lucide-react";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { LoginForm } from "@/components/admin/AuthControls";
+import { AdminShell } from "@/components/admin/shared/AdminShell";
+import { LoginForm } from "@/components/admin/shared/AuthControls";
 import { Notice } from "@/components/ui";
 import styles from "@/components/admin/admin.module.css";
 import { adminAuthConfig, MIN_PASSWORD_LENGTH, MIN_SECRET_LENGTH, safeNext } from "@/lib/admin-token";

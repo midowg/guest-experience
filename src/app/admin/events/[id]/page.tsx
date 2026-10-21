@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { getAdminEvent, getFeaturedEventId } from "@/lib/server/events";
 import { isSupabaseConfigured } from "@/lib/server/config";
-import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/AdminShell";
-import { EventEditor } from "@/components/admin/EventEditor";
-import { DeleteEvent } from "@/components/admin/DeleteEvent";
+import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
+import { EventEditor } from "@/components/admin/editor/EventEditor";
+import { DeleteEvent } from "@/components/admin/events/DeleteEvent";
 import { formatDateTime } from "@/lib/format";
 import styles from "@/components/admin/admin.module.css";
 import { requireAdminPage, requireEventPage } from "@/lib/server/admin-session";
