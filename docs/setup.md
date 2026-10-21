@@ -169,7 +169,21 @@ Tab **Galeri foto** di setiap acara. Sebelum R2 disiapkan, tab ini hanya menampi
 
 Alur: admin memilih banyak foto sekaligus. Browser membuat versi tampilan (sisi panjang 2048 px) dan thumbnail (480 px) dalam WebP, lalu mengunggah ketiganya langsung ke R2. Server memeriksa ukuran dan isi berkas (harus JPEG, PNG, WebP, atau HEIC). Foto baru berstatus **Menunggu tinjauan**; tamu hanya melihat foto yang **Tayang**. Setelah acara, halaman undangan menampilkan tombol galeri bila ada foto tayang. Tamu bisa mengunduh berkas asli dan meminta foto dihapus lewat WhatsApp PIC. Galeri tertutup otomatis enam bulan setelah acara.
 
+### Tiket dan check-in
+Butuh migrasi `202610210003_tickets_checkin.sql` dan mode **Tautan per tamu**.
+
+- **Tamu**: setelah menjawab hadir lewat tautan personal, kartu RSVP menampilkan **Lihat tiket masuk**. Tiket berisi nama, jumlah orang, dan QR, dan bisa disimpan sebagai gambar, PDF (lewat dialog cetak), atau dikirim ke WhatsApp sendiri.
+- **QR** hanya berisi alamat `/admin/checkin/<kode>`. Dipindai dengan kamera ponsel biasa, alamat itu membuka halaman konfirmasi check-in untuk panitia yang sudah login. Orang lain hanya melihat halaman login, tanpa data tamu.
+- **Panitia**: tab **Check-in** di setiap acara. Di Chrome atau Edge (Android/desktop), tombol **Pindai QR tiket** memakai kamera langsung. Di iPhone, pakai aplikasi Kamera. Ada juga pencarian nama untuk check-in manual, termasuk tamu tautan umum yang tidak punya tiket.
+- Pindai ulang tidak menggandakan check-in; layar memberi tanda "Sudah check-in sebelumnya" beserta jam pertama. Check-in yang salah bisa dibatalkan.
+- Layar hasil menampilkan jumlah orang, alergi, dan kebutuhan akses supaya penyambut langsung tahu.
+
 ## 7. Hal yang belum tersedia
+
+- **Tiket untuk RSVP tautan umum.** Tamu tautan umum tidak menerima tiket; mereka dicari dengan nama di tab Check-in.
+- **Check-in tanpa sinyal.** Papan check-in butuh koneksi; antrean offline belum dibuat.
+- **Denah dan pilihan kursi.** Belum dibuat.
+- **Dokumen pribadi per tamu (e-tiket pesawat, voucher) di R2.** Belum dibuat.
 
 - **Pembersihan tabel pembatasan laju terjadwal.** Fungsi `purge_expired_request_limits()` tersedia, tetapi penjadwalnya belum dipasang. Baris kedaluwarsa juga dihapus setiap kali fungsi dipanggil.
 - **Kebijakan retensi data tamu.** Perlu ditetapkan penyelenggara sebelum acara berjalan.

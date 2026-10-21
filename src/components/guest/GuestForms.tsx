@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Check, CircleCheck, ClipboardCheck, MessageSquareHeart, Minus, Pencil, Plus, X } from "lucide-react";
-import { Button, Field, Notice } from "@/components/ui";
+import { Check, CircleCheck, ClipboardCheck, MessageSquareHeart, Minus, Pencil, Plus, Ticket, X } from "lucide-react";
+import { Button, ButtonLink, Field, Notice } from "@/components/ui";
 import type { AccessNeed, Dietary, EventRecord, RsvpRecord } from "@/lib/types";
 import { feedbackSchema, rsvpSchema } from "@/lib/validation";
 import type { WordKey } from "@/lib/wording";
@@ -266,7 +266,10 @@ export function RsvpPanel({ event, disabled, onSaved, invitation, needs = true }
       {saved.attendance === "yes" && <p>{(saved.party_size ?? 1) > 1 ? `${t("rsvp.review.partySize", { n: saved.party_size ?? 1 })} · ` : ""}{needsSummary({ dietary: saved.dietary ?? (saved.has_allergy ? ["allergy"] : []), access: saved.access ?? [], allergy_details: saved.allergy_details, dietary_other: saved.dietary_other ?? "", access_other: saved.access_other ?? "" })}</p>}
       <p className={styles.privacy}>{invitation ? t("rsvp.saved.personal") : t("rsvp.saved.open")}</p>
     </div>
-    {invitation && !disabled && <Button type="button" variant="secondary" onClick={start}><Pencil size={16} aria-hidden="true" /> {t("rsvp.done.edit")}</Button>}
+    <div className={styles.rsvpDoneActions}>
+      {invitation && saved.attendance === "yes" && <ButtonLink href={`/e/${encodeURIComponent(event.slug)}/i/${invitation.token}/tiket`}><Ticket size={16} aria-hidden="true" /> {t("ticket.view")}</ButtonLink>}
+      {invitation && !disabled && <Button type="button" variant="secondary" onClick={start}><Pencil size={16} aria-hidden="true" /> {t("rsvp.done.edit")}</Button>}
+    </div>
   </div>;
 
   return <div className={styles.rsvpPanel}>

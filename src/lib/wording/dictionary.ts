@@ -234,6 +234,13 @@ export const id = {
   "photos.removeMessage": "Halo, saya ingin meminta foto nomor {n} di galeri \"{event}\" dihapus. {link}",
   "photos.back": "Kembali ke undangan",
   "photos.count": "{n} foto",
+  "ticket.title": "Tiket masuk",
+  "ticket.view": "Lihat tiket masuk",
+  "ticket.party": "Untuk {n} orang",
+  "ticket.notYet": "Tiket muncul setelah Anda mengonfirmasi hadir.",
+  "ticket.unavailable": "Tiket belum tersedia untuk acara ini. Cukup sebutkan nama Anda di meja registrasi.",
+  "ticket.whatsappMessage": "Tiket masuk saya untuk {event}: {link}",
+  "ticket.private": "Tiket ini khusus untuk Anda. Jangan bagikan ke orang lain.",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -472,4 +479,11 @@ export const en: Record<WordKey, string> = {
   "photos.removeMessage": "Hello, please remove photo number {n} from the \"{event}\" gallery. {link}",
   "photos.back": "Back to the invitation",
   "photos.count": "{n} photos",
+  "ticket.title": "Entry ticket",
+  "ticket.view": "View your entry ticket",
+  "ticket.party": "For {n} people",
+  "ticket.notYet": "Your ticket appears once you confirm you're coming.",
+  "ticket.unavailable": "Tickets aren't available for this event yet. Just give your name at the registration desk.",
+  "ticket.whatsappMessage": "My entry ticket for {event}: {link}",
+  "ticket.private": "This ticket is just for you. Please don't share it.",
 };

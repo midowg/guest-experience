@@ -65,6 +65,8 @@ export function databaseError(error: { message: string; code?: string }): never 
     BEO_CHANGED: [409, "BEO baru saja diubah orang lain. Muat ulang halaman untuk melihat angka terbaru."],
     BEO_STEP: [409, "Langkah ini tidak tersedia untuk status BEO sekarang. Muat ulang halaman."],
     BEO_REASON: [422, "Tulis alasan revisi agar perubahan angka tercatat."],
+    TICKET_UNKNOWN: [404, "Tiket tidak dikenal untuk acara ini. Pastikan QR berasal dari undangan acara ini."],
+    TICKET_NOT_ATTENDING: [409, "Tamu ini tidak terdaftar hadir, jadi tidak punya tiket."],
   };
   if (messages[error.message]) { const [status, message] = messages[error.message]; throw new ServiceError(status, message); }
   if (error.code === "23505") throw new ServiceError(409, "Slug atau ID sudah digunakan. Gunakan nilai berbeda.");

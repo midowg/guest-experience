@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, ClipboardCheck, Crown, ExternalLink, Eye, Images, LayoutGrid, Mail, MessageSquare, Pencil, ShieldCheck, UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, Crown, ExternalLink, Eye, Images, LayoutGrid, Mail, MessageSquare, Pencil, ScanLine, ShieldCheck, UtensilsCrossed } from "lucide-react";
 import { adminRole } from "@/lib/server/admin-session";
 import { ButtonLink, Notice } from "@/components/ui";
 import type { EventRecord } from "@/lib/types";
@@ -36,7 +36,7 @@ export function SetupNotice() {
     <ButtonLink href="/admin" variant="secondary">Periksa koneksi</ButtonLink>
   </section>;
 }
-export function EventNavigation({ event, current }: { event: EventRecord; current: "edit" | "invitations" | "responses" | "beo" | "gallery" | "feedback" | "preview" }) {
+export function EventNavigation({ event, current }: { event: EventRecord; current: "edit" | "invitations" | "responses" | "checkin" | "beo" | "gallery" | "feedback" | "preview" }) {
   const base = `/admin/events/${event.id}`;
   const tab = (key: typeof current, href: string, label: string, Icon: typeof Pencil) =>
     <a href={href} className={styles.tab} aria-current={current === key ? "page" : undefined}><Icon size={16} aria-hidden="true" /> {label}</a>;
@@ -45,6 +45,7 @@ export function EventNavigation({ event, current }: { event: EventRecord; curren
     {tab("edit", base, "Edit acara", Pencil)}
     {tab("invitations", `${base}/invitations`, "Undangan tamu", Mail)}
     {tab("responses", `${base}/responses`, "RSVP", ClipboardCheck)}
+    {tab("checkin", `${base}/checkin`, "Check-in", ScanLine)}
     {tab("beo", `${base}/beo`, "BEO", UtensilsCrossed)}
     {tab("gallery", `${base}/galeri`, "Galeri foto", Images)}
     {tab("feedback", `${base}/feedback`, "Feedback", MessageSquare)}

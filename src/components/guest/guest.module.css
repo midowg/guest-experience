@@ -448,3 +448,25 @@
 .photoViewerActions { display: flex; justify-content: center; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-2); }
 .photoRemove { display: inline-flex; align-items: center; justify-self: center; gap: var(--space-2); padding: 0 var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); color: rgba(255,255,255,.85); font-size: var(--text-sm); }
 .afterGallery { justify-self: start; }
+
+/* Entry ticket (/e/{slug}/i/{token}/tiket) */
+.ticketPage { display: grid; gap: var(--space-5); max-width: 30rem; padding-block: var(--space-6) var(--space-8); }
+.ticketCard { overflow: hidden; border: 1px solid var(--color-border); border-radius: max(var(--radius, 0px), 18px); background: var(--color-background); box-shadow: 0 8px 30px rgba(15, 25, 50, .08); }
+.ticketBand { display: flex; align-items: center; gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-5); background: var(--color-primary); color: var(--color-on-primary); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: var(--text-sm); }
+.ticketBody { display: grid; gap: var(--space-2); padding: var(--space-5); }
+.ticketBody h1 { margin: 0; font-size: 1.75rem; line-height: 1.15; }
+.ticketWhen { margin: 0; color: var(--color-caption); }
+.ticketName { margin: var(--space-3) 0 0; font-size: 1.5rem; font-weight: 800; }
+.ticketQr { width: min(100%, 18rem); margin: var(--space-4) auto 0; }
+.ticketQr svg { display: block; width: 100%; height: auto; }
+.ticketShow { margin: 0; text-align: center; color: var(--color-caption); font-size: var(--text-sm); font-weight: 600; }
+.ticketSave { display: grid; gap: var(--space-3); }
+.ticketSave h2 { margin: 0; font-size: var(--text-lg); }
+.ticketActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+@media print {
+  .ticketPage [data-no-print] { display: none !important; }
+  .ticketCard { box-shadow: none; }
+  .ticketBand { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+.rsvpDoneActions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.rsvpDoneActions:empty { display: none; }

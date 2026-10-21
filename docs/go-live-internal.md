@@ -25,6 +25,7 @@ Terapkan migrasi yang belum ada, **urut nama berkas**, lewat Supabase Dashboard 
 | `202610200007_admin_templates.sql` | Templat yang tampil di Buat acara (bawaan: Kunjungan klien, Trip klien) |
 | `202610210001_event_beo.sql` | BEO hospitality: jumlah disiapkan, status, dan riwayat revisi |
 | `202610210002_gallery_photos.sql` | Galeri foto acara di R2 (boleh menunggu sampai bucket siap) |
+| `202610210003_tickets_checkin.sql` | Tiket QR untuk tamu undangan personal dan check-in di pintu masuk |
 
 Cek hasilnya (hanya membaca). Semua kolom harus `true`:
 
@@ -39,7 +40,8 @@ select
   to_regclass('public.admin_settings') is not null as "200006",
   exists (select 1 from information_schema.columns where table_schema='public' and table_name='admin_settings' and column_name='enabled_templates') as "200007",
   to_regclass('public.event_beo') is not null as "210001",
-  to_regclass('public.gallery_photos') is not null as "210002";
+  to_regclass('public.gallery_photos') is not null as "210002",
+  to_regclass('public.event_tickets') is not null as "210003";
 ```
 
 Migrasi bersifat menambah. Versi lama yang masih online tetap berjalan setelah migrasi diterapkan, jadi urutannya aman: **database dulu, baru kode**.
