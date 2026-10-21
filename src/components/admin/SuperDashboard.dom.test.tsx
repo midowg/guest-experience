@@ -62,14 +62,12 @@ it("waits for the migration before allowing changes", () => {
   expect(screen.queryByRole("checkbox", { name: /Pilih/ })).toBeNull();
 });
 
-it("only labels hidden events in the regular panel and points to the dashboard", () => {
+it("only labels hidden events in the regular panel", () => {
   const event = { ...createSeedEvent(), status: "draft" as const };
   const { unmount } = render(<EventList events={[event]} featuredId={null} />);
-  expect(screen.queryByText("Tersembunyi dari admin")).toBeNull();
-  expect(screen.queryByRole("link", { name: "Dashboard super admin" })).toBeNull();
+  expect(screen.queryByText("Tersembunyi")).toBeNull();
   unmount();
   render(<EventList events={[event]} featuredId={null} superAdmin={{ hiddenIds: [event.id], migrated: true }} />);
-  expect(screen.getByText("Tersembunyi dari admin")).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Dashboard super admin" }).getAttribute("href")).toBe("/admin/super");
+  expect(screen.getByText("Tersembunyi")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Sembunyikan/ })).toBeNull();
 });

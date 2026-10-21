@@ -526,3 +526,27 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .moreBlocks[open] > summary { margin-bottom: var(--space-2); }
 .sectionSwitch { display: grid; gap: var(--space-1); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border-radius: 12px; background: var(--st-guest-bg); }
 .templateOff { opacity: .6; } .templateOff:hover { opacity: .85; }
+
+/* Event list, kept short (meeting of 20 Oct). */
+.listHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.listTitle { margin: 0; font-size: 1.75rem; color: var(--color-text); }
+.listTitle span { margin-left: var(--space-2); padding: 0 var(--space-2); border-radius: 999px; background: var(--st-settings-bg); color: var(--st-settings); font-size: .9375rem; vertical-align: middle; }
+.emptyList { display: grid; justify-items: start; gap: var(--space-3); padding: var(--space-6); border: 1px dashed #c4cad6; border-radius: 14px; background: #fff; }
+.emptyList p { margin: 0; color: var(--ink-soft); }
+.eventCard { position: relative; gap: var(--space-2); padding: var(--space-4) var(--space-5); }
+.eventCard h2 { margin: var(--space-1) 0 0; font-size: 1.125rem; line-height: 1.3; }
+.cardLink { color: inherit; text-decoration: none; }
+.cardLink:hover { color: var(--blue); text-decoration: underline; }
+.eventWhen { margin: 0; color: var(--ink-soft); font-size: .875rem; font-weight: 500; }
+.eventKind { margin: 0; color: var(--ink-soft); font-size: .8125rem; }
+.liveBadge { display: inline-flex; align-items: center; gap: 4px; padding: 2px var(--space-2); border-radius: 999px; background: var(--page); color: var(--ink-soft); font-size: .75rem; font-weight: 600; }
+.cardFooter { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: auto; padding-top: var(--space-3); }
+.cardFooter > a { min-height: 40px; padding-block: var(--space-1); }
+.cardMenu { position: relative; }
+.cardMenu > summary { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--color-text); list-style: none; cursor: pointer; }
+.cardMenu > summary::-webkit-details-marker { display: none; }
+.cardMenu > summary:hover, .cardMenu[open] > summary { border-color: var(--blue); color: var(--blue); }
+.cardMenuList { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 5; display: grid; min-width: 15rem; padding: var(--space-1); border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 10px 30px rgba(20, 30, 50, .15); }
+.cardMenuList a, .cardMenuList button { display: flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: 8px; background: transparent; color: var(--color-text); font: inherit; font-size: .875rem; text-align: left; text-decoration: none; cursor: pointer; }
+.cardMenuList a:hover, .cardMenuList button:hover { background: var(--page); }
+.cardMenuList button:disabled { opacity: .5; cursor: default; }
