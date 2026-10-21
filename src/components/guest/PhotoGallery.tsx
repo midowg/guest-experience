@@ -74,11 +74,11 @@ function GalleryBody({ event, photos, closed, lang, setLang }: Props & { lang: "
       <div className={styles.photoViewerActions}>
         <button type="button" disabled={open === 0} onClick={() => setOpen(open - 1)} aria-label={t("gallery.prev")}><ChevronLeft size={20} aria-hidden="true" /></button>
         <ButtonLink href={`/e/${event.slug}/galeri/${photo.id}/unduh`}><Download size={16} aria-hidden="true" /> {t("gallery.original")}</ButtonLink>
-        {phone && <a className={styles.photoRemove} href={whatsappUrl(phone, t("photos.removeMessage", { n: open + 1, event: title, link: page }))} target="_blank" rel="noopener noreferrer">
-          <MessageCircle size={16} aria-hidden="true" /> {t("photos.remove")}<span className="sr-only">{t("common.newTab")}</span>
-        </a>}
         <button type="button" disabled={open === photos.length - 1} onClick={() => setOpen(open + 1)} aria-label={t("gallery.next")}><ChevronRight size={20} aria-hidden="true" /></button>
       </div>
+      {phone && <a className={styles.photoRemove} href={whatsappUrl(phone, t("photos.removeMessage", { n: open + 1, event: title, link: page }))} target="_blank" rel="noopener noreferrer">
+          <MessageCircle size={16} aria-hidden="true" /> {t("photos.remove")}<span className="sr-only">{t("common.newTab")}</span>
+        </a>}
     </div>}
   </div>;
 }

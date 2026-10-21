@@ -438,13 +438,13 @@
 .photoGrid { display: grid; gap: 4px; grid-template-columns: repeat(auto-fill, minmax(min(30vw, 11rem), 1fr)); margin: 0; padding: 0; list-style: none; }
 .photoGrid button { display: block; width: 100%; padding: 0; border: 0; background: var(--color-surface); cursor: zoom-in; }
 .photoGrid img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; }
-.photoViewer { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-rows: auto 1fr auto; background: rgba(8, 12, 20, .96); color: #fff; }
+.photoViewer { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; background: #0b0f17; color: #fff; }
 .photoViewerBar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); font-size: var(--text-sm); }
 .photoViewerBar button, .photoViewerActions > button { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; background: transparent; color: #fff; cursor: pointer; }
 .photoViewerActions > button:disabled { opacity: .3; cursor: default; }
 .photoViewer figure { display: grid; place-items: center; min-height: 0; margin: 0; padding: 0 var(--space-3); }
 .photoViewer figure img { max-width: 100%; max-height: calc(100svh - 11rem); object-fit: contain; }
 .photoViewer figcaption { margin-top: var(--space-2); font-size: var(--text-sm); text-align: center; }
-.photoViewerActions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); }
-.photoRemove { display: inline-flex; align-items: center; gap: var(--space-2); color: #fff; font-size: var(--text-sm); }
+.photoViewerActions { display: flex; justify-content: center; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-2); }
+.photoRemove { display: inline-flex; align-items: center; justify-self: center; gap: var(--space-2); padding: 0 var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); color: rgba(255,255,255,.85); font-size: var(--text-sm); }
 .afterGallery { justify-self: start; }
