@@ -1,8 +1,10 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { DEVICE_COOKIE, isDeviceId, type AdminRole } from "@/lib/admin-token";
-import { emptyBeo, type BeoAction, type BeoRevision, type BeoState, type BeoStatus } from "@/lib/beo";
+import { beoSummary, emptyBeo, type BeoAction, type BeoRevision, type BeoState, type BeoStatus } from "@/lib/beo";
 import { createPrivilegedClient } from "./supabase/admin";
+import { readAdminEvent } from "./events";
+import { listAllRsvps } from "./responses";
 import { databaseError } from "./http";
 import { ServiceError } from "./config";
 
@@ -40,4 +42,12 @@ export async function applyBeo(eventId: string, input: BeoInput, attending: numb
     databaseError(error);
   }
   return toState(data as Record<string, unknown>);
+}
+
+/** Event, RSVP summary and BEO state together, as the BEO page, print page and PDF need them. */
+export async function loadBeo(eventId: string) {
+  const event = await readAdminEvent(eventId);
+  if (!event) return null;
+  const [beo, rsvps] = await Promise.all([getBeo(eventId), listAllRsvps(eventId)]);
+  return { event, ...beo, summary: beoSummary(event, rsvps, beo.state.locked_at) };
 }

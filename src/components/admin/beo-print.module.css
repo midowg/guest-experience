@@ -1,0 +1,48 @@
+/* BEO print page: an A4 sheet on screen, the sheet alone on paper. */
+.screen { min-height: 100vh; padding: 0 16px 48px; background: #eef0f5; font-family: var(--font-body); color: #2b2b33; }
+.toolbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; max-width: 210mm; margin: 0 auto 24px; padding: 14px 0; background: #eef0f5; }
+.back { display: inline-flex; align-items: center; gap: 6px; color: #1551a0; font-weight: 700; text-decoration: none; }
+.switch { display: inline-flex; padding: 4px; border-radius: 999px; background: #fff; border: 1px solid #dde1ea; }
+.switch a { padding: 8px 16px; border-radius: 999px; color: #4a5060; font-weight: 700; text-decoration: none; }
+.switch a[aria-current="page"][data-version="vendor"] { background: #1551a0; color: #fff; }
+.switch a[aria-current="page"][data-version="internal"] { background: #9a273d; color: #fff; }
+.actions { display: inline-flex; gap: 8px; margin-left: auto; }
+.actions button, .actions a { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 16px; border: 1px solid #1551a0; border-radius: 10px; background: #1551a0; color: #fff; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.actions a { background: #fff; color: #1551a0; }
+.includes { flex-basis: 100%; margin: 0; color: #5b6476; font-size: .9rem; }
+
+.sheet { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 0 18mm 18mm; background: #fff; box-shadow: 0 6px 24px rgba(20, 30, 60, .12); box-sizing: border-box; font-size: 11pt; line-height: 1.45; }
+.band { margin: 0 -18mm 10mm; padding: 4mm 18mm; color: #fff; font-weight: 800; letter-spacing: .04em; background: #1551a0; }
+.sheet[data-version="internal"] .band { background: #9a273d; }
+.head h1 { margin: 2mm 0 3mm; color: #1d1d24; font-size: 20pt; font-weight: 800; line-height: 1.15; letter-spacing: 0; }
+.head p { margin: 0 0 1mm; }
+.kicker { color: #5b6476; font-size: 8.5pt; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.muted { color: #5b6476; }
+.numbers { display: grid; grid-template-columns: repeat(auto-fit, minmax(40mm, 1fr)); gap: 4mm; margin: 7mm 0; }
+.numbers div { display: grid; gap: 1mm; padding: 4mm; border: 1px solid #dde1ea; border-radius: 3mm; }
+.numbers span { color: #5b6476; font-size: 9pt; }
+.numbers strong { font-size: 22pt; font-weight: 800; line-height: 1.1; }
+.numbers small { color: #5b6476; font-size: 8pt; }
+.numbers .main { border: 2px solid #1551a0; background: #f2f6fc; }
+.sheet[data-version="internal"] .numbers .main { border-color: #9a273d; background: #fbf3f5; }
+.sheet section { margin-top: 7mm; break-inside: avoid-page; }
+.sheet h2 { margin: 0 0 2mm; color: #1d1d24; font-size: 13pt; font-weight: 800; letter-spacing: 0; }
+.notes { white-space: pre-line; }
+.sheet table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.sheet th, .sheet td { padding: 2.2mm 3mm; border: 1px solid #dde1ea; text-align: left; vertical-align: top; }
+.sheet th { background: #f4f5f8; color: #5b6476; font-size: 8.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.sheet tr { break-inside: avoid; }
+.foot { margin-top: 10mm; padding-top: 3mm; border-top: 1px solid #dde1ea; color: #5b6476; font-size: 8pt; }
+
+@media (max-width: 640px) {
+  .sheet { padding: 0 6mm 10mm; }
+  .band { margin: 0 -6mm 6mm; padding: 3mm 6mm; }
+  .actions { margin-left: 0; }
+}
+@page { size: A4; margin: 0; }
+@media print {
+  .screen { padding: 0; background: #fff; }
+  .toolbar { display: none; }
+  .sheet { box-shadow: none; max-width: none; min-height: 0; }
+  .band, .numbers .main, .sheet th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

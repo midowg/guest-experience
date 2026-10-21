@@ -61,20 +61,20 @@ it("warns when answers changed after the numbers were set", () => {
   expect(screen.getByText(/Perlu ditinjau: 1 jawaban RSVP/)).toBeTruthy();
 });
 
-it("prints the supplier version without internal parts", () => {
-  vi.stubGlobal("requestAnimationFrame", (fn: () => void) => { fn(); return 0; });
-  const print = vi.spyOn(window, "print").mockImplementation(() => {});
-  const { container } = view();
-  fireEvent.click(screen.getByRole("button", { name: "Cetak versi penyedia" }));
-  expect(print).toHaveBeenCalled();
-  expect(container.querySelector("[data-print]")?.getAttribute("data-print")).toBe("vendor");
-  expect(container.querySelector("[data-vendor]")?.textContent).toBe("Ayu");
-  vi.unstubAllGlobals();
+it("offers the supplier and internal versions as separate print pages and PDFs", () => {
+  view();
+  const exports = screen.getByRole("region", { name: "Cetak & ekspor" });
+  const links = within(exports).getAllByRole("link").map(link => link.getAttribute("href"));
+  expect(links).toEqual([
+    `/admin/events/${event.id}/beo/cetak?versi=penyedia`, `/api/admin/events/${event.id}/beo/pdf?versi=penyedia`,
+    `/admin/events/${event.id}/beo/cetak?versi=internal`, `/api/admin/events/${event.id}/beo/pdf?versi=internal`,
+  ]);
+  expect(within(exports).getByText(/nama depan saja/)).toBeTruthy();
 });
 
 it("is read-only before the migration", () => {
   view({}, false);
   expect(screen.getByText(/menunggu migrasi/)).toBeTruthy();
   expect(screen.queryByLabelText("Jumlah porsi/pax disiapkan")).toBeNull();
-  expect(screen.getByRole("button", { name: "Cetak versi internal" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: /Unduh PDF versi internal/ })).toBeTruthy();
 });

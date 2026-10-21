@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Printer, Save } from "lucide-react";
-import { Button, Field, Notice } from "@/components/ui";
+import { AlertTriangle, Download, Printer, Save } from "lucide-react";
+import { Button, ButtonLink, Field, Notice } from "@/components/ui";
 import { beoActions, beoStatuses, beoStatusLabels, type BeoAction, type BeoRevision, type BeoState, type BeoSummary } from "@/lib/beo";
+import { beoVersionInfo, beoVersionParam, type BeoVersion } from "@/lib/beo-document";
 import { formatDateTime, formatTime } from "@/lib/format";
 import { tzLabel } from "@/lib/timezones";
 import type { EventRecord } from "@/lib/types";
@@ -23,8 +24,8 @@ type Props = { event: EventRecord; summary: BeoSummary; initial: BeoState; revis
 
 /**
  * The BEO for hospitality: three numbers, food and allergies, access needs, the service schedule,
- * and the Draf → Ditetapkan → Revisi → Final → Selesai flow. Prints in a supplier version (first
- * names, no access list or history) and an internal one.
+ * and the Draf → Ditetapkan → Revisi → Final → Selesai flow. Printing and PDF export live on a
+ * separate A4 page, in a supplier version (first names, no access list or history) or internal.
  */
 export function BeoView({ event, summary, initial, revisions, migrated }: Props) {
   const router = useRouter();
@@ -36,7 +37,6 @@ export function BeoView({ event, summary, initial, revisions, migrated }: Props)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [printing, setPrinting] = useState<"vendor" | "internal">("internal");
   const editable = state.status === "draft" || revising;
   const actions = beoActions(state.status);
   const count = prepared.trim() === "" ? null : Number(prepared);
@@ -59,20 +59,13 @@ export function BeoView({ event, summary, initial, revisions, migrated }: Props)
     finally { setBusy(false); }
   }
 
-  function print(version: "vendor" | "internal") {
-    setPrinting(version);
-    // The attribute must be on the page before the print dialog takes its snapshot.
-    requestAnimationFrame(() => window.print());
-  }
-
   const time = (value: string) => formatTime(value, event.timezone);
-  return <div className={styles.beo} data-print={printing}>
+  return <div className={styles.beo}>
     {!migrated && <Notice tone="warning">Angka persiapan dan status BEO menunggu migrasi <code>202610210001_event_beo.sql</code>. Rekap di bawah sudah bisa dibaca dan dicetak.</Notice>}
 
     <ol className={styles.beoSteps} aria-label="Status BEO">
       {beoStatuses.map(status => <li key={status} aria-current={state.status === status ? "step" : undefined}>{beoStatusLabels[status]}</li>)}
     </ol>
-    <p className={styles.beoPrintTitle}>BEO · {event.title} · {beoStatusLabels[state.status]}{state.version ? ` · versi ${state.version}` : ""}</p>
     {stale > 0 && <Notice tone="warning" role="status"><AlertTriangle size={16} aria-hidden="true" /> Perlu ditinjau: {stale} jawaban RSVP masuk atau berubah setelah angka ditetapkan.</Notice>}
 
     <div className={styles.beoNumbers}>
@@ -81,7 +74,7 @@ export function BeoView({ event, summary, initial, revisions, migrated }: Props)
       <div className={styles.beoPrepared}><span>Jumlah disiapkan</span><strong>{state.prepared_count ?? "—"}</strong></div>
     </div>
 
-    {migrated && <section className={styles.guestCard} aria-labelledby="beo-form-title" data-no-print>
+    {migrated && <section className={styles.guestCard} aria-labelledby="beo-form-title">
       <h2 id="beo-form-title" className={styles.guestCardTitle}>Angka untuk penyedia</h2>
       <Field label="Jumlah porsi/pax disiapkan" name="beo-prepared" hint={`RSVP hadir saat ini ${summary.attending}. Tambahkan cadangan bila perlu.`}>
         <input id="beo-prepared" inputMode="numeric" value={prepared} disabled={!editable || busy} onChange={e => setPrepared(e.target.value.replace(/\D/g, "").slice(0, 6))} />
@@ -102,7 +95,7 @@ export function BeoView({ event, summary, initial, revisions, migrated }: Props)
       </div>
       {actions.map(action => actionHints[action] && <p key={action} className="field-hint">{actionLabels[action]}: {actionHints[action]}</p>)}
     </section>}
-    {state.notes && <section className={styles.beoSection} data-print-only><h2>Catatan</h2><p className={styles.multiline}>{state.notes}</p></section>}
+    <ExportCard eventId={event.id} />
 
     <section className={styles.beoSection} aria-labelledby="beo-food">
       <h2 id="beo-food">Makanan</h2>
@@ -114,7 +107,7 @@ export function BeoView({ event, summary, initial, revisions, migrated }: Props)
         <caption>Alergi</caption>
         <thead><tr><th scope="col">Tamu</th><th scope="col">Alergen</th></tr></thead>
         <tbody>{summary.allergies.map((item, index) => <tr key={index}>
-          <td><span data-internal>{item.name}</span><span data-vendor>{item.firstName}</span></td><td>{item.details || "Belum dirinci, tanyakan ke tamu"}</td>
+          <td>{item.name}</td><td>{item.details || "Belum dirinci, tanyakan ke tamu"}</td>
         </tr>)}</tbody>
       </table></div>}
       {summary.otherFood.length > 0 && <div className={styles.tableWrap}><table className={styles.table}>
@@ -124,7 +117,7 @@ export function BeoView({ event, summary, initial, revisions, migrated }: Props)
       </table></div>}
     </section>
 
-    <section className={styles.beoSection} aria-labelledby="beo-access" data-internal>
+    <section className={styles.beoSection} aria-labelledby="beo-access">
       <h2 id="beo-access">Akses khusus <small>(internal, tidak ikut versi penyedia)</small></h2>
       {summary.access.length === 0 ? <p>Tidak ada kebutuhan akses dari tamu yang hadir.</p> : <ul className={styles.beoList}>
         {summary.access.map((item, index) => <li key={index}><strong>{item.name}</strong>: {[...item.needs, item.other].filter(Boolean).join(", ")}</li>)}
@@ -138,7 +131,7 @@ export function BeoView({ event, summary, initial, revisions, migrated }: Props)
       </ol>}
     </section>
 
-    {revisions.length > 0 && <section className={styles.beoSection} aria-labelledby="beo-history" data-internal>
+    {revisions.length > 0 && <section className={styles.beoSection} aria-labelledby="beo-history">
       <h2 id="beo-history">Riwayat</h2>
       <ol className={styles.beoList}>{revisions.map(rev => <li key={rev.id}>
         <strong>Versi {rev.version} · {beoStatusLabels[rev.status]}</strong> · {formatDateTime(rev.at, event.timezone)} · disiapkan {rev.prepared_count ?? "—"}, RSVP hadir {rev.attending}
@@ -146,10 +139,22 @@ export function BeoView({ event, summary, initial, revisions, migrated }: Props)
       </li>)}</ol>
     </section>}
 
-    <div className={styles.qrActions} data-no-print>
-      <Button type="button" variant="secondary" onClick={() => print("vendor")}><Printer size={16} aria-hidden="true" /> Cetak versi penyedia</Button>
-      <Button type="button" variant="secondary" onClick={() => print("internal")}><Printer size={16} aria-hidden="true" /> Cetak versi internal</Button>
-    </div>
-    <p className="field-hint" data-no-print>Pilih “Simpan sebagai PDF” di dialog cetak untuk mengirim ke penyedia. Versi penyedia hanya memuat nama depan, tanpa akses khusus dan riwayat.</p>
   </div>;
+}
+
+/** Two clearly different outputs: the supplier version and the internal one, each printable or as PDF. */
+function ExportCard({ eventId }: { eventId: string }) {
+  return <section className={styles.guestCard} aria-labelledby="beo-export-title">
+    <h2 id="beo-export-title" className={styles.guestCardTitle}><Printer size={18} aria-hidden="true" /> Cetak &amp; ekspor</h2>
+    <div className={styles.beoExports}>
+      {(["vendor", "internal"] as BeoVersion[]).map(version => <div key={version} className={styles.beoExport} data-version={version}>
+        <strong>{beoVersionInfo[version].label}</strong>
+        <p>{beoVersionInfo[version].includes}</p>
+        <div className={styles.qrActions}>
+          <ButtonLink variant="secondary" href={`/admin/events/${eventId}/beo/cetak?versi=${beoVersionParam[version]}`} target="_blank" rel="noopener noreferrer"><Printer size={16} aria-hidden="true" /> Lihat &amp; cetak<span className="sr-only"> {beoVersionInfo[version].label.toLowerCase()} (tab baru)</span></ButtonLink>
+          <ButtonLink href={`/api/admin/events/${eventId}/beo/pdf?versi=${beoVersionParam[version]}`} download><Download size={16} aria-hidden="true" /> Unduh PDF<span className="sr-only"> {beoVersionInfo[version].label.toLowerCase()}</span></ButtonLink>
+        </div>
+      </div>)}
+    </div>
+  </section>;
 }

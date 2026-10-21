@@ -579,16 +579,11 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .beoCounts { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 .beoCounts li { padding: var(--space-2) var(--space-4); border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .beoList { display: grid; gap: var(--space-2); margin: 0; padding-left: 1.25rem; }
-.beoPrintTitle, .beo [data-vendor], .beo [data-print-only] { display: none; }
-@media print {
-  .header, .navigation, .beo [data-no-print] { display: none !important; }
-  .beoPrintTitle { display: block; font-weight: 700; }
-  .beo [data-print-only] { display: grid; }
-  .beoSteps { display: none; }
-  .beo[data-print="vendor"] [data-internal] { display: none !important; }
-  .beo[data-print="vendor"] [data-vendor] { display: inline; }
-  .beoNumbers > div, .beoCounts li { border-color: #999; }
-}
+.beoExports { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.beoExport { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-4); border: 1px solid var(--line); border-left: 5px solid var(--blue); border-radius: 12px; background: #fff; }
+.beoExport[data-version="internal"] { border-left-color: #9a273d; }
+.beoExport strong { font-size: 1.0625rem; }
+.beoExport p { margin: 0; color: #5b6476; font-size: .9rem; }
 
 /* Photo gallery (R2) */
 .galleryPick { position: relative; display: inline-flex; justify-self: start; align-items: center; justify-content: center; min-height: 44px; padding: var(--space-2) var(--space-5); border-radius: 10px; background: var(--blue); color: #fff; font-weight: 600; cursor: pointer; }
