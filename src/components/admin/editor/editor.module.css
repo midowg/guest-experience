@@ -24,7 +24,7 @@
   .menu { position: fixed; top: 0; bottom: 0; left: 0; z-index: 60; width: min(20rem, 86vw); overflow-y: auto; border-radius: 0 16px 16px 0; box-shadow: 0 10px 40px rgba(15, 25, 50, .25); transform: translateX(-105%); visibility: hidden; transition: transform .2s ease, visibility .2s; }
   .menu[data-open] { transform: none; visibility: visible; }
   .menuHead { display: flex; align-items: center; justify-content: space-between; padding: var(--space-1) 0 var(--space-2); border-bottom: 1px solid var(--line); }
-  .menuHead button { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 10px; background: var(--page); cursor: pointer; }
+  .menu .menuHead button { display: inline-grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; min-height: 0; padding: 0; border: 0; border-radius: 10px; background: var(--page); cursor: pointer; }
   .menuBackdrop { position: fixed; inset: 0; z-index: 59; border: 0; background: rgba(15, 20, 30, .4); }
 }
 @media (prefers-reduced-motion: reduce) { .menu { transition: none; } }
@@ -32,13 +32,10 @@
 .menuDanger button { color: #9a273d; }
 .menuDanger button[aria-current="true"] { background: #9a273d; color: #fff; }
 
-/* ☰ in the toolbar */
-.menuToggle { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 42px; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--color-text); font: inherit; font-weight: 700; cursor: pointer; }
-.menuToggle:hover { border-color: var(--blue); }
-.menuToggleText { display: grid; min-width: 0; text-align: left; line-height: 1.15; }
-.menuToggleLabel { font-size: .8125rem; color: #5b6476; }
-.menuToggleText strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 71.99rem) { .menuToggle { flex: 1; min-width: 0; } .menuToggleLabel { font-size: .6875rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; } }
+/* ☰ in the toolbar: a square icon button, as in most apps; the open part is named beside it. */
+.menuToggle { display: inline-grid; place-items: center; flex-shrink: 0; width: 42px; height: 42px; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--color-text); cursor: pointer; }
+.menuToggle:hover, .menuToggle[aria-expanded="true"] { border-color: var(--blue); color: var(--blue); }
+.currentBlock { flex: 1; min-width: 0; margin: 0; overflow: hidden; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 .menu ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .menu button { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 38px; padding: 6px var(--space-2); border: 0; border-radius: 10px; background: transparent; color: var(--color-text); font: inherit; font-size: .9rem; font-weight: 600; text-align: left; cursor: pointer; }
 .menu button:hover { background: var(--page); }

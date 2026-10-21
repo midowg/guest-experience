@@ -266,10 +266,11 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       preview (phone), and Simpan. It sticks under the header and covers nothing.
     */}
     <div className={e.toolbar} role="region" aria-label="Simpan perubahan">
-      <button type="button" className={e.menuToggle} aria-controls="editor-menu" aria-expanded={menuShown} onClick={() => wide ? setSidebarHidden(hidden => !hidden) : setDrawerOpen(true)}>
-        <Menu size={18} aria-hidden="true" />
-        <span className={e.menuToggleText}><span className={e.menuToggleLabel}>{wide ? (sidebarHidden ? "Tampilkan menu" : "Sembunyikan menu") : "Bagian"}</span>{!wide && <strong>{openTitle}</strong>}</span>
+      {/* The usual ☰: a square icon button, with the open part named beside it as plain text. */}
+      <button type="button" className={e.menuToggle} aria-controls="editor-menu" aria-expanded={menuShown} aria-label={wide ? (sidebarHidden ? "Tampilkan menu bagian" : "Sembunyikan menu bagian") : "Buka menu bagian"} title={wide ? (sidebarHidden ? "Tampilkan menu" : "Sembunyikan menu") : "Menu bagian"} onClick={() => wide ? setSidebarHidden(hidden => !hidden) : setDrawerOpen(true)}>
+        <Menu size={20} aria-hidden="true" />
       </button>
+      {!wide && <p className={e.currentBlock} aria-hidden="true">{openTitle}</p>}
       <div className={e.viewSwitch} role="group" aria-label="Tampilan">
         <button type="button" aria-pressed={view === "form"} aria-label="Isi" onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> <span className={e.btnText}>Isi</span></button>
         <button type="button" aria-pressed={view === "preview"} aria-label="Lihat" onClick={() => setView("preview")}><Smartphone size={15} aria-hidden="true" /> <span className={e.btnText}>Lihat</span></button>

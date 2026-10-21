@@ -34,7 +34,7 @@ Editor terdiri dari tiga kolom: **menu bagian** di kiri, **form** di tengah, dan
 - Bilah di atas editor selalu terlihat saat menggulir. Isinya tombol **☰** untuk menu bagian, **Isi / Lihat** (di HP: ikon pensil untuk mengisi, ikon ponsel untuk melihat), dan tombol **Simpan**. Tombol bertuliskan *Tersimpan* (atau ikon centang di HP) bila tidak ada perubahan.
 - **☰** di HP dan tablet membuka menu bagian dari kiri; ketuk bagian, atau di luar menu, untuk menutupnya. Di laptop, ☰ menyembunyikan atau menampilkan menu samping supaya form dan pratinjau lebih lebar.
 - **Hapus acara** ada di bagian paling bawah menu. Untuk konfirmasi, ketik kode acara (misalnya AB23CD).
-- Tab di atas editor: **Edit acara**, **Daftar tamu**, **RSVP**, **Check-in**, **BEO**, **Galeri**, **Feedback**. Kembali ke daftar acara lewat ikon kotak-kotak di kepala halaman.
+- Halaman acara lain dibuka dari tombol di bawah judul (misalnya **Edit acara ▾**): Daftar tamu, RSVP, Check-in, BEO, Galeri foto, Feedback. Di sebelahnya ada **Buka undangan** untuk melihat halaman tamu yang sudah tayang. Kembali ke daftar acara lewat ikon kotak-kotak di kepala halaman.
 - Bagian yang dipakai templat tampil di menu. Bagian lain ada di lipatan **Bagian lain** di dasar menu; buka hanya bila perlu.
 - **Jadwal**: acara lebih dari sehari otomatis tampil per hari (Hari 1, Hari 2, …). Setiap sesi punya **Tambahan (opsional)**: lokasi kegiatan, cuplikan "Kenali lebih dekat", kotak **Tahukah Anda?**, dan halaman PDF presentasi.
 - **Kontak**: ketuk salah satu nama di **Pilih PIC dari tim**. Nama, jabatan, nomor WhatsApp, dan foto langsung terisi. Isi manual tetap bisa dipakai untuk PIC dari luar tim. Untuk trip, isi juga **Kontak darurat** dan rumah sakit terdekat.

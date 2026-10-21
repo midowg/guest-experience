@@ -133,7 +133,7 @@ it("switches between the form and the phone preview on a phone", () => {
   fireEvent.click(screen.getByRole("button", { name: "Lihat" }));
   expect(layout.getAttribute("data-view")).toBe("preview");
   // ☰ opens the block menu as a drawer; picking a block closes it and shows that block's form.
-  const toggle = screen.getByRole("button", { name: /Bagian/ });
+  const toggle = screen.getByRole("button", { name: "Buka menu bagian" });
   expect(toggle.getAttribute("aria-expanded")).toBe("false");
   fireEvent.click(toggle);
   expect(toggle.getAttribute("aria-expanded")).toBe("true");
@@ -146,10 +146,10 @@ it("switches between the form and the phone preview on a phone", () => {
 
 it("closes the drawer with Escape or the backdrop", () => {
   render(<EventEditor event={createSeedEvent()} />);
-  fireEvent.click(screen.getByRole("button", { name: /Bagian/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Buka menu bagian" }));
   fireEvent.keyDown(window, { key: "Escape" });
   expect(editorMenu().getAttribute("data-open")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: /Bagian/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Buka menu bagian" }));
   fireEvent.click(screen.getAllByRole("button", { name: "Tutup menu" })[0]);
   expect(editorMenu().getAttribute("data-open")).toBeNull();
 });

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ClipboardCheck, Crown, ExternalLink, Images, LayoutGrid, Mail, MessageSquare, Pencil, ScanLine, UtensilsCrossed } from "lucide-react";
+import { Crown, LayoutGrid } from "lucide-react";
 import { adminRole } from "@/lib/server/admin-session";
 import { ButtonLink, Notice } from "@/components/ui";
 import type { EventRecord } from "@/lib/types";
 import { LogoutButton } from "@/components/admin/shared/AuthControls";
 import styles from "@/components/admin/admin.module.css";
-import nav from "./navigation.module.css";
+import { EventPagesMenu } from "./EventPagesMenu";
 import shell from "./shell.module.css";
 import { adminEventPath, eventPath, type AdminTab } from "@/lib/routes";
 
@@ -41,19 +41,12 @@ export function SetupNotice() {
     <ButtonLink href="/admin" variant="secondary">Periksa koneksi</ButtonLink>
   </section>;
 }
-/**
- * The event's pages as plain tabs, in three runs: edit, guests (list, RSVP, check-in), operations
- * (BEO, gallery, feedback). "Semua acara" is in the header and the live preview in the editor.
- */
+/** The event's pages behind one dropdown, grouped; "Semua acara" is in the header, the live preview in the editor. */
 export function EventNavigation({ event, current }: { event: EventRecord; current: AdminTab }) {
-  const tab = (key: AdminTab, label: string, Icon: typeof Pencil) =>
-    <a href={adminEventPath(event, key)} className={nav.tab} aria-current={current === key ? "page" : undefined}><Icon size={16} aria-hidden="true" /> {label}</a>;
-  return <nav className={nav.bar} aria-label="Pengelolaan acara">
-    {tab("edit", "Edit acara", Pencil)}
-    <span className={nav.divider} aria-hidden="true" />
-    {tab("invitations", "Daftar tamu", Mail)}{tab("responses", "RSVP", ClipboardCheck)}{tab("checkin", "Check-in", ScanLine)}
-    <span className={nav.divider} aria-hidden="true" />
-    {tab("beo", "BEO", UtensilsCrossed)}{tab("gallery", "Galeri", Images)}{tab("feedback", "Feedback", MessageSquare)}
-    {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer" className={`${nav.tab} ${nav.public}`}><ExternalLink size={16} aria-hidden="true" /> Buka undangan<span className="sr-only"> (tab baru)</span></a>}
-  </nav>;
+  const page = (tab: AdminTab, label: string) => ({ tab, label, href: adminEventPath(event, tab) });
+  return <EventPagesMenu current={current} publicHref={event.status === "published" ? eventPath(event) : undefined} groups={[
+    { label: "Edit", pages: [page("edit", "Edit acara")] },
+    { label: "Tamu", pages: [page("invitations", "Daftar tamu"), page("responses", "RSVP"), page("checkin", "Check-in")] },
+    { label: "Operasional", pages: [page("beo", "BEO"), page("gallery", "Galeri foto"), page("feedback", "Feedback")] },
+  ]} />;
 }
