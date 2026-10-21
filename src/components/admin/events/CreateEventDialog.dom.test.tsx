@@ -41,7 +41,7 @@ it("creates an event from a template with only name, time, and place", async () 
   fireEvent.change(title, { target: { value: "Trip Lombok Mitra" } });
   fireEvent.change(screen.getByLabelText(/^Mulai/), { target: { value: "2026-12-12T08:00" } });
   fireEvent.click(screen.getByRole("button", { name: "Buat acara" }));
-  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/admin/events/5e7a0c1e-0000-4000-8000-000000000099"));
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/admin/acara/5e7a0c1e-0000-4000-8000-000000000099"));
   expect(body).toMatchObject({ setup: { template: "trip-klien", title: "Trip Lombok Mitra", starts_at: "2026-12-12T01:00:00.000Z", audience: "external", language: "id", invitation_mode: "open", venue_name: "PT. Werkudara", greeting: "" } });
   expect((body!.setup as { modules: string[] }).modules).toEqual(["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback"]);
 });

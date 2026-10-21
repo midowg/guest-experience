@@ -32,4 +32,6 @@ export type EditorKit = {
   /** A module the super admin switched off and this event does not use. */
   unavailable: (key: AdminModule) => boolean;
   sectionUnavailable: (key: string) => boolean;
+  /** Public site address (NEXT_PUBLIC_SITE_URL) for links shown to copy. */
+  origin: string;
 };

@@ -33,6 +33,26 @@ export async function getPublicEvent(slug: string): Promise<EventRecord | null> 
   if (error) databaseError(error);
   return data?.document ? normalizeEvent(data.document as EventRecord) : null;
 }
+/** Not migrated yet (202610210004): there are no codes, so nothing is found by code. */
+const noCodeColumn = (error: { code?: string; message?: string }) => error.code === "42703" || /code/.test(error.message ?? "") && /column/.test(error.message ?? "");
+
+/** A published event by its short code (`AB23CD`). */
+export async function getPublicEventByCode(code: string): Promise<EventRecord | null> {
+  const { data, error } = await createPublicClient().from("event_documents").select("document").eq("code", code).eq("status", "published").maybeSingle();
+  if (error) { if (noCodeColumn(error)) return null; databaseError(error); }
+  return data?.document ? normalizeEvent(data.document as EventRecord) : null;
+}
+
+/** An admin address names an event by its code or its id; both lead to the id. */
+export async function resolveEventRef(ref: string): Promise<string | null> {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref)) return ref.toLowerCase();
+  const code = ref.toUpperCase();
+  if (!/^[A-HJKMNP-Z2-9]{6}$/.test(code)) return null;
+  const { data, error } = await createPrivilegedClient().from("events").select("id").eq("code", code).maybeSingle();
+  if (error) { if (noCodeColumn(error)) return null; databaseError(error); }
+  return (data?.id as string | undefined) ?? null;
+}
+
 export async function getAdminEvent(id: string): Promise<EventRecord | null> {
   return readAdminEvent(id);
 }

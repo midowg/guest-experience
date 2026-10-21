@@ -71,7 +71,7 @@ function PanelHeader({ open, titleRef, onClose }: { open: string | null; titleRe
  * that this event does not use is not offered at all; one it already uses stays visible with a
  * note, may be switched off, and cannot come back (the server checks the same rule on save).
  */
-export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean }) {
+export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false, origin = "" }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean; origin?: string }) {
   const unavailable = (key: AdminModule) => disabledModules.includes(key) && !moduleActive(initialEvent, key);
   const restricted = (key: AdminModule) => disabledModules.includes(key) && moduleActive(initialEvent, key);
   // Kind, audience, and theme come from the template; only the super admin changes them (meeting of 20 Oct).
@@ -245,7 +245,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       <button type="button" className={styles.cardEdit} onClick={e => openBlock(item.id, e.currentTarget)} aria-label={`Ubah ${item.title}`}><Pencil size={14} aria-hidden="true" /> Ubah</button>
     </li>;
   }
-  const kit: EditorKit = { event, update, errors, control, text, time, toggle, choices, tz, unavailable, sectionUnavailable };
+  const kit: EditorKit = { event, update, errors, control, text, time, toggle, choices, tz, unavailable, sectionUnavailable, origin };
   return <form className={styles.form} onSubmit={save} noValidate aria-busy={pending}>
     {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
     {message && <Notice tone="success">{message}</Notice>}

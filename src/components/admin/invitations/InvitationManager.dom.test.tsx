@@ -9,7 +9,7 @@ const now = "2026-10-20T03:00:00.000Z";
 const guest = (n: number, over: Partial<EventInvitation> = {}): EventInvitation => ({
   id: `7a1d0000-0000-4000-8000-00000000000${n}`, event_id: event.id, name: `Tamu ${n}`, token: String(n).repeat(64), active: true,
   created_at: now, updated_at: now, phone: null, party_size_max: 1, last_sent_at: null, send_count: 0,
-  first_opened_at: null, last_opened_at: null, open_count: 0, rsvp: null, ...over,
+  first_opened_at: null, last_opened_at: null, open_count: 0, short_token: null, rsvp: null, ...over,
 });
 const yes = { id: "r1", event_id: event.id, name: "Tamu 2", organization: "", attendance: "yes" as const, phone: "", email: "", has_allergy: false, allergy_details: "", created_at: now };
 const guests = [

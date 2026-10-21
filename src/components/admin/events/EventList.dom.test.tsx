@@ -27,7 +27,7 @@ it("shows each event as status, title, and date only", () => {
   const item = card("Acara Draf");
   expect(within(item).getByText("Draf")).toBeTruthy();
   expect(within(item).getByText(/Senin, 12 Oktober 2026 · 18\.00 WIB/)).toBeTruthy();
-  expect(within(item).getByRole("link", { name: "Buka" }).getAttribute("href")).toBe(`/admin/events/${draft.id}`);
+  expect(within(item).getByRole("link", { name: "Buka" }).getAttribute("href")).toBe(`/admin/acara/${draft.id}`);
   for (const gone of [/\/e\/acara-draf/, /Terakhir disimpan/, /Eksternal|Internal/, /Werkudara$/]) expect(within(item).queryByText(gone)).toBeNull();
 });
 
@@ -79,7 +79,7 @@ it("duplicates an event into a new draft and opens it", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => reply({ ok: true, data: { ...draft, id: "10f3a511-2331-4000-8000-000000000009" }, message: "Draft acara dibuat." })));
   render(<EventList events={[first]} featuredId={null} />);
   fireEvent.click(within(menu("Acara A")).getByRole("button", { name: /Duplikasi/ }));
-  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/admin/events/10f3a511-2331-4000-8000-000000000009"));
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/admin/acara/10f3a511-2331-4000-8000-000000000009"));
 });
 
 it("closes an open card menu on a click elsewhere or Escape", () => {

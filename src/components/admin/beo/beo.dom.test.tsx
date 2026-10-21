@@ -66,8 +66,8 @@ it("offers the supplier and internal versions as separate print pages and PDFs",
   const exports = screen.getByRole("region", { name: "Cetak & ekspor" });
   const links = within(exports).getAllByRole("link").map(link => link.getAttribute("href"));
   expect(links).toEqual([
-    `/admin/events/${event.id}/beo/cetak?versi=penyedia`, `/api/admin/events/${event.id}/beo/pdf?versi=penyedia`,
-    `/admin/events/${event.id}/beo/cetak?versi=internal`, `/api/admin/events/${event.id}/beo/pdf?versi=internal`,
+    `/admin/acara/${event.id}/beo/cetak?versi=penyedia`, `/api/admin/events/${event.id}/beo/pdf?versi=penyedia`,
+    `/admin/acara/${event.id}/beo/cetak?versi=internal`, `/api/admin/events/${event.id}/beo/pdf?versi=internal`,
   ]);
   expect(within(exports).getByText(/nama depan saja/)).toBeTruthy();
 });

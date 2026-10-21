@@ -63,7 +63,7 @@ type Answers = {
   dietary: Dietary[]; allergy_details: string; dietary_other: string; access: AccessNeed[]; access_other: string;
   photo_opt_out: boolean; consent: boolean;
 };
-type Invitation = { name: string; token: string; rsvp: RsvpRecord | null; party_size_max?: number };
+type Invitation = { name: string; token: string; short_token?: string | null; rsvp: RsvpRecord | null; party_size_max?: number };
 
 function answersFrom(rsvp: RsvpRecord | null, invitee?: string): Answers {
   return {

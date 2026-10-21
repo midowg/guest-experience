@@ -58,6 +58,8 @@ export type AfterContent = {
 };
 export type EventRecord = {
   id: string; slug: string; status: EventStatus; title: string; subtitle: string;
+  /** Short code for /AB23CD addresses; absent before migration 202610210004. */
+  code?: string;
   organizer: string; greeting: string; introduction: string; closing: string;
   starts_at: string; ends_at: string | null; timezone: string;
   venue_name: string; address: string; location_url: string; location_embed_url: string; location_display: "manual" | "embed"; arrival_notes: string;

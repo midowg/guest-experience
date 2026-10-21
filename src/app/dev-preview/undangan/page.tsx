@@ -14,7 +14,7 @@ export default function DevInvitationsPage() {
   const now = new Date().toISOString();
   const guest = (n: number, name: string, over: Partial<EventInvitation> = {}): EventInvitation => ({
     id: `7a1d0000-0000-4000-8000-00000000000${n}`, event_id: event.id, name, token: String(n).repeat(64), active: true, created_at: now, updated_at: now,
-    phone: null, party_size_max: 1, last_sent_at: null, send_count: 0, first_opened_at: null, last_opened_at: null, open_count: 0, rsvp: null, ...over,
+    phone: null, party_size_max: 1, last_sent_at: null, send_count: 0, first_opened_at: null, last_opened_at: null, open_count: 0, short_token: null, rsvp: null, ...over,
   });
   const answer = (attendance: "yes" | "no") => ({ id: crypto.randomUUID(), event_id: event.id, name: "", organization: "", attendance, phone: "", email: "", has_allergy: false, allergy_details: "", created_at: now });
   const guests = [

@@ -1,3 +1,4 @@
+import { resolveEventRef } from "@/lib/server/events";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BeoPrint } from "@/components/admin/beo/BeoPrint";
@@ -11,10 +12,11 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Cetak BEO", robots: { index: false, follow: false } };
 
 /** A4 print page for the BEO, ?versi=penyedia (default) or internal. No admin header, so it prints clean. */
-export default async function BeoPrintPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ versi?: string }> }) {
+export default async function BeoPrintPage({ params, searchParams }: { params: Promise<{ ref: string }>; searchParams: Promise<{ versi?: string }> }) {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <SetupNotice />;
-  const { id } = await params;
+  const id = await resolveEventRef((await params).ref);
+  if (!id) notFound();
   await requireEventPage(id);
   const data = await loadBeo(id);
   if (!data) notFound();

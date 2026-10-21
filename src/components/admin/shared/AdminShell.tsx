@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowLeft, ClipboardCheck, Crown, ExternalLink, Eye, Images, LayoutGrid, Mail, MessageSquare, Pencil, ScanLine, ShieldCheck, UtensilsCrossed } from "lucide-react";
 import { adminRole } from "@/lib/server/admin-session";
@@ -13,15 +14,15 @@ export async function AdminShell({ children, bare = false }: { children: ReactNo
   return <div className={styles.shell}>
     <header className={styles.header}>
       <div className={`container ${styles.headerInner}`}>
-        <a href="/admin" className={styles.brand}>
+        <Link href="/admin" className={styles.brand}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/werkudara_icon.png" alt="" width={36} height={36} className={styles.logo} />
           <span><strong>Werkudara</strong><span className={styles.brandSub}>Admin pengalaman tamu</span></span>
-        </a>
+        </Link>
         {!bare && <nav className={styles.headerNav} aria-label="Admin">
-          {role === "super" && <a href="/admin/super" className={`${styles.headerLink} ${styles.roleLink}`}><Crown size={16} aria-hidden="true" /> Dashboard super admin</a>}
-          <a href="/admin" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> Semua acara</a>
-          <a href="/admin/akses" className={styles.headerLink}><ShieldCheck size={16} aria-hidden="true" /> Log akses</a>
+          {role === "super" && <Link href="/admin/super" className={`${styles.headerLink} ${styles.roleLink}`}><Crown size={16} aria-hidden="true" /> Dashboard super admin</Link>}
+          <Link href="/admin" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> Semua acara</Link>
+          <Link href="/admin/akses" className={styles.headerLink}><ShieldCheck size={16} aria-hidden="true" /> Log akses</Link>
           <LogoutButton />
         </nav>}
       </div>
@@ -41,7 +42,7 @@ export function EventNavigation({ event, current }: { event: EventRecord; curren
   const tab = (key: AdminTab, label: string, Icon: typeof Pencil) =>
     <a href={adminEventPath(event, key)} className={styles.tab} aria-current={current === key ? "page" : undefined}><Icon size={16} aria-hidden="true" /> {label}</a>;
   return <nav className={styles.navigation} aria-label="Pengelolaan acara">
-    <a href="/admin" className={`${styles.tab} ${styles.tabBack}`}><ArrowLeft size={16} aria-hidden="true" /> Semua acara</a>
+    <Link href="/admin" className={`${styles.tab} ${styles.tabBack}`}><ArrowLeft size={16} aria-hidden="true" /> Semua acara</Link>
     {tab("edit", "Edit acara", Pencil)}
     {tab("invitations", "Undangan tamu", Mail)}
     {tab("responses", "RSVP", ClipboardCheck)}

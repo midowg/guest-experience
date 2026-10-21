@@ -1,6 +1,6 @@
 /**
  * Every address in the app is built here, so a change of URL shape is one edit. Guest pages use
- * the event's short code when it has one (`/AB12CD`, `/AB12CD/k7q2mx9p`); before migration
+ * the event's short code when it has one (`/AB23CD`, `/AB23CD/k7q2mx9p`); before migration
  * 202610210004 events have no code and the older `/e/{slug}` form is used. A guard test fails when
  * a path is written by hand elsewhere.
  */
@@ -28,7 +28,7 @@ export function calendarPath(event: EventRef, query: Record<string, string> = {}
 }
 
 /** The offline copy of guest pages (public/sw.js) and the part of the site it may cover. */
-export const guestServiceWorker = { url: "/sw.js", scope: "/e/" } as const;
+export const guestServiceWorker = { url: "/sw.js", scope: "/", legacyScope: "/e/" } as const;
 
 /** The address a staff phone opens when it scans a guest's ticket QR. */
 export const ticketScanPath = (code: string) => `/admin/checkin/${code}`;
@@ -40,15 +40,18 @@ export const absolute = (origin: string, path: string) => `${origin.replace(/\/$
 
 export type AdminTab = "edit" | "invitations" | "responses" | "checkin" | "beo" | "beo-print" | "gallery" | "feedback" | "preview";
 const adminTabPaths: Record<AdminTab, string> = {
-  edit: "", invitations: "/invitations", responses: "/responses", checkin: "/checkin", beo: "/beo", "beo-print": "/beo/cetak",
+  edit: "", invitations: "/undangan", responses: "/rsvp", checkin: "/checkin", beo: "/beo", "beo-print": "/beo/cetak",
   gallery: "/galeri", feedback: "/feedback", preview: "/preview",
 };
 
-/** An event's admin page. Accepts the event or its id (where only the id is at hand). */
-export function adminEventPath(event: Pick<EventRef, "id"> | string, tab: AdminTab = "edit", query: Record<string, string> = {}): string {
-  const id = typeof event === "string" ? event : event.id;
+/**
+ * An event's admin page: /admin/acara/{code}/… with the short code, or the id where only the id
+ * is at hand or the event has no code yet. Both resolve to the same event.
+ */
+export function adminEventPath(event: Pick<EventRef, "id" | "code"> | string, tab: AdminTab = "edit", query: Record<string, string> = {}): string {
+  const ref = typeof event === "string" ? event : event.code || event.id;
   const search = new URLSearchParams(query).toString();
-  return `/admin/events/${id}${adminTabPaths[tab]}${search ? `?${search}` : ""}`;
+  return `/admin/acara/${ref}${adminTabPaths[tab]}${search ? `?${search}` : ""}`;
 }
 
 /* APIs */

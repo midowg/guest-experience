@@ -157,7 +157,7 @@ const afterSections = new Set<SectionKey>(["feedback", "contact"]);
  * already the right part of the journey; components rendered without it show the invitation.
  */
 type ExperienceProps = {
-  event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; rsvp: RsvpRecord | null; party_size_max?: number }; phase?: EventPhase;
+  event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; short_token?: string | null; rsvp: RsvpRecord | null; party_size_max?: number }; phase?: EventPhase;
   /** False until migration 202610200004: the RSVP then asks only about allergies, as before. */
   rsvpNeeds?: boolean;
   /** Photos marked Tayang in the event gallery; after the event the page links to them. */
@@ -179,6 +179,8 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
   useEffect(() => {
     if (preview || process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
     navigator.serviceWorker.register(guestServiceWorker.url, { scope: guestServiceWorker.scope }).catch(() => {});
+    // Phones that opened an older invitation still hold a worker limited to /e/; one is enough.
+    void navigator.serviceWorker.getRegistrations().then(list => list.filter(item => new URL(item.scope).pathname === guestServiceWorker.legacyScope).forEach(item => void item.unregister())).catch(() => {});
   }, [preview]);
   // Counts the opening of a personal link once per browser session. Never in the admin preview.
   const openedToken = !preview && invitation ? invitation.token : null;

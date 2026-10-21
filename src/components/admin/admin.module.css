@@ -632,3 +632,12 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .checkinDone span { display: inline-flex; align-items: center; gap: 4px; color: #208650; }
 .checkinDone button { display: inline-grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: #5b6476; cursor: pointer; }
 .checkinList li > button { flex-shrink: 0; white-space: nowrap; }
+
+/* Short event link (editor, Identitas) */
+.eventLink { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: 12px; background: #f4f8fd; }
+.eventLinkIcon { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: #fff; color: var(--blue); }
+.eventLinkText { display: grid; gap: 2px; min-width: 0; }
+.eventLinkText p { margin: 0; }
+.eventLinkLabel { font-size: .8125rem; color: #5b6476; font-weight: 600; }
+.eventLinkUrl { font-size: 1.125rem; font-weight: 800; color: var(--color-text); overflow-wrap: anywhere; }
+@media (max-width: 30rem) { .eventLink { grid-template-columns: auto minmax(0, 1fr); } .eventLink > button { grid-column: 1 / -1; justify-self: start; } }

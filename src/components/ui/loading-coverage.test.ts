@@ -18,7 +18,7 @@ describe("loading styles", () => {
 describe("every data-backed page has a loading state", () => {
   // A page that waits on the database should never show a blank screen while it waits.
   const appDir = new URL("../../app/", import.meta.url);
-  const routes = ["", "e/[slug]/", "admin/", "admin/login/", "admin/events/[id]/", "admin/events/[id]/responses/", "admin/events/[id]/feedback/", "admin/events/[id]/preview/"];
+  const routes = ["", "e/[slug]/", "admin/", "admin/login/", "[code]/", "admin/acara/[ref]/", "admin/acara/[ref]/rsvp/", "admin/acara/[ref]/feedback/", "admin/acara/[ref]/preview/"];
 
   it.each(routes)("'%s' has loading.tsx", route => {
     expect(readdirSync(new URL(route, appDir))).toContain("loading.tsx");

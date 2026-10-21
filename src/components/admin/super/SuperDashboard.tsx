@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CalendarDays, Eye, EyeOff, LayoutGrid, Search, X } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
@@ -102,6 +103,6 @@ export function SuperDashboard({ events, initialHidden, migrated }: { events: Su
       </table>
     </div>}
 
-    <p><a href="/admin" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> Buka panel acara</a></p>
+    <p><Link href="/admin" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> Buka panel acara</Link></p>
   </div>;
 }
