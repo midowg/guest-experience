@@ -231,3 +231,19 @@ describe('rsvp needs', () => {
     expect(rsvpSchema.parse({ ...rsvp, party_size: 2, companion_names: ['Raka', 'Dinda', ''] }).companion_names).toEqual(['Raka']);
   });
 });
+
+describe('program details', () => {
+  it('needs the presentation link before pointing at a page, and a full emergency contact', () => {
+    const event = createSeedEvent();
+    const detail = { teaser: '', did_you_know: '', more_story: '', place: '', pdf_page: 3 };
+    expect(eventSchema.safeParse({ ...event, agenda_details: { [event.agenda[0].id]: detail } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, presentation_pdf_url: 'https://example.test/a.pdf', agenda_details: { [event.agenda[0].id]: detail } }).success).toBe(true);
+    expect(eventSchema.safeParse({ ...event, emergency: { ...event.emergency, name: 'Tim medis' } }).success).toBe(false);
+    expect(eventSchema.safeParse({ ...event, emergency: { ...event.emergency, name: 'Tim medis', phone: '0812 1111 2222' } }).success).toBe(true);
+  });
+  it('fills program defaults for an older document', () => {
+    const legacy = { ...createSeedEvent() } as Partial<ReturnType<typeof createSeedEvent>>;
+    for (const key of ['agenda_details', 'presentation_pdf_url', 'emergency'] as const) delete legacy[key];
+    expect(eventSchema.parse(legacy)).toMatchObject({ agenda_details: {}, presentation_pdf_url: '', emergency: { name: '', phone: '' } });
+  });
+});

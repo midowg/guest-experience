@@ -96,3 +96,13 @@ describe("setupTodo and slugify", () => {
     expect(slugify("¿¿")).toBe("acara");
   });
 });
+
+describe("copying activity details", () => {
+  it("moves details to the copied sessions' new ids", () => {
+    const source = createSeedEvent();
+    source.agenda_details = { [source.agenda[1].id]: { teaser: "Cuplikan", did_you_know: "Fakta", more_story: "", place: "Pendopo", pdf_page: null } };
+    const copy = copyEventWithSetup(source, { ...base, template: "blank", starts_at: source.starts_at, ends_at: null, rsvp_closes_at: null, modules: ["about", "agenda"] }, ids());
+    expect(copy.agenda_details).toEqual({ [copy.agenda[1].id]: source.agenda_details[source.agenda[1].id] });
+    expect(copy.agenda_details[source.agenda[1].id]).toBeUndefined();
+  });
+});

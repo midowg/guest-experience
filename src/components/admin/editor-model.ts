@@ -76,6 +76,9 @@ export function prepareEvent(event: EventRecord): EventRecord {
       .map(item => ({ ...item, title: item.title.trim(), list: item.list.map(line => line.trim()).filter(Boolean), ...(item.en ? { en: { ...item.en, list: item.en.list.map(line => line.trim()).filter(Boolean) } } : {}) }))
       .filter(item => item.title || item.description.trim() || item.list.length) },
     agenda: event.agenda.map((item, sort_order) => ({ ...item, sort_order })),
+    // Details keyed by session id leave with their session, and an all-empty detail is not stored.
+    agenda_details: Object.fromEntries(Object.entries(event.agenda_details).filter(([id, detail]) => event.agenda.some(item => item.id === id)
+      && (detail.teaser.trim() || detail.did_you_know.trim() || detail.more_story.trim() || detail.place.trim() || detail.pdf_page))),
     // English rundown texts are keyed by session id; a deleted session takes its translation with it.
     translations: { ...event.translations, en: { ...event.translations.en, agenda: Object.fromEntries(Object.entries(event.translations.en.agenda).filter(([id]) => event.agenda.some(item => item.id === id))) } },
     gallery: event.gallery.filter(item => item.url.trim() || item.caption.trim() || item.alt.trim() || item.srcset.length).map((item, sort_order) => ({ ...item, sort_order })),
@@ -132,6 +135,7 @@ const fieldBlocks: Record<string, string> = {
   hero: "hero", topics: "topics", experience: "experience", agenda: "agenda",
   venue_name: "venue", address: "venue", location_url: "venue", location_embed_url: "venue", location_display: "venue", arrival_notes: "venue", route: "venue",
   gallery: "gallery", venue_image_url: "gallery", venue_image_alt: "gallery", venue_image_credit: "gallery",
+  agenda_details: "agenda", presentation_pdf_url: "agenda", emergency: "contact",
   team_image: "team", rsvp_enabled: "rsvp", rsvp_closes_at: "rsvp", guest_estimate: "rsvp", contact: "contact", day_note: "day",
   feedback_enabled: "feedback_questions", feedback_opens_at: "feedback_questions", feedback_description: "feedback_questions", feedback_questions: "feedback_questions",
   review_url: "review", review_enabled: "review", review_heading: "review", review_description: "review", review_button_label: "review",

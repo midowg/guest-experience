@@ -1,4 +1,4 @@
-import { emptyAfter, emptyEnglish, emptyExperience, emptyPrepare, emptyRoute } from "./validation";
+import { emptyAfter, emptyEmergency, emptyEnglish, emptyExperience, emptyPrepare, emptyRoute } from "./validation";
 import type { EventRecord, HeroFraming, HeroImage, PhotoFrame } from "./types";
 
 export function defaultFraming(focus: HeroImage["focus"] = "center"): HeroFraming {
@@ -31,6 +31,8 @@ export function normalizeEvent(event: EventRecord): EventRecord {
     language: event.language ?? "id",
     translations: { en: { ...emptyEnglish, ...event.translations?.en, agenda: event.translations?.en?.agenda ?? {} } },
     guest_estimate: event.guest_estimate ?? null,
+    agenda_details: event.agenda_details ?? {}, presentation_pdf_url: event.presentation_pdf_url ?? "",
+    emergency: { ...emptyEmergency, ...event.emergency },
   };
 }
 export function dragFrame(frame: PhotoFrame, dx: number, dy: number, width: number, height: number, naturalWidth: number, naturalHeight: number): PhotoFrame {

@@ -108,9 +108,9 @@ export function copyEventWithSetup(source: EventRecord, setup: EventSetup, ids: 
     translations: { ...source.translations, en: { ...source.translations.en, agenda: {} } },
   };
   const copy = apply(moved, { ...setup, rsvp_closes_at: setup.rsvp_closes_at ?? shift(source.rsvp_closes_at) }, ids);
-  // English rundown texts follow their sessions to the new ids.
-  const agendaEn = Object.fromEntries(source.agenda.flatMap((item, index) => source.translations.en.agenda[item.id] ? [[copy.agenda[index].id, source.translations.en.agenda[item.id]]] : []));
-  return { ...copy, translations: { ...copy.translations, en: { ...copy.translations.en, agenda: agendaEn } } };
+  // English rundown texts and activity details follow their sessions to the new ids.
+  const remap = <T,>(byId: Record<string, T>) => Object.fromEntries(source.agenda.flatMap((item, index) => byId[item.id] ? [[copy.agenda[index].id, byId[item.id]]] : []));
+  return { ...copy, agenda_details: remap(source.agenda_details ?? {}), translations: { ...copy.translations, en: { ...copy.translations.en, agenda: remap(source.translations.en.agenda) } } };
 }
 
 /** What still needs writing after the survey, for its last step and the editor's first visit. */

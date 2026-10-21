@@ -43,6 +43,13 @@ export type EnglishContent = {
   agenda: Record<string, TextPair>;
 };
 export type EventTranslations = { en: EnglishContent };
+/**
+ * Optional depth for one agenda item (Program, Trip klien): a teaser that opens a "Did you know?"
+ * box, a longer story, where it happens, and the presentation page. Keyed by agenda id, because
+ * agenda rows live in their own table.
+ */
+export type AgendaDetail = { teaser: string; did_you_know: string; more_story: string; place: string; pdf_page: number | null };
+export type EmergencyContact = { name: string; phone: string; hospital: string; hospital_address: string; hospital_maps_url: string };
 export type RouteStep = { title: string; description: string; image: PlainImage };
 export type RouteGuide = { map_image: PlainImage; steps: RouteStep[] };
 export type AfterContent = {
@@ -64,6 +71,7 @@ export type EventRecord = {
   hero: HeroImage; gallery: GalleryImage[];
   event_kind: EventKind; audience: EventAudience; theme: EventTheme; phase_override: PhaseOverride;
   experience: EventExperienceContent; route: RouteGuide; day_note: string; after: AfterContent; prepare: PrepareContent; language: EventLanguage; translations: EventTranslations; guest_estimate: number | null;
+  agenda_details: Record<string, AgendaDetail>; presentation_pdf_url: string; emergency: EmergencyContact;
   created_at: string; updated_at: string;
 };
 export type Dietary = "vegetarian" | "allergy" | "other";

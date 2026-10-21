@@ -9,13 +9,14 @@ import { parseContactPhone } from "@/lib/contact-phone";
 import type { EventPhase, EventRecord, RsvpRecord, SectionKey } from "@/lib/types";
 import { themeStyle } from "@/lib/themes";
 import { Gallery, imageSrcSet, venuePhotos } from "./Gallery";
-import { InvitationHero, TimeRange, visibleSections } from "./InvitationHero";
+import { InvitationHero, visibleSections } from "./InvitationHero";
 import { FeedbackPanel, RsvpPanel } from "./GuestForms";
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
 import { AfterPanel, ExperienceContent, PrepareCards, RouteGuideContent, TodayPanel, teamPoints } from "./JourneyPanels";
 import { LanguageSwitch, WordingProvider, useEventLanguage, useWording } from "./language";
 import { localizeEvent } from "@/lib/wording/localize";
 import { offersSwitch, type Lang, type WordKey } from "@/lib/wording";
+import { AgendaList, EmergencyCard } from "./ProgramAgenda";
 import styles from "./guest.module.css";
 
 const navKeys: Record<SectionKey, WordKey> = { about: "nav.about", experience: "nav.experience", agenda: "nav.agenda", location: "nav.location", prepare: "nav.prepare", team: "nav.team", rsvp: "nav.rsvp", contact: "nav.contact", feedback: "nav.feedback" };
@@ -170,6 +171,11 @@ export function EventExperience({ event: source, ...props }: ExperienceProps) {
 
 function ExperienceBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
   const { lang, t, dateTime } = useWording();
+  // Keeps the last copy of this guest page for offline use (trips with weak signal). Production only.
+  useEffect(() => {
+    if (preview || process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("/sw.js", { scope: "/e/" }).catch(() => {});
+  }, [preview]);
   // Counts the opening of a personal link once per browser session. Never in the admin preview.
   const openedToken = !preview && invitation ? invitation.token : null;
   useEffect(() => {
@@ -250,7 +256,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             </>}
             {section.key === "agenda" && <>
               <div id="agenda-heading"><SectionHeading title={t("section.agenda.title")}><p>{t("section.agenda.tz", { zone: timezoneInfo[zoneOf(event.timezone)].label, zoneName: lang === "en" ? timezoneInfo[zoneOf(event.timezone)].nameEn : timezoneInfo[zoneOf(event.timezone)].name, offset: timezoneInfo[zoneOf(event.timezone)].offset })}</p></SectionHeading></div>
-              {event.agenda.length === 0 ? <p>{t("section.agenda.empty")}</p> : <ol className={styles.agenda}>{[...event.agenda].sort((a, b) => a.sort_order - b.sort_order).map(item => <li key={item.id}><div className={styles.agendaTime}><TimeRange start={item.starts_at} end={item.ends_at} timezone={event.timezone} /></div><div><h3>{item.title}</h3>{item.description && <p className={styles.multiline}>{item.description}</p>}</div></li>)}</ol>}
+              {event.agenda.length === 0 ? <p>{t("section.agenda.empty")}</p> : <AgendaList event={event} now={now} />}
             </>}
             {section.key === "location" && <><div id="location-heading"><SectionHeading title={t("section.location.title")} /></div><Location event={event} /></>}
             {section.key === "prepare" && <>
@@ -276,6 +282,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             {section.key === "contact" && event.contact && <>
               <div id="contact-heading"><SectionHeading title={event.contact.heading || t("section.contact.title")}><p className={styles.multiline}>{event.contact.description || t("section.contact.sub")}</p></SectionHeading></div>
               <Contact contact={event.contact} />
+              <EmergencyCard event={event} />
             </>}
             {section.key === "feedback" && <>
               <div id="feedback-heading"><SectionHeading title={t("section.feedback.title")}><p className={styles.multiline}>{event.feedback_description || t("section.feedback.sub")}</p></SectionHeading></div>

@@ -8,6 +8,7 @@ import { localDay } from "@/lib/event-phase";
 import type { EventRecord, MomentIcon, PlainImage, PrepareIcon, PrepareItem } from "@/lib/types";
 import { imageSrcSet } from "./Gallery";
 import { useWording } from "./language";
+import { EmergencyCard } from "./ProgramAgenda";
 import type { WordKey } from "@/lib/wording";
 import styles from "./guest.module.css";
 
@@ -165,6 +166,7 @@ export function TodayPanel({ event, invitee, now, firstSection }: { event: Event
       </div>}
       {event.day_note && <div className={styles.todayNote}><Info size={18} aria-hidden="true" /><p className={styles.multiline}>{event.day_note}</p></div>}
       <PicCard event={event} title={t("today.help", { name: event.contact.name })} />
+      <EmergencyCard event={event} />
       {firstSection && <a className={styles.todayMore} href={`#${firstSection}`} onClick={focusAnchor}>{t("today.more")} <ArrowDown size={15} aria-hidden="true" /></a>}
     </div>
   </section>;

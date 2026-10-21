@@ -550,3 +550,7 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .cardMenuList a, .cardMenuList button { display: flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: 8px; background: transparent; color: var(--color-text); font: inherit; font-size: .875rem; text-align: left; text-decoration: none; cursor: pointer; }
 .cardMenuList a:hover, .cardMenuList button:hover { background: var(--page); }
 .cardMenuList button:disabled { opacity: .5; cursor: default; }
+
+.extraFields { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px dashed #c4cad6; border-radius: 12px; background: #fff; }
+.extraFields > summary { cursor: pointer; color: var(--blue); font-weight: 600; font-size: .875rem; }
+.extraFields[open] > summary { margin-bottom: var(--space-2); }

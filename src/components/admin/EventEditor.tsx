@@ -11,8 +11,8 @@ import { HeroPreview } from "./HeroPreview";
 import { formatDate, formatTime, fromZoneInput, toZoneInput } from "@/lib/format";
 import { eventTimezones, timezoneInfo, tzLabel, zoneOf } from "@/lib/timezones";
 import { themeDefinition } from "@/lib/themes";
-import type { EventRecord, EventStatus, FeedbackQuestion, SectionKey } from "@/lib/types";
-import { eventSchema } from "@/lib/validation";
+import type { AgendaDetail, EventRecord, EventStatus, FeedbackQuestion, SectionKey } from "@/lib/types";
+import { emptyAgendaDetail, eventSchema } from "@/lib/validation";
 import { AdminApiError, adminRequest, errorMessage } from "./api";
 import { blockOfPath, blockStatusLabels, blockStatuses, blockSummary, completeSections, editorBlocks, editorStages, type BlockStatus, heroTextPositionHints, heroTextPositionOptions, hiddenSectionReasons, moveItem, photoGuidance, prepareEvent, sectionLabels } from "./editor-model";
 import { PhotoField } from "./PhotoField";
@@ -320,7 +320,11 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       </div>)}
       {block("experience", "Pengalaman kunjungan", <ExperienceBlock event={event} update={update} control={control} errors={errors} />)}
       {block("agenda", "Rundown", <div className="stack">
-        <p>Urutan tampilan mengikuti susunan di bawah. Waktu setiap sesi tetap perlu diperiksa.</p>
+        <p>Urutan tampilan mengikuti susunan di bawah. Acara lebih dari sehari otomatis tampil per hari (Hari 1, Hari 2, …).</p>
+        <details className={styles.extraFields}>
+          <summary>PDF presentasi (opsional)</summary>
+          {control("presentation_pdf_url", "Tautan PDF presentasi untuk tamu", event.presentation_pdf_url, value => update("presentation_pdf_url", value), { type: "url", maxLength: 8000, hint: "Tautan HTTPS ke PDF versi tamu. Setiap sesi bisa menunjuk halamannya di bagian Tambahan." })}
+        </details>
         {event.agenda.map((item, index) => {
           function change(key: "title" | "description" | "starts_at" | "ends_at", value: string) { update("agenda", event.agenda.map((entry, i) => i === index ? { ...entry, [key]: value } : entry)); }
           return <div className={styles.item} key={item.id}>
@@ -328,6 +332,20 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
             {control(`agenda.${index}.title`, "Judul sesi", item.title, value => change("title", value), { maxLength: 200 })}
             <div className={styles.grid}>{control(`agenda.${index}.starts_at`, `Mulai sesi (${tz})`, toZoneInput(item.starts_at, event.timezone), value => change("starts_at", fromZoneInput(value, event.timezone) || ""), { type: "datetime-local" })}{control(`agenda.${index}.ends_at`, `Selesai sesi (${tz})`, toZoneInput(item.ends_at, event.timezone), value => change("ends_at", fromZoneInput(value, event.timezone) || ""), { type: "datetime-local" })}</div>
             {control(`agenda.${index}.description`, "Keterangan sesi", item.description, value => change("description", value), { multiline: true, maxLength: 1500 })}
+            <details className={styles.extraFields}>
+              <summary>Tambahan (opsional): lokasi, Tahukah Anda?, cerita</summary>
+              {(() => {
+                const detail = { ...emptyAgendaDetail, ...event.agenda_details[item.id] };
+                const setDetail = (patch: Partial<AgendaDetail>) => update("agenda_details", { ...event.agenda_details, [item.id]: { ...detail, ...patch } });
+                return <div className="stack">
+                  {control(`agenda_details.${item.id}.place`, "Lokasi kegiatan", detail.place, place => setDetail({ place }), { maxLength: 200, hint: "Contoh: Pantai Kuta Mandalika. Tampil kecil di bawah judul sesi." })}
+                  {control(`agenda_details.${item.id}.teaser`, "Cuplikan “Kenali lebih dekat”", detail.teaser, teaser => setDetail({ teaser }), { maxLength: 200, hint: "Satu kalimat pemancing rasa penasaran. Contoh: kenapa pasirnya seperti merica?" })}
+                  {control(`agenda_details.${item.id}.did_you_know`, "Isi kotak “Tahukah Anda?”", detail.did_you_know, did_you_know => setDetail({ did_you_know }), { multiline: true, maxLength: 600, hint: "Hanya hal yang belum diketahui tamu. Terbuka saat tamu mengetuk cuplikan." })}
+                  {control(`agenda_details.${item.id}.more_story`, "Cerita lengkap (opsional)", detail.more_story, more_story => setDetail({ more_story }), { multiline: true, maxLength: 4000 })}
+                  {event.presentation_pdf_url && control(`agenda_details.${item.id}.pdf_page`, "Halaman di PDF presentasi", detail.pdf_page ? String(detail.pdf_page) : "", value => { const digits = value.replace(/\D/g, "").slice(0, 3); setDetail({ pdf_page: digits ? Number(digits) : null }); }, { hint: "Nomor halaman yang membahas sesi ini." })}
+                </div>;
+              })()}
+            </details>
             <Button type="button" variant="danger" onClick={() => { if (window.confirm("Hapus sesi ini dari draft editor?")) update("agenda", event.agenda.filter(entry => entry.id !== item.id)); }}><Trash2 size={17} aria-hidden="true" /><span>Hapus sesi {index + 1}</span></Button>
           </div>;
         })}
@@ -377,6 +395,17 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
         {control("contact.role", "Jabatan PIC (opsional)", event.contact.role, value => update("contact", { ...event.contact, role: value }), { maxLength: 150 })}
         {control("contact.organization", "Organisasi PIC (opsional)", event.contact.organization, value => update("contact", { ...event.contact, organization: value }), { maxLength: 200 })}
         {control("contact.phone", "Nomor PIC", event.contact.phone, value => update("contact", { ...event.contact, phone: value }), { maxLength: 30, hint: "Cukup isi nomor HP 08, misalnya 0812 3456 7890. WhatsApp otomatis memakai kode 62; telepon tetap memakai 0. Kosongkan nama dan nomor untuk menyembunyikan kontak." })}
+        <details className={styles.extraFields}>
+          <summary>Kontak darurat (opsional)</summary>
+          <div className="stack">
+            <p className="field-hint">Tampil sebagai kartu merah di bagian Kontak dan di halaman Hari H. Berguna untuk trip dan program di luar kantor.</p>
+            {control("emergency.name", "Nama kontak darurat", event.emergency.name, name => update("emergency", { ...event.emergency, name }), { maxLength: 150 })}
+            {control("emergency.phone", "Nomor kontak darurat", event.emergency.phone, phone => update("emergency", { ...event.emergency, phone }), { maxLength: 30 })}
+            {control("emergency.hospital", "Rumah sakit terdekat", event.emergency.hospital, hospital => update("emergency", { ...event.emergency, hospital }), { maxLength: 200 })}
+            {control("emergency.hospital_address", "Alamat rumah sakit", event.emergency.hospital_address, hospital_address => update("emergency", { ...event.emergency, hospital_address }), { multiline: true, maxLength: 500 })}
+            {control("emergency.hospital_maps_url", "Tautan Maps rumah sakit", event.emergency.hospital_maps_url, hospital_maps_url => update("emergency", { ...event.emergency, hospital_maps_url }), { type: "url", maxLength: 8000 })}
+          </div>
+        </details>
         {choices("contact.channel", "Cara menghubungi PIC", [{ value: "whatsapp", label: "WhatsApp" }, { value: "phone", label: "Telepon" }], event.contact.channel, value => update("contact", { ...event.contact, channel: value }), value => value === "whatsapp" ? "Tombol membuka percakapan WhatsApp." : "Tombol membuka aplikasi telepon.")}
       </div>)}
       {block("day", "Hari H", <DayBlock event={event} update={update} control={control} />)}

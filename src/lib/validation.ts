@@ -68,6 +68,17 @@ const afterSchema = z.object({
 });
 export const emptyExperience = { title: "", story: "", image: emptyImage, moments: [] };
 export const emptyRoute = { map_image: emptyImage, steps: [] };
+export const emptyEmergency = { name: "", phone: "", hospital: "", hospital_address: "", hospital_maps_url: "" };
+export const emptyAgendaDetail = { teaser: "", did_you_know: "", more_story: "", place: "", pdf_page: null };
+const agendaDetailSchema = z.object({
+  teaser: text(200).default(""), did_you_know: text(600).default(""), more_story: text(4000).default(""), place: text(200).default(""),
+  pdf_page: z.number().int().min(1).max(999).nullable().default(null),
+});
+const emergencySchema = z.object({
+  name: text(150).default(""),
+  phone: text(30).refine(value => !value || parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890.").default(""),
+  hospital: text(200).default(""), hospital_address: text(500).default(""), hospital_maps_url: httpsUrl.default(""),
+});
 export const emptyPrepare = { title: "", intro: "", items: [] };
 export const emptyAfter = { title: "", message: "", image: emptyImage, collaboration: { enabled: false, title: "", description: "", button_label: "" } };
 export const eventBaseSchema = z.object({
@@ -104,12 +115,17 @@ export const eventBaseSchema = z.object({
   prepare: prepareSchema.default(emptyPrepare),
   language: z.enum(["id", "en", "id_en"]).default("id"),
   guest_estimate: z.number().int().min(1).max(5000).nullable().default(null),
+  agenda_details: z.record(z.uuid(), agendaDetailSchema).default({}),
+  presentation_pdf_url: httpsUrl.default(""),
+  emergency: emergencySchema.default(emptyEmergency),
   translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),
   created_at: timestamp, updated_at: timestamp,
 });
 export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
   const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: "custom", path, message });
   if (new Set(event.sections.map(s => s.key)).size !== event.sections.length) issue(["sections"], "Bagian tidak boleh berulang.");
+  if (Boolean(event.emergency.name) !== Boolean(event.emergency.phone)) issue([event.emergency.name ? "emergency.phone" : "emergency.name"], "Isi nama dan nomor kontak darurat bersama-sama.");
+  for (const [id, detail] of Object.entries(event.agenda_details)) if (detail.pdf_page && !event.presentation_pdf_url) issue(["agenda_details", id, "pdf_page"], "Isi tautan PDF presentasi dulu.");
   if (Boolean(event.contact.name) !== Boolean(event.contact.phone)) issue([event.contact.name ? "contact.phone" : "contact.name"], "Isi nama dan nomor PIC bersama-sama.");
   if (event.ends_at && Date.parse(event.ends_at) <= Date.parse(event.starts_at)) issue(["ends_at"], "Waktu selesai harus setelah waktu mulai.");
   for (const [index, item] of event.agenda.entries()) if (Date.parse(item.ends_at) <= Date.parse(item.starts_at)) issue(["agenda", index, "ends_at"], "Waktu selesai harus setelah waktu mulai.");

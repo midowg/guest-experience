@@ -213,6 +213,17 @@ export const id = {
   "feedback.optional": "(opsional)",
   "feedback.choose": "Pilih jawaban",
   "feedback.closedNow": "Survei belum menerima jawaban saat ini.",
+  "program.tab": "Hari {n}",
+  "program.tabs.label": "Pilih hari",
+  "detail.less": "Tutup",
+  "detail.moreLess": "Ringkas",
+  "duration.hours": "{n} jam",
+  "duration.minutes": "{n} menit",
+  "emergency.title": "Kontak darurat",
+  "emergency.call": "Telepon {name}",
+  "emergency.hospital": "Rumah sakit terdekat",
+  "emergency.directions": "Petunjuk arah",
+  "offline.ready": "Halaman ini tersimpan di perangkat dan tetap bisa dibuka tanpa sinyal.",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -430,4 +441,15 @@ export const en: Record<WordKey, string> = {
   "feedback.optional": "(optional)",
   "feedback.choose": "Choose an answer",
   "feedback.closedNow": "The survey isn't accepting answers right now.",
+  "program.tab": "Day {n}",
+  "program.tabs.label": "Choose a day",
+  "detail.less": "Close",
+  "detail.moreLess": "Show less",
+  "duration.hours": "{n} h",
+  "duration.minutes": "{n} min",
+  "emergency.title": "Emergency contact",
+  "emergency.call": "Call {name}",
+  "emergency.hospital": "Nearest hospital",
+  "emergency.directions": "Directions",
+  "offline.ready": "This page is saved on your device and opens without a signal.",
 };

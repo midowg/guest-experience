@@ -77,6 +77,11 @@ export async function createEvent(duplicateId?: string, setup?: EventSetup, disa
   const source = await readAdminEvent(duplicateId);
   if (!source) throw new ServiceError(404, "Acara sumber tidak ditemukan.");
   if (setup) return saveEvent(id, clean(copyEventWithSetup(source, setup, ids)), true);
-  const draft: EventRecord = { ...source, id, status: "draft", slug: `${source.slug.slice(0, 62)}-${id}`, agenda: source.agenda.map(item => ({ ...item, id: randomUUID() })), feedback_questions: source.feedback_questions.map(question => ({ ...question, id: randomUUID() })) };
+  const agenda = source.agenda.map(item => ({ ...item, id: randomUUID() }));
+  // Details and English texts keyed by session id follow their sessions to the new ids.
+  const remap = <T,>(byId: Record<string, T>) => Object.fromEntries(source.agenda.flatMap((item, index) => byId[item.id] ? [[agenda[index].id, byId[item.id]]] : []));
+  const draft: EventRecord = { ...source, id, status: "draft", slug: `${source.slug.slice(0, 62)}-${id}`, agenda,
+    agenda_details: remap(source.agenda_details ?? {}), translations: { ...source.translations, en: { ...source.translations.en, agenda: remap(source.translations.en.agenda) } },
+    feedback_questions: source.feedback_questions.map(question => ({ ...question, id: randomUUID() })) };
   return saveEvent(id, clean(draft), true);
 }

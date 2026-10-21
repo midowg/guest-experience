@@ -104,6 +104,12 @@ Editor menyediakan pengantar kontak, jabatan dan organisasi PIC, pengantar surve
 
 Bagian **Our Team** memakai teks tetap tentang lingkungan kerja Werkudara yang inklusif. Bagian ini **nonaktif secara default** termasuk pada acara lama. Aktifkan lewat Urutan & tampilan bagian. Foto tim boleh ditambahkan kemudian melalui unggahan atau tautan HTTPS; isi deskripsi foto untuk aksesibilitas. Tanpa foto, teks tetap dapat tampil. Foto dan teks yang dipublikasikan perlu persetujuan penyelenggara. Form RSVP hanya menanyakan alergi makanan, bukan seluruh preferensi makanan atau kebutuhan aksesibilitas; arahkan kebutuhan lain kepada PIC melalui kanal kontak yang tersedia. Penambahan konten ini disimpan pada JSONB acara dan tidak memerlukan migrasi database baru.
 
+### Program dan Trip klien (jadwal beberapa hari)
+
+Rundown yang melewati lebih dari satu tanggal (menurut zona acara) tampil sebagai tab **Hari 1, Hari 2, …** di halaman tamu; saat Hari H, tab hari ini langsung terbuka. Di editor, setiap sesi punya bagian **Tambahan (opsional)**: lokasi kegiatan, cuplikan *Kenali lebih dekat*, isi kotak *Tahukah Anda?*, cerita lengkap, dan halaman di PDF presentasi (isi dulu *PDF presentasi* di atas daftar sesi). Durasi dihitung otomatis dari jam mulai dan selesai. Blok Kontak punya **Kontak darurat (opsional)**: nomor darurat dan rumah sakit terdekat, tampil sebagai kartu merah di bagian Kontak dan halaman Hari H. Semua isian ini disimpan di konten acara dan tidak memerlukan migrasi; terjemahan English untuk isian tambahan belum tersedia.
+
+Halaman tamu `/e/…` menyimpan salinan terakhirnya di perangkat (service worker `public/sw.js`, hanya di produksi), sehingga jadwal tetap terbuka saat sinyal hilang. Admin dan API tidak disimpan.
+
 ### Jenis acara, tema, dan fase
 
 Blok **Jenis, audiens, dan tampilan** di editor menentukan:

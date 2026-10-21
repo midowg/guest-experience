@@ -154,3 +154,16 @@ describe("language card", () => {
     expect(blockSummary("language", bilingual, "Werkudara", iso => iso)).toMatch(/^Dua bahasa \(ID \+ EN\) · 0 dari \d+ teks diterjemahkan$/);
   });
 });
+
+describe("activity details", () => {
+  it("drops details of deleted sessions and empty details before saving", () => {
+    const event = createSeedEvent();
+    const keep = event.agenda[0].id;
+    event.agenda_details = {
+      [keep]: { teaser: "", did_you_know: "Fakta", more_story: "", place: "", pdf_page: null },
+      [event.agenda[1].id]: { teaser: " ", did_you_know: "", more_story: "", place: "", pdf_page: null },
+      "7d000000-0000-4000-8000-0000000000ff": { teaser: "Sesi terhapus", did_you_know: "", more_story: "", place: "", pdf_page: null },
+    };
+    expect(Object.keys(prepareEvent(event).agenda_details)).toEqual([keep]);
+  });
+});
