@@ -33,11 +33,14 @@ import { VenueGalleryBlock } from "@/components/admin/editor/blocks/VenueGallery
 import styles from "@/components/admin/admin.module.css";
 import e from "./editor.module.css";
 import n from "./block-numbers.module.css";
+import { BlockChips } from "@/components/admin/editor/BlockChips";
 import { PhonePreview, type PreviewDevice } from "@/components/admin/editor/PhonePreview";
 import { areaOfBlock, blockOfArea, phaseOfBlock } from "@/lib/live-preview";
 import { absolute, adminApi, eventPath } from "@/lib/routes";
 
 
+/** Shorter names for the chips, so more of them fit with their names on one row. */
+const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan" };
 const blockIcons: Record<string, LucideIcon> = {
   delete: Trash2, identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
   agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, language: Languages, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
@@ -146,9 +149,6 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const inUse = (id: string) => !blockModule[id] || moduleActive(event, blockModule[id]) || dirtyBlocks.has(id) || statuses[id] === "error" || statuses[id] === "todo";
   const mainBlocks = blocks.filter(item => inUse(item.id));
   const extraBlocks = blocks.filter(item => !inUse(item.id));
-  // The parts in use, numbered in menu order: the chips, the menu and the open header share it.
-  const numbered = editorStages.flatMap(stage => mainBlocks.filter(item => item.stage === stage.key));
-  const numberOf = new Map(numbered.map((item, index) => [item.id, index + 1]));
   function described(name: string, hint?: string) { return [hint ? `${name}-hint` : "", errors[name] ? `${name}-error` : ""].filter(Boolean).join(" ") || undefined; }
   /** Chips and example sentences come from suggestions.ts by field name, so call sites stay short. */
   function control(name: string, label: string, value: string, onChange: (value: string) => void, options: ControlOptions = {}) {
@@ -252,6 +252,9 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     } catch (err) { setError(errorMessage(err)); if (err instanceof AdminApiError) setErrors(err.fieldErrors || {}); }
     finally { setPending(false); }
   }
+  // The switched-on modules, numbered in menu order: the chips, the menu and the open header share it.
+  const numbered = editorStages.flatMap(stage => mainBlocks.filter(item => item.stage === stage.key && blockSwitch(item.id)?.on));
+  const numberOf = new Map(numbered.map((item, index) => [item.id, index + 1]));
   const openMeta = editorBlocks.find(item => item.id === open);
   const openTitle = open === "delete" ? "Hapus acara" : openMeta?.title ?? "";
   function menuItem(item: (typeof editorBlocks)[number]) {
@@ -277,17 +280,11 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       <button type="button" className={e.menuToggle} aria-controls="editor-menu" aria-expanded={menuShown} aria-label={wide ? (sidebarHidden ? "Tampilkan menu bagian" : "Sembunyikan menu bagian") : "Buka menu bagian"} title={wide ? (sidebarHidden ? "Tampilkan menu" : "Sembunyikan menu") : "Menu bagian"} onClick={() => wide ? setSidebarHidden(hidden => !hidden) : setDrawerOpen(true)}>
         <Menu size={20} aria-hidden="true" />
       </button>
-      {/* One chip per part in use, numbered as in the menu: a quick jump without opening ☰. */}
-      <ol className={n.chips} aria-label="Lompat ke bagian">
-        {numbered.map((item, index) => {
-          const off = blockSwitch(item.id)?.on === false;
-          const status = statuses[item.id];
-          const flagged = status === "todo" || status === "error" || status === "dirty";
-          return <li key={item.id}><button type="button" className={n.chip} data-off={off || undefined} aria-current={open === item.id ? "true" : undefined} title={`${item.title}${off ? " (tidak tampil)" : ""}`} aria-label={`Bagian ${index + 1}: ${item.title}${off ? ", tidak tampil" : ""}${flagged ? `, ${blockStatusLabels[status].toLowerCase()}` : ""}`} onClick={() => openBlock(item.id)}>
-            {index + 1}{flagged && <span className={n.chipDot} data-status={status} aria-hidden="true" />}
-          </button></li>;
-        })}
-      </ol>
+      {numbered.length > 0 && <BlockChips current={open} onOpen={openBlock} chips={numbered.map(item => {
+        const status = statuses[item.id];
+        const flagged = status === "todo" || status === "error" || status === "dirty" ? status : undefined;
+        return { id: item.id, title: item.title, short: chipNames[item.id] ?? item.title, status: flagged, statusLabel: flagged && blockStatusLabels[flagged] };
+      })} />}
       {!wide && <p className={e.currentBlock} aria-hidden="true">{openTitle}</p>}
       <div className={e.viewSwitch} role="group" aria-label="Tampilan">
         <button type="button" aria-pressed={view === "form"} aria-label="Isi" onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> <span className={e.btnText}>Isi</span></button>

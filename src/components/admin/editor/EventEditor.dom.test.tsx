@@ -246,18 +246,26 @@ it("keeps one save button at the top that says whether anything is unsaved", () 
   expect(save.compareDocumentPosition(screen.getByRole("textbox", { name: "Judul acara" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
-it("numbers the parts in use the same way in the chips, the menu and the open header", () => {
+it("numbers only the switched-on modules, the same way in the chips, the menu and the open header", () => {
   render(<EventEditor event={createSeedEvent()} />);
-  const chips = within(screen.getByRole("list", { name: "Lompat ke bagian" })).getAllByRole("button");
-  // As many chips as parts in the main menu, numbered 1, 2, 3 … in menu order.
-  const menuParts = within(editorMenu()).getAllByRole("button").filter(button => button.closest("details") === null && /^\d+$/.test(button.querySelector("b")?.textContent ?? ""));
-  expect(chips.map(chip => chip.textContent)).toEqual(menuParts.map((_, index) => String(index + 1)));
-  expect(chips[0].getAttribute("aria-current")).toBe("true");
-  // A tap on a chip opens that part; its header carries the same number.
-  const third = chips[2];
-  const title = third.getAttribute("aria-label")!.replace(/^Bagian 3: /, "").split(",")[0];
-  fireEvent.click(third);
-  expect(third.getAttribute("aria-current")).toBe("true");
-  expect(screen.getByRole("heading", { level: 2, name: title })).toBeTruthy();
-  expect(screen.getByRole("heading", { level: 2 }).closest("header")?.textContent).toMatch(/^3/);
+  const chipList = () => within(screen.getByRole("list", { name: "Modul aktif" })).getAllByRole("button");
+  // The menu's "Aktif" entries, in order, are the chips 1, 2, 3 …
+  const active = within(editorMenu()).getAllByRole("button").filter(button => /Aktif$/.test(button.textContent ?? ""));
+  expect(active.length).toBeGreaterThan(1);
+  expect(active.map(button => button.querySelector("b")?.textContent)).toEqual(active.map((_, index) => String(index + 1)));
+  expect(within(editorMenu()).getAllByRole("button").filter(button => button.querySelector("b"))).toHaveLength(active.length);
+  expect(chipList().map(chip => chip.getAttribute("title"))).toEqual(active.map(button => button.querySelector("span")?.textContent));
+  // A part without a switch (Identitas) has no number.
+  expect(menuButton("Identitas & undangan")?.querySelector("b")).toBeNull();
+  // A tap on a chip opens that module; its header carries the same number.
+  const second = chipList()[1];
+  fireEvent.click(second);
+  expect(second.getAttribute("aria-current")).toBe("true");
+  expect(screen.getByRole("heading", { level: 2, name: second.getAttribute("title")! })).toBeTruthy();
+  expect(screen.getByRole("heading", { level: 2 }).closest("header")?.textContent).toMatch(/^2/);
+  // Switching it off takes it out of the numbering.
+  const count = chipList().length;
+  fireEvent.click(screen.getByRole("switch"));
+  expect(chipList()).toHaveLength(count - 1);
+  expect(screen.getByRole("heading", { level: 2 }).closest("header")?.textContent).not.toMatch(/^2/);
 });
