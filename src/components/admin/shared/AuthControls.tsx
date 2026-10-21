@@ -6,6 +6,7 @@ import { Eye, EyeOff, LogIn, LogOut } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import styles from "@/components/admin/admin.module.css";
+import shell from "./shell.module.css";
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
@@ -47,7 +48,7 @@ export function LogoutButton() {
     catch (err) { setError(errorMessage(err)); setPending(false); }
   }
   return <>
-    <button type="button" className={styles.headerLink} disabled={pending} onClick={logout}><LogOut size={16} aria-hidden="true" /> {pending ? "Keluar…" : "Keluar"}</button>
+    <button type="button" className={styles.headerLink} disabled={pending} onClick={logout} aria-label="Keluar"><LogOut size={16} aria-hidden="true" /> <span className={shell.linkText}>{pending ? "Keluar…" : "Keluar"}</span></button>
     {error && <span role="alert" className={styles.headerError}>{error}</span>}
   </>;
 }

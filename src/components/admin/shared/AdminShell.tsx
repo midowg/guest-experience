@@ -1,12 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, ClipboardCheck, Crown, ExternalLink, Eye, Images, LayoutGrid, Mail, MessageSquare, Pencil, ScanLine, ShieldCheck, UtensilsCrossed } from "lucide-react";
+import { ClipboardCheck, Crown, ExternalLink, Images, LayoutGrid, Mail, MessageSquare, Pencil, ScanLine, ShieldCheck, UtensilsCrossed } from "lucide-react";
 import { adminRole } from "@/lib/server/admin-session";
 import { ButtonLink, Notice } from "@/components/ui";
 import type { EventRecord } from "@/lib/types";
 import { LogoutButton } from "@/components/admin/shared/AuthControls";
 import styles from "@/components/admin/admin.module.css";
 import nav from "./navigation.module.css";
+import shell from "./shell.module.css";
 import { adminEventPath, eventPath, type AdminTab } from "@/lib/routes";
 
 /** `bare` drops the signed-in links, for the login and setup screens. */
@@ -15,16 +16,17 @@ export async function AdminShell({ children, bare = false, wide = false }: { chi
   const role = bare ? null : await adminRole();
   return <div className={styles.shell}>
     <header className={styles.header}>
-      <div className={`container ${styles.headerInner}`}>
+      <div className={`container ${styles.headerInner} ${shell.inner}`}>
         <Link href="/admin" className={styles.brand}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/werkudara_icon.png" alt="" width={36} height={36} className={styles.logo} />
           <span><strong>Werkudara</strong><span className={styles.brandSub}>Admin pengalaman tamu</span></span>
         </Link>
-        {!bare && <nav className={styles.headerNav} aria-label="Admin">
-          {role === "super" && <Link href="/admin/super" className={`${styles.headerLink} ${styles.roleLink}`}><Crown size={16} aria-hidden="true" /> Dashboard super admin</Link>}
-          <Link href="/admin" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> Semua acara</Link>
-          <Link href="/admin/akses" className={styles.headerLink}><ShieldCheck size={16} aria-hidden="true" /> Log akses</Link>
+        {!bare && <nav className={`${styles.headerNav} ${shell.nav}`} aria-label="Admin">
+          {/* On a phone only the icons show; each link keeps its name for screen readers. */}
+          {role === "super" && <Link href="/admin/super" aria-label="Dashboard super admin" className={`${styles.headerLink} ${styles.roleLink}`}><Crown size={16} aria-hidden="true" /> <span className={shell.linkText}>Super admin</span></Link>}
+          <Link href="/admin" aria-label="Semua acara" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> <span className={shell.linkText}>Semua acara</span></Link>
+          <Link href="/admin/akses" aria-label="Log akses" className={styles.headerLink}><ShieldCheck size={16} aria-hidden="true" /> <span className={shell.linkText}>Log akses</span></Link>
           <LogoutButton />
         </nav>}
       </div>
@@ -40,13 +42,15 @@ export function SetupNotice() {
     <ButtonLink href="/admin" variant="secondary">Periksa koneksi</ButtonLink>
   </section>;
 }
-/** The event's pages in three groups: edit the invitation, work with guests, run the event. */
+/**
+ * The event's pages in three groups: edit the invitation, work with guests, run the event. "Semua
+ * acara" is in the header, and the live preview lives in the editor, so neither is repeated here.
+ */
 export function EventNavigation({ event, current }: { event: EventRecord; current: AdminTab }) {
   const tab = (key: AdminTab, label: string, Icon: typeof Pencil) =>
     <a href={adminEventPath(event, key)} className={nav.tab} aria-current={current === key ? "page" : undefined}><Icon size={16} aria-hidden="true" /> {label}</a>;
   return <nav className={nav.bar} aria-label="Pengelolaan acara">
-    <Link href="/admin" className={`${nav.tab} ${nav.back}`}><ArrowLeft size={16} aria-hidden="true" /> Semua acara</Link>
-    <div className={nav.group}><span className={nav.label}>Edit</span>{tab("edit", "Undangan", Pencil)}{tab("preview", "Tersimpan", Eye)}</div>
+    <div className={nav.group}><span className={nav.label}>Edit</span>{tab("edit", "Undangan", Pencil)}</div>
     <div className={nav.group}><span className={nav.label}>Tamu</span>{tab("invitations", "Daftar tamu", Mail)}{tab("responses", "RSVP", ClipboardCheck)}{tab("checkin", "Check-in", ScanLine)}</div>
     <div className={nav.group}><span className={nav.label}>Operasional</span>{tab("beo", "BEO", UtensilsCrossed)}{tab("gallery", "Galeri", Images)}{tab("feedback", "Feedback", MessageSquare)}</div>
     {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer" className={`${nav.tab} ${nav.public}`}><ExternalLink size={16} aria-hidden="true" /> Buka undangan<span className="sr-only"> (tab baru)</span></a>}

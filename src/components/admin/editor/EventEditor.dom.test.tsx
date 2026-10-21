@@ -207,3 +207,15 @@ it("has no switch on blocks that are always part of the invitation", () => {
   render(<EventEditor event={createSeedEvent()} />);
   expect(screen.queryByRole("switch")).toBeNull();
 });
+
+it("keeps one save button at the top that says whether anything is unsaved", () => {
+  render(<EventEditor event={createSeedEvent()} />);
+  const save = screen.getByRole("button", { name: "Simpan perubahan" });
+  expect(save.textContent).toContain("Tersimpan");
+  expect(screen.queryByRole("link", { name: /Pratinjau tersimpan/ })).toBeNull();
+  fireEvent.change(screen.getByRole("textbox", { name: "Judul acara" }), { target: { value: "Judul baru" } });
+  expect(save.textContent).toContain("Simpan");
+  expect(save.textContent).not.toContain("Tersimpan");
+  // The bar sits before the editor, so it never floats over the form.
+  expect(save.compareDocumentPosition(screen.getByRole("textbox", { name: "Judul acara" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});

@@ -31,7 +31,8 @@ Editor terdiri dari tiga kolom: **menu bagian** di kiri, **form** di tengah, dan
 - Di atas pratinjau ada pilihan **Ponsel / Web** (bawaannya Ponsel, karena kebanyakan tamu membuka dari HP) dan **Sebelum / Hari H / Sesudah** untuk melihat tampilan tiap tahap. Blok Hari H dan Setelah acara otomatis menampilkan tahapnya.
 - Bagian yang bisa dinyalakan atau dimatikan (misalnya Rundown, Lokasi, RSVP, Kontak, Our Team, Survei, Ulasan Google) punya **switch di pojok kanan judulnya**. Bagian yang menyala diberi tanda **Aktif** di menu. Bagian yang selalu ada (misalnya Identitas, Waktu, Foto pembuka) tidak punya switch.
 - Titik di menu menandai bagian yang **belum disimpan** (biru) atau **perlu diperbaiki** sebelum dipublikasikan (kuning/merah).
-- Di HP, pilih bagian dari daftar di atas, lalu ketuk **Isi** untuk mengisi atau **Lihat** untuk melihat ponsel.
+- Bilah di atas editor selalu terlihat saat menggulir. Isinya pilihan bagian (di HP dan tablet), **Isi / Lihat** (di HP: ikon pensil untuk mengisi, ikon ponsel untuk melihat), dan tombol **Simpan**. Tombol bertuliskan *Tersimpan* (atau ikon centang di HP) bila tidak ada perubahan.
+- Menu acara di atasnya: **Edit** (Undangan), **Tamu** (Daftar tamu, RSVP, Check-in), dan **Operasional** (BEO, Galeri, Feedback). Kembali ke daftar acara lewat ikon kotak-kotak di kepala halaman.
 - Bagian yang dipakai templat tampil di menu. Bagian lain ada di lipatan **Bagian lain** di dasar menu; buka hanya bila perlu.
 - **Jadwal**: acara lebih dari sehari otomatis tampil per hari (Hari 1, Hari 2, …). Setiap sesi punya **Tambahan (opsional)**: lokasi kegiatan, cuplikan "Kenali lebih dekat", kotak **Tahukah Anda?**, dan halaman PDF presentasi.
 - **Kontak**: ketuk salah satu nama di **Pilih PIC dari tim**. Nama, jabatan, nomor WhatsApp, dan foto langsung terisi. Isi manual tetap bisa dipakai untuk PIC dari luar tim. Untuk trip, isi juga **Kontak darurat** dan rumah sakit terdekat.

@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ButtonLink, Field, Notice } from "@/components/ui";
-import { CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Shirt, Smartphone, Sparkles, Star, Users, type LucideIcon } from "lucide-react";
+import { Button, Field, Notice } from "@/components/ui";
+import { CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Shirt, Smartphone, Sparkles, Star, Users, type LucideIcon } from "lucide-react";
 import { Check, SuggestionChips } from "@/components/admin/editor/controls";
 import { chipLabel, fieldExamples, fieldPattern, fieldSuggestions, fillSuggestion } from "@/components/admin/editor/suggestions";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
@@ -34,7 +34,7 @@ import styles from "@/components/admin/admin.module.css";
 import e from "./editor.module.css";
 import { PhonePreview, type PreviewDevice } from "@/components/admin/editor/PhonePreview";
 import { areaOfBlock, blockOfArea, phaseOfBlock } from "@/lib/live-preview";
-import { absolute, adminApi, adminEventPath, eventPath } from "@/lib/routes";
+import { absolute, adminApi, eventPath } from "@/lib/routes";
 
 
 const blockIcons: Record<string, LucideIcon> = {
@@ -233,6 +233,29 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   return <form className={`${styles.form} ${e.editor}`} onSubmit={save} noValidate aria-busy={pending}>
     {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
     {message && <Notice tone="success">{message}</Notice>}
+    {/*
+      One bar above the editor holds what is used all the time: which part to edit (tablet and
+      phone), form or preview (phone), and Simpan. It sticks under the header and covers nothing.
+    */}
+    <div className={e.toolbar} role="region" aria-label="Simpan perubahan">
+      <div className={e.picker}>
+        <label htmlFor="editor-block" className="sr-only">Bagian yang diubah</label>
+        <select id="editor-block" className="input" value={open} onChange={change => openBlock(change.target.value)}>
+          {editorStages.map(stage => mainBlocks.some(item => item.stage === stage.key) && <optgroup key={stage.key} label={stage.label}>
+            {mainBlocks.filter(item => item.stage === stage.key).map(item => <option key={item.id} value={item.id}>{blockSwitch(item.id)?.on ? "● " : ""}{item.title}{["todo", "error"].includes(statuses[item.id]) ? " · perlu dilengkapi" : ""}</option>)}
+          </optgroup>)}
+          {extraBlocks.length > 0 && <optgroup label="Bagian lain">{extraBlocks.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</optgroup>}
+        </select>
+        <div className={e.viewSwitch} role="group" aria-label="Tampilan">
+          <button type="button" aria-pressed={view === "form"} aria-label="Isi" onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> <span className={e.btnText}>Isi</span></button>
+          <button type="button" aria-pressed={view === "preview"} aria-label="Lihat" onClick={() => setView("preview")}><Smartphone size={15} aria-hidden="true" /> <span className={e.btnText}>Lihat</span></button>
+        </div>
+      </div>
+      <span className={`${e.saveState} ${dirty ? e.saveStateDirty : ""}`.trimEnd()} role="status">{dirty ? <><CircleDot size={16} aria-hidden="true" /> {dirtyBlocks.size > 1 ? `${dirtyBlocks.size} bagian belum disimpan` : "Ada perubahan yang belum disimpan"}</> : <><CircleCheck size={16} aria-hidden="true" /> Semua perubahan tersimpan</>}</span>
+      <Button type="submit" variant={dirty ? "primary" : "secondary"} className={e.saveButton} disabled={pending} aria-label={event.status === "published" ? "Simpan & publikasikan" : "Simpan perubahan"}>
+        {pending ? "Menyimpan…" : dirty ? <><Save size={17} aria-hidden="true" /> Simpan{event.status === "published" && <span className={e.wideOnly}>&nbsp;&amp; publikasikan</span>}</> : <><CircleCheck size={17} aria-hidden="true" /> <span className={e.btnText}>Tersimpan</span></>}
+      </Button>
+    </div>
     <div className={e.layout} data-view={view} data-device={device}>
       <nav className={e.menu} aria-label="Bagian acara">
         {editorStages.map(stage => {
@@ -248,19 +271,6 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
           <ul>{extraBlocks.map(menuItem)}</ul>
         </details>}
       </nav>
-      <div className={e.picker}>
-        <label htmlFor="editor-block" className="sr-only">Bagian yang diubah</label>
-        <select id="editor-block" className="input" value={open} onChange={change => openBlock(change.target.value)}>
-          {editorStages.map(stage => mainBlocks.some(item => item.stage === stage.key) && <optgroup key={stage.key} label={stage.label}>
-            {mainBlocks.filter(item => item.stage === stage.key).map(item => <option key={item.id} value={item.id}>{blockSwitch(item.id)?.on ? "● " : ""}{item.title}{["todo", "error"].includes(statuses[item.id]) ? " · perlu dilengkapi" : ""}</option>)}
-          </optgroup>)}
-          {extraBlocks.length > 0 && <optgroup label="Bagian lain">{extraBlocks.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</optgroup>}
-        </select>
-        <div className={e.viewSwitch} role="group" aria-label="Tampilan">
-          <button type="button" aria-pressed={view === "form"} onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> Isi</button>
-          <button type="button" aria-pressed={view === "preview"} onClick={() => setView("preview")}><Smartphone size={15} aria-hidden="true" /> Lihat</button>
-        </div>
-      </div>
       <section className={e.formPane} aria-labelledby="block-title">
         <header className={e.formHeader}>
           <span className={e.formIcon} aria-hidden="true">{(() => { const Icon = blockIcons[open] ?? FileText; return <Icon size={20} />; })()}</span>
@@ -305,13 +315,6 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       <aside className={e.previewPane} aria-label="Pratinjau undangan">
         <PhonePreview event={event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open)} onFocusArea={area => openBlock(blockOfArea[area])} src={previewSrc} />
       </aside>
-    </div>
-    <div className={`${styles.saveBar} ${e.saveBar}`} role="region" aria-label="Simpan perubahan">
-      <span className={`${styles.saveState} ${dirty ? styles.saveStateDirty : ""}`.trimEnd()}>{dirty ? <><CircleDot size={16} aria-hidden="true" /> {dirtyBlocks.size > 1 ? `${dirtyBlocks.size} bagian belum disimpan` : "Ada perubahan yang belum disimpan"}</> : <><CircleCheck size={16} aria-hidden="true" /> Semua perubahan tersimpan</>}</span>
-      <div className={styles.actions}>
-        <ButtonLink href={adminEventPath(event, "preview")} variant="secondary"><Eye size={17} aria-hidden="true" /> Pratinjau tersimpan</ButtonLink>
-        <Button type="submit" disabled={pending}><Save size={17} aria-hidden="true" /> {pending ? "Menyimpan…" : event.status === "published" ? "Simpan & publikasikan" : "Simpan perubahan"}</Button>
-      </div>
     </div>
   </form>;
 }

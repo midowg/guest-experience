@@ -1,0 +1,8 @@
+/* Admin header on a phone: brand on the left, icon-only links on the right, one row. */
+@media (max-width: 47.99rem) {
+  .inner { flex-wrap: nowrap; gap: var(--space-2); }
+  .inner > a:first-child span span { display: none; }
+  .nav { flex-wrap: nowrap; gap: 0; }
+  .nav a, .nav button { padding: 0 10px; min-width: 40px; justify-content: center; }
+  .linkText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
