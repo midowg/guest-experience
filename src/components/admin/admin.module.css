@@ -561,3 +561,31 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .qrUrl { margin: 0; font-weight: 600; word-break: break-all; }
 .qrActions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .qrText { display: grid; gap: var(--space-3); flex: 1 1 240px; min-width: 0; }
+
+/* BEO */
+.beo { display: grid; gap: var(--space-5); }
+.beoSteps { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.beoSteps li { padding: var(--space-1) var(--space-3); border: 1px solid var(--line); border-radius: 999px; font-size: .875rem; color: #5b6476; background: #fff; }
+.beoSteps li[aria-current="step"] { border-color: var(--blue); background: var(--blue); color: #fff; font-weight: 600; }
+.beoNumbers { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+.beoNumbers > div { display: grid; gap: 2px; padding: var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.beoNumbers span { font-size: .8125rem; color: #5b6476; }
+.beoNumbers strong { font-size: 2rem; line-height: 1.1; }
+.beoNumbers small { font-size: .75rem; color: #5b6476; }
+.beoPrepared { border-color: var(--blue) !important; }
+.beoSection { display: grid; gap: var(--space-3); }
+.beoSection h2 { margin: 0; font-size: 1.125rem; }
+.beoSection h2 small { font-weight: 400; font-size: .8125rem; color: #5b6476; }
+.beoCounts { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.beoCounts li { padding: var(--space-2) var(--space-4); border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.beoList { display: grid; gap: var(--space-2); margin: 0; padding-left: 1.25rem; }
+.beoPrintTitle, .beo [data-vendor], .beo [data-print-only] { display: none; }
+@media print {
+  .header, .navigation, .beo [data-no-print] { display: none !important; }
+  .beoPrintTitle { display: block; font-weight: 700; }
+  .beo [data-print-only] { display: grid; }
+  .beoSteps { display: none; }
+  .beo[data-print="vendor"] [data-internal] { display: none !important; }
+  .beo[data-print="vendor"] [data-vendor] { display: inline; }
+  .beoNumbers > div, .beoCounts li { border-color: #999; }
+}

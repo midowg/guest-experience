@@ -23,6 +23,7 @@ Terapkan migrasi yang belum ada, **urut nama berkas**, lewat Supabase Dashboard 
 | `202610200005_admin_roles.sql` | Super admin dan acara tersembunyi |
 | `202610200006_admin_modules.sql` | Modul yang boleh dipakai admin biasa |
 | `202610200007_admin_templates.sql` | Templat yang tampil di Buat acara (bawaan: Kunjungan klien, Trip klien) |
+| `202610210001_event_beo.sql` | BEO hospitality: jumlah disiapkan, status, dan riwayat revisi |
 
 Cek hasilnya (hanya membaca). Semua kolom harus `true`:
 
@@ -35,7 +36,8 @@ select
   exists (select 1 from information_schema.columns where table_schema='public' and table_name='rsvps' and column_name='party_size') as "200004",
   exists (select 1 from information_schema.columns where table_schema='public' and table_name='events' and column_name='admin_hidden') as "200005",
   to_regclass('public.admin_settings') is not null as "200006",
-  exists (select 1 from information_schema.columns where table_schema='public' and table_name='admin_settings' and column_name='enabled_templates') as "200007";
+  exists (select 1 from information_schema.columns where table_schema='public' and table_name='admin_settings' and column_name='enabled_templates') as "200007",
+  to_regclass('public.event_beo') is not null as "210001";
 ```
 
 Migrasi bersifat menambah. Versi lama yang masih online tetap berjalan setelah migrasi diterapkan, jadi urutannya aman: **database dulu, baru kode**.

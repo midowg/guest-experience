@@ -1,0 +1,155 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, Printer, Save } from "lucide-react";
+import { Button, Field, Notice } from "@/components/ui";
+import { beoActions, beoStatuses, beoStatusLabels, type BeoAction, type BeoRevision, type BeoState, type BeoSummary } from "@/lib/beo";
+import { formatDateTime, formatTime } from "@/lib/format";
+import { tzLabel } from "@/lib/timezones";
+import type { EventRecord } from "@/lib/types";
+import { adminRequest, errorMessage } from "./api";
+import styles from "./admin.module.css";
+
+const actionLabels: Record<BeoAction, string> = {
+  save: "Simpan draf", set: "Tetapkan angka", revise: "Simpan revisi", final: "Tandai final", done: "Tandai selesai", reopen: "Buka lagi untuk revisi",
+};
+const actionHints: Partial<Record<BeoAction, string>> = {
+  set: "Biasanya H-3. Setelah ditetapkan, angka hanya berubah lewat revisi beralasan.",
+  final: "Biasanya H-1, angka terakhir untuk penyedia.",
+};
+
+type Props = { event: EventRecord; summary: BeoSummary; initial: BeoState; revisions: BeoRevision[]; migrated: boolean };
+
+/**
+ * The BEO for hospitality: three numbers, food and allergies, access needs, the service schedule,
+ * and the Draf → Ditetapkan → Revisi → Final → Selesai flow. Prints in a supplier version (first
+ * names, no access list or history) and an internal one.
+ */
+export function BeoView({ event, summary, initial, revisions, migrated }: Props) {
+  const router = useRouter();
+  const [state, setState] = useState(initial);
+  const [prepared, setPrepared] = useState(initial.prepared_count === null ? "" : String(initial.prepared_count));
+  const [notes, setNotes] = useState(initial.notes);
+  const [reason, setReason] = useState("");
+  const [revising, setRevising] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [printing, setPrinting] = useState<"vendor" | "internal">("internal");
+  const editable = state.status === "draft" || revising;
+  const actions = beoActions(state.status);
+  const count = prepared.trim() === "" ? null : Number(prepared);
+  const stale = state.locked_at ? summary.changedSinceLock : 0;
+
+  async function run(action: BeoAction) {
+    if (action === "revise" && !revising) { setRevising(true); return; }
+    setBusy(true); setError(""); setMessage("");
+    try {
+      const result = await adminRequest<BeoState>(`/api/admin/events/${event.id}/beo`, {
+        method: "PUT",
+        body: JSON.stringify({ action, version: state.version, prepared_count: count, notes, ...(action === "revise" ? { reason } : {}) }),
+      });
+      if (result.data) setState(result.data);
+      setRevising(false); setReason("");
+      setMessage(result.message);
+      // Revisions and the "needs review" count come from the server.
+      if (action !== "save") router.refresh();
+    } catch (cause) { setError(errorMessage(cause)); }
+    finally { setBusy(false); }
+  }
+
+  function print(version: "vendor" | "internal") {
+    setPrinting(version);
+    // The attribute must be on the page before the print dialog takes its snapshot.
+    requestAnimationFrame(() => window.print());
+  }
+
+  const time = (value: string) => formatTime(value, event.timezone);
+  return <div className={styles.beo} data-print={printing}>
+    {!migrated && <Notice tone="warning">Angka persiapan dan status BEO menunggu migrasi <code>202610210001_event_beo.sql</code>. Rekap di bawah sudah bisa dibaca dan dicetak.</Notice>}
+
+    <ol className={styles.beoSteps} aria-label="Status BEO">
+      {beoStatuses.map(status => <li key={status} aria-current={state.status === status ? "step" : undefined}>{beoStatusLabels[status]}</li>)}
+    </ol>
+    <p className={styles.beoPrintTitle}>BEO · {event.title} · {beoStatusLabels[state.status]}{state.version ? ` · versi ${state.version}` : ""}</p>
+    {stale > 0 && <Notice tone="warning" role="status"><AlertTriangle size={16} aria-hidden="true" /> Perlu ditinjau: {stale} jawaban RSVP masuk atau berubah setelah angka ditetapkan.</Notice>}
+
+    <div className={styles.beoNumbers}>
+      <div><span>Perkiraan dari survei</span><strong>{summary.estimate ?? "—"}</strong></div>
+      <div><span>RSVP hadir</span><strong>{summary.attending}</strong><small>{summary.answeredYes} jawaban, termasuk pendamping</small></div>
+      <div className={styles.beoPrepared}><span>Jumlah disiapkan</span><strong>{state.prepared_count ?? "—"}</strong></div>
+    </div>
+
+    {migrated && <section className={styles.guestCard} aria-labelledby="beo-form-title" data-no-print>
+      <h2 id="beo-form-title" className={styles.guestCardTitle}>Angka untuk penyedia</h2>
+      <Field label="Jumlah porsi/pax disiapkan" name="beo-prepared" hint={`RSVP hadir saat ini ${summary.attending}. Tambahkan cadangan bila perlu.`}>
+        <input id="beo-prepared" inputMode="numeric" value={prepared} disabled={!editable || busy} onChange={e => setPrepared(e.target.value.replace(/\D/g, "").slice(0, 6))} />
+      </Field>
+      <Field label="Catatan untuk penyedia (opsional)" name="beo-notes" hint="Ikut tercetak di kedua versi. Jangan tulis nomor telepon tamu.">
+        <textarea id="beo-notes" rows={3} maxLength={4000} value={notes} disabled={!editable || busy} onChange={e => setNotes(e.target.value)} />
+      </Field>
+      {revising && <Field label="Alasan revisi" name="beo-reason" hint="Contoh: klien menambah 5 tamu. Tercatat di riwayat.">
+        <input id="beo-reason" maxLength={500} value={reason} disabled={busy} onChange={e => setReason(e.target.value)} />
+      </Field>}
+      {error && <Notice tone="error" role="alert">{error}</Notice>}
+      {message && <p role="status" className={styles.guestMessage}>{message}</p>}
+      <div className={styles.qrActions}>
+        {actions.map(action => <Button key={action} type="button" variant={action === "save" || (action === "revise" && !revising) || action === "reopen" ? "secondary" : "primary"} disabled={busy || (action === "revise" && revising && !reason.trim())} onClick={() => void run(action)}>
+          {action === "save" && <Save size={16} aria-hidden="true" />} {action === "revise" && !revising ? "Revisi angka" : actionLabels[action]}
+        </Button>)}
+        {revising && <Button type="button" variant="secondary" disabled={busy} onClick={() => { setRevising(false); setPrepared(state.prepared_count === null ? "" : String(state.prepared_count)); setNotes(state.notes); }}>Batal</Button>}
+      </div>
+      {actions.map(action => actionHints[action] && <p key={action} className="field-hint">{actionLabels[action]}: {actionHints[action]}</p>)}
+    </section>}
+    {state.notes && <section className={styles.beoSection} data-print-only><h2>Catatan</h2><p className={styles.multiline}>{state.notes}</p></section>}
+
+    <section className={styles.beoSection} aria-labelledby="beo-food">
+      <h2 id="beo-food">Makanan</h2>
+      {summary.dietary.length === 0 ? <p>Belum ada kebutuhan makanan khusus dari tamu yang hadir.</p> : <ul className={styles.beoCounts}>
+        {summary.dietary.map(item => <li key={item.key}><strong>{item.count}</strong> {item.label}</li>)}
+      </ul>}
+      <p className="field-hint">Dihitung per jawaban, bukan per orang: satu tamu bisa vegetarian sekaligus alergi.</p>
+      {summary.allergies.length > 0 && <div className={styles.tableWrap}><table className={styles.table}>
+        <caption>Alergi</caption>
+        <thead><tr><th scope="col">Tamu</th><th scope="col">Alergen</th></tr></thead>
+        <tbody>{summary.allergies.map((item, index) => <tr key={index}>
+          <td><span data-internal>{item.name}</span><span data-vendor>{item.firstName}</span></td><td>{item.details || "Belum dirinci, tanyakan ke tamu"}</td>
+        </tr>)}</tbody>
+      </table></div>}
+      {summary.otherFood.length > 0 && <div className={styles.tableWrap}><table className={styles.table}>
+        <caption>Makanan lainnya</caption>
+        <thead><tr><th scope="col">Tamu</th><th scope="col">Keterangan</th></tr></thead>
+        <tbody>{summary.otherFood.map((item, index) => <tr key={index}><td>{item.name.split(/\s+/)[0]}</td><td>{item.details || "—"}</td></tr>)}</tbody>
+      </table></div>}
+    </section>
+
+    <section className={styles.beoSection} aria-labelledby="beo-access" data-internal>
+      <h2 id="beo-access">Akses khusus <small>(internal, tidak ikut versi penyedia)</small></h2>
+      {summary.access.length === 0 ? <p>Tidak ada kebutuhan akses dari tamu yang hadir.</p> : <ul className={styles.beoList}>
+        {summary.access.map((item, index) => <li key={index}><strong>{item.name}</strong>: {[...item.needs, item.other].filter(Boolean).join(", ")}</li>)}
+      </ul>}
+    </section>
+
+    <section className={styles.beoSection} aria-labelledby="beo-schedule">
+      <h2 id="beo-schedule">Jadwal layanan <small>({tzLabel(event.timezone)})</small></h2>
+      {summary.schedule.length === 0 ? <p>Rundown belum diisi di editor acara.</p> : <ol className={styles.beoList}>
+        {summary.schedule.map(item => <li key={item.id}><strong>{time(item.starts_at)}–{time(item.ends_at)}</strong> {item.title}</li>)}
+      </ol>}
+    </section>
+
+    {revisions.length > 0 && <section className={styles.beoSection} aria-labelledby="beo-history" data-internal>
+      <h2 id="beo-history">Riwayat</h2>
+      <ol className={styles.beoList}>{revisions.map(rev => <li key={rev.id}>
+        <strong>Versi {rev.version} · {beoStatusLabels[rev.status]}</strong> · {formatDateTime(rev.at, event.timezone)} · disiapkan {rev.prepared_count ?? "—"}, RSVP hadir {rev.attending}
+        {rev.reason && <> · “{rev.reason}”</>}{rev.device_id && <> · perangkat {rev.device_id.slice(0, 8)}</>}
+      </li>)}</ol>
+    </section>}
+
+    <div className={styles.qrActions} data-no-print>
+      <Button type="button" variant="secondary" onClick={() => print("vendor")}><Printer size={16} aria-hidden="true" /> Cetak versi penyedia</Button>
+      <Button type="button" variant="secondary" onClick={() => print("internal")}><Printer size={16} aria-hidden="true" /> Cetak versi internal</Button>
+    </div>
+    <p className="field-hint" data-no-print>Pilih “Simpan sebagai PDF” di dialog cetak untuk mengirim ke penyedia. Versi penyedia hanya memuat nama depan, tanpa akses khusus dan riwayat.</p>
+  </div>;
+}
