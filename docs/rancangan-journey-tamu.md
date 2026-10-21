@@ -237,23 +237,31 @@ Prinsipnya: kumpulkan seperlunya dan simpan sesingkat mungkin. Selama admin belu
 
 Setiap login berhasil, password salah, dan keluar dicatat di **Log akses** (`/admin/akses`): waktu, IP, perkiraan kota dan negara, browser dan OS, serta ID perangkat acak di cookie browser, dengan tanda **Perangkat baru**. Nomor seri atau MAC laptop tidak bisa dibaca dari browser, jadi ID perangkat adalah pengenal terbaik yang tersedia; ia berganti bila cookie dihapus atau memakai browser lain. Karena password dipakai bersama, log menunjukkan perangkat dan lokasi, bukan nama orang. Akun admin per orang dan pembagian peran dicatat sebagai tahap lanjutan.
 
-## Kondisi proyek saat rangkuman dibuat
+## Kondisi proyek (21 Oktober 2026)
 
-- Sudah ada: acara, RSVP, tautan umum dan personal, lokasi, unggah foto lokasi dan galeri foto pada halaman acara, kontak PIC, survei feedback, dan tautan ulasan Google opsional.
-- RSVP saat ini menanyakan alergi, **belum** seluruh preferensi makanan atau kebutuhan aksesibilitas.
-- Perubahan lokal yang belum di-commit (branch `feat/konten-e-guide-fleksibel`): konten e-guide opsional (pengantar kontak, jabatan dan organisasi PIC, pengantar survei, judul/deskripsi/teks tombol ulasan) serta bagian Our Team yang nonaktif secara default. Tes otomatis lulus per 14 Oktober (210 tes); lint, typecheck, dan build belum dijalankan untuk perubahan itu.
-- Migrasi undangan personal (`202610110001_personal_invitations.sql`) belum diterapkan ke Supabase remote menurut `docs/setup.md`; keadaan data Supabase live belum diverifikasi dalam diskusi ini.
-- Belum ada: jenis acara dan audiens, fase, tema tamu, panduan rute bergambar, jadwal per hari, handbook, tiket, kursi, denah, check-in, BEO, galeri pasca-acara di R2, halaman terima kasih, ajakan kolaborasi, pustaka konten bersama, dukungan beberapa bahasa, serta login.
+- **Sudah dibangun** (branch `feat/acara-hosting-klien`):
+  - login admin dengan log akses, dan super admin (visibilitas acara, modul, templat);
+  - Buat acara 2 langkah dengan galeri templat Kunjungan klien dan Trip klien;
+  - zona WIB/WITA/WIT, serta kamus wording ID/EN dengan tombol bahasa;
+  - undangan per tamu dengan impor, kirim WhatsApp, dan status dibuka;
+  - RSVP bertahap (pendamping, makanan, akses, opsi foto) dan persiapan tamu;
+  - jadwal per hari dengan detail kegiatan dan kontak darurat, plus salinan offline halaman tamu;
+  - berkas kalender .ics, pratinjau tautan WhatsApp, QR tautan umum, dan sambutan halaman depan;
+  - BEO dengan cetak dan PDF versi penyedia dan internal;
+  - galeri foto R2 (menunggu bucket), tiket QR, dan check-in;
+  - font Nunito untuk admin dan tamu.
+- **Migrasi yang perlu diterapkan pemilik**: daftar dan cara mengeceknya di [go-live internal](go-live-internal.md). Semua migrasi lulus uji SQL lokal.
+- **Belum ada**: tiket untuk RSVP tautan umum, check-in offline, denah dan kursi, dokumen pribadi per tamu, notifikasi push, retensi data otomatis, dan akun admin per orang.
 
 ## Hal yang masih terbuka
 
-- Tinjauan usulan: font admin, warna per tahap, serta kebijakan BEO, retensi data, dan izin foto.
+- Tinjauan usulan: warna per tahap, serta kebijakan BEO, retensi data, dan izin foto. Font sudah diputuskan: Nunito.
 - Tinjauan draf wording (`docs/wording-draf.xlsx`) oleh tim, termasuk istilah tradisi untuk templat Nyadran.
-- Kapan migrasi database untuk form tamu bertahap (makanan jamak, akses, opsi foto) dan tiket dilakukan.
+- Kapan migrasi BEO, galeri, dan tiket (`202610210001`–`003`) diterapkan.
 - Notifikasi push: kapan dibangun, dan siapa yang boleh mengirim kabar perubahan jadwal.
 - Cara tautan per halaman untuk deck selain PDF (Google Slides, Canva).
 - Nama domain baru.
-- Bucket R2 baru dan kredensialnya (dibuat oleh pemilik), diperlukan sebelum galeri acara dibangun.
+- Bucket R2 baru dan kredensialnya (dibuat oleh pemilik). Kode galeri sudah siap dan menunggu variabel R2.
 - Akun admin per orang dan pembagian peran (tahap lanjutan; sekarang password bersama).
 - Tampilan fase otomatis (digambar dulu sebelum dibangun).
 - Bahasa pertama yang didukung, penanggung jawab dan proses persetujuan terjemahan, serta perilaku saat terjemahan belum tersedia.
