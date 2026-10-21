@@ -178,7 +178,7 @@
    yellow stays reserved for "needs attention".
    --------------------------------------------------------------------------------------- */
 .shell {
-  --font-body: 'Plus Jakarta Sans', 'Source Sans Pro', sans-serif; --font-label: var(--font-body); --font-heading: var(--font-body);
+  --font-body: 'Nunito', system-ui, sans-serif; --font-label: var(--font-body); --font-heading: var(--font-body);
   --heading-weight: 700; --radius: 10px; --page: #f5f6fa; --line: #e3e6ee;
   --color-border: var(--line); --border: 1px solid var(--line); --color-text: #2f3a4a; --ink-soft: #5f6b7a;
   --text-heading: clamp(1.75rem, 3vw, 2.25rem); --text-base: 1rem;

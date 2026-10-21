@@ -123,7 +123,7 @@ Modul baru yang disepakati: **titik kumpul dan transport**, **daftar bawaan**, *
 
 **Usulan, menunggu tinjauan** (papan 05):
 
-- Font admin **Plus Jakarta Sans** agar lebih ramah dan mudah dibaca. Tampilan tamu tetap memakai font tema.
+- Font **Nunito** untuk admin dan halaman tamu (keputusan 21 Okt): membulat, ramah, dan jelas di ukuran kecil. Tema hanya boleh mengganti font judul.
 - **Warna per tahap**: Persiapan magenta, Tamu biru, Hari H oranye, Sesudah acara hijau, Pengaturan abu. Warna diambil dari warna sekunder brand Werkudara; kuning tetap khusus untuk "perlu perhatian".
 
 ## Tampilan tamu dan tema

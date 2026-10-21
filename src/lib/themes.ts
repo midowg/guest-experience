@@ -21,7 +21,7 @@ const werkudara: ThemeTokens = {
   text: "#484443", heading: "#1551a0", caption: "#6c6765", danger: "#9a273d",
   primary: "#1551a0", primaryHover: "#306fb6", onPrimary: "#ffffff",
   hero: "#1551a0", onHero: "#ffffff", heroAccent: "#c3e6f5", scrimRgb: "10, 32, 62",
-  fontHeading: "'Source Sans Pro', sans-serif", headingWeight: 300,
+  fontHeading: "'Nunito', system-ui, sans-serif", headingWeight: 800,
 };
 
 export const themes: ThemeDefinition[] = [
