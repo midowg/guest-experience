@@ -22,7 +22,7 @@ export function PosterFieldRow({ field, index, open, onToggle, onChange, onRemov
   const set = <K extends keyof PosterField>(key: K, value: PosterField[K]) => onChange({ ...field, [key]: value });
   const number = (value: string, fallback: number) => { const parsed = Number(value.replace(",", ".")); return Number.isFinite(parsed) ? parsed : fallback; };
   const numberInput = (id: string, label: string, value: number, apply: (value: number) => void, step = 1) =>
-    <label className={s.num}><span>{label}</span><input id={id} className="input" type="number" inputMode="decimal" step={step} value={value} onChange={(event: ChangeEvent<HTMLInputElement>) => apply(number(event.target.value, value))} aria-invalid={!!errors[id] || undefined} /></label>;
+    <label key={id} className={s.num}><span>{label}</span><input id={id} className="input" type="number" inputMode="decimal" step={step} value={value} onChange={(event: ChangeEvent<HTMLInputElement>) => apply(number(event.target.value, value))} aria-invalid={!!errors[id] || undefined} /></label>;
   const rowErrors = Object.entries(errors).filter(([key]) => key === path || key.startsWith(`${path}.`)).flatMap(([, list]) => list);
 
   return <details className={s.row} open={open} onToggle={event => onToggle((event.currentTarget as HTMLDetailsElement).open)} data-field-row={field.key}>
