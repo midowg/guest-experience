@@ -51,7 +51,9 @@ Untuk mengganti bentuk alamat, cukup ubah `routes.ts` dan rute di `src/app/`.
 ## Studio Poster
 
 - Model di `src/lib/poster.ts`: kotak dalam piksel desain (dari Figma) per format (Post 1080×1350, Story 1080×1920). `fitText` menentukan ukuran huruf dan baris. Hasilnya dipakai **layar dan unduhan sekaligus**, sehingga keduanya sama.
-- Desain bawaan ada di `src/lib/poster-presets.ts`. Latarnya berupa SVG di `public/poster/` yang dibuat oleh `npm run poster:backgrounds` (`scripts/poster-backgrounds.mjs`). Latar tidak berisi teks, karena SVG yang digambar sebagai gambar tidak bisa memakai font halaman.
+- Desain bawaan ada di `src/lib/poster-presets.ts`: jenis kartu, ukuran yang disiapkan, palet awal, dan per ukuran `decor` (bentuk latar) serta posisi kotak. Latar digambar di browser dari palet sebagai SVG (data URL) memakai ikon dari `src/lib/poster-icons.ts`, yang dibuat oleh `npm run poster:icons`. Latar tidak berisi teks, karena SVG yang digambar sebagai gambar tidak bisa memakai font halaman.
+- Ukuran (`posterSizes`, termasuk ukuran kertas PDF), jenis kartu (`cardTypes`), dan palet (`posterPalettes`) ada di `src/lib/poster.ts`. Kotak memakai `tone` (peran palet), sehingga satu desain berlaku di semua palet.
+- Acara jenis `kartu` (`event_kind`): editornya hanya berisi blok `poster` dan `publication` (`cardBlocks` di `EventEditor.tsx`), halaman tamunya `PosterPage`, dan syarat publikasi undangan dilewati.
 - **Menambah desain bawaan:** tambah objek di `posterPresets` beserta latarnya, lalu jalankan tes `src/lib/poster.test.ts`, yang memastikan setiap kotak berada di dalam format dan lolos validasi.
 - **Pustaka desain** dari admin disimpan di tabel `poster_designs` (`src/lib/server/poster-designs.ts`, API `/api/admin/poster-designs`).
 - Font poster hanya yang dimuat di `src/app/layout.tsx` (`posterFonts`). Font baru dari Figma harus ditambahkan di kedua tempat itu.

@@ -86,9 +86,30 @@ Galeri aktif setelah bucket R2 disiapkan (lihat [setup](setup.md)).
 3. Halaman undangan sesudah acara otomatis menampilkan tombol **Lihat dan unduh semua foto**. Tamu bisa mengunduh foto asli dan meminta foto dihapus lewat WhatsApp PIC. Tindak lanjuti permintaan itu dengan menyembunyikan atau menghapus fotonya.
 4. Galeri tertutup otomatis enam bulan setelah acara.
 
-## 8. Studio Poster: peserta membuat posternya sendiri
+## 8. Kartu (Studio Poster): peserta membuat kartunya sendiri
 
-Untuk acara seperti festival, tempat tiap pengisi sesi membuat poster sesinya sendiri. Mulai dari templat **Poster sesi / festival**, atau nyalakan blok **Studio Poster** di editor acara mana pun.
+Kartu adalah jenis acara khusus, **bukan undangan**. Tidak ada rundown, RSVP, maupun lokasi; isinya hanya kartu yang diisi sendiri oleh peserta, lalu diunduh dan dibagikan atau dicetak.
+
+- **Buat kartu:** Buat acara → templat **Kartu: poster, ucapan, ID card, sertifikat**. Cukup isi nama kartu.
+- **Tautannya** `invitation.werkudara.group/KODE` langsung membuka pembuat kartu.
+- **Jenis kartu**, masing-masing dengan desain bawaan:
+
+  | Jenis | Desain bawaan | Ukuran |
+  |---|---|---|
+  | Poster sesi | Rempah Nusantara | Post, Story, Persegi |
+  | Kartu ucapan | Ucapan Hangat | Persegi, Story, Post |
+  | ID card / name tag | Name Tag | ID card, A5 |
+  | Sertifikat | Sertifikat Klasik | A4 landscape, A4 |
+  | Kartu undangan | Undangan Sederhana | Story, Post, A5 |
+
+- **Warna:** lima palet (Rempah, Werkudara, Malam emas, Segar, Senja). Latar bawaan dan kotak yang memakai "warna tema" ikut berganti. Nyalakan **Peserta boleh memilih warna sendiri** kalau setiap orang boleh memilih.
+- **Ukuran:**
+  - untuk dibagikan: Post 4:5, Story 9:16, Persegi 1:1, Landscape 16:9;
+  - untuk dicetak: A4, A4 landscape, A5, ID card. PDF ukuran cetak memakai ukuran kertas sebenarnya.
+
+  Ukuran yang tidak disiapkan desainnya diberi tanda "atur kotak sendiri".
+
+Studio Poster juga bisa dinyalakan sebagai bagian tambahan di acara biasa (blok **Studio Poster**, tautan `KODE/poster`).
 
 1. **Pilih desain**: misalnya *Rempah Nusantara*, atau desain dari pustaka yang pernah disimpan.
 2. **Latar dari Figma** (opsional), untuk tiap ukuran:
