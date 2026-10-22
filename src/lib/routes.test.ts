@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { absolute, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, photoDownloadPath, ticketPath } from "./routes";
+import { absolute, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, photoDownloadPath, posterPath, ticketPath } from "./routes";
 
 const legacy = { id: "e1", slug: "kunjungan-sinar" };
 const short = { ...legacy, code: "AB23CD" };
@@ -13,6 +13,7 @@ describe("guest addresses", () => {
     expect(invitationPath(short, invitation)).toBe("/AB23CD/k7q2mx9p");
     expect(ticketPath(short, invitation)).toBe("/AB23CD/k7q2mx9p/tiket");
     expect(galleryPath(short)).toBe("/AB23CD/galeri");
+    expect(posterPath(short)).toBe("/AB23CD/poster");
     expect(photoDownloadPath(short, "p1")).toBe("/AB23CD/galeri/p1/unduh");
     expect(calendarPath(short, { ingat: "30" })).toBe("/AB23CD/kalender.ics?ingat=30");
   });
@@ -21,6 +22,7 @@ describe("guest addresses", () => {
     expect(eventPath(legacy)).toBe("/e/kunjungan-sinar");
     expect(invitationPath(short, { token: invitation.token })).toBe(`/e/kunjungan-sinar/i/${invitation.token}`);
     expect(calendarPath(legacy)).toBe("/e/kunjungan-sinar/kalender.ics");
+    expect(posterPath(legacy)).toBe("/e/kunjungan-sinar/poster");
     expect(absolute("https://invitation.example/", "/AB23CD")).toBe("https://invitation.example/AB23CD");
   });
 

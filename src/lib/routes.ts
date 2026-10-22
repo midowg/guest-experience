@@ -22,6 +22,8 @@ export function invitationPath(event: EventRef, invitation: InvitationRef): stri
 export const ticketPath = (event: EventRef, invitation: InvitationRef) => `${invitationPath(event, invitation)}/tiket`;
 export const galleryPath = (event: EventRef) => `${eventPath(event)}/galeri`;
 export const photoDownloadPath = (event: EventRef, photoId: string) => `${galleryPath(event)}/${photoId}/unduh`;
+/** Studio Poster, where a guest makes and downloads their own poster. */
+export const posterPath = (event: EventRef) => `${eventPath(event)}/poster`;
 export function calendarPath(event: EventRef, query: Record<string, string> = {}): string {
   const search = new URLSearchParams(query).toString();
   return `${eventPath(event)}/kalender.ics${search ? `?${search}` : ""}`;

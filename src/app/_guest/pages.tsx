@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { z } from "zod";
 import { EventExperience } from "@/components/guest/EventExperience";
 import { PhotoGallery } from "@/components/guest/PhotoGallery";
+import { PosterPage as PosterView } from "@/components/poster/PosterPage";
 import { TicketView, type TicketData } from "@/components/guest/TicketView";
 import { Notice } from "@/components/ui";
 import { currentPhase } from "@/lib/event-phase";
@@ -66,6 +68,12 @@ export async function TicketPage({ event, invitation }: { event: EventRecord; in
     backUrl: invitationPath(event, invitation),
   };
   return <TicketView event={event} ticket={data} reason="ready" />;
+}
+
+/** Studio Poster: only when the admin switched it on and the template has boxes. */
+export function PosterPage({ event }: { event: EventRecord }) {
+  if (!event.poster?.enabled || event.poster.fields.length === 0) notFound();
+  return <PosterView event={event} />;
 }
 
 /** Ready photos; the gallery closes six months after the event. */
