@@ -21,14 +21,16 @@ export type FigmaImport = {
   notes: string[];
 };
 
-/** `isi_nama_fasilitator` → text box "nama_fasilitator", label "Nama fasilitator". Figma adds `_2` to duplicate names. */
+/** `isi_nama_fasilitator` → text box "nama_fasilitator", label "Nama fasilitator"; `foto_utama` → photo "foto_utama", "Foto utama". Figma adds `_2` to duplicate names. */
 export function parseLayer(id: string): Placeholder | null {
   const match = LAYER.exec(id.trim());
   if (!match) return null;
   const key = match[2].toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
   if (!key) return null;
   const words = key.replace(/_/g, " ");
-  return { id, kind: match[1].toLowerCase() === "foto" ? "photo" : "text", key, label: words.charAt(0).toUpperCase() + words.slice(1) };
+  // A photo keeps its prefix, so foto_fasilitator and isi_fasilitator are two boxes, not one.
+  if (match[1].toLowerCase() === "foto") return { id, kind: "photo", key: `foto_${key}`.slice(0, 40), label: `Foto ${words}` };
+  return { id, kind: "text", key, label: words.charAt(0).toUpperCase() + words.slice(1) };
 }
 
 /** The card size a Figma frame is: the same size, or the same shape within 2% (then scaled). */
@@ -105,13 +107,45 @@ export function textField(place: Placeholder, measured: Measured, scale: number)
       },
     };
   }
-  const filled = element.matches("[fill]") ? element : element.querySelector("[fill]:not([fill=none])");
-  const size = Math.max(10, Math.round(box.h * 0.95));
-  box = { x: box.x, y: Math.max(0, Math.round(box.y - box.h * 0.12)), w: box.w, h: Math.round(box.h * 1.25) };
+  const filled = element.matches("[fill]:not([fill=none])") ? element : element.querySelector("[fill]:not([fill=none])");
+  const area = element.tagName.toLowerCase() === "g" && !!element.querySelector(":scope > rect[fill=none], :scope > rect:not([fill])");
+  const size = Math.max(10, Math.round(box.h * (area ? 0.5 : 0.95)));
+  if (!area) box = { x: box.x, y: Math.max(0, Math.round(box.y - box.h * 0.12)), w: box.w, h: Math.round(box.h * 1.25) };
   return {
     box, outlined: true,
     field: { ...base, hint: place.label, maxLength: 80, font: "nunito", weight: 700, color: hex(filled?.getAttribute("fill") ?? "") || "#1f2a24", align: "left", letterSpacing: 0, sizeMax: size, sizeMin: Math.max(8, Math.round(size * 0.6)), lineHeight: 1.2, maxLines: 1 },
   };
+}
+
+/**
+ * Type hints a prepared file may carry on an isi_ layer, since outlined text keeps no type:
+ * data-font (playfair|nunito|lora|cormorant or a Figma font name), data-size, data-lines,
+ * data-weight, data-align, data-color, data-uppercase, data-spacing (em), data-line-height.
+ */
+export function withHints(field: Omit<PosterField, "box">, element: Element, scale: number): { field: Omit<PosterField, "box">; hinted: boolean } {
+  const read = (name: string) => element.getAttribute(`data-${name}`);
+  if (![...element.attributes].some(attribute => attribute.name.startsWith("data-") && attribute.name !== "data-box")) return { field, hinted: false };
+  const next = { ...field };
+  const font = read("font");
+  if (font) { next.font = (["playfair", "nunito", "lora", "cormorant"] as const).find(key => key === font) ?? fontFor(font); next.weight = nearestWeight(next.font, next.weight); }
+  const size = Number.parseFloat(read("size") ?? "");
+  if (size > 0) { next.sizeMax = Math.round(size * scale); next.sizeMin = Math.max(8, Math.round(next.sizeMax * 0.6)); }
+  const lines = Number.parseInt(read("lines") ?? "", 10);
+  if (lines > 0) next.maxLines = Math.min(20, lines);
+  const weight = Number.parseInt(read("weight") ?? "", 10);
+  if (weight > 0) next.weight = nearestWeight(next.font, weight);
+  const align = read("align");
+  if (align === "left" || align === "center" || align === "right") next.align = align;
+  const color = hex(read("color") ?? "");
+  if (color) next.color = color;
+  if (read("uppercase") === "true") next.uppercase = true;
+  const spacing = Number.parseFloat(read("spacing") ?? "");
+  if (Number.isFinite(spacing)) next.letterSpacing = spacing;
+  const lineHeight = Number.parseFloat(read("line-height") ?? "");
+  if (lineHeight >= 0.8 && lineHeight <= 3) next.lineHeight = lineHeight;
+  const hint = read("hint");
+  if (hint) next.hint = hint.slice(0, 200);
+  return { field: next, hinted: true };
 }
 
 function nearestWeight(font: PosterFont, weight: number): number {
@@ -160,13 +194,20 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
     if (!raw || raw.w <= 0 || raw.h <= 0) { notes.push(`Layer ${place.id} tidak punya ukuran dan dilewati.`); continue; }
     const box = { x: Math.round(raw.x * scale), y: Math.round(raw.y * scale), w: Math.round(raw.w * scale), h: Math.round(raw.h * scale) };
     const made = place.kind === "photo" ? photoField(place, { box, element }, scale) : textField(place, { box, element }, scale);
-    if ("outlined" in made && made.outlined) outlined++;
+    const hinted = place.kind === "text" ? withHints(made.field, element, scale) : { field: made.field, hinted: false };
+    made.field = hinted.field;
+    if ("outlined" in made && made.outlined && !hinted.hinted) outlined++;
     // A bare text layer is only as wide as its sample; a group with a clear box gives the area.
     if (place.kind === "text" && !(element.tagName.toLowerCase() === "g" && element.querySelector("rect"))) bare++;
     seen.add(place.key);
     fields.push({ ...made.field, box: boxes({ [format]: fit(made.box, format) }) });
   }
-  if (!fields.length) throw new Error("Tidak ada layer bernama isi_… atau foto_… di SVG ini. Beri nama layer yang boleh diganti peserta, lalu ekspor dengan “Include id”.");
+  if (!fields.length) {
+    const named = [...svg.querySelectorAll("[id]")].some(element => !/^(clip|pattern|image|paint|filter|mask)\d*_/.test(element.getAttribute("id") ?? ""));
+    throw new Error(named
+      ? "Tidak ada layer bernama isi_… atau foto_… di SVG ini. Di Figma, ganti nama layer yang boleh diganti peserta (misalnya isi_judul, foto_utama), lalu ekspor ulang."
+      : "SVG ini tidak membawa nama layer. Saat ekspor di Figma, centang “Include \"id\" attribute”, dan beri nama layer yang boleh diganti peserta (misalnya isi_judul, foto_utama).");
+  }
   if (bare) notes.push(`${bare} kolom teks selebar teks contohnya, jadi isian yang lebih panjang akan mengecil. Untuk area yang lebih lebar, kelompokkan teksnya dengan kotak transparan seukuran area dan beri nama grup itu isi_….`);
   if (outlined) notes.push(`${outlined} kolom teks berasal dari teks yang di-outline: ukuran dan hurufnya diperkirakan, periksa di pengaturan kolom.`);
   if ([...svg.querySelectorAll("text")].some(text => !parseLayer(text.closest("[id]")?.getAttribute("id") ?? ""))) {

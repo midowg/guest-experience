@@ -31,7 +31,9 @@ const outlined = `<svg width="540" height="960" viewBox="0 0 540 960" xmlns="htt
 describe("Figma layer names", () => {
   it("reads isi_ and foto_ layers into keys and labels, and ignores the rest", () => {
     expect(parseLayer("isi_nama_fasilitator")).toEqual({ id: "isi_nama_fasilitator", kind: "text", key: "nama_fasilitator", label: "Nama fasilitator" });
-    expect(parseLayer("foto-utama")).toMatchObject({ kind: "photo", key: "utama" });
+    expect(parseLayer("foto-utama")).toMatchObject({ kind: "photo", key: "foto_utama", label: "Foto utama" });
+    // The same name for a text and a photo makes two boxes.
+    expect(parseLayer("foto_fasilitator")?.key).not.toBe(parseLayer("isi_fasilitator")?.key);
     expect(parseLayer("isi_judul_2")?.key).toBe("judul");
     expect(parseLayer("Bersama")).toBeNull();
     expect(parseLayer("isi_")).toBeNull();
@@ -52,15 +54,15 @@ describe("Figma SVG import", () => {
     const result = readFigmaSvg(liveText, measure);
     expect(result.format).toBe("post");
     const byKey = Object.fromEntries(result.fields.map(field => [field.key, field]));
-    expect(Object.keys(byKey)).toEqual(["judul", "nama_fasilitator", "utama", "fasilitator"]);
+    expect(Object.keys(byKey)).toEqual(["judul", "nama_fasilitator", "foto_utama", "foto_fasilitator"]);
     expect(byKey.judul).toMatchObject({ kind: "text", editable: true, font: "playfair", sizeMax: 96, color: "#0f4a3a", maxLines: 2, hint: "Meramu Rempah Nusantara", tone: "" });
     expect(byKey.judul.lineHeight).toBe(1);
     expect(byKey.judul.box.post).toMatchObject({ x: 64, y: 40, w: 600 });
     expect(byKey.judul.box.story).toBeNull();
     expect(byKey.nama_fasilitator).toMatchObject({ font: "nunito", weight: 700, sizeMax: 40 });
-    expect(byKey.utama).toMatchObject({ kind: "photo", radius: 0 });
-    expect(byKey.utama.box.post).toEqual({ x: 0, y: 215, w: 1080, h: 660 });
-    expect(byKey.fasilitator.radius).toBe(500);
+    expect(byKey.foto_utama).toMatchObject({ kind: "photo", radius: 0 });
+    expect(byKey.foto_utama.box.post).toEqual({ x: 0, y: 215, w: 1080, h: 660 });
+    expect(byKey.foto_fasilitator.radius).toBe(500);
     // Text boxes leave the background; photo shapes and fixed text stay in it.
     expect(result.background).not.toContain("isi_judul");
     expect(result.background).toContain("foto_utama");
@@ -79,15 +81,25 @@ describe("Figma SVG import", () => {
     expect(title).toMatchObject({ key: "judul", color: "#9c3d22", maxLines: 1 });
     expect(title.sizeMax).toBe(Math.round(120 * 0.95));
     expect(title.box.story).toMatchObject({ x: 72, w: 800 });
-    expect(photo).toMatchObject({ key: "utama", radius: 24 });
+    expect(photo).toMatchObject({ key: "foto_utama", radius: 24 });
     expect(photo.box.story).toEqual({ x: 0, y: 600, w: 1080, h: 600 });
     expect(result.notes.join(" ")).toMatch(/di-outline/);
+  });
+
+  it("takes type hints from a prepared layer, since outlined text keeps no type", () => {
+    const prepared = `<svg width="1080" height="1350" xmlns="http://www.w3.org/2000/svg"><g id="isi_judul" data-box="61 150 600 150" data-font="playfair" data-size="66" data-lines="3" data-line-height="1.05" data-color="#073E34" data-hint="Judul sesi"><rect width="600" height="150" fill="none"/><path d="M0 0h1v1z" fill="#073E34"/></g></svg>`;
+    const [title] = readFigmaSvg(prepared, measure).fields;
+    expect(title).toMatchObject({ font: "playfair", sizeMax: 66, maxLines: 3, lineHeight: 1.05, color: "#073e34", hint: "Judul sesi" });
+    // A clear area box is the field's box, as drawn.
+    expect(title.box.post).toEqual({ x: 61, y: 150, w: 600, h: 150 });
   });
 
   it("explains a frame of another size and a frame without boxes", () => {
     expect(() => readFigmaSvg(`<svg width="800" height="300" xmlns="http://www.w3.org/2000/svg"><rect id="isi_a" width="10" height="10"/></svg>`, measure)).toThrow(/tidak cocok/);
     expect(() => readFigmaSvg(`<svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg"><rect id="hiasan" width="10" height="10"/></svg>`, measure)).toThrow(/isi_/);
     expect(() => readFigmaSvg("bukan svg", measure)).toThrow(/bukan SVG/);
+    // An export without "Include id" carries only Figma's own ids.
+    expect(() => readFigmaSvg(`<svg width="1080" height="1350" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_43_3)"><rect width="10" height="10"/></g><defs><clipPath id="clip0_43_3"><rect width="1080" height="1350"/></clipPath></defs></svg>`, measure)).toThrow(/tidak membawa nama layer/);
   });
 
   it("adds a second size to the same boxes, keeping what the admin set, after a first Figma import", () => {
@@ -99,7 +111,7 @@ describe("Figma SVG import", () => {
     expect(title).toMatchObject({ label: "Judul sesi", editable: false, value: "Tetap" });
     expect(title.box.post).toBeTruthy();
     expect(title.box.story).toMatchObject({ x: 72 });
-    expect(merged.filter(field => field.key === "utama")).toHaveLength(1);
+    expect(merged.filter(field => field.key === "foto_utama")).toHaveLength(1);
     expect(merged.some(field => field.key === "lokasi")).toBe(true);
     // From a gallery design, the import replaces the boxes.
     expect(mergeImport(edited, false, story)).toEqual(story.fields);

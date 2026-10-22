@@ -5,14 +5,16 @@ import { PosterCanvas } from "@/components/poster/PosterCanvas";
 import { backgroundPng, importInBrowser } from "@/components/admin/editor/blocks/figma-import";
 import { emptyPoster, posterFormatSetups, type PosterSettings } from "@/lib/poster";
 
-/** Runs the real import on the sample SVG: boxes measured by the browser, background drawn to PNG (kept local). */
+/** Runs the real import on a sample SVG (?berkas= from public/dev/): boxes measured by the browser, background drawn to PNG (kept local). */
 export function FigmaCheck() {
   const [poster, setPoster] = useState<PosterSettings | null>(null);
   const [report, setReport] = useState("");
   useEffect(() => {
     (async () => {
       try {
-        const result = importInBrowser(await (await fetch("/dev/contoh-figma.svg")).text());
+        // ?berkas=nama.svg picks another file from public/dev/ (development only).
+        const picked = new URLSearchParams(location.search).get("berkas") ?? "contoh-figma.svg";
+        const result = importInBrowser(await (await fetch(`/dev/${encodeURIComponent(picked.replace(/[^\w.-]/g, ""))}`)).text());
         const png = await backgroundPng(result.background, result.format);
         const url = URL.createObjectURL(png);
         setPoster({ ...emptyPoster(), enabled: true, formats: { ...posterFormatSetups([]), [result.format]: { enabled: true, background: { url, alt: "", srcset: [] } } }, fields: result.fields });
