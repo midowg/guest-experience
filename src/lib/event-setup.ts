@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parseContactPhone } from "./contact-phone";
 import { standardQuestions, templateKeys, templateOf } from "./event-templates";
+import { presetPoster } from "./poster-presets";
 import { createSeedEvent } from "./seed-event";
 import { eventTimezones } from "./timezones";
 import type { EventRecord, SectionKey } from "./types";
@@ -28,6 +29,8 @@ export const setupSchema = z.object({
   rsvp_closes_at: timestamp.nullable(),
   contact_name: text(150),
   contact_phone: text(30).refine(value => !value || parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890."),
+  /** A Tim Werkudara member to be the PIC; the server copies their details. */
+  pic_staff_id: z.union([z.uuid(), z.literal("")]).default(""),
 }).superRefine((setup, ctx) => {
   if (setup.ends_at && Date.parse(setup.ends_at) <= Date.parse(setup.starts_at)) ctx.addIssue({ code: "custom", path: ["ends_at"], message: "Waktu selesai harus setelah waktu mulai." });
   if (setup.rsvp_closes_at && Date.parse(setup.rsvp_closes_at) > Date.parse(setup.starts_at)) ctx.addIssue({ code: "custom", path: ["rsvp_closes_at"], message: "Batas RSVP sebaiknya sebelum acara dimulai." });
@@ -84,6 +87,7 @@ export function buildEventFromSetup(setup: EventSetup, ids: Ids): EventRecord {
     theme: { key: template?.theme ?? "werkudara", corners: "square" },
     prepare: { ...base.prepare, items: (template?.prepare ?? []).map(card => ({ icon: card.icon, title: card.title, description: "", list: [] })) },
   }, setup, ids);
+  if (template?.poster) event.poster = presetPoster(template.poster, event);
   const feedback = setup.modules.includes("feedback");
   return {
     ...event,
@@ -108,9 +112,9 @@ export function copyEventWithSetup(source: EventRecord, setup: EventSetup, ids: 
     translations: { ...source.translations, en: { ...source.translations.en, agenda: {} } },
   };
   const copy = apply(moved, { ...setup, rsvp_closes_at: setup.rsvp_closes_at ?? shift(source.rsvp_closes_at) }, ids);
-  // English rundown texts follow their sessions to the new ids.
-  const agendaEn = Object.fromEntries(source.agenda.flatMap((item, index) => source.translations.en.agenda[item.id] ? [[copy.agenda[index].id, source.translations.en.agenda[item.id]]] : []));
-  return { ...copy, translations: { ...copy.translations, en: { ...copy.translations.en, agenda: agendaEn } } };
+  // English rundown texts and activity details follow their sessions to the new ids.
+  const remap = <T,>(byId: Record<string, T>) => Object.fromEntries(source.agenda.flatMap((item, index) => byId[item.id] ? [[copy.agenda[index].id, byId[item.id]]] : []));
+  return { ...copy, agenda_details: remap(source.agenda_details ?? {}), translations: { ...copy.translations, en: { ...copy.translations.en, agenda: remap(source.translations.en.agenda) } } };
 }
 
 /** What still needs writing after the survey, for its last step and the editor's first visit. */

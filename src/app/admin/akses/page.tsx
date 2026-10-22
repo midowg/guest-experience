@@ -1,5 +1,7 @@
 import { CircleAlert, CircleCheck, LogOut, MapPin, MonitorSmartphone, Sparkles } from "lucide-react";
-import { AdminShell, SetupNotice } from "@/components/admin/AdminShell";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { Notice } from "@/components/ui";
 import styles from "@/components/admin/admin.module.css";
 import { formatDateTime } from "@/lib/format";
@@ -26,13 +28,14 @@ function place(entry: AccessEntry) {
 }
 
 export default async function AccessLogPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  await requireAdminPage();
+  // The access log belongs with the super admin; for anyone else the page does not exist.
+  if ((await requireAdminPage()) !== "super") notFound();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const params = await searchParams;
   const filter = filters.find(item => item.key === params.jenis)?.key ?? "semua";
   const { entries, missing } = await listAccessLog(filter);
   return <AdminShell>
-    <p className="eyebrow">Keamanan</p>
+    <p className="eyebrow"><Link href="/admin/super">Dashboard super admin</Link> · Keamanan</p>
     <h1 className={styles.title}>Log akses admin</h1>
     <p className={styles.lead}>Setiap percobaan masuk dan keluar tercatat di sini. Password dipakai bersama, jadi log menunjukkan perangkat dan lokasi, bukan nama orangnya. ID perangkat adalah kode acak yang tersimpan di browser; berganti bila cookie dihapus atau memakai browser lain.</p>
     <nav className={styles.filterChips} aria-label="Saring log">

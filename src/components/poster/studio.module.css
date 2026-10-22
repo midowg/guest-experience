@@ -1,0 +1,58 @@
+/* The page around the poster: actions on top, the poster, and the panel that fills a box. */
+.studio { display: grid; gap: var(--space-3); }
+.bar { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; justify-content: space-between; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.actions :global(.button) { min-height: 44px; padding: .5rem 1rem; }
+.formats { display: inline-flex; padding: 3px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-background); }
+.formats button { min-height: 38px; padding: 0 var(--space-3); border: 0; border-radius: 999px; background: none; color: var(--color-text); font: inherit; font-weight: 700; cursor: pointer; }
+.formats button[aria-pressed="true"] { background: var(--color-primary); color: var(--color-on-primary); }
+.status { min-height: 1.5em; margin: 0; color: var(--color-caption); font-size: .9375rem; }
+
+.layout { display: grid; gap: var(--space-4); align-items: start; justify-items: center; }
+@media (min-width: 64rem) { .layout[data-editing] { grid-template-columns: minmax(0, 1fr) 22rem; justify-items: stretch; } }
+/* The card as large as fits: by width on a phone, by the window's height on a wide screen. */
+.stage { width: 100%; max-width: min(100%, var(--cap, 36rem), calc((100svh - 11rem) * var(--ratio, .8))); margin-inline: auto; }
+@media (max-width: 47.99rem) { .stage { max-width: 100%; } }
+
+.panel { display: grid; gap: var(--space-3); width: 100%; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-background); }
+@media (min-width: 64rem) { .panel { position: sticky; top: var(--space-4); } }
+/* On a phone the open box is filled from a sheet at the bottom; the poster stays in sight above it. */
+@media (max-width: 63.99rem) {
+  .layout[data-editing] { padding-bottom: 50svh; }
+  .panel[data-open] { position: fixed; right: 0; bottom: 0; left: 0; z-index: 40; max-height: 46svh; overflow-y: auto; padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom)); border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(20, 30, 25, .18); }
+  /* While one box is open the sheet holds only its editor; Tutup brings the list back. */
+  .panel[data-open] .fieldList, .panel[data-open] .reset { display: none; }
+}
+@media (max-width: 47.99rem) {
+  .actions { width: 100%; }
+  .actions :global(.button) { flex: 1 1 auto; min-height: 42px; padding: .4rem .75rem; font-size: .9375rem; }
+}
+.panelHint { margin: 0; color: var(--color-caption); }
+.editor { display: grid; gap: var(--space-2); }
+.editorHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.editorHead label { font-weight: 800; }
+.editorHead button { display: inline-grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 10px; background: var(--color-surface); color: var(--color-text); cursor: pointer; }
+.counter { display: grid; gap: 4px; margin: 0; color: var(--color-caption); font-size: .875rem; }
+.counter strong { color: var(--color-danger); font-weight: 700; }
+.photoActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.photoActions :global(.button) { min-height: 44px; padding: .5rem 1rem; cursor: pointer; }
+.zoom { display: grid; grid-template-columns: auto 1fr; gap: var(--space-3); align-items: center; font-weight: 700; }
+.fieldList { display: flex; flex-wrap: wrap; gap: 6px; }
+.fieldList button { min-height: 34px; padding: 0 12px; border: 1px dashed var(--color-border); border-radius: 999px; background: none; color: var(--color-text); font: inherit; font-size: .875rem; cursor: pointer; }
+.fieldList button[data-filled] { border-style: solid; }
+.fieldList button[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary); }
+.reset { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--color-danger); font: inherit; font-size: .875rem; cursor: pointer; }
+
+.page { min-height: 100svh; padding: var(--space-5) var(--space-4) var(--space-7); background: var(--color-background); color: var(--color-text); }
+.page > * { max-width: 72rem; margin-inline: auto; }
+.head { display: grid; gap: var(--space-1); margin-bottom: var(--space-4); }
+.head h1 { margin: 0; color: var(--color-heading); font-family: var(--font-heading); font-weight: var(--heading-weight, 700); font-size: clamp(1.75rem, 5vw, 2.5rem); line-height: 1.1; }
+.head p { margin: 0; max-width: 40rem; color: var(--color-caption); }
+.eyebrow { font-size: .8125rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+
+.choices { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.formats { flex-wrap: wrap; border-radius: 22px; }
+.palettes { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.palettes button { display: inline-flex; overflow: hidden; width: 54px; height: 32px; padding: 0; border: 2px solid var(--color-border); border-radius: 999px; background: none; cursor: pointer; }
+.palettes button span { flex: 1; }
+.palettes button[aria-pressed="true"] { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-primary); }

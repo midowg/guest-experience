@@ -22,6 +22,14 @@ Terapkan migrasi yang belum ada, **urut nama berkas**, lewat Supabase Dashboard 
 | `202610200004_rsvp_needs.sql` | RSVP bertahap: rombongan, makanan, akses, opsi foto |
 | `202610200005_admin_roles.sql` | Super admin dan acara tersembunyi |
 | `202610200006_admin_modules.sql` | Modul yang boleh dipakai admin biasa |
+| `202610200007_admin_templates.sql` | Templat yang tampil di Buat acara (bawaan: Kunjungan klien, Trip klien) |
+| `202610210001_event_beo.sql` | BEO hospitality: jumlah disiapkan, status, dan riwayat revisi |
+| `202610210002_gallery_photos.sql` | Galeri foto acara di R2 (boleh menunggu sampai bucket siap) |
+| `202610210003_tickets_checkin.sql` | Tiket QR untuk tamu undangan personal dan check-in di pintu masuk |
+| `202610210004_short_links.sql` | Kode pendek acara (`/AB23CD`) dan token tamu 8 karakter (`/AB23CD/k7q2mx9p`). Acara dan undangan lama langsung mendapat kode |
+| `202610210005_staff_members.sql` | Daftar Tim Werkudara untuk mengisi PIC |
+| `202610220001_studio_poster.sql` | Templat "Poster sesi / festival" dan modul Studio Poster boleh diatur untuk admin biasa (Studio Poster sendiri tetap jalan tanpa migrasi ini) |
+| `202610220002_poster_designs.sql` | Pustaka desain poster ("Simpan sebagai desain baru") |
 
 Cek hasilnya (hanya membaca). Semua kolom harus `true`:
 
@@ -33,7 +41,15 @@ select
   exists (select 1 from information_schema.columns where table_schema='public' and table_name='event_invitations' and column_name='open_count') as "200003",
   exists (select 1 from information_schema.columns where table_schema='public' and table_name='rsvps' and column_name='party_size') as "200004",
   exists (select 1 from information_schema.columns where table_schema='public' and table_name='events' and column_name='admin_hidden') as "200005",
-  to_regclass('public.admin_settings') is not null as "200006";
+  to_regclass('public.admin_settings') is not null as "200006",
+  exists (select 1 from information_schema.columns where table_schema='public' and table_name='admin_settings' and column_name='enabled_templates') as "200007",
+  to_regclass('public.event_beo') is not null as "210001",
+  to_regclass('public.gallery_photos') is not null as "210002",
+  to_regclass('public.event_tickets') is not null as "210003",
+  exists (select 1 from information_schema.columns where table_schema='public' and table_name='events' and column_name='code') as "210004",
+  to_regclass('public.staff_members') is not null as "210005",
+  coalesce((select pg_get_constraintdef(oid) like '%poster-sesi%' from pg_constraint where conname = 'admin_settings_enabled_templates_check'), false) as "220001",
+  to_regclass('public.poster_designs') is not null as "220002";
 ```
 
 Migrasi bersifat menambah. Versi lama yang masih online tetap berjalan setelah migrasi diterapkan, jadi urutannya aman: **database dulu, baru kode**.

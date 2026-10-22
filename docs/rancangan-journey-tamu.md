@@ -123,7 +123,7 @@ Modul baru yang disepakati: **titik kumpul dan transport**, **daftar bawaan**, *
 
 **Usulan, menunggu tinjauan** (papan 05):
 
-- Font admin **Plus Jakarta Sans** agar lebih ramah dan mudah dibaca. Tampilan tamu tetap memakai font tema.
+- Font **Nunito** untuk admin dan halaman tamu (keputusan 21 Okt): membulat, ramah, dan jelas di ukuran kecil. Tema hanya boleh mengganti font judul.
 - **Warna per tahap**: Persiapan magenta, Tamu biru, Hari H oranye, Sesudah acara hijau, Pengaturan abu. Warna diambil dari warna sekunder brand Werkudara; kuning tetap khusus untuk "perlu perhatian".
 
 ## Tampilan tamu dan tema
@@ -151,6 +151,7 @@ Disepakati 19 Oktober setelah tinjauan tata letak editor yang terlalu panjang (p
   4. Ringkasan: bagian yang tampil, isi awal yang sudah ditulis (dalam Indonesia dan English), pratinjau tema, dan daftar **Setelah ini, lengkapi**. Isi awal adalah contoh yang perlu ditinjau.
 - **Keputusan 20 Okt — isian kosong, pilihan jelas.** Semua kolom teks di survei dan di draf baru **dimulai kosong**; draf baru tidak lagi berisi konten contoh. Jawaban yang bisa ditebak (sapaan, isi undangan, penutup, judul dan cerita pengalaman, momen, pesan terima kasih, judul dan peran kontak, teks ulasan) tampil sebagai **chip** di bawah kolom: sekali klik mengganti isinya, dan tautan **Kembalikan teks sebelumnya** muncul bila teks yang sudah diketik tertimpa. Chip diambil dari lembar *Isi awal templat*, dengan kalimat templat terpilih di urutan pertama. Kolom yang tidak bisa ditebak (nama acara, alamat, nama PIC, rundown, catatan kedatangan) menampilkan **contoh kalimat** abu-abu. Lokasi punya tombol **Pakai alamat kantor Werkudara** yang mengisi nama tempat, alamat, dan tautan Maps sekaligus.
 - **Sudah dibangun (20 Okt).** Templat mengatur jenis, audiens, tema, bagian yang tampil, kartu persiapan awal (judul saja), dan tiga pertanyaan survei standar bila survei dipilih. Salinan acara memindahkan rundown, batas RSVP, dan pembukaan survei mengikuti tanggal baru. Modul yang belum ada (tiket dan kursi, check-in, galeri acara) ditandai *Segera*.
+- **Keputusan rapat 20 Okt (sore) — sederhanakan.** Uji internal menunjukkan alur terlalu panjang dan pilihan tema membingungkan. Fokus sekarang: **acara hosting klien** dengan templat siap pakai **Kunjungan klien** dan **Trip klien**; templat lain disembunyikan dan bisa dimunculkan super admin (*Templat Buat acara* di dashboard super admin, migrasi `202610200007`). **Buat acara jadi 2 langkah**: pilih templat dari galeri miniatur → nama, waktu, dan lokasi. Audiens, bahasa, cara mengundang, kalimat, dan modul tidak lagi ditanyakan; semuanya mengikuti templat dan bisa diubah di editor. **Tema ikut templat**: blok *Jenis, audiens, dan tampilan* hanya untuk super admin. **Editor dipendekkan**: bagian yang belum dipakai acara dilipat di *Bagian lain yang bisa ditambahkan*, dan panelnya punya sakelar *Tampilkan bagian ini di undangan*. Draf kosong hanya untuk super admin.
 - **Lombok Guidebook** dipakai ulang sebagai **struktur templat Trip klien**, tanpa data pribadi tamu, setelah modul jadwal per hari dan handbook tersedia.
 
 ## Form tamu bertahap
@@ -236,23 +237,31 @@ Prinsipnya: kumpulkan seperlunya dan simpan sesingkat mungkin. Selama admin belu
 
 Setiap login berhasil, password salah, dan keluar dicatat di **Log akses** (`/admin/akses`): waktu, IP, perkiraan kota dan negara, browser dan OS, serta ID perangkat acak di cookie browser, dengan tanda **Perangkat baru**. Nomor seri atau MAC laptop tidak bisa dibaca dari browser, jadi ID perangkat adalah pengenal terbaik yang tersedia; ia berganti bila cookie dihapus atau memakai browser lain. Karena password dipakai bersama, log menunjukkan perangkat dan lokasi, bukan nama orang. Akun admin per orang dan pembagian peran dicatat sebagai tahap lanjutan.
 
-## Kondisi proyek saat rangkuman dibuat
+## Kondisi proyek (21 Oktober 2026)
 
-- Sudah ada: acara, RSVP, tautan umum dan personal, lokasi, unggah foto lokasi dan galeri foto pada halaman acara, kontak PIC, survei feedback, dan tautan ulasan Google opsional.
-- RSVP saat ini menanyakan alergi, **belum** seluruh preferensi makanan atau kebutuhan aksesibilitas.
-- Perubahan lokal yang belum di-commit (branch `feat/konten-e-guide-fleksibel`): konten e-guide opsional (pengantar kontak, jabatan dan organisasi PIC, pengantar survei, judul/deskripsi/teks tombol ulasan) serta bagian Our Team yang nonaktif secara default. Tes otomatis lulus per 14 Oktober (210 tes); lint, typecheck, dan build belum dijalankan untuk perubahan itu.
-- Migrasi undangan personal (`202610110001_personal_invitations.sql`) belum diterapkan ke Supabase remote menurut `docs/setup.md`; keadaan data Supabase live belum diverifikasi dalam diskusi ini.
-- Belum ada: jenis acara dan audiens, fase, tema tamu, panduan rute bergambar, jadwal per hari, handbook, tiket, kursi, denah, check-in, BEO, galeri pasca-acara di R2, halaman terima kasih, ajakan kolaborasi, pustaka konten bersama, dukungan beberapa bahasa, serta login.
+- **Sudah dibangun** (branch `feat/acara-hosting-klien`):
+  - login admin dengan log akses, dan super admin (visibilitas acara, modul, templat);
+  - Buat acara 2 langkah dengan galeri templat Kunjungan klien dan Trip klien;
+  - zona WIB/WITA/WIT, serta kamus wording ID/EN dengan tombol bahasa;
+  - undangan per tamu dengan impor, kirim WhatsApp, dan status dibuka;
+  - RSVP bertahap (pendamping, makanan, akses, opsi foto) dan persiapan tamu;
+  - jadwal per hari dengan detail kegiatan dan kontak darurat, plus salinan offline halaman tamu;
+  - berkas kalender .ics, pratinjau tautan WhatsApp, QR tautan umum, dan sambutan halaman depan;
+  - BEO dengan cetak dan PDF versi penyedia dan internal;
+  - galeri foto R2 (menunggu bucket), tiket QR, dan check-in;
+  - font Nunito untuk admin dan tamu.
+- **Migrasi yang perlu diterapkan pemilik**: daftar dan cara mengeceknya di [go-live internal](go-live-internal.md). Semua migrasi lulus uji SQL lokal.
+- **Belum ada**: tiket untuk RSVP tautan umum, check-in offline, denah dan kursi, dokumen pribadi per tamu, notifikasi push, retensi data otomatis, dan akun admin per orang.
 
 ## Hal yang masih terbuka
 
-- Tinjauan usulan: font admin, warna per tahap, serta kebijakan BEO, retensi data, dan izin foto.
+- Tinjauan usulan: warna per tahap, serta kebijakan BEO, retensi data, dan izin foto. Font sudah diputuskan: Nunito.
 - Tinjauan draf wording (`docs/wording-draf.xlsx`) oleh tim, termasuk istilah tradisi untuk templat Nyadran.
-- Kapan migrasi database untuk form tamu bertahap (makanan jamak, akses, opsi foto) dan tiket dilakukan.
+- Kapan migrasi BEO, galeri, dan tiket (`202610210001`–`003`) diterapkan.
 - Notifikasi push: kapan dibangun, dan siapa yang boleh mengirim kabar perubahan jadwal.
 - Cara tautan per halaman untuk deck selain PDF (Google Slides, Canva).
 - Nama domain baru.
-- Bucket R2 baru dan kredensialnya (dibuat oleh pemilik), diperlukan sebelum galeri acara dibangun.
+- Bucket R2 baru dan kredensialnya (dibuat oleh pemilik). Kode galeri sudah siap dan menunggu variabel R2.
 - Akun admin per orang dan pembagian peran (tahap lanjutan; sekarang password bersama).
 - Tampilan fase otomatis (digambar dulu sebelum dibangun).
 - Bahasa pertama yang didukung, penanggung jawab dan proses persetujuan terjemahan, serta perilaku saat terjemahan belum tersedia.

@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import type { EventRecord } from "@/lib/types";
+import type { EventRecord, StaffMember } from "@/lib/types";
+import { contactFromStaff } from "@/lib/staff";
 import { buildEventFromSetup, copyEventWithSetup, type EventSetup } from "@/lib/event-setup";
 import { withoutModules, type AdminModule } from "@/lib/admin-modules";
 import { eventSchema } from "@/lib/validation";
@@ -33,6 +34,26 @@ export async function getPublicEvent(slug: string): Promise<EventRecord | null> 
   if (error) databaseError(error);
   return data?.document ? normalizeEvent(data.document as EventRecord) : null;
 }
+/** Not migrated yet (202610210004): there are no codes, so nothing is found by code. */
+const noCodeColumn = (error: { code?: string; message?: string }) => error.code === "42703" || /code/.test(error.message ?? "") && /column/.test(error.message ?? "");
+
+/** A published event by its short code (`AB23CD`). */
+export async function getPublicEventByCode(code: string): Promise<EventRecord | null> {
+  const { data, error } = await createPublicClient().from("event_documents").select("document").eq("code", code).eq("status", "published").maybeSingle();
+  if (error) { if (noCodeColumn(error)) return null; databaseError(error); }
+  return data?.document ? normalizeEvent(data.document as EventRecord) : null;
+}
+
+/** An admin address names an event by its code or its id; both lead to the id. */
+export async function resolveEventRef(ref: string): Promise<string | null> {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref)) return ref.toLowerCase();
+  const code = ref.toUpperCase();
+  if (!/^[A-HJKMNP-Z2-9]{6}$/.test(code)) return null;
+  const { data, error } = await createPrivilegedClient().from("events").select("id").eq("code", code).maybeSingle();
+  if (error) { if (noCodeColumn(error)) return null; databaseError(error); }
+  return (data?.id as string | undefined) ?? null;
+}
+
 export async function getAdminEvent(id: string): Promise<EventRecord | null> {
   return readAdminEvent(id);
 }
@@ -65,9 +86,13 @@ export async function deleteEvent(id: string): Promise<{ slug: string; rsvps: nu
  * A new draft: from the "Buat acara" answers (template or blank), or a copy of an earlier event,
  * optionally under the survey's new name and date. Guest data is never copied.
  */
-export async function createEvent(duplicateId?: string, setup?: EventSetup, disabled: AdminModule[] = []): Promise<EventRecord> {
+export async function createEvent(duplicateId?: string, setup?: EventSetup, disabled: AdminModule[] = [], pic?: StaffMember | null): Promise<EventRecord> {
   // New drafts never start with a module the admin may not use, whatever the template or source had.
-  const clean = (event: EventRecord) => disabled.length ? withoutModules(event, disabled) : event;
+  // A PIC picked from the team fills the contact in the same save.
+  const clean = (event: EventRecord) => {
+    const allowed = disabled.length ? withoutModules(event, disabled) : event;
+    return pic ? { ...allowed, contact: contactFromStaff(allowed.contact, pic) } : allowed;
+  };
   const id = randomUUID();
   const ids = { id, uuid: () => randomUUID(), now: new Date().toISOString() };
   if (!duplicateId) {
@@ -77,6 +102,11 @@ export async function createEvent(duplicateId?: string, setup?: EventSetup, disa
   const source = await readAdminEvent(duplicateId);
   if (!source) throw new ServiceError(404, "Acara sumber tidak ditemukan.");
   if (setup) return saveEvent(id, clean(copyEventWithSetup(source, setup, ids)), true);
-  const draft: EventRecord = { ...source, id, status: "draft", slug: `${source.slug.slice(0, 62)}-${id}`, agenda: source.agenda.map(item => ({ ...item, id: randomUUID() })), feedback_questions: source.feedback_questions.map(question => ({ ...question, id: randomUUID() })) };
+  const agenda = source.agenda.map(item => ({ ...item, id: randomUUID() }));
+  // Details and English texts keyed by session id follow their sessions to the new ids.
+  const remap = <T,>(byId: Record<string, T>) => Object.fromEntries(source.agenda.flatMap((item, index) => byId[item.id] ? [[agenda[index].id, byId[item.id]]] : []));
+  const draft: EventRecord = { ...source, id, status: "draft", slug: `${source.slug.slice(0, 62)}-${id}`, agenda,
+    agenda_details: remap(source.agenda_details ?? {}), translations: { ...source.translations, en: { ...source.translations.en, agenda: remap(source.translations.en.agenda) } },
+    feedback_questions: source.feedback_questions.map(question => ({ ...question, id: randomUUID() })) };
   return saveEvent(id, clean(draft), true);
 }

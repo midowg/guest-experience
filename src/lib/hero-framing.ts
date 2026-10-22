@@ -1,5 +1,6 @@
-import { emptyAfter, emptyEnglish, emptyExperience, emptyPrepare, emptyRoute } from "./validation";
+import { emptyAfter, emptyEmergency, emptyEnglish, emptyExperience, emptyPrepare, emptyRoute } from "./validation";
 import type { EventRecord, HeroFraming, HeroImage, PhotoFrame } from "./types";
+import { normalizePoster } from "./poster";
 
 export function defaultFraming(focus: HeroImage["focus"] = "center"): HeroFraming {
   const frame = { x: 50, y: focus === "top" ? 0 : focus === "bottom" ? 100 : 50, zoom: 1 };
@@ -16,6 +17,7 @@ export function normalizeEvent(event: EventRecord): EventRecord {
       name: event.contact?.name ?? "", phone: event.contact?.phone ?? "", channel: event.contact?.channel ?? "whatsapp",
       heading: event.contact?.heading ?? "", description: event.contact?.description ?? "",
       role: event.contact?.role ?? "", organization: event.contact?.organization ?? "",
+      photo: event.contact?.photo ?? { url: "", alt: "", srcset: [] }, staff_id: event.contact?.staff_id ?? "",
     },
     review_heading: event.review_heading ?? "", review_description: event.review_description ?? "", review_button_label: event.review_button_label ?? "",
     feedback_description: event.feedback_description ?? "", team_image: event.team_image ?? { url: "", alt: "", srcset: [] },
@@ -31,6 +33,9 @@ export function normalizeEvent(event: EventRecord): EventRecord {
     language: event.language ?? "id",
     translations: { en: { ...emptyEnglish, ...event.translations?.en, agenda: event.translations?.en?.agenda ?? {} } },
     guest_estimate: event.guest_estimate ?? null,
+    agenda_details: event.agenda_details ?? {}, presentation_pdf_url: event.presentation_pdf_url ?? "",
+    emergency: { ...emptyEmergency, ...event.emergency },
+    poster: normalizePoster(event.poster),
   };
 }
 export function dragFrame(frame: PhotoFrame, dx: number, dy: number, width: number, height: number, naturalWidth: number, naturalHeight: number): PhotoFrame {

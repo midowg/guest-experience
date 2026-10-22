@@ -1,4 +1,5 @@
 import type { EventRecord, SectionKey } from "./types";
+import { POSTER_LABEL } from "./poster";
 
 /**
  * Event modules the super admin can switch off for regular admins. "Tentang acara" is the
@@ -16,6 +17,7 @@ export const adminModules = [
   { key: "personal", label: "Tautan per tamu", description: "Undangan personal dengan nama tamu, impor daftar tamu, dan kirim WhatsApp.", group: "Tamu" },
   { key: "contact", label: "Kontak PIC", description: "Kartu kontak WhatsApp atau telepon panitia.", group: "Tamu" },
   { key: "bilingual", label: "Dua bahasa / English", description: "Halaman tamu dalam English atau dengan tombol ID/EN.", group: "Tamu" },
+  { key: "poster", label: POSTER_LABEL, description: "Peserta membuat poster sesinya sendiri dari templat, lalu mengunduh dan membagikannya.", group: "Tamu" },
   { key: "feedback", label: "Survei feedback", description: "Survei pengalaman tamu setelah acara.", group: "Sesudah acara" },
   { key: "review", label: "Ulasan Google", description: "Ajakan sukarela menulis ulasan Google.", group: "Sesudah acara" },
   { key: "collaboration", label: "Ajakan kolaborasi", description: "Kartu ajakan bermitra di halaman terima kasih.", group: "Sesudah acara" },
@@ -45,6 +47,7 @@ export function moduleActive(event: EventRecord, key: AdminModule): boolean {
     case "bilingual": return (event.language ?? "id") !== "id";
     case "review": return event.review_enabled;
     case "collaboration": return !!event.after?.collaboration.enabled;
+    case "poster": return !!event.poster?.enabled || event.event_kind === "kartu";
     default: return false;
   }
 }
@@ -80,5 +83,5 @@ export function withoutModules(event: EventRecord, disabled: AdminModule[]): Eve
 /** Editor blocks that belong wholly to one module. */
 export const moduleBlocks: Partial<Record<AdminModule, string>> = {
   experience: "experience", agenda: "agenda", location: "venue", gallery: "gallery", prepare: "prepare", team: "team", rsvp: "rsvp",
-  contact: "contact", feedback: "feedback_questions", review: "review", bilingual: "language",
+  contact: "contact", feedback: "feedback_questions", review: "review", bilingual: "language", poster: "poster",
 };

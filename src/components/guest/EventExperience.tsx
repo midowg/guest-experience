@@ -9,14 +9,17 @@ import { parseContactPhone } from "@/lib/contact-phone";
 import type { EventPhase, EventRecord, RsvpRecord, SectionKey } from "@/lib/types";
 import { themeStyle } from "@/lib/themes";
 import { Gallery, imageSrcSet, venuePhotos } from "./Gallery";
-import { InvitationHero, TimeRange, visibleSections } from "./InvitationHero";
+import { InvitationHero, visibleSections } from "./InvitationHero";
 import { FeedbackPanel, RsvpPanel } from "./GuestForms";
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
-import { AfterPanel, ExperienceContent, PrepareCards, RouteGuideContent, TodayPanel, teamPoints } from "./JourneyPanels";
+import { AfterPanel, ExperienceContent, PicAvatar, PrepareCards, RouteGuideContent, TodayPanel, teamPoints } from "./JourneyPanels";
 import { LanguageSwitch, WordingProvider, useEventLanguage, useWording } from "./language";
 import { localizeEvent } from "@/lib/wording/localize";
 import { offersSwitch, type Lang, type WordKey } from "@/lib/wording";
+import { AgendaList, EmergencyCard } from "./ProgramAgenda";
+import { CalendarButton } from "./CalendarSheet";
 import styles from "./guest.module.css";
+import { guestApi, guestServiceWorker } from "@/lib/routes";
 
 const navKeys: Record<SectionKey, WordKey> = { about: "nav.about", experience: "nav.experience", agenda: "nav.agenda", location: "nav.location", prepare: "nav.prepare", team: "nav.team", rsvp: "nav.rsvp", contact: "nav.contact", feedback: "nav.feedback" };
 
@@ -97,7 +100,7 @@ function Contact({ contact }: { contact: EventRecord["contact"] }) {
   if (!phone) return null;
   const whatsapp = contact.channel === "whatsapp";
   return <div className={styles.contactPanel}>
-    <h3>{contact.name}</h3>
+    <div className={styles.contactWho}><PicAvatar contact={contact} large /><h3>{contact.name}</h3></div>
     {contact.role && <p className={styles.contactDetail}>{contact.role}</p>}
     {contact.organization && <p className={styles.contactDetail}>{contact.organization}</p>}
     <p className={styles.contactPhone}>{phone.local}</p>
@@ -130,7 +133,7 @@ function Location({ event }: { event: EventRecord }) {
     {event.arrival_notes && <p className={styles.multiline}>{event.arrival_notes}</p>}
     <div className={styles.actions}>
       {event.location_url && <ButtonLink href={event.location_url} target="_blank" rel="noopener noreferrer">{t("location.open")} <ArrowUpRight size={18} aria-hidden="true" /><span className="sr-only">{t("common.newTab")}</span></ButtonLink>}
-      {event.address && <Button variant="secondary" onClick={copyAddress}><Copy size={16} aria-hidden="true" /> {t("location.copy")}</Button>}
+      {event.address && <Button type="button" variant="secondary" onClick={copyAddress}><Copy size={16} aria-hidden="true" /> {t("location.copy")}</Button>}
     </div>
     <p className={styles.copyStatus} role="status">{copyStatus}</p>
   </div>;
@@ -154,9 +157,13 @@ const afterSections = new Set<SectionKey>(["feedback", "contact"]);
  * already the right part of the journey; components rendered without it show the invitation.
  */
 type ExperienceProps = {
-  event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; rsvp: RsvpRecord | null; party_size_max?: number }; phase?: EventPhase;
+  event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; short_token?: string | null; rsvp: RsvpRecord | null; party_size_max?: number }; phase?: EventPhase;
   /** False until migration 202610200004: the RSVP then asks only about allergies, as before. */
   rsvpNeeds?: boolean;
+  /** Photos marked Tayang in the event gallery; after the event the page links to them. */
+  photoCount?: number;
+  /** False inside the editor's phone frame, where the "this is a preview" banner would only take space. */
+  previewNotice?: boolean;
 };
 
 /** Holds the guest's language; everything below reads its words and the event's texts in it. */
@@ -168,16 +175,23 @@ export function EventExperience({ event: source, ...props }: ExperienceProps) {
   </WordingProvider>;
 }
 
-function ExperienceBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
+function ExperienceBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, photoCount = 0, previewNotice = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
   const { lang, t, dateTime } = useWording();
+  // Keeps the last copy of this guest page for offline use (trips with weak signal). Production only.
+  useEffect(() => {
+    if (preview || process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register(guestServiceWorker.url, { scope: guestServiceWorker.scope }).catch(() => {});
+    // Phones that opened an older invitation still hold a worker limited to /e/; one is enough.
+    void navigator.serviceWorker.getRegistrations().then(list => list.filter(item => new URL(item.scope).pathname === guestServiceWorker.legacyScope).forEach(item => void item.unregister())).catch(() => {});
+  }, [preview]);
   // Counts the opening of a personal link once per browser session. Never in the admin preview.
   const openedToken = !preview && invitation ? invitation.token : null;
   useEffect(() => {
     if (!openedToken) return;
     const key = `wk_opened_${openedToken.slice(0, 16)}`;
     try { if (window.sessionStorage.getItem(key)) return; window.sessionStorage.setItem(key, "1"); } catch { /* storage blocked: still count */ }
-    void fetch(`/api/events/${encodeURIComponent(event.slug)}/i/${openedToken}/opened`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", keepalive: true }).catch(() => {});
-  }, [openedToken, event.slug]);
+    void fetch(guestApi.opened(event, openedToken), { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", keepalive: true }).catch(() => {});
+  }, [openedToken, event]);
   const [now, setNow] = useState<number | null>(null);
   const [rsvpSaved, setRsvpSaved] = useState(false);
   // The opening should arrive uninterrupted, so the bar stays away until the guest scrolls.
@@ -217,7 +231,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
   const feedbackOpen = now !== null && feedbackIsOpen(event, now);
   return <div lang={lang} className={styles.experience} data-theme={event.theme?.key ?? "werkudara"} data-phase={phase} style={themeStyle(event.theme)}>
     <a className={styles.skipLink} href="#event-content" onClick={focusAnchor}>{t("nav.skip")}</a>
-    {preview && <div className={styles.preview}><Notice>{t("preview.notice")}</Notice></div>}
+    {preview && previewNotice && <div className={styles.preview}><Notice>{t("preview.notice")}</Notice></div>}
     <header className={`${styles.siteHeader} ${headerShown ? styles.siteHeaderShown : styles.siteHeaderHidden}`}>
       <div className={`container ${styles.headerInner}`}>
         <a href="#event-content" onClick={focusAnchor} className={styles.brand} aria-label="Werkudara — kembali ke awal undangan">
@@ -233,7 +247,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
     <main id="event-content" tabIndex={-1}>
       {fallback && <p className={styles.langFallback}>{t("lang.fallback")}</p>}
       {phase === "day" ? <TodayPanel event={event} invitee={invitation?.name} now={now} firstSection={sections[0]?.key} />
-        : phase === "after" ? <AfterPanel event={event} invitee={invitation?.name} />
+        : phase === "after" ? <AfterPanel event={event} invitee={invitation?.name} photoCount={photoCount} />
         : <InvitationHero event={event} rsvpSaved={rsvpSaved} invitee={invitation?.name} />}
       {sections.map((section, index) => <RevealSection id={section.key} key={section.key} className={`${styles.section} ${section.key === "rsvp" ? styles.rsvpSection : ""}`.trimEnd()} labelledBy={`${section.key}-heading`}>
         <div className={`container ${styles.sectionGrid}`}>
@@ -250,7 +264,8 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             </>}
             {section.key === "agenda" && <>
               <div id="agenda-heading"><SectionHeading title={t("section.agenda.title")}><p>{t("section.agenda.tz", { zone: timezoneInfo[zoneOf(event.timezone)].label, zoneName: lang === "en" ? timezoneInfo[zoneOf(event.timezone)].nameEn : timezoneInfo[zoneOf(event.timezone)].name, offset: timezoneInfo[zoneOf(event.timezone)].offset })}</p></SectionHeading></div>
-              {event.agenda.length === 0 ? <p>{t("section.agenda.empty")}</p> : <ol className={styles.agenda}>{[...event.agenda].sort((a, b) => a.sort_order - b.sort_order).map(item => <li key={item.id}><div className={styles.agendaTime}><TimeRange start={item.starts_at} end={item.ends_at} timezone={event.timezone} /></div><div><h3>{item.title}</h3>{item.description && <p className={styles.multiline}>{item.description}</p>}</div></li>)}</ol>}
+              {event.agenda.length === 0 ? <p>{t("section.agenda.empty")}</p> : <AgendaList event={event} now={now} />}
+              <CalendarButton event={event} now={now} />
             </>}
             {section.key === "location" && <><div id="location-heading"><SectionHeading title={t("section.location.title")} /></div><Location event={event} /></>}
             {section.key === "prepare" && <>
@@ -276,6 +291,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             {section.key === "contact" && event.contact && <>
               <div id="contact-heading"><SectionHeading title={event.contact.heading || t("section.contact.title")}><p className={styles.multiline}>{event.contact.description || t("section.contact.sub")}</p></SectionHeading></div>
               <Contact contact={event.contact} />
+              <EmergencyCard event={event} />
             </>}
             {section.key === "feedback" && <>
               <div id="feedback-heading"><SectionHeading title={t("section.feedback.title")}><p className={styles.multiline}>{event.feedback_description || t("section.feedback.sub")}</p></SectionHeading></div>

@@ -1,10 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
 import { normalizeEvent } from "@/lib/hero-framing";
 import type { EventRecord } from "@/lib/types";
-import { EventEditor } from "./admin/EventEditor";
+import { EventEditor } from "@/components/admin/editor/EventEditor";
 import { EventExperience } from "./guest/EventExperience";
+import { openBlock } from "@/components/admin/editor/editor-test-helpers";
 
 vi.setConfig({ testTimeout: 20000 });
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }) }));
@@ -22,8 +23,8 @@ function storedBefore20Oct(): EventRecord {
 it("opens an older event in the editor, including its new blocks", () => {
   render(<EventEditor event={normalizeEvent(storedBefore20Oct())} />);
   for (const title of ["Persiapan tamu", "Bahasa & terjemahan", "Penerimaan RSVP"]) {
-    fireEvent.click(screen.getByRole("button", { name: `Ubah ${title}` }));
-    expect(screen.getByRole("dialog")).toBeTruthy();
+    openBlock(title);
+    expect(screen.getByRole("heading", { level: 2, name: title })).toBeTruthy();
   }
 });
 

@@ -1,4 +1,5 @@
 import type { EventRecord } from "./types";
+import { emptyPoster } from "./poster";
 
 export function createSeedEvent(): EventRecord {
   return {
@@ -12,7 +13,7 @@ export function createSeedEvent(): EventRecord {
     location_url: "https://maps.app.goo.gl/ctLcnKszth9QX83AA", location_embed_url: "", location_display: "manual",
     arrival_notes: "", review_url: "", review_enabled: false, review_heading: "", review_description: "", review_button_label: "", rsvp_enabled: true, rsvp_closes_at: null, invitation_mode: "open",
     feedback_enabled: false, feedback_opens_at: null, feedback_description: "",
-    contact: { name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "" },
+    contact: { name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "", photo: { url: "", alt: "", srcset: [] }, staff_id: "" },
     team_image: { url: "", alt: "", srcset: [] },
     sections: ["about", "experience", "agenda", "location", "prepare", "team", "rsvp", "contact", "feedback"].map(key => ({ key: key as EventRecord["sections"][number]["key"], enabled: !["contact", "team", "experience", "prepare"].includes(key) })),
     topics: [
@@ -36,6 +37,9 @@ export function createSeedEvent(): EventRecord {
     prepare: { title: "", intro: "", items: [] },
     language: "id",
     guest_estimate: null,
+    agenda_details: {}, presentation_pdf_url: "",
+    emergency: { name: "", phone: "", hospital: "", hospital_address: "", hospital_maps_url: "" },
+    poster: emptyPoster(),
     translations: { en: {
       title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",
       experience_title: "", experience_story: "", prepare_title: "", prepare_intro: "", after_title: "", after_message: "",

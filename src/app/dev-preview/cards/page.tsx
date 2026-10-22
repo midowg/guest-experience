@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { EventList } from "@/components/admin/EventList";
+import { EventList } from "@/components/admin/events/EventList";
 import { createSeedEvent } from "@/lib/seed-event";
 
 export const dynamic = "force-dynamic";

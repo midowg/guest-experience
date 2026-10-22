@@ -25,7 +25,7 @@
 .heroMain { min-width: 0; }
 .heroMain > :global(.eyebrow) { margin-bottom: var(--space-7); }
 .greeting { font-size: var(--text-lg); margin-bottom: var(--space-4); }
-.hero h1 { font-size: var(--text-hero); line-height: 1.04; font-weight: 600; letter-spacing: -.035em; color: var(--color-primary); margin-bottom: var(--space-5); }
+.hero h1 { font-size: var(--text-hero); line-height: 1.04; font-weight: var(--heading-weight); letter-spacing: -.035em; color: var(--color-primary); margin-bottom: var(--space-5); }
 .subtitle { font-size: clamp(1.25rem, 2.1vw, 1.75rem); line-height: 1.45; max-width: var(--reading); margin-bottom: var(--space-7); }
 
 /* Cinematic opening used when the event supplies a backdrop photo (hero.url). */
@@ -97,7 +97,7 @@
 .sectionNumber { font-family: var(--font-label); font-size: var(--text-sm); }
 .sectionBody { min-width: 0; }
 .sectionBody :global(.section-heading) { max-width: var(--reading); margin-bottom: var(--space-6); }
-.sectionBody :global(.section-heading h2) { color: var(--color-primary); font-size: var(--text-heading); line-height: 1.12; font-weight: 600; letter-spacing: -.025em; margin-bottom: var(--space-4); }
+.sectionBody :global(.section-heading h2) { color: var(--color-primary); font-size: var(--text-heading); line-height: 1.12; font-weight: var(--heading-weight); letter-spacing: -.025em; margin-bottom: var(--space-4); }
 .sectionBody :global(.section-description) { font-size: var(--text-lg); }
 .introduction { max-width: var(--reading); font-size: var(--text-lg); line-height: 1.65; margin-bottom: var(--space-7); }
 .multiline { white-space: pre-line; }
@@ -381,3 +381,98 @@
 .reviewList dt { grid-column: 1; color: var(--color-caption); font-size: var(--text-sm); }
 .reviewList dd { grid-column: 1; margin: 0; font-weight: 600; overflow-wrap: anywhere; }
 .reviewList button { grid-column: 2; grid-row: 1 / span 2; align-self: center; min-height: 44px; padding: 0 var(--space-3); border: 0; background: transparent; color: var(--color-primary); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+/* Program: day tabs, activity details, emergency card. */
+.programDays { display: grid; gap: var(--space-4); }
+.dayTabs { display: flex; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.dayTabs::-webkit-scrollbar { display: none; }
+.dayTabs button { display: grid; flex-shrink: 0; gap: 0; min-width: 5.5rem; min-height: 52px; padding: var(--space-2) var(--space-4); border: 1px solid var(--color-border); border-radius: max(var(--radius, 0px), 10px); background: var(--color-background); color: var(--color-text); font: inherit; text-align: left; cursor: pointer; }
+.dayTabs button strong { font-size: var(--text-sm); }
+.dayTabs button span { color: var(--color-caption); font-size: .75rem; }
+.dayTabs button[aria-selected="true"] { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary, #fff); }
+.dayTabs button[aria-selected="true"] span { color: inherit; opacity: .85; }
+.dayHeading { margin: 0; color: var(--color-caption); font-size: var(--text-sm); font-weight: 600; }
+.agendaBody { display: grid; gap: var(--space-2); min-width: 0; }
+.agendaBody h3 { margin: 0; }
+.agendaBody > p { margin: 0; }
+.agendaFacts { display: flex; flex-wrap: wrap; gap: var(--space-3); color: var(--color-caption); font-size: var(--text-sm); }
+.agendaFacts span { display: inline-flex; align-items: center; gap: 4px; }
+.discover { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; min-height: 44px; padding: var(--space-2) var(--space-3); border: 1px dashed var(--color-primary); border-radius: max(var(--radius, 0px), 10px); background: transparent; color: var(--color-primary); font: inherit; font-size: var(--text-sm); font-weight: 600; text-align: left; cursor: pointer; }
+.discover svg { flex-shrink: 0; transition: transform .15s; }
+.discoverOpen { transform: rotate(180deg); }
+.discoverPanel { display: grid; gap: var(--space-3); }
+.didYouKnow { padding: var(--space-3) var(--space-4); border-radius: max(var(--radius, 0px), 10px); background: var(--color-soft); }
+.didYouKnow p { margin: 0; }
+.didYouKnowTitle { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1) !important; color: var(--color-heading, var(--color-primary)); font-weight: 700; }
+.textButton { justify-self: start; min-height: 40px; padding: 0; border: 0; background: transparent; color: var(--color-primary); font: inherit; font-size: var(--text-sm); font-weight: 600; text-decoration: underline; cursor: pointer; }
+.pageLink { display: inline-flex; align-items: center; gap: 4px; justify-self: start; color: var(--color-primary); font-size: var(--text-sm); }
+.emergencyCard { display: grid; gap: var(--space-2); margin-top: var(--space-4); padding: var(--space-4) var(--space-5); border: 1px solid color-mix(in srgb, var(--color-danger, #9a273d) 40%, transparent); border-radius: max(var(--radius, 0px), 12px); background: color-mix(in srgb, var(--color-danger, #9a273d) 6%, var(--color-background)); }
+.emergencyCard p { margin: 0; }
+.emergencyTitle { display: flex; align-items: center; gap: var(--space-2); color: var(--color-danger, #9a273d); font-weight: 700; }
+.emergencyCall { display: inline-flex; align-items: center; gap: var(--space-2); justify-self: start; min-height: 44px; color: var(--color-text); font-weight: 600; }
+.emergencyHospital { display: grid; gap: 2px; font-size: var(--text-sm); }
+@media (prefers-reduced-motion: reduce) { .discover svg { transition: none; } }
+
+/* Phone header: the section links scroll sideways in one row instead of stacking. */
+@media (max-width: 47.99rem) {
+  .headerInner { flex-wrap: wrap; gap: var(--space-2); min-height: 0; padding-block: var(--space-2); }
+  .navigation { flex-wrap: nowrap; width: 100%; gap: var(--space-4); overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+  .navigation::-webkit-scrollbar { display: none; }
+  .navigation a { flex-shrink: 0; white-space: nowrap; }
+}
+.topicNumber { white-space: nowrap; }
+
+/* Add to calendar */
+.calendarButton { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; margin-top: var(--space-5); padding: var(--space-2) var(--space-4); border: 1px solid var(--color-primary); border-radius: max(var(--radius, 0px), 999px); background: transparent; color: var(--color-primary); font: inherit; font-weight: 600; cursor: pointer; }
+.calendarButton:hover { background: var(--color-soft); }
+.sheetNote { color: var(--color-caption); font-size: var(--text-sm); }
+/* Next item on the day */
+.todayNext { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); }
+.sheetLegend { margin-bottom: var(--space-2); padding: 0; font-size: var(--text-sm); font-weight: 600; color: var(--color-caption); }
+
+/* Event photo gallery (/e/{slug}/galeri) */
+.photoPage { display: grid; gap: var(--space-4); padding-block: var(--space-6) var(--space-9, 6rem); }
+.photoTop { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
+.photoBack { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-primary); font-weight: 600; }
+.photoCount { color: var(--color-caption); font-size: var(--text-sm); }
+.photoGrid { display: grid; gap: 4px; grid-template-columns: repeat(auto-fill, minmax(min(30vw, 11rem), 1fr)); margin: 0; padding: 0; list-style: none; }
+.photoGrid button { display: block; width: 100%; padding: 0; border: 0; background: var(--color-surface); cursor: zoom-in; }
+.photoGrid img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; }
+.photoViewer { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; background: #0b0f17; color: #fff; }
+.photoViewerBar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); font-size: var(--text-sm); }
+.photoViewerBar button, .photoViewerActions > button { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; background: transparent; color: #fff; cursor: pointer; }
+.photoViewerActions > button:disabled { opacity: .3; cursor: default; }
+.photoViewer figure { display: grid; place-items: center; min-height: 0; margin: 0; padding: 0 var(--space-3); }
+.photoViewer figure img { max-width: 100%; max-height: calc(100svh - 11rem); object-fit: contain; }
+.photoViewer figcaption { margin-top: var(--space-2); font-size: var(--text-sm); text-align: center; }
+.photoViewerActions { display: flex; justify-content: center; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-2); }
+.photoRemove { display: inline-flex; align-items: center; justify-self: center; gap: var(--space-2); padding: 0 var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); color: rgba(255,255,255,.85); font-size: var(--text-sm); }
+.afterGallery { justify-self: start; }
+
+/* Entry ticket (/e/{slug}/i/{token}/tiket) */
+.ticketPage { display: grid; gap: var(--space-5); max-width: 30rem; padding-block: var(--space-6) var(--space-8); }
+.ticketCard { overflow: hidden; border: 1px solid var(--color-border); border-radius: max(var(--radius, 0px), 18px); background: var(--color-background); box-shadow: 0 8px 30px rgba(15, 25, 50, .08); }
+.ticketBand { display: flex; align-items: center; gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-5); background: var(--color-primary); color: var(--color-on-primary); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: var(--text-sm); }
+.ticketBody { display: grid; gap: var(--space-2); padding: var(--space-5); }
+.ticketBody h1 { margin: 0; font-size: 1.75rem; line-height: 1.15; }
+.ticketWhen { margin: 0; color: var(--color-caption); }
+.ticketName { margin: var(--space-3) 0 0; font-size: 1.5rem; font-weight: 800; }
+.ticketQr { width: min(100%, 18rem); margin: var(--space-4) auto 0; }
+.ticketQr svg { display: block; width: 100%; height: auto; }
+.ticketShow { margin: 0; text-align: center; color: var(--color-caption); font-size: var(--text-sm); font-weight: 600; }
+.ticketSave { display: grid; gap: var(--space-3); }
+.ticketSave h2 { margin: 0; font-size: var(--text-lg); }
+.ticketActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+@media print {
+  .ticketPage [data-no-print] { display: none !important; }
+  .ticketCard { box-shadow: none; }
+  .ticketBand { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+.rsvpDoneActions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.rsvpDoneActions:empty { display: none; }
+
+/* PIC photo */
+img.picAvatar { object-fit: cover; background: var(--color-surface); }
+.picAvatarLarge { width: 64px; height: 64px; font-size: 1.5rem; }
+.contactWho { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-2); }
+.contactWho h3 { margin: 0; }

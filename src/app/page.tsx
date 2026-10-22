@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from '@/lib/server/config';
 import { formatDate } from '@/lib/format';
 import { currentPhase } from '@/lib/event-phase';
 import { rsvpNeedsReady } from '@/lib/server/responses';
+import { afterPhotos } from '@/lib/server/gallery';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,15 +18,18 @@ async function featured() {
 export async function generateMetadata(): Promise<Metadata> {
   const event = await featured();
   if (!event) return { title: 'Guest Experience', robots: { index: false, follow: false } };
+  const description = `${formatDate(event.starts_at, event.timezone)}${event.venue_name ? ` · ${event.venue_name}` : ''}`;
+  // og:title and og:description are what WhatsApp prints beside the preview image.
   return {
     title: event.title,
-    description: `${event.title} — ${formatDate(event.starts_at, event.timezone)}${event.venue_name ? `, ${event.venue_name}` : ''}.`,
+    description: `${event.title} — ${description}.`,
+    openGraph: { title: event.title, description, type: 'website', siteName: 'Werkudara' },
     robots: { index: false, follow: false },
   };
 }
 
 export default async function Home() {
   const event = await featured();
-  if (event) return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} />;
+  if (event) return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
   return <EmptyHome />;
 }

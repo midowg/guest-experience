@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Check, CircleCheck, ClipboardCheck, MessageSquareHeart, Minus, Pencil, Plus, X } from "lucide-react";
-import { Button, Field, Notice } from "@/components/ui";
+import { Check, CircleCheck, ClipboardCheck, MessageSquareHeart, Minus, Pencil, Plus, Ticket, X } from "lucide-react";
+import { Button, ButtonLink, Field, Notice } from "@/components/ui";
 import type { AccessNeed, Dietary, EventRecord, RsvpRecord } from "@/lib/types";
 import { feedbackSchema, rsvpSchema } from "@/lib/validation";
 import type { WordKey } from "@/lib/wording";
 import { feedbackErrors, feedbackIsOpen, firstErrors, postSubmission, rsvpIsOpen, submissionIdentity, type FieldErrors, type RetryIdentity } from "./form-utils";
 import { useWording } from "./language";
 import styles from "./guest.module.css";
+import { guestApi, ticketPath } from "@/lib/routes";
 
 function currentTime() { return new Date().getTime(); }
 
@@ -32,7 +33,7 @@ function useSender() {
  * The form opens in a sheet: from the bottom on a phone, as a dialog on a larger screen. Esc and
  * the close button return focus to whatever opened it.
  */
-function GuestSheet({ title, step, onClose, children, footer }: { title: string; step?: string; onClose: () => void; children: ReactNode; footer: ReactNode }) {
+export function GuestSheet({ title, step, onClose, children, footer }: { title: string; step?: string; onClose: () => void; children: ReactNode; footer: ReactNode }) {
   const { t } = useWording();
   const heading = useRef<HTMLHeadingElement>(null);
   const opener = useRef<Element | null>(null);
@@ -62,7 +63,7 @@ type Answers = {
   dietary: Dietary[]; allergy_details: string; dietary_other: string; access: AccessNeed[]; access_other: string;
   photo_opt_out: boolean; consent: boolean;
 };
-type Invitation = { name: string; token: string; rsvp: RsvpRecord | null; party_size_max?: number };
+type Invitation = { name: string; token: string; short_token?: string | null; rsvp: RsvpRecord | null; party_size_max?: number };
 
 function answersFrom(rsvp: RsvpRecord | null, invitee?: string): Answers {
   return {
@@ -159,7 +160,7 @@ export function RsvpPanel({ event, disabled, onSaved, invitation, needs = true }
     void ignored;
     // Older databases only understand the allergy pair; extra keys would be ignored, not stored.
     const body = needs ? payload : { name: payload.name, organization: payload.organization, attendance: payload.attendance, phone: payload.phone, email: payload.email, has_allergy: payload.has_allergy, allergy_details: payload.allergy_details, consent: payload.consent, website: payload.website };
-    const result = await send(invitation ? `/api/events/${encodeURIComponent(event.slug)}/i/${encodeURIComponent(invitation.token)}/rsvp` : `/api/events/${encodeURIComponent(event.slug)}/rsvp`, body);
+    const result = await send(guestApi.rsvp(event, invitation), body);
     if (!result) return;
     if (!result.ok) {
       const found = firstErrors(result.fieldErrors);
@@ -266,7 +267,10 @@ export function RsvpPanel({ event, disabled, onSaved, invitation, needs = true }
       {saved.attendance === "yes" && <p>{(saved.party_size ?? 1) > 1 ? `${t("rsvp.review.partySize", { n: saved.party_size ?? 1 })} · ` : ""}{needsSummary({ dietary: saved.dietary ?? (saved.has_allergy ? ["allergy"] : []), access: saved.access ?? [], allergy_details: saved.allergy_details, dietary_other: saved.dietary_other ?? "", access_other: saved.access_other ?? "" })}</p>}
       <p className={styles.privacy}>{invitation ? t("rsvp.saved.personal") : t("rsvp.saved.open")}</p>
     </div>
-    {invitation && !disabled && <Button type="button" variant="secondary" onClick={start}><Pencil size={16} aria-hidden="true" /> {t("rsvp.done.edit")}</Button>}
+    <div className={styles.rsvpDoneActions}>
+      {invitation && saved.attendance === "yes" && <ButtonLink href={ticketPath(event, invitation)}><Ticket size={16} aria-hidden="true" /> {t("ticket.view")}</ButtonLink>}
+      {invitation && !disabled && <Button type="button" variant="secondary" onClick={start}><Pencil size={16} aria-hidden="true" /> {t("rsvp.done.edit")}</Button>}
+    </div>
   </div>;
 
   return <div className={styles.rsvpPanel}>
@@ -313,7 +317,7 @@ export function FeedbackPanel({ event, disabled }: { event: EventRecord; disable
     if (Object.keys(found).length) { setErrors(found); requestAnimationFrame(() => document.getElementById(`feedback-${Object.keys(found)[0]}`)?.focus()); return; }
     const parsed = feedbackSchema.safeParse({ answers, website: "", idempotency_key: "00000000-0000-4000-8000-000000000000" });
     if (!parsed.success) { setMessage(t("form.error.fields")); return; }
-    const result = await send(`/api/events/${encodeURIComponent(event.slug)}/feedback`, { answers: parsed.data.answers, website: "" });
+    const result = await send(guestApi.feedback(event), { answers: parsed.data.answers, website: "" });
     if (!result) return;
     if (!result.ok) { setMessage(result.message || t("form.error.network")); setErrors(firstErrors(result.fieldErrors)); return; }
     setSaved(true); setOpen(false);

@@ -63,6 +63,12 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--color-primary)
 .landing h1 { margin-block: var(--space-5) var(--space-6); }
 .landing p:not(.eyebrow) { max-width: 37rem; font-size: var(--text-lg); }
 .landing .row { margin-top: var(--space-7); }
+.landing-points { display: grid; gap: var(--space-4); margin: var(--space-7) 0 0; padding: 0; list-style: none; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); }
+.landing-points li { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4); border: var(--border); background: var(--color-surface); }
+.landing-points svg { flex-shrink: 0; color: var(--color-primary); margin-top: 2px; }
+.landing-points strong { display: block; color: var(--color-heading); }
+.landing-points span { display: block; font-size: var(--text-sm); }
+.landing p.landing-en { margin-top: var(--space-6); font-size: var(--text-sm); color: var(--color-caption); }
 .site-footer { border-top: var(--border); padding-block: var(--space-5); font-size: var(--text-sm); }
 @media (max-width: 600px) { .container { width: calc(100% - 2rem); } .panel { padding: var(--space-5); } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }

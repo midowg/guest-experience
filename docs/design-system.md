@@ -11,7 +11,7 @@ A considered welcome, not a dashboard for guests. One invitation URL, meaningful
 - Primary #1551A0; support #306FB6; accent #00A3E9; light blues #65C6F2/#C3E6F5.
 - Body text #484443; backgrounds white/#EFEFEF. White on primary is suitable for text. Ice blue/orange on white are decorative only, not small text.
 - Secondary accents #9A273D, #DD1A7E, #ED7333, #F9BC4E, #72C29C are sparse; never convey state by color alone.
-- Source Sans Pro 300/400/600 for titles, content and headings; Montserrat 400/600 for short labels. Fontsource self-hosts font files through the build.
+- Nunito 400/600/700/800 for all admin and guest text: rounded, friendly, and clear at small sizes. Headings use 800. Themes may swap only the heading face (Lora, Playfair Display, Cormorant Garamond). Fontsource self-hosts font files through the build.
 - Square corners, flat fills, no shadows/gradients. Whitespace and hierarchy provide emphasis.
 - 74rem container, minimum 16px phone gutters, 44rem reading width. Body 17px, responsive hero 40–88px, section title 32–56px. Never shrink text to hide overflow.
 

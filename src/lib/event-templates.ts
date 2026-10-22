@@ -1,18 +1,24 @@
 import type { EventAudience, EventKind, SectionKey, ThemeKey } from "./types";
 import { templateContent } from "./wording/template-content";
 
-export const templateKeys = ["kunjungan-klien", "gala-dinner", "seminar-launching", "annual-meeting", "nyadran", "csr-kegiatan-sosial", "pelatihan-bootcamp", "trip-klien"] as const;
+export const templateKeys = ["kunjungan-klien", "gala-dinner", "seminar-launching", "annual-meeting", "nyadran", "csr-kegiatan-sosial", "pelatihan-bootcamp", "trip-klien", "poster-sesi"] as const;
 export type TemplateKey = (typeof templateKeys)[number];
+/** Offered to regular admins until the super admin chooses otherwise: hosting clients first. */
+export const defaultTemplates: readonly TemplateKey[] = ["kunjungan-klien", "trip-klien"];
 
 export type EventTemplate = {
   key: TemplateKey; label: string; description: string;
-  /** Example event name, shown greyed in the empty title field. */
+  /** Example event name, offered as a chip under the title field. */
   example: string;
+  /** More names to offer as chips, after `example`. */
+  examples?: string[];
   kind: EventKind; audience: EventAudience; theme: ThemeKey;
   /** Sections shown from the start; the rest exist but stay hidden. */
   modules: SectionKey[];
   /** Preparation cards to start with: titles only, the admin writes the details. */
   prepare: { icon: "shirt" | "backpack" | "gift"; title: string }[];
+  /** A Studio Poster preset switched on from the start (src/lib/poster-presets.ts). */
+  poster?: string;
 };
 
 const DRESS = { icon: "shirt", title: "Dress code" } as const;
@@ -29,6 +35,7 @@ export const eventTemplates: EventTemplate[] = [
   { key: "csr-kegiatan-sosial", label: "CSR / kegiatan sosial", example: "Berbagi Bersama Anak Panti 2026", description: "Kegiatan sosial: tema Segar, barang bawaan, perlengkapan dari panitia, RSVP relawan.", kind: "acara", audience: "internal", theme: "segar", modules: ["about", "experience", "agenda", "location", "prepare", "rsvp", "contact"], prepare: [BRING, PROVIDED] },
   { key: "pelatihan-bootcamp", label: "Pelatihan / bootcamp", example: "Sales Mastery Bootcamp Batch 3", description: "Program beberapa hari: jadwal per hari, bawaan peserta, RSVP, dan survei.", kind: "program", audience: "internal", theme: "werkudara", modules: ["about", "agenda", "location", "prepare", "rsvp", "contact", "feedback"], prepare: [BRING] },
   { key: "trip-klien", label: "Trip klien", example: "Trip Lombok bersama PT Sinar Abadi", description: "Perjalanan bersama klien (struktur Lombok Guidebook): jadwal per hari, bawaan, perlengkapan, kontak.", kind: "program", audience: "external", theme: "nenek", modules: ["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback"], prepare: [BRING, PROVIDED] },
+  { key: "poster-sesi", label: "Kartu: poster, ucapan, ID card, sertifikat", example: "Poster sesi JCWF 2026", examples: ["ID card peserta JCWF 2026", "Sertifikat peserta JCWF 2026", "Kartu ucapan Hari Raya"], description: "Bukan undangan: kartu yang diisi sendiri oleh peserta (poster sesi, kartu ucapan, ID card, sertifikat, undangan singkat), lalu diunduh dan dibagikan.", kind: "kartu", audience: "external", theme: "rempah", modules: [], prepare: [], poster: "rempah-nusantara" },
 ];
 
 export function templateOf(key: string): EventTemplate | undefined {

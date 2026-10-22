@@ -1,10 +1,20 @@
+import type { PosterSettings } from "./poster";
+
 export type EventStatus = "draft" | "published" | "archived";
 export type InvitationMode = "open" | "personal";
 export type SectionKey = "about" | "experience" | "agenda" | "location" | "prepare" | "rsvp" | "contact" | "feedback" | "team";
 export type SectionConfig = { key: SectionKey; enabled: boolean };
 export type AgendaItem = { id: string; starts_at: string; ends_at: string; title: string; description: string; sort_order: number };
 export type DiscussionTopic = { title: string; description: string; en?: TextPair };
-export type EventContact = { name: string; phone: string; channel: "whatsapp" | "phone"; heading: string; description: string; role: string; organization: string };
+export type EventContact = {
+  name: string; phone: string; channel: "whatsapp" | "phone"; heading: string; description: string; role: string; organization: string;
+  /** Face on the PIC card; empty for an initial instead. Copied from the team list when picked there. */
+  photo?: PlainImage;
+  /** The team member this contact was filled from, or "" when typed by hand. */
+  staff_id?: string;
+};
+/** Someone in Tim Werkudara who can be an event's PIC. */
+export type StaffMember = { id: string; name: string; role: string; phone: string; photo: PlainImage; active: boolean; sort_order: number };
 export type FeedbackQuestion = { id: string; label: string; kind: "rating" | "choice" | "text"; required: boolean; options: string[]; sort_order: number };
 export type ImageSource = { width: number; url: string };
 export type ImageFocus = "top" | "center" | "bottom";
@@ -16,10 +26,10 @@ export type PhotoFrame = { x: number; y: number; zoom: number };
 export type HeroFraming = { mobile: PhotoFrame; desktop: PhotoFrame };
 /** Optional framing preserves compatibility with previously saved invitations. */
 export type HeroImage = { url: string; alt: string; srcset: ImageSource[]; focus: ImageFocus; text_position: HeroTextPosition; framing?: HeroFraming };
-/** The form of the event. Audience is a separate choice: an internal event can take any form. */
-export type EventKind = "kunjungan" | "acara" | "program";
+/** The form of the event. Audience is a separate choice: an internal event can take any form. "kartu" is no event at all: a card people fill in (Studio Poster). */
+export type EventKind = "kunjungan" | "acara" | "program" | "kartu";
 export type EventAudience = "external" | "internal";
-export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar";
+export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah";
 export type EventTheme = { key: ThemeKey; corners: "square" | "soft" };
 export type EventPhase = "before" | "day" | "after";
 export type PhaseOverride = "auto" | EventPhase;
@@ -43,6 +53,13 @@ export type EnglishContent = {
   agenda: Record<string, TextPair>;
 };
 export type EventTranslations = { en: EnglishContent };
+/**
+ * Optional depth for one agenda item (Program, Trip klien): a teaser that opens a "Did you know?"
+ * box, a longer story, where it happens, and the presentation page. Keyed by agenda id, because
+ * agenda rows live in their own table.
+ */
+export type AgendaDetail = { teaser: string; did_you_know: string; more_story: string; place: string; pdf_page: number | null };
+export type EmergencyContact = { name: string; phone: string; hospital: string; hospital_address: string; hospital_maps_url: string };
 export type RouteStep = { title: string; description: string; image: PlainImage };
 export type RouteGuide = { map_image: PlainImage; steps: RouteStep[] };
 export type AfterContent = {
@@ -51,6 +68,8 @@ export type AfterContent = {
 };
 export type EventRecord = {
   id: string; slug: string; status: EventStatus; title: string; subtitle: string;
+  /** Short code for /AB23CD addresses; absent before migration 202610210004. */
+  code?: string;
   organizer: string; greeting: string; introduction: string; closing: string;
   starts_at: string; ends_at: string | null; timezone: string;
   venue_name: string; address: string; location_url: string; location_embed_url: string; location_display: "manual" | "embed"; arrival_notes: string;
@@ -64,6 +83,9 @@ export type EventRecord = {
   hero: HeroImage; gallery: GalleryImage[];
   event_kind: EventKind; audience: EventAudience; theme: EventTheme; phase_override: PhaseOverride;
   experience: EventExperienceContent; route: RouteGuide; day_note: string; after: AfterContent; prepare: PrepareContent; language: EventLanguage; translations: EventTranslations; guest_estimate: number | null;
+  agenda_details: Record<string, AgendaDetail>; presentation_pdf_url: string; emergency: EmergencyContact;
+  /** Studio Poster: the template guests fill in to make their own poster. */
+  poster: PosterSettings;
   created_at: string; updated_at: string;
 };
 export type Dietary = "vegetarian" | "allergy" | "other";

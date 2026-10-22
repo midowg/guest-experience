@@ -1,0 +1,17 @@
+/* Event pages: one dropdown that names the current page, and a link to the live invitation. */
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-block: var(--space-3) var(--space-5); }
+.switcher { position: relative; }
+.trigger { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 42px; padding: 0 var(--space-3) 0 var(--space-4); border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--color-text); font: inherit; font-weight: 700; cursor: pointer; }
+.trigger:hover, .trigger[aria-expanded="true"] { border-color: var(--blue); }
+.trigger > svg:first-child { color: var(--blue); }
+.chevronOpen { transform: rotate(180deg); }
+.popover { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; display: grid; gap: var(--space-2); width: min(18rem, calc(100vw - 2rem)); padding: var(--space-2); border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 12px 32px rgba(15, 25, 50, .16); }
+.popover[hidden] { display: none; }
+.popoverGroup p { margin: var(--space-1) var(--space-2) 2px; color: #5b6476; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.popoverGroup ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.popoverGroup a { display: flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-2); border-radius: 9px; color: var(--color-text); font-weight: 600; text-decoration: none; }
+.popoverGroup a:hover { background: var(--page); }
+.popoverGroup a span { flex: 1; }
+.popoverGroup a[aria-current="page"] { background: #eef4fd; color: var(--blue); font-weight: 800; }
+.public { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 var(--space-3); border-radius: 10px; color: var(--blue); font-weight: 700; text-decoration: none; }
+.public:hover { background: #fff; }

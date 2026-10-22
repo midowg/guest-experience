@@ -13,13 +13,15 @@ export type EventInvitation = {
   phone: string | null; party_size_max: number;
   last_sent_at: string | null; send_count: number;
   first_opened_at: string | null; last_opened_at: string | null; open_count: number;
+  /** 8 characters for the short link; null before migration 202610210004. */
+  short_token: string | null;
   rsvp: RsvpRecord | null;
 };
 type InvitationRow = Omit<EventInvitation, "rsvp">;
 const rsvpFields = "id,event_id,invitation_id,name,organization,attendance,phone,email,has_allergy,allergy_details,created_at,updated_at";
 const baseFields = "id,event_id,name,token,active,created_at,updated_at";
 const operationFields = `${baseFields},phone,party_size_max,last_sent_at,send_count,first_opened_at,last_opened_at,open_count`;
-const operationDefaults = { phone: null, party_size_max: 1, last_sent_at: null, send_count: 0, first_opened_at: null, last_opened_at: null, open_count: 0 };
+const operationDefaults = { phone: null, party_size_max: 1, last_sent_at: null, send_count: 0, first_opened_at: null, last_opened_at: null, open_count: 0, short_token: null };
 
 /** A column or function from 202610200003 that the database does not have yet. */
 function notMigrated(error: { code?: string; message?: string }) {
@@ -39,8 +41,11 @@ async function withRsvps(eventId: string, invitations: InvitationRow[]): Promise
 export async function listInvitations(eventId: string): Promise<{ invitations: EventInvitation[]; migrated: boolean }> {
   const client = createPrivilegedClient();
   const query = (fields: string) => client.from("event_invitations").select(fields).eq("event_id", eventId).order("created_at", { ascending: true }).limit(1000);
+  const short = await query(`${operationFields},short_token`);
+  if (!short.error) return { invitations: await withRsvps(eventId, (short.data ?? []) as unknown as InvitationRow[]), migrated: true };
+  if (!notMigrated(short.error)) databaseError(short.error);
   const { data, error } = await query(operationFields);
-  if (!error) return { invitations: await withRsvps(eventId, (data ?? []) as unknown as InvitationRow[]), migrated: true };
+  if (!error) return { invitations: await withRsvps(eventId, ((data ?? []) as unknown as InvitationRow[]).map(row => ({ ...row, short_token: null }))), migrated: true };
   if (!notMigrated(error)) databaseError(error);
   const legacy = await query(baseFields);
   if (legacy.error) databaseError(legacy.error);
@@ -87,19 +92,33 @@ export async function markInvitationOpened(slug: string, token: string): Promise
   if (error && !notMigrated(error)) console.error("mark_invitation_opened:", error.message);
 }
 
-export async function getPersonalInvitation(slug: string, token: string): Promise<{ name: string; token: string; rsvp: RsvpRecord | null; party_size_max: number } | null> {
+export type PersonalInvitation = { name: string; token: string; short_token: string | null; rsvp: RsvpRecord | null; party_size_max: number };
+
+export async function getPersonalInvitation(slug: string, token: string): Promise<PersonalInvitation | null> {
   if (!/^[0-9a-f]{64}$/.test(token)) return null;
   const client = createPrivilegedClient();
   const { data: event, error: eventError } = await client.from("events").select("id,status,content").eq("slug", slug).maybeSingle();
   if (eventError) databaseError(eventError);
   if (!event || event.status !== "published" || (event.content as { invitation_mode?: string }).invitation_mode !== "personal") return null;
   const find = (fields: string) => client.from("event_invitations").select(fields).eq("event_id", event.id).eq("token", token).eq("active", true).maybeSingle();
-  let { data: invitation, error } = await find("id,name,party_size_max");
+  let { data: invitation, error } = await find("id,name,party_size_max,short_token");
+  if (error && notMigrated(error)) ({ data: invitation, error } = await find("id,name,party_size_max"));
   if (error && notMigrated(error)) ({ data: invitation, error } = await find("id,name"));
   if (error) databaseError(error);
   if (!invitation) return null;
-  const row = invitation as unknown as { id: string; name: string; party_size_max?: number };
+  const row = invitation as unknown as { id: string; name: string; party_size_max?: number; short_token?: string };
   const { data: rsvp, error: rsvpError } = await client.from("rsvps").select(await currentRsvpFields()).eq("invitation_id", row.id).maybeSingle();
   if (rsvpError) databaseError(rsvpError);
-  return { name: row.name, token, rsvp: (rsvp as unknown as RsvpRecord | null) ?? null, party_size_max: row.party_size_max ?? 1 };
+  return { name: row.name, token, short_token: row.short_token ?? null, rsvp: (rsvp as unknown as RsvpRecord | null) ?? null, party_size_max: row.party_size_max ?? 1 };
+}
+
+/** The long slug and token behind a short link, or null when either part is unknown. */
+export async function findShortInvitation(code: string, shortToken: string): Promise<{ slug: string; token: string } | null> {
+  const client = createPrivilegedClient();
+  const { data: event, error } = await client.from("events").select("id,slug").eq("code", code).maybeSingle();
+  if (error) { if (notMigrated(error)) return null; databaseError(error); }
+  if (!event) return null;
+  const { data: invitation, error: invitationError } = await client.from("event_invitations").select("token").eq("event_id", event.id).eq("short_token", shortToken).eq("active", true).maybeSingle();
+  if (invitationError) { if (notMigrated(invitationError)) return null; databaseError(invitationError); }
+  return invitation ? { slug: event.slug as string, token: invitation.token as string } : null;
 }

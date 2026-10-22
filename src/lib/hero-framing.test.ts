@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { defaultFraming, dragFrame, getFraming, normalizeEvent } from "./hero-framing";
 import { createSeedEvent } from "./seed-event";
 import { eventSchema } from "./validation";
-import { prepareEvent } from "@/components/admin/editor-model";
+import { prepareEvent } from "@/components/admin/editor/editor-model";
 import { previewUpdateSchema } from "./hero-preview";
 
 describe("responsive framing", () => {

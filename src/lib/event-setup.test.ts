@@ -11,7 +11,7 @@ const base: EventSetup = {
   timezone: "Asia/Jakarta", audience: "external", language: "id", invitation_mode: "personal", location: "other",
   venue_name: "Hotel Tentrem", address: "Jl. P. Mangkubumi 72A, Yogyakarta", location_url: "",
   greeting: "", introduction: "", closing: "", modules: ["about", "agenda", "location", "prepare", "rsvp", "contact", "feedback"],
-  guest_estimate: 120, rsvp_closes_at: "2026-12-05T10:00:00.000Z", contact_name: "", contact_phone: "",
+  guest_estimate: 120, rsvp_closes_at: "2026-12-05T10:00:00.000Z", contact_name: "", contact_phone: "", pic_staff_id: "",
 };
 
 describe("buildEventFromSetup", () => {
@@ -94,5 +94,15 @@ describe("setupTodo and slugify", () => {
   it("makes readable slugs", () => {
     expect(slugify("Kunjungan PT Sinar Abadi — 2026!")).toBe("kunjungan-pt-sinar-abadi-2026");
     expect(slugify("¿¿")).toBe("acara");
+  });
+});
+
+describe("copying activity details", () => {
+  it("moves details to the copied sessions' new ids", () => {
+    const source = createSeedEvent();
+    source.agenda_details = { [source.agenda[1].id]: { teaser: "Cuplikan", did_you_know: "Fakta", more_story: "", place: "Pendopo", pdf_page: null } };
+    const copy = copyEventWithSetup(source, { ...base, template: "blank", starts_at: source.starts_at, ends_at: null, rsvp_closes_at: null, modules: ["about", "agenda"] }, ids());
+    expect(copy.agenda_details).toEqual({ [copy.agenda[1].id]: source.agenda_details[source.agenda[1].id] });
+    expect(copy.agenda_details[source.agenda[1].id]).toBeUndefined();
   });
 });

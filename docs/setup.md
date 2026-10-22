@@ -16,7 +16,7 @@ Salin `.env.example` menjadi `.env.local`, lalu isi dari Supabase Dashboard → 
 | `ADMIN_SESSION_SECRET` | Buat sendiri, acak minimal 32 karakter | **Rahasia.** Menandatangani cookie sesi admin. |
 | `SUPER_ADMIN_PASSWORD` | Opsional, minimal 8 karakter, berbeda dari `ADMIN_PASSWORD` | **Rahasia.** Password super admin, yang bisa menyembunyikan acara dari admin biasa. |
 
-`.env*` sudah masuk `.gitignore`, kecuali `.env.example` yang hanya berisi template. Jangan mengirim kunci apa pun melalui chat. `NEXT_PUBLIC_SITE_URL` tercantum di template tetapi saat ini tidak digunakan aplikasi.
+`.env*` sudah masuk `.gitignore`, kecuali `.env.example` yang hanya berisi template. Jangan mengirim kunci apa pun melalui chat. `NEXT_PUBLIC_SITE_URL` adalah alamat publik situs (di produksi `https://invitation.werkudara.group`). Dipakai untuk gambar pratinjau tautan WhatsApp dan isi QR undangan. Bila kosong, Vercel memakai domain produksinya, dan lokal memakai `http://localhost:3000`.
 
 Di Vercel, isi semuanya pada Project Settings → Environment Variables untuk **Production** (dan Preview jika kelak digunakan), lalu deploy ulang. Variabel `NEXT_PUBLIC_*` dibekukan pada saat build, sehingga perubahan nilainya memerlukan build/deploy baru. Tanpa variabel ini, aplikasi menampilkan status "belum terhubung" dan **tidak** memakai data contoh. Lihat [rencana deployment berbasis tag](deployment.md); workflow deploy belum dibuat.
 
@@ -38,7 +38,7 @@ Yang dijamin skema ini:
 
 Pemeriksaan berlapis: `src/proxy.ts` menolak permintaan tanpa sesi, lalu setiap halaman dan route admin memeriksa sesi lagi.
 
-Setiap login berhasil, password salah, dan keluar dicatat di tabel `admin_access_log` (migrasi `202610200001_admin_access_log.sql`) dan dapat dilihat di **Log akses** (`/admin/akses`): waktu, IP, perkiraan kota/wilayah/negara dari header Vercel, browser dan OS, serta **ID perangkat** acak yang tersimpan di cookie `wk_device` (berlaku 2 tahun). Perangkat yang pertama kali berhasil masuk diberi tanda **Perangkat baru**. Keterbatasan yang perlu dipahami:
+Setiap login berhasil, password salah, dan keluar dicatat di tabel `admin_access_log` (migrasi `202610200001_admin_access_log.sql`) dan dapat dilihat super admin di **Log akses** (`/admin/akses`, tautannya di Dashboard super admin; admin biasa mendapat halaman tidak ditemukan): waktu, IP, perkiraan kota/wilayah/negara dari header Vercel, browser dan OS, serta **ID perangkat** acak yang tersimpan di cookie `wk_device` (berlaku 2 tahun). Perangkat yang pertama kali berhasil masuk diberi tanda **Perangkat baru**. Keterbatasan yang perlu dipahami:
 - Password dipakai bersama, jadi log menunjukkan perangkat dan lokasi, bukan nama orang.
 - Browser tidak dapat membaca nomor seri, MAC, atau kode perangkat keras laptop. ID perangkat berganti bila cookie dihapus, memakai mode penyamaran, atau browser lain.
 - Lokasi berasal dari IP (perkiraan) dan hanya tersedia saat berjalan di Vercel. Di lokal kolom lokasi kosong.
@@ -104,6 +104,12 @@ Editor menyediakan pengantar kontak, jabatan dan organisasi PIC, pengantar surve
 
 Bagian **Our Team** memakai teks tetap tentang lingkungan kerja Werkudara yang inklusif. Bagian ini **nonaktif secara default** termasuk pada acara lama. Aktifkan lewat Urutan & tampilan bagian. Foto tim boleh ditambahkan kemudian melalui unggahan atau tautan HTTPS; isi deskripsi foto untuk aksesibilitas. Tanpa foto, teks tetap dapat tampil. Foto dan teks yang dipublikasikan perlu persetujuan penyelenggara. Form RSVP hanya menanyakan alergi makanan, bukan seluruh preferensi makanan atau kebutuhan aksesibilitas; arahkan kebutuhan lain kepada PIC melalui kanal kontak yang tersedia. Penambahan konten ini disimpan pada JSONB acara dan tidak memerlukan migrasi database baru.
 
+### Program dan Trip klien (jadwal beberapa hari)
+
+Rundown yang melewati lebih dari satu tanggal (menurut zona acara) tampil sebagai tab **Hari 1, Hari 2, …** di halaman tamu; saat Hari H, tab hari ini langsung terbuka. Di editor, setiap sesi punya bagian **Tambahan (opsional)**: lokasi kegiatan, cuplikan *Kenali lebih dekat*, isi kotak *Tahukah Anda?*, cerita lengkap, dan halaman di PDF presentasi (isi dulu *PDF presentasi* di atas daftar sesi). Durasi dihitung otomatis dari jam mulai dan selesai. Blok Kontak punya **Kontak darurat (opsional)**: nomor darurat dan rumah sakit terdekat, tampil sebagai kartu merah di bagian Kontak dan halaman Hari H. Semua isian ini disimpan di konten acara dan tidak memerlukan migrasi; terjemahan English untuk isian tambahan belum tersedia.
+
+Halaman tamu `/e/…` menyimpan salinan terakhirnya di perangkat (service worker `public/sw.js`, hanya di produksi), sehingga jadwal tetap terbuka saat sinyal hilang. Admin dan API tidak disimpan.
+
 ### Jenis acara, tema, dan fase
 
 Blok **Jenis, audiens, dan tampilan** di editor menentukan:
@@ -148,7 +154,36 @@ Pilih HP (390×844) atau Desktop (1440×900). Preview menggunakan komponen dan s
 ### Ulasan Google opsional
 Tombol di penutup mengarah ke ulasan Google Werkudara, bukan survei internal. Dari profil bisnis Google yang dikelola, gunakan Minta ulasan/bagikan tautan ulasan. Tempel URL resmi, periksa tautan, aktifkan tombol, simpan/publikasikan. Ulasan berada di Google dan dapat tampil publik; Google mungkin meminta login. Semua tamu mendapat tautan yang sama, tidak disaring berdasarkan skor feedback. Matikan pilihan dan simpan jika tidak ingin tombol tampil.
 
+### Galeri foto acara (Cloudflare R2)
+Tab **Galeri foto** di setiap acara. Sebelum R2 disiapkan, tab ini hanya menampilkan "Penyimpanan foto belum disiapkan" dan tidak mengunggah apa pun.
+
+1. Cloudflare → R2 → **Create bucket**. Biarkan **privat** (jangan aktifkan akses publik atau r2.dev). Foto dibuka lewat alamat bertanda tangan yang berlaku beberapa jam.
+2. R2 → **Manage API tokens** → buat token dengan izin **Object Read & Write**, dibatasi ke bucket itu saja.
+3. Bucket → **Settings → CORS policy**, isi:
+   ```json
+   [{ "AllowedOrigins": ["https://invitation.werkudara.group"], "AllowedMethods": ["PUT", "GET", "HEAD"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
+   ```
+   Tambahkan `http://localhost:3000` hanya bila perlu menguji unggahan dari lokal.
+4. Di Vercel (Production), isi `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, lalu deploy ulang.
+5. Terapkan migrasi `202610210002_gallery_photos.sql`.
+
+Alur: admin memilih banyak foto sekaligus. Browser membuat versi tampilan (sisi panjang 2048 px) dan thumbnail (480 px) dalam WebP, lalu mengunggah ketiganya langsung ke R2. Server memeriksa ukuran dan isi berkas (harus JPEG, PNG, WebP, atau HEIC). Foto baru berstatus **Menunggu tinjauan**; tamu hanya melihat foto yang **Tayang**. Setelah acara, halaman undangan menampilkan tombol galeri bila ada foto tayang. Tamu bisa mengunduh berkas asli dan meminta foto dihapus lewat WhatsApp PIC. Galeri tertutup otomatis enam bulan setelah acara.
+
+### Tiket dan check-in
+Butuh migrasi `202610210003_tickets_checkin.sql` dan mode **Tautan per tamu**.
+
+- **Tamu**: setelah menjawab hadir lewat tautan personal, kartu RSVP menampilkan **Lihat tiket masuk**. Tiket berisi nama, jumlah orang, dan QR, dan bisa disimpan sebagai gambar, PDF (lewat dialog cetak), atau dikirim ke WhatsApp sendiri.
+- **QR** hanya berisi alamat `/admin/checkin/<kode>`. Dipindai dengan kamera ponsel biasa, alamat itu membuka halaman konfirmasi check-in untuk panitia yang sudah login. Orang lain hanya melihat halaman login, tanpa data tamu.
+- **Panitia**: tab **Check-in** di setiap acara. Di Chrome atau Edge (Android/desktop), tombol **Pindai QR tiket** memakai kamera langsung. Di iPhone, pakai aplikasi Kamera. Ada juga pencarian nama untuk check-in manual, termasuk tamu tautan umum yang tidak punya tiket.
+- Pindai ulang tidak menggandakan check-in; layar memberi tanda "Sudah check-in sebelumnya" beserta jam pertama. Check-in yang salah bisa dibatalkan.
+- Layar hasil menampilkan jumlah orang, alergi, dan kebutuhan akses supaya penyambut langsung tahu.
+
 ## 7. Hal yang belum tersedia
+
+- **Tiket untuk RSVP tautan umum.** Tamu tautan umum tidak menerima tiket; mereka dicari dengan nama di tab Check-in.
+- **Check-in tanpa sinyal.** Papan check-in butuh koneksi; antrean offline belum dibuat.
+- **Denah dan pilihan kursi.** Belum dibuat.
+- **Dokumen pribadi per tamu (e-tiket pesawat, voucher) di R2.** Belum dibuat.
 
 - **Pembersihan tabel pembatasan laju terjadwal.** Fungsi `purge_expired_request_limits()` tersedia, tetapi penjadwalnya belum dipasang. Baris kedaluwarsa juga dihapus setiap kali fungsi dipanggil.
 - **Kebijakan retensi data tamu.** Perlu ditetapkan penyelenggara sebelum acara berjalan.

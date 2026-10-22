@@ -53,7 +53,15 @@ export default async function DevPreviewPage({ searchParams }: { searchParams: P
   // On the day, the sample schedule is moved to today so the "now" marker has something to mark.
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta" }).format(new Date());
   const shift = (value: string) => value.replace(/^\d{4}-\d{2}-\d{2}/, today);
-  const agenda = phase === "day" ? base.agenda.map(item => ({ ...item, starts_at: shift(item.starts_at), ends_at: shift(item.ends_at) })) : base.agenda;
+  // ?program=1: a two-day trip with activity details and an emergency card.
+  const program = read("program") === "1";
+  const tripDay = (offset: number, time: string) => new Date(Date.parse(`${today}T${time}:00+07:00`) + offset * 86400000).toISOString();
+  const tripAgenda = [
+    { id: "7d000000-0000-4000-8000-000000000001", starts_at: tripDay(0, "08:00"), ends_at: tripDay(0, "09:30"), title: "Contoh: penjemputan di bandara", description: "", sort_order: 0 },
+    { id: "7d000000-0000-4000-8000-000000000002", starts_at: tripDay(0, "15:00"), ends_at: tripDay(0, "17:00"), title: "Contoh: pantai berpasir merica", description: "Contoh keterangan kegiatan.", sort_order: 1 },
+    { id: "7d000000-0000-4000-8000-000000000003", starts_at: tripDay(1, "09:00"), ends_at: tripDay(1, "12:00"), title: "Contoh: desa adat", description: "", sort_order: 2 },
+  ];
+  const agenda = program ? tripAgenda : phase === "day" ? base.agenda.map(item => ({ ...item, starts_at: shift(item.starts_at), ends_at: shift(item.ends_at) })) : base.agenda;
   const sample = (seed: string, alt: string) => ({ url: `https://picsum.photos/seed/${seed}/1600/1000`, alt, srcset: [] });
   const journey: Partial<EventRecord> = {
     event_kind: "kunjungan", audience: read("audiens") === "internal" ? "internal" : "external",
@@ -70,6 +78,12 @@ export default async function DevPreviewPage({ searchParams }: { searchParams: P
     contact: { ...base.contact, name: "Koordinator Acara", phone: "0812 3456 7890", role: "Hospitality", channel: "whatsapp" },
     day_note: "Contoh catatan hari H: Wi-Fi tamu tersedia, tanyakan ke resepsionis.",
     after: { title: "", message: "Contoh pesan terima kasih untuk tamu.", image: sample("werkudara-after", "Contoh foto penutup"), collaboration: { enabled: true, title: "", description: "Tertarik berkolaborasi? Tim kami senang mendengar ide Anda.", button_label: "" } },
+    ...(program ? {
+      event_kind: "program" as const,
+      agenda_details: { "7d000000-0000-4000-8000-000000000002": { teaser: "kenapa pasirnya seperti merica?", did_you_know: "Contoh isi kotak Tahukah Anda.", more_story: "Contoh cerita lengkap.", place: "Contoh lokasi kegiatan", pdf_page: 4 } },
+      presentation_pdf_url: "https://example.com/contoh.pdf",
+      emergency: { name: "Contoh tim medis", phone: "0812 0000 0000", hospital: "Contoh rumah sakit terdekat", hospital_address: "Contoh alamat rumah sakit", hospital_maps_url: "https://example.com/peta" },
+    } : {}),
     prepare: { title: "", intro: "Contoh pengantar persiapan tamu.", items: [
       { icon: "shirt", title: "Dress code", description: "Contoh: batik atau kemeja berkerah.", list: [] },
       { icon: "backpack", title: "Yang perlu dibawa", description: "", list: ["Kartu identitas", "Botol minum"] },

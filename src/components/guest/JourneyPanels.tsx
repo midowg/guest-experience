@@ -1,15 +1,18 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import { ArrowDown, ArrowUpRight, Backpack, CalendarCheck, CalendarDays, Camera, Check, Coffee, Gift, Footprints, Hand, Handshake, Heart, HeartHandshake, IdCard, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Package, Phone, Pill, Presentation, Salad, Shirt, Sparkles, Star, Sun, Umbrella, Users, Utensils, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Backpack, CalendarCheck, CalendarDays, Camera, Check, Clock3, Coffee, Gift, Footprints, Hand, Handshake, Heart, HeartHandshake, IdCard, Images, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Package, Phone, Pill, Presentation, Salad, Shirt, Sparkles, Star, Sun, Umbrella, Users, Utensils, type LucideIcon } from "lucide-react";
 import { ButtonLink } from "@/components/ui";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { localDay } from "@/lib/event-phase";
 import type { EventRecord, MomentIcon, PlainImage, PrepareIcon, PrepareItem } from "@/lib/types";
 import { imageSrcSet } from "./Gallery";
 import { useWording } from "./language";
+import { EmergencyCard } from "./ProgramAgenda";
 import type { WordKey } from "@/lib/wording";
 import styles from "./guest.module.css";
+import { galleryPath } from "@/lib/routes";
+import { initials } from "@/lib/staff";
 
 export const momentIconComponents: Record<MomentIcon, LucideIcon> = {
   coffee: Coffee, utensils: Utensils, gift: Gift, users: Users, camera: Camera,
@@ -57,12 +60,21 @@ export function contactLink(contact: EventRecord["contact"]) {
   return { whatsapp, href: whatsapp ? `https://wa.me/${phone.international}` : `tel:${phone.local}`, local: phone.local };
 }
 
+/** The PIC's photo when one is set, otherwise their initials. Decorative: the name is next to it. */
+export function PicAvatar({ contact, large = false }: { contact: EventRecord["contact"]; large?: boolean }) {
+  const photo = contact.photo?.url ? contact.photo : null;
+  const className = `${styles.picAvatar} ${large ? styles.picAvatarLarge : ""}`.trimEnd();
+  // eslint-disable-next-line @next/next/no-img-element -- stored photo with its own sizes
+  return photo ? <img className={className} src={photo.srcset?.[0]?.url || photo.url} alt="" />
+    : <span className={className} aria-hidden="true">{initials(contact.name)}</span>;
+}
+
 function PicCard({ event, title }: { event: EventRecord; title: string }) {
   const { t } = useWording();
   const link = contactLink(event.contact);
   if (!link) return null;
   return <div className={styles.picCard}>
-    <span className={styles.picAvatar} aria-hidden="true">{event.contact.name.trim().charAt(0).toUpperCase()}</span>
+    <PicAvatar contact={event.contact} />
     <div className={styles.picText}>
       <p className={styles.picTitle}>{title}</p>
       {event.contact.role && <p className={styles.picRole}>{event.contact.role}</p>}
@@ -151,6 +163,12 @@ export function TodayPanel({ event, invitee, now, firstSection }: { event: Event
       <p className={styles.todayMeta}>{invitee && <>{event.title} · </>}{event.venue_name || t("today.place.fallback")}</p>
       {items.length > 0 && <div className={styles.todayCard}>
         <h2 className={styles.todayCardTitle}>{t("today.schedule")}</h2>
+        {(() => {
+          // "Next · in N min" for the coming hour, so the guest knows how long they have.
+          const next = now === null ? undefined : items.find(item => Date.parse(item.starts_at) > now);
+          const minutes = next && now !== null ? Math.ceil((Date.parse(next.starts_at) - now) / 60000) : 0;
+          return next && minutes <= 60 ? <p className={styles.todayNext}><Clock3 size={15} aria-hidden="true" /> {t("next.label", { minutes })}: {next.title}</p> : null;
+        })()}
         <ol className={styles.todaySchedule}>
           {items.map(item => {
             const status = agendaStatus(item, now);
@@ -165,6 +183,7 @@ export function TodayPanel({ event, invitee, now, firstSection }: { event: Event
       </div>}
       {event.day_note && <div className={styles.todayNote}><Info size={18} aria-hidden="true" /><p className={styles.multiline}>{event.day_note}</p></div>}
       <PicCard event={event} title={t("today.help", { name: event.contact.name })} />
+      <EmergencyCard event={event} />
       {firstSection && <a className={styles.todayMore} href={`#${firstSection}`} onClick={focusAnchor}>{t("today.more")} <ArrowDown size={15} aria-hidden="true" /></a>}
     </div>
   </section>;
@@ -174,7 +193,7 @@ export function TodayPanel({ event, invitee, now, firstSection }: { event: Event
  * After the event: thanks first. Review and collaboration are only for external guests, and the
  * review is never a condition for anything else on the page.
  */
-export function AfterPanel({ event, invitee }: { event: EventRecord; invitee?: string }) {
+export function AfterPanel({ event, invitee, photoCount = 0 }: { event: EventRecord; invitee?: string; photoCount?: number }) {
   const { t, date } = useWording();
   const external = event.audience !== "internal";
   const image = event.after.image.url ? event.after.image : event.hero.url ? { url: event.hero.url, alt: "", srcset: event.hero.srcset } : null;
@@ -193,6 +212,7 @@ export function AfterPanel({ event, invitee }: { event: EventRecord; invitee?: s
       <h1 id="event-title">{event.after.title || (invitee ? t("after.title.named", { name: invitee }) : t("after.title"))}</h1>
       <p className={styles.afterEvent}><CalendarDays size={16} aria-hidden="true" /> {event.title}{event.starts_at && <> · {date(event.starts_at, event.timezone)}</>}</p>
       {message && <p className={`${styles.afterMessage} ${styles.multiline}`}>{message}</p>}
+      {photoCount > 0 && <ButtonLink href={galleryPath(event)} className={styles.afterGallery}><Images size={18} aria-hidden="true" /> {t("gallery.all")} · {t("photos.count", { n: photoCount })}</ButtonLink>}
       {showReview && <div className={styles.afterCard}>
         <p className={styles.afterStars} aria-hidden="true">{[0, 1, 2, 3, 4].map(i => <Star key={i} size={20} />)}</p>
         <h2>{event.review_heading || t("after.review.title")}</h2>

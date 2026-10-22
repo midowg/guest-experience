@@ -1,0 +1,4 @@
+/* The miniature of the card template: a row of small cards, one per kind. */
+.cards { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 14px 10px 8px; }
+.card { display: grid; place-items: center; height: 74px; max-width: 30%; padding: 4px; border-radius: 4px; font-size: 9px; font-weight: 700; text-align: center; box-shadow: 0 2px 6px rgba(0, 0, 0, .12); }
+.card[data-wide] { height: 52px; }

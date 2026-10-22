@@ -2,6 +2,7 @@ import { z } from "zod";
 import { EMBED_ERROR, parseLocationEmbed } from "./location-embed";
 import { parseContactPhone } from "./contact-phone";
 import { eventTimezones } from "./timezones";
+import { cardTypes, paletteRoles, posterFormats } from "./poster";
 
 const text = (max: number) => z.string().trim().max(max);
 /** `new URL()` throws on malformed input, so a half-typed address must never reach it. */
@@ -23,11 +24,24 @@ const contactSchema = z.object({
   channel: z.enum(["whatsapp", "phone"]),
   heading: text(200).default(""), description: text(1000).default(""),
   role: text(150).default(""), organization: text(200).default(""),
+  photo: z.lazy(() => plainImage).default({ url: "", alt: "", srcset: [] }),
+  staff_id: z.union([z.uuid(), z.literal("")]).default(""),
 });
 const plainImage = z.object({ url: httpsUrl, alt: text(300).default(""), srcset: srcsetSchema.default([]) });
 const emptyImage = { url: "", alt: "", srcset: [] };
+
+/** A team member as the super admin enters them. The number must be an Indonesian mobile number. */
+export const staffInputSchema = z.object({
+  name: z.string().trim().min(2, "Isi nama minimal 2 huruf.").max(150),
+  role: z.string().trim().max(150).default(""),
+  phone: z.string().trim().max(30).refine(value => parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890."),
+  photo: plainImage.default(emptyImage),
+  active: z.boolean().default(true),
+  sort_order: z.number().int().min(0).max(10000).default(0),
+});
+export type StaffInput = z.infer<typeof staffInputSchema>;
 export const momentIcons = ["coffee", "utensils", "gift", "users", "camera", "music", "map", "sparkles", "presentation", "heart"] as const;
-export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar"] as const;
+export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar", "rempah"] as const;
 const pairSchema = (title = 200, description = 1500) => z.object({ title: text(title).default(""), description: text(description).default("") });
 export const emptyEnglish = {
   title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",
@@ -68,7 +82,54 @@ const afterSchema = z.object({
 });
 export const emptyExperience = { title: "", story: "", image: emptyImage, moments: [] };
 export const emptyRoute = { map_image: emptyImage, steps: [] };
+export const emptyEmergency = { name: "", phone: "", hospital: "", hospital_address: "", hospital_maps_url: "" };
+export const emptyAgendaDetail = { teaser: "", did_you_know: "", more_story: "", place: "", pdf_page: null };
+const agendaDetailSchema = z.object({
+  teaser: text(200).default(""), did_you_know: text(600).default(""), more_story: text(4000).default(""), place: text(200).default(""),
+  pdf_page: z.number().int().min(1).max(999).nullable().default(null),
+});
+const emergencySchema = z.object({
+  name: text(150).default(""),
+  phone: text(30).refine(value => !value || parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890.").default(""),
+  hospital: text(200).default(""), hospital_address: text(500).default(""), hospital_maps_url: httpsUrl.default(""),
+});
 export const emptyPrepare = { title: "", intro: "", items: [] };
+/** Studio Poster. Boxes are design pixels from Figma; a poster is at most 2000 px on a side. */
+const coordinate = z.number().min(0).max(2000);
+const posterBox = z.object({ x: coordinate, y: coordinate, w: z.number().min(1).max(2000), h: z.number().min(1).max(2000) });
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Gunakan warna hex, misalnya #0f4a3a.");
+const posterFieldSchema = z.object({
+  key: z.string().regex(/^[a-z0-9_]{1,40}$/), label: text(80).min(1), hint: text(200).default(""),
+  kind: z.enum(["text", "photo"]), editable: z.boolean(), value: text(2000).default(""), maxLength: z.number().int().min(1).max(1000),
+  font: z.enum(["playfair", "nunito", "lora", "cormorant"]), weight: z.number().int().min(100).max(900),
+  tone: z.union([z.enum(paletteRoles), z.literal("")]).default(""), color: hexColor,
+  align: z.enum(["left", "center", "right"]), uppercase: z.boolean(), letterSpacing: z.number().min(-0.1).max(1),
+  sizeMax: z.number().min(6).max(300), sizeMin: z.number().min(6).max(300), lineHeight: z.number().min(0.8).max(3), maxLines: z.number().int().min(1).max(20),
+  radius: z.number().min(0).max(500), fill: hexColor,
+  box: z.object(Object.fromEntries(posterFormats.map(format => [format, posterBox.nullable().default(null)])) as Record<(typeof posterFormats)[number], z.ZodDefault<z.ZodNullable<typeof posterBox>>>),
+});
+const posterFormatSchema = z.object({ enabled: z.boolean(), background: plainImage.default(emptyImage) });
+const posterFormatsSchema = z.object(Object.fromEntries(posterFormats.map(format => [format, posterFormatSchema.default({ enabled: false, background: emptyImage })])) as Record<(typeof posterFormats)[number], z.ZodDefault<typeof posterFormatSchema>>);
+const cardTypeSchema = z.enum(cardTypes.map(type => type.key) as [(typeof cardTypes)[number]["key"], ...(typeof cardTypes)[number]["key"][]]);
+const posterFieldsSchema = z.array(posterFieldSchema).max(30).refine(fields => new Set(fields.map(field => field.key)).size === fields.length, "Kunci kolom poster tidak boleh sama.");
+export const posterSchema = z.object({
+  enabled: z.boolean().default(false), cardType: cardTypeSchema.default("poster"), preset: z.string().max(60).default(""),
+  palette: z.string().max(40).default("rempah"), paletteChoice: z.boolean().default(false),
+  formats: posterFormatsSchema.default(() => posterFormatsSchema.parse({ post: { enabled: true }, story: { enabled: true } })),
+  fields: posterFieldsSchema.default([]),
+});
+/** A design for the library: the poster of an event without its on/off switch. */
+export const posterDesignInputSchema = z.object({
+  name: z.string().trim().min(2, "Isi nama desain minimal 2 huruf.").max(80),
+  description: z.string().trim().max(300).default(""),
+  template: z.object({
+    cardType: cardTypeSchema.default("poster"), preset: z.string().max(60).default(""),
+    palette: z.string().max(40).default("rempah"), paletteChoice: z.boolean().default(false),
+    formats: posterFormatsSchema,
+    fields: posterFieldsSchema.refine(fields => fields.length > 0, "Desain perlu minimal satu kotak."),
+  }),
+});
+export type PosterDesignInput = z.infer<typeof posterDesignInputSchema>;
 export const emptyAfter = { title: "", message: "", image: emptyImage, collaboration: { enabled: false, title: "", description: "", button_label: "" } };
 export const eventBaseSchema = z.object({
   id: z.uuid(), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),
@@ -79,7 +140,7 @@ export const eventBaseSchema = z.object({
   review_url: httpsUrl, review_enabled: z.boolean(), review_heading: text(200).default(""), review_description: text(1000).default(""), review_button_label: text(100).default(""), rsvp_enabled: z.boolean(), rsvp_closes_at: optionalTime,
   invitation_mode: z.enum(["open", "personal"]).default("open"),
   feedback_enabled: z.boolean(), feedback_opens_at: optionalTime, feedback_description: text(1000).default(""),
-  contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "" }),
+  contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "", photo: { url: "", alt: "", srcset: [] }, staff_id: "" }),
   team_image: plainImage.default(emptyImage),
   sections: z.array(z.object({ key: z.enum(["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback", "team"]), enabled: z.boolean() })).max(9),
   topics: z.array(z.object({ title: text(200).min(1), description: text(1500), en: pairSchema(200, 1500).optional() })).max(20),
@@ -93,7 +154,7 @@ export const eventBaseSchema = z.object({
     framing: z.object({ mobile: photoFrameSchema, desktop: photoFrameSchema }).optional(),
   }),
   gallery: z.array(z.object({ id: z.uuid(), url: requiredHttpsUrl, alt: text(300), caption: text(300), sort_order: z.number().int().min(0).max(1000), srcset: srcsetSchema })).max(12),
-  event_kind: z.enum(["kunjungan", "acara", "program"]).default("acara"),
+  event_kind: z.enum(["kunjungan", "acara", "program", "kartu"]).default("acara"),
   audience: z.enum(["external", "internal"]).default("external"),
   theme: z.object({ key: z.enum(themeKeys).default("werkudara"), corners: z.enum(["square", "soft"]).default("square") }).default({ key: "werkudara", corners: "square" }),
   phase_override: z.enum(["auto", "before", "day", "after"]).default("auto"),
@@ -104,12 +165,18 @@ export const eventBaseSchema = z.object({
   prepare: prepareSchema.default(emptyPrepare),
   language: z.enum(["id", "en", "id_en"]).default("id"),
   guest_estimate: z.number().int().min(1).max(5000).nullable().default(null),
+  agenda_details: z.record(z.uuid(), agendaDetailSchema).default({}),
+  presentation_pdf_url: httpsUrl.default(""),
+  emergency: emergencySchema.default(emptyEmergency),
+  poster: posterSchema.default(() => posterSchema.parse({})),
   translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),
   created_at: timestamp, updated_at: timestamp,
 });
 export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
   const issue = (path: (string | number)[], message: string) => ctx.addIssue({ code: "custom", path, message });
   if (new Set(event.sections.map(s => s.key)).size !== event.sections.length) issue(["sections"], "Bagian tidak boleh berulang.");
+  if (Boolean(event.emergency.name) !== Boolean(event.emergency.phone)) issue([event.emergency.name ? "emergency.phone" : "emergency.name"], "Isi nama dan nomor kontak darurat bersama-sama.");
+  for (const [id, detail] of Object.entries(event.agenda_details)) if (detail.pdf_page && !event.presentation_pdf_url) issue(["agenda_details", id, "pdf_page"], "Isi tautan PDF presentasi dulu.");
   if (Boolean(event.contact.name) !== Boolean(event.contact.phone)) issue([event.contact.name ? "contact.phone" : "contact.name"], "Isi nama dan nomor PIC bersama-sama.");
   if (event.ends_at && Date.parse(event.ends_at) <= Date.parse(event.starts_at)) issue(["ends_at"], "Waktu selesai harus setelah waktu mulai.");
   for (const [index, item] of event.agenda.entries()) if (Date.parse(item.ends_at) <= Date.parse(item.starts_at)) issue(["agenda", index, "ends_at"], "Waktu selesai harus setelah waktu mulai.");
@@ -127,7 +194,8 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
   }
   const locationDisplay = event.location_display ?? (event.location_embed_url ? "embed" : "manual");
   if (locationDisplay === "embed" && !event.location_embed_url) issue(["location_embed_url"], "Isi kode sematan Google Maps.");
-  if (event.status === "published") {
+  // A card has no invitation: organiser, introduction and place are not asked of it.
+  if (event.status === "published" && event.event_kind !== "kartu") {
     for (const key of ["organizer", "introduction"] as const) if (!event[key]) issue([key], "Lengkapi sebelum publikasi.");
     if (locationDisplay === "manual") for (const key of ["venue_name", "address", "location_url"] as const) if (!event[key]) issue([key], "Lengkapi sebelum publikasi.");
     if (event.feedback_enabled && !event.feedback_questions.length) issue(["feedback_questions"], "Isi pertanyaan sebelum mengaktifkan survei.");
