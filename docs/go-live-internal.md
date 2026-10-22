@@ -30,6 +30,7 @@ Terapkan migrasi yang belum ada, **urut nama berkas**, lewat Supabase Dashboard 
 | `202610210005_staff_members.sql` | Daftar Tim Werkudara untuk mengisi PIC |
 | `202610220001_studio_poster.sql` | Templat "Poster sesi / festival" dan modul Studio Poster boleh diatur untuk admin biasa (Studio Poster sendiri tetap jalan tanpa migrasi ini) |
 | `202610220002_poster_designs.sql` | Pustaka desain poster ("Simpan sebagai desain baru") |
+| `202610220003_card_publish.sql` | Kartu (Studio Poster) bisa dipublikasikan tanpa penyelenggara, pengantar, dan lokasi |
 
 Cek hasilnya (hanya membaca). Semua kolom harus `true`:
 
@@ -49,7 +50,8 @@ select
   exists (select 1 from information_schema.columns where table_schema='public' and table_name='events' and column_name='code') as "210004",
   to_regclass('public.staff_members') is not null as "210005",
   coalesce((select pg_get_constraintdef(oid) like '%poster-sesi%' from pg_constraint where conname = 'admin_settings_enabled_templates_check'), false) as "220001",
-  to_regclass('public.poster_designs') is not null as "220002";
+  to_regclass('public.poster_designs') is not null as "220002",
+  coalesce((select prosrc like '%kartu%' from pg_proc where proname = 'save_event' limit 1), false) as "220003";
 ```
 
 Migrasi bersifat menambah. Versi lama yang masih online tetap berjalan setelah migrasi diterapkan, jadi urutannya aman: **database dulu, baru kode**.

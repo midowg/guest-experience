@@ -111,30 +111,31 @@ Kartu adalah jenis acara khusus, **bukan undangan**. Tidak ada rundown, RSVP, ma
 
 Studio Poster juga bisa dinyalakan sebagai bagian tambahan di acara biasa (blok **Studio Poster**, tautan `KODE/poster`).
 
-1. **Pilih desain**: pilih jenis kartu, lalu ketuk salah satu gambar mini desain. Desain dari pustaka yang pernah disimpan juga muncul di sini.
-2. **Atur kartu**, langsung di kartunya:
-   - **geser** kotak untuk memindahkannya;
-   - tarik **titik biru di sudut** untuk mengubah ukurannya;
-   - **ketuk** kotak, atau pilih namanya di daftar, untuk membuka pengaturan singkatnya:
-     - **Diisi peserta**: kalau mati, isinya tetap dari panitia, misalnya tautan reservasi;
-     - isi, petunjuk untuk peserta, ukuran huruf, tebal, font, rata, dan warna.
+### Menyiapkan desain di Figma
 
-   Panah keyboard menggeser kotak 1 px (Shift: 10 px). Tambah kotak dengan tombol **Teks** atau **Foto**.
+1. **Ukuran frame** sama dengan ukuran kartu, misalnya 1080×1350 (Post), 1080×1920 (Story), 1080×1080 (Persegi), atau A4 1240×1754. Frame dengan rasio yang sama juga diterima dan diskalakan.
+2. **Nama layer** yang boleh diganti peserta:
+   - `isi_<nama>` untuk teks, misalnya `isi_judul`, `isi_nama_fasilitator`, `isi_tanggal`;
+   - `foto_<nama>` untuk foto, misalnya `foto_utama`. Kotak atau lingkaran pada layer foto menjadi bingkainya.
 
-   Warna kartu dipilih dari bulatan palet di atas kartu.
+   Supaya kolom teks selebar areanya (bukan hanya selebar teks contoh), kelompokkan teksnya dengan **kotak transparan seukuran area**, lalu beri nama grup itu `isi_…`. Teks lain, logo, garis, dan warna menjadi latar dan tidak bisa diubah peserta.
+3. **Ekspor:** pilih frame → Export → **SVG**, lalu centang **Include "id" attribute** dan **Outline text**.
 
-   Garis biru berarti kotak diisi peserta; garis abu-abu berarti isinya tetap dari panitia.
-3. **Angka dari Figma** (opsional): di pengaturan kotak, buka **Pengaturan lanjutan** untuk mengetik X, Y, Lebar, dan Tinggi persis dari Figma (pilih layer → X/Y/W/H). Posisi berlaku sama di HP maupun laptop, karena seluruh kartu diperbesar atau diperkecil utuh.
+### Di admin (blok Studio Poster)
 
-   **Ukuran dan latar dari Figma** (bagian yang dilipat di bawah):
-   - pilih ukuran yang dipakai;
-   - unggah latar PNG/JPG seukuran desain, berisi hiasan saja tanpa teks yang diisi peserta.
-4. Simpan dan publikasikan, lalu bagikan tautannya: `invitation.werkudara.group/KODE` untuk acara Kartu, atau `KODE/poster` bila Studio Poster dipakai di acara biasa. Tautan selalu memakai domain publik, juga saat admin dibuka dari laptop (localhost).
+1. **1 · Desain:** tekan **Unggah desain dari Figma (SVG)**. Kolom terbaca otomatis dari nama layer, dan latarnya diunggah sebagai gambar. Unggah lagi untuk ukuran lain (misalnya Story); kolom dengan nama yang sama digabung. Kalau tidak punya desain Figma, buka **atau pakai desain bawaan**.
+2. **2 · Kolom untuk peserta:** satu baris per kolom. Ubah namanya bila perlu. Matikan **Diisi peserta** untuk teks tetap dari panitia (misalnya tautan reservasi) dan isi teksnya. Untuk kolom yang diisi peserta, petunjuknya boleh diubah. Pratinjau kartu ada di sampingnya.
+3. **Lanjutan** (dilipat, jarang perlu): geser kotak, ubah ukuran huruf dan warna, ukuran kartu, dan latar manual.
+4. Simpan dan publikasikan, lalu bagikan tautannya: `invitation.werkudara.group/KODE` untuk acara Kartu, atau `KODE/poster` bila Studio Poster dipakai di acara biasa. Tautan selalu memakai domain publik, juga saat admin dibuka dari laptop.
 
-Yang dilakukan peserta:
-1. Buka tautan, lalu tekan **Edit**.
-2. Ketuk kotak bergaris untuk mengisinya. Unggah foto, lalu geser untuk mengatur posisi; di HP, cubit dengan dua jari untuk zoom.
-3. Tekan **Simpan**, lalu **Unduh gambar** (Post/Story), **PDF**, atau **Bagikan** (di HP yang mendukung).
+   Kartu baru bisa dipublikasikan setelah migrasi `202610220003_card_publish.sql` diterapkan. Sebelum itu, simpan sebagai draf.
+
+### Yang dilihat peserta
+
+- **Di laptop:** form di kiri, kartu di kanan. Kartu langsung berubah saat mengetik.
+- **Di HP:** kartu kecil menempel di atas, form di bawahnya.
+- Foto dipilih dari perangkat, lalu bisa digeser di kartu dan di-zoom dengan slider.
+- **Unduh gambar**, **PDF**, atau **Bagikan** bisa ditekan kapan saja. Kolom yang masih kosong tidak ikut tampil.
 
 Isian dan foto peserta **tidak dikirim ke server**: semuanya tersimpan di browser HP peserta itu sendiri dan tetap ada walau halaman ditutup.
 
