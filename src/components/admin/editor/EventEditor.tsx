@@ -23,7 +23,7 @@ import { HeroBlock } from "@/components/admin/editor/blocks/HeroBlock";
 import { IdentityBlock } from "@/components/admin/editor/blocks/IdentityBlock";
 import { PosterBlock } from "@/components/admin/editor/blocks/PosterBlock";
 import { PublicationBlock } from "@/components/admin/editor/blocks/PublicationBlock";
-import { POSTER_LABEL } from "@/lib/poster";
+import { POSTER_LABEL, type PosterDesign } from "@/lib/poster";
 import { posterPresets, presetPoster } from "@/lib/poster-presets";
 import { ReviewBlock } from "@/components/admin/editor/blocks/ReviewBlock";
 import { RsvpBlock } from "@/components/admin/editor/blocks/RsvpBlock";
@@ -72,7 +72,7 @@ function useWideScreen() {
  * that this event does not use is not offered at all; one it already uses stays visible with a
  * note, may be switched off, and cannot come back (the server checks the same rule on save).
  */
-export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false, origin = "", staff = [], previewSrc, dangerZone }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean; origin?: string; staff?: StaffMember[]; previewSrc?: string; dangerZone?: ReactNode }) {
+export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false, origin = "", staff = [], posterDesigns = [], previewSrc, dangerZone }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean; origin?: string; staff?: StaffMember[]; posterDesigns?: PosterDesign[]; previewSrc?: string; dangerZone?: ReactNode }) {
   const unavailable = (key: AdminModule) => disabledModules.includes(key) && !moduleActive(initialEvent, key);
   const restricted = (key: AdminModule) => disabledModules.includes(key) && moduleActive(initialEvent, key);
   // Kind, audience, and theme come from the template; only the super admin changes them (meeting of 20 Oct).
@@ -272,7 +272,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {(status === "todo" || status === "error" || status === "dirty") && <span className={`${e.dot} ${e[`dot_${status}`]}`} title={blockStatusLabels[status]} />}
     </button></li>;
   }
-  const kit: EditorKit = { event, update, errors, control, text, time, toggle, choices, tz, unavailable, sectionUnavailable, origin, staff };
+  const kit: EditorKit = { event, update, errors, control, text, time, toggle, choices, tz, unavailable, sectionUnavailable, origin, staff, posterDesigns, superAdmin };
   return <form className={`${styles.form} ${e.editor}`} onSubmit={save} noValidate aria-busy={pending}>
     {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
     {message && <Notice tone="success">{message}</Notice>}

@@ -11,6 +11,7 @@ import { POSTER_LABEL, posterFormats, posterSizes, type PosterField, type Poster
 import { posterPresets, presetOf, presetPoster } from "@/lib/poster-presets";
 import { posterPath } from "@/lib/routes";
 import { PosterFieldRow } from "./PosterFieldRow";
+import { PosterDesignLibrary } from "./PosterDesignLibrary";
 import { loadPosterFonts } from "@/components/poster/layout";
 import s from "./poster-block.module.css";
 
@@ -19,7 +20,7 @@ import s from "./poster-block.module.css";
  * tap on a box in the preview opens its row. Guests only change the boxes marked editable.
  */
 export function PosterBlock({ kit }: { kit: EditorKit }) {
-  const { event, update, errors, origin } = kit;
+  const { event, update, errors, origin, posterDesigns, superAdmin } = kit;
   const poster = event.poster;
   const [format, setFormat] = useState<PosterFormat>("post");
   const [openRow, setOpenRow] = useState<string | null>(null);
@@ -66,6 +67,10 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
         <div><strong>{preset.name}</strong><p className="field-hint">{preset.description}</p></div>
         <Button type="button" variant={poster.preset === preset.key ? "secondary" : "primary"} onClick={() => applyPreset(preset.key)}>{poster.preset === preset.key ? "Atur ulang ke bawaan" : "Pakai desain ini"}</Button>
       </div>)}
+      <PosterDesignLibrary poster={poster} initial={posterDesigns} superAdmin={superAdmin} onApply={design => {
+        if (poster.fields.length && !window.confirm(`Pakai desain “${design.name}”? Latar, kotak, dan posisi poster ini akan diganti.`)) return;
+        set({ preset: design.template.preset, formats: design.template.formats, fields: design.template.fields });
+      }} />
     </fieldset>
 
     <div className={s.formats}>

@@ -107,11 +107,23 @@ const posterFieldSchema = z.object({
   box: z.object({ post: posterBox.nullable(), story: posterBox.nullable() }),
 });
 const posterFormatSchema = z.object({ enabled: z.boolean(), background: plainImage.default(emptyImage) });
+const posterFieldsSchema = z.array(posterFieldSchema).max(30).refine(fields => new Set(fields.map(field => field.key)).size === fields.length, "Kunci kolom poster tidak boleh sama.");
 export const posterSchema = z.object({
   enabled: z.boolean().default(false), preset: z.string().max(60).default(""),
   formats: z.object({ post: posterFormatSchema, story: posterFormatSchema }).default({ post: { enabled: true, background: emptyImage }, story: { enabled: true, background: emptyImage } }),
-  fields: z.array(posterFieldSchema).max(30).refine(fields => new Set(fields.map(field => field.key)).size === fields.length, "Kunci kolom poster tidak boleh sama.").default([]),
+  fields: posterFieldsSchema.default([]),
 });
+/** A design for the library: the poster of an event without its on/off switch. */
+export const posterDesignInputSchema = z.object({
+  name: z.string().trim().min(2, "Isi nama desain minimal 2 huruf.").max(80),
+  description: z.string().trim().max(300).default(""),
+  template: z.object({
+    preset: z.string().max(60).default(""),
+    formats: z.object({ post: posterFormatSchema, story: posterFormatSchema }),
+    fields: posterFieldsSchema.refine(fields => fields.length > 0, "Desain perlu minimal satu kotak."),
+  }),
+});
+export type PosterDesignInput = z.infer<typeof posterDesignInputSchema>;
 export const emptyAfter = { title: "", message: "", image: emptyImage, collaboration: { enabled: false, title: "", description: "", button_label: "" } };
 export const eventBaseSchema = z.object({
   id: z.uuid(), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),

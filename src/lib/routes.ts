@@ -72,6 +72,8 @@ export function adminApi(eventId: string, part = "", query: Record<string, strin
   return `/api/admin/events/${eventId}${part ? `/${part}` : ""}${search ? `?${search}` : ""}`;
 }
 export const adminEventsApi = "/api/admin/events";
+/** Studio Poster design library: the list, or one design by id. */
+export const posterDesignsApi = (id?: string) => `/api/admin/poster-designs${id ? `/${id}` : ""}`;
 /** Tim Werkudara: the list, or one member by id. */
 export const staffApi = (id?: string, query: Record<string, string> = {}) => {
   const search = new URLSearchParams(query).toString();

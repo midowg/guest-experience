@@ -53,6 +53,12 @@ export type PosterSettings = {
   fields: PosterField[];
 };
 
+/**
+ * A poster saved to the super admin's library (migration 202610220002): an event starts from a
+ * copy of it, so a later change to the design never moves an event's boxes.
+ */
+export type PosterDesign = { id: string; name: string; description: string; template: Pick<PosterSettings, "preset" | "formats" | "fields">; created_at: string };
+
 /** What the person making a poster changed: text by field key, photos with their framing. */
 export type PosterPhoto = { url: string; frame: PhotoFrame };
 export type PosterValues = { text: Record<string, string>; photos: Record<string, PosterPhoto> };

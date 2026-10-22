@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { AdminModule } from "@/lib/admin-modules";
 import type { EventRecord, StaffMember } from "@/lib/types";
+import type { PosterDesign } from "@/lib/poster";
 
 /** Changes one field of the draft; the editor tracks which block became unsaved. */
 export type Update = <K extends keyof EventRecord>(key: K, value: EventRecord[K]) => void;
@@ -36,4 +37,7 @@ export type EditorKit = {
   origin: string;
   /** Active Tim Werkudara members, for picking the PIC. */
   staff: StaffMember[];
+  /** Saved Studio Poster designs, and whether this admin may save or delete them. */
+  posterDesigns: PosterDesign[];
+  superAdmin: boolean;
 };
