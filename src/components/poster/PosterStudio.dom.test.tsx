@@ -50,3 +50,14 @@ it("lets the person pick a colour only when the admin allows it", async () => {
   expect(malam.getAttribute("aria-pressed")).toBe("true");
   await waitFor(() => expect(decodeURIComponent((screen.getByRole("img", { name: /Poster/ }).querySelector("img") as HTMLImageElement).src)).toContain("#111a2e"));
 });
+
+it("keeps the card in a frame that a phone can fold away, buttons still at hand", () => {
+  setup();
+  const frame = screen.getByRole("region", { name: "Pratinjau kartu" });
+  const fold = within(frame).getByRole("button", { name: /Sembunyikan/ });
+  expect(fold.getAttribute("aria-expanded")).toBe("true");
+  fireEvent.click(fold);
+  expect(within(frame).getByRole("button", { name: /Tampilkan/ }).getAttribute("aria-expanded")).toBe("false");
+  expect(frame.hasAttribute("data-hidden")).toBe(true);
+  expect(within(frame).getByRole("button", { name: "Unduh gambar" })).toBeTruthy();
+});

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { Download, FileText, ImagePlus, RotateCcw, Share2, Trash2 } from "lucide-react";
+import { Download, Eye, EyeOff, FileText, ImagePlus, RotateCcw, Share2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { activePalette, fieldText, fitText, posterFormats, posterPalettes, posterSizes, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import type { PhotoFrame } from "@/lib/types";
@@ -10,6 +10,7 @@ import { createMeasure, loadPosterFonts } from "./layout";
 import { canShareFiles, canvasBlob, downloadBlob, posterFilename, posterPdf, renderPoster, shareBlob } from "./export";
 import { clearDraft, loadDraft, preparePhoto, saveDraft } from "./draft";
 import styles from "./card-studio.module.css";
+import frame from "./card-frame.module.css";
 
 type Props = { eventId: string; eventTitle: string; poster: PosterSettings };
 const empty: PosterValues = { text: {}, photos: {} };
@@ -28,6 +29,8 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
   const [fontsVersion, setFontsVersion] = useState(0);
   const [busy, setBusy] = useState("");
   const [status, setStatus] = useState("");
+  // A phone can fold the card away to type with more room; it starts open.
+  const [hidden, setHidden] = useState(false);
   const canShare = useSyncExternalStore(noSubscription, canShareFiles, () => false);
   const blobs = useRef<Record<string, Blob>>({});
   const loaded = useRef(false);
@@ -115,32 +118,42 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
       <button type="button" className={styles.reset} onClick={() => void reset()}><RotateCcw size={15} aria-hidden="true" /> Hapus semua isian</button>
     </form>
 
-    {/* Card and its buttons stick together beside the form, so the buttons never slide behind the card. */}
+    {/*
+      The card in a frame, with its buttons at the bottom of the frame: beside the form on a wide
+      screen, pinned at the top on a phone, where it can be folded down to its buttons.
+    */}
     <div className={styles.side}>
-    <div className={styles.preview}>
-      {(formats.length > 1 || poster.paletteChoice) && <div className={styles.choices}>
-        {formats.length > 1 && <div className={styles.formats} role="group" aria-label="Ukuran">
-          {formats.map(item => <button key={item} type="button" aria-pressed={format === item} onClick={() => setFormat(item)}>{posterSizes[item].label}</button>)}
-        </div>}
-        {/* Colours, when the admin lets each person pick their own. */}
-        {poster.paletteChoice && <div className={styles.palettes} role="group" aria-label="Warna">
-          {posterPalettes.map(palette => <button key={palette.key} type="button" aria-pressed={activePalette(poster, values).key === palette.key} title={palette.name} aria-label={`Warna ${palette.name}`}
-            onClick={() => setValues(current => ({ ...current, palette: palette.key }))}>
-            <span style={{ background: palette.colors.background }} /><span style={{ background: palette.colors.primary }} /><span style={{ background: palette.colors.accent }} />
-          </button>)}
-        </div>}
-      </div>}
-      <div className={styles.stage} style={{ "--ratio": ratio } as CSSProperties}>
-        <PosterCanvas poster={poster} values={values} format={format} editing={false} hints selected={null} onSelect={noop} onFrame={setFrame} fontsVersion={fontsVersion} movePhotos />
-      </div>
-    </div>
-
-    <div className={styles.actions}>
-      <Button type="button" onClick={png} disabled={!!busy}><Download size={18} aria-hidden="true" /> {busy === "png" ? "Membuat…" : "Unduh gambar"}</Button>
-      <Button type="button" variant="secondary" onClick={pdf} disabled={!!busy}><FileText size={18} aria-hidden="true" /> {busy === "pdf" ? "Membuat…" : "PDF"}</Button>
-      {canShare && <Button type="button" variant="secondary" onClick={share} disabled={!!busy}><Share2 size={18} aria-hidden="true" /> Bagikan</Button>}
-      <p className={styles.status} role="status">{status}</p>
-    </div>
+      <section className={frame.frame} data-hidden={hidden || undefined} aria-label="Pratinjau kartu">
+        <div className={frame.head}>
+          <span className={frame.title}>Pratinjau</span>
+          <button type="button" className={frame.toggle} aria-expanded={!hidden} aria-controls="kartu-pratinjau" onClick={() => setHidden(value => !value)}>
+            {hidden ? <><Eye size={16} aria-hidden="true" /> Tampilkan</> : <><EyeOff size={16} aria-hidden="true" /> Sembunyikan</>}
+          </button>
+        </div>
+        <div id="kartu-pratinjau" className={frame.body}>
+          {(formats.length > 1 || poster.paletteChoice) && <div className={styles.choices}>
+            {formats.length > 1 && <div className={styles.formats} role="group" aria-label="Ukuran">
+              {formats.map(item => <button key={item} type="button" aria-pressed={format === item} onClick={() => setFormat(item)}>{posterSizes[item].label}</button>)}
+            </div>}
+            {/* Colours, when the admin lets each person pick their own. */}
+            {poster.paletteChoice && <div className={styles.palettes} role="group" aria-label="Warna">
+              {posterPalettes.map(palette => <button key={palette.key} type="button" aria-pressed={activePalette(poster, values).key === palette.key} title={palette.name} aria-label={`Warna ${palette.name}`}
+                onClick={() => setValues(current => ({ ...current, palette: palette.key }))}>
+                <span style={{ background: palette.colors.background }} /><span style={{ background: palette.colors.primary }} /><span style={{ background: palette.colors.accent }} />
+              </button>)}
+            </div>}
+          </div>}
+          <div className={frame.stage} style={{ "--ratio": ratio } as CSSProperties}>
+            <PosterCanvas poster={poster} values={values} format={format} editing={false} hints selected={null} onSelect={noop} onFrame={setFrame} fontsVersion={fontsVersion} movePhotos />
+          </div>
+        </div>
+        <div className={frame.actions}>
+          <Button type="button" onClick={png} disabled={!!busy} aria-label="Unduh gambar"><Download size={18} aria-hidden="true" /> {busy === "png" ? "Membuat…" : "Unduh"}</Button>
+          <Button type="button" variant="secondary" onClick={pdf} disabled={!!busy}><FileText size={18} aria-hidden="true" /> {busy === "pdf" ? "Membuat…" : "PDF"}</Button>
+          {canShare && <Button type="button" variant="secondary" onClick={share} disabled={!!busy}><Share2 size={18} aria-hidden="true" /> Bagikan</Button>}
+        </div>
+        <p className={frame.status} role="status">{status}</p>
+      </section>
     </div>
   </div>;
 }
