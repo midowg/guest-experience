@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
 import { CreateEventDialog } from "@/components/admin/events/CreateEventDialog";
 
@@ -33,7 +33,11 @@ it("creates an event from a template with only name, time, and place", async () 
   expect(screen.getByRole("heading", { name: "Detail acara" })).toBeTruthy();
   const title = screen.getByRole("textbox", { name: "Nama acara" }) as HTMLInputElement;
   expect(title.value).toBe("");
-  expect(title.placeholder).toBe("Contoh: Trip Lombok bersama PT Sinar Abadi");
+  // The template's own name is offered as a chip under the field; a tap fills it in.
+  const chip = within(screen.getByRole("group", { name: "Pilihan cepat: Nama acara" })).getByRole("button", { name: "Trip Lombok bersama PT Sinar Abadi" });
+  fireEvent.click(chip);
+  expect(title.value).toBe("Trip Lombok bersama PT Sinar Abadi");
+  fireEvent.change(title, { target: { value: "" } });
   expect(screen.queryByRole("radio", { name: /Eksternal|Internal/ })).toBeNull();
   expect(screen.queryByText(/Tema|tema Werkudara/)).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Buat acara" }));

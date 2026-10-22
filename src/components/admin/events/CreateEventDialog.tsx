@@ -1,5 +1,6 @@
 "use client";
 
+import { SuggestionChips } from "@/components/admin/editor/controls";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Copy, FilePlus2, X } from "lucide-react";
@@ -95,11 +96,12 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
     }
   }
 
-  function input(name: "title" | "starts_at" | "ends_at" | "venue_name" | "address" | "location_url", label: string, options: { type?: string; hint?: string; multiline?: boolean; placeholder?: string } = {}) {
+  function input(name: "title" | "starts_at" | "ends_at" | "venue_name" | "address" | "location_url", label: string, options: { type?: string; hint?: string; multiline?: boolean; placeholder?: string; suggestions?: string[] } = {}) {
     const id = `setup-${name}`;
     const props = { id, value: details[name], onChange: (e: { target: { value: string } }) => set({ [name]: e.target.value } as Partial<Details>), placeholder: options.placeholder ?? (options.type === "datetime-local" ? undefined : fieldExamples[name]), "aria-invalid": !!errors[name], "aria-describedby": [options.hint ? `${id}-hint` : "", errors[name] ? `${id}-error` : ""].filter(Boolean).join(" ") || undefined };
     return <Field name={id} label={label} hint={options.hint} error={errors[name]}>
       {options.multiline ? <textarea {...props} className="textarea" rows={2} /> : <input {...props} className="input" type={options.type ?? "text"} />}
+      {options.suggestions?.length ? <SuggestionChips field={label} value={details[name]} onPick={value => set({ [name]: value } as Partial<Details>)} options={options.suggestions.map(text => ({ label: text, value: text }))} /> : null}
     </Field>;
   }
   const zone = timezoneInfo[details.timezone].label;
@@ -141,7 +143,7 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
             {template && <p className="field-hint">{template.label} · tampilan {themeDefinition(template.theme).name}</p>}
           </div>
           <div className="stack">
-            {input("title", card ? "Nama kartu" : "Nama acara", { hint: card ? "Tampil sebagai judul halaman kartu." : "Tampil sebagai judul undangan.", placeholder: template ? `Contoh: ${template.example}` : undefined })}
+            {input("title", card ? "Nama kartu" : "Nama acara", { hint: card ? "Tampil sebagai judul halaman kartu." : "Tampil sebagai judul undangan.", placeholder: template ? "" : undefined, suggestions: template ? [template.example, ...(template.examples ?? [])] : undefined })}
             {card ? <p className="field-hint">Jenis kartu (poster, ucapan, ID card, sertifikat, undangan), desain, warna, dan ukuran dipilih di editor setelah ini. Kartu dibuat sebagai draf.</p> : <>
             <div className={styles.grid}>
               {input("starts_at", `Mulai (${zone})`, { type: "datetime-local" })}
