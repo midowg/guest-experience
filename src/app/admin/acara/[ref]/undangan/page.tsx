@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { InvitationManager } from "@/components/admin/invitations/InvitationManager";
 import { PublicLinkCard } from "@/components/admin/invitations/PublicLinkCard";
-import { siteUrl } from "@/lib/site-url";
+import { shareUrl } from "@/lib/site-url";
 import { getAdminEvent, resolveEventRef } from "@/lib/server/events";
 import { listInvitations } from "@/lib/server/invitations";
 import { isSupabaseConfigured } from "@/lib/server/config";
@@ -24,7 +24,7 @@ export default async function InvitationsPage({ params }: { params: Promise<{ re
     <p className="eyebrow">Undangan individual</p>
     <h1 className={styles.title}>{event.title}</h1>
     <EventNavigation event={event} current="invitations" />
-    <PublicLinkCard event={event} origin={siteUrl().origin} />
-    <InvitationManager event={event} initial={invitations} migrated={migrated} />
+    <PublicLinkCard event={event} origin={shareUrl().origin} />
+    <InvitationManager event={event} initial={invitations} migrated={migrated} origin={shareUrl().origin} />
   </AdminShell>;
 }

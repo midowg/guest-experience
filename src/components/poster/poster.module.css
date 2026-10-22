@@ -19,3 +19,16 @@ button.text { cursor: text; font: inherit; color: inherit; }
 .photo[data-open]:active { cursor: grabbing; }
 .photo[data-selected] { outline-style: solid; outline-color: #0f4a3a; }
 .photoHint { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4em; padding: 8%; background: rgba(251, 247, 239, .55); color: #6b5a3a; font-family: 'Nunito', sans-serif; font-weight: 700; text-align: center; white-space: normal; }
+
+/* Tapping a box outside editing opens it (the studio switches to editing). */
+.text[data-tap] { cursor: pointer; }
+
+/* The admin's arranging layer: every box outlined, the selected one with a label and a corner. */
+.arrange { position: absolute; inset: 0; }
+.arrangeBox { position: absolute; cursor: move; outline: var(--ring) dashed rgba(21, 81, 160, .55); outline-offset: 0; touch-action: none; }
+.arrangeBox[data-locked] { outline-color: rgba(91, 100, 118, .45); }
+.arrangeBox:hover { background: rgba(21, 81, 160, .06); }
+.arrangeBox[data-selected] { outline: calc(var(--ring) * 1.5) solid #1551a0; background: rgba(21, 81, 160, .08); z-index: 2; }
+.arrangeBox:focus-visible { outline: calc(var(--ring) * 2) solid #1551a0; }
+.arrangeLabel { position: absolute; bottom: 100%; left: 0; padding: .15em .5em; border-radius: .3em .3em 0 0; background: #1551a0; color: #fff; font-family: 'Nunito', sans-serif; font-weight: 800; white-space: nowrap; pointer-events: none; }
+.arrangeHandle { position: absolute; right: 0; bottom: 0; transform: translate(50%, 50%); border: 2px solid #fff; border-radius: 50%; background: #1551a0; cursor: nwse-resize; box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }

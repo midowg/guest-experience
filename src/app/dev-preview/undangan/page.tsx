@@ -24,5 +24,5 @@ export default function DevInvitationsPage() {
     guest(4, "Contoh Tamu Empat", { phone: "6281200000004", last_sent_at: now, send_count: 1, rsvp: answer("no") }),
     guest(5, "Contoh Tamu Lima", { active: false }),
   ];
-  return <AdminShell bare><h1>Undangan tamu (contoh)</h1><PublicLinkCard event={event} origin="https://invitation.werkudara.group" /><InvitationManager event={event} initial={guests} migrated /></AdminShell>;
+  return <AdminShell bare><h1>Undangan tamu (contoh)</h1><PublicLinkCard event={event} origin="https://invitation.werkudara.group" /><InvitationManager event={event} initial={guests} migrated origin="https://invitation.werkudara.group" /></AdminShell>;
 }

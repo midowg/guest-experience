@@ -111,19 +111,25 @@ Kartu adalah jenis acara khusus, **bukan undangan**. Tidak ada rundown, RSVP, ma
 
 Studio Poster juga bisa dinyalakan sebagai bagian tambahan di acara biasa (blok **Studio Poster**, tautan `KODE/poster`).
 
-1. **Pilih desain**: misalnya *Rempah Nusantara*, atau desain dari pustaka yang pernah disimpan.
-2. **Latar dari Figma** (opsional), untuk tiap ukuran:
-   - ekspor PNG/JPG **Post 1080×1350** dan/atau **Story 1080×1920**;
-   - isinya hanya hiasan (warna, garis, ikon, logo), tanpa teks yang akan diisi peserta;
-   - kosongkan untuk memakai latar bawaan desain.
-3. **Kotak di poster**: tiap kotak (judul, foto, tanggal, …) punya:
-   - **Boleh diedit peserta**: kalau mati, isinya tetap dari admin, misalnya tautan reservasi atau Instagram;
-   - **Isi awal / isi tetap**, teks petunjuk, dan batas huruf;
-   - **Posisi**: X, Y, Lebar, Tinggi dalam piksel desain. Salin angkanya langsung dari panel Figma (pilih layer → angka X/Y/W/H). Posisi berlaku sama di HP maupun laptop, karena seluruh poster diperbesar atau diperkecil utuh;
-   - **Huruf**: font, tebal, warna, rata, ukuran maks/min. Teks panjang mengecil sendiri sampai ukuran min, lalu dipotong "…".
+1. **Pilih desain**: pilih jenis kartu, lalu ketuk salah satu gambar mini desain. Desain dari pustaka yang pernah disimpan juga muncul di sini.
+2. **Atur kartu**, langsung di kartunya:
+   - **geser** kotak untuk memindahkannya;
+   - tarik **titik biru di sudut** untuk mengubah ukurannya;
+   - **ketuk** kotak, atau pilih namanya di daftar, untuk membuka pengaturan singkatnya:
+     - **Diisi peserta**: kalau mati, isinya tetap dari panitia, misalnya tautan reservasi;
+     - isi, petunjuk untuk peserta, ukuran huruf, tebal, font, rata, dan warna.
 
-   Ketuk kotak di pratinjau untuk membuka pengaturannya. Kotak baru bisa ditambah dengan **Tambah kotak teks/foto**.
-4. Simpan dan publikasikan acara, lalu bagikan **Tautan Studio Poster** (`invitation.werkudara.group/KODE/poster`) ke para pengisi sesi.
+   Panah keyboard menggeser kotak 1 px (Shift: 10 px). Tambah kotak dengan tombol **Teks** atau **Foto**.
+
+   Warna kartu dipilih dari bulatan palet di atas kartu.
+
+   Garis biru berarti kotak diisi peserta; garis abu-abu berarti isinya tetap dari panitia.
+3. **Angka dari Figma** (opsional): di pengaturan kotak, buka **Pengaturan lanjutan** untuk mengetik X, Y, Lebar, dan Tinggi persis dari Figma (pilih layer → X/Y/W/H). Posisi berlaku sama di HP maupun laptop, karena seluruh kartu diperbesar atau diperkecil utuh.
+
+   **Ukuran dan latar dari Figma** (bagian yang dilipat di bawah):
+   - pilih ukuran yang dipakai;
+   - unggah latar PNG/JPG seukuran desain, berisi hiasan saja tanpa teks yang diisi peserta.
+4. Simpan dan publikasikan, lalu bagikan tautannya: `invitation.werkudara.group/KODE` untuk acara Kartu, atau `KODE/poster` bila Studio Poster dipakai di acara biasa. Tautan selalu memakai domain publik, juga saat admin dibuka dari laptop (localhost).
 
 Yang dilakukan peserta:
 1. Buka tautan, lalu tekan **Edit**.

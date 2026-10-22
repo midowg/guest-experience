@@ -27,7 +27,8 @@ const companionOptions = Array.from({ length: MAX_COMPANIONS + 1 }, (_, n) => n)
 type Queue = { kind: MessageKind; ids: string[]; index: number };
 
 /** Guest list, import, WhatsApp sending, and opened/answered status for one event. */
-export function InvitationManager({ event, initial, migrated }: { event: EventRecord; initial: EventInvitation[]; migrated: boolean }) {
+/** `origin`: the public address personal links are built on (shareUrl), never the admin's own. */
+export function InvitationManager({ event, initial, migrated, origin = "" }: { event: EventRecord; initial: EventInvitation[]; migrated: boolean; origin?: string }) {
   const [items, setItems] = useState(initial);
   const [filter, setFilter] = useState<Filter>("all");
   const [busy, setBusy] = useState(false);
@@ -36,7 +37,6 @@ export function InvitationManager({ event, initial, migrated }: { event: EventRe
   const [editing, setEditing] = useState<string | null>(null);
   const [queue, setQueue] = useState<Queue | null>(null);
   const base = adminApi(event.id, "invitations");
-  const origin = typeof window === "undefined" ? "" : window.location.origin;
   const linkOf = (item: EventInvitation) => invitationLink(origin, event, item);
   const textOf = (kind: MessageKind, item: EventInvitation) => invitationMessage(kind, event, item, linkOf(item));
 

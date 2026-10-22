@@ -150,11 +150,12 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
         {canShare && <Button type="button" variant="secondary" onClick={share} disabled={!saved || editing || !!busy}><Share2 size={18} aria-hidden="true" /> Bagikan</Button>}
       </div>
     </div>
-    <p id="poster-download-hint" className={styles.status} role="status">{status || (editing ? "Ketuk kotak bergaris di poster untuk mengisinya." : saved ? "" : "Tekan Edit untuk mengisi poster. Setelah Simpan, poster bisa diunduh.")}</p>
+    <p id="poster-download-hint" className={styles.status} role="status">{status || (editing ? "Ketuk kotak bergaris di poster untuk mengisinya." : saved ? "" : "Ketuk kotak di kartu (atau tekan Edit) untuk mengisinya. Setelah Simpan, kartu bisa diunduh.")}</p>
 
     <div className={styles.layout} data-editing={editing || undefined}>
       <div className={styles.stage} style={{ "--ratio": posterSizes[format].width / posterSizes[format].height, "--cap": posterSizes[format].width > posterSizes[format].height ? "60rem" : "36rem" } as CSSProperties}>
-        <PosterCanvas poster={poster} values={values} format={format} editing={editing} hints={editing || !saved} selected={selected} onSelect={select} onFrame={setFrame} fontsVersion={fontsVersion} />
+        <PosterCanvas poster={poster} values={values} format={format} editing={editing} hints={editing || !saved} selected={selected} onSelect={select} onFrame={setFrame} fontsVersion={fontsVersion}
+          onTap={key => { setEditing(true); setStatus(""); select(key); }} />
       </div>
       {editing && <aside className={styles.panel} aria-label="Isi poster" data-open={current ? "" : undefined}>
         {current
