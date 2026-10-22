@@ -40,7 +40,7 @@ export const staffInputSchema = z.object({
 });
 export type StaffInput = z.infer<typeof staffInputSchema>;
 export const momentIcons = ["coffee", "utensils", "gift", "users", "camera", "music", "map", "sparkles", "presentation", "heart"] as const;
-export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar"] as const;
+export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar", "rempah"] as const;
 const pairSchema = (title = 200, description = 1500) => z.object({ title: text(title).default(""), description: text(description).default("") });
 export const emptyEnglish = {
   title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",
@@ -93,6 +93,25 @@ const emergencySchema = z.object({
   hospital: text(200).default(""), hospital_address: text(500).default(""), hospital_maps_url: httpsUrl.default(""),
 });
 export const emptyPrepare = { title: "", intro: "", items: [] };
+/** Studio Poster. Boxes are design pixels from Figma; a poster is at most 2000 px on a side. */
+const coordinate = z.number().min(0).max(2000);
+const posterBox = z.object({ x: coordinate, y: coordinate, w: z.number().min(1).max(2000), h: z.number().min(1).max(2000) });
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Gunakan warna hex, misalnya #0f4a3a.");
+const posterFieldSchema = z.object({
+  key: z.string().regex(/^[a-z0-9_]{1,40}$/), label: text(80).min(1), hint: text(200).default(""),
+  kind: z.enum(["text", "photo"]), editable: z.boolean(), value: text(2000).default(""), maxLength: z.number().int().min(1).max(1000),
+  font: z.enum(["playfair", "nunito", "lora", "cormorant"]), weight: z.number().int().min(100).max(900), color: hexColor,
+  align: z.enum(["left", "center", "right"]), uppercase: z.boolean(), letterSpacing: z.number().min(-0.1).max(1),
+  sizeMax: z.number().min(6).max(300), sizeMin: z.number().min(6).max(300), lineHeight: z.number().min(0.8).max(3), maxLines: z.number().int().min(1).max(20),
+  radius: z.number().min(0).max(500), fill: hexColor,
+  box: z.object({ post: posterBox.nullable(), story: posterBox.nullable() }),
+});
+const posterFormatSchema = z.object({ enabled: z.boolean(), background: plainImage.default(emptyImage) });
+export const posterSchema = z.object({
+  enabled: z.boolean().default(false), preset: z.string().max(60).default(""),
+  formats: z.object({ post: posterFormatSchema, story: posterFormatSchema }).default({ post: { enabled: true, background: emptyImage }, story: { enabled: true, background: emptyImage } }),
+  fields: z.array(posterFieldSchema).max(30).refine(fields => new Set(fields.map(field => field.key)).size === fields.length, "Kunci kolom poster tidak boleh sama.").default([]),
+});
 export const emptyAfter = { title: "", message: "", image: emptyImage, collaboration: { enabled: false, title: "", description: "", button_label: "" } };
 export const eventBaseSchema = z.object({
   id: z.uuid(), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),
@@ -131,6 +150,7 @@ export const eventBaseSchema = z.object({
   agenda_details: z.record(z.uuid(), agendaDetailSchema).default({}),
   presentation_pdf_url: httpsUrl.default(""),
   emergency: emergencySchema.default(emptyEmergency),
+  poster: posterSchema.default({ enabled: false, preset: "", formats: { post: { enabled: true, background: emptyImage }, story: { enabled: true, background: emptyImage } }, fields: [] }),
   translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),
   created_at: timestamp, updated_at: timestamp,
 });

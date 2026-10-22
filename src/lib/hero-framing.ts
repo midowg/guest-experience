@@ -1,5 +1,6 @@
 import { emptyAfter, emptyEmergency, emptyEnglish, emptyExperience, emptyPrepare, emptyRoute } from "./validation";
 import type { EventRecord, HeroFraming, HeroImage, PhotoFrame } from "./types";
+import { normalizePoster } from "./poster";
 
 export function defaultFraming(focus: HeroImage["focus"] = "center"): HeroFraming {
   const frame = { x: 50, y: focus === "top" ? 0 : focus === "bottom" ? 100 : 50, zoom: 1 };
@@ -34,6 +35,7 @@ export function normalizeEvent(event: EventRecord): EventRecord {
     guest_estimate: event.guest_estimate ?? null,
     agenda_details: event.agenda_details ?? {}, presentation_pdf_url: event.presentation_pdf_url ?? "",
     emergency: { ...emptyEmergency, ...event.emergency },
+    poster: normalizePoster(event.poster),
   };
 }
 export function dragFrame(frame: PhotoFrame, dx: number, dy: number, width: number, height: number, naturalWidth: number, naturalHeight: number): PhotoFrame {

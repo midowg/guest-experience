@@ -1,3 +1,5 @@
+import type { PosterSettings } from "./poster";
+
 export type EventStatus = "draft" | "published" | "archived";
 export type InvitationMode = "open" | "personal";
 export type SectionKey = "about" | "experience" | "agenda" | "location" | "prepare" | "rsvp" | "contact" | "feedback" | "team";
@@ -27,7 +29,7 @@ export type HeroImage = { url: string; alt: string; srcset: ImageSource[]; focus
 /** The form of the event. Audience is a separate choice: an internal event can take any form. */
 export type EventKind = "kunjungan" | "acara" | "program";
 export type EventAudience = "external" | "internal";
-export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar";
+export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah";
 export type EventTheme = { key: ThemeKey; corners: "square" | "soft" };
 export type EventPhase = "before" | "day" | "after";
 export type PhaseOverride = "auto" | EventPhase;
@@ -82,6 +84,8 @@ export type EventRecord = {
   event_kind: EventKind; audience: EventAudience; theme: EventTheme; phase_override: PhaseOverride;
   experience: EventExperienceContent; route: RouteGuide; day_note: string; after: AfterContent; prepare: PrepareContent; language: EventLanguage; translations: EventTranslations; guest_estimate: number | null;
   agenda_details: Record<string, AgendaDetail>; presentation_pdf_url: string; emergency: EmergencyContact;
+  /** Studio Poster: the template guests fill in to make their own poster. */
+  poster: PosterSettings;
   created_at: string; updated_at: string;
 };
 export type Dietary = "vegetarian" | "allergy" | "other";

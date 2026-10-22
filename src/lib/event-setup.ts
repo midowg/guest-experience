@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parseContactPhone } from "./contact-phone";
 import { standardQuestions, templateKeys, templateOf } from "./event-templates";
+import { presetPoster } from "./poster-presets";
 import { createSeedEvent } from "./seed-event";
 import { eventTimezones } from "./timezones";
 import type { EventRecord, SectionKey } from "./types";
@@ -86,6 +87,7 @@ export function buildEventFromSetup(setup: EventSetup, ids: Ids): EventRecord {
     theme: { key: template?.theme ?? "werkudara", corners: "square" },
     prepare: { ...base.prepare, items: (template?.prepare ?? []).map(card => ({ icon: card.icon, title: card.title, description: "", list: [] })) },
   }, setup, ids);
+  if (template?.poster) event.poster = presetPoster(template.poster, event);
   const feedback = setup.modules.includes("feedback");
   return {
     ...event,

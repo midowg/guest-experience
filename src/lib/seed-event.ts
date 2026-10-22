@@ -1,4 +1,5 @@
 import type { EventRecord } from "./types";
+import { emptyPoster } from "./poster";
 
 export function createSeedEvent(): EventRecord {
   return {
@@ -38,6 +39,7 @@ export function createSeedEvent(): EventRecord {
     guest_estimate: null,
     agenda_details: {}, presentation_pdf_url: "",
     emergency: { name: "", phone: "", hospital: "", hospital_address: "", hospital_maps_url: "" },
+    poster: emptyPoster(),
     translations: { en: {
       title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",
       experience_title: "", experience_story: "", prepare_title: "", prepare_intro: "", after_title: "", after_message: "",

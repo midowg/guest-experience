@@ -54,6 +54,13 @@ export const themes: ThemeDefinition[] = [
     hero: "#22684a", onHero: "#ffffff", heroAccent: "#c9ebd8", scrimRgb: "12, 40, 28",
     fontHeading: "'Nunito', sans-serif", headingWeight: 700,
   } },
+  { key: "rempah", name: "Rempah", description: "Krem, hijau tua, dan emas; judul berkait.", suggestedFor: "Festival, kuliner, budaya", tokens: {
+    background: "#fbf7ef", surface: "#f3ead8", soft: "#f3ead8", border: "#e3cfa3",
+    text: "#1f2a24", heading: "#0f4a3a", caption: "#5d6157", danger: "#8a2433",
+    primary: "#0f4a3a", primaryHover: "#0a3a2d", onPrimary: "#ffffff",
+    hero: "#0f4a3a", onHero: "#fbf7ef", heroAccent: "#c9922b", scrimRgb: "10, 40, 30",
+    fontHeading: "'Playfair Display', serif", headingWeight: 600,
+  } },
 ];
 
 export function themeDefinition(key: ThemeKey): ThemeDefinition {
