@@ -3,7 +3,7 @@ import { getAdminEvent, getFeaturedEventId, resolveEventRef } from "@/lib/server
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { EventEditor } from "@/components/admin/editor/EventEditor";
-import { siteUrl } from "@/lib/site-url";
+import { shareUrl } from "@/lib/site-url";
 import { listStaff } from "@/lib/server/staff";
 import { listPosterDesigns } from "@/lib/server/poster-designs";
 import { DeleteEvent } from "@/components/admin/events/DeleteEvent";
@@ -28,6 +28,6 @@ export default async function EventEditorPage({ params }: { params: Promise<{ re
     <h1 className={styles.title}>{event.title}</h1>
     <p className={styles.eventMeta}>Dibuat {formatDateTime(event.created_at)} · Terakhir disimpan {formatDateTime(event.updated_at)}</p>
     <EventNavigation event={event} current="edit" />
-    <EventEditor key={event.id} event={event} disabledModules={await disabledModulesFor(role)} superAdmin={role === "super"} origin={siteUrl().origin} staff={(await listStaff()).staff} posterDesigns={(await listPosterDesigns()).designs} dangerZone={<DeleteEvent event={event} isFeatured={featuredId === event.id} bare />} />
+    <EventEditor key={event.id} event={event} disabledModules={await disabledModulesFor(role)} superAdmin={role === "super"} origin={shareUrl().origin} staff={(await listStaff()).staff} posterDesigns={(await listPosterDesigns()).designs} dangerZone={<DeleteEvent event={event} isFeatured={featuredId === event.id} bare />} />
   </AdminShell>;
 }
