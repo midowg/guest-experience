@@ -151,3 +151,7 @@
   .btnText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .saveButton { min-height: 42px; padding-inline: var(--space-3); }
 }
+
+/* A card (event_kind "kartu") has no phone preview: menu and form only. */
+@media (min-width: 72rem) { .layout[data-card] { grid-template-columns: var(--menu-width) minmax(0, 1fr); } .layout[data-card][data-menu="hidden"] { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 71.99rem) { .layout[data-card] { grid-template-columns: minmax(0, 1fr); } }

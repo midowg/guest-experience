@@ -47,7 +47,7 @@ export function moduleActive(event: EventRecord, key: AdminModule): boolean {
     case "bilingual": return (event.language ?? "id") !== "id";
     case "review": return event.review_enabled;
     case "collaboration": return !!event.after?.collaboration.enabled;
-    case "poster": return !!event.poster?.enabled;
+    case "poster": return !!event.poster?.enabled || event.event_kind === "kartu";
     default: return false;
   }
 }

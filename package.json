@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "wording": "node scripts/wording-from-xlsx.mjs",
-    "poster:backgrounds": "node scripts/poster-backgrounds.mjs"
+    "poster:icons": "node scripts/poster-icons.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1147.0",

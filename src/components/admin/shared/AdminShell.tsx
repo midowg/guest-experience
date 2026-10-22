@@ -44,7 +44,10 @@ export function SetupNotice() {
 /** The event's pages behind one dropdown, grouped; "Semua acara" is in the header, the live preview in the editor. */
 export function EventNavigation({ event, current }: { event: EventRecord; current: AdminTab }) {
   const page = (tab: AdminTab, label: string) => ({ tab, label, href: adminEventPath(event, tab) });
-  return <EventPagesMenu current={current} publicHref={event.status === "published" ? eventPath(event) : undefined} groups={[
+  const publicHref = event.status === "published" ? eventPath(event) : undefined;
+  // A card has no guests, RSVP or operations: its editor is all there is.
+  if (event.event_kind === "kartu") return <EventPagesMenu current={current} publicHref={publicHref} groups={[{ label: "Edit", pages: [page("edit", "Edit kartu")] }]} />;
+  return <EventPagesMenu current={current} publicHref={publicHref} groups={[
     { label: "Edit", pages: [page("edit", "Edit acara")] },
     { label: "Tamu", pages: [page("invitations", "Daftar tamu"), page("responses", "RSVP"), page("checkin", "Check-in")] },
     { label: "Operasional", pages: [page("beo", "BEO"), page("gallery", "Galeri foto"), page("feedback", "Feedback")] },

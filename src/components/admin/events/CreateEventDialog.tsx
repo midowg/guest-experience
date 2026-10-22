@@ -60,8 +60,14 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
     } else setDetails(emptyDetails);
   }
 
+  // A card needs only a name: no time, place or PIC. It is dated now so the record stays complete.
+  const card = template?.kind === "kartu";
   function setup(): unknown {
     const time = (value: string) => value ? fromZoneInput(value, details.timezone) : null;
+    if (card) return {
+      template: template.key, title: details.title, starts_at: new Date().toISOString(), ends_at: null, timezone: details.timezone, audience: template.audience, language: "id", invitation_mode: "open",
+      location: "later", venue_name: "", address: "", location_url: "", greeting: "", introduction: "", closing: "", modules: [], guest_estimate: null, rsvp_closes_at: null, contact_name: "", contact_phone: "", pic_staff_id: "",
+    };
     const modules = (template ? template.modules : source ? source.sections.filter(s => s.enabled).map(s => s.key) : ["about", "agenda", "location", "rsvp", "contact"] as SectionKey[]).filter(isSetupKey).filter(allowed);
     return {
       template: template?.key ?? "blank", title: details.title, starts_at: time(details.starts_at) ?? "", ends_at: time(details.ends_at), timezone: details.timezone,
@@ -76,7 +82,7 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
     const parsed = setupSchema.safeParse(setup());
     const found: Record<string, string> = {};
     if (!parsed.success) for (const issue of parsed.error.issues) found[issue.path.join(".")] ??= issue.message;
-    if (!details.starts_at) found.starts_at = "Isi tanggal dan jam mulai.";
+    if (!details.starts_at && !card) found.starts_at = "Isi tanggal dan jam mulai.";
     if (Object.keys(found).length) { setErrors(found); requestAnimationFrame(() => document.getElementById(`setup-${Object.keys(found)[0]}`)?.focus()); return; }
     setPending(true); setError("");
     try {
@@ -135,7 +141,8 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
             {template && <p className="field-hint">{template.label} · tampilan {themeDefinition(template.theme).name}</p>}
           </div>
           <div className="stack">
-            {input("title", "Nama acara", { hint: "Tampil sebagai judul undangan.", placeholder: template ? `Contoh: ${template.example}` : undefined })}
+            {input("title", card ? "Nama kartu" : "Nama acara", { hint: card ? "Tampil sebagai judul halaman kartu." : "Tampil sebagai judul undangan.", placeholder: template ? `Contoh: ${template.example}` : undefined })}
+            {card ? <p className="field-hint">Jenis kartu (poster, ucapan, ID card, sertifikat, undangan), desain, warna, dan ukuran dipilih di editor setelah ini. Kartu dibuat sebagai draf.</p> : <>
             <div className={styles.grid}>
               {input("starts_at", `Mulai (${zone})`, { type: "datetime-local" })}
               {input("ends_at", `Selesai (${zone}, opsional)`, { type: "datetime-local" })}
@@ -163,6 +170,7 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
               </div>
             </fieldset>}
             <p className="field-hint">Isi undangan, rundown, dan bagian lain dilengkapi di editor setelah ini. Acara dibuat sebagai draf dan belum terlihat tamu.</p>
+            </>}
           </div>
         </div>}
       </div>

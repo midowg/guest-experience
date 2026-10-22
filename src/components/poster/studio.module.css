@@ -10,11 +10,9 @@
 
 .layout { display: grid; gap: var(--space-4); align-items: start; justify-items: center; }
 @media (min-width: 64rem) { .layout[data-editing] { grid-template-columns: minmax(0, 1fr) 22rem; justify-items: stretch; } }
-/* The poster as large as fits: by width on a phone, by the window's height on a wide screen. */
-.stage { width: 100%; margin-inline: auto; }
-.stage[data-format="post"] { max-width: min(100%, 36rem, calc((100svh - 11rem) * .8)); }
-.stage[data-format="story"] { max-width: min(100%, 26rem, calc((100svh - 11rem) * .5625)); }
-@media (max-width: 47.99rem) { .stage[data-format] { max-width: 100%; } }
+/* The card as large as fits: by width on a phone, by the window's height on a wide screen. */
+.stage { width: 100%; max-width: min(100%, var(--cap, 36rem), calc((100svh - 11rem) * var(--ratio, .8))); margin-inline: auto; }
+@media (max-width: 47.99rem) { .stage { max-width: 100%; } }
 
 .panel { display: grid; gap: var(--space-3); width: 100%; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-background); }
 @media (min-width: 64rem) { .panel { position: sticky; top: var(--space-4); } }
@@ -51,3 +49,10 @@
 .head h1 { margin: 0; color: var(--color-heading); font-family: var(--font-heading); font-weight: var(--heading-weight, 700); font-size: clamp(1.75rem, 5vw, 2.5rem); line-height: 1.1; }
 .head p { margin: 0; max-width: 40rem; color: var(--color-caption); }
 .eyebrow { font-size: .8125rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+
+.choices { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.formats { flex-wrap: wrap; border-radius: 22px; }
+.palettes { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.palettes button { display: inline-flex; overflow: hidden; width: 54px; height: 32px; padding: 0; border: 2px solid var(--color-border); border-radius: 999px; background: none; cursor: pointer; }
+.palettes button span { flex: 1; }
+.palettes button[aria-pressed="true"] { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-primary); }

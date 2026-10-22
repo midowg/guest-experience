@@ -1,5 +1,5 @@
-import { fieldText, fitText, posterFonts, type FittedText, type Measure, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
-import { presetOf } from "@/lib/poster-presets";
+import { fieldText, fitText, posterFonts, type FittedText, type Measure, type PosterField, type PosterFormat, type PosterPalette, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { presetBackground, presetOf } from "@/lib/poster-presets";
 
 /** The CSS/canvas font shorthand of a field at a size. */
 export const fontOf = (field: Pick<PosterField, "font" | "weight">, size: number) => `${field.weight} ${size}px ${posterFonts[field.font].family}`;
@@ -21,9 +21,14 @@ export async function loadPosterFonts(fields: PosterField[]): Promise<void> {
   await Promise.all([...faces].map(face => document.fonts.load(face).catch(() => [])));
 }
 
-/** The background a format shows: the uploaded one, else the preset's own. */
-export function posterBackground(poster: PosterSettings, format: PosterFormat): string {
-  return poster.formats[format].background.url || presetOf(poster.preset)?.backgrounds[format] || "";
+/**
+ * The background a format shows: the one uploaded from Figma, else the preset's own drawn in the
+ * palette (an SVG data address, so it stays same-origin and the download canvas may read it).
+ */
+export function posterBackground(poster: PosterSettings, format: PosterFormat, palette: PosterPalette): string {
+  if (poster.formats[format].background.url) return poster.formats[format].background.url;
+  const svg = presetBackground(presetOf(poster.preset), format, palette);
+  return svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : "";
 }
 
 export type LaidText = { field: PosterField; text: string; fitted: FittedText; hint: boolean };

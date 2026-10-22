@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { fieldText, fitText, normalizePoster, photoPlacement, posterDate, posterDuration, posterTime, type PosterField } from "./poster";
-import { posterPresets, presetPoster } from "./poster-presets";
+import { activePalette, fieldText, pdfPage, fitText, normalizePoster, paletteOf, photoPlacement, posterDate, posterDuration, posterFormats, posterSizes, posterTime, toneColor, type PosterField } from "./poster";
+import { posterPresets, presetBackground, presetPoster } from "./poster-presets";
 import { createSeedEvent } from "./seed-event";
 import { normalizeEvent } from "./hero-framing";
-import { posterSchema } from "./validation";
+import { eventSchema, posterSchema } from "./validation";
 import { buildEventFromSetup } from "./event-setup";
 
 /** Every character half as wide as the font size: easy to reason about in tests. */
@@ -80,15 +80,21 @@ describe("poster data", () => {
 
 describe("poster presets", () => {
   for (const preset of posterPresets) {
-    it(`${preset.key} passes validation and keeps every box inside its format`, () => {
+    it(`${preset.key} passes validation, lays out every size it offers, and keeps boxes inside`, () => {
       const poster = presetPoster(preset.key, createSeedEvent());
       expect(posterSchema.safeParse(poster).success).toBe(true);
-      const sizes = { post: { width: 1080, height: 1350 }, story: { width: 1080, height: 1920 } };
-      for (const field of poster.fields) for (const format of ["post", "story"] as const) {
+      expect(poster.cardType).toBe(preset.type);
+      for (const format of preset.formats) {
+        expect(poster.formats[format].enabled, format).toBe(true);
+        expect(presetBackground(preset, format, paletteOf(preset.palette)), format).toMatch(/^<svg/);
+      }
+      for (const field of poster.fields) for (const format of posterFormats) {
         const box = field.box[format];
         if (!box) continue;
-        expect(box.x + box.w, `${field.key} ${format}`).toBeLessThanOrEqual(sizes[format].width);
-        expect(box.y + box.h, `${field.key} ${format}`).toBeLessThanOrEqual(sizes[format].height);
+        expect(preset.formats, `${field.key} ${format}`).toContain(format);
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.w, `${field.key} ${format}`).toBeLessThanOrEqual(posterSizes[format].width);
+        expect(box.y + box.h, `${field.key} ${format}`).toBeLessThanOrEqual(posterSizes[format].height);
       }
     });
   }
@@ -112,11 +118,47 @@ describe("poster presets", () => {
   it("switches the poster on for an event made from the poster template", () => {
     const event = buildEventFromSetup({
       template: "poster-sesi", title: "Meramu Rempah Nusantara", starts_at: "2026-11-07T04:30:00.000Z", ends_at: "2026-11-07T05:30:00.000Z", timezone: "Asia/Jakarta",
-      audience: "external", language: "id", invitation_mode: "open", modules: ["about"], location: "other", venue_name: "Loman Park Hotel", address: "", location_url: "",
-      greeting: "", introduction: "", closing: "", rsvp_closes_at: null, guest_estimate: null, contact_name: "", contact_phone: "",
+      audience: "external", language: "id", invitation_mode: "open", modules: [], location: "other", venue_name: "Loman Park Hotel", address: "", location_url: "",
+      greeting: "", introduction: "", closing: "", rsvp_closes_at: null, guest_estimate: null, contact_name: "", contact_phone: "", pic_staff_id: "",
     } as Parameters<typeof buildEventFromSetup>[0], { id: "10f3a511-2331-4000-8000-0000000000aa", uuid: () => "10f3a511-2331-4000-8000-0000000000ab", now: "2026-10-22T00:00:00.000Z" });
-    expect(event.poster).toMatchObject({ enabled: true, preset: "rempah-nusantara" });
+    expect(event.poster).toMatchObject({ enabled: true, preset: "rempah-nusantara", cardType: "poster" });
     expect(event.theme.key).toBe("rempah");
+    expect(event.event_kind).toBe("kartu");
+    expect(event.sections.every(section => !section.enabled)).toBe(true);
     expect(event.poster.fields.find(field => field.key === "venue")?.value).toBe("Loman Park Hotel");
   });
+});
+
+describe("palettes and card events", () => {
+  it("draws boxes and backgrounds in the chosen palette, and lets the person pick only when allowed", () => {
+    const poster = presetPoster("ucapan-hangat", createSeedEvent());
+    const greeting = poster.fields.find(field => field.key === "greeting")!;
+    expect(toneColor(greeting, paletteOf("malam"))).toBe(paletteOf("malam").colors.primary);
+    expect(toneColor({ ...greeting, tone: "", color: "#123456" }, paletteOf("malam"))).toBe("#123456");
+    expect(activePalette(poster, { palette: "malam" }).key).toBe(poster.palette);
+    expect(activePalette({ ...poster, paletteChoice: true }, { palette: "malam" }).key).toBe("malam");
+    expect(presetBackground(posterPresets[1], "square", paletteOf("malam"))).toContain(paletteOf("malam").colors.background);
+  });
+
+  it("keeps the sizes of a poster saved before more sizes existed, with the new ones off", () => {
+    const saved = { enabled: true, preset: "rempah-nusantara", formats: { post: { enabled: true, background: { url: "", alt: "", srcset: [] } }, story: { enabled: false, background: { url: "", alt: "", srcset: [] } } }, fields: [] };
+    const poster = normalizePoster(saved as never);
+    expect(poster.formats.post.enabled).toBe(true);
+    expect(poster.formats.story.enabled).toBe(false);
+    expect(poster.formats.a4.enabled).toBe(false);
+    expect(poster.cardType).toBe("poster");
+  });
+
+  it("publishes a card without the invitation's organiser, introduction or place", () => {
+    const event = { ...createSeedEvent(), event_kind: "kartu" as const, status: "published" as const, organizer: "", introduction: "", venue_name: "", address: "", location_url: "", poster: presetPoster("name-tag", createSeedEvent()) };
+    expect(eventSchema.safeParse(event).success).toBe(true);
+    expect(eventSchema.safeParse({ ...event, event_kind: "acara" }).success).toBe(false);
+  });
+});
+
+it("gives print sizes their real paper in the PDF, and digital ones half a point per pixel", () => {
+  expect(pdfPage("a4")).toEqual([595.28, 841.89]);
+  expect(pdfPage("a4_landscape")).toEqual([841.89, 595.28]);
+  expect(pdfPage("idcard")).toEqual([153.07, 242.65]);
+  expect(pdfPage("post")).toEqual([540, 675]);
 });

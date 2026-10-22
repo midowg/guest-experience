@@ -7,12 +7,51 @@ import type { PhotoFrame, PlainImage } from "./types";
  */
 export const POSTER_LABEL = "Studio Poster";
 
-export const posterFormats = ["post", "story"] as const;
+export const posterFormats = ["post", "story", "square", "landscape", "a4", "a4_landscape", "a5", "idcard"] as const;
 export type PosterFormat = (typeof posterFormats)[number];
-export const posterSizes: Record<PosterFormat, { width: number; height: number; label: string }> = {
-  post: { width: 1080, height: 1350, label: "Post 4:5" },
-  story: { width: 1080, height: 1920, label: "Story 9:16" },
+/**
+ * Design sizes in pixels, and for the ones meant for paper the page a PDF gets (points, 1/72 in):
+ * A4 and A5 at 150 dpi, the ID card at 300 dpi (CR80, 54 x 85.6 mm).
+ */
+export const posterSizes: Record<PosterFormat, { width: number; height: number; label: string; group: "digital" | "print"; page?: [number, number] }> = {
+  post: { width: 1080, height: 1350, label: "Post 4:5", group: "digital" },
+  story: { width: 1080, height: 1920, label: "Story 9:16", group: "digital" },
+  square: { width: 1080, height: 1080, label: "Persegi 1:1", group: "digital" },
+  landscape: { width: 1920, height: 1080, label: "Landscape 16:9", group: "digital" },
+  a4: { width: 1240, height: 1754, label: "A4", group: "print", page: [595.28, 841.89] },
+  a4_landscape: { width: 1754, height: 1240, label: "A4 landscape", group: "print", page: [841.89, 595.28] },
+  a5: { width: 874, height: 1240, label: "A5", group: "print", page: [419.53, 595.28] },
+  idcard: { width: 638, height: 1011, label: "ID card", group: "print", page: [153.07, 242.65] },
 };
+
+/** A PDF page in points: the real paper for print sizes, otherwise half a point per design pixel. */
+export const pdfPage = (format: PosterFormat): [number, number] => posterSizes[format].page ?? [posterSizes[format].width / 2, posterSizes[format].height / 2];
+
+/** What a card is for; each kind has its own ready-made designs. */
+export const cardTypes = [
+  { key: "poster", label: "Poster sesi", description: "Poster acara atau sesi untuk dibagikan di media sosial." },
+  { key: "ucapan", label: "Kartu ucapan", description: "Ucapan selamat, terima kasih, atau hari raya." },
+  { key: "idcard", label: "ID card / name tag", description: "Kartu nama peserta, panitia, atau pembicara." },
+  { key: "sertifikat", label: "Sertifikat", description: "Sertifikat peserta atau penghargaan, siap cetak." },
+  { key: "undangan", label: "Kartu undangan", description: "Undangan singkat bergambar untuk dikirim." },
+] as const;
+export type CardType = (typeof cardTypes)[number]["key"];
+
+/**
+ * A colour set a design is drawn with. Boxes name a role (tone) instead of a colour, so one design
+ * works in every palette; the background is drawn from the same roles.
+ */
+export const paletteRoles = ["background", "surface", "primary", "onPrimary", "accent", "text", "muted", "line", "photo"] as const;
+export type PaletteRole = (typeof paletteRoles)[number];
+export type PosterPalette = { key: string; name: string; colors: Record<PaletteRole, string> };
+export const posterPalettes: PosterPalette[] = [
+  { key: "rempah", name: "Rempah", colors: { background: "#fbf7ef", surface: "#f3ead8", primary: "#0f4a3a", onPrimary: "#fbf7ef", accent: "#c9922b", text: "#1f2a24", muted: "#5d6157", line: "#e3cfa3", photo: "#e9dfcb" } },
+  { key: "werkudara", name: "Werkudara", colors: { background: "#ffffff", surface: "#eef6fb", primary: "#1551a0", onPrimary: "#ffffff", accent: "#3fa9dd", text: "#1f2937", muted: "#5b6476", line: "#c3e6f5", photo: "#dbe9f6" } },
+  { key: "malam", name: "Malam emas", colors: { background: "#111a2e", surface: "#1b2742", primary: "#c9a35b", onPrimary: "#111a2e", accent: "#e9d6a8", text: "#f4efe3", muted: "#b4bbcc", line: "#2c3a5a", photo: "#1b2742" } },
+  { key: "segar", name: "Segar", colors: { background: "#ffffff", surface: "#eaf6ef", primary: "#22684a", onPrimary: "#ffffff", accent: "#e8952b", text: "#1f2a24", muted: "#56625b", line: "#cfe7d9", photo: "#d9efe3" } },
+  { key: "senja", name: "Senja", colors: { background: "#fdf4ec", surface: "#f6e3d3", primary: "#9c3d22", onPrimary: "#fff7f0", accent: "#d98a3d", text: "#2d1d16", muted: "#6f5a4e", line: "#ecd0bb", photo: "#ecd8c6" } },
+];
+export const paletteOf = (key: string | undefined) => posterPalettes.find(palette => palette.key === key) ?? posterPalettes[0];
 
 /** Faces already bundled by the app (src/app/layout.tsx), with the weights loaded for each. */
 export const posterFonts = {
@@ -32,14 +71,16 @@ export type PosterField = {
   /** The admin's text: fixed when not editable, the starting text when it is. */
   value: string;
   maxLength: number;
-  font: PosterFont; weight: number; color: string;
+  font: PosterFont; weight: number;
+  /** The palette role the text is drawn in; "" uses `color` as is. */
+  tone: PaletteRole | ""; color: string;
   align: "left" | "center" | "right"; uppercase: boolean;
   /** In em, as CSS letter-spacing. */
   letterSpacing: number;
   /** Largest and smallest font size in design pixels; long text shrinks between the two. */
   sizeMax: number; sizeMin: number;
   lineHeight: number; maxLines: number;
-  /** Photo corners in design pixels, and the colour an empty photo box shows. */
+  /** Photo corners in design pixels (half the box for a circle), and the colour an empty photo box shows. */
   radius: number; fill: string;
   /** Where the box sits in each format; null when the format does not show it. */
   box: Record<PosterFormat, PosterBox | null>;
@@ -47,8 +88,11 @@ export type PosterField = {
 export type PosterFormatSetup = { enabled: boolean; background: PlainImage };
 export type PosterSettings = {
   enabled: boolean;
-  /** The preset the template came from; its built-in background shows until one is uploaded. */
+  /** What the card is for, and the preset it came from (its background shows until one is uploaded). */
+  cardType: CardType;
   preset: string;
+  /** The palette, and whether the person making a card may pick another one. */
+  palette: string; paletteChoice: boolean;
   formats: Record<PosterFormat, PosterFormatSetup>;
   fields: PosterField[];
 };
@@ -57,33 +101,47 @@ export type PosterSettings = {
  * A poster saved to the super admin's library (migration 202610220002): an event starts from a
  * copy of it, so a later change to the design never moves an event's boxes.
  */
-export type PosterDesign = { id: string; name: string; description: string; template: Pick<PosterSettings, "preset" | "formats" | "fields">; created_at: string };
+export type PosterDesign = { id: string; name: string; description: string; template: Pick<PosterSettings, "preset" | "formats" | "fields"> & Partial<Pick<PosterSettings, "cardType" | "palette" | "paletteChoice">>; created_at: string };
 
 /** What the person making a poster changed: text by field key, photos with their framing. */
 export type PosterPhoto = { url: string; frame: PhotoFrame };
-export type PosterValues = { text: Record<string, string>; photos: Record<string, PosterPhoto> };
+export type PosterValues = { text: Record<string, string>; photos: Record<string, PosterPhoto>; palette?: string };
 
 const emptyImage = (): PlainImage => ({ url: "", alt: "", srcset: [] });
+const formatSetups = (enabled: readonly PosterFormat[]) => Object.fromEntries(posterFormats.map(format => [format, { enabled: enabled.includes(format), background: emptyImage() }])) as Record<PosterFormat, PosterFormatSetup>;
 export function emptyPoster(): PosterSettings {
-  return { enabled: false, preset: "", formats: { post: { enabled: true, background: emptyImage() }, story: { enabled: true, background: emptyImage() } }, fields: [] };
+  return { enabled: false, cardType: "poster", preset: "", palette: "rempah", paletteChoice: false, formats: formatSetups(["post", "story"]), fields: [] };
 }
+/** Every format, with the given ones switched on. */
+export const posterFormatSetups = formatSetups;
+/** A box per format from a partial map: formats left out do not show the box. */
+export const boxes = (map: Partial<Record<PosterFormat, PosterBox | null>>) => Object.fromEntries(posterFormats.map(format => [format, map[format] ?? null])) as Record<PosterFormat, PosterBox | null>;
 
 /** Fills what documents saved before Studio Poster existed do not carry. */
 export function normalizePoster(poster: Partial<PosterSettings> | undefined): PosterSettings {
   const base = emptyPoster();
   if (!poster) return base;
+  const saved = (poster.formats ?? {}) as Partial<Record<PosterFormat, Partial<PosterFormatSetup>>>;
   return {
     enabled: !!poster.enabled,
+    cardType: poster.cardType ?? "poster",
     preset: poster.preset ?? "",
-    formats: {
-      post: { ...base.formats.post, ...poster.formats?.post, background: { ...emptyImage(), ...poster.formats?.post?.background } },
-      story: { ...base.formats.story, ...poster.formats?.story, background: { ...emptyImage(), ...poster.formats?.story?.background } },
-    },
-    fields: poster.fields ?? [],
+    palette: poster.palette ?? "rempah",
+    paletteChoice: !!poster.paletteChoice,
+    // Saved before more sizes existed: the new ones are off.
+    formats: Object.fromEntries(posterFormats.map(format => [format, { enabled: saved[format]?.enabled ?? (poster.formats ? false : base.formats[format].enabled), background: { ...emptyImage(), ...saved[format]?.background } }])) as Record<PosterFormat, PosterFormatSetup>,
+    fields: (poster.fields ?? []).map(field => ({ ...field, tone: field.tone ?? "", box: boxes(field.box ?? {}) })),
   };
 }
 
 /** The text a box shows: the admin's when locked, the person's when they typed one. */
+/** The palette in use: the person's pick when the admin lets them choose, else the admin's. */
+export function activePalette(poster: Pick<PosterSettings, "palette" | "paletteChoice">, values?: Pick<PosterValues, "palette">): PosterPalette {
+  return paletteOf(poster.paletteChoice && values?.palette ? values.palette : poster.palette);
+}
+/** A box's colour: its palette role when it has one, else its own colour. */
+export const toneColor = (field: Pick<PosterField, "tone" | "color">, palette: PosterPalette) => field.tone ? palette.colors[field.tone] : field.color;
+
 export function fieldText(field: PosterField, values: PosterValues): string {
   const own = values.text[field.key];
   return field.editable && own !== undefined ? own : field.value;

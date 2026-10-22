@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Building2, CalendarRange, CircleHelp, DoorOpen, Globe, Lightbulb, PartyPopper, ThumbsUp, Trash2, UserRound, type LucideIcon } from "lucide-react";
+import { Building2, CalendarRange, CircleHelp, DoorOpen, Frame, Globe, Lightbulb, PartyPopper, ThumbsUp, Trash2, UserRound, type LucideIcon } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { momentIconComponents, prepareIconComponents } from "@/components/guest/JourneyPanels";
 import { phaseLabels } from "@/lib/event-phase";
@@ -64,6 +64,7 @@ export function AppearanceBlock({ event, update }: Pick<Props, "event" | "update
       { value: "kunjungan", label: "Kunjungan", description: "Tamu datang ke kantor atau lokasi kita.", icon: DoorOpen },
       { value: "acara", label: "Acara", description: "Satu hari, tamu banyak. Gala, nyadran, seminar.", icon: PartyPopper, recommended: true },
       { value: "program", label: "Program", description: "Beberapa hari, jadwal per hari. Bootcamp, trip.", icon: CalendarRange },
+      { value: "kartu", label: "Kartu", description: "Bukan undangan: kartu yang diisi peserta (poster, ucapan, ID card, sertifikat). Editor hanya berisi pengaturan kartu.", icon: Frame },
     ]} />
     <ChoiceCards name="audience" legend="Untuk siapa" current={event.audience} onPick={value => update("audience", value)} options={[
       { value: "external", label: "Eksternal", description: "Tamu dan klien. Ulasan Google dan ajakan kolaborasi dapat tampil.", icon: Globe, recommended: true },

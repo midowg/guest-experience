@@ -26,8 +26,8 @@ export type PhotoFrame = { x: number; y: number; zoom: number };
 export type HeroFraming = { mobile: PhotoFrame; desktop: PhotoFrame };
 /** Optional framing preserves compatibility with previously saved invitations. */
 export type HeroImage = { url: string; alt: string; srcset: ImageSource[]; focus: ImageFocus; text_position: HeroTextPosition; framing?: HeroFraming };
-/** The form of the event. Audience is a separate choice: an internal event can take any form. */
-export type EventKind = "kunjungan" | "acara" | "program";
+/** The form of the event. Audience is a separate choice: an internal event can take any form. "kartu" is no event at all: a card people fill in (Studio Poster). */
+export type EventKind = "kunjungan" | "acara" | "program" | "kartu";
 export type EventAudience = "external" | "internal";
 export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah";
 export type EventTheme = { key: ThemeKey; corners: "square" | "soft" };

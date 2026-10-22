@@ -53,3 +53,15 @@ it("hides empty hints once saved and lets the poster be downloaded", async () =>
   expect((screen.getByRole("button", { name: /Unduh gambar/ }) as HTMLButtonElement).disabled).toBe(false);
   expect(screen.getByRole("status").textContent).toMatch(/kotak masih kosong/);
 });
+
+it("lets the person pick a colour only when the admin allows it", async () => {
+  const poster = presetPoster("ucapan-hangat", createSeedEvent());
+  const { unmount } = render(<PosterStudio eventId="10f3a511-2331-4000-8000-0000000000ab" eventTitle="Ucapan" poster={poster} />);
+  expect(screen.queryByRole("group", { name: "Warna" })).toBeNull();
+  unmount();
+  render(<PosterStudio eventId="10f3a511-2331-4000-8000-0000000000ac" eventTitle="Ucapan" poster={{ ...poster, paletteChoice: true }} />);
+  const malam = within(screen.getByRole("group", { name: "Warna" })).getByRole("button", { name: "Warna Malam emas" });
+  fireEvent.click(malam);
+  expect(malam.getAttribute("aria-pressed")).toBe("true");
+  await waitFor(() => expect(decodeURIComponent((screen.getByRole("img", { name: /Poster/ }).querySelector("img") as HTMLImageElement).src)).toContain("#111a2e"));
+});

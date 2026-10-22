@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
+import { presetPoster } from "@/lib/poster-presets";
 import { EventEditor } from "@/components/admin/editor/EventEditor";
 import { editorMenu, menuButton, openBlock, otherBlocks } from "@/components/admin/editor/editor-test-helpers";
 
@@ -285,4 +286,18 @@ it("switches Studio Poster on with the default design, and lets the admin lock o
   fireEvent.change(within(title).getAllByRole("spinbutton", { name: "X" })[0], { target: { value: "200" } });
   expect((screen.getByRole("img", { name: /Poster Post/ }).querySelector("[data-field=title]") as HTMLElement).style.left).toBe("200px");
   expect(screen.getByRole("button", { name: "Simpan perubahan" }).textContent).toContain("Simpan");
+});
+
+it("edits a card event with the card block only, without the invitation preview", () => {
+  const seed = createSeedEvent();
+  render(<EventEditor event={{ ...seed, event_kind: "kartu", poster: presetPoster("rempah-nusantara", seed) }} />);
+  const entries = within(editorMenu()).getAllByRole("button").map(button => button.textContent?.replace(/\d|Aktif/g, "").trim()).filter(Boolean);
+  expect(entries).toEqual(["Studio Poster", "Status & penyimpanan"]);
+  expect(screen.getByRole("heading", { level: 2, name: "Studio Poster" })).toBeTruthy();
+  expect(screen.queryByRole("complementary", { name: "Pratinjau undangan" })).toBeNull();
+  // Always on for a card: no switch, and the card's name is asked here.
+  expect(screen.queryByRole("switch", { name: "Tampilkan Studio Poster di undangan" })).toBeNull();
+  expect(screen.getByRole("textbox", { name: "Nama kartu" })).toBeTruthy();
+  fireEvent.click(within(screen.getByRole("group", { name: "Jenis kartu" })).getByRole("button", { name: "Sertifikat" }));
+  expect(screen.getByText("Sertifikat Klasik")).toBeTruthy();
 });

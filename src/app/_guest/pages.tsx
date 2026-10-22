@@ -44,6 +44,7 @@ export function StorageMissing() {
 }
 
 export async function EventPage({ event }: { event: EventRecord }) {
+  if (event.event_kind === "kartu") return <PosterPage event={event} />;
   return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
 }
 
@@ -70,9 +71,9 @@ export async function TicketPage({ event, invitation }: { event: EventRecord; in
   return <TicketView event={event} ticket={data} reason="ready" />;
 }
 
-/** Studio Poster: only when the admin switched it on and the template has boxes. */
+/** Studio Poster: when the admin switched it on (always, for a card event) and it has boxes. */
 export function PosterPage({ event }: { event: EventRecord }) {
-  if (!event.poster?.enabled || event.poster.fields.length === 0) notFound();
+  if (!(event.poster?.enabled || event.event_kind === "kartu") || !event.poster?.fields.length) notFound();
   return <PosterView event={event} />;
 }
 

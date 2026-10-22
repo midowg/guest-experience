@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { Check, Download, FileText, ImagePlus, Pencil, RotateCcw, Share2, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui";
-import { fieldText, fitText, posterFormats, posterSizes, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { activePalette, fieldText, fitText, posterFormats, posterPalettes, posterSizes, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import type { PhotoFrame } from "@/lib/types";
 import { PosterCanvas } from "./PosterCanvas";
 import { createMeasure, loadPosterFonts } from "./layout";
@@ -48,7 +48,7 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
       if (!alive || !draft) return;
       const photos: PosterValues["photos"] = {};
       for (const [key, photo] of Object.entries(draft.photos)) { blobs.current[key] = photo.blob; photos[key] = { url: URL.createObjectURL(photo.blob), frame: photo.frame }; }
-      setValues({ text: draft.text, photos });
+      setValues({ text: draft.text, photos, palette: draft.palette });
       setSaved(draft.saved);
     });
     return () => { alive = false; };
@@ -59,7 +59,7 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
     if (!loaded.current) return;
     const timer = window.setTimeout(() => {
       const photos = Object.fromEntries(Object.entries(values.photos).filter(([key]) => blobs.current[key]).map(([key, photo]) => [key, { blob: blobs.current[key], frame: photo.frame }]));
-      void saveDraft(eventId, { text: values.text, photos, saved });
+      void saveDraft(eventId, { text: values.text, photos, saved, palette: values.palette });
     }, 400);
     return () => window.clearTimeout(timer);
   }, [values, saved, eventId]);
@@ -129,9 +129,18 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
 
   return <div className={styles.studio}>
     <div className={styles.bar}>
-      {formats.length > 1 && <div className={styles.formats} role="group" aria-label="Ukuran poster">
-        {formats.map(item => <button key={item} type="button" aria-pressed={format === item} onClick={() => setFormat(item)}>{posterSizes[item].label}</button>)}
-      </div>}
+      <div className={styles.choices}>
+        {formats.length > 1 && <div className={styles.formats} role="group" aria-label="Ukuran">
+          {formats.map(item => <button key={item} type="button" aria-pressed={format === item} onClick={() => setFormat(item)}>{posterSizes[item].label}</button>)}
+        </div>}
+        {/* Colours, when the admin lets each person pick their own. */}
+        {poster.paletteChoice && <div className={styles.palettes} role="group" aria-label="Warna">
+          {posterPalettes.map(palette => <button key={palette.key} type="button" aria-pressed={activePalette(poster, values).key === palette.key} title={palette.name} aria-label={`Warna ${palette.name}`}
+            onClick={() => { setValues(current => ({ ...current, palette: palette.key })); setSaved(false); }}>
+            <span style={{ background: palette.colors.background }} /><span style={{ background: palette.colors.primary }} /><span style={{ background: palette.colors.accent }} />
+          </button>)}
+        </div>}
+      </div>
       <div className={styles.actions}>
         {editing
           ? <Button type="button" onClick={finish}><Check size={18} aria-hidden="true" /> Simpan</Button>
@@ -144,7 +153,7 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
     <p id="poster-download-hint" className={styles.status} role="status">{status || (editing ? "Ketuk kotak bergaris di poster untuk mengisinya." : saved ? "" : "Tekan Edit untuk mengisi poster. Setelah Simpan, poster bisa diunduh.")}</p>
 
     <div className={styles.layout} data-editing={editing || undefined}>
-      <div className={styles.stage} data-format={format}>
+      <div className={styles.stage} style={{ "--ratio": posterSizes[format].width / posterSizes[format].height, "--cap": posterSizes[format].width > posterSizes[format].height ? "60rem" : "36rem" } as CSSProperties}>
         <PosterCanvas poster={poster} values={values} format={format} editing={editing} hints={editing || !saved} selected={selected} onSelect={select} onFrame={setFrame} fontsVersion={fontsVersion} />
       </div>
       {editing && <aside className={styles.panel} aria-label="Isi poster" data-open={current ? "" : undefined}>

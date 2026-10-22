@@ -1,4 +1,4 @@
-import { photoPlacement, posterSizes, spacedWidth, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { activePalette, pdfPage, photoPlacement, posterSizes, spacedWidth, toneColor, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import { createMeasure, fontOf, layoutTexts, loadPosterFonts, posterBackground } from "./layout";
 
 /**
@@ -29,11 +29,12 @@ export async function renderPoster(poster: PosterSettings, values: PosterValues,
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Browser ini tidak bisa membuat gambar.");
   context.scale(scale, scale);
-  context.fillStyle = "#fbf7ef";
+  const palette = activePalette(poster, values);
+  context.fillStyle = palette.colors.background;
   context.fillRect(0, 0, size.width, size.height);
   await loadPosterFonts(poster.fields);
 
-  const background = posterBackground(poster, format);
+  const background = posterBackground(poster, format, palette);
   if (background) context.drawImage(await loadImage(background), 0, 0, size.width, size.height);
 
   for (const field of poster.fields) {
@@ -52,7 +53,7 @@ export async function renderPoster(poster: PosterSettings, values: PosterValues,
     const measure = createMeasure(field);
     const line = fitted.size * fitted.lineHeight;
     context.font = fontOf(field, fitted.size);
-    context.fillStyle = field.color;
+    context.fillStyle = toneColor(field, palette);
     context.textBaseline = "alphabetic";
     // Where CSS puts the baseline in a line box: half the leading above the font's ascent.
     const metrics = context.measureText("Hg");
@@ -76,15 +77,18 @@ export function canvasBlob(canvas: HTMLCanvasElement, type = "image/png"): Promi
   });
 }
 
-/** One PDF page the size of the poster (half a point per design pixel), the picture at 2×. */
+/**
+ * One PDF page: the real paper size for print formats (A4, A5, ID card), otherwise half a point
+ * per design pixel. The picture is drawn at 2x so it stays sharp when printed.
+ */
 export async function posterPdf(poster: PosterSettings, values: PosterValues, format: PosterFormat): Promise<Blob> {
   const { PDFDocument } = await import("pdf-lib");
-  const size = posterSizes[format];
+  const [width, height] = pdfPage(format);
   const png = await canvasBlob(await renderPoster(poster, values, format, 2));
   const pdf = await PDFDocument.create();
   const image = await pdf.embedPng(await png.arrayBuffer());
-  const page = pdf.addPage([size.width / 2, size.height / 2]);
-  page.drawImage(image, { x: 0, y: 0, width: size.width / 2, height: size.height / 2 });
+  const page = pdf.addPage([width, height]);
+  page.drawImage(image, { x: 0, y: 0, width, height });
   const bytes = await pdf.save();
   return new Blob([bytes as BlobPart], { type: "application/pdf" });
 }

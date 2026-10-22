@@ -1,3 +1,4 @@
+import card from "./card-miniature.module.css";
 import { CalendarDays, Clock3, MapPin } from "lucide-react";
 import type { EventTemplate } from "@/lib/event-templates";
 import { themeDefinition } from "@/lib/themes";
@@ -14,6 +15,13 @@ const sectionNames: Partial<Record<SectionKey, string>> = {
  */
 export function TemplateMiniature({ template, title }: { template: EventTemplate; title?: string }) {
   const t = themeDefinition(template.theme).tokens;
+  // A card template is no invitation: show the kinds of card it makes instead.
+  if (template.kind === "kartu") return <div className={styles.mini} style={{ background: t.background, color: t.text, borderColor: t.border }} aria-hidden="true">
+    <div className={card.cards}>
+      {[["Poster", 4 / 5], ["Ucapan", 1], ["ID card", 0.63], ["Sertifikat", 1.41]].map(([name, ratio], index) => <span key={name as string} className={card.card} data-wide={(ratio as number) > 1 || undefined} style={{ aspectRatio: String(ratio), background: index % 2 ? t.surface : t.hero, color: index % 2 ? t.heading : t.onHero, fontFamily: t.fontHeading }}>{name}</span>)}
+    </div>
+    <strong className={styles.miniTitle} style={{ color: t.heading, fontFamily: t.fontHeading, fontWeight: t.headingWeight, padding: "0 10px 10px" }}>{title?.trim() || template.example}</strong>
+  </div>;
   const sections = template.modules.filter(key => key !== "about").map(key => sectionNames[key]).filter(Boolean).slice(0, 4);
   return <div className={styles.mini} style={{ background: t.background, color: t.text, borderColor: t.border }} aria-hidden="true">
     <div className={styles.miniHero} style={{ background: t.hero, color: t.onHero }}>

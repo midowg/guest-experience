@@ -2,11 +2,16 @@
 
 import type { ChangeEvent } from "react";
 import { Image as ImageIcon, Trash2, Type } from "lucide-react";
-import { posterFonts, posterFormats, posterSizes, type PosterBox, type PosterField, type PosterFont } from "@/lib/poster";
+import { posterFonts, posterSizes, type PaletteRole, type PosterBox, type PosterField, type PosterFont, type PosterFormat } from "@/lib/poster";
 import s from "./poster-block.module.css";
+
+/** Palette roles a text can follow, so it changes with the chosen colours; "" keeps its own colour. */
+const toneOptions: [PaletteRole | "", string][] = [["primary", "Tema: utama"], ["accent", "Tema: aksen"], ["text", "Tema: teks"], ["muted", "Tema: teks redup"], ["onPrimary", "Tema: di atas warna utama"], ["background", "Tema: latar"], ["", "Warna sendiri"]];
 
 type Props = {
   field: PosterField; index: number; open: boolean;
+  /** The sizes switched on: only those get position inputs. */
+  formats: PosterFormat[];
   onToggle: (open: boolean) => void;
   onChange: (field: PosterField) => void;
   onRemove: () => void;
@@ -17,7 +22,7 @@ type Props = {
  * One box of the poster in the admin's table: whether guests may change it, its text, and (folded)
  * where it sits per format and how its text looks. Positions are the design pixels Figma shows.
  */
-export function PosterFieldRow({ field, index, open, onToggle, onChange, onRemove, errors }: Props) {
+export function PosterFieldRow({ field, index, formats, open, onToggle, onChange, onRemove, errors }: Props) {
   const path = `poster.fields.${index}`;
   const set = <K extends keyof PosterField>(key: K, value: PosterField[K]) => onChange({ ...field, [key]: value });
   const number = (value: string, fallback: number) => { const parsed = Number(value.replace(",", ".")); return Number.isFinite(parsed) ? parsed : fallback; };
@@ -44,7 +49,7 @@ export function PosterFieldRow({ field, index, open, onToggle, onChange, onRemov
       </>}
 
       <p className={s.sub}>Posisi (piksel desain, dari Figma)</p>
-      {posterFormats.map(format => {
+      {formats.map(format => {
         const box = field.box[format];
         const place = (next: PosterBox | null) => set("box", { ...field.box, [format]: next });
         return <fieldset key={format} className={s.box}>
@@ -64,7 +69,10 @@ export function PosterFieldRow({ field, index, open, onToggle, onChange, onRemov
           <label className={s.field}><span>Tebal</span><select className="select" value={field.weight} onChange={event => set("weight", Number(event.target.value))}>
             {posterFonts[field.font].weights.map(weight => <option key={weight} value={weight}>{weight}</option>)}
           </select></label>
-          <label className={s.field}><span>Warna</span><span className={s.color}><input type="color" value={field.color} onChange={event => set("color", event.target.value)} aria-label="Pilih warna" /><input id={`${path}.color`} className="input" value={field.color} maxLength={7} onChange={event => set("color", event.target.value)} /></span></label>
+          <label className={s.field}><span>Warna</span><select className="select" value={field.tone} onChange={event => set("tone", event.target.value as PaletteRole | "")}>
+            {toneOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select></label>
+          {!field.tone && <label className={s.field}><span>Warna sendiri</span><span className={s.color}><input type="color" value={field.color} onChange={event => set("color", event.target.value)} aria-label="Pilih warna" /><input id={`${path}.color`} className="input" value={field.color} maxLength={7} onChange={event => set("color", event.target.value)} /></span></label>}
           <label className={s.field}><span>Rata</span><select className="select" value={field.align} onChange={event => set("align", event.target.value as PosterField["align"])}>
             <option value="left">Kiri</option><option value="center">Tengah</option><option value="right">Kanan</option>
           </select></label>

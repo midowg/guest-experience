@@ -51,6 +51,9 @@ const blockIcons: Record<string, LucideIcon> = {
 };
 
 
+/** A card event (event_kind "kartu") is edited with these blocks only. */
+const cardBlocks = new Set(["poster", "publication", "appearance"]);
+
 const WIDE = "(min-width: 72rem)";
 /** Whether the menu is a sidebar (wide screen) or a drawer. Without matchMedia it is a drawer. */
 function useWideScreen() {
@@ -76,7 +79,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const unavailable = (key: AdminModule) => disabledModules.includes(key) && !moduleActive(initialEvent, key);
   const restricted = (key: AdminModule) => disabledModules.includes(key) && moduleActive(initialEvent, key);
   // Kind, audience, and theme come from the template; only the super admin changes them (meeting of 20 Oct).
-  const blocks = editorBlocks.filter(item => (superAdmin || item.id !== "appearance") && !(Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, id]) => id === item.id && unavailable(key)));
+  const card = initialEvent.event_kind === "kartu";
+  const blocks = editorBlocks.filter(item => (superAdmin || item.id !== "appearance") && (!card || cardBlocks.has(item.id)) && !(Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, id]) => id === item.id && unavailable(key)));
   const restrictedBlock = (id: string) => (Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, block]) => block === id && restricted(key));
   const sectionModule: Partial<Record<string, AdminModule>> = { experience: "experience", agenda: "agenda", location: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback: "feedback" };
   const sectionUnavailable = (key: string) => { const owner = sectionModule[key]; return !!owner && unavailable(owner); };
@@ -89,7 +93,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   // One block's form is always open next to the phone preview; it starts with the event's basics.
-  const [open, setOpen] = useState<string>("identity");
+  const [open, setOpen] = useState<string>(card ? "poster" : "identity");
   const [phase, setPhase] = useState<EventPhase>("before");
   // On a phone the form and the preview take turns on screen.
   const [view, setView] = useState<"form" | "preview">("form");
@@ -211,6 +215,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   function blockSwitch(id: string): { on: boolean; set: (on: boolean) => void } | null {
     if (id === "review") return { on: event.review_enabled, set: on => update("review_enabled", on) };
     // Switched on for the first time, Studio Poster starts from the first design.
+    if (id === "poster" && event.event_kind === "kartu") return null;
     if (id === "poster") return { on: event.poster.enabled, set: on => update("poster", on && !event.poster.fields.length ? presetPoster(posterPresets[0].key, event) : { ...event.poster, enabled: on }) };
     const key = sectionOfBlock[id];
     if (!key) return null;
@@ -291,16 +296,17 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
         return { id: item.id, title: item.title, short: chipNames[item.id] ?? item.title, status: flagged, statusLabel: flagged && blockStatusLabels[flagged] };
       })} />}
       {!wide && <p className={e.currentBlock} aria-hidden="true">{openTitle}</p>}
-      <div className={e.viewSwitch} role="group" aria-label="Tampilan">
+      {!card && <div className={e.viewSwitch} role="group" aria-label="Tampilan">
         <button type="button" aria-pressed={view === "form"} aria-label="Isi" onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> <span className={e.btnText}>Isi</span></button>
         <button type="button" aria-pressed={view === "preview"} aria-label="Lihat" onClick={() => setView("preview")}><Smartphone size={15} aria-hidden="true" /> <span className={e.btnText}>Lihat</span></button>
-      </div>
+      </div>}
       <span className={`${e.saveState} ${dirty ? e.saveStateDirty : ""}`.trimEnd()} role="status">{dirty ? <><CircleDot size={16} aria-hidden="true" /> {dirtyBlocks.size > 1 ? `${dirtyBlocks.size} bagian belum disimpan` : "Ada perubahan yang belum disimpan"}</> : <><CircleCheck size={16} aria-hidden="true" /> Semua perubahan tersimpan</>}</span>
       <Button type="submit" variant={dirty ? "primary" : "secondary"} className={e.saveButton} disabled={pending} aria-label={event.status === "published" ? "Simpan & publikasikan" : "Simpan perubahan"}>
         {pending ? "Menyimpan…" : dirty ? <><Save size={17} aria-hidden="true" /> Simpan{event.status === "published" && <span className={e.wideOnly}>&nbsp;&amp; publikasikan</span>}</> : <><CircleCheck size={17} aria-hidden="true" /> <span className={e.btnText}>Tersimpan</span></>}
       </Button>
     </div>
-    <div className={e.layout} data-view={view} data-device={device} data-menu={sidebarHidden ? "hidden" : undefined}>
+    {/* A card has no invitation to preview: its block shows the card itself. */}
+    <div className={e.layout} data-view={card ? "form" : view} data-device={device} data-card={card || undefined} data-menu={sidebarHidden ? "hidden" : undefined}>
       {drawerOpen && <button type="button" className={e.menuBackdrop} aria-label="Tutup menu" onClick={() => setDrawerOpen(false)} />}
       <nav id="editor-menu" className={e.menu} aria-label="Bagian acara" data-open={drawerOpen || undefined}>
         <div className={e.menuHead}>
@@ -366,9 +372,9 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {block("publication", "Status & penyimpanan", <PublicationBlock kit={kit} />)}
     </fieldset>}
       </section>
-      <aside className={e.previewPane} aria-label="Pratinjau undangan">
+      {!card && <aside className={e.previewPane} aria-label="Pratinjau undangan">
         <PhonePreview event={event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open)} onFocusArea={area => openBlock(blockOfArea[area])} src={previewSrc} />
-      </aside>
+      </aside>}
     </div>
   </form>;
 }

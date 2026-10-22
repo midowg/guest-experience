@@ -2,6 +2,7 @@ import { z } from "zod";
 import { EMBED_ERROR, parseLocationEmbed } from "./location-embed";
 import { parseContactPhone } from "./contact-phone";
 import { eventTimezones } from "./timezones";
+import { cardTypes, paletteRoles, posterFormats } from "./poster";
 
 const text = (max: number) => z.string().trim().max(max);
 /** `new URL()` throws on malformed input, so a half-typed address must never reach it. */
@@ -100,17 +101,21 @@ const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Gunakan warna hex, misal
 const posterFieldSchema = z.object({
   key: z.string().regex(/^[a-z0-9_]{1,40}$/), label: text(80).min(1), hint: text(200).default(""),
   kind: z.enum(["text", "photo"]), editable: z.boolean(), value: text(2000).default(""), maxLength: z.number().int().min(1).max(1000),
-  font: z.enum(["playfair", "nunito", "lora", "cormorant"]), weight: z.number().int().min(100).max(900), color: hexColor,
+  font: z.enum(["playfair", "nunito", "lora", "cormorant"]), weight: z.number().int().min(100).max(900),
+  tone: z.union([z.enum(paletteRoles), z.literal("")]).default(""), color: hexColor,
   align: z.enum(["left", "center", "right"]), uppercase: z.boolean(), letterSpacing: z.number().min(-0.1).max(1),
   sizeMax: z.number().min(6).max(300), sizeMin: z.number().min(6).max(300), lineHeight: z.number().min(0.8).max(3), maxLines: z.number().int().min(1).max(20),
   radius: z.number().min(0).max(500), fill: hexColor,
-  box: z.object({ post: posterBox.nullable(), story: posterBox.nullable() }),
+  box: z.object(Object.fromEntries(posterFormats.map(format => [format, posterBox.nullable().default(null)])) as Record<(typeof posterFormats)[number], z.ZodDefault<z.ZodNullable<typeof posterBox>>>),
 });
 const posterFormatSchema = z.object({ enabled: z.boolean(), background: plainImage.default(emptyImage) });
+const posterFormatsSchema = z.object(Object.fromEntries(posterFormats.map(format => [format, posterFormatSchema.default({ enabled: false, background: emptyImage })])) as Record<(typeof posterFormats)[number], z.ZodDefault<typeof posterFormatSchema>>);
+const cardTypeSchema = z.enum(cardTypes.map(type => type.key) as [(typeof cardTypes)[number]["key"], ...(typeof cardTypes)[number]["key"][]]);
 const posterFieldsSchema = z.array(posterFieldSchema).max(30).refine(fields => new Set(fields.map(field => field.key)).size === fields.length, "Kunci kolom poster tidak boleh sama.");
 export const posterSchema = z.object({
-  enabled: z.boolean().default(false), preset: z.string().max(60).default(""),
-  formats: z.object({ post: posterFormatSchema, story: posterFormatSchema }).default({ post: { enabled: true, background: emptyImage }, story: { enabled: true, background: emptyImage } }),
+  enabled: z.boolean().default(false), cardType: cardTypeSchema.default("poster"), preset: z.string().max(60).default(""),
+  palette: z.string().max(40).default("rempah"), paletteChoice: z.boolean().default(false),
+  formats: posterFormatsSchema.default(() => posterFormatsSchema.parse({ post: { enabled: true }, story: { enabled: true } })),
   fields: posterFieldsSchema.default([]),
 });
 /** A design for the library: the poster of an event without its on/off switch. */
@@ -118,8 +123,9 @@ export const posterDesignInputSchema = z.object({
   name: z.string().trim().min(2, "Isi nama desain minimal 2 huruf.").max(80),
   description: z.string().trim().max(300).default(""),
   template: z.object({
-    preset: z.string().max(60).default(""),
-    formats: z.object({ post: posterFormatSchema, story: posterFormatSchema }),
+    cardType: cardTypeSchema.default("poster"), preset: z.string().max(60).default(""),
+    palette: z.string().max(40).default("rempah"), paletteChoice: z.boolean().default(false),
+    formats: posterFormatsSchema,
     fields: posterFieldsSchema.refine(fields => fields.length > 0, "Desain perlu minimal satu kotak."),
   }),
 });
@@ -148,7 +154,7 @@ export const eventBaseSchema = z.object({
     framing: z.object({ mobile: photoFrameSchema, desktop: photoFrameSchema }).optional(),
   }),
   gallery: z.array(z.object({ id: z.uuid(), url: requiredHttpsUrl, alt: text(300), caption: text(300), sort_order: z.number().int().min(0).max(1000), srcset: srcsetSchema })).max(12),
-  event_kind: z.enum(["kunjungan", "acara", "program"]).default("acara"),
+  event_kind: z.enum(["kunjungan", "acara", "program", "kartu"]).default("acara"),
   audience: z.enum(["external", "internal"]).default("external"),
   theme: z.object({ key: z.enum(themeKeys).default("werkudara"), corners: z.enum(["square", "soft"]).default("square") }).default({ key: "werkudara", corners: "square" }),
   phase_override: z.enum(["auto", "before", "day", "after"]).default("auto"),
@@ -162,7 +168,7 @@ export const eventBaseSchema = z.object({
   agenda_details: z.record(z.uuid(), agendaDetailSchema).default({}),
   presentation_pdf_url: httpsUrl.default(""),
   emergency: emergencySchema.default(emptyEmergency),
-  poster: posterSchema.default({ enabled: false, preset: "", formats: { post: { enabled: true, background: emptyImage }, story: { enabled: true, background: emptyImage } }, fields: [] }),
+  poster: posterSchema.default(() => posterSchema.parse({})),
   translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),
   created_at: timestamp, updated_at: timestamp,
 });
@@ -188,7 +194,8 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
   }
   const locationDisplay = event.location_display ?? (event.location_embed_url ? "embed" : "manual");
   if (locationDisplay === "embed" && !event.location_embed_url) issue(["location_embed_url"], "Isi kode sematan Google Maps.");
-  if (event.status === "published") {
+  // A card has no invitation: organiser, introduction and place are not asked of it.
+  if (event.status === "published" && event.event_kind !== "kartu") {
     for (const key of ["organizer", "introduction"] as const) if (!event[key]) issue([key], "Lengkapi sebelum publikasi.");
     if (locationDisplay === "manual") for (const key of ["venue_name", "address", "location_url"] as const) if (!event[key]) issue([key], "Lengkapi sebelum publikasi.");
     if (event.feedback_enabled && !event.feedback_questions.length) issue(["feedback_questions"], "Isi pertanyaan sebelum mengaktifkan survei.");

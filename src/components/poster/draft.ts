@@ -5,7 +5,7 @@ import type { PhotoFrame } from "@/lib/types";
  * tab loses nothing. Nothing here is sent anywhere. Any failure (private mode, blocked storage)
  * simply means no draft.
  */
-export type PosterDraft = { text: Record<string, string>; photos: Record<string, { blob: Blob; frame: PhotoFrame }>; saved: boolean };
+export type PosterDraft = { text: Record<string, string>; photos: Record<string, { blob: Blob; frame: PhotoFrame }>; saved: boolean; palette?: string };
 
 const DB = "studio-poster", STORE = "drafts";
 
