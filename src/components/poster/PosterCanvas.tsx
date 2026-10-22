@@ -3,7 +3,7 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Camera } from "lucide-react";
 import { dragFrame } from "@/lib/hero-framing";
-import { activePalette, photoPlacement, posterSizes, toneColor, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { activePalette, photoPlacement, posterSizes, toneColor, type PosterBox, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import type { PhotoFrame } from "@/lib/types";
 import { fontOf, layoutTexts, posterBackground } from "./layout";
 import styles from "./poster.module.css";
@@ -16,6 +16,10 @@ type Props = {
   onFrame: (key: string, frame: PhotoFrame) => void;
   /** Bumped once the fonts are in, so the lines are measured again with the real faces. */
   fontsVersion: number;
+  /** Outside editing, a tap on a box the guest may fill (the studio then opens it). */
+  onTap?: (key: string) => void;
+  /** The admin's arranging: every box can be dragged and resized; a tap selects it. */
+  onArrange?: (key: string, box: PosterBox) => void;
 };
 
 const clampZoom = (zoom: number) => Math.min(3, Math.max(1, Math.round(zoom * 100) / 100));
@@ -24,7 +28,7 @@ const clampZoom = (zoom: number) => Math.min(3, Math.max(1, Math.round(zoom * 10
  * The poster at its design size (1080 px wide), scaled to the space it has. Boxes sit at the
  * design pixels the admin typed from Figma, so they land on the same spot on every screen.
  */
-export function PosterCanvas({ poster, values, format, editing, hints, selected, onSelect, onFrame, fontsVersion }: Props) {
+export function PosterCanvas({ poster, values, format, editing, hints, selected, onSelect, onFrame, fontsVersion, onTap, onArrange }: Props) {
   const size = posterSizes[format];
   const holder = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.4);
@@ -89,7 +93,7 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
   }
 
   return <div ref={holder} className={styles.holder} style={{ aspectRatio: `${size.width} / ${size.height}` }}>
-    <div className={styles.poster} data-editing={editing || undefined} style={{ width: size.width, height: size.height, transform: `scale(${scale})`, background: palette.colors.background }} aria-label={`Poster ${size.label}`} role="img">
+    <div className={styles.poster} data-editing={editing || undefined} onClick={onTap && !editing ? event => { const key = (event.target as HTMLElement).closest<HTMLElement>("[data-field]")?.dataset.field; if (key && poster.fields.some(field => field.key === key && field.editable)) onTap(key); } : undefined} style={{ width: size.width, height: size.height, transform: `scale(${scale})`, background: palette.colors.background }} aria-label={`Poster ${size.label}`} role="img">
       {/* eslint-disable-next-line @next/next/no-img-element -- drawn at design size and redrawn on the download canvas */}
       {background && <img className={styles.background} src={background} alt="" crossOrigin="anonymous" draggable={false} />}
       {poster.fields.map(field => {
@@ -118,13 +122,14 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
         const lines = fitted.lines.map((text, index) => <span key={index} style={{ height: line, lineHeight: `${line}px` }}>{text}</span>);
         return open
           ? <button key={field.key} data-field={field.key} type="button" className={styles.text} data-open data-hint={hint || undefined} data-selected={selected === field.key || undefined} style={style} onClick={() => onSelect(field.key)} aria-label={`Ubah ${field.label}`}>{lines}</button>
-          : <div key={field.key} className={styles.text} style={style}>{lines}</div>;
+          : <div key={field.key} data-field={field.key} className={styles.text} data-tap={(onTap && field.editable) || undefined} style={style}>{lines}</div>;
       })}
       {editing && poster.fields.filter(field => field.kind === "text" && field.editable && field.box[format] && !texts.some(item => item.field.key === field.key)).map(field => {
         // An editable box with neither text nor hint still needs something to tap.
         const box = field.box[format]!;
         return <button key={field.key} data-field={field.key} type="button" className={styles.text} data-open data-hint data-selected={selected === field.key || undefined} style={{ left: box.x, top: box.y, width: box.w, height: box.h, "--ring": `${ring}px` } as CSSProperties} onClick={() => onSelect(field.key)} aria-label={`Ubah ${field.label}`} />;
       })}
+      {onArrange && <ArrangeLayer poster={poster} format={format} scale={scale} selected={selected} onSelect={onSelect} onArrange={onArrange} />}
     </div>
   </div>;
 }
@@ -132,4 +137,59 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
 function spread(pointers: Map<number, { x: number; y: number }>) {
   const [a, b] = [...pointers.values()];
   return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+}
+
+/**
+ * Handles over every box for the admin: drag a box to move it, its corner to resize it, tap to
+ * select it. Arrow keys move the selected box by 1 px (10 px with Shift). Boxes stay inside.
+ */
+function ArrangeLayer({ poster, format, scale, selected, onSelect, onArrange }: { poster: PosterSettings; format: PosterFormat; scale: number; selected: string | null; onSelect: (key: string) => void; onArrange: (key: string, box: PosterBox) => void }) {
+  const size = posterSizes[format];
+  const drag = useRef<{ key: string; mode: "move" | "resize"; x: number; y: number; box: PosterBox; moved: boolean } | null>(null);
+  const handle = Math.max(16, 16 / scale);
+  const fit = (box: PosterBox): PosterBox => {
+    const w = Math.round(Math.min(Math.max(box.w, 20), size.width)), h = Math.round(Math.min(Math.max(box.h, 20), size.height));
+    return { x: Math.round(Math.min(Math.max(box.x, 0), size.width - w)), y: Math.round(Math.min(Math.max(box.y, 0), size.height - h)), w, h };
+  };
+  function down(event: ReactPointerEvent<HTMLElement>, key: string, box: PosterBox, mode: "move" | "resize") {
+    event.stopPropagation();
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* not capturable */ }
+    drag.current = { key, mode, x: event.clientX, y: event.clientY, box, moved: false };
+  }
+  function move(event: ReactPointerEvent<HTMLElement>) {
+    const state = drag.current;
+    if (!state) return;
+    const dx = (event.clientX - state.x) / scale, dy = (event.clientY - state.y) / scale;
+    if (!state.moved && Math.abs(dx) + Math.abs(dy) < 3 / scale) return;
+    state.moved = true;
+    const { box } = state;
+    onArrange(state.key, fit(state.mode === "move" ? { ...box, x: box.x + dx, y: box.y + dy } : { ...box, w: box.w + dx, h: box.h + dy }));
+  }
+  function up() {
+    const state = drag.current;
+    if (state && !state.moved) onSelect(state.key);
+    drag.current = null;
+  }
+  return <div className={styles.arrange} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+    {poster.fields.map(field => {
+      const box = field.box[format];
+      if (!box) return null;
+      const here = selected === field.key;
+      return <div key={field.key} role="button" tabIndex={0} aria-label={`Atur ${field.label}`} aria-pressed={here} className={styles.arrangeBox} data-selected={here || undefined} data-locked={!field.editable || undefined}
+        style={{ left: box.x, top: box.y, width: box.w, height: box.h, "--ring": `${Math.max(2, 2 / scale)}px` } as CSSProperties}
+        onPointerDown={event => down(event, field.key, box, "move")}
+        onKeyDown={event => {
+          const step = event.shiftKey ? 10 : 1;
+          const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(field.key); return; }
+          const by = moves[event.key];
+          if (!by) return;
+          event.preventDefault();
+          onArrange(field.key, fit({ ...box, x: box.x + by[0], y: box.y + by[1] }));
+        }}>
+        {here && <span className={styles.arrangeLabel} style={{ fontSize: Math.max(12, 13 / scale) }}>{field.label}</span>}
+        {here && <span className={styles.arrangeHandle} style={{ width: handle, height: handle }} aria-hidden="true" onPointerDown={event => down(event, field.key, box, "resize")} />}
+      </div>;
+    })}
+  </div>;
 }

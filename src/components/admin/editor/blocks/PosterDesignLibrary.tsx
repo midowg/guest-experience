@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import type { PosterDesign, PosterSettings } from "@/lib/poster";
 import { posterDesignsApi } from "@/lib/routes";
-import s from "./poster-block.module.css";
+import s from "./card-editor.module.css";
 
 type Props = {
   poster: PosterSettings; initial: PosterDesign[]; superAdmin: boolean;

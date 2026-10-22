@@ -271,20 +271,26 @@ it("numbers only the switched-on modules, the same way in the chips, the menu an
   expect(screen.getByRole("heading", { level: 2 }).closest("header")?.textContent).not.toMatch(/^2/);
 });
 
-it("switches Studio Poster on with the default design, and lets the admin lock or move a box", () => {
+it("switches Studio Poster on with the default design, and lets the admin lock, restyle and move a box on the card", () => {
   render(<EventEditor event={createSeedEvent()} />);
   openBlock("Studio Poster");
   fireEvent.click(screen.getByRole("switch", { name: "Tampilkan Studio Poster di undangan" }));
-  expect(screen.getByRole("img", { name: /Poster Post/ })).toBeTruthy();
-  const title = screen.getByText("Judul sesi", { selector: "summary span" }).closest("details")!;
-  fireEvent.click(title.querySelector("summary")!);
-  const editable = within(title).getByRole("switch", { name: "Boleh diedit peserta" }) as HTMLInputElement;
-  expect(editable.checked).toBe(true);
-  fireEvent.click(editable);
-  expect(editable.checked).toBe(false);
-  // The first X is the Post format's; Story has its own below it.
-  fireEvent.change(within(title).getAllByRole("spinbutton", { name: "X" })[0], { target: { value: "200" } });
-  expect((screen.getByRole("img", { name: /Poster Post/ }).querySelector("[data-field=title]") as HTMLElement).style.left).toBe("200px");
+  const card = () => screen.getAllByRole("img", { name: /Poster Post/ }).at(-1)!;
+  // Pick a box from the list (or by tapping it on the card): its short settings open beside it.
+  fireEvent.click(within(screen.getByRole("group", { name: "Kotak di kartu" })).getByRole("button", { name: "Judul sesi" }));
+  const inspector = screen.getByRole("group", { name: "Kotak Judul sesi" });
+  const filled = within(inspector).getByRole("switch", { name: "Diisi peserta" }) as HTMLInputElement;
+  expect(filled.checked).toBe(true);
+  fireEvent.click(filled);
+  expect(filled.checked).toBe(false);
+  fireEvent.click(within(inspector).getByRole("button", { name: "Rata tengah" }));
+  expect(within(inspector).getByRole("button", { name: "Rata tengah" }).getAttribute("aria-pressed")).toBe("true");
+  // Arrow keys nudge the selected box on the card; the exact numbers follow under "lanjutan".
+  const handle = within(card()).getByRole("button", { name: "Atur Judul sesi" });
+  const before = Number.parseFloat(handle.style.left);
+  fireEvent.keyDown(handle, { key: "ArrowRight", shiftKey: true });
+  expect(Number.parseFloat(within(card()).getByRole("button", { name: "Atur Judul sesi" }).style.left)).toBe(before + 10);
+  expect((within(inspector).getAllByRole("spinbutton", { name: "X" })[0] as HTMLInputElement).value).toBe(String(before + 10));
   expect(screen.getByRole("button", { name: "Simpan perubahan" }).textContent).toContain("Simpan");
 });
 
