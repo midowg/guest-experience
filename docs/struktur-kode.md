@@ -8,6 +8,7 @@ Peta singkat supaya perubahan berikutnya mudah dicari dan tidak merusak bagian l
 | --- | --- |
 | `src/app/` | Halaman dan rute (Next.js App Router). `[code]/` untuk tamu (alamat pendek), `e/` untuk alamat lama yang dialihkan, `_guest/` berisi pencarian dan perenderan halaman tamu yang dipakai keduanya, `admin/` untuk panitia (`admin/acara/[ref]` per acara), `api/` untuk API, `dev-preview/` untuk cek tampilan tanpa login (404 di produksi). |
 | `src/components/guest/` | Tampilan tamu: `EventExperience` (halaman undangan), panel per fase, RSVP, tiket, galeri. |
+| `src/components/poster/` | Studio Poster untuk tamu: `PosterCanvas` (poster DOM berskala), `PosterStudio` (Edit/Simpan/Unduh), `layout.ts` (ukur dan tata teks), `export.ts` (canvas → PNG/PDF/Bagikan), `draft.ts` (draf di IndexedDB). |
 | `src/components/admin/` | Tampilan admin, dibagi per fitur (lihat bawah). `admin.module.css` dipakai bersama. |
 | `src/components/ui/` | Komponen dasar bersama: `Button`, `ButtonLink`, `Field`, `Notice`. |
 | `src/lib/` | Logika tanpa tampilan: tipe (`types.ts`), validasi (`validation.ts`), format waktu, tema, kamus wording, dan **alamat (`routes.ts`)**. |
@@ -46,6 +47,14 @@ Untuk mengganti bentuk alamat, cukup ubah `routes.ts` dan rute di `src/app/`.
 3. Panggil di `EventEditor.tsx`: `{block("id", "Judul", <NamaBlock kit={kit} />)}`.
 4. Petakan path data ke blok di `fieldBlocks` (`editor-model.ts`) bila awalan path-nya baru.
 5. Tambahkan contoh kalimat dan chip di `editor/suggestions.ts` bila perlu.
+
+## Studio Poster
+
+- Model di `src/lib/poster.ts`: kotak dalam piksel desain (dari Figma) per format (Post 1080×1350, Story 1080×1920). `fitText` menentukan ukuran huruf dan baris. Hasilnya dipakai **layar dan unduhan sekaligus**, sehingga keduanya sama.
+- Desain bawaan ada di `src/lib/poster-presets.ts`. Latarnya berupa SVG di `public/poster/` yang dibuat oleh `npm run poster:backgrounds` (`scripts/poster-backgrounds.mjs`). Latar tidak berisi teks, karena SVG yang digambar sebagai gambar tidak bisa memakai font halaman.
+- **Menambah desain bawaan:** tambah objek di `posterPresets` beserta latarnya, lalu jalankan tes `src/lib/poster.test.ts`, yang memastikan setiap kotak berada di dalam format dan lolos validasi.
+- **Pustaka desain** dari admin disimpan di tabel `poster_designs` (`src/lib/server/poster-designs.ts`, API `/api/admin/poster-designs`).
+- Font poster hanya yang dimuat di `src/app/layout.tsx` (`posterFonts`). Font baru dari Figma harus ditambahkan di kedua tempat itu.
 
 ## Menambah isi acara baru (tanpa migrasi)
 

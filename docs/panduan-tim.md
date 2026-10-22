@@ -86,6 +86,33 @@ Galeri aktif setelah bucket R2 disiapkan (lihat [setup](setup.md)).
 3. Halaman undangan sesudah acara otomatis menampilkan tombol **Lihat dan unduh semua foto**. Tamu bisa mengunduh foto asli dan meminta foto dihapus lewat WhatsApp PIC. Tindak lanjuti permintaan itu dengan menyembunyikan atau menghapus fotonya.
 4. Galeri tertutup otomatis enam bulan setelah acara.
 
+## 8. Studio Poster: peserta membuat posternya sendiri
+
+Untuk acara seperti festival, tempat tiap pengisi sesi membuat poster sesinya sendiri. Mulai dari templat **Poster sesi / festival**, atau nyalakan blok **Studio Poster** di editor acara mana pun.
+
+1. **Pilih desain**: misalnya *Rempah Nusantara*, atau desain dari pustaka yang pernah disimpan.
+2. **Latar dari Figma** (opsional), untuk tiap ukuran:
+   - ekspor PNG/JPG **Post 1080×1350** dan/atau **Story 1080×1920**;
+   - isinya hanya hiasan (warna, garis, ikon, logo), tanpa teks yang akan diisi peserta;
+   - kosongkan untuk memakai latar bawaan desain.
+3. **Kotak di poster**: tiap kotak (judul, foto, tanggal, …) punya:
+   - **Boleh diedit peserta**: kalau mati, isinya tetap dari admin, misalnya tautan reservasi atau Instagram;
+   - **Isi awal / isi tetap**, teks petunjuk, dan batas huruf;
+   - **Posisi**: X, Y, Lebar, Tinggi dalam piksel desain. Salin angkanya langsung dari panel Figma (pilih layer → angka X/Y/W/H). Posisi berlaku sama di HP maupun laptop, karena seluruh poster diperbesar atau diperkecil utuh;
+   - **Huruf**: font, tebal, warna, rata, ukuran maks/min. Teks panjang mengecil sendiri sampai ukuran min, lalu dipotong "…".
+
+   Ketuk kotak di pratinjau untuk membuka pengaturannya. Kotak baru bisa ditambah dengan **Tambah kotak teks/foto**.
+4. Simpan dan publikasikan acara, lalu bagikan **Tautan Studio Poster** (`invitation.werkudara.group/KODE/poster`) ke para pengisi sesi.
+
+Yang dilakukan peserta:
+1. Buka tautan, lalu tekan **Edit**.
+2. Ketuk kotak bergaris untuk mengisinya. Unggah foto, lalu geser untuk mengatur posisi; di HP, cubit dengan dua jari untuk zoom.
+3. Tekan **Simpan**, lalu **Unduh gambar** (Post/Story), **PDF**, atau **Bagikan** (di HP yang mendukung).
+
+Isian dan foto peserta **tidak dikirim ke server**: semuanya tersimpan di browser HP peserta itu sendiri dan tetap ada walau halaman ditutup.
+
+**Pustaka desain (super admin):** di blok Studio Poster, **Simpan sebagai desain baru** menyimpan latar dan kotak poster acara ini, supaya acara lain bisa memulai dari desain yang sama. Menghapus atau mengubah desain di pustaka tidak mengubah acara yang sudah memakainya. Simpan acaranya dulu kalau latarnya baru saja diunggah.
+
 ## Super admin
 
 Menu **Dashboard super admin** (password terpisah):

@@ -28,6 +28,8 @@ Terapkan migrasi yang belum ada, **urut nama berkas**, lewat Supabase Dashboard 
 | `202610210003_tickets_checkin.sql` | Tiket QR untuk tamu undangan personal dan check-in di pintu masuk |
 | `202610210004_short_links.sql` | Kode pendek acara (`/AB23CD`) dan token tamu 8 karakter (`/AB23CD/k7q2mx9p`). Acara dan undangan lama langsung mendapat kode |
 | `202610210005_staff_members.sql` | Daftar Tim Werkudara untuk mengisi PIC |
+| `202610220001_studio_poster.sql` | Templat "Poster sesi / festival" dan modul Studio Poster boleh diatur untuk admin biasa (Studio Poster sendiri tetap jalan tanpa migrasi ini) |
+| `202610220002_poster_designs.sql` | Pustaka desain poster ("Simpan sebagai desain baru") |
 
 Cek hasilnya (hanya membaca). Semua kolom harus `true`:
 
@@ -45,7 +47,9 @@ select
   to_regclass('public.gallery_photos') is not null as "210002",
   to_regclass('public.event_tickets') is not null as "210003",
   exists (select 1 from information_schema.columns where table_schema='public' and table_name='events' and column_name='code') as "210004",
-  to_regclass('public.staff_members') is not null as "210005";
+  to_regclass('public.staff_members') is not null as "210005",
+  coalesce((select pg_get_constraintdef(oid) like '%poster-sesi%' from pg_constraint where conname = 'admin_settings_enabled_templates_check'), false) as "220001",
+  to_regclass('public.poster_designs') is not null as "220002";
 ```
 
 Migrasi bersifat menambah. Versi lama yang masih online tetap berjalan setelah migrasi diterapkan, jadi urutannya aman: **database dulu, baru kode**.
