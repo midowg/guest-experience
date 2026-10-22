@@ -2,7 +2,7 @@ import { POSTER_LABEL, type CardType } from "@/lib/poster";
 import { themeStyle } from "@/lib/themes";
 import type { EventRecord } from "@/lib/types";
 import { PosterStudio } from "./PosterStudio";
-import styles from "./studio.module.css";
+import styles from "./card-studio.module.css";
 
 const headings: Record<CardType, string> = { poster: "Buat poster Anda", ucapan: "Buat kartu ucapan Anda", idcard: "Buat ID card Anda", sertifikat: "Buat sertifikat Anda", undangan: "Buat kartu undangan Anda" };
 
@@ -12,7 +12,7 @@ export function PosterPage({ event }: { event: Pick<EventRecord, "id" | "title" 
     <header className={styles.head}>
       <p className={styles.eyebrow}>{POSTER_LABEL} · {event.title}</p>
       <h1>{headings[event.poster.cardType] ?? headings.poster}</h1>
-      <p>Isi kotak di kartu, atur foto, lalu unduh untuk dibagikan atau dicetak. Semua isian hanya tersimpan di perangkat ini.</p>
+      <p>Isi formnya, kartu langsung berubah, lalu unduh untuk dibagikan atau dicetak. Semua isian hanya tersimpan di perangkat ini.</p>
     </header>
     <PosterStudio eventId={event.id} eventTitle={event.title} poster={event.poster} />
   </main>;

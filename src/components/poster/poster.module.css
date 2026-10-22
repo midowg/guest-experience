@@ -32,3 +32,7 @@ button.text { cursor: text; font: inherit; color: inherit; }
 .arrangeBox:focus-visible { outline: calc(var(--ring) * 2) solid #1551a0; }
 .arrangeLabel { position: absolute; bottom: 100%; left: 0; padding: .15em .5em; border-radius: .3em .3em 0 0; background: #1551a0; color: #fff; font-family: 'Nunito', sans-serif; font-weight: 800; white-space: nowrap; pointer-events: none; }
 .arrangeHandle { position: absolute; right: 0; bottom: 0; transform: translate(50%, 50%); border: 2px solid #fff; border-radius: 50%; background: #1551a0; cursor: nwse-resize; box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
+
+/* A guest's photo can be dragged in the preview beside the form. */
+.photo[data-movable] { cursor: grab; }
+.photo[data-movable]:active { cursor: grabbing; }

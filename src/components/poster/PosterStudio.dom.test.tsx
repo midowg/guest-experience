@@ -18,40 +18,25 @@ function setup() {
   render(<PosterStudio eventId="10f3a511-2331-4000-8000-0000000000aa" eventTitle="JCWF 2026" poster={poster} />);
   return poster;
 }
-const posterImage = () => screen.getByRole("img", { name: /Poster Post/ });
+const card = () => screen.getByRole("img", { name: /Poster Post/ });
+const form = () => screen.getByRole("form", { name: "Isi kartu" });
 
-it("shows grey hints before anything is filled, and locks downloads until Simpan", async () => {
+it("shows a form field for each box guests fill, and none for the admin's fixed text", async () => {
   setup();
-  await waitFor(() => expect(within(posterImage()).getByText("Judul sesi")).toBeTruthy());
-  expect(within(posterImage()).getByText("@jcwf.id | jcwf.id")).toBeTruthy();
-  expect((screen.getByRole("button", { name: /Unduh gambar/ }) as HTMLButtonElement).disabled).toBe(true);
+  expect(within(form()).getByRole("textbox", { name: "Judul sesi" })).toBeTruthy();
+  expect(within(form()).getByLabelText("Pilih Foto utama")).toBeTruthy();
+  expect(within(form()).queryByRole("textbox", { name: "Instagram & website" })).toBeNull();
+  // The fixed text is on the card; empty fields show their hint there.
+  await waitFor(() => expect(within(card()).getByText("@jcwf.id | jcwf.id")).toBeTruthy());
+  expect(within(card()).getByText("Judul sesi")).toBeTruthy();
 });
 
-it("opens only the boxes the admin made editable, and fills them from the panel", async () => {
+it("changes the card as the guest types, and can be downloaded at any time", async () => {
   setup();
-  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-  // Editable boxes are buttons on the poster; the locked Instagram box is not.
-  await waitFor(() => expect(within(posterImage()).getByRole("button", { name: "Ubah Judul sesi" })).toBeTruthy());
-  expect(within(posterImage()).queryByRole("button", { name: "Ubah Instagram & website" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Instagram & website" })).toBeNull();
-
-  fireEvent.change(screen.getByRole("textbox", { name: "Judul sesi" }), { target: { value: "Meramu Rempah Nusantara" } });
-  // Long text wraps into one span per line; the box holds the whole of it.
-  expect([...within(posterImage()).getByRole("button", { name: "Ubah Judul sesi" }).querySelectorAll("span")].map(line => line.textContent).join(" ")).toBe("Meramu Rempah Nusantara");
-
-  fireEvent.click(screen.getByRole("button", { name: "Foto utama" }));
-  expect(screen.getByLabelText("Unggah foto")).toBeTruthy();
-});
-
-it("hides empty hints once saved and lets the poster be downloaded", async () => {
-  setup();
-  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-  fireEvent.change(await screen.findByRole("textbox", { name: "Judul sesi" }), { target: { value: "Meramu Rempah" } });
-  fireEvent.click(screen.getByRole("button", { name: "Simpan" }));
-  expect(within(posterImage()).queryByText("Nama fasilitator")).toBeNull();
-  expect(within(posterImage()).getByText("Meramu Rempah")).toBeTruthy();
+  fireEvent.change(within(form()).getByRole("textbox", { name: "Judul sesi" }), { target: { value: "Meramu Rempah Nusantara" } });
+  await waitFor(() => expect([...card().querySelectorAll("[data-field=title] span")].map(line => line.textContent).join(" ")).toBe("Meramu Rempah Nusantara"));
   expect((screen.getByRole("button", { name: /Unduh gambar/ }) as HTMLButtonElement).disabled).toBe(false);
-  expect(screen.getByRole("status").textContent).toMatch(/kotak masih kosong/);
+  expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
 });
 
 it("lets the person pick a colour only when the admin allows it", async () => {

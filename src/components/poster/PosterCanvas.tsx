@@ -18,6 +18,8 @@ type Props = {
   fontsVersion: number;
   /** Outside editing, a tap on a box the guest may fill (the studio then opens it). */
   onTap?: (key: string) => void;
+  /** Guests' photos may be dragged and zoomed in place without editing mode (the form beside it fills the rest). */
+  movePhotos?: boolean;
   /** The admin's arranging: every box can be dragged and resized; a tap selects it. */
   onArrange?: (key: string, box: PosterBox) => void;
 };
@@ -28,7 +30,7 @@ const clampZoom = (zoom: number) => Math.min(3, Math.max(1, Math.round(zoom * 10
  * The poster at its design size (1080 px wide), scaled to the space it has. Boxes sit at the
  * design pixels the admin typed from Figma, so they land on the same spot on every screen.
  */
-export function PosterCanvas({ poster, values, format, editing, hints, selected, onSelect, onFrame, fontsVersion, onTap, onArrange }: Props) {
+export function PosterCanvas({ poster, values, format, editing, hints, selected, onSelect, onFrame, fontsVersion, onTap, onArrange, movePhotos = false }: Props) {
   const size = posterSizes[format];
   const holder = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.4);
@@ -54,8 +56,9 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
   const ring = Math.max(2, 2 / scale);
 
   function photoDown(field: PosterField, event: ReactPointerEvent<HTMLDivElement>) {
-    if (!editing || !field.editable) return;
+    if (!(editing || movePhotos) || !field.editable) return;
     const photo = values.photos[field.key];
+    if (!editing && !photo) return;
     const current = gesture.current?.key === field.key ? gesture.current : null;
     const pointers = current?.pointers ?? new Map<number, { x: number; y: number }>();
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -104,10 +107,10 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
         const place = photo && image ? photoPlacement(box, image, photo.frame) : null;
         const open = editing && field.editable;
         if (!photo && !open && !(hints && field.editable)) return null;
-        return <div key={field.key} data-field={field.key} className={styles.photo} data-open={open || undefined} data-selected={selected === field.key || undefined}
+        return <div key={field.key} data-field={field.key} className={styles.photo} data-open={open || undefined} data-movable={(movePhotos && photo && field.editable) || undefined} data-selected={selected === field.key || undefined}
           style={{ left: box.x, top: box.y, width: box.w, height: box.h, borderRadius: field.radius, "--ring": `${ring}px` } as CSSProperties}
           onPointerDown={event => photoDown(field, event)} onPointerMove={event => photoMove(field, event)} onPointerUp={event => photoUp(field, event)} onPointerCancel={event => photoUp(field, event)}
-          onWheel={event => { if (!open || !photo) return; onFrame(field.key, { ...photo.frame, zoom: clampZoom(photo.frame.zoom - Math.sign(event.deltaY) * 0.08) }); }}>
+          onWheel={event => { if (!(open || movePhotos) || !photo || !field.editable) return; onFrame(field.key, { ...photo.frame, zoom: clampZoom(photo.frame.zoom - Math.sign(event.deltaY) * 0.08) }); }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- a local photo (object URL), never uploaded */}
           {photo && <img src={photo.url} alt="" draggable={false} onLoad={event => { const { naturalWidth: width, naturalHeight: height } = event.currentTarget; setNatural(current => current[field.key]?.width === width && current[field.key]?.height === height ? current : { ...current, [field.key]: { width, height } }); }}
             style={place ? { left: place.left, top: place.top, width: place.width, height: place.height } : { opacity: 0 }} />}
