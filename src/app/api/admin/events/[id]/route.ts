@@ -38,7 +38,16 @@ export async function PUT(request: Request, { params }: Params) {
         if (blocked.length) throw new ServiceError(403, `Modul berikut dinonaktifkan oleh super admin dan tidak bisa dinyalakan: ${moduleNames(blocked)}.`);
       }
     }
-    return success(await saveEvent(id, input, false), "Perubahan tersimpan.");
+    try {
+      return success(await saveEvent(id, input, false), "Perubahan tersimpan.");
+    } catch (error) {
+      // Before 202610220003 the database still asks a published card for an organiser and a place.
+      const document = input as { event_kind?: string; status?: string } | null;
+      if (error instanceof ServiceError && error.message === "Konten acara tidak valid." && document?.event_kind === "kartu" && document.status === "published") {
+        throw new ServiceError(422, "Kartu belum bisa dipublikasikan: database menunggu migrasi 202610220003_card_publish.sql. Simpan sebagai draf dulu.");
+      }
+      throw error;
+    }
   });
 }
 
