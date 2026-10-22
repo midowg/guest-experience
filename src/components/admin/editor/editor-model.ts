@@ -1,3 +1,4 @@
+import { POSTER_LABEL } from "@/lib/poster";
 import type { EventRecord, HeroTextPosition, ImageFocus, ImageSource, PlainImage, SectionKey } from "@/lib/types";
 import { getFraming, normalizeEvent } from "@/lib/hero-framing";
 import { parseLocationEmbed } from "@/lib/location-embed";
@@ -118,6 +119,7 @@ export const editorBlocks: { id: string; title: string; stage: EditorStage }[] =
   { id: "team", title: "Our Team", stage: "prep" },
   { id: "rsvp", title: "Penerimaan RSVP", stage: "guest" },
   { id: "contact", title: "Kontak", stage: "guest" },
+  { id: "poster", title: POSTER_LABEL, stage: "guest" },
   { id: "day", title: "Hari H", stage: "day" },
   { id: "feedback_questions", title: "Survei feedback", stage: "after" },
   { id: "review", title: "Ulasan Google (opsional)", stage: "after" },
@@ -139,7 +141,7 @@ const fieldBlocks: Record<string, string> = {
   team_image: "team", rsvp_enabled: "rsvp", rsvp_closes_at: "rsvp", guest_estimate: "rsvp", contact: "contact", day_note: "day",
   feedback_enabled: "feedback_questions", feedback_opens_at: "feedback_questions", feedback_description: "feedback_questions", feedback_questions: "feedback_questions",
   review_url: "review", review_enabled: "review", review_heading: "review", review_description: "review", review_button_label: "review",
-  after: "after", prepare: "prepare", language: "language", translations: "language", sections: "sections", status: "publication",
+  after: "after", prepare: "prepare", language: "language", translations: "language", sections: "sections", status: "publication", poster: "poster",
 };
 export function blockOfPath(path: string): string {
   return fieldBlocks[path.split(".")[0]] ?? "identity";
@@ -200,6 +202,7 @@ function isEmptyOptional(id: string, event: EventRecord): boolean {
     case "day": return !event.day_note;
     case "feedback_questions": return !event.feedback_enabled;
     case "review": return !event.review_enabled;
+    case "poster": return !event.poster.enabled;
     case "after": return !event.after.message && !event.after.title && !event.after.collaboration.enabled;
     case "language": return event.language === "id";
     default: return false;

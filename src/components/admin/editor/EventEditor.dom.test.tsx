@@ -269,3 +269,20 @@ it("numbers only the switched-on modules, the same way in the chips, the menu an
   expect(chipList()).toHaveLength(count - 1);
   expect(screen.getByRole("heading", { level: 2 }).closest("header")?.textContent).not.toMatch(/^2/);
 });
+
+it("switches Studio Poster on with the default design, and lets the admin lock or move a box", () => {
+  render(<EventEditor event={createSeedEvent()} />);
+  openBlock("Studio Poster");
+  fireEvent.click(screen.getByRole("switch", { name: "Tampilkan Studio Poster di undangan" }));
+  expect(screen.getByRole("img", { name: /Poster Post/ })).toBeTruthy();
+  const title = screen.getByText("Judul sesi", { selector: "summary span" }).closest("details")!;
+  fireEvent.click(title.querySelector("summary")!);
+  const editable = within(title).getByRole("switch", { name: "Boleh diedit peserta" }) as HTMLInputElement;
+  expect(editable.checked).toBe(true);
+  fireEvent.click(editable);
+  expect(editable.checked).toBe(false);
+  // The first X is the Post format's; Story has its own below it.
+  fireEvent.change(within(title).getAllByRole("spinbutton", { name: "X" })[0], { target: { value: "200" } });
+  expect((screen.getByRole("img", { name: /Poster Post/ }).querySelector("[data-field=title]") as HTMLElement).style.left).toBe("200px");
+  expect(screen.getByRole("button", { name: "Simpan perubahan" }).textContent).toContain("Simpan");
+});

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Notice } from "@/components/ui";
-import { CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
+import { CalendarCheck, CalendarClock, Frame, CircleCheck, CircleDot, ClipboardCheck, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
 import { Check, SuggestionChips } from "@/components/admin/editor/controls";
 import { chipLabel, fieldExamples, fieldPattern, fieldSuggestions, fillSuggestion } from "@/components/admin/editor/suggestions";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
@@ -21,7 +21,10 @@ import { ContactBlock } from "@/components/admin/editor/blocks/ContactBlock";
 import { FeedbackBlock } from "@/components/admin/editor/blocks/FeedbackBlock";
 import { HeroBlock } from "@/components/admin/editor/blocks/HeroBlock";
 import { IdentityBlock } from "@/components/admin/editor/blocks/IdentityBlock";
+import { PosterBlock } from "@/components/admin/editor/blocks/PosterBlock";
 import { PublicationBlock } from "@/components/admin/editor/blocks/PublicationBlock";
+import { POSTER_LABEL } from "@/lib/poster";
+import { posterPresets, presetPoster } from "@/lib/poster-presets";
 import { ReviewBlock } from "@/components/admin/editor/blocks/ReviewBlock";
 import { RsvpBlock } from "@/components/admin/editor/blocks/RsvpBlock";
 import { ScheduleBlock } from "@/components/admin/editor/blocks/ScheduleBlock";
@@ -40,11 +43,11 @@ import { absolute, adminApi, eventPath } from "@/lib/routes";
 
 
 /** Shorter names for the chips, so more of them fit with their names on one row. */
-const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan" };
+const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan", poster: "Poster" };
 const blockIcons: Record<string, LucideIcon> = {
   delete: Trash2, identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
   agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, language: Languages, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
-  feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket,
+  feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket, poster: Frame,
 };
 
 
@@ -207,6 +210,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
    */
   function blockSwitch(id: string): { on: boolean; set: (on: boolean) => void } | null {
     if (id === "review") return { on: event.review_enabled, set: on => update("review_enabled", on) };
+    // Switched on for the first time, Studio Poster starts from the first design.
+    if (id === "poster") return { on: event.poster.enabled, set: on => update("poster", on && !event.poster.fields.length ? presetPoster(posterPresets[0].key, event) : { ...event.poster, enabled: on }) };
     const key = sectionOfBlock[id];
     if (!key) return null;
     const shown = !!event.sections.find(section => section.key === key)?.enabled;
@@ -352,6 +357,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {block("rsvp", "Penerimaan RSVP", <RsvpBlock kit={kit} />)}
       {block("contact", "Kontak", <ContactBlock kit={kit} />)}
       {block("day", "Hari H", <DayBlock event={event} update={update} control={control} />)}
+      {block("poster", POSTER_LABEL, <PosterBlock kit={kit} />)}
       {block("feedback_questions", "Survei feedback", <FeedbackBlock kit={kit} />)}
       {block("review", "Ulasan Google (opsional)", <ReviewBlock kit={kit} />)}
       {block("after", "Setelah acara", <AfterBlock event={event} update={update} control={control} errors={errors} collaboration={!unavailable("collaboration")} />)}
