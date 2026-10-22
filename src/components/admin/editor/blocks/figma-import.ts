@@ -150,7 +150,7 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
   const notes: string[] = [];
   const fields: PosterField[] = [];
   const seen = new Set<string>();
-  let outlined = 0;
+  let outlined = 0, bare = 0;
   for (const element of [...svg.querySelectorAll("[id]")]) {
     const place = parseLayer(element.getAttribute("id") ?? "");
     if (!place || seen.has(place.key)) continue;
@@ -161,10 +161,13 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
     const box = { x: Math.round(raw.x * scale), y: Math.round(raw.y * scale), w: Math.round(raw.w * scale), h: Math.round(raw.h * scale) };
     const made = place.kind === "photo" ? photoField(place, { box, element }, scale) : textField(place, { box, element }, scale);
     if ("outlined" in made && made.outlined) outlined++;
+    // A bare text layer is only as wide as its sample; a group with a clear box gives the area.
+    if (place.kind === "text" && !(element.tagName.toLowerCase() === "g" && element.querySelector("rect"))) bare++;
     seen.add(place.key);
     fields.push({ ...made.field, box: boxes({ [format]: fit(made.box, format) }) });
   }
   if (!fields.length) throw new Error("Tidak ada layer bernama isi_… atau foto_… di SVG ini. Beri nama layer yang boleh diganti peserta, lalu ekspor dengan “Include id”.");
+  if (bare) notes.push(`${bare} kolom teks selebar teks contohnya, jadi isian yang lebih panjang akan mengecil. Untuk area yang lebih lebar, kelompokkan teksnya dengan kotak transparan seukuran area dan beri nama grup itu isi_….`);
   if (outlined) notes.push(`${outlined} kolom teks berasal dari teks yang di-outline: ukuran dan hurufnya diperkirakan, periksa di pengaturan kolom.`);
   if ([...svg.querySelectorAll("text")].some(text => !parseLayer(text.closest("[id]")?.getAttribute("id") ?? ""))) {
     notes.push("Ada teks tetap yang belum di-outline: hurufnya bisa berbeda dari Figma. Centang “Outline text” saat ekspor.");

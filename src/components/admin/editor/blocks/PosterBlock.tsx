@@ -8,12 +8,16 @@ import { EventLink } from "@/components/admin/editor/blocks/EventLink";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { PosterCanvas } from "@/components/poster/PosterCanvas";
 import { loadPosterFonts } from "@/components/poster/layout";
-import { boxes, cardTypes, paletteOf, POSTER_LABEL, posterFormats, posterPalettes, posterSizes, type CardType, type PosterBox, type PosterField, type PosterFormat, type PosterSettings } from "@/lib/poster";
+import { boxes, cardTypes, paletteOf, POSTER_LABEL, posterFormats, posterFormatSetups, posterPalettes, posterSizes, type CardType, type PosterBox, type PosterField, type PosterFormat, type PosterSettings } from "@/lib/poster";
 import { posterPresets, presetOf, presetPoster } from "@/lib/poster-presets";
 import { eventPath, posterPath } from "@/lib/routes";
 import { PosterInspector } from "./PosterInspector";
+import { PosterFieldList } from "./PosterFieldList";
+import { FigmaImport, type FigmaResult } from "./FigmaImport";
+import { mergeImport } from "./figma-import";
 import { PosterDesignLibrary } from "./PosterDesignLibrary";
 import s from "./card-editor.module.css";
+import f from "./card-figma.module.css";
 
 const noop = () => {};
 const empty = { text: {}, photos: {} };
@@ -70,6 +74,22 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
     setSelected(key);
   }
 
+  /**
+   * A design from Figma: a first import (or one over a gallery design) replaces the boxes and
+   * sizes; a further one, for another size, adds that size to the boxes of the same name.
+   */
+  function applyFigma(result: FigmaResult) {
+    const again = poster.preset === "" && poster.fields.length > 0;
+    if (!again && poster.fields.length && !window.confirm("Pakai desain dari Figma ini? Kotak dan ukuran desain sebelumnya akan diganti.")) return;
+    const formats = again ? poster.formats : posterFormatSetups([]);
+    set({
+      preset: "", fields: mergeImport(poster.fields, again, { ...result, background: "" }),
+      formats: { ...formats, [result.format]: { enabled: true, background: result.background } },
+    });
+    setFormat(result.format);
+    setSelected(null);
+  }
+
   // In the preview every box shows its hint, locked or not, so the admin sees each one.
   const preview: PosterSettings = { ...poster, fields: poster.fields.map(field => ({ ...field, editable: true })) };
 
@@ -79,7 +99,10 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
     {event.code && event.status === "published" && poster.enabled && <ButtonLink variant="secondary" href={link} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> Buka halaman kartu<span className="sr-only"> (tab baru)</span></ButtonLink>}
 
     <section className={s.step} aria-labelledby="poster-step-design">
-      <h3 id="poster-step-design"><span className={s.stepNumber}>1</span> Pilih desain</h3>
+      <h3 id="poster-step-design"><span className={s.stepNumber}>1</span> Desain</h3>
+      <FigmaImport onImport={applyFigma} />
+      <details className={f.builtIn}>
+      <summary>atau pakai desain bawaan</summary>
       <div className={s.types} role="group" aria-label="Jenis kartu">
         {cardTypes.map(item => <button key={item.key} type="button" aria-pressed={type === item.key} onClick={() => setType(item.key)}>{item.label}</button>)}
       </div>
@@ -101,10 +124,26 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
         set({ cardType: design.template.cardType ?? "poster", preset: design.template.preset, palette: design.template.palette ?? poster.palette, paletteChoice: design.template.paletteChoice ?? poster.paletteChoice, formats: design.template.formats, fields: design.template.fields });
         setSelected(null);
       }} />
+      </details>
     </section>
 
-    {poster.fields.length > 0 && shown && <section className={s.step} aria-labelledby="poster-step-arrange">
-      <h3 id="poster-step-arrange"><span className={s.stepNumber}>2</span> Atur kartu</h3>
+    {poster.fields.length > 0 && shown && <section className={s.step} aria-labelledby="poster-step-fields">
+      <h3 id="poster-step-fields"><span className={s.stepNumber}>2</span> Kolom untuk peserta</h3>
+      <p className="field-hint">Kolom yang diisi peserta tampil di form mereka. Matikan <strong>Diisi peserta</strong> untuk teks tetap dari panitia, misalnya tautan reservasi.</p>
+      <div className={s.workspace}>
+        <PosterFieldList fields={poster.fields} onChange={(key, next) => setField(key, () => next)} />
+        <div className={s.side}>
+          {usable.length > 1 && <div className={s.tabs} role="group" aria-label="Ukuran pratinjau">{usable.map(item => <button key={item} type="button" aria-pressed={shown === item} onClick={() => setFormat(item)}>{posterSizes[item].label}</button>)}</div>}
+          <div className={s.canvas} style={{ maxWidth: posterSizes[shown].width > posterSizes[shown].height ? "100%" : `${Math.min(22, Math.round(34 * posterSizes[shown].width / posterSizes[shown].height))}rem` }}>
+            <PosterCanvas poster={preview} values={empty} format={shown} editing={false} hints selected={null} onSelect={noop} onFrame={noop} fontsVersion={fontsVersion} />
+          </div>
+        </div>
+      </div>
+    </section>}
+
+    <details className={s.more}>
+      <summary>Lanjutan: posisi kotak, warna, ukuran, dan latar</summary>
+    {poster.fields.length > 0 && shown && <section aria-label="Atur posisi kotak">
       <div className={s.arrangeBar}>
         {usable.length > 1 && <div className={s.tabs} role="group" aria-label="Ukuran yang diatur">{usable.map(item => <button key={item} type="button" aria-pressed={shown === item} onClick={() => setFormat(item)}>{posterSizes[item].label}</button>)}</div>}
         <div className={s.swatches} role="group" aria-label="Warna kartu">
@@ -138,9 +177,6 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
         </div>
       </div>
     </section>}
-
-    <details className={s.more}>
-      <summary>Ukuran dan latar dari Figma</summary>
       {(["digital", "print"] as const).map(group => <div key={group} className={s.sizeGroup}>
         <p className={s.sub}>{group === "digital" ? "Untuk dibagikan" : "Untuk dicetak (PDF seukuran kertas)"}</p>
         <div className={s.sizes}>{posterFormats.filter(item => posterSizes[item].group === group).map(item => <label key={item} className={s.size} data-on={poster.formats[item].enabled || undefined}>

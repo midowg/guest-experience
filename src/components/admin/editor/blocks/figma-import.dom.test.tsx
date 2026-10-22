@@ -22,6 +22,7 @@ const liveText = `<svg width="1080" height="1350" viewBox="0 0 1080 1350" fill="
 
 /** "Outline text" on: every text is a path group; the layer name stays as the group id. */
 const outlined = `<svg width="540" height="960" viewBox="0 0 540 960" xmlns="http://www.w3.org/2000/svg">
+  <g id="isi_lokasi" data-box="36 700 468 80"><rect width="468" height="80" fill="none"/><text font-size="20"><tspan x="40" y="720">Loman Park</tspan></text></g>
   <g id="isi_judul" data-box="36 100 400 60"><path d="M0 0h10v10z" fill="#9C3D22"/></g>
   <g id="isi_judul_2" data-box="36 200 400 60"><path d="M0 0h10v10z" fill="#9C3D22"/></g>
   <rect id="foto-utama" x="0" y="300" width="540" height="300" rx="12" fill="#ECD8C6"/>
@@ -70,8 +71,11 @@ describe("Figma SVG import", () => {
   it("estimates outlined text from its shape and colour, and scales a frame of the same shape", () => {
     const result = readFigmaSvg(outlined, measure);
     expect(result.format).toBe("story");
-    const [title, photo] = result.fields;
-    expect(result.fields).toHaveLength(2);
+    const [, title, photo] = result.fields;
+    expect(result.fields).toHaveLength(3);
+    // A group with a clear box gives the whole area, not just the sample text.
+    expect(result.fields.find(field => field.key === "lokasi")?.box.story).toMatchObject({ x: 72, w: 936 });
+    expect(result.notes.join(" ")).toMatch(/1 kolom teks selebar teks contohnya/);
     expect(title).toMatchObject({ key: "judul", color: "#9c3d22", maxLines: 1 });
     expect(title.sizeMax).toBe(Math.round(120 * 0.95));
     expect(title.box.story).toMatchObject({ x: 72, w: 800 });
@@ -96,6 +100,7 @@ describe("Figma SVG import", () => {
     expect(title.box.post).toBeTruthy();
     expect(title.box.story).toMatchObject({ x: 72 });
     expect(merged.filter(field => field.key === "utama")).toHaveLength(1);
+    expect(merged.some(field => field.key === "lokasi")).toBe(true);
     // From a gallery design, the import replaces the boxes.
     expect(mergeImport(edited, false, story)).toEqual(story.fields);
   });

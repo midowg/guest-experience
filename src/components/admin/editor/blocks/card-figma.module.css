@@ -1,0 +1,21 @@
+/* Admin card editor: the Figma import and the guests' field list. */
+/* Figma import: the main way in. */
+.figma { display: grid; gap: var(--space-2); }
+.figmaButton { justify-self: start; cursor: pointer; }
+.figmaButton[aria-disabled] { opacity: .7; cursor: progress; }
+.figmaSteps { display: grid; gap: 4px; margin: 0; padding-left: 1.25rem; color: #4a5060; font-size: .875rem; }
+.figmaSteps code { padding: 0 4px; border-radius: 4px; background: var(--page); font-size: .8125rem; }
+.figmaResult { padding: var(--space-2) var(--space-3); border-radius: 10px; background: #eefaf3; color: #1d6b40; font-size: .875rem; }
+.figmaResult[data-tone="error"] { background: #fbe9ec; color: #9a273d; }
+.figmaResult p, .figmaResult ul { margin: 0; }
+.figmaResult ul { padding-left: 1.1rem; }
+.builtIn { display: grid; gap: var(--space-3); }
+.builtIn summary { color: var(--blue); font-weight: 700; cursor: pointer; }
+
+/* The guests' fields: one short row each. */
+.fieldList { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.fieldRow { display: grid; gap: 6px; padding: var(--space-2) var(--space-3); border: 1px solid #9fb7da; border-radius: 12px; background: #fff; }
+.fieldRow[data-locked] { border-color: var(--line); background: var(--page); }
+.fieldRowHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.fieldName { flex: 1 1 10rem; min-width: 0; min-height: 40px; padding: .35rem .6rem; font-weight: 800; }
+.fieldRow :global(.textarea) { min-height: 44px; }

@@ -1,0 +1,15 @@
+<svg width="1080" height="1350" viewBox="0 0 1080 1350" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Contoh poster">
+<rect width="1080" height="1350" fill="#FBF7EF"/>
+<rect id="foto_utama" y="215" width="1080" height="660" fill="#E9DFCB"/>
+<rect x="730" y="127" width="290" height="2" fill="#C9922B"/>
+<rect x="805" y="920" width="225" height="92" fill="#0F4A3A"/>
+<text id="isi_judul" fill="#0F4A3A" xml:space="preserve" style="white-space: pre" font-family="Playfair Display" font-size="88" letter-spacing="0em"><tspan x="64" y="118">Judul sesi</tspan><tspan x="64" y="204">di sini</tspan></text>
+<text id="isi_kategori" fill="#0F4A3A" xml:space="preserve" style="white-space: pre" font-family="Nunito" font-size="22" font-weight="600" letter-spacing="0.16em"><tspan x="730" y="166">KATEGORI SESI</tspan></text>
+<text id="isi_fasilitator" fill="#0F4A3A" xml:space="preserve" style="white-space: pre" font-family="Playfair Display" font-size="44"><tspan x="64" y="980">Nama fasilitator</tspan></text>
+<text id="isi_deskripsi" fill="#2F3A33" xml:space="preserve" style="white-space: pre" font-family="Nunito" font-size="22"><tspan x="64" y="1040">Ceritakan sesi ini dalam</tspan><tspan x="64" y="1071">dua atau tiga kalimat.</tspan></text>
+<text id="isi_tanggal" fill="#1F2A24" xml:space="preserve" style="white-space: pre" font-family="Nunito" font-size="25" font-weight="600"><tspan x="580" y="950">Sabtu, 7 November 2026</tspan></text>
+<text id="isi_tempat" fill="#1F2A24" xml:space="preserve" style="white-space: pre" font-family="Nunito" font-size="25" font-weight="600"><tspan x="580" y="1250">Loman Park Hotel</tspan></text>
+<text id="isi_kuota" fill="#FBF7EF" xml:space="preserve" style="white-space: pre" font-family="Nunito" font-size="20" font-weight="600"><tspan x="830" y="972">Kuota 15 peserta</tspan></text>
+</g>
+</svg>

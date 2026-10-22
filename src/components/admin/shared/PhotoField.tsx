@@ -22,6 +22,19 @@ function readSrcset(value: unknown): ImageSource[] {
  * Two ways to supply the same thing: upload a file, or paste an approved HTTPS link.
  * Either way the value is a URL plus the generated sizes; an outside link simply has none.
  */
+/** Uploads one image through the optimiser (WebP sizes up to 2048 px); used by PhotoField and imports. */
+export async function uploadPhoto(file: File): Promise<PhotoValue> {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch("/api/admin/photos", { method: "POST", body, credentials: "same-origin", cache: "no-store" });
+  const result = await response.json().catch(() => null);
+  if (!result || typeof result.ok !== "boolean") throw new AdminApiError("Server belum dapat memastikan unggahan. Foto belum tersimpan.");
+  if (!response.ok || !result.ok) throw new AdminApiError(result.message || "Foto gagal diunggah.");
+  const url = typeof result.data?.url === "string" ? result.data.url : "";
+  if (!url) throw new AdminApiError("Server tidak mengembalikan tautan foto. Foto belum tersimpan.");
+  return { url, srcset: readSrcset(result.data?.srcset) };
+}
+
 export function PhotoField({ name, label, value, srcset, onChange, error, hint }: {
   name: string; label: string; value: string; srcset: ImageSource[];
   onChange: (value: PhotoValue) => void; error?: string; hint?: string;
@@ -37,15 +50,7 @@ export function PhotoField({ name, label, value, srcset, onChange, error, hint }
   async function upload(file: File) {
     setPending(true); setUploadError(""); setUploaded(""); setNotOptimised(false);
     try {
-      const body = new FormData();
-      body.append("file", file);
-      const response = await fetch("/api/admin/photos", { method: "POST", body, credentials: "same-origin", cache: "no-store" });
-      const result = await response.json().catch(() => null);
-      if (!result || typeof result.ok !== "boolean") throw new AdminApiError("Server belum dapat memastikan unggahan. Foto belum tersimpan.");
-      if (!response.ok || !result.ok) throw new AdminApiError(result.message || "Foto gagal diunggah.");
-      const url = typeof result.data?.url === "string" ? result.data.url : "";
-      if (!url) throw new AdminApiError("Server tidak mengembalikan tautan foto. Foto belum tersimpan.");
-      const sizes = readSrcset(result.data?.srcset);
+      const { url, srcset: sizes } = await uploadPhoto(file);
       onChange({ url, srcset: sizes });
       setUploaded(file.name);
       // An empty srcset after a real upload means the resize step failed: the original was stored as-is.
