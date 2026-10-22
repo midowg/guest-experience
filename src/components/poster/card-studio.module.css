@@ -8,21 +8,25 @@
 .eyebrow { font-size: .8125rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 
 .split { display: grid; gap: var(--space-4) var(--space-6); grid-template-areas: "preview" "form" "actions"; }
+/* On a phone the card and its buttons take their own rows; side is only a wrapper. */
+.side { display: contents; }
 @media (min-width: 64rem) {
-  .split { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-areas: "form preview" "form actions"; grid-template-rows: auto 1fr; align-items: start; }
+  .split { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-areas: "form side"; align-items: start; }
+  .side { grid-area: side; position: sticky; top: var(--space-4); display: grid; gap: var(--space-3); }
+  .side > .preview, .side > .actions { grid-area: auto; }
 }
 .form { grid-area: form; display: grid; gap: var(--space-4); align-content: start; }
 .preview { grid-area: preview; display: grid; gap: var(--space-2); justify-items: center; }
 .actions { grid-area: actions; display: flex; flex-wrap: wrap; gap: var(--space-2); align-content: start; }
 .actions :global(.button) { min-height: 44px; padding: .5rem 1rem; }
-@media (min-width: 64rem) { .preview { position: sticky; top: var(--space-4); } }
 /* On a phone: the card pinned at the top, small enough to leave room for typing. */
 @media (max-width: 63.99rem) {
   .preview { position: sticky; top: 0; z-index: 5; padding: var(--space-2) 0; background: var(--color-background); box-shadow: 0 8px 16px -12px rgba(20, 30, 25, .35); }
   .actions :global(.button) { flex: 1 1 auto; }
 }
 
-.stage { width: 100%; max-width: min(100%, 34rem, calc((100svh - 9rem) * var(--ratio, .8))); }
+/* Room left for the size chips above and the buttons below, so all three stay in view. */
+.stage { width: 100%; max-width: min(100%, 34rem, calc((100svh - 15rem) * var(--ratio, .8))); }
 @media (max-width: 63.99rem) { .stage { max-width: min(100%, calc(40svh * var(--ratio, .8))); } }
 
 .field { display: grid; gap: 6px; }

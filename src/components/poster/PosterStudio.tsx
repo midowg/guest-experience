@@ -115,6 +115,8 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
       <button type="button" className={styles.reset} onClick={() => void reset()}><RotateCcw size={15} aria-hidden="true" /> Hapus semua isian</button>
     </form>
 
+    {/* Card and its buttons stick together beside the form, so the buttons never slide behind the card. */}
+    <div className={styles.side}>
     <div className={styles.preview}>
       {(formats.length > 1 || poster.paletteChoice) && <div className={styles.choices}>
         {formats.length > 1 && <div className={styles.formats} role="group" aria-label="Ukuran">
@@ -138,6 +140,7 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
       <Button type="button" variant="secondary" onClick={pdf} disabled={!!busy}><FileText size={18} aria-hidden="true" /> {busy === "pdf" ? "Membuat…" : "PDF"}</Button>
       {canShare && <Button type="button" variant="secondary" onClick={share} disabled={!!busy}><Share2 size={18} aria-hidden="true" /> Bagikan</Button>}
       <p className={styles.status} role="status">{status}</p>
+    </div>
     </div>
   </div>;
 }

@@ -12,7 +12,7 @@ export function PosterPage({ event }: { event: Pick<EventRecord, "id" | "title" 
     <header className={styles.head}>
       <p className={styles.eyebrow}>{POSTER_LABEL} · {event.title}</p>
       <h1>{headings[event.poster.cardType] ?? headings.poster}</h1>
-      <p>Isi formnya, kartu langsung berubah, lalu unduh untuk dibagikan atau dicetak. Semua isian hanya tersimpan di perangkat ini.</p>
+      <p>Lengkapi formnya dan lihat hasilnya langsung di kartu. Setelah selesai, unduh untuk dibagikan atau dicetak. Isian Anda tidak dikirim ke server dan hanya tersimpan di perangkat ini.</p>
     </header>
     <PosterStudio eventId={event.id} eventTitle={event.title} poster={event.poster} />
   </main>;
