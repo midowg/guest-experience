@@ -1,0 +1,31 @@
+/* The guest's card page in one shape language: every control rounded like the preview frame,
+   whatever corner radius the event's theme uses elsewhere. */
+.studio {
+  --control-radius: 12px;
+  --control-ring: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  --control-line: color-mix(in srgb, var(--color-text) 22%, transparent);
+}
+
+/* Fields: a soft line that turns the theme colour on focus. */
+.studio :global(.input), .studio :global(.textarea) {
+  min-height: 48px; padding: .7rem .9rem; border: 1px solid var(--control-line); border-radius: var(--control-radius);
+  background: color-mix(in srgb, var(--color-background) 70%, #fff); transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+.studio :global(.textarea) { min-height: 96px; }
+.studio :global(.input):hover, .studio :global(.textarea):hover { border-color: color-mix(in srgb, var(--color-text) 40%, transparent); }
+.studio :global(.input):focus-visible, .studio :global(.textarea):focus-visible { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--control-ring); }
+.studio :global(.input)::placeholder, .studio :global(.textarea)::placeholder { color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+
+/* Buttons: same corners, a lighter outline for the secondary ones, a soft lift for the main one. */
+.studio :global(.button) { gap: 8px; border-radius: var(--control-radius); font-weight: 700; letter-spacing: .01em; transition: background-color var(--motion-fast), border-color var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast); }
+.studio :global(.button--primary) { box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--color-primary) 80%, transparent); }
+.studio :global(.button--primary):hover { box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--color-primary) 90%, transparent); }
+.studio :global(.button--secondary) { border-color: color-mix(in srgb, var(--color-primary) 35%, transparent); background: color-mix(in srgb, var(--color-background) 70%, #fff); }
+.studio :global(.button--secondary):hover { border-color: var(--color-primary); background: var(--color-soft); }
+.studio :global(.button):active:not(:disabled) { transform: translateY(1px); }
+.studio :global(.button):focus-visible { outline: none; box-shadow: 0 0 0 3px var(--control-ring); }
+.studio :global(.button):disabled { opacity: .6; cursor: progress; box-shadow: none; }
+.studio :global(.button--quiet) { padding-inline: .75rem; }
+
+/* The zoom slider in the theme colour instead of the browser's blue. */
+.studio input[type="range"] { width: 100%; accent-color: var(--color-primary); cursor: pointer; }

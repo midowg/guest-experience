@@ -11,6 +11,7 @@ import { canShareFiles, canvasBlob, downloadBlob, posterFilename, posterPdf, ren
 import { clearDraft, loadDraft, preparePhoto, saveDraft } from "./draft";
 import styles from "./card-studio.module.css";
 import frame from "./card-frame.module.css";
+import look from "./card-look.module.css";
 
 type Props = { eventId: string; eventTitle: string; poster: PosterSettings };
 const empty: PosterValues = { text: {}, photos: {} };
@@ -109,7 +110,7 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
   const share = () => run("share", "Siap dibagikan.", async () => shareBlob(await canvasBlob(await renderPoster(poster, values, format)), posterFilename(title, format, "png"), title));
   const ratio = posterSizes[format].width / posterSizes[format].height;
 
-  return <div className={styles.split}>
+  return <div className={`${styles.split} ${look.studio}`}>
     <form className={styles.form} aria-label="Isi kartu" onSubmit={event => event.preventDefault()}>
       {fields.map(field => field.kind === "text"
         ? <TextField key={field.key} field={field} value={fieldText(field, values)} truncated={truncated.has(field.key)} onChange={text => setText(field.key, text)} />

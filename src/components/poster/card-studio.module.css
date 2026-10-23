@@ -40,10 +40,11 @@
 .status { flex-basis: 100%; min-height: 1.5em; margin: 0; color: var(--color-caption); font-size: .9375rem; }
 
 .choices { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: center; }
-.formats { display: inline-flex; flex-wrap: wrap; padding: 3px; border: 1px solid var(--color-border); border-radius: 22px; background: var(--color-background); }
-.formats button { min-height: 36px; padding: 0 var(--space-3); border: 0; border-radius: 999px; background: none; color: var(--color-text); font: inherit; font-weight: 700; cursor: pointer; }
-.formats button[aria-pressed="true"] { background: var(--color-primary); color: var(--color-on-primary); }
+.formats { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-background); }
+.formats button { min-height: 36px; padding: 0 var(--space-3); border: 0; border-radius: 9px; background: none; color: var(--color-text); font: inherit; font-weight: 700; cursor: pointer; }
+.formats button[aria-pressed="true"] { background: var(--color-primary); color: var(--color-on-primary); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--color-primary) 70%, transparent); }
+.formats button:not([aria-pressed="true"]):hover { background: var(--color-soft); }
 .palettes { display: inline-flex; flex-wrap: wrap; gap: 6px; }
-.palettes button { display: inline-flex; overflow: hidden; width: 46px; height: 30px; padding: 0; border: 2px solid var(--color-border); border-radius: 999px; background: none; cursor: pointer; }
+.palettes button { display: inline-flex; overflow: hidden; width: 46px; height: 30px; padding: 0; border: 2px solid var(--color-border); border-radius: 10px; background: none; cursor: pointer; }
 .palettes button span { flex: 1; }
 .palettes button[aria-pressed="true"] { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-primary); }
