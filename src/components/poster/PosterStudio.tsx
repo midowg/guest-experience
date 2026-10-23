@@ -25,6 +25,9 @@ const optional = (field: PosterField) => !!(field.optional || field.stack);
  * and the card on the right, updated as they type. Download is always there. On a phone the card
  * stays small at the top while the form scrolls under it. The draft stays in this browser only.
  */
+/** A size by its ratio alone ("4:5", "9:16"), or its name when it has none ("A4"): short enough for a phone's row. */
+const shortLabel = (format: PosterFormat) => posterSizes[format].label.match(/\d+:\d+/)?.[0] ?? posterSizes[format].label;
+
 export function PosterStudio({ eventId, eventTitle, poster }: Props) {
   const formats = posterFormats.filter(format => poster.formats[format].enabled && poster.fields.some(field => field.box[format]));
   const [format, setFormat] = useState<PosterFormat>(formats[0] ?? "post");
@@ -156,7 +159,7 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
         <div className={frame.toolbar}>
           {formats.length > 1 || poster.paletteChoice ? <div className={styles.choices}>
             {formats.length > 1 && <div className={styles.formats} role="group" aria-label="Ukuran">
-              {formats.map(item => <button key={item} type="button" aria-pressed={format === item} onClick={() => setFormat(item)}>{posterSizes[item].label}</button>)}
+              {formats.map(item => <button key={item} type="button" aria-pressed={format === item} onClick={() => setFormat(item)} aria-label={posterSizes[item].label}>{shortLabel(item)}</button>)}
             </div>}
             {/* Colours, when the admin lets each person pick their own. */}
             {poster.paletteChoice && <div className={styles.palettes} role="group" aria-label="Warna">

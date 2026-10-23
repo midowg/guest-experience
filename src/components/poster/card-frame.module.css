@@ -11,7 +11,9 @@
 .stage { width: 100%; max-width: min(100%, 34rem, calc((100svh - 17rem) * var(--ratio, .8))); }
 @media (max-width: 63.99rem) { .stage { max-width: min(100%, calc(31svh * var(--ratio, .8))); } }
 /* One row above the card: the sizes on the left, the download on the right. */
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.toolbar { display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: var(--space-2); min-width: 0; }
+.toolbar > :first-child { min-width: 0; }
+@media (max-width: 30rem) { .actions :global(.button) { min-height: 38px; padding: .3rem .8rem; } .toolbar [role="group"] button { padding: 0 10px; } }
 .toolbar > :first-child { justify-content: flex-start; }
 .actions { display: flex; gap: var(--space-2); margin-left: auto; }
 .actions :global(.button) { flex: 0 0 auto; min-height: 42px; padding: .4rem 1rem; font-size: .9375rem; }
