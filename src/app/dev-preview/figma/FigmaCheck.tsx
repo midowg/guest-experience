@@ -17,8 +17,10 @@ export function FigmaCheck() {
       const png = await backgroundPng(result.background, result.format);
       const url = URL.createObjectURL(png);
       const overlay = result.overlay ? URL.createObjectURL(await backgroundPng(result.overlay, result.format)) : "";
-      setPoster({ ...emptyPoster(), enabled: true, formats: { ...posterFormatSetups([]), [result.format]: { enabled: true, background: { url, alt: "", srcset: [] }, overlay: { url: overlay, alt: "", srcset: [] } } }, fields: result.fields });
-      setReport(JSON.stringify({ format: result.format, png: png.size, overlay: !!result.overlay, notes: result.notes, fields: result.fields.map(field => ({ key: field.key, kind: field.kind, box: field.box[result.format], font: field.font, size: field.sizeMax, lines: field.maxLines, align: field.align, color: field.color })) }, null, 1));
+      const image = async (svg: string | null) => ({ url: svg ? URL.createObjectURL(await backgroundPng(svg, result.format)) : "", alt: "", srcset: [] });
+      const parts = await Promise.all(result.parts.map(async part => ({ key: part.key, art: await image(part.art), slot: await image(part.slot) })));
+      setPoster({ ...emptyPoster(), enabled: true, formats: { ...posterFormatSetups([]), [result.format]: { enabled: true, background: { url, alt: "", srcset: [] }, overlay: { url: overlay, alt: "", srcset: [] }, parts } }, fields: result.fields });
+      setReport(JSON.stringify({ format: result.format, png: png.size, overlay: !!result.overlay, parts: result.parts.map(part => `${part.key}:${part.art ? "petunjuk" : ""}${part.slot ? "+slot" : ""}`), notes: result.notes, fields: result.fields.map(field => ({ key: field.key, kind: field.kind, box: field.box[result.format], font: field.font, size: field.sizeMax, lines: field.maxLines, optional: !!field.optional, max: field.maxLength, align: field.align, color: field.color })) }, null, 1));
     } catch (error) {
       if (error instanceof NoLayersError) setMarking(source);
       else setReport(`GAGAL: ${(error as Error).message}`);

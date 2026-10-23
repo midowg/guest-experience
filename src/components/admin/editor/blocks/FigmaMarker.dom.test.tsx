@@ -14,14 +14,18 @@ vi.mock("./figma-import", async original => {
     importInBrowser: (source: string): Imported => {
       seen.push(source);
       if (!/id="(isi|foto)_/.test(source)) throw new actual.NoLayersError("SVG ini tidak membawa nama layer.");
-      return { format: "post", background: "<svg/>", overlay: null, fields: [], notes: [] };
+      return { format: "post", background: "<svg/>", overlay: null, parts: [], fields: [], notes: [] };
     },
     backgroundPng: async () => new Blob(["png"], { type: "image/png" }),
   };
 });
 
 // jsdom lays nothing out: each shape gets its box in the design, drawn at full size.
-const places: Record<string, [number, number, number, number]> = { judul: [60, 60, 600, 80], foto: [0, 300, 1080, 560] };
+const places: Record<string, [number, number, number, number]> = {
+  judul: [60, 60, 600, 80], foto: [0, 300, 1080, 560],
+  // A square icon, a one-move rule, and the "Foto peserta" line written on the photo box.
+  ikon: [500, 1000, 60, 60], garis: [60, 1200, 900, 4], tulisan: [400, 560, 280, 40],
+};
 const at = (name: string) => ({ clientX: places[name][0] + 20, clientY: places[name][1] + 20 });
 beforeEach(() => {
   seen.length = 0;
@@ -31,6 +35,13 @@ beforeEach(() => {
     return { x, y, left: x, top: y, width: w, height: h, right: x + w, bottom: y + h, toJSON() {} } as DOMRect;
   });
 });
+/** Outlined text is one path of several letters (moves); an icon or a rule is not text. */
+const busy = '<svg class="figma-design" xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350"><rect width="1080" height="1350" fill="#fff"/>'
+  + '<path class="judul" d="M60 60h10v10z M80 60h10v10z M100 60h10v10z"/><path class="ikon" d="M500 1000h10v10z M520 1000h10v10z M540 1000h10v10z"/>'
+  + '<path class="garis" d="M60 1200h900v4H60z"/><rect class="foto" x="0" y="300" width="1080" height="560"/>'
+  + '<path class="tulisan" d="M400 560h10v10z M420 560h10v10z M440 560h10v10z"/></svg>';
+const indexOf = (source: string, name: string) => [...new DOMParser().parseFromString(source, "image/svg+xml").documentElement.querySelectorAll("*")].findIndex(element => element.getAttribute("class") === name);
+
 /** The tap surface: the drawing's holder, where taps are read by position. */
 const surface = () => document.querySelector("svg.figma-design")?.parentElement?.parentElement as HTMLElement;
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
@@ -79,4 +90,47 @@ it("opens the marker for an SVG without layer names, then imports the marked par
   expect(seen[1]).toMatch(/<path[^>]*id="isi_teks1"/);
   expect(screen.queryByText(/belum punya nama layer/)).toBeNull();
   expect(screen.getByRole("status").textContent).toMatch(/kolom ditemukan/);
+});
+
+it("marks every line of text in one go, leaving icons and rules, and takes back the writing on a photo", async () => {
+  const { FigmaMarker } = await import("./FigmaMarker");
+  const done = vi.fn();
+  render(<FigmaMarker source={busy} onDone={done} onCancel={() => {}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: /Tandai semua teks otomatis/ }));
+  const list = screen.getByRole("list", { name: "Bagian yang ditandai" });
+  expect(within(list).getAllByRole("textbox").map(input => (input as HTMLInputElement).value)).toEqual(["Teks 1", "Teks 2"]);
+  // Pressed again, nothing is marked twice.
+  fireEvent.click(screen.getByRole("button", { name: /Tandai semua teks otomatis/ }));
+  expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+
+  // The photo box is marked after: the writing on it is its hint, not a field.
+  fireEvent.click(screen.getByRole("button", { name: /Foto/ }));
+  fireEvent.click(surface(), at("foto"));
+  const rows = within(list).getAllByRole("listitem");
+  expect(rows.map(row => (within(row).getByRole("textbox") as HTMLInputElement).value)).toEqual(["Teks 1", "Foto 1"]);
+  fireEvent.click(within(rows[1]).getByRole("checkbox", { name: "Opsional" }));
+  expect((within(rows[1]).getByRole("checkbox", { name: "Opsional" }) as HTMLInputElement).checked).toBe(true);
+
+  fireEvent.click(screen.getByRole("button", { name: "Selesai, buat 2 kolom" }));
+  expect(done).toHaveBeenCalledWith([
+    { index: indexOf(busy, "judul"), kind: "text", label: "Teks 1", lines: 1, font: "sans" },
+    { index: indexOf(busy, "foto"), kind: "photo", label: "Foto 1", lines: 1, font: "sans", optional: true },
+  ]);
+});
+
+it("leaves the writing inside a photo already marked when marking all text", async () => {
+  const { FigmaMarker } = await import("./FigmaMarker");
+  const done = vi.fn();
+  render(<FigmaMarker source={busy} onDone={done} onCancel={() => {}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: /Foto/ }));
+  fireEvent.click(surface(), at("foto"));
+  fireEvent.click(screen.getByRole("button", { name: /Tandai semua teks otomatis/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Selesai, buat 2 kolom" }));
+  expect(done).toHaveBeenCalledWith([
+    { index: indexOf(busy, "foto"), kind: "photo", label: "Foto 1", lines: 1, font: "sans" },
+    { index: indexOf(busy, "judul"), kind: "text", label: "Teks 1", lines: 1, font: "sans" },
+  ]);
+  expect(done.mock.calls[0][0][0].optional).toBeUndefined();
 });

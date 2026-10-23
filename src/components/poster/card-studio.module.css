@@ -30,6 +30,7 @@
 
 .field { display: grid; gap: 6px; }
 .field > label, .label { font-weight: 800; }
+.optional { color: var(--color-caption); font-weight: 600; }
 .counter { display: grid; gap: 2px; margin: 0; color: var(--color-caption); font-size: .8125rem; }
 .counter strong { color: var(--color-danger); font-weight: 700; }
 .hint { margin: 0; color: var(--color-caption); }

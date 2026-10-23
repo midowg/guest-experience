@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activePalette, fieldText, pdfPage, fitText, normalizePoster, paletteOf, photoPlacement, posterDate, posterDuration, posterFormats, posterSizes, posterTime, toneColor, type PosterField } from "./poster";
+import { activePalette, emptyPoster, fieldText, partOf, pdfPage, fitText, normalizePoster, paletteOf, photoPlacement, posterDate, posterDuration, posterFormats, posterSizes, posterTime, slotShows, toneColor, type PosterField } from "./poster";
 import { posterPresets, presetBackground, presetPoster } from "./poster-presets";
 import { createSeedEvent } from "./seed-event";
 import { normalizeEvent } from "./hero-framing";
@@ -57,6 +57,34 @@ describe("poster data", () => {
     expect(fieldText(locked, values)).toBe("Reservasi");
     expect(fieldText(open, values)).toBe("Judul baru");
     expect(fieldText(open, { text: {}, photos: {} })).toBe("Judul");
+  });
+
+  it("shows a box's slot always when it must be filled, and an optional one only once filled or while hints show", () => {
+    const empty = { text: {}, photos: {} };
+    const required = { key: "judul", kind: "text", editable: true, value: "" } as PosterField;
+    const note = { ...required, key: "biaya", optional: true };
+    const logo = { ...required, key: "foto_logo", kind: "photo", optional: true } as PosterField;
+    expect(slotShows(required, empty, false)).toBe(true);
+    expect(slotShows(note, empty, false)).toBe(false);
+    expect(slotShows(note, { text: { biaya: "   " }, photos: {} }, false)).toBe(false);
+    expect(slotShows(note, { text: { biaya: "Rp50.000" }, photos: {} }, false)).toBe(true);
+    // A locked optional box shows when the admin gave it text.
+    expect(slotShows({ ...note, editable: false, value: "Gratis" }, empty, false)).toBe(true);
+    expect(slotShows(logo, empty, false)).toBe(false);
+    expect(slotShows(logo, { text: {}, photos: { foto_logo: { url: "https://cdn.example/logo.webp", frame: { x: 50, y: 50, zoom: 1 } } } }, false)).toBe(true);
+    // On screen, while the box still shows its hint, its slot shows too.
+    expect(slotShows(note, empty, true)).toBe(true);
+    expect(slotShows(logo, empty, true)).toBe(true);
+  });
+
+  it("finds a box's pictures for one size, and none for a poster saved before them", () => {
+    const image = (url: string) => ({ url, alt: "", srcset: [] });
+    const poster = emptyPoster();
+    poster.formats.post.parts = [{ key: "foto_logo", art: image(""), slot: image("https://cdn.example/slot.png") }];
+    expect(partOf(poster, "post", "foto_logo")?.slot.url).toBe("https://cdn.example/slot.png");
+    expect(partOf(poster, "post", "judul")).toBeUndefined();
+    expect(partOf(poster, "story", "foto_logo")).toBeUndefined();
+    expect(normalizePoster({ formats: { post: { enabled: true, background: image(""), overlay: image("") } } } as never).formats.post.parts).toEqual([]);
   });
 
   it("covers a box with a framed photo, as the hero framing does", () => {

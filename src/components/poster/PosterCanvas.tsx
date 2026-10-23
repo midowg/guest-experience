@@ -3,7 +3,7 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Camera } from "lucide-react";
 import { dragFrame } from "@/lib/hero-framing";
-import { activePalette, photoPlacement, posterSizes, toneColor, type PosterBox, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { activePalette, partOf, photoPlacement, posterSizes, slotShows, toneColor, type PosterBox, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import type { PhotoFrame } from "@/lib/types";
 import { fontOf, layoutTexts, posterBackground } from "./layout";
 import styles from "./poster.module.css";
@@ -54,6 +54,16 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
   const palette = activePalette(poster, values);
   const background = posterBackground(poster, format, palette);
   const overlay = poster.formats[format].overlay?.url ?? "";
+  // A box's own pictures from Figma, drawn at the size of the card like the overlay.
+  const slots = (kind: PosterField["kind"]) => poster.fields.filter(field => field.kind === kind && field.box[format]).flatMap(field => {
+    const url = partOf(poster, format, field.key)?.slot.url;
+    return url && slotShows(field, values, hints) ? [{ key: field.key, url }] : [];
+  });
+  // The "upload a photo" marks: on screen only, while the box is empty.
+  const marks = hints || editing ? poster.fields.filter(field => field.kind === "photo" && field.box[format] && !values.photos[field.key]).flatMap(field => {
+    const url = partOf(poster, format, field.key)?.art.url;
+    return url ? [{ key: field.key, url }] : [];
+  }) : [];
   const ring = Math.max(2, 2 / scale);
 
   function photoDown(field: PosterField, event: ReactPointerEvent<HTMLDivElement>) {
@@ -100,6 +110,8 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
     <div className={styles.poster} data-editing={editing || undefined} onClick={onTap && !editing ? event => { const key = (event.target as HTMLElement).closest<HTMLElement>("[data-field]")?.dataset.field; if (key && poster.fields.some(field => field.key === key && field.editable)) onTap(key); } : undefined} style={{ width: size.width, height: size.height, transform: `scale(${scale})`, background: palette.colors.background }} aria-label={`Poster ${size.label}`} role="img">
       {/* eslint-disable-next-line @next/next/no-img-element -- drawn at design size and redrawn on the download canvas */}
       {background && <img className={styles.background} src={background} alt="" crossOrigin="anonymous" draggable={false} />}
+      {/* eslint-disable-next-line @next/next/no-img-element -- drawn at design size, like the background */}
+      {slots("photo").map(slot => <img key={`slot-${slot.key}`} className={styles.background} src={slot.url} alt="" crossOrigin="anonymous" draggable={false} />)}
       {poster.fields.map(field => {
         const box = field.box[format];
         if (field.kind !== "photo" || !box) return null;
@@ -115,12 +127,16 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
           {/* eslint-disable-next-line @next/next/no-img-element -- a local photo (object URL), never uploaded */}
           {photo && <img src={photo.url} alt="" draggable={false} onLoad={event => { const { naturalWidth: width, naturalHeight: height } = event.currentTarget; setNatural(current => current[field.key]?.width === width && current[field.key]?.height === height ? current : { ...current, [field.key]: { width, height } }); }}
             style={place ? { left: place.left, top: place.top, width: place.width, height: place.height } : { opacity: 0 }} />}
-          {!photo && (open || hints) && <span className={styles.photoHint} style={{ fontSize: Math.max(18, Math.min(34, box.w / 9)) }}><Camera size={Math.max(28, Math.min(64, box.w / 6))} aria-hidden="true" />{field.hint}</span>}
+          {!photo && (open || hints) && !marks.some(mark => mark.key === field.key) && <span className={styles.photoHint} style={{ fontSize: Math.max(18, Math.min(34, box.w / 9)) }}><Camera size={Math.max(28, Math.min(64, box.w / 6))} aria-hidden="true" />{field.hint}</span>}
         </div>;
       })}
+      {/* eslint-disable-next-line @next/next/no-img-element -- drawn at design size, like the background */}
+      {marks.map(mark => <img key={`art-${mark.key}`} className={styles.background} src={mark.url} alt="" crossOrigin="anonymous" draggable={false} />)}
       {/* Over the photos, under the text: what sat on top of a photo in Figma. */}
       {/* eslint-disable-next-line @next/next/no-img-element -- drawn at design size, like the background */}
       {overlay && <img className={styles.background} src={overlay} alt="" crossOrigin="anonymous" draggable={false} />}
+      {/* eslint-disable-next-line @next/next/no-img-element -- drawn at design size, like the background */}
+      {slots("text").map(slot => <img key={`slot-${slot.key}`} className={styles.background} src={slot.url} alt="" crossOrigin="anonymous" draggable={false} />)}
       {texts.map(({ field, fitted, hint }) => {
         const box = field.box[format]!;
         const open = editing && field.editable;

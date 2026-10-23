@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { FileUp } from "lucide-react";
 import { uploadPhoto } from "@/components/admin/shared/PhotoField";
 import { errorMessage } from "@/components/admin/shared/api";
-import { posterSizes, type PosterFormat, type PosterField } from "@/lib/poster";
+import { posterSizes, type PosterFormat, type PosterField, type PosterPart } from "@/lib/poster";
 import type { PlainImage } from "@/lib/types";
 import { backgroundPng, importInBrowser, nameMarks, NoLayersError, sanitizeSvg, type FigmaImport as Imported, type Mark } from "./figma-import";
 import { FigmaMarker } from "./FigmaMarker";
@@ -18,7 +18,7 @@ const readText = (file: File) => new Promise<string>((resolve, reject) => {
   reader.readAsText(file);
 });
 
-export type FigmaResult = { format: PosterFormat; background: PlainImage; overlay: PlainImage; fields: PosterField[]; notes: string[] };
+export type FigmaResult = { format: PosterFormat; background: PlainImage; overlay: PlainImage; parts: PosterPart[]; fields: PosterField[]; notes: string[] };
 
 /**
  * One button: a frame exported from Figma as SVG becomes the card. The layers named isi_… and
@@ -66,8 +66,16 @@ export function FigmaImport({ onImport }: { onImport: (result: FigmaResult) => v
     const png = await backgroundPng(imported.background, imported.format);
     const background = await uploadPhoto(new File([png], `latar-${imported.format}.png`, { type: "image/png" }));
     // The overlay keeps its transparency: uploaded as PNG, drawn over the guest's photos.
-    const overlay = imported.overlay ? await uploadPhoto(new File([await backgroundPng(imported.overlay, imported.format)], `atas-${imported.format}.png`, { type: "image/png" })) : { url: "", srcset: [] };
-    onImport({ format: imported.format, background: { ...background, alt: "" }, overlay: { ...overlay, alt: "" }, fields: imported.fields, notes: imported.notes });
+    const image = async (svg: string | null, name: string): Promise<PlainImage> => {
+      if (!svg) return { url: "", alt: "", srcset: [] };
+      const uploaded = await uploadPhoto(new File([await backgroundPng(svg, imported.format)], `${name}-${imported.format}.png`, { type: "image/png" }));
+      return { ...uploaded, alt: "" };
+    };
+    const overlay = await image(imported.overlay, "atas");
+    // Each box's own pictures: transparent PNGs the size of the card, like the overlay.
+    const parts: PosterPart[] = [];
+    for (const part of imported.parts) parts.push({ key: part.key, art: await image(part.art, "petunjuk"), slot: await image(part.slot, "slot") });
+    onImport({ format: imported.format, background: { ...background, alt: "" }, overlay, parts, fields: imported.fields, notes: imported.notes });
     setMessage({ tone: "ok", text: `${imported.fields.length} kolom ditemukan untuk ukuran ${posterSizes[imported.format].label}. Periksa di bawah, lalu simpan.`, notes: imported.notes });
   }
 

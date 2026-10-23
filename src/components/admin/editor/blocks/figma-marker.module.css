@@ -25,6 +25,8 @@
 .list li :global(.select) { flex: 0 0 auto; width: auto; }
 .badge { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #e6f4ec; color: #1d6b40; }
 .list li[data-kind="photo"] .badge { background: #fbeedf; color: #a14f00; }
+.auto { justify-self: start; }
+.optional { display: inline-flex; align-items: center; gap: 4px; font-size: .8125rem; font-weight: 700; cursor: pointer; }
 .live { color: #4a5060; font-size: .8125rem; }
 .remove { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 8px; background: none; color: #9a273d; cursor: pointer; }
 .remove:hover { background: #fbe9ec; }

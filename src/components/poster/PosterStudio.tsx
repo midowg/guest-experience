@@ -92,7 +92,8 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
       return field.kind === "text" && box && text && fitText(createMeasure(field), text, field, box).truncated;
     }).map(field => field.key));
   }, [fields, values, format, fontsVersion]);
-  const missing = fields.filter(field => field.kind === "text" ? !fieldText(field, values).trim() : !values.photos[field.key]);
+  // An optional box left empty is meant to be left out: no reminder for it.
+  const missing = fields.filter(field => !field.optional && (field.kind === "text" ? !fieldText(field, values).trim() : !values.photos[field.key]));
 
   const title = fieldText(poster.fields.find(field => field.key === "title") ?? ({ editable: false, value: eventTitle } as PosterField), values) || eventTitle;
   async function run(label: string, done: string, task: () => Promise<void>) {
@@ -163,7 +164,7 @@ function TextField({ field, value, truncated, onChange }: { field: PosterField; 
   const id = `kartu-${field.key}`;
   const props = { id, value, placeholder: field.hint, maxLength: field.maxLength, onChange: (event: { target: { value: string } }) => onChange(event.target.value), "aria-describedby": `${id}-info` };
   return <div className={styles.field}>
-    <label htmlFor={id}>{field.label}</label>
+    <label htmlFor={id}>{field.label}{field.optional && <span className={styles.optional}> (opsional)</span>}</label>
     {field.maxLines > 1 ? <textarea {...props} className="textarea" rows={Math.min(5, field.maxLines)} /> : <input {...props} className="input" />}
     <p id={`${id}-info`} className={styles.counter}><span>{[...value].length}/{field.maxLength}</span>{truncated && <strong>Terlalu panjang untuk kotaknya; akhirnya terpotong “…”. Persingkat sedikit.</strong>}</p>
   </div>;
@@ -172,7 +173,7 @@ function TextField({ field, value, truncated, onChange }: { field: PosterField; 
 function PhotoField({ field, photo, onPhoto, onZoom }: { field: PosterField; photo?: PosterValues["photos"][string]; onPhoto: (file: File | null) => void; onZoom: (zoom: number) => void }) {
   const id = `kartu-${field.key}`;
   return <div className={styles.field}>
-    <span className={styles.label}>{field.label}</span>
+    <span className={styles.label}>{field.label}{field.optional && <span className={styles.optional}> (opsional)</span>}</span>
     <div className={styles.photoActions}>
       <label className="button button--secondary" htmlFor={id}><ImagePlus size={18} aria-hidden="true" /> {photo ? "Ganti foto" : "Pilih foto"}</label>
       <input id={id} className="sr-only" type="file" accept="image/*" aria-label={`${photo ? "Ganti" : "Pilih"} ${field.label}`} onChange={event => { onPhoto(event.target.files?.[0] ?? null); event.target.value = ""; }} />

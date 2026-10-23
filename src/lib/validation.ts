@@ -105,11 +105,12 @@ const posterFieldSchema = z.object({
   tone: z.union([z.enum(paletteRoles), z.literal("")]).default(""), color: hexColor,
   align: z.enum(["left", "center", "right"]), uppercase: z.boolean(), letterSpacing: z.number().min(-0.1).max(1),
   sizeMax: z.number().min(6).max(300), sizeMin: z.number().min(6).max(300), lineHeight: z.number().min(0.8).max(3), maxLines: z.number().int().min(1).max(20),
-  radius: z.number().min(0).max(500), fill: hexColor,
+  radius: z.number().min(0).max(500), fill: hexColor, optional: z.boolean().default(false),
   box: z.object(Object.fromEntries(posterFormats.map(format => [format, posterBox.nullable().default(null)])) as Record<(typeof posterFormats)[number], z.ZodDefault<z.ZodNullable<typeof posterBox>>>),
 });
-const posterFormatSchema = z.object({ enabled: z.boolean(), background: plainImage.default(emptyImage), overlay: plainImage.default(emptyImage) });
-const posterFormatsSchema = z.object(Object.fromEntries(posterFormats.map(format => [format, posterFormatSchema.default({ enabled: false, background: emptyImage, overlay: emptyImage })])) as Record<(typeof posterFormats)[number], z.ZodDefault<typeof posterFormatSchema>>);
+const posterPartSchema = z.object({ key: z.string().regex(/^[a-z0-9_]{1,40}$/), art: plainImage.default(emptyImage), slot: plainImage.default(emptyImage) });
+const posterFormatSchema = z.object({ enabled: z.boolean(), background: plainImage.default(emptyImage), overlay: plainImage.default(emptyImage), parts: z.array(posterPartSchema).max(30).default([]) });
+const posterFormatsSchema = z.object(Object.fromEntries(posterFormats.map(format => [format, posterFormatSchema.default({ enabled: false, background: emptyImage, overlay: emptyImage, parts: [] })])) as Record<(typeof posterFormats)[number], z.ZodDefault<typeof posterFormatSchema>>);
 const cardTypeSchema = z.enum(cardTypes.map(type => type.key) as [(typeof cardTypes)[number]["key"], ...(typeof cardTypes)[number]["key"][]]);
 const posterFieldsSchema = z.array(posterFieldSchema).max(30).refine(fields => new Set(fields.map(field => field.key)).size === fields.length, "Kunci kolom poster tidak boleh sama.");
 export const posterSchema = z.object({

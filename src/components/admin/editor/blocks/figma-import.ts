@@ -55,8 +55,27 @@ export function capacity(field: Pick<PosterField, "sizeMax" | "maxLines" | "uppe
   return Math.min(1000, Math.max(20, Math.ceil(letters / 10) * 10));
 }
 
+/**
+ * How many lines an outlined text has, from where its letters start: Figma starts each glyph
+ * with a move (M x y), and a new line shows as a clear jump in y between groups of letters.
+ * Gaps smaller than 6 units, or groups of letters thinner than 4 units and than half a jump,
+ * are a single line's letters.
+ */
+export function guessLines(element: Element): number {
+  const paths = element.matches("path") ? [element] : [...element.querySelectorAll("path")];
+  const ys = paths.flatMap(path => [...(path.getAttribute("d") ?? "").matchAll(/M\s*-?[\d.]+[\s,]+(-?[\d.]+)/g)].map(match => Number(match[1]))).sort((a, b) => a - b);
+  if (ys.length < 6) return 1;
+  const gaps = ys.slice(1).map((y, index) => y - ys[index]);
+  const widest = Math.max(...gaps);
+  const breaks = gaps.filter(gap => gap > Math.max(6, widest * 0.6));
+  if (!breaks.length) return 1;
+  const lines = breaks.length + 1;
+  const spread = ys[ys.length - 1] - ys[0] - breaks.reduce((sum, gap) => sum + gap, 0);
+  return spread / lines < Math.min(4, Math.min(...breaks) * 0.5) ? 1 : Math.min(8, lines);
+}
+
 /** A part the admin tapped: its place among the SVG's elements, and what it becomes. */
-export type Mark = { index: number; kind: "text" | "photo"; label: string; lines: number; font: "sans" | "serif" };
+export type Mark = { index: number; kind: "text" | "photo"; label: string; lines: number; font: "sans" | "serif"; optional?: boolean };
 
 /** A key from a label: "Nama fasilitator" → "nama_fasilitator". */
 export const keyOf = (label: string) => label.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 34) || "kolom";
@@ -79,17 +98,18 @@ export function nameMarks(source: string, marks: Mark[]): string {
     let key = base, n = 2;
     while (used.has(`${mark.kind}:${key}`)) key = `${base}${n++}`;
     used.add(`${mark.kind}:${key}`);
-    const id = `${mark.kind === "photo" ? "foto" : "isi"}_${key}`;
+    const id = `${mark.kind === "photo" ? "foto" : "isi"}_${key}${mark.optional ? "_opsional" : ""}`;
     // A box marked as text (a ribbon, a label plate) stays in the design and becomes the text's
-    // area: a clear twin of it is named instead, in a colour that reads on the box.
-    const plate = mark.kind === "text" && BOXES.includes(element.tagName.toLowerCase());
-    const named = plate ? doc.createElementNS(SVG_NS, "g") : element;
-    if (plate) {
+    // area: it goes into a group named for the text, with a clear twin as the area and a colour
+    // that reads on it. The import keeps the plate as background, or as the slot when optional.
+    const onPlate = mark.kind === "text" && BOXES.includes(element.tagName.toLowerCase());
+    const named = onPlate ? doc.createElementNS(SVG_NS, "g") : element;
+    if (onPlate) {
       const twin = element.cloneNode(false) as Element;
       for (const name of ["id", "fill", "stroke", "filter", "opacity", "href", "xlink:href"]) twin.removeAttribute(name);
       twin.setAttribute("fill", "none");
-      named.append(twin);
-      element.after(named);
+      element.before(named);
+      named.append(element, twin);
       named.setAttribute("data-color", luminance(inherited(element, "fill")) < 0.5 ? "#FFFFFF" : "#1F2A24");
     }
     named.setAttribute("id", id);
@@ -106,7 +126,10 @@ export function nameMarks(source: string, marks: Mark[]): string {
   return new XMLSerializer().serializeToString(doc);
 }
 
-export type Placeholder = { id: string; kind: "text" | "photo"; key: string; label: string };
+/** `optional`: the layer's name ends in _opsional, so the box may be left empty. */
+export type Placeholder = { id: string; kind: "text" | "photo"; key: string; label: string; optional: boolean };
+/** A box's own pictures as SVG (see PosterPart): null when the design has none. */
+export type FigmaPart = { key: string; art: string | null; slot: string | null };
 export type Measured = { box: PosterBox; element: Element };
 export type FigmaImport = {
   format: PosterFormat;
@@ -114,6 +137,8 @@ export type FigmaImport = {
   background: string;
   /** What lies on top of a photo in Figma (a ribbon over the picture), drawn over the guest's photo; null when nothing does. */
   overlay: string | null;
+  /** Per box: the "upload a photo" marks, and an optional box's frame or plate. */
+  parts: FigmaPart[];
   fields: PosterField[];
   notes: string[];
 };
@@ -122,12 +147,15 @@ export type FigmaImport = {
 export function parseLayer(id: string): Placeholder | null {
   const match = LAYER.exec(id.trim());
   if (!match) return null;
-  const key = match[2].toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
+  const name = match[2].toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+  // isi_biaya_opsional: the box "biaya", which may be left empty.
+  const optional = /(^|_)(opsional|optional)$/.test(name);
+  const key = name.replace(/_?(opsional|optional)$/, "").slice(0, 40);
   if (!key) return null;
   const words = key.replace(/_/g, " ");
   // A photo keeps its prefix, so foto_fasilitator and isi_fasilitator are two boxes, not one.
-  if (match[1].toLowerCase() === "foto") return { id, kind: "photo", key: `foto_${key}`.slice(0, 40), label: `Foto ${words}` };
-  return { id, kind: "text", key, label: words.charAt(0).toUpperCase() + words.slice(1) };
+  if (match[1].toLowerCase() === "foto") return { id, kind: "photo", key: `foto_${key}`.slice(0, 40), label: `Foto ${words}`, optional };
+  return { id, kind: "text", key, label: words.charAt(0).toUpperCase() + words.slice(1), optional };
 }
 
 /** The card size a Figma frame is: the same size, or the same shape within 2% (then scaled). */
@@ -208,7 +236,7 @@ export function textField(place: Placeholder, measured: Measured, scale: number)
   }
   const filled = element.matches("[fill]:not([fill=none])") ? element : element.querySelector("[fill]:not([fill=none])");
   const area = element.tagName.toLowerCase() === "g" && !!element.querySelector(":scope > :is(rect, circle, ellipse)[fill=none], :scope > rect:not([fill])");
-  const lines = Math.max(1, Math.min(20, Number.parseInt(element.getAttribute("data-lines") ?? "", 10) || 1));
+  const lines = Math.max(1, Math.min(20, Number.parseInt(element.getAttribute("data-lines") ?? "", 10) || guessLines(element)));
   // Glyphs of one line stand about 0.95 em tall; each further line adds a line height of 1.15 em.
   const size = Math.max(10, Math.round(box.h * (area ? 0.5 : 1) / (0.95 + (lines - 1) * 1.15)));
   if (!area) box = { x: box.x, y: Math.max(0, Math.round(box.y - size * 0.2)), w: box.w, h: Math.round(box.h + size * 0.4) };
@@ -302,6 +330,7 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
     const made = place.kind === "photo" ? photoField(place, { box, element }, scale) : textField(place, { box, element }, scale);
     const hinted = place.kind === "text" ? withHints(made.field, element, scale) : { field: made.field, hinted: false };
     made.field = hinted.field;
+    if (place.optional) made.field.optional = true;
     // Room for as many letters as the box holds, unless the designer set the limit.
     if (place.kind === "text" && !element.hasAttribute("data-maxlength")) made.field.maxLength = Math.max(made.field.maxLength, capacity(made.field, made.box));
     if ("outlined" in made && made.outlined && !hinted.hinted) outlined++;
@@ -322,32 +351,103 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
     notes.push("Ada teks tetap yang belum di-outline: hurufnya bisa berbeda dari Figma. Centang “Outline text” saat ekspor.");
   }
 
-  // Shapes Figma draws after a photo, over its area, would hide behind the guest's photo: they
-  // go to the overlay, drawn above the photos. Everything else stays in the background.
   const textBox = (element: Element) => [...ancestors(element)].some(node => parseLayer(node.getAttribute("id") ?? "")?.kind === "text");
   const photoLayers = [...svg.querySelectorAll("[id]")].filter(element => parseLayer(element.getAttribute("id") ?? "")?.kind === "photo")
     .map(element => ({ element, box: measure(element, svg) })).filter((photo): photo is { element: Element; box: PosterBox } => !!photo.box);
-  const above = [...svg.querySelectorAll(SHAPES)].filter(element => !element.closest("defs, clipPath, mask, pattern") && !textBox(element)
-    && photoLayers.some(photo => photo.element !== element && !photo.element.contains(element)
-      && !!(photo.element.compareDocumentPosition(element) & 4) && overlaps(measure(element, svg), photo.box)));
 
   svg.setAttribute("width", String(posterSizes[format].width));
   svg.setAttribute("height", String(posterSizes[format].height));
   if (!svg.getAttribute("viewBox")) svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  for (const element of [...svg.querySelectorAll("[id]")]) if (parseLayer(element.getAttribute("id") ?? "")?.kind === "text") element.remove();
+
+  // Each box's own pictures, cut out of the design before the rest is split into background and overlay.
+  const parts = boxParts(svg, fields, photoLayers, measure);
+  const picture = (elements: Element[]) => elements.length ? only(svg, elements) : null;
+  const figmaParts = parts.map(part => ({ key: part.key, art: picture(part.art), slot: picture(part.slot) })).filter(part => part.art || part.slot);
+  const cut = parts.flatMap(part => [...part.art, ...part.slot]);
+  if (parts.some(part => part.art.length)) notes.push("Ikon dan tulisan “unggah foto” di kotak foto hanya tampil sebagai petunjuk, tidak ikut di hasil unduhan.");
+  const optional = fields.filter(field => field.optional).length;
+  if (optional) notes.push(`${optional} kolom opsional: bila dibiarkan kosong, kotaknya tidak ikut di hasil unduhan.`);
+
+  // Shapes Figma draws after a photo, over its area, would hide behind the guest's photo: they
+  // go to the overlay, drawn above the photos. Everything else stays in the background.
+  // Worked out while the cut-out parts are still in place: drawing order needs them in the document.
+  const above = [...svg.querySelectorAll(SHAPES)].filter(element => !element.closest("defs, clipPath, mask, pattern") && !textBox(element)
+    && !cut.some(part => part === element || part.contains(element))
+    && photoLayers.some(photo => photo.element !== element && !photo.element.contains(element)
+      && !!(photo.element.compareDocumentPosition(element) & 4) && overlaps(measure(element, svg), photo.box)));
+  for (const element of cut) element.remove();
+
+  // Text layers leave the background, all but a plate the text sits on (kept in the design).
+  for (const element of [...svg.querySelectorAll("[id]")]) {
+    if (parseLayer(element.getAttribute("id") ?? "")?.kind !== "text") continue;
+    const plates = element.matches(SHAPES) ? [] : [...element.querySelectorAll(SHAPES)].filter(plate);
+    if (!plates.length) { element.remove(); continue; }
+    for (const shape of [...element.querySelectorAll(SHAPES)]) if (!plates.includes(shape)) shape.remove();
+    element.removeAttribute("id");
+  }
   let overlay: string | null = null;
   if (above.length) {
-    const mark = "data-wk-atas";
-    for (const element of above) element.setAttribute(mark, "");
-    const top = svg.cloneNode(true) as SVGSVGElement;
-    for (const element of top.querySelectorAll(SHAPES)) if (!element.hasAttribute(mark) && !element.closest("defs, clipPath, mask, pattern")) element.setAttribute("visibility", "hidden");
-    for (const element of top.querySelectorAll(`[${mark}]`)) element.removeAttribute(mark);
-    overlay = new XMLSerializer().serializeToString(top);
+    overlay = only(svg, above);
     for (const element of above) element.remove();
     notes.push(`${above.length} elemen yang menumpang di atas foto (misalnya pita label) tetap tampil di atas foto peserta.`);
   }
-  return { format, background: new XMLSerializer().serializeToString(svg), overlay, fields, notes };
+  return { format, background: new XMLSerializer().serializeToString(svg), overlay, parts: figmaParts, fields, notes };
 }
+
+/** A filled box (not glyphs, not a clear area): the plate or ribbon a text sits on. */
+const plate = (element: Element) => BOXES.includes(element.tagName.toLowerCase()) && !/^(none|transparent)$/i.test(inherited(element, "fill") || "black");
+const drawn = (element: Element) => !element.closest("defs, clipPath, mask, pattern");
+
+/** The frame, sized to the format, with only these shapes showing (the rest kept for their defs and clips). */
+function only(svg: SVGSVGElement, shown: Element[]): string {
+  const mark = "data-wk-tampil";
+  const marked = shown.flatMap(element => element.matches(SHAPES) ? [element] : [...element.querySelectorAll(SHAPES)]);
+  for (const element of marked) element.setAttribute(mark, "");
+  const copy = svg.cloneNode(true) as SVGSVGElement;
+  for (const element of marked) element.removeAttribute(mark);
+  for (const element of copy.querySelectorAll(SHAPES)) if (!element.hasAttribute(mark) && drawn(element)) element.setAttribute("visibility", "hidden");
+  for (const element of copy.querySelectorAll(`[${mark}]`)) element.removeAttribute(mark);
+  return new XMLSerializer().serializeToString(copy);
+}
+
+/**
+ * What belongs to each box rather than to the design:
+ * - `art`: inside a photo box, the small marks drawn on it, away from its edges (a camera icon,
+ *   "Foto fasilitator"). They only tell the guest where a photo goes.
+ * - `slot`: an optional box's own shapes (the photo box, a frame the size of it, the plate under
+ *   a text), so an empty optional box leaves no trace.
+ */
+function boxParts(svg: SVGSVGElement, fields: PosterField[], photos: { element: Element; box: PosterBox }[], measure: (element: Element, svg: SVGSVGElement) => PosterBox | null) {
+  const optional = new Set(fields.filter(field => field.optional).map(field => field.key));
+  const layers = [...svg.querySelectorAll("[id]")].map(element => ({ element, place: parseLayer(element.getAttribute("id") ?? "") }))
+    .filter((layer): layer is { element: Element; place: Placeholder } => !!layer.place && fields.some(field => field.key === layer.place!.key));
+  const inLayer = (element: Element) => layers.some(layer => layer.element.contains(element));
+  const shapes = [...svg.querySelectorAll(SHAPES)].filter(drawn);
+  const result: { key: string; art: Element[]; slot: Element[] }[] = [];
+  for (const { element, place } of layers) {
+    const own = element.matches(SHAPES) ? [element] : [...element.querySelectorAll(SHAPES)].filter(drawn);
+    if (place.kind === "text") {
+      result.push({ key: place.key, art: [], slot: optional.has(place.key) ? own.filter(plate) : [] });
+      continue;
+    }
+    const box = photos.find(photo => photo.element === element)?.box;
+    if (!box) continue;
+    // Shapes on the photo box: in its layer, or drawn after it by no other layer.
+    const on = shapes.filter(shape => !own.includes(shape) && (element.contains(shape) || (!inLayer(shape) && !!(element.compareDocumentPosition(shape) & 4))))
+      .map(shape => ({ shape, box: measure(shape, svg) })).filter((item): item is { shape: Element; box: PosterBox } => !!item.box && within(item.box, box));
+    const frames = on.filter(item => sameBox(item.box, box)).map(item => item.shape);
+    const art = on.filter(item => !sameBox(item.box, box) && central(item.box, box)).map(item => item.shape);
+    result.push({ key: place.key, art, slot: optional.has(place.key) ? [...own, ...frames] : [] });
+  }
+  return result;
+}
+const within = (a: PosterBox, b: PosterBox) => a.x >= b.x - 2 && a.y >= b.y - 2 && a.x + a.w <= b.x + b.w + 2 && a.y + a.h <= b.y + b.h + 2;
+const sameBox = (a: PosterBox, b: PosterBox) => Math.abs(a.x - b.x) <= 3 && Math.abs(a.y - b.y) <= 3 && Math.abs(a.w - b.w) <= 6 && Math.abs(a.h - b.h) <= 6;
+/** Small and in the middle of the box: a mark on it, not a ribbon laid along its edge. */
+const central = (a: PosterBox, b: PosterBox) => {
+  const cx = a.x + a.w / 2 - b.x, cy = a.y + a.h / 2 - b.y;
+  return a.w * a.h < b.w * b.h * 0.4 && cx > b.w * 0.15 && cx < b.w * 0.85 && cy > b.h * 0.15 && cy < b.h * 0.85;
+};
 
 function* ancestors(element: Element) { for (let node: Element | null = element; node; node = node.parentElement) yield node; }
 /** Whether two boxes share more than a hairline: shapes that only touch a photo's edge stay in the background. */
@@ -376,7 +476,7 @@ export function mergeImport(current: PosterField[], fromFigma: boolean, imported
     if (!Object.values(box).some(Boolean)) return [];
     // A look left over from an earlier file (a colour read wrong, a gallery tone) must not
     // outlive the design that now draws the box.
-    return [next ? { ...next, label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: Math.max(field.maxLength, next.maxLength), box } : { ...field, box }];
+    return [next ? { ...next, label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: Math.max(field.maxLength, next.maxLength), optional: !!(next.optional || field.optional), box } : { ...field, box }];
   });
   return [...merged, ...imported.fields.filter(field => !current.some(item => item.key === field.key))];
 }

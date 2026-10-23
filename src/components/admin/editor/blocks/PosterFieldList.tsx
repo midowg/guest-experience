@@ -20,6 +20,7 @@ export function PosterFieldList({ fields, onChange }: { fields: PosterField[]; o
           <span className={base.kind} aria-hidden="true">{field.kind === "photo" ? <ImageIcon size={16} /> : <Type size={16} />}</span>
           <input id={`${path}.label`} className={`input ${s.fieldName}`} value={field.label} maxLength={80} onChange={event => set("label", event.target.value)} aria-label="Nama kolom" />
           <label className={base.check}><input type="checkbox" role="switch" checked={field.editable} onChange={event => set("editable", event.target.checked)} aria-label={`${field.label} diisi peserta`} /> Diisi peserta</label>
+          {field.editable && <label className={base.check} title="Boleh dikosongkan peserta. Bila kosong, kotaknya tidak ikut di hasil unduhan."><input type="checkbox" checked={!!field.optional} onChange={event => set("optional", event.target.checked)} aria-label={`${field.label} opsional`} /> Opsional</label>}
         </div>
         {field.editable
           ? <div className={s.fieldGuide}>

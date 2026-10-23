@@ -82,14 +82,22 @@ export type PosterField = {
   lineHeight: number; maxLines: number;
   /** Photo corners in design pixels (half the box for a circle), and the colour an empty photo box shows. */
   radius: number; fill: string;
+  /** May be left empty: its slot (the box, the frame, a plate behind it) is then left out of the card. */
+  optional?: boolean;
   /** Where the box sits in each format; null when the format does not show it. */
   box: Record<PosterFormat, PosterBox | null>;
 };
 /**
+ * A box's own pictures from Figma, drawn at the size of the card: `art` is the "upload a photo"
+ * icon and label inside a photo box, shown only while it is empty and only on screen; `slot` is
+ * an optional box's frame or plate, shown only when the box is filled.
+ */
+export type PosterPart = { key: string; art: PlainImage; slot: PlainImage };
+/**
  * A size's images: the background, under everything, and an overlay drawn over the photos and
  * under the text: what lies on top of a photo in Figma (a ribbon, a frame) stays on top of it.
  */
-export type PosterFormatSetup = { enabled: boolean; background: PlainImage; overlay: PlainImage };
+export type PosterFormatSetup = { enabled: boolean; background: PlainImage; overlay: PlainImage; parts: PosterPart[] };
 export type PosterSettings = {
   enabled: boolean;
   /** What the card is for, and the preset it came from (its background shows until one is uploaded). */
@@ -112,7 +120,7 @@ export type PosterPhoto = { url: string; frame: PhotoFrame };
 export type PosterValues = { text: Record<string, string>; photos: Record<string, PosterPhoto>; palette?: string };
 
 const emptyImage = (): PlainImage => ({ url: "", alt: "", srcset: [] });
-const formatSetups = (enabled: readonly PosterFormat[]) => Object.fromEntries(posterFormats.map(format => [format, { enabled: enabled.includes(format), background: emptyImage(), overlay: emptyImage() }])) as Record<PosterFormat, PosterFormatSetup>;
+const formatSetups = (enabled: readonly PosterFormat[]) => Object.fromEntries(posterFormats.map(format => [format, { enabled: enabled.includes(format), background: emptyImage(), overlay: emptyImage(), parts: [] as PosterPart[] }])) as Record<PosterFormat, PosterFormatSetup>;
 export function emptyPoster(): PosterSettings {
   return { enabled: false, cardType: "poster", preset: "", palette: "rempah", paletteChoice: false, formats: formatSetups(["post", "story"]), fields: [] };
 }
@@ -133,7 +141,7 @@ export function normalizePoster(poster: Partial<PosterSettings> | undefined): Po
     palette: poster.palette ?? "rempah",
     paletteChoice: !!poster.paletteChoice,
     // Saved before more sizes existed: the new ones are off.
-    formats: Object.fromEntries(posterFormats.map(format => [format, { enabled: saved[format]?.enabled ?? (poster.formats ? false : base.formats[format].enabled), background: { ...emptyImage(), ...saved[format]?.background }, overlay: { ...emptyImage(), ...saved[format]?.overlay } }])) as Record<PosterFormat, PosterFormatSetup>,
+    formats: Object.fromEntries(posterFormats.map(format => [format, { enabled: saved[format]?.enabled ?? (poster.formats ? false : base.formats[format].enabled), background: { ...emptyImage(), ...saved[format]?.background }, overlay: { ...emptyImage(), ...saved[format]?.overlay }, parts: saved[format]?.parts ?? [] }])) as Record<PosterFormat, PosterFormatSetup>,
     fields: (poster.fields ?? []).map(field => ({ ...field, tone: field.tone ?? "", box: boxes(field.box ?? {}) })),
   };
 }
@@ -144,6 +152,15 @@ export function activePalette(poster: Pick<PosterSettings, "palette" | "paletteC
   return paletteOf(poster.paletteChoice && values?.palette ? values.palette : poster.palette);
 }
 /** A box's colour: its palette role when it has one, else its own colour. */
+/**
+ * Whether a box's slot (its frame or plate) shows: always for a box that must be filled, and for
+ * an optional one only once it is filled, or on screen while it still shows its hint.
+ */
+export const slotShows = (field: PosterField, values: PosterValues, hints: boolean) =>
+  !field.optional || hints || (field.kind === "photo" ? !!values.photos[field.key] : !!fieldText(field, values).trim());
+/** A size's pictures for one box (see PosterPart), if the design has them. */
+export const partOf = (poster: PosterSettings, format: PosterFormat, key: string) => poster.formats[format].parts?.find(part => part.key === key);
+
 export const toneColor = (field: Pick<PosterField, "tone" | "color">, palette: PosterPalette) => field.tone ? palette.colors[field.tone] : field.color;
 
 export function fieldText(field: PosterField, values: PosterValues): string {

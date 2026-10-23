@@ -119,6 +119,8 @@ Studio Poster juga bisa dinyalakan sebagai bagian tambahan di acara biasa (blok 
    - `foto_<nama>` untuk foto, misalnya `foto_utama`. Kotak atau lingkaran pada layer foto menjadi bingkainya.
 
    Supaya kolom teks selebar areanya (bukan hanya selebar teks contoh), kelompokkan teksnya dengan **kotak transparan seukuran area**, lalu beri nama grup itu `isi_…`. Teks lain, logo, garis, dan warna menjadi latar dan tidak bisa diubah peserta.
+
+   **Bagian opsional:** tambahkan akhiran `_opsional`, misalnya `foto_logo_opsional` atau `isi_biaya_opsional`. Peserta boleh mengosongkannya, dan bila kosong, kotaknya ikut hilang dari hasil unduhan: kotak foto, bingkai seukuran kotak, atau pelat berwarna di dalam grup teksnya. Ikon kamera dan tulisan "unggah foto" di dalam kotak foto mana pun hanya tampil sebagai petunjuk di layar, tidak ikut diunduh.
 3. **Ekspor:** pilih frame → Export → **SVG**, lalu centang **Outline text**. Kalau layer sudah diberi nama, centang juga **Include "id" attribute**.
 
 Tanpa nama layer pun SVG tetap diterima: admin menandai bagiannya sendiri setelah mengunggah (lihat di bawah).
@@ -130,10 +132,12 @@ Tanpa nama layer pun SVG tetap diterima: admin menandai bagiannya sendiri setela
    Kalau SVG belum punya nama layer `isi_`/`foto_`, muncul layar **ketuk bagian yang diisi peserta**:
    - pilih **Teks** atau **Foto**, lalu ketuk bagiannya di desain (ketuk lagi untuk membatalkan);
    - beri nama tiap kolom. Untuk teks yang sudah di-outline, pilih juga jumlah baris dan gaya huruf (Sans/Serif) agar ukuran hurufnya tertebak dengan benar;
+   - **Tandai semua teks otomatis** menandai semua teks sekaligus; tinggal hapus tanda pada teks yang tetap (logo sponsor, footer);
+   - centang **Opsional** untuk bagian yang boleh dikosongkan peserta;
    - tekan **Selesai, buat … kolom**. Bagian yang tidak diketuk tetap menjadi latar.
 
    Unggah lagi untuk ukuran lain (misalnya Story); kolom dengan nama yang sama digabung. Kalau tidak punya desain Figma, buka **atau pakai desain bawaan**.
-2. **2 · Kolom untuk peserta:** satu baris per kolom. Ubah namanya bila perlu. Matikan **Diisi peserta** untuk teks tetap dari panitia (misalnya tautan reservasi) dan isi teksnya. Untuk kolom yang diisi peserta, petunjuk dan **Maks. huruf** boleh diubah. Batas huruf awalnya dihitung dari besar kotak di desain. Pratinjau kartu ada di sampingnya.
+2. **2 · Kolom untuk peserta:** satu baris per kolom. Ubah namanya bila perlu. Matikan **Diisi peserta** untuk teks tetap dari panitia (misalnya tautan reservasi) dan isi teksnya. Untuk kolom yang diisi peserta, petunjuk, **Maks. huruf**, dan **Opsional** boleh diubah. Batas huruf awalnya dihitung dari besar kotak di desain. Pratinjau kartu ada di sampingnya.
 3. **Lanjutan** (dilipat, jarang perlu): geser kotak, ubah ukuran huruf dan warna, ukuran kartu, dan latar manual.
 4. Simpan dan publikasikan, lalu bagikan tautannya: `invitation.werkudara.group/KODE` untuk acara Kartu, atau `KODE/poster` bila Studio Poster dipakai di acara biasa. Tautan selalu memakai domain publik, juga saat admin dibuka dari laptop.
 

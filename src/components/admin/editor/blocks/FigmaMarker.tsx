@@ -1,12 +1,33 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Image as ImageIcon, Trash2, Type } from "lucide-react";
+import { Image as ImageIcon, Trash2, Type, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui";
-import { SHAPES, type Mark } from "./figma-import";
+import { guessLines, SHAPES, type Mark } from "./figma-import";
 import s from "./figma-marker.module.css";
 
 type Box = { left: number; top: number; width: number; height: number };
+
+/**
+ * A run of text: live <text>, or an outlined line of glyphs, which Figma writes as one path of
+ * several letters (moves) and is wider than tall. Icons are about square, so they stay out.
+ */
+function looksLikeText(element: Element): boolean {
+  if (element.closest("defs, clipPath, mask, pattern")) return false;
+  const tag = element.tagName.toLowerCase();
+  if (tag === "text") return true;
+  if (tag !== "path") return false;
+  const moves = (element.getAttribute("d") ?? "").match(/[Mm]/g)?.length ?? 0;
+  const rect = element.getBoundingClientRect();
+  return moves >= 3 && rect.height > 0 && rect.width / rect.height >= 1.8;
+}
+
+/** Whether one shape lies within another on screen. */
+function inside(element: Element | undefined, box: Element): boolean {
+  if (!element) return false;
+  const a = element.getBoundingClientRect(), b = box.getBoundingClientRect();
+  return a.left >= b.left - 1 && a.top >= b.top - 1 && a.right <= b.right + 1 && a.bottom <= b.bottom + 1;
+}
 
 /** Where an element sits over the design, in the holder's own pixels. */
 const boxIn = (holder: HTMLElement, element: Element): Box => {
@@ -72,9 +93,23 @@ export function FigmaMarker({ source, onDone, onCancel }: { source: string; onDo
     if (shape.tagName.toLowerCase() === "text") setLive(current => new Set(current).add(index));
     setMarks(current => current.some(mark => mark.index === index)
       ? current.filter(mark => mark.index !== index)
-      : [...current, { index, kind, label: `${kind === "photo" ? "Foto" : "Teks"} ${current.filter(mark => mark.kind === kind).length + 1}`, lines: 1, font: "sans" }]);
+      // Writing on a photo box ("Foto fasilitator") is its hint, not a field of its own.
+      : [...current.filter(mark => kind !== "photo" || mark.kind !== "text" || !inside(elements.current[mark.index], shape)),
+        { index, kind, label: `${kind === "photo" ? "Foto" : "Teks"} ${current.filter(mark => mark.kind === kind).length + 1}`, lines: kind === "text" ? guessLines(shape) : 1, font: "sans" }]);
   }
   const change = (index: number, next: Partial<Mark>) => setMarks(current => current.map(mark => mark.index === index ? { ...mark, ...next } : mark));
+
+  // Every piece of text in one go, so the admin only takes back the fixed ones (sponsor lines, the footer).
+  function markAllText() {
+    const photos = marks.filter(mark => mark.kind === "photo").map(mark => elements.current[mark.index]);
+    const found = elements.current.flatMap((element, index) => looksLikeText(element) && !photos.some(photo => inside(element, photo)) ? [index] : []);
+    if (found.some(index => elements.current[index].tagName.toLowerCase() === "text")) setLive(current => new Set([...current, ...found.filter(index => elements.current[index].tagName.toLowerCase() === "text")]));
+    setMarks(current => {
+      let n = current.filter(mark => mark.kind === "text").length;
+      const added = found.filter(index => !current.some(mark => mark.index === index)).map(index => ({ index, kind: "text" as const, label: `Teks ${++n}`, lines: guessLines(elements.current[index]), font: "sans" as const }));
+      return [...current, ...added];
+    });
+  }
 
   return <div className={s.marker}>
     <p className={s.intro}><strong>SVG ini belum punya nama layer.</strong> Ketuk bagian desain yang boleh diganti peserta: judul, nama, tanggal, foto, dan lainnya. Bagian yang tidak diketuk tetap menjadi latar. Ketuk lagi untuk membatalkan.</p>
@@ -82,6 +117,7 @@ export function FigmaMarker({ source, onDone, onCancel }: { source: string; onDo
       <button type="button" aria-pressed={kind === "text"} onClick={() => setKind("text")}><Type size={16} aria-hidden="true" /> Teks</button>
       <button type="button" aria-pressed={kind === "photo"} onClick={() => setKind("photo")}><ImageIcon size={16} aria-hidden="true" /> Foto</button>
     </div>
+    <Button type="button" variant="secondary" className={s.auto} onClick={markAllText}><Wand2 size={16} aria-hidden="true" /> Tandai semua teks otomatis</Button>
     <div className={s.work}>
       <div ref={holder} className={s.design} data-kind={kind} onClick={event => tap(event.clientX, event.clientY)}
         onPointerMove={event => { const shape = shapeAt(event.clientX, event.clientY); setHover(shape && holder.current ? boxIn(holder.current, shape) : null); }} onPointerLeave={() => setHover(null)}>
@@ -104,6 +140,7 @@ export function FigmaMarker({ source, onDone, onCancel }: { source: string; onDo
                 <option value="sans">Sans</option><option value="serif">Serif</option>
               </select>
             </>}
+            <label className={s.optional}><input type="checkbox" checked={!!mark.optional} onChange={event => change(mark.index, { optional: event.target.checked })} /> Opsional</label>
             <button type="button" className={s.remove} onClick={() => setMarks(current => current.filter(item => item.index !== mark.index))} aria-label={`Hapus tanda ${mark.label}`}><Trash2 size={16} aria-hidden="true" /></button>
           </li>)}
         </ul>
@@ -111,7 +148,7 @@ export function FigmaMarker({ source, onDone, onCancel }: { source: string; onDo
           <Button type="button" disabled={marks.length === 0} onClick={() => onDone(marks)}>Selesai, buat {marks.length || ""} kolom</Button>
           <Button type="button" variant="quiet" onClick={onCancel}>Batal</Button>
         </div>
-        <p className="field-hint">Jumlah baris dan gaya huruf membantu menebak ukuran teks yang sudah di-outline. Ukuran, font, dan posisi tetap bisa dirapikan di “Lanjutan”.</p>
+        <p className="field-hint">Jumlah baris dan gaya huruf membantu menebak ukuran teks yang sudah di-outline. <strong>Opsional</strong>: boleh dikosongkan peserta, dan bila kosong kotaknya tidak ikut di hasil unduhan. Ukuran, font, dan posisi tetap bisa dirapikan di “Lanjutan”.</p>
       </div>
     </div>
   </div>;

@@ -1,4 +1,4 @@
-import { activePalette, pdfPage, photoPlacement, posterSizes, spacedWidth, toneColor, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { activePalette, partOf, pdfPage, photoPlacement, posterSizes, slotShows, spacedWidth, toneColor, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import { createMeasure, fontOf, layoutTexts, loadPosterFonts, posterBackground } from "./layout";
 
 /**
@@ -36,6 +36,14 @@ export async function renderPoster(poster: PosterSettings, values: PosterValues,
 
   const background = posterBackground(poster, format, palette);
   if (background) context.drawImage(await loadImage(background), 0, 0, size.width, size.height);
+  // A box's frame or plate: an optional box left empty leaves none. The "upload a photo" marks never come along.
+  const slots = async (kind: "text" | "photo") => {
+    for (const field of poster.fields) {
+      const url = field.kind === kind && field.box[format] ? partOf(poster, format, field.key)?.slot.url : "";
+      if (url && slotShows(field, values, false)) context.drawImage(await loadImage(url), 0, 0, size.width, size.height);
+    }
+  };
+  await slots("photo");
 
   for (const field of poster.fields) {
     const box = field.box[format], photo = values.photos[field.key];
@@ -50,6 +58,7 @@ export async function renderPoster(poster: PosterSettings, values: PosterValues,
 
   const overlay = poster.formats[format].overlay?.url;
   if (overlay) context.drawImage(await loadImage(overlay), 0, 0, size.width, size.height);
+  await slots("text");
 
   for (const { field, fitted } of layoutTexts(poster, values, format, false)) {
     const box = field.box[format]!;
