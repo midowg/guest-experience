@@ -137,8 +137,17 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
       {overlay && <img className={styles.background} src={overlay} alt="" crossOrigin="anonymous" draggable={false} />}
       {/* eslint-disable-next-line @next/next/no-img-element -- drawn at design size, like the background */}
       {slots("text").map(slot => <img key={`slot-${slot.key}`} className={styles.background} src={slot.url} alt="" crossOrigin="anonymous" draggable={false} />)}
-      {texts.map(({ field, fitted, hint }) => {
-        const box = field.box[format]!;
+      {/* A stacked item's heading and divider, moved with it; one left out takes them along (layoutTexts). */}
+      {texts.flatMap(({ field, labelShift }) => {
+        const url = labelShift && partOf(poster, format, field.key)?.label?.url;
+        if (!labelShift || !url) return [];
+        const { box, dy } = labelShift;
+        return [<div key={`label-${field.key}`} className={styles.label} data-label={field.key} style={{ left: box.x, top: box.y + dy, width: box.w, height: box.h }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- drawn at design size, like the background, and cropped to the heading */}
+          <img src={url} alt="" crossOrigin="anonymous" draggable={false} style={{ left: -box.x, top: -box.y, width: size.width, height: size.height }} />
+        </div>];
+      })}
+      {texts.map(({ field, fitted, hint, box }) => {
         const open = editing && field.editable;
         const line = fitted.size * fitted.lineHeight;
         const style = { left: box.x, top: box.y, width: box.w, height: box.h, font: fontOf(field, fitted.size), color: toneColor(field, palette), textAlign: field.align, letterSpacing: `${field.letterSpacing}em`, "--ring": `${ring}px` } as CSSProperties;

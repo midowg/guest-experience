@@ -91,7 +91,8 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
   }
 
   // In the preview every box shows its hint, locked or not, so the admin sees each one.
-  const preview: PosterSettings = { ...poster, fields: poster.fields.map(field => ({ ...field, editable: true })) };
+  // Every box shows, an optional or stacked one too, so the admin sees where each sits.
+  const preview: PosterSettings = { ...poster, fields: poster.fields.map(field => ({ ...field, editable: true, optional: false })) };
 
   return <div className="stack">
     {card && text("title", "Nama kartu", 180, false, "Tampil sebagai judul halaman dan nama berkas unduhan.")}

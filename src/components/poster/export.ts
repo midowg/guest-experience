@@ -60,8 +60,18 @@ export async function renderPoster(poster: PosterSettings, values: PosterValues,
   if (overlay) context.drawImage(await loadImage(overlay), 0, 0, size.width, size.height);
   await slots("text");
 
-  for (const { field, fitted } of layoutTexts(poster, values, format, false)) {
-    const box = field.box[format]!;
+  const texts = layoutTexts(poster, values, format, false);
+  // A stacked item's heading and divider, cut from its full-card picture and moved with it as the
+  // preview does; the stored picture may be a smaller variant, so the crop follows its own size.
+  for (const { field, labelShift } of texts) {
+    const url = labelShift && partOf(poster, format, field.key)?.label?.url;
+    if (!labelShift || !url) continue;
+    const image = await loadImage(url), { box, dy } = labelShift;
+    const kx = image.naturalWidth / size.width, ky = image.naturalHeight / size.height;
+    context.drawImage(image, box.x * kx, box.y * ky, box.w * kx, box.h * ky, box.x, box.y + dy, box.w, box.h);
+  }
+
+  for (const { field, fitted, box } of texts) {
     const measure = createMeasure(field);
     const line = fitted.size * fitted.lineHeight;
     context.font = fontOf(field, fitted.size);

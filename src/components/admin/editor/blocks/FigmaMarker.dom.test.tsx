@@ -15,7 +15,9 @@ vi.mock("./figma-import", async original => {
     importInBrowser: (source: string): Imported => {
       seen.push(source);
       if (!/id="(isi|foto)_/.test(source)) throw new actual.NoLayersError("SVG ini tidak membawa nama layer.");
-      return { format: "post", background: "<svg/>", overlay: null, parts: [], fields: [], notes: [] };
+      // A stacked mark brings its heading as a label part.
+      const parts = source.includes("data-susun") ? [{ key: "info1", art: null, slot: null, label: "<svg/>" }] : [];
+      return { format: "post", background: "<svg/>", overlay: null, parts, fields: [], notes: [] };
     },
     backgroundPng: async () => new Blob(["png"], { type: "image/png" }),
   };
@@ -222,4 +224,49 @@ it("hands the earlier import's fields to the marker, so a mark named after one f
   fireEvent.change(screen.getByDisplayValue("Teks 1"), { target: { value: "Judul sesi" } });
   fireEvent.click(screen.getByRole("button", { name: "Selesai, buat 1 kolom" }));
   await waitFor(() => expect(seen[1]).toMatch(/<path[^>]*id="isi_judul"/));
+});
+
+it("marks stacked items in Info, optional, one group after another", async () => {
+  const { FigmaMarker } = await import("./FigmaMarker");
+  const done = vi.fn();
+  render(<FigmaMarker source={points} onDone={done} onCancel={() => {}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: /Info/ }));
+  // A new group only once the current one has an item.
+  expect((screen.getByRole("button", { name: /Grup info baru/ }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(surface(), at("baris1"));
+  fireEvent.click(surface(), at("baris2"));
+  const list = screen.getByRole("list", { name: "Bagian yang ditandai" });
+  expect(within(list).getAllByText("grup info")).toHaveLength(2);
+  expect(within(list).getAllByRole("listitem").map(row => row.getAttribute("data-kind"))).toEqual(["info", "info"]);
+  // Tapped again, an item is taken back; once more, it is in again.
+  fireEvent.click(surface(), at("baris2"));
+  expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+  fireEvent.click(surface(), at("baris2"));
+
+  fireEvent.click(screen.getByRole("button", { name: /Grup info baru/ }));
+  fireEvent.click(surface(), at("baris3"));
+  expect(within(list).getByText("grup info2")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Selesai, buat 3 kolom" }));
+  expect(done).toHaveBeenCalledWith([
+    { index: indexOf(points, "baris1"), kind: "text", stack: "info", optional: true, label: "Info 1", lines: 1, font: "sans" },
+    { index: indexOf(points, "baris2"), kind: "text", stack: "info", optional: true, label: "Info 2", lines: 1, font: "sans" },
+    { index: indexOf(points, "baris3"), kind: "text", stack: "info2", optional: true, label: "Info 3", lines: 1, font: "sans" },
+  ]);
+});
+
+it("names stacked marks for the import and uploads each item's heading as its label", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true, data: { url: "https://cdn.example/label.webp", srcset: [] }, message: "ok" }), { status: 200, headers: { "Content-Type": "application/json" } })));
+  const { FigmaImport } = await import("./FigmaImport");
+  const imported = vi.fn();
+  render(<FigmaImport onImport={imported} />);
+  fireEvent.change(screen.getByLabelText(/Unggah desain dari Figma/), { target: { files: [new File([points], "a4.svg", { type: "image/svg+xml" })] } });
+  await waitFor(() => expect(screen.getByText(/belum punya nama layer/)).toBeTruthy());
+
+  fireEvent.click(screen.getByRole("button", { name: /Info/ }));
+  fireEvent.click(surface(), at("baris1"));
+  fireEvent.click(screen.getByRole("button", { name: "Selesai, buat 1 kolom" }));
+  await waitFor(() => expect(imported).toHaveBeenCalledOnce());
+  expect(seen[1]).toMatch(/<path[^>]*id="isi_info1_opsional"[^>]*data-susun="info"/);
+  expect(imported.mock.calls[0][0].parts).toEqual([{ key: "info1", art: { url: "", alt: "", srcset: [] }, slot: { url: "", alt: "", srcset: [] }, label: { url: "https://cdn.example/label.webp", alt: "", srcset: [] } }]);
 });

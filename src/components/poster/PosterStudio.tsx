@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { Download, Eye, EyeOff, FileText, ImagePlus, RotateCcw, Share2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui";
-import { activePalette, fieldText, fitText, posterFormats, posterPalettes, posterSizes, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { activePalette, fieldText, posterFormats, posterPalettes, posterSizes, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import type { PhotoFrame } from "@/lib/types";
 import { PosterCanvas } from "./PosterCanvas";
-import { createMeasure, loadPosterFonts } from "./layout";
+import { layoutTexts, loadPosterFonts } from "./layout";
 import { canShareFiles, canvasBlob, downloadBlob, posterFilename, posterPdf, renderPoster, shareBlob } from "./export";
 import { clearDraft, loadDraft, preparePhoto, saveDraft } from "./draft";
 import styles from "./card-studio.module.css";
@@ -17,6 +17,8 @@ type Props = { eventId: string; eventTitle: string; poster: PosterSettings };
 const empty: PosterValues = { text: {}, photos: {} };
 const noSubscription = () => () => {};
 const noop = () => {};
+/** May be left empty: an optional box, or a stacked one, which then leaves and the ones below move up. */
+const optional = (field: PosterField) => !!(field.optional || field.stack);
 
 /**
  * The page a guest makes their card on: a form on the left (one field per box the admin opened)
@@ -84,16 +86,14 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
     await clearDraft(eventId);
   }
 
-  // Which boxes end in "…" in the size being made, so the form can say so beside the field.
+  // Which boxes end in "…" in the size being made, so the form can say so beside the field: the
+  // download's own lines, so a stacked box is measured where its stack puts it.
   const truncated = useMemo(() => {
     void fontsVersion;
-    return new Set(fields.filter(field => {
-      const box = field.box[format], text = fieldText(field, values).trim();
-      return field.kind === "text" && box && text && fitText(createMeasure(field), text, field, box).truncated;
-    }).map(field => field.key));
-  }, [fields, values, format, fontsVersion]);
-  // An optional box left empty is meant to be left out: no reminder for it.
-  const missing = fields.filter(field => !field.optional && (field.kind === "text" ? !fieldText(field, values).trim() : !values.photos[field.key]));
+    return new Set(layoutTexts(poster, values, format, false).filter(item => item.field.editable && item.fitted.truncated).map(item => item.field.key));
+  }, [poster, values, format, fontsVersion]);
+  // An optional box left empty is meant to be left out, as is a stacked one: no reminder for them.
+  const missing = fields.filter(field => !optional(field) && (field.kind === "text" ? !fieldText(field, values).trim() : !values.photos[field.key]));
 
   const title = fieldText(poster.fields.find(field => field.key === "title") ?? ({ editable: false, value: eventTitle } as PosterField), values) || eventTitle;
   async function run(label: string, done: string, task: () => Promise<void>) {
@@ -164,7 +164,7 @@ function TextField({ field, value, truncated, onChange }: { field: PosterField; 
   const id = `kartu-${field.key}`;
   const props = { id, value, placeholder: field.hint, maxLength: field.maxLength, onChange: (event: { target: { value: string } }) => onChange(event.target.value), "aria-describedby": `${id}-info` };
   return <div className={styles.field}>
-    <label htmlFor={id}>{field.label}{field.optional && <span className={styles.optional}> (opsional)</span>}</label>
+    <label htmlFor={id}>{field.label}{optional(field) && <span className={styles.optional}> (opsional)</span>}</label>
     {/* A list needs Enter for each point, so it always gets a textarea. */}
     {field.list ? <textarea {...props} className="textarea" rows={Math.max(2, Math.min(6, field.maxLines))} /> : field.maxLines > 1 ? <textarea {...props} className="textarea" rows={Math.min(5, field.maxLines)} /> : <input {...props} className="input" />}
     <p id={`${id}-info`} className={styles.counter}>{field.list && <span>Satu poin per baris.</span>}<span>{[...value].length}/{field.maxLength}</span>{truncated && <strong>Terlalu panjang untuk kotaknya; akhirnya terpotong “…”. Persingkat sedikit.</strong>}</p>

@@ -2,6 +2,9 @@
 .holder { position: relative; width: 100%; overflow: hidden; border-radius: 6px; background: #fff; box-shadow: 0 10px 30px rgba(20, 30, 25, .14); }
 .poster { position: absolute; top: 0; left: 0; overflow: hidden; transform-origin: top left; background: #fbf7ef; user-select: none; }
 .background { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+/* A stacked item's heading: a window onto its full-card picture, moved with the item. */
+.label { position: absolute; overflow: hidden; pointer-events: none; }
+.label img { position: absolute; max-width: none; }
 
 /* Text boxes: one span per line, as measured, so screen and download break lines alike. */
 .text { position: absolute; display: flex; flex-direction: column; margin: 0; padding: 0; border: 0; background: none; overflow: visible; white-space: pre; text-align: inherit; }

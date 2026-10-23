@@ -22,6 +22,9 @@
 /* A list: one dashed outline round all its lines, each line lightly filled. */
 .mark[data-kind="list"] { outline: 2px dashed #6a3fb5; background: none; }
 .mark[data-kind="list"] i { background: #6a3fb5; }
+/* A stacked item (Info): teal, apart from texts, photos and lists. */
+.mark[data-kind="info"] { outline-color: #0b6e75; background: rgb(11 110 117 / .16); }
+.mark[data-kind="info"] i { background: #0b6e75; }
 .piece { position: absolute; pointer-events: none; border-radius: 2px; background: rgb(106 63 181 / .2); }
 
 .side { display: grid; gap: var(--space-2); }
@@ -33,6 +36,7 @@
 .badge { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #e6f4ec; color: #1d6b40; }
 .list li[data-kind="photo"] .badge { background: #fbeedf; color: #a14f00; }
 .list li[data-kind="list"] .badge { background: #efe8fa; color: #6a3fb5; }
+.list li[data-kind="info"] .badge { background: #e0f2f3; color: #0b6e75; }
 .auto { justify-self: start; }
 .optional { display: inline-flex; align-items: center; gap: 4px; font-size: .8125rem; font-weight: 700; cursor: pointer; }
 .live { color: #4a5060; font-size: .8125rem; }

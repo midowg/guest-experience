@@ -134,6 +134,7 @@ Tanpa nama layer pun SVG tetap diterima: admin menandai bagiannya sendiri setela
    - beri nama tiap kolom. Untuk teks yang sudah di-outline, pilih juga jumlah baris dan gaya huruf (Sans/Serif) agar ukuran hurufnya tertebak dengan benar;
    - **Tandai semua teks otomatis** menandai semua teks sekaligus; tinggal hapus tanda pada teks yang tetap (logo sponsor, footer);
    - mode **Poin** menggabungkan beberapa baris (misalnya daftar di samping foto) menjadi satu kolom poin-poin: ketuk tiap barisnya, ikon ▸ di depannya ikut terpilih. Peserta lalu menulis satu poin per baris;
+   - mode **Info** untuk panel berisi pasangan judul kecil + isi (misalnya "Cocok untuk", "Persiapan"): ketuk tiap isinya. Isian yang dikosongkan peserta hilang bersama judul kecil dan garis di atasnya, dan isian di bawahnya naik (seperti auto layout di Figma). Di Figma, cukup beri nama grup panelnya `susun_info` dan tiap isinya `isi_…`;
    - centang **Opsional** untuk bagian yang boleh dikosongkan peserta;
    - tekan **Selesai, buat … kolom**. Bagian yang tidak diketuk tetap menjadi latar.
 
@@ -143,6 +144,10 @@ Tanpa nama layer pun SVG tetap diterima: admin menandai bagiannya sendiri setela
 4. Simpan dan publikasikan, lalu bagikan tautannya: `invitation.werkudara.group/KODE` untuk acara Kartu, atau `KODE/poster` bila Studio Poster dipakai di acara biasa. Tautan selalu memakai domain publik, juga saat admin dibuka dari laptop.
 
    Kartu baru bisa dipublikasikan setelah migrasi `202610220003_card_publish.sql` diterapkan. Sebelum itu, simpan sebagai draf.
+
+### Mencoba tanpa menyimpan (di laptop tim)
+
+Saat server pengembangan berjalan (`npm run dev`), buka `http://localhost:3000/dev-preview/kartu-uji`. Pilih SVG ukuran pertama, tandai kolomnya, lalu **Tambah ukuran lain (SVG)** untuk ukuran berikutnya dengan nama kolom yang sama. Di bawahnya langsung tampil halaman peserta (form, pilihan ukuran, Unduh/PDF) dan **Lihat hasil unduhan** untuk setiap ukuran. Tidak ada yang diunggah atau disimpan.
 
 ### Yang dilihat peserta
 

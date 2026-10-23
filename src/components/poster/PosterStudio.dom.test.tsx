@@ -72,3 +72,10 @@ it("keeps the card in a frame that a phone can fold away, buttons still at hand"
   expect(frame.hasAttribute("data-hidden")).toBe(true);
   expect(within(frame).getByRole("button", { name: "Unduh gambar" })).toBeTruthy();
 });
+
+it("marks a stacked field as one that may be left empty", () => {
+  const poster = presetPoster("rempah-nusantara", { ...createSeedEvent(), venue_name: "Loman Park Hotel" });
+  poster.fields = poster.fields.map(field => field.key === "title" ? { ...field, stack: "info" } : field);
+  render(<PosterStudio eventId="10f3a511-2331-4000-8000-0000000000ae" eventTitle="JCWF 2026" poster={poster} />);
+  expect(within(form()).getByText("Judul sesi").textContent).toBe("Judul sesi (opsional)");
+});

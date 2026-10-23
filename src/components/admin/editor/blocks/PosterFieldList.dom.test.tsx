@@ -20,3 +20,9 @@ it("turns a guest's text box into a list of points, with room for several", () =
   expect(onChange).toHaveBeenLastCalledWith("title", { ...title, list: false, maxLines: 4 });
   expect(screen.getAllByRole("checkbox", { name: /poin-poin/ })).toHaveLength(1);
 });
+
+it("says which boxes their stack places", () => {
+  const fields = presetPoster("rempah-nusantara", createSeedEvent()).fields;
+  render(<PosterFieldList fields={[{ ...fields[0], stack: "info" }, { ...fields[1], key: "lain" }]} onChange={vi.fn()} />);
+  expect(screen.getAllByText("Tersusun otomatis")).toHaveLength(1);
+});

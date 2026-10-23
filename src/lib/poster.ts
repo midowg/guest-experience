@@ -88,15 +88,23 @@ export type PosterField = {
   list?: boolean;
   /** The type in a size whose design sets it larger or smaller, as a factor of sizeMax/sizeMin. */
   sizes?: Partial<Record<PosterFormat, number>>;
+  /**
+   * A stack (like Figma's auto layout) the box stands in, by name: its boxes go one under another
+   * in design order; an empty one leaves together with its heading, and the ones below move up.
+   */
+  stack?: string;
+  /** Per size: where the item's own design sits (its heading, a divider above it), drawn from its part's `label`. */
+  labelBox?: Partial<Record<PosterFormat, PosterBox>>;
   /** Where the box sits in each format; null when the format does not show it. */
   box: Record<PosterFormat, PosterBox | null>;
 };
 /**
  * A box's own pictures from Figma, drawn at the size of the card: `art` is the "upload a photo"
  * icon and label inside a photo box, shown only while it is empty and only on screen; `slot` is
- * an optional box's frame or plate, shown only when the box is filled.
+ * an optional box's frame or plate, shown only when the box is filled; `label` is a stacked item's
+ * heading and divider (see PosterField.stack), moved with it and left out with it.
  */
-export type PosterPart = { key: string; art: PlainImage; slot: PlainImage };
+export type PosterPart = { key: string; art: PlainImage; slot: PlainImage; label?: PlainImage };
 /**
  * A size's images: the background, under everything, and an overlay drawn over the photos and
  * under the text: what lies on top of a photo in Figma (a ribbon, a frame) stays on top of it.

@@ -9,7 +9,17 @@ import { boxes, posterFormats, posterSizes, type PosterBox, type PosterField, ty
  */
 
 const LAYER = /^(isi|foto)[-_](.+?)(?:_\d+)?$/i;
+/** A group of items standing one under another, like Figma's auto layout: `susun_info`. */
+const STACK = /^susun[-_](.+?)(?:_\d+)?$/i;
 const ROUND = 500;
+
+/** A stack's name as a key ("Info 2" → "info_2"); null when nothing is left of it. */
+const stackKey = (name: string) => name.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || null;
+/** `susun_info` → "info": the stack its isi_ layers stand in. */
+export function parseStack(id: string): string | null {
+  const match = STACK.exec(id.trim());
+  return match ? stackKey(match[1]) : null;
+}
 
 /** An SVG without isi_/foto_ layers: the admin marks the parts by hand instead (FigmaMarker). */
 export class NoLayersError extends Error {}
@@ -83,9 +93,10 @@ export type Area = { x: number; y: number; w: number; h: number };
  * A part the admin tapped: its place among the SVG's elements, and what it becomes. `key`: the
  * field of another size's design it fills, so both sizes share one form. A list (`list`) is
  * several shapes (`index` and `extra`: each bullet line and its icon) that become one text box
- * over `area`.
+ * over `area`. `stack`: the stack a text stands in (see PosterField.stack); its heading and a
+ * divider above it are found by the import, not tapped.
  */
-export type Mark = { index: number; kind: "text" | "photo"; label: string; lines: number; font: "sans" | "serif"; optional?: boolean; key?: string; list?: boolean; extra?: number[]; area?: Area };
+export type Mark = { index: number; kind: "text" | "photo"; label: string; lines: number; font: "sans" | "serif"; optional?: boolean; key?: string; list?: boolean; extra?: number[]; area?: Area; stack?: string };
 
 /** A key from a label: "Nama fasilitator" → "nama_fasilitator". */
 export const keyOf = (label: string) => label.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 34) || "kolom";
@@ -139,6 +150,8 @@ export function nameMarks(source: string, marks: Mark[]): string {
     }
     named.setAttribute("id", id);
     named.setAttribute("data-label", mark.label);
+    const stack = mark.kind === "text" && mark.stack ? stackKey(mark.stack) : null;
+    if (stack) named.setAttribute("data-susun", stack);
     // A live <text> brings its own face, size and lines; only outlined text needs them told.
     if (mark.kind === "text") {
       named.setAttribute("data-hint", mark.label);
@@ -154,7 +167,7 @@ export function nameMarks(source: string, marks: Mark[]): string {
 /** `optional`: the layer's name ends in _opsional, so the box may be left empty. */
 export type Placeholder = { id: string; kind: "text" | "photo"; key: string; label: string; optional: boolean };
 /** A box's own pictures as SVG (see PosterPart): null when the design has none. */
-export type FigmaPart = { key: string; art: string | null; slot: string | null };
+export type FigmaPart = { key: string; art: string | null; slot: string | null; label: string | null };
 export type Measured = { box: PosterBox; element: Element };
 export type FigmaImport = {
   format: PosterFormat;
@@ -347,6 +360,7 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
   const notes: string[] = [];
   const fields: PosterField[] = [];
   const seen = new Set<string>();
+  const stacked: StackItem[] = [];
   let outlined = 0, bare = 0;
   for (const element of [...svg.querySelectorAll("[id]")]) {
     const place = parseLayer(element.getAttribute("id") ?? "");
@@ -382,6 +396,14 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
     const hinted = place.kind === "text" ? withHints(made.field, element, scale) : { field: made.field, hinted: false };
     made.field = hinted.field;
     if (place.optional) made.field.optional = true;
+    // A text in a susun_ group, or marked into a stack (data-susun): an item that may be empty, its heading leaving with it.
+    const group = place.kind === "text" ? [...ancestors(element)].find(node => parseStack(node.getAttribute("id") ?? "")) ?? null : null;
+    const stack = group ? parseStack(group.getAttribute("id") ?? "") : place.kind === "text" ? stackKey(element.getAttribute("data-susun") ?? "") : null;
+    if (stack) {
+      made.field.stack = stack;
+      if (group) made.field.optional = true;
+      stacked.push({ key: place.key, stack, group, raw, line: made.field.sizeMax * made.field.lineHeight / scale });
+    }
     // Room for as many letters as the box holds, unless the designer set the limit.
     if (place.kind === "text" && !element.hasAttribute("data-maxlength")) made.field.maxLength = Math.max(made.field.maxLength, capacity(made.field, made.box));
     if ("outlined" in made && made.outlined && !hinted.hinted) outlined++;
@@ -414,11 +436,20 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
   svg.setAttribute("height", String(posterSizes[format].height));
   if (!svg.getAttribute("viewBox")) svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
+  // A stacked item's heading and divider: its own picture and box, so they leave and move with it.
+  const bands = stackBands(svg, stacked, photoLayers, width, measure);
+  for (const field of fields) {
+    const band = bands.get(field.key);
+    if (band) field.labelBox = { [format]: fit({ x: Math.round(band.box.x * scale), y: Math.round(band.box.y * scale), w: Math.round(band.box.w * scale), h: Math.round(band.box.h * scale) }, format) };
+  }
+  const banded = [...bands.values()].flatMap(band => band.shapes);
+  if (stacked.length) notes.push(`${stacked.length} kolom bersusun: bila dikosongkan, judul kecil dan garis di atasnya ikut hilang, dan kolom di bawahnya naik.`);
+
   // Each box's own pictures, cut out of the design before the rest is split into background and overlay.
-  const parts = boxParts(svg, fields, photoLayers, measure);
+  const parts = boxParts(svg, fields, photoLayers, measure, new Set(banded));
   const picture = (elements: Element[]) => elements.length ? only(svg, elements) : null;
-  const figmaParts = parts.map(part => ({ key: part.key, art: picture(part.art), slot: picture(part.slot) })).filter(part => part.art || part.slot);
-  const cut = parts.flatMap(part => [...part.art, ...part.slot]);
+  const figmaParts = parts.map(part => ({ key: part.key, art: picture(part.art), slot: picture(part.slot), label: picture(bands.get(part.key)?.shapes ?? []) })).filter(part => part.art || part.slot || part.label);
+  const cut = [...parts.flatMap(part => [...part.art, ...part.slot]), ...banded];
   if (parts.some(part => part.art.length)) notes.push("Ikon dan tulisan “unggah foto” di kotak foto hanya tampil sebagai petunjuk, tidak ikut di hasil unduhan.");
   const optional = fields.filter(field => field.optional).length;
   if (optional) notes.push(`${optional} kolom opsional: bila dibiarkan kosong, kotaknya tidak ikut di hasil unduhan.`);
@@ -472,12 +503,13 @@ function only(svg: SVGSVGElement, shown: Element[]): string {
  * - `slot`: an optional box's own shapes (the photo box, a frame the size of it, the plate under
  *   a text), so an empty optional box leaves no trace.
  */
-function boxParts(svg: SVGSVGElement, fields: PosterField[], photos: { element: Element; box: PosterBox }[], measure: (element: Element, svg: SVGSVGElement) => PosterBox | null) {
+function boxParts(svg: SVGSVGElement, fields: PosterField[], photos: { element: Element; box: PosterBox }[], measure: (element: Element, svg: SVGSVGElement) => PosterBox | null, banded: ReadonlySet<Element>) {
   const optional = new Set(fields.filter(field => field.optional).map(field => field.key));
   const layers = [...svg.querySelectorAll("[id]")].map(element => ({ element, place: parseLayer(element.getAttribute("id") ?? "") }))
     .filter((layer): layer is { element: Element; place: Placeholder } => !!layer.place && fields.some(field => field.key === layer.place!.key));
   const inLayer = (element: Element) => layers.some(layer => layer.element.contains(element));
-  const shapes = [...svg.querySelectorAll(SHAPES)].filter(drawn);
+  // A stacked item's heading is its own, never a photo's mark.
+  const shapes = [...svg.querySelectorAll(SHAPES)].filter(shape => drawn(shape) && !banded.has(shape));
   const result: { key: string; art: Element[]; slot: Element[] }[] = [];
   for (const { element, place } of layers) {
     const own = element.matches(SHAPES) ? [element] : [...element.querySelectorAll(SHAPES)].filter(drawn);
@@ -495,6 +527,50 @@ function boxParts(svg: SVGSVGElement, fields: PosterField[], photos: { element: 
     result.push({ key: place.key, art, slot: optional.has(place.key) ? [...own, ...frames] : [] });
   }
   return result;
+}
+
+/** A stacked text: its box in the frame's units, its susun_ group (null when marked), and one line's height in frame units. */
+type StackItem = { key: string; stack: string; group: Element | null; raw: PosterBox; line: number };
+
+/**
+ * Each stacked item's own design, the small heading over it and a divider above that, by the
+ * item's key: what leaves with the item when it is empty and moves up with it otherwise.
+ * - Named (susun_…): the group's other shapes, each to the first item whose text starts below
+ *   it; what lies below the last text is the last item's. A shape reaching over an item's text
+ *   (a panel behind them all) is no one's and stays in the design.
+ * - Marked (data-susun): no group holds them, so they are the frame's free shapes in the stack's
+ *   column (its texts' width, 2% of the frame wider each side), between the item above's text
+ *   and this one's; over the first item, up to three of its lines.
+ * Shapes in a box layer, or inside a photo, are never a heading.
+ */
+function stackBands(svg: SVGSVGElement, items: StackItem[], photos: { box: PosterBox }[], width: number, measure: (element: Element, svg: SVGSVGElement) => PosterBox | null) {
+  const bands = new Map<string, { shapes: Element[]; box: PosterBox }>();
+  const taken = new Set<Element>();
+  const free = (shape: Element) => drawn(shape) && ![...ancestors(shape)].some(node => parseLayer(node.getAttribute("id") ?? ""));
+  for (const stack of new Set(items.map(item => item.stack))) {
+    const sorted = items.filter(item => item.stack === stack).sort((a, b) => a.raw.y - b.raw.y);
+    const group = sorted[0].group;
+    const shapes = [...(group ?? svg).querySelectorAll(SHAPES)].filter(shape => free(shape) && !taken.has(shape))
+      .map(shape => ({ shape, box: measure(shape, svg) })).filter((item): item is { shape: Element; box: PosterBox } => { const box = item.box; return !!box && !photos.some(photo => within(box, photo.box)); });
+    const left = Math.min(...sorted.map(item => item.raw.x)) - width * 0.02, right = Math.max(...sorted.map(item => item.raw.x + item.raw.w)) + width * 0.02;
+    for (const { shape, box } of shapes) {
+      const bottom = box.y + box.h;
+      const owner = group
+        ? sorted.find((item, n) => item.raw.y >= bottom - 1 && (n === 0 || box.y >= sorted[n - 1].raw.y - 1)) ?? (box.y >= sorted[sorted.length - 1].raw.y - 1 ? sorted[sorted.length - 1] : undefined)
+        : box.x >= left && box.x + box.w <= right ? sorted.find((item, n) => {
+          const top = n ? sorted[n - 1].raw.y + sorted[n - 1].raw.h : item.raw.y - item.line * 3;
+          return box.y >= top - 1 && bottom <= item.raw.y + 1;
+        }) : undefined;
+      if (!owner) continue;
+      taken.add(shape);
+      const band = bands.get(owner.key);
+      if (!band) { bands.set(owner.key, { shapes: [shape], box }); continue; }
+      const x = Math.min(band.box.x, box.x), y = Math.min(band.box.y, box.y);
+      band.shapes.push(shape);
+      band.box = { x, y, w: Math.max(band.box.x + band.box.w, box.x + box.w) - x, h: Math.max(band.box.y + band.box.h, bottom) - y };
+    }
+  }
+  return bands;
 }
 const within = (a: PosterBox, b: PosterBox) => a.x >= b.x - 2 && a.y >= b.y - 2 && a.x + a.w <= b.x + b.w + 2 && a.y + a.h <= b.y + b.h + 2;
 const sameBox = (a: PosterBox, b: PosterBox) => Math.abs(a.x - b.x) <= 3 && Math.abs(a.y - b.y) <= 3 && Math.abs(a.w - b.w) <= 6 && Math.abs(a.h - b.h) <= 6;
@@ -529,17 +605,21 @@ export function mergeImport(current: PosterField[], fromFigma: boolean, imported
     const next = byKey.get(field.key);
     const box = { ...field.box, [imported.format]: next?.box[imported.format] ?? null };
     if (!Object.values(box).some(Boolean)) return [];
-    if (!next) return [{ ...field, box }];
-    const kept = { label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: Math.max(field.maxLength, next.maxLength), optional: !!(next.optional || field.optional), list: !!(next.list || field.list) };
+    // A stacked item's heading box is per size, like its box: this size's comes from the new SVG only.
+    const labelBox = Object.fromEntries(Object.entries({ ...field.labelBox, [imported.format]: next?.labelBox?.[imported.format] }).filter(([, value]) => value)) as NonNullable<PosterField["labelBox"]>;
+    const headed = (made: PosterField): PosterField => { const rest = { ...made }; delete rest.labelBox; return Object.keys(labelBox).length ? { ...rest, labelBox } : rest; };
+    if (!next) return [headed({ ...field, box })];
+    const stack = next.stack ?? field.stack;
+    const kept = { label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: Math.max(field.maxLength, next.maxLength), optional: !!(next.optional || field.optional), list: !!(next.list || field.list), ...(stack ? { stack } : {}) };
     // A design for another size fills the same box: the look stays the first design's, and only
     // how much larger or smaller its type is in this size is kept.
     if (posterFormats.some(format => format !== imported.format && field.box[format])) {
       const factor = Math.round(next.sizeMax / Math.max(1, field.sizeMax) * 100) / 100;
-      return [{ ...field, ...kept, maxLines: Math.max(field.maxLines, next.maxLines), sizes: { ...field.sizes, [imported.format]: Math.min(5, Math.max(0.2, factor)) }, box }];
+      return [headed({ ...field, ...kept, maxLines: Math.max(field.maxLines, next.maxLines), sizes: { ...field.sizes, [imported.format]: Math.min(5, Math.max(0.2, factor)) }, box })];
     }
     // The same size again: a look left over from an earlier file (a colour read wrong, a gallery
     // tone) must not outlive the design that now draws the box.
-    return [{ ...next, ...kept, box }];
+    return [headed({ ...next, ...kept, box })];
   });
   return [...merged, ...imported.fields.filter(field => !current.some(item => item.key === field.key))];
 }

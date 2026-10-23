@@ -74,9 +74,9 @@ export function FigmaImport({ fields = [], onImport }: { fields?: PosterField[];
       return { ...uploaded, alt: "" };
     };
     const overlay = await image(imported.overlay, "atas");
-    // Each box's own pictures: transparent PNGs the size of the card, like the overlay.
+    // Each box's own pictures: transparent PNGs the size of the card, like the overlay; a stacked item's heading is its label.
     const parts: PosterPart[] = [];
-    for (const part of imported.parts) parts.push({ key: part.key, art: await image(part.art, "petunjuk"), slot: await image(part.slot, "slot") });
+    for (const part of imported.parts) parts.push({ key: part.key, art: await image(part.art, "petunjuk"), slot: await image(part.slot, "slot"), label: await image(part.label, "label") });
     onImport({ format: imported.format, background: { ...background, alt: "" }, overlay, parts, fields: imported.fields, notes: imported.notes });
     setMessage({ tone: "ok", text: `${imported.fields.length} kolom ditemukan untuk ukuran ${posterSizes[imported.format].label}. Periksa di bawah, lalu simpan.`, notes: imported.notes });
   }

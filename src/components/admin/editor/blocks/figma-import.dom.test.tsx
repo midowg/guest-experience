@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { capacity, fontFor, guessLines, matchFormat, mergeImport, nameMarks, NoLayersError, parseLayer, readFigmaSvg, sanitizeSvg } from "@/components/admin/editor/blocks/figma-import";
+import { capacity, fontFor, guessLines, matchFormat, mergeImport, nameMarks, NoLayersError, parseLayer, parseStack, readFigmaSvg, sanitizeSvg } from "@/components/admin/editor/blocks/figma-import";
 
 /** jsdom has no layout: boxes come from each layer's own x/y/width/height (or a data-box). */
 function measure(element: Element): { x: number; y: number; w: number; h: number } {
@@ -406,5 +406,92 @@ describe("marking a design by hand", () => {
     const clean = sanitizeSvg(`<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(2)</script><foreignObject><div/></foreignObject><a href="javascript:alert(3)"><rect width="1" height="1" onclick="x()"/></a></svg>`);
     expect(clean).not.toMatch(/onload|onclick|<script|foreignObject|javascript:/);
     expect(clean).toContain("<rect");
+  });
+});
+
+describe("stacked items (a side panel of small headings, each over its value)", () => {
+  // An A4 frame at the card's own size: a photo on the left, the panel on the right.
+  const glyphs = (id: string, box: string, fill = "#BD850F") => `<path id="${id}" data-box="${box}" d="M0 0h1v1z" fill="${fill}"/>`;
+  const value = (id: string, y: number) => `<g id="${id}" data-box="760 ${y} 400 40"><path d="M0 0h1v1z" fill="#383838"/></g>`;
+  const named = `<svg width="1240" height="1754" viewBox="0 0 1240 1754" xmlns="http://www.w3.org/2000/svg">
+    <rect id="dasar" width="1240" height="1754" fill="#FCF9F2"/>
+    <rect id="foto_utama" x="0" y="300" width="560" height="900" fill="#EDE6D4"/>
+    <g id="susun_info">
+      <rect id="panel" x="740" y="280" width="440" height="340" fill="#FFFFFF"/>
+      ${glyphs("judul1", "760 300 200 20")}${value("isi_cocok_untuk", 330)}
+      <rect id="garis1" x="760" y="390" width="400" height="2" fill="#D9CBB0"/>
+      ${glyphs("judul2", "760 410 200 20")}${value("isi_persiapan", 440)}
+      ${glyphs("judul3", "760 500 200 20")}${value("isi_bawa_sendiri", 530)}
+      <rect id="garis_akhir" x="760" y="590" width="400" height="2" fill="#D9CBB0"/>
+    </g>
+    ${glyphs("kaki", "60 1600 600 30", "#111111")}
+  </svg>`;
+
+  it("reads a susun_ group's texts as optional items of one stack, each with its heading and the divider above it", () => {
+    expect(parseStack("susun_info_2")).toBe("info");
+    expect(parseStack("susun-Info Kanan")).toBe("info_kanan");
+    expect(parseStack("isi_info")).toBeNull();
+    const result = readFigmaSvg(named, measure);
+    expect(result.format).toBe("a4");
+    expect(result.fields.map(field => [field.key, field.stack, !!field.optional])).toEqual([["foto_utama", undefined, false], ["cocok_untuk", "info", true], ["persiapan", "info", true], ["bawa_sendiri", "info", true]]);
+    const byKey = Object.fromEntries(result.fields.map(field => [field.key, field]));
+    // Each band is the shapes between the text above and this one; what lies below the last text is the last item's.
+    expect(byKey.cocok_untuk.labelBox).toEqual({ a4: { x: 760, y: 300, w: 200, h: 20 } });
+    expect(byKey.persiapan.labelBox).toEqual({ a4: { x: 760, y: 390, w: 400, h: 40 } });
+    expect(byKey.bawa_sendiri.labelBox).toEqual({ a4: { x: 760, y: 500, w: 400, h: 92 } });
+    expect(byKey.foto_utama.labelBox).toBeUndefined();
+    const label = (key: string) => result.parts.find(part => part.key === key)?.label ?? "";
+    expect(label("persiapan")).toMatch(/id="judul2"(?![^>]*visibility)/);
+    expect(label("persiapan")).toMatch(/id="garis1"(?![^>]*visibility)/);
+    expect(label("persiapan")).toMatch(/id="judul1"[^>]*visibility="hidden"/);
+    expect(label("cocok_untuk")).toMatch(/id="judul1"(?![^>]*visibility)/);
+    expect(result.parts.find(part => part.key === "persiapan")).toMatchObject({ art: null, slot: null });
+    // The headings and dividers leave the design; the panel behind them all, and the rest, stay.
+    for (const id of ["judul1", "garis1", "judul2", "judul3", "garis_akhir"]) expect(result.background).not.toContain(`id="${id}"`);
+    for (const id of ["dasar", "panel", "kaki", "foto_utama"]) expect(result.background).toContain(`id="${id}"`);
+    expect(result.overlay).toBeNull();
+    expect(result.notes.join(" ")).toMatch(/3 kolom bersusun/);
+  });
+
+  it("finds a marked stack's headings in its column, between one item's text and the next", () => {
+    // No layer names, as the flyer is exported. A title far above, a note left of the panel, and a footer stay in the design.
+    const plain = named.replace(/ id="[^"]*"/g, "").replace(/<g data-box="([^"]+)"><path d="M0 0h1v1z" fill="#383838"\/><\/g>/g, '<path data-box="$1" d="M0 0h1v1z" fill="#383838"/>')
+      .replace("</svg>", '<path data-box="760 100 300 40" d="M0 0h1v1z" fill="#063E34"/><path data-box="600 410 100 20" d="M0 0h1v1z" fill="#9C3D22"/></svg>');
+    const all = [...new DOMParser().parseFromString(plain, "image/svg+xml").documentElement.querySelectorAll("*")];
+    const at = (y: number) => all.findIndex(element => element.getAttribute("fill") === "#383838" && element.getAttribute("data-box")?.split(" ")[1] === String(y));
+    const marks = [330, 440, 530].map((y, n) => ({ index: at(y), kind: "text" as const, label: ["Cocok untuk", "Persiapan", "Bawa sendiri"][n], lines: 1, font: "sans" as const, optional: true, stack: "info" }));
+    const photo = { index: all.findIndex(element => element.getAttribute("fill") === "#EDE6D4"), kind: "photo" as const, label: "Foto utama", lines: 1, font: "sans" as const };
+    const result = readFigmaSvg(nameMarks(plain, [photo, ...marks]), measure);
+    expect(result.fields.map(field => [field.key, field.stack, !!field.optional])).toEqual([["foto_utama", undefined, false], ["cocok_untuk", "info", true], ["persiapan", "info", true], ["bawa_sendiri", "info", true]]);
+    const byKey = Object.fromEntries(result.fields.map(field => [field.key, field]));
+    // Over the first item: up to three of its lines (42 px type at 1.2), so the title 190 px up is not its heading.
+    expect(byKey.cocok_untuk.labelBox).toEqual({ a4: { x: 760, y: 300, w: 200, h: 20 } });
+    expect(byKey.persiapan.labelBox).toEqual({ a4: { x: 760, y: 390, w: 400, h: 40 } });
+    // Below the last item nothing is looked for: no group says where the stack ends.
+    expect(byKey.bawa_sendiri.labelBox).toEqual({ a4: { x: 760, y: 500, w: 200, h: 20 } });
+    expect(result.parts.filter(part => part.label).map(part => part.key)).toEqual(["cocok_untuk", "persiapan", "bawa_sendiri"]);
+    expect(result.background).not.toContain("#BD850F");
+    for (const fill of ["#063E34", "#9C3D22", "#111111", "#FFFFFF"]) expect(result.background).toContain(`fill="${fill}"`);
+  });
+
+  it("names a stacked mark so the import knows its stack", () => {
+    const plain = `<svg width="1080" height="1350" xmlns="http://www.w3.org/2000/svg"><rect width="1080" height="1350" fill="#FCF9F2"/><path d="M0 0h1v1z" data-box="61 59 528 123"/><path d="M0 0h1v1z" data-box="61 900 300 20"/></svg>`;
+    const doc = new DOMParser().parseFromString(nameMarks(plain, [
+      { index: 1, kind: "text", label: "Info 1", lines: 1, font: "sans", optional: true, stack: "info" },
+      { index: 2, kind: "text", label: "Info 2", lines: 1, font: "sans", stack: "Info 2" },
+    ]), "image/svg+xml");
+    expect([...doc.querySelectorAll("[id]")].map(element => [element.getAttribute("id"), element.getAttribute("data-susun")])).toEqual([["isi_info1_opsional", "info"], ["isi_info2", "info_2"]]);
+  });
+
+  it("keeps an item's stack and its heading box per size when another size is merged in", () => {
+    const a4 = readFigmaSvg(named, measure);
+    const post = { x: 600, y: 900, w: 300, h: 30 };
+    const earlier = a4.fields.map(field => ({ ...field, box: { ...field.box, a4: null, post: { x: 1, y: 1, w: 10, h: 10 } }, ...(field.stack ? { labelBox: { post } } : {}) }));
+    const merged = mergeImport(earlier, true, a4);
+    expect(merged.find(field => field.key === "persiapan")).toMatchObject({ stack: "info", optional: true, labelBox: { post, a4: { x: 760, y: 390, w: 400, h: 40 } } });
+    expect(merged.find(field => field.key === "foto_utama")?.labelBox).toBeUndefined();
+    // A newer file for the size without the item: its heading box leaves that size too.
+    const without = { ...a4, fields: a4.fields.filter(field => field.key !== "persiapan") };
+    expect(mergeImport(merged, true, without).find(field => field.key === "persiapan")?.labelBox).toEqual({ post });
   });
 });

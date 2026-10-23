@@ -26,7 +26,7 @@ export function FigmaCheck() {
       const result = importInBrowser(source);
       const image = async (svg: string | null) => ({ url: svg ? URL.createObjectURL(await backgroundPng(svg, result.format)) : "", alt: "", srcset: [] });
       const background = await image(result.background), overlay = await image(result.overlay);
-      const parts = await Promise.all(result.parts.map(async part => ({ key: part.key, art: await image(part.art), slot: await image(part.slot) })));
+      const parts = await Promise.all(result.parts.map(async part => ({ key: part.key, art: await image(part.art), slot: await image(part.slot), label: await image(part.label) })));
       const before = current.current;
       const next: PosterSettings = {
         ...(before ?? { ...emptyPoster(), enabled: true, formats: posterFormatSetups([]) }),
@@ -35,7 +35,7 @@ export function FigmaCheck() {
       next.formats = { ...next.formats, [result.format]: { enabled: true, background, overlay, parts } };
       current.current = next;
       setPoster(next); setFormat(result.format);
-      setReport(JSON.stringify({ formats: posterFormats.filter(item => next.formats[item].enabled), parts: result.parts.map(part => `${part.key}:${part.art ? "petunjuk" : ""}${part.slot ? "+slot" : ""}`), notes: result.notes, fields: next.fields.map(field => ({ key: field.key, kind: field.kind, list: !!field.list, optional: !!field.optional, lines: field.maxLines, size: field.sizeMax, boxes: posterFormats.filter(item => field.box[item]).map(item => `${item}:${JSON.stringify(field.box[item])}`) })) }, null, 1));
+      setReport(JSON.stringify({ formats: posterFormats.filter(item => next.formats[item].enabled), parts: result.parts.map(part => `${part.key}:${part.art ? "petunjuk" : ""}${part.slot ? "+slot" : ""}${part.label ? "+label" : ""}`), notes: result.notes, fields: next.fields.map(field => ({ key: field.key, kind: field.kind, list: !!field.list, optional: !!field.optional, lines: field.maxLines, size: field.sizeMax, stack: field.stack, labelBox: field.labelBox, boxes: posterFormats.filter(item => field.box[item]).map(item => `${item}:${JSON.stringify(field.box[item])}`) })) }, null, 1));
     } catch (error) {
       if (error instanceof NoLayersError) setMarking(source);
       else setReport(`GAGAL: ${(error as Error).message}`);
