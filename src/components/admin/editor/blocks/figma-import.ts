@@ -11,6 +11,67 @@ import { boxes, posterFormats, posterSizes, type PosterBox, type PosterField, ty
 const LAYER = /^(isi|foto)[-_](.+?)(?:_\d+)?$/i;
 const ROUND = 500;
 
+/** An SVG without isi_/foto_ layers: the admin marks the parts by hand instead (FigmaMarker). */
+export class NoLayersError extends Error {}
+
+/** The shapes a design is drawn with: what the admin can tap, and what can lie over a photo. */
+export const SHAPES = "path, rect, circle, ellipse, line, polyline, polygon, image, use, text";
+
+/**
+ * The SVG with anything that could run taken out (scripts, foreignObject, on… handlers,
+ * javascript: links), before it is shown in the admin or measured. A design needs none of it.
+ */
+export function sanitizeSvg(source: string): string {
+  const doc = new DOMParser().parseFromString(source, "image/svg+xml");
+  if (doc.documentElement.tagName.toLowerCase() !== "svg" || doc.querySelector("parsererror")) return source;
+  for (const element of [...doc.querySelectorAll("script, foreignObject")]) element.remove();
+  for (const element of doc.querySelectorAll("*")) {
+    for (const attribute of [...element.attributes]) {
+      const name = attribute.name.toLowerCase();
+      if (name.startsWith("on") || ((name === "href" || name.endsWith(":href")) && /^\s*javascript:/i.test(attribute.value))) element.removeAttribute(attribute.name);
+    }
+  }
+  return new XMLSerializer().serializeToString(doc);
+}
+
+/** A part the admin tapped: its place among the SVG's elements, and what it becomes. */
+export type Mark = { index: number; kind: "text" | "photo"; label: string; lines: number; font: "sans" | "serif" };
+
+/** A key from a label: "Nama fasilitator" → "nama_fasilitator". */
+export const keyOf = (label: string) => label.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 34) || "kolom";
+
+/**
+ * The SVG with the tapped parts named as if the designer had done it in Figma (isi_…/foto_…,
+ * with the lines and face as hints), so the usual import reads it. `index` counts elements in
+ * document order, as `querySelectorAll("*")` lists them.
+ */
+export function nameMarks(source: string, marks: Mark[]): string {
+  const doc = new DOMParser().parseFromString(source, "image/svg+xml");
+  const all = [...doc.documentElement.querySelectorAll("*")];
+  const used = new Set<string>();
+  for (const mark of marks) {
+    const element = all[mark.index];
+    if (!element) continue;
+    // A photo labelled "Foto utama" is foto_utama, not foto_foto_utama. Numbers go without "_"
+    // ("Teks 2" is teks2): Figma's "_2" on duplicates is read as the same layer.
+    const base = (mark.kind === "photo" ? keyOf(mark.label).replace(/^foto_/, "") || "foto" : keyOf(mark.label)).replace(/_(\d+)$/, "$1");
+    let key = base, n = 2;
+    while (used.has(`${mark.kind}:${key}`)) key = `${base}${n++}`;
+    used.add(`${mark.kind}:${key}`);
+    element.setAttribute("id", `${mark.kind === "photo" ? "foto" : "isi"}_${key}`);
+    element.setAttribute("data-label", mark.label);
+    // A live <text> brings its own face, size and lines; only outlined text needs them told.
+    if (mark.kind === "text") {
+      element.setAttribute("data-hint", mark.label);
+      if (element.tagName.toLowerCase() !== "text") {
+        element.setAttribute("data-lines", String(mark.lines));
+        element.setAttribute("data-font", mark.font === "serif" ? "cormorant" : "nunito");
+      }
+    }
+  }
+  return new XMLSerializer().serializeToString(doc);
+}
+
 export type Placeholder = { id: string; kind: "text" | "photo"; key: string; label: string };
 export type Measured = { box: PosterBox; element: Element };
 export type FigmaImport = {
@@ -111,11 +172,13 @@ export function textField(place: Placeholder, measured: Measured, scale: number)
   }
   const filled = element.matches("[fill]:not([fill=none])") ? element : element.querySelector("[fill]:not([fill=none])");
   const area = element.tagName.toLowerCase() === "g" && !!element.querySelector(":scope > rect[fill=none], :scope > rect:not([fill])");
-  const size = Math.max(10, Math.round(box.h * (area ? 0.5 : 0.95)));
-  if (!area) box = { x: box.x, y: Math.max(0, Math.round(box.y - box.h * 0.12)), w: box.w, h: Math.round(box.h * 1.25) };
+  const lines = Math.max(1, Math.min(20, Number.parseInt(element.getAttribute("data-lines") ?? "", 10) || 1));
+  // Glyphs of one line stand about 0.95 em tall; each further line adds a line height of 1.15 em.
+  const size = Math.max(10, Math.round(box.h * (area ? 0.5 : 1) / (0.95 + (lines - 1) * 1.15)));
+  if (!area) box = { x: box.x, y: Math.max(0, Math.round(box.y - size * 0.2)), w: box.w, h: Math.round(box.h + size * 0.4) };
   return {
     box, outlined: true,
-    field: { ...base, hint: place.label, maxLength: 80, font: "nunito", weight: 700, color: hex(filled?.getAttribute("fill") ?? "") || "#1f2a24", align: "left", letterSpacing: 0, sizeMax: size, sizeMin: Math.max(8, Math.round(size * 0.6)), lineHeight: 1.2, maxLines: 1 },
+    field: { ...base, hint: place.label, maxLength: 80, font: "nunito", weight: 700, color: hex(filled?.getAttribute("fill") ?? "") || "#1f2a24", align: "left", letterSpacing: 0, sizeMax: size, sizeMin: Math.max(8, Math.round(size * 0.6)), lineHeight: lines > 1 ? 1.15 : 1.2, maxLines: lines },
   };
 }
 
@@ -147,6 +210,8 @@ export function withHints(field: Omit<PosterField, "box">, element: Element, sca
   if (lineHeight >= 0.8 && lineHeight <= 3) next.lineHeight = lineHeight;
   const hint = read("hint");
   if (hint) next.hint = hint.slice(0, 200);
+  const label = read("label")?.trim();
+  if (label) next.label = label.slice(0, 60);
   return { field: next, hinted: true };
 }
 
@@ -161,9 +226,10 @@ export function photoField(place: Placeholder, measured: Measured, scale: number
   const shape = ["rect", "circle", "ellipse"].includes(element.tagName.toLowerCase()) ? element : element.querySelector("rect, circle, ellipse");
   const tag = shape?.tagName.toLowerCase();
   const radius = tag === "circle" || tag === "ellipse" ? ROUND : Math.round((Number.parseFloat(shape?.getAttribute("rx") ?? "") || 0) * scale);
+  const label = element.getAttribute("data-label")?.trim().slice(0, 60) || place.label;
   return {
     box: measured.box,
-    field: { key: place.key, label: place.label, hint: `Unggah ${place.label.toLowerCase()}`, kind: "photo", editable: true, value: "", maxLength: 1, font: "nunito", weight: 600, tone: "", color: "#1f2a24", align: "left", uppercase: false, letterSpacing: 0, sizeMax: 24, sizeMin: 12, lineHeight: 1.2, maxLines: 1, radius: Math.min(ROUND, radius), fill: hex(shape?.getAttribute("fill") ?? "") || "#e9dfcb" },
+    field: { key: place.key, label, hint: `Unggah ${label.toLowerCase()}`, kind: "photo", editable: true, value: "", maxLength: 1, font: "nunito", weight: 600, tone: "", color: "#1f2a24", align: "left", uppercase: false, letterSpacing: 0, sizeMax: 24, sizeMin: 12, lineHeight: 1.2, maxLines: 1, radius: Math.min(ROUND, radius), fill: hex(shape?.getAttribute("fill") ?? "") || "#e9dfcb" },
   };
 }
 
@@ -206,7 +272,7 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
   }
   if (!fields.length) {
     const named = [...svg.querySelectorAll("[id]")].some(element => !/^(clip|pattern|image|paint|filter|mask)\d*_/.test(element.getAttribute("id") ?? ""));
-    throw new Error(named
+    throw new NoLayersError(named
       ? "Tidak ada layer bernama isi_… atau foto_… di SVG ini. Di Figma, ganti nama layer yang boleh diganti peserta (misalnya isi_judul, foto_utama), lalu ekspor ulang."
       : "SVG ini tidak membawa nama layer. Saat ekspor di Figma, centang “Include \"id\" attribute”, dan beri nama layer yang boleh diganti peserta (misalnya isi_judul, foto_utama).");
   }
@@ -243,7 +309,6 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
   return { format, background: new XMLSerializer().serializeToString(svg), overlay, fields, notes };
 }
 
-const SHAPES = "path, rect, circle, ellipse, line, polyline, polygon, image, use, text";
 function* ancestors(element: Element) { for (let node: Element | null = element; node; node = node.parentElement) yield node; }
 /** Whether two boxes share more than a hairline: shapes that only touch a photo's edge stay in the background. */
 const overlaps = (a: PosterBox | null, b: PosterBox, edge = 1) => !!a && a.w > 0 && a.h > 0 && a.x < b.x + b.w - edge && b.x < a.x + a.w - edge && a.y < b.y + b.h - edge && b.y < a.y + a.h - edge;
@@ -283,7 +348,8 @@ export function measureInDocument(element: Element, svg: SVGSVGElement): PosterB
 }
 
 /** Reads a Figma SVG in the page: mounted out of sight so the browser can lay it out and measure it. */
-export function importInBrowser(source: string): FigmaImport {
+export function importInBrowser(raw: string): FigmaImport {
+  const source = sanitizeSvg(raw);
   const holder = document.createElement("div");
   holder.style.cssText = "position:fixed;left:-99999px;top:0;width:4000px;height:4000px;visibility:hidden;pointer-events:none";
   holder.innerHTML = new DOMParser().parseFromString(source, "image/svg+xml").documentElement.outerHTML;

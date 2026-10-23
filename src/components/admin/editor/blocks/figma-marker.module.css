@@ -1,0 +1,31 @@
+/* Marking an SVG without layer names: tap the parts guests may change. */
+.marker { display: grid; gap: var(--space-3); padding: var(--space-3); border: 1px solid #9fb7da; border-radius: 14px; background: #f7f9fd; }
+.intro { margin: 0; font-size: .9375rem; }
+.mode { display: inline-flex; justify-self: start; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
+.mode button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: 999px; background: none; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+.mode button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+.work { display: grid; gap: var(--space-3); align-items: start; }
+@media (min-width: 60rem) { .work { grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem); } }
+
+.design { position: relative; max-width: 36rem; border-radius: 10px; overflow: hidden; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / .12); cursor: crosshair; }
+.svg svg { display: block; width: 100%; height: auto; }
+.svg :is(path, rect, circle, ellipse, line, polyline, polygon, image, use, text) { cursor: pointer; }
+.hover, .mark { position: absolute; pointer-events: none; border-radius: 3px; }
+.hover { outline: 2px dashed var(--blue); background: rgb(36 99 235 / .08); }
+.mark { outline: 2px solid #1d6b40; background: rgb(29 107 64 / .16); }
+.mark[data-kind="photo"] { outline-color: #a14f00; background: rgb(161 79 0 / .16); }
+.mark i { position: absolute; left: 0; bottom: 100%; max-width: 14rem; padding: 1px 6px; border-radius: 4px 4px 4px 0; background: #1d6b40; color: #fff; font-size: .75rem; font-style: normal; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mark[data-kind="photo"] i { background: #a14f00; }
+
+.side { display: grid; gap: var(--space-2); }
+.empty { margin: 0; color: #4a5060; font-size: .875rem; }
+.list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.list li :global(.input) { flex: 1 1 9rem; min-width: 0; }
+.list li :global(.select) { flex: 0 0 auto; width: auto; }
+.badge { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #e6f4ec; color: #1d6b40; }
+.list li[data-kind="photo"] .badge { background: #fbeedf; color: #a14f00; }
+.live { color: #4a5060; font-size: .8125rem; }
+.remove { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 8px; background: none; color: #9a273d; cursor: pointer; }
+.remove:hover { background: #fbe9ec; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }

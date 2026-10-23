@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fontFor, matchFormat, mergeImport, parseLayer, readFigmaSvg } from "@/components/admin/editor/blocks/figma-import";
+import { fontFor, matchFormat, mergeImport, nameMarks, NoLayersError, parseLayer, readFigmaSvg, sanitizeSvg } from "@/components/admin/editor/blocks/figma-import";
 
 /** jsdom has no layout: boxes come from each layer's own x/y/width/height (or a data-box). */
 function measure(element: Element) {
@@ -79,7 +79,7 @@ describe("Figma SVG import", () => {
     expect(result.fields.find(field => field.key === "lokasi")?.box.story).toMatchObject({ x: 72, w: 936 });
     expect(result.notes.join(" ")).toMatch(/1 kolom teks selebar teks contohnya/);
     expect(title).toMatchObject({ key: "judul", color: "#9c3d22", maxLines: 1 });
-    expect(title.sizeMax).toBe(Math.round(120 * 0.95));
+    expect(title.sizeMax).toBe(Math.round(120 / 0.95));
     expect(title.box.story).toMatchObject({ x: 72, w: 800 });
     expect(photo).toMatchObject({ key: "foto_utama", radius: 24 });
     expect(photo.box.story).toEqual({ x: 0, y: 600, w: 1080, h: 600 });
@@ -133,5 +133,44 @@ describe("Figma SVG import", () => {
     expect(merged.some(field => field.key === "lokasi")).toBe(true);
     // From a gallery design, the import replaces the boxes.
     expect(mergeImport(edited, false, story)).toEqual(story.fields);
+  });
+});
+
+describe("marking a design by hand", () => {
+  const plain = `<svg width="1080" height="1350" xmlns="http://www.w3.org/2000/svg"><rect width="1080" height="1350" fill="#FCF9F2"/><path d="M0 0h1v1z" data-box="61 59 528 123" fill="#383838"/><rect x="0" y="289" width="1080" height="564" fill="#EDE6D4"/><path d="M0 0h1v1z" data-box="61 900 300 20" fill="#383838"/></svg>`;
+
+  it("says an SVG without named layers needs marking, with its own error type", () => {
+    expect(() => readFigmaSvg(plain, measure)).toThrow(NoLayersError);
+  });
+
+  it("names the tapped parts so the usual import reads them, with lines and face as hints", () => {
+    // In document order: 0 rect, 1 title path, 2 photo rect, 3 small text.
+    const named = nameMarks(plain, [
+      { index: 1, kind: "text", label: "Judul sesi", lines: 2, font: "serif" },
+      { index: 2, kind: "photo", label: "Foto utama", lines: 1, font: "sans" },
+      { index: 3, kind: "text", label: "Judul sesi", lines: 1, font: "sans" },
+    ]);
+    const result = readFigmaSvg(named, measure);
+    expect(result.fields.map(field => field.key)).toEqual(["judul_sesi", "foto_utama", "judul_sesi2"]);
+    const title = result.fields[0];
+    // Two lines in 123 px: about 59 px type, in the chosen serif face.
+    expect(title).toMatchObject({ font: "cormorant", maxLines: 2, hint: "Judul sesi", color: "#383838" });
+    expect(title.sizeMax).toBe(Math.round(123 / (0.95 + 1.15)));
+    expect(result.background).not.toContain("isi_judul_sesi");
+  });
+
+  it("keeps numbered labels apart and gives each field the label the admin typed", () => {
+    const result = readFigmaSvg(nameMarks(plain, [
+      { index: 1, kind: "text", label: "Teks 1", lines: 1, font: "sans" },
+      { index: 3, kind: "text", label: "Teks 2", lines: 1, font: "sans" },
+      { index: 2, kind: "photo", label: "Foto peserta", lines: 1, font: "sans" },
+    ]), measure);
+    expect(result.fields.map(field => [field.key, field.label])).toEqual([["teks1", "Teks 1"], ["foto_peserta", "Foto peserta"], ["teks2", "Teks 2"]]);
+  });
+
+  it("takes out anything that could run before the SVG is shown or measured", () => {
+    const clean = sanitizeSvg(`<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(2)</script><foreignObject><div/></foreignObject><a href="javascript:alert(3)"><rect width="1" height="1" onclick="x()"/></a></svg>`);
+    expect(clean).not.toMatch(/onload|onclick|<script|foreignObject|javascript:/);
+    expect(clean).toContain("<rect");
   });
 });
