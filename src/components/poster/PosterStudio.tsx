@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { Download, Eye, EyeOff, FileText, ImagePlus, RotateCcw, Share2, Trash2 } from "lucide-react";
+import { ChevronDown, Download, Eye, EyeOff, FileText, Image as ImageIcon, ImagePlus, RotateCcw, Share2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { activePalette, fieldText, posterFormats, posterPalettes, posterSizes, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import type { PhotoFrame } from "@/lib/types";
@@ -31,8 +31,17 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
   const [values, setValues] = useState<PosterValues>(empty);
   const [fontsVersion, setFontsVersion] = useState(0);
   const [busy, setBusy] = useState("");
-  // With more than one size: download the one on screen, or every size at once.
-  const [every, setEvery] = useState(false);
+  // One download button; its panel picks the kind (picture or PDF) and, with several sizes, which ones.
+  const [menu, setMenu] = useState(false);
+  const [kind, setKind] = useState<"png" | "pdf">("png");
+  const [picked, setPicked] = useState<PosterFormat[]>([]);
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const close = (event: Event) => { if (event instanceof KeyboardEvent ? event.key === "Escape" : !panel.current?.contains(event.target as Node)) setMenu(false); };
+    document.addEventListener("pointerdown", close); document.addEventListener("keydown", close);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", close); };
+  }, [menu]);
   const [status, setStatus] = useState("");
   // A phone can fold the card away to type with more room; it starts open.
   const [hidden, setHidden] = useState(false);
@@ -108,7 +117,7 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
     catch (error) { if ((error as Error)?.name !== "AbortError") setStatus((error as Error)?.message || "Gagal membuat kartu. Coba lagi."); }
     finally { setBusy(""); }
   }
-  const chosen = every && formats.length > 1 ? formats : [format];
+  const chosen = formats.filter(item => picked.includes(item)).length ? formats.filter(item => picked.includes(item)) : [format];
   const images = () => Promise.all(chosen.map(async item => ({ blob: await canvasBlob(await renderPoster(poster, values, item, 2)), filename: posterFilename(title, item, "png") })));
   const sizes = chosen.map(item => posterSizes[item].label).join(" dan ");
   const png = () => run("png", chosen.length > 1 ? `${chosen.length} gambar diunduh (${sizes}).` : "Gambar diunduh.", async () => {
@@ -118,6 +127,9 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
   });
   const pdf = () => run("pdf", chosen.length > 1 ? `PDF diunduh: ${chosen.length} halaman (${sizes}).` : "PDF diunduh.", async () => downloadBlob(await posterPdf(poster, values, chosen), posterFilename(title, chosen.join("-"), "pdf")));
   const share = () => run("share", "Siap dibagikan.", async () => shareBlob(await images(), "", title));
+  const open = () => { setPicked([format]); setMenu(value => !value); };
+  const go = () => { setMenu(false); void (kind === "pdf" ? pdf() : png()); };
+  const toggle = (item: PosterFormat) => setPicked(current => current.includes(item) ? (current.length > 1 ? current.filter(each => each !== item) : current) : [...current, item]);
   const ratio = posterSizes[format].width / posterSizes[format].height;
 
   return <div className={`${styles.split} ${look.studio}`}>
@@ -158,14 +170,20 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
             <PosterCanvas poster={poster} values={values} format={format} editing={false} hints selected={null} onSelect={noop} onFrame={setFrame} fontsVersion={fontsVersion} movePhotos />
           </div>
         </div>
-        {formats.length > 1 && <div className={frame.scope} role="group" aria-label="Ukuran yang diunduh">
-          <button type="button" aria-pressed={!every} onClick={() => setEvery(false)}>Ukuran ini ({posterSizes[format].label})</button>
-          <button type="button" aria-pressed={every} onClick={() => setEvery(true)}>Semua ukuran ({formats.length})</button>
-        </div>}
-        <div className={frame.actions}>
-          <Button type="button" onClick={png} disabled={!!busy} aria-label="Unduh gambar"><Download size={18} aria-hidden="true" /> {busy === "png" ? "Membuat…" : "Unduh"}</Button>
-          <Button type="button" variant="secondary" onClick={pdf} disabled={!!busy}><FileText size={18} aria-hidden="true" /> {busy === "pdf" ? "Membuat…" : "PDF"}</Button>
-          {canShare && <Button type="button" variant="secondary" onClick={share} disabled={!!busy}><Share2 size={18} aria-hidden="true" /> Bagikan</Button>}
+        <div className={frame.actions} ref={panel}>
+          {menu && <div className={frame.menu} role="dialog" aria-label="Pilihan unduhan">
+            <div className={frame.kinds} role="radiogroup" aria-label="Jenis berkas">
+              <button type="button" role="radio" aria-checked={kind === "png"} onClick={() => setKind("png")}><ImageIcon size={16} aria-hidden="true" /> Gambar</button>
+              <button type="button" role="radio" aria-checked={kind === "pdf"} onClick={() => setKind("pdf")}><FileText size={16} aria-hidden="true" /> PDF cetak</button>
+            </div>
+            {formats.length > 1 && <fieldset className={frame.sizes}>
+              <legend>Ukuran</legend>
+              {formats.map(item => <label key={item}><input type="checkbox" checked={picked.includes(item)} onChange={() => toggle(item)} /> {posterSizes[item].label}</label>)}
+            </fieldset>}
+            <Button type="button" onClick={go}><Download size={18} aria-hidden="true" /> Unduh {chosen.length > 1 ? `${chosen.length} ukuran` : posterSizes[chosen[0]].label}</Button>
+          </div>}
+          <Button type="button" onClick={open} disabled={!!busy} aria-expanded={menu} aria-haspopup="dialog" aria-label="Unduh gambar"><Download size={18} aria-hidden="true" /> {busy === "png" || busy === "pdf" ? "Membuat…" : "Unduh"} <ChevronDown size={16} aria-hidden="true" /></Button>
+          {canShare && <Button type="button" variant="secondary" className={frame.share} onClick={share} disabled={!!busy} aria-label="Bagikan"><Share2 size={18} aria-hidden="true" /></Button>}
         </div>
         <p className={frame.status} role="status">{status}</p>
       </section>

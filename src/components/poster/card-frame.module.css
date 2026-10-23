@@ -17,7 +17,15 @@
 .actions :global(.button--primary) { flex-grow: 1.6; }
 .status { min-height: 0; margin: 0; padding: 0 var(--space-1); color: var(--color-caption); font-size: .8125rem; }
 .status:empty { display: none; }
-/* Which sizes the buttons below download: the one on screen, or all of them. */
-.scope { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-background); }
-.scope button { flex: 1 1 0; min-width: 0; min-height: 36px; padding: 0 8px; border: 0; border-radius: 9px; background: none; color: var(--color-text); font: inherit; font-size: .8125rem; font-weight: 700; cursor: pointer; }
-.scope button[aria-pressed="true"] { background: var(--color-primary); color: var(--color-on-primary); }
+/* The download button's panel: what to download, opened above the button. */
+.actions { position: relative; }
+.share { flex: 0 0 auto !important; width: 46px; padding: 0 !important; }
+.menu { position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); z-index: 3; display: grid; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); box-shadow: 0 18px 40px -16px rgba(20, 30, 25, .45); }
+.kinds { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-background); }
+.kinds button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; border: 0; border-radius: 9px; background: none; color: var(--color-text); font: inherit; font-size: .875rem; font-weight: 700; cursor: pointer; }
+.kinds button[aria-checked="true"] { background: var(--color-primary); color: var(--color-on-primary); }
+.sizes { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; padding: 0; border: 0; }
+.sizes legend { width: 100%; margin-bottom: 4px; color: var(--color-caption); font-size: .75rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.sizes label { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; font-weight: 700; cursor: pointer; }
+.sizes input { width: 18px; height: 18px; accent-color: var(--color-primary); }
+.menu :global(.button) { width: 100%; }
