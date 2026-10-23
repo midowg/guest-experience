@@ -44,6 +44,26 @@ describe("fitText", () => {
     expect(fitted.lines.join("")).toBe("atourin.com/en/jcwf2026");
   });
 
+  it("wraps each typed paragraph on its own and drops blank lines", () => {
+    // At 40 px a line holds 10 characters: "tiga empat" would fit, but they are separate paragraphs.
+    const fixed = { ...style, sizeMin: 40, maxLines: 4 };
+    expect(fitText(measure, "satu dua tiga\n\n  \r\nempat", fixed, { w: 200, h: 400 }).lines).toEqual(["satu dua", "tiga", "empat"]);
+  });
+
+  it("draws a list as bullets, continuation lines indented after the bullet", () => {
+    // The bullet "• " is 40 px at 40 px, leaving 160 (8 characters) for the point's own text.
+    const list = { ...style, sizeMin: 40, maxLines: 4, list: true };
+    expect(fitText(measure, "satu dua tiga\n- empat", list, { w: 200, h: 400 })).toEqual({ size: 40, lines: ["• satu dua", "tiga", "• empat"], lineHeight: 1, truncated: false, indents: [0, 40, 0] });
+    // Shrinks until the point fits one line: 13 characters in 200 minus the bullet is 26 px.
+    expect(fitText(measure, "satu dua tiga", { ...list, sizeMin: 20, maxLines: 1 }, { w: 200, h: 200 })).toMatchObject({ size: 26, lines: ["• satu dua tiga"], indents: [0] });
+  });
+
+  it("ends a list in … within the indented width when the points do not fit", () => {
+    const fitted = fitText(measure, "satu dua tigaempa\nlima", { ...style, sizeMin: 40, maxLines: 2, list: true }, { w: 200, h: 400 });
+    expect(fitted).toEqual({ size: 40, lines: ["• satu dua", "tigaemp…"], lineHeight: 1, truncated: true, indents: [0, 40] });
+    expect(measure(fitted.lines[1], 40)).toBeLessThanOrEqual(200 - 40);
+  });
+
   it("returns no lines for empty text", () => {
     expect(fitText(measure, "  ", style, { w: 100, h: 100 }).lines).toEqual([]);
   });

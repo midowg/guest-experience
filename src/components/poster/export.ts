@@ -71,8 +71,10 @@ export async function renderPoster(poster: PosterSettings, values: PosterValues,
     const metrics = context.measureText("Hg");
     const ascent = metrics.fontBoundingBoxAscent || fitted.size * 0.8, descent = metrics.fontBoundingBoxDescent || fitted.size * 0.2;
     fitted.lines.forEach((text, index) => {
+      // A list point's later lines sit after its bullet and align in what is left (as the preview's padding does).
+      const indent = fitted.indents?.[index] ?? 0, left = box.x + indent, room = box.w - indent;
       const width = spacedWidth(measure, text, fitted.size, field.letterSpacing);
-      const x = field.align === "center" ? box.x + (box.w - width) / 2 : field.align === "right" ? box.x + box.w - width : box.x;
+      const x = field.align === "center" ? left + (room - width) / 2 : field.align === "right" ? left + room - width : left;
       const y = box.y + index * line + (line - ascent - descent) / 2 + ascent;
       if (!field.letterSpacing) { context.fillText(text, x, y); return; }
       let cursor = x;

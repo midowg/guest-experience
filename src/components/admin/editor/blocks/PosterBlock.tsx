@@ -100,7 +100,8 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
 
     <section className={s.step} aria-labelledby="poster-step-design">
       <h3 id="poster-step-design"><span className={s.stepNumber}>1</span> Desain</h3>
-      <FigmaImport onImport={applyFigma} />
+      {/* An earlier Figma import's boxes, so a design for another size can be marked onto them. */}
+      <FigmaImport fields={poster.preset === "" ? poster.fields : []} onImport={applyFigma} />
       <details className={f.builtIn}>
       <summary>atau pakai desain bawaan</summary>
       <div className={s.types} role="group" aria-label="Jenis kartu">

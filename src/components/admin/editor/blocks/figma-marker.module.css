@@ -1,6 +1,9 @@
 /* Marking an SVG without layer names: tap the parts guests may change. */
 .marker { display: grid; gap: var(--space-3); padding: var(--space-3); border: 1px solid #9fb7da; border-radius: 14px; background: #f7f9fd; }
 .intro { margin: 0; font-size: .9375rem; }
+.note { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fff7e0; color: #5b4500; font-size: .875rem; }
+.listBar { display: grid; gap: var(--space-2); justify-items: start; }
+.listBar :global(.field-hint) { margin: 0; }
 .mode { display: inline-flex; justify-self: start; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: #fff; }
 .mode button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: 999px; background: none; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
 .mode button[aria-pressed="true"] { background: var(--blue); color: #fff; }
@@ -16,6 +19,10 @@
 .mark[data-kind="photo"] { outline-color: #a14f00; background: rgb(161 79 0 / .16); }
 .mark i { position: absolute; left: 0; bottom: 100%; max-width: 14rem; padding: 1px 6px; border-radius: 4px 4px 4px 0; background: #1d6b40; color: #fff; font-size: .75rem; font-style: normal; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mark[data-kind="photo"] i { background: #a14f00; }
+/* A list: one dashed outline round all its lines, each line lightly filled. */
+.mark[data-kind="list"] { outline: 2px dashed #6a3fb5; background: none; }
+.mark[data-kind="list"] i { background: #6a3fb5; }
+.piece { position: absolute; pointer-events: none; border-radius: 2px; background: rgb(106 63 181 / .2); }
 
 .side { display: grid; gap: var(--space-2); }
 .empty { margin: 0; color: #4a5060; font-size: .875rem; }
@@ -25,6 +32,7 @@
 .list li :global(.select) { flex: 0 0 auto; width: auto; }
 .badge { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #e6f4ec; color: #1d6b40; }
 .list li[data-kind="photo"] .badge { background: #fbeedf; color: #a14f00; }
+.list li[data-kind="list"] .badge { background: #efe8fa; color: #6a3fb5; }
 .auto { justify-self: start; }
 .optional { display: inline-flex; align-items: center; gap: 4px; font-size: .8125rem; font-weight: 700; cursor: pointer; }
 .live { color: #4a5060; font-size: .8125rem; }

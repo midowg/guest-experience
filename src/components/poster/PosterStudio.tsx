@@ -165,8 +165,9 @@ function TextField({ field, value, truncated, onChange }: { field: PosterField; 
   const props = { id, value, placeholder: field.hint, maxLength: field.maxLength, onChange: (event: { target: { value: string } }) => onChange(event.target.value), "aria-describedby": `${id}-info` };
   return <div className={styles.field}>
     <label htmlFor={id}>{field.label}{field.optional && <span className={styles.optional}> (opsional)</span>}</label>
-    {field.maxLines > 1 ? <textarea {...props} className="textarea" rows={Math.min(5, field.maxLines)} /> : <input {...props} className="input" />}
-    <p id={`${id}-info`} className={styles.counter}><span>{[...value].length}/{field.maxLength}</span>{truncated && <strong>Terlalu panjang untuk kotaknya; akhirnya terpotong “…”. Persingkat sedikit.</strong>}</p>
+    {/* A list needs Enter for each point, so it always gets a textarea. */}
+    {field.list ? <textarea {...props} className="textarea" rows={Math.max(2, Math.min(6, field.maxLines))} /> : field.maxLines > 1 ? <textarea {...props} className="textarea" rows={Math.min(5, field.maxLines)} /> : <input {...props} className="input" />}
+    <p id={`${id}-info`} className={styles.counter}>{field.list && <span>Satu poin per baris.</span>}<span>{[...value].length}/{field.maxLength}</span>{truncated && <strong>Terlalu panjang untuk kotaknya; akhirnya terpotong “…”. Persingkat sedikit.</strong>}</p>
   </div>;
 }
 

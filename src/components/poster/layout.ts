@@ -47,7 +47,12 @@ export function layoutTexts(poster: PosterSettings, values: PosterValues, format
     const hint = !own && hints && field.editable;
     const text = own || (hint ? field.hint : "");
     if (!text) continue;
-    laid.push({ field, text, hint, fitted: fitText(createMeasure(field), text, field, box) });
+    // A one-line hint is an instruction, not a point: only a hint written as lines gets bullets.
+    const plain = hint && field.list && !text.includes("\n") ? { ...field, list: false } : field;
+    // Another size's design may set the type larger or smaller than the first one did.
+    const factor = field.sizes?.[format] ?? 1;
+    const style = factor === 1 ? plain : { ...plain, sizeMax: Math.round(field.sizeMax * factor), sizeMin: Math.max(6, Math.round(field.sizeMin * factor)) };
+    laid.push({ field, text, hint, fitted: fitText(createMeasure(field), text, style, box) });
   }
   return laid;
 }

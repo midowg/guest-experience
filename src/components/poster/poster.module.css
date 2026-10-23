@@ -5,7 +5,7 @@
 
 /* Text boxes: one span per line, as measured, so screen and download break lines alike. */
 .text { position: absolute; display: flex; flex-direction: column; margin: 0; padding: 0; border: 0; background: none; overflow: visible; white-space: pre; text-align: inherit; }
-.text > span { display: block; width: 100%; }
+.text > span { display: block; box-sizing: border-box; width: 100%; }
 button.text { cursor: text; font: inherit; color: inherit; }
 .text[data-open] { outline: var(--ring) dashed #c9922b; outline-offset: calc(var(--ring) * 2); }
 .text[data-hint] { opacity: .55; font-style: italic; }

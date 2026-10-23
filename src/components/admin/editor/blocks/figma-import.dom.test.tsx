@@ -229,9 +229,12 @@ describe("Figma SVG import", () => {
     expect(title.box.story).toMatchObject({ x: 72 });
     expect(merged.filter(field => field.key === "foto_utama")).toHaveLength(1);
     expect(merged.some(field => field.key === "lokasi")).toBe(true);
-    // The look comes from the newer file: a colour or tone left from before does not stay.
+    // Another size keeps the first design's look, and notes how its type compares.
+    const storyTitle = story.fields.find(field => field.key === "judul")!;
+    expect(title).toMatchObject({ font: post.fields[0].font, sizeMax: post.fields[0].sizeMax, sizes: { story: Math.round(storyTitle.sizeMax / post.fields[0].sizeMax * 100) / 100 } });
+    // The same size again takes the look from the newer file: a colour or tone left from before does not stay.
     const dark = edited.map(field => field.key === "judul" ? { ...field, color: "#111111", tone: "primary" as const } : field);
-    expect(mergeImport(dark, true, story).find(field => field.key === "judul")).toMatchObject({ color: story.fields.find(field => field.key === "judul")!.color, tone: "", value: "Tetap" });
+    expect(mergeImport(dark, true, post).find(field => field.key === "judul")).toMatchObject({ color: post.fields[0].color, tone: "", value: "Tetap" });
     // From a gallery design, the import replaces the boxes.
     expect(mergeImport(edited, false, story)).toEqual(story.fields);
   });
@@ -315,6 +318,64 @@ describe("marking a design by hand", () => {
     // Optional, the plate leaves the background for the text's slot.
     expect(result.parts.find(part => part.key === "kategori")?.slot).toMatch(/fill="#063E34"(?![^>]*visibility)/);
     expect(result.background).not.toContain('fill="#063E34"');
+  });
+
+  it("reuses the key of another size's field, so both sizes fill one box", () => {
+    const named = nameMarks(plain, [
+      { index: 1, kind: "text", label: "Judul acara", lines: 1, font: "sans", key: "judul" },
+      { index: 2, kind: "photo", label: "Foto besar", lines: 1, font: "sans", key: "foto_utama" },
+      // A key ending in a number (a box added by hand) keeps it, though Figma's _2 is read as a duplicate.
+      { index: 3, kind: "text", label: "Catatan", lines: 1, font: "sans", key: "teks_1", optional: true },
+    ]);
+    const result = readFigmaSvg(named, measure);
+    expect(result.fields.map(field => [field.key, field.label])).toEqual([["judul", "Judul acara"], ["foto_utama", "Foto besar"], ["teks_1", "Catatan"]]);
+    expect(named).not.toContain("foto_foto");
+    expect(result.fields[2].optional).toBe(true);
+    // Joined by key, the other size's box gains this one.
+    const other = { ...result.fields[0], label: "Judul", box: { ...result.fields[0].box, post: null, a4: { x: 1, y: 1, w: 100, h: 20 } } };
+    expect(mergeImport([other], true, result).find(field => field.key === "judul")?.box).toMatchObject({ a4: { x: 1 }, post: { x: 61 } });
+  });
+
+  it("sizes a list's type by one line of it, spaced as far apart as the points in the design", () => {
+    // Two points 20 units apart, each line of glyphs 8 units tall, in a 596-wide A4 frame.
+    const line = (y: number) => `<path d="M312 ${y}h4v8z M318 ${y}h4v8z M324 ${y}h4v8z" data-box="312 ${y} 100 8" fill="#383838"/>`;
+    const flyer = `<svg width="596" height="842" viewBox="0 0 596 842" xmlns="http://www.w3.org/2000/svg"><rect width="596" height="842" fill="#FCF9F2"/>${line(300)}${line(320)}</svg>`;
+    const named = nameMarks(flyer, [{ index: 1, kind: "text", label: "Poin", lines: 2, font: "sans", list: true, extra: [2], area: { x: 312, y: 300, w: 100, h: 28 } }]);
+    const [list] = readFigmaSvg(named, measure).fields;
+    const scale = 1240 / 596, size = Math.round(8 * scale / 0.95);
+    expect(list).toMatchObject({ list: true, maxLines: 2, sizeMax: size, lineHeight: Math.round(20 * scale / size * 20) / 20 });
+    // The box reaches half a leading above the first line, so the glyphs land where Figma had them.
+    expect(list.box.a4!.y).toBeLessThan(Math.round(300 * scale));
+  });
+
+  it("makes one list field of a list's lines and icons, over the area they cover", () => {
+    // An A4 frame in points (596×842, scaled to 1240 wide): an icon and two outlined lines, twice.
+    const flyer = `<svg width="596" height="842" viewBox="0 0 596 842" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="596" height="842" fill="#FCF9F2"/><rect x="20" y="300" width="250" height="250" fill="#EDE6D4"/>`
+      + `<path d="M300 300l6 4-6 4z" fill="#BD850F"/><path d="M312 300h4v8z M318 300h4v8z M324 300h4v8z" fill="#383838"/>`
+      + `<path d="M300 320l6 4-6 4z" fill="#BD850F"/><path d="M312 320h4v8z M318 320h4v8z M324 320h4v8z" fill="#383838"/><path d="M60 700h400v2H60z" fill="#111111"/></svg>`;
+    // In document order: 0 rect, 1 photo, 2 icon, 3 line, 4 icon, 5 line, 6 rule.
+    const named = nameMarks(flyer, [
+      { index: 1, kind: "photo", label: "Foto utama", lines: 1, font: "sans" },
+      { index: 2, kind: "text", label: "Fasilitas", lines: 2, font: "sans", list: true, extra: [3, 4, 5], area: { x: 300, y: 300, w: 120, h: 28 } },
+    ]);
+    const group = new DOMParser().parseFromString(named, "image/svg+xml").getElementById("isi_fasilitas")!;
+    expect(group.getAttribute("data-list")).toBe("true");
+    expect(group.querySelector("rect")?.getAttribute("fill")).toBe("none");
+    const result = readFigmaSvg(named, measure);
+    expect(result.format).toBe("a4");
+    const scale = 1240 / 596;
+    const list = result.fields.find(field => field.key === "fasilitas")!;
+    expect(result.fields).toHaveLength(2);
+    // The colour is the lines', not the icons' gold.
+    expect(list).toMatchObject({ kind: "text", list: true, maxLines: 2, label: "Fasilitas", color: "#383838" });
+    expect(list.box.a4).toEqual({ x: Math.round(300 * scale), y: Math.round(300 * scale), w: Math.round(120 * scale), h: Math.round(28 * scale) });
+    // The lines and icons leave the design: the list draws them now.
+    for (const image of [result.background, result.overlay ?? ""]) {
+      expect(image).not.toContain("#BD850F");
+      expect(image).not.toContain("#383838");
+      expect(image).not.toContain("data-isi-bagian");
+    }
+    expect(result.background).toContain("#111111");
   });
 
   it("counts the lines of outlined text from where its letters start", () => {

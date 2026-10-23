@@ -84,6 +84,10 @@ export type PosterField = {
   radius: number; fill: string;
   /** May be left empty: its slot (the box, the frame, a plate behind it) is then left out of the card. */
   optional?: boolean;
+  /** A list of points: one per line of the text, each drawn after a bullet. */
+  list?: boolean;
+  /** The type in a size whose design sets it larger or smaller, as a factor of sizeMax/sizeMin. */
+  sizes?: Partial<Record<PosterFormat, number>>;
   /** Where the box sits in each format; null when the format does not show it. */
   box: Record<PosterFormat, PosterBox | null>;
 };
@@ -169,59 +173,73 @@ export function fieldText(field: PosterField, values: PosterValues): string {
 }
 
 export type Measure = (text: string, size: number) => number;
-export type FittedText = { size: number; lines: string[]; lineHeight: number; truncated: boolean };
+/**
+ * `indents` (list fields only) is each line's left offset in design pixels at `size`: a point's
+ * continuation lines start after its bullet. The line is then aligned in what is left of the box.
+ */
+export type FittedText = { size: number; lines: string[]; lineHeight: number; truncated: boolean; indents?: number[] };
+
+/** What a list point starts with. */
+export const BULLET = "• ";
 
 /** Width of a line including CSS letter-spacing, which follows every character. */
 export function spacedWidth(measure: Measure, text: string, size: number, letterSpacing: number) {
   return measure(text, size) + letterSpacing * size * [...text].length;
 }
 
-function wrap(text: string, fits: (line: string) => boolean): string[] {
+/** One paragraph (no line breaks) broken into lines that each pass `fits`. */
+function wrap(paragraph: string, fits: (line: string) => boolean): string[] {
   const lines: string[] = [];
-  for (const paragraph of text.split("\n")) {
-    let line = "";
-    for (const word of paragraph.split(/\s+/).filter(Boolean)) {
-      const next = line ? `${line} ${word}` : word;
-      if (fits(next)) { line = next; continue; }
-      if (line) lines.push(line);
-      // A word wider than the box breaks between characters rather than spilling out.
-      let rest = word;
-      while (!fits(rest) && rest.length > 1) {
-        let cut = rest.length - 1;
-        while (cut > 1 && !fits(rest.slice(0, cut))) cut--;
-        lines.push(rest.slice(0, cut));
-        rest = rest.slice(cut);
-      }
-      line = rest;
+  let line = "";
+  for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+    const next = line ? `${line} ${word}` : word;
+    if (fits(next)) { line = next; continue; }
+    if (line) lines.push(line);
+    // A word wider than the box breaks between characters rather than spilling out.
+    let rest = word;
+    while (!fits(rest) && rest.length > 1) {
+      let cut = rest.length - 1;
+      while (cut > 1 && !fits(rest.slice(0, cut))) cut--;
+      lines.push(rest.slice(0, cut));
+      rest = rest.slice(cut);
     }
-    lines.push(line);
+    line = rest;
   }
+  if (line) lines.push(line);
   return lines;
 }
 
 /**
  * The largest size between sizeMax and sizeMin at which the text fits the box, and its lines. At
  * sizeMin a text that still does not fit keeps as many lines as fit and ends in "…". Screen and
- * download both draw these lines, so what is seen is what is saved.
+ * download both draw these lines, so what is seen is what is saved. Typed line breaks are kept
+ * (blank lines dropped); in a list field each line is a point after a bullet, wrapping under its
+ * own text rather than under the bullet.
  */
-export function fitText(measure: Measure, raw: string, field: Pick<PosterField, "sizeMax" | "sizeMin" | "lineHeight" | "maxLines" | "letterSpacing" | "uppercase">, box: Pick<PosterBox, "w" | "h">): FittedText {
+export function fitText(measure: Measure, raw: string, field: Pick<PosterField, "sizeMax" | "sizeMin" | "lineHeight" | "maxLines" | "letterSpacing" | "uppercase" | "list">, box: Pick<PosterBox, "w" | "h">): FittedText {
   const text = (field.uppercase ? raw.toLocaleUpperCase("id-ID") : raw).trim();
+  // A bullet typed by hand would be drawn twice.
+  const paragraphs = text.split("\n").map(line => (field.list ? line.replace(/^\s*[•·*-]\s+/, "") : line).trim()).filter(Boolean);
   const min = Math.max(1, Math.min(field.sizeMin, field.sizeMax));
-  if (!text) return { size: field.sizeMax, lines: [], lineHeight: field.lineHeight, truncated: false };
+  if (!paragraphs.length) return { size: field.sizeMax, lines: [], lineHeight: field.lineHeight, truncated: false };
+  const done = (size: number, laid: { text: string; indent: number }[], truncated: boolean): FittedText => ({ size, lines: laid.map(line => line.text), lineHeight: field.lineHeight, truncated, ...(field.list ? { indents: laid.map(line => line.indent) } : {}) });
   for (let size = Math.max(min, field.sizeMax); size >= min; size--) {
-    const fits = (line: string) => spacedWidth(measure, line, size, field.letterSpacing) <= box.w;
-    const lines = wrap(text, fits);
+    const fits = (line: string, width: number) => spacedWidth(measure, line, size, field.letterSpacing) <= width;
+    const bullet = field.list ? spacedWidth(measure, BULLET, size, field.letterSpacing) : 0;
+    const laid = paragraphs.flatMap(paragraph => field.list
+      ? wrap(paragraph, line => fits(line, box.w - bullet)).map((line, index) => index ? { text: line, indent: bullet } : { text: `${BULLET}${line}`, indent: 0 })
+      : wrap(paragraph, line => fits(line, box.w)).map(line => ({ text: line, indent: 0 })));
     const room = Math.max(1, Math.min(field.maxLines, Math.floor(box.h / (size * field.lineHeight) + 0.001)));
-    if (lines.length <= room) return { size, lines, lineHeight: field.lineHeight, truncated: false };
+    if (laid.length <= room) return done(size, laid, false);
     if (size === min) {
-      const kept = lines.slice(0, room);
-      let last = kept[room - 1];
-      while (last && !fits(`${last}…`)) last = last.slice(0, -1).trimEnd();
-      kept[room - 1] = `${last}…`;
-      return { size, lines: kept, lineHeight: field.lineHeight, truncated: true };
+      const kept = laid.slice(0, room), end = kept[room - 1];
+      let last = end.text;
+      while (last && !fits(`${last}…`, box.w - end.indent)) last = last.slice(0, -1).trimEnd();
+      kept[room - 1] = { ...end, text: `${last}…` };
+      return done(size, kept, true);
     }
   }
-  return { size: min, lines: [text], lineHeight: field.lineHeight, truncated: true };
+  return done(min, [{ text, indent: 0 }], true);
 }
 
 /** Where a framed photo lands in its box: the same maths as the hero framing (x, y in %). */

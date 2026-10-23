@@ -142,7 +142,8 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
         const open = editing && field.editable;
         const line = fitted.size * fitted.lineHeight;
         const style = { left: box.x, top: box.y, width: box.w, height: box.h, font: fontOf(field, fitted.size), color: toneColor(field, palette), textAlign: field.align, letterSpacing: `${field.letterSpacing}em`, "--ring": `${ring}px` } as CSSProperties;
-        const lines = fitted.lines.map((text, index) => <span key={index} style={{ height: line, lineHeight: `${line}px` }}>{text}</span>);
+        // A list point's later lines start after its bullet, as the download draws them (export.ts).
+        const lines = fitted.lines.map((text, index) => <span key={index} style={{ height: line, lineHeight: `${line}px`, paddingLeft: fitted.indents?.[index] || undefined }}>{text}</span>);
         return open
           ? <button key={field.key} data-field={field.key} type="button" className={styles.text} data-open data-hint={hint || undefined} data-selected={selected === field.key || undefined} style={style} onClick={() => onSelect(field.key)} aria-label={`Ubah ${field.label}`}>{lines}</button>
           : <div key={field.key} data-field={field.key} className={styles.text} data-tap={(onTap && field.editable) || undefined} style={style}>{lines}</div>;

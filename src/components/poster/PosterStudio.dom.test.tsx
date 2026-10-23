@@ -39,6 +39,17 @@ it("changes the card as the guest types, and can be downloaded at any time", asy
   expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
 });
 
+it("draws each line of a list field as its own bullet point", async () => {
+  const poster = presetPoster("rempah-nusantara", { ...createSeedEvent(), venue_name: "Loman Park Hotel" });
+  poster.fields = poster.fields.map(field => field.key === "title" ? { ...field, list: true, maxLines: 6 } : field);
+  render(<PosterStudio eventId="10f3a511-2331-4000-8000-0000000000ad" eventTitle="JCWF 2026" poster={poster} />);
+  const input = within(form()).getByRole("textbox", { name: "Judul sesi" });
+  expect(input.tagName).toBe("TEXTAREA");
+  expect(within(form()).getByText("Satu poin per baris.")).toBeTruthy();
+  fireEvent.change(input, { target: { value: "Satu\n\nDua" } });
+  await waitFor(() => expect([...card().querySelectorAll("[data-field=title] span")].map(line => line.textContent)).toEqual(["• Satu", "• Dua"]));
+});
+
 it("lets the person pick a colour only when the admin allows it", async () => {
   const poster = presetPoster("ucapan-hangat", createSeedEvent());
   const { unmount } = render(<PosterStudio eventId="10f3a511-2331-4000-8000-0000000000ab" eventTitle="Ucapan" poster={poster} />);

@@ -21,6 +21,8 @@ export function PosterFieldList({ fields, onChange }: { fields: PosterField[]; o
           <input id={`${path}.label`} className={`input ${s.fieldName}`} value={field.label} maxLength={80} onChange={event => set("label", event.target.value)} aria-label="Nama kolom" />
           <label className={base.check}><input type="checkbox" role="switch" checked={field.editable} onChange={event => set("editable", event.target.checked)} aria-label={`${field.label} diisi peserta`} /> Diisi peserta</label>
           {field.editable && <label className={base.check} title="Boleh dikosongkan peserta. Bila kosong, kotaknya tidak ikut di hasil unduhan."><input type="checkbox" checked={!!field.optional} onChange={event => set("optional", event.target.checked)} aria-label={`${field.label} opsional`} /> Opsional</label>}
+          {/* A list needs room for several points: a box kept to one or two lines gets six. */}
+          {field.editable && field.kind === "text" && <label className={base.check} title="Peserta menulis satu poin per baris; tiap poin diberi tanda •."><input type="checkbox" checked={!!field.list} onChange={event => onChange(field.key, { ...field, list: event.target.checked, maxLines: event.target.checked && field.maxLines < 3 ? 6 : field.maxLines })} aria-label={`${field.label} poin-poin`} /> Poin-poin</label>}
         </div>
         {field.editable
           ? <div className={s.fieldGuide}>

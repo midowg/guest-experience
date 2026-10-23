@@ -62,20 +62,30 @@ export function capacity(field: Pick<PosterField, "sizeMax" | "maxLines" | "uppe
  * are a single line's letters.
  */
 export function guessLines(element: Element): number {
+  // The thresholds are for a frame 1080 units wide; an A4 frame in points (596) has smaller units.
+  const view = (element.closest("svg")?.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
+  const unit = view.length === 4 && view[2] > 0 ? Math.min(3, Math.max(0.3, view[2] / 1080)) : 1;
   const paths = element.matches("path") ? [element] : [...element.querySelectorAll("path")];
   const ys = paths.flatMap(path => [...(path.getAttribute("d") ?? "").matchAll(/M\s*-?[\d.]+[\s,]+(-?[\d.]+)/g)].map(match => Number(match[1]))).sort((a, b) => a - b);
   if (ys.length < 6) return 1;
   const gaps = ys.slice(1).map((y, index) => y - ys[index]);
   const widest = Math.max(...gaps);
-  const breaks = gaps.filter(gap => gap > Math.max(6, widest * 0.6));
+  const breaks = gaps.filter(gap => gap > Math.max(6 * unit, widest * 0.6));
   if (!breaks.length) return 1;
   const lines = breaks.length + 1;
   const spread = ys[ys.length - 1] - ys[0] - breaks.reduce((sum, gap) => sum + gap, 0);
-  return spread / lines < Math.min(4, Math.min(...breaks) * 0.5) ? 1 : Math.min(8, lines);
+  return spread / lines < Math.min(4 * unit, Math.min(...breaks) * 0.5) ? 1 : Math.min(8, lines);
 }
 
-/** A part the admin tapped: its place among the SVG's elements, and what it becomes. */
-export type Mark = { index: number; kind: "text" | "photo"; label: string; lines: number; font: "sans" | "serif"; optional?: boolean };
+/** A box in the root SVG's own units (its viewBox). */
+export type Area = { x: number; y: number; w: number; h: number };
+/**
+ * A part the admin tapped: its place among the SVG's elements, and what it becomes. `key`: the
+ * field of another size's design it fills, so both sizes share one form. A list (`list`) is
+ * several shapes (`index` and `extra`: each bullet line and its icon) that become one text box
+ * over `area`.
+ */
+export type Mark = { index: number; kind: "text" | "photo"; label: string; lines: number; font: "sans" | "serif"; optional?: boolean; key?: string; list?: boolean; extra?: number[]; area?: Area };
 
 /** A key from a label: "Nama fasilitator" → "nama_fasilitator". */
 export const keyOf = (label: string) => label.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 34) || "kolom";
@@ -91,14 +101,29 @@ export function nameMarks(source: string, marks: Mark[]): string {
   const used = new Set<string>();
   for (const mark of marks) {
     const element = all[mark.index];
-    if (!element) continue;
+    if (!element || (mark.list && !mark.area)) continue;
     // A photo labelled "Foto utama" is foto_utama, not foto_foto_utama. Numbers go without "_"
-    // ("Teks 2" is teks2): Figma's "_2" on duplicates is read as the same layer.
-    const base = (mark.kind === "photo" ? keyOf(mark.label).replace(/^foto_/, "") || "foto" : keyOf(mark.label)).replace(/_(\d+)$/, "$1");
+    // ("Teks 2" is teks2): Figma's "_2" on duplicates is read as the same layer. A key taken from
+    // another size's field is kept as it is, so mergeImport joins the two.
+    const strip = (key: string) => mark.kind === "photo" ? key.replace(/^foto_/, "") || "foto" : key;
+    const base = mark.key ? strip(mark.key) : strip(keyOf(mark.label)).replace(/_(\d+)$/, "$1");
     let key = base, n = 2;
     while (used.has(`${mark.kind}:${key}`)) key = `${base}${n++}`;
     used.add(`${mark.kind}:${key}`);
-    const id = `${mark.kind === "photo" ? "foto" : "isi"}_${key}${mark.optional ? "_opsional" : ""}`;
+    // A key ending in _1 (teks_1) keeps it only with something after: parseLayer reads a last _n as Figma's duplicate count.
+    const id = `${mark.kind === "photo" ? "foto" : "isi"}_${key}${mark.optional ? "_opsional" : /_\d+$/.test(key) ? "_1" : ""}`;
+    if (mark.list && mark.area) {
+      // The lines and icons stay where they are only to be cut out (data-isi-bagian); a group
+      // with a clear box over them all is the list's area.
+      for (const index of [mark.index, ...(mark.extra ?? [])]) all[index]?.setAttribute("data-isi-bagian", parseLayer(id)?.key ?? key);
+      const group = doc.createElementNS(SVG_NS, "g"), box = doc.createElementNS(SVG_NS, "rect");
+      for (const [name, value] of [["x", mark.area.x], ["y", mark.area.y], ["width", mark.area.w], ["height", mark.area.h]] as const) box.setAttribute(name, String(Math.round(value * 10) / 10));
+      box.setAttribute("fill", "none");
+      group.append(box);
+      for (const [name, value] of [["id", id], ["data-list", "true"], ["data-lines", String(mark.lines)], ["data-font", mark.font === "serif" ? "cormorant" : "nunito"], ["data-hint", mark.label], ["data-label", mark.label]]) group.setAttribute(name, value);
+      doc.documentElement.append(group);
+      continue;
+    }
     // A box marked as text (a ribbon, a label plate) stays in the design and becomes the text's
     // area: it goes into a group named for the text, with a clear twin as the area and a colour
     // that reads on it. The import keeps the plate as background, or as the slot when optional.
@@ -236,9 +261,11 @@ export function textField(place: Placeholder, measured: Measured, scale: number)
   }
   const filled = element.matches("[fill]:not([fill=none])") ? element : element.querySelector("[fill]:not([fill=none])");
   const area = element.tagName.toLowerCase() === "g" && !!element.querySelector(":scope > :is(rect, circle, ellipse)[fill=none], :scope > rect:not([fill])");
+  // A list's area is drawn round its own lines, so its height is all type, not room around it.
+  const roomy = area && element.getAttribute("data-list") !== "true";
   const lines = Math.max(1, Math.min(20, Number.parseInt(element.getAttribute("data-lines") ?? "", 10) || guessLines(element)));
   // Glyphs of one line stand about 0.95 em tall; each further line adds a line height of 1.15 em.
-  const size = Math.max(10, Math.round(box.h * (area ? 0.5 : 1) / (0.95 + (lines - 1) * 1.15)));
+  const size = Math.max(10, Math.round(box.h * (roomy ? 0.5 : 1) / (0.95 + (lines - 1) * 1.15)));
   if (!area) box = { x: box.x, y: Math.max(0, Math.round(box.y - size * 0.2)), w: box.w, h: Math.round(box.h + size * 0.4) };
   return {
     box, outlined: true,
@@ -249,7 +276,8 @@ export function textField(place: Placeholder, measured: Measured, scale: number)
 /**
  * Type hints a prepared file may carry on an isi_ layer, since outlined text keeps no type:
  * data-font (playfair|nunito|lora|cormorant or a Figma font name), data-size, data-lines,
- * data-weight, data-align, data-color, data-uppercase, data-spacing (em), data-line-height.
+ * data-weight, data-align, data-color, data-uppercase, data-spacing (em), data-line-height,
+ * data-list (one point per line).
  */
 export function withHints(field: Omit<PosterField, "box">, element: Element, scale: number): { field: Omit<PosterField, "box">; hinted: boolean } {
   const read = (name: string) => element.getAttribute(`data-${name}`);
@@ -278,6 +306,7 @@ export function withHints(field: Omit<PosterField, "box">, element: Element, sca
   if (most > 0) next.maxLength = Math.min(1000, most);
   const label = read("label")?.trim();
   if (label) next.label = label.slice(0, 60);
+  if (read("list") === "true") next.list = true;
   return { field: next, hinted: true };
 }
 
@@ -328,6 +357,28 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
     if (!raw || raw.w <= 0 || raw.h <= 0) { notes.push(`Layer ${place.id} tidak punya ukuran dan dilewati.`); continue; }
     const box = { x: Math.round(raw.x * scale), y: Math.round(raw.y * scale), w: Math.round(raw.w * scale), h: Math.round(raw.h * scale) };
     const made = place.kind === "photo" ? photoField(place, { box, element }, scale) : textField(place, { box, element }, scale);
+    // A list's group only holds its clear area: the colour is the lines' own, which an icon
+    // (one move, a ▸) is not.
+    const pieces = [...svg.querySelectorAll(`[data-isi-bagian="${place.key}"]`)];
+    if (place.kind === "text" && pieces.length && !element.matches("[fill]:not([fill=none])") && !element.querySelector("[fill]:not([fill=none])")) {
+      const sample = pieces.find(piece => ((piece.getAttribute("d") ?? "").match(/M/gi)?.length ?? 0) >= 3) ?? pieces[0];
+      made.field.color = hex(inherited(sample, "fill")) || made.field.color;
+      // The type is as tall as one line of glyphs, and the points sit as far apart as in Figma
+      // (a list is often spaced wider than its type): both from the lines themselves.
+      const lines = pieces.filter(piece => ((piece.getAttribute("d") ?? "").match(/M/gi)?.length ?? 0) >= 3)
+        .map(piece => ({ box: measure(piece, svg), count: guessLines(piece) })).filter((line): line is { box: PosterBox; count: number } => !!line.box && line.box.h > 0);
+      const single = lines.filter(line => line.count === 1).map(line => line.box.h).sort((x, y) => x - y);
+      const count = lines.reduce((sum, line) => sum + line.count, 0);
+      if (single.length && count > 1) {
+        const glyphs = single[Math.floor(single.length / 2)];
+        const size = Math.max(8, Math.round(glyphs * scale / 0.95));
+        const lineHeight = Math.min(3, Math.max(1, Math.round((raw.h - glyphs) / (count - 1) * scale / size * 20) / 20));
+        // Text sits in the middle of its line box: the box reaches half a leading above the first line and below the last.
+        const lead = Math.round((lineHeight - 1) * size / 2 + size * 0.1);
+        made.box = { x: made.box.x, y: Math.max(0, made.box.y - lead), w: made.box.w, h: made.box.h + lead * 2 };
+        made.field = { ...made.field, sizeMax: size, sizeMin: Math.max(8, Math.round(size * 0.75)), lineHeight };
+      }
+    }
     const hinted = place.kind === "text" ? withHints(made.field, element, scale) : { field: made.field, hinted: false };
     made.field = hinted.field;
     if (place.optional) made.field.optional = true;
@@ -339,6 +390,10 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
     seen.add(place.key);
     fields.push({ ...made.field, box: boxes({ [format]: fit(made.box, format) }) });
   }
+  // The shapes a list was marked on are drawn by the list itself now: out of the background, the
+  // overlay and the photos' parts. Safe to cut here: the browser's measure lined up its elements
+  // on the first call, made in the loop above.
+  for (const element of [...svg.querySelectorAll("[data-isi-bagian]")]) element.remove();
   if (!fields.length) {
     const named = [...svg.querySelectorAll("[id]")].some(element => !/^(clip|pattern|image|paint|filter|mask)\d*_/.test(element.getAttribute("id") ?? ""));
     throw new NoLayersError(named
@@ -474,9 +529,17 @@ export function mergeImport(current: PosterField[], fromFigma: boolean, imported
     const next = byKey.get(field.key);
     const box = { ...field.box, [imported.format]: next?.box[imported.format] ?? null };
     if (!Object.values(box).some(Boolean)) return [];
-    // A look left over from an earlier file (a colour read wrong, a gallery tone) must not
-    // outlive the design that now draws the box.
-    return [next ? { ...next, label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: Math.max(field.maxLength, next.maxLength), optional: !!(next.optional || field.optional), box } : { ...field, box }];
+    if (!next) return [{ ...field, box }];
+    const kept = { label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: Math.max(field.maxLength, next.maxLength), optional: !!(next.optional || field.optional), list: !!(next.list || field.list) };
+    // A design for another size fills the same box: the look stays the first design's, and only
+    // how much larger or smaller its type is in this size is kept.
+    if (posterFormats.some(format => format !== imported.format && field.box[format])) {
+      const factor = Math.round(next.sizeMax / Math.max(1, field.sizeMax) * 100) / 100;
+      return [{ ...field, ...kept, maxLines: Math.max(field.maxLines, next.maxLines), sizes: { ...field.sizes, [imported.format]: Math.min(5, Math.max(0.2, factor)) }, box }];
+    }
+    // The same size again: a look left over from an earlier file (a colour read wrong, a gallery
+    // tone) must not outlive the design that now draws the box.
+    return [{ ...next, ...kept, box }];
   });
   return [...merged, ...imported.fields.filter(field => !current.some(item => item.key === field.key))];
 }

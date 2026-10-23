@@ -24,8 +24,10 @@ export type FigmaResult = { format: PosterFormat; background: PlainImage; overla
  * One button: a frame exported from Figma as SVG becomes the card. The layers named isi_… and
  * foto_… become the guests' fields; the rest is drawn to an image and uploaded as the background.
  * A file without such names is not turned away: the admin taps the parts on the design instead.
+ * `fields`: the boxes an earlier Figma import made for another size, offered by name while
+ * marking, so both sizes fill one form.
  */
-export function FigmaImport({ onImport }: { onImport: (result: FigmaResult) => void }) {
+export function FigmaImport({ fields = [], onImport }: { fields?: PosterField[]; onImport: (result: FigmaResult) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string; notes: string[] } | null>(null);
@@ -89,7 +91,7 @@ export function FigmaImport({ onImport }: { onImport: (result: FigmaResult) => v
       <li>Pilih frame → Export → SVG, centang <strong>Outline text</strong>, lalu unggah di sini. Unggah lagi untuk ukuran lain.</li>
       <li>Setelah diunggah, ketuk bagian yang boleh diganti peserta. Lebih cepat lagi: di Figma beri nama layernya <code>isi_judul</code>, <code>isi_nama</code>, <code>foto_utama</code>, dan seterusnya, lalu centang <strong>Include “id” attribute</strong> saat ekspor; kolomnya langsung terbaca.</li>
     </ol>
-    {marking && <FigmaMarker source={marking} onDone={marks => void marked(marking, marks)} onCancel={() => setMarking(null)} />}
+    {marking && <FigmaMarker source={marking} existing={fields} onDone={marks => void marked(marking, marks)} onCancel={() => setMarking(null)} />}
     {message && <div role={message.tone === "error" ? "alert" : "status"} className={s.figmaResult} data-tone={message.tone}>
       <p>{message.text}</p>
       {message.notes.length > 0 && <ul>{message.notes.map(note => <li key={note}>{note}</li>)}</ul>}
