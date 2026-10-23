@@ -101,7 +101,7 @@ const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Gunakan warna hex, misal
 const posterFieldSchema = z.object({
   key: z.string().regex(/^[a-z0-9_]{1,40}$/), label: text(80).min(1), hint: text(200).default(""),
   kind: z.enum(["text", "photo"]), editable: z.boolean(), value: text(2000).default(""), maxLength: z.number().int().min(1).max(1000),
-  font: z.enum(["playfair", "nunito", "lora", "cormorant"]), weight: z.number().int().min(100).max(900),
+  font: z.enum(["playfair", "nunito", "inter", "lora", "cormorant"]), weight: z.number().int().min(100).max(900),
   tone: z.union([z.enum(paletteRoles), z.literal("")]).default(""), color: hexColor,
   align: z.enum(["left", "center", "right"]), uppercase: z.boolean(), letterSpacing: z.number().min(-0.1).max(1),
   sizeMax: z.number().min(6).max(300), sizeMin: z.number().min(6).max(300), lineHeight: z.number().min(0.8).max(3), maxLines: z.number().int().min(1).max(20),

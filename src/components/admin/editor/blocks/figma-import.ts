@@ -1,4 +1,4 @@
-import { boxes, posterFormats, posterSizes, type PosterBox, type PosterField, type PosterFont, type PosterFormat } from "@/lib/poster";
+import { boxes, posterFonts, posterFormats, posterSizes, type PosterBox, type PosterField, type PosterFont, type PosterFormat } from "@/lib/poster";
 
 /**
  * A card design straight from Figma. The designer names the layers guests may change
@@ -131,7 +131,7 @@ export function nameMarks(source: string, marks: Mark[]): string {
       for (const [name, value] of [["x", mark.area.x], ["y", mark.area.y], ["width", mark.area.w], ["height", mark.area.h]] as const) box.setAttribute(name, String(Math.round(value * 10) / 10));
       box.setAttribute("fill", "none");
       group.append(box);
-      for (const [name, value] of [["id", id], ["data-list", "true"], ["data-lines", String(mark.lines)], ["data-font", mark.font === "serif" ? "cormorant" : "nunito"], ["data-hint", mark.label], ["data-label", mark.label]]) group.setAttribute(name, value);
+      for (const [name, value] of [["id", id], ["data-list", "true"], ["data-lines", String(mark.lines)], ["data-font", mark.font === "serif" ? "cormorant" : "inter"], ["data-hint", mark.label], ["data-label", mark.label]]) group.setAttribute(name, value);
       doc.documentElement.append(group);
       continue;
     }
@@ -157,7 +157,7 @@ export function nameMarks(source: string, marks: Mark[]): string {
       named.setAttribute("data-hint", mark.label);
       if (element.tagName.toLowerCase() !== "text") {
         named.setAttribute("data-lines", String(mark.lines));
-        named.setAttribute("data-font", mark.font === "serif" ? "cormorant" : "nunito");
+        named.setAttribute("data-font", mark.font === "serif" ? "cormorant" : "inter");
       }
     }
   }
@@ -213,7 +213,9 @@ export function fontFor(family: string): PosterFont {
   if (name.includes("lora")) return "lora";
   if (name.includes("cormorant") || name.includes("garamond")) return "cormorant";
   if (/serif|times|georgia|baskerville|didot|bodoni|garamond|caslon|merriweather/.test(name) && !name.includes("sans")) return "playfair";
-  return "nunito";
+  if (name.includes("nunito")) return "nunito";
+  // Inter is Figma's default face; any other sans (or an unknown name) is drawn in it too.
+  return "inter";
 }
 
 /** An attribute or style property, from the element or the nearest ancestor that sets it. */
@@ -282,13 +284,13 @@ export function textField(place: Placeholder, measured: Measured, scale: number)
   if (!area) box = { x: box.x, y: Math.max(0, Math.round(box.y - size * 0.2)), w: box.w, h: Math.round(box.h + size * 0.4) };
   return {
     box, outlined: true,
-    field: { ...base, hint: place.label, maxLength: 80, font: "nunito", weight: 700, color: hex(filled?.getAttribute("fill") ?? "") || "#1f2a24", align: "left", letterSpacing: 0, sizeMax: size, sizeMin: Math.max(8, Math.round(size * 0.6)), lineHeight: lines > 1 ? 1.15 : 1.2, maxLines: lines },
+    field: { ...base, hint: place.label, maxLength: 80, font: "inter", weight: 700, color: hex(filled?.getAttribute("fill") ?? "") || "#1f2a24", align: "left", letterSpacing: 0, sizeMax: size, sizeMin: Math.max(8, Math.round(size * 0.6)), lineHeight: lines > 1 ? 1.15 : 1.2, maxLines: lines },
   };
 }
 
 /**
  * Type hints a prepared file may carry on an isi_ layer, since outlined text keeps no type:
- * data-font (playfair|nunito|lora|cormorant or a Figma font name), data-size, data-lines,
+ * data-font (playfair|nunito|inter|lora|cormorant or a Figma font name), data-size, data-lines,
  * data-weight, data-align, data-color, data-uppercase, data-spacing (em), data-line-height,
  * data-list (one point per line).
  */
@@ -297,7 +299,7 @@ export function withHints(field: Omit<PosterField, "box">, element: Element, sca
   if (![...element.attributes].some(attribute => attribute.name.startsWith("data-") && attribute.name !== "data-box")) return { field, hinted: false };
   const next = { ...field };
   const font = read("font");
-  if (font) { next.font = (["playfair", "nunito", "lora", "cormorant"] as const).find(key => key === font) ?? fontFor(font); next.weight = nearestWeight(next.font, next.weight); }
+  if (font) { next.font = (["playfair", "nunito", "inter", "lora", "cormorant"] as const).find(key => key === font) ?? fontFor(font); next.weight = nearestWeight(next.font, next.weight); }
   const size = Number.parseFloat(read("size") ?? "");
   if (size > 0) { next.sizeMax = Math.round(size * scale); next.sizeMin = Math.max(8, Math.round(next.sizeMax * 0.6)); }
   const lines = Number.parseInt(read("lines") ?? "", 10);
@@ -324,8 +326,8 @@ export function withHints(field: Omit<PosterField, "box">, element: Element, sca
 }
 
 function nearestWeight(font: PosterFont, weight: number): number {
-  const weights: Record<PosterFont, number[]> = { playfair: [400, 600], nunito: [400, 600, 700, 800], lora: [400, 600], cormorant: [500, 600] };
-  return weights[font].reduce((best, w) => Math.abs(w - weight) < Math.abs(best - weight) ? w : best);
+  const weights = posterFonts[font].weights as readonly number[];
+  return weights.reduce((best, w) => Math.abs(w - weight) < Math.abs(best - weight) ? w : best);
 }
 
 /** A photo box: its shape decides the frame (a circle or ellipse is round, a rect keeps its corners). */

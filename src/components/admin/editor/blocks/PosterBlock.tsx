@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ExternalLink, ImagePlus, MousePointerClick, Type } from "lucide-react";
 import { ButtonLink } from "@/components/ui";
 import { PhotoField } from "@/components/admin/shared/PhotoField";
@@ -37,6 +37,10 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [fontsVersion, setFontsVersion] = useState(0);
   useEffect(() => { loadPosterFonts(poster.fields).then(() => setFontsVersion(version => version + 1)); }, [poster.fields]);
+  // Several Figma files arrive one after another, faster than the editor re-renders: each import
+  // builds on the one before it, not on the card as this render saw it.
+  const latest = useRef(poster);
+  useEffect(() => { latest.current = poster; }, [poster]);
   const set = (next: Partial<PosterSettings>) => update("poster", { ...poster, ...next });
   const setField = (key: string, next: (field: PosterField) => PosterField) => set({ fields: poster.fields.map(field => field.key === key ? next(field) : field) });
 
@@ -77,17 +81,22 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
   /**
    * A design from Figma: a first import (or one over a gallery design) replaces the boxes and
    * sizes; a further one, for another size, adds that size to the boxes of the same name.
+   * False when the admin keeps the design they had.
    */
-  function applyFigma(result: FigmaResult) {
-    const again = poster.preset === "" && poster.fields.length > 0;
-    if (!again && poster.fields.length && !window.confirm("Pakai desain dari Figma ini? Kotak dan ukuran desain sebelumnya akan diganti.")) return;
-    const formats = again ? poster.formats : posterFormatSetups([]);
-    set({
-      preset: "", fields: mergeImport(poster.fields, again, { ...result, background: "", overlay: null, parts: [] }),
+  function applyFigma(result: FigmaResult): boolean {
+    const before = latest.current;
+    const again = before.preset === "" && before.fields.length > 0;
+    if (!again && before.fields.length && !window.confirm("Pakai desain dari Figma ini? Kotak dan ukuran desain sebelumnya akan diganti.")) return false;
+    const formats = again ? before.formats : posterFormatSetups([]);
+    const next: PosterSettings = {
+      ...before, preset: "", fields: mergeImport(before.fields, again, { ...result, background: "", overlay: null, parts: [] }),
       formats: { ...formats, [result.format]: { enabled: true, background: result.background, overlay: result.overlay, parts: result.parts } },
-    });
+    };
+    latest.current = next;
+    update("poster", next);
     setFormat(result.format);
     setSelected(null);
+    return true;
   }
 
   // In the preview every box shows its hint, locked or not, so the admin sees each one.

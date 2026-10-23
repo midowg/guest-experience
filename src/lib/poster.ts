@@ -57,6 +57,7 @@ export const paletteOf = (key: string | undefined) => posterPalettes.find(palett
 export const posterFonts = {
   playfair: { family: "'Playfair Display', serif", label: "Playfair Display", weights: [400, 600] },
   nunito: { family: "'Nunito', sans-serif", label: "Nunito", weights: [400, 600, 700, 800] },
+  inter: { family: "'Inter', sans-serif", label: "Inter", weights: [400, 500, 600, 700] },
   lora: { family: "'Lora', serif", label: "Lora", weights: [400, 600] },
   cormorant: { family: "'Cormorant Garamond', serif", label: "Cormorant Garamond", weights: [500, 600] },
 } as const;

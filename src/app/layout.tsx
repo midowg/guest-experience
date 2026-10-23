@@ -4,6 +4,11 @@ import '@fontsource/nunito/400.css';
 import '@fontsource/nunito/600.css';
 import '@fontsource/nunito/700.css';
 import '@fontsource/nunito/800.css';
+// Inter: Figma's default face, for Studio Poster cards designed in Figma.
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
 // Theme heading faces (src/lib/themes.ts). @font-face only downloads a file when a theme uses it.
 import '@fontsource/lora/400.css';
 import '@fontsource/lora/600.css';

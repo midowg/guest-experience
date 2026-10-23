@@ -17,7 +17,10 @@ vi.mock("./figma-import", async original => {
       if (!/id="(isi|foto)_/.test(source)) throw new actual.NoLayersError("SVG ini tidak membawa nama layer.");
       // A stacked mark brings its heading as a label part.
       const parts = source.includes("data-susun") ? [{ key: "info1", art: null, slot: null, label: "<svg/>" }] : [];
-      return { format: "post", background: "<svg/>", overlay: null, parts, fields: [], notes: [] };
+      // data-uji="a4" is the A4 frame; a named Post frame (data-uji="post") brings its Judul sesi box.
+      const format = source.includes('data-uji="a4"') ? "a4" : "post";
+      const fields = source.includes('data-uji="post"') ? [field("judul", "Judul sesi", "text")] : [];
+      return { format, background: "<svg/>", overlay: null, parts, fields, notes: [] };
     },
     backgroundPng: async () => new Blob(["png"], { type: "image/png" }),
   };
@@ -269,4 +272,51 @@ it("names stacked marks for the import and uploads each item's heading as its la
   await waitFor(() => expect(imported).toHaveBeenCalledOnce());
   expect(seen[1]).toMatch(/<path[^>]*id="isi_info1_opsional"[^>]*data-susun="info"/);
   expect(imported.mock.calls[0][0].parts).toEqual([{ key: "info1", art: { url: "", alt: "", srcset: [] }, slot: { url: "", alt: "", srcset: [] }, label: { url: "https://cdn.example/label.webp", alt: "", srcset: [] } }]);
+});
+
+// A batch: a Post frame with layer names, then an A4 frame without (data-uji tells the stand-in importer which).
+const namedPost = design.replace("<svg ", '<svg data-uji="post" ').replace('<g><path class="judul"', '<g id="isi_judul"><path class="judul"');
+const bareA4 = design.replace("<svg ", '<svg data-uji="a4" ');
+const svg = (source: string, name: string) => new File([source], name, { type: "image/svg+xml" });
+
+it("opens the marker for a later file of a batch once the earlier one is in, offering its fields", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true, data: { url: "https://cdn.example/latar.webp", srcset: [] }, message: "ok" }), { status: 200, headers: { "Content-Type": "application/json" } })));
+  const { FigmaImport } = await import("./FigmaImport");
+  const imported = vi.fn();
+  render(<FigmaImport onImport={imported} />);
+  fireEvent.change(screen.getByLabelText(/Unggah desain dari Figma/), { target: { files: [svg(namedPost, "post.svg"), svg(bareA4, "a4.svg")] } });
+
+  await waitFor(() => expect(screen.getByText(/belum punya nama layer/)).toBeTruthy());
+  expect(imported).toHaveBeenCalledOnce();
+  expect(imported.mock.calls[0][0].format).toBe("post");
+  expect(screen.getByRole("status").textContent).toMatch(/Post 4:5 sudah terbaca\. Tandai bagian di a4\.svg/);
+  // The Post file's boxes, though no render has handed them down as `fields` yet.
+  expect(screen.getByText(/Desain ukuran lain sudah ada/)).toBeTruthy();
+
+  fireEvent.click(surface(), at("judul"));
+  fireEvent.change(screen.getByDisplayValue("Teks 1"), { target: { value: "Judul sesi" } });
+  fireEvent.click(screen.getByRole("button", { name: "Selesai, buat 1 kolom" }));
+  await waitFor(() => expect(imported).toHaveBeenCalledTimes(2));
+  expect(imported.mock.calls[1][0].format).toBe("a4");
+  // Named after the Post file's field, the mark takes its key: both sizes fill one form.
+  expect(seen[2]).toMatch(/<path[^>]*id="isi_judul"/);
+  await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/1 kolom ditemukan untuk ukuran Post 4:5 dan A4\./));
+  expect(screen.queryByText(/belum punya nama layer/)).toBeNull();
+});
+
+it("skips a file of a batch on Batal and goes on with the next", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true, data: { url: "https://cdn.example/latar.webp", srcset: [] }, message: "ok" }), { status: 200, headers: { "Content-Type": "application/json" } })));
+  const { FigmaImport } = await import("./FigmaImport");
+  const imported = vi.fn();
+  render(<FigmaImport onImport={imported} />);
+  fireEvent.change(screen.getByLabelText(/Unggah desain dari Figma/), { target: { files: [svg(bareA4, "a4.svg"), svg(namedPost, "post.svg")] } });
+
+  await waitFor(() => expect(screen.getByText(/belum punya nama layer/)).toBeTruthy());
+  expect(imported).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Batal" }));
+  await waitFor(() => expect(imported).toHaveBeenCalledOnce());
+  expect(imported.mock.calls[0][0].format).toBe("post");
+  await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/1 kolom ditemukan untuk ukuran Post 4:5\./));
+  expect(screen.getByText("a4.svg dilewati.")).toBeTruthy();
+  expect(screen.queryByText(/belum punya nama layer/)).toBeNull();
 });

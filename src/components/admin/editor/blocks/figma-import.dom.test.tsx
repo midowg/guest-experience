@@ -56,7 +56,9 @@ describe("Figma layer names", () => {
     expect(matchFormat(540, 960)).toEqual({ format: "story", scale: 2 });
     expect(matchFormat(1000, 300)).toBeNull();
     expect(fontFor("Playfair Display")).toBe("playfair");
-    expect(fontFor("Inter")).toBe("nunito");
+    expect(fontFor("Inter")).toBe("inter");
+    expect(fontFor("Roboto")).toBe("inter");
+    expect(fontFor("Nunito Sans")).toBe("nunito");
     expect(fontFor("Libre Baskerville")).toBe("playfair");
   });
 });
@@ -71,7 +73,7 @@ describe("Figma SVG import", () => {
     expect(byKey.judul.lineHeight).toBe(1);
     expect(byKey.judul.box.post).toMatchObject({ x: 64, y: 40, w: 600 });
     expect(byKey.judul.box.story).toBeNull();
-    expect(byKey.nama_fasilitator).toMatchObject({ font: "nunito", weight: 700, sizeMax: 40 });
+    expect(byKey.nama_fasilitator).toMatchObject({ font: "inter", weight: 700, sizeMax: 40 });
     expect(byKey.foto_utama).toMatchObject({ kind: "photo", radius: 0 });
     expect(byKey.foto_utama.box.post).toEqual({ x: 0, y: 215, w: 1080, h: 660 });
     expect(byKey.foto_fasilitator.radius).toBe(500);
