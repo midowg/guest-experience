@@ -34,6 +34,17 @@ export function sanitizeSvg(source: string): string {
   return new XMLSerializer().serializeToString(doc);
 }
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+/** Shapes that are boxes rather than glyphs: tapped as text, they hold the text. */
+const BOXES = ["rect", "circle", "ellipse", "image"];
+/** How light a colour is, 0 (black) to 1 (white); unknown colours count as light. */
+function luminance(colour: string): number {
+  const value = hex(colour);
+  if (!value) return 1;
+  const [r, g, b] = [1, 3, 5].map(at => Number.parseInt(value.slice(at, at + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
 /** A part the admin tapped: its place among the SVG's elements, and what it becomes. */
 export type Mark = { index: number; kind: "text" | "photo"; label: string; lines: number; font: "sans" | "serif" };
 
@@ -58,14 +69,27 @@ export function nameMarks(source: string, marks: Mark[]): string {
     let key = base, n = 2;
     while (used.has(`${mark.kind}:${key}`)) key = `${base}${n++}`;
     used.add(`${mark.kind}:${key}`);
-    element.setAttribute("id", `${mark.kind === "photo" ? "foto" : "isi"}_${key}`);
-    element.setAttribute("data-label", mark.label);
+    const id = `${mark.kind === "photo" ? "foto" : "isi"}_${key}`;
+    // A box marked as text (a ribbon, a label plate) stays in the design and becomes the text's
+    // area: a clear twin of it is named instead, in a colour that reads on the box.
+    const plate = mark.kind === "text" && BOXES.includes(element.tagName.toLowerCase());
+    const named = plate ? doc.createElementNS(SVG_NS, "g") : element;
+    if (plate) {
+      const twin = element.cloneNode(false) as Element;
+      for (const name of ["id", "fill", "stroke", "filter", "opacity", "href", "xlink:href"]) twin.removeAttribute(name);
+      twin.setAttribute("fill", "none");
+      named.append(twin);
+      element.after(named);
+      named.setAttribute("data-color", luminance(inherited(element, "fill")) < 0.5 ? "#FFFFFF" : "#1F2A24");
+    }
+    named.setAttribute("id", id);
+    named.setAttribute("data-label", mark.label);
     // A live <text> brings its own face, size and lines; only outlined text needs them told.
     if (mark.kind === "text") {
-      element.setAttribute("data-hint", mark.label);
+      named.setAttribute("data-hint", mark.label);
       if (element.tagName.toLowerCase() !== "text") {
-        element.setAttribute("data-lines", String(mark.lines));
-        element.setAttribute("data-font", mark.font === "serif" ? "cormorant" : "nunito");
+        named.setAttribute("data-lines", String(mark.lines));
+        named.setAttribute("data-font", mark.font === "serif" ? "cormorant" : "nunito");
       }
     }
   }
@@ -126,8 +150,10 @@ function inherited(element: Element | null, name: string): string {
   }
   return "";
 }
+/** Figma writes pure white and black by name (fill="white"), not as #ffffff. */
+const NAMED: Record<string, string> = { white: "#ffffff", black: "#000000" };
 const hex = (color: string) => {
-  const value = color.trim().toLowerCase();
+  const value = NAMED[color.trim().toLowerCase()] ?? color.trim().toLowerCase();
   if (/^#[0-9a-f]{6}$/.test(value)) return value;
   if (/^#[0-9a-f]{3}$/.test(value)) return `#${[...value.slice(1)].map(c => c + c).join("")}`;
   const rgb = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(value);
@@ -171,7 +197,7 @@ export function textField(place: Placeholder, measured: Measured, scale: number)
     };
   }
   const filled = element.matches("[fill]:not([fill=none])") ? element : element.querySelector("[fill]:not([fill=none])");
-  const area = element.tagName.toLowerCase() === "g" && !!element.querySelector(":scope > rect[fill=none], :scope > rect:not([fill])");
+  const area = element.tagName.toLowerCase() === "g" && !!element.querySelector(":scope > :is(rect, circle, ellipse)[fill=none], :scope > rect:not([fill])");
   const lines = Math.max(1, Math.min(20, Number.parseInt(element.getAttribute("data-lines") ?? "", 10) || 1));
   // Glyphs of one line stand about 0.95 em tall; each further line adds a line height of 1.15 em.
   const size = Math.max(10, Math.round(box.h * (area ? 0.5 : 1) / (0.95 + (lines - 1) * 1.15)));

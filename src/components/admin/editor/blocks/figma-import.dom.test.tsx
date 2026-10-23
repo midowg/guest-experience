@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { fontFor, matchFormat, mergeImport, nameMarks, NoLayersError, parseLayer, readFigmaSvg, sanitizeSvg } from "@/components/admin/editor/blocks/figma-import";
 
 /** jsdom has no layout: boxes come from each layer's own x/y/width/height (or a data-box). */
-function measure(element: Element) {
+function measure(element: Element): { x: number; y: number; w: number; h: number } {
+  if (element.tagName === "g" && !element.hasAttribute("data-box") && element.firstElementChild) return measure(element.firstElementChild);
   const own = element.getAttribute("data-box");
   if (own) { const [x, y, w, h] = own.split(" ").map(Number); return { x, y, w, h }; }
   const n = (name: string) => Number.parseFloat(element.getAttribute(name) ?? "");
@@ -177,6 +178,20 @@ describe("marking a design by hand", () => {
       { index: 2, kind: "photo", label: "Foto peserta", lines: 1, font: "sans" },
     ]), measure);
     expect(result.fields.map(field => [field.key, field.label])).toEqual([["teks1", "Teks 1"], ["foto_peserta", "Foto peserta"], ["teks2", "Teks 2"]]);
+  });
+
+  it("keeps a box marked as text in the design, as the text's area in a colour that reads on it", () => {
+    // A dark ribbon tapped as text: index 2 is the photo-sized rect, here a dark plate.
+    const ribbon = plain.replace('fill="#EDE6D4"', 'fill="#063E34"');
+    const result = readFigmaSvg(nameMarks(ribbon, [{ index: 2, kind: "text", label: "Kategori", lines: 1, font: "sans" }]), measure);
+    expect(result.fields).toHaveLength(1);
+    expect(result.fields[0]).toMatchObject({ key: "kategori", color: "#ffffff", maxLines: 1 });
+    expect(result.fields[0].box.post).toMatchObject({ x: 0, y: 289, w: 1080, h: 564 });
+    // Figma names pure white: an outlined label in fill="white" stays white.
+    const label = readFigmaSvg(nameMarks(plain.replace('fill="#383838"', 'fill="white"'), [{ index: 1, kind: "text", label: "Kategori", lines: 1, font: "sans" }]), measure);
+    expect(label.fields[0].color).toBe("#ffffff");
+    // The plate itself is still drawn in the background.
+    expect(result.background).toContain('fill="#063E34"');
   });
 
   it("takes out anything that could run before the SVG is shown or measured", () => {

@@ -52,12 +52,20 @@ export function FigmaMarker({ source, onDone, onCancel }: { source: string; onDo
     return () => observer.disconnect();
   }, [marks]);
 
-  const shapeAt = (target: EventTarget) => {
-    const shape = target instanceof Element ? target.closest(SHAPES) : null;
-    return shape && drawing.current?.contains(shape) && !shape.closest("defs, clipPath, mask, pattern") ? shape : null;
+  // The smallest shape whose box holds the point, not only the one painted there: outlined text
+  // is thin strokes, and a tap between them would otherwise land on the plate behind it.
+  const shapeAt = (x: number, y: number) => {
+    let best: Element | null = null, least = Infinity;
+    for (const shape of drawing.current?.querySelectorAll(SHAPES) ?? []) {
+      if (shape.closest("defs, clipPath, mask, pattern")) continue;
+      const rect = shape.getBoundingClientRect();
+      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) continue;
+      if (rect.width * rect.height < least) { best = shape; least = rect.width * rect.height; }
+    }
+    return best;
   };
-  function tap(target: EventTarget) {
-    const shape = shapeAt(target);
+  function tap(x: number, y: number) {
+    const shape = shapeAt(x, y);
     if (!shape) return;
     const index = elements.current.indexOf(shape);
     if (index < 0) return;
@@ -75,8 +83,8 @@ export function FigmaMarker({ source, onDone, onCancel }: { source: string; onDo
       <button type="button" aria-pressed={kind === "photo"} onClick={() => setKind("photo")}><ImageIcon size={16} aria-hidden="true" /> Foto</button>
     </div>
     <div className={s.work}>
-      <div ref={holder} className={s.design} data-kind={kind} onClick={event => tap(event.target)}
-        onPointerMove={event => { const shape = shapeAt(event.target); setHover(shape && holder.current ? boxIn(holder.current, shape) : null); }} onPointerLeave={() => setHover(null)}>
+      <div ref={holder} className={s.design} data-kind={kind} onClick={event => tap(event.clientX, event.clientY)}
+        onPointerMove={event => { const shape = shapeAt(event.clientX, event.clientY); setHover(shape && holder.current ? boxIn(holder.current, shape) : null); }} onPointerLeave={() => setHover(null)}>
         <div ref={drawing} className={s.svg} />
         {hover && <span className={s.hover} style={hover} aria-hidden="true" />}
         {marks.map(mark => boxes[mark.index] && <span key={mark.index} className={s.mark} data-kind={mark.kind} style={boxes[mark.index]} aria-hidden="true"><i>{mark.label}</i></span>)}

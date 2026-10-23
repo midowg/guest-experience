@@ -26,8 +26,9 @@ export function FigmaCheck() {
   };
   useEffect(() => {
     // ?berkas=nama.svg picks another file from public/dev/ (development only).
-    const picked = new URLSearchParams(location.search).get("berkas") ?? "contoh-figma.svg";
-    void fetch(`/dev/${encodeURIComponent(picked.replace(/[^\w.-]/g, ""))}`).then(response => response.text()).then(text => run(sanitizeSvg(text)));
+    // ?url= reads a file from a server on this machine instead (development only).
+    const params = new URLSearchParams(location.search), picked = params.get("berkas") ?? "contoh-figma.svg", local = params.get("url");
+    void fetch(local && /^http:\/\/(127\.0\.0\.1|localhost):\d+\//.test(local) ? local : `/dev/${encodeURIComponent(picked.replace(/[^\w.-]/g, ""))}`).then(response => response.text()).then(text => run(sanitizeSvg(text)));
   }, []);
   if (marking) return <FigmaMarker source={marking} onDone={marks => { setMarking(null); void run(nameMarks(marking, marks)); }} onCancel={() => setMarking(null)} />;
   return <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 420px", gap: 24 }}>
