@@ -69,16 +69,16 @@ function layoutStacks(poster: PosterSettings, values: PosterValues, format: Post
     const bottom = Math.max(...members.map(field => field.box[format]!.y + field.box[format]!.h));
     let cursor = top(members[0]);
     members.forEach((field, index) => {
-      // An optional item shows no hint: left empty it is already gone on screen, as in the
-      // download, so the person sees the ones below move up while typing.
-      const { text, hint } = shownText(field, values, hints && !field.optional);
+      // On screen an empty item still shows its heading and hint, so the person sees what can be
+      // filled; only the download leaves it out (hints off), the ones below moving up.
+      const { text, hint } = shownText(field, values, hints);
       if (!text) return;
       const design = field.box[format]!, dy = cursor - top(field), y = design.y + dy;
       const style = styleOf(field, format, text, hint);
-      // Room for every line it may have at full size, but not below the last item's design.
-      const box = { ...design, y, h: Math.max(0, Math.min(style.maxLines * style.sizeMax * style.lineHeight, bottom - y)) };
-      // Pushed past the stack's bottom, an item has no room left at all: it is not drawn.
-      if (box.h < style.sizeMin * style.lineHeight) return;
+      // Room for every line it may have at full size, but not far below the last item's design;
+      // pushed down by longer items above, an item keeps at least one line rather than vanish.
+      const line = style.sizeMax * style.lineHeight;
+      const box = { ...design, y, h: Math.max(line, Math.min(style.maxLines * line, bottom + line * 2 - y)) };
       const fitted = fitText(createMeasure(field), text, style, box);
       const next = members[index + 1];
       cursor = y + fitted.lines.length * fitted.size * fitted.lineHeight + (next ? Math.max(0, top(next) - (design.y + design.h)) : 0);

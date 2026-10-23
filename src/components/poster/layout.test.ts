@@ -34,14 +34,15 @@ describe("stacked boxes", () => {
     expect(some.c.labelShift).toEqual({ box: c.labelBox!.post, dy: -70 });
   });
 
-  it("pushes the items below down by the lines a longer text adds, never past the stack's bottom", () => {
+  it("pushes the items below down by the lines a longer text adds, keeping each one on the card", () => {
     // 11 px a character at 20 px: about 45 to a 500 px line, so this takes two.
     const long = laid(text({ a: "Bahan rempah pilihan dari kebun warga di lereng gunung dan pesisir", b: "Dua", c: "Tiga tiga tiga tiga tiga tiga tiga tiga tiga tiga tiga tiga tiga tiga tiga" }));
     expect(long.a.fitted.lines).toHaveLength(2);
     expect(long.a.box).toEqual({ x: 50, y: 130, w: 500, h: 60 });
     expect([long.b.box.y, long.b.labelShift?.dy]).toEqual([220, 20]);
-    // c would start at 290, where the stack ends: no room for a line, so it is not drawn at all.
-    expect(long.c).toBeUndefined();
+    // c now starts at 290, where the stack ended in the design: it still gets a line, not dropped.
+    expect(long.c.box.y).toBe(290);
+    expect(long.c.fitted.lines.length).toBeGreaterThanOrEqual(1);
   });
 
   it("keeps every editable item while hints show, each with its hint", () => {
@@ -50,11 +51,14 @@ describe("stacked boxes", () => {
     expect([hinted.a.hint, hinted.b.box.y, hinted.c.box.y, hinted.c.labelShift?.dy]).toEqual([true, 200, 270, 0]);
   });
 
-  it("drops an empty optional item even while hints show, so the ones below move up on screen too", () => {
+  it("keeps an empty optional item and its heading on screen as a hint, and leaves it out of the download", () => {
     const optional = { ...poster, fields: poster.fields.map(field => field.key === "b" ? { ...field, optional: true, hint: "Isi b" } : { ...field, hint: `Isi ${field.key}` }) };
-    const shown = Object.fromEntries(layoutTexts(optional, text({}), "post", true).map(entry => [entry.field.key, entry]));
-    expect(shown.b).toBeUndefined();
-    expect(shown.c.labelShift!.dy).toBeLessThan(0);
+    const onScreen = Object.fromEntries(layoutTexts(optional, text({}), "post", true).map(entry => [entry.field.key, entry]));
+    expect(onScreen.b).toMatchObject({ hint: true });
+    expect(onScreen.b.labelShift).toBeDefined();
+    const download = Object.fromEntries(layoutTexts(optional, text({ a: "Satu", c: "Tiga" }), "post", false).map(entry => [entry.field.key, entry]));
+    expect(download.b).toBeUndefined();
+    expect(download.c.labelShift!.dy).toBeLessThan(0);
   });
 
   it("leaves boxes outside a stack as they were", () => {
