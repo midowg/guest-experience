@@ -106,9 +106,9 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
     catch (error) { if ((error as Error)?.name !== "AbortError") setStatus((error as Error)?.message || "Gagal membuat kartu. Coba lagi."); }
     finally { setBusy(""); }
   }
-  const png = () => run("png", "Gambar diunduh.", async () => downloadBlob(await canvasBlob(await renderPoster(poster, values, format)), posterFilename(title, format, "png")));
+  const png = () => run("png", "Gambar diunduh.", async () => downloadBlob(await canvasBlob(await renderPoster(poster, values, format, 2)), posterFilename(title, format, "png")));
   const pdf = () => run("pdf", "PDF diunduh.", async () => downloadBlob(await posterPdf(poster, values, format), posterFilename(title, format, "pdf")));
-  const share = () => run("share", "Siap dibagikan.", async () => shareBlob(await canvasBlob(await renderPoster(poster, values, format)), posterFilename(title, format, "png"), title));
+  const share = () => run("share", "Siap dibagikan.", async () => shareBlob(await canvasBlob(await renderPoster(poster, values, format, 2)), posterFilename(title, format, "png"), title));
   const ratio = posterSizes[format].width / posterSizes[format].height;
 
   return <div className={`${styles.split} ${look.studio}`}>

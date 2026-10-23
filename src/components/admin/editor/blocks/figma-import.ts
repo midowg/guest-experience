@@ -526,7 +526,8 @@ function boxParts(svg: SVGSVGElement, fields: PosterField[], photos: { element: 
       .map(shape => ({ shape, box: measure(shape, svg) })).filter((item): item is { shape: Element; box: PosterBox } => !!item.box && within(item.box, box));
     const frames = on.filter(item => sameBox(item.box, box)).map(item => item.shape);
     const art = on.filter(item => !sameBox(item.box, box) && central(item.box, box)).map(item => item.shape);
-    result.push({ key: place.key, art, slot: optional.has(place.key) ? [...own, ...frames] : [] });
+    // Every photo box is a slot: shown while empty, gone under the guest's photo (a transparent PNG must not show it).
+    result.push({ key: place.key, art, slot: [...own, ...frames] });
   }
   return result;
 }

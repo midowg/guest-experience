@@ -170,7 +170,8 @@ export function activePalette(poster: Pick<PosterSettings, "palette" | "paletteC
  * an optional one only once it is filled, or on screen while it still shows its hint.
  */
 export const slotShows = (field: PosterField, values: PosterValues, hints: boolean) =>
-  !field.optional || hints || (field.kind === "photo" ? !!values.photos[field.key] : !!fieldText(field, values).trim());
+  // A photo replaces its placeholder box once uploaded (a transparent PNG must not show it through).
+  field.kind === "photo" ? !values.photos[field.key] && (!field.optional || hints) : !field.optional || hints || !!fieldText(field, values).trim();
 /** A size's pictures for one box (see PosterPart), if the design has them. */
 export const partOf = (poster: PosterSettings, format: PosterFormat, key: string) => poster.formats[format].parts?.find(part => part.key === key);
 
