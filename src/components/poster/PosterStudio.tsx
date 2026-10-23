@@ -31,6 +31,8 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
   const [values, setValues] = useState<PosterValues>(empty);
   const [fontsVersion, setFontsVersion] = useState(0);
   const [busy, setBusy] = useState("");
+  // With more than one size: download the one on screen, or every size at once.
+  const [every, setEvery] = useState(false);
   const [status, setStatus] = useState("");
   // A phone can fold the card away to type with more room; it starts open.
   const [hidden, setHidden] = useState(false);
@@ -106,9 +108,16 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
     catch (error) { if ((error as Error)?.name !== "AbortError") setStatus((error as Error)?.message || "Gagal membuat kartu. Coba lagi."); }
     finally { setBusy(""); }
   }
-  const png = () => run("png", "Gambar diunduh.", async () => downloadBlob(await canvasBlob(await renderPoster(poster, values, format, 2)), posterFilename(title, format, "png")));
-  const pdf = () => run("pdf", "PDF diunduh.", async () => downloadBlob(await posterPdf(poster, values, format), posterFilename(title, format, "pdf")));
-  const share = () => run("share", "Siap dibagikan.", async () => shareBlob(await canvasBlob(await renderPoster(poster, values, format, 2)), posterFilename(title, format, "png"), title));
+  const chosen = every && formats.length > 1 ? formats : [format];
+  const images = () => Promise.all(chosen.map(async item => ({ blob: await canvasBlob(await renderPoster(poster, values, item, 2)), filename: posterFilename(title, item, "png") })));
+  const sizes = chosen.map(item => posterSizes[item].label).join(" dan ");
+  const png = () => run("png", chosen.length > 1 ? `${chosen.length} gambar diunduh (${sizes}).` : "Gambar diunduh.", async () => {
+    const made = await images();
+    // One after another: a browser may ask once to allow several downloads.
+    for (const [index, item] of made.entries()) { if (index) await new Promise(resolve => setTimeout(resolve, 400)); downloadBlob(item.blob, item.filename); }
+  });
+  const pdf = () => run("pdf", chosen.length > 1 ? `PDF diunduh: ${chosen.length} halaman (${sizes}).` : "PDF diunduh.", async () => downloadBlob(await posterPdf(poster, values, chosen), posterFilename(title, chosen.join("-"), "pdf")));
+  const share = () => run("share", "Siap dibagikan.", async () => shareBlob(await images(), "", title));
   const ratio = posterSizes[format].width / posterSizes[format].height;
 
   return <div className={`${styles.split} ${look.studio}`}>
@@ -149,6 +158,10 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
             <PosterCanvas poster={poster} values={values} format={format} editing={false} hints selected={null} onSelect={noop} onFrame={setFrame} fontsVersion={fontsVersion} movePhotos />
           </div>
         </div>
+        {formats.length > 1 && <div className={frame.scope} role="group" aria-label="Ukuran yang diunduh">
+          <button type="button" aria-pressed={!every} onClick={() => setEvery(false)}>Ukuran ini ({posterSizes[format].label})</button>
+          <button type="button" aria-pressed={every} onClick={() => setEvery(true)}>Semua ukuran ({formats.length})</button>
+        </div>}
         <div className={frame.actions}>
           <Button type="button" onClick={png} disabled={!!busy} aria-label="Unduh gambar"><Download size={18} aria-hidden="true" /> {busy === "png" ? "Membuat…" : "Unduh"}</Button>
           <Button type="button" variant="secondary" onClick={pdf} disabled={!!busy}><FileText size={18} aria-hidden="true" /> {busy === "pdf" ? "Membuat…" : "PDF"}</Button>

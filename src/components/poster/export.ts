@@ -105,14 +105,16 @@ export function canvasBlob(canvas: HTMLCanvasElement, type = "image/png"): Promi
  * One PDF page: the real paper size for print formats (A4, A5, ID card), otherwise half a point
  * per design pixel. The picture is drawn at 2x so it stays sharp when printed.
  */
-export async function posterPdf(poster: PosterSettings, values: PosterValues, format: PosterFormat): Promise<Blob> {
+export async function posterPdf(poster: PosterSettings, values: PosterValues, formats: PosterFormat | PosterFormat[]): Promise<Blob> {
   const { PDFDocument } = await import("pdf-lib");
-  const [width, height] = pdfPage(format);
-  const png = await canvasBlob(await renderPoster(poster, values, format, 2));
   const pdf = await PDFDocument.create();
-  const image = await pdf.embedPng(await png.arrayBuffer());
-  const page = pdf.addPage([width, height]);
-  page.drawImage(image, { x: 0, y: 0, width, height });
+  // One page per size, each its own paper (A4, or the card's own size).
+  for (const format of Array.isArray(formats) ? formats : [formats]) {
+    const [width, height] = pdfPage(format);
+    const png = await canvasBlob(await renderPoster(poster, values, format, 2));
+    const image = await pdf.embedPng(await png.arrayBuffer());
+    pdf.addPage([width, height]).drawImage(image, { x: 0, y: 0, width, height });
+  }
   const bytes = await pdf.save();
   return new Blob([bytes as BlobPart], { type: "application/pdf" });
 }
@@ -130,11 +132,12 @@ export function canShareFiles(): boolean {
   if (typeof navigator === "undefined" || typeof navigator.canShare !== "function" || typeof File === "undefined") return false;
   try { return navigator.canShare({ files: [new File([""], "poster.png", { type: "image/png" })] }); } catch { return false; }
 }
-export async function shareBlob(blob: Blob, filename: string, title: string): Promise<void> {
-  await navigator.share({ files: [new File([blob], filename, { type: blob.type })], title });
+export async function shareBlob(blob: Blob | { blob: Blob; filename: string }[], filename: string, title: string): Promise<void> {
+  const files = Array.isArray(blob) ? blob.map(item => new File([item.blob], item.filename, { type: item.blob.type })) : [new File([blob], filename, { type: blob.type })];
+  await navigator.share({ files, title });
 }
 
-export function posterFilename(title: string, format: PosterFormat, extension: string) {
+export function posterFilename(title: string, format: PosterFormat | string, extension: string) {
   const slug = title.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50) || "poster";
   return `${slug}-${format}.${extension}`;
 }
