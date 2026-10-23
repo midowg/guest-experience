@@ -132,6 +132,9 @@ describe("Figma SVG import", () => {
     expect(title.box.story).toMatchObject({ x: 72 });
     expect(merged.filter(field => field.key === "foto_utama")).toHaveLength(1);
     expect(merged.some(field => field.key === "lokasi")).toBe(true);
+    // The look comes from the newer file: a colour or tone left from before does not stay.
+    const dark = edited.map(field => field.key === "judul" ? { ...field, color: "#111111", tone: "primary" as const } : field);
+    expect(mergeImport(dark, true, story).find(field => field.key === "judul")).toMatchObject({ color: story.fields.find(field => field.key === "judul")!.color, tone: "", value: "Tetap" });
     // From a gallery design, the import replaces the boxes.
     expect(mergeImport(edited, false, story)).toEqual(story.fields);
   });

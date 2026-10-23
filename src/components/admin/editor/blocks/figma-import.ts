@@ -348,7 +348,8 @@ const fit = (box: PosterBox, format: PosterFormat): PosterBox => {
 /**
  * The poster's boxes after an import: a design from the gallery is replaced; an earlier Figma
  * import gains this size for the boxes it shares, keeps what the admin set on them (label,
- * locked text, hint), and gains the new ones. The new SVG is the whole truth for its size: a
+ * locked text, hint) but takes the look (face, size, colour) from the new SVG, and gains the
+ * new ones. The new SVG is the whole truth for its size: a
  * box it no longer has leaves that size (an older design uploaded for the same size would
  * otherwise still show through), and a box left with no size at all is dropped.
  */
@@ -356,8 +357,12 @@ export function mergeImport(current: PosterField[], fromFigma: boolean, imported
   if (!fromFigma) return imported.fields;
   const byKey = new Map(imported.fields.map(field => [field.key, field]));
   const merged = current.flatMap(field => {
-    const box = { ...field.box, [imported.format]: byKey.get(field.key)?.box[imported.format] ?? null };
-    return Object.values(box).some(Boolean) ? [{ ...field, box }] : [];
+    const next = byKey.get(field.key);
+    const box = { ...field.box, [imported.format]: next?.box[imported.format] ?? null };
+    if (!Object.values(box).some(Boolean)) return [];
+    // A look left over from an earlier file (a colour read wrong, a gallery tone) must not
+    // outlive the design that now draws the box.
+    return [next ? { ...next, label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: field.maxLength, box } : { ...field, box }];
   });
   return [...merged, ...imported.fields.filter(field => !current.some(item => item.key === field.key))];
 }
