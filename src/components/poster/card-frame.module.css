@@ -10,17 +10,19 @@
 /* The card as large as fits: by the window's height beside the form, about a third of a phone screen. */
 .stage { width: 100%; max-width: min(100%, 34rem, calc((100svh - 17rem) * var(--ratio, .8))); }
 @media (max-width: 63.99rem) { .stage { max-width: min(100%, calc(31svh * var(--ratio, .8))); } }
-/* The buttons under a hairline, so they read as the frame's footer. */
-.actions { display: flex; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent); }
-.actions :global(.button) { flex: 1 1 0; min-width: 0; min-height: 46px; padding: .4rem .75rem; font-size: .9375rem; }
+/* One row above the card: the sizes on the left, the download on the right. */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.toolbar > :first-child { justify-content: flex-start; }
+.actions { display: flex; gap: var(--space-2); margin-left: auto; }
+.actions :global(.button) { flex: 0 0 auto; min-height: 42px; padding: .4rem 1rem; font-size: .9375rem; }
 /* The download leads; PDF and share sit beside it. */
-.actions :global(.button--primary) { flex-grow: 1.6; }
+
 .status { min-height: 0; margin: 0; padding: 0 var(--space-1); color: var(--color-caption); font-size: .8125rem; }
 .status:empty { display: none; }
 /* The download button's panel: what to download, opened above the button. */
 .actions { position: relative; }
 .share { flex: 0 0 auto !important; width: 46px; padding: 0 !important; }
-.menu { position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); z-index: 3; display: grid; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); box-shadow: 0 18px 40px -16px rgba(20, 30, 25, .45); }
+.menu { position: absolute; right: 0; top: calc(100% + 8px); width: min(20rem, calc(100vw - 3rem)); z-index: 3; display: grid; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); box-shadow: 0 18px 40px -16px rgba(20, 30, 25, .45); }
 .kinds { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-background); }
 .kinds button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; border: 0; border-radius: 9px; background: none; color: var(--color-text); font: inherit; font-size: .875rem; font-weight: 700; cursor: pointer; }
 .kinds button[aria-checked="true"] { background: var(--color-primary); color: var(--color-on-primary); }

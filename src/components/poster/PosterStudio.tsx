@@ -153,8 +153,8 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
             {hidden ? <><Eye size={16} aria-hidden="true" /> Tampilkan</> : <><EyeOff size={16} aria-hidden="true" /> Sembunyikan</>}
           </button>
         </div>
-        <div id="kartu-pratinjau" className={frame.body}>
-          {(formats.length > 1 || poster.paletteChoice) && <div className={styles.choices}>
+        <div className={frame.toolbar}>
+          {formats.length > 1 || poster.paletteChoice ? <div className={styles.choices}>
             {formats.length > 1 && <div className={styles.formats} role="group" aria-label="Ukuran">
               {formats.map(item => <button key={item} type="button" aria-pressed={format === item} onClick={() => setFormat(item)}>{posterSizes[item].label}</button>)}
             </div>}
@@ -165,25 +165,27 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
                 <span style={{ background: palette.colors.background }} /><span style={{ background: palette.colors.primary }} /><span style={{ background: palette.colors.accent }} />
               </button>)}
             </div>}
-          </div>}
+          </div> : <span />}
+          <div className={frame.actions} ref={panel}>
+            {menu && <div className={frame.menu} role="dialog" aria-label="Pilihan unduhan">
+              <div className={frame.kinds} role="radiogroup" aria-label="Jenis berkas">
+                <button type="button" role="radio" aria-checked={kind === "png"} onClick={() => setKind("png")}><ImageIcon size={16} aria-hidden="true" /> Gambar</button>
+                <button type="button" role="radio" aria-checked={kind === "pdf"} onClick={() => setKind("pdf")}><FileText size={16} aria-hidden="true" /> PDF cetak</button>
+              </div>
+              {formats.length > 1 && <fieldset className={frame.sizes}>
+                <legend>Ukuran</legend>
+                {formats.map(item => <label key={item}><input type="checkbox" checked={picked.includes(item)} onChange={() => toggle(item)} /> {posterSizes[item].label}</label>)}
+              </fieldset>}
+              <Button type="button" onClick={go}><Download size={18} aria-hidden="true" /> Unduh {chosen.length > 1 ? `${chosen.length} ukuran` : posterSizes[chosen[0]].label}</Button>
+            </div>}
+            <Button type="button" onClick={open} disabled={!!busy} aria-expanded={menu} aria-haspopup="dialog" aria-label="Unduh gambar"><Download size={18} aria-hidden="true" /> {busy === "png" || busy === "pdf" ? "Membuat…" : "Unduh"} <ChevronDown size={16} aria-hidden="true" /></Button>
+            {canShare && <Button type="button" variant="secondary" className={frame.share} onClick={share} disabled={!!busy} aria-label="Bagikan"><Share2 size={18} aria-hidden="true" /></Button>}
+          </div>
+        </div>
+        <div id="kartu-pratinjau" className={frame.body}>
           <div className={frame.stage} style={{ "--ratio": ratio } as CSSProperties}>
             <PosterCanvas poster={poster} values={values} format={format} editing={false} hints selected={null} onSelect={noop} onFrame={setFrame} fontsVersion={fontsVersion} movePhotos />
           </div>
-        </div>
-        <div className={frame.actions} ref={panel}>
-          {menu && <div className={frame.menu} role="dialog" aria-label="Pilihan unduhan">
-            <div className={frame.kinds} role="radiogroup" aria-label="Jenis berkas">
-              <button type="button" role="radio" aria-checked={kind === "png"} onClick={() => setKind("png")}><ImageIcon size={16} aria-hidden="true" /> Gambar</button>
-              <button type="button" role="radio" aria-checked={kind === "pdf"} onClick={() => setKind("pdf")}><FileText size={16} aria-hidden="true" /> PDF cetak</button>
-            </div>
-            {formats.length > 1 && <fieldset className={frame.sizes}>
-              <legend>Ukuran</legend>
-              {formats.map(item => <label key={item}><input type="checkbox" checked={picked.includes(item)} onChange={() => toggle(item)} /> {posterSizes[item].label}</label>)}
-            </fieldset>}
-            <Button type="button" onClick={go}><Download size={18} aria-hidden="true" /> Unduh {chosen.length > 1 ? `${chosen.length} ukuran` : posterSizes[chosen[0]].label}</Button>
-          </div>}
-          <Button type="button" onClick={open} disabled={!!busy} aria-expanded={menu} aria-haspopup="dialog" aria-label="Unduh gambar"><Download size={18} aria-hidden="true" /> {busy === "png" || busy === "pdf" ? "Membuat…" : "Unduh"} <ChevronDown size={16} aria-hidden="true" /></Button>
-          {canShare && <Button type="button" variant="secondary" className={frame.share} onClick={share} disabled={!!busy} aria-label="Bagikan"><Share2 size={18} aria-hidden="true" /></Button>}
         </div>
         <p className={frame.status} role="status">{status}</p>
       </section>
