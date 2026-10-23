@@ -45,6 +45,16 @@ function luminance(colour: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/**
+ * About how many letters fit in a text box at its largest size: an average letter is about half
+ * an em wide (wider in capitals and with spacing), rounded up to tens.
+ */
+export function capacity(field: Pick<PosterField, "sizeMax" | "maxLines" | "uppercase" | "letterSpacing">, box: Pick<PosterBox, "w">): number {
+  const letter = field.sizeMax * ((field.uppercase ? 0.62 : 0.5) + Math.max(0, field.letterSpacing));
+  const letters = Math.floor(box.w / Math.max(1, letter)) * Math.max(1, field.maxLines);
+  return Math.min(1000, Math.max(20, Math.ceil(letters / 10) * 10));
+}
+
 /** A part the admin tapped: its place among the SVG's elements, and what it becomes. */
 export type Mark = { index: number; kind: "text" | "photo"; label: string; lines: number; font: "sans" | "serif" };
 
@@ -236,6 +246,8 @@ export function withHints(field: Omit<PosterField, "box">, element: Element, sca
   if (lineHeight >= 0.8 && lineHeight <= 3) next.lineHeight = lineHeight;
   const hint = read("hint");
   if (hint) next.hint = hint.slice(0, 200);
+  const most = Number.parseInt(read("maxlength") ?? "", 10);
+  if (most > 0) next.maxLength = Math.min(1000, most);
   const label = read("label")?.trim();
   if (label) next.label = label.slice(0, 60);
   return { field: next, hinted: true };
@@ -290,6 +302,8 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
     const made = place.kind === "photo" ? photoField(place, { box, element }, scale) : textField(place, { box, element }, scale);
     const hinted = place.kind === "text" ? withHints(made.field, element, scale) : { field: made.field, hinted: false };
     made.field = hinted.field;
+    // Room for as many letters as the box holds, unless the designer set the limit.
+    if (place.kind === "text" && !element.hasAttribute("data-maxlength")) made.field.maxLength = Math.max(made.field.maxLength, capacity(made.field, made.box));
     if ("outlined" in made && made.outlined && !hinted.hinted) outlined++;
     // A bare text layer is only as wide as its sample; a group with a clear box gives the area.
     if (place.kind === "text" && !(element.tagName.toLowerCase() === "g" && element.querySelector("rect"))) bare++;
@@ -362,7 +376,7 @@ export function mergeImport(current: PosterField[], fromFigma: boolean, imported
     if (!Object.values(box).some(Boolean)) return [];
     // A look left over from an earlier file (a colour read wrong, a gallery tone) must not
     // outlive the design that now draws the box.
-    return [next ? { ...next, label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: field.maxLength, box } : { ...field, box }];
+    return [next ? { ...next, label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: Math.max(field.maxLength, next.maxLength), box } : { ...field, box }];
   });
   return [...merged, ...imported.fields.filter(field => !current.some(item => item.key === field.key))];
 }

@@ -133,7 +133,7 @@ Tanpa nama layer pun SVG tetap diterima: admin menandai bagiannya sendiri setela
    - tekan **Selesai, buat … kolom**. Bagian yang tidak diketuk tetap menjadi latar.
 
    Unggah lagi untuk ukuran lain (misalnya Story); kolom dengan nama yang sama digabung. Kalau tidak punya desain Figma, buka **atau pakai desain bawaan**.
-2. **2 · Kolom untuk peserta:** satu baris per kolom. Ubah namanya bila perlu. Matikan **Diisi peserta** untuk teks tetap dari panitia (misalnya tautan reservasi) dan isi teksnya. Untuk kolom yang diisi peserta, petunjuknya boleh diubah. Pratinjau kartu ada di sampingnya.
+2. **2 · Kolom untuk peserta:** satu baris per kolom. Ubah namanya bila perlu. Matikan **Diisi peserta** untuk teks tetap dari panitia (misalnya tautan reservasi) dan isi teksnya. Untuk kolom yang diisi peserta, petunjuk dan **Maks. huruf** boleh diubah. Batas huruf awalnya dihitung dari besar kotak di desain. Pratinjau kartu ada di sampingnya.
 3. **Lanjutan** (dilipat, jarang perlu): geser kotak, ubah ukuran huruf dan warna, ukuran kartu, dan latar manual.
 4. Simpan dan publikasikan, lalu bagikan tautannya: `invitation.werkudara.group/KODE` untuk acara Kartu, atau `KODE/poster` bila Studio Poster dipakai di acara biasa. Tautan selalu memakai domain publik, juga saat admin dibuka dari laptop.
 

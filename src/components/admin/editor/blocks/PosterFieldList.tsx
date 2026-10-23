@@ -7,7 +7,8 @@ import s from "./card-figma.module.css";
 
 /**
  * The card's boxes as a short list: a name, whether guests fill it, and then either the fixed
- * text (filled by the committee) or the hint guests see. Everything else waits under "Lanjutan".
+ * text (filled by the committee) or the hint guests see, with how many letters they may type.
+ * Everything else waits under "Lanjutan".
  */
 export function PosterFieldList({ fields, onChange }: { fields: PosterField[]; onChange: (key: string, field: PosterField) => void }) {
   return <ul className={s.fieldList} aria-label="Kolom kartu">
@@ -21,7 +22,13 @@ export function PosterFieldList({ fields, onChange }: { fields: PosterField[]; o
           <label className={base.check}><input type="checkbox" role="switch" checked={field.editable} onChange={event => set("editable", event.target.checked)} aria-label={`${field.label} diisi peserta`} /> Diisi peserta</label>
         </div>
         {field.editable
-          ? <input id={`${path}.hint`} className="input" value={field.hint} maxLength={200} onChange={event => set("hint", event.target.value)} placeholder="Petunjuk untuk peserta (opsional)" aria-label={`Petunjuk ${field.label}`} />
+          ? <div className={s.fieldGuide}>
+            <input id={`${path}.hint`} className="input" value={field.hint} maxLength={200} onChange={event => set("hint", event.target.value)} placeholder="Petunjuk untuk peserta (opsional)" aria-label={`Petunjuk ${field.label}`} />
+            {field.kind === "text" && <label className={s.fieldLimit}>Maks. huruf
+              <input id={`${path}.maxLength`} className="input" type="number" inputMode="numeric" min={1} max={1000} value={field.maxLength}
+                onChange={event => { const value = Math.round(Number(event.target.value)); if (value >= 1 && value <= 1000) set("maxLength", value); }} />
+            </label>}
+          </div>
           : field.kind === "text" && <textarea id={`${path}.value`} className="textarea" rows={1} value={field.value} maxLength={2000} onChange={event => set("value", event.target.value)} placeholder="Isi tetap dari panitia" aria-label={`Isi tetap ${field.label}`} />}
       </li>;
     })}

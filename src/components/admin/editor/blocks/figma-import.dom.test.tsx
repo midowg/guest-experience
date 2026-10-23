@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fontFor, matchFormat, mergeImport, nameMarks, NoLayersError, parseLayer, readFigmaSvg, sanitizeSvg } from "@/components/admin/editor/blocks/figma-import";
+import { capacity, fontFor, matchFormat, mergeImport, nameMarks, NoLayersError, parseLayer, readFigmaSvg, sanitizeSvg } from "@/components/admin/editor/blocks/figma-import";
 
 /** jsdom has no layout: boxes come from each layer's own x/y/width/height (or a data-box). */
 function measure(element: Element): { x: number; y: number; w: number; h: number } {
@@ -195,6 +195,15 @@ describe("marking a design by hand", () => {
     expect(label.fields[0].color).toBe("#ffffff");
     // The plate itself is still drawn in the background.
     expect(result.background).toContain('fill="#063E34"');
+  });
+
+  it("lets a text box take as many letters as it holds, or the designer's own limit", () => {
+    // A paragraph area as the prepared JCWF flyer has it: 619 px wide, four lines at 15 px.
+    const paragraph = `<svg width="1080" height="1350" xmlns="http://www.w3.org/2000/svg"><g id="isi_tentang_sesi" data-font="nunito" data-size="15" data-lines="4"><rect x="61" y="906" width="619" height="100" fill="none"/><path d="M0 0h1v1z" data-box="61 910 600 60" fill="#383838"/></g><g id="isi_jam" data-size="14" data-maxlength="12"><rect x="775" y="924" width="245" height="20" fill="none"/></g></svg>`;
+    const [about, time] = readFigmaSvg(paragraph, measure).fields;
+    expect(about.maxLength).toBe(capacity(about, { w: 619 }));
+    expect(about.maxLength).toBeGreaterThanOrEqual(300);
+    expect(time.maxLength).toBe(12);
   });
 
   it("takes out anything that could run before the SVG is shown or measured", () => {
