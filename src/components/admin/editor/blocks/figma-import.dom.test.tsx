@@ -134,6 +134,17 @@ describe("Figma SVG import", () => {
     // From a gallery design, the import replaces the boxes.
     expect(mergeImport(edited, false, story)).toEqual(story.fields);
   });
+
+  it("lets a new SVG for the same size replace the old one's boxes, not pile on them", () => {
+    const post = readFigmaSvg(liveText, measure);
+    const old = [...post.fields, { ...post.fields[0], key: "deskripsi_lama", hint: "Ceritakan sesi ini dalam 2–3 kalimat" }];
+    const again = mergeImport(old, true, post);
+    expect(again.some(field => field.key === "deskripsi_lama")).toBe(false);
+    expect(again.map(field => field.key)).toEqual(post.fields.map(field => field.key));
+    // A box that also stands in another size keeps that size and leaves only this one.
+    const both = [{ ...old[old.length - 1], box: { ...old[old.length - 1].box, story: { x: 1, y: 1, w: 10, h: 10 } } }];
+    expect(mergeImport(both, true, post).find(field => field.key === "deskripsi_lama")?.box).toMatchObject({ post: null, story: { x: 1 } });
+  });
 });
 
 describe("marking a design by hand", () => {

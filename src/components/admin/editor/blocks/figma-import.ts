@@ -322,14 +322,16 @@ const fit = (box: PosterBox, format: PosterFormat): PosterBox => {
 /**
  * The poster's boxes after an import: a design from the gallery is replaced; an earlier Figma
  * import gains this size for the boxes it shares, keeps what the admin set on them (label,
- * locked text, hint), and gains the new ones.
+ * locked text, hint), and gains the new ones. The new SVG is the whole truth for its size: a
+ * box it no longer has leaves that size (an older design uploaded for the same size would
+ * otherwise still show through), and a box left with no size at all is dropped.
  */
 export function mergeImport(current: PosterField[], fromFigma: boolean, imported: FigmaImport): PosterField[] {
   if (!fromFigma) return imported.fields;
   const byKey = new Map(imported.fields.map(field => [field.key, field]));
-  const merged = current.map(field => {
-    const next = byKey.get(field.key);
-    return next ? { ...field, box: { ...field.box, [imported.format]: next.box[imported.format] } } : field;
+  const merged = current.flatMap(field => {
+    const box = { ...field.box, [imported.format]: byKey.get(field.key)?.box[imported.format] ?? null };
+    return Object.values(box).some(Boolean) ? [{ ...field, box }] : [];
   });
   return [...merged, ...imported.fields.filter(field => !current.some(item => item.key === field.key))];
 }
