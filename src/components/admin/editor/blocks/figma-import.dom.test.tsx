@@ -404,6 +404,15 @@ describe("marking a design by hand", () => {
     expect(time.maxLength).toBe(12);
   });
 
+  it("takes a wide slot's icon set to one side as its upload mark", () => {
+    // The flyer's optional logo slot: a wide box with its camera icon near the left and its label beside it.
+    const slot = `<svg width="1080" height="1350" xmlns="http://www.w3.org/2000/svg"><rect width="1080" height="1350" fill="#FCF9F2"/><rect id="foto_logo_opsional" x="834.4" y="1265.4" width="199.2" height="66.2" fill="#F5EDDE"/><path class="ikon" d="M0 0h1v1z" data-box="849.8 1287.3 24.4 21.6" fill="#BD850F"/><path class="label" d="M0 0h1v1z" data-box="895.3 1286.9 113.7 22.7" fill="#383838"/></svg>`;
+    const result = readFigmaSvg(slot, measure);
+    expect(result.parts.find(part => part.key === "foto_logo")?.art).toContain('class="ikon"');
+    expect(result.background).not.toContain('class="ikon"');
+    expect(result.background).not.toContain('class="label"');
+  });
+
   it("takes out anything that could run before the SVG is shown or measured", () => {
     const clean = sanitizeSvg(`<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(2)</script><foreignObject><div/></foreignObject><a href="javascript:alert(3)"><rect width="1" height="1" onclick="x()"/></a></svg>`);
     expect(clean).not.toMatch(/onload|onclick|<script|foreignObject|javascript:/);

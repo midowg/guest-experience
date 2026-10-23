@@ -576,10 +576,13 @@ function stackBands(svg: SVGSVGElement, items: StackItem[], photos: { box: Poste
 }
 const within = (a: PosterBox, b: PosterBox) => a.x >= b.x - 2 && a.y >= b.y - 2 && a.x + a.w <= b.x + b.w + 2 && a.y + a.h <= b.y + b.h + 2;
 const sameBox = (a: PosterBox, b: PosterBox) => Math.abs(a.x - b.x) <= 3 && Math.abs(a.y - b.y) <= 3 && Math.abs(a.w - b.w) <= 6 && Math.abs(a.h - b.h) <= 6;
-/** Small and in the middle of the box: a mark on it, not a ribbon laid along its edge. */
+/**
+ * Small and clear of the box's edges: a mark drawn on it (a camera icon, "Foto fasilitator"),
+ * not a ribbon laid along its edge. A wide slot may set its icon well to one side.
+ */
 const central = (a: PosterBox, b: PosterBox) => {
-  const cx = a.x + a.w / 2 - b.x, cy = a.y + a.h / 2 - b.y;
-  return a.w * a.h < b.w * b.h * 0.4 && cx > b.w * 0.15 && cx < b.w * 0.85 && cy > b.h * 0.15 && cy < b.h * 0.85;
+  const margin = Math.max(3, Math.min(b.w, b.h) * 0.04);
+  return a.w * a.h < b.w * b.h * 0.4 && a.x >= b.x + margin && a.y >= b.y + margin && a.x + a.w <= b.x + b.w - margin && a.y + a.h <= b.y + b.h - margin;
 };
 
 function* ancestors(element: Element) { for (let node: Element | null = element; node; node = node.parentElement) yield node; }
