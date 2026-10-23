@@ -48,6 +48,9 @@ export async function renderPoster(poster: PosterSettings, values: PosterValues,
     context.restore();
   }
 
+  const overlay = poster.formats[format].overlay?.url;
+  if (overlay) context.drawImage(await loadImage(overlay), 0, 0, size.width, size.height);
+
   for (const { field, fitted } of layoutTexts(poster, values, format, false)) {
     const box = field.box[format]!;
     const measure = createMeasure(field);

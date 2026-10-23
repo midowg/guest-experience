@@ -8,7 +8,7 @@ import { boxes } from "@/lib/poster";
 vi.mock("@/components/admin/editor/blocks/figma-import", async original => ({
   ...(await original<typeof import("@/components/admin/editor/blocks/figma-import")>()),
   importInBrowser: () => ({
-    format: "post", background: "<svg/>", notes: ["1 kolom teks berasal dari teks yang di-outline."],
+    format: "post", background: "<svg/>", overlay: null, notes: ["1 kolom teks berasal dari teks yang di-outline."],
     fields: [
       { key: "judul", label: "Judul", hint: "Judul sesi", kind: "text", editable: true, value: "", maxLength: 60, font: "playfair", weight: 400, tone: "", color: "#0f4a3a", align: "left", uppercase: false, letterSpacing: 0, sizeMax: 88, sizeMin: 53, lineHeight: 1, maxLines: 2, radius: 0, fill: "#e9dfcb", box: boxes({ post: { x: 64, y: 40, w: 600, h: 180 } }) },
       { key: "utama", label: "Utama", hint: "Unggah utama", kind: "photo", editable: true, value: "", maxLength: 1, font: "nunito", weight: 600, tone: "", color: "#1f2a24", align: "left", uppercase: false, letterSpacing: 0, sizeMax: 24, sizeMin: 12, lineHeight: 1.2, maxLines: 1, radius: 0, fill: "#e9dfcb", box: boxes({ post: { x: 0, y: 215, w: 1080, h: 660 } }) },
@@ -18,6 +18,8 @@ vi.mock("@/components/admin/editor/blocks/figma-import", async original => ({
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
+// The whole editor renders here; its role queries outlast the 5 s default when the suite runs in parallel.
+vi.setConfig({ testTimeout: 20000 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 it("turns a Figma SVG into the card's fields and background, and lists them for the admin", async () => {

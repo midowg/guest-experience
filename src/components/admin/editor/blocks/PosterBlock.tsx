@@ -83,8 +83,8 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
     if (!again && poster.fields.length && !window.confirm("Pakai desain dari Figma ini? Kotak dan ukuran desain sebelumnya akan diganti.")) return;
     const formats = again ? poster.formats : posterFormatSetups([]);
     set({
-      preset: "", fields: mergeImport(poster.fields, again, { ...result, background: "" }),
-      formats: { ...formats, [result.format]: { enabled: true, background: result.background } },
+      preset: "", fields: mergeImport(poster.fields, again, { ...result, background: "", overlay: null }),
+      formats: { ...formats, [result.format]: { enabled: true, background: result.background, overlay: result.overlay } },
     });
     setFormat(result.format);
     setSelected(null);

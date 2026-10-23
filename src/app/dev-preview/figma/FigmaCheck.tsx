@@ -17,8 +17,9 @@ export function FigmaCheck() {
         const result = importInBrowser(await (await fetch(`/dev/${encodeURIComponent(picked.replace(/[^\w.-]/g, ""))}`)).text());
         const png = await backgroundPng(result.background, result.format);
         const url = URL.createObjectURL(png);
-        setPoster({ ...emptyPoster(), enabled: true, formats: { ...posterFormatSetups([]), [result.format]: { enabled: true, background: { url, alt: "", srcset: [] } } }, fields: result.fields });
-        setReport(JSON.stringify({ format: result.format, png: png.size, notes: result.notes, fields: result.fields.map(field => ({ key: field.key, kind: field.kind, box: field.box[result.format], font: field.font, size: field.sizeMax, lines: field.maxLines, align: field.align, color: field.color })) }, null, 1));
+        const overlay = result.overlay ? URL.createObjectURL(await backgroundPng(result.overlay, result.format)) : "";
+        setPoster({ ...emptyPoster(), enabled: true, formats: { ...posterFormatSetups([]), [result.format]: { enabled: true, background: { url, alt: "", srcset: [] }, overlay: { url: overlay, alt: "", srcset: [] } } }, fields: result.fields });
+        setReport(JSON.stringify({ format: result.format, png: png.size, overlay: !!result.overlay, notes: result.notes, fields: result.fields.map(field => ({ key: field.key, kind: field.kind, box: field.box[result.format], font: field.font, size: field.sizeMax, lines: field.maxLines, align: field.align, color: field.color })) }, null, 1));
       } catch (error) { setReport(`GAGAL: ${(error as Error).message}`); }
     })();
   }, []);

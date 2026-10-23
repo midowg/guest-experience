@@ -17,7 +17,7 @@ const readText = (file: File) => new Promise<string>((resolve, reject) => {
   reader.readAsText(file);
 });
 
-export type FigmaResult = { format: PosterFormat; background: PlainImage; fields: PosterField[]; notes: string[] };
+export type FigmaResult = { format: PosterFormat; background: PlainImage; overlay: PlainImage; fields: PosterField[]; notes: string[] };
 
 /**
  * One button: a frame exported from Figma as SVG becomes the card. The layers named isi_… and
@@ -36,7 +36,9 @@ export function FigmaImport({ onImport }: { onImport: (result: FigmaResult) => v
       const imported = importInBrowser(await readText(file));
       const png = await backgroundPng(imported.background, imported.format);
       const background = await uploadPhoto(new File([png], `latar-${imported.format}.png`, { type: "image/png" }));
-      onImport({ format: imported.format, background: { ...background, alt: "" }, fields: imported.fields, notes: imported.notes });
+      // The overlay keeps its transparency: uploaded as PNG, drawn over the guest's photos.
+      const overlay = imported.overlay ? await uploadPhoto(new File([await backgroundPng(imported.overlay, imported.format)], `atas-${imported.format}.png`, { type: "image/png" })) : { url: "", srcset: [] };
+      onImport({ format: imported.format, background: { ...background, alt: "" }, overlay: { ...overlay, alt: "" }, fields: imported.fields, notes: imported.notes });
       setMessage({ tone: "ok", text: `${imported.fields.length} kolom ditemukan untuk ukuran ${posterSizes[imported.format].label}. Periksa di bawah, lalu simpan.`, notes: imported.notes });
     } catch (error) {
       setMessage({ tone: "error", text: error instanceof Error && !("status" in error) ? error.message : errorMessage(error), notes: [] });

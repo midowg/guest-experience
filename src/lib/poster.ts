@@ -85,7 +85,11 @@ export type PosterField = {
   /** Where the box sits in each format; null when the format does not show it. */
   box: Record<PosterFormat, PosterBox | null>;
 };
-export type PosterFormatSetup = { enabled: boolean; background: PlainImage };
+/**
+ * A size's images: the background, under everything, and an overlay drawn over the photos and
+ * under the text: what lies on top of a photo in Figma (a ribbon, a frame) stays on top of it.
+ */
+export type PosterFormatSetup = { enabled: boolean; background: PlainImage; overlay: PlainImage };
 export type PosterSettings = {
   enabled: boolean;
   /** What the card is for, and the preset it came from (its background shows until one is uploaded). */
@@ -108,7 +112,7 @@ export type PosterPhoto = { url: string; frame: PhotoFrame };
 export type PosterValues = { text: Record<string, string>; photos: Record<string, PosterPhoto>; palette?: string };
 
 const emptyImage = (): PlainImage => ({ url: "", alt: "", srcset: [] });
-const formatSetups = (enabled: readonly PosterFormat[]) => Object.fromEntries(posterFormats.map(format => [format, { enabled: enabled.includes(format), background: emptyImage() }])) as Record<PosterFormat, PosterFormatSetup>;
+const formatSetups = (enabled: readonly PosterFormat[]) => Object.fromEntries(posterFormats.map(format => [format, { enabled: enabled.includes(format), background: emptyImage(), overlay: emptyImage() }])) as Record<PosterFormat, PosterFormatSetup>;
 export function emptyPoster(): PosterSettings {
   return { enabled: false, cardType: "poster", preset: "", palette: "rempah", paletteChoice: false, formats: formatSetups(["post", "story"]), fields: [] };
 }
@@ -129,7 +133,7 @@ export function normalizePoster(poster: Partial<PosterSettings> | undefined): Po
     palette: poster.palette ?? "rempah",
     paletteChoice: !!poster.paletteChoice,
     // Saved before more sizes existed: the new ones are off.
-    formats: Object.fromEntries(posterFormats.map(format => [format, { enabled: saved[format]?.enabled ?? (poster.formats ? false : base.formats[format].enabled), background: { ...emptyImage(), ...saved[format]?.background } }])) as Record<PosterFormat, PosterFormatSetup>,
+    formats: Object.fromEntries(posterFormats.map(format => [format, { enabled: saved[format]?.enabled ?? (poster.formats ? false : base.formats[format].enabled), background: { ...emptyImage(), ...saved[format]?.background }, overlay: { ...emptyImage(), ...saved[format]?.overlay } }])) as Record<PosterFormat, PosterFormatSetup>,
     fields: (poster.fields ?? []).map(field => ({ ...field, tone: field.tone ?? "", box: boxes(field.box ?? {}) })),
   };
 }

@@ -17,6 +17,8 @@ export type FigmaImport = {
   format: PosterFormat;
   /** The SVG with the text layers taken out, sized to the format: drawn as the background. */
   background: string;
+  /** What lies on top of a photo in Figma (a ribbon over the picture), drawn over the guest's photo; null when nothing does. */
+  overlay: string | null;
   fields: PosterField[];
   notes: string[];
 };
@@ -214,13 +216,37 @@ export function readFigmaSvg(source: string, measure: (element: Element, svg: SV
     notes.push("Ada teks tetap yang belum di-outline: hurufnya bisa berbeda dari Figma. Centang “Outline text” saat ekspor.");
   }
 
-  // The background: the same frame without the text boxes (photo shapes stay as placeholders).
-  for (const element of [...svg.querySelectorAll("[id]")]) if (parseLayer(element.getAttribute("id") ?? "")?.kind === "text") element.remove();
+  // Shapes Figma draws after a photo, over its area, would hide behind the guest's photo: they
+  // go to the overlay, drawn above the photos. Everything else stays in the background.
+  const textBox = (element: Element) => [...ancestors(element)].some(node => parseLayer(node.getAttribute("id") ?? "")?.kind === "text");
+  const photoLayers = [...svg.querySelectorAll("[id]")].filter(element => parseLayer(element.getAttribute("id") ?? "")?.kind === "photo")
+    .map(element => ({ element, box: measure(element, svg) })).filter((photo): photo is { element: Element; box: PosterBox } => !!photo.box);
+  const above = [...svg.querySelectorAll(SHAPES)].filter(element => !element.closest("defs, clipPath, mask, pattern") && !textBox(element)
+    && photoLayers.some(photo => photo.element !== element && !photo.element.contains(element)
+      && !!(photo.element.compareDocumentPosition(element) & 4) && overlaps(measure(element, svg), photo.box)));
+
   svg.setAttribute("width", String(posterSizes[format].width));
   svg.setAttribute("height", String(posterSizes[format].height));
   if (!svg.getAttribute("viewBox")) svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  return { format, background: new XMLSerializer().serializeToString(svg), fields, notes };
+  for (const element of [...svg.querySelectorAll("[id]")]) if (parseLayer(element.getAttribute("id") ?? "")?.kind === "text") element.remove();
+  let overlay: string | null = null;
+  if (above.length) {
+    const mark = "data-wk-atas";
+    for (const element of above) element.setAttribute(mark, "");
+    const top = svg.cloneNode(true) as SVGSVGElement;
+    for (const element of top.querySelectorAll(SHAPES)) if (!element.hasAttribute(mark) && !element.closest("defs, clipPath, mask, pattern")) element.setAttribute("visibility", "hidden");
+    for (const element of top.querySelectorAll(`[${mark}]`)) element.removeAttribute(mark);
+    overlay = new XMLSerializer().serializeToString(top);
+    for (const element of above) element.remove();
+    notes.push(`${above.length} elemen yang menumpang di atas foto (misalnya pita label) tetap tampil di atas foto peserta.`);
+  }
+  return { format, background: new XMLSerializer().serializeToString(svg), overlay, fields, notes };
 }
+
+const SHAPES = "path, rect, circle, ellipse, line, polyline, polygon, image, use, text";
+function* ancestors(element: Element) { for (let node: Element | null = element; node; node = node.parentElement) yield node; }
+/** Whether two boxes share more than a hairline: shapes that only touch a photo's edge stay in the background. */
+const overlaps = (a: PosterBox | null, b: PosterBox, edge = 1) => !!a && a.w > 0 && a.h > 0 && a.x < b.x + b.w - edge && b.x < a.x + a.w - edge && a.y < b.y + b.h - edge && b.y < a.y + a.h - edge;
 
 const fit = (box: PosterBox, format: PosterFormat): PosterBox => {
   const { width, height } = posterSizes[format];
@@ -265,10 +291,15 @@ export function importInBrowser(source: string): FigmaImport {
   try {
     const live = holder.querySelector("svg");
     if (!live) throw new Error("Berkas ini bukan SVG yang terbaca. Ekspor frame dari Figma sebagai SVG.");
-    // Boxes measured on the live copy, matched to the parsed copy by id.
-    const boxesById = new Map<string, PosterBox | null>();
-    for (const element of live.querySelectorAll("[id]")) boxesById.set(element.getAttribute("id")!, measureInDocument(element, live));
-    return readFigmaSvg(source, element => boxesById.get(element.getAttribute("id") ?? "") ?? null);
+    // Boxes measured on the live copy, matched to the parsed copy by position in the document:
+    // both come from the same source, so their elements line up one to one.
+    const liveAll = [...live.querySelectorAll("*")];
+    let parsedAll: Element[] | null = null;
+    return readFigmaSvg(source, (element, svg) => {
+      parsedAll ??= [...svg.querySelectorAll("*")];
+      const match = liveAll[parsedAll.indexOf(element)];
+      return match && match.tagName.toLowerCase() === element.tagName.toLowerCase() ? measureInDocument(match, live) : null;
+    });
   } finally { holder.remove(); }
 }
 

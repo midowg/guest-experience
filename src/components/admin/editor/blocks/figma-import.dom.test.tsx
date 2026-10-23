@@ -94,6 +94,24 @@ describe("Figma SVG import", () => {
     expect(title.box.post).toEqual({ x: 61, y: 150, w: 600, h: 150 });
   });
 
+  it("keeps what Figma draws over a photo on top of it, as an overlay", () => {
+    const ribbon = `<svg width="1080" height="1350" xmlns="http://www.w3.org/2000/svg">
+      <rect id="dasar" width="1080" height="1350" fill="#FCF9F2"/>
+      <rect id="foto_utama" x="0" y="289" width="1080" height="564" fill="#EDE6D4"/>
+      <rect id="pita" x="60" y="821" width="304" height="32" fill="#063E34"/>
+      <g id="isi_kategori" data-box="73 827 284 20"><rect width="284" height="20" fill="none"/><path d="M0 0h1v1z" fill="#fff"/></g>
+      <rect id="garis" x="60" y="1017" width="620" height="1" fill="#BD850F"/>
+    </svg>`;
+    const result = readFigmaSvg(ribbon, measure);
+    expect(result.overlay).toContain('id="pita"');
+    // In the overlay only the ribbon shows; in the background it is gone, the rest stays.
+    expect(result.overlay).toMatch(/id="dasar"[^>]*visibility="hidden"/);
+    expect(result.background).not.toContain('id="pita"');
+    expect(result.background).toContain('id="garis"');
+    expect(result.background).not.toContain("isi_kategori");
+    expect(readFigmaSvg(liveText, measure).overlay).toBeNull();
+  });
+
   it("explains a frame of another size and a frame without boxes", () => {
     expect(() => readFigmaSvg(`<svg width="800" height="300" xmlns="http://www.w3.org/2000/svg"><rect id="isi_a" width="10" height="10"/></svg>`, measure)).toThrow(/tidak cocok/);
     expect(() => readFigmaSvg(`<svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg"><rect id="hiasan" width="10" height="10"/></svg>`, measure)).toThrow(/isi_/);

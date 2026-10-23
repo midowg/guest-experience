@@ -53,6 +53,7 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
   const texts = useMemo(() => fontsVersion > 0 ? layoutTexts(poster, values, format, hints) : [], [poster, values, format, hints, fontsVersion]);
   const palette = activePalette(poster, values);
   const background = posterBackground(poster, format, palette);
+  const overlay = poster.formats[format].overlay?.url ?? "";
   const ring = Math.max(2, 2 / scale);
 
   function photoDown(field: PosterField, event: ReactPointerEvent<HTMLDivElement>) {
@@ -117,6 +118,9 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
           {!photo && (open || hints) && <span className={styles.photoHint} style={{ fontSize: Math.max(18, Math.min(34, box.w / 9)) }}><Camera size={Math.max(28, Math.min(64, box.w / 6))} aria-hidden="true" />{field.hint}</span>}
         </div>;
       })}
+      {/* Over the photos, under the text: what sat on top of a photo in Figma. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- drawn at design size, like the background */}
+      {overlay && <img className={styles.background} src={overlay} alt="" crossOrigin="anonymous" draggable={false} />}
       {texts.map(({ field, fitted, hint }) => {
         const box = field.box[format]!;
         const open = editing && field.editable;

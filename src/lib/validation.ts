@@ -108,8 +108,8 @@ const posterFieldSchema = z.object({
   radius: z.number().min(0).max(500), fill: hexColor,
   box: z.object(Object.fromEntries(posterFormats.map(format => [format, posterBox.nullable().default(null)])) as Record<(typeof posterFormats)[number], z.ZodDefault<z.ZodNullable<typeof posterBox>>>),
 });
-const posterFormatSchema = z.object({ enabled: z.boolean(), background: plainImage.default(emptyImage) });
-const posterFormatsSchema = z.object(Object.fromEntries(posterFormats.map(format => [format, posterFormatSchema.default({ enabled: false, background: emptyImage })])) as Record<(typeof posterFormats)[number], z.ZodDefault<typeof posterFormatSchema>>);
+const posterFormatSchema = z.object({ enabled: z.boolean(), background: plainImage.default(emptyImage), overlay: plainImage.default(emptyImage) });
+const posterFormatsSchema = z.object(Object.fromEntries(posterFormats.map(format => [format, posterFormatSchema.default({ enabled: false, background: emptyImage, overlay: emptyImage })])) as Record<(typeof posterFormats)[number], z.ZodDefault<typeof posterFormatSchema>>);
 const cardTypeSchema = z.enum(cardTypes.map(type => type.key) as [(typeof cardTypes)[number]["key"], ...(typeof cardTypes)[number]["key"][]]);
 const posterFieldsSchema = z.array(posterFieldSchema).max(30).refine(fields => new Set(fields.map(field => field.key)).size === fields.length, "Kunci kolom poster tidak boleh sama.");
 export const posterSchema = z.object({
