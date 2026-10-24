@@ -105,7 +105,7 @@ const posterFieldSchema = z.object({
   tone: z.union([z.enum(paletteRoles), z.literal("")]).default(""), color: hexColor,
   align: z.enum(["left", "center", "right"]), uppercase: z.boolean(), letterSpacing: z.number().min(-0.1).max(1),
   sizeMax: z.number().min(6).max(300), sizeMin: z.number().min(6).max(300), lineHeight: z.number().min(0.8).max(3), maxLines: z.number().int().min(1).max(20),
-  radius: z.number().min(0).max(500), fill: hexColor, optional: z.boolean().default(false), list: z.boolean().default(false),
+  radius: z.number().min(0).max(500), fill: hexColor, optional: z.boolean().default(false), zoomOut: z.boolean().default(false), list: z.boolean().default(false),
   stack: z.string().regex(/^[a-z0-9_]{1,40}$/).optional(),
   labelBox: z.object(Object.fromEntries(posterFormats.map(format => [format, posterBox.optional()])) as Record<(typeof posterFormats)[number], z.ZodOptional<typeof posterBox>>).optional(),
   sizes: z.object(Object.fromEntries(posterFormats.map(format => [format, z.number().min(0.2).max(5).optional()])) as Record<(typeof posterFormats)[number], z.ZodOptional<z.ZodNumber>>).optional(),

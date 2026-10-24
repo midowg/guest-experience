@@ -85,6 +85,11 @@ export type PosterField = {
   radius: number; fill: string;
   /** May be left empty: its slot (the box, the frame, a plate behind it) is then left out of the card. */
   optional?: boolean;
+  /**
+   * A photo box that may be zoomed out below filling the box, down to the whole image fitting
+   * inside it: for logos and community photos whose shape differs from the box.
+   */
+  zoomOut?: boolean;
   /** A list of points: one per line of the text, each drawn after a bullet. */
   list?: boolean;
   /** The type in a size whose design sets it larger or smaller, as a factor of sizeMax/sizeMin. */
@@ -252,9 +257,24 @@ export function fitText(measure: Measure, raw: string, field: Pick<PosterField, 
   return done(min, [{ text, indent: 0 }], true);
 }
 
-/** Where a framed photo lands in its box: the same maths as the hero framing (x, y in %). */
-export function photoPlacement(box: Pick<PosterBox, "w" | "h">, natural: { width: number; height: number }, frame: PhotoFrame) {
-  const scale = Math.max(box.w / natural.width, box.h / natural.height) * frame.zoom;
+/**
+ * The smallest zoom a photo may have in its box, where 1 fills the box ("cover"). A box that may
+ * be zoomed out goes down to the whole image fitting inside it ("contain"); any other stays at 1.
+ */
+export function photoMinZoom(box: Pick<PosterBox, "w" | "h">, natural: { width: number; height: number }, zoomOut = false) {
+  if (!zoomOut || !(natural.width > 0) || !(natural.height > 0) || !(box.w > 0) || !(box.h > 0)) return 1;
+  const across = box.w / natural.width, down = box.h / natural.height;
+  return Math.min(1, Math.min(across, down) / Math.max(across, down));
+}
+
+/**
+ * Where a framed photo lands in its box: the same maths as the hero framing (x, y in %). The zoom
+ * never goes below the box's minimum (see photoMinZoom). Along a side where the photo is smaller
+ * than the box, x/y move it inside the box (50 centres it); where it is larger, they pick the crop.
+ */
+export function photoPlacement(box: Pick<PosterBox, "w" | "h">, natural: { width: number; height: number }, frame: PhotoFrame, zoomOut = false) {
+  const zoom = Math.max(photoMinZoom(box, natural, zoomOut), frame.zoom);
+  const scale = Math.max(box.w / natural.width, box.h / natural.height) * zoom;
   const width = natural.width * scale, height = natural.height * scale;
   return { width, height, left: (box.w - width) * frame.x / 100, top: (box.h - height) * frame.y / 100 };
 }

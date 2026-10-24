@@ -49,7 +49,7 @@ export async function renderPoster(poster: PosterSettings, values: PosterValues,
     const box = field.box[format], photo = values.photos[field.key];
     if (field.kind !== "photo" || !box || !photo) continue;
     const image = await loadImage(photo.url);
-    const place = photoPlacement(box, { width: image.naturalWidth, height: image.naturalHeight }, photo.frame);
+    const place = photoPlacement(box, { width: image.naturalWidth, height: image.naturalHeight }, photo.frame, field.zoomOut);
     context.save();
     roundedClip(context, box.x, box.y, box.w, box.h, field.radius);
     context.drawImage(image, box.x + place.left, box.y + place.top, place.width, place.height);

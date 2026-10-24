@@ -3,7 +3,7 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Camera } from "lucide-react";
 import { dragFrame } from "@/lib/hero-framing";
-import { activePalette, partOf, photoPlacement, posterSizes, slotShows, toneColor, type PosterBox, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { activePalette, partOf, photoMinZoom, photoPlacement, posterSizes, slotShows, toneColor, type PosterBox, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import type { PhotoFrame } from "@/lib/types";
 import { fontOf, layoutTexts, posterBackground } from "./layout";
 import styles from "./poster.module.css";
@@ -24,7 +24,8 @@ type Props = {
   onArrange?: (key: string, box: PosterBox) => void;
 };
 
-const clampZoom = (zoom: number) => Math.min(3, Math.max(1, Math.round(zoom * 100) / 100));
+/** `min` is the box's smallest zoom (photoMinZoom): 1, or below it for a box that may be zoomed out. */
+const clampZoom = (zoom: number, min = 1) => Math.min(3, Math.max(min, Math.round(zoom * 100) / 100));
 
 /**
  * The poster at its design size (1080 px wide), scaled to the space it has. Boxes sit at the
@@ -85,15 +86,17 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
     if (!state || state.key !== field.key || !photo || !box || !image || !state.pointers.has(event.pointerId)) return;
     const before = state.pointers.get(event.pointerId)!;
     state.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const min = photoMinZoom(box, image, field.zoomOut);
     if (state.pointers.size >= 2) {
       // Two fingers: the photo zooms as they spread or pinch.
       const distance = spread(state.pointers);
-      if (state.distance > 0) state.frame = { ...state.frame, zoom: clampZoom(state.frame.zoom * distance / state.distance) };
+      if (state.distance > 0) state.frame = { ...state.frame, zoom: clampZoom(state.frame.zoom * distance / state.distance, min) };
       state.distance = distance;
     } else {
       const dx = (event.clientX - before.x) / scale, dy = (event.clientY - before.y) / scale;
       if (Math.abs(dx) + Math.abs(dy) < 0.5) return;
-      state.frame = dragFrame(state.frame, dx, dy, box.w, box.h, image.width, image.height);
+      // Dragged at the zoom it shows in this box (photoPlacement), keeping the frame's own zoom.
+      state.frame = { ...dragFrame({ ...state.frame, zoom: Math.max(min, state.frame.zoom) }, dx, dy, box.w, box.h, image.width, image.height), zoom: state.frame.zoom };
     }
     state.moved = true;
     onFrame(field.key, state.frame);
@@ -117,13 +120,13 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
         if (field.kind !== "photo" || !box) return null;
         const photo = values.photos[field.key];
         const image = natural[field.key];
-        const place = photo && image ? photoPlacement(box, image, photo.frame) : null;
+        const place = photo && image ? photoPlacement(box, image, photo.frame, field.zoomOut) : null;
         const open = editing && field.editable;
         if (!photo && !open && !(hints && field.editable)) return null;
         return <div key={field.key} data-field={field.key} className={styles.photo} data-open={open || undefined} data-movable={(movePhotos && photo && field.editable) || undefined} data-selected={selected === field.key || undefined}
           style={{ left: box.x, top: box.y, width: box.w, height: box.h, borderRadius: field.radius, "--ring": `${ring}px` } as CSSProperties}
           onPointerDown={event => photoDown(field, event)} onPointerMove={event => photoMove(field, event)} onPointerUp={event => photoUp(field, event)} onPointerCancel={event => photoUp(field, event)}
-          onWheel={event => { if (!(open || movePhotos) || !photo || !field.editable) return; onFrame(field.key, { ...photo.frame, zoom: clampZoom(photo.frame.zoom - Math.sign(event.deltaY) * 0.08) }); }}>
+          onWheel={event => { if (!(open || movePhotos) || !photo || !field.editable) return; onFrame(field.key, { ...photo.frame, zoom: clampZoom(photo.frame.zoom - Math.sign(event.deltaY) * 0.08, image ? photoMinZoom(box, image, field.zoomOut) : 1) }); }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- a local photo (object URL), never uploaded */}
           {photo && <img src={photo.url} alt="" draggable={false} onLoad={event => { const { naturalWidth: width, naturalHeight: height } = event.currentTarget; setNatural(current => current[field.key]?.width === width && current[field.key]?.height === height ? current : { ...current, [field.key]: { width, height } }); }}
             style={place ? { left: place.left, top: place.top, width: place.width, height: place.height } : { opacity: 0 }} />}

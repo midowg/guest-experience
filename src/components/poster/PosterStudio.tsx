@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { ChevronDown, Download, Eye, EyeOff, FileText, Image as ImageIcon, ImagePlus, RotateCcw, Share2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui";
-import { activePalette, fieldText, posterFormats, posterPalettes, posterSizes, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { activePalette, fieldText, photoMinZoom, posterFormats, posterPalettes, posterSizes, type PosterBox, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import type { PhotoFrame } from "@/lib/types";
 import { PosterCanvas } from "./PosterCanvas";
 import { layoutTexts, loadPosterFonts } from "./layout";
@@ -139,7 +139,7 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
     <form className={styles.form} aria-label="Isi kartu" onSubmit={event => event.preventDefault()}>
       {fields.map(field => field.kind === "text"
         ? <TextField key={field.key} field={field} value={fieldText(field, values)} truncated={truncated.has(field.key)} onChange={text => setText(field.key, text)} />
-        : <PhotoField key={field.key} field={field} photo={values.photos[field.key]} onPhoto={file => void setPhoto(field.key, file)} onZoom={zoom => { const photo = values.photos[field.key]; if (photo) setFrame(field.key, { ...photo.frame, zoom }); }} />)}
+        : <PhotoField key={field.key} field={field} box={field.box[format]} photo={values.photos[field.key]} onPhoto={file => void setPhoto(field.key, file)} onZoom={zoom => { const photo = values.photos[field.key]; if (photo) setFrame(field.key, { ...photo.frame, zoom }); }} />)}
       {fields.length === 0 && <p className={styles.hint}>Kartu ini tidak punya kolom untuk diisi. Langsung unduh saja.</p>}
       <button type="button" className={styles.reset} onClick={() => void reset()}><RotateCcw size={15} aria-hidden="true" /> Hapus semua isian</button>
     </form>
@@ -207,8 +207,20 @@ function TextField({ field, value, truncated, onChange }: { field: PosterField; 
   </div>;
 }
 
-function PhotoField({ field, photo, onPhoto, onZoom }: { field: PosterField; photo?: PosterValues["photos"][string]; onPhoto: (file: File | null) => void; onZoom: (zoom: number) => void }) {
+function PhotoField({ field, box, photo, onPhoto, onZoom }: { field: PosterField; box: PosterBox | null; photo?: PosterValues["photos"][string]; onPhoto: (file: File | null) => void; onZoom: (zoom: number) => void }) {
   const id = `kartu-${field.key}`;
+  // A box that may be zoomed out needs the photo's own size: its smallest zoom fits the whole photo in the box.
+  const [natural, setNatural] = useState<{ url: string; width: number; height: number } | null>(null);
+  const url = field.zoomOut ? photo?.url : undefined;
+  useEffect(() => {
+    if (!url) return;
+    let live = true;
+    const image = new Image();
+    image.onload = () => { if (live) setNatural({ url, width: image.naturalWidth, height: image.naturalHeight }); };
+    image.src = url;
+    return () => { live = false; };
+  }, [url]);
+  const min = box && natural && natural.url === url ? Math.floor(photoMinZoom(box, natural, field.zoomOut) * 100) / 100 : 1;
   return <div className={styles.field}>
     <span className={styles.label}>{field.label}{field.optional && <span className={styles.optional}> (opsional)</span>}</span>
     <div className={styles.photoActions}>
@@ -216,7 +228,8 @@ function PhotoField({ field, photo, onPhoto, onZoom }: { field: PosterField; pho
       <input id={id} className="sr-only" type="file" accept="image/*" aria-label={`${photo ? "Ganti" : "Pilih"} ${field.label}`} onChange={event => { onPhoto(event.target.files?.[0] ?? null); event.target.value = ""; }} />
       {photo && <button type="button" className="button button--quiet" onClick={() => onPhoto(null)}><Trash2 size={18} aria-hidden="true" /> Hapus</button>}
     </div>
-    {photo && <label className={styles.zoom}>Zoom<input type="range" min={1} max={3} step={0.05} value={photo.frame.zoom} onChange={event => onZoom(Number(event.target.value))} /></label>}
+    {photo && <label className={styles.zoom}>Zoom<input type="range" min={min} max={3} step={0.05} value={Math.max(min, photo.frame.zoom)} onChange={event => onZoom(Number(event.target.value))} /></label>}
+    {photo && field.zoomOut && <p className={styles.counter}>Geser ke kiri untuk mengecilkan agar logo/foto tidak terpotong.</p>}
     <p className={styles.counter}>{photo ? "Geser foto di kartu untuk mengatur posisinya." : "Foto hanya diproses di perangkat ini, tidak diunggah ke server."}</p>
   </div>;
 }

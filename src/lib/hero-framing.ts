@@ -38,10 +38,16 @@ export function normalizeEvent(event: EventRecord): EventRecord {
     poster: normalizePoster(event.poster),
   };
 }
+/**
+ * Moves a framed photo by a drag of dx, dy pixels. Along a side where the photo is larger than the
+ * box, x/y pick the crop; where it is smaller (a photo zoomed out below "cover"), they move it
+ * inside the box. Either way it follows the finger and stops at the box's edges.
+ */
 export function dragFrame(frame: PhotoFrame, dx: number, dy: number, width: number, height: number, naturalWidth: number, naturalHeight: number): PhotoFrame {
   const cover = Math.max(width / naturalWidth, height / naturalHeight) * frame.zoom;
-  const overflowX = Math.max(0, naturalWidth * cover - width);
-  const overflowY = Math.max(0, naturalHeight * cover - height);
+  // Signed: positive when the photo overflows the box, negative when it is smaller than it.
+  const slackX = naturalWidth * cover - width;
+  const slackY = naturalHeight * cover - height;
   const clamp = (value: number) => Math.max(0, Math.min(100, value));
-  return { ...frame, x: overflowX > 0 ? clamp(frame.x - dx / overflowX * 100) : frame.x, y: overflowY > 0 ? clamp(frame.y - dy / overflowY * 100) : frame.y };
+  return { ...frame, x: Math.abs(slackX) > 0.01 ? clamp(frame.x - dx / slackX * 100) : frame.x, y: Math.abs(slackY) > 0.01 ? clamp(frame.y - dy / slackY * 100) : frame.y };
 }

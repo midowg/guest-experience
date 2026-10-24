@@ -337,9 +337,11 @@ export function photoField(place: Placeholder, measured: Measured, scale: number
   const tag = shape?.tagName.toLowerCase();
   const radius = tag === "circle" || tag === "ellipse" ? ROUND : Math.round((Number.parseFloat(shape?.getAttribute("rx") ?? "") || 0) * scale);
   const label = element.getAttribute("data-label")?.trim().slice(0, 60) || place.label;
+  // data-fit="contain": a logo or community photo whose shape differs from the box may be zoomed out to fit whole.
+  const zoomOut = element.getAttribute("data-fit")?.trim().toLowerCase() === "contain";
   return {
     box: measured.box,
-    field: { key: place.key, label, hint: `Unggah ${label.toLowerCase()}`, kind: "photo", editable: true, value: "", maxLength: 1, font: "nunito", weight: 600, tone: "", color: "#1f2a24", align: "left", uppercase: false, letterSpacing: 0, sizeMax: 24, sizeMin: 12, lineHeight: 1.2, maxLines: 1, radius: Math.min(ROUND, radius), fill: hex(shape?.getAttribute("fill") ?? "") || "#e9dfcb" },
+    field: { key: place.key, label, hint: `Unggah ${label.toLowerCase()}`, kind: "photo", editable: true, value: "", maxLength: 1, font: "nunito", weight: 600, tone: "", color: "#1f2a24", align: "left", uppercase: false, letterSpacing: 0, sizeMax: 24, sizeMin: 12, lineHeight: 1.2, maxLines: 1, radius: Math.min(ROUND, radius), fill: hex(shape?.getAttribute("fill") ?? "") || "#e9dfcb", ...(zoomOut ? { zoomOut: true } : {}) },
   };
 }
 
@@ -616,7 +618,7 @@ export function mergeImport(current: PosterField[], fromFigma: boolean, imported
     const headed = (made: PosterField): PosterField => { const rest = { ...made }; delete rest.labelBox; return Object.keys(labelBox).length ? { ...rest, labelBox } : rest; };
     if (!next) return [headed({ ...field, box })];
     const stack = next.stack ?? field.stack;
-    const kept = { label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: Math.max(field.maxLength, next.maxLength), optional: !!(next.optional || field.optional), list: !!(next.list || field.list), ...(stack ? { stack } : {}) };
+    const kept = { label: field.label, hint: field.hint, editable: field.editable, value: field.value, maxLength: Math.max(field.maxLength, next.maxLength), optional: !!(next.optional || field.optional), zoomOut: !!(next.zoomOut || field.zoomOut), list: !!(next.list || field.list), ...(stack ? { stack } : {}) };
     // A design for another size fills the same box: the look stays the first design's, and only
     // how much larger or smaller its type is in this size is kept.
     if (posterFormats.some(format => format !== imported.format && field.box[format])) {
