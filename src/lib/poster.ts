@@ -259,12 +259,13 @@ export function fitText(measure: Measure, raw: string, field: Pick<PosterField, 
 
 /**
  * The smallest zoom a photo may have in its box, where 1 fills the box ("cover"). A box that may
- * be zoomed out goes down to the whole image fitting inside it ("contain"); any other stays at 1.
+ * be zoomed out goes below the whole image fitting inside it ("contain"), down to 40% of that, so
+ * even a logo shaped like its box can sit smaller with room around it; any other stays at 1.
  */
 export function photoMinZoom(box: Pick<PosterBox, "w" | "h">, natural: { width: number; height: number }, zoomOut = false) {
   if (!zoomOut || !(natural.width > 0) || !(natural.height > 0) || !(box.w > 0) || !(box.h > 0)) return 1;
   const across = box.w / natural.width, down = box.h / natural.height;
-  return Math.min(1, Math.min(across, down) / Math.max(across, down));
+  return Math.min(1, Math.min(across, down) / Math.max(across, down)) * 0.4;
 }
 
 /**
