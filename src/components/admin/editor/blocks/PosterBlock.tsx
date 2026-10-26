@@ -7,6 +7,7 @@ import { PhotoField } from "@/components/admin/shared/PhotoField";
 import { EventLink } from "@/components/admin/editor/blocks/EventLink";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { PosterCanvas } from "@/components/poster/PosterCanvas";
+import { PosterZoom } from "@/components/poster/PosterZoom";
 import { layoutTexts, loadPosterFonts } from "@/components/poster/layout";
 import { boxes, cardTypes, paletteOf, POSTER_LABEL, posterFormats, posterFormatSetups, posterPalettes, posterSizes, type CardType, type PosterBox, type PosterField, type PosterFormat, type PosterSettings } from "@/lib/poster";
 import { posterPresets, presetOf, presetPoster } from "@/lib/poster-presets";
@@ -104,6 +105,10 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
   const preview: PosterSettings = { ...poster, fields: poster.fields.map(field => ({ ...field, editable: true, optional: false })) };
   // The type a text box really shows in the arranged size, which its box or stack may hold below
   // the size it is set to: the inspector says so instead of a slider that seems to do nothing.
+  // The card full screen, to check that the text fits (Perbesar).
+  const zoomed = shown && <PosterZoom format={shown}>
+    <PosterCanvas poster={preview} values={empty} format={shown} editing={false} hints selected={null} onSelect={noop} onFrame={noop} fontsVersion={fontsVersion} />
+  </PosterZoom>;
   const shownType = (field: PosterField) => {
     if (field.kind !== "text" || fontsVersion === 0) return undefined;
     const laid = layoutTexts(preview, empty, shown, true).find(entry => entry.field.key === field.key);
@@ -155,6 +160,7 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
           <div className={s.canvas} style={{ maxWidth: posterSizes[shown].width > posterSizes[shown].height ? "100%" : `${Math.min(22, Math.round(34 * posterSizes[shown].width / posterSizes[shown].height))}rem` }}>
             <PosterCanvas poster={preview} values={empty} format={shown} editing={false} hints selected={null} onSelect={noop} onFrame={noop} fontsVersion={fontsVersion} />
           </div>
+          {zoomed}
         </div>
       </div>
     </section>}
@@ -177,6 +183,7 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
             onArrange={(key, box: PosterBox) => setField(key, field => ({ ...field, box: { ...field.box, [shown]: box } }))} />
         </div>
         <div className={s.side}>
+          {zoomed}
           {current
             ? <PosterInspector key={current.key} field={current} index={poster.fields.indexOf(current)} formats={usable} palette={palette} errors={errors} shown={shownType(current)}
               onChange={next => setField(current.key, () => next)} onClose={() => setSelected(null)}

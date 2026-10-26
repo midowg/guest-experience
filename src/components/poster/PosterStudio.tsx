@@ -6,12 +6,14 @@ import { Button } from "@/components/ui";
 import { activePalette, fieldText, photoMinZoom, posterFormats, posterPalettes, posterSizes, type PosterBox, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import type { PhotoFrame } from "@/lib/types";
 import { PosterCanvas } from "./PosterCanvas";
+import { PosterZoom } from "./PosterZoom";
 import { layoutTexts, loadPosterFonts } from "./layout";
 import { canShareFiles, canvasBlob, downloadBlob, posterFilename, posterPdf, renderPoster, shareBlob } from "./export";
 import { clearDraft, loadDraft, preparePhoto, saveDraft } from "./draft";
 import styles from "./card-studio.module.css";
 import frame from "./card-frame.module.css";
 import look from "./card-look.module.css";
+import zoom from "./card-zoom.module.css";
 
 type Props = { eventId: string; eventTitle: string; poster: PosterSettings };
 const empty: PosterValues = { text: {}, photos: {} };
@@ -152,9 +154,14 @@ export function PosterStudio({ eventId, eventTitle, poster }: Props) {
       <section className={frame.frame} data-hidden={hidden || undefined} aria-label="Pratinjau kartu">
         <div className={frame.head}>
           <span className={frame.title}>Pratinjau</span>
-          <button type="button" className={frame.toggle} aria-expanded={!hidden} aria-controls="kartu-pratinjau" onClick={() => setHidden(value => !value)}>
-            {hidden ? <><Eye size={16} aria-hidden="true" /> Tampilkan</> : <><EyeOff size={16} aria-hidden="true" /> Sembunyikan</>}
-          </button>
+          <span className={zoom.tools}>
+            <PosterZoom format={format}>
+              <PosterCanvas poster={poster} values={values} format={format} editing={false} hints selected={null} onSelect={noop} onFrame={noop} fontsVersion={fontsVersion} />
+            </PosterZoom>
+            <button type="button" className={frame.toggle} aria-expanded={!hidden} aria-controls="kartu-pratinjau" onClick={() => setHidden(value => !value)}>
+              {hidden ? <><Eye size={16} aria-hidden="true" /> Tampilkan</> : <><EyeOff size={16} aria-hidden="true" /> Sembunyikan</>}
+            </button>
+          </span>
         </div>
         <div className={frame.toolbar}>
           {formats.length > 1 || poster.paletteChoice ? <div className={styles.choices}>
