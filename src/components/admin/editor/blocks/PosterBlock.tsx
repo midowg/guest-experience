@@ -7,7 +7,7 @@ import { PhotoField } from "@/components/admin/shared/PhotoField";
 import { EventLink } from "@/components/admin/editor/blocks/EventLink";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { PosterCanvas } from "@/components/poster/PosterCanvas";
-import { loadPosterFonts } from "@/components/poster/layout";
+import { layoutTexts, loadPosterFonts } from "@/components/poster/layout";
 import { boxes, cardTypes, paletteOf, POSTER_LABEL, posterFormats, posterFormatSetups, posterPalettes, posterSizes, type CardType, type PosterBox, type PosterField, type PosterFormat, type PosterSettings } from "@/lib/poster";
 import { posterPresets, presetOf, presetPoster } from "@/lib/poster-presets";
 import { eventPath, posterPath } from "@/lib/routes";
@@ -102,6 +102,13 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
   // In the preview every box shows its hint, locked or not, so the admin sees each one.
   // Every box shows, an optional or stacked one too, so the admin sees where each sits.
   const preview: PosterSettings = { ...poster, fields: poster.fields.map(field => ({ ...field, editable: true, optional: false })) };
+  // The type a text box really shows in the arranged size, which its box or stack may hold below
+  // the size it is set to: the inspector says so instead of a slider that seems to do nothing.
+  const shownType = (field: PosterField) => {
+    if (field.kind !== "text" || fontsVersion === 0) return undefined;
+    const laid = layoutTexts(preview, empty, shown, true).find(entry => entry.field.key === field.key);
+    return laid && { format: shown, size: laid.fitted.size, lines: laid.fitted.lines.length };
+  };
 
   return <div className="stack">
     {card && text("title", "Nama kartu", 180, false, "Tampil sebagai judul halaman dan nama berkas unduhan.")}
@@ -171,7 +178,7 @@ export function PosterBlock({ kit }: { kit: EditorKit }) {
         </div>
         <div className={s.side}>
           {current
-            ? <PosterInspector key={current.key} field={current} index={poster.fields.indexOf(current)} formats={usable} palette={palette} errors={errors}
+            ? <PosterInspector key={current.key} field={current} index={poster.fields.indexOf(current)} formats={usable} palette={palette} errors={errors} shown={shownType(current)}
               onChange={next => setField(current.key, () => next)} onClose={() => setSelected(null)}
               onRemove={() => { if (window.confirm(`Hapus kotak “${current.label}”?`)) { set({ fields: poster.fields.filter(field => field.key !== current.key) }); setSelected(null); } }} />
             : <div className={s.tips}>

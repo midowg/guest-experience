@@ -134,7 +134,7 @@ Tanpa nama layer pun SVG tetap diterima: admin menandai bagiannya sendiri setela
    - beri nama tiap kolom. Untuk teks yang sudah di-outline, pilih juga jumlah baris dan gaya huruf (Sans/Serif) agar ukuran hurufnya tertebak dengan benar;
    - **Tandai semua teks otomatis** menandai semua teks sekaligus; tinggal hapus tanda pada teks yang tetap (logo sponsor, footer);
    - mode **Poin** menggabungkan beberapa baris (misalnya daftar di samping foto) menjadi satu kolom poin-poin: ketuk tiap barisnya, ikon ▸ di depannya ikut terpilih. Peserta lalu menulis satu poin per baris;
-   - mode **Info** untuk panel berisi pasangan judul kecil + isi (misalnya "Cocok untuk", "Persiapan"): ketuk tiap isinya. Isian yang dikosongkan peserta hilang bersama judul kecil dan garis di atasnya, dan isian di bawahnya naik (seperti auto layout di Figma). Di Figma, cukup beri nama grup panelnya `susun_info` dan tiap isinya `isi_…`;
+   - mode **Info** untuk panel berisi pasangan judul kecil + isi (misalnya "Cocok untuk", "Persiapan"): ketuk tiap isinya. Isian yang dikosongkan peserta hilang bersama judul kecil dan garis di atasnya, dan isian di bawahnya naik (seperti auto layout di Figma). Panel tidak pernah melewati batas bawahnya di desain: kalau isinya terlalu panjang atau hurufnya terlalu besar, semua isian di panel mengecil bersama sampai muat. Di Figma, cukup beri nama grup panelnya `susun_info` dan tiap isinya `isi_…`;
    - centang **Opsional** untuk bagian yang boleh dikosongkan peserta;
    - tekan **Selesai, buat … kolom**. Bagian yang tidak diketuk tetap menjadi latar.
 

@@ -58,7 +58,9 @@ function styleOf(field: PosterField, format: PosterFormat, text: string, hint: b
 /**
  * The stacks of a format laid like Figma's auto layout: items one under another in design order,
  * each as tall as its lines, the design's gaps kept between them. An empty item leaves with its
- * heading and the ones below move up; a longer one pushes them down, never past the stack's bottom.
+ * heading and the ones below move up; a longer one pushes them down. A stack never runs past the
+ * bottom of its design (the panel it sits in): when its items need more room, they all shrink
+ * together, down to their smallest sizes, until they fit.
  */
 function layoutStacks(poster: PosterSettings, values: PosterValues, format: PosterFormat, hints: boolean): Map<string, LaidText> {
   const laid = new Map<string, LaidText>();
@@ -67,24 +69,34 @@ function layoutStacks(poster: PosterSettings, values: PosterValues, format: Post
   for (const name of names) {
     const members = poster.fields.filter(field => field.kind === "text" && field.stack === name && field.box[format]).sort((a, b) => top(a) - top(b));
     const bottom = Math.max(...members.map(field => field.box[format]!.y + field.box[format]!.h));
-    let cursor = top(members[0]);
-    members.forEach((field, index) => {
-      // On screen an empty item still shows its heading and hint, so the person sees what can be
-      // filled; only the download leaves it out (hints off), the ones below moving up.
-      const { text, hint } = shownText(field, values, hints);
-      if (!text) return;
-      const design = field.box[format]!, dy = cursor - top(field), y = design.y + dy;
-      const style = styleOf(field, format, text, hint);
-      // Room for every line it may have at full size, but not far below the last item's design;
-      // pushed down by longer items above, an item keeps at least one line rather than vanish.
-      const line = style.sizeMax * style.lineHeight;
-      const box = { ...design, y, h: Math.max(line, Math.min(style.maxLines * line, bottom + line * 2 - y)) };
-      const fitted = fitText(createMeasure(field), text, style, box);
-      const next = members[index + 1];
-      cursor = y + fitted.lines.length * fitted.size * fitted.lineHeight + (next ? Math.max(0, top(next) - (design.y + design.h)) : 0);
-      const label = field.labelBox?.[format];
-      laid.set(field.key, { field, text, hint, fitted, box, ...(label ? { labelShift: { box: label, dy } } : {}) });
-    });
+    // One pass at a scale of every item's type; returns the items and where the last one ends.
+    const lay = (scale: number) => {
+      const items = new Map<string, LaidText>();
+      let cursor = top(members[0]), end = cursor;
+      members.forEach((field, index) => {
+        // On screen an empty item still shows its heading and hint, so the person sees what can be
+        // filled; only the download leaves it out (hints off), the ones below moving up.
+        const { text, hint } = shownText(field, values, hints);
+        if (!text) return;
+        const design = field.box[format]!, dy = cursor - top(field), y = design.y + dy;
+        const base = styleOf(field, format, text, hint);
+        const style = scale === 1 ? base : { ...base, sizeMax: Math.max(base.sizeMin, base.sizeMax * scale) };
+        // Room for every line it may have, down to the stack's bottom; an item pushed that far
+        // still keeps one line rather than vanish.
+        const line = style.sizeMax * style.lineHeight;
+        const box = { ...design, y, h: Math.max(line, Math.min(style.maxLines * line, bottom - y)) };
+        const fitted = fitText(createMeasure(field), text, style, box);
+        end = y + fitted.lines.length * fitted.size * fitted.lineHeight;
+        const next = members[index + 1];
+        cursor = end + (next ? Math.max(0, top(next) - (design.y + design.h)) : 0);
+        const label = field.labelBox?.[format];
+        items.set(field.key, { field, text, hint, fitted, box, ...(label ? { labelShift: { box: label, dy } } : {}) });
+      });
+      return { items, end };
+    };
+    let result = lay(1);
+    for (let scale = 0.95; result.end > bottom + 0.5 && scale >= 0.4; scale -= 0.05) result = lay(scale);
+    for (const [key, item] of result.items) laid.set(key, item);
   }
   return laid;
 }

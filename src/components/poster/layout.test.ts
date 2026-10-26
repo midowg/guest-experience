@@ -61,6 +61,18 @@ describe("stacked boxes", () => {
     expect(download.c.labelShift!.dy).toBeLessThan(0);
   });
 
+  it("shrinks the whole stack together rather than run past the bottom of its panel", () => {
+    // Type that may shrink to 10 px; at 20 px these texts would push c far below 290.
+    const flexible: PosterSettings = { ...poster, fields: poster.fields.map(field => field.stack ? { ...field, sizeMin: 10 } : field) };
+    const long = "Bahan rempah pilihan dari kebun warga di lereng gunung dan pesisir";
+    const all = Object.fromEntries(layoutTexts(flexible, text({ a: long, b: long, c: long }), "post", false).map(entry => [entry.field.key, entry]));
+    const end = all.c.box.y + all.c.fitted.lines.length * all.c.fitted.size * all.c.fitted.lineHeight;
+    expect(end).toBeLessThanOrEqual(290.5);
+    // Every item shrank by the same step, so the panel keeps one size of type.
+    expect(new Set([all.a.fitted.size, all.b.fitted.size, all.c.fitted.size]).size).toBe(1);
+    expect(all.a.fitted.size).toBeLessThan(20);
+  });
+
   it("leaves boxes outside a stack as they were", () => {
     const values = text({ a: "Satu", plain: "Teks yang cukup panjang untuk dua baris di kotak yang sempit ini ya" });
     const own = laid(values).plain;

@@ -11,6 +11,8 @@ type Props = {
   formats: PosterFormat[];
   palette: PosterPalette;
   errors: Record<string, string[]>;
+  /** The type the box shows in the size being arranged, once laid out. */
+  shown?: { format: PosterFormat; size: number; lines: number };
   onChange: (field: PosterField) => void;
   onRemove: () => void;
   onClose: () => void;
@@ -25,7 +27,7 @@ const ROUND = 500;
  * bold, colour, alignment). Moving and resizing happen on the card itself; exact numbers (from
  * Figma) and the finer type settings wait under "Pengaturan lanjutan".
  */
-export function PosterInspector({ field, index, formats, palette, errors, onChange, onRemove, onClose }: Props) {
+export function PosterInspector({ field, index, formats, palette, errors, shown, onChange, onRemove, onClose }: Props) {
   const path = `poster.fields.${index}`;
   const set = <K extends keyof PosterField>(key: K, value: PosterField[K]) => onChange({ ...field, [key]: value });
   const number = (value: string, fallback: number) => { const parsed = Number(value.replace(",", ".")); return Number.isFinite(parsed) ? parsed : fallback; };
@@ -35,6 +37,10 @@ export function PosterInspector({ field, index, formats, palette, errors, onChan
   const weights = posterFonts[field.font].weights as readonly number[];
   const bold = field.weight >= 700 || field.weight === Math.max(...weights) && weights.length > 1;
   // A new largest size keeps the smallest in proportion, so long text still shrinks the same way.
+  // Set larger than the box or its stack lets it show (half a pixel of rounding allowed).
+  const setSize = field.sizeMax * (shown ? field.sizes?.[shown.format] ?? 1 : 1);
+  const held = field.kind === "text" && shown && shown.size < setSize - 0.5 ? shown : null;
+  const heldBox = held ? field.box[held.format] : null;
   const resize = (sizeMax: number) => onChange({ ...field, sizeMax, sizeMin: Math.max(6, Math.min(sizeMax, Math.round(sizeMax * field.sizeMin / Math.max(field.sizeMax, 1)))) });
 
   return <div className={s.inspector} role="group" aria-label={`Kotak ${field.label}`}>
@@ -52,6 +58,13 @@ export function PosterInspector({ field, index, formats, palette, errors, onChan
     {field.kind === "text" ? <>
       <label className={s.range}><span>Ukuran huruf <strong>{Math.round(field.sizeMax)}</strong></span>
         <input type="range" min={8} max={200} step={1} value={field.sizeMax} onChange={event => resize(Number(event.target.value))} /></label>
+      {held && <div className={s.held} role="status">
+        <p>Tampil <strong>{Math.round(held.size)}</strong>, bukan {Math.round(setSize)}: {field.stack
+          ? "panel ini mengecilkan semua isinya bersama agar tetap muat di dalam panel. Persingkat isinya, atau kecilkan ukuran huruf item lain di panel ini."
+          : `teksnya harus muat di tinggi kotak (${held.lines} baris × jarak baris ${field.lineHeight.toLocaleString("id-ID")}).`}</p>
+        {!field.stack && heldBox && <button type="button" className="button button--secondary" onClick={() => set("box", { ...field.box, [held.format]: { ...heldBox, h: Math.ceil(held.lines * field.sizeMax * (field.sizes?.[held.format] ?? 1) * field.lineHeight) } })}>Tinggikan kotak agar muat</button>}
+        {!field.stack && <p className="field-hint">Atau kurangi <strong>Jarak baris</strong> di Pengaturan lanjutan, agar huruf lebih besar muat di kotak yang sama.</p>}
+      </div>}
       <div className={s.tools}>
         <div className={s.segment} role="group" aria-label="Font">
           {(Object.entries(posterFonts) as [PosterFont, (typeof posterFonts)[PosterFont]][]).map(([key, font]) => <button key={key} type="button" aria-pressed={field.font === key} title={font.label} aria-label={font.label} style={{ fontFamily: font.family }}
