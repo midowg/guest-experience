@@ -6,7 +6,7 @@ import { uploadPhoto } from "@/components/admin/shared/PhotoField";
 import { errorMessage } from "@/components/admin/shared/api";
 import { posterSizes, type PosterFormat, type PosterField, type PosterPart } from "@/lib/poster";
 import type { PlainImage } from "@/lib/types";
-import { backgroundPng, importInBrowser, mergeImport, nameMarks, NoLayersError, sanitizeSvg, type FigmaImport as Imported, type Mark } from "./figma-import";
+import { designImage, importInBrowser, mergeImport, nameMarks, NoLayersError, sanitizeSvg, type FigmaImport as Imported, type Mark } from "./figma-import";
 import { FigmaMarker } from "./FigmaMarker";
 import s from "./card-figma.module.css";
 
@@ -120,12 +120,12 @@ export function FigmaImport({ fields = [], onImport }: { fields?: PosterField[];
   }
 
   async function upload(imported: Imported): Promise<FigmaResult> {
-    const png = await backgroundPng(imported.background, imported.format);
-    const background = await uploadPhoto(new File([png], `latar-${imported.format}.png`, { type: "image/png" }));
+    const file = (blob: Blob, name: string) => new File([blob], `${name}-${imported.format}.${blob.type === "image/jpeg" ? "jpg" : "png"}`, { type: blob.type || "image/png" });
+    const background = await uploadPhoto(file(await designImage(imported.background, imported.format, { opaque: true }), "latar"));
     // The overlay keeps its transparency: uploaded as PNG, drawn over the guest's photos.
     const image = async (svg: string | null, name: string): Promise<PlainImage> => {
       if (!svg) return { url: "", alt: "", srcset: [] };
-      const uploaded = await uploadPhoto(new File([await backgroundPng(svg, imported.format)], `${name}-${imported.format}.png`, { type: "image/png" }));
+      const uploaded = await uploadPhoto(file(await designImage(svg, imported.format), name));
       return { ...uploaded, alt: "" };
     };
     const overlay = await image(imported.overlay, "atas");

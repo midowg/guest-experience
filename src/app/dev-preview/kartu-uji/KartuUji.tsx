@@ -5,7 +5,7 @@ import { FileUp } from "lucide-react";
 import { PosterStudio } from "@/components/poster/PosterStudio";
 import { canvasBlob, renderPoster } from "@/components/poster/export";
 import { loadDraft } from "@/components/poster/draft";
-import { backgroundPng, importInBrowser, mergeImport, nameMarks, NoLayersError, sanitizeSvg, type Mark } from "@/components/admin/editor/blocks/figma-import";
+import { designImage, importInBrowser, mergeImport, nameMarks, NoLayersError, sanitizeSvg, type Mark } from "@/components/admin/editor/blocks/figma-import";
 import { FigmaMarker } from "@/components/admin/editor/blocks/FigmaMarker";
 import { emptyPoster, posterFormatSetups, posterFormats, posterSizes, type PosterFormat, type PosterSettings } from "@/lib/poster";
 
@@ -43,7 +43,7 @@ export function KartuUji() {
         if (!marks) return { notes: [], error: "" };
         result = importInBrowser(nameMarks(source, marks));
       }
-      const image = async (svg: string | null) => ({ url: svg ? URL.createObjectURL(await backgroundPng(svg, result.format)) : "", alt: "", srcset: [] });
+      const image = async (svg: string | null) => ({ url: svg ? URL.createObjectURL(await designImage(svg, result.format)) : "", alt: "", srcset: [] });
       const parts = await Promise.all(result.parts.map(async part => ({ key: part.key, art: await image(part.art), slot: await image(part.slot), label: await image(part.label) })));
       const before = current.current;
       const next: PosterSettings = { ...(before ?? { ...emptyPoster(), enabled: true, formats: posterFormatSetups([]) }), fields: mergeImport(before?.fields ?? [], !!before, result) };

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PosterCanvas } from "@/components/poster/PosterCanvas";
-import { backgroundPng, importInBrowser, mergeImport, nameMarks, NoLayersError, sanitizeSvg } from "@/components/admin/editor/blocks/figma-import";
+import { designImage, importInBrowser, mergeImport, nameMarks, NoLayersError, sanitizeSvg } from "@/components/admin/editor/blocks/figma-import";
 import { FigmaMarker } from "@/components/admin/editor/blocks/FigmaMarker";
 import { emptyPoster, posterFormatSetups, posterFormats, posterSizes, type PosterFormat, type PosterSettings } from "@/lib/poster";
 
@@ -24,7 +24,7 @@ export function FigmaCheck() {
   const run = async (source: string) => {
     try {
       const result = importInBrowser(source);
-      const image = async (svg: string | null) => ({ url: svg ? URL.createObjectURL(await backgroundPng(svg, result.format)) : "", alt: "", srcset: [] });
+      const image = async (svg: string | null) => ({ url: svg ? URL.createObjectURL(await designImage(svg, result.format)) : "", alt: "", srcset: [] });
       const background = await image(result.background), overlay = await image(result.overlay);
       const parts = await Promise.all(result.parts.map(async part => ({ key: part.key, art: await image(part.art), slot: await image(part.slot), label: await image(part.label) })));
       const before = current.current;

@@ -22,7 +22,7 @@ vi.mock("./figma-import", async original => {
       const fields = source.includes('data-uji="post"') ? [field("judul", "Judul sesi", "text")] : [];
       return { format, background: "<svg/>", overlay: null, parts, fields, notes: [] };
     },
-    backgroundPng: async () => new Blob(["png"], { type: "image/png" }),
+    designImage: async () => new Blob(["png"], { type: "image/png" }),
   };
 });
 

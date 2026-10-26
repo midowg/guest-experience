@@ -21,7 +21,7 @@ const read = vi.hoisted(() => {
 vi.mock("@/components/admin/editor/blocks/figma-import", async original => ({
   ...(await original<typeof import("@/components/admin/editor/blocks/figma-import")>()),
   importInBrowser: read.importInBrowser,
-  backgroundPng: async () => new Blob(["png"], { type: "image/png" }),
+  designImage: async () => new Blob(["png"], { type: "image/png" }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 

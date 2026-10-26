@@ -669,18 +669,35 @@ export function importInBrowser(raw: string): FigmaImport {
   } finally { holder.remove(); }
 }
 
-/** The background SVG drawn to a PNG at the card's size, ready to upload like any photo. */
-export async function backgroundPng(svg: string, format: PosterFormat): Promise<Blob> {
+/** The widest image the upload keeps (its largest WebP size): designs are drawn up to it. */
+const UPLOAD_WIDTH = 2048;
+/** Below the upload limit (8 MB), with room for the form around the file. */
+const UPLOAD_BYTES = 7.5 * 1024 * 1024;
+
+/**
+ * A layer of the design drawn to an image for upload: about twice the card's size (as wide as the
+ * upload keeps), so fixed headings, logos and icons stay sharp when the card is zoomed in or seen
+ * on a sharp screen. PNG keeps transparency; an `opaque` background that would be too heavy as a
+ * PNG (a full-bleed photo) goes as a high-quality JPEG on white instead.
+ */
+export async function designImage(svg: string, format: PosterFormat, { opaque = false } = {}): Promise<Blob> {
   const { width, height } = posterSizes[format];
+  const scale = Math.max(1, Math.min(2, UPLOAD_WIDTH / width));
   const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
   try {
     const image = new Image();
     await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("Latar dari SVG tidak bisa digambar. Coba ekspor ulang dari Figma.")); image.src = url; });
     const canvas = document.createElement("canvas");
-    canvas.width = width; canvas.height = height;
+    canvas.width = Math.round(width * scale); canvas.height = Math.round(height * scale);
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Browser ini tidak bisa menggambar latar.");
-    context.drawImage(image, 0, 0, width, height);
-    return await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Latar gagal dibuat.")), "image/png"));
+    const encode = (type: string, quality?: number) => new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Latar gagal dibuat.")), type, quality));
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const png = await encode("image/png");
+    if (!opaque || png.size <= UPLOAD_BYTES) return png;
+    context.globalCompositeOperation = "destination-over";
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return await encode("image/jpeg", 0.92);
   } finally { URL.revokeObjectURL(url); }
 }
