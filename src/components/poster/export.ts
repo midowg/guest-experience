@@ -1,4 +1,4 @@
-import { activePalette, partOf, pdfPage, photoPlacement, posterSizes, slotShows, spacedWidth, toneColor, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { activePalette, partOf, pdfPage, photoPlacement, posterSizes, slotShows, spacedWidth, textTop, toneColor, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import { createMeasure, fontOf, layoutTexts, loadPosterFonts, posterBackground } from "./layout";
 
 /**
@@ -78,6 +78,7 @@ export async function renderPoster(poster: PosterSettings, values: PosterValues,
     context.fillStyle = toneColor(field, palette);
     context.textBaseline = "alphabetic";
     // Where CSS puts the baseline in a line box: half the leading above the font's ascent.
+    const top = textTop(field, box, fitted.lines.length, line);
     const metrics = context.measureText("Hg");
     const ascent = metrics.fontBoundingBoxAscent || fitted.size * 0.8, descent = metrics.fontBoundingBoxDescent || fitted.size * 0.2;
     fitted.lines.forEach((text, index) => {
@@ -85,7 +86,7 @@ export async function renderPoster(poster: PosterSettings, values: PosterValues,
       const indent = fitted.indents?.[index] ?? 0, left = box.x + indent, room = box.w - indent;
       const width = spacedWidth(measure, text, fitted.size, field.letterSpacing);
       const x = field.align === "center" ? left + (room - width) / 2 : field.align === "right" ? left + room - width : left;
-      const y = box.y + index * line + (line - ascent - descent) / 2 + ascent;
+      const y = box.y + top + index * line + (line - ascent - descent) / 2 + ascent;
       if (!field.letterSpacing) { context.fillText(text, x, y); return; }
       let cursor = x;
       for (const character of text) { context.fillText(character, cursor, y); cursor += measure(character, fitted.size) + field.letterSpacing * fitted.size; }

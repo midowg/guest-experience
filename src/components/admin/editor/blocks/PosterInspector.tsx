@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChangeEvent } from "react";
-import { AlignCenter, AlignLeft, AlignRight, Bold, CaseUpper, Circle, Image as ImageIcon, Trash2, Type, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalJustifyStart, Bold, CaseUpper, Circle, Image as ImageIcon, Trash2, Type, X } from "lucide-react";
 import { posterFonts, posterSizes, type PaletteRole, type PosterBox, type PosterField, type PosterFont, type PosterFormat, type PosterPalette } from "@/lib/poster";
 import s from "./card-editor.module.css";
 
@@ -64,6 +64,10 @@ export function PosterInspector({ field, index, formats, palette, errors, onChan
         <div className={s.segment} role="group" aria-label="Rata">
           {([["left", AlignLeft, "Rata kiri"], ["center", AlignCenter, "Rata tengah"], ["right", AlignRight, "Rata kanan"]] as const).map(([value, Icon, label]) =>
             <button key={value} type="button" aria-pressed={field.align === value} aria-label={label} title={label} onClick={() => set("align", value)}><Icon size={16} aria-hidden="true" /></button>)}
+        </div>
+        <div className={s.segment} role="group" aria-label="Rata vertikal">
+          {([["top", AlignVerticalJustifyStart, "Rata atas"], ["middle", AlignVerticalJustifyCenter, "Rata tengah vertikal"], ["bottom", AlignVerticalJustifyEnd, "Rata bawah"]] as const).map(([value, Icon, label]) =>
+            <button key={value} type="button" aria-pressed={(field.valign ?? "top") === value} aria-label={label} title={label} onClick={() => set("valign", value)}><Icon size={16} aria-hidden="true" /></button>)}
         </div>
       </div>
       <div className={s.tones} role="group" aria-label="Warna teks">

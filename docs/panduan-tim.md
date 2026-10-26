@@ -140,7 +140,7 @@ Tanpa nama layer pun SVG tetap diterima: admin menandai bagiannya sendiri setela
 
    Unggah lagi untuk ukuran lain (misalnya A4 atau Story); kolom dengan nama yang sama digabung, jadi form peserta tetap satu. Saat menandai desain ukuran kedua, pilih nama kolom dari daftar yang muncul saat mengetik. Gaya huruf mengikuti desain pertama; ukuran hurufnya menyesuaikan desain tiap ukuran. Kalau tidak punya desain Figma, buka **atau pakai desain bawaan**.
 2. **2 · Kolom untuk peserta:** satu baris per kolom. Ubah namanya bila perlu. Matikan **Diisi peserta** untuk teks tetap dari panitia (misalnya tautan reservasi) dan isi teksnya. Untuk kolom yang diisi peserta, petunjuk, **Maks. huruf**, dan **Opsional** boleh diubah. Batas huruf awalnya dihitung dari besar kotak di desain. Pratinjau kartu ada di sampingnya.
-3. **Lanjutan** (dilipat, jarang perlu): geser kotak, ubah ukuran huruf dan warna, ukuran kartu, dan latar manual.
+3. **Lanjutan** (dilipat, jarang perlu): geser kotak, ubah ukuran huruf dan warna, rata kiri/tengah/kanan dan **rata atas/tengah/bawah**, ukuran kartu, dan latar manual. Rata bawah berguna untuk judul yang kotaknya disiapkan beberapa baris tapi isinya sering hanya satu baris: teksnya tetap menempel ke bagian di bawahnya. Di Figma, tim desain bisa langsung menandainya dengan `data-valign="bottom"` pada layer `isi_…`.
 4. Simpan dan publikasikan, lalu bagikan tautannya: `invitation.werkudara.group/KODE` untuk acara Kartu, atau `KODE/poster` bila Studio Poster dipakai di acara biasa. Tautan selalu memakai domain publik, juga saat admin dibuka dari laptop.
 
    Kartu baru bisa dipublikasikan setelah migrasi `202610220003_card_publish.sql` diterapkan. Sebelum itu, simpan sebagai draf.

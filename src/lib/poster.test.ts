@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activePalette, emptyPoster, fieldText, partOf, pdfPage, fitText, normalizePoster, paletteOf, photoPlacement, posterDate, posterDuration, posterFormats, posterSizes, posterTime, slotShows, toneColor, type PosterField } from "./poster";
+import { activePalette, emptyPoster, fieldText, partOf, pdfPage, fitText, normalizePoster, paletteOf, photoPlacement, posterDate, posterDuration, posterFormats, posterSizes, posterTime, slotShows, textTop, toneColor, type PosterField } from "./poster";
 import { posterPresets, presetBackground, presetPoster } from "./poster-presets";
 import { createSeedEvent } from "./seed-event";
 import { normalizeEvent } from "./hero-framing";
@@ -209,4 +209,27 @@ it("gives print sizes their real paper in the PDF, and digital ones half a point
   expect(pdfPage("a4_landscape")).toEqual([841.89, 595.28]);
   expect(pdfPage("idcard")).toEqual([153.07, 242.65]);
   expect(pdfPage("post")).toEqual([540, 675]);
+});
+
+describe("vertical alignment", () => {
+  // A title box made for three 60 px lines that holds one.
+  const box = { h: 180 };
+  it("keeps the lines at the top unless told otherwise", () => {
+    expect(textTop({}, box, 1, 60)).toBe(0);
+    expect(textTop({ valign: "top" }, box, 1, 60)).toBe(0);
+  });
+  it("moves one line to the middle or down to the bottom of the box", () => {
+    expect(textTop({ valign: "middle" }, box, 1, 60)).toBe(60);
+    expect(textTop({ valign: "bottom" }, box, 1, 60)).toBe(120);
+  });
+  it("never starts above the box when the text fills or overflows it", () => {
+    expect(textTop({ valign: "bottom" }, box, 3, 60)).toBe(0);
+    expect(textTop({ valign: "bottom" }, box, 4, 60)).toBe(0);
+  });
+});
+
+it("keeps a box's vertical alignment through validation", () => {
+  const poster = presetPoster("rempah-nusantara", createSeedEvent());
+  const parsed = posterSchema.parse({ ...poster, fields: poster.fields.map(field => field.kind === "text" ? { ...field, valign: "bottom" } : field) });
+  expect(parsed.fields.find(field => field.kind === "text")?.valign).toBe("bottom");
 });

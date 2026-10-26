@@ -308,6 +308,8 @@ export function withHints(field: Omit<PosterField, "box">, element: Element, sca
   if (weight > 0) next.weight = nearestWeight(next.font, weight);
   const align = read("align");
   if (align === "left" || align === "center" || align === "right") next.align = align;
+  const valign = read("valign");
+  if (valign === "top" || valign === "middle" || valign === "bottom") next.valign = valign;
   const color = hex(read("color") ?? "");
   if (color) next.color = color;
   if (read("uppercase") === "true") next.uppercase = true;

@@ -104,7 +104,7 @@ const posterFieldSchema = z.object({
   kind: z.enum(["text", "photo"]), editable: z.boolean(), value: text(2000).default(""), maxLength: z.number().int().min(1).max(1000),
   font: z.enum(["playfair", "nunito", "inter", "lora", "cormorant"]), weight: z.number().int().min(100).max(900),
   tone: z.union([z.enum(paletteRoles), z.literal("")]).default(""), color: hexColor,
-  align: z.enum(["left", "center", "right"]), uppercase: z.boolean(), letterSpacing: z.number().min(-0.1).max(1),
+  align: z.enum(["left", "center", "right"]), valign: z.enum(["top", "middle", "bottom"]).optional(), uppercase: z.boolean(), letterSpacing: z.number().min(-0.1).max(1),
   sizeMax: z.number().min(6).max(300), sizeMin: z.number().min(6).max(300), lineHeight: z.number().min(0.8).max(3), maxLines: z.number().int().min(1).max(20),
   radius: z.number().min(0).max(500), fill: hexColor, optional: z.boolean().default(false), zoomOut: z.boolean().default(false), list: z.boolean().default(false),
   stack: z.string().regex(/^[a-z0-9_]{1,40}$/).optional(),

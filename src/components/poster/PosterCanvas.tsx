@@ -3,7 +3,7 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Camera } from "lucide-react";
 import { dragFrame } from "@/lib/hero-framing";
-import { activePalette, partOf, photoMinZoom, photoPlacement, posterSizes, slotShows, toneColor, type PosterBox, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
+import { activePalette, partOf, photoMinZoom, photoPlacement, posterSizes, slotShows, textTop, toneColor, type PosterBox, type PosterField, type PosterFormat, type PosterSettings, type PosterValues } from "@/lib/poster";
 import type { PhotoFrame } from "@/lib/types";
 import { fontOf, layoutTexts, posterBackground } from "./layout";
 import styles from "./poster.module.css";
@@ -153,7 +153,7 @@ export function PosterCanvas({ poster, values, format, editing, hints, selected,
       {texts.map(({ field, fitted, hint, box }) => {
         const open = editing && field.editable;
         const line = fitted.size * fitted.lineHeight;
-        const style = { left: box.x, top: box.y, width: box.w, height: box.h, font: fontOf(field, fitted.size), color: toneColor(field, palette), textAlign: field.align, letterSpacing: `${field.letterSpacing}em`, "--ring": `${ring}px` } as CSSProperties;
+        const style = { left: box.x, top: box.y, width: box.w, height: box.h, paddingTop: textTop(field, box, fitted.lines.length, line), font: fontOf(field, fitted.size), color: toneColor(field, palette), textAlign: field.align, letterSpacing: `${field.letterSpacing}em`, "--ring": `${ring}px` } as CSSProperties;
         // A list point's later lines start after its bullet, as the download draws them (export.ts).
         const lines = fitted.lines.map((text, index) => <span key={index} style={{ height: line, lineHeight: `${line}px`, paddingLeft: fitted.indents?.[index] || undefined }}>{text}</span>);
         return open

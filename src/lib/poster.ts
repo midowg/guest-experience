@@ -76,6 +76,8 @@ export type PosterField = {
   /** The palette role the text is drawn in; "" uses `color` as is. */
   tone: PaletteRole | ""; color: string;
   align: "left" | "center" | "right"; uppercase: boolean;
+  /** Where the lines sit in a box taller than they need; top when not set. */
+  valign?: "top" | "middle" | "bottom";
   /** In em, as CSS letter-spacing. */
   letterSpacing: number;
   /** Largest and smallest font size in design pixels; long text shrinks between the two. */
@@ -266,6 +268,15 @@ export function photoMinZoom(box: Pick<PosterBox, "w" | "h">, natural: { width: 
   if (!zoomOut || !(natural.width > 0) || !(natural.height > 0) || !(box.w > 0) || !(box.h > 0)) return 1;
   const across = box.w / natural.width, down = box.h / natural.height;
   return Math.min(1, Math.min(across, down) / Math.max(across, down)) * 0.4;
+}
+
+/**
+ * How far below the box's top its lines start: a title box made for three lines but given one
+ * keeps that line next to what follows it when set to the bottom. Never above the top.
+ */
+export function textTop(field: Pick<PosterField, "valign">, box: Pick<PosterBox, "h">, lines: number, line: number): number {
+  const spare = Math.max(0, box.h - lines * line);
+  return field.valign === "bottom" ? spare : field.valign === "middle" ? spare / 2 : 0;
 }
 
 /**
