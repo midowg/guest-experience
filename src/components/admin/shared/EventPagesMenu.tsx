@@ -14,7 +14,7 @@ const icons: Partial<Record<AdminTab, LucideIcon>> = {
  * One button for the event's pages instead of a row of tabs: it names the page you are on, and
  * opens a short list grouped as edit, guests and operations. Closes on a pick, outside or Esc.
  */
-export function EventPagesMenu({ groups, current, publicHref }: { groups: { label: string; pages: EventPage[] }[]; current: AdminTab; publicHref?: string }) {
+export function EventPagesMenu({ groups, current, publicHref, publicLabel = "Buka undangan" }: { groups: { label: string; pages: EventPage[] }[]; current: AdminTab; publicHref?: string; publicLabel?: string }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -47,6 +47,6 @@ export function EventPagesMenu({ groups, current, publicHref }: { groups: { labe
         </div>)}
       </div>
     </div>
-    {publicHref && <a href={publicHref} target="_blank" rel="noopener noreferrer" className={nav.public}><ExternalLink size={15} aria-hidden="true" /> Buka undangan<span className="sr-only"> (tab baru)</span></a>}
+    {publicHref && <a href={publicHref} target="_blank" rel="noopener noreferrer" className={nav.public}><ExternalLink size={15} aria-hidden="true" /> {publicLabel}<span className="sr-only"> (tab baru)</span></a>}
   </nav>;
 }

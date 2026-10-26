@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { z } from "zod";
 import { EventExperience } from "@/components/guest/EventExperience";
+import { GuidePage } from "@/components/guest/GuidePage";
 import { PhotoGallery } from "@/components/guest/PhotoGallery";
 import { PosterPage as PosterView } from "@/components/poster/PosterPage";
 import { TicketView, type TicketData } from "@/components/guest/TicketView";
@@ -45,6 +46,7 @@ export function StorageMissing() {
 
 export async function EventPage({ event }: { event: EventRecord }) {
   if (event.event_kind === "kartu") return <PosterPage event={event} />;
+  if (event.event_kind === "eguide") return <GuidePage event={event} />;
   return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
 }
 

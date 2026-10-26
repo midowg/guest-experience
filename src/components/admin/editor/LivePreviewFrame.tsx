@@ -2,6 +2,7 @@
 
 import { Component, useEffect, useState, type ReactNode } from "react";
 import { EventExperience } from "@/components/guest/EventExperience";
+import { GuidePage } from "@/components/guest/GuidePage";
 import { prepareEvent } from "@/components/admin/editor/editor-model";
 import { normalizeEvent } from "@/lib/hero-framing";
 import { isPreviewMessage, type PreviewArea, type PreviewMessage } from "@/lib/live-preview";
@@ -62,5 +63,6 @@ export function LivePreviewFrame() {
     return () => { window.removeEventListener("message", receive); document.removeEventListener("click", click, true); };
   }, []);
   if (!draft) return <p style={{ padding: 24, fontFamily: "var(--font-body)", color: "#5b6476" }}>Menyiapkan pratinjau…</p>;
-  return <Boundary attempt={draft.version}><EventExperience event={draft.event} phase={draft.phase} preview previewNotice={false} /></Boundary>;
+  // An E-Guide is a book, not an invitation: the preview shows the reader the guest gets.
+  return <Boundary attempt={draft.version}>{draft.event.event_kind === "eguide" ? <GuidePage event={draft.event} /> : <EventExperience event={draft.event} phase={draft.phase} preview previewNotice={false} />}</Boundary>;
 }

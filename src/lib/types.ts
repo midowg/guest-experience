@@ -1,3 +1,4 @@
+import type { GuideSettings } from "./guide";
 import type { PosterSettings } from "./poster";
 
 export type EventStatus = "draft" | "published" | "archived";
@@ -26,8 +27,12 @@ export type PhotoFrame = { x: number; y: number; zoom: number };
 export type HeroFraming = { mobile: PhotoFrame; desktop: PhotoFrame };
 /** Optional framing preserves compatibility with previously saved invitations. */
 export type HeroImage = { url: string; alt: string; srcset: ImageSource[]; focus: ImageFocus; text_position: HeroTextPosition; framing?: HeroFraming };
-/** The form of the event. Audience is a separate choice: an internal event can take any form. "kartu" is no event at all: a card people fill in (Studio Poster). */
-export type EventKind = "kunjungan" | "acara" | "program" | "kartu";
+/**
+ * The form of the event. Audience is a separate choice: an internal event can take any form.
+ * "kartu" is no event at all: a card people fill in (Studio Poster). "eguide" is a guidebook to
+ * read (src/lib/guide.ts): no RSVP, tickets or invitations.
+ */
+export type EventKind = "kunjungan" | "acara" | "program" | "kartu" | "eguide";
 export type EventAudience = "external" | "internal";
 export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah";
 export type EventTheme = { key: ThemeKey; corners: "square" | "soft" };
@@ -86,6 +91,8 @@ export type EventRecord = {
   agenda_details: Record<string, AgendaDetail>; presentation_pdf_url: string; emergency: EmergencyContact;
   /** Studio Poster: the template guests fill in to make their own poster. */
   poster: PosterSettings;
+  /** E-Guide: the guidebook's cover, chapters and order (event_kind "eguide"). */
+  guide: GuideSettings;
   created_at: string; updated_at: string;
 };
 export type Dietary = "vegetarian" | "allergy" | "other";

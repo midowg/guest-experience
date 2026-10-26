@@ -1,4 +1,4 @@
-import type { EventRecord, SectionKey } from "./types";
+import type { EventKind, EventRecord, SectionKey } from "./types";
 import { POSTER_LABEL } from "./poster";
 
 /**
@@ -77,6 +77,8 @@ export function withoutModules(event: EventRecord, disabled: AdminModule[]): Eve
   if (off.has("bilingual")) next = { ...next, language: "id" };
   if (off.has("review")) next = { ...next, review_enabled: false };
   if (off.has("collaboration")) next = { ...next, after: { ...next.after, collaboration: { ...next.after.collaboration, enabled: false } } };
+  // An E-Guide's book leaves out the parts whose module is switched off.
+  if (next.guide) next = { ...next, guide: { ...next.guide, order: next.guide.order.filter(step => step.kind !== "part" || !off.has(step.part)) } };
   return next;
 }
 
@@ -85,3 +87,39 @@ export const moduleBlocks: Partial<Record<AdminModule, string>> = {
   experience: "experience", agenda: "agenda", location: "venue", gallery: "gallery", prepare: "prepare", team: "team", rsvp: "rsvp",
   contact: "contact", feedback: "feedback_questions", review: "review", bilingual: "language", poster: "poster",
 };
+
+/**
+ * What each kind of event offers, so no event is handed a module that does not fit it.
+ *
+ * | Kind                         | Modules                                                              | Editor blocks outside any module |
+ * |------------------------------|----------------------------------------------------------------------|----------------------------------|
+ * | kunjungan / acara / program  | all                                                                  | identity, appearance, schedule, hero, topics, day, after, sections, publication |
+ * | kartu (Studio Poster)        | poster                                                               | appearance, publication          |
+ * | eguide (E-Guide)             | experience, agenda, location, route, gallery, prepare, contact, bilingual | identity, appearance, schedule, guide, publication |
+ *
+ * An E-Guide is read, not answered: no RSVP, personal links, tickets, survey, review,
+ * collaboration, poster or Our Team. Its order of parts lives in the guide itself, so it has no
+ * "Urutan & tampilan bagian", no hero (the cover has its own photo) and no Hari H / thank-you page.
+ */
+export const kindModules: Record<EventKind, readonly AdminModule[]> = {
+  kunjungan: adminModuleKeys, acara: adminModuleKeys, program: adminModuleKeys,
+  kartu: ["poster"],
+  eguide: ["experience", "agenda", "location", "route", "gallery", "prepare", "contact", "bilingual"],
+};
+const invitationBlocks = ["identity", "appearance", "schedule", "hero", "topics", "day", "after", "sections", "publication"] as const;
+export const kindBlocks: Record<EventKind, readonly string[]> = {
+  kunjungan: invitationBlocks, acara: invitationBlocks, program: invitationBlocks,
+  kartu: ["appearance", "publication"],
+  eguide: ["identity", "appearance", "schedule", "guide", "publication"],
+};
+const blockOwner = Object.fromEntries((Object.entries(moduleBlocks) as [AdminModule, string][]).map(([key, id]) => [id, key])) as Record<string, AdminModule>;
+
+/** Whether a kind of event offers a module at all (before the super admin's switches). */
+export function kindOffers(kind: EventKind | undefined, key: AdminModule): boolean {
+  return (kindModules[kind ?? "acara"] ?? kindModules.acara).includes(key);
+}
+/** Whether an editor block belongs to this kind of event: through its module, or as one of the kind's own blocks. */
+export function blockAllowed(kind: EventKind | undefined, id: string): boolean {
+  const owner = blockOwner[id];
+  return owner ? kindOffers(kind, owner) : (kindBlocks[kind ?? "acara"] ?? kindBlocks.acara).includes(id);
+}

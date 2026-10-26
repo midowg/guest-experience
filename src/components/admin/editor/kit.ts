@@ -6,7 +6,7 @@ import type { PosterDesign } from "@/lib/poster";
 /** Changes one field of the draft; the editor tracks which block became unsaved. */
 export type Update = <K extends keyof EventRecord>(key: K, value: EventRecord[K]) => void;
 
-export type ControlOptions = { multiline?: boolean; hint?: string; type?: "text" | "url" | "datetime-local"; maxLength?: number; suggestions?: string[] };
+export type ControlOptions = { multiline?: boolean; hint?: string; type?: "text" | "url" | "datetime-local"; maxLength?: number; suggestions?: string[]; placeholder?: string };
 /** A labelled input or textarea whose id is the field path, with example text and chips from suggestions.ts. */
 export type Control = (name: string, label: string, value: string, onChange: (value: string) => void, options?: ControlOptions) => ReactNode;
 

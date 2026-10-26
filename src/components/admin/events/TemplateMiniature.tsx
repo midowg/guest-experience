@@ -22,6 +22,20 @@ export function TemplateMiniature({ template, title }: { template: EventTemplate
     </div>
     <strong className={styles.miniTitle} style={{ color: t.heading, fontFamily: t.fontHeading, fontWeight: t.headingWeight, padding: "0 10px 10px" }}>{title?.trim() || template.example}</strong>
   </div>;
+  // An E-Guide is a book: a cover, then its first chapters. No date, place or RSVP button.
+  if (template.kind === "eguide") return <div className={styles.mini} style={{ background: t.background, color: t.text, borderColor: t.border }} aria-hidden="true">
+    <div className={styles.miniHero} style={{ background: t.hero, color: t.onHero }}>
+      <span className={styles.miniEyebrow} style={{ color: t.heroAccent }}>E-Guide</span>
+      <strong className={styles.miniTitle} style={{ fontFamily: t.fontHeading, fontWeight: t.headingWeight }}>{title?.trim() || template.example}</strong>
+    </div>
+    <div className={styles.miniBody}>
+      {(template.guide?.chapters ?? []).slice(0, 4).map((chapter, index) => <div key={chapter.title} className={styles.miniSection} style={{ borderColor: t.border }}>
+        <span className={styles.miniNumber} style={{ color: t.heading }}>Bab {index + 1}</span>
+        <span className={styles.miniLabel} style={{ color: t.heading, fontFamily: t.fontHeading, fontWeight: t.headingWeight }}>{chapter.title}</span>
+        <span className={styles.miniLine} style={{ background: t.soft }} />
+      </div>)}
+    </div>
+  </div>;
   const sections = template.modules.filter(key => key !== "about").map(key => sectionNames[key]).filter(Boolean).slice(0, 4);
   return <div className={styles.mini} style={{ background: t.background, color: t.text, borderColor: t.border }} aria-hidden="true">
     <div className={styles.miniHero} style={{ background: t.hero, color: t.onHero }}>

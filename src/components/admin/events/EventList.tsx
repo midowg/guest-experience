@@ -14,7 +14,7 @@ import type { TemplateKey } from "@/lib/event-templates";
 import styles from "@/components/admin/admin.module.css";
 import { adminEventPath, adminEventsApi, eventPath } from "@/lib/routes";
 
-const kinds = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu" } as const;
+const kinds = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide" } as const;
 /** One word for where an event stands, in the stage colours of the editor. */
 function stageBadge(event: EventRecord, phase: EventPhase | undefined) {
   if (event.status === "draft") return { label: "Draf", stage: "settings", Icon: Pencil };
@@ -100,7 +100,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
             <details className={styles.cardMenu} data-card-menu>
               <summary aria-label={`Aksi lain untuk ${event.title}`}><MoreHorizontal size={18} aria-hidden="true" /></summary>
               <div className={styles.cardMenuList} role="group" aria-label={`Aksi lain untuk ${event.title}`}>
-                {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> Lihat undangan<span className="sr-only"> (tab baru)</span></a>}
+                {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> {event.event_kind === "eguide" ? "Lihat E-Guide" : "Lihat undangan"}<span className="sr-only"> (tab baru)</span></a>}
                 <button type="button" disabled={!!busy} onClick={() => duplicate(event.id)}><Copy size={16} aria-hidden="true" /> {busy === event.id ? "Menyalin…" : "Duplikasi"}</button>
                 {event.status === "published" && !live && <button type="button" disabled={!!busy} onClick={() => setHomepage(event)}><Star size={16} aria-hidden="true" /> Tayangkan di halaman utama</button>}
                 {live && <button type="button" disabled={!!busy} onClick={() => setHomepage(null)}><StarOff size={16} aria-hidden="true" /> Turunkan dari halaman utama</button>}

@@ -1,4 +1,5 @@
 import { POSTER_LABEL } from "@/lib/poster";
+import { guidePartLabels, type GuidePart } from "@/lib/guide";
 import type { EventRecord, HeroTextPosition, ImageFocus, ImageSource, PlainImage, SectionKey } from "@/lib/types";
 import { getFraming, normalizeEvent } from "@/lib/hero-framing";
 import { parseLocationEmbed } from "@/lib/location-embed";
@@ -84,10 +85,26 @@ export function prepareEvent(event: EventRecord): EventRecord {
     translations: { ...event.translations, en: { ...event.translations.en, agenda: Object.fromEntries(Object.entries(event.translations.en.agenda).filter(([id]) => event.agenda.some(item => item.id === id))) } },
     gallery: event.gallery.filter(item => item.url.trim() || item.caption.trim() || item.alt.trim() || item.srcset.length).map((item, sort_order) => ({ ...item, sort_order })),
     feedback_questions: event.feedback_questions.map((item, sort_order) => ({ ...item, options: item.kind === "choice" ? item.options.map(option => option.trim()).filter(Boolean) : [], sort_order })),
+    // E-Guide: empty items are dropped, and the order keeps only chapters that still exist.
+    guide: {
+      ...event.guide,
+      cover: { ...event.guide.cover, photo: cleanImage(event.guide.cover.photo) },
+      chapters: event.guide.chapters.map(chapter => ({ ...chapter, photo: cleanImage(chapter.photo), items: chapter.items
+        .filter(item => item.title.trim() || item.text.trim() || item.fact.trim() || item.photo.url || item.link.trim())
+        .map(item => ({ ...item, photo: cleanImage(item.photo) })) })),
+      order: event.guide.order.filter(step => step.kind === "part" || event.guide.chapters.some(chapter => chapter.id === step.id)),
+    },
   };
 }
 
 export function hiddenSectionReasons(event: EventRecord): string[] {
+  // An E-Guide has no RSVP, survey or review: only its parts left out of the book are worth a note.
+  if (event.event_kind === "eguide") {
+    const reasons = (Object.keys(guidePartLabels) as GuidePart[]).filter(part => !event.guide.order.some(step => step.kind === "part" && step.part === part)).map(part => `${guidePartLabels[part]} belum dimasukkan ke urutan baca.`);
+    if (sectionOn(event, "contact") && (!event.contact?.name || !event.contact.phone)) reasons.push("Kontak PIC belum diisi; bagian kontak tidak ditampilkan.");
+    if (!event.guide.chapters.length) reasons.push("Belum ada bab panduan.");
+    return reasons;
+  }
   const reasons = event.sections.filter(section => !section.enabled).map(section => `${sectionLabels[section.key]} disembunyikan melalui pengaturan bagian.`);
   if (!event.rsvp_enabled) reasons.push("Formulir RSVP dinonaktifkan.");
   if (event.sections.some(section => section.key === "contact" && section.enabled) && (!event.contact?.name || !event.contact.phone)) reasons.push("Kontak PIC belum diisi; bagian kontak tidak ditampilkan.");
@@ -110,6 +127,8 @@ export const editorBlocks: { id: string; title: string; stage: EditorStage }[] =
   { id: "appearance", title: "Jenis, audiens, dan tampilan", stage: "prep" },
   { id: "schedule", title: "Waktu acara", stage: "prep" },
   { id: "hero", title: "Foto latar pembuka", stage: "prep" },
+  // E-Guide only (src/lib/admin-modules.ts kindBlocks): the book's cover, chapters and order.
+  { id: "guide", title: "Bab panduan", stage: "prep" },
   { id: "topics", title: "Topik pembahasan", stage: "prep" },
   { id: "experience", title: "Pengalaman kunjungan", stage: "prep" },
   { id: "agenda", title: "Rundown", stage: "prep" },
@@ -141,7 +160,7 @@ const fieldBlocks: Record<string, string> = {
   team_image: "team", rsvp_enabled: "rsvp", rsvp_closes_at: "rsvp", guest_estimate: "rsvp", contact: "contact", day_note: "day",
   feedback_enabled: "feedback_questions", feedback_opens_at: "feedback_questions", feedback_description: "feedback_questions", feedback_questions: "feedback_questions",
   review_url: "review", review_enabled: "review", review_heading: "review", review_description: "review", review_button_label: "review",
-  after: "after", prepare: "prepare", language: "language", translations: "language", sections: "sections", status: "publication", poster: "poster",
+  after: "after", prepare: "prepare", language: "language", translations: "language", sections: "sections", status: "publication", poster: "poster", guide: "guide",
 };
 export function blockOfPath(path: string): string {
   return fieldBlocks[path.split(".")[0]] ?? "identity";
@@ -150,7 +169,7 @@ export function blockOfPath(path: string): string {
 export type BlockStatus = "error" | "dirty" | "todo" | "optional" | "done";
 export const blockStatusLabels: Record<BlockStatus, string> = { error: "Perlu diperbaiki", dirty: "Belum disimpan", todo: "Perlu dilengkapi", optional: "Opsional", done: "Lengkap" };
 
-const kindLabels = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu" } as const;
+const kindLabels = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide" } as const;
 const phaseText = { auto: "fase otomatis", before: "selalu undangan", day: "selalu hari H", after: "selalu terima kasih" } as const;
 const sectionOn = (event: EventRecord, key: SectionKey) => event.sections.some(section => section.key === key && section.enabled);
 const count = (n: number, noun: string) => `${n} ${noun}`;
@@ -185,6 +204,7 @@ export function blockSummary(id: string, event: EventRecord, themeName: string, 
       return gaps.total ? `${mode} · ${gaps.total - gaps.missing} dari ${gaps.total} teks diterjemahkan` : mode;
     }
     case "sections": return `${event.sections.filter(section => section.enabled).length} dari ${event.sections.length} bagian tampil`;
+    case "guide": return event.guide.chapters.length ? `${event.guide.cover.title || "Sampul belum berjudul"} · ${count(event.guide.chapters.length, "bab")}` : "Belum ada bab";
     case "publication": return event.status === "published" ? "Dipublikasikan" : event.status === "archived" ? "Diarsipkan" : "Draf";
     default: return "";
   }

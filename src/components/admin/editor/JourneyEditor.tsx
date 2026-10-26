@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Building2, CalendarRange, CircleHelp, DoorOpen, Frame, Globe, Lightbulb, PartyPopper, ThumbsUp, Trash2, UserRound, type LucideIcon } from "lucide-react";
+import { BookOpen, Building2, CalendarRange, CircleHelp, DoorOpen, Frame, Globe, Lightbulb, PartyPopper, ThumbsUp, Trash2, UserRound, type LucideIcon } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { momentIconComponents, prepareIconComponents } from "@/components/guest/JourneyPanels";
 import { phaseLabels } from "@/lib/event-phase";
@@ -50,7 +50,7 @@ export function ChoiceCards<T extends string>({ name, legend, options, current, 
   </fieldset>;
 }
 
-function ImageInput({ name, label, image, onChange, control, errors }: { name: string; label: string; image: PlainImage; onChange: (image: PlainImage) => void } & Pick<Props, "control" | "errors">) {
+export function ImageInput({ name, label, image, onChange, control, errors }: { name: string; label: string; image: PlainImage; onChange: (image: PlainImage) => void } & Pick<Props, "control" | "errors">) {
   return <div className="stack">
     <PhotoField name={`${name}.url`} label={label} value={image.url} srcset={image.srcset} onChange={value => onChange({ ...image, ...value, alt: value.url ? image.alt : "" })} error={errors[`${name}.url`]?.join(" ")} />
     {image.url && control(`${name}.alt`, "Deskripsi foto", image.alt, alt => onChange({ ...image, alt }), { maxLength: 300, hint: "Wajib bila foto diisi. Jelaskan isi foto untuk pembaca layar." })}
@@ -65,6 +65,7 @@ export function AppearanceBlock({ event, update }: Pick<Props, "event" | "update
       { value: "acara", label: "Acara", description: "Satu hari, tamu banyak. Gala, nyadran, seminar.", icon: PartyPopper, recommended: true },
       { value: "program", label: "Program", description: "Beberapa hari, jadwal per hari. Bootcamp, trip.", icon: CalendarRange },
       { value: "kartu", label: "Kartu", description: "Bukan undangan: kartu yang diisi peserta (poster, ucapan, ID card, sertifikat). Editor hanya berisi pengaturan kartu.", icon: Frame },
+      { value: "eguide", label: "E-Guide", description: "Bukan undangan: buku panduan untuk dibaca tamu (bab, jadwal, lokasi, persiapan, kontak). Tanpa RSVP dan tiket.", icon: BookOpen },
     ]} />
     <ChoiceCards name="audience" legend="Untuk siapa" current={event.audience} onPick={value => update("audience", value)} options={[
       { value: "external", label: "Eksternal", description: "Tamu dan klien. Ulasan Google dan ajakan kolaborasi dapat tampil.", icon: Globe, recommended: true },

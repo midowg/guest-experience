@@ -1,0 +1,121 @@
+/* E-Guide reader (GuidePage.tsx). Colours, fonts and corners come from the event theme, like the invitation. */
+.guide { min-height: 100svh; }
+.narrow { width: min(46rem, calc(100% - 2rem)); margin-inline: auto; }
+.stack { display: grid; gap: var(--space-5); }
+
+/* Cover: the photo fills the first screen; without one the theme's hero colour does. */
+.cover { position: relative; isolation: isolate; min-height: 100svh; display: flex; align-items: flex-end; background: var(--color-hero); color: var(--color-on-hero); }
+.coverPhoto { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
+.coverPhoto img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.92) brightness(.88); }
+.coverScrim { display: none; }
+.coverWithPhoto .coverScrim {
+  display: block; position: absolute; inset: 0; z-index: -1; background-color: rgba(var(--scrim-rgb), .58);
+  background-image: linear-gradient(to top, rgba(var(--scrim-rgb), .55) 0%, rgba(var(--scrim-rgb), .15) 50%, rgba(var(--scrim-rgb), 0) 80%);
+}
+.coverLang { position: absolute; top: calc(var(--space-4) + env(safe-area-inset-top, 0px)); right: var(--space-4); }
+.coverInner { width: min(var(--container), calc(100% - 2rem)); margin-inline: auto; padding-block: var(--space-9) calc(var(--space-8) + env(safe-area-inset-bottom, 0px)); }
+.coverEyebrow { display: inline-flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-5); font-family: var(--font-label); font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; }
+.cover h1 { max-width: 18ch; margin-bottom: var(--space-5); color: var(--color-on-hero); font-family: var(--font-heading); font-weight: var(--heading-weight); font-size: clamp(2.5rem, 9vw, 4.75rem); line-height: 1.04; letter-spacing: -.03em; text-wrap: balance; }
+.cover h1:focus { outline: none; }
+.coverSubtitle { max-width: var(--reading); margin-bottom: var(--space-7); font-size: clamp(1.125rem, 2.4vw, 1.5rem); line-height: 1.45; }
+.coverActions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4) var(--space-6); }
+.coverTocLink { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; color: var(--color-on-hero); text-underline-offset: var(--space-1); }
+.coverEmpty { margin: 0; font-size: var(--text-lg); }
+
+/* Table of contents */
+.toc { padding-block: var(--space-8) calc(var(--space-8) + env(safe-area-inset-bottom, 0px)); }
+.toc h2 { margin-bottom: var(--space-5); color: var(--color-heading, var(--color-primary)); font-family: var(--font-heading); font-weight: var(--heading-weight); font-size: var(--text-heading); line-height: 1.12; scroll-margin-top: var(--space-5); }
+.toc h2:focus { outline: none; }
+.tocList { list-style: none; margin: 0 0 var(--space-7); padding: 0; border-top: var(--border); }
+.tocList li { border-bottom: var(--border); }
+.tocList a { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-4); min-height: 56px; padding-block: var(--space-3); color: var(--color-text); text-decoration: none; font-size: var(--text-lg); font-weight: 600; }
+.tocList a:hover { color: var(--color-primary); }
+.tocList a svg { color: var(--color-primary); }
+.tocNumber { font-family: var(--font-label); font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); }
+.pdf { display: grid; justify-items: start; gap: var(--space-2); }
+.pdfHint { margin: 0; font-size: var(--text-sm); color: var(--color-caption); }
+
+/* Reading: a bar with the way back and the position, the page, and the page-turn buttons. */
+.bar { position: sticky; top: 0; z-index: var(--z-nav); background: var(--color-background); border-bottom: var(--border); }
+.barInner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: min(46rem, calc(100% - 2rem)); min-height: 56px; margin-inline: auto; }
+.barToc { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; color: var(--color-primary); font-weight: 600; text-decoration: none; }
+.barPosition { margin: 0 auto 0 0; padding-left: var(--space-3); font-family: var(--font-label); font-size: var(--text-sm); font-weight: 600; color: var(--color-caption); }
+.progress { height: 3px; background: var(--color-soft); }
+.progress span { display: block; height: 100%; background: var(--color-primary); transform-origin: left center; transition: transform var(--motion-fast) ease; }
+.reader { min-height: calc(100svh - 56px - 72px); }
+.reader:focus { outline: none; }
+.page { padding-block: var(--space-7) var(--space-8); animation: turn 220ms ease-out; }
+@keyframes turn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.pageHeader { margin-bottom: var(--space-6); }
+.pageHeader :global(.eyebrow) { margin-bottom: var(--space-3); }
+.pageHeader h2 { margin-bottom: var(--space-3); color: var(--color-heading, var(--color-primary)); font-family: var(--font-heading); font-weight: var(--heading-weight); font-size: var(--text-heading); line-height: 1.12; letter-spacing: -.02em; text-wrap: balance; }
+.pageHeader h2:focus { outline: none; }
+.pageIntro { margin: 0; font-size: var(--text-lg); }
+.pager { position: sticky; bottom: 0; z-index: var(--z-nav); background: var(--color-background); border-top: var(--border); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pagerInner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: min(46rem, calc(100% - 2rem)); min-height: 72px; margin-inline: auto; }
+.pagerButton { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 48px; padding: 0 var(--space-4); border: 1px solid var(--color-primary); border-radius: var(--radius); color: var(--color-primary); background: var(--color-background); font-weight: 600; text-decoration: none; }
+.pagerButton:hover { background: var(--color-soft); }
+.pagerNext { margin-left: auto; background: var(--color-primary); color: var(--color-on-primary); }
+.pagerNext:hover { background: var(--color-primary-hover); }
+
+/* Chapters */
+.chapterPhoto { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; margin-bottom: var(--space-6); border-radius: var(--radius); background: var(--color-surface); }
+.chapterIntro { margin-bottom: var(--space-7); font-size: var(--text-lg); line-height: 1.65; }
+.points h3 { margin-bottom: var(--space-4); font-size: var(--text-lg); color: var(--color-heading, var(--color-primary)); }
+.points ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+.points li { padding-left: var(--space-4); border-left: 3px solid var(--color-primary); }
+.points h4 { margin-bottom: var(--space-1); font-size: var(--text-base); }
+.points p { margin: 0; color: var(--color-caption); }
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-6); }
+.card { overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-background); break-inside: avoid; }
+.cardPhoto { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--color-surface); }
+.cardBody { display: grid; gap: var(--space-4); padding: var(--space-5); }
+.cardBody h3 { margin: 0; color: var(--color-heading, var(--color-primary)); }
+.cardBody > p { margin: 0; }
+.cardLink { justify-self: start; }
+.phrases { margin: 0; border-top: var(--border); }
+.phrasesHead, .phrase { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); padding-block: var(--space-3); border-bottom: var(--border); }
+.phrasesHead { font-family: var(--font-label); font-size: var(--text-sm); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--color-caption); }
+.phrase dt { font-weight: 700; color: var(--color-heading, var(--color-primary)); }
+.phrase dd { margin: 0; }
+.tips { list-style: none; margin: 0; padding: 0; border-top: var(--border); }
+.tips li { padding-block: var(--space-4); border-bottom: var(--border); break-inside: avoid; }
+.tips h3 { margin-bottom: var(--space-1); font-size: var(--text-base); }
+.tips p { margin: 0; color: var(--color-caption); }
+
+/* Closing page */
+.end { text-align: center; display: grid; justify-items: center; gap: var(--space-4); padding-top: var(--space-9); }
+.end h2 { margin: 0; color: var(--color-heading, var(--color-primary)); font-family: var(--font-heading); font-weight: var(--heading-weight); font-size: var(--text-heading); line-height: 1.15; }
+.end h2:focus { outline: none; }
+.end .pdf { justify-items: center; }
+.endIcon { color: var(--color-primary); }
+.endText { max-width: 34ch; margin: 0 0 var(--space-3); font-size: var(--text-lg); }
+.restart { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; color: var(--color-primary); text-underline-offset: var(--space-1); }
+
+@media (min-width: 48rem) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coverInner { padding-bottom: var(--space-9); }
+}
+
+/* The printed book exists only on paper. */
+.book { display: none; }
+@media print {
+  .guide[data-print="book"] .screen { display: none; }
+  .guide[data-print="book"] .book { display: block; }
+  .book { color: #000; }
+  .book img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .book :global(.button), .book iframe { display: none !important; }
+  .bookCover { text-align: left; }
+  .bookCover h1 { margin-bottom: var(--space-4); color: var(--color-heading, var(--color-primary)); font-family: var(--font-heading); font-weight: var(--heading-weight); font-size: 32pt; line-height: 1.1; }
+  .bookCover h2 { margin: var(--space-7) 0 var(--space-4); font-size: 16pt; }
+  .bookCover .tocList li { display: flex; gap: var(--space-3); padding-block: var(--space-2); font-size: 12pt; }
+  .bookCoverPhoto { display: block; width: 100%; max-height: 55vh; object-fit: cover; margin-bottom: var(--space-6); }
+  .bookPage { break-before: page; }
+  .bookPage .chapterPhoto, .bookPage .cardPhoto { max-height: 40vh; }
+  .bookPage .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+  .bookPage.end { padding-top: 30vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page { animation: none; }
+  .progress span { transition: none; }
+}

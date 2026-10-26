@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parseContactPhone } from "./contact-phone";
-import { standardQuestions, templateKeys, templateOf } from "./event-templates";
+import { standardQuestions, templateKeys, templateOf, type EventTemplate } from "./event-templates";
+import { emptyGuide, type GuideSettings } from "./guide";
 import { presetPoster } from "./poster-presets";
 import { createSeedEvent } from "./seed-event";
 import { eventTimezones } from "./timezones";
@@ -78,6 +79,17 @@ function apply(base: EventRecord, setup: EventSetup, ids: Ids): EventRecord {
   };
 }
 
+/** An E-Guide's starting book: the template's chapter titles (no content), its order, and the name on the cover. */
+export function templateGuide(frame: NonNullable<EventTemplate["guide"]>, title: string, uuid: () => string): GuideSettings {
+  const base = emptyGuide();
+  const chapters = frame.chapters.map(chapter => ({ id: uuid(), layout: chapter.layout, title: chapter.title, intro: "", photo: { url: "", alt: "", srcset: [] }, items: [] }));
+  return {
+    cover: { ...base.cover, title },
+    chapters,
+    order: frame.order.map(step => typeof step === "number" ? { kind: "chapter" as const, id: chapters[step].id } : { kind: "part" as const, part: step }),
+  };
+}
+
 export function buildEventFromSetup(setup: EventSetup, ids: Ids): EventRecord {
   const template = templateOf(setup.template);
   const base = createBlankEvent();
@@ -88,6 +100,11 @@ export function buildEventFromSetup(setup: EventSetup, ids: Ids): EventRecord {
     prepare: { ...base.prepare, items: (template?.prepare ?? []).map(card => ({ icon: card.icon, title: card.title, description: "", list: [] })) },
   }, setup, ids);
   if (template?.poster) event.poster = presetPoster(template.poster, event);
+  if (template?.guide) {
+    // The book holds only the parts this event shows (a module the admin may not use is left out).
+    const guide = templateGuide(template.guide, setup.title, ids.uuid);
+    event.guide = { ...guide, order: guide.order.filter(step => step.kind === "chapter" || setup.modules.includes(step.part)) };
+  }
   const feedback = setup.modules.includes("feedback");
   return {
     ...event,

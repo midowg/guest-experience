@@ -1,0 +1,16 @@
+/* "Bab panduan" (E-Guide): chapters fold open one by one; the reading order is a numbered list. */
+.chapter { gap: 0; }
+.chapter[open] { gap: var(--space-4); }
+.chapterSummary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); cursor: pointer; font-size: .9375rem; min-height: 44px; }
+.chapterSummary svg { flex-shrink: 0; color: var(--blue); }
+.layoutTag { margin-left: auto; padding: 2px 8px; border-radius: 999px; background: #eef1f6; color: #3d4757; font-size: .75rem; font-weight: 600; }
+.chapterBody { display: grid; gap: var(--space-4); min-width: 0; }
+.entry { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px dashed #c4cad6; border-radius: 12px; background: #fff; min-width: 0; }
+.entry h5 { margin: 0; font-size: .9375rem; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.step { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border: var(--border); border-radius: 10px; background: #fff; min-width: 0; }
+.stepNumber { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; background: #eef1f6; font-weight: 700; font-size: .8125rem; flex-shrink: 0; }
+.stepText { display: grid; flex: 1 1 10rem; min-width: 0; overflow-wrap: anywhere; }
+.stepKind { color: #5b6473; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+.outside { display: grid; gap: var(--space-2); }

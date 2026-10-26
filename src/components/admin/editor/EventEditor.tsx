@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Notice } from "@/components/ui";
-import { CalendarCheck, CalendarClock, Frame, CircleCheck, CircleDot, ClipboardCheck, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
+import { BookOpen, CalendarCheck, CalendarClock, Frame, CircleCheck, CircleDot, ClipboardCheck, FileText, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
 import { Check, SuggestionChips } from "@/components/admin/editor/controls";
 import { chipLabel, fieldExamples, fieldPattern, fieldSuggestions, fillSuggestion } from "@/components/admin/editor/suggestions";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
@@ -14,11 +14,13 @@ import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/sh
 import { blockOfPath, blockStatusLabels, blockStatuses, completeSections, editorBlocks, editorStages, prepareEvent } from "@/components/admin/editor/editor-model";
 import { AfterBlock, AppearanceBlock, DayBlock, ExperienceBlock, PrepareBlock } from "@/components/admin/editor/JourneyEditor";
 import { TranslationBlock } from "@/components/admin/editor/TranslationEditor";
-import { moduleActive, moduleBlocks, type AdminModule } from "@/lib/admin-modules";
+import { blockAllowed, moduleActive, moduleBlocks, type AdminModule } from "@/lib/admin-modules";
+import type { GuidePart } from "@/lib/guide";
 import type { ControlOptions, EditorKit, BooleanKey, TextKey, TimeKey } from "@/components/admin/editor/kit";
 import { AgendaBlock } from "@/components/admin/editor/blocks/AgendaBlock";
 import { ContactBlock } from "@/components/admin/editor/blocks/ContactBlock";
 import { FeedbackBlock } from "@/components/admin/editor/blocks/FeedbackBlock";
+import { GuideBlock, withGuidePart } from "@/components/admin/editor/blocks/GuideBlock";
 import { HeroBlock } from "@/components/admin/editor/blocks/HeroBlock";
 import { IdentityBlock } from "@/components/admin/editor/blocks/IdentityBlock";
 import { PosterBlock } from "@/components/admin/editor/blocks/PosterBlock";
@@ -43,16 +45,13 @@ import { absolute, adminApi, eventPath } from "@/lib/routes";
 
 
 /** Shorter names for the chips, so more of them fit with their names on one row. */
-const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan", poster: "Poster" };
+const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan", poster: "Poster", guide: "Bab" };
 const blockIcons: Record<string, LucideIcon> = {
   delete: Trash2, identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
   agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, language: Languages, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
-  feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket, poster: Frame,
+  feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket, poster: Frame, guide: BookOpen,
 };
 
-
-/** A card event (event_kind "kartu") is edited with these blocks only. */
-const cardBlocks = new Set(["poster", "publication", "appearance"]);
 
 const WIDE = "(min-width: 72rem)";
 /** Whether the menu is a sidebar (wide screen) or a drawer. Without matchMedia it is a drawer. */
@@ -80,7 +79,9 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const restricted = (key: AdminModule) => disabledModules.includes(key) && moduleActive(initialEvent, key);
   // Kind, audience, and theme come from the template; only the super admin changes them (meeting of 20 Oct).
   const card = initialEvent.event_kind === "kartu";
-  const blocks = editorBlocks.filter(item => (superAdmin || item.id !== "appearance") && (!card || cardBlocks.has(item.id)) && !(Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, id]) => id === item.id && unavailable(key)));
+  const guide = initialEvent.event_kind === "eguide";
+  // Each kind offers only the blocks that fit it (kindModules / kindBlocks in src/lib/admin-modules.ts).
+  const blocks = editorBlocks.filter(item => (superAdmin || item.id !== "appearance") && blockAllowed(initialEvent.event_kind, item.id) && !(Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, id]) => id === item.id && unavailable(key)));
   const restrictedBlock = (id: string) => (Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, block]) => block === id && restricted(key));
   const sectionModule: Partial<Record<string, AdminModule>> = { experience: "experience", agenda: "agenda", location: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback: "feedback" };
   const sectionUnavailable = (key: string) => { const owner = sectionModule[key]; return !!owner && unavailable(owner); };
@@ -93,7 +94,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const [error, setError] = useState("");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   // One block's form is always open next to the phone preview; it starts with the event's basics.
-  const [open, setOpen] = useState<string>(card ? "poster" : "identity");
+  const [open, setOpen] = useState<string>(card ? "poster" : guide ? "guide" : "identity");
   const [phase, setPhase] = useState<EventPhase>("before");
   // On a phone the form and the preview take turns on screen.
   const [view, setView] = useState<"form" | "preview">("form");
@@ -160,7 +161,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   /** Chips and example sentences come from suggestions.ts by field name, so call sites stay short. */
   function control(name: string, label: string, value: string, onChange: (value: string) => void, options: ControlOptions = {}) {
     const pattern = fieldPattern(name);
-    const placeholder = options.type === "datetime-local" ? undefined : fieldExamples[pattern];
+    const placeholder = options.type === "datetime-local" ? undefined : options.placeholder ?? fieldExamples[pattern];
     const suggestions = (options.suggestions ?? fieldSuggestions[pattern] ?? []).map(text => fillSuggestion(text, event.title));
     const props = { id: name, value, placeholder, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value), "aria-describedby": described(name, options.hint), "aria-invalid": !!errors[name], maxLength: options.maxLength };
     return <Field name={name} label={label} hint={options.hint} error={errors[name]?.join(" ")}>
@@ -219,6 +220,11 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     if (id === "poster") return { on: event.poster.enabled, set: on => update("poster", on && !event.poster.fields.length ? presetPoster(posterPresets[0].key, event) : { ...event.poster, enabled: on }) };
     const key = sectionOfBlock[id];
     if (!key) return null;
+    // In an E-Guide a part is shown by being in the book, so the switch puts it in or takes it out.
+    if (guide) {
+      const part = key as GuidePart;
+      return { on: !!event.sections.find(section => section.key === key)?.enabled, set: next => { const changed = withGuidePart(event, part, next); update("guide", changed.guide); update("sections", changed.sections); } };
+    }
     const shown = !!event.sections.find(section => section.key === key)?.enabled;
     const on = shown && (key !== "rsvp" || event.rsvp_enabled) && (key !== "feedback" || event.feedback_enabled);
     return {
@@ -252,7 +258,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       if (first) openField(first);
       return;
     }
-    if (payload.status === "published" && !window.confirm("Simpan dan publikasikan perubahan ini? Undangan akan dapat dibuka oleh siapa pun yang memiliki tautannya.")) return;
+    if (payload.status === "published" && !window.confirm(`Simpan dan publikasikan perubahan ini? ${guide ? "E-Guide" : "Undangan"} akan dapat dibuka oleh siapa pun yang memiliki tautannya.`)) return;
     setPending(true);
     try {
       const result = await adminRequest<EventRecord>(adminApi(event.id), { method: "PUT", body: JSON.stringify(parsed.data) });
@@ -353,6 +359,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {block("appearance", "Jenis, audiens, dan tampilan", <AppearanceBlock event={event} update={update} />)}
       {block("schedule", "Waktu acara", <ScheduleBlock kit={kit} onTimezone={changeTimezone} />)}
       {block("hero", "Foto latar pembuka", <HeroBlock kit={kit} />)}
+      {block("guide", "Bab panduan", <GuideBlock kit={kit} />)}
       {block("topics", "Topik pembahasan", <TopicsBlock kit={kit} />)}
       {block("experience", "Pengalaman kunjungan", <ExperienceBlock event={event} update={update} control={control} errors={errors} />)}
       {block("agenda", "Rundown", <AgendaBlock kit={kit} />)}
@@ -373,7 +380,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     </fieldset>}
       </section>
       {!card && <aside className={e.previewPane} aria-label="Pratinjau undangan">
-        <PhonePreview event={event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open)} onFocusArea={area => openBlock(blockOfArea[area])} src={previewSrc} />
+        <PhonePreview event={event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open)} onFocusArea={area => openBlock(blocks.some(item => item.id === blockOfArea[area]) ? blockOfArea[area] : guide ? "guide" : blockOfArea[area])} src={previewSrc} />
       </aside>}
     </div>
   </form>;

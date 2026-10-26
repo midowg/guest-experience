@@ -14,11 +14,11 @@ function shortDay(day: string, timeZone: string, lang: "id" | "en") {
   return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "id-ID", { weekday: "short", day: "numeric", month: "short", timeZone }).format(new Date(`${day}T12:00:00Z`));
 }
 
-function AgendaEntry({ event, item }: { event: EventRecord; item: AgendaItem }) {
+function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; item: AgendaItem; expanded?: boolean }) {
   const { t } = useWording();
   const panel = useId();
-  const [open, setOpen] = useState(false);
-  const [story, setStory] = useState(false);
+  const [open, setOpen] = useState(expanded);
+  const [story, setStory] = useState(expanded);
   const detail = event.agenda_details?.[item.id];
   const length = duration(item.starts_at, item.ends_at);
   const page = presentationPage(event.presentation_pdf_url ?? "", detail?.pdf_page ?? null);
@@ -51,8 +51,9 @@ function AgendaEntry({ event, item }: { event: EventRecord; item: AgendaItem }) 
 /**
  * The rundown. Over several days it becomes day tabs, opening on today during the event; each
  * item may carry a place, its length, and a "Did you know?" detail that opens in place.
+ * `expanded` (the printed E-Guide): every day one after another, every detail open.
  */
-export function AgendaList({ event, now }: { event: EventRecord; now: number | null }) {
+export function AgendaList({ event, now, expanded = false }: { event: EventRecord; now: number | null; expanded?: boolean }) {
   const { t, lang } = useWording();
   const days = agendaByDay(event.agenda, event.timezone);
   const [active, setActive] = useState(0);
@@ -61,7 +62,11 @@ export function AgendaList({ event, now }: { event: EventRecord; now: number | n
   // Opening on today is set once the clock is known on the client; the server renders day 1.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (todayIndex >= 0) setActive(todayIndex); }, [todayIndex]);
-  if (days.length <= 1) return <ol className={styles.agenda}>{(days[0]?.items ?? []).map(item => <AgendaEntry key={item.id} event={event} item={item} />)}</ol>;
+  if (days.length <= 1) return <ol className={styles.agenda}>{(days[0]?.items ?? []).map(item => <AgendaEntry key={item.id} event={event} item={item} expanded={expanded} />)}</ol>;
+  if (expanded) return <div className={styles.programDays}>{days.map((day, index) => <div key={day.day || index}>
+    <p className={styles.dayHeading}>{t("program.day", { n: index + 1, total: days.length })}{day.day && ` · ${shortDay(day.day, event.timezone, lang)}`}</p>
+    <ol className={styles.agenda}>{day.items.map(item => <AgendaEntry key={item.id} event={event} item={item} expanded />)}</ol>
+  </div>)}</div>;
   const current = days[Math.min(active, days.length - 1)];
   return <div className={styles.programDays}>
     <div className={styles.dayTabs} role="tablist" aria-label={t("program.tabs.label")}>

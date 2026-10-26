@@ -464,6 +464,11 @@
 .ticketSave h2 { margin: 0; font-size: var(--text-lg); }
 .ticketActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 @media print {
+  /* A printed carousel shows every photo, one under another (the E-Guide's PDF). */
+  .galleryViewport { aspect-ratio: auto; overflow: visible; background: none; }
+  .gallerySlide { position: static; opacity: 1; margin-bottom: var(--space-4); break-inside: avoid; }
+  .gallerySlide img { height: auto; max-height: 40vh; object-fit: cover; }
+  .galleryControls { display: none; }
   .ticketPage [data-no-print] { display: none !important; }
   .ticketCard { box-shadow: none; }
   .ticketBand { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

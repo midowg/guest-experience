@@ -1,3 +1,4 @@
+import { emptyGuide } from "./guide";
 import { z } from "zod";
 import { EMBED_ERROR, parseLocationEmbed } from "./location-embed";
 import { parseContactPhone } from "./contact-phone";
@@ -135,6 +136,22 @@ export const posterDesignInputSchema = z.object({
 });
 export type PosterDesignInput = z.infer<typeof posterDesignInputSchema>;
 export const emptyAfter = { title: "", message: "", image: emptyImage, collaboration: { enabled: false, title: "", description: "", button_label: "" } };
+/** E-Guide (src/lib/guide.ts): a cover, up to 20 chapters of up to 30 items, and the book's order. */
+const guideImage = plainImage.default(emptyImage);
+const guideItemSchema = z.object({
+  id: z.string().min(1).max(40), title: text(200).default(""), text: text(2000).default(""), fact: text(600).default(""), photo: guideImage, link: httpsUrl.default(""),
+  en: z.object({ title: text(200).default(""), text: text(2000).default(""), fact: text(600).default("") }).optional(),
+});
+const guideChapterSchema = z.object({
+  id: z.string().min(1).max(40), layout: z.enum(["story", "cards", "phrases", "tips"]), title: text(200).default(""), intro: text(2000).default(""), photo: guideImage,
+  items: z.array(guideItemSchema).max(30).default([]), en: z.object({ title: text(200).default(""), intro: text(2000).default("") }).optional(),
+});
+const guideSchema = z.object({
+  cover: z.object({ eyebrow: text(120).default(""), title: text(200).default(""), subtitle: text(400).default(""), photo: guideImage, en: z.object({ eyebrow: text(120).default(""), title: text(200).default(""), subtitle: text(400).default("") }).optional() }).default({ eyebrow: "", title: "", subtitle: "", photo: emptyImage }),
+  chapters: z.array(guideChapterSchema).max(20).default([]),
+  order: z.array(z.union([z.object({ kind: z.literal("chapter"), id: z.string().min(1).max(40) }), z.object({ kind: z.literal("part"), part: z.enum(["experience", "agenda", "location", "prepare", "contact"]) })])).max(30).default([]),
+});
+
 export const eventBaseSchema = z.object({
   id: z.uuid(), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),
   status: z.enum(["draft", "published", "archived"]), title: text(180).min(1), subtitle: text(250),
@@ -158,7 +175,7 @@ export const eventBaseSchema = z.object({
     framing: z.object({ mobile: photoFrameSchema, desktop: photoFrameSchema }).optional(),
   }),
   gallery: z.array(z.object({ id: z.uuid(), url: requiredHttpsUrl, alt: text(300), caption: text(300), sort_order: z.number().int().min(0).max(1000), srcset: srcsetSchema })).max(12),
-  event_kind: z.enum(["kunjungan", "acara", "program", "kartu"]).default("acara"),
+  event_kind: z.enum(["kunjungan", "acara", "program", "kartu", "eguide"]).default("acara"),
   audience: z.enum(["external", "internal"]).default("external"),
   theme: z.object({ key: z.enum(themeKeys).default("werkudara"), corners: z.enum(["square", "soft"]).default("square") }).default({ key: "werkudara", corners: "square" }),
   phase_override: z.enum(["auto", "before", "day", "after"]).default("auto"),
@@ -173,6 +190,7 @@ export const eventBaseSchema = z.object({
   presentation_pdf_url: httpsUrl.default(""),
   emergency: emergencySchema.default(emptyEmergency),
   poster: posterSchema.default(() => posterSchema.parse({})),
+  guide: guideSchema.default(emptyGuide),
   translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),
   created_at: timestamp, updated_at: timestamp,
 });
@@ -191,6 +209,11 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
   const photos: [(string | number)[], { url: string; alt: string; srcset: unknown[] }][] = [
     [["team_image"], event.team_image], [["experience", "image"], event.experience.image], [["route", "map_image"], event.route.map_image],
     [["after", "image"], event.after.image], ...event.route.steps.map((step, index) => [["route", "steps", index, "image"], step.image] as [(string | number)[], typeof step.image]),
+    [["guide", "cover", "photo"], event.guide.cover.photo],
+    ...event.guide.chapters.flatMap((chapter, index) => [
+      [["guide", "chapters", index, "photo"], chapter.photo] as [(string | number)[], typeof chapter.photo],
+      ...chapter.items.map((item, at) => [["guide", "chapters", index, "items", at, "photo"], item.photo] as [(string | number)[], typeof item.photo]),
+    ]),
   ];
   for (const [path, image] of photos) {
     if (image.url && !image.alt) issue([...path, "alt"], "Isi deskripsi foto.");
@@ -198,8 +221,13 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
   }
   const locationDisplay = event.location_display ?? (event.location_embed_url ? "embed" : "manual");
   if (locationDisplay === "embed" && !event.location_embed_url) issue(["location_embed_url"], "Isi kode sematan Google Maps.");
-  // A card has no invitation: organiser, introduction and place are not asked of it.
-  if (event.status === "published" && event.event_kind !== "kartu") {
+  if (new Set(event.guide.chapters.map(chapter => chapter.id)).size !== event.guide.chapters.length) issue(["guide", "chapters"], "ID bab tidak boleh berulang.");
+  // A card and an E-Guide have no invitation: organiser, introduction and place are not asked of them.
+  if (event.status === "published" && event.event_kind === "eguide") {
+    if (!event.guide.cover.title) issue(["guide", "cover", "title"], "Isi judul sampul sebelum publikasi.");
+    if (!event.guide.chapters.length) issue(["guide", "chapters"], "Tambahkan minimal satu bab sebelum publikasi.");
+  }
+  if (event.status === "published" && event.event_kind !== "kartu" && event.event_kind !== "eguide") {
     for (const key of ["organizer", "introduction"] as const) if (!event[key]) issue([key], "Lengkapi sebelum publikasi.");
     if (locationDisplay === "manual") for (const key of ["venue_name", "address", "location_url"] as const) if (!event[key]) issue([key], "Lengkapi sebelum publikasi.");
     if (event.feedback_enabled && !event.feedback_questions.length) issue(["feedback_questions"], "Isi pertanyaan sebelum mengaktifkan survei.");

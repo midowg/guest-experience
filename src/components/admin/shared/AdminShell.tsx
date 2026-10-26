@@ -47,6 +47,8 @@ export function EventNavigation({ event, current }: { event: EventRecord; curren
   const publicHref = event.status === "published" ? eventPath(event) : undefined;
   // A card has no guests, RSVP or operations: its editor is all there is.
   if (event.event_kind === "kartu") return <EventPagesMenu current={current} publicHref={publicHref} groups={[{ label: "Edit", pages: [page("edit", "Edit kartu")] }]} />;
+  // An E-Guide is read, not attended: no guest list, RSVP, check-in, BEO, event photos or survey.
+  if (event.event_kind === "eguide") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka E-Guide" groups={[{ label: "Edit", pages: [page("edit", "Edit E-Guide")] }]} />;
   return <EventPagesMenu current={current} publicHref={publicHref} groups={[
     { label: "Edit", pages: [page("edit", "Edit acara")] },
     { label: "Tamu", pages: [page("invitations", "Daftar tamu"), page("responses", "RSVP"), page("checkin", "Check-in")] },

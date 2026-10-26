@@ -11,7 +11,7 @@ import { fromZoneInput } from "@/lib/format";
 import { eventTimezones, timezoneInfo } from "@/lib/timezones";
 import { themeDefinition } from "@/lib/themes";
 import type { EventRecord, SectionKey, StaffMember } from "@/lib/types";
-import type { AdminModule } from "@/lib/admin-modules";
+import { kindOffers, type AdminModule } from "@/lib/admin-modules";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { TemplateMiniature } from "@/components/admin/events/TemplateMiniature";
 import { fieldExamples, WERKUDARA_OFFICE } from "@/components/admin/editor/suggestions";
@@ -50,7 +50,8 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
   const template = start?.type === "template" ? templateOf(start.key) : undefined;
   const source = start?.type === "copy" ? events.find(event => event.id === start.id) : undefined;
   const set = (patch: Partial<Details>) => { setDetails(current => ({ ...current, ...patch })); setErrors({}); };
-  const allowed = (key: SectionKey) => key === "about" || !disabledModules.includes(key as AdminModule);
+  // Only modules the super admin allows and the kind of event offers (src/lib/admin-modules.ts kindModules).
+  const allowed = (key: SectionKey) => key === "about" || (!disabledModules.includes(key as AdminModule) && kindOffers(template?.kind ?? source?.event_kind, key as AdminModule));
 
   function pick(next: Start) {
     setStart(next); setErrors({}); setError("");
@@ -58,11 +59,14 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
       const copy = events.find(event => event.id === next.id);
       const office = copy?.venue_name === WERKUDARA_OFFICE.venue_name;
       setDetails({ ...emptyDetails, timezone: (copy?.timezone ?? "Asia/Jakarta") as Details["timezone"], location: office ? "werkudara" : copy?.venue_name ? "other" : "later", venue_name: copy?.venue_name ?? "", address: copy?.address ?? "", location_url: copy?.location_url ?? "" });
-    } else setDetails(emptyDetails);
+    } else if (next.type === "template" && templateOf(next.key)?.kind === "eguide") setDetails({ ...emptyDetails, location: "later", venue_name: "", address: "", location_url: "" });
+    else setDetails(emptyDetails);
   }
 
   // A card needs only a name: no time, place or PIC. It is dated now so the record stays complete.
   const card = template?.kind === "kartu";
+  // An E-Guide is read, not attended: its dates and place are optional, and undated it is dated now.
+  const guide = template?.kind === "eguide";
   function setup(): unknown {
     const time = (value: string) => value ? fromZoneInput(value, details.timezone) : null;
     if (card) return {
@@ -71,7 +75,7 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
     };
     const modules = (template ? template.modules : source ? source.sections.filter(s => s.enabled).map(s => s.key) : ["about", "agenda", "location", "rsvp", "contact"] as SectionKey[]).filter(isSetupKey).filter(allowed);
     return {
-      template: template?.key ?? "blank", title: details.title, starts_at: time(details.starts_at) ?? "", ends_at: time(details.ends_at), timezone: details.timezone,
+      template: template?.key ?? "blank", title: details.title, starts_at: time(details.starts_at) ?? (guide ? new Date().toISOString() : ""), ends_at: time(details.ends_at), timezone: details.timezone,
       audience: template?.audience ?? source?.audience ?? "external", language: source?.language ?? "id", invitation_mode: source?.invitation_mode ?? "open",
       location: details.location, ...(details.location === "later" ? { venue_name: "", address: "", location_url: "" } : { venue_name: details.venue_name, address: details.address, location_url: details.location_url }),
       greeting: "", introduction: "", closing: "", modules, guest_estimate: null, rsvp_closes_at: null, contact_name: "", contact_phone: "", pic_staff_id: picId,
@@ -83,7 +87,7 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
     const parsed = setupSchema.safeParse(setup());
     const found: Record<string, string> = {};
     if (!parsed.success) for (const issue of parsed.error.issues) found[issue.path.join(".")] ??= issue.message;
-    if (!details.starts_at && !card) found.starts_at = "Isi tanggal dan jam mulai.";
+    if (!details.starts_at && !card && !guide) found.starts_at = "Isi tanggal dan jam mulai.";
     if (Object.keys(found).length) { setErrors(found); requestAnimationFrame(() => document.getElementById(`setup-${Object.keys(found)[0]}`)?.focus()); return; }
     setPending(true); setError("");
     try {
@@ -143,10 +147,10 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
             {template && <p className="field-hint">{template.label} · tampilan {themeDefinition(template.theme).name}</p>}
           </div>
           <div className="stack">
-            {input("title", card ? "Nama kartu" : "Nama acara", { hint: card ? "Tampil sebagai judul halaman kartu." : "Tampil sebagai judul undangan.", placeholder: template ? "" : undefined, suggestions: template ? [template.example, ...(template.examples ?? [])] : undefined })}
+            {input("title", card ? "Nama kartu" : guide ? "Nama E-Guide" : "Nama acara", { hint: card ? "Tampil sebagai judul halaman kartu." : guide ? "Tampil di sampul buku panduan." : "Tampil sebagai judul undangan.", placeholder: template ? "" : undefined, suggestions: template ? [template.example, ...(template.examples ?? [])] : undefined })}
             {card ? <p className="field-hint">Jenis kartu (poster, ucapan, ID card, sertifikat, undangan), desain, warna, dan ukuran dipilih di editor setelah ini. Kartu dibuat sebagai draf.</p> : <>
             <div className={styles.grid}>
-              {input("starts_at", `Mulai (${zone})`, { type: "datetime-local" })}
+              {input("starts_at", guide ? `Mulai trip (${zone}, opsional)` : `Mulai (${zone})`, { type: "datetime-local", hint: guide ? "Untuk jadwal per hari. Boleh dikosongkan bila panduan tidak terikat tanggal." : undefined })}
               {input("ends_at", `Selesai (${zone}, opsional)`, { type: "datetime-local" })}
             </div>
             <Field name="setup-timezone" label="Zona waktu">
@@ -171,7 +175,7 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
                 </button>)}
               </div>
             </fieldset>}
-            <p className="field-hint">Isi undangan, rundown, dan bagian lain dilengkapi di editor setelah ini. Acara dibuat sebagai draf dan belum terlihat tamu.</p>
+            <p className="field-hint">{guide ? "Bab panduan (kenapa ke sini, tempat, budaya, tips), jadwal, dan bagian lain dilengkapi di editor setelah ini. E-Guide dibuat sebagai draf dan belum terlihat tamu." : "Isi undangan, rundown, dan bagian lain dilengkapi di editor setelah ini. Acara dibuat sebagai draf dan belum terlihat tamu."}</p>
             </>}
           </div>
         </div>}

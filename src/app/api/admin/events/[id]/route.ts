@@ -46,6 +46,10 @@ export async function PUT(request: Request, { params }: Params) {
       if (error instanceof ServiceError && error.message === "Konten acara tidak valid." && document?.event_kind === "kartu" && document.status === "published") {
         throw new ServiceError(422, "Kartu belum bisa dipublikasikan: database menunggu migrasi 202610220003_card_publish.sql. Simpan sebagai draf dulu.");
       }
+      // Before 202610260001 the same holds for an E-Guide.
+      if (error instanceof ServiceError && error.message === "Konten acara tidak valid." && document?.event_kind === "eguide" && document.status === "published") {
+        throw new ServiceError(422, "E-Guide belum bisa dipublikasikan sebelum migrasi 202610260001 diterapkan. Simpan sebagai draf dulu.");
+      }
       throw error;
     }
   });
