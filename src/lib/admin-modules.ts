@@ -96,21 +96,25 @@ export const moduleBlocks: Partial<Record<AdminModule, string>> = {
  * | kunjungan / acara / program  | all                                                                  | identity, appearance, schedule, hero, topics, day, after, sections, publication |
  * | kartu (Studio Poster)        | poster                                                               | appearance, publication          |
  * | eguide (E-Guide)             | experience, agenda, location, route, gallery, prepare, contact, bilingual | identity, appearance, schedule, guide, publication |
+ * | csr (CSR / donasi)           | contact                                                              | identity, appearance, hero, donation, publication |
  *
  * An E-Guide is read, not answered: no RSVP, personal links, tickets, survey, review,
  * collaboration, poster or Our Team. Its order of parts lives in the guide itself, so it has no
  * "Urutan & tampilan bagian", no hero (the cover has its own photo) and no Hari H / thank-you page.
+ * A CSR page takes donations instead of answers: only its cover, the donation settings and a contact.
  */
 export const kindModules: Record<EventKind, readonly AdminModule[]> = {
   kunjungan: adminModuleKeys, acara: adminModuleKeys, program: adminModuleKeys,
   kartu: ["poster"],
   eguide: ["experience", "agenda", "location", "route", "gallery", "prepare", "contact", "bilingual"],
+  csr: ["contact"],
 };
 const invitationBlocks = ["identity", "appearance", "schedule", "hero", "topics", "day", "after", "sections", "publication"] as const;
 export const kindBlocks: Record<EventKind, readonly string[]> = {
   kunjungan: invitationBlocks, acara: invitationBlocks, program: invitationBlocks,
   kartu: ["appearance", "publication"],
   eguide: ["identity", "appearance", "schedule", "guide", "publication"],
+  csr: ["identity", "appearance", "hero", "donation", "publication"],
 };
 const blockOwner = Object.fromEntries((Object.entries(moduleBlocks) as [AdminModule, string][]).map(([key, id]) => [id, key])) as Record<string, AdminModule>;
 

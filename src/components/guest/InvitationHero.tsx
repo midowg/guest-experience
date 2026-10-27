@@ -15,7 +15,7 @@ import styles from "./guest.module.css";
 export function visibleSections(event: HeroPreviewEvent & { contact?: EventContact; prepare?: PrepareContent }) {
   return event.sections.filter(section => section.enabled && (section.key !== "feedback" || (event.feedback_enabled && event.feedback_questions.length > 0)) && (section.key !== "contact" || (!!event.contact?.name && !!event.contact.phone)) && (section.key !== "prepare" || !!event.prepare?.items.length));
 }
-const kindEyebrow = { kunjungan: "hero.eyebrow.kunjungan", acara: "hero.eyebrow.acara", program: "hero.eyebrow.program", kartu: "hero.eyebrow.acara", eguide: "hero.eyebrow.acara" } as const;
+const kindEyebrow = { kunjungan: "hero.eyebrow.kunjungan", acara: "hero.eyebrow.acara", program: "hero.eyebrow.program", kartu: "hero.eyebrow.acara", eguide: "hero.eyebrow.acara", csr: "hero.eyebrow.acara" } as const;
 
 export function TimeRange({ start, end, timezone }: { start: string; end: string | null; timezone: string }) {
   const { t, time } = useWording();

@@ -1,0 +1,131 @@
+import { describe, expect, it } from "vitest";
+import { HAMBA_ALLAH, defaultDonationItems, describeDonation, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
+import { donationInputSchema, eventSchema } from "./validation";
+import { createSeedEvent } from "./seed-event";
+import { buildEventFromSetup } from "./event-setup";
+import { normalizeEvent } from "./hero-framing";
+
+let n = 0;
+function donation(overrides: Partial<DonationRecord> = {}): DonationRecord {
+  n++;
+  return {
+    id: `d${n}`, event_id: "e1", item_key: "dana", item_label: "Dana", category: "fund", amount: 100000, unit: "Rp",
+    donor_name: "Sari Dewi", display: "name", donor_phone: "081234567890", message: "Semoga bermanfaat",
+    proof_key: "", status: "received", received_amount: null, reject_reason: "", verified_at: `2026-10-2${n % 9}T03:00:00.000Z`, notified_at: null,
+    created_at: "2026-10-20T03:00:00.000Z", ...overrides,
+  };
+}
+const settings = () => ({ ...startingDonation(), items: defaultDonationItems().map(item => item.key === "dana" ? { ...item, target: 10_000_000 } : item.key === "sembako" ? { ...item, target: 100 } : item) });
+
+describe("rupiah", () => {
+  it("writes and reads amounts the Indonesian way", () => {
+    expect(formatRupiah(12500000)).toBe("Rp 12.500.000");
+    expect(parseRupiah("Rp 100.000")).toBe(100000);
+    expect(parseRupiah("abc")).toBe(0);
+  });
+  it("describes money and goods", () => {
+    expect(describeDonation(donation())).toBe("Dana Rp 100.000");
+    expect(describeDonation(donation({ item_label: "Sembako", category: "goods", amount: 2, unit: "paket" }))).toBe("Sembako 2 paket");
+    expect(describeDonation(donation({ item_label: "Tenaga relawan", category: "other", amount: 0, unit: "" }))).toBe("Tenaga relawan");
+  });
+});
+
+describe("totals", () => {
+  it("counts only what the committee received, using the amount it recorded", () => {
+    const totals = donationTotals(settings(), [
+      donation(), donation({ received_amount: 250000 }), donation({ status: "pending", amount: 5_000_000 }), donation({ status: "rejected", amount: 9_000_000 }),
+      donation({ item_key: "sembako", item_label: "Sembako", category: "goods", amount: 3, unit: "paket" }),
+      donation({ item_key: "", item_label: "Kursi roda", category: "other", amount: 1, unit: "" }),
+    ]);
+    expect(totals.fund).toEqual({ total: 350000, target: 10_000_000 });
+    expect(totals.goods).toEqual([{ key: "sembako", label: "Sembako", unit: "paket", total: 3, target: 100 }]);
+    expect(totals.other).toBe(1);
+    expect(totals.donors).toBe(4);
+    expect(totals.pending).toBe(1);
+  });
+
+  it("counts goods given under a chip removed since as other help, never losing them", () => {
+    const totals = donationTotals(settings(), [donation({ item_key: "kasur", item_label: "Kasur", category: "goods", amount: 2, unit: "buah" })]);
+    expect(totals.other).toBe(1);
+  });
+
+  it("shows only the parts the admin switched on", () => {
+    const hidden = { ...settings(), show: { ...settings().show, fundTotal: false, goods: false } };
+    const totals = donationTotals(hidden, [donation(), donation({ item_key: "sembako", item_label: "Sembako", category: "goods", amount: 3, unit: "paket" })]);
+    expect(totals.fund).toBeNull();
+    expect(totals.goods).toEqual([]);
+    expect(totals.donors).toBe(2);
+    expect(donationTotals({ ...settings(), show: { ...settings().show, fundTarget: false } }, [donation()]).fund?.target).toBeNull();
+  });
+});
+
+describe("public donor list", () => {
+  it("follows each donor's choice and never carries a phone number", () => {
+    const list = publicDonors(settings(), [donation({ donor_name: "Raka" }), donation({ donor_name: "Budi Santoso", display: "hamba_allah" }), donation({ donor_name: "Rahasia", display: "hidden" }), donation({ status: "pending" })]);
+    expect(list.map(item => item.name)).toEqual(expect.arrayContaining(["Raka", HAMBA_ALLAH]));
+    expect(list).toHaveLength(2);
+    expect(JSON.stringify(list)).not.toContain("Budi");
+    expect(JSON.stringify(list)).not.toContain("Rahasia");
+    expect(JSON.stringify(list)).not.toContain("0812");
+  });
+
+  it("hides amounts of money and messages unless the admin shows them", () => {
+    const [plain] = publicDonors(settings(), [donation()]);
+    expect(plain.gift).toBe("Dana");
+    expect(plain.message).toBe("Semoga bermanfaat");
+    const [shown] = publicDonors({ ...settings(), show: { ...settings().show, donorAmounts: true, messages: false } }, [donation()]);
+    expect(shown.gift).toBe("Dana Rp 100.000");
+    expect(shown.message).toBe("");
+    expect(publicDonors({ ...settings(), show: { ...settings().show, donors: false } }, [donation()])).toEqual([]);
+  });
+});
+
+describe("handover message", () => {
+  it("fills the template with this donor's gift, the date and the prayer, by their own name", () => {
+    const text = notifyMessage(settings(), donation({ donor_name: "Budi", display: "hamba_allah", received_amount: 150000 }), { title: "Berbagi Bersama Anak Panti" }, "https://journey.werkudara.group/AB23CD", "12 Desember 2026");
+    expect(text).toContain("Halo Budi");
+    expect(text).toContain("Berbagi Bersama Anak Panti: Dana Rp 150.000");
+    expect(text).toContain("12 Desember 2026");
+    expect(text).toContain("https://journey.werkudara.group/AB23CD");
+    expect(text).toContain(settings().notify.prayer);
+    expect(text).not.toContain("{");
+  });
+});
+
+describe("form and event", () => {
+  const base = { item_key: "dana", item_label: "Dana", category: "fund" as const, amount: 50000, unit: "Rp", donor_name: "Sari", display: "name" as const, donor_phone: "", message: "", website: "", idempotency_key: "10f3a511-2331-4000-8000-0000000000aa" };
+  it("asks money for an amount and goods for a count", () => {
+    expect(donationInputSchema.safeParse(base).success).toBe(true);
+    expect(donationInputSchema.safeParse({ ...base, amount: 500 }).success).toBe(false);
+    expect(donationInputSchema.safeParse({ ...base, category: "goods", item_label: "Sembako", amount: 0 }).success).toBe(false);
+    expect(donationInputSchema.safeParse({ ...base, category: "other", item_label: "Tenaga relawan", amount: 0 }).success).toBe(true);
+    expect(donationInputSchema.safeParse({ ...base, website: "spam" }).success).toBe(false);
+    expect(donationInputSchema.safeParse({ ...base, donor_phone: "12" }).success).toBe(false);
+  });
+
+  it("starts a CSR event from its template with donations open and the usual chips", () => {
+    const event = buildEventFromSetup({
+      template: "csr-kegiatan-sosial", title: "Berbagi Bersama Anak Panti", starts_at: "2026-12-12T02:00:00.000Z", ends_at: null, timezone: "Asia/Jakarta",
+      audience: "external", language: "id", invitation_mode: "open", modules: ["about", "contact"], location: "later", venue_name: "", address: "", location_url: "",
+      greeting: "", introduction: "", closing: "", rsvp_closes_at: null, guest_estimate: null, contact_name: "", contact_phone: "",
+    } as Parameters<typeof buildEventFromSetup>[0], { id: "10f3a511-2331-4000-8000-0000000000ab", uuid: () => "10f3a511-2331-4000-8000-0000000000ac", now: "2026-10-27T00:00:00.000Z" });
+    expect(event.event_kind).toBe("csr");
+    expect(event.donation.enabled).toBe(true);
+    expect(event.donation.items.map(item => item.key)).toContain("sembako");
+  });
+
+  it("publishes a CSR page without a place, but not money without a way to pay", () => {
+    const event = { ...createSeedEvent(), event_kind: "csr" as const, status: "published" as const, organizer: "Werkudara", introduction: "Untuk anak panti.", venue_name: "", address: "", location_url: "", location_embed_url: "", location_display: "manual" as const, donation: startingDonation() };
+    const missing = eventSchema.safeParse(event);
+    expect(missing.success).toBe(false);
+    expect(missing.error?.issues.map(issue => issue.path.join("."))).toEqual(["donation.accounts"]);
+    const paid = { ...event, donation: { ...event.donation, accounts: [{ id: "a1", bank: "BCA", number: "123 456 7890", holder: "Yayasan Werkudara" }] } };
+    expect(eventSchema.safeParse(paid).success).toBe(true);
+  });
+
+  it("gives events saved before donations a switched-off donation", () => {
+    const old = { ...createSeedEvent(), donation: undefined } as unknown as Parameters<typeof normalizeEvent>[0];
+    expect(normalizeEvent(old).donation).toEqual(emptyDonation());
+    expect(normalizeDonation({ enabled: true }).show).toEqual(emptyDonation().show);
+  });
+});

@@ -1,3 +1,4 @@
+import { startingDonation } from "./donations";
 import { z } from "zod";
 import { parseContactPhone } from "./contact-phone";
 import { standardQuestions, templateKeys, templateOf, type EventTemplate } from "./event-templates";
@@ -100,6 +101,7 @@ export function buildEventFromSetup(setup: EventSetup, ids: Ids): EventRecord {
     prepare: { ...base.prepare, items: (template?.prepare ?? []).map(card => ({ icon: card.icon, title: card.title, description: "", list: [] })) },
   }, setup, ids);
   if (template?.poster) event.poster = presetPoster(template.poster, event);
+  if (template?.kind === "csr") event.donation = startingDonation();
   if (template?.guide) {
     // The book holds only the parts this event shows (a module the admin may not use is left out).
     const guide = templateGuide(template.guide, setup.title, ids.uuid);

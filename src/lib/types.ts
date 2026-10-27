@@ -1,4 +1,5 @@
 import type { GuideSettings } from "./guide";
+import type { DonationSettings } from "./donations";
 import type { PosterSettings } from "./poster";
 
 export type EventStatus = "draft" | "published" | "archived";
@@ -30,9 +31,10 @@ export type HeroImage = { url: string; alt: string; srcset: ImageSource[]; focus
 /**
  * The form of the event. Audience is a separate choice: an internal event can take any form.
  * "kartu" is no event at all: a card people fill in (Studio Poster). "eguide" is a guidebook to
- * read (src/lib/guide.ts): no RSVP, tickets or invitations.
+ * read (src/lib/guide.ts): no RSVP, tickets or invitations. "csr" collects donations
+ * (src/lib/donations.ts): what was given and by whom, not an invitation.
  */
-export type EventKind = "kunjungan" | "acara" | "program" | "kartu" | "eguide";
+export type EventKind = "kunjungan" | "acara" | "program" | "kartu" | "eguide" | "csr";
 export type EventAudience = "external" | "internal";
 export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah";
 export type EventTheme = { key: ThemeKey; corners: "square" | "soft" };
@@ -93,6 +95,8 @@ export type EventRecord = {
   poster: PosterSettings;
   /** E-Guide: the guidebook's cover, chapters and order (event_kind "eguide"). */
   guide: GuideSettings;
+  /** CSR: what people may give, how to pay, what the page shows, and the handover news (event_kind "csr"). */
+  donation: DonationSettings;
   created_at: string; updated_at: string;
 };
 export type Dietary = "vegetarian" | "allergy" | "other";

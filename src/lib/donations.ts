@@ -1,0 +1,199 @@
+import type { PlainImage } from "./types";
+
+/**
+ * CSR donations (event_kind "csr"): people give money or goods, the page shows what has been
+ * collected and who gave, and the committee tells every donor when the help was handed over.
+ *
+ * Money is paid by hand (bank transfer or QRIS shown on the page, no payment gateway). Only
+ * donations the committee has received count anywhere public, so the totals can be trusted.
+ */
+
+/** Fund: money (in rupiah). Goods: things counted in a unit. Other: anything else, typed freely. */
+export type DonationCategory = "fund" | "goods" | "other";
+/** One suggestion chip on the form: a tap fills in what is given and its unit. */
+export type DonationItem = { key: string; label: string; category: DonationCategory; unit: string; target: number | null };
+export type BankAccount = { id: string; bank: string; number: string; holder: string };
+/** How a donor appears in the public list. "hidden" still counts in the totals. */
+export type DonorDisplay = "name" | "hamba_allah" | "hidden";
+export const donorDisplays: { key: DonorDisplay; label: string; hint: string }[] = [
+  { key: "name", label: "Tampilkan nama saya", hint: "Nama Anda muncul di daftar donatur." },
+  { key: "hamba_allah", label: "Hamba Allah", hint: "Tercantum sebagai Hamba Allah." },
+  { key: "hidden", label: "Jangan sebutkan", hint: "Tidak muncul di daftar, tetap terhitung." },
+];
+export const HAMBA_ALLAH = "Hamba Allah";
+
+export type DonationSettings = {
+  /** The form takes donations. Off: the page still shows what was collected. */
+  enabled: boolean;
+  items: DonationItem[];
+  accounts: BankAccount[];
+  qris: PlainImage;
+  proofRequired: boolean;
+  /** How to hand over goods: where to drop them off, by when, or that the committee picks them up. */
+  goodsNote: string;
+  /** After this the form closes; null keeps it open. */
+  closesAt: string | null;
+  /** What the public page shows. */
+  show: { fundTotal: boolean; fundTarget: boolean; goods: boolean; donors: boolean; donorAmounts: boolean; messages: boolean };
+  /** Filled once the help has been handed over: the page shows it and donors can be told. */
+  delivered: { at: string | null; photo: PlainImage; note: string };
+  /** The WhatsApp message to each donor, with {nama} {bantuan} {jumlah} {tanggal_serah} {acara} {tautan} {doa}. */
+  notify: { template: string; prayer: string };
+};
+
+/** A donation as the committee sees it. */
+export type DonationStatus = "pending" | "received" | "rejected";
+export type DonationRecord = {
+  id: string; event_id: string;
+  item_key: string; item_label: string; category: DonationCategory; amount: number; unit: string;
+  donor_name: string; display: DonorDisplay; donor_phone: string; message: string;
+  proof_key: string; status: DonationStatus; received_amount: number | null; reject_reason: string;
+  verified_at: string | null; notified_at: string | null; created_at: string;
+};
+/** What the form sends. */
+export type DonationInput = {
+  item_key: string; item_label: string; category: DonationCategory; amount: number; unit: string;
+  donor_name: string; display: DonorDisplay; donor_phone: string; message: string;
+  website: string; idempotency_key: string;
+};
+
+const image = (): PlainImage => ({ url: "", alt: "", srcset: [] });
+const item = (key: string, label: string, category: DonationCategory, unit: string): DonationItem => ({ key, label, category, unit, target: null });
+
+/** The chips a CSR event starts with; the admin adds, removes and reorders them. */
+export const defaultDonationItems = (): DonationItem[] => [
+  item("dana", "Dana", "fund", "Rp"),
+  item("sembako", "Sembako", "goods", "paket"),
+  item("beras", "Beras", "goods", "kg"),
+  item("minyak", "Minyak goreng", "goods", "liter"),
+  item("susu", "Susu", "goods", "kotak"),
+  item("buku", "Buku tulis", "goods", "pcs"),
+  item("alat-tulis", "Alat tulis", "goods", "set"),
+  item("seragam", "Seragam sekolah", "goods", "stel"),
+  item("pakaian", "Pakaian layak pakai", "goods", "potong"),
+  item("mainan", "Mainan edukasi", "goods", "pcs"),
+  item("obat", "Obat-obatan", "goods", "paket"),
+  item("mandi", "Perlengkapan mandi", "goods", "paket"),
+];
+/** Prayers the admin can pick for the closing line of the WhatsApp message. */
+export const prayerSuggestions = [
+  "Semoga kebaikan Anda dibalas berlipat ganda.",
+  "Semoga menjadi amal jariyah dan membawa keberkahan bagi Anda sekeluarga.",
+  "Semoga Tuhan membalas kebaikan Anda dengan kesehatan dan rezeki yang lapang.",
+  "Jazakumullahu khairan katsiran, semoga Allah membalas dengan kebaikan yang banyak.",
+];
+export const defaultNotifyTemplate = "Halo {nama},\n\nTerima kasih atas donasi Anda untuk {acara}: {bantuan}.\nBantuan telah kami serahkan pada {tanggal_serah}.\n\nLihat kabarnya di sini: {tautan}\n\n{doa}";
+
+export function emptyDonation(): DonationSettings {
+  return {
+    enabled: false, items: [], accounts: [], qris: image(), proofRequired: false, goodsNote: "", closesAt: null,
+    show: { fundTotal: true, fundTarget: true, goods: true, donors: true, donorAmounts: false, messages: true },
+    delivered: { at: null, photo: image(), note: "" },
+    notify: { template: defaultNotifyTemplate, prayer: prayerSuggestions[0] },
+  };
+}
+/** A new CSR event: donations open, with the usual chips. */
+export const startingDonation = (): DonationSettings => ({ ...emptyDonation(), enabled: true, items: defaultDonationItems() });
+
+/** Fills what documents saved before donations existed do not carry. */
+export function normalizeDonation(donation: Partial<DonationSettings> | undefined): DonationSettings {
+  const base = emptyDonation();
+  if (!donation) return base;
+  return {
+    ...base, ...donation,
+    items: donation.items ?? [], accounts: donation.accounts ?? [], qris: { ...image(), ...donation.qris },
+    show: { ...base.show, ...donation.show },
+    delivered: { ...base.delivered, ...donation.delivered, photo: { ...image(), ...donation.delivered?.photo } },
+    notify: { ...base.notify, ...donation.notify },
+  };
+}
+
+/** "Rp 12.500.000". */
+export const formatRupiah = (amount: number) => `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(Math.round(amount))}`;
+/** Digits from what was typed ("Rp 100.000", "100rb" is not guessed): 0 when there are none. */
+export const parseRupiah = (text: string) => Number(text.replace(/\D/g, "").slice(0, 13)) || 0;
+const formatCount = (amount: number) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(amount);
+
+/** "Dana Rp 100.000", "Sembako 2 paket", or just the label when no amount was given. */
+export function describeDonation(donation: Pick<DonationRecord, "item_label" | "category" | "amount" | "unit">, amount = donation.amount): string {
+  if (donation.category === "fund") return amount > 0 ? `${donation.item_label} ${formatRupiah(amount)}` : donation.item_label;
+  return amount > 0 ? `${donation.item_label} ${formatCount(amount)}${donation.unit ? ` ${donation.unit}` : ""}` : donation.item_label;
+}
+
+/** The amount that counts: what the committee recorded on receipt, else what the donor said. */
+export const countedAmount = (donation: Pick<DonationRecord, "amount" | "received_amount">) => donation.received_amount ?? donation.amount;
+
+export type DonationTotals = {
+  fund: { total: number; target: number | null } | null;
+  goods: { key: string; label: string; unit: string; total: number; target: number | null }[];
+  /** Donations of things not on the chip list. */
+  other: number;
+  /** People who gave (received donations), named or not. */
+  donors: number;
+  /** Donations still waiting for the committee: a count only, nobody's details. */
+  pending: number;
+};
+
+/**
+ * What the public page may show of the totals. Only received donations count; the admin's switches
+ * decide which parts appear at all (a part switched off is null or empty).
+ */
+export function donationTotals(settings: DonationSettings, donations: Pick<DonationRecord, "item_key" | "item_label" | "category" | "amount" | "unit" | "status" | "received_amount">[]): DonationTotals {
+  const received = donations.filter(donation => donation.status === "received");
+  const fundItems = settings.items.filter(item => item.category === "fund");
+  const fundTarget = fundItems.reduce<number | null>((sum, item) => item.target ? (sum ?? 0) + item.target : sum, null);
+  const fundTotal = received.filter(donation => donation.category === "fund").reduce((sum, donation) => sum + countedAmount(donation), 0);
+  const goods = settings.items.filter(item => item.category === "goods").map(item => ({
+    key: item.key, label: item.label, unit: item.unit, target: item.target,
+    total: received.filter(donation => donation.category === "goods" && donation.item_key === item.key).reduce((sum, donation) => sum + countedAmount(donation), 0),
+  }));
+  // Goods given under a chip removed since, or typed freely, are "other": still visible, never lost.
+  const goodsKeys = new Set(goods.map(item => item.key));
+  const other = received.filter(donation => donation.category === "other" || (donation.category === "goods" && !goodsKeys.has(donation.item_key))).length;
+  return {
+    fund: settings.show.fundTotal && (fundItems.length || fundTotal) ? { total: fundTotal, target: settings.show.fundTarget ? fundTarget : null } : null,
+    goods: settings.show.goods ? goods.filter(item => item.total > 0 || item.target) : [],
+    other: settings.show.goods ? other : 0,
+    donors: received.length,
+    pending: donations.filter(donation => donation.status === "pending").length,
+  };
+}
+
+/** One line of the public donor list. Never carries a phone number, a proof, or a hidden name. */
+export type PublicDonor = { id: string; name: string; gift: string; message: string; at: string };
+
+/**
+ * The public donor list: received donations, newest first, as each donor chose to appear. Hidden
+ * donors are left out; amounts of money and messages only when the admin shows them.
+ */
+export function publicDonors(settings: DonationSettings, donations: DonationRecord[]): PublicDonor[] {
+  if (!settings.show.donors) return [];
+  return donations
+    .filter(donation => donation.status === "received" && donation.display !== "hidden")
+    .sort((a, b) => (b.verified_at ?? b.created_at).localeCompare(a.verified_at ?? a.created_at))
+    .map(donation => ({
+      id: donation.id,
+      name: donation.display === "name" ? donation.donor_name : HAMBA_ALLAH,
+      gift: donation.category === "fund" && !settings.show.donorAmounts ? donation.item_label : describeDonation(donation, countedAmount(donation)),
+      message: settings.show.messages ? donation.message : "",
+      at: donation.verified_at ?? donation.created_at,
+    }));
+}
+
+/** Initials for a donor's round badge: "HA" for Hamba Allah. */
+export const donorInitials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]!.toUpperCase()).join("") || "?";
+
+/**
+ * The WhatsApp message telling one donor their help was handed over. Placeholders the admin did not
+ * use are simply absent; only this donor's own details go in.
+ */
+export function notifyMessage(settings: DonationSettings, donation: DonationRecord, event: { title: string }, link: string, handedOver: string): string {
+  const values: Record<string, string> = {
+    // The message is private to the donor, so their own name is used even when the page says Hamba Allah.
+    nama: donation.donor_name || "Bapak/Ibu",
+    bantuan: describeDonation(donation, countedAmount(donation)),
+    jumlah: donation.category === "fund" ? formatRupiah(countedAmount(donation)) : `${formatCount(countedAmount(donation))}${donation.unit ? ` ${donation.unit}` : ""}`,
+    tanggal_serah: handedOver, acara: event.title, tautan: link, doa: settings.notify.prayer,
+  };
+  return settings.notify.template.replace(/\{(\w+)\}/g, (whole, key: string) => values[key] ?? whole).replace(/\n{3,}/g, "\n\n").trim();
+}

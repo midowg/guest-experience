@@ -2,6 +2,7 @@ import { emptyAfter, emptyEmergency, emptyEnglish, emptyExperience, emptyPrepare
 import type { EventRecord, HeroFraming, HeroImage, PhotoFrame } from "./types";
 import { normalizePoster } from "./poster";
 import { emptyGuide } from "./guide";
+import { normalizeDonation } from "./donations";
 
 export function defaultFraming(focus: HeroImage["focus"] = "center"): HeroFraming {
   const frame = { x: 50, y: focus === "top" ? 0 : focus === "bottom" ? 100 : 50, zoom: 1 };
@@ -38,6 +39,7 @@ export function normalizeEvent(event: EventRecord): EventRecord {
     emergency: { ...emptyEmergency, ...event.emergency },
     poster: normalizePoster(event.poster),
     // E-Guide (26 Oct): older documents carry no guide.
+    donation: normalizeDonation(event.donation),
     guide: { ...emptyGuide(), ...event.guide, cover: { ...emptyGuide().cover, ...event.guide?.cover }, chapters: event.guide?.chapters ?? [], order: event.guide?.order ?? [] },
   };
 }

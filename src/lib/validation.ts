@@ -1,4 +1,5 @@
 import { emptyGuide } from "./guide";
+import { emptyDonation } from "./donations";
 import { z } from "zod";
 import { EMBED_ERROR, parseLocationEmbed } from "./location-embed";
 import { parseContactPhone } from "./contact-phone";
@@ -136,6 +137,64 @@ export const posterDesignInputSchema = z.object({
 });
 export type PosterDesignInput = z.infer<typeof posterDesignInputSchema>;
 export const emptyAfter = { title: "", message: "", image: emptyImage, collaboration: { enabled: false, title: "", description: "", button_label: "" } };
+/** CSR donations (src/lib/donations.ts): the chips, how to pay, what the page shows, the handover news. */
+const donationItemSchema = z.object({
+  key: z.string().regex(/^[a-z0-9-]{1,40}$/), label: text(60).min(1, "Isi nama bantuan."), category: z.enum(["fund", "goods", "other"]),
+  unit: text(20).default(""), target: z.number().min(1).max(1_000_000_000_000).nullable().default(null),
+});
+const bankAccountSchema = z.object({
+  id: z.string().min(1).max(40), bank: text(60).min(1, "Isi nama bank."),
+  number: text(40).regex(/^[0-9][0-9 .-]*$/, "Nomor rekening hanya angka."), holder: text(120).min(1, "Isi nama pemilik rekening."),
+});
+const donationSchema = z.object({
+  enabled: z.boolean().default(false),
+  items: z.array(donationItemSchema).max(40).refine(items => new Set(items.map(item => item.key)).size === items.length, "Jenis bantuan tidak boleh berulang.").default([]),
+  accounts: z.array(bankAccountSchema).max(5).default([]),
+  qris: plainImage.default(emptyImage),
+  proofRequired: z.boolean().default(false),
+  goodsNote: text(1000).default(""),
+  closesAt: optionalTime.default(null),
+  show: z.object({ fundTotal: z.boolean(), fundTarget: z.boolean(), goods: z.boolean(), donors: z.boolean(), donorAmounts: z.boolean(), messages: z.boolean() }).default(() => emptyDonation().show),
+  delivered: z.object({ at: optionalTime.default(null), photo: plainImage.default(emptyImage), note: text(1000).default("") }).default(() => emptyDonation().delivered),
+  notify: z.object({ template: text(2000).default(() => emptyDonation().notify.template), prayer: text(300).default("") }).default(() => emptyDonation().notify),
+});
+/** What a donor sends. Money needs an amount; goods need how many; anything else just its name. */
+export const donationInputSchema = z.object({
+  item_key: z.string().max(40).regex(/^[a-z0-9-]*$/).default(""),
+  item_label: text(120).min(2, "Tulis bantuan yang ingin diberikan."),
+  category: z.enum(["fund", "goods", "other"]),
+  amount: z.number().min(0).max(1_000_000_000_000).default(0),
+  unit: text(20).default(""),
+  donor_name: text(150).min(2, "Isi nama Anda."),
+  display: z.enum(["name", "hamba_allah", "hidden"]),
+  donor_phone: text(30).refine(value => !value || parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890.").default(""),
+  message: text(500).default(""),
+  website: z.string().max(0),
+  idempotency_key: z.uuid(),
+}).superRefine((value, ctx) => {
+  if (value.category === "fund" && value.amount < 1000) ctx.addIssue({ code: "custom", path: ["amount"], message: "Isi nominal dana, minimal Rp 1.000." });
+  if (value.category === "goods" && value.amount <= 0) ctx.addIssue({ code: "custom", path: ["amount"], message: "Isi jumlah barang." });
+});
+/** The committee records a donation by hand (cash, goods dropped off), already received. */
+export const manualDonationSchema = z.object({
+  item_key: z.string().max(40).regex(/^[a-z0-9-]*$/).default(""),
+  item_label: text(120).min(2, "Tulis bantuannya."),
+  category: z.enum(["fund", "goods", "other"]),
+  amount: z.number().min(0).max(1_000_000_000_000).default(0),
+  unit: text(20).default(""),
+  donor_name: text(150).min(2, "Isi nama donatur."),
+  display: z.enum(["name", "hamba_allah", "hidden"]),
+  donor_phone: text(30).refine(value => !value || parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890.").default(""),
+  message: text(500).default(""),
+});
+/** Receive (with the amount that actually came in), reject (with a reason), or mark the handover message sent. */
+export const donationActionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("receive"), received_amount: z.number().min(0).max(1_000_000_000_000).nullable().default(null) }),
+  z.object({ action: z.literal("reject"), reason: text(300).min(2, "Tulis alasan singkat.") }),
+  z.object({ action: z.literal("pending") }),
+  z.object({ action: z.literal("notified") }),
+]);
+
 /** E-Guide (src/lib/guide.ts): a cover, up to 20 chapters of up to 30 items, and the book's order. */
 const guideImage = plainImage.default(emptyImage);
 const guideItemSchema = z.object({
@@ -175,7 +234,7 @@ export const eventBaseSchema = z.object({
     framing: z.object({ mobile: photoFrameSchema, desktop: photoFrameSchema }).optional(),
   }),
   gallery: z.array(z.object({ id: z.uuid(), url: requiredHttpsUrl, alt: text(300), caption: text(300), sort_order: z.number().int().min(0).max(1000), srcset: srcsetSchema })).max(12),
-  event_kind: z.enum(["kunjungan", "acara", "program", "kartu", "eguide"]).default("acara"),
+  event_kind: z.enum(["kunjungan", "acara", "program", "kartu", "eguide", "csr"]).default("acara"),
   audience: z.enum(["external", "internal"]).default("external"),
   theme: z.object({ key: z.enum(themeKeys).default("werkudara"), corners: z.enum(["square", "soft"]).default("square") }).default({ key: "werkudara", corners: "square" }),
   phase_override: z.enum(["auto", "before", "day", "after"]).default("auto"),
@@ -191,6 +250,7 @@ export const eventBaseSchema = z.object({
   emergency: emergencySchema.default(emptyEmergency),
   poster: posterSchema.default(() => posterSchema.parse({})),
   guide: guideSchema.default(emptyGuide),
+  donation: donationSchema.default(emptyDonation),
   translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),
   created_at: timestamp, updated_at: timestamp,
 });
@@ -227,9 +287,14 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
     if (!event.guide.cover.title) issue(["guide", "cover", "title"], "Isi judul sampul sebelum publikasi.");
     if (!event.guide.chapters.length) issue(["guide", "chapters"], "Tambahkan minimal satu bab sebelum publikasi.");
   }
+  // CSR: a page to give, so it needs something to give and, for money, a way to pay; a place is optional.
+  if (event.status === "published" && event.event_kind === "csr" && event.donation.enabled) {
+    if (!event.donation.items.length) issue(["donation", "items"], "Tambahkan minimal satu jenis bantuan sebelum publikasi.");
+    if (event.donation.items.some(item => item.category === "fund") && !event.donation.accounts.length && !event.donation.qris.url) issue(["donation", "accounts"], "Isi rekening atau QRIS untuk donasi dana.");
+  }
   if (event.status === "published" && event.event_kind !== "kartu" && event.event_kind !== "eguide") {
     for (const key of ["organizer", "introduction"] as const) if (!event[key]) issue([key], "Lengkapi sebelum publikasi.");
-    if (locationDisplay === "manual") for (const key of ["venue_name", "address", "location_url"] as const) if (!event[key]) issue([key], "Lengkapi sebelum publikasi.");
+    if (locationDisplay === "manual" && event.event_kind !== "csr") for (const key of ["venue_name", "address", "location_url"] as const) if (!event[key]) issue([key], "Lengkapi sebelum publikasi.");
     if (event.feedback_enabled && !event.feedback_questions.length) issue(["feedback_questions"], "Isi pertanyaan sebelum mengaktifkan survei.");
     if (event.review_enabled && !event.review_url) issue(["review_url"], "Isi tautan review resmi.");
   }
