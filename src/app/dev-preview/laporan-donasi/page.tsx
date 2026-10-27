@@ -9,5 +9,5 @@ export const dynamic = "force-dynamic";
 export default async function DevDonationReportPage({ searchParams }: { searchParams: Promise<{ kosong?: string; serah?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const { event, donation, records } = sampleCsr(await searchParams);
-  return <DonationReportSheet event={{ id: event.id, title: event.title, organizer: event.organizer, timezone: event.timezone, donation }} report={donationReport(donation, records)} initialRecipient="" printedAt="2026-10-27T09:00:00.000Z" />;
+  return <DonationReportSheet event={{ id: event.id, title: event.title, organizer: event.organizer, timezone: event.timezone, donation, contactName: event.contact.name }} report={donationReport(donation, records)} initialRecipient="" printedAt="2026-10-27T09:00:00.000Z" />;
 }

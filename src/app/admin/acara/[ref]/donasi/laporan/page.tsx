@@ -27,7 +27,7 @@ export default async function DonationReportPage({ params, searchParams }: { par
   const { donations } = await listDonations(id);
   const recipient = (await searchParams).penerima ?? "";
   return <DonationReportSheet
-    event={{ id: event.id, title: event.title, organizer: event.organizer, timezone: event.timezone, donation: event.donation }}
+    event={{ id: event.id, title: event.title, organizer: event.organizer, timezone: event.timezone, donation: event.donation, contactName: event.contact.name }}
     report={donationReport(event.donation, donations)}
     initialRecipient={event.donation.recipients.some(item => item.id === recipient) ? recipient : ""}
     printedAt={new Date().toISOString()} />;

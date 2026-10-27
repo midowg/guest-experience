@@ -9,18 +9,21 @@ import styles from "@/components/admin/beo/beo-print.module.css";
 import s from "./donation-report.module.css";
 
 type Props = {
-  event: { id: string; title: string; organizer: string; timezone: string; donation: DonationSettings };
+  event: { id: string; title: string; organizer: string; timezone: string; donation: DonationSettings; contactName: string };
   report: DonationReport;
   initialRecipient: string;
   printedAt: string;
 };
 
 const count = (amount: number) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(amount);
+/** "2026-10-30" in the event's time zone, for a date field. */
+const dayOf = (iso: string, timeZone: string) => new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 
 /**
  * The handover report as one printable A4 sheet: who it is for, what was collected (received
  * donations only), the donors as each chose to appear, and two signature boxes. The admin picks
- * the recipient and whether the donor list and each donor's amount are printed.
+ * the recipient, fills the handover date and who signs on each side (printed under the signature
+ * lines; nothing is saved), and whether the donor list and each donor's amount are printed.
  */
 export function DonationReportSheet({ event, report, initialRecipient, printedAt }: Props) {
   const { donation } = event;
@@ -28,8 +31,12 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
   const [showDonors, setShowDonors] = useState(true);
   const [showAmounts, setShowAmounts] = useState(false);
   const recipient = donation.recipients.find(item => item.id === recipientId);
+  const [day, setDay] = useState(donation.delivered.at ? dayOf(donation.delivered.at, event.timezone) : "");
+  const [giver, setGiver] = useState({ name: event.contactName, org: event.organizer || "Panitia" });
+  const [receiver, setReceiver] = useState({ name: "", org: "" });
   const organizer = event.organizer || "Panitia";
-  const handedOver = donation.delivered.at ? formatDate(donation.delivered.at, event.timezone) : "";
+  const receiverOrg = receiver.org || recipient?.name || "Penerima bantuan";
+  const handedOver = day ? formatDate(`${day}T12:00:00+07:00`, event.timezone) : "";
 
   return <div className={styles.screen}>
     <div className={styles.toolbar}>
@@ -45,6 +52,15 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
         <label><input type="checkbox" checked={showDonors} onChange={change => setShowDonors(change.target.checked)} /> Daftar donatur</label>
         {showDonors && <label><input type="checkbox" checked={showAmounts} onChange={change => setShowAmounts(change.target.checked)} /> Nominal dana per donatur</label>}
       </div>
+      <fieldset className={s.fill}>
+        <legend>Isi lembar ini sebelum mencetak</legend>
+        <label><span>Tanggal penyerahan</span><input className="input" type="date" value={day} onChange={change => setDay(change.target.value)} /></label>
+        <label><span>Diserahkan oleh: nama</span><input className="input" value={giver.name} maxLength={80} placeholder="Nama yang menyerahkan" onChange={change => setGiver({ ...giver, name: change.target.value })} /></label>
+        <label><span>Diserahkan oleh: instansi atau jabatan</span><input className="input" value={giver.org} maxLength={80} onChange={change => setGiver({ ...giver, org: change.target.value })} /></label>
+        <label><span>Diterima oleh: nama</span><input className="input" value={receiver.name} maxLength={80} placeholder="Kosongkan untuk ditulis tangan" onChange={change => setReceiver({ ...receiver, name: change.target.value })} /></label>
+        <label><span>Diterima oleh: instansi atau jabatan</span><input className="input" value={receiver.org} maxLength={80} placeholder={recipient?.name || "Pengurus panti"} onChange={change => setReceiver({ ...receiver, org: change.target.value })} /></label>
+        <p>Isian ini hanya untuk cetakan, tidak disimpan. Nama yang dikosongkan dicetak sebagai garis untuk ditulis tangan.</p>
+      </fieldset>
       <p className={styles.includes}>Hanya donasi yang sudah <strong>diterima</strong> di Donasi masuk. Donatur yang memilih tidak disebutkan tertulis &ldquo;Tanpa nama&rdquo;. Nomor WhatsApp dan bukti transfer tidak dicetak.</p>
     </div>
 
@@ -92,11 +108,22 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
       {donation.delivered.note && <section><h2>Catatan</h2><p className={styles.notes}>{donation.delivered.note}</p></section>}
 
       <section className={s.signs}>
-        <div><p>Diserahkan oleh,</p><p className={s.org}>{organizer}</p><span className={s.line} /><p className={styles.muted}>Nama dan tanda tangan</p></div>
-        <div><p>Diterima oleh,</p><p className={s.org}>{recipient?.name || "Penerima bantuan"}</p><span className={s.line} /><p className={styles.muted}>Nama dan tanda tangan</p></div>
+        <Signature role="Diserahkan oleh," org={giver.org || organizer} name={giver.name} />
+        <Signature role="Diterima oleh," org={receiverOrg} name={receiver.name} />
       </section>
 
       <footer className={styles.foot}><span>{organizer} · Friday Sharing</span><span>Dicetak {formatDate(printedAt, event.timezone)}</span></footer>
     </article>
+  </div>;
+}
+
+/** One signature box: who signs for whom, room to sign, and the name under the line (or a blank to write in). */
+function Signature({ role, org, name }: { role: string; org: string; name: string }) {
+  return <div>
+    <p>{role}</p>
+    <p className={s.org}>{org}</p>
+    <span className={s.space} />
+    <p className={s.signName}>{name || " "}</p>
+    <p className={styles.muted}>{name ? "Tanda tangan" : "Nama dan tanda tangan"}</p>
   </div>;
 }
