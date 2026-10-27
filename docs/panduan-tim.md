@@ -160,6 +160,33 @@ Isian dan foto peserta **tidak dikirim ke server**: semuanya tersimpan di browse
 
 **Pustaka desain (super admin):** di blok Studio Poster, **Simpan sebagai desain baru** menyimpan latar dan kotak poster acara ini, supaya acara lain bisa memulai dari desain yang sama. Menghapus atau mengubah desain di pustaka tidak mengubah acara yang sudah memakainya. Simpan acaranya dulu kalau latarnya baru saja diunggah.
 
+## 9. CSR / donasi: halaman donasi yang transparan
+
+Untuk kegiatan sosial yang menerima **dana dan barang**. Halamannya bukan undangan: pengunjung melihat **apa yang sudah terkumpul**, **daftar donatur**, dan satu tombol **Donasi sekarang**. Buat acara dari templat **CSR / donasi**.
+
+**Di editor (blok Donasi):**
+1. **Pilihan bantuan:** tombol yang diketuk donatur, misalnya Dana, Sembako, Buku tulis. Atur kelompoknya (Dana, Barang, atau Lainnya), satuannya (paket, kg, pcs), dan target bila ada. Donatur tetap bisa menulis bantuan lain sendiri.
+2. **Pembayaran dana:** isi rekening (bisa lebih dari satu) dan/atau unggah gambar QRIS. Nyalakan *Wajib unggah bukti transfer* bila perlu.
+3. **Barang dan batas waktu:** cara menyerahkan barang (alamat titip, jam, atau dijemput), dan tanggal donasi ditutup bila ada.
+4. **Yang tampil di halaman:** nyalakan atau matikan total dana, target, barang terkumpul, daftar donatur, nominal per donatur, dan pesan donatur.
+5. Di blok **Identitas**, isi **Cerita singkat**: siapa yang dibantu dan untuk apa. Simpan, lalu publikasikan.
+
+Setiap donatur memilih cara tampil: **nama**, **Hamba Allah**, atau **jangan sebutkan** (tidak muncul di daftar, tapi tetap terhitung).
+
+**Tab Donasi masuk:**
+- Donasi baru berstatus **Menunggu**. Cek mutasi rekening atau barangnya, lalu tekan **Terima**. Jumlah bisa dikoreksi sesuai yang benar-benar masuk. Bila tidak ditemukan, tekan **Tolak** dengan alasan singkat.
+- **Hanya donasi yang Diterima yang dihitung** di halaman publik. Itulah yang membuatnya transparan.
+- **Bukti** membuka bukti transfer selama 10 menit. Bukti tersimpan privat dan tidak pernah tampil di halaman.
+- **Tambah manual** untuk dana tunai atau barang yang dititip langsung. Langsung tercatat sebagai diterima.
+- **Unduh CSV** untuk laporan.
+
+**Setelah bantuan diserahkan:**
+1. Di blok Donasi → **Kabar penyerahan**, isi tanggal penyerahan, foto (opsional), dan ucapan. Halaman donasi langsung menampilkan kabar itu.
+2. Periksa **pesan WhatsApp** dan **doa penutup**. Isian `{nama}`, `{bantuan}`, `{tanggal_serah}`, dan lainnya terisi otomatis untuk tiap donatur.
+3. Di tab **Donasi masuk** → **Kabar penyerahan**, tekan **Kirim WA** satu per satu. WhatsApp terbuka dengan pesan yang sudah terisi; kirim, lalu kembali. Barisnya ditandai **Terkirim**, dan penghitung menunjukkan berapa yang sudah dikabari.
+
+Hanya donatur yang mengisi nomor WhatsApp dan donasinya sudah Diterima yang muncul di daftar kabar.
+
 ## Super admin
 
 Menu **Dashboard super admin** (password terpisah):

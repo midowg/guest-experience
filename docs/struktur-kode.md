@@ -8,6 +8,7 @@ Peta singkat supaya perubahan berikutnya mudah dicari dan tidak merusak bagian l
 | --- | --- |
 | `src/app/` | Halaman dan rute (Next.js App Router). `[code]/` untuk tamu (alamat pendek), `e/` untuk alamat lama yang dialihkan, `_guest/` berisi pencarian dan perenderan halaman tamu yang dipakai keduanya, `admin/` untuk panitia (`admin/acara/[ref]` per acara), `api/` untuk API, `dev-preview/` untuk cek tampilan tanpa login (404 di produksi). |
 | `src/components/guest/` | Tampilan tamu: `EventExperience` (halaman undangan), panel per fase, RSVP, tiket, galeri. |
+| `src/components/guest/csr/` | Halaman donasi CSR (`event_kind` "csr"): `CsrExperience` (terkumpul, daftar donatur, tombol Donasi) dan `DonationForm`. Model dan hitungan di `src/lib/donations.ts`; server di `src/lib/server/donations.ts`; admin di `src/components/admin/donations/` dan blok `DonationBlock`. Total dan daftar publik hanya dari donasi berstatus diterima. |
 | `src/components/poster/` | Studio Poster untuk tamu: `PosterCanvas` (poster DOM berskala), `PosterStudio` (Edit/Simpan/Unduh), `layout.ts` (ukur dan tata teks), `export.ts` (canvas → PNG/PDF/Bagikan), `draft.ts` (draf di IndexedDB). |
 | `src/components/admin/` | Tampilan admin, dibagi per fitur (lihat bawah). `admin.module.css` dipakai bersama. |
 | `src/components/ui/` | Komponen dasar bersama: `Button`, `ButtonLink`, `Field`, `Notice`. |
