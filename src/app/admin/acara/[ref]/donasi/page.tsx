@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { isEventId as isId } from "@/lib/short-code";
 import { getAdminEvent, resolveEventRef } from "@/lib/server/events";
 import { listDonations } from "@/lib/server/donations";
 import { isSupabaseConfigured } from "@/lib/server/config";
@@ -6,7 +7,7 @@ import { AdminShell, EventNavigation, SetupNotice } from "@/components/admin/sha
 import { DonationBoard } from "@/components/admin/donations/DonationBoard";
 import styles from "@/components/admin/admin.module.css";
 import { requireAdminPage, requireEventPage } from "@/lib/server/admin-session";
-import { absolute, eventPath } from "@/lib/routes";
+import { absolute, adminEventPath, eventPath } from "@/lib/routes";
 import { shareUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
@@ -15,11 +16,13 @@ export const dynamic = "force-dynamic";
 export default async function DonationsPage({ params }: { params: Promise<{ ref: string }> }) {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
-  const id = await resolveEventRef((await params).ref);
+  const { ref } = await params;
+  const id = await resolveEventRef(ref);
   if (!id) notFound();
   await requireEventPage(id);
   const event = await getAdminEvent(id);
   if (!event) notFound();
+  if (event.event_kind === "csr" && !isId(ref)) redirect(adminEventPath(event, "donations"));
   if (event.event_kind !== "csr") notFound();
   const { donations, migrated } = await listDonations(id);
   return <AdminShell>

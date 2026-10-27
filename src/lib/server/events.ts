@@ -56,6 +56,13 @@ export async function getCurrentFridaySharing(): Promise<EventRecord | null> {
   return latestFridaySharing((data ?? []).map(row => normalizeEvent(row.document as EventRecord)));
 }
 
+/** The Friday Sharing /admin/friday-sharing opens: the CSR event made last, published or not. */
+export async function currentFridaySharingId(): Promise<string | null> {
+  const { data, error } = await createPrivilegedClient().from("events").select("id").eq("content->>event_kind", "csr").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) databaseError(error);
+  return (data?.id as string | undefined) ?? null;
+}
+
 /** An admin address names an event by its code or its id; both lead to the id. */
 export async function resolveEventRef(ref: string): Promise<string | null> {
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref)) return ref.toLowerCase();

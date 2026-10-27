@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { adminEventPath } from "@/lib/routes";
+import { isEventId as isId } from "@/lib/short-code";
 import { DonationReportSheet } from "@/components/admin/donations/DonationReportSheet";
 import { SetupNotice } from "@/components/admin/shared/AdminShell";
 import { donationReport } from "@/lib/donations";
@@ -19,11 +21,13 @@ export const metadata: Metadata = { title: "Cetak laporan donasi", robots: { ind
 export default async function DonationReportPage({ params, searchParams }: { params: Promise<{ ref: string }>; searchParams: Promise<{ penerima?: string }> }) {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <SetupNotice />;
-  const id = await resolveEventRef((await params).ref);
+  const { ref } = await params;
+  const id = await resolveEventRef(ref);
   if (!id) notFound();
   await requireEventPage(id);
   const event = await getAdminEvent(id);
   if (!event || event.event_kind !== "csr") notFound();
+  if (event.event_kind === "csr" && !isId(ref)) redirect(adminEventPath(event, "donations-report"));
   const { donations } = await listDonations(id);
   const recipient = (await searchParams).penerima ?? "";
   return <DonationReportSheet

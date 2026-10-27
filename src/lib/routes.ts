@@ -12,15 +12,14 @@ const enc = encodeURIComponent;
 /* Guest pages */
 
 /**
- * Friday Sharing (CSR) lives under /friday-sharing: the bare address is always the latest published
- * one, to share every week; /friday-sharing/AB23CD is one event, for its admin links and the
- * WhatsApp news to its donors.
+ * Friday Sharing (CSR) has no code in its addresses: /friday-sharing is the latest published one,
+ * and /admin/friday-sharing its admin. It is a yearly event, so there is one at a time.
  */
 export const FRIDAY_SHARING_PATH = "/friday-sharing";
-export const fridaySharingPath = (code: string) => `${FRIDAY_SHARING_PATH}/${code}`;
+const FRIDAY_SHARING_ADMIN = "/admin/friday-sharing";
 
 export function eventPath(event: EventRef): string {
-  if (event.code && event.event_kind === "csr") return fridaySharingPath(event.code);
+  if (event.event_kind === "csr") return FRIDAY_SHARING_PATH;
   return event.code ? `/${event.code}` : `/e/${enc(event.slug)}`;
 }
 
@@ -61,9 +60,10 @@ const adminTabPaths: Record<AdminTab, string> = {
  * An event's admin page: /admin/acara/{code}/… with the short code, or the id where only the id
  * is at hand or the event has no code yet. Both resolve to the same event.
  */
-export function adminEventPath(event: Pick<EventRef, "id" | "code"> | string, tab: AdminTab = "edit", query: Record<string, string> = {}): string {
-  const ref = typeof event === "string" ? event : event.code || event.id;
+export function adminEventPath(event: Pick<EventRef, "id" | "code" | "event_kind"> | string, tab: AdminTab = "edit", query: Record<string, string> = {}): string {
   const search = new URLSearchParams(query).toString();
+  if (typeof event !== "string" && event.event_kind === "csr") return `${FRIDAY_SHARING_ADMIN}${adminTabPaths[tab]}${search ? `?${search}` : ""}`;
+  const ref = typeof event === "string" ? event : event.code || event.id;
   return `/admin/acara/${ref}${adminTabPaths[tab]}${search ? `?${search}` : ""}`;
 }
 

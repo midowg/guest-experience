@@ -8,10 +8,13 @@ const short = { ...legacy, code: "AB23CD" };
 const invitation = { token: "a".repeat(64), short_token: "k7q2mx9p" };
 
 describe("guest addresses", () => {
-  it("put Friday Sharing under /friday-sharing, the bare address for the latest and the code for one event", () => {
+  it("give Friday Sharing addresses without a code, public and admin", () => {
     expect(FRIDAY_SHARING_PATH).toBe("/friday-sharing");
-    expect(eventPath({ ...short, event_kind: "csr" })).toBe("/friday-sharing/AB23CD");
+    expect(eventPath({ ...short, event_kind: "csr" })).toBe("/friday-sharing");
+    expect(adminEventPath({ ...short, event_kind: "csr" })).toBe("/admin/friday-sharing");
+    expect(adminEventPath({ ...short, event_kind: "csr" }, "donations-report", { penerima: "p1" })).toBe("/admin/friday-sharing/donasi/laporan?penerima=p1");
     expect(eventPath({ ...short, event_kind: "kunjungan" })).toBe("/AB23CD");
+    expect(adminEventPath({ ...short, event_kind: "kunjungan" })).toBe("/admin/acara/AB23CD");
   });
 
   it("use the short code when the event has one", () => {

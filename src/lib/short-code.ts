@@ -12,3 +12,5 @@ export function readEventCode(value: string): { code: string; canonical: boolean
 }
 
 export const isShortToken = (value: string) => SHORT_TOKEN.test(value);
+/** An event's id (a UUID), as opposed to its short code. */
+export const isEventId = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
