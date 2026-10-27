@@ -178,6 +178,8 @@ Form donasi dimulai dari dua pilihan besar, **Dana** atau **Barang** (boleh kedu
 
 Setiap donatur memilih cara tampil: **nama**, **Hamba Allah**, atau **jangan sebutkan**. Form menjelaskan bahwa apa pun pilihannya, donasi **tetap dikonfirmasi panitia dan terhitung di total**; yang berubah hanya apakah namanya terlihat di daftar donatur.
 
+**Tautan tetap:** `journey.werkudara.group/friday-sharing` selalu membuka Friday Sharing **terbaru** yang sudah terbit (tanggal paling akhir), jadi tautan yang sama bisa dibagikan setiap minggu. Setiap kegiatan tetap punya tautan kodenya sendiri (mis. `/CSTW8D`); tautan kode itulah yang dipakai di kabar WhatsApp ke donatur, supaya kabar lama tidak berpindah ke kegiatan baru. Keduanya tampil di blok *Judul & cerita*.
+
 **Tab Donasi masuk:**
 - Donasi baru berstatus **Menunggu**. Cek mutasi rekening atau barangnya, lalu tekan **Terima**. Jumlah bisa dikoreksi sesuai yang benar-benar masuk. Bila tidak ditemukan, tekan **Tolak** dengan alasan singkat.
 - **Hanya donasi yang Diterima yang dihitung** di halaman publik. Itulah yang membuatnya transparan.

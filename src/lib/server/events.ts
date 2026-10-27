@@ -1,4 +1,5 @@
 import "server-only";
+import { latestFridaySharing } from "@/lib/friday-sharing";
 import { randomUUID } from "node:crypto";
 import type { EventRecord, StaffMember } from "@/lib/types";
 import { contactFromStaff } from "@/lib/staff";
@@ -42,6 +43,17 @@ export async function getPublicEventByCode(code: string): Promise<EventRecord | 
   const { data, error } = await createPublicClient().from("event_documents").select("document").eq("code", code).eq("status", "published").maybeSingle();
   if (error) { if (noCodeColumn(error)) return null; databaseError(error); }
   return data?.document ? normalizeEvent(data.document as EventRecord) : null;
+}
+
+/**
+ * The Friday Sharing behind /friday-sharing: of the published CSR events, the one dated latest
+ * (by its date, else when it was made). One fixed link to share every week; each event keeps its
+ * own code link too, which the WhatsApp news to donors uses.
+ */
+export async function getCurrentFridaySharing(): Promise<EventRecord | null> {
+  const { data, error } = await createPublicClient().from("event_documents").select("document").eq("status", "published").eq("document->>event_kind", "csr").limit(100);
+  if (error) databaseError(error);
+  return latestFridaySharing((data ?? []).map(row => normalizeEvent(row.document as EventRecord)));
 }
 
 /** An admin address names an event by its code or its id; both lead to the id. */

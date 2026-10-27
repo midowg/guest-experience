@@ -11,6 +11,9 @@ const enc = encodeURIComponent;
 
 /* Guest pages */
 
+/** The one fixed Friday Sharing address: always the latest published Friday Sharing (CSR) event. */
+export const FRIDAY_SHARING_PATH = "/friday-sharing";
+
 export function eventPath(event: EventRef): string {
   return event.code ? `/${event.code}` : `/e/${enc(event.slug)}`;
 }
