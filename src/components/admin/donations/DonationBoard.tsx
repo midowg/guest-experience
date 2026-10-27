@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Download, Eye, MessageCircle, Plus, RotateCcw, Send, Trash2, X } from "lucide-react";
+import { Check, Download, Eye, MessageCircle, Plus, Printer, RotateCcw, Send, Trash2, X } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { describeDonation, donationTotals, formatRupiah, notifyMessage, parseRupiah, type DonationRecord, type DonationSettings, type DonorDisplay } from "@/lib/donations";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { whatsappUrl } from "@/lib/invitation-messages";
-import { adminApi } from "@/lib/routes";
+import { adminApi, adminEventPath } from "@/lib/routes";
 import { ManualDonation } from "./ManualDonation";
 import s from "./donations.module.css";
 
@@ -120,6 +120,7 @@ export function DonationBoard({ event, link, initial, migrated }: Props) {
         <h2 id="daftar-donasi">Donasi masuk</h2>
         <div className={s.tools}>
           <Button type="button" variant="secondary" onClick={() => setAdding(!adding)} aria-expanded={adding}><Plus size={16} aria-hidden="true" /> Tambah manual</Button>
+          <ButtonLink variant="secondary" href={adminEventPath(event.id, "donations-report")}><Printer size={16} aria-hidden="true" /> Cetak laporan</ButtonLink>
           <ButtonLink variant="secondary" href={adminApi(event.id, "donations/export")}><Download size={16} aria-hidden="true" /> Unduh CSV</ButtonLink>
         </div>
       </div>

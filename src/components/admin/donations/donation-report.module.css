@@ -1,0 +1,16 @@
+/* The donation handover report: the BEO print sheet in Friday Sharing's teal, with signature boxes. */
+.options { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; flex-basis: 100%; font-weight: 700; }
+.options label { display: inline-flex; align-items: center; gap: 8px; }
+.options .select { min-height: 40px; width: auto; padding: 0 10px; }
+.options input[type="checkbox"] { width: 18px; height: 18px; accent-color: #0b5c57; }
+.band { background: #0b5c57; }
+.main { border-color: #0b5c57 !important; background: #fdf0e2 !important; }
+.main strong { font-size: 18pt !important; white-space: nowrap; }
+.donors table { font-size: 9.5pt; }
+.signs { display: grid; grid-template-columns: 1fr 1fr; gap: 14mm; margin-top: 12mm !important; text-align: center; }
+.signs p { margin: 0; }
+.org { margin-top: 1mm !important; font-weight: 800; }
+.line { display: block; height: 22mm; border-bottom: 1px solid #2b2b33; margin: 0 6mm 2mm; }
+@media print {
+  .band, .main { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

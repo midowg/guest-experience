@@ -217,3 +217,48 @@ export function listNames(names: string[]): string {
   if (names.length <= 1) return names[0] ?? "";
   return names.length === 2 ? `${names[0]} dan ${names[1]}` : `${names.slice(0, -1).join(", ")}, dan ${names.at(-1)}`;
 }
+
+/** What the printed report lists: every received gift, whatever the public page shows. */
+export type DonationReport = {
+  fund: number;
+  goods: { label: string; unit: string; total: number }[];
+  /** Gifts written freely (or under a chip removed since), as the donor wrote them. */
+  other: string[];
+  /** Received donations; one donor giving two things counts twice, as on the page. */
+  count: number;
+  donors: { id: string; name: string; gift: string; amount: string; at: string }[];
+};
+
+/**
+ * The handover report for the recipient: totals per kind of gift from received donations only,
+ * and the donors as each chose to appear ("Tanpa nama" for those who asked not to be named).
+ * Never a phone number or a proof.
+ */
+export function donationReport(settings: DonationSettings, donations: DonationRecord[]): DonationReport {
+  const received = donations.filter(donation => donation.status === "received")
+    .sort((a, b) => (a.verified_at ?? a.created_at).localeCompare(b.verified_at ?? b.created_at));
+  const goodsKeys = new Set(settings.items.filter(item => item.category === "goods").map(item => item.key));
+  const goods = new Map<string, { label: string; unit: string; total: number }>();
+  for (const donation of received) {
+    if (donation.category !== "goods" || !goodsKeys.has(donation.item_key)) continue;
+    const key = `${donation.item_label}|${donation.unit}`;
+    const row = goods.get(key) ?? { label: donation.item_label, unit: donation.unit, total: 0 };
+    row.total += countedAmount(donation);
+    goods.set(key, row);
+  }
+  const order = settings.items.map(item => item.label);
+  return {
+    fund: received.filter(donation => donation.category === "fund").reduce((sum, donation) => sum + countedAmount(donation), 0),
+    goods: [...goods.values()].sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label)),
+    other: received.filter(donation => donation.category === "other" || (donation.category === "goods" && !goodsKeys.has(donation.item_key)))
+      .map(donation => describeDonation(donation, countedAmount(donation))),
+    count: received.length,
+    donors: received.map(donation => ({
+      id: donation.id,
+      name: donation.display === "name" ? donation.donor_name : donation.display === "hamba_allah" ? HAMBA_ALLAH : "Tanpa nama",
+      gift: donation.category === "fund" ? donation.item_label : describeDonation(donation, countedAmount(donation)),
+      amount: donation.category === "fund" ? formatRupiah(countedAmount(donation)) : "",
+      at: donation.verified_at ?? donation.created_at,
+    })),
+  };
+}

@@ -42,10 +42,10 @@ export const absolute = (origin: string, path: string) => `${origin.replace(/\/$
 
 /* Admin pages */
 
-export type AdminTab = "edit" | "invitations" | "responses" | "checkin" | "beo" | "beo-print" | "gallery" | "feedback" | "preview" | "donations";
+export type AdminTab = "edit" | "invitations" | "responses" | "checkin" | "beo" | "beo-print" | "gallery" | "feedback" | "preview" | "donations" | "donations-report";
 const adminTabPaths: Record<AdminTab, string> = {
   edit: "", invitations: "/undangan", responses: "/rsvp", checkin: "/checkin", beo: "/beo", "beo-print": "/beo/cetak",
-  gallery: "/galeri", feedback: "/feedback", preview: "/preview", donations: "/donasi",
+  gallery: "/galeri", feedback: "/feedback", preview: "/preview", donations: "/donasi", "donations-report": "/donasi/laporan",
 };
 
 /**

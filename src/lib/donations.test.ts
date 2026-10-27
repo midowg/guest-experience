@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HAMBA_ALLAH, addGiftText, listNames, defaultDonationItems, describeDonation, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
+import { HAMBA_ALLAH, addGiftText, listNames, defaultDonationItems, describeDonation, donationReport, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
 import { donationInputSchema, eventSchema } from "./validation";
 import { createSeedEvent } from "./seed-event";
 import { buildEventFromSetup } from "./event-setup";
@@ -142,5 +142,27 @@ describe("several gifts and recipients", () => {
     expect(listNames(["A"])).toBe("A");
     expect(listNames(["A", "B"])).toBe("A dan B");
     expect(listNames(["A", "B", "C"])).toBe("A, B, dan C");
+  });
+});
+
+describe("handover report", () => {
+  it("adds up received gifts only, whatever the public page shows, and names donors as they chose", () => {
+    const shown = { ...settings(), show: { ...settings().show, fundTotal: false, goods: false, donors: false } };
+    const report = donationReport(shown, [
+      donation({ amount: 250000, received_amount: 200000 }),
+      donation({ item_key: "sembako", item_label: "Sembako", category: "goods", amount: 3, unit: "paket", display: "hamba_allah" }),
+      donation({ item_key: "sembako", item_label: "Sembako", category: "goods", amount: 2, unit: "paket", display: "hidden", donor_name: "Rahasia" }),
+      donation({ item_key: "", item_label: "Kursi roda", category: "other", amount: 0, unit: "" }),
+      donation({ amount: 9_000_000, status: "pending" }),
+      donation({ amount: 5_000_000, status: "rejected" }),
+    ]);
+    expect(report.fund).toBe(200000);
+    expect(report.goods).toEqual([{ label: "Sembako", unit: "paket", total: 5 }]);
+    expect(report.other).toEqual(["Kursi roda"]);
+    expect(report.count).toBe(4);
+    expect(report.donors.map(row => row.name)).toEqual(["Sari Dewi", HAMBA_ALLAH, "Tanpa nama", "Sari Dewi"]);
+    expect(report.donors[0]).toMatchObject({ gift: "Dana", amount: "Rp 200.000" });
+    expect(JSON.stringify(report)).not.toContain("Rahasia");
+    expect(JSON.stringify(report)).not.toContain("0812");
   });
 });
