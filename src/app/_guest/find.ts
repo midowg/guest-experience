@@ -2,6 +2,7 @@ import "server-only";
 import { notFound, permanentRedirect } from "next/navigation";
 import { readEventCode, isShortToken } from "@/lib/short-code";
 import { getPublicEvent, getPublicEventByCode } from "@/lib/server/events";
+import { eventPath, fridaySharingPath } from "@/lib/routes";
 import { findShortInvitation, getPersonalInvitation } from "@/lib/server/invitations";
 
 /*
@@ -16,6 +17,22 @@ export async function eventByCode(raw: string, suffix = "") {
   if (!read.canonical) permanentRedirect(`/${read.code}${suffix}`);
   const event = await getPublicEventByCode(read.code);
   if (!event) notFound();
+  return event;
+}
+
+/** The published Friday Sharing behind `/friday-sharing/{code}`; any other kind of event is not here. */
+export async function fridaySharingByCode(raw: string) {
+  const read = readEventCode(raw);
+  if (!read) notFound();
+  if (!read.canonical) permanentRedirect(fridaySharingPath(read.code));
+  const event = await getPublicEventByCode(read.code);
+  if (!event || event.event_kind !== "csr") notFound();
+  return event;
+}
+
+/** A Friday Sharing opened by its bare code (`/AB23CD`, older links) moves to its friday-sharing address. */
+export function sendFridaySharingHome<T extends { event_kind: string; code?: string | null; id: string; slug: string }>(event: T): T {
+  if (event.event_kind === "csr") permanentRedirect(eventPath(event));
   return event;
 }
 

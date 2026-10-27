@@ -5,16 +5,22 @@
  * a path is written by hand elsewhere.
  */
 
-type EventRef = { id: string; slug: string; code?: string | null };
+type EventRef = { id: string; slug: string; code?: string | null; event_kind?: string };
 type InvitationRef = { token: string; short_token?: string | null };
 const enc = encodeURIComponent;
 
 /* Guest pages */
 
-/** The one fixed Friday Sharing address: always the latest published Friday Sharing (CSR) event. */
+/**
+ * Friday Sharing (CSR) lives under /friday-sharing: the bare address is always the latest published
+ * one, to share every week; /friday-sharing/AB23CD is one event, for its admin links and the
+ * WhatsApp news to its donors.
+ */
 export const FRIDAY_SHARING_PATH = "/friday-sharing";
+export const fridaySharingPath = (code: string) => `${FRIDAY_SHARING_PATH}/${code}`;
 
 export function eventPath(event: EventRef): string {
+  if (event.code && event.event_kind === "csr") return fridaySharingPath(event.code);
   return event.code ? `/${event.code}` : `/e/${enc(event.slug)}`;
 }
 

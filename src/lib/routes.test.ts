@@ -1,13 +1,19 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { absolute, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, photoDownloadPath, posterPath, ticketPath } from "./routes";
+import { FRIDAY_SHARING_PATH, absolute, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, photoDownloadPath, posterPath, ticketPath } from "./routes";
 
 const legacy = { id: "e1", slug: "kunjungan-sinar" };
 const short = { ...legacy, code: "AB23CD" };
 const invitation = { token: "a".repeat(64), short_token: "k7q2mx9p" };
 
 describe("guest addresses", () => {
+  it("put Friday Sharing under /friday-sharing, the bare address for the latest and the code for one event", () => {
+    expect(FRIDAY_SHARING_PATH).toBe("/friday-sharing");
+    expect(eventPath({ ...short, event_kind: "csr" })).toBe("/friday-sharing/AB23CD");
+    expect(eventPath({ ...short, event_kind: "kunjungan" })).toBe("/AB23CD");
+  });
+
   it("use the short code when the event has one", () => {
     expect(eventPath(short)).toBe("/AB23CD");
     expect(invitationPath(short, invitation)).toBe("/AB23CD/k7q2mx9p");
