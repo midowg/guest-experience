@@ -174,7 +174,7 @@ Editornya punya menu sendiri, terpisah dari undangan:
 - **Penyaluran:** Kabar penyerahan.
 - **Pengaturan:** Terbitkan.
 
-Donatur boleh memilih **beberapa bantuan sekaligus**: beberapa tombol, masing-masing dengan jumlahnya, dan/atau menulis beberapa barang di *Bantuan lain*, dipisah koma. Setiap bantuan tercatat sebagai satu donasi di tab Donasi masuk.
+Form donasi dimulai dari dua pilihan besar, **Dana** atau **Barang** (boleh keduanya). *Barang* menampilkan empat pilihan pertama dan tombol **Lihat lainnya** untuk sisanya serta isian *Barang lain* (beberapa barang dipisah koma). Urutan pilihan mengikuti urutan di blok Pilihan bantuan. Setiap bantuan tercatat sebagai satu donasi di tab Donasi masuk.
 
 Setiap donatur memilih cara tampil: **nama**, **Hamba Allah**, atau **jangan sebutkan**. Form menjelaskan bahwa apa pun pilihannya, donasi **tetap dikonfirmasi panitia dan terhitung di total**; yang berubah hanya apakah namanya terlihat di daftar donatur.
 
@@ -184,6 +184,7 @@ Setiap donatur memilih cara tampil: **nama**, **Hamba Allah**, atau **jangan seb
 - **Bukti** membuka bukti transfer selama 10 menit. Bukti tersimpan privat dan tidak pernah tampil di halaman.
 - **Tambah manual** untuk dana tunai atau barang yang dititip langsung. Langsung tercatat sebagai diterima.
 - **Unduh CSV** untuk laporan.
+- **Cetak laporan**: lembar A4 untuk diserahkan ke penerima. Isinya rincian bantuan yang sudah diterima (dana dan barang per jenis), daftar donatur sesuai pilihan tampil mereka (yang memilih tidak disebutkan tertulis *Tanpa nama*), catatan penyerahan, dan kolom tanda tangan kedua pihak. Pilih penerimanya, dan apakah daftar donatur serta nominal per donatur ikut dicetak. Nomor WhatsApp dan bukti transfer tidak pernah dicetak.
 
 **Setelah bantuan diserahkan:**
 1. Di blok **Kabar penyerahan** (menu Penyaluran), isi tanggal penyerahan, foto (opsional), dan ucapan. Halaman donasi langsung menampilkan kabar itu.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { ArrowLeft, ChevronRight, CircleCheck, Gift, HandHeart, HeartHandshake, Home, MapPin, MessageCircle, Package, Share2, Users, Wallet } from "lucide-react";
+import { ArrowLeft, ChevronRight, CircleCheck, Gift, HandHeart, HeartHandshake, Home, MapPin, MessageCircle, Package, Share2 } from "lucide-react";
 import { donorInitials, formatRupiah, listNames, type DonationTotals, type PublicDonor } from "@/lib/donations";
 import { themeStyle } from "@/lib/themes";
 import type { EventRecord } from "@/lib/types";
@@ -55,43 +55,37 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
   const recipients = settings.recipients;
   const goodsTiles = totals.goods.length + (totals.other > 0 ? 1 : 0);
   const nothingYet = !totals.fund && !totals.goods.length && !totals.other;
+  // A few faces of the people who gave, as on a charity page; hidden donors are never among them.
+  const faces = view.donors.slice(0, 4);
 
   return <div className={s.csr} data-theme={event.theme?.key ?? "berbagi"} style={themeStyle(event.theme)}>
     <main className={s.main}>
-      <header className={s.cover} data-plain={hero ? undefined : ""}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- the event's own cover photo, already sized */}
-        {hero && <img src={hero} alt={event.hero.alt} />}
-        <div className={s.coverText}>
-          <p className={s.eyebrow}><HandHeart size={16} aria-hidden="true" /> {event.organizer || "Kegiatan sosial"}</p>
-          <h1 className={s.title}>{event.title}</h1>
-          {event.subtitle && <p className={s.subtitle}>{event.subtitle}</p>}
-        </div>
+      <header className={s.intro}>
+        <p className={s.eyebrow}><HandHeart size={16} aria-hidden="true" /> {event.organizer || "Kegiatan sosial"}</p>
+        <h1 className={s.title}>{event.title}</h1>
+        {event.subtitle && <p className={s.subtitle}>{event.subtitle}</p>}
       </header>
+      {/* eslint-disable-next-line @next/next/no-img-element -- the event's own cover photo, already sized */}
+      {hero && <div className={s.photo}><img src={hero} alt={event.hero.alt} /></div>}
 
       <div className={s.body}>
-        {/* What has been collected: one card lifted over the cover, the first thing a donor sees. */}
-        <section className={s.collected} aria-labelledby="terkumpul">
-          <div className={s.collectedHead}>
-            <h2 id="terkumpul">Terkumpul</h2>
-            <span className={s.donorCount}><Users size={15} aria-hidden="true" /> {totals.donors} orang baik</span>
-          </div>
-          {totals.fund && <div className={s.fund}>
-            <span className={s.fundLabel}><Wallet size={16} aria-hidden="true" /> Dana</span>
+        {/* What has been collected: one warm card under the photo, money first, then who gave and the goods. */}
+        <section className={s.collected} data-lifted={hero ? "" : undefined} aria-labelledby="terkumpul">
+          <h2 id="terkumpul" className={s.collectedLabel}>Terkumpul</h2>
+          {totals.fund && <>
             <strong className={s.fundValue}>{formatRupiah(totals.fund.total)}</strong>
-            {totals.fund.target && <Progress total={totals.fund.total} target={totals.fund.target} label={`dari ${formatRupiah(totals.fund.target)}`} />}
-          </div>}
-          {goodsTiles > 0 && <ul className={s.totals}>
-            {totals.goods.map(item => <li key={item.key} className={s.total}>
-              <span className={s.totalIcon}><Package size={18} aria-hidden="true" /></span>
-              <strong className={s.totalValue}>{count(item.total)} <small>{item.unit}</small></strong>
-              <span className={s.totalLabel}>{item.label}</span>
-              {item.target && <Progress total={item.total} target={item.target} label={`dari ${count(item.target)} ${item.unit}`} small />}
-            </li>)}
-            {totals.other > 0 && <li className={s.total}>
-              <span className={s.totalIcon}><Gift size={18} aria-hidden="true" /></span>
-              <strong className={s.totalValue}>{totals.other} <small>bantuan</small></strong>
-              <span className={s.totalLabel}>Bantuan lain</span>
-            </li>}
+            {totals.fund.target && <Progress total={totals.fund.total} target={totals.fund.target} label={`dari target ${formatRupiah(totals.fund.target)}`} />}
+          </>}
+          <div className={s.people}>
+            {faces.length > 0 && <span className={s.faces} aria-hidden="true">
+              {faces.map(donor => <span key={donor.id} className={s.face}>{donorInitials(donor.name)}</span>)}
+              {totals.donors > faces.length && <span className={s.face} data-more="">+{totals.donors - faces.length}</span>}
+            </span>}
+            <span><strong>{totals.donors} orang baik</strong> {totals.donors ? "sudah ikut berbagi" : "menunggu Anda"}</span>
+          </div>
+          {goodsTiles > 0 && <ul className={s.goods} aria-label="Barang terkumpul">
+            {totals.goods.map(item => <li key={item.key}><Package size={15} aria-hidden="true" /><span><strong>{count(item.total)}</strong>{item.target ? `/${count(item.target)}` : ""} {item.unit} {item.label}</span></li>)}
+            {totals.other > 0 && <li><Gift size={15} aria-hidden="true" /><span><strong>{totals.other}</strong> bantuan lain</span></li>}
           </ul>}
           {nothingYet && <p className={s.empty}>Belum ada bantuan yang dikonfirmasi. Jadilah yang pertama.</p>}
           <p className={s.note}>Diperbarui setelah dikonfirmasi panitia{totals.pending > 0 ? ` · ${totals.pending} donasi menunggu konfirmasi` : ""}.</p>
@@ -145,7 +139,7 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
 
     <div className={s.bar}>
       {canGive
-        ? <button type="button" className={s.give} onClick={() => setFormOpen(true)}><HandHeart size={22} aria-hidden="true" /> Donasi sekarang</button>
+        ? <button type="button" className={s.give} onClick={() => setFormOpen(true)}><HandHeart size={22} aria-hidden="true" /> Ikut berbagi</button>
         : <p className={s.closed}>{!view.ready ? "Donasi belum dapat diterima." : "Donasi untuk kegiatan ini sudah ditutup. Terima kasih atas kebaikan Anda."}</p>}
     </div>
 

@@ -18,7 +18,7 @@ const record = (overrides: Partial<DonationRecord>): DonationRecord => ({
 function show(e = event(), records: DonationRecord[] = [], preview = true) {
   render(<CsrExperience event={e} preview={preview} view={{ totals: donationTotals(e.donation, records), donors: publicDonors(e.donation, records), ready: true }} />);
 }
-const openForm = () => { fireEvent.click(screen.getByRole("button", { name: /Donasi sekarang/ })); return screen.getByRole("dialog", { name: "Donasi" }); };
+const openForm = () => { fireEvent.click(screen.getByRole("button", { name: /Ikut berbagi/ })); return screen.getByRole("dialog", { name: "Donasi" }); };
 
 it("shows what was collected and who gave, as each donor chose", () => {
   show(event(), [record({ donor_name: "Sari Dewi" }), record({ donor_name: "Budi", display: "hamba_allah", item_key: "sembako", item_label: "Sembako", category: "goods", amount: 5, unit: "paket" }), record({ donor_name: "Rahasia", display: "hidden" }), record({ status: "pending", amount: 9_000_000 })]);
@@ -126,6 +126,6 @@ it("asks for a gift, a proof when required, and says when donations are closed",
   expect(within(form).getByText("Unggah bukti transfer.")).toBeTruthy();
   cleanup();
   show(event({ enabled: false }));
-  expect(screen.queryByRole("button", { name: /Donasi sekarang/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Ikut berbagi/ })).toBeNull();
   expect(screen.getByText(/sudah ditutup/)).toBeTruthy();
 });
