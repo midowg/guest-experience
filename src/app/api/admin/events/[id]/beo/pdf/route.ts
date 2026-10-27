@@ -8,7 +8,7 @@ import { requireApiAdmin, requireEventAccess } from "@/lib/server/admin-session"
 
 export const dynamic = "force-dynamic";
 
-/** GET ?versi=penyedia|internal: the BEO as a PDF download. */
+/** GET: the full BEO with the hosting brief as a PDF download, or ?versi=penyedia for the supplier. */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   return handle(async () => {
     await requireApiAdmin();
@@ -17,7 +17,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const data = await loadBeo(id);
     if (!data) throw new ServiceError(404, "Acara tidak ditemukan.");
     const version = beoVersionFromParam(new URL(request.url).searchParams.get("versi"));
-    const bytes = await beoPdf(beoDocument(data.event, data.summary, data.state, data.revisions, version));
+    const bytes = await beoPdf(beoDocument(data.event, data.summary, data.state, data.revisions, version, data.brief.brief));
     return new Response(new Uint8Array(bytes), {
       headers: {
         "Content-Type": "application/pdf",

@@ -1,22 +1,25 @@
 import { beoStatusLabels, type BeoRevision, type BeoState, type BeoSummary } from "./beo";
 import { formatDate, formatDateTime, formatTime } from "./format";
+import { briefFilled, briefGroups, type BriefGroup, type HostingBrief } from "./hosting-brief";
 import { tzLabel } from "./timezones";
 import type { EventRecord } from "./types";
 
 export type BeoVersion = "vendor" | "internal";
-export const beoVersionParam: Record<BeoVersion, string> = { vendor: "penyedia", internal: "internal" };
-export const beoVersionFromParam = (value: string | null | undefined): BeoVersion => value === "internal" ? "internal" : "vendor";
+export const beoVersionParam: Record<BeoVersion, string> = { vendor: "penyedia", internal: "lengkap" };
+/** The full sheet unless the supplier version is asked for by name. */
+export const beoVersionFromParam = (value: string | null | undefined): BeoVersion => value === "penyedia" ? "vendor" : "internal";
 
 export const beoVersionInfo: Record<BeoVersion, { label: string; banner: string; includes: string }> = {
   vendor: {
     label: "Versi penyedia",
-    banner: "VERSI PENYEDIA · untuk katering dan venue",
-    includes: "Jumlah porsi, makanan khusus, alergi (nama depan saja), jadwal layanan, dan catatan. Tanpa kebutuhan akses, nama lengkap, atau riwayat.",
+    banner: "Untuk penyedia (katering & venue)",
+    includes: "Jumlah porsi, makanan khusus, alergi (nama depan saja), jadwal layanan, dan catatan. Tanpa nama lengkap, kebutuhan akses, brief tamu, atau riwayat.",
   },
   internal: {
-    label: "Versi internal",
-    banner: "VERSI INTERNAL · jangan dikirim ke penyedia",
-    includes: "Semua isi versi penyedia, ditambah nama lengkap, kebutuhan akses khusus, angka RSVP, dan riwayat revisi.",
+    label: "Lembar lengkap",
+    // The full sheet stays with the team, so it carries no band.
+    banner: "",
+    includes: "Lembar persiapan dan brief tamu sekaligus: nama lengkap, kebutuhan akses, angka RSVP, dan riwayat revisi.",
   },
 };
 
@@ -27,6 +30,8 @@ export type BeoDocument = {
   numbers: { label: string; value: string; note?: string; main?: boolean }[];
   notes: string;
   tables: BeoTable[];
+  /** Page 2 of the full sheet: the hosting brief, when anything is written in it. Never in the supplier version. */
+  brief: BriefGroup[] | null;
 };
 
 const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? "";
@@ -36,7 +41,7 @@ const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? "";
  * so they cannot drift apart. The supplier version never carries full names, access needs, RSVP
  * counts or history.
  */
-export function beoDocument(event: EventRecord, summary: BeoSummary, state: BeoState, revisions: BeoRevision[], version: BeoVersion, now = Date.now()): BeoDocument {
+export function beoDocument(event: EventRecord, summary: BeoSummary, state: BeoState, revisions: BeoRevision[], version: BeoVersion, brief: HostingBrief | null = null, now = Date.now()): BeoDocument {
   const vendor = version === "vendor";
   const time = (value: string) => formatTime(value, event.timezone);
   const when = event.starts_at ? `${formatDate(event.starts_at, event.timezone)}, ${time(event.starts_at)}${event.ends_at ? `–${time(event.ends_at)}` : ""} ${tzLabel(event.timezone)}` : "Tanggal belum diisi";
@@ -72,9 +77,10 @@ export function beoDocument(event: EventRecord, summary: BeoSummary, state: BeoS
     status: `${beoStatusLabels[state.status]}${state.version ? ` · versi ${state.version}` : ""}`,
     generated: formatDateTime(new Date(now).toISOString(), event.timezone),
     numbers, notes: state.notes.trim(), tables,
+    brief: !vendor && brief && briefFilled(brief) ? briefGroups(brief, summary.attending ? `${summary.attending} orang (dari konfirmasi)` : "Belum ada konfirmasi") : null,
   };
 }
 
 export function beoFileName(slug: string, version: BeoVersion, state: BeoState) {
-  return `beo-${slug}-${beoVersionParam[version]}${state.version ? `-v${state.version}` : ""}.pdf`;
+  return `beo-${slug}${version === "vendor" ? "-penyedia" : ""}${state.version ? `-v${state.version}` : ""}.pdf`;
 }

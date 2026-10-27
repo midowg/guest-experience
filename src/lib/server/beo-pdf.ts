@@ -53,13 +53,8 @@ export async function beoPdf(doc: BeoDocument): Promise<Uint8Array> {
   let page: PDFPage = pdf.addPage([A4.width, A4.height]);
   let y = A4.height - MARGIN;
 
-  const footer = () => page.drawText(pdfSafe(`${doc.banner} · dibuat ${doc.generated}`), { x: MARGIN, y: 24, size: 8, font: regular, color: MUTED });
-  const ensure = (height: number) => {
-    if (y - height >= MARGIN) return;
-    footer();
-    page = pdf.addPage([A4.width, A4.height]);
-    y = A4.height - MARGIN;
-  };
+  const newPage = () => { page = pdf.addPage([A4.width, A4.height]); y = A4.height - MARGIN; };
+  const ensure = (height: number) => { if (y - height < MARGIN) newPage(); };
   const text = (value: string, options: { size?: number; font?: PDFFont; color?: ReturnType<typeof rgb>; width?: number; x?: number; gap?: number } = {}) => {
     const size = options.size ?? 10, font = options.font ?? regular, lineHeight = size * 1.35;
     for (const line of wrap(value, font, size, options.width ?? contentWidth)) {
@@ -70,10 +65,12 @@ export async function beoPdf(doc: BeoDocument): Promise<Uint8Array> {
     y -= options.gap ?? 0;
   };
 
-  // Version band: the first thing anyone sees, so the two versions cannot be mixed up.
-  page.drawRectangle({ x: 0, y: A4.height - 34, width: A4.width, height: 34, color: BAND[doc.version] });
-  page.drawText(pdfSafe(doc.banner), { x: MARGIN, y: A4.height - 22, size: 10, font: bold, color: rgb(1, 1, 1) });
-  y = A4.height - 34 - 28;
+  // Only the supplier version carries a band, so it is not mistaken for the full sheet.
+  if (doc.banner) {
+    page.drawRectangle({ x: 0, y: A4.height - 34, width: A4.width, height: 34, color: BAND[doc.version] });
+    page.drawText(pdfSafe(doc.banner), { x: MARGIN, y: A4.height - 22, size: 10, font: bold, color: rgb(1, 1, 1) });
+    y = A4.height - 34 - 28;
+  }
 
   text("BANQUET EVENT ORDER", { size: 9, font: bold, color: MUTED, gap: 2 });
   text(doc.title, { size: 20, font: bold, gap: 4 });
@@ -86,7 +83,7 @@ export async function beoPdf(doc: BeoDocument): Promise<Uint8Array> {
   ensure(64);
   doc.numbers.forEach((item, index) => {
     const x = MARGIN + index * (boxWidth + 10);
-    page.drawRectangle({ x, y: y - 60, width: boxWidth, height: 60, color: item.main ? SOFT : rgb(1, 1, 1), borderColor: item.main ? BAND[doc.version] : LINE, borderWidth: item.main ? 1.5 : 1 });
+    page.drawRectangle({ x, y: y - 60, width: boxWidth, height: 60, color: item.main ? SOFT : rgb(1, 1, 1), borderColor: item.main ? BAND.vendor : LINE, borderWidth: item.main ? 1.5 : 1 });
     page.drawText(pdfSafe(item.label), { x: x + 10, y: y - 16, size: 8.5, font: regular, color: MUTED });
     page.drawText(pdfSafe(item.value), { x: x + 10, y: y - 40, size: item.value.length > 6 ? 14 : 22, font: bold, color: INK });
     if (item.note) page.drawText(pdfSafe(item.note), { x: x + 10, y: y - 53, size: 7, font: regular, color: MUTED });
@@ -98,12 +95,14 @@ export async function beoPdf(doc: BeoDocument): Promise<Uint8Array> {
     text(doc.notes, { size: 10, gap: 12 });
   }
 
-  for (const table of doc.tables) {
+  const draw = (table: { title: string; note?: string; columns: string[]; rows: string[][]; empty: string }, header = true) => {
     ensure(48);
     text(table.title, { size: 12, font: bold, gap: 2 });
     if (table.note) text(table.note, { size: 8.5, color: MUTED, gap: 2 });
-    if (!table.rows.length) { text(table.empty, { size: 10, color: MUTED, gap: 12 }); continue; }
-    const widths = table.columns.length === 2 ? [contentWidth * 0.38, contentWidth * 0.62] : table.columns.map(() => contentWidth / table.columns.length);
+    if (!table.rows.length) { text(table.empty, { size: 10, color: MUTED, gap: 12 }); return; }
+    // The brief's label/value tables have no header row, so count columns from the first row.
+    const columns = table.columns.length || table.rows[0].length;
+    const widths = columns === 2 ? [contentWidth * 0.38, contentWidth * 0.62] : Array.from({ length: columns }, () => contentWidth / columns);
     const row = (cells: string[], header: boolean) => {
       const font = header ? bold : regular, size = header ? 8.5 : 9.5;
       const wrapped = cells.map((cell, i) => wrap(cell, font, size, widths[i] - 12));
@@ -117,10 +116,27 @@ export async function beoPdf(doc: BeoDocument): Promise<Uint8Array> {
       });
       y -= height;
     };
-    row(table.columns, true);
+    if (header) row(table.columns, true);
     table.rows.forEach(cells => row(cells, false));
     y -= 16;
+  };
+  doc.tables.forEach(table => draw(table));
+
+  // Page 2: the hosting brief, always on a page of its own.
+  if (doc.brief) {
+    newPage();
+    text("BRIEF TAMU", { size: 9, font: bold, color: MUTED, gap: 2 });
+    text(doc.title, { size: 20, font: bold, gap: 4 });
+    text(doc.when, { size: 11, gap: 14 });
+    doc.brief.forEach(group => draw({ title: group.title, columns: [], rows: group.rows, empty: "" }, false));
   }
-  footer();
+
+  const pages = pdf.getPages();
+  pages.forEach((sheet, index) => {
+    const left = pdfSafe([doc.banner || doc.title, `dibuat ${doc.generated}`].join(" · "));
+    sheet.drawText(left, { x: MARGIN, y: 24, size: 8, font: regular, color: MUTED });
+    const right = `Halaman ${index + 1} dari ${pages.length}`;
+    sheet.drawText(right, { x: A4.width - MARGIN - regular.widthOfTextAtSize(right, 8), y: 24, size: 8, font: regular, color: MUTED });
+  });
   return pdf.save();
 }

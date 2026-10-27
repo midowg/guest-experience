@@ -563,7 +563,23 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .qrText { display: grid; gap: var(--space-3); flex: 1 1 240px; min-width: 0; }
 
 /* BEO */
-.beo { display: grid; gap: var(--space-5); }
+.beo { display: grid; gap: var(--space-5); align-content: start; min-width: 0; }
+.beo[hidden] { display: none; }
+/* BEO page: the forms, and beside them on wide screens the printed pages as they will come out. */
+.beoLayout { display: grid; gap: var(--space-6); align-items: start; }
+@media (min-width: 72rem) { .beoLayout { grid-template-columns: minmax(0, 1fr) minmax(0, 30rem); } }
+.beoPreview { display: grid; gap: var(--space-3); padding: var(--space-4); border-radius: 16px; background: #eef1f5; }
+@media (min-width: 72rem) { .beoPreview { position: sticky; top: var(--space-4); max-height: calc(100vh - 2 * var(--space-4)); overflow: auto; } }
+/* The A4 sheets drawn small; zoom keeps their layout in millimetres. */
+.beoPaper { zoom: .56; }
+@media (max-width: 40rem) { .beoPaper { zoom: .42; } }
+.beoExportBar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.beoVendorLink { margin-left: auto; color: #5b6476; font-size: .8125rem; font-weight: 600; }
+.beoFieldset { display: grid; gap: var(--space-3); margin: 0; padding: var(--space-4); border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
+.beoFieldset legend { padding: 0 var(--space-1); font-weight: 800; }
+.beoPair { display: grid; gap: var(--space-3); }
+@media (min-width: 40rem) { .beoPair { grid-template-columns: 1fr 1fr; } }
+.beoLabel { margin: 0; font-weight: 700; font-size: .9375rem; }
 .beoSteps { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .beoSteps li { padding: var(--space-1) var(--space-3); border: 1px solid var(--line); border-radius: 999px; font-size: .875rem; color: #5b6476; background: #fff; }
 .beoSteps li[aria-current="step"] { border-color: var(--blue); background: var(--blue); color: #fff; font-weight: 600; }
@@ -579,11 +595,6 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .beoCounts { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 .beoCounts li { padding: var(--space-2) var(--space-4); border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .beoList { display: grid; gap: var(--space-2); margin: 0; padding-left: 1.25rem; }
-.beoExports { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
-.beoExport { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-4); border: 1px solid var(--line); border-left: 5px solid var(--blue); border-radius: 12px; background: #fff; }
-.beoExport[data-version="internal"] { border-left-color: #9a273d; }
-.beoExport strong { font-size: 1.0625rem; }
-.beoExport p { margin: 0; color: #5b6476; font-size: .9rem; }
 
 /* Photo gallery (R2) */
 .galleryPick { position: relative; display: inline-flex; justify-self: start; align-items: center; justify-content: center; min-height: 44px; padding: var(--space-2) var(--space-5); border-radius: 10px; background: var(--blue); color: #fff; font-weight: 600; cursor: pointer; }

@@ -11,7 +11,7 @@ import { requireAdminPage, requireEventPage } from "@/lib/server/admin-session";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Cetak BEO", robots: { index: false, follow: false } };
 
-/** A4 print page for the BEO, ?versi=penyedia (default) or internal. No admin header, so it prints clean. */
+/** A4 print page for the BEO: the full sheet with the hosting brief, or ?versi=penyedia. No admin header, so it prints clean. */
 export default async function BeoPrintPage({ params, searchParams }: { params: Promise<{ ref: string }>; searchParams: Promise<{ versi?: string }> }) {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <SetupNotice />;
@@ -21,5 +21,5 @@ export default async function BeoPrintPage({ params, searchParams }: { params: P
   const data = await loadBeo(id);
   if (!data) notFound();
   const version = beoVersionFromParam((await searchParams).versi);
-  return <BeoPrint eventId={id} doc={beoDocument(data.event, data.summary, data.state, data.revisions, version)} />;
+  return <BeoPrint eventId={id} doc={beoDocument(data.event, data.summary, data.state, data.revisions, version, data.brief.brief)} />;
 }

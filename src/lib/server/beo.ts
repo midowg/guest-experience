@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { DEVICE_COOKIE, isDeviceId, type AdminRole } from "@/lib/admin-token";
 import { beoSummary, emptyBeo, type BeoAction, type BeoRevision, type BeoState, type BeoStatus } from "@/lib/beo";
+import { emptyBrief, readBrief, type BriefState, type HostingBrief } from "@/lib/hosting-brief";
 import { createPrivilegedClient } from "./supabase/admin";
 import { readAdminEvent } from "./events";
 import { listAllRsvps } from "./responses";
@@ -44,10 +45,32 @@ export async function applyBeo(eventId: string, input: BeoInput, attending: numb
   return toState(data as Record<string, unknown>);
 }
 
-/** Event, RSVP summary and BEO state together, as the BEO page, print page and PDF need them. */
+const BRIEF_MIGRATION = "202610270001_hosting_brief.sql";
+const briefNotMigrated = (error: { code?: string; message?: string }) =>
+  ["42P01", "PGRST205", "42883", "PGRST202"].includes(error.code ?? "") || /event_hosting_brief|save_hosting_brief/.test(error.message ?? "");
+
+/** The hosting brief and its version. Before the migration: an empty brief, read only. */
+export async function getBrief(eventId: string): Promise<BriefState> {
+  const { data, error } = await createPrivilegedClient().from("event_hosting_brief").select("brief,version").eq("event_id", eventId).maybeSingle();
+  if (error) { if (briefNotMigrated(error)) return { brief: emptyBrief(), version: 0, migrated: false }; databaseError(error); }
+  return { brief: readBrief(data?.brief), version: (data?.version as number | undefined) ?? 0, migrated: true };
+}
+
+/** Saves the brief unless someone else saved it after `version` was read. */
+export async function saveBrief(eventId: string, brief: HostingBrief, version: number): Promise<BriefState> {
+  const { data, error } = await createPrivilegedClient().rpc("save_hosting_brief", { p_event_id: eventId, p_brief: brief, p_expected_version: version });
+  if (error) {
+    if (briefNotMigrated(error)) throw new ServiceError(503, `Brief tamu menunggu migrasi ${BRIEF_MIGRATION}.`);
+    databaseError(error);
+  }
+  const row = data as { brief: unknown; version: number };
+  return { brief: readBrief(row.brief), version: row.version, migrated: true };
+}
+
+/** Event, RSVP summary, BEO state and hosting brief together, as the BEO page, print page and PDF need them. */
 export async function loadBeo(eventId: string) {
   const event = await readAdminEvent(eventId);
   if (!event) return null;
-  const [beo, rsvps] = await Promise.all([getBeo(eventId), listAllRsvps(eventId)]);
-  return { event, ...beo, summary: beoSummary(event, rsvps, beo.state.locked_at) };
+  const [beo, rsvps, brief] = await Promise.all([getBeo(eventId), listAllRsvps(eventId), getBrief(eventId)]);
+  return { event, ...beo, brief, summary: beoSummary(event, rsvps, beo.state.locked_at) };
 }

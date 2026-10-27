@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 export default async function DevBeoPage({ searchParams }: { searchParams: Promise<{ status?: string; cetak?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const params = await searchParams;
-  const { event, state, revisions, summary } = sampleBeo(params.status);
-  // ?cetak=penyedia|internal shows the print page with the sample data.
-  if (params.cetak) return <BeoPrint eventId={event.id} doc={beoDocument(event, summary, state, revisions, beoVersionFromParam(params.cetak))} />;
-  return <AdminShell bare><h1>BEO (contoh)</h1><BeoView event={event} summary={summary} initial={state} revisions={revisions} migrated /></AdminShell>;
+  const { event, state, revisions, summary, brief } = sampleBeo(params.status);
+  // ?cetak=lengkap|penyedia shows the print page with the sample data.
+  if (params.cetak) return <BeoPrint eventId={event.id} doc={beoDocument(event, summary, state, revisions, beoVersionFromParam(params.cetak), brief.brief)} />;
+  return <AdminShell bare><h1>BEO (contoh)</h1><BeoView event={event} summary={summary} initial={state} revisions={revisions} migrated brief={brief} /></AdminShell>;
 }

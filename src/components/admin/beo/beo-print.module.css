@@ -11,9 +11,12 @@
 .actions a { background: #fff; color: #1551a0; }
 .includes { flex-basis: 100%; margin: 0; color: #5b6476; font-size: .9rem; }
 
-.sheet { max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 0 18mm 18mm; background: #fff; box-shadow: 0 6px 24px rgba(20, 30, 60, .12); box-sizing: border-box; font-size: 11pt; line-height: 1.45; }
+.includes a { color: #1551a0; font-weight: 700; }
+
+.sheet { display: flex; flex-direction: column; max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 0 18mm 12mm; background: #fff; box-shadow: 0 6px 24px rgba(20, 30, 60, .12); box-sizing: border-box; font-size: 11pt; line-height: 1.45; }
+.sheet[data-band="none"] { padding-top: 16mm; }
+.sheet + .sheet { margin-top: 24px; }
 .band { margin: 0 -18mm 10mm; padding: 4mm 18mm; color: #fff; font-weight: 800; letter-spacing: .04em; background: #1551a0; }
-.sheet[data-version="internal"] .band { background: #9a273d; }
 .head h1 { margin: 2mm 0 3mm; color: #1d1d24; font-size: 20pt; font-weight: 800; line-height: 1.15; letter-spacing: 0; }
 .head p { margin: 0 0 1mm; }
 .kicker { color: #5b6476; font-size: 8.5pt; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
@@ -24,7 +27,6 @@
 .numbers strong { font-size: 22pt; font-weight: 800; line-height: 1.1; }
 .numbers small { color: #5b6476; font-size: 8pt; }
 .numbers .main { border: 2px solid #1551a0; background: #f2f6fc; }
-.sheet[data-version="internal"] .numbers .main { border-color: #9a273d; background: #fbf3f5; }
 .sheet section { margin-top: 7mm; break-inside: avoid-page; }
 .sheet h2 { margin: 0 0 2mm; color: #1d1d24; font-size: 13pt; font-weight: 800; letter-spacing: 0; }
 .notes { white-space: pre-line; }
@@ -32,7 +34,9 @@
 .sheet th, .sheet td { padding: 2.2mm 3mm; border: 1px solid #dde1ea; text-align: left; vertical-align: top; }
 .sheet th { background: #f4f5f8; color: #5b6476; font-size: 8.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
 .sheet tr { break-inside: avoid; }
-.foot { margin-top: 10mm; padding-top: 3mm; border-top: 1px solid #dde1ea; color: #5b6476; font-size: 8pt; }
+.pairs th { width: 38%; background: none; color: #5b6476; font-size: 9.5pt; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.foot { display: flex; justify-content: space-between; gap: 4mm; margin-top: auto; padding-top: 3mm; border-top: 1px solid #dde1ea; color: #5b6476; font-size: 8pt; }
+.sheet > section:last-of-type { margin-bottom: 10mm; }
 
 @media (max-width: 640px) {
   .sheet { padding: 0 6mm 10mm; }
@@ -43,6 +47,8 @@
 @media print {
   .screen { padding: 0; background: #fff; }
   .toolbar { display: none; }
-  .sheet { box-shadow: none; max-width: none; min-height: 0; }
+  /* A hair under A4 so rounding never pushes a sheet onto an extra blank page. */
+  .sheet { box-shadow: none; max-width: none; min-height: 295mm; }
+  .sheet + .sheet { margin-top: 0; break-before: page; }
   .band, .numbers .main, .sheet th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

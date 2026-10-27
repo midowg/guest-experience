@@ -23,6 +23,6 @@ export default async function BeoPage({ params }: { params: Promise<{ ref: strin
     <p className="eyebrow">BEO hospitality</p>
     <h1 className={styles.title}>{event.title}</h1>
     <EventNavigation event={event} current="beo" />
-    <BeoView event={event} summary={data.summary} initial={data.state} revisions={data.revisions} migrated={data.migrated} />
+    <BeoView event={event} summary={data.summary} initial={data.state} revisions={data.revisions} migrated={data.migrated} brief={data.brief} />
   </AdminShell>;
 }
