@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Check, Copy, Download, FileUp, HandHeart, Minus, Plus, X } from "lucide-react";
-import { describeDonation, donorDisplays, formatRupiah, parseRupiah, type DonationCategory, type DonationItem, type DonorDisplay } from "@/lib/donations";
+import { Check, Copy, Download, FileUp, HandHeart, Info, Minus, Plus, X } from "lucide-react";
+import { addGiftText, describeDonation, donorDisplays, formatRupiah, otherGiftSuggestions, parseRupiah, type DonationCategory, type DonationItem, type DonorDisplay } from "@/lib/donations";
 import { guestApi } from "@/lib/routes";
 import type { EventRecord } from "@/lib/types";
 import { donationInputSchema } from "@/lib/validation";
@@ -26,28 +26,37 @@ function remember(eventId: string, donation: RememberedDonation) {
 }
 
 const quickAmounts = [50_000, 100_000, 250_000, 500_000];
-type Answers = { item: DonationItem | null; label: string; amount: number; name: string; display: DonorDisplay; phone: string; message: string };
-const empty: Answers = { item: null, label: "", amount: 0, name: "", display: "name", phone: "", message: "" };
+type Gift = { item_key: string; item_label: string; category: DonationCategory; amount: number; unit: string };
 
 /**
- * The donation form, full screen: what to give (a tap on a chip fills it), how much, how to hand
- * it over (bank account and QRIS for money, the committee's note for goods), the donor's name and
- * how it appears, an optional WhatsApp number for the handover news, and a message or prayer.
+ * The donation form, full screen. A donor may give several things at once: tap one or more chips
+ * (each with its own amount) and/or write other gifts, several separated by commas. Then how to
+ * hand it over (bank account and QRIS for money, the committee's note for goods), the donor's name
+ * and how it appears, an optional WhatsApp number for the handover news, and a message or prayer.
+ * Each gift is sent as its own donation, so the committee can receive them one by one.
  */
 export function DonationForm({ event, preview = false, onClose }: { event: EventRecord; preview?: boolean; onClose: () => void }) {
   const settings = event.donation;
-  const [answers, setAnswers] = useState<Answers>(empty);
+  const [picked, setPicked] = useState<Record<string, number>>({});
+  const [other, setOther] = useState("");
+  const [name, setName] = useState("");
+  const [display, setDisplay] = useState<DonorDisplay>("name");
+  const [phone, setPhone] = useState("");
+  const [note, setNote] = useState("");
   const [proof, setProof] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
-  const [done, setDone] = useState<RememberedDonation | null>(null);
+  const [done, setDone] = useState<{ name: string; gifts: string[] } | null>(null);
   const [copied, setCopied] = useState("");
-  const identity = useRef<RetryIdentity | null>(null);
+  const identities = useRef<Record<string, RetryIdentity>>({});
+  const sent = useRef<Set<string>>(new Set());
   const heading = useRef<HTMLHeadingElement>(null);
   const honeypot = useRef<HTMLInputElement>(null);
-  const category: DonationCategory = answers.item?.category ?? "other";
-  const set = (patch: Partial<Answers>) => { setAnswers(current => ({ ...current, ...patch })); setErrors({}); setMessage(""); };
+  const chosen = settings.items.filter(item => item.key in picked);
+  const fund = chosen.filter(item => item.category === "fund");
+  const goods = chosen.filter(item => item.category === "goods");
+  const touched = () => { setErrors({}); setMessage(""); };
 
   useEffect(() => {
     heading.current?.focus();
@@ -57,9 +66,16 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
   }, [onClose]);
 
-  function pick(item: DonationItem) {
-    set({ item, label: item.label, amount: item.category === "goods" ? Math.max(1, answers.item?.category === "goods" ? answers.amount : 1) : item.category === "fund" ? (answers.item?.category === "fund" ? answers.amount : 0) : 0 });
+  function toggle(item: DonationItem) {
+    touched();
+    setPicked(current => {
+      const next = { ...current };
+      if (item.key in next) delete next[item.key];
+      else next[item.key] = item.category === "goods" ? 1 : 0;
+      return next;
+    });
   }
+  const setAmount = (key: string, amount: number) => { touched(); setPicked(current => ({ ...current, [key]: amount })); };
   async function copy(text: string, what: string) {
     try { await navigator.clipboard.writeText(text.replace(/\s/g, "")); setCopied(what); } catch { setCopied(""); }
   }
@@ -67,37 +83,49 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
   async function submit(form: FormEvent<HTMLFormElement>) {
     form.preventDefault();
     if (pending) return;
-    const payload = {
-      item_key: answers.item && answers.label === answers.item.label ? answers.item.key : "",
-      item_label: answers.label.trim(), category: answers.item && answers.label === answers.item.label ? category : "other" as DonationCategory,
-      amount: answers.amount, unit: answers.item && answers.label === answers.item.label ? answers.item.unit : "",
-      donor_name: answers.name.trim(), display: answers.display, donor_phone: answers.phone.trim(), message: answers.message.trim(),
-      website: honeypot.current?.value ?? "",
-    };
-    identity.current = submissionIdentity({ ...payload, proof: proof?.name ?? "" }, identity.current, () => crypto.randomUUID());
-    const body = { ...payload, idempotency_key: identity.current.key };
-    const parsed = donationInputSchema.safeParse(body);
+    const gifts: Gift[] = [
+      ...chosen.map(item => ({ item_key: item.key, item_label: item.label, category: item.category, amount: item.category === "other" ? 0 : picked[item.key] ?? 0, unit: item.unit })),
+      ...(other.trim() ? [{ item_key: "", item_label: other.trim(), category: "other" as const, amount: 0, unit: "" }] : []),
+    ];
+    const donor = { donor_name: name.trim(), display, donor_phone: phone.trim(), message: note.trim(), website: honeypot.current?.value ?? "" };
     const next: Record<string, string> = {};
-    if (!parsed.success) for (const issue of parsed.error.issues) next[String(issue.path[0] ?? "form")] ??= issue.message;
-    if (payload.category === "fund" && settings.proofRequired && !proof) next.proof = "Unggah bukti transfer.";
+    if (!gifts.length) next.gift = "Pilih atau tulis bantuan yang ingin diberikan.";
+    const bodies = gifts.map(gift => {
+      const key = gift.item_key || "lain";
+      identities.current[key] = submissionIdentity({ ...gift, ...donor, proof: proof?.name ?? "" }, identities.current[key] ?? null, () => crypto.randomUUID());
+      const body = { ...gift, ...donor, idempotency_key: identities.current[key].key };
+      const parsed = donationInputSchema.safeParse(body);
+      if (!parsed.success) for (const issue of parsed.error.issues) {
+        const field = String(issue.path[0] ?? "form");
+        next[field === "amount" || field === "item_label" ? `${field}:${key}` : field] ??= issue.message;
+      }
+      return { key, body };
+    });
+    if (fund.length && settings.proofRequired && !proof) next.proof = "Unggah bukti transfer.";
     if (Object.keys(next).length) { setErrors(next); setMessage("Periksa isian yang ditandai."); return; }
-    const gift = describeDonation(body);
-    if (preview) { setDone({ name: body.donor_name, gift, at: new Date().toISOString() }); return; }
+    const labels = bodies.map(({ body }) => describeDonation(body));
+    if (preview) { setDone({ name: donor.donor_name, gifts: labels }); return; }
     setPending(true);
     try {
-      const data = new FormData();
-      data.set("payload", JSON.stringify(body));
-      if (proof && payload.category === "fund") data.set("proof", proof);
-      const response = await fetch(guestApi.donation(event), { method: "POST", body: data });
-      const result = await response.json().catch(() => null) as { ok?: boolean; message?: string; fieldErrors?: Record<string, string[]> } | null;
-      if (!response.ok || !result?.ok) {
-        setErrors(Object.fromEntries(Object.entries(result?.fieldErrors ?? {}).map(([key, list]) => [key, list[0]])));
-        setMessage(result?.message || "Donasi belum terkirim. Periksa koneksi, lalu coba lagi.");
-        return;
+      let proofSent = false;
+      for (const { key, body } of bodies) {
+        // A gift already recorded on an earlier try is not sent again.
+        if (sent.current.has(body.idempotency_key)) continue;
+        const data = new FormData();
+        data.set("payload", JSON.stringify(body));
+        if (proof && body.category === "fund" && !proofSent) { data.set("proof", proof); proofSent = true; }
+        const response = await fetch(guestApi.donation(event), { method: "POST", body: data });
+        const result = await response.json().catch(() => null) as { ok?: boolean; message?: string; fieldErrors?: Record<string, string[]> } | null;
+        if (!response.ok || !result?.ok) {
+          setErrors(Object.fromEntries(Object.entries(result?.fieldErrors ?? {}).map(([field, list]) => [field === "amount" ? `amount:${key}` : field, list[0]])));
+          setMessage(`${result?.message || "Donasi belum terkirim. Periksa koneksi, lalu coba lagi."}${sent.current.size ? " Bantuan yang sudah tercatat tidak akan terkirim dua kali." : ""}`);
+          return;
+        }
+        sent.current.add(body.idempotency_key);
       }
-      const record = { name: body.display === "name" ? body.donor_name : body.donor_name.split(" ")[0], gift, at: new Date().toISOString() };
-      remember(event.id, record);
-      setDone(record);
+      const shownName = display === "name" ? donor.donor_name : donor.donor_name.split(" ")[0];
+      remember(event.id, { name: shownName, gift: labels.join(", "), at: new Date().toISOString() });
+      setDone({ name: shownName, gifts: labels });
     } catch { setMessage("Donasi belum terkirim. Periksa koneksi, lalu coba lagi."); }
     finally { setPending(false); }
   }
@@ -111,85 +139,94 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
     {done ? <div className={s.done}>
       <span className={s.doneIcon}><HandHeart size={36} aria-hidden="true" /></span>
       <p className={s.doneTitle}>Donasi Anda tercatat, {done.name}.</p>
-      <p className={s.doneGift}>{done.gift}</p>
-      <p>Panitia akan mengonfirmasi donasi Anda. Setelah dikonfirmasi, donasi ikut terhitung di halaman ini{answers.phone ? ", dan Anda akan mendapat kabar lewat WhatsApp saat bantuan diserahkan" : ""}.</p>
+      <ul className={s.doneGifts}>{done.gifts.map(gift => <li key={gift} className={s.doneGift}>{gift}</li>)}</ul>
+      <p>Panitia akan mengonfirmasi donasi Anda. Setelah dikonfirmasi, donasi ikut terhitung di halaman ini{phone ? ", dan Anda akan mendapat kabar lewat WhatsApp saat bantuan diserahkan" : ""}.</p>
       <button type="button" className={s.give} onClick={onClose}><Check size={20} aria-hidden="true" /> Selesai</button>
     </div>
 
     : <form className={s.form} onSubmit={submit} noValidate>
       <fieldset className={s.group}>
         <legend>Bantuan apa?</legend>
+        <p className={s.hint}>Pilih satu atau beberapa.</p>
         <div className={s.chips} role="group" aria-label="Pilihan bantuan">
-          {settings.items.map(item => <button key={item.key} type="button" className={s.chip} aria-pressed={answers.item?.key === item.key && answers.label === item.label} onClick={() => pick(item)}>{item.label}</button>)}
+          {settings.items.map(item => <button key={item.key} type="button" className={s.chip} aria-pressed={item.key in picked} onClick={() => toggle(item)}>{item.key in picked && <Check size={16} aria-hidden="true" />} {item.label}</button>)}
         </div>
-        <label className={s.field}><span>Atau tulis sendiri</span>
-          <input className="input" value={answers.label} maxLength={120} placeholder="Misalnya: kursi roda, tenaga relawan" aria-invalid={!!errors.item_label || undefined}
-            onChange={change => set({ label: change.target.value, ...(answers.item && change.target.value !== answers.item.label ? { item: null, amount: 0 } : {}) })} />
+        <label className={s.field}><span>Bantuan lain (opsional)</span>
+          <textarea className="textarea" rows={2} value={other} maxLength={120} placeholder="Misalnya: beras 5 kg, minyak goreng 2 liter, selimut" aria-invalid={!!errors["item_label:lain"] || undefined} onChange={change => { touched(); setOther(change.target.value); }} />
+          <small>Bisa beberapa barang sekaligus, pisahkan dengan koma. Ketuk contoh untuk menambahkan:</small>
         </label>
-        {errors.item_label && <p className="field-error">{errors.item_label}</p>}
+        <div className={s.chips} role="group" aria-label="Contoh bantuan lain">
+          {otherGiftSuggestions.map(text => <button key={text} type="button" className={s.chipSmall} onClick={() => { touched(); setOther(current => addGiftText(current, text).slice(0, 120)); }}><Plus size={14} aria-hidden="true" /> {text}</button>)}
+        </div>
+        {(errors.gift || errors["item_label:lain"]) && <p className="field-error">{errors.gift || errors["item_label:lain"]}</p>}
       </fieldset>
 
-      {answers.item?.category === "fund" && answers.label === answers.item.label && <fieldset className={s.group}>
-        <legend>Berapa?</legend>
-        <div className={s.chips} role="group" aria-label="Nominal cepat">
-          {quickAmounts.map(amount => <button key={amount} type="button" className={s.chip} aria-pressed={answers.amount === amount} onClick={() => set({ amount })}>{formatRupiah(amount).replace(".000", " rb").replace("Rp ", "")}</button>)}
+      {fund.map(item => <fieldset key={item.key} className={s.group}>
+        <legend>{item.label}: berapa?</legend>
+        <div className={s.chips} role="group" aria-label={`Nominal cepat ${item.label}`}>
+          {quickAmounts.map(amount => <button key={amount} type="button" className={s.chip} aria-pressed={picked[item.key] === amount} onClick={() => setAmount(item.key, amount)}>{formatRupiah(amount).replace(".000", " rb").replace("Rp ", "")}</button>)}
         </div>
-        <label className={s.field}><span>Nominal</span>
-          <input className="input" inputMode="numeric" value={answers.amount ? formatRupiah(answers.amount) : ""} placeholder="Rp 0" aria-invalid={!!errors.amount || undefined} onChange={change => set({ amount: parseRupiah(change.target.value) })} />
+        <label className={s.field}><span>Nominal {item.label.toLowerCase()}</span>
+          <input className="input" inputMode="numeric" value={picked[item.key] ? formatRupiah(picked[item.key]) : ""} placeholder="Rp 0" aria-invalid={!!errors[`amount:${item.key}`] || undefined} onChange={change => setAmount(item.key, parseRupiah(change.target.value))} />
         </label>
-        {errors.amount && <p className="field-error">{errors.amount}</p>}
-        <div className={s.pay}>
-          <p className={s.payTitle}>Transfer ke</p>
-          {settings.accounts.map(account => <div key={account.id} className={s.account}>
-            <div><p className={s.bank}>{account.bank}</p><p className={s.number}>{account.number}</p><p className={s.holder}>a.n. {account.holder}</p></div>
-            <button type="button" className={s.copy} onClick={() => void copy(account.number, account.id)}>{copied === account.id ? <><Check size={16} aria-hidden="true" /> Disalin</> : <><Copy size={16} aria-hidden="true" /> Salin</>}</button>
-          </div>)}
-          {settings.qris.url && <div className={s.qris}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- the committee's QRIS image */}
-            <img src={settings.qris.url} alt="QRIS untuk donasi" />
-            <a className={s.copy} href={settings.qris.url} download="qris-donasi" target="_blank" rel="noopener noreferrer"><Download size={16} aria-hidden="true" /> Unduh QRIS</a>
-          </div>}
-          <label className={s.upload}>
-            <FileUp size={18} aria-hidden="true" />
-            <span>{proof ? proof.name : `Unggah bukti transfer${settings.proofRequired ? "" : " (opsional)"}`}</span>
-            <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="sr-only" onChange={change => { setProof(change.target.files?.[0] ?? null); setErrors({}); }} />
-          </label>
-          {errors.proof && <p className="field-error">{errors.proof}</p>}
-        </div>
-      </fieldset>}
+        {errors[`amount:${item.key}`] && <p className="field-error">{errors[`amount:${item.key}`]}</p>}
+      </fieldset>)}
 
-      {answers.item?.category === "goods" && answers.label === answers.item.label && <fieldset className={s.group}>
-        <legend>Berapa?</legend>
-        <div className={s.stepper}>
-          <button type="button" onClick={() => set({ amount: Math.max(1, answers.amount - 1) })} aria-label="Kurangi"><Minus size={20} aria-hidden="true" /></button>
-          <label><span className="sr-only">Jumlah</span><input className="input" inputMode="decimal" value={answers.amount || ""} onChange={change => set({ amount: Number(change.target.value.replace(",", ".")) || 0 })} aria-invalid={!!errors.amount || undefined} /></label>
-          <span className={s.unit}>{answers.item.unit}</span>
-          <button type="button" onClick={() => set({ amount: answers.amount + 1 })} aria-label="Tambah"><Plus size={20} aria-hidden="true" /></button>
-        </div>
-        {errors.amount && <p className="field-error">{errors.amount}</p>}
+      {fund.length > 0 && <div className={s.pay}>
+        <p className={s.payTitle}>Transfer ke</p>
+        {settings.accounts.map(account => <div key={account.id} className={s.account}>
+          <div><p className={s.bank}>{account.bank}</p><p className={s.number}>{account.number}</p><p className={s.holder}>a.n. {account.holder}</p></div>
+          <button type="button" className={s.copy} onClick={() => void copy(account.number, account.id)}>{copied === account.id ? <><Check size={16} aria-hidden="true" /> Disalin</> : <><Copy size={16} aria-hidden="true" /> Salin</>}</button>
+        </div>)}
+        {settings.qris.url && <div className={s.qris}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- the committee's QRIS image */}
+          <img src={settings.qris.url} alt="QRIS untuk donasi" />
+          <a className={s.copy} href={settings.qris.url} download="qris-donasi" target="_blank" rel="noopener noreferrer"><Download size={16} aria-hidden="true" /> Unduh QRIS</a>
+        </div>}
+        <label className={s.upload}>
+          <FileUp size={18} aria-hidden="true" />
+          <span>{proof ? proof.name : `Unggah bukti transfer${settings.proofRequired ? "" : " (opsional)"}`}</span>
+          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="sr-only" onChange={change => { setProof(change.target.files?.[0] ?? null); touched(); }} />
+        </label>
+        {errors.proof && <p className="field-error">{errors.proof}</p>}
+      </div>}
+
+      {goods.length > 0 && <fieldset className={s.group}>
+        <legend>Berapa banyak?</legend>
+        {goods.map(item => <div key={item.key} className={s.goodsRow}>
+          <span className={s.goodsName}>{item.label}</span>
+          <div className={s.stepper}>
+            <button type="button" onClick={() => setAmount(item.key, Math.max(1, (picked[item.key] ?? 1) - 1))} aria-label={`Kurangi ${item.label}`}><Minus size={18} aria-hidden="true" /></button>
+            <label><span className="sr-only">Jumlah {item.label}</span><input className="input" inputMode="decimal" value={picked[item.key] || ""} onChange={change => setAmount(item.key, Number(change.target.value.replace(",", ".")) || 0)} aria-invalid={!!errors[`amount:${item.key}`] || undefined} /></label>
+            <span className={s.unit}>{item.unit}</span>
+            <button type="button" onClick={() => setAmount(item.key, (picked[item.key] ?? 0) + 1)} aria-label={`Tambah ${item.label}`}><Plus size={18} aria-hidden="true" /></button>
+          </div>
+          {errors[`amount:${item.key}`] && <p className="field-error">{errors[`amount:${item.key}`]}</p>}
+        </div>)}
         {settings.goodsNote && <p className={s.goodsNote}>{settings.goodsNote}</p>}
       </fieldset>}
 
       <fieldset className={s.group}>
         <legend>Data Anda</legend>
         <label className={s.field}><span>Nama</span>
-          <input className="input" value={answers.name} maxLength={150} autoComplete="name" aria-invalid={!!errors.donor_name || undefined} onChange={change => set({ name: change.target.value })} />
+          <input className="input" value={name} maxLength={150} autoComplete="name" aria-invalid={!!errors.donor_name || undefined} onChange={change => { touched(); setName(change.target.value); }} />
         </label>
         {errors.donor_name && <p className="field-error">{errors.donor_name}</p>}
         <div className={s.displays} role="radiogroup" aria-label="Tampil di daftar donatur sebagai">
-          {donorDisplays.map(option => <label key={option.key} className={s.display} data-checked={answers.display === option.key || undefined}>
-            <input type="radio" name="display" value={option.key} checked={answers.display === option.key} onChange={() => set({ display: option.key })} />
+          {donorDisplays.map(option => <label key={option.key} className={s.display} data-checked={display === option.key || undefined}>
+            <input type="radio" name="display" value={option.key} checked={display === option.key} onChange={() => setDisplay(option.key)} />
             <span className={s.displayLabel}>{option.label}</span>
             <span className={s.displayHint}>{option.hint}</span>
           </label>)}
         </div>
+        <p className={s.assure}><Info size={18} aria-hidden="true" /> Apa pun pilihannya, donasi Anda tetap dikonfirmasi panitia dan ikut terhitung di total. Pilihan ini hanya mengatur apakah nama Anda terlihat di daftar donatur.</p>
         <label className={s.field}><span>Nomor WhatsApp (opsional)</span>
-          <input className="input" type="tel" inputMode="tel" autoComplete="tel" value={answers.phone} maxLength={30} placeholder="0812 3456 7890" aria-invalid={!!errors.donor_phone || undefined} onChange={change => set({ phone: change.target.value })} />
+          <input className="input" type="tel" inputMode="tel" autoComplete="tel" value={phone} maxLength={30} placeholder="0812 3456 7890" aria-invalid={!!errors.donor_phone || undefined} onChange={change => { touched(); setPhone(change.target.value); }} />
           <small>Untuk kabar saat bantuan diserahkan. Tidak ditampilkan.</small>
         </label>
         {errors.donor_phone && <p className="field-error">{errors.donor_phone}</p>}
         <label className={s.field}><span>Pesan atau doa (opsional)</span>
-          <textarea className="textarea" rows={3} maxLength={500} value={answers.message} onChange={change => set({ message: change.target.value })} />
+          <textarea className="textarea" rows={3} maxLength={500} value={note} onChange={change => setNote(change.target.value)} />
         </label>
       </fieldset>
 

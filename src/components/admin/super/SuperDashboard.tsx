@@ -13,7 +13,7 @@ import { adminEventPath } from "@/lib/routes";
 export type SuperEventRow = Pick<EventRecord, "id" | "title" | "slug" | "status" | "starts_at" | "timezone" | "event_kind" | "audience" | "updated_at">;
 type Filter = "all" | "visible" | "hidden";
 const statusLabels = { draft: "Draf", published: "Dipublikasikan", archived: "Diarsipkan" } as const;
-const kindLabels = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "CSR / Donasi" } as const;
+const kindLabels = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)" } as const;
 
 /** Which events regular admins can see: one switch per event, plus bulk hide/show. */
 export function SuperDashboard({ events, initialHidden, migrated }: { events: SuperEventRow[]; initialHidden: string[]; migrated: boolean }) {

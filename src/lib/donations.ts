@@ -13,6 +13,8 @@ export type DonationCategory = "fund" | "goods" | "other";
 /** One suggestion chip on the form: a tap fills in what is given and its unit. */
 export type DonationItem = { key: string; label: string; category: DonationCategory; unit: string; target: number | null };
 export type BankAccount = { id: string; bank: string; number: string; holder: string };
+/** Where the help goes: a children's home, a village, a family. A page may name several. */
+export type DonationRecipient = { id: string; name: string; description: string; place: string; photo: PlainImage };
 /** How a donor appears in the public list. "hidden" still counts in the totals. */
 export type DonorDisplay = "name" | "hamba_allah" | "hidden";
 export const donorDisplays: { key: DonorDisplay; label: string; hint: string }[] = [
@@ -26,6 +28,8 @@ export type DonationSettings = {
   /** The form takes donations. Off: the page still shows what was collected. */
   enabled: boolean;
   items: DonationItem[];
+  /** Who receives the help, shown on the page as "Disalurkan ke". */
+  recipients: DonationRecipient[];
   accounts: BankAccount[];
   qris: PlainImage;
   proofRequired: boolean;
@@ -37,7 +41,7 @@ export type DonationSettings = {
   show: { fundTotal: boolean; fundTarget: boolean; goods: boolean; donors: boolean; donorAmounts: boolean; messages: boolean };
   /** Filled once the help has been handed over: the page shows it and donors can be told. */
   delivered: { at: string | null; photo: PlainImage; note: string };
-  /** The WhatsApp message to each donor, with {nama} {bantuan} {jumlah} {tanggal_serah} {acara} {tautan} {doa}. */
+  /** The WhatsApp message to each donor, with {nama} {bantuan} {jumlah} {tanggal_serah} {penerima} {acara} {tautan} {doa}. */
   notify: { template: string; prayer: string };
 };
 
@@ -75,6 +79,14 @@ export const defaultDonationItems = (): DonationItem[] => [
   item("obat", "Obat-obatan", "goods", "paket"),
   item("mandi", "Perlengkapan mandi", "goods", "paket"),
 ];
+/** Examples that add to the free-text gift, so donors see they may write several things at once. */
+export const otherGiftSuggestions = ["Beras 5 kg", "Minyak goreng 2 liter", "Gula 1 kg", "Buku tulis 1 pak", "Pakaian anak", "Selimut", "Sabun dan sampo", "Tas sekolah"];
+/** Adds an example to what was typed, separated by a comma, unless it is already there. */
+export function addGiftText(current: string, addition: string): string {
+  const text = current.trim().replace(/[,\s]+$/, "");
+  if (text.toLowerCase().split(/\s*,\s*/).includes(addition.toLowerCase())) return text;
+  return text ? `${text}, ${addition}` : addition;
+}
 /** Prayers the admin can pick for the closing line of the WhatsApp message. */
 export const prayerSuggestions = [
   "Semoga kebaikan Anda dibalas berlipat ganda.",
@@ -82,11 +94,11 @@ export const prayerSuggestions = [
   "Semoga Tuhan membalas kebaikan Anda dengan kesehatan dan rezeki yang lapang.",
   "Jazakumullahu khairan katsiran, semoga Allah membalas dengan kebaikan yang banyak.",
 ];
-export const defaultNotifyTemplate = "Halo {nama},\n\nTerima kasih atas donasi Anda untuk {acara}: {bantuan}.\nBantuan telah kami serahkan pada {tanggal_serah}.\n\nLihat kabarnya di sini: {tautan}\n\n{doa}";
+export const defaultNotifyTemplate = "Halo {nama},\n\nTerima kasih atas donasi Anda untuk {acara}: {bantuan}.\nBantuan telah kami serahkan kepada {penerima} pada {tanggal_serah}.\n\nLihat kabarnya di sini: {tautan}\n\n{doa}";
 
 export function emptyDonation(): DonationSettings {
   return {
-    enabled: false, items: [], accounts: [], qris: image(), proofRequired: false, goodsNote: "", closesAt: null,
+    enabled: false, items: [], recipients: [], accounts: [], qris: image(), proofRequired: false, goodsNote: "", closesAt: null,
     show: { fundTotal: true, fundTarget: true, goods: true, donors: true, donorAmounts: false, messages: true },
     delivered: { at: null, photo: image(), note: "" },
     notify: { template: defaultNotifyTemplate, prayer: prayerSuggestions[0] },
@@ -102,6 +114,7 @@ export function normalizeDonation(donation: Partial<DonationSettings> | undefine
   return {
     ...base, ...donation,
     items: donation.items ?? [], accounts: donation.accounts ?? [], qris: { ...image(), ...donation.qris },
+    recipients: (donation.recipients ?? []).map(recipient => ({ ...recipient, photo: { ...image(), ...recipient.photo } })),
     show: { ...base.show, ...donation.show },
     delivered: { ...base.delivered, ...donation.delivered, photo: { ...image(), ...donation.delivered?.photo } },
     notify: { ...base.notify, ...donation.notify },
@@ -194,6 +207,13 @@ export function notifyMessage(settings: DonationSettings, donation: DonationReco
     bantuan: describeDonation(donation, countedAmount(donation)),
     jumlah: donation.category === "fund" ? formatRupiah(countedAmount(donation)) : `${formatCount(countedAmount(donation))}${donation.unit ? ` ${donation.unit}` : ""}`,
     tanggal_serah: handedOver, acara: event.title, tautan: link, doa: settings.notify.prayer,
+    penerima: listNames(settings.recipients.map(recipient => recipient.name).filter(Boolean)) || "penerima bantuan",
   };
   return settings.notify.template.replace(/\{(\w+)\}/g, (whole, key: string) => values[key] ?? whole).replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** "A", "A dan B", "A, B, dan C". */
+export function listNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return names.length === 2 ? `${names[0]} dan ${names[1]}` : `${names.slice(0, -1).join(", ")}, dan ${names.at(-1)}`;
 }

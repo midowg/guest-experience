@@ -125,3 +125,23 @@
 .doneIcon { display: inline-grid; place-items: center; width: 76px; height: 76px; border-radius: 50%; background: var(--color-soft); color: var(--color-primary); }
 .doneTitle { color: var(--color-heading); font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; }
 .doneGift { padding: 6px 16px; border-radius: 999px; background: var(--color-soft); color: var(--color-primary); font-weight: 900; }
+
+/* Several gifts at once, the reassurance under the name choice, and where the help goes. */
+.hint { margin: -4px 0 0; color: var(--color-caption); font-size: var(--text-sm); }
+.chip { display: inline-flex; align-items: center; gap: 4px; }
+.chipSmall { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 12px; border: 1px dashed var(--color-border); border-radius: 999px; background: var(--color-background); color: var(--color-text); font: inherit; font-size: .875rem; font-weight: 700; cursor: pointer; }
+.chipSmall:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.goodsRow { display: grid; gap: 6px; }
+.goodsName { font-weight: 800; }
+.assure { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0; padding: var(--space-3) var(--space-4); border-radius: 14px; background: var(--color-soft); font-size: var(--text-sm); line-height: 1.5; }
+.assure svg { flex-shrink: 0; margin-top: 1px; color: var(--color-primary); }
+.doneGifts { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.recipients { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.recipient { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-background); }
+.recipient img { flex-shrink: 0; width: 76px; height: 76px; object-fit: cover; border-radius: 14px; }
+.recipientIcon { display: inline-grid; flex-shrink: 0; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--color-soft); color: var(--color-primary); }
+.recipientText { display: grid; gap: 2px; min-width: 0; }
+.recipientText p { margin: 0; }
+.recipientName { font-weight: 900; }
+.recipientPlace { display: inline-flex; align-items: center; gap: 4px; color: var(--color-caption); font-size: var(--text-sm); font-weight: 700; }
+.recipientDescription { font-size: var(--text-sm); line-height: 1.5; }

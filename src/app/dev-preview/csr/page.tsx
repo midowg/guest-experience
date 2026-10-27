@@ -18,6 +18,10 @@ export default async function DevCsrPage({ searchParams }: { searchParams: Promi
     enabled: query.tutup !== "1",
     items: base.items.map(item => item.key === "dana" ? { ...item, target: 25_000_000 } : item.key === "sembako" ? { ...item, target: 100 } : item.key === "buku" ? { ...item, target: 300 } : item),
     accounts: [{ id: "a1", bank: "BCA", number: "123 456 7890", holder: "Yayasan Contoh Peduli" }, { id: "a2", bank: "Bank Syariah Indonesia", number: "7100 2233 44", holder: "Yayasan Contoh Peduli" }],
+    recipients: [
+      { id: "p1", name: "Panti Asuhan Contoh Kasih Ibu", place: "Sleman, Yogyakarta", description: "60 anak usia sekolah; kebutuhan utama perlengkapan sekolah dan sembako.", photo: { url: "https://picsum.photos/seed/csr-panti/400/400", alt: "Contoh foto panti", srcset: [] } },
+      { id: "p2", name: "Sekolah Contoh Harapan", place: "Bantul, Yogyakarta", description: "Perpustakaan kecil untuk 120 murid SD.", photo: { url: "", alt: "", srcset: [] } },
+    ],
     goodsNote: "Barang dapat diantar ke Kantor Werkudara, Jl. Contoh No. 1, setiap hari kerja pukul 09.00–16.00, paling lambat 10 Desember 2026.",
     delivered: query.serah === "1" ? { at: "2026-12-12T03:00:00.000Z", photo: { url: "https://picsum.photos/seed/csr-serah/1600/900", alt: "Contoh foto penyerahan bantuan", srcset: [] }, note: "Bantuan diterima langsung oleh pengurus panti. Terima kasih atas kebaikan Anda semua." } : base.delivered,
   };

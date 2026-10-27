@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HAMBA_ALLAH, defaultDonationItems, describeDonation, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
+import { HAMBA_ALLAH, addGiftText, listNames, defaultDonationItems, describeDonation, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
 import { donationInputSchema, eventSchema } from "./validation";
 import { createSeedEvent } from "./seed-event";
 import { buildEventFromSetup } from "./event-setup";
@@ -82,10 +82,12 @@ describe("public donor list", () => {
 
 describe("handover message", () => {
   it("fills the template with this donor's gift, the date and the prayer, by their own name", () => {
-    const text = notifyMessage(settings(), donation({ donor_name: "Budi", display: "hamba_allah", received_amount: 150000 }), { title: "Berbagi Bersama Anak Panti" }, "https://journey.werkudara.group/AB23CD", "12 Desember 2026");
+    const withRecipients = { ...settings(), recipients: ["Panti Asuhan Kasih Ibu", "Sekolah Harapan"].map((name, index) => ({ id: `p${index}`, name, description: "", place: "", photo: { url: "", alt: "", srcset: [] } })) };
+    const text = notifyMessage(withRecipients, donation({ donor_name: "Budi", display: "hamba_allah", received_amount: 150000 }), { title: "Berbagi Bersama Anak Panti" }, "https://journey.werkudara.group/AB23CD", "12 Desember 2026");
     expect(text).toContain("Halo Budi");
     expect(text).toContain("Berbagi Bersama Anak Panti: Dana Rp 150.000");
     expect(text).toContain("12 Desember 2026");
+    expect(text).toContain("kepada Panti Asuhan Kasih Ibu dan Sekolah Harapan");
     expect(text).toContain("https://journey.werkudara.group/AB23CD");
     expect(text).toContain(settings().notify.prayer);
     expect(text).not.toContain("{");
@@ -127,5 +129,18 @@ describe("form and event", () => {
     const old = { ...createSeedEvent(), donation: undefined } as unknown as Parameters<typeof normalizeEvent>[0];
     expect(normalizeEvent(old).donation).toEqual(emptyDonation());
     expect(normalizeDonation({ enabled: true }).show).toEqual(emptyDonation().show);
+  });
+});
+
+describe("several gifts and recipients", () => {
+  it("adds examples to the free-text gift once each", () => {
+    expect(addGiftText("", "Selimut")).toBe("Selimut");
+    expect(addGiftText("Beras 5 kg, ", "Selimut")).toBe("Beras 5 kg, Selimut");
+    expect(addGiftText("Selimut", "selimut")).toBe("Selimut");
+  });
+  it("lists names the Indonesian way", () => {
+    expect(listNames(["A"])).toBe("A");
+    expect(listNames(["A", "B"])).toBe("A dan B");
+    expect(listNames(["A", "B", "C"])).toBe("A, B, dan C");
   });
 });

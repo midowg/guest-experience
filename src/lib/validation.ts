@@ -146,8 +146,12 @@ const bankAccountSchema = z.object({
   id: z.string().min(1).max(40), bank: text(60).min(1, "Isi nama bank."),
   number: text(40).regex(/^[0-9][0-9 .-]*$/, "Nomor rekening hanya angka."), holder: text(120).min(1, "Isi nama pemilik rekening."),
 });
+const donationRecipientSchema = z.object({
+  id: z.string().min(1).max(40), name: text(150).min(1, "Isi nama penerima."), description: text(500).default(""), place: text(200).default(""), photo: plainImage.default(emptyImage),
+});
 const donationSchema = z.object({
   enabled: z.boolean().default(false),
+  recipients: z.array(donationRecipientSchema).max(20).default([]),
   items: z.array(donationItemSchema).max(40).refine(items => new Set(items.map(item => item.key)).size === items.length, "Jenis bantuan tidak boleh berulang.").default([]),
   accounts: z.array(bankAccountSchema).max(5).default([]),
   qris: plainImage.default(emptyImage),

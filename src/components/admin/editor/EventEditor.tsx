@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Notice } from "@/components/ui";
-import { BookOpen, CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, FileText, Frame, HandHeart, Handshake, Image as ImageIcon, Images, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
+import { BookOpen, CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Frame, HandHeart, Handshake, HeartHandshake, Image as ImageIcon, Images, Landmark, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Send, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
 import { Check, SuggestionChips } from "@/components/admin/editor/controls";
 import { chipLabel, fieldExamples, fieldPattern, fieldSuggestions, fillSuggestion } from "@/components/admin/editor/suggestions";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
@@ -11,7 +11,7 @@ import { tzLabel, zoneOf } from "@/lib/timezones";
 import type { EventPhase, EventRecord, SectionKey, StaffMember } from "@/lib/types";
 import { eventSchema } from "@/lib/validation";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { blockOfPath, blockStatusLabels, blockStatuses, completeSections, editorBlocks, editorStages, prepareEvent } from "@/components/admin/editor/editor-model";
+import { blockOfPath, blockStatusLabels, blockStatuses, blocksFor, completeSections, prepareEvent, stagesFor } from "@/components/admin/editor/editor-model";
 import { AfterBlock, AppearanceBlock, DayBlock, ExperienceBlock, PrepareBlock } from "@/components/admin/editor/JourneyEditor";
 import { TranslationBlock } from "@/components/admin/editor/TranslationEditor";
 import { blockAllowed, moduleActive, moduleBlocks, type AdminModule } from "@/lib/admin-modules";
@@ -24,7 +24,7 @@ import { GuideBlock, withGuidePart } from "@/components/admin/editor/blocks/Guid
 import { HeroBlock } from "@/components/admin/editor/blocks/HeroBlock";
 import { IdentityBlock } from "@/components/admin/editor/blocks/IdentityBlock";
 import { PosterBlock } from "@/components/admin/editor/blocks/PosterBlock";
-import { DonationBlock } from "@/components/admin/editor/blocks/DonationBlock";
+import { DonationDisplayBlock, DonationItemsBlock, DonationNewsBlock, DonationPaymentBlock, DonationRecipientsBlock } from "@/components/admin/editor/blocks/DonationBlock";
 import { PublicationBlock } from "@/components/admin/editor/blocks/PublicationBlock";
 import { POSTER_LABEL, type PosterDesign } from "@/lib/poster";
 import { posterPresets, presetPoster } from "@/lib/poster-presets";
@@ -46,11 +46,11 @@ import { absolute, adminApi, eventPath } from "@/lib/routes";
 
 
 /** Shorter names for the chips, so more of them fit with their names on one row. */
-const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan", poster: "Poster", guide: "Bab", donation: "Donasi" };
+const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan", poster: "Poster", guide: "Bab", "donation-items": "Bantuan", "donation-pay": "Rekening", "donation-recipients": "Penerima", "donation-show": "Tampilan", "donation-news": "Kabar" };
 const blockIcons: Record<string, LucideIcon> = {
   delete: Trash2, identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
   agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, language: Languages, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
-  feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket, poster: Frame, guide: BookOpen, donation: HandHeart,
+  feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket, poster: Frame, guide: BookOpen, "donation-items": HandHeart, "donation-pay": Landmark, "donation-recipients": HeartHandshake, "donation-show": Eye, "donation-news": Send,
 };
 
 
@@ -82,6 +82,9 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const card = initialEvent.event_kind === "kartu";
   const guide = initialEvent.event_kind === "eguide";
   // Each kind offers only the blocks that fit it (kindModules / kindBlocks in src/lib/admin-modules.ts).
+  // Each kind reads its own menu (Friday Sharing renames and regroups); everything below uses these two.
+  const editorBlocks = blocksFor(initialEvent.event_kind);
+  const editorStages = stagesFor(initialEvent.event_kind);
   const blocks = editorBlocks.filter(item => (superAdmin || item.id !== "appearance") && blockAllowed(initialEvent.event_kind, item.id) && !(Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, id]) => id === item.id && unavailable(key)));
   const restrictedBlock = (id: string) => (Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, block]) => block === id && restricted(key));
   const sectionModule: Partial<Record<string, AdminModule>> = { experience: "experience", agenda: "agenda", location: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback: "feedback" };
@@ -125,7 +128,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   useEffect(() => { if (error) errorSummary.current?.focus(); }, [error, errors]);
   function update<K extends keyof EventRecord>(key: K, value: EventRecord[K]) {
     setEvent(current => ({ ...current, [key]: value })); setDirty(true); setMessage("");
-    const owner = blockOfPath(String(key));
+    // Friday Sharing keeps its settings in one field across several blocks: the open one is the one changed.
+    const owner = key === "donation" && open.startsWith("donation-") ? open : blockOfPath(String(key));
     setDirtyBlocks(current => current.has(owner) ? current : new Set(current).add(owner));
   }
   /** Switch the form to another block; the preview follows with the matching part and phase. */
@@ -218,7 +222,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     if (id === "review") return { on: event.review_enabled, set: on => update("review_enabled", on) };
     // Switched on for the first time, Studio Poster starts from the first design.
     if (id === "poster" && event.event_kind === "kartu") return null;
-    if (id === "donation") return { on: event.donation.enabled, set: on => update("donation", { ...event.donation, enabled: on }) };
+    if (id === "donation-items") return { on: event.donation.enabled, set: on => update("donation", { ...event.donation, enabled: on }) };
     if (id === "poster") return { on: event.poster.enabled, set: on => update("poster", on && !event.poster.fields.length ? presetPoster(posterPresets[0].key, event) : { ...event.poster, enabled: on }) };
     const key = sectionOfBlock[id];
     if (!key) return null;
@@ -373,7 +377,11 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {block("contact", "Kontak", <ContactBlock kit={kit} />)}
       {block("day", "Hari H", <DayBlock event={event} update={update} control={control} />)}
       {block("poster", POSTER_LABEL, <PosterBlock kit={kit} />)}
-      {block("donation", "Donasi", <DonationBlock kit={kit} />)}
+      {block("donation-items", "Pilihan bantuan", <DonationItemsBlock kit={kit} />)}
+      {block("donation-pay", "Rekening & QRIS", <DonationPaymentBlock kit={kit} />)}
+      {block("donation-recipients", "Penerima bantuan", <DonationRecipientsBlock kit={kit} />)}
+      {block("donation-show", "Yang tampil di halaman", <DonationDisplayBlock kit={kit} />)}
+      {block("donation-news", "Kabar penyerahan", <DonationNewsBlock kit={kit} />)}
       {block("feedback_questions", "Survei feedback", <FeedbackBlock kit={kit} />)}
       {block("review", "Ulasan Google (opsional)", <ReviewBlock kit={kit} />)}
       {block("after", "Setelah acara", <AfterBlock event={event} update={update} control={control} errors={errors} collaboration={!unavailable("collaboration")} origin={origin} />)}

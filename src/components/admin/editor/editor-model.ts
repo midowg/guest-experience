@@ -139,7 +139,12 @@ export const editorBlocks: { id: string; title: string; stage: EditorStage }[] =
   { id: "rsvp", title: "Penerimaan RSVP", stage: "guest" },
   { id: "contact", title: "Kontak", stage: "guest" },
   { id: "poster", title: POSTER_LABEL, stage: "guest" },
-  { id: "donation", title: "Donasi", stage: "guest" },
+  // Friday Sharing (CSR) only: what can be given, how to pay, who receives it, what the page shows, the handover news.
+  { id: "donation-items", title: "Pilihan bantuan", stage: "guest" },
+  { id: "donation-pay", title: "Rekening & QRIS", stage: "guest" },
+  { id: "donation-recipients", title: "Penerima bantuan", stage: "guest" },
+  { id: "donation-show", title: "Yang tampil di halaman", stage: "guest" },
+  { id: "donation-news", title: "Kabar penyerahan", stage: "after" },
   { id: "day", title: "Hari H", stage: "day" },
   { id: "feedback_questions", title: "Survei feedback", stage: "after" },
   { id: "review", title: "Ulasan Google (opsional)", stage: "after" },
@@ -161,16 +166,44 @@ const fieldBlocks: Record<string, string> = {
   team_image: "team", rsvp_enabled: "rsvp", rsvp_closes_at: "rsvp", guest_estimate: "rsvp", contact: "contact", day_note: "day",
   feedback_enabled: "feedback_questions", feedback_opens_at: "feedback_questions", feedback_description: "feedback_questions", feedback_questions: "feedback_questions",
   review_url: "review", review_enabled: "review", review_heading: "review", review_description: "review", review_button_label: "review",
-  after: "after", prepare: "prepare", language: "language", translations: "language", sections: "sections", status: "publication", poster: "poster", guide: "guide", donation: "donation",
+  after: "after", prepare: "prepare", language: "language", translations: "language", sections: "sections", status: "publication", poster: "poster", guide: "guide",
+};
+/** Friday Sharing's settings are split over several blocks: the second segment of donation.* decides. */
+const donationBlocks: Record<string, string> = {
+  enabled: "donation-items", items: "donation-items", goodsNote: "donation-items", closesAt: "donation-items",
+  accounts: "donation-pay", qris: "donation-pay", proofRequired: "donation-pay",
+  recipients: "donation-recipients", show: "donation-show", delivered: "donation-news", notify: "donation-news",
 };
 export function blockOfPath(path: string): string {
-  return fieldBlocks[path.split(".")[0]] ?? "identity";
+  const [first, second] = path.split(".");
+  if (first === "donation") return donationBlocks[second] ?? "donation-items";
+  return fieldBlocks[first] ?? "identity";
+}
+
+/**
+ * Friday Sharing (CSR) has its own menu, not the invitation's: shared blocks are renamed and
+ * regrouped for a donation page, and the stages read Halaman · Donasi · Penyaluran · Pengaturan.
+ */
+const csrBlocks: Record<string, { title: string; stage: EditorStage }> = {
+  identity: { title: "Judul & cerita", stage: "prep" },
+  hero: { title: "Foto sampul", stage: "prep" },
+  contact: { title: "Kontak panitia", stage: "prep" },
+  publication: { title: "Terbitkan", stage: "settings" },
+};
+const csrStages: Partial<Record<EditorStage, string>> = { prep: "Halaman", guest: "Donasi", after: "Penyaluran", settings: "Pengaturan" };
+/** The blocks of the menu for a kind of event, with that kind's names and grouping. */
+export function blocksFor(kind: EventRecord["event_kind"] | undefined) {
+  return kind === "csr" ? editorBlocks.map(item => csrBlocks[item.id] ? { ...item, ...csrBlocks[item.id] } : item) : editorBlocks;
+}
+/** The menu's stage headings for a kind of event. */
+export function stagesFor(kind: EventRecord["event_kind"] | undefined) {
+  return kind === "csr" ? editorStages.filter(stage => csrStages[stage.key]).map(stage => ({ ...stage, label: csrStages[stage.key]! })) : editorStages;
 }
 
 export type BlockStatus = "error" | "dirty" | "todo" | "optional" | "done";
 export const blockStatusLabels: Record<BlockStatus, string> = { error: "Perlu diperbaiki", dirty: "Belum disimpan", todo: "Perlu dilengkapi", optional: "Opsional", done: "Lengkap" };
 
-const kindLabels = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "CSR / Donasi" } as const;
+const kindLabels = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)" } as const;
 const phaseText = { auto: "fase otomatis", before: "selalu undangan", day: "selalu hari H", after: "selalu terima kasih" } as const;
 const sectionOn = (event: EventRecord, key: SectionKey) => event.sections.some(section => section.key === key && section.enabled);
 const count = (n: number, noun: string) => `${n} ${noun}`;

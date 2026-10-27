@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore } from "react";
-import { CircleCheck, Gift, HandHeart, HeartHandshake, MessageCircle, Package, Share2, Users, Wallet } from "lucide-react";
+import { CircleCheck, Gift, HandHeart, HeartHandshake, Home, MapPin, MessageCircle, Package, Share2, Users, Wallet } from "lucide-react";
 import { donorInitials, formatRupiah, type DonationTotals, type PublicDonor } from "@/lib/donations";
 import { themeStyle } from "@/lib/themes";
 import type { EventRecord } from "@/lib/types";
@@ -110,6 +110,21 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
           {!totals.fund && !totals.goods.length && !totals.other && <p className={s.empty}>Belum ada bantuan yang dikonfirmasi. Jadilah yang pertama.</p>}
           <p className={s.note}>Diperbarui setelah dikonfirmasi panitia{totals.pending > 0 ? ` · ${totals.pending} donasi menunggu konfirmasi` : ""}.</p>
         </section>
+
+        {settings.recipients.length > 0 && <section className={s.section} aria-labelledby="penerima">
+          <div className={s.sectionHead}><h2 id="penerima">Disalurkan ke</h2></div>
+          <ul className={s.recipients}>
+            {settings.recipients.map(recipient => <li key={recipient.id} className={s.recipient}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- a photo the committee uploaded */}
+              {recipient.photo.url ? <img src={recipient.photo.url} alt={recipient.photo.alt || recipient.name} /> : <span className={s.recipientIcon} aria-hidden="true"><Home size={24} /></span>}
+              <div className={s.recipientText}>
+                <p className={s.recipientName}>{recipient.name}</p>
+                {recipient.place && <p className={s.recipientPlace}><MapPin size={14} aria-hidden="true" /> {recipient.place}</p>}
+                {recipient.description && <p className={s.recipientDescription}>{recipient.description}</p>}
+              </div>
+            </li>)}
+          </ul>
+        </section>}
 
         {settings.show.donors && <section className={s.section} aria-labelledby="donatur">
           <div className={s.sectionHead}><h2 id="donatur">Daftar donatur</h2></div>

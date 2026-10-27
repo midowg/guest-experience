@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   return handle(async () => {
     checkOrigin(request);
-    await enforceRateLimit(request, "donation", 10);
+    // One form may send several gifts (one request each).
+    await enforceRateLimit(request, "donation", 30);
     const length = Number(request.headers.get("content-length") ?? 0);
     if (length > PROOF_MAX_BYTES + 64_000) throw new ServiceError(413, "Ukuran bukti transfer maksimal 5 MB.");
     const { slug } = await params;
