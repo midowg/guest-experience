@@ -285,7 +285,8 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
 
       <input ref={honeypot} type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className={s.trap} defaultValue="" />
       {message && <p className="field-error" role="alert">{message}</p>}
-      <button type="submit" className={s.give} disabled={pending}><HandHeart size={22} aria-hidden="true" /> {pending ? "Mengirim…" : "Kirim donasi"}</button>
+      {/* Stays in view at the bottom, above Safari's address bar on an iPhone, so sending never needs a hunt. */}
+      <div className={s.submitBar}><button type="submit" className={s.give} disabled={pending}><HandHeart size={22} aria-hidden="true" /> {pending ? "Mengirim…" : "Kirim donasi"}</button></div>
     </form>}
   </div>;
 }

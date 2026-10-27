@@ -123,12 +123,15 @@
 .closed { width: 100%; max-width: 32rem; margin: 0; padding: var(--space-3) var(--space-4); border-radius: 16px; background: var(--color-soft); text-align: center; font-weight: 700; }
 
 /* The form: a full screen of its own. */
-.sheet { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: var(--color-background); }
+/* The visible screen's height (dvh), not the tallest one, so on an iPhone the bottom is never under Safari's bar. */
+.sheet { position: fixed; top: 0; right: 0; left: 0; z-index: 60; height: 100vh; height: 100dvh; overflow-y: auto; overscroll-behavior: contain; background: var(--color-background); }
 .sheetHead { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; max-width: 36rem; margin: 0 auto; padding: var(--space-3) var(--space-5); background: var(--color-background); border-bottom: 1px solid var(--color-border); }
 .sheetHead h2 { margin: 0; color: var(--color-heading); font-family: var(--font-heading); font-size: 1.375rem; }
 .sheetHead h2:focus { outline: none; }
 .close { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: var(--color-soft); color: var(--color-text); cursor: pointer; }
-.form { display: grid; gap: var(--space-5); max-width: 36rem; margin: 0 auto; padding: var(--space-5) var(--space-5) calc(var(--space-7) + env(safe-area-inset-bottom, 0px)); }
+.form { display: grid; gap: var(--space-5); max-width: 36rem; margin: 0 auto; padding: var(--space-5) var(--space-5) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); }
+.submitBar { position: sticky; bottom: 0; z-index: 2; margin: 0 calc(-1 * var(--space-5)); padding: var(--space-3) var(--space-5) calc(var(--space-3) + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--color-background) 75%, transparent); }
+.submitBar .give { width: 100%; }
 .group { display: grid; gap: var(--space-3); min-width: 0; margin: 0; padding: 0; border: 0; }
 .group legend { margin-bottom: var(--space-2); padding: 0; color: var(--color-heading); font-size: 1.125rem; font-weight: 900; }
 .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
