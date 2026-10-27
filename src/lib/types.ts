@@ -36,7 +36,7 @@ export type HeroImage = { url: string; alt: string; srcset: ImageSource[]; focus
  */
 export type EventKind = "kunjungan" | "acara" | "program" | "kartu" | "eguide" | "csr";
 export type EventAudience = "external" | "internal";
-export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah";
+export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah" | "berbagi";
 export type EventTheme = { key: ThemeKey; corners: "square" | "soft" };
 export type EventPhase = "before" | "day" | "after";
 export type PhaseOverride = "auto" | EventPhase;

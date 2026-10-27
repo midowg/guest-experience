@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
-import { CircleCheck, Gift, HandHeart, HeartHandshake, Home, MapPin, MessageCircle, Package, Share2, Users, Wallet } from "lucide-react";
-import { donorInitials, formatRupiah, type DonationTotals, type PublicDonor } from "@/lib/donations";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { ArrowLeft, ChevronRight, CircleCheck, Gift, HandHeart, HeartHandshake, Home, MapPin, MessageCircle, Package, Share2, Users, Wallet } from "lucide-react";
+import { donorInitials, formatRupiah, listNames, type DonationTotals, type PublicDonor } from "@/lib/donations";
 import { themeStyle } from "@/lib/themes";
 import type { EventRecord } from "@/lib/types";
 import { formatDate } from "@/lib/format";
@@ -23,14 +23,16 @@ const relative = (iso: string) => {
 
 /**
  * The CSR page (event kind "csr"): not an invitation but a place to give. What has been collected,
- * who gave, and one button to donate. Only what the committee has received is counted, and each
+ * who gave, and one button to donate, on one short page; the recipients and the full donor list
+ * open as pages of their own. Only what the committee has received is counted, and each
  * donor appears as they chose (their name, Hamba Allah, or not at all).
  */
 export function CsrExperience({ event, view, preview = false }: { event: EventRecord; view: DonationView; preview?: boolean }) {
   useGuestPage(event, preview);
   const settings = event.donation;
   const [formOpen, setFormOpen] = useState(false);
-  const [allDonors, setAllDonors] = useState(false);
+  const [page, setPage] = useState<"" | "penerima" | "donatur">("");
+  const closePage = useCallback(() => setPage(""), []);
   const [shared, setShared] = useState("");
   // What this browser gave before, read after hydration (the server has no such memory).
   const memory = useSyncExternalStore(subscribeMemory, () => readMemory(event.id), () => "");
@@ -39,7 +41,6 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
   const closed = !settings.enabled || (!!settings.closesAt && openedAt >= Date.parse(settings.closesAt));
   const canGive = view.ready && !closed && settings.items.length > 0;
   const { totals } = view;
-  const donors = allDonors ? view.donors : view.donors.slice(0, 8);
   const contactHref = event.sections.some(section => section.key === "contact" && section.enabled) ? contactLink(event.contact) : null;
   const hero = event.hero.url;
 
@@ -51,7 +52,11 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
     } catch { /* closed by the person */ }
   }
 
-  return <div className={s.csr} data-theme={event.theme?.key ?? "segar"} style={themeStyle(event.theme)}>
+  const recipients = settings.recipients;
+  const goodsTiles = totals.goods.length + (totals.other > 0 ? 1 : 0);
+  const nothingYet = !totals.fund && !totals.goods.length && !totals.other;
+
+  return <div className={s.csr} data-theme={event.theme?.key ?? "berbagi"} style={themeStyle(event.theme)}>
     <main className={s.main}>
       <header className={s.cover} data-plain={hero ? undefined : ""}>
         {/* eslint-disable-next-line @next/next/no-img-element -- the event's own cover photo, already sized */}
@@ -64,6 +69,34 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
       </header>
 
       <div className={s.body}>
+        {/* What has been collected: one card lifted over the cover, the first thing a donor sees. */}
+        <section className={s.collected} aria-labelledby="terkumpul">
+          <div className={s.collectedHead}>
+            <h2 id="terkumpul">Terkumpul</h2>
+            <span className={s.donorCount}><Users size={15} aria-hidden="true" /> {totals.donors} orang baik</span>
+          </div>
+          {totals.fund && <div className={s.fund}>
+            <span className={s.fundLabel}><Wallet size={16} aria-hidden="true" /> Dana</span>
+            <strong className={s.fundValue}>{formatRupiah(totals.fund.total)}</strong>
+            {totals.fund.target && <Progress total={totals.fund.total} target={totals.fund.target} label={`dari ${formatRupiah(totals.fund.target)}`} />}
+          </div>}
+          {goodsTiles > 0 && <ul className={s.totals}>
+            {totals.goods.map(item => <li key={item.key} className={s.total}>
+              <span className={s.totalIcon}><Package size={18} aria-hidden="true" /></span>
+              <strong className={s.totalValue}>{count(item.total)} <small>{item.unit}</small></strong>
+              <span className={s.totalLabel}>{item.label}</span>
+              {item.target && <Progress total={item.total} target={item.target} label={`dari ${count(item.target)} ${item.unit}`} small />}
+            </li>)}
+            {totals.other > 0 && <li className={s.total}>
+              <span className={s.totalIcon}><Gift size={18} aria-hidden="true" /></span>
+              <strong className={s.totalValue}>{totals.other} <small>bantuan</small></strong>
+              <span className={s.totalLabel}>Bantuan lain</span>
+            </li>}
+          </ul>}
+          {nothingYet && <p className={s.empty}>Belum ada bantuan yang dikonfirmasi. Jadilah yang pertama.</p>}
+          <p className={s.note}>Diperbarui setelah dikonfirmasi panitia{totals.pending > 0 ? ` · ${totals.pending} donasi menunggu konfirmasi` : ""}.</p>
+        </section>
+
         {event.introduction && <p className={s.lead}>{event.introduction}</p>}
 
         {settings.delivered.at && <section className={s.delivered} aria-label="Bantuan sudah diserahkan">
@@ -83,63 +116,23 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
           </div>
         </section>}
 
-        <section className={s.section} aria-labelledby="terkumpul">
-          <div className={s.sectionHead}>
-            <h2 id="terkumpul">Terkumpul</h2>
-            <span className={s.donorCount}><Users size={16} aria-hidden="true" /> {totals.donors} orang baik</span>
-          </div>
-          <ul className={s.totals}>
-            {totals.fund && <li className={s.total} data-kind="fund">
-              <span className={s.totalIcon}><Wallet size={20} aria-hidden="true" /></span>
-              <span className={s.totalLabel}>Dana</span>
-              <strong className={s.totalValue}>{formatRupiah(totals.fund.total)}</strong>
-              {totals.fund.target && <Progress total={totals.fund.total} target={totals.fund.target} label={`dari ${formatRupiah(totals.fund.target)}`} />}
-            </li>}
-            {totals.goods.map(item => <li key={item.key} className={s.total}>
-              <span className={s.totalIcon}><Package size={20} aria-hidden="true" /></span>
-              <span className={s.totalLabel}>{item.label}</span>
-              <strong className={s.totalValue}>{count(item.total)} <small>{item.unit}</small></strong>
-              {item.target && <Progress total={item.total} target={item.target} label={`dari ${count(item.target)} ${item.unit}`} />}
-            </li>)}
-            {totals.other > 0 && <li className={s.total}>
-              <span className={s.totalIcon}><Gift size={20} aria-hidden="true" /></span>
-              <span className={s.totalLabel}>Bantuan lain</span>
-              <strong className={s.totalValue}>{totals.other} <small>bantuan</small></strong>
-            </li>}
-          </ul>
-          {!totals.fund && !totals.goods.length && !totals.other && <p className={s.empty}>Belum ada bantuan yang dikonfirmasi. Jadilah yang pertama.</p>}
-          <p className={s.note}>Diperbarui setelah dikonfirmasi panitia{totals.pending > 0 ? ` · ${totals.pending} donasi menunggu konfirmasi` : ""}.</p>
-        </section>
-
-        {settings.recipients.length > 0 && <section className={s.section} aria-labelledby="penerima">
-          <div className={s.sectionHead}><h2 id="penerima">Disalurkan ke</h2></div>
-          <ul className={s.recipients}>
-            {settings.recipients.map(recipient => <li key={recipient.id} className={s.recipient}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- a photo the committee uploaded */}
-              {recipient.photo.url ? <img src={recipient.photo.url} alt={recipient.photo.alt || recipient.name} /> : <span className={s.recipientIcon} aria-hidden="true"><Home size={24} /></span>}
-              <div className={s.recipientText}>
-                <p className={s.recipientName}>{recipient.name}</p>
-                {recipient.place && <p className={s.recipientPlace}><MapPin size={14} aria-hidden="true" /> {recipient.place}</p>}
-                {recipient.description && <p className={s.recipientDescription}>{recipient.description}</p>}
-              </div>
-            </li>)}
-          </ul>
-        </section>}
+        {/* Where the help goes has a page of its own; here only a button naming who receives it. */}
+        {recipients.length > 0 && <button type="button" className={s.recipientsButton} onClick={() => setPage("penerima")}>
+          <span className={s.recipientsIcon} aria-hidden="true"><Home size={22} /></span>
+          <span className={s.recipientsText}>
+            <span className={s.recipientsTitle}>Disalurkan ke {recipients.length > 1 ? `${recipients.length} penerima` : recipients[0].name}</span>
+            <span className={s.recipientsNames}>{recipients.length > 1 ? listNames(recipients.map(recipient => recipient.name)) : recipients[0].place || "Lihat penerima bantuan"}</span>
+          </span>
+          <ChevronRight size={22} aria-hidden="true" className={s.chevron} />
+        </button>}
 
         {settings.show.donors && <section className={s.section} aria-labelledby="donatur">
-          <div className={s.sectionHead}><h2 id="donatur">Daftar donatur</h2></div>
+          <div className={s.sectionHead}>
+            <h2 id="donatur">Daftar donatur</h2>
+            {view.donors.length > SHOWN && <button type="button" className={s.more} onClick={() => setPage("donatur")}>Lihat semua ({view.donors.length})</button>}
+          </div>
           {view.donors.length === 0 ? <p className={s.empty}>Nama donatur muncul di sini setelah dikonfirmasi panitia.</p>
-            : <ul className={s.donors}>
-              {donors.map(donor => <li key={donor.id} className={s.donor}>
-                <span className={s.avatar} aria-hidden="true">{donorInitials(donor.name)}</span>
-                <div className={s.donorText}>
-                  <p className={s.donorName}>{donor.name}</p>
-                  <p className={s.donorGift}>{donor.gift} · {relative(donor.at)}</p>
-                  {donor.message && <p className={s.donorMessage}>“{donor.message}”</p>}
-                </div>
-              </li>)}
-            </ul>}
-          {view.donors.length > 8 && <button type="button" className={s.more} onClick={() => setAllDonors(!allDonors)}>{allDonors ? "Tampilkan lebih sedikit" : `Lihat semua (${view.donors.length})`}</button>}
+            : <DonorList donors={view.donors.slice(0, SHOWN)} />}
         </section>}
 
         <section className={s.footerLinks} aria-label="Bantuan lain">
@@ -156,14 +149,66 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
         : <p className={s.closed}>{!view.ready ? "Donasi belum dapat diterima." : "Donasi untuk kegiatan ini sudah ditutup. Terima kasih atas kebaikan Anda."}</p>}
     </div>
 
+    {page === "penerima" && <Sheet title="Disalurkan ke" onClose={closePage}>
+      <p className={s.sheetLead}>Bantuan yang terkumpul diserahkan langsung oleh {event.organizer || "panitia"} kepada {recipients.length > 1 ? `${recipients.length} penerima` : "penerima"} berikut.</p>
+      <ul className={s.recipients}>
+        {recipients.map(recipient => <li key={recipient.id} className={s.recipient}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a photo the committee uploaded */}
+          {recipient.photo.url ? <img src={recipient.photo.url} alt={recipient.photo.alt || recipient.name} /> : <span className={s.recipientIcon} aria-hidden="true"><Home size={24} /></span>}
+          <div className={s.recipientText}>
+            <p className={s.recipientName}>{recipient.name}</p>
+            {recipient.place && <p className={s.recipientPlace}><MapPin size={14} aria-hidden="true" /> {recipient.place}</p>}
+            {recipient.description && <p className={s.recipientDescription}>{recipient.description}</p>}
+          </div>
+        </li>)}
+      </ul>
+    </Sheet>}
+    {page === "donatur" && <Sheet title="Semua donatur" onClose={closePage}><DonorList donors={view.donors} /></Sheet>}
+
     {formOpen && <DonationForm event={event} preview={preview} onClose={() => setFormOpen(false)} />}
   </div>;
 }
 
-function Progress({ total, target, label }: { total: number; target: number; label: string }) {
+/** How many donors the page itself lists; the rest are on a page of their own. */
+const SHOWN = 3;
+
+function DonorList({ donors }: { donors: PublicDonor[] }) {
+  return <ul className={s.donors}>
+    {donors.map(donor => <li key={donor.id} className={s.donor}>
+      <span className={s.avatar} aria-hidden="true">{donorInitials(donor.name)}</span>
+      <div className={s.donorText}>
+        <p className={s.donorName}>{donor.name}</p>
+        <p className={s.donorGift}>{donor.gift} · {relative(donor.at)}</p>
+        {donor.message && <p className={s.donorMessage}>“{donor.message}”</p>}
+      </div>
+    </li>)}
+  </ul>;
+}
+
+/** A page of its own over the donation page (recipients, all donors): Escape or the back button returns. */
+function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    heading.current?.focus();
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
+  }, [onClose]);
+  return <div className={s.sheet} role="dialog" aria-modal="true" aria-label={title}>
+    <div className={s.sheetHead}>
+      <button type="button" className={s.close} onClick={onClose} aria-label="Kembali"><ArrowLeft size={22} aria-hidden="true" /></button>
+      <h2 ref={heading} tabIndex={-1}>{title}</h2>
+      <span aria-hidden="true" className={s.sheetSpacer} />
+    </div>
+    <div className={s.sheetBody}>{children}</div>
+  </div>;
+}
+
+function Progress({ total, target, label, small = false }: { total: number; target: number; label: string; small?: boolean }) {
   const value = percent(total, target) ?? 0;
-  return <span className={s.progress}>
-    <span className={s.bar0} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={value} aria-label={`${value}% ${label}`}><span style={{ width: `${value}%` }} /></span>
-    <span className={s.progressText}>{value}% {label}</span>
+  return <span className={s.progress} data-small={small ? "" : undefined}>
+    <span className={s.bar0} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={value} aria-label={`${value}% ${label}`}><span style={{ width: `${value ? Math.max(value, 3) : 0}%` }} /></span>
+    <span className={s.progressText}>{small ? `${value}%` : <><b>{value}%</b> {label}</>}</span>
   </span>;
 }

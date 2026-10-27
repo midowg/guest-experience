@@ -33,14 +33,24 @@ it("shows what was collected and who gave, as each donor chose", () => {
   expect(within(list).queryByText("Budi")).toBeNull();
 });
 
-it("names where the help goes, when the committee lists recipients", () => {
+it("names where the help goes on a page of its own, when the committee lists recipients", () => {
   show(event({ recipients: [{ id: "p1", name: "Panti Asuhan Kasih Ibu", place: "Sleman", description: "60 anak", photo: { url: "", alt: "", srcset: [] } }, { id: "p2", name: "Sekolah Harapan", place: "", description: "", photo: { url: "", alt: "", srcset: [] } }] }));
-  const recipients = screen.getByRole("region", { name: "Disalurkan ke" });
+  fireEvent.click(screen.getByRole("button", { name: /Disalurkan ke 2 penerima/ }));
+  const recipients = screen.getByRole("dialog", { name: "Disalurkan ke" });
   expect(within(recipients).getByText("Panti Asuhan Kasih Ibu")).toBeTruthy();
-  expect(within(recipients).getByText("Sekolah Harapan")).toBeTruthy();
+  expect(within(recipients).getByText("60 anak")).toBeTruthy();
+  fireEvent.click(within(recipients).getByRole("button", { name: "Kembali" }));
+  expect(screen.queryByRole("dialog", { name: "Disalurkan ke" })).toBeNull();
   cleanup();
   show();
-  expect(screen.queryByRole("region", { name: "Disalurkan ke" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Disalurkan ke/ })).toBeNull();
+});
+
+it("lists the latest donors on the page and everyone on a page of their own", () => {
+  show(event(), Array.from({ length: 7 }, (_, index) => record({ donor_name: `Donatur ${index + 1}` })));
+  expect(within(screen.getByRole("region", { name: "Daftar donatur" })).getAllByRole("listitem")).toHaveLength(3);
+  fireEvent.click(screen.getByRole("button", { name: "Lihat semua (7)" }));
+  expect(within(screen.getByRole("dialog", { name: "Semua donatur" })).getAllByRole("listitem")).toHaveLength(7);
 });
 
 it("hides the donor list and money when the admin switches them off", () => {

@@ -61,6 +61,13 @@ export const themes: ThemeDefinition[] = [
     hero: "#0f4a3a", onHero: "#fbf7ef", heroAccent: "#c9922b", scrimRgb: "10, 40, 30",
     fontHeading: "'Playfair Display', serif", headingWeight: 600,
   } },
+  { key: "berbagi", name: "Berbagi", description: "Hangat: hijau toska, krem, dan jingga.", suggestedFor: "Friday Sharing, donasi", tokens: {
+    background: "#fffaf4", surface: "#fdf0e2", soft: "#fcebd8", border: "#f1d6b8",
+    text: "#2b2420", heading: "#0b5c57", caption: "#6a5a4e", danger: "#9a273d",
+    primary: "#0b5c57", primaryHover: "#084642", onPrimary: "#ffffff",
+    hero: "#0b5c57", onHero: "#ffffff", heroAccent: "#f6a04d", scrimRgb: "8, 42, 40",
+    fontHeading: "'Nunito', sans-serif", headingWeight: 800,
+  } },
 ];
 
 export function themeDefinition(key: ThemeKey): ThemeDefinition {

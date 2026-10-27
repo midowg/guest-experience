@@ -169,7 +169,7 @@ Editornya punya menu sendiri, terpisah dari undangan:
 - **Donasi:**
   - **Pilihan bantuan:** tombol yang diketuk donatur, misalnya Dana, Sembako, Buku tulis. Atur kelompoknya (Dana, Barang, atau Lainnya), satuannya (paket, kg, pcs), dan target bila ada. Di sini juga cara menyerahkan barang dan tanggal donasi ditutup. Switch di kanan atas membuka atau menutup donasi.
   - **Rekening & QRIS:** rekening (bisa lebih dari satu) dan/atau gambar QRIS, serta *Wajib unggah bukti transfer* bila perlu.
-  - **Penerima bantuan:** satu atau lebih tujuan penyaluran (nama, lokasi, keterangan, foto). Tampil di halaman sebagai *Disalurkan ke*.
+  - **Penerima bantuan:** satu atau lebih tujuan penyaluran (nama, lokasi, keterangan, foto). Di halaman tampil sebagai tombol *Disalurkan ke …* yang membuka halaman daftar penerima. Templat ini memakai tema warna **Berbagi** (toska, krem, jingga).
   - **Yang tampil di halaman:** total dana, target, barang terkumpul, daftar donatur, nominal per donatur, dan pesan donatur.
 - **Penyaluran:** Kabar penyerahan.
 - **Pengaturan:** Terbitkan.

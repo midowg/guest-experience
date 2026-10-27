@@ -43,7 +43,7 @@ export const staffInputSchema = z.object({
 });
 export type StaffInput = z.infer<typeof staffInputSchema>;
 export const momentIcons = ["coffee", "utensils", "gift", "users", "camera", "music", "map", "sparkles", "presentation", "heart"] as const;
-export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar", "rempah"] as const;
+export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar", "rempah", "berbagi"] as const;
 const pairSchema = (title = 200, description = 1500) => z.object({ title: text(title).default(""), description: text(description).default("") });
 export const emptyEnglish = {
   title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",

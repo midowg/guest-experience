@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * Layout check for the CSR donation page with made-up donations. Nothing is sent: the form
- * pretends to send. ?kosong=1 no donations yet · ?tutup=1 donations closed · ?serah=1 handed over.
+ * pretends to send. ?kosong=1 no donations yet · ?tutup=1 donations closed · ?serah=1 handed over · ?tema=segar the older green theme.
  */
-export default async function DevCsrPage({ searchParams }: { searchParams: Promise<{ kosong?: string; tutup?: string; serah?: string }> }) {
+export default async function DevCsrPage({ searchParams }: { searchParams: Promise<{ kosong?: string; tutup?: string; serah?: string; tema?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const query = await searchParams;
   const base = startingDonation();
@@ -29,7 +29,7 @@ export default async function DevCsrPage({ searchParams }: { searchParams: Promi
     ...createSeedEvent(), id: "10f3a511-2331-4000-8000-0000000000c5", slug: "contoh-csr", code: "AB23CD", status: "published" as const, event_kind: "csr" as const,
     title: "Contoh Berbagi Bersama Anak Panti 2026", subtitle: "Bersama 60 anak di Panti Asuhan Contoh", organizer: "Werkudara Peduli",
     introduction: "Bantu kami melengkapi kebutuhan sekolah dan sembako untuk anak-anak panti menjelang tahun ajaran baru.",
-    theme: { key: "segar" as const, corners: "soft" as const },
+    theme: { key: (query.tema === "segar" ? "segar" : "berbagi") as "segar" | "berbagi", corners: "soft" as const },
     hero: { ...createSeedEvent().hero, url: "https://picsum.photos/seed/csr-sampul/1600/1000", alt: "Contoh foto kegiatan", srcset: [] },
     donation,
   };
