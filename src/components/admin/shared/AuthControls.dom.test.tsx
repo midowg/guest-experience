@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { LoginForm } from "@/components/admin/shared/AuthControls";
+import { LoginForm, LogoutButton } from "@/components/admin/shared/AuthControls";
 
+// After the session cookie changes the page is left with a full load (see navigate.ts).
 const replace = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, refresh: vi.fn(), push: vi.fn() }) }));
+vi.mock("@/components/admin/shared/navigate", () => ({ reloadTo: (url: string) => replace(url) }));
 
 function reply(body: object, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -59,5 +60,17 @@ describe("super admin login", () => {
     fireEvent.change(screen.getByLabelText("Password admin"), { target: { value: "password-super-admin" } });
     fireEvent.click(screen.getByRole("button", { name: /Masuk/ }));
     await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/akses"));
+  });
+});
+
+describe("logout", () => {
+  it("leaves for the login page once the session is closed", async () => {
+    replace.mockClear();
+    const fetch = vi.fn(async () => reply({ ok: true, data: null, message: "Berhasil keluar." }));
+    vi.stubGlobal("fetch", fetch);
+    render(<LogoutButton />);
+    fireEvent.click(screen.getByRole("button", { name: "Keluar" }));
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/login"));
+    expect(fetch).toHaveBeenCalledWith("/api/auth/logout", expect.objectContaining({ method: "POST" }));
   });
 });
