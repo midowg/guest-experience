@@ -32,3 +32,14 @@ it("closes with Escape or a tap outside", () => {
   expect(trigger.getAttribute("aria-expanded")).toBe("false");
   expect(screen.queryByRole("link", { name: /Buka undangan/ })).toBeNull();
 });
+
+it("shows both pages side by side when there are only two (Friday Sharing)", () => {
+  render(<EventPagesMenu current="donations" publicHref="/AB23CD" publicLabel="Buka halaman donasi" groups={[
+    { label: "Edit", pages: [{ tab: "edit", label: "Edit halaman", href: "/admin/acara/AB23CD" }] },
+    { label: "Donasi", pages: [{ tab: "donations", label: "Donasi masuk", href: "/admin/acara/AB23CD/donasi" }] },
+  ]} />);
+  expect(screen.queryByRole("button")).toBeNull();
+  expect(screen.getByRole("link", { name: "Edit halaman" }).getAttribute("href")).toBe("/admin/acara/AB23CD");
+  expect(screen.getByRole("link", { name: "Donasi masuk" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: /Buka halaman donasi/ })).toBeTruthy();
+});

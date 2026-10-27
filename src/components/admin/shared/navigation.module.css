@@ -15,3 +15,9 @@
 .popoverGroup a[aria-current="page"] { background: #eef4fd; color: var(--blue); font-weight: 800; }
 .public { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 var(--space-3); border-radius: 10px; color: var(--blue); font-weight: 700; text-decoration: none; }
 .public:hover { background: #fff; }
+
+/* Two pages only: both as a segmented pair, the current one filled. */
+.tabs { display: inline-flex; gap: 4px; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: #fff; list-style: none; }
+.tabs a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 38px; padding: 0 var(--space-4); border-radius: 9px; color: var(--color-text); font-weight: 700; text-decoration: none; }
+.tabs a:hover { background: var(--page); }
+.tabs a[aria-current="page"] { background: var(--blue); color: #fff; }
