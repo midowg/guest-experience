@@ -373,7 +373,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {block("poster", POSTER_LABEL, <PosterBlock kit={kit} />)}
       {block("feedback_questions", "Survei feedback", <FeedbackBlock kit={kit} />)}
       {block("review", "Ulasan Google (opsional)", <ReviewBlock kit={kit} />)}
-      {block("after", "Setelah acara", <AfterBlock event={event} update={update} control={control} errors={errors} collaboration={!unavailable("collaboration")} />)}
+      {block("after", "Setelah acara", <AfterBlock event={event} update={update} control={control} errors={errors} collaboration={!unavailable("collaboration")} origin={origin} />)}
       {block("language", "Bahasa & terjemahan", <TranslationBlock event={event} update={update} control={control} />)}
       {block("sections", "Urutan & tampilan bagian", <SectionsBlock kit={kit} />)}
       {block("publication", "Status & penyimpanan", <PublicationBlock kit={kit} />)}

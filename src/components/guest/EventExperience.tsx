@@ -18,7 +18,8 @@ import { offersSwitch, type Lang, type WordKey } from "@/lib/wording";
 import { AgendaList, EmergencyCard } from "./ProgramAgenda";
 import { CalendarButton } from "./CalendarSheet";
 import styles from "./guest.module.css";
-import { guestApi, guestServiceWorker } from "@/lib/routes";
+import { useGuestPage } from "./use-guest-page";
+import { VisitExperience } from "./VisitExperience";
 
 const navKeys: Record<SectionKey, WordKey> = { about: "nav.about", experience: "nav.experience", agenda: "nav.agenda", location: "nav.location", prepare: "nav.prepare", team: "nav.team", rsvp: "nav.rsvp", contact: "nav.contact", feedback: "nav.feedback" };
 
@@ -100,7 +101,7 @@ const afterSections = new Set<SectionKey>(["feedback", "contact"]);
  * `phase` is decided by the page on the server (see lib/event-phase.ts) so the first paint is
  * already the right part of the journey; components rendered without it show the invitation.
  */
-type ExperienceProps = {
+export type ExperienceProps = {
   event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; short_token?: string | null; rsvp: RsvpRecord | null; party_size_max?: number }; phase?: EventPhase;
   /** False until migration 202610200004: the RSVP then asks only about allergies, as before. */
   rsvpNeeds?: boolean;
@@ -111,7 +112,12 @@ type ExperienceProps = {
 };
 
 /** Holds the guest's language; everything below reads its words and the event's texts in it. */
-export function EventExperience({ event: source, ...props }: ExperienceProps) {
+export function EventExperience(props: ExperienceProps) {
+  // An office visit has its own layout: a few screens with a tab bar (board 11).
+  return props.event.event_kind === "kunjungan" ? <VisitExperience {...props} /> : <InvitationExperience {...props} />;
+}
+
+function InvitationExperience({ event: source, ...props }: ExperienceProps) {
   const [lang, setLang] = useEventLanguage(source.language);
   const { event, fallback } = useMemo(() => localizeEvent(source, lang), [source, lang]);
   return <WordingProvider lang={lang}>
@@ -121,21 +127,7 @@ export function EventExperience({ event: source, ...props }: ExperienceProps) {
 
 function ExperienceBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, photoCount = 0, previewNotice = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
   const { lang, t, dateTime } = useWording();
-  // Keeps the last copy of this guest page for offline use (trips with weak signal). Production only.
-  useEffect(() => {
-    if (preview || process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register(guestServiceWorker.url, { scope: guestServiceWorker.scope }).catch(() => {});
-    // Phones that opened an older invitation still hold a worker limited to /e/; one is enough.
-    void navigator.serviceWorker.getRegistrations().then(list => list.filter(item => new URL(item.scope).pathname === guestServiceWorker.legacyScope).forEach(item => void item.unregister())).catch(() => {});
-  }, [preview]);
-  // Counts the opening of a personal link once per browser session. Never in the admin preview.
-  const openedToken = !preview && invitation ? invitation.token : null;
-  useEffect(() => {
-    if (!openedToken) return;
-    const key = `wk_opened_${openedToken.slice(0, 16)}`;
-    try { if (window.sessionStorage.getItem(key)) return; window.sessionStorage.setItem(key, "1"); } catch { /* storage blocked: still count */ }
-    void fetch(guestApi.opened(event, openedToken), { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", keepalive: true }).catch(() => {});
-  }, [openedToken, event]);
+  useGuestPage(event, preview, invitation);
   const [now, setNow] = useState<number | null>(null);
   const [rsvpSaved, setRsvpSaved] = useState(false);
   // The opening should arrive uninterrupted, so the bar stays away until the guest scrolls.

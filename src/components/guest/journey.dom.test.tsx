@@ -10,7 +10,8 @@ function journeyEvent(patch: Partial<EventRecord> = {}): EventRecord {
   const event = createSeedEvent();
   return {
     ...event,
-    event_kind: "kunjungan",
+    // The long invitation layout; an office visit ("kunjungan") has its own (visit.dom.test.tsx).
+    event_kind: "acara",
     contact: { ...event.contact, name: "Raja", phone: "0811 2831 929", role: "Hospitality Specialist", channel: "whatsapp" },
     experience: { title: "", story: "Kami menyambut Anda seperti kerabat.", image: { url: "", alt: "", srcset: [] }, moments: [{ icon: "coffee", title: "Sambutan di pendopo", description: "Teh hangat" }] },
     route: { map_image: { url: "https://example.test/map.webp", alt: "Peta menuju kantor", srcset: [] }, steps: [{ title: "Belok di Jl. Bhinneka", description: "", image: { url: "https://example.test/turn.webp", alt: "Titik belok", srcset: [] } }] },
@@ -21,7 +22,7 @@ function journeyEvent(patch: Partial<EventRecord> = {}): EventRecord {
 
 it("opens with the kind of invitation and shortcuts to the enabled sections", () => {
   render(<EventExperience event={journeyEvent()} preview />);
-  expect(screen.getByText("Undangan kunjungan")).toBeTruthy();
+  expect(screen.getByText("Undangan acara")).toBeTruthy();
   const shortcuts = screen.getByRole("navigation", { name: "Pintasan undangan" });
   expect(within(shortcuts).getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["#experience", "#location", "#contact"]);
 });
@@ -111,7 +112,7 @@ describe("language", () => {
     expect(screen.getByRole("heading", { level: 1, name: event.title })).toBeTruthy();
     fireEvent.click(within(screen.getByRole("group", { name: "Bahasa" })).getByRole("button", { name: /EN/ }));
     expect(screen.getByRole("heading", { level: 1, name: "Core Committee Meeting" })).toBeTruthy();
-    expect(screen.getByText("Visit invitation")).toBeTruthy();
+    expect(screen.getByText("Event invitation")).toBeTruthy();
     expect(screen.getByRole("link", { name: /Confirm attendance/ })).toBeTruthy();
     expect(screen.getByText("Some details are only available in Indonesian.")).toBeTruthy();
     expect(document.querySelector("[data-theme]")?.getAttribute("lang")).toBe("en");
@@ -124,6 +125,6 @@ describe("language", () => {
   it("opens straight in English for an English-only event", () => {
     render(<EventExperience event={journeyEvent({ language: "en" })} preview />);
     expect(screen.queryByRole("group", { name: "Language" })).toBeNull();
-    expect(screen.getByText("Visit invitation")).toBeTruthy();
+    expect(screen.getByText("Event invitation")).toBeTruthy();
   });
 });

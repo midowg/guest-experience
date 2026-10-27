@@ -435,11 +435,18 @@
 .photoTop { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
 .photoBack { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-primary); font-weight: 600; }
 .photoCount { color: var(--color-caption); font-size: var(--text-sm); }
-.photoGrid { display: grid; gap: 4px; grid-template-columns: repeat(auto-fill, minmax(min(30vw, 11rem), 1fr)); margin: 0; padding: 0; list-style: none; }
-.photoGrid button { display: block; width: 100%; padding: 0; border: 0; background: var(--color-surface); cursor: zoom-in; }
-.photoGrid img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; }
+/* Masonry: columns of photos at their own shape, so portrait and landscape mix without gaps. */
+.photoGrid { columns: 2 10rem; column-gap: 6px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 48rem) { .photoGrid { columns: 3 12rem; } }
+.photoGrid li { margin-bottom: 6px; break-inside: avoid; }
+.photoGrid button { position: relative; display: block; width: 100%; padding: 0; border: 0; border-radius: 10px; overflow: hidden; background: var(--color-surface); cursor: zoom-in; }
+.photoGrid img { display: block; width: 100%; height: auto; }
+.photoGridView { position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; background: rgb(255 255 255 / .92); color: var(--color-primary); font-size: .75rem; font-weight: 700; opacity: 0; transition: opacity var(--motion-fast, .15s) ease; }
+.photoGrid button:hover .photoGridView, .photoGrid button:focus-visible .photoGridView { opacity: 1; }
+@media (hover: none) { .photoGridView { display: none; } }
 .photoViewer { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; background: #0b0f17; color: #fff; }
 .photoViewerBar { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); font-size: var(--text-sm); }
+.photoViewerBar > a { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; color: #fff; }
 .photoViewerBar button, .photoViewerActions > button { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; background: transparent; color: #fff; cursor: pointer; }
 .photoViewerActions > button:disabled { opacity: .3; cursor: default; }
 .photoViewer figure { display: grid; place-items: center; min-height: 0; margin: 0; padding: 0 var(--space-3); }

@@ -54,6 +54,12 @@ export async function InvitationPage({ event, invitation }: { event: EventRecord
   return <EventExperience event={event} invitation={invitation} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
 }
 
+/** The thank-you page: the after-the-event view, sent by the host when the visit is over. */
+export async function ThanksPage({ event, invitation }: { event: EventRecord; invitation?: PersonalInvitation }) {
+  if (event.event_kind === "kartu" || event.event_kind === "eguide") notFound();
+  return <EventExperience event={event} invitation={invitation} phase="after" rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
+}
+
 /** The entry ticket, issued the first time it is opened after a yes. */
 export async function TicketPage({ event, invitation }: { event: EventRecord; invitation: PersonalInvitation }) {
   if (invitation.rsvp?.attendance !== "yes") return <TicketView event={event} ticket={null} reason="not-attending" />;

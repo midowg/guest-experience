@@ -11,6 +11,8 @@ import type { EventRecord, MomentIcon, PlainImage, PrepareIcon, PrepareItem } fr
 import { Check, OrderButtons } from "@/components/admin/editor/controls";
 import { moveItem } from "@/components/admin/editor/editor-model";
 import { PhotoField } from "@/components/admin/shared/PhotoField";
+import { EventLink } from "@/components/admin/editor/blocks/EventLink";
+import { thanksPath } from "@/lib/routes";
 import styles from "@/components/admin/admin.module.css";
 import type { Control, Update } from "@/components/admin/editor/kit";
 
@@ -185,13 +187,14 @@ export function DayBlock({ event, update, control }: Pick<Props, "event" | "upda
   </div>;
 }
 
-export function AfterBlock({ event, update, control, errors, collaboration: allowCollaboration = true }: Props & { collaboration?: boolean }) {
+export function AfterBlock({ event, update, control, errors, collaboration: allowCollaboration = true, origin = "" }: Props & { collaboration?: boolean; origin?: string }) {
   const after = event.after;
   const set = (patch: Partial<EventRecord["after"]>) => update("after", { ...after, ...patch });
   const collaboration = after.collaboration;
   const internal = event.audience === "internal";
   return <div className="stack">
     <BlockIntro why="Halaman terima kasih yang tampil setelah acara. Ulasan Google memakai pengaturan di blok Ulasan dan bersifat sukarela." who="hospitality" />
+    {origin && event.code && <EventLink event={event} origin={origin} path={thanksPath(event)} label="Tautan terima kasih" hint="Kirim ke tamu setelah kunjungan, bersama foto dan survei. Halaman ini langsung menampilkan terima kasih, tanpa menunggu tanggal acara lewat." />}
     {control("after.title", "Judul terima kasih (opsional)", after.title, title => set({ title }), { maxLength: 200, hint: "Kosongkan untuk memakai: Terima kasih atas kehadiran Anda." })}
     {control("after.message", "Pesan (opsional)", after.message, message => set({ message }), { multiline: true, maxLength: 2000, hint: "Kosongkan untuk memakai teks Penutup." })}
     <ImageInput name="after.image" label="Foto (opsional)" image={after.image} onChange={image => set({ image })} control={control} errors={errors} />

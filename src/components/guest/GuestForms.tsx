@@ -90,7 +90,7 @@ const stepFields: Record<Step, string[]> = {
  * The RSVP card and its four-step sheet (board 10). `needs` is false until migration
  * 202610200004 exists: the needs step then asks only about food allergies, as before.
  */
-export function RsvpPanel({ event, disabled, onSaved, invitation, needs = true }: { event: EventRecord; disabled: boolean; onSaved: () => void; invitation?: Invitation; needs?: boolean }) {
+export function RsvpPanel({ event, disabled, onSaved, invitation, needs = true, tickets = true }: { event: EventRecord; disabled: boolean; onSaved: (rsvp: RsvpRecord) => void; invitation?: Invitation; needs?: boolean; tickets?: boolean }) {
   const { t } = useWording();
   const { pending, send } = useSender();
   const [saved, setSaved] = useState<RsvpRecord | null>(invitation?.rsvp ?? null);
@@ -171,8 +171,9 @@ export function RsvpPanel({ event, disabled, onSaved, invitation, needs = true }
       return;
     }
     const now = new Date().toISOString();
-    setSaved({ ...(saved ?? { id: result.data?.id ?? "", event_id: event.id, created_at: now }), ...payload, updated_at: now });
-    setJustSaved(true); setOpen(false); onSaved();
+    const record: RsvpRecord = { ...(saved ?? { id: result.data?.id ?? "", event_id: event.id, created_at: now }), ...payload, updated_at: now };
+    setSaved(record);
+    setJustSaved(true); setOpen(false); onSaved(record);
   }
 
   const fieldProps = (name: string, hint = false) => ({ id: `rsvp-${name}`, "aria-invalid": !!errors[name], "aria-describedby": [hint ? `rsvp-${name}-hint` : "", errors[name] ? `rsvp-${name}-error` : ""].filter(Boolean).join(" ") || undefined });
@@ -268,7 +269,7 @@ export function RsvpPanel({ event, disabled, onSaved, invitation, needs = true }
       <p className={styles.privacy}>{invitation ? t("rsvp.saved.personal") : t("rsvp.saved.open")}</p>
     </div>
     <div className={styles.rsvpDoneActions}>
-      {invitation && saved.attendance === "yes" && <ButtonLink href={ticketPath(event, invitation)}><Ticket size={16} aria-hidden="true" /> {t("ticket.view")}</ButtonLink>}
+      {tickets && invitation && saved.attendance === "yes" && <ButtonLink href={ticketPath(event, invitation)}><Ticket size={16} aria-hidden="true" /> {t("ticket.view")}</ButtonLink>}
       {invitation && !disabled && <Button type="button" variant="secondary" onClick={start}><Pencil size={16} aria-hidden="true" /> {t("rsvp.done.edit")}</Button>}
     </div>
   </div>;

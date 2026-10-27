@@ -3,6 +3,7 @@
 import { Component, useEffect, useState, type ReactNode } from "react";
 import { EventExperience } from "@/components/guest/EventExperience";
 import { GuidePage } from "@/components/guest/GuidePage";
+import { VISIT_AREA_EVENT } from "@/components/guest/VisitExperience";
 import { prepareEvent } from "@/components/admin/editor/editor-model";
 import { normalizeEvent } from "@/lib/hero-framing";
 import { isPreviewMessage, type PreviewArea, type PreviewMessage } from "@/lib/live-preview";
@@ -44,9 +45,13 @@ export function LivePreviewFrame() {
       const data = message.data;
       if (data.type === "preview:update") setDraft(current => ({ event: normalizeEvent(prepareEvent(data.event)), phase: data.phase, version: (current?.version ?? 0) + 1 }));
       if (data.type === "preview:scroll") {
-        const target = data.area === "hero" ? document.querySelector("[data-invitation-hero]") : data.area === "day" ? document.querySelector("[data-today-panel]") : data.area === "after" ? document.querySelector("[data-after-panel]") : document.getElementById(data.area);
-        // scrollIntoView would also scroll the editor page around the frame; move this window only.
-        if (target) window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 8, behavior: "smooth" });
+        // An office visit shows one screen at a time: switch to the part's screen first.
+        window.dispatchEvent(new CustomEvent(VISIT_AREA_EVENT, { detail: data.area }));
+        requestAnimationFrame(() => {
+          const target = data.area === "hero" ? document.querySelector("[data-invitation-hero]") : data.area === "day" ? document.querySelector("[data-today-panel]") : data.area === "after" ? document.querySelector("[data-after-panel]") : document.getElementById(data.area);
+          // scrollIntoView would also scroll the editor page around the frame; move this window only.
+          if (target) window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 8, behavior: "smooth" });
+        });
       }
     };
     const click = (e: MouseEvent) => {
@@ -54,6 +59,8 @@ export function LivePreviewFrame() {
       const link = target.closest("a[href]");
       // Leaving for WhatsApp, Maps or a calendar file would take the editor's preview with it.
       if (link && !link.getAttribute("href")!.startsWith("#")) e.preventDefault();
+      // A visit's tabs and tiles only move between screens; they open no block in the editor.
+      if (link && target.closest("[data-visit-nav]")) return;
       const area = areaOf(target);
       if (area) send({ type: "preview:focus", area });
     };

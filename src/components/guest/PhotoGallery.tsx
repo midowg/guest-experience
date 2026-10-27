@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Download, MessageCircle, X } from "lucide-react";
-import { ButtonLink } from "@/components/ui";
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Maximize2, MessageCircle, X } from "lucide-react";
 import { parseContactPhone } from "@/lib/contact-phone";
 import type { GalleryPhoto } from "@/lib/gallery";
 import { whatsappUrl } from "@/lib/invitation-messages";
@@ -57,6 +56,7 @@ function GalleryBody({ event, photos, closed, lang, setLang }: Props & { lang: "
             <button type="button" onClick={() => setOpen(index)} aria-label={`${t("gallery.photo", { n: index + 1 })}${item.caption ? `: ${item.caption}` : ""}`}>
               {/* eslint-disable-next-line @next/next/no-img-element -- signed storage address */}
               <img src={item.thumb_url} alt="" loading="lazy" width={item.width ?? undefined} height={item.height ?? undefined} />
+              <span className={styles.photoGridView} aria-hidden="true"><Maximize2 size={13} /> {lang === "en" ? "View" : "Lihat"}</span>
             </button>
           </li>)}
         </ul>
@@ -64,8 +64,9 @@ function GalleryBody({ event, photos, closed, lang, setLang }: Props & { lang: "
     </main>
     {photo && open !== null && <div className={styles.photoViewer} role="dialog" aria-modal="true" aria-label={t("gallery.photo", { n: open + 1 })}>
       <div className={styles.photoViewerBar}>
-        <span>{t("gallery.position", { n: open + 1, total: photos.length })}</span>
         <button ref={close} type="button" onClick={() => setOpen(null)} aria-label={t("button.close")}><X size={20} aria-hidden="true" /></button>
+        <span>{t("gallery.position", { n: open + 1, total: photos.length })}</span>
+        <a href={photoDownloadPath(event, photo.id)} aria-label={t("gallery.original")}><Download size={20} aria-hidden="true" /></a>
       </div>
       <figure>
         {/* eslint-disable-next-line @next/next/no-img-element -- signed storage address */}
@@ -74,7 +75,6 @@ function GalleryBody({ event, photos, closed, lang, setLang }: Props & { lang: "
       </figure>
       <div className={styles.photoViewerActions}>
         <button type="button" disabled={open === 0} onClick={() => setOpen(open - 1)} aria-label={t("gallery.prev")}><ChevronLeft size={20} aria-hidden="true" /></button>
-        <ButtonLink href={photoDownloadPath(event, photo.id)}><Download size={16} aria-hidden="true" /> {t("gallery.original")}</ButtonLink>
         <button type="button" disabled={open === photos.length - 1} onClick={() => setOpen(open + 1)} aria-label={t("gallery.next")}><ChevronRight size={20} aria-hidden="true" /></button>
       </div>
       {phone && <a className={styles.photoRemove} href={whatsappUrl(phone, t("photos.removeMessage", { n: open + 1, event: title, link: page }))} target="_blank" rel="noopener noreferrer">
