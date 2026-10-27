@@ -31,12 +31,12 @@ it("never starts a new event with a switched-off module", async () => {
   let body: { setup: { modules: string[] } } | null = null;
   vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => { body = JSON.parse(init!.body as string); return new Response(JSON.stringify({ ok: true, data: { ...createSeedEvent(), id: "5e7a0c1e-0000-4000-8000-000000000001" }, message: "OK" }), { status: 200, headers: { "Content-Type": "application/json" } }); }));
   render(<CreateEventDialog events={[]} templates={["kunjungan-klien"]} onClose={() => {}} disabledModules={["team", "feedback"]} />);
-  fireEvent.click(screen.getByRole("button", { name: /^Kunjungan klien:/ }));
+  fireEvent.click(screen.getByRole("button", { name: /^Kunjungan Kantor:/ }));
   fireEvent.change(screen.getByRole("textbox", { name: "Nama acara" }), { target: { value: "Kunjungan" } });
   fireEvent.change(screen.getByLabelText(/^Mulai/), { target: { value: "2026-12-01T10:00" } });
   fireEvent.click(screen.getByRole("button", { name: "Buat acara" }));
   await vi.waitFor(() => expect(body).not.toBeNull());
-  expect(body!.setup.modules).toEqual(["about", "experience", "agenda", "location", "rsvp", "contact"]);
+  expect(body!.setup.modules).toEqual(["about", "agenda", "location", "rsvp", "contact"]);
 });
 
 it("lets the super admin switch modules off and saves the list", async () => {

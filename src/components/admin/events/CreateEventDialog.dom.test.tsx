@@ -22,7 +22,7 @@ it("offers only the allowed templates, each as a miniature card", () => {
   expect(screen.getByRole("heading", { name: "Pilih templat acara" })).toBeTruthy();
   expect(screen.getByText("Langkah 1 dari 2")).toBeTruthy();
   const cards = screen.getAllByRole("button", { name: /:/ });
-  expect(cards.map(card => [...card.querySelectorAll("strong")].at(-1)?.textContent)).toEqual(["Kunjungan klien", "Trip klien"]);
+  expect(cards.map(card => [...card.querySelectorAll("strong")].at(-1)?.textContent)).toEqual(["Kunjungan Kantor", "Trip klien"]);
   expect(screen.queryByText("Gala dinner")).toBeNull();
   expect(screen.queryByRole("button", { name: /draf kosong/ })).toBeNull();
 });
@@ -52,7 +52,7 @@ it("creates an event from a template with only name, time, and place", async () 
 
 it("can go back to choose another template", () => {
   render(<CreateEventDialog events={[]} templates={["kunjungan-klien", "trip-klien"]} onClose={() => {}} />);
-  fireEvent.click(screen.getByRole("button", { name: /^Kunjungan klien:/ }));
+  fireEvent.click(screen.getByRole("button", { name: /^Kunjungan Kantor:/ }));
   fireEvent.click(screen.getByRole("button", { name: /Ganti templat/ }));
   expect(screen.getByRole("heading", { name: "Pilih templat acara" })).toBeTruthy();
 });

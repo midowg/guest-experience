@@ -10,7 +10,7 @@ it("shows every template with its miniature and saves which ones admins see", as
   vi.stubGlobal("fetch", fetch);
   render(<TemplateSettings initialEnabled={["kunjungan-klien", "trip-klien"]} migrated />);
   expect(screen.getAllByRole("switch")).toHaveLength(templateKeys.length);
-  expect((screen.getByRole("switch", { name: "Kunjungan klien tampil untuk admin" }) as HTMLInputElement).checked).toBe(true);
+  expect((screen.getByRole("switch", { name: "Kunjungan Kantor tampil untuk admin" }) as HTMLInputElement).checked).toBe(true);
   expect((screen.getByRole("switch", { name: "Nyadran tampil untuk admin" }) as HTMLInputElement).checked).toBe(false);
   fireEvent.click(screen.getByRole("switch", { name: "Nyadran tampil untuk admin" }));
   fireEvent.click(screen.getByRole("button", { name: /Simpan pengaturan templat/ }));
