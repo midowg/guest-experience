@@ -14,7 +14,7 @@ import { guestApi, ticketPath } from "@/lib/routes";
 function currentTime() { return new Date().getTime(); }
 
 /** Retry-safe sending: the same answers reuse one idempotency key, changed answers get a new one. */
-function useSender() {
+export function useSender() {
   const identity = useRef<RetryIdentity | null>(null);
   const locked = useRef(false);
   const [pending, setPending] = useState(false);

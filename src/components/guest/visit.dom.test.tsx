@@ -51,11 +51,65 @@ it("moves between screens with the address hash, and the host can be asked or ca
 
 it("remembers a confirmation made on this device through the general link", () => {
   const event = visit();
-  window.localStorage.setItem(`wk_rsvp_${event.id.slice(0, 16)}`, JSON.stringify({ name: "Budi", attendance: "yes" }));
+  window.localStorage.setItem(`wk_rsvp_${event.id.slice(0, 16)}`, JSON.stringify({ name: "Budi", attendance: "yes", party: 3 }));
   render(<EventExperience event={event} />);
-  expect(screen.getByText("Terkonfirmasi atas nama Budi")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Konfirmasi atas nama lain" }));
-  expect(screen.getByRole("button", { name: "Mulai konfirmasi" })).toBeTruthy();
+  expect(screen.getByText("Terkonfirmasi · 3 orang")).toBeTruthy();
+  expect(screen.getByText(/Atas nama Budi/)).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Konfirmasi atas nama lain" }).getAttribute("href")).toBe("#konfirmasi");
+});
+
+const open = (hash: string) => act(() => { window.location.hash = hash; window.dispatchEvent(new HashChangeEvent("hashchange")); });
+const type = (label: RegExp | string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+
+it("confirms a party on one screen through the general link, then shows what was confirmed", async () => {
+  const fetch = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async () => new Response(JSON.stringify({ ok: true, message: "Tersimpan", data: { id: crypto.randomUUID() } }), { status: 200 }));
+  vi.stubGlobal("fetch", fetch);
+  const event = visit({ status: "published" });
+  render(<EventExperience event={event} openPartyMax={10} />);
+  open("#konfirmasi");
+  expect(screen.getByRole("heading", { level: 1, name: "Konfirmasi kedatangan" })).toBeTruthy();
+  // The form has no tab bar: sending is the way on.
+  expect(screen.queryByRole("navigation", { name: "Navigasi kunjungan" })).toBeNull();
+  type("Nama lengkap", "Budi Santoso");
+  type("Instansi / perusahaan", "PT Contoh");
+  fireEvent.click(screen.getByRole("button", { name: /Datang bersama orang lain/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Tambah satu orang" }));
+  type(/Nama yang ikut/, "Rina, Tono");
+  fireEvent.click(screen.getByLabelText("Vegetarian"));
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Kirim konfirmasi/ })); });
+  const body = JSON.parse(String(fetch.mock.calls[0]![1]!.body));
+  expect(body).toMatchObject({ name: "Budi Santoso", organization: "PT Contoh", attendance: "yes", party_size: 3, companion_names: ["Rina", "Tono"], dietary: ["vegetarian"], consent: true });
+  expect(screen.getByRole("heading", { name: "Sampai jumpa, Budi Santoso!" })).toBeTruthy();
+  expect(screen.getByText(/3 orang · Vegetarian/)).toBeTruthy();
+  expect(JSON.parse(window.localStorage.getItem(`wk_rsvp_${event.id.slice(0, 16)}`)!)).toEqual({ name: "Budi Santoso", attendance: "yes", party: 3 });
+});
+
+it("offers no party before the general-link migration, and checks the names against the count", () => {
+  render(<EventExperience event={visit({ status: "published" })} />);
+  open("#konfirmasi");
+  expect(screen.queryByRole("button", { name: /Datang bersama orang lain/ })).toBeNull();
+  expect(screen.getByText(/Satu konfirmasi untuk satu orang/)).toBeTruthy();
+  cleanup();
+  render(<EventExperience event={visit({ status: "published" })} openPartyMax={10} />);
+  open("#konfirmasi");
+  type("Nama lengkap", "Budi Santoso");
+  type("Instansi / perusahaan", "PT Contoh");
+  fireEvent.click(screen.getByRole("button", { name: /Datang bersama orang lain/ }));
+  type(/Nama yang ikut/, "Rina, Tono");
+  fireEvent.click(screen.getByRole("button", { name: /Kirim konfirmasi/ }));
+  expect(screen.getByText("Nama yang ditulis lebih banyak dari jumlah orang yang ikut.")).toBeTruthy();
+});
+
+it("lets a personal guest reopen their confirmation, with their name as a card", () => {
+  const rsvp = { id: "r1", event_id: "e", name: "Ibu Sari", organization: "PT Contoh", attendance: "yes" as const, phone: "", email: "", has_allergy: false, allergy_details: "", party_size: 2, companion_names: ["Budi"], created_at: "2026-10-01T00:00:00Z" };
+  render(<EventExperience event={visit({ invitation_mode: "personal", status: "published" })} invitation={{ name: "Ibu Sari", token: "a".repeat(64), rsvp, party_size_max: 3 }} />);
+  open("#konfirmasi");
+  expect(screen.getByRole("heading", { name: "Sampai jumpa, Ibu Sari!" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Ubah konfirmasi/ }));
+  expect(screen.getByText("PT Contoh")).toBeTruthy();
+  expect(screen.queryByLabelText("Nama lengkap")).toBeNull();
+  expect(screen.getByRole("button", { name: /Datang bersama orang lain/ }).getAttribute("aria-expanded")).toBe("true");
+  expect(screen.getByLabelText(/Nama yang ikut/)).toHaveProperty("value", "Budi");
 });
 
 it("shows the thank-you page without the tab bar after the visit", () => {

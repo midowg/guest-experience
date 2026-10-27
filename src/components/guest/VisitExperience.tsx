@@ -14,13 +14,14 @@ import { CalendarButton } from "./CalendarSheet";
 import type { ExperienceProps } from "./EventExperience";
 import { Location } from "./EventParts";
 import { imageSrcSet } from "./Gallery";
-import { FeedbackPanel, RsvpPanel } from "./GuestForms";
+import { FeedbackPanel } from "./GuestForms";
 import { TimeRange, visibleSections } from "./InvitationHero";
 import { AfterPanel, contactLink, ExperienceContent, PicAvatar, PrepareCards, TodayPanel, teamPoints } from "./JourneyPanels";
 import { LanguageSwitch, WordingProvider, useEventLanguage, useWording } from "./language";
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
 import { AgendaList, EmergencyCard } from "./ProgramAgenda";
 import { useGuestPage } from "./use-guest-page";
+import { VisitRsvpDone, VisitRsvpForm } from "./VisitRsvp";
 import guest from "./guest.module.css";
 import styles from "./visit.module.css";
 
@@ -31,10 +32,10 @@ import styles from "./visit.module.css";
  * address hash, so the phone's back button and a shared link both land where they should.
  */
 
-type Screen = "beranda" | "tentang" | "pengalaman" | "persiapan" | "tim" | "cara-datang" | "jadwal" | "kontak";
+type Screen = "beranda" | "konfirmasi" | "tentang" | "pengalaman" | "persiapan" | "tim" | "cara-datang" | "jadwal" | "kontak";
 /** Each screen shows one section of the event; the home screen shows the confirmation. */
 const screenSection: Record<Screen, SectionKey> = {
-  beranda: "rsvp", tentang: "about", pengalaman: "experience", persiapan: "prepare", tim: "team", "cara-datang": "location", jadwal: "agenda", kontak: "contact",
+  beranda: "rsvp", konfirmasi: "rsvp", tentang: "about", pengalaman: "experience", persiapan: "prepare", tim: "team", "cara-datang": "location", jadwal: "agenda", kontak: "contact",
 };
 /** Where the editor's "show this part" lands (live-preview areas). */
 const areaScreen: Record<string, Screen> = {
@@ -44,7 +45,7 @@ const areaScreen: Record<string, Screen> = {
 export const VISIT_AREA_EVENT = "visit:area";
 
 const remembered = (eventId: string) => `wk_rsvp_${eventId.slice(0, 16)}`;
-type Remembered = { name: string; attendance: "yes" | "no" };
+type Remembered = { name: string; attendance: "yes" | "no"; party?: number };
 
 export function VisitExperience({ event: source, ...props }: ExperienceProps) {
   const [lang, setLang] = useEventLanguage(source.language);
@@ -54,7 +55,7 @@ export function VisitExperience({ event: source, ...props }: ExperienceProps) {
   </WordingProvider>;
 }
 
-function VisitBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, photoCount = 0, previewNotice = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
+function VisitBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, openPartyMax = 1, photoCount = 0, previewNotice = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
   const { lang, t, dateTime } = useWording();
   const v = (key: VisitKey, vars?: Record<string, string | number>) => visitText(lang, key, vars);
   useGuestPage(event, preview, invitation);
@@ -99,8 +100,9 @@ function VisitBody({ event, preview = false, invitation, phase = "before", rsvpN
 
   // On the general link, this device remembers who confirmed, so the invitation to confirm does not come back.
   const [memory, setMemory] = useState<Remembered | null>(null);
-  const [another, setAnother] = useState(0);
+  const [formKey, setFormKey] = useState(0);
   const [saved, setSaved] = useState<RsvpRecord | null>(invitation?.rsvp ?? null);
+  const [editing, setEditing] = useState(false);
   useEffect(() => {
     if (invitation || preview) return;
     try {
@@ -111,9 +113,12 @@ function VisitBody({ event, preview = false, invitation, phase = "before", rsvpN
     } catch { /* storage blocked: ask again */ }
   }, [event.id, invitation, preview]);
   function onSaved(rsvp: RsvpRecord) {
-    setSaved(rsvp);
+    setSaved(rsvp); setEditing(false);
+    window.scrollTo({ top: 0 });
+    heading.current?.focus({ preventScroll: true });
     if (invitation || preview) return;
-    const value: Remembered = { name: rsvp.name, attendance: rsvp.attendance };
+    const value: Remembered = { name: rsvp.name, attendance: rsvp.attendance, party: rsvp.party_size ?? 1 };
+    setMemory(value);
     try { window.localStorage.setItem(remembered(event.id), JSON.stringify(value)); } catch { /* storage blocked */ }
   }
 
@@ -137,21 +142,38 @@ function VisitBody({ event, preview = false, invitation, phase = "before", rsvpN
     </section>}
   </main>, false);
 
-  const confirmation = () => {
-    if (!rsvpVisible) return null;
+  // The general link covers a party once migration 202610270002 is in; the preview shows the full form.
+  const partyMax = invitation ? invitation.party_size_max ?? 1 : preview ? 10 : openPartyMax;
+  /** Why the guest cannot confirm here, if they cannot. */
+  const blocked = () => {
     if (event.invitation_mode === "personal" && !invitation && !preview) return <Notice>{t("rsvp.personalOnly")}</Notice>;
     if (!event.rsvp_enabled || (now !== null && !rsvpOpen && !preview)) return <Notice>{invitation?.rsvp ? t("rsvp.locked", { answer: t(invitation.rsvp.attendance === "yes" ? "rsvp.answer.yes" : "rsvp.answer.no") }) : event.rsvp_enabled ? t("rsvp.closed") : t("rsvp.notOpen")}</Notice>;
-    if (memory && !saved) return <div className={styles.remembered} data-rsvp-done>
+    return null;
+  };
+  const answer = saved ?? (memory ? { name: memory.name, attendance: memory.attendance, party_size: memory.party ?? 1 } : null);
+  const confirmation = () => {
+    if (!rsvpVisible) return null;
+    const notice = blocked();
+    if (notice && !answer) return notice;
+    if (answer) return <div className={styles.remembered} data-rsvp-done>
       <CircleCheck size={22} aria-hidden="true" />
-      <div>
-        <p className={styles.rememberedTitle}>{v(memory.attendance === "yes" ? "home.remembered" : "home.remembered.no", { name: memory.name })}</p>
-        <p className={styles.rememberedNote}>{v("home.remembered.note")} <button type="button" className={styles.linkButton} onClick={() => { setMemory(null); setAnother(n => n + 1); }}>{v("home.other")}</button></p>
+      <div className={styles.rememberedText}>
+        <p className={styles.rememberedTitle}>{answer.attendance === "yes" ? v("home.confirmed", { n: Math.max(1, answer.party_size ?? 1) }) : v("home.confirmed.no")}</p>
+        <p className={styles.rememberedNote}>{v("home.confirmed.for", { name: answer.name })}{!saved && <> · {v("home.remembered.note")}</>}</p>
       </div>
+      <a href="#konfirmasi" className={styles.linkButton} data-visit-nav>{v(saved ? "home.confirmed.view" : "home.other")}</a>
     </div>;
     return <>
-      {!saved && event.rsvp_closes_at && <p className={styles.deadline}><Clock3 size={15} aria-hidden="true" /> {v("home.deadline", { when: dateTime(event.rsvp_closes_at, event.timezone) })}</p>}
-      <RsvpPanel key={`${event.id}-${another}`} event={event} disabled={preview || !rsvpOpen} invitation={invitation} needs={rsvpNeeds} tickets={false} onSaved={onSaved} />
+      {event.rsvp_closes_at && <p className={styles.deadline}><Clock3 size={15} aria-hidden="true" /> {v("home.deadline", { when: dateTime(event.rsvp_closes_at, event.timezone) })}</p>}
+      <ButtonLink href="#konfirmasi" data-visit-nav>{v("home.confirm")} <ChevronRight size={18} aria-hidden="true" /></ButtonLink>
     </>;
+  };
+  const confirmScreen = () => {
+    const notice = blocked();
+    if (saved && !editing) return <VisitRsvpDone event={event} rsvp={saved} personal={!!invitation} editable={!notice} now={now} v={v} hasRoute={has("location")}
+      onEdit={() => { if (invitation) setEditing(true); else { setSaved(null); setFormKey(n => n + 1); } heading.current?.focus(); }} />;
+    if (notice) return notice;
+    return <VisitRsvpForm key={formKey} event={event} invitation={invitation} saved={invitation ? saved : null} disabled={preview || !rsvpOpen} needs={rsvpNeeds} partyMax={partyMax} v={v} onSaved={onSaved} />;
   };
   const confirmed = (saved?.attendance ?? memory?.attendance) === "yes";
 
@@ -185,7 +207,7 @@ function VisitBody({ event, preview = false, invitation, phase = "before", rsvpN
           <ChevronRight size={18} aria-hidden="true" />
         </a></li>)}</ul>
       </nav>}
-      {rsvpVisible && <p className={styles.note}>{invitation ? v("home.for", { name: invitation.name }) : v("home.share")}</p>}
+      {rsvpVisible && <p className={styles.note}>{invitation ? v("home.for", { name: invitation.name }) : v(partyMax > 1 ? "home.share.party" : "home.share")}</p>}
     </div>
   </>;
 
@@ -197,6 +219,7 @@ function VisitBody({ event, preview = false, invitation, phase = "before", rsvpN
 
   const screens: Record<Screen, () => ReactNode> = {
     beranda: () => home,
+    konfirmasi: () => page("rsvp", v("confirm.title"), confirmScreen(), saved && !editing ? undefined : v(partyMax > 1 ? "confirm.lead" : "confirm.leadAlone")),
     tentang: () => page("about", v("tile.about"), <>
       {event.introduction && <div className={styles.card}><h2 className={styles.cardTitle}>{v("about.why")}</h2><p className={guest.multiline}>{event.introduction}</p></div>}
       {event.topics.length > 0 && <div>
@@ -229,7 +252,9 @@ function VisitBody({ event, preview = false, invitation, phase = "before", rsvpN
     </>, event.contact.description || v("contact.lead")),
   };
 
-  return shell(<main id="event-content" tabIndex={-1} className={styles.main}>{screens[screen]()}</main>);
+  // The form has no tab bar (board 11, 3a/3b): its send button is the way on.
+  const formShown = screen === "konfirmasi" && !(saved && !editing);
+  return shell(<main id="event-content" tabIndex={-1} className={styles.main}>{screens[screen]()}</main>, !formShown);
 }
 
 /** The opening photo, with the logo in its top-left corner and the language switch opposite. */
