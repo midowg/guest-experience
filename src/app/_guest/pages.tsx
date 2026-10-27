@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { z } from "zod";
+import { CsrExperience } from "@/components/guest/csr/CsrExperience";
+import { publicDonationView } from "@/lib/server/donations";
 import { EventExperience } from "@/components/guest/EventExperience";
 import { GuidePage } from "@/components/guest/GuidePage";
 import { PhotoGallery } from "@/components/guest/PhotoGallery";
@@ -47,6 +49,7 @@ export function StorageMissing() {
 export async function EventPage({ event }: { event: EventRecord }) {
   if (event.event_kind === "kartu") return <PosterPage event={event} />;
   if (event.event_kind === "eguide") return <GuidePage event={event} />;
+  if (event.event_kind === "csr") return <CsrExperience event={event} view={await publicDonationView(event)} />;
   return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} openPartyMax={await openPartyMax()} photoCount={await afterPhotos(event)} />;
 }
 
@@ -56,7 +59,7 @@ export async function InvitationPage({ event, invitation }: { event: EventRecord
 
 /** The thank-you page: the after-the-event view, sent by the host when the visit is over. */
 export async function ThanksPage({ event, invitation }: { event: EventRecord; invitation?: PersonalInvitation }) {
-  if (event.event_kind === "kartu" || event.event_kind === "eguide") notFound();
+  if (event.event_kind === "kartu" || event.event_kind === "eguide" || event.event_kind === "csr") notFound();
   return <EventExperience event={event} invitation={invitation} phase="after" rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
 }
 

@@ -42,10 +42,10 @@ export const absolute = (origin: string, path: string) => `${origin.replace(/\/$
 
 /* Admin pages */
 
-export type AdminTab = "edit" | "invitations" | "responses" | "checkin" | "beo" | "beo-print" | "gallery" | "feedback" | "preview";
+export type AdminTab = "edit" | "invitations" | "responses" | "checkin" | "beo" | "beo-print" | "gallery" | "feedback" | "preview" | "donations";
 const adminTabPaths: Record<AdminTab, string> = {
   edit: "", invitations: "/undangan", responses: "/rsvp", checkin: "/checkin", beo: "/beo", "beo-print": "/beo/cetak",
-  gallery: "/galeri", feedback: "/feedback", preview: "/preview",
+  gallery: "/galeri", feedback: "/feedback", preview: "/preview", donations: "/donasi",
 };
 
 /**
@@ -66,6 +66,8 @@ export const guestApi = {
     : `/api/events/${enc(event.slug)}/rsvp`,
   feedback: (event: EventRef) => `/api/events/${enc(event.slug)}/feedback`,
   opened: (event: EventRef, token: string) => `/api/events/${enc(event.slug)}/i/${token}/opened`,
+  /** CSR: a donation, sent as a form with an optional proof of transfer. */
+  donation: (event: EventRef) => `/api/events/${enc(event.slug)}/donation`,
 };
 
 /** Admin API for one event; `part` is the sub-resource, e.g. "beo", "gallery/<id>/complete". */
