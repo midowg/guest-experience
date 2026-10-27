@@ -194,7 +194,7 @@ export function AfterBlock({ event, update, control, errors, collaboration: allo
   const collaboration = after.collaboration;
   const internal = event.audience === "internal";
   return <div className="stack">
-    <BlockIntro why="Halaman terima kasih yang tampil setelah acara. Ulasan Google memakai pengaturan di blok Ulasan dan bersifat sukarela." who="hospitality" />
+    <BlockIntro why={event.event_kind === "kunjungan" ? "Halaman terima kasih yang dikirim setelah kunjungan, bersama foto dan survei. Survei dan ulasan Google diatur di bawah." : "Halaman terima kasih yang tampil setelah acara. Ulasan Google memakai pengaturan di blok Ulasan dan bersifat sukarela."} who="hospitality" />
     {origin && event.code && <EventLink event={event} origin={origin} path={thanksPath(event)} label="Tautan terima kasih" hint="Kirim ke tamu setelah kunjungan, bersama foto dan survei. Halaman ini langsung menampilkan terima kasih, tanpa menunggu tanggal acara lewat." />}
     {control("after.title", "Judul terima kasih (opsional)", after.title, title => set({ title }), { maxLength: 200, hint: "Kosongkan untuk memakai: Terima kasih atas kehadiran Anda." })}
     {control("after.message", "Pesan (opsional)", after.message, message => set({ message }), { multiline: true, maxLength: 2000, hint: "Kosongkan untuk memakai teks Penutup." })}

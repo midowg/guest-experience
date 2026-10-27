@@ -13,15 +13,17 @@ export const dynamic = "force-dynamic";
 /**
  * Layout check for the editor with its phone preview. Saving is refused without a session.
  * ?super=1 shows the super admin's controls (theme, poster design library); ?kartu=1 a card event;
- * ?eguide=1 an E-Guide started from the "e-guide" template; ?csr=1 a CSR donation page.
+ * ?eguide=1 an E-Guide started from the "e-guide" template; ?csr=1 a CSR donation page;
+ * ?kunjungan=1 a Kunjungan Kantor with its own menu (board 12).
  */
-export default async function DevEditorPage({ searchParams }: { searchParams: Promise<{ super?: string; kartu?: string; eguide?: string; csr?: string }> }) {
+export default async function DevEditorPage({ searchParams }: { searchParams: Promise<{ super?: string; kartu?: string; eguide?: string; csr?: string; kunjungan?: string }> }) {
   const query = await searchParams;
   const superAdmin = query.super === "1";
   if (process.env.NODE_ENV === "production") notFound();
   const seed = { ...createSeedEvent(), code: "AB23CD" };
   // ?kartu=1: a card event, edited with the card block only.
   const eguide = templateOf("e-guide")!;
+  const visit = templateOf("kunjungan-klien")!;
   let uuid = 0;
   const event = query.kartu === "1" ? { ...seed, title: "Poster sesi JCWF 2026", event_kind: "kartu" as const, poster: presetPoster("rempah-nusantara", seed) }
     : query.eguide === "1" ? { ...seed, title: "Mengenal Lombok", event_kind: "eguide" as const, theme: { key: eguide.theme, corners: "square" as const }, rsvp_enabled: false, feedback_enabled: false,
@@ -30,6 +32,8 @@ export default async function DevEditorPage({ searchParams }: { searchParams: Pr
     : query.csr === "1" ? { ...seed, title: "Contoh Berbagi Bersama Anak Panti 2026", event_kind: "csr" as const, theme: { key: "segar" as const, corners: "soft" as const }, rsvp_enabled: false, feedback_enabled: false,
       introduction: "Bantu kami melengkapi kebutuhan sekolah dan sembako untuk anak-anak panti.", sections: seed.sections.map(section => ({ ...section, enabled: section.key === "about" || section.key === "contact" })),
       donation: { ...startingDonation(), accounts: [{ id: "a1", bank: "BCA", number: "123 456 7890", holder: "Yayasan Contoh Peduli" }] } }
+    : query.kunjungan === "1" ? { ...seed, title: "Kunjungan PT Contoh Nusantara", event_kind: "kunjungan" as const, greeting: "Selamat datang di Werkudara",
+      sections: seed.sections.map(section => ({ ...section, enabled: (visit.modules as string[]).includes(section.key) })) }
     : seed;
   const person = (n: number, name: string, role: string, photo = "") => ({ id: `5f000000-0000-4000-8000-00000000000${n}`, name, role, phone: `0812 0000 000${n}`, photo: { url: photo, alt: name, srcset: [] }, active: true, sort_order: n });
   const staff = [person(1, "Contoh Raka Pratama", "Hospitality", "https://picsum.photos/seed/wk-staf1/200/200"), person(2, "Contoh Sari Dewi", "Sales")];

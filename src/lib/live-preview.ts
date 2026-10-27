@@ -17,8 +17,20 @@ export const blockOfArea: Record<PreviewArea, string> = {
   team: "team", rsvp: "rsvp", contact: "contact", feedback: "feedback_questions", day: "day", after: "after",
 };
 
+/** Kunjungan Kantor's menu (editor-model visitMenu): a tap on a screen opens the block named after it. */
+const visitBlockOfArea: Partial<Record<PreviewArea, string>> = { hero: "hero", about: "topics", feedback: "after" };
+/** Which editor block edits a part of the guest page, for this kind of event. */
+export function blockForArea(area: PreviewArea, kind?: EventRecord["event_kind"]): string {
+  return (kind === "kunjungan" && visitBlockOfArea[area]) || blockOfArea[area];
+}
+
 /** The part of the guest page a block changes, for scrolling the preview to it. */
-export function areaOfBlock(block: string): PreviewArea | null {
+export function areaOfBlock(block: string, kind?: EventRecord["event_kind"]): PreviewArea | null {
+  if (kind === "kunjungan") {
+    // Each block of the visit menu is one guest screen; Info kunjungan fills the welcome card.
+    const visit: Record<string, PreviewArea> = { identity: "hero", hero: "hero", topics: "about", photos: "after" };
+    if (visit[block]) return visit[block];
+  }
   if (block === "schedule" || block === "appearance") return "hero";
   if (block === "gallery") return "location";
   if (block === "review") return "after";
@@ -28,7 +40,7 @@ export function areaOfBlock(block: string): PreviewArea | null {
 
 /** The journey phase worth showing while a block is open: the day panel for Hari H, the thank-you for after. */
 export function phaseOfBlock(block: string): EventPhase {
-  return block === "day" ? "day" : block === "after" || block === "review" ? "after" : "before";
+  return block === "day" ? "day" : block === "after" || block === "review" || block === "photos" ? "after" : "before";
 }
 
 export function isPreviewMessage(data: unknown): data is PreviewMessage {

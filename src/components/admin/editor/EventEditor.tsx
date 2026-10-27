@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Notice } from "@/components/ui";
-import { BookOpen, CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Frame, HandHeart, Handshake, HeartHandshake, Image as ImageIcon, Images, Landmark, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Send, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Frame, HandHeart, Handshake, HeartHandshake, Image as ImageIcon, Images, Landmark, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Send, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
 import { Check, SuggestionChips } from "@/components/admin/editor/controls";
 import { chipLabel, fieldExamples, fieldPattern, fieldSuggestions, fillSuggestion } from "@/components/admin/editor/suggestions";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
@@ -11,7 +11,7 @@ import { tzLabel, zoneOf } from "@/lib/timezones";
 import type { EventPhase, EventRecord, SectionKey, StaffMember } from "@/lib/types";
 import { eventSchema } from "@/lib/validation";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { blockOfPath, blockStatusLabels, blockStatuses, blocksFor, completeSections, prepareEvent, stagesFor } from "@/components/admin/editor/editor-model";
+import { blockOfPath, blockStatusLabels, blockStatuses, blocksFor, completeSections, prepareEvent, stagesFor, visitMenu } from "@/components/admin/editor/editor-model";
 import { AfterBlock, AppearanceBlock, DayBlock, ExperienceBlock, PrepareBlock } from "@/components/admin/editor/JourneyEditor";
 import { TranslationBlock } from "@/components/admin/editor/TranslationEditor";
 import { blockAllowed, moduleActive, moduleBlocks, type AdminModule } from "@/lib/admin-modules";
@@ -36,21 +36,24 @@ import { TeamBlock } from "@/components/admin/editor/blocks/TeamBlock";
 import { TopicsBlock } from "@/components/admin/editor/blocks/TopicsBlock";
 import { VenueBlock } from "@/components/admin/editor/blocks/VenueBlock";
 import { VenueGalleryBlock } from "@/components/admin/editor/blocks/VenueGalleryBlock";
+import { VisitAboutBlock, VisitAfterBlock, VisitInfoBlock, VisitPhotosBlock, VisitWelcomeBlock } from "@/components/admin/editor/blocks/VisitBlocks";
 import styles from "@/components/admin/admin.module.css";
 import e from "./editor.module.css";
 import n from "./block-numbers.module.css";
 import { BlockChips } from "@/components/admin/editor/BlockChips";
 import { PhonePreview, type PreviewDevice } from "@/components/admin/editor/PhonePreview";
-import { areaOfBlock, blockOfArea, phaseOfBlock } from "@/lib/live-preview";
+import { areaOfBlock, blockForArea, phaseOfBlock } from "@/lib/live-preview";
 import { absolute, adminApi, eventPath } from "@/lib/routes";
 
 
 /** Shorter names for the chips, so more of them fit with their names on one row. */
 const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan", poster: "Poster", guide: "Bab", "donation-items": "Bantuan", "donation-pay": "Rekening", "donation-recipients": "Penerima", "donation-show": "Tampilan", "donation-news": "Kabar" };
+/** A visit's chips name its guest screens. */
+const visitChipNames: Record<string, string> = { hero: "Sambutan", topics: "Tentang", rsvp: "Konfirmasi", venue: "Cara datang", agenda: "Rundown", day: "Hari H", team: "Tim", contact: "Pendamping", after: "Terima kasih", photos: "Foto" };
 const blockIcons: Record<string, LucideIcon> = {
   delete: Trash2, identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
   agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, language: Languages, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
-  feedback_questions: MessageSquare, review: Star, after: Handshake, sections: LayoutList, publication: Rocket, poster: Frame, guide: BookOpen, "donation-items": HandHeart, "donation-pay": Landmark, "donation-recipients": HeartHandshake, "donation-show": Eye, "donation-news": Send,
+  feedback_questions: MessageSquare, review: Star, after: Handshake, photos: Images, sections: LayoutList, publication: Rocket, poster: Frame, guide: BookOpen, "donation-items": HandHeart, "donation-pay": Landmark, "donation-recipients": HeartHandshake, "donation-show": Eye, "donation-news": Send,
 };
 
 
@@ -81,6 +84,9 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   // Kind, audience, and theme come from the template; only the super admin changes them (meeting of 20 Oct).
   const card = initialEvent.event_kind === "kartu";
   const guide = initialEvent.event_kind === "eguide";
+  // Kunjungan Kantor has its own menu, one item per guest screen (board 12 in docs/journey-platform.pen).
+  const visit = initialEvent.event_kind === "kunjungan";
+  const kind = initialEvent.event_kind;
   // Each kind offers only the blocks that fit it (kindModules / kindBlocks in src/lib/admin-modules.ts).
   // Each kind reads its own menu (Friday Sharing renames and regroups); everything below uses these two.
   const editorBlocks = blocksFor(initialEvent.event_kind);
@@ -129,7 +135,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   function update<K extends keyof EventRecord>(key: K, value: EventRecord[K]) {
     setEvent(current => ({ ...current, [key]: value })); setDirty(true); setMessage("");
     // Friday Sharing keeps its settings in one field across several blocks: the open one is the one changed.
-    const owner = key === "donation" && open.startsWith("donation-") ? open : blockOfPath(String(key));
+    const owner = key === "donation" && open.startsWith("donation-") ? open : blockOfPath(String(key), kind);
     setDirtyBlocks(current => current.has(owner) ? current : new Set(current).add(owner));
   }
   /** Switch the form to another block; the preview follows with the matching part and phase. */
@@ -147,7 +153,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   }
   /** Open the block that owns a field, then focus the field once it is visible. */
   function openField(key: string) {
-    setOpen(blockOfPath(key)); setView("form");
+    setOpen(blockOfPath(key, kind)); setView("form");
     requestAnimationFrame(() => { const field = document.getElementById(key); field?.focus(); field?.scrollIntoView?.({ block: "center" }); });
   }
   // Whatever publishing would still reject marks a card "Perlu dilengkapi".
@@ -159,7 +165,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   // A block for a module this event does not use waits under "Bagian lain", so the main list
   // shows only what the event actually has. Opening, editing, or an error keeps it in view.
   const blockModule = Object.fromEntries((Object.entries(moduleBlocks) as [AdminModule, string][]).map(([key, id]) => [id, key])) as Record<string, AdminModule>;
-  const inUse = (id: string) => !blockModule[id] || moduleActive(event, blockModule[id]) || dirtyBlocks.has(id) || statuses[id] === "error" || statuses[id] === "todo";
+  // A visit lists every screen, switched off or not: its menu is the guest's flow.
+  const inUse = (id: string) => visit || !blockModule[id] || moduleActive(event, blockModule[id]) || dirtyBlocks.has(id) || statuses[id] === "error" || statuses[id] === "todo";
   const mainBlocks = blocks.filter(item => inUse(item.id));
   const extraBlocks = blocks.filter(item => !inUse(item.id));
   function described(name: string, hint?: string) { return [hint ? `${name}-hint` : "", errors[name] ? `${name}-error` : ""].filter(Boolean).join(" ") || undefined; }
@@ -219,12 +226,21 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
    * always there. RSVP and the survey also open and close with it, so there is one switch, not two.
    */
   function blockSwitch(id: string): { on: boolean; set: (on: boolean) => void } | null {
+    // A visit's optional screens are Rundown and Kenali Tim; any other screen shows its switch only while off, to bring it back.
+    if (visit && id !== "agenda" && id !== "team") {
+      const own = sectionSwitch(id);
+      return own && !own.on ? own : null;
+    }
     if (id === "review") return { on: event.review_enabled, set: on => update("review_enabled", on) };
     // Switched on for the first time, Studio Poster starts from the first design.
     if (id === "poster" && event.event_kind === "kartu") return null;
     if (id === "donation-items") return { on: event.donation.enabled, set: on => update("donation", { ...event.donation, enabled: on }) };
     if (id === "poster") return { on: event.poster.enabled, set: on => update("poster", on && !event.poster.fields.length ? presetPoster(posterPresets[0].key, event) : { ...event.poster, enabled: on }) };
-    const key = sectionOfBlock[id];
+    return sectionSwitch(id);
+  }
+  function sectionSwitch(id: string): { on: boolean; set: (on: boolean) => void } | null {
+    // A visit's Tentang kunjungan is the "about" part of the page.
+    const key = visit && id === "topics" ? "about" : sectionOfBlock[id];
     if (!key) return null;
     // In an E-Guide a part is shown by being in the book, so the switch puts it in or takes it out.
     if (guide) {
@@ -264,7 +280,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       if (first) openField(first);
       return;
     }
-    if (payload.status === "published" && !window.confirm(`Simpan dan publikasikan perubahan ini? ${guide ? "E-Guide" : "Undangan"} akan dapat dibuka oleh siapa pun yang memiliki tautannya.`)) return;
+    if (payload.status === "published" && !window.confirm(`Simpan dan publikasikan perubahan ini? ${guide ? "E-Guide" : visit ? "Halaman kunjungan" : "Undangan"} akan dapat dibuka oleh siapa pun yang memiliki tautannya.`)) return;
     setPending(true);
     try {
       const result = await adminRequest<EventRecord>(adminApi(event.id), { method: "PUT", body: JSON.stringify(parsed.data) });
@@ -275,23 +291,29 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     finally { setPending(false); }
   }
   // The switched-on modules, numbered in menu order: the chips, the menu and the open header share it.
-  const numbered = editorStages.flatMap(stage => mainBlocks.filter(item => item.stage === stage.key && blockSwitch(item.id)?.on));
+  // A visit numbers its guest screens instead ("Layar 3 dari 10"): every screen that is shown.
+  const numbered = visit
+    ? mainBlocks.filter(item => (item.stage === "guest" || item.stage === "after") && blockSwitch(item.id)?.on !== false)
+    : editorStages.flatMap(stage => mainBlocks.filter(item => item.stage === stage.key && blockSwitch(item.id)?.on));
   const numberOf = new Map(numbered.map((item, index) => [item.id, index + 1]));
   const openMeta = editorBlocks.find(item => item.id === open);
   const openTitle = open === "delete" ? "Hapus acara" : openMeta?.title ?? "";
+  const visitHint = visitMenu.find(item => item.id === open)?.hint;
+  // "Lanjut" walks the visit menu in the guest's order.
+  const nextBlock = visit ? mainBlocks[mainBlocks.findIndex(item => item.id === open) + 1] : undefined;
   function menuItem(item: (typeof editorBlocks)[number]) {
     const Icon = blockIcons[item.id] ?? FileText;
     const status = statuses[item.id];
     const number = numberOf.get(item.id);
     return <li key={item.id}><button type="button" onClick={() => openBlock(item.id)} aria-current={open === item.id ? "true" : undefined}>
       {number ? <b className={n.menuNumber} aria-hidden="true">{number}</b> : <Icon size={16} aria-hidden="true" />}<span>{item.title}</span>
-      {blockSwitch(item.id)?.on && <span className={e.onBadge} title="Tampil di undangan">Aktif</span>}
+      {blockSwitch(item.id)?.on && <span className={e.onBadge} title={visit ? "Tampil ke tamu" : "Tampil di undangan"}>Aktif</span>}
       {(status === "todo" || status === "error" || status === "dirty") && <span className={`${e.dot} ${e[`dot_${status}`]}`} title={blockStatusLabels[status]} />}
     </button></li>;
   }
   const kit: EditorKit = { event, update, errors, control, text, time, toggle, choices, tz, unavailable, sectionUnavailable, origin, staff, posterDesigns, superAdmin };
   return <form className={`${styles.form} ${e.editor}`} onSubmit={save} noValidate aria-busy={pending}>
-    {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
+    {error && <div ref={errorSummary} tabIndex={-1} className={styles.errorSummary}><Notice tone="error"><p>{error}</p>{Object.keys(errors).length > 0 && <ul>{Object.entries(errors).map(([key, values]) => <li key={key}><a href={`#${key}`} onClick={e => { e.preventDefault(); openField(key); }}>{editorBlocks.find(item => item.id === blockOfPath(key, kind))?.title}: {values.join(" ")}</a></li>)}</ul>}</Notice></div>}
     {message && <Notice tone="success">{message}</Notice>}
     {/*
       One bar above the editor holds what is used all the time: ☰ for the block menu, form or
@@ -305,7 +327,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {numbered.length > 0 && <BlockChips current={open} onOpen={openBlock} chips={numbered.map(item => {
         const status = statuses[item.id];
         const flagged = status === "todo" || status === "error" || status === "dirty" ? status : undefined;
-        return { id: item.id, title: item.title, short: chipNames[item.id] ?? item.title, status: flagged, statusLabel: flagged && blockStatusLabels[flagged] };
+        return { id: item.id, title: item.title, short: (visit ? visitChipNames[item.id] : chipNames[item.id]) ?? item.title, status: flagged, statusLabel: flagged && blockStatusLabels[flagged] };
       })} />}
       {!wide && <p className={e.currentBlock} aria-hidden="true">{openTitle}</p>}
       {!card && <div className={e.viewSwitch} role="group" aria-label="Tampilan">
@@ -345,8 +367,9 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
             ? <span className={n.number} aria-hidden="true">{numberOf.get(open)}</span>
             : <span className={e.formIcon} aria-hidden="true">{(() => { const Icon = blockIcons[open] ?? FileText; return <Icon size={20} />; })()}</span>}
           <div>
-            <p className={e.formStage}>{open === "delete" ? "Pengaturan" : editorStages.find(stage => stage.key === openMeta?.stage)?.label}</p>
+            <p className={e.formStage}>{open === "delete" ? "Pengaturan" : editorStages.find(stage => stage.key === openMeta?.stage)?.label}{visit && numberOf.has(open) && ` · Layar ${numberOf.get(open)} dari ${numbered.length}`}{visit && blockSwitch(open) && " · Opsional"}</p>
             <h2 id="block-title" ref={blockTitle} tabIndex={-1}>{openTitle}</h2>
+            {visit && visitHint && <p className="field-hint">{visitHint}</p>}
           </div>
           {(() => {
             const toggle = blockSwitch(open);
@@ -354,22 +377,32 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
             // A module the super admin switched off may be turned off here, never back on.
             const locked = !toggle.on && restrictedBlock(open);
             return <label className={e.blockSwitch} data-on={toggle.on || undefined}>
-              <span>{toggle.on ? "Tampil" : "Tidak tampil"}</span>
-              <input type="checkbox" role="switch" checked={toggle.on} disabled={locked || pending} onChange={change => toggle.set(change.target.checked)} aria-label={`Tampilkan ${openMeta?.title ?? "bagian ini"} di undangan`} />
+              <span>{toggle.on ? (visit ? "Tampil ke tamu" : "Tampil") : "Tidak tampil"}</span>
+              <input type="checkbox" role="switch" checked={toggle.on} disabled={locked || pending} onChange={change => toggle.set(change.target.checked)} aria-label={`Tampilkan ${openMeta?.title ?? "bagian ini"} ${visit ? "ke tamu" : "di undangan"}`} />
             </label>;
           })()}
         </header>
     {open === "delete" ? <div className={e.formBody}>{dangerZone}</div> :
     <fieldset disabled={pending} className={`${styles.fieldset} ${e.formBody}`}>
+      {visit ? <>
+        {block("identity", "Info kunjungan", <VisitInfoBlock kit={kit} onTimezone={changeTimezone} />)}
+        {block("hero", "Sambutan", <VisitWelcomeBlock kit={kit} />)}
+        {block("topics", "Tentang kunjungan", <VisitAboutBlock kit={kit} />)}
+        {block("venue", "Cara datang", <><VenueBlock kit={kit} embedDraft={embedDraft} onEmbedDraft={setEmbedDraft} place={false} />{!unavailable("gallery") && <><h3>Foto lokasi</h3><VenueGalleryBlock kit={kit} /></>}</>)}
+        {block("after", "Terima kasih & survei", <VisitAfterBlock kit={kit} />)}
+        {block("photos", "Foto kunjungan", <VisitPhotosBlock kit={kit} />)}
+      </> : <>
       {block("identity", "Identitas & undangan", <IdentityBlock kit={kit} />)}
       {block("appearance", "Jenis, audiens, dan tampilan", <AppearanceBlock event={event} update={update} />)}
       {block("schedule", "Waktu acara", <ScheduleBlock kit={kit} onTimezone={changeTimezone} />)}
       {block("hero", "Foto latar pembuka", <HeroBlock kit={kit} />)}
-      {block("guide", "Bab panduan", <GuideBlock kit={kit} />)}
       {block("topics", "Topik pembahasan", <TopicsBlock kit={kit} />)}
+      {block("venue", "Lokasi", <VenueBlock kit={kit} embedDraft={embedDraft} onEmbedDraft={setEmbedDraft} />)}
+      {block("after", "Setelah acara", <AfterBlock event={event} update={update} control={control} errors={errors} collaboration={!unavailable("collaboration")} origin={origin} />)}
+      </>}
+      {block("guide", "Bab panduan", <GuideBlock kit={kit} />)}
       {block("experience", "Pengalaman kunjungan", <ExperienceBlock event={event} update={update} control={control} errors={errors} />)}
       {block("agenda", "Rundown", <AgendaBlock kit={kit} />)}
-      {block("venue", "Lokasi", <VenueBlock kit={kit} embedDraft={embedDraft} onEmbedDraft={setEmbedDraft} />)}
       {block("gallery", "Galeri foto lokasi Werkudara", <VenueGalleryBlock kit={kit} />)}
       {block("prepare", "Persiapan tamu", <PrepareBlock event={event} update={update} control={control} />)}
       {block("team", "Our Team", <TeamBlock kit={kit} />)}
@@ -384,14 +417,17 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {block("donation-news", "Kabar penyerahan", <DonationNewsBlock kit={kit} />)}
       {block("feedback_questions", "Survei feedback", <FeedbackBlock kit={kit} />)}
       {block("review", "Ulasan Google (opsional)", <ReviewBlock kit={kit} />)}
-      {block("after", "Setelah acara", <AfterBlock event={event} update={update} control={control} errors={errors} collaboration={!unavailable("collaboration")} origin={origin} />)}
       {block("language", "Bahasa & terjemahan", <TranslationBlock event={event} update={update} control={control} />)}
       {block("sections", "Urutan & tampilan bagian", <SectionsBlock kit={kit} />)}
-      {block("publication", "Status & penyimpanan", <PublicationBlock kit={kit} />)}
+      {block("publication", visit ? "Terbitkan" : "Status & penyimpanan", <PublicationBlock kit={kit} />)}
+      {visit && <div className={e.visitNext}>
+        <p className="field-hint">Kolom kosong tidak ditampilkan ke tamu.</p>
+        {nextBlock && <Button type="button" variant="secondary" onClick={() => openBlock(nextBlock.id)}>Lanjut: {nextBlock.title} <ArrowRight size={16} aria-hidden="true" /></Button>}
+      </div>}
     </fieldset>}
       </section>
       {!card && <aside className={e.previewPane} aria-label="Pratinjau undangan">
-        <PhonePreview event={event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open)} onFocusArea={area => openBlock(blocks.some(item => item.id === blockOfArea[area]) ? blockOfArea[area] : guide ? "guide" : blockOfArea[area])} src={previewSrc} />
+        <PhonePreview event={event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open, kind)} onFocusArea={area => { const target = blockForArea(area, kind); openBlock(blocks.some(item => item.id === target) ? target : guide ? "guide" : target); }} src={previewSrc} />
       </aside>}
     </div>
   </form>;

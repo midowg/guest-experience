@@ -125,6 +125,10 @@
 .blockSwitch input:checked::after { transform: translateX(18px); }
 .blockSwitch input:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .blockSwitch input:disabled { opacity: .5; cursor: not-allowed; }
+/* Kunjungan Kantor: under each screen's form, a reminder and the way on to the next screen. */
+.visitNext { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line); }
+.visitNext p { margin: 0; }
+.formHeader :global(.field-hint) { margin: .15rem 0 0; }
 .offNote { margin: 0; padding: var(--space-2) var(--space-3); border-radius: 10px; background: #fff7e6; color: #8a5a00; font-size: .875rem; }
 .onBadge { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; background: #e3f5ea; color: #1d7a47; font-size: .6875rem; font-weight: 800; }
 .menu button[aria-current="true"] .onBadge { background: rgba(255, 255, 255, .22); color: #fff; }

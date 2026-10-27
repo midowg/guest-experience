@@ -39,7 +39,7 @@ const screenSection: Record<Screen, SectionKey> = {
 };
 /** Where the editor's "show this part" lands (live-preview areas). */
 const areaScreen: Record<string, Screen> = {
-  hero: "beranda", day: "beranda", rsvp: "beranda", about: "tentang", experience: "pengalaman", prepare: "persiapan", team: "tim", location: "cara-datang", agenda: "jadwal", contact: "kontak",
+  hero: "beranda", day: "beranda", rsvp: "konfirmasi", about: "tentang", experience: "pengalaman", prepare: "persiapan", team: "tim", location: "cara-datang", agenda: "jadwal", contact: "kontak",
 };
 /** The event the editor's preview sends to switch screens before it scrolls to a part. */
 export const VISIT_AREA_EVENT = "visit:area";

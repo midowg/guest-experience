@@ -149,6 +149,8 @@ export const editorBlocks: { id: string; title: string; stage: EditorStage }[] =
   { id: "feedback_questions", title: "Survei feedback", stage: "after" },
   { id: "review", title: "Ulasan Google (opsional)", stage: "after" },
   { id: "after", title: "Setelah acara", stage: "after" },
+  // Kunjungan Kantor only: the visit's photos live on the Foto page; the menu points there.
+  { id: "photos", title: "Foto kunjungan", stage: "after" },
   { id: "language", title: "Bahasa & terjemahan", stage: "settings" },
   { id: "sections", title: "Urutan & tampilan bagian", stage: "settings" },
   { id: "publication", title: "Status & penyimpanan", stage: "settings" },
@@ -174,9 +176,22 @@ const donationBlocks: Record<string, string> = {
   accounts: "donation-pay", qris: "donation-pay", proofRequired: "donation-pay",
   recipients: "donation-recipients", show: "donation-show", delivered: "donation-news", notify: "donation-news",
 };
-export function blockOfPath(path: string): string {
+/**
+ * Kunjungan Kantor's menu follows the guest's screens (board 12), so some fields sit in another
+ * block than in an invitation: the date and address in Info kunjungan, the greeting with the
+ * cover photo in Sambutan, the reason with the topics, the survey and review with the thank-you.
+ */
+const visitFields: Record<string, string> = {
+  starts_at: "identity", ends_at: "identity", timezone: "identity", venue_name: "identity", address: "identity",
+  greeting: "hero", subtitle: "hero", introduction: "topics", closing: "after",
+  feedback_enabled: "after", feedback_opens_at: "after", feedback_description: "after", feedback_questions: "after",
+  review_url: "after", review_enabled: "after", review_heading: "after", review_description: "after", review_button_label: "after",
+  gallery: "venue", venue_image_url: "venue", venue_image_alt: "venue", venue_image_credit: "venue", sections: "identity",
+};
+export function blockOfPath(path: string, kind?: EventRecord["event_kind"]): string {
   const [first, second] = path.split(".");
   if (first === "donation") return donationBlocks[second] ?? "donation-items";
+  if (kind === "kunjungan" && visitFields[first]) return visitFields[first];
   return fieldBlocks[first] ?? "identity";
 }
 
@@ -191,13 +206,37 @@ const csrBlocks: Record<string, { title: string; stage: EditorStage }> = {
   publication: { title: "Terbitkan", stage: "settings" },
 };
 const csrStages: Partial<Record<EditorStage, string>> = { prep: "Halaman", guest: "Donasi", after: "Penyaluran", settings: "Pengaturan" };
-/** The blocks of the menu for a kind of event, with that kind's names and grouping. */
-export function blocksFor(kind: EventRecord["event_kind"] | undefined) {
+/**
+ * Kunjungan Kantor has its own menu too (board 12): one item per guest screen, in the order the
+ * guest opens them, from Sambutan to the photos. Its stages read Acara · Sebelum kunjungan ·
+ * Setelah kunjungan · Pengaturan.
+ */
+export const visitMenu: { id: string; title: string; stage: EditorStage; hint: string }[] = [
+  { id: "identity", title: "Info kunjungan", stage: "prep", hint: "Nama kunjungan, tanggal, jam, alamat, dan cara mengundang. Dipakai di kartu sambutan dan BEO." },
+  { id: "hero", title: "Sambutan", stage: "guest", hint: "Layar pertama yang dibuka tamu dari tautan." },
+  { id: "topics", title: "Tentang kunjungan", stage: "guest", hint: "Tujuan kunjungan dan topik yang dibahas." },
+  { id: "rsvp", title: "Konfirmasi kedatangan", stage: "guest", hint: "Form satu layar: nama, rombongan, dan kebutuhan khusus." },
+  { id: "venue", title: "Cara datang", stage: "guest", hint: "Peta, petunjuk, rute bergambar, dan foto lokasi." },
+  { id: "agenda", title: "Rundown", stage: "guest", hint: "Susunan acara per jam. Matikan kalau kunjungan tidak punya jadwal rinci." },
+  { id: "day", title: "Hari H", stage: "guest", hint: "Catatan yang tampil pada hari kunjungan, bersama sesi yang sedang berlangsung." },
+  { id: "team", title: "Kenali Tim Werkudara", stage: "guest", hint: "Sedikit tentang tim Werkudara yang inklusif. Matikan kalau tidak diperlukan." },
+  { id: "contact", title: "Pendamping kunjungan", stage: "guest", hint: "Orang yang bisa ditanya tamu sebelum dan saat kunjungan." },
+  { id: "after", title: "Terima kasih & survei", stage: "after", hint: "Halaman yang dikirim setelah kunjungan: ucapan, survei, dan ulasan." },
+  { id: "photos", title: "Foto kunjungan", stage: "after", hint: "Foto dibagikan lewat halaman terima kasih." },
+  { id: "appearance", title: "Jenis, audiens, dan tampilan", stage: "settings", hint: "" },
+  { id: "language", title: "Bahasa & terjemahan", stage: "settings", hint: "Isi dalam Indonesia, English, atau keduanya." },
+  { id: "publication", title: "Terbitkan", stage: "settings", hint: "Draf hanya terlihat di admin. Setelah terbit, siapa pun yang punya tautan bisa membukanya." },
+];
+const visitStages: Partial<Record<EditorStage, string>> = { prep: "Acara", guest: "Sebelum kunjungan", after: "Setelah kunjungan", settings: "Pengaturan" };
+/** The blocks of the menu for a kind of event, with that kind's names, order, and grouping. */
+export function blocksFor(kind: EventRecord["event_kind"] | undefined): { id: string; title: string; stage: EditorStage }[] {
+  if (kind === "kunjungan") return visitMenu;
   return kind === "csr" ? editorBlocks.map(item => csrBlocks[item.id] ? { ...item, ...csrBlocks[item.id] } : item) : editorBlocks;
 }
 /** The menu's stage headings for a kind of event. */
 export function stagesFor(kind: EventRecord["event_kind"] | undefined) {
-  return kind === "csr" ? editorStages.filter(stage => csrStages[stage.key]).map(stage => ({ ...stage, label: csrStages[stage.key]! })) : editorStages;
+  const names = kind === "csr" ? csrStages : kind === "kunjungan" ? visitStages : null;
+  return names ? editorStages.filter(stage => names[stage.key]).map(stage => ({ ...stage, label: names[stage.key]! })) : editorStages;
 }
 
 export type BlockStatus = "error" | "dirty" | "todo" | "optional" | "done";
@@ -254,6 +293,7 @@ function isEmptyOptional(id: string, event: EventRecord): boolean {
     case "prepare": return !sectionOn(event, "prepare");
     case "team": return !sectionOn(event, "team");
     case "day": return !event.day_note;
+    case "photos": return true;
     case "feedback_questions": return !event.feedback_enabled;
     case "review": return !event.review_enabled;
     case "poster": return !event.poster.enabled;
@@ -273,8 +313,9 @@ function untranslated(event: EventRecord) {
 }
 
 export function blockStatuses(event: EventRecord, errors: Record<string, string[]>, dirtyBlocks: Set<string>, publishIssues: string[]): Record<string, BlockStatus> {
-  const errorBlocks = new Set(Object.keys(errors).map(blockOfPath));
-  const todoBlocks = new Set(publishIssues.map(blockOfPath));
+  const owner = (path: string) => blockOfPath(path, event.event_kind);
+  const errorBlocks = new Set(Object.keys(errors).map(owner));
+  const todoBlocks = new Set(publishIssues.map(owner));
   return Object.fromEntries(editorBlocks.map(({ id }) => [id,
     errorBlocks.has(id) ? "error" : dirtyBlocks.has(id) ? "dirty" : todoBlocks.has(id) || (id === "language" && untranslated(event)) ? "todo" : isEmptyOptional(id, event) ? "optional" : "done"]));
 }

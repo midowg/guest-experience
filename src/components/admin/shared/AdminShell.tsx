@@ -51,6 +51,12 @@ export function EventNavigation({ event, current }: { event: EventRecord; curren
   if (event.event_kind === "eguide") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka E-Guide" groups={[{ label: "Edit", pages: [page("edit", "Edit E-Guide")] }]} />;
   // A CSR page takes donations, not guests: its editor and the donation desk.
   if (event.event_kind === "csr") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka halaman donasi" groups={[{ label: "Edit", pages: [page("edit", "Edit halaman")] }, { label: "Donasi", pages: [page("donations", "Donasi masuk")] }]} />;
+  // An office visit (board 12): its page, its guests and confirmations, then the team's own pages. No tickets, so no check-in.
+  if (event.event_kind === "kunjungan") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka halaman tamu" groups={[
+    { label: "Edit", pages: [page("edit", "Isi halaman")] },
+    { label: "Tamu", pages: [page("responses", "Tamu & konfirmasi"), ...(event.invitation_mode === "personal" ? [page("invitations", "Tautan pribadi")] : [])] },
+    { label: "Operasional", pages: [page("beo", "BEO"), page("gallery", "Foto"), page("feedback", "Survei")] },
+  ]} />;
   return <EventPagesMenu current={current} publicHref={publicHref} groups={[
     { label: "Edit", pages: [page("edit", "Edit acara")] },
     { label: "Tamu", pages: [page("invitations", "Daftar tamu"), page("responses", "RSVP"), page("checkin", "Check-in")] },

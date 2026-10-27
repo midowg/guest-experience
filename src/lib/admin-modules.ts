@@ -93,7 +93,8 @@ export const moduleBlocks: Partial<Record<AdminModule, string>> = {
  *
  * | Kind                         | Modules                                                              | Editor blocks outside any module |
  * |------------------------------|----------------------------------------------------------------------|----------------------------------|
- * | kunjungan / acara / program  | all                                                                  | identity, appearance, schedule, hero, topics, day, after, sections, publication |
+ * | acara / program              | all                                                                  | identity, appearance, schedule, hero, topics, day, after, sections, publication |
+ * | kunjungan (Kunjungan Kantor) | all                                                                  | identity, appearance, hero, topics, day, after, photos, publication |
  * | kartu (Studio Poster)        | poster                                                               | appearance, publication          |
  * | eguide (E-Guide)             | experience, agenda, location, route, gallery, prepare, contact, bilingual | identity, appearance, schedule, guide, publication |
  * | csr (Friday Sharing)         | contact                                                              | identity, appearance, hero, donation-*, publication |
@@ -111,7 +112,8 @@ export const kindModules: Record<EventKind, readonly AdminModule[]> = {
 };
 const invitationBlocks = ["identity", "appearance", "schedule", "hero", "topics", "day", "after", "sections", "publication"] as const;
 export const kindBlocks: Record<EventKind, readonly string[]> = {
-  kunjungan: invitationBlocks, acara: invitationBlocks, program: invitationBlocks,
+  // Kunjungan Kantor's menu (editor-model visitMenu) keeps schedule in Info kunjungan and has no section-order block.
+  kunjungan: ["identity", "appearance", "hero", "topics", "day", "after", "photos", "publication"], acara: invitationBlocks, program: invitationBlocks,
   kartu: ["appearance", "publication"],
   eguide: ["identity", "appearance", "schedule", "guide", "publication"],
   csr: ["identity", "appearance", "hero", "donation-items", "donation-pay", "donation-recipients", "donation-show", "donation-news", "publication"],
