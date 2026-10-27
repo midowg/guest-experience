@@ -68,6 +68,8 @@ export function databaseError(error: { message: string; code?: string }): never 
     BRIEF_CHANGED: [409, "Brief tamu baru saja diubah orang lain. Muat ulang halaman untuk melihat isinya."],
     TICKET_UNKNOWN: [404, "Tiket tidak dikenal untuk acara ini. Pastikan QR berasal dari undangan acara ini."],
     TICKET_NOT_ATTENDING: [409, "Tamu ini tidak terdaftar hadir, jadi tidak punya tiket."],
+    DONATION_CLOSED: [409, "Donasi untuk kegiatan ini sedang tidak dibuka."],
+    INVALID_DONATION: [422, "Isian donasi belum sesuai. Periksa bantuan, jumlah, dan bukti transfer, lalu kirim lagi."],
   };
   if (messages[error.message]) { const [status, message] = messages[error.message]; throw new ServiceError(status, message); }
   if (error.code === "23505") throw new ServiceError(409, "Slug atau ID sudah digunakan. Gunakan nilai berbeda.");
