@@ -11,7 +11,7 @@ import { PosterPage as PosterView } from "@/components/poster/PosterPage";
 import { TicketView, type TicketData } from "@/components/guest/TicketView";
 import { Notice } from "@/components/ui";
 import { currentPhase } from "@/lib/event-phase";
-import { formatDate } from "@/lib/format";
+import { shareWording } from "@/lib/share-wording";
 import { galleryOpen } from "@/lib/gallery";
 import { buildCalendar, calendarFileName, reminderChoices, type CalendarScope } from "@/lib/ics";
 import { absolute, eventPath, invitationPath, ticketPath } from "@/lib/routes";
@@ -30,12 +30,16 @@ import { ensureTicket } from "@/lib/server/tickets";
 
 const hidden = { index: false, follow: false } as const;
 
-/** Title, description and WhatsApp preview text. Never the guest's name, so a forwarded link shows nothing personal. */
+/**
+ * Title, description and WhatsApp preview text, worded for the kind of event (an invitation, a
+ * card, an E-Guide, a Friday Sharing page). Never the guest's name, so a forwarded link shows
+ * nothing personal.
+ */
 export function eventMetadata(event: EventRecord | null, personal = false): Metadata {
-  const base: Metadata = { title: personal ? "Undangan personal" : "Undangan", robots: hidden, ...(personal ? { referrer: "no-referrer" as const } : {}) };
+  const base: Metadata = { title: personal ? "Undangan personal" : "Werkudara", robots: hidden, ...(personal ? { referrer: "no-referrer" as const } : {}) };
   if (!event) return base;
-  const description = `${formatDate(event.starts_at, event.timezone)}${event.venue_name ? ` · ${event.venue_name}` : ""}`;
-  return { ...base, title: event.title, description: `${event.title} — ${description}.`, openGraph: { title: event.title, description, type: "website", siteName: "Werkudara" } };
+  const { description } = shareWording(event);
+  return { ...base, title: event.title, description, openGraph: { title: event.title, description, type: "website", siteName: "Werkudara" } };
 }
 
 export function StorageMissing() {
