@@ -80,7 +80,7 @@ export const defaultDonationItems = (): DonationItem[] => [
   item("mandi", "Perlengkapan mandi", "goods", "paket"),
 ];
 /** Examples that add to the free-text gift, so donors see they may write several things at once. */
-export const otherGiftSuggestions = ["Beras 5 kg", "Minyak goreng 2 liter", "Gula 1 kg", "Buku tulis 1 pak", "Pakaian anak", "Selimut", "Sabun dan sampo", "Tas sekolah"];
+export const otherGiftSuggestions = ["Selimut", "Pakaian anak", "Sepatu", "Tas sekolah", "Buku cerita", "Mainan edukasi", "Handuk", "Sajadah dan mukena"];
 /** Adds an example to what was typed, separated by a comma, unless it is already there. */
 export function addGiftText(current: string, addition: string): string {
   const text = current.trim().replace(/[,\s]+$/, "");

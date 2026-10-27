@@ -70,15 +70,15 @@ it("takes several gifts at once, shows the bank account only for money, and reas
   fireEvent.click(within(form).getByRole("button", { name: "Dana" }));
   expect(within(form).getByText("123 456 7890")).toBeTruthy();
   fireEvent.click(within(form).getByRole("button", { name: "100 rb" }));
-  fireEvent.click(within(form).getByRole("button", { name: /Beras 5 kg/ }));
   fireEvent.click(within(form).getByRole("button", { name: /Selimut/ }));
-  expect((within(form).getByRole("textbox", { name: /Bantuan lain/ }) as HTMLTextAreaElement).value).toBe("Beras 5 kg, Selimut");
+  fireEvent.click(within(form).getByRole("button", { name: /Tas sekolah/ }));
+  expect((within(form).getByRole("textbox", { name: /Bantuan lain/ }) as HTMLTextAreaElement).value).toBe("Selimut, Tas sekolah");
   expect(within(form).getByText(/tetap dikonfirmasi panitia/)).toBeTruthy();
   fireEvent.change(within(form).getByRole("textbox", { name: "Nama" }), { target: { value: "Sari Dewi" } });
   fireEvent.click(within(form).getByRole("radio", { name: /Hamba Allah/ }));
   fireEvent.click(within(form).getByRole("button", { name: /Kirim donasi/ }));
   await waitFor(() => expect(screen.getByRole("dialog", { name: "Terima kasih" })).toBeTruthy());
-  for (const gift of ["Dana Rp 100.000", "Sembako 1 paket", "Buku tulis 2 pcs", "Beras 5 kg, Selimut"]) expect(screen.getByText(gift)).toBeTruthy();
+  for (const gift of ["Dana Rp 100.000", "Sembako 1 paket", "Buku tulis 2 pcs", "Selimut, Tas sekolah"]) expect(screen.getByText(gift)).toBeTruthy();
 });
 
 it("sends one donation per gift with the proof on the money, and remembers them on this phone", async () => {
