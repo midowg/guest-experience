@@ -18,7 +18,7 @@ import { ticketScanUrl } from "@/lib/tickets";
 import type { EventRecord } from "@/lib/types";
 import { afterPhotos, listPublicPhotos, originalDownload } from "@/lib/server/gallery";
 import type { PersonalInvitation } from "@/lib/server/invitations";
-import { rsvpNeedsReady } from "@/lib/server/responses";
+import { openPartyMax, rsvpNeedsReady } from "@/lib/server/responses";
 import { ensureTicket } from "@/lib/server/tickets";
 
 /*
@@ -47,7 +47,7 @@ export function StorageMissing() {
 export async function EventPage({ event }: { event: EventRecord }) {
   if (event.event_kind === "kartu") return <PosterPage event={event} />;
   if (event.event_kind === "eguide") return <GuidePage event={event} />;
-  return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
+  return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} openPartyMax={await openPartyMax()} photoCount={await afterPhotos(event)} />;
 }
 
 export async function InvitationPage({ event, invitation }: { event: EventRecord; invitation: PersonalInvitation }) {

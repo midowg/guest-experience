@@ -23,6 +23,22 @@ export async function rsvpNeedsReady(): Promise<boolean> {
   needsCheck = { ready, at: Date.now() };
   return ready;
 }
+let partyCheck: { max: number; at: number } | null = null;
+/**
+ * How many people one general-link confirmation may cover: 10 once 202610270002 is applied,
+ * otherwise 1 (the older submit_rsvp refuses a party). Cached like rsvpNeedsReady.
+ */
+export async function openPartyMax(): Promise<number> {
+  if (partyCheck && (partyCheck.max > 1 || Date.now() - partyCheck.at < 60_000)) return partyCheck.max;
+  let max = 1;
+  try {
+    const { data, error } = await createPrivilegedClient().rpc("open_rsvp_party_max");
+    if (!error && typeof data === "number" && data > 1) max = Math.min(10, data);
+  } catch { max = 1; }
+  partyCheck = { max, at: Date.now() };
+  return max;
+}
+
 export async function rsvpFields() { return (await rsvpNeedsReady()) ? `${baseRsvpFields},${needsFields}` : baseRsvpFields; }
 
 /** Binds an idempotency key to one exact payload, so a replayed key with different content is rejected. */

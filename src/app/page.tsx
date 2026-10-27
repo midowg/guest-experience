@@ -5,7 +5,7 @@ import { getFeaturedEvent } from '@/lib/server/events';
 import { isSupabaseConfigured } from '@/lib/server/config';
 import { formatDate } from '@/lib/format';
 import { currentPhase } from '@/lib/event-phase';
-import { rsvpNeedsReady } from '@/lib/server/responses';
+import { openPartyMax, rsvpNeedsReady } from '@/lib/server/responses';
 import { afterPhotos } from '@/lib/server/gallery';
 
 export const dynamic = 'force-dynamic';
@@ -30,6 +30,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Home() {
   const event = await featured();
-  if (event) return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
+  if (event) return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} openPartyMax={await openPartyMax()} photoCount={await afterPhotos(event)} />;
   return <EmptyHome />;
 }

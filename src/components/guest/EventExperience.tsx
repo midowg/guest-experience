@@ -105,6 +105,8 @@ export type ExperienceProps = {
   event: EventRecord; preview?: boolean; invitation?: { name: string; token: string; short_token?: string | null; rsvp: RsvpRecord | null; party_size_max?: number }; phase?: EventPhase;
   /** False until migration 202610200004: the RSVP then asks only about allergies, as before. */
   rsvpNeeds?: boolean;
+  /** People one general-link confirmation may cover; 1 until migration 202610270002. */
+  openPartyMax?: number;
   /** Photos marked Tayang in the event gallery; after the event the page links to them. */
   photoCount?: number;
   /** False inside the editor's phone frame, where the "this is a preview" banner would only take space. */
