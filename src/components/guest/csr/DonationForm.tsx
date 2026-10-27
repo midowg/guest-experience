@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Check, Copy, Download, FileUp, HandHeart, Info, Minus, Plus, X } from "lucide-react";
+import { Check, ChevronDown, Copy, Download, FileUp, HandHeart, Info, Minus, Package, Plus, Wallet, X } from "lucide-react";
 import { addGiftText, describeDonation, donorDisplays, formatRupiah, otherGiftSuggestions, parseRupiah, type DonationCategory, type DonationItem, type DonorDisplay } from "@/lib/donations";
 import { guestApi } from "@/lib/routes";
 import type { EventRecord } from "@/lib/types";
@@ -26,11 +26,14 @@ function remember(eventId: string, donation: RememberedDonation) {
 }
 
 const quickAmounts = [50_000, 100_000, 250_000, 500_000];
+/** Goods shown before "Lihat lainnya": the first few the committee listed. */
+const FIRST_GOODS = 4;
 type Gift = { item_key: string; item_label: string; category: DonationCategory; amount: number; unit: string };
 
 /**
- * The donation form, full screen. A donor may give several things at once: tap one or more chips
- * (each with its own amount) and/or write other gifts, several separated by commas. Then how to
+ * The donation form, full screen. It starts with one simple choice, Dana or Barang (or both). Barang
+ * shows the first few goods, and "Lihat lainnya" the rest plus a free text for other gifts, several
+ * separated by commas. Then how to
  * hand it over (bank account and QRIS for money, the committee's note for goods), the donor's name
  * and how it appears, an optional WhatsApp number for the handover news, and a message or prayer.
  * Each gift is sent as its own donation, so the committee can receive them one by one.
@@ -39,6 +42,8 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
   const settings = event.donation;
   const [picked, setPicked] = useState<Record<string, number>>({});
   const [other, setOther] = useState("");
+  const [giveGoods, setGiveGoods] = useState(false);
+  const [moreGoods, setMoreGoods] = useState(false);
   const [name, setName] = useState("");
   const [display, setDisplay] = useState<DonorDisplay>("name");
   const [phone, setPhone] = useState("");
@@ -54,6 +59,9 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
   const heading = useRef<HTMLHeadingElement>(null);
   const honeypot = useRef<HTMLInputElement>(null);
   const chosen = settings.items.filter(item => item.key in picked);
+  const fundItems = settings.items.filter(item => item.category === "fund");
+  const goodsItems = settings.items.filter(item => item.category !== "fund");
+  const giveFund = fundItems.some(item => item.key in picked);
   const fund = chosen.filter(item => item.category === "fund");
   const goods = chosen.filter(item => item.category === "goods");
   const touched = () => { setErrors({}); setMessage(""); };
@@ -75,6 +83,25 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
       return next;
     });
   }
+  /** Dana: picks the (first) money item, or drops every money item. */
+  function toggleFund() {
+    touched();
+    setPicked(current => {
+      const next = { ...current };
+      if (fundItems.some(item => item.key in next)) for (const item of fundItems) delete next[item.key];
+      else if (fundItems[0]) next[fundItems[0].key] = 0;
+      return next;
+    });
+  }
+  /** Barang: opens the goods; closing it drops the goods picked and the free text. */
+  function toggleGoods() {
+    touched();
+    if (giveGoods) {
+      setPicked(current => Object.fromEntries(Object.entries(current).filter(([key]) => fundItems.some(item => item.key === key))));
+      setOther("");
+    }
+    setGiveGoods(!giveGoods);
+  }
   const setAmount = (key: string, amount: number) => { touched(); setPicked(current => ({ ...current, [key]: amount })); };
   async function copy(text: string, what: string) {
     try { await navigator.clipboard.writeText(text.replace(/\s/g, "")); setCopied(what); } catch { setCopied(""); }
@@ -89,7 +116,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
     ];
     const donor = { donor_name: name.trim(), display, donor_phone: phone.trim(), message: note.trim(), website: honeypot.current?.value ?? "" };
     const next: Record<string, string> = {};
-    if (!gifts.length) next.gift = "Pilih atau tulis bantuan yang ingin diberikan.";
+    if (!gifts.length) next.gift = giveGoods ? "Pilih barang yang ingin diberikan, atau tulis sendiri di Lihat lainnya." : "Pilih bantuan yang ingin diberikan: dana atau barang.";
     const bodies = gifts.map(gift => {
       const key = gift.item_key || "lain";
       identities.current[key] = submissionIdentity({ ...gift, ...donor, proof: proof?.name ?? "" }, identities.current[key] ?? null, () => crypto.randomUUID());
@@ -147,17 +174,43 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
     : <form className={s.form} onSubmit={submit} noValidate>
       <fieldset className={s.group}>
         <legend>Bantuan apa?</legend>
-        <p className={s.hint}>Pilih satu atau beberapa.</p>
-        <div className={s.chips} role="group" aria-label="Pilihan bantuan">
-          {settings.items.map(item => <button key={item.key} type="button" className={s.chip} aria-pressed={item.key in picked} onClick={() => toggle(item)}>{item.key in picked && <Check size={16} aria-hidden="true" />} {item.label}</button>)}
+        <p className={s.hint}>Boleh pilih keduanya.</p>
+        <div className={s.kinds}>
+          {fundItems.length > 0 && <button type="button" className={s.kind} aria-pressed={giveFund} aria-label="Dana" aria-describedby="jenis-dana" onClick={toggleFund}>
+            <span className={s.kindIcon}><Wallet size={22} aria-hidden="true" /></span>
+            <span className={s.kindLabel}>Dana</span>
+            <span className={s.kindHint} id="jenis-dana">Transfer{settings.qris.url ? " atau QRIS" : " rekening"}</span>
+            {giveFund && <Check size={18} aria-hidden="true" className={s.kindCheck} />}
+          </button>}
+          <button type="button" className={s.kind} aria-pressed={giveGoods} aria-label="Barang" aria-describedby="jenis-barang" onClick={toggleGoods}>
+            <span className={s.kindIcon}><Package size={22} aria-hidden="true" /></span>
+            <span className={s.kindLabel}>Barang</span>
+            <span className={s.kindHint} id="jenis-barang">{goodsItems.slice(0, 2).map(item => item.label).join(", ") || "Tulis barangnya"}{goodsItems.length > 2 ? ", dll." : ""}</span>
+            {giveGoods && <Check size={18} aria-hidden="true" className={s.kindCheck} />}
+          </button>
         </div>
-        <label className={s.field}><span>Bantuan lain (opsional)</span>
-          <textarea className="textarea" rows={2} value={other} maxLength={120} placeholder="Misalnya: beras 5 kg, minyak goreng 2 liter, selimut" aria-invalid={!!errors["item_label:lain"] || undefined} onChange={change => { touched(); setOther(change.target.value); }} />
-          <small>Bisa beberapa barang sekaligus, pisahkan dengan koma. Ketuk contoh untuk menambahkan:</small>
-        </label>
-        <div className={s.chips} role="group" aria-label="Contoh bantuan lain">
-          {otherGiftSuggestions.map(text => <button key={text} type="button" className={s.chipSmall} onClick={() => { touched(); setOther(current => addGiftText(current, text).slice(0, 120)); }}><Plus size={14} aria-hidden="true" /> {text}</button>)}
-        </div>
+
+        {fundItems.length > 1 && giveFund && <div className={s.chips} role="group" aria-label="Pilihan dana">
+          {fundItems.map(item => <button key={item.key} type="button" className={s.chip} aria-pressed={item.key in picked} onClick={() => toggle(item)}>{item.key in picked && <Check size={16} aria-hidden="true" />} {item.label}</button>)}
+        </div>}
+
+        {giveGoods && <div className={s.goodsPick}>
+          {goodsItems.length > 0 && <div className={s.chips} role="group" aria-label="Pilihan barang">
+            {(moreGoods ? goodsItems : goodsItems.slice(0, FIRST_GOODS)).map(item => <button key={item.key} type="button" className={s.chip} aria-pressed={item.key in picked} onClick={() => toggle(item)}>{item.key in picked && <Check size={16} aria-hidden="true" />} {item.label}</button>)}
+          </div>}
+          {!moreGoods && <button type="button" className={s.seeMore} onClick={() => setMoreGoods(true)}>
+            Lihat lainnya{goodsItems.length > FIRST_GOODS ? ` (${goodsItems.length - FIRST_GOODS})` : ""} <ChevronDown size={16} aria-hidden="true" />
+          </button>}
+          {moreGoods && <>
+            <label className={s.field}><span>Barang lain (opsional)</span>
+              <textarea className="textarea" rows={2} value={other} maxLength={120} placeholder="Misalnya: selimut, sepatu, tas sekolah" aria-invalid={!!errors["item_label:lain"] || undefined} onChange={change => { touched(); setOther(change.target.value); }} />
+              <small>Bisa beberapa sekaligus, pisahkan dengan koma. Ketuk contoh untuk menambahkan:</small>
+            </label>
+            <div className={s.chips} role="group" aria-label="Contoh barang lain">
+              {otherGiftSuggestions.map(text => <button key={text} type="button" className={s.chipSmall} onClick={() => { touched(); setOther(current => addGiftText(current, text).slice(0, 120)); }}><Plus size={14} aria-hidden="true" /> {text}</button>)}
+            </div>
+          </>}
+        </div>}
         {(errors.gift || errors["item_label:lain"]) && <p className="field-error">{errors.gift || errors["item_label:lain"]}</p>}
       </fieldset>
 

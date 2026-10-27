@@ -59,10 +59,15 @@ it("hides the donor list and money when the admin switches them off", () => {
   expect(screen.queryByText("Rp 100.000")).toBeNull();
 });
 
-it("takes several gifts at once, shows the bank account only for money, and reassures about the name", async () => {
+it("starts with Dana or Barang, shows a few goods with Lihat lainnya, the bank account only for money, and reassures about the name", async () => {
   show();
   const form = openForm();
+  expect(within(form).queryByRole("button", { name: "Sembako" })).toBeNull();
+  fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
   fireEvent.click(within(form).getByRole("button", { name: "Sembako" }));
+  expect(within(form).queryByRole("button", { name: "Buku tulis" })).toBeNull();
+  expect(within(form).queryByRole("textbox", { name: /Barang lain/ })).toBeNull();
+  fireEvent.click(within(form).getByRole("button", { name: /Lihat lainnya \(7\)/ }));
   fireEvent.click(within(form).getByRole("button", { name: "Buku tulis" }));
   expect(within(form).getByText("Antar ke kantor Werkudara.")).toBeTruthy();
   expect(within(form).queryByText("123 456 7890")).toBeNull();
@@ -72,7 +77,7 @@ it("takes several gifts at once, shows the bank account only for money, and reas
   fireEvent.click(within(form).getByRole("button", { name: "100 rb" }));
   fireEvent.click(within(form).getByRole("button", { name: /Selimut/ }));
   fireEvent.click(within(form).getByRole("button", { name: /Tas sekolah/ }));
-  expect((within(form).getByRole("textbox", { name: /Bantuan lain/ }) as HTMLTextAreaElement).value).toBe("Selimut, Tas sekolah");
+  expect((within(form).getByRole("textbox", { name: /Barang lain/ }) as HTMLTextAreaElement).value).toBe("Selimut, Tas sekolah");
   expect(within(form).getByText(/tetap dikonfirmasi panitia/)).toBeTruthy();
   fireEvent.change(within(form).getByRole("textbox", { name: "Nama" }), { target: { value: "Sari Dewi" } });
   fireEvent.click(within(form).getByRole("radio", { name: /Hamba Allah/ }));
@@ -88,6 +93,7 @@ it("sends one donation per gift with the proof on the money, and remembers them 
   const form = openForm();
   fireEvent.click(within(form).getByRole("button", { name: "Dana" }));
   fireEvent.change(within(form).getByRole("textbox", { name: "Nominal dana" }), { target: { value: "Rp 75.000" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
   fireEvent.click(within(form).getByRole("button", { name: "Sembako" }));
   fireEvent.change(within(form).getByLabelText(/Unggah bukti transfer/), { target: { files: [new File(["x"], "bukti.jpg", { type: "image/jpeg" })] } });
   fireEvent.change(within(form).getByRole("textbox", { name: "Nama" }), { target: { value: "Rina" } });
@@ -109,7 +115,11 @@ it("asks for a gift, a proof when required, and says when donations are closed",
   const form = openForm();
   fireEvent.change(within(form).getByRole("textbox", { name: "Nama" }), { target: { value: "Sari" } });
   fireEvent.click(within(form).getByRole("button", { name: /Kirim donasi/ }));
-  expect(within(form).getByText("Pilih atau tulis bantuan yang ingin diberikan.")).toBeTruthy();
+  expect(within(form).getByText("Pilih bantuan yang ingin diberikan: dana atau barang.")).toBeTruthy();
+  fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
+  fireEvent.click(within(form).getByRole("button", { name: /Kirim donasi/ }));
+  expect(within(form).getByText(/Pilih barang yang ingin diberikan/)).toBeTruthy();
+  fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
   fireEvent.click(within(form).getByRole("button", { name: "Dana" }));
   fireEvent.click(within(form).getByRole("button", { name: "50 rb" }));
   fireEvent.click(within(form).getByRole("button", { name: /Kirim donasi/ }));
