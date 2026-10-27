@@ -6,15 +6,29 @@
 .sheet :is(input.input, textarea.textarea, select.select) { border: 1.5px solid var(--color-border); border-radius: 14px; }
 .sheet :is(input.input, textarea.textarea, select.select):focus { border-color: var(--color-primary); outline: 3px solid color-mix(in srgb, var(--color-primary) 22%, transparent); outline-offset: 0; }
 
-/* Intro: a friendly headline above the photo, never text on the photo. */
-.intro { display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-6) var(--space-5) var(--space-4); text-align: center; }
-.eyebrow { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 5px 12px; border-radius: 999px; background: color-mix(in srgb, var(--color-primary) 9%, var(--color-background)); color: var(--color-primary); font-size: .8125rem; font-weight: 800; }
-.title { margin: 0; color: var(--color-heading); font-family: var(--font-heading); font-size: clamp(1.625rem, 7vw, 2.125rem); font-weight: var(--heading-weight, 800); line-height: 1.18; text-wrap: balance; }
+/* Cheerful charity page: pastel confetti, a polaroid photo with a sticker, soft colourful pills. */
+.csr { --pastel-mint: #dcf3e8; --pastel-peach: #ffe3cc; --pastel-sky: #dcebfb; --pastel-lilac: #ebe4fb; --pastel-sun: #fff0bf; --ink: #2b2420; }
+
+/* Intro: a friendly headline above the photo, with confetti behind it and a wavy line under it. */
+.intro { position: relative; display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-6) var(--space-5) var(--space-5); text-align: center; isolation: isolate; }
+.intro::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(circle at 8% 22%, #f6a04d 0 5px, transparent 6px),
+    radial-gradient(circle at 92% 16%, #7cc6a8 0 6px, transparent 7px),
+    radial-gradient(circle at 16% 78%, #8db8ee 0 4px, transparent 5px),
+    radial-gradient(circle at 86% 70%, #f28da0 0 5px, transparent 6px),
+    radial-gradient(circle at 50% 6%, #f7c948 0 4px, transparent 5px),
+    radial-gradient(circle at 70% 88%, #b9a3ee 0 3px, transparent 4px),
+    radial-gradient(circle at 30% 10%, #7cc6a8 0 3px, transparent 4px); }
+.eyebrow { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 6px 14px; border-radius: 999px; background: var(--pastel-mint); color: var(--color-heading); font-size: .8125rem; font-weight: 800; }
+.title { margin: 0; color: var(--color-heading); font-family: var(--font-heading); font-size: clamp(1.75rem, 7.5vw, 2.25rem); font-weight: 900; line-height: 1.15; text-wrap: balance; }
+.squiggle { display: block; width: 96px; height: 10px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='10' viewBox='0 0 24 10'%3E%3Cpath d='M0 5 Q6 0 12 5 T24 5' fill='none' stroke='%23f6a04d' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x center / 24px 10px; }
 .subtitle { margin: 0; max-width: 30rem; color: var(--color-caption); font-size: var(--text-base); line-height: 1.5; text-wrap: pretty; }
 
-/* The photo in an arch: soft at the top, settled at the foot where the collected card meets it. */
-.photo { margin: 0 var(--space-4); overflow: hidden; aspect-ratio: 4 / 3; border-radius: 200px 200px 28px 28px; background: var(--color-soft); }
-.photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* The photo as a polaroid, a little tilted, with a sticker on its corner. */
+.photo { position: relative; margin: 0 var(--space-5); padding: 10px 10px 14px; border-radius: 22px; background: #fff; transform: rotate(-1.5deg); box-shadow: 0 14px 30px -18px rgba(var(--scrim-rgb), .55), 0 1px 0 var(--color-border); }
+.photo img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px; }
+.sticker { position: absolute; top: -12px; right: -6px; display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: 999px; background: var(--color-hero-accent, #f6a04d); color: var(--ink); font-size: .8125rem; font-weight: 900; transform: rotate(6deg); box-shadow: 0 6px 14px -8px rgba(var(--scrim-rgb), .6); }
 
 .body { display: grid; gap: var(--space-5); padding: 0 var(--space-4) var(--space-5); }
 .lead { margin: 0; padding: 0 var(--space-1); font-size: 1.0625rem; line-height: 1.65; }
@@ -26,13 +40,14 @@
 .sectionHead h2 { margin: 0; color: var(--color-heading); font-family: var(--font-heading); font-size: 1.25rem; }
 
 /* Collected: centred and warm. The sum, its progress, the faces of who gave, the goods as soft pills. */
-.collected { position: relative; z-index: 1; display: grid; justify-items: center; gap: var(--space-2); margin: var(--space-4) var(--space-2) 0; padding: var(--space-5) var(--space-4) var(--space-4); border-radius: 28px; background: var(--color-background); text-align: center; box-shadow: 0 1px 0 var(--color-border), 0 18px 40px -26px rgba(var(--scrim-rgb), .55); }
-.collected[data-lifted] { margin-top: -2.25rem; }
-.collectedLabel { margin: 0; color: var(--color-caption); font-family: inherit; font-size: .8125rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.collected { position: relative; z-index: 1; display: grid; justify-items: center; gap: var(--space-2); margin: var(--space-5) var(--space-1) 0; padding: var(--space-5) var(--space-4) var(--space-4); border-radius: 28px; background: #fff; text-align: center; box-shadow: 0 1px 0 var(--color-border), 0 18px 40px -26px rgba(var(--scrim-rgb), .55); }
+.collected[data-lifted] { margin-top: var(--space-5); }
+.collectedLabel { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 5px 14px; border-radius: 999px; background: var(--pastel-sun); color: var(--ink); font-family: inherit; font-size: .8125rem; font-weight: 900; }
+.collectedLabel svg { color: #d9822b; }
 .fundValue { color: var(--color-heading); font-size: clamp(2rem, 9vw, 2.375rem); font-weight: 900; line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .progress { display: grid; gap: 6px; width: 100%; margin-top: var(--space-1); }
-.bar0 { display: block; height: 10px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--color-hero-accent, var(--color-primary)) 22%, var(--color-background)); }
-.bar0 > span { display: block; height: 100%; border-radius: inherit; background: var(--color-hero-accent, var(--color-primary)); transition: width .6s ease; }
+.bar0 { display: block; height: 14px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--color-hero-accent, var(--color-primary)) 22%, var(--color-background)); }
+.bar0 > span { display: block; height: 100%; border-radius: inherit; background: repeating-linear-gradient(-45deg, var(--color-hero-accent, var(--color-primary)) 0 8px, color-mix(in srgb, var(--color-hero-accent, var(--color-primary)) 78%, #fff) 8px 16px); transition: width .6s ease; }
 .progressText { color: var(--color-caption); font-size: .8125rem; font-weight: 700; }
 .progressText b { color: var(--color-heading); font-weight: 900; }
 
@@ -41,10 +56,17 @@
 .faces { display: inline-flex; }
 .face { display: inline-grid; place-items: center; width: 32px; height: 32px; margin-left: -8px; border: 2px solid var(--color-background); border-radius: 50%; background: color-mix(in srgb, var(--color-hero-accent, var(--color-soft)) 35%, var(--color-background)); color: var(--color-heading); font-size: .6875rem; font-weight: 900; }
 .face:first-child { margin-left: 0; }
+.face:nth-child(4n + 1) { background: var(--pastel-peach); }
+.face:nth-child(4n + 2) { background: var(--pastel-mint); }
+.face:nth-child(4n + 3) { background: var(--pastel-sky); }
+.face:nth-child(4n + 4) { background: var(--pastel-lilac); }
 .face[data-more] { background: var(--color-primary); color: var(--color-on-primary); }
 
 .goods { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: var(--space-2) 0 0; padding: 0; list-style: none; }
-.goods li { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; background: color-mix(in srgb, var(--color-soft) 75%, var(--color-background)); color: var(--color-text); font-size: .8125rem; }
+.goods li { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; background: var(--pastel-mint); color: var(--ink); font-size: .8125rem; }
+.goods li:nth-child(4n + 2) { background: var(--pastel-peach); }
+.goods li:nth-child(4n + 3) { background: var(--pastel-sky); }
+.goods li:nth-child(4n + 4) { background: var(--pastel-lilac); }
 .goods li svg { color: var(--color-primary); }
 .goods strong { color: var(--color-heading); font-weight: 900; }
 
@@ -52,7 +74,7 @@
 .recipientsButton { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3) var(--space-4); border: 0; border-radius: 22px; background: var(--color-background); color: var(--color-text); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 1px 0 var(--color-border), 0 10px 30px -22px rgba(var(--scrim-rgb), .45); transition: transform .15s ease, box-shadow .15s ease; }
 .recipientsButton:hover { transform: translateY(-1px); box-shadow: 0 1px 0 var(--color-border), 0 14px 32px -20px rgba(var(--scrim-rgb), .55); }
 .recipientsButton:focus-visible { outline: 3px solid var(--color-focus, var(--color-primary)); outline-offset: 3px; }
-.recipientsIcon { display: inline-grid; flex-shrink: 0; place-items: center; width: 48px; height: 48px; border-radius: 16px; background: color-mix(in srgb, var(--color-hero-accent, var(--color-soft)) 32%, var(--color-background)); color: var(--color-heading); }
+.recipientsIcon { display: inline-grid; flex-shrink: 0; place-items: center; width: 48px; height: 48px; border-radius: 16px; background: var(--pastel-sky); color: var(--color-heading); }
 .recipientsText { display: grid; flex: 1; gap: 2px; min-width: 0; }
 .recipientsTitle { color: var(--color-heading); font-weight: 900; }
 .recipientsNames { display: -webkit-box; overflow: hidden; color: var(--color-caption); font-size: var(--text-sm); line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -62,6 +84,9 @@
 .donors { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
 .donor { display: flex; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border); }
 .donor:last-child { border-bottom: 0; }
+.donor:nth-child(4n + 2) .avatar { background: var(--pastel-mint); }
+.donor:nth-child(4n + 3) .avatar { background: var(--pastel-sky); }
+.donor:nth-child(4n + 4) .avatar { background: var(--pastel-lilac); }
 .avatar { display: inline-grid; flex-shrink: 0; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: color-mix(in srgb, var(--color-hero-accent, var(--color-soft)) 30%, var(--color-background)); color: var(--color-heading); font-size: .875rem; font-weight: 900; }
 .donorText { display: grid; gap: 2px; min-width: 0; }
 .donorText p { margin: 0; }
@@ -88,6 +113,9 @@
 /* The donate button, always at hand at the bottom. */
 .bar { position: fixed; right: 0; bottom: 0; left: 0; z-index: 30; display: flex; justify-content: center; padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--color-background) 70%, transparent); }
 .give { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); width: 100%; max-width: 32rem; min-height: 56px; padding: 0 var(--space-5); border: 0; border-radius: 999px; background: linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 75%, #000)); color: var(--color-on-primary); font: inherit; font-size: 1.0625rem; font-weight: 900; box-shadow: 0 10px 26px -8px rgba(var(--scrim-rgb), .55); cursor: pointer; }
+.bar .give { background: var(--color-hero-accent, #f6a04d); color: var(--ink); box-shadow: 0 10px 24px -10px rgba(217, 130, 43, .8); }
+.bar .give svg { color: var(--ink); }
+.bar .give:hover { background: color-mix(in srgb, var(--color-hero-accent, #f6a04d) 88%, #000); }
 .give:hover { background: var(--color-primary-hover, var(--color-primary)); }
 .give svg { color: var(--color-hero-accent, currentColor); }
 .give:disabled { opacity: .7; cursor: progress; }

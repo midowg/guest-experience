@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { ArrowLeft, ChevronRight, CircleCheck, Gift, HandHeart, HeartHandshake, Home, MapPin, MessageCircle, Package, Share2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, CircleCheck, Gift, HandHeart, HeartHandshake, Home, MapPin, MessageCircle, Package, PartyPopper, Share2, Sparkles } from "lucide-react";
 import { donorInitials, formatRupiah, listNames, type DonationTotals, type PublicDonor } from "@/lib/donations";
 import { themeStyle } from "@/lib/themes";
 import type { EventRecord } from "@/lib/types";
@@ -23,7 +23,7 @@ const relative = (iso: string) => {
 
 /**
  * The CSR page (event kind "csr"): not an invitation but a place to give. What has been collected,
- * who gave, and one button to donate, on one short page; the recipients and the full donor list
+ * who gave, and one button to donate, on one short and cheerful page; the recipients and the full donor list
  * open as pages of their own. Only what the committee has received is counted, and each
  * donor appears as they chose (their name, Hamba Allah, or not at all).
  */
@@ -63,15 +63,19 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
       <header className={s.intro}>
         <p className={s.eyebrow}><HandHeart size={16} aria-hidden="true" /> {event.organizer || "Kegiatan sosial"}</p>
         <h1 className={s.title}>{event.title}</h1>
+        <span className={s.squiggle} aria-hidden="true" />
         {event.subtitle && <p className={s.subtitle}>{event.subtitle}</p>}
       </header>
-      {/* eslint-disable-next-line @next/next/no-img-element -- the event's own cover photo, already sized */}
-      {hero && <div className={s.photo}><img src={hero} alt={event.hero.alt} /></div>}
+      {hero && <div className={s.photo}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- the event's own cover photo, already sized */}
+        <img src={hero} alt={event.hero.alt} />
+        <span className={s.sticker} aria-hidden="true"><Sparkles size={16} /> Yuk, berbagi!</span>
+      </div>}
 
       <div className={s.body}>
         {/* What has been collected: one warm card under the photo, money first, then who gave and the goods. */}
         <section className={s.collected} data-lifted={hero ? "" : undefined} aria-labelledby="terkumpul">
-          <h2 id="terkumpul" className={s.collectedLabel}>Terkumpul</h2>
+          <h2 id="terkumpul" className={s.collectedLabel}><PartyPopper size={16} aria-hidden="true" /> Terkumpul</h2>
           {totals.fund && <>
             <strong className={s.fundValue}>{formatRupiah(totals.fund.total)}</strong>
             {totals.fund.target && <Progress total={totals.fund.total} target={totals.fund.target} label={`dari target ${formatRupiah(totals.fund.target)}`} />}
