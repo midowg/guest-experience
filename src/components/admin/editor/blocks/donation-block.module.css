@@ -1,0 +1,15 @@
+/* Donation block: chips, payment, goods, what the page shows, handover news. */
+.part { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.part h3 { margin: 0; font-size: 1.0625rem; }
+.items { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.item { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--line); border-radius: 12px; background: #f9fafc; }
+.itemRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--space-2); align-items: end; }
+.itemTools { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.field { display: grid; gap: 4px; font-size: .875rem; font-weight: 700; }
+.field small { color: #5b6476; font-weight: 600; }
+.tools { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.switches { display: grid; gap: var(--space-2); }
+.switch { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-2) 0; cursor: pointer; }
+.switch input { flex-shrink: 0; width: 20px; height: 20px; margin-top: 2px; accent-color: var(--blue); }
+.switch span { display: grid; gap: 2px; }
+.switch small { color: #5b6476; }

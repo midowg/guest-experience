@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, ClipboardCheck, ExternalLink, Images, Mail, MessageSquare, Pencil, ScanLine, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { Check, ChevronDown, ClipboardCheck, ExternalLink, HandHeart, Images, Mail, MessageSquare, Pencil, ScanLine, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import type { AdminTab } from "@/lib/routes";
 import nav from "./navigation.module.css";
 
 export type EventPage = { tab: AdminTab; label: string; href: string };
 const icons: Partial<Record<AdminTab, LucideIcon>> = {
-  edit: Pencil, invitations: Mail, responses: ClipboardCheck, checkin: ScanLine, beo: UtensilsCrossed, gallery: Images, feedback: MessageSquare,
+  edit: Pencil, invitations: Mail, responses: ClipboardCheck, checkin: ScanLine, beo: UtensilsCrossed, gallery: Images, feedback: MessageSquare, donations: HandHeart,
 };
 
 /**

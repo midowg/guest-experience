@@ -6,15 +6,16 @@ import { createSeedEvent } from "@/lib/seed-event";
 import { presetPoster } from "@/lib/poster-presets";
 import { templateOf } from "@/lib/event-templates";
 import { templateGuide } from "@/lib/event-setup";
+import { startingDonation } from "@/lib/donations";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Layout check for the editor with its phone preview. Saving is refused without a session.
  * ?super=1 shows the super admin's controls (theme, poster design library); ?kartu=1 a card event;
- * ?eguide=1 an E-Guide started from the "e-guide" template.
+ * ?eguide=1 an E-Guide started from the "e-guide" template; ?csr=1 a CSR donation page.
  */
-export default async function DevEditorPage({ searchParams }: { searchParams: Promise<{ super?: string; kartu?: string; eguide?: string }> }) {
+export default async function DevEditorPage({ searchParams }: { searchParams: Promise<{ super?: string; kartu?: string; eguide?: string; csr?: string }> }) {
   const query = await searchParams;
   const superAdmin = query.super === "1";
   if (process.env.NODE_ENV === "production") notFound();
@@ -26,6 +27,9 @@ export default async function DevEditorPage({ searchParams }: { searchParams: Pr
     : query.eguide === "1" ? { ...seed, title: "Mengenal Lombok", event_kind: "eguide" as const, theme: { key: eguide.theme, corners: "square" as const }, rsvp_enabled: false, feedback_enabled: false,
       sections: seed.sections.map(section => ({ ...section, enabled: (eguide.modules as string[]).includes(section.key) })),
       guide: templateGuide(eguide.guide!, "Mengenal Lombok", () => `6e000000-0000-4000-8000-00000000000${++uuid}`) }
+    : query.csr === "1" ? { ...seed, title: "Contoh Berbagi Bersama Anak Panti 2026", event_kind: "csr" as const, theme: { key: "segar" as const, corners: "soft" as const }, rsvp_enabled: false, feedback_enabled: false,
+      introduction: "Bantu kami melengkapi kebutuhan sekolah dan sembako untuk anak-anak panti.", sections: seed.sections.map(section => ({ ...section, enabled: section.key === "about" || section.key === "contact" })),
+      donation: { ...startingDonation(), accounts: [{ id: "a1", bank: "BCA", number: "123 456 7890", holder: "Yayasan Contoh Peduli" }] } }
     : seed;
   const person = (n: number, name: string, role: string, photo = "") => ({ id: `5f000000-0000-4000-8000-00000000000${n}`, name, role, phone: `0812 0000 000${n}`, photo: { url: photo, alt: name, srcset: [] }, active: true, sort_order: n });
   const staff = [person(1, "Contoh Raka Pratama", "Hospitality", "https://picsum.photos/seed/wk-staf1/200/200"), person(2, "Contoh Sari Dewi", "Sales")];

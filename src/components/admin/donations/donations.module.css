@@ -1,0 +1,56 @@
+/* Admin donation desk (DonationBoard): summary, handover news, the list to receive or reject. */
+.board { display: grid; gap: var(--space-5); }
+.summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: var(--space-3); }
+.stat { display: grid; gap: 2px; padding: var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.stat[data-kind="fund"] { border-color: transparent; background: var(--blue); color: #fff; }
+.stat span { font-size: .8125rem; font-weight: 800; opacity: .8; }
+.stat strong { font-size: 1.375rem; font-weight: 900; }
+.stat small { font-size: .8125rem; opacity: .8; }
+
+.notify, .list { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.notify h2, .list h2 { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: 1.125rem; }
+.progressLine { margin: 0; }
+.notifyList { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.notifyList li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); }
+.notifyList li:last-child { border-bottom: 0; }
+.notifyList li[data-sent] { opacity: .65; }
+.notifyList p { margin: 0; }
+.wa { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--space-3); border-radius: 999px; background: #1d7a47; color: #fff; font-weight: 800; text-decoration: none; }
+.sent { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; color: #1d7a47; font-weight: 800; }
+
+.listHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.tools { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.filters button { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: 999px; background: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.filters button span { padding: 0 7px; border-radius: 999px; background: #eef1f6; font-size: .75rem; }
+.filters button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: #fff; }
+.filters button[aria-pressed="true"] span { background: rgba(255, 255, 255, .25); }
+.filters input { flex: 1 1 12rem; min-height: 38px; }
+.status { min-height: 1.2em; margin: 0; color: #5b6476; font-size: .875rem; }
+.empty { margin: 0; padding: var(--space-4); border: 1px dashed var(--line); border-radius: 12px; color: #5b6476; text-align: center; }
+
+.rows { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.row { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--line); border-left-width: 4px; border-radius: 12px; }
+.row[data-status="pending"] { border-left-color: #c27a00; }
+.row[data-status="received"] { border-left-color: #1d7a47; }
+.row[data-status="rejected"] { border-left-color: #9a273d; opacity: .75; }
+.who { display: grid; gap: 2px; flex: 1 1 16rem; min-width: 0; }
+.who p { margin: 0; }
+.name { font-weight: 800; }
+.badge { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #eef1f6; color: #4a5060; font-size: .75rem; font-weight: 700; }
+.gift { font-weight: 600; }
+.message { font-style: italic; color: #3b4150; }
+.meta { color: #5b6476; font-size: .8125rem; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.actions :global(.button) { min-height: 40px; padding: .35rem .85rem; font-size: .9375rem; }
+.amount input { width: 9rem; min-height: 40px; padding: .35rem .6rem; }
+.reject { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.reject input { min-width: 14rem; min-height: 40px; }
+
+.manual { display: grid; gap: var(--space-3); padding: var(--space-3); border-radius: 12px; background: #f6f8fb; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { min-height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font: inherit; font-size: .875rem; font-weight: 700; cursor: pointer; }
+.chips button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: #fff; }
+.grid { display: grid; gap: var(--space-2); }
+@media (min-width: 40rem) { .grid { grid-template-columns: 1fr 1fr; } }
+.field { display: grid; gap: 4px; font-size: .875rem; font-weight: 700; }

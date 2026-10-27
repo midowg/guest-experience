@@ -49,6 +49,8 @@ export function EventNavigation({ event, current }: { event: EventRecord; curren
   if (event.event_kind === "kartu") return <EventPagesMenu current={current} publicHref={publicHref} groups={[{ label: "Edit", pages: [page("edit", "Edit kartu")] }]} />;
   // An E-Guide is read, not attended: no guest list, RSVP, check-in, BEO, event photos or survey.
   if (event.event_kind === "eguide") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka E-Guide" groups={[{ label: "Edit", pages: [page("edit", "Edit E-Guide")] }]} />;
+  // A CSR page takes donations, not guests: its editor and the donation desk.
+  if (event.event_kind === "csr") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka halaman donasi" groups={[{ label: "Edit", pages: [page("edit", "Edit halaman")] }, { label: "Donasi", pages: [page("donations", "Donasi masuk")] }]} />;
   return <EventPagesMenu current={current} publicHref={publicHref} groups={[
     { label: "Edit", pages: [page("edit", "Edit acara")] },
     { label: "Tamu", pages: [page("invitations", "Daftar tamu"), page("responses", "RSVP"), page("checkin", "Check-in")] },

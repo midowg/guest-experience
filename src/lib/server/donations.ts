@@ -6,7 +6,7 @@ import type { EventRecord } from "@/lib/types";
 import { createPrivilegedClient } from "./supabase/admin";
 import { databaseError } from "./http";
 import { ServiceError } from "./config";
-import { payloadHash } from "./responses";
+import { csvCell, payloadHash } from "./responses";
 
 const MIGRATION = "202610270003_donations.sql";
 const BUCKET = "bukti-donasi";
@@ -111,4 +111,16 @@ export async function proofAddress(eventId: string, id: string): Promise<string>
   const signed = await client.storage.from(BUCKET).createSignedUrl(data.proof_key, 600);
   if (signed.error || !signed.data) throw new ServiceError(503, "Bukti transfer belum dapat dibuka. Coba lagi.");
   return signed.data.signedUrl;
+}
+
+const statusLabels = { pending: "Menunggu", received: "Diterima", rejected: "Ditolak" } as const;
+const displayLabels = { name: "Nama", hamba_allah: "Hamba Allah", hidden: "Tidak disebutkan" } as const;
+const categoryLabels = { fund: "Dana", goods: "Barang", other: "Lainnya" } as const;
+/** Every donation as a spreadsheet, formula-safe (csvCell). */
+export function donationsCsv(rows: DonationRecord[]) {
+  const header = ["Waktu", "Nama", "Tampil sebagai", "WhatsApp", "Kelompok", "Bantuan", "Jumlah", "Jumlah diterima", "Satuan", "Status", "Alasan ditolak", "Pesan", "Bukti transfer", "Dikonfirmasi", "Kabar terkirim"];
+  const lines = rows.map(row => [row.created_at, row.donor_name, displayLabels[row.display], row.donor_phone, categoryLabels[row.category], row.item_label,
+    String(row.amount), row.received_amount === null ? "" : String(row.received_amount), row.unit, statusLabels[row.status], row.reject_reason, row.message,
+    row.proof_key ? "Ada" : "", row.verified_at ?? "", row.notified_at ?? ""].map(csvCell).join(","));
+  return `﻿${[header.map(csvCell).join(","), ...lines].join("\r\n")}\r\n`;
 }

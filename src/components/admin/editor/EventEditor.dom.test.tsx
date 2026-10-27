@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
+import { startingDonation } from "@/lib/donations";
 import { presetPoster } from "@/lib/poster-presets";
 import { EventEditor } from "@/components/admin/editor/EventEditor";
 import { editorMenu, menuButton, openBlock, otherBlocks } from "@/components/admin/editor/editor-test-helpers";
@@ -306,4 +307,26 @@ it("edits a card event with the card block only, without the invitation preview"
   expect(screen.getByRole("textbox", { name: "Nama kartu" })).toBeTruthy();
   fireEvent.click(within(screen.getByRole("group", { name: "Jenis kartu" })).getByRole("button", { name: "Sertifikat" }));
   expect(screen.getByText("Sertifikat Klasik")).toBeTruthy();
+});
+
+it("edits a CSR page: its chips, accounts and what the page shows, without the invitation blocks", () => {
+  const event = { ...createSeedEvent(), event_kind: "csr" as const, donation: startingDonation() };
+  render(<EventEditor event={event} />);
+  expect(menuButton("Rundown")).toBeNull();
+  expect(menuButton("Penerimaan RSVP")).toBeNull();
+  openBlock("Donasi");
+  // The form pane and the block inside it are both named after the block; the inner one holds the fields.
+  const block = screen.getAllByRole("region", { name: "Donasi" }).at(-1)!;
+  expect(within(block).getAllByRole("textbox", { name: "Nama bantuan" }).map(input => (input as HTMLInputElement).value)).toContain("Sembako");
+  fireEvent.click(within(block).getByRole("button", { name: /Tambah bantuan/ }));
+  const names = within(block).getAllByRole("textbox", { name: "Nama bantuan" });
+  fireEvent.change(names.at(-1)!, { target: { value: "Kursi roda" } });
+  expect((within(block).getAllByRole("textbox", { name: "Nama bantuan" }).at(-1) as HTMLInputElement).value).toBe("Kursi roda");
+  fireEvent.click(within(block).getByRole("button", { name: /Tambah rekening/ }));
+  expect(within(block).getByRole("textbox", { name: "Nomor rekening" })).toBeTruthy();
+  const donors = within(block).getByRole("switch", { name: /Daftar donatur/ }) as HTMLInputElement;
+  expect(donors.checked).toBe(true);
+  fireEvent.click(donors);
+  expect(donors.checked).toBe(false);
+  expect(screen.getByRole("button", { name: "Simpan perubahan" }).textContent).toContain("Simpan");
 });
