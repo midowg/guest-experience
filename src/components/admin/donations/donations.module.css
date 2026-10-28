@@ -85,8 +85,14 @@
 /* Phones: two summary cards a row (money across both), tools side by side, a donation's actions
    in a tidy grid (amount, then Terima | Tolak, then the small ones), and Pembagian's long home
    names on one sideways-scrolling line. */
+/* The photo or proof beside each donation, tap to open full size. */
+.proofThumb { display: grid; flex-shrink: 0; justify-items: center; gap: 2px; width: 88px; color: #5b6476; font-size: .6875rem; font-weight: 700; text-align: center; text-decoration: none; }
+.proofThumb img, .proofThumb span { display: grid; place-items: center; width: 88px; height: 88px; border: 1px solid var(--line); border-radius: 10px; background: #f4f6fa; object-fit: cover; color: var(--blue); }
+.proofThumb:hover img { outline: 2px solid var(--blue); }
 @media (max-width: 42rem) {
   .board { gap: var(--space-4); }
+  .proofThumb { width: 100%; }
+  .proofThumb img, .proofThumb span { width: 100%; height: auto; max-height: 14rem; aspect-ratio: 4 / 3; }
   .stat { padding: var(--space-3); border-radius: 12px; }
   .stat strong { font-size: 1.125rem; overflow-wrap: anywhere; }
   .stat[data-kind="fund"] { grid-column: 1 / -1; }

@@ -71,6 +71,8 @@ export function DonationItemsBlock({ kit }: { kit: EditorKit }) {
       <Button type="button" variant="quiet" onClick={() => { if (!donation.items.length || window.confirm("Ganti daftar dengan pilihan bawaan? Target yang sudah diisi ikut hilang.")) set({ items: defaultDonationItems() }); }}><RotateCcw size={16} aria-hidden="true" /> Pilihan bawaan</Button>
     </div>
     {control("donation.goodsNote", "Cara menyerahkan barang", donation.goodsNote, value => set({ goodsNote: value }), { multiline: true, maxLength: 1000, hint: "Muncul saat donatur memilih barang. Misalnya alamat titip, jam, batas tanggal, atau bahwa panitia bisa menjemput." })}
+    <Check label="Wajib foto barang" checked={donation.goodsPhotoRequired} onChange={value => set({ goodsPhotoRequired: value })} />
+    <p className="field-hint">Bila menyala, donatur harus menyertakan foto tiap barang. Foto dikecilkan di HP donatur sebelum dikirim, dan tampil di Donasi masuk saat konfirmasi.</p>
     <label className={d.field}><span>Donasi ditutup pada <small>opsional</small></span>
       <input id="donation.closesAt" className="input" type="datetime-local" value={toZoneInput(donation.closesAt, tz)} onChange={change => set({ closesAt: fromZoneInput(change.target.value, tz) || null })} />
       <small className="field-hint">Setelah lewat, tombol Donasi diganti tulisan “Donasi sudah ditutup”. Total dan daftar donatur tetap tampil.</small>

@@ -61,6 +61,8 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
   return <div className={s.csr} data-theme={event.theme?.key ?? "berbagi"} style={themeStyle(event.theme)}>
     <main className={s.main}>
       <header className={s.intro}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- the small Werkudara mark, a static file */}
+        <img className={s.logo} src="/werkudara_icon.png" alt="Werkudara" width={52} height={52} />
         <p className={s.eyebrow}><HandHeart size={16} aria-hidden="true" /> {event.organizer || "Kegiatan sosial"}</p>
         <h1 className={s.title}>{event.title}</h1>
         <span className={s.squiggle} aria-hidden="true" />

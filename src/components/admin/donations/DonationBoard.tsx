@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Eye, MessageCircle, Plus, Printer, RotateCcw, Send, Trash2, X } from "lucide-react";
+import { Check, Eye, MessageCircle, Plus, Printer, RotateCcw, Send, Trash2, X, FileText } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { parseContactPhone } from "@/lib/contact-phone";
@@ -44,7 +44,8 @@ export function DonationBoard({ event, link, initial, migrated }: Props) {
   const toNotify = donations.filter(donation => donation.status === "received" && parseContactPhone(donation.donor_phone));
   const notified = toNotify.filter(donation => donation.notified_at).length;
 
-  function replace(next: DonationRecord) { setDonations(current => current.map(item => item.id === next.id ? next : item)); }
+  // An update comes back without the photo address; the one from the page load is kept.
+  function replace(next: DonationRecord) { setDonations(current => current.map(item => item.id === next.id ? { ...next, proof_url: next.proof_url ?? item.proof_url } : item)); }
   async function act(donation: DonationRecord, body: Record<string, unknown>) {
     setBusy(donation.id); setStatus("");
     try {
@@ -131,6 +132,12 @@ export function DonationBoard({ event, link, initial, migrated }: Props) {
       {shown.length === 0 ? <p className={s.empty}>{filter === "pending" ? "Tidak ada donasi yang menunggu konfirmasi." : "Belum ada donasi di sini."}</p>
         : <ul className={s.rows}>
           {shown.map(donation => <li key={donation.id} className={s.row} data-status={donation.status}>
+            {donation.proof_url && <a className={s.proofThumb} href={donation.proof_url} target="_blank" rel="noopener noreferrer" aria-label={`${donation.category === "fund" ? "Bukti transfer" : "Foto barang"} dari ${donorLabel(donation)}`}>
+              {/\.pdf$/i.test(donation.proof_key) ? <span><FileText size={22} aria-hidden="true" /> PDF</span>
+                // eslint-disable-next-line @next/next/no-img-element -- a signed address that expires; next/image would cache it
+                : <img src={donation.proof_url} alt="" loading="lazy" />}
+              <small>{donation.category === "fund" ? "Bukti transfer" : "Foto barang"}</small>
+            </a>}
             <div className={s.who}>
               <p className={s.name}>{donorLabel(donation)}</p>
               <p className={s.gift}>{describeDonation(donation)}{donation.status === "received" && donation.received_amount !== null && <> · <strong>diterima {amountText(donation, donation.received_amount)}</strong></>}</p>
@@ -138,7 +145,7 @@ export function DonationBoard({ event, link, initial, migrated }: Props) {
               <p className={s.meta}>{formatDateTime(donation.created_at)}{donation.donor_phone ? ` · ${donation.donor_phone}` : ""}{donation.status === "rejected" && donation.reject_reason ? ` · Ditolak: ${donation.reject_reason}` : ""}</p>
             </div>
             <div className={s.actions}>
-              {donation.proof_key && <Button type="button" variant="quiet" className={s.minor} onClick={() => void proof(donation)}><Eye size={16} aria-hidden="true" /> Bukti</Button>}
+              {donation.proof_key && !donation.proof_url && <Button type="button" variant="quiet" className={s.minor} onClick={() => void proof(donation)}><Eye size={16} aria-hidden="true" /> {donation.category === "fund" ? "Bukti" : "Foto"}</Button>}
               {donation.status === "pending" && rejecting?.id !== donation.id && <>
                 {donation.category !== "other" && <label className={s.amount}><span className="sr-only">Jumlah yang diterima</span>
                   <input className="input" inputMode="decimal" value={amounts[donation.id] ?? (donation.category === "fund" ? formatRupiah(donation.amount) : String(donation.amount))}

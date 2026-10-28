@@ -41,6 +41,8 @@ export type DonationSettings = {
   accounts: BankAccount[];
   qris: PlainImage;
   proofRequired: boolean;
+  /** Each gift of goods comes with a photo of it, so the committee can check it on receipt. */
+  goodsPhotoRequired: boolean;
   /** How to hand over goods: where to drop them off, by when, or that the committee picks them up. */
   goodsNote: string;
   /** After this the form closes; null keeps it open. */
@@ -63,6 +65,8 @@ export type DonationRecord = {
   verified_at: string | null; notified_at: string | null; created_at: string;
   /** The recipient this donation is handed to (Donasi → Pembagian); empty until shared out. */
   recipient_id: string;
+  /** Admin only: a short-lived address of the photo (goods) or proof of transfer, for a preview. */
+  proof_url?: string;
 };
 /** What the form sends. */
 export type DonationInput = {
@@ -108,7 +112,7 @@ export const defaultNotifyTemplate = "Halo {nama},\n\nTerima kasih atas donasi A
 
 export function emptyDonation(): DonationSettings {
   return {
-    enabled: false, items: [], recipients: [], accounts: [], qris: image(), proofRequired: false, goodsNote: "", closesAt: null,
+    enabled: false, items: [], recipients: [], accounts: [], qris: image(), proofRequired: false, goodsPhotoRequired: false, goodsNote: "", closesAt: null,
     show: { fundTotal: true, fundTarget: true, goods: true, donors: true, donorAmounts: false, messages: true },
     delivered: { at: null, photo: image(), note: "" },
     notify: { template: defaultNotifyTemplate, prayer: prayerSuggestions[0] },

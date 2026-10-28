@@ -87,7 +87,17 @@ export async function listDonations(eventId: string): Promise<{ donations: Donat
   const client = createPrivilegedClient();
   const { data, error, split } = await withRecipient(select => client.from("donations").select(select).eq("event_id", eventId).order("created_at", { ascending: false }).limit(5000));
   if (error) { if (notMigrated(error)) return { donations: [], migrated: false, split: false }; databaseError(error); }
-  return { donations: ((data ?? []) as unknown as Record<string, unknown>[]).map(record), migrated: true, split };
+  const donations = ((data ?? []) as unknown as Record<string, unknown>[]).map(record);
+  return { donations: await withProofAddresses(client, donations), migrated: true, split };
+}
+
+/** One batch of hour-long addresses for the photos and proofs, so the admin list can show them inline. */
+async function withProofAddresses(client: ReturnType<typeof createPrivilegedClient>, donations: DonationRecord[]): Promise<DonationRecord[]> {
+  const keys = [...new Set(donations.map(item => item.proof_key).filter(Boolean))];
+  if (!keys.length) return donations;
+  const { data } = await client.storage.from(BUCKET).createSignedUrls(keys, 3600);
+  const urls = new Map((data ?? []).filter(item => item.signedUrl && item.path).map(item => [item.path as string, item.signedUrl]));
+  return donations.map(item => item.proof_key && urls.has(item.proof_key) ? { ...item, proof_url: urls.get(item.proof_key) } : item);
 }
 
 type Action = { action: "receive"; received_amount: number | null } | { action: "reject"; reason: string } | { action: "pending" } | { action: "notified" } | { action: "assign"; recipient_id: string };
@@ -129,12 +139,12 @@ export async function deleteDonation(eventId: string, id: string): Promise<void>
   if (data?.proof_key) await client.storage.from(BUCKET).remove([data.proof_key]).catch(() => null);
 }
 
-/** A ten-minute address to look at one proof of transfer. */
+/** A ten-minute address to look at one photo or proof of transfer. */
 export async function proofAddress(eventId: string, id: string): Promise<string> {
   const client = createPrivilegedClient();
   const { data, error } = await client.from("donations").select("proof_key").eq("event_id", eventId).eq("id", id).maybeSingle();
   if (error) { if (notMigrated(error)) throw waiting(); databaseError(error); }
-  if (!data?.proof_key) throw new ServiceError(404, "Donasi ini tidak membawa bukti transfer.");
+  if (!data?.proof_key) throw new ServiceError(404, "Donasi ini tidak membawa foto atau bukti.");
   const signed = await client.storage.from(BUCKET).createSignedUrl(data.proof_key, 600);
   if (signed.error || !signed.data) throw new ServiceError(503, "Bukti transfer belum dapat dibuka. Coba lagi.");
   return signed.data.signedUrl;

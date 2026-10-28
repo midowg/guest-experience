@@ -158,6 +158,7 @@ const donationSchema = z.object({
   accounts: z.array(bankAccountSchema).max(5).default([]),
   qris: plainImage.default(emptyImage),
   proofRequired: z.boolean().default(false),
+  goodsPhotoRequired: z.boolean().default(false),
   goodsNote: text(1000).default(""),
   closesAt: optionalTime.default(null),
   show: z.object({ fundTotal: z.boolean(), fundTarget: z.boolean(), goods: z.boolean(), donors: z.boolean(), donorAmounts: z.boolean(), messages: z.boolean() }).default(() => emptyDonation().show),

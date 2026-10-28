@@ -59,35 +59,32 @@ it("hides the donor list and money when the admin switches them off", () => {
   expect(screen.queryByText("Rp 100.000")).toBeNull();
 });
 
-it("starts with Dana or Barang, shows a few goods with Lihat lainnya, the bank account only for money, and reassures about the name", async () => {
+it("starts with Dana or Barang; goods are rows to fill with suggestions and an add button; the bank account only for money", async () => {
   show();
   const form = openForm();
-  expect(within(form).queryByRole("button", { name: "Sembako" })).toBeNull();
+  expect(within(form).queryByRole("textbox", { name: "Nama barang" })).toBeNull();
   fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
-  fireEvent.click(within(form).getByRole("button", { name: "Sembako" }));
-  expect(within(form).queryByRole("button", { name: "Buku tulis" })).toBeNull();
-  expect(within(form).queryByRole("textbox", { name: /Barang lain/ })).toBeNull();
-  fireEvent.click(within(form).getByRole("button", { name: /Lihat lainnya \(7\)/ }));
-  fireEvent.click(within(form).getByRole("button", { name: "Buku tulis" }));
+  fireEvent.click(within(within(form).getByRole("group", { name: "Saran barang" })).getByRole("button", { name: "Sembako" }));
+  expect((within(form).getByRole("textbox", { name: "Nama barang" }) as HTMLInputElement).value).toBe("Sembako");
+  expect(within(form).getByText("paket")).toBeTruthy();
   expect(within(form).getByText("Antar ke kantor Werkudara.")).toBeTruthy();
   expect(within(form).queryByText("123 456 7890")).toBeNull();
-  fireEvent.click(within(form).getByRole("button", { name: "Tambah Buku tulis" }));
+  fireEvent.click(within(form).getByRole("button", { name: "Tambah jumlah Sembako" }));
+  fireEvent.click(within(form).getByRole("button", { name: /Tambah barang/ }));
+  fireEvent.change(within(form).getByRole("textbox", { name: "Nama barang 2" }), { target: { value: "Kursi roda" } });
   fireEvent.click(within(form).getByRole("button", { name: "Dana" }));
   expect(within(form).getByText("123 456 7890")).toBeTruthy();
   fireEvent.click(within(form).getByRole("button", { name: "100 rb" }));
-  fireEvent.click(within(form).getByRole("button", { name: /Selimut/ }));
-  fireEvent.click(within(form).getByRole("button", { name: /Tas sekolah/ }));
-  expect((within(form).getByRole("textbox", { name: /Barang lain/ }) as HTMLTextAreaElement).value).toBe("Selimut, Tas sekolah");
   fireEvent.change(within(form).getByRole("textbox", { name: "Nama" }), { target: { value: "Sari Dewi" } });
   fireEvent.click(within(form).getByRole("radio", { name: /Hamba Allah/ }));
   expect(within(form).queryByRole("textbox", { name: "Nama" })).toBeNull();
   expect(within(form).getByText(/tetap dikonfirmasi panitia/)).toBeTruthy();
   fireEvent.click(within(form).getByRole("button", { name: /Kirim donasi/ }));
   await waitFor(() => expect(screen.getByRole("dialog", { name: "Terima kasih" })).toBeTruthy());
-  for (const gift of ["Dana Rp 100.000", "Sembako 1 paket", "Buku tulis 2 pcs", "Selimut, Tas sekolah"]) expect(screen.getByText(gift)).toBeTruthy();
+  for (const gift of ["Dana Rp 100.000", "Sembako 2 paket", "Kursi roda 1 pcs"]) expect(screen.getByText(gift)).toBeTruthy();
 });
 
-it("sends one donation per gift with the proof on the money, and remembers them on this phone", async () => {
+it("sends one donation per gift, the transfer proof with the money and each goods photo with its goods, and remembers them", async () => {
   const fetch = vi.fn(async () => new Response(JSON.stringify({ ok: true, data: { id: "x" }, message: "ok" }), { status: 200, headers: { "Content-Type": "application/json" } }));
   vi.stubGlobal("fetch", fetch);
   show(event(), [], false);
@@ -95,31 +92,37 @@ it("sends one donation per gift with the proof on the money, and remembers them 
   fireEvent.click(within(form).getByRole("button", { name: "Dana" }));
   fireEvent.change(within(form).getByRole("textbox", { name: "Nominal dana" }), { target: { value: "Rp 75.000" } });
   fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
-  fireEvent.click(within(form).getByRole("button", { name: "Sembako" }));
+  fireEvent.change(within(form).getByRole("textbox", { name: "Nama barang" }), { target: { value: "sembako" } });
   fireEvent.change(within(form).getByLabelText(/Unggah bukti transfer/), { target: { files: [new File(["x"], "bukti.jpg", { type: "image/jpeg" })] } });
+  fireEvent.change(within(form).getByLabelText(/Foto barang/), { target: { files: [new File(["y"], "barang.jpg", { type: "image/jpeg" })] } });
+  await waitFor(() => expect(within(form).getByText(/barang\.jpg/)).toBeTruthy());
+  await waitFor(() => expect(within(form).getByText(/bukti\.jpg/)).toBeTruthy());
   fireEvent.change(within(form).getByRole("textbox", { name: "Nama" }), { target: { value: "Rina" } });
   fireEvent.click(within(form).getByRole("button", { name: /Kirim donasi/ }));
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   const bodies = (fetch.mock.calls as unknown as [string, RequestInit][]).map(([url, init]) => ({ url, data: init.body as FormData }));
   expect(bodies.every(body => body.url === "/api/events/berbagi/donation")).toBe(true);
   const payloads = bodies.map(body => JSON.parse(String(body.data.get("payload"))));
-  expect(payloads).toEqual([expect.objectContaining({ item_key: "dana", amount: 75000, donor_name: "Rina" }), expect.objectContaining({ item_key: "sembako", amount: 1, unit: "paket" })]);
+  expect(payloads).toEqual([expect.objectContaining({ item_key: "dana", amount: 75000, donor_name: "Rina" }), expect.objectContaining({ item_key: "sembako", item_label: "Sembako", amount: 1, unit: "paket" })]);
   expect(payloads[0].idempotency_key).not.toBe(payloads[1].idempotency_key);
   expect((bodies[0].data.get("proof") as File).name).toBe("bukti.jpg");
-  expect(bodies[1].data.get("proof")).toBeNull();
+  expect((bodies[1].data.get("proof") as File).name).toBe("barang.jpg");
   await waitFor(() => expect(screen.getByRole("dialog", { name: "Terima kasih" })).toBeTruthy());
   expect(localStorage.getItem("wk_donasi_10f3a511-2331-40")).toContain("Dana Rp 75.000, Sembako 1 paket");
 });
 
-it("asks for a gift, a proof when required, and says when donations are closed", () => {
-  show(event({ proofRequired: true }));
+it("asks for a gift, a proof or goods photo when required, and says when donations are closed", () => {
+  show(event({ proofRequired: true, goodsPhotoRequired: true }));
   const form = openForm();
   fireEvent.change(within(form).getByRole("textbox", { name: "Nama" }), { target: { value: "Sari" } });
   fireEvent.click(within(form).getByRole("button", { name: /Kirim donasi/ }));
   expect(within(form).getByText("Pilih bantuan yang ingin diberikan: dana atau barang.")).toBeTruthy();
   fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
   fireEvent.click(within(form).getByRole("button", { name: /Kirim donasi/ }));
-  expect(within(form).getByText(/Pilih barang yang ingin diberikan/)).toBeTruthy();
+  expect(within(form).getByText("Tulis barang yang ingin diberikan.")).toBeTruthy();
+  fireEvent.change(within(form).getByRole("textbox", { name: "Nama barang" }), { target: { value: "Selimut" } });
+  fireEvent.click(within(form).getByRole("button", { name: /Kirim donasi/ }));
+  expect(within(form).getByText("Unggah foto barang ini.")).toBeTruthy();
   fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
   fireEvent.click(within(form).getByRole("button", { name: "Dana" }));
   fireEvent.click(within(form).getByRole("button", { name: "50 rb" }));

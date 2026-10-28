@@ -16,8 +16,8 @@ export default async function DevDonationsPage({ searchParams }: { searchParams:
     donor_name: "Contoh Donatur", display: "name", donor_phone: "", message: "", proof_key: "", status: "pending", received_amount: null, reject_reason: "", verified_at: null, notified_at: null, recipient_id: "", created_at: day(n), ...overrides,
   });
   const rows = [
-    row(1, { donor_name: "Contoh Sari Dewi", amount: 500_000, donor_phone: "081234567890", message: "Semoga bermanfaat.", proof_key: "x/1.jpg" }),
-    row(2, { donor_name: "Contoh Budi", display: "hamba_allah", item_key: "sembako", item_label: "Sembako", category: "goods", amount: 10, unit: "paket", donor_phone: "081298765432" }),
+    row(1, { donor_name: "Contoh Sari Dewi", amount: 500_000, donor_phone: "081234567890", message: "Semoga bermanfaat.", proof_key: "x/1.jpg", proof_url: "https://picsum.photos/seed/bukti-transfer/600/800" }),
+    row(2, { donor_name: "Contoh Budi", display: "hamba_allah", item_key: "sembako", item_label: "Sembako", category: "goods", amount: 10, unit: "paket", donor_phone: "081298765432", proof_key: "x/2.jpg", proof_url: "https://picsum.photos/seed/foto-barang/800/600" }),
     row(3, { donor_name: "Contoh Rina", status: "received", amount: 1_000_000, received_amount: 1_000_000, verified_at: day(3), donor_phone: "081311112222", notified_at: handedOver ? day(1) : null }),
     row(4, { donor_name: "Contoh Agus", status: "received", item_key: "buku", item_label: "Buku tulis", category: "goods", amount: 120, unit: "pcs", verified_at: day(4), donor_phone: "081355556666" }),
     row(5, { donor_name: "Contoh Rahasia", display: "hidden", status: "rejected", reject_reason: "Transfer tidak ditemukan", verified_at: day(5) }),
