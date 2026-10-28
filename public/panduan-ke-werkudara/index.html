@@ -236,6 +236,16 @@ body { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 .maps-bar { position: fixed; z-index: 15; left: 0; right: 0; bottom: 0; padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--ground-veil); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
 .maps-bar .btn { display: flex; width: 100%; max-width: 420px; min-width: 0; margin: 0 auto; }
 @media (prefers-reduced-motion: reduce) { .pic-wa { transition: none; } }
+
+/* Gallery: justified rows. An item's share of a row is its aspect ratio, so every photo in a row
+   has the same height and the row fills the width, portrait or landscape. */
+.gallery { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.gallery li { flex-grow: calc(var(--r) * 100); flex-basis: calc(var(--r) * 120px); min-width: 0; }
+.gallery .photo-open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.gallery img { display: block; width: 100%; height: auto; aspect-ratio: var(--r); object-fit: cover; border-radius: 14px; }
+@media (min-width: 900px) { .gallery li { flex-basis: calc(var(--r) * 220px); } }
+.viewer.is-photo .viewer-scroll { align-items: center; padding: 16px; }
+.viewer.is-photo .viewer-scroll img { width: auto; max-width: 100%; max-height: 100%; height: auto; }
 </style>
 
 <header class="bar" id="bar">
@@ -244,6 +254,7 @@ body { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
     <nav class="nav" id="nav" aria-label="Bagian panduan" data-i18n-attr="aria-label:a.nav">
       <a href="#welcome" data-nav>Welcome</a>
       <a href="#getting-here" data-nav>Getting Here</a>
+      <a href="#gallery" data-nav>Gallery</a>
     </nav>
     <div class="bar-tools">
       <div class="lang" role="group" aria-label="Pilih bahasa" data-i18n-attr="aria-label:a.langGroup">
@@ -312,6 +323,32 @@ body { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
         </ul>
         <div class="maps-bar"><a class="btn solid" href="https://maps.app.goo.gl/BKkDQWsgH3pFMzeA7" target="_blank" rel="noopener" data-i18n="gh.mapsBtn">BUKA GOOGLE MAPS</a></div>
       </div>
+    </div>
+  </section>
+
+<section id="gallery" aria-labelledby="t-gallery">
+    <div class="wrap sec">
+      <div class="head">
+        <h2 id="t-gallery">GALLERY</h2>
+        <p class="sub">A Glimpse of Werkudara</p>
+      </div>
+      <ul class="gallery" aria-label="Galeri foto Werkudara Office" data-i18n-attr="aria-label:a.gallery">
+          <li style="--r: 1.517"><button class="photo-open" type="button" data-open-photo data-src="/panduan-ke-werkudara/assets/pendopo-1000.webp" data-w="1000" data-h="659" aria-label="Perbesar foto: Pendopo di area terbuka Werkudara Office">
+            <img src="/panduan-ke-werkudara/assets/pendopo-600.webp" srcset="/panduan-ke-werkudara/assets/pendopo-600.webp 600w, /panduan-ke-werkudara/assets/pendopo-1000.webp 1000w" sizes="(min-width: 900px) 40vw, 70vw" width="1000" height="659" alt="Pendopo di area terbuka Werkudara Office" data-i18n-attr="alt:a.pendopoAlt" loading="lazy" decoding="async">
+          </button></li>
+          <li style="--r: 0.747"><button class="photo-open" type="button" data-open-photo data-src="/panduan-ke-werkudara/assets/garden-960.webp" data-w="960" data-h="1285" aria-label="Perbesar foto: Area luar Werkudara Office dengan jalur berundak">
+            <img src="/panduan-ke-werkudara/assets/garden-640.webp" srcset="/panduan-ke-werkudara/assets/garden-640.webp 640w, /panduan-ke-werkudara/assets/garden-960.webp 960w" sizes="(min-width: 900px) 40vw, 70vw" width="960" height="1285" alt="Area luar Werkudara Office dengan jalur berundak" data-i18n-attr="alt:a.gardenAlt" loading="lazy" decoding="async">
+          </button></li>
+          <li style="--r: 1.443"><button class="photo-open" type="button" data-open-photo data-src="/panduan-ke-werkudara/assets/workspace-1000.webp" data-w="1000" data-h="693" aria-label="Perbesar foto: Area duduk semi-terbuka di Werkudara Office">
+            <img src="/panduan-ke-werkudara/assets/workspace-600.webp" srcset="/panduan-ke-werkudara/assets/workspace-600.webp 600w, /panduan-ke-werkudara/assets/workspace-1000.webp 1000w" sizes="(min-width: 900px) 40vw, 70vw" width="1000" height="693" alt="Area duduk semi-terbuka di Werkudara Office" data-i18n-attr="alt:a.workspaceAlt" loading="lazy" decoding="async">
+          </button></li>
+          <li style="--r: 1.427"><button class="photo-open" type="button" data-open-photo data-src="/panduan-ke-werkudara/assets/team-1280.webp" data-w="1280" data-h="897" aria-label="Perbesar foto: Tim Werkudara">
+            <img src="/panduan-ke-werkudara/assets/team-768.webp" srcset="/panduan-ke-werkudara/assets/team-768.webp 768w, /panduan-ke-werkudara/assets/team-1280.webp 1280w" sizes="(min-width: 900px) 40vw, 70vw" width="1280" height="897" alt="Tim Werkudara" data-i18n-attr="alt:a.teamAlt" loading="lazy" decoding="async">
+          </button></li>
+          <li style="--r: 1.501"><button class="photo-open" type="button" data-open-photo data-src="/panduan-ke-werkudara/assets/exterior-1280.webp" data-w="1280" data-h="853" aria-label="Perbesar foto: Tampak depan Werkudara Office">
+            <img src="/panduan-ke-werkudara/assets/exterior-768.webp" srcset="/panduan-ke-werkudara/assets/exterior-768.webp 768w, /panduan-ke-werkudara/assets/exterior-1280.webp 1280w" sizes="(min-width: 900px) 40vw, 70vw" width="1280" height="853" alt="Tampak depan Werkudara Office" data-i18n-attr="alt:a.heroAlt" loading="lazy" decoding="async">
+          </button></li>
+      </ul>
     </div>
   </section>
 
@@ -458,6 +495,9 @@ body { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
     'pt.1': 'Lobby & reception', 'pt.1s': 'Come in through the main glass door; reception will walk you in.',
     'pt.2': 'Meeting point', 'pt.2s': 'If you are running late, wait at the pendopo and we will come to you.',
 
+    'a.gallery': 'Photos of Werkudara Office',
+    'view.photo.title': 'PHOTO',
+
     // Getting Here
     'gh.routeLabel': 'RECOMMENDED ROUTE',
     'a.turnBtn': 'Enlarge the photo of the turn',
@@ -580,4 +620,30 @@ body { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 })();
 </script>
 
+<script>
+// Gallery photos open full size in the same viewer as the map, fitted to the screen.
+(function () {
+  function T(key, idText) { return window.WK ? window.WK.t(key, idText) : idText; }
+  var viewer = document.getElementById('map-viewer');
+  var img = document.getElementById('viewer-img');
+  var title = document.getElementById('viewer-title');
+  Array.prototype.forEach.call(document.querySelectorAll('[data-open-photo]'), function (b) {
+    b.addEventListener('click', function () {
+      var thumb = b.querySelector('img');
+      img.setAttribute('width', b.getAttribute('data-w'));
+      img.setAttribute('height', b.getAttribute('data-h'));
+      img.setAttribute('src', b.getAttribute('data-src'));
+      img.setAttribute('alt', thumb.getAttribute('alt'));
+      title.textContent = T('view.photo.title', 'FOTO');
+      viewer.classList.add('is-photo');
+      if (typeof viewer.showModal === 'function') viewer.showModal(); else viewer.setAttribute('open', '');
+    });
+  });
+  // The map and the turn photo open as before.
+  viewer.addEventListener('close', function () { viewer.classList.remove('is-photo'); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-open-map], [data-open-turn]'), function (b) {
+    b.addEventListener('click', function () { viewer.classList.remove('is-photo'); }, true);
+  });
+})();
+</script>
 </body></html>
