@@ -218,8 +218,11 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
                 <input className="input" value={row.name} maxLength={120} placeholder="Mis. selimut" aria-label={rows.length > 1 ? `Nama barang ${index + 1}` : "Nama barang"} aria-invalid={!!errors[`item_label:barang-${row.id}`] || undefined} onChange={change => setRow(row.id, { name: change.target.value })} />
                 <div className={s.qty}>
                   <button type="button" onClick={() => setRow(row.id, { amount: Math.max(1, row.amount - 1) })} aria-label={`Kurangi ${row.name || "barang"}`}><Minus size={16} aria-hidden="true" /></button>
-                  <input className="input" inputMode="decimal" aria-label={`Jumlah ${row.name || "barang"}`} value={row.amount || ""} onChange={change => setRow(row.id, { amount: Number(change.target.value.replace(",", ".")) || 0 })} aria-invalid={!!errors[`amount:barang-${row.id}`] || undefined} />
-                  <span className={s.qtyUnit}>{unit}</span>
+                  {/* The unit sits at the end inside the box, like "2 pcs". */}
+                  <label className={s.qtyBox}>
+                    <input inputMode="decimal" aria-label={`Jumlah ${row.name || "barang"}`} value={row.amount || ""} onChange={change => setRow(row.id, { amount: Number(change.target.value.replace(",", ".")) || 0 })} aria-invalid={!!errors[`amount:barang-${row.id}`] || undefined} />
+                    <span aria-hidden="true">{unit}</span>
+                  </label>
                   <button type="button" onClick={() => setRow(row.id, { amount: row.amount + 1 })} aria-label={`Tambah jumlah ${row.name || "barang"}`}><Plus size={16} aria-hidden="true" /></button>
                 </div>
               </div>

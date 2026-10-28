@@ -231,9 +231,11 @@
 .goodsLine { display: flex; align-items: center; gap: 8px; }
 .goodsLine > input { flex: 1; min-width: 0; min-height: 44px; padding-block: 0; }
 .qty { display: flex; flex-shrink: 0; align-items: center; gap: 3px; }
-.qty button { display: inline-grid; place-items: center; width: 32px; height: 44px; border: 1.5px solid var(--color-border); border-radius: 10px; background: var(--color-background); color: var(--color-text); cursor: pointer; }
-.qty input { width: 40px; min-height: 44px; padding: 0 2px; text-align: center; font-weight: 900; }
-.qtyUnit { min-width: 1.5rem; color: var(--color-caption); font-size: .75rem; font-weight: 800; text-align: center; }
+.qty button { display: inline-grid; place-items: center; width: 30px; height: 44px; border: 1.5px solid var(--color-border); border-radius: 10px; background: var(--color-background); color: var(--color-text); cursor: pointer; }
+.qtyBox { display: flex; align-items: center; gap: 3px; width: 80px; min-height: 44px; padding: 0 8px; border: 1.5px solid var(--color-border); border-radius: 14px; background: var(--color-background); cursor: text; }
+.qtyBox:focus-within { border-color: var(--color-primary); outline: 3px solid color-mix(in srgb, var(--color-primary) 22%, transparent); }
+.qtyBox input { flex: 1; width: 100%; min-width: 0; padding: 0; border: 0; background: none; color: var(--color-text); font: inherit; font-weight: 900; text-align: right; outline: none; }
+.qtyBox span { flex-shrink: 0; color: var(--color-caption); font-size: .75rem; font-weight: 800; }
 /* Suggestions: small, a tap fills the name. */
 .suggest { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border: 1px dashed var(--color-border); border-radius: 999px; background: var(--color-background); color: var(--color-text); font: inherit; font-size: .75rem; font-weight: 700; cursor: pointer; }
 .suggest:hover { border-color: var(--color-primary); color: var(--color-primary); }
