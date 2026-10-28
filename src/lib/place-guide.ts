@@ -43,6 +43,19 @@ const points: ArrivalPoint[] = [
     en: { title: "Meeting point", description: "If you are running late, wait at the pendopo and we will come to you." } },
 ];
 
+export const galleryText = {
+  id: [
+    "Beberapa area kantor Werkudara berada di ruang terbuka.",
+    "Untuk menuju beberapa titik, Anda mungkin perlu melewati tangga atau area berundak. Kami menyarankan menggunakan alas kaki yang nyaman agar lebih leluasa saat berkunjung.",
+    "Jika membutuhkan bantuan akses atau mobilitas, silakan menghubungi Hospitality Specialist kami.",
+  ].join("\n\n"),
+  en: [
+    "Some areas of the Werkudara office are open-air.",
+    "To reach certain spots, you may need to use stairs or stepped paths. We suggest wearing comfortable footwear so you can move around with ease during your visit.",
+    "If you need any assistance with access or mobility, please contact our Hospitality Specialist.",
+  ].join("\n\n"),
+};
+
 /** The Werkudara guide a new Panduan lokasi starts with. The host (PIC) comes from the setup. */
 export function placeGuideStarter(event: EventRecord, uuid: () => string): EventRecord {
   const gallery: GalleryImage[] = galleryPhotos.map((image, sort_order) => ({ id: uuid(), url: image.url, alt: image.alt, caption: "", sort_order, srcset: image.srcset }));
@@ -56,6 +69,8 @@ export function placeGuideStarter(event: EventRecord, uuid: () => string): Event
     address: "Jl. Bhinneka No. 9\nCondongcatur, Sleman, Yogyakarta",
     location_url: "https://maps.app.goo.gl/BKkDQWsgH3pFMzeA7",
     location_display: "manual",
+    // The gallery's text, from "What to Expect" of the original guide; the first paragraph reads large.
+    closing: galleryText.id,
     hero: { ...event.hero, url: cover.url, alt: cover.alt, srcset: cover.srcset, focus: "center", text_position: "left" },
     route: { map_image: map, steps, points },
     gallery,
@@ -68,6 +83,7 @@ export function placeGuideStarter(event: EventRecord, uuid: () => string): Event
         title: event.translations.en.title || event.title,
         subtitle: "A Little Guide Before We Meet",
         greeting: "Welcome to Werkudara.",
+        closing: galleryText.en,
         introduction: "We are delighted to be welcoming you.\n\nWe have put together this short guide to help you find us, get a feel for the office, and prepare comfortably for your visit.",
       },
     },

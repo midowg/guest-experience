@@ -34,8 +34,6 @@
   font-family: var(--font-body); font-weight: 400; font-size: 1.1875rem; line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
-/* Room under the Google Maps bar, which shows only while Getting Here is on screen. */
-.gettingHere[data-maps] { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 .page img { display: block; max-width: 100%; height: auto; }
 .page p { margin: 0; text-wrap: pretty; }
 .page :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
@@ -60,8 +58,8 @@
 /* Shared section rhythm */
 .section { scroll-margin-top: calc(var(--bar) + 16px); }
 .wrap { max-width: 1128px; margin-inline: auto; padding-inline: var(--gutter); }
-.sec { display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 36px; padding-block: 76px; }
-.sec.first { padding-block: 44px 76px; }
+.sec { display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 28px; padding-block: 44px; }
+.sec.first { padding-block: 36px 44px; }
 .page h1, .page h2 { margin: 0; font-family: var(--font-display); font-weight: 400; line-height: 1.3; letter-spacing: 0.18em; word-spacing: -0.1em; color: var(--blue); text-transform: uppercase; text-wrap: balance; }
 .page h1 { font-size: clamp(1.4rem, 7.2vw, 2.1rem); }
 .page h2 { font-size: clamp(1.35rem, 6.6vw, 2rem); }
@@ -115,10 +113,9 @@
 .picWa:hover { background: #1E8A4F; }
 .ptIc { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; background: #EAF1FB; color: var(--blue); }
 
-/* Buka Google Maps stays on screen in a bottom bar that mirrors the top bar (warm veil, blur,
-   hairline), holding the page's own solid button. */
-.mapsBar { position: fixed; z-index: 15; left: 0; right: 0; bottom: 0; padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--ground-veil); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line); transform: translateY(110%); visibility: hidden; transition: transform 0.25s ease, visibility 0s linear 0.25s; }
-.mapsBar[data-show] { transform: none; visibility: visible; transition: transform 0.25s ease, visibility 0s; }
+/* Buka Google Maps: the last piece of Getting Here, sticky. It holds to the bottom of the screen while
+   the guest reads the way here, then rests under the arrival points once the gallery comes up. */
+.mapsBar { position: sticky; z-index: 15; bottom: 0; margin-inline: calc(var(--gutter) * -1); padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--ground-veil); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
 
 /* Gallery: justified rows. An item's share of a row is its aspect ratio, so every photo in a row
    has the same height and the row fills the width, portrait or landscape. */
@@ -146,8 +143,8 @@
   .btnOutline { width: auto; align-self: flex-start; }
   .nav, .open .nav { display: flex; flex-direction: row; position: static; gap: 22px; margin-left: auto; padding: 0; border: 0; background: none; }
   .nav a { padding: 10px 0; font-family: var(--font-sans); font-weight: 400; font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; word-spacing: 0; white-space: nowrap; }
-  .sec { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 72px; row-gap: 56px; padding-block: 120px; }
-  .sec.first { padding-block: 72px 120px; }
+  .sec { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 72px; row-gap: 40px; padding-block: 72px; }
+  .sec.first { padding-block: 56px 72px; }
   .sec > .head { grid-column: 1; }
   .sec > .body, .sec > .gallery { grid-column: 2; }
   .page .heroImg { aspect-ratio: 5 / 2; max-height: 600px; }
@@ -157,10 +154,15 @@
   .gettingHere .map { grid-column: 2; grid-row: 1; }
   .gettingHere .body { grid-column: 2; grid-row: 2; }
   .gettingHere .sec:not(:has(> .map)) > .body { grid-row: 1; }
+  .gettingHere .mapsBar { grid-column: 2; grid-row: 3; margin-inline: 0; padding-inline: 0; }
+  .gettingHere .sec:not(:has(> .map)) > .mapsBar { grid-row: 2; }
+  .mapsBar .btnSolid { margin: 0; }
+  /* Gallery: the title on the left beside its text and photos. */
+  .gallerySection .head { grid-row: 1 / span 2; align-self: start; }
   .viewerScroll { display: flex; align-items: flex-start; justify-content: center; padding: 32px; }
   .viewerScroll img { width: min(1601px, 100%); }
   .viewerHint { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .btnSolid, .btnOutline, .picWa, .mapsBar, .mapsBar[data-show] { transition: none; }
+  .btnSolid, .btnOutline, .picWa { transition: none; }
 }

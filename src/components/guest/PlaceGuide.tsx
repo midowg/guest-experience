@@ -38,18 +38,6 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
   const [menu, setMenu] = useState(false);
   const [viewing, setViewing] = useState<Viewing | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const routeSection = useRef<HTMLElement>(null);
-  // Google Maps shows at the bottom of the screen only while Getting Here is on it.
-  const [atRoute, setAtRoute] = useState(false);
-
-  useEffect(() => {
-    const section = routeSection.current;
-    if (!section || typeof IntersectionObserver === "undefined") { setAtRoute(true); return; }
-    const watch = new IntersectionObserver(([entry]) => setAtRoute(entry.isIntersecting), { rootMargin: "0px 0px -35% 0px" });
-    watch.observe(section);
-    return () => watch.disconnect();
-  }, []);
-
   useEffect(() => {
     const box = dialog.current;
     if (!box) return;
@@ -62,11 +50,13 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
   const link = contactLink(contact);
   const points = route.points ?? [];
   const gallery = event.gallery;
-  const intro = event.introduction.split(/\n\s*\n/).map(part => part.trim()).filter(Boolean);
+  const paragraphs = (text: string) => text.split(/\n\s*\n/).map(part => part.trim()).filter(Boolean);
+  const intro = paragraphs(event.introduction);
+  const galleryText = paragraphs(event.closing);
   const city = placeCity(event.address);
   const addressLines = event.address.split("\n").map(line => line.trim()).filter(Boolean);
   const openMap = () => setViewing({ image: route.map_image, title: w("mapTitle"), mode: "pan", hint: w("swipeMap") });
-  const nav = [["welcome", w("welcome")], ["getting-here", w("gettingHere")], ...(gallery.length ? [["gallery", w("gallery")]] : [])];
+  const nav = [["welcome", w("welcome")], ["getting-here", w("gettingHere")], ...(gallery.length || galleryText.length ? [["gallery", w("gallery")]] : [])];
 
   return <div className={`${styles.page} ${garamond.variable}`} lang={lang}>
     <header className={`${styles.bar} ${menu ? styles.open : ""}`.trimEnd()}>
@@ -106,7 +96,7 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
         </div>
       </section>
 
-      <section id="getting-here" ref={routeSection} className={`${styles.section} ${styles.gettingHere}`} data-maps={event.location_url ? "" : undefined} aria-labelledby="place-getting">
+      <section id="getting-here" className={`${styles.section} ${styles.gettingHere}`} aria-labelledby="place-getting">
         <div className={`${styles.wrap} ${styles.sec}`}>
           <div className={styles.head}>
             <h2 id="place-getting">{w("gettingHere")}</h2>
@@ -158,26 +148,30 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
               })}
             </ul>}
           </div>
+          {/* Last in Getting Here and sticky: held at the bottom of the screen while the guest reads the
+              way here, then left under the arrival points once the gallery comes up. */}
+          {event.location_url && <div className={styles.mapsBar}>
+            <a className={styles.btnSolid} href={event.location_url} target="_blank" rel="noopener noreferrer">{w("maps")}</a>
+          </div>}
         </div>
       </section>
 
-      {gallery.length > 0 && <section id="gallery" className={styles.section} aria-labelledby="place-gallery">
+      {(gallery.length > 0 || galleryText.length > 0) && <section id="gallery" className={`${styles.section} ${styles.gallerySection}`} aria-labelledby="place-gallery">
         <div className={`${styles.wrap} ${styles.sec}`}>
           <div className={styles.head}>
             <h2 id="place-gallery">{w("gallery")}</h2>
             {event.venue_name && <p className={styles.sub}>{w("glimpse", { place: event.venue_name })}</p>}
           </div>
-          <ul className={styles.gallery} aria-label={w("galleryAria")}>
+          {galleryText.length > 0 && <div className={styles.body}>
+            {galleryText.map((part, index) => <p key={index} className={`${index === 0 ? styles.lead : ""} ${styles.multiline}`.trim()}>{part}</p>)}
+          </div>}
+          {gallery.length > 0 && <ul className={styles.gallery} aria-label={w("galleryAria")}>
             {gallery.map(photo => <GalleryPhoto key={photo.id} photo={photo} label={w("photoOpen", { alt: photo.alt || photo.caption })}
               onOpen={() => setViewing({ image: photo, title: w("photoTitle"), mode: "fit", hint: "" })} />)}
-          </ul>
+          </ul>}
         </div>
       </section>}
     </main>
-
-    {event.location_url && <div className={styles.mapsBar} data-show={atRoute || undefined} inert={!atRoute || undefined}>
-      <a className={styles.btnSolid} href={event.location_url} target="_blank" rel="noopener noreferrer">{w("maps")}</a>
-    </div>}
 
     <dialog ref={dialog} className={`${styles.viewer} ${viewing?.mode === "fit" ? styles.fit : ""}`.trimEnd()} aria-labelledby="place-viewer-title" onClose={() => setViewing(null)}>
       <div className={styles.viewerBar}>

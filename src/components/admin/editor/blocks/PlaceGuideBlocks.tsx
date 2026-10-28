@@ -45,10 +45,12 @@ export function PlaceWelcomeBlock({ kit }: { kit: EditorKit }) {
 
 /** Galeri: photos in justified rows, each as wide as its own shape; a tap opens it full size. */
 export function PlaceGalleryBlock({ kit }: { kit: EditorKit }) {
-  const { event, update, control, errors } = kit;
+  const { event, update, control, errors, text } = kit;
   const change = (index: number, patch: Partial<EventRecord["gallery"][number]>) => update("gallery", event.gallery.map((item, i) => i === index ? { ...item, ...patch } : item));
   return <div className="stack">
-    <p>Foto tampil berderet dan memenuhi lebar halaman, mendatar maupun tegak. Tamu mengetuk foto untuk melihatnya penuh. Galeri disembunyikan kalau tidak ada foto. Maksimal 12.</p>
+    {text("closing", "Teks galeri", 2000, true, "Tampil di atas foto: apa yang perlu tamu tahu tentang tempatnya. Paragraf pertama tampil besar; pisahkan paragraf dengan satu baris kosong.")}
+    <h3>Foto</h3>
+    <p>Foto tampil berderet dan memenuhi lebar halaman, mendatar maupun tegak. Tamu mengetuk foto untuk melihatnya penuh. Bagian Gallery disembunyikan kalau teks dan foto kosong. Maksimal 12.</p>
     {event.gallery.map((image, index) => <div className={styles.item} key={image.id}>
       <div className={styles.itemHeader}><h3>Foto {index + 1}</h3><OrderButtons label={`foto ${index + 1}`} index={index} length={event.gallery.length} onMove={direction => update("gallery", moveItem(event.gallery, index, direction))} /></div>
       <PhotoField name={`gallery.${index}.url`} label="Foto" value={image.url} srcset={image.srcset} onChange={value => change(index, { url: value.url, srcset: value.srcset })} error={errors[`gallery.${index}.url`]?.join(" ")} />

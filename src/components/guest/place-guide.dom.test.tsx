@@ -6,7 +6,7 @@ import { PlaceGuide } from "./PlaceGuide";
 // next/font only runs inside Next's compiler.
 vi.mock("./place-guide-font", () => ({ garamond: { variable: "" } }));
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); window.localStorage.clear(); });
 
 it("shows the welcome, the way here with the host, the gallery and Google Maps", () => {
   render(<PlaceGuide event={samplePlaceGuide()} />);
@@ -17,6 +17,7 @@ it("shows the welcome, the way here with the host, the gallery and Google Maps",
   expect(screen.getByRole("link", { name: "BUKA GOOGLE MAPS" }).getAttribute("href")).toBe("https://maps.app.goo.gl/BKkDQWsgH3pFMzeA7");
   expect(within(screen.getByRole("list", { name: "Galeri foto" })).getAllByRole("button")).toHaveLength(5);
   expect(screen.getByRole("link", { name: "LIHAT CARA KE SINI" }).getAttribute("href")).toBe("#getting-here");
+  expect(screen.getByText("Beberapa area kantor Werkudara berada di ruang terbuka.")).toBeTruthy();
 });
 
 it("switches the guide to English, steps included", () => {
@@ -28,7 +29,7 @@ it("switches the guide to English, steps included", () => {
 
 it("leaves out the map, steps and gallery when they are empty", () => {
   const event = samplePlaceGuide();
-  render(<PlaceGuide event={{ ...event, gallery: [], route: { map_image: { url: "", alt: "", srcset: [] }, steps: [], points: [] } }} />);
+  render(<PlaceGuide event={{ ...event, closing: "", gallery: [], route: { map_image: { url: "", alt: "", srcset: [] }, steps: [], points: [] } }} />);
   expect(screen.queryByRole("button", { name: "Perbesar peta akses" })).toBeNull();
   expect(screen.queryByRole("list", { name: "Langkah menuju lokasi" })).toBeNull();
   expect(screen.queryByRole("heading", { name: "Gallery" })).toBeNull();
