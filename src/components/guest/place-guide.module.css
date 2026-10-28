@@ -22,6 +22,8 @@
   --font-display: "LM Roman 17", "Bodoni 72", Didot, "Times New Roman", serif;
   --font-serif: "LM Roman 12", "Bodoni 72", Didot, "Times New Roman", serif;
   --font-sans: "Poppins", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* Reading text: EB Garamond, a book face that stays clear at small sizes (labels and buttons stay sans). */
+  --font-body: var(--font-garamond), "EB Garamond", Garamond, Georgia, serif;
   --gutter: 24px;
   --measure: 34rem;
   --bar: 56px;
@@ -29,11 +31,11 @@
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--ground); color: var(--ink);
-  font-family: var(--font-sans); font-weight: 300; font-size: 1.03125rem; line-height: 1.75;
+  font-family: var(--font-body); font-weight: 400; font-size: 1.1875rem; line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
-/* Room under the Google Maps bar. */
-.page[data-maps] { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+/* Room under the Google Maps bar, which shows only while Getting Here is on screen. */
+.gettingHere[data-maps] { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 .page img { display: block; max-width: 100%; height: auto; }
 .page p { margin: 0; text-wrap: pretty; }
 .page :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
@@ -80,7 +82,10 @@
 .page .heroImg[data-focus="top"] { object-position: 64% 20%; }
 .page .heroImg[data-focus="bottom"] { object-position: 64% 80%; }
 .details { display: flex; flex-wrap: wrap; gap: 18px 48px; margin-top: 1.6rem; }
-.page .details p { font-size: 1rem; line-height: 1.6; }
+.page .details p { font-size: 1.125rem; line-height: 1.5; }
+/* From the welcome straight to the way here, in the page's outline button. */
+.btnOutline { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 54px; margin-top: 1.6rem; padding: 0 28px; border: 1px solid var(--blue); background: transparent; color: var(--blue); text-decoration: none; font-family: var(--font-sans); font-weight: 500; font-size: 0.78rem; letter-spacing: 0.2em; transition: background-color 0.2s ease, color 0.2s ease; }
+.btnOutline:hover, .btnOutline:active { background: var(--blue); color: var(--on-blue); }
 .page .details p:first-child { font-weight: 400; }
 .page .details p:last-child:not(:first-child) { color: var(--muted); }
 
@@ -94,10 +99,10 @@
 .steps, .points { display: grid; gap: 14px; margin: 6px 0 0; padding: 0; list-style: none; }
 .steps li { display: flex; align-items: flex-start; gap: 14px; padding: 16px; background: #fff; border: 1px solid var(--line); }
 .points li { display: flex; align-items: center; gap: 14px; }
-.num { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; background: var(--blue); color: var(--on-blue); font-weight: 500; font-size: 0.9rem; line-height: 1; }
+.num { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; background: var(--blue); color: var(--on-blue); font-family: var(--font-sans); font-weight: 500; font-size: 0.9rem; line-height: 1; }
 .steps li > div, .points li > div { flex: 1 1 0; min-width: 0; display: grid; gap: 4px; }
-.stepT, .ptT, .picT { font-weight: 500; color: var(--ink); line-height: 1.4; }
-.page .stepS, .page .ptS, .page .picS { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+.stepT, .ptT, .picT { font-weight: 500; font-size: 1.1875rem; color: var(--ink); line-height: 1.35; }
+.page .stepS, .page .ptS, .page .picS { color: var(--muted); font-size: 1.0625rem; line-height: 1.45; }
 .stepPhoto { position: relative; margin-top: 10px; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
 /* The step photo shows whole, at its own shape: the landmark at the turn must not be cropped. */
 .page .stepPhoto img { height: auto; }
@@ -105,14 +110,15 @@
 .pic { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; background: #EAF1FB; }
 .pic > div { flex: 1 1 0; min-width: 0; }
 .avatar, .picWa { flex: none; display: inline-grid; place-items: center; width: 46px; height: 46px; }
-.avatar { background: var(--blue); color: var(--on-blue); font-weight: 500; font-size: 1.1rem; object-fit: cover; }
+.avatar { background: var(--blue); color: var(--on-blue); font-family: var(--font-sans); font-weight: 500; font-size: 1.1rem; object-fit: cover; }
 .picWa { background: #25A55F; color: #fff; transition: background-color 0.2s ease; }
 .picWa:hover { background: #1E8A4F; }
 .ptIc { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; background: #EAF1FB; color: var(--blue); }
 
 /* Buka Google Maps stays on screen in a bottom bar that mirrors the top bar (warm veil, blur,
    hairline), holding the page's own solid button. */
-.mapsBar { position: fixed; z-index: 15; left: 0; right: 0; bottom: 0; padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--ground-veil); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
+.mapsBar { position: fixed; z-index: 15; left: 0; right: 0; bottom: 0; padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--ground-veil); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line); transform: translateY(110%); visibility: hidden; transition: transform 0.25s ease, visibility 0s linear 0.25s; }
+.mapsBar[data-show] { transform: none; visibility: visible; transition: transform 0.25s ease, visibility 0s; }
 
 /* Gallery: justified rows. An item's share of a row is its aspect ratio, so every photo in a row
    has the same height and the row fills the width, portrait or landscape. */
@@ -135,8 +141,9 @@
 
 @media (min-width: 900px) {
   .page { --gutter: 40px; --bar: 64px; }
-  .page { font-size: 1.0625rem; }
+  .page { font-size: 1.25rem; }
   .menuBtn { display: none; }
+  .btnOutline { width: auto; align-self: flex-start; }
   .nav, .open .nav { display: flex; flex-direction: row; position: static; gap: 22px; margin-left: auto; padding: 0; border: 0; background: none; }
   .nav a { padding: 10px 0; font-family: var(--font-sans); font-weight: 400; font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; word-spacing: 0; white-space: nowrap; }
   .sec { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 72px; row-gap: 56px; padding-block: 120px; }
@@ -155,5 +162,5 @@
   .viewerHint { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .btnSolid, .picWa { transition: none; }
+  .btnSolid, .btnOutline, .picWa, .mapsBar, .mapsBar[data-show] { transition: none; }
 }

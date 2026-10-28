@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Info, MessageCircle, Phone } from "lucide-react";
+import { ArrowDown, Info, MessageCircle, Phone } from "lucide-react";
 import { parseLocationEmbed } from "@/lib/location-embed";
 import { defaultPhotoRatio, placeCity } from "@/lib/place-guide";
 import type { EventRecord, GalleryImage, PlainImage } from "@/lib/types";
@@ -12,6 +12,7 @@ import { imageSrcSet } from "./Gallery";
 import { contactLink } from "./JourneyPanels";
 import { useEventLanguage } from "./language";
 import { arrivalIconComponents } from "./VisitRoute";
+import { garamond } from "./place-guide-font";
 import styles from "./place-guide.module.css";
 
 /** The Werkudara mark in the top bar; the page is hosted by Werkudara. */
@@ -37,6 +38,17 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
   const [menu, setMenu] = useState(false);
   const [viewing, setViewing] = useState<Viewing | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  const routeSection = useRef<HTMLElement>(null);
+  // Google Maps shows at the bottom of the screen only while Getting Here is on it.
+  const [atRoute, setAtRoute] = useState(false);
+
+  useEffect(() => {
+    const section = routeSection.current;
+    if (!section || typeof IntersectionObserver === "undefined") { setAtRoute(true); return; }
+    const watch = new IntersectionObserver(([entry]) => setAtRoute(entry.isIntersecting), { rootMargin: "0px 0px -35% 0px" });
+    watch.observe(section);
+    return () => watch.disconnect();
+  }, []);
 
   useEffect(() => {
     const box = dialog.current;
@@ -56,7 +68,7 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
   const openMap = () => setViewing({ image: route.map_image, title: w("mapTitle"), mode: "pan", hint: w("swipeMap") });
   const nav = [["welcome", w("welcome")], ["getting-here", w("gettingHere")], ...(gallery.length ? [["gallery", w("gallery")]] : [])];
 
-  return <div className={styles.page} lang={lang} data-maps={event.location_url ? "" : undefined}>
+  return <div className={`${styles.page} ${garamond.variable}`} lang={lang}>
     <header className={`${styles.bar} ${menu ? styles.open : ""}`.trimEnd()}>
       <div className={styles.barIn}>
         {/* eslint-disable-next-line @next/next/no-img-element -- a fixed asset beside the static guide */}
@@ -89,11 +101,12 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
             {event.greeting && <p className={styles.lead}>{event.greeting}</p>}
             {intro.map((part, index) => <p key={index} className={styles.multiline}>{part}</p>)}
             {(event.venue_name || city) && <div className={styles.details}><div>{event.venue_name && <p>{event.venue_name}</p>}{city && <p>{city}</p>}</div></div>}
+            <a className={styles.btnOutline} href="#getting-here">{w("toRoute")} <ArrowDown size={16} aria-hidden="true" /></a>
           </div>
         </div>
       </section>
 
-      <section id="getting-here" className={`${styles.section} ${styles.gettingHere}`} aria-labelledby="place-getting">
+      <section id="getting-here" ref={routeSection} className={`${styles.section} ${styles.gettingHere}`} data-maps={event.location_url ? "" : undefined} aria-labelledby="place-getting">
         <div className={`${styles.wrap} ${styles.sec}`}>
           <div className={styles.head}>
             <h2 id="place-getting">{w("gettingHere")}</h2>
@@ -162,7 +175,7 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
       </section>}
     </main>
 
-    {event.location_url && <div className={styles.mapsBar}>
+    {event.location_url && <div className={styles.mapsBar} data-show={atRoute || undefined} inert={!atRoute || undefined}>
       <a className={styles.btnSolid} href={event.location_url} target="_blank" rel="noopener noreferrer">{w("maps")}</a>
     </div>}
 
