@@ -28,6 +28,9 @@ function remember(eventId: string, donation: RememberedDonation) {
 
 const quickAmounts = [50_000, 100_000, 250_000, 500_000];
 type Gift = { item_key: string; item_label: string; category: DonationCategory; amount: number; unit: string };
+type Donor = { donor_name: string; display: DonorDisplay; donor_phone: string; message: string; website: string };
+/** What the donor is asked to confirm before anything is sent. */
+type Review = { bodies: { key: string; body: Gift & Donor & { idempotency_key: string }; photo: File | null }[]; labels: string[]; donor: Donor };
 /** One kind of goods the donor gives: its name (a listed one or their own words), how many, and a photo. */
 type GoodsRow = { id: string; name: string; amount: number; photo: File | null };
 const newRow = (): GoodsRow => ({ id: crypto.randomUUID().slice(0, 8), name: "", amount: 1, photo: null });
@@ -56,6 +59,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState<{ name: string; gifts: string[] } | null>(null);
+  const [review, setReview] = useState<Review | null>(null);
   const [copied, setCopied] = useState("");
   const identities = useRef<Record<string, RetryIdentity>>({});
   const sent = useRef<Set<string>>(new Set());
@@ -121,7 +125,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
         return { key: `barang-${row.id}`, photo: row.photo, item_key: item?.key ?? "", item_label: item?.label ?? row.name.trim(), category: item?.category ?? "other" as const, amount: row.amount, unit: item?.unit || "pcs" };
       }),
     ];
-    const donor = { donor_name: display === "name" ? name.trim() : "", display, donor_phone: phone.trim(), message: note.trim(), website: honeypot.current?.value ?? "" };
+    const donor: Donor = { donor_name: display === "name" ? name.trim() : "", display, donor_phone: phone.trim(), message: note.trim(), website: honeypot.current?.value ?? "" };
     const next: Record<string, string> = {};
     if (!gifts.length) next.gift = giveGoods ? "Tulis barang yang ingin diberikan." : "Pilih bantuan yang ingin diberikan: dana atau barang.";
     if (settings.goodsPhotoRequired) for (const row of named) if (!row.photo) next[`photo:${row.id}`] = "Unggah foto barang ini.";
@@ -138,7 +142,13 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
     if (fund.length && settings.proofRequired && !proof) next.proof = "Unggah bukti transfer.";
     if (shrinking) next.form = "Tunggu sebentar, foto sedang dikecilkan.";
     if (Object.keys(next).length) { setErrors(next); setMessage("Periksa isian yang ditandai."); return; }
-    const labels = bodies.map(({ body }) => describeDonation(body));
+    // Nothing is sent yet: the donor checks a summary first, then confirms.
+    setReview({ bodies, labels: bodies.map(({ body }) => describeDonation(body)), donor });
+  }
+
+  /** Sends what the donor confirmed, one gift at a time. */
+  async function send({ bodies, labels, donor }: Review) {
+    setReview(null);
     if (preview) { setDone({ name: donorLabel(donor), gifts: labels }); return; }
     setPending(true);
     try {
@@ -301,6 +311,25 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
       {/* Stays in view at the bottom, above Safari's address bar on an iPhone, so sending never needs a hunt. */}
       <div className={s.submitBar}><button type="submit" className={s.give} disabled={pending}><HandHeart size={22} aria-hidden="true" /> {pending ? "Mengirim…" : "Kirim donasi"}</button></div>
     </form>}
+
+    {review && <div className={s.confirmBackdrop}>
+      <div className={s.confirm} role="alertdialog" aria-modal="true" aria-labelledby="cek-judul" aria-describedby="cek-isi"
+        onKeyDown={key => { if (key.key === "Escape") { key.stopPropagation(); setReview(null); } }}>
+        <h3 id="cek-judul">Apakah data sudah benar?</h3>
+        <dl id="cek-isi" className={s.confirmList}>
+          <div><dt>Bantuan</dt><dd><ul>{review.labels.map(label => <li key={label}>{label}</li>)}</ul></dd></div>
+          <div><dt>Tampil sebagai</dt><dd>{donorLabel(review.donor)}</dd></div>
+          {review.donor.donor_phone && <div><dt>WhatsApp</dt><dd>{review.donor.donor_phone}</dd></div>}
+          {review.bodies.some(item => item.photo) && <div><dt>Foto dan bukti</dt><dd>{review.bodies.filter(item => item.photo).length} terlampir</dd></div>}
+          {review.donor.message && <div><dt>Pesan</dt><dd>&ldquo;{review.donor.message}&rdquo;</dd></div>}
+        </dl>
+        <p className={s.hint}>Setelah dikirim, data tidak bisa diubah sendiri. Donasi masuk daftar setelah diverifikasi panitia.</p>
+        <div className={s.confirmActions}>
+          <button type="button" className={s.confirmBack} onClick={() => setReview(null)}>Periksa lagi</button>
+          <button type="button" className={s.give} autoFocus onClick={() => void send(review)}><Check size={20} aria-hidden="true" /> Ya, kirim</button>
+        </div>
+      </div>
+    </div>}
   </div>;
 }
 

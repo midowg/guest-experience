@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { ArrowLeft, ChevronRight, CircleCheck, Gift, HandHeart, HeartHandshake, Home, MapPin, MessageCircle, Package, PartyPopper, Share2, Sparkles } from "lucide-react";
+import { ArrowLeft, ChevronRight, CircleCheck, Gift, HandHeart, HeartHandshake, Home, MapPin, MessageCircle, Package, PartyPopper, Share2, Sparkles, UserRound } from "lucide-react";
 import { donorInitials, formatRupiah, listNames, type DonationTotals, type PublicDonor } from "@/lib/donations";
 import { themeStyle } from "@/lib/themes";
 import type { EventRecord } from "@/lib/types";
@@ -86,7 +86,7 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
           </>}
           <div className={s.people}>
             {faces.length > 0 && <span className={s.faces} aria-hidden="true">
-              {faces.map(donor => <span key={donor.id} className={s.face}>{donorInitials(donor.name)}</span>)}
+              {faces.map(donor => <span key={donor.id} className={s.face}>{donor.named ? donorInitials(donor.name) : <UserRound size={15} />}</span>)}
               {totals.donors > faces.length && <span className={s.face} data-more="">+{totals.donors - faces.length}</span>}
             </span>}
             <span><strong>{totals.donors} orang baik</strong> {totals.donors ? "sudah ikut berbagi" : "menunggu Anda"}</span>
@@ -177,7 +177,7 @@ const SHOWN = 3;
 function DonorList({ donors }: { donors: PublicDonor[] }) {
   return <ul className={s.donors}>
     {donors.map(donor => <li key={donor.id} className={s.donor}>
-      <span className={s.avatar} aria-hidden="true">{donorInitials(donor.name)}</span>
+      <span className={s.avatar} aria-hidden="true">{donor.named ? donorInitials(donor.name) : <UserRound size={20} />}</span>
       <div className={s.donorText}>
         <p className={s.donorName}>{donor.name}</p>
         <p className={s.donorGift}>{donor.gift} · {relative(donor.at)}</p>

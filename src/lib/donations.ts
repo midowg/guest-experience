@@ -200,7 +200,7 @@ export function donationTotals(settings: DonationSettings, donations: Pick<Donat
 }
 
 /** One line of the public donor list. Never carries a phone number, a proof, or a hidden name. */
-export type PublicDonor = { id: string; name: string; gift: string; message: string; at: string };
+export type PublicDonor = { id: string; name: string; gift: string; message: string; at: string; /** Shown by their own name (initials in the avatar); otherwise Hamba Allah, a plain icon. */ named: boolean };
 
 /**
  * The public donor list: received donations, largest first as on other donation apps (money by its
@@ -221,6 +221,7 @@ export function publicDonors(settings: DonationSettings, donations: DonationReco
       gift: donation.category === "fund" && !settings.show.donorAmounts ? donation.item_label : describeDonation(donation, countedAmount(donation)),
       message: settings.show.messages ? donation.message : "",
       at: donation.verified_at ?? donation.created_at,
+      named: donation.display === "name",
     }));
 }
 
