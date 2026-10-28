@@ -149,14 +149,13 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
   </div>;
 }
 
-/** One signature box: who signs for whom, room to sign, and the name under the line (or a blank to write in). */
+/** One signature box: who signs for whom, room to sign, and the name on the line (or a blank line to write it in). */
 function Signature({ role, org, name }: { role: string; org: string; name: string }) {
   return <div>
     <p>{role}</p>
     <p className={s.org}>{org}</p>
     <span className={s.space} />
     <p className={s.signName}>{name || " "}</p>
-    <p className={styles.muted}>{name ? "Tanda tangan" : "Nama dan tanda tangan"}</p>
   </div>;
 }
 
