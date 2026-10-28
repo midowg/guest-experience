@@ -30,6 +30,8 @@ export function invitationPath(event: EventRef, invitation: InvitationRef): stri
 export const ticketPath = (event: EventRef, invitation: InvitationRef) => `${invitationPath(event, invitation)}/tiket`;
 /** The thank-you page the host sends after the visit, whatever the date says; personal when sent to one guest. */
 export const thanksPath = (event: EventRef, invitation?: InvitationRef) => `${invitation ? invitationPath(event, invitation) : eventPath(event)}/terima-kasih`;
+/** The office visit's "Cara datang" on its own page, to send to a guest before the visit. */
+export const arrivalPath = (event: EventRef) => `${eventPath(event)}/panduan`;
 export const galleryPath = (event: EventRef) => `${eventPath(event)}/galeri`;
 export const photoDownloadPath = (event: EventRef, photoId: string) => `${galleryPath(event)}/${photoId}/unduh`;
 /** Studio Poster, where a guest makes and downloads their own poster. */

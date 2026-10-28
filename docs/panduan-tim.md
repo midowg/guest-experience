@@ -9,6 +9,7 @@ Setiap acara punya **kode 6 karakter**, misalnya `invitation.werkudara.group/AB2
 - Kode acara terlihat di blok **Identitas & undangan** (kartu **Tautan acara**, dengan tombol Salin) dan di tab **Daftar tamu** (tautan umum dan QR).
 - Kode tidak berubah, jadi tautan yang sudah dicetak tetap berlaku.
 - Tautan lama `/e/…` masih bisa dibuka dan otomatis pindah ke alamat baru.
+- Kunjungan Kantor punya tautan **panduan datang** `invitation.werkudara.group/AB23CD/panduan`: hanya Cara datang (peta, rute, info kedatangan, pendamping, tombol Google Maps), tanpa beranda dan konfirmasi. Tautannya ada di editor **Cara datang**; kirim ke tamu sehari sebelum kunjungan.
 - Halaman admin acara juga pendek: `/admin/acara/AB23CD`, `/admin/acara/AB23CD/undangan`, `/admin/acara/AB23CD/checkin`.
 
 Masuk lewat `/admin` dengan password tim. Setiap login dicatat (waktu, IP, perkiraan lokasi, perangkat); catatannya bisa dilihat super admin di **Dashboard super admin › Log akses**.

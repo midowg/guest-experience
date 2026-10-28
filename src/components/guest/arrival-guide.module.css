@@ -1,0 +1,5 @@
+/* /KODE/panduan: "Cara datang" on its own, without the visit page's tab bar. */
+.main { padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px)); }
+.head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.event { margin: 0 0 var(--space-1); color: var(--color-muted); font-size: .875rem; font-weight: 600; }
+.visit { display: inline-flex; align-items: center; justify-self: center; gap: 6px; padding: var(--space-2) var(--space-3); color: var(--color-primary); font-size: .9375rem; font-weight: 600; }

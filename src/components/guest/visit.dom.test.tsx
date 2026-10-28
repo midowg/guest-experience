@@ -151,3 +151,20 @@ it("opens Cara datang on a photo of the place when there is no route map", () =>
   expect(within(page).getByAltText("Lobi kantor").closest("figure")).toBeTruthy();
   expect(within(page).queryByRole("list", { name: "Saat tiba" })).toBeNull();
 });
+
+it("shows only the way here on /KODE/panduan: no tab bar, no confirmation, a link back to the visit", async () => {
+  const { ArrivalGuide } = await import("./ArrivalGuide");
+  const event = visit({
+    code: "AB23CD", title: "Kunjungan PT Sinar Abadi", address: "Jl. Bhinneka No. 09", location_url: "https://maps.app.goo.gl/contoh",
+    route: { map_image: { url: "https://example.test/map.webp", alt: "Peta menuju kantor", srcset: [] }, steps: [{ title: "Lewat Jl. Pondok Raya", description: "", image: { url: "", alt: "", srcset: [] } }], points: [{ icon: "door", title: "Lobi & resepsionis", description: "" }] },
+  });
+  render(<ArrivalGuide event={event} />);
+  expect(screen.getByRole("heading", { level: 1, name: "Cara datang" })).toBeTruthy();
+  expect(screen.getByText("Kunjungan PT Sinar Abadi")).toBeTruthy();
+  expect(screen.getByAltText("Peta menuju kantor")).toBeTruthy();
+  expect(screen.getByRole("list", { name: "Saat tiba" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: /Buka Google Maps/ })).toBeTruthy();
+  expect(screen.queryByRole("navigation", { name: "Navigasi kunjungan" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Konfirmasi/ })).toBeNull();
+  expect(screen.getByRole("link", { name: /Buka halaman kunjungan/ }).getAttribute("href")).toBe("/AB23CD");
+});
