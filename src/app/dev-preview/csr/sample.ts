@@ -1,11 +1,13 @@
-import { startingDonation, type DonationRecipient, type DonationRecord } from "@/lib/donations";
+import { pageStyles, startingDonation, type DonationRecipient, type DonationRecord } from "@/lib/donations";
 import { createSeedEvent } from "@/lib/seed-event";
 
 /** Made-up Friday Sharing event and donations for the dev previews (donation page and report). */
-export function sampleCsr(query: { kosong?: string; tutup?: string; serah?: string; tema?: string }) {
+export function sampleCsr(query: { kosong?: string; tutup?: string; serah?: string; tema?: string; gaya?: string }) {
+  const style = pageStyles.find(item => item.key === query.gaya) ?? pageStyles[0];
   const base = startingDonation();
   const donation = {
     ...base,
+    style: style.key,
     enabled: query.tutup !== "1",
     items: base.items.map(item => item.key === "dana" ? { ...item, target: 25_000_000 } : item.key === "sembako" ? { ...item, target: 100 } : item.key === "buku" ? { ...item, target: 300 } : item),
     accounts: [{ id: "a1", bank: "BCA", number: "123 456 7890", holder: "Yayasan Contoh Peduli" }, { id: "a2", bank: "Bank Syariah Indonesia", number: "7100 2233 44", holder: "Yayasan Contoh Peduli" }],
@@ -20,7 +22,7 @@ export function sampleCsr(query: { kosong?: string; tutup?: string; serah?: stri
     ...createSeedEvent(), id: "10f3a511-2331-4000-8000-0000000000c5", slug: "contoh-csr", code: "AB23CD", status: "published" as const, event_kind: "csr" as const,
     title: "Contoh Berbagi Bersama Anak Panti 2026", subtitle: "Bersama 60 anak di Panti Asuhan Contoh", organizer: "Werkudara Peduli",
     introduction: "Bantu kami melengkapi kebutuhan sekolah dan sembako untuk anak-anak panti menjelang tahun ajaran baru.",
-    theme: { key: (query.tema === "segar" ? "segar" : "berbagi") as "segar" | "berbagi", corners: "soft" as const },
+    theme: { key: query.tema === "segar" ? "segar" as const : style.theme, corners: "soft" as const },
     hero: { ...createSeedEvent().hero, url: "https://picsum.photos/seed/csr-sampul/1600/1000", alt: "Contoh foto kegiatan", srcset: [] },
     donation,
   };

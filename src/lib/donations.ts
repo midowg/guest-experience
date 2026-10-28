@@ -23,6 +23,17 @@ export const donorDisplays: { key: DonorDisplay; label: string; hint: string }[]
   { key: "hidden", label: "Jangan sebutkan", hint: "Tidak muncul di daftar dan tanpa mengisi nama, tetap terhitung." },
 ];
 export const HAMBA_ALLAH = "Hamba Allah";
+
+/**
+ * The looks of the donor page. Each pairs a decoration style with a colour theme (src/lib/themes.ts);
+ * the page's sections, the donation form and its fields stay the same in all of them.
+ */
+export type PageStyle = "ceria" | "rapi" | "hangat";
+export const pageStyles: { key: PageStyle; label: string; description: string; theme: "berbagi" | "werkudara" | "nenek" }[] = [
+  { key: "ceria", label: "Ceria", description: "Toska dan jingga, konfeti, foto polaroid miring dengan stiker. Hangat untuk ajakan berbagi.", theme: "berbagi" },
+  { key: "rapi", label: "Rapi", description: "Biru Werkudara, bersih dan profesional. Tanpa hiasan, cocok untuk mitra korporat.", theme: "werkudara" },
+  { key: "hangat", label: "Hangat", description: "Krem dan cokelat, judul berhuruf kait, foto melengkung. Tenang dan bersahaja.", theme: "nenek" },
+];
 export const NO_NAME = "Tanpa nama";
 /**
  * The name a donation carries everywhere (page, admin, report, spreadsheet): the donor's own only
@@ -40,6 +51,8 @@ export type DonationSettings = {
   recipients: DonationRecipient[];
   accounts: BankAccount[];
   qris: PlainImage;
+  /** How the donor page looks (Tema halaman); content and forms are the same in every style. */
+  style: PageStyle;
   proofRequired: boolean;
   /** Each gift of goods comes with a photo of it, so the committee can check it on receipt. */
   goodsPhotoRequired: boolean;
@@ -112,7 +125,7 @@ export const defaultNotifyTemplate = "Halo {nama},\n\nTerima kasih atas donasi A
 
 export function emptyDonation(): DonationSettings {
   return {
-    enabled: false, items: [], recipients: [], accounts: [], qris: image(), proofRequired: false, goodsPhotoRequired: false, goodsNote: "", closesAt: null,
+    enabled: false, items: [], recipients: [], accounts: [], qris: image(), style: "ceria", proofRequired: false, goodsPhotoRequired: false, goodsNote: "", closesAt: null,
     show: { fundTotal: true, fundTarget: true, goods: true, donors: true, donorAmounts: false, messages: true },
     delivered: { at: null, photo: image(), note: "" },
     notify: { template: defaultNotifyTemplate, prayer: prayerSuggestions[0] },

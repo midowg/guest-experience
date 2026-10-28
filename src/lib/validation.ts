@@ -157,6 +157,7 @@ const donationSchema = z.object({
   items: z.array(donationItemSchema).max(40).refine(items => new Set(items.map(item => item.key)).size === items.length, "Jenis bantuan tidak boleh berulang.").default([]),
   accounts: z.array(bankAccountSchema).max(5).default([]),
   qris: plainImage.default(emptyImage),
+  style: z.enum(["ceria", "rapi", "hangat"]).default("ceria"),
   proofRequired: z.boolean().default(false),
   goodsPhotoRequired: z.boolean().default(false),
   goodsNote: text(1000).default(""),

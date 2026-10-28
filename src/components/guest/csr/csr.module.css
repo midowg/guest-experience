@@ -241,3 +241,46 @@
 .suggest:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .suggest[aria-pressed="true"] { border-style: solid; border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary); }
 .goodsEntry .chips { gap: 6px; }
+
+/* ---------------------------------------------------------------------------------------
+   Tema halaman. Ceria is the look above. Rapi and Hangat change only decoration, shapes and
+   type; the sections, the form and its fields are the same. Colours come from the theme
+   each one is paired with (pageStyles in src/lib/donations.ts).
+   --------------------------------------------------------------------------------------- */
+
+/* Rapi: clean and professional. No confetti, no tilt, flat cards with a hairline, one colour. */
+.csr[data-style="rapi"] { background: color-mix(in srgb, var(--color-soft) 25%, var(--color-background)); }
+.csr[data-style="rapi"] .intro::before, .csr[data-style="rapi"] .squiggle, .csr[data-style="rapi"] .sticker { display: none; }
+.csr[data-style="rapi"] .intro { padding-bottom: var(--space-4); }
+.csr[data-style="rapi"] .title { font-weight: 800; letter-spacing: -.01em; }
+.csr[data-style="rapi"] .photo { padding: 0; background: none; transform: none; box-shadow: none; }
+.csr[data-style="rapi"] .photo img { border-radius: 16px; }
+.csr[data-style="rapi"] .collected, .csr[data-style="rapi"] .section, .csr[data-style="rapi"] .recipientsButton { border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-background); box-shadow: none; }
+.csr[data-style="rapi"] .collectedLabel { padding: 0; background: none; color: var(--color-caption); font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; }
+.csr[data-style="rapi"] .collectedLabel svg { display: none; }
+.csr[data-style="rapi"] .bar0 { height: 10px; background: color-mix(in srgb, var(--color-primary) 14%, var(--color-background)); }
+.csr[data-style="rapi"] .bar0 > span { background: var(--color-primary); }
+.csr[data-style="rapi"] .goods li:nth-child(n), .csr[data-style="rapi"] .face:nth-child(n), .csr[data-style="rapi"] .donor:nth-child(n) .avatar, .csr[data-style="rapi"] .recipientsIcon { background: color-mix(in srgb, var(--color-primary) 9%, var(--color-background)); color: var(--color-heading); }
+.csr[data-style="rapi"] .face[data-more] { background: var(--color-primary); color: var(--color-on-primary); }
+.csr[data-style="rapi"] .bar .give { background: var(--color-primary); color: var(--color-on-primary); box-shadow: 0 10px 22px -12px rgba(var(--scrim-rgb), .6); }
+.csr[data-style="rapi"] .bar .give svg { color: currentColor; }
+
+/* Hangat: calm and homely. A serif title, an arched photo, outlined pills, a thin ornament. */
+.csr[data-style="hangat"] .intro::before, .csr[data-style="hangat"] .sticker { display: none; }
+.csr[data-style="hangat"] .title { font-family: var(--font-garamond), var(--font-heading), serif; font-weight: 500; font-size: clamp(2rem, 8.5vw, 2.5rem); line-height: 1.08; }
+.csr[data-style="hangat"] .squiggle { width: 56px; height: 2px; background: var(--color-primary); opacity: .5; }
+.csr[data-style="hangat"] .subtitle { font-family: var(--font-garamond), serif; font-size: 1.125rem; font-style: italic; }
+.csr[data-style="hangat"] .photo { padding: 0; overflow: hidden; border-radius: 96px 96px 22px 22px; background: none; transform: none; box-shadow: 0 18px 34px -24px rgba(var(--scrim-rgb), .7); }
+.csr[data-style="hangat"] .photo img { border-radius: 0; }
+.csr[data-style="hangat"] .collected { border: 1px solid var(--color-border); box-shadow: none; }
+.csr[data-style="hangat"] .collectedLabel { padding: 0; background: none; color: var(--color-heading); font-family: var(--font-garamond), serif; font-size: 1.25rem; font-weight: 500; font-style: italic; }
+.csr[data-style="hangat"] .collectedLabel svg { display: none; }
+.csr[data-style="hangat"] .fundValue { font-weight: 800; }
+.csr[data-style="hangat"] .bar0 { height: 8px; background: color-mix(in srgb, var(--color-primary) 12%, var(--color-background)); }
+.csr[data-style="hangat"] .bar0 > span { background: var(--color-primary); }
+.csr[data-style="hangat"] .goods li:nth-child(n) { border: 1px solid var(--color-border); background: transparent; }
+.csr[data-style="hangat"] .face:nth-child(n), .csr[data-style="hangat"] .donor:nth-child(n) .avatar, .csr[data-style="hangat"] .recipientsIcon { background: var(--color-soft); color: var(--color-heading); }
+.csr[data-style="hangat"] .face[data-more] { background: var(--color-primary); color: var(--color-on-primary); }
+.csr[data-style="hangat"] .sectionHead h2 { font-family: var(--font-garamond), serif; font-weight: 500; font-size: 1.5rem; }
+.csr[data-style="hangat"] .bar .give { background: var(--color-primary); color: var(--color-on-primary); box-shadow: 0 10px 22px -12px rgba(var(--scrim-rgb), .6); }
+.csr[data-style="hangat"] .bar .give svg { color: currentColor; }

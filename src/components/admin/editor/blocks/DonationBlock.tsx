@@ -5,8 +5,10 @@ import { Button } from "@/components/ui";
 import { Check, OrderButtons, SuggestionChips } from "@/components/admin/editor/controls";
 import { moveItem } from "@/components/admin/editor/editor-model";
 import type { EditorKit } from "@/components/admin/editor/kit";
+import { ChoiceCards } from "@/components/admin/editor/JourneyEditor";
+import { themeDefinition } from "@/lib/themes";
 import { PhotoField } from "@/components/admin/shared/PhotoField";
-import { defaultDonationItems, defaultNotifyTemplate, prayerSuggestions, type DonationCategory, type DonationItem, type DonationSettings } from "@/lib/donations";
+import { defaultDonationItems, defaultNotifyTemplate, prayerSuggestions, type DonationCategory, type DonationItem, type DonationSettings, pageStyles } from "@/lib/donations";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
 import d from "./donation-block.module.css";
 
@@ -172,4 +174,24 @@ function uniqueKey(base: string, items: DonationItem[], self: number) {
   let key = base, n = 2;
   while (taken.has(key)) key = `${base}-${n++}`;
   return key;
+}
+
+/**
+ * Tema halaman: the look of the donor page. Picking one sets its decoration style and its colours
+ * together; the sections, the donation form and every field stay as they are.
+ */
+export function DonationStyleBlock({ kit }: { kit: EditorKit }) {
+  const { event, update } = kit;
+  const { donation, set } = useDonation(kit);
+  return <div className="stack">
+    <p>Pilih gaya halaman donasi. Yang berganti hanya tampilannya: warna, hiasan, bentuk foto, dan huruf judul. Isi, urutan bagian, dan form donasi tetap sama.</p>
+    <ChoiceCards name="donation.style" legend="Tema" current={donation.style} onPick={key => {
+      set({ style: key });
+      update("theme", { ...event.theme, key: pageStyles.find(style => style.key === key)!.theme, corners: "soft" });
+    }} options={pageStyles.map(style => {
+      const tokens = themeDefinition(style.theme).tokens;
+      return { value: style.key, label: style.label, description: style.description, recommended: style.key === "ceria", swatch: [tokens.hero, tokens.heroAccent] as [string, string] };
+    })} />
+    <p className="field-hint">Lihat hasilnya di pratinjau ponsel di samping.</p>
+  </div>;
 }

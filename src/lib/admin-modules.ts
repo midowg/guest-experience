@@ -119,7 +119,7 @@ export const kindBlocks: Record<EventKind, readonly string[]> = {
   kunjungan: ["identity", "appearance", "hero", "topics", "day", "after", "photos", "publication"], acara: invitationBlocks, program: invitationBlocks,
   kartu: ["appearance", "publication"],
   eguide: ["identity", "appearance", "schedule", "guide", "publication"],
-  csr: ["identity", "appearance", "hero", "donation-items", "donation-pay", "donation-recipients", "donation-show", "donation-news", "publication"],
+  csr: ["identity", "appearance", "hero", "donation-style", "donation-items", "donation-pay", "donation-recipients", "donation-show", "donation-news", "publication"],
   panduan: ["identity", "appearance", "hero", "publication"],
 };
 const blockOwner = Object.fromEntries((Object.entries(moduleBlocks) as [AdminModule, string][]).map(([key, id]) => [id, key])) as Record<string, AdminModule>;

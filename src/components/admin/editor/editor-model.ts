@@ -149,6 +149,7 @@ export const editorBlocks: { id: string; title: string; stage: EditorStage }[] =
   { id: "contact", title: "Kontak", stage: "guest" },
   { id: "poster", title: POSTER_LABEL, stage: "guest" },
   // Friday Sharing (CSR) only: what can be given, how to pay, who receives it, what the page shows, the handover news.
+  { id: "donation-style", title: "Tema halaman", stage: "prep" },
   { id: "donation-items", title: "Pilihan bantuan", stage: "guest" },
   { id: "donation-pay", title: "Rekening & QRIS", stage: "guest" },
   { id: "donation-recipients", title: "Penerima bantuan", stage: "guest" },
@@ -183,7 +184,7 @@ const fieldBlocks: Record<string, string> = {
 const donationBlocks: Record<string, string> = {
   enabled: "donation-items", items: "donation-items", goodsNote: "donation-items", closesAt: "donation-items",
   accounts: "donation-pay", qris: "donation-pay", proofRequired: "donation-pay",
-  recipients: "donation-recipients", show: "donation-show", delivered: "donation-news", notify: "donation-news",
+  style: "donation-style", recipients: "donation-recipients", show: "donation-show", delivered: "donation-news", notify: "donation-news",
 };
 /**
  * Kunjungan Kantor's menu follows the guest's screens (board 12), so some fields sit in another

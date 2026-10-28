@@ -4,6 +4,9 @@ import { CsrExperience } from "@/components/guest/csr/CsrExperience";
 import { donationTotals, publicDonors, startingDonation, type DonationRecord } from "@/lib/donations";
 import { createSeedEvent } from "@/lib/seed-event";
 
+// next/font only runs inside Next's compiler.
+vi.mock("../place-guide-font", () => ({ garamond: { variable: "" } }));
+
 beforeEach(() => { localStorage.clear(); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 

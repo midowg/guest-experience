@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/format";
 import { contactLink } from "../JourneyPanels";
 import { useGuestPage } from "../use-guest-page";
 import { DonationForm, DONATION_MEMORY_EVENT, donationMemoryKey, parseRemembered } from "./DonationForm";
+import { garamond } from "../place-guide-font";
 import s from "./csr.module.css";
 
 export type DonationView = { totals: DonationTotals; donors: PublicDonor[]; ready: boolean };
@@ -60,7 +61,7 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
   // A few faces of the people who gave, as on a charity page; hidden donors are never among them.
   const faces = view.donors.slice(0, 4);
 
-  return <div className={s.csr} data-theme={event.theme?.key ?? "berbagi"} style={themeStyle(event.theme)}>
+  return <div className={`${s.csr} ${settings.style === "hangat" ? garamond.variable : ""}`} data-theme={event.theme?.key ?? "berbagi"} data-style={settings.style} style={themeStyle(event.theme)}>
     <main className={s.main}>
       <header className={s.intro}>
         {/* eslint-disable-next-line @next/next/no-img-element -- the small Werkudara mark, a static file */}

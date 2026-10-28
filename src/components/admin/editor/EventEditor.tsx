@@ -24,7 +24,7 @@ import { GuideBlock, withGuidePart } from "@/components/admin/editor/blocks/Guid
 import { HeroBlock } from "@/components/admin/editor/blocks/HeroBlock";
 import { IdentityBlock } from "@/components/admin/editor/blocks/IdentityBlock";
 import { PosterBlock } from "@/components/admin/editor/blocks/PosterBlock";
-import { DonationDisplayBlock, DonationItemsBlock, DonationNewsBlock, DonationPaymentBlock, DonationRecipientsBlock } from "@/components/admin/editor/blocks/DonationBlock";
+import { DonationDisplayBlock, DonationItemsBlock, DonationNewsBlock, DonationPaymentBlock, DonationRecipientsBlock, DonationStyleBlock } from "@/components/admin/editor/blocks/DonationBlock";
 import { PublicationBlock } from "@/components/admin/editor/blocks/PublicationBlock";
 import { POSTER_LABEL, type PosterDesign } from "@/lib/poster";
 import { posterPresets, presetPoster } from "@/lib/poster-presets";
@@ -48,14 +48,14 @@ import { absolute, adminApi, eventPath } from "@/lib/routes";
 
 
 /** Shorter names for the chips, so more of them fit with their names on one row. */
-const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan", poster: "Poster", guide: "Bab", "donation-items": "Bantuan", "donation-pay": "Rekening", "donation-recipients": "Penerima", "donation-show": "Tampilan", "donation-news": "Kabar" };
+const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan", poster: "Poster", guide: "Bab", "donation-style": "Tema", "donation-items": "Bantuan", "donation-pay": "Rekening", "donation-recipients": "Penerima", "donation-show": "Tampilan", "donation-news": "Kabar" };
 /** A visit's chips name its guest screens. */
 const placeChipNames: Record<string, string> = { hero: "Sambutan", venue: "Getting Here", contact: "PIC", gallery: "Galeri" };
 const visitChipNames: Record<string, string> = { hero: "Sambutan", topics: "Tentang", rsvp: "Konfirmasi", venue: "Cara datang", agenda: "Rundown", day: "Hari H", team: "Tim", contact: "Pendamping", after: "Terima kasih", photos: "Foto" };
 const blockIcons: Record<string, LucideIcon> = {
   delete: Trash2, identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
   agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, language: Languages, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
-  feedback_questions: MessageSquare, review: Star, after: Handshake, photos: Images, sections: LayoutList, publication: Rocket, poster: Frame, guide: BookOpen, "donation-items": HandHeart, "donation-pay": Landmark, "donation-recipients": HeartHandshake, "donation-show": Eye, "donation-news": Send,
+  feedback_questions: MessageSquare, review: Star, after: Handshake, photos: Images, sections: LayoutList, publication: Rocket, poster: Frame, guide: BookOpen, "donation-style": Palette, "donation-items": HandHeart, "donation-pay": Landmark, "donation-recipients": HeartHandshake, "donation-show": Eye, "donation-news": Send,
 };
 
 
@@ -423,6 +423,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {block("contact", "Kontak", <ContactBlock kit={kit} />)}
       {block("day", "Hari H", <DayBlock event={event} update={update} control={control} />)}
       {block("poster", POSTER_LABEL, <PosterBlock kit={kit} />)}
+      {block("donation-style", "Tema halaman", <DonationStyleBlock kit={kit} />)}
       {block("donation-items", "Pilihan bantuan", <DonationItemsBlock kit={kit} />)}
       {block("donation-pay", "Rekening & QRIS", <DonationPaymentBlock kit={kit} />)}
       {block("donation-recipients", "Penerima bantuan", <DonationRecipientsBlock kit={kit} />)}
