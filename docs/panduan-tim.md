@@ -196,6 +196,15 @@ Setiap donatur memilih cara tampil: **nama**, **Hamba Allah**, atau **jangan seb
 
 Hanya donatur yang mengisi nomor WhatsApp dan donasinya sudah Diterima yang muncul di daftar kabar.
 
+## 10. Panduan lokasi: halaman umum "cara ke tempat kami"
+
+Templat **Panduan lokasi** di **Buat acara** membuat halaman bergaya *Panduan ke Werkudara*: sambutan dengan foto sampul, **Getting Here** (peta rute, alamat, langkah bergambar, kartu "Tersesat? Tanya kami", info kedatangan), **Gallery**, dan tombol **Buka Google Maps** yang selalu terlihat di bawah layar. Tanpa RSVP, tiket, atau tanggal.
+
+- Panduan baru langsung terisi data dan foto Werkudara (dua bahasa, ID/EN). Pilih PIC di langkah Buat acara.
+- Untuk lokasi atau klien lain, ganti isinya di editor: **Sambutan** (judul, subjudul, kalimat pembuka, isi, foto sampul), **Getting Here** (alamat, tautan Maps, peta rute, langkah dan fotonya, info kedatangan), **PIC**, dan **Galeri**. Foto yang tidak dipakai dihapus di blok Galeri.
+- Bagian yang kosong tidak tampil: tanpa foto galeri, bagian Gallery hilang; tanpa peta rute, Getting Here dimulai dari alamat.
+- Terjemahan English (termasuk langkah rute dan info kedatangan) ada di **Bahasa & terjemahan**.
+
 ## Super admin
 
 Menu **Dashboard super admin** (password terpisah):

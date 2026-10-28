@@ -1,0 +1,160 @@
+/*
+ * Panduan lokasi: the styles of the page "Panduan ke Werkudara" (public/panduan-ke-werkudara),
+ * scoped to the page. One quiet column on phones, photographs edge to edge and text held to a narrow
+ * measure; from 900px each section splits into a title column and a reading column. Single light
+ * theme by design: the warm white ground and the blue logo stay as supplied.
+ */
+@font-face { font-family: "LM Roman 17"; src: url("/panduan-ke-werkudara/assets/fonts/lm-roman-17.woff") format("woff"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "LM Roman 12"; src: url("/panduan-ke-werkudara/assets/fonts/lm-roman-12.woff") format("woff"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "LM Roman 12"; src: url("/panduan-ke-werkudara/assets/fonts/lm-roman-12-italic.woff") format("woff"); font-weight: 400; font-style: italic; font-display: swap; }
+
+.page {
+  --ground: #FAF8F4;
+  --ground-veil: rgba(250, 248, 244, 0.94);
+  --ink: #2B2F36;
+  --muted: #5C6066;
+  --line: #E4E0D8;
+  --blue: #02378D;
+  --blue-deep: #012A6E;
+  --on-blue: #FFFFFF;
+  --scrim: rgba(43, 47, 54, 0.5);
+  --rule: #B9B5AD;
+  --font-display: "LM Roman 17", "Bodoni 72", Didot, "Times New Roman", serif;
+  --font-serif: "LM Roman 12", "Bodoni 72", Didot, "Times New Roman", serif;
+  --font-sans: "Poppins", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --gutter: 24px;
+  --measure: 34rem;
+  --bar: 56px;
+  color-scheme: light;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--ground); color: var(--ink);
+  font-family: var(--font-sans); font-weight: 300; font-size: 1.03125rem; line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+/* Room under the Google Maps bar. */
+.page[data-maps] { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+.page img { display: block; max-width: 100%; height: auto; }
+.page p { margin: 0; text-wrap: pretty; }
+.page :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.multiline { white-space: pre-line; }
+
+/* Top bar and section navigation */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--ground-veil); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.barIn { position: relative; max-width: 1128px; margin-inline: auto; padding-inline: var(--gutter); height: var(--bar); display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.brand { display: flex; align-items: center; min-height: 44px; }
+.page .brand img { height: 30px; width: auto; }
+.menuBtn { min-height: 44px; padding: 0 0 0 16px; border: 0; background: none; color: var(--ink); cursor: pointer; font-family: var(--font-sans); font-weight: 500; font-size: 0.72rem; letter-spacing: 0.22em; }
+.barTools { display: flex; align-items: center; gap: 4px; }
+.lang, .langItem { display: flex; align-items: center; }
+.langBtn { min-width: 40px; min-height: 44px; padding: 0 6px; border: 0; background: none; cursor: pointer; color: var(--muted); font-family: var(--font-sans); font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; }
+.langBtn[aria-pressed="true"] { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; }
+.langSep { color: var(--rule); font-size: 0.72rem; }
+.nav { display: none; position: absolute; left: 0; right: 0; top: 100%; background: var(--ground); border-bottom: 1px solid var(--line); padding: 10px var(--gutter) 30px; }
+.open .nav { display: flex; flex-direction: column; }
+.nav a { padding: 11px 0; color: var(--ink); text-decoration: none; font-family: var(--font-serif); font-size: 1.5rem; line-height: 1.3; word-spacing: -0.07em; }
+.nav a:hover { color: var(--blue); }
+
+/* Shared section rhythm */
+.section { scroll-margin-top: calc(var(--bar) + 16px); }
+.wrap { max-width: 1128px; margin-inline: auto; padding-inline: var(--gutter); }
+.sec { display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 36px; padding-block: 76px; }
+.sec.first { padding-block: 44px 76px; }
+.page h1, .page h2 { margin: 0; font-family: var(--font-display); font-weight: 400; line-height: 1.3; letter-spacing: 0.18em; word-spacing: -0.1em; color: var(--blue); text-transform: uppercase; text-wrap: balance; }
+.page h1 { font-size: clamp(1.4rem, 7.2vw, 2.1rem); }
+.page h2 { font-size: clamp(1.35rem, 6.6vw, 2rem); }
+.sub { margin-top: 0.5rem; font-family: var(--font-serif); font-style: italic; font-size: 1.3rem; line-height: 1.35; word-spacing: -0.07em; color: var(--muted); }
+.page .sub { margin-top: 0.5rem; }
+.lead { font-family: var(--font-serif); font-size: 1.42rem; line-height: 1.4; word-spacing: -0.07em; color: var(--ink); }
+.body { display: flex; flex-direction: column; gap: 0.9rem; max-width: var(--measure); min-width: 0; }
+.label { font-weight: 500; font-size: 0.72rem; line-height: 1.4; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+
+/* Buttons */
+.btnSolid { box-sizing: border-box; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 420px; min-height: 54px; margin: 0 auto; padding: 0 28px; border: 1px solid var(--blue); background: var(--blue); color: var(--on-blue); text-decoration: none; font-family: var(--font-sans); font-weight: 500; font-size: 0.78rem; letter-spacing: 0.2em; transition: background-color 0.2s ease, border-color 0.2s ease; }
+.btnSolid:hover, .btnSolid:active { background: var(--blue-deep); border-color: var(--blue-deep); }
+.textBtn { min-height: 44px; padding: 0; border: 0; background: none; color: var(--blue); cursor: pointer; font-family: var(--font-sans); font-weight: 400; font-size: 0.86rem; letter-spacing: 0.02em; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.textBtn:hover { color: var(--blue-deep); }
+
+/* Welcome */
+.page .heroImg { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; object-position: 64% 50%; }
+.page .heroImg[data-focus="top"] { object-position: 64% 20%; }
+.page .heroImg[data-focus="bottom"] { object-position: 64% 80%; }
+.page .mark { height: 46px; width: auto; margin-bottom: 26px; }
+.details { display: flex; flex-wrap: wrap; gap: 18px 48px; margin-top: 1.6rem; }
+.page .details p { font-size: 1rem; line-height: 1.6; }
+.page .details p:first-child { font-weight: 400; }
+.page .details p:last-child:not(:first-child) { color: var(--muted); }
+
+/* Getting Here: the map, the numbered turns, the host to ask, what to do on arrival. Square
+   corners and hairlines, like the buttons, the serif titles and the cover photo. */
+.map { margin: 0; }
+.mapOpen { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.page .map img, .page .stepPhoto img { width: 100%; }
+.map figcaption { margin-top: 10px; }
+.embed iframe { display: block; width: 100%; aspect-ratio: 4 / 3; border: 0; }
+.steps, .points { display: grid; gap: 14px; margin: 6px 0 0; padding: 0; list-style: none; }
+.steps li { display: flex; align-items: flex-start; gap: 14px; padding: 16px; background: #fff; border: 1px solid var(--line); }
+.points li { display: flex; align-items: center; gap: 14px; }
+.num { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; background: var(--blue); color: var(--on-blue); font-weight: 500; font-size: 0.9rem; line-height: 1; }
+.steps li > div, .points li > div { flex: 1 1 0; min-width: 0; display: grid; gap: 4px; }
+.stepT, .ptT, .picT { font-weight: 500; color: var(--ink); line-height: 1.4; }
+.page .stepS, .page .ptS, .page .picS { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+.stepPhoto { position: relative; margin-top: 10px; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+/* The step photo shows whole, at its own shape: the landmark at the turn must not be cropped. */
+.page .stepPhoto img { height: auto; }
+.stepPhoto::after { content: ""; position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; background: rgba(255, 255, 255, 0.92) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2302378D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cpolyline points='9 21 3 21 3 15'/%3E%3Cline x1='21' y1='3' x2='14' y2='10'/%3E%3Cline x1='3' y1='21' x2='10' y2='14'/%3E%3C/svg%3E") no-repeat center / 16px; box-shadow: 0 2px 8px rgba(43, 47, 54, 0.2); }
+.pic { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; background: #EAF1FB; }
+.pic > div { flex: 1 1 0; min-width: 0; }
+.avatar, .picWa { flex: none; display: inline-grid; place-items: center; width: 46px; height: 46px; }
+.avatar { background: var(--blue); color: var(--on-blue); font-weight: 500; font-size: 1.1rem; object-fit: cover; }
+.picWa { background: #25A55F; color: #fff; transition: background-color 0.2s ease; }
+.picWa:hover { background: #1E8A4F; }
+.ptIc { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; background: #EAF1FB; color: var(--blue); }
+
+/* Buka Google Maps stays on screen in a bottom bar that mirrors the top bar (warm veil, blur,
+   hairline), holding the page's own solid button. */
+.mapsBar { position: fixed; z-index: 15; left: 0; right: 0; bottom: 0; padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--ground-veil); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
+
+/* Gallery: justified rows. An item's share of a row is its aspect ratio, so every photo in a row
+   has the same height and the row fills the width, portrait or landscape. */
+.gallery { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.gallery li { flex-grow: calc(var(--r) * 100); flex-basis: calc(var(--r) * 120px); min-width: 0; }
+.photoOpen { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.page .gallery img { width: 100%; height: auto; aspect-ratio: var(--r); object-fit: cover; }
+
+/* Viewer for the map and the photos */
+.viewer { box-sizing: border-box; width: 100%; max-width: 100%; height: 100%; max-height: 100%; margin: 0; padding: 0; border: 0; background: var(--ground); color: var(--ink); font-family: var(--font-sans); }
+.viewer::backdrop { background: var(--scrim); }
+.viewer[open] { display: flex; flex-direction: column; }
+.viewer p { margin: 0; }
+.viewerBar { box-sizing: border-box; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: var(--bar); padding: env(safe-area-inset-top, 0px) var(--gutter) 0; border-bottom: 1px solid var(--line); }
+.viewerScroll { flex-grow: 1; overflow: auto; -webkit-overflow-scrolling: touch; }
+.viewerScroll img { display: block; width: 1100px; max-width: none; height: auto; }
+.viewerHint { flex-shrink: 0; padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); font-size: 0.86rem; line-height: 1.5; color: var(--muted); }
+.fit .viewerScroll { display: flex; align-items: center; justify-content: center; padding: 16px; }
+.fit .viewerScroll img { width: auto; max-width: 100%; max-height: 100%; }
+
+@media (min-width: 900px) {
+  .page { --gutter: 40px; --bar: 64px; }
+  .page { font-size: 1.0625rem; }
+  .menuBtn { display: none; }
+  .nav, .open .nav { display: flex; flex-direction: row; position: static; gap: 22px; margin-left: auto; padding: 0; border: 0; background: none; }
+  .nav a { padding: 10px 0; font-family: var(--font-sans); font-weight: 400; font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; word-spacing: 0; white-space: nowrap; }
+  .sec { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 72px; row-gap: 56px; padding-block: 120px; }
+  .sec.first { padding-block: 72px 120px; }
+  .sec > .head { grid-column: 1; }
+  .sec > .body, .sec > .gallery { grid-column: 2; }
+  .page .heroImg { aspect-ratio: 5 / 2; max-height: 600px; }
+  .gallery li { flex-basis: calc(var(--r) * 220px); }
+  /* Getting Here: the title holds the left column, the map and the steps read down the right one. */
+  .gettingHere .head { grid-row: 1 / span 2; align-self: start; position: sticky; top: calc(var(--bar) + 32px); }
+  .gettingHere .map { grid-column: 2; grid-row: 1; }
+  .gettingHere .body { grid-column: 2; grid-row: 2; }
+  .gettingHere .sec:not(:has(> .map)) > .body { grid-row: 1; }
+  .viewerScroll { display: flex; align-items: flex-start; justify-content: center; padding: 32px; }
+  .viewerScroll img { width: min(1601px, 100%); }
+  .viewerHint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btnSolid, .picWa { transition: none; }
+}

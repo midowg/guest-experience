@@ -98,7 +98,7 @@ export function PhonePreview({ event, phase, onPhase, device, onDevice, focus, o
         <button type="button" aria-pressed={device === "web"} onClick={() => onDevice("web")}><Monitor size={14} aria-hidden="true" /> Web</button>
       </div>
       {/* An E-Guide reads the same before, on and after the day: no phases to switch. */}
-      {event.event_kind !== "eguide" && event.event_kind !== "csr" && <div className={styles.phaseSwitch} role="group" aria-label="Tampilan undangan">
+      {event.event_kind !== "eguide" && event.event_kind !== "csr" && event.event_kind !== "panduan" && <div className={styles.phaseSwitch} role="group" aria-label="Tampilan undangan">
         {phases.map(item => <button key={item.key} type="button" aria-pressed={phase === item.key} onClick={() => onPhase(item.key)}>{item.label}</button>)}
       </div>}
     </div>

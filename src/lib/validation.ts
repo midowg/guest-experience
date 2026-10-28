@@ -76,8 +76,8 @@ const experienceSchema = z.object({
 });
 const routeSchema = z.object({
   map_image: plainImage.default(emptyImage),
-  steps: z.array(z.object({ title: text(150).min(1, "Isi judul langkah."), description: text(500).default(""), image: plainImage.default(emptyImage) })).max(6).default([]),
-  points: z.array(z.object({ icon: z.enum(arrivalIcons).default("info"), title: text(120).min(1, "Isi judul info."), description: text(300).default("") })).max(4).default([]),
+  steps: z.array(z.object({ title: text(150).min(1, "Isi judul langkah."), description: text(500).default(""), image: plainImage.default(emptyImage), en: pairSchema(150, 500).optional() })).max(6).default([]),
+  points: z.array(z.object({ icon: z.enum(arrivalIcons).default("info"), title: text(120).min(1, "Isi judul info."), description: text(300).default(""), en: pairSchema(120, 300).optional() })).max(4).default([]),
 });
 const afterSchema = z.object({
   title: text(200).default(""), message: text(2000).default(""), image: plainImage.default(emptyImage),
@@ -240,7 +240,7 @@ export const eventBaseSchema = z.object({
     framing: z.object({ mobile: photoFrameSchema, desktop: photoFrameSchema }).optional(),
   }),
   gallery: z.array(z.object({ id: z.uuid(), url: requiredHttpsUrl, alt: text(300), caption: text(300), sort_order: z.number().int().min(0).max(1000), srcset: srcsetSchema })).max(12),
-  event_kind: z.enum(["kunjungan", "acara", "program", "kartu", "eguide", "csr"]).default("acara"),
+  event_kind: z.enum(["kunjungan", "acara", "program", "kartu", "eguide", "csr", "panduan"]).default("acara"),
   audience: z.enum(["external", "internal"]).default("external"),
   theme: z.object({ key: z.enum(themeKeys).default("werkudara"), corners: z.enum(["square", "soft"]).default("square") }).default({ key: "werkudara", corners: "square" }),
   phase_override: z.enum(["auto", "before", "day", "after"]).default("auto"),

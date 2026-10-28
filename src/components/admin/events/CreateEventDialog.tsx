@@ -59,7 +59,7 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
       const copy = events.find(event => event.id === next.id);
       const office = copy?.venue_name === WERKUDARA_OFFICE.venue_name;
       setDetails({ ...emptyDetails, timezone: (copy?.timezone ?? "Asia/Jakarta") as Details["timezone"], location: office ? "werkudara" : copy?.venue_name ? "other" : "later", venue_name: copy?.venue_name ?? "", address: copy?.address ?? "", location_url: copy?.location_url ?? "" });
-    } else if (next.type === "template" && (templateOf(next.key)?.kind === "eguide" || templateOf(next.key)?.kind === "csr")) setDetails({ ...emptyDetails, location: "later", venue_name: "", address: "", location_url: "" });
+    } else if (next.type === "template" && ["eguide", "csr", "panduan"].includes(templateOf(next.key)?.kind ?? "")) setDetails({ ...emptyDetails, location: "later", venue_name: "", address: "", location_url: "" });
     else setDetails(emptyDetails);
   }
 
@@ -69,6 +69,8 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
   const guide = template?.kind === "eguide";
   // A CSR page collects donations: a handover date and a place are optional.
   const csr = template?.kind === "csr";
+  // A Panduan lokasi starts filled with Werkudara's guide (src/lib/place-guide.ts): no date or place to ask.
+  const place = template?.kind === "panduan";
   function setup(): unknown {
     const time = (value: string) => value ? fromZoneInput(value, details.timezone) : null;
     if (card) return {
@@ -77,19 +79,28 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
     };
     const modules = (template ? template.modules : source ? source.sections.filter(s => s.enabled).map(s => s.key) : ["about", "agenda", "location", "rsvp", "contact"] as SectionKey[]).filter(isSetupKey).filter(allowed);
     return {
-      template: template?.key ?? "blank", title: details.title, starts_at: time(details.starts_at) ?? (guide || csr ? new Date().toISOString() : ""), ends_at: time(details.ends_at), timezone: details.timezone,
+      template: template?.key ?? "blank", title: details.title, starts_at: time(details.starts_at) ?? (guide || csr || place ? new Date().toISOString() : ""), ends_at: time(details.ends_at), timezone: details.timezone,
       audience: template?.audience ?? source?.audience ?? "external", language: source?.language ?? "id", invitation_mode: source?.invitation_mode ?? "open",
       location: details.location, ...(details.location === "later" ? { venue_name: "", address: "", location_url: "" } : { venue_name: details.venue_name, address: details.address, location_url: details.location_url }),
       greeting: "", introduction: "", closing: "", modules, guest_estimate: null, rsvp_closes_at: null, contact_name: "", contact_phone: "", pic_staff_id: picId,
     };
   }
 
+  const picChooser = staff.length > 0 && <fieldset className={styles.wizardChoices}>
+    <legend>{place ? "PIC untuk tamu yang tersesat (opsional)" : "PIC acara (opsional)"}</legend>
+    <div className={styles.picRow}>
+      {staff.map(person => <button key={person.id} type="button" className={styles.picChip} aria-pressed={picId === person.id} onClick={() => setPicId(picId === person.id ? "" : person.id)}>
+        <StaffAvatar person={person} size={32} /><span>{person.name}</span>
+      </button>)}
+    </div>
+  </fieldset>;
+
   async function create() {
     if (pending || !start) return;
     const parsed = setupSchema.safeParse(setup());
     const found: Record<string, string> = {};
     if (!parsed.success) for (const issue of parsed.error.issues) found[issue.path.join(".")] ??= issue.message;
-    if (!details.starts_at && !card && !guide && !csr) found.starts_at = "Isi tanggal dan jam mulai.";
+    if (!details.starts_at && !card && !guide && !csr && !place) found.starts_at = "Isi tanggal dan jam mulai.";
     if (Object.keys(found).length) { setErrors(found); requestAnimationFrame(() => document.getElementById(`setup-${Object.keys(found)[0]}`)?.focus()); return; }
     setPending(true); setError("");
     try {
@@ -149,8 +160,11 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
             {template && <p className="field-hint">{template.label} · tampilan {themeDefinition(template.theme).name}</p>}
           </div>
           <div className="stack">
-            {input("title", card ? "Nama kartu" : guide ? "Nama E-Guide" : csr ? "Nama kegiatan" : "Nama acara", { hint: card ? "Tampil sebagai judul halaman kartu." : guide ? "Tampil di sampul buku panduan." : csr ? "Tampil sebagai judul halaman donasi." : "Tampil sebagai judul undangan.", placeholder: template ? "" : undefined, suggestions: template ? [template.example, ...(template.examples ?? [])] : undefined })}
-            {card ? <p className="field-hint">Jenis kartu (poster, ucapan, ID card, sertifikat, undangan), desain, warna, dan ukuran dipilih di editor setelah ini. Kartu dibuat sebagai draf.</p> : <>
+            {input("title", card ? "Nama kartu" : guide ? "Nama E-Guide" : csr ? "Nama kegiatan" : place ? "Judul panduan" : "Nama acara", { hint: card ? "Tampil sebagai judul halaman kartu." : place ? "Tampil besar di sambutan, di atas foto sampul." : guide ? "Tampil di sampul buku panduan." : csr ? "Tampil sebagai judul halaman donasi." : "Tampil sebagai judul undangan.", placeholder: template ? "" : undefined, suggestions: template ? [template.example, ...(template.examples ?? [])] : undefined })}
+            {place ? <>
+              {picChooser}
+              <p className="field-hint">Panduan terisi dengan data dan foto Werkudara (sambutan, alamat, peta, langkah rute, info kedatangan, galeri). Ubah semuanya di editor untuk lokasi lain. Panduan dibuat sebagai draf dan belum terlihat publik.</p>
+            </> : card ? <p className="field-hint">Jenis kartu (poster, ucapan, ID card, sertifikat, undangan), desain, warna, dan ukuran dipilih di editor setelah ini. Kartu dibuat sebagai draf.</p> : <>
             <div className={styles.grid}>
               {input("starts_at", guide ? `Mulai trip (${zone}, opsional)` : csr ? `Rencana penyaluran (${zone}, opsional)` : `Mulai (${zone})`, { type: "datetime-local", hint: guide ? "Untuk jadwal per hari. Boleh dikosongkan bila panduan tidak terikat tanggal." : csr ? "Boleh dikosongkan. Tanggal penyerahan yang sebenarnya diisi nanti di blok Donasi." : undefined })}
               {input("ends_at", `Selesai (${zone}, opsional)`, { type: "datetime-local" })}
@@ -169,14 +183,7 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
                 </label>)}
             </fieldset>
             {details.location === "other" && <div className="stack">{input("venue_name", "Nama tempat")}{input("address", "Alamat", { multiline: true })}{input("location_url", "Tautan Google Maps (opsional)", { type: "url" })}</div>}
-            {staff.length > 0 && <fieldset className={styles.wizardChoices}>
-              <legend>PIC acara (opsional)</legend>
-              <div className={styles.picRow}>
-                {staff.map(person => <button key={person.id} type="button" className={styles.picChip} aria-pressed={picId === person.id} onClick={() => setPicId(picId === person.id ? "" : person.id)}>
-                  <StaffAvatar person={person} size={32} /><span>{person.name}</span>
-                </button>)}
-              </div>
-            </fieldset>}
+            {picChooser}
             <p className="field-hint">{csr ? "Pilihan bantuan, rekening/QRIS, dan yang tampil di halaman dilengkapi di editor (blok Donasi). Halaman dibuat sebagai draf dan belum terlihat publik." : guide ? "Bab panduan (kenapa ke sini, tempat, budaya, tips), jadwal, dan bagian lain dilengkapi di editor setelah ini. E-Guide dibuat sebagai draf dan belum terlihat tamu." : "Isi undangan, rundown, dan bagian lain dilengkapi di editor setelah ini. Acara dibuat sebagai draf dan belum terlihat tamu."}</p>
             </>}
           </div>

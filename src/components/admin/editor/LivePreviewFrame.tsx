@@ -4,6 +4,7 @@ import { Component, useEffect, useState, type ReactNode } from "react";
 import { CsrExperience } from "@/components/guest/csr/CsrExperience";
 import { EventExperience } from "@/components/guest/EventExperience";
 import { GuidePage } from "@/components/guest/GuidePage";
+import { PlaceGuide } from "@/components/guest/PlaceGuide";
 import { VISIT_AREA_EVENT } from "@/components/guest/VisitExperience";
 import { donationTotals } from "@/lib/donations";
 import { prepareEvent } from "@/components/admin/editor/editor-model";
@@ -75,6 +76,7 @@ export function LivePreviewFrame() {
   // An E-Guide is a book, not an invitation: the preview shows the reader the guest gets.
   return <Boundary attempt={draft.version}>{draft.event.event_kind === "eguide" ? <GuidePage event={draft.event} />
     // The editor previews the page as donors see it before anything is confirmed; the form only pretends to send.
+    : draft.event.event_kind === "panduan" ? <PlaceGuide event={draft.event} />
     : draft.event.event_kind === "csr" ? <CsrExperience event={draft.event} preview view={{ totals: donationTotals(draft.event.donation, []), donors: [], ready: true }} />
     : <EventExperience event={draft.event} phase={draft.phase} preview previewNotice={false} />}</Boundary>;
 }

@@ -32,9 +32,10 @@ export type HeroImage = { url: string; alt: string; srcset: ImageSource[]; focus
  * The form of the event. Audience is a separate choice: an internal event can take any form.
  * "kartu" is no event at all: a card people fill in (Studio Poster). "eguide" is a guidebook to
  * read (src/lib/guide.ts): no RSVP, tickets or invitations. "csr" collects donations
- * (src/lib/donations.ts): what was given and by whom, not an invitation.
+ * (src/lib/donations.ts): what was given and by whom, not an invitation. "panduan" is a public
+ * guide to a place (src/lib/place-guide.ts): a welcome, the way there and photos, nothing to answer.
  */
-export type EventKind = "kunjungan" | "acara" | "program" | "kartu" | "eguide" | "csr";
+export type EventKind = "kunjungan" | "acara" | "program" | "kartu" | "eguide" | "csr" | "panduan";
 export type EventAudience = "external" | "internal";
 export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah" | "berbagi";
 export type EventTheme = { key: ThemeKey; corners: "square" | "soft" };
@@ -67,11 +68,11 @@ export type EventTranslations = { en: EnglishContent };
  */
 export type AgendaDetail = { teaser: string; did_you_know: string; more_story: string; place: string; pdf_page: number | null };
 export type EmergencyContact = { name: string; phone: string; hospital: string; hospital_address: string; hospital_maps_url: string };
-export type RouteStep = { title: string; description: string; image: PlainImage };
+export type RouteStep = { title: string; description: string; image: PlainImage; en?: TextPair };
 /** The pictures an arrival point can carry on the office-visit page (Cara datang). */
 export type ArrivalIcon = "door" | "pin" | "parking" | "clock" | "info" | "coffee";
 /** A short fact about arriving, beside its icon: the lobby, the meeting point, parking. */
-export type ArrivalPoint = { icon: ArrivalIcon; title: string; description: string };
+export type ArrivalPoint = { icon: ArrivalIcon; title: string; description: string; en?: TextPair };
 export type RouteGuide = { map_image: PlainImage; steps: RouteStep[]; points: ArrivalPoint[] };
 export type AfterContent = {
   title: string; message: string; image: PlainImage;

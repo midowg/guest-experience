@@ -98,6 +98,15 @@ export function prepareEvent(event: EventRecord): EventRecord {
 }
 
 export function hiddenSectionReasons(event: EventRecord): string[] {
+  // A Panduan lokasi has one fixed shape: only empty parts are worth a note.
+  if (event.event_kind === "panduan") {
+    const reasons: string[] = [];
+    if (!event.hero.url) reasons.push("Belum ada foto sampul; sambutan tampil tanpa foto.");
+    if (!event.contact?.name || !event.contact.phone) reasons.push("PIC belum diisi; kartu \"Tersesat? Tanya kami\" tidak ditampilkan.");
+    if (!event.route.steps.length) reasons.push("Belum ada langkah rute.");
+    if (!event.gallery.length) reasons.push("Galeri kosong; bagian Gallery disembunyikan.");
+    return reasons;
+  }
   // An E-Guide has no RSVP, survey or review: only its parts left out of the book are worth a note.
   if (event.event_kind === "eguide") {
     const reasons = (Object.keys(guidePartLabels) as GuidePart[]).filter(part => !event.guide.order.some(step => step.kind === "part" && step.part === part)).map(part => `${guidePartLabels[part]} belum dimasukkan ke urutan baca.`);
@@ -188,10 +197,13 @@ const visitFields: Record<string, string> = {
   review_url: "after", review_enabled: "after", review_heading: "after", review_description: "after", review_button_label: "after",
   gallery: "venue", venue_image_url: "venue", venue_image_alt: "venue", venue_image_credit: "venue", sections: "identity",
 };
+/** Panduan lokasi: the welcome's texts sit with the cover photo in Sambutan. */
+const placeFields: Record<string, string> = { subtitle: "hero", greeting: "hero", introduction: "hero", sections: "identity" };
 export function blockOfPath(path: string, kind?: EventRecord["event_kind"]): string {
   const [first, second] = path.split(".");
   if (first === "donation") return donationBlocks[second] ?? "donation-items";
   if (kind === "kunjungan" && visitFields[first]) return visitFields[first];
+  if (kind === "panduan" && placeFields[first]) return placeFields[first];
   return fieldBlocks[first] ?? "identity";
 }
 
@@ -228,21 +240,34 @@ export const visitMenu: { id: string; title: string; stage: EditorStage; hint: s
   { id: "publication", title: "Terbitkan", stage: "settings", hint: "Draf hanya terlihat di admin. Setelah terbit, siapa pun yang punya tautan bisa membukanya." },
 ];
 const visitStages: Partial<Record<EditorStage, string>> = { prep: "Acara", guest: "Sebelum kunjungan", after: "Setelah kunjungan", settings: "Pengaturan" };
+/** Panduan lokasi's menu: the page's parts in reading order, from Sambutan to the gallery. */
+export const placeMenu: { id: string; title: string; stage: EditorStage; hint: string }[] = [
+  { id: "identity", title: "Info panduan", stage: "prep", hint: "Judul, tautan untuk dibagikan, dan tuan rumah." },
+  { id: "hero", title: "Sambutan", stage: "guest", hint: "Foto sampul, judul, dan beberapa kalimat sambutan." },
+  { id: "venue", title: "Getting Here", stage: "guest", hint: "Alamat, tombol Google Maps, peta rute, langkah bergambar, dan info kedatangan." },
+  { id: "contact", title: "PIC", stage: "guest", hint: "Orang yang bisa dihubungi tamu yang tersesat (kartu \"Tersesat? Tanya kami\")." },
+  { id: "gallery", title: "Galeri", stage: "guest", hint: "Foto tempat, berderet memenuhi lebar halaman." },
+  { id: "appearance", title: "Jenis, audiens, dan tampilan", stage: "settings", hint: "" },
+  { id: "language", title: "Bahasa & terjemahan", stage: "settings", hint: "ID saja, EN saja, atau keduanya dengan tombol ID/EN." },
+  { id: "publication", title: "Terbitkan", stage: "settings", hint: "Draf hanya terlihat di admin. Setelah terbit, siapa pun yang punya tautan bisa membukanya." },
+];
+const placeStages: Partial<Record<EditorStage, string>> = { prep: "Halaman", guest: "Isi panduan", settings: "Pengaturan" };
 /** The blocks of the menu for a kind of event, with that kind's names, order, and grouping. */
 export function blocksFor(kind: EventRecord["event_kind"] | undefined): { id: string; title: string; stage: EditorStage }[] {
   if (kind === "kunjungan") return visitMenu;
+  if (kind === "panduan") return placeMenu;
   return kind === "csr" ? editorBlocks.map(item => csrBlocks[item.id] ? { ...item, ...csrBlocks[item.id] } : item) : editorBlocks;
 }
 /** The menu's stage headings for a kind of event. */
 export function stagesFor(kind: EventRecord["event_kind"] | undefined) {
-  const names = kind === "csr" ? csrStages : kind === "kunjungan" ? visitStages : null;
+  const names = kind === "csr" ? csrStages : kind === "kunjungan" ? visitStages : kind === "panduan" ? placeStages : null;
   return names ? editorStages.filter(stage => names[stage.key]).map(stage => ({ ...stage, label: names[stage.key]! })) : editorStages;
 }
 
 export type BlockStatus = "error" | "dirty" | "todo" | "optional" | "done";
 export const blockStatusLabels: Record<BlockStatus, string> = { error: "Perlu diperbaiki", dirty: "Belum disimpan", todo: "Perlu dilengkapi", optional: "Opsional", done: "Lengkap" };
 
-const kindLabels = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)" } as const;
+const kindLabels = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;
 const phaseText = { auto: "fase otomatis", before: "selalu undangan", day: "selalu hari H", after: "selalu terima kasih" } as const;
 const sectionOn = (event: EventRecord, key: SectionKey) => event.sections.some(section => section.key === key && section.enabled);
 const count = (n: number, noun: string) => `${n} ${noun}`;

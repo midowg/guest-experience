@@ -39,6 +39,8 @@ export function translationGaps(event: EventRecord): { total: number; missing: n
   event.topics.forEach(topic => pair(topic, topic.en));
   event.agenda.forEach(item => pair(item, en?.agenda[item.id]));
   event.experience.moments.forEach(moment => pair(moment, moment.en));
+  event.route.steps.forEach(step => pair(step, step.en));
+  (event.route.points ?? []).forEach(point => pair(point, point.en));
   event.prepare.items.forEach(item => { pair(item, item.en); if (item.list.length) check(item.list.join(""), item.en?.list.join("")); });
   return { total, missing };
 }
@@ -79,6 +81,7 @@ export function localizeEvent(event: EventRecord, lang: Lang): { event: EventRec
         }),
       },
       after: { ...event.after, title: pick(event.after.title, en?.after_title), message: pick(event.after.message, en?.after_message) },
+      route: { ...event.route, steps: event.route.steps.map(step => pair(step, step.en)), points: (event.route.points ?? []).map(point => pair(point, point.en)) },
     },
     fallback,
   };

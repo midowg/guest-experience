@@ -85,6 +85,12 @@ export function TranslationBlock({ event, update, control }: { event: EventRecor
         {event.experience.moments.map((moment, index) => pairFields(`experience.moments.${index}.en`, `Momen ${index + 1}`, moment, moment.en, patch =>
           update("experience", { ...event.experience, moments: event.experience.moments.map((item, i) => i === index ? { ...item, en: { ...emptyPair, ...item.en, ...patch } } : item) }), [150, 300]))}
       </fieldset>}
+      {(event.route.steps.length > 0 || (event.route.points ?? []).length > 0) && <fieldset className={styles.translationGroup}><legend>Cara datang</legend>
+        {event.route.steps.map((step, index) => pairFields(`route.steps.${index}.en`, `Langkah ${index + 1}`, step, step.en, patch =>
+          update("route", { ...event.route, steps: event.route.steps.map((item, i) => i === index ? { ...item, en: { ...emptyPair, ...item.en, ...patch } } : item) }), [150, 500]))}
+        {(event.route.points ?? []).map((point, index) => pairFields(`route.points.${index}.en`, `Info kedatangan ${index + 1}`, point, point.en, patch =>
+          update("route", { ...event.route, points: event.route.points.map((item, i) => i === index ? { ...item, en: { ...emptyPair, ...item.en, ...patch } } : item) }), [120, 300]))}
+      </fieldset>}
       {event.event_kind === "eguide" && <GuideTranslation guide={event.guide} onChange={guide => update("guide", guide)} control={control} />}
       {event.prepare.items.length > 0 && <fieldset className={styles.translationGroup}><legend>Kartu persiapan</legend>
         {event.prepare.items.map((item, index) => {

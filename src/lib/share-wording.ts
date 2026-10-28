@@ -17,6 +17,7 @@ const labels: Record<Kind, { id: string; en: string }> = {
   kartu: { id: "Kartu", en: "Card" },
   eguide: { id: "E-Guide", en: "E-Guide" },
   csr: { id: "Friday Sharing", en: "Friday Sharing" },
+  panduan: { id: "Panduan lokasi", en: "Visitor guide" },
 };
 
 export function shareWording(event: Pick<EventRecord, "event_kind" | "title" | "subtitle" | "organizer" | "starts_at" | "timezone" | "venue_name" | "language">): ShareWording {
@@ -30,6 +31,10 @@ export function shareWording(event: Pick<EventRecord, "event_kind" | "title" | "
   if (event.event_kind === "eguide") {
     const read = english ? "A digital guide: places, culture, schedule and what to prepare." : "Panduan digital: tempat, budaya, jadwal, dan persiapan.";
     return { label, description: subtitle ? `${subtitle}. ${read}` : read, details: subtitle ? [subtitle] : [] };
+  }
+  if (event.event_kind === "panduan") {
+    const find = english ? `How to find ${event.venue_name || "us"}: the route, where to park and who to ask.` : `Cara menuju ${event.venue_name || "lokasi"}: rute, parkir, dan siapa yang bisa ditanya.`;
+    return { label, description: subtitle ? `${subtitle}. ${find}` : find, details: [event.venue_name].filter(Boolean) };
   }
   if (event.event_kind === "kartu") {
     const make = english ? "Fill in your details, then download and share your card." : "Isi data Anda, lalu unduh dan bagikan kartunya.";

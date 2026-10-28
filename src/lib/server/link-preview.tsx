@@ -17,7 +17,7 @@ export function linkPreview(event: EventRecord | null) {
   if (event?.event_kind === "csr") return sharingPreview(event);
   const tokens = themeDefinition(event?.theme?.key ?? "werkudara").tokens;
   const wording = event ? shareWording(event) : null;
-  const invitation = event && !["kartu", "eguide"].includes(event.event_kind);
+  const invitation = event && !["kartu", "eguide", "panduan"].includes(event.event_kind);
   const when = invitation && event.starts_at ? `${formatDate(event.starts_at, event.timezone)} · ${formatTime(event.starts_at, event.timezone)} ${tzLabel(event.timezone)}` : "";
   const below = invitation ? event.venue_name : wording?.details[0];
   const title = event?.title || "Setiap pertemuan, dimulai dengan sambutan.";

@@ -2,10 +2,10 @@ import type { GuideLayout, GuidePart } from "./guide";
 import type { EventAudience, EventKind, SectionKey, ThemeKey } from "./types";
 import { templateContent } from "./wording/template-content";
 
-export const templateKeys = ["kunjungan-klien", "gala-dinner", "seminar-launching", "annual-meeting", "nyadran", "csr-kegiatan-sosial", "pelatihan-bootcamp", "trip-klien", "poster-sesi", "e-guide"] as const;
+export const templateKeys = ["kunjungan-klien", "gala-dinner", "seminar-launching", "annual-meeting", "nyadran", "csr-kegiatan-sosial", "pelatihan-bootcamp", "trip-klien", "poster-sesi", "e-guide", "panduan-lokasi"] as const;
 export type TemplateKey = (typeof templateKeys)[number];
 /** Offered to regular admins until the super admin chooses otherwise: hosting clients first. */
-export const defaultTemplates: readonly TemplateKey[] = ["kunjungan-klien", "trip-klien"];
+export const defaultTemplates: readonly TemplateKey[] = ["kunjungan-klien", "trip-klien", "panduan-lokasi"];
 
 export type EventTemplate = {
   key: TemplateKey; label: string; description: string;
@@ -56,6 +56,12 @@ export const eventTemplates: EventTemplate[] = [
       ],
       order: [0, "experience", 1, "location", "agenda", 2, "prepare", 3, "contact"],
     },
+  },
+  // Starts filled with Werkudara's own guide (src/lib/place-guide.ts); only the host comes from the setup.
+  {
+    key: "panduan-lokasi", label: "Panduan lokasi", example: "Your Visit to Werkudara", examples: ["Panduan ke Werkudara", "Cara ke lokasi acara"],
+    description: "Bukan undangan: halaman umum untuk menemukan tempat. Sambutan dengan foto sampul, Getting Here (peta, alamat, langkah rute bergambar, info kedatangan, PIC), galeri foto, dan tombol Google Maps yang selalu terlihat. Terisi dengan data dan foto Werkudara; semuanya bisa diubah untuk lokasi lain.",
+    kind: "panduan", audience: "external", theme: "werkudara", modules: ["location", "contact"], prepare: [],
   },
 ];
 

@@ -36,6 +36,22 @@ export function TemplateMiniature({ template, title }: { template: EventTemplate
       </div>)}
     </div>
   </div>;
+  // A Panduan lokasi is a page to read: the welcome, then its two parts. No date or RSVP button.
+  if (template.kind === "panduan") return <div className={styles.mini} style={{ background: t.background, color: t.text, borderColor: t.border }} aria-hidden="true">
+    <div className={styles.miniHero} style={{ background: t.hero, color: t.onHero }}>
+      <span className={styles.miniEyebrow} style={{ color: t.heroAccent }}>Panduan lokasi</span>
+      <strong className={styles.miniTitle} style={{ fontFamily: t.fontHeading, fontWeight: t.headingWeight }}>{title?.trim() || template.example}</strong>
+      <span className={styles.miniFacts}><MapPin size={9} /> Werkudara Office</span>
+      <span className={styles.miniButton} style={{ background: t.onHero, color: t.hero }}>Buka Google Maps</span>
+    </div>
+    <div className={styles.miniBody}>
+      {["Getting Here", "Gallery"].map((name, index) => <div key={name} className={styles.miniSection} style={{ borderColor: t.border }}>
+        <span className={styles.miniNumber} style={{ color: t.heading }}>0{index + 1}</span>
+        <span className={styles.miniLabel} style={{ color: t.heading, fontFamily: t.fontHeading, fontWeight: t.headingWeight }}>{name}</span>
+        <span className={styles.miniLine} style={{ background: t.soft }} />
+      </div>)}
+    </div>
+  </div>;
   const sections = template.modules.filter(key => key !== "about").map(key => sectionNames[key]).filter(Boolean).slice(0, 4);
   return <div className={styles.mini} style={{ background: t.background, color: t.text, borderColor: t.border }} aria-hidden="true">
     <div className={styles.miniHero} style={{ background: t.hero, color: t.onHero }}>

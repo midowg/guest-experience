@@ -98,17 +98,20 @@ export const moduleBlocks: Partial<Record<AdminModule, string>> = {
  * | kartu (Studio Poster)        | poster                                                               | appearance, publication          |
  * | eguide (E-Guide)             | experience, agenda, location, route, gallery, prepare, contact, bilingual | identity, appearance, schedule, guide, publication |
  * | csr (Friday Sharing)         | contact                                                              | identity, appearance, hero, donation-*, publication |
+ * | panduan (Panduan lokasi)     | location, route, gallery, contact, bilingual                         | identity, appearance, hero, publication |
  *
  * An E-Guide is read, not answered: no RSVP, personal links, tickets, survey, review,
  * collaboration, poster or Our Team. Its order of parts lives in the guide itself, so it has no
  * "Urutan & tampilan bagian", no hero (the cover has its own photo) and no Hari H / thank-you page.
  * A CSR page takes donations instead of answers: only its cover, the donation settings and a contact.
+ * A Panduan lokasi is read, like an E-Guide, but has one fixed shape: welcome, the way there, photos.
  */
 export const kindModules: Record<EventKind, readonly AdminModule[]> = {
   kunjungan: adminModuleKeys, acara: adminModuleKeys, program: adminModuleKeys,
   kartu: ["poster"],
   eguide: ["experience", "agenda", "location", "route", "gallery", "prepare", "contact", "bilingual"],
   csr: ["contact"],
+  panduan: ["location", "route", "gallery", "contact", "bilingual"],
 };
 const invitationBlocks = ["identity", "appearance", "schedule", "hero", "topics", "day", "after", "sections", "publication"] as const;
 export const kindBlocks: Record<EventKind, readonly string[]> = {
@@ -117,6 +120,7 @@ export const kindBlocks: Record<EventKind, readonly string[]> = {
   kartu: ["appearance", "publication"],
   eguide: ["identity", "appearance", "schedule", "guide", "publication"],
   csr: ["identity", "appearance", "hero", "donation-items", "donation-pay", "donation-recipients", "donation-show", "donation-news", "publication"],
+  panduan: ["identity", "appearance", "hero", "publication"],
 };
 const blockOwner = Object.fromEntries((Object.entries(moduleBlocks) as [AdminModule, string][]).map(([key, id]) => [id, key])) as Record<string, AdminModule>;
 

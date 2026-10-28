@@ -49,6 +49,8 @@ export function EventNavigation({ event, current }: { event: EventRecord; curren
   if (event.event_kind === "kartu") return <EventPagesMenu current={current} publicHref={publicHref} groups={[{ label: "Edit", pages: [page("edit", "Edit kartu")] }]} />;
   // An E-Guide is read, not attended: no guest list, RSVP, check-in, BEO, event photos or survey.
   if (event.event_kind === "eguide") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka E-Guide" groups={[{ label: "Edit", pages: [page("edit", "Edit E-Guide")] }]} />;
+  // A Panduan lokasi is read by anyone with the link: no guests, answers or operations.
+  if (event.event_kind === "panduan") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka panduan" groups={[{ label: "Edit", pages: [page("edit", "Edit panduan")] }]} />;
   // A CSR page takes donations, not guests: its editor and the donation desk.
   if (event.event_kind === "csr") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka halaman donasi" groups={[{ label: "Edit", pages: [page("edit", "Edit halaman")] }, { label: "Donasi", pages: [page("donations", "Donasi masuk")] }]} />;
   // An office visit (board 12): its page, its guests and confirmations, then the team's own pages. No tickets, so no check-in.
