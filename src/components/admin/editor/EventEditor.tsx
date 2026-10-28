@@ -36,7 +36,7 @@ import { TeamBlock } from "@/components/admin/editor/blocks/TeamBlock";
 import { TopicsBlock } from "@/components/admin/editor/blocks/TopicsBlock";
 import { VenueBlock } from "@/components/admin/editor/blocks/VenueBlock";
 import { VenueGalleryBlock } from "@/components/admin/editor/blocks/VenueGalleryBlock";
-import { VisitAboutBlock, VisitAfterBlock, VisitInfoBlock, VisitPhotosBlock, VisitWelcomeBlock } from "@/components/admin/editor/blocks/VisitBlocks";
+import { ArrivalPointsBlock, VisitAboutBlock, VisitAfterBlock, VisitInfoBlock, VisitPhotosBlock, VisitWelcomeBlock } from "@/components/admin/editor/blocks/VisitBlocks";
 import styles from "@/components/admin/admin.module.css";
 import e from "./editor.module.css";
 import n from "./block-numbers.module.css";
@@ -388,7 +388,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
         {block("identity", "Info kunjungan", <VisitInfoBlock kit={kit} onTimezone={changeTimezone} />)}
         {block("hero", "Sambutan", <VisitWelcomeBlock kit={kit} />)}
         {block("topics", "Tentang kunjungan", <VisitAboutBlock kit={kit} />)}
-        {block("venue", "Cara datang", <><VenueBlock kit={kit} embedDraft={embedDraft} onEmbedDraft={setEmbedDraft} place={false} />{!unavailable("gallery") && <><h3>Foto lokasi</h3><VenueGalleryBlock kit={kit} /></>}</>)}
+        {block("venue", "Cara datang", <><VenueBlock kit={kit} embedDraft={embedDraft} onEmbedDraft={setEmbedDraft} place={false} />{!unavailable("route") && <ArrivalPointsBlock kit={kit} />}{!unavailable("gallery") && <><h3>Foto lokasi</h3><VenueGalleryBlock kit={kit} /></>}</>)}
         {block("after", "Terima kasih & survei", <VisitAfterBlock kit={kit} />)}
         {block("photos", "Foto kunjungan", <VisitPhotosBlock kit={kit} />)}
       </> : <>

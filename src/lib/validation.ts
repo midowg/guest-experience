@@ -60,6 +60,7 @@ const englishSchema = z.object({
   review_heading: text(200).default(""), review_description: text(1000).default(""), review_button_label: text(100).default(""),
   agenda: z.record(z.uuid(), pairSchema(200, 1500)).default({}),
 });
+export const arrivalIcons = ["door", "pin", "parking", "clock", "info", "coffee"] as const;
 export const prepareIcons = ["shirt", "backpack", "gift", "id-card", "umbrella", "sun", "footprints", "utensils", "camera", "pill", "package", "info"] as const;
 const prepareSchema = z.object({
   title: text(200).default(""), intro: text(1000).default(""),
@@ -76,6 +77,7 @@ const experienceSchema = z.object({
 const routeSchema = z.object({
   map_image: plainImage.default(emptyImage),
   steps: z.array(z.object({ title: text(150).min(1, "Isi judul langkah."), description: text(500).default(""), image: plainImage.default(emptyImage) })).max(6).default([]),
+  points: z.array(z.object({ icon: z.enum(arrivalIcons).default("info"), title: text(120).min(1, "Isi judul info."), description: text(300).default("") })).max(4).default([]),
 });
 const afterSchema = z.object({
   title: text(200).default(""), message: text(2000).default(""), image: plainImage.default(emptyImage),
@@ -83,7 +85,7 @@ const afterSchema = z.object({
     .default({ enabled: false, title: "", description: "", button_label: "" }),
 });
 export const emptyExperience = { title: "", story: "", image: emptyImage, moments: [] };
-export const emptyRoute = { map_image: emptyImage, steps: [] };
+export const emptyRoute = { map_image: emptyImage, steps: [], points: [] };
 export const emptyEmergency = { name: "", phone: "", hospital: "", hospital_address: "", hospital_maps_url: "" };
 export const emptyAgendaDetail = { teaser: "", did_you_know: "", more_story: "", place: "", pdf_page: null };
 const agendaDetailSchema = z.object({

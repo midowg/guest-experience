@@ -71,7 +71,7 @@ export function prepareEvent(event: EventRecord): EventRecord {
     hero: { ...event.hero, focus: HERO_FOCUS, framing: getFraming(event.hero), srcset: event.hero.url ? event.hero.srcset : [] },
     team_image: cleanImage(event.team_image),
     experience: { ...event.experience, image: cleanImage(event.experience.image), moments: event.experience.moments.filter(item => item.title.trim() || item.description.trim()) },
-    route: { map_image: cleanImage(event.route.map_image), steps: event.route.steps.filter(step => step.title.trim() || step.description.trim() || step.image.url).map(step => ({ ...step, image: cleanImage(step.image) })) },
+    route: { map_image: cleanImage(event.route.map_image), steps: event.route.steps.filter(step => step.title.trim() || step.description.trim() || step.image.url).map(step => ({ ...step, image: cleanImage(step.image) })), points: (event.route.points ?? []).filter(point => point.title.trim() || point.description.trim()) },
     after: { ...event.after, image: cleanImage(event.after.image) },
     // Blank lines are kept while typing (so Enter works) and dropped here, before validation.
     prepare: { ...event.prepare, items: event.prepare.items

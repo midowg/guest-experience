@@ -74,6 +74,7 @@ const id = {
   "team.lead": "Sedikit tentang kami",
   "contact.lead": "Ada pertanyaan sebelum atau saat kunjungan? Tanya kami kapan saja.",
   "contact.host": "Pendamping kunjungan Anda",
+  "route.lost": "Tersesat? Tanya kami", "route.maps": "Buka Google Maps", "route.steps": "Langkah menuju kantor", "route.arrival": "Saat tiba",
   "contact.ask": "Tanya kami", "contact.call": "Telepon",
   "thanks.survey": "Bagaimana kunjungan Anda?",
 };
@@ -147,6 +148,7 @@ const en: VisitWords = {
   "team.lead": "A little about us",
   "contact.lead": "Any questions before or during your visit? Ask us any time.",
   "contact.host": "Your visit host",
+  "route.lost": "Lost? Ask us", "route.maps": "Open Google Maps", "route.steps": "Steps to the office", "route.arrival": "When you arrive",
   "contact.ask": "Ask us", "contact.call": "Call",
   "thanks.survey": "How was your visit?",
 };

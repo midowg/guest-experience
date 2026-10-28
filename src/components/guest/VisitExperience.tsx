@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, CalendarDays, ChevronRight, CircleCheck, Clock3, Home, Info, ListOrdered, MapPin, MessageCircle, Phone, Sparkles, Backpack, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChevronRight, CircleCheck, Clock3, Home, Info, ListOrdered, MapPin, MessageCircle, Phone, Route, Sparkles, Backpack, Users } from "lucide-react";
 import { ButtonLink, Notice } from "@/components/ui";
 import { getFraming } from "@/lib/hero-framing";
 import { themeStyle } from "@/lib/themes";
@@ -12,7 +12,6 @@ import { localizeEvent } from "@/lib/wording/localize";
 import { visitText, type VisitKey } from "@/lib/wording/visit";
 import { CalendarButton } from "./CalendarSheet";
 import type { ExperienceProps } from "./EventExperience";
-import { Location } from "./EventParts";
 import { imageSrcSet } from "./Gallery";
 import { FeedbackPanel } from "./GuestForms";
 import { TimeRange, visibleSections } from "./InvitationHero";
@@ -21,6 +20,7 @@ import { LanguageSwitch, WordingProvider, useEventLanguage, useWording } from ".
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
 import { AgendaList, EmergencyCard } from "./ProgramAgenda";
 import { useGuestPage } from "./use-guest-page";
+import { VisitRoute } from "./VisitRoute";
 import { VisitRsvpDone, VisitRsvpForm } from "./VisitRsvp";
 import guest from "./guest.module.css";
 import styles from "./visit.module.css";
@@ -240,7 +240,7 @@ function VisitBody({ event, preview = false, invitation, phase = "before", rsvpN
       </figure>}
       <ul className={styles.values}>{teamPoints.map(({ icon: Icon, key }) => <li key={key}><span className={styles.tileIcon} aria-hidden="true"><Icon size={18} /></span><p>{t(key)}</p></li>)}</ul>
     </>, v("team.lead")),
-    "cara-datang": () => page("location", v("tab.route"), <Location event={event} />),
+    "cara-datang": () => page("location", v("tab.route"), <VisitRoute event={event} words={{ lost: v("route.lost"), maps: v("route.maps"), steps: v("route.steps"), arrival: v("route.arrival") }} />),
     jadwal: () => page("agenda", v("schedule.title"), <>
       {event.agenda.length === 0 ? <p>{t("section.agenda.empty")}</p> : <AgendaList event={event} now={now} />}
       <CalendarButton event={event} now={now} />
@@ -305,7 +305,7 @@ function HostCard({ event, label, ask, call }: { event: EventRecord; label: stri
 function TabBar({ screen, has, label, words }: { screen: Screen; has: (key: SectionKey) => boolean; label: string; words: { home: string; route: string; schedule: string; contact: string } }) {
   const tabs = [
     { target: "beranda" as Screen, icon: Home, label: words.home, on: true },
-    { target: "cara-datang" as Screen, icon: MapPin, label: words.route, on: has("location") },
+    { target: "cara-datang" as Screen, icon: Route, label: words.route, on: has("location") },
     { target: "jadwal" as Screen, icon: CalendarDays, label: words.schedule, on: has("agenda") },
     { target: "kontak" as Screen, icon: MessageCircle, label: words.contact, on: has("contact") },
   ].filter(tab => tab.on);

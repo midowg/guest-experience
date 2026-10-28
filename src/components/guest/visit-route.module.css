@@ -1,0 +1,38 @@
+/* "Cara datang" on the office-visit page (board 11): map, address, turns, host, arrival, Maps. */
+.route { display: grid; gap: 14px; }
+
+/* The map fills the width; the zoom chip sits in its lower right corner. */
+.map { position: relative; margin: 0; overflow: hidden; height: clamp(190px, 52vw, 300px); border-radius: 14px; background: var(--color-soft); }
+.map img, .map iframe { display: block; width: 100%; height: 100%; border: 0; object-fit: cover; }
+.zoom { position: absolute; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; background: rgb(255 255 255 / .9); color: var(--color-primary); font-size: .75rem; font-weight: 600; text-decoration: none; }
+.zoom:hover { background: #fff; }
+
+.address { margin: 0; color: var(--color-muted); font-size: .875rem; line-height: 1.45; }
+.note { margin: 0; font-size: .875rem; line-height: 1.5; }
+
+/* Numbered turns, each with its own photo. */
+.steps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.steps li { display: flex; align-items: flex-start; gap: 14px; }
+.number { display: inline-grid; flex-shrink: 0; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--color-primary); color: var(--color-on-primary, #fff); font-size: .875rem; font-weight: 600; }
+.stepText { display: grid; flex: 1 1 0; min-width: 0; gap: 6px; }
+.stepText h2 { margin: 0; color: var(--color-text); font-family: inherit; font-size: 1rem; font-weight: 600; line-height: 1.375; }
+.stepText p { margin: 0; color: var(--color-muted); font-size: .8125rem; line-height: 1.4; }
+.stepPhoto { display: block; width: 100%; height: 110px; border-radius: 10px; object-fit: cover; }
+
+/* The host to ask when lost. */
+.pic { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 14px; background: var(--color-soft); }
+.picText { flex: 1 1 0; min-width: 0; }
+.picTitle { margin: 0; color: var(--color-text); font-size: .9375rem; font-weight: 600; line-height: 1.4; }
+.picRole { margin: 2px 0 0; color: var(--color-muted); font-size: .8125rem; }
+.picAction { display: inline-grid; flex-shrink: 0; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #2e6b4f; color: #fff; }
+.picAction:hover { filter: brightness(1.08); }
+
+/* What to do on arrival: an icon beside a short fact. */
+.points { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.points li { display: flex; align-items: flex-start; gap: 12px; }
+.pointIcon { display: inline-grid; flex-shrink: 0; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--color-soft); color: var(--color-primary); }
+.points h2 { margin: 0; color: var(--color-text); font-family: inherit; font-size: .9375rem; font-weight: 700; line-height: 1.35; }
+.points p { margin: 2px 0 0; color: var(--color-muted); font-size: .875rem; line-height: 1.45; }
+
+.maps { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 54px; border-radius: 16px; background: var(--color-primary); color: var(--color-on-primary, #fff); font-size: 1.0625rem; font-weight: 700; text-decoration: none; }
+.maps:hover { filter: brightness(1.06); }

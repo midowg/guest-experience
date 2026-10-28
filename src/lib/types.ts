@@ -68,7 +68,11 @@ export type EventTranslations = { en: EnglishContent };
 export type AgendaDetail = { teaser: string; did_you_know: string; more_story: string; place: string; pdf_page: number | null };
 export type EmergencyContact = { name: string; phone: string; hospital: string; hospital_address: string; hospital_maps_url: string };
 export type RouteStep = { title: string; description: string; image: PlainImage };
-export type RouteGuide = { map_image: PlainImage; steps: RouteStep[] };
+/** The pictures an arrival point can carry on the office-visit page (Cara datang). */
+export type ArrivalIcon = "door" | "pin" | "parking" | "clock" | "info" | "coffee";
+/** A short fact about arriving, beside its icon: the lobby, the meeting point, parking. */
+export type ArrivalPoint = { icon: ArrivalIcon; title: string; description: string };
+export type RouteGuide = { map_image: PlainImage; steps: RouteStep[]; points: ArrivalPoint[] };
 export type AfterContent = {
   title: string; message: string; image: PlainImage;
   collaboration: { enabled: boolean; title: string; description: string; button_label: string };

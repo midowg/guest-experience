@@ -14,7 +14,7 @@ function journeyEvent(patch: Partial<EventRecord> = {}): EventRecord {
     event_kind: "acara",
     contact: { ...event.contact, name: "Raja", phone: "0811 2831 929", role: "Hospitality Specialist", channel: "whatsapp" },
     experience: { title: "", story: "Kami menyambut Anda seperti kerabat.", image: { url: "", alt: "", srcset: [] }, moments: [{ icon: "coffee", title: "Sambutan di pendopo", description: "Teh hangat" }] },
-    route: { map_image: { url: "https://example.test/map.webp", alt: "Peta menuju kantor", srcset: [] }, steps: [{ title: "Belok di Jl. Bhinneka", description: "", image: { url: "https://example.test/turn.webp", alt: "Titik belok", srcset: [] } }] },
+    route: { map_image: { url: "https://example.test/map.webp", alt: "Peta menuju kantor", srcset: [] }, steps: [{ title: "Belok di Jl. Bhinneka", description: "", image: { url: "https://example.test/turn.webp", alt: "Titik belok", srcset: [] } }], points: [] },
     sections: event.sections.map(section => ({ ...section, enabled: ["about", "experience", "agenda", "location", "rsvp", "contact"].includes(section.key) })),
     ...patch,
   };

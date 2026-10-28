@@ -117,3 +117,37 @@ it("shows the thank-you page without the tab bar after the visit", () => {
   expect(screen.getByRole("heading", { level: 1, name: /Terima kasih/ })).toBeTruthy();
   expect(screen.queryByRole("navigation", { name: "Navigasi kunjungan" })).toBeNull();
 });
+
+it("opens Cara datang on the route map, then the turns, the host, what to do on arrival and Google Maps", () => {
+  const image = (url: string, alt: string) => ({ url, alt, srcset: [] });
+  window.location.hash = "#cara-datang";
+  render(<EventExperience event={visit({
+    address: "Jl. Bhinneka No. 09, Condong Catur", location_url: "https://maps.app.goo.gl/contoh",
+    route: {
+      map_image: image("https://example.test/map.webp", "Peta menuju kantor"),
+      steps: [{ title: "Lewat Jl. Pondok Raya", description: "Rute paling mudah.", image: image("", "") }, { title: "Belok di Jl. Bhinneka", description: "", image: image("https://example.test/turn.webp", "Titik belok") }],
+      points: [{ icon: "door", title: "Lobi & resepsionis", description: "Resepsionis akan mengantar." }, { icon: "pin", title: "Titik temu", description: "" }],
+    },
+  })} />);
+  const page = document.getElementById("location")!;
+  // The map first, with its zoom link, then the address.
+  expect(within(page).getByAltText("Peta menuju kantor")).toBeTruthy();
+  expect(within(page).getByRole("link", { name: /Perbesar peta/ }).getAttribute("href")).toBe("https://example.test/map.webp");
+  expect(within(page).getByText("Jl. Bhinneka No. 09, Condong Catur")).toBeTruthy();
+  const steps = within(page).getByRole("list", { name: "Langkah menuju kantor" });
+  expect(within(steps).getAllByRole("heading").map(heading => heading.textContent)).toEqual(["Lewat Jl. Pondok Raya", "Belok di Jl. Bhinneka"]);
+  expect(within(steps).getByAltText("Titik belok")).toBeTruthy();
+  expect(within(page).getByText("Tersesat? Tanya kami")).toBeTruthy();
+  expect(within(page).getByRole("link", { name: /WhatsApp|Dewi/ }).getAttribute("href")).toMatch(/wa\.me/);
+  const arrival = within(page).getByRole("list", { name: "Saat tiba" });
+  expect(within(arrival).getAllByRole("heading").map(heading => heading.textContent)).toEqual(["Lobi & resepsionis", "Titik temu"]);
+  expect(within(page).getByRole("link", { name: /Buka Google Maps/ }).getAttribute("href")).toBe("https://maps.app.goo.gl/contoh");
+});
+
+it("opens Cara datang on a photo of the place when there is no route map", () => {
+  window.location.hash = "#cara-datang";
+  render(<EventExperience event={visit({ gallery: [{ id: "g1", url: "https://example.test/lobi.webp", alt: "Lobi kantor", caption: "", sort_order: 0, srcset: [] }] })} />);
+  const page = document.getElementById("location")!;
+  expect(within(page).getByAltText("Lobi kantor").closest("figure")).toBeTruthy();
+  expect(within(page).queryByRole("list", { name: "Saat tiba" })).toBeNull();
+});

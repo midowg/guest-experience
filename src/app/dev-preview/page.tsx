@@ -74,6 +74,9 @@ export default async function DevPreviewPage({ searchParams }: { searchParams: P
     route: { map_image: sample("werkudara-map", "Contoh peta rute"), steps: [
       { title: "Lewat jalan utama", description: "Contoh petunjuk langkah pertama.", image: { url: "", alt: "", srcset: [] } },
       { title: "Belok di titik ini", description: "Perhatikan titik belok seperti di foto.", image: sample("werkudara-turn", "Contoh foto titik belok") },
+    ], points: [
+      { icon: "door", title: "Lobi & resepsionis", description: "Masuk lewat pintu kaca utama; resepsionis akan mengantar." },
+      { icon: "pin", title: "Titik temu", description: "Jika terlambat, tunggu di pendopo — kami jemput." },
     ] },
     contact: { ...base.contact, name: "Koordinator Acara", phone: "0812 3456 7890", role: "Hospitality", channel: "whatsapp" },
     day_note: "Contoh catatan hari H: Wi-Fi tamu tersedia, tanyakan ke resepsionis.",

@@ -1,6 +1,10 @@
-import { ImagePlus, MapPin } from "lucide-react";
-import { ButtonLink, Notice } from "@/components/ui";
-import { Check } from "@/components/admin/editor/controls";
+import { ImagePlus, MapPin, Trash2 } from "lucide-react";
+import { Button, ButtonLink, Notice } from "@/components/ui";
+import { Check, OrderButtons } from "@/components/admin/editor/controls";
+import { moveItem } from "@/components/admin/editor/editor-model";
+import { arrivalIconComponents } from "@/components/guest/VisitRoute";
+import { arrivalIcons } from "@/lib/validation";
+import type { ArrivalIcon, ArrivalPoint } from "@/lib/types";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { WERKUDARA_OFFICE } from "@/components/admin/editor/suggestions";
 import { AfterBlock } from "@/components/admin/editor/JourneyEditor";
@@ -95,5 +99,45 @@ export function VisitPhotosBlock({ kit }: { kit: EditorKit }) {
     <ButtonLink href={adminEventPath(event, "gallery")} variant="secondary"><ImagePlus size={17} aria-hidden="true" /> Unggah dan atur foto</ButtonLink>
     {origin && event.code && <EventLink event={event} origin={origin} path={thanksPath(event)} label="Tautan terima kasih" hint="Kirim ke tamu setelah kunjungan, bersama foto dan survei." />}
     <Notice>Unggah hanya foto yang boleh dilihat tamu.</Notice>
+  </div>;
+}
+
+/** What the icons mean, for the radio labels the admin hears. */
+const arrivalIconNames: Record<ArrivalIcon, string> = { door: "Pintu masuk", pin: "Titik temu", parking: "Parkir", clock: "Waktu", info: "Info", coffee: "Ruang tunggu" };
+/** The two points the board shows, as a start the admin rewrites for the office. */
+const samplePoints: ArrivalPoint[] = [
+  { icon: "door", title: "Lobi & resepsionis", description: "Masuk lewat pintu kaca utama; resepsionis akan mengantar." },
+  { icon: "pin", title: "Titik temu", description: "Jika terlambat, tunggu di pendopo — kami jemput." },
+];
+
+/**
+ * Info kedatangan, under the turns on the guest's "Cara datang" screen: short facts beside an
+ * icon (the lobby, where to wait, parking). Office visits only; at most four.
+ */
+export function ArrivalPointsBlock({ kit }: { kit: EditorKit }) {
+  const { event, update, control } = kit;
+  const points = event.route.points ?? [];
+  const set = (next: ArrivalPoint[]) => update("route", { ...event.route, points: next });
+  const change = (index: number, patch: Partial<ArrivalPoint>) => set(points.map((point, i) => i === index ? { ...point, ...patch } : point));
+  return <div className="stack">
+    <h3>Info kedatangan</h3>
+    <p className="field-hint">Tampil di bawah langkah rute dan kontak pendamping: apa yang tamu lakukan begitu sampai. Maksimal 4.</p>
+    {points.map((point, index) => <div className={styles.item} key={index}>
+      <div className={styles.itemHeader}><h4>Info {index + 1}</h4><OrderButtons label={`info ${index + 1}`} index={index} length={points.length} onMove={direction => set(moveItem(points, index, direction))} /></div>
+      <fieldset className={styles.iconSet}><legend>Ikon</legend><div className={styles.iconRow}>{arrivalIcons.map(icon => {
+        const Icon = arrivalIconComponents[icon];
+        return <label key={icon} className={`${styles.iconChoice} ${point.icon === icon ? styles.iconChoiceOn : ""}`.trimEnd()}>
+          <input type="radio" name={`route.points.${index}.icon`} value={icon} checked={point.icon === icon} onChange={() => change(index, { icon })} className="sr-only" />
+          <Icon size={20} aria-hidden="true" /><span className="sr-only">{arrivalIconNames[icon]}</span>
+        </label>;
+      })}</div></fieldset>
+      {control(`route.points.${index}.title`, "Judul", point.title, title => change(index, { title }), { maxLength: 120, hint: "Contoh: Lobi & resepsionis." })}
+      {control(`route.points.${index}.description`, "Keterangan (opsional)", point.description, description => change(index, { description }), { maxLength: 300 })}
+      <Button type="button" variant="danger" onClick={() => set(points.filter((_, i) => i !== index))}><Trash2 size={17} aria-hidden="true" /><span>Hapus info {index + 1}</span></Button>
+    </div>)}
+    <div className={styles.chips}>
+      <Button type="button" variant="secondary" disabled={points.length >= 4} onClick={() => set([...points, { icon: "info", title: "", description: "" }])}>Tambah info</Button>
+      {points.length === 0 && <Button type="button" variant="quiet" onClick={() => set(samplePoints)}>Pakai contoh: lobi & titik temu</Button>}
+    </div>
   </div>;
 }

@@ -71,7 +71,7 @@ export function withoutModules(event: EventRecord, disabled: AdminModule[]): Eve
   next = { ...next, sections };
   if (off.has("rsvp")) next = { ...next, rsvp_enabled: false };
   if (off.has("feedback")) next = { ...next, feedback_enabled: false };
-  if (off.has("route")) next = { ...next, route: { map_image: { url: "", alt: "", srcset: [] }, steps: [] } };
+  if (off.has("route")) next = { ...next, route: { map_image: { url: "", alt: "", srcset: [] }, steps: [], points: [] } };
   if (off.has("gallery")) next = { ...next, gallery: [] };
   if (off.has("personal")) next = { ...next, invitation_mode: "open" };
   if (off.has("bilingual")) next = { ...next, language: "id" };
