@@ -7,6 +7,7 @@ import { presetPoster } from "./poster-presets";
 import { createSeedEvent } from "./seed-event";
 import { eventTimezones } from "./timezones";
 import type { EventRecord, SectionKey } from "./types";
+import { visitStarter } from "./visit-template";
 
 const text = (max: number) => z.string().trim().max(max);
 const timestamp = z.iso.datetime({ offset: true });
@@ -102,6 +103,7 @@ export function buildEventFromSetup(setup: EventSetup, ids: Ids): EventRecord {
   }, setup, ids);
   if (template?.poster) event.poster = presetPoster(template.poster, event);
   if (template?.kind === "csr") event.donation = startingDonation();
+  const ready = template?.kind === "kunjungan" ? visitStarter(event, setup.location === "werkudara") : event;
   if (template?.guide) {
     // The book holds only the parts this event shows (a module the admin may not use is left out).
     const guide = templateGuide(template.guide, setup.title, ids.uuid);
@@ -109,7 +111,7 @@ export function buildEventFromSetup(setup: EventSetup, ids: Ids): EventRecord {
   }
   const feedback = setup.modules.includes("feedback");
   return {
-    ...event,
+    ...ready,
     feedback_enabled: feedback,
     feedback_questions: feedback ? standardQuestions().map((question, sort_order) => ({ id: ids.uuid(), ...question, options: [], sort_order })) : [],
   };

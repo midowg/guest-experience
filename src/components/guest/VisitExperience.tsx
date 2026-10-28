@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, CalendarDays, ChevronRight, CircleCheck, Clock3, Home, Info, ListOrdered, MapPin, MessageCircle, Phone, Route, Sparkles, Backpack, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChevronRight, CircleCheck, Clock3, Home, Info, ListOrdered, MapPin, MessageCircle, Phone, Route, Users } from "lucide-react";
 import { ButtonLink, Notice } from "@/components/ui";
 import { getFraming } from "@/lib/hero-framing";
 import { themeStyle } from "@/lib/themes";
@@ -15,7 +15,7 @@ import type { ExperienceProps } from "./EventExperience";
 import { imageSrcSet } from "./Gallery";
 import { FeedbackPanel } from "./GuestForms";
 import { TimeRange, visibleSections } from "./InvitationHero";
-import { AfterPanel, contactLink, ExperienceContent, PicAvatar, PrepareCards, TodayPanel, teamPoints } from "./JourneyPanels";
+import { AfterPanel, contactLink, PicAvatar, TodayPanel, teamPoints } from "./JourneyPanels";
 import { LanguageSwitch, WordingProvider, useEventLanguage, useWording } from "./language";
 import { feedbackIsOpen, rsvpIsOpen } from "./form-utils";
 import { AgendaList, EmergencyCard } from "./ProgramAgenda";
@@ -32,14 +32,18 @@ import styles from "./visit.module.css";
  * address hash, so the phone's back button and a shared link both land where they should.
  */
 
-type Screen = "beranda" | "konfirmasi" | "tentang" | "pengalaman" | "persiapan" | "tim" | "cara-datang" | "jadwal" | "kontak";
+/*
+ * Only the visit's own screens (board 11). Parts other templates use, such as the experience story
+ * and the preparation cards, are not shown here even when an older or copied event has them on.
+ */
+type Screen = "beranda" | "konfirmasi" | "tentang" | "tim" | "cara-datang" | "jadwal" | "kontak";
 /** Each screen shows one section of the event; the home screen shows the confirmation. */
 const screenSection: Record<Screen, SectionKey> = {
-  beranda: "rsvp", konfirmasi: "rsvp", tentang: "about", pengalaman: "experience", persiapan: "prepare", tim: "team", "cara-datang": "location", jadwal: "agenda", kontak: "contact",
+  beranda: "rsvp", konfirmasi: "rsvp", tentang: "about", tim: "team", "cara-datang": "location", jadwal: "agenda", kontak: "contact",
 };
 /** Where the editor's "show this part" lands (live-preview areas). */
 const areaScreen: Record<string, Screen> = {
-  hero: "beranda", day: "beranda", rsvp: "konfirmasi", about: "tentang", experience: "pengalaman", prepare: "persiapan", team: "tim", location: "cara-datang", agenda: "jadwal", contact: "kontak",
+  hero: "beranda", day: "beranda", rsvp: "konfirmasi", about: "tentang", team: "tim", location: "cara-datang", agenda: "jadwal", contact: "kontak",
 };
 /** The event the editor's preview sends to switch screens before it scrolls to a part. */
 export const VISIT_AREA_EVENT = "visit:area";
@@ -179,9 +183,7 @@ function VisitBody({ event, preview = false, invitation, phase = "before", rsvpN
 
   const tiles: { screen: Screen; icon: typeof Info; title: string; sub: string }[] = [
     { screen: "tentang", icon: Info, title: v("tile.about"), sub: v("tile.about.sub") },
-    { screen: "pengalaman", icon: Sparkles, title: event.experience.title || v("tile.experience"), sub: v("tile.experience.sub") },
     { screen: "jadwal", icon: ListOrdered, title: v("tile.agenda"), sub: v("tile.agenda.sub") },
-    { screen: "persiapan", icon: Backpack, title: event.prepare.title || v("tile.prepare"), sub: v("tile.prepare.sub") },
     { screen: "tim", icon: Users, title: v("tile.team"), sub: v("tile.team.sub") },
   ];
   const shownTiles = tiles.filter(tile => available(tile.screen));
@@ -231,8 +233,6 @@ function VisitBody({ event, preview = false, invitation, phase = "before", rsvpN
       </div>}
       {has("agenda") && <a className={styles.hint} href="#jadwal"><ListOrdered size={16} aria-hidden="true" /> {v("about.agenda")}</a>}
     </>),
-    pengalaman: () => page("experience", event.experience.title || v("tile.experience"), <ExperienceContent event={event} rsvpVisible={false} />),
-    persiapan: () => page("prepare", event.prepare.title || v("tile.prepare"), <PrepareCards items={event.prepare.items} />, event.prepare.intro || undefined),
     tim: () => page("team", v("tile.team"), <>
       {event.team_image?.url && <figure className={styles.teamPhoto}>
         {/* eslint-disable-next-line @next/next/no-img-element */}

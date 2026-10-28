@@ -106,3 +106,25 @@ describe("copying activity details", () => {
     expect(copy.agenda_details[source.agenda[1].id]).toBeUndefined();
   });
 });
+
+describe("a Kunjungan Kantor from its template", () => {
+  const visit: EventSetup = { ...base, template: "kunjungan-klien", title: "Kunjungan PT Sinar Abadi", location: "werkudara", venue_name: "PT. Werkudara", address: "Jl. Bhinneka No. 09", location_url: "https://maps.app.goo.gl/x", modules: ["about", "agenda", "location", "team", "rsvp", "contact", "feedback"] };
+
+  it("starts at the office with the route, what to do on arrival, the host's role and Werkudara as host", () => {
+    const event = buildEventFromSetup(visit, ids());
+    expect(event.event_kind).toBe("kunjungan");
+    expect(event.organizer).toBe("Werkudara Group");
+    expect(event.contact.role).toBe("Hospitality Specialist");
+    expect(event.route.steps.map(step => step.title)).toEqual(["Lewat Jl. Pondok Raya", "Belok di Jl. Bhinneka", "Parkir di depan kantor"]);
+    expect(event.route.points.map(point => point.title)).toEqual(["Lobi & resepsionis", "Titik temu"]);
+    // Only the visit's own parts are on: no experience story, no preparation cards.
+    expect(event.sections.filter(section => section.enabled).map(section => section.key).sort()).toEqual(["about", "agenda", "contact", "feedback", "location", "rsvp", "team"]);
+    expect(eventSchema.safeParse(event).success).toBe(true);
+  });
+
+  it("leaves the office route out of a visit somewhere else", () => {
+    const event = buildEventFromSetup({ ...visit, location: "other", venue_name: "Hotel Tentrem", address: "Jl. P. Mangkubumi 72A" }, ids());
+    expect(event.route.steps).toEqual([]);
+    expect(event.route.points).toEqual([]);
+  });
+});

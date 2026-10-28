@@ -4,6 +4,7 @@ import { Check, OrderButtons } from "@/components/admin/editor/controls";
 import { moveItem } from "@/components/admin/editor/editor-model";
 import { arrivalIconComponents } from "@/components/guest/VisitRoute";
 import { arrivalIcons } from "@/lib/validation";
+import { officeArrivalPoints } from "@/lib/visit-template";
 import type { ArrivalIcon, ArrivalPoint } from "@/lib/types";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { WERKUDARA_OFFICE } from "@/components/admin/editor/suggestions";
@@ -104,11 +105,6 @@ export function VisitPhotosBlock({ kit }: { kit: EditorKit }) {
 
 /** What the icons mean, for the radio labels the admin hears. */
 const arrivalIconNames: Record<ArrivalIcon, string> = { door: "Pintu masuk", pin: "Titik temu", parking: "Parkir", clock: "Waktu", info: "Info", coffee: "Ruang tunggu" };
-/** The two points the board shows, as a start the admin rewrites for the office. */
-const samplePoints: ArrivalPoint[] = [
-  { icon: "door", title: "Lobi & resepsionis", description: "Masuk lewat pintu kaca utama; resepsionis akan mengantar." },
-  { icon: "pin", title: "Titik temu", description: "Jika terlambat, tunggu di pendopo — kami jemput." },
-];
 
 /**
  * Info kedatangan, under the turns on the guest's "Cara datang" screen: short facts beside an
@@ -137,7 +133,7 @@ export function ArrivalPointsBlock({ kit }: { kit: EditorKit }) {
     </div>)}
     <div className={styles.chips}>
       <Button type="button" variant="secondary" disabled={points.length >= 4} onClick={() => set([...points, { icon: "info", title: "", description: "" }])}>Tambah info</Button>
-      {points.length === 0 && <Button type="button" variant="quiet" onClick={() => set(samplePoints)}>Pakai contoh: lobi & titik temu</Button>}
+      {points.length === 0 && <Button type="button" variant="quiet" onClick={() => set(officeArrivalPoints)}>Pakai contoh: lobi & titik temu</Button>}
     </div>
   </div>;
 }
