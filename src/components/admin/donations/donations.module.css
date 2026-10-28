@@ -63,7 +63,7 @@
 .splitList { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
 .splitList li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
 .splitList li:last-child { border-bottom: 0; }
-.splitList li[aria-busy] { opacity: .6; }
+.splitList li[aria-busy] { opacity: 1; }
 .splitGift { display: grid; gap: 2px; min-width: 0; }
 .splitGift p { margin: 0; }
 .splitWhat { font-weight: 800; }
@@ -72,3 +72,13 @@
 .splitPick button { min-height: 38px; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: 999px; background: #fff; font: inherit; font-weight: 700; cursor: pointer; }
 .splitPick button:hover { border-color: var(--blue); }
 .splitPick button[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: #fff; }
+.splitPick button { display: inline-flex; align-items: center; gap: 6px; }
+.splitPick button:disabled { cursor: progress; opacity: .55; }
+.splitPick button[data-saving] { border-color: var(--blue); color: var(--blue); opacity: 1; }
+.saving { display: inline-flex; align-items: center; gap: 6px; color: var(--blue); font-weight: 700; }
+.spin { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
+.reset { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 var(--space-3); border: 1px solid #c9ced8; border-radius: 10px; background: #fff; color: #9a273d; font: inherit; font-weight: 700; cursor: pointer; }
+.reset:hover { border-color: #9a273d; }
+.reset:disabled { cursor: progress; opacity: .55; }
