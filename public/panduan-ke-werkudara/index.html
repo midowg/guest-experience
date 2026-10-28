@@ -206,24 +206,35 @@ dialog.viewer[open] { display: flex; flex-direction: column; }
   .btn { transition: none; }
 }
 
-/* Cara datang (board 11): numbered turns, the host to ask, what to do on arrival. */
-.steps, .points { display: grid; gap: 18px; margin: 6px 0 0; padding: 0; list-style: none; }
-.steps li, .points li { display: flex; align-items: flex-start; gap: 14px; }
-.num { flex: none; display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--blue); color: var(--on-blue); font-weight: 500; font-size: 0.9rem; line-height: 1; }
+/* Cara datang (board 11): numbered turns, the host to ask, what to do on arrival. Soft, rounded
+   pieces; the map and the turn photo keep a little margin so their corners show. */
+#getting-here .map.bleed { margin-inline: 0; }
+#getting-here .map img, .step-photo img { border-radius: 18px; box-shadow: 0 10px 28px -18px rgba(2, 55, 141, 0.45); }
+#getting-here .map figcaption { margin-top: 10px; }
+.steps, .points { display: grid; gap: 14px; margin: 6px 0 0; padding: 0; list-style: none; }
+.steps li { display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 20px; background: #fff; box-shadow: 0 1px 2px rgba(43, 47, 54, 0.06), 0 8px 24px -18px rgba(43, 47, 54, 0.35); }
+.points li { display: flex; align-items: center; gap: 14px; }
+.num { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--blue); color: var(--on-blue); font-weight: 500; font-size: 0.9rem; line-height: 1; box-shadow: 0 4px 10px -4px rgba(2, 55, 141, 0.6); }
 .steps li > div, .points li > div { flex: 1 1 0; min-width: 0; display: grid; gap: 4px; }
 .step-t, .pt-t { font-weight: 500; color: var(--ink); line-height: 1.4; }
 .step-s, .pt-s, .pic-s { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
-.step-photo { margin-top: 8px; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
-.step-photo img { width: 100%; height: 150px; object-fit: cover; }
-.pic { display: flex; align-items: center; gap: 12px; padding: 14px; background: #EAF1FB; }
+.step-photo { position: relative; margin-top: 10px; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.step-photo img { width: 100%; height: 160px; object-fit: cover; }
+.step-photo::after { content: ""; position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 255, 255, 0.92) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2302378D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cpolyline points='9 21 3 21 3 15'/%3E%3Cline x1='21' y1='3' x2='14' y2='10'/%3E%3Cline x1='3' y1='21' x2='10' y2='14'/%3E%3C/svg%3E") center / 16px no-repeat; box-shadow: 0 2px 8px rgba(43, 47, 54, 0.2); }
+.pic { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; border-radius: 22px; background: #EAF1FB; }
 .pic > div { flex: 1 1 0; min-width: 0; }
 .pic-t { font-weight: 500; color: var(--ink); line-height: 1.4; }
-.avatar, .pic-wa { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; }
+.avatar, .pic-wa { flex: none; display: inline-grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; }
 .avatar { background: var(--blue); color: var(--on-blue); font-weight: 500; font-size: 1.1rem; }
-.pic-wa { background: #2E6B4F; color: #fff; }
-.pt-ic { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #EAF1FB; color: var(--blue); }
-.btn-solid { gap: 10px; margin-top: 6px; background: var(--blue); color: var(--on-blue); }
-.btn-solid:hover { background: var(--blue-deep); }
+.pic-wa { background: #25A55F; color: #fff; box-shadow: 0 6px 14px -6px rgba(37, 165, 95, 0.7); transition: transform 0.15s; }
+.pic-wa:hover { transform: scale(1.06); }
+.pt-ic { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: #EAF1FB; color: var(--blue); }
+
+/* Buka Google Maps floats over the page, always one tap away; the page leaves room under it. */
+body { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+.btn-solid { position: fixed; z-index: 15; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: calc(100% - 32px); max-width: 420px; min-height: 56px; gap: 10px; margin: 0; border: 0; border-radius: 999px; background: var(--blue); color: var(--on-blue); letter-spacing: 0.12em; box-shadow: 0 14px 30px -12px rgba(2, 55, 141, 0.7), 0 2px 6px rgba(2, 55, 141, 0.25); transition: background 0.15s, transform 0.15s; }
+.btn-solid:hover { background: var(--blue-deep); transform: translateX(-50%) translateY(-1px); }
+@media (prefers-reduced-motion: reduce) { .pic-wa, .btn-solid { transition: none; } }
 </style>
 
 <header class="bar" id="bar">
