@@ -246,6 +246,14 @@ body { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 900px) { .gallery li { flex-basis: calc(var(--r) * 220px); } }
 .viewer.is-photo .viewer-scroll { align-items: center; padding: 16px; }
 .viewer.is-photo .viewer-scroll img { width: auto; max-width: 100%; max-height: 100%; height: auto; }
+
+/* Getting Here on a wide screen: the title holds the left column, the map and the steps read down
+   the right one, as every other section splits; nothing leaves a column empty. */
+@media (min-width: 900px) {
+  #getting-here .head { grid-column: 1; grid-row: 1 / span 2; align-self: start; position: sticky; top: calc(var(--bar) + 32px); }
+  #getting-here .map { grid-column: 2; grid-row: 1; margin: 0; }
+  #getting-here .body { grid-column: 2; grid-row: 2; }
+}
 </style>
 
 <header class="bar" id="bar">
