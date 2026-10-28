@@ -9,6 +9,7 @@ import { describeDonation, donorLabel, donationTotals, formatRupiah, notifyMessa
 import { formatDate, formatDateTime } from "@/lib/format";
 import { whatsappUrl } from "@/lib/invitation-messages";
 import { adminApi, adminEventPath } from "@/lib/routes";
+import { HandoverShare } from "./HandoverShare";
 import { ManualDonation } from "./ManualDonation";
 import s from "./donations.module.css";
 
@@ -96,23 +97,28 @@ export function DonationBoard({ event, link, initial, migrated }: Props) {
 
     <section className={s.notify} aria-labelledby="kabar">
       <h2 id="kabar"><Send size={20} aria-hidden="true" /> Kabar penyerahan</h2>
-      {!delivered ? <p className="field-hint">Setelah bantuan diserahkan, isi tanggal penyerahan di editor (blok Donasi → Kabar penyerahan). Tombol kirim WhatsApp ke tiap donatur muncul di sini.</p>
-        : toNotify.length === 0 ? <p className="field-hint">Belum ada donatur diterima yang mengisi nomor WhatsApp.</p>
-        : <>
-          <p className={s.progressLine}><strong>{notified} / {toNotify.length}</strong> donatur sudah dikabari · diserahkan {formatDate(delivered, event.timezone)}</p>
-          <ul className={s.notifyList}>
-            {toNotify.map(donation => {
-              const phone = parseContactPhone(donation.donor_phone)!;
-              const text = notifyMessage(event.donation, donation, event, link, formatDate(delivered, event.timezone));
-              return <li key={donation.id} data-sent={donation.notified_at ? "" : undefined}>
-                <div><p className={s.name}>{donorLabel(donation)}</p><p className={s.meta}>{describeDonation(donation, donation.received_amount ?? donation.amount)} · {phone.local}</p></div>
-                {donation.notified_at
-                  ? <span className={s.sent}><Check size={16} aria-hidden="true" /> Terkirim</span>
-                  : <a className={s.wa} href={whatsappUrl(phone.international, text)} target="_blank" rel="noopener noreferrer" onClick={() => void act(donation, { action: "notified" })}><MessageCircle size={16} aria-hidden="true" /> Kirim WA</a>}
-              </li>;
-            })}
-          </ul>
-        </>}
+      <p className="field-hint">Setelah bantuan diserahkan, susun kabarnya di sini lalu bagikan ke grup WhatsApp.</p>
+      <HandoverShare event={event} link={link} donations={donations} />
+      <details className={s.perDonor}>
+        <summary>Kirim juga ke tiap donatur (opsional)</summary>
+        {!delivered ? <p className="field-hint">Isi tanggal penyerahan di Edit halaman → Kabar penyerahan, lalu tombol kirim WhatsApp ke tiap donatur yang mengisi nomornya muncul di sini.</p>
+          : toNotify.length === 0 ? <p className="field-hint">Belum ada donatur diterima yang mengisi nomor WhatsApp.</p>
+          : <>
+            <p className={s.progressLine}><strong>{notified} / {toNotify.length}</strong> donatur sudah dikabari · diserahkan {formatDate(delivered, event.timezone)}</p>
+            <ul className={s.notifyList}>
+              {toNotify.map(donation => {
+                const phone = parseContactPhone(donation.donor_phone)!;
+                const text = notifyMessage(event.donation, donation, event, link, formatDate(delivered, event.timezone));
+                return <li key={donation.id} data-sent={donation.notified_at ? "" : undefined}>
+                  <div><p className={s.name}>{donorLabel(donation)}</p><p className={s.meta}>{describeDonation(donation, donation.received_amount ?? donation.amount)} · {phone.local}</p></div>
+                  {donation.notified_at
+                    ? <span className={s.sent}><Check size={16} aria-hidden="true" /> Terkirim</span>
+                    : <a className={s.wa} href={whatsappUrl(phone.international, text)} target="_blank" rel="noopener noreferrer" onClick={() => void act(donation, { action: "notified" })}><MessageCircle size={16} aria-hidden="true" /> Kirim WA</a>}
+                </li>;
+              })}
+            </ul>
+          </>}
+      </details>
     </section>
 
     <section className={s.list} aria-labelledby="daftar-donasi">

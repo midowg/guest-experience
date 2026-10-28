@@ -2,13 +2,13 @@
 
 import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui";
-import { Check, OrderButtons, SuggestionChips } from "@/components/admin/editor/controls";
+import { Check, OrderButtons } from "@/components/admin/editor/controls";
 import { moveItem } from "@/components/admin/editor/editor-model";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { ChoiceCards } from "@/components/admin/editor/JourneyEditor";
 import { themeDefinition } from "@/lib/themes";
 import { PhotoField } from "@/components/admin/shared/PhotoField";
-import { defaultDonationItems, defaultNotifyTemplate, prayerSuggestions, type DonationCategory, type DonationItem, type DonationSettings, pageStyles } from "@/lib/donations";
+import { defaultDonationItems, type DonationCategory, type DonationItem, type DonationSettings, pageStyles } from "@/lib/donations";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
 import d from "./donation-block.module.css";
 
@@ -19,7 +19,6 @@ import d from "./donation-block.module.css";
  */
 
 const categories: { value: DonationCategory; label: string }[] = [{ value: "fund", label: "Dana" }, { value: "goods", label: "Barang" }, { value: "other", label: "Lainnya" }];
-const placeholders = ["{nama}", "{bantuan}", "{jumlah}", "{tanggal_serah}", "{penerima}", "{acara}", "{tautan}", "{doa}"];
 const showLabels: { key: keyof DonationSettings["show"]; label: string; hint: string }[] = [
   { key: "fundTotal", label: "Total dana terkumpul", hint: "Jumlah rupiah yang sudah diterima panitia." },
   { key: "fundTarget", label: "Target dan progres dana", hint: "Bilah progres bila target dana diisi." },
@@ -154,18 +153,12 @@ export function DonationNewsBlock({ kit }: { kit: EditorKit }) {
   const { donation, set } = useDonation(kit);
   const tz = event.timezone;
   return <div className="stack">
-    <p>Isi setelah bantuan diserahkan. Halaman donasi menampilkan kabarnya, dan di halaman <em>Donasi masuk</em> muncul tombol kirim WhatsApp ke tiap donatur.</p>
+    <p>Isi setelah bantuan diserahkan; halaman donasi lalu menampilkan pita <em>Bantuan sudah diserahkan</em> dengan foto dan ucapan ini. Untuk membagikan kabar ke grup WhatsApp, buka <strong>Donasi masuk → Kabar penyerahan</strong>.</p>
     <label className={d.field}><span>Tanggal diserahkan</span>
       <input id="donation.delivered.at" className="input" type="date" value={donation.delivered.at ? toZoneInput(donation.delivered.at, tz).slice(0, 10) : ""} onChange={change => set({ delivered: { ...donation.delivered, at: change.target.value ? fromZoneInput(`${change.target.value}T10:00`, tz) || null : null } })} />
     </label>
     <PhotoField name="donation.delivered.photo.url" label="Foto penyerahan (opsional)" value={donation.delivered.photo.url} srcset={donation.delivered.photo.srcset} onChange={value => set({ delivered: { ...donation.delivered, photo: { ...donation.delivered.photo, ...value, alt: donation.delivered.photo.alt || "Foto penyerahan bantuan" } } })} />
     {control("donation.delivered.note", "Ucapan di halaman", donation.delivered.note, value => set({ delivered: { ...donation.delivered, note: value } }), { multiline: true, maxLength: 1000 })}
-    {control("donation.notify.template", "Pesan WhatsApp ke donatur", donation.notify.template, value => set({ notify: { ...donation.notify, template: value } }), { multiline: true, maxLength: 2000, hint: `Isian otomatis: ${placeholders.join(" ")}. Tiap donatur menerima pesan dengan namanya dan bantuannya sendiri.` })}
-    <div className={d.tools}>
-      <Button type="button" variant="quiet" onClick={() => set({ notify: { ...donation.notify, template: defaultNotifyTemplate } })}><RotateCcw size={16} aria-hidden="true" /> Pesan bawaan</Button>
-    </div>
-    {control("donation.notify.prayer", "Doa penutup", donation.notify.prayer, value => set({ notify: { ...donation.notify, prayer: value } }), { maxLength: 300, hint: "Masuk ke pesan lewat {doa}." })}
-    <SuggestionChips field="Doa penutup" value={donation.notify.prayer} onPick={value => set({ notify: { ...donation.notify, prayer: value } })} options={prayerSuggestions.map(text => ({ label: text.split(/[,.]/)[0], value: text }))} />
   </div>;
 }
 

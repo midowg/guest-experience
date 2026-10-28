@@ -195,9 +195,10 @@ Setiap donatur memilih cara tampil: **nama**, **Hamba Allah**, atau **jangan seb
 - **Laporan**: lembar A4 untuk diserahkan ke penerima. Isinya rincian bantuan yang sudah diterima (dana dan barang per jenis), daftar donatur sesuai pilihan tampil mereka (yang memilih tidak disebutkan tertulis *Tanpa nama*), catatan penyerahan, dan kolom tanda tangan kedua pihak. Pilih penerimanya: lembar untuk satu penerima berisi donasi yang dibagikan kepadanya di menu Pembagian; lembar *Semua penerima* berisi total terkumpul, tabel pembagian per penerima, dan yang belum dibagikan (ada peringatan di layar bila masih ada donasi yang belum dibagikan). Pilih juga apakah daftar donatur serta nominal per donatur ikut dicetak. Di kotak **Isi lembar ini sebelum mencetak**, isi tanggal penyerahan serta nama dan instansi yang menyerahkan dan yang menerima; nama yang dikosongkan dicetak sebagai garis untuk ditulis tangan. Isian ini tidak disimpan. Nomor WhatsApp dan bukti transfer tidak pernah dicetak.
 
 **Setelah bantuan diserahkan:**
-1. Di blok **Kabar penyerahan** (menu Penyaluran), isi tanggal penyerahan, foto (opsional), dan ucapan. Halaman donasi langsung menampilkan kabar itu.
-2. Periksa **pesan WhatsApp** dan **doa penutup**. Isian `{nama}`, `{bantuan}`, `{tanggal_serah}`, `{penerima}` (nama penerima bantuan), dan lainnya terisi otomatis untuk tiap donatur.
-3. Di tab **Donasi masuk** → **Kabar penyerahan**, tekan **Kirim WA** satu per satu. WhatsApp terbuka dengan pesan yang sudah terisi; kirim, lalu kembali. Barisnya ditandai **Terkirim**, dan penghitung menunjukkan berapa yang sudah dikabari.
+1. Di blok **Kabar penyerahan** (Edit halaman → Penyaluran), isi tanggal penyerahan, foto (opsional), dan ucapan. Halaman donasi langsung menampilkan pita *Bantuan sudah diserahkan*.
+2. Di **Donasi masuk → Kabar penyerahan**, isi tanggal, kalimat pembuka, pilih yang disertakan (rincian tiap penerima, total terkumpul, jumlah donatur, tautan), dan doa penutup. Pratinjau di sampingnya menunjukkan pesan WhatsApp persis seperti yang akan terkirim, dari donasi yang sudah diterima dan pembagian di menu Pembagian.
+3. Tekan **Bagikan ke WhatsApp**, pilih grupnya, lalu kirim. Atau **Salin pesan** untuk ditempel di mana saja. Tidak ada nama atau nomor donatur di pesan ini.
+4. (Opsional) Buka **Kirim juga ke tiap donatur** untuk mengabari donatur yang mengisi nomor WhatsApp satu per satu; barisnya ditandai **Terkirim**.
 
 Hanya donatur yang mengisi nomor WhatsApp dan donasinya sudah Diterima yang muncul di daftar kabar.
 

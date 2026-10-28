@@ -1,10 +1,11 @@
 /* Admin donation desk (DonationBoard): summary, handover news, the list to receive or reject. */
 .board { display: grid; gap: var(--space-5); }
-.summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: var(--space-3); }
+.summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: var(--space-3); }
 .stat { display: grid; gap: 2px; padding: var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
 .stat[data-kind="fund"] { border-color: transparent; background: var(--blue); color: #fff; }
 .stat span { font-size: .8125rem; font-weight: 800; opacity: .8; }
 .stat strong { font-size: 1.375rem; font-weight: 900; }
+.stat[data-kind="fund"] strong { white-space: nowrap; }
 .stat small { font-size: .8125rem; opacity: .8; }
 
 .notify, .list { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: 16px; background: #fff; }
@@ -89,10 +90,30 @@
 .proofThumb { display: grid; flex-shrink: 0; justify-items: center; gap: 2px; width: 88px; color: #5b6476; font-size: .6875rem; font-weight: 700; text-align: center; text-decoration: none; }
 .proofThumb img, .proofThumb span { display: grid; place-items: center; width: 88px; height: 88px; border: 1px solid var(--line); border-radius: 10px; background: #f4f6fa; object-fit: cover; color: var(--blue); }
 .proofThumb:hover img { outline: 2px solid var(--blue); }
+/* Kabar penyerahan: the form beside a WhatsApp-like preview; sending to each donor folded under it. */
+.share { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.shareForm { display: grid; gap: var(--space-3); }
+.shareField { display: grid; gap: 4px; font-size: .875rem; font-weight: 700; }
+.shareParts { display: grid; gap: 6px; margin: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: 12px; }
+.shareParts legend { padding: 0 4px; font-size: .875rem; font-weight: 800; }
+.shareParts label { display: flex; align-items: center; gap: 8px; font-size: .9375rem; }
+.shareParts input { width: 18px; height: 18px; accent-color: var(--blue); }
+.sharePreview { display: grid; gap: var(--space-2); }
+.sharePreviewLabel { margin: 0; color: #5b6476; font-size: .8125rem; font-weight: 800; }
+.chat { padding: var(--space-3); border-radius: 14px; background: #efe7dd; }
+.bubble { max-width: 100%; padding: 10px 12px; border-radius: 4px 12px 12px 12px; background: #d9fdd3; color: #111b21; font-size: .9375rem; line-height: 1.45; overflow-wrap: anywhere; box-shadow: 0 1px 1px rgba(0, 0, 0, .12); }
+.shareActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.copyMessage { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: 999px; background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.perDonor { padding-top: var(--space-2); border-top: 1px solid var(--line); }
+.perDonor summary { cursor: pointer; font-weight: 800; }
+.perDonor[open] summary { margin-bottom: var(--space-2); }
 @media (max-width: 42rem) {
   .board { gap: var(--space-4); }
+  .share { grid-template-columns: 1fr; }
+  .shareActions > * { flex: 1 1 0; justify-content: center; }
   .proofThumb { width: 100%; }
   .proofThumb img, .proofThumb span { width: 100%; height: auto; max-height: 14rem; aspect-ratio: 4 / 3; }
+  .summary { grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); }
   .stat { padding: var(--space-3); border-radius: 12px; }
   .stat strong { font-size: 1.125rem; overflow-wrap: anywhere; }
   .stat[data-kind="fund"] { grid-column: 1 / -1; }

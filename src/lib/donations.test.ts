@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HAMBA_ALLAH, addGiftText, donorLabel, giftsText, splitByRecipient, listNames, defaultDonationItems, describeDonation, donationReport, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
+import { HAMBA_ALLAH, addGiftText, donorLabel, giftsText, groupNews, splitByRecipient, listNames, defaultDonationItems, describeDonation, donationReport, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
 import { donationInputSchema, eventSchema } from "./validation";
 import { createSeedEvent } from "./seed-event";
 import { buildEventFromSetup } from "./event-setup";
@@ -213,5 +213,26 @@ describe("public donor list order", () => {
       donation({ donor_name: "Sedang baru", amount: 500_000, verified_at: "2026-10-26T03:00:00.000Z" }),
     ]).map(donor => donor.name);
     expect(names).toEqual(["Besar", "Sedang baru", "Sedang lama", "Kecil", "Barang"]);
+  });
+});
+
+describe("handover news for a group", () => {
+  it("says when, to whom and what each got, what was collected and how many gave, without donor names", () => {
+    const shared = { ...settings(), recipients: ["Panti A", "Panti B"].map((name, index) => ({ id: `p${index}`, name, description: "", place: "", photo: { url: "", alt: "", srcset: [] } })) };
+    const records = [
+      donation({ donor_name: "Sari Dewi", amount: 200000, recipient_id: "p0" }),
+      donation({ donor_name: "Budi", item_key: "sembako", item_label: "Sembako", category: "goods", amount: 5, unit: "paket", recipient_id: "p1" }),
+      donation({ donor_name: "Rina", amount: 9_000_000, status: "pending" }),
+    ];
+    const news = { date: "Jumat, 30 Oktober 2026", intro: "Alhamdulillah, bantuan sudah kami serahkan.", prayer: "Semoga berkah.", link: "https://journey.werkudara.group/friday-sharing", perRecipient: true, totals: true, donors: true };
+    const text = groupNews(shared, records, { title: "Friday Sharing" }, news);
+    expect(text).toBe([
+      "*Friday Sharing*", "", "Alhamdulillah, bantuan sudah kami serahkan.", "", "Diserahkan pada Jumat, 30 Oktober 2026.",
+      "", "*Penerima*", "• Panti A: Dana Rp 200.000", "• Panti B: Sembako 5 paket",
+      "", "*Total terkumpul*", "• Dana Rp 200.000", "• Sembako 5 paket",
+      "", "Terima kasih kepada 2 orang baik yang sudah ikut berbagi.", "", "Semoga berkah.", "", "Lihat kabarnya: https://journey.werkudara.group/friday-sharing",
+    ].join("\n"));
+    expect(text).not.toMatch(/Sari|Budi|Rina|9\.000\.000/);
+    expect(groupNews(shared, records, { title: "Friday Sharing" }, { ...news, perRecipient: false, totals: false, donors: false, link: "" })).toContain("Kepada Panti A dan Panti B.");
   });
 });

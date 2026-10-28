@@ -327,3 +327,39 @@ export function splitByRecipient(settings: DonationSettings, donations: Donation
 
 /** "Selimut 20 pcs; Sepatu 10 pcs; Kursi roda", for a table cell. */
 export const giftsText = (gifts: RecipientGifts) => [...gifts.goods.map(item => `${item.label} ${formatCount(item.total)}${item.unit ? ` ${item.unit}` : ""}`), ...gifts.other].join("; ");
+
+/** What goes into the handover news for a WhatsApp group (Donasi masuk → Kabar penyerahan). */
+export type GroupNews = { date: string; intro: string; prayer: string; link: string; perRecipient: boolean; totals: boolean; donors: boolean };
+
+/**
+ * One message for a WhatsApp group once the help is handed over: when, to whom and what each
+ * recipient got (Pembagian), what was collected, how many gave, a prayer and the page. Built from
+ * received donations only; no donor's name or number. *Bold* is WhatsApp's own formatting.
+ */
+export function groupNews(settings: DonationSettings, donations: DonationRecord[], event: { title: string }, news: GroupNews): string {
+  const report = donationReport(settings, donations);
+  const split = splitByRecipient(settings, donations);
+  const names = settings.recipients.map(recipient => recipient.name).filter(Boolean);
+  const lines: string[] = [`*${event.title}*`];
+  if (news.intro.trim()) lines.push("", news.intro.trim());
+  lines.push("");
+  if (news.date) lines.push(`Diserahkan pada ${news.date}.`);
+  const shared = settings.recipients.filter(recipient => recipient.name && split.byRecipient[recipient.id]?.count);
+  if (news.perRecipient && shared.length) {
+    lines.push("", "*Penerima*");
+    for (const recipient of shared) {
+      const gifts = split.byRecipient[recipient.id];
+      lines.push(`• ${recipient.name}: ${[gifts.fund ? `Dana ${formatRupiah(gifts.fund)}` : "", giftsText(gifts)].filter(Boolean).join("; ")}`);
+    }
+  } else if (names.length) lines.push(`Kepada ${listNames(names)}.`);
+  if (news.totals && (report.fund || report.goods.length || report.other.length)) {
+    lines.push("", "*Total terkumpul*");
+    if (report.fund) lines.push(`• Dana ${formatRupiah(report.fund)}`);
+    for (const item of report.goods) lines.push(`• ${item.label} ${formatCount(item.total)}${item.unit ? ` ${item.unit}` : ""}`);
+    if (report.other.length) lines.push(`• ${report.other.length} bantuan lain`);
+  }
+  if (news.donors && report.count) lines.push("", `Terima kasih kepada ${report.count} orang baik yang sudah ikut berbagi.`);
+  if (news.prayer.trim()) lines.push("", news.prayer.trim());
+  if (news.link) lines.push("", `Lihat kabarnya: ${news.link}`);
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
