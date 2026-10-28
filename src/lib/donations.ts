@@ -203,14 +203,18 @@ export function donationTotals(settings: DonationSettings, donations: Pick<Donat
 export type PublicDonor = { id: string; name: string; gift: string; message: string; at: string };
 
 /**
- * The public donor list: received donations, newest first, as each donor chose to appear. Hidden
- * donors are left out; amounts of money and messages only when the admin shows them.
+ * The public donor list: received donations, largest first as on other donation apps (money by its
+ * amount first, then goods by quantity; the newest first among equals), as each donor chose to
+ * appear. Hidden donors are left out; amounts of money and messages only when the admin shows them.
+ * Never a photo or proof.
  */
 export function publicDonors(settings: DonationSettings, donations: DonationRecord[]): PublicDonor[] {
   if (!settings.show.donors) return [];
   return donations
     .filter(donation => donation.status === "received" && donation.display !== "hidden")
-    .sort((a, b) => (b.verified_at ?? b.created_at).localeCompare(a.verified_at ?? a.created_at))
+    .sort((a, b) => (a.category === "fund" ? 0 : 1) - (b.category === "fund" ? 0 : 1)
+      || countedAmount(b) - countedAmount(a)
+      || (b.verified_at ?? b.created_at).localeCompare(a.verified_at ?? a.created_at))
     .map(donation => ({
       id: donation.id,
       name: donation.display === "name" ? donation.donor_name : HAMBA_ALLAH,

@@ -201,3 +201,17 @@ describe("sharing out to recipients", () => {
     expect(giftsText(split.byRecipient.p1)).toBe("Sembako 5 paket");
   });
 });
+
+describe("public donor list order", () => {
+  it("puts the largest gifts first, money before goods, the newest first among equals", () => {
+    const shown = { ...settings(), show: { ...settings().show, donorAmounts: true } };
+    const names = publicDonors(shown, [
+      donation({ donor_name: "Kecil", amount: 50000, verified_at: "2026-10-27T03:00:00.000Z" }),
+      donation({ donor_name: "Barang", item_key: "sembako", item_label: "Sembako", category: "goods", amount: 30, unit: "paket", verified_at: "2026-10-28T03:00:00.000Z" }),
+      donation({ donor_name: "Besar", amount: 2_000_000, verified_at: "2026-10-20T03:00:00.000Z" }),
+      donation({ donor_name: "Sedang lama", amount: 500_000, verified_at: "2026-10-21T03:00:00.000Z" }),
+      donation({ donor_name: "Sedang baru", amount: 500_000, verified_at: "2026-10-26T03:00:00.000Z" }),
+    ]).map(donor => donor.name);
+    expect(names).toEqual(["Besar", "Sedang baru", "Sedang lama", "Kecil", "Barang"]);
+  });
+});

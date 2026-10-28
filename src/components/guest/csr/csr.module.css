@@ -284,3 +284,8 @@
 .csr[data-style="hangat"] .sectionHead h2 { font-family: var(--font-garamond), serif; font-weight: 500; font-size: 1.5rem; }
 .csr[data-style="hangat"] .bar .give { background: var(--color-primary); color: var(--color-on-primary); box-shadow: 0 10px 22px -12px rgba(var(--scrim-rgb), .6); }
 .csr[data-style="hangat"] .bar .give svg { color: currentColor; }
+
+/* Under the transfer proof: what the name on it is for; and on the thank-you, that it waits for the committee. */
+.proofNote { display: flex; gap: 6px; align-items: flex-start; margin: 0; color: var(--color-caption); font-size: .8125rem; line-height: 1.45; }
+.proofNote svg { flex-shrink: 0; margin-top: 2px; color: var(--color-primary); }
+.doneWait { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 999px; background: color-mix(in srgb, var(--color-hero-accent, var(--color-soft)) 30%, var(--color-background)); color: var(--color-heading); font-size: .875rem; font-weight: 800; }

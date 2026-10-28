@@ -82,8 +82,11 @@ it("starts with Dana or Barang; goods are rows to fill with suggestions and an a
   fireEvent.click(within(form).getByRole("radio", { name: /Hamba Allah/ }));
   expect(within(form).queryByRole("textbox", { name: "Nama" })).toBeNull();
   expect(within(form).getByText(/tetap dikonfirmasi panitia/)).toBeTruthy();
+  expect(within(form).getByText(/tidak langsung muncul di daftar donatur/)).toBeTruthy();
+  expect(within(form).getByText(/tutupi atau sunting dulu fotonya/)).toBeTruthy();
   fireEvent.click(within(form).getByRole("button", { name: /Kirim donasi/ }));
   await waitFor(() => expect(screen.getByRole("dialog", { name: "Terima kasih" })).toBeTruthy());
+  expect(screen.getByText("Menunggu verifikasi panitia")).toBeTruthy();
   for (const gift of ["Dana Rp 100.000", "Sembako 2 paket", "Kursi roda 1 pcs"]) expect(screen.getByText(gift)).toBeTruthy();
 });
 

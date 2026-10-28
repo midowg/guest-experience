@@ -176,7 +176,8 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
       <span className={s.doneIcon}><HandHeart size={36} aria-hidden="true" /></span>
       <p className={s.doneTitle}>Donasi Anda tercatat, {done.name}.</p>
       <ul className={s.doneGifts}>{done.gifts.map(gift => <li key={gift} className={s.doneGift}>{gift}</li>)}</ul>
-      <p>Panitia akan mengonfirmasi donasi Anda. Setelah dikonfirmasi, donasi ikut terhitung di halaman ini{phone ? ", dan Anda akan mendapat kabar lewat WhatsApp saat bantuan diserahkan" : ""}.</p>
+      <p className={s.doneWait}>Menunggu verifikasi panitia</p>
+      <p>Donasi Anda belum tampil di daftar donatur. Setelah panitia memeriksa dan menerimanya, donasi Anda masuk daftar sesuai pilihan tampil dan ikut terhitung di halaman ini{phone ? ". Kabar lewat WhatsApp menyusul saat bantuan diserahkan" : ""}.</p>
       <button type="button" className={s.give} onClick={onClose}><Check size={20} aria-hidden="true" /> Selesai</button>
     </div>
 
@@ -265,6 +266,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
         </div>}
         <PhotoPick label={`Unggah bukti transfer${settings.proofRequired ? "" : " (opsional)"}`} accept={`${PHOTO_TYPES},application/pdf`} file={proof} error={errors.proof}
           onBusy={busy => setShrinking(count => count + (busy ? 1 : -1))} onChange={file => { touched(); setProof(file); }} />
+        <p className={s.proofNote}><Info size={16} aria-hidden="true" /> <span>Nama di bukti transfer hanya dipakai panitia untuk memeriksa donasi yang masuk, tidak ditampilkan. Bila tidak ingin nama Anda terlihat, tutupi atau sunting dulu fotonya, lalu unggah di sini.</span></p>
       </div>}
 
       <fieldset className={s.group}>
@@ -294,6 +296,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
       </fieldset>
 
       <input ref={honeypot} type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className={s.trap} defaultValue="" />
+      <p className={s.assure}><Info size={18} aria-hidden="true" /> <span>Donasi tidak langsung muncul di daftar donatur. Panitia memverifikasinya dulu; setelah diterima, donasi Anda masuk daftar sesuai pilihan tampil dan ikut terhitung.</span></p>
       {(message || errors.form) && <p className="field-error" role="alert">{errors.form || message}</p>}
       {/* Stays in view at the bottom, above Safari's address bar on an iPhone, so sending never needs a hunt. */}
       <div className={s.submitBar}><button type="submit" className={s.give} disabled={pending}><HandHeart size={22} aria-hidden="true" /> {pending ? "Mengirim…" : "Kirim donasi"}</button></div>
