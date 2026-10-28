@@ -1,21 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, ClipboardCheck, ExternalLink, HandHeart, Images, Mail, MessageSquare, Pencil, ScanLine, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { Check, ChevronDown, ClipboardCheck, ExternalLink, HandHeart, Images, Mail, MessageSquare, Pencil, ScanLine, UtensilsCrossed, type LucideIcon, Split } from "lucide-react";
 import type { AdminTab } from "@/lib/routes";
 import nav from "./navigation.module.css";
 
 export type EventPage = { tab: AdminTab; label: string; href: string };
 const icons: Partial<Record<AdminTab, LucideIcon>> = {
-  edit: Pencil, invitations: Mail, responses: ClipboardCheck, checkin: ScanLine, beo: UtensilsCrossed, gallery: Images, feedback: MessageSquare, donations: HandHeart,
+  edit: Pencil, invitations: Mail, responses: ClipboardCheck, checkin: ScanLine, beo: UtensilsCrossed, gallery: Images, feedback: MessageSquare, donations: HandHeart, "donations-split": Split,
 };
 
 /**
  * One button for the event's pages instead of a row of tabs: it names the page you are on, and
  * opens a short list grouped as edit, guests and operations. Closes on a pick, outside or Esc.
- * With only two pages (Friday Sharing: edit and donations) both show side by side instead.
+ * `inline` shows the pages side by side instead, for an event with only a few (Friday Sharing).
  */
-export function EventPagesMenu({ groups, current, publicHref, publicLabel = "Buka undangan" }: { groups: { label: string; pages: EventPage[] }[]; current: AdminTab; publicHref?: string; publicLabel?: string }) {
+export function EventPagesMenu({ groups, current, publicHref, publicLabel = "Buka undangan", inline = false }: { groups: { label: string; pages: EventPage[] }[]; current: AdminTab; publicHref?: string; publicLabel?: string; inline?: boolean }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -33,7 +33,7 @@ export function EventPagesMenu({ groups, current, publicHref, publicLabel = "Buk
   }, [open]);
 
   const publicLink = publicHref && <a href={publicHref} target="_blank" rel="noopener noreferrer" className={nav.public}><ExternalLink size={15} aria-hidden="true" /> {publicLabel}<span className="sr-only"> (tab baru)</span></a>;
-  if (pages.length === 2) return <nav className={nav.bar} aria-label="Pengelolaan acara">
+  if (inline) return <nav className={nav.bar} aria-label="Pengelolaan acara">
     <ul className={nav.tabs}>{pages.map(page => {
       const PageIcon = icons[page.tab] ?? Pencil;
       return <li key={page.tab}><a href={page.href} aria-current={page.tab === current ? "page" : undefined}><PageIcon size={16} aria-hidden="true" /> {page.label}</a></li>;

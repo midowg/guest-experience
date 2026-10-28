@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Printer } from "lucide-react";
-import { formatRupiah, listNames, shareBalance, type DonationRecipient, type DonationReport, type DonationSettings } from "@/lib/donations";
+import { ArrowLeft, Download, Printer } from "lucide-react";
+import { formatRupiah, giftsText, listNames, splitByRecipient, type DonationRecord, type DonationReport, type DonationSettings, type RecipientGifts } from "@/lib/donations";
 import { formatDate } from "@/lib/format";
-import { adminEventPath } from "@/lib/routes";
+import { adminApi, adminEventPath } from "@/lib/routes";
 import styles from "@/components/admin/beo/beo-print.module.css";
 import s from "./donation-report.module.css";
 
 type Props = {
   event: { id: string; title: string; organizer: string; timezone: string; donation: DonationSettings; contactName: string };
   report: DonationReport;
+  /** Every donation (names already as each donor chose), for what each recipient was given. */
+  donations: DonationRecord[];
   initialRecipient: string;
   printedAt: string;
 };
@@ -22,11 +24,11 @@ const dayOf = (iso: string, timeZone: string) => new Intl.DateTimeFormat("en-CA"
 /**
  * The handover report as one printable A4 sheet: who it is for, what was collected (received
  * donations only), the donors as each chose to appear, and two signature boxes. Addressed to one
- * recipient it lists that recipient's share (set per recipient in the editor, Penerima bantuan);
- * for all recipients it adds how the help was shared out and what is left. The admin also fills
- * the handover date and who signs (printed only, nothing saved) and whether donors are listed.
+ * recipient it lists what that recipient was given (Donasi → Pembagian); for all recipients it adds
+ * how the help was shared out and what is left. The admin also fills the handover date and who
+ * signs (printed only, nothing saved) and whether donors are listed. The CSV download is here too.
  */
-export function DonationReportSheet({ event, report, initialRecipient, printedAt }: Props) {
+export function DonationReportSheet({ event, report, donations, initialRecipient, printedAt }: Props) {
   const { donation } = event;
   const [recipientId, setRecipientId] = useState(initialRecipient);
   const [showDonors, setShowDonors] = useState(true);
@@ -39,15 +41,16 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
   const receiverOrg = receiver.org || recipient?.name || "Penerima bantuan";
   const handedOver = day ? formatDate(`${day}T12:00:00+07:00`, event.timezone) : "";
   const csr = { id: event.id, event_kind: "csr" };
-  const balance = shareBalance(donation, report);
-  const overFund = balance.fund.given > balance.fund.total;
-  const share = recipient ? shareRows(recipient) : [];
+  const split = splitByRecipient(donation, donations);
+  const gifts = recipient ? split.byRecipient[recipient.id] : null;
+  const rows = gifts ? giftRows(gifts) : [];
 
   return <div className={styles.screen}>
     <div className={`${styles.toolbar} ${s.toolbar}`}>
       <a href={adminEventPath(csr, "donations")} className={styles.back}><ArrowLeft size={16} aria-hidden="true" /> Kembali ke Donasi masuk</a>
       <div className={styles.actions}>
         <button type="button" onClick={() => window.print()}><Printer size={16} aria-hidden="true" /> Cetak</button>
+        <a href={adminApi(event.id, "donations/export")} download><Download size={16} aria-hidden="true" /> Unduh CSV</a>
       </div>
       <div className={s.options}>
         {donation.recipients.length > 0 && <label>Untuk <select className="select" value={recipientId} onChange={change => setRecipientId(change.target.value)}>
@@ -66,8 +69,7 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
         <label><span>Diterima oleh: instansi atau jabatan</span><input className="input" value={receiver.org} maxLength={80} placeholder={recipient?.name || "Pengurus panti"} onChange={change => setReceiver({ ...receiver, org: change.target.value })} /></label>
         <p>Isian ini hanya untuk cetakan, tidak disimpan. Nama yang dikosongkan dicetak sebagai garis untuk ditulis tangan.</p>
       </fieldset>
-      {donation.recipients.length > 0 && !balance.anySet && <p className={s.warn}>Pembagian per penerima belum diatur, jadi lembar per penerima belum berisi rincian. Atur di <a href={adminEventPath(csr)}>Edit halaman</a> → Penerima bantuan → <strong>Bagian untuk penerima ini</strong>.</p>}
-      {overFund && <p className={s.warn}>Dana yang dibagikan ({formatRupiah(balance.fund.given)}) melebihi dana yang diterima ({formatRupiah(balance.fund.total)}). Periksa lagi di <a href={adminEventPath(csr)}>Penerima bantuan</a>.</p>}
+      {donation.recipients.length > 0 && split.unassigned.count > 0 && <p className={s.warn}>{split.unassigned.count} donasi yang diterima belum dibagikan ke penerima. Bagikan di <a href={adminEventPath(csr, "donations-split")}>Pembagian</a>.</p>}
       <p className={styles.includes}>Hanya donasi yang sudah <strong>diterima</strong> di Donasi masuk. Donatur yang memilih tidak disebutkan tertulis &ldquo;Tanpa nama&rdquo;. Nomor WhatsApp dan bukti transfer tidak dicetak.</p>
     </div>
 
@@ -87,15 +89,15 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
 
       {recipient ? <>
         <div className={styles.numbers}>
-          <div className={`${styles.main} ${s.main}`}><span>Dana diserahkan</span><strong>{recipient.share.fund ? formatRupiah(recipient.share.fund) : "-"}</strong></div>
-          <div><span>Total donasi diterima</span><strong>{report.count}</strong><small>untuk semua penerima</small></div>
+          <div className={`${styles.main} ${s.main}`}><span>Dana diserahkan</span><strong>{gifts?.fund ? formatRupiah(gifts.fund) : "-"}</strong></div>
+          <div><span>Donasi untuk penerima ini</span><strong>{gifts?.count ?? 0}</strong><small>dari {report.count} donasi diterima</small></div>
         </div>
         <section>
           <h2>Rincian bantuan untuk {recipient.name || "penerima ini"}</h2>
-          {share.length ? <table>
+          {rows.length ? <table>
             <thead><tr><th style={{ width: "10mm" }}>No</th><th>Bantuan</th><th style={{ width: "45mm" }}>Jumlah</th></tr></thead>
-            <tbody>{share.map((row, index) => <tr key={row.label}><td>{index + 1}</td><td>{row.label}</td><td>{row.amount}</td></tr>)}</tbody>
-          </table> : <p className={styles.muted}>Pembagian untuk penerima ini belum diatur.</p>}
+            <tbody>{rows.map((row, index) => <tr key={`${row.label}-${index}`}><td>{index + 1}</td><td>{row.label}</td><td>{row.amount}</td></tr>)}</tbody>
+          </table> : <p className={styles.muted}>Belum ada donasi yang dibagikan ke penerima ini.</p>}
         </section>
       </> : <>
       <div className={styles.numbers}>
@@ -117,13 +119,13 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
           </table>}
       </section>
 
-      {balance.anySet && <section>
+      {split.anyAssigned && <section>
         <h2>Pembagian per penerima</h2>
         <table>
           <thead><tr><th>Penerima</th><th style={{ width: "38mm" }}>Dana</th><th>Barang</th></tr></thead>
           <tbody>
-            {donation.recipients.map(item => <tr key={item.id}><td>{item.name || "Tanpa nama"}</td><td>{item.share.fund ? formatRupiah(item.share.fund) : "-"}</td><td>{item.share.note.trim() || "-"}</td></tr>)}
-            <tr className={s.left}><td>Dana belum dibagikan</td><td>{formatRupiah(Math.max(0, balance.fund.total - balance.fund.given))}</td><td /></tr>
+            {donation.recipients.map(item => { const given = split.byRecipient[item.id]; return <tr key={item.id}><td>{item.name || "Tanpa nama"}</td><td>{given.fund ? formatRupiah(given.fund) : "-"}</td><td>{giftsText(given) || "-"}</td></tr>; })}
+            {split.unassigned.count > 0 && <tr className={s.left}><td>Belum dibagikan</td><td>{split.unassigned.fund ? formatRupiah(split.unassigned.fund) : "-"}</td><td>{giftsText(split.unassigned) || "-"}</td></tr>}
           </tbody>
         </table>
       </section>}
@@ -159,11 +161,11 @@ function Signature({ role, org, name }: { role: string; org: string; name: strin
   </div>;
 }
 
-/** One recipient's share as table rows: the money, then the goods as written. */
-function shareRows(recipient: DonationRecipient): { label: string; amount: string }[] {
-  const { share } = recipient;
+/** What one recipient was given as table rows: the money, each kind of goods, then gifts written freely. */
+function giftRows(gifts: RecipientGifts): { label: string; amount: string }[] {
   return [
-    ...(share.fund > 0 ? [{ label: "Dana", amount: formatRupiah(share.fund) }] : []),
-    ...(share.note.trim() ? [{ label: "Barang", amount: share.note.trim() }] : []),
+    ...(gifts.fund > 0 ? [{ label: "Dana", amount: formatRupiah(gifts.fund) }] : []),
+    ...gifts.goods.map(item => ({ label: item.label, amount: `${count(item.total)} ${item.unit}`.trim() })),
+    ...gifts.other.map(text => ({ label: text, amount: "-" })),
   ];
 }

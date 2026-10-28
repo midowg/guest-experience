@@ -8,7 +8,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const eventId = "10f3a511-2331-4000-8000-0000000000c5";
 const row = (n: number, overrides: Partial<DonationRecord>): DonationRecord => ({
   id: `8d000000-0000-4000-8000-00000000000${n}`, event_id: eventId, item_key: "dana", item_label: "Dana", category: "fund", amount: 100_000, unit: "Rp",
-  donor_name: `Donatur ${n}`, display: "name", donor_phone: "", message: "", proof_key: "", status: "pending", received_amount: null, reject_reason: "", verified_at: null, notified_at: null,
+  donor_name: `Donatur ${n}`, display: "name", donor_phone: "", message: "", proof_key: "", status: "pending", received_amount: null, reject_reason: "", verified_at: null, notified_at: null, recipient_id: "",
   created_at: "2026-10-26T03:00:00.000Z", ...overrides,
 });
 function show(rows: DonationRecord[], delivered: string | null = null) {

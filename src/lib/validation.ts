@@ -148,13 +148,8 @@ const bankAccountSchema = z.object({
   id: z.string().min(1).max(40), bank: text(60).min(1, "Isi nama bank."),
   number: text(40).regex(/^[0-9][0-9 .-]*$/, "Nomor rekening hanya angka."), holder: text(120).min(1, "Isi nama pemilik rekening."),
 });
-const recipientShareSchema = z.object({
-  fund: z.number().min(0).max(1_000_000_000_000).default(0),
-  note: text(500).default(""),
-});
 const donationRecipientSchema = z.object({
   id: z.string().min(1).max(40), name: text(150).min(1, "Isi nama penerima."), description: text(500).default(""), place: text(200).default(""), photo: plainImage.default(emptyImage),
-  share: recipientShareSchema.default({ fund: 0, note: "" }),
 });
 const donationSchema = z.object({
   enabled: z.boolean().default(false),
@@ -204,6 +199,7 @@ export const manualDonationSchema = z.object({
 });
 /** Receive (with the amount that actually came in), reject (with a reason), or mark the handover message sent. */
 export const donationActionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("assign"), recipient_id: z.string().max(40).regex(/^[A-Za-z0-9_-]*$/) }),
   z.object({ action: z.literal("receive"), received_amount: z.number().min(0).max(1_000_000_000_000).nullable().default(null) }),
   z.object({ action: z.literal("reject"), reason: text(300).min(2, "Tulis alasan singkat.") }),
   z.object({ action: z.literal("pending") }),

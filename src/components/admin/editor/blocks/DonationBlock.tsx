@@ -6,7 +6,7 @@ import { Check, OrderButtons, SuggestionChips } from "@/components/admin/editor/
 import { moveItem } from "@/components/admin/editor/editor-model";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { PhotoField } from "@/components/admin/shared/PhotoField";
-import { defaultDonationItems, defaultNotifyTemplate, emptyShare, formatRupiah, parseRupiah, prayerSuggestions, type DonationCategory, type DonationItem, type DonationRecipient, type DonationSettings, type RecipientShare } from "@/lib/donations";
+import { defaultDonationItems, defaultNotifyTemplate, prayerSuggestions, type DonationCategory, type DonationItem, type DonationSettings } from "@/lib/donations";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
 import d from "./donation-block.module.css";
 
@@ -106,7 +106,7 @@ export function DonationRecipientsBlock({ kit }: { kit: EditorKit }) {
   const { donation, set } = useDonation(kit);
   const setRecipient = (index: number, patch: Partial<DonationSettings["recipients"][number]>) => set({ recipients: donation.recipients.map((item, at) => at === index ? { ...item, ...patch } : item) });
   return <div className="stack">
-    <p>Ke mana bantuan ini disalurkan. Boleh lebih dari satu, misalnya dua panti asuhan dan satu sekolah. Tampil di halaman donasi sebagai <strong>Disalurkan ke</strong>, dan namanya masuk ke pesan WhatsApp lewat <code>{"{penerima}"}</code>. Di <strong>Bagian untuk penerima ini</strong>, isi dana dan barang yang diserahkan ke masing-masing; laporan cetak memakai isian ini.</p>
+    <p>Ke mana bantuan ini disalurkan. Boleh lebih dari satu, misalnya dua panti asuhan dan satu sekolah. Tampil di halaman donasi sebagai <strong>Disalurkan ke</strong>, dan namanya masuk ke pesan WhatsApp lewat <code>{"{penerima}"}</code>. Apa yang diserahkan ke masing-masing diatur di <strong>Donasi → Pembagian</strong>.</p>
     {!donation.recipients.length && <p className="field-hint">Belum ada penerima. Halaman donasi tetap bisa terbit tanpa bagian ini.</p>}
     <ol className={d.items}>
       {donation.recipients.map((recipient, index) => <li key={recipient.id} className={d.item}>
@@ -117,14 +117,13 @@ export function DonationRecipientsBlock({ kit }: { kit: EditorKit }) {
         {errors[`donation.recipients.${index}.name`] && <p className="field-error">{errors[`donation.recipients.${index}.name`].join(" ")}</p>}
         <label className={d.field}><span>Keterangan <small>opsional</small></span><textarea className="textarea" rows={2} value={recipient.description} maxLength={500} placeholder="60 anak usia sekolah; kebutuhan utama perlengkapan sekolah dan sembako." onChange={change => setRecipient(index, { description: change.target.value })} /></label>
         <PhotoField name={`donation.recipients.${index}.photo.url`} label="Foto (opsional)" value={recipient.photo.url} srcset={recipient.photo.srcset} onChange={value => setRecipient(index, { photo: { ...recipient.photo, ...value, alt: recipient.photo.alt || `Foto ${recipient.name || "penerima bantuan"}` } })} />
-        <ShareFields recipient={recipient} onChange={share => setRecipient(index, { share })} />
         <div className={d.itemTools}>
           <OrderButtons label={recipient.name || `penerima ${index + 1}`} index={index} length={donation.recipients.length} onMove={direction => set({ recipients: moveItem(donation.recipients, index, direction) })} />
           <Button type="button" variant="quiet" onClick={() => set({ recipients: donation.recipients.filter((_, at) => at !== index) })} aria-label={`Hapus ${recipient.name || `penerima ${index + 1}`}`}><Trash2 size={16} aria-hidden="true" /></Button>
         </div>
       </li>)}
     </ol>
-    <Button type="button" variant="secondary" disabled={donation.recipients.length >= 20} onClick={() => set({ recipients: [...donation.recipients, { id: newId("penerima"), name: "", description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: emptyShare() }] })}><Plus size={16} aria-hidden="true" /> Tambah penerima</Button>
+    <Button type="button" variant="secondary" disabled={donation.recipients.length >= 20} onClick={() => set({ recipients: [...donation.recipients, { id: newId("penerima"), name: "", description: "", place: "", photo: { url: "", alt: "", srcset: [] } }] })}><Plus size={16} aria-hidden="true" /> Tambah penerima</Button>
   </div>;
 }
 
@@ -168,22 +167,4 @@ function uniqueKey(base: string, items: DonationItem[], self: number) {
   let key = base, n = 2;
   while (taken.has(key)) key = `${base}-${n++}`;
   return key;
-}
-
-/**
- * What one recipient is given, for the handover report: money and goods, nothing more. A home that
- * needs only money leaves Barang empty, and the other way round. Not shown on the public page.
- */
-function ShareFields({ recipient, onChange }: { recipient: DonationRecipient; onChange: (share: RecipientShare) => void }) {
-  const share = recipient.share;
-  const set = (patch: Partial<RecipientShare>) => onChange({ ...share, ...patch });
-  const given = [share.fund > 0 ? formatRupiah(share.fund) : "", share.note.trim()].filter(Boolean);
-  return <details className={d.share} open={given.length > 0 || undefined}>
-    <summary>Bagian untuk penerima ini <small>{given.length ? given.join(" · ") : "belum diatur"}</small></summary>
-    <p className="field-hint">Untuk laporan penyerahan, tidak tampil di halaman donasi. Isi dana, barang, atau keduanya.</p>
-    <div className={d.shareGrid}>
-      <label className={d.field}><span>Dana</span><input className="input" inputMode="numeric" value={share.fund ? formatRupiah(share.fund) : ""} placeholder="Rp 0" onChange={change => set({ fund: parseRupiah(change.target.value) })} /></label>
-      <label className={d.field}><span>Barang</span><textarea className="textarea" rows={2} value={share.note} maxLength={500} placeholder="Selimut 20 pcs, sepatu 10 pcs" onChange={change => set({ note: change.target.value })} /></label>
-    </div>
-  </details>;
 }

@@ -13,7 +13,7 @@ function event(overrides: Partial<ReturnType<typeof startingDonation>> = {}) {
 }
 const record = (overrides: Partial<DonationRecord>): DonationRecord => ({
   id: crypto.randomUUID(), event_id: "e", item_key: "dana", item_label: "Dana", category: "fund", amount: 100000, unit: "Rp", donor_name: "Sari", display: "name",
-  donor_phone: "081234567890", message: "", proof_key: "", status: "received", received_amount: null, reject_reason: "", verified_at: "2026-10-20T00:00:00Z", notified_at: null, created_at: "2026-10-20T00:00:00Z", ...overrides,
+  donor_phone: "081234567890", message: "", proof_key: "", status: "received", received_amount: null, reject_reason: "", verified_at: "2026-10-20T00:00:00Z", notified_at: null, recipient_id: "", created_at: "2026-10-20T00:00:00Z", ...overrides,
 });
 function show(e = event(), records: DonationRecord[] = [], preview = true) {
   render(<CsrExperience event={e} preview={preview} view={{ totals: donationTotals(e.donation, records), donors: publicDonors(e.donation, records), ready: true }} />);
@@ -34,7 +34,7 @@ it("shows what was collected and who gave, as each donor chose", () => {
 });
 
 it("names where the help goes on a page of its own, when the committee lists recipients", () => {
-  show(event({ recipients: [{ id: "p1", name: "Panti Asuhan Kasih Ibu", place: "Sleman", description: "60 anak", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, note: "" } }, { id: "p2", name: "Sekolah Harapan", place: "", description: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, note: "" } }] }));
+  show(event({ recipients: [{ id: "p1", name: "Panti Asuhan Kasih Ibu", place: "Sleman", description: "60 anak", photo: { url: "", alt: "", srcset: [] } }, { id: "p2", name: "Sekolah Harapan", place: "", description: "", photo: { url: "", alt: "", srcset: [] } }] }));
   fireEvent.click(screen.getByRole("button", { name: /Disalurkan ke 2 penerima/ }));
   const recipients = screen.getByRole("dialog", { name: "Disalurkan ke" });
   expect(within(recipients).getByText("Panti Asuhan Kasih Ibu")).toBeTruthy();

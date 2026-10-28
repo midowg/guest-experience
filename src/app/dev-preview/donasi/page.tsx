@@ -13,7 +13,7 @@ export default async function DevDonationsPage({ searchParams }: { searchParams:
   const day = (back: number) => new Date(Date.parse("2026-10-26T03:00:00.000Z") - back * 3_600_000).toISOString();
   const row = (n: number, overrides: Partial<DonationRecord>): DonationRecord => ({
     id: `8d000000-0000-4000-8000-00000000000${n}`, event_id: "10f3a511-2331-4000-8000-0000000000c5", item_key: "dana", item_label: "Dana", category: "fund", amount: 100_000, unit: "Rp",
-    donor_name: "Contoh Donatur", display: "name", donor_phone: "", message: "", proof_key: "", status: "pending", received_amount: null, reject_reason: "", verified_at: null, notified_at: null, created_at: day(n), ...overrides,
+    donor_name: "Contoh Donatur", display: "name", donor_phone: "", message: "", proof_key: "", status: "pending", received_amount: null, reject_reason: "", verified_at: null, notified_at: null, recipient_id: "", created_at: day(n), ...overrides,
   });
   const rows = [
     row(1, { donor_name: "Contoh Sari Dewi", amount: 500_000, donor_phone: "081234567890", message: "Semoga bermanfaat.", proof_key: "x/1.jpg" }),

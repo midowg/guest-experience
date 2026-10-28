@@ -52,7 +52,7 @@ export function EventNavigation({ event, current }: { event: EventRecord; curren
   // A Panduan lokasi is read by anyone with the link: no guests, answers or operations.
   if (event.event_kind === "panduan") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka panduan" groups={[{ label: "Edit", pages: [page("edit", "Edit panduan")] }]} />;
   // A CSR page takes donations, not guests: its editor and the donation desk.
-  if (event.event_kind === "csr") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka halaman donasi" groups={[{ label: "Edit", pages: [page("edit", "Edit halaman")] }, { label: "Donasi", pages: [page("donations", "Donasi masuk")] }]} />;
+  if (event.event_kind === "csr") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka halaman donasi" inline groups={[{ label: "Edit", pages: [page("edit", "Edit halaman")] }, { label: "Donasi", pages: [page("donations", "Donasi masuk"), page("donations-split", "Pembagian")] }]} />;
   // An office visit (board 12): its page, its guests and confirmations, then the team's own pages. No tickets, so no check-in.
   if (event.event_kind === "kunjungan") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka halaman tamu" groups={[
     { label: "Edit", pages: [page("edit", "Isi halaman")] },

@@ -33,6 +33,7 @@ Terapkan migrasi yang belum ada, **urut nama berkas**, lewat Supabase Dashboard 
 | `202610220003_card_publish.sql` | Kartu (Studio Poster) bisa dipublikasikan tanpa penyelenggara, pengantar, dan lokasi |
 | `202610260001_eguide_publish.sql` | E-Guide (buku panduan tamu) bisa dipublikasikan tanpa penyelenggara, pengantar, dan lokasi; templat "E-Guide destinasi" boleh ditampilkan untuk admin biasa |
 | `202610270003_donations.sql` | Donasi CSR: tabel donasi, bucket privat `bukti-donasi` untuk bukti transfer, dan halaman CSR bisa dipublikasikan tanpa lokasi. Sebelum migrasi ini, halaman CSR tampil tanpa tombol Donasi dan tab Donasi masuk menampilkan "menunggu migrasi" |
+| `202610280001_donation_recipient.sql` | Friday Sharing: kolom penerima di tiap donasi, untuk menu **Donasi → Pembagian** dan laporan per panti. Sebelum migrasi ini, Donasi masuk tetap berjalan, hanya Pembagian yang menampilkan "menunggu migrasi" |
 
 Cek hasilnya (hanya membaca). Semua kolom harus `true`:
 
@@ -55,7 +56,8 @@ select
   to_regclass('public.poster_designs') is not null as "220002",
   coalesce((select prosrc like '%kartu%' from pg_proc where proname = 'save_event' limit 1), false) as "220003",
   coalesce((select prosrc like '%eguide%' from pg_proc where proname = 'save_event' limit 1), false) as "260001",
-  to_regclass('public.donations') is not null and exists (select 1 from storage.buckets where id = 'bukti-donasi' and not public) as "270003";
+  to_regclass('public.donations') is not null and exists (select 1 from storage.buckets where id = 'bukti-donasi' and not public) as "270003",
+  exists (select 1 from information_schema.columns where table_schema='public' and table_name='donations' and column_name='recipient_id') as "280001";
 ```
 
 Migrasi bersifat menambah. Versi lama yang masih online tetap berjalan setelah migrasi diterapkan, jadi urutannya aman: **database dulu, baru kode**.

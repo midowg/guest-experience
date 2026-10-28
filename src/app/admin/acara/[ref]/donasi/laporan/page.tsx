@@ -33,6 +33,7 @@ export default async function DonationReportPage({ params, searchParams }: { par
   return <DonationReportSheet
     event={{ id: event.id, title: event.title, organizer: event.organizer, timezone: event.timezone, donation: event.donation, contactName: event.contact.name }}
     report={donationReport(event.donation, donations)}
+    donations={donations}
     initialRecipient={event.donation.recipients.some(item => item.id === recipient) ? recipient : ""}
     printedAt={new Date().toISOString()} />;
 }

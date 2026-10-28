@@ -15,13 +15,22 @@ const columns = "id,event_id,item_key,item_label,category,amount,unit,donor_name
 const notMigrated = (error: { code?: string; message?: string }) =>
   ["42P01", "PGRST205", "PGRST202", "42883"].includes(error.code ?? "") || /donations|submit_donation/.test(error.message ?? "");
 const waiting = () => new ServiceError(503, `Donasi menunggu migrasi ${MIGRATION}.`);
+/** Donasi → Pembagian needs the recipient column (202610280001); everything else works without it. */
+const SPLIT_MIGRATION = "202610280001_donation_recipient.sql";
+const noRecipientColumn = (error: { code?: string; message?: string }) => error.code === "42703" || /recipient_id/.test(error.message ?? "");
+/** Reads with the recipient column, and again without it before its migration. */
+async function withRecipient<T>(read: (select: string) => PromiseLike<{ data: T; error: { code?: string; message: string } | null }>): Promise<{ data: T; error: { code?: string; message: string } | null; split: boolean }> {
+  const first = await read(`${columns},recipient_id`);
+  if (!first.error || !noRecipientColumn(first.error)) return { ...first, split: true };
+  return { ...(await read(columns)), split: false };
+}
 
 /**
  * A row as the app sees it: numeric columns arrive as strings from PostgREST, and a donor who chose
  * Hamba Allah or not to be named shows as that, never by an older stored name, admin included.
  */
 function record(row: Record<string, unknown>): DonationRecord {
-  const donation = { ...(row as DonationRecord), amount: Number(row.amount ?? 0), received_amount: row.received_amount === null || row.received_amount === undefined ? null : Number(row.received_amount) };
+  const donation = { ...(row as DonationRecord), recipient_id: String(row.recipient_id ?? ""), amount: Number(row.amount ?? 0), received_amount: row.received_amount === null || row.received_amount === undefined ? null : Number(row.received_amount) };
   return { ...donation, donor_name: donorLabel(donation) };
 }
 /** The name column needs one; a donor who chose not to be named gets the label, not their name. */
@@ -73,33 +82,44 @@ export async function publicDonationView(event: Pick<EventRecord, "id" | "donati
   return { totals: donationTotals(event.donation, rows), donors: publicDonors(event.donation, rows).slice(0, 200), ready: true };
 }
 
-export async function listDonations(eventId: string): Promise<{ donations: DonationRecord[]; migrated: boolean }> {
-  const { data, error } = await createPrivilegedClient().from("donations").select(columns).eq("event_id", eventId).order("created_at", { ascending: false }).limit(5000);
-  if (error) { if (notMigrated(error)) return { donations: [], migrated: false }; databaseError(error); }
-  return { donations: (data ?? []).map(record), migrated: true };
+/** `split`: whether donations can be shared out to recipients yet (migration 202610280001). */
+export async function listDonations(eventId: string): Promise<{ donations: DonationRecord[]; migrated: boolean; split: boolean }> {
+  const client = createPrivilegedClient();
+  const { data, error, split } = await withRecipient(select => client.from("donations").select(select).eq("event_id", eventId).order("created_at", { ascending: false }).limit(5000));
+  if (error) { if (notMigrated(error)) return { donations: [], migrated: false, split: false }; databaseError(error); }
+  return { donations: ((data ?? []) as unknown as Record<string, unknown>[]).map(record), migrated: true, split };
 }
 
-type Action = { action: "receive"; received_amount: number | null } | { action: "reject"; reason: string } | { action: "pending" } | { action: "notified" };
-/** Receive (with what actually came in), reject (with a reason), back to waiting, or handover message sent. */
+type Action = { action: "receive"; received_amount: number | null } | { action: "reject"; reason: string } | { action: "pending" } | { action: "notified" } | { action: "assign"; recipient_id: string };
+/** Receive (with what actually came in), reject (with a reason), back to waiting, handover message sent, or share out to a recipient. */
 export async function updateDonation(eventId: string, id: string, change: Action): Promise<DonationRecord> {
   const now = new Date().toISOString();
   const values =
     change.action === "receive" ? { status: "received", received_amount: change.received_amount, reject_reason: "", verified_at: now }
     : change.action === "reject" ? { status: "rejected", reject_reason: change.reason, received_amount: null, verified_at: now }
     : change.action === "pending" ? { status: "pending", reject_reason: "", received_amount: null, verified_at: null }
+    : change.action === "assign" ? { recipient_id: change.recipient_id }
     : { notified_at: now };
-  const { data, error } = await createPrivilegedClient().from("donations").update(values).eq("event_id", eventId).eq("id", id).select(columns).maybeSingle();
+  const client = createPrivilegedClient();
+  if (change.action === "assign") {
+    const { data, error } = await client.from("donations").update(values).eq("event_id", eventId).eq("id", id).eq("status", "received").select(`${columns},recipient_id`).maybeSingle();
+    if (error) { if (noRecipientColumn(error)) throw new ServiceError(503, `Pembagian menunggu migrasi ${SPLIT_MIGRATION}.`); if (notMigrated(error)) throw waiting(); databaseError(error); }
+    if (!data) throw new ServiceError(409, "Hanya donasi yang sudah diterima yang bisa dibagikan.");
+    return record(data);
+  }
+  const { data, error } = await withRecipient(select => client.from("donations").update(values).eq("event_id", eventId).eq("id", id).select(select).maybeSingle());
   if (error) { if (notMigrated(error)) throw waiting(); databaseError(error); }
   if (!data) throw new ServiceError(404, "Donasi tidak ditemukan.");
-  return record(data);
+  return record(data as unknown as Record<string, unknown>);
 }
 
 /** Cash or goods handed over in person: recorded by the committee, already received. */
 export async function addManualDonation(eventId: string, input: Omit<DonationInput, "website" | "idempotency_key">): Promise<DonationRecord> {
-  const { data, error } = await createPrivilegedClient().from("donations")
-    .insert({ ...input, donor_name: storedName(input), event_id: eventId, manual: true, status: "received", verified_at: new Date().toISOString() }).select(columns).single();
+  const client = createPrivilegedClient();
+  const row = { ...input, donor_name: storedName(input), event_id: eventId, manual: true, status: "received", verified_at: new Date().toISOString() };
+  const { data, error } = await withRecipient(select => client.from("donations").insert(row).select(select).single());
   if (error) { if (notMigrated(error)) throw waiting(); databaseError(error); }
-  return record(data);
+  return record(data as unknown as Record<string, unknown>);
 }
 
 export async function deleteDonation(eventId: string, id: string): Promise<void> {
@@ -123,11 +143,12 @@ export async function proofAddress(eventId: string, id: string): Promise<string>
 const statusLabels = { pending: "Menunggu", received: "Diterima", rejected: "Ditolak" } as const;
 const displayLabels = { name: "Nama", hamba_allah: "Hamba Allah", hidden: "Tidak disebutkan" } as const;
 const categoryLabels = { fund: "Dana", goods: "Barang", other: "Lainnya" } as const;
-/** Every donation as a spreadsheet, formula-safe (csvCell). */
-export function donationsCsv(rows: DonationRecord[]) {
-  const header = ["Waktu", "Nama", "Tampil sebagai", "WhatsApp", "Kelompok", "Bantuan", "Jumlah", "Jumlah diterima", "Satuan", "Status", "Alasan ditolak", "Pesan", "Bukti transfer", "Dikonfirmasi", "Kabar terkirim"];
+/** Every donation as a spreadsheet, formula-safe (csvCell), with the recipient each was shared out to. */
+export function donationsCsv(rows: DonationRecord[], recipients: { id: string; name: string }[] = []) {
+  const recipientName = (id: string) => recipients.find(recipient => recipient.id === id)?.name ?? "";
+  const header = ["Waktu", "Nama", "Tampil sebagai", "WhatsApp", "Kelompok", "Bantuan", "Jumlah", "Jumlah diterima", "Satuan", "Status", "Diserahkan ke", "Alasan ditolak", "Pesan", "Bukti transfer", "Dikonfirmasi", "Kabar terkirim"];
   const lines = rows.map(row => [row.created_at, row.donor_name, displayLabels[row.display], row.donor_phone, categoryLabels[row.category], row.item_label,
-    String(row.amount), row.received_amount === null ? "" : String(row.received_amount), row.unit, statusLabels[row.status], row.reject_reason, row.message,
+    String(row.amount), row.received_amount === null ? "" : String(row.received_amount), row.unit, statusLabels[row.status], recipientName(row.recipient_id), row.reject_reason, row.message,
     row.proof_key ? "Ada" : "", row.verified_at ?? "", row.notified_at ?? ""].map(csvCell).join(","));
   return `﻿${[header.map(csvCell).join(","), ...lines].join("\r\n")}\r\n`;
 }

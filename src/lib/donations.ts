@@ -14,10 +14,7 @@ export type DonationCategory = "fund" | "goods" | "other";
 export type DonationItem = { key: string; label: string; category: DonationCategory; unit: string; target: number | null };
 export type BankAccount = { id: string; bank: string; number: string; holder: string };
 /** Where the help goes: a children's home, a village, a family. A page may name several. */
-/** What one recipient is given, for the handover report: money, and the goods in words (`note`, e.g. "Selimut 20 pcs, sepatu 10 pcs"). */
-export type RecipientShare = { fund: number; note: string };
-export const emptyShare = (): RecipientShare => ({ fund: 0, note: "" });
-export type DonationRecipient = { id: string; name: string; description: string; place: string; photo: PlainImage; share: RecipientShare };
+export type DonationRecipient = { id: string; name: string; description: string; place: string; photo: PlainImage };
 /** How a donor appears in the public list. "hidden" still counts in the totals. */
 export type DonorDisplay = "name" | "hamba_allah" | "hidden";
 export const donorDisplays: { key: DonorDisplay; label: string; hint: string }[] = [
@@ -64,6 +61,8 @@ export type DonationRecord = {
   donor_name: string; display: DonorDisplay; donor_phone: string; message: string;
   proof_key: string; status: DonationStatus; received_amount: number | null; reject_reason: string;
   verified_at: string | null; notified_at: string | null; created_at: string;
+  /** The recipient this donation is handed to (Donasi → Pembagian); empty until shared out. */
+  recipient_id: string;
 };
 /** What the form sends. */
 export type DonationInput = {
@@ -125,7 +124,7 @@ export function normalizeDonation(donation: Partial<DonationSettings> | undefine
   return {
     ...base, ...donation,
     items: donation.items ?? [], accounts: donation.accounts ?? [], qris: { ...image(), ...donation.qris },
-    recipients: (donation.recipients ?? []).map(recipient => ({ ...recipient, photo: { ...image(), ...recipient.photo }, share: { fund: recipient.share?.fund ?? 0, note: recipient.share?.note ?? "" } })),
+    recipients: (donation.recipients ?? []).map(({ id, name, description, place, photo }) => ({ id, name, description, place, photo: { ...image(), ...photo } })),
     show: { ...base.show, ...donation.show },
     delivered: { ...base.delivered, ...donation.delivered, photo: { ...image(), ...donation.delivered?.photo } },
     notify: { ...base.notify, ...donation.notify },
@@ -275,12 +274,35 @@ export function donationReport(settings: DonationSettings, donations: DonationRe
   };
 }
 
-/** The money handed to recipients so far, against what was received; goods are written per recipient, so only listed. */
-export type ShareBalance = { fund: { total: number; given: number }; anySet: boolean };
-export function shareBalance(settings: DonationSettings, report: DonationReport): ShareBalance {
-  const shares = settings.recipients.map(recipient => recipient.share);
-  return {
-    fund: { total: report.fund, given: shares.reduce((sum, share) => sum + share.fund, 0) },
-    anySet: shares.some(share => share.fund > 0 || share.note.trim()),
-  };
+/** What one recipient is handed: money, goods per kind (as donated), and gifts written freely. */
+export type RecipientGifts = { fund: number; goods: { label: string; unit: string; total: number }[]; other: string[]; count: number };
+
+/**
+ * Received donations shared out to recipients (Donasi → Pembagian): what each recipient gets, and
+ * what is not shared out yet (no recipient, or one removed since). Goods given under a chip are
+ * added up per kind; anything else is listed as written.
+ */
+export function splitByRecipient(settings: DonationSettings, donations: DonationRecord[]): { byRecipient: Record<string, RecipientGifts>; unassigned: RecipientGifts; anyAssigned: boolean } {
+  const goodsKeys = new Set(settings.items.filter(item => item.category === "goods").map(item => item.key));
+  const ids = new Set(settings.recipients.map(recipient => recipient.id));
+  const empty = (): RecipientGifts => ({ fund: 0, goods: [], other: [], count: 0 });
+  const byRecipient: Record<string, RecipientGifts> = Object.fromEntries(settings.recipients.map(recipient => [recipient.id, empty()]));
+  const unassigned = empty();
+  let anyAssigned = false;
+  for (const donation of donations.filter(item => item.status === "received")) {
+    const assigned = ids.has(donation.recipient_id);
+    anyAssigned ||= assigned;
+    const into = assigned ? byRecipient[donation.recipient_id] : unassigned;
+    const amount = countedAmount(donation);
+    into.count++;
+    if (donation.category === "fund") into.fund += amount;
+    else if (donation.category === "goods" && goodsKeys.has(donation.item_key)) {
+      const row = into.goods.find(item => item.label === donation.item_label && item.unit === donation.unit);
+      if (row) row.total += amount; else into.goods.push({ label: donation.item_label, unit: donation.unit, total: amount });
+    } else into.other.push(describeDonation(donation, amount));
+  }
+  return { byRecipient, unassigned, anyAssigned };
 }
+
+/** "Selimut 20 pcs; Sepatu 10 pcs; Kursi roda", for a table cell. */
+export const giftsText = (gifts: RecipientGifts) => [...gifts.goods.map(item => `${item.label} ${formatCount(item.total)}${item.unit ? ` ${item.unit}` : ""}`), ...gifts.other].join("; ");

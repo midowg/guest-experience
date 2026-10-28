@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HAMBA_ALLAH, addGiftText, donorLabel, shareBalance, listNames, defaultDonationItems, describeDonation, donationReport, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
+import { HAMBA_ALLAH, addGiftText, donorLabel, giftsText, splitByRecipient, listNames, defaultDonationItems, describeDonation, donationReport, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
 import { donationInputSchema, eventSchema } from "./validation";
 import { createSeedEvent } from "./seed-event";
 import { buildEventFromSetup } from "./event-setup";
@@ -11,7 +11,7 @@ function donation(overrides: Partial<DonationRecord> = {}): DonationRecord {
   return {
     id: `d${n}`, event_id: "e1", item_key: "dana", item_label: "Dana", category: "fund", amount: 100000, unit: "Rp",
     donor_name: "Sari Dewi", display: "name", donor_phone: "081234567890", message: "Semoga bermanfaat",
-    proof_key: "", status: "received", received_amount: null, reject_reason: "", verified_at: `2026-10-2${n % 9}T03:00:00.000Z`, notified_at: null,
+    proof_key: "", status: "received", received_amount: null, reject_reason: "", verified_at: `2026-10-2${n % 9}T03:00:00.000Z`, notified_at: null, recipient_id: "",
     created_at: "2026-10-20T03:00:00.000Z", ...overrides,
   };
 }
@@ -82,7 +82,7 @@ describe("public donor list", () => {
 
 describe("handover message", () => {
   it("fills the template with this donor's gift, the date and the prayer, by name only when they showed it", () => {
-    const withRecipients = { ...settings(), recipients: ["Panti Asuhan Kasih Ibu", "Sekolah Harapan"].map((name, index) => ({ id: `p${index}`, name, description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, note: "" } })) };
+    const withRecipients = { ...settings(), recipients: ["Panti Asuhan Kasih Ibu", "Sekolah Harapan"].map((name, index) => ({ id: `p${index}`, name, description: "", place: "", photo: { url: "", alt: "", srcset: [] } })) };
     const text = notifyMessage(withRecipients, donation({ donor_name: "Budi", display: "hamba_allah", received_amount: 150000 }), { title: "Berbagi Bersama Anak Panti" }, "https://journey.werkudara.group/AB23CD", "12 Desember 2026");
     expect(text).toContain("Halo Bapak/Ibu");
     expect(text).not.toContain("Budi");
@@ -183,16 +183,21 @@ describe("donor names", () => {
   });
 });
 
-describe("shares per recipient", () => {
-  it("adds up the money handed out against what came in; goods are written per recipient", () => {
-    const shared = { ...settings(), recipients: [
-      { id: "a", name: "Panti A", description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 150000, note: "" } },
-      { id: "b", name: "Panti B", description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, note: "Sembako 3 paket" } },
-    ] };
-    const report = donationReport(shared, [donation({ amount: 200000 }), donation({ item_key: "sembako", item_label: "Sembako", category: "goods", amount: 5, unit: "paket" })]);
-    const balance = shareBalance(shared, report);
-    expect(balance.anySet).toBe(true);
-    expect(balance.fund).toEqual({ total: 200000, given: 150000 });
-    expect(shareBalance(settings(), report).anySet).toBe(false);
+describe("sharing out to recipients", () => {
+  it("adds up what each recipient was given, and what is not shared out yet", () => {
+    const shared = { ...settings(), recipients: ["Panti A", "Panti B"].map((name, index) => ({ id: `p${index}`, name, description: "", place: "", photo: { url: "", alt: "", srcset: [] } })) };
+    const split = splitByRecipient(shared, [
+      donation({ amount: 200000, recipient_id: "p0" }),
+      donation({ item_key: "sembako", item_label: "Sembako", category: "goods", amount: 3, unit: "paket", recipient_id: "p1" }),
+      donation({ item_key: "sembako", item_label: "Sembako", category: "goods", amount: 2, unit: "paket", recipient_id: "p1" }),
+      donation({ item_key: "", item_label: "Kursi roda", category: "other", amount: 0, unit: "", recipient_id: "gone" }),
+      donation({ amount: 50000, recipient_id: "" }),
+      donation({ amount: 9_000_000, status: "pending", recipient_id: "p0" }),
+    ]);
+    expect(split.anyAssigned).toBe(true);
+    expect(split.byRecipient.p0).toEqual({ fund: 200000, goods: [], other: [], count: 1 });
+    expect(split.byRecipient.p1).toEqual({ fund: 0, goods: [{ label: "Sembako", unit: "paket", total: 5 }], other: [], count: 2 });
+    expect(split.unassigned).toEqual({ fund: 50000, goods: [], other: ["Kursi roda"], count: 2 });
+    expect(giftsText(split.byRecipient.p1)).toBe("Sembako 5 paket");
   });
 });

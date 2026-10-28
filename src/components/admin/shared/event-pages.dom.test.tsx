@@ -33,13 +33,14 @@ it("closes with Escape or a tap outside", () => {
   expect(screen.queryByRole("link", { name: /Buka undangan/ })).toBeNull();
 });
 
-it("shows both pages side by side when there are only two (Friday Sharing)", () => {
-  render(<EventPagesMenu current="donations" publicHref="/AB23CD" publicLabel="Buka halaman donasi" groups={[
+it("shows the pages side by side when there are only a few (Friday Sharing)", () => {
+  render(<EventPagesMenu inline current="donations" publicHref="/AB23CD" publicLabel="Buka halaman donasi" groups={[
     { label: "Edit", pages: [{ tab: "edit", label: "Edit halaman", href: "/admin/acara/AB23CD" }] },
-    { label: "Donasi", pages: [{ tab: "donations", label: "Donasi masuk", href: "/admin/acara/AB23CD/donasi" }] },
+    { label: "Donasi", pages: [{ tab: "donations", label: "Donasi masuk", href: "/admin/acara/AB23CD/donasi" }, { tab: "donations-split", label: "Pembagian", href: "/admin/acara/AB23CD/donasi/pembagian" }] },
   ]} />);
   expect(screen.queryByRole("button")).toBeNull();
   expect(screen.getByRole("link", { name: "Edit halaman" }).getAttribute("href")).toBe("/admin/acara/AB23CD");
   expect(screen.getByRole("link", { name: "Donasi masuk" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: "Pembagian" }).getAttribute("href")).toBe("/admin/acara/AB23CD/donasi/pembagian");
   expect(screen.getByRole("link", { name: /Buka halaman donasi/ })).toBeTruthy();
 });
