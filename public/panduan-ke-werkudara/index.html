@@ -206,29 +206,29 @@ dialog.viewer[open] { display: flex; flex-direction: column; }
   .btn { transition: none; }
 }
 
-/* Cara datang (board 11): numbered turns, the host to ask, what to do on arrival. Soft, rounded
-   pieces; the map and the turn photo keep a little margin so their corners show. */
+/* Cara datang (board 11): numbered turns, the host to ask, what to do on arrival. Square corners
+   and hairlines, like the buttons, the serif titles and the cover photo. */
 #getting-here .map.bleed { margin-inline: 0; }
-#getting-here .map img, .step-photo img { border-radius: 18px; box-shadow: 0 10px 28px -18px rgba(2, 55, 141, 0.45); }
 #getting-here .map figcaption { margin-top: 10px; }
 .steps, .points { display: grid; gap: 14px; margin: 6px 0 0; padding: 0; list-style: none; }
-.steps li { display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 20px; background: #fff; box-shadow: 0 1px 2px rgba(43, 47, 54, 0.06), 0 8px 24px -18px rgba(43, 47, 54, 0.35); }
+.steps li { display: flex; align-items: flex-start; gap: 14px; padding: 16px; background: #fff; border: 1px solid var(--line); }
 .points li { display: flex; align-items: center; gap: 14px; }
-.num { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--blue); color: var(--on-blue); font-weight: 500; font-size: 0.9rem; line-height: 1; box-shadow: 0 4px 10px -4px rgba(2, 55, 141, 0.6); }
+.num { flex: none; display: inline-grid; place-items: center; width: 32px; height: 32px; background: var(--blue); color: var(--on-blue); font-weight: 500; font-size: 0.9rem; line-height: 1; }
 .steps li > div, .points li > div { flex: 1 1 0; min-width: 0; display: grid; gap: 4px; }
 .step-t, .pt-t { font-weight: 500; color: var(--ink); line-height: 1.4; }
 .step-s, .pt-s, .pic-s { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
 .step-photo { position: relative; margin-top: 10px; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
-.step-photo img { width: 100%; height: 160px; object-fit: cover; }
-.step-photo::after { content: ""; position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 255, 255, 0.92) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2302378D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cpolyline points='9 21 3 21 3 15'/%3E%3Cline x1='21' y1='3' x2='14' y2='10'/%3E%3Cline x1='3' y1='21' x2='10' y2='14'/%3E%3C/svg%3E") center / 16px no-repeat; box-shadow: 0 2px 8px rgba(43, 47, 54, 0.2); }
-.pic { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; border-radius: 22px; background: #EAF1FB; }
+/* The turn photo shows whole, at its own shape: the landmark at the turn must not be cropped. */
+.step-photo img { width: 100%; height: auto; }
+.step-photo::after { content: ""; position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; background: rgba(255, 255, 255, 0.92) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2302378D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cpolyline points='9 21 3 21 3 15'/%3E%3Cline x1='21' y1='3' x2='14' y2='10'/%3E%3Cline x1='3' y1='21' x2='10' y2='14'/%3E%3C/svg%3E") center / 16px no-repeat; box-shadow: 0 2px 8px rgba(43, 47, 54, 0.2); }
+.pic { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; background: #EAF1FB; }
 .pic > div { flex: 1 1 0; min-width: 0; }
 .pic-t { font-weight: 500; color: var(--ink); line-height: 1.4; }
-.avatar, .pic-wa { flex: none; display: inline-grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; }
+.avatar, .pic-wa { flex: none; display: inline-grid; place-items: center; width: 46px; height: 46px; }
 .avatar { background: var(--blue); color: var(--on-blue); font-weight: 500; font-size: 1.1rem; }
-.pic-wa { background: #25A55F; color: #fff; box-shadow: 0 6px 14px -6px rgba(37, 165, 95, 0.7); transition: transform 0.15s; }
-.pic-wa:hover { transform: scale(1.06); }
-.pt-ic { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: #EAF1FB; color: var(--blue); }
+.pic-wa { background: #25A55F; color: #fff; transition: background-color 0.2s ease; }
+.pic-wa:hover { background: #1E8A4F; }
+.pt-ic { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; background: #EAF1FB; color: var(--blue); }
 
 /* Buka Google Maps stays on screen in a bottom bar that mirrors the top bar (warm veil, blur,
    hairline), holding the page's own solid button; the page leaves room under it. */
@@ -242,7 +242,7 @@ body { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 .gallery { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .gallery li { flex-grow: calc(var(--r) * 100); flex-basis: calc(var(--r) * 120px); min-width: 0; }
 .gallery .photo-open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
-.gallery img { display: block; width: 100%; height: auto; aspect-ratio: var(--r); object-fit: cover; border-radius: 14px; }
+.gallery img { display: block; width: 100%; height: auto; aspect-ratio: var(--r); object-fit: cover; }
 @media (min-width: 900px) { .gallery li { flex-basis: calc(var(--r) * 220px); } }
 .viewer.is-photo .viewer-scroll { align-items: center; padding: 16px; }
 .viewer.is-photo .viewer-scroll img { width: auto; max-width: 100%; max-height: 100%; height: auto; }
@@ -349,9 +349,6 @@ body { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
           </button></li>
           <li style="--r: 1.443"><button class="photo-open" type="button" data-open-photo data-src="/panduan-ke-werkudara/assets/workspace-1000.webp" data-w="1000" data-h="693" aria-label="Perbesar foto: Area duduk semi-terbuka di Werkudara Office">
             <img src="/panduan-ke-werkudara/assets/workspace-600.webp" srcset="/panduan-ke-werkudara/assets/workspace-600.webp 600w, /panduan-ke-werkudara/assets/workspace-1000.webp 1000w" sizes="(min-width: 900px) 40vw, 70vw" width="1000" height="693" alt="Area duduk semi-terbuka di Werkudara Office" data-i18n-attr="alt:a.workspaceAlt" loading="lazy" decoding="async">
-          </button></li>
-          <li style="--r: 1.427"><button class="photo-open" type="button" data-open-photo data-src="/panduan-ke-werkudara/assets/team-1280.webp" data-w="1280" data-h="897" aria-label="Perbesar foto: Tim Werkudara">
-            <img src="/panduan-ke-werkudara/assets/team-768.webp" srcset="/panduan-ke-werkudara/assets/team-768.webp 768w, /panduan-ke-werkudara/assets/team-1280.webp 1280w" sizes="(min-width: 900px) 40vw, 70vw" width="1280" height="897" alt="Tim Werkudara" data-i18n-attr="alt:a.teamAlt" loading="lazy" decoding="async">
           </button></li>
           <li style="--r: 1.501"><button class="photo-open" type="button" data-open-photo data-src="/panduan-ke-werkudara/assets/exterior-1280.webp" data-w="1280" data-h="853" aria-label="Perbesar foto: Tampak depan Werkudara Office">
             <img src="/panduan-ke-werkudara/assets/exterior-768.webp" srcset="/panduan-ke-werkudara/assets/exterior-768.webp 768w, /panduan-ke-werkudara/assets/exterior-1280.webp 1280w" sizes="(min-width: 900px) 40vw, 70vw" width="1280" height="853" alt="Tampak depan Werkudara Office" data-i18n-attr="alt:a.heroAlt" loading="lazy" decoding="async">
