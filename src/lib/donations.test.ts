@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HAMBA_ALLAH, addGiftText, listNames, defaultDonationItems, describeDonation, donationReport, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
+import { HAMBA_ALLAH, addGiftText, donorLabel, shareBalance, listNames, defaultDonationItems, describeDonation, donationReport, donationTotals, emptyDonation, formatRupiah, normalizeDonation, notifyMessage, parseRupiah, publicDonors, startingDonation, type DonationRecord } from "./donations";
 import { donationInputSchema, eventSchema } from "./validation";
 import { createSeedEvent } from "./seed-event";
 import { buildEventFromSetup } from "./event-setup";
@@ -81,10 +81,12 @@ describe("public donor list", () => {
 });
 
 describe("handover message", () => {
-  it("fills the template with this donor's gift, the date and the prayer, by their own name", () => {
-    const withRecipients = { ...settings(), recipients: ["Panti Asuhan Kasih Ibu", "Sekolah Harapan"].map((name, index) => ({ id: `p${index}`, name, description: "", place: "", photo: { url: "", alt: "", srcset: [] } })) };
+  it("fills the template with this donor's gift, the date and the prayer, by name only when they showed it", () => {
+    const withRecipients = { ...settings(), recipients: ["Panti Asuhan Kasih Ibu", "Sekolah Harapan"].map((name, index) => ({ id: `p${index}`, name, description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, goods: {}, note: "" } })) };
     const text = notifyMessage(withRecipients, donation({ donor_name: "Budi", display: "hamba_allah", received_amount: 150000 }), { title: "Berbagi Bersama Anak Panti" }, "https://journey.werkudara.group/AB23CD", "12 Desember 2026");
-    expect(text).toContain("Halo Budi");
+    expect(text).toContain("Halo Bapak/Ibu");
+    expect(text).not.toContain("Budi");
+    expect(notifyMessage(withRecipients, donation({ donor_name: "Sari Dewi", display: "name" }), { title: "Berbagi" }, "https://journey.werkudara.group/friday-sharing", "12 Desember 2026")).toContain("Halo Sari Dewi");
     expect(text).toContain("Berbagi Bersama Anak Panti: Dana Rp 150.000");
     expect(text).toContain("12 Desember 2026");
     expect(text).toContain("kepada Panti Asuhan Kasih Ibu dan Sekolah Harapan");
@@ -157,12 +159,40 @@ describe("handover report", () => {
       donation({ amount: 5_000_000, status: "rejected" }),
     ]);
     expect(report.fund).toBe(200000);
-    expect(report.goods).toEqual([{ label: "Sembako", unit: "paket", total: 5 }]);
+    expect(report.goods).toEqual([{ key: "sembako", label: "Sembako", unit: "paket", total: 5 }]);
     expect(report.other).toEqual(["Kursi roda"]);
     expect(report.count).toBe(4);
     expect(report.donors.map(row => row.name)).toEqual(["Sari Dewi", HAMBA_ALLAH, "Tanpa nama", "Sari Dewi"]);
     expect(report.donors[0]).toMatchObject({ gift: "Dana", amount: "Rp 200.000" });
     expect(JSON.stringify(report)).not.toContain("Rahasia");
     expect(JSON.stringify(report)).not.toContain("0812");
+  });
+});
+
+describe("donor names", () => {
+  it("shows a donor's name only when they chose to show it, admin included", () => {
+    expect(donorLabel({ donor_name: "Sari Dewi", display: "name" })).toBe("Sari Dewi");
+    expect(donorLabel({ donor_name: "Budi", display: "hamba_allah" })).toBe(HAMBA_ALLAH);
+    expect(donorLabel({ donor_name: "Rahasia", display: "hidden" })).toBe("Tanpa nama");
+  });
+  it("asks for a name only when it will be shown", () => {
+    const base = { item_key: "dana", item_label: "Dana", category: "fund" as const, amount: 100000, unit: "Rp", donor_phone: "", message: "", website: "", idempotency_key: crypto.randomUUID() };
+    expect(donationInputSchema.safeParse({ ...base, donor_name: "", display: "hidden" }).success).toBe(true);
+    expect(donationInputSchema.safeParse({ ...base, donor_name: "", display: "hamba_allah" }).success).toBe(true);
+    expect(donationInputSchema.safeParse({ ...base, donor_name: "", display: "name" }).success).toBe(false);
+  });
+});
+
+describe("shares per recipient", () => {
+  it("adds up what was handed out against what came in", () => {
+    const shared = { ...settings(), recipients: [
+      { id: "a", name: "Panti A", description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 150000, goods: {} as Record<string, number>, note: "" } },
+      { id: "b", name: "Panti B", description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, goods: { sembako: 3 }, note: "" } },
+    ] };
+    const report = donationReport(shared, [donation({ amount: 200000 }), donation({ item_key: "sembako", item_label: "Sembako", category: "goods", amount: 5, unit: "paket" })]);
+    const balance = shareBalance(shared, report);
+    expect(balance.anySet).toBe(true);
+    expect(balance.fund).toEqual({ total: 200000, given: 150000 });
+    expect(balance.goods).toEqual([{ key: "sembako", label: "Sembako", unit: "paket", total: 5, given: 3 }]);
   });
 });

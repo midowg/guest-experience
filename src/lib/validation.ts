@@ -148,8 +148,14 @@ const bankAccountSchema = z.object({
   id: z.string().min(1).max(40), bank: text(60).min(1, "Isi nama bank."),
   number: text(40).regex(/^[0-9][0-9 .-]*$/, "Nomor rekening hanya angka."), holder: text(120).min(1, "Isi nama pemilik rekening."),
 });
+const recipientShareSchema = z.object({
+  fund: z.number().min(0).max(1_000_000_000_000).default(0),
+  goods: z.record(z.string().max(40), z.number().min(0).max(1_000_000_000)).default({}),
+  note: text(500).default(""),
+});
 const donationRecipientSchema = z.object({
   id: z.string().min(1).max(40), name: text(150).min(1, "Isi nama penerima."), description: text(500).default(""), place: text(200).default(""), photo: plainImage.default(emptyImage),
+  share: recipientShareSchema.default({ fund: 0, goods: {}, note: "" }),
 });
 const donationSchema = z.object({
   enabled: z.boolean().default(false),
@@ -171,13 +177,15 @@ export const donationInputSchema = z.object({
   category: z.enum(["fund", "goods", "other"]),
   amount: z.number().min(0).max(1_000_000_000_000).default(0),
   unit: text(20).default(""),
-  donor_name: text(150).min(2, "Isi nama Anda."),
+  // Only asked when the donor chose to show their name; Hamba Allah and not named need none.
+  donor_name: text(150).default(""),
   display: z.enum(["name", "hamba_allah", "hidden"]),
   donor_phone: text(30).refine(value => !value || parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890.").default(""),
   message: text(500).default(""),
   website: z.string().max(0),
   idempotency_key: z.uuid(),
 }).superRefine((value, ctx) => {
+  if (value.display === "name" && value.donor_name.trim().length < 2) ctx.addIssue({ code: "custom", path: ["donor_name"], message: "Isi nama Anda, atau pilih Hamba Allah atau Jangan sebutkan." });
   if (value.category === "fund" && value.amount < 1000) ctx.addIssue({ code: "custom", path: ["amount"], message: "Isi nominal dana, minimal Rp 1.000." });
   if (value.category === "goods" && value.amount <= 0) ctx.addIssue({ code: "custom", path: ["amount"], message: "Isi jumlah barang." });
 });
@@ -188,10 +196,12 @@ export const manualDonationSchema = z.object({
   category: z.enum(["fund", "goods", "other"]),
   amount: z.number().min(0).max(1_000_000_000_000).default(0),
   unit: text(20).default(""),
-  donor_name: text(150).min(2, "Isi nama donatur."),
+  donor_name: text(150).default(""),
   display: z.enum(["name", "hamba_allah", "hidden"]),
   donor_phone: text(30).refine(value => !value || parseContactPhone(value) !== null, "Gunakan nomor HP Indonesia, misalnya 0812 3456 7890.").default(""),
   message: text(500).default(""),
+}).superRefine((value, ctx) => {
+  if (value.display === "name" && value.donor_name.trim().length < 2) ctx.addIssue({ code: "custom", path: ["donor_name"], message: "Isi nama donatur, atau pilih Hamba Allah atau Tidak disebutkan." });
 });
 /** Receive (with the amount that actually came in), reject (with a reason), or mark the handover message sent. */
 export const donationActionSchema = z.discriminatedUnion("action", [

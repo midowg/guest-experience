@@ -114,7 +114,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
       ...chosen.map(item => ({ item_key: item.key, item_label: item.label, category: item.category, amount: item.category === "other" ? 0 : picked[item.key] ?? 0, unit: item.unit })),
       ...(other.trim() ? [{ item_key: "", item_label: other.trim(), category: "other" as const, amount: 0, unit: "" }] : []),
     ];
-    const donor = { donor_name: name.trim(), display, donor_phone: phone.trim(), message: note.trim(), website: honeypot.current?.value ?? "" };
+    const donor = { donor_name: display === "name" ? name.trim() : "", display, donor_phone: phone.trim(), message: note.trim(), website: honeypot.current?.value ?? "" };
     const next: Record<string, string> = {};
     if (!gifts.length) next.gift = giveGoods ? "Pilih barang yang ingin diberikan, atau tulis sendiri di Lihat lainnya." : "Pilih bantuan yang ingin diberikan: dana atau barang.";
     const bodies = gifts.map(gift => {
@@ -131,7 +131,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
     if (fund.length && settings.proofRequired && !proof) next.proof = "Unggah bukti transfer.";
     if (Object.keys(next).length) { setErrors(next); setMessage("Periksa isian yang ditandai."); return; }
     const labels = bodies.map(({ body }) => describeDonation(body));
-    if (preview) { setDone({ name: donor.donor_name, gifts: labels }); return; }
+    if (preview) { setDone({ name: display === "name" ? donor.donor_name : "orang baik", gifts: labels }); return; }
     setPending(true);
     try {
       let proofSent = false;
@@ -150,7 +150,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
         }
         sent.current.add(body.idempotency_key);
       }
-      const shownName = display === "name" ? donor.donor_name : donor.donor_name.split(" ")[0];
+      const shownName = display === "name" ? donor.donor_name : "orang baik";
       remember(event.id, { name: shownName, gift: labels.join(", "), at: new Date().toISOString() });
       setDone({ name: shownName, gifts: labels });
     } catch { setMessage("Donasi belum terkirim. Periksa koneksi, lalu coba lagi."); }
@@ -261,18 +261,20 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
 
       <fieldset className={s.group}>
         <legend>Data Anda</legend>
-        <label className={s.field}><span>Nama</span>
-          <input className="input" value={name} maxLength={150} autoComplete="name" aria-invalid={!!errors.donor_name || undefined} onChange={change => { touched(); setName(change.target.value); }} />
-        </label>
-        {errors.donor_name && <p className="field-error">{errors.donor_name}</p>}
+        <p className={s.hint}>Bagaimana Anda ingin tercantum?</p>
         <div className={s.displays} role="radiogroup" aria-label="Tampil di daftar donatur sebagai">
           {donorDisplays.map(option => <label key={option.key} className={s.display} data-checked={display === option.key || undefined}>
-            <input type="radio" name="display" value={option.key} checked={display === option.key} onChange={() => setDisplay(option.key)} />
+            <input type="radio" name="display" value={option.key} checked={display === option.key} onChange={() => { touched(); setDisplay(option.key); }} />
             <span className={s.displayLabel}>{option.label}</span>
             <span className={s.displayHint}>{option.hint}</span>
           </label>)}
         </div>
-        <p className={s.assure}><Info size={18} aria-hidden="true" /> Apa pun pilihannya, donasi Anda tetap dikonfirmasi panitia dan ikut terhitung di total. Pilihan ini hanya mengatur apakah nama Anda terlihat di daftar donatur.</p>
+        {display === "name" ? <>
+          <label className={s.field}><span>Nama</span>
+            <input className="input" value={name} maxLength={150} autoComplete="name" aria-invalid={!!errors.donor_name || undefined} onChange={change => { touched(); setName(change.target.value); }} />
+          </label>
+          {errors.donor_name && <p className="field-error">{errors.donor_name}</p>}
+        </> : <p className={s.assure}><Info size={18} aria-hidden="true" /> Tidak perlu mengisi nama. Donasi Anda tetap dikonfirmasi panitia dan ikut terhitung di total, tanpa nama di mana pun, termasuk di catatan panitia.</p>}
         <label className={s.field}><span>Nomor WhatsApp (opsional)</span>
           <input className="input" type="tel" inputMode="tel" autoComplete="tel" value={phone} maxLength={30} placeholder="0812 3456 7890" aria-invalid={!!errors.donor_phone || undefined} onChange={change => { touched(); setPhone(change.target.value); }} />
           <small>Untuk kabar saat bantuan diserahkan. Tidak ditampilkan.</small>

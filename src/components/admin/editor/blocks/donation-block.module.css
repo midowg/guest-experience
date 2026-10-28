@@ -18,3 +18,9 @@
 .csrCover { display: grid; gap: 6px; max-width: 22rem; margin: 0; }
 .csrCover img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; padding: 8px 8px 12px; border-radius: 18px; background: #fff; box-shadow: 0 10px 24px -14px rgba(20, 40, 38, .5), 0 0 0 1px #f1d6b8; transform: rotate(-1.5deg); }
 .csrCover figcaption { color: var(--color-caption); font-size: var(--text-sm); }
+
+/* A recipient's share, folded until opened (open when something is set). */
+.share { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px dashed var(--line, #dde1ea); border-radius: 12px; background: #fff; }
+.share summary { cursor: pointer; font-weight: 800; }
+.share summary small { margin-left: 6px; color: var(--color-caption); font-weight: 600; }
+.shareGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: var(--space-3); }

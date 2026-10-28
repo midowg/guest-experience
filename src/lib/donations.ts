@@ -14,15 +14,26 @@ export type DonationCategory = "fund" | "goods" | "other";
 export type DonationItem = { key: string; label: string; category: DonationCategory; unit: string; target: number | null };
 export type BankAccount = { id: string; bank: string; number: string; holder: string };
 /** Where the help goes: a children's home, a village, a family. A page may name several. */
-export type DonationRecipient = { id: string; name: string; description: string; place: string; photo: PlainImage };
+/** What one recipient is given, for the handover report: money, a quantity per kind of goods, and a note (other gifts). */
+export type RecipientShare = { fund: number; goods: Record<string, number>; note: string };
+export const emptyShare = (): RecipientShare => ({ fund: 0, goods: {}, note: "" });
+export type DonationRecipient = { id: string; name: string; description: string; place: string; photo: PlainImage; share: RecipientShare };
 /** How a donor appears in the public list. "hidden" still counts in the totals. */
 export type DonorDisplay = "name" | "hamba_allah" | "hidden";
 export const donorDisplays: { key: DonorDisplay; label: string; hint: string }[] = [
   { key: "name", label: "Tampilkan nama saya", hint: "Nama Anda muncul di daftar donatur." },
-  { key: "hamba_allah", label: "Hamba Allah", hint: "Tercantum sebagai Hamba Allah." },
-  { key: "hidden", label: "Jangan sebutkan", hint: "Tidak muncul di daftar, tetap terhitung." },
+  { key: "hamba_allah", label: "Hamba Allah", hint: "Tercantum sebagai Hamba Allah, tanpa mengisi nama." },
+  { key: "hidden", label: "Jangan sebutkan", hint: "Tidak muncul di daftar dan tanpa mengisi nama, tetap terhitung." },
 ];
 export const HAMBA_ALLAH = "Hamba Allah";
+export const NO_NAME = "Tanpa nama";
+/**
+ * The name a donation carries everywhere (page, admin, report, spreadsheet): the donor's own only
+ * when they chose to show it. A donor who chose Hamba Allah or not to be named is never asked for a
+ * name, and an older record that has one still shows it as they chose.
+ */
+export const donorLabel = (donation: Pick<DonationRecord, "donor_name" | "display">) =>
+  donation.display === "name" ? donation.donor_name : donation.display === "hamba_allah" ? HAMBA_ALLAH : NO_NAME;
 
 export type DonationSettings = {
   /** The form takes donations. Off: the page still shows what was collected. */
@@ -114,7 +125,7 @@ export function normalizeDonation(donation: Partial<DonationSettings> | undefine
   return {
     ...base, ...donation,
     items: donation.items ?? [], accounts: donation.accounts ?? [], qris: { ...image(), ...donation.qris },
-    recipients: (donation.recipients ?? []).map(recipient => ({ ...recipient, photo: { ...image(), ...recipient.photo } })),
+    recipients: (donation.recipients ?? []).map(recipient => ({ ...recipient, photo: { ...image(), ...recipient.photo }, share: { ...emptyShare(), ...recipient.share } })),
     show: { ...base.show, ...donation.show },
     delivered: { ...base.delivered, ...donation.delivered, photo: { ...image(), ...donation.delivered?.photo } },
     notify: { ...base.notify, ...donation.notify },
@@ -203,7 +214,7 @@ export const donorInitials = (name: string) => name.split(/\s+/).filter(Boolean)
 export function notifyMessage(settings: DonationSettings, donation: DonationRecord, event: { title: string }, link: string, handedOver: string): string {
   const values: Record<string, string> = {
     // The message is private to the donor, so their own name is used even when the page says Hamba Allah.
-    nama: donation.donor_name || "Bapak/Ibu",
+    nama: donation.display === "name" && donation.donor_name ? donation.donor_name : "Bapak/Ibu",
     bantuan: describeDonation(donation, countedAmount(donation)),
     jumlah: donation.category === "fund" ? formatRupiah(countedAmount(donation)) : `${formatCount(countedAmount(donation))}${donation.unit ? ` ${donation.unit}` : ""}`,
     tanggal_serah: handedOver, acara: event.title, tautan: link, doa: settings.notify.prayer,
@@ -221,7 +232,8 @@ export function listNames(names: string[]): string {
 /** What the printed report lists: every received gift, whatever the public page shows. */
 export type DonationReport = {
   fund: number;
-  goods: { label: string; unit: string; total: number }[];
+  /** Per kind of goods; `key` is the chip it was given under. */
+  goods: { key: string; label: string; unit: string; total: number }[];
   /** Gifts written freely (or under a chip removed since), as the donor wrote them. */
   other: string[];
   /** Received donations; one donor giving two things counts twice, as on the page. */
@@ -238,11 +250,11 @@ export function donationReport(settings: DonationSettings, donations: DonationRe
   const received = donations.filter(donation => donation.status === "received")
     .sort((a, b) => (a.verified_at ?? a.created_at).localeCompare(b.verified_at ?? b.created_at));
   const goodsKeys = new Set(settings.items.filter(item => item.category === "goods").map(item => item.key));
-  const goods = new Map<string, { label: string; unit: string; total: number }>();
+  const goods = new Map<string, { key: string; label: string; unit: string; total: number }>();
   for (const donation of received) {
     if (donation.category !== "goods" || !goodsKeys.has(donation.item_key)) continue;
-    const key = `${donation.item_label}|${donation.unit}`;
-    const row = goods.get(key) ?? { label: donation.item_label, unit: donation.unit, total: 0 };
+    const key = donation.item_key;
+    const row = goods.get(key) ?? { key, label: donation.item_label, unit: donation.unit, total: 0 };
     row.total += countedAmount(donation);
     goods.set(key, row);
   }
@@ -255,10 +267,29 @@ export function donationReport(settings: DonationSettings, donations: DonationRe
     count: received.length,
     donors: received.map(donation => ({
       id: donation.id,
-      name: donation.display === "name" ? donation.donor_name : donation.display === "hamba_allah" ? HAMBA_ALLAH : "Tanpa nama",
+      name: donorLabel(donation),
       gift: donation.category === "fund" ? donation.item_label : describeDonation(donation, countedAmount(donation)),
       amount: donation.category === "fund" ? formatRupiah(countedAmount(donation)) : "",
       at: donation.verified_at ?? donation.created_at,
     })),
+  };
+}
+
+/** What has been handed to recipients so far, against what was collected: per kind, given and left. */
+export type ShareBalance = { fund: { total: number; given: number }; goods: { key: string; label: string; unit: string; total: number; given: number }[]; anySet: boolean };
+export function shareBalance(settings: DonationSettings, report: DonationReport): ShareBalance {
+  const shares = settings.recipients.map(recipient => recipient.share);
+  const given = (key: string) => shares.reduce((sum, share) => sum + (share.goods[key] ?? 0), 0);
+  const keys = new Set(report.goods.map(item => item.key));
+  const goods = [
+    ...report.goods.map(item => ({ ...item, given: given(item.key) })),
+    // Goods shared out that nothing was received for yet still show, so an over-promise is visible.
+    ...settings.items.filter(item => item.category === "goods" && !keys.has(item.key) && given(item.key) > 0)
+      .map(item => ({ key: item.key, label: item.label, unit: item.unit, total: 0, given: given(item.key) })),
+  ];
+  return {
+    fund: { total: report.fund, given: shares.reduce((sum, share) => sum + share.fund, 0) },
+    goods,
+    anySet: shares.some(share => share.fund > 0 || Object.values(share.goods).some(amount => amount > 0) || share.note.trim()),
   };
 }

@@ -27,7 +27,7 @@ export function ManualDonation({ eventId, items, onAdded, onCancel }: { eventId:
       const body = {
         item_key: chosen?.key ?? "", item_label: label.trim(), category: chosen?.category ?? "other", unit: chosen?.unit ?? "",
         amount: chosen?.category === "fund" ? parseRupiah(amount) : Number(amount.replace(",", ".")) || 0,
-        donor_name: name.trim(), display, donor_phone: phone.trim(), message: message.trim(),
+        donor_name: display === "name" ? name.trim() : "", display, donor_phone: phone.trim(), message: message.trim(),
       };
       const result = await adminRequest<DonationRecord>(adminApi(eventId, "donations"), { method: "POST", body: JSON.stringify(body) });
       if (result.data) onAdded(result.data);
@@ -43,7 +43,7 @@ export function ManualDonation({ eventId, items, onAdded, onCancel }: { eventId:
     <div className={s.grid}>
       <label className={s.field}><span>Bantuan</span><input className="input" value={label} maxLength={120} onChange={change => setLabel(change.target.value)} required /></label>
       <label className={s.field}><span>{chosen?.category === "fund" ? "Nominal (Rp)" : `Jumlah${chosen?.unit ? ` (${chosen.unit})` : ""}`}</span><input className="input" inputMode="decimal" value={amount} onChange={change => setAmount(change.target.value)} /></label>
-      <label className={s.field}><span>Nama donatur</span><input className="input" value={name} maxLength={150} onChange={change => setName(change.target.value)} required /></label>
+      {display === "name" && <label className={s.field}><span>Nama donatur</span><input className="input" value={name} maxLength={150} onChange={change => setName(change.target.value)} required /></label>}
       <label className={s.field}><span>Tampil sebagai</span><select className="select" value={display} onChange={change => setDisplay(change.target.value as DonorDisplay)}>
         {donorDisplays.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}
       </select></label>

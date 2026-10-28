@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ArrowLeft, Printer } from "lucide-react";
-import { formatRupiah, listNames, type DonationReport, type DonationSettings } from "@/lib/donations";
+import { formatRupiah, listNames, shareBalance, type DonationRecipient, type DonationReport, type DonationSettings } from "@/lib/donations";
 import { formatDate } from "@/lib/format";
 import { adminEventPath } from "@/lib/routes";
 import styles from "@/components/admin/beo/beo-print.module.css";
@@ -21,9 +21,10 @@ const dayOf = (iso: string, timeZone: string) => new Intl.DateTimeFormat("en-CA"
 
 /**
  * The handover report as one printable A4 sheet: who it is for, what was collected (received
- * donations only), the donors as each chose to appear, and two signature boxes. The admin picks
- * the recipient, fills the handover date and who signs on each side (printed under the signature
- * lines; nothing is saved), and whether the donor list and each donor's amount are printed.
+ * donations only), the donors as each chose to appear, and two signature boxes. Addressed to one
+ * recipient it lists that recipient's share (set per recipient in the editor, Penerima bantuan);
+ * for all recipients it adds how the help was shared out and what is left. The admin also fills
+ * the handover date and who signs (printed only, nothing saved) and whether donors are listed.
  */
 export function DonationReportSheet({ event, report, initialRecipient, printedAt }: Props) {
   const { donation } = event;
@@ -37,10 +38,14 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
   const organizer = event.organizer || "Panitia";
   const receiverOrg = receiver.org || recipient?.name || "Penerima bantuan";
   const handedOver = day ? formatDate(`${day}T12:00:00+07:00`, event.timezone) : "";
+  const csr = { id: event.id, event_kind: "csr" };
+  const balance = shareBalance(donation, report);
+  const over = [balance.fund.given > balance.fund.total ? "dana" : "", ...balance.goods.filter(item => item.given > item.total).map(item => item.label.toLowerCase())].filter(Boolean);
+  const share = recipient ? shareRows(recipient, donation) : [];
 
   return <div className={styles.screen}>
     <div className={styles.toolbar}>
-      <a href={adminEventPath(event.id, "donations")} className={styles.back}><ArrowLeft size={16} aria-hidden="true" /> Kembali ke Donasi masuk</a>
+      <a href={adminEventPath(csr, "donations")} className={styles.back}><ArrowLeft size={16} aria-hidden="true" /> Kembali ke Donasi masuk</a>
       <div className={styles.actions}>
         <button type="button" onClick={() => window.print()}><Printer size={16} aria-hidden="true" /> Cetak</button>
       </div>
@@ -61,6 +66,8 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
         <label><span>Diterima oleh: instansi atau jabatan</span><input className="input" value={receiver.org} maxLength={80} placeholder={recipient?.name || "Pengurus panti"} onChange={change => setReceiver({ ...receiver, org: change.target.value })} /></label>
         <p>Isian ini hanya untuk cetakan, tidak disimpan. Nama yang dikosongkan dicetak sebagai garis untuk ditulis tangan.</p>
       </fieldset>
+      {donation.recipients.length > 0 && !balance.anySet && <p className={s.warn}>Pembagian per penerima belum diatur, jadi lembar per penerima belum berisi rincian. Atur di <a href={adminEventPath(csr)}>Edit halaman</a> → Penerima bantuan → <strong>Bagian untuk penerima ini</strong>.</p>}
+      {over.length > 0 && <p className={s.warn}>Pembagian {listNames(over)} melebihi yang sudah diterima. Periksa lagi di <a href={adminEventPath(csr)}>Penerima bantuan</a>.</p>}
       <p className={styles.includes}>Hanya donasi yang sudah <strong>diterima</strong> di Donasi masuk. Donatur yang memilih tidak disebutkan tertulis &ldquo;Tanpa nama&rdquo;. Nomor WhatsApp dan bukti transfer tidak dicetak.</p>
     </div>
 
@@ -78,6 +85,20 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
           : <p>{listNames(donation.recipients.map(item => item.name).filter(Boolean)) || "Penerima bantuan"}</p>}
       </section>
 
+      {recipient ? <>
+        <div className={styles.numbers}>
+          <div className={`${styles.main} ${s.main}`}><span>Dana diserahkan</span><strong>{recipient.share.fund ? formatRupiah(recipient.share.fund) : "-"}</strong></div>
+          <div><span>Jenis barang diserahkan</span><strong>{share.filter(row => row.kind === "goods").length}</strong></div>
+          <div><span>Total donasi diterima</span><strong>{report.count}</strong><small>untuk semua penerima</small></div>
+        </div>
+        <section>
+          <h2>Rincian bantuan untuk {recipient.name || "penerima ini"}</h2>
+          {share.length ? <table>
+            <thead><tr><th style={{ width: "10mm" }}>No</th><th>Bantuan</th><th style={{ width: "45mm" }}>Jumlah</th></tr></thead>
+            <tbody>{share.map((row, index) => <tr key={row.label}><td>{index + 1}</td><td>{row.label}</td><td>{row.amount}</td></tr>)}</tbody>
+          </table> : <p className={styles.muted}>Pembagian untuk penerima ini belum diatur.</p>}
+        </section>
+      </> : <>
       <div className={styles.numbers}>
         <div className={`${styles.main} ${s.main}`}><span>Dana terkumpul</span><strong>{formatRupiah(report.fund)}</strong></div>
         <div><span>Jenis barang</span><strong>{report.goods.length + (report.other.length ? 1 : 0)}</strong><small>termasuk bantuan lain</small></div>
@@ -85,7 +106,7 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
       </div>
 
       <section>
-        <h2>Rincian bantuan</h2>
+        <h2>Rincian bantuan terkumpul</h2>
         {report.fund === 0 && !report.goods.length && !report.other.length ? <p className={styles.muted}>Belum ada donasi yang diterima.</p>
           : <table>
             <thead><tr><th style={{ width: "10mm" }}>No</th><th>Bantuan</th><th style={{ width: "45mm" }}>Jumlah</th></tr></thead>
@@ -96,6 +117,22 @@ export function DonationReportSheet({ event, report, initialRecipient, printedAt
             </tbody>
           </table>}
       </section>
+
+      {balance.anySet && <section>
+        <h2>Pembagian per penerima</h2>
+        <table>
+          <thead><tr><th>Penerima</th><th style={{ width: "38mm" }}>Dana</th><th>Barang dan lainnya</th></tr></thead>
+          <tbody>
+            {donation.recipients.map(item => {
+              const rows = shareRows(item, donation);
+              return <tr key={item.id}><td>{item.name || "Tanpa nama"}</td><td>{item.share.fund ? formatRupiah(item.share.fund) : "-"}</td><td>{rows.filter(row => row.kind !== "fund").map(row => row.kind === "note" ? row.label : `${row.label} ${row.amount}`.trim()).join("; ") || "-"}</td></tr>;
+            })}
+            <tr className={s.left}><td>Belum dibagikan</td><td>{formatRupiah(Math.max(0, balance.fund.total - balance.fund.given))}</td>
+              <td>{balance.goods.filter(item => item.total > item.given).map(item => `${item.label} ${count(item.total - item.given)} ${item.unit}`.trim()).join("; ") || "-"}</td></tr>
+          </tbody>
+        </table>
+      </section>}
+      </>}
 
       {showDonors && report.donors.length > 0 && <section className={s.donors}>
         <h2>Donatur</h2>
@@ -126,4 +163,15 @@ function Signature({ role, org, name }: { role: string; org: string; name: strin
     <p className={s.signName}>{name || " "}</p>
     <p className={styles.muted}>{name ? "Tanda tangan" : "Nama dan tanda tangan"}</p>
   </div>;
+}
+
+/** One recipient's share as table rows: the money, each kind of goods with a quantity, then the note. */
+function shareRows(recipient: DonationRecipient, donation: DonationSettings): { kind: "fund" | "goods" | "note"; label: string; amount: string }[] {
+  const { share } = recipient;
+  return [
+    ...(share.fund > 0 ? [{ kind: "fund" as const, label: "Dana", amount: formatRupiah(share.fund) }] : []),
+    ...donation.items.filter(item => item.category === "goods" && (share.goods[item.key] ?? 0) > 0)
+      .map(item => ({ kind: "goods" as const, label: item.label, amount: `${count(share.goods[item.key])} ${item.unit}`.trim() })),
+    ...(share.note.trim() ? [{ kind: "note" as const, label: `Lainnya: ${share.note.trim()}`, amount: "-" }] : []),
+  ];
 }

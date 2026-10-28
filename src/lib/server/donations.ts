@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { donationTotals, publicDonors, type DonationInput, type DonationRecord, type DonationTotals, type PublicDonor } from "@/lib/donations";
+import { donationTotals, publicDonors, type DonationInput, type DonationRecord, type DonationTotals, type PublicDonor, donorLabel } from "@/lib/donations";
 import { sniffPhoto } from "@/lib/image-signature";
 import type { EventRecord } from "@/lib/types";
 import { createPrivilegedClient } from "./supabase/admin";
@@ -16,10 +16,16 @@ const notMigrated = (error: { code?: string; message?: string }) =>
   ["42P01", "PGRST205", "PGRST202", "42883"].includes(error.code ?? "") || /donations|submit_donation/.test(error.message ?? "");
 const waiting = () => new ServiceError(503, `Donasi menunggu migrasi ${MIGRATION}.`);
 
-/** numeric columns arrive as strings from PostgREST. */
+/**
+ * A row as the app sees it: numeric columns arrive as strings from PostgREST, and a donor who chose
+ * Hamba Allah or not to be named shows as that, never by an older stored name, admin included.
+ */
 function record(row: Record<string, unknown>): DonationRecord {
-  return { ...(row as DonationRecord), amount: Number(row.amount ?? 0), received_amount: row.received_amount === null || row.received_amount === undefined ? null : Number(row.received_amount) };
+  const donation = { ...(row as DonationRecord), amount: Number(row.amount ?? 0), received_amount: row.received_amount === null || row.received_amount === undefined ? null : Number(row.received_amount) };
+  return { ...donation, donor_name: donorLabel(donation) };
 }
+/** The name column needs one; a donor who chose not to be named gets the label, not their name. */
+const storedName = (input: Pick<DonationInput, "donor_name" | "display">) => input.display === "name" ? input.donor_name.trim() : donorLabel(input);
 
 /** Image or PDF, from its first bytes; anything else is refused. */
 function proofKind(bytes: Uint8Array): { extension: string; type: string } | null {
@@ -45,7 +51,8 @@ export async function storeProof(slug: string, file: File): Promise<string> {
 }
 
 export async function submitDonation(slug: string, payload: DonationInput, proofKey: string): Promise<string> {
-  const { data, error } = await createPrivilegedClient().rpc("submit_donation", { p_slug: slug, p_payload: payload, p_hash: payloadHash(payload), p_proof: proofKey });
+  const named = { ...payload, donor_name: storedName(payload) };
+  const { data, error } = await createPrivilegedClient().rpc("submit_donation", { p_slug: slug, p_payload: named, p_hash: payloadHash(named), p_proof: proofKey });
   if (error) { if (notMigrated(error)) throw waiting(); databaseError(error); }
   return data as string;
 }
@@ -90,7 +97,7 @@ export async function updateDonation(eventId: string, id: string, change: Action
 /** Cash or goods handed over in person: recorded by the committee, already received. */
 export async function addManualDonation(eventId: string, input: Omit<DonationInput, "website" | "idempotency_key">): Promise<DonationRecord> {
   const { data, error } = await createPrivilegedClient().from("donations")
-    .insert({ ...input, event_id: eventId, manual: true, status: "received", verified_at: new Date().toISOString() }).select(columns).single();
+    .insert({ ...input, donor_name: storedName(input), event_id: eventId, manual: true, status: "received", verified_at: new Date().toISOString() }).select(columns).single();
   if (error) { if (notMigrated(error)) throw waiting(); databaseError(error); }
   return record(data);
 }
