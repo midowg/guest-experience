@@ -37,7 +37,6 @@
 .who { display: grid; gap: 2px; flex: 1 1 16rem; min-width: 0; }
 .who p { margin: 0; }
 .name { font-weight: 800; }
-.badge { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #eef1f6; color: #4a5060; font-size: .75rem; font-weight: 700; }
 .gift { font-weight: 600; }
 .message { font-style: italic; color: #3b4150; }
 .meta { color: #5b6476; font-size: .8125rem; }

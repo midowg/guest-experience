@@ -5,7 +5,7 @@ import { Check, Eye, MessageCircle, Plus, Printer, RotateCcw, Send, Trash2, X } 
 import { Button, ButtonLink, Notice } from "@/components/ui";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { parseContactPhone } from "@/lib/contact-phone";
-import { describeDonation, donationTotals, formatRupiah, notifyMessage, parseRupiah, type DonationRecord, type DonationSettings, type DonorDisplay } from "@/lib/donations";
+import { describeDonation, donorLabel, donationTotals, formatRupiah, notifyMessage, parseRupiah, type DonationRecord, type DonationSettings } from "@/lib/donations";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { whatsappUrl } from "@/lib/invitation-messages";
 import { adminApi, adminEventPath } from "@/lib/routes";
@@ -20,7 +20,6 @@ type Props = {
 };
 type Filter = "all" | "pending" | "received" | "rejected";
 const filters: { key: Filter; label: string }[] = [{ key: "all", label: "Semua" }, { key: "pending", label: "Menunggu" }, { key: "received", label: "Diterima" }, { key: "rejected", label: "Ditolak" }];
-const displayBadge: Record<DonorDisplay, string> = { name: "Tampil nama", hamba_allah: "Hamba Allah", hidden: "Tidak disebutkan" };
 const everything = (settings: DonationSettings): DonationSettings => ({ ...settings, show: { fundTotal: true, fundTarget: true, goods: true, donors: true, donorAmounts: true, messages: true } });
 const amountText = (donation: DonationRecord, amount: number) => donation.category === "fund" ? formatRupiah(amount) : `${amount}${donation.unit ? ` ${donation.unit}` : ""}`;
 
@@ -67,7 +66,7 @@ export function DonationBoard({ event, link, initial, migrated }: Props) {
     if (await act(donation, { action: "reject", reason: rejecting.reason })) setRejecting(null);
   }
   async function remove(donation: DonationRecord) {
-    if (!window.confirm(`Hapus donasi dari ${donation.donor_name}? Tindakan ini tidak dapat dibatalkan.`)) return;
+    if (!window.confirm(`Hapus donasi dari ${donorLabel(donation)}? Tindakan ini tidak dapat dibatalkan.`)) return;
     setBusy(donation.id);
     try {
       const result = await adminRequest(adminApi(event.id, `donations/${donation.id}`), { method: "DELETE" });
@@ -105,7 +104,7 @@ export function DonationBoard({ event, link, initial, migrated }: Props) {
               const phone = parseContactPhone(donation.donor_phone)!;
               const text = notifyMessage(event.donation, donation, event, link, formatDate(delivered, event.timezone));
               return <li key={donation.id} data-sent={donation.notified_at ? "" : undefined}>
-                <div><p className={s.name}>{donation.donor_name}</p><p className={s.meta}>{describeDonation(donation, donation.received_amount ?? donation.amount)} · {phone.local}</p></div>
+                <div><p className={s.name}>{donorLabel(donation)}</p><p className={s.meta}>{describeDonation(donation, donation.received_amount ?? donation.amount)} · {phone.local}</p></div>
                 {donation.notified_at
                   ? <span className={s.sent}><Check size={16} aria-hidden="true" /> Terkirim</span>
                   : <a className={s.wa} href={whatsappUrl(phone.international, text)} target="_blank" rel="noopener noreferrer" onClick={() => void act(donation, { action: "notified" })}><MessageCircle size={16} aria-hidden="true" /> Kirim WA</a>}
@@ -133,7 +132,7 @@ export function DonationBoard({ event, link, initial, migrated }: Props) {
         : <ul className={s.rows}>
           {shown.map(donation => <li key={donation.id} className={s.row} data-status={donation.status}>
             <div className={s.who}>
-              <p className={s.name}>{donation.donor_name} <span className={s.badge}>{displayBadge[donation.display]}</span></p>
+              <p className={s.name}>{donorLabel(donation)}</p>
               <p className={s.gift}>{describeDonation(donation)}{donation.status === "received" && donation.received_amount !== null && <> · <strong>diterima {amountText(donation, donation.received_amount)}</strong></>}</p>
               {donation.message && <p className={s.message}>“{donation.message}”</p>}
               <p className={s.meta}>{formatDateTime(donation.created_at)}{donation.donor_phone ? ` · ${donation.donor_phone}` : ""}{donation.status === "rejected" && donation.reject_reason ? ` · Ditolak: ${donation.reject_reason}` : ""}</p>
@@ -154,7 +153,7 @@ export function DonationBoard({ event, link, initial, migrated }: Props) {
                 <Button type="button" variant="quiet" onClick={() => setRejecting(null)}>Batal</Button>
               </div>}
               {donation.status !== "pending" && <Button type="button" variant="quiet" disabled={busy === donation.id} onClick={() => void act(donation, { action: "pending" })}><RotateCcw size={16} aria-hidden="true" /> {donation.status === "received" ? "Batalkan terima" : "Kembalikan"}</Button>}
-              <Button type="button" variant="quiet" disabled={busy === donation.id} onClick={() => void remove(donation)} aria-label={`Hapus donasi ${donation.donor_name}`}><Trash2 size={16} aria-hidden="true" /></Button>
+              <Button type="button" variant="quiet" disabled={busy === donation.id} onClick={() => void remove(donation)} aria-label={`Hapus donasi ${donorLabel(donation)}`}><Trash2 size={16} aria-hidden="true" /></Button>
             </div>
           </li>)}
         </ul>}

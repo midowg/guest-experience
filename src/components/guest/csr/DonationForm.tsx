@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Check, ChevronDown, Copy, Download, FileUp, HandHeart, Info, Minus, Package, Plus, Wallet, X } from "lucide-react";
-import { addGiftText, describeDonation, donorDisplays, formatRupiah, otherGiftSuggestions, parseRupiah, type DonationCategory, type DonationItem, type DonorDisplay } from "@/lib/donations";
+import { addGiftText, describeDonation, donorLabel, donorDisplays, formatRupiah, otherGiftSuggestions, parseRupiah, type DonationCategory, type DonationItem, type DonorDisplay } from "@/lib/donations";
 import { guestApi } from "@/lib/routes";
 import type { EventRecord } from "@/lib/types";
 import { donationInputSchema } from "@/lib/validation";
@@ -131,7 +131,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
     if (fund.length && settings.proofRequired && !proof) next.proof = "Unggah bukti transfer.";
     if (Object.keys(next).length) { setErrors(next); setMessage("Periksa isian yang ditandai."); return; }
     const labels = bodies.map(({ body }) => describeDonation(body));
-    if (preview) { setDone({ name: display === "name" ? donor.donor_name : "orang baik", gifts: labels }); return; }
+    if (preview) { setDone({ name: donorLabel(donor), gifts: labels }); return; }
     setPending(true);
     try {
       let proofSent = false;
@@ -150,7 +150,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
         }
         sent.current.add(body.idempotency_key);
       }
-      const shownName = display === "name" ? donor.donor_name : "orang baik";
+      const shownName = donorLabel(donor);
       remember(event.id, { name: shownName, gift: labels.join(", "), at: new Date().toISOString() });
       setDone({ name: shownName, gifts: labels });
     } catch { setMessage("Donasi belum terkirim. Periksa koneksi, lalu coba lagi."); }
