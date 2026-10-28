@@ -1,58 +1,35 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PhotoField } from "@/components/admin/shared/PhotoField";
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 function setup(value = "") {
   const onChange = vi.fn();
   render(<PhotoField name="hero.url" label="Foto latar" value={value} srcset={[]} onChange={onChange} />);
   return { onChange };
 }
-const uploadTab = () => screen.getByRole("button", { name: "Unggah berkas" });
-const urlTab = () => screen.getByRole("button", { name: "Gunakan tautan" });
 
-describe("switching between upload and link", () => {
-  // React reuses a DOM node when two inputs share a position, which turned the
-  // uncontrolled file field into the controlled URL field and warned in the console.
-  it("does not warn about a controlled/uncontrolled switch", () => {
-    const warn = vi.spyOn(console, "error").mockImplementation(() => {});
-    setup();
-    for (let round = 0; round < 3; round++) {
-      fireEvent.click(urlTab());
-      fireEvent.click(uploadTab());
-    }
-    const complaints = warn.mock.calls.map(args => String(args[0])).filter(message => /uncontrolled|controlled/i.test(message));
-    warn.mockRestore();
-    expect(complaints).toEqual([]);
-  });
-
-  it("renders a file input in upload mode and a URL input in link mode", () => {
+describe("photo field", () => {
+  it("only uploads a file: no link to paste, no choice between the two", () => {
     setup();
     expect(document.querySelector('input[type="file"]')).not.toBeNull();
     expect(document.querySelector('input[type="url"]')).toBeNull();
-    fireEvent.click(urlTab());
-    expect(document.querySelector('input[type="file"]')).toBeNull();
-    expect(document.querySelector('input[type="url"]')).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /Gunakan tautan|Unggah berkas/ })).toBeNull();
+    expect((screen.getByLabelText("Foto latar") as HTMLInputElement).id).toBe("hero.url");
   });
 
-  it("keeps the URL field controlled from the first render", () => {
-    setup("https://example.test/foto.jpg");
-    fireEvent.click(urlTab());
-    const input = document.querySelector('input[type="url"]') as HTMLInputElement;
-    expect(input.value).toBe("https://example.test/foto.jpg");
-  });
-
-  it("reports a pasted link with no generated sizes", () => {
+  it("sends the chosen file to the optimiser and keeps the sizes it made", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true, data: { url: "https://cdn.test/a.jpg", srcset: [{ url: "https://cdn.test/a-640.webp", width: 640 }] } }), { status: 200, headers: { "Content-Type": "application/json" } })));
     const { onChange } = setup();
-    fireEvent.click(urlTab());
-    fireEvent.change(document.querySelector('input[type="url"]')!, { target: { value: "https://example.test/baru.jpg" } });
-    expect(onChange).toHaveBeenCalledWith({ url: "https://example.test/baru.jpg", srcset: [] });
+    fireEvent.change(screen.getByLabelText("Foto latar"), { target: { files: [new File(["x"], "foto.jpg", { type: "image/jpeg" })] } });
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith({ url: "https://cdn.test/a.jpg", srcset: [{ url: "https://cdn.test/a-640.webp", width: 640 }] }));
+    expect(await screen.findByText("Terunggah: foto.jpg")).toBeTruthy();
   });
 
-  it("offers to clear a photo that is already set", () => {
+  it("offers to remove a photo that is already set", () => {
     const { onChange } = setup("https://example.test/foto.jpg");
-    fireEvent.click(screen.getByRole("button", { name: "Kosongkan foto" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hapus foto" }));
     expect(onChange).toHaveBeenCalledWith({ url: "", srcset: [] });
   });
 });
