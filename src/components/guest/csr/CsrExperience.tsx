@@ -43,6 +43,8 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
   const { totals } = view;
   const contactHref = event.sections.some(section => section.key === "contact" && section.enabled) ? contactLink(event.contact) : null;
   const hero = event.hero.url;
+  // Which part of the cover shows, as the admin dragged it (Foto sampul); the middle by default.
+  const frame = event.hero.framing?.mobile ?? { x: 50, y: 50 };
 
   async function share() {
     const url = location.href.split("#")[0];
@@ -62,15 +64,14 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
     <main className={s.main}>
       <header className={s.intro}>
         {/* eslint-disable-next-line @next/next/no-img-element -- the small Werkudara mark, a static file */}
-        <img className={s.logo} src="/werkudara_icon.png" alt="Werkudara" width={52} height={52} />
-        <p className={s.eyebrow}><HandHeart size={16} aria-hidden="true" /> {event.organizer || "Kegiatan sosial"}</p>
+        <img className={s.logo} src="/werkudara_icon.png" alt="Werkudara" width={40} height={40} />
         <h1 className={s.title}>{event.title}</h1>
         <span className={s.squiggle} aria-hidden="true" />
         {event.subtitle && <p className={s.subtitle}>{event.subtitle}</p>}
       </header>
       {hero && <div className={s.photo}>
         {/* eslint-disable-next-line @next/next/no-img-element -- the event's own cover photo, already sized */}
-        <img src={hero} alt={event.hero.alt} />
+        <img src={hero} alt={event.hero.alt} style={{ objectPosition: `${frame.x}% ${frame.y}%` }} />
         <span className={s.sticker} aria-hidden="true"><Sparkles size={16} /> Yuk, berbagi!</span>
       </div>}
 

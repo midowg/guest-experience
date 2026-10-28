@@ -32,6 +32,7 @@ export default async function DevEditorPage({ searchParams }: { searchParams: Pr
       guide: templateGuide(eguide.guide!, "Mengenal Lombok", () => `6e000000-0000-4000-8000-00000000000${++uuid}`) }
     : query.csr === "1" ? { ...seed, title: "Contoh Berbagi Bersama Anak Panti 2026", event_kind: "csr" as const, theme: { key: "segar" as const, corners: "soft" as const }, rsvp_enabled: false, feedback_enabled: false,
       introduction: "Bantu kami melengkapi kebutuhan sekolah dan sembako untuk anak-anak panti.", sections: seed.sections.map(section => ({ ...section, enabled: section.key === "about" || section.key === "contact" })),
+      hero: { ...seed.hero, url: "https://picsum.photos/seed/csr-sampul/1600/1000", alt: "Contoh foto kegiatan", srcset: [] },
       donation: { ...startingDonation(), accounts: [{ id: "a1", bank: "BCA", number: "123 456 7890", holder: "Yayasan Contoh Peduli" }] } }
     : query.kunjungan === "1" ? { ...seed, title: "Kunjungan PT Contoh Nusantara", event_kind: "kunjungan" as const, greeting: "Selamat datang di Werkudara",
       sections: seed.sections.map(section => ({ ...section, enabled: (visit.modules as string[]).includes(section.key) })) }

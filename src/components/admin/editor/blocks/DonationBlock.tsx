@@ -48,19 +48,22 @@ export function DonationItemsBlock({ kit }: { kit: EditorKit }) {
   return <div className="stack">
     <p>Muncul sebagai tombol di form donasi. Donatur boleh memilih <strong>beberapa sekaligus</strong> dan mengisi jumlahnya masing-masing, atau menulis bantuan lain sendiri. Switch di kanan atas membuka atau menutup penerimaan donasi.</p>
     {errors["donation.items"] && <p className="field-error" id="donation.items">{errors["donation.items"].join(" ")}</p>}
-    <ol className={d.items}>
-      {donation.items.map((item, index) => <li key={index} className={d.item}>
-        <div className={d.itemRow}>
-          <label className={d.field}><span>Nama bantuan</span><input className="input" value={item.label} maxLength={60} placeholder="Sembako"
-            onChange={change => setItem(index, { label: change.target.value, ...(item.key.startsWith("bantuan-") && change.target.value ? { key: uniqueKey(slug(change.target.value), donation.items, index) } : {}) })} /></label>
-          <label className={d.field}><span>Kelompok</span><select className="select" value={item.category} onChange={change => setItem(index, { category: change.target.value as DonationCategory, unit: change.target.value === "fund" ? "Rp" : item.unit === "Rp" ? "" : item.unit })}>
-            {categories.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select></label>
-          {item.category === "goods" && <label className={d.field}><span>Satuan</span><input className="input" value={item.unit} maxLength={20} placeholder="pcs" onChange={change => setItem(index, { unit: change.target.value })} /></label>}
-          {item.category !== "other" && <label className={d.field}><span>Target {item.category === "fund" ? "(Rp)" : ""} <small>opsional</small></span>
-            <input className="input" inputMode="numeric" value={item.target ?? ""} onChange={change => { const value = Number(change.target.value.replace(/\D/g, "")); setItem(index, { target: value > 0 ? value : null }); }} /></label>}
-        </div>
-        <div className={d.itemTools}>
+    {/* One line per gift, like a table: easy to scan and to fill. */}
+    <div className={d.listHead} aria-hidden="true"><span>Nama bantuan</span><span>Kelompok</span><span>Satuan</span><span>Target <small>opsional</small></span><span /></div>
+    <ol className={d.list}>
+      {donation.items.map((item, index) => <li key={index} className={d.listRow}>
+        <input className="input" aria-label="Nama bantuan" value={item.label} maxLength={60} placeholder="Nama bantuan"
+          onChange={change => setItem(index, { label: change.target.value, ...(item.key.startsWith("bantuan-") && change.target.value ? { key: uniqueKey(slug(change.target.value), donation.items, index) } : {}) })} />
+        <select className="select" aria-label={`Kelompok ${item.label || `bantuan ${index + 1}`}`} value={item.category} onChange={change => setItem(index, { category: change.target.value as DonationCategory, unit: change.target.value === "fund" ? "Rp" : item.unit === "Rp" ? "pcs" : item.unit })}>
+          {categories.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+        {item.category === "goods"
+          ? <input className="input" aria-label={`Satuan ${item.label || `bantuan ${index + 1}`}`} value={item.unit} maxLength={20} placeholder="pcs" onChange={change => setItem(index, { unit: change.target.value })} />
+          : <span className={d.dash}>{item.category === "fund" ? "Rp" : "-"}</span>}
+        {item.category !== "other"
+          ? <input className="input" aria-label={`Target ${item.label || `bantuan ${index + 1}`}`} inputMode="numeric" placeholder="Target" value={item.target ?? ""} onChange={change => { const value = Number(change.target.value.replace(/\D/g, "")); setItem(index, { target: value > 0 ? value : null }); }} />
+          : <span className={d.dash}>-</span>}
+        <div className={d.listTools}>
           <OrderButtons label={item.label || `bantuan ${index + 1}`} index={index} length={donation.items.length} onMove={direction => set({ items: moveItem(donation.items, index, direction) })} />
           <Button type="button" variant="quiet" onClick={() => set({ items: donation.items.filter((_, at) => at !== index) })} aria-label={`Hapus ${item.label || `bantuan ${index + 1}`}`}><Trash2 size={16} aria-hidden="true" /></Button>
         </div>

@@ -16,6 +16,28 @@
 
 /* Friday Sharing's cover preview: the photo as the same tilted polaroid as on the donation page. */
 .csrCover { display: grid; gap: 6px; max-width: 22rem; margin: 0; }
-.csrCover img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; padding: 8px 8px 12px; border-radius: 18px; background: #fff; box-shadow: 0 10px 24px -14px rgba(20, 40, 38, .5), 0 0 0 1px #f1d6b8; transform: rotate(-1.5deg); }
+.csrFrame { padding: 8px 8px 12px; border-radius: 18px; background: #fff; box-shadow: 0 10px 24px -14px rgba(20, 40, 38, .5), 0 0 0 1px #f1d6b8; cursor: grab; touch-action: none; user-select: none; }
+.csrFrame:active { cursor: grabbing; }
+.csrFrame:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.csrFrame img { display: block; width: 100%; aspect-ratio: 40 / 21; object-fit: cover; border-radius: 12px; pointer-events: none; }
+.csrCenter { margin-left: 4px; padding: 0; border: 0; background: none; color: var(--blue); font: inherit; font-weight: 800; cursor: pointer; }
 .csrCover figcaption { color: var(--color-caption); font-size: var(--text-sm); }
 
+
+/* The gift list: one line per gift with the column names once on top; two lines on a phone. */
+.listHead, .listRow { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.25fr) minmax(0, .8fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.listHead { padding: 0 10px; color: #5b6476; font-size: .75rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.listHead small { font-weight: 600; text-transform: none; letter-spacing: 0; }
+.list { margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; list-style: none; }
+.listRow { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.listRow:last-child { border-bottom: 0; }
+.listRow:nth-child(even) { background: #fafbfd; }
+.listRow :global(.input), .listRow :global(.select) { min-height: 40px; padding: .4rem .6rem; }
+.dash { padding-left: .6rem; color: #8a93a3; font-weight: 700; }
+.listTools { display: flex; align-items: center; gap: 2px; }
+@media (max-width: 42rem) {
+  .listHead { display: none; }
+  .listRow { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); padding: 10px; }
+  .listRow > :first-child { grid-column: 1 / -1; }
+  .listTools { grid-column: 1 / -1; justify-content: space-between; }
+}
