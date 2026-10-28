@@ -79,7 +79,6 @@
 .page .heroImg { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; object-position: 64% 50%; }
 .page .heroImg[data-focus="top"] { object-position: 64% 20%; }
 .page .heroImg[data-focus="bottom"] { object-position: 64% 80%; }
-.page .mark { height: 46px; width: auto; margin-bottom: 26px; }
 .details { display: flex; flex-wrap: wrap; gap: 18px 48px; margin-top: 1.6rem; }
 .page .details p { font-size: 1rem; line-height: 1.6; }
 .page .details p:first-child { font-weight: 400; }

@@ -14,7 +14,7 @@ import { useEventLanguage } from "./language";
 import { arrivalIconComponents } from "./VisitRoute";
 import styles from "./place-guide.module.css";
 
-/** The Werkudara mark in the top bar and on the welcome; the page is hosted by Werkudara. */
+/** The Werkudara mark in the top bar; the page is hosted by Werkudara. */
 const LOGO = "/panduan-ke-werkudara/assets/logo.webp";
 
 type Viewing = { image: PlainImage; title: string; mode: "pan" | "fit"; hint: string };
@@ -82,8 +82,6 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
         {event.hero.url && <img className={styles.heroImg} src={event.hero.url} {...imageSrcSet(event.hero.srcset, "100vw")} alt={event.hero.alt} data-focus={event.hero.focus} fetchPriority="high" decoding="async" referrerPolicy="no-referrer" />}
         <div className={`${styles.wrap} ${styles.sec} ${styles.first}`}>
           <div className={styles.head}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- a fixed asset beside the static guide */}
-            <img className={styles.mark} src={LOGO} alt="" width={186} height={220} />
             <h1 id="place-welcome">{event.title}</h1>
             {event.subtitle && <p className={styles.sub}>{event.subtitle}</p>}
           </div>
