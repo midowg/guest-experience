@@ -25,7 +25,7 @@ export default async function EventEditorPage({ params }: { params: Promise<{ re
   const role = await requireEventPage(id);
   const event = await getAdminEvent(id);
   if (!event) notFound();
-  if (event.event_kind === "csr" && !isId(ref)) redirect(adminEventPath(event, "edit"));
+  if ((event.event_kind === "csr" || event.event_kind === "panduan") && !isId(ref)) redirect(adminEventPath(event, "edit"));
   const featuredId = await getFeaturedEventId();
   return <AdminShell wide>
     <p className="eyebrow">{event.event_kind === "csr" ? "Friday Sharing" : event.event_kind === "panduan" ? "Editor panduan" : "Editor undangan"}</p>

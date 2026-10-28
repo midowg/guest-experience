@@ -1,21 +1,7 @@
-import { notFound, permanentRedirect } from "next/navigation";
-import { ArrivalPage, eventMetadata, StorageMissing } from "@/app/_guest/pages";
-import { arrivalPath } from "@/lib/routes";
-import { getPublicEvent } from "@/lib/server/events";
-import { isSupabaseConfigured } from "@/lib/server/config";
+import { redirect } from "next/navigation";
+import { PLACE_GUIDE_PATH } from "@/lib/routes";
 
-export const dynamic = "force-dynamic";
-type Params = { params: Promise<{ slug: string }> };
-
-export async function generateMetadata({ params }: Params) {
-  return eventMetadata(isSupabaseConfigured() ? await getPublicEvent((await params).slug).catch(() => null) : null);
-}
-
-/** Older address of the way-here page; moves to /{code}/panduan once the event has a code. */
-export default async function LegacyArrivalPage({ params }: Params) {
-  if (!isSupabaseConfigured()) return <StorageMissing />;
-  const event = await getPublicEvent((await params).slug);
-  if (!event) notFound();
-  if (event.code) permanentRedirect(arrivalPath(event));
-  return <ArrivalPage event={event} />;
+/** /e/slug/panduan, an older visit link: the way to Werkudara now lives on its own at /your-visit. */
+export default function LegacyArrivalPage() {
+  redirect(PLACE_GUIDE_PATH);
 }

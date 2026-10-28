@@ -17,9 +17,16 @@ const enc = encodeURIComponent;
  */
 export const FRIDAY_SHARING_PATH = "/friday-sharing";
 const FRIDAY_SHARING_ADMIN = "/admin/friday-sharing";
+/**
+ * Panduan lokasi has a fixed English address in the same way: /your-visit is the latest published
+ * one, /admin/your-visit its editor. One at a time, like Friday Sharing.
+ */
+export const PLACE_GUIDE_PATH = "/your-visit";
+export const PLACE_GUIDE_ADMIN = "/admin/your-visit";
 
 export function eventPath(event: EventRef): string {
   if (event.event_kind === "csr") return FRIDAY_SHARING_PATH;
+  if (event.event_kind === "panduan") return PLACE_GUIDE_PATH;
   return event.code ? `/${event.code}` : `/e/${enc(event.slug)}`;
 }
 
@@ -30,8 +37,6 @@ export function invitationPath(event: EventRef, invitation: InvitationRef): stri
 export const ticketPath = (event: EventRef, invitation: InvitationRef) => `${invitationPath(event, invitation)}/tiket`;
 /** The thank-you page the host sends after the visit, whatever the date says; personal when sent to one guest. */
 export const thanksPath = (event: EventRef, invitation?: InvitationRef) => `${invitation ? invitationPath(event, invitation) : eventPath(event)}/terima-kasih`;
-/** The office visit's "Cara datang" on its own page, to send to a guest before the visit. */
-export const arrivalPath = (event: EventRef) => `${eventPath(event)}/panduan`;
 export const galleryPath = (event: EventRef) => `${eventPath(event)}/galeri`;
 export const photoDownloadPath = (event: EventRef, photoId: string) => `${galleryPath(event)}/${photoId}/unduh`;
 /** Studio Poster, where a guest makes and downloads their own poster. */
@@ -65,6 +70,7 @@ const adminTabPaths: Record<AdminTab, string> = {
 export function adminEventPath(event: Pick<EventRef, "id" | "code" | "event_kind"> | string, tab: AdminTab = "edit", query: Record<string, string> = {}): string {
   const search = new URLSearchParams(query).toString();
   if (typeof event !== "string" && event.event_kind === "csr") return `${FRIDAY_SHARING_ADMIN}${adminTabPaths[tab]}${search ? `?${search}` : ""}`;
+  if (typeof event !== "string" && event.event_kind === "panduan") return `${PLACE_GUIDE_ADMIN}${adminTabPaths[tab]}${search ? `?${search}` : ""}`;
   const ref = typeof event === "string" ? event : event.code || event.id;
   return `/admin/acara/${ref}${adminTabPaths[tab]}${search ? `?${search}` : ""}`;
 }

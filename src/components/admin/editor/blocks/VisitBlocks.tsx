@@ -4,12 +4,11 @@ import { Check, OrderButtons } from "@/components/admin/editor/controls";
 import { moveItem } from "@/components/admin/editor/editor-model";
 import { arrivalIconComponents } from "@/components/guest/VisitRoute";
 import { arrivalIcons } from "@/lib/validation";
-import { officeArrivalPoints } from "@/lib/visit-template";
 import type { ArrivalIcon, ArrivalPoint } from "@/lib/types";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { WERKUDARA_OFFICE } from "@/components/admin/editor/suggestions";
 import { AfterBlock } from "@/components/admin/editor/JourneyEditor";
-import { adminEventPath, arrivalPath, thanksPath } from "@/lib/routes";
+import { adminEventPath, thanksPath } from "@/lib/routes";
 import { EventLink } from "./EventLink";
 import { FeedbackBlock } from "./FeedbackBlock";
 import { HeroBlock } from "./HeroBlock";
@@ -116,7 +115,6 @@ export function ArrivalPointsBlock({ kit }: { kit: EditorKit }) {
   const set = (next: ArrivalPoint[]) => update("route", { ...event.route, points: next });
   const change = (index: number, patch: Partial<ArrivalPoint>) => set(points.map((point, i) => i === index ? { ...point, ...patch } : point));
   return <div className="stack">
-    {event.code && event.event_kind === "kunjungan" && <EventLink event={event} origin={kit.origin} path={arrivalPath(event)} label="Tautan panduan datang" hint="Halaman berisi Cara datang saja (peta, rute, info kedatangan, pendamping, Google Maps). Kirim ke tamu lewat WhatsApp sehari sebelum kunjungan." />}
     <h3>Info kedatangan</h3>
     <p className="field-hint">Tampil di bawah langkah rute dan kontak pendamping: apa yang tamu lakukan begitu sampai. Maksimal 4.</p>
     {points.map((point, index) => <div className={styles.item} key={index}>
@@ -134,7 +132,6 @@ export function ArrivalPointsBlock({ kit }: { kit: EditorKit }) {
     </div>)}
     <div className={styles.chips}>
       <Button type="button" variant="secondary" disabled={points.length >= 4} onClick={() => set([...points, { icon: "info", title: "", description: "" }])}>Tambah info</Button>
-      {points.length === 0 && <Button type="button" variant="quiet" onClick={() => set(officeArrivalPoints)}>Pakai contoh: lobi & titik temu</Button>}
     </div>
   </div>;
 }

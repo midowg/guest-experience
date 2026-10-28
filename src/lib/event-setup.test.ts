@@ -110,13 +110,13 @@ describe("copying activity details", () => {
 describe("a Kunjungan Kantor from its template", () => {
   const visit: EventSetup = { ...base, template: "kunjungan-klien", title: "Kunjungan PT Sinar Abadi", location: "werkudara", venue_name: "PT. Werkudara", address: "Jl. Bhinneka No. 09", location_url: "https://maps.app.goo.gl/x", modules: ["about", "agenda", "location", "team", "rsvp", "contact", "feedback"] };
 
-  it("starts at the office with the route, what to do on arrival, the host's role and Werkudara as host", () => {
+  it("starts at the office with the route, the host's role and Werkudara as host; arrival points belong to Panduan lokasi", () => {
     const event = buildEventFromSetup(visit, ids());
     expect(event.event_kind).toBe("kunjungan");
     expect(event.organizer).toBe("Werkudara Group");
     expect(event.contact.role).toBe("Hospitality Specialist");
     expect(event.route.steps.map(step => step.title)).toEqual(["Lewat Jl. Pondok Raya", "Belok di Jl. Bhinneka", "Parkir di depan kantor"]);
-    expect(event.route.points.map(point => point.title)).toEqual(["Lobi & resepsionis", "Titik temu"]);
+    expect(event.route.points).toEqual([]);
     // Only the visit's own parts are on: no experience story, no preparation cards.
     expect(event.sections.filter(section => section.enabled).map(section => section.key).sort()).toEqual(["about", "agenda", "contact", "feedback", "location", "rsvp", "team"]);
     expect(eventSchema.safeParse(event).success).toBe(true);

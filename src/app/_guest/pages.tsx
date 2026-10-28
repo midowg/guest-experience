@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { z } from "zod";
-import { ArrivalGuide } from "@/components/guest/ArrivalGuide";
 import { CsrExperience } from "@/components/guest/csr/CsrExperience";
 import { publicDonationView } from "@/lib/server/donations";
 import { EventExperience } from "@/components/guest/EventExperience";
@@ -68,12 +67,6 @@ export async function InvitationPage({ event, invitation }: { event: EventRecord
 export async function ThanksPage({ event, invitation }: { event: EventRecord; invitation?: PersonalInvitation }) {
   if (event.event_kind === "kartu" || event.event_kind === "eguide" || event.event_kind === "csr" || event.event_kind === "panduan") notFound();
   return <EventExperience event={event} invitation={invitation} phase="after" rsvpNeeds={await rsvpNeedsReady()} photoCount={await afterPhotos(event)} />;
-}
-
-/** Only the way here, for an office visit whose "Cara datang" is on. */
-export function ArrivalPage({ event }: { event: EventRecord }) {
-  if (event.event_kind !== "kunjungan" || !event.sections.some(section => section.key === "location" && section.enabled)) notFound();
-  return <ArrivalGuide event={event} />;
 }
 
 /** The entry ticket, issued the first time it is opened after a yes. */

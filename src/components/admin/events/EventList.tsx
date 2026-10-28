@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, CalendarCheck, CalendarDays, Copy, ExternalLink, EyeOff, Hourglass, Images, MoreHorizontal, Pencil, Plus, Star, StarOff } from "lucide-react";
+import { Archive, CalendarCheck, CalendarDays, Copy, ExternalLink, EyeOff, Hourglass, Images, MoreHorizontal, Pencil, Plus, Star, StarOff, Globe, MapPinned } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
 import type { EventPhase, EventRecord, StaffMember } from "@/lib/types";
 import { formatDate, formatTime } from "@/lib/format";
@@ -12,13 +12,15 @@ import { CreateEventDialog } from "@/components/admin/events/CreateEventDialog";
 import type { AdminModule } from "@/lib/admin-modules";
 import type { TemplateKey } from "@/lib/event-templates";
 import styles from "@/components/admin/admin.module.css";
-import { adminEventPath, adminEventsApi, eventPath } from "@/lib/routes";
+import { adminEventPath, adminEventsApi, eventPath, PLACE_GUIDE_PATH } from "@/lib/routes";
 
 const kinds = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;
 /** One word for where an event stands, in the stage colours of the editor. */
 function stageBadge(event: EventRecord, phase: EventPhase | undefined) {
   if (event.status === "draft") return { label: "Draf", stage: "settings", Icon: Pencil };
   if (event.status === "archived") return { label: "Arsip", stage: "settings", Icon: Archive };
+  // A Panduan lokasi has no date to wait for: once published it is simply on.
+  if (event.event_kind === "panduan") return { label: "Tayang", stage: "guest", Icon: Globe };
   if (phase === "day") return { label: "Hari H", stage: "day", Icon: CalendarCheck };
   if (phase === "after") return { label: "Selesai", stage: "after", Icon: Images };
   return { label: "Akan datang", stage: "guest", Icon: Hourglass };
@@ -71,44 +73,54 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
     } catch (err) { setError(errorMessage(err)); setBusy(null); }
   }
 
+  // Panduan lokasi has its own place: its fixed address, apart from the events (Rapat Panitia, visits…).
+  const guides = events.filter(event => event.event_kind === "panduan");
+  const listed = events.filter(event => event.event_kind !== "panduan");
+  const card = (event: EventRecord) => {
+    const badge = stageBadge(event, phases[event.id]);
+    const live = event.id === featured && event.status === "published";
+    return <li key={event.id} className={`${styles.eventCard} ${styles[`stage_${badge.stage}`]}`}>
+      <div className={styles.cardBadges}>
+        <span className={styles.stageBadge}><badge.Icon size={14} aria-hidden="true" /> {badge.label}</span>
+        {live && <span className={styles.liveBadge}><Star size={12} aria-hidden="true" /> Di halaman utama</span>}
+        {hidden.has(event.id) && <span className={styles.liveBadge}><EyeOff size={12} aria-hidden="true" /> Tersembunyi</span>}
+      </div>
+      <h2><a href={adminEventPath(event)} className={styles.cardLink}>{event.title}</a></h2>
+      <p className={styles.eventWhen}>{event.event_kind === "panduan" ? <><Globe size={16} aria-hidden="true" /> {PLACE_GUIDE_PATH}</> : <><CalendarDays size={16} aria-hidden="true" /> {event.starts_at ? `${formatDate(event.starts_at, event.timezone)} · ${formatTime(event.starts_at, event.timezone)} ${tzLabel(event.timezone)}` : "Tanggal belum diisi"}</>}</p>
+      <p className={styles.eventKind}>{kinds[event.event_kind ?? "acara"]}</p>
+      <div className={styles.cardFooter}>
+        <ButtonLink href={adminEventPath(event)}>Buka</ButtonLink>
+        <details className={styles.cardMenu} data-card-menu>
+          <summary aria-label={`Aksi lain untuk ${event.title}`}><MoreHorizontal size={18} aria-hidden="true" /></summary>
+          <div className={styles.cardMenuList} role="group" aria-label={`Aksi lain untuk ${event.title}`}>
+            {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> {event.event_kind === "eguide" ? "Lihat E-Guide" : event.event_kind === "panduan" ? "Lihat panduan" : "Lihat undangan"}<span className="sr-only"> (tab baru)</span></a>}
+            <button type="button" disabled={!!busy} onClick={() => duplicate(event.id)}><Copy size={16} aria-hidden="true" /> {busy === event.id ? "Menyalin…" : "Duplikasi"}</button>
+            {event.status === "published" && !live && <button type="button" disabled={!!busy} onClick={() => setHomepage(event)}><Star size={16} aria-hidden="true" /> Tayangkan di halaman utama</button>}
+            {live && <button type="button" disabled={!!busy} onClick={() => setHomepage(null)}><StarOff size={16} aria-hidden="true" /> Turunkan dari halaman utama</button>}
+          </div>
+        </details>
+      </div>
+    </li>;
+  };
+
   return <div className="stack" aria-busy={!!busy}>
     <div className={styles.listHeader}>
-      <h1 className={styles.listTitle}>Acara <span>{events.length}</span></h1>
+      <h1 className={styles.listTitle}>Acara <span>{listed.length}</span></h1>
       <Button type="button" disabled={!!busy} onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" /> Buat acara</Button>
     </div>
     {creating && <CreateEventDialog events={events} disabledModules={disabledModules} templates={templates} canStartBlank={!!superAdmin} staff={staff} onClose={() => setCreating(false)} />}
     {error && <Notice tone="error">{error}</Notice>}
     {message && <p role="status" className={styles.guestMessage}>{message}</p>}
-    {!events.length ? <div className={styles.emptyList}>
+    {!listed.length ? <div className={styles.emptyList}>
       <p>Belum ada acara.</p>
       <Button type="button" onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" /> Buat acara pertama</Button>
     </div> : <ul className={styles.eventList}>
-      {events.map(event => {
-        const badge = stageBadge(event, phases[event.id]);
-        const live = event.id === featured && event.status === "published";
-        return <li key={event.id} className={`${styles.eventCard} ${styles[`stage_${badge.stage}`]}`}>
-          <div className={styles.cardBadges}>
-            <span className={styles.stageBadge}><badge.Icon size={14} aria-hidden="true" /> {badge.label}</span>
-            {live && <span className={styles.liveBadge}><Star size={12} aria-hidden="true" /> Di halaman utama</span>}
-            {hidden.has(event.id) && <span className={styles.liveBadge}><EyeOff size={12} aria-hidden="true" /> Tersembunyi</span>}
-          </div>
-          <h2><a href={adminEventPath(event)} className={styles.cardLink}>{event.title}</a></h2>
-          <p className={styles.eventWhen}><CalendarDays size={16} aria-hidden="true" /> {event.starts_at ? `${formatDate(event.starts_at, event.timezone)} · ${formatTime(event.starts_at, event.timezone)} ${tzLabel(event.timezone)}` : "Tanggal belum diisi"}</p>
-          <p className={styles.eventKind}>{kinds[event.event_kind ?? "acara"]}</p>
-          <div className={styles.cardFooter}>
-            <ButtonLink href={adminEventPath(event)}>Buka</ButtonLink>
-            <details className={styles.cardMenu} data-card-menu>
-              <summary aria-label={`Aksi lain untuk ${event.title}`}><MoreHorizontal size={18} aria-hidden="true" /></summary>
-              <div className={styles.cardMenuList} role="group" aria-label={`Aksi lain untuk ${event.title}`}>
-                {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> {event.event_kind === "eguide" ? "Lihat E-Guide" : event.event_kind === "panduan" ? "Lihat panduan" : "Lihat undangan"}<span className="sr-only"> (tab baru)</span></a>}
-                <button type="button" disabled={!!busy} onClick={() => duplicate(event.id)}><Copy size={16} aria-hidden="true" /> {busy === event.id ? "Menyalin…" : "Duplikasi"}</button>
-                {event.status === "published" && !live && <button type="button" disabled={!!busy} onClick={() => setHomepage(event)}><Star size={16} aria-hidden="true" /> Tayangkan di halaman utama</button>}
-                {live && <button type="button" disabled={!!busy} onClick={() => setHomepage(null)}><StarOff size={16} aria-hidden="true" /> Turunkan dari halaman utama</button>}
-              </div>
-            </details>
-          </div>
-        </li>;
-      })}
+      {listed.map(card)}
     </ul>}
+    {guides.length > 0 && <section className="stack" aria-labelledby="guides-title">
+      <h2 id="guides-title" className={styles.listTitle}><MapPinned size={22} aria-hidden="true" /> Your Visit <span>{guides.length}</span></h2>
+      <p className="field-hint">Panduan lokasi untuk umum, di alamat tetap <strong>{PLACE_GUIDE_PATH}</strong>. Terpisah dari acara dan kunjungan; yang tayang adalah panduan terbaru yang terbit.</p>
+      <ul className={styles.eventList}>{guides.map(card)}</ul>
+    </section>}
   </div>;
 }

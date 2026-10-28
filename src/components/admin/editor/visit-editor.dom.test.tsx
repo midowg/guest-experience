@@ -51,14 +51,14 @@ it("keeps the date and address in Info kunjungan and the greeting in Sambutan", 
   expect(screen.getByRole("checkbox", { name: /^Tampilkan survei di halaman terima kasih/ })).toBeTruthy();
 });
 
-it("fills Info kedatangan in Cara datang from the board's example, then each point stays editable", () => {
+it("adds Info kedatangan in Cara datang by hand; the office's example belongs to Panduan lokasi", () => {
   render(<EventEditor event={visit()} />);
   openBlock("Cara datang");
   expect(screen.getByRole("heading", { name: "Info kedatangan" })).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /Pakai contoh: lobi & titik temu/ }));
-  expect(screen.getAllByRole("textbox", { name: "Judul" }).map(input => (input as HTMLInputElement).value)).toEqual(["Lobi & resepsionis", "Titik temu"]);
-  expect(screen.getAllByRole("radio", { name: "Pintu masuk" })[0]).toHaveProperty("checked", true);
-  fireEvent.click(screen.getByRole("button", { name: "Hapus info 2" }));
-  expect(screen.getAllByRole("textbox", { name: "Judul" })).toHaveLength(1);
   expect(screen.queryByRole("button", { name: /Pakai contoh/ })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Tambah info" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Judul" }), { target: { value: "Lobi" } });
+  expect((screen.getByRole("textbox", { name: "Judul" }) as HTMLInputElement).value).toBe("Lobi");
+  fireEvent.click(screen.getByRole("button", { name: "Hapus info 1" }));
+  expect(screen.queryByRole("textbox", { name: "Judul" })).toBeNull();
 });

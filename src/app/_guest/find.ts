@@ -20,9 +20,12 @@ export async function eventByCode(raw: string, suffix = "") {
   return event;
 }
 
-/** A Friday Sharing opened by its bare code (`/AB23CD`, older links) moves to its friday-sharing address. */
-export function sendFridaySharingHome<T extends { event_kind: string; code?: string | null; id: string; slug: string }>(event: T): T {
-  if (event.event_kind === "csr") permanentRedirect(eventPath(event));
+/**
+ * A Friday Sharing or a Panduan lokasi opened by its bare code (`/AB23CD`, older links) moves to its
+ * fixed address (/friday-sharing, /your-visit).
+ */
+export function sendToFixedAddress<T extends { event_kind: string; code?: string | null; id: string; slug: string }>(event: T): T {
+  if (event.event_kind === "csr" || event.event_kind === "panduan") permanentRedirect(eventPath(event));
   return event;
 }
 

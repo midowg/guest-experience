@@ -1,6 +1,5 @@
 import { PUBLIC_SITE } from "./site-url";
-import type { EventRecord, GalleryImage, PlainImage } from "./types";
-import { officeArrivalPoints, officeRouteSteps } from "./visit-template";
+import type { ArrivalPoint, EventRecord, GalleryImage, PlainImage, RouteStep } from "./types";
 
 /*
  * Panduan lokasi (event_kind "panduan"): the public page "Panduan ke Werkudara" as a template. A
@@ -28,14 +27,20 @@ const galleryPhotos = [
   cover,
 ];
 
-const stepsEn = [
-  { title: "Take Jl. Pondok Raya", description: "The easiest and widest road. Avoid Jl. Tengiri Raya." },
-  { title: "Turn into Jl. Bhinneka", description: "Look for the turn shown in the photo." },
-  { title: "Park in front of the office", description: "Guest parking is right in front of the building." },
+const noImage: PlainImage = { url: "", alt: "", srcset: [] };
+const steps: RouteStep[] = [
+  { title: "Lewat Jl. Pondok Raya", description: "Rute paling mudah dan lebar. Hindari Jl. Tengiri Raya.", image: noImage,
+    en: { title: "Take Jl. Pondok Raya", description: "The easiest and widest road. Avoid Jl. Tengiri Raya." } },
+  { title: "Belok di Jl. Bhinneka", description: "Perhatikan titik belok seperti di foto.", image: turn,
+    en: { title: "Turn into Jl. Bhinneka", description: "Look for the turn shown in the photo." } },
+  { title: "Parkir di depan kantor", description: "Area parkir tamu tepat di depan gedung.", image: noImage,
+    en: { title: "Park in front of the office", description: "Guest parking is right in front of the building." } },
 ];
-const pointsEn = [
-  { title: "Lobby & reception", description: "Come in through the main glass door; reception will walk you in." },
-  { title: "Meeting point", description: "If you are running late, wait at the pendopo and we will come to you." },
+const points: ArrivalPoint[] = [
+  { icon: "door", title: "Lobi & resepsionis", description: "Masuk lewat pintu kaca utama; resepsionis akan mengantar.",
+    en: { title: "Lobby & reception", description: "Come in through the main glass door; reception will walk you in." } },
+  { icon: "pin", title: "Titik temu", description: "Jika terlambat, tunggu di pendopo — kami jemput.",
+    en: { title: "Meeting point", description: "If you are running late, wait at the pendopo and we will come to you." } },
 ];
 
 /** The Werkudara guide a new Panduan lokasi starts with. The host (PIC) comes from the setup. */
@@ -52,11 +57,7 @@ export function placeGuideStarter(event: EventRecord, uuid: () => string): Event
     location_url: "https://maps.app.goo.gl/BKkDQWsgH3pFMzeA7",
     location_display: "manual",
     hero: { ...event.hero, url: cover.url, alt: cover.alt, srcset: cover.srcset, focus: "center", text_position: "left" },
-    route: {
-      map_image: map,
-      steps: officeRouteSteps.map((step, index) => ({ ...step, image: index === 1 ? turn : step.image, en: stepsEn[index] })),
-      points: officeArrivalPoints.map((point, index) => ({ ...point, en: pointsEn[index] })),
-    },
+    route: { map_image: map, steps, points },
     gallery,
     contact: { ...event.contact, role: event.contact.role || "Hospitality Specialist" },
     language: "id_en",

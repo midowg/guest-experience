@@ -20,7 +20,7 @@ export function PlaceInfoBlock({ kit }: { kit: EditorKit }) {
   const { event, text } = kit;
   return <div className="stack">
     {text("title", "Judul panduan", 180, false, "Tampil besar di sambutan, di tab browser, dan di daftar acara. Contoh: Your Visit to Werkudara.")}
-    {event.code && <EventLink event={event} origin={kit.origin} label="Tautan panduan" hint="Bagikan ke siapa saja: tamu, klien, vendor. Tidak perlu konfirmasi atau tiket." />}
+    {event.code && <EventLink event={event} origin={kit.origin} label="Tautan panduan" hint="Alamat tetap, seperti /friday-sharing: selalu membuka panduan terbaru yang terbit. Bagikan ke siapa saja; tidak perlu konfirmasi atau tiket." />}
     {text("organizer", "Tuan rumah", 250, false, "Biasanya Werkudara Group. Wajib sebelum terbit.")}
   </div>;
 }

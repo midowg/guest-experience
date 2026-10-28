@@ -63,6 +63,21 @@ export async function currentFridaySharingId(): Promise<string | null> {
   return (data?.id as string | undefined) ?? null;
 }
 
+/** The Panduan lokasi behind /your-visit: of the published guides, the one dated latest. */
+export async function getCurrentPlaceGuide(): Promise<EventRecord | null> {
+  const { data, error } = await createPublicClient().from("event_documents").select("document").eq("status", "published").eq("document->>event_kind", "panduan").limit(100);
+  if (error) databaseError(error);
+  // The same "latest" as Friday Sharing: by date, else by when it was made.
+  return latestFridaySharing((data ?? []).map(row => normalizeEvent(row.document as EventRecord)));
+}
+
+/** The Panduan lokasi /admin/your-visit opens: the guide made last, published or not. */
+export async function currentPlaceGuideId(): Promise<string | null> {
+  const { data, error } = await createPrivilegedClient().from("events").select("id").eq("content->>event_kind", "panduan").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error) databaseError(error);
+  return (data?.id as string | undefined) ?? null;
+}
+
 /** An admin address names an event by its code or its id; both lead to the id. */
 export async function resolveEventRef(ref: string): Promise<string | null> {
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref)) return ref.toLowerCase();

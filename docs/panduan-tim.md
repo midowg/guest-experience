@@ -9,7 +9,7 @@ Setiap acara punya **kode 6 karakter**, misalnya `invitation.werkudara.group/AB2
 - Kode acara terlihat di blok **Identitas & undangan** (kartu **Tautan acara**, dengan tombol Salin) dan di tab **Daftar tamu** (tautan umum dan QR).
 - Kode tidak berubah, jadi tautan yang sudah dicetak tetap berlaku.
 - Tautan lama `/e/…` masih bisa dibuka dan otomatis pindah ke alamat baru.
-- Kunjungan Kantor punya tautan **panduan datang** `invitation.werkudara.group/AB23CD/panduan`: hanya Cara datang (peta, rute, info kedatangan, pendamping, tombol Google Maps), tanpa beranda dan konfirmasi. Tautannya ada di editor **Cara datang**; kirim ke tamu sehari sebelum kunjungan.
+- Panduan ke Werkudara untuk umum ada di alamat tetap `journey.werkudara.group/your-visit` (lihat bagian 10). Tautan lama `/panduan-ke-werkudara`, `/panduan`, dan `/AB23CD/panduan` diarahkan ke sana.
 - Halaman admin acara juga pendek: `/admin/acara/AB23CD`, `/admin/acara/AB23CD/undangan`, `/admin/acara/AB23CD/checkin`.
 
 Masuk lewat `/admin` dengan password tim. Setiap login dicatat (waktu, IP, perkiraan lokasi, perangkat); catatannya bisa dilihat super admin di **Dashboard super admin › Log akses**.
@@ -197,6 +197,8 @@ Setiap donatur memilih cara tampil: **nama**, **Hamba Allah**, atau **jangan seb
 Hanya donatur yang mengisi nomor WhatsApp dan donasinya sudah Diterima yang muncul di daftar kabar.
 
 ## 10. Panduan lokasi: halaman umum "cara ke tempat kami"
+
+Panduan lokasi berdiri sendiri, seperti Friday Sharing: alamatnya tetap **`journey.werkudara.group/your-visit`** (selalu panduan terbaru yang terbit), editornya di **`/admin/your-visit`**, dan di daftar admin tampil di bagian **Your Visit**, terpisah dari acara dan Kunjungan Kantor. Satu panduan tayang pada satu waktu.
 
 Templat **Panduan lokasi** di **Buat acara** membuat halaman bergaya *Panduan ke Werkudara*: sambutan dengan foto sampul, **Getting Here** (peta rute, alamat, langkah bergambar, kartu "Tersesat? Tanya kami", info kedatangan), **Gallery**, dan tombol **Buka Google Maps** yang selalu terlihat di bawah layar. Tanpa RSVP, tiket, atau tanggal.
 
