@@ -150,12 +150,11 @@ const bankAccountSchema = z.object({
 });
 const recipientShareSchema = z.object({
   fund: z.number().min(0).max(1_000_000_000_000).default(0),
-  goods: z.record(z.string().max(40), z.number().min(0).max(1_000_000_000)).default({}),
   note: text(500).default(""),
 });
 const donationRecipientSchema = z.object({
   id: z.string().min(1).max(40), name: text(150).min(1, "Isi nama penerima."), description: text(500).default(""), place: text(200).default(""), photo: plainImage.default(emptyImage),
-  share: recipientShareSchema.default({ fund: 0, goods: {}, note: "" }),
+  share: recipientShareSchema.default({ fund: 0, note: "" }),
 });
 const donationSchema = z.object({
   enabled: z.boolean().default(false),

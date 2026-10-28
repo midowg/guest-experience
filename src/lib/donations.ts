@@ -14,9 +14,9 @@ export type DonationCategory = "fund" | "goods" | "other";
 export type DonationItem = { key: string; label: string; category: DonationCategory; unit: string; target: number | null };
 export type BankAccount = { id: string; bank: string; number: string; holder: string };
 /** Where the help goes: a children's home, a village, a family. A page may name several. */
-/** What one recipient is given, for the handover report: money, a quantity per kind of goods, and a note (other gifts). */
-export type RecipientShare = { fund: number; goods: Record<string, number>; note: string };
-export const emptyShare = (): RecipientShare => ({ fund: 0, goods: {}, note: "" });
+/** What one recipient is given, for the handover report: money, and the goods in words (`note`, e.g. "Selimut 20 pcs, sepatu 10 pcs"). */
+export type RecipientShare = { fund: number; note: string };
+export const emptyShare = (): RecipientShare => ({ fund: 0, note: "" });
 export type DonationRecipient = { id: string; name: string; description: string; place: string; photo: PlainImage; share: RecipientShare };
 /** How a donor appears in the public list. "hidden" still counts in the totals. */
 export type DonorDisplay = "name" | "hamba_allah" | "hidden";
@@ -81,14 +81,14 @@ export const defaultDonationItems = (): DonationItem[] => [
   item("sembako", "Sembako", "goods", "paket"),
   item("beras", "Beras", "goods", "kg"),
   item("minyak", "Minyak goreng", "goods", "liter"),
-  item("susu", "Susu", "goods", "kotak"),
+  item("susu", "Susu", "goods", "pcs"),
   item("buku", "Buku tulis", "goods", "pcs"),
-  item("alat-tulis", "Alat tulis", "goods", "set"),
-  item("seragam", "Seragam sekolah", "goods", "stel"),
-  item("pakaian", "Pakaian layak pakai", "goods", "potong"),
+  item("alat-tulis", "Alat tulis", "goods", "pcs"),
+  item("seragam", "Seragam sekolah", "goods", "pcs"),
+  item("pakaian", "Pakaian layak pakai", "goods", "pcs"),
   item("mainan", "Mainan edukasi", "goods", "pcs"),
-  item("obat", "Obat-obatan", "goods", "paket"),
-  item("mandi", "Perlengkapan mandi", "goods", "paket"),
+  item("obat", "Obat-obatan", "goods", "pcs"),
+  item("mandi", "Perlengkapan mandi", "goods", "pcs"),
 ];
 /** Examples that add to the free-text gift, so donors see they may write several things at once. */
 export const otherGiftSuggestions = ["Selimut", "Pakaian anak", "Sepatu", "Tas sekolah", "Buku cerita", "Mainan edukasi", "Handuk", "Sajadah dan mukena"];
@@ -125,7 +125,7 @@ export function normalizeDonation(donation: Partial<DonationSettings> | undefine
   return {
     ...base, ...donation,
     items: donation.items ?? [], accounts: donation.accounts ?? [], qris: { ...image(), ...donation.qris },
-    recipients: (donation.recipients ?? []).map(recipient => ({ ...recipient, photo: { ...image(), ...recipient.photo }, share: { ...emptyShare(), ...recipient.share } })),
+    recipients: (donation.recipients ?? []).map(recipient => ({ ...recipient, photo: { ...image(), ...recipient.photo }, share: { fund: recipient.share?.fund ?? 0, note: recipient.share?.note ?? "" } })),
     show: { ...base.show, ...donation.show },
     delivered: { ...base.delivered, ...donation.delivered, photo: { ...image(), ...donation.delivered?.photo } },
     notify: { ...base.notify, ...donation.notify },
@@ -275,21 +275,12 @@ export function donationReport(settings: DonationSettings, donations: DonationRe
   };
 }
 
-/** What has been handed to recipients so far, against what was collected: per kind, given and left. */
-export type ShareBalance = { fund: { total: number; given: number }; goods: { key: string; label: string; unit: string; total: number; given: number }[]; anySet: boolean };
+/** The money handed to recipients so far, against what was received; goods are written per recipient, so only listed. */
+export type ShareBalance = { fund: { total: number; given: number }; anySet: boolean };
 export function shareBalance(settings: DonationSettings, report: DonationReport): ShareBalance {
   const shares = settings.recipients.map(recipient => recipient.share);
-  const given = (key: string) => shares.reduce((sum, share) => sum + (share.goods[key] ?? 0), 0);
-  const keys = new Set(report.goods.map(item => item.key));
-  const goods = [
-    ...report.goods.map(item => ({ ...item, given: given(item.key) })),
-    // Goods shared out that nothing was received for yet still show, so an over-promise is visible.
-    ...settings.items.filter(item => item.category === "goods" && !keys.has(item.key) && given(item.key) > 0)
-      .map(item => ({ key: item.key, label: item.label, unit: item.unit, total: 0, given: given(item.key) })),
-  ];
   return {
     fund: { total: report.fund, given: shares.reduce((sum, share) => sum + share.fund, 0) },
-    goods,
-    anySet: shares.some(share => share.fund > 0 || Object.values(share.goods).some(amount => amount > 0) || share.note.trim()),
+    anySet: shares.some(share => share.fund > 0 || share.note.trim()),
   };
 }

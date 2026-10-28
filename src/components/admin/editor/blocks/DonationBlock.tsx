@@ -43,7 +43,7 @@ export function DonationItemsBlock({ kit }: { kit: EditorKit }) {
   function addItem() {
     const keys = new Set(donation.items.map(item => item.key));
     let n = 1; while (keys.has(`bantuan-${n}`)) n++;
-    set({ items: [...donation.items, { key: `bantuan-${n}`, label: "", category: "goods", unit: "", target: null }] });
+    set({ items: [...donation.items, { key: `bantuan-${n}`, label: "", category: "goods", unit: "pcs", target: null }] });
   }
   return <div className="stack">
     <p>Muncul sebagai tombol di form donasi. Donatur boleh memilih <strong>beberapa sekaligus</strong> dan mengisi jumlahnya masing-masing, atau menulis bantuan lain sendiri. Switch di kanan atas membuka atau menutup penerimaan donasi.</p>
@@ -56,7 +56,7 @@ export function DonationItemsBlock({ kit }: { kit: EditorKit }) {
           <label className={d.field}><span>Kelompok</span><select className="select" value={item.category} onChange={change => setItem(index, { category: change.target.value as DonationCategory, unit: change.target.value === "fund" ? "Rp" : item.unit === "Rp" ? "" : item.unit })}>
             {categories.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select></label>
-          {item.category === "goods" && <label className={d.field}><span>Satuan</span><input className="input" value={item.unit} maxLength={20} placeholder="paket" onChange={change => setItem(index, { unit: change.target.value })} /></label>}
+          {item.category === "goods" && <label className={d.field}><span>Satuan</span><input className="input" value={item.unit} maxLength={20} placeholder="pcs" onChange={change => setItem(index, { unit: change.target.value })} /></label>}
           {item.category !== "other" && <label className={d.field}><span>Target {item.category === "fund" ? "(Rp)" : ""} <small>opsional</small></span>
             <input className="input" inputMode="numeric" value={item.target ?? ""} onChange={change => { const value = Number(change.target.value.replace(/\D/g, "")); setItem(index, { target: value > 0 ? value : null }); }} /></label>}
         </div>
@@ -106,7 +106,7 @@ export function DonationRecipientsBlock({ kit }: { kit: EditorKit }) {
   const { donation, set } = useDonation(kit);
   const setRecipient = (index: number, patch: Partial<DonationSettings["recipients"][number]>) => set({ recipients: donation.recipients.map((item, at) => at === index ? { ...item, ...patch } : item) });
   return <div className="stack">
-    <p>Ke mana bantuan ini disalurkan. Boleh lebih dari satu, misalnya dua panti asuhan dan satu sekolah. Tampil di halaman donasi sebagai <strong>Disalurkan ke</strong>, dan namanya masuk ke pesan WhatsApp lewat <code>{"{penerima}"}</code>. Di <strong>Bagian untuk penerima ini</strong>, atur berapa dana dan barang yang diserahkan ke masing-masing; laporan cetak memakai angka ini.</p>
+    <p>Ke mana bantuan ini disalurkan. Boleh lebih dari satu, misalnya dua panti asuhan dan satu sekolah. Tampil di halaman donasi sebagai <strong>Disalurkan ke</strong>, dan namanya masuk ke pesan WhatsApp lewat <code>{"{penerima}"}</code>. Di <strong>Bagian untuk penerima ini</strong>, isi dana dan barang yang diserahkan ke masing-masing; laporan cetak memakai isian ini.</p>
     {!donation.recipients.length && <p className="field-hint">Belum ada penerima. Halaman donasi tetap bisa terbit tanpa bagian ini.</p>}
     <ol className={d.items}>
       {donation.recipients.map((recipient, index) => <li key={recipient.id} className={d.item}>
@@ -117,7 +117,7 @@ export function DonationRecipientsBlock({ kit }: { kit: EditorKit }) {
         {errors[`donation.recipients.${index}.name`] && <p className="field-error">{errors[`donation.recipients.${index}.name`].join(" ")}</p>}
         <label className={d.field}><span>Keterangan <small>opsional</small></span><textarea className="textarea" rows={2} value={recipient.description} maxLength={500} placeholder="60 anak usia sekolah; kebutuhan utama perlengkapan sekolah dan sembako." onChange={change => setRecipient(index, { description: change.target.value })} /></label>
         <PhotoField name={`donation.recipients.${index}.photo.url`} label="Foto (opsional)" value={recipient.photo.url} srcset={recipient.photo.srcset} onChange={value => setRecipient(index, { photo: { ...recipient.photo, ...value, alt: recipient.photo.alt || `Foto ${recipient.name || "penerima bantuan"}` } })} />
-        <ShareFields recipient={recipient} items={donation.items} onChange={share => setRecipient(index, { share })} />
+        <ShareFields recipient={recipient} onChange={share => setRecipient(index, { share })} />
         <div className={d.itemTools}>
           <OrderButtons label={recipient.name || `penerima ${index + 1}`} index={index} length={donation.recipients.length} onMove={direction => set({ recipients: moveItem(donation.recipients, index, direction) })} />
           <Button type="button" variant="quiet" onClick={() => set({ recipients: donation.recipients.filter((_, at) => at !== index) })} aria-label={`Hapus ${recipient.name || `penerima ${index + 1}`}`}><Trash2 size={16} aria-hidden="true" /></Button>
@@ -171,29 +171,19 @@ function uniqueKey(base: string, items: DonationItem[], self: number) {
 }
 
 /**
- * How much of the collected help one recipient gets, for the handover report: an amount of money
- * and a quantity per kind of goods (a home that needs only money leaves the goods empty, and the
- * other way round), plus a note for gifts outside the list. Nothing here shows on the public page.
+ * What one recipient is given, for the handover report: money and goods, nothing more. A home that
+ * needs only money leaves Barang empty, and the other way round. Not shown on the public page.
  */
-function ShareFields({ recipient, items, onChange }: { recipient: DonationRecipient; items: DonationItem[]; onChange: (share: RecipientShare) => void }) {
+function ShareFields({ recipient, onChange }: { recipient: DonationRecipient; onChange: (share: RecipientShare) => void }) {
   const share = recipient.share;
-  const fund = items.some(item => item.category === "fund");
-  const goods = items.filter(item => item.category === "goods");
   const set = (patch: Partial<RecipientShare>) => onChange({ ...share, ...patch });
-  const given = [share.fund > 0 ? formatRupiah(share.fund) : "", ...goods.filter(item => share.goods[item.key] > 0).map(item => `${item.label} ${share.goods[item.key]} ${item.unit}`.trim())].filter(Boolean);
+  const given = [share.fund > 0 ? formatRupiah(share.fund) : "", share.note.trim()].filter(Boolean);
   return <details className={d.share} open={given.length > 0 || undefined}>
     <summary>Bagian untuk penerima ini <small>{given.length ? given.join(" · ") : "belum diatur"}</small></summary>
-    <p className="field-hint">Untuk laporan penyerahan. Isi hanya yang diterima penerima ini: panti yang hanya butuh dana cukup isi dana, yang hanya butuh barang cukup isi barangnya. Tidak tampil di halaman donasi.</p>
+    <p className="field-hint">Untuk laporan penyerahan, tidak tampil di halaman donasi. Isi dana, barang, atau keduanya.</p>
     <div className={d.shareGrid}>
-      {fund && <label className={d.field}><span>Dana</span><input className="input" inputMode="numeric" value={share.fund ? formatRupiah(share.fund) : ""} placeholder="Rp 0" onChange={change => set({ fund: parseRupiah(change.target.value) })} /></label>}
-      {goods.map(item => <label key={item.key} className={d.field}><span>{item.label} {item.unit && <small>{item.unit}</small>}</span>
-        <input className="input" inputMode="decimal" value={share.goods[item.key] || ""} placeholder="0" onChange={change => {
-          const amount = Number(change.target.value.replace(",", ".")) || 0;
-          const next = { ...share.goods, [item.key]: amount };
-          if (!amount) delete next[item.key];
-          set({ goods: next });
-        }} /></label>)}
+      <label className={d.field}><span>Dana</span><input className="input" inputMode="numeric" value={share.fund ? formatRupiah(share.fund) : ""} placeholder="Rp 0" onChange={change => set({ fund: parseRupiah(change.target.value) })} /></label>
+      <label className={d.field}><span>Barang</span><textarea className="textarea" rows={2} value={share.note} maxLength={500} placeholder="Selimut 20 pcs, sepatu 10 pcs" onChange={change => set({ note: change.target.value })} /></label>
     </div>
-    <label className={d.field}><span>Bantuan lain atau catatan <small>opsional</small></span><input className="input" value={share.note} maxLength={500} placeholder="Kursi roda 1, mainan edukasi 10" onChange={change => set({ note: change.target.value })} /></label>
   </details>;
 }

@@ -34,7 +34,7 @@ it("shows what was collected and who gave, as each donor chose", () => {
 });
 
 it("names where the help goes on a page of its own, when the committee lists recipients", () => {
-  show(event({ recipients: [{ id: "p1", name: "Panti Asuhan Kasih Ibu", place: "Sleman", description: "60 anak", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, goods: {}, note: "" } }, { id: "p2", name: "Sekolah Harapan", place: "", description: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, goods: {}, note: "" } }] }));
+  show(event({ recipients: [{ id: "p1", name: "Panti Asuhan Kasih Ibu", place: "Sleman", description: "60 anak", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, note: "" } }, { id: "p2", name: "Sekolah Harapan", place: "", description: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, note: "" } }] }));
   fireEvent.click(screen.getByRole("button", { name: /Disalurkan ke 2 penerima/ }));
   const recipients = screen.getByRole("dialog", { name: "Disalurkan ke" });
   expect(within(recipients).getByText("Panti Asuhan Kasih Ibu")).toBeTruthy();

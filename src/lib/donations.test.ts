@@ -82,7 +82,7 @@ describe("public donor list", () => {
 
 describe("handover message", () => {
   it("fills the template with this donor's gift, the date and the prayer, by name only when they showed it", () => {
-    const withRecipients = { ...settings(), recipients: ["Panti Asuhan Kasih Ibu", "Sekolah Harapan"].map((name, index) => ({ id: `p${index}`, name, description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, goods: {}, note: "" } })) };
+    const withRecipients = { ...settings(), recipients: ["Panti Asuhan Kasih Ibu", "Sekolah Harapan"].map((name, index) => ({ id: `p${index}`, name, description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, note: "" } })) };
     const text = notifyMessage(withRecipients, donation({ donor_name: "Budi", display: "hamba_allah", received_amount: 150000 }), { title: "Berbagi Bersama Anak Panti" }, "https://journey.werkudara.group/AB23CD", "12 Desember 2026");
     expect(text).toContain("Halo Bapak/Ibu");
     expect(text).not.toContain("Budi");
@@ -184,15 +184,15 @@ describe("donor names", () => {
 });
 
 describe("shares per recipient", () => {
-  it("adds up what was handed out against what came in", () => {
+  it("adds up the money handed out against what came in; goods are written per recipient", () => {
     const shared = { ...settings(), recipients: [
-      { id: "a", name: "Panti A", description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 150000, goods: {} as Record<string, number>, note: "" } },
-      { id: "b", name: "Panti B", description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, goods: { sembako: 3 }, note: "" } },
+      { id: "a", name: "Panti A", description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 150000, note: "" } },
+      { id: "b", name: "Panti B", description: "", place: "", photo: { url: "", alt: "", srcset: [] }, share: { fund: 0, note: "Sembako 3 paket" } },
     ] };
     const report = donationReport(shared, [donation({ amount: 200000 }), donation({ item_key: "sembako", item_label: "Sembako", category: "goods", amount: 5, unit: "paket" })]);
     const balance = shareBalance(shared, report);
     expect(balance.anySet).toBe(true);
     expect(balance.fund).toEqual({ total: 200000, given: 150000 });
-    expect(balance.goods).toEqual([{ key: "sembako", label: "Sembako", unit: "paket", total: 5, given: 3 }]);
+    expect(shareBalance(settings(), report).anySet).toBe(false);
   });
 });
