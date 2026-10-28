@@ -10,6 +10,14 @@ const sameOriginFrame = [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, { key:
 
 const config: NextConfig = {
   poweredByHeader: false,
+  // Panduan ke Werkudara: the office's public guide for every visitor, a finished page served as it
+  // was designed (public/panduan-ke-werkudara), not an event.
+  async redirects() {
+    return [{ source: "/panduan", destination: "/panduan-ke-werkudara", permanent: false }];
+  },
+  async rewrites() {
+    return { beforeFiles: [{ source: "/panduan-ke-werkudara", destination: "/panduan-ke-werkudara/index.html" }], afterFiles: [], fallback: [] };
+  },
   async headers() {
     return [
       { source: "/:path*", headers: [
