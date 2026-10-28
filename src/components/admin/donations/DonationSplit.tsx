@@ -87,12 +87,12 @@ export function DonationSplit({ event, initial, ready }: Props) {
       <div className={s.listHead}>
         <h2 id="pembagian">Bagikan donasi</h2>
         <div className={s.tools}>
-          <button type="button" className={s.reset} disabled={working} onClick={() => void reset()}><RotateCcw size={16} aria-hidden="true" /> Reset pembagian</button>
+          <button type="button" className={s.reset} disabled={working} onClick={() => void reset()}><RotateCcw size={16} aria-hidden="true" /> Reset<span className={s.wide}> pembagian</span></button>
           <ButtonLink variant="secondary" href={adminEventPath(csr, "donations-report")}><Printer size={16} aria-hidden="true" /> Laporan dan CSV</ButtonLink>
         </div>
       </div>
       <p className="field-hint">Pilih penerima untuk tiap donasi yang sudah diterima. Panti yang hanya butuh dana cukup diberi donasi dana, yang butuh barang diberi barang. Laporan cetak mengikuti pembagian ini.{waiting > 0 && ` ${waiting} donasi masih menunggu konfirmasi di Donasi masuk.`}</p>
-      <div className={s.filters} role="group" aria-label="Saring">
+      <div className={`${s.filters} ${s.filtersScroll}`} role="group" aria-label="Saring">
         <button type="button" aria-pressed={filter === "open"} onClick={() => setFilter("open")}>Belum dibagikan <span>{open.length}</span></button>
         <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>Semua <span>{received.length}</span></button>
         {recipients.map(recipient => <button key={recipient.id} type="button" aria-pressed={filter === recipient.id} onClick={() => setFilter(recipient.id)}>{recipient.name || "Tanpa nama"} <span>{split.byRecipient[recipient.id].count}</span></button>)}

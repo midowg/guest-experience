@@ -1,6 +1,6 @@
 /* Admin donation desk (DonationBoard): summary, handover news, the list to receive or reject. */
 .board { display: grid; gap: var(--space-5); }
-.summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: var(--space-3); }
+.summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: var(--space-3); }
 .stat { display: grid; gap: 2px; padding: var(--space-4); border: 1px solid var(--line); border-radius: 14px; background: #fff; }
 .stat[data-kind="fund"] { border-color: transparent; background: var(--blue); color: #fff; }
 .stat span { font-size: .8125rem; font-weight: 800; opacity: .8; }
@@ -81,3 +81,43 @@
 .reset { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 var(--space-3); border: 1px solid #c9ced8; border-radius: 10px; background: #fff; color: #9a273d; font: inherit; font-weight: 700; cursor: pointer; }
 .reset:hover { border-color: #9a273d; }
 .reset:disabled { cursor: progress; opacity: .55; }
+
+/* Phones: two summary cards a row (money across both), tools side by side, a donation's actions
+   in a tidy grid (amount, then Terima | Tolak, then the small ones), and Pembagian's long home
+   names on one sideways-scrolling line. */
+@media (max-width: 42rem) {
+  .board { gap: var(--space-4); }
+  .stat { padding: var(--space-3); border-radius: 12px; }
+  .stat strong { font-size: 1.125rem; overflow-wrap: anywhere; }
+  .stat[data-kind="fund"] { grid-column: 1 / -1; }
+  .stat[data-kind="fund"] strong { font-size: 1.5rem; }
+  .notify, .list { padding: var(--space-3); border-radius: 14px; }
+  .listHead { align-items: stretch; }
+  .listHead h2 { flex-basis: 100%; }
+  .tools { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .tools > * { justify-content: center; min-height: 44px; padding-inline: var(--space-2); font-size: .9375rem; white-space: nowrap; }
+  .wide { display: none; }
+  .filters button { min-height: 36px; padding: 0 10px; font-size: .875rem; }
+  .filters input { flex-basis: 100%; }
+  .filtersScroll { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(-1 * var(--space-3)); padding: 2px var(--space-3); scrollbar-width: none; }
+  .filtersScroll::-webkit-scrollbar { display: none; }
+  .filtersScroll button { flex-shrink: 0; white-space: nowrap; }
+  .row { flex-direction: column; align-items: stretch; gap: var(--space-2); }
+  .who { flex: none; }
+  .tools svg { flex-shrink: 0; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .actions :global(.button) { justify-content: center; width: 100%; }
+  .amount { grid-column: 1 / -1; order: 0; }
+  .amount input { width: 100%; }
+  .decide { order: 1; }
+  .minor { order: 2; min-height: 38px !important; font-size: .875rem !important; }
+  .reject { grid-column: 1 / -1; order: 1; display: grid; grid-template-columns: 1fr 1fr; }
+  .reject label { grid-column: 1 / -1; }
+  .reject input { min-width: 0; width: 100%; }
+  .bulk { display: grid; grid-template-columns: 1fr auto; }
+  .bulk > span { grid-column: 1 / -1; font-size: .875rem; }
+  .bulk .select { width: 100%; }
+  .splitList li { flex-direction: column; align-items: stretch; }
+  .splitPick { display: grid; grid-template-columns: 1fr 1fr; }
+  .splitPick button { justify-content: center; min-height: 42px; padding: 0 8px; font-size: .875rem; line-height: 1.2; text-align: center; }
+}

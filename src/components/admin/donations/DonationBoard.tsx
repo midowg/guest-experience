@@ -138,22 +138,22 @@ export function DonationBoard({ event, link, initial, migrated }: Props) {
               <p className={s.meta}>{formatDateTime(donation.created_at)}{donation.donor_phone ? ` · ${donation.donor_phone}` : ""}{donation.status === "rejected" && donation.reject_reason ? ` · Ditolak: ${donation.reject_reason}` : ""}</p>
             </div>
             <div className={s.actions}>
-              {donation.proof_key && <Button type="button" variant="quiet" onClick={() => void proof(donation)}><Eye size={16} aria-hidden="true" /> Bukti</Button>}
+              {donation.proof_key && <Button type="button" variant="quiet" className={s.minor} onClick={() => void proof(donation)}><Eye size={16} aria-hidden="true" /> Bukti</Button>}
               {donation.status === "pending" && rejecting?.id !== donation.id && <>
                 {donation.category !== "other" && <label className={s.amount}><span className="sr-only">Jumlah yang diterima</span>
                   <input className="input" inputMode="decimal" value={amounts[donation.id] ?? (donation.category === "fund" ? formatRupiah(donation.amount) : String(donation.amount))}
                     onChange={change => setAmounts(current => ({ ...current, [donation.id]: change.target.value }))} />
                 </label>}
-                <Button type="button" disabled={busy === donation.id} onClick={() => void receive(donation)}><Check size={16} aria-hidden="true" /> Terima</Button>
-                <Button type="button" variant="secondary" disabled={busy === donation.id} onClick={() => setRejecting({ id: donation.id, reason: "" })}><X size={16} aria-hidden="true" /> Tolak</Button>
+                <Button type="button" className={s.decide} disabled={busy === donation.id} onClick={() => void receive(donation)}><Check size={16} aria-hidden="true" /> Terima</Button>
+                <Button type="button" variant="secondary" className={s.decide} disabled={busy === donation.id} onClick={() => setRejecting({ id: donation.id, reason: "" })}><X size={16} aria-hidden="true" /> Tolak</Button>
               </>}
               {rejecting?.id === donation.id && <div className={s.reject}>
                 <label><span className="sr-only">Alasan ditolak</span><input className="input" placeholder="Alasan, mis. transfer tidak ditemukan" value={rejecting.reason} maxLength={300} onChange={change => setRejecting({ id: donation.id, reason: change.target.value })} /></label>
                 <Button type="button" variant="danger" disabled={busy === donation.id || rejecting.reason.trim().length < 2} onClick={() => void reject()}>Tolak</Button>
                 <Button type="button" variant="quiet" onClick={() => setRejecting(null)}>Batal</Button>
               </div>}
-              {donation.status !== "pending" && <Button type="button" variant="quiet" disabled={busy === donation.id} onClick={() => void act(donation, { action: "pending" })}><RotateCcw size={16} aria-hidden="true" /> {donation.status === "received" ? "Batalkan terima" : "Kembalikan"}</Button>}
-              <Button type="button" variant="quiet" disabled={busy === donation.id} onClick={() => void remove(donation)} aria-label={`Hapus donasi ${donorLabel(donation)}`}><Trash2 size={16} aria-hidden="true" /></Button>
+              {donation.status !== "pending" && <Button type="button" variant="quiet" className={s.minor} disabled={busy === donation.id} onClick={() => void act(donation, { action: "pending" })}><RotateCcw size={16} aria-hidden="true" /> {donation.status === "received" ? "Batalkan terima" : "Kembalikan"}</Button>}
+              <Button type="button" variant="quiet" className={s.minor} disabled={busy === donation.id} onClick={() => void remove(donation)} aria-label={`Hapus donasi ${donorLabel(donation)}`}><Trash2 size={16} aria-hidden="true" /></Button>
             </div>
           </li>)}
         </ul>}
