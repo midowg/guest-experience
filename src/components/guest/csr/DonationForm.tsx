@@ -122,7 +122,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
       ...fund.map(item => ({ key: item.key, photo: proof, item_key: item.key, item_label: item.label, category: item.category, amount: picked[item.key] ?? 0, unit: item.unit })),
       ...named.map(row => {
         const item = listed(row.name);
-        return { key: `barang-${row.id}`, photo: row.photo, item_key: item?.key ?? "", item_label: item?.label ?? row.name.trim(), category: item?.category ?? "other" as const, amount: row.amount, unit: item?.unit || "pcs" };
+        return { key: `barang-${row.id}`, photo: row.photo, item_key: item?.key ?? "", item_label: item?.label ?? row.name.trim(), category: item?.category ?? "other" as const, amount: row.amount, unit: "pcs" };
       }),
     ];
     const donor: Donor = { donor_name: display === "name" ? name.trim() : "", display, donor_phone: phone.trim(), message: note.trim(), website: honeypot.current?.value ?? "" };
@@ -216,31 +216,29 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
 
         {giveGoods && <div className={s.goodsPick}>
           {rows.map((row, index) => {
-            const item = listed(row.name);
-            const unit = item?.unit || "pcs";
             const label = rows.length > 1 ? `Barang ${index + 1}` : "Barang";
             return <div key={row.id} className={s.goodsEntry} role="group" aria-label={label}>
               <div className={s.goodsEntryHead}>
                 <span>{label}</span>
                 {rows.length > 1 && <button type="button" className={s.remove} onClick={() => { touched(); setRows(current => current.filter(other => other.id !== row.id)); }}>Hapus</button>}
               </div>
-              {/* The name and how many on one line: type the number, or tap minus and plus. */}
-              <div className={s.goodsLine}>
-                <input className="input" value={row.name} maxLength={120} placeholder="Mis. selimut" aria-label={rows.length > 1 ? `Nama barang ${index + 1}` : "Nama barang"} aria-invalid={!!errors[`item_label:barang-${row.id}`] || undefined} onChange={change => setRow(row.id, { name: change.target.value })} />
-                <div className={s.qty}>
-                  <button type="button" onClick={() => setRow(row.id, { amount: Math.max(1, row.amount - 1) })} aria-label={`Kurangi ${row.name || "barang"}`}><Minus size={16} aria-hidden="true" /></button>
-                  {/* The unit sits at the end inside the box, like "2 pcs". */}
-                  <label className={s.qtyBox}>
-                    <input inputMode="decimal" aria-label={`Jumlah ${row.name || "barang"}`} value={row.amount || ""} onChange={change => setRow(row.id, { amount: Number(change.target.value.replace(",", ".")) || 0 })} aria-invalid={!!errors[`amount:barang-${row.id}`] || undefined} />
-                    <span aria-hidden="true">{unit}</span>
-                  </label>
-                  <button type="button" onClick={() => setRow(row.id, { amount: row.amount + 1 })} aria-label={`Tambah jumlah ${row.name || "barang"}`}><Plus size={16} aria-hidden="true" /></button>
-                </div>
-              </div>
+              <input className="input" value={row.name} maxLength={120} placeholder="Mis. selimut" aria-label={rows.length > 1 ? `Nama barang ${index + 1}` : "Nama barang"} aria-invalid={!!errors[`item_label:barang-${row.id}`] || undefined} onChange={change => setRow(row.id, { name: change.target.value })} />
               <div className={s.chips} role="group" aria-label="Saran barang">
                 {suggestions.map(text => <button key={text} type="button" className={s.suggest} aria-pressed={row.name.trim().toLowerCase() === text.toLowerCase()} onClick={() => setRow(row.id, { name: text })}>{text}</button>)}
               </div>
               {errors[`item_label:barang-${row.id}`] && <p className="field-error">{errors[`item_label:barang-${row.id}`]}</p>}
+              {/* How many, under the suggestions: type it, or tap minus and plus. Always in pieces. */}
+              <div className={s.qtyRow}>
+                <span>Jumlah</span>
+                <div className={s.qty}>
+                  <button type="button" onClick={() => setRow(row.id, { amount: Math.max(1, row.amount - 1) })} aria-label={`Kurangi ${row.name || "barang"}`}><Minus size={16} aria-hidden="true" /></button>
+                  <label className={s.qtyBox}>
+                    <input inputMode="decimal" aria-label={`Jumlah ${row.name || "barang"}`} value={row.amount || ""} onChange={change => setRow(row.id, { amount: Number(change.target.value.replace(",", ".")) || 0 })} aria-invalid={!!errors[`amount:barang-${row.id}`] || undefined} />
+                    <span aria-hidden="true">pcs</span>
+                  </label>
+                  <button type="button" onClick={() => setRow(row.id, { amount: row.amount + 1 })} aria-label={`Tambah jumlah ${row.name || "barang"}`}><Plus size={16} aria-hidden="true" /></button>
+                </div>
+              </div>
               {errors[`amount:barang-${row.id}`] && <p className="field-error">{errors[`amount:barang-${row.id}`]}</p>}
               <PhotoPick label={`Foto barang${settings.goodsPhotoRequired ? "" : " (opsional)"}`} accept={PHOTO_TYPES} file={row.photo} error={errors[`photo:${row.id}`]}
                 onBusy={busy => setShrinking(count => count + (busy ? 1 : -1))} onChange={photo => setRow(row.id, { photo })} />

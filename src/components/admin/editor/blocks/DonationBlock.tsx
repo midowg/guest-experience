@@ -50,19 +50,16 @@ export function DonationItemsBlock({ kit }: { kit: EditorKit }) {
     <p>Muncul sebagai tombol di form donasi. Donatur boleh memilih <strong>beberapa sekaligus</strong> dan mengisi jumlahnya masing-masing, atau menulis bantuan lain sendiri. Switch di kanan atas membuka atau menutup penerimaan donasi.</p>
     {errors["donation.items"] && <p className="field-error" id="donation.items">{errors["donation.items"].join(" ")}</p>}
     {/* One line per gift, like a table: easy to scan and to fill. */}
-    <div className={d.listHead} aria-hidden="true"><span>Nama bantuan</span><span>Kelompok</span><span>Satuan</span><span>Target <small>opsional</small></span><span /></div>
+    <div className={d.listHead} aria-hidden="true"><span>Nama bantuan</span><span>Kelompok</span><span>Target <small>opsional, barang dalam pcs</small></span><span /></div>
     <ol className={d.list}>
       {donation.items.map((item, index) => <li key={index} className={d.listRow}>
         <input className="input" aria-label="Nama bantuan" value={item.label} maxLength={60} placeholder="Nama bantuan"
           onChange={change => setItem(index, { label: change.target.value, ...(item.key.startsWith("bantuan-") && change.target.value ? { key: uniqueKey(slug(change.target.value), donation.items, index) } : {}) })} />
-        <select className="select" aria-label={`Kelompok ${item.label || `bantuan ${index + 1}`}`} value={item.category} onChange={change => setItem(index, { category: change.target.value as DonationCategory, unit: change.target.value === "fund" ? "Rp" : item.unit === "Rp" ? "pcs" : item.unit })}>
+        <select className="select" aria-label={`Kelompok ${item.label || `bantuan ${index + 1}`}`} value={item.category} onChange={change => setItem(index, { category: change.target.value as DonationCategory, unit: change.target.value === "fund" ? "Rp" : "pcs" })}>
           {categories.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
-        {item.category === "goods"
-          ? <input className="input" aria-label={`Satuan ${item.label || `bantuan ${index + 1}`}`} value={item.unit} maxLength={20} placeholder="pcs" onChange={change => setItem(index, { unit: change.target.value })} />
-          : <span className={d.dash}>{item.category === "fund" ? "Rp" : "-"}</span>}
         {item.category !== "other"
-          ? <input className="input" aria-label={`Target ${item.label || `bantuan ${index + 1}`}`} inputMode="numeric" placeholder="Target" value={item.target ?? ""} onChange={change => { const value = Number(change.target.value.replace(/\D/g, "")); setItem(index, { target: value > 0 ? value : null }); }} />
+          ? <input className="input" aria-label={`Target ${item.label || `bantuan ${index + 1}`}`} inputMode="numeric" placeholder={item.category === "fund" ? "Target (Rp)" : "Target (pcs)"} value={item.target ?? ""} onChange={change => { const value = Number(change.target.value.replace(/\D/g, "")); setItem(index, { target: value > 0 ? value : null }); }} />
           : <span className={d.dash}>-</span>}
         <div className={d.listTools}>
           <OrderButtons label={item.label || `bantuan ${index + 1}`} index={index} length={donation.items.length} onMove={direction => set({ items: moveItem(donation.items, index, direction) })} />

@@ -303,3 +303,7 @@
 .confirmActions { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2); }
 .confirmBack { min-height: 52px; padding: 0 var(--space-4); border: 1.5px solid var(--color-border); border-radius: 999px; background: var(--color-background); color: var(--color-text); font: inherit; font-weight: 800; cursor: pointer; }
 .face svg, .avatar svg { color: var(--color-heading); }
+.qtyRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding-top: 2px; }
+.qtyRow > span { font-size: .875rem; font-weight: 800; }
+.qtyRow .qtyBox { width: 96px; }
+.qtyRow .qty button { width: 44px; }

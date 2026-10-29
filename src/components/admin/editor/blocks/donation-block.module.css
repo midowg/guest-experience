@@ -25,7 +25,7 @@
 
 
 /* The gift list: one line per gift with the column names once on top; two lines on a phone. */
-.listHead, .listRow { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.25fr) minmax(0, .8fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.listHead, .listRow { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.25fr) minmax(0, 1.1fr) auto; gap: 8px; align-items: center; }
 .listHead { padding: 0 10px; color: #5b6476; font-size: .75rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .listHead small { font-weight: 600; text-transform: none; letter-spacing: 0; }
 .list { margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; list-style: none; }
@@ -37,7 +37,7 @@
 .listTools { display: flex; align-items: center; gap: 2px; }
 @media (max-width: 42rem) {
   .listHead { display: none; }
-  .listRow { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); padding: 10px; }
+  .listRow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 10px; }
   .listRow > :first-child { grid-column: 1 / -1; }
   .listTools { grid-column: 1 / -1; justify-content: space-between; }
 }

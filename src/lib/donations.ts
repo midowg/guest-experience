@@ -94,9 +94,9 @@ const item = (key: string, label: string, category: DonationCategory, unit: stri
 /** The chips a CSR event starts with; the admin adds, removes and reorders them. */
 export const defaultDonationItems = (): DonationItem[] => [
   item("dana", "Dana", "fund", "Rp"),
-  item("sembako", "Sembako", "goods", "paket"),
-  item("beras", "Beras", "goods", "kg"),
-  item("minyak", "Minyak goreng", "goods", "liter"),
+  item("sembako", "Sembako", "goods", "pcs"),
+  item("beras", "Beras", "goods", "pcs"),
+  item("minyak", "Minyak goreng", "goods", "pcs"),
   item("susu", "Susu", "goods", "pcs"),
   item("buku", "Buku tulis", "goods", "pcs"),
   item("alat-tulis", "Alat tulis", "goods", "pcs"),
@@ -140,7 +140,8 @@ export function normalizeDonation(donation: Partial<DonationSettings> | undefine
   if (!donation) return base;
   return {
     ...base, ...donation,
-    items: donation.items ?? [], accounts: donation.accounts ?? [], qris: { ...image(), ...donation.qris },
+    // Goods are counted in pieces, one unit for all so nobody has to choose; money stays in Rp.
+    items: (donation.items ?? []).map(item => item.category === "goods" ? { ...item, unit: "pcs" } : item), accounts: donation.accounts ?? [], qris: { ...image(), ...donation.qris },
     recipients: (donation.recipients ?? []).map(({ id, name, description, place, photo }) => ({ id, name, description, place, photo: { ...image(), ...photo } })),
     show: { ...base.show, ...donation.show },
     delivered: { ...base.delivered, ...donation.delivered, photo: { ...image(), ...donation.delivered?.photo } },

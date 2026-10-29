@@ -38,7 +38,7 @@ describe("totals", () => {
       donation({ item_key: "", item_label: "Kursi roda", category: "other", amount: 1, unit: "" }),
     ]);
     expect(totals.fund).toEqual({ total: 350000, target: 10_000_000 });
-    expect(totals.goods).toEqual([{ key: "sembako", label: "Sembako", unit: "paket", total: 3, target: 100 }]);
+    expect(totals.goods).toEqual([{ key: "sembako", label: "Sembako", unit: "pcs", total: 3, target: 100 }]);
     expect(totals.other).toBe(1);
     expect(totals.donors).toBe(4);
     expect(totals.pending).toBe(1);

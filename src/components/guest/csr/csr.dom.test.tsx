@@ -74,7 +74,7 @@ it("starts with Dana or Barang; goods are rows to fill with suggestions and an a
   fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
   fireEvent.click(within(within(form).getByRole("group", { name: "Saran barang" })).getByRole("button", { name: "Sembako" }));
   expect((within(form).getByRole("textbox", { name: "Nama barang" }) as HTMLInputElement).value).toBe("Sembako");
-  expect(within(form).getByText("paket")).toBeTruthy();
+  expect(within(form).getByText("pcs")).toBeTruthy();
   expect(within(form).getByText("Antar ke kantor Werkudara.")).toBeTruthy();
   expect(within(form).queryByText("123 456 7890")).toBeNull();
   fireEvent.click(within(form).getByRole("button", { name: "Tambah jumlah Sembako" }));
@@ -92,7 +92,7 @@ it("starts with Dana or Barang; goods are rows to fill with suggestions and an a
   send(form);
   await waitFor(() => expect(screen.getByRole("dialog", { name: "Terima kasih" })).toBeTruthy());
   expect(screen.getByText("Menunggu verifikasi panitia")).toBeTruthy();
-  for (const gift of ["Dana Rp 100.000", "Sembako 2 paket", "Kursi roda 1 pcs"]) expect(screen.getByText(gift)).toBeTruthy();
+  for (const gift of ["Dana Rp 100.000", "Sembako 2 pcs", "Kursi roda 1 pcs"]) expect(screen.getByText(gift)).toBeTruthy();
 });
 
 it("sends one donation per gift, the transfer proof with the money and each goods photo with its goods, and remembers them", async () => {
@@ -114,12 +114,12 @@ it("sends one donation per gift, the transfer proof with the money and each good
   const bodies = (fetch.mock.calls as unknown as [string, RequestInit][]).map(([url, init]) => ({ url, data: init.body as FormData }));
   expect(bodies.every(body => body.url === "/api/events/berbagi/donation")).toBe(true);
   const payloads = bodies.map(body => JSON.parse(String(body.data.get("payload"))));
-  expect(payloads).toEqual([expect.objectContaining({ item_key: "dana", amount: 75000, donor_name: "Rina" }), expect.objectContaining({ item_key: "sembako", item_label: "Sembako", amount: 1, unit: "paket" })]);
+  expect(payloads).toEqual([expect.objectContaining({ item_key: "dana", amount: 75000, donor_name: "Rina" }), expect.objectContaining({ item_key: "sembako", item_label: "Sembako", amount: 1, unit: "pcs" })]);
   expect(payloads[0].idempotency_key).not.toBe(payloads[1].idempotency_key);
   expect((bodies[0].data.get("proof") as File).name).toBe("bukti.jpg");
   expect((bodies[1].data.get("proof") as File).name).toBe("barang.jpg");
   await waitFor(() => expect(screen.getByRole("dialog", { name: "Terima kasih" })).toBeTruthy());
-  expect(localStorage.getItem("wk_donasi_10f3a511-2331-40")).toContain("Dana Rp 75.000, Sembako 1 paket");
+  expect(localStorage.getItem("wk_donasi_10f3a511-2331-40")).toContain("Dana Rp 75.000, Sembako 1 pcs");
 });
 
 it("asks for a gift, a proof or goods photo when required, and says when donations are closed", () => {
