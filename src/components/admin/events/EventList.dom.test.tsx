@@ -40,26 +40,19 @@ it("keeps rarer actions in the card menu, depending on the event", () => {
   render(<EventList events={[first, second, draft]} featuredId={first.id} />);
   expect(within(card("Acara A")).getByText("Di halaman utama")).toBeTruthy();
   expect(within(menu("Acara A")).getByRole("button", { name: /Turunkan dari halaman utama/ })).toBeTruthy();
-  expect(within(menu("Acara B")).getByRole("button", { name: /Tayangkan di halaman utama/ })).toBeTruthy();
+  // The front page features no event any more: nothing new can be put on it.
+  expect(within(menu("Acara B")).queryByRole("button", { name: /Tayangkan di halaman utama/ })).toBeNull();
   expect(within(menu("Acara Draf")).queryByRole("button", { name: /halaman utama/ })).toBeNull();
   expect(within(menu("Acara Draf")).queryByRole("link", { name: /Lihat undangan/ })).toBeNull();
   expect(within(menu("Acara B")).getByRole("link", { name: /Lihat undangan/ }).getAttribute("href")).toBe("/e/acara-b");
 });
 
-it("confirms before changing the homepage and then marks the new event", async () => {
-  render(<EventList events={[first, second]} featuredId={first.id} />);
+it("asks before taking an event off the front page", () => {
+  render(<EventList events={[first]} featuredId={first.id} />);
   vi.stubGlobal("confirm", vi.fn(() => false));
-  fireEvent.click(within(menu("Acara B")).getByRole("button", { name: /Tayangkan di halaman utama/ }));
+  fireEvent.click(within(menu("Acara A")).getByRole("button", { name: /Turunkan dari halaman utama/ }));
   expect(globalThis.fetch).not.toHaveBeenCalled();
-  vi.stubGlobal("confirm", vi.fn(() => true));
-  fireEvent.click(within(menu("Acara B")).getByRole("button", { name: /Tayangkan di halaman utama/ }));
-  await vi.waitFor(() => expect(refresh).toHaveBeenCalled());
-  const [url, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-  expect(url).toBe("/api/admin/featured");
-  expect(JSON.parse(init.body)).toEqual({ eventId: second.id });
-  expect(globalThis.confirm).toHaveBeenCalledWith(expect.stringContaining("Tautan acara lama tetap aktif"));
-  expect(within(card("Acara B")).getByText("Di halaman utama")).toBeTruthy();
-  expect(within(card("Acara A")).queryByText("Di halaman utama")).toBeNull();
+  expect(within(card("Acara A")).getByText("Di halaman utama")).toBeTruthy();
 });
 
 it("takes the event off the homepage, and reports a refusal instead of claiming success", async () => {

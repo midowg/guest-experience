@@ -23,7 +23,7 @@ describe("the management area is not advertised publicly", () => {
     expect(/masuk sebagai|pengelola|login|admin/i.test(publicPages[file as keyof typeof publicPages])).toBe(false);
   });
 
-  it("the empty state still tells a guest what to do", () => {
-    expect(publicPages["EmptyHome.tsx"]).toMatch(/tautan undangan dari penyelenggara/i);
+  it("the front page still tells a guest what to do", () => {
+    expect(publicPages["EmptyHome.tsx"]).toMatch(/buka tautan yang Anda terima dari tim Werkudara/i);
   });
 });

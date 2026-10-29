@@ -1,35 +1,25 @@
 import type { Metadata } from 'next';
-import { EventExperience } from '@/components/guest/EventExperience';
 import { EmptyHome } from './EmptyHome';
-import { getFeaturedEvent } from '@/lib/server/events';
+import { getCurrentFridaySharing, getCurrentPlaceGuide } from '@/lib/server/events';
 import { isSupabaseConfigured } from '@/lib/server/config';
-import { formatDate } from '@/lib/format';
-import { currentPhase } from '@/lib/event-phase';
-import { openPartyMax, rsvpNeedsReady } from '@/lib/server/responses';
-import { afterPhotos } from '@/lib/server/gallery';
 
 export const dynamic = 'force-dynamic';
 
-async function featured() {
-  if (!isSupabaseConfigured()) return null;
-  return getFeaturedEvent().catch(() => null);
-}
+export const metadata: Metadata = {
+  title: 'Werkudara Journey',
+  description: 'Menemani tamu Werkudara sebelum, saat, dan sesudah setiap pertemuan.',
+  openGraph: { title: 'Werkudara Journey', description: 'Setiap pertemuan, dimulai dengan sambutan.', type: 'website', siteName: 'Werkudara' },
+  robots: { index: false, follow: false },
+};
 
-export async function generateMetadata(): Promise<Metadata> {
-  const event = await featured();
-  if (!event) return { title: 'Guest Experience', robots: { index: false, follow: false } };
-  const description = `${formatDate(event.starts_at, event.timezone)}${event.venue_name ? ` · ${event.venue_name}` : ''}`;
-  // og:title and og:description are what WhatsApp prints beside the preview image.
-  return {
-    title: event.title,
-    description: `${event.title} — ${description}.`,
-    openGraph: { title: event.title, description, type: 'website', siteName: 'Werkudara' },
-    robots: { index: false, follow: false },
-  };
-}
-
+/**
+ * journey.werkudara.group: one domain for many kinds of events (visits, events, trips, sharing),
+ * so the front page features none of them. Guests come in through their own link; the page only
+ * points to what is meant for everyone, while it is published.
+ */
 export default async function Home() {
-  const event = await featured();
-  if (event) return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} openPartyMax={await openPartyMax()} photoCount={await afterPhotos(event)} />;
-  return <EmptyHome />;
+  const [guide, sharing] = isSupabaseConfigured()
+    ? await Promise.all([getCurrentPlaceGuide().catch(() => null), getCurrentFridaySharing().catch(() => null)])
+    : [null, null];
+  return <EmptyHome placeGuide={!!guide} fridaySharing={!!sharing} />;
 }

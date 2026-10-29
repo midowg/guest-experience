@@ -111,7 +111,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
           <div className={styles.cardMenuList} role="group" aria-label={`Aksi lain untuk ${event.title}`}>
             {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> {event.event_kind === "eguide" ? "Lihat E-Guide" : event.event_kind === "panduan" ? "Lihat panduan" : event.event_kind === "kunjungan" ? "Lihat halaman tamu" : "Lihat undangan"}<span className="sr-only"> (tab baru)</span></a>}
             <button type="button" disabled={!!busy} onClick={() => duplicate(event.id)}><Copy size={16} aria-hidden="true" /> {busy === event.id ? "Menyalin…" : "Duplikasi"}</button>
-            {event.status === "published" && !live && <button type="button" disabled={!!busy} onClick={() => setHomepage(event)}><Star size={16} aria-hidden="true" /> Tayangkan di halaman utama</button>}
+            {/* An event shown on the front page before it stopped featuring any can still be taken down. */}
             {live && <button type="button" disabled={!!busy} onClick={() => setHomepage(null)}><StarOff size={16} aria-hidden="true" /> Turunkan dari halaman utama</button>}
           </div>
         </details>
