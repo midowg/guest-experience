@@ -113,23 +113,22 @@ export function PhonePreview({ event, phase, onPhase, device, onDevice, focus, o
   }, [size, device]);
 
   const outer = { width: size.width + size.frame * 2, height: size.height + size.frame * 2 };
+  // One compact bar (two rows at most): the phone keeps the rest of the column's height, whatever the bar holds.
   return <div ref={root} className={styles.preview} data-full={full || undefined}>
-    {link && <div className={styles.previewBar}>
-      <div className={styles.phaseSwitch} role="group" aria-label="Tautan yang dipratinjau">
+    <div className={styles.previewBar}>
+      {link && <div className={styles.phaseSwitch} role="group" aria-label="Tautan yang dipratinjau">
         <button type="button" aria-pressed={!link.personal} onClick={() => link.onPersonal(false)}>Tautan umum</button>
         <button type="button" aria-pressed={link.personal} onClick={() => link.onPersonal(true)} title={`Sapaan memakai nama ${link.guestName}`}>Tautan pribadi</button>
-      </div>
-      <button type="button" className={styles.fullButton} onClick={toggleFull} aria-pressed={full}>{full ? <Minimize2 size={14} aria-hidden="true" /> : <Maximize2 size={14} aria-hidden="true" />} {full ? "Keluar layar penuh" : "Layar penuh"}</button>
-    </div>}
-    <div className={styles.previewBar}>
-      <div className={styles.phaseSwitch} role="group" aria-label="Perangkat pratinjau">
-        <button type="button" aria-pressed={device === "mobile"} onClick={() => onDevice("mobile")}><Smartphone size={14} aria-hidden="true" /> Ponsel</button>
-        <button type="button" aria-pressed={device === "web"} onClick={() => onDevice("web")}><Monitor size={14} aria-hidden="true" /> Web</button>
+      </div>}
+      <div className={`${styles.phaseSwitch} ${styles.iconSwitch}`} role="group" aria-label="Perangkat pratinjau">
+        <button type="button" aria-pressed={device === "mobile"} onClick={() => onDevice("mobile")} aria-label="Ponsel" title="Ponsel"><Smartphone size={15} aria-hidden="true" /></button>
+        <button type="button" aria-pressed={device === "web"} onClick={() => onDevice("web")} aria-label="Web" title="Web"><Monitor size={15} aria-hidden="true" /></button>
       </div>
       {/* An E-Guide reads the same before, on and after the day: no phases to switch. */}
       {event.event_kind !== "eguide" && event.event_kind !== "csr" && event.event_kind !== "panduan" && <div className={styles.phaseSwitch} role="group" aria-label="Tampilan undangan">
         {phases.map(item => <button key={item.key} type="button" aria-pressed={phase === item.key} onClick={() => onPhase(item.key)}>{item.label}</button>)}
       </div>}
+      <button type="button" className={styles.fullButton} onClick={toggleFull} aria-pressed={full} aria-label={full ? "Keluar layar penuh" : "Layar penuh"} title={full ? "Keluar layar penuh" : "Layar penuh"}>{full ? <Minimize2 size={15} aria-hidden="true" /> : <Maximize2 size={15} aria-hidden="true" />}</button>
     </div>
     {hidden ? <span className={`${styles.previewHint} ${styles.previewHidden}`}><EyeOff size={14} aria-hidden="true" /> Disembunyikan dari tamu</span> : <span className={styles.previewHint}>Ketuk bagian untuk mengubahnya</span>}
     <div ref={stage} className={styles.phoneStage} data-device={device}>

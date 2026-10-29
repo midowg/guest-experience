@@ -91,9 +91,20 @@
 
 /* Phone preview */
 .previewPane { min-width: 0; }
-@media (min-width: 48rem) { .previewPane { position: sticky; top: var(--sticky-top); } }
-.preview { display: grid; gap: var(--space-2); justify-items: center; }
-.previewBar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: center; width: 100%; }
+/*
+ * On a wide screen the pane sticks and is exactly as tall as the room under the toolbar: the bar
+ * and hint take what they need and the phone fits the rest, so nothing hangs below the screen.
+ */
+@media (min-width: 48rem) {
+  .previewPane { position: sticky; top: var(--sticky-top); height: calc(100vh - var(--sticky-top) - var(--space-3)); }
+  .previewPane .preview { height: 100%; }
+  .previewPane .phoneStage { flex: 1 1 0; height: auto; min-height: 0; }
+  .previewPane .phoneStage[data-device="web"] { flex: none; }
+  .previewPane .preview:has(.phoneStage[data-device="web"]) { overflow-y: auto; }
+}
+.preview { display: flex; flex-direction: column; gap: var(--space-2); align-items: center; }
+.previewBar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; width: 100%; }
+.iconSwitch button { display: inline-grid; place-items: center; width: 36px; padding: 0; }
 .phaseSwitch { display: inline-flex; padding: 3px; border-radius: 999px; background: #fff; border: 1px solid var(--line); }
 .phaseSwitch button { min-height: 32px; padding: 0 var(--space-3); border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: .8125rem; font-weight: 700; color: #4a5060; cursor: pointer; }
 .phaseSwitch button[aria-pressed="true"] { background: var(--color-text); color: #fff; }
@@ -165,10 +176,11 @@
 .browserAddress { flex: 1; max-width: 560px; margin: 0 auto; padding: 5px 14px; border-radius: 999px; background: #fff; color: #4a5060; font-size: 14px; text-align: center; }
 .preview > .previewHint { justify-self: center; }
 .previewHidden { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #fff4e5; color: #8a4b00; font-weight: 700; }
-.fullButton { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: 999px; background: #fff; font: inherit; font-size: .8125rem; font-weight: 700; color: #4a5060; cursor: pointer; }
+.fullButton { display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: #4a5060; cursor: pointer; }
+.fullButton:hover, .phaseSwitch button:hover:not([aria-pressed="true"]) { color: var(--color-text); }
 /* Layar penuh: the preview alone, on a calm background, the phone as tall as the screen allows. */
-.preview[data-full] { align-content: start; padding: var(--space-4); background: #eef0f4; overflow: auto; }
-.preview[data-full] .phoneStage { height: calc(100vh - 8rem); }
+.preview[data-full] { height: 100vh; padding: var(--space-4); background: #eef0f4; overflow: auto; }
+.preview[data-full] .phoneStage { flex: 1 1 0; height: auto; min-height: 0; }
 .phoneStage { justify-self: stretch; }
 
 /* Phone toolbar, one row: the part to edit takes the room; Isi | Lihat and Simpan are icons
