@@ -12,7 +12,9 @@ import { imageSrcSet } from "./Gallery";
 import { contactLink } from "./JourneyPanels";
 import { useEventLanguage } from "./language";
 import { arrivalIconComponents } from "./VisitRoute";
-import { cormorant, garamond, jost } from "./place-guide-font";
+import { garamond, jost } from "./place-guide-font";
+// Resort's italic subtitles and links; the upright weights come with the site (src/app/layout.tsx).
+import "@fontsource/cormorant-garamond/500-italic.css";
 import styles from "./place-guide.module.css";
 
 /** The Werkudara mark in the top bar; the page is hosted by Werkudara. */
@@ -63,7 +65,7 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
   const titleOnPhoto = theme === "resort" && !!event.hero.url;
   const nav = [["welcome", w("welcome")], ["getting-here", w("gettingHere")], ...(gallery.length || galleryText.length ? [["gallery", w("gallery")]] : [])];
 
-  return <div className={`${styles.page} ${garamond.variable} ${cormorant.variable} ${jost.variable}`} data-theme={theme} lang={lang}>
+  return <div className={`${styles.page} ${garamond.variable} ${jost.variable}`} data-theme={theme} lang={lang}>
     <header className={`${styles.bar} ${menu ? styles.open : ""}`.trimEnd()}>
       <div className={styles.barIn}>
         {/* eslint-disable-next-line @next/next/no-img-element -- a fixed asset beside the static guide */}

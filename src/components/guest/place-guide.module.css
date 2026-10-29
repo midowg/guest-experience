@@ -182,8 +182,8 @@
 .page[data-theme="resort"] {
   --ground: #FFFFFF; --ground-veil: rgba(255, 255, 255, 0.95); --soft: #F8F6F0; --soft-veil: rgba(248, 246, 240, 0.95);
   --ink: #02102A; --muted: #4F5666; --line: #D9DBDF; --blue: #02102A; --blue-deep: #000814; --accent: #B5A191;
-  --font-display: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
-  --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
   --font-sans: var(--font-jost), Jost, "Helvetica Neue", Arial, sans-serif;
   --font-body: var(--font-sans);
   font-size: 1.0625rem; line-height: 1.7; letter-spacing: 0.02em;

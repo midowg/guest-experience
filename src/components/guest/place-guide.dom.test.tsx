@@ -4,7 +4,7 @@ import { samplePlaceGuide } from "@/app/dev-preview/panduan/sample";
 import { PlaceGuide } from "./PlaceGuide";
 
 // next/font only runs inside Next's compiler.
-vi.mock("./place-guide-font", () => ({ garamond: { variable: "" }, cormorant: { variable: "" }, jost: { variable: "" } }));
+vi.mock("./place-guide-font", () => ({ garamond: { variable: "" }, jost: { variable: "" } }));
 
 afterEach(() => { cleanup(); window.localStorage.clear(); });
 
