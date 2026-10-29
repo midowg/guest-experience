@@ -158,6 +158,7 @@ const donationSchema = z.object({
   accounts: z.array(bankAccountSchema).max(5).default([]),
   qris: plainImage.default(emptyImage),
   style: z.enum(["ceria", "rapi", "hangat"]).default("ceria"),
+  askPhone: z.boolean().default(true),
   proofRequired: z.boolean().default(false),
   goodsPhotoRequired: z.boolean().default(false),
   goodsNote: text(1000).default(""),

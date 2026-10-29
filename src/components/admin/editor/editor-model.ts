@@ -184,7 +184,7 @@ const fieldBlocks: Record<string, string> = {
 const donationBlocks: Record<string, string> = {
   enabled: "donation-items", items: "donation-items", goodsNote: "donation-items", closesAt: "donation-items",
   accounts: "donation-pay", qris: "donation-pay", proofRequired: "donation-pay",
-  style: "donation-style", recipients: "donation-recipients", show: "donation-show", delivered: "donation-news", notify: "donation-news",
+  style: "donation-style", askPhone: "donation-show", recipients: "donation-recipients", show: "donation-show", delivered: "donation-news", notify: "donation-news",
 };
 /**
  * Kunjungan Kantor's menu follows the guest's screens (board 12), so some fields sit in another

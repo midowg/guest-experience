@@ -125,7 +125,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
         return { key: `barang-${row.id}`, photo: row.photo, item_key: item?.key ?? "", item_label: item?.label ?? row.name.trim(), category: item?.category ?? "other" as const, amount: row.amount, unit: "pcs" };
       }),
     ];
-    const donor: Donor = { donor_name: display === "name" ? name.trim() : "", display, donor_phone: phone.trim(), message: note.trim(), website: honeypot.current?.value ?? "" };
+    const donor: Donor = { donor_name: display === "name" ? name.trim() : "", display, donor_phone: settings.askPhone ? phone.trim() : "", message: note.trim(), website: honeypot.current?.value ?? "" };
     const next: Record<string, string> = {};
     if (!gifts.length) next.gift = giveGoods ? "Tulis barang yang ingin diberikan." : "Pilih bantuan yang ingin diberikan: dana atau barang.";
     if (settings.goodsPhotoRequired) for (const row of named) if (!row.photo) next[`photo:${row.id}`] = "Unggah foto barang ini.";
@@ -293,10 +293,10 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
           </label>
           {errors.donor_name && <p className="field-error">{errors.donor_name}</p>}
         </> : <p className={s.assure}><Info size={18} aria-hidden="true" /> Tidak perlu mengisi nama. Donasi Anda tetap dikonfirmasi panitia dan ikut terhitung di total, tanpa nama di mana pun, termasuk di catatan panitia.</p>}
-        <label className={s.field}><span>Nomor WhatsApp (opsional)</span>
+        {settings.askPhone && <label className={s.field}><span>Nomor WhatsApp (opsional)</span>
           <input className="input" type="tel" inputMode="tel" autoComplete="tel" value={phone} maxLength={30} placeholder="0812 3456 7890" aria-invalid={!!errors.donor_phone || undefined} onChange={change => { touched(); setPhone(change.target.value); }} />
           <small>Untuk kabar saat bantuan diserahkan. Tidak ditampilkan.</small>
-        </label>
+        </label>}
         {errors.donor_phone && <p className="field-error">{errors.donor_phone}</p>}
         <label className={s.field}><span>Pesan atau doa (opsional)</span>
           <textarea className="textarea" rows={3} maxLength={500} value={note} onChange={change => setNote(change.target.value)} />

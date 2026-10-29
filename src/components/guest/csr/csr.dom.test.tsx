@@ -182,3 +182,11 @@ it("asks whether the data is right before sending, and Periksa lagi goes back to
   send(form);
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
 });
+
+it("asks for a WhatsApp number only when the admin wants it", () => {
+  show();
+  expect(within(openForm()).getByRole("textbox", { name: /Nomor WhatsApp/ })).toBeTruthy();
+  cleanup();
+  show(event({ askPhone: false }));
+  expect(within(openForm()).queryByRole("textbox", { name: /Nomor WhatsApp/ })).toBeNull();
+});

@@ -41,3 +41,5 @@
   .listRow > :first-child { grid-column: 1 / -1; }
   .listTools { grid-column: 1 / -1; justify-content: space-between; }
 }
+
+.subhead { margin: var(--space-2) 0 0; font-size: 1rem; }

@@ -53,6 +53,8 @@ export type DonationSettings = {
   qris: PlainImage;
   /** How the donor page looks (Tema halaman); content and forms are the same in every style. */
   style: PageStyle;
+  /** The form asks for a WhatsApp number (for the handover news); off, the field is not there. */
+  askPhone: boolean;
   proofRequired: boolean;
   /** Each gift of goods comes with a photo of it, so the committee can check it on receipt. */
   goodsPhotoRequired: boolean;
@@ -125,7 +127,7 @@ export const defaultNotifyTemplate = "Halo {nama},\n\nTerima kasih atas donasi A
 
 export function emptyDonation(): DonationSettings {
   return {
-    enabled: false, items: [], recipients: [], accounts: [], qris: image(), style: "ceria", proofRequired: false, goodsPhotoRequired: false, goodsNote: "", closesAt: null,
+    enabled: false, items: [], recipients: [], accounts: [], qris: image(), style: "ceria", askPhone: true, proofRequired: false, goodsPhotoRequired: false, goodsNote: "", closesAt: null,
     show: { fundTotal: true, fundTarget: true, goods: true, donors: true, donorAmounts: false, messages: true },
     delivered: { at: null, photo: image(), note: "" },
     notify: { template: defaultNotifyTemplate, prayer: prayerSuggestions[0] },

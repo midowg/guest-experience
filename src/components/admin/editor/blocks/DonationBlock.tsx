@@ -141,6 +141,13 @@ export function DonationDisplayBlock({ kit }: { kit: EditorKit }) {
         <span><strong>{option.label}</strong><small>{option.hint}</small></span>
       </label>)}
     </div>
+    <h3 className={d.subhead}>Form donasi</h3>
+    <div className={d.switches}>
+      <label className={d.switch}>
+        <input type="checkbox" role="switch" checked={donation.askPhone} onChange={change => set({ askPhone: change.target.checked })} />
+        <span><strong>Minta nomor WhatsApp</strong><small>Kolom nomor WhatsApp (opsional) di form, untuk mengabari tiap donatur saat bantuan diserahkan. Matikan bila kabar cukup dibagikan ke grup; kolomnya tidak tampil.</small></span>
+      </label>
+    </div>
   </div>;
 }
 
