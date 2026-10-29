@@ -31,7 +31,7 @@ it("never starts a new event with a switched-off module", async () => {
   let body: { setup: { modules: string[] } } | null = null;
   vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => { body = JSON.parse(init!.body as string); return new Response(JSON.stringify({ ok: true, data: { ...createSeedEvent(), id: "5e7a0c1e-0000-4000-8000-000000000001" }, message: "OK" }), { status: 200, headers: { "Content-Type": "application/json" } }); }));
   render(<CreateEventDialog events={[]} templates={["kunjungan-klien"]} onClose={() => {}} disabledModules={["team", "feedback"]} />);
-  fireEvent.click(screen.getByRole("button", { name: /^Kunjungan Kantor:/ }));
+  fireEvent.click(screen.getByRole("button", { name: /^Welcome:/ }));
   fireEvent.change(screen.getByRole("textbox", { name: "Nama acara" }), { target: { value: "Kunjungan" } });
   fireEvent.change(screen.getByLabelText(/^Mulai/), { target: { value: "2026-12-01T10:00" } });
   fireEvent.click(screen.getByRole("button", { name: "Buat acara" }));

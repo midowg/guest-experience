@@ -34,7 +34,7 @@ export function TemplateSettings({ initialEnabled, migrated }: { initialEnabled:
   return <section className={styles.moduleSettings} aria-labelledby="templates-title">
     <h2 id="templates-title" className={styles.superSectionTitle}>Templat Buat acara</h2>
     <p className={styles.lead}>Pilih templat yang muncul saat admin biasa menekan <strong>Buat acara</strong>. Tampilan setiap acara ikut templatnya, jadi admin cukup memilih templat. Super admin selalu melihat semua templat.</p>
-    {!migrated && <Notice tone="warning">Pengaturan ini menunggu migrasi <code>202610200007_admin_templates.sql</code>. Sampai itu, admin biasa melihat Kunjungan Kantor dan Trip klien.</Notice>}
+    {!migrated && <Notice tone="warning">Pengaturan ini menunggu migrasi <code>202610200007_admin_templates.sql</code>. Sampai itu, admin biasa melihat Welcome dan Trip klien.</Notice>}
     {error && <Notice tone="error">{error}</Notice>}
     {message && <p role="status" className={styles.guestMessage}>{message}</p>}
     <ul className={styles.templateGallery}>

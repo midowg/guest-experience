@@ -2,7 +2,7 @@ import "server-only";
 import { notFound, permanentRedirect } from "next/navigation";
 import { readEventCode, isShortToken } from "@/lib/short-code";
 import { getPublicEvent, getPublicEventByCode } from "@/lib/server/events";
-import { eventPath } from "@/lib/routes";
+import { eventPath, invitationPath } from "@/lib/routes";
 import { findShortInvitation, getPersonalInvitation } from "@/lib/server/invitations";
 
 /*
@@ -17,6 +17,8 @@ export async function eventByCode(raw: string, suffix = "") {
   if (!read.canonical) permanentRedirect(`/${read.code}${suffix}`);
   const event = await getPublicEventByCode(read.code);
   if (!event) notFound();
+  // A Welcome visit opened by its code (older links) moves to /welcome/{slug}.
+  if (event.event_kind === "kunjungan") permanentRedirect(`${eventPath(event)}${suffix}`);
   return event;
 }
 
@@ -41,6 +43,30 @@ export async function invitationByCode(raw: string, short: string, suffix = "") 
   if (!read || !isShortToken(short)) notFound();
   if (!read.canonical) permanentRedirect(`/${read.code}/${short}${suffix}`);
   const found = await findShortInvitation(read.code, short);
+  if (!found) notFound();
+  const result = await personal(found.slug, found.token);
+  if (result.event.event_kind === "kunjungan") permanentRedirect(`${invitationPath(result.event, result.invitation)}${suffix}`);
+  return result;
+}
+
+/** The published Welcome behind `/welcome/{slug}`; any other kind is not found here. */
+export async function welcomeEvent(slug: string) {
+  const event = await getPublicEvent(slug);
+  if (!event || event.event_kind !== "kunjungan") notFound();
+  return event;
+}
+
+/** Same, for link previews, metadata and file routes: null when unknown. */
+export async function welcomeEventQuietly(slug: string) {
+  const event = await getPublicEvent(slug).catch(() => null);
+  return event?.event_kind === "kunjungan" ? event : null;
+}
+
+/** Event and personal invitation behind `/welcome/{slug}/{short}`. */
+export async function welcomeInvitation(slug: string, short: string) {
+  const event = await welcomeEvent(slug);
+  if (!event.code || !isShortToken(short)) notFound();
+  const found = await findShortInvitation(event.code, short);
   if (!found) notFound();
   return personal(found.slug, found.token);
 }

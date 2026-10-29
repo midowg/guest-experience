@@ -268,7 +268,7 @@ export function stagesFor(kind: EventRecord["event_kind"] | undefined) {
 export type BlockStatus = "error" | "dirty" | "todo" | "optional" | "done";
 export const blockStatusLabels: Record<BlockStatus, string> = { error: "Perlu diperbaiki", dirty: "Belum disimpan", todo: "Perlu dilengkapi", optional: "Opsional", done: "Lengkap" };
 
-const kindLabels = { kunjungan: "Kunjungan", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;
+const kindLabels = { kunjungan: "Welcome", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;
 const phaseText = { auto: "fase otomatis", before: "selalu undangan", day: "selalu hari H", after: "selalu terima kasih" } as const;
 const sectionOn = (event: EventRecord, key: SectionKey) => event.sections.some(section => section.key === key && section.enabled);
 const count = (n: number, noun: string) => `${n} ${noun}`;

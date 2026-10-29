@@ -41,7 +41,7 @@ export default async function EventEditorPage({ params }: { params: Promise<{ re
   if ((event.event_kind === "csr" || event.event_kind === "panduan") && !isId(ref)) redirect(adminEventPath(event, "edit"));
   const featuredId = await getFeaturedEventId();
   return <AdminShell wide>
-    <p className="eyebrow">{event.event_kind === "csr" ? "Friday Sharing" : event.event_kind === "panduan" ? "Editor panduan" : event.event_kind === "kunjungan" ? "Kunjungan Kantor" : "Editor undangan"}</p>
+    <p className="eyebrow">{event.event_kind === "csr" ? "Friday Sharing" : event.event_kind === "panduan" ? "Editor panduan" : event.event_kind === "kunjungan" ? "Welcome" : "Editor undangan"}</p>
     <h1 className={styles.title}>{event.title}</h1>
     <p className={styles.eventMeta}>Dibuat {formatDateTime(event.created_at)} · Terakhir disimpan {formatDateTime(event.updated_at)}</p>
     <EventNavigation event={event} current="edit" />

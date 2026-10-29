@@ -25,7 +25,7 @@ const werkudara: ThemeTokens = {
 };
 
 export const themes: ThemeDefinition[] = [
-  { key: "werkudara", name: "Werkudara", description: "Biru brand, bersih dan tenang.", suggestedFor: "Kunjungan Kantor, rapat", tokens: werkudara },
+  { key: "werkudara", name: "Werkudara", description: "Biru brand, bersih dan tenang.", suggestedFor: "Welcome, rapat", tokens: werkudara },
   { key: "nenek", name: "Pulang ke Rumah Nenek", description: "Hangat: kayu, krem, dan huruf berkait.", suggestedFor: "Kunjungan bertema keakraban", tokens: {
     background: "#fbf6ee", surface: "#f1e6d6", soft: "#f1e6d6", border: "#e2d3be",
     text: "#2b211a", heading: "#7a4b2a", caption: "#6b5848", danger: "#8a2433",

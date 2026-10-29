@@ -23,14 +23,21 @@ const FRIDAY_SHARING_ADMIN = "/admin/friday-sharing";
  */
 export const PLACE_GUIDE_PATH = "/your-visit";
 export const PLACE_GUIDE_ADMIN = "/admin/your-visit";
+/**
+ * Welcome (Kunjungan Kantor) names the guest in its address: /welcome/{slug}, e.g. /welcome/vortex,
+ * and /welcome/{slug}/{short} for a personal link. Several visits run at once, so each has its own.
+ */
+export const WELCOME_PATH = "/welcome";
 
 export function eventPath(event: EventRef): string {
   if (event.event_kind === "csr") return FRIDAY_SHARING_PATH;
   if (event.event_kind === "panduan") return PLACE_GUIDE_PATH;
+  if (event.event_kind === "kunjungan") return `${WELCOME_PATH}/${enc(event.slug)}`;
   return event.code ? `/${event.code}` : `/e/${enc(event.slug)}`;
 }
 
 export function invitationPath(event: EventRef, invitation: InvitationRef): string {
+  if (event.event_kind === "kunjungan" && event.code && invitation.short_token) return `${eventPath(event)}/${invitation.short_token}`;
   return event.code && invitation.short_token ? `/${event.code}/${invitation.short_token}` : `/e/${enc(event.slug)}/i/${invitation.token}`;
 }
 

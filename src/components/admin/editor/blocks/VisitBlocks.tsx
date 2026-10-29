@@ -8,7 +8,7 @@ import type { ArrivalIcon, ArrivalPoint } from "@/lib/types";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { WERKUDARA_OFFICE } from "@/components/admin/editor/suggestions";
 import { AfterBlock } from "@/components/admin/editor/JourneyEditor";
-import { adminEventPath, thanksPath } from "@/lib/routes";
+import { absolute, adminEventPath, thanksPath, WELCOME_PATH } from "@/lib/routes";
 import { EventLink } from "./EventLink";
 import { FeedbackBlock } from "./FeedbackBlock";
 import { HeroBlock } from "./HeroBlock";
@@ -29,6 +29,7 @@ export function VisitInfoBlock({ kit, onTimezone }: { kit: EditorKit; onTimezone
   const office = event.venue_name === WERKUDARA_OFFICE.venue_name && event.address === WERKUDARA_OFFICE.address;
   return <div className="stack">
     {text("title", "Nama kunjungan", 180, false, "Tampil kecil di bawah sambutan, di daftar acara, dan di BEO. Contoh: Kunjungan PT Nusantara Energi.")}
+    {text("slug", "Nama tamu di tautan", 100, false, `Tautan tamu: ${absolute(kit.origin || "https://invitation.werkudara.group", WELCOME_PATH).replace(/^https?:\/\//, "")}/${event.slug || "nama-tamu"}. Huruf kecil, angka, dan tanda hubung, misalnya vortex. Kalau diganti, tautan lama dengan nama ini berhenti berlaku; tautan berkode tetap diarahkan ke sini.`)}
     {event.code && <EventLink event={event} origin={kit.origin} label="Tautan untuk tamu" />}
     {text("organizer", "Tuan rumah", 250, false, "Biasanya Werkudara Group. Wajib sebelum terbit.")}
     <ScheduleBlock kit={kit} onTimezone={onTimezone} />

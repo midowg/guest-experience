@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FRIDAY_SHARING_PATH, absolute, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, photoDownloadPath, posterPath, ticketPath } from "./routes";
+import { FRIDAY_SHARING_PATH, WELCOME_PATH, absolute, thanksPath, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, photoDownloadPath, posterPath, ticketPath } from "./routes";
 
 const legacy = { id: "e1", slug: "kunjungan-sinar" };
 const short = { ...legacy, code: "AB23CD" };
@@ -13,8 +13,20 @@ describe("guest addresses", () => {
     expect(eventPath({ ...short, event_kind: "csr" })).toBe("/friday-sharing");
     expect(adminEventPath({ ...short, event_kind: "csr" })).toBe("/admin/friday-sharing");
     expect(adminEventPath({ ...short, event_kind: "csr" }, "donations-report", { penerima: "p1" })).toBe("/admin/friday-sharing/donasi/laporan?penerima=p1");
-    expect(eventPath({ ...short, event_kind: "kunjungan" })).toBe("/AB23CD");
     expect(adminEventPath({ ...short, event_kind: "kunjungan" })).toBe("/admin/acara/AB23CD");
+  });
+
+  it("name a Welcome visit by its guest: /welcome/{slug}, and a personal link under it", () => {
+    const visit = { ...short, slug: "vortex", event_kind: "kunjungan" };
+    expect(WELCOME_PATH).toBe("/welcome");
+    expect(eventPath(visit)).toBe("/welcome/vortex");
+    expect(invitationPath(visit, invitation)).toBe("/welcome/vortex/k7q2mx9p");
+    expect(thanksPath(visit)).toBe("/welcome/vortex/terima-kasih");
+    expect(thanksPath(visit, invitation)).toBe("/welcome/vortex/k7q2mx9p/terima-kasih");
+    expect(galleryPath(visit)).toBe("/welcome/vortex/galeri");
+    expect(calendarPath(visit)).toBe("/welcome/vortex/kalender.ics");
+    // Without a short token the personal link keeps the long form.
+    expect(invitationPath(visit, { token: invitation.token })).toBe(`/e/vortex/i/${invitation.token}`);
   });
 
   it("use the short code when the event has one", () => {
