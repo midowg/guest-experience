@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Notice } from "@/components/ui";
-import { ArrowRight, BookOpen, CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Frame, HandHeart, Handshake, HeartHandshake, Image as ImageIcon, Images, Landmark, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Send, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Frame, HandHeart, Handshake, HeartHandshake, Image as ImageIcon, Images, Landmark, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Send, Share2, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
 import { Check, SuggestionChips } from "@/components/admin/editor/controls";
 import { chipLabel, fieldExamples, fieldPattern, fieldSuggestions, fillSuggestion } from "@/components/admin/editor/suggestions";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
@@ -43,7 +43,8 @@ import e from "./editor.module.css";
 import n from "./block-numbers.module.css";
 import { BlockChips } from "@/components/admin/editor/BlockChips";
 import { PhonePreview, type PreviewDevice } from "@/components/admin/editor/PhonePreview";
-import { areaOfBlock, blockForArea, phaseOfBlock } from "@/lib/live-preview";
+import { areaOfBlock, blockForArea, phaseOfBlock, type PreviewArea } from "@/lib/live-preview";
+import { translationGaps } from "@/lib/wording/localize";
 import { absolute, adminApi, eventPath } from "@/lib/routes";
 
 
@@ -80,7 +81,11 @@ function useWideScreen() {
  * that this event does not use is not offered at all; one it already uses stays visible with a
  * note, may be switched off, and cannot come back (the server checks the same rule on save).
  */
-export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false, origin = "", staff = [], posterDesigns = [], previewSrc, dangerZone }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean; origin?: string; staff?: StaffMember[]; posterDesigns?: PosterDesign[]; previewSrc?: string; dangerZone?: ReactNode }) {
+/**
+ * `photoCount` (visits) labels Foto kunjungan in the menu; `previewGuest` is the first guest on the
+ * personal-link list, so the preview of a personal link greets a real name.
+ */
+export function EventEditor({ event: initialEvent, disabledModules = [], superAdmin = false, origin = "", staff = [], posterDesigns = [], previewSrc, dangerZone, photoCount, previewGuest }: { event: EventRecord; disabledModules?: AdminModule[]; superAdmin?: boolean; origin?: string; staff?: StaffMember[]; posterDesigns?: PosterDesign[]; previewSrc?: string; dangerZone?: ReactNode; photoCount?: number; previewGuest?: string }) {
   const unavailable = (key: AdminModule) => disabledModules.includes(key) && !moduleActive(initialEvent, key);
   const restricted = (key: AdminModule) => disabledModules.includes(key) && moduleActive(initialEvent, key);
   // Kind, audience, and theme come from the template; only the super admin changes them (meeting of 20 Oct).
@@ -115,6 +120,11 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const [view, setView] = useState<"form" | "preview">("form");
   // The phone is what most guests see; the web view is a second look.
   const [device, setDevice] = useState<PreviewDevice>("mobile");
+  // Kunjungan Kantor (board 12): the preview shows the general or a personal link, the form and
+  // preview read Indonesian or English together, and the field being typed is framed in the preview.
+  const [personalPreview, setPersonalPreview] = useState(initialEvent.invitation_mode === "personal");
+  const [lang, setLang] = useState<"id" | "en">("id");
+  const [highlight, setHighlight] = useState<{ area: PreviewArea; label: string; field?: string } | null>(null);
   // The block menu: a drawer behind ☰ on phone and tablet, a sidebar that ☰ hides on a wide screen.
   const wide = useWideScreen();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -266,7 +276,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     };
   }
   function block(id: string, title: string, children: ReactNode) {
-    if (open !== id) return null;
+    // While a visit's screen is read in English, its English texts stand in for the form.
+    if (open !== id || english) return null;
     const stage = editorBlocks.find(item => item.id === id)?.stage ?? "prep";
     return <section id={id} data-block={id} className={`${styles.block} ${styles[`stage_${stage}`]}`} aria-label={title}>
       {blockSwitch(id)?.on === false && <p className={e.offNote}>Bagian ini belum tampil untuk tamu. Isi dulu, lalu nyalakan switch di kanan atas.</p>}
@@ -312,11 +323,41 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     const Icon = blockIcons[item.id] ?? FileText;
     const status = statuses[item.id];
     const number = numberOf.get(item.id);
-    return <li key={item.id}><button type="button" onClick={() => openBlock(item.id)} aria-current={open === item.id ? "true" : undefined}>
+    const toggle = blockSwitch(item.id);
+    // A visit names what is missing ("Perlu diisi") and counts the photos, and its optional screens switch on and off from the list.
+    const todo = status === "todo" || status === "error";
+    const label = visit && todo ? "Perlu diisi" : visit && item.id === "photos" && photoCount !== undefined ? `${photoCount} foto` : null;
+    return <li key={item.id} className={visit && toggle ? e.menuRow : undefined}><button type="button" onClick={() => openBlock(item.id)} aria-current={open === item.id ? "true" : undefined}>
       {number ? <b className={n.menuNumber} aria-hidden="true">{number}</b> : <Icon size={16} aria-hidden="true" />}<span>{item.title}</span>
-      {blockSwitch(item.id)?.on && <span className={e.onBadge} title={visit ? "Tampil ke tamu" : "Tampil di undangan"}>Aktif</span>}
-      {(status === "todo" || status === "error" || status === "dirty") && <span className={`${e.dot} ${e[`dot_${status}`]}`} title={blockStatusLabels[status]} />}
-    </button></li>;
+      {!visit && toggle?.on && <span className={e.onBadge} title="Tampil di undangan">Aktif</span>}
+      {label ? <span className={`${e.menuLabel} ${todo ? e.menuLabelTodo : ""}`.trimEnd()}>{label}</span>
+        : (todo || status === "dirty") && <span className={`${e.dot} ${e[`dot_${status}`]}`} title={blockStatusLabels[status]} />}
+    </button>
+    {visit && toggle && <input type="checkbox" role="switch" className={e.menuSwitch} checked={toggle.on} disabled={pending || (!toggle.on && restrictedBlock(item.id))} onChange={change => toggle.set(change.target.checked)} aria-label={`Tampilkan ${item.title} ke tamu`} />}
+    </li>;
+  }
+  // "Bagikan tautan" waits until publishing would accept the page (board 12).
+  const guestLink = absolute(origin, eventPath(event));
+  async function shareLink() {
+    const note = event.status === "published" ? "" : " Tamu baru bisa membukanya setelah halaman diterbitkan.";
+    try {
+      if (typeof navigator.share === "function" && !wide) { await navigator.share({ title: event.title, url: guestLink }); return; }
+      await navigator.clipboard.writeText(guestLink);
+      setMessage(`Tautan tamu disalin: ${guestLink}.${note}`);
+    } catch { setMessage(`Tautan tamu: ${guestLink}.${note}`); }
+  }
+  // "Isi dalam Indonesia / English": the open screen's English texts, with how many are still empty.
+  const ownText = (path: string) => blockOfPath(path, kind) === open;
+  const bilingual = visit && event.language !== "id" && open !== "language" && open !== "publication" && open !== "delete";
+  const englishGaps = bilingual ? translationGaps(event, ownText) : { total: 0, missing: 0 };
+  const english = bilingual && lang === "en";
+  /** The field the admin is in: its part of the preview gets a blue frame with the field's name. */
+  function track(focus: React.FocusEvent<HTMLElement>) {
+    if (!visit) return;
+    const area = areaOfBlock(open, kind);
+    const id = (focus.target as HTMLElement).id;
+    const label = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`)?.textContent?.trim() : undefined;
+    setHighlight(area ? { area, label: label || openTitle, field: id || undefined } : null);
   }
   const kit: EditorKit = { event, update, errors, control, text, time, toggle, choices, tz, unavailable, sectionUnavailable, origin, staff, posterDesigns, superAdmin };
   return <form className={`${styles.form} ${e.editor}`} onSubmit={save} noValidate aria-busy={pending}>
@@ -341,6 +382,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
         <button type="button" aria-pressed={view === "form"} aria-label="Isi" onClick={() => setView("form")}><Pencil size={15} aria-hidden="true" /> <span className={e.btnText}>Isi</span></button>
         <button type="button" aria-pressed={view === "preview"} aria-label="Lihat" onClick={() => setView("preview")}><Smartphone size={15} aria-hidden="true" /> <span className={e.btnText}>Lihat</span></button>
       </div>}
+      {visit && <Button type="button" variant="secondary" className={e.shareButton} onClick={shareLink} disabled={publishIssues.length > 0} title={publishIssues.length > 0 ? "Lengkapi dulu bagian bertanda Perlu diisi" : guestLink}><Share2 size={16} aria-hidden="true" /> <span className={e.btnText}>Bagikan tautan</span></Button>}
       <span className={`${e.saveState} ${dirty ? e.saveStateDirty : ""}`.trimEnd()} role="status">{dirty ? <><CircleDot size={16} aria-hidden="true" /> {dirtyBlocks.size > 1 ? `${dirtyBlocks.size} bagian belum disimpan` : "Ada perubahan yang belum disimpan"}</> : <><CircleCheck size={16} aria-hidden="true" /> Semua perubahan tersimpan</>}</span>
       <Button type="submit" variant={dirty ? "primary" : "secondary"} className={e.saveButton} disabled={pending} aria-label={event.status === "published" ? "Simpan & publikasikan" : "Simpan perubahan"}>
         {pending ? "Menyimpan…" : dirty ? <><Save size={17} aria-hidden="true" /> Simpan{event.status === "published" && <span className={e.wideOnly}>&nbsp;&amp; publikasikan</span>}</> : <><CircleCheck size={17} aria-hidden="true" /> <span className={e.btnText}>Tersimpan</span></>}
@@ -390,8 +432,19 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
           })()}
         </header>
     {open === "delete" ? <div className={e.formBody}>{dangerZone}</div> :
-    <fieldset disabled={pending} className={`${styles.fieldset} ${e.formBody}`}>
-      {visit ? <>
+    <fieldset disabled={pending} className={`${styles.fieldset} ${e.formBody}`} onFocus={track} onBlur={() => setHighlight(null)}>
+      {bilingual && <div className={e.langTabs} role="group" aria-label="Isi dalam">
+        <span>Isi dalam</span>
+        <div className={e.langSwitch}>
+          <button type="button" aria-pressed={lang === "id"} onClick={() => setLang("id")}>Indonesia</button>
+          <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")}>English</button>
+        </div>
+        {englishGaps.missing > 0 && <span className={e.langGap}>{englishGaps.missing} kosong</span>}
+      </div>}
+      {english ? (englishGaps.total > 0
+        ? <><p className="field-hint">Kolom English yang kosong memakai teks Indonesia di halaman tamu.</p><TranslationBlock event={event} update={update} control={control} only={ownText} /></>
+        : <p className="field-hint">Layar ini belum punya teks untuk diterjemahkan. Isi dulu dalam Bahasa Indonesia.</p>)
+      : visit ? <>
         {block("identity", "Info kunjungan", <VisitInfoBlock kit={kit} onTimezone={changeTimezone} />)}
         {block("hero", "Sambutan", <VisitWelcomeBlock kit={kit} />)}
         {block("topics", "Tentang kunjungan", <VisitAboutBlock kit={kit} />)}
@@ -441,7 +494,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
     </fieldset>}
       </section>
       {!card && <aside className={e.previewPane} aria-label="Pratinjau undangan">
-        <PhonePreview event={event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open, kind)} onFocusArea={area => { const target = blockForArea(area, kind); openBlock(blocks.some(item => item.id === target) ? target : guide ? "guide" : target); }} src={previewSrc} />
+        <PhonePreview event={english ? { ...event, language: "en" } : event} phase={phase} onPhase={setPhase} device={device} onDevice={setDevice} address={absolute(origin, eventPath(event)).replace(/^https?:\/\//, "")} focus={areaOfBlock(open, kind)} onFocusArea={area => { const target = blockForArea(area, kind); openBlock(blocks.some(item => item.id === target) ? target : guide ? "guide" : target); }} src={previewSrc}
+          link={visit ? { personal: personalPreview, guestName: previewGuest || "Bapak/Ibu Tamu", onPersonal: setPersonalPreview } : undefined} highlight={visit ? highlight : null} hidden={visit && blockSwitch(open)?.on === false} />
       </aside>}
     </div>
   </form>;

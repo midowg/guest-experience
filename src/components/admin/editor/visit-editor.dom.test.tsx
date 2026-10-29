@@ -33,7 +33,8 @@ it("numbers the screens, marks the optional ones, and walks on with Lanjut", () 
   render(<EventEditor event={visit()} />);
   openBlock("Rundown");
   expect(screen.getByText(/Sebelum kunjungan · Layar 5 dari 10 · Opsional/i)).toBeTruthy();
-  expect(screen.getByRole("switch", { name: "Tampilkan Rundown ke tamu" })).toBeTruthy();
+  // One switch in the list, one beside the screen's title.
+  expect(screen.getAllByRole("switch", { name: "Tampilkan Rundown ke tamu" })).toHaveLength(2);
   fireEvent.click(screen.getByRole("button", { name: /Lanjut: Hari H/ }));
   expect(screen.getByRole("heading", { level: 2, name: "Hari H" })).toBeTruthy();
 });
@@ -61,4 +62,32 @@ it("adds Info kedatangan in Cara datang by hand; the office's example belongs to
   expect((screen.getByRole("textbox", { name: "Judul" }) as HTMLInputElement).value).toBe("Lobi");
   fireEvent.click(screen.getByRole("button", { name: "Hapus info 1" }));
   expect(screen.queryByRole("textbox", { name: "Judul" })).toBeNull();
+});
+
+it("switches an optional screen off from the list and says so above the preview", () => {
+  render(<EventEditor event={visit()} />);
+  openBlock("Rundown");
+  const [listSwitch] = screen.getAllByRole("switch", { name: "Tampilkan Rundown ke tamu" }) as HTMLInputElement[];
+  fireEvent.click(listSwitch);
+  expect(listSwitch.checked).toBe(false);
+  expect(screen.getByText("Disembunyikan dari tamu")).toBeTruthy();
+});
+
+it("labels the screens still missing something, and holds Bagikan tautan until they are filled", () => {
+  render(<EventEditor event={{ ...visit(), organizer: "", introduction: "" }} photoCount={3} />);
+  expect(within(editorMenu()).getAllByText("Perlu diisi").length).toBeGreaterThan(0);
+  expect(within(editorMenu()).getByText("3 foto")).toBeTruthy();
+  expect((screen.getByRole("button", { name: /Bagikan tautan/ }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it("fills a bilingual screen in English beside its Indonesian, counting the empty texts", () => {
+  render(<EventEditor event={{ ...visit(), language: "id_en", greeting: "Selamat datang", subtitle: "Kami senang Anda berkunjung." }} />);
+  openBlock("Sambutan");
+  expect(screen.getByText("2 kosong")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "English" }));
+  expect(screen.queryByRole("textbox", { name: "Judul sambutan" })).toBeNull();
+  fireEvent.change(screen.getByRole("textbox", { name: "Sapaan (English)" }), { target: { value: "Welcome" } });
+  expect(screen.getByText("1 kosong")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Indonesia" }));
+  expect(screen.getByRole("textbox", { name: "Judul sambutan" })).toBeTruthy();
 });

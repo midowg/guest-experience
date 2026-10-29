@@ -7,8 +7,12 @@ import type { EventPhase, EventRecord, SectionKey } from "./types";
 export type PreviewArea = SectionKey | "hero" | "day" | "after";
 export type PreviewMessage =
   | { type: "preview:ready" }
-  | { type: "preview:update"; event: EventRecord; phase: EventPhase }
+  // `guest` previews a personal link: the page greets that name.
+  | { type: "preview:update"; event: EventRecord; phase: EventPhase; guest?: string }
   | { type: "preview:scroll"; area: PreviewArea }
+  // The part being typed in gets a blue frame with the field's name; null removes it.
+  // `field` frames that one text where the page marks it (data-preview-field), else the whole part.
+  | { type: "preview:highlight"; area: PreviewArea | null; label?: string; field?: string }
   | { type: "preview:focus"; area: PreviewArea };
 
 /** Which editor block edits each part of the guest page. */

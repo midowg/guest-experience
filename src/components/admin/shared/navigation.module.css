@@ -21,6 +21,8 @@
 .tabs a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 38px; padding: 0 var(--space-4); border-radius: 9px; color: var(--color-text); font-weight: 700; text-decoration: none; }
 .tabs a:hover { background: var(--page); }
 .tabs a[aria-current="page"] { background: var(--blue); color: #fff; }
+.badge { padding: 0 7px; border-radius: 999px; background: var(--page); color: #4a5060; font-size: .75rem; font-weight: 800; line-height: 1.5; }
+.tabs a[aria-current="page"] .badge { background: rgba(255, 255, 255, .22); color: #fff; }
 @media (max-width: 42rem) {
   .bar:has(.tabs) { gap: var(--space-2); }
   .tabs { display: flex; width: 100%; }

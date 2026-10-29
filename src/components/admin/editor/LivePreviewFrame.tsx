@@ -26,6 +26,10 @@ class Boundary extends Component<{ children: ReactNode; attempt: number }, { fai
   }
 }
 
+/** The element that shows a part of the guest page. */
+const elementOf = (area: PreviewArea): Element | null => area === "hero" ? document.querySelector("[data-invitation-hero]") : area === "day" ? document.querySelector("[data-today-panel]") : area === "after" ? document.querySelector("[data-after-panel]") : document.getElementById(area);
+const HIGHLIGHT = "data-preview-highlight";
+
 const areaOf = (target: Element): PreviewArea | null => {
   if (target.closest("[data-invitation-hero]")) return "hero";
   if (target.closest("[data-today-panel]")) return "day";
@@ -40,18 +44,20 @@ const areaOf = (target: Element): PreviewArea | null => {
  * the editor which block to open; links never leave the preview.
  */
 export function LivePreviewFrame() {
-  const [draft, setDraft] = useState<{ event: EventRecord; phase: EventPhase; version: number } | null>(null);
+  const [draft, setDraft] = useState<{ event: EventRecord; phase: EventPhase; guest?: string; version: number } | null>(null);
+  const [highlight, setHighlight] = useState<{ area: PreviewArea; label: string; field?: string } | null>(null);
   useEffect(() => {
     const send = (message: PreviewMessage) => parent.postMessage(message, location.origin);
     const receive = (message: MessageEvent) => {
       if (message.origin !== location.origin || message.source !== parent || parent === window || !isPreviewMessage(message.data)) return;
       const data = message.data;
-      if (data.type === "preview:update") setDraft(current => ({ event: normalizeEvent(prepareEvent(data.event)), phase: data.phase, version: (current?.version ?? 0) + 1 }));
+      if (data.type === "preview:update") setDraft(current => ({ event: normalizeEvent(prepareEvent(data.event)), phase: data.phase, guest: data.guest, version: (current?.version ?? 0) + 1 }));
+      if (data.type === "preview:highlight") setHighlight(data.area ? { area: data.area, label: data.label ?? "", field: data.field } : null);
       if (data.type === "preview:scroll") {
         // An office visit shows one screen at a time: switch to the part's screen first.
         window.dispatchEvent(new CustomEvent(VISIT_AREA_EVENT, { detail: data.area }));
         requestAnimationFrame(() => {
-          const target = data.area === "hero" ? document.querySelector("[data-invitation-hero]") : data.area === "day" ? document.querySelector("[data-today-panel]") : data.area === "after" ? document.querySelector("[data-after-panel]") : document.getElementById(data.area);
+          const target = elementOf(data.area);
           // scrollIntoView would also scroll the editor page around the frame; move this window only.
           if (target) window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 8, behavior: "smooth" });
         });
@@ -72,11 +78,22 @@ export function LivePreviewFrame() {
     send({ type: "preview:ready" });
     return () => { window.removeEventListener("message", receive); document.removeEventListener("click", click, true); };
   }, []);
+  // The frame is an attribute on the part itself, set again after every render (a visit swaps its screens).
+  useEffect(() => {
+    document.querySelectorAll(`[${HIGHLIGHT}]`).forEach(node => node.removeAttribute(HIGHLIGHT));
+    if (!highlight) return;
+    const own = highlight.field ? document.querySelector(`[data-preview-field~="${CSS.escape(highlight.field)}"]`) : null;
+    (own ?? elementOf(highlight.area))?.setAttribute(HIGHLIGHT, "");
+  }, [highlight, draft]);
   if (!draft) return <p style={{ padding: 24, fontFamily: "var(--font-body)", color: "#5b6476" }}>Menyiapkan pratinjau…</p>;
   // An E-Guide is a book, not an invitation: the preview shows the reader the guest gets.
   return <Boundary attempt={draft.version}>{draft.event.event_kind === "eguide" ? <GuidePage event={draft.event} />
     // The editor previews the page as donors see it before anything is confirmed; the form only pretends to send.
     : draft.event.event_kind === "panduan" ? <PlaceGuide event={draft.event} />
     : draft.event.event_kind === "csr" ? <CsrExperience event={draft.event} preview view={{ totals: donationTotals(draft.event.donation, []), donors: [], ready: true }} />
-    : <EventExperience event={draft.event} phase={draft.phase} preview previewNotice={false} />}</Boundary>;
+    : <EventExperience event={draft.event} phase={draft.phase} preview previewNotice={false} invitation={draft.guest ? { name: draft.guest, token: "pratinjau", rsvp: null, party_size_max: 1 } : undefined} />}
+    {highlight && <>
+      <style>{`[${HIGHLIGHT}] { outline: 3px solid #2563eb; outline-offset: -3px; }`}</style>
+      {highlight.label && <p role="status" style={{ position: "fixed", top: 8, left: 8, zIndex: 50, margin: 0, padding: "4px 10px", borderRadius: 6, background: "#2563eb", color: "#fff", font: "600 13px/1.4 var(--font-body, sans-serif)", pointerEvents: "none" }}>{highlight.label}</p>}
+    </>}</Boundary>;
 }

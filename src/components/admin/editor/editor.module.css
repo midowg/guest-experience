@@ -68,6 +68,7 @@
 .saveStateDirty { color: #b45309; }
 @media (max-width: 71.99rem) { .saveState { flex: 0 1 auto; } }
 .saveButton { flex-shrink: 0; margin-left: auto; }
+.shareButton { flex-shrink: 0; }
 @media (max-width: 47.99rem) { .saveState, .wideOnly { display: none; } }
 .picker select { flex: 1; min-width: 0; min-height: 44px; font-weight: 700; }
 .viewSwitch { display: none; padding: 3px; border-radius: 999px; background: var(--page); border: 1px solid var(--line); }
@@ -132,6 +133,25 @@
 .offNote { margin: 0; padding: var(--space-2) var(--space-3); border-radius: 10px; background: #fff7e6; color: #8a5a00; font-size: .875rem; }
 .onBadge { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; background: #e3f5ea; color: #1d7a47; font-size: .6875rem; font-weight: 800; }
 .menu button[aria-current="true"] .onBadge { background: rgba(255, 255, 255, .22); color: #fff; }
+/* Kunjungan Kantor's list: a label for what is missing or counted, and a small switch for optional screens. */
+.menuLabel { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; background: var(--page); color: #5b6476; font-size: .6875rem; font-weight: 800; }
+.menuLabelTodo { background: #fff4e5; color: #8a4b00; }
+.menu button[aria-current="true"] .menuLabel { background: rgba(255, 255, 255, .22); color: #fff; }
+.menuRow { display: flex; align-items: center; gap: 6px; }
+.menuRow > button { flex: 1; min-width: 0; }
+.menuSwitch { appearance: none; position: relative; flex-shrink: 0; width: 34px; height: 20px; margin: 0 4px 0 0; border-radius: 999px; background: #c4cad6; cursor: pointer; transition: background .15s; }
+.menuSwitch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s; }
+.menuSwitch:checked { background: #208650; }
+.menuSwitch:checked::after { transform: translateX(14px); }
+.menuSwitch:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.menuSwitch:disabled { opacity: .5; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .menuSwitch, .menuSwitch::after { transition: none; } }
+/* "Isi dalam Indonesia | English · 2 kosong" above a bilingual visit's screen. */
+.langTabs { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: .875rem; font-weight: 700; color: #4a5060; }
+.langSwitch { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--page); border: 1px solid var(--line); }
+.langSwitch button { min-height: 32px; padding: 0 var(--space-3); border: 0; border-radius: 999px; background: transparent; font: inherit; color: #4a5060; cursor: pointer; }
+.langSwitch button[aria-pressed="true"] { background: var(--color-text); color: #fff; }
+.langGap { padding: 1px 8px; border-radius: 999px; background: #fff4e5; color: #8a4b00; font-size: .75rem; }
 @media (max-width: 30rem) { .blockSwitch > span { display: none; } .blockSwitch { padding: 4px; } }
 
 /* Web preview: a browser window, and more room for it */
@@ -144,6 +164,11 @@
 .browserDots i { width: 12px; height: 12px; border-radius: 50%; background: #c9ced8; }
 .browserAddress { flex: 1; max-width: 560px; margin: 0 auto; padding: 5px 14px; border-radius: 999px; background: #fff; color: #4a5060; font-size: 14px; text-align: center; }
 .preview > .previewHint { justify-self: center; }
+.previewHidden { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: #fff4e5; color: #8a4b00; font-weight: 700; }
+.fullButton { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: 999px; background: #fff; font: inherit; font-size: .8125rem; font-weight: 700; color: #4a5060; cursor: pointer; }
+/* Layar penuh: the preview alone, on a calm background, the phone as tall as the screen allows. */
+.preview[data-full] { align-content: start; padding: var(--space-4); background: #eef0f4; overflow: auto; }
+.preview[data-full] .phoneStage { height: calc(100vh - 8rem); }
 .phoneStage { justify-self: stretch; }
 
 /* Phone toolbar, one row: the part to edit takes the room; Isi | Lihat and Simpan are icons
@@ -153,7 +178,7 @@
   .picker select { min-height: 42px; }
   .viewSwitch button { padding: 0 10px; }
   .btnText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  .saveButton { min-height: 42px; padding-inline: var(--space-3); }
+  .saveButton, .shareButton { min-height: 42px; padding-inline: var(--space-3); }
 }
 
 /* A card (event_kind "kartu") has no phone preview: menu and form only. */

@@ -194,9 +194,9 @@ function VisitBody({ event, preview = false, invitation, phase = "before", rsvpN
     {phase === "day" && <TodayPanel event={event} invitee={invitation?.name} now={now} />}
     <div className={styles.body}>
       {phase !== "day" && <>
-        <h1 id="event-title" className={styles.title} ref={screen === "beranda" ? heading : undefined} tabIndex={-1}>{invitation ? v("home.hello", { name: invitation.name }) : event.greeting || v("home.welcome")}</h1>
-        <p className={styles.eventName}>{event.title}</p>
-        <p className={`${styles.lead} ${guest.multiline}`}>{event.subtitle || v("home.lead")}</p>
+        <h1 id="event-title" className={styles.title} ref={screen === "beranda" ? heading : undefined} tabIndex={-1} data-preview-field="greeting">{invitation ? v("home.hello", { name: invitation.name }) : event.greeting || v("home.welcome")}</h1>
+        <p className={styles.eventName} data-preview-field="title">{event.title}</p>
+        <p className={`${styles.lead} ${guest.multiline}`} data-preview-field="subtitle">{event.subtitle || v("home.lead")}</p>
         <Facts event={event} />
       </>}
       <section id="rsvp" className={styles.confirm} aria-label={t("section.rsvp.title")}>{confirmation()}</section>
@@ -276,7 +276,7 @@ function Cover({ event, lang, onLang }: { event: EventRecord; lang: Lang; onLang
 
 function Facts({ event }: { event: EventRecord }) {
   const { t, date } = useWording();
-  return <dl className={styles.facts}>
+  return <dl className={styles.facts} data-preview-field="starts_at ends_at timezone venue_name address">
     <div><dt className="sr-only">{t("hero.date")}</dt><dd><CalendarDays size={18} aria-hidden="true" /> {event.starts_at ? date(event.starts_at, event.timezone) : t("hero.date.empty")}</dd></div>
     <div><dt className="sr-only">{t("hero.time")}</dt><dd><Clock3 size={18} aria-hidden="true" /> <span><TimeRange start={event.starts_at} end={event.ends_at} timezone={event.timezone} /></span></dd></div>
     <div><dt className="sr-only">{t("hero.place")}</dt><dd><MapPin size={18} aria-hidden="true" /> <span>{event.venue_name || t("hero.place.empty")}{event.address && <span className={styles.factAddress}>{event.address}</span>}</span></dd></div>

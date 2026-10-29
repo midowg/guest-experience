@@ -50,49 +50,50 @@ function GuideTranslation({ guide, onChange, control }: { guide: GuideSettings; 
   </fieldset>;
 }
 
-/** Language choice plus every English text, listed only where the Indonesian text exists. */
-export function TranslationBlock({ event, update, control }: { event: EventRecord; update: Update; control: Control }) {
+/**
+ * Language choice plus every English text, listed only where the Indonesian text exists. `only`
+ * keeps the texts of some event fields and drops the language choice: Kunjungan Kantor shows each
+ * screen's English beside its Indonesian ("Isi dalam: English").
+ */
+export function TranslationBlock({ event, update, control, only }: { event: EventRecord; update: Update; control: Control; only?: (path: string) => boolean }) {
   const en = event.translations.en;
   const setEn = <K extends keyof EnglishContent>(key: K, value: EnglishContent[K]) => update("translations", { ...event.translations, en: { ...en, [key]: value } });
   const gaps = translationGaps(event);
-  const fields = translatableFields.filter(field => field.source(event).trim());
+  const has = only ?? (() => true);
+  const fields = translatableFields.filter(field => has(field.path) && field.source(event).trim());
   const groups = [...new Set(fields.map(field => field.group))];
   const pairFields = (name: string, label: string, source: TextPair, english: TextPair | undefined, onChange: (patch: Partial<TextPair>) => void, max: [number, number]) => <div className={styles.item} key={name}>
     <h4>{label}</h4>
     {source.title && control(`${name}.title`, "Judul (English)", english?.title ?? "", title => onChange({ title }), { maxLength: max[0], hint: `ID: ${short(source.title)}` })}
     {source.description && control(`${name}.description`, "Keterangan (English)", english?.description ?? "", description => onChange({ description }), { multiline: true, maxLength: max[1], hint: `ID: ${short(source.description)}` })}
   </div>;
-  return <div className="stack">
-    <BlockIntro why="Atur bahasa halaman tamu. Teks sistem (tombol, label, pesan) sudah tersedia dalam dua bahasa dari kamus wording; di sini Anda menerjemahkan isi acara. Teks yang belum diterjemahkan tetap tampil dalam Bahasa Indonesia dengan catatan kecil." who="panitia atau penerjemah" />
-    <ChoiceCards name="language" legend="Bahasa halaman tamu" current={event.language} onPick={value => update("language", value)} options={languageOptions.map(option => ({ ...option, icon: Languages }))} />
-    {event.language !== "id" && <>
-      <p className={styles.translationProgress} role="status">{gaps.total === 0 ? "Belum ada teks acara yang perlu diterjemahkan." : `${gaps.total - gaps.missing} dari ${gaps.total} teks sudah diterjemahkan.`}</p>
+  const texts = <>
       {groups.map(group => <fieldset key={group} className={styles.translationGroup}>
         <legend>{group}</legend>
         {fields.filter(field => field.group === group).map(field => <div key={field.key}>
           {control(`translations.en.${field.key}`, `${field.label} (English)`, en[field.key], value => setEn(field.key, value), { multiline: field.multiline, maxLength: field.max, hint: `ID: ${short(field.source(event))}` })}
         </div>)}
       </fieldset>)}
-      {event.topics.length > 0 && <fieldset className={styles.translationGroup}><legend>Topik pembahasan</legend>
+      {has("topics") && event.topics.length > 0 && <fieldset className={styles.translationGroup}><legend>Topik pembahasan</legend>
         {event.topics.map((topic, index) => pairFields(`topics.${index}.en`, `Topik ${index + 1}`, topic, topic.en, patch =>
           update("topics", event.topics.map((item, i) => i === index ? { ...item, en: { ...emptyPair, ...item.en, ...patch } } : item)), [200, 1500]))}
       </fieldset>}
-      {event.agenda.length > 0 && <fieldset className={styles.translationGroup}><legend>Rundown</legend>
+      {has("agenda") && event.agenda.length > 0 && <fieldset className={styles.translationGroup}><legend>Rundown</legend>
         {event.agenda.map((item, index) => pairFields(`translations.en.agenda.${item.id}`, `Sesi ${index + 1}`, item, en.agenda[item.id], patch =>
           setEn("agenda", { ...en.agenda, [item.id]: { ...emptyPair, ...en.agenda[item.id], ...patch } }), [200, 1500]))}
       </fieldset>}
-      {event.experience.moments.length > 0 && <fieldset className={styles.translationGroup}><legend>Momen pengalaman</legend>
+      {has("experience") && event.experience.moments.length > 0 && <fieldset className={styles.translationGroup}><legend>Momen pengalaman</legend>
         {event.experience.moments.map((moment, index) => pairFields(`experience.moments.${index}.en`, `Momen ${index + 1}`, moment, moment.en, patch =>
           update("experience", { ...event.experience, moments: event.experience.moments.map((item, i) => i === index ? { ...item, en: { ...emptyPair, ...item.en, ...patch } } : item) }), [150, 300]))}
       </fieldset>}
-      {(event.route.steps.length > 0 || (event.route.points ?? []).length > 0) && <fieldset className={styles.translationGroup}><legend>Cara datang</legend>
+      {has("route") && (event.route.steps.length > 0 || (event.route.points ?? []).length > 0) && <fieldset className={styles.translationGroup}><legend>Cara datang</legend>
         {event.route.steps.map((step, index) => pairFields(`route.steps.${index}.en`, `Langkah ${index + 1}`, step, step.en, patch =>
           update("route", { ...event.route, steps: event.route.steps.map((item, i) => i === index ? { ...item, en: { ...emptyPair, ...item.en, ...patch } } : item) }), [150, 500]))}
         {(event.route.points ?? []).map((point, index) => pairFields(`route.points.${index}.en`, `Info kedatangan ${index + 1}`, point, point.en, patch =>
           update("route", { ...event.route, points: event.route.points.map((item, i) => i === index ? { ...item, en: { ...emptyPair, ...item.en, ...patch } } : item) }), [120, 300]))}
       </fieldset>}
-      {event.event_kind === "eguide" && <GuideTranslation guide={event.guide} onChange={guide => update("guide", guide)} control={control} />}
-      {event.prepare.items.length > 0 && <fieldset className={styles.translationGroup}><legend>Kartu persiapan</legend>
+      {has("guide") && event.event_kind === "eguide" && <GuideTranslation guide={event.guide} onChange={guide => update("guide", guide)} control={control} />}
+      {has("prepare") && event.prepare.items.length > 0 && <fieldset className={styles.translationGroup}><legend>Kartu persiapan</legend>
         {event.prepare.items.map((item, index) => {
           const setItem = (patch: Partial<TextPair & { list: string[] }>) => update("prepare", { ...event.prepare, items: event.prepare.items.map((card, i) => i === index ? { ...card, en: { ...emptyPair, list: [], ...card.en, ...patch } } : card) });
           return <div key={index}>
@@ -101,6 +102,14 @@ export function TranslationBlock({ event, update, control }: { event: EventRecor
           </div>;
         })}
       </fieldset>}
+  </>;
+  if (only) return <div className="stack">{texts}</div>;
+  return <div className="stack">
+    <BlockIntro why="Atur bahasa halaman tamu. Teks sistem (tombol, label, pesan) sudah tersedia dalam dua bahasa dari kamus wording; di sini Anda menerjemahkan isi acara. Teks yang belum diterjemahkan tetap tampil dalam Bahasa Indonesia dengan catatan kecil." who="panitia atau penerjemah" />
+    <ChoiceCards name="language" legend="Bahasa halaman tamu" current={event.language} onPick={value => update("language", value)} options={languageOptions.map(option => ({ ...option, icon: Languages }))} />
+    {event.language !== "id" && <>
+      <p className={styles.translationProgress} role="status">{gaps.total === 0 ? "Belum ada teks acara yang perlu diterjemahkan." : `${gaps.total - gaps.missing} dari ${gaps.total} teks sudah diterjemahkan.`}</p>
+      {texts}
     </>}
   </div>;
 }

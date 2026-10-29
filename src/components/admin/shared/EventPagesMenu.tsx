@@ -5,7 +5,7 @@ import { Check, ChevronDown, ClipboardCheck, ExternalLink, HandHeart, Images, Ma
 import type { AdminTab } from "@/lib/routes";
 import nav from "./navigation.module.css";
 
-export type EventPage = { tab: AdminTab; label: string; href: string };
+export type EventPage = { tab: AdminTab; label: string; href: string; badge?: string };
 const icons: Partial<Record<AdminTab, LucideIcon>> = {
   edit: Pencil, invitations: Mail, responses: ClipboardCheck, checkin: ScanLine, beo: UtensilsCrossed, gallery: Images, feedback: MessageSquare, donations: HandHeart, "donations-split": Split,
 };
@@ -36,7 +36,7 @@ export function EventPagesMenu({ groups, current, publicHref, publicLabel = "Buk
   if (inline) return <nav className={nav.bar} aria-label="Pengelolaan acara">
     <ul className={nav.tabs}>{pages.map(page => {
       const PageIcon = icons[page.tab] ?? Pencil;
-      return <li key={page.tab}><a href={page.href} aria-current={page.tab === current ? "page" : undefined}><PageIcon size={16} aria-hidden="true" /> {page.label}</a></li>;
+      return <li key={page.tab}><a href={page.href} aria-current={page.tab === current ? "page" : undefined}><PageIcon size={16} aria-hidden="true" /> {page.label}{page.badge && <span className={nav.badge}>{page.badge}</span>}</a></li>;
     })}</ul>
     {publicLink}
   </nav>;

@@ -9,6 +9,18 @@ import styles from "@/components/admin/admin.module.css";
 import { EventPagesMenu } from "./EventPagesMenu";
 import shell from "./shell.module.css";
 import { adminEventPath, eventPath, type AdminTab } from "@/lib/routes";
+import { listRsvps } from "@/lib/server/responses";
+import { getBeo } from "@/lib/server/beo";
+import { beoStatusLabels } from "@/lib/beo";
+
+/** Kunjungan Kantor's tabs carry their numbers (board 12): confirmed guests and the BEO's status. Missing data leaves a tab plain. */
+async function visitBadges(eventId: string): Promise<{ guests?: string; beo?: string }> {
+  const [guests, beo] = await Promise.allSettled([listRsvps(eventId, { page: 1, attendance: "yes" }), getBeo(eventId)]);
+  return {
+    guests: guests.status === "fulfilled" && guests.value.total > 0 ? String(guests.value.total) : undefined,
+    beo: beo.status === "fulfilled" && beo.value.migrated ? beoStatusLabels[beo.value.state.status] : undefined,
+  };
+}
 
 /** `bare` drops the signed-in links, for the login and setup screens. */
 /** `wide` gives pages with a side preview (the editor) more room than the usual reading width. */
@@ -42,8 +54,8 @@ export function SetupNotice() {
   </section>;
 }
 /** The event's pages behind one dropdown, grouped; "Semua acara" is in the header, the live preview in the editor. */
-export function EventNavigation({ event, current }: { event: EventRecord; current: AdminTab }) {
-  const page = (tab: AdminTab, label: string) => ({ tab, label, href: adminEventPath(event, tab) });
+export async function EventNavigation({ event, current }: { event: EventRecord; current: AdminTab }) {
+  const page = (tab: AdminTab, label: string, badge?: string) => ({ tab, label, href: adminEventPath(event, tab), badge });
   const publicHref = event.status === "published" ? eventPath(event) : undefined;
   // A card has no guests, RSVP or operations: its editor is all there is.
   if (event.event_kind === "kartu") return <EventPagesMenu current={current} publicHref={publicHref} groups={[{ label: "Edit", pages: [page("edit", "Edit kartu")] }]} />;
@@ -53,12 +65,15 @@ export function EventNavigation({ event, current }: { event: EventRecord; curren
   if (event.event_kind === "panduan") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka panduan" groups={[{ label: "Edit", pages: [page("edit", "Edit panduan")] }]} />;
   // A CSR page takes donations, not guests: its editor and the donation desk.
   if (event.event_kind === "csr") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka halaman donasi" inline groups={[{ label: "Edit", pages: [page("edit", "Edit halaman")] }, { label: "Donasi", pages: [page("donations", "Donasi masuk"), page("donations-split", "Pembagian")] }]} />;
-  // An office visit (board 12): its page, its guests and confirmations, then the team's own pages. No tickets, so no check-in.
-  if (event.event_kind === "kunjungan") return <EventPagesMenu current={current} publicHref={publicHref} publicLabel="Buka halaman tamu" groups={[
-    { label: "Edit", pages: [page("edit", "Isi halaman")] },
-    { label: "Tamu", pages: [page("responses", "Tamu & konfirmasi"), ...(event.invitation_mode === "personal" ? [page("invitations", "Tautan pribadi")] : [])] },
-    { label: "Operasional", pages: [page("beo", "BEO"), page("gallery", "Foto"), page("feedback", "Survei")] },
-  ]} />;
+  // An office visit (board 12): its pages side by side as tabs, with the confirmed guests and the BEO's status. No tickets, so no check-in.
+  if (event.event_kind === "kunjungan") {
+    const badges = await visitBadges(event.id);
+    return <EventPagesMenu inline current={current} publicHref={publicHref} publicLabel="Buka halaman tamu" groups={[
+      { label: "Edit", pages: [page("edit", "Isi halaman")] },
+      { label: "Tamu", pages: [page("responses", "Tamu & konfirmasi", badges.guests), ...(event.invitation_mode === "personal" ? [page("invitations", "Tautan pribadi")] : [])] },
+      { label: "Operasional", pages: [page("beo", "BEO", badges.beo), page("gallery", "Foto"), page("feedback", "Survei")] },
+    ]} />;
+  }
   return <EventPagesMenu current={current} publicHref={publicHref} groups={[
     { label: "Edit", pages: [page("edit", "Edit acara")] },
     { label: "Tamu", pages: [page("invitations", "Daftar tamu"), page("responses", "RSVP"), page("checkin", "Check-in")] },
