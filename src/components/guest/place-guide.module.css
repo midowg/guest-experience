@@ -217,7 +217,7 @@
 .page[data-theme="resort"] .ptIc { background: none; border: 1px solid var(--accent); color: var(--accent); }
 /* Buttons: thin outline or navy, small capitals in the sans; links in italic serif, underlined. */
 .page[data-theme="resort"] .btnOutline, .page[data-theme="resort"] .btnSolid { min-height: 50px; padding: 0 20px; font-size: 0.875rem; letter-spacing: 0.08em; white-space: nowrap; }
-.page[data-theme="resort"] .btnOutline { width: auto; border-color: var(--ink); color: var(--ink); }
+.page[data-theme="resort"] .btnOutline { width: auto; align-self: center; border-color: var(--ink); color: var(--ink); }
 .page[data-theme="resort"] .btnOutline:hover { background: var(--ink); color: #fff; }
 .page[data-theme="resort"] .textBtn { font-family: var(--font-display); font-style: italic; font-size: 1.25rem; color: var(--ink); letter-spacing: 0; }
 .page[data-theme="resort"] .nav a { font-family: var(--font-sans); }
