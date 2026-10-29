@@ -77,9 +77,10 @@ describe("Figma SVG import", () => {
     expect(byKey.foto_utama).toMatchObject({ kind: "photo", radius: 0 });
     expect(byKey.foto_utama.box.post).toEqual({ x: 0, y: 215, w: 1080, h: 660 });
     expect(byKey.foto_fasilitator.radius).toBe(500);
-    // Text boxes leave the background; photo shapes and fixed text stay in it.
+    // Text boxes leave the background, and so do photo boxes (each is a slot, gone under the guest's photo); fixed text stays.
     expect(result.background).not.toContain("isi_judul");
-    expect(result.background).toContain("foto_utama");
+    expect(result.background).not.toContain("foto_utama");
+    expect(result.parts.find(part => part.key === "foto_utama")?.slot).toContain('id="foto_utama"');
     expect(result.background).toContain("BERSAMA");
     expect(result.notes.join(" ")).toMatch(/belum di-outline/);
   });
@@ -138,7 +139,9 @@ describe("Figma SVG import", () => {
     const result = readFigmaSvg(marked, measure);
     expect(result.parts).toHaveLength(1);
     const [part] = result.parts;
-    expect(part).toMatchObject({ key: "foto_utama", slot: null });
+    expect(part.key).toBe("foto_utama");
+    // The box itself is the slot: shown while empty, gone under the guest's photo.
+    expect(part.slot).toMatch(/id="foto_utama"(?![^>]*visibility)/);
     // The icon and its label show in the part, the rest of the design is hidden there.
     expect(part.art).toMatch(/id="ikon"(?![^>]*visibility)/);
     expect(part.art).toMatch(/id="tulisan"(?![^>]*visibility)/);
@@ -149,7 +152,7 @@ describe("Figma SVG import", () => {
     expect(part.art).toMatch(/id="pita"[^>]*visibility="hidden"/);
     expect(result.overlay).toMatch(/id="pita"(?![^>]*visibility)/);
     expect(result.overlay).not.toContain('id="ikon"');
-    expect(result.background).toContain('id="foto_utama"');
+    expect(result.background).not.toContain('id="foto_utama"');
     expect(result.notes.join(" ")).toMatch(/unggah foto/);
   });
 
@@ -172,9 +175,9 @@ describe("Figma SVG import", () => {
     expect(result.background).not.toContain("foto_logo_opsional");
     expect(result.background).not.toContain('id="bingkai"');
     expect(result.overlay).toBeNull();
-    // A photo that must be filled keeps its shape in the background and has no part.
-    expect(result.background).toContain('id="foto_utama"');
-    expect(result.parts.some(part => part.key === "foto_utama")).toBe(false);
+    // A photo that must be filled is a slot too, so a transparent PNG does not show its box through.
+    expect(result.background).not.toContain('id="foto_utama"');
+    expect(result.parts.find(part => part.key === "foto_utama")?.slot).toMatch(/id="foto_utama"(?![^>]*visibility)/);
     expect(result.notes.join(" ")).toMatch(/1 kolom opsional/);
   });
 
@@ -459,7 +462,9 @@ describe("stacked items (a side panel of small headings, each over its value)", 
     expect(result.parts.find(part => part.key === "persiapan")).toMatchObject({ art: null, slot: null });
     // The headings and dividers leave the design; the panel behind them all, and the rest, stay.
     for (const id of ["judul1", "garis1", "judul2", "judul3", "garis_akhir"]) expect(result.background).not.toContain(`id="${id}"`);
-    for (const id of ["dasar", "panel", "kaki", "foto_utama"]) expect(result.background).toContain(`id="${id}"`);
+    for (const id of ["dasar", "panel", "kaki"]) expect(result.background).toContain(`id="${id}"`);
+    // The photo box is a slot, not background.
+    expect(result.background).not.toContain('id="foto_utama"');
     expect(result.overlay).toBeNull();
     expect(result.notes.join(" ")).toMatch(/3 kolom bersusun/);
   });

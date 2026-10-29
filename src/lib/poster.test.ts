@@ -91,7 +91,11 @@ describe("poster data", () => {
     // A locked optional box shows when the admin gave it text.
     expect(slotShows({ ...note, editable: false, value: "Gratis" }, empty, false)).toBe(true);
     expect(slotShows(logo, empty, false)).toBe(false);
-    expect(slotShows(logo, { text: {}, photos: { foto_logo: { url: "https://cdn.example/logo.webp", frame: { x: 50, y: 50, zoom: 1 } } } }, false)).toBe(true);
+    // An uploaded photo replaces its placeholder box, so a transparent PNG does not show the box through.
+    const uploaded = { text: {}, photos: { foto_logo: { url: "https://cdn.example/logo.webp", frame: { x: 50, y: 50, zoom: 1 } } } };
+    expect(slotShows(logo, uploaded, false)).toBe(false);
+    expect(slotShows({ ...logo, optional: false }, uploaded, true)).toBe(false);
+    expect(slotShows({ ...logo, optional: false }, empty, false)).toBe(true);
     // On screen, while the box still shows its hint, its slot shows too.
     expect(slotShows(note, empty, true)).toBe(true);
     expect(slotShows(logo, empty, true)).toBe(true);
