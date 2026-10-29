@@ -76,6 +76,22 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
   // Panduan lokasi has its own place: its fixed address, apart from the events (Rapat Panitia, visits…).
   const guides = events.filter(event => event.event_kind === "panduan");
   const listed = events.filter(event => event.event_kind !== "panduan");
+  // The events by where they stand: on air first (today, then the coming ones by date, then the
+  // finished ones), then drafts, then the archive, folded away.
+  const time = (event: EventRecord) => event.starts_at ? Date.parse(event.starts_at) : Infinity;
+  const phaseOrder: Record<EventPhase, number> = { day: 0, before: 1, after: 2 };
+  const onAir = listed.filter(event => event.status === "published").sort((a, b) => {
+    const pa = phaseOrder[phases[a.id] ?? "before"], pb = phaseOrder[phases[b.id] ?? "before"];
+    if (pa !== pb) return pa - pb;
+    return pa === 2 ? time(b) - time(a) : time(a) - time(b);
+  });
+  const drafts = listed.filter(event => event.status === "draft");
+  const archived = listed.filter(event => event.status === "archived");
+  const group = (id: string, title: string, items: EventRecord[], hint: string) => items.length > 0 && <section className="stack" aria-labelledby={id}>
+    <h2 id={id} className={styles.groupTitle}>{title} <span>{items.length}</span></h2>
+    <p className="field-hint">{hint}</p>
+    <ul className={styles.eventList}>{items.map(card)}</ul>
+  </section>;
   const card = (event: EventRecord) => {
     const badge = stageBadge(event, phases[event.id]);
     const live = event.id === featured && event.status === "published";
@@ -93,7 +109,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
         <details className={styles.cardMenu} data-card-menu>
           <summary aria-label={`Aksi lain untuk ${event.title}`}><MoreHorizontal size={18} aria-hidden="true" /></summary>
           <div className={styles.cardMenuList} role="group" aria-label={`Aksi lain untuk ${event.title}`}>
-            {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> {event.event_kind === "eguide" ? "Lihat E-Guide" : event.event_kind === "panduan" ? "Lihat panduan" : "Lihat undangan"}<span className="sr-only"> (tab baru)</span></a>}
+            {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> {event.event_kind === "eguide" ? "Lihat E-Guide" : event.event_kind === "panduan" ? "Lihat panduan" : event.event_kind === "kunjungan" ? "Lihat halaman tamu" : "Lihat undangan"}<span className="sr-only"> (tab baru)</span></a>}
             <button type="button" disabled={!!busy} onClick={() => duplicate(event.id)}><Copy size={16} aria-hidden="true" /> {busy === event.id ? "Menyalin…" : "Duplikasi"}</button>
             {event.status === "published" && !live && <button type="button" disabled={!!busy} onClick={() => setHomepage(event)}><Star size={16} aria-hidden="true" /> Tayangkan di halaman utama</button>}
             {live && <button type="button" disabled={!!busy} onClick={() => setHomepage(null)}><StarOff size={16} aria-hidden="true" /> Turunkan dari halaman utama</button>}
@@ -114,9 +130,15 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
     {!listed.length ? <div className={styles.emptyList}>
       <p>Belum ada acara.</p>
       <Button type="button" onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" /> Buat acara pertama</Button>
-    </div> : <ul className={styles.eventList}>
-      {listed.map(card)}
-    </ul>}
+    </div> : <>
+      {group("group-live", "Tayang", onAir, "Sudah terbit dan bisa dibuka tamu lewat tautannya: hari ini dulu, lalu yang akan datang, lalu yang sudah selesai.")}
+      {group("group-draft", "Draf", drafts, "Belum terbit. Tamu belum bisa membukanya.")}
+      {archived.length > 0 && <details className={styles.groupArchive}>
+        <summary><span className={styles.groupTitle}>Arsip <span>{archived.length}</span></span></summary>
+        <p className="field-hint">Acara yang disimpan untuk catatan. Tamu tidak bisa membukanya lagi.</p>
+        <ul className={styles.eventList}>{archived.map(card)}</ul>
+      </details>}
+    </>}
     {guides.length > 0 && <section className="stack" aria-labelledby="guides-title">
       <h2 id="guides-title" className={styles.listTitle}><MapPinned size={22} aria-hidden="true" /> Your Visit <span>{guides.length}</span></h2>
       <p className="field-hint">Panduan lokasi untuk umum, di alamat tetap <strong>{PLACE_GUIDE_PATH}</strong>. Terpisah dari acara dan kunjungan; yang tayang adalah panduan terbaru yang terbit.</p>

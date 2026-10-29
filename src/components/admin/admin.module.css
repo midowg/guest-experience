@@ -530,6 +530,12 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .listHeader { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .listTitle { margin: 0; font-size: 1.75rem; color: var(--color-text); }
 .listTitle span { margin-left: var(--space-2); padding: 0 var(--space-2); border-radius: 999px; background: var(--st-settings-bg); color: var(--st-settings); font-size: .9375rem; vertical-align: middle; }
+/* Semua acara, grouped: Tayang, Draf, then the archive folded away. */
+.groupTitle { margin: var(--space-2) 0 0; font-size: 1.25rem; color: var(--color-text); }
+.groupTitle span { margin-left: var(--space-2); padding: 0 var(--space-2); border-radius: 999px; background: var(--st-settings-bg); color: var(--st-settings); font-size: .875rem; vertical-align: middle; }
+.groupArchive { display: grid; gap: var(--space-3); }
+.groupArchive > summary { cursor: pointer; list-style-position: outside; }
+.groupArchive[open] > summary { margin-bottom: var(--space-2); }
 .emptyList { display: grid; justify-items: start; gap: var(--space-3); padding: var(--space-6); border: 1px dashed #c4cad6; border-radius: 14px; background: #fff; }
 .emptyList p { margin: 0; color: var(--ink-soft); }
 .eventCard { position: relative; gap: var(--space-2); padding: var(--space-4) var(--space-5); }

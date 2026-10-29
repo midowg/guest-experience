@@ -16,6 +16,7 @@ export default function DevEventListPage() {
     event(2, { title: "Contoh Trip Lombok bersama Mitra", status: "published", event_kind: "program", starts_at: "2026-10-21T08:00:00+08:00", timezone: "Asia/Makassar" }),
     event(3, { title: "Contoh Kunjungan Tim Kreatif", status: "draft", event_kind: "kunjungan", starts_at: "2026-12-01T10:00:00+07:00" }),
     event(4, { title: "Contoh Kunjungan Bulan Lalu", status: "published", event_kind: "kunjungan", starts_at: "2026-09-15T10:00:00+07:00" }),
+    event(5, { title: "Contoh Gala Dinner 2025", status: "archived", event_kind: "acara", starts_at: "2025-12-12T19:00:00+07:00" }),
   ];
   return <AdminShell bare><EventList events={events} featuredId={events[0].id} phases={{ [events[1].id]: "day", [events[3].id]: "after" }} templates={["kunjungan-klien", "trip-klien"]} /></AdminShell>;
 }

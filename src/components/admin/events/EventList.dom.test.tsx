@@ -92,3 +92,15 @@ it("closes an open card menu on a click elsewhere or Escape", () => {
   fireEvent.keyDown(document, { key: "Escape" });
   expect(details.open).toBe(false);
 });
+
+it("groups the events as Tayang, Draf and a folded Arsip, today's and coming ones first", () => {
+  const done = { ...second, id: "10f3a511-2331-4000-8000-000000000004", title: "Acara Selesai", slug: "acara-selesai" };
+  const archived = { ...createSeedEvent(), id: "10f3a511-2331-4000-8000-000000000005", status: "archived" as const, title: "Acara Lama", slug: "acara-lama" };
+  render(<EventList events={[done, draft, archived, first]} featuredId={null} phases={{ [done.id]: "after", [first.id]: "day" }} />);
+  const live = screen.getByRole("region", { name: /^Tayang/ });
+  expect(within(live).getAllByRole("heading", { level: 2 }).slice(1).map(heading => heading.textContent)).toEqual(["Acara A", "Acara Selesai"]);
+  expect(within(screen.getByRole("region", { name: /^Draf/ })).getByRole("link", { name: "Acara Draf" })).toBeTruthy();
+  const archive = card("Acara Lama").closest("details")!;
+  expect(archive.open).toBe(false);
+  expect(archive.querySelector("summary")?.textContent).toBe("Arsip 1");
+});
