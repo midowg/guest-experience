@@ -227,3 +227,10 @@
   .page[data-theme="resort"] .sec > * { max-width: 44rem; }
   .page[data-theme="resort"] .sec > .gallery { max-width: 1128px; }
 }
+
+/* Resort with the title on the cover: no bar over the photo at first. The bar floats above the page
+   and slides in once the guest scrolls; the cover takes the whole screen. */
+.page[data-cover] .bar { position: fixed; top: 0; left: 0; right: 0; padding-top: env(safe-area-inset-top, 0px); transition: transform 0.3s ease, opacity 0.3s ease; }
+.page[data-cover] .bar[data-hidden] { transform: translateY(-100%); opacity: 0; }
+.page[data-theme="resort"][data-cover] .heroImg { height: 100svh; }
+@media (prefers-reduced-motion: reduce) { .page[data-cover] .bar { transition: none; } }

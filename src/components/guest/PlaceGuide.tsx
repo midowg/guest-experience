@@ -40,6 +40,14 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
   const { event } = useMemo(() => localizeEvent(source, lang), [source, lang]);
   const w = (key: PlaceGuideKey, values?: Record<string, string>) => placeGuideText(lang, key, values);
   const [menu, setMenu] = useState(false);
+  // Resort's cover fills the screen with no bar on it; the bar slides in once the guest scrolls.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const check = () => setScrolled(window.scrollY > 24);
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    return () => window.removeEventListener("scroll", check);
+  }, []);
   const [viewing, setViewing] = useState<Viewing | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -65,8 +73,9 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
   const titleOnPhoto = theme === "resort" && !!event.hero.url;
   const nav = [["welcome", w("welcome")], ["getting-here", w("gettingHere")], ...(gallery.length || galleryText.length ? [["gallery", w("gallery")]] : [])];
 
-  return <div className={`${styles.page} ${garamond.variable} ${jost.variable}`} data-theme={theme} lang={lang}>
-    <header className={`${styles.bar} ${menu ? styles.open : ""}`.trimEnd()}>
+  const barHidden = titleOnPhoto && !scrolled && !menu;
+  return <div className={`${styles.page} ${garamond.variable} ${jost.variable}`} data-theme={theme} data-cover={titleOnPhoto || undefined} lang={lang}>
+    <header className={`${styles.bar} ${menu ? styles.open : ""}`.trimEnd()} data-hidden={barHidden || undefined} inert={barHidden || undefined}>
       <div className={styles.barIn}>
         {/* eslint-disable-next-line @next/next/no-img-element -- a fixed asset beside the static guide */}
         <a className={styles.brand} href="#welcome" aria-label={w("brand")} onClick={() => setMenu(false)}><img src={LOGO} alt="Werkudara" width={186} height={220} /></a>
