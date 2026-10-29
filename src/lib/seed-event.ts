@@ -34,7 +34,7 @@ export function createSeedEvent(): EventRecord {
     hero: { url: "", alt: "", srcset: [], focus: "center", text_position: "left" }, gallery: [],
     event_kind: "acara", audience: "external", theme: { key: "werkudara", corners: "square" }, phase_override: "auto",
     experience: { title: "", story: "", image: { url: "", alt: "", srcset: [] }, moments: [] },
-    route: { map_image: { url: "", alt: "", srcset: [] }, steps: [], points: [] }, day_note: "",
+    route: { map_image: { url: "", alt: "", srcset: [] }, steps: [], points: [] }, day_note: "", day_enabled: true,
     after: { title: "", message: "", image: { url: "", alt: "", srcset: [] }, collaboration: { enabled: false, title: "", description: "", button_label: "" } },
     prepare: { title: "", intro: "", items: [] },
     language: "id",

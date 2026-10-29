@@ -59,10 +59,12 @@ export function VisitExperience({ event: source, ...props }: ExperienceProps) {
   </WordingProvider>;
 }
 
-function VisitBody({ event, preview = false, invitation, phase = "before", rsvpNeeds = true, openPartyMax = 1, photoCount = 0, previewNotice = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
+function VisitBody({ event, preview = false, invitation, phase: journeyPhase = "before", rsvpNeeds = true, openPartyMax = 1, photoCount = 0, previewNotice = true, fallback, onLang }: ExperienceProps & { fallback: boolean; onLang?: (lang: Lang) => void }) {
   const { lang, t, dateTime } = useWording();
   const v = (key: VisitKey, vars?: Record<string, string | number>) => visitText(lang, key, vars);
   useGuestPage(event, preview, invitation);
+  // With Hari H switched off, the day itself shows the welcome screens like the days before.
+  const phase = journeyPhase === "day" && event.day_enabled === false ? "before" : journeyPhase;
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     const refresh = () => setNow(Date.now());

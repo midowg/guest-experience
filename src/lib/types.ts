@@ -96,7 +96,9 @@ export type EventRecord = {
   venue_image_url: string; venue_image_alt: string; venue_image_credit: string;
   hero: HeroImage; gallery: GalleryImage[];
   event_kind: EventKind; audience: EventAudience; theme: EventTheme; phase_override: PhaseOverride;
-  experience: EventExperienceContent; route: RouteGuide; day_note: string; after: AfterContent; prepare: PrepareContent; language: EventLanguage; translations: EventTranslations; guest_estimate: number | null;
+  experience: EventExperienceContent; route: RouteGuide; day_note: string;
+  /** Kunjungan Kantor: false keeps the guest on the welcome screens on the day itself, without the Hari H panel. */
+  day_enabled: boolean; after: AfterContent; prepare: PrepareContent; language: EventLanguage; translations: EventTranslations; guest_estimate: number | null;
   agenda_details: Record<string, AgendaDetail>; presentation_pdf_url: string; emergency: EmergencyContact;
   /** Studio Poster: the template guests fill in to make their own poster. */
   poster: PosterSettings;

@@ -255,6 +255,7 @@ export const eventBaseSchema = z.object({
   experience: experienceSchema.default(emptyExperience),
   route: routeSchema.default(emptyRoute),
   day_note: text(1000).default(""),
+  day_enabled: z.boolean().default(true),
   after: afterSchema.default(emptyAfter),
   prepare: prepareSchema.default(emptyPrepare),
   language: z.enum(["id", "en", "id_en"]).default("id"),

@@ -151,3 +151,12 @@ it("opens Cara datang on a photo of the place when there is no route map", () =>
   expect(within(page).getByAltText("Lobi kantor").closest("figure")).toBeTruthy();
   expect(within(page).queryByRole("list", { name: "Saat tiba" })).toBeNull();
 });
+
+it("keeps the welcome screens on the day itself when Hari H is switched off", () => {
+  const { container, unmount } = render(<EventExperience event={visit()} phase="day" />);
+  expect(container.querySelector("[data-today-panel]")).not.toBeNull();
+  unmount();
+  const off = render(<EventExperience event={visit({ day_enabled: false })} phase="day" />);
+  expect(off.container.querySelector("[data-today-panel]")).toBeNull();
+  expect(screen.getByRole("heading", { level: 1, name: "Selamat datang di Werkudara" })).toBeTruthy();
+});

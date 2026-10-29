@@ -91,3 +91,14 @@ it("fills a bilingual screen in English beside its Indonesian, counting the empt
   fireEvent.click(screen.getByRole("button", { name: "Indonesia" }));
   expect(screen.getByRole("textbox", { name: "Judul sambutan" })).toBeTruthy();
 });
+
+it("switches Hari H off like the other optional screens, and the numbering skips it", () => {
+  render(<EventEditor event={visit()} />);
+  openBlock("Hari H");
+  expect(screen.getByText(/Layar 6 dari 10 · Opsional/)).toBeTruthy();
+  const [listSwitch] = screen.getAllByRole("switch", { name: "Tampilkan Hari H ke tamu" }) as HTMLInputElement[];
+  fireEvent.click(listSwitch);
+  expect(listSwitch.checked).toBe(false);
+  openBlock("Kenali Tim Werkudara");
+  expect(screen.getByText(/Layar 6 dari 9 · Opsional/)).toBeTruthy();
+});

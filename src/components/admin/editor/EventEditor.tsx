@@ -243,7 +243,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   function blockSwitch(id: string): { on: boolean; set: (on: boolean) => void } | null {
     // Every part of a Panduan lokasi shows once it has content.
     if (place) return null;
-    // A visit's optional screens are Rundown and Kenali Tim; any other screen shows its switch only while off, to bring it back.
+    // A visit's optional screens are Rundown, Hari H and Kenali Tim; any other screen shows its switch only while off, to bring it back.
+    if (visit && id === "day") return { on: event.day_enabled !== false, set: on => update("day_enabled", on) };
     if (visit && id !== "agenda" && id !== "team") {
       const own = sectionSwitch(id);
       return own && !own.on ? own : null;
