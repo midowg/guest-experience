@@ -166,3 +166,64 @@
 @media (prefers-reduced-motion: reduce) {
   .btnSolid, .btnOutline, .picWa { transition: none; }
 }
+
+/* The cover photo, and in the Resort theme the title written on it. */
+.hero { position: relative; }
+.first { scroll-margin-top: calc(var(--bar) + 8px); }
+.heroText { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: var(--gutter); text-align: center; background: linear-gradient(rgba(2, 16, 42, 0.12), rgba(2, 16, 42, 0.5)); }
+.page[data-theme] .heroText h1, .page[data-theme] .heroText .sub { color: #fff; text-shadow: 0 1px 18px rgba(0, 0, 0, 0.25); }
+.heroDown { position: absolute; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); display: grid; place-items: center; width: 48px; height: 48px; color: #fff; }
+
+/*
+ * Resort: the same content in the manner of a resort's own pages. The cover photo fills the screen
+ * with the title on it; titles in a light, high-contrast serif (not capitals), reading text in a clean
+ * sans; one centred column; white and ivory sections; navy ink with a warm taupe for details.
+ */
+.page[data-theme="resort"] {
+  --ground: #FFFFFF; --ground-veil: rgba(255, 255, 255, 0.95); --soft: #F8F6F0; --soft-veil: rgba(248, 246, 240, 0.95);
+  --ink: #02102A; --muted: #4F5666; --line: #D9DBDF; --blue: #02102A; --blue-deep: #000814; --accent: #B5A191;
+  --font-display: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-sans: var(--font-jost), Jost, "Helvetica Neue", Arial, sans-serif;
+  --font-body: var(--font-sans);
+  font-size: 1.0625rem; line-height: 1.7; letter-spacing: 0.02em;
+}
+.page[data-theme="resort"] h1, .page[data-theme="resort"] h2 { font-weight: 500; letter-spacing: 0; word-spacing: 0; text-transform: none; color: var(--ink); line-height: 1.08; }
+.page[data-theme="resort"] h1 { font-size: clamp(2.5rem, 11vw, 4.6rem); }
+.page[data-theme="resort"] h2 { font-size: clamp(2.2rem, 9vw, 3.4rem); }
+.page[data-theme="resort"] .sub { margin-top: 0.6rem; font-size: 1.35rem; color: var(--muted); }
+.page[data-theme="resort"] .lead { font-family: var(--font-display); font-size: 1.75rem; line-height: 1.25; }
+.page[data-theme="resort"] .label { color: var(--accent); font-family: var(--font-sans); letter-spacing: 0.14em; }
+/* The cover fills the screen under the bar. */
+.page[data-theme="resort"] .heroImg { aspect-ratio: auto; height: calc(100svh - var(--bar)); min-height: 420px; max-height: none; object-position: 50% 50%; }
+/* One centred column: titles, text and buttons on the axis; lists keep their text to the left. */
+.page[data-theme="resort"] .sec { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; row-gap: 28px; }
+.page[data-theme="resort"] .sec > * { grid-column: 1; grid-row: auto; position: static; width: 100%; max-width: 40rem; }
+.page[data-theme="resort"] .body { align-items: center; margin-inline: auto; }
+.page[data-theme="resort"] .details { justify-content: center; }
+.page[data-theme="resort"] .steps, .page[data-theme="resort"] .points, .page[data-theme="resort"] .pic { width: 100%; text-align: left; }
+.page[data-theme="resort"] .sec > .gallery { max-width: none; }
+/* Getting Here on ivory, the other sections on white. */
+.page[data-theme="resort"] .gettingHere { background: var(--soft); }
+.page[data-theme="resort"] .gettingHere .mapsBar { width: auto; max-width: none; justify-self: stretch; margin-inline: calc(var(--gutter) * -1); background: var(--soft-veil); }
+.page[data-theme="resort"] .mapsBar .btnSolid { margin: 0 auto; }
+/* Steps as an open list with fine rules and taupe serif numerals, not boxed cards. */
+.page[data-theme="resort"] .steps { gap: 0; }
+.page[data-theme="resort"] .steps li { padding: 20px 0; background: none; border: 0; border-top: 1px solid var(--line); }
+.page[data-theme="resort"] .steps li:last-child { border-bottom: 1px solid var(--line); }
+.page[data-theme="resort"] .num { width: 36px; height: auto; background: none; color: var(--accent); font-family: var(--font-display); font-size: 2rem; font-weight: 500; line-height: 1; }
+.page[data-theme="resort"] .stepT, .page[data-theme="resort"] .ptT, .page[data-theme="resort"] .picT { font-family: var(--font-display); font-size: 1.45rem; font-weight: 500; line-height: 1.2; }
+.page[data-theme="resort"] .pic { background: #fff; border: 1px solid var(--line); }
+.page[data-theme="resort"] .ptIc { background: none; border: 1px solid var(--accent); color: var(--accent); }
+/* Buttons: thin outline or navy, small capitals in the sans; links in italic serif, underlined. */
+.page[data-theme="resort"] .btnOutline, .page[data-theme="resort"] .btnSolid { min-height: 50px; padding: 0 20px; font-size: 0.875rem; letter-spacing: 0.08em; white-space: nowrap; }
+.page[data-theme="resort"] .btnOutline { width: auto; border-color: var(--ink); color: var(--ink); }
+.page[data-theme="resort"] .btnOutline:hover { background: var(--ink); color: #fff; }
+.page[data-theme="resort"] .textBtn { font-family: var(--font-display); font-style: italic; font-size: 1.25rem; color: var(--ink); letter-spacing: 0; }
+.page[data-theme="resort"] .nav a { font-family: var(--font-sans); }
+@media (min-width: 900px) {
+  .page[data-theme="resort"] { font-size: 1.125rem; }
+  .page[data-theme="resort"] .sec { padding-block: 88px; }
+  .page[data-theme="resort"] .sec > * { max-width: 44rem; }
+  .page[data-theme="resort"] .sec > .gallery { max-width: 1128px; }
+}

@@ -12,7 +12,7 @@ const words = {
     lost: "Tersesat? Tanya kami", whatsapp: "WhatsApp {name} (tab baru)", call: "Telepon {name}", points: "Saat tiba",
     maps: "BUKA GOOGLE MAPS", galleryAria: "Galeri foto", photoOpen: "Perbesar foto: {alt}",
     mapTitle: "PETA AKSES", photoTitle: "FOTO", close: "Tutup", swipeMap: "Geser untuk melihat seluruh peta.", swipePhoto: "Geser untuk melihat seluruh foto.",
-    embedTitle: "Peta lokasi {place}", toRoute: "LIHAT CARA KE SINI",
+    embedTitle: "Peta lokasi {place}", toRoute: "LIHAT CARA KE SINI", toWelcome: "Gulir ke sambutan",
   },
   en: {
     nav: "Guide sections", brand: "Back to the top", langGroup: "Choose a language", menu: "MENU",
@@ -21,7 +21,7 @@ const words = {
     lost: "Lost? Ask us", whatsapp: "WhatsApp {name} (new tab)", call: "Call {name}", points: "When you arrive",
     maps: "OPEN GOOGLE MAPS", galleryAria: "Photo gallery", photoOpen: "Enlarge photo: {alt}",
     mapTitle: "ROUTE MAP", photoTitle: "PHOTO", close: "Close", swipeMap: "Swipe to see the whole map.", swipePhoto: "Swipe to see the whole photo.",
-    embedTitle: "Map of {place}", toRoute: "SEE HOW TO GET HERE",
+    embedTitle: "Map of {place}", toRoute: "SEE HOW TO GET HERE", toWelcome: "Scroll to the welcome",
   },
 } as const;
 

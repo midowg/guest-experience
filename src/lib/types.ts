@@ -37,6 +37,8 @@ export type HeroImage = { url: string; alt: string; srcset: ImageSource[]; focus
  */
 export type EventKind = "kunjungan" | "acara" | "program" | "kartu" | "eguide" | "csr" | "panduan";
 export type EventAudience = "external" | "internal";
+/** The look of a Panduan lokasi; its content is the same in every one. */
+export type PlaceTheme = "werkudara" | "resort";
 export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah" | "berbagi";
 export type EventTheme = { key: ThemeKey; corners: "square" | "soft" };
 export type EventPhase = "before" | "day" | "after";
@@ -98,6 +100,8 @@ export type EventRecord = {
   agenda_details: Record<string, AgendaDetail>; presentation_pdf_url: string; emergency: EmergencyContact;
   /** Studio Poster: the template guests fill in to make their own poster. */
   poster: PosterSettings;
+  /** Panduan lokasi: its look (event_kind "panduan"); absent before the theme existed, read as "werkudara". */
+  place_theme?: PlaceTheme;
   /** E-Guide: the guidebook's cover, chapters and order (event_kind "eguide"). */
   guide: GuideSettings;
   /** CSR: what people may give, how to pay, what the page shows, and the handover news (event_kind "csr"). */

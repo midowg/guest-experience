@@ -263,6 +263,7 @@ export const eventBaseSchema = z.object({
   presentation_pdf_url: httpsUrl.default(""),
   emergency: emergencySchema.default(emptyEmergency),
   poster: posterSchema.default(() => posterSchema.parse({})),
+  place_theme: z.enum(["werkudara", "resort"]).default("werkudara"),
   guide: guideSchema.default(emptyGuide),
   donation: donationSchema.default(emptyDonation),
   translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),

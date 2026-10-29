@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { ArrowDown, Info, MessageCircle, Phone } from "lucide-react";
+import { ArrowDown, ChevronDown, Info, MessageCircle, Phone } from "lucide-react";
 import { parseLocationEmbed } from "@/lib/location-embed";
 import { defaultPhotoRatio, placeCity } from "@/lib/place-guide";
 import type { EventRecord, GalleryImage, PlainImage } from "@/lib/types";
@@ -12,7 +12,7 @@ import { imageSrcSet } from "./Gallery";
 import { contactLink } from "./JourneyPanels";
 import { useEventLanguage } from "./language";
 import { arrivalIconComponents } from "./VisitRoute";
-import { garamond } from "./place-guide-font";
+import { cormorant, garamond, jost } from "./place-guide-font";
 import styles from "./place-guide.module.css";
 
 /** The Werkudara mark in the top bar; the page is hosted by Werkudara. */
@@ -29,7 +29,9 @@ function largest(image: PlainImage): string {
  * Panduan lokasi (event_kind "panduan"): the page "Panduan ke Werkudara" built from an event. A
  * welcome over the cover photo, Getting Here (map, address, numbered turns, the host to ask, what
  * to do on arrival, Google Maps held at the bottom of the screen), and a gallery in justified rows.
- * Empty parts are left out; the map and photos open full size in one viewer.
+ * Empty parts are left out; the map and photos open full size in one viewer. The theme changes the
+ * look only: "werkudara" (the original guide) or "resort" (the cover photo full screen with the title
+ * on it, a light serif and a clean sans, centred text, white and ivory sections).
  */
 export function PlaceGuide({ event: source }: { event: EventRecord }) {
   const [lang, setLang] = useEventLanguage(source.language);
@@ -56,9 +58,12 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
   const city = placeCity(event.address);
   const addressLines = event.address.split("\n").map(line => line.trim()).filter(Boolean);
   const openMap = () => setViewing({ image: route.map_image, title: w("mapTitle"), mode: "pan", hint: w("swipeMap") });
+  const theme = event.place_theme ?? "werkudara";
+  // Resort puts the title on the cover photo, so the welcome below it starts with the greeting.
+  const titleOnPhoto = theme === "resort" && !!event.hero.url;
   const nav = [["welcome", w("welcome")], ["getting-here", w("gettingHere")], ...(gallery.length || galleryText.length ? [["gallery", w("gallery")]] : [])];
 
-  return <div className={`${styles.page} ${garamond.variable}`} lang={lang}>
+  return <div className={`${styles.page} ${garamond.variable} ${cormorant.variable} ${jost.variable}`} data-theme={theme} lang={lang}>
     <header className={`${styles.bar} ${menu ? styles.open : ""}`.trimEnd()}>
       <div className={styles.barIn}>
         {/* eslint-disable-next-line @next/next/no-img-element -- a fixed asset beside the static guide */}
@@ -80,13 +85,20 @@ export function PlaceGuide({ event: source }: { event: EventRecord }) {
 
     <main>
       <section id="welcome" className={styles.section} aria-labelledby="place-welcome">
-        {/* eslint-disable-next-line @next/next/no-img-element -- stored images with their own srcset */}
-        {event.hero.url && <img className={styles.heroImg} src={event.hero.url} {...imageSrcSet(event.hero.srcset, "100vw")} alt={event.hero.alt} data-focus={event.hero.focus} fetchPriority="high" decoding="async" referrerPolicy="no-referrer" />}
-        <div className={`${styles.wrap} ${styles.sec} ${styles.first}`}>
-          <div className={styles.head}>
+        {event.hero.url && <div className={styles.hero}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- stored images with their own srcset */}
+          <img className={styles.heroImg} src={event.hero.url} {...imageSrcSet(event.hero.srcset, "100vw")} alt={event.hero.alt} data-focus={event.hero.focus} fetchPriority="high" decoding="async" referrerPolicy="no-referrer" />
+          {titleOnPhoto && <div className={styles.heroText}>
             <h1 id="place-welcome">{event.title}</h1>
             {event.subtitle && <p className={styles.sub}>{event.subtitle}</p>}
-          </div>
+            <a className={styles.heroDown} href="#welcome-text" aria-label={w("toWelcome")}><ChevronDown size={30} strokeWidth={1.25} aria-hidden="true" /></a>
+          </div>}
+        </div>}
+        <div id="welcome-text" className={`${styles.wrap} ${styles.sec} ${styles.first}`}>
+          {!titleOnPhoto && <div className={styles.head}>
+            <h1 id="place-welcome">{event.title}</h1>
+            {event.subtitle && <p className={styles.sub}>{event.subtitle}</p>}
+          </div>}
           <div className={styles.body}>
             {event.greeting && <p className={styles.lead}>{event.greeting}</p>}
             {intro.map((part, index) => <p key={index} className={styles.multiline}>{part}</p>)}

@@ -5,7 +5,7 @@ import { moveItem } from "@/components/admin/editor/editor-model";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { PhotoField } from "@/components/admin/shared/PhotoField";
 import { defaultFraming } from "@/lib/hero-framing";
-import type { EventRecord } from "@/lib/types";
+import type { EventRecord, PlaceTheme } from "@/lib/types";
 import { EventLink } from "./EventLink";
 import { PhotoGuide } from "./PhotoGuide";
 import styles from "@/components/admin/admin.module.css";
@@ -15,13 +15,19 @@ import styles from "@/components/admin/admin.module.css";
  * Werkudara", worded for a guide, not an invitation. Getting Here reuses the location blocks.
  */
 
-/** Info halaman: the guide's name, its link, and who hosts it. */
+const themeHints: Record<PlaceTheme, string> = {
+  werkudara: "Gaya panduan asli: judul berhuruf kapital, dua kolom di layar lebar, biru Werkudara.",
+  resort: "Gaya resor: foto sampul selayar penuh dengan judul di atasnya, huruf serif ringan, teks di tengah, bagian putih dan krem.",
+};
+
+/** Info halaman: the guide's name, its link, who hosts it, and its look. */
 export function PlaceInfoBlock({ kit }: { kit: EditorKit }) {
-  const { event, text } = kit;
+  const { event, text, choices, update } = kit;
   return <div className="stack">
     {text("title", "Judul panduan", 180, false, "Tampil besar di sambutan, di tab browser, dan di daftar acara. Contoh: Your Visit to Werkudara.")}
     {event.code && <EventLink event={event} origin={kit.origin} label="Tautan panduan" hint="Alamat tetap, seperti /friday-sharing: selalu membuka panduan terbaru yang terbit. Bagikan ke siapa saja; tidak perlu konfirmasi atau tiket." />}
     {text("organizer", "Tuan rumah", 250, false, "Biasanya Werkudara Group. Wajib sebelum terbit.")}
+    {choices("place_theme", "Tema tampilan", [{ value: "werkudara" as const, label: "Werkudara" }, { value: "resort" as const, label: "Resort" }], event.place_theme ?? "werkudara", value => update("place_theme", value), value => `${themeHints[value]} Isi halaman tetap sama.`)}
   </div>;
 }
 

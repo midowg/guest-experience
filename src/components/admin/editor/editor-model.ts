@@ -199,7 +199,7 @@ const visitFields: Record<string, string> = {
   gallery: "venue", venue_image_url: "venue", venue_image_alt: "venue", venue_image_credit: "venue", sections: "identity",
 };
 /** Panduan lokasi: the welcome's texts sit with the cover photo in Sambutan. */
-const placeFields: Record<string, string> = { subtitle: "hero", greeting: "hero", introduction: "hero", closing: "gallery", sections: "identity" };
+const placeFields: Record<string, string> = { place_theme: "identity", subtitle: "hero", greeting: "hero", introduction: "hero", closing: "gallery", sections: "identity" };
 export function blockOfPath(path: string, kind?: EventRecord["event_kind"]): string {
   const [first, second] = path.split(".");
   if (first === "donation") return donationBlocks[second] ?? "donation-items";

@@ -4,7 +4,7 @@ import { samplePlaceGuide } from "@/app/dev-preview/panduan/sample";
 import { PlaceGuide } from "./PlaceGuide";
 
 // next/font only runs inside Next's compiler.
-vi.mock("./place-guide-font", () => ({ garamond: { variable: "" } }));
+vi.mock("./place-guide-font", () => ({ garamond: { variable: "" }, cormorant: { variable: "" }, jost: { variable: "" } }));
 
 afterEach(() => { cleanup(); window.localStorage.clear(); });
 
@@ -33,4 +33,16 @@ it("leaves out the map, steps and gallery when they are empty", () => {
   expect(screen.queryByRole("button", { name: "Perbesar peta akses" })).toBeNull();
   expect(screen.queryByRole("list", { name: "Langkah menuju lokasi" })).toBeNull();
   expect(screen.queryByRole("heading", { name: "Gallery" })).toBeNull();
+});
+
+it("keeps the same content in the Resort theme, with the title written on the cover photo", () => {
+  const { container } = render(<PlaceGuide event={{ ...samplePlaceGuide(), place_theme: "resort" }} />);
+  expect(container.querySelector("[data-theme]")?.getAttribute("data-theme")).toBe("resort");
+  const title = screen.getByRole("heading", { level: 1, name: "Your Visit to Werkudara" });
+  // The title's block sits right after the cover photo, inside the same frame.
+  expect(title.parentElement?.previousElementSibling?.getAttribute("alt")).toBe("Tampak depan Werkudara Office");
+  expect(screen.getByRole("link", { name: "Gulir ke sambutan" }).getAttribute("href")).toBe("#welcome-text");
+  expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  expect(within(screen.getByRole("list", { name: "Langkah menuju lokasi" })).getAllByRole("listitem")).toHaveLength(3);
+  expect(screen.getByRole("link", { name: "BUKA GOOGLE MAPS" })).toBeTruthy();
 });
