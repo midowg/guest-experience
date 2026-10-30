@@ -1,5 +1,6 @@
 import { emptyGuide } from "./guide";
 import { emptyDonation } from "./donations";
+import { emptyTrip, TRIP_LIMITS, tripModes } from "./trip";
 import { z } from "zod";
 import { EMBED_ERROR, parseLocationEmbed } from "./location-embed";
 import { parseContactPhone } from "./contact-phone";
@@ -43,7 +44,7 @@ export const staffInputSchema = z.object({
 });
 export type StaffInput = z.infer<typeof staffInputSchema>;
 export const momentIcons = ["coffee", "utensils", "gift", "users", "camera", "music", "map", "sparkles", "presentation", "heart"] as const;
-export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar", "rempah", "berbagi"] as const;
+export const themeKeys = ["werkudara", "nenek", "gala", "khidmat", "segar", "rempah", "berbagi", "keraton"] as const;
 const pairSchema = (title = 200, description = 1500) => z.object({ title: text(title).default(""), description: text(description).default("") });
 export const emptyEnglish = {
   title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",
@@ -225,6 +226,32 @@ const guideSchema = z.object({
   order: z.array(z.union([z.object({ kind: z.literal("chapter"), id: z.string().min(1).max(40) }), z.object({ kind: z.literal("part"), part: z.enum(["experience", "agenda", "location", "prepare", "contact"]) })])).max(30).default([]),
 });
 
+/** Client trip handbook (src/lib/trip.ts). Phones may be landlines (hotel, hospital), so only their characters are checked. */
+const tripPhone = text(30).refine(value => !value || /^[+\d\s().-]{6,30}$/.test(value), "Periksa nomor telepon.").default("");
+const tripLines = z.array(text(200).min(1, "Isi atau hapus baris kosong.")).max(TRIP_LIMITS.lines).default([]);
+const tripSchema = z.object({
+  transport: z.object({
+    title: text(200).default(""), intro: text(1000).default(""),
+    legs: z.array(z.object({
+      id: z.string().min(1).max(40), mode: z.enum(tripModes).default("train"),
+      carrier: text(120).min(1, "Isi nama kereta, maskapai, atau kendaraan."), number: text(60).default(""),
+      date: text(80).default(""), from: text(150).default(""), to: text(150).default(""), departs: text(40).default(""), arrives: text(40).default(""),
+      seat: text(300).default(""), meeting_point: text(300).default(""), meeting_time: text(80).default(""), note: text(1000).default(""),
+    })).max(TRIP_LIMITS.legs).default([]),
+  }).default(() => emptyTrip().transport),
+  stay: z.object({
+    title: text(200).default(""), name: text(200).default(""), address: text(500).default(""), maps_url: httpsUrl.default(""), phone: tripPhone,
+    check_in: text(80).default(""), check_out: text(80).default(""), breakfast_place: text(150).default(""), breakfast_time: text(80).default(""),
+    meeting_point: text(200).default(""), note: text(1000).default(""), photos: z.array(plainImage).max(TRIP_LIMITS.photos).default([]),
+  }).default(() => emptyTrip().stay),
+  contacts: z.object({
+    title: text(200).default(""), intro: text(1000).default(""),
+    people: z.array(z.object({ id: z.string().min(1).max(40), role: text(120).default(""), name: text(150).min(1, "Isi nama kontak."), phone: tripPhone })).max(TRIP_LIMITS.people).default([]),
+    hospital: text(200).default(""), hospital_phone: tripPhone, hospital_address: text(500).default(""), hospital_maps_url: httpsUrl.default(""),
+  }).default(() => emptyTrip().contacts),
+  guidelines: z.object({ title: text(200).default(""), intro: text(1000).default(""), weather: text(1000).default(""), dos: tripLines, donts: tripLines }).default(() => emptyTrip().guidelines),
+});
+
 export const eventBaseSchema = z.object({
   id: z.uuid(), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(100),
   status: z.enum(["draft", "published", "archived"]), title: text(180).min(1), subtitle: text(250),
@@ -236,7 +263,7 @@ export const eventBaseSchema = z.object({
   feedback_enabled: z.boolean(), feedback_opens_at: optionalTime, feedback_description: text(1000).default(""),
   contact: contactSchema.default({ name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "", photo: { url: "", alt: "", srcset: [] }, staff_id: "" }),
   team_image: plainImage.default(emptyImage),
-  sections: z.array(z.object({ key: z.enum(["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback", "team"]), enabled: z.boolean() })).max(9),
+  sections: z.array(z.object({ key: z.enum(["about", "experience", "agenda", "location", "prepare", "rsvp", "contact", "feedback", "team", "transport", "stay", "contacts", "guidelines"]), enabled: z.boolean() })).max(13),
   topics: z.array(z.object({ title: text(200).min(1), description: text(1500), en: pairSchema(200, 1500).optional() })).max(20),
   agenda: z.array(z.object({ id: z.uuid(), starts_at: timestamp, ends_at: timestamp, title: text(200).min(1), description: text(1500), sort_order: z.number().int().min(0).max(1000) })).max(100),
   feedback_questions: z.array(z.object({ id: z.uuid(), label: text(500).min(1), kind: z.enum(["rating", "choice", "text"]), required: z.boolean(), options: z.array(text(200).min(1)).max(20), sort_order: z.number().int().min(0).max(1000) })).max(30),
@@ -267,6 +294,7 @@ export const eventBaseSchema = z.object({
   place_theme: z.enum(["werkudara", "resort"]).default("werkudara"),
   guide: guideSchema.default(emptyGuide),
   donation: donationSchema.default(emptyDonation),
+  trip: tripSchema.default(emptyTrip),
   translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),
   created_at: timestamp, updated_at: timestamp,
 });
@@ -286,6 +314,7 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
     [["team_image"], event.team_image], [["experience", "image"], event.experience.image], [["route", "map_image"], event.route.map_image],
     [["after", "image"], event.after.image], ...event.route.steps.map((step, index) => [["route", "steps", index, "image"], step.image] as [(string | number)[], typeof step.image]),
     [["guide", "cover", "photo"], event.guide.cover.photo],
+    ...event.trip.stay.photos.map((photo, index) => [["trip", "stay", "photos", index], photo] as [(string | number)[], typeof photo]),
     ...event.guide.chapters.flatMap((chapter, index) => [
       [["guide", "chapters", index, "photo"], chapter.photo] as [(string | number)[], typeof chapter.photo],
       ...chapter.items.map((item, at) => [["guide", "chapters", index, "items", at, "photo"], item.photo] as [(string | number)[], typeof item.photo]),
@@ -297,6 +326,7 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
   }
   const locationDisplay = event.location_display ?? (event.location_embed_url ? "embed" : "manual");
   if (locationDisplay === "embed" && !event.location_embed_url) issue(["location_embed_url"], "Isi kode sematan Google Maps.");
+  for (const [path, list] of [[["trip", "transport", "legs"], event.trip.transport.legs], [["trip", "contacts", "people"], event.trip.contacts.people]] as const) if (new Set(list.map(item => item.id)).size !== list.length) issue([...path], "ID tidak boleh berulang.");
   if (new Set(event.guide.chapters.map(chapter => chapter.id)).size !== event.guide.chapters.length) issue(["guide", "chapters"], "ID bab tidak boleh berulang.");
   // A card and an E-Guide have no invitation: organiser, introduction and place are not asked of them.
   if (event.status === "published" && event.event_kind === "eguide") {

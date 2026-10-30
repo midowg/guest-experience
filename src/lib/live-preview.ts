@@ -19,6 +19,7 @@ export type PreviewMessage =
 export const blockOfArea: Record<PreviewArea, string> = {
   hero: "hero", about: "identity", experience: "experience", agenda: "agenda", location: "venue", prepare: "prepare",
   team: "team", rsvp: "rsvp", contact: "contact", feedback: "feedback_questions", day: "day", after: "after",
+  transport: "transport", stay: "stay", guidelines: "guidelines", contacts: "contacts",
 };
 
 /** Kunjungan Kantor's menu (editor-model visitMenu): a tap on a screen opens the block named after it. */

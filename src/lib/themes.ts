@@ -68,6 +68,14 @@ export const themes: ThemeDefinition[] = [
     hero: "#0b5c57", onHero: "#ffffff", heroAccent: "#f6a04d", scrimRgb: "8, 42, 40",
     fontHeading: "'Nunito', sans-serif", headingWeight: 800,
   } },
+  // From the Surya Madistrindo handbook (Sesarengan Lumampah): navy sky, cream pages, keraton red, gold lines.
+  { key: "keraton", name: "Keraton", description: "Biru malam, krem, merah, dan garis emas; judul berkait.", suggestedFor: "Trip budaya, handbook peserta", tokens: {
+    background: "#fffdf8", surface: "#f5f0e7", soft: "#f5f0e7", border: "#e4cfc8",
+    text: "#30292a", heading: "#1b2d55", caption: "#75686a", danger: "#cf2d2d",
+    primary: "#1b2d55", primaryHover: "#2a4178", onPrimary: "#ffffff",
+    hero: "#1b2d55", onHero: "#fffdf8", heroAccent: "#dabb88", scrimRgb: "12, 22, 46",
+    fontHeading: "'EB Garamond', serif", headingWeight: 600,
+  } },
 ];
 
 export function themeDefinition(key: ThemeKey): ThemeDefinition {

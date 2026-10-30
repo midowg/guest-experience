@@ -7,13 +7,16 @@ import { useWording } from "./language";
 import { tzLabel } from "@/lib/timezones";
 import { getFraming } from "@/lib/hero-framing";
 import type { EventContact, PrepareContent, SectionKey } from "@/lib/types";
+import { tripFilled, type TripContent } from "@/lib/trip";
 import type { HeroPreviewEvent } from "@/lib/hero-preview";
 import { imageSrcSet } from "./Gallery";
 import { HeroShortcuts } from "./JourneyPanels";
 import styles from "./guest.module.css";
 
-export function visibleSections(event: HeroPreviewEvent & { contact?: EventContact; prepare?: PrepareContent }) {
-  return event.sections.filter(section => section.enabled && (section.key !== "feedback" || (event.feedback_enabled && event.feedback_questions.length > 0)) && (section.key !== "contact" || (!!event.contact?.name && !!event.contact.phone)) && (section.key !== "prepare" || !!event.prepare?.items.length));
+export function visibleSections(event: HeroPreviewEvent & { contact?: EventContact; prepare?: PrepareContent; trip?: TripContent }) {
+  return event.sections.filter(section => section.enabled && (section.key !== "feedback" || (event.feedback_enabled && event.feedback_questions.length > 0)) && (section.key !== "contact" || (!!event.contact?.name && !!event.contact.phone)) && (section.key !== "prepare" || !!event.prepare?.items.length)
+    // A trip part with nothing in it, or on an event that is not a Program, stays off the page.
+    && (!(section.key in tripFilled) || (event.event_kind === "program" && tripFilled[section.key as keyof typeof tripFilled](event.trip))));
 }
 const kindEyebrow = { kunjungan: "hero.eyebrow.kunjungan", acara: "hero.eyebrow.acara", program: "hero.eyebrow.program", kartu: "hero.eyebrow.acara", eguide: "hero.eyebrow.acara", csr: "hero.eyebrow.acara", panduan: "hero.eyebrow.acara" } as const;
 

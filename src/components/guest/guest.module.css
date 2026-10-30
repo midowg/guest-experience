@@ -411,6 +411,39 @@
 .emergencyTitle { display: flex; align-items: center; gap: var(--space-2); color: var(--color-danger, #9a273d); font-weight: 700; }
 .emergencyCall { display: inline-flex; align-items: center; gap: var(--space-2); justify-self: start; min-height: 44px; color: var(--color-text); font-weight: 600; }
 .emergencyHospital { display: grid; gap: 2px; font-size: var(--text-sm); }
+
+/* Client trip handbook (TripParts.tsx): transport legs, hotel, do & don't, help contacts. */
+.tripLegs, .tripPeople { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+.tripPeople { grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); }
+.tripCard { display: grid; gap: var(--space-2); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius, 0); background: var(--color-surface, #fff); }
+.tripCard h3 { margin: 0; font-family: var(--font-heading); font-weight: var(--heading-weight, 700); font-size: var(--text-lg); color: var(--color-heading, var(--color-text)); }
+.tripCard p { margin: 0; }
+.tripEyebrow { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--text-sm); font-weight: 700; color: var(--color-caption); }
+.tripEyebrow svg { color: var(--color-primary); }
+.tripRoute { font-weight: 600; color: var(--color-text); }
+.tripTimes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); padding: var(--space-3) 0; border-block: 1px solid var(--color-border); }
+.tripTimes p { display: grid; gap: 2px; }
+.tripTimes span { font-size: var(--text-sm); color: var(--color-caption); }
+.tripTimes strong { font-size: var(--text-lg); color: var(--color-heading, var(--color-text)); }
+.tripFacts { display: grid; gap: var(--space-2); margin: 0; }
+.tripFacts:empty { display: none; }
+.tripFact { display: grid; gap: 2px; }
+.tripFact dt { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-caption); }
+.tripFact dd { margin: 0; color: var(--color-text); }
+.tripNote { padding: var(--space-3); border-left: 3px solid var(--color-hero-accent, var(--color-primary)); background: var(--color-background); font-size: var(--text-sm); color: var(--color-caption); }
+.tripActions { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
+.tripActions a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; font-weight: 600; color: var(--color-primary); }
+.tripPhotos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: calc(var(--space-5) * -1) calc(var(--space-5) * -1) var(--space-2); }
+.tripPhotos figure { margin: 0; aspect-ratio: 4 / 3; overflow: hidden; }
+.tripPhotos figure:only-child { grid-column: 1 / -1; aspect-ratio: 16 / 9; }
+.tripPhotos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tripGuidelines { display: grid; gap: var(--space-4); }
+.tripWeather { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4) var(--space-5); border-radius: var(--radius, 0); background: var(--color-soft); }
+.tripWeather svg { flex-shrink: 0; color: var(--color-primary); }
+.tripWeather h3 { margin: 0 0 var(--space-1); font-size: var(--text-base); color: var(--color-heading, var(--color-text)); }
+.tripWeather p { margin: 0; font-size: var(--text-sm); }
+.tripDo, .tripDont { font-size: var(--text-base) !important; }
+.tripDontList svg { color: var(--color-danger); }
 @media (prefers-reduced-motion: reduce) { .discover svg { transition: none; } }
 
 /* Phone header: the section links scroll sideways in one row instead of stacking. */

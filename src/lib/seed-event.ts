@@ -2,6 +2,7 @@ import { emptyGuide } from "./guide";
 import { emptyDonation } from "./donations";
 import type { EventRecord } from "./types";
 import { emptyPoster } from "./poster";
+import { emptyTrip } from "./trip";
 
 export function createSeedEvent(): EventRecord {
   return {
@@ -17,7 +18,7 @@ export function createSeedEvent(): EventRecord {
     feedback_enabled: false, feedback_opens_at: null, feedback_description: "",
     contact: { name: "", phone: "", channel: "whatsapp", heading: "", description: "", role: "", organization: "", photo: { url: "", alt: "", srcset: [] }, staff_id: "" },
     team_image: { url: "", alt: "", srcset: [] },
-    sections: ["about", "experience", "agenda", "location", "prepare", "team", "rsvp", "contact", "feedback"].map(key => ({ key: key as EventRecord["sections"][number]["key"], enabled: !["contact", "team", "experience", "prepare"].includes(key) })),
+    sections: ["about", "experience", "transport", "stay", "agenda", "location", "prepare", "guidelines", "team", "rsvp", "contact", "contacts", "feedback"].map(key => ({ key: key as EventRecord["sections"][number]["key"], enabled: !["contact", "team", "experience", "prepare", "transport", "stay", "guidelines", "contacts"].includes(key) })),
     topics: [
       { title: "Agenda kegiatan", description: "Meninjau seluruh rangkaian kegiatan yang direncanakan dalam Grand Design." },
       { title: "Penyederhanaan kegiatan", description: "Mengidentifikasi kegiatan yang dapat digabung atau disederhanakan." },
@@ -44,6 +45,7 @@ export function createSeedEvent(): EventRecord {
     poster: emptyPoster(),
     guide: emptyGuide(),
     donation: emptyDonation(),
+    trip: emptyTrip(),
     translations: { en: {
       title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",
       experience_title: "", experience_story: "", prepare_title: "", prepare_intro: "", after_title: "", after_message: "",

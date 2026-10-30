@@ -93,7 +93,7 @@ export const moduleBlocks: Partial<Record<AdminModule, string>> = {
  *
  * | Kind                         | Modules                                                              | Editor blocks outside any module |
  * |------------------------------|----------------------------------------------------------------------|----------------------------------|
- * | acara / program              | all                                                                  | identity, appearance, schedule, hero, topics, day, after, sections, publication |
+ * | acara / program              | all                                                                  | identity, appearance, schedule, hero, topics, day, after, sections, publication (program also transport, stay, guidelines, contacts) |
  * | kunjungan (Kunjungan Kantor) | all                                                                  | identity, appearance, hero, topics, day, after, photos, publication |
  * | kartu (Studio Poster)        | poster                                                               | appearance, publication          |
  * | eguide (E-Guide)             | experience, agenda, location, route, gallery, prepare, contact, bilingual | identity, appearance, schedule, guide, publication |
@@ -114,9 +114,11 @@ export const kindModules: Record<EventKind, readonly AdminModule[]> = {
   panduan: ["location", "route", "gallery", "contact", "bilingual"],
 };
 const invitationBlocks = ["identity", "appearance", "schedule", "hero", "topics", "day", "after", "sections", "publication"] as const;
+/** A trip's handbook parts (src/lib/trip.ts) belong to Program only; they sit under no module of their own. */
+const tripBlocks = ["transport", "stay", "guidelines", "contacts"] as const;
 export const kindBlocks: Record<EventKind, readonly string[]> = {
   // Kunjungan Kantor's menu (editor-model visitMenu) keeps schedule in Info kunjungan and has no section-order block.
-  kunjungan: ["identity", "appearance", "hero", "topics", "day", "after", "photos", "publication"], acara: invitationBlocks, program: invitationBlocks,
+  kunjungan: ["identity", "appearance", "hero", "topics", "day", "after", "photos", "publication"], acara: invitationBlocks, program: [...invitationBlocks, ...tripBlocks],
   kartu: ["appearance", "publication"],
   eguide: ["identity", "appearance", "schedule", "guide", "publication"],
   csr: ["identity", "appearance", "hero", "donation-style", "donation-items", "donation-pay", "donation-recipients", "donation-show", "donation-news", "publication"],

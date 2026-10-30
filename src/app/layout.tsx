@@ -16,6 +16,8 @@ import '@fontsource/playfair-display/400.css';
 import '@fontsource/playfair-display/600.css';
 import '@fontsource/cormorant-garamond/500.css';
 import '@fontsource/cormorant-garamond/600.css';
+import '@fontsource/eb-garamond/500.css';
+import '@fontsource/eb-garamond/600.css';
 // Welcome (Kunjungan Kantor, board 11): Source Sans 3 for reading, Montserrat for small labels.
 import '@fontsource/source-sans-3/400.css';
 import '@fontsource/source-sans-3/600.css';

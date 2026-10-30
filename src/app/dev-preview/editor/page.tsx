@@ -8,6 +8,7 @@ import { templateOf } from "@/lib/event-templates";
 import { templateGuide } from "@/lib/event-setup";
 import { startingDonation } from "@/lib/donations";
 import { samplePlaceGuide } from "../panduan/sample";
+import { smTdnYogyakarta } from "@/lib/fixtures/sm-tdn-yogyakarta";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +16,10 @@ export const dynamic = "force-dynamic";
  * Layout check for the editor with its phone preview. Saving is refused without a session.
  * ?super=1 shows the super admin's controls (theme, poster design library); ?kartu=1 a card event;
  * ?eguide=1 an E-Guide started from the "e-guide" template; ?csr=1 a CSR donation page;
- * ?kunjungan=1 a Kunjungan Kantor with its own menu (board 12); ?panduan=1 a Panduan lokasi as "Buat acara" makes it.
+ * ?kunjungan=1 a Kunjungan Kantor with its own menu (board 12); ?panduan=1 a Panduan lokasi as "Buat acara" makes it;
+ * ?handbook=1 the Handbook trip filled with the Surya Madistrindo data.
  */
-export default async function DevEditorPage({ searchParams }: { searchParams: Promise<{ super?: string; kartu?: string; eguide?: string; csr?: string; kunjungan?: string; panduan?: string }> }) {
+export default async function DevEditorPage({ searchParams }: { searchParams: Promise<{ super?: string; kartu?: string; eguide?: string; csr?: string; kunjungan?: string; panduan?: string; handbook?: string }> }) {
   const query = await searchParams;
   const superAdmin = query.super === "1";
   if (process.env.NODE_ENV === "production") notFound();
@@ -37,6 +39,7 @@ export default async function DevEditorPage({ searchParams }: { searchParams: Pr
     : query.kunjungan === "1" ? { ...seed, title: "Kunjungan PT Contoh Nusantara", event_kind: "kunjungan" as const, greeting: "Selamat datang di Werkudara", language: "id_en" as const,
       sections: seed.sections.map(section => ({ ...section, enabled: (visit.modules as string[]).includes(section.key) })) }
     : query.panduan === "1" ? samplePlaceGuide()
+    : query.handbook === "1" ? { ...smTdnYogyakarta(), code: "AB23CD" }
     : seed;
   const person = (n: number, name: string, role: string, photo = "") => ({ id: `5f000000-0000-4000-8000-00000000000${n}`, name, role, phone: `0812 0000 000${n}`, photo: { url: photo, alt: name, srcset: [] }, active: true, sort_order: n });
   const staff = [person(1, "Contoh Raka Pratama", "Hospitality", "https://picsum.photos/seed/wk-staf1/200/200"), person(2, "Contoh Sari Dewi", "Sales")];

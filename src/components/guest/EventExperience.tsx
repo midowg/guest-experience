@@ -20,8 +20,9 @@ import { CalendarButton } from "./CalendarSheet";
 import styles from "./guest.module.css";
 import { useGuestPage } from "./use-guest-page";
 import { VisitExperience } from "./VisitExperience";
+import { ContactList, GuidelineLists, StayCard, TransportCards } from "./TripParts";
 
-const navKeys: Record<SectionKey, WordKey> = { about: "nav.about", experience: "nav.experience", agenda: "nav.agenda", location: "nav.location", prepare: "nav.prepare", team: "nav.team", rsvp: "nav.rsvp", contact: "nav.contact", feedback: "nav.feedback" };
+const navKeys: Record<SectionKey, WordKey> = { about: "nav.about", experience: "nav.experience", agenda: "nav.agenda", location: "nav.location", prepare: "nav.prepare", team: "nav.team", rsvp: "nav.rsvp", contact: "nav.contact", feedback: "nav.feedback", transport: "nav.transport", stay: "nav.stay", contacts: "nav.contacts", guidelines: "nav.guidelines" };
 
 function focusAnchor(e: MouseEvent<HTMLAnchorElement>) {
   const id = e.currentTarget.hash.slice(1);
@@ -95,7 +96,7 @@ function BackToTop({ shown }: { shown: boolean }) {
 }
 
 /** After the event only what still serves the guest stays below the thank-you. */
-const afterSections = new Set<SectionKey>(["feedback", "contact"]);
+const afterSections = new Set<SectionKey>(["feedback", "contact", "contacts"]);
 
 /**
  * `phase` is decided by the page on the server (see lib/event-phase.ts) so the first paint is
@@ -209,6 +210,22 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             {section.key === "prepare" && <>
               <div id="prepare-heading"><SectionHeading title={event.prepare.title || t("section.prepare.title")}>{event.prepare.intro && <p className={styles.multiline}>{event.prepare.intro}</p>}</SectionHeading></div>
               <PrepareCards items={event.prepare.items} />
+            </>}
+            {section.key === "transport" && <>
+              <div id="transport-heading"><SectionHeading title={event.trip.transport.title || t("section.transport.title")}>{event.trip.transport.intro && <p className={styles.multiline}>{event.trip.transport.intro}</p>}</SectionHeading></div>
+              <TransportCards trip={event.trip} />
+            </>}
+            {section.key === "stay" && <>
+              <div id="stay-heading"><SectionHeading title={event.trip.stay.title || t("section.stay.title")} /></div>
+              <StayCard trip={event.trip} />
+            </>}
+            {section.key === "guidelines" && <>
+              <div id="guidelines-heading"><SectionHeading title={event.trip.guidelines.title || t("section.guidelines.title")}>{event.trip.guidelines.intro && <p className={styles.multiline}>{event.trip.guidelines.intro}</p>}</SectionHeading></div>
+              <GuidelineLists trip={event.trip} />
+            </>}
+            {section.key === "contacts" && <>
+              <div id="contacts-heading"><SectionHeading title={event.trip.contacts.title || t("section.contacts.title")}>{event.trip.contacts.intro && <p className={styles.multiline}>{event.trip.contacts.intro}</p>}</SectionHeading></div>
+              <ContactList trip={event.trip} />
             </>}
             {section.key === "team" && <>
               <div id="team-heading"><SectionHeading title="Our Team"><p>{t("team.subtitle")}</p></SectionHeading></div>

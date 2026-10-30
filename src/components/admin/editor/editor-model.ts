@@ -6,7 +6,8 @@ import { parseLocationEmbed } from "@/lib/location-embed";
 import { tzLabel } from "@/lib/timezones";
 import { translationGaps } from "@/lib/wording/localize";
 
-export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", experience: "Pengalaman kunjungan", agenda: "Rundown", location: "Lokasi", prepare: "Persiapan tamu", team: "Our Team", rsvp: "Konfirmasi kehadiran", contact: "Kontak", feedback: "Survei feedback" };
+// In the seed's default order (src/lib/seed-event.ts), so completeSections rebuilds it.
+export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", experience: "Pengalaman kunjungan", transport: "Transportasi", stay: "Hotel", agenda: "Rundown", location: "Lokasi", prepare: "Persiapan tamu", guidelines: "Do & don't", team: "Our Team", rsvp: "Konfirmasi kehadiran", contact: "Kontak", contacts: "Kontak bantuan", feedback: "Survei feedback" };
 export const sectionKeys = Object.keys(sectionLabels) as SectionKey[];
 
 /**
@@ -41,7 +42,7 @@ export function completeSections(event: EventRecord): EventRecord {
   const sections = [...event.sections];
   for (const key of sectionKeys) {
     if (sections.some(section => section.key === key)) continue;
-    const before = key === "contact" ? "feedback" : key === "team" || key === "prepare" ? "rsvp" : key === "experience" ? "agenda" : null;
+    const before = key === "contact" ? (sections.some(section => section.key === "contacts") ? "contacts" : "feedback") : key === "contacts" ? "feedback" : key === "team" || key === "prepare" || key === "guidelines" ? "rsvp" : key === "experience" || key === "transport" || key === "stay" ? "agenda" : null;
     const index = before ? sections.findIndex(section => section.key === before) : -1;
     sections.splice(index < 0 ? sections.length : index, 0, { key, enabled: false });
   }
@@ -77,6 +78,13 @@ export function prepareEvent(event: EventRecord): EventRecord {
     prepare: { ...event.prepare, items: event.prepare.items
       .map(item => ({ ...item, title: item.title.trim(), list: item.list.map(line => line.trim()).filter(Boolean), ...(item.en ? { en: { ...item.en, list: item.en.list.map(line => line.trim()).filter(Boolean) } } : {}) }))
       .filter(item => item.title || item.description.trim() || item.list.length) },
+    // Trip handbook: blank lines and empty rows are dropped, photos lose stale sizes.
+    trip: {
+      transport: { ...event.trip.transport, legs: event.trip.transport.legs.filter(leg => leg.carrier.trim() || leg.from.trim() || leg.to.trim() || leg.departs.trim()) },
+      stay: { ...event.trip.stay, photos: event.trip.stay.photos.filter(photo => photo.url).map(cleanImage) },
+      contacts: { ...event.trip.contacts, people: event.trip.contacts.people.filter(person => person.name.trim() || person.phone.trim() || person.role.trim()) },
+      guidelines: { ...event.trip.guidelines, dos: event.trip.guidelines.dos.map(line => line.trim()).filter(Boolean), donts: event.trip.guidelines.donts.map(line => line.trim()).filter(Boolean) },
+    },
     agenda: event.agenda.map((item, sort_order) => ({ ...item, sort_order })),
     // Details keyed by session id leave with their session, and an all-empty detail is not stored.
     agenda_details: Object.fromEntries(Object.entries(event.agenda_details).filter(([id, detail]) => event.agenda.some(item => item.id === id)
@@ -143,10 +151,15 @@ export const editorBlocks: { id: string; title: string; stage: EditorStage }[] =
   { id: "agenda", title: "Rundown", stage: "prep" },
   { id: "venue", title: "Lokasi", stage: "prep" },
   { id: "gallery", title: "Galeri foto lokasi Werkudara", stage: "prep" },
+  // Client trip handbook (Program only, src/lib/trip.ts): how the group travels, the hotel, do's and don'ts.
+  { id: "transport", title: "Transportasi", stage: "prep" },
+  { id: "stay", title: "Hotel", stage: "prep" },
   { id: "prepare", title: "Persiapan tamu", stage: "prep" },
+  { id: "guidelines", title: "Do & don't", stage: "prep" },
   { id: "team", title: "Our Team", stage: "prep" },
   { id: "rsvp", title: "Penerimaan RSVP", stage: "guest" },
   { id: "contact", title: "Kontak", stage: "guest" },
+  { id: "contacts", title: "Kontak bantuan", stage: "guest" },
   { id: "poster", title: POSTER_LABEL, stage: "guest" },
   // Friday Sharing (CSR) only: what can be given, how to pay, who receives it, what the page shows, the handover news.
   { id: "donation-style", title: "Tema halaman", stage: "prep" },
@@ -178,7 +191,7 @@ const fieldBlocks: Record<string, string> = {
   team_image: "team", rsvp_enabled: "rsvp", rsvp_closes_at: "rsvp", guest_estimate: "rsvp", contact: "contact", day_note: "day", day_enabled: "day",
   feedback_enabled: "feedback_questions", feedback_opens_at: "feedback_questions", feedback_description: "feedback_questions", feedback_questions: "feedback_questions",
   review_url: "review", review_enabled: "review", review_heading: "review", review_description: "review", review_button_label: "review",
-  after: "after", prepare: "prepare", language: "language", translations: "language", sections: "sections", status: "publication", poster: "poster", guide: "guide",
+  after: "after", prepare: "prepare", trip: "transport", language: "language", translations: "language", sections: "sections", status: "publication", poster: "poster", guide: "guide",
 };
 /** Friday Sharing's settings are split over several blocks: the second segment of donation.* decides. */
 const donationBlocks: Record<string, string> = {
@@ -200,8 +213,11 @@ const visitFields: Record<string, string> = {
 };
 /** Panduan lokasi: the welcome's texts sit with the cover photo in Sambutan. */
 const placeFields: Record<string, string> = { place_theme: "identity", subtitle: "hero", greeting: "hero", introduction: "hero", closing: "gallery", sections: "identity" };
+/** The trip's parts each have a block: the second segment of trip.* decides. */
+const tripBlocks: Record<string, string> = { transport: "transport", stay: "stay", contacts: "contacts", guidelines: "guidelines" };
 export function blockOfPath(path: string, kind?: EventRecord["event_kind"]): string {
   const [first, second] = path.split(".");
+  if (first === "trip") return tripBlocks[second] ?? "transport";
   if (first === "donation") return donationBlocks[second] ?? "donation-items";
   if (kind === "kunjungan" && visitFields[first]) return visitFields[first];
   if (kind === "panduan" && placeFields[first]) return placeFields[first];
@@ -289,6 +305,10 @@ export function blockSummary(id: string, event: EventRecord, themeName: string, 
     }
     case "gallery": return event.gallery.length ? count(event.gallery.length, "foto lokasi") : "Belum ada foto lokasi";
     case "prepare": return sectionOn(event, "prepare") ? (event.prepare.items.length ? event.prepare.items.map(item => item.title).slice(0, 3).join(" · ") : "Tampil · belum ada kartu") : "Nonaktif";
+    case "transport": return sectionOn(event, "transport") ? (event.trip.transport.legs.length ? event.trip.transport.legs.map(leg => [leg.carrier, leg.number].filter(Boolean).join(" ")).slice(0, 2).join(" · ") : "Tampil · belum ada perjalanan") : "Nonaktif";
+    case "stay": return sectionOn(event, "stay") ? event.trip.stay.name || "Tampil · hotel belum diisi" : "Nonaktif";
+    case "guidelines": return sectionOn(event, "guidelines") ? `${count(event.trip.guidelines.dos.length, "anjuran")} · ${count(event.trip.guidelines.donts.length, "larangan")}` : "Nonaktif";
+    case "contacts": return sectionOn(event, "contacts") ? [count(event.trip.contacts.people.length, "kontak"), event.trip.contacts.hospital].filter(Boolean).join(" · ") : "Nonaktif";
     case "team": return sectionOn(event, "team") ? (event.team_image.url ? "Tampil · dengan foto tim" : "Tampil · tanpa foto") : "Nonaktif";
     case "rsvp": return event.rsvp_enabled ? (event.rsvp_closes_at ? `Dibuka · batas ${formatWhen(event.rsvp_closes_at)}` : "Dibuka · tanpa batas waktu") : "Ditutup";
     case "contact": return event.contact.name && event.contact.phone ? `${event.contact.name} · ${event.contact.channel === "whatsapp" ? "WhatsApp" : "Telepon"}` : "Belum diisi";
@@ -317,6 +337,7 @@ function isEmptyOptional(id: string, event: EventRecord): boolean {
     case "experience": return !sectionOn(event, "experience");
     case "gallery": return !event.gallery.length;
     case "prepare": return !sectionOn(event, "prepare");
+    case "transport": case "stay": case "guidelines": case "contacts": return !sectionOn(event, id as SectionKey);
     case "team": return !sectionOn(event, "team");
     case "day": return !event.day_note;
     case "photos": return true;

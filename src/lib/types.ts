@@ -1,10 +1,11 @@
 import type { GuideSettings } from "./guide";
 import type { DonationSettings } from "./donations";
 import type { PosterSettings } from "./poster";
+import type { TripContent } from "./trip";
 
 export type EventStatus = "draft" | "published" | "archived";
 export type InvitationMode = "open" | "personal";
-export type SectionKey = "about" | "experience" | "agenda" | "location" | "prepare" | "rsvp" | "contact" | "feedback" | "team";
+export type SectionKey = "about" | "experience" | "agenda" | "location" | "prepare" | "rsvp" | "contact" | "feedback" | "team" | "transport" | "stay" | "contacts" | "guidelines";
 export type SectionConfig = { key: SectionKey; enabled: boolean };
 export type AgendaItem = { id: string; starts_at: string; ends_at: string; title: string; description: string; sort_order: number };
 export type DiscussionTopic = { title: string; description: string; en?: TextPair };
@@ -39,7 +40,7 @@ export type EventKind = "kunjungan" | "acara" | "program" | "kartu" | "eguide" |
 export type EventAudience = "external" | "internal";
 /** The look of a Panduan lokasi; its content is the same in every one. */
 export type PlaceTheme = "werkudara" | "resort";
-export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah" | "berbagi";
+export type ThemeKey = "werkudara" | "nenek" | "gala" | "khidmat" | "segar" | "rempah" | "berbagi" | "keraton";
 export type EventTheme = { key: ThemeKey; corners: "square" | "soft" };
 export type EventPhase = "before" | "day" | "after";
 export type PhaseOverride = "auto" | EventPhase;
@@ -108,6 +109,8 @@ export type EventRecord = {
   guide: GuideSettings;
   /** CSR: what people may give, how to pay, what the page shows, and the handover news (event_kind "csr"). */
   donation: DonationSettings;
+  /** Client trip handbook: transport, hotel, help contacts, do's and don'ts (src/lib/trip.ts). */
+  trip: TripContent;
   created_at: string; updated_at: string;
 };
 export type Dietary = "vegetarian" | "allergy" | "other";

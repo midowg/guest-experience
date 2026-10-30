@@ -13,7 +13,7 @@ import { visitStarter } from "./visit-template";
 const text = (max: number) => z.string().trim().max(max);
 const timestamp = z.iso.datetime({ offset: true });
 const httpsUrl = z.union([z.literal(""), z.url({ protocol: /^https$/ }).max(8000)]);
-export const setupSectionKeys = ["about", "experience", "agenda", "location", "prepare", "team", "rsvp", "contact", "feedback"] as const;
+export const setupSectionKeys = ["about", "experience", "transport", "stay", "agenda", "location", "prepare", "guidelines", "team", "rsvp", "contact", "contacts", "feedback"] as const;
 
 /** Answers from the "Buat acara" survey. Text answers may stay empty: the editor fills them later. */
 export const setupSchema = z.object({
@@ -28,7 +28,7 @@ export const setupSchema = z.object({
   location: z.enum(["werkudara", "other", "later"]),
   venue_name: text(200), address: text(1000), location_url: httpsUrl,
   greeting: text(150), introduction: text(5000), closing: text(2000),
-  modules: z.array(z.enum(setupSectionKeys)).max(9),
+  modules: z.array(z.enum(setupSectionKeys)).max(13),
   guest_estimate: z.number().int().min(1, "Isi angka 1 atau lebih.").max(5000).nullable(),
   rsvp_closes_at: timestamp.nullable(),
   contact_name: text(150),

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Notice } from "@/components/ui";
-import { ArrowRight, BookOpen, CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Frame, HandHeart, Handshake, HeartHandshake, Image as ImageIcon, Images, Landmark, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, Rocket, Save, Send, Share2, Shirt, Smartphone, Sparkles, Star, Trash2, Users, X, type LucideIcon } from "lucide-react";
+import { ArrowRight, BedDouble, BookOpen, CalendarCheck, CalendarClock, CircleCheck, CircleDot, ClipboardCheck, Eye, FileText, Frame, HandHeart, Handshake, HeartHandshake, Image as ImageIcon, Images, Landmark, Languages, LayoutList, ListChecks, ListOrdered, MapPin, Menu, MessageSquare, Palette, Pencil, Phone, PhoneCall, Rocket, Save, Send, Share2, Shirt, Smartphone, Sparkles, Star, ThumbsUp, TrainFront, Trash2, Users, X, type LucideIcon } from "lucide-react";
 import { Check, SuggestionChips } from "@/components/admin/editor/controls";
 import { chipLabel, fieldExamples, fieldPattern, fieldSuggestions, fillSuggestion } from "@/components/admin/editor/suggestions";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
@@ -32,6 +32,7 @@ import { ReviewBlock } from "@/components/admin/editor/blocks/ReviewBlock";
 import { RsvpBlock } from "@/components/admin/editor/blocks/RsvpBlock";
 import { ScheduleBlock } from "@/components/admin/editor/blocks/ScheduleBlock";
 import { SectionsBlock } from "@/components/admin/editor/blocks/SectionsBlock";
+import { ContactsBlock, GuidelinesBlock, StayBlock, TransportBlock } from "@/components/admin/editor/blocks/TripBlocks";
 import { TeamBlock } from "@/components/admin/editor/blocks/TeamBlock";
 import { TopicsBlock } from "@/components/admin/editor/blocks/TopicsBlock";
 import { VenueBlock } from "@/components/admin/editor/blocks/VenueBlock";
@@ -49,13 +50,13 @@ import { absolute, adminApi, eventPath } from "@/lib/routes";
 
 
 /** Shorter names for the chips, so more of them fit with their names on one row. */
-const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan", poster: "Poster", guide: "Bab", "donation-style": "Tema", "donation-items": "Bantuan", "donation-pay": "Rekening", "donation-recipients": "Penerima", "donation-show": "Tampilan", "donation-news": "Kabar" };
+const chipNames: Record<string, string> = { experience: "Pengalaman", venue: "Lokasi", prepare: "Persiapan", transport: "Transport", stay: "Hotel", guidelines: "Do & don't", contacts: "Kontak bantuan", team: "Tim", rsvp: "RSVP", contact: "Kontak", feedback_questions: "Feedback", review: "Ulasan", poster: "Poster", guide: "Bab", "donation-style": "Tema", "donation-items": "Bantuan", "donation-pay": "Rekening", "donation-recipients": "Penerima", "donation-show": "Tampilan", "donation-news": "Kabar" };
 /** A visit's chips name its guest screens. */
 const placeChipNames: Record<string, string> = { hero: "Sambutan", venue: "Getting Here", contact: "PIC", gallery: "Galeri" };
 const visitChipNames: Record<string, string> = { hero: "Sambutan", topics: "Tentang", rsvp: "Konfirmasi", venue: "Cara datang", agenda: "Rundown", day: "Hari H", team: "Tim", contact: "Pendamping", after: "Terima kasih", photos: "Foto" };
 const blockIcons: Record<string, LucideIcon> = {
   delete: Trash2, identity: FileText, appearance: Palette, schedule: CalendarClock, hero: ImageIcon, topics: ListChecks, experience: Sparkles,
-  agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, language: Languages, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
+  agenda: ListOrdered, venue: MapPin, gallery: Images, prepare: Shirt, transport: TrainFront, stay: BedDouble, guidelines: ThumbsUp, contacts: PhoneCall, language: Languages, team: Users, rsvp: ClipboardCheck, contact: Phone, day: CalendarCheck,
   feedback_questions: MessageSquare, review: Star, after: Handshake, photos: Images, sections: LayoutList, publication: Rocket, poster: Frame, guide: BookOpen, "donation-style": Palette, "donation-items": HandHeart, "donation-pay": Landmark, "donation-recipients": HeartHandshake, "donation-show": Eye, "donation-news": Send,
 };
 
@@ -104,7 +105,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const blocks = editorBlocks.filter(item => (superAdmin || item.id !== "appearance") && blockAllowed(initialEvent.event_kind, item.id) && !(Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, id]) => id === item.id && unavailable(key)));
   const restrictedBlock = (id: string) => (Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, block]) => block === id && restricted(key));
   const sectionModule: Partial<Record<string, AdminModule>> = { experience: "experience", agenda: "agenda", location: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback: "feedback" };
-  const sectionUnavailable = (key: string) => { const owner = sectionModule[key]; return !!owner && unavailable(owner); };
+  // The trip's handbook parts belong to Program only (src/lib/admin-modules.ts kindBlocks).
+  const sectionUnavailable = (key: string) => { const owner = sectionModule[key]; return (!!owner && unavailable(owner)) || (kind !== "program" && ["transport", "stay", "guidelines", "contacts"].includes(key)); };
   const router = useRouter();
   const [event, setEvent] = useState(() => completeSections(initialEvent));
   const [embedDraft, setEmbedDraft] = useState(initialEvent.location_embed_url ?? "");
@@ -235,7 +237,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
    * A block's form, rendered only while its panel is open. Values live in `event`, not in the DOM,
    * so nothing is lost on close; openField() opens the owning block before it focuses a field.
    */
-  const sectionOfBlock: Partial<Record<string, SectionKey>> = { experience: "experience", agenda: "agenda", venue: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback_questions: "feedback" };
+  const sectionOfBlock: Partial<Record<string, SectionKey>> = { experience: "experience", agenda: "agenda", venue: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback_questions: "feedback", transport: "transport", stay: "stay", guidelines: "guidelines", contacts: "contacts" };
   /**
    * The on/off switch of a block that is a part of the guest page, or null for blocks that are
    * always there. RSVP and the survey also open and close with it, so there is one switch, not two.
@@ -471,10 +473,14 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {block("experience", "Pengalaman kunjungan", <ExperienceBlock event={event} update={update} control={control} errors={errors} />)}
       {block("agenda", "Rundown", <AgendaBlock kit={kit} />)}
       {!place && block("gallery", "Galeri foto lokasi Werkudara", <VenueGalleryBlock kit={kit} />)}
+      {block("transport", "Transportasi", <TransportBlock kit={kit} />)}
+      {block("stay", "Hotel", <StayBlock kit={kit} />)}
       {block("prepare", "Persiapan tamu", <PrepareBlock event={event} update={update} control={control} />)}
+      {block("guidelines", "Do & don't", <GuidelinesBlock kit={kit} />)}
       {block("team", "Our Team", <TeamBlock kit={kit} />)}
       {block("rsvp", "Penerimaan RSVP", <RsvpBlock kit={kit} />)}
       {block("contact", "Kontak", <ContactBlock kit={kit} />)}
+      {block("contacts", "Kontak bantuan", <ContactsBlock kit={kit} />)}
       {block("day", "Hari H", <DayBlock event={event} update={update} control={control} />)}
       {block("poster", POSTER_LABEL, <PosterBlock kit={kit} />)}
       {block("donation-style", "Tema halaman", <DonationStyleBlock kit={kit} />)}
