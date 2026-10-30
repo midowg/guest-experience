@@ -86,6 +86,7 @@ export function GuidelinesBlock({ kit }: { kit: EditorKit }) {
     {control("trip.guidelines.weather", "Cuaca (opsional)", guidelines.weather, weather => set("guidelines", { weather }), { multiline: true, maxLength: 1000, hint: "Sebutkan sumber dan tanggalnya, misalnya prakiraan BMKG." })}
     {control("trip.guidelines.dos", "Yang dianjurkan (satu per baris)", guidelines.dos.join("\n"), value => set("guidelines", { dos: lines(value) }), { multiline: true, hint: `Maksimal ${TRIP_LIMITS.lines} baris.` })}
     {control("trip.guidelines.donts", "Yang perlu dihindari (satu per baris)", guidelines.donts.join("\n"), value => set("guidelines", { donts: lines(value) }), { multiline: true, hint: `Maksimal ${TRIP_LIMITS.lines} baris.` })}
+    {Object.entries(kit.errors).filter(([path]) => /^trip\.guidelines\.(dos|donts)\./.test(path)).map(([path, messages]) => <p key={path} className="field-error">{path.includes(".dos.") ? "Yang dianjurkan" : "Yang perlu dihindari"}, baris {Number(path.split(".").pop()) + 1}: {messages.join(" ")}</p>)}
     {switchHint("Do & don't")}
   </div>;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import { ArrowDown, ArrowUpRight, Backpack, CalendarCheck, CalendarDays, Camera, Check, Clock3, Coffee, Gift, Footprints, Hand, Handshake, Heart, HeartHandshake, IdCard, Images, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Package, Phone, Pill, Presentation, Salad, Shirt, Sparkles, Star, Sun, Umbrella, Users, Utensils, type LucideIcon } from "lucide-react";
+import { ArrowDown, ArrowUpRight, Backpack, BedDouble, CalendarCheck, CalendarDays, Camera, Check, Clock3, Coffee, Gift, Footprints, Hand, Handshake, Heart, HeartHandshake, IdCard, Images, Info, Map as MapIcon, MapPin, Maximize2, MessageCircle, Music, Package, Phone, Pill, Presentation, Salad, Shirt, Sparkles, Star, Sun, TrainFront, Umbrella, Users, Utensils, type LucideIcon } from "lucide-react";
 import { ButtonLink } from "@/components/ui";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { localDay } from "@/lib/event-phase";
@@ -184,6 +184,7 @@ export function TodayPanel({ event, invitee, now, firstSection }: { event: Event
       {event.day_note && <div className={styles.todayNote}><Info size={18} aria-hidden="true" /><p className={styles.multiline}>{event.day_note}</p></div>}
       <PicCard event={event} title={t("today.help", { name: event.contact.name })} />
       <EmergencyCard event={event} />
+      {!event.emergency?.hospital && event.event_kind === "program" && event.trip?.contacts.hospital && <EmergencyCard event={{ ...event, emergency: { name: "", phone: "", hospital: event.trip.contacts.hospital, hospital_address: event.trip.contacts.hospital_address, hospital_maps_url: event.trip.contacts.hospital_maps_url } }} />}
       {firstSection && <a className={styles.todayMore} href={`#${firstSection}`} onClick={focusAnchor}>{t("today.more")} <ArrowDown size={15} aria-hidden="true" /></a>}
     </div>
   </section>;
@@ -237,7 +238,11 @@ export function HeroShortcuts({ keys, inert }: { keys: string[]; inert: boolean 
   const items = [
     { key: "experience", label: t("shortcut.experience"), icon: Sparkles },
     { key: "location", label: t("shortcut.location"), icon: MapPin },
+    // A trip's guest mostly comes back for the train, the hotel and who to call.
+    { key: "transport", label: t("shortcut.transport"), icon: TrainFront },
+    { key: "stay", label: t("shortcut.stay"), icon: BedDouble },
     { key: "contact", label: t("shortcut.contact"), icon: Phone },
+    { key: "contacts", label: t("shortcut.contacts"), icon: Phone },
   ].filter(item => keys.includes(item.key));
   if (items.length < 2) return null;
   return <nav className={styles.shortcuts} aria-label={t("shortcut.label")}>

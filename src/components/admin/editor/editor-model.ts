@@ -5,6 +5,7 @@ import { getFraming, normalizeEvent } from "@/lib/hero-framing";
 import { parseLocationEmbed } from "@/lib/location-embed";
 import { tzLabel } from "@/lib/timezones";
 import { translationGaps } from "@/lib/wording/localize";
+import { isTripSection, tripFilled } from "@/lib/trip";
 
 // In the seed's default order (src/lib/seed-event.ts), so completeSections rebuilds it.
 export const sectionLabels: Record<SectionKey, string> = { about: "Tentang acara & topik", experience: "Pengalaman kunjungan", transport: "Transportasi", stay: "Hotel", agenda: "Rundown", location: "Lokasi", prepare: "Persiapan tamu", guidelines: "Do & don't", team: "Our Team", rsvp: "Konfirmasi kehadiran", contact: "Kontak", contacts: "Kontak bantuan", feedback: "Survei feedback" };
@@ -80,7 +81,7 @@ export function prepareEvent(event: EventRecord): EventRecord {
       .filter(item => item.title || item.description.trim() || item.list.length) },
     // Trip handbook: blank lines and empty rows are dropped, photos lose stale sizes.
     trip: {
-      transport: { ...event.trip.transport, legs: event.trip.transport.legs.filter(leg => leg.carrier.trim() || leg.from.trim() || leg.to.trim() || leg.departs.trim()) },
+      transport: { ...event.trip.transport, legs: event.trip.transport.legs.filter(leg => Object.entries(leg).some(([key, value]) => key !== "id" && key !== "mode" && String(value).trim())) },
       stay: { ...event.trip.stay, photos: event.trip.stay.photos.filter(photo => photo.url).map(cleanImage) },
       contacts: { ...event.trip.contacts, people: event.trip.contacts.people.filter(person => person.name.trim() || person.phone.trim() || person.role.trim()) },
       guidelines: { ...event.trip.guidelines, dos: event.trip.guidelines.dos.map(line => line.trim()).filter(Boolean), donts: event.trip.guidelines.donts.map(line => line.trim()).filter(Boolean) },
@@ -122,7 +123,10 @@ export function hiddenSectionReasons(event: EventRecord): string[] {
     if (!event.guide.chapters.length) reasons.push("Belum ada bab panduan.");
     return reasons;
   }
-  const reasons = event.sections.filter(section => !section.enabled).map(section => `${sectionLabels[section.key]} disembunyikan melalui pengaturan bagian.`);
+  const usable = event.sections.filter(section => event.event_kind === "program" || !isTripSection(section.key));
+  const reasons = usable.filter(section => !section.enabled).map(section => `${sectionLabels[section.key]} disembunyikan melalui pengaturan bagian.`);
+  // An enabled trip part shows only once it has content (src/lib/trip.ts tripFilled).
+  if (event.event_kind === "program") for (const section of usable) if (section.enabled && isTripSection(section.key) && !tripFilled[section.key](event.trip)) reasons.push(`${sectionLabels[section.key]} masih kosong${section.key === "stay" ? " (isi nama hotel)" : ""}; bagian ini belum tampil.`);
   if (!event.rsvp_enabled) reasons.push("Formulir RSVP dinonaktifkan.");
   if (event.sections.some(section => section.key === "contact" && section.enabled) && (!event.contact?.name || !event.contact.phone)) reasons.push("Kontak PIC belum diisi; bagian kontak tidak ditampilkan.");
   if (!event.feedback_enabled) reasons.push("Survei feedback dinonaktifkan.");
@@ -148,12 +152,12 @@ export const editorBlocks: { id: string; title: string; stage: EditorStage }[] =
   { id: "guide", title: "Bab panduan", stage: "prep" },
   { id: "topics", title: "Topik pembahasan", stage: "prep" },
   { id: "experience", title: "Pengalaman kunjungan", stage: "prep" },
+  // Client trip handbook (Program only, src/lib/trip.ts): how the group travels and the hotel come before the rundown, as in the handbook.
+  { id: "transport", title: "Transportasi", stage: "prep" },
+  { id: "stay", title: "Hotel", stage: "prep" },
   { id: "agenda", title: "Rundown", stage: "prep" },
   { id: "venue", title: "Lokasi", stage: "prep" },
   { id: "gallery", title: "Galeri foto lokasi Werkudara", stage: "prep" },
-  // Client trip handbook (Program only, src/lib/trip.ts): how the group travels, the hotel, do's and don'ts.
-  { id: "transport", title: "Transportasi", stage: "prep" },
-  { id: "stay", title: "Hotel", stage: "prep" },
   { id: "prepare", title: "Persiapan tamu", stage: "prep" },
   { id: "guidelines", title: "Do & don't", stage: "prep" },
   { id: "team", title: "Our Team", stage: "prep" },
@@ -322,7 +326,10 @@ export function blockSummary(id: string, event: EventRecord, themeName: string, 
       const mode = event.language === "en" ? "English saja" : "Dua bahasa (ID + EN)";
       return gaps.total ? `${mode} · ${gaps.total - gaps.missing} dari ${gaps.total} teks diterjemahkan` : mode;
     }
-    case "sections": return `${event.sections.filter(section => section.enabled).length} dari ${event.sections.length} bagian tampil`;
+    case "sections": {
+      const usable = event.sections.filter(section => event.event_kind === "program" || !isTripSection(section.key));
+      return `${usable.filter(section => section.enabled).length} dari ${usable.length} bagian tampil`;
+    }
     case "guide": return event.guide.chapters.length ? `${event.guide.cover.title || "Sampul belum berjudul"} · ${count(event.guide.chapters.length, "bab")}` : "Belum ada bab";
     case "publication": return event.status === "published" ? "Dipublikasikan" : event.status === "archived" ? "Diarsipkan" : "Draf";
     default: return "";

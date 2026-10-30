@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Copy, FilePlus2, X } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
 import { eventTemplates, templateOf, type TemplateKey } from "@/lib/event-templates";
+import { isTripSection } from "@/lib/trip";
 import { setupSchema, setupSectionKeys, type EventSetup } from "@/lib/event-setup";
 import { fromZoneInput } from "@/lib/format";
 import { eventTimezones, timezoneInfo } from "@/lib/timezones";
@@ -51,7 +52,8 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
   const source = start?.type === "copy" ? events.find(event => event.id === start.id) : undefined;
   const set = (patch: Partial<Details>) => { setDetails(current => ({ ...current, ...patch })); setErrors({}); };
   // Only modules the super admin allows and the kind of event offers (src/lib/admin-modules.ts kindModules).
-  const allowed = (key: SectionKey) => key === "about" || (!disabledModules.includes(key as AdminModule) && kindOffers(template?.kind ?? source?.event_kind, key as AdminModule));
+  // A trip's handbook parts are no admin module: a Program always offers them (src/lib/trip.ts).
+  const allowed = (key: SectionKey) => key === "about" || (isTripSection(key) ? (template?.kind ?? source?.event_kind) === "program" : !disabledModules.includes(key as AdminModule) && kindOffers(template?.kind ?? source?.event_kind, key as AdminModule));
 
   function pick(next: Start) {
     setStart(next); setErrors({}); setError("");

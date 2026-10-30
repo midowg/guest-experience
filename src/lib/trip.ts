@@ -31,6 +31,12 @@ export type TripContacts = { title: string; intro: string; people: TripPerson[];
 export type TripGuidelines = { title: string; intro: string; weather: string; dos: string[]; donts: string[] };
 export type TripContent = { transport: TripTransport; stay: TripStay; contacts: TripContacts; guidelines: TripGuidelines };
 
+/** The section keys of the trip's parts; only a Program shows them. */
+export const tripSectionKeys = ["transport", "stay", "guidelines", "contacts"] as const;
+export function isTripSection(key: string): key is (typeof tripSectionKeys)[number] {
+  return (tripSectionKeys as readonly string[]).includes(key);
+}
+
 export const TRIP_LIMITS = { legs: 6, photos: 4, people: 8, lines: 10 } as const;
 
 export function emptyTrip(): TripContent {
@@ -61,8 +67,8 @@ export const tripFilled = {
   guidelines: (trip: TripContent | undefined) => !!trip && (trip.guidelines.dos.length + trip.guidelines.donts.length > 0 || !!trip.guidelines.weather),
 };
 
-/** "0811-2546-096" → "08112546096"; "+62 811…" → "0811…". Landlines (hotel, hospital) keep their area code. */
+/** "0811-2546-096" → "08112546096"; "+62 811…" and "+62 (0)274…" → "0811…", "0274…". Landlines keep their area code. */
 export function dialNumber(phone: string): string {
-  const digits = phone.replace(/[^\d+]/g, "");
+  const digits = phone.replace(/\(0\)/g, "").replace(/[^\d+]/g, "");
   return digits.startsWith("+62") ? `0${digits.slice(3)}` : digits;
 }

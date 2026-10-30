@@ -193,7 +193,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
           <div className={styles.sectionLabel}><span className={styles.sectionNumber}>{String(index + 1).padStart(2, "0")}</span><p className="eyebrow">{t(navKeys[section.key])}</p></div>
           <div className={styles.sectionBody}>
             {section.key === "about" && <>
-              <div id="about-heading"><SectionHeading title={t("section.about.title")} /></div>
+              <div id="about-heading"><SectionHeading title={t(event.event_kind === "program" ? "section.about.title.program" : "section.about.title")} /></div>
               {event.introduction && <p className={`${styles.introduction} ${styles.multiline}`}>{event.introduction}</p>}
               {event.topics.length > 0 && <div className={styles.topics}><h3>{t("section.about.topics")}</h3><ol>{event.topics.map((topic, topicIndex) => <li key={`${topicIndex}-${topic.title}`}><span className={styles.topicNumber}>{String(topicIndex + 1).padStart(2, "0")}</span><div><h4>{topic.title}</h4>{topic.description && <p className={styles.multiline}>{topic.description}</p>}</div></li>)}</ol></div>}
             </>}

@@ -19,8 +19,8 @@ it("shows the trip's transport, hotel, do & don't and help contacts", () => {
   expect(within(guidelines).getByText("Meninggalkan rombongan tanpa memberi kabar")).toBeTruthy();
   const contacts = document.getElementById("contacts")!;
   // A mobile number gets WhatsApp; the hotel's landline only a call.
-  expect(within(contacts).getByRole("link", { name: "WhatsApp Dimas Wijanarko" }).getAttribute("href")).toBe("https://wa.me/628112546096");
-  expect(within(contacts).queryByRole("link", { name: "WhatsApp THE 1O1 Yogyakarta Tugu" })).toBeNull();
+  expect(within(contacts).getByRole("link", { name: /^WhatsApp Dimas Wijanarko/ }).getAttribute("href")).toBe("https://wa.me/628112546096");
+  expect(within(contacts).queryByRole("link", { name: /^WhatsApp THE 1O1/ })).toBeNull();
   expect(within(contacts).getByText("Rumah Sakit Bethesda Yogyakarta")).toBeTruthy();
-  expect(screen.getByRole("navigation", { name: /./ }).textContent).toContain("Transportasi");
+  expect(screen.getAllByRole("navigation").some(nav => nav.textContent?.includes("Transportasi"))).toBe(true);
 });

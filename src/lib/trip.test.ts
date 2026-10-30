@@ -68,3 +68,26 @@ describe("trip handbook parts", () => {
     expect(dialNumber("+62 811 2546 096")).toBe("08112546096");
   });
 });
+
+describe("trip parts around the rest of the platform", () => {
+  it("dials a landline written with (0)", () => {
+    expect(dialNumber("+62 (0)274 586688")).toBe("0274586688");
+  });
+  it("tells an English reader that trip details are Indonesian only", async () => {
+    const { localizeEvent } = await import("./wording/localize");
+    expect(localizeEvent(smTdnYogyakarta(), "en").fallback).toBe(true);
+  });
+  it("keeps a started transport leg so the schema can ask for its carrier", () => {
+    const event = smTdnYogyakarta();
+    event.trip.transport.legs = [{ ...event.trip.transport.legs[0], carrier: "", number: "", from: "", to: "", departs: "", arrives: "" }];
+    const prepared = prepareEvent(event);
+    expect(prepared.trip.transport.legs).toHaveLength(1);
+    expect(eventSchema.safeParse(prepared).error?.issues[0].path).toEqual(["trip", "transport", "legs", 0, "carrier"]);
+  });
+  it("leaves trip parts out of the notes of events that are not a Program", async () => {
+    const { hiddenSectionReasons } = await import("@/components/admin/editor/editor-model");
+    expect(hiddenSectionReasons(createSeedEvent()).join(" ")).not.toMatch(/Transportasi|Hotel|Do & don't|Kontak bantuan/);
+    const empty = { ...smTdnYogyakarta(), trip: emptyTrip() };
+    expect(hiddenSectionReasons(empty).join(" ")).toMatch(/Hotel masih kosong \(isi nama hotel\)/);
+  });
+});

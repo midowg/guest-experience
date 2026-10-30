@@ -6,7 +6,7 @@ import type { SectionKey } from "@/lib/types";
 import styles from "@/components/admin/admin.module.css";
 
 const sectionNames: Partial<Record<SectionKey, string>> = {
-  experience: "Pengalaman", agenda: "Jadwal", location: "Lokasi & rute", prepare: "Persiapan", team: "Our Team", rsvp: "Konfirmasi", contact: "Kontak PIC", feedback: "Survei",
+  experience: "Pengalaman", transport: "Transportasi", stay: "Hotel", guidelines: "Do & don't", contacts: "Kontak bantuan", agenda: "Jadwal", location: "Lokasi & rute", prepare: "Persiapan", team: "Our Team", rsvp: "Konfirmasi", contact: "Kontak PIC", feedback: "Survei",
 };
 
 /**

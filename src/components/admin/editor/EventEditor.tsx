@@ -151,8 +151,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   useEffect(() => { if (error) errorSummary.current?.focus(); }, [error, errors]);
   function update<K extends keyof EventRecord>(key: K, value: EventRecord[K]) {
     setEvent(current => ({ ...current, [key]: value })); setDirty(true); setMessage("");
-    // Friday Sharing keeps its settings in one field across several blocks: the open one is the one changed.
-    const owner = key === "donation" && open.startsWith("donation-") ? open : blockOfPath(String(key), kind);
+    // Friday Sharing and the trip keep their settings in one field across several blocks: the open one is the one changed.
+    const owner = (key === "donation" && open.startsWith("donation-")) || (key === "trip" && ["transport", "stay", "guidelines", "contacts"].includes(open)) ? open : blockOfPath(String(key), kind);
     setDirtyBlocks(current => current.has(owner) ? current : new Set(current).add(owner));
   }
   /** Switch the form to another block; the preview follows with the matching part and phase. */

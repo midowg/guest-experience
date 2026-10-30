@@ -296,6 +296,13 @@ export const id = {
   "guidelines.do": "Yang dianjurkan",
   "guidelines.dont": "Yang perlu dihindari",
   "contacts.call": "Telepon",
+  "hero.facts.days": "Catat jadwalnya",
+  "hero.duration": "Durasi",
+  "hero.duration.value": "{n} hari {nights} malam",
+  "section.about.title.program": "Informasi umum",
+  "shortcut.transport": "Transportasi",
+  "shortcut.stay": "Hotel",
+  "shortcut.contacts": "Kontak bantuan",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -596,4 +603,11 @@ export const en: Record<WordKey, string> = {
   "guidelines.do": "Please do",
   "guidelines.dont": "Please avoid",
   "contacts.call": "Call",
+  "hero.facts.days": "Save the dates",
+  "hero.duration": "Duration",
+  "hero.duration.value": "{n} days, {nights} nights",
+  "section.about.title.program": "General information",
+  "shortcut.transport": "Getting there",
+  "shortcut.stay": "Hotel",
+  "shortcut.contacts": "Help",
 };

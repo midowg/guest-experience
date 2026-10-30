@@ -100,8 +100,8 @@ export function ContactList({ trip }: { trip: TripContent }) {
         {person.role && <p className={styles.tripEyebrow}>{person.role}</p>}
         <h3>{person.name}</h3>
         {person.phone && <div className={styles.tripActions}>
-          <a href={`tel:${mobile?.local ?? dialNumber(person.phone)}`} aria-label={`${t("contacts.call")} ${person.name}`}><Phone size={16} aria-hidden="true" /> {person.phone}</a>
-          {mobile && <a href={`https://wa.me/${mobile.international}`} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp ${person.name}`}><MessageCircle size={16} aria-hidden="true" /> WhatsApp <NewTab /></a>}
+          <a href={`tel:${mobile?.local ?? dialNumber(person.phone)}`}><Phone size={16} aria-hidden="true" /> <span className="sr-only">{t("contacts.call")} {person.name}: </span>{person.phone}</a>
+          {mobile && <a href={`https://wa.me/${mobile.international}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} aria-hidden="true" /> WhatsApp<span className="sr-only"> {person.name}</span> <NewTab /></a>}
         </div>}
       </li>;
     })}</ul>}
@@ -111,7 +111,7 @@ export function ContactList({ trip }: { trip: TripContent }) {
         <p><strong>{contacts.hospital}</strong></p>
         {contacts.hospital_address && <p>{contacts.hospital_address}</p>}
       </div>
-      {contacts.hospital_phone && <a className={styles.emergencyCall} href={`tel:${dialNumber(contacts.hospital_phone)}`}><Phone size={16} aria-hidden="true" /> {contacts.hospital_phone}</a>}
+      {contacts.hospital_phone && <a className={styles.emergencyCall} href={`tel:${dialNumber(contacts.hospital_phone)}`}><Phone size={16} aria-hidden="true" /> <span className="sr-only">{t("contacts.call")} {contacts.hospital}: </span>{contacts.hospital_phone}</a>}
       {contacts.hospital_maps_url && <a href={contacts.hospital_maps_url} target="_blank" rel="noopener noreferrer">{t("emergency.directions")} <NewTab /></a>}
     </div>}
   </div>;
