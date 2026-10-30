@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, CalendarCheck, CalendarDays, Copy, ExternalLink, EyeOff, Hourglass, Images, MoreHorizontal, Pencil, Plus, Star, StarOff, Globe, MapPinned } from "lucide-react";
+import { Archive, CalendarCheck, CalendarDays, Copy, ExternalLink, EyeOff, Hourglass, Images, MoreHorizontal, Pencil, Plus, Star, StarOff, Globe, MapPinned, Trash2, X } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
 import type { EventPhase, EventRecord, StaffMember } from "@/lib/types";
 import { formatDate, formatTime } from "@/lib/format";
 import { tzLabel } from "@/lib/timezones";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { CreateEventDialog } from "@/components/admin/events/CreateEventDialog";
+import { DeleteEvent } from "@/components/admin/events/DeleteEvent";
 import type { AdminModule } from "@/lib/admin-modules";
 import type { TemplateKey } from "@/lib/event-templates";
 import styles from "@/components/admin/admin.module.css";
@@ -38,6 +39,14 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
   const [message, setMessage] = useState("");
   const [featured, setFeatured] = useState(featuredId);
   const [creating, setCreating] = useState(false);
+  // "Hapus" in a card's ⋯ menu opens the same typed confirmation as the editor's Hapus acara.
+  const [deleting, setDeleting] = useState<EventRecord | null>(null);
+  useEffect(() => {
+    if (!deleting) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDeleting(null); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [deleting]);
   const hidden = new Set(superAdmin?.hiddenIds ?? []);
   // A card menu closes on a tap elsewhere or on Escape, like any other menu.
   useEffect(() => {
@@ -113,6 +122,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
             <button type="button" disabled={!!busy} onClick={() => duplicate(event.id)}><Copy size={16} aria-hidden="true" /> {busy === event.id ? "Menyalin…" : "Duplikasi"}</button>
             {/* An event shown on the front page before it stopped featuring any can still be taken down. */}
             {live && <button type="button" disabled={!!busy} onClick={() => setHomepage(null)}><StarOff size={16} aria-hidden="true" /> Turunkan dari halaman utama</button>}
+            <button type="button" className={styles.cardMenuDanger} disabled={!!busy} onClick={click => { click.currentTarget.closest("details")?.removeAttribute("open"); setDeleting(event); }}><Trash2 size={16} aria-hidden="true" /> Hapus</button>
           </div>
         </details>
       </div>
@@ -124,6 +134,16 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
       <h1 className={styles.listTitle}>Acara <span>{listed.length}</span></h1>
       <Button type="button" disabled={!!busy} onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" /> Buat acara</Button>
     </div>
+    {deleting && <div className={styles.panelLayer}>
+      <div className={styles.panelBackdrop} onClick={() => setDeleting(null)} aria-hidden="true" />
+      <div className={styles.confirmDialog} role="dialog" aria-modal="true" aria-labelledby="delete-title">
+        <header className={styles.wizardHeader}>
+          <div><p className={styles.wizardStep}>Hapus acara</p><h2 id="delete-title">{deleting.title}</h2></div>
+          <button type="button" className={styles.panelClose} onClick={() => setDeleting(null)} aria-label="Tutup"><X size={18} aria-hidden="true" /></button>
+        </header>
+        <div className={styles.confirmBody}><DeleteEvent event={deleting} isFeatured={deleting.id === featured} bare startOpen onCancel={() => setDeleting(null)} /></div>
+      </div>
+    </div>}
     {creating && <CreateEventDialog events={events} disabledModules={disabledModules} templates={templates} canStartBlank={!!superAdmin} staff={staff} onClose={() => setCreating(false)} />}
     {error && <Notice tone="error">{error}</Notice>}
     {message && <p role="status" className={styles.guestMessage}>{message}</p>}

@@ -373,6 +373,11 @@
 .chipUndo { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 4px var(--space-2); border: 0; background: transparent; color: var(--st-day); font: inherit; font-size: .8125rem; font-weight: 600; text-decoration: underline; cursor: pointer; }
 
 /* "Buat acara" survey (board 11): dialog on desktop, full screen on a phone. */
+/* A small centred confirmation over the list (Hapus from a card's ⋯ menu). */
+.confirmDialog { position: absolute; inset: auto 0 0 0; display: flex; flex-direction: column; max-height: 90vh; overflow: auto; background: #fff; border-radius: 18px 18px 0 0; box-shadow: 0 20px 60px rgba(11, 30, 63, .25); }
+@media (min-width: 48rem) { .confirmDialog { inset: 18vh auto auto 50%; transform: translateX(-50%); width: min(32rem, calc(100% - 2rem)); border-radius: 18px; } }
+.confirmBody { padding: 0 var(--space-5) var(--space-5); }
+.confirmBody > section { margin: 0; }
 .wizard { position: absolute; display: flex; flex-direction: column; background: #fff; inset: 0; }
 @media (min-width: 48rem) { .wizard { inset: 5vh auto auto 50%; transform: translateX(-50%); width: min(46rem, calc(100% - 2rem)); max-height: 90vh; border-radius: 18px; box-shadow: 0 20px 60px rgba(11, 30, 63, .25); } }
 .wizardHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--line); }
@@ -555,6 +560,8 @@ details.guestCard > summary { cursor: pointer; list-style: revert; }
 .cardMenuList a, .cardMenuList button { display: flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-3); border: 0; border-radius: 8px; background: transparent; color: var(--color-text); font: inherit; font-size: .875rem; text-align: left; text-decoration: none; cursor: pointer; }
 .cardMenuList a:hover, .cardMenuList button:hover { background: var(--page); }
 .cardMenuList button:disabled { opacity: .5; cursor: default; }
+.cardMenuList .cardMenuDanger { margin-top: var(--space-1); border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; color: #9a273d; }
+.cardMenuList .cardMenuDanger:hover { background: #fcecef; }
 
 .extraFields { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px dashed #c4cad6; border-radius: 12px; background: #fff; }
 .extraFields > summary { cursor: pointer; color: var(--blue); font-weight: 600; font-size: .875rem; }

@@ -5,7 +5,8 @@ import { EventList } from "@/components/admin/events/EventList";
 
 const refresh = vi.fn();
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push }) }));
+const replace = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push, replace }) }));
 
 const first = { ...createSeedEvent(), status: "published" as const, title: "Acara A" };
 const second = { ...createSeedEvent(), id: "10f3a511-2331-4000-8000-000000000002", status: "published" as const, title: "Acara B", slug: "acara-b" };
@@ -96,4 +97,29 @@ it("groups the events as Tayang, Draf and a folded Arsip, today's and coming one
   const archive = card("Acara Lama").closest("details")!;
   expect(archive.open).toBe(false);
   expect(archive.querySelector("summary")?.textContent).toBe("Arsip 1");
+});
+
+it("deletes from the card menu only after the event's code is typed", async () => {
+  const coded = { ...second, code: "AB23CD" };
+  vi.stubGlobal("fetch", vi.fn(async () => reply({ ok: true, message: "Acara dihapus." })));
+  render(<EventList events={[first, coded]} featuredId={null} />);
+  fireEvent.click(within(menu("Acara B")).getByRole("button", { name: "Hapus" }));
+  const dialog = screen.getByRole("dialog", { name: "Acara B" });
+  const remove = within(dialog).getByRole("button", { name: /Hapus permanen/ }) as HTMLButtonElement;
+  expect(remove.disabled).toBe(true);
+  fireEvent.change(within(dialog).getByRole("textbox", { name: /Ketik AB23CD/ }), { target: { value: "ab23cd" } });
+  expect(remove.disabled).toBe(false);
+  fireEvent.click(remove);
+  await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/admin"));
+  const [url, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+  expect(url).toBe(`/api/admin/events/${coded.id}`);
+  expect(init.method).toBe("DELETE");
+});
+
+it("closes the delete confirmation with Batal without deleting", () => {
+  render(<EventList events={[first]} featuredId={null} />);
+  fireEvent.click(within(menu("Acara A")).getByRole("button", { name: "Hapus" }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Batal" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(globalThis.fetch).not.toHaveBeenCalled();
 });

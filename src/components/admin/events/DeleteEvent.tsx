@@ -13,10 +13,12 @@ import { adminApi } from "@/lib/routes";
  * Deleting takes the guest answers with it and cannot be undone, so the confirmation asks for
  * the event's code (or its slug, before short codes) to be typed rather than a single click.
  * `bare` drops the heading where the page already titles it (the editor's "Hapus acara").
+ * `startOpen` goes straight to the typed confirmation (the event list's ⋯ menu), and `onCancel`
+ * closes whatever holds it.
  */
-export function DeleteEvent({ event, isFeatured, bare = false }: { event: EventRecord; isFeatured: boolean; bare?: boolean }) {
+export function DeleteEvent({ event, isFeatured, bare = false, startOpen = false, onCancel }: { event: EventRecord; isFeatured: boolean; bare?: boolean; startOpen?: boolean; onCancel?: () => void }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [typed, setTyped] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -56,6 +58,7 @@ export function DeleteEvent({ event, isFeatured, bare = false }: { event: EventR
               className="input"
               value={typed}
               autoComplete="off"
+              autoFocus={startOpen}
               disabled={pending}
               aria-describedby="delete-confirm-hint"
               onChange={changed => setTyped(changed.target.value)}
@@ -67,7 +70,7 @@ export function DeleteEvent({ event, isFeatured, bare = false }: { event: EventR
             <Button type="button" variant="danger" disabled={pending || !matches} onClick={remove}>
               <Trash2 size={18} aria-hidden="true" /> {pending ? "Menghapus…" : "Hapus permanen"}
             </Button>
-            <Button type="button" variant="quiet" disabled={pending} onClick={() => { setOpen(false); setTyped(""); setError(""); }}>Batal</Button>
+            <Button type="button" variant="quiet" disabled={pending} onClick={() => { setOpen(false); setTyped(""); setError(""); onCancel?.(); }}>Batal</Button>
           </div>
         </div>}
   </section>;
