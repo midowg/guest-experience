@@ -15,22 +15,27 @@
 .main:focus, .thanks:focus { outline: none; }
 
 /* Opening photo; the logo sits on a soft white square so the blue mark reads on any photo. */
-.cover { position: relative; height: clamp(14rem, 42svh, 19rem); overflow: hidden; background: var(--color-soft); }
+.cover { position: relative; height: clamp(10.5rem, 28svh, 17rem); overflow: hidden; background: var(--color-soft); }
 .cover > img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(11 30 63 / .35), rgb(11 30 63 / .1) 45%, rgb(11 30 63 / .25)); pointer-events: none; }
 .coverPlain { padding-top: var(--space-2); }
 .coverBar { position: absolute; z-index: 1; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-5); }
 .coverPlain .coverBar { position: static; }
-.logo { display: inline-grid; place-items: center; padding: 8px; border-radius: 10px; background: rgb(255 255 255 / .72); }
-.logo img { display: block; width: 24px; height: 28px; object-fit: contain; }
+.logo {
+  display: block; width: 30px; height: 34px; background: #fff; filter: drop-shadow(0 1px 3px rgb(11 30 63 / .45));
+  -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat;
+}
+/* Without a photo the mark sits on the page itself, in the brand colour. */
+.coverPlain .logo { background: var(--color-primary); filter: none; }
 
-.body { display: grid; gap: var(--space-5); padding: var(--space-6) var(--space-5) var(--space-5); }
+/* Tight enough that the confirm button shows on the first screen, even on a small phone. */
+.body { display: grid; gap: var(--space-4); padding: var(--space-5) var(--space-5) var(--space-5); }
 .title { margin: 0; color: var(--color-heading, var(--color-text)); font-size: clamp(1.75rem, 7vw, 2.125rem); line-height: 1.15; letter-spacing: -.01em; }
 .title:focus, .pageTitle:focus { outline: none; }
 .eventName { margin: calc(-1 * var(--space-3)) 0 0; color: var(--color-muted); font-size: var(--text-sm); font-weight: 600; }
 .lead { margin: 0; font-size: var(--text-base); line-height: 1.55; }
 
-.facts { display: grid; gap: var(--space-3); margin: 0; padding: var(--space-4); border-radius: 18px; background: var(--color-soft); }
+.facts { display: grid; gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-4); border-radius: 18px; background: var(--color-soft); }
 .facts div { margin: 0; }
 .facts dd { display: flex; align-items: flex-start; gap: var(--space-3); margin: 0; font-weight: 600; }
 .visit[data-theme="werkudara"] .facts dd { font-weight: 400; font-size: 1.0625rem; }
@@ -141,7 +146,9 @@
 .thanksSurvey h2 { margin: 0; font-size: var(--text-lg); }
 
 /* Tab bar: a floating pill at the bottom, clear of the phone's home indicator. */
-.tabs { position: fixed; z-index: var(--z-nav, 20); left: 50%; bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px)); width: min(100% - 2rem, 34rem); transform: translateX(-50%); }
+.tabs { position: fixed; z-index: var(--z-nav, 20); left: 50%; bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px)); width: min(100% - 2rem, 34rem); transform: translateX(-50%); transition: transform .25s ease, opacity .2s ease; }
+.tabs[data-hidden] { opacity: 0; transform: translate(-50%, calc(100% + var(--space-4))); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .tabs { transition: none; } }
 .tabs ul { display: flex; gap: 4px; margin: 0; padding: 6px; border: var(--border); border-radius: 999px; background: rgb(255 255 255 / .95); box-shadow: 0 8px 24px rgb(20 30 60 / .12); list-style: none; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 .tabs li { flex: 1; }
 .tabs a { display: grid; justify-items: center; gap: 2px; min-height: 48px; padding: 4px 2px; border-radius: 999px; color: var(--color-muted); font-size: .6875rem; font-weight: 600; text-decoration: none; text-align: center; }

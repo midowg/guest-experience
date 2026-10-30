@@ -267,8 +267,8 @@ function Cover({ event, lang, onLang }: { event: EventRecord; lang: Lang; onLang
   const hero = event.hero;
   const frame = getFraming(hero).mobile;
   const bar = <div className={styles.coverBar}>
-    {/* eslint-disable-next-line @next/next/no-img-element */}
-    <span className={styles.logo}><img src="/werkudara_icon.png" width={24} height={28} alt="Werkudara" /></span>
+    {/* The Werkudara mark alone (public/werkudara-mark.png as a mask), white over the photo: no tile behind it. */}
+    <span className={styles.logo} role="img" aria-label="Werkudara" />
     {onLang && <LanguageSwitch lang={lang} onChange={onLang} />}
   </div>;
   if (!hero.url) return <div className={styles.coverPlain} data-invitation-hero>{bar}</div>;
@@ -308,6 +308,13 @@ function HostCard({ event, label, ask, call }: { event: EventRecord; label: stri
 
 /** Home, getting here, the schedule and the host: what a guest looks up again on the day. */
 function TabBar({ screen, has, label, words }: { screen: Screen; has: (key: SectionKey) => boolean; label: string; words: { home: string; route: string; schedule: string; contact: string } }) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const sync = () => setScrolled(window.scrollY > 48);
+    sync();
+    window.addEventListener("scroll", sync, { passive: true });
+    return () => window.removeEventListener("scroll", sync);
+  }, []);
   const tabs = [
     { target: "beranda" as Screen, icon: Home, label: words.home, on: true },
     { target: "cara-datang" as Screen, icon: Route, label: words.route, on: has("location") },
@@ -317,7 +324,9 @@ function TabBar({ screen, has, label, words }: { screen: Screen; has: (key: Sect
   if (tabs.length < 2) return null;
   // The tiles' screens belong to Home.
   const current = tabs.some(tab => tab.target === screen) ? screen : "beranda";
-  return <nav className={styles.tabs} aria-label={label} data-visit-nav>
+  // On Home the first screen is the welcome and its button; the bar comes up once the guest scrolls.
+  const hidden = screen === "beranda" && !scrolled;
+  return <nav className={styles.tabs} aria-label={label} data-visit-nav data-hidden={hidden || undefined} inert={hidden || undefined}>
     <ul>{tabs.map(({ target, icon: Icon, label: text }) => <li key={target}>
       <a href={`#${target}`} aria-current={current === target ? "page" : undefined}><Icon size={20} aria-hidden="true" /><span>{text}</span></a>
     </li>)}</ul>

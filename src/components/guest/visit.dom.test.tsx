@@ -160,3 +160,12 @@ it("keeps the welcome screens on the day itself when Hari H is switched off", ()
   expect(off.container.querySelector("[data-today-panel]")).toBeNull();
   expect(screen.getByRole("heading", { level: 1, name: "Selamat datang di Werkudara" })).toBeTruthy();
 });
+
+it("keeps the tab bar down on Home until the guest scrolls, so the welcome and its button come first", () => {
+  render(<EventExperience event={visit()} />);
+  const tabs = screen.getByRole("navigation", { name: "Navigasi kunjungan", hidden: true });
+  expect(tabs.hasAttribute("data-hidden")).toBe(true);
+  act(() => { Object.defineProperty(window, "scrollY", { value: 200, configurable: true }); window.dispatchEvent(new Event("scroll")); });
+  expect(tabs.hasAttribute("data-hidden")).toBe(false);
+  Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+});
