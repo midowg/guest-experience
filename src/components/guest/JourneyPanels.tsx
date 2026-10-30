@@ -9,6 +9,7 @@ import type { EventRecord, MomentIcon, PlainImage, PrepareIcon, PrepareItem } fr
 import { imageSrcSet } from "./Gallery";
 import { useWording } from "./language";
 import { EmergencyCard } from "./ProgramAgenda";
+import { PhotoZoom } from "./PhotoZoom";
 import type { WordKey } from "@/lib/wording";
 import styles from "./guest.module.css";
 import { galleryPath } from "@/lib/routes";
@@ -35,10 +36,7 @@ export function PrepareCards({ items }: { items: PrepareItem[] }) {
           <h3>{item.title}</h3>
           {item.description && <p className={styles.multiline}>{item.description}</p>}
           {item.list.length > 0 && <ul className={styles.prepareList}>{item.list.map((line, i) => <li key={`${i}-${line}`}><Check size={15} aria-hidden="true" /> {line}</li>)}</ul>}
-          {!!item.images?.length && <div className={styles.prepareImages}>{item.images.map((image, i) => <figure key={`${i}-${image.url}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image.url} {...imageSrcSet(image.srcset, "(max-width: 960px) 50vw, 240px")} alt={image.alt} loading="lazy" referrerPolicy="no-referrer" />
-          </figure>)}</div>}
+          {!!item.images?.length && <div className={styles.prepareImages}>{item.images.map((image, i) => <PhotoZoom key={`${i}-${image.url}`} image={image} sizes="(max-width: 960px) 33vw, 160px" />)}</div>}
         </div>
       </li>;
     })}

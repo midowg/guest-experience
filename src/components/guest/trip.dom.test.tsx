@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { smTdnYogyakarta } from "@/lib/fixtures/sm-tdn-yogyakarta";
 import { EventExperience } from "./EventExperience";
 
@@ -31,7 +31,7 @@ it("shows the day's cover above its sessions and a card's pictures", () => {
   event.prepare.items[2].images = [{ url: "https://example.test/kaos.webp", alt: "Kaos acara", srcset: [] }];
   render(<EventExperience event={event} preview />);
   expect(screen.getByRole("img", { name: "Sampul hari pertama" })).toBeTruthy();
-  expect(screen.getByRole("img", { name: "Kaos acara" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Lihat foto penuh: Kaos acara" })).toBeTruthy();
 });
 
 it("puts the client's logo in the header and names Werkudara in the footer", () => {
@@ -42,4 +42,23 @@ it("puts the client's logo in the header and names Werkudara in the footer", () 
   expect(screen.getByText("Diselenggarakan oleh")).toBeTruthy();
   expect(screen.getByText("Werkudara Group")).toBeTruthy();
   expect(screen.getByText("Journey by Werkudara Group")).toBeTruthy();
+});
+
+it("shows a session's photo small beside its title and opens it full size", () => {
+  const event = smTdnYogyakarta();
+  const sate = event.agenda.find(item => item.title.startsWith("Makan siang di Sate"))!;
+  event.agenda_details[sate.id] = { ...event.agenda_details[sate.id], photo: { url: "https://example.test/sate.webp", alt: "Sate klathak di kuah gulai", srcset: [] } };
+  event.trip.stay.photos = [{ url: "https://example.test/hotel.webp", alt: "Fasad hotel", srcset: [] }, { url: "https://example.test/kamar.webp", alt: "Kamar hotel", srcset: [] }];
+  render(<EventExperience event={event} preview />);
+  const thumb = screen.getByRole("button", { name: "Lihat foto penuh: Sate klathak di kuah gulai" });
+  const dialog = thumb.nextElementSibling as HTMLDialogElement;
+  expect(dialog.hasAttribute("open")).toBe(false);
+  fireEvent.click(thumb);
+  expect(dialog.hasAttribute("open")).toBe(true);
+  expect(within(dialog).getByRole("img", { name: "Sate klathak di kuah gulai" })).toBeTruthy();
+  fireEvent.click(within(dialog).getByRole("button", { name: "Tutup" }));
+  expect(dialog.hasAttribute("open")).toBe(false);
+  // The hotel's first photo is the card's background; the others open full size.
+  expect(screen.getByRole("img", { name: "Fasad hotel" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Lihat foto penuh: Kamar hotel" })).toBeTruthy();
 });

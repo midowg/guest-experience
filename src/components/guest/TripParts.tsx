@@ -4,6 +4,7 @@ import { ArrowUpRight, BedDouble, Bus, Car, Check, Clock3, CloudSun, Coffee, Hea
 import { parseContactPhone } from "@/lib/contact-phone";
 import { dialNumber, type TripContent, type TripMode } from "@/lib/trip";
 import { imageSrcSet } from "./Gallery";
+import { PhotoZoom } from "./PhotoZoom";
 import { useWording } from "./language";
 import styles from "./guest.module.css";
 
@@ -50,11 +51,8 @@ export function TransportCards({ trip }: { trip: TripContent }) {
 export function StayCard({ trip }: { trip: TripContent }) {
   const { t } = useWording();
   const stay = trip.stay;
-  return <div className={`${styles.tripCard} ${stay.photos.length ? styles.stayCard : ""}`.trimEnd()}>
-    {stay.photos.length > 0 && <div className={styles.tripPhotos}>{stay.photos.map((photo, index) => <figure key={`${index}-${photo.url}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={photo.url} {...imageSrcSet(photo.srcset, "(max-width: 960px) 50vw, 420px")} alt={photo.alt} loading="lazy" referrerPolicy="no-referrer" />
-    </figure>)}</div>}
+  const [cover, ...more] = stay.photos;
+  const details = <div className={`${styles.tripCard} ${cover ? styles.stayGlass : ""}`.trimEnd()}>
     <p className={styles.tripEyebrow}><BedDouble size={16} aria-hidden="true" /> {t("stay.hotel")}</p>
     <h3>{stay.name}</h3>
     {stay.address && <p className={styles.multiline}>{stay.address}</p>}
@@ -71,6 +69,15 @@ export function StayCard({ trip }: { trip: TripContent }) {
       {stay.maps_url && <a href={stay.maps_url} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> {t("stay.directions")} <NewTab /></a>}
       {stay.phone && <a href={`tel:${dialNumber(stay.phone)}`}><Phone size={16} aria-hidden="true" /> {t("stay.call")} · {stay.phone}</a>}
     </div>}
+    {more.length > 0 && <div className={styles.stayThumbs}>{more.map((photo, index) => <PhotoZoom key={`${index}-${photo.url}`} image={photo} sizes="6rem" />)}</div>}
+  </div>;
+  if (!cover) return details;
+  return <div className={styles.stayHero}>
+    <div className={styles.stayBackdrop}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={cover.url} {...imageSrcSet(cover.srcset, "(max-width: 960px) 100vw, 1200px")} alt={cover.alt} loading="lazy" referrerPolicy="no-referrer" />
+    </div>
+    {details}
   </div>;
 }
 

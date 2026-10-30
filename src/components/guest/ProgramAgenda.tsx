@@ -8,6 +8,7 @@ import { agendaByDay, duration, hasDepth, presentationPage } from "@/lib/program
 import type { AgendaItem, EventRecord } from "@/lib/types";
 import { TimeRange } from "./InvitationHero";
 import { imageSrcSet } from "./Gallery";
+import { PhotoZoom } from "./PhotoZoom";
 import { useWording } from "./language";
 import styles from "./guest.module.css";
 
@@ -21,22 +22,25 @@ function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; it
   const detail = event.agenda_details?.[item.id];
   const length = duration(item.starts_at, item.ends_at);
   const page = presentationPage(event.presentation_pdf_url ?? "", detail?.pdf_page ?? null);
-  const deep = hasDepth(detail);
+  // The photo sits beside the title; the box below holds only words.
+  const deep = hasDepth(detail) && !!(detail!.teaser.trim() || detail!.did_you_know.trim() || detail!.more_story.trim());
+  const photo = detail?.photo?.url ? detail.photo : null;
   return <li>
     <div className={styles.agendaTime}><TimeRange start={item.starts_at} end={item.ends_at} timezone={event.timezone} /></div>
     <div className={styles.agendaBody}>
-      <h3>{item.title}</h3>
-      {item.description && <p className={styles.multiline}>{item.description}</p>}
-      {(detail?.place || length) && <p className={styles.agendaFacts}>
-        {detail?.place && <span><MapPin size={14} aria-hidden="true" /> {detail.place}</span>}
-        {length && <span><Clock3 size={14} aria-hidden="true" /> {[length.hours ? t("duration.hours", { n: length.hours }) : "", length.minutes ? t("duration.minutes", { n: length.minutes }) : ""].filter(Boolean).join(" ")}</span>}
-      </p>}
+      <div className={photo ? styles.agendaHead : styles.agendaText}>
+        <div className={styles.agendaText}>
+          <h3>{item.title}</h3>
+          {item.description && <p className={styles.multiline}>{item.description}</p>}
+          {(detail?.place || length) && <p className={styles.agendaFacts}>
+            {detail?.place && <span><MapPin size={14} aria-hidden="true" /> {detail.place}</span>}
+            {length && <span><Clock3 size={14} aria-hidden="true" /> {[length.hours ? t("duration.hours", { n: length.hours }) : "", length.minutes ? t("duration.minutes", { n: length.minutes }) : ""].filter(Boolean).join(" ")}</span>}
+          </p>}
+        </div>
+        {photo && <PhotoZoom image={photo} className={styles.agendaThumb} sizes="8rem" />}
+      </div>
       {/* Shown as it is, without a button to open it (revision 30 Oct): the guest reads it while scrolling. */}
       {deep && <div className={styles.discoverPanel}>
-        {detail!.photo?.url && <figure className={styles.detailPhoto}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={detail!.photo.url} {...imageSrcSet(detail!.photo.srcset, "(max-width: 960px) 100vw, 640px")} alt={detail!.photo.alt} loading="lazy" referrerPolicy="no-referrer" />
-        </figure>}
         {/* No label (revision 30 Oct): the lamp says "worth knowing", the teaser leads, the story follows. */}
         {(detail!.did_you_know || detail!.teaser) && <div className={`${styles.didYouKnow} ${styles.noteBox}`}>
           <Lightbulb size={18} aria-hidden="true" className={styles.noteIcon} />

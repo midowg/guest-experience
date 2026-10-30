@@ -402,14 +402,30 @@
 .agendaFacts { display: flex; flex-wrap: wrap; gap: var(--space-3); color: var(--color-caption); font-size: var(--text-sm); }
 .agendaFacts span { display: inline-flex; align-items: center; gap: 4px; }
 .discoverPanel { display: grid; gap: var(--space-3); }
-.detailPhoto { margin: 0; aspect-ratio: 16 / 10; overflow: hidden; border-radius: max(var(--radius, 0px), 10px); }
-.detailPhoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.agendaHead { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-4); align-items: start; }
+.agendaText { display: grid; gap: var(--space-2); min-width: 0; }
+.agendaThumb { width: 5.5rem; aspect-ratio: 1; }
+@media (min-width: 961px) { .agendaThumb { width: 8rem; aspect-ratio: 4 / 3; } }
+/* A picture that opens full size (PhotoZoom.tsx). */
+.zoomThumb { position: relative; display: block; margin: 0; padding: 0; border: 0; overflow: hidden; border-radius: max(var(--radius, 0px), 10px); background: transparent; cursor: zoom-in; }
+.zoomThumb img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .2s; }
+.zoomThumb:hover img { transform: scale(1.04); }
+.zoomThumb:focus-visible { outline: 3px solid var(--color-focus, var(--color-primary)); outline-offset: 2px; }
+.zoomDialog { box-sizing: border-box; width: 100%; height: 100%; max-width: 100%; max-height: 100%; margin: 0; padding: var(--space-4); border: 0; background: rgba(8, 12, 22, .94); color: #fff; }
+.zoomDialog[open] { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); }
+.zoomDialog::backdrop { background: rgba(8, 12, 22, .6); }
+.zoomDialog figure { display: grid; justify-items: center; gap: var(--space-2); margin: 0; min-height: 0; }
+.zoomDialog img { display: block; max-width: 100%; max-height: calc(100dvh - 9rem); object-fit: contain; border-radius: 8px; }
+.zoomDialog figcaption { max-width: 40rem; color: rgba(255, 255, 255, .85); font-size: var(--text-sm); text-align: center; }
+.zoomClose { align-self: flex-end; display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-4); border: 1px solid rgba(255, 255, 255, .45); border-radius: 999px; background: transparent; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .zoomThumb img { transition: none; } }
 /* A day's cover is a wide banner, like a Facebook or LinkedIn cover: any picture is cropped to 12:5. */
 .dayCover { margin: var(--space-3) 0 var(--space-4); aspect-ratio: 12 / 5; overflow: hidden; border-radius: max(var(--radius, 0px), 12px); background: var(--color-soft); }
 .dayCover img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.prepareImages { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
-.prepareImages figure { margin: 0; aspect-ratio: 1; overflow: hidden; border-radius: max(var(--radius, 0px), 8px); background: var(--color-background); }
-.prepareImages img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* Card pictures are cut-outs (no white or black box): they sit straight on the card. */
+.prepareImages { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
+.prepareImages .zoomThumb { aspect-ratio: 1; }
+.prepareImages .zoomThumb img { object-fit: contain; }
 .didYouKnow { padding: var(--space-3) var(--space-4); border-radius: max(var(--radius, 0px), 10px); background: var(--color-soft); }
 .didYouKnow p { margin: 0; }
 .didYouKnowTitle { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-1) !important; color: var(--color-heading, var(--color-primary)); font-weight: 700; }
@@ -435,9 +451,7 @@
   .experience[data-kind="program"] .prepareCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .experience[data-kind="program"] .agenda li { grid-template-columns: 11rem minmax(0, 1fr); }
   .experience[data-kind="program"] .agendaBody { max-width: 52rem; }
-  .experience[data-kind="program"] .stayCard { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--space-6); }
-  .experience[data-kind="program"] .stayCard > .tripPhotos { grid-column: 1; grid-row: 1 / span 20; margin: calc(var(--space-5) * -1) 0 calc(var(--space-5) * -1) calc(var(--space-5) * -1); }
-  .experience[data-kind="program"] .stayCard > :not(.tripPhotos) { grid-column: 2; }
+  .experience[data-kind="program"] .stayHero { min-height: 32rem; padding: var(--space-6); }
 }
 
 /* Client trip handbook (TripParts.tsx): transport legs, hotel, do & don't, help contacts. */
@@ -461,10 +475,13 @@
 .tripNote { padding: var(--space-3); border-left: 3px solid var(--color-hero-accent, var(--color-primary)); background: var(--color-background); font-size: var(--text-sm); color: var(--color-caption); }
 .tripActions { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 .tripActions a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; font-weight: 600; color: var(--color-primary); }
-.tripPhotos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: calc(var(--space-5) * -1) calc(var(--space-5) * -1) var(--space-2); }
-.tripPhotos figure { margin: 0; aspect-ratio: 4 / 3; overflow: hidden; }
-.tripPhotos figure:only-child { grid-column: 1 / -1; aspect-ratio: 16 / 9; }
-.tripPhotos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Hotel: its first photo fills the card; the details sit on a frosted panel so they stay readable. */
+.stayHero { position: relative; display: flex; align-items: flex-end; min-height: 26rem; padding: var(--space-4); overflow: hidden; border-radius: max(var(--radius, 0px), 16px); background: var(--color-hero); }
+.stayBackdrop { position: absolute; inset: 0; }
+.stayBackdrop img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.stayGlass { position: relative; width: 100%; max-width: 32rem; border: 1px solid color-mix(in srgb, #fff 45%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--color-background) 74%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.15); backdrop-filter: blur(14px) saturate(1.15); box-shadow: 0 12px 32px rgba(0, 0, 0, .18); }
+.stayThumbs { display: flex; gap: var(--space-2); margin-top: var(--space-1); }
+.stayThumbs .zoomThumb { width: 4.5rem; aspect-ratio: 1; }
 .tripGuidelines { display: grid; gap: var(--space-4); }
 .tripWeather { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4) var(--space-5); border-radius: var(--radius, 0); background: var(--color-soft); }
 .tripWeather svg { flex-shrink: 0; color: var(--color-primary); }
