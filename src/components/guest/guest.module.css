@@ -478,7 +478,14 @@
 .tripFact dd { margin: 0; color: var(--color-text); }
 .tripNote { padding: var(--space-3); border-left: 3px solid var(--color-hero-accent, var(--color-primary)); background: var(--color-background); font-size: var(--text-sm); color: var(--color-caption); }
 .tripActions { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
-.tripActions a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; font-weight: 600; color: var(--color-primary); }
+/* Call, WhatsApp and directions are buttons; numbers are not printed on the page. */
+.tripActions a, .hospitalCall { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-4); border: 1px solid var(--color-primary); border-radius: 999px; background: var(--color-background); color: var(--color-primary); font-weight: 600; text-decoration: none; }
+.tripActions a:first-child, .hospitalCall { background: var(--color-primary); color: var(--color-on-primary, #fff); }
+.tripActions a:hover, .hospitalCall:hover { filter: brightness(.95); }
+.hospitalCall { justify-self: start; border-color: var(--color-danger); background: var(--color-danger); }
+/* A person's Call and WhatsApp share one row, half each. */
+.tripPeople .tripActions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--space-2); }
+.tripPeople .tripActions a { justify-content: center; padding: 0 var(--space-3); white-space: nowrap; }
 /* Hotel with a photo: no card. The photo runs edge to edge; the theme's dark tone and a soft blur
    rise from the bottom, where the words are, and fade out towards the top so the photo still shows. */
 .stayScene { position: relative; isolation: isolate; display: flex; align-items: flex-end; min-height: 36rem; margin-inline: calc(50% - 50vw); padding-block: 12rem var(--space-7); overflow: hidden; color: #fff; background: rgb(var(--scrim-rgb, 10, 32, 62)); }

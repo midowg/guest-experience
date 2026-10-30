@@ -62,3 +62,14 @@ it("shows a session's photo small beside its title and opens it full size", () =
   expect(screen.getByRole("img", { name: "Fasad hotel" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Lihat foto penuh: Kamar hotel" })).toBeTruthy();
 });
+
+it("calls through buttons without printing the numbers", () => {
+  render(<EventExperience event={smTdnYogyakarta()} preview />);
+  const contacts = document.getElementById("contacts")!;
+  expect(within(contacts).queryByText(/0811|0274|586688/)).toBeNull();
+  expect(within(contacts).getByRole("link", { name: "Telepon Dimas Wijanarko" }).getAttribute("href")).toBe("tel:08112546096");
+  expect(within(contacts).getByRole("link", { name: "Telepon rumah sakit" }).getAttribute("href")).toBe("tel:0274586688");
+  const stay = document.getElementById("stay")!;
+  expect(within(stay).queryByText(/0274/)).toBeNull();
+  expect(within(stay).getByRole("link", { name: "Telepon hotel" }).getAttribute("href")).toBe("tel:02742920101");
+});

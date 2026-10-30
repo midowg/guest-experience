@@ -308,6 +308,7 @@ export const id = {
   "footer.brand": "Journey by Werkudara Group",
   "photo.open": "Lihat foto penuh: {name}",
   "photo.close": "Tutup",
+  "contacts.callHospital": "Telepon rumah sakit",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -620,4 +621,5 @@ export const en: Record<WordKey, string> = {
   "footer.brand": "Journey by Werkudara Group",
   "photo.open": "View full photo: {name}",
   "photo.close": "Close",
+  "contacts.callHospital": "Call the hospital",
 };

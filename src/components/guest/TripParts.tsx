@@ -67,7 +67,7 @@ export function StayCard({ trip }: { trip: TripContent }) {
     {stay.note && <p className={`${styles.tripNote} ${styles.multiline}`}>{stay.note}</p>}
     {(stay.maps_url || stay.phone) && <div className={styles.tripActions}>
       {stay.maps_url && <a href={stay.maps_url} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> {t("stay.directions")} <NewTab /></a>}
-      {stay.phone && <a href={`tel:${dialNumber(stay.phone)}`}><Phone size={16} aria-hidden="true" /> {t("stay.call")} · {stay.phone}</a>}
+      {stay.phone && <a href={`tel:${dialNumber(stay.phone)}`}><Phone size={16} aria-hidden="true" /> {t("stay.call")}</a>}
     </div>}
   </div>;
   if (!cover) return details;
@@ -90,7 +90,7 @@ export function StayCard({ trip }: { trip: TripContent }) {
       {stay.note && <p className={`${styles.stayNote} ${styles.multiline}`}>{stay.note}</p>}
       {(stay.maps_url || stay.phone) && <div className={styles.stayActions}>
         {stay.maps_url && <a href={stay.maps_url} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> {t("stay.directions")} <NewTab /></a>}
-        {stay.phone && <a href={`tel:${dialNumber(stay.phone)}`}><Phone size={16} aria-hidden="true" /> {t("stay.call")} · {stay.phone}</a>}
+        {stay.phone && <a href={`tel:${dialNumber(stay.phone)}`}><Phone size={16} aria-hidden="true" /> {t("stay.call")}</a>}
       </div>}
       {/* Every photo, the background one too, opens full size from here. */}
       <div className={styles.stayThumbs}>{stay.photos.map((photo, index) => <PhotoZoom key={`${index}-${photo.url}`} image={photo} sizes="6rem" />)}</div>
@@ -127,8 +127,9 @@ export function ContactList({ trip }: { trip: TripContent }) {
         {person.role && <p className={styles.tripEyebrow}>{person.role}</p>}
         <h3>{person.name}</h3>
         {person.phone && <div className={styles.tripActions}>
-          <a href={`tel:${mobile?.local ?? dialNumber(person.phone)}`}><Phone size={16} aria-hidden="true" /> <span className="sr-only">{t("contacts.call")} {person.name}: </span>{person.phone}</a>
-          {mobile && <a href={`https://wa.me/${mobile.international}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} aria-hidden="true" /> WhatsApp<span className="sr-only"> {person.name}</span> <NewTab /></a>}
+          {/* No number on the page (revision 30 Oct): the button calls, and the phone's dialer shows it. */}
+          <a href={`tel:${mobile?.local ?? dialNumber(person.phone)}`}><Phone size={16} aria-hidden="true" /> {t("contacts.call")}<span className="sr-only"> {person.name}</span></a>
+          {mobile && <a href={`https://wa.me/${mobile.international}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} aria-hidden="true" /> WhatsApp<span className="sr-only"> {person.name} {t("common.newTab")}</span></a>}
         </div>}
       </li>;
     })}</ul>}
@@ -138,7 +139,7 @@ export function ContactList({ trip }: { trip: TripContent }) {
         <p><strong>{contacts.hospital}</strong></p>
         {contacts.hospital_address && <p>{contacts.hospital_address}</p>}
       </div>
-      {contacts.hospital_phone && <a className={styles.emergencyCall} href={`tel:${dialNumber(contacts.hospital_phone)}`}><Phone size={16} aria-hidden="true" /> <span className="sr-only">{t("contacts.call")} {contacts.hospital}: </span>{contacts.hospital_phone}</a>}
+      {contacts.hospital_phone && <a className={styles.hospitalCall} href={`tel:${dialNumber(contacts.hospital_phone)}`}><Phone size={16} aria-hidden="true" /> {t("contacts.callHospital")}</a>}
       {contacts.hospital_maps_url && <a href={contacts.hospital_maps_url} target="_blank" rel="noopener noreferrer">{t("emergency.directions")} <NewTab /></a>}
     </div>}
   </div>;
