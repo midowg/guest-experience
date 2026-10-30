@@ -9,5 +9,5 @@ export const dynamic = "force-dynamic";
  */
 export default function DevEmptyPage() {
   if (process.env.NODE_ENV === "production") notFound();
-  return <EmptyHome placeGuide fridaySharing />;
+  return <EmptyHome />;
 }
