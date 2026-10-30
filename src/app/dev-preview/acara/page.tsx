@@ -3,6 +3,7 @@ import { AdminShell } from "@/components/admin/shared/AdminShell";
 import { EventList } from "@/components/admin/events/EventList";
 import { createSeedEvent } from "@/lib/seed-event";
 import type { EventRecord } from "@/lib/types";
+import { smTdnYogyakarta } from "@/lib/fixtures/sm-tdn-yogyakarta";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,8 @@ export default function DevEventListPage() {
     event(3, { title: "Contoh Kunjungan Tim Kreatif", status: "draft", event_kind: "kunjungan", starts_at: "2026-12-01T10:00:00+07:00" }),
     event(4, { title: "Contoh Kunjungan Bulan Lalu", status: "published", event_kind: "kunjungan", starts_at: "2026-09-15T10:00:00+07:00" }),
     event(5, { title: "Contoh Gala Dinner 2025", status: "archived", event_kind: "acara", starts_at: "2025-12-12T19:00:00+07:00" }),
+    // Placeholder photography for the card preview, layout checking only.
+    { ...smTdnYogyakarta(), id: "9c1d0000-0000-4000-8000-000000000006", status: "published" as const, hero: { ...base.hero, url: "https://picsum.photos/seed/sm-tdn/1600/1000", alt: "Contoh foto sampul", srcset: [] } },
   ];
   return <AdminShell bare><EventList events={events} featuredId={events[0].id} phases={{ [events[1].id]: "day", [events[3].id]: "after" }} templates={["kunjungan-klien", "trip-klien"]} /></AdminShell>;
 }

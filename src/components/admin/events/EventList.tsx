@@ -1,5 +1,6 @@
 "use client";
 
+import { EventPreview } from "./EventPreview";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, CalendarCheck, CalendarDays, Copy, ExternalLink, EyeOff, Hourglass, Images, MoreHorizontal, Pencil, Plus, Star, StarOff, Globe, MapPinned, Trash2, X } from "lucide-react";
@@ -105,6 +106,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
     const badge = stageBadge(event, phases[event.id]);
     const live = event.id === featured && event.status === "published";
     return <li key={event.id} className={`${styles.eventCard} ${styles[`stage_${badge.stage}`]}`}>
+      <a href={adminEventPath(event)} className={styles.cardPreviewLink} tabIndex={-1} aria-hidden="true"><EventPreview event={event} /></a>
       <div className={styles.cardBadges}>
         <span className={styles.stageBadge}><badge.Icon size={14} aria-hidden="true" /> {badge.label}</span>
         {live && <span className={styles.liveBadge}><Star size={12} aria-hidden="true" /> Di halaman utama</span>}
