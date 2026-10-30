@@ -51,8 +51,8 @@ export function TransportCards({ trip }: { trip: TripContent }) {
 export function StayCard({ trip }: { trip: TripContent }) {
   const { t } = useWording();
   const stay = trip.stay;
-  const [cover, ...more] = stay.photos;
-  const details = <div className={`${styles.tripCard} ${cover ? styles.stayGlass : ""}`.trimEnd()}>
+  const cover = stay.photos[0];
+  const details = <div className={styles.tripCard}>
     <p className={styles.tripEyebrow}><BedDouble size={16} aria-hidden="true" /> {t("stay.hotel")}</p>
     <h3>{stay.name}</h3>
     {stay.address && <p className={styles.multiline}>{stay.address}</p>}
@@ -69,15 +69,32 @@ export function StayCard({ trip }: { trip: TripContent }) {
       {stay.maps_url && <a href={stay.maps_url} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> {t("stay.directions")} <NewTab /></a>}
       {stay.phone && <a href={`tel:${dialNumber(stay.phone)}`}><Phone size={16} aria-hidden="true" /> {t("stay.call")} · {stay.phone}</a>}
     </div>}
-    {more.length > 0 && <div className={styles.stayThumbs}>{more.map((photo, index) => <PhotoZoom key={`${index}-${photo.url}`} image={photo} sizes="6rem" />)}</div>}
   </div>;
   if (!cover) return details;
-  return <div className={styles.stayHero}>
-    <div className={styles.stayBackdrop}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={cover.url} {...imageSrcSet(cover.srcset, "(max-width: 960px) 100vw, 1200px")} alt={cover.alt} loading="lazy" referrerPolicy="no-referrer" />
+  return <div className={styles.stayScene}>
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img className={styles.stayScenePhoto} src={cover.url} {...imageSrcSet(cover.srcset, "100vw")} alt={cover.alt} loading="lazy" referrerPolicy="no-referrer" />
+    <div className={styles.stayTone} aria-hidden="true" />
+    <div className={`container ${styles.stayContent}`}>
+      <p className={styles.stayEyebrow}><BedDouble size={16} aria-hidden="true" /> {t("stay.hotel")}</p>
+      <h3 className={styles.stayName}>{stay.name}</h3>
+      {stay.address && <p className={`${styles.stayAddress} ${styles.multiline}`}>{stay.address}</p>}
+      {(stay.check_in || stay.check_out) && <div className={styles.stayDates}>
+        {stay.check_in && <p><span>{t("stay.checkIn")}</span><strong>{stay.check_in}</strong></p>}
+        {stay.check_out && <p><span>{t("stay.checkOut")}</span><strong>{stay.check_out}</strong></p>}
+      </div>}
+      {(stay.breakfast_place || stay.breakfast_time || stay.meeting_point) && <dl className={styles.stayFacts}>
+        {(stay.breakfast_place || stay.breakfast_time) && <div><dt><Coffee size={15} aria-hidden="true" /> {t("stay.breakfast")}</dt><dd>{[stay.breakfast_place, stay.breakfast_time].filter(Boolean).join(" · ")}</dd></div>}
+        {stay.meeting_point && <div><dt><MapPin size={15} aria-hidden="true" /> {t("stay.meeting")}</dt><dd>{stay.meeting_point}</dd></div>}
+      </dl>}
+      {stay.note && <p className={`${styles.stayNote} ${styles.multiline}`}>{stay.note}</p>}
+      {(stay.maps_url || stay.phone) && <div className={styles.stayActions}>
+        {stay.maps_url && <a href={stay.maps_url} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> {t("stay.directions")} <NewTab /></a>}
+        {stay.phone && <a href={`tel:${dialNumber(stay.phone)}`}><Phone size={16} aria-hidden="true" /> {t("stay.call")} · {stay.phone}</a>}
+      </div>}
+      {/* Every photo, the background one too, opens full size from here. */}
+      <div className={styles.stayThumbs}>{stay.photos.map((photo, index) => <PhotoZoom key={`${index}-${photo.url}`} image={photo} sizes="6rem" />)}</div>
     </div>
-    {details}
   </div>;
 }
 
@@ -85,7 +102,10 @@ export function GuidelineLists({ trip }: { trip: TripContent }) {
   const { t } = useWording();
   const guidelines = trip.guidelines;
   return <div className={styles.tripGuidelines}>
-    {guidelines.weather && <div className={styles.tripWeather}><CloudSun size={20} aria-hidden="true" /><div><h3>{t("guidelines.weather")}</h3><p className={styles.multiline}>{guidelines.weather}</p></div></div>}
+    {guidelines.weather && <div className={styles.tripWeather}>
+      <div className={styles.cardHead}><h3>{t("guidelines.weather")}</h3><span className={styles.momentIcon} aria-hidden="true"><CloudSun size={20} /></span></div>
+      <p className={styles.multiline}>{guidelines.weather}</p>
+    </div>}
     {guidelines.dos.length > 0 && <div className={styles.tripCard}>
       <h3 className={styles.tripDo}>{t("guidelines.do")}</h3>
       <ul className={styles.prepareList}>{guidelines.dos.map((line, index) => <li key={`${index}-${line}`}><Check size={15} aria-hidden="true" /> {line}</li>)}</ul>

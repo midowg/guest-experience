@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { X, ZoomIn } from "lucide-react";
 import type { PlainImage } from "@/lib/types";
 import { imageSrcSet } from "./Gallery";
 import { useWording } from "./language";
@@ -20,6 +20,7 @@ export function PhotoZoom({ image, className, sizes, children }: { image: PlainI
     <button type="button" className={`${styles.zoomThumb} ${className ?? ""}`.trimEnd()} onClick={open} aria-label={t("photo.open", { name: image.alt })}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={image.url} {...imageSrcSet(image.srcset, sizes)} alt="" loading="lazy" referrerPolicy="no-referrer" />
+      <span className={styles.zoomBadge} aria-hidden="true"><ZoomIn size={14} /></span>
       {children}
     </button>
     <dialog ref={dialog} className={styles.zoomDialog} aria-label={image.alt} onClick={e => { if (e.target === e.currentTarget) close(); }}>

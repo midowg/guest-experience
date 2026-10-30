@@ -328,7 +328,10 @@
 
 /* Persiapan tamu: free-form cards (dress code, bawaan, yang disiapkan panitia). */
 .prepareCards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
-.prepareCard { display: flex; gap: var(--space-4); align-items: flex-start; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius, 0); background: var(--color-surface, #fff); }
+.prepareCard { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius, 0); background: var(--color-surface, #fff); }
+/* A card's title with its icon at the right end; what follows starts at the same left edge. */
+.cardHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.cardHead h3 { margin: 0 !important; }
 .prepareCard h3 { margin: 0 0 var(--space-1); font-size: var(--text-base); color: var(--color-heading, var(--color-text)); }
 .prepareCard p { margin: 0; font-size: var(--text-sm); color: var(--color-caption); }
 .prepareList { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text); }
@@ -410,6 +413,7 @@
 .zoomThumb { position: relative; display: block; margin: 0; padding: 0; border: 0; overflow: hidden; border-radius: max(var(--radius, 0px), 10px); background: transparent; cursor: zoom-in; }
 .zoomThumb img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .2s; }
 .zoomThumb:hover img { transform: scale(1.04); }
+.zoomBadge { position: absolute; right: 6px; bottom: 6px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(12, 18, 32, .62); color: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); pointer-events: none; }
 .zoomThumb:focus-visible { outline: 3px solid var(--color-focus, var(--color-primary)); outline-offset: 2px; }
 .zoomDialog { box-sizing: border-box; width: 100%; height: 100%; max-width: 100%; max-height: 100%; margin: 0; padding: var(--space-4); border: 0; background: rgba(8, 12, 22, .94); color: #fff; }
 .zoomDialog[open] { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); }
@@ -451,7 +455,7 @@
   .experience[data-kind="program"] .prepareCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .experience[data-kind="program"] .agenda li { grid-template-columns: 11rem minmax(0, 1fr); }
   .experience[data-kind="program"] .agendaBody { max-width: 52rem; }
-  .experience[data-kind="program"] .stayHero { min-height: 34rem; padding: var(--space-6); }
+  .experience[data-kind="program"] .stayScene { min-height: 36rem; padding-block: 14rem var(--space-8); }
 }
 
 /* Client trip handbook (TripParts.tsx): transport legs, hotel, do & don't, help contacts. */
@@ -475,18 +479,37 @@
 .tripNote { padding: var(--space-3); border-left: 3px solid var(--color-hero-accent, var(--color-primary)); background: var(--color-background); font-size: var(--text-sm); color: var(--color-caption); }
 .tripActions { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 .tripActions a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; font-weight: 600; color: var(--color-primary); }
-/* Hotel: its first photo fills the card; the details sit on a frosted panel so they stay readable. */
-/* On a phone the photo shows above the panel; on a wide screen the panel sits over its left side. */
-.stayHero { position: relative; display: flex; align-items: flex-end; min-height: 26rem; padding: 13rem var(--space-3) var(--space-3); overflow: hidden; border-radius: max(var(--radius, 0px), 16px); background: var(--color-hero); }
-.stayBackdrop { position: absolute; inset: 0; }
-.stayBackdrop img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.stayGlass { position: relative; width: 100%; max-width: 32rem; border: 1px solid color-mix(in srgb, #fff 45%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--color-background) 74%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.15); backdrop-filter: blur(14px) saturate(1.15); box-shadow: 0 12px 32px rgba(0, 0, 0, .18); }
-.stayThumbs { display: flex; gap: var(--space-2); margin-top: var(--space-1); }
-.stayThumbs .zoomThumb { width: 4.5rem; aspect-ratio: 1; }
+/* Hotel with a photo: no card. The photo runs edge to edge; the theme's dark tone and a soft blur
+   rise from the bottom, where the words are, and fade out towards the top so the photo still shows. */
+.stayScene { position: relative; isolation: isolate; display: flex; align-items: flex-end; min-height: 36rem; margin-inline: calc(50% - 50vw); padding-block: 12rem var(--space-7); overflow: hidden; color: #fff; background: rgb(var(--scrim-rgb, 10, 32, 62)); }
+.stayScenePhoto { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
+.stayTone { position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(to top, rgba(var(--scrim-rgb, 10, 32, 62), .94) 0%, rgba(var(--scrim-rgb, 10, 32, 62), .8) 38%, rgba(var(--scrim-rgb, 10, 32, 62), .35) 68%, rgba(var(--scrim-rgb, 10, 32, 62), .05) 100%);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  -webkit-mask-image: linear-gradient(to top, #000 42%, transparent 82%); mask-image: linear-gradient(to top, #000 42%, transparent 82%); }
+.stayContent { display: grid; gap: var(--space-3); }
+.stayContent p { margin: 0; }
+.stayEyebrow { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--color-hero-accent, #fff); }
+.stayName { margin: 0; font-family: var(--font-heading); font-weight: var(--heading-weight, 700); font-size: clamp(1.75rem, 4vw, 2.75rem); line-height: 1.1; color: #fff; }
+.stayAddress { max-width: 36rem; color: rgba(255, 255, 255, .86); }
+.stayDates { display: flex; flex-wrap: wrap; gap: var(--space-5); padding-block: var(--space-3); border-block: 1px solid rgba(255, 255, 255, .22); }
+.stayDates p { display: grid; gap: 2px; }
+.stayDates span { font-size: var(--text-sm); color: rgba(255, 255, 255, .72); }
+.stayDates strong { font-size: var(--text-lg); color: #fff; }
+.stayFacts { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); margin: 0; }
+.stayFacts dt { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: rgba(255, 255, 255, .72); }
+.stayFacts dd { margin: 2px 0 0; color: #fff; font-weight: 600; }
+.stayNote { max-width: 36rem; font-size: var(--text-sm); color: rgba(255, 255, 255, .8); }
+.stayActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.stayActions a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-4); border: 1px solid rgba(255, 255, 255, .45); border-radius: 999px; background: rgba(255, 255, 255, .12); color: #fff; font-weight: 600; text-decoration: none; }
+.stayActions a:hover { background: rgba(255, 255, 255, .22); }
+.stayThumbs { display: flex; gap: var(--space-2); }
+.stayThumbs .zoomThumb { width: 4.75rem; aspect-ratio: 1; border: 2px solid rgba(255, 255, 255, .7); }
+/* The scene reaches the screen's edges; nothing beyond it may scroll sideways. */
+.experience[data-kind="program"] { overflow-x: clip; }
 .tripGuidelines { display: grid; gap: var(--space-4); }
-.tripWeather { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4) var(--space-5); border-radius: var(--radius, 0); background: var(--color-soft); }
-.tripWeather svg { flex-shrink: 0; color: var(--color-primary); }
-.tripWeather h3 { margin: 0 0 var(--space-1); font-size: var(--text-base); color: var(--color-heading, var(--color-text)); }
+.tripWeather { display: grid; gap: var(--space-2); padding: var(--space-4) var(--space-5); border-radius: var(--radius, 0); background: var(--color-soft); }
+.tripWeather h3 { font-size: var(--text-base); color: var(--color-heading, var(--color-text)); }
 .tripWeather p { margin: 0; font-size: var(--text-sm); }
 .tripDo, .tripDont { font-size: var(--text-base) !important; }
 .tripDontList svg { color: var(--color-danger); }

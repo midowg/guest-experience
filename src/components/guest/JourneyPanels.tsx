@@ -31,9 +31,8 @@ export function PrepareCards({ items }: { items: PrepareItem[] }) {
     {items.map((item, index) => {
       const Icon = prepareIconComponents[item.icon] ?? Info;
       return <li key={`${index}-${item.title}`} className={styles.prepareCard}>
-        <span className={styles.momentIcon} aria-hidden="true"><Icon size={20} /></span>
+        <div className={styles.cardHead}><h3>{item.title}</h3><span className={styles.momentIcon} aria-hidden="true"><Icon size={20} /></span></div>
         <div>
-          <h3>{item.title}</h3>
           {item.description && <p className={styles.multiline}>{item.description}</p>}
           {item.list.length > 0 && <ul className={styles.prepareList}>{item.list.map((line, i) => <li key={`${i}-${line}`}><Check size={15} aria-hidden="true" /> {line}</li>)}</ul>}
           {!!item.images?.length && <div className={styles.prepareImages}>{item.images.map((image, i) => <PhotoZoom key={`${i}-${image.url}`} image={image} sizes="(max-width: 960px) 33vw, 160px" />)}</div>}
