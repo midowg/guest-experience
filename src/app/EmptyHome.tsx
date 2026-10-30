@@ -1,14 +1,13 @@
-import Image from 'next/image';
-
 /**
- * The front page of Werkudara Journey: one full screen that greets whoever arrives. It says
- * nothing about what the guest pages hold and links to none of them; guests come in through the
- * link the team sent them.
+ * The front page of Werkudara Journey: one full, quiet screen that greets whoever arrives, light or
+ * dark with the visitor's system. It says nothing about what the guest pages hold and links to none
+ * of them; guests come in through the link the team sent them.
  */
 export function EmptyHome() {
   return <main className="welcome-page">
     <div className="welcome-main">
-      <span className="welcome-logo"><Image src="/werkudara_icon.png" alt="Werkudara Group" width={40} height={46} priority /></span>
+      {/* The Werkudara mark as a silhouette (public/werkudara-mark.png), coloured by the theme. */}
+      <span className="welcome-logo" role="img" aria-label="Werkudara Group" />
       <p className="welcome-kicker">Selamat datang</p>
       <h1 className="welcome-mark">Journey</h1>
       <p className="welcome-by">by Werkudara Group</p>

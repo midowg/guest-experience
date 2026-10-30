@@ -64,24 +64,35 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--color-primary)
 .landing p:not(.eyebrow) { max-width: 37rem; font-size: var(--text-lg); }
 .landing .row { margin-top: var(--space-7); }
 .landing p.landing-en { margin-top: var(--space-6); font-size: var(--text-sm); color: var(--color-caption); }
-/* The front page: one full screen in Werkudara blue, "Journey by Werkudara Group" set large. */
+/*
+ * The front page: one full, quiet screen. Light or dark follows the visitor's system; Werkudara
+ * blue is the accent, never the whole page. Square edges and plenty of room, as the brand does.
+ */
 .welcome-page {
+  --w-bg: #fff; --w-ink: var(--ink); --w-soft: #6c6765; --w-line: #e3e6ec; --w-mark: var(--blue); --w-accent: var(--blue);
+  color-scheme: light;
   min-height: 100svh; display: grid; grid-template-rows: 1fr auto; gap: var(--space-7);
-  padding: clamp(1.5rem, 6vw, 5.5rem) clamp(1.5rem, 7vw, 7rem);
-  background: radial-gradient(ellipse at 90% 10%, rgba(0, 163, 233, .35), transparent 55%), radial-gradient(ellipse at 0% 100%, rgba(195, 230, 245, .18), transparent 50%), var(--blue);
-  color: #fff;
+  padding: clamp(1.5rem, 6vw, 5.5rem) clamp(1.5rem, 8vw, 8rem);
+  background: var(--w-bg); color: var(--w-ink);
 }
-.welcome-main { align-self: center; display: grid; justify-items: start; max-width: 72rem; }
-.welcome-logo { display: inline-grid; place-items: center; width: 64px; height: 64px; margin-bottom: clamp(1.5rem, 4vh, 3rem); background: #fff; }
-.welcome-logo img { width: 40px; height: auto; }
+@media (prefers-color-scheme: dark) {
+  .welcome-page { --w-bg: #0d1117; --w-ink: #e8ebf0; --w-soft: #9aa3b2; --w-line: #262c36; --w-mark: #fff; --w-accent: var(--ocean); color-scheme: dark; }
+}
+html:has(.welcome-page) { background: #fff; }
+@media (prefers-color-scheme: dark) { html:has(.welcome-page) { background: #0d1117; } }
+.welcome-main { align-self: center; display: grid; justify-items: start; max-width: 60rem; }
 .welcome-page p { margin: 0; }
-.welcome-kicker { font-size: clamp(.875rem, 1.4vw, 1.125rem); font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--sky); }
-.welcome-page .welcome-mark { margin: .1em 0 0; font-size: clamp(5rem, 19vw, 15rem); font-weight: 800; line-height: .85; letter-spacing: -.04em; color: #fff; }
-.welcome-page .welcome-by { margin-top: clamp(.75rem, 2vh, 1.25rem); font-size: clamp(1.25rem, 3.2vw, 2.5rem); font-weight: 700; color: var(--sky); }
-.welcome-page .welcome-lead { max-width: 40rem; margin-top: clamp(2rem, 6vh, 3.5rem); font-size: clamp(1.125rem, 1.9vw, 1.5rem); line-height: 1.55; }
-.welcome-page .welcome-note { max-width: 40rem; margin-top: var(--space-4); font-size: clamp(1rem, 1.4vw, 1.125rem); line-height: 1.55; color: rgba(255, 255, 255, .78); }
-.welcome-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3) var(--space-6); padding-top: var(--space-5); border-top: 1px solid rgba(255, 255, 255, .25); font-size: var(--text-sm); color: rgba(255, 255, 255, .78); }
-.welcome-sign { font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #fff; }
+.welcome-logo {
+  width: 36px; height: 41px; margin-bottom: clamp(2rem, 6vh, 4rem); background: var(--w-accent);
+  -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat;
+}
+.welcome-page .welcome-kicker { font-size: .8125rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--w-accent); }
+.welcome-page .welcome-mark { margin: var(--space-3) 0 0; font-size: clamp(4.5rem, 15vw, 11rem); font-weight: 800; line-height: .9; letter-spacing: -.035em; color: var(--w-mark); }
+.welcome-page .welcome-by { margin-top: var(--space-3); font-size: clamp(1.125rem, 2.4vw, 1.75rem); font-weight: 600; color: var(--w-soft); }
+.welcome-page .welcome-lead { max-width: 36rem; margin-top: clamp(2.5rem, 7vh, 4rem); padding-top: clamp(1.5rem, 4vh, 2rem); border-top: 2px solid var(--w-accent); font-size: clamp(1.0625rem, 1.6vw, 1.3125rem); line-height: 1.6; }
+.welcome-page .welcome-note { max-width: 36rem; margin-top: var(--space-4); font-size: 1rem; line-height: 1.6; color: var(--w-soft); }
+.welcome-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3) var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--w-line); font-size: var(--text-sm); color: var(--w-soft); }
+.welcome-page .welcome-sign { font-size: .75rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--w-ink); }
 .site-footer { border-top: var(--border); padding-block: var(--space-5); font-size: var(--text-sm); }
 @media (max-width: 600px) { .container { width: calc(100% - 2rem); } .panel { padding: var(--space-5); } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .01ms; animation-iteration-count: 1; transition-duration: .01ms; } }
