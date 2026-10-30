@@ -65,49 +65,73 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--color-primary)
 .landing .row { margin-top: var(--space-7); }
 .landing p.landing-en { margin-top: var(--space-6); font-size: var(--text-sm); color: var(--color-caption); }
 /*
- * The front page: one full, quiet screen. Light or dark follows the visitor's system; Werkudara
- * blue is the accent, never the whole page. Square edges and plenty of room, as the brand does.
+ * The front page: one full, quiet screen. Light or dark follows the system unless the visitor
+ * picks one (data-scheme on <html>); Werkudara blue is the accent, never the whole page.
  */
 .welcome-page {
   --w-bg: #fff; --w-ink: var(--ink); --w-soft: #6c6765; --w-line: #e3e6ec; --w-mark: var(--blue); --w-accent: var(--blue);
   color-scheme: light;
   min-height: 100svh; display: grid; grid-template-rows: auto 1fr;
   background: var(--w-bg); color: var(--w-ink);
+  transition: background-color .25s ease, color .25s ease;
 }
-/* The photo: a band on top on a phone, the right side at full height on a wide screen. */
-.welcome-photo { position: relative; height: 34svh; min-height: 13rem; overflow: hidden; background: var(--w-line); }
-.welcome-photo img { object-fit: cover; object-position: center 40%; }
-.welcome-text { display: grid; grid-template-rows: 1fr auto; gap: var(--space-7); padding: clamp(2rem, 6vw, 5.5rem) clamp(1.5rem, 7vw, 6rem) clamp(1.5rem, 4vw, 3rem); }
-/* A phone: the photo opens the page, so the small mark steps aside and the text sits closer. */
-@media (max-width: 63.99rem) {
-  .welcome-photo { height: 28svh; }
-  .welcome-logo { display: none; }
-  .welcome-text { gap: var(--space-5); padding-top: var(--space-6); }
-  .welcome-page .welcome-lead { margin-top: var(--space-5); padding-top: var(--space-4); }
+:root[data-scheme="dark"] .welcome-page {
+  --w-bg: #0d1117; --w-ink: #e8ebf0; --w-soft: #9aa3b2; --w-line: #262c36; --w-mark: #fff; --w-accent: var(--ocean); color-scheme: dark;
 }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-scheme="light"]) .welcome-page {
+    --w-bg: #0d1117; --w-ink: #e8ebf0; --w-soft: #9aa3b2; --w-line: #262c36; --w-mark: #fff; --w-accent: var(--ocean); color-scheme: dark;
+  }
+}
+@media (prefers-reduced-motion: reduce) { .welcome-page, .welcome-scheme-knob { transition: none; } }
+html:has(.welcome-page) { background: #fff; }
+:root[data-scheme="dark"]:has(.welcome-page) { background: #0d1117; }
+@media (prefers-color-scheme: dark) { :root:not([data-scheme="light"]):has(.welcome-page) { background: #0d1117; } }
+.welcome-page p { margin: 0; }
+
+/* The photo: on a phone it opens the page and fades into it; on a wide screen it is the right half. */
+.welcome-photo { position: relative; height: 40svh; min-height: 15rem; overflow: hidden; background: var(--w-line); }
+.welcome-photo img { object-fit: cover; object-position: center 35%; }
+.welcome-photo::after { content: ""; position: absolute; inset: auto 0 0; height: 45%; background: linear-gradient(to bottom, transparent, var(--w-bg)); transition: background .25s ease; }
+.welcome-text { position: relative; display: grid; grid-template-rows: auto 1fr auto; gap: var(--space-5); margin-top: -4rem; padding: 0 var(--space-5) var(--space-5); }
+.welcome-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.welcome-main { align-self: center; display: grid; justify-items: start; max-width: 44rem; }
+
+.welcome-logo {
+  width: 30px; height: 34px; background: var(--w-accent);
+  -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat;
+}
+.welcome-scheme {
+  position: relative; display: inline-flex; align-items: center; gap: 10px; height: 34px; padding: 0 9px;
+  border: 1px solid var(--w-line); border-radius: 999px; background: var(--w-bg); color: var(--w-soft); cursor: pointer;
+}
+.welcome-scheme svg { position: relative; z-index: 1; }
+.welcome-scheme[aria-checked="false"] svg:first-of-type, .welcome-scheme[aria-checked="true"] svg:last-of-type { color: var(--w-bg); }
+.welcome-scheme-knob { position: absolute; top: 3px; left: 3px; width: 28px; height: 26px; border-radius: 999px; background: var(--w-accent); transition: transform .25s ease; }
+.welcome-scheme[aria-checked="true"] .welcome-scheme-knob { transform: translateX(26px); }
+.welcome-scheme:focus-visible { outline: 3px solid var(--w-accent); outline-offset: 2px; }
+.welcome-scheme:disabled { cursor: default; }
+
+.welcome-page .welcome-kicker { font-size: .75rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--w-accent); }
+.welcome-page .welcome-mark { margin: var(--space-2) 0 0; font-size: clamp(3.75rem, 19vw, 9rem); font-weight: 800; line-height: .9; letter-spacing: -.035em; color: var(--w-mark); }
+.welcome-page .welcome-by { margin-top: var(--space-2); font-size: clamp(1.0625rem, 2.4vw, 1.75rem); font-weight: 600; color: var(--w-soft); }
+.welcome-page .welcome-lead { max-width: 36rem; margin-top: var(--space-5); padding-top: var(--space-4); border-top: 2px solid var(--w-accent); font-size: clamp(1.0625rem, 1.6vw, 1.3125rem); line-height: 1.6; }
+.welcome-page .welcome-note { max-width: 36rem; margin-top: var(--space-3); font-size: .9375rem; line-height: 1.6; color: var(--w-soft); }
+.welcome-foot { display: grid; gap: var(--space-2); padding-top: var(--space-4); border-top: 1px solid var(--w-line); font-size: .8125rem; color: var(--w-soft); }
+.welcome-page .welcome-sign { font-size: .6875rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--w-ink); }
+
 @media (min-width: 64rem) {
   .welcome-page { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); grid-template-rows: none; }
   .welcome-photo { order: 2; height: auto; min-height: 100svh; }
   .welcome-photo img { object-position: center; }
+  .welcome-photo::after { content: none; }
+  .welcome-text { gap: var(--space-7); margin-top: 0; padding: clamp(2.5rem, 5vw, 4.5rem) clamp(2.5rem, 6vw, 6rem); }
+  .welcome-logo { width: 36px; height: 41px; }
+  .welcome-page .welcome-lead { margin-top: clamp(2rem, 5vh, 3.5rem); padding-top: clamp(1.25rem, 3vh, 2rem); }
+  .welcome-page .welcome-note { font-size: 1rem; }
+  .welcome-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3) var(--space-6); padding-top: var(--space-5); font-size: var(--text-sm); }
+  .welcome-page .welcome-sign { font-size: .75rem; }
 }
-@media (prefers-color-scheme: dark) {
-  .welcome-page { --w-bg: #0d1117; --w-ink: #e8ebf0; --w-soft: #9aa3b2; --w-line: #262c36; --w-mark: #fff; --w-accent: var(--ocean); color-scheme: dark; }
-}
-html:has(.welcome-page) { background: #fff; }
-@media (prefers-color-scheme: dark) { html:has(.welcome-page) { background: #0d1117; } }
-.welcome-main { align-self: center; display: grid; justify-items: start; max-width: 44rem; }
-.welcome-page p { margin: 0; }
-.welcome-logo {
-  width: 36px; height: 41px; margin-bottom: clamp(1.5rem, 5vh, 3.5rem); background: var(--w-accent);
-  -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat;
-}
-.welcome-page .welcome-kicker { font-size: .8125rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--w-accent); }
-.welcome-page .welcome-mark { margin: var(--space-3) 0 0; font-size: clamp(4rem, 17vw, 9rem); font-weight: 800; line-height: .9; letter-spacing: -.035em; color: var(--w-mark); }
-.welcome-page .welcome-by { margin-top: var(--space-3); font-size: clamp(1.125rem, 2.4vw, 1.75rem); font-weight: 600; color: var(--w-soft); }
-.welcome-page .welcome-lead { max-width: 36rem; margin-top: clamp(1.75rem, 5vh, 3.5rem); padding-top: clamp(1.25rem, 3vh, 2rem); border-top: 2px solid var(--w-accent); font-size: clamp(1.0625rem, 1.6vw, 1.3125rem); line-height: 1.6; }
-.welcome-page .welcome-note { max-width: 36rem; margin-top: var(--space-4); font-size: 1rem; line-height: 1.6; color: var(--w-soft); }
-.welcome-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3) var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--w-line); font-size: var(--text-sm); color: var(--w-soft); }
-.welcome-page .welcome-sign { font-size: .75rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--w-ink); }
 .site-footer { border-top: var(--border); padding-block: var(--space-5); font-size: var(--text-sm); }
 @media (max-width: 600px) { .container { width: calc(100% - 2rem); } .panel { padding: var(--space-5); } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .01ms; animation-iteration-count: 1; transition-duration: .01ms; } }

@@ -1,9 +1,10 @@
 import Image from 'next/image';
+import { SchemeSwitch } from './SchemeSwitch';
 
 /**
  * The front page of Werkudara Journey: one full, quiet screen that greets whoever arrives, light or
- * dark with the visitor's system, beside a photo of the joglo in the office garden. It says nothing
- * about what the guest pages hold and links to none of them; guests come in through their link.
+ * dark (the system's, or the visitor's pick), beside a photo of the joglo in the office garden. It
+ * says nothing about what the guest pages hold and links to none of them.
  */
 export function EmptyHome() {
   return <main className="welcome-page">
@@ -11,9 +12,12 @@ export function EmptyHome() {
       <Image src="/panduan-ke-werkudara/assets/garden-960.webp" alt="Rumah joglo di taman Werkudara" fill priority sizes="(min-width: 64rem) 45vw, 100vw" />
     </div>
     <div className="welcome-text">
-      <div className="welcome-main">
+      <div className="welcome-top">
         {/* The Werkudara mark as a silhouette (public/werkudara-mark.png), coloured by the theme. */}
         <span className="welcome-logo" role="img" aria-label="Werkudara Group" />
+        <SchemeSwitch />
+      </div>
+      <div className="welcome-main">
         <p className="welcome-kicker">Selamat datang</p>
         <h1 className="welcome-mark">Journey</h1>
         <p className="welcome-by">by Werkudara Group</p>
