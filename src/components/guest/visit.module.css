@@ -15,9 +15,12 @@
 .main:focus, .thanks:focus { outline: none; }
 
 /* Opening photo; the logo sits on a soft white square so the blue mark reads on any photo. */
-.cover { position: relative; height: clamp(10.5rem, 28svh, 17rem); overflow: hidden; background: var(--color-soft); }
+.cover { position: relative; height: clamp(15rem, 42svh, 22rem); overflow: hidden; background: var(--color-soft); }
 .cover > img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(11 30 63 / .35), rgb(11 30 63 / .1) 45%, rgb(11 30 63 / .25)); pointer-events: none; }
+.cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(11 30 63 / .35), rgb(11 30 63 / 0) 28%, rgb(11 30 63 / 0) 42%, rgb(11 30 63 / .78)); pointer-events: none; }
+/* The welcome over the photo, bottom left, white on the darkened foot of the picture. */
+.coverTitle { position: absolute; z-index: 1; right: var(--space-5); bottom: var(--space-5); left: var(--space-5); margin: 0; color: #fff; font-size: clamp(1.875rem, 8.5vw, 2.5rem); font-weight: 700; line-height: 1.08; letter-spacing: -.015em; text-shadow: 0 1px 14px rgb(0 0 0 / .3); text-wrap: balance; }
+.coverTitle:focus { outline: none; }
 .coverPlain { padding-top: var(--space-2); }
 .coverBar { position: absolute; z-index: 1; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: var(--space-4) var(--space-5); }
 .coverPlain .coverBar { position: static; }
@@ -33,6 +36,7 @@
 .title { margin: 0; color: var(--color-heading, var(--color-text)); font-size: clamp(1.75rem, 7vw, 2.125rem); line-height: 1.15; letter-spacing: -.01em; }
 .title:focus, .pageTitle:focus { outline: none; }
 .eventName { margin: calc(-1 * var(--space-3)) 0 0; color: var(--color-muted); font-size: var(--text-sm); font-weight: 600; }
+.body > .eventName:first-child { margin-top: 0; }
 .lead { margin: 0; font-size: var(--text-base); line-height: 1.55; }
 
 .facts { display: grid; gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-4); border-radius: 18px; background: var(--color-soft); }

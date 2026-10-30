@@ -1,4 +1,4 @@
-import { ImagePlus, MapPin, Trash2 } from "lucide-react";
+import { Image as ImageIcon, ImagePlus, MapPin, Route, Trash2 } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
 import { Check, OrderButtons } from "@/components/admin/editor/controls";
 import { moveItem } from "@/components/admin/editor/editor-model";
@@ -7,6 +7,7 @@ import { arrivalIcons } from "@/lib/validation";
 import type { ArrivalIcon, ArrivalPoint } from "@/lib/types";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { WERKUDARA_OFFICE } from "@/components/admin/editor/suggestions";
+import { officeCover, officeRoute } from "@/lib/place-guide";
 import { AfterBlock } from "@/components/admin/editor/JourneyEditor";
 import { absolute, adminEventPath, thanksPath, WELCOME_PATH } from "@/lib/routes";
 import { EventLink } from "./EventLink";
@@ -54,6 +55,11 @@ export function VisitWelcomeBlock({ kit }: { kit: EditorKit }) {
     {text("subtitle", "Kalimat pembuka", 200, true, "Satu atau dua kalimat sudah cukup. Kosongkan untuk memakai kalimat bawaan.")}
     <p className="field-hint">Tanggal, jam, dan alamat di kartu sambutan diambil dari Info kunjungan.</p>
     <h3>Foto sampul</h3>
+    {kit.event.hero.url !== officeCover.url && <div className={styles.chips}>
+      <button type="button" className={styles.chip} onClick={() => kit.update("hero", { ...kit.event.hero, url: officeCover.url, alt: officeCover.alt, srcset: officeCover.srcset, focus: "center" })}>
+        <ImageIcon size={14} aria-hidden="true" /> Pakai foto tampak depan kantor
+      </button>
+    </div>}
     <HeroBlock kit={kit} />
   </div>;
 }
@@ -100,6 +106,22 @@ export function VisitPhotosBlock({ kit }: { kit: EditorKit }) {
     <ButtonLink href={adminEventPath(event, "gallery")} variant="secondary"><ImagePlus size={17} aria-hidden="true" /> Unggah dan atur foto</ButtonLink>
     {origin && event.code && <EventLink event={event} origin={origin} path={thanksPath(event)} label="Tautan terima kasih" hint="Kirim ke tamu setelah kunjungan, bersama foto dan survei." />}
     <Notice>Unggah hanya foto yang boleh dilihat tamu.</Notice>
+  </div>;
+}
+
+/**
+ * Cara datang at the office in one tap: the map, the turns with their photos and the arrival points
+ * of the Werkudara guide (Your Visit). The admin edits them afterwards like any other route.
+ */
+export function OfficeRouteButton({ kit }: { kit: EditorKit }) {
+  const { event, update } = kit;
+  const filled = event.route.steps.length > 0 || (event.route.points ?? []).length > 0 || !!event.route.map_image.url;
+  function use() {
+    if (filled && !window.confirm("Ganti peta, langkah rute, dan info kedatangan yang sudah ada dengan rute bergambar kantor Werkudara?")) return;
+    update("route", { ...event.route, map_image: officeRoute.map_image, steps: officeRoute.steps, points: officeRoute.points });
+  }
+  return <div className={styles.chips}>
+    <button type="button" className={styles.chip} onClick={use}><Route size={14} aria-hidden="true" /> Pakai rute bergambar kantor Werkudara</button>
   </div>;
 }
 

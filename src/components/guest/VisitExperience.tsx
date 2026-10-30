@@ -191,12 +191,15 @@ function VisitBody({ event, preview = false, invitation, phase: journeyPhase = "
   const shownTiles = tiles.filter(tile => available(tile.screen));
   const zone = timezoneInfo[zoneOf(event.timezone)];
 
+  // With a cover photo the welcome is written over it, leaving the screen to the facts and the button.
+  const onPhoto = !!event.hero.url;
+  const welcome = (className: string) => <h1 id="event-title" className={className} ref={screen === "beranda" ? heading : undefined} tabIndex={-1} data-preview-field="greeting">{invitation ? v("home.hello", { name: invitation.name }) : event.greeting || v("home.welcome")}</h1>;
   const home = <>
-    <Cover event={event} lang={lang} onLang={onLang} />
+    <Cover event={event} lang={lang} onLang={onLang} title={phase !== "day" && onPhoto ? welcome(styles.coverTitle) : null} />
     {phase === "day" && <TodayPanel event={event} invitee={invitation?.name} now={now} />}
     <div className={styles.body}>
       {phase !== "day" && <>
-        <h1 id="event-title" className={styles.title} ref={screen === "beranda" ? heading : undefined} tabIndex={-1} data-preview-field="greeting">{invitation ? v("home.hello", { name: invitation.name }) : event.greeting || v("home.welcome")}</h1>
+        {!onPhoto && welcome(styles.title)}
         <p className={styles.eventName} data-preview-field="title">{event.title}</p>
         <p className={`${styles.lead} ${guest.multiline}`} data-preview-field="subtitle">{event.subtitle || v("home.lead")}</p>
         <Facts event={event} />
@@ -263,7 +266,7 @@ function VisitBody({ event, preview = false, invitation, phase: journeyPhase = "
 }
 
 /** The opening photo, with the logo in its top-left corner and the language switch opposite. */
-function Cover({ event, lang, onLang }: { event: EventRecord; lang: Lang; onLang?: (lang: Lang) => void }) {
+function Cover({ event, lang, onLang, title = null }: { event: EventRecord; lang: Lang; onLang?: (lang: Lang) => void; title?: ReactNode }) {
   const hero = event.hero;
   const frame = getFraming(hero).mobile;
   const bar = <div className={styles.coverBar}>
@@ -276,6 +279,7 @@ function Cover({ event, lang, onLang }: { event: EventRecord; lang: Lang; onLang
     {/* eslint-disable-next-line @next/next/no-img-element */}
     <img src={hero.url} {...imageSrcSet(hero.srcset, "(max-width: 600px) 100vw, 560px")} alt="" aria-hidden="true" fetchPriority="high" referrerPolicy="no-referrer" style={{ objectPosition: `${frame.x}% ${frame.y}%` }} />
     {bar}
+    {title}
   </div>;
 }
 

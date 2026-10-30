@@ -45,6 +45,9 @@ const points: ArrivalPoint[] = [
     en: { title: "Meeting point", description: "If you are running late, wait at the pendopo and we will come to you." } },
 ];
 
+/** The way to the office with its photos (map, the turn), arrival points included: Welcome reuses it. */
+export const officeRoute = { map_image: map, steps, points };
+
 export const galleryText = {
   id: [
     "Beberapa area kantor Werkudara berada di ruang terbuka.",
