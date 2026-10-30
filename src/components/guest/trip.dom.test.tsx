@@ -33,3 +33,13 @@ it("shows the day's cover above its sessions and a card's pictures", () => {
   expect(screen.getByRole("img", { name: "Sampul hari pertama" })).toBeTruthy();
   expect(screen.getByRole("img", { name: "Kaos acara" })).toBeTruthy();
 });
+
+it("puts the client's logo in the header and names Werkudara in the footer", () => {
+  const event = smTdnYogyakarta();
+  event.client_logo = { url: "https://example.test/sm.webp", alt: "Logo PT Surya Madistrindo", srcset: [] };
+  render(<EventExperience event={event} preview />);
+  expect(screen.getByRole("link", { name: /^Logo PT Surya Madistrindo — / })).toBeTruthy();
+  expect(screen.getByText("Diselenggarakan oleh")).toBeTruthy();
+  expect(screen.getByText("Werkudara Group")).toBeTruthy();
+  expect(screen.getByText("Journey by Werkudara Group")).toBeTruthy();
+});

@@ -117,6 +117,8 @@ export type EventRecord = {
   guide: GuideSettings;
   /** CSR: what people may give, how to pay, what the page shows, and the handover news (event_kind "csr"). */
   donation: DonationSettings;
+  /** The client's logo in the guest page header instead of Werkudara's; empty keeps Werkudara. Absent on older documents. */
+  client_logo?: PlainImage;
   /** Client trip handbook: transport, hotel, help contacts, do's and don'ts (src/lib/trip.ts). */
   trip: TripContent;
   created_at: string; updated_at: string;

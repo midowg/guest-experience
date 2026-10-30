@@ -46,6 +46,7 @@ export function createSeedEvent(): EventRecord {
     guide: emptyGuide(),
     donation: emptyDonation(),
     trip: emptyTrip(),
+    client_logo: { url: "", alt: "", srcset: [] },
     translations: { en: {
       title: "", subtitle: "", greeting: "", introduction: "", closing: "", arrival_notes: "", day_note: "",
       experience_title: "", experience_story: "", prepare_title: "", prepare_intro: "", after_title: "", after_message: "",

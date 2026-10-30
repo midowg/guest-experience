@@ -18,6 +18,8 @@
 .brand { display: inline-flex; align-items: center; gap: var(--space-3); color: var(--color-primary); text-decoration: none; font-family: var(--font-label); font-size: var(--text-sm); font-weight: 700; letter-spacing: .06em; flex-shrink: 0; }
 .brand img { width: 3.25rem; height: 3.25rem; object-fit: contain; }
 .brandSub { display: block; font-family: var(--font-body); font-weight: 400; color: var(--color-muted); letter-spacing: 0; }
+/* A client's horizontal logo (logo mark and name): as tall as the Werkudara mark, never wider than the header allows. */
+.clientBrand img { width: auto; height: 2.75rem; max-width: min(15rem, 60vw); object-fit: contain; }
 .navigation { display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap; }
 .navigation a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; font-size: var(--text-sm); color: var(--color-text); border-bottom: 2px solid transparent; }
 .navigation a:hover { color: var(--color-primary); border-bottom-color: var(--color-primary); }
@@ -186,6 +188,8 @@
 .closing { background: var(--color-background); border-top: var(--border); padding-top: var(--space-8); padding-bottom: calc(var(--space-7) + env(safe-area-inset-bottom, 0px)); }
 .closingText { max-width: var(--reading); font-size: clamp(1.5rem, 2.75vw, 2.5rem); line-height: 1.35; color: var(--color-primary); margin-bottom: var(--space-5); }
 .organizer { margin-bottom: var(--space-6); max-width: var(--reading); }
+.organizer p { margin: 0; }
+.organizerName { margin-top: var(--space-1) !important; font-weight: 700; color: var(--color-heading, var(--color-text)); }
 .footerLine { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); border-top: var(--border); margin-top: var(--space-8); padding-block: var(--space-5); font-size: var(--text-sm); }
 .footerLine a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; }
 /* A soft arrival for sections still below the fold. Only script applies .revealPending, and

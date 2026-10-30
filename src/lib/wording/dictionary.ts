@@ -303,6 +303,9 @@ export const id = {
   "shortcut.transport": "Transportasi",
   "shortcut.stay": "Hotel",
   "shortcut.contacts": "Kontak bantuan",
+  "nav.brandBack": "kembali ke awal halaman",
+  "footer.organizedBy": "Diselenggarakan oleh",
+  "footer.brand": "Journey by Werkudara Group",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -610,4 +613,7 @@ export const en: Record<WordKey, string> = {
   "shortcut.transport": "Getting there",
   "shortcut.stay": "Hotel",
   "shortcut.contacts": "Help",
+  "nav.brandBack": "back to the top of the page",
+  "footer.organizedBy": "Organised by",
+  "footer.brand": "Journey by Werkudara Group",
 };

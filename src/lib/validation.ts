@@ -299,6 +299,7 @@ export const eventBaseSchema = z.object({
   guide: guideSchema.default(emptyGuide),
   donation: donationSchema.default(emptyDonation),
   trip: tripSchema.default(emptyTrip),
+  client_logo: plainImage.default(emptyImage),
   translations: z.object({ en: englishSchema.default(emptyEnglish) }).default({ en: emptyEnglish }),
   created_at: timestamp, updated_at: timestamp,
 });
@@ -317,7 +318,7 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
   const photos: [(string | number)[], { url: string; alt: string; srcset: unknown[] }][] = [
     [["team_image"], event.team_image], [["experience", "image"], event.experience.image], [["route", "map_image"], event.route.map_image],
     [["after", "image"], event.after.image], ...event.route.steps.map((step, index) => [["route", "steps", index, "image"], step.image] as [(string | number)[], typeof step.image]),
-    [["guide", "cover", "photo"], event.guide.cover.photo],
+    [["guide", "cover", "photo"], event.guide.cover.photo], [["client_logo"], event.client_logo],
     ...event.trip.stay.photos.map((photo, index) => [["trip", "stay", "photos", index], photo] as [(string | number)[], typeof photo]),
     ...event.trip.day_covers.map((cover, index) => [["trip", "day_covers", index, "image"], cover.image] as [(string | number)[], typeof cover.image]),
     ...event.prepare.items.flatMap((item, index) => (item.images ?? []).map((image, at) => [["prepare", "items", index, "images", at], image] as [(string | number)[], typeof image])),

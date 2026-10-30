@@ -2,10 +2,11 @@ import { ButtonLink, Notice } from "@/components/ui";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { adminEventPath } from "@/lib/routes";
 import { EventLink } from "./EventLink";
+import { ImageInput } from "@/components/admin/editor/JourneyEditor";
 import styles from "@/components/admin/admin.module.css";
 
 export function IdentityBlock({ kit }: { kit: EditorKit }) {
-  const { event, update, text, choices, unavailable } = kit;
+  const { event, update, text, choices, unavailable, control, errors } = kit;
   // An E-Guide is read, not answered: no greeting, invitation text or guest links. Its cover and chapters live in "Bab panduan".
   const guide = event.event_kind === "eguide";
   // A CSR page asks for donations, not attendance: a short story instead of greeting, invitation and guest links.
@@ -16,6 +17,13 @@ export function IdentityBlock({ kit }: { kit: EditorKit }) {
     {csr ? <><EventLink event={event} origin={kit.origin} label="Tautan halaman donasi" hint={<>Tautan tetap tanpa kode, untuk dibagikan, dicetak, dan dipakai di kabar WhatsApp ke donatur. Bisa dipakai lagi tahun depan.</>} />{text("organizer", "Penyelenggara", 250)}</>
     : event.code ? <><EventLink event={event} origin={kit.origin} />{text("organizer", "Penyelenggara", 250)}</>
       : <div className={styles.grid}>{text("slug", "Alamat singkat undangan (slug)", 100, false, "Huruf kecil, angka, dan tanda hubung. Mengubah slug membuat tautan lama tidak berlaku.")}{text("organizer", "Penyelenggara", 250)}</div>}
+    {!csr && <details className={styles.extraFields} open={!!event.client_logo?.url || undefined}>
+      <summary>Logo klien di kepala halaman (opsional)</summary>
+      <div className="stack">
+        <p className="field-hint">Menggantikan logo Werkudara di kepala halaman tamu, misalnya logo PT Surya Madistrindo. Pakai logo mendatar berlatar transparan atau putih. Werkudara tetap disebut di kaki halaman.</p>
+        <ImageInput name="client_logo" label="Logo klien" image={event.client_logo ?? { url: "", alt: "", srcset: [] }} onChange={image => update("client_logo", image)} control={control} errors={errors} />
+      </div>
+    </details>}
     {csr && text("introduction", "Cerita singkat", 5000, true, "Dua-tiga kalimat di bawah judul: siapa yang dibantu dan untuk apa. Wajib sebelum publikasi.")}
     {!guide && !csr && <>{text("greeting", "Sapaan", 150)}{text("introduction", "Isi undangan", 5000, true)}{text("closing", "Penutup", 2000, true)}
     {choices("invitation_mode", "Cara mengundang", [{ value: "open" as const, label: "Tautan umum" }, ...(unavailable("personal") ? [] : [{ value: "personal" as const, label: "Tautan per tamu" }])], event.invitation_mode, value => update("invitation_mode", value), value => value === "personal" ? "RSVP hanya lewat tautan per tamu; halaman umum tetap dapat dibaca." : "Formulir RSVP tersedia di halaman umum bila diaktifkan.")}
