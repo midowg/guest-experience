@@ -13,7 +13,7 @@ type Kind = EventRecord["event_kind"];
 const labels: Record<Kind, { id: string; en: string }> = {
   kunjungan: { id: "Undangan kunjungan", en: "Visit invitation" },
   acara: { id: "Undangan", en: "Invitation" },
-  program: { id: "Undangan program", en: "Program invitation" },
+  program: { id: "Panduan peserta", en: "Participant guide" },
   kartu: { id: "Kartu", en: "Card" },
   eguide: { id: "E-Guide", en: "E-Guide" },
   csr: { id: "Friday Sharing", en: "Friday Sharing" },

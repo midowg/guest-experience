@@ -55,7 +55,7 @@ export function TemplateMiniature({ template, title }: { template: EventTemplate
   const sections = template.modules.filter(key => key !== "about").map(key => sectionNames[key]).filter(Boolean).slice(0, 4);
   return <div className={styles.mini} style={{ background: t.background, color: t.text, borderColor: t.border }} aria-hidden="true">
     <div className={styles.miniHero} style={{ background: t.hero, color: t.onHero }}>
-      <span className={styles.miniEyebrow} style={{ color: t.heroAccent }}>{template.kind === "program" ? "Undangan program" : template.kind === "kunjungan" ? "Undangan kunjungan" : "Undangan acara"}</span>
+      <span className={styles.miniEyebrow} style={{ color: t.heroAccent }}>{template.kind === "program" ? "Panduan peserta" : template.kind === "kunjungan" ? "Undangan kunjungan" : "Undangan acara"}</span>
       <strong className={styles.miniTitle} style={{ fontFamily: t.fontHeading, fontWeight: t.headingWeight }}>{title?.trim() || template.example}</strong>
       <span className={styles.miniFacts}><CalendarDays size={9} /> Sen, 2 Nov <Clock3 size={9} /> 09.00 <MapPin size={9} /> Werkudara</span>
       <span className={styles.miniButton} style={{ background: t.onHero, color: t.hero }}>Konfirmasi kehadiran</span>

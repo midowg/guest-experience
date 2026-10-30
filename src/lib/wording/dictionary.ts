@@ -4,7 +4,7 @@
 export const id = {
   "hero.eyebrow.kunjungan": "Undangan kunjungan",
   "hero.eyebrow.acara": "Undangan acara",
-  "hero.eyebrow.program": "Undangan program",
+  "hero.eyebrow.program": "Panduan peserta",
   "hero.to": "Kepada {name}",
   "hero.date": "Tanggal",
   "hero.time": "Waktu",
@@ -311,7 +311,7 @@ export type WordKey = keyof typeof id;
 export const en: Record<WordKey, string> = {
   "hero.eyebrow.kunjungan": "Visit invitation",
   "hero.eyebrow.acara": "Event invitation",
-  "hero.eyebrow.program": "Programme invitation",
+  "hero.eyebrow.program": "Participant guide",
   "hero.to": "Dear {name}",
   "hero.date": "Date",
   "hero.time": "Time",
