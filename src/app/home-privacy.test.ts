@@ -24,6 +24,6 @@ describe("the management area is not advertised publicly", () => {
   });
 
   it("the front page still tells a guest what to do", () => {
-    expect(publicPages["EmptyHome.tsx"]).toMatch(/buka tautan yang Anda terima dari tim Werkudara/i);
+    expect(publicPages["EmptyHome.tsx"]).toMatch(/buka tautan yang sudah kami kirimkan/i);
   });
 });

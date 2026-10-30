@@ -64,6 +64,15 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--color-primary)
 .landing p:not(.eyebrow) { max-width: 37rem; font-size: var(--text-lg); }
 .landing .row { margin-top: var(--space-7); }
 .landing p.landing-en { margin-top: var(--space-6); font-size: var(--text-sm); color: var(--color-caption); }
+/* The front page: one quiet screen in the middle, no header or footer. */
+.welcome-page { min-height: 100svh; display: grid; place-items: center; padding: var(--space-7) var(--space-5); background: #fff; }
+.welcome-card { max-width: 34rem; display: grid; justify-items: center; gap: var(--space-4); text-align: center; }
+.welcome-card img { width: 48px; height: auto; margin-bottom: var(--space-3); }
+.welcome-card h1 { margin: 0; font-size: clamp(2.5rem, 7vw, 4rem); }
+.welcome-card p { margin: 0; font-size: var(--text-lg); }
+.welcome-card .welcome-note { font-size: var(--text-base, 1rem); color: var(--color-caption); }
+.welcome-card .welcome-en { font-size: var(--text-sm); color: var(--color-caption); }
+.welcome-card .welcome-sign { margin-top: var(--space-4); font-family: var(--font-label); font-size: .8125rem; letter-spacing: .12em; text-transform: uppercase; color: var(--color-primary); }
 .site-footer { border-top: var(--border); padding-block: var(--space-5); font-size: var(--text-sm); }
 @media (max-width: 600px) { .container { width: calc(100% - 2rem); } .panel { padding: var(--space-5); } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
