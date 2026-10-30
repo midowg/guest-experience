@@ -25,7 +25,7 @@ export function duration(start: string, end: string): { hours: number; minutes: 
 }
 
 export function hasDepth(detail: AgendaDetail | undefined): boolean {
-  return !!detail && !!(detail.did_you_know.trim() || detail.more_story.trim() || detail.photo?.url);
+  return !!detail && !!(detail.teaser.trim() || detail.did_you_know.trim() || detail.more_story.trim() || detail.photo?.url);
 }
 
 /** "Halaman N" of the guest-facing presentation; browsers open PDFs at #page=N. */

@@ -168,7 +168,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
   const rsvpVisible = allSections.some(section => section.key === "rsvp") && event.rsvp_enabled;
   const rsvpOpen = now !== null && rsvpIsOpen(event, now);
   const feedbackOpen = now !== null && feedbackIsOpen(event, now);
-  return <div lang={lang} className={styles.experience} data-theme={event.theme?.key ?? "werkudara"} data-phase={phase} style={themeStyle(event.theme)}>
+  return <div lang={lang} className={styles.experience} data-theme={event.theme?.key ?? "werkudara"} data-kind={event.event_kind} data-phase={phase} style={themeStyle(event.theme)}>
     <a className={styles.skipLink} href="#event-content" onClick={focusAnchor}>{t("nav.skip")}</a>
     {preview && previewNotice && <div className={styles.preview}><Notice>{t("preview.notice")}</Notice></div>}
     <header className={`${styles.siteHeader} ${headerShown ? styles.siteHeaderShown : styles.siteHeaderHidden}`}>

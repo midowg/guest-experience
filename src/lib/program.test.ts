@@ -33,7 +33,9 @@ describe("helpers", () => {
   });
   it("knows when an item has more to tell", () => {
     expect(hasDepth(undefined)).toBe(false);
-    expect(hasDepth({ teaser: "x", did_you_know: "", more_story: "", place: "", pdf_page: null })).toBe(false);
+    // The teaser now leads the FYI box, which is always shown, so it is enough on its own.
+    expect(hasDepth({ teaser: "x", did_you_know: "", more_story: "", place: "", pdf_page: null })).toBe(true);
+    expect(hasDepth({ teaser: "", did_you_know: "", more_story: "", place: "Kotagede", pdf_page: null })).toBe(false);
     expect(hasDepth({ teaser: "", did_you_know: "Fakta", more_story: "", place: "", pdf_page: null })).toBe(true);
   });
   it("links to a presentation page", () => {

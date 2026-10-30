@@ -27,7 +27,7 @@ export function AgendaBlock({ kit }: { kit: EditorKit }) {
     {days.length > 1 && <details className={styles.extraFields}>
       <summary>Gambar per hari (opsional)</summary>
       <div className="stack">
-        <p className="field-hint">Tampil di atas jadwal hari itu, utuh tanpa dipotong. Cocok untuk sampul DAY 1, DAY 2 dari handbook.</p>
+        <p className="field-hint">Tampil sebagai banner lebar di atas jadwal hari itu, seperti foto sampul Facebook atau LinkedIn: gambar dipotong 12:5 dari tengah. Pakai gambar mendatar, misalnya 2400 × 1000 px, dengan tulisan di bagian tengah.</p>
         {days.map((day, index) => {
           const at = covers.findIndex(cover => cover.day === day.day);
           return <ImageInput key={day.day} name={`trip.day_covers.${at < 0 ? covers.length : at}.image`} label={`Hari ${index + 1} (${day.day})`} image={covers[at]?.image ?? { url: "", alt: "", srcset: [] }} onChange={image => setCover(day.day, image)} control={control} errors={errors} />;

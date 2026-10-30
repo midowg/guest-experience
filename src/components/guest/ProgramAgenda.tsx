@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
-import { ArrowUpRight, ChevronDown, Clock3, FileText, HeartPulse, Lightbulb, MapPin, Phone } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowUpRight, Clock3, FileText, HeartPulse, Lightbulb, MapPin, Phone } from "lucide-react";
 import { localDay } from "@/lib/event-phase";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { agendaByDay, duration, hasDepth, presentationPage } from "@/lib/program";
@@ -17,8 +17,6 @@ function shortDay(day: string, timeZone: string, lang: "id" | "en") {
 
 function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; item: AgendaItem; expanded?: boolean }) {
   const { t } = useWording();
-  const panel = useId();
-  const [open, setOpen] = useState(expanded);
   const [story, setStory] = useState(expanded);
   const detail = event.agenda_details?.[item.id];
   const length = duration(item.starts_at, item.ends_at);
@@ -33,16 +31,16 @@ function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; it
         {detail?.place && <span><MapPin size={14} aria-hidden="true" /> {detail.place}</span>}
         {length && <span><Clock3 size={14} aria-hidden="true" /> {[length.hours ? t("duration.hours", { n: length.hours }) : "", length.minutes ? t("duration.minutes", { n: length.minutes }) : ""].filter(Boolean).join(" ")}</span>}
       </p>}
-      {deep && <button type="button" className={styles.discover} aria-expanded={open} aria-controls={panel} onClick={() => setOpen(!open)}>
-        <span>{detail!.teaser ? t("detail.discover", { teaser: detail!.teaser }) : t("detail.more")}</span>
-        <ChevronDown size={16} aria-hidden="true" className={open ? styles.discoverOpen : undefined} />
-      </button>}
-      {deep && open && <div id={panel} className={styles.discoverPanel}>
+      {/* Shown as it is, without a button to open it (revision 30 Oct): the guest reads it while scrolling. */}
+      {deep && <div className={styles.discoverPanel}>
         {detail!.photo?.url && <figure className={styles.detailPhoto}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={detail!.photo.url} {...imageSrcSet(detail!.photo.srcset, "(max-width: 960px) 100vw, 640px")} alt={detail!.photo.alt} loading="lazy" referrerPolicy="no-referrer" />
         </figure>}
-        {detail!.did_you_know && <div className={styles.didYouKnow}><p className={styles.didYouKnowTitle}><Lightbulb size={16} aria-hidden="true" /> {t("detail.didYouKnow")}</p><p className={styles.multiline}>{detail!.did_you_know}</p></div>}
+        {(detail!.did_you_know || detail!.teaser) && <div className={styles.didYouKnow}>
+          <p className={styles.didYouKnowTitle}><Lightbulb size={16} aria-hidden="true" /> {t("detail.fyi")}{detail!.teaser && <span className={styles.fyiLead}>{detail!.teaser}</span>}</p>
+          {detail!.did_you_know && <p className={styles.multiline}>{detail!.did_you_know}</p>}
+        </div>}
         {detail!.more_story && <>
           {story && <p className={styles.multiline}>{detail!.more_story}</p>}
           <button type="button" className={styles.textButton} aria-expanded={story} onClick={() => setStory(!story)}>{story ? t("detail.moreLess") : t("detail.more")}</button>

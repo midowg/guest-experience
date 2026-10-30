@@ -50,7 +50,7 @@ export function TransportCards({ trip }: { trip: TripContent }) {
 export function StayCard({ trip }: { trip: TripContent }) {
   const { t } = useWording();
   const stay = trip.stay;
-  return <div className={styles.tripCard}>
+  return <div className={`${styles.tripCard} ${stay.photos.length ? styles.stayCard : ""}`.trimEnd()}>
     {stay.photos.length > 0 && <div className={styles.tripPhotos}>{stay.photos.map((photo, index) => <figure key={`${index}-${photo.url}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={photo.url} {...imageSrcSet(photo.srcset, "(max-width: 960px) 50vw, 420px")} alt={photo.alt} loading="lazy" referrerPolicy="no-referrer" />

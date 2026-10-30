@@ -42,16 +42,14 @@ it("opens on today during the event", async () => {
   await vi.waitFor(() => expect(within(tabs).getAllByRole("tab")[1].getAttribute("aria-selected")).toBe("true"));
 });
 
-it("shows place and length, and opens the Did you know detail in place", () => {
+it("shows place and length, and the FYI detail without a button", () => {
   render(<EventExperience event={trip()} preview />);
   expect(screen.getByText("Lombok Tengah")).toBeTruthy();
   expect(screen.getByText("2 jam")).toBeTruthy();
   expect(screen.getByText("1 jam 30 menit")).toBeTruthy();
-  const discover = screen.getByRole("button", { name: /Kenali lebih dekat: kenapa pasirnya seperti merica\?/ });
-  expect(discover.getAttribute("aria-expanded")).toBe("false");
-  expect(screen.queryByText("Tahukah Anda?")).toBeNull();
-  fireEvent.click(discover);
-  expect(screen.getByText("Tahukah Anda?")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Kenali lebih dekat/ })).toBeNull();
+  expect(screen.getByText("FYI")).toBeTruthy();
+  expect(screen.getByText("kenapa pasirnya seperti merica?")).toBeTruthy();
   expect(screen.getByText("Butiran pasirnya besar dan bulat.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Selengkapnya" }));
   expect(screen.getByText("Cerita panjang tentang pantai.")).toBeTruthy();
