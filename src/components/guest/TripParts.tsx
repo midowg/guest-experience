@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Ban, BedDouble, Bus, Car, Check, Clock3, CloudSun, Coffee, HeartPulse, MapPin, MessageCircle, Phone, Plane, Ship, ThumbsUp, TrainFront, UserRound, Users, X, type LucideIcon } from "lucide-react";
+import { Ban, BedDouble, Bus, Car, Check, Clock3, CloudSun, Coffee, HeartPulse, MapPin, MessageCircle, Phone, Plane, Ship, ThumbsUp, TrainFront, UserRound, Users, X, type LucideIcon } from "lucide-react";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { dialNumber, type TripContent, type TripMode } from "@/lib/trip";
 import { PhotoZoom } from "./PhotoZoom";
@@ -29,10 +29,6 @@ function CardHead({ title, icon: Icon, meta, tone }: { title: string; icon: Luci
   </>;
 }
 
-function NewTab() {
-  const { t } = useWording();
-  return <><ArrowUpRight size={14} aria-hidden="true" /><span className="sr-only">{t("common.newTab")}</span></>;
-}
 
 export function TransportCards({ trip }: { trip: TripContent }) {
   const { t } = useWording();
@@ -101,7 +97,7 @@ export function ContactList({ trip }: { trip: TripContent }) {
   const { t } = useWording();
   const contacts = trip.contacts;
   return <div className={styles.tripGuidelines}>
-    {contacts.people.length > 0 && <ul className={styles.tripPeople}>{contacts.people.map(person => {
+    {(contacts.people.length > 0 || contacts.hospital) && <ul className={styles.tripPeople}>{contacts.people.map(person => {
       const mobile = person.phone ? parseContactPhone(person.phone) : null;
       return <li key={person.id} className={styles.tripCard}>
         <CardHead title={person.name} icon={UserRound} meta={person.role} />
@@ -111,12 +107,16 @@ export function ContactList({ trip }: { trip: TripContent }) {
           {mobile && <a href={`https://wa.me/${mobile.international}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} aria-hidden="true" /> WhatsApp<span className="sr-only"> {person.name} {t("common.newTab")}</span></a>}
         </div>}
       </li>;
-    })}</ul>}
-    {contacts.hospital && <div className={`${styles.tripCard} ${styles.hospitalCard}`}>
-      <CardHead title={contacts.hospital} icon={HeartPulse} meta={t("emergency.hospital")} tone="danger" />
-      {contacts.hospital_address && <p className={styles.multiline}>{contacts.hospital_address}</p>}
-      {contacts.hospital_phone && <a className={styles.hospitalCall} href={`tel:${dialNumber(contacts.hospital_phone)}`}><Phone size={16} aria-hidden="true" /> {t("contacts.callHospital")}</a>}
-      {contacts.hospital_maps_url && <a className={styles.hospitalLink} href={contacts.hospital_maps_url} target="_blank" rel="noopener noreferrer">{t("emergency.directions")} <NewTab /></a>}
-    </div>}
+    })}
+      {/* The nearest hospital is one more contact card, in the same grid and colours (revision 30 Oct). */}
+      {contacts.hospital && <li className={styles.tripCard}>
+        <CardHead title={contacts.hospital} icon={HeartPulse} meta={t("emergency.hospital")} />
+        {contacts.hospital_address && <p className={styles.multiline}>{contacts.hospital_address}</p>}
+        {(contacts.hospital_phone || contacts.hospital_maps_url) && <div className={styles.tripActions}>
+          {contacts.hospital_phone && <a href={`tel:${dialNumber(contacts.hospital_phone)}`}><Phone size={16} aria-hidden="true" /> {t("contacts.call")}<span className="sr-only"> {contacts.hospital}</span></a>}
+          {contacts.hospital_maps_url && <a href={contacts.hospital_maps_url} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> {t("emergency.directions")}<span className="sr-only"> {contacts.hospital} {t("common.newTab")}</span></a>}
+        </div>}
+      </li>}
+    </ul>}
   </div>;
 }

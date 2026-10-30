@@ -21,7 +21,8 @@ it("shows the trip's transport, hotel, do & don't and help contacts", () => {
   // A mobile number gets WhatsApp; the hotel's landline only a call.
   expect(within(contacts).getByRole("link", { name: /^WhatsApp Dimas Wijanarko/ }).getAttribute("href")).toBe("https://wa.me/628112546096");
   expect(within(contacts).queryByRole("link", { name: /^WhatsApp THE 1O1/ })).toBeNull();
-  expect(within(contacts).getByText("Rumah Sakit Bethesda Yogyakarta")).toBeTruthy();
+  // The hospital is one more contact card in the same grid.
+  expect(within(contacts).getByRole("heading", { name: "Rumah Sakit Bethesda Yogyakarta" }).closest("ul")).toBe(within(contacts).getByRole("heading", { name: "Dimas Wijanarko" }).closest("ul"));
   expect(screen.getAllByRole("navigation").some(nav => nav.textContent?.includes("Transportasi"))).toBe(true);
 });
 
@@ -68,7 +69,7 @@ it("calls through buttons without printing the numbers", () => {
   const contacts = document.getElementById("contacts")!;
   expect(within(contacts).queryByText(/0811|0274|586688/)).toBeNull();
   expect(within(contacts).getByRole("link", { name: "Telepon Dimas Wijanarko" }).getAttribute("href")).toBe("tel:08112546096");
-  expect(within(contacts).getByRole("link", { name: "Telepon rumah sakit" }).getAttribute("href")).toBe("tel:0274586688");
+  expect(within(contacts).getByRole("link", { name: "Telepon Rumah Sakit Bethesda Yogyakarta" }).getAttribute("href")).toBe("tel:0274586688");
   const stay = document.getElementById("stay")!;
   expect(within(stay).queryByText(/0274/)).toBeNull();
   expect(within(stay).getByRole("link", { name: "Telepon hotel" }).getAttribute("href")).toBe("tel:02742920101");

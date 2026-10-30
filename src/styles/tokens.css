@@ -21,4 +21,6 @@
      address bar, Chrome's toolbar sliding in) can cover about this much, plus the iPhone's home
      indicator. No text or button sits lower than this. */
   --bottom-clear: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  /* Every button on a guest page has this corner: neither square nor a pill (revision 30 Oct). */
+  --button-radius: 10px;
 }
