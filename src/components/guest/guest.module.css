@@ -451,7 +451,7 @@
   .experience[data-kind="program"] .prepareCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .experience[data-kind="program"] .agenda li { grid-template-columns: 11rem minmax(0, 1fr); }
   .experience[data-kind="program"] .agendaBody { max-width: 52rem; }
-  .experience[data-kind="program"] .stayHero { min-height: 32rem; padding: var(--space-6); }
+  .experience[data-kind="program"] .stayHero { min-height: 34rem; padding: var(--space-6); }
 }
 
 /* Client trip handbook (TripParts.tsx): transport legs, hotel, do & don't, help contacts. */
@@ -476,7 +476,8 @@
 .tripActions { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 .tripActions a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; font-weight: 600; color: var(--color-primary); }
 /* Hotel: its first photo fills the card; the details sit on a frosted panel so they stay readable. */
-.stayHero { position: relative; display: flex; align-items: flex-end; min-height: 26rem; padding: var(--space-4); overflow: hidden; border-radius: max(var(--radius, 0px), 16px); background: var(--color-hero); }
+/* On a phone the photo shows above the panel; on a wide screen the panel sits over its left side. */
+.stayHero { position: relative; display: flex; align-items: flex-end; min-height: 26rem; padding: 13rem var(--space-3) var(--space-3); overflow: hidden; border-radius: max(var(--radius, 0px), 16px); background: var(--color-hero); }
 .stayBackdrop { position: absolute; inset: 0; }
 .stayBackdrop img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .stayGlass { position: relative; width: 100%; max-width: 32rem; border: 1px solid color-mix(in srgb, #fff 45%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--color-background) 74%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.15); backdrop-filter: blur(14px) saturate(1.15); box-shadow: 0 12px 32px rgba(0, 0, 0, .18); }
