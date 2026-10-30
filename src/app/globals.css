@@ -71,25 +71,40 @@ input[type='checkbox'], input[type='radio'] { accent-color: var(--color-primary)
 .welcome-page {
   --w-bg: #fff; --w-ink: var(--ink); --w-soft: #6c6765; --w-line: #e3e6ec; --w-mark: var(--blue); --w-accent: var(--blue);
   color-scheme: light;
-  min-height: 100svh; display: grid; grid-template-rows: 1fr auto; gap: var(--space-7);
-  padding: clamp(1.5rem, 6vw, 5.5rem) clamp(1.5rem, 8vw, 8rem);
+  min-height: 100svh; display: grid; grid-template-rows: auto 1fr;
   background: var(--w-bg); color: var(--w-ink);
+}
+/* The photo: a band on top on a phone, the right side at full height on a wide screen. */
+.welcome-photo { position: relative; height: 34svh; min-height: 13rem; overflow: hidden; background: var(--w-line); }
+.welcome-photo img { object-fit: cover; object-position: center 40%; }
+.welcome-text { display: grid; grid-template-rows: 1fr auto; gap: var(--space-7); padding: clamp(2rem, 6vw, 5.5rem) clamp(1.5rem, 7vw, 6rem) clamp(1.5rem, 4vw, 3rem); }
+/* A phone: the photo opens the page, so the small mark steps aside and the text sits closer. */
+@media (max-width: 63.99rem) {
+  .welcome-photo { height: 28svh; }
+  .welcome-logo { display: none; }
+  .welcome-text { gap: var(--space-5); padding-top: var(--space-6); }
+  .welcome-page .welcome-lead { margin-top: var(--space-5); padding-top: var(--space-4); }
+}
+@media (min-width: 64rem) {
+  .welcome-page { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); grid-template-rows: none; }
+  .welcome-photo { order: 2; height: auto; min-height: 100svh; }
+  .welcome-photo img { object-position: center; }
 }
 @media (prefers-color-scheme: dark) {
   .welcome-page { --w-bg: #0d1117; --w-ink: #e8ebf0; --w-soft: #9aa3b2; --w-line: #262c36; --w-mark: #fff; --w-accent: var(--ocean); color-scheme: dark; }
 }
 html:has(.welcome-page) { background: #fff; }
 @media (prefers-color-scheme: dark) { html:has(.welcome-page) { background: #0d1117; } }
-.welcome-main { align-self: center; display: grid; justify-items: start; max-width: 60rem; }
+.welcome-main { align-self: center; display: grid; justify-items: start; max-width: 44rem; }
 .welcome-page p { margin: 0; }
 .welcome-logo {
-  width: 36px; height: 41px; margin-bottom: clamp(2rem, 6vh, 4rem); background: var(--w-accent);
+  width: 36px; height: 41px; margin-bottom: clamp(1.5rem, 5vh, 3.5rem); background: var(--w-accent);
   -webkit-mask: url(/werkudara-mark.png) center / contain no-repeat; mask: url(/werkudara-mark.png) center / contain no-repeat;
 }
 .welcome-page .welcome-kicker { font-size: .8125rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--w-accent); }
-.welcome-page .welcome-mark { margin: var(--space-3) 0 0; font-size: clamp(4.5rem, 15vw, 11rem); font-weight: 800; line-height: .9; letter-spacing: -.035em; color: var(--w-mark); }
+.welcome-page .welcome-mark { margin: var(--space-3) 0 0; font-size: clamp(4rem, 17vw, 9rem); font-weight: 800; line-height: .9; letter-spacing: -.035em; color: var(--w-mark); }
 .welcome-page .welcome-by { margin-top: var(--space-3); font-size: clamp(1.125rem, 2.4vw, 1.75rem); font-weight: 600; color: var(--w-soft); }
-.welcome-page .welcome-lead { max-width: 36rem; margin-top: clamp(2.5rem, 7vh, 4rem); padding-top: clamp(1.5rem, 4vh, 2rem); border-top: 2px solid var(--w-accent); font-size: clamp(1.0625rem, 1.6vw, 1.3125rem); line-height: 1.6; }
+.welcome-page .welcome-lead { max-width: 36rem; margin-top: clamp(1.75rem, 5vh, 3.5rem); padding-top: clamp(1.25rem, 3vh, 2rem); border-top: 2px solid var(--w-accent); font-size: clamp(1.0625rem, 1.6vw, 1.3125rem); line-height: 1.6; }
 .welcome-page .welcome-note { max-width: 36rem; margin-top: var(--space-4); font-size: 1rem; line-height: 1.6; color: var(--w-soft); }
 .welcome-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3) var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--w-line); font-size: var(--text-sm); color: var(--w-soft); }
 .welcome-page .welcome-sign { font-size: .75rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--w-ink); }
