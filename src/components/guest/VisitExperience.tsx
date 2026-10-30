@@ -191,20 +191,29 @@ function VisitBody({ event, preview = false, invitation, phase: journeyPhase = "
   const shownTiles = tiles.filter(tile => available(tile.screen));
   const zone = timezoneInfo[zoneOf(event.timezone)];
 
-  // With a cover photo the welcome is written over it, leaving the screen to the facts and the button.
+  // With a cover photo, the photo carries the greeting (small) and the visit's name (large): the guest
+  // sees at once which visit this is, and the screen below is left to the facts and the button.
   const onPhoto = !!event.hero.url;
-  const welcome = (className: string) => <h1 id="event-title" className={className} ref={screen === "beranda" ? heading : undefined} tabIndex={-1} data-preview-field="greeting">{invitation ? v("home.hello", { name: invitation.name }) : event.greeting || v("home.welcome")}</h1>;
+  const greeting = invitation ? v("home.hello", { name: invitation.name }) : event.greeting || v("home.welcome");
+  const headingRef = screen === "beranda" ? heading : undefined;
+  const overPhoto = <div className={styles.coverText}>
+    <p className={styles.coverKicker} data-preview-field="greeting">{greeting}</p>
+    <h1 id="event-title" className={styles.coverTitle} ref={headingRef} tabIndex={-1} data-preview-field="title">{event.title}</h1>
+  </div>;
   const home = <>
-    <Cover event={event} lang={lang} onLang={onLang} title={phase !== "day" && onPhoto ? welcome(styles.coverTitle) : null} />
+    <Cover event={event} lang={lang} onLang={onLang} title={phase !== "day" && onPhoto ? overPhoto : null} />
     {phase === "day" && <TodayPanel event={event} invitee={invitation?.name} now={now} />}
     <div className={styles.body}>
       {phase !== "day" && <>
-        {!onPhoto && welcome(styles.title)}
-        <p className={styles.eventName} data-preview-field="title">{event.title}</p>
+        {!onPhoto && <>
+          <h1 id="event-title" className={styles.title} ref={headingRef} tabIndex={-1} data-preview-field="greeting">{greeting}</h1>
+          <p className={styles.eventName} data-preview-field="title">{event.title}</p>
+        </>}
         <p className={`${styles.lead} ${guest.multiline}`} data-preview-field="subtitle">{event.subtitle || v("home.lead")}</p>
         <Facts event={event} />
       </>}
-      <section id="rsvp" className={styles.confirm} aria-label={t("section.rsvp.title")}>{confirmation()}</section>
+      {/* While the guest still has to confirm, the button stays at the foot of the first screen until it is reached. */}
+      <section id="rsvp" className={styles.confirm} aria-label={t("section.rsvp.title")} data-cta={rsvpVisible && !answer && !blocked() ? "" : undefined}>{confirmation()}</section>
       {confirmed && has("location") && <ButtonLink variant="secondary" href="#cara-datang"><MapPin size={17} aria-hidden="true" /> {v("home.route")}</ButtonLink>}
       {shownTiles.length > 0 && <nav className={styles.explore} aria-labelledby="explore-title" data-visit-nav>
         <p id="explore-title" className={styles.exploreTitle}>{v("home.explore")}</p>
@@ -218,10 +227,12 @@ function VisitBody({ event, preview = false, invitation, phase: journeyPhase = "
     </div>
   </>;
 
-  const page = (key: SectionKey, title: string, children: ReactNode, lead?: string) => <section id={key} className={styles.page} aria-labelledby={`${key}-heading`}>
+  // A screen opened from a tile or a button has a way back; the tab bar's own screens (Cara datang,
+  // Jadwal, Kontak) are places of their own, reached and left through the tab bar.
+  const page = (key: SectionKey, title: string, children: ReactNode, lead?: string, back = true) => <section id={key} className={styles.page} aria-labelledby={`${key}-heading`}>
     {/* Back and the title share one row (board 11); the lead reads under the title. */}
     <div className={styles.pageHead}>
-      <a href="#beranda" className={styles.back} data-visit-nav><ArrowLeft size={18} aria-hidden="true" /> <span className="sr-only">{v("back")}</span></a>
+      {back && <a href="#beranda" className={styles.back} data-visit-nav><ArrowLeft size={18} aria-hidden="true" /> <span className="sr-only">{v("back")}</span></a>}
       <div id={`${key}-heading`}><h1 className={styles.pageTitle} ref={heading} tabIndex={-1}>{title}</h1>{lead && <p className={`${styles.pageLead} ${guest.multiline}`}>{lead}</p>}</div>
     </div>
     {children}
@@ -248,16 +259,16 @@ function VisitBody({ event, preview = false, invitation, phase: journeyPhase = "
       </figure>}
       <ul className={styles.values}>{teamPoints.map(({ icon: Icon, key }) => <li key={key}><span className={styles.tileIcon} aria-hidden="true"><Icon size={18} /></span><p>{t(key)}</p></li>)}</ul>
     </>, v("team.lead")),
-    "cara-datang": () => page("location", v("tab.route"), <VisitRoute event={event} words={{ lost: v("route.lost"), maps: v("route.maps"), steps: v("route.steps"), arrival: v("route.arrival") }} />),
+    "cara-datang": () => page("location", v("tab.route"), <VisitRoute event={event} words={{ lost: v("route.lost"), maps: v("route.maps"), steps: v("route.steps"), arrival: v("route.arrival") }} />, undefined, false),
     jadwal: () => page("agenda", v("schedule.title"), <>
       {event.agenda.length === 0 ? <p>{t("section.agenda.empty")}</p> : <AgendaList event={event} now={now} />}
       <CalendarButton event={event} now={now} />
       <p className={styles.note}>{v("schedule.note")}</p>
-    </>, t("section.agenda.tz", { zone: zone.label, zoneName: lang === "en" ? zone.nameEn : zone.name, offset: zone.offset })),
+    </>, t("section.agenda.tz", { zone: zone.label, zoneName: lang === "en" ? zone.nameEn : zone.name, offset: zone.offset }), false),
     kontak: () => page("contact", event.contact.heading || v("tab.contact"), <>
       <HostCard event={event} label={v("contact.host")} ask={v("contact.ask")} call={v("contact.call")} />
       <EmergencyCard event={event} />
-    </>, event.contact.description || v("contact.lead")),
+    </>, event.contact.description || v("contact.lead"), false),
   };
 
   // The form has no tab bar (board 11, 3a/3b): its send button is the way on.
@@ -314,7 +325,11 @@ function HostCard({ event, label, ask, call }: { event: EventRecord; label: stri
 function TabBar({ screen, has, label, words }: { screen: Screen; has: (key: SectionKey) => boolean; label: string; words: { home: string; route: string; schedule: string; contact: string } }) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const sync = () => setScrolled(window.scrollY > 48);
+    const sync = () => {
+      // While the confirm button waits at the foot of the screen, the bar stays down so the two never overlap.
+      const cta = document.querySelector("[data-cta]");
+      setScrolled(cta ? cta.getBoundingClientRect().top < window.innerHeight * .55 : window.scrollY > 48);
+    };
     sync();
     window.addEventListener("scroll", sync, { passive: true });
     return () => window.removeEventListener("scroll", sync);

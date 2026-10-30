@@ -161,11 +161,25 @@ it("keeps the welcome screens on the day itself when Hari H is switched off", ()
   expect(screen.getByRole("heading", { level: 1, name: "Selamat datang di Werkudara" })).toBeTruthy();
 });
 
-it("keeps the tab bar down on Home until the guest scrolls, so the welcome and its button come first", () => {
+it("keeps the tab bar down on Home while the confirm button waits at the foot of the screen", () => {
   render(<EventExperience event={visit()} />);
+  const cta = document.querySelector("[data-cta]") as HTMLElement;
+  expect(cta).not.toBeNull();
+  let top = window.innerHeight - 80;
+  cta.getBoundingClientRect = () => ({ top, bottom: top + 60, left: 0, right: 0, width: 0, height: 60, x: 0, y: top, toJSON: () => ({}) });
+  act(() => { window.dispatchEvent(new Event("scroll")); });
   const tabs = screen.getByRole("navigation", { name: "Navigasi kunjungan", hidden: true });
   expect(tabs.hasAttribute("data-hidden")).toBe(true);
-  act(() => { Object.defineProperty(window, "scrollY", { value: 200, configurable: true }); window.dispatchEvent(new Event("scroll")); });
+  // Scrolled past the button: the bar comes up.
+  top = 40;
+  act(() => { window.dispatchEvent(new Event("scroll")); });
   expect(tabs.hasAttribute("data-hidden")).toBe(false);
-  Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+});
+
+it("gives the tab bar's own screens no back button, and the screens opened from Home one", () => {
+  render(<EventExperience event={visit()} />);
+  act(() => { window.location.hash = "#jadwal"; window.dispatchEvent(new HashChangeEvent("hashchange")); });
+  expect(screen.queryByRole("link", { name: "Kembali ke Beranda" })).toBeNull();
+  act(() => { window.location.hash = "#tentang"; window.dispatchEvent(new HashChangeEvent("hashchange")); });
+  expect(screen.getByRole("link", { name: "Kembali ke Beranda" })).toBeTruthy();
 });
