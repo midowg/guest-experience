@@ -85,3 +85,12 @@ it("ends with Werkudara Group as on werkudara.com: one short address, contact li
   expect(within(footer).queryByText(/2832-999|2546-001/)).toBeNull();
   expect(within(footer).getByText(`© ${new Date().getFullYear()} Werkudara Group. Hak cipta dilindungi.`)).toBeTruthy();
 });
+
+it("shows a photo beside the introduction that opens full size", () => {
+  const event = smTdnYogyakarta();
+  event.about_image = { url: "https://example.test/tugu.webp", alt: "Tugu Yogyakarta saat senja", srcset: [] };
+  render(<EventExperience event={event} preview />);
+  const about = document.getElementById("about")!;
+  expect(within(about).getByRole("button", { name: "Lihat foto penuh: Tugu Yogyakarta saat senja" })).toBeTruthy();
+  expect(within(about).getByText(/Di setiap sudut Jogja/)).toBeTruthy();
+});

@@ -117,3 +117,13 @@ describe("pictures in the handbook", () => {
     expect(prepareEvent(event).agenda_details[first]).not.toHaveProperty("photo");
   });
 });
+
+describe("photo beside the introduction", () => {
+  it("is kept on save and needs a description", () => {
+    const event = smTdnYogyakarta();
+    event.about_image = { url: "https://example.test/tugu.webp", alt: "Tugu", srcset: [] };
+    expect(eventSchema.parse(prepareEvent(event)).about_image?.url).toBe("https://example.test/tugu.webp");
+    event.about_image = { ...event.about_image, alt: "" };
+    expect(eventSchema.safeParse(event).error?.issues[0].path).toEqual(["about_image", "alt"]);
+  });
+});

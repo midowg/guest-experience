@@ -71,8 +71,8 @@ export function StayCard({ trip }: { trip: TripContent }) {
     </dl>
     {stay.note && <p className={`${styles.tripNote} ${styles.multiline}`}>{stay.note}</p>}
     {stay.photos.length > 0 && <div className={styles.cardPhotos}>{stay.photos.map((photo, index) => <PhotoZoom key={`${index}-${photo.url}`} image={photo} sizes="(max-width: 960px) 33vw, 180px" />)}</div>}
-    {(stay.maps_url || stay.phone) && <div className={styles.tripActions}>
-      {stay.maps_url && <a href={stay.maps_url} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> {t("stay.directions")} <NewTab /></a>}
+    {(stay.maps_url || stay.phone) && <div className={`${styles.tripActions} ${styles.stayActions}`}>
+      {stay.maps_url && <a href={stay.maps_url} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> {t("stay.directions")}<span className="sr-only"> {t("common.newTab")}</span></a>}
       {stay.phone && <a href={`tel:${dialNumber(stay.phone)}`}><Phone size={16} aria-hidden="true" /> {t("stay.call")}</a>}
     </div>}
   </div>;

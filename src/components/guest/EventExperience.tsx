@@ -22,6 +22,7 @@ import { useGuestPage } from "./use-guest-page";
 import { VisitExperience } from "./VisitExperience";
 import { ContactList, GuidelineLists, StayCard, TransportCards } from "./TripParts";
 import { WerkudaraFooter } from "./WerkudaraFooter";
+import { PhotoZoom } from "./PhotoZoom";
 
 const navKeys: Record<SectionKey, WordKey> = { about: "nav.about", experience: "nav.experience", agenda: "nav.agenda", location: "nav.location", prepare: "nav.prepare", team: "nav.team", rsvp: "nav.rsvp", contact: "nav.contact", feedback: "nav.feedback", transport: "nav.transport", stay: "nav.stay", contacts: "nav.contacts", guidelines: "nav.guidelines" };
 
@@ -199,7 +200,10 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
           <div className={styles.sectionBody}>
             {section.key === "about" && <>
               <div id="about-heading"><SectionHeading title={t(event.event_kind === "program" ? "section.about.title.program" : "section.about.title")} /></div>
-              {event.introduction && <p className={`${styles.introduction} ${styles.multiline}`}>{event.introduction}</p>}
+              {event.about_image?.url ? <div className={styles.aboutLayout}>
+                {event.introduction && <p className={`${styles.introduction} ${styles.multiline}`}>{event.introduction}</p>}
+                <PhotoZoom image={event.about_image} className={styles.aboutPhoto} sizes="(max-width: 960px) 100vw, 480px" />
+              </div> : event.introduction && <p className={`${styles.introduction} ${styles.multiline}`}>{event.introduction}</p>}
               {event.topics.length > 0 && <div className={styles.topics}><h3>{t("section.about.topics")}</h3><ol>{event.topics.map((topic, topicIndex) => <li key={`${topicIndex}-${topic.title}`}><span className={styles.topicNumber}>{String(topicIndex + 1).padStart(2, "0")}</span><div><h4>{topic.title}</h4>{topic.description && <p className={styles.multiline}>{topic.description}</p>}</div></li>)}</ol></div>}
             </>}
             {section.key === "experience" && <>

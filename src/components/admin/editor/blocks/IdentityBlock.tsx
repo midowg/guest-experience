@@ -25,7 +25,9 @@ export function IdentityBlock({ kit }: { kit: EditorKit }) {
       </div>
     </details>}
     {csr && text("introduction", "Cerita singkat", 5000, true, "Dua-tiga kalimat di bawah judul: siapa yang dibantu dan untuk apa. Wajib sebelum publikasi.")}
-    {!guide && !csr && <>{text("greeting", "Sapaan", 150)}{text("introduction", "Isi undangan", 5000, true)}{text("closing", "Penutup", 2000, true)}
+    {!guide && !csr && <>{text("greeting", "Sapaan", 150)}{text("introduction", "Isi undangan", 5000, true)}
+    <ImageInput name="about_image" label="Foto di samping isi undangan (opsional)" image={event.about_image ?? { url: "", alt: "", srcset: [] }} onChange={image => update("about_image", image)} control={control} errors={errors} />
+    {text("closing", "Penutup", 2000, true)}
     {choices("invitation_mode", "Cara mengundang", [{ value: "open" as const, label: "Tautan umum" }, ...(unavailable("personal") ? [] : [{ value: "personal" as const, label: "Tautan per tamu" }])], event.invitation_mode, value => update("invitation_mode", value), value => value === "personal" ? "RSVP hanya lewat tautan per tamu; halaman umum tetap dapat dibaca." : "Formulir RSVP tersedia di halaman umum bila diaktifkan.")}
     {event.invitation_mode === "personal" && <Notice tone="warning">Siapa pun yang memegang tautan personal dapat membuka undangan dan mengubah RSVP tamu itu. Tautan personal bukan verifikasi identitas; kirim satu per satu.</Notice>}
     <ButtonLink href={adminEventPath(event, "invitations")} variant="secondary">Kelola undangan tamu</ButtonLink></>}

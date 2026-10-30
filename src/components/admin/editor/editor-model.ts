@@ -73,6 +73,7 @@ export function prepareEvent(event: EventRecord): EventRecord {
     hero: { ...event.hero, focus: HERO_FOCUS, framing: getFraming(event.hero), srcset: event.hero.url ? event.hero.srcset : [] },
     team_image: cleanImage(event.team_image),
     client_logo: cleanImage(event.client_logo ?? { url: "", alt: "", srcset: [] }),
+    about_image: cleanImage(event.about_image ?? { url: "", alt: "", srcset: [] }),
     experience: { ...event.experience, image: cleanImage(event.experience.image), moments: event.experience.moments.filter(item => item.title.trim() || item.description.trim()) },
     route: { map_image: cleanImage(event.route.map_image), steps: event.route.steps.filter(step => step.title.trim() || step.description.trim() || step.image.url).map(step => ({ ...step, image: cleanImage(step.image) })), points: (event.route.points ?? []).filter(point => point.title.trim() || point.description.trim()) },
     after: { ...event.after, image: cleanImage(event.after.image) },
@@ -192,7 +193,7 @@ export const editorBlocks: { id: string; title: string; stage: EditorStage }[] =
 
 /** Which editor block owns a field: the first segment of a dotted path decides. */
 const fieldBlocks: Record<string, string> = {
-  title: "identity", slug: "identity", client_logo: "identity", subtitle: "identity", organizer: "identity", greeting: "identity", introduction: "identity", closing: "identity", invitation_mode: "identity",
+  title: "identity", slug: "identity", client_logo: "identity", about_image: "identity", subtitle: "identity", organizer: "identity", greeting: "identity", introduction: "identity", closing: "identity", invitation_mode: "identity",
   event_kind: "appearance", audience: "appearance", theme: "appearance", phase_override: "appearance",
   starts_at: "schedule", ends_at: "schedule", timezone: "schedule",
   hero: "hero", topics: "topics", experience: "experience", agenda: "agenda",

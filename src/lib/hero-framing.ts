@@ -44,6 +44,7 @@ export function normalizeEvent(event: EventRecord): EventRecord {
     // Trip handbook parts (30 Oct): older documents carry none.
     trip: normalizeTrip(event.trip),
     client_logo: event.client_logo ?? { url: "", alt: "", srcset: [] },
+    about_image: event.about_image ?? { url: "", alt: "", srcset: [] },
     guide: { ...emptyGuide(), ...event.guide, cover: { ...emptyGuide().cover, ...event.guide?.cover }, chapters: event.guide?.chapters ?? [], order: event.guide?.order ?? [] },
   };
 }
