@@ -1,5 +1,6 @@
 "use client";
 
+import { isProgramLike } from "@/lib/program";
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { ArrowUp, ArrowUpRight } from "lucide-react";
 import { ButtonLink, Notice, SectionHeading } from "@/components/ui";
@@ -199,7 +200,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
           <div className={styles.sectionLabel}><span className={styles.sectionNumber}>{String(index + 1).padStart(2, "0")}</span><p className="eyebrow">{t(navKeys[section.key])}</p></div>
           <div className={styles.sectionBody}>
             {section.key === "about" && <>
-              <div id="about-heading"><SectionHeading title={t(event.event_kind === "program" ? "section.about.title.program" : "section.about.title")} /></div>
+              <div id="about-heading"><SectionHeading title={t(isProgramLike(event.event_kind) ? "section.about.title.program" : "section.about.title")} /></div>
               {event.about_image?.url ? <div className={styles.aboutLayout}>
                 {event.introduction && <p className={`${styles.introduction} ${styles.multiline}`}>{event.introduction}</p>}
                 <PhotoZoom image={event.about_image} className={styles.aboutPhoto} sizes="(max-width: 960px) 100vw, 480px" />

@@ -1,5 +1,6 @@
 "use client";
 
+import { isProgramLike } from "@/lib/program";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Notice } from "@/components/ui";
@@ -105,8 +106,8 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
   const blocks = editorBlocks.filter(item => (superAdmin || item.id !== "appearance") && blockAllowed(initialEvent.event_kind, item.id) && !(Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, id]) => id === item.id && unavailable(key)));
   const restrictedBlock = (id: string) => (Object.entries(moduleBlocks) as [AdminModule, string][]).some(([key, block]) => block === id && restricted(key));
   const sectionModule: Partial<Record<string, AdminModule>> = { experience: "experience", agenda: "agenda", location: "location", prepare: "prepare", team: "team", rsvp: "rsvp", contact: "contact", feedback: "feedback" };
-  // The trip's handbook parts belong to Program only (src/lib/admin-modules.ts kindBlocks).
-  const sectionUnavailable = (key: string) => { const owner = sectionModule[key]; return (!!owner && unavailable(owner)) || (kind !== "program" && ["transport", "stay", "guidelines", "contacts"].includes(key)); };
+  // The trip's handbook parts belong to Program and Handbook only (src/lib/admin-modules.ts kindBlocks).
+  const sectionUnavailable = (key: string) => { const owner = sectionModule[key]; return (!!owner && unavailable(owner)) || (!isProgramLike(kind) && ["transport", "stay", "guidelines", "contacts"].includes(key)); };
   const router = useRouter();
   const [event, setEvent] = useState(() => completeSections(initialEvent));
   const [embedDraft, setEmbedDraft] = useState(initialEvent.location_embed_url ?? "");

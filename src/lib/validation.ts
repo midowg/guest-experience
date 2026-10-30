@@ -279,7 +279,7 @@ export const eventBaseSchema = z.object({
     framing: z.object({ mobile: photoFrameSchema, desktop: photoFrameSchema }).optional(),
   }),
   gallery: z.array(z.object({ id: z.uuid(), url: requiredHttpsUrl, alt: text(300), caption: text(300), sort_order: z.number().int().min(0).max(1000), srcset: srcsetSchema })).max(12),
-  event_kind: z.enum(["kunjungan", "acara", "program", "kartu", "eguide", "csr", "panduan"]).default("acara"),
+  event_kind: z.enum(["kunjungan", "acara", "program", "handbook", "kartu", "eguide", "csr", "panduan"]).default("acara"),
   audience: z.enum(["external", "internal"]).default("external"),
   theme: z.object({ key: z.enum(themeKeys).default("werkudara"), corners: z.enum(["square", "soft"]).default("square") }).default({ key: "werkudara", corners: "square" }),
   phase_override: z.enum(["auto", "before", "day", "after"]).default("auto"),

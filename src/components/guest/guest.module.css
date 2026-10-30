@@ -502,14 +502,14 @@
 
 /* A Program (trip, bootcamp) reads like a handbook: on a wide screen every part uses the full width. */
 @media (min-width: 961px) {
-  .experience[data-kind="program"] .sectionGrid { grid-template-columns: 1fr; gap: var(--space-4); }
-  .experience[data-kind="program"] .tripLegs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .experience[data-kind="program"] .tripGuidelines { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  .experience[data-kind="program"] .tripGuidelines > :first-child:not(.tripCard) { grid-column: 1 / -1; }
-  .experience[data-kind="program"] .tripPeople { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .experience[data-kind="program"] .prepareCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .experience[data-kind="program"] .agenda li { grid-template-columns: 11rem minmax(0, 1fr); }
-  .experience[data-kind="program"] .agendaBody { max-width: 52rem; }
+  .experience:is([data-kind="program"], [data-kind="handbook"]) .sectionGrid { grid-template-columns: 1fr; gap: var(--space-4); }
+  .experience:is([data-kind="program"], [data-kind="handbook"]) .tripLegs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .experience:is([data-kind="program"], [data-kind="handbook"]) .tripGuidelines { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .experience:is([data-kind="program"], [data-kind="handbook"]) .tripGuidelines > :first-child:not(.tripCard) { grid-column: 1 / -1; }
+  .experience:is([data-kind="program"], [data-kind="handbook"]) .tripPeople { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .experience:is([data-kind="program"], [data-kind="handbook"]) .prepareCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .experience:is([data-kind="program"], [data-kind="handbook"]) .agenda li { grid-template-columns: 11rem minmax(0, 1fr); }
+  .experience:is([data-kind="program"], [data-kind="handbook"]) .agendaBody { max-width: 52rem; }
 }
 
 /* Client trip handbook (TripParts.tsx): transport legs, hotel, do & don't, help contacts. */

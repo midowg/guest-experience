@@ -49,14 +49,14 @@ describe("trip handbook parts", () => {
     expect(visibleSections({ ...event, trip: emptyTrip() }).map(section => section.key)).toEqual(["about", "agenda", "prepare"]);
   });
 
-  it("starts the Handbook trip template in the handbook's order", () => {
+  it("starts the Handbook template, a kind of its own, in the handbook's order", () => {
     const template = templateOf("handbook-trip")!;
     const setup = setupSchema.parse({
       template: "handbook-trip", title: "SM RO Jakarta TDN Yogyakarta", starts_at: "2026-11-05T00:45:00.000Z", ends_at: "2026-11-08T09:40:00.000Z", timezone: "Asia/Jakarta", audience: "external", language: "id", invitation_mode: "open",
       location: "later", venue_name: "", address: "", location_url: "", greeting: "", introduction: "", closing: "", modules: template.modules, guest_estimate: null, rsvp_closes_at: null, contact_name: "", contact_phone: "", pic_staff_id: "",
     });
     const draft = buildEventFromSetup(setup, { id: "10f3a511-2331-4000-8000-0000000000ab", uuid: () => crypto.randomUUID(), now: "2026-10-30T00:00:00.000Z" });
-    expect(draft.event_kind).toBe("program");
+    expect(draft.event_kind).toBe("handbook");
     expect(draft.theme.key).toBe("keraton");
     expect(draft.sections.filter(section => section.enabled).map(section => section.key)).toEqual(["about", "transport", "stay", "agenda", "prepare", "guidelines", "contacts", "feedback"]);
     expect(draft.prepare.items.map(item => item.title)).toEqual(["Panduan busana", "Perlengkapan pribadi", "Perlengkapan acara & oleh-oleh"]);
@@ -125,5 +125,16 @@ describe("photo beside the introduction", () => {
     expect(eventSchema.parse(prepareEvent(event)).about_image?.url).toBe("https://example.test/tugu.webp");
     event.about_image = { ...event.about_image, alt: "" };
     expect(eventSchema.safeParse(event).error?.issues[0].path).toEqual(["about_image", "alt"]);
+  });
+});
+
+describe("Handbook as a kind of its own", () => {
+  it("is the fixture's kind, and a Program keeps the trip's parts too", () => {
+    const event = smTdnYogyakarta();
+    expect(event.event_kind).toBe("handbook");
+    const shown = (kind: typeof event.event_kind) => visibleSections({ ...event, event_kind: kind }).map(section => section.key);
+    expect(shown("handbook")).toEqual(shown("program"));
+    expect(shown("handbook")).toContain("transport");
+    expect(eventSchema.parse(prepareEvent(event)).event_kind).toBe("handbook");
   });
 });

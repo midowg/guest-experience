@@ -1,3 +1,4 @@
+import { isProgramLike } from "@/lib/program";
 import { POSTER_LABEL } from "@/lib/poster";
 import { guidePartLabels, type GuidePart } from "@/lib/guide";
 import type { EventRecord, HeroTextPosition, ImageFocus, ImageSource, PlainImage, SectionKey } from "@/lib/types";
@@ -131,10 +132,10 @@ export function hiddenSectionReasons(event: EventRecord): string[] {
     if (!event.guide.chapters.length) reasons.push("Belum ada bab panduan.");
     return reasons;
   }
-  const usable = event.sections.filter(section => event.event_kind === "program" || !isTripSection(section.key));
+  const usable = event.sections.filter(section => isProgramLike(event.event_kind) || !isTripSection(section.key));
   const reasons = usable.filter(section => !section.enabled).map(section => `${sectionLabels[section.key]} disembunyikan melalui pengaturan bagian.`);
   // An enabled trip part shows only once it has content (src/lib/trip.ts tripFilled).
-  if (event.event_kind === "program") for (const section of usable) if (section.enabled && isTripSection(section.key) && !tripFilled[section.key](event.trip)) reasons.push(`${sectionLabels[section.key]} masih kosong${section.key === "stay" ? " (isi nama hotel)" : ""}; bagian ini belum tampil.`);
+  if (isProgramLike(event.event_kind)) for (const section of usable) if (section.enabled && isTripSection(section.key) && !tripFilled[section.key](event.trip)) reasons.push(`${sectionLabels[section.key]} masih kosong${section.key === "stay" ? " (isi nama hotel)" : ""}; bagian ini belum tampil.`);
   if (!event.rsvp_enabled) reasons.push("Formulir RSVP dinonaktifkan.");
   if (event.sections.some(section => section.key === "contact" && section.enabled) && (!event.contact?.name || !event.contact.phone)) reasons.push("Kontak PIC belum diisi; bagian kontak tidak ditampilkan.");
   if (!event.feedback_enabled) reasons.push("Survei feedback dinonaktifkan.");
@@ -296,7 +297,7 @@ export function stagesFor(kind: EventRecord["event_kind"] | undefined) {
 export type BlockStatus = "error" | "dirty" | "todo" | "optional" | "done";
 export const blockStatusLabels: Record<BlockStatus, string> = { error: "Perlu diperbaiki", dirty: "Belum disimpan", todo: "Perlu dilengkapi", optional: "Opsional", done: "Lengkap" };
 
-const kindLabels = { kunjungan: "Welcome", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;
+const kindLabels = { kunjungan: "Welcome", acara: "Acara", program: "Program", handbook: "Handbook", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;
 const phaseText = { auto: "fase otomatis", before: "selalu undangan", day: "selalu hari H", after: "selalu terima kasih" } as const;
 const sectionOn = (event: EventRecord, key: SectionKey) => event.sections.some(section => section.key === key && section.enabled);
 const count = (n: number, noun: string) => `${n} ${noun}`;
@@ -335,7 +336,7 @@ export function blockSummary(id: string, event: EventRecord, themeName: string, 
       return gaps.total ? `${mode} · ${gaps.total - gaps.missing} dari ${gaps.total} teks diterjemahkan` : mode;
     }
     case "sections": {
-      const usable = event.sections.filter(section => event.event_kind === "program" || !isTripSection(section.key));
+      const usable = event.sections.filter(section => isProgramLike(event.event_kind) || !isTripSection(section.key));
       return `${usable.filter(section => section.enabled).length} dari ${usable.length} bagian tampil`;
     }
     case "guide": return event.guide.chapters.length ? `${event.guide.cover.title || "Sampul belum berjudul"} · ${count(event.guide.chapters.length, "bab")}` : "Belum ada bab";

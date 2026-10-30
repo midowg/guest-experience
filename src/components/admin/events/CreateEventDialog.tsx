@@ -1,5 +1,6 @@
 "use client";
 
+import { isProgramLike } from "@/lib/program";
 import { SuggestionChips } from "@/components/admin/editor/controls";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -52,8 +53,8 @@ export function CreateEventDialog({ events, onClose, disabledModules = [], templ
   const source = start?.type === "copy" ? events.find(event => event.id === start.id) : undefined;
   const set = (patch: Partial<Details>) => { setDetails(current => ({ ...current, ...patch })); setErrors({}); };
   // Only modules the super admin allows and the kind of event offers (src/lib/admin-modules.ts kindModules).
-  // A trip's handbook parts are no admin module: a Program always offers them (src/lib/trip.ts).
-  const allowed = (key: SectionKey) => key === "about" || (isTripSection(key) ? (template?.kind ?? source?.event_kind) === "program" : !disabledModules.includes(key as AdminModule) && kindOffers(template?.kind ?? source?.event_kind, key as AdminModule));
+  // A trip's handbook parts are no admin module: a Program or a Handbook always offers them (src/lib/trip.ts).
+  const allowed = (key: SectionKey) => key === "about" || (isTripSection(key) ? isProgramLike(template?.kind ?? source?.event_kind) : !disabledModules.includes(key as AdminModule) && kindOffers(template?.kind ?? source?.event_kind, key as AdminModule));
 
   function pick(next: Start) {
     setStart(next); setErrors({}); setError("");

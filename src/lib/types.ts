@@ -35,8 +35,10 @@ export type HeroImage = { url: string; alt: string; srcset: ImageSource[]; focus
  * read (src/lib/guide.ts): no RSVP, tickets or invitations. "csr" collects donations
  * (src/lib/donations.ts): what was given and by whom, not an invitation. "panduan" is a public
  * guide to a place (src/lib/place-guide.ts): a welcome, the way there and photos, nothing to answer.
+ * "handbook" is a client trip's participant handbook: a Program's multi-day schedule with the
+ * trip's parts (transport, hotel, do's and don'ts, help contacts) as its own kind of event.
  */
-export type EventKind = "kunjungan" | "acara" | "program" | "kartu" | "eguide" | "csr" | "panduan";
+export type EventKind = "kunjungan" | "acara" | "program" | "handbook" | "kartu" | "eguide" | "csr" | "panduan";
 export type EventAudience = "external" | "internal";
 /** The look of a Panduan lokasi; its content is the same in every one. */
 export type PlaceTheme = "werkudara" | "resort";

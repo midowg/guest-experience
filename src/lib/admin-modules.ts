@@ -107,18 +107,18 @@ export const moduleBlocks: Partial<Record<AdminModule, string>> = {
  * A Panduan lokasi is read, like an E-Guide, but has one fixed shape: welcome, the way there, photos.
  */
 export const kindModules: Record<EventKind, readonly AdminModule[]> = {
-  kunjungan: adminModuleKeys, acara: adminModuleKeys, program: adminModuleKeys,
+  kunjungan: adminModuleKeys, acara: adminModuleKeys, program: adminModuleKeys, handbook: adminModuleKeys,
   kartu: ["poster"],
   eguide: ["experience", "agenda", "location", "route", "gallery", "prepare", "contact", "bilingual"],
   csr: ["contact"],
   panduan: ["location", "route", "gallery", "contact", "bilingual"],
 };
 const invitationBlocks = ["identity", "appearance", "schedule", "hero", "topics", "day", "after", "sections", "publication"] as const;
-/** A trip's handbook parts (src/lib/trip.ts) belong to Program only; they sit under no module of their own. */
+/** A trip's handbook parts (src/lib/trip.ts) belong to Program and Handbook; they sit under no module of their own. */
 const tripBlocks = ["transport", "stay", "guidelines", "contacts"] as const;
 export const kindBlocks: Record<EventKind, readonly string[]> = {
   // Kunjungan Kantor's menu (editor-model visitMenu) keeps schedule in Info kunjungan and has no section-order block.
-  kunjungan: ["identity", "appearance", "hero", "topics", "day", "after", "photos", "publication"], acara: invitationBlocks, program: [...invitationBlocks, ...tripBlocks],
+  kunjungan: ["identity", "appearance", "hero", "topics", "day", "after", "photos", "publication"], acara: invitationBlocks, program: [...invitationBlocks, ...tripBlocks], handbook: [...invitationBlocks, ...tripBlocks],
   kartu: ["appearance", "publication"],
   eguide: ["identity", "appearance", "schedule", "guide", "publication"],
   csr: ["identity", "appearance", "hero", "donation-style", "donation-items", "donation-pay", "donation-recipients", "donation-show", "donation-news", "publication"],

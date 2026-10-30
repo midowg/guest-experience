@@ -16,7 +16,7 @@ import type { TemplateKey } from "@/lib/event-templates";
 import styles from "@/components/admin/admin.module.css";
 import { adminEventPath, adminEventsApi, eventPath, PLACE_GUIDE_PATH } from "@/lib/routes";
 
-const kinds = { kunjungan: "Welcome", acara: "Acara", program: "Program", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;
+const kinds = { kunjungan: "Welcome", acara: "Acara", program: "Program", handbook: "Handbook", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;
 /** One word for where an event stands, in the stage colours of the editor. */
 function stageBadge(event: EventRecord, phase: EventPhase | undefined) {
   if (event.status === "draft") return { label: "Draf", stage: "settings", Icon: Pencil };

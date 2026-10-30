@@ -6,7 +6,7 @@ import type { EventRecord, PlainImage } from "@/lib/types";
 import styles from "@/components/admin/admin.module.css";
 
 const eyebrows: Record<EventRecord["event_kind"], string> = {
-  acara: "Undangan acara", program: "Panduan peserta", kunjungan: "Undangan kunjungan", eguide: "E-Guide",
+  acara: "Undangan acara", program: "Panduan peserta", handbook: "Panduan peserta", kunjungan: "Undangan kunjungan", eguide: "E-Guide",
   csr: "Friday Sharing", panduan: "Panduan lokasi", kartu: "Kartu",
 };
 

@@ -75,9 +75,9 @@ it("lets only the super admin start from a blank draft", () => {
   expect(screen.getByRole("button", { name: /Mulai dari draf kosong/ })).toBeTruthy();
 });
 
-it("keeps the trip's handbook parts switched on when a Handbook trip is created, even with modules switched off", async () => {
+it("keeps the trip's handbook parts switched on when a Handbook is created, even with modules switched off", async () => {
   render(<CreateEventDialog events={[]} templates={["handbook-trip"]} disabledModules={["team"]} onClose={() => {}} />);
-  fireEvent.click(screen.getByRole("button", { name: /^Handbook trip:/ }));
+  fireEvent.click(screen.getByRole("button", { name: /^Handbook:/ }));
   fireEvent.change(screen.getByRole("textbox", { name: "Nama acara" }), { target: { value: "SM RO Jakarta TDN Yogyakarta" } });
   fireEvent.change(screen.getByLabelText(/^Mulai/), { target: { value: "2026-11-05T07:45" } });
   fireEvent.click(screen.getByRole("button", { name: "Buat acara" }));

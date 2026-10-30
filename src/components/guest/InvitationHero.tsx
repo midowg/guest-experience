@@ -1,5 +1,6 @@
 "use client";
 
+import { isProgramLike } from "@/lib/program";
 import type { CSSProperties, MouseEvent } from "react";
 import { ArrowDown, ArrowRight, CalendarDays, Check, Clock3, MapPin } from "lucide-react";
 import { ButtonLink } from "@/components/ui";
@@ -18,9 +19,9 @@ import styles from "./guest.module.css";
 export function visibleSections(event: HeroPreviewEvent & { contact?: EventContact; prepare?: PrepareContent; trip?: TripContent }) {
   return event.sections.filter(section => section.enabled && (section.key !== "feedback" || (event.feedback_enabled && event.feedback_questions.length > 0)) && (section.key !== "contact" || (!!event.contact?.name && !!event.contact.phone)) && (section.key !== "prepare" || !!event.prepare?.items.length)
     // A trip part with nothing in it, or on an event that is not a Program, stays off the page.
-    && (!(section.key in tripFilled) || (event.event_kind === "program" && tripFilled[section.key as keyof typeof tripFilled](event.trip))));
+    && (!(section.key in tripFilled) || (isProgramLike(event.event_kind) && tripFilled[section.key as keyof typeof tripFilled](event.trip))));
 }
-const kindEyebrow = { kunjungan: "hero.eyebrow.kunjungan", acara: "hero.eyebrow.acara", program: "hero.eyebrow.program", kartu: "hero.eyebrow.acara", eguide: "hero.eyebrow.acara", csr: "hero.eyebrow.acara", panduan: "hero.eyebrow.acara" } as const;
+const kindEyebrow = { kunjungan: "hero.eyebrow.kunjungan", acara: "hero.eyebrow.acara", program: "hero.eyebrow.program", handbook: "hero.eyebrow.program", kartu: "hero.eyebrow.acara", eguide: "hero.eyebrow.acara", csr: "hero.eyebrow.acara", panduan: "hero.eyebrow.acara" } as const;
 
 export function TimeRange({ start, end, timezone }: { start: string; end: string | null; timezone: string }) {
   const { t, time } = useWording();

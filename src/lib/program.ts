@@ -24,6 +24,11 @@ export function duration(start: string, end: string): { hours: number; minutes: 
   return { hours: Math.floor(minutes / 60), minutes: minutes % 60 };
 }
 
+/** A Handbook is a Program of its own name: both have the multi-day schedule and the trip's handbook parts. */
+export function isProgramLike(kind: string | undefined): boolean {
+  return kind === "program" || kind === "handbook";
+}
+
 export function hasDepth(detail: AgendaDetail | undefined): boolean {
   return !!detail && !!(detail.teaser.trim() || detail.did_you_know.trim() || detail.more_story.trim() || detail.photo?.url);
 }

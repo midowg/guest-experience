@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BookOpen, Building2, CalendarRange, CircleHelp, DoorOpen, Frame, Globe, HandHeart, Lightbulb, MapPinned, PartyPopper, ThumbsUp, Trash2, UserRound, type LucideIcon } from "lucide-react";
+import { BookOpen, Building2, Luggage, CalendarRange, CircleHelp, DoorOpen, Frame, Globe, HandHeart, Lightbulb, MapPinned, PartyPopper, ThumbsUp, Trash2, UserRound, type LucideIcon } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { momentIconComponents, prepareIconComponents } from "@/components/guest/JourneyPanels";
 import { phaseLabels } from "@/lib/event-phase";
@@ -66,6 +66,7 @@ export function AppearanceBlock({ event, update }: Pick<Props, "event" | "update
       { value: "kunjungan", label: "Kunjungan", description: "Tamu datang ke kantor atau lokasi kita.", icon: DoorOpen },
       { value: "acara", label: "Acara", description: "Satu hari, tamu banyak. Gala, nyadran, seminar.", icon: PartyPopper, recommended: true },
       { value: "program", label: "Program", description: "Beberapa hari, jadwal per hari. Bootcamp, trip.", icon: CalendarRange },
+      { value: "handbook", label: "Handbook", description: "Panduan peserta trip: transportasi, hotel, jadwal per hari dengan cerita tiap tempat, persiapan, dan kontak bantuan.", icon: Luggage },
       { value: "kartu", label: "Kartu", description: "Bukan undangan: kartu yang diisi peserta (poster, ucapan, ID card, sertifikat). Editor hanya berisi pengaturan kartu.", icon: Frame },
       { value: "eguide", label: "E-Guide", description: "Bukan undangan: buku panduan untuk dibaca tamu (bab, jadwal, lokasi, persiapan, kontak). Tanpa RSVP dan tiket.", icon: BookOpen },
       { value: "panduan", label: "Panduan lokasi", description: "Bukan undangan: halaman umum untuk menemukan tempat (sambutan, rute bergambar, info kedatangan, PIC, galeri). Tanpa RSVP dan tiket.", icon: MapPinned },

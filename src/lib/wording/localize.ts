@@ -1,3 +1,4 @@
+import { isProgramLike } from "@/lib/program";
 import { tripFilled, tripSectionKeys } from "@/lib/trip";
 import type { EnglishContent, EventRecord, TextPair } from "@/lib/types";
 import type { Lang } from "./index";
@@ -88,6 +89,6 @@ export function localizeEvent(event: EventRecord, lang: Lang): { event: EventRec
       route: { ...event.route, steps: event.route.steps.map(step => pair(step, step.en)), points: (event.route.points ?? []).map(point => pair(point, point.en)) },
     },
     // The trip's texts (transport, hotel, do's and don'ts, contacts) are Indonesian only for now.
-    fallback: fallback || (event.event_kind === "program" && tripSectionKeys.some(key => tripFilled[key](event.trip) && event.sections.some(section => section.key === key && section.enabled))),
+    fallback: fallback || (isProgramLike(event.event_kind) && tripSectionKeys.some(key => tripFilled[key](event.trip) && event.sections.some(section => section.key === key && section.enabled))),
   };
 }

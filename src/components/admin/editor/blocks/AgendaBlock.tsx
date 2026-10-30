@@ -1,3 +1,4 @@
+import { isProgramLike } from "@/lib/program";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { OrderButtons } from "@/components/admin/editor/controls";
@@ -14,7 +15,7 @@ import styles from "@/components/admin/admin.module.css";
 export function AgendaBlock({ kit }: { kit: EditorKit }) {
   const { event, update, control, tz, errors } = kit;
   // Program: a picture above each day of the schedule (the handbook's DAY 1, DAY 2 covers).
-  const days = event.event_kind === "program" ? agendaByDay(event.agenda.filter(item => item.starts_at), event.timezone).filter(day => day.day) : [];
+  const days = isProgramLike(event.event_kind) ? agendaByDay(event.agenda.filter(item => item.starts_at), event.timezone).filter(day => day.day) : [];
   const trip = event.trip ?? emptyTrip();
   const covers = trip.day_covers ?? [];
   const setCover = (day: string, image: { url: string; alt: string; srcset: { width: number; url: string }[] }) => update("trip", { ...trip, day_covers: [...covers.filter(cover => cover.day !== day), ...(image.url ? [{ day, image }] : [])].sort((a, b) => a.day.localeCompare(b.day)) });
