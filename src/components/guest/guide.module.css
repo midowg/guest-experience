@@ -13,7 +13,7 @@
   background-image: linear-gradient(to top, rgba(var(--scrim-rgb), .55) 0%, rgba(var(--scrim-rgb), .15) 50%, rgba(var(--scrim-rgb), 0) 80%);
 }
 .coverLang { position: absolute; top: calc(var(--space-4) + env(safe-area-inset-top, 0px)); right: var(--space-4); }
-.coverInner { width: min(var(--container), calc(100% - 2rem)); margin-inline: auto; padding-block: var(--space-9) calc(var(--space-8) + env(safe-area-inset-bottom, 0px)); }
+.coverInner { width: min(var(--container), calc(100% - 2rem)); margin-inline: auto; padding-block: var(--space-9) max(var(--space-8), var(--bottom-clear)); }
 .coverEyebrow { display: inline-flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-5); font-family: var(--font-label); font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; }
 .cover h1 { max-width: 18ch; margin-bottom: var(--space-5); color: var(--color-on-hero); font-family: var(--font-heading); font-weight: var(--heading-weight); font-size: clamp(2.5rem, 9vw, 4.75rem); line-height: 1.04; letter-spacing: -.03em; text-wrap: balance; }
 .cover h1:focus { outline: none; }

@@ -17,4 +17,8 @@
   --text-heading: clamp(2rem, 4vw, 3.5rem); --text-hero: clamp(2.5rem, 5.8vw, 5.5rem);
   --container: 74rem; --reading: 44rem; --radius: 0; --border: 1px solid var(--color-border);
   --motion-fast: 160ms; --nav-height: 5rem; --z-nav: 20; --z-dialog: 50;
+  /* Kept free at the foot of every full-screen opening: a phone browser's bottom bar (Safari's
+     address bar, Chrome's toolbar sliding in) can cover about this much, plus the iPhone's home
+     indicator. No text or button sits lower than this. */
+  --bottom-clear: calc(4.5rem + env(safe-area-inset-bottom, 0px));
 }
