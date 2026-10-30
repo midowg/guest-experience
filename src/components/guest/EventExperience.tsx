@@ -21,6 +21,7 @@ import styles from "./guest.module.css";
 import { useGuestPage } from "./use-guest-page";
 import { VisitExperience } from "./VisitExperience";
 import { ContactList, GuidelineLists, StayCard, TransportCards } from "./TripParts";
+import { WerkudaraFooter } from "./WerkudaraFooter";
 
 const navKeys: Record<SectionKey, WordKey> = { about: "nav.about", experience: "nav.experience", agenda: "nav.agenda", location: "nav.location", prepare: "nav.prepare", team: "nav.team", rsvp: "nav.rsvp", contact: "nav.contact", feedback: "nav.feedback", transport: "nav.transport", stay: "nav.stay", contacts: "nav.contacts", guidelines: "nav.guidelines" };
 
@@ -263,7 +264,6 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
       <footer className={styles.closing}>
         <div className="container">
           {phase !== "after" && event.closing && <p className={`${styles.closingText} ${styles.multiline}`}>{event.closing}</p>}
-          {event.organizer && <div className={styles.organizer}><p className="eyebrow">{t("footer.organizedBy")}</p><p className={styles.organizerName}>{event.organizer}</p></div>}
           {phase !== "after" && external && event.review_enabled && event.review_url && <>
             {(event.review_heading || event.review_description) && <div className={styles.reviewCallout}>
               {event.review_heading && <h2>{event.review_heading}</h2>}
@@ -271,7 +271,8 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             </div>}
             <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">{event.review_button_label || t("after.review.button")} <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only">{t("common.newTab")}</span></ButtonLink>
           </>}
-          <div className={styles.footerLine}><span>{t("footer.brand")}</span><a href="#event-content" onClick={focusAnchor}>{t("nav.top")} <ArrowUp size={15} aria-hidden="true" /></a></div>
+          <WerkudaraFooter organizer={event.organizer} />
+          <div className={styles.footerLine}><span>{t("footer.copyright", { n: new Date().getFullYear() })}</span><span>{t("footer.brand")}</span><a href="#event-content" onClick={focusAnchor}>{t("nav.top")} <ArrowUp size={15} aria-hidden="true" /></a></div>
         </div>
       </footer>
     </main>

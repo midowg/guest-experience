@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { createSeedEvent } from "@/lib/seed-event";
 import { EventExperience } from "./EventExperience";
 
@@ -53,7 +53,8 @@ it("renders optional contact introduction, role, and organization", () => {
   expect(screen.getByRole("heading", { name: "Any questions before your visit?" })).toBeTruthy();
   expect(screen.getByText(event.contact.description)).toBeTruthy();
   expect(screen.getByText("Hospitality Specialist")).toBeTruthy();
-  expect(screen.getByText("Werkudara Group")).toBeTruthy();
+  // The contact card's organisation; the footer names Werkudara Group too.
+  expect(within(document.getElementById("contact")!).getByText("Werkudara Group")).toBeTruthy();
 });
 
 it("omits the contact section and navigation until contact details are filled", () => {

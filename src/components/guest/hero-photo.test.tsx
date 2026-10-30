@@ -157,7 +157,8 @@ describe("location display", () => {
     expect(markup).toContain('referrerPolicy="strict-origin-when-cross-origin"');
     expect(markup).toContain(styles.locationMapFrame);
     expect(markup).not.toContain(styles.addressPanel);
-    expect(markup).not.toContain('href="https://maps.app.goo.gl/');
+    // Within the location section: the page footer links to Werkudara's own office map.
+    expect(markup.split('id="location"')[1].split("</section>")[0]).not.toContain('href="https://maps.app.goo.gl/');
     expect(markup).toContain(styles.galleryViewport);
     expect(markup).toContain('aria-roledescription="carousel"');
   });

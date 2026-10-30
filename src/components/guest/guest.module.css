@@ -189,6 +189,23 @@
 .closingText { max-width: var(--reading); font-size: clamp(1.5rem, 2.75vw, 2.5rem); line-height: 1.35; color: var(--color-primary); margin-bottom: var(--space-5); }
 .organizer { margin-bottom: var(--space-6); max-width: var(--reading); }
 .organizer p { margin: 0; }
+/* Werkudara Group at the foot of the page (WerkudaraFooter.tsx), as on werkudara.com. */
+.wkFooter { display: grid; gap: var(--space-5); margin-top: var(--space-6); }
+.wkBrand { display: flex; align-items: center; gap: var(--space-3); }
+.wkBrand img { width: 3.5rem; height: 3.5rem; object-fit: contain; }
+.wkBrand p { margin: 0; }
+.wkName { margin-top: 2px !important; font-family: var(--font-heading); font-weight: var(--heading-weight, 700); font-size: var(--text-lg); color: var(--color-heading, var(--color-text)); }
+.wkGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-5); }
+.wkBlock { display: grid; gap: var(--space-2); align-content: start; }
+.wkBlock address { font-style: normal; font-size: var(--text-sm); color: var(--color-text); }
+.wkLabel { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--text-sm); font-weight: 700; color: var(--color-caption); }
+.wkLink { justify-self: start; display: inline-flex; align-items: center; gap: var(--space-1); min-height: 40px; font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); }
+.wkButtons { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.wkButtons a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); font-weight: 600; text-decoration: none; }
+.wkButtons a:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.wkSocial { display: flex; gap: var(--space-2); }
+.wkSocial a { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-heading, var(--color-text)); }
+.wkSocial a:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .organizerName { margin-top: var(--space-1) !important; font-weight: 700; color: var(--color-heading, var(--color-text)); }
 .footerLine { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); border-top: var(--border); margin-top: var(--space-8); padding-block: var(--space-5); font-size: var(--text-sm); }
 .footerLine a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; }
@@ -433,10 +450,16 @@
 .didYouKnow { padding: var(--space-3) var(--space-4); border-radius: max(var(--radius, 0px), 10px); background: var(--color-soft); }
 .didYouKnow p { margin: 0; }
 .didYouKnowTitle { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-1) !important; color: var(--color-heading, var(--color-primary)); font-weight: 700; }
-.noteBox { display: flex; gap: var(--space-3); align-items: flex-start; }
-.noteBox > div { display: grid; gap: var(--space-1); min-width: 0; }
-.noteIcon { flex-shrink: 0; margin-top: 3px; color: var(--color-heading, var(--color-primary)); }
-.noteLead { font-weight: 700; color: var(--color-heading, var(--color-text)); }
+/* An activity's "Did you know?": closed, its teaser as the title; a tap opens the story below. */
+.noteBox { padding: 0 var(--space-4); }
+.noteSummary { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; list-style: none; cursor: pointer; font-weight: 700; color: var(--color-heading, var(--color-text)); }
+.noteSummary::-webkit-details-marker { display: none; }
+.noteSummary span { flex: 1; min-width: 0; }
+.noteIcon { flex-shrink: 0; color: var(--color-heading, var(--color-primary)); }
+.noteChevron { flex-shrink: 0; color: var(--color-caption); transition: transform .15s; }
+.noteBox[open] .noteChevron { transform: rotate(180deg); }
+.noteBody { display: grid; gap: var(--space-2); padding-bottom: var(--space-4); }
+@media (prefers-reduced-motion: reduce) { .noteChevron { transition: none; } }
 .textButton { justify-self: start; min-height: 40px; padding: 0; border: 0; background: transparent; color: var(--color-primary); font: inherit; font-size: var(--text-sm); font-weight: 600; text-decoration: underline; cursor: pointer; }
 .pageLink { display: inline-flex; align-items: center; gap: 4px; justify-self: start; color: var(--color-primary); font-size: var(--text-sm); }
 .emergencyCard { display: grid; gap: var(--space-2); margin-top: var(--space-4); padding: var(--space-4) var(--space-5); border: 1px solid color-mix(in srgb, var(--color-danger, #9a273d) 40%, transparent); border-radius: max(var(--radius, 0px), 12px); background: color-mix(in srgb, var(--color-danger, #9a273d) 6%, var(--color-background)); }
@@ -455,7 +478,6 @@
   .experience[data-kind="program"] .prepareCards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .experience[data-kind="program"] .agenda li { grid-template-columns: 11rem minmax(0, 1fr); }
   .experience[data-kind="program"] .agendaBody { max-width: 52rem; }
-  .experience[data-kind="program"] .stayScene { min-height: 36rem; padding-block: 14rem var(--space-8); }
 }
 
 /* Client trip handbook (TripParts.tsx): transport legs, hotel, do & don't, help contacts. */
@@ -464,8 +486,6 @@
 .tripCard { display: grid; gap: var(--space-2); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius, 0); background: var(--color-surface, #fff); }
 .tripCard h3 { margin: 0; font-family: var(--font-heading); font-weight: var(--heading-weight, 700); font-size: var(--text-lg); color: var(--color-heading, var(--color-text)); }
 .tripCard p { margin: 0; }
-.tripEyebrow { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--text-sm); font-weight: 700; color: var(--color-caption); }
-.tripEyebrow svg { color: var(--color-primary); }
 .tripRoute { font-weight: 600; color: var(--color-text); }
 .tripTimes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); padding: var(--space-3) 0; border-block: 1px solid var(--color-border); }
 .tripTimes p { display: grid; gap: 2px; }
@@ -486,39 +506,17 @@
 /* A person's Call and WhatsApp share one row, half each. */
 .tripPeople .tripActions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: var(--space-2); }
 .tripPeople .tripActions a { justify-content: center; padding: 0 var(--space-3); white-space: nowrap; }
-/* Hotel with a photo: no card. The photo runs edge to edge; the theme's dark tone and a soft blur
-   rise from the bottom, where the words are, and fade out towards the top so the photo still shows. */
-.stayScene { position: relative; isolation: isolate; display: flex; align-items: flex-end; min-height: 36rem; margin-inline: calc(50% - 50vw); padding-block: 12rem var(--space-7); overflow: hidden; color: #fff; background: rgb(var(--scrim-rgb, 10, 32, 62)); }
-.stayScenePhoto { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
-.stayTone { position: absolute; inset: 0; z-index: -1;
-  background: linear-gradient(to top, rgba(var(--scrim-rgb, 10, 32, 62), .94) 0%, rgba(var(--scrim-rgb, 10, 32, 62), .8) 38%, rgba(var(--scrim-rgb, 10, 32, 62), .35) 68%, rgba(var(--scrim-rgb, 10, 32, 62), .05) 100%);
-  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-  -webkit-mask-image: linear-gradient(to top, #000 42%, transparent 82%); mask-image: linear-gradient(to top, #000 42%, transparent 82%); }
-.stayContent { display: grid; gap: var(--space-3); }
-.stayContent p { margin: 0; }
-.stayEyebrow { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--color-hero-accent, #fff); }
-.stayName { margin: 0; font-family: var(--font-heading); font-weight: var(--heading-weight, 700); font-size: clamp(1.75rem, 4vw, 2.75rem); line-height: 1.1; color: #fff; }
-.stayAddress { max-width: 36rem; color: rgba(255, 255, 255, .86); }
-.stayDates { display: flex; flex-wrap: wrap; gap: var(--space-5); padding-block: var(--space-3); border-block: 1px solid rgba(255, 255, 255, .22); }
-.stayDates p { display: grid; gap: 2px; }
-.stayDates span { font-size: var(--text-sm); color: rgba(255, 255, 255, .72); }
-.stayDates strong { font-size: var(--text-lg); color: #fff; }
-.stayFacts { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); margin: 0; }
-.stayFacts dt { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: rgba(255, 255, 255, .72); }
-.stayFacts dd { margin: 2px 0 0; color: #fff; font-weight: 600; }
-.stayNote { max-width: 36rem; font-size: var(--text-sm); color: rgba(255, 255, 255, .8); }
-.stayActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.stayActions a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-4); border: 1px solid rgba(255, 255, 255, .45); border-radius: 999px; background: rgba(255, 255, 255, .12); color: #fff; font-weight: 600; text-decoration: none; }
-.stayActions a:hover { background: rgba(255, 255, 255, .22); }
-.stayThumbs { display: flex; gap: var(--space-2); }
-.stayThumbs .zoomThumb { width: 4.75rem; aspect-ratio: 1; border: 2px solid rgba(255, 255, 255, .7); }
-/* The scene reaches the screen's edges; nothing beyond it may scroll sideways. */
-.experience[data-kind="program"] { overflow-x: clip; }
+/* Shared by every handbook card (TripParts.tsx CardHead): a short caption under the title. */
+.tripMeta { margin: 0; font-size: var(--text-sm); font-weight: 600; color: var(--color-caption); }
+.dangerIcon { background: color-mix(in srgb, var(--color-danger) 12%, var(--color-background)); color: var(--color-danger); }
+.cardPhotos { display: grid; grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr)); gap: var(--space-2); }
+.cardPhotos .zoomThumb { aspect-ratio: 4 / 3; }
+.hospitalCard { border-color: color-mix(in srgb, var(--color-danger) 35%, transparent); background: color-mix(in srgb, var(--color-danger) 5%, var(--color-background)); }
+.hospitalLink { justify-self: start; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; color: var(--color-danger); font-weight: 600; }
 .tripGuidelines { display: grid; gap: var(--space-4); }
 .tripWeather { display: grid; gap: var(--space-2); padding: var(--space-4) var(--space-5); border-radius: var(--radius, 0); background: var(--color-soft); }
 .tripWeather h3 { font-size: var(--text-base); color: var(--color-heading, var(--color-text)); }
 .tripWeather p { margin: 0; font-size: var(--text-sm); }
-.tripDo, .tripDont { font-size: var(--text-base) !important; }
 .tripDontList svg { color: var(--color-danger); }
 
 /* Phone header: the section links scroll sideways in one row instead of stacking. */

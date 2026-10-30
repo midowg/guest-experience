@@ -58,8 +58,8 @@ it("shows a session's photo small beside its title and opens it full size", () =
   expect(within(dialog).getByRole("img", { name: "Sate klathak di kuah gulai" })).toBeTruthy();
   fireEvent.click(within(dialog).getByRole("button", { name: "Tutup" }));
   expect(dialog.hasAttribute("open")).toBe(false);
-  // The hotel's first photo is the card's background; the others open full size.
-  expect(screen.getByRole("img", { name: "Fasad hotel" })).toBeTruthy();
+  // The hotel's photos are small pictures on its card; each opens full size.
+  expect(screen.getByRole("button", { name: "Lihat foto penuh: Fasad hotel" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Lihat foto penuh: Kamar hotel" })).toBeTruthy();
 });
 
@@ -72,4 +72,16 @@ it("calls through buttons without printing the numbers", () => {
   const stay = document.getElementById("stay")!;
   expect(within(stay).queryByText(/0274/)).toBeNull();
   expect(within(stay).getByRole("link", { name: "Telepon hotel" }).getAttribute("href")).toBe("tel:02742920101");
+});
+
+it("ends with Werkudara Group as on werkudara.com: offices, contact buttons, social pages and copyright", () => {
+  render(<EventExperience event={smTdnYogyakarta()} preview />);
+  const footer = document.querySelector("footer")!;
+  expect(within(footer).getByText(/Jl\. Bhinneka No\. 9, Condongcatur/)).toBeTruthy();
+  expect(within(footer).getByText(/Puri Candra Asri Blok A No\. 20/)).toBeTruthy();
+  expect(within(footer).getByRole("link", { name: "Email" }).getAttribute("href")).toBe("mailto:info@werkudara.com");
+  expect(within(footer).getByRole("link", { name: "Telepon kantor" }).getAttribute("href")).toBe("tel:+622742832999");
+  expect(within(footer).getByRole("link", { name: /Instagram/ })).toBeTruthy();
+  expect(within(footer).queryByText(/2832-999|2546-001/)).toBeNull();
+  expect(within(footer).getByText(`© ${new Date().getFullYear()} Werkudara Group. Hak cipta dilindungi.`)).toBeTruthy();
 });

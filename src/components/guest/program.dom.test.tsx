@@ -42,16 +42,17 @@ it("opens on today during the event", async () => {
   await vi.waitFor(() => expect(within(tabs).getAllByRole("tab")[1].getAttribute("aria-selected")).toBe("true"));
 });
 
-it("shows place and length, and the detail without a button or label", () => {
+it("shows place and length, and keeps the detail closed under its teaser until opened", () => {
   render(<EventExperience event={trip()} preview />);
   expect(screen.getByText("Lombok Tengah")).toBeTruthy();
   expect(screen.getByText("2 jam")).toBeTruthy();
   expect(screen.getByText("1 jam 30 menit")).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /Kenali lebih dekat/ })).toBeNull();
-  expect(screen.queryByText("FYI")).toBeNull();
-  expect(screen.getByText("kenapa pasirnya seperti merica?")).toBeTruthy();
+  const summary = screen.getByText("kenapa pasirnya seperti merica?").closest("summary")!;
+  const details = summary.closest("details")!;
+  expect(details.open).toBe(false);
+  fireEvent.click(summary);
+  details.open = true; // jsdom does not toggle <details> on a click; the browser does.
   expect(screen.getByText("Butiran pasirnya besar dan bulat.")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Selengkapnya" }));
   expect(screen.getByText("Cerita panjang tentang pantai.")).toBeTruthy();
   expect(screen.getByRole("link", { name: /Hal\. 4 presentasi/ }).getAttribute("href")).toBe("https://example.test/trip.pdf#page=4");
 });

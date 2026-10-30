@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, Clock3, FileText, HeartPulse, Lightbulb, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Clock3, FileText, HeartPulse, Lightbulb, MapPin, Phone } from "lucide-react";
 import { localDay } from "@/lib/event-phase";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { agendaByDay, duration, hasDepth, presentationPage } from "@/lib/program";
@@ -18,7 +18,6 @@ function shortDay(day: string, timeZone: string, lang: "id" | "en") {
 
 function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; item: AgendaItem; expanded?: boolean }) {
   const { t } = useWording();
-  const [story, setStory] = useState(expanded);
   const detail = event.agenda_details?.[item.id];
   const length = duration(item.starts_at, item.ends_at);
   const page = presentationPage(event.presentation_pdf_url ?? "", detail?.pdf_page ?? null);
@@ -40,20 +39,18 @@ function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; it
         {photo && <PhotoZoom image={photo} className={styles.agendaThumb} sizes="8rem" />}
       </div>
       {/* Shown as it is, without a button to open it (revision 30 Oct): the guest reads it while scrolling. */}
-      {deep && <div className={styles.discoverPanel}>
-        {/* No label (revision 30 Oct): the lamp says "worth knowing", the teaser leads, the story follows. */}
-        {(detail!.did_you_know || detail!.teaser) && <div className={`${styles.didYouKnow} ${styles.noteBox}`}>
+      {/* Closed by default (revision 30 Oct): the teaser is the title; the guest opens it to read more. */}
+      {deep && <details className={`${styles.didYouKnow} ${styles.noteBox}`} open={expanded || undefined}>
+        <summary className={styles.noteSummary}>
           <Lightbulb size={18} aria-hidden="true" className={styles.noteIcon} />
-          <div>
-            {detail!.teaser && <p className={styles.noteLead}>{detail!.teaser}</p>}
-            {detail!.did_you_know && <p className={styles.multiline}>{detail!.did_you_know}</p>}
-          </div>
-        </div>}
-        {detail!.more_story && <>
-          {story && <p className={styles.multiline}>{detail!.more_story}</p>}
-          <button type="button" className={styles.textButton} aria-expanded={story} onClick={() => setStory(!story)}>{story ? t("detail.moreLess") : t("detail.more")}</button>
-        </>}
-      </div>}
+          <span>{detail!.teaser.trim() || t("detail.didYouKnow")}</span>
+          <ChevronDown size={18} aria-hidden="true" className={styles.noteChevron} />
+        </summary>
+        <div className={styles.noteBody}>
+          {detail!.did_you_know && <p className={styles.multiline}>{detail!.did_you_know}</p>}
+          {detail!.more_story && <p className={styles.multiline}>{detail!.more_story}</p>}
+        </div>
+      </details>}
       {page && <a className={styles.pageLink} href={page} target="_blank" rel="noopener noreferrer"><FileText size={14} aria-hidden="true" /> {t("detail.page", { n: detail!.pdf_page! })}<span className="sr-only">{t("common.newTab")}</span></a>}
     </div>
   </li>;
