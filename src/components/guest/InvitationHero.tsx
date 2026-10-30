@@ -7,6 +7,7 @@ import { useWording } from "./language";
 import { tzLabel } from "@/lib/timezones";
 import { getFraming } from "@/lib/hero-framing";
 import { localDay } from "@/lib/event-phase";
+import { formatDateRange } from "@/lib/format";
 import type { EventContact, PrepareContent, SectionKey } from "@/lib/types";
 import { tripFilled, type TripContent } from "@/lib/trip";
 import type { HeroPreviewEvent } from "@/lib/hero-preview";
@@ -27,7 +28,7 @@ export function TimeRange({ start, end, timezone }: { start: string; end: string
   return <><time dateTime={start}>{time(start, timezone)}</time>{end && <> – <time dateTime={end}>{time(end, timezone)}</time></>} {tzLabel(timezone)}</>;
 }
 export function InvitationHero({ event, rsvpSaved = false, inert = false, invitee }: { event: HeroPreviewEvent; rsvpSaved?: boolean; inert?: boolean; invitee?: string }) {
-  const { t, date } = useWording();
+  const { t, date, lang } = useWording();
   const sections = visibleSections(event);
   const has = (key: SectionKey) => sections.some(section => section.key === key);
   const cta = has("rsvp") && event.rsvp_enabled && !rsvpSaved ? { href: "#rsvp", label: t("hero.cta.rsvp") } : has("location") ? { href: "#location", label: t("hero.cta.location") } : has("agenda") ? { href: "#agenda", label: t("hero.cta.agenda") } : null;
@@ -56,7 +57,7 @@ export function InvitationHero({ event, rsvpSaved = false, inert = false, invite
   // Several days (a trip, a bootcamp): both dates, and how many days and nights instead of one day's hours.
   const days = event.starts_at && event.ends_at ? Math.round((Date.parse(localDay(event.ends_at, event.timezone)) - Date.parse(localDay(event.starts_at, event.timezone))) / 86400000) + 1 : 1;
   const facts = (photographic: boolean) => <>
-    <div className={photographic ? styles.heroMetaItem : styles.fact}><CalendarDays size={photographic ? 20 : 22} aria-hidden="true" /><div><span>{t("hero.date")}</span><p><time dateTime={event.starts_at}>{event.starts_at ? date(event.starts_at, event.timezone) : t("hero.date.empty")}</time>{days > 1 && event.ends_at && <> – <time dateTime={event.ends_at}>{date(event.ends_at, event.timezone)}</time></>}</p></div></div>
+    <div className={photographic ? styles.heroMetaItem : styles.fact}><CalendarDays size={photographic ? 20 : 22} aria-hidden="true" /><div><span>{t("hero.date")}</span><p>{days > 1 && event.ends_at ? <time dateTime={event.starts_at}>{formatDateRange(event.starts_at, event.ends_at, event.timezone, lang)}</time> : <time dateTime={event.starts_at}>{event.starts_at ? date(event.starts_at, event.timezone) : t("hero.date.empty")}</time>}</p></div></div>
     {days > 1 ? <div className={photographic ? styles.heroMetaItem : styles.fact}><Clock3 size={photographic ? 20 : 22} aria-hidden="true" /><div><span>{t("hero.duration")}</span><p>{t("hero.duration.value", { n: days, nights: days - 1 })}</p></div></div>
       : <div className={photographic ? styles.heroMetaItem : styles.fact}><Clock3 size={photographic ? 20 : 22} aria-hidden="true" /><div><span>{t("hero.time")}</span><p><TimeRange start={event.starts_at} end={event.ends_at} timezone={event.timezone} /></p></div></div>}
     <div className={photographic ? styles.heroMetaItem : styles.fact}><MapPin size={photographic ? 20 : 22} aria-hidden="true" /><div><span>{t("hero.place")}</span><p>{event.venue_name || t("hero.place.empty")}</p>{!photographic && event.address && <p className={styles.factAddress}>{event.address}</p>}</div></div>

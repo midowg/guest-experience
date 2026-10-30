@@ -254,7 +254,19 @@
      collapsing on scroll cannot make this taller than the screen. */
   .heroImage { min-height: 100svh; }
   .heroImage .heroInner { width: calc(100% - 2rem); padding-block: var(--space-8) var(--bottom-clear); }
-  .heroMeta { gap: var(--space-4); padding-top: var(--space-5); margin-bottom: var(--space-6); }
+  /* The opening fits one phone screen (revision 30 Oct): a tighter top, the facts two by two,
+     no "scroll to read" cue (the shortcuts below already lead on) and the button on its own. */
+  .heroImage .heroInner { padding-top: var(--space-5); }
+  .heroMeta { display: grid; gap: var(--space-2); padding-top: var(--space-4); margin-bottom: var(--space-5); }
+  /* One short line per fact: the icon says what it is; the label stays for screen readers. */
+  .heroMeta .heroMetaItem { align-items: center; gap: var(--space-3); }
+  .heroMeta .heroMetaItem > svg { margin-top: 0; }
+  .heroMeta .heroMetaItem span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .heroMeta .heroMetaItem p { margin: 0; font-size: 1rem; line-height: 1.4; }
+  .heroImage .greeting { margin-bottom: var(--space-2); }
+  .heroImage .actions .textLink, .heroImage .scrollCue { display: none; }
+  .heroImage .shortcuts { margin-top: var(--space-4); }
+  .heroImage .shortcuts a { min-height: 52px; padding: var(--space-2); }
   /* Stacked on a phone, each fact spans the row, so it follows the block's alignment
      instead of pinning its label to the left. The icon sits above the label rather than
      beside it: left of a centred label it reads as a stray mark on the left margin. */
@@ -272,11 +284,15 @@
   .section { padding-block: var(--space-7); scroll-margin-top: var(--nav-height); }
   .topics ol { grid-template-columns: 1fr; }
   .formGrid { grid-template-columns: 1fr; }
-  .agenda li { grid-template-columns: 1fr; gap: var(--space-2); }
+  .agenda li { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
   .addressPanel { padding: var(--space-5); }
   .locationMapFrame { height: 300px; }
   .closing { padding-top: var(--space-7); }
   .footerLine { margin-top: var(--space-7); }
+}
+/* Short phones (360 × 640 and the like): the shortcuts repeat the menu, so they give way. */
+@media (max-width: 720px) and (max-height: 700px) {
+  .heroImage .shortcuts { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .experience *, .experience *::before, .experience *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -425,7 +441,9 @@
 .dayTabs button[aria-selected="true"] { border-color: var(--color-primary); background: var(--color-primary); color: var(--color-on-primary, #fff); }
 .dayTabs button[aria-selected="true"] span { color: inherit; opacity: .85; }
 .dayHeading { margin: 0; color: var(--color-caption); font-size: var(--text-sm); font-weight: 600; }
-.agendaBody { display: grid; gap: var(--space-2); min-width: 0; }
+/* minmax(0, 1fr): a one-line, ellipsed note title must not widen the column past the screen
+   (it did, and the whole page then scrolled sideways on a phone). */
+.agendaBody { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); min-width: 0; }
 .agendaBody h3 { margin: 0; }
 .agendaBody > p { margin: 0; }
 .agendaFacts { display: flex; flex-wrap: wrap; gap: var(--space-3); color: var(--color-caption); font-size: var(--text-sm); }
@@ -460,7 +478,7 @@
 .didYouKnow p { margin: 0; }
 .didYouKnowTitle { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-1) !important; color: var(--color-heading, var(--color-primary)); font-weight: 700; }
 /* An activity's "Did you know?": closed, its teaser as the title; a tap opens the story below. */
-.noteBox { padding: 0 var(--space-4); }
+.noteBox { min-width: 0; padding: 0 var(--space-4); }
 .noteSummary { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; list-style: none; cursor: pointer; font-weight: 700; color: var(--color-heading, var(--color-text)); }
 .noteSummary::-webkit-details-marker { display: none; }
 .noteTitle { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

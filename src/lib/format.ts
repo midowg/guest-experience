@@ -6,6 +6,10 @@ const locale = (lang: Lang) => (lang === "en" ? "en-GB" : "id-ID");
 export function formatDate(value: string, timeZone = "Asia/Jakarta", lang: Lang = "id") {
   return new Intl.DateTimeFormat(locale(lang), { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone }).format(new Date(value));
 }
+/** Several days as one short range: "5–8 November 2026", "30 Okt – 2 Nov 2026"; fits one line on a phone. */
+export function formatDateRange(start: string, end: string, timeZone = "Asia/Jakarta", lang: Lang = "id") {
+  return new Intl.DateTimeFormat(locale(lang), { day: "numeric", month: "long", year: "numeric", timeZone }).formatRange(new Date(start), new Date(end));
+}
 export function formatTime(value: string, timeZone = "Asia/Jakarta", lang: Lang = "id") {
   return new Intl.DateTimeFormat(locale(lang), { hour: "2-digit", minute: "2-digit", hour12: false, timeZone }).format(new Date(value));
 }
