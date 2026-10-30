@@ -17,6 +17,8 @@ const photo = (name: string, small: number, large: number, alt: string): PlainIm
 });
 
 const cover = photo("exterior", 768, 1280, "Tampak depan Werkudara Office");
+/** The office front, also the opening photo a new Welcome visit at the office starts with. */
+export const officeCover = cover;
 const map = photo("map", 820, 1601, "Peta rute menuju Werkudara Office: lurus di Jl. Pondok Raya, lalu masuk ke Jl. Bhinneka. Rute melalui Jl. Gurameh Raya dan Jl. Tengiri Raya tidak disarankan.");
 const turn = photo("turn", 800, 1400, "Belokan dari Jl. Pondok Raya ke Jl. Bhinneka menuju Werkudara Office, dengan Warmindo Harum di sisi kiri jalan");
 const galleryPhotos = [

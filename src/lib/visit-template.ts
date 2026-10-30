@@ -1,3 +1,4 @@
+import { officeCover } from "./place-guide";
 import type { EventRecord, RouteStep } from "./types";
 
 /*
@@ -15,10 +16,14 @@ export const officeRouteSteps: RouteStep[] = [
   { title: "Parkir di depan kantor", description: "Area parkir tamu tepat di depan gedung.", image: noImage },
 ];
 
-/** The visit's starting content; the route only when the visit is at the office it describes. */
+/**
+ * The visit's starting content; the route and the office's front as the opening photo only when the
+ * visit is at the office they show (board 12: "Foto bawaan templat · bisa diganti").
+ */
 export function visitStarter(event: EventRecord, atOffice: boolean): EventRecord {
   return {
     ...event,
+    hero: atOffice && !event.hero.url ? { ...event.hero, url: officeCover.url, alt: officeCover.alt, srcset: officeCover.srcset } : event.hero,
     organizer: event.organizer || "Werkudara Group",
     contact: { ...event.contact, role: event.contact.role || "Hospitality Specialist" },
     route: atOffice ? { ...event.route, steps: officeRouteSteps } : event.route,

@@ -171,7 +171,7 @@ function VisitBody({ event, preview = false, invitation, phase: journeyPhase = "
     </div>;
     return <>
       {event.rsvp_closes_at && <p className={styles.deadline}><Clock3 size={15} aria-hidden="true" /> {v("home.deadline", { when: dateTime(event.rsvp_closes_at, event.timezone) })}</p>}
-      <ButtonLink href="#konfirmasi" data-visit-nav>{v("home.confirm")} <ChevronRight size={18} aria-hidden="true" /></ButtonLink>
+      <ButtonLink href="#konfirmasi" data-visit-nav><CircleCheck size={19} aria-hidden="true" /> {v("home.confirm")}</ButtonLink>
     </>;
   };
   const confirmScreen = () => {
@@ -216,8 +216,11 @@ function VisitBody({ event, preview = false, invitation, phase: journeyPhase = "
   </>;
 
   const page = (key: SectionKey, title: string, children: ReactNode, lead?: string) => <section id={key} className={styles.page} aria-labelledby={`${key}-heading`}>
-    <a href="#beranda" className={styles.back} data-visit-nav><ArrowLeft size={18} aria-hidden="true" /> <span className="sr-only">{v("back")}</span></a>
-    <div id={`${key}-heading`}><h1 className={styles.pageTitle} ref={heading} tabIndex={-1}>{title}</h1>{lead && <p className={`${styles.pageLead} ${guest.multiline}`}>{lead}</p>}</div>
+    {/* Back and the title share one row (board 11); the lead reads under the title. */}
+    <div className={styles.pageHead}>
+      <a href="#beranda" className={styles.back} data-visit-nav><ArrowLeft size={18} aria-hidden="true" /> <span className="sr-only">{v("back")}</span></a>
+      <div id={`${key}-heading`}><h1 className={styles.pageTitle} ref={heading} tabIndex={-1}>{title}</h1>{lead && <p className={`${styles.pageLead} ${guest.multiline}`}>{lead}</p>}</div>
+    </div>
     {children}
   </section>;
 
@@ -225,7 +228,7 @@ function VisitBody({ event, preview = false, invitation, phase: journeyPhase = "
     beranda: () => home,
     konfirmasi: () => page("rsvp", v("confirm.title"), confirmScreen(), saved && !editing ? undefined : v(partyMax > 1 ? "confirm.lead" : "confirm.leadAlone")),
     tentang: () => page("about", v("tile.about"), <>
-      {event.introduction && <div className={styles.card}><h2 className={styles.cardTitle}>{v("about.why")}</h2><p className={guest.multiline}>{event.introduction}</p></div>}
+      {event.introduction && <div className={styles.why}><h2 className={styles.whyTitle}>{v("about.why")}</h2><p className={guest.multiline}>{event.introduction}</p></div>}
       {event.topics.length > 0 && <div>
         <h2 className={styles.kicker}>{v("about.topics")}</h2>
         <ol className={styles.topics}>{event.topics.map((topic, index) => <li key={`${index}-${topic.title}`}>
