@@ -8,10 +8,9 @@ export const WERKUDARA = {
   email: "info@werkudara.com",
   /** Dialled as written on the website; the page shows buttons, not the numbers. */
   phones: { office: "+62 274-2832-999", mobile: "+62 811-2546-001" },
-  offices: [
-    { city: "Yogyakarta", label: "Head Office", address: "Jl. Bhinneka No. 9, Condongcatur, Sleman, D.I. Yogyakarta 55283, Indonesia", maps: "https://maps.app.goo.gl/RnDxPL4gDXGBp1529" },
-    { city: "Bali", label: "Bali Office", address: "Puri Candra Asri Blok A No. 20, Batubulan, Gianyar, Bali 80582, Indonesia", maps: "" },
-  ],
+  /** The head office only, shortened for the page foot (revision 30 Oct); the Bali office is on the website. */
+  address: "Jl. Bhinneka No. 9, Condongcatur, Sleman, Yogyakarta",
+  maps: "https://maps.app.goo.gl/RnDxPL4gDXGBp1529",
   social: {
     instagram: "https://www.instagram.com/werkudaragroup/",
     linkedin: "https://id.linkedin.com/company/werkudaragroup",

@@ -69,11 +69,12 @@ export const themes: ThemeDefinition[] = [
     fontHeading: "'Nunito', sans-serif", headingWeight: 800,
   } },
   // From the Surya Madistrindo handbook (Sesarengan Lumampah): navy sky and headings, cream pages,
-  // gold lines, and the client's brand red (#E12B27) on buttons and links, as in their deck.
+  // gold lines, and a deeper brick red on buttons and links: the client's brand red (#E12B27)
+  // read too loud on a page (revision 30 Oct), so this is its darker, calmer shade.
   { key: "keraton", name: "Keraton", description: "Merah bata, biru malam, krem, dan garis emas; judul berkait.", suggestedFor: "Trip budaya, handbook peserta", tokens: {
     background: "#fffdf8", surface: "#f5f0e7", soft: "#f5f0e7", border: "#e4cfc8",
     text: "#30292a", heading: "#1b2d55", caption: "#75686a", danger: "#9a273d",
-    primary: "#e12b27", primaryHover: "#b81f1c", onPrimary: "#ffffff",
+    primary: "#b8231f", primaryHover: "#961b18", onPrimary: "#ffffff",
     hero: "#1b2d55", onHero: "#fffdf8", heroAccent: "#dabb88", scrimRgb: "12, 22, 46",
     fontHeading: "'EB Garamond', serif", headingWeight: 600,
   } },

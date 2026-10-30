@@ -43,8 +43,8 @@ function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; it
       {deep && <details className={`${styles.didYouKnow} ${styles.noteBox}`} open={expanded || undefined}>
         <summary className={styles.noteSummary}>
           <Lightbulb size={18} aria-hidden="true" className={styles.noteIcon} />
-          <span>{detail!.teaser.trim() || t("detail.didYouKnow")}</span>
-          <ChevronDown size={18} aria-hidden="true" className={styles.noteChevron} />
+          <span className={styles.noteTitle}>{detail!.teaser.trim() || t("detail.didYouKnow")}</span>
+          <span className={styles.noteToggle} aria-hidden="true"><span className={styles.noteMore}>{t("detail.more")}</span><span className={styles.noteLess}>{t("detail.close")}</span><ChevronDown size={16} className={styles.noteChevron} /></span>
         </summary>
         <div className={styles.noteBody}>
           {detail!.did_you_know && <p className={styles.multiline}>{detail!.did_you_know}</p>}

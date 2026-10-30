@@ -314,9 +314,9 @@ export const id = {
   "footer.email": "Email",
   "footer.callOffice": "Telepon kantor",
   "footer.callMobile": "Telepon seluler",
-  "footer.map": "Lihat peta",
   "footer.social": "Media sosial Werkudara Group",
   "footer.copyright": "© {n} Werkudara Group. Hak cipta dilindungi.",
+  "detail.close": "Tutup",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -635,7 +635,7 @@ export const en: Record<WordKey, string> = {
   "footer.email": "Email",
   "footer.callOffice": "Call the office",
   "footer.callMobile": "Call mobile",
-  "footer.map": "View map",
   "footer.social": "Werkudara Group on social media",
   "footer.copyright": "© {n} Werkudara Group. All rights reserved.",
+  "detail.close": "Close",
 };

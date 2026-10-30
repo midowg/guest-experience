@@ -190,19 +190,20 @@
 .organizer { margin-bottom: var(--space-6); max-width: var(--reading); }
 .organizer p { margin: 0; }
 /* Werkudara Group at the foot of the page (WerkudaraFooter.tsx), as on werkudara.com. */
-.wkFooter { display: grid; gap: var(--space-5); margin-top: var(--space-6); }
+.wkFooter { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); margin-top: var(--space-6); }
 .wkBrand { display: flex; align-items: center; gap: var(--space-3); }
 .wkBrand img { width: 3.5rem; height: 3.5rem; object-fit: contain; }
 .wkBrand p { margin: 0; }
 .wkName { margin-top: 2px !important; font-family: var(--font-heading); font-weight: var(--heading-weight, 700); font-size: var(--text-lg); color: var(--color-heading, var(--color-text)); }
-.wkGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-5); }
-.wkBlock { display: grid; gap: var(--space-2); align-content: start; }
-.wkBlock address { font-style: normal; font-size: var(--text-sm); color: var(--color-text); }
-.wkLabel { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--text-sm); font-weight: 700; color: var(--color-caption); }
-.wkLink { justify-self: start; display: inline-flex; align-items: center; gap: var(--space-1); min-height: 40px; font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); }
-.wkButtons { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.wkButtons a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); font-weight: 600; text-decoration: none; }
-.wkButtons a:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.wkAddress { justify-self: start; display: inline-flex; align-items: flex-start; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text); text-decoration: none; }
+.wkAddress svg { flex-shrink: 0; margin-top: 3px; color: var(--color-caption); }
+.wkAddress:hover span { text-decoration: underline; }
+/* Contacts as plain text links in an even grid: two columns on a phone, one row when there is room. */
+.wkContacts { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0 var(--space-4); max-width: 44rem; margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); }
+.wkContacts li { display: flex; align-items: center; }
+.wkContacts a { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; color: var(--color-text); font-weight: 600; text-decoration: none; }
+.wkContacts a svg { color: var(--color-caption); }
+.wkContacts a:hover { color: var(--color-primary); text-decoration: underline; }
 .wkSocial { display: flex; gap: var(--space-2); }
 .wkSocial a { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-heading, var(--color-text)); }
 .wkSocial a:hover { border-color: var(--color-primary); color: var(--color-primary); }
@@ -454,9 +455,14 @@
 .noteBox { padding: 0 var(--space-4); }
 .noteSummary { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; list-style: none; cursor: pointer; font-weight: 700; color: var(--color-heading, var(--color-text)); }
 .noteSummary::-webkit-details-marker { display: none; }
-.noteSummary span { flex: 1; min-width: 0; }
+.noteTitle { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.noteToggle { display: inline-flex; flex-shrink: 0; align-items: center; gap: 2px; font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); }
+.noteLess, .noteBox[open] .noteMore { display: none; }
+.noteBox[open] .noteLess { display: inline; }
+/* Opened, the title may wrap so the whole teaser reads. */
+.noteBox[open] .noteTitle { white-space: normal; }
 .noteIcon { flex-shrink: 0; color: var(--color-heading, var(--color-primary)); }
-.noteChevron { flex-shrink: 0; color: var(--color-caption); transition: transform .15s; }
+.noteChevron { flex-shrink: 0; transition: transform .15s; }
 .noteBox[open] .noteChevron { transform: rotate(180deg); }
 .noteBody { display: grid; gap: var(--space-2); padding-bottom: var(--space-4); }
 @media (prefers-reduced-motion: reduce) { .noteChevron { transition: none; } }
