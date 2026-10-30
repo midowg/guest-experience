@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Params) {
   return eventMetadata(isSupabaseConfigured() ? await eventByCodeQuietly((await params).code) : null, true);
 }
 
-/** invitation.werkudara.group/AB23CD/k7q2mx9p/terima-kasih: the thank-you page, greeting one guest by name. */
+/** journey.werkudara.group/AB23CD/k7q2mx9p/terima-kasih: the thank-you page, greeting one guest by name. */
 export default async function ShortPersonalThanksPage({ params }: Params) {
   const { code, token } = await params;
   const { event, invitation } = await invitationByCode(code, token, "/terima-kasih");

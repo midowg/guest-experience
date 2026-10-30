@@ -55,7 +55,7 @@ Perintah tersebut perlu dijalankan ulang setelah perubahan terbaru; README ini t
 
 ## Deploy dari GitHub ke Vercel
 
-Vercel men-deploy branch `main` ke `invitation.werkudara.group`. Kerjakan perubahan di branch terpisah, buka pull request, lalu gabungkan ke `main` setelah pemeriksaan lulus. **Terapkan migrasi database lebih dulu, baru gabungkan kodenya**; kode sudah tahan bila migrasi belum ada, tetapi fitur barunya baru aktif setelah migrasi. Urutan dan cara mengecek migrasi ada di [go-live internal](docs/go-live-internal.md). Lihat juga [docs/deployment.md](docs/deployment.md).
+Vercel men-deploy branch `main` ke `journey.werkudara.group`. Kerjakan perubahan di branch terpisah, buka pull request, lalu gabungkan ke `main` setelah pemeriksaan lulus. **Terapkan migrasi database lebih dulu, baru gabungkan kodenya**; kode sudah tahan bila migrasi belum ada, tetapi fitur barunya baru aktif setelah migrasi. Urutan dan cara mengecek migrasi ada di [go-live internal](docs/go-live-internal.md). Lihat juga [docs/deployment.md](docs/deployment.md).
 
 > **Catatan lingkungan:** Build Preview Vercel tetap memakai `NODE_ENV=production`, bukan `npm run dev`. Jika Preview dan Production memakai Supabase yang sama, keduanya membaca dan mengubah data yang sama; Preview bukan sandbox.
 

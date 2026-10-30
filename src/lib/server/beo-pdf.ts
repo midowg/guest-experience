@@ -46,7 +46,7 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
 export async function beoPdf(doc: BeoDocument): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.setTitle(pdfSafe(`BEO · ${doc.title}`));
-  pdf.setProducer("Werkudara Guest Experience");
+  pdf.setProducer("Werkudara Journey");
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const contentWidth = A4.width - MARGIN * 2;

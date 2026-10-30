@@ -176,7 +176,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
         <a href="#event-content" onClick={focusAnchor} className={styles.brand} aria-label="Werkudara — kembali ke awal undangan">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/werkudara_icon.png" width={52} height={52} alt="" />
-          <span>WERKUDARA<span className={styles.brandSub}>Guest experience</span></span>
+          <span>WERKUDARA<span className={styles.brandSub}>Journey</span></span>
         </a>
         <nav aria-label={t("nav.label")} className={styles.navigation}>{sections.map(section => <a key={section.key} href={`#${section.key}`} onClick={focusAnchor}>{t(navKeys[section.key])}</a>)}</nav>
       </div>
@@ -267,7 +267,7 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             </div>}
             <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">{event.review_button_label || t("after.review.button")} <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only">{t("common.newTab")}</span></ButtonLink>
           </>}
-          <div className={styles.footerLine}><span>WERKUDARA · Guest experience</span><a href="#event-content" onClick={focusAnchor}>{t("nav.top")} <ArrowUp size={15} aria-hidden="true" /></a></div>
+          <div className={styles.footerLine}><span>WERKUDARA · Journey</span><a href="#event-content" onClick={focusAnchor}>{t("nav.top")} <ArrowUp size={15} aria-hidden="true" /></a></div>
         </div>
       </footer>
     </main>

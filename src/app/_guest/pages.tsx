@@ -37,10 +37,10 @@ const hidden = { index: false, follow: false } as const;
  * nothing personal.
  */
 export function eventMetadata(event: EventRecord | null, personal = false): Metadata {
-  const base: Metadata = { title: personal ? "Undangan personal" : "Werkudara", robots: hidden, ...(personal ? { referrer: "no-referrer" as const } : {}) };
+  const base: Metadata = { title: personal ? "Undangan personal" : "Werkudara Journey", robots: hidden, ...(personal ? { referrer: "no-referrer" as const } : {}) };
   if (!event) return base;
   const { description } = shareWording(event);
-  return { ...base, title: event.title, description, openGraph: { title: event.title, description, type: "website", siteName: "Werkudara" } };
+  return { ...base, title: event.title, description, openGraph: { title: event.title, description, type: "website", siteName: "Werkudara Journey" } };
 }
 
 export function StorageMissing() {

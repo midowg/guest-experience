@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: Params) {
   return eventMetadata(isSupabaseConfigured() ? await eventByCodeQuietly((await params).code) : null, true);
 }
 
-/** invitation.werkudara.group/AB23CD/k7q2mx9p: one guest's invitation. */
+/** journey.werkudara.group/AB23CD/k7q2mx9p: one guest's invitation. */
 export default async function ShortInvitationPage({ params }: Params) {
   const { code, token } = await params;
   const { event, invitation } = await invitationByCode(code, token);

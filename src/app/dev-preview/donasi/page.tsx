@@ -22,5 +22,5 @@ export default async function DevDonationsPage({ searchParams }: { searchParams:
     row(4, { donor_name: "Contoh Agus", status: "received", item_key: "buku", item_label: "Buku tulis", category: "goods", amount: 120, unit: "pcs", verified_at: day(4), donor_phone: "081355556666" }),
     row(5, { donor_name: "Contoh Rahasia", display: "hidden", status: "rejected", reject_reason: "Transfer tidak ditemukan", verified_at: day(5) }),
   ];
-  return <AdminShell><h1>Donasi masuk (contoh)</h1><DonationBoard event={{ id: "10f3a511-2331-4000-8000-0000000000c5", title: "Contoh Berbagi Bersama Anak Panti 2026", timezone: "Asia/Jakarta", donation }} link="https://invitation.werkudara.group/AB23CD" initial={rows} migrated /></AdminShell>;
+  return <AdminShell><h1>Donasi masuk (contoh)</h1><DonationBoard event={{ id: "10f3a511-2331-4000-8000-0000000000c5", title: "Contoh Berbagi Bersama Anak Panti 2026", timezone: "Asia/Jakarta", donation }} link="https://journey.werkudara.group/AB23CD" initial={rows} migrated /></AdminShell>;
 }

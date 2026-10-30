@@ -3,7 +3,7 @@ import { EmptyHome } from './EmptyHome';
 
 export const metadata: Metadata = {
   title: 'Werkudara Journey',
-  openGraph: { title: 'Werkudara Journey', description: 'Setiap pertemuan, dimulai dengan sambutan.', type: 'website', siteName: 'Werkudara' },
+  openGraph: { title: 'Werkudara Journey', description: 'Setiap pertemuan, dimulai dengan sambutan.', type: 'website', siteName: 'Werkudara Journey' },
   robots: { index: false, follow: false },
 };
 

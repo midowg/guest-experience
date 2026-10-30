@@ -3,7 +3,7 @@ import { isSupabaseConfigured } from "@/lib/server/config";
 import { linkPreview, previewSize } from "@/lib/server/link-preview";
 
 export const dynamic = "force-dynamic";
-export const alt = "Pratinjau tautan dari Werkudara";
+export const alt = "Pratinjau tautan dari Werkudara Journey";
 export const size = previewSize;
 export const contentType = "image/png";
 

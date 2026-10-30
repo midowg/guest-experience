@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Params) {
   return eventMetadata(isSupabaseConfigured() ? await welcomeEventQuietly((await params).slug) : null);
 }
 
-/** invitation.werkudara.group/welcome/vortex: a Welcome visit's page for its guests. */
+/** journey.werkudara.group/welcome/vortex: a Welcome visit's page for its guests. */
 export default async function WelcomePage({ params }: Params) {
   if (!isSupabaseConfigured()) return <StorageMissing />;
   return <EventPage event={await welcomeEvent((await params).slug)} />;

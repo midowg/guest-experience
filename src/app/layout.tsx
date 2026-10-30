@@ -30,8 +30,10 @@ import { siteUrl } from '@/lib/site-url';
 export const metadata: Metadata = {
   // Link previews (WhatsApp) need absolute image addresses.
   metadataBase: siteUrl(),
-  title: { default: 'Journey | Werkudara', template: '%s | Werkudara' },
-  description: 'Informasi acara dan konfirmasi kehadiran tamu Werkudara.',
+  title: { default: 'Werkudara Journey', template: '%s | Werkudara Journey' },
+  description: 'Werkudara Journey: informasi acara, jadwal, dan panduan untuk tamu Werkudara.',
+  applicationName: 'Werkudara Journey',
+  openGraph: { siteName: 'Werkudara Journey', type: 'website' },
   icons: { icon: '/favicon.png' },
   robots: { index: false, follow: false },
 };

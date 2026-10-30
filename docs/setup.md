@@ -16,7 +16,7 @@ Salin `.env.example` menjadi `.env.local`, lalu isi dari Supabase Dashboard → 
 | `ADMIN_SESSION_SECRET` | Buat sendiri, acak minimal 32 karakter | **Rahasia.** Menandatangani cookie sesi admin. |
 | `SUPER_ADMIN_PASSWORD` | Opsional, minimal 8 karakter, berbeda dari `ADMIN_PASSWORD` | **Rahasia.** Password super admin, yang bisa menyembunyikan acara dari admin biasa. |
 
-`.env*` sudah masuk `.gitignore`, kecuali `.env.example` yang hanya berisi template. Jangan mengirim kunci apa pun melalui chat. `NEXT_PUBLIC_SITE_URL` adalah alamat publik situs (di produksi `https://invitation.werkudara.group`). Dipakai untuk gambar pratinjau tautan WhatsApp dan isi QR undangan. Bila kosong, Vercel memakai domain produksinya, dan lokal memakai `http://localhost:3000`.
+`.env*` sudah masuk `.gitignore`, kecuali `.env.example` yang hanya berisi template. Jangan mengirim kunci apa pun melalui chat. `NEXT_PUBLIC_SITE_URL` adalah alamat publik situs (di produksi `https://journey.werkudara.group`). Dipakai untuk gambar pratinjau tautan WhatsApp dan isi QR undangan. Bila kosong, Vercel memakai domain produksinya, dan lokal memakai `http://localhost:3000`.
 
 Di Vercel, isi semuanya pada Project Settings → Environment Variables untuk **Production** (dan Preview jika kelak digunakan), lalu deploy ulang. Variabel `NEXT_PUBLIC_*` dibekukan pada saat build, sehingga perubahan nilainya memerlukan build/deploy baru. Tanpa variabel ini, aplikasi menampilkan status "belum terhubung" dan **tidak** memakai data contoh. Lihat [rencana deployment berbasis tag](deployment.md); workflow deploy belum dibuat.
 
@@ -161,7 +161,7 @@ Tab **Galeri foto** di setiap acara. Sebelum R2 disiapkan, tab ini hanya menampi
 2. R2 → **Manage API tokens** → buat token dengan izin **Object Read & Write**, dibatasi ke bucket itu saja.
 3. Bucket → **Settings → CORS policy**, isi:
    ```json
-   [{ "AllowedOrigins": ["https://invitation.werkudara.group"], "AllowedMethods": ["PUT", "GET", "HEAD"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
+   [{ "AllowedOrigins": ["https://journey.werkudara.group"], "AllowedMethods": ["PUT", "GET", "HEAD"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
    ```
    Tambahkan `http://localhost:3000` hanya bila perlu menguji unggahan dari lokal.
 4. Di Vercel (Production), isi `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, lalu deploy ulang.

@@ -1,6 +1,6 @@
 # Go-live untuk tim internal
 
-Tujuan: versi baru (branch `feat/platform-lengkap`) online di `https://invitation.werkudara.group` dan dipakai **tim Werkudara dulu**. Fitur lanjutan (pengumuman, kalender, tiket, galeri R2, Program, BEO) menyusul setelah tahap ini stabil.
+Tujuan: versi baru (branch `feat/platform-lengkap`) online di `https://journey.werkudara.group` dan dipakai **tim Werkudara dulu**. Fitur lanjutan (pengumuman, kalender, tiket, galeri R2, Program, BEO) menyusul setelah tahap ini stabil.
 
 ## 0. Keadaan saat panduan ini ditulis (20 Okt 2026)
 
@@ -75,7 +75,7 @@ Vercel → Project → Settings → Environment Variables, lingkup **Production*
 | `ADMIN_PASSWORD` | **baru** | ≥ 8 karakter. Password bersama admin biasa |
 | `ADMIN_SESSION_SECRET` | **baru** | Acak ≥ 32 karakter |
 | `SUPER_ADMIN_PASSWORD` | **baru, opsional** | ≥ 8 karakter, beda dari `ADMIN_PASSWORD` |
-| `NEXT_PUBLIC_SITE_URL` | periksa | `https://invitation.werkudara.group` |
+| `NEXT_PUBLIC_SITE_URL` | periksa | `https://journey.werkudara.group` |
 
 Gunakan password **berbeda** dari yang dipakai di laptop untuk development. Tanpa `ADMIN_PASSWORD` dan `ADMIN_SESSION_SECRET`, admin di produksi **terkunci** (aman, tetapi tidak bisa dipakai).
 
@@ -89,7 +89,7 @@ Gunakan password **berbeda** dari yang dipakai di laptop untuk development. Tanp
 
 Kerjakan di browser biasa, lalu ulangi bagian tamu di ponsel.
 
-- [ ] `https://invitation.werkudara.group/admin` mengarah ke halaman login; tanpa password tidak bisa masuk.
+- [ ] `https://journey.werkudara.group/admin` mengarah ke halaman login; tanpa password tidak bisa masuk.
 - [ ] Login dengan `ADMIN_PASSWORD` berhasil; **Log akses** mencatat login itu (IP, kota, perangkat).
 - [ ] Login dengan `SUPER_ADMIN_PASSWORD` masuk ke **Dashboard super admin**.
 - [ ] `/dev-preview` menampilkan halaman tidak ditemukan (khusus development).

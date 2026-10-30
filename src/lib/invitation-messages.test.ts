@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { createSeedEvent } from "./seed-event";
 import { invitationLink, invitationMessage, whatsappUrl } from "./invitation-messages";
 
-const link = invitationLink("https://invitation.werkudara.group", { id: "e1", slug: "rapat panitia" }, { token: "a".repeat(64) });
+const link = invitationLink("https://journey.werkudara.group", { id: "e1", slug: "rapat panitia" }, { token: "a".repeat(64) });
 
 describe("invitation messages", () => {
   it("builds the personal link", () => {
-    expect(link).toBe(`https://invitation.werkudara.group/e/rapat%20panitia/i/${"a".repeat(64)}`);
+    expect(link).toBe(`https://journey.werkudara.group/e/rapat%20panitia/i/${"a".repeat(64)}`);
   });
   it("writes the invitation with name, event, local time, and link", () => {
     const text = invitationMessage("invite", createSeedEvent(), { name: "Bu Sari" }, link);

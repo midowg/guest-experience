@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: Params) {
   return eventMetadata(isSupabaseConfigured() ? await eventByCodeQuietly((await params).code) : null);
 }
 
-/** invitation.werkudara.group/AB23CD: the general invitation page. */
+/** journey.werkudara.group/AB23CD: the general invitation page. */
 export default async function ShortEventPage({ params }: Params) {
   if (!isSupabaseConfigured()) return <StorageMissing />;
   return <EventPage event={sendToFixedAddress(await eventByCode((await params).code))} />;

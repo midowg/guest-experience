@@ -43,7 +43,7 @@ export function buildCalendar(event: EventRecord, { scope, remind, pageUrl, host
     ? chosen.map(item => ({ uid: item.id, start: item.starts_at, end: item.ends_at, title: `${item.title} · ${event.title}`, note: item.description }))
     : event.starts_at && scope === "all" ? [{ uid: event.id, start: event.starts_at, end: event.ends_at || new Date(Date.parse(event.starts_at) + 2 * 3600000).toISOString(), title: event.title, note: event.subtitle }] : [];
   const lines = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Werkudara//Guest Experience//ID", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Werkudara//Journey//ID", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
     `X-WR-CALNAME:${text(event.title)}`, `X-WR-TIMEZONE:${event.timezone}`,
   ];
   for (const entry of entries) {

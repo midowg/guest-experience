@@ -10,7 +10,7 @@ describe("Panduan lokasi", () => {
   it("starts filled with Werkudara's guide, ready to publish", () => {
     expect(event.event_kind).toBe("panduan");
     expect(event.venue_name).toBe("Werkudara Office");
-    expect(event.hero.url).toMatch(/^https:\/\/invitation\.werkudara\.group\/panduan-ke-werkudara\/assets\/exterior-1280\.webp$/);
+    expect(event.hero.url).toMatch(/^https:\/\/journey\.werkudara\.group\/panduan-ke-werkudara\/assets\/exterior-1280\.webp$/);
     expect(event.route.map_image.url).toContain("map-1601.webp");
     expect(event.route.steps.map(step => step.title)).toEqual(["Lewat Jl. Pondok Raya", "Belok di Jl. Bhinneka", "Parkir di depan kantor"]);
     expect(event.route.steps[1].image.url).toContain("turn-1400.webp");
