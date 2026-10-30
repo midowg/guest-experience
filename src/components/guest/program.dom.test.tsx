@@ -42,13 +42,13 @@ it("opens on today during the event", async () => {
   await vi.waitFor(() => expect(within(tabs).getAllByRole("tab")[1].getAttribute("aria-selected")).toBe("true"));
 });
 
-it("shows place and length, and the FYI detail without a button", () => {
+it("shows place and length, and the detail without a button or label", () => {
   render(<EventExperience event={trip()} preview />);
   expect(screen.getByText("Lombok Tengah")).toBeTruthy();
   expect(screen.getByText("2 jam")).toBeTruthy();
   expect(screen.getByText("1 jam 30 menit")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Kenali lebih dekat/ })).toBeNull();
-  expect(screen.getByText("FYI")).toBeTruthy();
+  expect(screen.queryByText("FYI")).toBeNull();
   expect(screen.getByText("kenapa pasirnya seperti merica?")).toBeTruthy();
   expect(screen.getByText("Butiran pasirnya besar dan bulat.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Selengkapnya" }));

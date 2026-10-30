@@ -37,9 +37,13 @@ function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; it
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={detail!.photo.url} {...imageSrcSet(detail!.photo.srcset, "(max-width: 960px) 100vw, 640px")} alt={detail!.photo.alt} loading="lazy" referrerPolicy="no-referrer" />
         </figure>}
-        {(detail!.did_you_know || detail!.teaser) && <div className={styles.didYouKnow}>
-          <p className={styles.didYouKnowTitle}><Lightbulb size={16} aria-hidden="true" /> {t("detail.fyi")}{detail!.teaser && <span className={styles.fyiLead}>{detail!.teaser}</span>}</p>
-          {detail!.did_you_know && <p className={styles.multiline}>{detail!.did_you_know}</p>}
+        {/* No label (revision 30 Oct): the lamp says "worth knowing", the teaser leads, the story follows. */}
+        {(detail!.did_you_know || detail!.teaser) && <div className={`${styles.didYouKnow} ${styles.noteBox}`}>
+          <Lightbulb size={18} aria-hidden="true" className={styles.noteIcon} />
+          <div>
+            {detail!.teaser && <p className={styles.noteLead}>{detail!.teaser}</p>}
+            {detail!.did_you_know && <p className={styles.multiline}>{detail!.did_you_know}</p>}
+          </div>
         </div>}
         {detail!.more_story && <>
           {story && <p className={styles.multiline}>{detail!.more_story}</p>}
