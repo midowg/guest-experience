@@ -24,3 +24,12 @@ it("shows the trip's transport, hotel, do & don't and help contacts", () => {
   expect(within(contacts).getByText("Rumah Sakit Bethesda Yogyakarta")).toBeTruthy();
   expect(screen.getAllByRole("navigation").some(nav => nav.textContent?.includes("Transportasi"))).toBe(true);
 });
+
+it("shows the day's cover above its sessions and a card's pictures", () => {
+  const event = smTdnYogyakarta();
+  event.trip.day_covers = [{ day: "2026-11-05", image: { url: "https://example.test/day1.webp", alt: "Sampul hari pertama", srcset: [] } }];
+  event.prepare.items[2].images = [{ url: "https://example.test/kaos.webp", alt: "Kaos acara", srcset: [] }];
+  render(<EventExperience event={event} preview />);
+  expect(screen.getByRole("img", { name: "Sampul hari pertama" })).toBeTruthy();
+  expect(screen.getByRole("img", { name: "Kaos acara" })).toBeTruthy();
+});

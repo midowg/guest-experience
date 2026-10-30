@@ -29,7 +29,9 @@ export type TripStay = {
 export type TripPerson = { id: string; role: string; name: string; phone: string };
 export type TripContacts = { title: string; intro: string; people: TripPerson[]; hospital: string; hospital_phone: string; hospital_address: string; hospital_maps_url: string };
 export type TripGuidelines = { title: string; intro: string; weather: string; dos: string[]; donts: string[] };
-export type TripContent = { transport: TripTransport; stay: TripStay; contacts: TripContacts; guidelines: TripGuidelines };
+/** A picture shown above one day of the schedule; `day` is the local date, "2026-11-05". */
+export type TripDayCover = { day: string; image: PlainImage };
+export type TripContent = { transport: TripTransport; stay: TripStay; contacts: TripContacts; guidelines: TripGuidelines; day_covers: TripDayCover[] };
 
 /** The section keys of the trip's parts; only a Program shows them. */
 export const tripSectionKeys = ["transport", "stay", "guidelines", "contacts"] as const;
@@ -37,7 +39,7 @@ export function isTripSection(key: string): key is (typeof tripSectionKeys)[numb
   return (tripSectionKeys as readonly string[]).includes(key);
 }
 
-export const TRIP_LIMITS = { legs: 6, photos: 4, people: 8, lines: 10 } as const;
+export const TRIP_LIMITS = { legs: 6, photos: 4, people: 8, lines: 10, days: 14 } as const;
 
 export function emptyTrip(): TripContent {
   return {
@@ -45,6 +47,7 @@ export function emptyTrip(): TripContent {
     stay: { title: "", name: "", address: "", maps_url: "", phone: "", check_in: "", check_out: "", breakfast_place: "", breakfast_time: "", meeting_point: "", note: "", photos: [] },
     contacts: { title: "", intro: "", people: [], hospital: "", hospital_phone: "", hospital_address: "", hospital_maps_url: "" },
     guidelines: { title: "", intro: "", weather: "", dos: [], donts: [] },
+    day_covers: [],
   };
 }
 
@@ -56,6 +59,7 @@ export function normalizeTrip(trip: Partial<TripContent> | undefined): TripConte
     stay: { ...empty.stay, ...trip?.stay, photos: trip?.stay?.photos ?? [] },
     contacts: { ...empty.contacts, ...trip?.contacts, people: trip?.contacts?.people ?? [] },
     guidelines: { ...empty.guidelines, ...trip?.guidelines, dos: trip?.guidelines?.dos ?? [], donts: trip?.guidelines?.donts ?? [] },
+    day_covers: trip?.day_covers ?? [],
   };
 }
 

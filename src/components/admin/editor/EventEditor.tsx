@@ -475,7 +475,7 @@ export function EventEditor({ event: initialEvent, disabledModules = [], superAd
       {!place && block("gallery", "Galeri foto lokasi Werkudara", <VenueGalleryBlock kit={kit} />)}
       {block("transport", "Transportasi", <TransportBlock kit={kit} />)}
       {block("stay", "Hotel", <StayBlock kit={kit} />)}
-      {block("prepare", "Persiapan tamu", <PrepareBlock event={event} update={update} control={control} />)}
+      {block("prepare", "Persiapan tamu", <PrepareBlock event={event} update={update} control={control} errors={errors} />)}
       {block("guidelines", "Do & don't", <GuidelinesBlock kit={kit} />)}
       {block("team", "Our Team", <TeamBlock kit={kit} />)}
       {block("rsvp", "Penerimaan RSVP", <RsvpBlock kit={kit} />)}

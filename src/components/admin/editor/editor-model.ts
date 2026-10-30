@@ -77,19 +77,25 @@ export function prepareEvent(event: EventRecord): EventRecord {
     after: { ...event.after, image: cleanImage(event.after.image) },
     // Blank lines are kept while typing (so Enter works) and dropped here, before validation.
     prepare: { ...event.prepare, items: event.prepare.items
-      .map(item => ({ ...item, title: item.title.trim(), list: item.list.map(line => line.trim()).filter(Boolean), ...(item.en ? { en: { ...item.en, list: item.en.list.map(line => line.trim()).filter(Boolean) } } : {}) }))
-      .filter(item => item.title || item.description.trim() || item.list.length) },
+      .map(item => ({ ...item, title: item.title.trim(), list: item.list.map(line => line.trim()).filter(Boolean), ...(item.en ? { en: { ...item.en, list: item.en.list.map(line => line.trim()).filter(Boolean) } } : {}), ...(item.images ? { images: item.images.filter(image => image.url).map(cleanImage) } : {}) }))
+      .filter(item => item.title || item.description.trim() || item.list.length || item.images?.length) },
     // Trip handbook: blank lines and empty rows are dropped, photos lose stale sizes.
     trip: {
       transport: { ...event.trip.transport, legs: event.trip.transport.legs.filter(leg => Object.entries(leg).some(([key, value]) => key !== "id" && key !== "mode" && String(value).trim())) },
       stay: { ...event.trip.stay, photos: event.trip.stay.photos.filter(photo => photo.url).map(cleanImage) },
       contacts: { ...event.trip.contacts, people: event.trip.contacts.people.filter(person => person.name.trim() || person.phone.trim() || person.role.trim()) },
       guidelines: { ...event.trip.guidelines, dos: event.trip.guidelines.dos.map(line => line.trim()).filter(Boolean), donts: event.trip.guidelines.donts.map(line => line.trim()).filter(Boolean) },
+      day_covers: (event.trip.day_covers ?? []).filter(cover => cover.image.url).map(cover => ({ ...cover, image: cleanImage(cover.image) })),
     },
     agenda: event.agenda.map((item, sort_order) => ({ ...item, sort_order })),
     // Details keyed by session id leave with their session, and an all-empty detail is not stored.
     agenda_details: Object.fromEntries(Object.entries(event.agenda_details).filter(([id, detail]) => event.agenda.some(item => item.id === id)
-      && (detail.teaser.trim() || detail.did_you_know.trim() || detail.more_story.trim() || detail.place.trim() || detail.pdf_page))),
+      && (detail.teaser.trim() || detail.did_you_know.trim() || detail.more_story.trim() || detail.place.trim() || detail.pdf_page || detail.photo?.url))
+      // A photo field left empty is not stored; a filled one loses stale sizes.
+      .map(([id, detail]) => {
+        const { photo, ...rest } = detail;
+        return [id, photo?.url ? { ...rest, photo: cleanImage(photo) } : rest];
+      })),
     // English rundown texts are keyed by session id; a deleted session takes its translation with it.
     translations: { ...event.translations, en: { ...event.translations.en, agenda: Object.fromEntries(Object.entries(event.translations.en.agenda).filter(([id]) => event.agenda.some(item => item.id === id))) } },
     gallery: event.gallery.filter(item => item.url.trim() || item.caption.trim() || item.alt.trim() || item.srcset.length).map((item, sort_order) => ({ ...item, sort_order })),

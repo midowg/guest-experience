@@ -53,7 +53,11 @@ export type ExperienceMoment = { icon: MomentIcon; title: string; description: s
 export type EventExperienceContent = { title: string; story: string; image: PlainImage; moments: ExperienceMoment[] };
 export type PrepareIcon = "shirt" | "backpack" | "gift" | "id-card" | "umbrella" | "sun" | "footprints" | "utensils" | "camera" | "pill" | "package" | "info";
 /** One free-form card: dress code, what to bring, what the organiser provides, or anything else. */
-export type PrepareItem = { icon: PrepareIcon; title: string; description: string; list: string[]; en?: TextPair & { list: string[] } };
+export type PrepareItem = {
+  icon: PrepareIcon; title: string; description: string; list: string[]; en?: TextPair & { list: string[] };
+  /** Pictures of what the card is about (the event T-shirt, hat, bag); absent on older cards. */
+  images?: PlainImage[];
+};
 export type PrepareContent = { title: string; intro: string; items: PrepareItem[] };
 export type EventLanguage = "id" | "en" | "id_en";
 /** English text for single fields. Agenda rows live in their own table, so they are keyed by id here. */
@@ -69,7 +73,11 @@ export type EventTranslations = { en: EnglishContent };
  * box, a longer story, where it happens, and the presentation page. Keyed by agenda id, because
  * agenda rows live in their own table.
  */
-export type AgendaDetail = { teaser: string; did_you_know: string; more_story: string; place: string; pdf_page: number | null };
+export type AgendaDetail = {
+  teaser: string; did_you_know: string; more_story: string; place: string; pdf_page: number | null;
+  /** A photo of the place, shown in the opened detail; absent on older details. */
+  photo?: PlainImage;
+};
 export type EmergencyContact = { name: string; phone: string; hospital: string; hospital_address: string; hospital_maps_url: string };
 export type RouteStep = { title: string; description: string; image: PlainImage; en?: TextPair };
 /** The pictures an arrival point can carry on the office-visit page (Cara datang). */

@@ -91,3 +91,29 @@ describe("trip parts around the rest of the platform", () => {
     expect(hiddenSectionReasons(empty).join(" ")).toMatch(/Hotel masih kosong \(isi nama hotel\)/);
   });
 });
+
+describe("pictures in the handbook", () => {
+  const picture = (n: number) => ({ url: `https://example.test/${n}.webp`, alt: `Gambar ${n}`, srcset: [] });
+  it("keeps day covers, card pictures and place photos through saving", () => {
+    const event = smTdnYogyakarta();
+    const first = event.agenda[2].id;
+    event.trip.day_covers = [{ day: "2026-11-05", image: picture(1) }];
+    event.prepare.items[2].images = [picture(2), { url: "", alt: "", srcset: [] }];
+    event.agenda_details[first] = { ...event.agenda_details[first], photo: picture(3) };
+    const parsed = eventSchema.parse(prepareEvent(event));
+    expect(parsed.trip.day_covers).toEqual([{ day: "2026-11-05", image: picture(1) }]);
+    expect(parsed.prepare.items[2].images).toEqual([picture(2)]);
+    expect(parsed.agenda_details[first].photo).toEqual(picture(3));
+  });
+  it("asks for a description of every picture", () => {
+    const event = smTdnYogyakarta();
+    event.trip.day_covers = [{ day: "2026-11-05", image: { ...picture(1), alt: "" } }];
+    expect(eventSchema.safeParse(event).error?.issues[0].path).toEqual(["trip", "day_covers", 0, "image", "alt"]);
+  });
+  it("drops an empty place photo instead of storing it", () => {
+    const event = smTdnYogyakarta();
+    const first = event.agenda[2].id;
+    event.agenda_details[first] = { ...event.agenda_details[first], photo: { url: "", alt: "", srcset: [] } };
+    expect(prepareEvent(event).agenda_details[first]).not.toHaveProperty("photo");
+  });
+});

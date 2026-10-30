@@ -7,6 +7,7 @@ import { parseContactPhone } from "@/lib/contact-phone";
 import { agendaByDay, duration, hasDepth, presentationPage } from "@/lib/program";
 import type { AgendaItem, EventRecord } from "@/lib/types";
 import { TimeRange } from "./InvitationHero";
+import { imageSrcSet } from "./Gallery";
 import { useWording } from "./language";
 import styles from "./guest.module.css";
 
@@ -37,6 +38,10 @@ function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; it
         <ChevronDown size={16} aria-hidden="true" className={open ? styles.discoverOpen : undefined} />
       </button>}
       {deep && open && <div id={panel} className={styles.discoverPanel}>
+        {detail!.photo?.url && <figure className={styles.detailPhoto}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={detail!.photo.url} {...imageSrcSet(detail!.photo.srcset, "(max-width: 960px) 100vw, 640px")} alt={detail!.photo.alt} loading="lazy" referrerPolicy="no-referrer" />
+        </figure>}
         {detail!.did_you_know && <div className={styles.didYouKnow}><p className={styles.didYouKnowTitle}><Lightbulb size={16} aria-hidden="true" /> {t("detail.didYouKnow")}</p><p className={styles.multiline}>{detail!.did_you_know}</p></div>}
         {detail!.more_story && <>
           {story && <p className={styles.multiline}>{detail!.more_story}</p>}
@@ -46,6 +51,16 @@ function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; it
       {page && <a className={styles.pageLink} href={page} target="_blank" rel="noopener noreferrer"><FileText size={14} aria-hidden="true" /> {t("detail.page", { n: detail!.pdf_page! })}<span className="sr-only">{t("common.newTab")}</span></a>}
     </div>
   </li>;
+}
+
+/** The trip's picture for one day (the handbook's DAY 1 cover), above that day's sessions. */
+function DayCover({ event, day }: { event: EventRecord; day: string }) {
+  const cover = event.trip?.day_covers?.find(item => item.day === day);
+  if (!cover?.image.url) return null;
+  return <figure className={styles.dayCover}>
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img src={cover.image.url} {...imageSrcSet(cover.image.srcset, "(max-width: 960px) 100vw, 640px")} alt={cover.image.alt} loading="lazy" referrerPolicy="no-referrer" />
+  </figure>;
 }
 
 /**
@@ -65,6 +80,7 @@ export function AgendaList({ event, now, expanded = false }: { event: EventRecor
   if (days.length <= 1) return <ol className={styles.agenda}>{(days[0]?.items ?? []).map(item => <AgendaEntry key={item.id} event={event} item={item} expanded={expanded} />)}</ol>;
   if (expanded) return <div className={styles.programDays}>{days.map((day, index) => <div key={day.day || index}>
     <p className={styles.dayHeading}>{t("program.day", { n: index + 1, total: days.length })}{day.day && ` · ${shortDay(day.day, event.timezone, lang)}`}</p>
+    <DayCover event={event} day={day.day} />
     <ol className={styles.agenda}>{day.items.map(item => <AgendaEntry key={item.id} event={event} item={item} expanded />)}</ol>
   </div>)}</div>;
   const current = days[Math.min(active, days.length - 1)];
@@ -76,6 +92,7 @@ export function AgendaList({ event, now, expanded = false }: { event: EventRecor
     </div>
     <div id="day-panel" role="tabpanel" aria-labelledby={`day-tab-${active}`}>
       <p className={styles.dayHeading}>{t("program.day", { n: active + 1, total: days.length })}</p>
+      <DayCover event={event} day={current.day} />
       <ol className={styles.agenda}>{current.items.map(item => <AgendaEntry key={item.id} event={event} item={item} />)}</ol>
     </div>
   </div>;

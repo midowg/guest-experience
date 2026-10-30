@@ -132,7 +132,7 @@ const preparePresets: { label: string; item: PrepareItem }[] = [
   { label: "Kartu kustom", item: { icon: "info", title: "", description: "", list: [] } },
 ];
 
-export function PrepareBlock({ event, update, control }: Pick<Props, "event" | "update" | "control">) {
+export function PrepareBlock({ event, update, control, errors }: Pick<Props, "event" | "update" | "control" | "errors">) {
   const prepare = event.prepare;
   const set = (patch: Partial<EventRecord["prepare"]>) => update("prepare", { ...prepare, ...patch });
   const setItem = (index: number, patch: Partial<PrepareItem>) => set({ items: prepare.items.map((item, i) => i === index ? { ...item, ...patch } : item) });
@@ -153,6 +153,11 @@ export function PrepareBlock({ event, update, control }: Pick<Props, "event" | "
       {control(`prepare.items.${index}.title`, "Judul kartu", item.title, title => setItem(index, { title }), { maxLength: 150, hint: "Contoh: Dress code, Yang perlu dibawa, Perlengkapan dari panitia." })}
       {control(`prepare.items.${index}.description`, "Keterangan (opsional)", item.description, description => setItem(index, { description }), { multiline: true, maxLength: 1000, hint: "Contoh: Batik atau kemeja berkerah. Hindari sandal karena ada sesi jalan kaki." })}
       {control(`prepare.items.${index}.list`, "Daftar (opsional, satu per baris)", item.list.join("\n"), value => setItem(index, { list: value.split("\n") }), { multiline: true, hint: "Tampil sebagai daftar centang, maksimal 15 baris. Contoh: KTP, Payung, Botol minum." })}
+      {(item.images ?? []).map((image, at) => <div key={at} className="stack">
+        <ImageInput name={`prepare.items.${index}.images.${at}`} label={`Gambar ${at + 1}`} image={image} onChange={next => setItem(index, { images: (item.images ?? []).map((old, i) => i === at ? next : old) })} control={control} errors={errors} />
+        <Button type="button" variant="danger" onClick={() => setItem(index, { images: (item.images ?? []).filter((_, i) => i !== at) })}><Trash2 size={17} aria-hidden="true" /><span>Hapus gambar {at + 1}</span></Button>
+      </div>)}
+      <Button type="button" variant="secondary" disabled={(item.images?.length ?? 0) >= 4} onClick={() => setItem(index, { images: [...(item.images ?? []), { url: "", alt: "", srcset: [] }] })}>Tambah gambar (opsional)</Button>
       <Button type="button" variant="danger" onClick={() => set({ items: prepare.items.filter((_, i) => i !== index) })}><Trash2 size={17} aria-hidden="true" /><span>Hapus kartu {index + 1}</span></Button>
     </div>)}
     <div className={styles.presetRow} role="group" aria-label="Tambah kartu persiapan">

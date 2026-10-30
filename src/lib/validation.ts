@@ -69,6 +69,7 @@ const prepareSchema = z.object({
     icon: z.enum(prepareIcons).default("info"), title: text(150).min(1, "Isi judul kartu."), description: text(1000).default(""),
     list: z.array(text(150).min(1, "Isi atau hapus baris kosong.")).max(15).default([]),
     en: pairSchema(150, 1000).extend({ list: z.array(text(150)).max(15).default([]) }).optional(),
+    images: z.array(z.lazy(() => plainImage)).max(4).optional(),
   })).max(8).default([]),
 });
 const experienceSchema = z.object({
@@ -92,6 +93,7 @@ export const emptyAgendaDetail = { teaser: "", did_you_know: "", more_story: "",
 const agendaDetailSchema = z.object({
   teaser: text(200).default(""), did_you_know: text(600).default(""), more_story: text(4000).default(""), place: text(200).default(""),
   pdf_page: z.number().int().min(1).max(999).nullable().default(null),
+  photo: z.lazy(() => plainImage).optional(),
 });
 const emergencySchema = z.object({
   name: text(150).default(""),
@@ -250,6 +252,8 @@ const tripSchema = z.object({
     hospital: text(200).default(""), hospital_phone: tripPhone, hospital_address: text(500).default(""), hospital_maps_url: httpsUrl.default(""),
   }).default(() => emptyTrip().contacts),
   guidelines: z.object({ title: text(200).default(""), intro: text(1000).default(""), weather: text(1000).default(""), dos: tripLines, donts: tripLines }).default(() => emptyTrip().guidelines),
+  day_covers: z.array(z.object({ day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), image: plainImage })).max(TRIP_LIMITS.days)
+    .refine(covers => new Set(covers.map(cover => cover.day)).size === covers.length, "Satu gambar per hari.").default([]),
 });
 
 export const eventBaseSchema = z.object({
@@ -315,6 +319,9 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
     [["after", "image"], event.after.image], ...event.route.steps.map((step, index) => [["route", "steps", index, "image"], step.image] as [(string | number)[], typeof step.image]),
     [["guide", "cover", "photo"], event.guide.cover.photo],
     ...event.trip.stay.photos.map((photo, index) => [["trip", "stay", "photos", index], photo] as [(string | number)[], typeof photo]),
+    ...event.trip.day_covers.map((cover, index) => [["trip", "day_covers", index, "image"], cover.image] as [(string | number)[], typeof cover.image]),
+    ...event.prepare.items.flatMap((item, index) => (item.images ?? []).map((image, at) => [["prepare", "items", index, "images", at], image] as [(string | number)[], typeof image])),
+    ...Object.entries(event.agenda_details).flatMap(([id, detail]) => detail.photo ? [[["agenda_details", id, "photo"], detail.photo] as [(string | number)[], typeof detail.photo]] : []),
     ...event.guide.chapters.flatMap((chapter, index) => [
       [["guide", "chapters", index, "photo"], chapter.photo] as [(string | number)[], typeof chapter.photo],
       ...chapter.items.map((item, at) => [["guide", "chapters", index, "items", at, "photo"], item.photo] as [(string | number)[], typeof item.photo]),

@@ -114,6 +114,8 @@ export function smTdnYogyakarta(): EventRecord {
         { id: id(21), role: "PIC Surya Madistrindo", name: "Agi Andriyansyah", phone: "0811-1136-113" },
         { id: id(22), role: "Hotel", name: "THE 1O1 Yogyakarta Tugu", phone: "0274-2920101" },
       ], hospital: "Rumah Sakit Bethesda Yogyakarta", hospital_phone: "(0274) 586688", hospital_address: "", hospital_maps_url: "" },
+      // The handbook's DAY 1-3 covers are uploaded to the event itself, not kept in this file.
+      day_covers: [],
     },
   };
 }
