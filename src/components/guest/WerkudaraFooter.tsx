@@ -7,7 +7,7 @@ import styles from "./guest.module.css";
 
 /**
  * Who runs the page, as on werkudara.com: the Werkudara Group mark, its offices, how to reach it
- * and its social pages. Contacts are short text links; numbers are not printed (revision 30 Oct).
+ * and its social pages. Email and numbers are printed and each is a link (revision 30 Oct).
  */
 export function WerkudaraFooter({ organizer }: { organizer: string }) {
   const { t } = useWording();
@@ -22,9 +22,9 @@ export function WerkudaraFooter({ organizer }: { organizer: string }) {
     </div>
     <a className={styles.wkAddress} href={WERKUDARA.maps} target="_blank" rel="noopener noreferrer"><MapPin size={15} aria-hidden="true" /><span>{WERKUDARA.address}</span>{newTab}</a>
     <ul className={styles.wkContacts} aria-label={t("footer.contact")}>
-      <li><a href={`mailto:${WERKUDARA.email}`}><Mail size={15} aria-hidden="true" /> {t("footer.email")}</a></li>
-      <li><a href={telHref(WERKUDARA.phones.office)}><Phone size={15} aria-hidden="true" /> {t("footer.callOffice")}</a></li>
-      <li><a href={telHref(WERKUDARA.phones.mobile)}><Phone size={15} aria-hidden="true" /> {t("footer.callMobile")}</a></li>
+      <li><a href={`mailto:${WERKUDARA.email}`}><Mail size={15} aria-hidden="true" /><span className="sr-only">{t("footer.email")}: </span>{WERKUDARA.email}</a></li>
+      <li><a href={telHref(WERKUDARA.phones.office)}><Phone size={15} aria-hidden="true" /><span className="sr-only">{t("footer.callOffice")}: </span>{WERKUDARA.phones.office}</a></li>
+      <li><a href={telHref(WERKUDARA.phones.mobile)}><Phone size={15} aria-hidden="true" /><span className="sr-only">{t("footer.callMobile")}: </span>{WERKUDARA.phones.mobile}</a></li>
       <li><a href={WERKUDARA.website} target="_blank" rel="noopener noreferrer"><Globe size={15} aria-hidden="true" /> werkudara.com{newTab}</a></li>
     </ul>
     <nav className={styles.wkSocial} aria-label={t("footer.social")}>

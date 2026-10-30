@@ -206,8 +206,8 @@
 .wkAddress { justify-self: start; display: inline-flex; align-items: flex-start; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text); text-decoration: none; }
 .wkAddress svg { flex-shrink: 0; margin-top: 3px; color: var(--color-caption); }
 .wkAddress:hover span { text-decoration: underline; }
-/* Contacts as plain text links in an even grid: two columns on a phone, one row when there is room. */
-.wkContacts { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0 var(--space-4); max-width: 44rem; margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); }
+/* Email, phones and website as text links, close together; they wrap onto a new line when needed. */
+.wkContacts { display: flex; flex-wrap: wrap; gap: 0 var(--space-5); margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); }
 .wkContacts li { display: flex; align-items: center; }
 .wkContacts a { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; color: var(--color-text); font-weight: 600; text-decoration: none; }
 .wkContacts a svg { color: var(--color-caption); }

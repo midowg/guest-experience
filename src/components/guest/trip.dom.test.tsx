@@ -74,15 +74,15 @@ it("calls through buttons without printing the numbers", () => {
   expect(within(stay).getByRole("link", { name: "Telepon hotel" }).getAttribute("href")).toBe("tel:02742920101");
 });
 
-it("ends with Werkudara Group as on werkudara.com: one short address, contact links, social pages and copyright", () => {
+it("ends with Werkudara Group as on werkudara.com: one short address, email and numbers as links, social pages and copyright", () => {
   render(<EventExperience event={smTdnYogyakarta()} preview />);
   const footer = document.querySelector("footer")!;
   expect(within(footer).getByText("Jl. Bhinneka No. 9, Condongcatur, Sleman, Yogyakarta")).toBeTruthy();
   expect(within(footer).queryByText(/Head Office|Puri Candra Asri/)).toBeNull();
-  expect(within(footer).getByRole("link", { name: "Email" }).getAttribute("href")).toBe("mailto:info@werkudara.com");
-  expect(within(footer).getByRole("link", { name: "Telepon kantor" }).getAttribute("href")).toBe("tel:+622742832999");
+  expect(within(footer).getByRole("link", { name: "Email: info@werkudara.com" }).getAttribute("href")).toBe("mailto:info@werkudara.com");
+  expect(within(footer).getByRole("link", { name: "Telepon kantor: +62 274-2832-999" }).getAttribute("href")).toBe("tel:+622742832999");
   expect(within(footer).getByRole("link", { name: /Instagram/ })).toBeTruthy();
-  expect(within(footer).queryByText(/2832-999|2546-001/)).toBeNull();
+  expect(within(footer).getByText("+62 811-2546-001")).toBeTruthy();
   expect(within(footer).getByText(`© ${new Date().getFullYear()} Werkudara Group. Hak cipta dilindungi.`)).toBeTruthy();
 });
 

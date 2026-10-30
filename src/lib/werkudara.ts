@@ -6,7 +6,7 @@ export const WERKUDARA = {
   name: "Werkudara Group",
   website: "https://werkudara.com",
   email: "info@werkudara.com",
-  /** Dialled as written on the website; the page shows buttons, not the numbers. */
+  /** As written on the website; the page shows them and dials them. */
   phones: { office: "+62 274-2832-999", mobile: "+62 811-2546-001" },
   /** The head office only, shortened for the page foot (revision 30 Oct); the Bali office is on the website. */
   address: "Jl. Bhinneka No. 9, Condongcatur, Sleman, Yogyakarta",
