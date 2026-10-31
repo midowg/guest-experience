@@ -17,9 +17,9 @@ Bagi hospitality, informasi tamu harus berubah menjadi persiapan yang bisa ditin
 - Semua acara berada di satu web dengan satu admin. Isi, modul, dan tampilan diatur per acara. Platform ini dipakai untuk tamu, klien, dan acara internal.
 - Proyek ini (`guest-experience`) menjadi platformnya karena sudah memiliki database, admin, editor, RSVP, dan tautan personal.
 - Proyek lama **dibiarkan sebagai referensi** dan tidak dipindahkan:
-  - `D:\projects\your-visit-to-werkudara`: panduan rute bergambar, cerita Our Team, dua bahasa ID/EN.
-  - `D:\projects\Lombok-Guidebook`: jadwal per hari, kartu "sekarang", album foto di Cloudflare R2 dengan unggah langsung. Di sana siapa pun yang memegang tautan bisa mengunggah; di platform ini unggah hanya lewat admin.
-  - `D:\projects\Sales-Mistery-Bootcamp`: handbook per bab, tiket QR, denah kursi, pemindai check-in. Di sana pembaruan check-in memakai topik ntfy.sh publik dan ada profil DiSC/MBTI peserta; keduanya tidak dipindahkan ke platform ini.
+  - `D:\projects\events\your-visit-to-werkudara`: panduan rute bergambar, cerita Our Team, dua bahasa ID/EN.
+  - `D:\projects\events\Lombok-Guidebook`: jadwal per hari, kartu "sekarang", album foto di Cloudflare R2 dengan unggah langsung. Di sana siapa pun yang memegang tautan bisa mengunggah; di platform ini unggah hanya lewat admin.
+  - `D:\projects\events\Sales-Mistery-Bootcamp`: handbook per bab, tiket QR, denah kursi, pemindai check-in. Di sana pembaruan check-in memakai topik ntfy.sh publik dan ada profil DiSC/MBTI peserta; keduanya tidak dipindahkan ke platform ini.
 
 ### Jenis acara dan audiens
 

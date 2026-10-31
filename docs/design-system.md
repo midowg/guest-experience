@@ -1,6 +1,6 @@
 # Werkudara Web Design System
 
-Source: `D:/projects/skills/desain-system.md` (Werkudara Presentation Visual Guideline 2026). Adapted to responsive web, not slide dimensions. Pro Max is not installed or used.
+Source: `D:/projects/brain/kerja/brand-deck-werkudara.md` (Werkudara Presentation Visual Guideline 2026). Adapted to responsive web, not slide dimensions. Pro Max is not installed or used.
 
 ## Principles
 A considered welcome, not a dashboard for guests. One invitation URL, meaningful reading order, immediate date/location, direct anchor navigation. No entry gate, autoplay music, scroll-jacking, delayed text or unnecessary dialogs.
