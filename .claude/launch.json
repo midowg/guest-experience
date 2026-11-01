@@ -4,7 +4,15 @@
     {
       "name": "guest-experience",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "guest-experience-attach",
+      "url": "http://localhost:3000",
       "port": 3000
     }
   ]
