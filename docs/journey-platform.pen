@@ -32002,7 +32002,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "../../assets/exterior-1280.webp",
+                        "url": "../public/panduan-ke-werkudara/assets/exterior-1280.webp",
                         "mode": "cover"
                       },
                       "layout": "vertical",
@@ -32121,7 +32121,7 @@
                                           "fill": {
                                             "type": "image",
                                             "enabled": true,
-                                            "url": "../../assets/logo.webp",
+                                            "url": "../public/panduan-ke-werkudara/assets/logo.webp",
                                             "mode": "contain"
                                           }
                                         }
@@ -32717,7 +32717,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "../../assets/pendopo-1000.webp",
+                            "url": "../public/panduan-ke-werkudara/assets/pendopo-1000.webp",
                             "mode": "cover"
                           }
                         },
@@ -35777,7 +35777,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "../../assets/map-820.webp",
+                            "url": "../public/panduan-ke-werkudara/assets/map-820.webp",
                             "mode": "cover"
                           },
                           "layout": "vertical",
@@ -35974,7 +35974,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/turn-800.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/turn-800.webp",
                                     "mode": "cover"
                                   }
                                 }
@@ -37017,7 +37017,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "../../assets/team-1280.webp",
+                            "url": "../public/panduan-ke-werkudara/assets/team-1280.webp",
                             "mode": "cover"
                           }
                         },
@@ -37202,7 +37202,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "../../assets/garden-960.webp",
+                        "url": "../public/panduan-ke-werkudara/assets/garden-960.webp",
                         "mode": "cover"
                       },
                       "layout": "vertical",
@@ -37397,7 +37397,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/pendopo-600.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/pendopo-600.webp",
                                     "mode": "cover"
                                   },
                                   "justifyContent": "center",
@@ -37412,7 +37412,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/workspace-600.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/workspace-600.webp",
                                     "mode": "cover"
                                   },
                                   "justifyContent": "center",
@@ -37427,7 +37427,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/exterior-768.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/exterior-768.webp",
                                     "mode": "cover"
                                   },
                                   "justifyContent": "center",
@@ -37451,7 +37451,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/team-768.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/team-768.webp",
                                     "mode": "cover"
                                   },
                                   "justifyContent": "center",
@@ -37466,7 +37466,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/garden-640.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/garden-640.webp",
                                     "mode": "cover"
                                   },
                                   "justifyContent": "center",
@@ -37482,7 +37482,7 @@
                                     {
                                       "type": "image",
                                       "enabled": true,
-                                      "url": "../../assets/pendopo-1000.webp",
+                                      "url": "../public/panduan-ke-werkudara/assets/pendopo-1000.webp",
                                       "mode": "cover"
                                     },
                                     "#0B1E3F99"
@@ -37789,7 +37789,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "../../assets/pendopo-1000.webp",
+                        "url": "../public/panduan-ke-werkudara/assets/pendopo-1000.webp",
                         "mode": "cover"
                       }
                     },
@@ -38188,7 +38188,7 @@
                               "fill": {
                                 "type": "image",
                                 "enabled": true,
-                                "url": "../../assets/logo.webp",
+                                "url": "../public/panduan-ke-werkudara/assets/logo.webp",
                                 "mode": "contain"
                               }
                             },
@@ -41427,7 +41427,7 @@
                                       "fill": {
                                         "type": "image",
                                         "enabled": true,
-                                        "url": "../../assets/map-820.webp",
+                                        "url": "../public/panduan-ke-werkudara/assets/map-820.webp",
                                         "mode": "cover"
                                       },
                                       "cornerRadius": 6
@@ -55853,7 +55853,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "../../assets/exterior-1280.webp",
+                        "url": "../public/panduan-ke-werkudara/assets/exterior-1280.webp",
                         "mode": "cover"
                       },
                       "layout": "vertical",
@@ -55972,7 +55972,7 @@
                                           "fill": {
                                             "type": "image",
                                             "enabled": true,
-                                            "url": "../../assets/logo.webp",
+                                            "url": "../public/panduan-ke-werkudara/assets/logo.webp",
                                             "mode": "contain"
                                           }
                                         }
@@ -56623,7 +56623,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "../../assets/pendopo-1000.webp",
+                            "url": "../public/panduan-ke-werkudara/assets/pendopo-1000.webp",
                             "mode": "cover"
                           }
                         },
@@ -59849,7 +59849,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "../../assets/map-820.webp",
+                            "url": "../public/panduan-ke-werkudara/assets/map-820.webp",
                             "mode": "cover"
                           },
                           "layout": "vertical",
@@ -60046,7 +60046,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/turn-800.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/turn-800.webp",
                                     "mode": "cover"
                                   }
                                 }
@@ -61199,7 +61199,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "../../assets/team-1280.webp",
+                            "url": "../public/panduan-ke-werkudara/assets/team-1280.webp",
                             "mode": "cover"
                           }
                         },
@@ -61439,7 +61439,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "../../assets/garden-960.webp",
+                        "url": "../public/panduan-ke-werkudara/assets/garden-960.webp",
                         "mode": "cover"
                       },
                       "layout": "vertical",
@@ -61634,7 +61634,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/pendopo-600.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/pendopo-600.webp",
                                     "mode": "cover"
                                   },
                                   "justifyContent": "center",
@@ -61649,7 +61649,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/workspace-600.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/workspace-600.webp",
                                     "mode": "cover"
                                   },
                                   "justifyContent": "center",
@@ -61664,7 +61664,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/exterior-768.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/exterior-768.webp",
                                     "mode": "cover"
                                   },
                                   "justifyContent": "center",
@@ -61688,7 +61688,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/team-768.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/team-768.webp",
                                     "mode": "cover"
                                   },
                                   "justifyContent": "center",
@@ -61703,7 +61703,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/garden-640.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/garden-640.webp",
                                     "mode": "cover"
                                   },
                                   "justifyContent": "center",
@@ -61719,7 +61719,7 @@
                                     {
                                       "type": "image",
                                       "enabled": true,
-                                      "url": "../../assets/pendopo-1000.webp",
+                                      "url": "../public/panduan-ke-werkudara/assets/pendopo-1000.webp",
                                       "mode": "cover"
                                     },
                                     "#0B1E3F99"
@@ -62081,7 +62081,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "../../assets/pendopo-1000.webp",
+                        "url": "../public/panduan-ke-werkudara/assets/pendopo-1000.webp",
                         "mode": "cover"
                       }
                     },
@@ -62816,7 +62816,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "../../assets/exterior-768.webp",
+                        "url": "../public/panduan-ke-werkudara/assets/exterior-768.webp",
                         "mode": "cover"
                       },
                       "layout": "vertical",
@@ -62930,7 +62930,7 @@
                                           "fill": {
                                             "type": "image",
                                             "enabled": true,
-                                            "url": "../../assets/logo.webp",
+                                            "url": "../public/panduan-ke-werkudara/assets/logo.webp",
                                             "mode": "contain"
                                           }
                                         }
@@ -63670,7 +63670,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "../../assets/exterior-768.webp",
+                        "url": "../public/panduan-ke-werkudara/assets/exterior-768.webp",
                         "mode": "cover"
                       },
                       "layout": "vertical",
@@ -63784,7 +63784,7 @@
                                           "fill": {
                                             "type": "image",
                                             "enabled": true,
-                                            "url": "../../assets/logo.webp",
+                                            "url": "../public/panduan-ke-werkudara/assets/logo.webp",
                                             "mode": "contain"
                                           }
                                         }
@@ -64553,7 +64553,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "../../assets/exterior-768.webp",
+                        "url": "../public/panduan-ke-werkudara/assets/exterior-768.webp",
                         "mode": "cover"
                       },
                       "layout": "vertical",
@@ -64667,7 +64667,7 @@
                                           "fill": {
                                             "type": "image",
                                             "enabled": true,
-                                            "url": "../../assets/logo.webp",
+                                            "url": "../public/panduan-ke-werkudara/assets/logo.webp",
                                             "mode": "contain"
                                           }
                                         }
@@ -65614,7 +65614,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "../../assets/pendopo-600.webp",
+                            "url": "../public/panduan-ke-werkudara/assets/pendopo-600.webp",
                             "mode": "cover"
                           },
                           "cornerRadius": 20
@@ -68257,7 +68257,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "../../assets/map-820.webp",
+                            "url": "../public/panduan-ke-werkudara/assets/map-820.webp",
                             "mode": "cover"
                           },
                           "layout": "vertical",
@@ -68454,7 +68454,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/turn-800.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/turn-800.webp",
                                     "mode": "cover"
                                   }
                                 }
@@ -70432,7 +70432,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "../../assets/team-768.webp",
+                            "url": "../public/panduan-ke-werkudara/assets/team-768.webp",
                             "mode": "cover"
                           },
                           "cornerRadius": 20
@@ -71628,7 +71628,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/garden-640.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/garden-640.webp",
                                     "mode": "cover"
                                   },
                                   "cornerRadius": 8
@@ -71873,7 +71873,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "../../assets/garden-640.webp",
+                            "url": "../public/panduan-ke-werkudara/assets/garden-640.webp",
                             "mode": "cover"
                           },
                           "cornerRadius": 20
@@ -72380,7 +72380,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/pendopo-600.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/pendopo-600.webp",
                                     "mode": "cover"
                                   },
                                   "cornerRadius": 14,
@@ -72447,7 +72447,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/exterior-768.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/exterior-768.webp",
                                     "mode": "cover"
                                   },
                                   "cornerRadius": 14,
@@ -72465,7 +72465,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/team-768.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/team-768.webp",
                                     "mode": "cover"
                                   },
                                   "cornerRadius": 14,
@@ -72483,7 +72483,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/garden-640.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/garden-640.webp",
                                     "mode": "cover"
                                   },
                                   "cornerRadius": 14,
@@ -72511,7 +72511,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/workspace-600.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/workspace-600.webp",
                                     "mode": "cover"
                                   },
                                   "cornerRadius": 14,
@@ -72529,7 +72529,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/pendopo-1000.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/pendopo-1000.webp",
                                     "mode": "cover"
                                   },
                                   "cornerRadius": 14,
@@ -72547,7 +72547,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/garden-960.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/garden-960.webp",
                                     "mode": "cover"
                                   },
                                   "cornerRadius": 14,
@@ -72565,7 +72565,7 @@
                                   "fill": {
                                     "type": "image",
                                     "enabled": true,
-                                    "url": "../../assets/turn-800.webp",
+                                    "url": "../public/panduan-ke-werkudara/assets/turn-800.webp",
                                     "mode": "cover"
                                   },
                                   "cornerRadius": 14,
@@ -72821,7 +72821,7 @@
                       "fill": {
                         "type": "image",
                         "enabled": true,
-                        "url": "../../assets/pendopo-1000.webp",
+                        "url": "../public/panduan-ke-werkudara/assets/pendopo-1000.webp",
                         "mode": "contain"
                       }
                     },
@@ -74751,7 +74751,7 @@
                                       "fill": {
                                         "type": "image",
                                         "enabled": true,
-                                        "url": "../../assets/exterior-768.webp",
+                                        "url": "../public/panduan-ke-werkudara/assets/exterior-768.webp",
                                         "mode": "cover"
                                       },
                                       "cornerRadius": 8
@@ -75277,7 +75277,7 @@
                                       "fill": {
                                         "type": "image",
                                         "enabled": true,
-                                        "url": "../../assets/exterior-768.webp",
+                                        "url": "../public/panduan-ke-werkudara/assets/exterior-768.webp",
                                         "mode": "cover"
                                       },
                                       "layout": "vertical",
@@ -75391,7 +75391,7 @@
                                                           "fill": {
                                                             "type": "image",
                                                             "enabled": true,
-                                                            "url": "../../assets/logo.webp",
+                                                            "url": "../public/panduan-ke-werkudara/assets/logo.webp",
                                                             "mode": "contain"
                                                           }
                                                         }
@@ -84889,7 +84889,7 @@
                                       "fill": {
                                         "type": "image",
                                         "enabled": true,
-                                        "url": "../../assets/exterior-768.webp",
+                                        "url": "../public/panduan-ke-werkudara/assets/exterior-768.webp",
                                         "mode": "cover"
                                       },
                                       "cornerRadius": 8
@@ -85596,7 +85596,7 @@
                                       "fill": {
                                         "type": "image",
                                         "enabled": true,
-                                        "url": "../../assets/exterior-768.webp",
+                                        "url": "../public/panduan-ke-werkudara/assets/exterior-768.webp",
                                         "mode": "cover"
                                       },
                                       "layout": "vertical",
@@ -85710,7 +85710,7 @@
                                                           "fill": {
                                                             "type": "image",
                                                             "enabled": true,
-                                                            "url": "../../assets/logo.webp",
+                                                            "url": "../public/panduan-ke-werkudara/assets/logo.webp",
                                                             "mode": "contain"
                                                           }
                                                         }
