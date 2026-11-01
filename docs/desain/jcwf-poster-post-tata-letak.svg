@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350" font-family="Arial, Helvetica, sans-serif">
+<title>Tata letak poster JCWF (Post 4:5, 1080 x 1350)</title>
+<rect width="1080" height="1350" fill="#fbf7ef"/>
+<rect y="1251" width="1080" height="99" fill="#ffffff"/>
+<line x1="754" y1="46" x2="754" y2="106" stroke="#c9922b" stroke-width="2"/>
+<line x1="730" y1="253" x2="1016" y2="253" stroke="#c9922b" stroke-width="2"/>
+<line x1="480" y1="998" x2="480" y2="1221" stroke="#c9922b" stroke-width="2"/>
+<line x1="749" y1="998" x2="749" y2="1221" stroke="#c9922b" stroke-width="2"/>
+<line x1="778" y1="1077" x2="1035" y2="1077" stroke="#c9922b" stroke-width="2"/>
+<line x1="46" y1="1251" x2="1035" y2="1251" stroke="#c9922b" stroke-width="2"/>
+<line x1="924" y1="1273" x2="924" y2="1319" stroke="#c9922b" stroke-width="2"/>
+<rect x="67" y="27" width="251" height="81" rx="0" fill="#eeeeee" fill-opacity="0.85" stroke="#6b6b6b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="71" y="41" font-size="13" font-weight="700" fill="#6b6b6b">Logo acara</text>
+<text x="71" y="57" font-size="10" fill="#6b6b6b">x67 y27 w251 h81</text>
+<rect x="778" y="50" width="242" height="60" rx="0" fill="#e8f0fb" fill-opacity="0.85" stroke="#1551a0" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="782" y="64" font-size="13" font-weight="700" fill="#1551a0">Tema festival (2 baris)</text>
+<text x="782" y="80" font-size="10" fill="#1551a0">x778 y50 w242 h60</text>
+<rect x="64" y="144" width="540" height="154" rx="0" fill="#e6f4ea" fill-opacity="0.85" stroke="#1e7a46" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="68" y="158" font-size="13" font-weight="700" fill="#1e7a46">Judul sesi</text>
+<text x="68" y="174" font-size="10" fill="#1e7a46">x64 y144 w540 h154</text>
+<rect x="730" y="270" width="286" height="25" rx="0" fill="#e6f4ea" fill-opacity="0.85" stroke="#1e7a46" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="734" y="281" font-size="10" font-weight="700" fill="#1e7a46">Kategori</text>
+<rect x="0" y="327" width="1080" height="645" rx="0" fill="#fdf0e2" fill-opacity="0.85" stroke="#b8651b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="4" y="341" font-size="13" font-weight="700" fill="#b8651b">Foto utama</text>
+<text x="4" y="357" font-size="10" fill="#b8651b">x0 y327 w1080 h645</text>
+<rect x="63" y="989" width="120" height="15" rx="0" fill="#e8f0fb" fill-opacity="0.85" stroke="#1551a0" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="67" y="1000" font-size="10" font-weight="700" fill="#1551a0">Label Bersama</text>
+<rect x="60" y="1006" width="344" height="45" rx="0" fill="#e6f4ea" fill-opacity="0.85" stroke="#1e7a46" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="64" y="1020" font-size="13" font-weight="700" fill="#1e7a46">Fasilitator / komunitas</text>
+<text x="64" y="1036" font-size="10" fill="#1e7a46">x60 y1006 w344 h45</text>
+<rect x="57" y="1062" width="142" height="159" rx="8" fill="#fdf0e2" fill-opacity="0.85" stroke="#b8651b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="61" y="1076" font-size="13" font-weight="700" fill="#b8651b">Foto fasilitator</text>
+<text x="61" y="1092" font-size="10" fill="#b8651b">x57 y1062 w142 h159</text>
+<rect x="219" y="1064" width="233" height="141" rx="0" fill="#e6f4ea" fill-opacity="0.85" stroke="#1e7a46" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="223" y="1078" font-size="13" font-weight="700" fill="#1e7a46">Deskripsi</text>
+<text x="223" y="1094" font-size="10" fill="#1e7a46">x219 y1064 w233 h141</text>
+<rect x="573" y="1006" width="159" height="41" rx="0" fill="#e6f4ea" fill-opacity="0.85" stroke="#1e7a46" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="577" y="1020" font-size="13" font-weight="700" fill="#1e7a46">Hari &amp; tanggal</text>
+<text x="577" y="1036" font-size="10" fill="#1e7a46">x573 y1006 w159 h41</text>
+<rect x="573" y="1062" width="159" height="24" rx="0" fill="#e6f4ea" fill-opacity="0.85" stroke="#1e7a46" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="577" y="1073" font-size="10" font-weight="700" fill="#1e7a46">Jam</text>
+<rect x="573" y="1112" width="159" height="24" rx="0" fill="#e6f4ea" fill-opacity="0.85" stroke="#1e7a46" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="577" y="1123" font-size="10" font-weight="700" fill="#1e7a46">Durasi</text>
+<rect x="573" y="1161" width="159" height="44" rx="0" fill="#e6f4ea" fill-opacity="0.85" stroke="#1e7a46" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="577" y="1175" font-size="13" font-weight="700" fill="#1e7a46">Tempat, kota</text>
+<text x="577" y="1191" font-size="10" fill="#1e7a46">x573 y1161 w159 h44</text>
+<rect x="778" y="999" width="257" height="58" fill="#0f4a3a"/>
+<rect x="843" y="1007" width="179" height="44" rx="0" fill="#e6f4ea" fill-opacity="0.12" stroke="#1e7a46" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="847" y="1021" font-size="13" font-weight="700" fill="#ffffff">Biaya &amp; kuota</text>
+<text x="847" y="1037" font-size="10" fill="#ffffff">x843 y1007 w179 h44</text>
+<rect x="843" y="1103" width="185" height="44" rx="0" fill="#e8f0fb" fill-opacity="0.85" stroke="#1551a0" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="847" y="1117" font-size="13" font-weight="700" fill="#1551a0">Reservasi &amp; informasi</text>
+<text x="847" y="1133" font-size="10" fill="#1551a0">x843 y1103 w185 h44</text>
+<rect x="839" y="1174" width="162" height="27" rx="0" fill="#e8f0fb" fill-opacity="0.85" stroke="#1551a0" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="843" y="1185" font-size="10" font-weight="700" fill="#1551a0">Instagram &amp; website</text>
+<rect x="103" y="1273" width="171" height="55" rx="0" fill="#e8f0fb" fill-opacity="0.85" stroke="#1551a0" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="107" y="1287" font-size="13" font-weight="700" fill="#1551a0">Penyelenggara</text>
+<text x="107" y="1303" font-size="10" fill="#1551a0">x103 y1273 w171 h55</text>
+<rect x="53" y="1269" width="39" height="57" rx="0" fill="#eeeeee" fill-opacity="0.85" stroke="#6b6b6b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="57" y="1280" font-size="10" font-weight="700" fill="#6b6b6b">Logo</text>
+<rect x="357" y="1273" width="93" height="38" rx="0" fill="#e8f0fb" fill-opacity="0.85" stroke="#1551a0" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="361" y="1287" font-size="13" font-weight="700" fill="#1551a0">Label co-host</text>
+<text x="361" y="1303" font-size="10" fill="#1551a0">x357 y1273 w93 h38</text>
+<rect x="467" y="1271" width="93" height="55" rx="0" fill="#eeeeee" fill-opacity="0.85" stroke="#6b6b6b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="471" y="1285" font-size="13" font-weight="700" fill="#6b6b6b">Logo venue</text>
+<text x="471" y="1301" font-size="10" fill="#6b6b6b">x467 y1271 w93 h55</text>
+<rect x="637" y="1273" width="96" height="19" rx="0" fill="#e8f0fb" fill-opacity="0.85" stroke="#1551a0" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="641" y="1284" font-size="10" font-weight="700" fill="#1551a0">Label kolaborasi</text>
+<rect x="756" y="1273" width="35" height="48" rx="0" fill="#eeeeee" fill-opacity="0.85" stroke="#6b6b6b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="760" y="1284" font-size="10" font-weight="700" fill="#6b6b6b">Logo</text>
+<rect x="803" y="1286" width="75" height="23" rx="0" fill="#eeeeee" fill-opacity="0.85" stroke="#6b6b6b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="807" y="1297" font-size="10" font-weight="700" fill="#6b6b6b">Logo</text>
+<rect x="963" y="1285" width="63" height="24" rx="0" fill="#e8f0fb" fill-opacity="0.85" stroke="#1551a0" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="967" y="1296" font-size="10" font-weight="700" fill="#1551a0">Website</text>
+<rect x="796" y="768" width="250" height="160" rx="8" fill="#ffffff" fill-opacity="0.92"/>
+<text x="808" y="786" font-size="13" font-weight="700" fill="#1f2a24">Keterangan</text>
+<rect x="808" y="800" width="18" height="14" fill="#e6f4ea" stroke="#1e7a46" stroke-dasharray="4 3"/>
+<text x="834" y="812" font-size="12" fill="#1f2a24">Diisi peserta</text>
+<rect x="808" y="824" width="18" height="14" fill="#e8f0fb" stroke="#1551a0" stroke-dasharray="4 3"/>
+<text x="834" y="836" font-size="12" fill="#1f2a24">Tetap dari admin</text>
+<rect x="808" y="848" width="18" height="14" fill="#fdf0e2" stroke="#b8651b" stroke-dasharray="4 3"/>
+<text x="834" y="860" font-size="12" fill="#1f2a24">Foto</text>
+<rect x="808" y="872" width="18" height="14" fill="#eeeeee" stroke="#6b6b6b" stroke-dasharray="4 3"/>
+<text x="834" y="884" font-size="12" fill="#1f2a24">Logo</text>
+<rect x="808" y="896" width="18" height="14" fill="#0f4a3a" stroke="#0f4a3a" stroke-dasharray="4 3"/>
+<text x="834" y="908" font-size="12" fill="#1f2a24">Bidang warna (latar)</text>
+<text x="808" y="928" font-size="11" fill="#5d6157">Garis emas = garis latar</text>
+</svg>

@@ -1,0 +1,27 @@
+{
+  "version": "2.21",
+  "children": [],
+  "variables": {
+    "primary": { "type": "color", "value": "#1551A0" },
+    "support": { "type": "color", "value": "#306FB6" },
+    "accent": { "type": "color", "value": "#00A3E9" },
+    "ice": { "type": "color", "value": "#C3E6F5" },
+    "icebg": { "type": "color", "value": "#EAF5FB" },
+    "ink": { "type": "color", "value": "#1F1D1C" },
+    "text": { "type": "color", "value": "#484443" },
+    "muted": { "type": "color", "value": "#7A7574" },
+    "line": { "type": "color", "value": "#DCD8D5" },
+    "bg": { "type": "color", "value": "#EFEFEF" },
+    "white": { "type": "color", "value": "#FFFFFF" },
+    "okbg": { "type": "color", "value": "#E3F3EA" },
+    "ok": { "type": "color", "value": "#2E6B4F" },
+    "partbg": { "type": "color", "value": "#FDF1D6" },
+    "part": { "type": "color", "value": "#7A5410" },
+    "newbg": { "type": "color", "value": "#E3ECF7" },
+    "new": { "type": "color", "value": "#1551A0" },
+    "openbg": { "type": "color", "value": "#F8E3E7" },
+    "open": { "type": "color", "value": "#9A273D" },
+    "font-body": { "type": "string", "value": "Source Sans 3" },
+    "font-label": { "type": "string", "value": "Montserrat" }
+  }
+}
