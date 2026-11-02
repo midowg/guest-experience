@@ -121,7 +121,7 @@ export function CsrExperience({ event, view, preview = false, guide = null }: { 
           </div>
         </section>}
 
-        {settings.dropOff.address.trim() && settings.items.some(item => item.category !== "fund") && <DropOffCard place={settings.dropOff} contact={contactHref ? { href: contactHref.href, name: event.contact.name } : null} onGuide={guide ? () => setPage("panduan") : undefined} />}
+        {settings.dropOff.address.trim() && settings.items.some(item => item.category !== "fund") && <DropOffCard place={settings.dropOff} onGuide={guide ? () => setPage("panduan") : undefined} />}
 
         {/* Where the help goes has a page of its own; here only a button naming who receives it. */}
         {recipients.length > 0 && <button type="button" className={s.recipientsButton} onClick={() => setPage("penerima")}>

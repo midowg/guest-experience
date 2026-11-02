@@ -2,7 +2,7 @@ import type { EventRecord } from "./types";
 
 /**
  * The way to the drop-off point, taken from the published Panduan lokasi (/your-visit) so it is
- * written once: the route map, the steps with their photos, the arrival notes, a few photos. The
+ * written once: the route map, the steps with their photos, the arrival notes, up to four photos. The
  * Friday Sharing page shows it in its own theme.
  */
 export type CsrGuide = {
@@ -21,6 +21,6 @@ export function csrGuideFrom(place: EventRecord | null): CsrGuide | null {
   if (!steps.length && !mapImage.url && !place.address?.trim()) return null;
   return {
     venueName: place.venue_name ?? "", address: place.address ?? "", arrivalNotes: place.arrival_notes ?? "", locationUrl: place.location_url ?? "",
-    mapImage, steps, points: place.route?.points ?? [], gallery: (place.gallery ?? []).slice(0, 6),
+    mapImage, steps, points: place.route?.points ?? [], gallery: (place.gallery ?? []).slice(0, 4),
   };
 }

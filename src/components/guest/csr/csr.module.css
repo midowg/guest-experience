@@ -339,6 +339,7 @@
 .guideStepText { margin-top: 2px !important; color: var(--color-text); font-size: .9375rem; line-height: 1.5; white-space: pre-line; }
 .guideStepPhoto { display: block; margin-top: var(--space-2); }
 .guideStepPhoto img { display: block; width: 100%; max-height: 14rem; object-fit: cover; border-radius: 14px; }
-.guideGallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+/* The photos in exactly one row, however many (up to four), each the same width. */
+.guideGallery { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; margin: 0; padding: 0; list-style: none; }
 .guideGallery img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
 .guideMaps { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border-radius: 999px; background: var(--color-primary); color: var(--color-on-primary); font-weight: 900; text-decoration: none; }
