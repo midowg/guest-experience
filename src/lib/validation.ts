@@ -1,6 +1,6 @@
 import { emptyGuide } from "./guide";
 import { emptyDonation } from "./donations";
-import { emptyTrip, TRIP_LIMITS, tripModes } from "./trip";
+import { emptyTrip, TRIP_LIMITS, tripModes, weatherSkies } from "./trip";
 import { z } from "zod";
 import { EMBED_ERROR, parseLocationEmbed } from "./location-embed";
 import { parseContactPhone } from "./contact-phone";
@@ -263,7 +263,7 @@ const tripSchema = z.object({
   guidelines: z.object({
     title: text(200).default(""), intro: text(1000).default(""), weather: text(1000).default(""),
     weather_days: z.array(z.object({
-      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pilih tanggal."),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pilih tanggal."), place: text(80).optional(), sky: z.enum(weatherSkies).optional(),
       high: z.number().int().min(-20).max(60).nullable().default(null), low: z.number().int().min(-20).max(60).nullable().default(null),
       rain: z.number().int().min(0).max(100).nullable().default(null), note: text(120).default(""),
     })).max(TRIP_LIMITS.days).optional(),

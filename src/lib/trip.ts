@@ -32,8 +32,15 @@ export type TripStay = {
  */
 export type TripPerson = { id: string; role: string; name: string; phone: string; group?: string };
 export type TripContacts = { title: string; intro: string; people: TripPerson[]; hospital: string; hospital_phone: string; hospital_address: string; hospital_maps_url: string };
-/** One day of the forecast: its date, the highest and lowest temperature (°C) and the chance of rain (%); null where unknown. */
-export type TripWeatherDay = { date: string; high: number | null; low: number | null; rain: number | null; note: string };
+/** The sky in a day's forecast, shown as an icon and a short word ("Cerah berawan"). */
+export type WeatherSky = "clear" | "partly" | "cloudy" | "rain" | "storm";
+export const weatherSkies = ["clear", "partly", "cloudy", "rain", "storm"] as const satisfies readonly WeatherSky[];
+/**
+ * One day of the forecast: its date, where the day's activities are (the forecast is for that place),
+ * the sky, the highest and lowest temperature (°C) and the chance of rain (%); null where unknown.
+ * `place` and `sky` are absent on older entries.
+ */
+export type TripWeatherDay = { date: string; place?: string; sky?: WeatherSky; high: number | null; low: number | null; rain: number | null; note: string };
 /**
  * `weather` is the short summary; `weather_days` the forecast per day and `weather_note` its source
  * and date, shown small. Both are absent on older documents, which show the summary only.
@@ -84,7 +91,7 @@ export const tripFilled = {
   transport: (trip: TripContent | undefined) => !!trip?.transport.legs.length,
   stay: (trip: TripContent | undefined) => !!trip?.stay.name,
   contacts: (trip: TripContent | undefined) => !!trip?.contacts.people.length || !!trip?.contacts.hospital,
-  guidelines: (trip: TripContent | undefined) => !!trip && (trip.guidelines.dos.length + trip.guidelines.donts.length > 0 || !!trip.guidelines.weather),
+  guidelines: (trip: TripContent | undefined) => !!trip && (trip.guidelines.dos.length + trip.guidelines.donts.length > 0 || !!trip.guidelines.weather || !!trip.guidelines.weather_days?.length),
 };
 
 /** "0811-2546-096" → "08112546096"; "+62 811…" and "+62 (0)274…" → "0811…", "0274…". Landlines keep their area code. */

@@ -1,8 +1,8 @@
 "use client";
 
-import { Ban, BedDouble, Bus, Car, Check, Clock3, CloudSun, Coffee, Droplets, HeartPulse, MapPin, MessageCircle, Phone, Plane, Ship, Siren, ThumbsUp, TrainFront, Users, X, type LucideIcon } from "lucide-react";
+import { Ban, BedDouble, Bus, Car, Check, Clock3, Cloud, CloudLightning, CloudRain, CloudSun, Coffee, Droplets, HeartPulse, MapPin, MessageCircle, Phone, Plane, Ship, Siren, Sun, ThumbsUp, TrainFront, Users, X, type LucideIcon } from "lucide-react";
 import { parseContactPhone } from "@/lib/contact-phone";
-import { dialNumber, type TripContent, type TripMode, type TripPerson, type TripWeatherDay } from "@/lib/trip";
+import { dialNumber, type TripContent, type TripMode, type TripPerson, type TripWeatherDay, type WeatherSky } from "@/lib/trip";
 import { PhotoZoom } from "./PhotoZoom";
 import { useWording } from "./language";
 import styles from "./guest.module.css";
@@ -75,19 +75,29 @@ export function StayCard({ trip }: { trip: TripContent }) {
 }
 
 /** One day of the forecast, read at a glance on a phone: the day, a big highest temperature, the lowest, and the chance of rain. */
+const skyIcons: Record<WeatherSky, LucideIcon> = { clear: Sun, partly: CloudSun, cloudy: Cloud, rain: CloudRain, storm: CloudLightning };
+
+/**
+ * One day of the forecast as one row, the same for every day (revision 2 Nov): the sky's icon, the
+ * day and where its activities are, then the temperature range and the chance of rain.
+ */
 function WeatherDay({ day }: { day: TripWeatherDay }) {
   const { t, lang } = useWording();
   const date = new Date(`${day.date}T12:00:00Z`);
   const locale = lang === "en" ? "en-GB" : "id-ID";
-  const known = day.high !== null;
-  return <li className={known ? undefined : styles.weatherUnknown}>
-    <span className={styles.weatherWhen}><strong>{new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(date)}</strong> {new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" }).format(date)}</span>
-    {known ? <>
-      <span className={styles.weatherTemp}>{day.high}°<span className="sr-only">C</span></span>
-      {day.low !== null && <span className={styles.weatherMin}>{t("weather.min", { n: day.low })}</span>}
-      {day.rain !== null && <span className={styles.weatherRain}><Droplets size={14} aria-hidden="true" /> {t("weather.rain", { n: day.rain })}<span className={styles.weatherBar} aria-hidden="true"><span style={{ width: `${Math.max(4, day.rain)}%` }} /></span></span>}
-    </> : <span className={styles.weatherMin}>{t("weather.noData")}</span>}
-    {day.note && <span className={styles.weatherDayNote}>{day.note}</span>}
+  const Icon = day.sky ? skyIcons[day.sky] : Cloud;
+  const range = day.high === null ? "–" : day.low === null ? `${day.high}°` : `${day.low}–${day.high}°`;
+  const about = [day.place, day.sky ? t(`weather.sky.${day.sky}`) : "", day.high === null ? day.note || t("weather.noData") : day.note].filter(Boolean).join(" · ");
+  return <li className={styles.weatherRow}>
+    <span className={styles.weatherIcon} aria-hidden="true"><Icon size={20} /></span>
+    <div className={styles.weatherText}>
+      <p><strong>{new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(date)}</strong>, {new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" }).format(date)}</p>
+      {about && <p className={styles.weatherAbout}>{about}</p>}
+    </div>
+    <div className={styles.weatherFigures}>
+      <p className={styles.weatherRange}>{range}<span className="sr-only">C</span></p>
+      {day.rain !== null && <p className={styles.weatherRain}><Droplets size={13} aria-hidden="true" /><span className="sr-only">{t("weather.rain", { n: day.rain })}</span><span aria-hidden="true">{day.rain}%</span></p>}
+    </div>
   </li>;
 }
 

@@ -32,15 +32,18 @@ it("shows the trip's transport, hotel, do & don't and help contacts", () => {
   expect(screen.getAllByRole("navigation").some(nav => nav.textContent?.includes("Transportasi"))).toBe(true);
 });
 
-it("shows the forecast as one small box per day, with a day that has no forecast yet", () => {
+it("shows the forecast as one row per day in the same format, with where the day takes place", () => {
   render(<EventExperience event={smTdnYogyakarta()} preview />);
   const days = within(document.getElementById("guidelines")!).getByRole("list", { name: "Prakiraan per hari" });
-  const boxes = within(days).getAllByRole("listitem");
-  expect(boxes).toHaveLength(4);
-  expect(within(boxes[0]).getByText("Kamis")).toBeTruthy();
-  expect(boxes[0].textContent).toMatch(/32°.*min 24°.*Hujan 15%/);
-  expect(within(boxes[3]).getByText("Belum ada data")).toBeTruthy();
-  expect(screen.getByText(/Prakiraan per 31 Oktober 2026/)).toBeTruthy();
+  const rows = within(days).getAllByRole("listitem");
+  expect(rows).toHaveLength(4);
+  expect(within(rows[0]).getByText("Kamis")).toBeTruthy();
+  expect(within(rows[0]).getByText("Kotagede · Hujan ringan")).toBeTruthy();
+  expect(rows[0].textContent).toMatch(/25–32°/);
+  expect(within(rows[0]).getByText("Hujan 96%")).toBeTruthy();
+  // Every day in the same format, Sunday included.
+  expect(rows.every(row => /\d+–\d+°/.test(row.textContent ?? "") && /\d+%/.test(row.textContent ?? ""))).toBe(true);
+  expect(screen.getByText(/Prakiraan Open-Meteo per 2 November 2026/)).toBeTruthy();
 });
 
 it("shows the day's cover above its sessions and a card's pictures", () => {

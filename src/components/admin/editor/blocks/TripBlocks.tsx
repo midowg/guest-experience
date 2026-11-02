@@ -5,11 +5,12 @@ import { moveItem } from "@/components/admin/editor/editor-model";
 import { BlockIntro, ImageInput } from "@/components/admin/editor/JourneyEditor";
 import type { EditorKit } from "@/components/admin/editor/kit";
 import { agendaByDay } from "@/lib/program";
-import { emptyTrip, TRIP_LIMITS, tripModes, type TripContent, type TripLeg, type TripMode, type TripPerson, type TripWeatherDay } from "@/lib/trip";
+import { emptyTrip, TRIP_LIMITS, tripModes, weatherSkies, type TripContent, type TripLeg, type TripMode, type TripPerson, type TripWeatherDay, type WeatherSky } from "@/lib/trip";
 import styles from "@/components/admin/admin.module.css";
 
 /** Client trip handbook (src/lib/trip.ts): one block per part, each switched on in Urutan & tampilan bagian. */
 const modeLabels: Record<TripMode, string> = { train: "Kereta", flight: "Pesawat", bus: "Bus", car: "Mobil", boat: "Kapal" };
+const skyLabels: Record<WeatherSky | "", string> = { "": "Tidak diisi", clear: "Cerah", partly: "Cerah berawan", cloudy: "Berawan", rain: "Hujan ringan", storm: "Hujan petir" };
 const newId = () => crypto.randomUUID();
 const lines = (value: string) => value.split("\n");
 /** "32", "32°", "-3" → a whole number; empty or no digits → unknown. */
@@ -79,7 +80,7 @@ export function StayBlock({ kit }: { kit: EditorKit }) {
 }
 
 export function GuidelinesBlock({ kit }: { kit: EditorKit }) {
-  const { control } = kit;
+  const { control, choices } = kit;
   const guidelines = (kit.event.trip ?? emptyTrip()).guidelines;
   const set = useTrip(kit);
   // One forecast row per day of the schedule, kept in date order; a day with nothing filled is dropped.
@@ -87,7 +88,7 @@ export function GuidelinesBlock({ kit }: { kit: EditorKit }) {
   const weatherDays = guidelines.weather_days ?? [];
   const setWeather = (date: string, patch: Partial<TripWeatherDay>) => {
     const next: TripWeatherDay = { date, high: null, low: null, rain: null, note: "", ...weatherDays.find(item => item.date === date), ...patch };
-    const filled = next.high !== null || next.low !== null || next.rain !== null || !!next.note.trim();
+    const filled = next.high !== null || next.low !== null || next.rain !== null || !!next.note.trim() || !!next.place?.trim() || !!next.sky;
     set("guidelines", { weather_days: [...weatherDays.filter(item => item.date !== date), ...(filled ? [next] : [])].sort((a, b) => a.date.localeCompare(b.date)) });
   };
   return <div className="stack">
@@ -98,7 +99,7 @@ export function GuidelinesBlock({ kit }: { kit: EditorKit }) {
     {days.length > 0 && <details className={styles.extraFields}>
       <summary>Prakiraan per hari (opsional)</summary>
       <div className="stack">
-        <p className="field-hint">Tampil sebagai kotak kecil per hari: suhu tertinggi besar, suhu terendah, dan peluang hujan. Kosongkan suhu tertinggi bila prakiraannya belum ada; tamu melihat &quot;Belum ada data&quot;.</p>
+        <p className="field-hint">Tampil satu baris per hari dengan format yang sama: ikon langit, hari dan lokasi kegiatan, suhu terendah–tertinggi, dan peluang hujan. Isi semua hari dari satu sumber dan tanggal prakiraan yang sama.</p>
         {days.map((day, index) => {
           const at = weatherDays.findIndex(item => item.date === day.day);
           const entry = weatherDays[at];
@@ -106,6 +107,8 @@ export function GuidelinesBlock({ kit }: { kit: EditorKit }) {
           const shown = (value: number | null | undefined) => value === null || value === undefined ? "" : String(value);
           return <fieldset key={day.day} className="stack">
             <legend>Hari {index + 1} ({day.day})</legend>
+            {control(`${path}.place`, "Lokasi kegiatan hari ini", entry?.place ?? "", place => setWeather(day.day, { place }), { maxLength: 80, hint: "Prakiraan diambil untuk tempat ini. Contoh: Kotagede, Menoreh, Sewon." })}
+            {choices<WeatherSky | "">(`${path}.sky`, "Kondisi langit", (["", ...weatherSkies] as (WeatherSky | "")[]).map(value => ({ value, label: skyLabels[value] })), entry?.sky ?? "", sky => setWeather(day.day, { sky: sky || undefined }))}
             <div className={styles.grid}>
               {control(`${path}.high`, "Suhu tertinggi (°C)", shown(entry?.high), value => setWeather(day.day, { high: wholeNumber(value) }), { maxLength: 4 })}
               {control(`${path}.low`, "Suhu terendah (°C)", shown(entry?.low), value => setWeather(day.day, { low: wholeNumber(value) }), { maxLength: 4 })}

@@ -332,6 +332,11 @@ export const id = {
   "weather.rain": "Hujan {n}%",
   "weather.noData": "Belum ada data",
   "weather.days": "Prakiraan per hari",
+  "weather.sky.clear": "Cerah",
+  "weather.sky.partly": "Cerah berawan",
+  "weather.sky.cloudy": "Berawan",
+  "weather.sky.rain": "Hujan ringan",
+  "weather.sky.storm": "Hujan petir",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -668,4 +673,9 @@ export const en: Record<WordKey, string> = {
   "weather.rain": "Rain {n}%",
   "weather.noData": "No forecast yet",
   "weather.days": "Forecast by day",
+  "weather.sky.clear": "Clear",
+  "weather.sky.partly": "Partly cloudy",
+  "weather.sky.cloudy": "Cloudy",
+  "weather.sky.rain": "Light rain",
+  "weather.sky.storm": "Thunderstorm",
 };
