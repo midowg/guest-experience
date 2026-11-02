@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ArrowLeft, ChevronRight, CircleCheck, Gift, HandHeart, HeartHandshake, Home, MapPin, MessageCircle, Package, PartyPopper, Share2, Sparkles, UserRound } from "lucide-react";
-import { donorInitials, formatRupiah, listNames, type DonationTotals, type PublicDonor } from "@/lib/donations";
+import { donorInitials, formatRupiah, listNames, type DonationTotals, type PublicDonor, dropOffMap } from "@/lib/donations";
 import { themeStyle } from "@/lib/themes";
 import type { EventRecord } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { contactLink } from "../JourneyPanels";
 import { useGuestPage } from "../use-guest-page";
 import { DropOffCard } from "./DropOffCard";
+import { GuideContent } from "./GuideSheet";
+import type { CsrGuide } from "@/lib/csr-guide";
 import { DonationForm, DONATION_MEMORY_EVENT, donationMemoryKey, parseRemembered } from "./DonationForm";
 import { garamond } from "../place-guide-font";
 import s from "./csr.module.css";
@@ -29,11 +31,11 @@ const relative = (iso: string) => {
  * open as pages of their own. Only what the committee has received is counted, and each
  * donor appears as they chose (their name, Hamba Allah, or not at all).
  */
-export function CsrExperience({ event, view, preview = false }: { event: EventRecord; view: DonationView; preview?: boolean }) {
+export function CsrExperience({ event, view, preview = false, guide = null }: { event: EventRecord; view: DonationView; preview?: boolean; guide?: CsrGuide | null }) {
   useGuestPage(event, preview);
   const settings = event.donation;
   const [formOpen, setFormOpen] = useState(false);
-  const [page, setPage] = useState<"" | "penerima" | "donatur">("");
+  const [page, setPage] = useState<"" | "penerima" | "donatur" | "panduan">("");
   const closePage = useCallback(() => setPage(""), []);
   const [shared, setShared] = useState("");
   // What this browser gave before, read after hydration (the server has no such memory).
@@ -119,7 +121,7 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
           </div>
         </section>}
 
-        {settings.dropOff.address.trim() && settings.items.some(item => item.category !== "fund") && <DropOffCard place={settings.dropOff} contact={contactHref ? { href: contactHref.href, name: event.contact.name } : null} />}
+        {settings.dropOff.address.trim() && settings.items.some(item => item.category !== "fund") && <DropOffCard place={settings.dropOff} contact={contactHref ? { href: contactHref.href, name: event.contact.name } : null} onGuide={guide ? () => setPage("panduan") : undefined} />}
 
         {/* Where the help goes has a page of its own; here only a button naming who receives it. */}
         {recipients.length > 0 && <button type="button" className={s.recipientsButton} onClick={() => setPage("penerima")}>
@@ -169,6 +171,7 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
       </ul>
     </Sheet>}
     {page === "donatur" && <Sheet title="Semua donatur" onClose={closePage}><DonorList donors={view.donors} /></Sheet>}
+    {page === "panduan" && guide && <Sheet title="Panduan ke lokasi" onClose={closePage}><GuideContent guide={guide} mapsHref={dropOffMap(settings.dropOff)} /></Sheet>}
 
     {formOpen && <DonationForm event={event} preview={preview} onClose={() => setFormOpen(false)} />}
   </div>;

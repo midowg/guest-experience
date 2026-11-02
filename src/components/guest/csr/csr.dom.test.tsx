@@ -201,3 +201,17 @@ it("tells where to bring goods, with a map, once the committee sets an address",
   show();
   expect(screen.queryByRole("region", { name: "Antar barang ke" })).toBeNull();
 });
+
+it("opens the way to the drop-off point from Panduan lokasi, in the page itself", () => {
+  const guide = { venueName: "Werkudara Group", address: "Jl. Contoh No. 1", arrivalNotes: "", locationUrl: "https://maps.app.goo.gl/contoh", mapImage: { url: "", alt: "", srcset: [] },
+    steps: [{ title: "Belok di Jl. Bhinneka", description: "", image: { url: "", alt: "", srcset: [] } }], points: [], gallery: [] };
+  const e = event({ dropOff: { name: "Kantor Werkudara Group", address: "Jl. Contoh No. 1", mapsUrl: "", hours: "" } });
+  render(<CsrExperience event={e} preview guide={guide} view={{ totals: donationTotals(e.donation, []), donors: [], ready: true }} />);
+  fireEvent.click(screen.getByRole("button", { name: /Panduan ke lokasi/ }));
+  const page = screen.getByRole("dialog", { name: "Panduan ke lokasi" });
+  expect(within(page).getByText("Belok di Jl. Bhinneka")).toBeTruthy();
+  expect(within(page).getByRole("link", { name: /Buka Google Maps/ }).getAttribute("href")).toBe("https://maps.app.goo.gl/contoh");
+  cleanup();
+  show(e);
+  expect(screen.queryByRole("button", { name: /Panduan ke lokasi/ })).toBeNull();
+});

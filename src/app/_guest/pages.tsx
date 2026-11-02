@@ -4,6 +4,8 @@ import QRCode from "qrcode";
 import { z } from "zod";
 import { CsrExperience } from "@/components/guest/csr/CsrExperience";
 import { publicDonationView } from "@/lib/server/donations";
+import { getCurrentPlaceGuide } from "@/lib/server/events";
+import { csrGuideFrom } from "@/lib/csr-guide";
 import { EventExperience } from "@/components/guest/EventExperience";
 import { GuidePage } from "@/components/guest/GuidePage";
 import { PlaceGuide } from "@/components/guest/PlaceGuide";
@@ -55,7 +57,7 @@ export async function EventPage({ event }: { event: EventRecord }) {
   if (event.event_kind === "kartu") return <PosterPage event={event} />;
   if (event.event_kind === "eguide") return <GuidePage event={event} />;
   if (event.event_kind === "panduan") return <PlaceGuide event={event} />;
-  if (event.event_kind === "csr") return <CsrExperience event={event} view={await publicDonationView(event)} />;
+  if (event.event_kind === "csr") return <CsrExperience event={event} view={await publicDonationView(event)} guide={csrGuideFrom(await getCurrentPlaceGuide().catch(() => null))} />;
   return <EventExperience event={event} phase={currentPhase(event)} rsvpNeeds={await rsvpNeedsReady()} openPartyMax={await openPartyMax()} photoCount={await afterPhotos(event)} />;
 }
 
