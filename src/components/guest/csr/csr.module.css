@@ -342,4 +342,5 @@
 /* The photos in exactly one row, however many (up to four), each the same width. */
 .guideGallery { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; margin: 0; padding: 0; list-style: none; }
 .guideGallery img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
+.guideGallery li:only-child img { aspect-ratio: 16 / 9; }
 .guideMaps { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border-radius: 999px; background: var(--color-primary); color: var(--color-on-primary); font-weight: 900; text-decoration: none; }
