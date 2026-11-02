@@ -86,8 +86,11 @@ export function prepareEvent(event: EventRecord): EventRecord {
     trip: {
       transport: { ...event.trip.transport, legs: event.trip.transport.legs.filter(leg => Object.entries(leg).some(([key, value]) => key !== "id" && key !== "mode" && String(value).trim())) },
       stay: { ...event.trip.stay, photos: event.trip.stay.photos.filter(photo => photo.url).map(cleanImage) },
-      contacts: { ...event.trip.contacts, people: event.trip.contacts.people.filter(person => person.name.trim() || person.phone.trim() || person.role.trim()) },
-      guidelines: { ...event.trip.guidelines, dos: event.trip.guidelines.dos.map(line => line.trim()).filter(Boolean), donts: event.trip.guidelines.donts.map(line => line.trim()).filter(Boolean) },
+      contacts: { ...event.trip.contacts, people: event.trip.contacts.people.filter(person => person.name.trim() || person.phone.trim() || person.role.trim())
+        .map(({ group, ...person }) => group?.trim() ? { ...person, group: group.trim() } : person) },
+      guidelines: { ...event.trip.guidelines, dos: event.trip.guidelines.dos.map(line => line.trim()).filter(Boolean), donts: event.trip.guidelines.donts.map(line => line.trim()).filter(Boolean),
+        // A forecast day with nothing in it is not stored.
+        ...(event.trip.guidelines.weather_days ? { weather_days: event.trip.guidelines.weather_days.map(day => ({ ...day, note: day.note.trim() })).filter(day => day.high !== null || day.low !== null || day.rain !== null || day.note) } : {}) },
       // A day keeps its entry while its picture, name, summary or a tip is filled; empty tips are dropped.
       day_covers: (event.trip.day_covers ?? []).map(cover => ({ ...cover, image: cover.image?.url ? cleanImage(cover.image) : { url: "", alt: "", srcset: [] },
         ...(cover.tips ? { tips: cover.tips.map(tip => ({ title: tip.title.trim(), text: tip.text.trim() })).filter(tip => tip.title || tip.text) } : {}) }))

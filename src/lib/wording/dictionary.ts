@@ -328,6 +328,10 @@ export const id = {
   "program.dayTips": "Tips hari ini",
   "footer.website": "Situs web",
   "footer.maps": "Buka di Maps",
+  "weather.min": "min {n}°",
+  "weather.rain": "Hujan {n}%",
+  "weather.noData": "Belum ada data",
+  "weather.days": "Prakiraan per hari",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -660,4 +664,8 @@ export const en: Record<WordKey, string> = {
   "program.dayTips": "Tips for the day",
   "footer.website": "Website",
   "footer.maps": "Open in Maps",
+  "weather.min": "min {n}°",
+  "weather.rain": "Rain {n}%",
+  "weather.noData": "No forecast yet",
+  "weather.days": "Forecast by day",
 };

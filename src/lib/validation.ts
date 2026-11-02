@@ -257,10 +257,19 @@ const tripSchema = z.object({
   }).default(() => emptyTrip().stay),
   contacts: z.object({
     title: text(200).default(""), intro: text(1000).default(""),
-    people: z.array(z.object({ id: z.string().min(1).max(40), role: text(120).default(""), name: text(150).min(1, "Isi nama kontak."), phone: tripPhone })).max(TRIP_LIMITS.people).default([]),
+    people: z.array(z.object({ id: z.string().min(1).max(40), role: text(120).default(""), name: text(150).min(1, "Isi nama kontak."), phone: tripPhone, group: text(80).optional() })).max(TRIP_LIMITS.people).default([]),
     hospital: text(200).default(""), hospital_phone: tripPhone, hospital_address: text(500).default(""), hospital_maps_url: httpsUrl.default(""),
   }).default(() => emptyTrip().contacts),
-  guidelines: z.object({ title: text(200).default(""), intro: text(1000).default(""), weather: text(1000).default(""), dos: tripLines, donts: tripLines }).default(() => emptyTrip().guidelines),
+  guidelines: z.object({
+    title: text(200).default(""), intro: text(1000).default(""), weather: text(1000).default(""),
+    weather_days: z.array(z.object({
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pilih tanggal."),
+      high: z.number().int().min(-20).max(60).nullable().default(null), low: z.number().int().min(-20).max(60).nullable().default(null),
+      rain: z.number().int().min(0).max(100).nullable().default(null), note: text(120).default(""),
+    })).max(TRIP_LIMITS.days).optional(),
+    weather_note: text(300).optional(),
+    dos: tripLines, donts: tripLines,
+  }).default(() => emptyTrip().guidelines),
   day_covers: z.array(z.object({
     day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), image: plainImage.default(emptyImage),
     title: text(150).optional(), summary: text(400).optional(),

@@ -26,9 +26,19 @@ export type TripStay = {
   photos: PlainImage[];
 };
 /** Anyone the guest may call: the project manager, the client's PIC, the hotel. */
-export type TripPerson = { id: string; role: string; name: string; phone: string };
+/**
+ * A help contact. `group` gathers people under a small heading ("Tim perjalanan", "PT Surya
+ * Madistrindo"); people without one come first. Absent on older contacts.
+ */
+export type TripPerson = { id: string; role: string; name: string; phone: string; group?: string };
 export type TripContacts = { title: string; intro: string; people: TripPerson[]; hospital: string; hospital_phone: string; hospital_address: string; hospital_maps_url: string };
-export type TripGuidelines = { title: string; intro: string; weather: string; dos: string[]; donts: string[] };
+/** One day of the forecast: its date, the highest and lowest temperature (°C) and the chance of rain (%); null where unknown. */
+export type TripWeatherDay = { date: string; high: number | null; low: number | null; rain: number | null; note: string };
+/**
+ * `weather` is the short summary; `weather_days` the forecast per day and `weather_note` its source
+ * and date, shown small. Both are absent on older documents, which show the summary only.
+ */
+export type TripGuidelines = { title: string; intro: string; weather: string; weather_days?: TripWeatherDay[]; weather_note?: string; dos: string[]; donts: string[] };
 /** A picture shown above one day of the schedule; `day` is the local date, "2026-11-05". */
 /** One tip for a day ("Pakaian hari ini", "Bawa di tas kecil"): a short title and a line. */
 export type TripDayTip = { title: string; text: string };
@@ -45,7 +55,7 @@ export function isTripSection(key: string): key is (typeof tripSectionKeys)[numb
   return (tripSectionKeys as readonly string[]).includes(key);
 }
 
-export const TRIP_LIMITS = { legs: 6, photos: 4, people: 8, lines: 10, days: 14, tips: 4 } as const;
+export const TRIP_LIMITS = { legs: 6, photos: 4, people: 10, lines: 10, days: 14, tips: 4 } as const;
 
 export function emptyTrip(): TripContent {
   return {

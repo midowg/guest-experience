@@ -4,13 +4,16 @@ import { OrderButtons } from "@/components/admin/editor/controls";
 import { moveItem } from "@/components/admin/editor/editor-model";
 import { BlockIntro, ImageInput } from "@/components/admin/editor/JourneyEditor";
 import type { EditorKit } from "@/components/admin/editor/kit";
-import { emptyTrip, TRIP_LIMITS, tripModes, type TripContent, type TripLeg, type TripMode, type TripPerson } from "@/lib/trip";
+import { agendaByDay } from "@/lib/program";
+import { emptyTrip, TRIP_LIMITS, tripModes, type TripContent, type TripLeg, type TripMode, type TripPerson, type TripWeatherDay } from "@/lib/trip";
 import styles from "@/components/admin/admin.module.css";
 
 /** Client trip handbook (src/lib/trip.ts): one block per part, each switched on in Urutan & tampilan bagian. */
 const modeLabels: Record<TripMode, string> = { train: "Kereta", flight: "Pesawat", bus: "Bus", car: "Mobil", boat: "Kapal" };
 const newId = () => crypto.randomUUID();
 const lines = (value: string) => value.split("\n");
+/** "32", "32°", "-3" → a whole number; empty or no digits → unknown. */
+const wholeNumber = (value: string) => { const digits = value.replace(/[^\d-]/g, "").replace(/(?!^)-/g, "").slice(0, 4); return digits && digits !== "-" ? Number(digits) : null; };
 const switchHint = (name: string) => <p className="field-hint">Aktifkan bagian &quot;{name}&quot; di Urutan &amp; tampilan bagian agar tampil. Bagian ini tidak tampil selama masih kosong.</p>;
 
 function useTrip(kit: EditorKit) {
@@ -79,11 +82,41 @@ export function GuidelinesBlock({ kit }: { kit: EditorKit }) {
   const { control } = kit;
   const guidelines = (kit.event.trip ?? emptyTrip()).guidelines;
   const set = useTrip(kit);
+  // One forecast row per day of the schedule, kept in date order; a day with nothing filled is dropped.
+  const days = agendaByDay(kit.event.agenda.filter(item => item.starts_at), kit.event.timezone).filter(day => day.day);
+  const weatherDays = guidelines.weather_days ?? [];
+  const setWeather = (date: string, patch: Partial<TripWeatherDay>) => {
+    const next: TripWeatherDay = { date, high: null, low: null, rain: null, note: "", ...weatherDays.find(item => item.date === date), ...patch };
+    const filled = next.high !== null || next.low !== null || next.rain !== null || !!next.note.trim();
+    set("guidelines", { weather_days: [...weatherDays.filter(item => item.date !== date), ...(filled ? [next] : [])].sort((a, b) => a.date.localeCompare(b.date)) });
+  };
   return <div className="stack">
     <BlockIntro why="Yang dianjurkan dan yang perlu dihindari selama kegiatan, serta kabar cuaca singkat." who="project manager" />
     {control("trip.guidelines.title", "Judul bagian (opsional)", guidelines.title, title => set("guidelines", { title }), { maxLength: 200, hint: "Kosongkan untuk memakai: Panduan selama kegiatan." })}
     {control("trip.guidelines.intro", "Pengantar (opsional)", guidelines.intro, intro => set("guidelines", { intro }), { multiline: true, maxLength: 1000 })}
-    {control("trip.guidelines.weather", "Cuaca (opsional)", guidelines.weather, weather => set("guidelines", { weather }), { multiline: true, maxLength: 1000, hint: "Sebutkan sumber dan tanggalnya, misalnya prakiraan BMKG." })}
+    {control("trip.guidelines.weather", "Ringkasan cuaca (opsional)", guidelines.weather, weather => set("guidelines", { weather }), { multiline: true, maxLength: 1000, hint: "Satu atau dua kalimat, misalnya: cenderung panas dan cerah, hujan lokal sore hari tetap mungkin." })}
+    {days.length > 0 && <details className={styles.extraFields}>
+      <summary>Prakiraan per hari (opsional)</summary>
+      <div className="stack">
+        <p className="field-hint">Tampil sebagai kotak kecil per hari: suhu tertinggi besar, suhu terendah, dan peluang hujan. Kosongkan suhu tertinggi bila prakiraannya belum ada; tamu melihat &quot;Belum ada data&quot;.</p>
+        {days.map((day, index) => {
+          const at = weatherDays.findIndex(item => item.date === day.day);
+          const entry = weatherDays[at];
+          const path = `trip.guidelines.weather_days.${at < 0 ? weatherDays.length : at}`;
+          const shown = (value: number | null | undefined) => value === null || value === undefined ? "" : String(value);
+          return <fieldset key={day.day} className="stack">
+            <legend>Hari {index + 1} ({day.day})</legend>
+            <div className={styles.grid}>
+              {control(`${path}.high`, "Suhu tertinggi (°C)", shown(entry?.high), value => setWeather(day.day, { high: wholeNumber(value) }), { maxLength: 4 })}
+              {control(`${path}.low`, "Suhu terendah (°C)", shown(entry?.low), value => setWeather(day.day, { low: wholeNumber(value) }), { maxLength: 4 })}
+              {control(`${path}.rain`, "Peluang hujan (%)", shown(entry?.rain), value => setWeather(day.day, { rain: wholeNumber(value) }), { maxLength: 3 })}
+            </div>
+            {control(`${path}.note`, "Catatan hari ini (opsional)", entry?.note ?? "", note => setWeather(day.day, { note }), { maxLength: 120, hint: "Contoh: cek lagi mendekati hari H." })}
+          </fieldset>;
+        })}
+        {control("trip.guidelines.weather_note", "Sumber dan tanggal prakiraan", guidelines.weather_note ?? "", weather_note => set("guidelines", { weather_note }), { maxLength: 300, hint: "Tampil kecil di bawah kotak cuaca. Contoh: Prakiraan per 31 Oktober 2026. Info resmi: bmkg.go.id." })}
+      </div>
+    </details>}
     {control("trip.guidelines.dos", "Yang dianjurkan (satu per baris)", guidelines.dos.join("\n"), value => set("guidelines", { dos: lines(value) }), { multiline: true, hint: `Maksimal ${TRIP_LIMITS.lines} baris.` })}
     {control("trip.guidelines.donts", "Yang perlu dihindari (satu per baris)", guidelines.donts.join("\n"), value => set("guidelines", { donts: lines(value) }), { multiline: true, hint: `Maksimal ${TRIP_LIMITS.lines} baris.` })}
     {Object.entries(kit.errors).filter(([path]) => /^trip\.guidelines\.(dos|donts)\./.test(path)).map(([path, messages]) => <p key={path} className="field-error">{path.includes(".dos.") ? "Yang dianjurkan" : "Yang perlu dihindari"}, baris {Number(path.split(".").pop()) + 1}: {messages.join(" ")}</p>)}
@@ -102,7 +135,8 @@ export function ContactsBlock({ kit }: { kit: EditorKit }) {
     {control("trip.contacts.intro", "Pengantar (opsional)", contacts.intro, intro => set("contacts", { intro }), { multiline: true, maxLength: 1000 })}
     {contacts.people.map((person, index) => <div className={styles.item} key={person.id}>
       <div className={styles.itemHeader}><h4>{person.name || `Kontak ${index + 1}`}</h4><OrderButtons label={`kontak ${index + 1}`} index={index} length={contacts.people.length} onMove={direction => set("contacts", { people: moveItem(contacts.people, index, direction) })} /></div>
-      {control(`trip.contacts.people.${index}.role`, "Peran", person.role, role => setPerson(index, { role }), { maxLength: 120, hint: "Contoh: Project Manager, PIC Surya Madistrindo, Hotel." })}
+      {control(`trip.contacts.people.${index}.group`, "Kelompok (opsional)", person.group ?? "", group => setPerson(index, { group }), { maxLength: 80, suggestions: [...new Set(contacts.people.map(item => item.group?.trim()).filter((name): name is string => !!name))], hint: "Kontak dengan kelompok yang sama tampil bersama di bawah judul kecil, misalnya Tim perjalanan, PT Surya Madistrindo, Akomodasi & kesehatan. Rumah sakit ikut kelompok terakhir." })}
+      {control(`trip.contacts.people.${index}.role`, "Peran", person.role, role => setPerson(index, { role }), { maxLength: 120, hint: "Contoh: Project Manager, PIC Surya Madistrindo, Hotel. Nomor pendek seperti 112 tampil sebagai bar darurat merah di akhir daftar." })}
       {control(`trip.contacts.people.${index}.name`, "Nama", person.name, name => setPerson(index, { name }), { maxLength: 150 })}
       {control(`trip.contacts.people.${index}.phone`, "Nomor", person.phone, phone => setPerson(index, { phone }), { maxLength: 30 })}
       <Button type="button" variant="danger" onClick={() => set("contacts", { people: contacts.people.filter((_, i) => i !== index) })}><Trash2 size={17} aria-hidden="true" /><span>Hapus kontak {index + 1}</span></Button>

@@ -21,9 +21,26 @@ it("shows the trip's transport, hotel, do & don't and help contacts", () => {
   // A mobile number gets WhatsApp; the hotel's landline only a call.
   expect(within(contacts).getByRole("link", { name: /^WhatsApp Dimas Wijanarko/ }).getAttribute("href")).toBe("https://wa.me/628112546096");
   expect(within(contacts).queryByRole("link", { name: /^WhatsApp THE 1O1/ })).toBeNull();
-  // The hospital is one more contact card in the same grid.
-  expect(within(contacts).getByRole("heading", { name: "RS Bethesda Yogyakarta" }).closest("ul")).toBe(within(contacts).getByRole("heading", { name: "Dimas Wijanarko" }).closest("ul"));
+  // Contacts sit under their group headings; the hospital joins the last group, next to the hotel.
+  const group = (name: string) => within(contacts).getByRole("heading", { name }).closest("section")!;
+  expect(within(group("PT Surya Madistrindo")).getAllByRole("listitem")).toHaveLength(4);
+  expect(within(group("Akomodasi & kesehatan")).getByRole("heading", { name: "RS Bethesda Yogyakarta" })).toBeTruthy();
+  expect(within(group("Akomodasi & kesehatan")).getByRole("heading", { name: "THE 1O1 Yogyakarta Tugu" })).toBeTruthy();
+  // 112 is the red bar at the end, not a person in a group.
+  expect(within(contacts).queryByRole("heading", { name: "Darurat" })).toBeNull();
+  expect(within(contacts).getByText("112")).toBeTruthy();
   expect(screen.getAllByRole("navigation").some(nav => nav.textContent?.includes("Transportasi"))).toBe(true);
+});
+
+it("shows the forecast as one small box per day, with a day that has no forecast yet", () => {
+  render(<EventExperience event={smTdnYogyakarta()} preview />);
+  const days = within(document.getElementById("guidelines")!).getByRole("list", { name: "Prakiraan per hari" });
+  const boxes = within(days).getAllByRole("listitem");
+  expect(boxes).toHaveLength(4);
+  expect(within(boxes[0]).getByText("Kamis")).toBeTruthy();
+  expect(boxes[0].textContent).toMatch(/32°.*min 24°.*Hujan 15%/);
+  expect(within(boxes[3]).getByText("Belum ada data")).toBeTruthy();
+  expect(screen.getByText(/Prakiraan per 31 Oktober 2026/)).toBeTruthy();
 });
 
 it("shows the day's cover above its sessions and a card's pictures", () => {
@@ -98,7 +115,7 @@ it("calls through buttons without printing the numbers", () => {
   expect(within(contacts).queryByText(/0811|0274|586688/)).toBeNull();
   expect(within(contacts).getByRole("link", { name: "Telepon Dimas Wijanarko" }).getAttribute("href")).toBe("tel:08112546096");
   expect(within(contacts).getByRole("link", { name: "Telepon RS Bethesda Yogyakarta" }).getAttribute("href")).toBe("tel:0274586688");
-  expect(within(contacts).getByRole("link", { name: "Telepon Nomor darurat 112" }).getAttribute("href")).toBe("tel:112");
+  expect(within(contacts).getByRole("link", { name: "Telepon Darurat" }).getAttribute("href")).toBe("tel:112");
   const stay = document.getElementById("stay")!;
   expect(within(stay).queryByText(/0274/)).toBeNull();
   expect(within(stay).getByRole("link", { name: "Telepon hotel" }).getAttribute("href")).toBe("tel:02742920101");

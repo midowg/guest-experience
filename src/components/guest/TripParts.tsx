@@ -1,8 +1,8 @@
 "use client";
 
-import { Ban, BedDouble, Bus, Car, Check, Clock3, CloudSun, Coffee, HeartPulse, MapPin, MessageCircle, Phone, Plane, Ship, ThumbsUp, TrainFront, UserRound, Users, X, type LucideIcon } from "lucide-react";
+import { Ban, BedDouble, Bus, Car, Check, Clock3, CloudSun, Coffee, Droplets, HeartPulse, MapPin, MessageCircle, Phone, Plane, Ship, Siren, ThumbsUp, TrainFront, Users, X, type LucideIcon } from "lucide-react";
 import { parseContactPhone } from "@/lib/contact-phone";
-import { dialNumber, type TripContent, type TripMode } from "@/lib/trip";
+import { dialNumber, type TripContent, type TripMode, type TripPerson, type TripWeatherDay } from "@/lib/trip";
 import { PhotoZoom } from "./PhotoZoom";
 import { useWording } from "./language";
 import styles from "./guest.module.css";
@@ -74,13 +74,32 @@ export function StayCard({ trip }: { trip: TripContent }) {
   </div>;
 }
 
+/** One day of the forecast, read at a glance on a phone: the day, a big highest temperature, the lowest, and the chance of rain. */
+function WeatherDay({ day }: { day: TripWeatherDay }) {
+  const { t, lang } = useWording();
+  const date = new Date(`${day.date}T12:00:00Z`);
+  const locale = lang === "en" ? "en-GB" : "id-ID";
+  const known = day.high !== null;
+  return <li className={known ? undefined : styles.weatherUnknown}>
+    <span className={styles.weatherWhen}><strong>{new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(date)}</strong> {new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" }).format(date)}</span>
+    {known ? <>
+      <span className={styles.weatherTemp}>{day.high}°<span className="sr-only">C</span></span>
+      {day.low !== null && <span className={styles.weatherMin}>{t("weather.min", { n: day.low })}</span>}
+      {day.rain !== null && <span className={styles.weatherRain}><Droplets size={14} aria-hidden="true" /> {t("weather.rain", { n: day.rain })}<span className={styles.weatherBar} aria-hidden="true"><span style={{ width: `${Math.max(4, day.rain)}%` }} /></span></span>}
+    </> : <span className={styles.weatherMin}>{t("weather.noData")}</span>}
+    {day.note && <span className={styles.weatherDayNote}>{day.note}</span>}
+  </li>;
+}
+
 export function GuidelineLists({ trip }: { trip: TripContent }) {
   const { t } = useWording();
   const guidelines = trip.guidelines;
   return <div className={styles.tripGuidelines}>
-    {guidelines.weather && <div className={styles.tripWeather}>
+    {(guidelines.weather || guidelines.weather_days?.length) && <div className={styles.tripWeather}>
       <CardHead title={t("guidelines.weather")} icon={CloudSun} />
-      <p className={styles.multiline}>{guidelines.weather}</p>
+      {guidelines.weather && <p className={styles.multiline}>{guidelines.weather}</p>}
+      {!!guidelines.weather_days?.length && <ul className={styles.weatherDays} aria-label={t("weather.days")}>{guidelines.weather_days.map(day => <WeatherDay key={day.date} day={day} />)}</ul>}
+      {guidelines.weather_note && <p className={styles.weatherNote}>{guidelines.weather_note}</p>}
     </div>}
     {guidelines.dos.length > 0 && <div className={styles.tripCard}>
       <CardHead title={t("guidelines.do")} icon={ThumbsUp} />
@@ -93,30 +112,59 @@ export function GuidelineLists({ trip }: { trip: TripContent }) {
   </div>;
 }
 
+/** Two letters for a person's badge: "Dimas Wijanarko" → "DW", "THE 1O1 Yogyakarta Tugu" → "TY". */
+const initials = (name: string) => name.split(/\s+/).filter(word => /^[A-Za-z]/.test(word)).map(word => word[0].toUpperCase()).filter((_, index, all) => index === 0 || index === all.length - 1).join("").slice(0, 2);
+/** 112, 110, 118, 119: a national emergency number, shown as the red bar at the end rather than as a person. */
+const isEmergencyNumber = (phone: string) => /^\d{3,4}$/.test(phone.replace(/\D/g, ""));
+
+/** One contact as a single row: badge, name and role, then the call (and WhatsApp) buttons as icons. */
+function ContactRow({ name, role, detail, phone, mapsUrl, icon: Icon }: { name: string; role: string; detail?: string; phone: string; mapsUrl?: string; icon?: LucideIcon }) {
+  const { t } = useWording();
+  const mobile = phone ? parseContactPhone(phone) : null;
+  return <li className={styles.contactRow}>
+    <span className={styles.contactBadge} aria-hidden="true">{Icon ? <Icon size={18} /> : initials(name)}</span>
+    <div className={styles.contactText}>
+      <h4>{name}</h4>
+      {role && <p>{role}</p>}
+      {detail && <p>{detail}</p>}
+    </div>
+    <span className={styles.contactButtons}>
+      {/* No number on the page (revision 30 Oct): the button calls, and the phone's dialer shows it. */}
+      {phone && <a href={`tel:${mobile?.local ?? dialNumber(phone)}`} aria-label={`${t("contacts.call")} ${name}`}><Phone size={18} aria-hidden="true" /></a>}
+      {mobile && <a href={`https://wa.me/${mobile.international}`} target="_blank" rel="noopener noreferrer" aria-label={`WhatsApp ${name} ${t("common.newTab")}`}><MessageCircle size={18} aria-hidden="true" /></a>}
+      {mapsUrl && <a href={mapsUrl} target="_blank" rel="noopener noreferrer" aria-label={`${t("emergency.directions")} ${name} ${t("common.newTab")}`}><MapPin size={18} aria-hidden="true" /></a>}
+    </span>
+  </li>;
+}
+
+/**
+ * Help contacts as a short list (revision 2 Nov): one row per person under small group headings, in
+ * the order the admin set them. The nearest hospital joins the last group, and a national emergency
+ * number closes the list as a red bar.
+ */
 export function ContactList({ trip }: { trip: TripContent }) {
   const { t } = useWording();
   const contacts = trip.contacts;
-  return <div className={styles.tripGuidelines}>
-    {(contacts.people.length > 0 || contacts.hospital) && <ul className={styles.tripPeople}>{contacts.people.map(person => {
-      const mobile = person.phone ? parseContactPhone(person.phone) : null;
-      return <li key={person.id} className={styles.tripCard}>
-        <CardHead title={person.name} icon={UserRound} meta={person.role} />
-        {person.phone && <div className={styles.tripActions}>
-          {/* No number on the page (revision 30 Oct): the button calls, and the phone's dialer shows it. */}
-          <a href={`tel:${mobile?.local ?? dialNumber(person.phone)}`}><Phone size={16} aria-hidden="true" /> {t("contacts.call")}<span className="sr-only"> {person.name}</span></a>
-          {mobile && <a href={`https://wa.me/${mobile.international}`} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} aria-hidden="true" /> WhatsApp<span className="sr-only"> {person.name} {t("common.newTab")}</span></a>}
-        </div>}
-      </li>;
-    })}
-      {/* The nearest hospital is one more contact card, in the same grid and colours (revision 30 Oct). */}
-      {contacts.hospital && <li className={styles.tripCard}>
-        <CardHead title={contacts.hospital} icon={HeartPulse} meta={t("emergency.hospital")} />
-        {contacts.hospital_address && <p className={styles.multiline}>{contacts.hospital_address}</p>}
-        {(contacts.hospital_phone || contacts.hospital_maps_url) && <div className={styles.tripActions}>
-          {contacts.hospital_phone && <a href={`tel:${dialNumber(contacts.hospital_phone)}`}><Phone size={16} aria-hidden="true" /> {t("contacts.call")}<span className="sr-only"> {contacts.hospital}</span></a>}
-          {contacts.hospital_maps_url && <a href={contacts.hospital_maps_url} target="_blank" rel="noopener noreferrer"><MapPin size={16} aria-hidden="true" /> {t("emergency.directions")}<span className="sr-only"> {contacts.hospital} {t("common.newTab")}</span></a>}
-        </div>}
-      </li>}
-    </ul>}
+  const emergency = contacts.people.filter(person => isEmergencyNumber(person.phone));
+  const groups: { name: string; people: TripPerson[] }[] = [];
+  for (const person of contacts.people.filter(item => !isEmergencyNumber(item.phone))) {
+    const name = person.group?.trim() ?? "";
+    const group = groups.find(item => item.name === name);
+    if (group) group.people.push(person); else groups.push({ name, people: [person] });
+  }
+  if (contacts.hospital && !groups.length) groups.push({ name: "", people: [] });
+  return <div className={styles.contactGroups}>
+    {groups.map((group, index) => <section key={group.name || index} className={styles.contactGroup}>
+      {group.name && <h3>{group.name}</h3>}
+      <ul>
+        {group.people.map(person => <ContactRow key={person.id} name={person.name} role={person.role} phone={person.phone} />)}
+        {contacts.hospital && index === groups.length - 1 && <ContactRow name={contacts.hospital} role={t("emergency.hospital")} detail={contacts.hospital_address} phone={contacts.hospital_phone} mapsUrl={contacts.hospital_maps_url} icon={HeartPulse} />}
+      </ul>
+    </section>)}
+    {emergency.map(person => <a key={person.id} className={styles.emergencyBar} href={`tel:${dialNumber(person.phone)}`} aria-label={`${t("contacts.call")} ${person.name}`}>
+      <Siren size={20} aria-hidden="true" />
+      <span><strong>{person.name}</strong>{person.role && <span>{person.role}</span>}</span>
+      <span className={styles.emergencyNumber} aria-hidden="true">{person.phone}</span>
+    </a>)}
   </div>;
 }
