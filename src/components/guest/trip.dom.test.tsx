@@ -65,6 +65,13 @@ it("opens a place highlight from its row: photos one after another, the story, p
   expect(within(sheet).getByText(/Kabari tour leader sebelum hari keberangkatan/)).toBeTruthy();
   expect(within(sheet).getByText("1 dari 2")).toBeTruthy();
   expect(within(sheet).getByRole("button", { name: "Lihat foto penuh: Warung Sate Pak Pong" })).toBeTruthy();
+  // Closing a photo opened from the sheet leaves the sheet open with its content (bug 2 Nov).
+  const zoom = within(sheet).getByRole("button", { name: "Lihat foto penuh: Sate klathak di kuah gulai" }).nextElementSibling as HTMLDialogElement;
+  fireEvent.click(within(sheet).getByRole("button", { name: "Lihat foto penuh: Sate klathak di kuah gulai" }));
+  fireEvent.click(within(zoom).getByRole("button", { name: "Tutup" }));
+  fireEvent(zoom, new Event("close"));
+  expect(sheet.hasAttribute("open")).toBe(true);
+  expect(within(sheet).getByText(/Besi ini menghantarkan panas/)).toBeTruthy();
   fireEvent.click(within(sheet).getAllByRole("button", { name: "Tutup" })[0]);
   expect(sheet.hasAttribute("open")).toBe(false);
   // A highlight without photos opens from its "Lihat tempat" button.

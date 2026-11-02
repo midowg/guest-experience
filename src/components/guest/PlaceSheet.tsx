@@ -127,7 +127,9 @@ export function PlaceSheet({ detail, eyebrow, heading, trigger }: { detail: Agen
     step.current = "";
   };
   const close = () => { const box = dialog.current; if (!box) return; if (typeof box.close === "function") box.close(); else { box.removeAttribute("open"); onClose(); } };
-  const sheet = <dialog ref={dialog} className={styles.placeSheet} aria-label={heading} onClose={onClose} onClick={event => { if (event.target === event.currentTarget) close(); }}>
+  const sheet = <dialog ref={dialog} className={styles.placeSheet} aria-label={heading}
+    // React passes a photo's own close (PhotoZoom, a dialog inside this one) up to here: only the sheet's own counts.
+    onClose={event => { if (event.target === event.currentTarget) onClose(); }} onClick={event => { if (event.target === event.currentTarget) close(); }}>
     <div className={styles.placePanel}>
       <div className={styles.placeTop}>
         <span className={styles.placeGrip} aria-hidden="true" />
