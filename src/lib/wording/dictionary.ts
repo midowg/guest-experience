@@ -317,6 +317,15 @@ export const id = {
   "footer.social": "Media sosial Werkudara Group",
   "footer.copyright": "© {n} Werkudara Group. Hak cipta dilindungi.",
   "detail.close": "Tutup",
+  "detail.openPlace": "Lihat tempat",
+  "detail.open": "Lihat detail",
+  "detail.openLabel": "Buka sorotan: {name}",
+  "detail.map": "Buka peta",
+  "detail.sheetClose": "Tutup",
+  "photo.prev": "Foto sebelumnya",
+  "photo.next": "Foto berikutnya",
+  "photo.count": "{n} dari {total}",
+  "program.dayTips": "Tips hari ini",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -638,4 +647,13 @@ export const en: Record<WordKey, string> = {
   "footer.social": "Werkudara Group on social media",
   "footer.copyright": "© {n} Werkudara Group. All rights reserved.",
   "detail.close": "Close",
+  "detail.openPlace": "See the place",
+  "detail.open": "See details",
+  "detail.openLabel": "Open highlight: {name}",
+  "detail.map": "Open map",
+  "detail.sheetClose": "Close",
+  "photo.prev": "Previous photo",
+  "photo.next": "Next photo",
+  "photo.count": "{n} of {total}",
+  "program.dayTips": "Tips for the day",
 };

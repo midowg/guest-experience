@@ -78,6 +78,9 @@ it("shows the emergency contact and nearest hospital with the contact section", 
 });
 
 it("offers the calendar file with a chosen reminder, linking the general page", () => {
+  // A day before the trip, whatever today's date is.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-01T10:00:00+08:00"));
   render(<EventExperience event={trip({ slug: "trip-lombok" })} preview />);
   fireEvent.click(screen.getByRole("button", { name: "Tambahkan jadwal ke kalender" }));
   const sheet = screen.getByRole("dialog", { name: "Tambahkan ke kalender" });

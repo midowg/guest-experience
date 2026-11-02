@@ -88,16 +88,22 @@ export function prepareEvent(event: EventRecord): EventRecord {
       stay: { ...event.trip.stay, photos: event.trip.stay.photos.filter(photo => photo.url).map(cleanImage) },
       contacts: { ...event.trip.contacts, people: event.trip.contacts.people.filter(person => person.name.trim() || person.phone.trim() || person.role.trim()) },
       guidelines: { ...event.trip.guidelines, dos: event.trip.guidelines.dos.map(line => line.trim()).filter(Boolean), donts: event.trip.guidelines.donts.map(line => line.trim()).filter(Boolean) },
-      day_covers: (event.trip.day_covers ?? []).filter(cover => cover.image.url).map(cover => ({ ...cover, image: cleanImage(cover.image) })),
+      // A day keeps its entry while its picture, name, summary or a tip is filled; empty tips are dropped.
+      day_covers: (event.trip.day_covers ?? []).map(cover => ({ ...cover, image: cover.image?.url ? cleanImage(cover.image) : { url: "", alt: "", srcset: [] },
+        ...(cover.tips ? { tips: cover.tips.map(tip => ({ title: tip.title.trim(), text: tip.text.trim() })).filter(tip => tip.title || tip.text) } : {}) }))
+        .filter(cover => cover.image.url || cover.title?.trim() || cover.summary?.trim() || cover.tips?.length),
     },
     agenda: event.agenda.map((item, sort_order) => ({ ...item, sort_order })),
     // Details keyed by session id leave with their session, and an all-empty detail is not stored.
     agenda_details: Object.fromEntries(Object.entries(event.agenda_details).filter(([id, detail]) => event.agenda.some(item => item.id === id)
-      && (detail.teaser.trim() || detail.did_you_know.trim() || detail.more_story.trim() || detail.place.trim() || detail.pdf_page || detail.photo?.url))
-      // A photo field left empty is not stored; a filled one loses stale sizes.
+      && (detail.teaser.trim() || detail.did_you_know.trim() || detail.more_story.trim() || detail.place.trim() || detail.pdf_page || detail.photo?.url
+        || detail.photos?.some(photo => photo.url) || detail.points?.length || detail.note?.trim() || detail.maps_url?.trim()))
+      // A photo field left empty is not stored; a filled one loses stale sizes. Empty extra photos and points go too.
       .map(([id, detail]) => {
-        const { photo, ...rest } = detail;
-        return [id, photo?.url ? { ...rest, photo: cleanImage(photo) } : rest];
+        const { photo, photos, points, ...rest } = detail;
+        const extra = (photos ?? []).filter(item => item.url).map(cleanImage);
+        const kept = (points ?? []).map(point => ({ title: point.title.trim(), text: point.text.trim() })).filter(point => point.title || point.text);
+        return [id, { ...rest, ...(photo?.url ? { photo: cleanImage(photo) } : {}), ...(extra.length ? { photos: extra } : {}), ...(kept.length ? { points: kept } : {}) }];
       })),
     // English rundown texts are keyed by session id; a deleted session takes its translation with it.
     translations: { ...event.translations, en: { ...event.translations.en, agenda: Object.fromEntries(Object.entries(event.translations.en.agenda).filter(([id]) => event.agenda.some(item => item.id === id))) } },

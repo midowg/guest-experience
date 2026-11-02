@@ -158,7 +158,7 @@ export function PrepareBlock({ event, update, control, errors }: Pick<Props, "ev
         <ImageInput name={`prepare.items.${index}.images.${at}`} label={`Gambar ${at + 1}`} image={image} onChange={next => setItem(index, { images: (item.images ?? []).map((old, i) => i === at ? next : old) })} control={control} errors={errors} />
         <Button type="button" variant="danger" onClick={() => setItem(index, { images: (item.images ?? []).filter((_, i) => i !== at) })}><Trash2 size={17} aria-hidden="true" /><span>Hapus gambar {at + 1}</span></Button>
       </div>)}
-      <Button type="button" variant="secondary" disabled={(item.images?.length ?? 0) >= 4} onClick={() => setItem(index, { images: [...(item.images ?? []), { url: "", alt: "", srcset: [] }] })}>Tambah gambar (opsional)</Button>
+      <Button type="button" variant="secondary" disabled={(item.images?.length ?? 0) >= 6} onClick={() => setItem(index, { images: [...(item.images ?? []), { url: "", alt: "", srcset: [] }] })}>Tambah gambar (opsional)</Button>
       <Button type="button" variant="danger" onClick={() => set({ items: prepare.items.filter((_, i) => i !== index) })}><Trash2 size={17} aria-hidden="true" /><span>Hapus kartu {index + 1}</span></Button>
     </div>)}
     <div className={styles.presetRow} role="group" aria-label="Tambah kartu persiapan">

@@ -30,7 +30,13 @@ export type TripPerson = { id: string; role: string; name: string; phone: string
 export type TripContacts = { title: string; intro: string; people: TripPerson[]; hospital: string; hospital_phone: string; hospital_address: string; hospital_maps_url: string };
 export type TripGuidelines = { title: string; intro: string; weather: string; dos: string[]; donts: string[] };
 /** A picture shown above one day of the schedule; `day` is the local date, "2026-11-05". */
-export type TripDayCover = { day: string; image: PlainImage };
+/** One tip for a day ("Pakaian hari ini", "Bawa di tas kecil"): a short title and a line. */
+export type TripDayTip = { title: string; text: string };
+/**
+ * One day's opening: the handbook's DAY cover, the day's name and one-line summary, and up to four
+ * tips. Title, summary and tips are absent on older entries; the image may be empty when only text is set.
+ */
+export type TripDayCover = { day: string; image: PlainImage; title?: string; summary?: string; tips?: TripDayTip[] };
 export type TripContent = { transport: TripTransport; stay: TripStay; contacts: TripContacts; guidelines: TripGuidelines; day_covers: TripDayCover[] };
 
 /** The section keys of the trip's parts; only a Program shows them. */
@@ -39,7 +45,7 @@ export function isTripSection(key: string): key is (typeof tripSectionKeys)[numb
   return (tripSectionKeys as readonly string[]).includes(key);
 }
 
-export const TRIP_LIMITS = { legs: 6, photos: 4, people: 8, lines: 10, days: 14 } as const;
+export const TRIP_LIMITS = { legs: 6, photos: 4, people: 8, lines: 10, days: 14, tips: 4 } as const;
 
 export function emptyTrip(): TripContent {
   return {

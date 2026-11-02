@@ -69,7 +69,7 @@ const prepareSchema = z.object({
     icon: z.enum(prepareIcons).default("info"), title: text(150).min(1, "Isi judul kartu."), description: text(1000).default(""),
     list: z.array(text(150).min(1, "Isi atau hapus baris kosong.")).max(15).default([]),
     en: pairSchema(150, 1000).extend({ list: z.array(text(150)).max(15).default([]) }).optional(),
-    images: z.array(z.lazy(() => plainImage)).max(4).optional(),
+    images: z.array(z.lazy(() => plainImage)).max(6).optional(),
   })).max(8).default([]),
 });
 const experienceSchema = z.object({
@@ -89,11 +89,20 @@ const afterSchema = z.object({
 export const emptyExperience = { title: "", story: "", image: emptyImage, moments: [] };
 export const emptyRoute = { map_image: emptyImage, steps: [], points: [] };
 export const emptyEmergency = { name: "", phone: "", hospital: "", hospital_address: "", hospital_maps_url: "" };
+/** A place highlight holds at most this many extra photos and points (src/lib/types.ts AgendaDetail). */
+export const AGENDA_PHOTOS = 6;
+export const AGENDA_POINTS = 6;
 export const emptyAgendaDetail = { teaser: "", did_you_know: "", more_story: "", place: "", pdf_page: null };
 const agendaDetailSchema = z.object({
   teaser: text(200).default(""), did_you_know: text(600).default(""), more_story: text(4000).default(""), place: text(200).default(""),
   pdf_page: z.number().int().min(1).max(999).nullable().default(null),
   photo: z.lazy(() => plainImage).optional(),
+  photos: z.array(z.lazy(() => plainImage)).max(AGENDA_PHOTOS).optional(),
+  points_title: text(80).optional(),
+  points: z.array(z.object({ title: text(80).default(""), text: text(300).default("") }).refine(point => !!(point.title || point.text), "Isi atau hapus poin kosong.")).max(AGENDA_POINTS).optional(),
+  note_title: text(80).optional(),
+  note: text(600).optional(),
+  maps_url: httpsUrl.optional(),
 });
 const emergencySchema = z.object({
   name: text(150).default(""),
@@ -228,8 +237,8 @@ const guideSchema = z.object({
   order: z.array(z.union([z.object({ kind: z.literal("chapter"), id: z.string().min(1).max(40) }), z.object({ kind: z.literal("part"), part: z.enum(["experience", "agenda", "location", "prepare", "contact"]) })])).max(30).default([]),
 });
 
-/** Client trip handbook (src/lib/trip.ts). Phones may be landlines (hotel, hospital), so only their characters are checked. */
-const tripPhone = text(30).refine(value => !value || /^[+\d\s().-]{6,30}$/.test(value), "Periksa nomor telepon.").default("");
+/** Client trip handbook (src/lib/trip.ts). Phones may be landlines (hotel, hospital) or 112, so only their characters are checked. */
+const tripPhone = text(30).refine(value => !value || /^[+\d\s().-]{3,30}$/.test(value), "Periksa nomor telepon.").default("");
 const tripLines = z.array(text(200).min(1, "Isi atau hapus baris kosong.")).max(TRIP_LIMITS.lines).default([]);
 const tripSchema = z.object({
   transport: z.object({
@@ -252,7 +261,11 @@ const tripSchema = z.object({
     hospital: text(200).default(""), hospital_phone: tripPhone, hospital_address: text(500).default(""), hospital_maps_url: httpsUrl.default(""),
   }).default(() => emptyTrip().contacts),
   guidelines: z.object({ title: text(200).default(""), intro: text(1000).default(""), weather: text(1000).default(""), dos: tripLines, donts: tripLines }).default(() => emptyTrip().guidelines),
-  day_covers: z.array(z.object({ day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), image: plainImage })).max(TRIP_LIMITS.days)
+  day_covers: z.array(z.object({
+    day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), image: plainImage.default(emptyImage),
+    title: text(150).optional(), summary: text(400).optional(),
+    tips: z.array(z.object({ title: text(80).default(""), text: text(400).default("") }).refine(tip => !!(tip.title || tip.text), "Isi atau hapus tips kosong.")).max(TRIP_LIMITS.tips).optional(),
+  })).max(TRIP_LIMITS.days)
     .refine(covers => new Set(covers.map(cover => cover.day)).size === covers.length, "Satu gambar per hari.").default([]),
 });
 
@@ -324,6 +337,7 @@ export const eventSchema = eventBaseSchema.superRefine((event, ctx) => {
     ...event.trip.day_covers.map((cover, index) => [["trip", "day_covers", index, "image"], cover.image] as [(string | number)[], typeof cover.image]),
     ...event.prepare.items.flatMap((item, index) => (item.images ?? []).map((image, at) => [["prepare", "items", index, "images", at], image] as [(string | number)[], typeof image])),
     ...Object.entries(event.agenda_details).flatMap(([id, detail]) => detail.photo ? [[["agenda_details", id, "photo"], detail.photo] as [(string | number)[], typeof detail.photo]] : []),
+    ...Object.entries(event.agenda_details).flatMap(([id, detail]) => (detail.photos ?? []).map((photo, at) => [["agenda_details", id, "photos", at], photo] as [(string | number)[], typeof photo])),
     ...event.guide.chapters.flatMap((chapter, index) => [
       [["guide", "chapters", index, "photo"], chapter.photo] as [(string | number)[], typeof chapter.photo],
       ...chapter.items.map((item, at) => [["guide", "chapters", index, "items", at, "photo"], item.photo] as [(string | number)[], typeof item.photo]),

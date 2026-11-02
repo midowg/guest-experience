@@ -79,7 +79,20 @@ export type AgendaDetail = {
   teaser: string; did_you_know: string; more_story: string; place: string; pdf_page: number | null;
   /** A photo of the place, shown in the opened detail; absent on older details. */
   photo?: PlainImage;
+  /**
+   * A place highlight (the handbook's full page on one place): more photos after `photo`, short
+   * points ("Yang akan dilihat"), one note and a map link. Any of them turns the detail into a sheet
+   * the guest opens from the row ("Lihat tempat"). Absent on older details.
+   */
+  photos?: PlainImage[];
+  points_title?: string;
+  points?: AgendaPoint[];
+  note_title?: string;
+  note?: string;
+  maps_url?: string;
 };
+/** One short point in a place highlight: a bold lead and a line after it. */
+export type AgendaPoint = { title: string; text: string };
 export type EmergencyContact = { name: string; phone: string; hospital: string; hospital_address: string; hospital_maps_url: string };
 export type RouteStep = { title: string; description: string; image: PlainImage; en?: TextPair };
 /** The pictures an arrival point can carry on the office-visit page (Cara datang). */

@@ -470,6 +470,66 @@
 /* A day's cover is a wide banner, like a Facebook or LinkedIn cover: any picture is cropped to 12:5. */
 .dayCover { margin: var(--space-3) 0 var(--space-4); aspect-ratio: 12 / 5; overflow: hidden; border-radius: max(var(--radius, 0px), 12px); background: var(--color-soft); }
 .dayCover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* A day's name, summary and tips under its cover (ProgramAgenda.tsx DayCover). */
+.dayIntro { display: grid; gap: var(--space-1); margin: 0 0 var(--space-4); }
+.dayIntro p { margin: 0; color: var(--color-caption); }
+.dayTitle { margin: 0; color: var(--color-heading); font-size: var(--text-xl, 1.375rem); line-height: 1.25; }
+.dayTips { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); margin: 0 0 var(--space-5); padding: 0; list-style: none; }
+@media (min-width: 560px) { .dayTips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dayTips li { display: grid; gap: 2px; padding: var(--space-3) var(--space-4); border-radius: max(var(--radius, 0px), 10px); background: var(--color-soft); font-size: var(--text-sm); }
+.dayTips strong { color: var(--color-heading); }
+
+/* A place highlight opens from its row (PlaceSheet.tsx): a link-like button under the title. */
+.highlightOpen { justify-self: start; display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin: calc(var(--space-2) * -1) 0 calc(var(--space-2) * -1); padding: 0; border: 0; background: none; color: var(--color-primary); font: inherit; font-weight: 600; cursor: pointer; }
+.highlightOpen:hover { text-decoration: underline; }
+.highlightOpen:focus-visible { outline: 3px solid var(--color-focus, var(--color-primary)); outline-offset: 2px; }
+.highlightPrint { display: grid; gap: var(--space-3); }
+
+/* The sheet: rising from the bottom on a phone, a panel on the right on a wide screen. */
+.placeLocked { overflow: hidden; }
+.placeSheet { position: fixed; inset: auto 0 0 0; box-sizing: border-box; width: 100%; max-width: 100%; height: auto; max-height: 92dvh; margin: 0; padding: 0; border: 0; background: transparent; color: var(--color-text); }
+.placeSheet::backdrop { background: rgba(8, 12, 22, .55); }
+/* A closed sheet stays hidden even where a parent's rule lays its children out as flex. */
+.placeSheet:not([open]) { display: none; }
+.placeSheet[open] { display: block; }
+.placePanel { display: flex; flex-direction: column; max-height: 92dvh; border-radius: 18px 18px 0 0; background: var(--color-background); box-shadow: 0 -8px 30px rgba(0, 0, 0, .18); }
+.placeSheet[open] .placePanel { animation: placeUp .26s ease-out; }
+@keyframes placeUp { from { transform: translateY(100%); } }
+.placeTop { position: relative; display: flex; justify-content: flex-end; padding: var(--space-2) var(--space-3) 0; }
+.placeGrip { position: absolute; top: 8px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--color-border); }
+.placeClose { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 44px; padding: 0 var(--space-3); border: 0; border-radius: var(--button-radius); background: transparent; color: var(--color-caption); font: inherit; font-weight: 600; cursor: pointer; }
+.placeClose:hover { background: var(--color-soft); color: var(--color-heading); }
+.placeBody { display: grid; grid-auto-rows: max-content; align-content: start; gap: var(--space-3); overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--space-5) calc(var(--space-6) + env(safe-area-inset-bottom, 0px)); }
+.placeBody p, .highlightPrint p { margin: 0; }
+.placeEyebrow { margin-top: var(--space-2) !important; color: var(--color-primary); font-family: var(--font-label); font-size: var(--text-sm); font-weight: 600; letter-spacing: .02em; }
+.placeTitle { margin: 0; color: var(--color-heading); font-size: var(--text-2xl, 1.625rem); line-height: 1.2; }
+.placeLead { color: var(--color-heading); font-weight: 600; }
+.placeSubhead { margin-bottom: var(--space-1) !important; color: var(--color-heading); font-weight: 700; }
+.placePoints { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.placePoints li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2); align-items: start; }
+.placePoints svg { margin-top: 3px; color: var(--color-primary); }
+.placePoints strong { color: var(--color-heading); }
+.placeNote { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-3); padding: var(--space-3) var(--space-4); border-left: 3px solid var(--color-primary); background: var(--color-soft); }
+.placeNote svg { margin-top: 2px; color: var(--color-primary); }
+.placeNote strong { color: var(--color-heading); }
+@media (min-width: 961px) {
+  .placeSheet { inset: 0 0 0 auto; width: min(34rem, 100%); height: 100dvh; max-height: 100dvh; }
+  .placePanel { height: 100%; max-height: 100dvh; border-radius: 0; box-shadow: -8px 0 30px rgba(0, 0, 0, .18); }
+  .placeSheet[open] .placePanel { animation-name: placeIn; }
+  .placeGrip { display: none; }
+}
+@keyframes placeIn { from { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .placeSheet[open] .placePanel { animation: none; } }
+
+/* Photos one after another, swiped on a phone (PlaceSheet.tsx PhotoCarousel). */
+.carousel { display: grid; gap: var(--space-2); min-width: 0; }
+.carouselTrack { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; border-radius: max(var(--radius, 0px), 12px); scrollbar-width: none; }
+.carouselTrack::-webkit-scrollbar { display: none; }
+.carouselSlide { flex: 0 0 100%; width: 100%; aspect-ratio: 4 / 3; scroll-snap-align: start; }
+.carouselTrack .carouselSlide { border-radius: 0; }
+.carouselBar { display: flex; align-items: center; justify-content: center; gap: var(--space-4); color: var(--color-caption); font-size: var(--text-sm); }
+.carouselBar button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--color-border); border-radius: var(--button-radius); background: var(--color-background); color: var(--color-heading); cursor: pointer; }
+.carouselBar button:disabled { opacity: .35; cursor: default; }
 /* Card pictures are cut-outs (no white or black box): they sit straight on the card. */
 .prepareImages { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); gap: var(--space-2); margin-top: var(--space-3); }
 .prepareImages .zoomThumb { aspect-ratio: 1; }

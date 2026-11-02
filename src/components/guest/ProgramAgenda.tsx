@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, ChevronDown, Clock3, FileText, HeartPulse, Lightbulb, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ChevronRight, Clock3, FileText, HeartPulse, Lightbulb, MapPin, Phone } from "lucide-react";
 import { localDay } from "@/lib/event-phase";
 import { parseContactPhone } from "@/lib/contact-phone";
 import { agendaByDay, duration, hasDepth, presentationPage } from "@/lib/program";
@@ -9,6 +9,7 @@ import type { AgendaItem, EventRecord } from "@/lib/types";
 import { TimeRange } from "./InvitationHero";
 import { imageSrcSet } from "./Gallery";
 import { PhotoZoom } from "./PhotoZoom";
+import { HighlightBody, HighlightThumb, PlaceSheet, highlightPhotos, isHighlight } from "./PlaceSheet";
 import { useWording } from "./language";
 import styles from "./guest.module.css";
 
@@ -24,6 +25,7 @@ function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; it
   // The photo sits beside the title; the box below holds only words.
   const deep = hasDepth(detail) && !!(detail!.teaser.trim() || detail!.did_you_know.trim() || detail!.more_story.trim());
   const photo = detail?.photo?.url ? detail.photo : null;
+  if (detail && isHighlight(detail)) return <HighlightEntry event={event} item={item} expanded={expanded} />;
   return <li>
     <div className={styles.agendaTime}><TimeRange start={item.starts_at} end={item.ends_at} timezone={event.timezone} /></div>
     <div className={styles.agendaBody}>
@@ -56,14 +58,70 @@ function AgendaEntry({ event, item, expanded = false }: { event: EventRecord; it
   </li>;
 }
 
-/** The trip's picture for one day (the handbook's DAY 1 cover), above that day's sessions. */
+/**
+ * A row whose detail is a place highlight (photos, points, a note): the row stays one line with a
+ * small picture, and "Lihat tempat" opens the whole highlight in a sheet. On the printed E-Guide
+ * (`expanded`) the highlight is shown under the row instead.
+ */
+function HighlightEntry({ event, item, expanded }: { event: EventRecord; item: AgendaItem; expanded: boolean }) {
+  const { t } = useWording();
+  const detail = event.agenda_details[item.id];
+  const length = duration(item.starts_at, item.ends_at);
+  const photo = highlightPhotos(detail)[0];
+  const heading = detail.place.trim() || item.title;
+  const eyebrow = <><TimeRange start={item.starts_at} end={item.ends_at} timezone={event.timezone} />{detail.place && ` · ${item.title}`}</>;
+  const facts = (detail.place || length) && <p className={styles.agendaFacts}>
+    {detail.place && <span><MapPin size={14} aria-hidden="true" /> {detail.place}</span>}
+    {length && <span><Clock3 size={14} aria-hidden="true" /> {[length.hours ? t("duration.hours", { n: length.hours }) : "", length.minutes ? t("duration.minutes", { n: length.minutes }) : ""].filter(Boolean).join(" ")}</span>}
+  </p>;
+  if (expanded) return <li>
+    <div className={styles.agendaTime}><TimeRange start={item.starts_at} end={item.ends_at} timezone={event.timezone} /></div>
+    <div className={styles.agendaBody}>
+      <div className={styles.agendaText}><h3>{item.title}</h3>{item.description && <p className={styles.multiline}>{item.description}</p>}{facts}</div>
+      <div className={styles.highlightPrint}><HighlightBody detail={detail} eyebrow={eyebrow} heading={heading} /></div>
+    </div>
+  </li>;
+  return <li>
+    <div className={styles.agendaTime}><TimeRange start={item.starts_at} end={item.ends_at} timezone={event.timezone} /></div>
+    <PlaceSheet detail={detail} eyebrow={eyebrow} heading={heading} trigger={open => <div className={styles.agendaBody}>
+      <div className={photo ? styles.agendaHead : styles.agendaText}>
+        <div className={styles.agendaText}>
+          <h3>{item.title}</h3>
+          {item.description && <p className={styles.multiline}>{item.description}</p>}
+          {facts}
+          <button type="button" className={styles.highlightOpen} onClick={open} aria-haspopup="dialog">
+            {t(detail.place ? "detail.openPlace" : "detail.open")}<span className="sr-only">: {heading}</span> <ChevronRight size={16} aria-hidden="true" />
+          </button>
+        </div>
+        {photo && <HighlightThumb image={photo} label={t("detail.openLabel", { name: heading })} onOpen={open} />}
+      </div>
+    </div>} />
+  </li>;
+}
+
+/**
+ * One day's opening (the handbook's DAY 1 page): its cover picture, the day's name and one-line
+ * summary, and a few tips such as what to wear and what to carry. Each part shows only when filled.
+ */
 function DayCover({ event, day }: { event: EventRecord; day: string }) {
+  const { t } = useWording();
   const cover = event.trip?.day_covers?.find(item => item.day === day);
-  if (!cover?.image.url) return null;
-  return <figure className={styles.dayCover}>
-    {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img src={cover.image.url} {...imageSrcSet(cover.image.srcset, "(max-width: 960px) 100vw, 640px")} alt={cover.image.alt} loading="lazy" referrerPolicy="no-referrer" />
-  </figure>;
+  if (!cover) return null;
+  const tips = (cover.tips ?? []).filter(tip => tip.title.trim() || tip.text.trim());
+  return <>
+    {cover.image?.url && <figure className={styles.dayCover}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={cover.image.url} {...imageSrcSet(cover.image.srcset, "(max-width: 960px) 100vw, 640px")} alt={cover.image.alt} loading="lazy" referrerPolicy="no-referrer" />
+    </figure>}
+    {(cover.title?.trim() || cover.summary?.trim()) && <div className={styles.dayIntro}>
+      {cover.title?.trim() && <h3 className={styles.dayTitle}>{cover.title}</h3>}
+      {cover.summary?.trim() && <p>{cover.summary}</p>}
+    </div>}
+    {tips.length > 0 && <ul className={styles.dayTips} aria-label={t("program.dayTips")}>{tips.map((tip, at) => <li key={at}>
+      {tip.title.trim() && <strong>{tip.title}</strong>}
+      {tip.text.trim() && <span className={styles.multiline}>{tip.text}</span>}
+    </li>)}</ul>}
+  </>;
 }
 
 /**

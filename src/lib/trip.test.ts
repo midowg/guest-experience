@@ -98,12 +98,33 @@ describe("pictures in the handbook", () => {
     const event = smTdnYogyakarta();
     const first = event.agenda[2].id;
     event.trip.day_covers = [{ day: "2026-11-05", image: picture(1) }];
-    event.prepare.items[2].images = [picture(2), { url: "", alt: "", srcset: [] }];
-    event.agenda_details[first] = { ...event.agenda_details[first], photo: picture(3) };
+    event.prepare.items[0].images = [picture(2), { url: "", alt: "", srcset: [] }];
+    event.agenda_details[first] = { ...event.agenda_details[first], photo: picture(3), photos: [picture(4), { url: "", alt: "", srcset: [] }] };
     const parsed = eventSchema.parse(prepareEvent(event));
     expect(parsed.trip.day_covers).toEqual([{ day: "2026-11-05", image: picture(1) }]);
-    expect(parsed.prepare.items[2].images).toEqual([picture(2)]);
+    expect(parsed.prepare.items[0].images).toEqual([picture(2)]);
     expect(parsed.agenda_details[first].photo).toEqual(picture(3));
+    // A highlight's extra photos keep only the filled ones.
+    expect(parsed.agenda_details[first].photos).toEqual([picture(4)]);
+  });
+  it("keeps a day's name, summary and tips without a picture, and drops an empty day", () => {
+    const event = smTdnYogyakarta();
+    const empty = { url: "", alt: "", srcset: [] };
+    event.trip.day_covers = [
+      { day: "2026-11-05", image: empty, title: "Sugeng Rawuh", summary: "Kereta dari Jakarta.", tips: [{ title: "Pakaian hari ini", text: "Santai." }, { title: " ", text: "" }] },
+      { day: "2026-11-06", image: empty, title: "", summary: "", tips: [] },
+    ];
+    const parsed = eventSchema.parse(prepareEvent(event));
+    expect(parsed.trip.day_covers).toEqual([{ day: "2026-11-05", image: empty, title: "Sugeng Rawuh", summary: "Kereta dari Jakarta.", tips: [{ title: "Pakaian hari ini", text: "Santai." }] }]);
+  });
+  it("keeps a place highlight's points, note and map link, and drops empty points", () => {
+    const event = smTdnYogyakarta();
+    const first = event.agenda[4].id;
+    event.agenda_details[first] = { ...event.agenda_details[first], points: [{ title: "Pasar sore", text: "Menjelang petang." }, { title: "", text: " " }], note: "Tetap dekat pemandu.", maps_url: "https://maps.app.goo.gl/x" };
+    const parsed = eventSchema.parse(prepareEvent(event));
+    expect(parsed.agenda_details[first].points).toEqual([{ title: "Pasar sore", text: "Menjelang petang." }]);
+    expect(parsed.agenda_details[first].note).toBe("Tetap dekat pemandu.");
+    expect(parsed.agenda_details[first].maps_url).toBe("https://maps.app.goo.gl/x");
   });
   it("asks for a description of every picture", () => {
     const event = smTdnYogyakarta();
