@@ -193,31 +193,45 @@
 .savedHint { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-4); font-size: var(--text-sm); color: var(--color-success); }
 /* Room at the foot of the page for the fixed back-to-top disc, which is at its most visible
    here: without it the button would sit on top of the footer's own "kembali ke atas" link. */
-.closing { background: var(--color-background); border-top: var(--border); padding-top: var(--space-8); padding-bottom: calc(var(--space-7) + env(safe-area-inset-bottom, 0px)); }
+.closing { background: var(--color-background); border-top: var(--border); padding-top: var(--space-7); padding-bottom: calc(var(--space-7) + env(safe-area-inset-bottom, 0px)); }
 .closingText { max-width: var(--reading); font-size: clamp(1.5rem, 2.75vw, 2.5rem); line-height: 1.35; color: var(--color-primary); margin-bottom: var(--space-5); }
 .organizer { margin-bottom: var(--space-6); max-width: var(--reading); }
 .organizer p { margin: 0; }
 /* Werkudara Group at the foot of the page (WerkudaraFooter.tsx), as on werkudara.com. */
-.wkFooter { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); margin-top: var(--space-6); }
+.wkFooter { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); margin-top: var(--space-6); }
+/* Nothing above it (no closing words, no review button): the footer's own top space is enough. */
+.wkFooter:first-child { margin-top: 0; }
+.wkMain { display: grid; gap: var(--space-3); align-content: start; }
 .wkBrand { display: flex; align-items: center; gap: var(--space-3); }
 .wkBrand img { width: 3.5rem; height: 3.5rem; object-fit: contain; }
 .wkBrand p { margin: 0; }
 .wkName { margin-top: 2px !important; font-family: var(--font-heading); font-weight: var(--heading-weight, 700); font-size: var(--text-lg); color: var(--color-heading, var(--color-text)); }
-.wkAddress { justify-self: start; display: inline-flex; align-items: flex-start; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text); text-decoration: none; }
-.wkAddress svg { flex-shrink: 0; margin-top: 3px; color: var(--color-caption); }
-.wkAddress:hover span { text-decoration: underline; }
-/* Email, phones and website as text links, close together; they wrap onto a new line when needed. */
-.wkContacts { display: flex; flex-wrap: wrap; gap: 0 var(--space-5); margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); }
-.wkContacts li { display: flex; align-items: center; }
-.wkContacts a { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; color: var(--color-text); font-weight: 600; text-decoration: none; }
-.wkContacts a svg { color: var(--color-caption); }
-.wkContacts a:hover { color: var(--color-primary); text-decoration: underline; }
-.wkSocial { display: flex; gap: var(--space-2); }
+.wkAddress { justify-self: start; display: inline-flex; align-items: flex-start; gap: var(--space-2); min-height: 44px; font-size: var(--text-sm); color: var(--color-text); text-decoration: none; }
+.wkAddress svg { flex-shrink: 0; margin-top: 3px; color: var(--color-primary); }
+/* Shown, not only on hover: on a phone it is the only sign that the address opens a map. */
+.wkMaps { display: block; margin-top: 2px; color: var(--color-primary); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.wkAddress:hover .wkMaps { text-decoration-thickness: 2px; }
+/* Each contact: an icon, a small label (Email, Telepon kantor, …) and the address or number. */
+.wkContacts { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.wkContacts a { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); align-items: center; min-height: 44px; padding-block: var(--space-1); color: var(--color-text); text-decoration: none; }
+.wkIcon { grid-row: span 2; display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--button-radius); background: var(--color-soft); color: var(--color-primary); }
+.wkLabel { font-size: .75rem; line-height: 1.2; color: var(--color-caption); }
+.wkValue { font-size: var(--text-sm); font-weight: 600; line-height: 1.3; color: var(--color-heading, var(--color-text)); }
+.wkContacts a:hover .wkValue { color: var(--color-primary); text-decoration: underline; }
+.wkSocial { display: flex; gap: var(--space-2); align-self: start; }
 .wkSocial a { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--color-border); border-radius: var(--button-radius); color: var(--color-heading, var(--color-text)); }
 .wkSocial a:hover { border-color: var(--color-primary); color: var(--color-primary); }
+/* A wide screen: the mark and office, the contacts, and the social pages side by side. */
+@media (min-width: 900px) {
+  .wkFooter { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) auto; column-gap: var(--space-7); align-items: start; }
+  .wkFooter > .organizer { grid-column: 1 / -1; margin-bottom: 0; }
+}
+/* Two by two only where both columns hold a whole number or address without breaking it. */
+@media (min-width: 1200px) {
+  .wkContacts { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-5); }
+}
 .organizerName { margin-top: var(--space-1) !important; font-weight: 700; color: var(--color-heading, var(--color-text)); }
-.footerLine { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); border-top: var(--border); margin-top: var(--space-8); padding-block: var(--space-5); font-size: var(--text-sm); }
-.footerLine a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; }
+.footerLine { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); border-top: var(--border); margin-top: var(--space-6); padding-block: var(--space-5); color: var(--color-caption); font-size: var(--text-sm); }
 /* A soft arrival for sections still below the fold. Only script applies .revealPending, and
    only when motion is welcome, so markup rendered without JavaScript carries neither class and
    every section is visible at full opacity. The shift is small on purpose: 12px reads as the

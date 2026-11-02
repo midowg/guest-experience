@@ -277,7 +277,8 @@ function ExperienceBody({ event, preview = false, invitation, phase = "before", 
             <ButtonLink variant="secondary" href={event.review_url} target="_blank" rel="noopener noreferrer">{event.review_button_label || t("after.review.button")} <ArrowUpRight size={17} aria-hidden="true" /><span className="sr-only">{t("common.newTab")}</span></ButtonLink>
           </>}
           <WerkudaraFooter organizer={event.organizer} />
-          <div className={styles.footerLine}><span>{t("footer.copyright", { n: new Date().getFullYear() })}</span><span>{t("footer.brand")}</span><a href="#event-content" onClick={focusAnchor}>{t("nav.top")} <ArrowUp size={15} aria-hidden="true" /></a></div>
+          {/* One line, without its own "back to top": the floating button does that on every page (revision 2 Nov). */}
+          <div className={styles.footerLine}><span>{t("footer.copyright", { n: new Date().getFullYear() })}</span></div>
         </div>
       </footer>
     </main>

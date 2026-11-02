@@ -42,7 +42,7 @@ it("puts the client's logo in the header and names Werkudara in the footer", () 
   expect(screen.getByRole("link", { name: /^Logo PT Surya Madistrindo — / })).toBeTruthy();
   expect(screen.getByText("Diselenggarakan oleh")).toBeTruthy();
   expect(screen.getByText("Werkudara Group")).toBeTruthy();
-  expect(screen.getByText("Journey by Werkudara Group")).toBeTruthy();
+  expect(screen.getByText(`© ${new Date().getFullYear()} Werkudara Group · Journey`)).toBeTruthy();
 });
 
 it("opens a place highlight from its row: photos one after another, the story, points and note", async () => {
@@ -109,11 +109,18 @@ it("ends with Werkudara Group as on werkudara.com: one short address, email and 
   const footer = document.querySelector("footer")!;
   expect(within(footer).getByText("Jl. Bhinneka No. 9, Condongcatur, Sleman, Yogyakarta")).toBeTruthy();
   expect(within(footer).queryByText(/Head Office|Puri Candra Asri/)).toBeNull();
-  expect(within(footer).getByRole("link", { name: "Email: info@werkudara.com" }).getAttribute("href")).toBe("mailto:info@werkudara.com");
-  expect(within(footer).getByRole("link", { name: "Telepon kantor: +62 274-2832-999" }).getAttribute("href")).toBe("tel:+622742832999");
+  // The address says it opens a map, without needing a hover.
+  expect(within(footer).getByText("Buka di Maps")).toBeTruthy();
+  expect(within(footer).getByRole("link", { name: /^Email\W+info@werkudara\.com$/ }).getAttribute("href")).toBe("mailto:info@werkudara.com");
+  expect(within(footer).getByRole("link", { name: /^Telepon kantor\W+\+62 274-2832-999$/ }).getAttribute("href")).toBe("tel:+622742832999");
+  expect(within(footer).getByRole("link", { name: /^Telepon seluler\W+\+62 811-2546-001$/ }).getAttribute("href")).toBe("tel:+628112546001");
+  // Each number has its own visible label, so the two are told apart.
+  expect(within(footer).getByText("Telepon kantor")).toBeTruthy();
+  expect(within(footer).getByText("Telepon seluler")).toBeTruthy();
   expect(within(footer).getByRole("link", { name: /Instagram/ })).toBeTruthy();
-  expect(within(footer).getByText("+62 811-2546-001")).toBeTruthy();
-  expect(within(footer).getByText(`© ${new Date().getFullYear()} Werkudara Group. Hak cipta dilindungi.`)).toBeTruthy();
+  expect(within(footer).getByText(`© ${new Date().getFullYear()} Werkudara Group · Journey`)).toBeTruthy();
+  // Back to the top is the floating button's job, not the footer's.
+  expect(within(footer).queryByRole("link", { name: /Kembali ke atas/ })).toBeNull();
 });
 
 it("shows a photo beside the introduction that opens full size", () => {

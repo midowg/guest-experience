@@ -315,7 +315,7 @@ export const id = {
   "footer.callOffice": "Telepon kantor",
   "footer.callMobile": "Telepon seluler",
   "footer.social": "Media sosial Werkudara Group",
-  "footer.copyright": "© {n} Werkudara Group. Hak cipta dilindungi.",
+  "footer.copyright": "© {n} Werkudara Group · Journey",
   "detail.close": "Tutup",
   "detail.openPlace": "Lihat tempat",
   "detail.open": "Lihat detail",
@@ -326,6 +326,8 @@ export const id = {
   "photo.next": "Foto berikutnya",
   "photo.count": "{n} dari {total}",
   "program.dayTips": "Tips hari ini",
+  "footer.website": "Situs web",
+  "footer.maps": "Buka di Maps",
 } as const;
 
 export type WordKey = keyof typeof id;
@@ -642,10 +644,10 @@ export const en: Record<WordKey, string> = {
   "footer.managedBy": "Managed by",
   "footer.contact": "Contact us",
   "footer.email": "Email",
-  "footer.callOffice": "Call the office",
-  "footer.callMobile": "Call mobile",
+  "footer.callOffice": "Office phone",
+  "footer.callMobile": "Mobile phone",
   "footer.social": "Werkudara Group on social media",
-  "footer.copyright": "© {n} Werkudara Group. All rights reserved.",
+  "footer.copyright": "© {n} Werkudara Group · Journey",
   "detail.close": "Close",
   "detail.openPlace": "See the place",
   "detail.open": "See details",
@@ -656,4 +658,6 @@ export const en: Record<WordKey, string> = {
   "photo.next": "Next photo",
   "photo.count": "{n} of {total}",
   "program.dayTips": "Tips for the day",
+  "footer.website": "Website",
+  "footer.maps": "Open in Maps",
 };
