@@ -71,7 +71,19 @@ export function DonationItemsBlock({ kit }: { kit: EditorKit }) {
       <Button type="button" variant="secondary" disabled={donation.items.length >= 40} onClick={addItem}><Plus size={16} aria-hidden="true" /> Tambah bantuan</Button>
       <Button type="button" variant="quiet" onClick={() => { if (!donation.items.length || window.confirm("Ganti daftar dengan pilihan bawaan? Target yang sudah diisi ikut hilang.")) set({ items: defaultDonationItems() }); }}><RotateCcw size={16} aria-hidden="true" /> Pilihan bawaan</Button>
     </div>
-    {control("donation.goodsNote", "Cara menyerahkan barang", donation.goodsNote, value => set({ goodsNote: value }), { multiline: true, maxLength: 1000, hint: "Muncul saat donatur memilih barang. Misalnya alamat titip, jam, batas tanggal, atau bahwa panitia bisa menjemput." })}
+    <div className={d.part}>
+      <h3>Titik kumpul barang</h3>
+      <p className="field-hint">Tempat donatur mengantar barang, misalnya kantor Werkudara Group. Tampil di halaman donasi sebagai kartu <em>Antar barang ke</em> dengan tombol Buka di Maps, dan di form saat donatur memilih barang.</p>
+      <div className={d.shareGrid}>
+        <label className={d.field}><span>Nama tempat</span><input className="input" value={donation.dropOff.name} maxLength={120} placeholder="Kantor Werkudara Group" onChange={change => set({ dropOff: { ...donation.dropOff, name: change.target.value } })} /></label>
+        <label className={d.field}><span>Jam antar <small>opsional</small></span><input className="input" value={donation.dropOff.hours} maxLength={150} placeholder="Senin–Jumat, 09.00–16.00" onChange={change => set({ dropOff: { ...donation.dropOff, hours: change.target.value } })} /></label>
+      </div>
+      <label className={d.field}><span>Alamat</span><textarea id="donation.dropOff.address" className="textarea" rows={2} value={donation.dropOff.address} maxLength={300} placeholder="Jl. …, Kota" onChange={change => set({ dropOff: { ...donation.dropOff, address: change.target.value } })} /></label>
+      <label className={d.field}><span>Tautan Google Maps <small>opsional</small></span><input id="donation.dropOff.mapsUrl" className="input" type="url" value={donation.dropOff.mapsUrl} maxLength={2000} placeholder="https://maps.app.goo.gl/…" onChange={change => set({ dropOff: { ...donation.dropOff, mapsUrl: change.target.value.trim() } })} /></label>
+      {kit.errors["donation.dropOff.mapsUrl"] && <p className="field-error">{kit.errors["donation.dropOff.mapsUrl"].join(" ")}</p>}
+      <p className="field-hint">Tanpa tautan, tombol Buka di Maps mencari alamatnya. Kontak untuk ditanya memakai Kontak panitia.</p>
+    </div>
+    {control("donation.goodsNote", "Catatan lain untuk barang", donation.goodsNote, value => set({ goodsNote: value }), { multiline: true, maxLength: 1000, hint: "Opsional, muncul di form di bawah titik kumpul. Misalnya batas tanggal antar, barang harus bersih dan terlipat, atau panitia bisa menjemput." })}
     <Check label="Wajib foto barang" checked={donation.goodsPhotoRequired} onChange={value => set({ goodsPhotoRequired: value })} />
     <p className="field-hint">Bila menyala, donatur harus menyertakan foto tiap barang. Foto dikecilkan di HP donatur sebelum dikirim, dan tampil di Donasi masuk saat konfirmasi.</p>
     <label className={d.field}><span>Donasi ditutup pada <small>opsional</small></span>

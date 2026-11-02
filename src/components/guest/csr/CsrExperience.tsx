@@ -8,6 +8,7 @@ import type { EventRecord } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { contactLink } from "../JourneyPanels";
 import { useGuestPage } from "../use-guest-page";
+import { DropOffCard } from "./DropOffCard";
 import { DonationForm, DONATION_MEMORY_EVENT, donationMemoryKey, parseRemembered } from "./DonationForm";
 import { garamond } from "../place-guide-font";
 import s from "./csr.module.css";
@@ -117,6 +118,8 @@ export function CsrExperience({ event, view, preview = false }: { event: EventRe
             <p>Donasi Anda: {mine.map(item => item.gift).join(", ")}. Tercatat dan {settings.delivered.at ? "sudah ikut diserahkan" : "menunggu konfirmasi panitia"}.</p>
           </div>
         </section>}
+
+        {settings.dropOff.address.trim() && settings.items.some(item => item.category !== "fund") && <DropOffCard place={settings.dropOff} contact={contactHref ? { href: contactHref.href, name: event.contact.name } : null} />}
 
         {/* Where the help goes has a page of its own; here only a button naming who receives it. */}
         {recipients.length > 0 && <button type="button" className={s.recipientsButton} onClick={() => setPage("penerima")}>

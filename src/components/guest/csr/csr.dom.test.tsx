@@ -190,3 +190,14 @@ it("asks for a WhatsApp number only when the admin wants it", () => {
   show(event({ askPhone: false }));
   expect(within(openForm()).queryByRole("textbox", { name: /Nomor WhatsApp/ })).toBeNull();
 });
+
+it("tells where to bring goods, with a map, once the committee sets an address", () => {
+  show(event({ dropOff: { name: "Kantor Werkudara Group", address: "Jl. Contoh No. 1, Sleman", mapsUrl: "", hours: "Senin–Jumat, 09.00–16.00" } }));
+  const card = screen.getByRole("region", { name: "Antar barang ke" });
+  expect(within(card).getByText("Kantor Werkudara Group")).toBeTruthy();
+  expect(within(card).getByText("Senin–Jumat, 09.00–16.00", { exact: false })).toBeTruthy();
+  expect(within(card).getByRole("link", { name: /Buka di Maps/ }).getAttribute("href")).toBe("https://www.google.com/maps/search/?api=1&query=Kantor%20Werkudara%20Group%2C%20Jl.%20Contoh%20No.%201%2C%20Sleman");
+  cleanup();
+  show();
+  expect(screen.queryByRole("region", { name: "Antar barang ke" })).toBeNull();
+});

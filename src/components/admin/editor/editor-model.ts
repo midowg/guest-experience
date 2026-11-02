@@ -217,7 +217,7 @@ const fieldBlocks: Record<string, string> = {
 };
 /** Friday Sharing's settings are split over several blocks: the second segment of donation.* decides. */
 const donationBlocks: Record<string, string> = {
-  enabled: "donation-items", items: "donation-items", goodsNote: "donation-items", closesAt: "donation-items",
+  enabled: "donation-items", items: "donation-items", goodsNote: "donation-items", dropOff: "donation-items", closesAt: "donation-items",
   accounts: "donation-pay", qris: "donation-pay", proofRequired: "donation-pay",
   style: "donation-style", askPhone: "donation-show", recipients: "donation-recipients", show: "donation-show", delivered: "donation-news", notify: "donation-news",
 };

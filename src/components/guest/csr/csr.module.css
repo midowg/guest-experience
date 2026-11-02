@@ -307,3 +307,18 @@
 .qtyRow > span { font-size: .875rem; font-weight: 800; }
 .qtyRow .qtyBox { width: 96px; }
 .qtyRow .qty button { width: 44px; }
+
+/* Titik kumpul barang: where to bring goods, with a map button. Follows the page's theme colours. */
+.dropOff { display: grid; gap: 4px; padding: var(--space-4); border-radius: 22px; background: var(--color-background); box-shadow: 0 1px 0 var(--color-border), 0 10px 30px -22px rgba(var(--scrim-rgb), .45); }
+.dropOff p { margin: 0; }
+.dropOffLabel { display: inline-flex; align-items: center; gap: 6px; color: var(--color-caption); font-size: .8125rem; font-weight: 800; }
+.dropOffLabel svg { color: var(--color-primary); }
+.dropOffName { color: var(--color-heading); font-size: 1.0625rem; font-weight: 900; }
+.dropOffAddress { line-height: 1.5; white-space: pre-line; }
+.dropOffHours { display: inline-flex; align-items: center; gap: 6px; color: var(--color-caption); font-size: .875rem; font-weight: 700; }
+.dropOffActions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+.dropOffMap, .dropOffAsk { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; padding: 0 var(--space-4); border-radius: 999px; font-size: .9375rem; font-weight: 800; text-decoration: none; }
+.dropOffMap { background: var(--color-primary); color: var(--color-on-primary); }
+.dropOffAsk { border: 1.5px solid var(--color-border); background: var(--color-background); color: var(--color-primary); }
+.goodsPick .dropOff { box-shadow: none; border: 1px solid var(--color-border); }
+.csr[data-style="rapi"] .dropOff, .csr[data-style="hangat"] .dropOff { border: 1px solid var(--color-border); box-shadow: none; }

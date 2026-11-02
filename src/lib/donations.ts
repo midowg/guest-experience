@@ -28,6 +28,9 @@ export const HAMBA_ALLAH = "Hamba Allah";
  * The looks of the donor page. Each pairs a decoration style with a colour theme (src/lib/themes.ts);
  * the page's sections, the donation form and its fields stay the same in all of them.
  */
+export type DropOff = { name: string; address: string; mapsUrl: string; hours: string };
+/** The map to open for a drop-off point: the link the committee gave, else a search for its address. */
+export const dropOffMap = (place: DropOff) => place.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([place.name, place.address].filter(Boolean).join(", "))}`;
 export type PageStyle = "ceria" | "rapi" | "hangat";
 export const pageStyles: { key: PageStyle; label: string; description: string; theme: "berbagi" | "werkudara" | "nenek" }[] = [
   { key: "ceria", label: "Ceria", description: "Toska dan jingga, konfeti, foto polaroid miring dengan stiker. Hangat untuk ajakan berbagi.", theme: "berbagi" },
@@ -60,6 +63,8 @@ export type DonationSettings = {
   goodsPhotoRequired: boolean;
   /** How to hand over goods: where to drop them off, by when, or that the committee picks them up. */
   goodsNote: string;
+  /** Where goods are dropped off (Titik kumpul barang): shown on the page and in the form once an address is set. */
+  dropOff: DropOff;
   /** After this the form closes; null keeps it open. */
   closesAt: string | null;
   /** What the public page shows. */
@@ -127,7 +132,7 @@ export const defaultNotifyTemplate = "Halo {nama},\n\nTerima kasih atas donasi A
 
 export function emptyDonation(): DonationSettings {
   return {
-    enabled: false, items: [], recipients: [], accounts: [], qris: image(), style: "ceria", askPhone: true, proofRequired: false, goodsPhotoRequired: false, goodsNote: "", closesAt: null,
+    enabled: false, items: [], recipients: [], accounts: [], qris: image(), style: "ceria", askPhone: true, proofRequired: false, goodsPhotoRequired: false, goodsNote: "", dropOff: { name: "", address: "", mapsUrl: "", hours: "" }, closesAt: null,
     show: { fundTotal: true, fundTarget: true, goods: true, donors: true, donorAmounts: false, messages: true },
     delivered: { at: null, photo: image(), note: "" },
     notify: { template: defaultNotifyTemplate, prayer: prayerSuggestions[0] },
@@ -143,7 +148,7 @@ export function normalizeDonation(donation: Partial<DonationSettings> | undefine
   return {
     ...base, ...donation,
     // Goods are counted in pieces, one unit for all so nobody has to choose; money stays in Rp.
-    items: (donation.items ?? []).map(item => item.category === "goods" ? { ...item, unit: "pcs" } : item), accounts: donation.accounts ?? [], qris: { ...image(), ...donation.qris },
+    items: (donation.items ?? []).map(item => item.category === "goods" ? { ...item, unit: "pcs" } : item), accounts: donation.accounts ?? [], qris: { ...image(), ...donation.qris }, dropOff: { ...base.dropOff, ...donation.dropOff },
     recipients: (donation.recipients ?? []).map(({ id, name, description, place, photo }) => ({ id, name, description, place, photo: { ...image(), ...photo } })),
     show: { ...base.show, ...donation.show },
     delivered: { ...base.delivered, ...donation.delivered, photo: { ...image(), ...donation.delivered?.photo } },

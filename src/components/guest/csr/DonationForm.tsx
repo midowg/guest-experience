@@ -8,6 +8,7 @@ import { compressImage, fileSize } from "@/lib/compress-image";
 import type { EventRecord } from "@/lib/types";
 import { donationInputSchema } from "@/lib/validation";
 import { submissionIdentity, type RetryIdentity } from "../form-utils";
+import { DropOffCard } from "./DropOffCard";
 import s from "./csr.module.css";
 
 /** What this browser gave, so the page can thank the donor when they come back. */
@@ -245,6 +246,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
             </div>;
           })}
           <button type="button" className={s.addGoods} disabled={rows.length >= 10} onClick={() => { touched(); setRows(current => [...current, newRow()]); }}><Plus size={18} aria-hidden="true" /> Tambah barang</button>
+          {settings.dropOff.address.trim() && <DropOffCard place={settings.dropOff} />}
           {settings.goodsNote && <p className={s.goodsNote}>{settings.goodsNote}</p>}
         </div>}
         {errors.gift && <p className="field-error">{errors.gift}</p>}

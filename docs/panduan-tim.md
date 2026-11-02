@@ -188,6 +188,8 @@ Setiap donatur memilih cara tampil: **nama**, **Hamba Allah**, atau **jangan seb
 - **Tambah manual** untuk dana tunai atau barang yang dititip langsung. Langsung tercatat sebagai diterima.
 - **Laporan dan CSV**: satu tombol menuju halaman laporan; di sana ada **Cetak** dan **Unduh CSV** (CSV memuat kolom *Diserahkan ke*).
 
+**Titik kumpul barang** (Edit halaman → Pilihan bantuan): nama tempat (mis. Kantor Werkudara Group), alamat, jam antar, dan tautan Google Maps (opsional; tanpa tautan, tombol mencari alamatnya). Setelah alamat diisi, halaman donasi menampilkan kartu *Antar barang ke* dengan tombol **Buka di Maps** dan **Tanya** (Kontak panitia), dan kartu yang sama muncul di form saat donatur memilih barang. *Catatan lain untuk barang* tetap ada untuk hal seperti batas tanggal antar.
+
 **Tema halaman** (Edit halaman → Halaman → Tema halaman): tiga gaya halaman donasi. **Ceria** (toska-jingga, konfeti, foto polaroid), **Rapi** (biru Werkudara, bersih, tanpa hiasan), dan **Hangat** (krem-cokelat, judul berhuruf kait, foto melengkung). Yang berganti hanya tampilan (warna, hiasan, bentuk foto, huruf judul); isi, urutan bagian, dan form donasi tetap sama.
 
 **Menu Pembagian** (`/admin/friday-sharing/donasi/pembagian`): daftar donasi yang sudah diterima; ketuk nama penerima (Panti A, B, C) di tiap donasi untuk menentukan ke mana diserahkan, atau pakai **Bagikan semua yang tampil ke …**. Panti yang hanya butuh dana cukup diberi donasi dana, dan sebaliknya. Kartu di atas menjumlahkan yang diterima tiap penerima dan yang belum dibagikan. Perlu migrasi `202610280001_donation_recipient.sql`.

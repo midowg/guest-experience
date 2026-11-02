@@ -174,6 +174,10 @@ const donationSchema = z.object({
   proofRequired: z.boolean().default(false),
   goodsPhotoRequired: z.boolean().default(false),
   goodsNote: text(1000).default(""),
+  dropOff: z.object({
+    name: text(120).default(""), address: text(300).default(""), hours: text(150).default(""),
+    mapsUrl: z.union([z.literal(""), httpsUrl]).default(""),
+  }).default({ name: "", address: "", mapsUrl: "", hours: "" }),
   closesAt: optionalTime.default(null),
   show: z.object({ fundTotal: z.boolean(), fundTarget: z.boolean(), goods: z.boolean(), donors: z.boolean(), donorAmounts: z.boolean(), messages: z.boolean() }).default(() => emptyDonation().show),
   delivered: z.object({ at: optionalTime.default(null), photo: plainImage.default(emptyImage), note: text(1000).default("") }).default(() => emptyDonation().delivered),
