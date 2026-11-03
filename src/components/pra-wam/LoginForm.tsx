@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
-import { praWamApi, praWamPath } from "@/lib/routes";
+import { PRA_WAM_PATH, praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import styles from "./pra-wam.module.css";
 
@@ -28,7 +28,7 @@ export function LoginForm({ next }: { next: string | null }) {
   return <form className={styles.loginCard} onSubmit={submit} noValidate>
     <div className={styles.loginHead}>
       {/* eslint-disable-next-line @next/next/no-img-element -- a small static mark */}
-      <img className={styles.loginMark} src="/werkudara-mark.png" alt="Werkudara" />
+      <img className={styles.loginMark} src={`${PRA_WAM_PATH}/icon-192.png`} alt="Werkudara" />
       <h1>WAM</h1>
       <p>Satu aplikasi untuk setiap langkah menuju WAM 2027</p>
     </div>

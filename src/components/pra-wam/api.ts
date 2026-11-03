@@ -1,4 +1,4 @@
-import { praWamPath } from "@/lib/routes";
+import { praWamApi, praWamPath } from "@/lib/routes";
 
 export type Conflict = { kind: "room" | "participants"; sameRoom?: { start: string; end: string }[]; otherRooms?: string[]; people?: string[] };
 
@@ -20,7 +20,10 @@ export async function praWamRequest<T>(url: string, init: RequestInit & { json?:
   }
   let result: { ok: boolean; data?: T; message?: string; fieldErrors?: Record<string, string[]>; conflict?: Conflict };
   try { result = await response.json(); } catch { throw new PraWamApiError("Server belum dapat memberikan jawaban. Coba lagi sebentar.", response.status); }
-  if (response.status === 401 && typeof window !== "undefined") {
+  // A 401 from signing in or from an emailed link means a wrong password or an old link: the form
+  // shows the message. From anywhere else it means the session ended.
+  const signingIn = url === praWamApi.login || url === praWamApi.resetPassword;
+  if (response.status === 401 && !signingIn && typeof window !== "undefined") {
     window.location.assign(praWamPath.login(`${window.location.pathname}${window.location.search}`));
   }
   if (!response.ok || !result.ok) throw new PraWamApiError(result.message || "Permintaan gagal. Coba lagi.", response.status, result.fieldErrors, result.conflict);

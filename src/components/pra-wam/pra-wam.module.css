@@ -253,7 +253,7 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .loginHead { display: grid; justify-items: center; gap: 8px; text-align: center; margin-bottom: 8px; }
 .loginHead h1 { margin: 8px 0 0; font-family: var(--pw-display); font-size: 32px; font-weight: 600; color: var(--pw-primary); }
 .loginHead p { margin: 0; color: var(--pw-muted); }
-.loginMark { width: 64px; height: 64px; padding: 10px; border-radius: 16px; background: #fff; border: 1px solid var(--pw-line); }
+.loginMark { width: 64px; height: 64px; border-radius: 16px; background: #fff; border: 1px solid var(--pw-line); }
 .loginNote { font-size: 13px; color: var(--pw-muted); text-align: center; margin: 0; }
 .loginNote a { font-weight: 800; text-decoration: none; }
 .passwordRow { position: relative; }
