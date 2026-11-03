@@ -15,13 +15,13 @@ export type Employee = {
   id: string; full_name: string; nickname: string; department: string; position: string; office: string;
   category: EmployeeCategory; phone: string; email: string; active: boolean;
 };
-/** One person as read from HR's sheet. */
-export type EmployeeRow = Pick<Employee, "full_name" | "nickname" | "department" | "position" | "office" | "category">;
+/** One person as read from HR's sheet; `email` only when the sheet has an EMAIL column. */
+export type EmployeeRow = Pick<Employee, "full_name" | "nickname" | "department" | "position" | "office" | "category"> & { email?: string };
 
 const text = (max: number) => z.string().trim().max(max);
 export const employeeRowSchema = z.object({
   full_name: text(150).min(2, "Nama terlalu pendek."), nickname: text(60), department: text(150), position: text(150), office: text(20),
-  category: z.enum(employeeCategories),
+  category: z.enum(employeeCategories), email: z.union([z.literal(""), z.email("Email tidak valid.").max(200)]).optional(),
 });
 export const employeeImportSchema = z.object({ rows: z.array(employeeRowSchema).min(1, "Tidak ada karyawan untuk disimpan.").max(2000) });
 export const employeePatchSchema = z.object({
@@ -61,6 +61,7 @@ export function guessCategory(position: string): EmployeeCategory {
 }
 
 const headers: Record<string, keyof Omit<EmployeeRow, "category">> = {
+  EMAIL: "email", "E-MAIL": "email", "EMAIL KANTOR": "email",
   "NAMA KARYAWAN": "full_name", "NAMA LENGKAP": "full_name", NAMA: "full_name", "NAMA PANGGILAN": "nickname", PANGGILAN: "nickname",
   DEPARTMENT: "department", DEPARTEMEN: "department", DIVISI: "department", POSITION: "position", JABATAN: "position", OFFICE: "office", KANTOR: "office", PERUSAHAAN: "office",
 };
@@ -80,15 +81,18 @@ export function employeesFromSheets(sheets: { name: string; rows: string[][] }[]
     const skipped: string[] = [];
     const seen = new Set<string>();
     for (const cells of sheet.rows.slice(headerAt + 1)) {
-      const row: Omit<EmployeeRow, "category"> = { full_name: "", nickname: "", department: "", position: "", office: "" };
+      const row: Required<Omit<EmployeeRow, "category">> = { full_name: "", nickname: "", department: "", position: "", office: "", email: "" };
       map.forEach((key, index) => { if (key && !row[key]) row[key] = (cells[index] ?? "").trim(); });
       if (row.full_name.length < 2) continue;
       const key = nameKey(row.full_name);
       if (seen.has(key)) { skipped.push(`${tidy(row.full_name)} tercantum dua kali; baris kedua dilewati.`); continue; }
       seen.add(key);
+      const email = row.email.trim().toLowerCase();
       rows.push({
         full_name: tidy(row.full_name), nickname: tidy(row.nickname), department: tidy(row.department), position: tidy(row.position),
         office: row.office.trim().toUpperCase(), category: guessCategory(row.position),
+        // A sheet email only fills an empty one later (compareImport), and only when it looks like one.
+        ...(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? { email } : {}),
       });
     }
     return { sheet: sheet.name, rows, skipped };
@@ -99,13 +103,17 @@ export function employeesFromSheets(sheets: { name: string; rows: string[][] }[]
 export type ImportChange = "baru" | "berubah" | "sama";
 const fields = ["full_name", "nickname", "department", "position", "office"] as const;
 
-/** What an import would do to each person; the category set in the admin is not overwritten. */
+/**
+ * What an import would do to each person; the category set in the admin is not overwritten, and
+ * the sheet's email only fills an empty one, so an address the admin corrected stays.
+ */
 export function compareImport(rows: EmployeeRow[], current: Employee[]): { row: EmployeeRow; change: ImportChange; changed: string[] }[] {
   const byKey = new Map(current.map(person => [nameKey(person.full_name), person]));
   return rows.map(row => {
     const known = byKey.get(nameKey(row.full_name));
     if (!known) return { row, change: "baru", changed: [] };
-    const changed = fields.filter(field => known[field] !== row[field]);
+    const changed: string[] = fields.filter(field => known[field] !== row[field]);
+    if (row.email && !known.email) changed.push("email");
     return { row, change: changed.length ? "berubah" : "sama", changed };
   });
 }

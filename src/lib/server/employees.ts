@@ -26,7 +26,8 @@ export async function listEmployees(activeOnly = false): Promise<{ employees: Em
 
 /**
  * Saves an import: new names are added, known names get the sheet's name, department, position
- * and office. What the admin set (category, phone, email, active) stays as it is.
+ * and office, and the sheet's email when theirs is still empty. What the admin set (category,
+ * phone, email, active) stays as it is.
  */
 export async function importEmployees(rows: EmployeeRow[]): Promise<{ added: number; updated: number; unchanged: number }> {
   const { employees, migrated } = await listEmployees();
@@ -38,13 +39,14 @@ export async function importEmployees(rows: EmployeeRow[]): Promise<{ added: num
     const { error } = await client.from("employees").insert(fresh);
     if (error) databaseError(error);
   }
-  const known = new Map(employees.map(person => [person.full_name.trim().replace(/\s+/g, " ").toUpperCase(), person.id]));
+  const known = new Map(employees.map(person => [person.full_name.trim().replace(/\s+/g, " ").toUpperCase(), person]));
   const now = new Date().toISOString();
   const changed = plan.filter(item => item.change === "berubah");
   for (const { row } of changed) {
-    const id = known.get(row.full_name.trim().replace(/\s+/g, " ").toUpperCase());
-    if (!id) continue;
-    const { error } = await client.from("employees").update({ full_name: row.full_name, nickname: row.nickname, department: row.department, position: row.position, office: row.office, updated_at: now }).eq("id", id);
+    const person = known.get(row.full_name.trim().replace(/\s+/g, " ").toUpperCase());
+    if (!person) continue;
+    const email = row.email && !person.email ? { email: row.email } : {};
+    const { error } = await client.from("employees").update({ full_name: row.full_name, nickname: row.nickname, department: row.department, position: row.position, office: row.office, ...email, updated_at: now }).eq("id", person.id);
     if (error) databaseError(error);
   }
   return { added: fresh.length, updated: changed.length, unchanged: plan.length - fresh.length - changed.length };

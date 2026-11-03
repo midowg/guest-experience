@@ -104,3 +104,22 @@ describe("compareImport", () => {
     expect(compareImport([{ ...row, full_name: "Contoh Tiga" }], [known])[0].change).toBe("baru");
   });
 });
+
+describe("email from the sheet", () => {
+  const sheet = { name: "Karyawan", rows: [
+    ["NO", "NAMA KARYAWAN", "NAMA PANGGILAN", "DEPARTMENT", "POSITION", "OFFICE", "EMAIL"],
+    ["1", "CONTOH SATU", "SATU", "BAS", "STAFF", "WNS", " Satu@Werkudara.com "],
+    ["2", "CONTOH DUA", "DUA", "BAS", "STAFF", "WNS", "bukan email"],
+  ] };
+  it("reads a valid email in lower case and leaves out one that is not", () => {
+    const rows = employeesFromSheets([sheet]).rows;
+    expect(rows[0].email).toBe("satu@werkudara.com");
+    expect(rows[1]).not.toHaveProperty("email");
+  });
+  it("only fills an empty email", () => {
+    const known: Employee = { id: "e1", full_name: "Contoh Satu", nickname: "Satu", department: "BAS", position: "Staff", office: "WNS", category: "karyawan", phone: "", email: "", active: true };
+    const row = { full_name: "Contoh Satu", nickname: "Satu", department: "BAS", position: "Staff", office: "WNS", category: "karyawan" as const, email: "satu@werkudara.com" };
+    expect(compareImport([row], [known])[0]).toMatchObject({ change: "berubah", changed: ["email"] });
+    expect(compareImport([row], [{ ...known, email: "lain@werkudara.com" }])[0].change).toBe("sama");
+  });
+});

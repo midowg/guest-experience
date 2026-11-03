@@ -110,3 +110,31 @@ export const staffApi = (id?: string, query: Record<string, string> = {}) => {
   const search = new URLSearchParams(query).toString();
   return `/api/admin/staff${id ? `/${id}` : ""}${search ? `?${search}` : ""}`;
 };
+
+/*
+ * Pra WAM (and later WAM): Werkudara's own app for the meetings towards the Annual Meeting. It is
+ * not an invitation, so it has no event code: a fixed address, its own sign-in per person, and
+ * its own tables (pw_*). The super admin sets up accounts under /admin/super/pra-wam.
+ */
+export const PRA_WAM_PATH = "/pra-wam";
+export const praWamPath = {
+  home: PRA_WAM_PATH,
+  login: (next?: string) => `${PRA_WAM_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
+  appraisal: (date?: string) => `${PRA_WAM_PATH}/appraisal${date ? `?tanggal=${date}` : ""}`,
+  /** The booking form; with a booking id it edits that booking. */
+  book: (query: { ubah?: string; tanggal?: string; ruang?: string; mulai?: string } = {}) => {
+    const search = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString();
+    return `${PRA_WAM_PATH}/appraisal/pesan${search ? `?${search}` : ""}`;
+  },
+};
+export const praWamApi = {
+  login: "/api/pra-wam/masuk",
+  logout: "/api/pra-wam/keluar",
+  /** Appraisal bookings: the day's schedule, a new booking, or one booking by id. */
+  bookings: (id?: string, query: Record<string, string> = {}) => {
+    const search = new URLSearchParams(query).toString();
+    return `/api/pra-wam/appraisal${id ? `/${id}` : ""}${search ? `?${search}` : ""}`;
+  },
+};
+export const PRA_WAM_ADMIN = "/admin/super/pra-wam";
+export const praWamAccountsApi = "/api/admin/pra-wam/akun";

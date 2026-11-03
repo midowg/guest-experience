@@ -10,7 +10,7 @@ import styles from "@/components/admin/admin.module.css";
 
 type Plan = { sheet: string; skipped: string[]; migrated: boolean; plan: { row: EmployeeRow; change: ImportChange; changed: string[] }[] };
 const changeLabels: Record<ImportChange, string> = { baru: "Baru", berubah: "Diperbarui", sama: "Tetap" };
-const fieldLabels: Record<string, string> = { full_name: "nama", nickname: "panggilan", department: "departemen", position: "jabatan", office: "office" };
+const fieldLabels: Record<string, string> = { full_name: "nama", nickname: "panggilan", department: "departemen", position: "jabatan", office: "office", email: "email" };
 
 /** Phone and email, the details an app may need that HR's sheet does not have. */
 function ContactForm({ person, busy, onSave, onCancel }: { person: Employee; busy: boolean; onSave: (patch: Pick<Employee, "nickname" | "phone" | "email">) => void; onCancel: () => void }) {

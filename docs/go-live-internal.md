@@ -34,6 +34,7 @@ Terapkan migrasi yang belum ada, **urut nama berkas**, lewat Supabase Dashboard 
 | `202610260001_eguide_publish.sql` | E-Guide (buku panduan tamu) bisa dipublikasikan tanpa penyelenggara, pengantar, dan lokasi; templat "E-Guide destinasi" boleh ditampilkan untuk admin biasa |
 | `202610270003_donations.sql` | Donasi CSR: tabel donasi, bucket privat `bukti-donasi` untuk bukti transfer, dan halaman CSR bisa dipublikasikan tanpa lokasi. Sebelum migrasi ini, halaman CSR tampil tanpa tombol Donasi dan tab Donasi masuk menampilkan "menunggu migrasi" |
 | `202610280001_donation_recipient.sql` | Friday Sharing: kolom penerima di tiap donasi, untuk menu **Donasi → Pembagian** dan laporan per panti. Sebelum migrasi ini, Donasi masuk tetap berjalan, hanya Pembagian yang menampilkan "menunggu migrasi" |
+| `202611040001_pra_wam_appraisal.sql` | Pra WAM tahap 0: akun per orang (`pw_accounts`), 7 ruang dari Werkudara Room Booking (`pw_rooms`, area belum bisa dipesan), dan booking ruang appraisal dengan penjaga bentrok di database. Butuh `202611030001_employees.sql` lebih dulu. Sebelum migrasi ini, `/pra-wam` menampilkan "menunggu migrasi" |
 
 Cek hasilnya (hanya membaca). Semua kolom harus `true`:
 
