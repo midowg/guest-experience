@@ -16,7 +16,7 @@
   .phoneOnly { display: none !important; }
   .desktopOnly { display: revert; }
   .wide.wide { justify-self: stretch; justify-content: center; }
-  .greet.greet { font-size: 34px; margin-top: 0; }
+  .greet.greet { font-size: 34px; margin-top: 0; color: var(--pw-primary); }
 }
 
 /* Small pieces shared by both screens */

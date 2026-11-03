@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, ChevronRight, Eye, EyeOff, Lock } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { passwordRules } from "@/lib/pra-wam/password";
@@ -76,7 +76,6 @@ export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boo
 }
 
 const desktop = "(min-width: 1024px)";
-const watchDesktop = (change: () => void) => { const query = window.matchMedia(desktop); query.addEventListener("change", change); return () => query.removeEventListener("change", change); };
 
 /**
  * The password part of Profil. On a phone a "Ganti password" row that opens the form (Penpot
@@ -85,7 +84,15 @@ const watchDesktop = (change: () => void) => { const query = window.matchMedia(d
  */
 export function PasswordPanel({ firstTime }: { firstTime: boolean }) {
   const [open, setOpen] = useState(firstTime);
-  const wide = useSyncExternalStore(watchDesktop, () => window.matchMedia(desktop).matches, () => false);
+  // Known only in the browser: phone layout first, then the desktop card once the width is read.
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia(desktop);
+    const update = () => setWide(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
   const warning = firstTime && <Notice tone="warning">Kamu masih memakai password awal. Sebaiknya ganti sekarang.</Notice>;
   if (wide) return <section id="password" className={`${styles.card} ${own.security}`} aria-labelledby="keamanan">
     <div className={own.securityHead}>
