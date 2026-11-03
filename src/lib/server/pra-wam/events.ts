@@ -33,3 +33,21 @@ export async function updateEvent(id: string, patch: { status: PraWamEvent["stat
   if (error) { if (notMigrated(error)) throw new ServiceError(503, "Acara menunggu migrasi 202611040003_pra_wam_events_units.sql."); databaseError(error); }
   if (!data) throw new ServiceError(404, "Acara tidak ditemukan.");
 }
+
+export type Phase = { kind: "pra_wam" | "wam"; name: string; startDate: string; endDate: string; daysToWam: number | null };
+
+/**
+ * Which phase of the one WAM app is running today: the Pra WAM weeks or WAM itself, from the
+ * events' dates. Before migration 202611040003 it follows the calendar (Pra WAM to 23 Des 2026).
+ */
+export async function currentPhase(today: string): Promise<Phase | null> {
+  const { events, migrated } = await listEvents();
+  const list = migrated ? events : [
+    { kind: "pra_wam" as const, name: "Pra WAM", startDate: "2026-10-28", endDate: "2026-12-23", status: "aktif" as const },
+    { kind: "wam" as const, name: "WAM 2027", startDate: "2027-01-04", endDate: "2027-01-07", status: "disiapkan" as const },
+  ];
+  const wam = list.find(event => event.kind === "wam");
+  const daysToWam = wam && today < wam.startDate ? Math.round((Date.parse(`${wam.startDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000) : null;
+  const now = list.find(event => event.startDate <= today && today <= event.endDate) ?? (wam && today < wam.startDate ? list.find(event => event.kind === "pra_wam") : undefined);
+  return now ? { kind: now.kind, name: now.kind === "pra_wam" ? "Pra WAM" : now.name, startDate: now.startDate, endDate: now.endDate, daysToWam } : null;
+}

@@ -124,6 +124,6 @@ Pengumuman dan kalender .ics, pratinjau tautan WhatsApp (OG image), QR undangan,
 
 Tautan "Lupa password" dikirim Supabase Auth ke email masing-masing orang. Sebelum dipakai:
 
-1. Supabase → Authentication → URL Configuration: tambahkan `https://<domain>/pra-wam/atur-password` (dan `http://localhost:3000/pra-wam/atur-password` untuk uji lokal) ke Redirect URLs.
+1. Supabase → Authentication → URL Configuration: tambahkan `https://<domain>/wam/reset-password` (dan `http://localhost:3000/wam/reset-password` untuk uji lokal) ke Redirect URLs.
 2. Supabase → Authentication → SMTP: isi SMTP alamat pengirim kantor. SMTP bawaan Supabase hanya untuk uji dan sangat dibatasi.
 3. Kolom email di Data karyawan harus berisi kotak surat yang benar-benar aktif.

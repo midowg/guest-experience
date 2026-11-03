@@ -1,0 +1,21 @@
+/* Appraisal-only pieces on top of pra-wam.module.css (whose .app sets the --pw-* tokens). */
+.gap { margin-bottom: 12px; }
+.stack { display: grid; gap: 4px; min-width: 0; }
+.stack h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 12px; font-size: 12px; font-weight: 700; color: var(--pw-muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 12px; height: 12px; border-radius: 4px; background: var(--pw-primary-soft); border-left: 3px solid var(--pw-primary); }
+.swatchMine { background: var(--pw-brass-soft); border-left-color: var(--pw-brass); }
+.swatchSession { background: var(--pw-warning-soft); border-left-color: var(--pw-warning); }
+.roomTitle { display: flex; align-items: center; gap: 6px; color: var(--pw-primary); }
+.detail { margin-top: 16px; }
+
+/* Booking form, in the look of Penpot "P9 · Ajukan ganti jadwal" */
+.formCard { display: grid; gap: 16px; }
+.formCard h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.summaryBox { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.summaryBox small { display: block; font-size: 12px; color: var(--pw-muted); font-weight: 600; }
+.summaryBox strong { font-size: 15px; }
+.counter { font-size: 12px; color: var(--pw-muted); font-weight: 600; }
+.info { display: flex; gap: 8px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 13px; font-weight: 600; }
+.info svg { flex: none; margin-top: 1px; }

@@ -2,12 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FileText, Trash2, Upload } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
-import { acceptDocuments, documentMimes, documentTypes, MAX_DOCUMENT_BYTES, sizeLabel, type DocumentMime, type PraWamDocument } from "@/lib/pra-wam/documents";
+import { acceptDocuments, documentMimes, MAX_DOCUMENT_BYTES, sizeLabel, type DocumentMime, type PraWamDocument } from "@/lib/pra-wam/documents";
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
 import styles from "./pra-wam.module.css";
+import rows from "./peserta.module.css";
 
+type Filter = "semua" | "umum" | "sesi" | "saya";
 type Props = {
   documents: PraWamDocument[];
   /** Fixed on a session's page; otherwise panitia picks one (or none, for everyone). */
@@ -15,13 +18,21 @@ type Props = {
   sessions?: { id: string; title: string }[];
   canUpload: boolean;
   storage: boolean;
+  /** Dokumen page: filter chips and groups per session, as in Penpot "P8 · Dokumen". */
+  grouped?: boolean;
+  /** To mark "Unggahan saya": the uploader names the list carries. */
+  viewerName?: string;
+  uploadLabel?: string;
 };
 
-const dateLabel = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
+const dayLabel = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso));
+const filters: { id: Filter; label: string }[] = [{ id: "semua", label: "Semua" }, { id: "umum", label: "Umum acara" }, { id: "sesi", label: "Sesi saya" }, { id: "saya", label: "Unggahan saya" }];
 
-/** Documents to open, and (when allowed) a small form to add one. */
-export function DocumentList({ documents, sessionId, sessions, canUpload, storage }: Props) {
+/** Documents to open (one row each, "Buka" on the right), and when allowed a way to add one. */
+export function DocumentList({ documents, sessionId, sessions, canUpload, storage, grouped, viewerName, uploadLabel = "Unggah dokumen" }: Props) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<Filter>("semua");
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [target, setTarget] = useState(sessionId ?? "");
@@ -46,7 +57,7 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
       const put = await fetch(start.data.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } }).catch(() => null);
       if (!put?.ok) throw new PraWamApiError("Unggahan ke penyimpanan gagal. Periksa jaringan lalu coba lagi.");
       await praWamRequest(praWamApi.documents(), { method: "POST", json: { ...agreed, key: start.data.key, token: start.data.token } });
-      setFile(null); setTitle("");
+      setFile(null); setTitle(""); setOpen(false);
       setNotice({ tone: "success", text: "Dokumen diunggah." });
       router.refresh();
     } catch (problem) { setNotice({ tone: "error", text: errorText(problem) }); }
@@ -61,30 +72,51 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
     finally { setBusy(null); }
   }
 
-  return <div className={styles.section}>
-    {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
-    {documents.length === 0 ? <p className={styles.meta}>Belum ada dokumen.</p> : <div className={styles.mine}>
-      {documents.map(document => <article key={document.id} className={styles.mineItem}>
-        <h3><a href={praWamApi.documents(document.id)} target="_blank" rel="noopener">{document.title}</a></h3>
-        <span className={styles.meta}>{documentTypes[document.mime as DocumentMime]?.label ?? "Berkas"} · {sizeLabel(document.size)} · {document.uploadedBy}, {dateLabel(document.createdAt)}</span>
-        {!sessionId && <span className={styles.meta}>{document.sessionTitle ? `Sesi: ${document.sessionTitle}` : "Untuk semua"}</span>}
-        {document.canDelete && <div className={styles.actions}><button type="button" className="button button--quiet" disabled={!!busy} onClick={() => remove(document)}>{busy === document.id ? "Menghapus…" : "Hapus"}</button></div>}
-      </article>)}
-    </div>}
+  const shown = documents.filter(document => filter === "semua" || (filter === "umum" ? !document.sessionId : filter === "sesi" ? !!document.sessionId : document.uploadedBy === viewerName));
+  const groups = grouped
+    ? [...new Map(shown.map(document => [document.sessionId ?? "", document.sessionTitle ?? "Umum acara"])).entries()]
+      .sort(([a], [b]) => (a === "" ? -1 : b === "" ? 1 : 0))
+      .map(([key, label]) => ({ key, label, items: shown.filter(document => (document.sessionId ?? "") === key) }))
+    : [{ key: "all", label: "", items: shown }];
+  const row = (document: PraWamDocument) => <div key={document.id} className={rows.docRow}>
+    <span className={styles.tile}><FileText aria-hidden /></span>
+    <span className={rows.docBody}>
+      <strong>{document.title}</strong>
+      <span className={styles.meta}>{sizeLabel(document.size)} · {!sessionId && !grouped ? (document.sessionTitle ? `sesi ${document.sessionTitle}` : "umum acara") : document.uploadedBy === viewerName ? "unggahan Anda" : document.uploadedBy} · {dayLabel(document.createdAt)}</span>
+    </span>
+    <a className={rows.docOpen} href={praWamApi.documents(document.id)} target="_blank" rel="noopener" aria-label={`Buka ${document.title}`}>Buka</a>
+    {document.canDelete && <button type="button" className={rows.docDelete} disabled={!!busy} onClick={() => remove(document)} aria-label={busy === document.id ? "Menghapus…" : `Hapus ${document.title}`}><Trash2 aria-hidden /></button>}
+  </div>;
 
-    {canUpload && (storage ? <form className={`${styles.section} ${styles.detail}`} onSubmit={upload}>
-      <h3>Unggah dokumen</h3>
-      <div><label className={styles.label} htmlFor="doc-file">Berkas</label>
-        <input id="doc-file" type="file" accept={acceptDocuments} onChange={event => choose(event.target.files?.[0] ?? null)} />
-        <p className={styles.hint}>PDF, Word, Excel, PowerPoint, JPG, atau PNG. Paling besar 25 MB.</p></div>
-      <div><label className={styles.label} htmlFor="doc-title">Judul</label>
-        <input id="doc-title" className="input" value={title} maxLength={150} onChange={event => setTitle(event.target.value)} /></div>
-      {!sessionId && sessions && <div><label className={styles.label} htmlFor="doc-session">Untuk</label>
-        <select id="doc-session" className="select" value={target} onChange={event => setTarget(event.target.value)}>
-          <option value="">Semua peserta Pra WAM</option>
-          {sessions.map(session => <option key={session.id} value={session.id}>Sesi: {session.title}</option>)}
-        </select></div>}
-      <div><Button type="submit" disabled={!!busy || !file || title.trim().length < 2}>{busy === "upload" ? "Mengunggah…" : "Unggah"}</Button></div>
-    </form> : <Notice tone="info">Penyimpanan dokumen belum disiapkan, jadi unggah belum bisa dipakai.</Notice>)}
+  return <div>
+    {grouped && <div className={rows.filters} role="group" aria-label="Saring dokumen">
+      {filters.map(item => <button key={item.id} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}
+    </div>}
+    {notice && <div style={{ marginBottom: 12 }}><Notice tone={notice.tone}>{notice.text}</Notice></div>}
+    {shown.length === 0 ? <p className={styles.meta}>Belum ada dokumen.</p> : groups.map(group => <div key={group.key}>
+      {group.label && <p className={rows.groupLabel}>{group.label}</p>}
+      <div className={rows.docList}>{group.items.map(row)}</div>
+    </div>)}
+
+    {canUpload && (storage ? <>
+      {!open && <div style={{ marginTop: 12 }}><Button type="button" variant="secondary" onClick={() => setOpen(true)}><Upload size={18} aria-hidden /> {uploadLabel}</Button></div>}
+      {open && <form className={`${styles.section} ${styles.detail} ${rows.uploadForm}`} onSubmit={upload}>
+        <h3>{uploadLabel}</h3>
+        <div><label className={styles.label} htmlFor="doc-file">Berkas</label>
+          <input id="doc-file" type="file" accept={acceptDocuments} onChange={event => choose(event.target.files?.[0] ?? null)} />
+          <p className={styles.hint}>PDF, Word, Excel, PowerPoint, JPG, atau PNG. Paling besar 25 MB.</p></div>
+        <div><label className={styles.label} htmlFor="doc-title">Judul</label>
+          <input id="doc-title" className="input" value={title} maxLength={150} onChange={event => setTitle(event.target.value)} /></div>
+        {!sessionId && sessions && <div><label className={styles.label} htmlFor="doc-session">Untuk</label>
+          <select id="doc-session" className="select" value={target} onChange={event => setTarget(event.target.value)}>
+            <option value="">Semua peserta</option>
+            {sessions.map(session => <option key={session.id} value={session.id}>Sesi: {session.title}</option>)}
+          </select></div>}
+        <div className={styles.actions}>
+          <Button type="submit" disabled={!!busy || !file || title.trim().length < 2}>{busy === "upload" ? "Mengunggah…" : "Unggah"}</Button>
+          <button type="button" className="button button--quiet" disabled={!!busy} onClick={() => setOpen(false)}>Batal</button>
+        </div>
+      </form>}
+    </> : <div style={{ marginTop: 12 }}><Notice tone="info">Penyimpanan dokumen belum disiapkan, jadi unggah belum bisa dipakai.</Notice></div>)}
   </div>;
 }

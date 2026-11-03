@@ -2,12 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock, Info } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { clockLabel, wibDate, wibTime, type Room } from "@/lib/pra-wam/appraisal";
 import { requestStatusLabels, spanLabel, type ScheduleRequest } from "@/lib/pra-wam/requests";
 import { sessionTimes } from "@/lib/pra-wam/sessions";
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
+import panel from "./panitia.module.css";
 import styles from "./pra-wam.module.css";
 
 type Props = { sessionId: string; startsAt: string; endsAt: string; rooms: Room[]; requests: ScheduleRequest[]; canAsk: boolean };
@@ -88,31 +90,46 @@ export function RequestReview({ requests }: { requests: ScheduleRequest[] }) {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  // Approving asks once more in place (Penpot "K2"): the session moves and everyone is told.
+  const [confirming, setConfirming] = useState<string | null>(null);
   async function answer(request: ScheduleRequest, approve: boolean) {
-    if (approve && !window.confirm(`Pindahkan "${request.sessionTitle}" ke ${spanLabel(request.toStartsAt, request.toEndsAt)}? Semua peserta diberi tahu.`)) return;
     setBusy(request.id); setNotice(null);
     try {
       const result = await praWamRequest(praWamApi.request(request.id), { method: "POST", json: { approve, note: notes[request.id] ?? "" } });
-      setNotice({ tone: "success", text: result.message }); router.refresh();
+      setNotice({ tone: "success", text: result.message }); setConfirming(null); router.refresh();
     } catch (problem) { setNotice({ tone: "error", text: errorText(problem) }); }
     finally { setBusy(null); }
   }
+  const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase();
+  const short = (startsAt: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(startsAt));
   return <div className={styles.section}>
     {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
-    {requests.length === 0 ? <p className={styles.meta}>Tidak ada permintaan yang menunggu.</p> : <div className={styles.mine}>
-      {requests.map(request => <article key={request.id} className={styles.mineItem}>
-        <h3>{request.sessionTitle}</h3>
-        <span className={styles.meta}>Diajukan {request.requester}</span>
-        <span>Sekarang: {spanLabel(request.fromStartsAt, request.fromEndsAt)}</span>
-        <span><strong>Usul: {spanLabel(request.toStartsAt, request.toEndsAt)}{request.toRoomName ? ` · ${request.toRoomName}` : ""}</strong></span>
-        <span className={styles.meta}>Alasan: {request.reason}</span>
-        {!request.stillCurrent && <Notice tone="warning">Jadwal sesi sudah berubah sejak diajukan. Menyetujui tidak bisa; tolak dengan catatan.</Notice>}
-        <input className="input" aria-label={`Catatan untuk ${request.requester}`} placeholder="Catatan untuk pengaju (opsional)" maxLength={1000} value={notes[request.id] ?? ""} onChange={event => setNotes({ ...notes, [request.id]: event.target.value })} />
-        <div className={styles.actions}>
-          <Button type="button" disabled={!!busy || !request.stillCurrent} onClick={() => answer(request, true)}>{busy === request.id ? "Menyimpan…" : "Setujui dan pindahkan"}</Button>
-          <Button type="button" variant="secondary" disabled={!!busy} onClick={() => answer(request, false)}>Tolak</Button>
+    {requests.length === 0 ? <p className={styles.meta}>Tidak ada permintaan yang menunggu.</p> : requests.map(request => <article key={request.id} className={panel.request}>
+      <div className={panel.who}>
+        <span className={panel.avatar} aria-hidden>{initials(request.requester)}</span>
+        <span><strong>{request.requester}</strong><small>{request.sessionTitle}</small></span>
+        <span className={`${panel.statusPill} ${panel.live}`}><Clock aria-hidden />Diajukan</span>
+      </div>
+      <div className={panel.compare}>
+        <span><small>Semula</small><strong>{short(request.fromStartsAt)}</strong></span>
+        <ArrowRight size={20} aria-hidden />
+        <span><small>Usulan</small><strong>{short(request.toStartsAt)}</strong>{request.toRoomName && <small>{request.toRoomName}</small>}</span>
+      </div>
+      <p className={panel.quote}>&ldquo;{request.reason}&rdquo;</p>
+      {request.stillCurrent
+        ? <ul className={panel.checks}><li className={panel.ok}><CheckCircle2 aria-hidden /><span>Jadwal sesi belum berubah sejak diajukan</span></li><li className={panel.wait}><Info aria-hidden /><span>Ruang dicek saat disetujui; bila terpakai, persetujuan ditolak</span></li></ul>
+        : <ul className={panel.checks}><li className={panel.no}><AlertTriangle aria-hidden /><span>Jadwal sesi sudah berubah sejak diajukan. Tolak dengan catatan.</span></li></ul>}
+      <input className="input" aria-label={`Catatan untuk ${request.requester}`} placeholder="Catatan untuk pengaju (opsional)" maxLength={1000} value={notes[request.id] ?? ""} onChange={event => setNotes({ ...notes, [request.id]: event.target.value })} />
+      {confirming === request.id ? <div className={panel.confirm}>
+        <span>Jadwal sesi berubah ke {spanLabel(request.toStartsAt, request.toEndsAt)} dan semua peserta sesi menerima notifikasi. Lanjutkan?</span>
+        <div className={panel.actionsCell}>
+          <Button type="button" variant="secondary" disabled={!!busy} onClick={() => setConfirming(null)}>Batal</Button>
+          <Button type="button" disabled={!!busy} onClick={() => answer(request, true)}>{busy === request.id ? "Menyimpan…" : "Ya, setujui"}</Button>
         </div>
-      </article>)}
-    </div>}
+      </div> : <div className={styles.actions}>
+        <Button type="button" disabled={!!busy || !request.stillCurrent} onClick={() => setConfirming(request.id)}>Setujui</Button>
+        <Button type="button" variant="secondary" disabled={!!busy} onClick={() => answer(request, false)}>Tolak</Button>
+      </div>}
+    </article>)}
   </div>;
 }

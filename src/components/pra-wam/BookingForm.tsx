@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, ButtonLink, Notice } from "@/components/ui";
+import { DoorOpen, Info, Send } from "lucide-react";
+import { Button, Notice } from "@/components/ui";
 import { appraisalRules, bookingProblems, clockLabel, dayLabel, overlaps, slotTimes, titleSuggestions, wibDate, wibInstant, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError, type Conflict } from "./api";
+import own from "./appraisal.module.css";
 import styles from "./pra-wam.module.css";
 
 /** A chip in the participant picker: a department or BU and its people. */
@@ -17,9 +19,12 @@ type Props = {
 
 const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
 const span = (booking: Pick<Booking, "startsAt" | "endsAt">) => `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`;
+const chipDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+const chipDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 
 /**
- * Pesan ruang appraisal. Rooms show at once whether they are free at the chosen hours; the server
+ * Pesan ruang appraisal, as cards in the look of Penpot's "P9 · Ajukan ganti jadwal" (the page
+ * adds the back row and title). Rooms show at once whether they are free at the chosen hours; the server
  * still has the last word, and when someone else saved first the form keeps everything that was
  * typed and offers the nearest free hour or another room.
  */
@@ -42,7 +47,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   useEffect(() => {
     if (draft.date === loadedDate) return;
     let stale = false;
-    praWamRequest<{ bookings: Booking[] }>(praWamApi.bookings(undefined, { tanggal: draft.date }))
+    praWamRequest<{ bookings: Booking[] }>(praWamApi.bookings(undefined, { date: draft.date }))
       .then(result => { if (!stale) { setBookings(result.data.bookings); setLoadedDate(draft.date); } })
       .catch(problem => { if (!stale) setError(errorText(problem)); });
     return () => { stale = true; };
@@ -89,7 +94,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     } catch (problem) {
       if (problem instanceof PraWamApiError && problem.conflict) {
         setConflict({ ...problem.conflict, message: problem.message });
-        if (problem.conflict.kind === "room") praWamRequest<{ bookings: Booking[] }>(praWamApi.bookings(undefined, { tanggal: draft.date })).then(result => setBookings(result.data.bookings)).catch(() => undefined);
+        if (problem.conflict.kind === "room") praWamRequest<{ bookings: Booking[] }>(praWamApi.bookings(undefined, { date: draft.date })).then(result => setBookings(result.data.bookings)).catch(() => undefined);
       } else if (problem instanceof PraWamApiError && problem.fieldErrors) {
         setFieldErrors(Object.fromEntries(Object.entries(problem.fieldErrors).map(([key, list]) => [key, list[0]])));
         setError(problem.message);
@@ -100,16 +105,9 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
   const roomName = (id: string) => rooms.find(room => room.id === id)?.name ?? "Ruang";
   return <form className={styles.form} onSubmit={event => { event.preventDefault(); void save(); }} noValidate>
-    <div className={styles.head}>
-      <div>
-        <p className={styles.kicker}>Appraisal &amp; 1-on-1</p>
-        <h1>{editId ? "Ubah booking" : "Pesan ruang"}</h1>
-      </div>
-      <ButtonLink variant="secondary" href={praWamPath.appraisal(draft.date)}>Lihat jadwal ruang</ButtonLink>
-    </div>
     {error && <Notice tone="error">{error}</Notice>}
 
-    <section className={`${styles.card} ${styles.section}`} aria-labelledby="kegiatan">
+    <section className={`${styles.card} ${own.formCard}`} aria-labelledby="kegiatan">
       <h2 id="kegiatan">Kegiatan</h2>
       <div className={styles.suggest}>
         <label className={styles.label} htmlFor="title">Nama kegiatan</label>
@@ -126,15 +124,15 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       <div>
         <label className={styles.label} htmlFor="description">Deskripsi <span className={styles.meta}>(opsional)</span></label>
         <textarea id="description" className="textarea" rows={3} maxLength={500} value={draft.description} onChange={event => set({ description: event.target.value })} />
-        <p className={styles.hint}>{draft.description.length}/500 · Hanya terlihat oleh kamu dan partisipan.</p>
+        <p className={styles.hint}><span className={own.counter}>{draft.description.length}/500</span> · Hanya terlihat oleh kamu, partisipan, dan panitia.</p>
       </div>
     </section>
 
-    <section className={`${styles.card} ${styles.section}`} aria-labelledby="waktu">
+    <section className={`${styles.card} ${own.formCard}`} aria-labelledby="waktu">
       <h2 id="waktu">Tanggal dan jam</h2>
       <div className={styles.dates} role="group" aria-label="Tanggal">
-        {dates.map(day => <button key={day} type="button" className={styles.chip} aria-pressed={day === draft.date} onClick={() => set({ date: day })}>
-          {day === wibDate(now) ? "Hari ini" : dayLabel(day)}
+        {dates.map(day => <button key={day} type="button" className={`${styles.chip} ${styles.chipStack}`} aria-pressed={day === draft.date} onClick={() => set({ date: day })}>
+          {chipDay(day)}<small>{chipDate(day)}{day === wibDate(now) ? " · hari ini" : ""}</small>
         </button>)}
       </div>
       {fieldErrors.date && <p className={styles.error}>{fieldErrors.date}</p>}
@@ -160,23 +158,26 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       <p className={styles.hint}>Jam operasional {clockLabel(appraisalRules.open)}–{clockLabel(appraisalRules.close)}, paling lama 4 jam.</p>
     </section>
 
-    <section className={`${styles.card} ${styles.section}`} aria-labelledby="ruang">
+    <section className={`${styles.card} ${own.formCard}`} aria-labelledby="ruang">
       <h2 id="ruang">Ruang</h2>
       <div className={styles.rooms}>
         {rooms.map(room => {
           const taken = takenBy(room);
-          return <button key={room.id} type="button" className={styles.roomOption} aria-pressed={draft.roomId === room.id} disabled={!!taken} onClick={() => set({ roomId: room.id })}>
-            <strong>{room.name}</strong>
-            {taken ? <span className={`${styles.status} ${styles.busy}`}>Dipakai {taken.bookedBy.name}, {span(taken)}</span>
-              : <span className={`${styles.status} ${styles.free}`}>Kosong {clockLabel(draft.start)}–{clockLabel(draft.end)}</span>}
-            <span className={styles.meta}>{room.capacity ? `Kapasitas ${room.capacity} orang` : "Kapasitas belum diisi"}</span>
+          return <button key={room.id} type="button" className={`${styles.roomOption} ${styles.row}`} style={{ display: "flex" }} aria-pressed={draft.roomId === room.id} disabled={!!taken} onClick={() => set({ roomId: room.id })}>
+            <span className={styles.tile}><DoorOpen aria-hidden /></span>
+            <span className={own.stack}>
+              <strong>{room.name}</strong>
+              {taken ? <span className={`${styles.status} ${styles.busy}`}>Dipakai {taken.isSession ? "sesi" : taken.bookedBy.name}, {span(taken)}</span>
+                : <span className={`${styles.status} ${styles.free}`}>Kosong {clockLabel(draft.start)}–{clockLabel(draft.end)}</span>}
+              <span className={styles.meta}>{room.capacity ? `Kapasitas ${room.capacity} orang` : "Kapasitas belum diisi"}</span>
+            </span>
           </button>;
         })}
       </div>
       {fieldErrors.roomId && <p className={styles.error}>{fieldErrors.roomId}</p>}
     </section>
 
-    <section className={`${styles.card} ${styles.section}`} aria-labelledby="partisipan">
+    <section className={`${styles.card} ${own.formCard}`} aria-labelledby="partisipan">
       <h2 id="partisipan">Partisipan <span className={styles.meta}>({picked.length}/{appraisalRules.maxParticipants})</span></h2>
       {picked.length > 0 && <div className={styles.picked} aria-label="Partisipan terpilih">
         {picked.map(person => <span key={person.id} className={`${styles.chip} ${styles.chipSmall} ${styles.pickedChip}`}>
@@ -210,9 +211,11 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       {conflict.kind === "participants" && <div className={styles.actions}><Button type="button" variant="secondary" disabled={busy} onClick={() => save(true)}>Tetap simpan</Button></div>}
     </div>}
 
+    <p className={own.info}><Info size={16} aria-hidden />Booking langsung pasti. Bila ruang keburu dipesan orang lain, isianmu tetap tersimpan dan kami tawarkan jam atau ruang lain.</p>
+
     <div className={styles.sticky}>
-      <Button type="submit" disabled={busy}>{busy ? "Menyimpan…" : editId ? "Simpan perubahan" : "Pesan ruang"}</Button>
-      <span className={styles.meta}>{draft.roomId ? `${roomName(draft.roomId)}, ` : ""}{dayLabel(draft.date)}, {clockLabel(draft.start)}–{clockLabel(draft.end)}</span>
+      <Button type="submit" disabled={busy}><Send size={18} aria-hidden /> {busy ? "Menyimpan…" : editId ? "Simpan perubahan" : "Pesan ruang"}</Button>
+      <span className={styles.meta}>{draft.roomId ? `${roomName(draft.roomId)} · ` : ""}{dayLabel(draft.date)} · {clockLabel(draft.start)}–{clockLabel(draft.end)}</span>
     </div>
   </form>;
 }

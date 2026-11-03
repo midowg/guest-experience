@@ -36,7 +36,7 @@ export async function sessionQrPdf(session: Pick<Session, "title" | "startsAt" |
     page.drawText(text, { x: (A5.width - font.widthOfTextAtSize(text, size)) / 2, y, size, font, color });
 
   page.drawRectangle({ x: 0, y: A5.height - 64, width: A5.width, height: 64, color: BLUE });
-  center("PRA WAM  ·  ABSEN", bold, 12, A5.height - 30, rgb(1, 1, 1));
+  center("WAM  ·  ABSEN", bold, 12, A5.height - 30, rgb(1, 1, 1));
   center("Pindai untuk mencatat kehadiran", regular, 9, A5.height - 46, rgb(0.9, 0.86, 0.75));
 
   let y = A5.height - 100;
@@ -52,8 +52,8 @@ export async function sessionQrPdf(session: Pick<Session, "title" | "startsAt" |
 
   y = qrY - 36;
   const steps = [
-    "1. Buka kamera ponsel dan arahkan ke QR, atau buka menu Absen di aplikasi Pra WAM.",
-    "2. Masuk dengan akun Pra WAM bila diminta.",
+    "1. Buka kamera ponsel dan arahkan ke QR, atau buka menu Absen di aplikasi WAM.",
+    "2. Masuk dengan akun WAM bila diminta.",
     `3. Absen dibuka ${CHECK_IN_MARGIN_MINUTES} menit sebelum mulai sampai ${CHECK_IN_MARGIN_MINUTES} menit setelah selesai.`,
   ];
   for (const step of steps) for (const line of lines(step, regular, 9.5, width)) { page.drawText(line, { x: margin, y, size: 9.5, font: regular, color: INK }); y -= 13; }

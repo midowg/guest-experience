@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CheckCircle2, Clock } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import type { AttendanceRow } from "@/lib/pra-wam/attendance";
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
+import panel from "./panitia.module.css";
 import styles from "./pra-wam.module.css";
 
 /** Who is present, with a hand correction for panitia; and replacing the QR when a sheet is lost. */
@@ -37,23 +39,24 @@ export function AttendancePanel({ sessionId, initial, canEdit }: { sessionId: st
 
   return <div className={styles.section}>
     {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
-    <p><strong>{present}</strong> dari {rows.length} hadir.</p>
     <div className={styles.dates} role="group" aria-label="Saring">
       {(["semua", "hadir", "belum"] as const).map(value => <button key={value} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={filter === value} onClick={() => setFilter(value)}>
-        {value === "semua" ? "Semua" : value === "hadir" ? `Hadir (${present})` : `Belum (${rows.length - present})`}
+        {value === "semua" ? `Semua (${rows.length})` : value === "hadir" ? `Hadir (${present})` : `Belum (${rows.length - present})`}
       </button>)}
     </div>
-    <div style={{ overflowX: "auto" }}>
-      <table className={styles.attendance}>
-        <thead><tr><th>Nama</th><th>Hadir</th>{canEdit && <th />}</tr></thead>
+    {shown.length === 0 ? <p className={styles.meta}>Tidak ada nama di sini.</p> : <div className={styles.tableWrap}>
+      <table className={styles.table}>
+        <thead><tr><th>Nama</th><th>Status</th>{canEdit && <th>Tindakan</th>}</tr></thead>
         <tbody>{shown.map(row => <tr key={row.employeeId}>
-          <td>{row.name}<br /><small>{row.department}</small></td>
-          <td>{row.checkedInAt ? `${clockLabel(wibTime(row.checkedInAt))}${row.method === "manual" ? " (manual)" : ""}` : "—"}</td>
+          <td><strong>{row.name}</strong><small>{row.department}</small></td>
+          <td>{row.checkedInAt
+            ? <span className={`${panel.statusPill} ${panel.done}`}><CheckCircle2 aria-hidden />Hadir {clockLabel(wibTime(row.checkedInAt))}{row.method === "manual" ? " · manual" : ""}</span>
+            : <span className={`${panel.statusPill} ${panel.soon}`}><Clock aria-hidden />Belum</span>}</td>
           {canEdit && <td><button type="button" className="button button--quiet" disabled={!!busy} onClick={() => mark(row, !row.checkedInAt)}>
             {busy === row.employeeId ? "Menyimpan…" : row.checkedInAt ? "Hapus tanda" : "Tandai hadir"}</button></td>}
         </tr>)}</tbody>
       </table>
-    </div>
+    </div>}
     {canEdit && <div><button type="button" className="button button--quiet" disabled={!!busy} onClick={renew}>{busy === "qr" ? "Membuat…" : "Buat QR baru"}</button>
       <p className={styles.hint}>Hanya bila lembar QR hilang atau tersebar di luar ruangan.</p></div>}
   </div>;

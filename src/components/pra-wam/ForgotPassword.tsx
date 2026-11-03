@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
 import { passwordRules } from "@/lib/pra-wam/password";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
+import own from "./akun.module.css";
 import styles from "./pra-wam.module.css";
 
 /** Lupa password: one field, the work email. The link goes to the person's own inbox. */
@@ -20,8 +22,7 @@ export function ForgotPasswordForm() {
     finally { setBusy(false); }
   }
   return <form className={styles.loginCard} onSubmit={submit} noValidate>
-    <div><p className={styles.kicker}>Pra WAM</p><h1>Lupa password</h1>
-      <p className={styles.hint}>Tulis email kantormu. Kami kirim tautan untuk membuat password baru ke email itu.</p></div>
+    <div className={styles.loginHead}><h1>Lupa password</h1><p>Tulis email kantormu. Kami kirim tautan untuk membuat password baru ke email itu.</p></div>
     {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
     <Field name="email" label="Email kantor">
       <input id="email" className="input" type="email" autoComplete="username" inputMode="email" placeholder="nama@werkudara.com" value={email} onChange={change => setEmail(change.target.value)} />
@@ -62,14 +63,14 @@ export function ResetPasswordForm() {
     } catch (problem) { setError(errorText(problem)); setBusy(false); }
   }
   return <form className={styles.loginCard} onSubmit={submit} noValidate>
-    <div><p className={styles.kicker}>Pra WAM</p><h1>Buat password baru</h1></div>
+    <div className={styles.loginHead}><h1>Buat password baru</h1><p>WAM</p></div>
     {linkError ? <><Notice tone="error">{linkError} Minta tautan baru.</Notice><a className="button button--primary" href={praWamPath.forgot}>Minta tautan baru</a></> : <>
       {error && <Notice tone="error">{error}</Notice>}
       <Field name="next" label="Password baru">
         <input id="next" className="input" type="password" autoComplete="new-password" value={form.next} onChange={change => setForm({ ...form, next: change.target.value })} aria-describedby="aturan-password" />
       </Field>
       <ul id="aturan-password" className={styles.rules}>
-        {passwordRules.map(rule => <li key={rule.id} data-ok={rule.test(form.next)}>{rule.test(form.next) ? "✓" : "•"} {rule.label}</li>)}
+        {passwordRules.map(rule => <li key={rule.id} data-ok={rule.test(form.next)} className={own.ruleIcon}>{rule.test(form.next) || !form.next ? <CheckCircle2 aria-hidden /> : <AlertTriangle aria-hidden />}{rule.label}</li>)}
       </ul>
       <Field name="confirm" label="Ulangi password baru">
         <input id="confirm" className="input" type="password" autoComplete="new-password" value={form.confirm} onChange={change => setForm({ ...form, confirm: change.target.value })} />

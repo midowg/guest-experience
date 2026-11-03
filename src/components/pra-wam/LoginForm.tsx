@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Field, Notice } from "@/components/ui";
+import { Eye, EyeOff } from "lucide-react";
+import { Button, Notice } from "@/components/ui";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import styles from "./pra-wam.module.css";
 
-/** One sign-in for everyone: the work email and password. What follows depends on the person's role. */
+/** One sign-in for everyone (Penpot "A1 · Masuk"): what follows depends on the person's role. */
 export function LoginForm({ next }: { next: string | null }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,24 +26,26 @@ export function LoginForm({ next }: { next: string | null }) {
   }
 
   return <form className={styles.loginCard} onSubmit={submit} noValidate>
-    {/* eslint-disable-next-line @next/next/no-img-element -- a small static mark */}
-    <img className={styles.loginMark} src="/werkudara-mark.png" alt="Werkudara" />
-    <div>
-      <p className={styles.kicker}>Menuju WAM 2027</p>
-      <h1>Pra WAM</h1>
-      <p className={styles.hint}>Satu aplikasi untuk setiap langkah menuju WAM 2027.</p>
+    <div className={styles.loginHead}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a small static mark */}
+      <img className={styles.loginMark} src="/werkudara-mark.png" alt="Werkudara" />
+      <h1>WAM</h1>
+      <p>Satu aplikasi untuk setiap langkah menuju WAM 2027</p>
     </div>
     {error && <Notice tone="error">{error}</Notice>}
-    <Field name="email" label="Email kantor">
+    <div>
+      <label className={styles.label} htmlFor="email">Email</label>
       <input id="email" className="input" type="email" autoComplete="username" inputMode="email" placeholder="nama@werkudara.com" value={email} onChange={e => setEmail(e.target.value)} required />
-    </Field>
-    <Field name="password" label="Password">
-      <div className="row" style={{ flexWrap: "nowrap", gap: "var(--space-2)" }}>
+    </div>
+    <div>
+      <label className={styles.label} htmlFor="password">Password</label>
+      <div className={styles.passwordRow}>
         <input id="password" className="input" type={show ? "text" : "password"} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required />
-        <Button type="button" variant="quiet" onClick={() => setShow(!show)} aria-pressed={show}>{show ? "Sembunyikan" : "Lihat"}</Button>
+        <button type="button" className={styles.eye} onClick={() => setShow(!show)} aria-pressed={show} aria-label={show ? "Sembunyikan password" : "Lihat password"}>{show ? <EyeOff size={20} aria-hidden /> : <Eye size={20} aria-hidden />}</button>
       </div>
-    </Field>
+    </div>
     <Button type="submit" disabled={busy || !email || !password}>{busy ? "Memeriksa…" : "Masuk"}</Button>
     <p className={styles.loginNote}><a href={praWamPath.forgot}>Lupa password?</a></p>
+    <p className={styles.loginNote}>Tampilan menyesuaikan peran Anda</p>
   </form>;
 }

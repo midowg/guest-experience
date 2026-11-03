@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /*
- * The Pra WAM sign-in cookie: one person, signed with WAM_SESSION_SECRET. The password is
+ * The WAM sign-in cookie: one person, signed with WAM_SESSION_SECRET. The password is
  * checked by Supabase Auth; after that this cookie keeps the person signed in on the device
  * ("sekali masuk"). The account's session_version is part of it, so raising that number in
  * pw_accounts signs the person out everywhere. Pure logic, no `server-only`, so it can be tested.
@@ -38,8 +38,8 @@ export function verifyPraWamSession(secret: string | null, token: string | undef
   return { employeeId: match[1], version: Number(match[2]) };
 }
 
-/** Only Pra WAM pages are allowed as the place to go after signing in. */
+/** Only WAM pages are allowed as the place to go after signing in. */
 export function safePraWamNext(value: string | null | undefined): string | null {
-  if (!value || !/^\/pra-wam(?:[/?#]|$)/.test(value) || /^\/pra-wam\/masuk(?:[/?#]|$)/.test(value) || /[\\\s]/.test(value)) return null;
+  if (!value || !/^\/wam(?:[/?#]|$)/.test(value) || /^\/wam\/login(?:[/?#]|$)/.test(value) || /[\\\s]/.test(value)) return null;
   return value;
 }

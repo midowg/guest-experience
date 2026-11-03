@@ -1,0 +1,70 @@
+/* Panitia and BOD screens (Penpot page 04 · Panitia): tables, readiness pills, two-column forms,
+   the A5 print preview, and request cards. Builds on the tokens of pra-wam.module.css (.app). */
+.statusPill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.statusPill svg { width: 14px; height: 14px; }
+.done { background: var(--pw-success-soft); color: var(--pw-success); }
+.live { background: var(--pw-primary-soft); color: var(--pw-primary); }
+.soon { background: var(--pw-surface-soft); color: var(--pw-muted); }
+.warn { background: var(--pw-warning-soft); color: var(--pw-warning); }
+.cardHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.cardHead h2 { margin: 0; }
+.twoCol { display: grid; gap: 16px; margin-top: 16px; }
+@media (min-width: 1024px) { .twoCol { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; } }
+.rowLink { display: flex; align-items: center; gap: 12px; padding: 10px 0; text-decoration: none; }
+.rowLink.rowLink { color: var(--pw-text); } /* doubled to win over ".app a" */
+.rowLink + .rowLink { border-top: 1px solid var(--pw-line); }
+.rowLink > span:nth-child(2) { flex: 1; min-width: 0; }
+.rowLink strong { display: block; font-size: 14px; }
+.rowLink small { color: var(--pw-muted); font-size: 13px; }
+.alert { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 16px; background: var(--pw-warning-soft); color: var(--pw-warning); font-weight: 700; }
+.alert svg { flex: none; width: 22px; height: 22px; }
+.alert small { display: block; font-size: 12px; font-weight: 800; }
+.actionsCell { display: flex; flex-wrap: wrap; gap: 8px; }
+.actionsCell :global(.button) { min-height: 40px; padding: 6px 14px; font-size: 14px; }
+
+/* Buat sesi: form left, automatic checks right */
+.formGrid { display: grid; gap: 16px; }
+@media (min-width: 1024px) { .formGrid { grid-template-columns: minmax(0, 1fr) 22rem; align-items: start; } .aside { position: sticky; top: 24px; } }
+.fields { display: grid; gap: 16px; }
+.fieldRow { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .fieldRow { grid-template-columns: 1fr 1fr; } .fieldRow3 { grid-template-columns: 1fr 1fr 1fr; } }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 14px; }
+.checks li { display: flex; gap: 8px; align-items: flex-start; }
+.checks svg { flex: none; width: 18px; height: 18px; margin-top: 1px; }
+.ok { color: var(--pw-success); }
+.no { color: var(--pw-warning); }
+.wait { color: var(--pw-muted); }
+.noteBrass { padding: 12px; border-radius: 12px; background: var(--pw-brass-soft); color: var(--pw-on-brass-soft); font-size: 13px; font-weight: 600; }
+.noteBlue { padding: 12px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 13px; font-weight: 600; }
+.roomPick { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 16px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-primary); }
+.roomPick strong { display: block; }
+.roomPick small { color: var(--pw-text); }
+
+/* Cetak QR absen: the sheet as it prints */
+.printGrid { display: grid; gap: 16px; }
+@media (min-width: 1024px) { .printGrid { grid-template-columns: minmax(0, 1fr) minmax(0, 26rem); align-items: start; } }
+.sheet { display: grid; justify-items: center; gap: 10px; padding: 28px 24px; border: 1px solid var(--pw-line); border-radius: 8px; background: #fff; color: #1e2733; text-align: center; }
+.sheetEyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #a9813f; }
+.sheetEyebrow::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #a9813f; }
+.sheet h2 { margin: 0; font-family: 'Lora', Georgia, serif; font-size: 26px; font-weight: 600; color: #1551a0; }
+.sheet p { margin: 0; color: #5b6573; font-size: 14px; }
+.sheetQr { width: min(100%, 13rem); }
+.sheetQr svg { display: block; width: 100%; height: auto; }
+.sheet ol { text-align: left; margin: 4px 0 0; padding-left: 20px; font-size: 14px; color: #1e2733; }
+.sheetRule { width: 80px; height: 2px; background: #d6bf92; }
+.previewLabel { text-align: center; font-size: 13px; font-weight: 700; color: var(--pw-muted); margin: 0 0 8px; }
+
+/* Permintaan jadwal: one card per request */
+.request { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.who { display: flex; gap: 12px; align-items: flex-start; }
+.who > span:nth-child(2) { flex: 1; min-width: 0; }
+.who strong { display: block; }
+.who small { display: block; color: var(--pw-muted); font-size: 13px; }
+.avatar { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 13px; font-weight: 800; }
+.compare { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid var(--pw-line); border-radius: 12px; }
+.compare small { display: block; color: var(--pw-muted); font-size: 12px; }
+.compare strong { font-size: 15px; }
+.compare svg { color: var(--pw-muted); }
+.quote { margin: 0; color: var(--pw-muted); font-size: 14px; }
+.confirm { display: grid; gap: 12px; padding: 14px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-text); font-size: 14px; }
+.confirm .actionsCell :global(.button) { flex: 1; }

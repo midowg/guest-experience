@@ -1,0 +1,48 @@
+/* Pages of Agent B's restyle (scan, notifications, profile), on the Pra WAM tokens of pra-wam.module.css. */
+
+/* Scan QR absen (Penpot "P12"): a dark panel with a brass frame. */
+.scan { display: grid; gap: 16px; justify-items: center; padding: 24px 16px; border-radius: 24px; background: #0e1218; color: #e8ecf2; text-align: center; }
+.scanTitle { font-weight: 800; font-size: 17px; margin: 0; }
+.scanSub { margin: 0; color: #9aa4b2; font-size: 13px; }
+.frame { position: relative; width: min(100%, 16rem); aspect-ratio: 1; border-radius: 18px; background: #161c24; overflow: hidden; }
+.frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.corner { position: absolute; width: 44px; height: 44px; border: 4px solid #d9be8a; z-index: 2; }
+.corner:nth-of-type(1) { top: 8px; left: 8px; border-right: 0; border-bottom: 0; border-radius: 14px 0 0 0; }
+.corner:nth-of-type(2) { top: 8px; right: 8px; border-left: 0; border-bottom: 0; border-radius: 0 14px 0 0; }
+.corner:nth-of-type(3) { bottom: 8px; left: 8px; border-right: 0; border-top: 0; border-radius: 0 0 0 14px; }
+.corner:nth-of-type(4) { bottom: 8px; right: 8px; border-left: 0; border-top: 0; border-radius: 0 0 14px 0; }
+.line { position: absolute; left: 12%; right: 12%; top: 50%; height: 2px; background: #7bcb98; z-index: 2; }
+@media (prefers-reduced-motion: no-preference) {
+  .line { animation: sweep 2.4s ease-in-out infinite alternate; }
+  @keyframes sweep { from { top: 18%; } to { top: 82%; } }
+}
+.scanFoot { margin: 0; color: #9aa4b2; font-size: 12px; }
+.scanButton { min-height: 48px; padding: 0 20px; border: 0; border-radius: 12px; background: #d9be8a; color: #2e2616; font: inherit; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.scanError { margin: 0; padding: 10px 12px; border-radius: 12px; background: #3a1a21; color: #f2a0ae; font-size: 13px; font-weight: 700; }
+
+/* Notifications (Penpot "P11"): grouped by day, an icon tile, a dot while unread. */
+.group { margin: 20px 0 8px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.group:first-child { margin-top: 0; }
+.note { position: relative; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.note + .note { margin-top: 12px; }
+.noteRead { background: var(--pw-app); }
+.noteBody { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.noteBody strong { font-size: 15px; }
+.noteBody p { margin: 0; font-size: 13px; color: var(--pw-muted); white-space: pre-line; }
+.dot { position: absolute; top: 18px; right: 16px; width: 8px; height: 8px; border-radius: 50%; background: var(--pw-primary); }
+
+/* Profil dan pengaturan (Penpot "P4") */
+.fields { display: grid; gap: 16px; }
+.passwordRow { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); color: var(--pw-text); text-decoration: none; font: inherit; text-align: left; cursor: pointer; width: 100%; }
+.passwordRow strong { display: block; font-size: 15px; }
+.passwordRow small { color: var(--pw-muted); font-size: 13px; }
+.passwordRow > svg:last-child { margin-left: auto; color: var(--pw-muted); }
+.eyeWrap { position: relative; }
+.eyeWrap input { padding-right: 52px; }
+.eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; color: var(--pw-muted); cursor: pointer; border-radius: 10px; }
+.ruleWarn { color: var(--pw-warning); }
+.ruleIcon { display: inline-flex; align-items: center; gap: 6px; }
+.ruleIcon svg { width: 16px; height: 16px; flex: none; }
+.passwordRow { list-style: none; }
+.passwordRow::-webkit-details-marker { display: none; }
+details[open] > .passwordRow > svg:last-child { transform: rotate(90deg); }

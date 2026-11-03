@@ -2,16 +2,34 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ArrowLeftRight, CalendarDays, MapPin, Megaphone, XCircle } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import type { Notification, SentAnnouncement } from "@/lib/server/pra-wam/announcements";
 import { errorText, praWamRequest } from "./api";
+import notes from "./akun.module.css";
 import styles from "./pra-wam.module.css";
 
 const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 
-/** The person's notifications; opening one marks it read. */
-export function NotificationList({ items }: { items: Notification[] }) {
+const wibDay = (iso: string) => new Date(new Date(iso).getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
+const clock = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
+const dayName = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+
+/** The tile for a note, from what it is about (Penpot "P11"). */
+function noteIcon(item: Notification): { icon: React.ReactNode; brass: boolean } {
+  if (item.kind === "pengumuman") return { icon: <Megaphone aria-hidden />, brass: true };
+  if (/^Jadwal berubah/.test(item.title)) return { icon: <MapPin aria-hidden />, brass: true };
+  if (/^Dibatalkan/.test(item.title)) return { icon: <XCircle aria-hidden />, brass: false };
+  if (/^(Disetujui|Ditolak)/.test(item.title)) return { icon: <ArrowLeftRight aria-hidden />, brass: false };
+  return { icon: <CalendarDays aria-hidden />, brass: false };
+}
+
+/**
+ * The person's notifications (Penpot "P11 · Notifikasi"), grouped Hari ini, Kemarin, then by day.
+ * A dot marks what is unread; opening one or "Tandai dibaca" clears it.
+ */
+export function NotificationList({ items, now }: { items: Notification[]; now: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const unread = items.filter(item => !item.readAt).length;
@@ -21,19 +39,33 @@ export function NotificationList({ items }: { items: Notification[] }) {
     finally { setBusy(false); }
   }
   if (!items.length) return <p className={styles.meta}>Belum ada notifikasi. Pengumuman panitia dan kabar sesi muncul di sini.</p>;
-  return <div className={styles.section}>
-    {unread > 0 && <div><Button type="button" variant="secondary" disabled={busy} onClick={() => read()}>Tandai semua dibaca ({unread})</Button></div>}
-    <div className={styles.mine}>
-      {items.map(item => <article key={item.id} className={`${styles.mineItem} ${item.readAt ? "" : styles.unread}`}>
-        <span className={styles.kicker}>{item.kind === "sesi" ? "Kabar sesi" : "Pengumuman"} · {when(item.createdAt)}</span>
-        <h3>{item.title}</h3>
-        {item.body && <p className={styles.meta} style={{ whiteSpace: "pre-line", margin: 0 }}>{item.body}</p>}
-        <div className={styles.actions}>
-          {item.sessionId && <a className="button button--secondary" href={praWamPath.session(item.sessionId)} onClick={() => { if (!item.readAt) void read(item.id); }}>Buka sesi</a>}
-          {!item.readAt && <button type="button" className="button button--quiet" disabled={busy} onClick={() => read(item.id)}>Tandai dibaca</button>}
-        </div>
-      </article>)}
-    </div>
+  const today = wibDay(now);
+  const yesterday = wibDay(new Date(new Date(now).getTime() - 86_400_000).toISOString());
+  const days = [...new Set(items.map(item => wibDay(item.createdAt)))];
+  const label = (day: string) => (day === today ? "Hari ini" : day === yesterday ? "Kemarin" : dayName(day));
+  return <div>
+    {unread > 0 && <div className={styles.actions} style={{ justifyContent: "flex-end", marginBottom: 8 }}>
+      <button type="button" className="button button--quiet" disabled={busy} onClick={() => read()}>Tandai semua dibaca ({unread})</button>
+    </div>}
+    {days.map(day => <section key={day} aria-label={label(day)}>
+      <p className={notes.group}>{label(day)}</p>
+      {items.filter(item => wibDay(item.createdAt) === day).map(item => {
+        const { icon, brass } = noteIcon(item);
+        return <article key={item.id} className={`${notes.note} ${item.readAt ? notes.noteRead : ""}`}>
+          <span className={`${styles.tile} ${brass ? styles.tileBrass : ""}`}>{icon}</span>
+          <div className={notes.noteBody}>
+            <strong>{item.title}</strong>
+            {item.body && <p>{item.body}</p>}
+            <span className={styles.meta}>{item.kind === "sesi" ? "Kabar sesi" : "Panitia"} · {clock(item.createdAt)}</span>
+            {(item.sessionId || !item.readAt) && <div className={styles.actions}>
+              {item.sessionId && <a className="button button--primary" href={praWamPath.session(item.sessionId)} onClick={() => { if (!item.readAt) void read(item.id); }}>Buka sesi</a>}
+              {!item.readAt && <button type="button" className="button button--quiet" disabled={busy} onClick={() => read(item.id)}>Tandai dibaca</button>}
+            </div>}
+          </div>
+          {!item.readAt && <span className={notes.dot} aria-label="Belum dibaca" />}
+        </article>;
+      })}
+    </section>)}
   </div>;
 }
 

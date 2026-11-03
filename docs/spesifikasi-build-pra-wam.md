@@ -4,6 +4,15 @@ Status: siap dipakai untuk mulai build, dengan keputusan terbuka di bagian 10. D
 Dasar: `docs/rancangan-pra-wam.md` (fungsi dan keputusan), desain Penpot file **PRAWAM** halaman
 03–06 (layar dan alur per peran), acuan eksekusi 2 Nov 2026, kalender Pra WAM, dan data karyawan v2.
 
+> **Revisi 3 Nov 2026:** aplikasinya bernama **WAM**. Pra WAM adalah tahap di dalamnya, yang
+> ditandai pemberitahuan "Minggu Pra WAM" di Beranda, Agenda, dan Dashboard. Semua alamat berbahasa
+> Inggris di bawah `/wam`: `/wam/login`, `/wam/agenda`, `/wam/appraisal` (`/book`), `/wam/sessions/<id>`,
+> `/wam/check-in/<token>` (isi QR), `/wam/documents`, `/wam/notifications`, `/wam/account`,
+> `/wam/manage` (dashboard panitia, `/sessions`, `/requests`, `/announcements`), API di `/api/wam/…`,
+> pengaturan super admin di `/admin/super/wam`. Alamat lama `/pra-wam/…` dialihkan. Aplikasi bisa
+> di-install (PWA) dengan nama "WAM". Nama tabel `pw_…` dan variabel `WAM_…` tidak berubah. Alamat
+> di bagian lain dokumen ini adalah rancangan awal.
+
 ## 1. Cakupan build pertama (Pra WAM)
 
 Masuk:

@@ -112,85 +112,89 @@ export const staffApi = (id?: string, query: Record<string, string> = {}) => {
 };
 
 /*
- * Pra WAM (and later WAM): Werkudara's own app for the meetings towards the Annual Meeting. It is
- * not an invitation, so it has no event code: a fixed address, its own sign-in per person, and
- * its own tables (pw_*). The super admin sets up accounts under /admin/super/pra-wam.
+ * WAM: Werkudara's own app for the Annual Meeting and the weeks leading to it (the Pra WAM phase,
+ * shown as a notice inside the app, not a separate app). It is not an invitation, so it has no
+ * event code: a fixed English address, its own sign-in per person, and its own tables (pw_*). The
+ * super admin sets it up under /admin/super/wam. The code keeps the "praWam" names it started with.
  */
-export const PRA_WAM_PATH = "/pra-wam";
+export const PRA_WAM_PATH = "/wam";
+const WAM_API = "/api/wam";
 export const praWamPath = {
   home: PRA_WAM_PATH,
-  login: (next?: string) => `${PRA_WAM_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
-  appraisal: (date?: string) => `${PRA_WAM_PATH}/appraisal${date ? `?tanggal=${date}` : ""}`,
+  login: (next?: string) => `${PRA_WAM_PATH}/login${next ? `?next=${enc(next)}` : ""}`,
+  appraisal: (date?: string) => `${PRA_WAM_PATH}/appraisal${date ? `?date=${date}` : ""}`,
   /** The person's sessions, by day. */
   agenda: `${PRA_WAM_PATH}/agenda`,
-  session: (id: string) => `${PRA_WAM_PATH}/sesi/${id}`,
-  documents: `${PRA_WAM_PATH}/dokumen`,
-  notifications: `${PRA_WAM_PATH}/notifikasi`,
+  session: (id: string) => `${PRA_WAM_PATH}/sessions/${id}`,
+  documents: `${PRA_WAM_PATH}/documents`,
+  notifications: `${PRA_WAM_PATH}/notifications`,
+  /** Panitia and BOD: Ringkasan operasional. */
+  dashboard: `${PRA_WAM_PATH}/manage`,
   /** Panitia: write announcements and see who has read them. */
-  announcements: `${PRA_WAM_PATH}/panitia/pengumuman`,
+  announcements: `${PRA_WAM_PATH}/manage/announcements`,
   /** Panitia: schedule change requests to answer. */
-  requests: `${PRA_WAM_PATH}/panitia/permintaan`,
+  requests: `${PRA_WAM_PATH}/manage/requests`,
   /** Panitia (and BOD, reading): every session, drafts included; the form to make or change one. */
-  sessions: `${PRA_WAM_PATH}/panitia/sesi`,
-  newSession: `${PRA_WAM_PATH}/panitia/sesi/baru`,
-  editSession: (id: string) => `${PRA_WAM_PATH}/panitia/sesi/${id}`,
+  sessions: `${PRA_WAM_PATH}/manage/sessions`,
+  newSession: `${PRA_WAM_PATH}/manage/sessions/new`,
+  editSession: (id: string) => `${PRA_WAM_PATH}/manage/sessions/${id}`,
   /** Panitia: a session's QR to print, and who is present. */
-  sessionAttendance: (id: string) => `${PRA_WAM_PATH}/panitia/sesi/${id}/absen`,
+  sessionAttendance: (id: string) => `${PRA_WAM_PATH}/manage/sessions/${id}/attendance`,
   /** What a session's printed QR holds: scanning it signs the person in. */
-  checkIn: (token: string) => `${PRA_WAM_PATH}/absen/${enc(token)}`,
+  checkIn: (token: string) => `${PRA_WAM_PATH}/check-in/${enc(token)}`,
   /** The in-app scanner, for phones whose camera app does not open links. */
-  scan: `${PRA_WAM_PATH}/absen`,
+  scan: `${PRA_WAM_PATH}/check-in`,
   /** Profile and settings: change password. */
-  account: `${PRA_WAM_PATH}/akun`,
+  account: `${PRA_WAM_PATH}/account`,
   /** Right after the first sign-in: pick a new password, or skip for now. */
-  newPassword: (next?: string) => `${PRA_WAM_PATH}/password${next ? `?next=${enc(next)}` : ""}`,
+  newPassword: (next?: string) => `${PRA_WAM_PATH}/new-password${next ? `?next=${enc(next)}` : ""}`,
   /** Forgot password: ask for a link by email. */
-  forgot: `${PRA_WAM_PATH}/lupa-password`,
+  forgot: `${PRA_WAM_PATH}/forgot-password`,
   /** Where the emailed link lands to set a new password. Must be allowed in Supabase Auth redirect URLs. */
-  resetPassword: `${PRA_WAM_PATH}/atur-password`,
+  resetPassword: `${PRA_WAM_PATH}/reset-password`,
   /** The booking form; with a booking id it edits that booking. */
-  book: (query: { ubah?: string; tanggal?: string; ruang?: string; mulai?: string } = {}) => {
+  book: (query: { edit?: string; date?: string; room?: string; start?: string } = {}) => {
     const search = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString();
-    return `${PRA_WAM_PATH}/appraisal/pesan${search ? `?${search}` : ""}`;
+    return `${PRA_WAM_PATH}/appraisal/book${search ? `?${search}` : ""}`;
   },
 };
 export const praWamApi = {
-  login: "/api/pra-wam/masuk",
-  logout: "/api/pra-wam/keluar",
-  password: "/api/pra-wam/password",
-  forgot: "/api/pra-wam/lupa-password",
-  resetPassword: "/api/pra-wam/atur-password",
-  sessions: (id?: string) => `/api/pra-wam/sesi${id ? `/${id}` : ""}`,
-  sessionStatus: (id: string) => `/api/pra-wam/sesi/${id}/status`,
+  login: `${WAM_API}/login`,
+  logout: `${WAM_API}/logout`,
+  password: `${WAM_API}/password`,
+  forgot: `${WAM_API}/forgot-password`,
+  resetPassword: `${WAM_API}/reset-password`,
+  sessions: (id?: string) => `${WAM_API}/sessions${id ? `/${id}` : ""}`,
+  sessionStatus: (id: string) => `${WAM_API}/sessions/${id}/status`,
   /** GET: the session's QR as an A5 PDF to print; POST: a new QR (the printed one stops working). */
-  sessionQr: (id: string) => `/api/pra-wam/sesi/${id}/qr`,
+  sessionQr: (id: string) => `${WAM_API}/sessions/${id}/qr`,
   /** GET: who is present; POST: panitia marks someone present or not. */
-  sessionAttendance: (id: string) => `/api/pra-wam/sesi/${id}/absen`,
+  sessionAttendance: (id: string) => `${WAM_API}/sessions/${id}/attendance`,
   /** What holds each room on a day (bookings and sessions), for picking a session's room. */
-  roomUses: (date: string) => `/api/pra-wam/ruang?tanggal=${date}`,
+  roomUses: (date: string) => `${WAM_API}/rooms?date=${date}`,
   /** Documents: ask for an upload address, then register the uploaded file; one document by id. */
-  documents: (id?: string) => `/api/pra-wam/dokumen${id ? `/${id}` : ""}`,
-  documentUpload: "/api/pra-wam/dokumen/unggah",
+  documents: (id?: string) => `${WAM_API}/documents${id ? `/${id}` : ""}`,
+  documentUpload: `${WAM_API}/documents/upload`,
   /** GET: the person's notifications; POST {id?}: mark one, or all, read. */
-  notifications: "/api/pra-wam/notifikasi",
+  notifications: `${WAM_API}/notifications`,
   /** GET: sent announcements with read counts; POST: send one (panitia). */
-  announcements: "/api/pra-wam/pengumuman",
+  announcements: `${WAM_API}/announcements`,
   /** POST: a participant asks to move a session. */
-  requestChange: (sessionId: string) => `/api/pra-wam/sesi/${sessionId}/ganti-jadwal`,
+  requestChange: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/reschedule`,
   /** One request: POST {approve, note} (panitia answers), DELETE (the asker withdraws). */
-  request: (id: string) => `/api/pra-wam/permintaan/${id}`,
+  request: (id: string) => `${WAM_API}/requests/${id}`,
   /** Appraisal bookings: the day's schedule, a new booking, or one booking by id. */
   bookings: (id?: string, query: Record<string, string> = {}) => {
     const search = new URLSearchParams(query).toString();
-    return `/api/pra-wam/appraisal${id ? `/${id}` : ""}${search ? `?${search}` : ""}`;
+    return `${WAM_API}/appraisal${id ? `/${id}` : ""}${search ? `?${search}` : ""}`;
   },
 };
-export const PRA_WAM_ADMIN = "/admin/super/pra-wam";
+export const PRA_WAM_ADMIN = "/admin/super/wam";
 /** Super admin: the account list and creating accounts, or one person's roles and password reset. */
-export const praWamAccountsApi = (employeeId?: string) => `/api/admin/pra-wam/akun${employeeId ? `/${employeeId}` : ""}`;
+export const praWamAccountsApi = (employeeId?: string) => `/api/admin/wam/accounts${employeeId ? `/${employeeId}` : ""}`;
 /** Super admin: one room's capacity and whether appraisal may book it. */
-export const praWamRoomsApi = (roomId: string) => `/api/admin/pra-wam/ruang/${roomId}`;
+export const praWamRoomsApi = (roomId: string) => `/api/admin/wam/rooms/${roomId}`;
 /** Super admin: import units and positions from the Data karyawan workbook. */
-export const praWamUnitsApi = "/api/admin/pra-wam/unit";
+export const praWamUnitsApi = "/api/admin/wam/units";
 /** Super admin: one event's status and modules. */
-export const praWamEventsApi = (eventId: string) => `/api/admin/pra-wam/acara/${eventId}`;
+export const praWamEventsApi = (eventId: string) => `/api/admin/wam/events/${eventId}`;

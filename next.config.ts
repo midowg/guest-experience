@@ -16,6 +16,13 @@ const config: NextConfig = {
     return [
       { source: "/panduan", destination: "/your-visit", permanent: false },
       { source: "/panduan-ke-werkudara", destination: "/your-visit", permanent: false },
+      // The app was first published as /pra-wam with Indonesian paths; it is WAM now (Pra WAM is a
+      // phase inside it). Old links and printed QR codes keep working.
+      { source: "/pra-wam/absen/:token", destination: "/wam/check-in/:token", permanent: true },
+      { source: "/pra-wam/masuk", destination: "/wam/login", permanent: true },
+      { source: "/pra-wam/atur-password", destination: "/wam/reset-password", permanent: true },
+      { source: "/pra-wam/:path*", destination: "/wam", permanent: true },
+      { source: "/admin/super/pra-wam", destination: "/admin/super/wam", permanent: true },
     ];
   },
   async headers() {
@@ -32,6 +39,8 @@ const config: NextConfig = {
       { source: "/:code([A-Za-z2-9]{6})/:token([a-z2-9]{8})/tiket", headers: personalHeaders },
       // The door check-in scans tickets with the camera; every other page keeps it off.
       { source: "/admin/acara/:ref/checkin", headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }] },
+      // WAM's in-app QR scanner for attendance.
+      { source: "/wam/check-in", headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }] },
       { source: "/admin/hero-preview", headers: sameOriginFrame },
       { source: "/admin/pratinjau-langsung", headers: sameOriginFrame },
       // Development twin of the editor preview (404 in production).

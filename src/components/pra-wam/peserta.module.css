@@ -1,0 +1,17 @@
+/* Document rows (Penpot "P3 · Detail sesi" Materi and "P8 · Dokumen"). Tokens come from .app in pra-wam.module.css. */
+.docList { display: grid; background: var(--pw-surface); border: 1px solid var(--pw-line); border-radius: 16px; padding: 4px 16px; }
+.docRow { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.docRow + .docRow { border-top: 1px solid var(--pw-line); }
+.docBody { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.docBody strong { font-size: 15px; overflow-wrap: anywhere; }
+.docOpen { flex: none; font-weight: 800; font-size: 14px; text-decoration: none; padding: 10px 4px; }
+.docDelete { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--pw-muted); cursor: pointer; }
+.docDelete:hover { background: var(--pw-danger-soft); color: var(--pw-danger); }
+.docDelete svg { width: 18px; height: 18px; }
+.groupLabel { margin: 16px 0 8px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.groupLabel:first-child { margin-top: 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.uploadForm { margin-top: 12px; }
+.bottomActions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+.bottomActions > :first-child:nth-last-child(odd) { grid-column: 1 / -1; }
+.bottomActions :global(.button) { width: 100%; }

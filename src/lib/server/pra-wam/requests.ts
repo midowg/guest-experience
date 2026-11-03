@@ -140,3 +140,10 @@ export async function reviewRequest(id: string, approve: boolean, note: string, 
     sessionId: request.sessionId,
   }, viewer);
 }
+
+/** The person's requests still waiting, for Beranda. Empty before the migration. */
+export async function myOpenRequests(member: Member): Promise<ScheduleRequest[]> {
+  const { data, error } = await createPrivilegedClient().from("pw_schedule_requests").select(columns).eq("employee_id", member.id).eq("status", "diajukan").order("created_at", { ascending: false }).limit(3);
+  if (error) { if (missing(error)) return []; databaseError(error); }
+  return shape((data ?? []) as Row[]);
+}

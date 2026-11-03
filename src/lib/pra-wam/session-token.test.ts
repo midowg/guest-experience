@@ -4,7 +4,7 @@ import { praWamSecret, safePraWamNext, signPraWamSession, verifyPraWamSession } 
 const secret = "s".repeat(40);
 const person = { employeeId: "2f1c6a4e-8b7d-4c3a-9e21-5d6f7a8b9c0d", version: 2 };
 
-describe("Pra WAM session cookie", () => {
+describe("WAM session cookie", () => {
   it("round-trips the person and version", () => {
     expect(verifyPraWamSession(secret, signPraWamSession(secret, person))).toEqual(person);
   });
@@ -19,9 +19,9 @@ describe("Pra WAM session cookie", () => {
     expect(praWamSecret({ WAM_SESSION_SECRET: "short" })).toBeNull();
     expect(praWamSecret({ WAM_SESSION_SECRET: secret })).toBe(secret);
   });
-  it("only returns to Pra WAM pages after signing in", () => {
-    expect(safePraWamNext("/pra-wam/appraisal")).toBe("/pra-wam/appraisal");
-    expect(safePraWamNext("/pra-wam/masuk")).toBeNull();
+  it("only returns to WAM pages after signing in", () => {
+    expect(safePraWamNext("/wam/appraisal")).toBe("/wam/appraisal");
+    expect(safePraWamNext("/wam/login")).toBeNull();
     expect(safePraWamNext("//evil.example")).toBeNull();
     expect(safePraWamNext("/admin")).toBeNull();
   });
