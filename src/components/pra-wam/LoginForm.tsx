@@ -46,6 +46,6 @@ export function LoginForm({ next }: { next: string | null }) {
     </div>
     <Button type="submit" disabled={busy || !email || !password}>{busy ? "Memeriksa…" : "Masuk"}</Button>
     <p className={styles.loginNote}><a href={praWamPath.forgot}>Lupa password?</a></p>
-    <p className={styles.loginNote}>Tampilan menyesuaikan peran Anda</p>
+    <p className={styles.loginNote}>Journey by Werkudara</p>
   </form>;
 }
