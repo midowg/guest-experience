@@ -125,6 +125,10 @@ export const praWamPath = {
   account: `${PRA_WAM_PATH}/akun`,
   /** Right after the first sign-in: pick a new password, or skip for now. */
   newPassword: (next?: string) => `${PRA_WAM_PATH}/password${next ? `?next=${enc(next)}` : ""}`,
+  /** Forgot password: ask for a link by email. */
+  forgot: `${PRA_WAM_PATH}/lupa-password`,
+  /** Where the emailed link lands to set a new password. Must be allowed in Supabase Auth redirect URLs. */
+  resetPassword: `${PRA_WAM_PATH}/atur-password`,
   /** The booking form; with a booking id it edits that booking. */
   book: (query: { ubah?: string; tanggal?: string; ruang?: string; mulai?: string } = {}) => {
     const search = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString();
@@ -135,6 +139,8 @@ export const praWamApi = {
   login: "/api/pra-wam/masuk",
   logout: "/api/pra-wam/keluar",
   password: "/api/pra-wam/password",
+  forgot: "/api/pra-wam/lupa-password",
+  resetPassword: "/api/pra-wam/atur-password",
   /** Appraisal bookings: the day's schedule, a new booking, or one booking by id. */
   bookings: (id?: string, query: Record<string, string> = {}) => {
     const search = new URLSearchParams(query).toString();
@@ -146,3 +152,7 @@ export const PRA_WAM_ADMIN = "/admin/super/pra-wam";
 export const praWamAccountsApi = (employeeId?: string) => `/api/admin/pra-wam/akun${employeeId ? `/${employeeId}` : ""}`;
 /** Super admin: one room's capacity and whether appraisal may book it. */
 export const praWamRoomsApi = (roomId: string) => `/api/admin/pra-wam/ruang/${roomId}`;
+/** Super admin: import units and positions from the Data karyawan workbook. */
+export const praWamUnitsApi = "/api/admin/pra-wam/unit";
+/** Super admin: one event's status and modules. */
+export const praWamEventsApi = (eventId: string) => `/api/admin/pra-wam/acara/${eventId}`;

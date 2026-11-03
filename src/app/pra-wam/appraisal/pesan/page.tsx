@@ -5,6 +5,9 @@ import { appraisalRules, bookableDates, slotTimes, wibDate, wibInstant, wibTime 
 import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { daySchedule, getBooking, listPeople, usedTitles } from "@/lib/server/pra-wam/appraisal";
+import { appraisalOpen } from "@/lib/server/pra-wam/events";
+import { listUnits } from "@/lib/server/pra-wam/units";
+import { participantGroups } from "@/lib/pra-wam/units";
 import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
 
 export const dynamic = "force-dynamic";
@@ -19,17 +22,19 @@ export default async function BookRoomPage({ searchParams }: { searchParams: Pro
   const now = new Date();
   const today = wibDate(now.toISOString());
   const dates = bookableDates(today);
+  if (!await appraisalOpen()) return <PraWamShell member={member} current="appraisal"><Notice tone="info">Booking ruang appraisal sedang ditutup oleh admin Pra WAM.</Notice><p><a href={praWamPath.appraisal()}>Lihat jadwal ruang</a></p></PraWamShell>;
   const loaded = await loadForm(query, member, now, today, dates).catch((error: unknown) => {
     if (error instanceof ServiceError) return error.message;
     throw error;
   });
   if (typeof loaded === "string") return <PraWamShell member={member} current="appraisal"><Notice tone="warning">{loaded}</Notice><p><a href={praWamPath.appraisal()}>Kembali ke jadwal ruang</a></p></PraWamShell>;
-  const { editId, initial, schedule, people, titles } = loaded;
+  const { editId, initial, schedule, people, titles, units } = loaded;
   const rooms = schedule.rooms.filter(room => room.bookable);
+  const active = people.filter(person => person.active).map(({ id, name, department }) => ({ id, name, department }));
   return <PraWamShell member={member} current="appraisal">
     <BookingForm editId={editId} initial={initial} dates={dates.includes(initial.date) ? dates : [initial.date, ...dates]} now={now.toISOString()} rooms={rooms}
-      people={people.filter(person => person.active).map(({ id, name, department }) => ({ id, name, department }))}
-      viewer={{ id: member.id, department: member.department }} usedTitles={titles} dayBookings={schedule.bookings} />
+      people={active} groups={participantGroups(active, member.id, units.units, units.memberships)}
+      viewer={{ id: member.id }} usedTitles={titles} dayBookings={schedule.bookings} />
   </PraWamShell>;
 }
 
@@ -49,7 +54,7 @@ async function loadForm(query: Query, member: Member, now: Date, today: string, 
     const end = slotTimes().find(time => toMinutes(time) - toMinutes(start) >= 60) ?? appraisalRules.close;
     initial = { date, start, end, roomId: query.ruang ?? "", title: "", description: "", participants: [] };
   }
-  const [schedule, people, titles] = await Promise.all([daySchedule(initial.date, member), listPeople(), usedTitles()]);
+  const [schedule, people, titles, units] = await Promise.all([daySchedule(initial.date, member), listPeople(), usedTitles(), listUnits()]);
   if (!schedule.rooms.some(room => room.bookable && room.id === initial.roomId)) initial.roomId = "";
-  return { editId, initial, schedule, people, titles };
+  return { editId, initial, schedule, people, titles, units };
 }

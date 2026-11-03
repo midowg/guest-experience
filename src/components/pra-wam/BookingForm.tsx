@@ -7,10 +7,12 @@ import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError, type Conflict } from "./api";
 import styles from "./pra-wam.module.css";
 
+/** A chip in the participant picker: a department or BU and its people. */
+export type PeopleGroup = { id: string; label: string; memberIds: string[] };
 export type BookingDraft = { date: string; start: string; end: string; roomId: string; title: string; description: string; participants: string[] };
 type Props = {
   editId?: string; initial: BookingDraft; dates: string[]; now: string; rooms: Room[]; people: Person[];
-  viewer: { id: string; department: string }; usedTitles: { title: string; count: number }[]; dayBookings: Booking[];
+  viewer: { id: string }; groups: PeopleGroup[]; usedTitles: { title: string; count: number }[]; dayBookings: Booking[];
 };
 
 const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
@@ -21,13 +23,13 @@ const span = (booking: Pick<Booking, "startsAt" | "endsAt">) => `${clockLabel(wi
  * still has the last word, and when someone else saved first the form keeps everything that was
  * typed and offers the nearest free hour or another room.
  */
-export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, usedTitles, dayBookings }: Props) {
+export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings }: Props) {
   const [draft, setDraft] = useState(initial);
   const [bookings, setBookings] = useState(dayBookings);
   const [loadedDate, setLoadedDate] = useState(initial.date);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [active, setActive] = useState(-1);
-  const [department, setDepartment] = useState(viewer.department);
+  const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,10 +56,10 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const others = bookings.filter(booking => booking.id !== editId);
   const takenBy = (room: Room) => others.find(booking => booking.roomId === room.id && overlaps(booking, chosen));
   const suggestions = useMemo(() => titleSuggestions(draft.title, usedTitles), [draft.title, usedTitles]);
-  const departments = useMemo(() => [...new Set(people.map(person => person.department).filter(Boolean))].sort((a, b) => (a === viewer.department ? -1 : b === viewer.department ? 1 : a.localeCompare(b))), [people, viewer.department]);
+  const group = groups.find(item => item.id === groupId);
   const picked = draft.participants.map(id => people.find(person => person.id === id)).filter((person): person is Person => !!person);
   const query = search.trim().toLowerCase();
-  const offered = people.filter(person => person.id !== viewer.id && !draft.participants.includes(person.id) && (query ? person.name.toLowerCase().includes(query) : person.department === department)).slice(0, 40);
+  const offered = people.filter(person => person.id !== viewer.id && !draft.participants.includes(person.id) && (query ? person.name.toLowerCase().includes(query) : !!group?.memberIds.includes(person.id))).slice(0, 40);
 
   function pickStart(start: string) {
     const length = Math.max(minutes(draft.end) - minutes(draft.start), appraisalRules.stepMinutes);
@@ -185,9 +187,11 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         <label className={styles.label} htmlFor="search">Cari nama</label>
         <input id="search" className="input" type="search" value={search} placeholder="Ketik nama, atau pilih departemen di bawah" onChange={event => setSearch(event.target.value)} />
       </div>
-      {!query && <div className={styles.dates} role="group" aria-label="Departemen">
-        {departments.map(name => <button key={name} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={name === department} onClick={() => setDepartment(name)}>{name}</button>)}
+      {!query && <div className={styles.dates} role="group" aria-label="Departemen dan BU">
+        {groups.map(item => <button key={item.id} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={item.id === groupId} onClick={() => setGroupId(item.id)}>{item.label}</button>)}
       </div>}
+      {!query && group && offered.length > 1 && <button type="button" className="button button--quiet" disabled={picked.length >= appraisalRules.maxParticipants}
+        onClick={() => set({ participants: [...draft.participants, ...offered.map(person => person.id)].slice(0, appraisalRules.maxParticipants) })}>Tambah semua {group.label} ({offered.length})</button>}
       <div className={styles.people} aria-label="Saran partisipan">
         {offered.length === 0 && <p className={styles.meta}>{query ? "Nama tidak ditemukan." : "Semua di departemen ini sudah dipilih."}</p>}
         {offered.map(person => <button key={person.id} type="button" className={`${styles.chip} ${styles.chipSmall}`} disabled={picked.length >= appraisalRules.maxParticipants}

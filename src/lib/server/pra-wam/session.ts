@@ -106,6 +106,38 @@ export async function changePassword(member: Member, current: string, next: stri
   await issueSession(secret, member.id, version);
 }
 
+/**
+ * Sends a link to set a new password to the person's own email (Supabase Auth, with the SMTP set
+ * in Supabase). The answer is the same whether or not the email has an account.
+ */
+export async function requestPasswordReset(email: string, origin: string): Promise<void> {
+  const { error } = await createPublicClient().auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${origin.replace(/\/$/, "")}${praWamPath.resetPassword}` });
+  if (error && /rate|limit|security purposes/i.test(error.message)) throw new ServiceError(429, "Terlalu sering meminta tautan. Tunggu beberapa menit lalu coba lagi.");
+}
+
+/**
+ * Finishes "Lupa password": the access token from the emailed link proves the person, the new
+ * password is saved, every other device is signed out and this one is signed in.
+ */
+export async function completePasswordReset(accessToken: string, next: string): Promise<void> {
+  const secret = praWamSecret();
+  if (!secret) throw notReady();
+  const expired = new ServiceError(401, "Tautan sudah tidak berlaku. Minta tautan baru dari halaman Lupa password.");
+  if (next === process.env.WAM_DEFAULT_PASSWORD) throw new ServiceError(422, "Password baru harus berbeda dari password awal.", { next: ["Password baru harus berbeda dari password awal."] });
+  const client = createPrivilegedClient();
+  const { data: user, error: userError } = await client.auth.getUser(accessToken);
+  if (userError || !user.user) throw expired;
+  const { data: account, error } = await client.from("pw_accounts").select("employee_id,session_version,active").eq("auth_user_id", user.user.id).maybeSingle();
+  if (error) { if (notMigrated(error)) throw waitingForMigration(); databaseError(error); }
+  if (!account || !account.active) throw expired;
+  const { error: updateError } = await client.auth.admin.updateUserById(user.user.id, { password: next });
+  if (updateError) throw new ServiceError(503, "Password belum dapat diganti. Coba lagi sebentar.");
+  const version = account.session_version + 1;
+  const { error: saveError } = await client.from("pw_accounts").update({ must_change_password: false, password_changed_at: new Date().toISOString(), session_version: version }).eq("employee_id", account.employee_id);
+  if (saveError) databaseError(saveError);
+  await issueSession(secret, account.employee_id, version);
+}
+
 export async function signOut(): Promise<void> {
   (await cookies()).delete(PRA_WAM_COOKIE);
 }

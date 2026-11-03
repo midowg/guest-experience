@@ -36,6 +36,7 @@ Terapkan migrasi yang belum ada, **urut nama berkas**, lewat Supabase Dashboard 
 | `202610280001_donation_recipient.sql` | Friday Sharing: kolom penerima di tiap donasi, untuk menu **Donasi → Pembagian** dan laporan per panti. Sebelum migrasi ini, Donasi masuk tetap berjalan, hanya Pembagian yang menampilkan "menunggu migrasi" |
 | `202611040001_pra_wam_appraisal.sql` | Pra WAM tahap 0: akun per orang (`pw_accounts`), 7 ruang dari Werkudara Room Booking (`pw_rooms`, area belum bisa dipesan), dan booking ruang appraisal dengan penjaga bentrok di database. Butuh `202611030001_employees.sql` lebih dulu. Sebelum migrasi ini, `/pra-wam` menampilkan "menunggu migrasi" |
 | `202611040002_pra_wam_roles.sql` | Pra WAM tahap 1: kolom NIP di Data karyawan (boleh kosong, unik bila diisi) dan peran Panitia, BOD, Admin Pra WAM (`pw_roles`). BOD awal Pak Fadli dan Pak Bagus diisi otomatis bila namanya sudah ada di Data karyawan. Sebelum migrasi ini, semua orang tampil sebagai peserta dan kolom NIP tidak bisa diisi |
+| `202611040003_pra_wam_events_units.sql` | Pra WAM tahap 1b: acara Pra WAM 2026 (aktif, modul Appraisal menyala) dan WAM 2027 (disiapkan), serta unit (departemen dan BU) dengan anggota, jabatan, dan lead. Unit diisi lewat Super admin → Akun Pra WAM → Impor unit dan jabatan. Sebelum migrasi ini, Appraisal tetap terbuka dan chip partisipan memakai kolom departemen |
 
 Cek hasilnya (hanya membaca). Semua kolom harus `true`:
 
@@ -114,3 +115,11 @@ Bila ada yang gagal: Vercel → Deployments → deployment sebelumnya → **Prom
 ## 6. Ditunda sampai fase internal stabil
 
 Pengumuman dan kalender .ics, pratinjau tautan WhatsApp (OG image), QR undangan, halaman depan sambutan umum, tiket dan kursi, check-in, galeri dan dokumen di R2 (perlu bucket), modul Program, BEO dan pembersihan data, alur deploy berbasis tag.
+
+### Pra WAM: lupa password
+
+Tautan "Lupa password" dikirim Supabase Auth ke email masing-masing orang. Sebelum dipakai:
+
+1. Supabase → Authentication → URL Configuration: tambahkan `https://<domain>/pra-wam/atur-password` (dan `http://localhost:3000/pra-wam/atur-password` untuk uji lokal) ke Redirect URLs.
+2. Supabase → Authentication → SMTP: isi SMTP alamat pengirim kantor. SMTP bawaan Supabase hanya untuk uji dan sangat dibatasi.
+3. Kolom email di Data karyawan harus berisi kotak surat yang benar-benar aktif.

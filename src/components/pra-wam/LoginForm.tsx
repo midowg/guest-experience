@@ -43,6 +43,6 @@ export function LoginForm({ next }: { next: string | null }) {
       </div>
     </Field>
     <Button type="submit" disabled={busy || !email || !password}>{busy ? "Memeriksa…" : "Masuk"}</Button>
-    <p className={styles.loginNote}>Lupa password? Hubungi admin Pra WAM untuk mengatur ulang.</p>
+    <p className={styles.loginNote}><a href={praWamPath.forgot}>Lupa password?</a></p>
   </form>;
 }

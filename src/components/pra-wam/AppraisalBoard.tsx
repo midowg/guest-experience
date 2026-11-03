@@ -8,7 +8,7 @@ import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import styles from "./pra-wam.module.css";
 
-type Props = { date: string; dates: string[]; now: string; rooms: Room[]; bookings: Booking[]; mine: Booking[]; viewerId: string; canCancelAny: boolean };
+type Props = { date: string; dates: string[]; now: string; rooms: Room[]; bookings: Booking[]; mine: Booking[]; viewerId: string; canCancelAny: boolean; open: boolean };
 
 const span = (booking: Booking) => `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`;
 
@@ -16,7 +16,7 @@ const span = (booking: Booking) => `${clockLabel(wibTime(booking.startsAt))}–$
  * Appraisal: who has which room, per day. Everyone sees the booker and the activity of every
  * booking; an empty half hour opens the form for that room and time.
  */
-export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewerId, canCancelAny }: Props) {
+export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open }: Props) {
   const router = useRouter();
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
   const bookable = rooms.filter(room => room.bookable);
   const slots = slotTimes().slice(0, -1);
   const isToday = date === wibDate(now);
-  const passed = (time: string) => new Date(wibInstant(date, time)) <= new Date(now);
+  const passed = (time: string) => !open || new Date(wibInstant(date, time)) <= new Date(now);
   const inRoom = (room: Room) => bookings.filter(booking => booking.roomId === room.id);
   const mineFlag = (booking: Booking) => booking.bookedBy.id === viewerId;
 
@@ -49,8 +49,9 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
         <h1>Booking ruang</h1>
         <p>Jam {clockLabel(appraisalRules.open)}–{clockLabel(appraisalRules.close)}, Senin–Jumat. Yang tersimpan lebih dulu yang mendapat ruang.</p>
       </div>
-      <ButtonLink href={praWamPath.book({ tanggal: date })}>Pesan ruang</ButtonLink>
+      {open && <ButtonLink href={praWamPath.book({ tanggal: date })}>Pesan ruang</ButtonLink>}
     </div>
+    {!open && <Notice tone="info">Booking ruang appraisal sedang ditutup oleh admin Pra WAM. Jadwal yang ada tetap bisa dilihat.</Notice>}
 
     {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
 
@@ -109,7 +110,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
         {opened.participants && <span className={styles.meta}>{opened.participants.length ? `Bersama ${opened.participants.map(person => person.name).join(", ")}` : "Tanpa partisipan lain"}</span>}
         {opened.description && <span className={styles.meta}>{opened.description}</span>}
         <div className={styles.actions}>
-          {mineFlag(opened) && <ButtonLink variant="secondary" href={praWamPath.book({ ubah: opened.id })}>Ubah</ButtonLink>}
+          {open && mineFlag(opened) && <ButtonLink variant="secondary" href={praWamPath.book({ ubah: opened.id })}>Ubah</ButtonLink>}
           {(mineFlag(opened) || canCancelAny) && new Date(opened.endsAt) > new Date(now) && <button type="button" className="button button--quiet" disabled={busy === opened.id} onClick={() => cancel(opened)}>{busy === opened.id ? "Membatalkan…" : "Batalkan"}</button>}
           <button type="button" className="button button--quiet" onClick={() => setOpenId(null)}>Tutup</button>
         </div>
@@ -128,7 +129,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
             <span className={styles.meta}>{own ? "Kamu pemesannya" : `Dipesan ${booking.bookedBy.name}`}{booking.participants?.length ? ` · Bersama ${booking.participants.map(person => person.name).join(", ")}` : ""}</span>
             {booking.description && <span className={styles.meta}>{booking.description}</span>}
             {own && <div className={styles.actions}>
-              <ButtonLink variant="secondary" href={praWamPath.book({ ubah: booking.id })}>Ubah</ButtonLink>
+              {open && <ButtonLink variant="secondary" href={praWamPath.book({ ubah: booking.id })}>Ubah</ButtonLink>}
               <button type="button" className="button button--quiet" disabled={busy === booking.id} onClick={() => cancel(booking)}>{busy === booking.id ? "Membatalkan…" : "Batalkan"}</button>
             </div>}
           </article>;

@@ -12,9 +12,15 @@ export const passwordRules = [
 
 export const passwordProblems = (value: string) => passwordRules.filter(rule => !rule.test(value)).map(rule => rule.label);
 
+const newPassword = z.string().max(200).refine(value => passwordProblems(value).length === 0, "Password baru minimal 8 karakter dan ada angka atau simbol.");
+
+/** Setting a new password from the emailed link: the link's token instead of the current password. */
+export const passwordResetSchema = z.object({ accessToken: z.string().min(20).max(4000), next: newPassword, confirm: z.string().max(200) })
+  .refine(input => input.next === input.confirm, { path: ["confirm"], message: "Ulangi password baru dengan sama persis." });
+
 export const passwordChangeSchema = z.object({
   current: z.string().min(1, "Isi password saat ini.").max(200),
-  next: z.string().max(200).refine(value => passwordProblems(value).length === 0, "Password baru minimal 8 karakter dan ada angka atau simbol."),
+  next: newPassword,
   confirm: z.string().max(200),
 }).refine(input => input.next === input.confirm, { path: ["confirm"], message: "Ulangi password baru dengan sama persis." })
   .refine(input => input.next !== input.current, { path: ["next"], message: "Password baru harus berbeda dari password saat ini." });

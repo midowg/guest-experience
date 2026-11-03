@@ -4,6 +4,7 @@ import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
+import { appraisalOpen } from "./events";
 import { notMigrated, waitingForMigration, type Member } from "./session";
 
 /*
@@ -130,6 +131,7 @@ async function requireOwn(id: string, viewer: Member) {
  */
 export async function saveBooking(input: BookingInput, viewer: Member, options: { id?: string; confirmed?: boolean; now?: Date } = {}): Promise<Booking> {
   const now = options.now ?? new Date();
+  if (!await appraisalOpen()) throw new ServiceError(409, "Booking ruang appraisal sedang ditutup oleh admin Pra WAM.");
   if (options.id) await requireOwn(options.id, viewer);
   const problems = bookingProblems(input, now);
   if (Object.keys(problems).length) throw new ServiceError(422, "Periksa kembali tanggal dan jam.", Object.fromEntries(Object.entries(problems).map(([key, message]) => [key, [message]])));
