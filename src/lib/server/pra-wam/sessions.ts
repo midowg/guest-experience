@@ -176,8 +176,9 @@ export async function setSessionStatus(id: string, status: Exclude<SessionStatus
 }
 
 /**
- * Removes a draft or cancelled session for good, with its participants, attendance, requests and
- * documents (their files too). A published session is cancelled first, so its participants hear.
+ * Removes a draft or cancelled session for good, with its participants, attendance, requests,
+ * documents (their files too) and the notifications about it, which would otherwise point nowhere.
+ * A published session is cancelled first, so its participants hear.
  */
 export async function deleteSession(id: string, viewer: Member): Promise<void> {
   requireManager(viewer);
@@ -187,6 +188,8 @@ export async function deleteSession(id: string, viewer: Member): Promise<void> {
   const { data: files } = await client.from("pw_documents").select("file_key").eq("session_id", id);
   const keys = (files ?? []).map(file => file.file_key);
   if (keys.length && isR2Configured()) await removeObjects(keys).catch(() => undefined);
+  // Before the announcements migration there is nothing to remove, so its error is not a failure.
+  await client.from("pw_announcements").delete().eq("session_id", id);
   const { error } = await client.from("pw_sessions").delete().eq("id", id);
   if (error) fail(error);
 }

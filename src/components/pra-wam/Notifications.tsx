@@ -156,7 +156,7 @@ export function AnnouncementComposer({ sent, sessions, units }: { sent: SentAnno
       <h2 id="terkirim">Sudah dikirim</h2>
       {sent.length === 0 ? <div className={styles.emptyRow}>
         <span className={styles.tile} aria-hidden><Megaphone /></span>
-        <p>Belum ada pengumuman. Tulis yang pertama di sebelah ini.</p>
+        <p>Belum ada pengumuman. Pengumuman yang kamu kirim muncul di sini.</p>
       </div> : <div className={notes.sentList}>
         {sent.map(item => {
           const all = item.recipients > 0 && item.read === item.recipients;

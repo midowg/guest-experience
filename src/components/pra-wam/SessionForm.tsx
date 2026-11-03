@@ -86,7 +86,7 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
     if (!session) return;
     if (!(await confirm({
       title: "Hapus sesi permanen?",
-      body: `"${session.title}" beserta peserta, kehadiran, permintaan jadwal, dan dokumennya ikut terhapus dan tidak bisa dikembalikan.`,
+      body: `"${session.title}" beserta peserta, kehadiran, permintaan jadwal, dokumen, dan notifikasinya ikut terhapus dan tidak bisa dikembalikan.`,
       confirmLabel: "Hapus permanen",
       danger: true,
     }))) return;
