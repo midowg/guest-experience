@@ -4,6 +4,8 @@ import { managesSessions, roleSummary, seesAllSessions, type PraWamRole } from "
 import { praWamPath } from "@/lib/routes";
 import { unreadCount } from "@/lib/server/pra-wam/announcements";
 import { openRequestCount } from "@/lib/server/pra-wam/requests";
+import { currentPhase } from "@/lib/server/pra-wam/events";
+import { wibDate } from "@/lib/pra-wam/appraisal";
 import { SignOutButton } from "./SignOutButton";
 import styles from "./pra-wam.module.css";
 
@@ -27,30 +29,57 @@ const manage: Item[] = [
   { id: "pengumuman", label: "Pengumuman", href: praWamPath.announcements, icon: <Send aria-hidden />, show: managesSessions },
 ];
 
+const managedIds = new Set<Tab>(manage.map(item => item.id));
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
+const month = (date: string) => new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+
 /**
- * The frame of every signed-in Pra WAM page, as in Penpot: on a phone the page and a bottom bar
- * (Beranda · Agenda · Appraisal · Dokumen · Profil); from 1024px a sidebar with the same places,
- * Notifikasi, and for panitia and BOD the "Kelola acara" part. A detail screen (`back`) works like
- * a pushed screen on a phone: a top bar with a back arrow and the title, no bottom bar, and the
- * page slides in from the right.
+ * The frame of every signed-in WAM page, as in Penpot.
+ * - Phone: the page and a bottom bar (Beranda, Agenda, Appraisal, Dokumen, Profil). A detail
+ *   screen (`back`) is a pushed screen: a top bar with a back arrow and the title, no bottom bar,
+ *   sliding in from the right.
+ * - Desktop, the app (E1, E2): a top bar with the brand, the phase, the menu in the middle, and the
+ *   bell and the person on the right.
+ * - Desktop, "Kelola acara" (D1 to D9): a sidebar with the panitia's places.
  */
 export async function PraWamShell({ member, current, back, children }: { member: { id: string; name: string; nickname: string; department: string; roles: PraWamRole[] }; current?: Tab; back?: { href: string; title: string }; children: ReactNode }) {
-  const [unread, waiting] = await Promise.all([unreadCount(member.id), managesSessions(member) ? openRequestCount() : 0]);
+  const [unread, waiting, phase] = await Promise.all([
+    unreadCount(member.id), managesSessions(member) ? openRequestCount() : 0,
+    currentPhase(wibDate(new Date().toISOString())).catch(() => null),
+  ]);
   const badge = (tab: Tab) => (tab === "notifikasi" ? unread : tab === "permintaan" ? waiting : 0);
+  const managed = manage.filter(item => !item.show || item.show(member));
+  const panitiaView = !!current && managedIds.has(current);
   const side = (item: Item) => <a key={item.id} className={styles.sideItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>
     {item.icon}<span>{item.label}</span>{badge(item.id) > 0 && <span className={styles.sideBadge}>{badge(item.id)}</span>}
   </a>;
-  const managed = manage.filter(item => !item.show || item.show(member));
-  return <div className={`${styles.app} ${back ? styles.pushed : ""}`}>
+  const phaseLabel = phase ? `${phase.kind === "pra_wam" ? "Pra WAM" : phase.name} · ${month(phase.startDate)}–${month(phase.endDate)} ${phase.endDate.slice(0, 4)}` : "WAM 2027";
+  const who = member.nickname || member.name;
+  return <div className={`${styles.app} ${back ? styles.pushed : ""} ${panitiaView ? styles.panitiaView : styles.appView}`}>
+    <header className={styles.topBar}>
+      <a className={styles.topBrand} href={praWamPath.home}><span aria-hidden />WAM</a>
+      <span className={styles.phasePill}>{phaseLabel}</span>
+      <nav className={styles.topNav} aria-label="Menu WAM">
+        {personal.map(item => <a key={item.id} className={styles.topItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>{item.icon}<span>{item.label}</span></a>)}
+      </nav>
+      <div className={styles.topRight}>
+        {managed.length > 0 && <a className={styles.topManage} href={praWamPath.dashboard}><BarChart3 aria-hidden />Kelola acara{waiting > 0 && <span className={styles.sideBadge}>{waiting}</span>}</a>}
+        <a className={styles.iconButton} href={praWamPath.notifications} aria-label={unread ? `Notifikasi, ${unread} belum dibaca` : "Notifikasi"} aria-current={current === "notifikasi" ? "page" : undefined}>
+          <Bell aria-hidden />{unread > 0 && <span className={styles.iconDot} />}
+        </a>
+        <a className={styles.person} href={praWamPath.account}><span className={styles.avatar} aria-hidden>{initials(member.name)}</span><span><strong>{who}</strong><small>{member.department || roleSummary(member)}</small></span></a>
+        <SignOutButton className={styles.signOut} />
+      </div>
+    </header>
     <div className={styles.frame}>
-      <nav className={styles.sidebar} aria-label="Menu WAM">
-        <a className={styles.brand} href={praWamPath.home}><strong>WAM</strong><span>Nov–Des 2026 · menuju WAM 2027</span></a>
-        {personal.slice(0, 4).map(side)}
-        {side({ id: "notifikasi", label: "Notifikasi", href: praWamPath.notifications, icon: <Bell aria-hidden /> })}
-        {side(personal[4])}
-        {managed.length > 0 && <><p className={styles.sideLabel}>Kelola acara</p>{managed.map(side)}</>}
+      <nav className={styles.sidebar} aria-label="Kelola acara">
+        <a className={styles.brand} href={praWamPath.home}><strong>WAM</strong><span>{phaseLabel}</span></a>
+        <p className={styles.sideLabel}>Kelola acara</p>
+        {managed.map(side)}
+        <p className={styles.sideLabel}>Aplikasi</p>
+        {side({ id: "beranda", label: "Kembali ke aplikasi", href: praWamPath.home, icon: <Home aria-hidden /> })}
         <div className={styles.sideFoot}>
-          <div><strong>{member.nickname || member.name}</strong><small>{roleSummary(member)}</small></div>
+          <div><strong>{who}</strong><small>{roleSummary(member)}</small></div>
           <SignOutButton className={styles.signOut} />
         </div>
       </nav>

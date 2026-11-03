@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeftRight, CalendarDays, MapPin, Megaphone, XCircle } from "lucide-react";
+import { ArrowLeftRight, BellOff, CalendarDays, CheckCircle2, Clock, MapPin, Megaphone, Send, XCircle } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import type { Notification, SentAnnouncement } from "@/lib/server/pra-wam/announcements";
 import { errorText, praWamRequest } from "./api";
+import { ScreenHead } from "./ScreenHead";
 import notes from "./akun.module.css";
 import styles from "./pra-wam.module.css";
 
@@ -38,15 +39,23 @@ export function NotificationList({ items, now }: { items: Notification[]; now: s
     try { await praWamRequest(praWamApi.notifications, { method: "POST", json: id ? { id } : {} }); router.refresh(); }
     finally { setBusy(false); }
   }
-  if (!items.length) return <p className={styles.meta}>Belum ada notifikasi. Pengumuman panitia dan kabar sesi muncul di sini.</p>;
+  const markAll = unread > 0 && <button type="button" className="button button--secondary" disabled={busy} onClick={() => read()}>Tandai semua dibaca ({unread})</button>;
+  // Desktop: the title and "Tandai semua dibaca" in one row; the phone has its own back bar.
+  const head = <div className={notes.deskOnly}><ScreenHead title="Notifikasi" lead="Pengumuman panitia dan kabar sesi yang kamu ikuti." actions={markAll || undefined} /></div>;
+  if (!items.length) return <div className={notes.noteWrap}>{head}
+    <div className={notes.empty}>
+      <span className={notes.emptyMark}><BellOff aria-hidden /></span>
+      <strong>Belum ada notifikasi</strong>
+      <p>Pengumuman dari panitia dan kabar sesi (terbit, pindah jadwal, batal) akan muncul di sini.</p>
+    </div>
+  </div>;
   const today = wibDay(now);
   const yesterday = wibDay(new Date(new Date(now).getTime() - 86_400_000).toISOString());
   const days = [...new Set(items.map(item => wibDay(item.createdAt)))];
   const label = (day: string) => (day === today ? "Hari ini" : day === yesterday ? "Kemarin" : dayName(day));
-  return <div>
-    {unread > 0 && <div className={styles.actions} style={{ justifyContent: "flex-end", marginBottom: 8 }}>
-      <button type="button" className="button button--quiet" disabled={busy} onClick={() => read()}>Tandai semua dibaca ({unread})</button>
-    </div>}
+  return <div className={notes.noteWrap}>
+    {head}
+    {markAll && <div className={`${notes.noteBar} ${notes.phoneOnly}`}>{markAll}</div>}
     {days.map(day => <section key={day} aria-label={label(day)}>
       <p className={notes.group}>{label(day)}</p>
       {items.filter(item => wibDay(item.createdAt) === day).map(item => {
@@ -95,7 +104,7 @@ export function AnnouncementComposer({ sent, sessions, units }: { sent: SentAnno
     finally { setBusy(false); }
   }
 
-  return <>
+  return <div className={notes.annGrid}>
     <section className={styles.card} aria-labelledby="tulis">
       <h2 id="tulis">Tulis pengumuman</h2>
       <form className={styles.section} onSubmit={submit}>
@@ -104,29 +113,35 @@ export function AnnouncementComposer({ sent, sessions, units }: { sent: SentAnno
           <input id="ann-title" className="input" value={title} maxLength={150} onChange={event => setTitle(event.target.value)} /></div>
         <div><label className={styles.label} htmlFor="ann-body">Isi</label>
           <textarea id="ann-body" className="textarea" rows={5} maxLength={4000} value={body} onChange={event => setBody(event.target.value)} /></div>
-        <div className={styles.dates} role="group" aria-label="Penerima">
-          {([["semua", "Semua peserta"], ["sesi", "Peserta satu sesi"], ["unit", "Unit tertentu"]] as const).map(([value, label]) =>
-            <button key={value} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={type === value} onClick={() => setType(value)}>{label}</button>)}
+        <div>
+          <p className={styles.label}>Penerima</p>
+          <div className={styles.pills} role="group" aria-label="Penerima">
+            {([["semua", "Semua peserta"], ["sesi", "Peserta satu sesi"], ["unit", "Per departemen atau BU"]] as const).map(([value, label]) =>
+              <button key={value} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={type === value} onClick={() => setType(value)}>{label}</button>)}
+          </div>
         </div>
         {type === "sesi" && (sessions.length ? <select className="select" aria-label="Sesi" value={sessionId} onChange={event => setSessionId(event.target.value)}>
           {sessions.map(session => <option key={session.id} value={session.id}>{session.title}</option>)}
         </select> : <p className={styles.meta}>Belum ada sesi terbit.</p>)}
-        {type === "unit" && (units.length ? <div className={styles.dates} role="group" aria-label="Unit">
+        {type === "unit" && (units.length ? <div className={styles.pills} role="group" aria-label="Unit">
           {units.map(unit => <button key={unit.id} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={unitIds.includes(unit.id)}
             onClick={() => setUnitIds(unitIds.includes(unit.id) ? unitIds.filter(id => id !== unit.id) : [...unitIds, unit.id])}>{unit.title}</button>)}
         </div> : <p className={styles.meta}>Unit belum diimpor di super admin.</p>)}
-        <div><Button type="submit" disabled={busy || !ready}>{busy ? "Mengirim…" : "Kirim sekarang"}</Button></div>
+        <p className={notes.annHint}>Terkirim sekarang ke menu Notifikasi penerima.</p>
+        <div><Button type="submit" disabled={busy || !ready}><Send size={18} aria-hidden /> {busy ? "Mengirim…" : "Kirim sekarang"}</Button></div>
       </form>
     </section>
     <section className={styles.card} aria-labelledby="terkirim">
-      <h2 id="terkirim">Terkirim</h2>
-      {sent.length === 0 ? <p className={styles.meta}>Belum ada pengumuman.</p> : <div className={styles.mine}>
-        {sent.map(item => <article key={item.id} className={styles.mineItem}>
-          <span className={styles.kicker}>{when(item.createdAt)} · {item.audienceLabel}</span>
-          <h3>{item.title}</h3>
-          <span className={styles.meta}>Dibaca {item.read} dari {item.recipients}</span>
-        </article>)}
+      <h2 id="terkirim">Sudah dikirim</h2>
+      {sent.length === 0 ? <p className={styles.meta}>Belum ada pengumuman.</p> : <div className={notes.sentList}>
+        {sent.map(item => {
+          const all = item.recipients > 0 && item.read === item.recipients;
+          return <article key={item.id} className={notes.sentRow}>
+            <div><strong>{item.title}</strong><small>{item.audienceLabel} · {when(item.createdAt)}</small></div>
+            <span className={`${styles.pill} ${all ? styles.pillSuccess : ""} ${notes.readPill}`}>{all ? <CheckCircle2 aria-hidden /> : <Clock aria-hidden />}{item.read} / {item.recipients} dibaca</span>
+          </article>;
+        })}
       </div>}
     </section>
-  </>;
+  </div>;
 }

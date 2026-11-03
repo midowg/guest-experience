@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
+import { AlertTriangle, CheckCircle2, ChevronRight, Eye, EyeOff, Lock } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { passwordRules } from "@/lib/pra-wam/password";
 import { praWamApi } from "@/lib/routes";
@@ -73,4 +73,34 @@ export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boo
       {skipHref && <a className="button button--quiet" href={skipHref}>Lewati, atur nanti</a>}
     </div>
   </form>;
+}
+
+const desktop = "(min-width: 1024px)";
+const watchDesktop = (change: () => void) => { const query = window.matchMedia(desktop); query.addEventListener("change", change); return () => query.removeEventListener("change", change); };
+
+/**
+ * The password part of Profil. On a phone a "Ganti password" row that opens the form (Penpot
+ * "P4"); on a desktop a "Keamanan akun" card with the form always shown. Open by itself while the
+ * person still uses the shared first password.
+ */
+export function PasswordPanel({ firstTime }: { firstTime: boolean }) {
+  const [open, setOpen] = useState(firstTime);
+  const wide = useSyncExternalStore(watchDesktop, () => window.matchMedia(desktop).matches, () => false);
+  const warning = firstTime && <Notice tone="warning">Kamu masih memakai password awal. Sebaiknya ganti sekarang.</Notice>;
+  if (wide) return <section id="password" className={`${styles.card} ${own.security}`} aria-labelledby="keamanan">
+    <div className={own.securityHead}>
+      <span className={styles.tile}><Lock aria-hidden /></span>
+      <span><strong id="keamanan">Keamanan akun</strong><small>{firstTime ? "Ganti password awal dengan milik Anda" : "Ganti password Anda"}</small></span>
+    </div>
+    {warning}
+    <div style={{ marginTop: firstTime ? 12 : 0 }}><PasswordForm firstTime={firstTime} /></div>
+  </section>;
+  return <div id="password">
+    <button type="button" className={own.passwordRow} aria-expanded={open} aria-controls="password-form" onClick={() => setOpen(!open)}>
+      <span className={styles.tile}><Lock aria-hidden /></span>
+      <span><strong>Ganti password</strong><small>{firstTime ? "Ganti password awal dengan milik Anda" : "Ganti password Anda"}</small></span>
+      <ChevronRight size={20} aria-hidden style={{ transform: open ? "rotate(90deg)" : undefined }} />
+    </button>
+    {open && <div id="password-form" className={styles.card} style={{ marginTop: 12 }}>{warning}<PasswordForm firstTime={firstTime} /></div>}
+  </div>;
 }

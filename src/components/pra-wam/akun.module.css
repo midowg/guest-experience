@@ -46,3 +46,53 @@
 .passwordRow { list-style: none; }
 .passwordRow::-webkit-details-marker { display: none; }
 details[open] > .passwordRow > svg:last-child { transform: rotate(90deg); }
+
+/* Desktop (>= 1024px) versions, Agent F: phone layouts above stay as they are. */
+.deskOnly { display: none; }
+@media (min-width: 1024px) {
+  .deskOnly { display: block; }
+  .phoneOnly { display: none; }
+}
+
+/* Notifikasi: a centred list with the title and "Tandai semua dibaca" in one row on desktop. */
+.noteWrap { width: 100%; }
+.noteBar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+@media (min-width: 1024px) {
+  .noteWrap { max-width: 52rem; margin: 0 auto; }
+  .note { padding: 16px 20px; }
+  .note .noteBody strong { font-size: 16px; }
+}
+.empty { display: grid; justify-items: center; gap: 8px; padding: 48px 20px; text-align: center; border: 1px dashed var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.empty strong { font-size: 17px; }
+.empty p { margin: 0; max-width: 32rem; color: var(--pw-muted); font-size: 14px; }
+.emptyMark { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); }
+.emptyMark svg { width: 28px; height: 28px; }
+
+/* Profil: identity and data on the left, account security on the right. */
+.profileGrid { display: grid; gap: 16px; }
+.identity { display: flex; gap: 16px; align-items: center; }
+.identityAvatar { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 20px; font-weight: 800; }
+.identityName { margin: 0; font-family: var(--pw-display); font-size: 25px; font-weight: 600; color: var(--pw-primary); line-height: 1.2; }
+.identityMeta { margin: 2px 0 0; color: var(--pw-muted); font-size: 14px; }
+.identityUnits { display: grid; gap: 4px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--pw-line); }
+.securityHead { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+.securityHead strong { display: block; font-size: 17px; }
+.securityHead small { color: var(--pw-muted); font-size: 13px; }
+@media (min-width: 1024px) {
+  .profileGrid { grid-template-columns: minmax(0, 1fr) 26rem; gap: 24px; align-items: start; }
+  .profileGrid .fields { grid-template-columns: 1fr 1fr; }
+  .profileGrid .fields > .wide { grid-column: 1 / -1; }
+  .security { position: sticky; top: 96px; }
+}
+
+/* Pengumuman (Penpot "D8"): composer left, sent list right. */
+.annGrid { display: grid; gap: 16px; }
+@media (min-width: 1024px) { .annGrid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; align-items: start; } }
+.annGrid > section { margin: 0; }
+.sentList { display: grid; }
+.sentRow { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 14px 0; }
+.sentRow + .sentRow { border-top: 1px solid var(--pw-line); }
+.sentRow strong { display: block; font-size: 15px; }
+.sentRow small { display: block; color: var(--pw-muted); font-size: 13px; }
+.sentRow .readPill { flex: none; white-space: nowrap; }
+.annHint { margin: 0; font-size: 13px; color: var(--pw-muted); }

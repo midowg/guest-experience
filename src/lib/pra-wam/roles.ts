@@ -6,7 +6,7 @@
 
 export const praWamRoles = ["panitia", "bod", "admin"] as const;
 export type PraWamRole = (typeof praWamRoles)[number];
-export const roleLabels: Record<PraWamRole, string> = { panitia: "Panitia", bod: "BOD", admin: "Admin Pra WAM" };
+export const roleLabels: Record<PraWamRole, string> = { panitia: "Panitia", bod: "BOD", admin: "Admin WAM" };
 
 type WithRoles = { roles: readonly PraWamRole[] };
 const has = (who: WithRoles, ...roles: PraWamRole[]) => roles.some(role => who.roles.includes(role));

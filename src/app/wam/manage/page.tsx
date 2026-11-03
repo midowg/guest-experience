@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
 import { AlertTriangle, CalendarDays, ChevronRight, Plus, QrCode } from "lucide-react";
 import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
+import { BodSummary } from "@/components/pra-wam/BodSummary";
 import { SessionStatusPill } from "@/components/pra-wam/SessionStatusPill";
 import { Notice } from "@/components/ui";
 import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { sessionWhen, sessionWhere } from "@/lib/pra-wam/sessions";
 import { praWamApi, praWamPath } from "@/lib/routes";
-import { overview } from "@/lib/server/pra-wam/dashboard";
+import { bodSummary, overview } from "@/lib/server/pra-wam/dashboard";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import styles from "@/components/pra-wam/panitia.module.css";
@@ -17,13 +18,22 @@ export const metadata = { title: "Ringkasan operasional · WAM", robots: { index
 
 const longDate = (now: Date) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jakarta" }).format(now);
 
-/** Ringkasan operasional (Penpot "D1"): what is ready, what is running, and what still waits. */
+/** Ringkasan operasional (Penpot "D1") for panitia; BOD gets Ringkasan Pra WAM (Penpot "E3"). */
 export default async function DashboardPage() {
   const member = await requireMemberPage(praWamPath.dashboard);
   if (!seesAllSessions(member)) notFound();
   const manage = managesSessions(member);
   const now = new Date();
   const today = wibDate(now.toISOString());
+  // BOD reads everything and changes nothing: their own summary (Penpot "E3").
+  if (!manage) {
+    const summary = await bodSummary(member, now);
+    return <PraWamShell member={member} current="dashboard">
+      <ScreenHead title="Ringkasan Pra WAM" lead={`${longDate(now)} · data langsung · akses baca saja`} />
+      {!summary.migrated && <Notice tone="warning">Sesi menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>}
+      <BodSummary data={summary} />
+    </PraWamShell>;
+  }
   const data = await overview(member, now);
   return <PraWamShell member={member} current="dashboard">
     <ScreenHead eyebrow={`WAM · ${longDate(now)}`} title="Ringkasan operasional" lead={manage ? "Pantau kesiapan dan selesaikan tindakan tertunda." : "Baca saja: kesiapan sesi dan kehadiran."}

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FileText, Trash2, Upload } from "lucide-react";
+import { FileText, FolderOpen, Trash2, Upload } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { acceptDocuments, documentMimes, MAX_DOCUMENT_BYTES, sizeLabel, type DocumentMime, type PraWamDocument } from "@/lib/pra-wam/documents";
 import { praWamApi } from "@/lib/routes";
@@ -88,18 +88,47 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
     {document.canDelete && <button type="button" className={rows.docDelete} disabled={!!busy} onClick={() => remove(document)} aria-label={busy === document.id ? "Menghapus…" : `Hapus ${document.title}`}><Trash2 aria-hidden /></button>}
   </div>;
 
+  const uploadButton = canUpload && storage && !open && <Button type="button" variant={grouped ? "primary" : "secondary"} onClick={() => setOpen(true)}><Upload size={18} aria-hidden /> {uploadLabel}</Button>;
+  const empty = <div className={rows.empty}>
+    <span className={rows.emptyMark}><FolderOpen aria-hidden /></span>
+    <strong>{filter === "semua" ? "Belum ada dokumen" : "Tidak ada dokumen di saringan ini"}</strong>
+    <span className={styles.meta}>{filter === "semua" ? "Bahan sesi dan dokumen umum acara akan muncul di sini." : "Coba saringan lain."}</span>
+  </div>;
+  // Dokumen page on a desktop: one table with the place of each document as a column.
+  const table = <div className={rows.table} role="table" aria-label="Dokumen">
+    <div className={rows.tableHead} role="row">
+      <span role="columnheader">Dokumen</span><span role="columnheader">Untuk</span><span role="columnheader">Ukuran</span><span role="columnheader">Diunggah</span><span role="columnheader" aria-label="Aksi" />
+    </div>
+    {shown.map(document => <div key={document.id} className={rows.tableRow} role="row">
+      <span role="cell" className={rows.tableTitle}><span className={styles.tile}><FileText aria-hidden /></span><strong>{document.title}</strong></span>
+      <span role="cell">{document.sessionTitle ? <span className={`${styles.pill} ${styles.pillLine}`}>{document.sessionTitle}</span> : <span className={`${styles.pill} ${styles.pillBrass}`}>Umum acara</span>}</span>
+      <span role="cell" className={styles.meta}>{sizeLabel(document.size)}</span>
+      <span role="cell" className={styles.meta}>{document.uploadedBy === viewerName ? "Anda" : document.uploadedBy} · {dayLabel(document.createdAt)}</span>
+      <span role="cell" className={rows.tableActions}>
+        <a className={rows.docOpen} href={praWamApi.documents(document.id)} target="_blank" rel="noopener" aria-label={`Buka ${document.title}`}>Buka</a>
+        {document.canDelete && <button type="button" className={rows.docDelete} disabled={!!busy} onClick={() => remove(document)} aria-label={busy === document.id ? "Menghapus…" : `Hapus ${document.title}`}><Trash2 aria-hidden /></button>}
+      </span>
+    </div>)}
+  </div>;
+
   return <div>
-    {grouped && <div className={rows.filters} role="group" aria-label="Saring dokumen">
-      {filters.map(item => <button key={item.id} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}
+    {grouped && <div className={rows.toolbar}>
+      <div className={rows.filters} role="group" aria-label="Saring dokumen">
+        {filters.map(item => <button key={item.id} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={filter === item.id} onClick={() => setFilter(item.id)}>{item.label}</button>)}
+      </div>
+      {uploadButton}
     </div>}
     {notice && <div style={{ marginBottom: 12 }}><Notice tone={notice.tone}>{notice.text}</Notice></div>}
-    {shown.length === 0 ? <p className={styles.meta}>Belum ada dokumen.</p> : groups.map(group => <div key={group.key}>
-      {group.label && <p className={rows.groupLabel}>{group.label}</p>}
-      <div className={rows.docList}>{group.items.map(row)}</div>
-    </div>)}
+    {shown.length === 0 ? (grouped ? empty : <p className={styles.meta}>Belum ada dokumen.</p>) : <>
+      {grouped && <div className={rows.deskOnly}>{table}</div>}
+      <div className={grouped ? rows.phoneOnly : undefined}>{groups.map(group => <div key={group.key}>
+        {group.label && <p className={rows.groupLabel}>{group.label}</p>}
+        <div className={rows.docList}>{group.items.map(row)}</div>
+      </div>)}</div>
+    </>}
 
     {canUpload && (storage ? <>
-      {!open && <div style={{ marginTop: 12 }}><Button type="button" variant="secondary" onClick={() => setOpen(true)}><Upload size={18} aria-hidden /> {uploadLabel}</Button></div>}
+      {!grouped && uploadButton && <div style={{ marginTop: 12 }}>{uploadButton}</div>}
       {open && <form className={`${styles.section} ${styles.detail} ${rows.uploadForm}`} onSubmit={upload}>
         <h3>{uploadLabel}</h3>
         <div><label className={styles.label} htmlFor="doc-file">Berkas</label>

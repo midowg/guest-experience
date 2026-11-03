@@ -1,0 +1,64 @@
+/*
+ * Desktop layouts of Beranda (Penpot E1) and Agenda (E2). Phones keep the single column: every
+ * rule that changes the layout sits behind the 1024px breakpoint, and the desktop-only parts
+ * (the side column, the detail panel) are hidden below it.
+ */
+.col { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.col > * { margin-top: 0 !important; }
+.side, .panel, .desktopOnly { display: none; }
+
+@media (min-width: 1024px) {
+  .home { display: grid; grid-template-columns: minmax(0, 1fr) 27rem; gap: 28px; align-items: start; }
+  .agenda { display: grid; grid-template-columns: 32rem minmax(0, 1fr); gap: 28px; align-items: start; }
+  .side { display: grid; gap: 16px; align-content: start; position: sticky; top: 96px; }
+  .panel { display: grid; gap: 16px; align-content: start; position: sticky; top: 96px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .phoneOnly { display: none !important; }
+  .desktopOnly { display: revert; }
+  .wide.wide { justify-self: stretch; justify-content: center; }
+  .greet.greet { font-size: 34px; margin-top: 0; }
+}
+
+/* Small pieces shared by both screens */
+.headRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.metaLine { margin: 0 0 16px; font-size: 15px; color: var(--pw-muted); }
+.cardHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.cardHead h2 { margin: 0 !important; }
+.cardHead a { font-size: 13px; font-weight: 800; text-decoration: none; }
+.plain { color: var(--pw-text); text-decoration: none; }
+.plain:hover { text-decoration: underline; }
+.label { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.gapTop { margin-top: 16px; }
+.roomy.roomy { padding: 24px; }
+.prose { margin: 0; white-space: pre-line; }
+.list { list-style: none; margin: 0; padding: 0; }
+.noteCard { display: flex; gap: 12px; align-items: flex-start; text-decoration: none; color: var(--pw-text); }
+.noteCard strong { display: block; }
+
+/* Request progress: Diajukan → Diperiksa → Keputusan */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.step { display: grid; gap: 6px; font-size: 12px; font-weight: 700; color: var(--pw-muted); }
+.step::before { content: ''; height: 4px; border-radius: 4px; background: var(--pw-line); }
+.stepOn { color: var(--pw-primary); }
+.stepOn::before { background: var(--pw-primary); }
+
+/* Documents */
+.docRow { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.docRow + .docRow { border-top: 1px solid var(--pw-line); }
+.docRow > span:nth-child(2) { flex: 1; min-width: 0; }
+.docRow strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
+.open { margin-left: auto; font-weight: 800; font-size: 14px; text-decoration: none; }
+
+/* Agenda: selected item and the detail panel */
+.selected { box-shadow: inset 3px 0 0 var(--pw-primary); border-radius: 8px; }
+.timelineCard { padding: 20px 16px 4px; }
+.panelHead h2 { margin: 8px 0 0; font-family: var(--pw-display); font-size: 30px; font-weight: 600; color: var(--pw-primary); line-height: 1.15; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.tileBox { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--pw-surface-soft); min-width: 0; }
+.tileBox small { display: block; font-size: 12px; color: var(--pw-muted); font-weight: 600; }
+.tileBox strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
+.status { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--pw-success-soft); color: var(--pw-success); font-size: 14px; font-weight: 700; }
+.status svg { width: 18px; height: 18px; flex: none; }
+.panelActions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 8px; border-top: 1px solid var(--pw-line); }
+.panelActions a { display: inline-flex; align-items: center; gap: 8px; }
+.empty { text-align: center; padding: 32px 16px; color: var(--pw-muted); }
