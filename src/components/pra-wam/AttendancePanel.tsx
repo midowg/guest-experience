@@ -8,6 +8,7 @@ import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import type { AttendanceRow } from "@/lib/pra-wam/attendance";
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
+import { useConfirm } from "./ConfirmDialog";
 import panel from "./panitia.module.css";
 import styles from "./pra-wam.module.css";
 
@@ -18,6 +19,7 @@ export function AttendancePanel({ sessionId, initial, canEdit }: { sessionId: st
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [filter, setFilter] = useState<"semua" | "hadir" | "belum">("semua");
+  const [confirm, confirmDialog] = useConfirm();
   const present = rows.filter(row => row.checkedInAt).length;
   const shown = rows.filter(row => filter === "semua" || (filter === "hadir") === !!row.checkedInAt);
 
@@ -30,7 +32,12 @@ export function AttendancePanel({ sessionId, initial, canEdit }: { sessionId: st
     finally { setBusy(null); }
   }
   async function renew() {
-    if (!window.confirm("Buat QR baru? Lembar QR yang sudah dicetak tidak bisa dipakai lagi dan harus diganti.")) return;
+    if (!(await confirm({
+      title: "Buat QR baru?",
+      body: "Lembar QR yang sudah dicetak tidak bisa dipakai lagi dan harus diganti dengan cetakan baru.",
+      confirmLabel: "Buat QR baru",
+      danger: true,
+    }))) return;
     setBusy("qr"); setNotice(null);
     try { setNotice({ tone: "success", text: (await praWamRequest(praWamApi.sessionQr(sessionId), { method: "POST" })).message }); router.refresh(); }
     catch (problem) { setNotice({ tone: "error", text: errorText(problem) }); }
@@ -38,7 +45,8 @@ export function AttendancePanel({ sessionId, initial, canEdit }: { sessionId: st
   }
 
   return <div className={styles.section}>
-    {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
+    {confirmDialog}
+    {notice && <div role="status"><Notice tone={notice.tone}>{notice.text}</Notice></div>}
     <div className={styles.dates} role="group" aria-label="Saring">
       {(["semua", "hadir", "belum"] as const).map(value => <button key={value} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={filter === value} onClick={() => setFilter(value)}>
         {value === "semua" ? `Semua (${rows.length})` : value === "hadir" ? `Hadir (${present})` : `Belum (${rows.length - present})`}

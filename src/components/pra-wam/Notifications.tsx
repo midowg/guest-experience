@@ -7,6 +7,7 @@ import { Button, Notice } from "@/components/ui";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import type { Notification, SentAnnouncement } from "@/lib/server/pra-wam/announcements";
 import { errorText, praWamRequest } from "./api";
+import { useConfirm } from "./ConfirmDialog";
 import { ScreenHead } from "./ScreenHead";
 import notes from "./akun.module.css";
 import styles from "./pra-wam.module.css";
@@ -90,19 +91,31 @@ export function AnnouncementComposer({ sent, sessions, units }: { sent: SentAnno
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  /** Which sent announcement is being removed, for its busy label. */
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
   async function removeSent(item: SentAnnouncement) {
-    if (!window.confirm(`Hapus pengumuman "${item.title}"? Pengumuman hilang juga dari Notifikasi semua penerima.`)) return;
-    setBusy(true); setNotice(null);
+    if (!(await confirm({
+      title: "Hapus pengumuman?",
+      body: `"${item.title}" hilang juga dari Notifikasi semua penerima dan tidak bisa dikembalikan.`,
+      confirmLabel: "Hapus pengumuman",
+      danger: true,
+    }))) return;
+    setBusy(true); setRemoving(item.id); setNotice(null);
     try { setNotice({ tone: "success", text: (await praWamRequest(praWamApi.announcement(item.id), { method: "DELETE" })).message }); router.refresh(); }
     catch (problem) { setNotice({ tone: "error", text: errorText(problem) }); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setRemoving(null); }
   }
   const audience = type === "sesi" ? { type, sessionId } : type === "unit" ? { type, unitIds } : { type };
   const ready = title.trim().length >= 2 && (type !== "sesi" || !!sessionId) && (type !== "unit" || unitIds.length > 0);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (!window.confirm("Kirim pengumuman ini sekarang? Penerima langsung melihatnya di Notifikasi.")) return;
+    if (!(await confirm({
+      title: "Kirim pengumuman?",
+      body: `"${title.trim()}" langsung muncul di Notifikasi penerima. Setelah terkirim, isinya tidak bisa diubah.`,
+      confirmLabel: "Kirim sekarang",
+    }))) return;
     setBusy(true); setNotice(null);
     try {
       const result = await praWamRequest(praWamApi.announcements, { method: "POST", json: { title, body, audience } });
@@ -112,10 +125,11 @@ export function AnnouncementComposer({ sent, sessions, units }: { sent: SentAnno
   }
 
   return <div className={notes.annGrid}>
+    {confirmDialog}
     <section className={styles.card} aria-labelledby="tulis">
       <h2 id="tulis">Tulis pengumuman</h2>
       <form className={styles.section} onSubmit={submit}>
-        {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
+        {notice && <div role="status"><Notice tone={notice.tone}>{notice.text}</Notice></div>}
         <div><label className={styles.label} htmlFor="ann-title">Judul</label>
           <input id="ann-title" className="input" value={title} maxLength={150} onChange={event => setTitle(event.target.value)} /></div>
         <div><label className={styles.label} htmlFor="ann-body">Isi</label>
@@ -140,13 +154,16 @@ export function AnnouncementComposer({ sent, sessions, units }: { sent: SentAnno
     </section>
     <section className={styles.card} aria-labelledby="terkirim">
       <h2 id="terkirim">Sudah dikirim</h2>
-      {sent.length === 0 ? <p className={styles.meta}>Belum ada pengumuman.</p> : <div className={notes.sentList}>
+      {sent.length === 0 ? <div className={styles.emptyRow}>
+        <span className={styles.tile} aria-hidden><Megaphone /></span>
+        <p>Belum ada pengumuman. Tulis yang pertama di sebelah ini.</p>
+      </div> : <div className={notes.sentList}>
         {sent.map(item => {
           const all = item.recipients > 0 && item.read === item.recipients;
           return <article key={item.id} className={notes.sentRow}>
             <div><strong>{item.title}</strong><small>{item.audienceLabel} · {when(item.createdAt)}</small></div>
             <span className={`${styles.pill} ${all ? styles.pillSuccess : ""} ${notes.readPill}`}>{all ? <CheckCircle2 aria-hidden /> : <Clock aria-hidden />}{item.read} / {item.recipients} dibaca</span>
-            <button type="button" className="button button--quiet" style={{ color: "var(--pw-danger)" }} disabled={busy} aria-label={`Hapus pengumuman ${item.title}`} onClick={() => removeSent(item)}>Hapus</button>
+            <button type="button" className={`button button--quiet ${styles.dangerQuiet}`} disabled={busy} aria-label={`Hapus pengumuman ${item.title}`} onClick={() => removeSent(item)}>{removing === item.id ? "Menghapus…" : "Hapus"}</button>
           </article>;
         })}
       </div>}

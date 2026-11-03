@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Pencil } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
+import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import type { Room } from "@/lib/pra-wam/appraisal";
 import { praWamRoles, roleLabels, type PraWamRole } from "@/lib/pra-wam/roles";
@@ -46,6 +47,7 @@ export function PraWamAccounts({ initial, initialRooms, migrated, passwordReady 
   const [message, setMessage] = useState<Message>(null);
   const [filter, setFilter] = useState("");
   const [editing, setEditing] = useState<{ id: string; email: string } | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
   const active = rows.filter(row => row.active);
   const missing = active.filter(row => !row.hasAccount);
   const noEmail = missing.filter(row => !row.email);
@@ -64,14 +66,19 @@ export function PraWamAccounts({ initial, initialRooms, migrated, passwordReady 
   }
   const toggleRole = (row: AccountRow, role: PraWamRole) =>
     run(`role-${row.employeeId}`, praWamAccountsApi(row.employeeId), { roles: row.roles.includes(role) ? row.roles.filter(item => item !== role) : [...row.roles, role] }, "PATCH");
-  const reset = (row: AccountRow) => {
-    if (window.confirm(`Atur ulang password ${row.name} ke password awal? Ia keluar dari semua perangkat dan diminta membuat password baru saat masuk.`)) {
-      void run(`reset-${row.employeeId}`, praWamAccountsApi(row.employeeId), { resetPassword: true }, "PATCH");
-    }
+  const reset = async (row: AccountRow) => {
+    if (!(await confirm({
+      title: "Atur ulang password?",
+      body: `Password ${row.name} kembali ke password awal. Ia keluar dari semua perangkat dan diminta membuat password baru saat masuk.`,
+      confirmLabel: "Atur ulang",
+      danger: true,
+    }))) return;
+    void run(`reset-${row.employeeId}`, praWamAccountsApi(row.employeeId), { resetPassword: true }, "PATCH");
   };
 
   if (!migrated) return <Notice tone="warning">Akun Pra WAM menunggu migrasi 202611040001_pra_wam_appraisal.sql.</Notice>;
   return <div className="stack">
+    {confirmDialog}
     <p>{active.length - missing.length} dari {active.length} karyawan aktif sudah punya akun. Mereka masuk di <a href={praWamPath.login()}>{praWamPath.login()}</a> dengan email kantor dan password awal yang sama, lalu bisa menggantinya di menu Akun.</p>
     {!passwordReady && <Notice tone="warning">Password awal belum disiapkan. Isi WAM_DEFAULT_PASSWORD (minimal 8 karakter) pada server, lalu muat ulang halaman ini.</Notice>}
     {noEmail.length > 0 && <Notice tone="info">{noEmail.length} orang belum punya email. Lengkapi di <a href={EMPLOYEES_ADMIN}>Data karyawan</a> (impor ulang Excel dengan kolom EMAIL, atau ubah satu per satu).</Notice>}
@@ -95,7 +102,7 @@ export function PraWamAccounts({ initial, initialRooms, migrated, passwordReady 
                 <Button type="button" variant="quiet" disabled={!!busy} onClick={() => setEditing(null)}>Batal</Button>
               </form>
             : <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>{row.email || "—"}
-                <button type="button" className="button button--quiet" style={{ minHeight: 32, padding: "0 6px" }} aria-label={`Ubah email ${row.name}`} disabled={!!busy} onClick={() => setEditing({ id: row.employeeId, email: row.email })}><Pencil size={16} aria-hidden /></button>
+                <button type="button" className="button button--quiet" style={{ minHeight: 44, minWidth: 44, padding: 0 }} aria-label={`Ubah email ${row.name}`} disabled={!!busy} onClick={() => setEditing({ id: row.employeeId, email: row.email })}><Pencil size={16} aria-hidden /></button>
               </span>}</td>
           <td>{!row.hasAccount ? "Belum ada" : row.lastLoginAt ? (row.mustChangePassword ? "Masuk, password awal" : "Masuk") : "Siap"}</td>
           {praWamRoles.map(role => <td key={role}><input type="checkbox" aria-label={`${roleLabels[role]}: ${row.name}`} checked={row.roles.includes(role)} disabled={!!busy} onChange={() => toggleRole(row, role)} /></td>)}

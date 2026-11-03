@@ -9,6 +9,7 @@ import { sessionKindLabels, sessionKinds, sessionProblems, sessionSpan, sessionS
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
 import type { PeopleGroup } from "./BookingForm";
+import { useConfirm } from "./ConfirmDialog";
 import { ScreenHead } from "./ScreenHead";
 import panel from "./panitia.module.css";
 import styles from "./pra-wam.module.css";
@@ -33,6 +34,13 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const set = (patch: Partial<SessionInput>) => setDraft(current => ({ ...current, ...patch }));
+  const [confirm, confirmDialog] = useConfirm();
+  /** The first field with a problem gets the focus (field ids match the error keys). */
+  const showErrors = (found: Record<string, string>) => {
+    setFieldErrors(found);
+    const first = ["title", "date", "start", "end"].find(key => found[key]);
+    if (first) requestAnimationFrame(() => document.getElementById(first)?.focus());
+  };
 
   useEffect(() => {
     if (!draft.date) return;
@@ -53,20 +61,22 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
     setError(null); setFieldErrors({});
     const local = sessionProblems(draft, publish || status === "terbit");
     if (draft.title.trim().length < 2) local.title = "Isi nama sesi.";
-    if (Object.keys(local).length) { setFieldErrors(local); setError("Periksa kembali isian sesi."); return; }
+    if (Object.keys(local).length) { showErrors(local); setError("Periksa kembali isian sesi."); return; }
     setBusy(publish ? "publish" : "save");
     try {
       const result = await praWamRequest<Session>(session ? praWamApi.sessions(session.id) : praWamApi.sessions(), { method: session ? "PATCH" : "POST", json: { ...draft, ...(publish ? { publish: true } : {}) } });
       router.refresh(); router.push(session ? praWamPath.sessions : praWamPath.editSession(result.data.id));
     } catch (problem) {
-      if (problem instanceof PraWamApiError && problem.fieldErrors) setFieldErrors(Object.fromEntries(Object.entries(problem.fieldErrors).map(([key, list]) => [key, list[0]])));
+      if (problem instanceof PraWamApiError && problem.fieldErrors) showErrors(Object.fromEntries(Object.entries(problem.fieldErrors).map(([key, list]) => [key, list[0]])));
       setError(errorText(problem)); setBusy(null);
     }
   }
   async function changeStatus(next: "draf" | "batal") {
     if (!session) return;
-    const question = next === "batal" ? `Batalkan "${session.title}"? Sesi hilang dari agenda peserta dan ruangnya kembali tersedia.` : `Kembalikan "${session.title}" ke draf? Sesi hilang dari agenda peserta sampai diterbitkan lagi.`;
-    if (!window.confirm(question)) return;
+    const ok = await confirm(next === "batal"
+      ? { title: "Batalkan sesi?", body: `"${session.title}" hilang dari agenda peserta dan ruangnya kembali tersedia.`, confirmLabel: "Batalkan sesi", danger: true }
+      : { title: "Kembalikan ke draf?", body: `"${session.title}" hilang dari agenda peserta sampai diterbitkan lagi.`, confirmLabel: "Kembalikan ke draf" });
+    if (!ok) return;
     setBusy(next); setError(null);
     try { await praWamRequest(praWamApi.sessionStatus(session.id), { method: "POST", json: { status: next } }); router.refresh(); router.push(praWamPath.sessions); }
     catch (problem) { setError(errorText(problem)); setBusy(null); }
@@ -74,7 +84,12 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
 
   async function removeSession() {
     if (!session) return;
-    if (!window.confirm(`Hapus permanen "${session.title}"? Peserta, kehadiran, permintaan jadwal, dan dokumen sesi ini ikut terhapus dan tidak bisa dikembalikan.`)) return;
+    if (!(await confirm({
+      title: "Hapus sesi permanen?",
+      body: `"${session.title}" beserta peserta, kehadiran, permintaan jadwal, dan dokumennya ikut terhapus dan tidak bisa dikembalikan.`,
+      confirmLabel: "Hapus permanen",
+      danger: true,
+    }))) return;
     setBusy("hapus"); setError(null);
     try { await praWamRequest(praWamApi.sessions(session.id), { method: "DELETE" }); router.refresh(); router.push(praWamPath.sessions); }
     catch (problem) { setError(errorText(problem)); setBusy(null); }
@@ -201,9 +216,10 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
           <Button type="submit" variant="secondary" disabled={!!busy}>{busy === "save" ? "Menyimpan…" : "Simpan draf"}</Button>
           <Button type="button" disabled={!!busy} onClick={() => save(true)}><Send size={16} aria-hidden /> {busy === "publish" ? "Menerbitkan…" : "Terbitkan sesi"}</Button>
         </>}
-      {session && status === "terbit" && <button type="button" className="button button--quiet" disabled={!!busy} onClick={() => changeStatus("draf")}>Kembalikan ke draf</button>}
-      {session && status !== "batal" && <button type="button" className="button button--quiet" disabled={!!busy} onClick={() => changeStatus("batal")}>Batalkan sesi</button>}
-      {session && status !== "terbit" && <button type="button" className="button button--quiet" style={{ color: "var(--pw-danger)" }} disabled={!!busy} onClick={removeSession}>{busy === "hapus" ? "Menghapus…" : "Hapus sesi"}</button>}
+      {session && status === "terbit" && <button type="button" className="button button--quiet" disabled={!!busy} onClick={() => changeStatus("draf")}>{busy === "draf" ? "Mengembalikan…" : "Kembalikan ke draf"}</button>}
+      {session && status !== "batal" && <button type="button" className="button button--quiet" disabled={!!busy} onClick={() => changeStatus("batal")}>{busy === "batal" ? "Membatalkan…" : "Batalkan sesi"}</button>}
+      {session && status !== "terbit" && <button type="button" className={`button button--quiet ${styles.dangerQuiet}`} disabled={!!busy} onClick={removeSession}>{busy === "hapus" ? "Menghapus…" : "Hapus sesi"}</button>}
     </div>
+    {confirmDialog}
   </form>;
 }

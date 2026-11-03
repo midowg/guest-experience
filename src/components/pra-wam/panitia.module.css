@@ -20,7 +20,7 @@
 .alert svg { flex: none; width: 22px; height: 22px; }
 .alert small { display: block; font-size: 12px; font-weight: 800; }
 .actionsCell { display: flex; flex-wrap: wrap; gap: 8px; }
-.actionsCell :global(.button) { min-height: 40px; padding: 6px 14px; font-size: 14px; }
+.actionsCell :global(.button) { min-height: 44px; padding: 6px 14px; font-size: 14px; }
 
 /* Buat sesi: form left, automatic checks right */
 .formGrid { display: grid; gap: 16px; }
@@ -44,7 +44,7 @@
 .printGrid { display: grid; gap: 16px; }
 @media (min-width: 1024px) { .printGrid { grid-template-columns: minmax(0, 1fr) minmax(0, 26rem); align-items: start; } }
 .sheet { display: grid; justify-items: center; gap: 10px; padding: 28px 24px; border: 1px solid var(--pw-line); border-radius: 8px; background: #fff; color: #1e2733; text-align: center; }
-.sheetEyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #a9813f; }
+.sheetEyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #6e5321; }
 .sheetEyebrow::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #a9813f; }
 .sheet h2 { margin: 0; font-family: 'Lora', Georgia, serif; font-size: 26px; font-weight: 600; color: #1551a0; }
 .sheet p { margin: 0; color: #5b6573; font-size: 14px; }

@@ -9,6 +9,7 @@ import { requestStatusLabels, spanLabel, type ScheduleRequest } from "@/lib/pra-
 import { sessionTimes } from "@/lib/pra-wam/sessions";
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
+import { useConfirm } from "./ConfirmDialog";
 import panel from "./panitia.module.css";
 import styles from "./pra-wam.module.css";
 
@@ -24,6 +25,8 @@ export function RequestChange({ sessionId, startsAt, endsAt, rooms, requests, ca
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const set = (patch: Partial<typeof form>) => setForm(current => ({ ...current, ...patch }));
+  const [confirm, confirmDialog] = useConfirm();
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -32,26 +35,37 @@ export function RequestChange({ sessionId, startsAt, endsAt, rooms, requests, ca
       const result = await praWamRequest(praWamApi.requestChange(sessionId), { method: "POST", json: form });
       setShow(false); setNotice({ tone: "success", text: result.message }); router.refresh();
     } catch (problem) {
-      if (problem instanceof PraWamApiError && problem.fieldErrors) setErrors(Object.fromEntries(Object.entries(problem.fieldErrors).map(([key, list]) => [key, list[0]])));
+      if (problem instanceof PraWamApiError && problem.fieldErrors) {
+        const found = Object.fromEntries(Object.entries(problem.fieldErrors).map(([key, list]) => [key, list[0]]));
+        setErrors(found);
+        // The first field with a problem gets the focus.
+        const first = ["date", "start", "end", "reason"].find(key => found[key]);
+        if (first) requestAnimationFrame(() => document.getElementById(`req-${first}`)?.focus());
+      }
       setNotice({ tone: "error", text: errorText(problem) });
     } finally { setBusy(false); }
   }
   async function withdraw(id: string) {
-    if (!window.confirm("Tarik permintaan ini?")) return;
-    setBusy(true);
-    try { await praWamRequest(praWamApi.request(id), { method: "DELETE" }); router.refresh(); }
+    if (!(await confirm({
+      title: "Tarik permintaan?",
+      body: "Panitia tidak lagi meninjau usulan ini. Kamu bisa mengajukan lagi nanti.",
+      confirmLabel: "Tarik permintaan",
+    }))) return;
+    setBusy(true); setWithdrawing(id); setNotice(null);
+    try { await praWamRequest(praWamApi.request(id), { method: "DELETE" }); setNotice({ tone: "success", text: "Permintaan ditarik." }); router.refresh(); }
     catch (problem) { setNotice({ tone: "error", text: errorText(problem) }); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setWithdrawing(null); }
   }
 
   return <div className={styles.section}>
-    {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
+    {confirmDialog}
+    {notice && <div role="status"><Notice tone={notice.tone}>{notice.text}</Notice></div>}
     {requests.map(request => <article key={request.id} className={styles.mineItem}>
       <span className={styles.kicker}>{requestStatusLabels[request.status]}</span>
       <span>Usul: {spanLabel(request.toStartsAt, request.toEndsAt)}{request.toRoomName ? ` · ${request.toRoomName}` : ""}</span>
       <span className={styles.meta}>Alasan: {request.reason}</span>
       {request.reviewNote && <span className={styles.meta}>Catatan panitia: {request.reviewNote}</span>}
-      {request.status === "diajukan" && <div className={styles.actions}><button type="button" className="button button--quiet" disabled={busy} onClick={() => withdraw(request.id)}>Tarik permintaan</button></div>}
+      {request.status === "diajukan" && <div className={styles.actions}><button type="button" className="button button--quiet" disabled={busy} onClick={() => withdraw(request.id)}>{withdrawing === request.id ? "Menarik…" : "Tarik permintaan"}</button></div>}
     </article>)}
     {canAsk && !open && !show && <div><Button type="button" variant="secondary" onClick={() => setShow(true)}>Ajukan ganti jadwal</Button>
       <p className={styles.hint}>Panitia meninjau dulu. Jadwal baru berlaku setelah disetujui, dan semua peserta diberi tahu.</p></div>}

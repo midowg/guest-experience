@@ -6,6 +6,7 @@ import { FileText, FolderOpen, Trash2, Upload } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { acceptDocuments, documentMimes, MAX_DOCUMENT_BYTES, sizeLabel, type DocumentMime, type PraWamDocument } from "@/lib/pra-wam/documents";
 import { praWamApi } from "@/lib/routes";
+import { useConfirm } from "./ConfirmDialog";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
 import styles from "./pra-wam.module.css";
 import rows from "./peserta.module.css";
@@ -38,6 +39,7 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
   const [target, setTarget] = useState(sessionId ?? "");
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
 
   function choose(next: File | null) {
     setNotice(null);
@@ -65,9 +67,14 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
   }
 
   async function remove(document: PraWamDocument) {
-    if (!window.confirm(`Hapus "${document.title}"?`)) return;
+    if (!(await confirm({
+      title: "Hapus dokumen?",
+      body: `"${document.title}" hilang untuk semua yang bisa melihatnya dan tidak bisa dikembalikan.`,
+      confirmLabel: "Hapus dokumen",
+      danger: true,
+    }))) return;
     setBusy(document.id); setNotice(null);
-    try { await praWamRequest(praWamApi.documents(document.id), { method: "DELETE" }); router.refresh(); }
+    try { await praWamRequest(praWamApi.documents(document.id), { method: "DELETE" }); setNotice({ tone: "success", text: "Dokumen dihapus." }); router.refresh(); }
     catch (problem) { setNotice({ tone: "error", text: errorText(problem) }); }
     finally { setBusy(null); }
   }
@@ -118,7 +125,8 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
       </div>
       {uploadButton}
     </div>}
-    {notice && <div style={{ marginBottom: 12 }}><Notice tone={notice.tone}>{notice.text}</Notice></div>}
+    {confirmDialog}
+    {notice && <div style={{ marginBottom: 12 }} role="status"><Notice tone={notice.tone}>{notice.text}</Notice></div>}
     {shown.length === 0 ? (grouped ? empty : <p className={styles.meta}>Belum ada dokumen.</p>) : <>
       {grouped && <div className={rows.deskOnly}>{table}</div>}
       <div className={grouped ? rows.phoneOnly : undefined}>{groups.map(group => <div key={group.key}>

@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CalendarClock, DoorOpen, MapPin, Users } from "lucide-react";
+import { CalendarClock, CalendarPlus, DoorOpen, MapPin, Users } from "lucide-react";
 import { ButtonLink, Notice } from "@/components/ui";
 import { appraisalRules, clockLabel, dayLabel, slotTimes, wibDate, wibInstant, wibTime, type Booking, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
+import { useConfirm } from "./ConfirmDialog";
 import styles from "./pra-wam.module.css";
 import own from "./appraisal.module.css";
 
@@ -24,7 +25,9 @@ const chipDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "nume
 export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open }: Props) {
   const router = useRouter();
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  /** "batal:<id>" or "hapus:<id>": which action is running, on which booking. */
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
   const [openId, setOpenId] = useState<string | null>(null);
   const opened = bookings.find(booking => booking.id === openId);
   const bookable = rooms.filter(room => room.bookable);
@@ -35,11 +38,16 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
   const inRoom = (room: Room) => bookings.filter(booking => booking.roomId === room.id);
   const mineFlag = (booking: Booking) => !booking.isSession && booking.bookedBy.id === viewerId;
   const toggle = (id: string) => setOpenId(openId === id ? null : id);
+  const working = (booking: Booking) => !!busy && busy.endsWith(booking.id);
 
   async function cancel(booking: Booking) {
     const someoneElse = booking.bookedBy.id !== viewerId ? ` milik ${booking.bookedBy.name}` : "";
-    if (!window.confirm(`Batalkan "${booking.title}"${someoneElse} ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}? Ruang langsung bisa dipesan orang lain.`)) return;
-    setBusy(booking.id); setNotice(null);
+    if (!(await confirm({
+      title: "Batalkan booking?",
+      body: `"${booking.title}"${someoneElse}, ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}. Ruang langsung bisa dipesan orang lain.`,
+      confirmLabel: "Batalkan booking",
+    }))) return;
+    setBusy(`batal:${booking.id}`); setNotice(null);
     try {
       const result = await praWamRequest(praWamApi.bookings(booking.id), { method: "DELETE" });
       setNotice({ tone: "success", text: result.message });
@@ -51,8 +59,13 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
 
   /** For a test or a mistake: gone for good, not kept as cancelled. */
   async function remove(booking: Booking) {
-    if (!window.confirm(`Hapus permanen "${booking.title}" ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}? Data booking hilang dan tidak bisa dikembalikan. Pakai untuk booking uji atau salah input.`)) return;
-    setBusy(booking.id); setNotice(null);
+    if (!(await confirm({
+      title: "Hapus permanen?",
+      body: `"${booking.title}", ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}. Data booking hilang dan tidak bisa dikembalikan. Pakai untuk booking uji atau salah input.`,
+      confirmLabel: "Hapus permanen",
+      danger: true,
+    }))) return;
+    setBusy(`hapus:${booking.id}`); setNotice(null);
     try {
       const result = await praWamRequest(praWamApi.bookings(booking.id, { permanent: "1" }), { method: "DELETE" });
       setNotice({ tone: "success", text: result.message });
@@ -63,7 +76,8 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
   }
 
   return <>
-    {notice && <div className={own.gap}><Notice tone={notice.tone}>{notice.text}</Notice></div>}
+    {confirmDialog}
+    {notice && <div className={own.gap} role="status"><Notice tone={notice.tone}>{notice.text}</Notice></div>}
 
     <nav className={styles.dates} aria-label="Pilih tanggal">
       {dates.map(day => <a key={day} className={`${styles.chip} ${styles.chipStack}`} href={praWamPath.appraisal(day)} aria-current={day === date ? "date" : undefined}>
@@ -131,15 +145,19 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
         {opened.description && <span className={styles.meta}>{opened.description}</span>}
         <div className={styles.actions}>
           {open && mineFlag(opened) && <ButtonLink variant="secondary" href={praWamPath.book({ edit: opened.id })}>Ubah</ButtonLink>}
-          {!opened.isSession && (mineFlag(opened) || canCancelAny) && new Date(opened.endsAt) > new Date(now) && <button type="button" className="button button--quiet" disabled={busy === opened.id} onClick={() => cancel(opened)}>{busy === opened.id ? "Membatalkan…" : "Batalkan"}</button>}
-          {!opened.isSession && (mineFlag(opened) || canCancelAny) && <button type="button" className="button button--quiet" style={{ color: "var(--pw-danger)" }} disabled={busy === opened.id} onClick={() => remove(opened)}>Hapus</button>}
+          {!opened.isSession && (mineFlag(opened) || canCancelAny) && new Date(opened.endsAt) > new Date(now) && <button type="button" className="button button--quiet" disabled={working(opened)} onClick={() => cancel(opened)}>{busy === `batal:${opened.id}` ? "Membatalkan…" : "Batalkan"}</button>}
+          {!opened.isSession && (mineFlag(opened) || canCancelAny) && <button type="button" className={`button button--quiet ${styles.dangerQuiet}`} disabled={working(opened)} onClick={() => remove(opened)}>{busy === `hapus:${opened.id}` ? "Menghapus…" : "Hapus"}</button>}
           <button type="button" className="button button--quiet" onClick={() => setOpenId(null)}>Tutup</button>
         </div>
       </div>}
     </section>
 
     <p className={styles.sectionLabel}>Booking saya</p>
-    {mine.length === 0 ? <p className={styles.meta}>Belum ada booking yang kamu pesan atau ikuti.</p> : <div className={styles.mine}>
+    {mine.length === 0 ? <div className={styles.emptyRow}>
+      <span className={styles.tile} aria-hidden><CalendarPlus /></span>
+      <p>Belum ada booking yang kamu pesan atau ikuti.</p>
+      {open && <ButtonLink variant="secondary" href={praWamPath.book({ date })}>Pesan ruang</ButtonLink>}
+    </div> : <div className={styles.mine}>
       {mine.map(booking => {
         const room = rooms.find(item => item.id === booking.roomId)?.name ?? "Ruang";
         const mineBooking = mineFlag(booking);
@@ -152,8 +170,8 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
             {booking.description && <span className={styles.meta}>{booking.description}</span>}
             {mineBooking && <div className={styles.actions}>
               {open && <ButtonLink variant="secondary" href={praWamPath.book({ edit: booking.id })}>Ubah</ButtonLink>}
-              <button type="button" className="button button--quiet" disabled={busy === booking.id} onClick={() => cancel(booking)}>{busy === booking.id ? "Membatalkan…" : "Batalkan"}</button>
-              <button type="button" className="button button--quiet" style={{ color: "var(--pw-danger)" }} disabled={busy === booking.id} onClick={() => remove(booking)}>Hapus</button>
+              <button type="button" className="button button--quiet" disabled={working(booking)} onClick={() => cancel(booking)}>{busy === `batal:${booking.id}` ? "Membatalkan…" : "Batalkan"}</button>
+              <button type="button" className={`button button--quiet ${styles.dangerQuiet}`} disabled={working(booking)} onClick={() => remove(booking)}>{busy === `hapus:${booking.id}` ? "Menghapus…" : "Hapus"}</button>
             </div>}
           </div>
         </article>;

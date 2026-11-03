@@ -4,8 +4,8 @@
 .docRow + .docRow { border-top: 1px solid var(--pw-line); }
 .docBody { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .docBody strong { font-size: 15px; overflow-wrap: anywhere; }
-.docOpen { flex: none; font-weight: 800; font-size: 14px; text-decoration: none; padding: 10px 4px; }
-.docDelete { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--pw-muted); cursor: pointer; }
+.docOpen { flex: none; display: inline-flex; align-items: center; min-height: 44px; font-weight: 800; font-size: 14px; text-decoration: none; padding: 0 8px; }
+.docDelete { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--pw-muted); cursor: pointer; }
 .docDelete:hover { background: var(--pw-danger-soft); color: var(--pw-danger); }
 .docDelete svg { width: 18px; height: 18px; }
 .groupLabel { margin: 16px 0 8px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
@@ -23,7 +23,7 @@
 .toolbar .filters { margin-bottom: 0; }
 .table { background: var(--pw-surface); border: 1px solid var(--pw-line); border-radius: 16px; padding: 8px 16px; }
 .tableHead, .tableRow { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.4fr) 6rem minmax(0, 1.4fr) 7rem; gap: 16px; align-items: center; }
-.tableHead { padding: 8px 0 10px; border-bottom: 1px solid var(--pw-line); font-size: 12px; font-weight: 800; color: var(--pw-muted); text-transform: uppercase; letter-spacing: .06em; }
+.tableHead { padding: 8px 0 10px; border-bottom: 1px solid var(--pw-line); font-size: 13px; font-weight: 700; color: var(--pw-muted); }
 .tableRow { padding: 12px 0; }
 .tableRow + .tableRow { border-top: 1px solid var(--pw-line); }
 .tableTitle { display: flex; align-items: center; gap: 12px; min-width: 0; }
