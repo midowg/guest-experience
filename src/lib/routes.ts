@@ -125,6 +125,9 @@ export const praWamPath = {
   agenda: `${PRA_WAM_PATH}/agenda`,
   session: (id: string) => `${PRA_WAM_PATH}/sesi/${id}`,
   documents: `${PRA_WAM_PATH}/dokumen`,
+  notifications: `${PRA_WAM_PATH}/notifikasi`,
+  /** Panitia: write announcements and see who has read them. */
+  announcements: `${PRA_WAM_PATH}/panitia/pengumuman`,
   /** Panitia (and BOD, reading): every session, drafts included; the form to make or change one. */
   sessions: `${PRA_WAM_PATH}/panitia/sesi`,
   newSession: `${PRA_WAM_PATH}/panitia/sesi/baru`,
@@ -166,6 +169,10 @@ export const praWamApi = {
   /** Documents: ask for an upload address, then register the uploaded file; one document by id. */
   documents: (id?: string) => `/api/pra-wam/dokumen${id ? `/${id}` : ""}`,
   documentUpload: "/api/pra-wam/dokumen/unggah",
+  /** GET: the person's notifications; POST {id?}: mark one, or all, read. */
+  notifications: "/api/pra-wam/notifikasi",
+  /** GET: sent announcements with read counts; POST: send one (panitia). */
+  announcements: "/api/pra-wam/pengumuman",
   /** Appraisal bookings: the day's schedule, a new booking, or one booking by id. */
   bookings: (id?: string, query: Record<string, string> = {}) => {
     const search = new URLSearchParams(query).toString();

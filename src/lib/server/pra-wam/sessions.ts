@@ -5,6 +5,7 @@ import { sessionProblems, sessionSpan, type RoomUse, type Session, type SessionI
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
+import { notifySession } from "./announcements";
 import { listPeople, listRooms } from "./appraisal";
 import { listEvents } from "./events";
 import { type Member } from "./session";
@@ -149,17 +150,23 @@ export async function saveSession(input: SessionInput, viewer: Member, options: 
     const { error } = await client.from("pw_session_participants").insert(people.map(employee_id => ({ session_id: id, employee_id })));
     if (error) { if (error.code === "23503") throw new ServiceError(422, "Ada peserta yang tidak dikenal. Muat ulang halaman."); fail(error); }
   }
-  return getSession(id, viewer);
+  const saved = await getSession(id, viewer);
+  // Participants hear about a session when it is published, and when a published one moves.
+  if (saved.status === "terbit" && current?.status !== "terbit") await notifySession(saved, "terbit", viewer);
+  else if (saved.status === "terbit" && current && (current.startsAt !== saved.startsAt || current.endsAt !== saved.endsAt || current.roomId !== saved.roomId || current.location !== saved.location)) await notifySession(saved, "berubah", viewer);
+  return saved;
 }
 
 /** Back to draft (off the agenda) or cancelled (room freed, kept for the record). */
 export async function setSessionStatus(id: string, status: Exclude<SessionStatus, "terbit">, viewer: Member): Promise<Session> {
   requireManager(viewer);
-  await getSession(id, viewer);
+  const before = await getSession(id, viewer);
   const { error } = await createPrivilegedClient().from("pw_sessions").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) {
     if (error.code === "23P01") throw new ServiceError(409, "Ruang sesi ini sudah dipakai yang lain. Pilih ruang lain dulu.");
     fail(error);
   }
-  return getSession(id, viewer);
+  const saved = await getSession(id, viewer);
+  if (status === "batal" && before.status === "terbit") await notifySession(saved, "batal", viewer);
+  return saved;
 }
