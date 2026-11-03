@@ -12,6 +12,7 @@ import { TemplateSettings } from "@/components/admin/super/TemplateSettings";
 import { ModuleSettings } from "@/components/admin/super/ModuleSettings";
 import { StaffSettings } from "@/components/admin/super/StaffSettings";
 import { listStaff } from "@/lib/server/staff";
+import { EMPLOYEES_ADMIN } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard super admin" };
@@ -30,7 +31,7 @@ export default async function SuperAdminPage() {
     <p className="eyebrow">Super admin</p>
     <h1 className={styles.title}>Dashboard super admin</h1>
     <p className={styles.lead}>Atur tim yang bisa dipilih sebagai PIC, templat yang bisa dipilih admin biasa, acara yang terlihat, dan modul yang boleh dipakai saat membuat atau mengubah acara.</p>
-    <nav className={styles.superTabs} aria-label="Bagian dashboard"><a href="#tim">Tim Werkudara</a><Link href="/admin/akses">Log akses</Link><a href="#templat">Templat</a><a href="#visibilitas">Visibilitas acara</a><a href="#modul">Modul admin</a></nav>
+    <nav className={styles.superTabs} aria-label="Bagian dashboard"><a href="#tim">Tim Werkudara</a><Link href={EMPLOYEES_ADMIN}>Data karyawan</Link><Link href="/admin/akses">Log akses</Link><a href="#templat">Templat</a><a href="#visibilitas">Visibilitas acara</a><a href="#modul">Modul admin</a></nav>
     <div id="tim"><StaffSettings initial={team.staff} migrated={team.migrated} /></div>
     <div id="templat"><TemplateSettings initialEnabled={templates.templates} migrated={templates.migrated} /></div>
     <section id="visibilitas" aria-labelledby="visibility-title" className="stack">

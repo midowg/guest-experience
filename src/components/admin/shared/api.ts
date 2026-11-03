@@ -7,10 +7,11 @@ export class AdminApiError extends Error {
   }
 }
 
+/** JSON bodies are sent as JSON; a FormData body (an upload) keeps the browser's own multipart header. */
 export async function adminRequest<T>(url: string, init: RequestInit = {}): Promise<ApiResult<T> & { ok: true }> {
   let response: Response;
   try {
-    response = await fetch(url, { ...init, credentials: "same-origin", cache: "no-store", headers: { ...(init.body ? { "Content-Type": "application/json" } : {}), ...init.headers } });
+    response = await fetch(url, { ...init, credentials: "same-origin", cache: "no-store", headers: { ...(typeof init.body === "string" ? { "Content-Type": "application/json" } : {}), ...init.headers } });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     throw new AdminApiError("Tidak dapat terhubung. Periksa jaringan lalu coba lagi. Perubahan belum dikonfirmasi tersimpan.");

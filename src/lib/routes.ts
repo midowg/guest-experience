@@ -101,6 +101,9 @@ export function adminApi(eventId: string, part = "", query: Record<string, strin
 }
 export const adminEventsApi = "/api/admin/events";
 /** Studio Poster design library: the list, or one design by id. */
+/** Data karyawan: the list and import (super admin), the sheet check, or one person by id. */
+export const employeesApi = (part: "" | "parse" | string = "") => `/api/admin/employees${part ? `/${part}` : ""}`;
+export const EMPLOYEES_ADMIN = "/admin/super/karyawan";
 export const posterDesignsApi = (id?: string) => `/api/admin/poster-designs${id ? `/${id}` : ""}`;
 /** Tim Werkudara: the list, or one member by id. */
 export const staffApi = (id?: string, query: Record<string, string> = {}) => {
