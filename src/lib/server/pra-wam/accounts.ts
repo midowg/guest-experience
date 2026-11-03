@@ -6,15 +6,15 @@ import { notMigrated, waitingForMigration } from "./session";
 
 /*
  * Pra WAM accounts, set up by the super admin. Each active person in Data karyawan with an email
- * gets a Supabase Auth user with the shared first password (PRA_WAM_DEFAULT_PASSWORD, a server
+ * gets a Supabase Auth user with the shared first password (WAM_DEFAULT_PASSWORD, a server
  * secret that is never written in the repository) and a row in pw_accounts.
  */
 
 export type AccountRow = { employeeId: string; name: string; department: string; email: string; active: boolean; hasAccount: boolean; lastLoginAt: string | null };
 
 function defaultPassword(): string {
-  const password = process.env.PRA_WAM_DEFAULT_PASSWORD ?? "";
-  if (password.length < 8) throw new ServiceError(503, "Password awal Pra WAM belum disiapkan. Isi PRA_WAM_DEFAULT_PASSWORD (minimal 8 karakter) pada server.");
+  const password = process.env.WAM_DEFAULT_PASSWORD ?? "";
+  if (password.length < 8) throw new ServiceError(503, "Password awal Pra WAM belum disiapkan. Isi WAM_DEFAULT_PASSWORD (minimal 8 karakter) pada server.");
   return password;
 }
 

@@ -16,8 +16,8 @@ describe("Pra WAM session cookie", () => {
     expect(verifyPraWamSession(null, token)).toBeNull();
   });
   it("needs a secret of at least 32 characters", () => {
-    expect(praWamSecret({ PRA_WAM_SESSION_SECRET: "short" })).toBeNull();
-    expect(praWamSecret({ PRA_WAM_SESSION_SECRET: secret })).toBe(secret);
+    expect(praWamSecret({ WAM_SESSION_SECRET: "short" })).toBeNull();
+    expect(praWamSecret({ WAM_SESSION_SECRET: secret })).toBe(secret);
   });
   it("only returns to Pra WAM pages after signing in", () => {
     expect(safePraWamNext("/pra-wam/appraisal")).toBe("/pra-wam/appraisal");

@@ -20,7 +20,7 @@ export const waitingForMigration = () => new ServiceError(503, `Pra WAM menunggu
 
 export type Member = { id: string; name: string; nickname: string; department: string; position: string; mustChangePassword: boolean };
 
-const notReady = () => new ServiceError(503, "Login Pra WAM belum disiapkan. Isi PRA_WAM_SESSION_SECRET (acak, minimal 32 karakter) pada server.");
+const notReady = () => new ServiceError(503, "Login Pra WAM belum disiapkan. Isi WAM_SESSION_SECRET (acak, minimal 32 karakter) pada server.");
 
 export async function currentMember(): Promise<Member | null> {
   const secret = praWamSecret();

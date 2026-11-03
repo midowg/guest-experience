@@ -18,6 +18,6 @@ export default async function PraWamAccountsPage() {
   return <AdminShell>
     <p className="eyebrow"><Link href="/admin/super">Super admin</Link></p>
     <h1 className={styles.title}>Akun Pra WAM</h1>
-    <PraWamAccounts initial={rows} migrated={migrated} passwordReady={(process.env.PRA_WAM_DEFAULT_PASSWORD ?? "").length >= 8} />
+    <PraWamAccounts initial={rows} migrated={migrated} passwordReady={(process.env.WAM_DEFAULT_PASSWORD ?? "").length >= 8} />
   </AdminShell>;
 }
