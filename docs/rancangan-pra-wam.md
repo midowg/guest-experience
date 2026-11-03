@@ -157,8 +157,11 @@ permintaan jadwal, survei, dan status absen. Semua mengikuti akun yang login.
 - **Password awal sama untuk semua akun** (keputusan pemilik, 3 Nov 2026). Nilainya dibagikan
   terpisah dan disimpan sebagai pengaturan server, **tidak ditulis di repo atau dokumen ini**.
   Setiap orang menggantinya di Pengaturan akun.
-- Karena password awal seragam, layar "Buat password baru" (A2) muncul saat pertama masuk; usulan
-  saya wajib, bukan pilihan. Ada "Lupa password" yang mengirim tautan reset ke email.
+- Layar "Buat password baru" (A2) muncul saat pertama masuk tetapi **bisa dilewati** ("Lewati, atur
+  nanti"); password diganti kapan saja di Pengaturan akun (keputusan pemilik, 3 Nov 2026). Ada
+  "Lupa password" yang mengirim tautan reset ke email. Catatan risiko: selama password awal yang
+  seragam belum diganti, siapa pun yang tahu email seseorang bisa masuk ke akunnya; super admin bisa
+  memantau siapa yang masih memakai password awal (D5).
 - Draf daftar akun: `Downloads\Draf_Akun_PraWAM_WAM.xlsx` (sheet Akun, Unit, Catatan). Berisi data
   pribadi, jadi tidak masuk repo.
 - **Fakta saat ini:** login admin Journey (`src/app/api/auth/login/route.ts`) hanya memakai satu
@@ -166,9 +169,15 @@ permintaan jadwal, survei, dan status absen. Semua mengikuti akun yang login.
   email. Jadi akun per orang (email + password, peran per acara) adalah **fitur baru** di Journey,
   dan daftar email karyawan perlu disiapkan karena file data karyawan belum memuatnya.
 
+## Fokus sekarang: prototipe Pra WAM untuk review atasan (keputusan 3 Nov 2026)
+
+WAM cukup **disiapkan** (pengalih acara, data Pra WAM terbawa, pairing kamar sebagai contoh). Fokus
+desain dan prototipe adalah **Pra WAM**, digambar sedetail mungkin dan bisa diklik di Penpot
+(View mode) supaya atasan bisa mencoba alurnya lewat tautan bagikan.
+
 ## Satu aplikasi, dua versi acara: Pra WAM dan WAM (keputusan 3 Nov 2026)
 
-Aplikasinya satu, acaranya dua (`events`: Pra WAM dan WAM 2027). Akun, profil personalisasi,
+Aplikasinya satu, acaranya dua (`events`: Pra WAM dan WAM 2027). Akun, profil,
 departemen/BU, dokumen, dan riwayat absen Pra WAM **terbawa** ke WAM tanpa diisi ulang. Pengguna
 berpindah lewat **pengalih acara** di bilah atas (Pra WAM · WAM 2027); aplikasi membuka acara yang
 sedang berjalan secara otomatis. Modul yang aktif per acara diatur di pengaturan acara (mis. pairing
@@ -193,31 +202,28 @@ permintaan jadwal, bahan forum). Usulan data: `org_units` (jenis departemen/BU, 
 Super admin mengelola **akun dan akses**: email, reset password ke awal, peran per acara (peserta,
 panitia, BOD), tanggung jawab unit, dan izin MCP. Semua perubahan tercatat di `audit_logs`.
 
-## Form personalisasi di awal (keputusan 3 Nov 2026)
+## Data personalisasi: ditunda (keputusan 3 Nov 2026)
 
-Saat pertama masuk, peserta mengisi form personalisasi bertahap. Semua jawaban **disatukan di
-aplikasi ini** sebagai profil acara (`event_members.event_profile`), dipakai ulang di Pra WAM dan WAM,
-dan bisa diubah lagi dari Profil.
+Form personalisasi di awal dan semua data preferensi pribadi (alergi, pantangan, AC, tidur, hobi,
+olahraga, warna favorit, MBTI) **dihapus dulu** dari desain dan cakupan. Profil peserta sekarang hanya
+berisi data akun: nama lengkap dan departemen/BU (dari data karyawan, terkunci), nama panggilan,
+email (diatur super admin), dan ganti password. Akibatnya:
 
-1. Data saya: nama lengkap, departemen, jabatan (dari master, terkunci) + nama panggilan.
-2. Makanan: alergi dan pantangan (`allergies[]`).
-3. Kamar dan tidur: preferensi AC, mendengkur, toleransi suara (`ac_preference`, `snoring`,
-   `noise_tolerance`).
-4. Tentang saya: hobi, olahraga, warna favorit, MBTI (`hobbies[]`, `sports[]`, `favorite_color`,
-   `mbti`).
+- BOD melihat profil peserta tanpa infografis personal: unit, jabatan, kehadiran, kamar/tim.
+- Pairing kamar dan tim di WAM dilakukan manual oleh panitia tanpa filter preferensi.
+- Field `event_profile` JSON dan daftar field tervalidasi di acuan (halaman 09) belum dipakai.
 
-Pilihan dibuat sebagai chip dan pilihan tunggal (bukan isian bebas) supaya data rapi untuk pairing dan
-dashboard. Bisa dilewati dan dilanjutkan nanti; Beranda menampilkan pengingat sampai selesai.
+Rancangan form 4 langkah (data saya, makanan, kamar dan tidur, tentang saya; chip, bisa dilewati)
+bisa dikembalikan nanti kalau personalisasi dibuka lagi.
 
-## Pemilihan tempat meeting secara visual (keputusan 3 Nov 2026)
+## Pemilihan ruang meeting: khusus panitia (keputusan 3 Nov 2026)
 
-Panitia memilih ruang lewat **denah**, bukan daftar teks: ruang berwarna sesuai ketersediaan pada
-tanggal dan jam yang dipilih (kosong / terpakai / terlalu kecil), lengkap dengan kapasitas dan
-fasilitas. Memilih ruang langsung mengecek bentrok, lalu sesi tersimpan dengan ruang itu. Peserta
-melihat denah yang sama di detail sesi dengan ruangnya disorot. Asumsi desain: yang memilih adalah
-panitia saat membuat atau mengubah sesi (perlu konfirmasi). Nama dan denah ruang di desain masih
-simulasi. Usulan data: tabel `rooms` (nama, lantai, kapasitas, fasilitas, posisi di denah) dan
-`sessions.room_id`.
+Fitur ruang **hanya ada di panitia**. Panitia memilih ruang lewat **denah**: ruang berwarna sesuai
+ketersediaan pada tanggal dan jam yang dipilih (kosong / terpakai / terlalu kecil / dipilih), lengkap
+dengan kapasitas, fasilitas, dan jadwal ruang. Memilih ruang langsung mengecek bentrok, lalu sesi
+tersimpan dengan ruang itu. Peserta dan BOD hanya melihat **nama ruang** di agenda dan detail sesi,
+tanpa denah. Nama dan denah ruang di desain masih simulasi. Usulan data: tabel `rooms` (nama,
+lantai, kapasitas, fasilitas, posisi di denah) dan `sessions.room_id`.
 
 ## Akses MCP hanya untuk akun tertentu (keputusan 3 Nov 2026)
 
@@ -232,26 +238,33 @@ kunci, cakupan, dicabut_at) dan pencatatan ke `audit_logs`.
 | Peran | Perangkat | Navigasi |
 |---|---|---|
 | Peserta | Mobile | Beranda · Agenda · Dokumen · Profil |
-| Panitia | Desktop | Dashboard · Peserta & profil · Jadwal sesi · Pairing kamar/tim · Dokumen meeting · Permintaan jadwal · Survei · Pengumuman · Pengaturan · (Master personal, baca saja) · **Akses MCP** |
+| Peserta | Desktop | Bilah atas: Beranda · Agenda · Dokumen · Profil, pengalih acara, akun |
+| BOD | Desktop | Bilah atas: Ringkasan · Peserta · Survei · Akun, pengalih acara |
+| Panitia | Desktop | Dashboard · Peserta & profil · Jadwal sesi · Pairing kamar/tim · Dokumen meeting · Permintaan jadwal · Survei · Pengumuman · Pengaturan · (Master personal, baca saja). Akses MCP hanya untuk akun berizin |
 | Panitia | Mobile | Beranda · Peserta · Jadwal · Lainnya |
 | BOD | Mobile | Ringkasan · Peserta · Survei · Akun |
 
 ## Layar
 
-Sudah ada di Penpot (halaman `02 · Layar`, data simulasi Kamis 26 Nov 2026):
+Penpot halaman `02 · Layar`, diurutkan sesuai alur dari masuk sampai akses khusus (data simulasi
+Kamis 26 Nov 2026). Nomor urut ada di nama layar, mis. `01 · A1 · Masuk`.
 
-| Kode | Layar |
-|---|---|
-| A1–A2 | Masuk (email + password) · Buat password baru |
-| A3–A5 | Personalisasi: makanan · kamar dan tidur · tentang saya |
-| P1–P7 | Beranda · Agenda · Detail sesi · Profil saya · Absen tercatat · Lokasi sesi (denah) · Pengalih acara Pra WAM / WAM |
-| K1–K3 | Panitia mobile: Beranda · Tinjau permintaan · Pairing kamar (WAM) |
-| B1–B3 | BOD: Ringkasan · Profil peserta · Akun (dengan kartu Akses MCP) |
-| D1–D4 | Panitia desktop: Ringkasan operasional · QR absen (layar ruang) · Akses MCP (hanya akun berizin) · Pilih ruang lewat denah |
-| D5 | Super admin: Akun & akses (email, unit dan lead, peran per acara, izin MCP, reset password) |
+| Baris | No | Layar |
+|---|---|---|
+| 1 · Masuk | 01–03 | A1 Masuk (ponsel, login sederhana) · A2 Buat password baru (bisa dilewati) · E0 Masuk (desktop) |
+| 2 · Peserta · ponsel | 04–15 | P1 Beranda · P11 Notifikasi · P7 Pengalih acara · P2 Agenda · P3 Detail sesi · P9 Ajukan ganti jadwal · P12 Scan QR · P5 Absen tercatat · P13 QR tidak berlaku · P8 Dokumen · P10 Isi survei · P4 Profil dan pengaturan |
+| 3 · Peserta · desktop | 16–17 | E1 Beranda · E2 Agenda dan detail sesi |
+| 4 · Panitia · ponsel | 18–21 | K1 Beranda · K2 Tinjau permintaan · K4 Lainnya · K3 Pairing kamar (disiapkan untuk WAM) |
+| 5 · Panitia · desktop | 22–29 | D1 Ringkasan operasional · D6 Peserta & profil · D7 Buat sesi · D4 Pilih ruang lewat denah · D2 QR absen di layar ruang · D8 Pengumuman · D9 Survei · D10 Pengaturan acara (modul Pra WAM / WAM) |
+| 6 · BOD | 30–34 | B1 Ringkasan · B2 Profil peserta · B4 Hasil survei · B3 Akun (kartu MCP) · E3 Ringkasan (desktop) |
+| 7 · Akses khusus | 35–37 | D3 Akses MCP (hanya akun berizin) · D5 Akun & akses · D11 Unit & lead (super admin) |
 
-Belum digambar: langkah 1 personalisasi (data saya), Dokumen, Survei peserta, Hasil survei BOD,
-dan halaman kelola panitia lain (peserta, jadwal, dokumen, survei, pengumuman, pengaturan).
+Prototipe: layar dihubungkan dengan interaksi klik di Penpot (tombol utama, tab navigasi, tombol
+kembali) dan dibagi menjadi alur per peran. Untuk review atasan: buka View mode → Share → Get link.
+
+Dihapus 3 Nov 2026: A3–A5 (form personalisasi) dan P6 (denah lokasi untuk peserta).
+Belum digambar: kelola dokumen dan daftar permintaan jadwal versi desktop panitia, log audit,
+dan beranda versi WAM (rundown 4 hari).
 
 ## Database (acuan halaman 07–08)
 
