@@ -5,7 +5,7 @@ import type { Employee } from "@/lib/employees";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 const reply = (body: object, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-const person: Employee = { id: "6a000000-0000-4000-8000-000000000001", full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "karyawan", phone: "", email: "", active: true };
+const person: Employee = { id: "6a000000-0000-4000-8000-000000000001", full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "karyawan", phone: "", email: "", active: true, nip: "" };
 const row = { full_name: "Contoh Dua", nickname: "Dua", department: "Accounting", position: "Tax Staff", office: "WNS", category: "karyawan" };
 
 it("reads the Excel first, shows who is new or changed, and saves only on request", async () => {

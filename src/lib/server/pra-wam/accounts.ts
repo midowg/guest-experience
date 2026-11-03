@@ -1,4 +1,5 @@
 import "server-only";
+import { praWamRoles, type PraWamRole } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -10,7 +11,10 @@ import { notMigrated, waitingForMigration } from "./session";
  * secret that is never written in the repository) and a row in pw_accounts.
  */
 
-export type AccountRow = { employeeId: string; name: string; department: string; email: string; active: boolean; hasAccount: boolean; lastLoginAt: string | null };
+export type AccountRow = {
+  employeeId: string; name: string; department: string; email: string; active: boolean;
+  hasAccount: boolean; lastLoginAt: string | null; mustChangePassword: boolean; roles: PraWamRole[];
+};
 
 function defaultPassword(): string {
   const password = process.env.WAM_DEFAULT_PASSWORD ?? "";
@@ -20,10 +24,13 @@ function defaultPassword(): string {
 
 export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: boolean }> {
   const client = createPrivilegedClient();
-  const [{ data: people, error: peopleError }, { data: accounts, error }] = await Promise.all([
+  const [{ data: people, error: peopleError }, { data: accounts, error }, { data: roles, error: rolesError }] = await Promise.all([
     client.from("employees").select("id,full_name,department,email,active").order("department").order("full_name").limit(2000),
-    client.from("pw_accounts").select("employee_id,last_login_at,active"),
+    client.from("pw_accounts").select("employee_id,last_login_at,active,must_change_password"),
+    client.from("pw_roles").select("employee_id,role"),
   ]);
+  // Roles arrive with migration 202611040002; before it everyone is a peserta.
+  if (rolesError && !notMigrated(rolesError)) databaseError(rolesError);
   if (peopleError) { if (notMigrated(peopleError)) return { rows: [], migrated: false }; databaseError(peopleError); }
   if (error) { if (notMigrated(error)) return { rows: [], migrated: false }; databaseError(error); }
   const byPerson = new Map((accounts ?? []).map(account => [account.employee_id, account]));
@@ -32,6 +39,8 @@ export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: bo
     rows: (people ?? []).map(person => ({
       employeeId: person.id, name: person.full_name, department: person.department, email: person.email, active: person.active,
       hasAccount: byPerson.has(person.id), lastLoginAt: byPerson.get(person.id)?.last_login_at ?? null,
+      mustChangePassword: byPerson.get(person.id)?.must_change_password ?? true,
+      roles: praWamRoles.filter(role => (roles ?? []).some(row => row.employee_id === person.id && row.role === role)),
     })),
   };
 }
@@ -56,4 +65,37 @@ export async function createMissingAccounts(): Promise<{ created: number; skippe
     created += 1;
   }
   return { created, skipped };
+}
+
+/** Sets a person's roles to exactly these; peserta needs no row. */
+export async function setRoles(employeeId: string, roles: PraWamRole[]): Promise<void> {
+  const client = createPrivilegedClient();
+  const { error } = await client.from("pw_roles").delete().eq("employee_id", employeeId).not("role", "in", `(${roles.length ? roles.join(",") : "none"})`);
+  if (error) { if (notMigrated(error)) throw new ServiceError(503, "Peran menunggu migrasi 202611040002_pra_wam_roles.sql."); databaseError(error); }
+  if (!roles.length) return;
+  const { error: addError } = await client.from("pw_roles").upsert(roles.map(role => ({ employee_id: employeeId, role })), { onConflict: "employee_id,role", ignoreDuplicates: true });
+  if (addError) databaseError(addError);
+}
+
+/**
+ * Back to the shared first password, for someone who forgot theirs. They are signed out
+ * everywhere and offered a new password at the next sign-in.
+ */
+export async function resetPassword(employeeId: string): Promise<void> {
+  const password = defaultPassword();
+  const client = createPrivilegedClient();
+  const { data: account, error } = await client.from("pw_accounts").select("auth_user_id,session_version").eq("employee_id", employeeId).maybeSingle();
+  if (error) { if (notMigrated(error)) throw waitingForMigration(); databaseError(error); }
+  if (!account) throw new ServiceError(404, "Orang ini belum punya akun Pra WAM.");
+  const { error: authError } = await client.auth.admin.updateUserById(account.auth_user_id, { password });
+  if (authError) throw new ServiceError(503, "Password belum dapat diatur ulang. Coba lagi sebentar.");
+  const { error: saveError } = await client.from("pw_accounts").update({ must_change_password: true, session_version: account.session_version + 1 }).eq("employee_id", employeeId);
+  if (saveError) databaseError(saveError);
+}
+
+/** A room's capacity (empty = not known) and whether appraisal may book it. */
+export async function updateRoom(roomId: string, patch: { capacity: number | null; bookable: boolean }): Promise<void> {
+  const { data, error } = await createPrivilegedClient().from("pw_rooms").update(patch).eq("id", roomId).select("id").maybeSingle();
+  if (error) { if (notMigrated(error)) throw waitingForMigration(); databaseError(error); }
+  if (!data) throw new ServiceError(404, "Ruang tidak ditemukan.");
 }

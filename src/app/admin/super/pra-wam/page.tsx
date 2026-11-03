@@ -5,6 +5,7 @@ import { PraWamAccounts } from "@/components/admin/super/PraWamAccounts";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { listAccounts } from "@/lib/server/pra-wam/accounts";
+import { listRooms } from "@/lib/server/pra-wam/appraisal";
 import styles from "@/components/admin/admin.module.css";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +16,10 @@ export default async function PraWamAccountsPage() {
   if ((await requireAdminPage()) !== "super") notFound();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const { rows, migrated } = await listAccounts();
+  const rooms = migrated ? await listRooms() : [];
   return <AdminShell>
     <p className="eyebrow"><Link href="/admin/super">Super admin</Link></p>
     <h1 className={styles.title}>Akun Pra WAM</h1>
-    <PraWamAccounts initial={rows} migrated={migrated} passwordReady={(process.env.WAM_DEFAULT_PASSWORD ?? "").length >= 8} />
+    <PraWamAccounts initial={rows} initialRooms={rooms} migrated={migrated} passwordReady={(process.env.WAM_DEFAULT_PASSWORD ?? "").length >= 8} />
   </AdminShell>;
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { alternatives, appraisalRules, bookingProblems, clockLabel, overlaps, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -8,7 +9,7 @@ import { notMigrated, waitingForMigration, type Member } from "./session";
 /*
  * Appraisal room bookings. Anyone signed in books for themself; the database settles two people
  * reaching for the same room at once. Everyone sees who booked which room and for what; the
- * participants are only sent to the booker and the participants themselves.
+ * participants are only sent to the booker, the participants, and panitia, BOD and admin.
  */
 
 type BookingRow = { id: string; room_id: string; title: string; description: string; starts_at: string; ends_at: string; booked_by: string };
@@ -54,7 +55,7 @@ async function withPeople(rows: BookingRow[], viewer: Member): Promise<Booking[]
   for (const link of links ?? []) participants.set(link.booking_id, [...(participants.get(link.booking_id) ?? []), link.employee_id]);
   return rows.map(row => {
     const ids = participants.get(row.id) ?? [];
-    const involved = row.booked_by === viewer.id || ids.includes(viewer.id);
+    const involved = row.booked_by === viewer.id || ids.includes(viewer.id) || seesAllParticipants(viewer);
     return {
       id: row.id, roomId: row.room_id, title: row.title, description: involved ? row.description : "",
       startsAt: row.starts_at, endsAt: row.ends_at, bookedBy: unknown(row.booked_by),
@@ -108,12 +109,12 @@ export async function usedTitles(): Promise<{ title: string; count: number }[]> 
   return [...counts.values()];
 }
 
-export async function getBooking(id: string, viewer: Member): Promise<Booking & { mine: boolean }> {
+export async function getBooking(id: string, viewer: Member): Promise<Booking & { mine: boolean; booker: string }> {
   const { data, error } = await createPrivilegedClient().from("pw_room_bookings").select(bookingColumns).eq("id", id).eq("status", "aktif").maybeSingle();
   if (error) fail(error);
   if (!data) throw new ServiceError(404, "Booking tidak ditemukan atau sudah dibatalkan.");
   const [booking] = await withPeople([data as BookingRow], viewer);
-  return { ...booking, mine: data.booked_by === viewer.id };
+  return { ...booking, mine: data.booked_by === viewer.id, booker: data.booked_by };
 }
 
 async function requireOwn(id: string, viewer: Member) {
@@ -180,8 +181,10 @@ async function roomTaken(input: BookingInput, viewer: Member, now: Date, ignoreI
   return new BookingConflict(message, { kind: "room", ...options });
 }
 
+/** The booker cancels their own; panitia and admin may cancel anyone's (cancelled_by records who). */
 export async function cancelBooking(id: string, viewer: Member): Promise<void> {
-  await requireOwn(id, viewer);
+  const booking = await getBooking(id, viewer);
+  if (!booking.mine && !cancelsAnyBooking(viewer)) throw new ServiceError(403, "Hanya pemesan atau panitia yang bisa membatalkan booking ini.");
   const { error } = await createPrivilegedClient().from("pw_room_bookings")
     .update({ status: "batal", cancelled_by: viewer.id, cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", id).eq("status", "aktif");

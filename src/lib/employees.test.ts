@@ -95,7 +95,7 @@ describe("employeesFromSheets", () => {
 });
 
 describe("compareImport", () => {
-  const known: Employee = { id: "e1", full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "ga", phone: "0812", email: "", active: true };
+  const known: Employee = { id: "e1", full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "ga", phone: "0812", email: "", active: true, nip: "" };
   const row = { full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "karyawan" as const };
 
   it("matches people by name, names what changed, and ignores the category the admin set", () => {
@@ -117,9 +117,20 @@ describe("email from the sheet", () => {
     expect(rows[1]).not.toHaveProperty("email");
   });
   it("only fills an empty email", () => {
-    const known: Employee = { id: "e1", full_name: "Contoh Satu", nickname: "Satu", department: "BAS", position: "Staff", office: "WNS", category: "karyawan", phone: "", email: "", active: true };
+    const known: Employee = { id: "e1", full_name: "Contoh Satu", nickname: "Satu", department: "BAS", position: "Staff", office: "WNS", category: "karyawan", phone: "", email: "", active: true, nip: "" };
     const row = { full_name: "Contoh Satu", nickname: "Satu", department: "BAS", position: "Staff", office: "WNS", category: "karyawan" as const, email: "satu@werkudara.com" };
     expect(compareImport([row], [known])[0]).toMatchObject({ change: "berubah", changed: ["email"] });
     expect(compareImport([row], [{ ...known, email: "lain@werkudara.com" }])[0].change).toBe("sama");
+  });
+});
+
+describe("NIP from the sheet", () => {
+  it("reads a NIP column and fills only an empty one", () => {
+    const rows = employeesFromSheets([{ name: "Karyawan", rows: [["NAMA KARYAWAN", "DEPARTMENT", "NIP"], ["CONTOH SATU", "BAS", " 2026.001 "], ["CONTOH DUA", "BAS", ""]] }]).rows;
+    expect(rows[0].nip).toBe("2026.001");
+    expect(rows[1]).not.toHaveProperty("nip");
+    const known: Employee = { id: "e1", full_name: "Contoh Satu", nickname: "", department: rows[0].department, position: "", office: "", category: "karyawan", phone: "", email: "", active: true, nip: "" };
+    expect(compareImport([rows[0]], [known])[0].changed).toEqual(["nip"]);
+    expect(compareImport([rows[0]], [{ ...known, nip: "lama" }])[0].change).toBe("sama");
   });
 });

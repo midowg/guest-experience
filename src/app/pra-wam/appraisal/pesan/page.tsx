@@ -23,10 +23,10 @@ export default async function BookRoomPage({ searchParams }: { searchParams: Pro
     if (error instanceof ServiceError) return error.message;
     throw error;
   });
-  if (typeof loaded === "string") return <PraWamShell member={member}><Notice tone="warning">{loaded}</Notice><p><a href={praWamPath.appraisal()}>Kembali ke jadwal ruang</a></p></PraWamShell>;
+  if (typeof loaded === "string") return <PraWamShell member={member} current="appraisal"><Notice tone="warning">{loaded}</Notice><p><a href={praWamPath.appraisal()}>Kembali ke jadwal ruang</a></p></PraWamShell>;
   const { editId, initial, schedule, people, titles } = loaded;
   const rooms = schedule.rooms.filter(room => room.bookable);
-  return <PraWamShell member={member}>
+  return <PraWamShell member={member} current="appraisal">
     <BookingForm editId={editId} initial={initial} dates={dates.includes(initial.date) ? dates : [initial.date, ...dates]} now={now.toISOString()} rooms={rooms}
       people={people.filter(person => person.active).map(({ id, name, department }) => ({ id, name, department }))}
       viewer={{ id: member.id, department: member.department }} usedTitles={titles} dayBookings={schedule.bookings} />

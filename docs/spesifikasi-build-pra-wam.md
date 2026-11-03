@@ -213,8 +213,9 @@ Awalan `pw_` membedakan tabel Pra WAM/WAM dari tabel undangan Journey (`events`,
 
 | Tahap | Isi | Siap dipakai untuk |
 |---|---|---|
-| 0. Appraisal | Bagian minimal fondasi (akun, login, unit untuk chip partisipan) + `pw_rooms`, booking, jadwal ruang | Appraisal yang masih berjalan sampai 20 Nov |
-| 1. Fondasi | Sisa fondasi: NIP, peran lengkap, acara, ganti password, tampilan sesuai peran | Semua orang bisa masuk |
+| 0. Appraisal ✓ | Akun, login, `pw_rooms`, booking dengan penjaga bentrok, jadwal ruang, akun dibuat super admin (migrasi `202611040001`) | Appraisal yang masih berjalan sampai 20 Nov |
+| 1. Fondasi ✓ | NIP, peran Panitia/BOD/Admin (`pw_roles`, migrasi `202611040002`), ganti password awal (bisa dilewati) dan halaman Akun, reset password dan pengaturan ruang oleh super admin, panitia bisa membatalkan booking orang lain | Semua orang bisa masuk |
+| 1b. Sisa fondasi | Acara Pra WAM/WAM (`pw_events`), unit dan lead (`org_units`, `unit_members`), lupa password lewat email (menunggu SMTP) | Tampilan lead dan BOD |
 | 2. Agenda | Sesi, ruang (seed), agenda, detail sesi, dokumen, Buat sesi + pilih ruang | Panitia mengisi jadwal |
 | 3. Absen | Token QR, cetak A5, rute absen, koreksi manual | Forum pertama berjalan |
 | 4. Komunikasi | Pengumuman, notifikasi, ganti jadwal + tinjau, survei | |

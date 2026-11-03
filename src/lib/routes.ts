@@ -121,6 +121,10 @@ export const praWamPath = {
   home: PRA_WAM_PATH,
   login: (next?: string) => `${PRA_WAM_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
   appraisal: (date?: string) => `${PRA_WAM_PATH}/appraisal${date ? `?tanggal=${date}` : ""}`,
+  /** Profile and settings: change password. */
+  account: `${PRA_WAM_PATH}/akun`,
+  /** Right after the first sign-in: pick a new password, or skip for now. */
+  newPassword: (next?: string) => `${PRA_WAM_PATH}/password${next ? `?next=${enc(next)}` : ""}`,
   /** The booking form; with a booking id it edits that booking. */
   book: (query: { ubah?: string; tanggal?: string; ruang?: string; mulai?: string } = {}) => {
     const search = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString();
@@ -130,6 +134,7 @@ export const praWamPath = {
 export const praWamApi = {
   login: "/api/pra-wam/masuk",
   logout: "/api/pra-wam/keluar",
+  password: "/api/pra-wam/password",
   /** Appraisal bookings: the day's schedule, a new booking, or one booking by id. */
   bookings: (id?: string, query: Record<string, string> = {}) => {
     const search = new URLSearchParams(query).toString();
@@ -137,4 +142,7 @@ export const praWamApi = {
   },
 };
 export const PRA_WAM_ADMIN = "/admin/super/pra-wam";
-export const praWamAccountsApi = "/api/admin/pra-wam/akun";
+/** Super admin: the account list and creating accounts, or one person's roles and password reset. */
+export const praWamAccountsApi = (employeeId?: string) => `/api/admin/pra-wam/akun${employeeId ? `/${employeeId}` : ""}`;
+/** Super admin: one room's capacity and whether appraisal may book it. */
+export const praWamRoomsApi = (roomId: string) => `/api/admin/pra-wam/ruang/${roomId}`;

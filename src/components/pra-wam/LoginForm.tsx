@@ -18,8 +18,9 @@ export function LoginForm({ next }: { next: string | null }) {
     event.preventDefault();
     setBusy(true); setError(null);
     try {
-      await praWamRequest(praWamApi.login, { method: "POST", json: { email, password } });
-      window.location.assign(next ?? praWamPath.home);
+      const result = await praWamRequest<{ mustChangePassword: boolean }>(praWamApi.login, { method: "POST", json: { email, password } });
+      // The shared first password: offer a new one first; it can be skipped.
+      window.location.assign(result.data?.mustChangePassword ? praWamPath.newPassword(next ?? undefined) : next ?? praWamPath.home);
     } catch (problem) { setError(errorText(problem)); setBusy(false); }
   }
 

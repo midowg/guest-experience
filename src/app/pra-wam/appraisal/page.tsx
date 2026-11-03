@@ -2,6 +2,7 @@ import { AppraisalBoard } from "@/components/pra-wam/AppraisalBoard";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
 import { Notice } from "@/components/ui";
 import { appraisalRules, bookableDates, wibDate } from "@/lib/pra-wam/appraisal";
+import { cancelsAnyBooking } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { daySchedule, myBookings } from "@/lib/server/pra-wam/appraisal";
@@ -22,9 +23,9 @@ export default async function AppraisalPage({ searchParams }: { searchParams: Pr
     if (error instanceof ServiceError) return error.message;
     throw error;
   });
-  if (typeof loaded === "string") return <PraWamShell member={member}><Notice tone="warning">{loaded}</Notice></PraWamShell>;
+  if (typeof loaded === "string") return <PraWamShell member={member} current="appraisal"><Notice tone="warning">{loaded}</Notice></PraWamShell>;
   const [schedule, mine] = loaded;
-  return <PraWamShell member={member}>
-    <AppraisalBoard date={date} dates={dates.includes(date) ? dates : [date, ...dates]} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine} viewerId={member.id} />
+  return <PraWamShell member={member} current="appraisal">
+    <AppraisalBoard canCancelAny={cancelsAnyBooking(member)} date={date} dates={dates.includes(date) ? dates : [date, ...dates]} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine} viewerId={member.id} />
   </PraWamShell>;
 }

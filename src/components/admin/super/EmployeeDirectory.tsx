@@ -10,16 +10,17 @@ import styles from "@/components/admin/admin.module.css";
 
 type Plan = { sheet: string; skipped: string[]; migrated: boolean; plan: { row: EmployeeRow; change: ImportChange; changed: string[] }[] };
 const changeLabels: Record<ImportChange, string> = { baru: "Baru", berubah: "Diperbarui", sama: "Tetap" };
-const fieldLabels: Record<string, string> = { full_name: "nama", nickname: "panggilan", department: "departemen", position: "jabatan", office: "office", email: "email" };
+const fieldLabels: Record<string, string> = { full_name: "nama", nickname: "panggilan", department: "departemen", position: "jabatan", office: "office", email: "email", nip: "NIP" };
 
 /** Phone and email, the details an app may need that HR's sheet does not have. */
-function ContactForm({ person, busy, onSave, onCancel }: { person: Employee; busy: boolean; onSave: (patch: Pick<Employee, "nickname" | "phone" | "email">) => void; onCancel: () => void }) {
-  const [draft, setDraft] = useState({ nickname: person.nickname, phone: person.phone, email: person.email });
+function ContactForm({ person, busy, onSave, onCancel }: { person: Employee; busy: boolean; onSave: (patch: Pick<Employee, "nickname" | "phone" | "email" | "nip">) => void; onCancel: () => void }) {
+  const [draft, setDraft] = useState({ nickname: person.nickname, phone: person.phone, email: person.email, nip: person.nip });
   return <form className="stack" onSubmit={e => { e.preventDefault(); onSave(draft); }}>
     <div className={styles.grid}>
       <Field name={`nick-${person.id}`} label="Nama panggilan"><input id={`nick-${person.id}`} className="input" value={draft.nickname} maxLength={60} onChange={e => setDraft({ ...draft, nickname: e.target.value })} /></Field>
       <Field name={`phone-${person.id}`} label="Nomor WhatsApp"><input id={`phone-${person.id}`} className="input" inputMode="tel" value={draft.phone} maxLength={30} placeholder="0812 3456 7890" onChange={e => setDraft({ ...draft, phone: e.target.value })} /></Field>
       <Field name={`email-${person.id}`} label="Email kantor"><input id={`email-${person.id}`} className="input" type="email" value={draft.email} maxLength={200} onChange={e => setDraft({ ...draft, email: e.target.value })} /></Field>
+      <Field name={`nip-${person.id}`} label="NIP" hint="Boleh kosong dulu."><input id={`nip-${person.id}`} className="input" value={draft.nip} maxLength={30} onChange={e => setDraft({ ...draft, nip: e.target.value })} /></Field>
     </div>
     <div className={styles.qrActions}>
       <Button type="submit" disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button>
@@ -139,7 +140,7 @@ export function EmployeeDirectory({ initial, migrated }: { initial: Employee[]; 
               </select></td>
             <td>{editing === person.id
               ? <ContactForm person={person} busy={busy === person.id} onSave={change => patch(person, change)} onCancel={() => setEditing(null)} />
-              : <>{person.phone || person.email ? <><p>{person.phone}</p><p className="field-hint">{person.email}</p></> : <p className="field-hint">Belum ada</p>}
+              : <>{person.phone || person.email ? <><p>{person.phone}</p><p className="field-hint">{person.email}</p></> : <p className="field-hint">Belum ada</p>}{person.nip && <p className="field-hint">NIP {person.nip}</p>}
                 <Button type="button" variant="quiet" onClick={() => setEditing(person.id)} aria-label={`Ubah kontak ${person.full_name}`}><Pencil size={15} aria-hidden="true" /> Ubah</Button></>}</td>
             <td><label className={styles.superSwitch}>
               <input type="checkbox" role="switch" checked={person.active} disabled={busy === person.id} onChange={e => patch(person, { active: e.target.checked })} aria-label={`${person.full_name} aktif`} />

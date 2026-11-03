@@ -11,7 +11,6 @@ export async function POST(request: Request) {
     checkOrigin(request);
     await enforceRateLimit(request, "pra-wam-login", 8);
     const { email, password } = validate(schema, await readJson(request, 2_000));
-    await signIn(email, password);
-    return success(null, "Berhasil masuk.");
+    return success(await signIn(email, password), "Berhasil masuk.");
   });
 }
