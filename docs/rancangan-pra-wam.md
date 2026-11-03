@@ -14,7 +14,21 @@ Sumber, urut dari yang paling mengikat:
 Desain ada di **Penpot** (design.penpot.app), project **PRAWAM**, file **PRAWAM**:
 - `01 · Design system`: papan `DS · Fondasi` (warna, tipografi, bentuk, ikon, token) dan
   `DS · Komponen`. Token di panel Tokens, tema `Mode/Terang` dan `Mode/Gelap`.
-- `02 · Layar`: layar per peran (lihat bagian Layar).
+- `02 · Semua layar (arsip)`: semua layar dalam satu halaman (lihat bagian Layar).
+- Prototipe per peran, masing-masing halaman sendiri dengan urutan dan alurnya sendiri
+  (keputusan 3 Nov 2026):
+  - `03 · Peserta (ponsel)`: 13 layar (tanpa pengalih acara WAM), alur "Peserta (ponsel)".
+  - `04 · Panitia`: 8 layar desktop + 3 layar ponsel (pairing kamar WAM dikeluarkan), alur
+    "Panitia (desktop)" dan "Panitia (ponsel)".
+  - `05 · BOD`: 6 layar; Ringkasan BOD paling lengkap (Perlu perhatian, Akses cepat, Tanya data
+    MCP), alur "BOD (ponsel)" dan "BOD (desktop)".
+  - Semua layar Masuk memakai logo pegasus Werkudara dan satu layar Masuk yang sama untuk semua
+    peran.
+  - `06 · Admin`: Masuk → Pusat pengaturan → Acara & modul → Akun & akses → Unit & lead → Izin MCP,
+    alur "Admin". Pusat pengaturan merangkum semua yang bisa diatur admin.
+  - Setiap halaman peran dibuka dengan papan **`00 · Panduan · <peran>`** di paling atas: tujuan
+    peran, daftar fungsi dengan nomor layar, alur langkah demi langkah, cara mencoba prototipe, dan
+    aturan penting. Panduan ini bacaan pertama untuk atasan dan tim.
 
 `docs/desain/pra-wam-mockup.html` adalah mockup awal (masih hijau, sebelum acuan eksekusi); Penpot
 yang berlaku.
@@ -178,9 +192,28 @@ permintaan jadwal, survei, dan status absen. Semua mengikuti akun yang login.
 
 ## Fokus sekarang: prototipe Pra WAM untuk review atasan (keputusan 3 Nov 2026)
 
-WAM cukup **disiapkan** (pengalih acara, data Pra WAM terbawa, pairing kamar sebagai contoh). Fokus
-desain dan prototipe adalah **Pra WAM**, digambar sedetail mungkin dan bisa diklik di Penpot
-(View mode) supaya atasan bisa mencoba alurnya lewat tautan bagikan.
+Fokus desain dan prototipe adalah **Pra WAM**, digambar sedetail mungkin dan bisa diklik di Penpot
+(View mode) supaya atasan bisa mencoba alurnya lewat tautan bagikan. **WAM disembunyikan dari
+prototipe** peserta, panitia, dan BOD (tanpa pengalih acara, tanpa pairing kamar); WAM hanya
+muncul di Admin → Acara & modul sebagai acara "disiapkan". Fondasi data tetap siap dipakai WAM.
+
+## Satu login, tampilan sesuai jabatan (keputusan 3 Nov 2026)
+
+Semua orang masuk lewat **layar Masuk yang sama** (email + password). Setelah masuk, aplikasi
+menyusun tampilan dari peran dan jabatan orang itu:
+
+| Peran | Yang tampil setelah masuk |
+|---|---|
+| Peserta | Beranda pribadi: agenda, absen QR, dokumen, survei, profil |
+| Lead unit | Seperti peserta, ditambah ringkasan unit yang ia pimpin (kehadiran, permintaan jadwal, bahan forum) |
+| Panitia | Dashboard panitia: sesi, ruang, QR, peserta, pengumuman, survei |
+| BOD | **Tampilan paling lengkap**: ringkasan seluruh unit dan BU, hal yang perlu perhatian BOD, profil semua peserta, hasil survei, akses MCP, dan bisa membuka dashboard panitia dalam mode baca |
+| Admin | Pusat pengaturan |
+
+Orang dengan beberapa peran (mis. peserta sekaligus lead dan panitia) mendapat satu Beranda yang
+menggabungkan semuanya, dengan menu tambahan sesuai perannya; tidak perlu akun atau login kedua.
+BOD punya jangkauan lihat paling luas, tetapi tetap tidak mengubah data acara (mengikuti acuan).
+Antarmuka BOD dibuat paling ringkas: angka penting di atas, satu ketukan ke rincian.
 
 ## Satu aplikasi, dua versi acara: Pra WAM dan WAM (keputusan 3 Nov 2026)
 
@@ -190,10 +223,12 @@ berpindah lewat **pengalih acara** di bilah atas (Pra WAM · WAM 2027); aplikasi
 sedang berjalan secara otomatis. Modul yang aktif per acara diatur di pengaturan acara (mis. pairing
 kamar hanya di WAM).
 
-## Departemen, BU, dan lead (keputusan 3 Nov 2026)
+## Departemen, BU, jabatan, dan lead (keputusan 3 Nov 2026)
 
-Setiap karyawan punya satu departemen dan satu BU (dari kolom kantor: WNS 51, TEE 4, MRP 2). Satu
-orang bisa menjadi **lead di lebih dari satu unit**, dan unitnya bisa campuran departemen dan BU:
+Setiap karyawan punya **departemen utama dan BU utama** dari data karyawan (BU dari kolom kantor:
+WNS 51, TEE 4, MRP 2), tetapi satu orang bisa **tercatat di beberapa unit dengan jabatan berbeda**
+di tiap unit. Satu baris ditandai *utama* per jenis unit; baris tambahan diatur super admin. Contoh
+lead di lebih dari satu unit:
 
 | Orang | Tanggung jawab |
 |---|---|
@@ -202,12 +237,24 @@ orang bisa menjadi **lead di lebih dari satu unit**, dan unitnya bisa campuran d
 
 Lead unit lain belum ditentukan. Lead melihat ringkasan unitnya (kehadiran, kelengkapan profil,
 permintaan jadwal, bahan forum). Usulan data: `org_units` (jenis departemen/BU, nama, kode) dan
-`unit_members` (employee_id, unit_id, peran anggota/lead), banyak-ke-banyak. Diatur super admin.
+`unit_members` (employee_id, unit_id, `job_title`, `is_lead`, `is_primary`), banyak-ke-banyak,
+satu baris utama per jenis unit. Diatur super admin. Ringkasan per unit menghitung orang sekali
+walaupun ia tercatat di beberapa unit.
+
+Data karyawan versi perbaikan: `Downloads\Data_Karyawan_PraWAM_v2.xlsx` (tidak masuk repo karena
+berisi data pribadi). Isinya: sheet Karyawan (NIP kosong, nama dan jabatan dirapikan, email, usulan
+peran), Unit dan jabatan (118 baris), Unit, Perbaikan (4 salah ketik jabatan dan 2 spasi di nama
+panggilan), dan Catatan.
+
+**BOD (dikonfirmasi pemilik, 3 Nov 2026):** Pak Fadli (Fadli Fahmi Ali, Chief Executive Officer) dan
+Pak Bagus (I Gusti Putu Yaktianuraga, Managing Director), keduanya Corporate · WNS. Keduanya juga
+tetap peserta. Super admin dan panitia belum ditentukan.
 
 ## Super admin
 
-Super admin mengelola **akun dan akses**: email, reset password ke awal, peran per acara (peserta,
-panitia, BOD), tanggung jawab unit, dan izin MCP. Semua perubahan tercatat di `audit_logs`.
+Super admin mengelola **akun dan akses**: NIP, email, reset password ke awal, peran per acara
+(peserta, panitia, BOD), unit dan jabatan (bisa lebih dari satu), dan izin MCP. Semua perubahan
+tercatat di `audit_logs`.
 
 ## Data personalisasi: ditunda (keputusan 3 Nov 2026)
 
@@ -267,7 +314,13 @@ Kamis 26 Nov 2026). Nomor urut ada di nama layar, mis. `01 · A1 · Masuk`.
 | 7 · Akses khusus | 35–37 | D3 Akses MCP (hanya akun berizin) · D5 Akun & akses · D11 Unit & lead (super admin) |
 
 Prototipe: layar dihubungkan dengan interaksi klik di Penpot (tombol utama, tab navigasi, tombol
-kembali) dan dibagi menjadi alur per peran. Untuk review atasan: buka View mode → Share → Get link.
+kembali). Untuk dicoba atau direview, buka halaman peran (03–06), lalu View mode → pilih alur.
+Bagikan lewat Share → Get link. Halaman 02 hanya arsip gabungan.
+
+Admin (halaman 06) memiliki **Pusat pengaturan** yang merangkum semua yang bisa diatur: acara dan
+modul, absen QR, akun dan password, peran per acara, unit dan lead, izin MCP, data karyawan, ruang
+dan denah (belum digambar), dan log audit (belum digambar). Menu "Pengaturan" dikeluarkan dari
+sidebar panitia; pengaturan acara sekarang wewenang admin.
 
 Dihapus 3 Nov 2026: A3–A5 (form personalisasi) dan P6 (denah lokasi untuk peserta).
 Belum digambar: kelola dokumen dan daftar permintaan jadwal versi desktop panitia, log audit,
@@ -278,7 +331,9 @@ dan beranda versi WAM (rundown 4 hari).
 Model acara: **Pra WAM dan WAM masing-masing satu baris `events`**; setiap rapat atau aktivitas menjadi
 `sessions`.
 
-- Inti: `employees` (master, baca saja), `employee_profiles` (master personal_detail JSON),
+- Inti: `employees` (master, baca saja; **`nip` boleh kosong dulu**, unik bila terisi, menggantikan
+  `employee_no` di acuan; `email` unik, bisa diubah super admin), `org_units`, `unit_members`
+  (unit dan jabatan ganda), `employee_profiles` (master personal_detail JSON),
   `events`, `event_members` (unik event+employee, `event_profile` JSON, status, confirmed_at),
   `member_roles`, `sessions` (qr_token_hash statis per sesi; jendela absen dari jam sesi, bukan qr_expires_at), `session_participants` (dasar agenda dan
   akses dokumen), `groups` (kamar/tim/aktivitas, kapasitas), `group_members`.
@@ -343,7 +398,7 @@ pertanyaan).
    Wajib ganti password awal saat pertama masuk? Siapa saja super admin?
 2. Jam dan lokasi setiap forum, tanggal forum "Pra WAM" tersendiri, tanggal HOD Meeting (24–27 atau
    26–27 Nov), dan rundown WAM per hari.
-3. Siapa saja BOD dan panitia (peran per orang)?
+3. Siapa saja panitia dan super admin? (BOD sudah: Pak Fadli dan Pak Bagus.)
 4. Field profil mana yang boleh diedit peserta, dan siapa pengelola master personal?
 5. Pra WAM menginap atau tidak? (menentukan apakah pairing kamar ada di Pra WAM)
 6. Usulan tambahan (MoM, tenggat, Concierge) dipakai?
