@@ -191,15 +191,35 @@ it("asks for a WhatsApp number only when the admin wants it", () => {
   expect(within(openForm()).queryByRole("textbox", { name: /Nomor WhatsApp/ })).toBeNull();
 });
 
-it("tells where to bring goods, with a map, once the committee sets an address", () => {
+it("tells where to bring goods: one line on the page, the full card in the form and after sending goods", () => {
   show(event({ dropOff: { name: "Kantor Werkudara Group", address: "Jl. Contoh No. 1, Sleman", mapsUrl: "", hours: "Senin–Jumat, 09.00–16.00" } }));
-  const card = screen.getByRole("region", { name: "Antar barang ke" });
+  // Without Panduan lokasi the line opens the map.
+  expect(screen.getByRole("link", { name: /Barang diantar ke Kantor Werkudara Group/ }).getAttribute("href")).toContain("google.com/maps/search");
+  expect(screen.queryByRole("region", { name: "Antar barang ke" })).toBeNull();
+  const form = openForm();
+  fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
+  const card = within(form).getByRole("region", { name: "Antar barang ke" });
   expect(within(card).getByText("Kantor Werkudara Group")).toBeTruthy();
   expect(within(card).getByText("Senin–Jumat, 09.00–16.00", { exact: false })).toBeTruthy();
   expect(within(card).getByRole("link", { name: /Buka di Maps/ }).getAttribute("href")).toBe("https://www.google.com/maps/search/?api=1&query=Kantor%20Werkudara%20Group%2C%20Jl.%20Contoh%20No.%201%2C%20Sleman");
+  fireEvent.change(within(form).getByRole("textbox", { name: "Nama barang" }), { target: { value: "Selimut" } });
+  fireEvent.change(within(form).getByRole("textbox", { name: "Nama" }), { target: { value: "Rina" } });
+  send(form);
+  const thanks = screen.getByRole("dialog", { name: "Terima kasih" });
+  expect(within(within(thanks).getByRole("region", { name: "Antar barang ke" })).getByText("Kantor Werkudara Group")).toBeTruthy();
   cleanup();
   show();
-  expect(screen.queryByRole("region", { name: "Antar barang ke" })).toBeNull();
+  expect(screen.queryByRole("link", { name: /Barang diantar ke/ })).toBeNull();
+});
+
+it("shows no drop-off point after a gift of money only", () => {
+  show(event({ dropOff: { name: "Kantor Werkudara Group", address: "Jl. Contoh No. 1", mapsUrl: "", hours: "" } }));
+  const form = openForm();
+  fireEvent.click(within(form).getByRole("button", { name: "Dana" }));
+  fireEvent.change(within(form).getByRole("textbox", { name: "Nominal dana" }), { target: { value: "Rp 75.000" } });
+  fireEvent.change(within(form).getByRole("textbox", { name: "Nama" }), { target: { value: "Rina" } });
+  send(form);
+  expect(within(screen.getByRole("dialog", { name: "Terima kasih" })).queryByRole("region", { name: "Antar barang ke" })).toBeNull();
 });
 
 it("opens the way to the drop-off point from Panduan lokasi, in the page itself", () => {
@@ -207,11 +227,21 @@ it("opens the way to the drop-off point from Panduan lokasi, in the page itself"
     steps: [{ title: "Belok di Jl. Bhinneka", description: "", image: { url: "", alt: "", srcset: [] } }], points: [], gallery: [] };
   const e = event({ dropOff: { name: "Kantor Werkudara Group", address: "Jl. Contoh No. 1", mapsUrl: "", hours: "" } });
   render(<CsrExperience event={e} preview guide={guide} view={{ totals: donationTotals(e.donation, []), donors: [], ready: true }} />);
-  fireEvent.click(screen.getByRole("button", { name: /Panduan ke lokasi/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Barang diantar ke Kantor Werkudara Group/ }));
   const page = screen.getByRole("dialog", { name: "Panduan ke lokasi" });
   expect(within(page).getByText("Belok di Jl. Bhinneka")).toBeTruthy();
   expect(within(page).getByRole("link", { name: /Buka Google Maps/ }).getAttribute("href")).toBe("https://maps.app.goo.gl/contoh");
+  fireEvent.click(within(page).getByRole("button", { name: "Kembali" }));
+  // From the form too: the guide opens over it, and Escape closes only the guide.
+  const form = openForm();
+  fireEvent.click(within(form).getByRole("button", { name: "Barang" }));
+  fireEvent.click(within(form).getByRole("button", { name: /Panduan ke lokasi/ }));
+  expect(screen.getByRole("dialog", { name: "Panduan ke lokasi" })).toBeTruthy();
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("dialog", { name: "Panduan ke lokasi" })).toBeNull();
+  expect(screen.getByRole("dialog", { name: "Donasi" })).toBeTruthy();
   cleanup();
   show(e);
+  fireEvent.click(within(openForm()).getByRole("button", { name: "Barang" }));
   expect(screen.queryByRole("button", { name: /Panduan ke lokasi/ })).toBeNull();
 });

@@ -45,7 +45,7 @@ const PHOTO_TYPES = "image/jpeg,image/png,image/webp";
  * and how it appears, an optional WhatsApp number for the handover news, and a message or prayer.
  * Each gift is sent as its own donation, so the committee can receive them one by one.
  */
-export function DonationForm({ event, preview = false, onClose }: { event: EventRecord; preview?: boolean; onClose: () => void }) {
+export function DonationForm({ event, preview = false, onClose, onGuide, covered = false }: { event: EventRecord; preview?: boolean; onClose: () => void; onGuide?: () => void; covered?: boolean }) {
   const settings = event.donation;
   const [picked, setPicked] = useState<Record<string, number>>({});
   const [rows, setRows] = useState<GoodsRow[]>([]);
@@ -59,7 +59,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
-  const [done, setDone] = useState<{ name: string; gifts: string[] } | null>(null);
+  const [done, setDone] = useState<{ name: string; gifts: string[]; goods: boolean } | null>(null);
   const [review, setReview] = useState<Review | null>(null);
   const [copied, setCopied] = useState("");
   const identities = useRef<Record<string, RetryIdentity>>({});
@@ -76,9 +76,12 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
   const listed = (name: string) => goodsItems.find(item => item.label.toLowerCase() === name.trim().toLowerCase());
   const touched = () => { setErrors({}); setMessage(""); };
 
+  // While the way to the drop-off point is open over the form, Escape closes only that.
+  const coveredNow = useRef(covered);
+  useEffect(() => { coveredNow.current = covered; }, [covered]);
   useEffect(() => {
     heading.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape" && !coveredNow.current) onClose(); };
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
@@ -150,7 +153,8 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
   /** Sends what the donor confirmed, one gift at a time. */
   async function send({ bodies, labels, donor }: Review) {
     setReview(null);
-    if (preview) { setDone({ name: donorLabel(donor), gifts: labels }); return; }
+    const goods = bodies.some(({ body }) => body.category !== "fund");
+    if (preview) { setDone({ name: donorLabel(donor), gifts: labels, goods }); return; }
     setPending(true);
     try {
       let proofSent = false;
@@ -172,7 +176,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
       }
       const shownName = donorLabel(donor);
       remember(event.id, { name: shownName, gift: labels.join(", "), at: new Date().toISOString() });
-      setDone({ name: shownName, gifts: labels });
+      setDone({ name: shownName, gifts: labels, goods });
     } catch { setMessage("Donasi belum terkirim. Periksa koneksi, lalu coba lagi."); }
     finally { setPending(false); }
   }
@@ -189,6 +193,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
       <ul className={s.doneGifts}>{done.gifts.map(gift => <li key={gift} className={s.doneGift}>{gift}</li>)}</ul>
       <p className={s.doneWait}>Menunggu verifikasi panitia</p>
       <p>Donasi Anda belum tampil di daftar donatur. Setelah panitia memeriksa dan menerimanya, donasi Anda masuk daftar sesuai pilihan tampil dan ikut terhitung di halaman ini{phone ? ". Kabar lewat WhatsApp menyusul saat bantuan diserahkan" : ""}.</p>
+      {done.goods && settings.dropOff.address.trim() && <div className={s.doneDropOff}><DropOffCard place={settings.dropOff} onGuide={onGuide} /></div>}
       <button type="button" className={s.give} onClick={onClose}><Check size={20} aria-hidden="true" /> Selesai</button>
     </div>
 
@@ -246,7 +251,7 @@ export function DonationForm({ event, preview = false, onClose }: { event: Event
             </div>;
           })}
           <button type="button" className={s.addGoods} disabled={rows.length >= 10} onClick={() => { touched(); setRows(current => [...current, newRow()]); }}><Plus size={18} aria-hidden="true" /> Tambah barang</button>
-          {settings.dropOff.address.trim() && <DropOffCard place={settings.dropOff} />}
+          {settings.dropOff.address.trim() && <DropOffCard place={settings.dropOff} onGuide={onGuide} />}
           {settings.goodsNote && <p className={s.goodsNote}>{settings.goodsNote}</p>}
         </div>}
         {errors.gift && <p className="field-error">{errors.gift}</p>}

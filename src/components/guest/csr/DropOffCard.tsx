@@ -1,4 +1,4 @@
-import { Clock, Compass, MapPin, Navigation } from "lucide-react";
+import { ChevronRight, Clock, Compass, MapPin, Navigation } from "lucide-react";
 import { dropOffMap, type DropOff } from "@/lib/donations";
 import s from "./csr.module.css";
 
@@ -14,4 +14,16 @@ export function DropOffCard({ place, onGuide }: { place: DropOff; onGuide?: () =
       {onGuide && <button type="button" className={s.dropOffAsk} onClick={onGuide}><Compass size={16} aria-hidden="true" /> Panduan ke lokasi</button>}
     </div>
   </section>;
+}
+
+/** The main page only names the place in one line; the full card is in the form. Opens the way there (Panduan lokasi), else the map. */
+export function DropOffLine({ place, onGuide }: { place: DropOff; onGuide?: () => void }) {
+  const content = <>
+    <MapPin size={18} aria-hidden="true" className={s.dropOffLinePin} />
+    <span className={s.dropOffLineText}>Barang diantar ke <strong>{place.name || place.address}</strong></span>
+    <span className={s.dropOffLineAction}>Lihat lokasi <ChevronRight size={16} aria-hidden="true" /></span>
+  </>;
+  return onGuide
+    ? <button type="button" className={s.dropOffLine} onClick={onGuide}>{content}</button>
+    : <a className={s.dropOffLine} href={dropOffMap(place)} target="_blank" rel="noopener noreferrer">{content}</a>;
 }

@@ -73,7 +73,7 @@ export function DonationItemsBlock({ kit }: { kit: EditorKit }) {
     </div>
     <div className={d.part}>
       <h3>Titik kumpul barang</h3>
-      <p className="field-hint">Tempat donatur mengantar barang, misalnya kantor Werkudara Group. Tampil di halaman donasi sebagai kartu <em>Antar barang ke</em> dengan tombol Buka di Maps, dan di form saat donatur memilih barang.</p>
+      <p className="field-hint">Tempat donatur mengantar barang, misalnya kantor Werkudara Group. Tampil ringkas di halaman donasi (<em>Barang diantar ke … · Lihat lokasi</em>), dan sebagai kartu lengkap dengan tombol Buka di Maps di form saat donatur memilih barang serta di layar terima kasih.</p>
       <div className={d.shareGrid}>
         <label className={d.field}><span>Nama tempat</span><input className="input" value={donation.dropOff.name} maxLength={120} placeholder="Kantor Werkudara Group" onChange={change => set({ dropOff: { ...donation.dropOff, name: change.target.value } })} /></label>
         <label className={d.field}><span>Jam antar <small>opsional</small></span><input className="input" value={donation.dropOff.hours} maxLength={150} placeholder="Senin–Jumat, 09.00–16.00" onChange={change => set({ dropOff: { ...donation.dropOff, hours: change.target.value } })} /></label>

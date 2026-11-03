@@ -8,7 +8,7 @@ import type { EventRecord } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { contactLink } from "../JourneyPanels";
 import { useGuestPage } from "../use-guest-page";
-import { DropOffCard } from "./DropOffCard";
+import { DropOffLine } from "./DropOffCard";
 import { GuideContent } from "./GuideSheet";
 import type { CsrGuide } from "@/lib/csr-guide";
 import { DonationForm, DONATION_MEMORY_EVENT, donationMemoryKey, parseRemembered } from "./DonationForm";
@@ -37,6 +37,7 @@ export function CsrExperience({ event, view, preview = false, guide = null }: { 
   const [formOpen, setFormOpen] = useState(false);
   const [page, setPage] = useState<"" | "penerima" | "donatur" | "panduan">("");
   const closePage = useCallback(() => setPage(""), []);
+  const openGuide = guide ? () => setPage("panduan") : undefined;
   const [shared, setShared] = useState("");
   // What this browser gave before, read after hydration (the server has no such memory).
   const memory = useSyncExternalStore(subscribeMemory, () => readMemory(event.id), () => "");
@@ -121,7 +122,7 @@ export function CsrExperience({ event, view, preview = false, guide = null }: { 
           </div>
         </section>}
 
-        {settings.dropOff.address.trim() && settings.items.some(item => item.category !== "fund") && <DropOffCard place={settings.dropOff} onGuide={guide ? () => setPage("panduan") : undefined} />}
+        {settings.dropOff.address.trim() && settings.items.some(item => item.category !== "fund") && <DropOffLine place={settings.dropOff} onGuide={openGuide} />}
 
         {/* Where the help goes has a page of its own; here only a button naming who receives it. */}
         {recipients.length > 0 && <button type="button" className={s.recipientsButton} onClick={() => setPage("penerima")}>
@@ -171,9 +172,9 @@ export function CsrExperience({ event, view, preview = false, guide = null }: { 
       </ul>
     </Sheet>}
     {page === "donatur" && <Sheet title="Semua donatur" onClose={closePage}><DonorList donors={view.donors} /></Sheet>}
+    {formOpen && <DonationForm event={event} preview={preview} onClose={() => setFormOpen(false)} onGuide={openGuide} covered={page === "panduan"} />}
+    {/* After the form, so the way to the drop-off point also opens over it. */}
     {page === "panduan" && guide && <Sheet title="Panduan ke lokasi" onClose={closePage}><GuideContent guide={guide} mapsHref={dropOffMap(settings.dropOff)} /></Sheet>}
-
-    {formOpen && <DonationForm event={event} preview={preview} onClose={() => setFormOpen(false)} />}
   </div>;
 }
 
@@ -200,8 +201,9 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
     heading.current?.focus();
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
+    const before = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = before; };
   }, [onClose]);
   return <div className={s.sheet} role="dialog" aria-modal="true" aria-label={title}>
     <div className={s.sheetHead}>

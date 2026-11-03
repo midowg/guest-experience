@@ -344,3 +344,15 @@
 .guideGallery img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
 .guideGallery li:only-child img { aspect-ratio: 16 / 9; }
 .guideMaps { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border-radius: 999px; background: var(--color-primary); color: var(--color-on-primary); font-weight: 900; text-decoration: none; }
+
+/* The main page names the drop-off point in one line; the full card is in the form and after sending goods. */
+.dropOffLine { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 48px; padding: var(--space-2) var(--space-4); border: 0; border-radius: 18px; background: color-mix(in srgb, var(--color-primary) 8%, var(--color-background)); color: var(--color-text); font: inherit; font-size: .9375rem; text-align: left; text-decoration: none; cursor: pointer; }
+.dropOffLine:focus-visible { outline: 3px solid var(--color-focus, var(--color-primary)); outline-offset: 3px; }
+.dropOffLinePin { flex-shrink: 0; color: var(--color-primary); }
+.dropOffLineText { flex: 1; min-width: 0; line-height: 1.35; }
+.dropOffLineText strong { color: var(--color-heading); font-weight: 800; }
+.dropOffLineAction { display: inline-flex; flex-shrink: 0; align-items: center; gap: 2px; color: var(--color-primary); font-weight: 800; white-space: nowrap; }
+.csr[data-style="rapi"] .dropOffLine { border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-background); }
+.csr[data-style="hangat"] .dropOffLine { background: var(--color-soft); }
+.doneDropOff { width: 100%; text-align: left; }
+.doneDropOff .dropOff { box-shadow: none; border: 1px solid var(--color-border); }
