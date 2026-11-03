@@ -62,6 +62,19 @@ export async function verifyUpload(key: string, length: number, allowed: PhotoKi
   return kind;
 }
 
+/**
+ * After an upload that is not a photo (documents): the object exists with the agreed size. Its
+ * first bytes are returned so the caller can check the kind of file.
+ */
+export async function uploadedStart(key: string, length: number): Promise<Uint8Array> {
+  const { client, bucket } = connect();
+  const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key })).catch(() => null);
+  if (!head) throw new ServiceError(422, "Berkas belum terunggah. Coba unggah ulang.");
+  if (head.ContentLength !== length) throw new ServiceError(422, "Ukuran berkas tidak sesuai. Coba unggah ulang.");
+  const start = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key, Range: "bytes=0-15" }));
+  return new Uint8Array(await start.Body!.transformToByteArray());
+}
+
 export async function removeObjects(keys: string[]): Promise<void> {
   if (!keys.length) return;
   const { client, bucket } = connect();

@@ -124,3 +124,4 @@ a.gridCell:hover { background: var(--brass-soft); }
 .profile dt { font-weight: 700; }
 .profile dd { margin: 0; }
 .narrow { max-width: 32rem; }
+.blockSession { background: #efe7d6; border-left-color: #7a5c2a; }

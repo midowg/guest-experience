@@ -27,7 +27,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
   const isToday = date === wibDate(now);
   const passed = (time: string) => !open || new Date(wibInstant(date, time)) <= new Date(now);
   const inRoom = (room: Room) => bookings.filter(booking => booking.roomId === room.id);
-  const mineFlag = (booking: Booking) => booking.bookedBy.id === viewerId;
+  const mineFlag = (booking: Booking) => !booking.isSession && booking.bookedBy.id === viewerId;
 
   async function cancel(booking: Booking) {
     const someoneElse = booking.bookedBy.id !== viewerId ? ` milik ${booking.bookedBy.name}` : "";
@@ -87,7 +87,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
           : <a key={`${room.id}-${time}`} className={styles.gridCell} style={{ gridColumn: column + 2, gridRow: row + 2 }} href={praWamPath.book({ tanggal: date, ruang: room.id, mulai: time })} aria-label={`Pesan ${room.name} jam ${clockLabel(time)}`} />))}
         {bookable.flatMap((room, column) => inRoom(room).map(booking => {
           const from = slots.indexOf(wibTime(booking.startsAt)), to = slots.indexOf(wibTime(booking.endsAt));
-          return <button key={booking.id} type="button" className={`${styles.block} ${mineFlag(booking) ? styles.blockMine : ""}`} style={{ gridColumn: column + 2, gridRow: `${from + 2} / ${(to < 0 ? slots.length : to) + 2}` }}
+          return <button key={booking.id} type="button" className={`${styles.block} ${mineFlag(booking) ? styles.blockMine : ""} ${booking.isSession ? styles.blockSession : ""}`} style={{ gridColumn: column + 2, gridRow: `${from + 2} / ${(to < 0 ? slots.length : to) + 2}` }}
             aria-expanded={openId === booking.id} aria-controls="rincian" onClick={() => setOpenId(openId === booking.id ? null : booking.id)}>
             <strong>{booking.title}</strong>{booking.bookedBy.name} · {span(booking)}
           </button>;
@@ -106,12 +106,12 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
       </div>
       {opened && <div id="rincian" className={styles.detail} role="region" aria-label="Rincian booking">
         <h3>{opened.title}</h3>
-        <span className={styles.meta}>{rooms.find(item => item.id === opened.roomId)?.name}, {span(opened)} · Dipesan {mineFlag(opened) ? "kamu" : `${opened.bookedBy.name} (${opened.bookedBy.department})`}</span>
+        <span className={styles.meta}>{rooms.find(item => item.id === opened.roomId)?.name}, {span(opened)} · {opened.isSession ? "Sesi Pra WAM, diatur panitia" : `Dipesan ${mineFlag(opened) ? "kamu" : `${opened.bookedBy.name} (${opened.bookedBy.department})`}`}</span>
         {opened.participants && <span className={styles.meta}>{opened.participants.length ? `Bersama ${opened.participants.map(person => person.name).join(", ")}` : "Tanpa partisipan lain"}</span>}
         {opened.description && <span className={styles.meta}>{opened.description}</span>}
         <div className={styles.actions}>
           {open && mineFlag(opened) && <ButtonLink variant="secondary" href={praWamPath.book({ ubah: opened.id })}>Ubah</ButtonLink>}
-          {(mineFlag(opened) || canCancelAny) && new Date(opened.endsAt) > new Date(now) && <button type="button" className="button button--quiet" disabled={busy === opened.id} onClick={() => cancel(opened)}>{busy === opened.id ? "Membatalkan…" : "Batalkan"}</button>}
+          {!opened.isSession && (mineFlag(opened) || canCancelAny) && new Date(opened.endsAt) > new Date(now) && <button type="button" className="button button--quiet" disabled={busy === opened.id} onClick={() => cancel(opened)}>{busy === opened.id ? "Membatalkan…" : "Batalkan"}</button>}
           <button type="button" className="button button--quiet" onClick={() => setOpenId(null)}>Tutup</button>
         </div>
       </div>}

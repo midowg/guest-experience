@@ -1,0 +1,165 @@
+import "server-only";
+import { clockLabel, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
+import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
+import { sessionProblems, sessionSpan, type RoomUse, type Session, type SessionInput, type SessionStatus } from "@/lib/pra-wam/sessions";
+import { ServiceError } from "../config";
+import { databaseError } from "../http";
+import { createPrivilegedClient } from "../supabase/admin";
+import { listPeople, listRooms } from "./appraisal";
+import { listEvents } from "./events";
+import { type Member } from "./session";
+
+/*
+ * Sessions (migration 202611040004). Panitia and admin make and change them; BOD reads all;
+ * a peserta sees the published sessions they take part in. A room is held for a session as long
+ * as it is a draft or published, so a booking cannot take it and the other way round.
+ */
+
+const MIGRATION = "202611040004_pra_wam_sessions.sql";
+const missing = (error: { code?: string; message?: string }) => ["42P01", "PGRST205", "42703", "PGRST204"].includes(error.code ?? "") || /pw_sessions|pw_session_participants|pw_documents|pw_room_holds/.test(error.message ?? "");
+export const sessionsWaiting = () => new ServiceError(503, `Sesi menunggu migrasi ${MIGRATION}.`);
+function fail(error: { code?: string; message: string }): never {
+  if (missing(error)) throw sessionsWaiting();
+  databaseError(error);
+}
+
+type SessionRow = { id: string; title: string; kind: Session["kind"]; description: string; status: SessionStatus; plan_from: string | null; plan_to: string | null; starts_at: string | null; ends_at: string | null; room_id: string | null; location: string };
+const columns = "id,title,kind,description,status,plan_from,plan_to,starts_at,ends_at,room_id,location";
+
+/** The Pra WAM event sessions belong to. */
+async function praWamEventId(): Promise<string> {
+  const { events, migrated } = await listEvents();
+  const event = events.find(item => item.kind === "pra_wam");
+  if (!migrated || !event) throw new ServiceError(503, "Acara Pra WAM menunggu migrasi 202611040003_pra_wam_events_units.sql.");
+  return event.id;
+}
+
+async function shape(rows: SessionRow[], viewer: Member): Promise<Session[]> {
+  if (!rows.length) return [];
+  const client = createPrivilegedClient();
+  const [rooms, people, { data: links, error }] = await Promise.all([
+    listRooms(), listPeople(),
+    client.from("pw_session_participants").select("session_id,employee_id").in("session_id", rows.map(row => row.id)),
+  ]);
+  if (error) fail(error);
+  const all = seesAllSessions(viewer);
+  const byId = new Map(people.map(person => [person.id, { id: person.id, name: person.name, department: person.department }]));
+  return rows.map(row => {
+    const ids = (links ?? []).filter(link => link.session_id === row.id).map(link => link.employee_id);
+    return {
+      id: row.id, title: row.title, kind: row.kind, description: row.description, status: row.status,
+      planFrom: row.plan_from, planTo: row.plan_to, startsAt: row.starts_at, endsAt: row.ends_at,
+      roomId: row.room_id, roomName: rooms.find(room => room.id === row.room_id)?.name ?? null, location: row.location,
+      participantCount: ids.length, isParticipant: ids.includes(viewer.id),
+      participants: all ? ids.map(id => byId.get(id) ?? { id, name: "Tanpa nama", department: "" }).sort((a, b) => a.name.localeCompare(b.name)) : null,
+    };
+  });
+}
+
+const order = (a: Session, b: Session) => (a.startsAt ?? `${a.planFrom ?? "9999"}T99`).localeCompare(b.startsAt ?? `${b.planFrom ?? "9999"}T99`);
+
+/** Panitia, BOD and admin: every session. Anyone else: the published ones they take part in. */
+export async function listSessions(viewer: Member): Promise<{ sessions: Session[]; migrated: boolean }> {
+  const client = createPrivilegedClient();
+  let query = client.from("pw_sessions").select(columns);
+  if (!seesAllSessions(viewer)) {
+    const { data: links, error } = await client.from("pw_session_participants").select("session_id").eq("employee_id", viewer.id);
+    if (error) { if (missing(error)) return { sessions: [], migrated: false }; databaseError(error); }
+    const ids = (links ?? []).map(link => link.session_id);
+    if (!ids.length) return { sessions: [], migrated: true };
+    query = query.eq("status", "terbit").in("id", ids);
+  }
+  const { data, error } = await query.limit(500);
+  if (error) { if (missing(error)) return { sessions: [], migrated: false }; databaseError(error); }
+  return { sessions: (await shape((data ?? []) as SessionRow[], viewer)).sort(order), migrated: true };
+}
+
+export async function getSession(id: string, viewer: Member): Promise<Session> {
+  const { data, error } = await createPrivilegedClient().from("pw_sessions").select(columns).eq("id", id).maybeSingle();
+  if (error) fail(error);
+  const [session] = data ? await shape([data as SessionRow], viewer) : [];
+  if (!session || (!seesAllSessions(viewer) && !(session.status === "terbit" && session.isParticipant))) throw new ServiceError(404, "Sesi tidak ditemukan.");
+  return session;
+}
+
+/** Everything that holds a room on a day, with a label people recognise. */
+export async function roomUses(date: string): Promise<RoomUse[]> {
+  const next = new Date(`${date}T12:00:00Z`); next.setUTCDate(next.getUTCDate() + 1);
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("pw_room_holds").select("source,source_id,room_id,starts_at,ends_at")
+    .lt("starts_at", wibInstant(next.toISOString().slice(0, 10), "00:00")).gt("ends_at", wibInstant(date, "00:00"));
+  if (error) fail(error);
+  const holds = data ?? [];
+  const bookingIds = holds.filter(hold => hold.source === "booking").map(hold => hold.source_id);
+  const sessionIds = holds.filter(hold => hold.source === "sesi").map(hold => hold.source_id);
+  const [{ data: bookings }, { data: sessions }, people] = await Promise.all([
+    bookingIds.length ? client.from("pw_room_bookings").select("id,title,booked_by").in("id", bookingIds) : Promise.resolve({ data: [] as { id: string; title: string; booked_by: string }[] }),
+    sessionIds.length ? client.from("pw_sessions").select("id,title").in("id", sessionIds) : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    listPeople(),
+  ]);
+  return holds.map(hold => {
+    const booking = bookings?.find(item => item.id === hold.source_id);
+    const label = hold.source === "booking"
+      ? `${booking?.title ?? "Appraisal"} (${people.find(person => person.id === booking?.booked_by)?.name ?? "pemesan"})`
+      : sessions?.find(item => item.id === hold.source_id)?.title ?? "Sesi";
+    return { roomId: hold.room_id, startsAt: hold.starts_at, endsAt: hold.ends_at, source: hold.source as RoomUse["source"], sourceId: hold.source_id, label };
+  });
+}
+
+function requireManager(viewer: Member) {
+  if (!managesSessions(viewer)) throw new ServiceError(403, "Hanya panitia yang bisa mengatur sesi.");
+}
+
+/** A taken room names what holds it, so panitia knows whom to talk to. */
+async function roomTakenError(input: SessionInput, ignoreId?: string): Promise<ServiceError> {
+  const span = sessionSpan(input)!;
+  const uses = await roomUses(input.date);
+  const use = uses.find(item => item.roomId === input.roomId && item.sourceId !== ignoreId && new Date(item.startsAt) < new Date(span.endsAt) && new Date(span.startsAt) < new Date(item.endsAt));
+  return new ServiceError(409, use ? `Ruang sudah dipakai ${use.label}, ${clockLabel(wibTime(use.startsAt))}–${clockLabel(wibTime(use.endsAt))}.` : "Ruang sudah dipakai pada jam itu.", { roomId: ["Pilih ruang atau jam lain."] });
+}
+
+/** Creates or changes a session; `publish` also puts it on its participants' agenda. */
+export async function saveSession(input: SessionInput, viewer: Member, options: { id?: string; publish?: boolean } = {}): Promise<Session> {
+  requireManager(viewer);
+  const current = options.id ? await getSession(options.id, viewer) : null;
+  const publish = options.publish ?? current?.status === "terbit";
+  const problems = sessionProblems(input, publish);
+  if (Object.keys(problems).length) throw new ServiceError(422, "Periksa kembali isian sesi.", Object.fromEntries(Object.entries(problems).map(([key, message]) => [key, [message]])));
+  const span = sessionSpan(input);
+  const values = {
+    title: input.title, kind: input.kind, description: input.description,
+    starts_at: span?.startsAt ?? null, ends_at: span?.endsAt ?? null, room_id: input.roomId || null, location: input.roomId ? "" : input.location,
+    status: publish ? "terbit" : current?.status === "batal" ? "draf" : current?.status ?? "draf",
+    ...(publish && current?.status !== "terbit" ? { published_at: new Date().toISOString() } : {}),
+    updated_at: new Date().toISOString(),
+  };
+  const client = createPrivilegedClient();
+  const result = current
+    ? await client.from("pw_sessions").update(values).eq("id", current.id).select("id").single()
+    : await client.from("pw_sessions").insert({ ...values, event_id: await praWamEventId(), created_by: viewer.id }).select("id").single();
+  if (result.error) {
+    if (result.error.code === "23P01") throw await roomTakenError(input, current?.id);
+    fail(result.error);
+  }
+  const id = result.data.id as string;
+  const { error: clearError } = await client.from("pw_session_participants").delete().eq("session_id", id);
+  if (clearError) fail(clearError);
+  const people = [...new Set(input.participants)];
+  if (people.length) {
+    const { error } = await client.from("pw_session_participants").insert(people.map(employee_id => ({ session_id: id, employee_id })));
+    if (error) { if (error.code === "23503") throw new ServiceError(422, "Ada peserta yang tidak dikenal. Muat ulang halaman."); fail(error); }
+  }
+  return getSession(id, viewer);
+}
+
+/** Back to draft (off the agenda) or cancelled (room freed, kept for the record). */
+export async function setSessionStatus(id: string, status: Exclude<SessionStatus, "terbit">, viewer: Member): Promise<Session> {
+  requireManager(viewer);
+  await getSession(id, viewer);
+  const { error } = await createPrivilegedClient().from("pw_sessions").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) {
+    if (error.code === "23P01") throw new ServiceError(409, "Ruang sesi ini sudah dipakai yang lain. Pilih ruang lain dulu.");
+    fail(error);
+  }
+  return getSession(id, viewer);
+}

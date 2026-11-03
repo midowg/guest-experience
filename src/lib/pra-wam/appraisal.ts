@@ -28,6 +28,8 @@ export type Booking = {
   bookedBy: Person;
   /** Only sent to the booker, its participants, and the people who manage Pra WAM. */
   participants: Person[] | null;
+  /** A Pra WAM session holding the room (set by panitia), shown on the schedule but not a booking. */
+  isSession?: boolean;
 };
 
 const WIB = "+07:00";

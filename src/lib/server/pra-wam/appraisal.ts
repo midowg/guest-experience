@@ -79,10 +79,26 @@ async function activeOn(date: string): Promise<BookingRow[]> {
   return (data ?? []) as BookingRow[];
 }
 
-/** One day's schedule: every room and every active booking. */
+/**
+ * Sessions that hold a room that day (migration 202611040004), as schedule entries. Nothing
+ * before that migration.
+ */
+async function sessionsOn(date: string): Promise<Booking[]> {
+  const [from, to] = dayRange(date);
+  const client = createPrivilegedClient();
+  const { data: holds, error } = await client.from("pw_room_holds").select("source_id,room_id,starts_at,ends_at").eq("source", "sesi").lt("starts_at", to).gt("ends_at", from);
+  if (error || !holds?.length) return [];
+  const { data: sessions } = await client.from("pw_sessions").select("id,title").in("id", holds.map(hold => hold.source_id));
+  return holds.map(hold => ({
+    id: `sesi:${hold.source_id}`, roomId: hold.room_id, title: sessions?.find(item => item.id === hold.source_id)?.title ?? "Sesi Pra WAM", description: "",
+    startsAt: hold.starts_at, endsAt: hold.ends_at, bookedBy: { id: "", name: "Panitia Pra WAM", department: "" }, participants: null, isSession: true,
+  }));
+}
+
+/** One day's schedule: every room, every active booking, and the sessions that hold a room. */
 export async function daySchedule(date: string, viewer: Member): Promise<{ rooms: Room[]; bookings: Booking[] }> {
-  const [rooms, rows] = await Promise.all([listRooms(), activeOn(date)]);
-  return { rooms, bookings: await withPeople(rows, viewer) };
+  const [rooms, rows, sessions] = await Promise.all([listRooms(), activeOn(date), sessionsOn(date)]);
+  return { rooms, bookings: [...await withPeople(rows, viewer), ...sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt)) };
 }
 
 /** Bookings the person made or takes part in, from today on. */
@@ -171,13 +187,16 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
 
 /** The second person to save gets who took the room, and the nearest free options. */
 async function roomTaken(input: BookingInput, viewer: Member, now: Date, ignoreId?: string): Promise<BookingConflict> {
-  const [rooms, rows] = await Promise.all([listRooms(), activeOn(input.date)]);
+  const [rooms, rows, sessions] = await Promise.all([listRooms(), activeOn(input.date), sessionsOn(input.date)]);
   const span = { startsAt: wibInstant(input.date, input.start), endsAt: wibInstant(input.date, input.end) };
   const taker = rows.find(row => row.id !== ignoreId && row.room_id === input.roomId && overlaps({ startsAt: row.starts_at, endsAt: row.ends_at }, span));
+  const session = sessions.find(item => item.roomId === input.roomId && overlaps(item, span));
   const room = rooms.find(item => item.id === input.roomId)?.name ?? "Ruang ini";
   const name = taker ? (await listPeople()).find(person => person.id === taker.booked_by)?.name : undefined;
-  const options = alternatives(input, rooms, rows.map(row => ({ id: row.id, roomId: row.room_id, startsAt: row.starts_at, endsAt: row.ends_at })), now, ignoreId);
-  const message = taker && name
+  const options = alternatives(input, rooms, [...rows.map(row => ({ id: row.id, roomId: row.room_id, startsAt: row.starts_at, endsAt: row.ends_at })), ...sessions], now, ignoreId);
+  const message = !taker && session
+    ? `${room} dipakai sesi ${session.title}, ${clockLabel(wibTime(session.startsAt))}–${clockLabel(wibTime(session.endsAt))}.`
+    : taker && name
     ? `${room} baru saja dipesan ${taker.booked_by === viewer.id ? "olehmu" : name}, ${clockLabel(wibTime(taker.starts_at))}–${clockLabel(wibTime(taker.ends_at))}.`
     : `${room} sudah terpakai pada jam itu.`;
   return new BookingConflict(message, { kind: "room", ...options });

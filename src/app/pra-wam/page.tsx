@@ -3,7 +3,7 @@ import { praWamPath } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
-/** Tahap 0: Appraisal is the first part that is ready, so the home page opens it. */
+/** The home page opens the person's agenda; a Beranda with news comes with announcements. */
 export default function PraWamHome() {
-  redirect(praWamPath.appraisal());
+  redirect(praWamPath.agenda);
 }

@@ -15,6 +15,10 @@ const has = (who: WithRoles, ...roles: PraWamRole[]) => roles.some(role => who.r
 export const seesAllParticipants = (who: WithRoles) => has(who, "panitia", "bod", "admin");
 /** May cancel someone else's booking (for a forum that needs the room, say). */
 export const cancelsAnyBooking = (who: WithRoles) => has(who, "panitia", "admin");
+/** Makes, publishes and cancels sessions, picks their rooms, and uploads any document. */
+export const managesSessions = (who: WithRoles) => has(who, "panitia", "admin");
+/** Sees every session, drafts included (BOD reads, panitia and admin also change). */
+export const seesAllSessions = (who: WithRoles) => has(who, "panitia", "bod", "admin");
 /** Accounts, roles and rooms. */
 export const managesApp = (who: WithRoles) => has(who, "admin");
 

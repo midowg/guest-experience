@@ -1,12 +1,15 @@
 import type { ReactNode } from "react";
-import { roleSummary, type PraWamRole } from "@/lib/pra-wam/roles";
+import { roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { SignOutButton } from "./SignOutButton";
 import styles from "./pra-wam.module.css";
 
-type Tab = "appraisal" | "akun";
-const tabs: { id: Tab; label: string; href: string }[] = [
+type Tab = "agenda" | "appraisal" | "dokumen" | "sesi" | "akun";
+const tabs: { id: Tab; label: string; href: string; staff?: boolean }[] = [
+  { id: "agenda", label: "Agenda", href: praWamPath.agenda },
   { id: "appraisal", label: "Appraisal", href: praWamPath.appraisal() },
+  { id: "dokumen", label: "Dokumen", href: praWamPath.documents },
+  { id: "sesi", label: "Semua sesi", href: praWamPath.sessions, staff: true },
   { id: "akun", label: "Akun", href: praWamPath.account },
 ];
 
@@ -22,7 +25,7 @@ export function PraWamShell({ member, current, children }: { member: { name: str
         <SignOutButton className={styles.signOut} />
       </div>
       {current && <nav className={styles.tabs} aria-label="Menu Pra WAM">
-        {tabs.map(tab => <a key={tab.id} className={styles.tab} href={tab.href} aria-current={tab.id === current ? "page" : undefined}>{tab.label}</a>)}
+        {tabs.filter(tab => !tab.staff || seesAllSessions(member)).map(tab => <a key={tab.id} className={styles.tab} href={tab.href} aria-current={tab.id === current ? "page" : undefined}>{tab.label}</a>)}
       </nav>}
     </header>
     <main className={styles.main} id="isi">{children}</main>

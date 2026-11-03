@@ -121,6 +121,14 @@ export const praWamPath = {
   home: PRA_WAM_PATH,
   login: (next?: string) => `${PRA_WAM_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
   appraisal: (date?: string) => `${PRA_WAM_PATH}/appraisal${date ? `?tanggal=${date}` : ""}`,
+  /** The person's sessions, by day. */
+  agenda: `${PRA_WAM_PATH}/agenda`,
+  session: (id: string) => `${PRA_WAM_PATH}/sesi/${id}`,
+  documents: `${PRA_WAM_PATH}/dokumen`,
+  /** Panitia (and BOD, reading): every session, drafts included; the form to make or change one. */
+  sessions: `${PRA_WAM_PATH}/panitia/sesi`,
+  newSession: `${PRA_WAM_PATH}/panitia/sesi/baru`,
+  editSession: (id: string) => `${PRA_WAM_PATH}/panitia/sesi/${id}`,
   /** Profile and settings: change password. */
   account: `${PRA_WAM_PATH}/akun`,
   /** Right after the first sign-in: pick a new password, or skip for now. */
@@ -141,6 +149,13 @@ export const praWamApi = {
   password: "/api/pra-wam/password",
   forgot: "/api/pra-wam/lupa-password",
   resetPassword: "/api/pra-wam/atur-password",
+  sessions: (id?: string) => `/api/pra-wam/sesi${id ? `/${id}` : ""}`,
+  sessionStatus: (id: string) => `/api/pra-wam/sesi/${id}/status`,
+  /** What holds each room on a day (bookings and sessions), for picking a session's room. */
+  roomUses: (date: string) => `/api/pra-wam/ruang?tanggal=${date}`,
+  /** Documents: ask for an upload address, then register the uploaded file; one document by id. */
+  documents: (id?: string) => `/api/pra-wam/dokumen${id ? `/${id}` : ""}`,
+  documentUpload: "/api/pra-wam/dokumen/unggah",
   /** Appraisal bookings: the day's schedule, a new booking, or one booking by id. */
   bookings: (id?: string, query: Record<string, string> = {}) => {
     const search = new URLSearchParams(query).toString();
