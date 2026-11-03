@@ -276,3 +276,9 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .phase { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; padding: 10px 14px; border-radius: 12px; background: var(--pw-brass-soft); color: var(--pw-on-brass-soft); font-size: 13px; }
 .phase svg { width: 18px; height: 18px; flex: none; }
 .phase strong { font-weight: 800; }
+
+/* Loading between pages, in the app's colours */
+.loading { display: grid; place-content: center; justify-items: center; gap: 12px; color: var(--pw-muted); font-weight: 700; font-size: 14px; }
+.spinner { width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--pw-line); border-top-color: var(--pw-primary); animation: pw-spin .8s linear infinite; }
+@keyframes pw-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }

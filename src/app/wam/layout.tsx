@@ -17,5 +17,9 @@ export const viewport: Viewport = {
 };
 
 export default function PraWamLayout({ children }: { children: ReactNode }) {
-  return <><PwaRegister />{children}</>;
+  // The page behind WAM is the app's colour from the first paint, so dark mode never flashes white.
+  return <>
+    <style>{"body{background:#FAFAF7;color-scheme:light}@media (prefers-color-scheme:dark){body{background:#0E1218;color-scheme:dark}}"}</style>
+    <PwaRegister />{children}
+  </>;
 }
