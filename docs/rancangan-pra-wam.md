@@ -124,7 +124,7 @@ Backend yang membatasi akses, bukan hanya tampilan.
 |---|---|---|---|
 | Agenda & sesi | Sesi tempat ia terdaftar + info umum | Semua, kelola | Semua, baca |
 | Dokumen | Dokumen umum acara + dokumen sesinya; unggah ke sesinya | Semua | Baca |
-| Absensi | Scan QR sesi sendiri | Buka QR sesi, lihat absensi | Rekap |
+| Absensi | Scan QR sesi sendiri | Cetak QR sesi, lihat dan koreksi absensi | Rekap |
 | Permintaan jadwal | Ajukan, lihat status | Periksa bentrok, setujui / tolak | Rekap |
 | Profil | Master (baca) + profil acara miliknya (ubah field yang diizinkan) | Data operasional peserta; tidak mengubah master | Profil detail sampai data personal (infografis) |
 | Pairing kamar / tim | Miliknya setelah terbit | Atur manual dengan filter profil | Baca |
@@ -139,8 +139,15 @@ Backend yang membatasi akses, bukan hanya tampilan.
 2. **Ganti jadwal.** Peserta mengajukan waktu baru + alasan → panitia memeriksa bentrok waktu, ruang,
    dan peserta → setujui atau tolak. Status: **diajukan / disetujui / ditolak**. Jadwal hanya berubah
    kalau disetujui; setelah itu notifikasi ke **seluruh peserta sesi terdampak**.
-3. **Saat acara.** Panitia menampilkan QR di layar sesi yang dibuka → peserta login dan scan → sistem
-   memeriksa peserta dan waktu, menyimpan **satu absensi per peserta per sesi**, menampilkan konfirmasi.
+3. **Saat acara.** Setiap sesi punya **QR statis** yang dibuat otomatis saat sesi terbit dan dicetak
+   panitia dari menu Cetak QR absen (A5, bisa banyak sesi sekaligus), lalu ditempel di ruang
+   (keputusan pemilik, 3 Nov 2026; menggantikan QR di layar yang berganti di acuan). Peserta absen
+   sendiri: login → scan → sistem memeriksa bahwa ia peserta sesi itu dan waktunya dalam jendela absen
+   (**30 menit sebelum mulai sampai 30 menit setelah selesai**, keputusan pemilik 3 Nov 2026), menyimpan **satu absensi per
+   peserta per sesi**, menampilkan konfirmasi. Di luar jendela tampil "Absen belum dibuka".
+   Catatan risiko: QR statis bisa difoto dan dibagikan, jadi orang bisa absen tanpa hadir. Penahan yang
+   ada: wajib login, hanya peserta sesi, dan jendela waktu. Penahan tambahan bila perlu nanti: cek
+   jaringan Wi-Fi kantor atau lokasi, atau panitia menandai yang tidak hadir.
 4. **Evaluasi.** Panitia menerbitkan survei acara atau sesi → peserta mengirim jawaban → BOD dan
    panitia melihat ringkasan kehadiran, profil, dan hasil survei.
 
@@ -252,10 +259,10 @@ Kamis 26 Nov 2026). Nomor urut ada di nama layar, mis. `01 · A1 · Masuk`.
 | Baris | No | Layar |
 |---|---|---|
 | 1 · Masuk | 01–03 | A1 Masuk (ponsel, login sederhana) · A2 Buat password baru (bisa dilewati) · E0 Masuk (desktop) |
-| 2 · Peserta · ponsel | 04–15 | P1 Beranda · P11 Notifikasi · P7 Pengalih acara · P2 Agenda · P3 Detail sesi · P9 Ajukan ganti jadwal · P12 Scan QR · P5 Absen tercatat · P13 QR tidak berlaku · P8 Dokumen · P10 Isi survei · P4 Profil dan pengaturan |
+| 2 · Peserta · ponsel | 04–15 | P1 Beranda · P11 Notifikasi · P7 Pengalih acara · P2 Agenda · P3 Detail sesi · P9 Ajukan ganti jadwal · P12 Scan QR · P5 Absen tercatat · P13 Absen belum dibuka · P8 Dokumen · P10 Isi survei · P4 Profil dan pengaturan |
 | 3 · Peserta · desktop | 16–17 | E1 Beranda · E2 Agenda dan detail sesi |
 | 4 · Panitia · ponsel | 18–21 | K1 Beranda · K2 Tinjau permintaan · K4 Lainnya · K3 Pairing kamar (disiapkan untuk WAM) |
-| 5 · Panitia · desktop | 22–29 | D1 Ringkasan operasional · D6 Peserta & profil · D7 Buat sesi · D4 Pilih ruang lewat denah · D2 QR absen di layar ruang · D8 Pengumuman · D9 Survei · D10 Pengaturan acara (modul Pra WAM / WAM) |
+| 5 · Panitia · desktop | 22–29 | D1 Ringkasan operasional · D6 Peserta & profil · D7 Buat sesi · D4 Pilih ruang lewat denah · D2 Cetak QR absen (QR statis per sesi, pratinjau A5) · D8 Pengumuman · D9 Survei · D10 Pengaturan acara (modul Pra WAM / WAM) |
 | 6 · BOD | 30–34 | B1 Ringkasan · B2 Profil peserta · B4 Hasil survei · B3 Akun (kartu MCP) · E3 Ringkasan (desktop) |
 | 7 · Akses khusus | 35–37 | D3 Akses MCP (hanya akun berizin) · D5 Akun & akses · D11 Unit & lead (super admin) |
 
@@ -273,7 +280,7 @@ Model acara: **Pra WAM dan WAM masing-masing satu baris `events`**; setiap rapat
 
 - Inti: `employees` (master, baca saja), `employee_profiles` (master personal_detail JSON),
   `events`, `event_members` (unik event+employee, `event_profile` JSON, status, confirmed_at),
-  `member_roles`, `sessions` (qr_token_hash, qr_expires_at), `session_participants` (dasar agenda dan
+  `member_roles`, `sessions` (qr_token_hash statis per sesi; jendela absen dari jam sesi, bukan qr_expires_at), `session_participants` (dasar agenda dan
   akses dokumen), `groups` (kamar/tim/aktivitas, kapasitas), `group_members`.
 - Fitur: `documents` (sesi kosong = dokumen umum), `schedule_requests`, `attendance`
   (unik sesi+member), `announcements`, `notification_receipts`, `audit_logs`, `surveys`,
