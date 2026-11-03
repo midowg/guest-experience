@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { ParsedUnits, UnitKind } from "@/lib/pra-wam/units";
 import { ServiceError } from "../config";
 import { listEmployees } from "../employees";
@@ -18,7 +19,7 @@ export type Membership = { unitId: string; employeeId: string; jobTitle: string;
 const waiting = () => new ServiceError(503, "Unit dan jabatan menunggu migrasi 202611040003_pra_wam_events_units.sql.");
 
 /** Every unit and membership; empty (and `migrated: false`) before the migration. */
-export async function listUnits(): Promise<{ units: Unit[]; memberships: Membership[]; migrated: boolean }> {
+async function listUnitsUncached(): Promise<{ units: Unit[]; memberships: Membership[]; migrated: boolean }> {
   const client = createPrivilegedClient();
   const [{ data: units, error }, { data: members, error: memberError }] = await Promise.all([
     client.from("org_units").select("id,kind,name,code").order("kind").order("sort_order").order("name"),
@@ -32,6 +33,8 @@ export async function listUnits(): Promise<{ units: Unit[]; memberships: Members
     memberships: (members ?? []).map(row => ({ unitId: row.unit_id, employeeId: row.employee_id, jobTitle: row.job_title, isLead: row.is_lead, isPrimary: row.is_primary })),
   };
 }
+/** Read once per request, however many parts of the page ask. */
+export const listUnits = cache(listUnitsUncached);
 
 /** One person's units, for their profile: "Lead · Business & Administrative Services". */
 export async function unitsOf(employeeId: string): Promise<(Unit & Omit<Membership, "unitId" | "employeeId">)[]> {

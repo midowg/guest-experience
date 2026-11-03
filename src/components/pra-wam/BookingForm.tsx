@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DoorOpen, Info, Send } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
@@ -29,6 +30,7 @@ const chipDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "nume
  * typed and offers the nearest free hour or another room.
  */
 export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings }: Props) {
+  const router = useRouter();
   const [draft, setDraft] = useState(initial);
   const [bookings, setBookings] = useState(dayBookings);
   const [loadedDate, setLoadedDate] = useState(initial.date);
@@ -90,7 +92,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     try {
       const body = { ...draft, confirmed };
       await praWamRequest(editId ? praWamApi.bookings(editId) : praWamApi.bookings(), { method: editId ? "PATCH" : "POST", json: body });
-      window.location.assign(praWamPath.appraisal(draft.date));
+      router.push(praWamPath.appraisal(draft.date));
     } catch (problem) {
       if (problem instanceof PraWamApiError && problem.conflict) {
         setConflict({ ...problem.conflict, message: problem.message });

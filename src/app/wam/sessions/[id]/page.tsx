@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { CalendarDays, CheckCircle2, ClipboardList, MapPin, Pencil, QrCode, Users } from "lucide-react";
 import { DocumentList } from "@/components/pra-wam/DocumentList";
-import { BackRow, PraWamShell } from "@/components/pra-wam/PraWamShell";
+import { PraWamShell } from "@/components/pra-wam/PraWamShell";
 import { RequestChange } from "@/components/pra-wam/ScheduleRequests";
 import { Notice } from "@/components/ui";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
@@ -39,8 +39,8 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   const manage = managesSessions(member);
   const staff = seesAllSessions(member);
   const scan = session.isParticipant && live && !checkedInAt;
-  return <PraWamShell member={member} current="agenda">
-    <BackRow href={praWamPath.agenda} title="Detail sesi" />
+  return <PraWamShell member={member} current="agenda" back={{ href: praWamPath.agenda, title: "Detail sesi" }}>
+    
     <div className={styles.head} style={{ marginBottom: 12 }}><div><h1>{session.title}</h1></div></div>
     <div className={styles.pills} style={{ marginBottom: 16 }}>
       <span className={`${styles.pill} ${styles.pillLine}`}>{sessionKindLabels[session.kind]}</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
@@ -9,6 +10,7 @@ import styles from "./pra-wam.module.css";
 
 /** One sign-in for everyone (Penpot "A1 · Masuk"): what follows depends on the person's role. */
 export function LoginForm({ next }: { next: string | null }) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
@@ -21,7 +23,7 @@ export function LoginForm({ next }: { next: string | null }) {
     try {
       const result = await praWamRequest<{ mustChangePassword: boolean }>(praWamApi.login, { method: "POST", json: { email, password } });
       // The shared first password: offer a new one first; it can be skipped.
-      window.location.assign(result.data?.mustChangePassword ? praWamPath.newPassword(next ?? undefined) : next ?? praWamPath.home);
+      router.replace(result.data?.mustChangePassword ? praWamPath.newPassword(next ?? undefined) : next ?? praWamPath.home);
     } catch (problem) { setError(errorText(problem)); setBusy(false); }
   }
 

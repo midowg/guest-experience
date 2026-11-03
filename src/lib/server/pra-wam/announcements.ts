@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { managesSessions } from "@/lib/pra-wam/roles";
 import { sessionWhen, sessionWhere, type Session } from "@/lib/pra-wam/sessions";
 import { ServiceError } from "../config";
@@ -103,10 +104,12 @@ export async function myNotifications(member: Member): Promise<{ items: Notifica
 }
 
 /** For the badge in the menu; 0 before the migration. */
-export async function unreadCount(employeeId: string): Promise<number> {
+async function unreadCountUncached(employeeId: string): Promise<number> {
   const { count, error } = await createPrivilegedClient().from("pw_notification_receipts").select("announcement_id", { count: "exact", head: true }).eq("employee_id", employeeId).is("read_at", null);
   return error ? 0 : count ?? 0;
 }
+/** Read once per request, however many parts of the page ask. */
+export const unreadCount = cache(unreadCountUncached);
 
 export async function markRead(member: Member, announcementId?: string): Promise<void> {
   let query = createPrivilegedClient().from("pw_notification_receipts").update({ read_at: new Date().toISOString() }).eq("employee_id", member.id).is("read_at", null);

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowLeftRight, BarChart3, Bell, CalendarClock, CalendarDays, FileText, Home, Send, User } from "lucide-react";
+import { ArrowLeftRight, BarChart3, Bell, CalendarClock, CalendarDays, ChevronLeft, FileText, Home, Send, User } from "lucide-react";
 import { managesSessions, roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { unreadCount } from "@/lib/server/pra-wam/announcements";
@@ -30,16 +30,18 @@ const manage: Item[] = [
 /**
  * The frame of every signed-in Pra WAM page, as in Penpot: on a phone the page and a bottom bar
  * (Beranda · Agenda · Appraisal · Dokumen · Profil); from 1024px a sidebar with the same places,
- * Notifikasi, and for panitia and BOD the "Kelola acara" part.
+ * Notifikasi, and for panitia and BOD the "Kelola acara" part. A detail screen (`back`) works like
+ * a pushed screen on a phone: a top bar with a back arrow and the title, no bottom bar, and the
+ * page slides in from the right.
  */
-export async function PraWamShell({ member, current, children }: { member: { id: string; name: string; nickname: string; department: string; roles: PraWamRole[] }; current?: Tab; children: ReactNode }) {
+export async function PraWamShell({ member, current, back, children }: { member: { id: string; name: string; nickname: string; department: string; roles: PraWamRole[] }; current?: Tab; back?: { href: string; title: string }; children: ReactNode }) {
   const [unread, waiting] = await Promise.all([unreadCount(member.id), managesSessions(member) ? openRequestCount() : 0]);
   const badge = (tab: Tab) => (tab === "notifikasi" ? unread : tab === "permintaan" ? waiting : 0);
   const side = (item: Item) => <a key={item.id} className={styles.sideItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>
     {item.icon}<span>{item.label}</span>{badge(item.id) > 0 && <span className={styles.sideBadge}>{badge(item.id)}</span>}
   </a>;
   const managed = manage.filter(item => !item.show || item.show(member));
-  return <div className={styles.app}>
+  return <div className={`${styles.app} ${back ? styles.pushed : ""}`}>
     <div className={styles.frame}>
       <nav className={styles.sidebar} aria-label="Menu WAM">
         <a className={styles.brand} href={praWamPath.home}><strong>WAM</strong><span>Nov–Des 2026 · menuju WAM 2027</span></a>
@@ -52,13 +54,19 @@ export async function PraWamShell({ member, current, children }: { member: { id:
           <SignOutButton className={styles.signOut} />
         </div>
       </nav>
-      <main className={styles.main} id="isi">{children}</main>
+      <main className={styles.main} id="isi">
+        {back && <header className={styles.appBar}>
+          <a className={styles.back} href={back.href} aria-label="Kembali"><ChevronLeft aria-hidden /></a>
+          <strong>{back.title}</strong>
+        </header>}
+        <div className={back ? styles.pushIn : undefined}>{children}</div>
+      </main>
     </div>
-    <nav className={styles.bottomNav} aria-label="Menu WAM">
+    {!back && <nav className={styles.bottomNav} aria-label="Menu WAM">
       {personal.map(item => <a key={item.id} className={styles.navItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>
         {item.icon}<span>{item.label}</span>
       </a>)}
-    </nav>
+    </nav>}
   </div>;
 }
 

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { clockLabel, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { sessionProblems, sessionSpan, type RoomUse, type Session, type SessionInput, type SessionStatus } from "@/lib/pra-wam/sessions";
@@ -60,7 +61,7 @@ async function shape(rows: SessionRow[], viewer: Member): Promise<Session[]> {
 const order = (a: Session, b: Session) => (a.startsAt ?? `${a.planFrom ?? "9999"}T99`).localeCompare(b.startsAt ?? `${b.planFrom ?? "9999"}T99`);
 
 /** Panitia, BOD and admin: every session. Anyone else: the published ones they take part in. */
-export async function listSessions(viewer: Member): Promise<{ sessions: Session[]; migrated: boolean }> {
+async function listSessionsUncached(viewer: Member): Promise<{ sessions: Session[]; migrated: boolean }> {
   const client = createPrivilegedClient();
   let query = client.from("pw_sessions").select(columns);
   if (!seesAllSessions(viewer)) {
@@ -74,6 +75,8 @@ export async function listSessions(viewer: Member): Promise<{ sessions: Session[
   if (error) { if (missing(error)) return { sessions: [], migrated: false }; databaseError(error); }
   return { sessions: (await shape((data ?? []) as SessionRow[], viewer)).sort(order), migrated: true };
 }
+/** Read once per request, however many parts of the page ask. */
+export const listSessions = cache(listSessionsUncached);
 
 export async function getSession(id: string, viewer: Member): Promise<Session> {
   const { data, error } = await createPrivilegedClient().from("pw_sessions").select(columns).eq("id", id).maybeSingle();

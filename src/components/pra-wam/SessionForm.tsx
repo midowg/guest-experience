@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Circle, Send } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
@@ -23,6 +24,7 @@ const PRA_WAM_FROM = "2026-10-28", PRA_WAM_TO = "2026-12-23";
  * right the checks the server will also make (room free, capacity, period), shown while typing.
  */
 export function SessionForm({ session, initial, rooms, people, groups }: Props) {
+  const router = useRouter();
   const [draft, setDraft] = useState(initial);
   const [uses, setUses] = useState<RoomUse[]>([]);
   const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
@@ -55,7 +57,7 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
     setBusy(publish ? "publish" : "save");
     try {
       const result = await praWamRequest<Session>(session ? praWamApi.sessions(session.id) : praWamApi.sessions(), { method: session ? "PATCH" : "POST", json: { ...draft, ...(publish ? { publish: true } : {}) } });
-      window.location.assign(session ? praWamPath.sessions : praWamPath.editSession(result.data.id));
+      router.push(session ? praWamPath.sessions : praWamPath.editSession(result.data.id));
     } catch (problem) {
       if (problem instanceof PraWamApiError && problem.fieldErrors) setFieldErrors(Object.fromEntries(Object.entries(problem.fieldErrors).map(([key, list]) => [key, list[0]])));
       setError(errorText(problem)); setBusy(null);
@@ -66,7 +68,7 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
     const question = next === "batal" ? `Batalkan "${session.title}"? Sesi hilang dari agenda peserta dan ruangnya kembali tersedia.` : `Kembalikan "${session.title}" ke draf? Sesi hilang dari agenda peserta sampai diterbitkan lagi.`;
     if (!window.confirm(question)) return;
     setBusy(next); setError(null);
-    try { await praWamRequest(praWamApi.sessionStatus(session.id), { method: "POST", json: { status: next } }); window.location.assign(praWamPath.sessions); }
+    try { await praWamRequest(praWamApi.sessionStatus(session.id), { method: "POST", json: { status: next } }); router.push(praWamPath.sessions); }
     catch (problem) { setError(errorText(problem)); setBusy(null); }
   }
 

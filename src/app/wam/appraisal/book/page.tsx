@@ -1,5 +1,5 @@
 import { BookingForm, type BookingDraft } from "@/components/pra-wam/BookingForm";
-import { BackRow, PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
+import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { Notice } from "@/components/ui";
 import { appraisalRules, bookableDates, slotTimes, wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import { praWamPath } from "@/lib/routes";
@@ -22,17 +22,18 @@ export default async function BookRoomPage({ searchParams }: { searchParams: Pro
   const now = new Date();
   const today = wibDate(now.toISOString());
   const dates = bookableDates(today);
-  const top = (title: string) => <><BackRow href={praWamPath.appraisal(query.date)} title="Booking ruang" /><ScreenHead eyebrow="Appraisal & 1-on-1" title={title} /></>;
-  if (!await appraisalOpen()) return <PraWamShell member={member} current="appraisal">{top("Pesan ruang")}<Notice tone="info">Booking ruang appraisal sedang ditutup oleh admin WAM.</Notice></PraWamShell>;
+  const back = (title: string) => ({ href: praWamPath.appraisal(query.date), title });
+  const top = (title: string) => <><ScreenHead eyebrow="Appraisal & 1-on-1" title={title} /></>;
+  if (!await appraisalOpen()) return <PraWamShell member={member} current="appraisal" back={back("Pesan ruang")}>{top("Pesan ruang")}<Notice tone="info">Booking ruang appraisal sedang ditutup oleh admin WAM.</Notice></PraWamShell>;
   const loaded = await loadForm(query, member, now, today, dates).catch((error: unknown) => {
     if (error instanceof ServiceError) return error.message;
     throw error;
   });
-  if (typeof loaded === "string") return <PraWamShell member={member} current="appraisal">{top("Pesan ruang")}<Notice tone="warning">{loaded}</Notice></PraWamShell>;
+  if (typeof loaded === "string") return <PraWamShell member={member} current="appraisal" back={back("Pesan ruang")}>{top("Pesan ruang")}<Notice tone="warning">{loaded}</Notice></PraWamShell>;
   const { editId, initial, schedule, people, titles, units } = loaded;
   const rooms = schedule.rooms.filter(room => room.bookable);
   const active = people.filter(person => person.active).map(({ id, name, department }) => ({ id, name, department }));
-  return <PraWamShell member={member} current="appraisal">
+  return <PraWamShell member={member} current="appraisal" back={back(editId ? "Ubah booking" : "Pesan ruang")}>
     {top(editId ? "Ubah booking" : "Pesan ruang")}
     <BookingForm editId={editId} initial={initial} dates={dates.includes(initial.date) ? dates : [initial.date, ...dates]} now={now.toISOString()} rooms={rooms}
       people={active} groups={participantGroups(active, member.id, units.units, units.memberships)}

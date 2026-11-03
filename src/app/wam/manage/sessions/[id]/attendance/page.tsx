@@ -32,13 +32,13 @@ export default async function SessionAttendancePage({ params }: { params: Promis
     if (error instanceof ServiceError) return error.message;
     throw error;
   });
-  if (typeof loaded === "string") return <PraWamShell member={member} current="sesi"><Notice tone="warning">{loaded}</Notice></PraWamShell>;
+  if (typeof loaded === "string") return <PraWamShell member={member} current="sesi" back={{ href: praWamPath.sessions, title: "QR dan daftar hadir" }}><Notice tone="warning">{loaded}</Notice></PraWamShell>;
   const [rows, token] = loaded;
   const host = (await headers()).get("host");
   const origin = process.env.NEXT_PUBLIC_SITE_URL || `${host?.startsWith("localhost") ? "http" : "https"}://${host}`;
   const qrSvg = token ? await QRCode.toString(absolute(origin, praWamPath.checkIn(token)), { type: "svg", margin: 0, errorCorrectionLevel: "M" }) : null;
   const window = session.startsAt && session.endsAt ? checkInWindow(session.startsAt, session.endsAt) : null;
-  return <PraWamShell member={member} current="sesi">
+  return <PraWamShell member={member} current="sesi" back={{ href: praWamPath.sessions, title: "QR dan daftar hadir" }}>
     <ScreenHead eyebrow="Jadwal sesi · QR absen" title={manage ? "Cetak QR absen" : "Daftar hadir"}
       lead={manage ? "Setiap sesi punya satu QR tetap. Cetak dan tempel di ruang; peserta absen sendiri lewat aplikasi." : `${session.title} · ${sessionWhen(session)}`}
       actions={manage && token ? <a className="button button--primary" href={praWamApi.sessionQr(session.id)} target="_blank" rel="noopener"><FileText size={18} aria-hidden /> Unduh PDF A5</a> : undefined} />

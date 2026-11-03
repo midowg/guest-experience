@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { praWamPath } from "@/lib/routes";
@@ -22,15 +23,17 @@ export const waitingForMigration = () => new ServiceError(503, `Pra WAM menunggu
 export type Member = { id: string; name: string; nickname: string; department: string; position: string; mustChangePassword: boolean; roles: PraWamRole[] };
 
 /** A person's roles; none before migration 202611040002, so everyone is simply a peserta then. */
-export async function rolesOf(employeeId: string): Promise<PraWamRole[]> {
+async function rolesOfUncached(employeeId: string): Promise<PraWamRole[]> {
   const { data, error } = await createPrivilegedClient().from("pw_roles").select("role").eq("employee_id", employeeId);
   if (error) { if (notMigrated(error)) return []; databaseError(error); }
   return praWamRoles.filter(role => (data ?? []).some(row => row.role === role));
 }
+/** Read once per request, however many parts of the page ask. */
+export const rolesOf = cache(rolesOfUncached);
 
 const notReady = () => new ServiceError(503, "Login Pra WAM belum disiapkan. Isi WAM_SESSION_SECRET (acak, minimal 32 karakter) pada server.");
 
-export async function currentMember(): Promise<Member | null> {
+async function currentMemberUncached(): Promise<Member | null> {
   const secret = praWamSecret();
   const session = verifyPraWamSession(secret, (await cookies()).get(PRA_WAM_COOKIE)?.value);
   if (!session) return null;
@@ -42,6 +45,8 @@ export async function currentMember(): Promise<Member | null> {
   if (!data || !person || !data.active || !person.active || data.session_version !== session.version) return null;
   return { id: person.id, name: person.full_name, nickname: person.nickname, department: person.department, position: person.position, mustChangePassword: data.must_change_password, roles: await rolesOf(person.id) };
 }
+/** Read once per request, however many parts of the page ask. */
+export const currentMember = cache(currentMemberUncached);
 
 /** For pages: the signed-in person, or a trip to the sign-in page that comes back here. */
 export async function requireMemberPage(here: string): Promise<Member> {

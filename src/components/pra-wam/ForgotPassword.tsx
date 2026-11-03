@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
@@ -38,6 +39,7 @@ export function ForgotPasswordForm() {
  * the new password.
  */
 export function ResetPasswordForm() {
+  const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [form, setForm] = useState({ next: "", confirm: "" });
@@ -59,7 +61,7 @@ export function ResetPasswordForm() {
     setBusy(true); setError(null);
     try {
       await praWamRequest(praWamApi.resetPassword, { method: "POST", json: { accessToken: token, ...form } });
-      window.location.assign(praWamPath.home);
+      router.replace(praWamPath.home);
     } catch (problem) { setError(errorText(problem)); setBusy(false); }
   }
   return <form className={styles.loginCard} onSubmit={submit} noValidate>

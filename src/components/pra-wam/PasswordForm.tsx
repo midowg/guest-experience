@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
@@ -29,6 +30,7 @@ function Secret({ id, label, value, error, autoComplete, onChange, describedBy }
  * `skipHref` adds "Lewati, atur nanti" for the first sign-in; `doneHref` is where to go once saved.
  */
 export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boolean; skipHref?: string; doneHref?: string }) {
+  const router = useRouter();
   const [form, setForm] = useState({ current: "", next: "", confirm: "" });
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,7 +48,7 @@ export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boo
     setBusy(true); setErrors({}); setNotice(null);
     try {
       const result = await praWamRequest(praWamApi.password, { method: "POST", json: form });
-      if (doneHref) { window.location.assign(doneHref); return; }
+      if (doneHref) { router.replace(doneHref); return; }
       setForm({ current: "", next: "", confirm: "" });
       setNotice({ tone: "success", text: result.message });
     } catch (problem) {

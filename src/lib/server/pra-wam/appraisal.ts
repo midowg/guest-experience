@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { alternatives, appraisalRules, bookingProblems, clockLabel, overlaps, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
@@ -29,18 +30,22 @@ function fail(error: { code?: string; message: string }): never {
   databaseError(error);
 }
 
-export async function listRooms(): Promise<Room[]> {
+async function listRoomsUncached(): Promise<Room[]> {
   const { data, error } = await createPrivilegedClient().from("pw_rooms").select("id,slug,name,kind,capacity,bookable").order("sort_order");
   if (error) fail(error);
   return (data ?? []) as Room[];
 }
+/** Read once per request, however many parts of the page ask. */
+export const listRooms = cache(listRoomsUncached);
 
 /** Everyone in Data karyawan, for names on the schedule and the participant picker. */
-export async function listPeople(): Promise<(Person & { active: boolean })[]> {
+async function listPeopleUncached(): Promise<(Person & { active: boolean })[]> {
   const { data, error } = await createPrivilegedClient().from("employees").select("id,full_name,department,active").order("department").order("full_name").limit(2000);
   if (error) fail(error);
   return (data ?? []).map(row => ({ id: row.id, name: row.full_name, department: row.department, active: row.active }));
 }
+/** Read once per request, however many parts of the page ask. */
+export const listPeople = cache(listPeopleUncached);
 
 async function withPeople(rows: BookingRow[], viewer: Member): Promise<Booking[]> {
   if (!rows.length) return [];

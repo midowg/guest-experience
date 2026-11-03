@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { PasswordForm } from "@/components/pra-wam/PasswordForm";
-import { BackRow, PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
+import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { safePraWamNext } from "@/lib/pra-wam/session-token";
 import { praWamPath } from "@/lib/routes";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
@@ -14,9 +14,9 @@ export default async function NewPasswordPage({ searchParams }: { searchParams: 
   const next = safePraWamNext((await searchParams).next) ?? praWamPath.home;
   const member = await requireMemberPage(praWamPath.newPassword(next));
   if (!member.mustChangePassword) redirect(next);
-  return <PraWamShell member={member}>
+  return <PraWamShell member={member} back={{ href: next, title: "Keamanan akun" }}>
     <div className={styles.narrow}>
-      <BackRow href={next} title="Keamanan akun" />
+      
       <ScreenHead title="Buat password baru" lead="Anda masuk dengan password awal. Sebaiknya ganti sekarang, atau atur nanti di Pengaturan akun." />
       <PasswordForm firstTime skipHref={next} doneHref={next} />
     </div>

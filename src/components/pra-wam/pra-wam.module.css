@@ -282,3 +282,17 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .spinner { width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--pw-line); border-top-color: var(--pw-primary); animation: pw-spin .8s linear infinite; }
 @keyframes pw-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+
+/* Detail screens: a pushed screen on a phone (top bar, no bottom bar, slides in from the right) */
+.appBar { display: flex; align-items: center; gap: 4px; margin: -8px 0 12px; }
+.appBar strong { font-size: 17px; font-weight: 700; }
+.appBar .back svg { width: 24px; height: 24px; }
+.pushed .main { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
+.pushed .sticky { bottom: 0; }
+@media (max-width: 1023.98px) {
+  .appBar { position: sticky; top: 0; z-index: 20; margin: -20px -20px 12px; padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px; background: var(--pw-app); border-bottom: 1px solid var(--pw-line); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pushIn { animation: pw-push .28s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes pw-push { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+}

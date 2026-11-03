@@ -18,5 +18,5 @@ export default async function EditSessionPage({ params }: { params: Promise<{ id
   const session = await getSession(id, member).catch((error: unknown) => { if (error instanceof ServiceError && error.status === 404) return null; throw error; });
   if (!session) notFound();
   const data = await sessionFormData(session, member.id);
-  return <PraWamShell member={member} current="sesi"><SessionForm session={session} {...data} /></PraWamShell>;
+  return <PraWamShell member={member} current="sesi" back={{ href: praWamPath.sessions, title: "Ubah sesi" }}><SessionForm session={session} {...data} /></PraWamShell>;
 }

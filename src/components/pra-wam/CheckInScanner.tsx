@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Camera } from "lucide-react";
 import { PRA_WAM_PATH } from "@/lib/routes";
@@ -16,6 +17,7 @@ const canScan = () => typeof window !== "undefined" && "BarcodeDetector" in wind
  * to another site. Browsers without a QR reader (Safari on iPhone) are told to use the Camera app.
  */
 export function CheckInScanner() {
+  const router = useRouter();
   const video = useRef<HTMLVideoElement>(null);
   const [on, setOn] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export function CheckInScanner() {
       try { url = new URL(text, window.location.origin); } catch { setError("QR ini bukan QR absen WAM."); return false; }
       if (url.origin !== window.location.origin || !url.pathname.startsWith(`${PRA_WAM_PATH}/check-in/`)) { setError("QR ini bukan QR absen WAM."); return false; }
       stopped = true;
-      window.location.assign(url.pathname);
+      router.push(url.pathname);
       return true;
     };
     (async () => {
@@ -57,7 +59,7 @@ export function CheckInScanner() {
       }
     })();
     return () => { stopped = true; window.clearTimeout(timer); stream?.getTracks().forEach(track => track.stop()); };
-  }, [on]);
+  }, [on, router]);
 
   return <div className={styles.scan}>
     <div className={styles.frame} aria-hidden={!on}>

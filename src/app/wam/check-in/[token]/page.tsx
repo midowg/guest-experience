@@ -1,5 +1,5 @@
 import { AlertTriangle, CalendarDays, CheckCircle2, CircleCheck, Clock, Info, MapPin, QrCode, XCircle } from "lucide-react";
-import { BackRow, PraWamShell } from "@/components/pra-wam/PraWamShell";
+import { PraWamShell } from "@/components/pra-wam/PraWamShell";
 import { ButtonLink, Notice } from "@/components/ui";
 import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import type { CheckInResult } from "@/lib/pra-wam/attendance";
@@ -43,13 +43,13 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
   const outcome = /^[A-Za-z0-9_-]{20,64}$/.test(token)
     ? await checkIn(token, member).catch((error: unknown) => { if (error instanceof ServiceError) return error.message; throw error; })
     : { result: { kind: "tidak-dikenal" } as CheckInResult, session: null };
-  if (typeof outcome === "string") return <PraWamShell member={member} current="agenda"><BackRow href={praWamPath.agenda} title="Absen sesi" /><Notice tone="warning">{outcome}</Notice></PraWamShell>;
+  if (typeof outcome === "string") return <PraWamShell member={member} current="agenda" back={{ href: praWamPath.agenda, title: "Absen sesi" }}><Notice tone="warning">{outcome}</Notice></PraWamShell>;
   const shown = answer(outcome.result, member.nickname || member.name.split(" ")[0]);
   // The room for the card; a person outside the session simply gets no room line.
   const session: Session | null = outcome.session ? await getSession(outcome.session.id, member).catch(() => null) : null;
   const recorded = outcome.result.kind === "tercatat" || outcome.result.kind === "sudah";
-  return <PraWamShell member={member} current="agenda">
-    <BackRow href={praWamPath.agenda} title="Absen sesi" />
+  return <PraWamShell member={member} current="agenda" back={{ href: praWamPath.agenda, title: "Absen sesi" }}>
+    
     <section className={`${styles.checkin} ${styles.narrow}`} data-tone={shown.tone} aria-live="polite">
       <span className={styles.checkinMark}>{marks[shown.tone]}</span>
       <h1>{shown.title}</h1>
