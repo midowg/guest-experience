@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { PwaRegister } from "@/components/pra-wam/PwaRegister";
 import { WamNavigator } from "@/components/pra-wam/WamNavigator";
 import { PRA_WAM_PATH } from "@/lib/routes";
@@ -21,6 +21,6 @@ export default function PraWamLayout({ children }: { children: ReactNode }) {
   // The page behind WAM is the app's colour from the first paint, so dark mode never flashes white.
   return <>
     <style>{"body{background:#FAFAF7;color-scheme:light}@media (prefers-color-scheme:dark){body{background:#0E1218;color-scheme:dark}}"}</style>
-    <PwaRegister /><WamNavigator />{children}
+    <PwaRegister /><Suspense fallback={null}><WamNavigator /></Suspense>{children}
   </>;
 }

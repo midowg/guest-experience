@@ -23,7 +23,7 @@ export function LoginForm({ next }: { next: string | null }) {
     try {
       const result = await praWamRequest<{ mustChangePassword: boolean }>(praWamApi.login, { method: "POST", json: { email, password } });
       // The shared first password: offer a new one first; it can be skipped.
-      router.replace(result.data?.mustChangePassword ? praWamPath.newPassword(next ?? undefined) : next ?? praWamPath.home);
+      router.refresh(); router.replace(result.data?.mustChangePassword ? praWamPath.newPassword(next ?? undefined) : next ?? praWamPath.home);
     } catch (problem) { setError(errorText(problem)); setBusy(false); }
   }
 

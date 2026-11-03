@@ -92,7 +92,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     try {
       const body = { ...draft, confirmed };
       await praWamRequest(editId ? praWamApi.bookings(editId) : praWamApi.bookings(), { method: editId ? "PATCH" : "POST", json: body });
-      router.push(praWamPath.appraisal(draft.date));
+      router.refresh(); router.push(praWamPath.appraisal(draft.date));
     } catch (problem) {
       if (problem instanceof PraWamApiError && problem.conflict) {
         setConflict({ ...problem.conflict, message: problem.message });

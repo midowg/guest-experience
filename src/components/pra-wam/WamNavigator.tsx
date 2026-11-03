@@ -1,17 +1,25 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { PRA_WAM_PATH } from "@/lib/routes";
+import styles from "./pra-wam.module.css";
 
 /**
  * Makes WAM move like an app: a tap on any link to another WAM page changes the screen in place
  * (client navigation) instead of loading a whole new page, and the pages behind visible links
  * are fetched ahead. Links to files and APIs (documents, QR PDF), new tabs, downloads and
- * modified clicks keep the browser's own behaviour.
+ * modified clicks keep the browser's own behaviour. While the next screen loads, the current one
+ * stays with a thin bar at the top, as in an app, instead of a full loading screen.
  */
 export function WamNavigator() {
   const router = useRouter();
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const [going, setGoing] = useState(false);
+  // The new screen has arrived: hide the bar.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to the route change itself
+  useEffect(() => { setGoing(false); }, [pathname, search]);
   useEffect(() => {
     const inApp = (anchor: HTMLAnchorElement) => {
       if (anchor.target && anchor.target !== "_self") return null;
@@ -31,7 +39,7 @@ export function WamNavigator() {
       event.preventDefault();
       const here = `${window.location.pathname}${window.location.search}`;
       const there = `${url.pathname}${url.search}${url.hash}`;
-      if (there !== here) router.push(there);
+      if (there !== here) { setGoing(true); router.push(there); }
     };
     // Fetch the pages behind the menu and other visible links ahead of the tap.
     const seen = new Set<string>();
@@ -51,5 +59,5 @@ export function WamNavigator() {
     observer.observe(document.body, { childList: true, subtree: true });
     return () => { document.removeEventListener("click", onClick); window.clearTimeout(idle); observer.disconnect(); };
   }, [router]);
-  return null;
+  return going ? <div className={styles.progress} role="progressbar" aria-label="Memuat halaman" /> : null;
 }

@@ -10,6 +10,9 @@ const sameOriginFrame = [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, { key:
 
 const config: NextConfig = {
   poweredByHeader: false,
+  // WAM's pages are per person (dynamic); keeping a visited screen for 30 s makes moving between
+  // its menus instant, like an app. Saving anything refreshes the screen it changed.
+  experimental: { staleTimes: { dynamic: 30 } },
   // Panduan ke Werkudara: the office's public guide for every visitor, a finished page served as it
   // was designed (public/panduan-ke-werkudara), not an event.
   async redirects() {

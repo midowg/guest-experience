@@ -48,7 +48,7 @@ export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boo
     setBusy(true); setErrors({}); setNotice(null);
     try {
       const result = await praWamRequest(praWamApi.password, { method: "POST", json: form });
-      if (doneHref) { router.replace(doneHref); return; }
+      if (doneHref) { router.refresh(); router.replace(doneHref); return; }
       setForm({ current: "", next: "", confirm: "" });
       setNotice({ tone: "success", text: result.message });
     } catch (problem) {
