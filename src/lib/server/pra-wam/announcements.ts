@@ -141,3 +141,11 @@ export async function notifyPeople(employeeIds: string[], note: { title: string;
   try { await send({ kind: "sesi", title: note.title, body: note.body, audience: { type: "orang", employeeIds, label: "Pribadi", sessionId: note.sessionId }, createdBy: by.id }); }
   catch { /* the answer is saved either way */ }
 }
+
+/** Panitia removes an announcement (a test, a mistake); it leaves every recipient's list too. */
+export async function deleteAnnouncement(id: string, viewer: Member): Promise<void> {
+  if (!managesSessions(viewer)) throw new ServiceError(403, "Hanya panitia yang bisa menghapus pengumuman.");
+  const { data, error } = await createPrivilegedClient().from("pw_announcements").delete().eq("id", id).select("id");
+  if (error) { if (missing(error)) throw waiting(); databaseError(error); }
+  if (!data?.length) throw new ServiceError(404, "Pengumuman tidak ditemukan.");
+}

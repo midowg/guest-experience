@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { bookingInputSchema } from "@/lib/pra-wam/appraisal";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
-import { cancelBooking, saveBooking } from "@/lib/server/pra-wam/appraisal";
+import { cancelBooking, deleteBooking, saveBooking } from "@/lib/server/pra-wam/appraisal";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
 import { handleBooking } from "@/lib/server/pra-wam/respond";
 
@@ -21,12 +21,17 @@ export async function PATCH(request: Request, { params }: Params) {
   });
 }
 
-/** DELETE: cancel one of the person's own bookings; the slot is free at once. */
+/** DELETE: cancel a booking (the slot is free at once); with ?permanent=1, remove it for good. */
 export async function DELETE(request: Request, { params }: Params) {
   return handle(async () => {
     const member = await requireApiMember();
     checkOrigin(request);
-    await cancelBooking(validate(z.uuid(), (await params).id), member);
+    const id = validate(z.uuid(), (await params).id);
+    if (new URL(request.url).searchParams.get("permanent") === "1") {
+      await deleteBooking(id, member);
+      return success(null, "Booking dihapus.");
+    }
+    await cancelBooking(id, member);
     return success(null, "Booking dibatalkan. Ruang kembali tersedia.");
   });
 }

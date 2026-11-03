@@ -72,6 +72,14 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
     catch (problem) { setError(errorText(problem)); setBusy(null); }
   }
 
+  async function removeSession() {
+    if (!session) return;
+    if (!window.confirm(`Hapus permanen "${session.title}"? Peserta, kehadiran, permintaan jadwal, dan dokumen sesi ini ikut terhapus dan tidak bisa dikembalikan.`)) return;
+    setBusy("hapus"); setError(null);
+    try { await praWamRequest(praWamApi.sessions(session.id), { method: "DELETE" }); router.refresh(); router.push(praWamPath.sessions); }
+    catch (problem) { setError(errorText(problem)); setBusy(null); }
+  }
+
   // Pemeriksaan otomatis: what the server also checks, shown early.
   const room = rooms.find(item => item.id === draft.roomId);
   const roomUse = room ? usedBy(room) : undefined;
@@ -195,6 +203,7 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
         </>}
       {session && status === "terbit" && <button type="button" className="button button--quiet" disabled={!!busy} onClick={() => changeStatus("draf")}>Kembalikan ke draf</button>}
       {session && status !== "batal" && <button type="button" className="button button--quiet" disabled={!!busy} onClick={() => changeStatus("batal")}>Batalkan sesi</button>}
+      {session && status !== "terbit" && <button type="button" className="button button--quiet" style={{ color: "var(--pw-danger)" }} disabled={!!busy} onClick={removeSession}>{busy === "hapus" ? "Menghapus…" : "Hapus sesi"}</button>}
     </div>
   </form>;
 }

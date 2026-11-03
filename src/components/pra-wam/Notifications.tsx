@@ -90,6 +90,13 @@ export function AnnouncementComposer({ sent, sessions, units }: { sent: SentAnno
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  async function removeSent(item: SentAnnouncement) {
+    if (!window.confirm(`Hapus pengumuman "${item.title}"? Pengumuman hilang juga dari Notifikasi semua penerima.`)) return;
+    setBusy(true); setNotice(null);
+    try { setNotice({ tone: "success", text: (await praWamRequest(praWamApi.announcement(item.id), { method: "DELETE" })).message }); router.refresh(); }
+    catch (problem) { setNotice({ tone: "error", text: errorText(problem) }); }
+    finally { setBusy(false); }
+  }
   const audience = type === "sesi" ? { type, sessionId } : type === "unit" ? { type, unitIds } : { type };
   const ready = title.trim().length >= 2 && (type !== "sesi" || !!sessionId) && (type !== "unit" || unitIds.length > 0);
 
@@ -139,6 +146,7 @@ export function AnnouncementComposer({ sent, sessions, units }: { sent: SentAnno
           return <article key={item.id} className={notes.sentRow}>
             <div><strong>{item.title}</strong><small>{item.audienceLabel} · {when(item.createdAt)}</small></div>
             <span className={`${styles.pill} ${all ? styles.pillSuccess : ""} ${notes.readPill}`}>{all ? <CheckCircle2 aria-hidden /> : <Clock aria-hidden />}{item.read} / {item.recipients} dibaca</span>
+            <button type="button" className="button button--quiet" style={{ color: "var(--pw-danger)" }} disabled={busy} aria-label={`Hapus pengumuman ${item.title}`} onClick={() => removeSent(item)}>Hapus</button>
           </article>;
         })}
       </div>}

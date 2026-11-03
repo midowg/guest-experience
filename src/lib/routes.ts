@@ -179,6 +179,8 @@ export const praWamApi = {
   notifications: `${WAM_API}/notifications`,
   /** GET: sent announcements with read counts; POST: send one (panitia). */
   announcements: `${WAM_API}/announcements`,
+  /** DELETE: panitia removes one announcement. */
+  announcement: (id: string) => `${WAM_API}/announcements/${id}`,
   /** POST: a participant asks to move a session. */
   requestChange: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/reschedule`,
   /** One request: POST {approve, note} (panitia answers), DELETE (the asker withdraws). */

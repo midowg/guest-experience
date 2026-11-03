@@ -49,6 +49,19 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
     finally { setBusy(null); }
   }
 
+  /** For a test or a mistake: gone for good, not kept as cancelled. */
+  async function remove(booking: Booking) {
+    if (!window.confirm(`Hapus permanen "${booking.title}" ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}? Data booking hilang dan tidak bisa dikembalikan. Pakai untuk booking uji atau salah input.`)) return;
+    setBusy(booking.id); setNotice(null);
+    try {
+      const result = await praWamRequest(praWamApi.bookings(booking.id, { permanent: "1" }), { method: "DELETE" });
+      setNotice({ tone: "success", text: result.message });
+      setOpenId(null);
+      router.refresh();
+    } catch (error) { setNotice({ tone: "error", text: errorText(error) }); }
+    finally { setBusy(null); }
+  }
+
   return <>
     {notice && <div className={own.gap}><Notice tone={notice.tone}>{notice.text}</Notice></div>}
 
@@ -119,6 +132,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
         <div className={styles.actions}>
           {open && mineFlag(opened) && <ButtonLink variant="secondary" href={praWamPath.book({ edit: opened.id })}>Ubah</ButtonLink>}
           {!opened.isSession && (mineFlag(opened) || canCancelAny) && new Date(opened.endsAt) > new Date(now) && <button type="button" className="button button--quiet" disabled={busy === opened.id} onClick={() => cancel(opened)}>{busy === opened.id ? "Membatalkan…" : "Batalkan"}</button>}
+          {!opened.isSession && (mineFlag(opened) || canCancelAny) && <button type="button" className="button button--quiet" style={{ color: "var(--pw-danger)" }} disabled={busy === opened.id} onClick={() => remove(opened)}>Hapus</button>}
           <button type="button" className="button button--quiet" onClick={() => setOpenId(null)}>Tutup</button>
         </div>
       </div>}
@@ -139,6 +153,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
             {mineBooking && <div className={styles.actions}>
               {open && <ButtonLink variant="secondary" href={praWamPath.book({ edit: booking.id })}>Ubah</ButtonLink>}
               <button type="button" className="button button--quiet" disabled={busy === booking.id} onClick={() => cancel(booking)}>{busy === booking.id ? "Membatalkan…" : "Batalkan"}</button>
+              <button type="button" className="button button--quiet" style={{ color: "var(--pw-danger)" }} disabled={busy === booking.id} onClick={() => remove(booking)}>Hapus</button>
             </div>}
           </div>
         </article>;

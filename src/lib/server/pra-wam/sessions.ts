@@ -5,6 +5,7 @@ import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { sessionProblems, sessionSpan, type RoomUse, type Session, type SessionInput, type SessionStatus } from "@/lib/pra-wam/sessions";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
+import { isR2Configured, removeObjects } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
 import { notifySession } from "./announcements";
 import { listPeople, listRooms } from "./appraisal";
@@ -172,4 +173,20 @@ export async function setSessionStatus(id: string, status: Exclude<SessionStatus
   const saved = await getSession(id, viewer);
   if (status === "batal" && before.status === "terbit") await notifySession(saved, "batal", viewer);
   return saved;
+}
+
+/**
+ * Removes a draft or cancelled session for good, with its participants, attendance, requests and
+ * documents (their files too). A published session is cancelled first, so its participants hear.
+ */
+export async function deleteSession(id: string, viewer: Member): Promise<void> {
+  requireManager(viewer);
+  const session = await getSession(id, viewer);
+  if (session.status === "terbit") throw new ServiceError(409, "Sesi yang sudah terbit dibatalkan dulu, baru bisa dihapus.");
+  const client = createPrivilegedClient();
+  const { data: files } = await client.from("pw_documents").select("file_key").eq("session_id", id);
+  const keys = (files ?? []).map(file => file.file_key);
+  if (keys.length && isR2Configured()) await removeObjects(keys).catch(() => undefined);
+  const { error } = await client.from("pw_sessions").delete().eq("id", id);
+  if (error) fail(error);
 }

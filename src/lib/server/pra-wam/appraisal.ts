@@ -216,3 +216,17 @@ export async function cancelBooking(id: string, viewer: Member): Promise<void> {
     .eq("id", id).eq("status", "aktif");
   if (error) fail(error);
 }
+
+/**
+ * Removes a booking for good (a test or a mistake), not just cancels it: the booker, panitia or
+ * admin. The room hold goes with it (trigger), so the slot is free at once.
+ */
+export async function deleteBooking(id: string, viewer: Member): Promise<void> {
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("pw_room_bookings").select("booked_by").eq("id", id).maybeSingle();
+  if (error) fail(error);
+  if (!data) throw new ServiceError(404, "Booking tidak ditemukan.");
+  if (data.booked_by !== viewer.id && !cancelsAnyBooking(viewer)) throw new ServiceError(403, "Hanya pemesan atau panitia yang bisa menghapus booking ini.");
+  const { error: deleteError } = await client.from("pw_room_bookings").delete().eq("id", id);
+  if (deleteError) fail(deleteError);
+}
