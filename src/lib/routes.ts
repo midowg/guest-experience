@@ -129,6 +129,12 @@ export const praWamPath = {
   sessions: `${PRA_WAM_PATH}/panitia/sesi`,
   newSession: `${PRA_WAM_PATH}/panitia/sesi/baru`,
   editSession: (id: string) => `${PRA_WAM_PATH}/panitia/sesi/${id}`,
+  /** Panitia: a session's QR to print, and who is present. */
+  sessionAttendance: (id: string) => `${PRA_WAM_PATH}/panitia/sesi/${id}/absen`,
+  /** What a session's printed QR holds: scanning it signs the person in. */
+  checkIn: (token: string) => `${PRA_WAM_PATH}/absen/${enc(token)}`,
+  /** The in-app scanner, for phones whose camera app does not open links. */
+  scan: `${PRA_WAM_PATH}/absen`,
   /** Profile and settings: change password. */
   account: `${PRA_WAM_PATH}/akun`,
   /** Right after the first sign-in: pick a new password, or skip for now. */
@@ -151,6 +157,10 @@ export const praWamApi = {
   resetPassword: "/api/pra-wam/atur-password",
   sessions: (id?: string) => `/api/pra-wam/sesi${id ? `/${id}` : ""}`,
   sessionStatus: (id: string) => `/api/pra-wam/sesi/${id}/status`,
+  /** GET: the session's QR as an A5 PDF to print; POST: a new QR (the printed one stops working). */
+  sessionQr: (id: string) => `/api/pra-wam/sesi/${id}/qr`,
+  /** GET: who is present; POST: panitia marks someone present or not. */
+  sessionAttendance: (id: string) => `/api/pra-wam/sesi/${id}/absen`,
   /** What holds each room on a day (bookings and sessions), for picking a session's room. */
   roomUses: (date: string) => `/api/pra-wam/ruang?tanggal=${date}`,
   /** Documents: ask for an upload address, then register the uploaded file; one document by id. */

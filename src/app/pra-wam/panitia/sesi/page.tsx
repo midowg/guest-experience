@@ -26,7 +26,7 @@ export default async function SessionsPage() {
   const row = (session: Session) => <article key={session.id} className={styles.mineItem}>
     <h3>{manage ? <a href={praWamPath.editSession(session.id)}>{session.title}</a> : <a href={praWamPath.session(session.id)}>{session.title}</a>}</h3>
     <span className={styles.meta}>{sessionKindLabels[session.kind]} · {sessionWhen(session)} · {sessionWhere(session)}</span>
-    <span className={styles.meta}>{session.participantCount} peserta</span>
+    <span className={styles.meta}>{session.participantCount} peserta{session.status === "terbit" ? <> · <a href={praWamPath.sessionAttendance(session.id)}>QR dan daftar hadir</a></> : null}</span>
   </article>;
   return <PraWamShell member={member} current="sesi">
     <div className={styles.head}>

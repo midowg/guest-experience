@@ -125,3 +125,15 @@ a.gridCell:hover { background: var(--brass-soft); }
 .profile dd { margin: 0; }
 .narrow { max-width: 32rem; }
 .blockSession { background: #efe7d6; border-left-color: #7a5c2a; }
+
+/* Check-in answer */
+.checkin { border-top: 6px solid var(--color-primary); margin-inline: auto; text-align: center; display: grid; gap: var(--space-2); }
+.checkin h1 { font-size: 2rem; margin: 0; }
+.checkin .actions { justify-content: center; }
+.checkin[data-tone="success"] { border-top-color: #137247; }
+.checkin[data-tone="success"] h1 { color: #137247; }
+.checkin[data-tone="warning"], .checkin[data-tone="error"] { border-top-color: var(--color-danger); }
+.qrBox { width: min(100%, 15rem); margin: 0 auto var(--space-3); padding: var(--space-3); border: 2px solid var(--brass); border-radius: 12px; background: #fff; }
+.qrBox svg { display: block; width: 100%; height: auto; }
+.attendance { width: 100%; border-collapse: collapse; }
+.attendance th, .attendance td { text-align: left; padding: var(--space-2) var(--space-3); border-top: 1px solid var(--line); vertical-align: middle; }

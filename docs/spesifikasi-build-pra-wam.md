@@ -87,7 +87,7 @@ panitia, BOD, atau admin.
 - **Berkas dokumen:** R2 (sudah dipakai Journey), izin dicek saat unggah dan unduh.
 - **QR absen:** isi QR adalah alamat `https://<domain>/pra-wam/absen/<token>`. Kamera ponsel biasa
   langsung membuka aplikasi; pemindai di dalam aplikasi tetap ada (layar Scan QR). Token acak per
-  sesi, disimpan sebagai hash. Cetak A5 memakai `qrcode` + `pdf-lib` yang sudah ada.
+  sesi, disimpan apa adanya (hanya dibaca server) supaya QR yang sama bisa dicetak ulang. Cetak A5 memakai `qrcode` + `pdf-lib` yang sudah ada.
 - **Zona waktu:** WIB (Asia/Jakarta), mengikuti pola zona waktu acara di Journey.
 
 ## 4. Database (migrasi baru)
@@ -217,7 +217,7 @@ Awalan `pw_` membedakan tabel Pra WAM/WAM dari tabel undangan Journey (`events`,
 | 1. Fondasi ✓ | NIP, peran Panitia/BOD/Admin (`pw_roles`, migrasi `202611040002`), ganti password awal (bisa dilewati) dan halaman Akun, reset password dan pengaturan ruang oleh super admin, panitia bisa membatalkan booking orang lain | Semua orang bisa masuk |
 | 1b. Sisa fondasi ✓ | Acara Pra WAM/WAM dan modul (`pw_events`), unit dan lead dari sheet "Unit dan jabatan" (`org_units`, `unit_members`, migrasi `202611040003`), chip partisipan per unit, unit di profil, lupa password lewat email (butuh SMTP dan redirect URL di Supabase) | Tampilan lead dan BOD |
 | 2. Agenda ✓ | Sesi (draf dari kalender, terbit, batal), peserta per unit atau semua, pilih ruang dengan penjaga bersama booking appraisal (`pw_room_holds`), Agenda, detail sesi, Dokumen (unggah langsung ke R2, cek isi berkas), menu Semua sesi untuk panitia dan BOD (migrasi `202611040004`). Denah visual ruang menyusul setelah denah asli tersedia | Panitia mengisi jadwal |
-| 3. Absen | Token QR, cetak A5, rute absen, koreksi manual | Forum pertama berjalan |
+| 3. Absen ✓ | QR statis per sesi (token disimpan apa adanya agar bisa dicetak ulang; "Buat QR baru" bila lembar hilang), cetak PDF A5, `/pra-wam/absen/<token>` mencatat hadir dalam jendela 30 menit, pemindai di aplikasi, daftar hadir dan koreksi manual oleh panitia (migrasi `202611040005`) | Forum pertama berjalan |
 | 4. Komunikasi | Pengumuman, notifikasi, ganti jadwal + tinjau, survei | |
 | 5. Pemantauan | Dashboard panitia, ringkasan BOD, admin (akun, unit, modul, izin MCP), audit | Review atasan |
 

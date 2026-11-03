@@ -1,5 +1,5 @@
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
-import { Notice } from "@/components/ui";
+import { ButtonLink, Notice } from "@/components/ui";
 import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { seesAllSessions } from "@/lib/pra-wam/roles";
 import { sessionKindLabels, sessionWhen, sessionWhere } from "@/lib/pra-wam/sessions";
@@ -34,7 +34,8 @@ export default async function AgendaPage() {
   const days = [...new Set(items.map(item => wibDate(item.at)))];
   return <PraWamShell member={member} current="agenda">
     <div className={styles.head}><div><p className={styles.kicker}>Halo, {member.nickname || member.name}</p><h1>Agenda</h1>
-      <p>Sesi Pra WAM yang kamu ikuti dan booking appraisal, mulai hari ini.</p></div></div>
+      <p>Sesi Pra WAM yang kamu ikuti dan booking appraisal, mulai hari ini.</p></div>
+      <ButtonLink variant="secondary" href={praWamPath.scan}>Pindai QR absen</ButtonLink></div>
     {!migrated && <Notice tone="info">Sesi forum belum tersedia. Booking appraisal tetap tampil di sini.</Notice>}
     {seesAllSessions(member) && <Notice tone="info">Draf dan sesi semua peserta ada di <a href={praWamPath.sessions}>Semua sesi</a>.</Notice>}
     {days.length === 0 ? <section className={styles.card}><p className={styles.meta}>Belum ada agenda. Sesi muncul di sini setelah panitia menerbitkannya.</p></section>
