@@ -96,6 +96,15 @@ appraisal 20 Nov; teknis panitia dan final laporan/materi 23 Des.
 Yang belum ada di sumber: tanggal forum "Pra WAM" tersendiri (`#REF!` di Roadmap), jam setiap
 rapat, rundown WAM per hari, lokasi, dan deadline per seksi panitia.
 
+## Nama dan wording (keputusan 3 Nov 2026)
+
+- Nama aplikasi: **Pra WAM** (nanti berganti menjadi WAM saat acaranya tiba).
+- Kalimat pendamping di layar Masuk dan materi ke atasan: **"Satu aplikasi untuk setiap langkah
+  menuju WAM 2027"**.
+- Teks kecil di bawah layar Masuk ponsel: "Tampilan menyesuaikan peran Anda". Desktop: "Gunakan email
+  dan password akun Werkudara Anda."
+- Logo: pegasus Werkudara (`werkudara_icon.png`).
+
 ## Tema Hospitality
 
 Hospitality dipakai sebagai cara melayani, bukan hiasan:
