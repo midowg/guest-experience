@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { DocumentList } from "@/components/pra-wam/DocumentList";
+import { RequestChange } from "@/components/pra-wam/ScheduleRequests";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
 import { ButtonLink, Notice } from "@/components/ui";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
@@ -8,7 +9,9 @@ import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import { myCheckIn } from "@/lib/server/pra-wam/attendance";
+import { listRooms } from "@/lib/server/pra-wam/appraisal";
 import { listDocuments } from "@/lib/server/pra-wam/documents";
+import { myRequests } from "@/lib/server/pra-wam/requests";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import { getSession } from "@/lib/server/pra-wam/sessions";
 import styles from "@/components/pra-wam/pra-wam.module.css";
@@ -23,7 +26,13 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const session = await getSession(id, member).catch((error: unknown) => { if (error instanceof ServiceError && error.status === 404) return null; throw error; });
   if (!session) notFound();
-  const [{ documents, storage }, checkedInAt] = await Promise.all([listDocuments(member, session.id), session.isParticipant ? myCheckIn(session.id, member) : Promise.resolve(null)]);
+  const [{ documents, storage }, checkedInAt, requests, rooms] = await Promise.all([
+    listDocuments(member, session.id),
+    session.isParticipant ? myCheckIn(session.id, member) : Promise.resolve(null),
+    session.isParticipant ? myRequests(session.id, member) : Promise.resolve([]),
+    listRooms(),
+  ]);
+  const canAsk = session.isParticipant && session.status === "terbit" && !!session.startsAt && !!session.endsAt && new Date(session.endsAt) > new Date();
   const manage = managesSessions(member);
   return <PraWamShell member={member} current="agenda">
     <div className={styles.head}>
@@ -45,6 +54,10 @@ export default async function SessionPage({ params }: { params: Promise<{ id: st
       {session.description && <p style={{ whiteSpace: "pre-line" }}>{session.description}</p>}
       {session.participants && session.participants.length > 0 && <details><summary>Daftar peserta</summary><p className={styles.meta}>{session.participants.map(person => person.name).join(", ")}</p></details>}
     </section>
+    {(canAsk || requests.length > 0) && session.startsAt && session.endsAt && <section className={styles.card} aria-labelledby="ganti-jadwal">
+      <h2 id="ganti-jadwal">Ganti jadwal</h2>
+      <RequestChange sessionId={session.id} startsAt={session.startsAt} endsAt={session.endsAt} rooms={rooms} requests={requests} canAsk={canAsk} />
+    </section>}
     <section className={styles.card} aria-labelledby="dokumen">
       <h2 id="dokumen">Dokumen sesi</h2>
       <DocumentList documents={documents} sessionId={session.id} storage={storage} canUpload={manage || (session.isParticipant && session.status === "terbit")} />

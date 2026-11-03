@@ -218,7 +218,7 @@ Awalan `pw_` membedakan tabel Pra WAM/WAM dari tabel undangan Journey (`events`,
 | 1b. Sisa fondasi ✓ | Acara Pra WAM/WAM dan modul (`pw_events`), unit dan lead dari sheet "Unit dan jabatan" (`org_units`, `unit_members`, migrasi `202611040003`), chip partisipan per unit, unit di profil, lupa password lewat email (butuh SMTP dan redirect URL di Supabase) | Tampilan lead dan BOD |
 | 2. Agenda ✓ | Sesi (draf dari kalender, terbit, batal), peserta per unit atau semua, pilih ruang dengan penjaga bersama booking appraisal (`pw_room_holds`), Agenda, detail sesi, Dokumen (unggah langsung ke R2, cek isi berkas), menu Semua sesi untuk panitia dan BOD (migrasi `202611040004`). Denah visual ruang menyusul setelah denah asli tersedia | Panitia mengisi jadwal |
 | 3. Absen ✓ | QR statis per sesi (token disimpan apa adanya agar bisa dicetak ulang; "Buat QR baru" bila lembar hilang), cetak PDF A5, `/pra-wam/absen/<token>` mencatat hadir dalam jendela 30 menit, pemindai di aplikasi, daftar hadir dan koreksi manual oleh panitia (migrasi `202611040005`) | Forum pertama berjalan |
-| 4. Komunikasi | Pengumuman, notifikasi, ganti jadwal + tinjau, survei | |
+| 4. Komunikasi | ✓ Pengumuman dan notifikasi di aplikasi (`202611040006`), ✓ ganti jadwal + tinjau (`202611040007`); survei menyusul | |
 | 5. Pemantauan | Dashboard panitia, ringkasan BOD, admin (akun, unit, modul, izin MCP), audit | Review atasan |
 
 Target: tahap 1–3 selesai sebelum forum yang akan dipakai sebagai uji pertama. HOD Meeting dan

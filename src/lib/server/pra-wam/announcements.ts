@@ -18,7 +18,7 @@ const MIGRATION = "202611040006_pra_wam_announcements.sql";
 const missing = (error: { code?: string; message?: string }) => ["42P01", "PGRST205"].includes(error.code ?? "") || /pw_announcements|pw_notification_receipts/.test(error.message ?? "");
 const waiting = () => new ServiceError(503, `Pengumuman menunggu migrasi ${MIGRATION}.`);
 
-export type Audience = { type: "semua" } | { type: "sesi"; sessionId: string } | { type: "unit"; unitIds: string[] };
+export type Audience = { type: "semua" } | { type: "sesi"; sessionId: string } | { type: "unit"; unitIds: string[] } | { type: "orang"; employeeIds: string[]; label: string; sessionId?: string };
 export type Notification = { id: string; kind: "pengumuman" | "sesi"; title: string; body: string; sessionId: string | null; createdAt: string; readAt: string | null };
 export type SentAnnouncement = { id: string; title: string; body: string; audienceLabel: string; createdAt: string; recipients: number; read: number };
 
@@ -39,6 +39,7 @@ async function resolve(audience: Audience): Promise<{ ids: string[]; label: stri
     if (error) databaseError(error);
     return { ids: (links ?? []).map(link => link.employee_id), label: `Peserta ${session?.title ?? "sesi"}`, sessionId: audience.sessionId };
   }
+  if (audience.type === "orang") return { ids: [...new Set(audience.employeeIds)], label: audience.label, sessionId: audience.sessionId ?? null };
   if (audience.type === "unit") {
     const [{ data: units }, { data: members, error }] = await Promise.all([
       client.from("org_units").select("id,name,code").in("id", audience.unitIds),
@@ -130,4 +131,10 @@ export async function sentAnnouncements(viewer: Member): Promise<{ items: SentAn
       return { id: row.id, title: row.title, body: row.body, audienceLabel: row.audience_label, createdAt: row.created_at, recipients: mine.length, read: mine.filter(receipt => receipt.read_at).length };
     }),
   };
+}
+
+/** A note from the app to some people (e.g. the answer to their request). Never throws. */
+export async function notifyPeople(employeeIds: string[], note: { title: string; body: string; sessionId?: string }, by: Member): Promise<void> {
+  try { await send({ kind: "sesi", title: note.title, body: note.body, audience: { type: "orang", employeeIds, label: "Pribadi", sessionId: note.sessionId }, createdBy: by.id }); }
+  catch { /* the answer is saved either way */ }
 }

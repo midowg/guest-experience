@@ -128,6 +128,8 @@ export const praWamPath = {
   notifications: `${PRA_WAM_PATH}/notifikasi`,
   /** Panitia: write announcements and see who has read them. */
   announcements: `${PRA_WAM_PATH}/panitia/pengumuman`,
+  /** Panitia: schedule change requests to answer. */
+  requests: `${PRA_WAM_PATH}/panitia/permintaan`,
   /** Panitia (and BOD, reading): every session, drafts included; the form to make or change one. */
   sessions: `${PRA_WAM_PATH}/panitia/sesi`,
   newSession: `${PRA_WAM_PATH}/panitia/sesi/baru`,
@@ -173,6 +175,10 @@ export const praWamApi = {
   notifications: "/api/pra-wam/notifikasi",
   /** GET: sent announcements with read counts; POST: send one (panitia). */
   announcements: "/api/pra-wam/pengumuman",
+  /** POST: a participant asks to move a session. */
+  requestChange: (sessionId: string) => `/api/pra-wam/sesi/${sessionId}/ganti-jadwal`,
+  /** One request: POST {approve, note} (panitia answers), DELETE (the asker withdraws). */
+  request: (id: string) => `/api/pra-wam/permintaan/${id}`,
   /** Appraisal bookings: the day's schedule, a new booking, or one booking by id. */
   bookings: (id?: string, query: Record<string, string> = {}) => {
     const search = new URLSearchParams(query).toString();
