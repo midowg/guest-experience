@@ -1,6 +1,7 @@
 # Rancangan Pra WAM & WAM (Werkudara Annual Meeting)
 
-Status: rancangan, belum diimplementasikan. Diperbarui 3 November 2026.
+Status: rancangan, belum diimplementasikan. Diperbarui 3 November 2026. Spesifikasi untuk build
+ada di `docs/spesifikasi-build-pra-wam.md`.
 
 Sumber, urut dari yang paling mengikat:
 1. `Acuan_Eksekusi_Aplikasi_PraWAM_WAM_UseCase_ERD.pdf` (2 Nov 2026): use case, alur, contoh layar,
@@ -288,6 +289,53 @@ tersimpan dengan ruang itu. Peserta dan BOD hanya melihat **nama ruang** di agen
 tanpa denah. Nama dan denah ruang di desain masih simulasi. Usulan data: tabel `rooms` (nama,
 lantai, kapasitas, fasilitas, posisi di denah) dan `sessions.room_id`.
 
+## Appraisal: booking ruang (dibangun pertama, dicatat 3 Nov 2026)
+
+Kalender Pra WAM menempatkan **Appraisal & meeting 1-on-1 pada 28 Okt–20 Nov 2026**, jadi fitur ini
+dibangun lebih dulu dari forum lain. Berbeda dengan sesi forum (ruang dipilih panitia), di appraisal
+**setiap orang yang masuk bisa memesan ruang sendiri**, sehingga beberapa orang bisa berebut ruang
+dan jam yang sama. Sistem harus memutuskan dengan adil: yang lebih dulu tersimpan yang dapat.
+
+**Ruang** (final, dari aplikasi Werkudara Room Booking): CFC Ananta Room, Nagapadma, Vasuki (ruang
+utama), lalu Limasan, Pantry, Main Office, Komunal (area). Kapasitas dan fasilitas di sumber masih
+kosong. Apakah area boleh dipesan untuk appraisal masih ditanyakan (lihat Pertanyaan terbuka).
+
+**Form pesan ruang**
+
+| Isian | Aturan |
+|---|---|
+| Nama kegiatan (wajib) | Saat mengetik muncul saran: daftar baku (Appraisal 1-on-1, Appraisal tim, Review KPI, Kalibrasi nilai, Feedback) ditambah nama kegiatan yang pernah dipakai, paling sering di atas. Boleh teks bebas |
+| Tanggal | Chip Hari ini / Besok + pilih tanggal; hanya Senin–Jumat dalam periode appraisal |
+| Jam mulai – sampai | Jam operasional **09.00–18.00**, langkah 30 menit, selesai > mulai, maks. 4 jam. Jam yang sudah terisi di ruang itu tidak bisa dipilih |
+| Ruang | Kartu ruang dengan status pada jam terpilih (kosong / terpakai oleh siapa) |
+| Deskripsi | Opsional, maks. 500 karakter |
+| Partisipan | Chip departemen (departemen pemesan terpilih lebih dulu); menekan departemen memunculkan anggota sebagai chip saran; cari nama juga bisa. Terpilih tampil sebagai chip dengan tombol hapus |
+
+**Saat berebut**
+- Pengecekan pertama saat memilih jam dan ruang (yang terisi tampak terisi).
+- Penentu akhir ada di database: aturan "satu ruang tidak boleh punya dua booking aktif yang
+  jamnya tumpang tindih" (exclusion constraint). Dua orang menekan Simpan bersamaan, yang tersimpan
+  lebih dulu menang; yang kedua mendapat pesan "Vasuki baru saja dipesan Yulia, 10.00–11.00",
+  isiannya tidak hilang, dan aplikasi menawarkan jam kosong terdekat atau ruang lain di jam sama.
+- Tidak ada status "tentative/tahan sementara": booking langsung pasti. Ini menghindari celah di
+  aplikasi Room Booking lama, di mana tahanan sementara kedaluwarsa diam-diam dan slot diambil orang.
+- Partisipan yang di jam itu sudah ada di booking lain diberi peringatan (bukan ditolak), karena
+  data partisipan bisa saja salah.
+- Batal langsung membebaskan slot. Usulan batas adil: maks. 4 booking aktif per orang per hari
+  (bisa diubah admin).
+
+**Halaman Appraisal** (menu tersendiri selama modul appraisal aktif)
+- **Jadwal ruang**: per tanggal, ruang × jam 09.00–18.00. Setiap blok menampilkan **nama pemesan**
+  dan nama kegiatan, jadi semua orang tahu siapa memakai ruang apa. Di ponsel tampil sebagai daftar
+  per ruang. Ringkasan di atas: ruang kosong sekarang dan berikutnya.
+- **Booking saya**: booking yang saya pesan dan yang saya ikuti; ubah dan batal.
+- **Privasi**: nama partisipan appraisal hanya terlihat oleh pemesan, partisipan, panitia, BOD, dan
+  admin. Orang lain melihat pemesan dan nama kegiatan saja.
+- Panitia dan admin bisa membatalkan booking siapa pun (tercatat di log audit, pemesan diberi tahu).
+
+**Kaitan dengan sesi forum**: ruang yang sama dipakai sesi forum. Cek bentrok ruang saat panitia
+memilih ruang sesi harus memperhitungkan booking appraisal, dan sebaliknya.
+
 ## Akses MCP hanya untuk akun tertentu (keputusan 3 Nov 2026)
 
 Menu dan halaman Akses MCP **hanya tampil untuk akun yang diberi izin**, bukan untuk semua panitia.
@@ -393,8 +441,31 @@ baru di repo Journey (Next.js + Supabase yang sama) dengan rute sendiri, tabel m
 dan akses lewat server seperti tabel Journey lain. Keputusan ini perlu disepakati dulu (lihat
 pertanyaan).
 
+## Kesiapan WAM (dicatat 3 Nov 2026, dikerjakan setelah Pra WAM)
+
+**Sudah kuat dan terbawa ke WAM:** satu aplikasi dua acara (akun, unit, jabatan, dokumen, riwayat
+absen ikut), login dan peran (termasuk BOD dan admin), agenda per sesi dengan ganti jadwal dan cek
+bentrok, absen QR statis, pengumuman, survei, dokumen, modul per acara (WAM 2027 sudah "disiapkan"),
+tabel `groups` untuk kamar/tim/aktivitas, design system dengan kartu kunci kamar, dan MCP.
+
+**Perlu ditambah untuk WAM:**
+- Rundown 4 hari (4–7 Jan): belum ada data; sumber hanya menyebut pemaparan, penetapan komitmen,
+  awarding.
+- Pairing kamar dan tim: layar panitia ada di arsip; layar peserta "kamar & tim saya" belum ada.
+- Data personal untuk kamar dan konsumsi (alergi/pantangan, AC, kebiasaan tidur): ditunda, padahal
+  acuan memakainya untuk pairing dan konsumsi WAM.
+- Venue dan logistik (hotel, transport, check-in kamar): belum ada sumber.
+- Komitmen dan awarding: belum ada modul; penetapan komitmen cocok disambung ke notulen/tindak lanjut.
+- Beranda versi WAM (kamar, tim, rundown hari ini): belum digambar.
+
+**Risiko waktu:** Pra WAM selesai 23 Des, WAM mulai 4 Jan (sekitar 12 hari termasuk libur). Usulan:
+buka form personalisasi versi singkat (alergi/pantangan, AC, tidur) selama Pra WAM akhir Nov–awal
+Des; minta rundown dan venue WAM paling lambat awal Desember; gambar layar WAM setelah datanya ada.
+
 ## Tahapan
 
+0. **Fase 0, Appraisal (segera, periode 28 Okt–20 Nov)**: login, booking ruang appraisal, jadwal
+   ruang dengan nama pemesan.
 1. **Fase 1, Pra WAM inti**: login, master + profil acara, acara & sesi Pra WAM dari kalender, agenda
    personal, dokumen, pengumuman, dashboard panitia.
 2. **Fase 2**: permintaan jadwal + cek bentrok, absensi QR, survei, dashboard dan profil BOD, audit log,
@@ -412,8 +483,12 @@ pertanyaan).
 5. Pra WAM menginap atau tidak? (menentukan apakah pairing kamar ada di Pra WAM)
 6. Usulan tambahan (MoM, tenggat, Concierge) dipakai?
 7. Aplikasi dibangun di dalam repo Journey atau terpisah?
-8. Pemilihan tempat: dipakai panitia saat mengatur sesi, atau peserta juga bisa memesan ruang
-   (mis. untuk 1-on-1)? Denah dan daftar ruang sebenarnya?
+8. ~~Pemilihan tempat untuk peserta?~~ Terjawab 3 Nov 2026: peserta memesan ruang sendiri untuk
+   appraisal; sesi forum tetap dipilih panitia.
+9. Appraisal: kapasitas tiap ruang; area (Limasan, Pantry, Main Office, Komunal) boleh dipesan atau
+   hanya tiga ruang utama; ruang Pak Bagus, BS, Pak Fadil, Comms di denah lama masih ada atau tidak.
+10. Selama appraisal, apakah aplikasi Werkudara Room Booking lama masih dipakai untuk ruang yang
+    sama? Kalau ya, dua sistem bisa memesan ruang yang sama tanpa saling tahu.
 
 ## Di luar cakupan (sekarang)
 
