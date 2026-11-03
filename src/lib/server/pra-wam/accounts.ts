@@ -99,3 +99,32 @@ export async function updateRoom(roomId: string, patch: { capacity: number | nul
   if (error) { if (notMigrated(error)) throw waitingForMigration(); databaseError(error); }
   if (!data) throw new ServiceError(404, "Ruang tidak ditemukan.");
 }
+
+/**
+ * The super admin corrects a person's email: in Data karyawan and, when they have an account, as
+ * their sign-in too, so they sign in (and receive "Lupa password") with the new address. Nothing
+ * changes if another person already uses it.
+ */
+export async function updateEmail(employeeId: string, email: string): Promise<void> {
+  const address = email.trim().toLowerCase();
+  const client = createPrivilegedClient();
+  const { data: people, error } = await client.from("employees").select("id,email").limit(2000);
+  if (error) databaseError(error);
+  if (!people?.some(person => person.id === employeeId)) throw new ServiceError(404, "Karyawan tidak ditemukan.");
+  if (people.some(person => person.id !== employeeId && person.email.trim().toLowerCase() === address)) {
+    throw new ServiceError(409, "Email ini sudah dipakai karyawan lain.", { email: ["Email ini sudah dipakai karyawan lain."] });
+  }
+  const before = people.find(person => person.id === employeeId)!.email;
+  const { data: account, error: accountError } = await client.from("pw_accounts").select("auth_user_id").eq("employee_id", employeeId).maybeSingle();
+  if (accountError && !notMigrated(accountError)) databaseError(accountError);
+  if (account) {
+    const { error: authError } = await client.auth.admin.updateUserById(account.auth_user_id, { email: address, email_confirm: true });
+    if (authError) throw new ServiceError(/registered|exists|already/i.test(authError.message) ? 409 : 503, /registered|exists|already/i.test(authError.message) ? "Email ini sudah dipakai akun login lain." : "Email login belum dapat diubah. Coba lagi sebentar.", { email: ["Email belum tersimpan."] });
+  }
+  const { error: saveError } = await client.from("employees").update({ email: address, updated_at: new Date().toISOString() }).eq("id", employeeId);
+  if (saveError) {
+    // Keep the sign-in and Data karyawan the same if the second write fails.
+    if (account) await client.auth.admin.updateUserById(account.auth_user_id, { email: before, email_confirm: true });
+    databaseError(saveError);
+  }
+}

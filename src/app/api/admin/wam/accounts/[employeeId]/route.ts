@@ -2,13 +2,17 @@ import { z } from "zod";
 import { praWamRoles } from "@/lib/pra-wam/roles";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireSuperAdmin } from "@/lib/server/admin-session";
-import { listAccounts, resetPassword, setRoles } from "@/lib/server/pra-wam/accounts";
+import { listAccounts, resetPassword, setRoles, updateEmail } from "@/lib/server/pra-wam/accounts";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ employeeId: string }> };
-const schema = z.object({ roles: z.array(z.enum(praWamRoles)).max(praWamRoles.length).optional(), resetPassword: z.literal(true).optional() });
+const schema = z.object({
+  roles: z.array(z.enum(praWamRoles)).max(praWamRoles.length).optional(),
+  resetPassword: z.literal(true).optional(),
+  email: z.email("Email tidak valid.").max(200).optional(),
+});
 
-/** PATCH: one person's roles, or a reset to the shared first password (super admin). */
+/** PATCH: one person's roles, their email (also their sign-in), or a reset to the first password (super admin). */
 export async function PATCH(request: Request, { params }: Params) {
   return handle(async () => {
     await requireSuperAdmin();
@@ -16,7 +20,9 @@ export async function PATCH(request: Request, { params }: Params) {
     const employeeId = validate(z.uuid(), (await params).employeeId);
     const body = validate(schema, await readJson(request, 2_000));
     if (body.roles) await setRoles(employeeId, [...new Set(body.roles)]);
+    if (body.email) await updateEmail(employeeId, body.email);
     if (body.resetPassword) await resetPassword(employeeId);
-    return success(await listAccounts(), body.resetPassword ? "Password kembali ke password awal. Orang ini perlu masuk ulang." : "Peran disimpan.");
+    const message = body.resetPassword ? "Password kembali ke password awal. Orang ini perlu masuk ulang." : body.email ? "Email disimpan. Login memakai email baru." : "Peran disimpan.";
+    return success(await listAccounts(), message);
   });
 }

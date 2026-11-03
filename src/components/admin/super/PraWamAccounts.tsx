@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Pencil } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import type { Room } from "@/lib/pra-wam/appraisal";
@@ -44,19 +45,21 @@ export function PraWamAccounts({ initial, initialRooms, migrated, passwordReady 
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<Message>(null);
   const [filter, setFilter] = useState("");
+  const [editing, setEditing] = useState<{ id: string; email: string } | null>(null);
   const active = rows.filter(row => row.active);
   const missing = active.filter(row => !row.hasAccount);
   const noEmail = missing.filter(row => !row.email);
   const query = filter.trim().toLowerCase();
   const shown = rows.filter(row => !query || `${row.name} ${row.department} ${row.email}`.toLowerCase().includes(query));
 
-  async function run(key: string, url: string, body: unknown, method: "POST" | "PATCH") {
+  async function run(key: string, url: string, body: unknown, method: "POST" | "PATCH"): Promise<boolean> {
     setBusy(key); setMessage(null);
     try {
       const result = await adminRequest<{ rows: AccountRow[]; skipped?: string[] }>(url, { method, ...(body ? { body: JSON.stringify(body) } : {}) });
       if (result.data) setRows(result.data.rows);
       setMessage({ tone: "success", text: result.message, skipped: result.data?.skipped });
-    } catch (error) { setMessage({ tone: "error", text: errorMessage(error) }); }
+      return true;
+    } catch (error) { setMessage({ tone: "error", text: errorMessage(error) }); return false; }
     finally { setBusy(null); }
   }
   const toggleRole = (row: AccountRow, role: PraWamRole) =>
@@ -85,7 +88,15 @@ export function PraWamAccounts({ initial, initialRooms, migrated, passwordReady 
         <thead><tr><th>Nama</th><th>Email</th><th>Akun</th>{praWamRoles.map(role => <th key={role}>{roleLabels[role]}</th>)}<th /></tr></thead>
         <tbody>{shown.map(row => <tr key={row.employeeId}>
           <td>{row.name}{!row.active && " (nonaktif)"}<br /><small>{row.department}</small></td>
-          <td>{row.email || "—"}</td>
+          <td>{editing?.id === row.employeeId
+            ? <form onSubmit={event => { event.preventDefault(); void run(`email-${row.employeeId}`, praWamAccountsApi(row.employeeId), { email: editing.email }, "PATCH").then(ok => { if (ok) setEditing(null); }); }} style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                <input className="input" type="email" aria-label={`Email ${row.name}`} value={editing.email} maxLength={200} autoFocus style={{ minWidth: "14rem" }} onChange={event => setEditing({ id: row.employeeId, email: event.target.value })} />
+                <Button type="submit" disabled={!!busy || !editing.email.trim()}>{busy === `email-${row.employeeId}` ? "Menyimpan…" : "Simpan"}</Button>
+                <Button type="button" variant="quiet" disabled={!!busy} onClick={() => setEditing(null)}>Batal</Button>
+              </form>
+            : <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>{row.email || "—"}
+                <button type="button" className="button button--quiet" style={{ minHeight: 32, padding: "0 6px" }} aria-label={`Ubah email ${row.name}`} disabled={!!busy} onClick={() => setEditing({ id: row.employeeId, email: row.email })}><Pencil size={16} aria-hidden /></button>
+              </span>}</td>
           <td>{!row.hasAccount ? "Belum ada" : row.lastLoginAt ? (row.mustChangePassword ? "Masuk, password awal" : "Masuk") : "Siap"}</td>
           {praWamRoles.map(role => <td key={role}><input type="checkbox" aria-label={`${roleLabels[role]}: ${row.name}`} checked={row.roles.includes(role)} disabled={!!busy} onChange={() => toggleRole(row, role)} /></td>)}
           <td>{row.hasAccount && <Button type="button" variant="quiet" disabled={!!busy || !passwordReady} onClick={() => reset(row)}>{busy === `reset-${row.employeeId}` ? "Mengatur…" : "Reset password"}</Button>}</td>
