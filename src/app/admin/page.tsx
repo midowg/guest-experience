@@ -7,6 +7,7 @@ import { requireAdminPage } from "@/lib/server/admin-session";
 import { hiddenEventIds } from "@/lib/server/event-visibility";
 import { disabledModulesFor, templatesFor } from "@/lib/server/admin-settings";
 import { listStaff } from "@/lib/server/staff";
+import { WamAppCard } from "@/components/admin/wam/WamAppCard";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function AdminPage() {
   // A regular admin never receives hidden events at all, not even in the page payload.
   const events = role === "super" ? all : all.filter(event => !hidden.ids.has(event.id));
   return <AdminShell>
+    <WamAppCard superAdmin={role === "super"} />
     <EventList events={events} featuredId={featuredId} phases={Object.fromEntries(events.map(event => [event.id, currentPhase(event)]))}
       superAdmin={role === "super" ? { hiddenIds: [...hidden.ids], migrated: hidden.migrated } : undefined} disabledModules={disabledModules} templates={templates} staff={team.staff} />
   </AdminShell>;
