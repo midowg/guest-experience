@@ -9,7 +9,7 @@ import type { Membership, Unit } from "@/lib/server/pra-wam/units";
 import styles from "@/components/admin/admin.module.css";
 
 const statusLabels: Record<PraWamEvent["status"], string> = { aktif: "Aktif (tampil)", disiapkan: "Disiapkan (belum tampil)", selesai: "Selesai" };
-const moduleLabels: Record<string, string> = { appraisal: "Appraisal: booking ruang" };
+const moduleLabels: Record<string, string> = { appraisal: "Book: booking ruang" };
 type People = { id: string; name: string }[];
 type Message = { tone: "success" | "error"; text: string; list?: string[] } | null;
 
@@ -67,8 +67,8 @@ export function PraWamSetup({ initialEvents, eventsMigrated, initialUnits, initi
 
   return <div className="stack">
     <h2>Acara dan modul</h2>
-    {!eventsMigrated ? <Notice tone="warning">Acara menunggu migrasi 202611040003_pra_wam_events_units.sql. Sampai saat itu Appraisal tetap terbuka.</Notice> : <>
-      <p>Satu aplikasi untuk Pra WAM dan WAM. Acara berstatus Disiapkan belum tampil untuk peserta. Mematikan modul Appraisal menutup booking ruang.</p>
+    {!eventsMigrated ? <Notice tone="warning">Acara menunggu migrasi 202611040003_pra_wam_events_units.sql. Sampai saat itu Book tetap terbuka.</Notice> : <>
+      <p>Satu aplikasi untuk Pra WAM dan WAM. Acara berstatus Disiapkan belum tampil untuk peserta. Mematikan modul Book menutup booking ruang.</p>
       <div style={{ overflowX: "auto" }}><table className={styles.table}>
         <thead><tr><th>Acara</th><th>Status</th><th>Modul</th><th /></tr></thead>
         <tbody>{events.map(event => <EventRow key={`${event.id}-${event.status}-${JSON.stringify(event.modules)}`} event={event} onSaved={(next, text) => { setEvents(next); setMessage({ tone: "success", text }); }} />)}</tbody>

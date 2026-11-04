@@ -105,7 +105,7 @@ export async function roomUses(date: string): Promise<RoomUse[]> {
   return holds.map(hold => {
     const booking = bookings?.find(item => item.id === hold.source_id);
     const label = hold.source === "booking"
-      ? `${booking?.title ?? "Appraisal"} (${people.find(person => person.id === booking?.booked_by)?.name ?? "pemesan"})`
+      ? `${booking?.title ?? "Booking ruang"} (${people.find(person => person.id === booking?.booked_by)?.name ?? "pemesan"})`
       : sessions?.find(item => item.id === hold.source_id)?.title ?? "Sesi";
     return { roomId: hold.room_id, startsAt: hold.starts_at, endsAt: hold.ends_at, source: hold.source as RoomUse["source"], sourceId: hold.source_id, label };
   });

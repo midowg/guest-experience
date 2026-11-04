@@ -1,16 +1,167 @@
-/* Ringkasan Pra WAM for BOD (Penpot "E3"), on the tokens of pra-wam.module.css (.app). */
-.sub { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--pw-muted); }
-.grid { display: grid; gap: 16px; }
-@media (min-width: 1024px) { .grid { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; } }
-.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
-.head h2 { margin: 0; }
-.bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.bars li { display: grid; grid-template-columns: minmax(7rem, 11rem) 1fr auto; align-items: center; gap: 12px; font-size: 14px; }
-.barName { line-height: 1.3; }
-.track { height: 8px; border-radius: 999px; background: var(--pw-surface-soft); overflow: hidden; }
-.fill { display: block; height: 100%; border-radius: inherit; background: var(--pw-primary); }
+/*
+ * Ringkasan Pra WAM for BOD (Penpot "B1" on the phone, "E3" from 1024px), and the BOD pages
+ * Peserta, Profil peserta ("B2") and Hasil survei ("B4"). Tokens come from pra-wam.module.css (.app).
+ */
+
+.page { display: grid; gap: 16px; }
+
+/* Head: title, greeting (phone), date line, and the scope on the right (desktop) */
+.intro { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; }
+.intro h1 { margin: 0; font-family: var(--pw-display); font-size: 24px; line-height: 1.2; font-weight: 600; color: var(--pw-primary); }
+.greet { margin: 12px 0 0; font-family: var(--pw-display); font-size: 20px; font-weight: 600; color: var(--pw-primary); }
+.lead { margin: 2px 0 0; font-size: 13px; color: var(--pw-muted); }
+.scope { display: none; gap: 8px; }
+.scopePill { display: inline-flex; align-items: center; padding: 3px 10px; border: 1px solid var(--pw-line); border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--pw-muted); }
+
+/* The numbers: three small tiles on the phone, four cards on the desktop */
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.kpi { min-width: 0; padding: 10px; border: 1px solid var(--pw-line); border-radius: 14px; background: var(--pw-surface); }
+.kpi strong { display: block; font-family: var(--pw-display); font-size: 21px; line-height: 1.35; font-weight: 600; color: var(--pw-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kpi span { display: block; font-size: 12px; font-weight: 600; color: var(--pw-muted); line-height: 1.35; }
+.kpi small { display: none; margin-top: 2px; font-size: 12px; color: var(--pw-muted); overflow-wrap: anywhere; }
+.wideOnly { display: none; }
+
+/* Two columns from 1024px; on the phone the right column (departments, survey) is left out, as in B1 */
+.columns, .left, .right { display: grid; gap: 16px; align-content: start; }
+.right { display: none; }
+
+/* Links keep their own colours over ".app a" (pra-wam.module.css). */
+.page .attentionRow { color: inherit; }
+.page .quickItem, .page .bar, .page .plainList a, .profile .plainList a, .groups .personRow { color: var(--pw-text); }
+.page .quickSoon { color: var(--pw-on-brass-soft); }
+.page .cardHead a, .page .tableFoot a { color: var(--pw-primary); }
+
+/* Perlu perhatian */
+.attention { padding: 12px 14px; border-radius: 16px; background: var(--pw-warning-soft); color: var(--pw-warning); }
+.attention h2 { margin: 0 0 4px; font-family: var(--pw-body); font-size: 13px; font-weight: 800; color: var(--pw-warning); }
+.attention ul { list-style: none; margin: 0; padding: 0; }
+.attentionRow { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 0; text-decoration: none; color: inherit; border-radius: 10px; transition: background-color 150ms ease; }
+a.attentionRow:hover { background: color-mix(in srgb, var(--pw-warning) 8%, transparent); }
+.attentionRow > svg:first-child { flex: none; width: 18px; height: 18px; }
+.attentionRow > span { flex: 1; min-width: 0; }
+.attentionRow strong { display: block; font-size: 13px; font-weight: 700; color: var(--pw-text); line-height: 1.35; }
+.attentionRow small { display: none; font-size: 12.5px; color: var(--pw-warning); }
+.keepDetail small { display: block; }
+.chevron { flex: none; width: 16px; height: 16px; }
+.allClear { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 13px; font-weight: 700; color: var(--pw-text); }
+.allClear svg { flex: none; width: 18px; height: 18px; color: var(--pw-success); }
+
+/* Akses cepat */
+.quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.quickItem { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 10px; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); color: var(--pw-text); font-size: 12.5px; font-weight: 800; line-height: 1.3; text-decoration: none; transition: border-color 150ms ease, background-color 150ms ease; }
+a.quickItem:hover { border-color: var(--pw-primary); }
+.quickItem > svg { flex: none; width: 18px; height: 18px; color: var(--pw-primary); }
+.quickSoon { border-color: transparent; background: var(--pw-brass-soft); color: var(--pw-on-brass-soft); cursor: default; }
+.quickSoon > svg { color: var(--pw-on-brass-soft); }
+.quickSoon small { display: block; font-size: 12px; font-weight: 600; }
+
+/* Cards */
+.cardHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 8px; }
+.cardHead h2 { margin: 0; font-family: var(--pw-body); font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.cardHead span { font-size: 13px; font-weight: 800; color: var(--pw-text); }
+.cardHead a { display: inline-flex; align-items: center; min-height: 44px; margin: -12px 0; font-size: 13px; font-weight: 800; color: var(--pw-primary); text-decoration: none; }
+.empty { margin: 0; font-size: 13px; color: var(--pw-muted); }
+.note { margin: 8px 0 0; font-size: 12px; color: var(--pw-muted); }
+.muted { color: var(--pw-muted); }
+
+/* Forum meters: name, track, value; each row opens the session */
+.bars { list-style: none; margin: 0; padding: 0; display: grid; }
+.bar { display: grid; grid-template-columns: minmax(6rem, 7rem) minmax(0, 1fr) 3rem; align-items: center; gap: 8px; min-height: 44px; color: var(--pw-text); text-decoration: none; border-radius: 8px; transition: background-color 150ms ease; }
+.bar:hover { background: var(--pw-surface-soft); }
+.barName { font-size: 12.5px; line-height: 1.3; }
+.barName small { display: block; font-size: 12px; font-weight: 700; color: var(--pw-on-brass-soft); }
+.track { height: 8px; border-radius: 4px; background: var(--pw-surface-soft); overflow: hidden; }
+.fill { display: block; height: 100%; min-width: 0; border-radius: 4px; background: var(--pw-primary); }
 .fillLive { background: var(--pw-brass); }
-.barValue { font-size: 14px; font-variant-numeric: tabular-nums; }
-.count { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border: 1px solid var(--pw-line); border-radius: 999px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.barValue { font-size: 12.5px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+.plainList { list-style: none; margin: 8px 0 0; padding: 0; display: grid; }
+.plainList li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; border-top: 1px solid var(--pw-line); font-size: 13px; }
+.plainList a { color: var(--pw-text); font-weight: 700; text-decoration: none; }
+.plainList span { color: var(--pw-muted); white-space: nowrap; }
+
+/* Per departemen */
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table thead th { padding: 8px 8px 8px 0; border-bottom: 1px solid var(--pw-line); font-size: 12px; font-weight: 800; color: var(--pw-muted); text-align: left; }
+.table tbody th, .table td { padding: 10px 8px 10px 0; border-bottom: 1px solid var(--pw-line); text-align: left; vertical-align: middle; }
+.table tbody th { font-size: 13.5px; font-weight: 700; color: var(--pw-text); }
+.table tbody tr:last-child th, .table tbody tr:last-child td { border-bottom: 0; }
+.count { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--pw-line); border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--pw-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .count svg { width: 14px; height: 14px; }
 .countWarn { border-color: transparent; background: var(--pw-warning-soft); color: var(--pw-warning); }
+.tableFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin: 4px 0 0; font-size: 12px; color: var(--pw-muted); }
+.tableFoot a { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; font-weight: 800; color: var(--pw-primary); text-decoration: none; }
+
+@media (min-width: 1024px) {
+  .page { gap: 20px; }
+  .intro h1 { font-size: 32px; }
+  .greet { display: none; }
+  .lead { margin-top: 4px; font-size: 14.5px; }
+  .scope { display: flex; }
+  .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .kpi { padding: 14px 16px; border-radius: 16px; }
+  .kpi strong { font-size: 28px; }
+  .kpi span { font-size: 13px; font-weight: 700; color: var(--pw-text); }
+  .kpi small, .wideOnly { display: block; }
+  .columns { grid-template-columns: minmax(0, 820fr) minmax(0, 520fr); gap: 20px; align-items: start; }
+  .right { display: grid; }
+  /* E3 puts the forums first on the left; the phone (B1) leads with Perlu perhatian. */
+  .forums { order: -1; }
+  .attention { padding: 16px 20px; }
+  .attention h2 { font-size: 16px; margin-bottom: 8px; }
+  .attentionRow { min-height: 56px; gap: 12px; }
+  .attentionRow strong { font-size: 14px; font-weight: 800; }
+  .attentionRow small { display: block; }
+  .quick { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .quickItem { font-size: 13.5px; padding: 8px 14px; }
+  .cardHead { margin-bottom: 12px; }
+  .cardHead h2 { font-size: 16px; font-weight: 800; color: var(--pw-text); }
+  .cardHead span { font-weight: 400; color: var(--pw-muted); }
+  .bar { grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr) 3.5rem; gap: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attentionRow, .quickItem, .bar { transition: none; }
+}
+
+/* Peserta: departments with their people */
+.groups { display: grid; gap: 16px; }
+.groupHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; margin-bottom: 4px; }
+.groupHead h2 { margin: 0; font-family: var(--pw-body); font-size: 16px; font-weight: 800; color: var(--pw-text); }
+.groupHead span { font-size: 12.5px; color: var(--pw-muted); }
+.people { list-style: none; margin: 0; padding: 0; }
+.people li + li { border-top: 1px solid var(--pw-line); }
+.personRow { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 0; color: var(--pw-text); text-decoration: none; transition: background-color 150ms ease; border-radius: 10px; }
+.personRow:hover { background: var(--pw-surface-soft); }
+.personRow > span:nth-child(2) { flex: 1; min-width: 0; }
+.personRow strong { display: block; font-size: 14px; font-weight: 700; }
+.personRow small { display: block; font-size: 12.5px; color: var(--pw-muted); }
+.initials { flex: none; display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 12px; font-weight: 800; }
+
+/* Status pills (DS / Status) */
+.status { flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.status svg { width: 14px; height: 14px; flex: none; }
+.statusSuccess { background: var(--pw-success-soft); color: var(--pw-success); }
+.statusWarning { background: var(--pw-warning-soft); color: var(--pw-warning); }
+.statusDanger { background: var(--pw-danger-soft); color: var(--pw-danger); }
+.statusLine { border: 1px solid var(--pw-line); color: var(--pw-muted); }
+
+/* Profil peserta (B2) */
+.identity { display: flex; align-items: center; gap: 14px; }
+.avatarLarge { flex: none; display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 16px; background: var(--pw-primary-soft); color: var(--pw-primary); font-family: var(--pw-display); font-size: 21px; font-weight: 600; }
+.identity h1 { margin: 0; font-family: var(--pw-display); font-size: 21px; line-height: 1.35; font-weight: 600; color: var(--pw-primary); }
+.identity p { margin: 0 0 6px; font-size: 13px; color: var(--pw-muted); }
+.access { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; font-weight: 700; color: var(--pw-muted); }
+.access svg { width: 14px; height: 14px; }
+.info { display: grid; margin: 0; }
+.infoRow { display: flex; align-items: center; gap: 12px; min-height: 57px; }
+.infoRow + .infoRow { border-top: 1px solid var(--pw-line); }
+.infoRow small { display: block; font-size: 12.5px; color: var(--pw-muted); }
+.infoRow strong { display: block; font-size: 14px; font-weight: 700; color: var(--pw-text); }
+.forumChips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.forumChips a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; }
+.profile { display: grid; gap: 12px; max-width: 40rem; }
+
+/* Hasil survei (B4) */
+.emptyState { display: grid; justify-items: start; gap: 8px; padding: 20px; }
+.emptyState h2 { margin: 0; font-family: var(--pw-body); font-size: 17px; font-weight: 800; color: var(--pw-text); }
+.emptyState p { margin: 0; font-size: 14px; color: var(--pw-muted); max-width: 48ch; }

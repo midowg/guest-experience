@@ -62,3 +62,12 @@
 .panelActions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 8px; border-top: 1px solid var(--pw-line); }
 .panelActions a { display: inline-flex; align-items: center; gap: 8px; }
 .empty { text-align: center; padding: 32px 16px; color: var(--pw-muted); }
+
+/* Agenda rows: the whole row is the link (the title link stretched over it), with a visible focus. */
+.item { position: relative; }
+.stretch::after { content: ''; position: absolute; inset: -6px -8px 8px; border-radius: 12px; }
+.stretch:focus-visible { outline: none; }
+.stretch:focus-visible::after { outline: 2px solid var(--pw-primary); outline-offset: 0; }
+.item:hover .stretch { text-decoration: underline; text-underline-offset: 3px; }
+.calloutLink.calloutLink { min-height: 44px; color: var(--pw-on-brass-soft); text-decoration: none; }
+.calloutLink:hover { text-decoration: underline; }

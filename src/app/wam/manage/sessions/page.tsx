@@ -31,7 +31,7 @@ export default async function SessionsPage() {
     <table className={base.table}>
       <thead><tr><th>Sesi</th><th>Waktu</th><th>Tempat</th><th>Peserta</th><th>Status</th><th>Tindakan</th></tr></thead>
       <tbody>{items.map(session => <tr key={session.id}>
-        <td><strong>{session.title}</strong><small>{sessionKindLabels[session.kind]}</small></td>
+        <td><strong><a href={praWamPath.session(session.id)}>{session.title}</a></strong><small>{sessionKindLabels[session.kind]}</small></td>
         <td>{sessionWhen(session)}</td>
         <td>{sessionWhere(session)}</td>
         <td>{session.participantCount}</td>

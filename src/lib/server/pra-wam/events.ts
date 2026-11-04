@@ -11,7 +11,7 @@ import { notMigrated } from "./session";
  */
 
 export type PraWamEvent = { id: string; slug: string; name: string; kind: "pra_wam" | "wam"; startDate: string; endDate: string; status: "aktif" | "disiapkan" | "selesai"; modules: Record<string, boolean> };
-export const moduleLabels: Record<string, string> = { appraisal: "Appraisal: booking ruang" };
+export const moduleLabels: Record<string, string> = { appraisal: "Book: booking ruang" };
 
 async function listEventsUncached(): Promise<{ events: PraWamEvent[]; migrated: boolean }> {
   const { data, error } = await createPrivilegedClient().from("pw_events").select("id,slug,name,kind,start_date,end_date,status,modules").order("start_date");

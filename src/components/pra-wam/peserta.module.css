@@ -33,3 +33,83 @@
 .empty strong { font-size: 17px; }
 .emptyMark { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); }
 .emptyMark svg { width: 28px; height: 28px; }
+
+/* Detail sesi (Penpot P3): title and tags, check-in status, Rincian, Materi, the action bar. */
+.detail { display: grid; gap: 16px; }
+.detail > * { margin: 0; }
+.detailHead { display: grid; gap: 10px; justify-items: start; }
+.detailTitle { margin: 0 0 4px; font-family: var(--pw-display); font-size: 28px; line-height: 1.15; font-weight: 600; color: var(--pw-primary); }
+@media (min-width: 1024px) { .detailTitle { font-size: 32px; } }
+.description { margin: 16px 0 0; white-space: pre-line; }
+
+/* Check-in status (P3, E2; the states of P5 and P13). The text stays in the text colour for contrast; the tone is the background and icon. */
+.check { display: flex; align-items: flex-start; gap: 10px; max-width: 100%; margin: 0; padding: 10px 14px; border-radius: 12px; color: var(--pw-text); font-size: 14px; line-height: 1.45; }
+.check svg { flex: none; width: 18px; height: 18px; margin-top: 1px; }
+.check strong { font-weight: 800; }
+.checkWide { width: 100%; padding: 12px 14px; }
+.checkDone, .checkOpen { background: var(--pw-success-soft); }
+.checkDone svg, .checkOpen svg { color: var(--pw-success); }
+.checkWait { background: var(--pw-brass-soft); }
+.checkWait svg { color: var(--pw-on-brass-soft); }
+.checkClosed { background: var(--pw-warning-soft); }
+.checkClosed svg { color: var(--pw-warning); }
+
+/* A participant's session that is not published (yet), or cancelled */
+.waiting { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.waiting strong { display: block; font-size: 17px; }
+.waiting p { margin: 4px 0 0; }
+
+/* Participants: initials, overlapping, then the full list on demand */
+.faces { display: flex; margin-top: 8px; padding-left: 6px; }
+.face { display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--pw-surface); background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 11px; font-weight: 800; }
+.faces .face { margin-left: -6px; }
+.faceMore { background: var(--pw-surface-soft); color: var(--pw-muted); }
+.people { margin-top: 12px; border-top: 1px solid var(--pw-line); }
+.people summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 800; color: var(--pw-primary); cursor: pointer; }
+.people ul { list-style: none; margin: 0; padding: 0 0 4px; display: grid; gap: 8px; }
+.people li { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.people li .face { border-color: transparent; }
+.people small { display: block; font-size: 12px; color: var(--pw-muted); }
+
+/* Materi on Detail sesi: rows straight on the page, as in P3 */
+.docPlain { display: grid; }
+
+/* The action bar at the bottom of Detail sesi: the main action across, the others in pairs. */
+.actionBar { position: sticky; bottom: 0; z-index: 5; display: grid; gap: 12px; margin-top: 24px; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--pw-app); border-top: 1px solid var(--pw-line); }
+.actionBar :global(.button) { width: 100%; }
+.actionPair { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 12px; }
+@media (min-width: 1024px) {
+  .actionBar { position: static; display: flex; flex-wrap: wrap; padding: 16px 0 0; background: transparent; }
+  .actionBar :global(.button) { width: auto; }
+  .actionPair { display: flex; flex-wrap: wrap; }
+}
+
+/* Ajukan ganti jadwal (P9): a sheet from the bottom on a phone, a dialog in the middle from 640px */
+.sheet { box-sizing: border-box; width: 100%; max-width: 100%; max-height: 92dvh; margin: auto 0 0; padding: 0; overflow-y: auto; border: 0; border-radius: 24px 24px 0 0; background: var(--pw-app); color: var(--pw-text); box-shadow: var(--pw-shadow); }
+.sheet::backdrop { background: rgba(11, 21, 38, .45); }
+@media (min-width: 640px) { .sheet { width: min(100% - 32px, 32rem); margin: auto; border-radius: 24px; } }
+@media (prefers-reduced-motion: no-preference) {
+  .sheet[open] { animation: pw-sheet .22s cubic-bezier(.2, .8, .2, 1); }
+  .sheet[open]::backdrop { animation: pw-sheet-fade .2s ease-out; }
+  @keyframes pw-sheet { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes pw-sheet-fade { from { opacity: 0; } to { opacity: 1; } }
+}
+.sheetBody { display: grid; gap: 14px; padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px)); }
+.sheetHandle { justify-self: center; width: 40px; height: 4px; border-radius: 4px; background: var(--pw-line); }
+@media (min-width: 640px) { .sheetHandle { display: none; } .sheetBody { padding-top: 20px; } }
+.sheetHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sheetHead h2 { margin: 0; font-family: var(--pw-display); font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--pw-primary); }
+.sheetClose { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; margin-right: -8px; border: 0; border-radius: 12px; background: transparent; color: var(--pw-text); cursor: pointer; transition: background-color .15s ease; }
+.sheetClose:hover { background: var(--pw-surface-soft); }
+.sheetClose svg { width: 22px; height: 22px; }
+.compare { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); }
+.compare > span { display: grid; gap: 2px; min-width: 0; }
+.compare > span:last-child { text-align: right; }
+.compare small { font-size: 12px; font-weight: 600; color: var(--pw-muted); }
+.compare strong { font-size: 15px; }
+.compare svg { flex: none; width: 18px; height: 18px; color: var(--pw-muted); }
+.sheetFields { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.sheetFields legend { padding: 0; margin-bottom: 8px; }
+.sheetNote { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 13px; font-weight: 600; }
+.sheetNote svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+.actionPair :global(.button) { padding-inline: .75rem; white-space: nowrap; }

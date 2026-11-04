@@ -1,0 +1,57 @@
+/* The office floor plan (FloorPlan.tsx), on the --pw-* tokens of pra-wam.module.css, light and dark. */
+.plan { display: grid; gap: 12px; min-width: 0; }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.head p { margin: 0; font-size: 13px; color: var(--pw-muted); }
+.scroll { overflow: auto; border-radius: 12px; background: var(--pw-surface); -webkit-overflow-scrolling: touch; }
+.svg { display: block; width: 100%; height: auto; touch-action: pan-x pan-y pinch-zoom; }
+.zoomed .svg { width: 960px; max-width: none; }
+.zoom { display: none; }
+@media (max-width: 640px) { .zoom { display: inline-flex; } }
+
+.building { fill: var(--pw-app); stroke: var(--pw-line); stroke-width: 5; }
+.decor { fill: var(--pw-page); stroke: var(--pw-line); stroke-width: 3; }
+
+.spot .box { fill: var(--pw-surface); stroke: var(--pw-line); stroke-width: 4; transition: stroke-width .18s ease, fill .18s ease; }
+.spot.main .box { stroke-width: 8; }
+.spot text { fill: var(--pw-text); font-family: var(--pw-body); font-weight: 800; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+.spot text.st { fill: var(--pw-text); font-weight: 600; }
+.free .box { fill: var(--pw-success-soft); stroke: var(--pw-success); }
+.busy .box { fill: var(--pw-danger-soft); stroke: var(--pw-danger); }
+.mine .box { fill: var(--pw-brass-soft); stroke: var(--pw-brass); }
+.small .box { fill: var(--pw-warning-soft); stroke: var(--pw-warning); stroke-dasharray: 18 10; }
+.off .box, .closed .box { fill: var(--pw-page); stroke: var(--pw-muted); stroke-width: 3; }
+.off .box { stroke-dasharray: 6 8; }
+.off text, .closed text { fill: var(--pw-muted); }
+.selected .box { fill: var(--pw-primary-soft); stroke: var(--pw-primary); stroke-width: 14; stroke-dasharray: none; }
+.click { cursor: pointer; }
+.click:focus { outline: none; }
+.click:hover .box, .click:focus-visible .box { stroke-width: 14; }
+.click:focus-visible .box { stroke: var(--pw-text); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 13px; font-weight: 600; color: var(--pw-muted); }
+.legend li { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 14px; height: 14px; border-radius: 4px; border: 2px solid; flex: none; }
+.swatch.free { background: var(--pw-success-soft); border-color: var(--pw-success); }
+.swatch.busy { background: var(--pw-danger-soft); border-color: var(--pw-danger); }
+.swatch.mine { background: var(--pw-brass-soft); border-color: var(--pw-brass); }
+.swatch.small { background: var(--pw-warning-soft); border-color: var(--pw-warning); border-style: dashed; }
+.swatch.off { background: var(--pw-page); border-color: var(--pw-muted); border-style: dashed; }
+.swatch.selected { background: var(--pw-primary-soft); border-color: var(--pw-primary); border-width: 3px; }
+
+.extra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.extra > span { font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.extraChip { display: inline-grid; gap: 2px; min-height: 44px; padding: 6px 14px; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); color: var(--pw-text); font: inherit; font-size: 14px; font-weight: 700; text-align: left; transition: border-color .18s ease, background .18s ease; }
+.extraChip small { font-size: 12px; font-weight: 600; color: var(--pw-muted); }
+button.extraChip { cursor: pointer; }
+button.extraChip:hover { border-color: var(--pw-primary); }
+.extraChip[aria-pressed='true'] { border: 2px solid var(--pw-primary); background: var(--pw-primary-soft); padding: 5px 13px; }
+
+@media (prefers-reduced-motion: reduce) { .spot .box, .extraChip { transition: none; } }
+
+/* Panitia session form: the chosen room's day (Penpot D4's "Jadwal ruang"). */
+.roomDay { display: grid; gap: 8px; padding: 12px 14px; border-radius: 12px; background: var(--pw-page); font-size: 13px; }
+.roomDay p { margin: 0; color: var(--pw-muted); }
+.roomDay ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.roomDay li { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 12px; color: var(--pw-muted); }
+.roomDay li span:first-child { font-weight: 700; color: var(--pw-text); font-variant-numeric: tabular-nums; }
+.roomDay li.roomDayOwn, .roomDay li.roomDayOwn span:first-child { color: var(--pw-primary); font-weight: 700; }

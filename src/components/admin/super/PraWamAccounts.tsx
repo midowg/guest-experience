@@ -114,7 +114,7 @@ export function PraWamAccounts({ initial, initialRooms, migrated, passwordReady 
     <h2>Ruang appraisal</h2>
     <p>Kapasitas tampil di form pesan ruang. Hanya ruang yang dicentang &ldquo;Bisa dipesan&rdquo; yang muncul di form.</p>
     <table className={styles.table}>
-      <thead><tr><th>Ruang</th><th>Kapasitas</th><th>Appraisal</th><th /></tr></thead>
+      <thead><tr><th>Ruang</th><th>Kapasitas</th><th>Bisa di-book</th><th /></tr></thead>
       <tbody>{rooms.map(room => <RoomRow key={`${room.id}-${room.capacity}-${room.bookable}`} room={room} onSaved={(next, text) => { setRooms(next); setMessage({ tone: "success", text }); }} />)}</tbody>
     </table>
   </div>;

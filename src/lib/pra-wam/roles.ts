@@ -19,6 +19,8 @@ export const cancelsAnyBooking = (who: WithRoles) => has(who, "panitia", "admin"
 export const managesSessions = (who: WithRoles) => has(who, "panitia", "admin");
 /** Sees every session, drafts included (BOD reads, panitia and admin also change). */
 export const seesAllSessions = (who: WithRoles) => has(who, "panitia", "bod", "admin");
+/** BOD and nothing that manages: lands on Ringkasan and gets the BOD menu (Penpot "Panduan · BOD"). */
+export const bodOnly = (who: WithRoles) => has(who, "bod") && !has(who, "panitia", "admin");
 /** Accounts, roles and rooms. */
 export const managesApp = (who: WithRoles) => has(who, "admin");
 

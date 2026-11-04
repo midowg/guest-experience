@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileText, FolderOpen, Trash2, Upload } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { acceptDocuments, documentMimes, MAX_DOCUMENT_BYTES, sizeLabel, type DocumentMime, type PraWamDocument } from "@/lib/pra-wam/documents";
 import { praWamApi } from "@/lib/routes";
 import { useConfirm } from "./ConfirmDialog";
+import { useSessionIntent } from "./SessionActions";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
 import styles from "./pra-wam.module.css";
 import rows from "./peserta.module.css";
@@ -24,13 +25,15 @@ type Props = {
   /** To mark "Unggahan saya": the uploader names the list carries. */
   viewerName?: string;
   uploadLabel?: string;
+  /** Detail sesi (Penpot P3 "Materi"): rows on the page, no card, and the upload button lives in the page's action bar. */
+  plain?: boolean;
 };
 
 const dayLabel = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 const filters: { id: Filter; label: string }[] = [{ id: "semua", label: "Semua" }, { id: "umum", label: "Umum acara" }, { id: "sesi", label: "Sesi saya" }, { id: "saya", label: "Unggahan saya" }];
 
 /** Documents to open (one row each, "Buka" on the right), and when allowed a way to add one. */
-export function DocumentList({ documents, sessionId, sessions, canUpload, storage, grouped, viewerName, uploadLabel = "Unggah dokumen" }: Props) {
+export function DocumentList({ documents, sessionId, sessions, canUpload, storage, grouped, viewerName, uploadLabel = "Unggah dokumen", plain }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>("semua");
@@ -40,6 +43,14 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [confirm, confirmDialog] = useConfirm();
+  const form = useRef<HTMLFormElement>(null);
+  // "Unggah materi" in the page's action bar (or #unggah-materi in the address) opens the form.
+  useSessionIntent("unggah-materi", () => setOpen(true), !!sessionId && canUpload && storage);
+  useEffect(() => {
+    if (!open || !form.current) return;
+    form.current.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+    form.current.querySelector<HTMLInputElement>("#doc-file")?.focus({ preventScroll: true });
+  }, [open]);
 
   function choose(next: File | null) {
     setNotice(null);
@@ -89,7 +100,7 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
     <span className={styles.tile}><FileText aria-hidden /></span>
     <span className={rows.docBody}>
       <strong>{document.title}</strong>
-      <span className={styles.meta}>{sizeLabel(document.size)} · {!sessionId && !grouped ? (document.sessionTitle ? `sesi ${document.sessionTitle}` : "umum acara") : document.uploadedBy === viewerName ? "unggahan Anda" : document.uploadedBy} · {dayLabel(document.createdAt)}</span>
+      <span className={styles.meta}>{sizeLabel(document.size)} · {!sessionId && !grouped ? (document.sessionTitle ? `sesi ${document.sessionTitle}` : "umum acara") : document.uploadedBy === viewerName ? "unggahan kamu" : document.uploadedBy} · {dayLabel(document.createdAt)}</span>
     </span>
     <a className={rows.docOpen} href={praWamApi.documents(document.id)} target="_blank" rel="noopener" aria-label={`Buka ${document.title}`}>Buka</a>
     {document.canDelete && <button type="button" className={rows.docDelete} disabled={!!busy} onClick={() => remove(document)} aria-label={busy === document.id ? "Menghapus…" : `Hapus ${document.title}`}><Trash2 aria-hidden /></button>}
@@ -110,7 +121,7 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
       <span role="cell" className={rows.tableTitle}><span className={styles.tile}><FileText aria-hidden /></span><strong>{document.title}</strong></span>
       <span role="cell">{document.sessionTitle ? <span className={`${styles.pill} ${styles.pillLine}`}>{document.sessionTitle}</span> : <span className={`${styles.pill} ${styles.pillBrass}`}>Umum acara</span>}</span>
       <span role="cell" className={styles.meta}>{sizeLabel(document.size)}</span>
-      <span role="cell" className={styles.meta}>{document.uploadedBy === viewerName ? "Anda" : document.uploadedBy} · {dayLabel(document.createdAt)}</span>
+      <span role="cell" className={styles.meta}>{document.uploadedBy === viewerName ? "Kamu" : document.uploadedBy} · {dayLabel(document.createdAt)}</span>
       <span role="cell" className={rows.tableActions}>
         <a className={rows.docOpen} href={praWamApi.documents(document.id)} target="_blank" rel="noopener" aria-label={`Buka ${document.title}`}>Buka</a>
         {document.canDelete && <button type="button" className={rows.docDelete} disabled={!!busy} onClick={() => remove(document)} aria-label={busy === document.id ? "Menghapus…" : `Hapus ${document.title}`}><Trash2 aria-hidden /></button>}
@@ -127,17 +138,17 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
     </div>}
     {confirmDialog}
     {notice && <div style={{ marginBottom: 12 }} role="status"><Notice tone={notice.tone}>{notice.text}</Notice></div>}
-    {shown.length === 0 ? (grouped ? empty : <p className={styles.meta}>Belum ada dokumen.</p>) : <>
+    {shown.length === 0 ? (grouped ? empty : <p className={styles.meta}>{plain ? "Belum ada materi untuk sesi ini." : "Belum ada dokumen."}</p>) : <>
       {grouped && <div className={rows.deskOnly}>{table}</div>}
       <div className={grouped ? rows.phoneOnly : undefined}>{groups.map(group => <div key={group.key}>
         {group.label && <p className={rows.groupLabel}>{group.label}</p>}
-        <div className={rows.docList}>{group.items.map(row)}</div>
+        <div className={plain ? rows.docPlain : rows.docList}>{group.items.map(row)}</div>
       </div>)}</div>
     </>}
 
     {canUpload && (storage ? <>
-      {!grouped && uploadButton && <div style={{ marginTop: 12 }}>{uploadButton}</div>}
-      {open && <form className={`${styles.section} ${styles.detail} ${rows.uploadForm}`} onSubmit={upload}>
+      {!grouped && !plain && uploadButton && <div style={{ marginTop: 12 }}>{uploadButton}</div>}
+      {open && <form ref={form} id="unggah-materi" className={`${styles.section} ${styles.detail} ${rows.uploadForm}`} onSubmit={upload}>
         <h3>{uploadLabel}</h3>
         <div><label className={styles.label} htmlFor="doc-file">Berkas</label>
           <input id="doc-file" type="file" accept={acceptDocuments} onChange={event => choose(event.target.files?.[0] ?? null)} />

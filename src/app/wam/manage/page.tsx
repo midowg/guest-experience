@@ -5,6 +5,7 @@ import { BodSummary } from "@/components/pra-wam/BodSummary";
 import { SessionStatusPill } from "@/components/pra-wam/SessionStatusPill";
 import { Notice } from "@/components/ui";
 import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { greeting } from "@/lib/pra-wam/bod";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { sessionWhen, sessionWhere } from "@/lib/pra-wam/sessions";
 import { praWamApi, praWamPath } from "@/lib/routes";
@@ -18,26 +19,28 @@ export const metadata = { title: "Ringkasan operasional · WAM", robots: { index
 
 const longDate = (now: Date) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jakarta" }).format(now);
 
-/** Ringkasan operasional (Penpot "D1") for panitia; BOD gets Ringkasan Pra WAM (Penpot "E3"). */
-export default async function DashboardPage() {
+/**
+ * Ringkasan operasional (Penpot "D1") for panitia; BOD gets Ringkasan Pra WAM (Penpot "B1", "E3"),
+ * and the panitia's page read only with ?lihat=panitia ("Dashboard panitia (baca)").
+ */
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ lihat?: string }> }) {
   const member = await requireMemberPage(praWamPath.dashboard);
   if (!seesAllSessions(member)) notFound();
   const manage = managesSessions(member);
   const now = new Date();
   const today = wibDate(now.toISOString());
-  // BOD reads everything and changes nothing: their own summary (Penpot "E3").
-  if (!manage) {
+  // BOD reads everything and changes nothing: their own summary.
+  if (!manage && (await searchParams).lihat !== "panitia") {
     const summary = await bodSummary(member, now);
     return <PraWamShell member={member} current="dashboard">
-      <ScreenHead title="Ringkasan Pra WAM" lead={`${longDate(now)} · data langsung · akses baca saja`} />
       {!summary.migrated && <Notice tone="warning">Sesi menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>}
-      <BodSummary data={summary} />
+      <BodSummary data={summary} greeting={`${greeting(now)}, ${member.nickname || member.name.split(" ")[0]}`} date={longDate(now)} />
     </PraWamShell>;
   }
   const data = await overview(member, now);
   return <PraWamShell member={member} current="dashboard">
     <ScreenHead eyebrow={`WAM · ${longDate(now)}`} title="Ringkasan operasional" lead={manage ? "Pantau kesiapan dan selesaikan tindakan tertunda." : "Baca saja: kesiapan sesi dan kehadiran."}
-      actions={manage ? <a className="button button--primary" href={praWamPath.newSession}><Plus size={18} aria-hidden /> Buat sesi</a> : undefined} />
+      actions={manage ? <a className="button button--primary" href={praWamPath.newSession}><Plus size={18} aria-hidden /> Buat sesi</a> : <a className="button button--secondary" href={praWamPath.dashboard}>Ringkasan BOD</a>} />
     {!data.migrated && <Notice tone="warning">Sesi menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>}
 
     <div className={base.stats}>
@@ -74,7 +77,7 @@ export default async function DashboardPage() {
       <section className={base.card} aria-labelledby="berikutnya">
         <h2 id="berikutnya">Forum yang menunggu jam</h2>
         {data.waiting.length === 0 ? <p className={base.meta}>Semua forum sudah punya jadwal.</p> : data.waiting.map(session =>
-          <a key={session.id} className={styles.rowLink} href={manage ? praWamPath.editSession(session.id) : praWamPath.session(session.id)}>
+          <a key={session.id} className={styles.rowLink} href={praWamPath.session(session.id)}>
             <span className={base.tile}><CalendarDays aria-hidden /></span>
             <span><strong>{session.title}</strong><small>{sessionWhen(session)}</small></span>
             <ChevronRight size={18} aria-hidden />

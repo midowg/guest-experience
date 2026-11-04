@@ -4,12 +4,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, Circle, Send } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
-import { clockLabel, overlaps, wibTime, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { clockLabel, dayLabel, overlaps, wibTime, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { roomStatus } from "@/lib/pra-wam/floor-plan";
 import { sessionKindLabels, sessionKinds, sessionProblems, sessionSpan, sessionStatusLabels, sessionTimes, sessionWhen, type RoomUse, type Session, type SessionInput } from "@/lib/pra-wam/sessions";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
 import type { PeopleGroup } from "./BookingForm";
 import { useConfirm } from "./ConfirmDialog";
+import { FloorPlan } from "./FloorPlan";
+import plan from "./floor-plan.module.css";
 import { ScreenHead } from "./ScreenHead";
 import panel from "./panitia.module.css";
 import styles from "./pra-wam.module.css";
@@ -99,6 +102,15 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
   const room = rooms.find(item => item.id === draft.roomId);
   const roomUse = room ? usedBy(room) : undefined;
   const count = draft.participants.length;
+  // On the plan every room may hold a session (bookable is about Book); a session's own hold is not a clash.
+  const othersIn = (item: Room) => uses.filter(use => use.roomId === item.id && use.sourceId !== session?.id);
+  const statusOf = (item: Room) => span
+    ? roomStatus({ bookable: true, span, holds: othersIn(item), capacity: item.capacity, needed: count })
+    : { tone: "closed" as const, text: "Isi jam dulu" };
+  const roomDay = room ? [
+    ...othersIn(room).map(use => ({ key: `${use.source}-${use.sourceId}-${use.startsAt}`, startsAt: use.startsAt, endsAt: use.endsAt, label: use.label, own: false })),
+    ...(span ? [{ key: "sesi-ini", ...span, label: "Sesi ini", own: true }] : []),
+  ].sort((a, b) => a.startsAt.localeCompare(b.startsAt)) : [];
   const checks = ([
     span ? { tone: "ok", text: "Tanggal dan jam lengkap" } : { tone: "wait", text: status === "terbit" ? "Isi tanggal dan jam" : "Jam belum diisi (draf boleh tanpa jam)" },
     room ? (roomUse ? { tone: "no", text: `${room.name} dipakai ${roomUse.label}` } : { tone: "ok", text: span ? `${room.name} kosong` : `${room.name} dipilih` })
@@ -146,30 +158,31 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
             </select>{fieldError("end")}</div>
         </div>
 
-        <div>
-          <span className={styles.label}>Ruang</span>
-          {room ? <div className={panel.roomPick}>
-            <span><strong>{room.name}</strong><small>{room.capacity ? `${room.capacity} orang · ` : ""}{span ? (roomUse ? `dipakai ${roomUse.label}` : `kosong pada ${clockLabel(draft.start)}–${clockLabel(draft.end)}`) : "isi jam untuk cek ketersediaan"}</small></span>
-            <button type="button" className="button button--secondary" onClick={() => set({ roomId: "" })}>Ganti ruang</button>
-          </div> : <>
-            {!span && <p className={styles.hint} style={{ margin: "0 0 8px" }}>Isi tanggal dan jam dulu supaya terlihat ruang yang kosong.</p>}
-            <div className={styles.rooms}>
-              {rooms.map(item => {
-                const use = usedBy(item);
-                return <button key={item.id} type="button" className={styles.roomOption} disabled={!span || !!use} onClick={() => set({ roomId: item.id })}>
-                  <strong>{item.name}</strong>
-                  {!span ? <span className={styles.meta}>{item.kind === "utama" ? "Ruang utama" : "Area"}</span>
-                    : use ? <span className={`${styles.status} ${styles.busy}`}>Dipakai {use.label}, {clockLabel(wibTime(use.startsAt))}–{clockLabel(wibTime(use.endsAt))}</span>
-                    : <span className={`${styles.status} ${styles.free}`}>Kosong</span>}
-                  <span className={styles.meta}>{item.capacity ? `Kapasitas ${item.capacity} orang` : "Kapasitas belum diisi"}</span>
-                </button>;
-              })}
+        <div className={styles.section}>
+          <span className={styles.label} id="room-label">Ruang</span>
+          {!span && <p className={styles.hint} style={{ margin: 0 }}>Isi tanggal dan jam dulu supaya terlihat ruang yang kosong.</p>}
+          {/* Penpot "D4 · Pilih ruang lewat denah": the plan, then the chosen room and its day. */}
+          <FloorPlan rooms={rooms} statusOf={statusOf} selectedId={draft.roomId || undefined} onPick={item => set({ roomId: item.id })}
+            label={`Denah kantor${span ? `, ${dayLabel(draft.date)} ${clockLabel(draft.start)}–${clockLabel(draft.end)}` : ""}`}
+            caption={room ? <span role="status">{room.name} dipilih</span> : span ? "Ketuk ruang yang kosong untuk sesi ini." : undefined}
+            legend={["free", "selected", "small", "busy", "off"]} />
+          {room ? <>
+            <div className={panel.roomPick}>
+              <span><strong>{room.name}</strong><small>{room.capacity ? `${room.capacity} orang · ` : ""}{span ? (roomUse ? `dipakai ${roomUse.label}` : `kosong pada ${clockLabel(draft.start)}–${clockLabel(draft.end)}`) : "isi jam untuk cek ketersediaan"}</small></span>
+              <button type="button" className="button button--secondary" onClick={() => set({ roomId: "" })}>Hapus pilihan</button>
             </div>
-            <div style={{ marginTop: 12 }}>
-              <label className={styles.label} htmlFor="location">Tempat lain <span className={styles.meta}>(bila tidak di ruang kantor)</span></label>
-              <input id="location" className="input" value={draft.location} maxLength={200} placeholder="Mis. nama restoran" onChange={event => set({ location: event.target.value })} />
-            </div>
-          </>}
+            {draft.date && <div className={plan.roomDay}>
+              <strong>Jadwal {room.name} · {dayLabel(draft.date)}</strong>
+              {roomDay.length === 0 ? <p>Belum ada pemakaian lain hari ini.</p> : <ul>
+                {roomDay.map(item => <li key={item.key} className={item.own ? plan.roomDayOwn : undefined}>
+                  <span>{clockLabel(wibTime(item.startsAt))}–{clockLabel(wibTime(item.endsAt))}</span><span>{item.label}</span>
+                </li>)}
+              </ul>}
+            </div>}
+          </> : <div>
+            <label className={styles.label} htmlFor="location">Tempat lain <span className={styles.meta}>(bila tidak di ruang kantor)</span></label>
+            <input id="location" className="input" value={draft.location} maxLength={200} placeholder="Mis. nama restoran" onChange={event => set({ location: event.target.value })} />
+          </div>}
           {fieldError("roomId")}
         </div>
 

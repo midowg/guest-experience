@@ -122,7 +122,8 @@ const WAM_API = "/api/wam";
 export const praWamPath = {
   home: PRA_WAM_PATH,
   login: (next?: string) => `${PRA_WAM_PATH}/login${next ? `?next=${enc(next)}` : ""}`,
-  appraisal: (date?: string) => `${PRA_WAM_PATH}/appraisal${date ? `?date=${date}` : ""}`,
+  /** Book: who has which room, per day, on the floor plan (was /wam/appraisal). */
+  appraisal: (date?: string) => `${PRA_WAM_PATH}/book${date ? `?date=${date}` : ""}`,
   /** The person's sessions, by day. */
   agenda: `${PRA_WAM_PATH}/agenda`,
   session: (id: string) => `${PRA_WAM_PATH}/sessions/${id}`,
@@ -130,6 +131,14 @@ export const praWamPath = {
   notifications: `${PRA_WAM_PATH}/notifications`,
   /** Panitia and BOD: Ringkasan operasional. */
   dashboard: `${PRA_WAM_PATH}/manage`,
+  /** BOD: everyone taking part, by department; read only. */
+  people: `${PRA_WAM_PATH}/manage/people`,
+  /** BOD: one participant's profile (Penpot B2), read only. */
+  person: (id: string) => `${PRA_WAM_PATH}/manage/people/${id}`,
+  /** BOD and panitia: survey results (Penpot B4); empty until surveys exist. */
+  surveyResults: `${PRA_WAM_PATH}/manage/surveys`,
+  /** BOD: the panitia's Ringkasan operasional, read only. */
+  panitiaView: `${PRA_WAM_PATH}/manage?lihat=panitia`,
   /** Panitia: write announcements and see who has read them. */
   announcements: `${PRA_WAM_PATH}/manage/announcements`,
   /** Panitia: schedule change requests to answer. */
@@ -152,10 +161,10 @@ export const praWamPath = {
   forgot: `${PRA_WAM_PATH}/forgot-password`,
   /** Where the emailed link lands to set a new password. Must be allowed in Supabase Auth redirect URLs. */
   resetPassword: `${PRA_WAM_PATH}/reset-password`,
-  /** The booking form; with a booking id it edits that booking. */
-  book: (query: { edit?: string; date?: string; room?: string; start?: string } = {}) => {
+  /** The booking form (was /wam/appraisal/book); with a booking id it edits that booking. */
+  book: (query: { edit?: string; date?: string; room?: string; start?: string; end?: string } = {}) => {
     const search = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString();
-    return `${PRA_WAM_PATH}/appraisal/book${search ? `?${search}` : ""}`;
+    return `${PRA_WAM_PATH}/book/new${search ? `?${search}` : ""}`;
   },
 };
 export const praWamApi = {

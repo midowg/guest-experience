@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { ArrowLeftRight, BarChart3, Bell, CalendarClock, ChevronRight, Clock, Info, MapPin, QrCode } from "lucide-react";
 import { AgendaTimeline } from "@/components/pra-wam/desktop/AgendaTimeline";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
@@ -5,7 +6,7 @@ import { PhaseBanner } from "@/components/pra-wam/PhaseBanner";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
 import { clockLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { requestStatusLabels, spanLabel } from "@/lib/pra-wam/requests";
-import { seesAllSessions } from "@/lib/pra-wam/roles";
+import { bodOnly, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { agendaItems, untilLabel } from "@/lib/server/pra-wam/agenda";
 import { myNotifications } from "@/lib/server/pra-wam/announcements";
@@ -32,6 +33,8 @@ const shortTime = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-d
  */
 export default async function HomePage() {
   const member = await requireMemberPage(praWamPath.home);
+  // "Akun BOD langsung ke Ringkasan" (Penpot "Panduan · BOD").
+  if (bodOnly(member)) redirect(praWamPath.dashboard);
   const now = new Date();
   const today = wibDate(now.toISOString());
   const [{ items }, notes, requests, appraisal, docs] = await Promise.all([
@@ -91,7 +94,7 @@ export default async function HomePage() {
         </div>}
 
         {appraisal && <a className={base.cardLink} href={praWamPath.appraisal()}>
-          <CalendarClock size={22} aria-hidden /><span>Appraisal &amp; 1-on-1<small>Pesan ruang atau lihat siapa memakai ruang</small></span><ChevronRight size={20} aria-hidden />
+          <CalendarClock size={22} aria-hidden /><span>Book ruang<small>Pesan ruang lewat denah atau lihat siapa memakai ruang</small></span><ChevronRight size={20} aria-hidden />
         </a>}
         {seesAllSessions(member) && <a className={base.cardLink} href={praWamPath.dashboard}>
           <BarChart3 size={22} aria-hidden /><span>Kelola acara<small>Ringkasan operasional, jadwal sesi, permintaan</small></span><ChevronRight size={20} aria-hidden />

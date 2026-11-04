@@ -7,7 +7,9 @@ import { ButtonLink, Notice } from "@/components/ui";
 import { appraisalRules, clockLabel, dayLabel, slotTimes, wibDate, wibInstant, wibTime, type Booking, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
+import { roomStatus, type PlanStatus } from "@/lib/pra-wam/floor-plan";
 import { useConfirm } from "./ConfirmDialog";
+import { FloorPlan } from "./FloorPlan";
 import styles from "./pra-wam.module.css";
 import own from "./appraisal.module.css";
 
@@ -16,11 +18,16 @@ type Props = { date: string; dates: string[]; now: string; rooms: Room[]; bookin
 const span = (booking: Booking) => `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`;
 const chipDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 const chipDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+const clock = (total: number) => `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+/** The finder's lengths in the booking HTML. */
+const lengths = [{ minutes: 30, label: "30 mnt" }, { minutes: 60, label: "1 jam" }, { minutes: 90, label: "1,5 jam" }, { minutes: 120, label: "2 jam" }];
 
 /**
- * Appraisal: who has which room, per day, in the look of Penpot's peserta screens (day chips as on
- * Agenda, cards with icon tiles). Everyone sees the booker and the activity of every booking; an
- * empty half hour opens the form for that room and time.
+ * Book: who has which room, per day, in the look of Penpot's peserta screens (day chips as on
+ * Agenda, cards with icon tiles), with the office floor plan of "Werkudara Room Booking" on top.
+ * The plan shows every room for the chosen start and length; a free room opens the form for that
+ * room and those hours. Below it, the room-by-time schedule: an empty half hour opens the form too.
  */
 export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open }: Props) {
   const router = useRouter();
@@ -29,6 +36,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
   const opened = bookings.find(booking => booking.id === openId);
   const bookable = rooms.filter(room => room.bookable);
   const slots = slotTimes().slice(0, -1);
@@ -39,6 +47,20 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
   const mineFlag = (booking: Booking) => !booking.isSession && booking.bookedBy.id === viewerId;
   const toggle = (id: string) => setOpenId(openId === id ? null : id);
   const working = (booking: Booking) => !!busy && busy.endsWith(booking.id);
+
+  // The plan's hours: the next half hour that has not started, for an hour, as the HTML's finder.
+  const starts = slots.filter(time => new Date(wibInstant(date, time)) > new Date(now));
+  const [start, setStart] = useState(starts[0] ?? "");
+  const [length, setLength] = useState(60);
+  const end = start ? clock(Math.min(minutes(start) + length, minutes(appraisalRules.close))) : "";
+  const planSpan = start ? { startsAt: wibInstant(date, start), endsAt: wibInstant(date, end) } : null;
+  const statusOf = (room: Room): PlanStatus => !start && room.bookable
+    ? { tone: "closed", text: date < today ? "Sudah lewat" : "Sudah tutup" }
+    : roomStatus({ bookable: room.bookable, span: planSpan, now: new Date(now), holds: inRoom(room).map(booking => ({ startsAt: booking.startsAt, endsAt: booking.endsAt, mine: mineFlag(booking) })) });
+  function pickRoom(room: Room) {
+    setOpening(room.name);
+    router.push(praWamPath.book({ date, room: room.id, start, end }));
+  }
 
   async function cancel(booking: Booking) {
     const someoneElse = booking.bookedBy.id !== viewerId ? ` milik ${booking.bookedBy.name}` : "";
@@ -85,23 +107,26 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
       </a>)}
     </nav>
 
-    {isToday && <section className={styles.summary} aria-label="Ruang sekarang">
-      {bookable.map(room => {
-        const current = inRoom(room).find(booking => new Date(booking.startsAt) <= new Date(now) && new Date(booking.endsAt) > new Date(now));
-        const next = inRoom(room).find(booking => new Date(booking.startsAt) > new Date(now));
-        const closed = new Date(now) >= new Date(wibInstant(date, appraisalRules.close));
-        return <div key={room.id} className={`${styles.roomCard} ${styles.row}`}>
-          <span className={styles.tile}><DoorOpen aria-hidden /></span>
-          <div className={own.stack}>
-            <h3>{room.name}</h3>
-            {closed ? <span className={`${styles.status} ${styles.closed}`}>Sudah tutup hari ini</span>
-              : current ? <span className={`${styles.status} ${styles.busy}`}>Dipakai {current.bookedBy.name} sampai {clockLabel(wibTime(current.endsAt))}</span>
-              : <span className={`${styles.status} ${styles.free}`}>Kosong {next ? `sampai ${clockLabel(wibTime(next.startsAt))}` : "sampai tutup"}</span>}
-            {next && !closed && <span className={styles.meta}>Berikutnya: {next.title}, {span(next)} · {next.bookedBy.name}</span>}
+    <p className={styles.sectionLabel}>Denah kantor · {dayLabel(date)}</p>
+    <section className={`${styles.card} ${own.planCard}`} aria-label={`Denah kantor ${dayLabel(date)}`}>
+      {starts.length > 0 ? <div className={own.finder}>
+        <div>
+          <label className={styles.label} htmlFor="plan-start">Mulai</label>
+          <select id="plan-start" className="select" value={start} onChange={event => setStart(event.target.value)}>
+            {starts.map(time => <option key={time} value={time}>{clockLabel(time)}</option>)}
+          </select>
+        </div>
+        <div>
+          <span className={styles.label} id="plan-length">Durasi</span>
+          <div className={styles.dates} role="group" aria-labelledby="plan-length">
+            {lengths.map(item => <button key={item.minutes} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={item.minutes === length} onClick={() => setLength(item.minutes)}>{item.label}</button>)}
           </div>
-        </div>;
-      })}
-    </section>}
+        </div>
+      </div> : <p className={styles.meta} style={{ margin: 0 }}>{isToday ? "Jam operasional hari ini sudah lewat. Pilih tanggal lain untuk book ruang." : "Tanggal ini sudah lewat."}</p>}
+      <FloorPlan rooms={rooms} statusOf={statusOf} onPick={open && start ? pickRoom : undefined} action="Book ruang ini"
+        label={`Denah kantor, ${dayLabel(date)}${start ? `, ${clockLabel(start)}–${clockLabel(end)}` : ""}`}
+        caption={opening ? <span role="status">Membuka form untuk {opening}…</span> : open && start ? "Ketuk ruang yang kosong untuk book." : undefined} />
+    </section>
 
     <p className={styles.sectionLabel}>Jadwal ruang · {dayLabel(date)}</p>
     <section className={styles.card} aria-label={`Jadwal ruang ${dayLabel(date)}`}>
@@ -116,7 +141,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
         {slots.map((time, row) => <div key={time} className={styles.gridTime} style={{ gridRow: row + 2 }}>{time.endsWith(":00") ? clockLabel(time) : ""}</div>)}
         {bookable.flatMap((room, column) => slots.map((time, row) => passed(time)
           ? <div key={`${room.id}-${time}`} className={styles.gridCell} style={{ gridColumn: column + 2, gridRow: row + 2 }} />
-          : <a key={`${room.id}-${time}`} className={styles.gridCell} style={{ gridColumn: column + 2, gridRow: row + 2 }} href={praWamPath.book({ date: date, room: room.id, start: time })} aria-label={`Pesan ${room.name} jam ${clockLabel(time)}`} />))}
+          : <a key={`${room.id}-${time}`} className={styles.gridCell} style={{ gridColumn: column + 2, gridRow: row + 2 }} href={praWamPath.book({ date: date, room: room.id, start: time })} aria-label={`Book ${room.name} jam ${clockLabel(time)}`} />))}
         {bookable.flatMap((room, column) => inRoom(room).map(booking => {
           const from = slots.indexOf(wibTime(booking.startsAt)), to = slots.indexOf(wibTime(booking.endsAt));
           return <button key={booking.id} type="button" className={`${styles.block} ${mineFlag(booking) ? styles.blockMine : ""} ${booking.isSession ? styles.blockSession : ""}`} style={{ gridColumn: column + 2, gridRow: `${from + 2} / ${(to < 0 ? slots.length : to) + 2}` }}
@@ -129,7 +154,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
       <div className={styles.list}>
         {bookable.map(room => <div key={room.id} className={styles.listRoom}>
           <h3 className={own.roomTitle}><DoorOpen size={16} aria-hidden />{room.name}</h3>
-          {inRoom(room).length === 0 && <p className={styles.itemEmpty}>Belum ada booking. {open && <a href={praWamPath.book({ date: date, room: room.id })}>Pesan</a>}</p>}
+          {inRoom(room).length === 0 && <p className={styles.itemEmpty}>Belum ada booking. {open && <a href={praWamPath.book({ date: date, room: room.id })}>Book</a>}</p>}
           {inRoom(room).map(booking => <button key={booking.id} type="button" className={styles.item} aria-expanded={openId === booking.id} aria-controls="rincian" onClick={() => toggle(booking.id)}>
             <span className={styles.itemTime}>{span(booking)}</span>
             <span><strong>{booking.title}</strong><br /><span className={styles.meta}>{booking.isSession ? "Sesi Pra WAM" : mineFlag(booking) ? "Kamu" : booking.bookedBy.name}{booking.bookedBy.department ? ` · ${booking.bookedBy.department}` : ""}</span></span>
@@ -156,7 +181,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
     {mine.length === 0 ? <div className={styles.emptyRow}>
       <span className={styles.tile} aria-hidden><CalendarPlus /></span>
       <p>Belum ada booking yang kamu pesan atau ikuti.</p>
-      {open && <ButtonLink variant="secondary" href={praWamPath.book({ date })}>Pesan ruang</ButtonLink>}
+      {open && <ButtonLink variant="secondary" href={praWamPath.book({ date })}>Book ruang</ButtonLink>}
     </div> : <div className={styles.mine}>
       {mine.map(booking => {
         const room = rooms.find(item => item.id === booking.roomId)?.name ?? "Ruang";

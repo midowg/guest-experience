@@ -6,7 +6,9 @@ import { DoorOpen, Info, Send } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { appraisalRules, bookingProblems, clockLabel, dayLabel, overlaps, slotTimes, titleSuggestions, wibDate, wibInstant, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
+import { roomStatus } from "@/lib/pra-wam/floor-plan";
 import { errorText, praWamRequest, PraWamApiError, type Conflict } from "./api";
+import { FloorPlan } from "./FloorPlan";
 import own from "./appraisal.module.css";
 import styles from "./pra-wam.module.css";
 
@@ -24,8 +26,10 @@ const chipDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "s
 const chipDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 
 /**
- * Pesan ruang appraisal, as cards in the look of Penpot's "P9 · Ajukan ganti jadwal" (the page
- * adds the back row and title). Rooms show at once whether they are free at the chosen hours; the server
+ * Book ruang, as cards in the look of Penpot's "P9 · Ajukan ganti jadwal" (the page adds the back
+ * row and title). The room is picked on the office floor plan, with the room cards below as a list;
+ * `rooms` holds every room, the ones that cannot be booked drawn grey. Rooms show at once whether
+ * they are free at the chosen hours; the server
  * still has the last word, and when someone else saved first the form keeps everything that was
  * typed and offers the nearest free hour or another room.
  */
@@ -62,6 +66,11 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const chosen = { startsAt: wibInstant(draft.date, draft.start), endsAt: wibInstant(draft.date, draft.end) };
   const others = bookings.filter(booking => booking.id !== editId);
   const takenBy = (room: Room) => others.find(booking => booking.roomId === room.id && overlaps(booking, chosen));
+  const bookable = rooms.filter(room => room.bookable);
+  const statusOf = (room: Room) => roomStatus({
+    bookable: room.bookable, span: chosen, now: nowDate,
+    holds: others.filter(booking => booking.roomId === room.id).map(booking => ({ startsAt: booking.startsAt, endsAt: booking.endsAt, mine: !booking.isSession && booking.bookedBy.id === viewer.id })),
+  });
   const suggestions = useMemo(() => titleSuggestions(draft.title, usedTitles), [draft.title, usedTitles]);
   const group = groups.find(item => item.id === groupId);
   const picked = draft.participants.map(id => people.find(person => person.id === id)).filter((person): person is Person => !!person);
@@ -162,8 +171,13 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section className={`${styles.card} ${own.formCard}`} aria-labelledby="ruang">
       <h2 id="ruang">Ruang</h2>
+      <FloorPlan rooms={rooms} statusOf={statusOf} selectedId={draft.roomId} onPick={room => set({ roomId: room.id })}
+        label={`Denah kantor, ${dayLabel(draft.date)} ${clockLabel(draft.start)}–${clockLabel(draft.end)}`}
+        caption={draft.roomId ? <span role="status">{roomName(draft.roomId)} dipilih</span> : "Ketuk ruang yang kosong di denah, atau pilih dari daftar."}
+        legend={["free", "selected", "busy", "mine", "off"]} />
+      <p className={own.roomList}>Daftar ruang</p>
       <div className={styles.rooms}>
-        {rooms.map(room => {
+        {bookable.map(room => {
           const taken = takenBy(room);
           return <button key={room.id} type="button" className={`${styles.roomOption} ${styles.row}`} style={{ display: "flex" }} aria-pressed={draft.roomId === room.id} disabled={!!taken} onClick={() => set({ roomId: room.id })}>
             <span className={styles.tile}><DoorOpen aria-hidden /></span>
@@ -216,7 +230,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     <p className={own.info}><Info size={16} aria-hidden />Booking langsung pasti. Bila ruang keburu dipesan orang lain, isianmu tetap tersimpan dan kami tawarkan jam atau ruang lain.</p>
 
     <div className={styles.sticky}>
-      <Button type="submit" disabled={busy}><Send size={18} aria-hidden /> {busy ? "Menyimpan…" : editId ? "Simpan perubahan" : "Pesan ruang"}</Button>
+      <Button type="submit" disabled={busy}><Send size={18} aria-hidden /> {busy ? "Menyimpan…" : editId ? "Simpan perubahan" : "Book ruang"}</Button>
       <span className={styles.meta}>{draft.roomId ? `${roomName(draft.roomId)} · ` : ""}{dayLabel(draft.date)} · {clockLabel(draft.start)}–{clockLabel(draft.end)}</span>
     </div>
   </form>;
