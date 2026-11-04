@@ -6,7 +6,7 @@ import {
   answered, complete, progressOf, visibilityLabels,
   type AnswerValue, type Answers, type QForm, type QQuestion, type QSection, type Visibility,
 } from "@/lib/pra-wam/questionnaire";
-import { praWamApi } from "@/lib/routes";
+import { praWamApi, praWamPath } from "@/lib/routes";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 import { errorText, praWamRequest } from "../api";
 import { CardReveal } from "./CardReveal";
@@ -243,6 +243,7 @@ export function Questionnaire({ form, sections, questions, departments, people, 
           {saving
             ? <p className={styles.hint} aria-live="polite">Menyimpan jawaban terakhir…</p>
             : <CardReveal formId={form.id} initial={drawnCard} nickname={nickname} hasPhoto={hasPhoto} />}
+          {!preview && !saving && <p className={styles.hint}><a href={praWamPath.colleagues}>Lihat kartu rekan-rekanmu</a></p>}
           {form.editUntil && <p className={styles.hint}>Jawabanmu masih bisa diubah sampai {deadlineLabel(form.editUntil)}, kecuali bagian anonim. Karaktermu bisa ikut berubah; level, latar, dan nomor kartu tetap.</p>}
         </section>}
         {step.kind === "done" && !progress.done && <section className={card} aria-labelledby="cq-heading">

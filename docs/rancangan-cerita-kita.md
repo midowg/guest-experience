@@ -1,7 +1,8 @@
 # Rancangan kuesioner personal WAM
 
-Status: tahap 1 dan 2 dibangun (4 November 2026). Tahap 3 dan 4 belum. Ditulis 4 November 2026,
-diperbarui hari yang sama.
+Status: tahap 1 dan 2 dibangun (4 November 2026). Tahap 3 sedang dibangun: **Kartu rekan** (galeri
+dan profil rekan) sudah ada; rekap, ekspor, kamar, kebutuhan panitia, dan ringkasan BOD belum.
+Tahap 4 belum. Ditulis 4 November 2026, diperbarui hari yang sama.
 
 Sumber: artifact mockup **"Cerita Kita WAM 2026"**
 (https://claude.ai/artifact/BwHcrRv8Wmcg4oRTNW5Uaq). Isinya 6 bagian, sekitar 60 pertanyaan, level
@@ -219,8 +220,19 @@ kartunya punya dua sumber:
 - **Jadi foto profil.** Potongan persegi dari karakter diperkecil ke 320×320 WebP dan disimpan
   lewat jalur foto profil yang sudah ada (`pra-wam/foto/…`). Pemakaiannya opsional dan bisa
   diganti foto biasa kapan saja.
-- **Galeri** (tahap 3): peserta bisa melihat koleksi kartu rekan-rekannya, seperti galeri di mockup.
-  Admin melihat sebaran level.
+- **Kartu rekan** (tahap 3, dibangun): `/wam/rekan`.
+  - Galeri semua kartu bernomor, urut nomor, dengan pencarian (nama, departemen, karakter) dan
+    saringan per karakter. Kartu digambar di browser saat mendekati layar, jadi gambar tidak
+    disimpan ke R2.
+  - Ketuk kartu untuk membuka profil rekan (`/wam/rekan/<id>`): kartu, karakter, dan **hanya**
+    jawaban bertanda `rekan` dari bagian yang tidak anonim dan tidak disembunyikan. Jawaban `fasil`,
+    `hr`, `hronly`, `pilih`, dan anonim tidak pernah dikirim ke halaman ini.
+  - **Terbuka setelah kartu sendiri keluar** (pilihan bawaan saat dibangun; panitia, BOD, dan admin
+    selalu bisa). Sebelum itu peserta melihat ajakan menyelesaikan kuesioner. Mockup menyebut galeri
+    muncul "setelah form ditutup"; yang dibangun langsung bertambah setiap ada yang selesai.
+  - Kartu uji dan karyawan nonaktif tidak tampil. Jalan masuk: baris "Kartu rekan" di Beranda dan
+    tautan di layar akhir kuesioner.
+  - Admin melihat sebaran level di tab Kartu.
 
 ## Privasi dan penyimpanan
 

@@ -66,7 +66,7 @@ export async function catalogOf(formId: string): Promise<Catalog | null> {
   };
 }
 
-type PersonCardRow = {
+export type PersonCardRow = {
   employee_id: string; card_id: string; tier_key: string; background: number; accent: number; stickers: number[]; serial: number | null; trial: boolean;
   combo: string; dna: string; roll: Roll; drawn_at: string;
 };
@@ -78,7 +78,7 @@ export type Roll = {
   changes?: { at: string; from: string; to: string; kept?: "bentrok" }[];
 };
 
-const PERSON_COLUMNS = "employee_id,card_id,tier_key,background,accent,stickers,serial,trial,combo,dna,roll,drawn_at";
+export const PERSON_COLUMNS = "employee_id,card_id,tier_key,background,accent,stickers,serial,trial,combo,dna,roll,drawn_at";
 const dnaOf = (combo: string) => createHash("sha256").update(`dna:${combo}`).digest("hex").slice(0, 10);
 
 /** What a person's card shows. */
@@ -89,7 +89,7 @@ export type CardView = {
   background: Pick<Part, "number" | "name" | "image">; accent: Pick<Part, "number" | "name" | "image">; stickers: Pick<Part, "number" | "name" | "image">[];
 };
 
-function viewOf(row: PersonCardRow, catalog: Catalog): CardView | null {
+export function viewOf(row: PersonCardRow, catalog: Catalog): CardView | null {
   const character = catalog.characters.find(item => item.id === row.card_id);
   const tier = catalog.tiers.find(item => item.key === row.tier_key);
   if (!character || !tier) return null;

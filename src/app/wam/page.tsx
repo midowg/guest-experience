@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeftRight, Bell, CalendarClock, ChevronRight, Clock, Info, MapPin, QrCode } from "lucide-react";
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { Avatar } from "@/components/pra-wam/Avatar";
-import { AboutCard, ManageCard, QuestionnaireCard } from "@/components/pra-wam/BerandaCards";
+import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard } from "@/components/pra-wam/BerandaCards";
 import { AgendaTimeline } from "@/components/pra-wam/desktop/AgendaTimeline";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
@@ -124,6 +124,7 @@ export default async function HomePage() {
           <CalendarClock size={22} aria-hidden /><span>Book ruang<small>Pesan ruang lewat denah atau lihat siapa memakai ruang</small></span><ChevronRight size={20} aria-hidden />
         </a>}
         {quest?.progress.done && questCard}
+        {quest?.progress.done && quest.card && <ColleaguesCard href={praWamPath.colleagues} />}
         {about && <AboutCard about={about.about} />}
       </div>
 

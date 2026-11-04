@@ -50,7 +50,7 @@ export const hrOnly = (visibility: Visibility) => visibility === "hr" || visibil
 export const reservedSlugs = [
   "about", "account", "agenda", "book", "check-in", "documents", "forgot-password", "login", "manage", "manifest.webmanifest",
   "new-password", "notifications", "reset-password", "sessions", "settings", "scan", "offline", "api", "admin", "sw.js",
-  "icon-192.png", "icon-512.png", "apple-touch-icon.png", "icon-maskable-512.png", "appraisal", "pra-wam",
+  "icon-192.png", "icon-512.png", "apple-touch-icon.png", "icon-maskable-512.png", "appraisal", "pra-wam", "rekan",
 ];
 
 /** "Cerita Kita 2026" → "cerita-kita-2026". */

@@ -189,6 +189,10 @@ export const praWamPath = {
   },
   /** The personal questionnaire, at the address HR gives it (bawaannya /wam/kuesioner). */
   questionnaire: (slug: string) => `${PRA_WAM_PATH}/${enc(slug)}`,
+  /** Rekan: the character cards of everyone who finished the questionnaire. */
+  colleagues: `${PRA_WAM_PATH}/rekan`,
+  /** One colleague's card and what they share with colleagues. */
+  colleague: (employeeId: string) => `${PRA_WAM_PATH}/rekan/${enc(employeeId)}`,
 };
 export const praWamApi = {
   login: `${WAM_API}/login`,

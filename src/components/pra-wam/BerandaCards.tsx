@@ -1,4 +1,4 @@
-import { CheckCircle2, ChevronRight, ClipboardList, Info, LayoutDashboard } from "lucide-react";
+import { CheckCircle2, ChevronRight, ClipboardList, Info, LayoutDashboard, UsersRound } from "lucide-react";
 import { aboutParagraphs, pointParts, type About } from "@/lib/pra-wam/about";
 import { praWamPath } from "@/lib/routes";
 import styles from "./beranda.module.css";
@@ -68,6 +68,18 @@ export function QuestionnaireCard({ name, cardText, minutes, sectionsDone, secti
             <span style={{ width: `${share}%` }} />
           </span>
         </>}
+    </span>
+    <ChevronRight className={styles.chevron} aria-hidden />
+  </a>;
+}
+
+/** Kartu rekan on Beranda, once the person's own card is out: a row into the gallery. */
+export function ColleaguesCard({ href }: { href: string }) {
+  return <a className={styles.row} href={href}>
+    <span className={styles.questTileDone}><UsersRound aria-hidden /></span>
+    <span className={styles.aboutText}>
+      <strong>Kartu rekan</strong>
+      <span className={styles.rowLine}>Lihat karakter rekan-rekanmu</span>
     </span>
     <ChevronRight className={styles.chevron} aria-hidden />
   </a>;
