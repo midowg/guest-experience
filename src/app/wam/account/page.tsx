@@ -1,11 +1,13 @@
-import { Info, Lock, Users } from "lucide-react";
+import { Info, LogOut } from "lucide-react";
 import { PasswordPanel } from "@/components/pra-wam/PasswordForm";
 import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
-import { Notice } from "@/components/ui";
-import { roleSummary } from "@/lib/pra-wam/roles";
+import { SignOutButton } from "@/components/pra-wam/SignOutButton";
+import { ThemeSwitch } from "@/components/pra-wam/ThemeSwitch";
+import { praWamRoles, roleLabels } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import { createPrivilegedClient } from "@/lib/server/supabase/admin";
+import { readWamTheme } from "@/lib/server/pra-wam/theme";
 import { unitsOf } from "@/lib/server/pra-wam/units";
 import own from "@/components/pra-wam/akun.module.css";
 import styles from "@/components/pra-wam/pra-wam.module.css";
@@ -13,60 +15,89 @@ import styles from "@/components/pra-wam/pra-wam.module.css";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Profil · WAM", robots: { index: false } };
 
-/** A field the person cannot change here, with who owns it ("Master" = Data karyawan). */
-function Locked({ label, owner, value }: { label: string; owner: string; value: string }) {
-  return <div>
-    <div className={styles.fieldHead}>{label}<span className={`${styles.pill} ${styles.pillLine}`}>{owner}</span></div>
-    <div className={styles.locked}><span>{value || "—"}</span><Lock aria-hidden /></div>
+/** One line of Data diri: read only, the label on the left and the value on the right. */
+function Item({ label, value, stack }: { label: string; value: string; stack?: boolean }) {
+  return <div className={`${own.item} ${stack ? own.itemStack : ""}`}>
+    <dt>{label}</dt>
+    <dd>{value || <span className={own.unset}>Belum diisi</span>}</dd>
   </div>;
 }
 
 /**
- * Profil dan pengaturan (Penpot "P4"): name, unit and email come from Data karyawan and are
- * changed by the admin; the person changes only their password here.
+ * Profil dan pengaturan (Penpot "P4"), as a native settings screen. Name, unit and email come from
+ * Data karyawan and are changed by the admin; the person changes their password, the look of the
+ * app, and signs out here.
  */
 export default async function AccountPage() {
   const member = await requireMemberPage(praWamPath.account);
-  const [units, { data: person }] = await Promise.all([
+  const [units, { data: person }, theme] = await Promise.all([
     unitsOf(member.id),
     createPrivilegedClient().from("employees").select("email").eq("id", member.id).maybeSingle(),
+    readWamTheme(),
   ]);
   const initials = member.name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
-  const unitLines = units.map(unit => <div key={unit.id} className={styles.meta}>{unit.isLead ? "Lead · " : ""}{unit.name}{unit.kind === "bu" ? " (BU)" : ""}{unit.jobTitle ? `, ${unit.jobTitle}` : ""}</div>);
+  const roles = praWamRoles.filter(role => member.roles.includes(role));
   return <PraWamShell member={member} current="akun">
-    <ScreenHead title="Profil dan pengaturan" lead="Satu akun untuk Pra WAM dan WAM 2027" />
-    <div className={own.profileGrid}>
-      <div className={own.fields}>
-        <section className={`${styles.card} ${own.deskOnly} ${own.wide}`} aria-label="Identitas">
-          <div className={own.identity}>
-            <span className={own.identityAvatar} aria-hidden>{initials}</span>
-            <div>
-              <p className={own.identityName}>{member.name}</p>
-              <p className={own.identityMeta}>{[member.position, member.department].filter(Boolean).join(" · ") || "—"}</p>
-              <span className={`${styles.pill} ${styles.pillBrass}`} style={{ marginTop: 8 }}><Users aria-hidden />{roleSummary(member)}</span>
+    <div className={own.profile}>
+      <ScreenHead title="Profil dan pengaturan" lead="Satu akun untuk Pra WAM dan WAM 2027" />
+      <div className={own.profileGrid}>
+        <div className={own.profileCol}>
+          <section className={own.group} aria-labelledby="profil-nama">
+            <div className={own.hero}>
+              <span className={own.avatar} aria-hidden>{initials || "?"}</span>
+              <h2 id="profil-nama" className={own.heroName}>{member.name}</h2>
+              <p className={own.heroMeta}>{[member.position, member.department].filter(Boolean).join(" · ") || "Jabatan belum diatur"}</p>
+              <ul className={own.heroPills} aria-label="Peran">
+                <li className={styles.pill}>Peserta</li>
+                {roles.map(role => <li key={role} className={`${styles.pill} ${styles.pillBrass}`}>{roleLabels[role]}</li>)}
+              </ul>
             </div>
-          </div>
-          <div className={own.identityUnits}>{unitLines.length ? unitLines : <div className={styles.meta}>Unit belum diatur.</div>}</div>
-        </section>
-        <div className={own.wide}>
-          <Notice tone="info"><span style={{ display: "inline-flex", gap: 8 }}><Info size={16} aria-hidden style={{ flex: "none", marginTop: 2 }} />Nama dan departemen mengikuti data karyawan. Email diatur super admin.</span></Notice>
+            {units.length ? <ul className={own.units} aria-label="Unit">
+              {units.map(unit => <li key={unit.id} className={own.unit}>
+                <span className={own.unitText}>
+                  <strong>{unit.name}{unit.kind === "bu" ? " (BU)" : ""}</strong>
+                  {unit.jobTitle && <small>{unit.jobTitle}</small>}
+                </span>
+                {unit.isLead && <span className={`${styles.pill} ${styles.pillBrass}`}>Lead</span>}
+              </li>)}
+            </ul> : <p className={own.unitEmpty}>Unit belum diatur.</p>}
+          </section>
+
+          <section aria-labelledby="data-diri">
+            <h2 id="data-diri" className={own.groupTitle}>Data diri</h2>
+            <dl className={`${own.group} ${own.list}`}>
+              <Item label="Nama lengkap" value={member.name} />
+              <Item label="Nama panggilan" value={member.nickname} />
+              <Item label="Departemen" value={member.department} />
+              <Item label="Jabatan" value={member.position} />
+              <Item label="Email masuk" value={person?.email ?? ""} stack />
+            </dl>
+            <p className={own.groupNote}><Info aria-hidden />Data ini mengikuti Data karyawan dari HR. Email masuk diatur oleh super admin.</p>
+          </section>
         </div>
-        <Locked label="Nama lengkap" owner="Master" value={member.name} />
-        <Locked label="Nama panggilan" owner="Master" value={member.nickname} />
-        <Locked label="Departemen" owner="Master" value={member.department} />
-        <Locked label="Jabatan" owner="Master" value={member.position} />
-        <div className={own.wide}><Locked label="Email masuk" owner="Super admin" value={person?.email ?? ""} /></div>
-        <div className={`${styles.card} ${own.phoneOnly}`}>
-          <div className={styles.row}>
-            <span className={styles.tile}><Users aria-hidden /></span>
-            <div>
-              <strong>{roleSummary(member)}</strong>
-              {unitLines.length ? unitLines : <div className={styles.meta}>Unit belum diatur.</div>}
+
+        <div className={own.profileCol}>
+          <section aria-labelledby="keamanan">
+            <h2 id="keamanan" className={own.groupTitle}>Keamanan</h2>
+            <PasswordPanel firstTime={member.mustChangePassword} />
+          </section>
+
+          <section aria-labelledby="tampilan">
+            <h2 id="tampilan" className={own.groupTitle}>Tampilan</h2>
+            <ThemeSwitch initial={theme} />
+          </section>
+
+          <section aria-labelledby="akun">
+            <h2 id="akun" className={own.groupTitle}>Akun</h2>
+            <div className={`${own.group} ${own.signOutRow}`}>
+              <LogOut aria-hidden />
+              <SignOutButton className={own.signOutButton} />
             </div>
-          </div>
+          </section>
+
+          <p className={own.footer}>Journey by Werkudara</p>
         </div>
       </div>
-      <PasswordPanel firstTime={member.mustChangePassword} />
     </div>
   </PraWamShell>;
 }

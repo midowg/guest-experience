@@ -31,21 +31,13 @@
 .noteBody p { margin: 0; font-size: 13px; color: var(--pw-muted); white-space: pre-line; }
 .dot { position: absolute; top: 18px; right: 16px; width: 8px; height: 8px; border-radius: 50%; background: var(--pw-primary); }
 
-/* Profil dan pengaturan (Penpot "P4") */
-.fields { display: grid; gap: 16px; }
-.passwordRow { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); color: var(--pw-text); text-decoration: none; font: inherit; text-align: left; cursor: pointer; width: 100%; }
-.passwordRow strong { display: block; font-size: 15px; }
-.passwordRow small { color: var(--pw-muted); font-size: 13px; }
-.passwordRow > svg:last-child { margin-left: auto; color: var(--pw-muted); }
+/* Password fields (Profil, new password, reset password) */
 .eyeWrap { position: relative; }
 .eyeWrap input { padding-right: 52px; }
 .eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; color: var(--pw-muted); cursor: pointer; border-radius: 10px; }
 .ruleWarn { color: var(--pw-warning); }
 .ruleIcon { display: inline-flex; align-items: center; gap: 6px; }
 .ruleIcon svg { width: 16px; height: 16px; flex: none; }
-.passwordRow { list-style: none; }
-.passwordRow::-webkit-details-marker { display: none; }
-details[open] > .passwordRow > svg:last-child { transform: rotate(90deg); }
 
 /* Desktop (>= 1024px) versions, Agent F: phone layouts above stay as they are. */
 .deskOnly { display: none; }
@@ -68,23 +60,6 @@ details[open] > .passwordRow > svg:last-child { transform: rotate(90deg); }
 .emptyMark { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); }
 .emptyMark svg { width: 28px; height: 28px; }
 
-/* Profil: identity and data on the left, account security on the right. */
-.profileGrid { display: grid; gap: 16px; }
-.identity { display: flex; gap: 16px; align-items: center; }
-.identityAvatar { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 20px; font-weight: 800; }
-.identityName { margin: 0; font-family: var(--pw-display); font-size: 25px; font-weight: 600; color: var(--pw-primary); line-height: 1.2; }
-.identityMeta { margin: 2px 0 0; color: var(--pw-muted); font-size: 14px; }
-.identityUnits { display: grid; gap: 4px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--pw-line); }
-.securityHead { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
-.securityHead strong { display: block; font-size: 17px; }
-.securityHead small { color: var(--pw-muted); font-size: 13px; }
-@media (min-width: 1024px) {
-  .profileGrid { grid-template-columns: minmax(0, 1fr) 26rem; gap: 24px; align-items: start; }
-  .profileGrid .fields { grid-template-columns: 1fr 1fr; }
-  .profileGrid .fields > .wide { grid-column: 1 / -1; }
-  .security { position: sticky; top: 96px; }
-}
-
 /* Pengumuman (Penpot "D8"): composer left, sent list right. */
 .annGrid { display: grid; gap: 16px; }
 @media (min-width: 1024px) { .annGrid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; align-items: start; } }
@@ -96,3 +71,83 @@ details[open] > .passwordRow > svg:last-child { transform: rotate(90deg); }
 .sentRow small { display: block; color: var(--pw-muted); font-size: 13px; }
 .sentRow .readPill { flex: none; white-space: nowrap; }
 .annHint { margin: 0; font-size: 13px; color: var(--pw-muted); }
+
+/*
+ * Profil dan pengaturan (Penpot "P4"), as a native settings screen: an identity header, then
+ * grouped lists (Data diri, Keamanan, Tampilan, Akun) with a short title above each group.
+ * Desktop: identity and Data diri on the left, the settings on the right.
+ */
+.profile { width: 100%; }
+.profileGrid { display: grid; gap: 24px; }
+.profileCol { display: grid; gap: 24px; align-content: start; min-width: 0; }
+.profile .groupTitle { margin: 0 0 8px; padding: 0 4px; font-family: var(--pw-body); font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.groupNote { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; padding: 0 4px; font-size: 13px; color: var(--pw-muted); }
+.groupNote svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+.group { position: relative; margin: 0; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); overflow: hidden; }
+
+/* Identity header: centred on a phone, avatar beside the name on a desktop. */
+.hero { display: grid; justify-items: center; gap: 4px; padding: 24px 16px 20px; text-align: center; }
+.avatar { display: grid; place-items: center; width: 80px; height: 80px; margin-bottom: 8px; border-radius: 50%; background: var(--pw-hero); color: var(--pw-on-hero); font-family: var(--pw-display); font-size: 28px; font-weight: 600; box-shadow: 0 0 0 3px var(--pw-surface), 0 0 0 5px var(--pw-brass-line); }
+.hero .heroName { margin: 0; max-width: 100%; font-family: var(--pw-display); font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--pw-primary); overflow-wrap: anywhere; }
+.heroMeta { margin: 0; font-size: 14px; color: var(--pw-muted); }
+.heroPills { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.units { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--pw-line); }
+.unit { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 16px; }
+.unit + .unit::before, .item + .item::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--pw-line); }
+.unitText { flex: 1; min-width: 0; }
+.unitText strong { display: block; font-size: 15px; overflow-wrap: anywhere; }
+.unitText small { display: block; font-size: 13px; color: var(--pw-muted); }
+.unitEmpty { margin: 0; padding: 14px 16px; border-top: 1px solid var(--pw-line); font-size: 14px; color: var(--pw-muted); text-align: center; }
+
+/* Data diri: label left, value right; a long value (the email) under its label. */
+.list { margin: 0; }
+.item { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 4px 16px; min-height: 52px; padding: 14px 16px; }
+.item dt { font-size: 15px; font-weight: 600; color: var(--pw-muted); }
+.item dd { margin: 0; font-size: 15px; font-weight: 700; color: var(--pw-text); text-align: right; overflow-wrap: anywhere; min-width: 0; }
+.itemStack { grid-template-columns: minmax(0, 1fr); }
+.itemStack dd { text-align: left; }
+.item .unset { color: var(--pw-muted); font-weight: 600; }
+
+/* A row that does something: Ganti password, Keluar. */
+.rowButton { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; border: 0; background: transparent; color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; transition: background-color 150ms ease; }
+.rowButton:hover { background: var(--pw-app); }
+.rowButton:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: -2px; border-radius: 16px; }
+.rowText { flex: 1; min-width: 0; }
+.rowText strong { display: block; font-size: 15px; }
+.rowText small { display: block; font-size: 13px; color: var(--pw-muted); }
+.chevron { flex: none; width: 20px; height: 20px; color: var(--pw-muted); transition: transform 200ms ease; }
+.rowButton[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+.rowPanel { display: grid; gap: 12px; padding: 16px; border-top: 1px solid var(--pw-line); }
+@media (prefers-reduced-motion: no-preference) {
+  .rowPanel { animation: panelIn 200ms ease-out; }
+  @keyframes panelIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+}
+@media (prefers-reduced-motion: reduce) { .rowButton, .chevron { transition: none; } }
+
+/* Keluar: a quiet danger row; SignOutButton's own button covers the whole row. */
+.signOutRow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 16px; color: var(--pw-danger); transition: background-color 150ms ease; }
+.signOutRow:hover { background: var(--pw-danger-soft); }
+.signOutRow > svg { flex: none; width: 20px; height: 20px; }
+.signOutButton { flex: 1; min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--pw-danger); font: inherit; font-size: 15px; font-weight: 700; text-align: left; cursor: pointer; }
+.signOutButton::after { content: ""; position: absolute; inset: 0; border-radius: 16px; }
+.signOutButton:focus-visible { outline: none; }
+.signOutButton:focus-visible::after { outline: 2px solid var(--pw-primary); outline-offset: -2px; }
+.signOutButton:disabled { cursor: progress; opacity: .7; }
+@media (prefers-reduced-motion: reduce) { .signOutRow { transition: none; } }
+.footer { margin: 0; font-size: 13px; color: var(--pw-muted); text-align: center; }
+
+@media (min-width: 1024px) {
+  .profile { max-width: 72rem; margin: 0 auto; }
+  .profileGrid { grid-template-columns: minmax(0, 1fr) minmax(0, 26rem); align-items: start; }
+  .hero { grid-template-columns: auto minmax(0, 1fr); justify-items: start; align-items: center; column-gap: 20px; row-gap: 2px; padding: 24px; text-align: left; }
+  .avatar { grid-row: 1 / span 3; width: 88px; height: 88px; margin: 0; font-size: 30px; }
+  .hero .heroName { font-size: 28px; }
+  .heroPills { justify-content: flex-start; }
+  .unit { padding: 10px 24px; }
+  .unit + .unit::before { left: 24px; }
+  .unitEmpty { text-align: left; padding: 14px 24px; }
+  .item { grid-template-columns: 11rem minmax(0, 1fr); padding: 14px 24px; }
+  .item + .item::before { left: 24px; }
+  .item dd { text-align: left; }
+  .itemStack { grid-template-columns: 11rem minmax(0, 1fr); }
+}

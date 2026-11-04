@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, ChevronRight, Eye, EyeOff, Lock } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, CheckCircle2, ChevronDown, Eye, EyeOff, KeyRound, Lock } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { passwordRules } from "@/lib/pra-wam/password";
 import { praWamApi } from "@/lib/routes";
@@ -51,6 +51,8 @@ export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boo
       if (doneHref) { router.refresh(); router.replace(doneHref); return; }
       setForm({ current: "", next: "", confirm: "" });
       setNotice({ tone: "success", text: result.message });
+      // Profil: the server page drops the "password awal" warning once it reads the change.
+      router.refresh();
     } catch (problem) {
       if (problem instanceof PraWamApiError && problem.fieldErrors) setErrors(Object.fromEntries(Object.entries(problem.fieldErrors).map(([key, list]) => [key, list[0]])));
       setNotice({ tone: "error", text: errorText(problem) });
@@ -75,39 +77,22 @@ export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boo
   </form>;
 }
 
-const desktop = "(min-width: 1024px)";
-
 /**
- * The password part of Profil. On a phone a "Ganti password" row that opens the form (Penpot
- * "P4"); on a desktop a "Keamanan akun" card with the form always shown. Open by itself while the
- * person still uses the shared first password.
+ * Keamanan in Profil (Penpot "P4"): a "Ganti password" row that opens the form below it, inside
+ * the same group, on a phone and a desktop alike (no width check, so nothing jumps after load).
+ * Open by itself, with a warning, while the person still uses the shared first password.
  */
 export function PasswordPanel({ firstTime }: { firstTime: boolean }) {
   const [open, setOpen] = useState(firstTime);
-  // Known only in the browser: phone layout first, then the desktop card once the width is read.
-  const [wide, setWide] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia(desktop);
-    const update = () => setWide(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-  const warning = firstTime && <Notice tone="warning">Kamu masih memakai password awal. Sebaiknya ganti sekarang.</Notice>;
-  if (wide) return <section id="password" className={`${styles.card} ${own.security}`} aria-labelledby="keamanan">
-    <div className={own.securityHead}>
-      <span className={styles.tile}><Lock aria-hidden /></span>
-      <span><strong id="keamanan">Keamanan akun</strong><small>{firstTime ? "Ganti password awal dengan milik Anda" : "Ganti password Anda"}</small></span>
-    </div>
-    {warning}
-    <div style={{ marginTop: firstTime ? 12 : 0 }}><PasswordForm firstTime={firstTime} /></div>
-  </section>;
-  return <div id="password">
-    <button type="button" className={own.passwordRow} aria-expanded={open} aria-controls="password-form" onClick={() => setOpen(!open)}>
-      <span className={styles.tile}><Lock aria-hidden /></span>
-      <span><strong>Ganti password</strong><small>{firstTime ? "Ganti password awal dengan milik Anda" : "Ganti password Anda"}</small></span>
-      <ChevronRight size={20} aria-hidden style={{ transform: open ? "rotate(90deg)" : undefined }} />
+  return <div id="password" className={own.group}>
+    <button type="button" className={own.rowButton} aria-expanded={open} aria-controls="password-form" onClick={() => setOpen(!open)}>
+      <span className={`${styles.tile} ${firstTime ? styles.tileBrass : ""}`} aria-hidden>{firstTime ? <KeyRound /> : <Lock />}</span>
+      <span className={own.rowText}><strong>Ganti password</strong><small>{firstTime ? "Ganti password awal dengan password milikmu" : "Ganti password akunmu"}</small></span>
+      <ChevronDown className={own.chevron} aria-hidden />
     </button>
-    {open && <div id="password-form" className={styles.card} style={{ marginTop: 12 }}>{warning}<PasswordForm firstTime={firstTime} /></div>}
+    {open && <div id="password-form" className={own.rowPanel}>
+      {firstTime && <Notice tone="warning">Kamu masih memakai password awal. Sebaiknya ganti sekarang.</Notice>}
+      <PasswordForm firstTime={firstTime} />
+    </div>}
   </div>;
 }

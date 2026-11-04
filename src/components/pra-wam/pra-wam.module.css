@@ -18,9 +18,23 @@
   --color-surface: var(--pw-surface-soft); --color-border: var(--pw-line); --color-soft: var(--pw-primary-soft); --color-danger: var(--pw-danger);
   --color-focus: var(--pw-primary); --font-heading: var(--pw-display); --font-body: var(--pw-body); --heading-weight: 600; --radius: 12px;
   min-height: 100dvh; background: var(--pw-app); color: var(--pw-text); font-family: var(--pw-body); font-size: 15px; line-height: 1.5;
+  color-scheme: light;
+}
+/*
+ * Dark: picked in ThemeSwitch (data-wam-theme on the wrapper in app/wam/layout.tsx), or "Ikuti
+ * perangkat" on a dark device. Light is the default. The two blocks below must stay identical.
+ */
+[data-wam-theme="dark"] .app {
+  --pw-page: #0a0d12; --pw-app: #0e1218; --pw-surface: #161c24; --pw-surface-soft: #1d2530; --pw-line: #2a3340;
+  --pw-text: #e8ecf2; --pw-muted: #9aa4b2; --pw-primary: #8db6f2; --pw-primary-hover: #a9c8f5; --pw-primary-soft: #1b2a40;
+  --pw-on-primary: #0e1218; --pw-hero: #17345f; --pw-on-hero: #e8ecf2; --pw-on-hero-muted: #c8d8ee;
+  --pw-brass: #d9be8a; --pw-brass-line: #6e5c3a; --pw-brass-soft: #2e2616; --pw-on-brass-soft: #e8d3a8;
+  --pw-success: #7bcb98; --pw-success-soft: #173326; --pw-warning: #e8b566; --pw-warning-soft: #33270f;
+  --pw-danger: #f2a0ae; --pw-danger-soft: #3a1a21; --pw-shadow: 0 12px 32px -12px rgba(0, 0, 0, .6);
+  color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
-  .app {
+  [data-wam-theme="system"] .app {
     --pw-page: #0a0d12; --pw-app: #0e1218; --pw-surface: #161c24; --pw-surface-soft: #1d2530; --pw-line: #2a3340;
     --pw-text: #e8ecf2; --pw-muted: #9aa4b2; --pw-primary: #8db6f2; --pw-primary-hover: #a9c8f5; --pw-primary-soft: #1b2a40;
     --pw-on-primary: #0e1218; --pw-hero: #17345f; --pw-on-hero: #e8ecf2; --pw-on-hero-muted: #c8d8ee;
@@ -276,7 +290,7 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 @media (max-width: 47.99rem) { .grid { display: none; } .list { display: block; } }
 
 /* Sign in */
-.login { min-height: 100dvh; display: grid; place-items: center; padding: 40px 20px; background: var(--pw-app); }
+.login { min-height: 100dvh; display: grid; place-items: center; align-content: center; gap: 24px; padding: 40px 20px; background: var(--pw-app); }
 @media (min-width: 1024px) { .login { background: var(--pw-page); } }
 .loginCard { width: min(100%, 26rem); display: grid; gap: 16px; }
 @media (min-width: 1024px) { .loginCard { padding: 40px 32px; background: var(--pw-surface); border: 1px solid var(--pw-line); border-radius: 24px; box-shadow: var(--pw-shadow); } }
@@ -286,6 +300,18 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .loginMark { width: 64px; height: 64px; border-radius: 16px; background: #fff; border: 1px solid var(--pw-line); }
 .loginNote { font-size: 13px; color: var(--pw-muted); text-align: center; margin: 0; }
 .loginNote a { font-weight: 800; text-decoration: none; }
+
+/* Theme choice (ThemeSwitch): a segmented control, one radio per look. Compact on the sign-in screens. */
+.themeSwitch { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.app .themeOption { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 12px; color: var(--pw-muted); font-size: 13px; font-weight: 700; cursor: pointer; text-align: center; }
+.themeOption svg { flex: none; width: 20px; height: 20px; }
+.app .themeOption:hover { color: var(--pw-text); }
+.app .themeOption:has(input:checked) { background: var(--pw-primary-soft); color: var(--pw-primary); font-weight: 800; }
+.themeOption:has(input:focus-visible) { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.themeSwitchCompact { justify-self: center; background: transparent; }
+.app .themeSwitchCompact .themeOption { gap: 6px; padding: 0 10px; font-size: 12px; }
+.themeSwitchCompact .themeOption svg { width: 16px; height: 16px; }
+@media (prefers-reduced-motion: no-preference) { .themeOption { transition: background-color .15s ease, color .15s ease; } }
 .passwordRow { position: relative; }
 .passwordRow input { padding-right: 52px; }
 .eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; color: var(--pw-muted); cursor: pointer; border-radius: 10px; }
@@ -337,7 +363,8 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .app .dangerQuiet:hover:not(:disabled) { background: var(--pw-danger-soft); }
 .dialog .dangerSolid { background: var(--pw-danger, #9a273d); border-color: var(--pw-danger, #9a273d); color: #fff; }
 .dialog .dangerSolid:hover { background: var(--pw-danger, #9a273d); filter: brightness(.92); }
-@media (prefers-color-scheme: dark) { .app .dialog .dangerSolid { color: #1e0a0f; } }
+[data-wam-theme="dark"] .app .dialog .dangerSolid { color: #1e0a0f; }
+@media (prefers-color-scheme: dark) { [data-wam-theme="system"] .app .dialog .dangerSolid { color: #1e0a0f; } }
 
 /* Confirmation before a risky action (ConfirmDialog) */
 .dialog { width: min(100% - 32px, 26rem); max-width: none; margin: auto; padding: 0; border: 1px solid var(--pw-line, #dde3ea); border-radius: 24px; background: var(--pw-surface, #fff); color: var(--pw-text, #1e2733); box-shadow: var(--pw-shadow, 0 12px 32px -12px rgba(11, 21, 38, .35)); font-family: var(--pw-body, inherit); }
