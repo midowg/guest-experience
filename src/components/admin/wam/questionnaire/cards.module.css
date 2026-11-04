@@ -1,0 +1,66 @@
+/*
+ * Admin WAM → Kuesioner → Kartu: pictures, characters with their rules, levels and the cards
+ * drawn. Same plain admin look as the other questionnaire pages; every target is at least 44px.
+ */
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.head h2, .head h3 { margin: 0; }
+.muted { color: var(--ink-soft); margin: 0; }
+.muted code, .card code { padding: 1px 6px; border-radius: 6px; background: var(--page); color: var(--color-text); font-weight: 700; font-size: .8125rem; }
+.card { display: grid; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--line); border-radius: 16px; background: #fff; min-width: 0; }
+.card > h3 { margin: 0; font-size: 1.0625rem; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.iconButton { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--color-text); cursor: pointer; }
+.iconButton:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
+.iconButton:disabled { color: #9aa1ad; cursor: not-allowed; }
+.check { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; cursor: pointer; font-weight: 600; }
+.check input { width: 1.25rem; height: 1.25rem; accent-color: var(--blue); flex: none; }
+
+/* Pictures */
+.slotGroup { display: grid; gap: var(--space-2); }
+.slotGroup h4 { margin: 0; font-size: .9375rem; }
+.slots { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); margin: 0; padding: 0; list-style: none; }
+.slot { display: grid; gap: var(--space-1); padding: var(--space-2); border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.slot.empty { border-style: dashed; background: #fafbfc; }
+.slotArt { display: grid; place-items: center; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: repeating-conic-gradient(#eef0f4 0% 25%, #fff 0% 50%) 50% / 16px 16px; color: #9aa1ad; }
+.slotArt.tall { aspect-ratio: 4 / 5; }
+.slotArt img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.slotName { font-size: .8125rem; font-weight: 600; overflow-wrap: anywhere; }
+.slotPick { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; font-weight: 700; font-size: .875rem; cursor: pointer; }
+.slotPick:hover { border-color: var(--blue); color: var(--blue); }
+.slotPick:focus-within { outline: 3px solid var(--blue); outline-offset: 2px; }
+
+/* Characters */
+.characters { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.character { border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.character.hidden { background: #fafbfc; border-style: dashed; }
+.characterRow { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); }
+.thumb { display: grid; place-items: center; flex: none; width: 44px; height: 55px; border-radius: 8px; overflow: hidden; background: var(--page); color: #9aa1ad; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; display: block; }
+.characterText { display: grid; flex: 1; min-width: 0; }
+.characterText .muted { font-size: .8125rem; }
+.editor { display: grid; gap: var(--space-4); padding: var(--space-4); border-top: 1px solid var(--line); background: #fafbfc; border-radius: 0 0 12px 12px; }
+.card > .editor { border: 1px solid var(--line); border-radius: 12px; }
+.grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.fieldset { display: grid; gap: var(--space-3); margin: 0; padding: var(--space-4); border: 1px solid var(--line); border-radius: 12px; background: #fff; min-width: 0; }
+.fieldset legend { padding: 0 var(--space-2); font-weight: 700; }
+.rules { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.rule { display: grid; gap: var(--space-2); grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 5.5rem 44px; align-items: end; padding-bottom: var(--space-3); border-bottom: 1px dashed var(--line); }
+.ruleField, .ruleWeight { display: grid; gap: 4px; min-width: 0; font-size: .8125rem; font-weight: 600; }
+.ruleField select, .ruleWeight select { width: 100%; }
+.ruleError { grid-column: 1 / -1; margin: 0; }
+@media (max-width: 40rem) {
+  .rule { grid-template-columns: minmax(0, 1fr) 44px; }
+  .ruleField { grid-column: 1 / -1; }
+}
+
+/* Levels and drawn cards */
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.table th, .table td { padding: var(--space-2); border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.table th { font-size: .8125rem; color: var(--ink-soft); white-space: nowrap; }
+.table input.input { min-width: 7rem; }
+.table input.narrow { min-width: 0; width: 6.5rem; }
+.table details p { margin: var(--space-1) 0 0; max-width: 32rem; }
+.table summary { cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; font-weight: 700; color: var(--blue); }
+.color { width: 44px; height: 44px; padding: 2px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; }
+.tier { display: inline-block; padding: 1px var(--space-2); border-radius: 999px; color: #141325; font-size: .75rem; font-weight: 800; white-space: nowrap; box-shadow: inset 0 0 0 1px rgba(20, 19, 37, .25); }

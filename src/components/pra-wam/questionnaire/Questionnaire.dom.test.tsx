@@ -6,7 +6,7 @@ import { Questionnaire, type QuestionnaireProps } from "./Questionnaire";
 import { anonymousDraftKey } from "./local";
 
 // next/font only runs inside Next's compiler.
-vi.mock("./font", () => ({ display: { variable: "" }, body: { variable: "" } }));
+vi.mock("./font", () => ({ display: { variable: "", style: { fontFamily: "a" } }, body: { variable: "", style: { fontFamily: "b" } } }));
 
 const section = (id: string, title: string, anonymous = false, sort = 1): QSection => ({ id, key: id, title, short: title, hello: `Halo ${title}`, intro: "", tease: "", anonymous, sort, hidden: false });
 const question = (key: string, sectionId: string, rest: Partial<QQuestion>): QQuestion => ({
@@ -106,12 +106,14 @@ describe("the questionnaire", () => {
     expect(answerSaves()).toEqual([]);
 
     primary(/Kirim bagian anonim/);
-    await waitFor(() => expect(heading()).toBe("Selesai"));
+    await waitFor(() => expect(heading()).toBe("Selesai! Ini kartumu."));
     const sent = calls.filter(call => call.url === praWamApi.questionnaireAnonymous);
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ method: "POST", body: { answers: { D4: "Sering", D5: "Bawa tumbler" } } });
     expect(window.localStorage.getItem(anonymousDraftKey("f1"))).toBeNull();
-    expect(screen.getByText("Terima kasih sudah bercerita. Kartu karaktermu sedang disiapkan.")).toBeTruthy();
+    expect(screen.getByText("Terima kasih sudah bercerita, Dewi.")).toBeTruthy();
+    // The card is drawn once the answers are in: one request for it.
+    await waitFor(() => expect(calls.filter(call => call.url === praWamApi.questionnaireCard)).toHaveLength(1));
     expect(answerSaves()).toEqual([]);
     expect(screen.getByRole("list", { name: "Bagian kuesioner" }).querySelectorAll("li")[1].getAttribute("aria-label")).toContain("selesai");
 

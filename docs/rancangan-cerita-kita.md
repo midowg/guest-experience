@@ -1,6 +1,7 @@
 # Rancangan kuesioner personal WAM
 
-Status: rancangan, belum diimplementasikan. Ditulis 4 November 2026, diperbarui hari yang sama.
+Status: tahap 1 dan 2 dibangun (4 November 2026). Tahap 3 dan 4 belum. Ditulis 4 November 2026,
+diperbarui hari yang sama.
 
 Sumber: artifact mockup **"Cerita Kita WAM 2026"**
 (https://claude.ai/artifact/BwHcrRv8Wmcg4oRTNW5Uaq). Isinya 6 bagian, sekitar 60 pertanyaan, level
@@ -200,10 +201,21 @@ kartunya punya dua sumber:
   Common", HR bisa menunjukkan bahwa undiannya adil.
 
 **Gambar dan pemakaian.**
-- 34 aset dari mockup (8 karakter, 8 latar, 6 aksen, 12 stiker) dipindahkan dari artifact ke R2,
-  dari teks base64 menjadi berkas WebP, sebagai isi awal katalog.
-- Kartu disusun di browser seperti mockup. Hasil akhirnya disimpan ke R2, supaya profil, galeri,
-  dan admin tidak menyusun ulang.
+- 34 aset dari mockup (8 karakter, 8 latar, 6 aksen, 12 stiker) dipindahkan dari artifact ke R2
+  sebagai isi awal katalog. **Gambar tidak masuk repo** (repo publik): HR mengunggahnya di Admin
+  WAM → Kuesioner → Kartu, sekaligus satu folder dengan nama `karakter-01.webp`, `latar-01.png`,
+  `aksen-01.png`, `stiker-01.png`, atau satu per satu. Aplikasi melayani gambar lewat
+  `/api/wam/card-art/…` (harus login), supaya kartu bisa digambar di canvas dan disimpan.
+- Tanpa gambar, kartu tetap jalan dan digambar dengan warna polos.
+- Kartu disusun di browser seperti mockup (gaya full-art: aksen sudut ikut diundi dan masuk DNA,
+  tetapi tidak digambar, sama seperti mockup). **Belum dibangun:** menyimpan hasil susunan ke R2
+  untuk profil rekan dan galeri (tahap 3).
+- **Kartu uji.** Kartu yang diundi saat Admin WAM mencoba draf tidak bernomor dan tidak dihitung
+  ke batas level; saat kuesioner dibuka, kartu itu diganti undian sungguhan. Tab Kartu punya tombol
+  untuk menghapus kartu uji.
+- **Batas jumlah level** dicek saat mengundi. Dua orang yang selesai pada detik yang sama bisa
+  sama-sama lolos batas (paling banyak lebih satu); nomor dan kombinasi tampilan tetap dijaga unik
+  oleh database.
 - **Jadi foto profil.** Potongan persegi dari karakter diperkecil ke 320×320 WebP dan disimpan
   lewat jalur foto profil yang sudah ada (`pra-wam/foto/…`). Pemakaiannya opsional dan bisa
   diganti foto biasa kapan saja.

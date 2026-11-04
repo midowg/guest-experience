@@ -238,6 +238,10 @@ export const praWamApi = {
   questionnaireAnswer: `${WAM_API}/questionnaire/answer`,
   /** POST {answers}: send the anonymous section, once. */
   questionnaireAnonymous: `${WAM_API}/questionnaire/anonymous`,
+  /** GET: my character card, if drawn; POST: draw it once I have finished (never again after). */
+  questionnaireCard: `${WAM_API}/questionnaire/card`,
+  /** GET: one picture of the card catalog (a character by id, a look part by number); `v` changes with the picture. */
+  cardArt: (kind: string, ref: string, version?: string) => `${WAM_API}/card-art/${enc(kind)}/${enc(ref)}${version ? `?v=${enc(version)}` : ""}`,
 };
 /** Admin WAM: the WAM settings in the regular admin, one page per section (src/components/admin/wam/sections.ts). */
 export const WAM_ADMIN = "/admin/wam";
@@ -256,6 +260,8 @@ export const wamAdminPath = {
     settings: `${WAM_ADMIN}/kuesioner/pengaturan`,
     progress: `${WAM_ADMIN}/kuesioner/progres`,
     hrData: `${WAM_ADMIN}/kuesioner/data-hr`,
+    /** The character cards: catalog, rules, levels and odds, pictures, and the cards drawn. */
+    cards: `${WAM_ADMIN}/kuesioner/kartu`,
   },
 };
 /** Admin WAM, the questionnaire's content and settings (any admin). */
@@ -275,6 +281,22 @@ export const praWamQuestionnaireApi = {
   order: `${QUESTIONNAIRE_ADMIN_API}/order`,
   /** GET: who started, who finished, by department. */
   progress: `${QUESTIONNAIRE_ADMIN_API}/progress`,
+};
+/** Admin WAM, the character cards of the questionnaire (any admin). */
+const CARDS_ADMIN_API = `${QUESTIONNAIRE_ADMIN_API}/cards`;
+export const praWamCardsApi = {
+  /** GET: the catalog and the cards drawn so far; POST: a new character. */
+  catalog: CARDS_ADMIN_API,
+  /** PATCH: one character's texts, rules and visibility; DELETE removes it, or hides it once someone has it. */
+  character: (cardId: string) => `${CARDS_ADMIN_API}/${cardId}`,
+  /** PUT {tiers}: names, colours, odds (adding up to 100 %) and caps of the levels. */
+  tiers: `${CARDS_ADMIN_API}/tiers`,
+  /** DELETE: the trial cards drawn while the form was a draft. */
+  trials: `${CARDS_ADMIN_API}/trials`,
+  /** POST {kind, ref, mime, size}: an upload address for one picture of the catalog. */
+  artStart: `${CARDS_ADMIN_API}/art/start`,
+  /** POST: the picture is uploaded; check it and keep it. */
+  artConfirm: `${CARDS_ADMIN_API}/art/confirm`,
 };
 /**
  * Admin WAM, Data HR: opening it with the WAM email of a person on the HR access list (30 minutes

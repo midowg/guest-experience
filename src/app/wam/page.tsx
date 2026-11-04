@@ -60,7 +60,8 @@ export default async function HomePage() {
   const request = requests[0];
   const questCard = quest && <QuestionnaireCard name={quest.form.name} cardText={quest.form.cardText} minutes={quest.form.minutes}
     sectionsDone={quest.progress.sectionsDone} sectionsTotal={quest.progress.sectionsTotal} done={quest.progress.done}
-    closed={quest.form.status === "tutup"} href={praWamPath.questionnaire(quest.form.slug)} />;
+    closed={quest.form.status === "tutup"} href={praWamPath.questionnaire(quest.form.slug)}
+    character={quest.card && { name: quest.card.character.name, tier: quest.card.tier.name, color: quest.card.tier.color, image: quest.card.character.image }} />;
   /** This page with the item open: AgendaSheet opens it in place, and the address keeps it. */
   const open = (item: { key: string }) => withItem(praWamPath.home, item.key);
   const opens = (item: { key: string }) => ({ [AGENDA_ITEM]: item.key, "aria-haspopup": "dialog" as const });

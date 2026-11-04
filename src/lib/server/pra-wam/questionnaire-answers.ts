@@ -7,6 +7,7 @@ import {
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
+import { followAnswers, myCard, type CardView } from "./cards";
 import { currentForm, departmentOptions, formContent, peopleOptions, questionnaireMissing, questionnaireWaiting } from "./questionnaire";
 
 /*
@@ -73,12 +74,12 @@ export async function myAnswers(form: Pick<QForm, "id">, employeeId: string, con
   return { answers, consentAt: state?.consent_at ?? null, completedAt: state?.completed_at ?? null, anonymousSent, progress: progressOf(shown, answers, anonymousSent) };
 }
 
-/** For Beranda: how far I am, or null when there is nothing to show (no form, a draft, or no migration). */
-export async function myQuestionnaireCard(employeeId: string): Promise<{ form: QForm; progress: Progress } | null> {
+/** For Beranda: how far I am and my character card, or null when there is nothing to show (no form, a draft, or no migration). */
+export async function myQuestionnaireCard(employeeId: string): Promise<{ form: QForm; progress: Progress; card: CardView | null } | null> {
   const form = await currentForm();
   if (!form || form.status === "draf") return null;
-  const mine = await myAnswers(form, employeeId);
-  return { form, progress: mine.progress };
+  const [mine, card] = await Promise.all([myAnswers(form, employeeId), myCard(form, employeeId).catch(() => null)]);
+  return { form, progress: mine.progress, card: card?.trial ? null : card };
 }
 
 /** What department and person questions may hold; the person themself is never on the list. */
@@ -130,6 +131,8 @@ export async function saveAnswer(employeeId: string, key: string, raw: unknown, 
   const mine = await myAnswers(form, employeeId, content);
   const patch = question.kind === "consent" ? { consent_at: value === true ? new Date().toISOString() : null } : {};
   const { completedAt } = await settleProgress(form.id, employeeId, mine.progress.done, patch);
+  // A drawn card's character follows the answers until the deadline (level and look stay).
+  if (completedAt) await followAnswers(form, employeeId, mine.answers);
   return { value, progress: mine.progress, completedAt };
 }
 

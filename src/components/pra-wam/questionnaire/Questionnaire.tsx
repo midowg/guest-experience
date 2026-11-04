@@ -1,13 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { ArrowLeft, Check, Clock, CloudOff, Eye, Hand, Info, Lock, Pause, Send, Users, VenetianMask } from "lucide-react";
+import { ArrowLeft, Check, Clock, CloudOff, Eye, Hand, Info, Lock, Pause, Send, Sparkles, Users, VenetianMask } from "lucide-react";
 import {
   answered, complete, progressOf, visibilityLabels,
   type AnswerValue, type Answers, type QForm, type QQuestion, type QSection, type Visibility,
 } from "@/lib/pra-wam/questionnaire";
 import { praWamApi } from "@/lib/routes";
+import type { CardView } from "@/lib/server/pra-wam/cards";
 import { errorText, praWamRequest } from "../api";
+import { CardReveal } from "./CardReveal";
 import { QuestionField, type Person } from "./fields";
 import { deadlineLabel, QuestionnaireApp, Top } from "./Frame";
 import { anonymousDraftKey, forget, pendingKey, readAnswers, writeAnswers } from "./local";
@@ -23,6 +25,10 @@ export type QuestionnaireProps = {
   nickname: string; home: string;
   /** A draft tried by Admin WAM before it opens: marked, and its answers are test data. */
   preview?: boolean;
+  /** My character card, if it is drawn already; else it is drawn when I reach the end. */
+  card?: CardView | null;
+  /** Whether I have a profile photo now (using the card as one asks first). */
+  hasPhoto?: boolean;
 };
 
 const visibilityIcons: Record<Visibility, typeof Eye> = { rekan: Eye, fasil: Users, hr: Lock, hronly: Lock, pilih: Hand, anon: VenetianMask };
@@ -38,7 +44,7 @@ const reducedMotion = () => typeof window === "undefined" || typeof window.match
  * an intro card and one card per question, then "Selesai". Named answers save themselves as the
  * person goes; the anonymous section stays on this device until it is sent once, without a name.
  */
-export function Questionnaire({ form, sections, questions, departments, people, initial, nickname, home, preview }: QuestionnaireProps) {
+export function Questionnaire({ form, sections, questions, departments, people, initial, nickname, home, preview, card: drawnCard = null, hasPhoto = false }: QuestionnaireProps) {
   const content = useMemo(() => ({ sections, questions }), [sections, questions]);
   const anonymousIds = useMemo(() => new Set(sections.filter(section => section.anonymous).map(section => section.id)), [sections]);
   const names = useMemo(() => new Map(people.map(person => [person.id, person.name])), [people]);
@@ -188,6 +194,8 @@ export function Questionnaire({ form, sections, questions, departments, people, 
   const left = step.kind === "welcome" ? `sekitar ${form.minutes} menit` : step.kind === "done" ? "" : `± ${minutesLeft(steps, index)} menit lagi`;
 
   const card = `${styles.card} ${leaving ? styles[leaving] : styles[entering]}`;
+  // The card is drawn from what the server has: wait until the last answers are in.
+  const saving = autosave.status === "saving" || autosave.status === "retrying" || autosave.status === "offline" || autosave.waiting();
   const backs = [steps[index + 1], steps[index + 2]].map((upcoming, k) => {
     if (!upcoming) return null;
     const fill = upcoming.kind === "intro" ? (upcoming.section.anonymous ? styles.ink : styles.lime) : upcoming.kind === "done" ? styles.pink : styles.paper;
@@ -209,6 +217,7 @@ export function Questionnaire({ form, sections, questions, departments, people, 
             <li><Pause aria-hidden /><span>Bisa berhenti kapan saja, jawaban tersimpan otomatis.</span></li>
           </ul>
           {progress.done && <p className={styles.sentBadge}><Check aria-hidden />Sudah selesai. Kamu masih bisa melihat dan mengubah jawaban.</p>}
+          {progress.done && <button type="button" className={`${styles.btn} ${styles.outline}`} onClick={() => go(steps.length - 1)}><Sparkles aria-hidden />Lihat kartu karaktermu</button>}
           {form.editUntil && <p className={styles.tease}>Bisa diisi dan diubah sampai {deadlineLabel(form.editUntil)}.</p>}
         </section>}
 
@@ -228,16 +237,18 @@ export function Questionnaire({ form, sections, questions, departments, people, 
           reaction={reaction} onChange={(value, typing) => change(step.question, value, typing)}
           onBlur={() => showReaction(step.question, seen[step.question.key])} onEnter={next} />}
 
-        {step.kind === "done" && <section className={card} aria-labelledby="cq-heading">
-          {progress.done ? <>
-            <h1 id="cq-heading" ref={heading} tabIndex={-1}>Selesai</h1>
-            <p className={styles.lead}>Terima kasih sudah bercerita. Kartu karaktermu sedang disiapkan.</p>
-            {form.editUntil && <p className={styles.hint}>Jawabanmu masih bisa diubah sampai {deadlineLabel(form.editUntil)}, kecuali bagian anonim.</p>}
-          </> : <>
-            <h1 id="cq-heading" ref={heading} tabIndex={-1}>Hampir selesai</h1>
-            <p className={styles.lead}>{progress.requiredLeft > 0 ? `Masih ada ${progress.requiredLeft} pertanyaan wajib yang belum dijawab.` : "Masih ada bagian yang belum selesai."}</p>
-            <button type="button" className={`${styles.btn} ${styles.outline}`} onClick={() => go(resumeIndex(steps, seen))}>Isi yang tersisa</button>
-          </>}
+        {step.kind === "done" && progress.done && <section className={styles.finish} aria-labelledby="cq-heading">
+          <h1 id="cq-heading" ref={heading} tabIndex={-1}>Selesai! Ini kartumu.</h1>
+          <p className={styles.lead}>Terima kasih sudah bercerita, {nickname || "kamu"}.</p>
+          {saving
+            ? <p className={styles.hint} aria-live="polite">Menyimpan jawaban terakhir…</p>
+            : <CardReveal formId={form.id} initial={drawnCard} nickname={nickname} hasPhoto={hasPhoto} />}
+          {form.editUntil && <p className={styles.hint}>Jawabanmu masih bisa diubah sampai {deadlineLabel(form.editUntil)}, kecuali bagian anonim. Karaktermu bisa ikut berubah; level, latar, dan nomor kartu tetap.</p>}
+        </section>}
+        {step.kind === "done" && !progress.done && <section className={card} aria-labelledby="cq-heading">
+          <h1 id="cq-heading" ref={heading} tabIndex={-1}>Hampir selesai</h1>
+          <p className={styles.lead}>{progress.requiredLeft > 0 ? `Masih ada ${progress.requiredLeft} pertanyaan wajib yang belum dijawab.` : "Masih ada bagian yang belum selesai."}</p>
+          <button type="button" className={`${styles.btn} ${styles.outline}`} onClick={() => go(resumeIndex(steps, seen))}>Isi yang tersisa</button>
         </section>}
       </div>
     </main>

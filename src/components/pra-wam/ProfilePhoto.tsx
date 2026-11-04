@@ -7,6 +7,7 @@ import { Camera, Images, Trash2 } from "lucide-react";
 import { acceptPhotos, encodeWithinLimit, PHOTO_SIDE, sourceProblem, squareCrop, type PhotoMime } from "@/lib/pra-wam/photo";
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
+import { uploadProfilePhoto } from "./photoUpload";
 import { Avatar } from "./Avatar";
 import { useConfirm } from "./ConfirmDialog";
 import css from "./avatar.module.css";
@@ -64,18 +65,6 @@ async function shrink(file: File): Promise<{ blob: Blob; mime: PhotoMime }> {
   }
 }
 
-/** PUT to storage with progress; 0 when no answer came at all. */
-function put(url: string, blob: Blob, mime: string, onProgress: (share: number) => void): Promise<number> {
-  return new Promise(resolve => {
-    const request = new XMLHttpRequest();
-    request.open("PUT", url);
-    request.setRequestHeader("Content-Type", mime);
-    request.upload.onprogress = event => { if (event.lengthComputable) onProgress(event.loaded / event.total); };
-    request.onload = () => resolve(request.status);
-    request.onerror = () => resolve(0);
-    request.send(blob);
-  });
-}
 
 export function ProfilePhoto({ name, photo, editable }: { name: string; photo: string | null; editable?: boolean }) {
   const router = useRouter();
@@ -140,16 +129,7 @@ export function ProfilePhoto({ name, photo, editable }: { name: string; photo: s
       const { blob, mime } = await shrink(file);
       setLocal({ base: photo, url: URL.createObjectURL(blob) });
       setStep({ kind: "busy", text: "Mengunggah foto…", progress: 0 });
-      const agreed = { mime, size: blob.size };
-      const start = await praWamRequest<{ key: string; uploadUrl: string; token: string }>(praWamApi.photoStart, { method: "POST", json: agreed });
-      const status = await put(start.data.uploadUrl, blob, mime, share => setStep({ kind: "busy", text: "Mengunggah foto…", progress: share }));
-      // No answer at all while online is the storage refusing this site (its CORS rule), not the network.
-      if (status === 0) throw new PraWamApiError(navigator.onLine
-        ? "Penyimpanan foto menolak unggahan dari aplikasi ini. Ini pengaturan server, bukan jaringanmu. Hubungi admin WAM."
-        : "Kamu sedang offline. Sambungkan internet lalu coba lagi.");
-      if (status < 200 || status >= 300) throw new PraWamApiError(`Penyimpanan menolak foto ini (kode ${status}). Coba lagi, atau hubungi admin WAM bila terus terjadi.`);
-      setStep({ kind: "busy", text: "Menyimpan foto…", progress: 1 });
-      await praWamRequest(praWamApi.photoConfirm, { method: "POST", json: { ...agreed, key: start.data.key, token: start.data.token } });
+      await uploadProfilePhoto(blob, mime, share => setStep(share < 1 ? { kind: "busy", text: "Mengunggah foto…", progress: share } : { kind: "busy", text: "Menyimpan foto…", progress: 1 }));
       setStep({ kind: "done", text: "Foto profil diganti." });
       router.refresh();
     } catch (error) {

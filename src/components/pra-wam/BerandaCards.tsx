@@ -46,16 +46,21 @@ export function AboutCard({ about, preview = false }: { about: Pick<About, "titl
  * takes and how many sections are done, with a small bar. It is mandatory, so it has no dismiss;
  * once done it thanks the person and still opens the page, to look or change until the deadline.
  */
-export function QuestionnaireCard({ name, cardText, minutes, sectionsDone, sectionsTotal, done, closed, href }: {
+export function QuestionnaireCard({ name, cardText, minutes, sectionsDone, sectionsTotal, done, closed, href, character }: {
   name: string; cardText: string; minutes: number; sectionsDone: number; sectionsTotal: number; done: boolean; closed: boolean; href: string;
+  /** Once done and drawn: the character card instead of the tick (its picture, name and level). */
+  character?: { name: string; tier: string; color: string; image: string | null } | null;
 }) {
   const share = sectionsTotal ? Math.round((sectionsDone / sectionsTotal) * 100) : 0;
   return <a className={`${styles.row} ${done ? "" : styles.questRow}`} href={href}>
-    <span className={done ? styles.questTileDone : styles.questTile}>{done ? <CheckCircle2 aria-hidden /> : <ClipboardList aria-hidden />}</span>
+    {done && character
+      // eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas or served privately by this site; next/image cannot help
+      ? <span className={styles.questArt} style={{ borderColor: character.color }}>{character.image ? <img src={character.image} alt="" /> : <CheckCircle2 aria-hidden />}</span>
+      : <span className={done ? styles.questTileDone : styles.questTile}>{done ? <CheckCircle2 aria-hidden /> : <ClipboardList aria-hidden />}</span>}
     <span className={styles.aboutText}>
-      <strong>{name}</strong>
+      <strong>{done && character ? `Kamu ${character.name}` : name}</strong>
       {done
-        ? <span className={styles.rowLine}>Selesai · terima kasih</span>
+        ? <span className={styles.rowLine}>{character ? `${character.tier} · lihat kartu karaktermu` : "Selesai · terima kasih"}</span>
         : <>
           {cardText && <span className={styles.aboutSummary}>{cardText}</span>}
           <span className={styles.questMeta}>{closed ? "Sudah ditutup" : `Sekitar ${minutes} menit`} · {sectionsDone} dari {sectionsTotal} bagian</span>

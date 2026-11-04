@@ -80,3 +80,11 @@ export async function removeObjects(keys: string[]): Promise<void> {
   const { client, bucket } = connect();
   await client.send(new DeleteObjectsCommand({ Bucket: bucket, Delete: { Objects: keys.map(Key => ({ Key })), Quiet: true } }));
 }
+
+/** A private object's bytes and type, or null when it is not there (small files only: card art). */
+export async function readObject(key: string): Promise<{ bytes: Uint8Array; type: string } | null> {
+  const { client, bucket } = connect();
+  const object = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key })).catch(() => null);
+  if (!object?.Body) return null;
+  return { bytes: new Uint8Array(await object.Body.transformToByteArray()), type: object.ContentType ?? "application/octet-stream" };
+}
