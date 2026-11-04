@@ -170,7 +170,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     if (event.key === "ArrowDown") { event.preventDefault(); setActive((active + 1) % suggestions.length); }
     else if (event.key === "ArrowUp") { event.preventDefault(); setActive(active <= 0 ? suggestions.length - 1 : active - 1); }
     else if (event.key === "Enter" && active >= 0) { event.preventDefault(); chooseTitle(suggestions[active]); }
-    else if (event.key === "Escape") setSuggestOpen(false);
+    // Esc closes only the suggestions, not the sheet the form sits in.
+    else if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setSuggestOpen(false); }
   }
   function addPeople(ids: string[]) {
     set({ participants: [...draft.participants, ...ids].slice(0, appraisalRules.maxParticipants) });
@@ -347,6 +348,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         <label className={styles.label} htmlFor={`${uid}-search`}>Cari nama</label>
         <input id={`${uid}-search`} className="input" type="search" value={search} placeholder="Ketik nama, atau pilih departemen di bawah" onChange={event => setSearch(event.target.value)}
           onKeyDown={event => {
+            // Esc clears the search first; only an empty search lets Esc close the sheet.
+            if (event.key === "Escape" && search) { event.preventDefault(); event.stopPropagation(); setSearch(""); return; }
             // Enter picks the one name found rather than leaving the step.
             if (event.key !== "Enter") return;
             event.preventDefault();
