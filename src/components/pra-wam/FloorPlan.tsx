@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type KeyboardEvent, type ReactNode } from "react";
-import { ZoomIn, ZoomOut } from "lucide-react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { Maximize2, ZoomIn } from "lucide-react";
 import type { Room } from "@/lib/pra-wam/appraisal";
 import { BUILDING, DECOR, PLAN_H, PLAN_W, fitText, layoutRooms, pickableTone, type PlanStatus, type PlanTone, type Rect } from "@/lib/pra-wam/floor-plan";
 import css from "./floor-plan.module.css";
@@ -33,25 +33,32 @@ const lower = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
 /**
  * The office floor plan as an SVG (viewBox 0 0 1600 1340, from "Werkudara Room Booking"): the
  * building, the blocks that are not rooms, and every room with its name and status. WAM rooms the
- * plan has no spot for are listed below it. On a phone the plan fits the width; pinch to zoom, or
- * "Perbesar denah" to scroll it at a readable size.
+ * plan has no spot for are listed below it. On a phone the plan opens at a readable size and
+ * scrolls sideways like a map, starting from the middle; "Lihat seluruh denah" fits it to the width.
  */
 export function FloorPlan({ rooms, statusOf, onPick, selectedId, action = "Pilih ruang ini", label, legend = ["free", "busy", "mine", "off"], caption }: Props) {
-  const [zoomed, setZoomed] = useState(false);
+  const [fit, setFit] = useState(false);
+  const scroller = useRef<HTMLDivElement>(null);
+  // Start the phone's wide plan from the middle, where the meeting rooms are.
+  useEffect(() => {
+    const box = scroller.current;
+    if (box && !fit) box.scrollLeft = (box.scrollWidth - box.clientWidth) / 2;
+  }, [fit]);
   const { placed, others, unplaced } = layoutRooms(rooms);
   const canPick = (room: Room, status: PlanStatus) => !!onPick && (pickableTone(status.tone) || room.id === selectedId);
   const onKey = (room: Room) => (event: KeyboardEvent) => {
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onPick?.(room); }
   };
 
-  return <div className={`${css.plan} ${zoomed ? css.zoomed : ""}`}>
+  return <div className={`${css.plan} ${fit ? css.fit : ""}`}>
     <div className={css.head}>
       {caption ? <p>{caption}</p> : <span />}
-      <button type="button" className={`button button--quiet ${css.zoom}`} aria-pressed={zoomed} onClick={() => setZoomed(!zoomed)}>
-        {zoomed ? <ZoomOut size={18} aria-hidden /> : <ZoomIn size={18} aria-hidden />}{zoomed ? "Perkecil denah" : "Perbesar denah"}
+      <button type="button" className={`button button--quiet ${css.zoom}`} aria-pressed={fit} onClick={() => setFit(!fit)}>
+        {fit ? <ZoomIn size={18} aria-hidden /> : <Maximize2 size={18} aria-hidden />}{fit ? "Perbesar denah" : "Lihat seluruh denah"}
       </button>
     </div>
-    <div className={css.scroll}>
+    {!fit && <p className={css.swipe}>Geser denah ke samping untuk melihat ruang lain.</p>}
+    <div className={css.scroll} ref={scroller}>
       <svg className={css.svg} viewBox={`0 0 ${PLAN_W} ${PLAN_H}`} role="group" aria-label={label}>
         <rect className={css.building} x={BUILDING.x} y={BUILDING.y} width={BUILDING.w} height={BUILDING.h} rx={18} />
         {DECOR.map((rect, index) => <rect key={index} className={css.decor} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={6} />)}
