@@ -62,7 +62,8 @@ export function PraWamAccounts({ initial, initialRooms, migrated, passwordReady 
   const missing = active.filter(row => !row.hasAccount);
   const noEmail = missing.filter(row => !row.email);
   const query = filter.trim().toLowerCase();
-  const shown = rows.filter(row => !query || `${row.name} ${row.department} ${row.email}`.toLowerCase().includes(query));
+  // A to Z by name, so a person is easy to find by scrolling.
+  const shown = [...rows].sort((a, b) => a.name.localeCompare(b.name, "id", { sensitivity: "base" })).filter(row => !query || `${row.name} ${row.department} ${row.email}`.toLowerCase().includes(query));
 
   /** `rowId`: a change to one person, whose error shows on their row rather than at the top. */
   async function run(key: string, url: string, body: unknown, method: "POST" | "PATCH", rowId?: string): Promise<boolean> {

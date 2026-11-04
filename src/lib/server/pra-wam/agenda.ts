@@ -1,32 +1,41 @@
 import "server-only";
+import type { AgendaBooking, SessionView } from "@/lib/pra-wam/agenda";
 import { wibDate } from "@/lib/pra-wam/appraisal";
+import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { sessionKindLabels, sessionWhere, type Session } from "@/lib/pra-wam/sessions";
-import { praWamPath } from "@/lib/routes";
+import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
-import { myBookings } from "./appraisal";
+import { listRooms, myBookings } from "./appraisal";
+import { listDocuments } from "./documents";
+import { myRequests } from "./requests";
 import type { Member } from "./session";
-import { listSessions } from "./sessions";
+import { getSession, listSessions } from "./sessions";
 
 /*
  * The person's own day-by-day list for Beranda and Agenda: published sessions they take part in
  * and their appraisal bookings, from today on, with whether they have checked in and how many
  * documents each session has ("Bahan 3" in Penpot P2). Attendance (migration 202611040005) may
- * not be there yet; everything here keeps working without it.
+ * not be there yet; everything here keeps working without it. An item opens over the page
+ * (AgendaSheet): a booking with what it carries here, a session from its detail API.
  */
 
 export type AgendaItem = {
-  key: string; kind: "sesi" | "appraisal"; startsAt: string; endsAt: string; title: string; href: string;
+  key: string; kind: "sesi" | "appraisal"; startsAt: string; endsAt: string; title: string;
   tag: string; where: string; sessionId: string | null; checkedInAt: string | null;
   /** Documents of the session (0 for a booking). */
   materials: number;
+  /** A booking's detail (null for a session). */
+  booking: AgendaBooking | null;
 };
 
 /** Attendance or its QR column is not in the database yet. */
 const attendanceMissing = (error: { code?: string; message?: string }) => ["42P01", "PGRST205", "42703", "PGRST204"].includes(error.code ?? "") || /pw_attendance|qr_token/.test(error.message ?? "");
 
 export async function agendaItems(member: Member, today: string): Promise<{ items: AgendaItem[]; migrated: boolean }> {
-  const [{ sessions, migrated }, bookings] = await Promise.all([listSessions(member), myBookings(member, today).catch(() => [])]);
+  const [{ sessions, migrated }, bookings, rooms] = await Promise.all([
+    listSessions(member), myBookings(member, today).catch(() => []), listRooms().catch(() => []),
+  ]);
   const mine = sessions.filter(session => session.status === "terbit" && session.isParticipant && session.startsAt && session.endsAt && wibDate(session.startsAt) >= today);
   const checkIns = new Map<string, string>();
   const materials = new Map<string, number>();
@@ -43,14 +52,18 @@ export async function agendaItems(member: Member, today: string): Promise<{ item
   }
   const items: AgendaItem[] = [
     ...mine.map(session => ({
-      key: session.id, kind: "sesi" as const, startsAt: session.startsAt!, endsAt: session.endsAt!, title: session.title, href: praWamPath.session(session.id),
+      key: session.id, kind: "sesi" as const, startsAt: session.startsAt!, endsAt: session.endsAt!, title: session.title,
       tag: sessionKindLabels[session.kind], where: sessionWhere(session), sessionId: session.id, checkedInAt: checkIns.get(session.id) ?? null,
-      materials: materials.get(session.id) ?? 0,
+      materials: materials.get(session.id) ?? 0, booking: null,
     })),
-    ...bookings.map(booking => ({
-      key: booking.id, kind: "appraisal" as const, startsAt: booking.startsAt, endsAt: booking.endsAt, title: booking.title, href: praWamPath.appraisal(wibDate(booking.startsAt), booking.id),
-      tag: "Book ruang", where: booking.bookedBy.id === member.id ? "Booking kamu" : `Bersama ${booking.bookedBy.name}`, sessionId: null, checkedInAt: null, materials: 0,
-    })),
+    ...bookings.map(booking => {
+      const room = rooms.find(item => item.id === booking.roomId)?.name ?? "Ruang";
+      return {
+        key: booking.id, kind: "appraisal" as const, startsAt: booking.startsAt, endsAt: booking.endsAt, title: booking.title,
+        tag: "Book ruang", where: room, sessionId: null, checkedInAt: null, materials: 0,
+        booking: { room, bookedBy: booking.bookedBy, mine: booking.bookedBy.id === member.id, participants: booking.participants, description: booking.description },
+      };
+    }),
   ].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   return { items, migrated };
 }
@@ -75,6 +88,29 @@ export async function waitingSession(id: string, member: Member): Promise<Pick<S
   ]);
   if (error || linkError || !session || !link || session.status === "terbit") return null;
   return { id: session.id, title: session.title, status: session.status, planFrom: session.plan_from, planTo: session.plan_to, startsAt: session.starts_at, endsAt: session.ends_at };
+}
+
+/**
+ * Detail sesi's data (its page and the sheet over Agenda and Beranda). Panitia, BOD and admin may
+ * open every session; a participant's session that is not published (yet) or was cancelled is
+ * "menunggu". Null when the person may not see it at all.
+ */
+export async function sessionView(id: string, member: Member): Promise<SessionView | null> {
+  const session = await getSession(id, member).catch((error: unknown) => { if (error instanceof ServiceError && error.status === 404) return null; throw error; });
+  if (!session) {
+    const waiting = await waitingSession(id, member);
+    return waiting ? { kind: "menunggu", session: waiting } : null;
+  }
+  const [{ documents, storage }, attendance, requests, rooms] = await Promise.all([
+    listDocuments(member, session.id).catch(() => ({ documents: [], migrated: false, storage: false })),
+    session.isParticipant ? myAttendance(session.id, member) : Promise.resolve({ ready: false, checkedInAt: null }),
+    session.isParticipant ? myRequests(session.id, member) : Promise.resolve([]),
+    listRooms(),
+  ]);
+  return {
+    kind: "sesi", session, documents, storage, attendance, requests, rooms,
+    viewer: { name: member.name, manage: managesSessions(member), staff: seesAllSessions(member) },
+  };
 }
 
 /** "25 menit lagi", "Sedang berlangsung", "Besok", or the day. */

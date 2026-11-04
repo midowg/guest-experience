@@ -147,3 +147,141 @@ export function dayLabel(date: string): string {
 }
 /** "10.00" */
 export const clockLabel = (time: string) => time.replace(":", ".");
+
+/* ── Book calendar: the day and week layout (BookCalendar.tsx). Minutes count from opening. ── */
+
+/** "10:30" → 630. */
+export const clockMinutes = toMinutes;
+/** 630 → "10:30". */
+export const minutesClock = fromMinutes;
+/** The length of the bookable day, 540 minutes. */
+export const dayMinutes = toMinutes(appraisalRules.close) - toMinutes(appraisalRules.open);
+/** Minutes after opening → the clock time, "10:30". */
+export const clockAt = (offset: number) => fromMinutes(toMinutes(appraisalRules.open) + offset);
+
+const shiftDays = (date: string, days: number) => {
+  const day = new Date(`${date}T12:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + days);
+  return day.toISOString().slice(0, 10);
+};
+
+/** Monday to Friday of the week holding `date` (a Saturday or Sunday belongs to the week before). */
+export function workWeek(date: string): string[] {
+  const monday = shiftDays(date, -((weekday(date) + 6) % 7));
+  return [0, 1, 2, 3, 4].map(days => shiftDays(monday, days));
+}
+
+/** The Monday `weeks` weeks before or after the week holding `date`. */
+export const weekShift = (date: string, weeks: number) => shiftDays(workWeek(date)[0], weeks * 7);
+
+/** Where an instant falls on `date`, in minutes after opening, kept inside the opening hours. */
+function offsetOn(date: string, iso: string): number {
+  const day = wibDate(iso);
+  if (day < date) return 0;
+  if (day > date) return dayMinutes;
+  return Math.min(dayMinutes, Math.max(0, toMinutes(wibTime(iso)) - toMinutes(appraisalRules.open)));
+}
+
+/**
+ * The first minute after opening that can still be booked on `date`: 0 for a day ahead, the whole
+ * day for a day gone, and on the day itself the next half hour that has not started.
+ */
+export function bookableFrom(date: string, now: Date): number {
+  const today = wibDate(now.toISOString());
+  if (date > today) return 0;
+  if (date < today) return dayMinutes;
+  const passed = toMinutes(wibTime(now.toISOString())) - toMinutes(appraisalRules.open);
+  const step = appraisalRules.stepMinutes;
+  return Math.min(dayMinutes, Math.max(0, Math.floor(passed / step) * step + step));
+}
+
+/** The "Sekarang" line on `date`: minutes after opening, or null when it is not that day's hours. */
+export function nowOffset(date: string, now: Date): number | null {
+  if (wibDate(now.toISOString()) !== date) return null;
+  const at = toMinutes(wibTime(now.toISOString())) - toMinutes(appraisalRules.open);
+  return at >= 0 && at <= dayMinutes ? at : null;
+}
+
+/** A stretch of one room's day: a booking (or session), free time to book, or time gone by. */
+export type DaySegment<B> =
+  | { kind: "busy"; from: number; to: number; booking: B }
+  | { kind: "free"; from: number; to: number }
+  | { kind: "past"; from: number; to: number };
+
+/**
+ * One room's day from opening to closing, in order: its bookings, and the gaps between them split
+ * into time already gone (`past`) and time that can still be booked (`free`). `bookings` are that
+ * room's on that date; overlapping ones (which the database refuses) do not open a gap.
+ */
+export function roomDay<B extends Pick<Booking, "startsAt" | "endsAt">>(date: string, bookings: B[], now: Date): DaySegment<B>[] {
+  const cutoff = bookableFrom(date, now);
+  const segments: DaySegment<B>[] = [];
+  const gap = (from: number, to: number) => {
+    if (from < cutoff) {
+      const end = Math.min(to, cutoff);
+      const last = segments.at(-1);
+      if (last?.kind === "past" && last.to === from) last.to = end;
+      else segments.push({ kind: "past", from, to: end });
+    }
+    if (to > cutoff) segments.push({ kind: "free", from: Math.max(from, cutoff), to });
+  };
+  let cursor = 0;
+  const blocks = bookings.map(booking => ({ booking, from: offsetOn(date, booking.startsAt), to: offsetOn(date, booking.endsAt) }))
+    .filter(block => block.to > block.from).sort((a, b) => a.from - b.from || a.to - b.to);
+  for (const block of blocks) {
+    if (block.from > cursor) gap(cursor, block.from);
+    segments.push({ kind: "busy", ...block });
+    cursor = Math.max(cursor, block.to);
+  }
+  if (cursor < dayMinutes) gap(cursor, dayMinutes);
+  return segments;
+}
+
+/**
+ * The half hour under the pointer in a free stretch: `at` minutes into the day, rounded down to the
+ * step and kept inside the stretch (the last start still leaves one step).
+ */
+export function startInGap(gap: { from: number; to: number }, at: number): number {
+  const step = appraisalRules.stepMinutes;
+  const snapped = gap.from + Math.floor(Math.max(0, at - gap.from) / step) * step;
+  return Math.max(gap.from, Math.min(snapped, gap.to - step));
+}
+
+/** A new booking's hours from a free stretch: from `start`, an hour or what is left of the stretch. */
+export function hoursInGap(gap: { from: number; to: number }, start: number): { start: string; end: string } {
+  return { start: clockAt(start), end: clockAt(Math.min(start + 60, gap.to, start + appraisalRules.maxMinutes)) };
+}
+
+/** One day in the week overview: its bookings per room, how many, and how long rooms are taken. */
+export type WeekDay<B> = { date: string; count: number; busyMinutes: number; rooms: Record<string, { from: number; to: number; booking: B }[]> };
+
+/** The week overview (Mon–Fri × rooms): for every day and room the blocks, a count and busy minutes. */
+export function weekSummary<B extends Pick<Booking, "roomId" | "startsAt" | "endsAt">>(dates: string[], roomIds: string[], bookings: B[]): WeekDay<B>[] {
+  return dates.map(date => {
+    const rooms: WeekDay<B>["rooms"] = Object.fromEntries(roomIds.map(id => [id, []]));
+    let count = 0, busyMinutes = 0;
+    for (const booking of bookings) {
+      if (!rooms[booking.roomId] || wibDate(booking.startsAt) !== date) continue;
+      const from = offsetOn(date, booking.startsAt), to = offsetOn(date, booking.endsAt);
+      if (to <= from) continue;
+      rooms[booking.roomId].push({ from, to, booking });
+      count += 1; busyMinutes += to - from;
+    }
+    for (const list of Object.values(rooms)) list.sort((a, b) => a.from - b.from);
+    return { date, count, busyMinutes, rooms };
+  });
+}
+
+/**
+ * The hours a new booking starts with: the asked start when it can still be booked, else the next
+ * half hour that has not started; the asked end when it fits (after the start, at most 4 hours),
+ * else an hour later.
+ */
+export function draftHours(date: string, now: Date, asked: { start?: string; end?: string } = {}): { start: string; end: string } {
+  const open = slotTimes().slice(0, -1).filter(time => new Date(wibInstant(date, time)) > now);
+  const start = asked.start && open.includes(asked.start) ? asked.start : open[0] ?? appraisalRules.open;
+  const fits = (time: string) => toMinutes(time) > toMinutes(start) && toMinutes(time) - toMinutes(start) <= appraisalRules.maxMinutes;
+  const end = asked.end && slotTimes().includes(asked.end) && fits(asked.end) ? asked.end
+    : fromMinutes(Math.min(toMinutes(start) + 60, toMinutes(appraisalRules.close)));
+  return { start, end };
+}

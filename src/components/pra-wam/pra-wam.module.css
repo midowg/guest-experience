@@ -177,7 +177,9 @@
 .pillBrass { background: var(--pw-brass-soft); color: var(--pw-on-brass-soft); }
 .pillLine { background: transparent; border: 1px solid var(--pw-line); color: var(--pw-muted); }
 .pills { display: flex; flex-wrap: wrap; gap: 8px; }
-.dates { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.dates { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+/* Sideways rows scroll by touch or trackpad; no scrollbar showing under them. */
+.dates::-webkit-scrollbar, .tableWrap::-webkit-scrollbar, .grid::-webkit-scrollbar { display: none; }
 .picked, .people { display: flex; flex-wrap: wrap; gap: 8px; }
 .people { max-height: 15rem; overflow-y: auto; }
 .app .pickedChip { background: var(--pw-primary-soft); color: var(--pw-primary); border-color: transparent; }
@@ -244,7 +246,7 @@
 .table thead th:last-child { border-radius: 0 10px 10px 0; }
 .table td { padding: 14px 12px; border-bottom: 1px solid var(--pw-line); vertical-align: middle; }
 .table td small { display: block; color: var(--pw-muted); }
-.tableWrap { overflow-x: auto; }
+.tableWrap { overflow-x: auto; scrollbar-width: none; }
 .split { display: grid; gap: 16px; }
 @media (min-width: 1024px) { .split { grid-template-columns: minmax(0, 1fr) 22rem; align-items: start; } }
 
@@ -277,7 +279,7 @@
 .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 12px; margin: 16px 0; }
 .roomCard { background: var(--pw-surface); border: 1px solid var(--pw-line); border-radius: 16px; padding: 14px 16px; display: grid; gap: 6px; }
 .roomCard h3 { margin: 0; font-size: 15px; }
-.grid { display: grid; grid-template-columns: 4rem repeat(var(--rooms), minmax(9rem, 1fr)); grid-template-rows: auto repeat(18, 2.5rem); overflow-x: auto; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.grid { display: grid; grid-template-columns: 4rem repeat(var(--rooms), minmax(9rem, 1fr)); grid-template-rows: auto repeat(18, 2.5rem); overflow-x: auto; scrollbar-width: none; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
 .gridHead { position: sticky; top: 0; padding: 10px 12px; font-weight: 800; font-size: 13px; color: var(--pw-primary); background: var(--pw-primary-soft); }
 .gridTime { grid-column: 1; padding: 0 8px; font-size: 12px; color: var(--pw-muted); border-top: 1px solid var(--pw-line); text-align: right; }
 .gridCell { border-top: 1px solid var(--pw-line); border-left: 1px solid var(--pw-line); text-decoration: none; }

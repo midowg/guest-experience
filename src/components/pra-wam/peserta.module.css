@@ -78,10 +78,15 @@
 .actionBar { position: sticky; bottom: 0; z-index: 5; display: grid; gap: 12px; margin-top: 24px; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--pw-app); border-top: 1px solid var(--pw-line); }
 .actionBar :global(.button) { width: 100%; }
 .actionPair { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 12px; }
+/* The same bar in the sheet's foot (AgendaSheet): the foot is the frame, the buttons fill it. */
+.actionBar.actionBarBare { position: static; margin: 0; padding: 0; border: 0; background: none; width: 100%; }
 @media (min-width: 1024px) {
   .actionBar { position: static; display: flex; flex-wrap: wrap; padding: 16px 0 0; background: transparent; }
   .actionBar :global(.button) { width: auto; }
   .actionPair { display: flex; flex-wrap: wrap; }
+  .actionBarBare { display: grid; }
+  .actionBarBare :global(.button) { width: 100%; }
+  .actionBarBare .actionPair { display: grid; }
 }
 
 /* Ajukan ganti jadwal (P9): a sheet from the bottom on a phone, a dialog in the middle from 640px */

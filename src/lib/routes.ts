@@ -169,6 +169,14 @@ export const praWamPath = {
   forgot: `${PRA_WAM_PATH}/forgot-password`,
   /** Where the emailed link lands to set a new password. Must be allowed in Supabase Auth redirect URLs. */
   resetPassword: `${PRA_WAM_PATH}/reset-password`,
+  /**
+   * Book with a sheet open, kept in the address so a reload reopens it: one booking (`booking`),
+   * changing one (`edit`), or a new one (`new: "1"`, with the room and hours to start from).
+   */
+  bookSheet: (query: { date?: string; booking?: string; edit?: string; new?: "1"; room?: string; start?: string; end?: string } = {}) => {
+    const search = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString();
+    return `${PRA_WAM_PATH}/book${search ? `?${search}` : ""}`;
+  },
   /** The booking form (was /wam/appraisal/book); with a booking id it edits that booking. */
   book: (query: { edit?: string; date?: string; room?: string; start?: string; end?: string } = {}) => {
     const search = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString();
@@ -183,6 +191,8 @@ export const praWamApi = {
   resetPassword: `${WAM_API}/reset-password`,
   sessions: (id?: string) => `${WAM_API}/sessions${id ? `/${id}` : ""}`,
   sessionStatus: (id: string) => `${WAM_API}/sessions/${id}/status`,
+  /** GET: everything Detail sesi shows, for the sheet over Agenda and Beranda. */
+  sessionDetail: (id: string) => `${WAM_API}/sessions/${id}/detail`,
   /** GET: the session's QR as an A5 PDF to print; POST: a new QR (the printed one stops working). */
   sessionQr: (id: string) => `${WAM_API}/sessions/${id}/qr`,
   /** GET: who is present; POST: panitia marks someone present or not. */

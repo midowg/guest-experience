@@ -1,5 +1,7 @@
 import { checkInWindow, windowState } from "./attendance";
-import { clockLabel, wibDate, wibTime } from "./appraisal";
+import { clockLabel, wibDate, wibTime, type Person, type Room } from "./appraisal";
+import type { PraWamDocument } from "./documents";
+import type { ScheduleRequest } from "./requests";
 import type { Session } from "./sessions";
 
 /*
@@ -58,7 +60,50 @@ export function pickDay(items: Dated[], asked: string | undefined, today: string
   return { days, day: asked && days.includes(asked) ? asked : coming ?? today };
 }
 
-/** The item open in the desktop panel: the one asked for, else the next one, else the first. */
-export function pickItem<T extends Dated>(shown: T[], asked: string | undefined, now: Date): T | undefined {
-  return shown.find(item => item.key === asked) ?? shown.find(item => new Date(item.endsAt) > now) ?? shown[0];
+/*
+ * An agenda item opens over the page (AgendaSheet), never on another page: the address keeps
+ * ?item=<key> so a refresh or coming back shows it open again. Older links used ?session=<id>.
+ */
+
+/** The attribute on a link that opens an agenda item over the page (its value is the item's key). */
+export const AGENDA_ITEM = "data-agenda-item";
+
+/** The key of the item asked for in the address, if any. */
+export function askedItem(search: { get(name: string): string | null }): string | null {
+  return search.get("item") || search.get("session") || null;
 }
+
+/** The address with this item open (or none open): other parts of the query stay. */
+export function withItem(href: string, key: string | null): string {
+  const url = new URL(href, "http://x");
+  url.searchParams.delete("session");
+  if (key) url.searchParams.set("item", key); else url.searchParams.delete("item");
+  const search = url.searchParams.toString();
+  return `${url.pathname}${search ? `?${search}` : ""}${url.hash}`;
+}
+
+/** What the person may do with a booking on their agenda; the same rules as Book (AppraisalBoard). */
+export function bookingRights(
+  booking: { mine: boolean; endsAt: string },
+  viewer: { cancelsAny: boolean; bookingOpen: boolean },
+  now: Date,
+): { edit: boolean; cancel: boolean; remove: boolean } {
+  const manage = booking.mine || viewer.cancelsAny;
+  return { edit: viewer.bookingOpen && booking.mine, cancel: manage && new Date(booking.endsAt) > now, remove: manage };
+}
+
+/** A booking on the agenda, with what its detail shows. */
+export type AgendaBooking = { room: string; bookedBy: Person; mine: boolean; participants: Person[] | null; description: string };
+
+/**
+ * Everything Detail sesi shows, for its own page and for the sheet over Agenda and Beranda
+ * (GET /api/wam/sessions/<id>/detail). A participant's session that is not published (yet) or was
+ * cancelled is "menunggu": enough to say so.
+ */
+export type SessionView =
+  | {
+    kind: "sesi"; session: Session; documents: PraWamDocument[]; storage: boolean;
+    attendance: { ready: boolean; checkedInAt: string | null }; requests: ScheduleRequest[]; rooms: Room[];
+    viewer: { name: string; manage: boolean; staff: boolean };
+  }
+  | { kind: "menunggu"; session: Pick<Session, "id" | "title" | "status" | "planFrom" | "planTo" | "startsAt" | "endsAt"> };

@@ -1,0 +1,37 @@
+/* AgendaSheet and BookingDetail: an agenda item over the page. --pw-* tokens only (from .app). */
+
+/* While a session's detail loads: its shape, softly pulsing */
+.skeleton { display: grid; gap: 14px; }
+.boneRow { display: flex; gap: 8px; }
+.bone { display: block; height: 16px; border-radius: 8px; background: var(--pw-surface-soft); }
+.bonePill { width: 88px; height: 28px; border-radius: 999px; }
+.boneLine { width: 72%; height: 44px; border-radius: 12px; }
+.boneCard { height: 176px; border-radius: 16px; }
+.boneShort { width: 30%; height: 14px; margin-top: 4px; }
+.boneDoc { height: 48px; border-radius: 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  .bone { animation: pw-bone 1.1s ease-in-out infinite alternate; }
+}
+@keyframes pw-bone { from { opacity: 1; } to { opacity: .45; } }
+
+/* A failed load: what happened, and the way to try again */
+.problem { display: grid; gap: 12px; justify-items: start; }
+
+/* A booking's buttons in the sheet's foot: an error above, the buttons sharing the width */
+.foot { display: grid; gap: 8px; width: 100%; }
+.buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: 8px; }
+.buttons :global(.button) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+
+/* After a cancel or delete: a short message over the page, above the bottom bar on a phone */
+.toast { position: fixed; left: 16px; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 40; display: flex; align-items: center; gap: 10px; max-width: 28rem; margin: 0 auto; padding: 6px 6px 6px 14px; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-success-soft); color: var(--pw-text); box-shadow: var(--pw-shadow); font-size: 14px; font-weight: 700; }
+.toast > svg { flex: none; width: 18px; height: 18px; color: var(--pw-success); }
+.toast > span { flex: 1; min-width: 0; }
+.toastClose { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--pw-text); cursor: pointer; }
+.toastClose:hover { background: var(--pw-surface); }
+.toastClose:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.toastClose svg { width: 18px; height: 18px; }
+@media (min-width: 1024px) { .toast { bottom: 24px; } }
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: pw-toast .2s ease-out; }
+}
+@keyframes pw-toast { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

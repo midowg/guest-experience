@@ -8,7 +8,8 @@ import rows from "./peserta.module.css";
  * Detail sesi's buttons at the bottom (Penpot P3: "Scan QR untuk absen", then "Unggah materi" and
  * "Ganti jadwal") open forms that live in DocumentList and RequestChange. They ask by an intent:
  * a window event on the same page, or the address's hash (#unggah-materi, #ganti-jadwal) when
- * another screen links here, as the desktop Agenda panel does.
+ * another screen links here. In the sheet over Agenda and Beranda the bar sits in the sheet's foot
+ * and the forms in its body, so the same event reaches them.
  */
 
 export type SessionIntent = "unggah-materi" | "ganti-jadwal";
@@ -42,11 +43,13 @@ type Props = {
   reschedule: boolean;
   /** Panitia's links (QR and attendance, change the session). */
   children?: ReactNode;
+  /** In a sheet's foot: no frame or stickiness of its own, the foot has them. */
+  bare?: boolean;
 };
 
-export function SessionActions({ scanHref, upload, reschedule, children }: Props) {
+export function SessionActions({ scanHref, upload, reschedule, children, bare }: Props) {
   if (!scanHref && !upload && !reschedule && !children) return null;
-  return <div className={rows.actionBar}>
+  return <div className={`${rows.actionBar} ${bare ? rows.actionBarBare : ""}`}>
     {scanHref && <a className="button button--primary" href={scanHref}><QrCode size={20} aria-hidden /> Scan QR untuk absen</a>}
     {(upload || reschedule || children) && <div className={rows.actionPair}>
       {upload && <button type="button" className="button button--secondary" onClick={() => askSessionIntent("unggah-materi")}><Upload size={18} aria-hidden /> Unggah materi</button>}

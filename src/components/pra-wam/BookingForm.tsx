@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { DoorOpen, Info, Send } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { appraisalRules, bookingProblems, clockLabel, dayLabel, overlaps, slotTimes, titleSuggestions, wibDate, wibInstant, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
@@ -17,7 +17,13 @@ export type PeopleGroup = { id: string; label: string; memberIds: string[] };
 export type BookingDraft = { date: string; start: string; end: string; roomId: string; title: string; description: string; participants: string[] };
 type Props = {
   editId?: string; initial: BookingDraft; dates: string[]; now: string; rooms: Room[]; people: Person[];
-  viewer: { id: string }; groups: PeopleGroup[]; usedTitles: { title: string; count: number }[]; dayBookings: Booking[];
+  viewer: { id: string }; groups: PeopleGroup[]; usedTitles: { title: string; count: number }[];
+  /** The bookings of `dayOf` (the form's starting date unless given); another day is fetched. */
+  dayBookings: Booking[]; dayOf?: string;
+  /** In a sheet: after saving, instead of going back to Book. */
+  onSaved?: (saved: { message: string; date: string }) => void;
+  /** In a sheet: places the form and its submit row (whose button points at the form by id). */
+  frame?: (form: ReactNode, footer: ReactNode) => ReactNode;
 };
 
 const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
@@ -31,13 +37,15 @@ const chipDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "nume
  * `rooms` holds every room, the ones that cannot be booked drawn grey. Rooms show at once whether
  * they are free at the chosen hours; the server
  * still has the last word, and when someone else saved first the form keeps everything that was
- * typed and offers the nearest free hour or another room.
+ * typed and offers the nearest free hour or another room. On /wam/book/new it is the page; on Book
+ * it sits in a sheet (`frame`, `onSaved`) with the submit row as the sheet's footer.
  */
-export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings }: Props) {
+export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
   const [bookings, setBookings] = useState(dayBookings);
-  const [loadedDate, setLoadedDate] = useState(initial.date);
+  const [loadedDate, setLoadedDate] = useState(dayOf ?? initial.date);
+  const formId = useId();
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
@@ -64,7 +72,9 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const starts = slots.slice(0, -1).filter(time => new Date(wibInstant(draft.date, time)) > nowDate);
   const ends = slots.filter(time => minutes(time) > minutes(draft.start) && minutes(time) - minutes(draft.start) <= appraisalRules.maxMinutes);
   const chosen = { startsAt: wibInstant(draft.date, draft.start), endsAt: wibInstant(draft.date, draft.end) };
-  const others = bookings.filter(booking => booking.id !== editId);
+  // Until another day's bookings arrive, rooms are not marked taken from the wrong day.
+  const dayKnown = loadedDate === draft.date;
+  const others = dayKnown ? bookings.filter(booking => booking.id !== editId) : [];
   const takenBy = (room: Room) => others.find(booking => booking.roomId === room.id && overlaps(booking, chosen));
   const bookable = rooms.filter(room => room.bookable);
   const statusOf = (room: Room) => roomStatus({
@@ -100,7 +110,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     setBusy(true);
     try {
       const body = { ...draft, confirmed };
-      await praWamRequest(editId ? praWamApi.bookings(editId) : praWamApi.bookings(), { method: editId ? "PATCH" : "POST", json: body });
+      const result = await praWamRequest(editId ? praWamApi.bookings(editId) : praWamApi.bookings(), { method: editId ? "PATCH" : "POST", json: body });
+      if (onSaved) { setBusy(false); onSaved({ message: result.message, date: draft.date }); return; }
       router.refresh(); router.push(praWamPath.appraisal(draft.date));
     } catch (problem) {
       if (problem instanceof PraWamApiError && problem.conflict) {
@@ -115,7 +126,11 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   }
 
   const roomName = (id: string) => rooms.find(room => room.id === id)?.name ?? "Ruang";
-  return <form className={styles.form} onSubmit={event => { event.preventDefault(); void save(); }} noValidate>
+  const footer = <>
+    <Button type="submit" form={formId} disabled={busy}><Send size={18} aria-hidden /> {busy ? "Menyimpan…" : editId ? "Simpan perubahan" : "Book ruang"}</Button>
+    <span className={styles.meta}>{draft.roomId ? `${roomName(draft.roomId)} · ` : ""}{dayLabel(draft.date)} · {clockLabel(draft.start)}–{clockLabel(draft.end)}</span>
+  </>;
+  const form = <form id={formId} className={styles.form} onSubmit={event => { event.preventDefault(); void save(); }} noValidate>
     {error && <Notice tone="error">{error}</Notice>}
 
     <section className={`${styles.card} ${own.formCard}`} aria-labelledby="kegiatan">
@@ -173,7 +188,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       <h2 id="ruang">Ruang</h2>
       <FloorPlan rooms={rooms} statusOf={statusOf} selectedId={draft.roomId} onPick={room => set({ roomId: room.id })}
         label={`Denah kantor, ${dayLabel(draft.date)} ${clockLabel(draft.start)}–${clockLabel(draft.end)}`}
-        caption={draft.roomId ? <span role="status">{roomName(draft.roomId)} dipilih</span> : "Ketuk ruang yang kosong di denah, atau pilih dari daftar."}
+        caption={!dayKnown ? <span role="status">Memuat jadwal ruang {dayLabel(draft.date)}…</span> : draft.roomId ? <span role="status">{roomName(draft.roomId)} dipilih</span> : "Ketuk ruang yang kosong di denah, atau pilih dari daftar."}
         legend={["free", "selected", "busy", "mine", "off"]} />
       <p className={own.roomList}>Daftar ruang</p>
       <div className={styles.rooms}>
@@ -229,9 +244,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <p className={own.info}><Info size={16} aria-hidden />Booking langsung pasti. Bila ruang keburu dipesan orang lain, isianmu tetap tersimpan dan kami tawarkan jam atau ruang lain.</p>
 
-    <div className={styles.sticky}>
-      <Button type="submit" disabled={busy}><Send size={18} aria-hidden /> {busy ? "Menyimpan…" : editId ? "Simpan perubahan" : "Book ruang"}</Button>
-      <span className={styles.meta}>{draft.roomId ? `${roomName(draft.roomId)} · ` : ""}{dayLabel(draft.date)} · {clockLabel(draft.start)}–{clockLabel(draft.end)}</span>
-    </div>
+    {!frame && <div className={styles.sticky}>{footer}</div>}
   </form>;
+  return frame ? frame(form, footer) : form;
 }

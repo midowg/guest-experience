@@ -70,14 +70,16 @@ async function withPeople(rows: BookingRow[], viewer: Member): Promise<Booking[]
   });
 }
 
-const dayRange = (date: string) => {
-  const next = new Date(`${date}T12:00:00Z`);
+/** From the start of `first` to the end of `last` (the same date for one day), in WIB. */
+const dayRange = (first: string, last = first) => {
+  const next = new Date(`${last}T12:00:00Z`);
   next.setUTCDate(next.getUTCDate() + 1);
-  return [wibInstant(date, "00:00"), wibInstant(next.toISOString().slice(0, 10), "00:00")] as const;
+  return [wibInstant(first, "00:00"), wibInstant(next.toISOString().slice(0, 10), "00:00")] as const;
 };
 
-async function activeOn(date: string): Promise<BookingRow[]> {
-  const [from, to] = dayRange(date);
+const activeOn = (date: string) => activeBetween(date, date);
+async function activeBetween(first: string, last: string): Promise<BookingRow[]> {
+  const [from, to] = dayRange(first, last);
   const { data, error } = await createPrivilegedClient().from("pw_room_bookings").select(bookingColumns)
     .eq("status", "aktif").gte("starts_at", from).lt("starts_at", to).order("starts_at");
   if (error) fail(error);
@@ -85,11 +87,12 @@ async function activeOn(date: string): Promise<BookingRow[]> {
 }
 
 /**
- * Sessions that hold a room that day (migration 202611040004), as schedule entries. Nothing
+ * Sessions that hold a room on those days (migration 202611040004), as schedule entries. Nothing
  * before that migration.
  */
-async function sessionsOn(date: string): Promise<Booking[]> {
-  const [from, to] = dayRange(date);
+const sessionsOn = (date: string) => sessionsBetween(date, date);
+async function sessionsBetween(first: string, last: string): Promise<Booking[]> {
+  const [from, to] = dayRange(first, last);
   const client = createPrivilegedClient();
   const { data: holds, error } = await client.from("pw_room_holds").select("source_id,room_id,starts_at,ends_at").eq("source", "sesi").lt("starts_at", to).gt("ends_at", from);
   if (error || !holds?.length) return [];
@@ -103,6 +106,13 @@ async function sessionsOn(date: string): Promise<Booking[]> {
 /** One day's schedule: every room, every active booking, and the sessions that hold a room. */
 export async function daySchedule(date: string, viewer: Member): Promise<{ rooms: Room[]; bookings: Booking[] }> {
   const [rooms, rows, sessions] = await Promise.all([listRooms(), activeOn(date), sessionsOn(date)]);
+  return { rooms, bookings: [...await withPeople(rows, viewer), ...sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt)) };
+}
+
+/** The schedule of several days at once (the Book calendar's week, `dates` in order), as daySchedule. */
+export async function weekSchedule(dates: string[], viewer: Member): Promise<{ rooms: Room[]; bookings: Booking[] }> {
+  const first = dates[0], last = dates.at(-1) ?? first;
+  const [rooms, rows, sessions] = await Promise.all([listRooms(), activeBetween(first, last), sessionsBetween(first, last)]);
   return { rooms, bookings: [...await withPeople(rows, viewer), ...sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt)) };
 }
 

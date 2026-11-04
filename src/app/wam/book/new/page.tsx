@@ -1,7 +1,7 @@
 import { BookingForm, type BookingDraft } from "@/components/pra-wam/BookingForm";
 import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { Notice } from "@/components/ui";
-import { appraisalRules, bookableDates, slotTimes, wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
+import { bookableDates, draftHours, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { daySchedule, getBooking, listPeople, usedTitles } from "@/lib/server/pra-wam/appraisal";
@@ -15,7 +15,10 @@ export const metadata = { title: "Book ruang · WAM", robots: { index: false } }
 
 type Query = { edit?: string; date?: string; room?: string; start?: string; end?: string };
 
-/** The booking form, new or (with ?edit=id) one of the person's own bookings. */
+/**
+ * The booking form as its own page, new or (with ?edit=id) one of the person's own bookings. Book
+ * opens the same form in a sheet; this page stays for links that still point here.
+ */
 export default async function BookRoomPage({ searchParams }: { searchParams: Promise<Query> }) {
   const query = await searchParams;
   const member = await requireMemberPage(praWamPath.book(query));
@@ -52,13 +55,7 @@ async function loadForm(query: Query, member: Member, now: Date, today: string, 
     initial = { date: wibDate(booking.startsAt), start: wibTime(booking.startsAt), end: wibTime(booking.endsAt), roomId: booking.roomId, title: booking.title, description: booking.description, participants: (booking.participants ?? []).map(person => person.id) };
   } else {
     const date = query.date && dates.includes(query.date) ? query.date : dates[0] ?? today;
-    const open = slotTimes().slice(0, -1).filter(time => new Date(wibInstant(date, time)) > now);
-    const start = query.start && open.includes(query.start) ? query.start : open[0] ?? appraisalRules.open;
-    const toMinutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-    const fits = (time: string) => toMinutes(time) > toMinutes(start) && toMinutes(time) - toMinutes(start) <= appraisalRules.maxMinutes;
-    const end = query.end && slotTimes().includes(query.end) && fits(query.end) ? query.end
-      : slotTimes().find(time => toMinutes(time) - toMinutes(start) >= 60) ?? appraisalRules.close;
-    initial = { date, start, end, roomId: query.room ?? "", title: "", description: "", participants: [] };
+    initial = { date, ...draftHours(date, now, query), roomId: query.room ?? "", title: "", description: "", participants: [] };
   }
   const [schedule, people, titles, units] = await Promise.all([daySchedule(initial.date, member), listPeople(), usedTitles(), listUnits()]);
   if (!schedule.rooms.some(room => room.bookable && room.id === initial.roomId)) initial.roomId = "";

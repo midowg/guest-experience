@@ -28,7 +28,7 @@ function defaultPassword(): string {
 export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: boolean }> {
   const client = createPrivilegedClient();
   const [{ data: people, error: peopleError }, { data: accounts, error }, { data: roles, error: rolesError }, leads] = await Promise.all([
-    client.from("employees").select("id,full_name,department,email,active").order("department").order("full_name").limit(2000),
+    client.from("employees").select("id,full_name,department,email,active").order("full_name").limit(2000),
     client.from("pw_accounts").select("employee_id,last_login_at,active,must_change_password"),
     client.from("pw_roles").select("employee_id,role"),
     departmentLeads(),
