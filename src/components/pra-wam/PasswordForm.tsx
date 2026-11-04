@@ -71,7 +71,7 @@ export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boo
     <Secret id="confirm" label="Ulangi password baru" value={form.confirm} error={errors.confirm} autoComplete="new-password" onChange={set("confirm")} />
     {form.confirm.length > 0 && !matches && <p className={styles.error}>Belum sama dengan password baru.</p>}
     <div className={styles.section} style={{ marginTop: 8 }}>
-      <Button type="submit" disabled={busy || !form.current || !form.next || !matches}>{busy ? "Menyimpan…" : firstTime ? "Simpan dan lanjut" : "Simpan password baru"}</Button>
+      <Button type="submit" disabled={busy || !form.current || !form.next || !matches}>{busy ? "Menyimpan…" : doneHref ? "Simpan dan lanjut" : "Simpan password baru"}</Button>
       {skipHref && <a className="button button--quiet" href={skipHref}>Lewati, atur nanti</a>}
     </div>
   </form>;
