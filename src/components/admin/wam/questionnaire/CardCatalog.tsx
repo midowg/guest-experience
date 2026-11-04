@@ -225,10 +225,13 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
   }
 
   function pickFolder(list: FileList | null) {
+    // Copy the files first: the FileList is live, and clearing the input (so the same files can
+    // be picked again) empties it.
+    const picked = Array.from(list ?? []);
     if (folder.current) folder.current.value = "";
-    if (!list) return;
+    if (!picked.length) return;
     const files: { slot: (typeof slots)[number]; file: File }[] = [], unknown: string[] = [];
-    for (const file of Array.from(list)) {
+    for (const file of picked) {
       const match = slotOfFile(file.name);
       const slot = match && slots.find(item => item.kind === match.kind && item.number === match.number);
       if (slot) files.push({ slot, file }); else unknown.push(file.name);
