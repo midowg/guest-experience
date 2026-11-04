@@ -8,7 +8,6 @@ import { praWamApi, praWamPath } from "@/lib/routes";
 import type { Notification, SentAnnouncement } from "@/lib/server/pra-wam/announcements";
 import { errorText, praWamRequest } from "./api";
 import { useConfirm } from "./ConfirmDialog";
-import { ScreenHead } from "./ScreenHead";
 import notes from "./akun.module.css";
 import styles from "./pra-wam.module.css";
 
@@ -41,9 +40,8 @@ export function NotificationList({ items, now }: { items: Notification[]; now: s
     finally { setBusy(false); }
   }
   const markAll = unread > 0 && <button type="button" className="button button--secondary" disabled={busy} onClick={() => read()}>Tandai semua dibaca ({unread})</button>;
-  // Desktop: the title and "Tandai semua dibaca" in one row; the phone has its own back bar.
-  const head = <div className={notes.deskOnly}><ScreenHead title="Notifikasi" lead="Pengumuman panitia dan kabar sesi yang kamu ikuti." actions={markAll || undefined} /></div>;
-  if (!items.length) return <div className={notes.noteWrap}>{head}
+  // The shell's back bar ("‹ Notifikasi") is the title on every width; only the action sits here.
+  if (!items.length) return <div className={notes.noteWrap}>
     <div className={notes.empty}>
       <span className={notes.emptyMark}><BellOff aria-hidden /></span>
       <strong>Belum ada notifikasi</strong>
@@ -55,8 +53,7 @@ export function NotificationList({ items, now }: { items: Notification[]; now: s
   const days = [...new Set(items.map(item => wibDay(item.createdAt)))];
   const label = (day: string) => (day === today ? "Hari ini" : day === yesterday ? "Kemarin" : dayName(day));
   return <div className={notes.noteWrap}>
-    {head}
-    {markAll && <div className={`${notes.noteBar} ${notes.phoneOnly}`}>{markAll}</div>}
+    {markAll && <div className={notes.noteBar}>{markAll}</div>}
     {days.map(day => <section key={day} aria-label={label(day)}>
       <p className={notes.group}>{label(day)}</p>
       {items.filter(item => wibDay(item.createdAt) === day).map(item => {

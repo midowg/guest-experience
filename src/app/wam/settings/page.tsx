@@ -1,6 +1,6 @@
-import { BookOpen, ChevronLeft, ChevronRight, Info, LogOut } from "lucide-react";
+import { BookOpen, ChevronRight, Info, LogOut } from "lucide-react";
 import { PasswordPanel } from "@/components/pra-wam/PasswordForm";
-import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
+import { PraWamShell } from "@/components/pra-wam/PraWamShell";
 import { SignOutButton } from "@/components/pra-wam/SignOutButton";
 import { ThemeSwitch } from "@/components/pra-wam/ThemeSwitch";
 import { praWamPath } from "@/lib/routes";
@@ -16,19 +16,14 @@ export const metadata = { title: "Pengaturan · WAM", robots: { index: false } }
 
 /**
  * Pengaturan, pushed from the gear on Profil: grouped lists as in a phone's settings (Keamanan,
- * Tampilan, Tentang, Akun). Phone: the shell's back bar, no bottom bar. Desktop: the app's top bar
- * with Profil marked, and a back link above the title.
+ * Tampilan, Tentang, Akun). The shell's back bar ("‹ Pengaturan") is the only header on every
+ * width; on desktop the app's top bar above it keeps Profil marked.
  */
 export default async function SettingsPage() {
   const member = await requireMemberPage(praWamPath.settings);
   const theme = await readWamTheme();
   return <PraWamShell member={member} current="akun" back={{ href: praWamPath.account, title: "Pengaturan" }}>
     <div className={own.settings}>
-      <div className={own.deskOnly}>
-        <a className={own.backLink} href={praWamPath.account}><ChevronLeft aria-hidden />Profil</a>
-        <ScreenHead title="Pengaturan" lead="Password, tampilan, dan akunmu" />
-      </div>
-
       <section aria-labelledby="keamanan">
         <h2 id="keamanan" className={own.groupTitle}>Keamanan</h2>
         <PasswordPanel firstTime={member.mustChangePassword} />

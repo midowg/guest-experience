@@ -242,7 +242,6 @@ export const wamAdminPath = {
   rooms: `${WAM_ADMIN}/ruang`,
   events: `${WAM_ADMIN}/acara`,
   about: `${WAM_ADMIN}/apa-itu-wam`,
-  units: `${WAM_ADMIN}/unit`,
 };
 /** Admin WAM: the account list and creating accounts, or one person's roles, email and password reset. */
 export const praWamAccountsApi = (employeeId?: string) => `/api/admin/wam/accounts${employeeId ? `/${employeeId}` : ""}`;

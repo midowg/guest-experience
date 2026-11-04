@@ -19,3 +19,61 @@ a.stat:hover { border-color: var(--blue); }
 .cardIcon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: #eef4fd; color: var(--blue); }
 .card h3 { margin: 0 0 2px; font-size: .9375rem; }
 .card p { margin: 0; color: var(--ink-soft); font-size: .8125rem; }
+
+/*
+ * Every Admin WAM page: the title and the page on the right of a sticky side menu on a wide screen;
+ * on a phone or tablet the title, then the sections as a row of tabs that scrolls sideways, then
+ * the page. The frame always uses the wide container, so the menu stays put between sections.
+ */
+.frame { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "nav" "body"; gap: var(--space-4); }
+.frameHead { grid-area: head; }
+.frameHead :global(.eyebrow) { margin: 0; }
+.frameHead h1 { margin-block: var(--space-1) 0; }
+.frameBody { grid-area: body; min-width: 0; }
+
+.nav { grid-area: nav; min-width: 0; border: 1px solid var(--line); background: #fff; }
+.groups { min-width: 0; }
+.group ul { margin: 0; padding: 0; list-style: none; }
+.groupLabel { margin: 0 var(--space-3) var(--space-1); color: var(--ink-soft); font-size: .8125rem; font-weight: 700; }
+.item, .app { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; padding: var(--space-2) var(--space-3); border-radius: 10px; font-weight: 600; text-decoration: none; transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease; }
+.item { color: var(--color-text); }
+.item > svg { flex: none; color: var(--ink-soft); transition: color var(--motion-fast) ease; }
+.item:hover, .app:hover { background: var(--page); }
+.item[aria-current="page"] { background: #eef4fd; color: var(--blue); font-weight: 800; }
+.item[aria-current="page"] > svg { color: var(--blue); }
+.item:focus-visible, .app:focus-visible { outline-offset: -3px; }
+.label { flex: 1; min-width: 0; line-height: 1.3; }
+/* A count that waits on the admin (reset requests): the "needs attention" colours. */
+.badge { flex: none; min-width: 1.5rem; padding: 0 7px; border-radius: 999px; background: var(--st-day-bg); color: var(--st-day); font-size: .75rem; font-weight: 800; line-height: 1.5rem; text-align: center; }
+.app { color: var(--blue); font-weight: 700; }
+.app > svg { flex: none; }
+@media (prefers-reduced-motion: reduce) { .item, .app, .item > svg { transition: none; } }
+
+@media (min-width: 64rem) {
+  .frame { grid-template-columns: 15rem minmax(0, 1fr); grid-template-areas: "nav head" "nav body"; grid-template-rows: auto 1fr; gap: var(--space-5) var(--space-6); align-items: start; }
+  .frameHead, .frameBody { max-width: 72rem; }
+  .frameWide .frameHead, .frameWide .frameBody { max-width: none; }
+  /* The admin header scrolls away, so the menu sticks to the top of the window. */
+  .nav { position: sticky; top: var(--space-5); display: grid; gap: var(--space-3); max-height: calc(100vh - 2 * var(--space-5)); overflow-y: auto; padding: var(--space-3); border-radius: 16px; }
+  .groups { display: grid; gap: var(--space-4); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
+  .group ul { display: grid; gap: 2px; }
+  .item[aria-current="page"] { box-shadow: inset 3px 0 0 var(--blue); }
+}
+
+@media (max-width: 63.99rem) {
+  .nav { display: flex; align-items: stretch; gap: 4px; padding: 4px; border-radius: 12px; }
+  /* Sideways scrolling without a visible scrollbar; the cut-off tab shows there is more. */
+  .groups { position: relative; display: flex; flex: 1; gap: 4px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+  .groups::-webkit-scrollbar { display: none; }
+  .group, .group ul { display: flex; flex: none; gap: 4px; }
+  .groupLabel { display: none; }
+  .item { gap: var(--space-2); white-space: nowrap; }
+  .item[aria-current="page"] { background: var(--blue); color: #fff; }
+  .item[aria-current="page"] > svg { color: #fff; }
+  .app { flex: none; gap: var(--space-2); border-left: 1px solid var(--line); border-radius: 0 9px 9px 0; white-space: nowrap; }
+}
+/* A phone: the app link keeps only its icon; its name stays for screen readers and as a tooltip. */
+@media (max-width: 39.99rem) {
+  .app { justify-content: center; width: 44px; padding: 0; }
+  .appText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}

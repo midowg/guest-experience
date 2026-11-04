@@ -12,6 +12,11 @@ describe("Admin WAM sections", () => {
     expect(wamSections[0].href).toBe("/admin/wam");
   });
 
+  it("leave units and positions to Data karyawan", () => {
+    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "about", "ruang"]);
+    expect(Object.values(wamAdminPath)).not.toContain("/admin/wam/unit");
+  });
+
   it("group the menu in the order the sections are listed", () => {
     const groups = wamGroups();
     expect(groups.map(group => group.label)).toEqual(["Ikhtisar", "Orang", "Aplikasi"]);
@@ -47,14 +52,24 @@ function routes(dir: URL): string[] {
 describe("who may use Admin WAM", () => {
   const api = new URL("../../../app/api/admin/", import.meta.url);
 
+  // The unit import sits on Data karyawan, beside the workbook it reads: super admin only.
+  const superOnly = ["units"];
+  const isSuperOnly = (file: string) => superOnly.some(name => file.replace(/\\/g, "/").includes(`/wam/${name}/`));
+
   it("lets any signed-in admin call the WAM admin APIs", () => {
-    const files = routes(new URL("wam/", api));
+    const files = routes(new URL("wam/", api)).filter(file => !isSuperOnly(file));
     expect(files.length).toBeGreaterThan(0);
     for (const file of files) {
       const source = readFileSync(file, "utf8");
       expect(source, file).not.toContain("requireSuperAdmin");
       expect(source, file).toContain("requireApiAdmin()");
     }
+  });
+
+  it("keeps the unit import (matched by NIP) with the super admin", () => {
+    const files = routes(new URL("wam/", api)).filter(isSuperOnly);
+    expect(files).toHaveLength(superOnly.length);
+    for (const file of files) expect(readFileSync(file, "utf8"), file).toContain("requireSuperAdmin()");
   });
 
   it("keeps Data karyawan (NIP, personal details) with the super admin", () => {

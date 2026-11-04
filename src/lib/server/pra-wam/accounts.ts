@@ -7,9 +7,10 @@ import { notMigrated, waitingForMigration } from "./session";
 import { departmentLeads } from "./units";
 
 /*
- * Pra WAM accounts, set up in Admin WAM. Each active person in Data karyawan with an email
- * gets a Supabase Auth user with the shared first password (WAM_DEFAULT_PASSWORD, a server
- * secret that is never written in the repository) and a row in pw_accounts.
+ * Pra WAM accounts, set up in Admin WAM or per person from Data karyawan (super admin). Each
+ * active person in Data karyawan with an email gets a Supabase Auth user with the shared first
+ * password (WAM_DEFAULT_PASSWORD, a server secret that is never written in the repository) and a
+ * row in pw_accounts.
  */
 
 export type AccountRow = {
@@ -53,18 +54,17 @@ export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: bo
   };
 }
 
+type CreateResult = { created: number; skipped: string[] };
+
 /**
- * Creates the missing accounts. A person without an email, or whose email is already used by
- * another sign-in, is reported and skipped; running it again picks up whoever was added since.
+ * Makes the sign-in and the pw_accounts row for each of these people, or says why not. A person
+ * without an email, or whose email is already used by another sign-in, is reported and skipped.
  */
-export async function createMissingAccounts(): Promise<{ created: number; skipped: string[] }> {
-  const password = defaultPassword();
-  const { rows, migrated } = await listAccounts();
-  if (!migrated) throw waitingForMigration();
+async function createFor(people: AccountRow[], password: string): Promise<CreateResult> {
   const client = createPrivilegedClient();
   const skipped: string[] = [];
   let created = 0;
-  for (const person of rows.filter(row => row.active && !row.hasAccount)) {
+  for (const person of people) {
     if (!person.email) { skipped.push(`${person.name}: email masih kosong.`); continue; }
     const { data, error } = await client.auth.admin.createUser({ email: person.email.toLowerCase(), password, email_confirm: true, user_metadata: { employee_id: person.employeeId } });
     if (error || !data.user) { skipped.push(`${person.name}: ${/registered|exists/i.test(error?.message ?? "") ? "email sudah dipakai akun lain." : "akun belum dapat dibuat."}`); continue; }
@@ -73,6 +73,29 @@ export async function createMissingAccounts(): Promise<{ created: number; skippe
     created += 1;
   }
   return { created, skipped };
+}
+
+/** Creates the missing accounts of everyone active; running it again picks up whoever was added since. */
+export async function createMissingAccounts(): Promise<CreateResult> {
+  const password = defaultPassword();
+  const { rows, migrated } = await listAccounts();
+  if (!migrated) throw waitingForMigration();
+  return createFor(rows.filter(row => row.active && !row.hasAccount), password);
+}
+
+/**
+ * Creates one person's account, from their row in Data karyawan. Someone inactive or who already
+ * has an account is reported as skipped, not created twice.
+ */
+export async function createAccount(employeeId: string): Promise<CreateResult> {
+  const password = defaultPassword();
+  const { rows, migrated } = await listAccounts();
+  if (!migrated) throw waitingForMigration();
+  const person = rows.find(row => row.employeeId === employeeId);
+  if (!person) throw new ServiceError(404, "Karyawan tidak ditemukan.");
+  if (person.hasAccount) return { created: 0, skipped: [`${person.name}: sudah punya akun.`] };
+  if (!person.active) return { created: 0, skipped: [`${person.name}: nonaktif.`] };
+  return createFor([person], password);
 }
 
 /**

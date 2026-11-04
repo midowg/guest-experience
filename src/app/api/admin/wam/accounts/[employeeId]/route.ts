@@ -2,7 +2,7 @@ import { z } from "zod";
 import { praWamRoles } from "@/lib/pra-wam/roles";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireApiAdmin } from "@/lib/server/admin-session";
-import { listAccounts, resetPassword, setRoles, updateEmail } from "@/lib/server/pra-wam/accounts";
+import { createAccount, listAccounts, resetPassword, setRoles, updateEmail } from "@/lib/server/pra-wam/accounts";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ employeeId: string }> };
@@ -11,6 +11,17 @@ const schema = z.object({
   resetPassword: z.literal(true).optional(),
   email: z.email("Email tidak valid.").max(200).optional(),
 });
+
+/** POST: this one person's account, with the shared first password (any admin, so Data karyawan too). */
+export async function POST(request: Request, { params }: Params) {
+  return handle(async () => {
+    await requireApiAdmin();
+    checkOrigin(request);
+    const employeeId = validate(z.uuid(), (await params).employeeId);
+    const result = await createAccount(employeeId);
+    return success({ ...result, ...(await listAccounts()) }, result.created ? "Akun WAM dibuat." : "Akun belum dibuat.");
+  });
+}
 
 /**
  * PATCH: one person's roles, their email (also their sign-in), or a reset to the first password
