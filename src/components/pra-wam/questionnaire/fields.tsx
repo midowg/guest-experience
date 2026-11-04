@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Search, X } from "lucide-react";
 import type { AnswerValue, QQuestion } from "@/lib/pra-wam/questionnaire";
 import { toggleChoice } from "./steps";
@@ -19,6 +19,11 @@ const asRows = (value: AnswerValue | undefined) => value && typeof value === "ob
 
 /** One question's control, by kind. Text reports `typing` so saving can wait for a pause. */
 export function QuestionField({ question, value, onChange, labelledBy, departments, people, onEnter, onBlur }: Props) {
+  // Rows and choices build on the latest value, not the one of the last render, so quick taps
+  // on several matrix rows (or choices) in a row never undo each other.
+  const live = useRef(value);
+  useEffect(() => { live.current = value; }, [value]);
+  const commit = (next: AnswerValue) => { live.current = next; onChange(next); };
   switch (question.kind) {
     case "text":
       return <input className={styles.field} type="text" aria-labelledby={labelledBy} value={asText(value)} maxLength={300} autoComplete="off" enterKeyHint="next"
@@ -52,7 +57,7 @@ export function QuestionField({ question, value, onChange, labelledBy, departmen
           {question.options.map(option => {
             const on = chosen.includes(option);
             return <button key={option} type="button" className={`${styles.choice} ${styles.multi}`} aria-pressed={on} disabled={full && !on}
-              onClick={() => onChange(toggleChoice(chosen, option, question.maxChoices))}>
+              onClick={() => commit(toggleChoice(asList(live.current), option, question.maxChoices))}>
               <span className={styles.dot} aria-hidden />{option}
             </button>;
           })}
@@ -72,7 +77,7 @@ export function QuestionField({ question, value, onChange, labelledBy, departmen
             <b>{row}</b>
             <div className={styles.scale} role="group" aria-label={row}>
               {question.scale.map((step, index) => <button key={step} type="button" className={styles.choice} aria-pressed={rows[row] === step} aria-label={`${row}: ${index + 1}, ${step}`}
-                onClick={() => onChange({ ...rows, [row]: step })}>{index + 1}</button>)}
+                onClick={() => commit({ ...asRows(live.current), [row]: step })}>{index + 1}</button>)}
             </div>
           </div>)}
         </div>
@@ -82,7 +87,7 @@ export function QuestionField({ question, value, onChange, labelledBy, departmen
       </>;
     }
     case "person":
-      return <PersonPicker question={question} chosen={asList(value)} people={people} onChange={list => onChange(list)} />;
+      return <PersonPicker question={question} chosen={asList(value)} people={people} onChange={list => commit(list)} />;
   }
 }
 

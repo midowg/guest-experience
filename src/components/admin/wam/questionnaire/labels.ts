@@ -26,8 +26,8 @@ export const visibilityShort: Record<Visibility, string> = {
 export const visibilityHelp: Record<Visibility, string> = {
   rekan: "Semua peserta, di profil orang itu.",
   fasil: "Panitia dan admin (rekap dan per orang).",
-  hr: "Admin dengan password HR. Panitia kamar hanya melihat hasil pairing.",
-  hronly: "Hanya admin dengan password HR; tidak tampil ke panitia atau BOD.",
+  hr: "Orang HR yang terdaftar di Akses Data HR. Panitia kamar hanya melihat hasil pairing.",
+  hronly: "Hanya orang HR yang terdaftar di Akses Data HR; tidak tampil ke panitia atau BOD.",
   pilih: "Sesuai pilihan peserta di bagian itu: dengan nama, tanpa nama, atau hanya fasilitator.",
   anon: "Tidak ada yang melihat per orang; hanya rangkuman. Hanya untuk bagian anonim.",
 };

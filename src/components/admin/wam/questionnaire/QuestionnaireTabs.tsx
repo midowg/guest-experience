@@ -19,7 +19,7 @@ export function QuestionnaireTabs({ current }: { current: QuestionnaireTab }) {
         <a href={tab.href} className={styles.tab} aria-current={tab.key === current ? "page" : undefined}>
           {tab.locked && <Lock size={16} aria-hidden />}
           {tab.label}
-          {tab.locked && <span className="sr-only"> (dikunci password HR)</span>}
+          {tab.locked && <span className="sr-only"> (terkunci, buka dengan email HR)</span>}
         </a>
       </li>)}
     </ul>
