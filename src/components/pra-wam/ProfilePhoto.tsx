@@ -114,6 +114,16 @@ export function ProfilePhoto({ name, photo, editable }: { name: string; photo: s
    */
   function closeNow() { flushSync(() => setMenuOpen(false)); }
 
+  /**
+   * The camera button. When the dialog would hold only "Pilih dari galeri" (a computer, where
+   * "Ambil foto" is hidden, and no photo to remove), skip it and open the device's picker at once.
+   */
+  function choose() {
+    const noCamera = typeof window.matchMedia === "function" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    if (noCamera && !shown) { input.current?.click(); return; }
+    setMenuOpen(true);
+  }
+
   function pick(from: "kamera" | "galeri") {
     closeNow();
     (from === "kamera" ? camera : input).current?.click();
@@ -168,7 +178,7 @@ export function ProfilePhoto({ name, photo, editable }: { name: string; photo: s
       <Avatar name={name} photo={shown} size="xl" />
       {busy && <span className={css.veil} aria-hidden />}
       {editable && <button ref={trigger} type="button" className={css.camera} aria-label="Ganti foto profil" aria-haspopup="dialog" aria-expanded={menuOpen}
-        disabled={busy} onClick={() => setMenuOpen(true)}>
+        disabled={busy} onClick={choose}>
         <Camera aria-hidden />
       </button>}
     </div>

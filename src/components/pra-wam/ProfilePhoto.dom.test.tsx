@@ -84,6 +84,17 @@ it("offers Hapus foto with a photo, confirms first, then deletes and refreshes",
   expect(screen.getByRole("img", { name: "Bagus Werkudara" }).textContent).toBe("BW");
 });
 
+it("opens the device's picker at once when the gallery is the only choice", () => {
+  // A computer (no camera row) and no photo to remove: no dialog with a single button.
+  vi.spyOn(window, "matchMedia").mockImplementation(query => ({ matches: query.includes("pointer: fine"), media: query, onchange: null, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn() }) as unknown as MediaQueryList);
+  const { container } = render(<ProfilePhoto name="Bagus Werkudara" photo={null} editable />);
+  const gallery = container.querySelector<HTMLInputElement>("input[type=file]")!;
+  const click = vi.spyOn(gallery, "click").mockImplementation(() => undefined);
+  fireEvent.click(camera());
+  expect(click).toHaveBeenCalledTimes(1);
+  expect(sheet()).toBeNull();
+});
+
 it("says in plain words when the picked file is not a photo", async () => {
   const { container } = render(<ProfilePhoto name="Bagus Werkudara" photo={null} editable />);
   const input = container.querySelector<HTMLInputElement>("input[type=file]")!;
