@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 import { praWamApi } from "@/lib/routes";
 import { CardReveal } from "./CardReveal";

@@ -34,6 +34,8 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
   const { catalog } = data;
   const nameOf = new Map(catalog.characters.map(character => [character.id, character]));
   const tierOf = new Map(catalog.tiers.map(tier => [tier.key, tier]));
+  /** The draw record names characters by their fixed key; show their names. */
+  const named = (key: string) => catalog.characters.find(character => character.key === key)?.name ?? key;
   const real = data.drawn.filter(card => !card.trial);
   const trials = data.drawn.length - real.length;
 
@@ -149,8 +151,8 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
             <td>{when(card.drawnAt)}</td>
             <td><details><summary>Lihat</summary>
               <p>Angka undian {roll.number} dari 0–{ODDS_TOTAL - 1}, jatuh di {tierOf.get(roll.landed)?.name ?? roll.landed}{roll.passed?.length ? `, turun karena batas penuh: ${roll.passed.map(key => tierOf.get(key)?.name ?? key).join(", ")}` : ""}.</p>
-              <p>Karakter: {roll.character}{roll.tied?.length > 1 ? `, diundi di antara yang seri: ${roll.tied.join(", ")}` : ""}.</p>
-              {roll.changes?.length ? <p>Berganti karakter: {roll.changes.map(change => `${change.from} → ${change.to}${change.kept ? " (dibatalkan, kombinasi sudah dipakai)" : ""}`).join("; ")}.</p> : null}
+              <p>Karakter saat diundi: {named(roll.character)}{roll.tied?.length > 1 ? `, diundi di antara yang seri: ${roll.tied.map(named).join(", ")}` : ""}.</p>
+              {roll.changes?.length ? <p>Berganti karakter: {roll.changes.map(change => `${named(change.from)} → ${named(change.to)}${change.kept ? " (dibatalkan, kombinasi sudah dipakai)" : ""}`).join("; ")}.</p> : null}
               <p className={styles.muted}>DNA {card.dna}</p>
             </details></td>
           </tr>;

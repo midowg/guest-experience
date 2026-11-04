@@ -68,8 +68,9 @@
 .dna { font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
 
 /* The picture to keep */
-.overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--space-md); background: rgba(20, 19, 37, 0.72); }
-.sheet { display: grid; gap: var(--space-sm); width: min(420px, 100%); max-height: calc(100dvh - 32px); overflow: auto; padding: var(--space-md); border-radius: var(--radius-card); background: var(--paper-3); box-shadow: inset 0 0 0 2px var(--ink); }
+.overlay { width: min(452px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 0; background: transparent; overflow: visible; color: var(--ink); }
+.overlay::backdrop { background: rgba(20, 19, 37, 0.72); }
+.sheet { display: grid; gap: var(--space-sm); width: 100%; max-height: calc(100dvh - 32px); overflow: auto; padding: var(--space-md); border-radius: var(--radius-card); background: var(--paper-3); box-shadow: inset 0 0 0 2px var(--ink); }
 .sheet img { width: 100%; max-height: 60dvh; object-fit: contain; border-radius: 14px; background: var(--ink); }
 .sheet.tall img { max-height: 64dvh; }
 .sheet p { font-size: var(--text-sm); color: var(--ink-2); }

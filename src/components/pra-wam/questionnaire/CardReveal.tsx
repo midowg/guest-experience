@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Download, ImageIcon, RotateCcw, Share2, Smartphone, UserRound, X } from "lucide-react";
 import { oddsLabel, serialLabel } from "@/lib/pra-wam/cards";
 import { encodeWithinLimit, PHOTO_SIDE } from "@/lib/pra-wam/photo";
@@ -198,7 +198,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
       </section>
     </>}
 
-    {saved && <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Gambar siap disimpan" onClick={event => { if (event.target === event.currentTarget) closeSaved(); }}>
+    {saved && <SavedDialog onClose={closeSaved}>
       <div className={`${styles.sheet} ${saved.tall ? styles.tall : ""}`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas or served privately by this site; next/image cannot help */}
         <img src={saved.url} alt={`Pratinjau ${saved.filename}`} />
@@ -209,9 +209,25 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
           <a className={`${styles.btn} ${styles.primary}`} href={saved.url} download={saved.filename}><Download aria-hidden />Unduh PNG</a>
         </div>
       </div>
-    </div>}
+    </SavedDialog>}
     {confirmElement}
   </div>;
+}
+
+/**
+ * The picture to keep, in a modal <dialog>: the top layer, so the questionnaire's bar and dock
+ * never cover it. Escape or a tap outside closes it.
+ */
+function SavedDialog({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (dialog && !dialog.open) dialog.showModal?.();
+  }, []);
+  return <dialog ref={ref} className={styles.overlay} aria-label="Gambar siap disimpan" onClose={onClose} onCancel={event => { event.preventDefault(); onClose(); }}
+    onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
+    {children}
+  </dialog>;
 }
 
 /** Confetti from the middle of the card: more pieces for a rarer level. */
