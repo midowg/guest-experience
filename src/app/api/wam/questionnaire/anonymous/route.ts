@@ -1,3 +1,4 @@
+import { managesApp } from "@/lib/pra-wam/roles";
 import { z } from "zod";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { submitAnonymous } from "@/lib/server/pra-wam/questionnaire-answers";
@@ -13,6 +14,7 @@ export async function POST(request: Request) {
     const member = await requireApiMember();
     checkOrigin(request);
     const { answers } = validate(schema, await readJson(request, 60_000));
-    return success(await submitAnonymous(member.id, answers), "Bagian anonim terkirim, tanpa nama.");
+    // Admin WAM may try a draft before it opens.
+    return success(await submitAnonymous(member.id, answers, { preview: managesApp(member) }), "Bagian anonim terkirim, tanpa nama.");
   });
 }

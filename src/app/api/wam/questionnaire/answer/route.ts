@@ -1,3 +1,4 @@
+import { managesApp } from "@/lib/pra-wam/roles";
 import { z } from "zod";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { saveAnswer } from "@/lib/server/pra-wam/questionnaire-answers";
@@ -14,6 +15,7 @@ export async function PUT(request: Request) {
     const member = await requireApiMember();
     checkOrigin(request);
     const { question, value } = validate(schema, await readJson(request, 20_000));
-    return success(await saveAnswer(member.id, question, value), "Tersimpan.");
+    // Admin WAM may try a draft before it opens.
+    return success(await saveAnswer(member.id, question, value, { preview: managesApp(member) }), "Tersimpan.");
   });
 }

@@ -21,6 +21,8 @@ export type QuestionnaireProps = {
   departments: string[]; people: Person[];
   initial: { answers: Answers; anonymousSent: boolean };
   nickname: string; home: string;
+  /** A draft tried by Admin WAM before it opens: marked, and its answers are test data. */
+  preview?: boolean;
 };
 
 const visibilityIcons: Record<Visibility, typeof Eye> = { rekan: Eye, fasil: Users, hr: Lock, hronly: Lock, pilih: Hand, anon: VenetianMask };
@@ -36,7 +38,7 @@ const reducedMotion = () => typeof window === "undefined" || typeof window.match
  * an intro card and one card per question, then "Selesai". Named answers save themselves as the
  * person goes; the anonymous section stays on this device until it is sent once, without a name.
  */
-export function Questionnaire({ form, sections, questions, departments, people, initial, nickname, home }: QuestionnaireProps) {
+export function Questionnaire({ form, sections, questions, departments, people, initial, nickname, home, preview }: QuestionnaireProps) {
   const content = useMemo(() => ({ sections, questions }), [sections, questions]);
   const anonymousIds = useMemo(() => new Set(sections.filter(section => section.anonymous).map(section => section.id)), [sections]);
   const names = useMemo(() => new Map(people.map(person => [person.id, person.name])), [people]);
@@ -193,7 +195,7 @@ export function Questionnaire({ form, sections, questions, departments, people, 
   }).reverse();
 
   return <QuestionnaireApp>
-    <Top name={form.name} home={home} slots={slots} current={currentSection?.id} popped={popped}
+    <Top name={form.name} home={home} slots={slots} current={currentSection?.id} popped={popped} preview={preview}
       status={<><b>{where}</b><span aria-live="polite">{saveLine ?? left}</span></>} />
     <main className={`${styles.wrap} ${styles.main}`}>
       <div className={styles.stage}>

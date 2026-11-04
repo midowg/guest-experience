@@ -17,7 +17,9 @@ export type ShowIf = { question: string; any?: string[]; not?: string[] };
 
 export type QForm = {
   id: string; name: string; slug: string; oldSlugs: string[]; status: FormStatus; intro: string; cardText: string;
-  minutes: number; editUntil: string | null; stayDeleteOn: string | null; hasHrPassword: boolean;
+  minutes: number; editUntil: string | null; stayDeleteOn: string | null;
+  /** Who may open Data HR with their own WAM account (employee ids); empty before migration 202611040012. */
+  hrAccess: string[];
 };
 export type QSection = { id: string; key: string; title: string; short: string; hello: string; intro: string; tease: string; anonymous: boolean; sort: number; hidden: boolean };
 export type QQuestion = {

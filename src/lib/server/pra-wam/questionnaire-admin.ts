@@ -9,7 +9,7 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
-import { departmentOptions, questionnaireMissing, questionnaireWaiting, toForm, toQuestion } from "./questionnaire";
+import { departmentOptions, FORM_COLUMNS, FORM_COLUMNS_BEFORE_HR_ACCESS, hrAccessMissing, questionnaireMissing, questionnaireWaiting, toForm, toQuestion } from "./questionnaire";
 
 /*
  * Admin WAM → Kuesioner: HR edits the form's settings, its sections and its questions, and sees
@@ -209,7 +209,6 @@ export function newKey(prefix: "q" | "s", taken: Iterable<string>): string {
 
 /* ---- Reads ------------------------------------------------------------------------------------ */
 
-const FORM_COLUMNS = "id,name,slug,old_slugs,status,intro,card_text,minutes,edit_until,stay_delete_on,hr_password_hash";
 const SECTION_COLUMNS = "id,key,title,short,hello,intro,tease,anonymous,sort,hidden";
 const QUESTION_COLUMNS = "id,section_id,key,prompt,kind,required,visibility,options,max_choices,matrix_rows,scale,placeholder,note,react,show_if,sort,hidden";
 
@@ -217,9 +216,11 @@ const fail = (error: { code?: string; message: string }): never => { if (questio
 
 /** The form, with nothing cached; null before the migration (or without its first form). */
 async function readFormOrNull(): Promise<QForm | null> {
-  const { data, error } = await createPrivilegedClient().from("cq_forms").select(FORM_COLUMNS).order("created_at").limit(1).maybeSingle();
+  const read = (columns: string) => createPrivilegedClient().from("cq_forms").select(columns).order("created_at").limit(1).maybeSingle();
+  let { data, error } = await read(FORM_COLUMNS);
+  if (error && hrAccessMissing(error)) ({ data, error } = await read(FORM_COLUMNS_BEFORE_HR_ACCESS));
   if (error) { if (questionnaireMissing(error)) return null; databaseError(error); }
-  return data ? toForm(data as Parameters<typeof toForm>[0]) : null;
+  return data ? toForm(data as unknown as Parameters<typeof toForm>[0]) : null;
 }
 async function readForm(): Promise<QForm> {
   const form = await readFormOrNull();

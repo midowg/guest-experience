@@ -19,20 +19,27 @@ export const questionnaireWaiting = () => new ServiceError(503, `Kuesioner menun
 
 type FormRow = {
   id: string; name: string; slug: string; old_slugs: string[]; status: FormStatus; intro: string; card_text: string; minutes: number;
-  edit_until: string | null; stay_delete_on: string | null; hr_password_hash: string | null;
+  edit_until: string | null; stay_delete_on: string | null; hr_access?: string[] | null;
 };
-const FORM_COLUMNS = "id,name,slug,old_slugs,status,intro,card_text,minutes,edit_until,stay_delete_on,hr_password_hash";
+/** Without hr_access: the columns before migration 202611040012, read as "nobody has HR access". */
+export const FORM_COLUMNS_BEFORE_HR_ACCESS = "id,name,slug,old_slugs,status,intro,card_text,minutes,edit_until,stay_delete_on";
+export const FORM_COLUMNS = `${FORM_COLUMNS_BEFORE_HR_ACCESS},hr_access`;
+/** cq_forms.hr_access is missing (before migration 202611040012); not cq_hr_access_log, which is older. */
+export const hrAccessMissing = (error: { code?: string; message?: string }) =>
+  ["42703", "PGRST204"].includes(error.code ?? "") && /\bhr_access\b/.test(error.message ?? "");
 
 export const toForm = (row: FormRow): QForm => ({
   id: row.id, name: row.name, slug: row.slug, oldSlugs: row.old_slugs ?? [], status: row.status, intro: row.intro, cardText: row.card_text,
-  minutes: row.minutes, editUntil: row.edit_until, stayDeleteOn: row.stay_delete_on, hasHrPassword: !!row.hr_password_hash,
+  minutes: row.minutes, editUntil: row.edit_until, stayDeleteOn: row.stay_delete_on, hrAccess: row.hr_access ?? [],
 });
 
 /** The questionnaire (there is one); null before the migration. */
 async function currentFormUncached(): Promise<QForm | null> {
-  const { data, error } = await createPrivilegedClient().from("cq_forms").select(FORM_COLUMNS).order("created_at").limit(1).maybeSingle();
+  const read = (columns: string) => createPrivilegedClient().from("cq_forms").select(columns).order("created_at").limit(1).maybeSingle();
+  let { data, error } = await read(FORM_COLUMNS);
+  if (error && hrAccessMissing(error)) ({ data, error } = await read(FORM_COLUMNS_BEFORE_HR_ACCESS));
   if (error) { if (questionnaireMissing(error)) return null; databaseError(error); }
-  return data ? toForm(data as FormRow) : null;
+  return data ? toForm(data as unknown as FormRow) : null;
 }
 export const currentForm = cache(currentFormUncached);
 

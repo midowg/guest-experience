@@ -28,12 +28,13 @@ export function Slots({ slots, current, popped }: { slots: Slot[]; current?: str
 }
 
 /** The top bar: Keluar to Beranda, the form's name, the slots and a status line. */
-export function Top({ name, home, slots, current, popped, status }: { name: string; home: string; slots: Slot[]; current?: string; popped?: string | null; status: ReactNode }) {
+export function Top({ name, home, slots, current, popped, status, preview }: { name: string; home: string; slots: Slot[]; current?: string; popped?: string | null; status: ReactNode; preview?: boolean }) {
   return <header className={`${styles.wrap} ${styles.top}`}>
     <div className={styles.bar}>
       <a className={styles.exit} href={home}><ArrowLeft aria-hidden />Keluar</a>
       <span className={styles.formName}>{name}</span>
     </div>
+    {preview && <p className={styles.preview} role="note">Pratinjau draf: hanya Admin WAM yang melihat. Jawaban di sini data uji.</p>}
     <Slots slots={slots} current={current} popped={popped} />
     <div className={styles.status}>{status}</div>
   </header>;

@@ -2,18 +2,18 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Eye, KeyRound, Lock, LockKeyhole, RefreshCw, Search, ShieldAlert, Unlock, type LucideIcon } from "lucide-react";
-import { Button, ButtonLink, Notice } from "@/components/ui";
+import { Download, Eye, Lock, LockKeyhole, RefreshCw, Search, ShieldAlert, Unlock, UserCog, Users, type LucideIcon } from "lucide-react";
+import { Button, ButtonLink, Field, Notice } from "@/components/ui";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { HR_LOCKOUT_MINUTES, HR_MAX_FAILURES, HR_UNLOCK_MINUTES } from "@/lib/pra-wam/hr-password";
+import { HR_ACCESS_MIGRATION, HR_EMAIL_MAX, HR_LOCKOUT_MINUTES, HR_MAX_FAILURES, HR_UNLOCK_MINUTES } from "@/lib/pra-wam/hr-access";
 import { praWamHrApi, wamAdminPath } from "@/lib/routes";
 import type { HrAction, HrLogRow, HrPersonDetail, HrPersonRow } from "@/lib/server/pra-wam/hr-lock";
-import { HrPasswordInput } from "./HrPasswordInput";
 import hr from "./hr.module.css";
 
 /** What the server knows before rendering; data only when it verified the unlock itself. */
 export type HrScreenState = {
-  migrated: boolean; hasPassword: boolean; unlockedUntil: string | null; lockedUntil: string | null; attemptsLeft: number; renderedAt: number;
+  migrated: boolean; accessReady: boolean; hasAccess: boolean; unlockedUntil: string | null; actorName: string | null;
+  lockedUntil: string | null; attemptsLeft: number; renderedAt: number;
 };
 export type HrScreenData = { people: HrPersonRow[]; questions: number; log: HrLogRow[] } | null;
 
@@ -40,13 +40,15 @@ function device(userAgent: string | null): string {
   return system ? `${browser} di ${system}` : browser;
 }
 
-const actions: Record<HrAction, { icon: LucideIcon; text: (subject: string | null) => string }> = {
-  buka: { icon: Unlock, text: () => "Membuka Data HR" },
-  gagal: { icon: ShieldAlert, text: () => "Gagal membuka: password HR salah" },
-  kunci: { icon: Lock, text: () => "Mengunci Data HR" },
-  lihat: { icon: Eye, text: subject => `Membuka jawaban ${subject ?? "seseorang"}` },
-  ekspor: { icon: Download, text: () => "Mengekspor data HR" },
-  ganti_password: { icon: KeyRound, text: () => "Mengatur, mengganti, atau mengatur ulang password HR" },
+/** What a log row says, and who did it: a person by name, or who it was when the row names nobody. */
+const actions: Record<HrAction, { icon: LucideIcon; text: (subject: string | null) => string; nobody: string }> = {
+  buka: { icon: Unlock, text: () => "Membuka Data HR", nobody: "Tanpa nama" },
+  gagal: { icon: ShieldAlert, text: () => "Gagal membuka: email tanpa akses Data HR", nobody: "Email yang tidak terdaftar" },
+  kunci: { icon: Lock, text: () => "Mengunci Data HR", nobody: "Tanpa nama" },
+  lihat: { icon: Eye, text: subject => `Membuka jawaban ${subject ?? "seseorang"}`, nobody: "Tanpa nama" },
+  ekspor: { icon: Download, text: () => "Mengekspor data HR", nobody: "Tanpa nama" },
+  ganti_password: { icon: LockKeyhole, text: () => "Mengubah kunci HR (cara lama)", nobody: "Admin" },
+  ubah_akses: { icon: UserCog, text: subject => `Mengubah akses Data HR: ${subject ?? "seseorang"}`, nobody: "Super admin" },
 };
 
 /** A padlock on a shield: the locked screen's picture. */
@@ -62,28 +64,32 @@ function LockArt() {
 }
 
 /**
- * Admin WAM → Kuesioner → Data HR. Locked: who may open it, that every opening is logged, the
- * password form and, after too many wrong tries, how long until it can be tried again. Unlocked
- * (the server checked the cookie before sending anything): the time left, "Kunci sekarang", the
+ * Admin WAM → Kuesioner → Data HR. Locked: who may open it, that every opening is logged under the
+ * person, the email form and, after too many failed tries, how long until it can be tried again.
+ * Unlocked (the server checked the cookie before sending anything): who opened it, the time left,
+ * "Kunci sekarang", the
  * people who answered HR questions, one person's answers, and the access log. Unlocking and
  * locking reload the page from the server, so HR data only ever arrives from a verified render
  * or an API that checks the unlock again.
  */
 export function HrDataScreen({ state, data }: { state: HrScreenState; data: HrScreenData }) {
   if (!state.migrated) return <Notice tone="warning">Data HR menunggu migrasi 202611040011_wam_questionnaire.sql. Sampai migrasi diterapkan, tidak ada data yang bisa dibuka.</Notice>;
-  if (!state.hasPassword) return <div className={hr.lockCard}>
+  if (!state.accessReady) return <Notice tone="warning">Data HR menunggu migrasi {HR_ACCESS_MIGRATION}. Sampai migrasi diterapkan, Data HR tidak bisa dibuka.</Notice>;
+  if (!state.hasAccess) return <div className={hr.lockCard}>
     <LockArt />
-    <h2 className={hr.lockTitle}>Password HR belum diatur</h2>
-    <p className={hr.lead}>Data HR hanya bisa dibuka dengan password HR yang terpisah dari password admin. Atur password itu dulu di Pengaturan kuesioner.</p>
-    <ButtonLink href={wamAdminPath.questionnaire.settings}><KeyRound size={17} aria-hidden="true" /> Atur password HR</ButtonLink>
+    <h2 className={hr.lockTitle}>Data HR belum bisa dibuka</h2>
+    <p className={hr.lead}>Belum ada yang diberi akses Data HR. Super admin mengaturnya di Pengaturan.</p>
+    <ButtonLink href={wamAdminPath.questionnaire.settings} variant="secondary"><Users size={17} aria-hidden="true" /> Lihat Akses Data HR</ButtonLink>
   </div>;
-  return state.unlockedUntil && data ? <Unlocked until={state.unlockedUntil} renderedAt={state.renderedAt} data={data} /> : <Locked state={state} />;
+  return state.unlockedUntil && data
+    ? <Unlocked until={state.unlockedUntil} actorName={state.actorName ?? "Tanpa nama"} renderedAt={state.renderedAt} data={data} />
+    : <Locked state={state} />;
 }
 
 function Locked({ state }: { state: HrScreenState }) {
   const router = useRouter();
   const now = useNow(state.renderedAt);
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [lockedUntil, setLockedUntil] = useState(state.lockedUntil);
@@ -94,15 +100,13 @@ function Locked({ state }: { state: HrScreenState }) {
   async function unlock(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || paused) return;
-    if (!password) { setError("Isi password HR."); return; }
+    if (!email.trim()) { setError("Isi email WAM."); return; }
     setBusy(true); setError("");
     try {
-      await adminRequest<{ expiresAt: string }>(praWamHrApi.unlock, { method: "POST", body: JSON.stringify({ password }) });
-      setPassword("");
+      await adminRequest<{ expiresAt: string; name: string }>(praWamHrApi.unlock, { method: "POST", body: JSON.stringify({ email: email.trim() }) });
       // The data comes from the server render, which checks the new cookie itself.
       router.refresh();
     } catch (problem) {
-      setPassword("");
       setError(errorMessage(problem));
       if (problem instanceof AdminApiError && problem.status === 429) setLockedUntil(new Date(Date.now() + HR_LOCKOUT_MINUTES * 60_000).toISOString());
       else if (problem instanceof AdminApiError && problem.status === 403) setLeft(count => Math.max(1, count - 1));
@@ -115,23 +119,26 @@ function Locked({ state }: { state: HrScreenState }) {
     <h2 className={hr.lockTitle}>Data HR terkunci</h2>
     <ul className={hr.lockList}>
       <li>Berisi jawaban per orang dengan level HR dan Rahasia: kesehatan, data menginap, dan kontak.</li>
-      <li>Hanya HR dan orang yang diberi tahu password HR yang bisa membukanya. Password ini terpisah dari password admin.</li>
+      <li>Hanya orang yang diberi akses oleh super admin yang bisa membukanya, dengan email WAM masing-masing.</li>
       <li>Terbuka {HR_UNLOCK_MINUTES} menit di perangkat ini saja, lalu terkunci lagi otomatis.</li>
-      <li>Setiap buka, gagal buka, dan buka data per orang dicatat: waktu, IP, dan perangkat.</li>
+      <li>Setiap buka, gagal buka, dan buka data per orang dicatat atas nama pemilik email itu: waktu, IP, dan perangkat.</li>
     </ul>
     {paused
-      ? <Notice tone="warning">{error || `Terlalu banyak password yang salah. Coba lagi dalam ${wait} menit.`}</Notice>
+      ? <Notice tone="warning">{error || `Terlalu banyak percobaan yang gagal. Coba lagi dalam ${wait} menit.`}</Notice>
       : left < HR_MAX_FAILURES && <Notice tone="info">Sisa {left} percobaan sebelum dikunci sementara.</Notice>}
     <form className={hr.lockForm} onSubmit={unlock} noValidate aria-busy={busy}>
       {error && !paused && <Notice tone="error">{error}</Notice>}
-      <HrPasswordInput id="hr-unlock" label="Password HR" value={password} onChange={value => { setPassword(value); setError(""); }}
-        autoComplete="current-password" disabled={busy || paused} autoFocus />
+      <Field label="Email WAM" name="hr-email" hint="Email yang dipakai untuk masuk ke aplikasi WAM.">
+        <input className="input" id="hr-email" name="hr-email" type="email" inputMode="email" autoComplete="email" maxLength={HR_EMAIL_MAX}
+          value={email} disabled={busy || paused} autoFocus spellCheck={false} autoCapitalize="off"
+          onChange={event => { setEmail(event.target.value); setError(""); }} />
+      </Field>
       <Button type="submit" disabled={busy || paused}><LockKeyhole size={17} aria-hidden="true" /> {busy ? "Memeriksa…" : "Buka Data HR"}</Button>
     </form>
   </div>;
 }
 
-function Unlocked({ until, renderedAt, data }: { until: string; renderedAt: number; data: NonNullable<HrScreenData> }) {
+function Unlocked({ until, actorName, renderedAt, data }: { until: string; actorName: string; renderedAt: number; data: NonNullable<HrScreenData> }) {
   const router = useRouter();
   const now = useNow(renderedAt);
   const [query, setQuery] = useState("");
@@ -153,7 +160,7 @@ function Unlocked({ until, renderedAt, data }: { until: string; renderedAt: numb
     return words.length ? data.people.filter(person => words.every(word => `${person.name} ${person.department}`.toLocaleLowerCase("id").includes(word))) : data.people;
   }, [data.people, query]);
 
-  /** A 403 means the lock closed meanwhile (time, a new password, another tab): reload locked. */
+  /** A 403 means the lock closed meanwhile (time, access taken away, another tab): reload locked. */
   function closedMeanwhile(problem: unknown) {
     if (problem instanceof AdminApiError && problem.status === 403) { setDetail(null); router.refresh(); return true; }
     return false;
@@ -192,7 +199,10 @@ function Unlocked({ until, renderedAt, data }: { until: string; renderedAt: numb
   return <div className="stack">
     <div className={`${hr.unlockedBar} ${minutes < 5 ? hr.unlockedSoon : ""}`} role="status">
       <Unlock size={20} aria-hidden="true" />
-      <p>{over ? "Mengunci…" : minutes < 1 ? "Terkunci lagi dalam kurang dari 1 menit" : `Terkunci lagi dalam ${minutes} menit`}</p>
+      <p className={hr.unlockedText}>
+        <span>Dibuka oleh <strong>{actorName}</strong></span>
+        <span>{over ? "Mengunci…" : minutes < 1 ? "Terkunci lagi dalam kurang dari 1 menit" : `Terkunci lagi dalam ${minutes} menit`}</span>
+      </p>
       <Button type="button" variant="secondary" disabled={busy === "lock"} onClick={() => void lockNow()}><Lock size={17} aria-hidden="true" /> {busy === "lock" ? "Mengunci…" : "Kunci sekarang"}</Button>
     </div>
     {message && <Notice tone="error">{message}</Notice>}
@@ -248,11 +258,12 @@ function Unlocked({ until, renderedAt, data }: { until: string; renderedAt: numb
       <p className={hr.logMeta}>50 catatan terakhir, terbaru di atas. Waktu dalam WIB.</p>
       {log.length ? <ul className={hr.log}>
         {log.map(row => {
-          const { icon: Icon, text } = actions[row.action] ?? actions.lihat;
+          const { icon: Icon, text, nobody } = actions[row.action] ?? actions.lihat;
           return <li key={row.id} className={hr.logItem}>
             <span className={`${hr.logIcon} ${hr[`log_${row.action}`] ?? ""}`} aria-hidden="true"><Icon size={16} /></span>
             <span className={hr.logText}>
               <p><strong>{text(row.subject)}</strong></p>
+              <p>{row.actor ?? nobody}</p>
               <p className={hr.logMeta}>{when(row.createdAt)} · {row.ip ?? "IP tidak tercatat"} · {device(row.userAgent)}</p>
             </span>
           </li>;

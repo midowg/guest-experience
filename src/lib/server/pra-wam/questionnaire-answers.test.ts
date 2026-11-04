@@ -23,7 +23,7 @@ function query(table: string) {
 }
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => ({ from: query }) }));
 
-const form: QForm = { id: "f1", name: "Kuesioner", slug: "kuesioner", oldSlugs: [], status: "buka", intro: "", cardText: "", minutes: 15, editUntil: null, stayDeleteOn: null, hasHrPassword: false };
+const form: QForm = { id: "f1", name: "Kuesioner", slug: "kuesioner", oldSlugs: [], status: "buka", intro: "", cardText: "", minutes: 15, editUntil: null, stayDeleteOn: null, hrAccess: [] };
 const section = (id: string, anonymous = false): QSection => ({ id, key: id, title: id, short: id, hello: "", intro: "", tease: "", anonymous, sort: anonymous ? 2 : 1, hidden: false });
 const question = (key: string, sectionId: string, rest: Partial<QQuestion>): QQuestion => ({
   id: `q-${key}`, sectionId, key, prompt: `Pertanyaan ${key}`, kind: "text", required: false, visibility: "hr", options: [], maxChoices: null, matrixRows: [], scale: [],

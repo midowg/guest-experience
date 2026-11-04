@@ -27,10 +27,17 @@ const failed = (error: { code?: string; message?: string }): never => {
   databaseError({ message: error.message ?? "", code: error.code });
 };
 
-/** The form as people may answer it right now, or why not. */
-async function openForm(): Promise<QForm> {
+/**
+ * The form as people may answer it right now, or why not. `preview` (Admin WAM only) also lets a
+ * draft be answered, so it can be tried before it opens; those answers are test data.
+ */
+async function openForm(preview = false): Promise<QForm> {
   const form = await currentForm();
-  if (!form || form.status === "draf") throw new ServiceError(404, "Kuesioner belum dibuka.");
+  if (!form) throw new ServiceError(404, "Kuesioner belum dibuka.");
+  if (form.status === "draf") {
+    if (!preview) throw new ServiceError(404, "Kuesioner belum dibuka.");
+    return form;
+  }
   if (!editable(form)) throw new ServiceError(409, "Kuesioner sudah ditutup. Jawaban tidak bisa diubah lagi.");
   return form;
 }
@@ -106,8 +113,8 @@ async function settleProgress(formId: string, employeeId: string, done: boolean,
  * Saves one named answer. Empty answers remove the row, so "answered" means a stored value. Never
  * for the anonymous section: that goes in one piece through submitAnonymous.
  */
-export async function saveAnswer(employeeId: string, key: string, raw: unknown): Promise<{ value: AnswerValue; progress: Progress; completedAt: string | null }> {
-  const form = await openForm();
+export async function saveAnswer(employeeId: string, key: string, raw: unknown, { preview = false }: { preview?: boolean } = {}): Promise<{ value: AnswerValue; progress: Progress; completedAt: string | null }> {
+  const form = await openForm(preview);
   const content = shownContent(await formContent(form.id));
   const question = content.questions.find(item => item.key === key);
   if (!question) throw new ServiceError(404, "Pertanyaan ini tidak ada lagi. Muat ulang halaman.");
@@ -133,8 +140,8 @@ export async function saveAnswer(employeeId: string, key: string, raw: unknown):
  * and never doubles the answers; if the answers then fail, the receipt is taken back so the
  * person can try again. The rows are shuffled so their order does not follow the questions.
  */
-export async function submitAnonymous(employeeId: string, raw: Record<string, unknown>): Promise<{ progress: Progress; completedAt: string | null }> {
-  const form = await openForm();
+export async function submitAnonymous(employeeId: string, raw: Record<string, unknown>, { preview = false }: { preview?: boolean } = {}): Promise<{ progress: Progress; completedAt: string | null }> {
+  const form = await openForm(preview);
   const content = shownContent(await formContent(form.id));
   const anonymous = anonymousSectionIds(content);
   const questions = content.questions.filter(question => anonymous.has(question.sectionId));

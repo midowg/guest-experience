@@ -277,19 +277,17 @@ export const praWamQuestionnaireApi = {
   progress: `${QUESTIONNAIRE_ADMIN_API}/progress`,
 };
 /**
- * Admin WAM, Data HR: the separate HR password (set the first one, change it with the old one, a
- * super admin resets it), unlocking this device for 30 minutes and locking it again, and the
- * locked data: who answered HR questions, one person's answers, and the access log.
+ * Admin WAM, Data HR: opening it with the WAM email of a person on the HR access list (30 minutes
+ * on this device) and locking it again, the locked data (who answered HR questions, one person's
+ * answers, the access log), and the list itself (the super admin adds and removes people).
  */
 const QUESTIONNAIRE_HR_API = `${QUESTIONNAIRE_ADMIN_API}/hr`;
 export const praWamHrApi = {
-  /** POST {password}: the first HR password, when there is none. */
-  set: `${QUESTIONNAIRE_HR_API}/set`,
-  /** POST {current, password}: a new HR password, with the current one. */
-  change: `${QUESTIONNAIRE_HR_API}/change`,
-  /** POST: super admin clears the HR password so a new one can be set. */
-  reset: `${QUESTIONNAIRE_HR_API}/reset`,
-  /** POST {password}: unlock Data HR on this device. */
+  /** POST {employeeId}: super admin gives one person Data HR access. */
+  access: `${QUESTIONNAIRE_HR_API}/access`,
+  /** DELETE: super admin takes one person's Data HR access away. */
+  accessPerson: (employeeId: string) => `${QUESTIONNAIRE_HR_API}/access/${employeeId}`,
+  /** POST {email}: unlock Data HR on this device as that person. */
   unlock: `${QUESTIONNAIRE_HR_API}/unlock`,
   /** POST: lock Data HR on this device now. */
   lock: `${QUESTIONNAIRE_HR_API}/lock`,

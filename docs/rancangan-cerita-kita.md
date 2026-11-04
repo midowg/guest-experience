@@ -71,12 +71,12 @@ Satu entri baru di `wamSections`, grup baru **"Data peserta"**, dengan sub-halam
 |---|---|
 | **Konten** | Nama dan alamat kuesioner. Bagian: judul, sapaan, pengantar. Pertanyaan: teks, tipe, pilihan, maks pilihan, wajib, level baca, catatan, placeholder, percabangan, urutan. Ada pratinjau persis seperti di HP. |
 | **Kartu** | Katalog karakter dan aturan yang memilihnya dari jawaban; peluang dan batas jumlah tiap level; sebaran level yang sudah keluar. Kartu baru bisa ditambah kapan saja. |
-| **Pengaturan** | Dibuka/ditutup, tenggat ubah jawaban, tanggal hapus data menginap, teks kartu Beranda, password HR. |
+| **Pengaturan** | Dibuka/ditutup, tenggat ubah jawaban, tanggal hapus data menginap, teks kartu Beranda, Akses Data HR (siapa yang boleh membuka; diubah super admin). |
 | **Progres** | Siapa sudah dan belum, per departemen. Tombol "Ingatkan yang belum" lewat notifikasi WAM. |
-| **Data HR** 🔒 | Jawaban per orang untuk data `hr` dan `hronly`. Hanya terbuka dengan password HR. |
+| **Data HR** 🔒 | Jawaban per orang untuk data `hr` dan `hronly`. Hanya terbuka dengan email WAM orang yang punya akses. |
 | **Rekap** | Grafik per pertanyaan dan kutipan jawaban terbuka, mengikuti level baca. Bagian anonim hanya rangkuman. |
 | **Kamar** (tahap 3) 🔒 | Pairing kamar dari jawaban bagian menginap (papan Penpot "K3 · Pairing kamar"). |
-| **Ekspor** | Excel per bagian, sesuai hak pembaca. Data HR hanya setelah password HR. |
+| **Ekspor** | Excel per bagian, sesuai hak pembaca. Data HR hanya setelah Data HR dibuka. |
 
 Supaya data tidak rusak:
 - Mengubah pertanyaan setelah ada jawaban tidak mengubah jawaban lama.
@@ -86,30 +86,46 @@ Supaya data tidak rusak:
 - Pertanyaan "pilih rekan" (13 dan 23) memakai daftar karyawan dengan pencarian, bukan isian bebas,
   supaya bisa langsung dipakai untuk pairing.
 
-## Password khusus HR
+## Akses Data HR
 
 Data yang paling pribadi tidak cukup dilindungi password admin biasa, karena banyak orang yang tahu
-password admin. Jadi:
+password admin. Dulu dipakai satu password HR bersama; sekarang diganti **akses per orang**, supaya
+log menunjukkan siapa yang membuka apa.
 
-- **Ada password HR terpisah.**
-  - Disimpan di server sebagai hash, tidak pernah dalam bentuk asli, tidak di repo, tidak di
-    dokumen.
-  - HR mengaturnya di Pengaturan. Mengganti password butuh password HR yang lama; kalau lupa,
-    super admin bisa mengatur ulang.
+- **Daftar akses.**
+  - Di Pengaturan kuesioner ada bagian "Akses Data HR": nama, departemen, dan email orang yang
+    boleh membuka. Saat ini 3 orang dari HR dan HRGA; paling banyak 20.
+  - Hanya **super admin** yang bisa menambah (dari karyawan aktif yang punya akun WAM, dengan
+    pencarian) dan mencabut (dengan konfirmasi). Admin biasa hanya melihat daftarnya.
+  - Mencabut akses langsung mengunci Data HR di perangkat orang itu.
+- **Cara buka.**
+  - Admin yang sudah login masuk ke halaman Data HR 🔒, lalu mengisi **email WAM** orang yang
+    punya akses. Tidak ada password tambahan.
+  - Server mencocokkan email (tanpa beda huruf besar/kecil) dengan karyawan aktif yang punya akun
+    WAM aktif, lalu memeriksa orang itu ada di daftar akses.
+  - Kalau cocok, kunci terbuka **30 menit** di perangkat itu saja (cookie terpisah yang
+    ditandatangani, berisi orangnya, dan ikut mati bila sesi admin berakhir). Kepala halaman
+    menampilkan "Dibuka oleh <nama>" dan sisa waktunya. Ada tombol "Kunci sekarang".
+  - Email yang tidak dikenal dan email tanpa akses mendapat jawaban yang sama ("Email ini tidak
+    punya akses Data HR"), supaya halaman tidak membocorkan siapa yang punya akses.
+- **Catatan keamanan: email saja kuncinya** (keputusan pemilik). Siapa pun yang punya login admin
+  dan tahu email salah satu orang HR bisa membuka Data HR. Penjaganya: setiap pembukaan dan setiap
+  data per orang yang dibuka **dicatat atas nama email itu**, jadi orang HR bisa melihat di log
+  bila emailnya dipakai orang lain.
 - **Yang dikunci:**
   - semua jawaban per orang dengan level `hr` dan `hronly` (kesehatan, data menginap, kontak);
   - pairing kamar;
   - ekspor data HR.
-- **Cara buka.**
-  - Admin yang sudah login masuk ke halaman 🔒, lalu diminta password HR.
-  - Kalau benar, kunci terbuka **30 menit** di perangkat itu saja (cookie terpisah yang
-    ditandatangani), lalu otomatis terkunci lagi. Ada tombol "Kunci sekarang".
-- **Dijaga di server.** Setiap API data HR memeriksa sesi admin **dan** kunci HR. Tanpa keduanya,
-  data tidak dikirim sama sekali; jadi ini bukan sekadar tampilan yang disembunyikan.
-- **Batas percobaan.** Salah password beberapa kali dikunci sementara.
-- **Log akses.** Setiap buka kunci, gagal buka, dan buka data per orang dicatat: waktu, IP,
-  perangkat, dan data siapa yang dibuka. Log bisa dilihat dari halaman Data HR.
-- **Anonim tetap anonim.** Password HR pun tidak membuka jawaban anonim per orang, karena memang
+- **Dijaga di server.** Setiap API data HR memeriksa sesi admin **dan** kunci HR (dan bahwa orangnya
+  masih di daftar). Tanpa itu, data tidak dikirim sama sekali; jadi ini bukan sekadar tampilan yang
+  disembunyikan.
+- **Batas percobaan.** Dibatasi per jaringan (IP) dan per email. Lima kali gagal dalam 15 menit
+  mengunci sementara selama 15 menit, dihitung per jaringan dan per email karyawan.
+- **Log akses per orang.** Setiap buka, gagal buka (dengan nama pemilik email bila emailnya
+  karyawan), buka data per orang, kunci, dan ekspor dicatat: siapa, waktu, IP, perangkat, dan data
+  siapa yang dibuka. Perubahan daftar akses juga dicatat (oleh super admin). Log bisa dilihat dari
+  halaman Data HR.
+- **Anonim tetap anonim.** Akses Data HR pun tidak membuka jawaban anonim per orang, karena memang
   tidak disimpan dengan nama.
 
 ## Level baca per pertanyaan
@@ -120,8 +136,8 @@ Kode di mockup dipetakan ke peran yang sudah ada:
 |---|---|---|
 | `rekan` | Terlihat rekan | Semua peserta, di profil orang itu |
 | `fasil` | Fasilitator | Panitia dan admin (rekap dan per orang) |
-| `hr` | HR | Admin + password HR. Panitia kamar hanya melihat hasil pairing, bukan jawaban per orang |
-| `hronly` | Hanya HR | Admin + password HR saja; tidak tampil ke panitia atau BOD |
+| `hr` | HR | Admin + Data HR dibuka (email WAM yang punya akses). Panitia kamar hanya melihat hasil pairing, bukan jawaban per orang |
+| `hronly` | Hanya HR | Admin + Data HR dibuka saja; tidak tampil ke panitia atau BOD |
 | `pilih` | Ditentukan peserta (pertanyaan 30) | Sesuai pilihan: dengan nama, tanpa nama, atau hanya fasilitator |
 | `anon` | Anonim | Tidak ada yang bisa melihat per orang; hanya rangkuman |
 
@@ -211,7 +227,9 @@ kartunya punya dua sumber:
   - `cq_person_cards`: kartu tiap orang: karakter, level, detail, nomor, DNA (unik), kunci
     gambar, dan catatan undian;
   - `cq_hr_access_log`: log buka kunci HR dan buka data per orang;
-  - hash password HR disimpan di pengaturan, hanya hash.
+  - daftar akses Data HR (`cq_forms.hr_access`, id karyawan) dan siapa pelaku tiap baris log
+    (`cq_hr_access_log.actor_employee_id`), migrasi 202611040012. Kolom hash password HR lama
+    dibiarkan di database tetapi tidak dipakai lagi.
 - **Ambang rangkuman anonim.** Rekap anonim baru tampil bila ada minimal 5 jawaban per kelompok,
   supaya departemen kecil tidak bisa ditebak.
 - **Penghapusan otomatis** data menginap dan kesehatan pada tanggal yang diatur. Admin melihat
@@ -221,7 +239,7 @@ kartunya punya dua sumber:
 
 1. **Tahap 1, isi dan kelola.**
    - Konten (termasuk nama dan alamat) dan Pengaturan di Admin WAM;
-   - password HR dan kuncinya;
+   - akses Data HR per orang dan kuncinya;
    - halaman kuesioner dengan simpan otomatis dan percabangan;
    - kartu di Beranda;
    - Progres di admin.
@@ -234,8 +252,10 @@ kartunya punya dua sumber:
 
 ## Keputusan pemilik (4 November 2026)
 
-1. **Data HR dikunci password khusus HR**, terpisah dari password admin. Hanya HR dan yang diberi
-   tahu yang bisa membuka; aksesnya dicatat.
+1. **Data HR dibuka dengan email WAM masing-masing**, bukan password bersama, supaya log
+   menunjukkan siapa yang membuka. Yang boleh hanya orang di daftar akses (saat ini 3 orang HR dan
+   HRGA), yang diatur super admin. Awalnya direncanakan email + password WAM; pemilik lalu
+   memutuskan email saja, dengan konsekuensi yang tercatat di bagian "Akses Data HR".
 2. **Kartu karakter seperti NFT, tanpa blockchain**: kartu koleksi bernomor dan unik di dalam
    aplikasi. Karakter dari jawaban dan kepribadian; level (Common sampai Legendary) dan detail
    tampilan diundi di server sekali lalu dikunci. Katalog karakter akan bertambah dan dikelola di

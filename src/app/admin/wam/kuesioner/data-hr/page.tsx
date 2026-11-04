@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Data HR · Kuesioner · Admin WAM", robots: { index: false, follow: false } };
 
 /**
- * Any admin, then the HR password: the questionnaire's `hr` and `hronly` answers per person. The
+ * Any admin, then the WAM email of someone on the HR access list: the questionnaire's `hr` and
+ * `hronly` answers per person, every read logged under that person. The
  * people list and the log are rendered only after the server verified this browser's HR unlock;
  * locked, the page holds no HR data at all. One person's answers come from the API (logged).
  */
@@ -29,7 +30,8 @@ export default async function WamHrDataPage() {
       <h2 className="sr-only">Data HR</h2>
       {/* The key gives the screen fresh state whenever the lock opens or closes. */}
       <HrDataScreen key={state.unlocked?.expiresAt ?? "terkunci"} data={data} state={{
-        migrated: state.migrated, hasPassword: state.hasPassword, unlockedUntil: data ? state.unlocked?.expiresAt ?? null : null,
+        migrated: state.migrated, accessReady: state.accessReady, hasAccess: state.hasAccess,
+        unlockedUntil: data ? state.unlocked?.expiresAt ?? null : null, actorName: data ? state.unlocked?.actor.name ?? null : null,
         lockedUntil: state.lockedUntil, attemptsLeft: state.attemptsLeft, renderedAt: state.checkedAt,
       }} />
     </div>

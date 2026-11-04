@@ -1,17 +1,4 @@
-/* Data HR and the HR password: the forms, the locked screen, and the unlocked data. */
-
-.passwordField { display: grid; gap: var(--space-2); }
-.passwordField :global(.field) { margin: 0; }
-
-/* The strength hint under a new password: three bars and a short line, never colour alone. */
-.strength { display: flex; align-items: flex-start; gap: var(--space-2); font-size: .8125rem; color: var(--ink-soft); }
-.strengthBars { display: inline-flex; flex: none; gap: 3px; margin-top: 5px; }
-.strengthBars span { width: 18px; height: 5px; border-radius: 3px; background: var(--line); }
-.strength[data-level="0"] .strengthBars span:nth-child(-n + 1),
-.strength[data-level="1"] .strengthBars span:nth-child(-n + 1) { background: #dc2626; }
-.strength[data-level="2"] .strengthBars span:nth-child(-n + 2) { background: #d97706; }
-.strength[data-level="3"] .strengthBars span:nth-child(-n + 3) { background: #16a34a; }
-.strength strong { color: var(--color-text); }
+/* Data HR and its access list: the settings card, the locked screen, and the unlocked data. */
 
 .settings { display: grid; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--line); border-radius: 16px; background: #fff; }
 .settingsHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
@@ -20,11 +7,18 @@
 .pill { padding: 1px var(--space-2); border-radius: 999px; background: var(--page); color: var(--ink-soft); font-size: .75rem; font-weight: 700; }
 .pillOn { background: var(--st-after-bg); color: var(--st-after); }
 .lead { margin: 0; color: var(--ink-soft); }
-.form { display: grid; gap: var(--space-4); max-width: 28rem; }
-.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
-.forgot { border-top: 1px solid var(--line); padding-top: var(--space-4); }
-.forgot summary { cursor: pointer; font-weight: 600; color: var(--blue); min-height: 44px; display: flex; align-items: center; }
-.forgot p { margin: var(--space-2) 0 var(--space-3); color: var(--ink-soft); }
+
+/* Pengaturan → Akses Data HR: the people on the list, and the super admin's picker. */
+.accessList { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.accessItem { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); min-height: 56px; padding: var(--space-3); border: 1px solid var(--line); border-radius: 12px; }
+.accessWho { display: grid; gap: 2px; min-width: 0; }
+.accessWho strong, .accessWho small { overflow-wrap: anywhere; }
+.accessWho small { color: var(--ink-soft); }
+.accessWarn { display: inline-flex; align-items: center; gap: 4px; color: #92400e; font-size: .8125rem; font-weight: 600; }
+.picker { display: grid; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.picker h3 { margin: 0; font-size: .9375rem; }
+.results { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; max-height: 20rem; overflow-y: auto; }
+.readOnly { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--ink-soft); font-size: .875rem; }
 
 /* Locked: one card in the middle with the lock drawing and the form. */
 .lockCard { display: grid; gap: var(--space-4); max-width: 30rem; margin: var(--space-4) auto; padding: var(--space-6); border: 1px solid var(--line); border-radius: 16px; background: #fff; text-align: left; }
@@ -37,6 +31,8 @@
 /* Unlocked: the bar with the time left and "Kunci sekarang". */
 .unlockedBar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid color-mix(in srgb, #16a34a 30%, var(--line)); border-radius: 12px; background: #dcfce7; color: #14532d; }
 .unlockedBar p { flex: 1 1 14rem; margin: 0; font-weight: 600; }
+.unlockedText { display: grid; gap: 2px; }
+.unlockedText span + span { font-weight: 500; }
 .unlockedBar svg { flex: none; }
 .unlockedSoon { border-color: color-mix(in srgb, #d97706 35%, var(--line)); background: #fef3c7; color: #78350f; }
 
@@ -67,7 +63,7 @@
 .log_buka { background: #dcfce7; color: #166534; }
 .log_gagal { background: #fee2e2; color: #991b1b; }
 .log_lihat, .log_ekspor { background: #eef4fd; color: var(--blue); }
-.log_ganti_password { background: #fef3c7; color: #92400e; }
+.log_ganti_password, .log_ubah_akses { background: #fef3c7; color: #92400e; }
 .logText { display: grid; gap: 2px; min-width: 0; }
 .logText p { margin: 0; }
 .logMeta { color: var(--ink-soft); font-size: .8125rem; overflow-wrap: anywhere; }
