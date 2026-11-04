@@ -8,6 +8,7 @@ import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { listPeople, myBookings, usedTitles, weekSchedule } from "@/lib/server/pra-wam/appraisal";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
+import { appSettings } from "@/lib/server/pra-wam/rooms";
 import { listUnits } from "@/lib/server/pra-wam/units";
 import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
 
@@ -21,7 +22,7 @@ const TIME = /^\d{2}:\d{2}$/;
 
 /**
  * Book: the calendar of who has which room (the day, or on a desktop the week), the floor plan as
- * a second view, and the person's own bookings. The whole week of the chosen day is loaded, so
+ * a second view unless the super admin switched it off, and the person's own bookings. The whole week of the chosen day is loaded, so
  * switching days needs no trip to the server. The address may ask for a sheet: ?booking=<id> (from
  * an agenda item), ?edit=<id>, or ?new=1 with room, start and end.
  */
@@ -34,8 +35,8 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
   const asked = query.date;
   const date = asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) && asked >= appraisalRules.periodStart && asked <= appraisalRules.periodEnd ? asked : dates[0] ?? appraisalRules.periodEnd;
   const week = workWeek(date);
-  const loaded = await Promise.all([weekSchedule(week, member), myBookings(member, today), appraisalOpen()])
-    .then(async ([schedule, mine, open]) => ({ schedule, mine, open, form: open ? await formData(member) : null }))
+  const loaded = await Promise.all([weekSchedule(week, member), myBookings(member, today), appraisalOpen(), appSettings()])
+    .then(async ([schedule, mine, open, settings]) => ({ schedule, mine, open, settings, form: open ? await formData(member) : null }))
     .catch((error: unknown) => {
       if (error instanceof ServiceError) return error.message;
       throw error;
@@ -44,7 +45,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
     <ScreenHead eyebrow="Ruang meeting" title="Book ruang" lead={`Jam ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–20 Nov.`} />
     <Notice tone="warning">{loaded}</Notice>
   </PraWamShell>;
-  const { schedule, mine, open, form } = loaded;
+  const { schedule, mine, open, settings, form } = loaded;
   const arrive: BookArrival = {
     booking: query.booking && ID.test(query.booking) ? query.booking : undefined,
     edit: query.edit && ID.test(query.edit) ? query.edit : undefined,
@@ -58,8 +59,8 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
   const shown = week.includes(date) ? date : week.find(day => day >= appraisalRules.periodStart && day <= appraisalRules.periodEnd) ?? week[0];
   return <PraWamShell member={member} current="appraisal">
     <AppraisalBoard date={shown} week={week} dates={dates} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine}
-      viewerId={member.id} canCancelAny={cancelsAnyBooking(member)} open={open} form={form} arrive={arrive}
-      banner={open ? undefined : <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. Kalender dan denah tetap bisa dilihat.</Notice></div>} />
+      viewerId={member.id} canCancelAny={cancelsAnyBooking(member)} open={open} form={form} arrive={arrive} floorPlan={settings.floorPlan}
+      banner={open ? undefined : <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. {settings.floorPlan ? "Kalender dan denah" : "Kalender"} tetap bisa dilihat.</Notice></div>} />
   </PraWamShell>;
 }
 

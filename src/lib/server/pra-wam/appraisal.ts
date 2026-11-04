@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { alternatives, appraisalRules, bookingProblems, clockLabel, overlaps, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { alternatives, appraisalRules, bookingProblems, clockLabel, overlaps, roomFitProblem, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -31,9 +31,14 @@ function fail(error: { code?: string; message: string }): never {
 }
 
 async function listRoomsUncached(): Promise<Room[]> {
-  const { data, error } = await createPrivilegedClient().from("pw_rooms").select("id,slug,name,kind,capacity,bookable").order("sort_order");
-  if (error) fail(error);
-  return (data ?? []) as Room[];
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("pw_rooms").select("id,slug,name,kind,capacity,bookable,min_people,plan_key").order("sort_order");
+  if (!error) return (data ?? []).map(({ min_people, plan_key, ...room }) => ({ ...room, minPeople: min_people, planKey: plan_key }) as Room);
+  // Before migration 202611040009: no lower limit and no picked plan spot yet.
+  if (error.code !== "42703" && error.code !== "PGRST204") fail(error);
+  const { data: rows, error: oldError } = await client.from("pw_rooms").select("id,slug,name,kind,capacity,bookable").order("sort_order");
+  if (oldError) fail(oldError);
+  return (rows ?? []).map(room => ({ ...room, minPeople: null, planKey: null }) as Room);
 }
 /** Read once per request, however many parts of the page ask. */
 export const listRooms = cache(listRoomsUncached);
@@ -166,6 +171,9 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
   if (options.id) await requireOwn(options.id, viewer);
   const problems = bookingProblems(input, now);
   if (Object.keys(problems).length) throw new ServiceError(422, "Periksa kembali tanggal dan jam.", Object.fromEntries(Object.entries(problems).map(([key, message]) => [key, [message]])));
+  // The room must suit how many come (the same rule the form uses): no one-on-one in the big room.
+  const unfit = roomFitProblem(await listRooms(), input, viewer.id);
+  if (unfit) throw new ServiceError(422, unfit.message, { roomId: [unfit.reason] });
   const span = { startsAt: wibInstant(input.date, input.start), endsAt: wibInstant(input.date, input.end) };
   const participants = [...new Set(input.participants)].filter(id => id !== viewer.id);
   const sameDay = await activeOn(input.date);

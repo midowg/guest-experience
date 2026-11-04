@@ -1,0 +1,60 @@
+/* The booking form's steps (BookingForm.tsx), on top of pra-wam.module.css and appraisal.module.css.
+   Only --pw-* tokens, so the light and dark themes both hold. */
+
+/* "Langkah 2 dari 4", the bar, and (from 640px) the steps by name */
+.progress { display: grid; gap: 8px; }
+.count { margin: 0; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.bar { height: 6px; border-radius: 999px; background: var(--pw-line); overflow: hidden; }
+.bar > span { display: block; height: 100%; border-radius: inherit; background: var(--pw-primary); transition: width 200ms ease-out; }
+.steps { display: none; margin: 0; padding: 0; list-style: none; gap: 8px; }
+.steps button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 12px; border: 1px solid var(--pw-line); border-radius: 999px; background: var(--pw-surface); color: var(--pw-text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out; }
+.steps button:hover:not(:disabled) { border-color: var(--pw-primary); }
+.steps button[aria-current='step'] { background: var(--pw-primary); border-color: var(--pw-primary); color: var(--pw-on-primary); }
+.steps button:disabled { cursor: not-allowed; background: var(--pw-surface-soft); color: var(--pw-muted); }
+.steps button:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.steps svg { width: 16px; height: 16px; }
+@media (min-width: 640px) { .steps { display: flex; flex-wrap: wrap; } }
+
+/* One step at a time, coming in briefly */
+.step { animation: stepIn 200ms ease-out; }
+.step[hidden] { display: none; }
+.step h2:focus { outline: none; }
+.lead { margin: -8px 0 0; font-size: 13px; color: var(--pw-muted); }
+@keyframes stepIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .step, .bar > span, .steps button, .room { animation: none; transition: none; } }
+
+/* Waktu: the hours the booking takes, said back */
+.span { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 14px; font-weight: 700; }
+.span svg { flex: none; }
+
+/* Partisipan: how many come */
+.headcount { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 15px; font-weight: 700; }
+.headcount svg { flex: none; }
+
+/* Ruang: the cards, those that cannot be taken still readable */
+.rooms { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 12px; }
+.room { display: flex; gap: 12px; align-items: flex-start; min-height: 44px; padding: 14px 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; transition: border-color 150ms ease-out, background-color 150ms ease-out; }
+.room:hover:not(:disabled) { border-color: var(--pw-primary); }
+.room:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.room[aria-pressed='true'] { border: 2px solid var(--pw-primary); background: var(--pw-primary-soft); padding: 13px 15px; }
+.room:disabled { cursor: not-allowed; border-style: dashed; background: var(--pw-surface-soft); }
+.room:disabled strong { color: var(--pw-muted); }
+.room strong { font-size: 15px; }
+.ok { font-size: 13px; font-weight: 700; color: var(--pw-success); }
+.no { font-size: 13px; font-weight: 700; color: var(--pw-danger); }
+.picked { margin: 0; font-size: 14px; font-weight: 700; color: var(--pw-text); }
+
+/* No room fits: what to change */
+.wayOut { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid var(--pw-warning); border-radius: 16px; background: var(--pw-warning-soft); color: var(--pw-text); }
+.wayOut p { margin: 0; font-size: 14px; }
+.note { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--pw-warning-soft); color: var(--pw-text); font-size: 13px; font-weight: 600; }
+
+/* Ringkasan */
+.summary { display: grid; gap: 0; margin: 0; }
+.summaryRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: start; padding: 12px 0; border-top: 1px solid var(--pw-line); }
+.summaryRow:first-child { border-top: 0; padding-top: 0; }
+.summaryRow dt { grid-column: 1; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.summaryRow dd { grid-column: 1; margin: 0; display: grid; gap: 2px; font-size: 15px; font-weight: 700; color: var(--pw-text); overflow-wrap: anywhere; }
+.summaryRow dd small { font-size: 13px; font-weight: 600; color: var(--pw-muted); }
+.summaryRow > button { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+.missing { color: var(--pw-danger); }

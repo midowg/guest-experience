@@ -221,7 +221,7 @@ export const praWamApi = {
 export const PRA_WAM_ADMIN = "/admin/super/wam";
 /** Super admin: the account list and creating accounts, or one person's roles and password reset. */
 export const praWamAccountsApi = (employeeId?: string) => `/api/admin/wam/accounts${employeeId ? `/${employeeId}` : ""}`;
-/** Super admin: one room's capacity and whether appraisal may book it. */
+/** Super admin: PATCH one room's capacity, fewest people, bookable and floor plan spot. */
 export const praWamRoomsApi = (roomId: string) => `/api/admin/wam/rooms/${roomId}`;
 /** Super admin: import units and positions from the Data karyawan workbook. */
 export const praWamUnitsApi = "/api/admin/wam/units";
@@ -229,3 +229,5 @@ export const praWamUnitsApi = "/api/admin/wam/units";
 export const praWamEventsApi = (eventId: string) => `/api/admin/wam/events/${eventId}`;
 /** Super admin: PUT saves the "Apa itu WAM?" text, DELETE goes back to the default text. */
 export const praWamAboutApi = "/api/admin/wam/about";
+/** Super admin: PUT the app settings, e.g. whether Book shows the floor plan. */
+export const praWamSettingsApi = "/api/admin/wam/settings";

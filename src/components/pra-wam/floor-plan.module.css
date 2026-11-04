@@ -32,6 +32,14 @@
 .off .box { stroke-dasharray: 6 8; }
 .off text, .closed text { fill: var(--pw-muted); }
 .selected .box { fill: var(--pw-primary-soft); stroke: var(--pw-primary); stroke-width: 14; stroke-dasharray: none; }
+/* Book plan, the whole day: partly used (amber), full (red, hatched by a thicker double line). */
+.part .box { fill: var(--pw-warning-soft); stroke: var(--pw-warning); }
+.full .box { fill: var(--pw-danger-soft); stroke: var(--pw-danger); stroke-width: 8; }
+/* The room whose detail is open: ringed, its status colour kept. */
+.ring .box { stroke: var(--pw-primary); stroke-width: 16; stroke-dasharray: none; }
+/* Building context on the Book plan: no status, quieter. */
+.plain .box { fill: var(--pw-page); stroke: var(--pw-line); stroke-width: 3; stroke-dasharray: none; }
+.plain text { fill: var(--pw-muted); font-weight: 600; }
 .click { cursor: pointer; }
 .click:focus { outline: none; }
 .click:hover .box, .click:focus-visible .box { stroke-width: 14; }
@@ -45,6 +53,9 @@
 .swatch.mine { background: var(--pw-brass-soft); border-color: var(--pw-brass); }
 .swatch.small { background: var(--pw-warning-soft); border-color: var(--pw-warning); border-style: dashed; }
 .swatch.off { background: var(--pw-page); border-color: var(--pw-muted); border-style: dashed; }
+.swatch.part { background: var(--pw-warning-soft); border-color: var(--pw-warning); }
+.swatch.full { background: var(--pw-danger-soft); border-color: var(--pw-danger); border-width: 3px; }
+.swatch.closed { background: var(--pw-page); border-color: var(--pw-muted); }
 .swatch.selected { background: var(--pw-primary-soft); border-color: var(--pw-primary); border-width: 3px; }
 
 .extra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -55,7 +66,34 @@ button.extraChip { cursor: pointer; }
 button.extraChip:hover { border-color: var(--pw-primary); }
 .extraChip[aria-pressed='true'] { border: 2px solid var(--pw-primary); background: var(--pw-primary-soft); padding: 5px 13px; }
 
-@media (prefers-reduced-motion: reduce) { .spot .box, .extraChip { transition: none; } }
+/* Book plan: each bookable room's day below the plan. */
+.days { display: grid; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }
+@media (min-width: 900px) { .days { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.day { display: grid; gap: 10px; align-content: start; padding: 14px 16px; border: 1px solid var(--pw-line); border-radius: 14px; background: var(--pw-surface); scroll-margin-top: 96px; transition: border-color .2s ease, box-shadow .2s ease; }
+.dayOn { border-color: var(--pw-primary); box-shadow: 0 0 0 2px var(--pw-primary); }
+.dayHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.dayHead h3 { margin: 0; font-family: var(--pw-body); font-size: 16px; font-weight: 800; color: var(--pw-text); }
+.dayHead small { font-size: 13px; color: var(--pw-muted); }
+.dayTag { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 2px solid; font-size: 13px; font-weight: 800; color: var(--pw-text); }
+.dayTag.free { background: var(--pw-success-soft); border-color: var(--pw-success); }
+.dayTag.part { background: var(--pw-warning-soft); border-color: var(--pw-warning); }
+.dayTag.full { background: var(--pw-danger-soft); border-color: var(--pw-danger); }
+.dayTag.off, .dayTag.closed { background: var(--pw-page); border-color: var(--pw-muted); color: var(--pw-muted); }
+.dayFacts { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font-size: 14px; color: var(--pw-muted); }
+.dayFacts b { color: var(--pw-text); font-weight: 800; }
+.dayBookings { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.dayBooking { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 2px 12px; width: 100%; min-height: 44px; padding: 6px 10px; border: 0; border-radius: 10px; background: var(--pw-page); color: var(--pw-text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; transition: background .18s ease; }
+.dayBooking:hover { background: var(--pw-primary-soft); }
+.dayBooking:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.dayBooking > span:first-child { font-weight: 800; font-variant-numeric: tabular-nums; }
+.dayBooking strong { display: block; font-weight: 700; overflow-wrap: anywhere; }
+.dayBooking small { display: block; font-size: 13px; color: var(--pw-muted); }
+.dayBooking.dayMine { background: var(--pw-brass-soft); box-shadow: inset 4px 0 0 var(--pw-brass); }
+.dayBooking.dayMine small { color: var(--pw-on-brass-soft); font-weight: 700; }
+.dayEmpty { margin: 0; font-size: 14px; color: var(--pw-muted); }
+.dayActions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (prefers-reduced-motion: reduce) { .spot .box, .extraChip, .day, .dayBooking { transition: none; } }
 
 /* Panitia session form: the chosen room's day (Penpot D4's "Jadwal ruang"). */
 .roomDay { display: grid; gap: 8px; padding: 12px 14px; border-radius: 12px; background: var(--pw-page); font-size: 13px; }

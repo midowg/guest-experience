@@ -110,13 +110,6 @@ export async function resetPassword(employeeId: string): Promise<void> {
   if (saveError) databaseError(saveError);
 }
 
-/** A room's capacity (empty = not known) and whether appraisal may book it. */
-export async function updateRoom(roomId: string, patch: { capacity: number | null; bookable: boolean }): Promise<void> {
-  const { data, error } = await createPrivilegedClient().from("pw_rooms").update(patch).eq("id", roomId).select("id").maybeSingle();
-  if (error) { if (notMigrated(error)) throw waitingForMigration(); databaseError(error); }
-  if (!data) throw new ServiceError(404, "Ruang tidak ditemukan.");
-}
-
 /**
  * The super admin corrects a person's email: in Data karyawan and, when they have an account, as
  * their sign-in too, so they sign in (and receive "Lupa password") with the new address. Nothing

@@ -1,0 +1,16 @@
+/* Super admin → WAM → Ruang dan denah (PraWamRooms.tsx), on the Journey admin tokens. */
+.layout { display: grid; gap: var(--space-5); min-width: 0; }
+@media (min-width: 1100px) { .layout { grid-template-columns: minmax(0, 3fr) minmax(20rem, 2fr); align-items: start; } }
+/* The plan sits in a WAM-themed box (its colours are the --pw-* tokens), like the "Apa itu WAM" preview. */
+.planBox { min-height: 0; min-width: 0; padding: 16px; border-radius: 16px; border: 1px solid var(--color-border); display: grid; gap: 12px; }
+.side { display: grid; gap: var(--space-4); min-width: 0; }
+.editor { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-background, #fff); }
+.editor h3 { margin: 0; }
+.fields { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+.fields :global(.field) { margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: 10px; }
+.list small { display: block; color: var(--color-caption); }
+.note { margin: 0; font-size: var(--text-sm); color: var(--color-caption); }
+.on td { background: var(--color-soft); }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { headcount, peopleLabel, roomFit } from "./room-fit";
 
 /*
  * Appraisal room booking for Pra WAM: the rules shared by the form, the server and the tests.
@@ -21,7 +22,13 @@ export const appraisalRules = {
 /** Offered while typing the activity name, before the names people have already used. */
 export const standardTitles = ["Appraisal 1-on-1", "Appraisal tim", "Review KPI", "Kalibrasi nilai", "Feedback session"];
 
-export type Room = { id: string; slug: string; name: string; kind: "utama" | "area"; capacity: number | null; bookable: boolean };
+export type Room = {
+  id: string; slug: string; name: string; kind: "utama" | "area"; capacity: number | null; bookable: boolean;
+  /** The fewest people the room is for (a big room is not for a one-on-one); null = no lower limit. */
+  minPeople: number | null;
+  /** The floor plan spot the super admin picked; null = matched by name (migration 202611040009). */
+  planKey: string | null;
+};
 export type Person = { id: string; name: string; department: string };
 export type Booking = {
   id: string; roomId: string; title: string; description: string; startsAt: string; endsAt: string;
@@ -284,4 +291,34 @@ export function draftHours(date: string, now: Date, asked: { start?: string; end
   const end = asked.end && slotTimes().includes(asked.end) && fits(asked.end) ? asked.end
     : fromMinutes(Math.min(toMinutes(start) + 60, toMinutes(appraisalRules.close)));
   return { start, end };
+}
+
+/* ── The booking form's steps (BookingForm.tsx) and the room rule the server repeats. ── */
+
+/** 30 → "30 mnt", 60 → "1 jam", 90 → "1 jam 30 mnt". */
+export function durationLabel(minutes: number): string {
+  const hours = Math.floor(minutes / 60), rest = minutes % 60;
+  return [hours ? `${hours} jam` : "", rest ? `${rest} mnt` : ""].filter(Boolean).join(" ") || "0 mnt";
+}
+
+/** The lengths a booking from `start` may take: every half hour up to 4 hours, ending by closing. */
+export function durationsFrom(start: string): number[] {
+  const room = Math.min(appraisalRules.maxMinutes, toMinutes(appraisalRules.close) - toMinutes(start));
+  const lengths: number[] = [];
+  for (let length = appraisalRules.stepMinutes; length <= room; length += appraisalRules.stepMinutes) lengths.push(length);
+  return lengths;
+}
+
+/**
+ * Why a booking may not take its room for the people it brings (the booker and each other
+ * participant once), as roomFit() says; null when it may. An unknown or closed room is left to the
+ * database, which answers those with its own message.
+ */
+export function roomFitProblem(rooms: Room[], input: Pick<BookingInput, "roomId" | "participants">, bookerId: string): { message: string; reason: string } | null {
+  const room = rooms.find(item => item.id === input.roomId);
+  if (!room || !room.bookable) return null;
+  const people = headcount(new Set(input.participants.filter(id => id !== bookerId)).size);
+  const fit = roomFit(room, people);
+  if (fit.ok) return null;
+  return { message: `${room.name} tidak cocok untuk ${peopleLabel(people)}. ${fit.text}.`, reason: fit.text };
 }

@@ -5,9 +5,8 @@ import { Pencil } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import type { Room } from "@/lib/pra-wam/appraisal";
 import { blockedRoles, praWamRoles, roleConflicts, roleLabels, roleProblem, type PraWamRole } from "@/lib/pra-wam/roles";
-import { EMPLOYEES_ADMIN, praWamAccountsApi, praWamPath, praWamRoomsApi } from "@/lib/routes";
+import { EMPLOYEES_ADMIN, praWamAccountsApi, praWamPath } from "@/lib/routes";
 import type { AccountRow } from "@/lib/server/pra-wam/accounts";
 import styles from "@/components/admin/admin.module.css";
 
@@ -22,36 +21,12 @@ const roleGuide: { role: string; does: string; combines: string }[] = [
   { role: "BOD", does: "Menu BOD: Ringkasan, Peserta, Survei; melihat semua sesi tanpa mengubah. Tetap bisa ikut sesi dan book ruang.", combines: "Tidak dengan peran lain" },
 ];
 
-/** Capacity and bookable for one room, saved on its own. */
-function RoomRow({ room, onSaved }: { room: Room; onSaved: (rooms: Room[], text: string) => void }) {
-  const [capacity, setCapacity] = useState(room.capacity?.toString() ?? "");
-  const [bookable, setBookable] = useState(room.bookable);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const changed = capacity !== (room.capacity?.toString() ?? "") || bookable !== room.bookable;
-  async function save() {
-    setBusy(true); setError(null);
-    try {
-      const result = await adminRequest<Room[]>(praWamRoomsApi(room.id), { method: "PATCH", body: JSON.stringify({ capacity: capacity.trim() ? Number(capacity) : null, bookable }) });
-      if (result.data) onSaved(result.data, `${room.name}: ${result.message}`);
-    } catch (problem) { setError(errorMessage(problem)); }
-    finally { setBusy(false); }
-  }
-  return <tr>
-    <td>{room.name}<br /><small>{room.kind === "utama" ? "Ruang utama" : "Area"}</small></td>
-    <td><input className="input" style={{ maxWidth: "7rem" }} inputMode="numeric" aria-label={`Kapasitas ${room.name}`} placeholder="—" value={capacity} onChange={event => setCapacity(event.target.value.replace(/\D/g, "").slice(0, 3))} /></td>
-    <td><label><input type="checkbox" checked={bookable} onChange={event => setBookable(event.target.checked)} /> Bisa dipesan</label></td>
-    <td><Button type="button" variant="secondary" disabled={busy || !changed} onClick={save}>{busy ? "Menyimpan…" : "Simpan"}</Button>{error && <div role="alert">{error}</div>}</td>
-  </tr>;
-}
-
 /**
  * Pra WAM, set up by the super admin: accounts for everyone active in Data karyawan with an email
- * (shared first password), roles on top of peserta, password resets, and the rooms.
+ * (shared first password), roles on top of peserta, and password resets. The rooms are in PraWamRooms.
  */
-export function PraWamAccounts({ initial, initialRooms, migrated, passwordReady }: { initial: AccountRow[]; initialRooms: Room[]; migrated: boolean; passwordReady: boolean }) {
+export function PraWamAccounts({ initial, migrated, passwordReady }: { initial: AccountRow[]; migrated: boolean; passwordReady: boolean }) {
   const [rows, setRows] = useState(initial);
-  const [rooms, setRooms] = useState(initialRooms);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<Message>(null);
   const [rowError, setRowError] = useState<{ id: string; text: string } | null>(null);
@@ -144,12 +119,5 @@ export function PraWamAccounts({ initial, initialRooms, migrated, passwordReady 
         })}</tbody>
       </table>
     </div>
-
-    <h2>Ruang appraisal</h2>
-    <p>Kapasitas tampil di form pesan ruang. Hanya ruang yang dicentang &ldquo;Bisa dipesan&rdquo; yang muncul di form.</p>
-    <table className={styles.table}>
-      <thead><tr><th>Ruang</th><th>Kapasitas</th><th>Bisa di-book</th><th /></tr></thead>
-      <tbody>{rooms.map(room => <RoomRow key={`${room.id}-${room.capacity}-${room.bookable}`} room={room} onSaved={(next, text) => { setRooms(next); setMessage({ tone: "success", text }); }} />)}</tbody>
-    </table>
   </div>;
 }

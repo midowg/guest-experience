@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { wibInstant, type Room } from "./appraisal";
-import { BUILDING, PLAN_SPOTS, fitText, layoutRooms, normalizeRoomName, pickableTone, planKey, roomStatus } from "./floor-plan";
+import { BUILDING, PLAN_SPOTS, fitText, layoutRooms, normalizeRoomName, pickableTone, placeRooms, planKey, roomStatus } from "./floor-plan";
 
-const room = (name: string, slug = name.toLowerCase().replace(/\s+/g, "-"), bookable = true): Room => ({ id: slug, slug, name, kind: "utama", capacity: null, bookable });
+const room = (name: string, slug = name.toLowerCase().replace(/\s+/g, "-"), bookable = true): Room => ({ id: slug, slug, name, kind: "utama", capacity: null, bookable, minPeople: null, planKey: null });
 /** The rooms as seeded in production (migration 202611040001). */
 const production = [
   room("CFC Ananta Room", "cfc-ananta"), room("Nagapadma"), room("Vasuki"),
@@ -76,5 +76,17 @@ describe("text sizing", () => {
     expect(fitText("Vasuki", 453, 46)).toBe(46);
     expect(fitText("CFC Ananta Room", 410, 46)).toBeCloseTo(386 / (15 * 0.68));
     expect(fitText("Kosong 09.00–10.00", 100, 23)).toBe(14);
+  });
+});
+
+describe("spots the super admin picked", () => {
+  it("win over a room that only matches by name, which goes unplaced", () => {
+    const picked = { ...room("Komunal"), planKey: "nagapadma" };
+    const { placed, unplaced } = placeRooms([room("Nagapadma"), room("Vasuki"), picked]);
+    expect(placed.find(item => item.key === "nagapadma")?.room.name).toBe("Komunal");
+    expect(unplaced.map(item => item.name)).toEqual(["Nagapadma"]);
+  });
+  it("ignore a picked key the plan does not have", () => {
+    expect(placeRooms([{ ...room("Komunal"), planKey: "gudang" }]).unplaced).toHaveLength(1);
   });
 });

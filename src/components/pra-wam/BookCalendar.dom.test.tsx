@@ -7,7 +7,7 @@ afterEach(cleanup);
 // jsdom has no CSS: the phone rows and the desktop timeline are both in the document, phone first.
 const first = (name: string | RegExp) => screen.getAllByRole("button", { name })[0];
 
-const room = (id: string, name: string): Room => ({ id, slug: id, name, kind: "area", capacity: 6, bookable: true });
+const room = (id: string, name: string): Room => ({ id, slug: id, name, kind: "area", capacity: 6, bookable: true, minPeople: null, planKey: null });
 const rooms = [room("r1", "Nagapadma"), room("r2", "Cendana")];
 const person = (id: string, name: string) => ({ id, name, department: "Finance" });
 const booking = (id: string, roomId: string, date: string, start: string, end: string, by = person("p2", "Sari"), extra: Partial<Booking> = {}): Booking =>

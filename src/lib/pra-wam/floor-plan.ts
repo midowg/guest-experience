@@ -45,8 +45,12 @@ const ROOM_SPOTS: Record<string, string> = {
   "main office": "main-office",
 };
 
-/** Which spot a WAM room takes: by its name first, then by its slug; null when it has none. */
-export function planKey(room: Pick<Room, "name" | "slug">): string | null {
+/**
+ * Which spot a WAM room takes: the one the super admin picked, else by its name, then by its slug;
+ * null when it has none.
+ */
+export function planKey(room: Pick<Room, "name" | "slug"> & { planKey?: string | null }): string | null {
+  if (room.planKey && PLAN_SPOTS[room.planKey]) return room.planKey;
   return ROOM_SPOTS[normalizeRoomName(room.name)] ?? ROOM_SPOTS[normalizeRoomName(room.slug ?? "")] ?? null;
 }
 
@@ -54,7 +58,7 @@ export function planKey(room: Pick<Room, "name" | "slug">): string | null {
  * The plan for a list of WAM rooms: the rooms with a spot, the spots no WAM room takes (drawn grey,
  * never bookable), and the WAM rooms without a spot (listed below the plan).
  */
-export function layoutRooms<R extends Pick<Room, "id" | "name" | "slug">>(rooms: R[]) {
+export function layoutRooms<R extends Pick<Room, "id" | "name" | "slug"> & { planKey?: string | null }>(rooms: R[]) {
   const placed: { key: string; room: R; rect: Rect }[] = [];
   const unplaced: R[] = [];
   const taken = new Set<string>();
@@ -103,3 +107,16 @@ export const pickableTone = (tone: PlanTone) => tone === "free" || tone === "sma
  * 14 and never above `max`.
  */
 export const fitText = (label: string, width: number, max: number) => Math.max(14, Math.min(max, (width - 24) / (Math.max(label.length, 3) * 0.68)));
+
+/**
+ * As layoutRooms, but a spot the super admin picked for a room (`planKey`) wins over a room that
+ * only matches the spot by name, which then goes to `unplaced`. `unplaced` keeps the given order.
+ */
+export function placeRooms<R extends Pick<Room, "id" | "name" | "slug"> & { planKey?: string | null }>(rooms: R[]) {
+  const picked = (room: R) => !!room.planKey && !!PLAN_SPOTS[room.planKey];
+  const { placed, others, unplaced } = layoutRooms([...rooms.filter(picked), ...rooms.filter(room => !picked(room))]);
+  return { placed, others, unplaced: rooms.filter(room => unplaced.includes(room)) };
+}
+
+/** Every spot key with its label, for a picker. */
+export const planSpotOptions = () => Object.entries(PLAN_SPOTS).map(([key, spot]) => ({ key, label: spot.label }));

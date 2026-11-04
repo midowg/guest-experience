@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { CalendarDays, CalendarPlus, ChevronRight, Clock, DoorOpen, Map as MapIcon, MapPin, Plus, Text, User, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { appraisalRules, clockLabel, dayLabel, draftHours, wibDate, wibInstant, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, clockLabel, dayLabel, draftHours, wibDate, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
-import { roomStatus, type PlanStatus } from "@/lib/pra-wam/floor-plan";
+import { placeRooms } from "@/lib/pra-wam/floor-plan";
+import { bookingFrom, countLabel, durationLabel, roomDay, runLabel, type DayStatus } from "@/lib/pra-wam/room-day";
 import { bookingKey, DayCalendar, Legend, WeekCalendar, WeekStrip, type BookPick } from "./BookCalendar";
 import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
 import { useConfirm } from "./ConfirmDialog";
@@ -16,6 +17,7 @@ import { ScreenHead } from "./ScreenHead";
 import { Sheet } from "./Sheet";
 import styles from "./pra-wam.module.css";
 import css from "./book-calendar.module.css";
+import plan from "./floor-plan.module.css";
 
 /** What the booking form needs besides the schedule; null while booking is closed. */
 export type BookFormData = { people: Person[]; groups: PeopleGroup[]; usedTitles: { title: string; count: number }[] };
@@ -31,6 +33,8 @@ type Props = {
   form: BookFormData | null; arrive: BookArrival;
   /** A line under the title, e.g. that booking is closed. */
   banner?: ReactNode;
+  /** Whether the floor plan is offered next to the calendar (the super admin's setting); default true. */
+  floorPlan?: boolean;
 };
 
 type SheetState =
@@ -39,10 +43,6 @@ type SheetState =
 
 const span = (booking: Booking) => `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`;
 const shortDate = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
-const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
-const clock = (total: number) => `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
-/** The finder's lengths in the booking HTML. */
-const lengths = [{ minutes: 30, label: "30 mnt" }, { minutes: 60, label: "1 jam" }, { minutes: 90, label: "1,5 jam" }, { minutes: 120, label: "2 jam" }];
 const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <= appraisalRules.periodEnd;
 
 /**
@@ -53,7 +53,7 @@ const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <=
  * round trip), so a reload reopens it; another week is a navigation, since its bookings are loaded
  * on the server.
  */
-export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner }: Props) {
+export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true }: Props) {
   const router = useRouter();
   const [confirm, confirmDialog] = useConfirm();
   const bookable = rooms.filter(room => room.bookable);
@@ -65,7 +65,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const [selected, setSelected] = useState(date);
   const [weekOf, setWeekOf] = useState(week[0]);
   if (weekOf !== week[0]) { setWeekOf(week[0]); setSelected(date); }
-  const [view, setView] = useState<"kalender" | "denah">("kalender");
+  const [chosenView, setView] = useState<"kalender" | "denah">("kalender");
+  // With the floor plan switched off by the super admin, only the calendar.
+  const view = floorPlan ? chosenView : "kalender";
   const [mode, setMode] = useState<"hari" | "minggu">("hari");
 
   // "Now" moves on while the page is open: the line and what can still be booked.
@@ -194,10 +196,10 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {confirmDialog}
 
     <div className={css.toolbar}>
-      <div className={css.segmented} role="group" aria-label="Tampilan">
+      {floorPlan && <div className={css.segmented} role="group" aria-label="Tampilan">
         <button type="button" aria-pressed={view === "kalender"} onClick={() => setView("kalender")}><CalendarDays aria-hidden />Kalender</button>
         <button type="button" aria-pressed={view === "denah"} onClick={() => setView("denah")}><MapIcon aria-hidden />Denah</button>
-      </div>
+      </div>}
       {view === "kalender" && <div className={`${css.segmented} ${css.deskOnly}`} role="group" aria-label="Rentang kalender">
         <button type="button" aria-pressed={mode === "hari"} onClick={() => setMode("hari")}>Hari</button>
         <button type="button" aria-pressed={mode === "minggu"} onClick={() => setMode("minggu")}>Minggu</button>
@@ -218,8 +220,8 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
       </div>}
       <DayCalendar date={selected} rooms={bookable} bookings={dayBookings} now={clockNow} viewerId={viewerId} canBook={canBookDay}
         onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} phoneOnly={mode === "minggu"} />
-    </> : <PlanView key={selected} date={selected} now={clockNow} rooms={rooms} bookings={dayBookings} viewerId={viewerId} canBook={canBookDay}
-      onBook={(room, start, end) => book({ date: selected, room: room.id, start, end })} />}
+    </> : <PlanView key={selected} date={selected} today={today} now={clockNow} rooms={rooms} bookings={dayBookings} viewerId={viewerId} canBook={canBookDay} open={open}
+      onOpen={openBooking} onBook={(room, hours) => book({ date: selected, room: room.id, ...hours })} />}
 
     <p className={styles.sectionLabel}>Booking saya</p>
     {mine.length === 0 ? <div className={styles.emptyRow}>
@@ -246,7 +248,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {sheet?.kind === "form" && form && <BookingForm key={sheet.key} editId={sheet.editId} initial={sheet.initial}
       dates={dates.includes(sheet.initial.date) ? dates : [sheet.initial.date, ...dates]} now={clockNow.toISOString()} rooms={rooms}
       people={form.people} groups={form.groups} viewer={{ id: viewerId }} usedTitles={form.usedTitles}
-      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved}
+      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan}
       frame={(body, footer) => <Sheet open={shown} onClose={close} side="left" wide title={sheet.editId ? "Ubah booking" : "Book ruang"}
         subtitle="Yang tersimpan lebih dulu yang mendapat ruang." footer={footer}>{body}</Sheet>} />}
 
@@ -296,47 +298,90 @@ function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canC
   </Sheet>;
 }
 
-/** Denah: the office floor plan for the day, for a start time and length; a free room opens the form. */
-function PlanView({ date, now, rooms, bookings, viewerId, canBook, onBook }: {
-  date: string; now: Date; rooms: Room[]; bookings: Booking[]; viewerId: string; canBook: boolean; onBook: (room: Room, start: string, end: string) => void;
+/**
+ * Denah: the office floor plan for the whole day, each room empty, partly used, full or not
+ * bookable, and below it each bookable room's day: its bookings, the time taken and the next free
+ * half hour. Tapping a room on the plan brings its day into view; "Book ruang ini" opens the form
+ * at that free half hour. How long to book is chosen in the form. WAM rooms without a spot on the
+ * plan are not shown here (the calendar has them).
+ */
+function PlanView({ date, today, now, rooms, bookings, viewerId, canBook, open, onOpen, onBook }: {
+  date: string; today: string; now: Date; rooms: Room[]; bookings: Booking[]; viewerId: string; canBook: boolean; open: boolean;
+  onOpen: (booking: Booking) => void; onBook: (room: Room, hours: { start: string; end: string }) => void;
 }) {
-  const today = wibDate(now.toISOString());
-  const starts = (canBook ? draftStarts(date, now) : []);
-  const [chosen, setChosen] = useState(starts[0] ?? "");
-  const start = starts.includes(chosen) ? chosen : starts[0] ?? "";
-  const [length, setLength] = useState(60);
-  const end = start ? clock(Math.min(minutes(start) + length, minutes(appraisalRules.close))) : "";
-  const planSpan = start ? { startsAt: wibInstant(date, start), endsAt: wibInstant(date, end) } : null;
-  const statusOf = (room: Room): PlanStatus => !start && room.bookable
-    ? { tone: "closed", text: date < today ? "Sudah lewat" : canBook ? "Sudah tutup" : "Tidak bisa dibooking" }
-    : roomStatus({ bookable: room.bookable, span: planSpan, now, holds: bookings.filter(booking => booking.roomId === room.id).map(booking => ({ startsAt: booking.startsAt, endsAt: booking.endsAt, mine: !booking.isSession && booking.bookedBy.id === viewerId })) });
-  return <section className={`${styles.card} ${css.planCard}`} aria-label={`Denah kantor ${dayLabel(date)}`}>
-    {starts.length > 0 ? <div className={css.finder}>
-      <div>
-        <label className={styles.label} htmlFor="plan-start">Mulai</label>
-        <select id="plan-start" className="select" value={start} onChange={event => setChosen(event.target.value)}>
-          {starts.map(time => <option key={time} value={time}>{clockLabel(time)}</option>)}
-        </select>
-      </div>
-      <div>
-        <span className={styles.label} id="plan-length">Durasi</span>
-        <div className={css.lengths} role="group" aria-labelledby="plan-length">
-          {lengths.map(item => <button key={item.minutes} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={item.minutes === length} onClick={() => setLength(item.minutes)}>{item.label}</button>)}
-        </div>
-      </div>
-    </div> : <p className={styles.meta} style={{ margin: 0 }}>{date < today || (date === today && !canBook) ? "Jam operasional hari ini sudah lewat atau tanggal ini sudah lewat. Pilih hari lain untuk book ruang." : "Denah hanya untuk dilihat."}</p>}
-    <FloorPlan rooms={rooms} statusOf={statusOf} onPick={canBook && start ? room => onBook(room, start, end) : undefined} action="Book ruang ini"
-      label={`Denah kantor, ${dayLabel(date)}${start ? `, ${clockLabel(start)}–${clockLabel(end)}` : ""}`}
-      caption={canBook && start ? "Ketuk ruang yang kosong untuk book." : undefined} />
-  </section>;
-}
+  const [focus, setFocus] = useState<string | null>(null);
+  const outside = !inPeriod(date);
+  const placed = placeRooms(rooms).placed.map(item => item.room);
+  const listed = placed.filter(room => room.bookable).sort((a, b) => a.name.localeCompare(b.name, "id", { sensitivity: "base" }));
+  const holdsOf = (room: Room) => bookings.filter(booking => booking.roomId === room.id);
+  const dayOf = (room: Room) => roomDay({ date, bookable: room.bookable, now, holds: holdsOf(room).map(booking => ({ startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })) });
+  const statusOf = (room: Room): DayStatus => outside && room.bookable ? { tone: "closed", text: "Di luar periode" } : dayOf(room).status;
+  const anyClosed = placed.some(room => statusOf(room).tone === "closed");
+  const ownOf = (booking: Booking) => !booking.isSession && booking.bookedBy.id === viewerId;
+  const joined = (booking: Booking) => !ownOf(booking) && !!booking.participants?.some(person => person.id === viewerId);
 
-/** Start times on `date` that have not begun. */
-const draftStarts = (date: string, now: Date) => {
-  const times: string[] = [];
-  for (let at = minutes(appraisalRules.open); at < minutes(appraisalRules.close); at += appraisalRules.stepMinutes) {
-    const time = clock(at);
-    if (new Date(wibInstant(date, time)) > now) times.push(time);
+  function show(room: Room) {
+    setFocus(room.id);
+    const item = document.getElementById(`denah-${room.id}`);
+    if (!item) return;
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    item.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "nearest" });
+    item.focus({ preventScroll: true });
   }
-  return times;
-};
+
+  const hint = outside ? "Di luar periode appraisal." : date < today ? "Sudah lewat, hanya untuk dilihat." : canBook ? "Ketuk ruang di denah untuk melihat detail dan book." : open ? "Ketuk ruang di denah untuk melihat detailnya." : "Book ruang sedang ditutup.";
+  return <>
+    <div className={css.dayTitle}>
+      <h2>{dayLabel(date)}{date === today ? " · hari ini" : ""}</h2>
+      <p>{hint}</p>
+    </div>
+    <section className={`${styles.card} ${css.planCard}`} aria-label={`Denah kantor ${dayLabel(date)}`}>
+      <FloorPlan rooms={rooms} statusOf={statusOf} label={`Denah kantor, ${dayLabel(date)}, sepanjang hari`}
+        onPick={show} pickable={room => room.bookable} highlightId={focus ?? undefined} action="Lihat detail"
+        otherSpots="plain" showUnplaced={false}
+        legend={anyClosed ? ["free", "part", "full", "closed", "off"] : ["free", "part", "full", "off"]}
+        legendLabels={{ part: "Terpakai sebagian", full: "Penuh (tak ada 30 mnt kosong)", closed: outside ? "Di luar periode" : "Sudah lewat" }}
+        caption={`Status sepanjang hari, ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}.`} />
+    </section>
+
+    {listed.length === 0 ? <p className={styles.meta}>Belum ada ruang yang bisa dibooking di denah.</p>
+      : <ul className={plan.days} aria-label={`Ruang yang bisa dibooking, ${dayLabel(date)}`}>
+        {listed.map(room => {
+          const day = dayOf(room);
+          const status = statusOf(room);
+          const items = holdsOf(room);
+          const counted = countLabel(day.bookings, day.sessions);
+          const fits = room.capacity ? `Muat ${room.capacity} orang${room.minPeople ? `, minimal ${room.minPeople}` : ""}` : room.minPeople ? `Minimal ${room.minPeople} orang` : "";
+          const free = day.nextFree;
+          return <li key={room.id} id={`denah-${room.id}`} tabIndex={-1} className={`${plan.day} ${focus === room.id ? plan.dayOn : ""}`} aria-labelledby={`denah-${room.id}-nama`}>
+            <div className={plan.dayHead}>
+              <h3 id={`denah-${room.id}-nama`}>{room.name}</h3>
+              <span className={`${plan.dayTag} ${plan[status.tone]}`}>{status.text}</span>
+            </div>
+            {fits && <small className={styles.meta}>{fits}</small>}
+            <p className={plan.dayFacts}>
+              <span><b>{counted || "Belum ada booking"}</b></span>
+              {day.takenMinutes > 0 && <span><b>{durationLabel(day.takenMinutes)}</b> terpakai</span>}
+              {!outside && (free ? <span>Kosong berikutnya <b>{runLabel(free)}</b></span> : status.tone === "full" ? <span>Tidak ada jam kosong lagi</span> : null)}
+            </p>
+            {items.length > 0 && <ul className={plan.dayBookings} aria-label={`Booking di ${room.name}`}>
+              {items.map(booking => <li key={bookingKey(booking)}>
+                <button type="button" className={`${plan.dayBooking} ${ownOf(booking) || joined(booking) ? plan.dayMine : ""}`} onClick={() => onOpen(booking)} aria-haspopup="dialog">
+                  <span>{span(booking)}</span>
+                  <span>
+                    <strong>{booking.title}</strong>
+                    <small>{booking.isSession ? "Sesi Pra WAM · panitia" : ownOf(booking) ? "Booking kamu" : joined(booking) ? `Kamu ikut · dipesan ${booking.bookedBy.name}` : `Dipesan ${booking.bookedBy.name}`}</small>
+                  </span>
+                </button>
+              </li>)}
+            </ul>}
+            {canBook && free && <div className={plan.dayActions}>
+              <button type="button" className={`button ${focus === room.id ? "button--primary" : "button--secondary"}`} onClick={() => onBook(room, bookingFrom(free))} aria-haspopup="dialog">
+                Book ruang ini
+              </button>
+            </div>}
+          </li>;
+        })}
+      </ul>}
+  </>;
+}
