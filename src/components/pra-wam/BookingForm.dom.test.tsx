@@ -11,15 +11,15 @@ const NOW = "2026-11-04T03:00:00.000Z"; // Rabu 4 Nov, 10.00 WIB
 beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(NOW)); request.mockReset(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-const room = (id: string, name: string, capacity: number | null, minPeople: number | null): Room => ({ id, slug: id, name, kind: "area", capacity, bookable: true, minPeople, planKey: null });
+const room = (id: string, name: string, capacity: number | null, minPeople: number | null): Room => ({ id, slug: id, name, kind: "area", capacity, bookable: true, minPeople, planKey: null, facilities: [] });
 const kecil = room("kecil", "Arjuna", 4, null), besar = room("besar", "Bima", 12, 4), sibuk = room("sibuk", "Nakula", 6, null);
 const held: Booking = { id: "b1", roomId: "sibuk", title: "Rapat", description: "", startsAt: wibInstant("2026-11-05", "13:00"), endsAt: wibInstant("2026-11-05", "14:00"), bookedBy: { id: "other", name: "Sari", department: "HR" }, participants: null };
 const draft = (patch: Partial<BookingDraft> = {}): BookingDraft => ({ date: "2026-11-05", start: "13:00", end: "14:00", roomId: "", title: "", description: "", participants: [], ...patch });
 
-function renderForm(props: { initial?: BookingDraft; rooms?: Room[]; editId?: string; onSaved?: () => void } = {}) {
+function renderForm(props: { initial?: BookingDraft; rooms?: Room[]; editId?: string; onSaved?: () => void; summary?: Record<string, { bookings: number; full: boolean }> } = {}) {
   return render(<BookingForm editId={props.editId} initial={props.initial ?? draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={props.rooms ?? [kecil, besar, sibuk]}
     people={[{ id: "p1", name: "Budi", department: "IT" }, { id: "p2", name: "Citra", department: "IT" }]} viewer={{ id: "me" }}
-    groups={[{ id: "it", label: "IT", memberIds: ["p1", "p2"] }]} usedTitles={[]} dayBookings={[held]} dayOf="2026-11-05" onSaved={props.onSaved} showPlan={false} />);
+    groups={[{ id: "it", label: "IT", memberIds: ["p1", "p2"] }]} usedTitles={[]} dayBookings={[held]} dayOf="2026-11-05" onSaved={props.onSaved} showPlan={false} summary={props.summary} />);
 }
 const lanjut = () => fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
 const roomCard = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name}`) }) as HTMLButtonElement;
@@ -105,4 +105,27 @@ it("opens the room step when the server refuses the room", async () => {
   fireEvent.click(screen.getByRole("button", { name: /Simpan perubahan/ }));
   await vi.waitFor(() => expect(screen.getByRole("heading", { name: "Di ruang mana?" })).toBeTruthy());
   expect(screen.getByText("Terlalu kecil: muat 4 orang")).toBeTruthy();
+});
+
+it("shows the whole window on the date strip: a past day cannot be picked, a full day can, with a note", () => {
+  request.mockReturnValue(new Promise(() => undefined));
+  renderForm({ summary: { "2026-11-06": { bookings: 8, full: true } } });
+  const past = screen.getByRole("button", { name: /^Selasa, 3 Nov, lewat/ });
+  expect(past.getAttribute("aria-disabled")).toBe("true");
+  fireEvent.click(past);
+  expect(screen.getByRole("button", { name: /^Kamis, 5 Nov/ }).getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByRole("button", { name: /^Rabu, 4 Nov, hari ini/ })).toBeTruthy();
+  expect(screen.queryByText("Semua ruang penuh hari ini. Pilih hari lain atau jam lain.")).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Jumat, 6 Nov, penuh" }));
+  expect(screen.getByRole("button", { name: /^Jumat, 6 Nov/ }).getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByText("Semua ruang penuh hari ini. Pilih hari lain atau jam lain.")).toBeTruthy();
+});
+
+it("counts the chosen day from its bookings when no summary is given", () => {
+  const allDay: Booking = { ...held, id: "b2", startsAt: wibInstant("2026-11-05", "09:00"), endsAt: wibInstant("2026-11-05", "18:00") };
+  render(<BookingForm initial={draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[sibuk]} people={[]} viewer={{ id: "me" }}
+    groups={[]} usedTitles={[]} dayBookings={[allDay]} dayOf="2026-11-05" showPlan={false} />);
+  expect(screen.getByRole("button", { name: "Kamis, 5 Nov, penuh" })).toBeTruthy();
+  expect(screen.getByText("Semua ruang penuh hari ini. Pilih hari lain atau jam lain.")).toBeTruthy();
 });

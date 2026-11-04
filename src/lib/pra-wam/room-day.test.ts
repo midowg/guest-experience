@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { wibInstant } from "./appraisal";
-import { bookingFrom, countLabel, durationLabel, roomDay, runLabel } from "./room-day";
+import { bookingFrom, countLabel, daySummaries, durationLabel, roomDay, runLabel, stripDay } from "./room-day";
 
 const date = "2026-11-05";
 const hold = (start: string, end: string, session = false) => ({ startsAt: wibInstant(date, start), endsAt: wibInstant(date, end), session });
@@ -65,5 +65,42 @@ describe("labels", () => {
   it("starts a booking at the free run, an hour long when it fits", () => {
     expect(bookingFrom({ start: "13:00", end: "15:30" })).toEqual({ start: "13:00", end: "14:00" });
     expect(bookingFrom({ start: "17:30", end: "18:00" })).toEqual({ start: "17:30", end: "18:00" });
+  });
+});
+
+describe("a whole day across the rooms, for the date strip", () => {
+  const rooms = [{ id: "a", bookable: true }, { id: "b", bookable: true }, { id: "x", bookable: false }];
+  const on = (roomId: string, day: string, start: string, end: string, session = false) => ({ roomId, startsAt: wibInstant(day, start), endsAt: wibInstant(day, end), session });
+
+  it("counts the bookable rooms' bookings and sessions per date, and is not full while a half hour is free", () => {
+    const summary = daySummaries(["2026-11-05", "2026-11-06"], rooms, [on("a", "2026-11-05", "09:00", "18:00"), on("b", "2026-11-05", "09:00", "12:00", true), on("x", "2026-11-05", "09:00", "18:00")], before);
+    expect(summary).toEqual({ "2026-11-05": { bookings: 2, full: false }, "2026-11-06": { bookings: 0, full: false } });
+  });
+
+  it("is full when every bookable room has no free half hour, counting Pra WAM sessions", () => {
+    const summary = daySummaries([date], rooms, [on("a", date, "09:00", "18:00"), on("b", date, "09:00", "13:00"), on("b", date, "13:00", "18:00", true)], before);
+    expect(summary[date]).toEqual({ bookings: 3, full: true });
+  });
+
+  it("ignores today's half hours that have begun", () => {
+    const late = new Date(wibInstant(date, "16:40"));
+    const summary = daySummaries([date], rooms, [on("a", date, "17:00", "18:00"), on("b", date, "16:30", "18:00")], late);
+    expect(summary[date].full).toBe(true);
+    // Earlier the same holds leave the morning free.
+    expect(daySummaries([date], rooms, [on("a", date, "17:00", "18:00"), on("b", date, "16:30", "18:00")], before)[date].full).toBe(false);
+  });
+
+  it("is never full on a day whose hours are over, or without a bookable room", () => {
+    expect(daySummaries([date], rooms, [], new Date(wibInstant(date, "18:30")))[date].full).toBe(false);
+    expect(daySummaries([date], [{ id: "x", bookable: false }], [], before)[date]).toEqual({ bookings: 0, full: false });
+  });
+
+  it("says each strip day's state in words", () => {
+    const at = { today: "2026-11-04", selected: "2026-11-05" };
+    expect(stripDay("2026-11-03", { ...at, summary: { bookings: 3, full: true } })).toMatchObject({ past: true, full: false, note: "Lewat" });
+    expect(stripDay("2026-11-04", { ...at, summary: { bookings: 0, full: false } })).toMatchObject({ today: true, selected: false, note: "Kosong" });
+    expect(stripDay("2026-11-05", { ...at, summary: { bookings: 2, full: false } })).toMatchObject({ selected: true, note: "2 terpakai" });
+    expect(stripDay("2026-11-06", { ...at, summary: { bookings: 9, full: true } })).toMatchObject({ full: true, note: "Penuh" });
+    expect(stripDay("2026-11-09", at).note).toBe("");
   });
 });

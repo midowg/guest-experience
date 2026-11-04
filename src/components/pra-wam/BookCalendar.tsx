@@ -1,13 +1,14 @@
 "use client";
 
 import { Fragment, useState, type CSSProperties, type PointerEvent, type MouseEvent } from "react";
-import Link from "next/link";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { appraisalRules, clockAt, clockLabel, dayLabel, dayMinutes, hoursInGap, nowOffset, roomDay, startInGap, weekSummary, wibTime, type Booking, type DaySegment, type Room } from "@/lib/pra-wam/appraisal";
+import { ChevronRight, Plus } from "lucide-react";
+import { appraisalRules, clockAt, clockLabel, dayLabel, dayMinutes, hoursInGap, nowOffset, periodDates, roomDay, startInGap, weekSummary, wibTime, type Booking, type DaySegment, type Room } from "@/lib/pra-wam/appraisal";
+import type { DaySummary } from "@/lib/pra-wam/room-day";
+import { DateStrip } from "./DateStrip";
 import css from "./book-calendar.module.css";
 
 /*
- * Book's calendar, simplified from "Werkudara Room Booking" (rooms by time). On a phone: a week
+ * Book's calendar, simplified from "Werkudara Room Booking" (rooms by time). On a phone: a date
  * strip, then each room as a card listing its day in big rows (bookings, free time to tap, time
  * gone by) with a "Sekarang" line on today. From 1024px: the day as a timeline (rooms as columns,
  * 09.00–18.00 as rows) or the week overview (Mon–Fri × rooms). No grid of tiny half-hour cells.
@@ -48,33 +49,15 @@ export function Legend() {
   </ul>;
 }
 
-/** Monday to Friday as five equal buttons (no sideways scrolling), with the week's arrows above. */
-export function WeekStrip({ week, selected, today, counts, onPick, prevHref, nextHref }: {
-  week: string[]; selected: string; today: string; counts: Record<string, number>; onPick: (date: string) => void; prevHref?: string; nextHref?: string;
+/**
+ * The booking window's weekdays above the calendar (DateStrip): past days greyed out, today
+ * marked, full days flagged. Replaces the five-day week strip and its week arrows.
+ */
+export function DayStrip({ selected, today, summary, onPick }: {
+  selected: string; today: string; summary: Record<string, DaySummary>; onPick: (date: string) => void;
 }) {
-  const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <= appraisalRules.periodEnd;
   return <div className={css.strip}>
-    <div className={css.stripHead}>
-      <p>{weekLabel(week)} {week[0].slice(0, 4)}</p>
-      <div className={css.stripNav}>
-        {prevHref ? <Link className={css.arrow} href={prevHref} scroll={false} aria-label="Minggu sebelumnya"><ChevronLeft aria-hidden /></Link>
-          : <span className={css.arrow} aria-hidden data-off><ChevronLeft /></span>}
-        {nextHref ? <Link className={css.arrow} href={nextHref} scroll={false} aria-label="Minggu berikutnya"><ChevronRight aria-hidden /></Link>
-          : <span className={css.arrow} aria-hidden data-off><ChevronRight /></span>}
-      </div>
-    </div>
-    <div className={css.days} role="group" aria-label="Pilih hari">
-      {week.map(date => {
-        const count = counts[date] ?? 0;
-        const off = !inPeriod(date);
-        return <button key={date} type="button" className={css.day} aria-pressed={date === selected} disabled={off} onClick={() => onPick(date)}
-          aria-label={`${dayLabel(date)}${date === today ? ", hari ini" : ""}${off ? ", di luar periode" : `, ${count ? `${count} terpakai` : "semua kosong"}`}`}>
-          <span className={css.dayName}>{date === today ? "Hari ini" : shortDay(date)}</span>
-          <strong>{dayNumber(date)}</strong>
-          <span className={css.dayCount} aria-hidden>{off ? "–" : count ? `${count} terpakai` : "Kosong"}</span>
-        </button>;
-      })}
-    </div>
+    <DateStrip days={periodDates()} selected={selected} today={today} summary={summary} onPick={onPick} label="Pilih hari" />
   </div>;
 }
 

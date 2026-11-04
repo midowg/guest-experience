@@ -28,6 +28,8 @@ export type Room = {
   minPeople: number | null;
   /** The floor plan spot the super admin picked; null = matched by name (migration 202611040009). */
   planKey: string | null;
+  /** What the room has, for its line on the floor plan: "TV", "Whiteboard"… */
+  facilities: string[];
 };
 export type Person = { id: string; name: string; department: string };
 export type Booking = {
@@ -71,6 +73,9 @@ export function bookableDates(from: string): string[] {
   }
   return dates;
 }
+
+/** Every weekday of the appraisal period, 28 Okt–20 Nov: the booking window the date strip shows. */
+export const periodDates = () => bookableDates(appraisalRules.periodStart);
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;

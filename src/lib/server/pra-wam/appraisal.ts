@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
-import { alternatives, appraisalRules, bookingProblems, clockLabel, overlaps, roomFitProblem, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { alternatives, appraisalRules, bookableDates, bookingProblems, clockLabel, overlaps, roomFitProblem, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -32,11 +33,11 @@ function fail(error: { code?: string; message: string }): never {
 
 async function listRoomsUncached(): Promise<Room[]> {
   const client = createPrivilegedClient();
-  const { data, error } = await client.from("pw_rooms").select("id,slug,name,kind,capacity,bookable,min_people,plan_key").order("sort_order");
+  const { data, error } = await client.from("pw_rooms").select("id,slug,name,kind,capacity,bookable,facilities,min_people,plan_key").order("sort_order");
   if (!error) return (data ?? []).map(({ min_people, plan_key, ...room }) => ({ ...room, minPeople: min_people, planKey: plan_key }) as Room);
   // Before migration 202611040009: no lower limit and no picked plan spot yet.
   if (error.code !== "42703" && error.code !== "PGRST204") fail(error);
-  const { data: rows, error: oldError } = await client.from("pw_rooms").select("id,slug,name,kind,capacity,bookable").order("sort_order");
+  const { data: rows, error: oldError } = await client.from("pw_rooms").select("id,slug,name,kind,capacity,bookable,facilities").order("sort_order");
   if (oldError) fail(oldError);
   return (rows ?? []).map(room => ({ ...room, minPeople: null, planKey: null }) as Room);
 }
@@ -119,6 +120,20 @@ export async function weekSchedule(dates: string[], viewer: Member): Promise<{ r
   const first = dates[0], last = dates.at(-1) ?? first;
   const [rooms, rows, sessions] = await Promise.all([listRooms(), activeBetween(first, last), sessionsBetween(first, last)]);
   return { rooms, bookings: [...await withPeople(rows, viewer), ...sessions].sort((a, b) => a.startsAt.localeCompare(b.startsAt)) };
+}
+
+/**
+ * A light summary of every weekday from `from` to `to` (the date strip on Book): per date how many
+ * bookings and Pra WAM sessions the bookable rooms have, and whether all of them are full
+ * (daySummaries). Read only; no names or titles leave the server.
+ */
+export async function windowSummary(from: string, to: string, now = new Date()): Promise<Record<string, DaySummary>> {
+  const [rooms, rows, sessions] = await Promise.all([listRooms(), activeBetween(from, to), sessionsBetween(from, to)]);
+  const holds = [
+    ...rows.map(row => ({ roomId: row.room_id, startsAt: row.starts_at, endsAt: row.ends_at })),
+    ...sessions.map(item => ({ roomId: item.roomId, startsAt: item.startsAt, endsAt: item.endsAt, session: true })),
+  ];
+  return daySummaries(bookableDates(from).filter(date => date <= to), rooms, holds, now);
 }
 
 /** Bookings the person made or takes part in, from today on. */

@@ -6,12 +6,14 @@ import { ArrowLeft, ArrowRight, Check, Clock, DoorOpen, Info, Pencil, Send, User
 import { Button, Notice } from "@/components/ui";
 import {
   alternatives, appraisalRules, bookingProblems, clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock,
-  slotTimes, titleSuggestions, wibDate, wibInstant, type Booking, type Person, type Room,
+  periodDates, slotTimes, titleSuggestions, wibDate, wibInstant, type Booking, type Person, type Room,
 } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { roomStatus, type PlanTone } from "@/lib/pra-wam/floor-plan";
+import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { headcount, peopleLabel, roomFit } from "@/lib/pra-wam/room-fit";
 import { errorText, praWamRequest, PraWamApiError, type Conflict } from "./api";
+import { DateStrip } from "./DateStrip";
 import { FloorPlan } from "./FloorPlan";
 import own from "./appraisal.module.css";
 import css from "./booking-form.module.css";
@@ -31,6 +33,8 @@ type Props = {
   frame?: (form: ReactNode, footer: ReactNode) => ReactNode;
   /** Pick the room on the office floor plan (default) or, when false, from a list of room cards. */
   showPlan?: boolean;
+  /** Per weekday of the booking window: holds and "Penuh" (Book's windowSummary); without it only the chosen day is counted. */
+  summary?: Record<string, DaySummary>;
 };
 
 const STEPS = ["Waktu", "Kegiatan", "Partisipan", "Ruang"] as const;
@@ -38,8 +42,6 @@ const SUMMARY = STEPS.length;
 /** Which step holds each field, so an error (ours or the server's) opens the right one. */
 const FIELD_STEP: Record<string, number> = { date: 0, start: 0, end: 0, title: 1, description: 1, participants: 2, roomId: 3 };
 
-const chipDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
-const chipDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 const capacityText = (room: Room) => room.capacity
   ? `Kapasitas ${room.capacity} orang${room.minPeople ? `, minimal ${room.minPeople}` : ""}`
   : room.minPeople ? `Kapasitas belum diisi, minimal ${room.minPeople}` : "Kapasitas belum diisi";
@@ -57,7 +59,7 @@ type Choice = { ok: boolean; pending: boolean; tone: PlanTone; text: string };
  * that was typed and offers the nearest free hour or another room that fits. On /wam/book/new it is
  * the page; on Book it sits in a sheet (`frame`, `onSaved`) with the buttons as the sheet's footer.
  */
-export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true }: Props) {
+export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {} }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
   const [step, setStep] = useState(editId ? SUMMARY : 0);
@@ -146,6 +148,14 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     return option ? [{ room: item, ...option }] : [];
   }).sort((a, b) => Math.abs(clockMinutes(a.start) - clockMinutes(draft.start)) - Math.abs(clockMinutes(b.start) - clockMinutes(draft.start))).slice(0, 3);
 
+  // The date strip: the whole window, past days greyed out; the chosen day recounted from its bookings.
+  const today = wibDate(now);
+  const stripDays = [...new Set([...periodDates(), ...dates])].sort();
+  const daySummary = dayKnown
+    ? { ...summary, ...daySummaries([draft.date], rooms, others.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), nowDate) }
+    : summary;
+  const dayFull = draft.date >= today && !!daySummary[draft.date]?.full;
+
   const suggestions = useMemo(() => titleSuggestions(draft.title, usedTitles), [draft.title, usedTitles]);
   const group = groups.find(item => item.id === groupId);
   const picked = draft.participants.map(id => people.find(person => person.id === id)).filter((person): person is Person => !!person);
@@ -161,6 +171,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     return { start, end: minutesClock(clockMinutes(start) + keep) };
   }
   function pickDate(date: string) {
+    if (date < today) return;
     const open = startsOn(date);
     set({ date, ...(open.includes(draft.start) || !open.length ? {} : hoursFrom(open[0])) });
   }
@@ -281,12 +292,9 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(0)}>
       {heading(0, "Kapan?")}
-      <div className={styles.dates} role="group" aria-label="Tanggal">
-        {dates.map(day => <button key={day} type="button" className={`${styles.chip} ${styles.chipStack}`} aria-pressed={day === draft.date} onClick={() => pickDate(day)}>
-          {chipDay(day)}<small>{chipDate(day)}{day === wibDate(now) ? " · hari ini" : ""}</small>
-        </button>)}
-      </div>
+      <DateStrip days={stripDays} selected={draft.date} today={today} summary={daySummary} onPick={pickDate} label="Tanggal" />
       {fieldError("date")}
+      {dayFull && <p className={css.note} role="status">Semua ruang penuh hari ini. Pilih hari lain atau jam lain.</p>}
       <div className={styles.times}>
         <div>
           <label className={styles.label} htmlFor={`${uid}-start`}>Jam mulai</label>
@@ -394,7 +402,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
           statusOf={item => item.bookable ? choiceOf(item) : { tone: "off", text: "Tidak bisa dibooking" }} legendLabels={{ off: "Tidak cocok / tidak bisa dibooking" }}
           label={`Denah kantor untuk ${peopleLabel(count)}, ${dayLabel(draft.date)} ${hours}`}
           caption={room ? <span role="status">{room.name} dipilih</span> : "Ketuk ruang yang kosong di denah."}
-          legend={["free", "selected", "busy", "mine", "off"]} />
+          legend={["free", "selected", "busy", "mine", "off"]} subtitle="status" />
         : <div className={css.rooms} role="group" aria-label="Daftar ruang">
           {listed.map(item => <button key={item.room.id} type="button" className={css.room} aria-pressed={roomId === item.room.id} disabled={!item.ok} onClick={() => pickRoom(item.room)}>
             <span className={styles.tile}><DoorOpen aria-hidden /></span>

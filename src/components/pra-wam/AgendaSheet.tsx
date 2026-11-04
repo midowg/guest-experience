@@ -113,7 +113,7 @@ export function AgendaSheet({ items, version, cancelsAny, bookingOpen }: Props) 
   let footer: React.ReactNode = null;
   if (booking) {
     body = <BookingDetailBody item={booking} />;
-    if (rights && (rights.edit || rights.cancel || rights.remove)) footer = <BookingDetailActions item={booking} viewer={viewer} onDone={done} />;
+    if (rights && (rights.edit || rights.cancel)) footer = <BookingDetailActions item={booking} viewer={viewer} onDone={done} />;
   } else if (item && view?.kind === "sesi") {
     body = <SessionDetailBody view={view} now={now} />;
     footer = sessionDetailActions({ view, now }, true);

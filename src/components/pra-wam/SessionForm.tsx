@@ -162,7 +162,7 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
           <span className={styles.label} id="room-label">Ruang</span>
           {!span && <p className={styles.hint} style={{ margin: 0 }}>Isi tanggal dan jam dulu supaya terlihat ruang yang kosong.</p>}
           {/* Penpot "D4 · Pilih ruang lewat denah": the plan, then the chosen room and its day. */}
-          <FloorPlan rooms={rooms} statusOf={statusOf} selectedId={draft.roomId || undefined} onPick={item => set({ roomId: item.id })}
+          <FloorPlan rooms={rooms} statusOf={statusOf} subtitle="status" selectedId={draft.roomId || undefined} onPick={item => set({ roomId: item.id })}
             label={`Denah kantor${span ? `, ${dayLabel(draft.date)} ${clockLabel(draft.start)}–${clockLabel(draft.end)}` : ""}`}
             caption={room ? <span role="status">{room.name} dipilih</span> : span ? "Ketuk ruang yang kosong untuk sesi ini." : undefined}
             legend={["free", "selected", "small", "busy", "off"]} />

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { durationLabel, durationsFrom, roomFitProblem, type Room } from "./appraisal";
 
 const room = (id: string, capacity: number | null, minPeople: number | null, bookable = true): Room =>
-  ({ id, slug: id, name: id, kind: "area", capacity, bookable, minPeople, planKey: null });
+  ({ id, slug: id, name: id, kind: "area", capacity, bookable, minPeople, planKey: null, facilities: [] });
 
 describe("booking form steps", () => {
   it("names a length in hours and minutes", () => {

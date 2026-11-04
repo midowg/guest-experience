@@ -8,8 +8,8 @@ import { appraisalRules, clockLabel, dayLabel, draftHours, wibDate, wibTime, typ
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { placeRooms } from "@/lib/pra-wam/floor-plan";
-import { bookingFrom, countLabel, durationLabel, roomDay, runLabel, type DayStatus } from "@/lib/pra-wam/room-day";
-import { bookingKey, DayCalendar, Legend, WeekCalendar, WeekStrip, type BookPick } from "./BookCalendar";
+import { bookingFrom, countLabel, daySummaries, durationLabel, roomDay, runLabel, type DayStatus, type DaySummary } from "@/lib/pra-wam/room-day";
+import { bookingKey, DayCalendar, DayStrip, Legend, WeekCalendar, type BookPick } from "./BookCalendar";
 import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
 import { useConfirm } from "./ConfirmDialog";
 import { FloorPlan } from "./FloorPlan";
@@ -35,6 +35,8 @@ type Props = {
   banner?: ReactNode;
   /** Whether the floor plan is offered next to the calendar (the super admin's setting); default true. */
   floorPlan?: boolean;
+  /** Per weekday of the booking window: holds and whether it is full (windowSummary); the loaded week is recounted here. */
+  summary?: Record<string, DaySummary>;
 };
 
 type SheetState =
@@ -48,12 +50,12 @@ const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <=
 /**
  * Book: a simplified calendar of who has which room (BookCalendar), with the office floor plan as
  * the second view. Everything opens over the page in a sheet from the left (bottom on a phone):
- * a booking's detail with Ubah, Batalkan and Hapus, and the booking form, new or changing one. The
- * open sheet and the day are mirrored in the address (history.replaceState: no reload, no server
- * round trip), so a reload reopens it; another week is a navigation, since its bookings are loaded
- * on the server.
+ * a booking's detail with Ubah and Batalkan, and the booking form, new or changing one. The open
+ * sheet and the day are mirrored in the address (history.replaceState: no reload, no server round
+ * trip), so a reload reopens it; a day in another week (picked on the date strip) is a navigation,
+ * since its bookings are loaded on the server.
  */
-export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true }: Props) {
+export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {} }: Props) {
   const router = useRouter();
   const [confirm, confirmDialog] = useConfirm();
   const bookable = rooms.filter(room => room.bookable);
@@ -108,7 +110,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const [shown, setShown] = useState(!!arrival.sheet);
   const [notice, setNotice] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(arrival.missing
     ? { tone: "info", text: "Booking itu tidak ada di jadwal. Mungkin sudah dibatalkan atau dipindah." } : null);
-  /** "batal:<id>" or "hapus:<id>": which action is running, on which booking. */
+  /** "batal:<id>": the cancel running, on which booking. */
   const [busy, setBusy] = useState<string | null>(null);
 
   // Good news goes away by itself; a problem stays until closed.
@@ -131,6 +133,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   }
   function close() { setShown(false); mirror({}); }
   function pickDay(day: string) {
+    if (!week.includes(day)) { router.push(praWamPath.appraisal(day), { scroll: false }); return; }
     setSelected(day); setMode("hari");
     window.history.replaceState(null, "", praWamPath.bookSheet({ date: day }));
   }
@@ -147,12 +150,15 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     } else router.push(praWamPath.appraisal(day), { scroll: false });
   }
 
+  /** Cancelling frees the room at once and takes the booking off the schedule and "Booking saya". */
   async function cancel(booking: Booking) {
     const someoneElse = booking.bookedBy.id !== viewerId ? ` milik ${booking.bookedBy.name}` : "";
+    const room = rooms.find(item => item.id === booking.roomId)?.name ?? "Ruang";
     if (!(await confirm({
       title: "Batalkan booking?",
-      body: `"${booking.title}"${someoneElse}, ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}. Ruang langsung bisa dipesan orang lain.`,
+      body: `"${booking.title}"${someoneElse}, ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}, ${room}. Ruang langsung bisa dipesan orang lain.`,
       confirmLabel: "Batalkan booking",
+      danger: true,
     }))) return;
     setBusy(`batal:${booking.id}`); setNotice(null);
     try {
@@ -164,27 +170,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     finally { setBusy(null); }
   }
 
-  /** For a test or a mistake: gone for good, not kept as cancelled. */
-  async function remove(booking: Booking) {
-    if (!(await confirm({
-      title: "Hapus permanen?",
-      body: `"${booking.title}", ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}. Data booking hilang dan tidak bisa dikembalikan. Pakai untuk booking uji atau salah input.`,
-      confirmLabel: "Hapus permanen",
-      danger: true,
-    }))) return;
-    setBusy(`hapus:${booking.id}`); setNotice(null);
-    try {
-      const result = await praWamRequest(praWamApi.bookings(booking.id, { permanent: "1" }), { method: "DELETE" });
-      setNotice({ tone: "success", text: result.message || "Booking dihapus." });
-      close();
-      router.refresh();
-    } catch (error) { setNotice({ tone: "error", text: errorText(error) }); }
-    finally { setBusy(null); }
-  }
-
   const dayBookings = bookings.filter(booking => wibDate(booking.startsAt) === selected);
-  const counts = Object.fromEntries(week.map(day => [day, bookings.filter(booking => wibDate(booking.startsAt) === day && bookable.some(room => room.id === booking.roomId)).length]));
-  const prev = weekShiftWithin(week, -1), next = weekShiftWithin(week, 1);
+  // The loaded week is recounted from its bookings with the moving clock; the rest is the server's.
+  const days = { ...summary, ...daySummaries(week, rooms, bookings.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), clockNow) };
   const canBookDay = canBook && inPeriod(selected) && selected >= today;
   const head = <ScreenHead eyebrow="Ruang meeting" title="Book ruang"
     lead={`Jam ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–20 Nov. Yang tersimpan lebih dulu yang mendapat ruang.`}
@@ -207,8 +195,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
       {view === "kalender" && <Legend />}
     </div>
 
-    <WeekStrip week={week} selected={selected} today={today} counts={counts} onPick={pickDay}
-      prevHref={prev ? praWamPath.appraisal(prev) : undefined} nextHref={next ? praWamPath.appraisal(next) : undefined} />
+    <DayStrip selected={selected} today={today} summary={days} onPick={pickDay} />
 
     {view === "kalender" ? <>
       <div className={`${css.dayTitle} ${mode === "minggu" ? css.deskHide : ""}`}>
@@ -243,12 +230,12 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
 
     {sheet?.kind === "detail" && <BookingSheet booking={sheet.booking} shown={shown} onClose={close} rooms={rooms} now={clockNow}
       mine={mineFlag(sheet.booking)} canEdit={canBook && mineFlag(sheet.booking)} canCancel={!sheet.booking.isSession && (mineFlag(sheet.booking) || canCancelAny)}
-      busy={busy} onEdit={() => show(editFor(sheet.booking))} onCancel={() => cancel(sheet.booking)} onRemove={() => remove(sheet.booking)} />}
+      busy={busy} onEdit={() => show(editFor(sheet.booking))} onCancel={() => cancel(sheet.booking)} />}
 
     {sheet?.kind === "form" && form && <BookingForm key={sheet.key} editId={sheet.editId} initial={sheet.initial}
       dates={dates.includes(sheet.initial.date) ? dates : [sheet.initial.date, ...dates]} now={clockNow.toISOString()} rooms={rooms}
       people={form.people} groups={form.groups} viewer={{ id: viewerId }} usedTitles={form.usedTitles}
-      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan}
+      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan} summary={days}
       frame={(body, footer) => <Sheet open={shown} onClose={close} side="left" wide title={sheet.editId ? "Ubah booking" : "Book ruang"}
         subtitle="Yang tersimpan lebih dulu yang mendapat ruang." footer={footer}>{body}</Sheet>} />}
 
@@ -259,20 +246,10 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   </>;
 }
 
-/** The Monday of the week before or after, when that week still has days in the period. */
-function weekShiftWithin(week: string[], step: -1 | 1): string | null {
-  const day = new Date(`${week[0]}T12:00:00Z`);
-  day.setUTCDate(day.getUTCDate() + step * 7);
-  const monday = day.toISOString().slice(0, 10);
-  day.setUTCDate(day.getUTCDate() + 4);
-  const friday = day.toISOString().slice(0, 10);
-  return friday >= appraisalRules.periodStart && monday <= appraisalRules.periodEnd ? (monday < appraisalRules.periodStart ? appraisalRules.periodStart : monday) : null;
-}
-
 /** One booking in the sheet: when, where, who, and what can be done with it. */
-function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canCancel, busy, onEdit, onCancel, onRemove }: {
+function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canCancel, busy, onEdit, onCancel }: {
   booking: Booking; shown: boolean; onClose: () => void; rooms: Room[]; now: Date; mine: boolean; canEdit: boolean; canCancel: boolean;
-  busy: string | null; onEdit: () => void; onCancel: () => void; onRemove: () => void;
+  busy: string | null; onEdit: () => void; onCancel: () => void;
 }) {
   const room = rooms.find(item => item.id === booking.roomId);
   const ended = new Date(booking.endsAt) <= now;
@@ -280,10 +257,9 @@ function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canC
   const tone = booking.isSession ? css.session : mine ? css.mine : css.busy;
   const actions = <>
     {canEdit && !ended && <button type="button" className="button button--secondary" onClick={onEdit} disabled={working}>Ubah</button>}
-    {canCancel && !ended && <button type="button" className="button button--quiet" onClick={onCancel} disabled={working}>{busy === `batal:${booking.id}` ? "Membatalkan…" : "Batalkan"}</button>}
-    {canCancel && <button type="button" className={`button button--quiet ${styles.dangerQuiet}`} onClick={onRemove} disabled={working}>{busy === `hapus:${booking.id}` ? "Menghapus…" : "Hapus"}</button>}
+    {canCancel && !ended && <button type="button" className={`button button--secondary ${styles.dangerQuiet}`} onClick={onCancel} disabled={working}>{working ? "Membatalkan…" : "Batalkan"}</button>}
   </>;
-  const hasActions = canCancel || (canEdit && !ended);
+  const hasActions = !ended && (canCancel || canEdit);
   return <Sheet open={shown} onClose={onClose} side="left" title={booking.title} subtitle={`${dayLabel(wibDate(booking.startsAt))} · ${span(booking)}`} footer={hasActions ? actions : undefined}>
     <span className={`${css.tag} ${tone}`}>{booking.isSession ? "Sesi Pra WAM" : mine ? "Booking kamu" : "Terpakai"}{ended ? " · selesai" : ""}</span>
     <dl className={css.facts}>
@@ -332,16 +308,15 @@ function PlanView({ date, today, now, rooms, bookings, viewerId, canBook, open, 
   const hint = outside ? "Di luar periode appraisal." : date < today ? "Sudah lewat, hanya untuk dilihat." : canBook ? "Ketuk ruang di denah untuk melihat detail dan book." : open ? "Ketuk ruang di denah untuk melihat detailnya." : "Book ruang sedang ditutup.";
   return <>
     <div className={css.dayTitle}>
-      <h2>{dayLabel(date)}{date === today ? " · hari ini" : ""}</h2>
-      <p>{hint}</p>
+      <h2>Denah kantor · {dayLabel(date)}{date === today ? " · hari ini" : ""}</h2>
+      <p>Status sepanjang hari, {clockLabel(appraisalRules.open)}–{clockLabel(appraisalRules.close)}. {hint}</p>
     </div>
     <section className={`${styles.card} ${css.planCard}`} aria-label={`Denah kantor ${dayLabel(date)}`}>
       <FloorPlan rooms={rooms} statusOf={statusOf} label={`Denah kantor, ${dayLabel(date)}, sepanjang hari`}
         onPick={show} pickable={room => room.bookable} highlightId={focus ?? undefined} action="Lihat detail"
         otherSpots="plain" showUnplaced={false}
         legend={anyClosed ? ["free", "part", "full", "closed", "off"] : ["free", "part", "full", "off"]}
-        legendLabels={{ part: "Terpakai sebagian", full: "Penuh (tak ada 30 mnt kosong)", closed: outside ? "Di luar periode" : "Sudah lewat" }}
-        caption={`Status sepanjang hari, ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}.`} />
+        legendLabels={{ part: "Terpakai sebagian", full: "Penuh (tak ada 30 mnt kosong)", closed: outside ? "Di luar periode" : "Sudah lewat" }} />
     </section>
 
     {listed.length === 0 ? <p className={styles.meta}>Belum ada ruang yang bisa dibooking di denah.</p>

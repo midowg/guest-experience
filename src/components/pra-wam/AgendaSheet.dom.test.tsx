@@ -88,8 +88,9 @@ describe("an agenda item opens over the page", () => {
     expect(sheet.getByText("Raka")).toBeTruthy();
     expect(sheet.getByText("Bahas target 2027.")).toBeTruthy();
     expect(sheet.getByRole("link", { name: "Ubah" }).getAttribute("href")).toBe(praWamPath.bookSheet({ date: "2099-11-26", edit: "b-1" }));
+    // One way to take a booking off: Batalkan (no separate permanent delete here).
     expect(sheet.getByRole("button", { name: "Batalkan" })).toBeTruthy();
-    expect(sheet.getByRole("button", { name: "Hapus" })).toBeTruthy();
+    expect(sheet.queryByRole("button", { name: "Hapus" })).toBeNull();
     // Only "Ubah" leads to Book, straight into its edit sheet; nothing else leaves the agenda.
     expect([...dialog().querySelectorAll("a")].filter(anchor => anchor.getAttribute("href")?.startsWith(praWamPath.appraisal())).map(anchor => anchor.textContent?.trim())).toEqual(["Ubah"]);
   });
@@ -120,7 +121,9 @@ describe("an agenda item opens over the page", () => {
   it("does not cancel when the confirmation is declined", async () => {
     window.history.replaceState(null, "", "/wam/agenda?item=b-1");
     render(<Page items={[booking(true)]} />);
-    fireEvent.click(within(dialog()).getByRole("button", { name: "Hapus" }));
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Batalkan" }));
+    // The confirmation names the booking, its time and its room.
+    expect(await screen.findByText(/^"Appraisal tim", .* \d{2}\.\d{2}–\d{2}\.\d{2}, Ruang Cendana\. Ruang langsung bisa dipesan orang lain\.$/)).toBeTruthy();
     fireEvent.click(await screen.findByRole("button", { name: "Batal" }));
     expect(fetchMock).not.toHaveBeenCalled();
     expect(dialog().hasAttribute("open")).toBe(true);

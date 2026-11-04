@@ -49,53 +49,40 @@ export function BookingDetailBody({ item }: { item: BookingItem }) {
 type ActionProps = {
   item: BookingItem;
   viewer: { cancelsAny: boolean; bookingOpen: boolean };
-  /** After a cancel or delete: the sheet closes and the page says so. */
+  /** After a cancel: the sheet closes and the page says so. */
   onDone: (message: string) => void;
 };
 
 /**
  * The booking's buttons in the sheet's foot, with the rules of Book (AppraisalBoard): Ubah for the
- * booker while booking is open (Book's edit form), Batalkan before it ends and Hapus (for good) for
- * the booker or panitia/admin. Both ask first. Null when the person can do none of these.
+ * booker while booking is open (Book's edit form), and Batalkan before it ends for the booker or
+ * panitia/admin, after asking. Cancelling frees the room at once and takes the booking off the
+ * schedule and "Booking saya", so there is no separate delete here (the permanent delete stays on
+ * the API for test data). Null when the person can do neither.
  */
 export function BookingDetailActions({ item, viewer, onDone }: ActionProps) {
   const [confirm, confirmDialog] = useConfirm();
-  const [busy, setBusy] = useState<"batal" | "hapus" | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Read when the sheet renders; a booking that ends while it is open is caught by the server.
   const [now] = useState(() => new Date());
   const rights = bookingRights({ mine: item.booking.mine, endsAt: item.endsAt }, viewer, now);
-  if (!rights.edit && !rights.cancel && !rights.remove) return null;
+  if (!rights.edit && !rights.cancel) return null;
 
   async function cancel() {
     const someoneElse = item.booking.mine ? "" : ` milik ${item.booking.bookedBy.name}`;
     if (!(await confirm({
       title: "Batalkan booking?",
-      body: `"${item.title}"${someoneElse}, ${dayLabel(wibDate(item.startsAt))}, ${span(item)}. Ruang langsung bisa dipesan orang lain.`,
+      body: `"${item.title}"${someoneElse}, ${dayLabel(wibDate(item.startsAt))}, ${span(item)}, ${item.booking.room}. Ruang langsung bisa dipesan orang lain.`,
       confirmLabel: "Batalkan booking",
-    }))) return;
-    setBusy("batal"); setError(null);
-    try {
-      const result = await praWamRequest(praWamApi.bookings(item.key), { method: "DELETE" });
-      onDone(result.message);
-    } catch (problem) { setError(errorText(problem)); }
-    finally { setBusy(null); }
-  }
-
-  /** For a test or a mistake: gone for good, not kept as cancelled. */
-  async function remove() {
-    if (!(await confirm({
-      title: "Hapus permanen?",
-      body: `"${item.title}", ${dayLabel(wibDate(item.startsAt))}, ${span(item)}. Data booking hilang dan tidak bisa dikembalikan. Pakai untuk booking uji atau salah input.`,
-      confirmLabel: "Hapus permanen",
       danger: true,
     }))) return;
-    setBusy("hapus"); setError(null);
+    setBusy(true); setError(null);
     try {
-      const result = await praWamRequest(praWamApi.bookings(item.key, { permanent: "1" }), { method: "DELETE" });
-      onDone(result.message);
+      const result = await praWamRequest(praWamApi.bookings(item.key), { method: "DELETE" });
+      onDone(result.message || "Booking dibatalkan.");
     } catch (problem) { setError(errorText(problem)); }
-    finally { setBusy(null); }
+    finally { setBusy(false); }
   }
 
   return <div className={own.foot}>
@@ -103,8 +90,7 @@ export function BookingDetailActions({ item, viewer, onDone }: ActionProps) {
     {error && <Notice tone="error" role="alert">{error}</Notice>}
     <div className={own.buttons}>
       {rights.edit && <ButtonLink variant="secondary" href={praWamPath.bookSheet({ date: wibDate(item.startsAt), edit: item.key })}><Pencil size={18} aria-hidden /> Ubah</ButtonLink>}
-      {rights.cancel && <button type="button" className="button button--secondary" disabled={!!busy} onClick={cancel}>{busy === "batal" ? "Membatalkan…" : "Batalkan"}</button>}
-      {rights.remove && <button type="button" className={`button button--quiet ${styles.dangerQuiet}`} disabled={!!busy} onClick={remove}>{busy === "hapus" ? "Menghapus…" : "Hapus"}</button>}
+      {rights.cancel && <button type="button" className={`button button--secondary ${styles.dangerQuiet}`} disabled={busy} onClick={cancel}>{busy ? "Membatalkan…" : "Batalkan"}</button>}
     </div>
   </div>;
 }

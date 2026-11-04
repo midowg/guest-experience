@@ -1,4 +1,4 @@
-import { appraisalRules, clockLabel, overlaps, wibInstant, wibTime } from "./appraisal";
+import { appraisalRules, clockLabel, overlaps, wibDate, wibInstant, wibTime } from "./appraisal";
 
 /*
  * A room's whole day for the Book plan: how much of 09.00–18.00 is taken (bookings and Pra WAM
@@ -94,3 +94,51 @@ export function bookingFrom(run: { start: string; end: string }): { start: strin
 
 /** A hold's hours in WIB, "09.30–10.00". */
 export const holdLabel = (hold: { startsAt: string; endsAt: string }) => `${clockLabel(wibTime(hold.startsAt))}–${clockLabel(wibTime(hold.endsAt))}`;
+
+/* ── A whole day across the rooms, for the date strip (DateStrip.tsx). ── */
+
+/**
+ * One day of the booking window at a glance: how many holds (bookings and Pra WAM sessions) the
+ * bookable rooms have, and whether it is full: every bookable room is "full" in roomDay (no free
+ * half hour left that has not begun). A day without bookable rooms, or whose hours are over, is
+ * not full.
+ */
+export type DaySummary = { bookings: number; full: boolean };
+
+/** The summary of each date: `holds` are the bookings and sessions of any room on those dates. */
+export function daySummaries(
+  dates: string[],
+  rooms: { id: string; bookable: boolean }[],
+  holds: (DayHold & { roomId: string })[],
+  now: Date,
+): Record<string, DaySummary> {
+  const bookable = rooms.filter(room => room.bookable);
+  const ids = new Set(bookable.map(room => room.id));
+  const byDate = new Map<string, (DayHold & { roomId: string })[]>();
+  for (const hold of holds) {
+    if (!ids.has(hold.roomId)) continue;
+    const date = wibDate(hold.startsAt);
+    byDate.set(date, [...(byDate.get(date) ?? []), hold]);
+  }
+  return Object.fromEntries(dates.map(date => {
+    const day = byDate.get(date) ?? [];
+    const full = bookable.length > 0 && bookable.every(room =>
+      roomDay({ date, bookable: true, now, holds: day.filter(hold => hold.roomId === room.id) }).status.tone === "full");
+    return [date, { bookings: day.length, full }];
+  }));
+}
+
+/** How one day shows on the date strip: its state and the short line under the number. */
+export type StripDay = { past: boolean; today: boolean; selected: boolean; full: boolean; count: number; note: string };
+
+/**
+ * A day on the strip. A past day is "Lewat" (not to be picked); otherwise "Penuh", "2 terpakai" or
+ * "Kosong" from the summary, or nothing when the day's summary is not known.
+ */
+export function stripDay(date: string, at: { today: string; selected: string; summary?: DaySummary }): StripDay {
+  const past = date < at.today;
+  const full = !past && !!at.summary?.full;
+  const count = at.summary?.bookings ?? 0;
+  const note = past ? "Lewat" : full ? "Penuh" : !at.summary ? "" : count ? `${count} terpakai` : "Kosong";
+  return { past, today: date === at.today, selected: date === at.selected, full, count, note };
+}

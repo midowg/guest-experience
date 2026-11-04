@@ -68,7 +68,12 @@ export function DocumentList({ documents, sessionId, sessions, canUpload, storag
     try {
       const start = await praWamRequest<{ key: string; uploadUrl: string; token: string }>(praWamApi.documentUpload, { method: "POST", json: agreed });
       const put = await fetch(start.data.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } }).catch(() => null);
-      if (!put?.ok) throw new PraWamApiError("Unggahan ke penyimpanan gagal. Periksa jaringan lalu coba lagi.");
+      // No response at all while online is the storage refusing this site (its CORS rule), not the
+      // person's network; say so, so they tell the admin instead of retrying.
+      if (!put) throw new PraWamApiError(navigator.onLine
+        ? "Penyimpanan dokumen menolak unggahan dari aplikasi ini. Ini pengaturan server, bukan jaringanmu. Hubungi admin WAM."
+        : "Kamu sedang offline. Sambungkan internet lalu coba lagi.");
+      if (!put.ok) throw new PraWamApiError(`Penyimpanan menolak berkas ini (kode ${put.status}). Coba lagi, atau hubungi admin WAM bila terus terjadi.`);
       await praWamRequest(praWamApi.documents(), { method: "POST", json: { ...agreed, key: start.data.key, token: start.data.token } });
       setFile(null); setTitle(""); setOpen(false);
       setNotice({ tone: "success", text: "Dokumen diunggah." });

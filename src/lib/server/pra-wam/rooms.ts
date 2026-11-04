@@ -1,15 +1,15 @@
 import "server-only";
 import { cache } from "react";
-import { PLAN_SPOTS } from "@/lib/pra-wam/floor-plan";
+import { PLAN_SPOTS, facilitiesProblem, spotTitle } from "@/lib/pra-wam/floor-plan";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 
 /*
  * The rooms as the super admin sets them up (migration 202611040009): each room's capacity, the
- * fewest people it is for, whether it can be booked, and its spot on the office floor plan; and
+ * fewest people it is for, its facilities, whether it can be booked, and its spot on the office floor plan; and
  * one app setting, whether Book shows the floor plan at all. Before the migration the plan shows
- * (the default) and only capacity and bookable can be saved.
+ * (the default) and only capacity, facilities and bookable can be saved.
  */
 
 export const ROOM_PLAN_MIGRATION = "202611040009_pra_wam_room_plan.sql";
@@ -38,7 +38,11 @@ export async function setFloorPlan(on: boolean): Promise<AppSettings> {
   return readSettings();
 }
 
-export type RoomPatch = { capacity: number | null; minPeople: number | null; bookable: boolean; planKey: string | null };
+export type RoomPatch = {
+  capacity: number | null; minPeople: number | null; bookable: boolean; planKey: string | null;
+  /** Facility tags (TV, Whiteboard…); left as they are when not given. */
+  facilities?: string[];
+};
 
 /** What is wrong with a patch, by field; empty when it can be saved. */
 export function roomPatchProblems(patch: RoomPatch): Record<string, string[]> {
@@ -50,6 +54,8 @@ export function roomPatchProblems(patch: RoomPatch): Record<string, string[]> {
     problems.minPeople = [`Minimal orang tidak boleh lebih dari kapasitas (${patch.capacity}).`];
   }
   if (patch.planKey != null && !Object.hasOwn(PLAN_SPOTS, patch.planKey)) problems.planKey = ["Pilih spot dari denah."];
+  const facilities = patch.facilities && facilitiesProblem(patch.facilities);
+  if (facilities) problems.facilities = [facilities];
   return problems;
 }
 
@@ -63,6 +69,8 @@ export async function saveRoom(id: string, patch: RoomPatch, options: { replace?
   const first = Object.values(problems)[0];
   if (first) throw new ServiceError(422, first[0], problems);
   const client = createPrivilegedClient();
+  // pw_rooms.facilities is older than the migration, so it is saved before and after it.
+  const facilities = patch.facilities ? { facilities: patch.facilities } : {};
   if (patch.planKey) {
     const { data: holders, error } = await client.from("pw_rooms").select("id,name").eq("plan_key", patch.planKey).neq("id", id);
     if (error) { if (missing(error)) throw waiting(); databaseError(error); }
@@ -73,15 +81,15 @@ export async function saveRoom(id: string, patch: RoomPatch, options: { replace?
     }
   }
   const { data, error } = await client.from("pw_rooms")
-    .update({ capacity: patch.capacity, min_people: patch.minPeople, bookable: patch.bookable, plan_key: patch.planKey })
+    .update({ capacity: patch.capacity, min_people: patch.minPeople, bookable: patch.bookable, plan_key: patch.planKey, ...facilities })
     .eq("id", id).select("id").maybeSingle();
   if (error) {
     if (error.code === "23505") throw spotTaken(patch.planKey ?? "", null);
     if (error.code === "23514") throw new ServiceError(422, "Minimal orang tidak boleh lebih dari kapasitas.", { minPeople: ["Minimal orang tidak boleh lebih dari kapasitas."] });
     if (!missing(error)) databaseError(error);
-    // Before the migration only capacity and bookable exist; anything more must wait for it.
+    // Before the migration only capacity, facilities and bookable exist; anything more must wait for it.
     if (patch.minPeople != null || patch.planKey != null) throw waiting();
-    const { data: old, error: oldError } = await client.from("pw_rooms").update({ capacity: patch.capacity, bookable: patch.bookable }).eq("id", id).select("id").maybeSingle();
+    const { data: old, error: oldError } = await client.from("pw_rooms").update({ capacity: patch.capacity, bookable: patch.bookable, ...facilities }).eq("id", id).select("id").maybeSingle();
     if (oldError) databaseError(oldError);
     if (!old) throw new ServiceError(404, "Ruang tidak ditemukan.");
     return;
@@ -90,7 +98,7 @@ export async function saveRoom(id: string, patch: RoomPatch, options: { replace?
 }
 
 function spotTaken(key: string, holder: string | null) {
-  const spot = PLAN_SPOTS[key]?.label ?? "Spot ini";
+  const spot = PLAN_SPOTS[key] ? spotTitle(key) : "Spot ini";
   const text = holder ? `Spot ${spot} sudah dipakai ${holder}. Lepas dulu dari ${holder}, atau pilih spot lain.` : `Spot ${spot} baru saja dipakai ruang lain. Muat ulang halaman, lalu coba lagi.`;
   return new ServiceError(409, text, { planKey: [text] });
 }

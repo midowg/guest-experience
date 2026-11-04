@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { alternatives, bookableDates, bookingProblems, overlaps, slotTimes, titleSuggestions, wibDate, wibInstant, wibTime, type Room } from "./appraisal";
 
 const now = new Date("2026-11-04T02:05:00Z"); // Rabu 4 Nov, 09.05 WIB
-const room = (id: string, bookable = true): Room => ({ id, slug: id, name: id, kind: "utama", capacity: null, bookable, minPeople: null, planKey: null });
+const room = (id: string, bookable = true): Room => ({ id, slug: id, name: id, kind: "utama", capacity: null, bookable, minPeople: null, planKey: null, facilities: [] });
 
 describe("WIB time", () => {
   it("round-trips a date and clock time", () => {
