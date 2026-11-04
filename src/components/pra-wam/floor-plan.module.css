@@ -3,8 +3,9 @@
 .caption { margin: 0; font-size: 13px; color: var(--pw-muted); }
 /* The plan, always fitted to its box: zoom and pan happen inside (FloorPlan.tsx, the SVG viewBox). */
 .stage { position: relative; min-width: 0; width: 100%; }
-@media (min-width: 1024px) { .stage { max-width: 860px; margin-inline: auto; } }
-.viewport { position: relative; aspect-ratio: 1600 / 1340; overflow: hidden; border-radius: 12px; background: var(--pw-surface); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+/* The plan is taller than wide (north up): on a wide screen it is kept within the window's height. */
+@media (min-width: 1024px) { .stage { max-width: min(640px, calc((100vh - 220px) * 1265 / 1580)); margin-inline: auto; } }
+.viewport { position: relative; overflow: hidden; border-radius: 12px; background: var(--pw-surface); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   /* Fitted, one finger scrolls the page; pinch is the plan's (FloorPlan.tsx stops the page's own). Zoomed, every touch is the plan's. */
   touch-action: pan-y; }
 .viewport.zoomed { touch-action: none; cursor: grab; }
@@ -12,8 +13,15 @@
 .viewport:focus { outline: none; }
 .viewport:focus-visible { outline: 3px solid var(--pw-primary); outline-offset: 2px; }
 .svg { display: block; width: 100%; height: 100%; }
-/* + / − / fit in the plan's top-left corner, over the empty part of the building. */
-.controls { position: absolute; top: 8px; left: 8px; display: grid; gap: 4px; }
+/* + / − / fit in a row in the plan's top-right corner, over the empty part of the building. */
+.controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
+/* The compass in the top-left corner, beside Limasan: it stays put while the plan zooms. */
+.compass { position: absolute; top: 8px; left: 8px; width: 38px; height: 38px; border-radius: 50%; background: var(--pw-surface); box-shadow: 0 2px 8px -4px rgba(11, 21, 38, .35); pointer-events: none; }
+.compass svg { display: block; width: 100%; height: 100%; }
+.compassRing { fill: none; stroke: var(--pw-line); stroke-width: 1.5; }
+.compassN { fill: var(--pw-text); font-family: var(--pw-body); font-size: 9px; font-weight: 800; text-anchor: middle; dominant-baseline: middle; }
+.needleNorth { fill: var(--pw-danger); }
+.needleSouth { fill: var(--pw-muted); opacity: .45; }
 .control { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); color: var(--pw-text); box-shadow: 0 2px 8px -4px rgba(11, 21, 38, .35); cursor: pointer; transition: background .18s ease, border-color .18s ease, color .18s ease; }
 .control:hover { border-color: var(--pw-primary); color: var(--pw-primary); }
 .control:focus { outline: none; }

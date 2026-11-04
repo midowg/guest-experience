@@ -1,7 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { Room } from "@/lib/pra-wam/appraisal";
-import type { PlanStatus } from "@/lib/pra-wam/floor-plan";
+import { PLAN_H, PLAN_W, type PlanStatus } from "@/lib/pra-wam/floor-plan";
 import { FloorPlan } from "./FloorPlan";
 
 afterEach(cleanup);
@@ -27,7 +27,7 @@ const rooms = [
 const free: PlanStatus = { tone: "free", text: "Kosong 09.00–10.00" };
 const plan = () => screen.getByRole("group", { name: "Denah kantor" });
 const viewBox = () => plan().querySelector("svg")?.getAttribute("viewBox");
-const fit = "0.00 0.00 1600.00 1340.00";
+const fit = `0.00 0.00 ${PLAN_W.toFixed(2)} ${PLAN_H.toFixed(2)}`;
 
 describe("FloorPlan", () => {
   it("opens fitted, with the zoom buttons inside the plan and no names of desks", () => {
@@ -46,15 +46,25 @@ describe("FloorPlan", () => {
     const { container, rerender } = render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
     // What the plan shows, not its tooltips.
     const text = () => [...container.querySelectorAll("svg text")].map(node => node.textContent).join(" ");
-    expect(text()).toContain("Maks 8 orang");
-    expect(text()).toContain("TV, Whiteboard");
-    expect(text()).toContain("Maks 4 · min 1");
+    expect(text()).toMatch(/Maks 4( ·)? min 1/);
     expect(text()).toContain("Kapasitas belum diisi");
     expect(text()).not.toContain("Kosong 09.00–10.00");
     rerender(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" subtitle="status" />);
     expect(text()).toContain("Kosong 09.00–10.00");
     // The status is still read out.
     expect(screen.getByRole("img", { name: "Nagapadma, kosong 09.00–10.00" })).toBeTruthy();
+    // Nagapadma's narrow box shows its specification once zoomed in.
+    rerender(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
+    expect(text()).not.toContain("Maks 8 orang");
+    const zoomIn = screen.getByRole("button", { name: "Perbesar denah" });
+    fireEvent.click(zoomIn); fireEvent.click(zoomIn); fireEvent.click(zoomIn);
+    expect(text()).toContain("Maks 8 orang");
+    expect(text()).toContain("TV, Whiteboard");
+  });
+
+  it("shows a compass with north up, toward Limasan", () => {
+    render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
+    expect(screen.getByRole("img", { name: /Kompas: utara ke atas, sisi Limasan/ })).toBeTruthy();
   });
 
   it("zooms with the buttons and the keyboard, between 1× and 4×", () => {
@@ -65,7 +75,7 @@ describe("FloorPlan", () => {
     expect(viewBox()).not.toBe(fit);
     expect(screen.getByRole("status").textContent).toMatch(/Denah diperbesar 1,6×/);
     fireEvent.click(zoomIn); fireEvent.click(zoomIn); fireEvent.click(zoomIn);
-    expect(viewBox()?.split(" ")[2]).toBe("400.00");
+    expect(viewBox()?.split(" ")[2]).toBe((PLAN_W / 4).toFixed(2));
     expect(zoomIn.getAttribute("aria-disabled")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "Pas layar" }));
     expect(viewBox()).toBe(fit);

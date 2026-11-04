@@ -35,6 +35,22 @@ describe("room names on the plan", () => {
     expect(placed).toHaveLength(1);
     expect(unplaced.map(item => item.slug)).toEqual(["vasuki-2"]);
   });
+  it("is turned so north (Limasan) is up: Limasan along the top, Main Office at the bottom", () => {
+    const top = (key: string) => PLAN_SPOTS[key].rect.y;
+    expect(top("limasan")).toBeLessThan(top("communal"));
+    expect(top("limasan")).toBeLessThan(BUILDING.y + 40);
+    // Main Office is west of Nagapadma, CFC Ananta in the south.
+    expect(PLAN_SPOTS["main-office"].rect.x).toBeLessThan(PLAN_SPOTS.nagapadma.rect.x);
+    expect(top("ananta")).toBeGreaterThan(top("limasan"));
+    expect(PLAN_H).toBeGreaterThan(PLAN_W);
+    expect(BUILDING.x + BUILDING.w + 20).toBe(PLAN_W);
+    expect(BUILDING.y + BUILDING.h + 20).toBe(PLAN_H);
+    // Main Office's words sit inside its L.
+    const office = PLAN_SPOTS["main-office"];
+    const words = office.textRect!;
+    expect(words.x).toBeGreaterThanOrEqual(office.rect.x);
+    expect(words.y + words.h).toBeLessThanOrEqual(office.rect.y + office.rect.h);
+  });
   it("keeps every spot inside the building", () => {
     for (const { rect } of Object.values(PLAN_SPOTS)) {
       expect(rect.x).toBeGreaterThanOrEqual(BUILDING.x);
@@ -150,10 +166,10 @@ describe("words in a spot", () => {
     expect(ananta.subFrom).toBe(1);
     expect(ananta.nameSize).toBeGreaterThan(30);
   });
-  it("breaks a long name in a tall narrow box", () => {
-    const communal = spotText({ name: "Communal Space", sub: "", rect: PLAN_SPOTS.communal.rect, unitPx: 860 / PLAN_W });
-    expect(communal.name).toEqual(["Communal", "Space"]);
-    expect(communal.sub).toEqual([]);
+  it("breaks a long name in a narrow box", () => {
+    const narrow = spotText({ name: "Communal Space", sub: "", rect: { w: 225, h: 380 }, unitPx: 860 / PLAN_W });
+    expect(narrow.name).toEqual(["Communal", "Space"]);
+    expect(narrow.sub).toEqual([]);
   });
 });
 
@@ -178,13 +194,14 @@ describe("zoom and pan", () => {
   });
   it("brings a room into view", () => {
     const view = { scale: 2, x: 0, y: 0 };
-    const shown = revealRect(view, PLAN_SPOTS.nagapadma.rect);
-    const rect = PLAN_SPOTS.nagapadma.rect;
+    const rect = PLAN_SPOTS.ananta.rect;
+    const shown = revealRect(view, rect);
     expect(shown.x).toBeLessThanOrEqual(rect.x);
     expect(shown.x + PLAN_W / 2).toBeGreaterThanOrEqual(rect.x + rect.w);
-    // Wider than the view at 4×: centred on it.
-    expect(revealRect({ scale: 4, x: 0, y: 0 }, rect).x + PLAN_W / 8).toBeCloseTo(rect.x + rect.w / 2);
     expect(shown.y).toBeLessThanOrEqual(rect.y);
+    expect(shown.y + PLAN_H / 2).toBeGreaterThanOrEqual(rect.y + rect.h);
+    // Taller than the view at 4×: centred on it.
+    expect(revealRect({ scale: 4, x: 0, y: 0 }, rect).y + PLAN_H / 8).toBeCloseTo(rect.y + rect.h / 2);
     expect(revealRect({ scale: 1, x: 0, y: 0 }, rect)).toEqual(FIT_VIEW);
   });
 });

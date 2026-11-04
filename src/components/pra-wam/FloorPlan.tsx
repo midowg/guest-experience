@@ -79,11 +79,13 @@ type Gesture = {
 };
 
 /**
- * The office floor plan as an SVG (plan units 0 0 1600 1340, from "Werkudara Room Booking"): the
- * building, the blocks that are not rooms, and every room with its name and specification (or
- * status). It always opens fitted to its box, on a phone too, and zooms and pans like a map: pinch
- * or ctrl/⌘ + wheel, double tap, drag when zoomed, the + / − / fit buttons in its top-left corner,
- * and +, −, 0 and the arrows from the keyboard. WAM rooms the plan has no spot for are listed below.
+ * The office floor plan as an SVG (plan units 0 0 PLAN_W PLAN_H, from "Werkudara Room Booking",
+ * north up): the building, the blocks that are not rooms, and every room with its name and
+ * specification (or status). A compass in its top-left corner shows north (Limasan's side). It
+ * always opens fitted to its box, on a phone too, and zooms and pans like a map: pinch or ctrl/⌘ +
+ * wheel, double tap, drag when zoomed, the + / − / fit buttons in its top-right corner (the empty
+ * corner of the building), and +, −, 0 and the arrows from the keyboard. WAM rooms the plan has no
+ * spot for are listed below.
  */
 export function FloorPlan({
   rooms, statusOf, onPick, selectedId, action = "Pilih ruang ini", label, legend = ["free", "busy", "mine", "off"], caption,
@@ -250,7 +252,7 @@ export function FloorPlan({
 
   return <div className={css.plan}>
     <div className={css.stage} onKeyDown={onKeyDown}>
-      <div ref={box} className={`${css.viewport} ${zoomed ? css.zoomed : ""}`} tabIndex={0} role="group" aria-label={label}
+      <div ref={box} className={`${css.viewport} ${zoomed ? css.zoomed : ""}`} style={{ aspectRatio: `${PLAN_W} / ${PLAN_H}` }} tabIndex={0} role="group" aria-label={label}
         aria-roledescription="denah" aria-keyshortcuts="+ - 0"
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onClickCapture={onClickCapture}>
         <svg className={css.svg} viewBox={`${view.x.toFixed(2)} ${view.y.toFixed(2)} ${(PLAN_W / view.scale).toFixed(2)} ${(PLAN_H / view.scale).toFixed(2)}`}>
@@ -261,29 +263,30 @@ export function FloorPlan({
             if (onPickSpot) {
               const empty = emptySpot ?? { tone: "closed", text: "Belum ada ruang" };
               // Desks carry no name: only "Spot kosong", so the super admin can still give them a room.
-              return <Spot key={spot.key} {...common} rect={spot.rect} shape={spot.shape} name={named ? spot.label : empty.text} quiet={!named} sub={named ? empty.text : ""}
+              return <Spot key={spot.key} {...common} rect={spot.rect} shape={spot.shape} textRect={spot.textRect} name={named ? spot.label : empty.text} quiet={!named} sub={named ? empty.text : ""}
                 tone={empty.tone} selected={spot.key === selectedSpot} title={named ? `${spot.label} · ${empty.text}` : empty.text}
                 button={spotButton(spot.key, named ? `${spot.label}, ${lower(empty.text)}` : empty.text)} />;
             }
             const name = named && otherSpots === "label" ? spot.label : "";
-            return <Spot key={spot.key} {...common} rect={spot.rect} shape={spot.shape} name={name} sub="" tone="off" plain title={name} />;
+            return <Spot key={spot.key} {...common} rect={spot.rect} shape={spot.shape} textRect={spot.textRect} name={name} sub="" tone="off" plain title={name} />;
           })}
           {placed.map(({ key, room, rect }) => {
             const status = statusOf(room);
             const spec = roomSpec(room);
-            const shape = PLAN_SPOTS[key]?.shape;
-            if (onPickSpot) return <Spot key={key} {...common} rect={rect} shape={shape} name={room.name} sub={subtitle === "status" ? status.text : spec} tone={status.tone}
+            const shape = PLAN_SPOTS[key]?.shape, textRect = PLAN_SPOTS[key]?.textRect;
+            if (onPickSpot) return <Spot key={key} {...common} rect={rect} shape={shape} textRect={textRect} name={room.name} sub={subtitle === "status" ? status.text : spec} tone={status.tone}
               main={room.kind === "utama"} selected={key === selectedSpot} title={`${room.name} · ${spec} · ${status.text}`}
               button={spotButton(key, `${room.name}, ${lower(status.text)}`)} />;
             const selected = room.id === selectedId;
             const pick = canPick(room, status);
             const sub = subtitle === "status" ? (selected ? `Dipilih · ${status.text}` : status.text) : spec;
-            return <Spot key={key} {...common} rect={rect} shape={shape} name={room.name} sub={sub} tone={status.tone} main={room.kind === "utama"} selected={selected}
+            return <Spot key={key} {...common} rect={rect} shape={shape} textRect={textRect} name={room.name} sub={sub} tone={status.tone} main={room.kind === "utama"} selected={selected}
               ring={room.id === highlightId} title={`${room.name} · ${spec} · ${status.text}`} a11y={`${room.name}, ${lower(status.text)}`}
               button={pick ? { label: `${room.name}, ${lower(status.text)}. ${action}`, onClick: () => onPick?.(room), onKeyDown: keyed(() => onPick?.(room)) } : undefined} />;
           })}
         </svg>
       </div>
+      <Compass />
       <div className={css.controls}>
         <button type="button" className={css.control} aria-label="Perbesar denah" aria-disabled={view.scale >= ZOOM_MAX - 0.001} onClick={() => { if (viewRef.current.scale < ZOOM_MAX) zoomBy(ZOOM_STEP); }}>
           <Plus size={20} aria-hidden />
@@ -316,10 +319,27 @@ export function FloorPlan({
   </div>;
 }
 
+/**
+ * North, up: a small compass that stays in the corner while the plan zooms and pans, so a guest
+ * can turn the plan to match the office (Limasan is on the north side).
+ */
+function Compass() {
+  return <div className={css.compass} role="img" aria-label="Kompas: utara ke atas, sisi Limasan" title="Utara ke atas (sisi Limasan)">
+    <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+      <circle className={css.compassRing} cx="20" cy="20" r="18.5" />
+      <text className={css.compassN} x="20" y="10.5">U</text>
+      <path className={css.needleNorth} d="M20 14 L24.5 25.5 L15.5 25.5 Z" />
+      <path className={css.needleSouth} d="M20 35 L24.5 25.5 L15.5 25.5 Z" />
+    </svg>
+  </div>;
+}
+
 type SpotProps = {
   rect: Rect;
-  /** The outline to draw instead of `rect` (Main Office's L); the words stay in `rect`'s middle. */
+  /** The outline to draw instead of `rect` (Main Office's L). */
   shape?: [number, number][];
+  /** Where the words sit, when not `rect`'s middle (the L's full-width arm). */
+  textRect?: Rect;
   name: string;
   /** The line under the name: the room's specification or its status; "" for none. */
   sub: string;
@@ -347,15 +367,15 @@ function keyboardFocus(element: Element) {
 }
 
 /** One spot: its box (or outline), its name and, once readable at this zoom, its subtitle. */
-function Spot({ rect, shape, name, sub, tone, title, a11y, main, selected, ring, plain, quiet, button, unitPx, scale, onReveal }: SpotProps) {
-  // An L-shaped room keeps its words in the middle of its box, narrower so they stay inside the L.
-  const textBox = shape ? { w: rect.w * 0.45, h: rect.h } : rect;
+function Spot({ rect, shape, textRect, name, sub, tone, title, a11y, main, selected, ring, plain, quiet, button, unitPx, scale, onReveal }: SpotProps) {
+  // An L-shaped room keeps its words in its full-width arm, so they stay inside the L.
+  const textBox = textRect ?? rect;
   const text = spotText({ name, sub, rect: textBox, main, unitPx });
   const showSub = text.sub.length > 0 && scale >= text.subFrom;
   const nameGap = text.nameSize * 1.2, subGap = text.subSize * 1.2;
   const height = text.name.length * nameGap + (showSub ? text.subSize * 0.5 + text.sub.length * subGap : 0);
-  const top = rect.y + rect.h / 2 - height / 2;
-  const cx = rect.x + rect.w / 2;
+  const top = textBox.y + textBox.h / 2 - height / 2;
+  const cx = textBox.x + textBox.w / 2;
   const className = [css.spot, css[tone], main ? css.main : "", selected ? css.selected : "", ring ? css.ring : "", plain ? css.plain : "", button ? css.click : ""].join(" ");
   const attributes = button
     ? { role: "button", tabIndex: 0, "aria-label": button.label, "aria-pressed": !!(selected || ring), onClick: button.onClick, onKeyDown: button.onKeyDown, onFocus: (event: FocusEvent<SVGGElement>) => { if (keyboardFocus(event.currentTarget)) onReveal(rect); } }

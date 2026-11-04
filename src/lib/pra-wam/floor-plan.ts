@@ -2,28 +2,47 @@ import { clockLabel, overlaps, wibTime, type Room } from "./appraisal";
 
 /*
  * The office floor plan, taken from "Werkudara Room Booking" (MAP_W, MAP_H, BLDG, DEF.floor.decor
- * and FLOOR_DEFAULT there). Coordinates are in plan units: the SVG's viewBox is 0 0 1600 1340.
+ * and FLOOR_DEFAULT there). The HTML draws it with Limasan on the left; north is Limasan's side,
+ * so the plan here is that drawing turned a quarter clockwise: north (Limasan) is up, as the
+ * compass on the plan says. The coordinates below are the HTML's (a 1600 × 1340 drawing), turned
+ * once when this module loads; the SVG's viewBox is 0 0 PLAN_W PLAN_H.
  * WAM rooms live in the database (pw_rooms); they find their spot here by name, so a room that is
  * renamed or added without a spot is simply listed below the plan.
  */
 
 export type Rect = { x: number; y: number; w: number; h: number };
+type Point = [number, number];
 
-export const PLAN_W = 1600;
-export const PLAN_H = 1340;
-export const BUILDING: Rect = { x: 20, y: 95, w: 1540, h: 1225 };
+/** The HTML drawing's height: its left edge (Limasan's side) becomes the top. */
+const SOURCE_H = 1340;
+/** A quarter turn clockwise: the drawing's left goes to the top, its top to the right. */
+const turn = ({ x, y, w, h }: Rect): Rect => ({ x: SOURCE_H - y - h, y: x, w: h, h: w });
+const turnPoint = ([x, y]: Point): Point => [SOURCE_H - y, x];
+
+/** The turned building is 1225 × 1540 with a 20-unit margin all round. */
+export const PLAN_W = 1265;
+export const PLAN_H = 1580;
+export const BUILDING: Rect = turn({ x: 20, y: 95, w: 1540, h: 1225 });
 /** Blocks that are not rooms (stairs, lift, storage): drawn plain. */
 export const DECOR: Rect[] = [
   { x: 565, y: 302, w: 190, h: 238 }, { x: 870, y: 130, w: 228, h: 235 },
   { x: 1100, y: 110, w: 410, h: 245 }, { x: 670, y: 725, w: 200, h: 120 },
-];
+].map(turn);
+
+export type PlanSpot = {
+  label: string; rect: Rect;
+  /** The outline to draw instead of `rect`, for a room that is not a plain box. */
+  shape?: Point[];
+  /** Where its words sit, when not the middle of `rect` (the wide arm of an L). */
+  textRect?: Rect;
+};
 
 /**
- * Every room drawn on the plan, keyed by the slug the booking HTML uses. `rect` is the room's box
- * (its label sits in the middle); `shape`, when given, is the outline to draw instead, for a room
- * that is not a plain box (Main Office wraps round Antareja).
+ * Every room drawn on the plan, keyed by the slug the booking HTML uses, in the HTML's coordinates
+ * (turned below). `rect` is the room's box (its label sits in the middle); Main Office is an L
+ * round Antareja, its words in the L's full-width arm.
  */
-export const PLAN_SPOTS: Record<string, { label: string; rect: Rect; shape?: [number, number][] }> = {
+const SOURCE_SPOTS: Record<string, PlanSpot> = {
   "pak-bagus": { label: "Pak Bagus", rect: { x: 255, y: 165, w: 155, h: 135 } },
   vasuki: { label: "Vasuki", rect: { x: 412, y: 142, w: 453, h: 153 } },
   bs: { label: "BS", rect: { x: 255, y: 302, w: 310, h: 243 } },
@@ -34,6 +53,7 @@ export const PLAN_SPOTS: Record<string, { label: string; rect: Rect; shape?: [nu
   "main-office": {
     label: "Main Office", rect: { x: 840, y: 842, w: 635, h: 368 },
     shape: [[840, 842], [1475, 842], [1475, 1210], [1020, 1210], [1020, 1030], [840, 1030]],
+    textRect: { x: 1020, y: 842, w: 455, h: 368 },
   },
   // Added by the owner (Nov 2026): Antareja in Main Office's lower-left corner, and the communal
   // space between Limasan and Pantry.
@@ -42,6 +62,13 @@ export const PLAN_SPOTS: Record<string, { label: string; rect: Rect; shape?: [nu
   pantry: { label: "Pantry", rect: { x: 590, y: 930, w: 160, h: 135 } },
   limasan: { label: "Limasan", rect: { x: 40, y: 740, w: 300, h: 400 } },
 };
+
+/** The spots as drawn: north (Limasan) up. */
+export const PLAN_SPOTS: Record<string, PlanSpot> = Object.fromEntries(Object.entries(SOURCE_SPOTS).map(([key, spot]) => [key, {
+  label: spot.label, rect: turn(spot.rect),
+  ...(spot.shape ? { shape: spot.shape.map(turnPoint) } : {}),
+  ...(spot.textRect ? { textRect: turn(spot.textRect) } : {}),
+}]));
 
 /** "CFC Ananta Room" → "cfc ananta room"; slugs normalize the same way ("cfc-ananta" → "cfc ananta"). */
 export const normalizeRoomName = (name: string) => name.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
