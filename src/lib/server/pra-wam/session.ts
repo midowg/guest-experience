@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { praWamPath } from "@/lib/routes";
+import { photoColumnMissing, photoPath } from "@/lib/pra-wam/photo";
 import { praWamRoles, type PraWamRole } from "@/lib/pra-wam/roles";
 import { PRA_WAM_COOKIE, PRA_WAM_SESSION_TTL_SECONDS, praWamSecret, signPraWamSession, verifyPraWamSession } from "@/lib/pra-wam/session-token";
 import { ServiceError } from "../config";
@@ -20,7 +21,8 @@ export const notMigrated = (error: { code?: string; message?: string }) =>
   ["42P01", "PGRST205", "42883", "PGRST202", "42703", "PGRST204"].includes(error.code ?? "") || /pw_/.test(error.message ?? "");
 export const waitingForMigration = () => new ServiceError(503, `Pra WAM menunggu migrasi ${PRA_WAM_MIGRATION}.`);
 
-export type Member = { id: string; name: string; nickname: string; department: string; position: string; mustChangePassword: boolean; roles: PraWamRole[] };
+/** `photo`: the app address of the profile photo, or null (initials are shown). */
+export type Member = { id: string; name: string; nickname: string; department: string; position: string; mustChangePassword: boolean; roles: PraWamRole[]; photo: string | null };
 
 /** A person's roles; none before migration 202611040002, so everyone is simply a peserta then. */
 async function rolesOfUncached(employeeId: string): Promise<PraWamRole[]> {
@@ -37,13 +39,19 @@ async function currentMemberUncached(): Promise<Member | null> {
   const secret = praWamSecret();
   const session = verifyPraWamSession(secret, (await cookies()).get(PRA_WAM_COOKIE)?.value);
   if (!session) return null;
-  const { data, error } = await createPrivilegedClient().from("pw_accounts")
-    .select("session_version,active,must_change_password,employees(id,full_name,nickname,department,position,active)")
-    .eq("employee_id", session.employeeId).maybeSingle();
+  const columns = "session_version,active,must_change_password,employees(id,full_name,nickname,department,position,active)";
+  const account = (select: string) => createPrivilegedClient().from("pw_accounts").select(select).eq("employee_id", session.employeeId).maybeSingle();
+  let { data: found, error } = await account(`${columns},photo_key,photo_updated_at`);
+  // Before migration 202611040010 there are no photo columns: read the rest, and show initials.
+  if (error && photoColumnMissing(error)) ({ data: found, error } = await account(columns));
   if (error) { if (notMigrated(error)) return null; databaseError(error); }
-  const person = data?.employees as unknown as { id: string; full_name: string; nickname: string; department: string; position: string; active: boolean } | null;
+  const data = found as unknown as { session_version: number; active: boolean; must_change_password: boolean; photo_key?: string | null; photo_updated_at?: string | null; employees: unknown } | null;
+  const person = data?.employees as { id: string; full_name: string; nickname: string; department: string; position: string; active: boolean } | null;
   if (!data || !person || !data.active || !person.active || data.session_version !== session.version) return null;
-  return { id: person.id, name: person.full_name, nickname: person.nickname, department: person.department, position: person.position, mustChangePassword: data.must_change_password, roles: await rolesOf(person.id) };
+  return {
+    id: person.id, name: person.full_name, nickname: person.nickname, department: person.department, position: person.position, mustChangePassword: data.must_change_password, roles: await rolesOf(person.id),
+    photo: photoPath({ id: person.id, photoKey: data.photo_key ?? null, photoUpdatedAt: data.photo_updated_at ?? null }),
+  };
 }
 /** Read once per request, however many parts of the page ask. */
 export const currentMember = cache(currentMemberUncached);

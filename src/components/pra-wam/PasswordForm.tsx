@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { AlertTriangle, CheckCircle2, ChevronDown, Eye, EyeOff, KeyRound, Lock } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { passwordRules } from "@/lib/pra-wam/password";
@@ -51,7 +51,7 @@ export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boo
       if (doneHref) { router.refresh(); router.replace(doneHref); return; }
       setForm({ current: "", next: "", confirm: "" });
       setNotice({ tone: "success", text: result.message });
-      // Profil: the server page drops the "password awal" warning once it reads the change.
+      // Pengaturan and Profil: the server pages drop the "password awal" warning once they read the change.
       router.refresh();
     } catch (problem) {
       if (problem instanceof PraWamApiError && problem.fieldErrors) setErrors(Object.fromEntries(Object.entries(problem.fieldErrors).map(([key, list]) => [key, list[0]])));
@@ -77,15 +77,25 @@ export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boo
   </form>;
 }
 
+/** A link to `#password` (the "password awal" warning on Profil) asks for the form open. */
+const subscribeHash = (onChange: () => void) => {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+};
+const askedForPassword = () => window.location.hash === "#password";
+
 /**
- * Keamanan in Profil (Penpot "P4"): a "Ganti password" row that opens the form below it, inside
+ * Keamanan in Pengaturan (Penpot "P4"): a "Ganti password" row that opens the form below it, inside
  * the same group, on a phone and a desktop alike (no width check, so nothing jumps after load).
- * Open by itself, with a warning, while the person still uses the shared first password.
+ * Open by itself, with a warning, while the person still uses the shared first password, or when
+ * the address ends in `#password`; once the person taps the row, their choice wins.
  */
 export function PasswordPanel({ firstTime }: { firstTime: boolean }) {
-  const [open, setOpen] = useState(firstTime);
+  const asked = useSyncExternalStore(subscribeHash, askedForPassword, () => false);
+  const [choice, setChoice] = useState<boolean | null>(null);
+  const open = choice ?? (firstTime || asked);
   return <div id="password" className={own.group}>
-    <button type="button" className={own.rowButton} aria-expanded={open} aria-controls="password-form" onClick={() => setOpen(!open)}>
+    <button type="button" className={own.rowButton} aria-expanded={open} aria-controls="password-form" onClick={() => setChoice(!open)}>
       <span className={`${styles.tile} ${firstTime ? styles.tileBrass : ""}`} aria-hidden>{firstTime ? <KeyRound /> : <Lock />}</span>
       <span className={own.rowText}><strong>Ganti password</strong><small>{firstTime ? "Ganti password awal dengan password milikmu" : "Ganti password akunmu"}</small></span>
       <ChevronDown className={own.chevron} aria-hidden />

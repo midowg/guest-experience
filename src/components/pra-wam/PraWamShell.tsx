@@ -6,6 +6,7 @@ import { unreadCount } from "@/lib/server/pra-wam/announcements";
 import { openRequestCount } from "@/lib/server/pra-wam/requests";
 import { currentPhase } from "@/lib/server/pra-wam/events";
 import { wibDate } from "@/lib/pra-wam/appraisal";
+import { Avatar } from "./Avatar";
 import { SignOutButton } from "./SignOutButton";
 import styles from "./pra-wam.module.css";
 
@@ -38,7 +39,6 @@ const manage: Item[] = [
 ];
 
 const managedIds = new Set<Tab>(manage.map(item => item.id));
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
 const month = (date: string) => new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 
 /**
@@ -50,7 +50,7 @@ const month = (date: string) => new Intl.DateTimeFormat("id-ID", { month: "short
  *   bell and the person on the right.
  * - Desktop, "Kelola acara" (D1 to D9): a sidebar with the panitia's places.
  */
-export async function PraWamShell({ member, current, back, children }: { member: { id: string; name: string; nickname: string; department: string; roles: PraWamRole[] }; current?: Tab; back?: { href: string; title: string }; children: ReactNode }) {
+export async function PraWamShell({ member, current, back, children }: { member: { id: string; name: string; nickname: string; department: string; roles: PraWamRole[]; photo?: string | null }; current?: Tab; back?: { href: string; title: string }; children: ReactNode }) {
   const [unread, waiting, phase] = await Promise.all([
     unreadCount(member.id), managesSessions(member) ? openRequestCount() : 0,
     currentPhase(wibDate(new Date().toISOString())).catch(() => null),
@@ -78,7 +78,7 @@ export async function PraWamShell({ member, current, back, children }: { member:
         <a className={styles.iconButton} href={praWamPath.notifications} aria-label={unread ? `Notifikasi, ${unread} belum dibaca` : "Notifikasi"} aria-current={current === "notifikasi" ? "page" : undefined}>
           <Bell aria-hidden />{unread > 0 && <span className={styles.iconDot} />}
         </a>
-        <a className={styles.person} href={praWamPath.account}><span className={styles.avatar} aria-hidden>{initials(member.name)}</span><span><strong>{who}</strong><small>{member.department || roleSummary(member)}</small></span></a>
+        <a className={styles.person} href={praWamPath.account}><Avatar name={member.name} photo={member.photo ?? null} size="md" /><span><strong>{who}</strong><small>{member.department || roleSummary(member)}</small></span></a>
         <SignOutButton className={styles.signOut} />
       </div>
     </header>

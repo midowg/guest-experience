@@ -123,6 +123,8 @@ export const praWamPath = {
   home: PRA_WAM_PATH,
   /** "Apa itu WAM?": the text the super admin writes, opened from Beranda. */
   about: `${PRA_WAM_PATH}/about`,
+  /** The same page opened from Pengaturan, so its back arrow returns there. */
+  aboutFromSettings: `${PRA_WAM_PATH}/about?dari=pengaturan`,
   login: (next?: string) => `${PRA_WAM_PATH}/login${next ? `?next=${enc(next)}` : ""}`,
   /**
    * Book: who has which room, per day, on the floor plan (was /wam/appraisal). With a booking id
@@ -161,8 +163,10 @@ export const praWamPath = {
   checkIn: (token: string) => `${PRA_WAM_PATH}/check-in/${enc(token)}`,
   /** The in-app scanner, for phones whose camera app does not open links. */
   scan: `${PRA_WAM_PATH}/check-in`,
-  /** Profile and settings: change password. */
+  /** Profil: the person's details and photo; settings are a separate page. */
   account: `${PRA_WAM_PATH}/account`,
+  /** Pengaturan, pushed from Profil: password (`#password` opens it), theme, about, sign out. */
+  settings: `${PRA_WAM_PATH}/settings`,
   /** Right after the first sign-in: pick a new password, or skip for now. */
   newPassword: (next?: string) => `${PRA_WAM_PATH}/new-password${next ? `?next=${enc(next)}` : ""}`,
   /** Forgot password: ask for a link by email. */
@@ -217,10 +221,22 @@ export const praWamApi = {
     const search = new URLSearchParams(query).toString();
     return `${WAM_API}/appraisal${id ? `/${id}` : ""}${search ? `?${search}` : ""}`;
   },
+  /** Profile photo: DELETE removes the person's own photo. */
+  photo: `${WAM_API}/photo`,
+  /** POST {mime, size}: an upload address for a new profile photo. */
+  photoStart: `${WAM_API}/photo/start`,
+  /** POST: the photo is uploaded; check it and keep it. */
+  photoConfirm: `${WAM_API}/photo/confirm`,
+  /** GET: one person's photo (a redirect to storage); `v` changes with the photo, so caches refresh. */
+  photoOf: (employeeId: string, version?: string) => `${WAM_API}/photo/${employeeId}${version ? `?v=${enc(version)}` : ""}`,
 };
 export const PRA_WAM_ADMIN = "/admin/super/wam";
 /** Super admin: the account list and creating accounts, or one person's roles and password reset. */
 export const praWamAccountsApi = (employeeId?: string) => `/api/admin/wam/accounts${employeeId ? `/${employeeId}` : ""}`;
+/** Super admin: GET the "Lupa password" requests; with an id, PATCH {action: "reset" | "tolak"} answers one. */
+export const praWamResetRequestsApi = (requestId?: string) => `/api/admin/wam/reset-requests${requestId ? `/${requestId}` : ""}`;
+/** Where the super admin answers "Lupa password" requests, on the WAM settings page. */
+export const PRA_WAM_RESET_REQUESTS = `${PRA_WAM_ADMIN}#permintaan-reset`;
 /** Super admin: PATCH one room's capacity, fewest people, bookable and floor plan spot. */
 export const praWamRoomsApi = (roomId: string) => `/api/admin/wam/rooms/${roomId}`;
 /** Super admin: import units and positions from the Data karyawan workbook. */

@@ -1,17 +1,20 @@
-import { z } from "zod";
+import { resetRequestSchema } from "@/lib/pra-wam/reset-requests";
 import { checkOrigin, enforceRateLimit, handle, readJson, success, validate } from "@/lib/server/http";
-import { requestPasswordReset } from "@/lib/server/pra-wam/session";
+import { submitResetRequest } from "@/lib/server/pra-wam/reset-requests";
 
 export const dynamic = "force-dynamic";
-const schema = z.object({ email: z.email("Isi email kantor yang valid.").max(200) });
 
-/** POST: email a link to set a new password. Same answer whether or not the email has an account. */
+/**
+ * POST: ask the admin WAM to reset the password to the shared first one. The answer is the same
+ * whether or not the email has an account. (The emailed Supabase link is no longer sent from
+ * here; /wam/reset-password stays for links sent before.)
+ */
 export async function POST(request: Request) {
   return handle(async () => {
     checkOrigin(request);
     await enforceRateLimit(request, "pra-wam-forgot", 5);
-    const { email } = validate(schema, await readJson(request, 2_000));
-    await requestPasswordReset(email, process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin);
-    return success(null, "Bila email ini terdaftar, tautan untuk membuat password baru sudah dikirim. Periksa kotak masuk dan folder spam.");
+    const input = validate(resetRequestSchema, await readJson(request, 2_000));
+    const answer = await submitResetRequest(input);
+    return success({ sent: answer.sent }, answer.message);
   });
 }

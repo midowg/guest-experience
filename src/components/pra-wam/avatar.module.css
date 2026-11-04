@@ -1,0 +1,39 @@
+/* Avatar.tsx and ProfilePhoto.tsx: a round photo or initials with a brass ring. --pw-* tokens only. */
+.avatar { flex: none; position: relative; display: inline-grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); font-weight: 800; line-height: 1; user-select: none; }
+.avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sm { width: 28px; height: 28px; font-size: 11px; box-shadow: 0 0 0 2px var(--pw-surface), 0 0 0 3px var(--pw-brass-line); }
+.md { width: 36px; height: 36px; font-size: 12px; box-shadow: 0 0 0 2px var(--pw-surface), 0 0 0 3px var(--pw-brass-line); }
+.lg { width: 56px; height: 56px; font-size: 20px; box-shadow: 0 0 0 3px var(--pw-surface), 0 0 0 5px var(--pw-brass-line); }
+.xl { width: 96px; height: 96px; font-size: 32px; box-shadow: 0 0 0 3px var(--pw-surface), 0 0 0 5px var(--pw-brass-line); }
+.lg.initials, .xl.initials { background: var(--pw-hero); color: var(--pw-on-hero); font-family: var(--pw-display); font-weight: 600; }
+
+.profile { display: grid; justify-items: center; gap: 10px; }
+.frame { position: relative; display: inline-grid; }
+.veil { position: absolute; inset: 0; border-radius: 50%; background: var(--pw-surface); opacity: .55; }
+.camera { position: absolute; right: -10px; bottom: -6px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 3px solid var(--pw-surface); border-radius: 50%; background: var(--pw-primary); color: var(--pw-on-primary); cursor: pointer; box-shadow: var(--pw-shadow); }
+.camera:hover { background: var(--pw-primary-hover); }
+.camera:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.camera:disabled { cursor: progress; opacity: .7; }
+.camera svg { width: 20px; height: 20px; }
+
+.menu { position: absolute; z-index: 20; top: calc(100% + 12px); left: 50%; min-width: 200px; padding: 6px; border: 1px solid var(--pw-line); border-radius: 14px; background: var(--pw-surface); color: var(--pw-text); box-shadow: var(--pw-shadow); transform: translateX(-50%); }
+.menuItem { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--pw-text); font: inherit; font-size: 15px; font-weight: 700; text-align: left; cursor: pointer; }
+.menuItem:hover, .menuItem:focus-visible { background: var(--pw-surface-soft); outline: none; }
+.menuItem:focus-visible { box-shadow: inset 0 0 0 2px var(--pw-primary); }
+.menuItem svg { width: 20px; height: 20px; flex: none; color: var(--pw-muted); }
+.menuDanger, .menuDanger svg { color: var(--pw-danger); }
+
+.file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.status { display: grid; justify-items: center; gap: 6px; min-height: 20px; font-size: 13px; font-weight: 600; color: var(--pw-muted); text-align: center; }
+.bar { display: block; width: 160px; height: 6px; overflow: hidden; border-radius: 6px; background: var(--pw-line); }
+.bar span { display: block; height: 100%; border-radius: inherit; background: var(--pw-primary); transition: width .15s ease-out; }
+.done { color: var(--pw-success); }
+.error { max-width: 22rem; color: var(--pw-danger); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .menu { animation: pw-photo-menu .18s cubic-bezier(.2, .8, .2, 1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar span { transition: none; }
+}
+@keyframes pw-photo-menu { from { opacity: 0; transform: translate(-50%, -4px); } to { opacity: 1; transform: translateX(-50%); } }

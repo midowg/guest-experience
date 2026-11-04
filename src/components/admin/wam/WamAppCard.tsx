@@ -1,6 +1,7 @@
-import { ExternalLink, Settings } from "lucide-react";
-import { PRA_WAM_ADMIN, praWamPath } from "@/lib/routes";
+import { ExternalLink, KeyRound, Settings } from "lucide-react";
+import { PRA_WAM_ADMIN, PRA_WAM_RESET_REQUESTS, praWamPath } from "@/lib/routes";
 import { currentPhase } from "@/lib/server/pra-wam/events";
+import { openResetRequestCount } from "@/lib/server/pra-wam/reset-requests";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import styles from "./wam-card.module.css";
 
@@ -9,10 +10,13 @@ const short = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric
 /**
  * WAM is not an invitation in the events table, so the event list does not read it; this card
  * puts it at the top of "Semua acara" with its phase and the way in (the app, and for the super
- * admin its settings and accounts).
+ * admin its settings and accounts, and how many "Lupa password" requests wait).
  */
 export async function WamAppCard({ superAdmin }: { superAdmin: boolean }) {
-  const phase = await currentPhase(wibDate(new Date().toISOString())).catch(() => null);
+  const [phase, waiting] = await Promise.all([
+    currentPhase(wibDate(new Date().toISOString())).catch(() => null),
+    superAdmin ? openResetRequestCount().catch(() => null) : null,
+  ]);
   return <section className={styles.card} aria-labelledby="wam-app">
     <div>
       <p className={styles.eyebrow}>Aplikasi internal Werkudara</p>
@@ -25,6 +29,7 @@ export async function WamAppCard({ superAdmin }: { superAdmin: boolean }) {
     <div className={styles.actions}>
       <a className="button button--primary" href={praWamPath.home} target="_blank" rel="noopener"><ExternalLink size={18} aria-hidden /> Buka aplikasi</a>
       {superAdmin && <a className="button button--secondary" href={PRA_WAM_ADMIN}><Settings size={18} aria-hidden /> Akun, peran &amp; pengaturan</a>}
+      {superAdmin && !!waiting && <a className="button button--secondary" href={PRA_WAM_RESET_REQUESTS}><KeyRound size={18} aria-hidden /> {waiting} permintaan reset password</a>}
     </div>
   </section>;
 }

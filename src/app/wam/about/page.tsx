@@ -8,10 +8,12 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Apa itu WAM? · WAM", robots: { index: false } };
 
 /** "Apa itu WAM?" in full, opened from its card on Beranda; the super admin writes the text. */
-export default async function AboutPage() {
+export default async function AboutPage({ searchParams }: { searchParams: Promise<{ dari?: string }> }) {
   const member = await requireMemberPage(praWamPath.about);
-  const { about } = await getAbout();
-  return <PraWamShell member={member} back={{ href: praWamPath.home, title: "Tentang WAM" }}>
+  const [{ about }, { dari }] = await Promise.all([getAbout(), searchParams]);
+  // Back to where it was opened: Pengaturan, or Beranda's card.
+  const back = dari === "pengaturan" ? praWamPath.settings : praWamPath.home;
+  return <PraWamShell member={member} back={{ href: back, title: "Tentang WAM" }}>
     <AboutText about={about} />
   </PraWamShell>;
 }

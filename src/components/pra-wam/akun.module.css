@@ -73,21 +73,40 @@
 .annHint { margin: 0; font-size: 13px; color: var(--pw-muted); }
 
 /*
- * Profil dan pengaturan (Penpot "P4"), as a native settings screen: an identity header, then
- * grouped lists (Data diri, Keamanan, Tampilan, Akun) with a short title above each group.
- * Desktop: identity and Data diri on the left, the settings on the right.
+ * Profil (Penpot "P4"): the title row with the gear to Pengaturan, an identity header, and the
+ * read-only Data diri. Desktop: identity on the left, Data diri on the right.
+ * Pengaturan: grouped lists (Keamanan, Tampilan, Tentang, Akun), a short title above each group.
  */
-.profile { width: 100%; }
+.profile { width: 100%; display: grid; gap: 24px; }
 .profileGrid { display: grid; gap: 24px; }
-.profileCol { display: grid; gap: 24px; align-content: start; min-width: 0; }
-.profile .groupTitle { margin: 0 0 8px; padding: 0 4px; font-family: var(--pw-body); font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.profile .headRow { flex-wrap: nowrap; align-items: center; margin-bottom: 0; }
+.profile .headRow > div { flex: 1; min-width: 0; }
+.gear { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); transition: background-color 150ms ease, color 150ms ease; }
+.profile .gear { color: var(--pw-text); }
+.profile .gear:hover { background: var(--pw-primary-soft); color: var(--pw-primary); }
+.gear:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.gear svg { width: 22px; height: 22px; }
+/* Still on the shared first password: a warning with the way to Pengaturan > Keamanan. */
+.warnCard { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--pw-brass-line); border-radius: 16px; background: var(--pw-warning-soft); }
+.warnText { flex: 1 1 12rem; min-width: 0; }
+.warnText strong { display: block; font-size: 15px; color: var(--pw-warning); }
+.warnText small { display: block; font-size: 13px; color: var(--pw-text); }
+.warnButton { flex: none; }
+@media (max-width: 479.98px) { .warnButton { flex: 1 1 100%; } }
+.heroPhoto { display: grid; place-items: center; margin-bottom: 8px; }
+.settings { width: 100%; display: grid; gap: 24px; align-content: start; }
+.backLink { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: -8px 0 4px -8px; padding: 0 12px 0 4px; border-radius: 12px; font-weight: 800; font-size: 15px; text-decoration: none; transition: background-color 150ms ease; }
+.backLink:hover { background: var(--pw-primary-soft); }
+.backLink:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.backLink svg { width: 20px; height: 20px; }
+.settings .head { margin-bottom: 0; }
+.profile .groupTitle, .settings .groupTitle { margin: 0 0 8px; padding: 0 4px; font-family: var(--pw-body); font-size: 13px; font-weight: 700; color: var(--pw-muted); }
 .groupNote { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; padding: 0 4px; font-size: 13px; color: var(--pw-muted); }
 .groupNote svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
 .group { position: relative; margin: 0; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); overflow: hidden; }
 
-/* Identity header: centred on a phone, avatar beside the name on a desktop. */
+/* Identity header: centred on a phone, the photo beside the name on a desktop. */
 .hero { display: grid; justify-items: center; gap: 4px; padding: 24px 16px 20px; text-align: center; }
-.avatar { display: grid; place-items: center; width: 80px; height: 80px; margin-bottom: 8px; border-radius: 50%; background: var(--pw-hero); color: var(--pw-on-hero); font-family: var(--pw-display); font-size: 28px; font-weight: 600; box-shadow: 0 0 0 3px var(--pw-surface), 0 0 0 5px var(--pw-brass-line); }
 .hero .heroName { margin: 0; max-width: 100%; font-family: var(--pw-display); font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--pw-primary); overflow-wrap: anywhere; }
 .heroMeta { margin: 0; font-size: 14px; color: var(--pw-muted); }
 .heroPills { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
@@ -108,13 +127,18 @@
 .itemStack dd { text-align: left; }
 .item .unset { color: var(--pw-muted); font-weight: 600; }
 
-/* A row that does something: Ganti password, Keluar. */
+/* A row that does something: Ganti password, Apa itu WAM?, Keluar. */
 .rowButton { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 16px; border: 0; background: transparent; color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; transition: background-color 150ms ease; }
 .rowButton:hover { background: var(--pw-app); }
 .rowButton:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: -2px; border-radius: 16px; }
 .rowText { flex: 1; min-width: 0; }
 .rowText strong { display: block; font-size: 15px; }
 .rowText small { display: block; font-size: 13px; color: var(--pw-muted); }
+.group .rowLink { color: var(--pw-text); text-decoration: none; }
+.rowLink + .aboutApp::before { content: ""; position: absolute; top: 0; left: 64px; right: 0; height: 1px; background: var(--pw-line); }
+/* Tentang aplikasi: information only, laid out like a row. */
+.aboutApp { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; }
+.version { flex: none; font-size: 13px; font-weight: 700; color: var(--pw-muted); white-space: nowrap; }
 .chevron { flex: none; width: 20px; height: 20px; color: var(--pw-muted); transition: transform 200ms ease; }
 .rowButton[aria-expanded="true"] .chevron { transform: rotate(180deg); }
 .rowPanel { display: grid; gap: 12px; padding: 16px; border-top: 1px solid var(--pw-line); }
@@ -122,7 +146,7 @@
   .rowPanel { animation: panelIn 200ms ease-out; }
   @keyframes panelIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 }
-@media (prefers-reduced-motion: reduce) { .rowButton, .chevron { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .rowButton, .chevron, .gear, .backLink { transition: none; } }
 
 /* Keluar: a quiet danger row; SignOutButton's own button covers the whole row. */
 .signOutRow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 16px; color: var(--pw-danger); transition: background-color 150ms ease; }
@@ -138,9 +162,10 @@
 
 @media (min-width: 1024px) {
   .profile { max-width: 72rem; margin: 0 auto; }
-  .profileGrid { grid-template-columns: minmax(0, 1fr) minmax(0, 26rem); align-items: start; }
+  .profileGrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .settings { max-width: 40rem; margin: 0 auto; }
   .hero { grid-template-columns: auto minmax(0, 1fr); justify-items: start; align-items: center; column-gap: 20px; row-gap: 2px; padding: 24px; text-align: left; }
-  .avatar { grid-row: 1 / span 3; width: 88px; height: 88px; margin: 0; font-size: 30px; }
+  .heroPhoto { grid-row: 1 / span 3; margin: 0; }
   .hero .heroName { font-size: 28px; }
   .heroPills { justify-content: flex-start; }
   .unit { padding: 10px 24px; }
