@@ -26,6 +26,15 @@ a.row:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px;
 .aboutSummary { font-size: 14px; color: var(--pw-muted); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .aboutMore { margin-top: 2px; font-size: 13px; font-weight: 800; color: var(--pw-primary); }
 
+/* The questionnaire: mandatory until done, so it stands out a little with a primary border. */
+.row.questRow { border-color: var(--pw-primary); }
+.questTile, .questTileDone { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-primary); }
+.questTileDone { background: var(--pw-success-soft); color: var(--pw-success); }
+.questTile svg, .questTileDone svg { width: 20px; height: 20px; }
+.questMeta { margin-top: 2px; font-size: 13px; font-weight: 800; color: var(--pw-text); }
+.questBar { display: block; height: 6px; margin-top: 6px; border-radius: 999px; background: var(--pw-line); overflow: hidden; }
+.questBar > span { display: block; height: 100%; border-radius: inherit; background: var(--pw-primary); transition: width .3s ease; }
+
 /* Apa itu WAM: the full screen */
 .aboutPage { display: grid; gap: 16px; max-width: 42rem; }
 .aboutHeading.aboutHeading { margin: 0; font-family: var(--pw-display); font-size: 28px; font-weight: 600; line-height: 1.2; color: var(--pw-primary); overflow-wrap: anywhere; }
@@ -40,4 +49,5 @@ a.row:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px;
 
 @media (prefers-reduced-motion: reduce) {
   .row.row { transition: none; }
+  .questBar > span { transition: none; }
 }

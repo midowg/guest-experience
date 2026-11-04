@@ -187,6 +187,8 @@ export const praWamPath = {
     const search = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString();
     return `${PRA_WAM_PATH}/book/new${search ? `?${search}` : ""}`;
   },
+  /** The personal questionnaire, at the address HR gives it (bawaannya /wam/kuesioner). */
+  questionnaire: (slug: string) => `${PRA_WAM_PATH}/${enc(slug)}`,
 };
 export const praWamApi = {
   login: `${WAM_API}/login`,
@@ -230,6 +232,12 @@ export const praWamApi = {
   photoConfirm: `${WAM_API}/photo/confirm`,
   /** GET: one person's photo (a redirect to storage); `v` changes with the photo, so caches refresh. */
   photoOf: (employeeId: string, version?: string) => `${WAM_API}/photo/${employeeId}${version ? `?v=${enc(version)}` : ""}`,
+  /** GET: my questionnaire answers and progress. */
+  questionnaire: `${WAM_API}/questionnaire`,
+  /** PUT {question, value}: save one named answer. */
+  questionnaireAnswer: `${WAM_API}/questionnaire/answer`,
+  /** POST {answers}: send the anonymous section, once. */
+  questionnaireAnonymous: `${WAM_API}/questionnaire/anonymous`,
 };
 /** Admin WAM: the WAM settings in the regular admin, one page per section (src/components/admin/wam/sections.ts). */
 export const WAM_ADMIN = "/admin/wam";
@@ -242,6 +250,55 @@ export const wamAdminPath = {
   rooms: `${WAM_ADMIN}/ruang`,
   events: `${WAM_ADMIN}/acara`,
   about: `${WAM_ADMIN}/apa-itu-wam`,
+  /** The personal questionnaire: content, settings, progress, and the HR-locked answers. */
+  questionnaire: {
+    content: `${WAM_ADMIN}/kuesioner`,
+    settings: `${WAM_ADMIN}/kuesioner/pengaturan`,
+    progress: `${WAM_ADMIN}/kuesioner/progres`,
+    hrData: `${WAM_ADMIN}/kuesioner/data-hr`,
+  },
+};
+/** Admin WAM, the questionnaire's content and settings (any admin). */
+const QUESTIONNAIRE_ADMIN_API = "/api/admin/wam/questionnaire";
+export const praWamQuestionnaireApi = {
+  /** PATCH: the form's name, address, status, texts and dates. */
+  form: QUESTIONNAIRE_ADMIN_API,
+  /** POST: a new section at the end. */
+  sections: `${QUESTIONNAIRE_ADMIN_API}/sections`,
+  /** PATCH one section; DELETE removes it, or hides it once it has answers. */
+  section: (sectionId: string) => `${QUESTIONNAIRE_ADMIN_API}/sections/${sectionId}`,
+  /** POST: a new question at the end of a section. */
+  questions: `${QUESTIONNAIRE_ADMIN_API}/questions`,
+  /** PATCH one question (a move between sections included); DELETE removes it, or hides it once it has answers. */
+  question: (questionId: string) => `${QUESTIONNAIRE_ADMIN_API}/questions/${questionId}`,
+  /** PUT {sections} or {sectionId, questions}: a new order. */
+  order: `${QUESTIONNAIRE_ADMIN_API}/order`,
+  /** GET: who started, who finished, by department. */
+  progress: `${QUESTIONNAIRE_ADMIN_API}/progress`,
+};
+/**
+ * Admin WAM, Data HR: the separate HR password (set the first one, change it with the old one, a
+ * super admin resets it), unlocking this device for 30 minutes and locking it again, and the
+ * locked data: who answered HR questions, one person's answers, and the access log.
+ */
+const QUESTIONNAIRE_HR_API = `${QUESTIONNAIRE_ADMIN_API}/hr`;
+export const praWamHrApi = {
+  /** POST {password}: the first HR password, when there is none. */
+  set: `${QUESTIONNAIRE_HR_API}/set`,
+  /** POST {current, password}: a new HR password, with the current one. */
+  change: `${QUESTIONNAIRE_HR_API}/change`,
+  /** POST: super admin clears the HR password so a new one can be set. */
+  reset: `${QUESTIONNAIRE_HR_API}/reset`,
+  /** POST {password}: unlock Data HR on this device. */
+  unlock: `${QUESTIONNAIRE_HR_API}/unlock`,
+  /** POST: lock Data HR on this device now. */
+  lock: `${QUESTIONNAIRE_HR_API}/lock`,
+  /** GET: people who answered any HR question (unlocked only). */
+  people: `${QUESTIONNAIRE_HR_API}/person`,
+  /** GET: one person's HR answers (unlocked only; logged). */
+  person: (employeeId: string) => `${QUESTIONNAIRE_HR_API}/person/${employeeId}`,
+  /** GET: the latest HR access log (unlocked only). */
+  log: `${QUESTIONNAIRE_HR_API}/log`,
 };
 /** Admin WAM: the account list and creating accounts, or one person's roles, email and password reset. */
 export const praWamAccountsApi = (employeeId?: string) => `/api/admin/wam/accounts${employeeId ? `/${employeeId}` : ""}`;

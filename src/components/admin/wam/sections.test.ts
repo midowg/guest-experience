@@ -13,13 +13,13 @@ describe("Admin WAM sections", () => {
   });
 
   it("leave units and positions to Data karyawan", () => {
-    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "about", "ruang"]);
+    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "about", "ruang", "kuesioner"]);
     expect(Object.values(wamAdminPath)).not.toContain("/admin/wam/unit");
   });
 
   it("group the menu in the order the sections are listed", () => {
     const groups = wamGroups();
-    expect(groups.map(group => group.label)).toEqual(["Ikhtisar", "Orang", "Aplikasi"]);
+    expect(groups.map(group => group.label)).toEqual(["Ikhtisar", "Orang", "Aplikasi", "Data peserta"]);
     expect(groups.flatMap(group => group.sections)).toEqual(wamSections);
   });
 
@@ -29,6 +29,8 @@ describe("Admin WAM sections", () => {
     expect(wamSectionAt(wamAdminPath.accounts).key).toBe("akun");
     expect(wamSectionAt(`${wamAdminPath.rooms}/detail`).key).toBe("ruang");
     expect(wamSection("reset").href).toBe(wamAdminPath.resetRequests);
+    expect(wamSectionAt(wamAdminPath.questionnaire.settings).key).toBe("kuesioner");
+    expect(wamSectionAt(wamAdminPath.questionnaire.hrData).key).toBe("kuesioner");
   });
 
   it("have a page for every section", () => {

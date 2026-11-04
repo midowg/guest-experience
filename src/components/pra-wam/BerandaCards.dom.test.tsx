@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { praWamPath } from "@/lib/routes";
-import { AboutCard, AboutText, ManageCard } from "./BerandaCards";
+import { AboutCard, AboutText, ManageCard, QuestionnaireCard } from "./BerandaCards";
 
 afterEach(cleanup);
 
@@ -45,5 +45,26 @@ describe("Apa itu WAM", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Apa itu WAM?");
     expect(screen.getByText("Kapan").tagName).toBe("STRONG");
     expect(screen.getByText("Tanpa label")).toBeTruthy();
+  });
+});
+
+describe("the questionnaire on Beranda", () => {
+  const card = { name: "Kuesioner", cardText: "Ceritakan dirimu.", minutes: 15, sectionsDone: 2, sectionsTotal: 6, done: false, closed: false, href: praWamPath.questionnaire("kuesioner") };
+
+  it("opens the questionnaire with its time and progress, and has nothing to dismiss it", () => {
+    render(<QuestionnaireCard {...card} />);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0].getAttribute("href")).toBe("/wam/kuesioner");
+    expect(links[0].textContent).toContain("Sekitar 15 menit · 2 dari 6 bagian");
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("2");
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("thanks the person once done, and still opens the page", () => {
+    render(<QuestionnaireCard {...card} sectionsDone={6} done />);
+    expect(screen.getByRole("link").textContent).toContain("Selesai · terima kasih");
+    expect(screen.getByRole("link").getAttribute("href")).toBe("/wam/kuesioner");
+    expect(screen.queryByRole("progressbar")).toBeNull();
   });
 });

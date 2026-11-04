@@ -1,4 +1,4 @@
-import { ChevronRight, Info, LayoutDashboard } from "lucide-react";
+import { CheckCircle2, ChevronRight, ClipboardList, Info, LayoutDashboard } from "lucide-react";
 import { aboutParagraphs, pointParts, type About } from "@/lib/pra-wam/about";
 import { praWamPath } from "@/lib/routes";
 import styles from "./beranda.module.css";
@@ -39,6 +39,33 @@ export function AboutCard({ about, preview = false }: { about: Pick<About, "titl
   return preview
     ? <div className={styles.row}>{inner}</div>
     : <a className={styles.row} href={praWamPath.about}>{inner}</a>;
+}
+
+/**
+ * The questionnaire on Beranda, a row like "Apa itu WAM?": its name, HR's card text, the time it
+ * takes and how many sections are done, with a small bar. It is mandatory, so it has no dismiss;
+ * once done it thanks the person and still opens the page, to look or change until the deadline.
+ */
+export function QuestionnaireCard({ name, cardText, minutes, sectionsDone, sectionsTotal, done, closed, href }: {
+  name: string; cardText: string; minutes: number; sectionsDone: number; sectionsTotal: number; done: boolean; closed: boolean; href: string;
+}) {
+  const share = sectionsTotal ? Math.round((sectionsDone / sectionsTotal) * 100) : 0;
+  return <a className={`${styles.row} ${done ? "" : styles.questRow}`} href={href}>
+    <span className={done ? styles.questTileDone : styles.questTile}>{done ? <CheckCircle2 aria-hidden /> : <ClipboardList aria-hidden />}</span>
+    <span className={styles.aboutText}>
+      <strong>{name}</strong>
+      {done
+        ? <span className={styles.rowLine}>Selesai · terima kasih</span>
+        : <>
+          {cardText && <span className={styles.aboutSummary}>{cardText}</span>}
+          <span className={styles.questMeta}>{closed ? "Sudah ditutup" : `Sekitar ${minutes} menit`} · {sectionsDone} dari {sectionsTotal} bagian</span>
+          <span className={styles.questBar} role="progressbar" aria-label={`Progres ${name}`} aria-valuemin={0} aria-valuemax={sectionsTotal} aria-valuenow={sectionsDone} aria-valuetext={`${sectionsDone} dari ${sectionsTotal} bagian`}>
+            <span style={{ width: `${share}%` }} />
+          </span>
+        </>}
+    </span>
+    <ChevronRight className={styles.chevron} aria-hidden />
+  </a>;
 }
 
 /** The full text: the summary as a lead, the paragraphs, and the key points. Text only, no HTML. */

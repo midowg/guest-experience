@@ -1,4 +1,4 @@
-import { CalendarRange, Info, KeyRound, LayoutDashboard, Map as MapIcon, UsersRound, type LucideIcon } from "lucide-react";
+import { CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, Map as MapIcon, UsersRound, type LucideIcon } from "lucide-react";
 import { wamAdminPath } from "@/lib/routes";
 
 /*
@@ -7,7 +7,7 @@ import { wamAdminPath } from "@/lib/routes";
  * one entry here, its path in wamAdminPath and its page under src/app/admin/wam/. A new group
  * name starts a new group in the menu.
  */
-export type WamSectionKey = "ringkasan" | "akun" | "reset" | "acara" | "about" | "ruang";
+export type WamSectionKey = "ringkasan" | "akun" | "reset" | "acara" | "about" | "ruang" | "kuesioner";
 export type WamSection = {
   key: WamSectionKey;
   label: string;
@@ -26,6 +26,7 @@ export const wamSections: readonly WamSection[] = [
   { key: "acara", label: "Acara dan modul", group: "Aplikasi", href: wamAdminPath.events, icon: CalendarRange, summary: "Status Pra WAM dan WAM, serta modul yang dibuka." },
   { key: "about", label: "Apa itu WAM", group: "Aplikasi", href: wamAdminPath.about, icon: Info, summary: "Teks penjelasan WAM di Beranda peserta." },
   { key: "ruang", label: "Ruang dan denah", group: "Aplikasi", href: wamAdminPath.rooms, icon: MapIcon, summary: "Kapasitas ruang, spot di denah, dan tampil tidaknya denah di Book." },
+  { key: "kuesioner", label: "Kuesioner", group: "Data peserta", href: wamAdminPath.questionnaire.content, icon: ClipboardList, summary: "Isi, pengaturan, dan progres kuesioner personal." },
 ];
 
 export const wamSection = (key: WamSectionKey): WamSection => wamSections.find(section => section.key === key)!;
