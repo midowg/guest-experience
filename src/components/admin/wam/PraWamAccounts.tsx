@@ -71,7 +71,7 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
   if (!migrated) return <Notice tone="warning">Akun Pra WAM menunggu migrasi 202611040001_pra_wam_appraisal.sql.</Notice>;
   return <div className="stack">
     {confirmDialog}
-    <p>{active.length - missing.length} dari {active.length} karyawan aktif sudah punya akun. Mereka masuk di <a href={praWamPath.login()}>{praWamPath.login()}</a> dengan email kantor dan password awal yang sama, lalu bisa menggantinya di menu Akun.</p>
+    <p>{active.length - missing.length} dari {active.length} karyawan aktif sudah punya akun. Mereka masuk di <a href={praWamPath.login()}>{praWamPath.login()}</a> dengan email kantor dan password awal yang sama, lalu bisa menggantinya di Profil → Pengaturan.</p>
     {!passwordReady && <Notice tone="warning">Password awal belum disiapkan. Isi WAM_DEFAULT_PASSWORD (minimal 8 karakter) pada server, lalu muat ulang halaman ini.</Notice>}
     {noEmail.length > 0 && <Notice tone="info">{noEmail.length} orang belum punya email. Isi emailnya lewat tombol ubah email di tabel di bawah{superAdmin ? <>, atau di <a href={EMPLOYEES_ADMIN}>Data karyawan</a> (impor ulang Excel dengan kolom EMAIL)</> : ""}.</Notice>}
     <div className={styles.qrActions}>
