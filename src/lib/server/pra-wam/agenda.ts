@@ -48,7 +48,7 @@ export async function agendaItems(member: Member, today: string): Promise<{ item
       materials: materials.get(session.id) ?? 0,
     })),
     ...bookings.map(booking => ({
-      key: booking.id, kind: "appraisal" as const, startsAt: booking.startsAt, endsAt: booking.endsAt, title: booking.title, href: praWamPath.appraisal(wibDate(booking.startsAt)),
+      key: booking.id, kind: "appraisal" as const, startsAt: booking.startsAt, endsAt: booking.endsAt, title: booking.title, href: praWamPath.appraisal(wibDate(booking.startsAt), booking.id),
       tag: "Book ruang", where: booking.bookedBy.id === member.id ? "Booking kamu" : `Bersama ${booking.bookedBy.name}`, sessionId: null, checkedInAt: null, materials: 0,
     })),
   ].sort((a, b) => a.startsAt.localeCompare(b.startsAt));

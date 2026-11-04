@@ -41,6 +41,7 @@ Terapkan migrasi yang belum ada, **urut nama berkas**, lewat Supabase Dashboard 
 | `202611040005_pra_wam_attendance.sql` | Pra WAM tahap 3: token QR statis per sesi (`pw_sessions.qr_token`, disimpan apa adanya supaya bisa dicetak ulang, hanya dibaca server) dan kehadiran (`pw_attendance`, satu baris per orang per sesi, scan atau manual). Sebelum migrasi ini, halaman absen menampilkan "menunggu migrasi" |
 | `202611040006_pra_wam_announcements.sql` | Pra WAM tahap 4a: pengumuman panitia (semua, satu sesi, atau unit) dan notifikasi di aplikasi dengan tanda dibaca. Kabar sesi (terbit, pindah jadwal, batal) dikirim otomatis. Sebelum migrasi ini, sesi tetap tersimpan tanpa kabar, dan menu Notifikasi menampilkan "menunggu migrasi" |
 | `202611040007_pra_wam_schedule_requests.sql` | Pra WAM tahap 4b: peserta mengajukan ganti jadwal dari halaman sesi; panitia menyetujui (sesi dipindah bila ruang kosong dan jadwal belum berubah sejak diajukan, semua peserta diberi tahu) atau menolak dengan catatan. Sebelum migrasi ini, tombol ajukan tidak tampil dan menu Permintaan menampilkan "menunggu migrasi" |
+| `202611040008_pra_wam_about.sql` | WAM: teks "Apa itu WAM?" di Beranda yang ditulis super admin (`pw_about`, satu baris). Sebelum migrasi ini, Beranda menampilkan teks bawaan dari tanggal acara dan editor di Super admin → WAM menampilkan "menunggu migrasi" |
 
 Cek hasilnya (hanya membaca). Semua kolom harus `true`:
 

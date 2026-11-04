@@ -13,10 +13,13 @@ import { requireMemberPage } from "@/lib/server/pra-wam/session";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Book ruang · WAM", robots: { index: false } };
 
-/** Book: the floor plan and who booked which room, per day, and the person's own bookings. */
-export default async function BookPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
-  const { date: tanggal } = await searchParams;
-  const member = await requireMemberPage(praWamPath.appraisal(tanggal));
+/**
+ * Book: the floor plan and who booked which room, per day, and the person's own bookings.
+ * ?booking=<id> (from an agenda item) opens that booking's detail on its day.
+ */
+export default async function BookPage({ searchParams }: { searchParams: Promise<{ date?: string; booking?: string }> }) {
+  const { date: tanggal, booking: asked } = await searchParams;
+  const member = await requireMemberPage(praWamPath.appraisal(tanggal, asked));
   const now = new Date();
   const today = wibDate(now.toISOString());
   const dates = bookableDates(today);
@@ -33,6 +36,6 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
   return <PraWamShell member={member} current="appraisal">
     {head(open)}
     {!open && <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. Denah dan jadwal yang ada tetap bisa dilihat.</Notice></div>}
-    <AppraisalBoard key={date} open={open} canCancelAny={cancelsAnyBooking(member)} date={date} dates={dates.includes(date) ? dates : [date, ...dates]} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine} viewerId={member.id} />
+    <AppraisalBoard key={date} open={open} canCancelAny={cancelsAnyBooking(member)} date={date} dates={dates.includes(date) ? dates : [date, ...dates]} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine} viewerId={member.id} openFirst={asked?.slice(0, 64)} />
   </PraWamShell>;
 }

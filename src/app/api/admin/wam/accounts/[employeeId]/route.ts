@@ -19,7 +19,8 @@ export async function PATCH(request: Request, { params }: Params) {
     checkOrigin(request);
     const employeeId = validate(z.uuid(), (await params).employeeId);
     const body = validate(schema, await readJson(request, 2_000));
-    if (body.roles) await setRoles(employeeId, [...new Set(body.roles)]);
+    // setRoles refuses (422) a combination the role rule does not allow, such as BOD with Panitia.
+    if (body.roles) await setRoles(employeeId, body.roles);
     if (body.email) await updateEmail(employeeId, body.email);
     if (body.resetPassword) await resetPassword(employeeId);
     const message = body.resetPassword ? "Password kembali ke password awal. Orang ini perlu masuk ulang." : body.email ? "Email disimpan. Login memakai email baru." : "Peran disimpan.";

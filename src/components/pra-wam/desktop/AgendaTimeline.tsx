@@ -9,7 +9,8 @@ const shortTime = (iso: string) => clockLabel(wibTime(iso));
 /**
  * One day of the person's agenda as a timeline (Penpot P2 and the cards of E1, E2). The whole row
  * is the link, not only the title: on a phone it opens the item's own page (Detail sesi, or the
- * room schedule for a booking); with `select` a desktop opens it in the detail panel instead.
+ * booking opened on Book); with `select` a desktop opens it in the detail panel instead, and only
+ * there is the open item marked (`selectedKey`).
  */
 export function AgendaTimeline({ items, now, selectedKey, select }: { items: AgendaItem[]; now: Date; selectedKey?: string; select?: (item: AgendaItem) => string | null }) {
   const nextKey = items.find(item => new Date(item.endsAt) > now)?.key;

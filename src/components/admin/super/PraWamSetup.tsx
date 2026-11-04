@@ -4,9 +4,11 @@ import { useState } from "react";
 import { Button, Notice } from "@/components/ui";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { praWamEventsApi, praWamUnitsApi } from "@/lib/routes";
+import type { AboutState } from "@/lib/server/pra-wam/about";
 import type { PraWamEvent } from "@/lib/server/pra-wam/events";
 import type { Membership, Unit } from "@/lib/server/pra-wam/units";
 import styles from "@/components/admin/admin.module.css";
+import { PraWamAbout } from "./PraWamAbout";
 
 const statusLabels: Record<PraWamEvent["status"], string> = { aktif: "Aktif (tampil)", disiapkan: "Disiapkan (belum tampil)", selesai: "Selesai" };
 const moduleLabels: Record<string, string> = { appraisal: "Book: booking ruang" };
@@ -39,10 +41,11 @@ function EventRow({ event, onSaved }: { event: PraWamEvent; onSaved: (events: Pr
 
 /**
  * Pra WAM settings beside the accounts: the events (Pra WAM shown, WAM prepared) with their
- * modules, and the units with their people and leads, imported from the Data karyawan workbook.
+ * modules, "Apa itu WAM" for Beranda, and the units with their people and leads, imported from
+ * the Data karyawan workbook.
  */
-export function PraWamSetup({ initialEvents, eventsMigrated, initialUnits, initialMemberships, unitsMigrated, people }: {
-  initialEvents: PraWamEvent[]; eventsMigrated: boolean; initialUnits: Unit[]; initialMemberships: Membership[]; unitsMigrated: boolean; people: People;
+export function PraWamSetup({ initialEvents, eventsMigrated, initialAbout, initialUnits, initialMemberships, unitsMigrated, people }: {
+  initialEvents: PraWamEvent[]; eventsMigrated: boolean; initialAbout: AboutState; initialUnits: Unit[]; initialMemberships: Membership[]; unitsMigrated: boolean; people: People;
 }) {
   const [events, setEvents] = useState(initialEvents);
   const [units, setUnits] = useState(initialUnits);
@@ -74,6 +77,8 @@ export function PraWamSetup({ initialEvents, eventsMigrated, initialUnits, initi
         <tbody>{events.map(event => <EventRow key={`${event.id}-${event.status}-${JSON.stringify(event.modules)}`} event={event} onSaved={(next, text) => { setEvents(next); setMessage({ tone: "success", text }); }} />)}</tbody>
       </table></div>
     </>}
+
+    <PraWamAbout initial={initialAbout} />
 
     <h2>Unit dan jabatan</h2>
     {!unitsMigrated ? <Notice tone="warning">Unit menunggu migrasi 202611040003_pra_wam_events_units.sql.</Notice> : <>

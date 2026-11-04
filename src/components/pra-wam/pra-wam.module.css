@@ -205,20 +205,27 @@
 .cardLink small { display: block; font-weight: 600; }
 .cardLink > svg:last-child { margin-left: auto; }
 
-/* Agenda timeline */
+/*
+ * Agenda timeline (Penpot P2, E2): the time on the right of its column, a rail with a dot, then the
+ * item; no card around a row and no dividers. The rail spans the whole row, so it reads as one line
+ * from the first item to the last. A row bleeds 8px on both sides for its hover and pressed fill.
+ */
 .timeline { display: grid; }
-.timeItem { display: grid; grid-template-columns: 52px 20px 1fr; gap: 0 12px; padding-bottom: 20px; }
-.timeItem time { font-weight: 800; font-size: 15px; line-height: 1.3; }
-.timeItem time small { display: block; color: var(--pw-muted); font-weight: 600; font-size: 13px; }
-.timeRail { position: relative; display: flex; justify-content: center; }
-.timeRail::before { content: ''; position: absolute; top: 6px; bottom: -26px; width: 2px; background: var(--pw-line); }
-.timeItem:last-child .timeRail::before { display: none; }
-.timeDot { position: relative; margin-top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--pw-surface); border: 2px solid var(--pw-line); }
-.timeDotNow { background: var(--pw-primary); border-color: var(--pw-primary); }
+.timeItem { --tl-time: 48px; --tl-gap: 10px; --tl-rail: 14px; --tl-bleed: 8px; position: relative; display: grid; grid-template-columns: var(--tl-time) minmax(0, 1fr); column-gap: calc(var(--tl-gap) * 2 + var(--tl-rail)); margin: 0 calc(var(--tl-bleed) * -1); padding: 10px var(--tl-bleed) 12px; border-radius: 12px; }
+.timeItem time { padding-top: 2px; text-align: right; font-weight: 800; font-size: 13px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.timeItem time small { display: block; color: var(--pw-muted); font-weight: 600; font-size: 11.5px; line-height: 16px; }
+.timeRail { position: absolute; top: 0; bottom: 0; left: calc(var(--tl-bleed) + var(--tl-time) + var(--tl-gap)); width: var(--tl-rail); pointer-events: none; }
+.timeRail::before { content: ''; position: absolute; top: 0; bottom: 0; left: calc(50% - .5px); width: 1px; background: var(--pw-line); }
+.timeDot { position: absolute; top: 16px; left: calc(50% - 6px); box-sizing: border-box; width: 12px; height: 12px; border-radius: 50%; background: var(--pw-surface); border: 2px solid var(--pw-line); }
+.timeDotNow { background: var(--pw-primary); border-color: var(--pw-primary-soft); }
 .timeDotDone { background: var(--pw-success); border-color: var(--pw-success); }
-.timeBody { display: grid; gap: 6px; }
-.timeBody h3 { margin: 0; font-size: 17px; font-weight: 700; }
+.timeBody { display: grid; gap: 6px; justify-items: start; min-width: 0; }
+.timeBody h3 { margin: 0; font-size: 15px; font-weight: 700; line-height: 20px; overflow-wrap: anywhere; }
 .app .timeBody h3 a { color: var(--pw-text); text-decoration: none; }
+.timeBody .place { font-size: 13px; }
+.timeBody .place svg { width: 14px; height: 14px; }
+.timeBody .pills { gap: 6px; }
+.timeBody .pill { padding: 3px 10px; font-size: 12px; }
 .place { display: inline-flex; align-items: center; gap: 6px; color: var(--pw-muted); font-size: 14px; }
 .place svg { width: 16px; height: 16px; }
 .callout { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 12px; background: var(--pw-brass-soft); color: var(--pw-on-brass-soft); font-size: 13px; font-weight: 700; }

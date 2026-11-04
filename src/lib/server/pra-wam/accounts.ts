@@ -1,9 +1,10 @@
 import "server-only";
-import { praWamRoles, type PraWamRole } from "@/lib/pra-wam/roles";
+import { checkRoleChange, normalizeRoles, praWamRoles, type PraWamRole } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { notMigrated, waitingForMigration } from "./session";
+import { departmentLeads } from "./units";
 
 /*
  * Pra WAM accounts, set up by the super admin. Each active person in Data karyawan with an email
@@ -14,6 +15,8 @@ import { notMigrated, waitingForMigration } from "./session";
 export type AccountRow = {
   employeeId: string; name: string; department: string; email: string; active: boolean;
   hasAccount: boolean; lastLoginAt: string | null; mustChangePassword: boolean; roles: PraWamRole[];
+  /** Departments this person leads (HOD), from the unit import. */
+  leads: string[];
 };
 
 function defaultPassword(): string {
@@ -24,10 +27,11 @@ function defaultPassword(): string {
 
 export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: boolean }> {
   const client = createPrivilegedClient();
-  const [{ data: people, error: peopleError }, { data: accounts, error }, { data: roles, error: rolesError }] = await Promise.all([
+  const [{ data: people, error: peopleError }, { data: accounts, error }, { data: roles, error: rolesError }, leads] = await Promise.all([
     client.from("employees").select("id,full_name,department,email,active").order("department").order("full_name").limit(2000),
     client.from("pw_accounts").select("employee_id,last_login_at,active,must_change_password"),
     client.from("pw_roles").select("employee_id,role"),
+    departmentLeads(),
   ]);
   // Roles arrive with migration 202611040002; before it everyone is a peserta.
   if (rolesError && !notMigrated(rolesError)) databaseError(rolesError);
@@ -41,6 +45,7 @@ export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: bo
       hasAccount: byPerson.has(person.id), lastLoginAt: byPerson.get(person.id)?.last_login_at ?? null,
       mustChangePassword: byPerson.get(person.id)?.must_change_password ?? true,
       roles: praWamRoles.filter(role => (roles ?? []).some(row => row.employee_id === person.id && row.role === role)),
+      leads: leads.get(person.id) ?? [],
     })),
   };
 }
@@ -67,9 +72,21 @@ export async function createMissingAccounts(): Promise<{ created: number; skippe
   return { created, skipped };
 }
 
-/** Sets a person's roles to exactly these; peserta needs no row. */
-export async function setRoles(employeeId: string, roles: PraWamRole[]): Promise<void> {
+/**
+ * Sets a person's roles to exactly these; peserta needs no row. A combination the rule refuses
+ * (BOD with Panitia, Admin WAM or a department lead) is a 422 and nothing changes. Nobody is
+ * signed out: roles are read again on every request.
+ */
+export async function setRoles(employeeId: string, wanted: PraWamRole[]): Promise<void> {
+  const roles = normalizeRoles(wanted);
   const client = createPrivilegedClient();
+  const [{ data: current, error: currentError }, leads] = await Promise.all([
+    client.from("pw_roles").select("role").eq("employee_id", employeeId),
+    departmentLeads(),
+  ]);
+  if (currentError) { if (notMigrated(currentError)) throw new ServiceError(503, "Peran menunggu migrasi 202611040002_pra_wam_roles.sql."); databaseError(currentError); }
+  const problem = checkRoleChange(normalizeRoles((current ?? []).map(row => row.role)), roles, { isLead: leads.has(employeeId) });
+  if (problem) throw new ServiceError(422, problem, { roles: [problem] });
   const { error } = await client.from("pw_roles").delete().eq("employee_id", employeeId).not("role", "in", `(${roles.length ? roles.join(",") : "none"})`);
   if (error) { if (notMigrated(error)) throw new ServiceError(503, "Peran menunggu migrasi 202611040002_pra_wam_roles.sql."); databaseError(error); }
   if (!roles.length) return;

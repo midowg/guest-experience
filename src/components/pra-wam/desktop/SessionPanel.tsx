@@ -29,7 +29,7 @@ export async function SessionPanel({ item, member }: { item: AgendaItem | undefi
         <div className={own.tileBox}><span className={base.tile}><CalendarDays aria-hidden /></span><span><small>Waktu</small><strong>{clockLabel(wibTime(item.startsAt))}–{clockLabel(wibTime(item.endsAt))}</strong></span></div>
         <div className={own.tileBox}><span className={base.tile}><MapPin aria-hidden /></span><span><small>Booking</small><strong>{item.where}</strong></span></div>
       </div>
-      <div className={own.panelActions}><a className="button button--secondary" href={item.href}><CalendarClock size={18} aria-hidden /> Lihat jadwal ruang</a></div>
+      <div className={own.panelActions}><a className="button button--secondary" href={item.href}><CalendarClock size={18} aria-hidden /> Buka booking</a></div>
     </section>;
   }
   const [session, { documents, storage }, attendance, requests] = await Promise.all([

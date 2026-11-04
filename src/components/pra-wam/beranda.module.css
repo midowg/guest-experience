@@ -1,0 +1,61 @@
+/*
+ * Beranda pieces of their own: "Kelola acara" for the panitia (Penpot K1: soft blue, white
+ * stat tiles, the amber "Perlu keputusan" tile, outlined buttons) and "Apa itu WAM?" with its
+ * full screen. Classes are doubled where `.app a` or `.app h2` in pra-wam.module.css would win.
+ */
+
+/* Kelola acara */
+.manage { display: grid; gap: 12px; padding: 16px; border-radius: 18px; background: var(--pw-primary-soft); border: 1px solid color-mix(in srgb, var(--pw-primary) 18%, transparent); }
+.manageHead.manageHead { display: flex; align-items: center; gap: 12px; min-height: 48px; margin: -6px; padding: 6px; border-radius: 12px; color: var(--pw-primary); text-decoration: none; transition: background-color .15s ease; }
+.manageHead:hover { background: color-mix(in srgb, var(--pw-primary) 8%, transparent); }
+.manageTile { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--pw-primary); color: var(--pw-on-primary); }
+.manageTile svg { width: 22px; height: 22px; }
+.manageTitle { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.manageTitle.manageTitle h2 { margin: 0; font-family: var(--pw-display); font-size: 22px; font-weight: 600; line-height: 1.2; color: var(--pw-primary); }
+.manageTitle small { font-size: 13px; font-weight: 600; color: var(--pw-muted); }
+.chevron { flex: none; width: 20px; height: 20px; }
+
+.manageStats { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); gap: 8px; margin: 0; }
+.manageStats > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--pw-surface); border: 1px solid var(--pw-line); min-width: 0; }
+.manageStats dt { font-size: 12px; font-weight: 700; line-height: 1.3; color: var(--pw-muted); }
+.manageStats dd { margin: 0; font-family: var(--pw-display); font-size: 26px; font-weight: 600; line-height: 1.15; color: var(--pw-primary); }
+.manageStats > .statAlert { background: var(--pw-warning-soft); border-color: transparent; }
+.statAlert dt, .statAlert dd { color: var(--pw-warning); }
+
+.manageChips { display: grid; grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr)); gap: 8px; }
+.manageChip.manageChip { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 60px; padding: 8px; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); color: var(--pw-primary); font-size: 13px; font-weight: 800; line-height: 1.2; text-align: center; text-decoration: none; transition: border-color .15s ease, background-color .15s ease; }
+.manageChip svg { width: 20px; height: 20px; }
+.manageChip:hover { border-color: var(--pw-primary); }
+.manageHead:focus-visible, .manageChip:focus-visible, .about:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.chipBadge { position: absolute; top: 6px; right: 6px; display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--pw-primary); color: var(--pw-on-primary); font-size: 12px; font-weight: 800; }
+@media (min-width: 640px) {
+  .manageChip.manageChip { flex-direction: row; gap: 8px; min-height: 48px; font-size: 14px; }
+  .chipBadge { position: static; }
+}
+
+/* Apa itu WAM: the card on Beranda */
+.about.about { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); color: var(--pw-text); text-decoration: none; transition: border-color .15s ease; }
+a.about:hover { border-color: var(--pw-primary); }
+.aboutTile { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--pw-brass-soft); color: var(--pw-on-brass-soft); }
+.aboutTile svg { width: 20px; height: 20px; }
+.aboutText { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.aboutText strong { font-size: 16px; font-weight: 800; overflow-wrap: anywhere; }
+.aboutSummary { font-size: 14px; color: var(--pw-muted); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
+.aboutMore { margin-top: 2px; font-size: 13px; font-weight: 800; color: var(--pw-primary); }
+.about .chevron { color: var(--pw-muted); }
+
+/* Apa itu WAM: the full screen */
+.aboutPage { display: grid; gap: 16px; max-width: 42rem; }
+.aboutHeading.aboutHeading { margin: 0; font-family: var(--pw-display); font-size: 28px; font-weight: 600; line-height: 1.2; color: var(--pw-primary); overflow-wrap: anywhere; }
+.aboutLead { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.55; color: var(--pw-text); overflow-wrap: anywhere; }
+.points { list-style: none; margin: 0; padding: 4px 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.points li { display: grid; gap: 2px; padding: 12px 0; overflow-wrap: anywhere; }
+.points li + li { border-top: 1px solid var(--pw-line); }
+.points strong { font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.points span { font-weight: 700; }
+.aboutBody p { margin: 0 0 12px; font-size: 16px; line-height: 1.65; white-space: pre-line; overflow-wrap: anywhere; }
+.aboutBody p:last-child { margin-bottom: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .manageHead.manageHead, .manageChip.manageChip, .about.about { transition: none; }
+}

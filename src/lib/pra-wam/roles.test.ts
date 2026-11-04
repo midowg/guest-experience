@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { passwordChangeSchema, passwordProblems, passwordResetSchema } from "./password";
-import { cancelsAnyBooking, managesApp, roleSummary, seesAllParticipants } from "./roles";
+import { blockedRoles, bodOnly, cancelsAnyBooking, checkRoleChange, managesApp, normalizeRoles, roleConflicts, roleProblem, roleSummary, seesAllParticipants, type PraWamRole } from "./roles";
 
 describe("roles", () => {
   it("adds to peserta and allows only what the role needs", () => {
@@ -10,6 +10,56 @@ describe("roles", () => {
     expect([seesAllParticipants(panitia), cancelsAnyBooking(panitia), managesApp(panitia)]).toEqual([true, true, false]);
     expect(managesApp(admin)).toBe(true);
     expect(roleSummary({ roles: ["bod", "panitia"] })).toBe("Peserta · Panitia · BOD");
+  });
+});
+
+describe("which roles combine", () => {
+  const sets: PraWamRole[][] = [[], ["panitia"], ["admin"], ["bod"], ["panitia", "admin"], ["panitia", "bod"], ["bod", "admin"], ["panitia", "bod", "admin"]];
+  it("allows every combination without BOD, with or without lead", () => {
+    for (const roles of sets.filter(roles => !roles.includes("bod"))) {
+      expect(roleConflicts(roles)).toEqual([]);
+      expect(roleConflicts(roles, { isLead: true })).toEqual([]);
+      expect(roleProblem(roles, { isLead: true })).toBeNull();
+    }
+  });
+  it("lets BOD stand alone, as a peserta", () => {
+    expect(roleConflicts(["bod"])).toEqual([]);
+    expect(roleProblem(["bod"])).toBeNull();
+  });
+  it("refuses BOD with Panitia, Admin WAM or a department lead", () => {
+    expect(roleConflicts(["panitia", "bod"]).map(item => item.with)).toEqual(["panitia"]);
+    expect(roleConflicts(["bod", "admin"]).map(item => item.with)).toEqual(["admin"]);
+    expect(roleConflicts(["panitia", "bod", "admin"], { isLead: true }).map(item => item.with)).toEqual(["panitia", "admin", "lead"]);
+    expect(roleConflicts(["bod"], { isLead: true }).map(item => item.with)).toEqual(["lead"]);
+    expect(roleProblem(["panitia", "bod"])).toBe("BOD tidak bisa digabung dengan Panitia atau Admin WAM.");
+    expect(roleProblem(["bod"], { isLead: true })).toBe("BOD tidak bisa menjadi lead departemen (HOD).");
+    expect(roleProblem(["bod", "admin"], { isLead: true })).toBe("BOD tidak bisa digabung dengan Panitia atau Admin WAM. BOD tidak bisa menjadi lead departemen (HOD).");
+  });
+  it("keeps known roles once, in order", () => {
+    expect(normalizeRoles(["admin", "panitia", "admin", "super"])).toEqual(["panitia", "admin"]);
+  });
+  it("refuses a change that adds a conflict but allows one that only removes", () => {
+    expect(checkRoleChange(["bod"], ["panitia", "bod"])).toBe("BOD tidak bisa digabung dengan Panitia atau Admin WAM.");
+    expect(checkRoleChange(["admin"], ["bod", "admin"])).toBe("BOD tidak bisa digabung dengan Panitia atau Admin WAM.");
+    expect(checkRoleChange([], ["bod"], { isLead: true })).toBe("BOD tidak bisa menjadi lead departemen (HOD).");
+    expect(checkRoleChange(["panitia"], ["panitia", "admin"], { isLead: true })).toBeNull();
+    // A row saved before the rule: removing one role at a time is fine, adding back is not.
+    expect(checkRoleChange(["panitia", "bod", "admin"], ["bod", "admin"])).toBeNull();
+    expect(checkRoleChange(["bod", "admin"], ["panitia", "bod", "admin"])).not.toBeNull();
+    expect(checkRoleChange(["panitia", "bod", "admin"], ["panitia", "admin"])).toBeNull();
+  });
+  it("blocks the checkbox that would make a conflict, never one already ticked", () => {
+    expect(blockedRoles(["bod"])).toEqual({ panitia: expect.any(String), admin: expect.any(String) });
+    expect(Object.keys(blockedRoles(["panitia"]))).toEqual(["bod"]);
+    expect(Object.keys(blockedRoles(["admin"]))).toEqual(["bod"]);
+    expect(Object.keys(blockedRoles([], { isLead: true }))).toEqual(["bod"]);
+    expect(blockedRoles([])).toEqual({});
+    expect(blockedRoles(["panitia", "bod"])).toEqual({ admin: expect.any(String) });
+  });
+  it("gives a BOD the BOD menu", () => {
+    expect(bodOnly({ roles: ["bod"] })).toBe(true);
+    expect(bodOnly({ roles: ["panitia"] })).toBe(false);
+    expect(bodOnly({ roles: [] })).toBe(false);
   });
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CalendarClock, CalendarPlus, DoorOpen, MapPin, Users } from "lucide-react";
 import { ButtonLink, Notice } from "@/components/ui";
 import { appraisalRules, clockLabel, dayLabel, slotTimes, wibDate, wibInstant, wibTime, type Booking, type Room } from "@/lib/pra-wam/appraisal";
@@ -13,7 +13,11 @@ import { FloorPlan } from "./FloorPlan";
 import styles from "./pra-wam.module.css";
 import own from "./appraisal.module.css";
 
-type Props = { date: string; dates: string[]; now: string; rooms: Room[]; bookings: Booking[]; mine: Booking[]; viewerId: string; canCancelAny: boolean; open: boolean };
+type Props = {
+  date: string; dates: string[]; now: string; rooms: Room[]; bookings: Booking[]; mine: Booking[]; viewerId: string; canCancelAny: boolean; open: boolean;
+  /** A booking to open on arrival (?booking= from an agenda item). */
+  openFirst?: string;
+};
 
 const span = (booking: Booking) => `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`;
 const chipDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
@@ -28,14 +32,20 @@ const lengths = [{ minutes: 30, label: "30 mnt" }, { minutes: 60, label: "1 jam"
  * Agenda, cards with icon tiles), with the office floor plan of "Werkudara Room Booking" on top.
  * The plan shows every room for the chosen start and length; a free room opens the form for that
  * room and those hours. Below it, the room-by-time schedule: an empty half hour opens the form too.
+ * With `openFirst` that booking's detail is open on arrival and scrolled into view.
  */
-export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open }: Props) {
+export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, openFirst }: Props) {
   const router = useRouter();
-  const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const arrived = openFirst && bookings.some(booking => booking.id === openFirst) ? openFirst : null;
+  const [notice, setNotice] = useState<{ tone: "success" | "error" | "info"; text: string } | null>(
+    openFirst && !arrived ? { tone: "info", text: "Booking itu tidak ada di jadwal tanggal ini. Mungkin sudah dibatalkan atau dipindah." } : null);
   /** "batal:<id>" or "hapus:<id>": which action is running, on which booking. */
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, confirmDialog] = useConfirm();
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(arrived);
+  const detail = useRef<HTMLDivElement>(null);
+  // Arriving on one booking: bring its detail into view (it sits below the plan and schedule).
+  useEffect(() => { if (arrived) detail.current?.scrollIntoView({ block: "center" }); }, [arrived]);
   const [opening, setOpening] = useState<string | null>(null);
   const opened = bookings.find(booking => booking.id === openId);
   const bookable = rooms.filter(room => room.bookable);
@@ -162,7 +172,7 @@ export function AppraisalBoard({ date, dates, now, rooms, bookings, mine, viewer
         </div>)}
       </div>
 
-      {opened && <div id="rincian" className={`${styles.detail} ${own.detail}`} role="region" aria-label="Rincian booking">
+      {opened && <div ref={detail} id="rincian" className={`${styles.detail} ${own.detail}`} role="region" aria-label="Rincian booking">
         <h3>{opened.title}</h3>
         <span className={styles.place}><MapPin aria-hidden />{rooms.find(item => item.id === opened.roomId)?.name} · {span(opened)}</span>
         <span className={styles.meta}>{opened.isSession ? "Sesi Pra WAM, diatur panitia" : `Dipesan ${mineFlag(opened) ? "kamu" : `${opened.bookedBy.name} (${opened.bookedBy.department})`}`}</span>

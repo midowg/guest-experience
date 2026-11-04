@@ -49,9 +49,16 @@
 .docRow strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
 .open { margin-left: auto; font-weight: 800; font-size: 14px; text-decoration: none; }
 
-/* Agenda: selected item and the detail panel */
-.selected { box-shadow: inset 3px 0 0 var(--pw-primary); border-radius: 8px; }
-.timelineCard { padding: 20px 16px 4px; }
+/*
+ * Agenda: the list and the detail panel. On a phone the timeline sits on the page (Penpot P2); on a
+ * desktop it is a card next to the panel (E2), where the item open in the panel is marked.
+ */
+.timelineCard.timelineCard { padding: 0; background: none; border: 0; border-radius: 0; }
+@media (min-width: 1024px) {
+  .timelineCard.timelineCard { padding: 16px 16px 8px; background: var(--pw-surface); border: 1px solid var(--pw-line); border-radius: 16px; }
+  .item.selected, .item.selected:hover { background: var(--pw-primary-soft); }
+  .selected.selected h3 .stretch { color: var(--pw-primary); }
+}
 .panelHead h2 { margin: 8px 0 0; font-family: var(--pw-display); font-size: 30px; font-weight: 600; color: var(--pw-primary); line-height: 1.15; }
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .tileBox { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--pw-surface-soft); min-width: 0; }
@@ -63,11 +70,19 @@
 .panelActions a { display: inline-flex; align-items: center; gap: 8px; }
 .empty { text-align: center; padding: 32px 16px; color: var(--pw-muted); }
 
-/* Agenda rows: the whole row is the link (the title link stretched over it), with a visible focus. */
-.item { position: relative; }
-.stretch::after { content: ''; position: absolute; inset: -6px -8px 8px; border-radius: 12px; }
+/*
+ * Agenda rows: the whole row is the link (the title link stretched over the row, time and dot
+ * included), with a fill on hover and press and a visible focus ring.
+ */
+.item { position: relative; -webkit-tap-highlight-color: transparent; }
+.stretch::after { content: ''; position: absolute; inset: 0; border-radius: 12px; }
 .stretch:focus-visible { outline: none; }
-.stretch:focus-visible::after { outline: 2px solid var(--pw-primary); outline-offset: 0; }
-.item:hover .stretch { text-decoration: underline; text-underline-offset: 3px; }
+.stretch:focus-visible::after { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+@media (hover: hover) {
+  .item:hover { background: color-mix(in srgb, var(--pw-primary-soft) 60%, transparent); }
+  .item:hover .stretch { text-decoration: underline; text-underline-offset: 3px; }
+}
+.item:active { background: var(--pw-primary-soft); }
+@media (prefers-reduced-motion: no-preference) { .item { transition: background-color .15s ease; } }
 .calloutLink.calloutLink { min-height: 44px; color: var(--pw-on-brass-soft); text-decoration: none; }
 .calloutLink:hover { text-decoration: underline; }

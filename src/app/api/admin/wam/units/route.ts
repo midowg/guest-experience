@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     catch (error) { if (error instanceof XlsxError) throw new ServiceError(400, error.message); throw new ServiceError(400, "Berkas Excel tidak terbaca."); }
     if (!parsed.members.length) throw new ServiceError(400, "Tidak ada sheet dengan kolom Jenis unit dan Unit.");
     const result = await importUnits(parsed);
-    return success({ ...result, skipped: parsed.skipped, ...(await listUnits()) }, `${result.units} unit dan ${result.members} keanggotaan tersimpan${result.unmatched.length ? `; ${result.unmatched.length} nama tidak ditemukan` : ""}.`);
+    // Warnings (a BOD the sheet makes a department lead) join the skipped list the page shows.
+    return success({ ...result, skipped: [...parsed.skipped, ...result.warnings], ...(await listUnits()) }, `${result.units} unit dan ${result.members} keanggotaan tersimpan${result.unmatched.length ? `; ${result.unmatched.length} nama tidak ditemukan` : ""}${result.warnings.length ? `; ${result.warnings.length} tanda lead BOD dilewati` : ""}.`);
   });
 }

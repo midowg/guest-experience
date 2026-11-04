@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FRIDAY_SHARING_PATH, WELCOME_PATH, absolute, thanksPath, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, photoDownloadPath, posterPath, ticketPath } from "./routes";
+import { FRIDAY_SHARING_PATH, WELCOME_PATH, absolute, thanksPath, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, photoDownloadPath, posterPath, praWamPath, ticketPath } from "./routes";
 
 const legacy = { id: "e1", slug: "kunjungan-sinar" };
 const short = { ...legacy, code: "AB23CD" };
@@ -72,6 +72,15 @@ function sources(dir: string): string[] {
     return /\.(ts|tsx)$/.test(name) && !/\.test\.tsx?$/.test(name) ? [path] : [];
   });
 }
+
+describe("WAM addresses", () => {
+  it("open Book on a day, and on one booking for an agenda item", () => {
+    expect(praWamPath.appraisal()).toBe("/wam/book");
+    expect(praWamPath.appraisal("2026-11-05")).toBe("/wam/book?date=2026-11-05");
+    expect(praWamPath.appraisal("2026-11-05", "b-1")).toBe("/wam/book?date=2026-11-05&booking=b-1");
+    expect(praWamPath.appraisal(undefined, "b 1")).toBe("/wam/book?booking=b+1");
+  });
+});
 
 it("builds addresses only in routes.ts", () => {
   const root = new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");

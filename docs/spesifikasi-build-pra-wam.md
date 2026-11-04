@@ -149,6 +149,28 @@ Awalan `pw_` membedakan tabel Pra WAM/WAM dari tabel undangan Journey (`events`,
 | Ringkasan semua unit, profil semua peserta, hasil survei | – | unitnya | ✓ | ✓ | – |
 | Akun, NIP, email, unit-jabatan, peran, izin MCP, modul acara | – | – | – | – | ✓ |
 
+### Gabungan peran
+
+Peserta adalah dasar setiap akun. HOD bukan peran yang dicentang: ia lead departemen dari impor unit
+(`unit_members.is_lead`; lead BU bukan HOD). Aturannya ada di `src/lib/pra-wam/roles.ts`
+(`roleConflicts`, `checkRoleChange`) dan diperiksa server.
+
+| Peran | Bisa digabung dengan | Catatan |
+|---|---|---|
+| Peserta | semua | dasar setiap akun |
+| Panitia | Admin WAM, HOD | |
+| Admin WAM | Panitia, HOD | |
+| HOD (lead departemen) | Panitia, Admin WAM | aplikasi biasa |
+| BOD | tidak dengan peran lain | tetap bisa ikut sesi dan book ruang sebagai peserta |
+
+- Super admin (Akun dan peran): BOD dicentang → Panitia dan Admin WAM tidak bisa dicentang, dan
+  sebaliknya; lead departemen tidak bisa dicentang BOD. Server menolak dengan 422 "BOD tidak bisa
+  digabung dengan Panitia atau Admin WAM." Perubahan yang hanya melepas peran selalu diterima, supaya
+  data lama yang bertabrakan bisa dirapikan satu per satu.
+- Impor unit: BOD yang ditandai lead departemen tetap tercatat sebagai anggota, tanda lead dilewati,
+  dan hasil impor menyebutnya.
+- Ganti peran tidak mengeluarkan siapa pun; peran dibaca ulang di setiap permintaan.
+
 ## 6. Layar → rute → desain
 
 | Desain (Penpot) | Rute | Fungsi server utama |

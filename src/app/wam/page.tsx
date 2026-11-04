@@ -1,19 +1,22 @@
 import { redirect } from "next/navigation";
-import { ArrowLeftRight, BarChart3, Bell, CalendarClock, ChevronRight, Clock, Info, MapPin, QrCode } from "lucide-react";
+import { ArrowLeftRight, Bell, CalendarClock, ChevronRight, Clock, Info, MapPin, QrCode } from "lucide-react";
+import { AboutCard, ManageCard } from "@/components/pra-wam/BerandaCards";
 import { AgendaTimeline } from "@/components/pra-wam/desktop/AgendaTimeline";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
 import { PhaseBanner } from "@/components/pra-wam/PhaseBanner";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
 import { clockLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { requestStatusLabels, spanLabel } from "@/lib/pra-wam/requests";
-import { bodOnly, seesAllSessions } from "@/lib/pra-wam/roles";
+import { bodOnly, managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
+import { getAbout } from "@/lib/server/pra-wam/about";
 import { agendaItems, untilLabel } from "@/lib/server/pra-wam/agenda";
 import { myNotifications } from "@/lib/server/pra-wam/announcements";
 import { listDocuments } from "@/lib/server/pra-wam/documents";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
-import { myOpenRequests } from "@/lib/server/pra-wam/requests";
-import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { myOpenRequests, openRequestCount } from "@/lib/server/pra-wam/requests";
+import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
+import { listSessions } from "@/lib/server/pra-wam/sessions";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import own from "@/components/pra-wam/desktop/home.module.css";
 
@@ -27,9 +30,23 @@ const greeting = (now: Date) => {
 const longDate = (now: Date) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jakarta" }).format(now);
 const shortTime = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 
+/** For "Kelola acara": requests waiting, drafts still without a time, and sessions published for today. */
+async function manageCounts(member: Member, today: string) {
+  const [openRequests, { sessions }] = await Promise.all([
+    managesSessions(member) ? openRequestCount() : 0,
+    listSessions(member).catch(() => ({ sessions: [] })),
+  ]);
+  return {
+    openRequests,
+    draftsWithoutTime: sessions.filter(session => session.status === "draf" && !session.startsAt).length,
+    sessionsToday: sessions.filter(session => session.status === "terbit" && session.startsAt && wibDate(session.startsAt) === today).length,
+  };
+}
+
 /**
  * Beranda (Penpot P1 on a phone, E1 on a desktop): the next thing, what waits on the person, the
- * latest news; on a desktop also today's agenda and the newest documents in a side column.
+ * latest news, "Kelola acara" for the panitia (Penpot K1) and "Apa itu WAM?"; on a desktop also
+ * today's agenda and the newest documents in a side column.
  */
 export default async function HomePage() {
   const member = await requireMemberPage(praWamPath.home);
@@ -37,9 +54,11 @@ export default async function HomePage() {
   if (bodOnly(member)) redirect(praWamPath.dashboard);
   const now = new Date();
   const today = wibDate(now.toISOString());
-  const [{ items }, notes, requests, appraisal, docs] = await Promise.all([
+  const [{ items }, notes, requests, appraisal, docs, about, manage] = await Promise.all([
     agendaItems(member, today), myNotifications(member), myOpenRequests(member), appraisalOpen(),
     listDocuments(member).catch(() => ({ documents: [], migrated: false, storage: false })),
+    getAbout().catch(() => null),
+    seesAllSessions(member) ? manageCounts(member, today) : null,
   ]);
   const next = items.find(item => new Date(item.endsAt) > now);
   const todays = items.filter(item => wibDate(item.startsAt) === today);
@@ -68,11 +87,13 @@ export default async function HomePage() {
           {next.kind === "sesi" && (next.checkedInAt
             ? <span className={`${base.heroButton} ${own.wide}`}>Absen tercatat {shortTime(next.checkedInAt)}</span>
             : <a className={`${base.heroButton} ${own.wide}`} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a>)}
-          {next.kind === "appraisal" && <a className={`${base.heroButton} ${own.wide}`} href={next.href}><CalendarClock size={20} aria-hidden />Lihat jadwal ruang</a>}
+          {next.kind === "appraisal" && <a className={`${base.heroButton} ${own.wide}`} href={next.href}><CalendarClock size={20} aria-hidden />Buka booking</a>}
         </section> : <section className={base.card}>
           <h2>Belum ada agenda</h2>
           <p className={`${base.meta} ${own.prose}`}>Sesi muncul di sini setelah panitia menerbitkannya.</p>
         </section>}
+
+        {manage && <ManageCard manages={managesSessions(member)} {...manage} />}
 
         {(request || latest) && <div className={own.pair}>
           {request && <section className={base.card} aria-label="Permintaan jadwal">
@@ -96,9 +117,7 @@ export default async function HomePage() {
         {appraisal && <a className={base.cardLink} href={praWamPath.appraisal()}>
           <CalendarClock size={22} aria-hidden /><span>Book ruang<small>Pesan ruang lewat denah atau lihat siapa memakai ruang</small></span><ChevronRight size={20} aria-hidden />
         </a>}
-        {seesAllSessions(member) && <a className={base.cardLink} href={praWamPath.dashboard}>
-          <BarChart3 size={22} aria-hidden /><span>Kelola acara<small>Ringkasan operasional, jadwal sesi, permintaan</small></span><ChevronRight size={20} aria-hidden />
-        </a>}
+        {about && <AboutCard about={about.about} />}
       </div>
 
       <aside className={own.side} aria-label="Hari ini">

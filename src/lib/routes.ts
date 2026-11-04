@@ -121,9 +121,17 @@ export const PRA_WAM_PATH = "/wam";
 const WAM_API = "/api/wam";
 export const praWamPath = {
   home: PRA_WAM_PATH,
+  /** "Apa itu WAM?": the text the super admin writes, opened from Beranda. */
+  about: `${PRA_WAM_PATH}/about`,
   login: (next?: string) => `${PRA_WAM_PATH}/login${next ? `?next=${enc(next)}` : ""}`,
-  /** Book: who has which room, per day, on the floor plan (was /wam/appraisal). */
-  appraisal: (date?: string) => `${PRA_WAM_PATH}/book${date ? `?date=${date}` : ""}`,
+  /**
+   * Book: who has which room, per day, on the floor plan (was /wam/appraisal). With a booking id
+   * that booking's detail opens (an agenda item links there).
+   */
+  appraisal: (date?: string, booking?: string) => {
+    const search = new URLSearchParams(Object.entries({ date, booking }).filter((entry): entry is [string, string] => !!entry[1])).toString();
+    return `${PRA_WAM_PATH}/book${search ? `?${search}` : ""}`;
+  },
   /** The person's sessions, by day. */
   agenda: `${PRA_WAM_PATH}/agenda`,
   session: (id: string) => `${PRA_WAM_PATH}/sessions/${id}`,
@@ -209,3 +217,5 @@ export const praWamRoomsApi = (roomId: string) => `/api/admin/wam/rooms/${roomId
 export const praWamUnitsApi = "/api/admin/wam/units";
 /** Super admin: one event's status and modules. */
 export const praWamEventsApi = (eventId: string) => `/api/admin/wam/events/${eventId}`;
+/** Super admin: PUT saves the "Apa itu WAM?" text, DELETE goes back to the default text. */
+export const praWamAboutApi = "/api/admin/wam/about";
