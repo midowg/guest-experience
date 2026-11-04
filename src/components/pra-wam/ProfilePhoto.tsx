@@ -3,19 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Camera, ImagePlus, Trash2, X } from "lucide-react";
+import { Camera, Images, Trash2 } from "lucide-react";
 import { acceptPhotos, encodeWithinLimit, PHOTO_SIDE, sourceProblem, squareCrop, type PhotoMime } from "@/lib/pra-wam/photo";
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
 import { Avatar } from "./Avatar";
 import { useConfirm } from "./ConfirmDialog";
-import { Sheet } from "./Sheet";
 import css from "./avatar.module.css";
 
 /*
- * The large profile photo on Profil. With `editable`, the camera button opens an action sheet:
- * "Pilih foto", "Hapus foto" when there is one, and "Batal". It is the shared Sheet (a modal
- * <dialog> in the top layer), so no card's `overflow: hidden` can clip it, on a phone or a desktop.
+ * The large profile photo on Profil. With `editable`, the camera button opens a small dialog in
+ * the middle, like a phone's own photo chooser: "Ambil foto" (the camera; touch screens only),
+ * "Pilih dari galeri", "Hapus foto" when there is one, and "Batal". A modal <dialog> sits in the
+ * top layer, so no card's `overflow: hidden` can clip it.
  * A picked photo is cropped to a square and made small
  * here in the browser (320 × 320 WebP, at most 200 KB), shown at once, then uploaded with its
  * progress. The page refreshes when it is saved.
@@ -86,31 +86,42 @@ export function ProfilePhoto({ name, photo, editable }: { name: string; photo: s
   const [local, setLocal] = useState<{ base: string | null; url: string | null } | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const trigger = useRef<HTMLButtonElement>(null);
+  const chooser = useRef<HTMLDialogElement>(null);
   const firstAction = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  const camera = useRef<HTMLInputElement>(null);
   const busy = step.kind === "busy";
   const localUrl = local?.url;
   useEffect(() => () => { if (localUrl) URL.revokeObjectURL(localUrl); }, [localUrl]);
 
-  // The sheet (a child) opens its dialog first; then the first action takes the focus, not the X.
-  useEffect(() => { if (menuOpen) firstAction.current?.focus(); }, [menuOpen]);
+  // Open and close the dialog with the state; the first visible choice takes the focus.
+  useEffect(() => {
+    const dialog = chooser.current;
+    if (!dialog) return;
+    if (menuOpen && !dialog.open) {
+      dialog.showModal();
+      const first = [...dialog.querySelectorAll<HTMLButtonElement>("button")].find(button => button.offsetParent !== null) ?? firstAction.current;
+      first?.focus();
+    }
+    if (!menuOpen && dialog.open) { dialog.close(); trigger.current?.focus(); }
+  }, [menuOpen]);
 
   const shown = local && local.base === photo ? local.url : photo;
 
   /**
-   * Closes the sheet now, not after the next render: while its modal dialog is open the rest of
-   * the page is inert, so the file input could not be clicked and the confirm would open over it.
-   * The sheet gives the focus back to the camera button.
+   * Closes the dialog now, not after the next render: while it is open the rest of the page is
+   * inert, so the file input could not be clicked and the confirm would open over it.
    */
   function closeNow() { flushSync(() => setMenuOpen(false)); }
 
-  function pick() {
+  function pick(from: "kamera" | "galeri") {
     closeNow();
-    input.current?.click();
+    (from === "kamera" ? camera : input).current?.click();
   }
 
   async function upload(file: File | undefined) {
     if (input.current) input.current.value = "";
+    if (camera.current) camera.current.value = "";
     if (!file) return;
     const problem = sourceProblem(file);
     if (problem) { setStep({ kind: "error", text: problem }); return; }
@@ -161,14 +172,20 @@ export function ProfilePhoto({ name, photo, editable }: { name: string; photo: s
         <Camera aria-hidden />
       </button>}
     </div>
-    {editable && <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Foto profil">
+    {editable && <dialog ref={chooser} className={css.chooser} aria-labelledby="ganti-foto-judul"
+      onCancel={event => { event.preventDefault(); setMenuOpen(false); }}
+      onClick={event => { if (event.target === chooser.current) setMenuOpen(false); }}>
+      <h2 id="ganti-foto-judul">Ganti foto profil</h2>
+      <p>Foto dipotong persegi dan diperkecil otomatis.</p>
       <div className={css.actions}>
-        <button ref={firstAction} type="button" className={css.action} onClick={pick}><ImagePlus aria-hidden />Pilih foto</button>
+        <button type="button" className={`${css.action} ${css.actionCamera}`} onClick={() => pick("kamera")}><Camera aria-hidden />Ambil foto</button>
+        <button ref={firstAction} type="button" className={css.action} onClick={() => pick("galeri")}><Images aria-hidden />Pilih dari galeri</button>
         {shown && <button type="button" className={`${css.action} ${css.actionDanger}`} onClick={remove}><Trash2 aria-hidden />Hapus foto</button>}
-        <button type="button" className={`${css.action} ${css.actionCancel}`} onClick={() => setMenuOpen(false)}><X aria-hidden />Batal</button>
+        <button type="button" className={`${css.action} ${css.actionCancel}`} onClick={() => setMenuOpen(false)}>Batal</button>
       </div>
-    </Sheet>}
+    </dialog>}
     {editable && <input ref={input} type="file" accept={acceptPhotos} className={css.file} tabIndex={-1} aria-hidden onChange={event => upload(event.target.files?.[0])} />}
+    {editable && <input ref={camera} type="file" accept="image/*" capture="user" className={css.file} tabIndex={-1} aria-hidden onChange={event => upload(event.target.files?.[0])} />}
     {editable && <div className={css.status} role={step.kind === "error" ? "alert" : "status"} aria-live="polite">
       {step.kind === "busy" && <>
         <span>{step.text}{step.progress !== undefined && step.progress < 1 ? ` ${Math.round(step.progress * 100)}%` : ""}</span>

@@ -17,13 +17,27 @@
 .camera svg { width: 20px; height: 20px; }
 
 /* The camera's action sheet (Sheet.tsx): large rows, the last one "Batal" set apart. */
-.actions { display: grid; gap: 8px; }
-.action { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 56px; padding: 0 16px; border: 1px solid var(--pw-line); border-radius: 14px; background: var(--pw-surface); color: var(--pw-text); font: inherit; font-size: 16px; font-weight: 700; text-align: left; cursor: pointer; transition: background-color .15s ease, border-color .15s ease; }
+/* "Ganti foto profil": a small dialog in the middle, like a phone's own photo chooser. */
+.chooser { box-sizing: border-box; width: min(100% - 48px, 20rem); max-width: none; margin: auto; padding: 0; border: 0; border-radius: 20px; background: var(--pw-surface); color: var(--pw-text); box-shadow: var(--pw-shadow); overflow: hidden; }
+.chooser::backdrop { background: rgba(11, 21, 38, .45); }
+.chooser h2 { margin: 0; padding: 18px 20px 6px; font-family: var(--pw-body); font-size: 17px; font-weight: 800; text-align: center; color: var(--pw-text); }
+.chooser p { margin: 0; padding: 0 20px 12px; font-size: 13px; text-align: center; color: var(--pw-muted); }
+.actions { display: grid; border-top: 1px solid var(--pw-line); }
+.action { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; padding: 0 20px; border: 0; border-bottom: 1px solid var(--pw-line); background: transparent; color: var(--pw-text); font: inherit; font-size: 16px; font-weight: 700; text-align: left; cursor: pointer; transition: background-color .15s ease; }
+.action:last-child { border-bottom: 0; }
 .action:hover { background: var(--pw-surface-soft); }
-.action:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
-.action svg { width: 22px; height: 22px; flex: none; color: var(--pw-muted); }
+.action:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: -2px; }
+.action svg { width: 22px; height: 22px; flex: none; color: var(--pw-primary); }
 .actionDanger, .actionDanger svg { color: var(--pw-danger); }
-.actionCancel { justify-content: center; margin-top: 4px; background: transparent; }
+.actionCancel { justify-content: center; color: var(--pw-muted); font-weight: 600; }
+/* A computer has no camera to hand: "Ambil foto" shows on touch screens only. */
+@media (hover: hover) and (pointer: fine) { .actionCamera { display: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .chooser[open] { animation: pw-chooser .18s cubic-bezier(.2, .8, .2, 1); }
+  .chooser[open]::backdrop { animation: pw-chooser-fade .18s ease-out; }
+}
+@keyframes pw-chooser { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pw-chooser-fade { from { opacity: 0; } to { opacity: 1; } }
 
 .file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .status { display: grid; justify-items: center; gap: 6px; min-height: 20px; font-size: 13px; font-weight: 600; color: var(--pw-muted); text-align: center; }

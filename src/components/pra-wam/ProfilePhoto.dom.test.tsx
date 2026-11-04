@@ -20,10 +20,10 @@ it("shows initials without a photo, and no camera when it is not editable", () =
 });
 
 // A closed <dialog> is hidden, so it has no role to find.
-const sheet = () => screen.queryByRole("dialog", { name: "Foto profil" });
+const sheet = () => screen.queryByRole("dialog", { name: "Ganti foto profil" });
 const actions = () => [...sheet()!.querySelectorAll("button")].map(button => button.textContent).filter(Boolean);
 
-it("opens an action sheet with Pilih foto and Batal when there is no photo; Batal closes it and returns focus", () => {
+it("opens a small chooser with camera, gallery and Batal when there is no photo; Batal closes it and returns focus", () => {
   render(<ProfilePhoto name="Bagus Werkudara" photo={null} editable />);
   expect(camera().getAttribute("aria-haspopup")).toBe("dialog");
   expect(camera().getAttribute("aria-expanded")).toBe("false");
@@ -31,28 +31,34 @@ it("opens an action sheet with Pilih foto and Batal when there is no photo; Bata
   fireEvent.click(camera());
   expect(camera().getAttribute("aria-expanded")).toBe("true");
   expect(sheet()).not.toBeNull();
-  expect(actions()).toEqual(["Pilih foto", "Batal"]);
-  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Pilih foto" }));
+  expect(actions()).toEqual(["Ambil foto", "Pilih dari galeri", "Batal"]);
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "Pilih dari galeri" }));
   fireEvent.click(screen.getByRole("button", { name: "Batal" }));
   expect(sheet()).toBeNull();
-  expect(screen.queryByRole("button", { name: "Pilih foto" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Pilih dari galeri" })).toBeNull();
   expect(document.activeElement).toBe(camera());
 });
 
-it("closes on Esc (the dialog's cancel) and opens the file picker from Pilih foto", () => {
+it("closes on Esc (the dialog's cancel), opens the gallery picker, and the camera with capture", () => {
   const { container } = render(<ProfilePhoto name="Bagus Werkudara" photo={null} editable />);
   fireEvent.click(camera());
   fireEvent(sheet()!, new Event("cancel", { cancelable: true }));
   expect(sheet()).toBeNull();
 
-  const input = container.querySelector<HTMLInputElement>("input[type=file]")!;
-  const click = vi.spyOn(input, "click").mockImplementation(() => {
-    // The sheet is already closed, so the page is no longer inert.
+  const [gallery, shot] = [...container.querySelectorAll<HTMLInputElement>("input[type=file]")];
+  expect(gallery.hasAttribute("capture")).toBe(false);
+  expect(shot.getAttribute("capture")).toBe("user");
+  const click = vi.spyOn(gallery, "click").mockImplementation(() => {
+    // The chooser is already closed, so the page is no longer inert.
     expect(sheet()).toBeNull();
   });
   fireEvent.click(camera());
-  fireEvent.click(screen.getByRole("button", { name: "Pilih foto" }));
+  fireEvent.click(screen.getByRole("button", { name: "Pilih dari galeri" }));
   expect(click).toHaveBeenCalledTimes(1);
+  const snap = vi.spyOn(shot, "click").mockImplementation(() => undefined);
+  fireEvent.click(camera());
+  fireEvent.click(screen.getByRole("button", { name: "Ambil foto" }));
+  expect(snap).toHaveBeenCalledTimes(1);
 });
 
 it("offers Hapus foto with a photo, confirms first, then deletes and refreshes", async () => {
@@ -60,7 +66,7 @@ it("offers Hapus foto with a photo, confirms first, then deletes and refreshes",
   render(<ProfilePhoto name="Bagus Werkudara" photo="/api/wam/photo/p1?v=1" editable />);
   expect(screen.getByRole("img", { name: "Bagus Werkudara" }).getAttribute("src")).toBe("/api/wam/photo/p1?v=1");
   fireEvent.click(camera());
-  expect(actions()).toEqual(["Pilih foto", "Hapus foto", "Batal"]);
+  expect(actions()).toEqual(["Ambil foto", "Pilih dari galeri", "Hapus foto", "Batal"]);
   fireEvent.click(screen.getByRole("button", { name: "Hapus foto" }));
   expect(sheet()).toBeNull();
 
