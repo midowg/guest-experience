@@ -79,11 +79,11 @@ export function checkRoleChange(current: readonly PraWamRole[], next: readonly P
 export function blockedRoles(roles: readonly PraWamRole[], { isLead = false }: Standing = {}): Partial<Record<PraWamRole, string>> {
   const blocked: Partial<Record<PraWamRole, string>> = {};
   if (roles.includes("bod")) {
-    for (const role of ["panitia", "admin"] as const) if (!roles.includes(role)) blocked[role] = "BOD tidak bisa digabung dengan Panitia atau Admin WAM. Lepas BOD dulu.";
+    for (const role of ["panitia", "admin"] as const) if (!roles.includes(role)) blocked[role] = "Panitia dan Admin WAM terkunci karena orang ini BOD.";
   } else if (has({ roles }, "panitia", "admin")) {
-    blocked.bod = "BOD tidak bisa digabung dengan Panitia atau Admin WAM. Lepas peran itu dulu.";
+    blocked.bod = "BOD terkunci karena orang ini Panitia atau Admin WAM.";
   } else if (isLead) {
-    blocked.bod = "Lead departemen (HOD) tidak bisa menjadi BOD. Ubah lead di impor unit dulu.";
+    blocked.bod = "BOD terkunci karena orang ini lead departemen (HOD).";
   }
   return blocked;
 }
