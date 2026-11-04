@@ -3,33 +3,29 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Camera } from "lucide-react";
+import { cameraProblem, canUseCamera, qrReader } from "@/lib/qr-detect";
 import { PRA_WAM_PATH } from "@/lib/routes";
 import styles from "./akun.module.css";
 
-type Detector = { detect: (source: HTMLVideoElement) => Promise<{ rawValue: string }[]> };
-type DetectorClass = new (options: { formats: string[] }) => Detector;
 const noSubscribe = () => () => {};
-const canScan = () => typeof window !== "undefined" && "BarcodeDetector" in window && !!navigator.mediaDevices?.getUserMedia;
 
 /**
  * Scan QR absen (Penpot "P12"): the back camera in a brass frame. A session QR holds a Pra WAM
  * address; anything else is refused here rather than opened, so a stray QR cannot send the person
- * to another site. Browsers without a QR reader (Safari on iPhone) are told to use the Camera app.
+ * to another site. Safari on iPhone has no QR reader of its own; jsQR reads the picture there.
  */
 export function CheckInScanner() {
   const router = useRouter();
   const video = useRef<HTMLVideoElement>(null);
   const [on, setOn] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const supported = useSyncExternalStore(noSubscribe, canScan, () => false);
+  const supported = useSyncExternalStore(noSubscribe, canUseCamera, () => false);
 
   useEffect(() => {
     if (!on) return;
     let stream: MediaStream | null = null;
     let timer = 0;
     let stopped = false;
-    const Barcode = (window as unknown as { BarcodeDetector: DetectorClass }).BarcodeDetector;
-    const detector = new Barcode({ formats: ["qr_code"] });
     const handle = (text: string) => {
       let url: URL;
       try { url = new URL(text, window.location.origin); } catch { setError("QR ini bukan QR absen WAM."); return false; }
@@ -41,20 +37,21 @@ export function CheckInScanner() {
     (async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        const read = await qrReader();
         if (stopped || !video.current) return;
         video.current.srcObject = stream;
         await video.current.play();
         const tick = async () => {
           if (stopped || !video.current) return;
           if (video.current.readyState >= 2) {
-            const text = (await detector.detect(video.current).catch(() => []))[0]?.rawValue;
+            const text = await read(video.current).catch(() => null);
             if (text && handle(text)) return;
           }
           timer = window.setTimeout(() => void tick(), 300);
         };
         void tick();
-      } catch {
-        setError("Kamera tidak bisa dibuka. Izinkan akses kamera di browser, atau pakai aplikasi Kamera ponsel.");
+      } catch (problem) {
+        setError(cameraProblem(problem, "Atau pakai aplikasi Kamera ponsel."));
         setOn(false);
       }
     })();

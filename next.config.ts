@@ -6,6 +6,7 @@ const personalHeaders = [
   { key: "Cache-Control", value: "private, no-store, max-age=0" },
   { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
 ];
+const cameraHere = [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }];
 const sameOriginFrame = [{ key: "X-Frame-Options", value: "SAMEORIGIN" }, { key: "Content-Security-Policy", value: "frame-ancestors 'self'" }];
 
 const config: NextConfig = {
@@ -47,10 +48,14 @@ const config: NextConfig = {
       { source: "/e/:slug/i/:token/tiket", headers: personalHeaders },
       { source: "/:code([A-Za-z2-9]{6})/:token([a-z2-9]{8})", headers: personalHeaders },
       { source: "/:code([A-Za-z2-9]{6})/:token([a-z2-9]{8})/tiket", headers: personalHeaders },
-      // The door check-in scans tickets with the camera; every other page keeps it off.
-      { source: "/admin/acara/:ref/checkin", headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }] },
-      // WAM's in-app QR scanner for attendance.
-      { source: "/wam/check-in", headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }] },
+      // The door check-in (admin) and WAM's attendance scanner use the camera. The policy belongs to
+      // the page first loaded, and both scanners are reached by moving inside the app without a
+      // reload (Beranda or Agenda to Scan; the event list to Check-in), so the whole area allows the
+      // camera for this site only. Guest pages keep it off.
+      { source: "/admin", headers: cameraHere },
+      { source: "/admin/:path*", headers: cameraHere },
+      { source: "/wam", headers: cameraHere },
+      { source: "/wam/:path*", headers: cameraHere },
       { source: "/admin/hero-preview", headers: sameOriginFrame },
       { source: "/admin/pratinjau-langsung", headers: sameOriginFrame },
       // Development twin of the editor preview (404 in production).

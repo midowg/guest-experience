@@ -150,9 +150,9 @@ export const fitText = (label: string, width: number, max: number, min = 14) => 
 
 /** Width of one character of the plan's bold label font, as a share of the font size. */
 const CHAR = 0.6;
-/** Smallest name and subtitle on screen, in CSS px: below that a label is not readable. */
+/** Smallest name and subtitle on screen, in CSS px: below that a label is not readable (the subtitle is short, so a little smaller). */
 export const NAME_MIN_PX = 9;
-export const SUB_MIN_PX = 9;
+export const SUB_MIN_PX = 8;
 
 /**
  * Words of `text` broken into at most `maxLines` lines, each at most `chars` characters where the
@@ -174,51 +174,82 @@ export type SpotText = {
   sub: string[]; subSize: number;
   /** The zoom from which the subtitle is readable (≥ SUB_MIN_PX); Infinity when it never fits the box. */
   subFrom: number;
+  /** The words run up the box (turned a quarter anticlockwise): a tall, narrow room. */
+  rotate: boolean;
 };
 
 /**
  * How a spot's words sit in its box, in plan units: the name on one line or, when that lets it be
- * bigger, two; never smaller on screen than NAME_MIN_PX (a short box may let it run a little past
- * its edges rather than be unreadable). The subtitle breaks at " · " and spaces, up to three
- * lines, and shows only once the plan is zoomed enough for it to be readable. `unitPx` is screen
- * px per plan unit with the plan fitted (zoom 1); without it the plan is taken as 860px wide.
+ * bigger, two; never smaller on screen than NAME_MIN_PX. The subtitle breaks at " · " and spaces,
+ * up to three lines, and shows only once the plan is zoomed enough for it to be readable. A tall,
+ * narrow room (Nagapadma, Vasuki) whose name would run past its sides, or whose subtitle would not
+ * fit, has its words turned to run along its length instead. `unitPx` is screen px per plan unit
+ * with the plan fitted (zoom 1); without it the plan is taken as 860px wide.
  */
 export function spotText(input: { name: string; sub: string; rect: Pick<Rect, "w" | "h">; main?: boolean; unitPx?: number }): SpotText {
+  const { rect } = input;
+  const upright = layText({ ...input, rect });
+  if (rect.h <= rect.w * 1.3) return upright;
+  const turned = layText({ ...input, rect: { w: rect.h, h: rect.w } });
+  // Upright reads more easily: turn only when the name runs past the sides, or the subtitle does
+  // not show at all or is broken in the middle of its parts ("Muat 6 / orang · / min 1").
+  const parts = input.sub ? input.sub.split(" · ").length : 0;
+  const awkward = (text: SpotText) => !!input.sub && (text.subFrom > 1 || text.sub.length > parts);
+  const better = (upright.spills && !turned.spills) || (awkward(upright) && !awkward(turned) && !turned.spills);
+  return better ? { ...strip(turned), rotate: true } : strip(upright);
+}
+
+const strip = (text: SpotText & { spills: boolean }): SpotText => {
+  const { name, nameSize, sub, subSize, subFrom, rotate } = text;
+  return { name, nameSize, sub, subSize, subFrom, rotate };
+};
+
+function layText(input: { name: string; sub: string; rect: Pick<Rect, "w" | "h">; main?: boolean; unitPx?: number }): SpotText & { spills: boolean } {
   const { name, sub, rect, main } = input;
   const unitPx = input.unitPx && input.unitPx > 0 ? input.unitPx : 860 / PLAN_W;
   const pad = 24, room = rect.w - pad;
   const floor = Math.min(NAME_MIN_PX / unitPx, 72);
   const top = Math.max(main ? 46 : 34, floor);
-  const fit = (lines: string[]) => Math.min(top, room / (Math.max(...lines.map(line => line.length), 3) * CHAR), (rect.h - pad) / (lines.length * 1.2));
+  const longest = (lines: string[]) => Math.max(...lines.map(line => line.length), 3);
+  const fit = (lines: string[]) => Math.min(top, room / (longest(lines) * CHAR), (rect.h - pad) / (lines.length * 1.2));
   const one = name ? [name] : [];
   const half = Math.ceil(name.length / 2);
   const two = name.includes(" ") ? wrapWords(name, half, 2) : one;
   // Two lines only when they win by a clear margin: one line reads more easily.
   const nameLines = two.length > 1 && fit(two) > fit(one) * 1.25 ? two : one;
   const nameSize = name ? Math.max(fit(nameLines), floor) : 0;
+  // Held at the readable floor, a long name can be wider than its box.
+  const spills = !!name && longest(nameLines) * CHAR * nameSize > rect.w - 8;
   const nameH = nameLines.length * nameSize * 1.2;
-  if (!sub) return { name: nameLines, nameSize, sub: [], subSize: 0, subFrom: Infinity };
+  const none = { name: nameLines, nameSize, sub: [], subSize: 0, subFrom: Infinity, rotate: false, spills };
+  if (!sub) return none;
 
-  const subTop = main ? 28 : 23;
+  // The subtitle may grow to the readable size where the box allows, but stays below the name.
+  const subTop = Math.min(Math.max(main ? 28 : 23, SUB_MIN_PX / unitPx), Math.max(nameSize * 0.95, 1));
   const parts = sub.split(" · ");
   const options = [[sub], parts.length > 1 ? [parts[0], parts.slice(1).join(" · ")] : wrapWords(sub, Math.ceil(sub.length / 2), 2), wrapWords(sub, Math.ceil(sub.length / 3), 3)];
   let best: { lines: string[]; size: number } = { lines: [], size: 0 };
   for (const lines of options) {
-    const size = Math.min(subTop, room / (Math.max(...lines.map(line => line.length), 3) * CHAR));
+    const size = Math.min(subTop, room / (longest(lines) * CHAR));
     // It must fit under the name, with a gap.
     if (nameH + size * 0.5 + lines.length * size * 1.2 > rect.h - pad / 2) continue;
-    if (size > best.size * 1.15) best = { lines, size };
+    // A clearly bigger option wins, and so does any bigger one while the best is still too small to read.
+    if (size > best.size * 1.15 || (size > best.size && best.size * unitPx < SUB_MIN_PX)) best = { lines, size };
   }
-  if (!best.lines.length) return { name: nameLines, nameSize, sub: [], subSize: 0, subFrom: Infinity };
-  return { name: nameLines, nameSize, sub: best.lines, subSize: best.size, subFrom: Math.max(1, SUB_MIN_PX / (best.size * unitPx)) };
+  if (!best.lines.length) return none;
+  return { ...none, sub: best.lines, subSize: best.size, subFrom: Math.max(1, SUB_MIN_PX / (best.size * unitPx)) };
 }
 
-/** "Maks 8 orang · TV, Whiteboard": a room's capacity, fewest people and facilities, for the plan. */
-export function roomSpec(room: Pick<Room, "capacity" | "minPeople"> & { facilities?: string[] | null }): string {
+/** "Muat 8 orang · min 2": how many people a room holds and the fewest it is booked for. */
+export function roomPeople(room: Pick<Room, "capacity" | "minPeople">): string {
   const { capacity, minPeople } = room;
-  const people = capacity
-    ? minPeople ? `Maks ${capacity} · min ${minPeople}` : `Maks ${capacity} orang`
-    : minPeople ? `Min ${minPeople} orang · kapasitas belum diisi` : "Kapasitas belum diisi";
+  if (capacity) return minPeople ? `Muat ${capacity} orang · min ${minPeople}` : `Muat ${capacity} orang`;
+  return minPeople ? `Min ${minPeople} orang · kapasitas belum diisi` : "Kapasitas belum diisi";
+}
+
+/** "Muat 8 orang · min 2 · TV, Whiteboard": the room's people and facilities, for lists and tooltips. */
+export function roomSpec(room: Pick<Room, "capacity" | "minPeople"> & { facilities?: string[] | null }): string {
+  const people = roomPeople(room);
   const facilities = (room.facilities ?? []).map(item => item.trim()).filter(Boolean);
   if (!facilities.length) return people;
   const shown = facilities.slice(0, 3).join(", ");

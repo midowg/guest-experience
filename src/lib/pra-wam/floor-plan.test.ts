@@ -113,14 +113,14 @@ describe("spots the super admin picked", () => {
 describe("room specification", () => {
   const spec = (capacity: number | null, minPeople: number | null, facilities: string[] = []) => roomSpec({ capacity, minPeople, facilities });
   it("says capacity, fewest people and facilities", () => {
-    expect(spec(8, null, ["TV", "Whiteboard"])).toBe("Maks 8 orang · TV, Whiteboard");
-    expect(spec(4, 1)).toBe("Maks 4 · min 1");
+    expect(spec(8, null, ["TV", "Whiteboard"])).toBe("Muat 8 orang · TV, Whiteboard");
+    expect(spec(4, 1)).toBe("Muat 4 orang · min 1");
     expect(spec(null, null)).toBe("Kapasitas belum diisi");
     expect(spec(null, 4)).toBe("Min 4 orang · kapasitas belum diisi");
   });
   it("shows three facilities and counts the rest", () => {
-    expect(spec(10, null, ["TV", "AC", "Whiteboard", "Proyektor", "Speaker"])).toBe("Maks 10 orang · TV, AC, Whiteboard +2");
-    expect(roomSpec({ capacity: 6, minPeople: null })).toBe("Maks 6 orang");
+    expect(spec(10, null, ["TV", "AC", "Whiteboard", "Proyektor", "Speaker"])).toBe("Muat 10 orang · TV, AC, Whiteboard +2");
+    expect(roomSpec({ capacity: 6, minPeople: null })).toBe("Muat 6 orang");
   });
 });
 
@@ -160,6 +160,21 @@ describe("words in a spot", () => {
     expect(nagapadma.subFrom).toBeGreaterThan(1);
     expect(nagapadma.subFrom).toBeLessThanOrEqual(ZOOM_MAX);
     expect(nagapadma.subSize * phone * nagapadma.subFrom).toBeCloseTo(SUB_MIN_PX);
+  });
+  it("turns the words of a tall, narrow room so they stay inside it, and keeps the others upright", () => {
+    for (const unitPx of [300 / PLAN_W, 860 / PLAN_W]) {
+      for (const key of ["nagapadma", "vasuki"]) {
+        const rect = PLAN_SPOTS[key].rect;
+        const text = spotText({ name: PLAN_SPOTS[key].label, sub: "Muat 8 orang · min 2", rect, unitPx });
+        expect(text.rotate).toBe(true);
+        // Along the box's length, the name fits inside it.
+        expect(Math.max(...text.name.map(line => line.length)) * 0.6 * text.nameSize).toBeLessThanOrEqual(rect.h);
+        expect(text.name.length * text.nameSize * 1.2).toBeLessThanOrEqual(rect.w);
+      }
+    }
+    const limasan = spotText({ name: "Limasan", sub: "Muat 40 orang · min 10", rect: PLAN_SPOTS.limasan.rect, unitPx: 860 / PLAN_W });
+    expect(limasan.rotate).toBe(false);
+    expect(limasan.sub).toEqual(["Muat 40 orang · min 10"]);
   });
   it("shows the specification at once on a desktop", () => {
     const ananta = spotText({ name: "CFC Ananta Room", sub: "Maks 12 orang · TV", rect: PLAN_SPOTS.ananta.rect, main: true, unitPx: 860 / PLAN_W });

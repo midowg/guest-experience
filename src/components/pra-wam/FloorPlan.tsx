@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type 
 import { Minus, Plus, Scan } from "lucide-react";
 import type { Room } from "@/lib/pra-wam/appraisal";
 import {
-  BUILDING, DECOR, FIT_VIEW, PLAN_H, PLAN_SPOTS, PLAN_W, ZOOM_MAX, ZOOM_MIN, clampView, isRoomSpot, moveView, pickableTone, placeRooms, revealRect, roomSpec,
+  BUILDING, DECOR, FIT_VIEW, PLAN_H, PLAN_SPOTS, PLAN_W, ZOOM_MAX, ZOOM_MIN, clampView, isRoomSpot, moveView, pickableTone, placeRooms, revealRect, roomPeople, roomSpec,
   spotText, zoomView, type PlanStatus, type PlanTone, type PlanView, type Rect,
 } from "@/lib/pra-wam/floor-plan";
 import type { DayStatus, DayTone } from "@/lib/pra-wam/room-day";
@@ -272,14 +272,15 @@ export function FloorPlan({
           })}
           {placed.map(({ key, room, rect }) => {
             const status = statusOf(room);
-            const spec = roomSpec(room);
+            // On the plan the line under the name is how many people fit; facilities are in the tooltip.
+            const spec = roomSpec(room), people = roomPeople(room);
             const shape = PLAN_SPOTS[key]?.shape, textRect = PLAN_SPOTS[key]?.textRect;
-            if (onPickSpot) return <Spot key={key} {...common} rect={rect} shape={shape} textRect={textRect} name={room.name} sub={subtitle === "status" ? status.text : spec} tone={status.tone}
+            if (onPickSpot) return <Spot key={key} {...common} rect={rect} shape={shape} textRect={textRect} name={room.name} sub={subtitle === "status" ? status.text : people} tone={status.tone}
               main={room.kind === "utama"} selected={key === selectedSpot} title={`${room.name} · ${spec} · ${status.text}`}
               button={spotButton(key, `${room.name}, ${lower(status.text)}`)} />;
             const selected = room.id === selectedId;
             const pick = canPick(room, status);
-            const sub = subtitle === "status" ? (selected ? `Dipilih · ${status.text}` : status.text) : spec;
+            const sub = subtitle === "status" ? (selected ? `Dipilih · ${status.text}` : status.text) : people;
             return <Spot key={key} {...common} rect={rect} shape={shape} textRect={textRect} name={room.name} sub={sub} tone={status.tone} main={room.kind === "utama"} selected={selected}
               ring={room.id === highlightId} title={`${room.name} · ${spec} · ${status.text}`} a11y={`${room.name}, ${lower(status.text)}`}
               button={pick ? { label: `${room.name}, ${lower(status.text)}. ${action}`, onClick: () => onPick?.(room), onKeyDown: keyed(() => onPick?.(room)) } : undefined} />;
@@ -374,8 +375,8 @@ function Spot({ rect, shape, textRect, name, sub, tone, title, a11y, main, selec
   const showSub = text.sub.length > 0 && scale >= text.subFrom;
   const nameGap = text.nameSize * 1.2, subGap = text.subSize * 1.2;
   const height = text.name.length * nameGap + (showSub ? text.subSize * 0.5 + text.sub.length * subGap : 0);
-  const top = textBox.y + textBox.h / 2 - height / 2;
-  const cx = textBox.x + textBox.w / 2;
+  const cx = textBox.x + textBox.w / 2, cy = textBox.y + textBox.h / 2;
+  const top = cy - height / 2;
   const className = [css.spot, css[tone], main ? css.main : "", selected ? css.selected : "", ring ? css.ring : "", plain ? css.plain : "", button ? css.click : ""].join(" ");
   const attributes = button
     ? { role: "button", tabIndex: 0, "aria-label": button.label, "aria-pressed": !!(selected || ring), onClick: button.onClick, onKeyDown: button.onKeyDown, onFocus: (event: FocusEvent<SVGGElement>) => { if (keyboardFocus(event.currentTarget)) onReveal(rect); } }
@@ -385,8 +386,10 @@ function Spot({ rect, shape, textRect, name, sub, tone, title, a11y, main, selec
     {shape
       ? <polygon className={css.box} points={shape.map(point => point.join(",")).join(" ")} />
       : <rect className={css.box} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={10} />}
+    <g transform={text.rotate ? `rotate(-90 ${cx.toFixed(1)} ${cy.toFixed(1)})` : undefined}>
     {text.name.map((line, index) => <text key={`n${index}`} className={quiet ? css.st : undefined} x={cx} y={top + nameGap * (index + 0.5)} fontSize={text.nameSize.toFixed(1)}>{line}</text>)}
     {showSub && text.sub.map((line, index) => <text key={`s${index}`} className={css.st} x={cx}
       y={top + text.name.length * nameGap + text.subSize * 0.5 + subGap * (index + 0.5)} fontSize={text.subSize.toFixed(1)}>{line}</text>)}
+    </g>
   </g>;
 }

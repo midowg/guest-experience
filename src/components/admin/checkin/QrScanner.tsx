@@ -4,15 +4,12 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Camera, CameraOff } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import styles from "@/components/admin/admin.module.css";
+import { cameraProblem, canUseCamera, qrReader } from "@/lib/qr-detect";
 
-type Detector = { detect: (source: HTMLVideoElement) => Promise<{ rawValue: string }[]> };
-type DetectorClass = new (options: { formats: string[] }) => Detector;
 const noSubscribe = () => () => {};
 
-/** Whether this browser can read QR codes from the camera itself (Chrome/Edge on Android and desktop). */
-export function canScanHere(): boolean {
-  return typeof window !== "undefined" && "BarcodeDetector" in window && !!navigator.mediaDevices?.getUserMedia;
-}
+/** Whether this browser can scan with its camera (every browser with a camera: see qr-detect). */
+export const canScanHere = canUseCamera;
 
 /**
  * The back camera, read a few times a second. Each new value is reported once, then the scanner
@@ -35,19 +32,17 @@ export function QrScanner({ onScan, paused }: { onScan: (text: string) => void; 
     let stream: MediaStream | null = null;
     let timer = 0;
     let stopped = false;
-    const Barcode = (window as unknown as { BarcodeDetector: DetectorClass }).BarcodeDetector;
-    const detector = new Barcode({ formats: ["qr_code"] });
     (async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        const read = await qrReader();
         if (stopped || !video.current) return;
         video.current.srcObject = stream;
         await video.current.play();
         const tick = async () => {
           if (stopped || !video.current) return;
           if (!pausedRef.current && video.current.readyState >= 2) {
-            const found = await detector.detect(video.current).catch(() => []);
-            const text = found[0]?.rawValue;
+            const text = await read(video.current).catch(() => null);
             const now = Date.now();
             if (text && (text !== last.current.text || now - last.current.at > 4000)) {
               last.current = { text, at: now };
@@ -57,8 +52,8 @@ export function QrScanner({ onScan, paused }: { onScan: (text: string) => void; 
           timer = window.setTimeout(() => void tick(), 300);
         };
         void tick();
-      } catch {
-        setError("Kamera tidak bisa dibuka. Izinkan akses kamera di browser, atau gunakan pencarian nama di bawah.");
+      } catch (problem) {
+        setError(cameraProblem(problem, "Atau gunakan pencarian nama di bawah."));
         setOn(false);
       }
     })();

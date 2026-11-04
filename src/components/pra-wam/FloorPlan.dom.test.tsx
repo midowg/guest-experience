@@ -46,20 +46,21 @@ describe("FloorPlan", () => {
     const { container, rerender } = render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
     // What the plan shows, not its tooltips.
     const text = () => [...container.querySelectorAll("svg text")].map(node => node.textContent).join(" ");
-    expect(text()).toMatch(/Maks 4( ·)? min 1/);
+    expect(text()).toContain("Muat 4 orang · min 1");
     expect(text()).toContain("Kapasitas belum diisi");
     expect(text()).not.toContain("Kosong 09.00–10.00");
     rerender(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" subtitle="status" />);
     expect(text()).toContain("Kosong 09.00–10.00");
     // The status is still read out.
     expect(screen.getByRole("img", { name: "Nagapadma, kosong 09.00–10.00" })).toBeTruthy();
-    // Nagapadma's narrow box shows its specification once zoomed in.
+    // Nagapadma's tall, narrow box runs its words along its length, so they stay inside; the plan
+    // says how many people fit, the tooltip adds the facilities.
     rerender(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
-    expect(text()).not.toContain("Maks 8 orang");
-    const zoomIn = screen.getByRole("button", { name: "Perbesar denah" });
-    fireEvent.click(zoomIn); fireEvent.click(zoomIn); fireEvent.click(zoomIn);
-    expect(text()).toContain("Maks 8 orang");
-    expect(text()).toContain("TV, Whiteboard");
+    expect(text()).toContain("Muat 8 orang");
+    expect(text()).not.toContain("TV, Whiteboard");
+    const nagapadma = screen.getByRole("img", { name: "Nagapadma, kosong 09.00–10.00" });
+    expect(nagapadma.querySelector("g[transform^='rotate(-90']")).toBeTruthy();
+    expect(nagapadma.querySelector("title")?.textContent).toContain("TV, Whiteboard");
   });
 
   it("shows a compass with north up, toward Limasan", () => {
