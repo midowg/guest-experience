@@ -308,11 +308,22 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .app .themeOption:hover { color: var(--pw-text); }
 .app .themeOption:has(input:checked) { background: var(--pw-primary-soft); color: var(--pw-primary); font-weight: 800; }
 .themeOption:has(input:focus-visible) { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
-.themeSwitchCompact { justify-self: center; background: transparent; }
-.app .themeSwitchCompact .themeOption { gap: 6px; padding: 0 10px; font-size: 12px; }
-.themeSwitchCompact .themeOption svg { width: 16px; height: 16px; }
+/* Sign-in screens: one switch, the whole row is the target. */
+.app .themeToggle { justify-self: center; display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 8px 0 12px; border: 0; border-radius: 22px; background: transparent; color: var(--pw-muted); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.app .themeToggle:hover { color: var(--pw-text); }
+.app .themeToggle:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.themeToggle > svg { width: 18px; height: 18px; }
+.toggleTrack { position: relative; width: 44px; height: 26px; border-radius: 13px; background: var(--pw-line); }
+.toggleTrack > span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--pw-surface); box-shadow: 0 1px 3px rgba(11, 21, 38, .3); }
+.themeToggle[aria-checked="true"] .toggleTrack { background: var(--pw-primary); }
+.themeToggle[aria-checked="true"] .toggleTrack > span { transform: translateX(18px); background: var(--pw-on-primary); }
+@media (prefers-reduced-motion: no-preference) { .toggleTrack, .toggleTrack > span { transition: background-color .2s ease, transform .2s ease; } }
 @media (prefers-reduced-motion: no-preference) { .themeOption { transition: background-color .15s ease, color .15s ease; } }
 .passwordRow { position: relative; }
+/* "Lupa password?" right under the password box, lined up with the eye button. */
+.forgotRow { display: flex; justify-content: flex-end; margin-top: 2px; }
+.forgotRow a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 13px; font-weight: 800; text-decoration: none; color: var(--pw-primary); }
+.forgotRow a:hover { text-decoration: underline; }
 .passwordRow input { padding-right: 52px; }
 .eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; color: var(--pw-muted); cursor: pointer; border-radius: 10px; }
 

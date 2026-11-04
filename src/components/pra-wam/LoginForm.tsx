@@ -45,9 +45,9 @@ export function LoginForm({ next }: { next: string | null }) {
         <input id="password" className="input" type={show ? "text" : "password"} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required />
         <button type="button" className={styles.eye} onClick={() => setShow(!show)} aria-pressed={show} aria-label={show ? "Sembunyikan password" : "Lihat password"}>{show ? <EyeOff size={20} aria-hidden /> : <Eye size={20} aria-hidden />}</button>
       </div>
+      <div className={styles.forgotRow}><a href={praWamPath.forgot}>Lupa password?</a></div>
     </div>
     <Button type="submit" disabled={busy || !email || !password}>{busy ? "Memeriksa…" : "Masuk"}</Button>
-    <p className={styles.loginNote}><a href={praWamPath.forgot}>Lupa password?</a></p>
     <p className={styles.loginNote}>Journey by Werkudara</p>
   </form>;
 }
