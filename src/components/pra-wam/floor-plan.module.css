@@ -13,6 +13,8 @@
   .svg { width: 900px; max-width: none; }
   .fit .svg { width: 100%; }
 }
+/* Desktop: the whole plan in view next to its controls, not wider than the screen is tall. */
+@media (min-width: 1024px) { .svg { max-width: min(100%, 860px); margin-inline: auto; } }
 
 .building { fill: var(--pw-app); stroke: var(--pw-line); stroke-width: 5; }
 .decor { fill: var(--pw-page); stroke: var(--pw-line); stroke-width: 3; }
