@@ -74,19 +74,30 @@ export async function requireApiMember(): Promise<Member> {
  * Checks the email and password with Supabase Auth, then signs the person in on this device.
  * One message for every failure, so the form does not tell which emails have an account.
  */
-export async function signIn(email: string, password: string): Promise<{ mustChangePassword: boolean }> {
+/**
+ * The "buat password baru" screen after signing in shows once per first password: at the very
+ * first sign-in, and once after the admin resets it (that reset stamps password_changed_at). Later
+ * sign-ins go straight in; Pengaturan still offers the change and Profil still reminds.
+ */
+export function asksNewPassword(account: { must_change_password: boolean; last_login_at: string | null; password_changed_at: string | null }): boolean {
+  if (!account.must_change_password) return false;
+  if (!account.last_login_at) return true;
+  return !!account.password_changed_at && Date.parse(account.last_login_at) < Date.parse(account.password_changed_at);
+}
+
+export async function signIn(email: string, password: string): Promise<{ mustChangePassword: boolean; askNewPassword: boolean }> {
   const secret = praWamSecret();
   if (!secret) throw notReady();
   const wrong = new ServiceError(401, "Email atau password tidak cocok. Periksa lalu coba lagi.");
   const { data: auth, error: authError } = await createPublicClient().auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
   if (authError || !auth.user) throw wrong;
   const client = createPrivilegedClient();
-  const { data, error } = await client.from("pw_accounts").select("employee_id,session_version,active,must_change_password").eq("auth_user_id", auth.user.id).maybeSingle();
+  const { data, error } = await client.from("pw_accounts").select("employee_id,session_version,active,must_change_password,last_login_at,password_changed_at").eq("auth_user_id", auth.user.id).maybeSingle();
   if (error) { if (notMigrated(error)) throw waitingForMigration(); databaseError(error); }
   if (!data || !data.active) throw wrong;
   await client.from("pw_accounts").update({ last_login_at: new Date().toISOString() }).eq("employee_id", data.employee_id);
   await issueSession(secret, data.employee_id, data.session_version);
-  return { mustChangePassword: data.must_change_password };
+  return { mustChangePassword: data.must_change_password, askNewPassword: asksNewPassword(data) };
 }
 
 async function issueSession(secret: string, employeeId: string, version: number) {

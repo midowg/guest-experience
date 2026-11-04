@@ -106,7 +106,7 @@ export async function resetPassword(employeeId: string): Promise<void> {
   if (!account) throw new ServiceError(404, "Orang ini belum punya akun Pra WAM.");
   const { error: authError } = await client.auth.admin.updateUserById(account.auth_user_id, { password });
   if (authError) throw new ServiceError(503, "Password belum dapat diatur ulang. Coba lagi sebentar.");
-  const { error: saveError } = await client.from("pw_accounts").update({ must_change_password: true, session_version: account.session_version + 1 }).eq("employee_id", employeeId);
+  const { error: saveError } = await client.from("pw_accounts").update({ must_change_password: true, session_version: account.session_version + 1, password_changed_at: new Date().toISOString() }).eq("employee_id", employeeId);
   if (saveError) databaseError(saveError);
 }
 

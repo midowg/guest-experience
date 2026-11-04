@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { ArrowLeftRight, Bell, CalendarClock, ChevronRight, Clock, Info, MapPin, QrCode } from "lucide-react";
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
+import { Avatar } from "@/components/pra-wam/Avatar";
 import { AboutCard, ManageCard } from "@/components/pra-wam/BerandaCards";
 import { AgendaTimeline } from "@/components/pra-wam/desktop/AgendaTimeline";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
-import { PhaseBanner } from "@/components/pra-wam/PhaseBanner";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
 import { AGENDA_ITEM, withItem } from "@/lib/pra-wam/agenda";
 import { clockLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
@@ -17,8 +17,7 @@ import { myNotifications } from "@/lib/server/pra-wam/announcements";
 import { listDocuments } from "@/lib/server/pra-wam/documents";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
 import { myOpenRequests, openRequestCount } from "@/lib/server/pra-wam/requests";
-import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
-import { listSessions } from "@/lib/server/pra-wam/sessions";
+import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import own from "@/components/pra-wam/desktop/home.module.css";
 
@@ -31,19 +30,6 @@ const greeting = (now: Date) => {
 };
 const longDate = (now: Date) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jakarta" }).format(now);
 const shortTime = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
-
-/** For "Kelola acara": requests waiting, drafts still without a time, and sessions published for today. */
-async function manageCounts(member: Member, today: string) {
-  const [openRequests, { sessions }] = await Promise.all([
-    managesSessions(member) ? openRequestCount() : 0,
-    listSessions(member).catch(() => ({ sessions: [] })),
-  ]);
-  return {
-    openRequests,
-    draftsWithoutTime: sessions.filter(session => session.status === "draf" && !session.startsAt).length,
-    sessionsToday: sessions.filter(session => session.status === "terbit" && session.startsAt && wibDate(session.startsAt) === today).length,
-  };
-}
 
 /**
  * Beranda (Penpot P1 on a phone, E1 on a desktop): the next thing, what waits on the person, the
@@ -61,7 +47,8 @@ export default async function HomePage() {
     agendaItems(member, today), myNotifications(member), myOpenRequests(member), appraisalOpen(),
     listDocuments(member).catch(() => ({ documents: [], migrated: false, storage: false })),
     getAbout().catch(() => null),
-    seesAllSessions(member) ? manageCounts(member, today) : null,
+    // "Kelola acara" for the panitia: the card carries only the requests waiting.
+    seesAllSessions(member) ? (managesSessions(member) ? openRequestCount() : 0) : null,
   ]);
   const next = items.find(item => new Date(item.endsAt) > now);
   const todays = items.filter(item => wibDate(item.startsAt) === today);
@@ -72,18 +59,21 @@ export default async function HomePage() {
   const open = (item: { key: string }) => withItem(praWamPath.home, item.key);
   const opens = (item: { key: string }) => ({ [AGENDA_ITEM]: item.key, "aria-haspopup": "dialog" as const });
   return <PraWamShell member={member} current="beranda">
-    <div className={own.headRow}>
-      <PhaseBanner />
-      <a className={`${base.iconButton} ${own.phoneOnly}`} href={praWamPath.notifications} aria-label={notes.unread ? `Notifikasi, ${notes.unread} belum dibaca` : "Notifikasi"}>
-        <Bell aria-hidden />{notes.unread > 0 && <span className={base.iconDot} />}
-      </a>
-    </div>
     <div className={own.home}>
       <div className={own.col}>
-        <div>
-          <h1 className={`${base.greet} ${own.greet}`}>{greeting(now)}, {member.nickname || member.name.split(" ")[0]}</h1>
-          <p className={own.metaLine}>{member.department ? `${member.department} · ` : ""}{longDate(now)}{sessionsToday ? ` · ${sessionsToday} sesi hari ini` : ""}</p>
-        </div>
+        {/* Phone: the person, the greeting and the bell in one row. Desktop: the top bar has the person and the bell. */}
+        <header className={own.homeHead}>
+          <a className={`${own.homeAvatar} ${own.phoneOnly}`} href={praWamPath.account} aria-label="Profil">
+            <Avatar name={member.name} photo={member.photo ?? null} size="md" decorative />
+          </a>
+          <div className={own.homeTitle}>
+            <h1 className={own.greet}>{greeting(now)}, {member.nickname || member.name.split(" ")[0]}</h1>
+            <p className={own.metaLine}>{longDate(now)}{member.department ? ` · ${member.department}` : ""}{sessionsToday ? ` · ${sessionsToday} sesi hari ini` : ""}</p>
+          </div>
+          <a className={`${base.iconButton} ${own.homeBell} ${own.phoneOnly}`} href={praWamPath.notifications} aria-label={notes.unread ? `Notifikasi, ${notes.unread} belum dibaca` : "Notifikasi"}>
+            <Bell aria-hidden />{notes.unread > 0 && <span className={base.iconDot} />}
+          </a>
+        </header>
 
         {next ? <section className={base.hero} aria-label="Berikutnya">
           <div className={base.heroTop}><span>Berikutnya · {next.tag}</span><span>{untilLabel(next, now, today)}</span></div>
@@ -99,7 +89,7 @@ export default async function HomePage() {
           <p className={`${base.meta} ${own.prose}`}>Sesi muncul di sini setelah panitia menerbitkannya.</p>
         </section>}
 
-        {manage && <ManageCard manages={managesSessions(member)} {...manage} />}
+        {manage !== null && <ManageCard manages={managesSessions(member)} openRequests={manage} />}
 
         {(request || latest) && <div className={own.pair}>
           {request && <section className={base.card} aria-label="Permintaan jadwal">

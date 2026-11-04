@@ -14,12 +14,18 @@
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
   .phoneOnly { display: none !important; }
   .wide.wide { justify-self: stretch; justify-content: center; }
-  .greet.greet { font-size: 34px; margin-top: 0; color: var(--pw-primary); }
 }
 
+/* Beranda's header. Phone: avatar (to Profil), greeting with the date and department, the bell. */
+.homeHead { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; }
+.homeAvatar { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; margin-left: -4px; border-radius: 50%; text-decoration: none; }
+.homeAvatar:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.homeTitle { flex: 1; min-width: 0; }
+.greet.greet { margin: 0; font-family: var(--pw-display); font-size: 24px; font-weight: 600; line-height: 1.25; color: var(--pw-primary); overflow-wrap: anywhere; }
+.metaLine { margin: 4px 0 0; font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--pw-muted); }
+.homeBell { flex: none; margin-right: -8px; }
+@media (min-width: 1024px) { .greet.greet { font-size: 34px; } .metaLine { font-size: 15px; } .homeHead { padding-bottom: 0; } }
 /* Small pieces shared by both screens */
-.headRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
-.metaLine { margin: 0 0 16px; font-size: 15px; color: var(--pw-muted); }
 .cardHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .cardHead h2 { margin: 0 !important; }
 .cardHead a { font-size: 13px; font-weight: 800; text-decoration: none; }

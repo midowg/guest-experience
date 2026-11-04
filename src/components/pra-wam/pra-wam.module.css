@@ -70,6 +70,13 @@
 .app .navItem[aria-current='page'] { color: var(--pw-primary); }
 .navItem svg { width: 22px; height: 22px; }
 .navDot { position: absolute; top: 14px; left: calc(50% + 6px); width: 8px; height: 8px; border-radius: 50%; background: var(--pw-danger); }
+/* A count on a bottom bar item (Permintaan in Kelola acara), at the icon's top right. */
+.navBadge { position: absolute; top: 12px; left: calc(50% + 6px); display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--pw-primary); color: var(--pw-on-primary); font-size: 12px; font-weight: 800; line-height: 1; border: 2px solid var(--pw-surface); box-sizing: content-box; }
+/* "Keluar" in the Kelola acara bar: back to the app. */
+.exit { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--pw-line); background: var(--pw-surface); font-size: 14px; font-weight: 800; text-decoration: none; transition: border-color .15s ease, background-color .15s ease; }
+.app .exit { color: var(--pw-primary); }
+.exit:hover { border-color: var(--pw-primary); }
+.exit svg { width: 18px; height: 18px; flex: none; }
 .topBar { display: none; }
 @media (min-width: 1024px) {
   .bottomNav { display: none; }
@@ -113,9 +120,16 @@
 .app .sideItem[aria-current='page'] { background: var(--pw-primary-soft); color: var(--pw-primary); }
 .sideItem svg { width: 20px; height: 20px; flex: none; }
 .sideBadge { margin-left: auto; min-width: 24px; padding: 2px 8px; border-radius: 999px; background: var(--pw-brass-soft); color: var(--pw-on-brass-soft); font-size: 12px; font-weight: 800; text-align: center; }
-.sideFoot { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: var(--pw-app); font-size: 13px; }
-.sideFoot strong { display: block; }
-.sideFoot small { color: var(--pw-muted); font-weight: 600; }
+/* The sidebar's foot: the way out of Kelola acara as a clear button, then the person. */
+.sideFoot { margin-top: auto; display: grid; gap: 8px; padding-top: 16px; }
+.sideExit { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--pw-primary); background: var(--pw-surface); font-size: 14px; font-weight: 800; text-decoration: none; transition: background-color .15s ease; }
+.app .sideExit { color: var(--pw-primary); }
+.sideExit:hover { background: var(--pw-primary-soft); }
+.sideExit svg { width: 18px; height: 18px; flex: none; }
+.sideWho { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--pw-app); font-size: 13px; }
+.sideWho strong { display: block; }
+.sideWho small { color: var(--pw-muted); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .exit, .sideExit { transition: none; } }
 .signOut { margin-left: auto; display: inline-flex; align-items: center; min-height: 44px; border: 0; background: transparent; color: var(--pw-primary); font: inherit; font-weight: 800; cursor: pointer; padding: 0 10px; border-radius: 8px; }
 
 /* Screen header */
@@ -348,11 +362,6 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .qrBox { width: min(100%, 15rem); margin: 0 auto 12px; padding: 12px; border: 1px solid var(--pw-brass-line); border-radius: 16px; background: #fff; }
 .qrBox svg { display: block; width: 100%; height: auto; }
 
-/* Which phase of WAM is on: the Pra WAM weeks, or WAM itself */
-.phase { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; padding: 10px 14px; border-radius: 12px; background: var(--pw-brass-soft); color: var(--pw-on-brass-soft); font-size: 13px; }
-.phase svg { width: 18px; height: 18px; flex: none; }
-.phase strong { font-weight: 800; }
-
 /* Loading between pages, in the app's colours */
 .loading { display: grid; place-content: center; justify-items: center; gap: 12px; color: var(--pw-muted); font-weight: 700; font-size: 14px; }
 .spinner { width: 32px; height: 32px; border-radius: 50%; border: 3px solid var(--pw-line); border-top-color: var(--pw-primary); animation: pw-spin .8s linear infinite; }
@@ -363,13 +372,17 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .appBar { display: flex; align-items: center; gap: 4px; margin: -8px 0 12px; }
 .appBar strong { font-size: 17px; font-weight: 700; }
 .appBar .back svg { width: 24px; height: 24px; }
+/* Kelola acara on a phone, an app of its own: its name, and "Keluar" back to the app. */
+.appBar.manageBar { justify-content: space-between; gap: 12px; }
+.appBar.manageBar strong { font-family: var(--pw-display); font-size: 20px; font-weight: 600; line-height: 1.2; color: var(--pw-primary); }
 .pushed .main { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
 .pushed .sticky { bottom: 0; }
 @media (max-width: 1023.98px) {
   .appBar { position: sticky; top: 0; z-index: 20; margin: -20px -20px 12px; padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px; background: var(--pw-app); border-bottom: 1px solid var(--pw-line); }
+  .appBar.manageBar { min-height: 64px; padding-left: 20px; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .pushIn { animation: pw-push .32s cubic-bezier(.2, .8, .2, 1); }
+  .pushIn { animation: pw-push .24s cubic-bezier(.2, .8, .2, 1); }
   @keyframes pw-push { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
 }
 

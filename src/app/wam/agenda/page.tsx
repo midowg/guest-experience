@@ -1,7 +1,6 @@
 import { Info, QrCode } from "lucide-react";
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { AgendaTimeline } from "@/components/pra-wam/desktop/AgendaTimeline";
-import { PhaseBanner } from "@/components/pra-wam/PhaseBanner";
 import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { Notice } from "@/components/ui";
 import { pickDay } from "@/lib/pra-wam/agenda";
@@ -43,7 +42,6 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   const shown = items.filter(item => wibDate(item.startsAt) === day);
   const later = items.find(item => wibDate(item.startsAt) > day);
   return <PraWamShell member={member} current="agenda">
-    <PhaseBanner />
     <div className={own.agenda}>
       <div className={own.col}>
         <ScreenHead title="Agenda saya" actions={<a className="button button--secondary" href={praWamPath.scan}><QrCode size={18} aria-hidden /> Scan QR absen</a>} />

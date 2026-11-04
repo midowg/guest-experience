@@ -21,9 +21,10 @@ export function LoginForm({ next }: { next: string | null }) {
     event.preventDefault();
     setBusy(true); setError(null);
     try {
-      const result = await praWamRequest<{ mustChangePassword: boolean }>(praWamApi.login, { method: "POST", json: { email, password } });
-      // The shared first password: offer a new one first; it can be skipped.
-      router.refresh(); router.replace(result.data?.mustChangePassword ? praWamPath.newPassword(next ?? undefined) : next ?? praWamPath.home);
+      const result = await praWamRequest<{ mustChangePassword: boolean; askNewPassword: boolean }>(praWamApi.login, { method: "POST", json: { email, password } });
+      // The shared first password: offer a new one once (it can be skipped); after that Profil
+      // reminds and Pengaturan has the form, so a later sign-in goes straight in.
+      router.refresh(); router.replace(result.data?.askNewPassword ? praWamPath.newPassword(next ?? undefined) : next ?? praWamPath.home);
     } catch (problem) { setError(errorText(problem)); setBusy(false); }
   }
 

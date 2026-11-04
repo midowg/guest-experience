@@ -6,20 +6,24 @@ import { AboutCard, AboutText, ManageCard } from "./BerandaCards";
 afterEach(cleanup);
 
 describe("Kelola acara on Beranda", () => {
-  it("gives managers their counts and three shortcuts", () => {
-    render(<ManageCard manages openRequests={3} draftsWithoutTime={2} sessionsToday={1} />);
-    expect(screen.getByRole("link", { name: /Kelola acara/ }).getAttribute("href")).toBe(praWamPath.dashboard);
-    const shortcuts = screen.getByRole("navigation", { name: "Pintasan kelola acara" });
-    expect([...shortcuts.querySelectorAll("a")].map(link => link.getAttribute("href"))).toEqual([praWamPath.sessions, praWamPath.requests, praWamPath.announcements]);
-    expect(screen.getByRole("link", { name: "Permintaan, 3 menunggu" })).toBeTruthy();
-    expect(screen.getByText("Permintaan menunggu").nextSibling?.textContent).toBe("3");
+  it("is one link to the panitia's app, with the requests waiting and no shortcuts", () => {
+    render(<ManageCard manages openRequests={3} />);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0].getAttribute("href")).toBe(praWamPath.dashboard);
+    expect(links[0].textContent).toContain("Ruang kerja panitia");
+    expect(screen.getByText("3 menunggu")).toBeTruthy();
   });
 
-  it("gives a reader only Ringkasan and no request count", () => {
-    render(<ManageCard manages={false} openRequests={0} draftsWithoutTime={0} sessionsToday={2} />);
-    const shortcuts = screen.getByRole("navigation", { name: "Pintasan kelola acara" });
-    expect([...shortcuts.querySelectorAll("a")].map(link => link.textContent)).toEqual(["Ringkasan"]);
-    expect(screen.queryByText("Permintaan menunggu")).toBeNull();
+  it("shows no badge when nothing waits", () => {
+    render(<ManageCard manages openRequests={0} />);
+    expect(screen.queryByText(/menunggu/)).toBeNull();
+  });
+
+  it("tells a reader it is the BOD summary, without a request count", () => {
+    render(<ManageCard manages={false} openRequests={2} />);
+    expect(screen.getByRole("link").textContent).toContain("Ringkasan BOD");
+    expect(screen.queryByText(/menunggu/)).toBeNull();
   });
 });
 
