@@ -11,7 +11,7 @@ export const metadata = { title: "Apa itu WAM? · WAM", robots: { index: false }
 export default async function AboutPage() {
   const member = await requireMemberPage(praWamPath.about);
   const { about } = await getAbout();
-  return <PraWamShell member={member} back={{ href: praWamPath.home, title: "Apa itu WAM?" }}>
+  return <PraWamShell member={member} back={{ href: praWamPath.home, title: "Tentang WAM" }}>
     <AboutText about={about} />
   </PraWamShell>;
 }
