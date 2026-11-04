@@ -114,14 +114,15 @@ export const staffApi = (id?: string, query: Record<string, string> = {}) => {
 /*
  * WAM: Werkudara's own app for the Annual Meeting and the weeks leading to it (the Pra WAM phase,
  * shown as a notice inside the app, not a separate app). It is not an invitation, so it has no
- * event code: a fixed English address, its own sign-in per person, and its own tables (pw_*). The
- * super admin sets it up under /admin/super/wam. The code keeps the "praWam" names it started with.
+ * event code: a fixed English address, its own sign-in per person, and its own tables (pw_*). Any
+ * admin (HR) sets it up under /admin/wam; only Data karyawan stays with the super admin. The code
+ * keeps the "praWam" names it started with.
  */
 export const PRA_WAM_PATH = "/wam";
 const WAM_API = "/api/wam";
 export const praWamPath = {
   home: PRA_WAM_PATH,
-  /** "Apa itu WAM?": the text the super admin writes, opened from Beranda. */
+  /** "Apa itu WAM?": the text written in Admin WAM, opened from Beranda. */
   about: `${PRA_WAM_PATH}/about`,
   /** The same page opened from Pengaturan, so its back arrow returns there. */
   aboutFromSettings: `${PRA_WAM_PATH}/about?dari=pengaturan`,
@@ -230,20 +231,30 @@ export const praWamApi = {
   /** GET: one person's photo (a redirect to storage); `v` changes with the photo, so caches refresh. */
   photoOf: (employeeId: string, version?: string) => `${WAM_API}/photo/${employeeId}${version ? `?v=${enc(version)}` : ""}`,
 };
-export const PRA_WAM_ADMIN = "/admin/super/wam";
-/** Super admin: the account list and creating accounts, or one person's roles and password reset. */
+/** Admin WAM: the WAM settings in the regular admin, one page per section (src/components/admin/wam/sections.ts). */
+export const WAM_ADMIN = "/admin/wam";
+export const wamAdminPath = {
+  /** Ringkasan: the key numbers and a way into every section. */
+  home: WAM_ADMIN,
+  accounts: `${WAM_ADMIN}/akun`,
+  /** "Lupa password" requests waiting for an answer. */
+  resetRequests: `${WAM_ADMIN}/permintaan-reset`,
+  rooms: `${WAM_ADMIN}/ruang`,
+  events: `${WAM_ADMIN}/acara`,
+  about: `${WAM_ADMIN}/apa-itu-wam`,
+  units: `${WAM_ADMIN}/unit`,
+};
+/** Admin WAM: the account list and creating accounts, or one person's roles, email and password reset. */
 export const praWamAccountsApi = (employeeId?: string) => `/api/admin/wam/accounts${employeeId ? `/${employeeId}` : ""}`;
-/** Super admin: GET the "Lupa password" requests; with an id, PATCH {action: "reset" | "tolak"} answers one. */
+/** Admin WAM: GET the "Lupa password" requests; with an id, PATCH {action: "reset" | "tolak"} answers one. */
 export const praWamResetRequestsApi = (requestId?: string) => `/api/admin/wam/reset-requests${requestId ? `/${requestId}` : ""}`;
-/** Where the super admin answers "Lupa password" requests, on the WAM settings page. */
-export const PRA_WAM_RESET_REQUESTS = `${PRA_WAM_ADMIN}#permintaan-reset`;
-/** Super admin: PATCH one room's capacity, fewest people, bookable and floor plan spot. */
+/** Admin WAM: PATCH one room's capacity, fewest people, bookable and floor plan spot. */
 export const praWamRoomsApi = (roomId: string) => `/api/admin/wam/rooms/${roomId}`;
-/** Super admin: import units and positions from the Data karyawan workbook. */
+/** Admin WAM: import units and positions from the Data karyawan workbook. */
 export const praWamUnitsApi = "/api/admin/wam/units";
-/** Super admin: one event's status and modules. */
+/** Admin WAM: one event's status and modules. */
 export const praWamEventsApi = (eventId: string) => `/api/admin/wam/events/${eventId}`;
-/** Super admin: PUT saves the "Apa itu WAM?" text, DELETE goes back to the default text. */
+/** Admin WAM: PUT saves the "Apa itu WAM?" text, DELETE goes back to the default text. */
 export const praWamAboutApi = "/api/admin/wam/about";
-/** Super admin: PUT the app settings, e.g. whether Book shows the floor plan. */
+/** Admin WAM: PUT the app settings, e.g. whether Book shows the floor plan. */
 export const praWamSettingsApi = "/api/admin/wam/settings";

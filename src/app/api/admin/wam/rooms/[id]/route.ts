@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
-import { requireSuperAdmin } from "@/lib/server/admin-session";
+import { requireApiAdmin } from "@/lib/server/admin-session";
 import { listRooms } from "@/lib/server/pra-wam/appraisal";
 import { saveRoom } from "@/lib/server/pra-wam/rooms";
 import { FACILITY_LIMITS } from "@/lib/pra-wam/floor-plan";
@@ -25,10 +25,10 @@ const schema = z.object({
   path: ["minPeople"], message: "Minimal orang tidak boleh lebih dari kapasitas.",
 });
 
-/** PATCH: a room's capacity, fewest people, facilities, bookable and floor plan spot (super admin). */
+/** PATCH: a room's capacity, fewest people, facilities, bookable and floor plan spot (any admin). */
 export async function PATCH(request: Request, { params }: Params) {
   return handle(async () => {
-    await requireSuperAdmin();
+    await requireApiAdmin();
     checkOrigin(request);
     const id = validate(z.uuid(), (await params).id);
     const { replace, ...patch } = validate(schema, await readJson(request, 2_000));

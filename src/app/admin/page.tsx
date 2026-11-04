@@ -18,7 +18,7 @@ export default async function AdminPage() {
   // A regular admin never receives hidden events at all, not even in the page payload.
   const events = role === "super" ? all : all.filter(event => !hidden.ids.has(event.id));
   return <AdminShell>
-    <WamAppCard superAdmin={role === "super"} />
+    <WamAppCard />
     <EventList events={events} featuredId={featuredId} phases={Object.fromEntries(events.map(event => [event.id, currentPhase(event)]))}
       superAdmin={role === "super" ? { hiddenIds: [...hidden.ids], migrated: hidden.migrated } : undefined} disabledModules={disabledModules} templates={templates} staff={team.staff} />
   </AdminShell>;

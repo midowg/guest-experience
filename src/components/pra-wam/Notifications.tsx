@@ -147,7 +147,7 @@ export function AnnouncementComposer({ sent, sessions, units }: { sent: SentAnno
         {type === "unit" && (units.length ? <div className={styles.pills} role="group" aria-label="Unit">
           {units.map(unit => <button key={unit.id} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={unitIds.includes(unit.id)}
             onClick={() => setUnitIds(unitIds.includes(unit.id) ? unitIds.filter(id => id !== unit.id) : [...unitIds, unit.id])}>{unit.title}</button>)}
-        </div> : <p className={styles.meta}>Unit belum diimpor di super admin.</p>)}
+        </div> : <p className={styles.meta}>Unit belum diimpor di admin WAM.</p>)}
         <p className={notes.annHint}>Terkirim sekarang ke menu Notifikasi penerima.</p>
         <div><Button type="submit" disabled={busy || !ready}><Send size={18} aria-hidden /> {busy ? "Mengirim…" : "Kirim sekarang"}</Button></div>
       </form>

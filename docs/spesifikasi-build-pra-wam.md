@@ -9,7 +9,9 @@ Dasar: `docs/rancangan-pra-wam.md` (fungsi dan keputusan), desain Penpot file **
 > Inggris di bawah `/wam`: `/wam/login`, `/wam/agenda`, `/wam/appraisal` (`/book`), `/wam/sessions/<id>`,
 > `/wam/check-in/<token>` (isi QR), `/wam/documents`, `/wam/notifications`, `/wam/account`,
 > `/wam/manage` (dashboard panitia, `/sessions`, `/requests`, `/announcements`), API di `/api/wam/…`,
-> pengaturan super admin di `/admin/super/wam`. Alamat lama `/pra-wam/…` dialihkan. Aplikasi bisa
+> pengaturan di Admin WAM `/admin/wam` (untuk semua admin, termasuk HR; alamat lama
+> `/admin/super/wam` dialihkan ke sana). Hanya Data karyawan yang rahasia (NIP, data pribadi) tetap
+> di super admin. Alamat lama `/pra-wam/…` dialihkan. Aplikasi bisa
 > di-install (PWA) dengan nama "WAM". Nama tabel `pw_…` dan variabel `WAM_…` tidak berubah. Alamat
 > di bagian lain dokumen ini adalah rancangan awal.
 
@@ -163,7 +165,7 @@ Peserta adalah dasar setiap akun. HOD bukan peran yang dicentang: ia lead depart
 | HOD (lead departemen) | Panitia, Admin WAM | aplikasi biasa |
 | BOD | tidak dengan peran lain | tetap bisa ikut sesi dan book ruang sebagai peserta |
 
-- Super admin (Akun dan peran): BOD dicentang → Panitia dan Admin WAM tidak bisa dicentang, dan
+- Akun dan peran (`/admin/wam/akun`): BOD dicentang → Panitia dan Admin WAM tidak bisa dicentang, dan
   sebaliknya; lead departemen tidak bisa dicentang BOD. Server menolak dengan 422 "BOD tidak bisa
   digabung dengan Panitia atau Admin WAM." Perubahan yang hanya melepas peran selalu diterima, supaya
   data lama yang bertabrakan bisa dirapikan satu per satu.
@@ -223,7 +225,7 @@ Peserta adalah dasar setiap akun. HOD bukan peran yang dicentang: ia lead depart
   akhir pekan, dan masa lalu ditolak server. Batal membebaskan slot. Partisipan tidak bocor ke
   orang yang tidak berhak.
 - Login: email tidak dikenal dan password salah memberi pesan jelas; percobaan dibatasi; ganti
-  password awal bisa dilewati; super admin bisa reset ke password awal.
+  password awal bisa dilewati; admin bisa reset ke password awal di Admin WAM.
 - Tampilan: setelah login, menu dan Beranda sesuai peran; orang berperan ganda melihat gabungan.
 - Akses: setiap rute dan API menolak peran yang tidak berhak (diuji per peran).
 - Sesi: draf tidak terlihat peserta; terbit mengirim notifikasi ke peserta sesi; bentrok ruang,

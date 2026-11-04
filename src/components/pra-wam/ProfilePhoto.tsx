@@ -1,18 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
-import { Camera, ImagePlus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import { Camera, ImagePlus, Trash2, X } from "lucide-react";
 import { acceptPhotos, encodeWithinLimit, PHOTO_SIDE, sourceProblem, squareCrop, type PhotoMime } from "@/lib/pra-wam/photo";
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
 import { Avatar } from "./Avatar";
 import { useConfirm } from "./ConfirmDialog";
+import { Sheet } from "./Sheet";
 import css from "./avatar.module.css";
 
 /*
- * The large profile photo on Profil. With `editable`, a camera button opens a small menu: "Pilih
- * foto", and "Hapus foto" when there is one. A picked photo is cropped to a square and made small
+ * The large profile photo on Profil. With `editable`, the camera button opens an action sheet:
+ * "Pilih foto", "Hapus foto" when there is one, and "Batal". It is the shared Sheet (a modal
+ * <dialog> in the top layer), so no card's `overflow: hidden` can clip it, on a phone or a desktop.
+ * A picked photo is cropped to a square and made small
  * here in the browser (320 × 320 WebP, at most 200 KB), shown at once, then uploaded with its
  * progress. The page refreshes when it is saved.
  */
@@ -75,7 +79,6 @@ function put(url: string, blob: Blob, mime: string, onProgress: (share: number) 
 
 export function ProfilePhoto({ name, photo, editable }: { name: string; photo: string | null; editable?: boolean }) {
   const router = useRouter();
-  const id = useId();
   const [menuOpen, setMenuOpen] = useState(false);
   const [step, setStep] = useState<Step>({ kind: "idle" });
   // What to show until the refresh brings the saved photo: the new picture, or none after "Hapus".
@@ -83,38 +86,26 @@ export function ProfilePhoto({ name, photo, editable }: { name: string; photo: s
   const [local, setLocal] = useState<{ base: string | null; url: string | null } | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const trigger = useRef<HTMLButtonElement>(null);
-  const menu = useRef<HTMLDivElement>(null);
+  const firstAction = useRef<HTMLButtonElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const busy = step.kind === "busy";
   const localUrl = local?.url;
   useEffect(() => () => { if (localUrl) URL.revokeObjectURL(localUrl); }, [localUrl]);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    menu.current?.querySelector<HTMLButtonElement>("[role=menuitem]")?.focus();
-    const away = (event: PointerEvent) => {
-      if (!menu.current?.contains(event.target as Node) && !trigger.current?.contains(event.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener("pointerdown", away);
-    return () => document.removeEventListener("pointerdown", away);
-  }, [menuOpen]);
+  // The sheet (a child) opens its dialog first; then the first action takes the focus, not the X.
+  useEffect(() => { if (menuOpen) firstAction.current?.focus(); }, [menuOpen]);
 
   const shown = local && local.base === photo ? local.url : photo;
 
-  function closeMenu() { setMenuOpen(false); trigger.current?.focus(); }
-
-  function onMenuKey(event: React.KeyboardEvent<HTMLDivElement>) {
-    const items = [...(menu.current?.querySelectorAll<HTMLButtonElement>("[role=menuitem]") ?? [])];
-    const at = items.indexOf(document.activeElement as HTMLButtonElement);
-    if (event.key === "Escape") { event.preventDefault(); closeMenu(); }
-    else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-      event.preventDefault();
-      items[(at + (event.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus();
-    } else if (event.key === "Tab") setMenuOpen(false);
-  }
+  /**
+   * Closes the sheet now, not after the next render: while its modal dialog is open the rest of
+   * the page is inert, so the file input could not be clicked and the confirm would open over it.
+   * The sheet gives the focus back to the camera button.
+   */
+  function closeNow() { flushSync(() => setMenuOpen(false)); }
 
   function pick() {
-    setMenuOpen(false);
+    closeNow();
     input.current?.click();
   }
 
@@ -147,7 +138,7 @@ export function ProfilePhoto({ name, photo, editable }: { name: string; photo: s
   }
 
   async function remove() {
-    setMenuOpen(false);
+    closeNow();
     const ok = await confirm({ title: "Hapus foto profil?", body: "Foto dihapus dari akunmu. Inisial namamu tampil sebagai gantinya.", confirmLabel: "Hapus foto", danger: true });
     if (!ok) { trigger.current?.focus(); return; }
     setStep({ kind: "busy", text: "Menghapus foto…" });
@@ -165,15 +156,18 @@ export function ProfilePhoto({ name, photo, editable }: { name: string; photo: s
     <div className={css.frame} aria-busy={busy || undefined}>
       <Avatar name={name} photo={shown} size="xl" />
       {busy && <span className={css.veil} aria-hidden />}
-      {editable && <button ref={trigger} type="button" className={css.camera} aria-label="Ganti foto profil" aria-haspopup="menu" aria-expanded={menuOpen} aria-controls={menuOpen ? `${id}-menu` : undefined}
-        disabled={busy} onClick={() => setMenuOpen(open => !open)}>
+      {editable && <button ref={trigger} type="button" className={css.camera} aria-label="Ganti foto profil" aria-haspopup="dialog" aria-expanded={menuOpen}
+        disabled={busy} onClick={() => setMenuOpen(true)}>
         <Camera aria-hidden />
       </button>}
-      {editable && menuOpen && <div ref={menu} id={`${id}-menu`} role="menu" aria-label="Foto profil" className={css.menu} onKeyDown={onMenuKey}>
-        <button type="button" role="menuitem" className={css.menuItem} onClick={pick}><ImagePlus aria-hidden />Pilih foto</button>
-        {shown && <button type="button" role="menuitem" className={`${css.menuItem} ${css.menuDanger}`} onClick={remove}><Trash2 aria-hidden />Hapus foto</button>}
-      </div>}
     </div>
+    {editable && <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Foto profil">
+      <div className={css.actions}>
+        <button ref={firstAction} type="button" className={css.action} onClick={pick}><ImagePlus aria-hidden />Pilih foto</button>
+        {shown && <button type="button" className={`${css.action} ${css.actionDanger}`} onClick={remove}><Trash2 aria-hidden />Hapus foto</button>}
+        <button type="button" className={`${css.action} ${css.actionCancel}`} onClick={() => setMenuOpen(false)}><X aria-hidden />Batal</button>
+      </div>
+    </Sheet>}
     {editable && <input ref={input} type="file" accept={acceptPhotos} className={css.file} tabIndex={-1} aria-hidden onChange={event => upload(event.target.files?.[0])} />}
     {editable && <div className={css.status} role={step.kind === "error" ? "alert" : "status"} aria-live="polite">
       {step.kind === "busy" && <>

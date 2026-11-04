@@ -7,7 +7,7 @@ import { resetPassword } from "./accounts";
 
 /*
  * "Lupa password" requests (pw_reset_requests, migration 202611040010). The asker leaves an email
- * and a short note; the super admin resets the account to the shared first password or declines.
+ * and a short note; an admin resets the account to the shared first password or declines.
  */
 
 const MIGRATION = "202611040010_pra_wam_photos_reset_requests.sql";
@@ -84,10 +84,11 @@ export async function openResetRequestCount(): Promise<number | null> {
 }
 
 /**
- * The super admin answers one open request: "reset" puts the account back to the shared first
- * password (signed out everywhere, a new password offered at the next sign-in); "tolak" declines.
+ * An admin answers one open request: "reset" puts the account back to the shared first password
+ * (signed out everywhere, a new password offered at the next sign-in); "tolak" declines.
+ * `handledBy` is the admin role that answered, shown in the history.
  */
-export async function handleResetRequest(id: string, action: "reset" | "tolak"): Promise<string> {
+export async function handleResetRequest(id: string, action: "reset" | "tolak", handledBy: string): Promise<string> {
   const client = createPrivilegedClient();
   const { data: request, error } = await client.from("pw_reset_requests").select("id,employee_id,status").eq("id", id).maybeSingle();
   if (error) { if (missing(error)) throw waiting(); databaseError(error); }
@@ -98,7 +99,7 @@ export async function handleResetRequest(id: string, action: "reset" | "tolak"):
     await resetPassword(request.employee_id);
   }
   const { error: saveError } = await client.from("pw_reset_requests")
-    .update({ status: action === "reset" ? "selesai" : "ditolak", handled_by: "super admin", handled_at: new Date().toISOString() })
+    .update({ status: action === "reset" ? "selesai" : "ditolak", handled_by: handledBy, handled_at: new Date().toISOString() })
     .eq("id", id).eq("status", "menunggu");
   if (saveError) databaseError(saveError);
   return action === "reset" ? "Password kembali ke password awal. Orang ini perlu masuk ulang lalu membuat password baru." : "Permintaan ditolak.";

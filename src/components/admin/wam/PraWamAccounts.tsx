@@ -22,10 +22,11 @@ const roleGuide: { role: string; does: string; combines: string }[] = [
 ];
 
 /**
- * Pra WAM, set up by the super admin: accounts for everyone active in Data karyawan with an email
- * (shared first password), roles on top of peserta, and password resets. The rooms are in PraWamRooms.
+ * Admin WAM → Akun dan peran: accounts for everyone active in Data karyawan with an email (shared
+ * first password), roles on top of peserta, the sign-in email, and password resets. Data karyawan
+ * itself is the super admin's: `superAdmin` decides whether its link is offered.
  */
-export function PraWamAccounts({ initial, migrated, passwordReady }: { initial: AccountRow[]; migrated: boolean; passwordReady: boolean }) {
+export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = false }: { initial: AccountRow[]; migrated: boolean; passwordReady: boolean; superAdmin?: boolean }) {
   const [rows, setRows] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<Message>(null);
@@ -72,7 +73,7 @@ export function PraWamAccounts({ initial, migrated, passwordReady }: { initial: 
     {confirmDialog}
     <p>{active.length - missing.length} dari {active.length} karyawan aktif sudah punya akun. Mereka masuk di <a href={praWamPath.login()}>{praWamPath.login()}</a> dengan email kantor dan password awal yang sama, lalu bisa menggantinya di menu Akun.</p>
     {!passwordReady && <Notice tone="warning">Password awal belum disiapkan. Isi WAM_DEFAULT_PASSWORD (minimal 8 karakter) pada server, lalu muat ulang halaman ini.</Notice>}
-    {noEmail.length > 0 && <Notice tone="info">{noEmail.length} orang belum punya email. Lengkapi di <a href={EMPLOYEES_ADMIN}>Data karyawan</a> (impor ulang Excel dengan kolom EMAIL, atau ubah satu per satu).</Notice>}
+    {noEmail.length > 0 && <Notice tone="info">{noEmail.length} orang belum punya email. Isi emailnya lewat tombol ubah email di tabel di bawah{superAdmin ? <>, atau di <a href={EMPLOYEES_ADMIN}>Data karyawan</a> (impor ulang Excel dengan kolom EMAIL)</> : ""}.</Notice>}
     <div className={styles.qrActions}>
       <Button type="button" disabled={!!busy || !passwordReady || missing.length === noEmail.length} onClick={() => run("create", praWamAccountsApi(), null, "POST")}>{busy === "create" ? "Membuat akun…" : `Buat ${missing.length - noEmail.length} akun`}</Button>
     </div>

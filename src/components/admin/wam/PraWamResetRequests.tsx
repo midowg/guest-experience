@@ -21,8 +21,9 @@ function resetBlocked(row: ResetRequestRow, passwordReady: boolean): string | nu
 }
 
 /**
- * "Lupa password" requests from /wam/forgot-password: the super admin resets the account to the
- * shared first password (through the same reset as Akun dan peran) or declines.
+ * Admin WAM → Permintaan reset password: "Lupa password" requests from /wam/forgot-password. An
+ * admin resets the account to the shared first password (through the same reset as Akun dan
+ * peran) or declines.
  */
 export function PraWamResetRequests({ initial, passwordReady }: { initial: ResetRequestList; passwordReady: boolean }) {
   const [list, setList] = useState(initial);

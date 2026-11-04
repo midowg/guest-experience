@@ -79,7 +79,7 @@ export default async function AccountPage() {
             <Item label="Jabatan" value={member.position} />
             <Item label="Email masuk" value={person?.email ?? ""} stack />
           </dl>
-          <p className={own.groupNote}><Info aria-hidden />Data ini mengikuti Data karyawan dari HR. Email masuk diatur oleh super admin.</p>
+          <p className={own.groupNote}><Info aria-hidden />Data ini mengikuti Data karyawan dari HR. Email masuk diatur oleh admin WAM.</p>
         </section>
       </div>
 

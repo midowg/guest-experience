@@ -19,7 +19,7 @@ const updated = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeri
 const counter = (value: string, max: number) => `${value.trim().length}/${max} karakter`;
 
 /**
- * "Apa itu WAM?" on Beranda: the super admin writes the title, the short summary for the card,
+ * Admin WAM → Apa itu WAM: an admin writes the title, the short summary for the card,
  * the full text and a few key points, and sees the card and the screen as participants will.
  * Plain text only. Until something is saved, participants see the default text.
  */

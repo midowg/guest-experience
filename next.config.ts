@@ -25,7 +25,9 @@ const config: NextConfig = {
       { source: "/pra-wam/masuk", destination: "/wam/login", permanent: true },
       { source: "/pra-wam/atur-password", destination: "/wam/reset-password", permanent: true },
       { source: "/pra-wam/:path*", destination: "/wam", permanent: true },
-      { source: "/admin/super/pra-wam", destination: "/admin/super/wam", permanent: true },
+      // WAM's settings moved from the super admin to Admin WAM, for every admin; only Data karyawan stays.
+      { source: "/admin/super/pra-wam", destination: "/admin/wam", permanent: true },
+      { source: "/admin/super/wam", destination: "/admin/wam", permanent: true },
       // Appraisal became Book (room booking for everyone); query strings (?date=, ?edit=) pass through.
       { source: "/wam/appraisal/book", destination: "/wam/book/new", permanent: true },
       { source: "/wam/appraisal", destination: "/wam/book", permanent: true },

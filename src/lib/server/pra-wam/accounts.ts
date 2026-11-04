@@ -7,7 +7,7 @@ import { notMigrated, waitingForMigration } from "./session";
 import { departmentLeads } from "./units";
 
 /*
- * Pra WAM accounts, set up by the super admin. Each active person in Data karyawan with an email
+ * Pra WAM accounts, set up in Admin WAM. Each active person in Data karyawan with an email
  * gets a Supabase Auth user with the shared first password (WAM_DEFAULT_PASSWORD, a server
  * secret that is never written in the repository) and a row in pw_accounts.
  */
@@ -18,6 +18,9 @@ export type AccountRow = {
   /** Departments this person leads (HOD), from the unit import. */
   leads: string[];
 };
+
+/** Whether the shared first password is set on the server, so accounts can be made and reset. */
+export const defaultPasswordReady = (): boolean => (process.env.WAM_DEFAULT_PASSWORD ?? "").length >= 8;
 
 function defaultPassword(): string {
   const password = process.env.WAM_DEFAULT_PASSWORD ?? "";
@@ -111,7 +114,7 @@ export async function resetPassword(employeeId: string): Promise<void> {
 }
 
 /**
- * The super admin corrects a person's email: in Data karyawan and, when they have an account, as
+ * An admin corrects a person's email: in Data karyawan and, when they have an account, as
  * their sign-in too, so they sign in (and receive "Lupa password") with the new address. Nothing
  * changes if another person already uses it.
  */

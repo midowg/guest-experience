@@ -33,9 +33,9 @@ const shortTime = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-d
 
 /**
  * Beranda (Penpot P1 on a phone, E1 on a desktop): the next thing, what waits on the person, the
- * latest news, "Kelola acara" for the panitia (Penpot K1) and "Apa itu WAM?"; on a desktop also
- * today's agenda and the newest documents in a side column. An agenda item (the hero, today's
- * agenda) opens over the page (AgendaSheet), as on Agenda.
+ * latest news, "Kelola acara" for the panitia (Penpot K1, phone only: a desktop has it in the top
+ * bar) and "Apa itu WAM?"; on a desktop also today's agenda and the newest documents in a side
+ * column. An agenda item (the hero, today's agenda) opens over the page (AgendaSheet), as on Agenda.
  */
 export default async function HomePage() {
   const member = await requireMemberPage(praWamPath.home);

@@ -134,7 +134,7 @@ function ForumBars({ data }: { data: Summary }) {
 
 /** Attendance per department with its lead; the first five, the rest on the Peserta page. */
 function Departments({ data }: { data: Summary }) {
-  if (data.units.length === 0) return <p className={styles.empty}>Belum ada data departemen. Unit dan jabatan diimpor super admin dari Data karyawan.</p>;
+  if (data.units.length === 0) return <p className={styles.empty}>Belum ada data departemen. Unit dan jabatan diimpor admin WAM dari Data karyawan.</p>;
   const shown = data.units.slice(0, DEPARTMENTS_SHOWN);
   return <>
     <table className={styles.table}>

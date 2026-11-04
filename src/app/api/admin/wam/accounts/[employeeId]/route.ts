@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { praWamRoles } from "@/lib/pra-wam/roles";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
-import { requireSuperAdmin } from "@/lib/server/admin-session";
+import { requireApiAdmin } from "@/lib/server/admin-session";
 import { listAccounts, resetPassword, setRoles, updateEmail } from "@/lib/server/pra-wam/accounts";
 
 export const dynamic = "force-dynamic";
@@ -12,10 +12,14 @@ const schema = z.object({
   email: z.email("Email tidak valid.").max(200).optional(),
 });
 
-/** PATCH: one person's roles, their email (also their sign-in), or a reset to the first password (super admin). */
+/**
+ * PATCH: one person's roles, their email (also their sign-in), or a reset to the first password
+ * (any admin). The email is the only Data karyawan field this changes; NIP and personal details
+ * stay with the super admin (/api/admin/employees).
+ */
 export async function PATCH(request: Request, { params }: Params) {
   return handle(async () => {
-    await requireSuperAdmin();
+    await requireApiAdmin();
     checkOrigin(request);
     const employeeId = validate(z.uuid(), (await params).employeeId);
     const body = validate(schema, await readJson(request, 2_000));

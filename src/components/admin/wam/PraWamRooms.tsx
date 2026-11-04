@@ -24,7 +24,7 @@ const spotLabel = (key: string | null) => key ? spotTitle(key) : "Tanpa spot";
 const nameSpot = (room: Room) => planKey({ name: room.name, slug: room.slug });
 
 /**
- * Super admin → WAM: the rooms and the office floor plan. Whether Book shows the plan at all; the
+ * Admin WAM → Ruang dan denah: the rooms and the office floor plan. Whether Book shows the plan at all; the
  * plan, where clicking a spot opens its room (which room sits there, capacity, fewest people,
  * facilities, bookable); the rooms without a spot, when there are any; and every room in a table.
  * Before migration 202611040009 only capacity, facilities and bookable can be saved.

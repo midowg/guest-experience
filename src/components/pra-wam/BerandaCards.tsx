@@ -10,7 +10,8 @@ import styles from "./beranda.module.css";
  * Dashboard). Managers see how many schedule requests wait; a BOD who reads only sees Ringkasan.
  */
 export function ManageCard({ manages, openRequests }: { manages: boolean; openRequests: number }) {
-  return <a className={styles.row} href={praWamPath.dashboard}>
+  // Phone only: from 1024px the top bar has its own "Kelola acara" button.
+  return <a className={`${styles.row} ${styles.manageRow}`} href={praWamPath.dashboard}>
     <span className={styles.manageTile}><LayoutDashboard aria-hidden /></span>
     <span className={styles.aboutText}>
       <strong>Kelola acara</strong>

@@ -15,6 +15,8 @@ a.row:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px;
 .manageTile { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-primary); }
 .manageTile svg { width: 20px; height: 20px; }
 .rowBadge { flex: none; padding: 2px 8px; border-radius: 999px; background: var(--pw-primary); color: var(--pw-on-primary); font-size: 12px; font-weight: 800; line-height: 20px; white-space: nowrap; }
+/* From 1024px "Kelola acara" lives in the top bar (PraWamShell), not on Beranda. */
+@media (min-width: 1024px) { .row.manageRow { display: none; } }
 
 /* Apa itu WAM: the card on Beranda */
 .aboutTile { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--pw-brass-soft); color: var(--pw-on-brass-soft); }
