@@ -24,7 +24,8 @@ function rights({ view: { session, attendance, requests, viewer, storage }, now 
   const status = checkInStatus(session, attendance, now);
   // A booking's session moves with its booking (the server refuses a request for it), so no "Ganti jadwal".
   const canAsk = session.isParticipant && live && timed && !session.booking && new Date(session.endsAt!) > now;
-  const canUpload = viewer.manage || (session.isParticipant && live);
+  // Panitia may add materials to a draft too; nobody to a cancelled session (audit 5 Nov 2026).
+  const canUpload = session.status !== "batal" && (viewer.manage || (session.isParticipant && live));
   // One way per session (5 Nov 2026): a booking's session "Saya hadir" only, a panitia's session its QR only.
   const byButton = checkInWay(session) === "tombol";
   const open = !!status && (status.kind === "buka" || status.kind === "belum");

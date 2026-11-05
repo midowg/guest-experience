@@ -12,6 +12,8 @@
   .agenda { max-width: 44rem; }
   .side { display: grid; gap: 16px; align-content: start; position: sticky; top: 96px; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  /* Only the news (no schedule request), or only the request: one card, the full width. */
+  .pair > :only-child { grid-column: 1 / -1; }
   .phoneOnly { display: none !important; }
   .wide.wide { justify-self: stretch; justify-content: center; }
 }

@@ -21,8 +21,9 @@
 .scanError { margin: 0; padding: 10px 12px; border-radius: 12px; background: #3a1420; color: #ff7fa0; font-size: 13px; font-weight: 700; }
 
 /* Notifications (Penpot "P11"): grouped by day, an icon tile, a dot while unread. */
-.group { margin: 20px 0 8px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
-.group:first-child { margin-top: 0; }
+/* A day in Notifikasi ("Hari ini"); was .group, which clashed with the settings card below. */
+.noteDay { margin: 20px 0 8px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+section:first-of-type > .noteDay { margin-top: 0; }
 .note { position: relative; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 0; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); }
 .note + .note { margin-top: 12px; }
 .noteRead { background: var(--pw-app); }

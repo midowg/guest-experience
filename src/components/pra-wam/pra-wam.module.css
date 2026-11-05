@@ -160,6 +160,21 @@
 .person small { display: block; font-size: 12px; color: var(--pw-muted); font-weight: 500; }
 .avatar { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 12px; font-weight: 700; }
 @media (min-width: 1024px) and (max-width: 1279.98px) { .topItem span, .person > span:last-child { display: none; } }
+/*
+ * The bar never squeezes (audit 5 Nov 2026): at 1280px the icons shrank to dots and "Aksi cepat",
+ * "Kelola acara" and the name broke over lines. Icons keep their size, labels stay on one line,
+ * and below 1440px the bar tightens and drops the name beside the avatar (Profil has it).
+ */
+.topNav, .topRight, .topBrand, .phasePill, .signOut { flex: none; }
+.topItem, .topManage, .person strong, .person small, .signOut { white-space: nowrap; }
+.topItem svg, .topManage svg { flex: none; }
+.person > span:last-child { min-width: 0; max-width: 12rem; }
+.person strong, .person small { overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 1024px) and (max-width: 1439.98px) {
+  .appView .topBar { gap: 12px; padding: 0 24px; }
+  .topItem { padding: 0 14px; }
+  .person > span:last-child { display: none; }
+}
 .app .iconButton[aria-current="page"] { background: var(--pw-primary-soft); color: var(--pw-primary); }
 .brand { display: block; padding: 0 8px 20px; text-decoration: none; }
 .brand strong { display: block; font-family: var(--pw-display); font-size: 24px; font-weight: 600; color: var(--pw-primary); line-height: 1.15; }
@@ -381,6 +396,8 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .themeSwitch { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border: 0; border-radius: 999px; background: var(--pw-app); box-shadow: var(--pw-shadow-inner); }
 .app .themeOption { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: 999px; color: var(--pw-muted); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; }
 .themeOption svg { flex: none; width: 20px; height: 20px; }
+/* A phone has about 110px per option: the icon goes above the word, so "Ikuti perangkat" stays one line. */
+@media (max-width: 479.98px) { .app .themeOption { flex-direction: column; gap: 2px; min-height: 52px; padding: 6px 4px; font-size: 12px; white-space: nowrap; } .themeOption svg { width: 18px; height: 18px; } }
 .app .themeOption:hover { color: var(--pw-text); }
 .app .themeOption:has(input:checked) { background: var(--pw-surface); color: var(--pw-primary); font-weight: 600; box-shadow: var(--pw-shadow-card); }
 .themeOption:has(input:focus-visible) { outline: 2px solid var(--pw-primary); outline-offset: 2px; }

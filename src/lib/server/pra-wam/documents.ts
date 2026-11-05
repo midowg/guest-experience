@@ -30,7 +30,10 @@ function sign(key: string, input: DocumentStart, viewer: Member): string {
 }
 
 async function requireUpload(viewer: Member, sessionId: string) {
-  if (managesSessions(viewer)) return;
+  if (managesSessions(viewer)) {
+    if (sessionId && (await getSession(sessionId, viewer)).status === "batal") throw new ServiceError(409, "Sesi ini sudah dibatalkan, jadi tidak bisa ditambah materi.");
+    return;
+  }
   if (!sessionId) throw new ServiceError(403, "Dokumen umum hanya bisa diunggah panitia. Unggah dari halaman sesi yang kamu ikuti.");
   const session = await getSession(sessionId, viewer);
   if (!session.isParticipant || session.status !== "terbit") throw new ServiceError(403, "Kamu hanya bisa mengunggah ke sesi yang kamu ikuti.");

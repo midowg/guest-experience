@@ -55,7 +55,7 @@ export function NotificationList({ items, now }: { items: Notification[]; now: s
   return <div className={notes.noteWrap}>
     {markAll && <div className={notes.noteBar}>{markAll}</div>}
     {days.map(day => <section key={day} aria-label={label(day)}>
-      <p className={notes.group}>{label(day)}</p>
+      <p className={notes.noteDay}>{label(day)}</p>
       {items.filter(item => wibDay(item.createdAt) === day).map(item => {
         const { icon, brass } = noteIcon(item);
         return <article key={item.id} className={`${notes.note} ${item.readAt ? notes.noteRead : ""}`}>

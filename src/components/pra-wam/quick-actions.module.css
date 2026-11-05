@@ -6,7 +6,8 @@
 /* Desktop: the same, as a pill in the top bar. */
 .topFab { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 18px 0 14px; border: 0; border-radius: 999px; background: var(--pw-primary); color: var(--pw-on-primary); font: inherit; font-size: 14px; font-weight: 600; box-shadow: var(--pw-shadow-fab); cursor: pointer; }
 .topFab:hover { background: var(--pw-primary-hover); }
-.topFab svg { width: 18px; height: 18px; }
+.topFab svg { width: 18px; height: 18px; flex: none; }
+.topFab { flex: none; white-space: nowrap; }
 @media (prefers-reduced-motion: no-preference) { .fab, .topFab { transition: background-color .15s ease, transform .15s ease; } .fab:active { transform: scale(.94); } }
 
 /* A dot on the + while a check-in is open, so it is noticed. */
