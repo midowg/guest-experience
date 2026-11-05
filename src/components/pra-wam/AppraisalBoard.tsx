@@ -4,10 +4,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Clock, DoorOpen, Map as MapIcon, MapPin, Plus, Text, User, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { appraisalRules, bookingWhere, clockLabel, dayLabel, draftHours, isOutside, isWorkday, loadedWeek, OUTSIDE_ROOM, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, bookingWhere, clockLabel, dayLabel, dayMinutes, draftHours, isOutside, isWorkday, loadedWeek, OUTSIDE_ROOM, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
-import { placeRooms } from "@/lib/pra-wam/floor-plan";
 import { daySummaries, roomDay, type DayStatus, type DaySummary } from "@/lib/pra-wam/room-day";
 import { bookingKey, DayCalendar, Legend, WeekCalendar, type BookPick } from "./BookCalendar";
 import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
@@ -309,6 +308,20 @@ function DayHead({ date, today, note, className }: { date: string; today: string
   </div>;
 }
 
+/**
+ * How full the day is, as one line instead of a key under the plan: a bar from free (green) to full
+ * (red) with a marker at the share of opening hours taken across the rooms, and a word for it.
+ */
+function DayMeter({ share }: { share: number }) {
+  const percent = Math.round(Math.min(1, Math.max(0, share)) * 100);
+  const word = percent >= 100 ? "Penuh" : percent >= 75 ? "Hampir penuh" : percent >= 35 ? "Mulai ramai" : "Masih lengang";
+  return <div className={css.meter} role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={`Keterisian hari ini, ${percent} persen`} aria-valuetext={`${word}, ${percent}% terisi`}>
+    <div className={css.meterHead}><strong>{word}</strong><span>{percent}% terisi</span></div>
+    <div className={css.meterTrack} aria-hidden><i style={{ left: `${percent}%` }} /></div>
+    <div className={css.meterEnds} aria-hidden><span>Kosong</span><span>Penuh</span></div>
+  </div>;
+}
+
 const nextDay = (date: string, by: number) => new Date(Date.parse(`${date}T12:00:00Z`) + by * 86_400_000).toISOString().slice(0, 10);
 
 /**
@@ -325,24 +338,24 @@ function PlanView({ date, today, now, rooms, bookings, canBook, weekend, note, o
   onDay: (date: string) => void; onBookRoom: (room: Room) => void;
 }) {
   const outside = !inPeriod(date);
-  const placed = placeRooms(rooms).placed.map(item => item.room);
   const dayOf = (room: Room) => roomDay({ date, bookable: room.bookable, now, holds: bookings.filter(booking => booking.roomId === room.id).map(booking => ({ startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })) });
   const statusOf = (room: Room): DayStatus => weekend && room.bookable ? { tone: "closed", text: "Akhir pekan" }
     : outside && room.bookable ? { tone: "closed", text: "Di luar periode" } : dayOf(room).status;
-  const anyClosed = placed.some(room => statusOf(room).tone === "closed");
   const before = nextDay(date, -1), after = nextDay(date, 1);
+  // How full the day is: the opening hours taken across the bookable rooms, overlaps counted once.
+  const open = rooms.filter(room => room.bookable);
+  const share = open.length ? open.reduce((sum, room) => sum + dayOf(room).takenMinutes, 0) / (open.length * dayMinutes) : 0;
   return <section className={`${styles.card} ${css.planCard}`} aria-label={`Denah kantor ${dayLabel(date)}`}>
     <div className={css.planDay}>
       <button type="button" className={css.round} onClick={() => onDay(before)} disabled={before < appraisalRules.periodStart} aria-label="Hari sebelumnya"><ChevronLeft aria-hidden /></button>
       <DayHead date={date} today={today} note={note} />
       <button type="button" className={css.round} onClick={() => onDay(after)} disabled={after > appraisalRules.periodEnd} aria-label="Hari berikutnya"><ChevronRight aria-hidden /></button>
     </div>
+    {!note && <DayMeter share={share} />}
     <FloorPlan rooms={rooms} statusOf={statusOf} label={`Denah kantor, ${dayLabel(date)}`}
-      otherSpots="plain" showUnplaced={false}
+      otherSpots="plain" showUnplaced={false} landscapeOnDesktop legend={[]}
       activeOf={(room, status) => canBook && room.bookable && (status.tone === "free" || status.tone === "part")}
       tipAction={(room, status) => canBook && room.bookable && (status.tone === "free" || status.tone === "part") ? { label: "Book ruang ini", run: () => onBookRoom(room) } : null}
-      legend={anyClosed ? ["free", "part", "full", "closed", "off"] : ["free", "part", "full", "off"]}
-      legendLabels={{ part: "Sebagian", full: "Penuh", closed: weekend ? "Tutup" : outside ? "Di luar periode" : "Sudah lewat", off: "Bukan ruang booking" }}
       caption={canBook ? "Ruang bergaris biru bisa dibooking. Ketuk untuk detail." : undefined} />
   </section>;
 }

@@ -544,12 +544,21 @@ export type PlanView = { scale: number; x: number; y: number };
 export const ZOOM_MIN = 1;
 export const ZOOM_MAX = 4;
 export const FIT_VIEW: PlanView = { scale: 1, x: 0, y: 0 };
+/**
+ * The plan's size as drawn: upright (north up, PLAN_W × PLAN_H) or, on a desktop, turned a quarter
+ * to lie landscape (north to the left, PLAN_H × PLAN_W). Every view below is in these units.
+ */
+export type PlanSize = { w: number; h: number };
+export const UPRIGHT: PlanSize = { w: PLAN_W, h: PLAN_H };
+export const LANDSCAPE: PlanSize = { w: PLAN_H, h: PLAN_W };
+/** A rect of the upright plan, where it lies on the landscape plan (turned a quarter anticlockwise). */
+export const landscapeRect = (rect: Rect): Rect => ({ x: rect.y, y: PLAN_W - rect.x - rect.w, w: rect.h, h: rect.w });
 
 /** The view kept within 1×–4× and with the plan filling the box (never pulled off it). */
-export function clampView(view: PlanView): PlanView {
+export function clampView(view: PlanView, size: PlanSize = UPRIGHT): PlanView {
   const scale = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number.isFinite(view.scale) ? view.scale : 1));
-  const x = Math.min(PLAN_W - PLAN_W / scale, Math.max(0, view.x || 0));
-  const y = Math.min(PLAN_H - PLAN_H / scale, Math.max(0, view.y || 0));
+  const x = Math.min(size.w - size.w / scale, Math.max(0, view.x || 0));
+  const y = Math.min(size.h - size.h / scale, Math.max(0, view.y || 0));
   return { scale, x, y };
 }
 
@@ -558,25 +567,25 @@ export function clampView(view: PlanView): PlanView {
  * share of its width and height, 0–1) now under `to`: zooming at a point (from = to), panning
  * (same scale) and a pinch (both) in one.
  */
-export function moveView(start: PlanView, scale: number, from: [number, number], to: [number, number]): PlanView {
+export function moveView(start: PlanView, scale: number, from: [number, number], to: [number, number], size: PlanSize = UPRIGHT): PlanView {
   const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, scale));
-  const px = start.x + from[0] * PLAN_W / start.scale, py = start.y + from[1] * PLAN_H / start.scale;
-  return clampView({ scale: next, x: px - to[0] * PLAN_W / next, y: py - to[1] * PLAN_H / next });
+  const px = start.x + from[0] * size.w / start.scale, py = start.y + from[1] * size.h / start.scale;
+  return clampView({ scale: next, x: px - to[0] * size.w / next, y: py - to[1] * size.h / next }, size);
 }
 
 /** Zoom by `factor` about a point of the box (shares, default its middle). */
-export const zoomView = (view: PlanView, factor: number, at: [number, number] = [0.5, 0.5]) => moveView(view, view.scale * factor, at, at);
+export const zoomView = (view: PlanView, factor: number, at: [number, number] = [0.5, 0.5], size: PlanSize = UPRIGHT) => moveView(view, view.scale * factor, at, at, size);
 
 /** Pans the least that brings `rect` into view (centred when it is bigger than the view). */
-export function revealRect(view: PlanView, rect: Rect, margin = 40): PlanView {
-  const w = PLAN_W / view.scale, h = PLAN_H / view.scale;
+export function revealRect(view: PlanView, rect: Rect, margin = 40, size: PlanSize = UPRIGHT): PlanView {
+  const w = size.w / view.scale, h = size.h / view.scale;
   const axis = (start: number, size: number, from: number, length: number) => {
     if (length + margin * 2 >= size) return from + length / 2 - size / 2;
     if (from - margin < start) return from - margin;
     if (from + length + margin > start + size) return from + length + margin - size;
     return start;
   };
-  return clampView({ scale: view.scale, x: axis(view.x, w, rect.x, rect.w), y: axis(view.y, h, rect.y, rect.h) });
+  return clampView({ scale: view.scale, x: axis(view.x, w, rect.x, rect.w), y: axis(view.y, h, rect.y, rect.h) }, size);
 }
 
 /**

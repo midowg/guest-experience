@@ -27,8 +27,9 @@ const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2)
  * Picking people (5 Nov 2026), for Book ruang and Buat sesi: Departemen as one dropdown, opening on
  * the viewer's own department (from their profile), the name search beside it (name or
  * department), and one list that scrolls down, never sideways: initials, name and department, and
- * + or a check. Tap to add, tap again to take off; "Tambah semua" for the department shown. Enter
- * in the search adds the one person found.
+ * + or a check. Tap to add, tap again to take off. "Pilih semua" above the list checks everyone
+ * shown (all departments, the one picked, or what the search finds) or takes them all off again,
+ * up to `max`. Enter in the search adds the one person found.
  */
 export function PeoplePicker({ people, groups, picked, onChange, viewerId, max }: Props) {
   const uid = useId();
@@ -42,6 +43,10 @@ export function PeoplePicker({ people, groups, picked, onChange, viewerId, max }
   const addable = shown.filter(person => !picked.includes(person.id));
   const full = max !== undefined && picked.length >= max;
   const add = (ids: string[]) => onChange([...picked, ...ids].slice(0, max ?? Infinity));
+  const shownPicked = shown.length - addable.length;
+  const allOn = shown.length > 0 && addable.length === 0;
+  const toggleAll = () => allOn ? onChange(picked.filter(id => !shown.some(person => person.id === id))) : add(addable.map(person => person.id));
+  const allLabel = `Pilih semua ${query ? "hasil pencarian" : group ? group.label : "karyawan"} (${shown.length})`;
 
   return <div className={css.picker}>
     <div className={css.finder}>
@@ -66,8 +71,12 @@ export function PeoplePicker({ people, groups, picked, onChange, viewerId, max }
           }} />
       </div>
     </div>
-    {group && addable.length > 1 && <button type="button" className={`button button--secondary ${css.addAll}`} disabled={full}
-      onClick={() => add(addable.map(person => person.id))}><Plus size={18} aria-hidden />Tambah semua {group.label} ({addable.length})</button>}
+    {shown.length > 1 && <label className={css.all}>
+      <input type="checkbox" checked={allOn} disabled={!allOn && full}
+        ref={box => { if (box) box.indeterminate = shownPicked > 0 && !allOn; }} onChange={toggleAll} />
+      <span>{allLabel}</span>
+      {shownPicked > 0 && <small>{shownPicked} dipilih</small>}
+    </label>}
     <ul className={css.list} aria-label="Pilih partisipan">
       {shown.length === 0 && <li className={css.empty}>{query ? "Tidak ada yang cocok. Coba nama lain, atau pilih Semua departemen." : "Belum ada orang di departemen ini."}</li>}
       {shown.map(person => {

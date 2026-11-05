@@ -236,4 +236,11 @@
 .planDay { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; }
 .planDay .dayTitle { justify-content: center; margin: 0; }
 .planDay .dayTitle h2 { font-size: 18px; }
-@media (min-width: 1024px) { .planCard { max-width: 48rem; } }
+/* How full the day is (DayMeter): a bar from free to full with a marker, instead of a key. */
+.meter { display: grid; gap: 6px; }
+.meterHead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--pw-muted); }
+.meterHead strong { font-size: 14px; font-weight: 600; color: var(--pw-text); }
+.meterTrack { position: relative; height: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--pw-success) 0%, var(--pw-brass) 50%, var(--pw-warning) 75%, var(--pw-danger) 100%); }
+.meterTrack i { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%; background: var(--pw-surface); box-shadow: 0 0 0 3px var(--pw-text), 0 2px 6px rgba(15, 23, 42, .25); transform: translate(-50%, -50%); }
+.meterEnds { display: flex; justify-content: space-between; font-size: 12px; color: var(--pw-muted); }
+@media (min-width: 1024px) { .planCard { max-width: 64rem; } }

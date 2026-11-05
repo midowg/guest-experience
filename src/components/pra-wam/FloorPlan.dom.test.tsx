@@ -31,7 +31,7 @@ const fit = `0.00 0.00 ${PLAN_W.toFixed(2)} ${PLAN_H.toFixed(2)}`;
 /** The label of the room tapped: its lines, or null when none shows. */
 const tip = (container: HTMLElement) => {
   const card = container.querySelector("[class*='tipCard']");
-  return card ? [...card.children].map(node => node.textContent) : null;
+  return card ? [...card.children].filter(node => node.getAttribute("aria-label") !== "Tutup").map(node => node.textContent) : null;
 };
 
 describe("FloorPlan", () => {
@@ -59,9 +59,19 @@ describe("FloorPlan", () => {
     // A tap shows the label: the name, then people, facilities and status.
     fireEvent.click(nagapadma);
     expect(tip(container)).toEqual(["Nagapadma", "8 orang · TV · Whiteboard", "Kosong 09.00–10.00"]);
-    // A tap on the floor, away from any room, closes it.
+    // A tap on the floor, away from any room, closes it; so do × and the same room again.
     fireEvent.click(plan());
     expect(tip(container)).toBeNull();
+    fireEvent.click(nagapadma);
+    fireEvent.click(screen.getByRole("button", { name: "Tutup" }));
+    expect(tip(container)).toBeNull();
+    fireEvent.click(nagapadma);
+    fireEvent.click(nagapadma);
+    expect(tip(container)).toBeNull();
+    // Another room opens its own label instead.
+    fireEvent.click(nagapadma);
+    fireEvent.click(screen.getByRole("button", { name: /^Vasuki,/ }));
+    expect(tip(container)?.[0]).toBe("Vasuki");
   });
 
   it("draws each room's chairs from its capacity, below its name", () => {

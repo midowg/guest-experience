@@ -141,8 +141,18 @@ it("picks people from one list: Departemen as a dropdown, search by name or depa
   expect(names()).toEqual(["Ayu", "Budi", "Citra"]);
   fireEvent.change(screen.getByLabelText("Departemen"), { target: { value: "it" } });
   expect(names()).toEqual(["Budi", "Citra"]);
-  fireEvent.click(screen.getByRole("button", { name: /Tambah semua IT \(2\)/ }));
+  fireEvent.click(screen.getByRole("checkbox", { name: /Pilih semua IT \(2\)/ }));
   expect(screen.getByText("Kamu + 2 orang = 3 orang")).toBeTruthy();
+  // Everyone in every department, and off again.
+  fireEvent.change(screen.getByLabelText("Departemen"), { target: { value: "" } });
+  const all = screen.getByRole("checkbox", { name: /Pilih semua karyawan \(3\)/ }) as HTMLInputElement;
+  expect(all.indeterminate).toBe(true);
+  fireEvent.click(all);
+  expect(screen.getByText("Kamu + 3 orang = 4 orang")).toBeTruthy();
+  fireEvent.click(all);
+  expect(screen.queryByText(/Kamu \+ \d orang/)).toBeNull();
+  fireEvent.change(screen.getByLabelText("Departemen"), { target: { value: "it" } });
+  fireEvent.click(screen.getByRole("checkbox", { name: /Pilih semua IT \(2\)/ }));
   // Tapping a picked person takes them off again.
   const budi = screen.getByRole("button", { name: /^Budi/ });
   expect(budi.getAttribute("aria-pressed")).toBe("true");

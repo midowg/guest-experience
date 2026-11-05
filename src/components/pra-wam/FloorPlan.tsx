@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { Minus, Plus, Scan } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { Minus, Plus, Scan, X } from "lucide-react";
 import type { Room } from "@/lib/pra-wam/appraisal";
 import {
-  ENTRANCE, FIT_VIEW, FIXTURES, FOUNTAIN, PLAN_H, PLAN_SPOTS, PLAN_W, SEAT_SCALE, SITE, SITE_LINES, WORDS_BOTTOM, WORDS_TOP, ZOOM_MAX, ZOOM_MIN, clampView, isRoomSpot, moveView,
-  pickableTone, placeRooms, quietName, revealRect, roomSeats, roomSpec, spotText, spotWords, zoomView, type DrawnSpot, type PlanStatus, type PlanTone, type PlanView, type Rect, type SiteKind, type SpotText,
+  ENTRANCE, FIT_VIEW, FIXTURES, FOUNTAIN, PLAN_SPOTS, PLAN_W, SEAT_SCALE, SITE, SITE_LINES, WORDS_BOTTOM, WORDS_TOP, ZOOM_MAX, ZOOM_MIN, LANDSCAPE, UPRIGHT, clampView, isRoomSpot, landscapeRect, moveView,
+  pickableTone, placeRooms, quietName, revealRect, roomSeats, roomSpec, spotText, spotWords, zoomView, type DrawnSpot, type PlanStatus, type PlanSize, type PlanTone, type PlanView, type Rect, type SiteKind, type SpotText,
 } from "@/lib/pra-wam/floor-plan";
 import type { DayStatus, DayTone } from "@/lib/pra-wam/room-day";
 import { chairPaths, seatPlan, type SeatLayout } from "@/lib/pra-wam/seating";
@@ -71,6 +71,11 @@ type Props = {
    * or every room when nothing is picked.
    */
   activeOf?: (room: Room, status: Status) => boolean;
+  /**
+   * From 1024px the plan lies landscape, turned a quarter (north to the left, as the office's CAD
+   * drawing), so it fills a wide screen. People's plan only (its boxes carry no words).
+   */
+  landscapeOnDesktop?: boolean;
   /** A button in the label of the room tapped, e.g. "Book ruang ini"; none when it returns null. */
   tipAction?: (room: Room, status: Status) => { label: string; run: () => void } | null;
 };
@@ -110,7 +115,7 @@ type Gesture = {
  */
 export function FloorPlan({
   rooms, statusOf, onPick, selectedId, action = "Pilih ruang ini", label, legend = ["free", "busy", "mine", "off"], caption,
-  legendLabels, pickable, highlightId, otherSpots = "label", showUnplaced = true, subtitle = "spec", onPickSpot, selectedSpot, emptySpot, chairColors, tipAction, activeOf,
+  legendLabels, pickable, highlightId, otherSpots = "label", showUnplaced = true, subtitle = "spec", onPickSpot, selectedSpot, emptySpot, chairColors, tipAction, activeOf, landscapeOnDesktop = false,
 }: Props) {
   const byKind = (chairColors ?? (onPickSpot ? "kind" : "status")) === "kind";
   const shadowId = `fp-shadow-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
@@ -119,6 +124,15 @@ export function FloorPlan({
   const [said, setSaid] = useState("");
   /** The room or spot tapped last, whose label shows (people's plan only); none until a tap. */
   const [peek, setPeek] = useState<string | null>(null);
+  /** The label closed (×, a tap on the floor, the same room again); a tap on a room opens it again. */
+  const [tipShut, setTipShut] = useState(false);
+  const landscape = useWide(landscapeOnDesktop && !onPickSpot);
+  const size: PlanSize = landscape ? LANDSCAPE : UPRIGHT;
+  const sizeRef = useRef<PlanSize>(size);
+  // The listeners and the view's moves read the size from here (set before the effects below run).
+  useEffect(() => { sizeRef.current = size; });
+  const tapRoom = (key: string) => { if (peek === key && !tipShut) { setTipShut(true); return; } setPeek(key); setTipShut(false); };
+  const shutTip = () => setTipShut(true);
   const box = useRef<HTMLDivElement>(null);
   const viewRef = useRef<PlanView>(FIT_VIEW);
   const frame = useRef(0);
@@ -131,19 +145,19 @@ export function FloorPlan({
   /** Goes to a view: animated (200ms) for the buttons and keys, at once for gestures or reduced motion. */
   const go = (target: PlanView, animate = true) => {
     cancelAnimationFrame(frame.current);
-    const to = clampView(target), from = viewRef.current;
+    const to = clampView(target, sizeRef.current), from = viewRef.current;
     if (!animate || reducedMotion()) { apply(to); return; }
     const begun = performance.now();
     const step = (now: number) => {
       const k = Math.min(1, (now - begun) / 200), ease = 1 - (1 - k) ** 3;
       const mix = (a: number, b: number) => a + (b - a) * ease;
-      apply(k < 1 ? clampView({ scale: mix(from.scale, to.scale), x: mix(from.x, to.x), y: mix(from.y, to.y) }) : to);
+      apply(k < 1 ? clampView({ scale: mix(from.scale, to.scale), x: mix(from.x, to.x), y: mix(from.y, to.y) }, sizeRef.current) : to);
       if (k < 1) frame.current = requestAnimationFrame(step);
     };
     frame.current = requestAnimationFrame(step);
   };
   const zoomBy = (factor: number, at?: [number, number]) => {
-    const next = zoomView(viewRef.current, factor, at);
+    const next = zoomView(viewRef.current, factor, at, sizeRef.current);
     go(next);
     setSaid(next.scale <= ZOOM_MIN ? "Denah pas layar" : `Denah diperbesar ${zoomWords(next.scale)}`);
   };
@@ -155,7 +169,7 @@ export function FloorPlan({
   useEffect(() => {
     const element = box.current;
     if (!element) return;
-    const measure = () => { const width = element.clientWidth; if (width > 0) setUnitPx(width / PLAN_W); };
+    const measure = () => { const width = element.clientWidth; if (width > 0) setUnitPx(width / sizeRef.current.w); };
     measure();
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     observer?.observe(element);
@@ -164,7 +178,7 @@ export function FloorPlan({
       event.preventDefault();
       const bounds = element.getBoundingClientRect();
       const delta = Math.max(-60, Math.min(60, event.deltaY * (event.deltaMode === 1 ? 16 : 1)));
-      go(zoomView(viewRef.current, Math.exp(-delta * 0.01), [(event.clientX - bounds.left) / bounds.width, (event.clientY - bounds.top) / bounds.height]), false);
+      go(zoomView(viewRef.current, Math.exp(-delta * 0.01), [(event.clientX - bounds.left) / bounds.width, (event.clientY - bounds.top) / bounds.height], sizeRef.current), false);
     };
     const onTouchMove = (event: TouchEvent) => { if (event.touches.length > 1 || viewRef.current.scale > ZOOM_MIN) event.preventDefault(); };
     const onGesture = (event: Event) => event.preventDefault();
@@ -179,9 +193,12 @@ export function FloorPlan({
       element.removeEventListener("gesturestart", onGesture);
       cancelAnimationFrame(frame.current);
     };
-    // `go` only reads refs; the listeners are set once.
+    // `go` only reads refs; the listeners are set again when the plan turns (its size changes).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [landscape]);
+  // Turning the plan starts it fitted again.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- the view belongs to the old orientation
+  useEffect(() => { viewRef.current = FIT_VIEW; setView(FIT_VIEW); }, [landscape]);
 
   const share = (x: number, y: number): [number, number] => {
     const bounds = box.current?.getBoundingClientRect();
@@ -212,14 +229,14 @@ export function FloorPlan({
     points.current.set(event.pointerId, [event.clientX, event.clientY]);
     if (now.distance && points.current.size >= 2) {
       const { at, distance } = middle();
-      go(moveView(now.start, now.start.scale * distance / now.distance, now.from, at), false);
+      go(moveView(now.start, now.start.scale * distance / now.distance, now.from, at, sizeRef.current), false);
       return;
     }
     if (!now.moved && Math.hypot(event.clientX - now.origin[0], event.clientY - now.origin[1]) > TAP_SLOP) {
       now.moved = true;
       if (now.start.scale > ZOOM_MIN) capture(event.pointerId);
     }
-    if (now.moved && now.start.scale > ZOOM_MIN) go(moveView(now.start, now.start.scale, now.from, share(event.clientX, event.clientY)), false);
+    if (now.moved && now.start.scale > ZOOM_MIN) go(moveView(now.start, now.start.scale, now.from, share(event.clientX, event.clientY), sizeRef.current), false);
   }
   function onPointerEnd(event: ReactPointerEvent) {
     if (!points.current.delete(event.pointerId)) return;
@@ -259,12 +276,14 @@ export function FloorPlan({
     else if (event.target === box.current && viewRef.current.scale > ZOOM_MIN && key.startsWith("Arrow")) {
       const step = 0.2;
       const [dx, dy] = key === "ArrowLeft" ? [step, 0] : key === "ArrowRight" ? [-step, 0] : key === "ArrowUp" ? [0, step] : [0, -step];
-      go(moveView(viewRef.current, viewRef.current.scale, [0.5, 0.5], [0.5 + dx, 0.5 + dy]));
+      go(moveView(viewRef.current, viewRef.current.scale, [0.5, 0.5], [0.5 + dx, 0.5 + dy], sizeRef.current));
     } else return;
     event.preventDefault();
   }
   /** Keyboard focus on a room the zoomed plan has off screen brings it into view. */
-  const reveal = (rect: Rect) => { if (viewRef.current.scale > ZOOM_MIN) go(revealRect(viewRef.current, rect)); };
+  /** A rect of the plan where it is drawn (turned on a landscape plan). */
+  const drawnRect = (rect: Rect) => landscape ? landscapeRect(rect) : rect;
+  const reveal = (rect: Rect) => { if (viewRef.current.scale > ZOOM_MIN) go(revealRect(viewRef.current, drawnRect(rect), 40, sizeRef.current)); };
 
   const { placed, others, unplaced } = placeRooms(rooms);
   // People see chairs only; the words are in the label of the room tapped (Focus).
@@ -315,7 +334,7 @@ export function FloorPlan({
     if (!wordsInside) {
       // A room's spot no WAM room takes (Pantry, Limasan) still says what it is when tapped; desks and the like say nothing.
       if (!named) return <Spot key={spot.key} {...common} {...drawn} name="" sub="" tone="off" plain hideWords title="" />;
-      const open = () => setPeek(spot.key);
+      const open = () => tapRoom(spot.key);
       return <Spot key={spot.key} {...common} {...drawn} seats={seats} name={spot.label} sub="" tone="off" plain hideWords title={spot.label}
         ring={peek === spot.key} button={{ label: `${spot.label}, bukan ruang booking`, onClick: open, onKeyDown: keyed(open) }} />;
     }
@@ -340,7 +359,7 @@ export function FloorPlan({
     const pick = canPick(room, status);
     const active = activeOf ? activeOf(room, status) : onPick ? pick : true;
     // A tap on an active room shows its label; a room that can be picked is picked too.
-    const tap = () => { setPeek(key); if (pick) onPick?.(room); };
+    const tap = () => { tapRoom(key); if (pick) onPick?.(room); };
     return <Spot key={key} {...common} {...drawn} chip={undefined} name={room.name} sub="" hideWords tone={status.tone} selected={selected}
       ring={room.id === highlightId || peek === key} title={`${room.name} · ${spec} · ${status.text}`} a11y={`${room.name}, ${spec}, ${lower(status.text)}`}
       active={active} inactive={!active}
@@ -349,25 +368,28 @@ export function FloorPlan({
 
   return <div className={css.plan}>
     <div className={css.stage} onKeyDown={onKeyDown}>
-      <div ref={box} className={`${css.viewport} ${zoomed ? css.zoomed : ""}`} style={{ aspectRatio: `${PLAN_W} / ${PLAN_H}` }} tabIndex={0} role="group" aria-label={label}
+      <div ref={box} className={`${css.viewport} ${zoomed ? css.zoomed : ""}`} style={{ aspectRatio: `${size.w} / ${size.h}` }} tabIndex={0} role="group" aria-label={label}
         aria-roledescription="denah" aria-keyshortcuts="+ - 0"
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onClickCapture={onClickCapture}
-        onClick={event => { if (!(event.target as Element).closest?.("[role='button']")) setPeek(null); }}>
-        <svg className={css.svg} viewBox={`${view.x.toFixed(2)} ${view.y.toFixed(2)} ${(PLAN_W / view.scale).toFixed(2)} ${(PLAN_H / view.scale).toFixed(2)}`}>
+        onClick={event => { if (!(event.target as Element).closest?.("[role='button']")) shutTip(); }}>
+        <svg className={css.svg} viewBox={`${view.x.toFixed(2)} ${view.y.toFixed(2)} ${(size.w / view.scale).toFixed(2)} ${(size.h / view.scale).toFixed(2)}`}>
           <defs>
             <filter id={shadowId} x="-10%" y="-10%" width="120%" height="125%">
               <feDropShadow dx="0" dy="4" stdDeviation="5" style={{ floodColor: "var(--fp-shadow)" }} />
             </filter>
           </defs>
-          <Site />
+          {/* Landscape: the upright plan turned a quarter anticlockwise, north to the left. */}
+          <g transform={landscape ? `translate(0 ${PLAN_W}) rotate(-90)` : undefined}>
+          <Site landscape={landscape} />
           {otherSpotsDrawn}
           {placedDrawn}
           <Fixtures />
           {chosen && <Focus rect={chosen.rect} shape={chosen.shape} />}
+          </g>
         </svg>
       </div>
-      {chosen && <PlanTip tip={chosen.tip} rect={chosen.rect} view={view} unitPx={unitPx && unitPx > 0 ? unitPx : 860 / PLAN_W} />}
-      <Compass />
+      {chosen && !tipShut && <PlanTip tip={chosen.tip} rect={drawnRect(chosen.rect)} view={view} size={size} unitPx={unitPx && unitPx > 0 ? unitPx : 860 / size.w} onClose={shutTip} />}
+      <Compass landscape={landscape} />
       <div className={css.controls}>
         <button type="button" className={css.control} aria-label="Perbesar denah" aria-disabled={view.scale >= ZOOM_MAX - 0.001} onClick={() => { if (viewRef.current.scale < ZOOM_MAX) zoomBy(ZOOM_STEP); }}>
           <Plus size={20} aria-hidden />
@@ -394,9 +416,9 @@ export function FloorPlan({
           : <span key={room.id} className={css.extraChip}>{body}</span>;
       })}
     </div>}
-    <ul className={`${css.legend} ${byKind ? css.kindLegend : ""}`} aria-label="Keterangan warna">
+    {legendKeys.length > 0 && <ul className={`${css.legend} ${byKind ? css.kindLegend : ""}`} aria-label="Keterangan warna">
       {legendKeys.map(key => <li key={key}><i className={`${css.swatch} ${css[key]}`} aria-hidden />{legendLabels?.[key] ?? defaultLegend[key]}</li>)}
-    </ul>
+    </ul>}
   </div>;
 }
 
@@ -416,13 +438,14 @@ const LINE_CLASS = { tread: css.tread, board: css.board, ridge: css.ridge, mark:
  * The site under the rooms (the trace's grass, river, road, paving, yard, roofs, ramps and
  * gardens, the fountain and the way in): context only, never read out or tapped.
  */
-function Site() {
+function Site({ landscape = false }: { landscape?: boolean }) {
   return <g className={css.site} aria-hidden="true">
     {SITE.map(({ kind, rect, r }, index) => <rect key={index} className={SITE_CLASS[kind]} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={r} />)}
     {SITE_LINES.map(({ kind, d }) => <path key={kind} className={LINE_CLASS[kind]} d={d} />)}
     <circle className={css.fountain} cx={FOUNTAIN.cx} cy={FOUNTAIN.cy} r={FOUNTAIN.r} />
     <polygon className={css.entrance} points={ENTRANCE.arrow.map(point => point.join(",")).join(" ")} />
-    <text className={css.entranceText} x={ENTRANCE.label.x} y={ENTRANCE.label.y}>Masuk</text>
+    {/* On a landscape plan the word turns back, so it still reads upright. */}
+    <text className={css.entranceText} x={ENTRANCE.label.x} y={ENTRANCE.label.y} transform={landscape ? `rotate(90 ${ENTRANCE.label.x} ${ENTRANCE.label.y})` : undefined}>Masuk</text>
   </g>;
 }
 
@@ -430,16 +453,31 @@ function Site() {
  * North, up: a small compass that stays in the corner while the plan zooms and pans, so a guest
  * can turn the plan to match the office (Limasan is on the north side).
  */
-function Compass() {
-  return <div className={css.compass} role="img" aria-label="Kompas: utara ke atas, sisi Limasan" title="Utara ke atas (sisi Limasan)">
+function Compass({ landscape = false }: { landscape?: boolean }) {
+  const words = landscape ? "Kompas: utara ke kiri, sisi Limasan" : "Kompas: utara ke atas, sisi Limasan";
+  return <div className={css.compass} role="img" aria-label={words} title={landscape ? "Utara ke kiri (sisi Limasan)" : "Utara ke atas (sisi Limasan)"}>
     <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">
       <circle className={css.compassRing} cx="20" cy="20" r="18" />
-      <text className={css.compassN} x="20" y="9.5">U</text>
-      <path className={css.needleNorth} d="M20 13.5 L23.6 23 L16.4 23 Z" />
-      <path className={css.needleSouth} d="M20 33 L23.6 23 L16.4 23 Z" />
-      <circle className={css.compassHub} cx="20" cy="23" r="1.6" />
+      <text className={css.compassN} x={landscape ? 8.5 : 20} y={landscape ? 21 : 9.5}>U</text>
+      <g transform={landscape ? "rotate(-90 20 20)" : undefined}>
+        <path className={css.needleNorth} d="M20 13.5 L23.6 23 L16.4 23 Z" />
+        <path className={css.needleSouth} d="M20 33 L23.6 23 L16.4 23 Z" />
+        <circle className={css.compassHub} cx="20" cy="23" r="1.6" />
+      </g>
     </svg>
   </div>;
+}
+
+/** Whether a landscape plan is asked for and the screen is 1024px or wider (never on the server's first draw). */
+function useWide(enabled: boolean) {
+  const wide = useSyncExternalStore(subscribeWide, () => !!window.matchMedia?.(WIDE).matches, () => false);
+  return enabled && wide;
+}
+const WIDE = "(min-width: 1024px)";
+function subscribeWide(changed: () => void) {
+  const query = typeof window === "undefined" ? null : window.matchMedia?.(WIDE);
+  query?.addEventListener?.("change", changed);
+  return () => query?.removeEventListener?.("change", changed);
 }
 
 /** Furniture that belongs to no room's chairs: Main Office's desks, stools and inner garden, plants. Never in the way of a tap. */
@@ -485,9 +523,9 @@ const TIP_W = 232, TIP_ROOM = 112, TIP_EDGE = 8;
  * people and facilities, its status with the chairs' colour, and an action ("Book ruang ini").
  * Already said by the room's own label, so it is not announced again; its button is reachable.
  */
-function PlanTip({ tip, rect, view, unitPx }: { tip: Tip; rect: Rect; view: PlanView; unitPx: number }) {
+function PlanTip({ tip, rect, view, size, unitPx, onClose }: { tip: Tip; rect: Rect; view: PlanView; size: PlanSize; unitPx: number; onClose: () => void }) {
   const px = unitPx * view.scale;
-  const boxW = PLAN_W * unitPx, boxH = PLAN_H * unitPx;
+  const boxW = size.w * unitPx, boxH = size.h * unitPx;
   const middle = (rect.x + rect.w / 2 - view.x) * px;
   const top = (rect.y - view.y) * px, bottom = (rect.y + rect.h - view.y) * px;
   const width = Math.min(TIP_W, boxW - TIP_EDGE * 2);
@@ -496,6 +534,7 @@ function PlanTip({ tip, rect, view, unitPx }: { tip: Tip; rect: Rect; view: Plan
   const arrow = Math.min(Math.max(middle - left, 16), width - 16);
   const style = { left, width, "--arrow": `${arrow}px`, top: below ? Math.max(bottom, 0) + 10 : undefined, bottom: below ? undefined : boxH - Math.min(top, boxH) + 10 } as CSSProperties;
   return <div className={`${css.tipCard} ${below ? css.tipBelow : ""}`} style={style}>
+    <button type="button" className={css.tipClose} onClick={onClose} aria-label="Tutup"><X size={16} aria-hidden /></button>
     <strong className={css.tipTitle}>{tip.title}</strong>
     {tip.detail && <span className={css.tipDetail}>{tip.detail}</span>}
     <span className={`${css.tipStatus} ${css[tip.tone]}`}><i aria-hidden />{tip.status}</span>

@@ -194,7 +194,11 @@
 .tipCard::after { content: ""; position: absolute; left: calc(var(--arrow) - 7px); bottom: -7px; width: 14px; height: 14px; background: var(--pw-surface);
   transform: rotate(45deg); box-shadow: 1px 1px 0 var(--pw-line); }
 .tipBelow::after { top: -7px; bottom: auto; box-shadow: -1px -1px 0 var(--pw-line); }
-.tipTitle { font-family: var(--pw-display); font-size: 16px; font-weight: 600; color: var(--pw-text); line-height: 1.3; }
+.tipClose { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--pw-muted); cursor: pointer; }
+.tipClose:hover { background: var(--pw-app); color: var(--pw-text); }
+.tipClose:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 1px; }
+.tipTitle { padding-right: 24px; font-family: var(--pw-display); font-size: 16px; font-weight: 600; color: var(--pw-text); line-height: 1.3; }
 .tipDetail { font-size: 13px; color: var(--pw-muted); line-height: 1.4; }
 .tipStatus { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--pw-text); }
 .tipStatus i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--fp-chair-off); }
