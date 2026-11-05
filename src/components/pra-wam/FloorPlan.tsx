@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Minus, Plus, Scan } from "lucide-react";
 import type { Room } from "@/lib/pra-wam/appraisal";
 import {
@@ -20,10 +20,6 @@ const defaultLegend: Record<LegendKey, string> = {
 };
 /** A room's status on the plan: for chosen hours (PlanStatus) or a whole day (DayStatus). */
 type Status = PlanStatus | DayStatus;
-/** The status in a few words, for the tooltip over the chosen room ("Antareja · 4 kursi · kosong"). */
-const TONE_WORDS: Record<Status["tone"], string> = {
-  free: "kosong", busy: "terpakai", mine: "booking kamu", small: "terlalu kecil", off: "tidak bisa dibooking", closed: "tutup", part: "terpakai sebagian", full: "penuh",
-};
 /** The tag on a taken room, so it reads as taken before its words do. */
 const TAKEN_CHIP: Partial<Record<Status["tone"], string>> = { busy: "Terpakai", full: "Penuh" };
 type Point = [number, number];
@@ -69,6 +65,8 @@ type Props = {
    * room ("kind", the default with `onPickSpot`: the super admin's view of the rooms).
    */
   chairColors?: "status" | "kind";
+  /** A button in the label of the room tapped, e.g. "Book ruang ini"; none when it returns null. */
+  tipAction?: (room: Room, status: Status) => { label: string; run: () => void } | null;
 };
 
 /** "Kosong 09.00–10.00" → "kosong 09.00–10.00", for the middle of a sentence. */
@@ -106,7 +104,7 @@ type Gesture = {
  */
 export function FloorPlan({
   rooms, statusOf, onPick, selectedId, action = "Pilih ruang ini", label, legend = ["free", "busy", "mine", "off"], caption,
-  legendLabels, pickable, highlightId, otherSpots = "label", showUnplaced = true, subtitle = "spec", onPickSpot, selectedSpot, emptySpot, chairColors,
+  legendLabels, pickable, highlightId, otherSpots = "label", showUnplaced = true, subtitle = "spec", onPickSpot, selectedSpot, emptySpot, chairColors, tipAction,
 }: Props) {
   const byKind = (chairColors ?? (onPickSpot ? "kind" : "status")) === "kind";
   const shadowId = `fp-shadow-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
@@ -274,22 +272,25 @@ export function FloorPlan({
   const common = { unitPx, scale: view.scale, onReveal: reveal, shadow: `url(#${shadowId})` };
   const seatsWord = (room: Room) => room.capacity ? `${room.capacity} kursi` : "kapasitas belum diisi";
   const emptyStatus: PlanStatus = emptySpot ?? { tone: "closed", text: "Belum ada ruang" };
-  /** A WAM room's label: its name, then its people and facilities and its status. */
-  const roomTip = (room: Room): Tip => ({ title: room.name, detail: `${roomSpec(room)} · ${TONE_WORDS[statusOf(room).tone]}` });
+  /** A WAM room's label: its name, its people and facilities, its status, and the action if any. */
+  const roomTip = (room: Room): Tip => {
+    const status = statusOf(room);
+    return { title: room.name, detail: tipSpec(room), tone: status.tone, status: status.text, action: tipAction?.(room, status) ?? null };
+  };
   /** The chosen (or ringed, or tapped) spot: drawn again on top with a blue ring and a dark label. */
   const chosen = ((): { rect: Rect; shape?: Point[]; tip: Tip } | null => {
     if (onPickSpot) {
       const hit = placed.find(item => item.key === selectedSpot);
-      if (hit) return { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: { title: hit.room.name, detail: `${seatsWord(hit.room)} · ${lower(statusOf(hit.room).text)}` } };
+      if (hit) return { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: { title: hit.room.name, detail: seatsWord(hit.room), tone: statusOf(hit.room).tone, status: statusOf(hit.room).text, action: null } };
       const spot = others.find(item => item.key === selectedSpot);
       if (!spot) return null;
-      return { rect: spot.rect, shape: spot.shape, tip: { title: spot.label, detail: lower(emptyStatus.text) } };
+      return { rect: spot.rect, shape: spot.shape, tip: { title: spot.label, detail: "", tone: emptyStatus.tone, status: emptyStatus.text, action: null } };
     }
     const tapped = peek ? placed.find(item => item.key === peek) : undefined;
     const hit = tapped ?? placed.find(item => item.room.id === selectedId) ?? placed.find(item => item.room.id === highlightId);
     if (hit) return { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: roomTip(hit.room) };
     const spot = peek ? others.find(item => item.key === peek) : undefined;
-    return spot ? { rect: spot.rect, shape: spot.shape, tip: { title: spot.label, detail: "Bukan ruang booking" } } : null;
+    return spot ? { rect: spot.rect, shape: spot.shape, tip: { title: spot.label, detail: "", tone: "off", status: "Bukan ruang booking", action: null } } : null;
   })();
   const legendKeys: LegendKey[] = byKind ? [...(["kindMain", "kindSmall"] as const).filter(key => !legend.includes(key)), ...legend] : legend;
 
@@ -342,7 +343,8 @@ export function FloorPlan({
     <div className={css.stage} onKeyDown={onKeyDown}>
       <div ref={box} className={`${css.viewport} ${zoomed ? css.zoomed : ""}`} style={{ aspectRatio: `${PLAN_W} / ${PLAN_H}` }} tabIndex={0} role="group" aria-label={label}
         aria-roledescription="denah" aria-keyshortcuts="+ - 0"
-        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onClickCapture={onClickCapture}>
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onClickCapture={onClickCapture}
+        onClick={event => { if (!(event.target as Element).closest?.("[role='button']")) setPeek(null); }}>
         <svg className={css.svg} viewBox={`${view.x.toFixed(2)} ${view.y.toFixed(2)} ${(PLAN_W / view.scale).toFixed(2)} ${(PLAN_H / view.scale).toFixed(2)}`}>
           <defs>
             <filter id={shadowId} x="-10%" y="-10%" width="120%" height="125%">
@@ -353,9 +355,10 @@ export function FloorPlan({
           {otherSpotsDrawn}
           {placedDrawn}
           <Fixtures />
-          {chosen && <Focus {...chosen} view={view} unitPx={unitPx} />}
+          {chosen && <Focus rect={chosen.rect} shape={chosen.shape} />}
         </svg>
       </div>
+      {chosen && <PlanTip tip={chosen.tip} rect={chosen.rect} view={view} unitPx={unitPx && unitPx > 0 ? unitPx : 860 / PLAN_W} />}
       <Compass />
       <div className={css.controls}>
         <button type="button" className={css.control} aria-label="Perbesar denah" aria-disabled={view.scale >= ZOOM_MAX - 0.001} onClick={() => { if (viewRef.current.scale < ZOOM_MAX) zoomBy(ZOOM_STEP); }}>
@@ -444,43 +447,52 @@ function Fixtures() {
   </g>;
 }
 
-/** The label over a tapped room: its name, and a line of its people, facilities and status. */
-type Tip = { title: string; detail: string };
+/** The label over a tapped room: name, people and facilities, status, and an action. */
+type Tip = { title: string; detail: string; tone: Status["tone"]; status: string; action: { label: string; run: () => void } | null };
 /** No words in a box: only its chairs (people's plan). */
 const NO_WORDS: SpotText = { name: [], nameSize: 0, sub: [], subSize: 0, subFrom: Infinity, rotate: false };
+/** "10 orang · min 4 · TV, Whiteboard": the room in a few words. */
+function tipSpec(room: Room): string {
+  const parts = [room.capacity ? `${room.capacity} orang` : "Kapasitas belum diisi", room.minPeople ? `min ${room.minPeople}` : "", ...(room.facilities ?? []).map(item => item.trim())];
+  return parts.filter(Boolean).join(" · ");
+}
 
-/**
- * The chosen room drawn again on top of the plan: a blue ring on its walls and a dark label above
- * it ("Antareja" over "4 orang · TV · kosong"), sized for the screen at any zoom and kept in view. Read out
- * already by the room itself, so hidden from screen readers.
- */
-function Focus({ rect, shape, tip, view, unitPx }: { rect: Rect; shape?: Point[]; tip: Tip; view: PlanView; unitPx?: number }) {
-  const px = (unitPx && unitPx > 0 ? unitPx : 860 / PLAN_W) * view.scale;
-  const size = 13.5 / px, small = 11.5 / px, padX = 12 / px, height = 46 / px, arrow = 6 / px, gap = 5 / px, edge = 4 / px;
-  const viewW = PLAN_W / view.scale, viewH = PLAN_H / view.scale;
-  const width = Math.min(Math.max(tip.title.length * size * 0.6, tip.detail.length * small * 0.56) + padX * 2, viewW - edge * 2);
-  const middle = rect.x + rect.w / 2;
-  const x = Math.min(Math.max(middle - width / 2, view.x + edge), view.x + viewW - width - edge);
-  const aboveY = rect.y - gap - arrow - height;
-  const above = aboveY >= view.y + edge || rect.y + rect.h + gap + arrow + height > view.y + viewH - edge;
-  const y = above ? Math.max(aboveY, view.y + edge) : rect.y + rect.h + gap + arrow;
-  const tipX = Math.min(Math.max(middle, x + arrow * 2), x + width - arrow * 2);
-  const pointer = above
-    ? `M${tipX - arrow} ${y + height - 0.5}L${tipX} ${y + height + arrow}L${tipX + arrow} ${y + height - 0.5}Z`
-    : `M${tipX - arrow} ${y + 0.5}L${tipX} ${y - arrow}L${tipX + arrow} ${y + 0.5}Z`;
+/** The chosen room drawn again on top of the plan: a blue ring on its walls. */
+function Focus({ rect, shape }: { rect: Rect; shape?: Point[] }) {
   const outline = (className: string) => shape
     ? <polygon className={className} points={shape.map(point => point.join(",")).join(" ")} />
     : <rect className={className} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={10} />;
   return <g className={css.focus} aria-hidden="true">
     {outline(css.focusHalo)}
     {outline(css.focusRing)}
-    <g className={css.tip}>
-      <rect x={x} y={y} width={width} height={height} rx={12 / px} />
-      <path d={pointer} />
-      <text x={x + width / 2} y={y + height * 0.33} fontSize={size.toFixed(2)}>{tip.title}</text>
-      <text className={css.tipDetail} x={x + width / 2} y={y + height * 0.7} fontSize={small.toFixed(2)}>{tip.detail}</text>
-    </g>
   </g>;
+}
+
+/** Room for the label above (or below) a room, in px. */
+const TIP_W = 232, TIP_ROOM = 112, TIP_EDGE = 8;
+
+/**
+ * The label of the room tapped (or chosen): a small white card over the plan, pointing at the room
+ * from above (below when the room is near the top), kept inside the plan at any zoom. Its name, its
+ * people and facilities, its status with the chairs' colour, and an action ("Book ruang ini").
+ * Already said by the room's own label, so it is not announced again; its button is reachable.
+ */
+function PlanTip({ tip, rect, view, unitPx }: { tip: Tip; rect: Rect; view: PlanView; unitPx: number }) {
+  const px = unitPx * view.scale;
+  const boxW = PLAN_W * unitPx, boxH = PLAN_H * unitPx;
+  const middle = (rect.x + rect.w / 2 - view.x) * px;
+  const top = (rect.y - view.y) * px, bottom = (rect.y + rect.h - view.y) * px;
+  const width = Math.min(TIP_W, boxW - TIP_EDGE * 2);
+  const left = Math.min(Math.max(middle - width / 2, TIP_EDGE), boxW - width - TIP_EDGE);
+  const below = top < TIP_ROOM + (tip.action ? 44 : 0) && bottom < boxH - TIP_ROOM;
+  const arrow = Math.min(Math.max(middle - left, 16), width - 16);
+  const style = { left, width, "--arrow": `${arrow}px`, top: below ? Math.max(bottom, 0) + 10 : undefined, bottom: below ? undefined : boxH - Math.min(top, boxH) + 10 } as CSSProperties;
+  return <div className={`${css.tipCard} ${below ? css.tipBelow : ""}`} style={style}>
+    <strong className={css.tipTitle}>{tip.title}</strong>
+    {tip.detail && <span className={css.tipDetail}>{tip.detail}</span>}
+    <span className={`${css.tipStatus} ${css[tip.tone]}`}><i aria-hidden />{tip.status}</span>
+    {tip.action && <button type="button" className={css.tipAction} onClick={tip.action.run}>{tip.action.label}</button>}
+  </div>;
 }
 
 type SpotProps = {

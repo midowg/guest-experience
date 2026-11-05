@@ -33,7 +33,8 @@ describe("the day calendar on a phone", () => {
     render(<DayCalendar date="2026-11-04" rooms={rooms} bookings={list} now={now} viewerId="me" canBook onOpen={() => undefined} onBook={() => undefined} />);
     expect(screen.queryByText("Sudah lewat")).toBeNull();
     const card = screen.getByRole("region", { name: "Nagapadma, Rabu, 4 Nov" });
-    expect(within(card).getByText("2 terpakai")).toBeTruthy();
+    // One tag: the hours still free (15 hours less the two bookings).
+    expect(within(card).getByText("Sisa 13 jam")).toBeTruthy();
     // Bookings and free stretches in order: free from 10.30, a, free, b, free to the end of the day.
     const items = within(card).getAllByRole("button").map(button => button.getAttribute("aria-label") ?? button.textContent);
     expect(items).toEqual(["Book Nagapadma, kosong 10.30–11.00", "11.00–12.00Rapat aSari · Finance", "Book Nagapadma, kosong 12.00–13.00", "13.00–14.00Rapat bBooking kamu", "Book Nagapadma, kosong 14.00–22.00"]);
@@ -60,13 +61,13 @@ describe("the day calendar on a phone", () => {
   it("shows free time without a tap target while booking is closed", () => {
     render(<DayCalendar date="2026-11-05" rooms={rooms} bookings={[]} now={now} viewerId="me" canBook={false} onOpen={() => undefined} onBook={() => undefined} />);
     expect(screen.queryAllByRole("button", { name: /^Book / })).toHaveLength(0);
-    expect(screen.getAllByText("Kosong seharian")).toHaveLength(2);
+    expect(screen.getAllByText("Kosong", { selector: "[class*='pill']" })).toHaveLength(2);
   });
 
   it("says a day gone by once per room, without free time", () => {
     render(<DayCalendar date="2026-11-03" rooms={rooms} bookings={[booking("c", "r1", "2026-11-03", "09:00", "10:00")]} now={now} viewerId="me" canBook={false} onOpen={() => undefined} onBook={() => undefined} />);
     expect(screen.getAllByText("Sudah lewat")).toHaveLength(2);
-    expect(screen.getByText("Tidak ada booking.")).toBeTruthy();
+    expect(screen.queryByText("Tidak ada booking.")).toBeNull();
     expect(screen.queryByText(/^Kosong/)).toBeNull();
   });
 });

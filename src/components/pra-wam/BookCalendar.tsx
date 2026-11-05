@@ -127,10 +127,11 @@ function RoomCard({ date, room, segments, viewerId, line, over, canBook, onOpen,
 }) {
   const taken = segments.filter(segment => segment.kind === "busy").length;
   const free = segments.filter(segment => segment.kind === "free");
+  // One tag says it all: gone by, full, free all day, or the hours still free (overlaps counted once).
   const status = over ? { tone: css.pillMuted, text: "Sudah lewat" }
     : !free.length ? { tone: css.pillWarn, text: "Penuh" }
-    : !taken ? { tone: css.pillFree, text: "Kosong seharian" }
-    : { tone: css.pillMuted, text: `${taken} terpakai` };
+    : !taken ? { tone: css.pillFree, text: "Kosong" }
+    : { tone: css.pillFree, text: `Sisa ${durationLabel(dayMinutes - takenOf(segments))}` };
   const items = segments.filter(segment => segment.kind !== "past");
   return <section className={css.room} aria-label={`${room.name}, ${dayLabel(date)}`}>
     <header className={css.roomHead}>
@@ -138,8 +139,6 @@ function RoomCard({ date, room, segments, viewerId, line, over, canBook, onOpen,
       {room.capacity ? <span className={css.roomSize}>{room.capacity} orang</span> : null}
       <span className={`${css.pill} ${status.tone}`}>{status.text}</span>
     </header>
-    {/* Sisa jam (DS meter): what of 07.00–22.00 is not booked yet, overlaps counted once. */}
-    <p className={css.left}>Sisa <b>{durationLabel(dayMinutes - takenOf(segments))}</b> dari {dayMinutes / 60} jam</p>
     <DayBar segments={segments} viewerId={viewerId} line={line} />
     {items.length ? <ol className={css.items}>
       {items.map(segment => {
@@ -167,7 +166,7 @@ function RoomCard({ date, room, segments, viewerId, line, over, canBook, onOpen,
             : <span className={`${css.chip} ${css.chipIdle}`}>{words}</span>}
         </li>;
       })}
-    </ol> : <p className={css.none}>Tidak ada booking.</p>}
+    </ol> : null}
   </section>;
 }
 

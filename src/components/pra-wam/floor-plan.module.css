@@ -63,8 +63,6 @@
   --fp-chair-edge: color-mix(in srgb, var(--pw-text) 28%, transparent);
   --fp-ring: var(--pw-primary);
   --fp-hover: var(--pw-primary);
-  --fp-tip: var(--pw-accent-navy);
-  --fp-tip-ink: var(--pw-on-primary);
   --fp-chip: color-mix(in srgb, var(--pw-muted) 16%, var(--pw-surface));
   --fp-chip-ink: var(--pw-text);
   --fp-shadow: color-mix(in srgb, var(--pw-primary) 14%, transparent);
@@ -181,12 +179,35 @@
 .click:hover .box { stroke: var(--fp-hover); stroke-width: 3; }
 .click:focus-visible .box { stroke: var(--fp-ink); stroke-width: 5; }
 
-/* The chosen room on top: a primary ring on its edge and a navy tooltip above it. */
+/* The chosen room on top: a primary ring on its edge. */
 .focus { pointer-events: none; }
 .focusHalo { fill: none; stroke: var(--fp-ring); stroke-opacity: .18; stroke-width: 14; stroke-linejoin: round; }
 .focusRing { fill: none; stroke: var(--fp-ring); stroke-width: 4; stroke-linejoin: round; }
-.tip rect, .tip path { fill: var(--fp-tip); }
-.tip text { fill: var(--fp-tip-ink); font-family: var(--pw-body); font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+
+/* The label of the room tapped (PlanTip): a small white card with a pointer at the room. */
+.tipCard { position: absolute; z-index: 2; display: grid; gap: 2px; padding: 12px 14px; border-radius: 14px; background: var(--pw-surface);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, .16), 0 0 0 1px var(--pw-line); text-align: left; font-family: var(--pw-body); }
+.tipCard::after { content: ""; position: absolute; left: calc(var(--arrow) - 7px); bottom: -7px; width: 14px; height: 14px; background: var(--pw-surface);
+  transform: rotate(45deg); box-shadow: 1px 1px 0 var(--pw-line); }
+.tipBelow::after { top: -7px; bottom: auto; box-shadow: -1px -1px 0 var(--pw-line); }
+.tipTitle { font-family: var(--pw-display); font-size: 16px; font-weight: 600; color: var(--pw-text); line-height: 1.3; }
+.tipDetail { font-size: 13px; color: var(--pw-muted); line-height: 1.4; }
+.tipStatus { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--pw-text); }
+.tipStatus i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--fp-chair-off); }
+.tipStatus.free i { background: var(--fp-chair-free); }
+.tipStatus.busy i { background: var(--fp-chair-busy); }
+.tipStatus.mine i { background: var(--fp-chair-mine); }
+.tipStatus.small i { background: var(--fp-chair-small); }
+.tipStatus.part i { background: var(--fp-chair-part); }
+.tipStatus.full i { background: var(--fp-chair-full); }
+.tipAction { position: relative; z-index: 1; margin-top: 10px; min-height: 36px; border: 0; border-radius: 999px; background: var(--pw-primary); color: var(--pw-on-primary);
+  font: 600 13px/1 var(--pw-body); cursor: pointer; }
+.tipAction:hover { background: var(--pw-primary-hover); }
+.tipAction:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .tipCard { animation: fp-tip .16s ease-out; }
+  @keyframes fp-tip { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
 
 /* The key: the chair colour of each status (in the super admin's view, the room floors). */
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 13px; font-weight: 600; color: var(--pw-muted); }
@@ -252,5 +273,3 @@ button.extraChip:hover { border-color: var(--pw-primary); }
 .roomDay li { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 12px; color: var(--pw-muted); }
 .roomDay li span:first-child { font-weight: 700; color: var(--pw-text); font-variant-numeric: tabular-nums; }
 .roomDay li.roomDayOwn, .roomDay li.roomDayOwn span:first-child { color: var(--pw-primary); font-weight: 700; }
-/* The label's second line: people, facilities and status, quieter than the name. */
-.tip text.tipDetail { font-weight: 500; opacity: .82; }

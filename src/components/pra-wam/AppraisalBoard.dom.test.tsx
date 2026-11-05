@@ -33,23 +33,19 @@ it("opens a sheet from the address", () => {
     rooms={rooms} bookings={[b]} mine={[b]} viewerId="me" canCancelAny={false} open form={{ people: [], groups: [], usedTitles: [] }} arrive={{ booking: "zzz" }} />);
   expect(screen.getByText(/tidak ada di jadwal/)).toBeTruthy();
 });
-it("shows each room's day on the plan, without hours to pick, and books the next free half hour", () => {
-  Element.prototype.scrollIntoView = vi.fn();
+it("shows only the plan under Denah: the day with ‹ ›, and a room's label books it", () => {
   const week = ["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"];
   render(<AppraisalBoard date="2026-11-05" week={week} dates={["2026-11-04","2026-11-05"]} now={wibInstant("2026-11-04","10:12")}
     rooms={rooms} bookings={[b]} mine={[b]} viewerId="me" canCancelAny={false} open form={{ people: [], groups: [], usedTitles: [] }} arrive={{}} />);
   fireEvent.click(screen.getByRole("button", { name: "Denah" }));
   expect(screen.queryByLabelText("Mulai")).toBeNull();
   expect(screen.queryByText("Durasi")).toBeNull();
-  expect(screen.getByRole("heading", { name: "Denah kantor · Kamis, 5 Nov" })).toBeTruthy();
-  expect(screen.getByText(/^Status sepanjang hari, 07.00–22.00\./)).toBeTruthy();
-  // Under the plan, the same room cards as under Kalender: the hours left, the booking, free time to book.
-  const card = within(document.getElementById("ruang-r1")!);
-  expect(card.getByText("14 jam")).toBeTruthy();
-  expect(card.getByText(/Booking kamu/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /^Nagapadma, .*terpakai · 1 booking\. Lihat kartunya/ }));
-  expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
-  fireEvent.click(card.getAllByRole("button", { name: /^Book Nagapadma, kosong/ })[0]);
+  expect(screen.getByRole("heading", { name: "Kamis, 5 Nov" })).toBeTruthy();
+  // Only the plan: no month calendar and no room cards under it.
+  expect(screen.queryByRole("region", { name: "Pilih hari" })).toBeNull();
+  expect(document.getElementById("ruang-r1")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /^Nagapadma, .*terpakai · 1 booking$/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Book ruang ini" }));
   expect(screen.getByRole("dialog", { name: "Book ruang" })).toBeTruthy();
 });
 it("shows the calendar only when the floor plan is switched off", () => {
