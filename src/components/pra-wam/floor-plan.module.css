@@ -252,3 +252,5 @@ button.extraChip:hover { border-color: var(--pw-primary); }
 .roomDay li { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 12px; color: var(--pw-muted); }
 .roomDay li span:first-child { font-weight: 700; color: var(--pw-text); font-variant-numeric: tabular-nums; }
 .roomDay li.roomDayOwn, .roomDay li.roomDayOwn span:first-child { color: var(--pw-primary); font-weight: 700; }
+/* The label's second line: people, facilities and status, quieter than the name. */
+.tip text.tipDetail { font-weight: 500; opacity: .82; }

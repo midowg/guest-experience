@@ -47,7 +47,7 @@ it("shows each room's day on the plan, without hours to pick, and books the next
   const card = within(document.getElementById("ruang-r1")!);
   expect(card.getByText("14 jam")).toBeTruthy();
   expect(card.getByText(/Booking kamu/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: /^Nagapadma, terpakai · 1 booking\. Lihat kartunya/ }));
+  fireEvent.click(screen.getByRole("button", { name: /^Nagapadma, .*terpakai · 1 booking\. Lihat kartunya/ }));
   expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
   fireEvent.click(card.getAllByRole("button", { name: /^Book Nagapadma, kosong/ })[0]);
   expect(screen.getByRole("dialog", { name: "Book ruang" })).toBeTruthy();
@@ -89,13 +89,14 @@ it("picks the day on the month calendar, past days off, and goes to another week
   expect(screen.queryByRole("link", { name: /Minggu (sebelumnya|berikutnya)/ })).toBeNull();
 });
 
-it("a Saturday has no rooms but offers Book di luar kantor, which opens the form on outside", () => {
+it("a Saturday has no rooms, and Di luar kantor is only in the booking form", () => {
   const week = ["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"];
   render(<AppraisalBoard date="2026-11-07" week={week} dates={["2026-11-04","2026-11-05"]} now={wibInstant("2026-11-04","10:12")}
     rooms={rooms} bookings={[]} mine={[]} viewerId="me" canCancelAny={false} open form={{ people: [], groups: [], usedTitles: [] }} arrive={{}} />);
   expect(screen.getByRole("region", { name: /^Akhir pekan, Sabtu, 7 Nov/ })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^Book Nagapadma/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: /Book di luar kantor/ }));
+  expect(screen.queryByRole("button", { name: /Book di luar kantor/ })).toBeNull();
+  fireEvent.click(screen.getAllByRole("button", { name: "Book ruang" })[0]);
   const form = within(screen.getByRole("dialog", { name: "Book ruang" }));
-  expect(form.getByRole("button", { name: "Di luar kantor", pressed: true })).toBeTruthy();
+  expect(form.getByRole("button", { name: "Di luar kantor" })).toBeTruthy();
 });

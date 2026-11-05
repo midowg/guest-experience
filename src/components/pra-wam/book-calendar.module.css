@@ -221,11 +221,6 @@
 }
 @keyframes toast-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 
-/* "Di luar kantor": a card like a room's, with a map-pin feel; under the views, on every width. */
-.outsideWrap:empty { display: none; }
-.outsideWrap { margin-top: 12px; }
-@media (min-width: 1024px) { .outsideWrap { max-width: 40rem; } }
-.outside .roomHead h3::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--pw-accent-orange); vertical-align: middle; }
 
 /* A Saturday or Sunday: no rooms, a note and "Book di luar kantor". */
 .weekend { display: grid; gap: 12px; justify-items: start; padding: 20px; }

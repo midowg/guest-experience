@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties, type PointerEvent, type MouseEvent } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { appraisalRules, bookableFrom, clockAt, clockLabel, dayLabel, dayMinutes, hoursInGap, nowOffset, OUTSIDE_ROOM, roomDay, startInGap, wibDate, wibTime, type Booking, type DaySegment, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, bookableFrom, clockAt, clockLabel, dayLabel, dayMinutes, hoursInGap, nowOffset, roomDay, startInGap, wibDate, wibTime, type Booking, type DaySegment, type Room } from "@/lib/pra-wam/appraisal";
 import { durationLabel } from "@/lib/pra-wam/room-day";
 import css from "./book-calendar.module.css";
 
@@ -81,37 +81,6 @@ export function RoomList({ date, rooms, bookings, now, viewerId, canBook, onOpen
       <RoomCard date={date} room={room} segments={roomDay(date, bookings.filter(booking => booking.roomId === room.id), now)} viewerId={viewerId} line={line} over={over} canBook={canBook} onOpen={onOpen} onBook={book} />
     </li>)}
   </ul>;
-}
-
-/**
- * The day's bookings outside the office (5 Nov 2026): one card "Di luar kantor" under the room
- * cards, for everyone, in time order; tap one for its detail. Places are not locked, so there is
- * no free time to book here; nothing shows on a day without any.
- */
-export function OutsideDay({ date, bookings, now, viewerId, onOpen }: { date: string; bookings: Booking[]; now: Date; viewerId: string; onOpen: (booking: Booking) => void }) {
-  const items = bookings.filter(booking => booking.roomId === OUTSIDE_ROOM && wibDate(booking.startsAt) === date).sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  if (!items.length) return null;
-  return <section className={`${css.room} ${css.outside}`} aria-label={`Di luar kantor, ${dayLabel(date)}`}>
-    <header className={css.roomHead}>
-      <h3>Di luar kantor</h3>
-      <span className={`${css.pill} ${css.pillMuted}`}>{items.length} kegiatan</span>
-    </header>
-    <ol className={css.items}>
-      {items.map(booking => {
-        const done = new Date(booking.endsAt) <= now;
-        return <li key={bookingKey(booking)}>
-          <button type="button" className={`${css.item} ${css[kindOf(booking, viewerId)]} ${done ? css.done : ""}`} onClick={() => onOpen(booking)} aria-haspopup="dialog">
-            <span className={css.itemTime}>{bookingSpan(booking)}</span>
-            <span className={css.itemWhat}>
-              <strong>{booking.title}</strong>
-              <small>{booking.place || "Tempat belum diisi"} · {whoOf(booking, viewerId)}{done ? " · selesai" : ""}</small>
-            </span>
-            <ChevronRight className={css.itemIcon} aria-hidden />
-          </button>
-        </li>;
-      })}
-    </ol>
-  </section>;
 }
 
 /** One day: a card per room on a phone (RoomList), the room-by-hour timeline from 1024px. */

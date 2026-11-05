@@ -9,7 +9,7 @@ import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { placeRooms } from "@/lib/pra-wam/floor-plan";
 import { daySummaries, roomDay, type DayStatus, type DaySummary } from "@/lib/pra-wam/room-day";
-import { bookingKey, DayCalendar, Legend, OutsideDay, RoomList, WeekCalendar, type BookPick } from "./BookCalendar";
+import { bookingKey, DayCalendar, Legend, RoomList, WeekCalendar, type BookPick } from "./BookCalendar";
 import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
 import { useConfirm } from "./ConfirmDialog";
 import { FloorPlan } from "./FloorPlan";
@@ -187,13 +187,11 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   // The loaded week is recounted from its bookings with the moving clock; the rest is the server's.
   const days = { ...summary, ...daySummaries(week, rooms, bookings.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), clockNow) };
   const canBookDay = canBook && inPeriod(selected) && selected >= today && isWorkday(selected);
-  // A Saturday or Sunday: no rooms, only "Di luar kantor" (5 Nov 2026).
+  // A Saturday or Sunday: no rooms. "Di luar kantor" is chosen inside the booking form only (5 Nov 2026).
   const weekendDay = !isWorkday(selected);
-  const canAway = canBook && inPeriod(selected) && selected >= today;
   const weekendPanel = <section className={`${styles.card} ${css.weekend}`} aria-label={`Akhir pekan, ${dayLabel(selected)}`}>
     <div className={css.dayTitle}><h2>{dayLabel(selected)}{selected === today ? " · hari ini" : ""}</h2></div>
-    <p className={css.weekendText}>Ruang kantor hanya bisa dibooking Senin–Jumat. Di akhir pekan kamu bisa membooking kegiatan <b>di luar kantor</b> dengan nama tempatnya; jam bebas, sampai 23.30.</p>
-    {canAway && <button type="button" className="button button--primary" onClick={() => book({ date: selected, room: OUTSIDE_ROOM })} aria-haspopup="dialog"><MapPin size={18} aria-hidden /> Book di luar kantor</button>}
+    <p className={css.weekendText}>Ruang kantor hanya bisa dibooking Senin–Jumat.</p>
     {!inPeriod(selected) ? <p className={css.weekendText}>Di luar periode appraisal.</p> : selected < today ? <p className={css.weekendText}>Sudah lewat, hanya untuk dilihat.</p> : !open ? <p className={css.weekendText}>Book ruang sedang ditutup.</p> : null}
   </section>;
   const nowLine = nowOffset(selected, clockNow);
@@ -201,7 +199,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const calendar = <MonthCalendar from={appraisalRules.periodStart} to={appraisalRules.periodEnd} selected={selected} today={today} summary={days}
     mine={mine.map(booking => wibDate(booking.startsAt))} onPick={day => pickDay(day, false)} label="Pilih hari" />;
   const head = <ScreenHead eyebrow="Ruang meeting" title="Book ruang"
-    lead={`Ruang ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–20 Nov; di luar kantor boleh kapan saja. Yang tersimpan lebih dulu yang mendapat ruang.`}
+    lead={`Ruang ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–20 Nov. Yang tersimpan lebih dulu yang mendapat ruang.`}
     actions={canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
 
   return <>
@@ -243,9 +241,6 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
       {weekendDay ? weekendPanel : <PlanView key={selected} date={selected} today={today} now={clockNow} rooms={rooms} bookable={bookable} bookings={dayBookings} viewerId={viewerId} canBook={canBookDay} open={open}
         onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} />}
     </>}
-
-    {/* Outside the office: the same under Kalender and Denah, phone and desktop. */}
-    <div className={css.outsideWrap}><OutsideDay date={selected} bookings={dayBookings} now={clockNow} viewerId={viewerId} onOpen={openBooking} /></div>
 
     <p className={styles.sectionLabel}>Booking saya</p>
     {mine.length === 0 ? <div className={styles.emptyRow}>

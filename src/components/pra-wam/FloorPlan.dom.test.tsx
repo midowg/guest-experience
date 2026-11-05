@@ -42,32 +42,24 @@ describe("FloorPlan", () => {
     expect(plan().compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("shows each room's specification under its name, and the status when asked", () => {
-    const { container, rerender } = render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
-    // What the plan shows, not its tooltips.
+  it("keeps each room's box to its chairs: name, specification and status are in the label of the room tapped", () => {
+    const { container } = render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
+    // What the plan shows inside its boxes: no names, no "Ruang N", no chairs count, no status.
     const text = () => [...container.querySelectorAll("svg text")].map(node => node.textContent).join(" ");
-    expect(text()).toContain("4 kursi");
-    expect(text()).toContain("Kapasitas belum diisi");
-    expect(text()).not.toContain("Kosong 09.00–10.00");
-    rerender(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" subtitle="status" />);
-    expect(text()).toContain("Kosong 09.00–10.00");
-    // The status is still read out.
-    expect(screen.getByRole("img", { name: "Nagapadma, kosong 09.00–10.00" })).toBeTruthy();
-    // The plan says how many chairs; the tooltip adds the people and facilities. Nagapadma's
-    // narrow box keeps its name inside it: upright when it fits, else turned to run down the room.
-    rerender(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
-    expect(text()).toContain("8 kursi");
-    expect(text()).not.toContain("TV, Whiteboard");
-    const nagapadma = screen.getByRole("img", { name: "Nagapadma, kosong 09.00–10.00" });
-    const name = [...nagapadma.querySelectorAll("text")].find(node => node.textContent === "Nagapadma")!;
-    const turned = !!nagapadma.querySelector("g[transform^='rotate(-90']");
-    if (!turned) expect(9 * 0.6 * Number(name.getAttribute("font-size"))).toBeLessThanOrEqual(125 - 8);
+    for (const word of ["Nagapadma", "Vasuki", "kursi", "Kapasitas", "Kosong", "Ruang 5"]) expect(text()).not.toContain(word);
+    expect(container.querySelector("[class*='focus']")).toBeNull();
+    // Each room is still named for screen readers, with its specification and status.
+    const nagapadma = screen.getByRole("button", { name: /^Nagapadma, Muat 8 orang · TV, Whiteboard, kosong 09.00–10.00/ });
     expect(nagapadma.querySelector("title")?.textContent).toContain("TV, Whiteboard");
+    // A tap shows the label: the name, then people, facilities and status.
+    fireEvent.click(nagapadma);
+    const focus = container.querySelector("[class*='focus']")!;
+    expect([...focus.querySelectorAll("text")].map(node => node.textContent)).toEqual(["Nagapadma", "Muat 8 orang · TV, Whiteboard · kosong"]);
   });
 
   it("draws each room's chairs from its capacity, below its name", () => {
     const { container } = render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
-    const seats = (name: string) => screen.getByRole("img", { name: new RegExp(`^${name},`) }).querySelector("path[class*='seat']")?.getAttribute("d")?.match(/M/g)?.length ?? 0;
+    const seats = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name},`) }).querySelector("path[class*='seat']")?.getAttribute("d")?.match(/M/g)?.length ?? 0;
     expect(seats("Nagapadma")).toBe(8);
     expect(seats("Vasuki")).toBe(4);
     // No capacity: a table without chairs.
@@ -79,17 +71,21 @@ describe("FloorPlan", () => {
     expect(container.querySelector("[class*='furniture']")?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  it("rings the chosen room and says it in a tooltip, and tags a taken room", () => {
+  it("rings the chosen room with its label; a taken room shows its label when tapped but is not picked", () => {
     const statusOf = (item: Room): PlanStatus => item.name === "Nagapadma" ? { tone: "busy", text: "Terpakai 09.30–11.00" } : free;
-    const { container, rerender } = render(<FloorPlan rooms={rooms} statusOf={statusOf} label="Denah kantor" onPick={() => {}} selectedId="vasuki" />);
-    const focus = container.querySelector("[class*='focus']")!;
-    expect(focus.getAttribute("aria-hidden")).toBe("true");
-    expect(focus.textContent).toBe("Vasuki · 4 kursi · kosong");
-    expect(screen.getByRole("img", { name: /^Nagapadma, terpakai/ }).textContent).toContain("Terpakai");
-    rerender(<FloorPlan rooms={rooms} statusOf={statusOf} label="Denah kantor" onPick={() => {}} highlightId="antareja" />);
-    expect(container.querySelector("[class*='focus']")?.textContent).toBe("Antareja · kapasitas belum diisi · kosong");
-    rerender(<FloorPlan rooms={rooms} statusOf={statusOf} label="Denah kantor" onPick={() => {}} />);
-    expect(container.querySelector("[class*='focus']")).toBeNull();
+    const onPick = vi.fn();
+    const { container, rerender } = render(<FloorPlan rooms={rooms} statusOf={statusOf} label="Denah kantor" onPick={onPick} selectedId="vasuki" />);
+    const label = () => [...container.querySelector("[class*='focus']")!.querySelectorAll("text")].map(node => node.textContent);
+    expect(container.querySelector("[class*='focus']")?.getAttribute("aria-hidden")).toBe("true");
+    expect(label()).toEqual(["Vasuki", "Muat 4 orang · min 1 · kosong"]);
+    rerender(<FloorPlan rooms={rooms} statusOf={statusOf} label="Denah kantor" onPick={onPick} highlightId="antareja" />);
+    expect(label()).toEqual(["Antareja", "Kapasitas belum diisi · kosong"]);
+    // No "Terpakai" tag in the box: the chairs' colour says it.
+    const nagapadma = screen.getByRole("button", { name: /^Nagapadma, .*terpakai 09.30–11.00$/ });
+    expect(nagapadma.querySelectorAll("text")).toHaveLength(0);
+    fireEvent.click(nagapadma);
+    expect(onPick).not.toHaveBeenCalled();
+    expect(label()).toEqual(["Nagapadma", "Muat 8 orang · TV, Whiteboard · terpakai"]);
   });
 
   it("colours chairs by main or small room in the admin's view, as the room list groups them", () => {
@@ -109,18 +105,21 @@ describe("FloorPlan", () => {
     expect(screen.getByRole("img", { name: /Kompas: utara ke atas, sisi Limasan/ })).toBeTruthy();
   });
 
-  it("draws the site and Vasuki's divider, and names the other rooms quietly without reading them out", () => {
+  it("draws the site and Vasuki's divider, and no “Ruang N” on the people's plan", () => {
     const { container } = render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
     const site = container.querySelector("g[class*='site']")!;
     expect(site.getAttribute("aria-hidden")).toBe("true");
     expect(site.querySelectorAll("rect").length).toBeGreaterThan(20);
     expect(site.textContent).toBe("Masuk");
-    const vasuki = screen.getByRole("img", { name: /^Vasuki,/ });
+    const vasuki = screen.getByRole("button", { name: /^Vasuki,/ });
     expect(vasuki.querySelector("line[class*='divider']")).toBeTruthy();
-    // The numbered rooms carry their names (a tiny one only once readable, floor-plan.test.ts), never read out.
+    // The numbered rooms are plain boxes: no name drawn, nothing read out.
     const svgText = () => [...container.querySelectorAll("svg text")].map(node => node.textContent);
-    expect(svgText()).toContain("Ruang 5");
+    expect(svgText().some(text => text?.startsWith("Ruang"))).toBe(false);
     expect(screen.queryByRole("img", { name: /Ruang 5/ })).toBeNull();
+    // A room's spot with no WAM room (Pantry) still says what it is when tapped.
+    fireEvent.click(screen.getByRole("button", { name: "Pantry, bukan ruang booking" }));
+    expect(container.querySelector("[class*='focus']")?.textContent).toContain("Bukan ruang booking");
     // Main Office keeps its desks as fixtures, with no table of its own.
     expect(container.querySelectorAll("rect[class*='desk']")).toHaveLength(10);
   });

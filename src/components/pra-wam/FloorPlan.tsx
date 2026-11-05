@@ -5,7 +5,7 @@ import { Minus, Plus, Scan } from "lucide-react";
 import type { Room } from "@/lib/pra-wam/appraisal";
 import {
   ENTRANCE, FIT_VIEW, FIXTURES, FOUNTAIN, PLAN_H, PLAN_SPOTS, PLAN_W, SEAT_SCALE, SITE, SITE_LINES, WORDS_BOTTOM, WORDS_TOP, ZOOM_MAX, ZOOM_MIN, clampView, isRoomSpot, moveView,
-  pickableTone, placeRooms, quietName, revealRect, roomSeats, roomSpec, spotText, spotWords, zoomView, type DrawnSpot, type PlanStatus, type PlanTone, type PlanView, type Rect, type SiteKind,
+  pickableTone, placeRooms, quietName, revealRect, roomSeats, roomSpec, spotText, spotWords, zoomView, type DrawnSpot, type PlanStatus, type PlanTone, type PlanView, type Rect, type SiteKind, type SpotText,
 } from "@/lib/pra-wam/floor-plan";
 import type { DayStatus, DayTone } from "@/lib/pra-wam/room-day";
 import { chairPaths, seatPlan, type SeatLayout } from "@/lib/pra-wam/seating";
@@ -95,8 +95,10 @@ type Gesture = {
 
 /**
  * The office floor plan as an SVG (plan units 0 0 PLAN_W PLAN_H, traced from the office's CAD
- * drawing, north up): the site and both buildings, and every room with its name and specification
- * (or status); the rooms no WAM room takes carry a quiet "Ruang N". A compass in its top-left corner shows north (Limasan's side). It
+ * drawing, north up): the site and both buildings, and every room with its chairs. For the people
+ * using it a room box holds only its chairs (coloured by status): its name, specification and
+ * status show in a label over it when it is tapped (5 Nov 2026). The super admin's plan
+ * (`onPickSpot`) still names every spot, "Ruang N" too, to give it a room. A compass in its top-left corner shows north (Limasan's side). It
  * always opens fitted to its box, on a phone too, and zooms and pans like a map: pinch or ctrl/⌘ +
  * wheel, double tap, drag when zoomed, the + / − / fit buttons in its top-right corner (the empty
  * corner of the building), and +, −, 0 and the arrows from the keyboard. WAM rooms the plan has no
@@ -111,6 +113,8 @@ export function FloorPlan({
   const [view, setView] = useState<PlanView>(FIT_VIEW);
   const [unitPx, setUnitPx] = useState<number | undefined>(undefined);
   const [said, setSaid] = useState("");
+  /** The room or spot tapped last, whose label shows (people's plan only); none until a tap. */
+  const [peek, setPeek] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const viewRef = useRef<PlanView>(FIT_VIEW);
   const frame = useRef(0);
@@ -259,6 +263,8 @@ export function FloorPlan({
   const reveal = (rect: Rect) => { if (viewRef.current.scale > ZOOM_MIN) go(revealRect(viewRef.current, rect)); };
 
   const { placed, others, unplaced } = placeRooms(rooms);
+  // People see chairs only; the words are in the label of the room tapped (Focus).
+  const wordsInside = !!onPickSpot;
   const canPick = (room: Room, status: Status) => !!onPick && (pickable ? pickable(room, status) : pickableTone(status.tone as PlanTone) || room.id === selectedId);
   const keyed = (run: () => void) => (event: KeyboardEvent) => {
     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); run(); }
@@ -268,17 +274,22 @@ export function FloorPlan({
   const common = { unitPx, scale: view.scale, onReveal: reveal, shadow: `url(#${shadowId})` };
   const seatsWord = (room: Room) => room.capacity ? `${room.capacity} kursi` : "kapasitas belum diisi";
   const emptyStatus: PlanStatus = emptySpot ?? { tone: "closed", text: "Belum ada ruang" };
-  /** The chosen (or ringed) spot: drawn again on top with a blue ring and a dark tooltip. */
-  const chosen = ((): { rect: Rect; shape?: Point[]; tip: string } | null => {
+  /** A WAM room's label: its name, then its people and facilities and its status. */
+  const roomTip = (room: Room): Tip => ({ title: room.name, detail: `${roomSpec(room)} · ${TONE_WORDS[statusOf(room).tone]}` });
+  /** The chosen (or ringed, or tapped) spot: drawn again on top with a blue ring and a dark label. */
+  const chosen = ((): { rect: Rect; shape?: Point[]; tip: Tip } | null => {
     if (onPickSpot) {
       const hit = placed.find(item => item.key === selectedSpot);
-      if (hit) return { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: `${hit.room.name} · ${seatsWord(hit.room)} · ${lower(statusOf(hit.room).text)}` };
+      if (hit) return { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: { title: hit.room.name, detail: `${seatsWord(hit.room)} · ${lower(statusOf(hit.room).text)}` } };
       const spot = others.find(item => item.key === selectedSpot);
       if (!spot) return null;
-      return { rect: spot.rect, shape: spot.shape, tip: `${spot.label} · ${lower(emptyStatus.text)}` };
+      return { rect: spot.rect, shape: spot.shape, tip: { title: spot.label, detail: lower(emptyStatus.text) } };
     }
-    const hit = placed.find(item => item.room.id === selectedId) ?? placed.find(item => item.room.id === highlightId);
-    return hit ? { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: `${hit.room.name} · ${seatsWord(hit.room)} · ${TONE_WORDS[statusOf(hit.room).tone]}` } : null;
+    const tapped = peek ? placed.find(item => item.key === peek) : undefined;
+    const hit = tapped ?? placed.find(item => item.room.id === selectedId) ?? placed.find(item => item.room.id === highlightId);
+    if (hit) return { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: roomTip(hit.room) };
+    const spot = peek ? others.find(item => item.key === peek) : undefined;
+    return spot ? { rect: spot.rect, shape: spot.shape, tip: { title: spot.label, detail: "Bukan ruang booking" } } : null;
   })();
   const legendKeys: LegendKey[] = byKind ? [...(["kindMain", "kindSmall"] as const).filter(key => !legend.includes(key)), ...legend] : legend;
 
@@ -293,6 +304,13 @@ export function FloorPlan({
       return <Spot key={spot.key} {...common} {...drawn} seats={seats} name={spot.label} sub={empty.text}
         tone={empty.tone} selected={spot.key === selectedSpot} title={`${spot.label} · ${empty.text}`}
         button={spotButton(spot.key, `${spot.label}, ${lower(empty.text)}`)} />;
+    }
+    if (!wordsInside) {
+      // A room's spot no WAM room takes (Pantry, Limasan) still says what it is when tapped; desks and the like say nothing.
+      if (!named) return <Spot key={spot.key} {...common} {...drawn} name="" sub="" tone="off" plain hideWords title="" />;
+      const open = () => setPeek(spot.key);
+      return <Spot key={spot.key} {...common} {...drawn} seats={seats} name={spot.label} sub="" tone="off" plain hideWords title={spot.label}
+        ring={peek === spot.key} button={{ label: `${spot.label}, bukan ruang booking`, onClick: open, onKeyDown: keyed(open) }} />;
     }
     const name = otherSpots === "label" ? spot.label : "";
     return <Spot key={spot.key} {...common} {...drawn} seats={seats} name={name} sub="" tone="off" plain faint={!named} title={name} />;
@@ -313,10 +331,11 @@ export function FloorPlan({
     }
     const selected = room.id === selectedId;
     const pick = canPick(room, status);
-    const sub = subtitle === "status" ? (selected ? `Dipilih · ${status.text}` : status.text) : seatsLine;
-    return <Spot key={key} {...common} {...drawn} name={room.name} sub={sub} tone={status.tone} selected={selected}
-      ring={room.id === highlightId} title={`${room.name} · ${spec} · ${status.text}`} a11y={`${room.name}, ${lower(status.text)}`}
-      button={pick ? { label: `${room.name}, ${lower(status.text)}. ${action}`, onClick: () => onPick?.(room), onKeyDown: keyed(() => onPick?.(room)) } : undefined} />;
+    // A tap shows its label; a room that can be picked is picked too.
+    const tap = () => { setPeek(key); if (pick) onPick?.(room); };
+    return <Spot key={key} {...common} {...drawn} chip={undefined} name={room.name} sub="" hideWords tone={status.tone} selected={selected}
+      ring={room.id === highlightId || peek === key} title={`${room.name} · ${spec} · ${status.text}`} a11y={`${room.name}, ${lower(status.text)}`}
+      button={{ label: `${room.name}, ${spec}, ${lower(status.text)}${pick ? `. ${action}` : ""}`, onClick: tap, onKeyDown: keyed(tap) }} />;
   });
 
   return <div className={css.plan}>
@@ -425,16 +444,21 @@ function Fixtures() {
   </g>;
 }
 
+/** The label over a tapped room: its name, and a line of its people, facilities and status. */
+type Tip = { title: string; detail: string };
+/** No words in a box: only its chairs (people's plan). */
+const NO_WORDS: SpotText = { name: [], nameSize: 0, sub: [], subSize: 0, subFrom: Infinity, rotate: false };
+
 /**
- * The chosen room drawn again on top of the plan: a blue ring on its walls and a dark tooltip above
- * it ("Antareja · 4 kursi · kosong"), sized for the screen at any zoom and kept in view. Read out
+ * The chosen room drawn again on top of the plan: a blue ring on its walls and a dark label above
+ * it ("Antareja" over "4 orang · TV · kosong"), sized for the screen at any zoom and kept in view. Read out
  * already by the room itself, so hidden from screen readers.
  */
-function Focus({ rect, shape, tip, view, unitPx }: { rect: Rect; shape?: Point[]; tip: string; view: PlanView; unitPx?: number }) {
+function Focus({ rect, shape, tip, view, unitPx }: { rect: Rect; shape?: Point[]; tip: Tip; view: PlanView; unitPx?: number }) {
   const px = (unitPx && unitPx > 0 ? unitPx : 860 / PLAN_W) * view.scale;
-  const size = 12.5 / px, padX = 9 / px, height = 26 / px, arrow = 6 / px, gap = 5 / px, edge = 4 / px;
+  const size = 13.5 / px, small = 11.5 / px, padX = 12 / px, height = 46 / px, arrow = 6 / px, gap = 5 / px, edge = 4 / px;
   const viewW = PLAN_W / view.scale, viewH = PLAN_H / view.scale;
-  const width = Math.min(tip.length * size * 0.56 + padX * 2, viewW - edge * 2);
+  const width = Math.min(Math.max(tip.title.length * size * 0.6, tip.detail.length * small * 0.56) + padX * 2, viewW - edge * 2);
   const middle = rect.x + rect.w / 2;
   const x = Math.min(Math.max(middle - width / 2, view.x + edge), view.x + viewW - width - edge);
   const aboveY = rect.y - gap - arrow - height;
@@ -451,9 +475,10 @@ function Focus({ rect, shape, tip, view, unitPx }: { rect: Rect; shape?: Point[]
     {outline(css.focusHalo)}
     {outline(css.focusRing)}
     <g className={css.tip}>
-      <rect x={x} y={y} width={width} height={height} rx={height / 2.4} />
+      <rect x={x} y={y} width={width} height={height} rx={12 / px} />
       <path d={pointer} />
-      <text x={x + width / 2} y={y + height / 2} fontSize={size.toFixed(2)}>{tip}</text>
+      <text x={x + width / 2} y={y + height * 0.33} fontSize={size.toFixed(2)}>{tip.title}</text>
+      <text className={css.tipDetail} x={x + width / 2} y={y + height * 0.7} fontSize={small.toFixed(2)}>{tip.detail}</text>
     </g>
   </g>;
 }
@@ -474,6 +499,8 @@ type SpotProps = {
   open?: boolean;
   /** A quiet name ("Ruang 12") that shows only once readable at this zoom; not read out. */
   faint?: boolean;
+  /** Draw no words in the box, only its chairs (the name stays in the label and the tooltip). */
+  hideWords?: boolean;
   /** Chairs drawn from the capacity, the words then at the top; without it the words sit in the middle. */
   seats?: { capacity: number | null; layout: SeatLayout; round?: boolean };
   name: string;
@@ -513,18 +540,18 @@ function keyboardFocus(element: Element) {
  * at this zoom, its subtitle. With chairs, the words sit at the top and the chairs below them; the
  * chairs are two paths (seats, backrests) coloured by the spot's status or kind.
  */
-function Spot({ rect, shape, textRect, door, divider, marks, open, faint, seats, name, sub, tone, kind, chip, title, a11y, main, selected, ring, plain, quiet, button, unitPx, scale, onReveal, shadow }: SpotProps) {
+function Spot({ rect, shape, textRect, door, divider, marks, open, faint, hideWords, seats, name, sub, tone, kind, chip, title, a11y, main, selected, ring, plain, quiet, button, unitPx, scale, onReveal, shadow }: SpotProps) {
   // An L-shaped room keeps its words in its full-width arm, so they stay inside the L.
   const textBox = textRect ?? rect;
   const capacity = seats?.capacity ?? null, layout = seats?.layout, round = !!seats?.round;
   const { text, band, furniture, chairs } = useMemo(() => {
-    if (!layout) return { text: spotText({ name, sub, rect: textBox, main, unitPx }), band: 0, furniture: null, chairs: null };
-    const words = spotWords({ name, sub, rect: textBox, main, unitPx });
+    if (!layout) return { text: hideWords ? NO_WORDS : spotText({ name, sub, rect: textBox, main, unitPx }), band: 0, furniture: null, chairs: null };
+    const words = hideWords ? { ...NO_WORDS, band: 0 } : spotWords({ name, sub, rect: textBox, main, unitPx });
     // Planned at seating's size in a box 1/SEAT_SCALE as big, and drawn shrunk back (below).
     const k = 1 / SEAT_SCALE;
     const plan = seatPlan({ box: { x: textBox.x * k, y: textBox.y * k, w: textBox.w * k, h: textBox.h * k }, capacity, layout, round, top: words.band * k });
     return { text: words, band: words.band, furniture: plan, chairs: plan.drawn ? chairPaths(plan.chairs) : null };
-  }, [name, sub, textBox, main, unitPx, capacity, layout, round]);
+  }, [name, sub, textBox, main, unitPx, capacity, layout, round, hideWords]);
 
   const showSub = text.sub.length > 0 && scale >= text.subFrom;
   const nameGap = text.nameSize * 1.2, subGap = text.subSize * 1.2;
