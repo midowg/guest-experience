@@ -268,3 +268,18 @@ export async function exportWorkbook(form: Pick<QForm, "id" | "name">, reader: R
   };
   return { file: writeXlsx([info, ...sheets]), includesHr, sections: sheets.length };
 }
+
+/* ---- Partisipasi ------------------------------------------------------------------------------ */
+
+export type Participation = { done: number; active: number };
+
+/** How many active employees finished the questionnaire, of all active employees (Hasil survei, Ringkasan BOD). */
+export async function participationOf(form: Pick<QForm, "id">): Promise<Participation> {
+  const [people, rows] = await Promise.all([
+    listPeople(),
+    allRows<{ employee_id: string; completed_at: string | null }>((from, to) => createPrivilegedClient().from("cq_progress").select("employee_id,completed_at")
+      .eq("form_id", form.id).order("employee_id").range(from, to)),
+  ]);
+  const active = new Set(people.filter(person => person.active).map(person => person.id));
+  return { done: rows.filter(row => row.completed_at && active.has(row.employee_id)).length, active: active.size };
+}

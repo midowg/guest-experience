@@ -10,6 +10,8 @@ import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { sessionWhen, sessionWhere } from "@/lib/pra-wam/sessions";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { bodSummary, overview } from "@/lib/server/pra-wam/dashboard";
+import { currentForm } from "@/lib/server/pra-wam/questionnaire";
+import { participationOf } from "@/lib/server/pra-wam/recap";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import styles from "@/components/pra-wam/panitia.module.css";
@@ -23,6 +25,14 @@ const longDate = (now: Date) => new Intl.DateTimeFormat("id-ID", { weekday: "lon
  * Ringkasan operasional (Penpot "D1") for panitia; BOD gets Ringkasan Pra WAM (Penpot "B1", "E3"),
  * and the panitia's page read only with ?lihat=panitia ("Dashboard panitia (baca)").
  */
+/** The open questionnaire for the Survei card: its name and participation; null before it opens, and never in the way of Ringkasan. */
+async function questionnaireSurvey() {
+  const form = await currentForm().catch(() => null);
+  if (!form || form.status === "draf") return null;
+  const participation = await participationOf(form).catch(() => null);
+  return participation ? { name: form.name, participation } : null;
+}
+
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ lihat?: string }> }) {
   const member = await requireMemberPage(praWamPath.dashboard);
   if (!seesAllSessions(member)) notFound();
@@ -31,10 +41,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const today = wibDate(now.toISOString());
   // BOD reads everything and changes nothing: their own summary.
   if (!manage && (await searchParams).lihat !== "panitia") {
-    const summary = await bodSummary(member, now);
+    const [summary, survey] = await Promise.all([bodSummary(member, now), questionnaireSurvey()]);
     return <PraWamShell member={member} current="dashboard">
       {!summary.migrated && <Notice tone="warning">Sesi menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>}
-      <BodSummary data={summary} greeting={`${greeting(now)}, ${member.nickname || member.name.split(" ")[0]}`} date={longDate(now)} />
+      <BodSummary data={summary} greeting={`${greeting(now)}, ${member.nickname || member.name.split(" ")[0]}`} date={longDate(now)} survey={survey} />
     </PraWamShell>;
   }
   const data = await overview(member, now);

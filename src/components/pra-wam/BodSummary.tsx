@@ -3,6 +3,8 @@ import { AlertTriangle, ArrowLeftRight, BarChart3, Bot, CalendarClock, CalendarD
 import { lowAttendance, percent, type AttentionKind } from "@/lib/pra-wam/bod";
 import { praWamPath } from "@/lib/routes";
 import type { BodSummary as Summary } from "@/lib/server/pra-wam/dashboard";
+import type { Participation } from "@/lib/server/pra-wam/recap";
+import { ParticipationMeter } from "./SurveyRecap";
 import base from "./pra-wam.module.css";
 import styles from "./bod.module.css";
 
@@ -24,7 +26,8 @@ const attention: Record<AttentionKind, { icon: ReactNode; href?: string }> = {
  * forums, Perlu perhatian and Akses cepat on the left, departments and the survey on the right.
  * Surveys and MCP do not exist yet: they say so instead of showing numbers.
  */
-export function BodSummary({ data, greeting, date }: { data: Summary; greeting: string; date: string }) {
+/** `survey`: the open questionnaire's name and participation, or null before it opens. */
+export function BodSummary({ data, greeting, date, survey = null }: { data: Summary; greeting: string; date: string; survey?: { name: string; participation: Participation } | null }) {
   const notSignedIn = data.accounts - data.signedIn;
   const active = data.active;
   const attendanceShown = data.attendanceReady && !!active;
@@ -96,7 +99,9 @@ export function BodSummary({ data, greeting, date }: { data: Summary; greeting: 
 
         <section className={base.card} aria-labelledby="survei">
           <div className={styles.cardHead}><h2 id="survei">Survei</h2><a href={praWamPath.surveyResults}>Lihat hasil</a></div>
-          <p className={styles.empty}>Belum ada survei. Hasilnya muncul di sini setelah panitia menerbitkan survei pertama.</p>
+          {survey
+            ? <><p className={styles.empty}>{survey.name}</p><ParticipationMeter participation={survey.participation} /></>
+            : <p className={styles.empty}>Belum ada survei. Hasilnya muncul di sini setelah kuesioner dibuka.</p>}
         </section>
       </div>
     </div>

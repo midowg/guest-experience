@@ -54,7 +54,7 @@ vi.mock("./questionnaire", () => ({
   }),
 }));
 
-const { exportPlan, exportWorkbook, recapOf } = await import("./recap");
+const { exportPlan, exportWorkbook, participationOf, recapOf } = await import("./recap");
 const { readXlsx } = await import("../xlsx");
 
 const form = { id: "f1", name: "Kuesioner" };
@@ -110,6 +110,25 @@ describe("Rekap", () => {
     expect(items.song.body).toEqual({ type: "quotes", quotes: [{ text: "Lagu A", count: 1 }] });
     expect(items.smoke.body).toEqual({ type: "few" });
     expect((await recapOf(form, adminReader(false), "Tidak ada")).department).toBeNull();
+  });
+});
+
+describe("Hasil survei for BOD", () => {
+  it("leaves out answers kept for the facilitator only, which panitia and admin still read", async () => {
+    db.cq_answers.find(row => row.employee_id === "p2" && row.question_id === "share")!.value = SHARE_CHOICES.facilitator;
+    const dream = async (facilitator: boolean) => (await recapOf(form, { hrOpen: false, facilitator })).sections[1].items.find(item => item.key === "dream")!;
+    const bod = await dream(false);
+    expect(bod.body.type === "quotes" && bod.body.quotes.map(quote => quote.text).sort()).toEqual(["mimpi Ayu", "mimpi Citra"]);
+    const panitia = await dream(true);
+    expect(panitia.answered).toBe(3);
+  });
+  it("counts who finished among active employees", async () => {
+    db.cq_progress = [
+      { form_id: "f1", employee_id: "p1", completed_at: "2026-11-05T01:00:00Z" },
+      { form_id: "f1", employee_id: "p2", completed_at: null },
+      { form_id: "f1", employee_id: "gone", completed_at: "2026-11-05T01:00:00Z" },
+    ];
+    expect(await participationOf(form)).toEqual({ done: 1, active: 3 });
   });
 });
 

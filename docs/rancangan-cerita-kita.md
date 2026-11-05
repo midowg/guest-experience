@@ -1,8 +1,8 @@
 # Rancangan kuesioner personal WAM
 
 Status: tahap 1 dan 2 dibangun (4 November 2026). Tahap 3 sedang dibangun: **Kartu rekan** (galeri
-dan profil rekan), **Rekap**, **Ekspor**, **Kamar**, dan **Kebutuhan peserta** sudah ada (5 November;
-menunggu migrasi 202611050001 dan 202611050002); ringkasan BOD belum. Tahap 4 belum. Ditulis 4 November 2026, diperbarui 5 November 2026.
+dan profil rekan), **Rekap**, **Ekspor**, **Kamar**, **Kebutuhan peserta**, dan **Hasil survei** untuk BOD
+sudah ada (5 November; menunggu migrasi 202611050001 dan 202611050002). Tahap 4 belum. Ditulis 4 November 2026, diperbarui 5 November 2026.
 
 Sumber: artifact mockup **"Cerita Kita WAM 2026"**
 (https://claude.ai/artifact/BwHcrRv8Wmcg4oRTNW5Uaq). Isinya 6 bagian, sekitar 60 pertanyaan, level
@@ -312,6 +312,20 @@ BOD). Satu kartu per pertanyaan, aturannya di `src/lib/pra-wam/needs.ts`:
 | Kesehatan (16), nomor HP (5) | Tidak tampil; catatan bahwa HR menghubungi panitia bila perlu |
 
 Pilihan "Tidak ada" hanya berupa angka.
+
+## Hasil survei untuk BOD (tahap 3, dibangun)
+
+Kelola acara → **Survei** (`/wam/manage/surveys`, papan Penpot "B4 · Hasil survei"), untuk BOD,
+Panitia, dan Admin WAM. Memakai aturan Rekap dengan pembaca `{ hrOpen: false, facilitator }`:
+
+- Partisipasi: selesai dari karyawan aktif ("40 dari 57 · 70%"), juga di kartu Survei Ringkasan BOD.
+- Saringan bagian dan departemen. Grafik, tabel matriks, dan kutipan tanpa nama; kutipan yang sama
+  dikelompokkan ("· 6 orang"), tiga teratas lalu "Lihat semua".
+- Pertanyaan `hronly`, isian `hr`, dan rekan yang dipilih di pertanyaan `hr` tidak tampil sama
+  sekali. Pilihan `hr` (misalnya ukuran kaos) tampil sebagai jumlah; per departemen mulai 5 jawaban.
+- BOD bukan fasilitator: jawaban `pilih` dari orang yang memilih "Hanya dibaca fasilitator" tidak
+  ikut dihitung. Panitia dan admin tetap melihatnya (tanpa nama).
+- Bagian anonim hanya untuk semua departemen, mulai 5 jawaban.
 
 ## Privasi dan penyimpanan
 

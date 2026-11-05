@@ -1,0 +1,41 @@
+/* Hasil survei (Penpot B4) on the WAM tokens: one hue for bars, numbers always written next to them. */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.filters label { display: grid; gap: 4px; flex: 1 1 12rem; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.filters select { min-height: 44px; padding: 0 12px; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); color: var(--pw-text); font: inherit; }
+.filters button { min-height: 44px; padding: 0 16px; border: 1px solid var(--pw-primary); border-radius: 12px; background: var(--pw-surface); color: var(--pw-primary); font: inherit; font-weight: 800; cursor: pointer; }
+
+.participation { display: grid; gap: 8px; }
+.participationHead { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.participationHead span { font-weight: 700; color: var(--pw-muted); }
+.participationHead strong { color: var(--pw-text); font-variant-numeric: tabular-nums; }
+.track { height: 8px; border-radius: 999px; background: var(--pw-surface-soft, #eceef2); overflow: hidden; }
+.fill { display: block; height: 100%; border-radius: 999px; background: var(--pw-primary); }
+
+.sections { display: grid; gap: 24px; margin-top: 16px; }
+.section { display: grid; gap: 12px; }
+.section > article + article { margin-top: 0; }
+.sectionTitle { margin: 0; font-family: var(--pw-display); font-size: 20px; font-weight: 600; color: var(--pw-primary); }
+.question { margin: 0 0 4px; font-family: var(--pw-body); font-size: 15px; font-weight: 700; line-height: 1.4; color: var(--pw-text); }
+.note { margin: 8px 0 0; font-size: 14px; color: var(--pw-muted); }
+
+.bars { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.bar { display: grid; grid-template-columns: minmax(6rem, 12rem) minmax(0, 1fr) 2.5rem; gap: 10px; align-items: center; min-height: 28px; font-size: 14px; color: var(--pw-text); }
+.barLabel { overflow-wrap: anywhere; line-height: 1.3; }
+.barTrack { height: 10px; border-radius: 0 4px 4px 0; background: var(--pw-surface-soft, #eceef2); overflow: hidden; }
+.barFill { display: block; height: 100%; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--pw-primary); }
+.barFill[data-zero] { min-width: 0; }
+.barValue { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+@media (max-width: 30rem) { .bar { grid-template-columns: minmax(0, 1fr) auto; } .barTrack { grid-column: 1 / -1; grid-row: 2; } }
+
+.matrixWrap { overflow-x: auto; margin-top: 10px; }
+.matrix { width: 100%; border-collapse: separate; border-spacing: 2px; font-size: 13px; color: var(--pw-text); }
+.matrix th { padding: 4px 6px; text-align: left; font-weight: 700; vertical-align: bottom; }
+.matrix thead th { color: var(--pw-muted); text-align: center; font-size: 12px; }
+.matrix td { min-width: 3.75rem; padding: 6px; border-radius: 4px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--pw-primary) calc(6% + var(--share, 0) * 40%), var(--pw-surface)); }
+.matrix td small { display: block; font-weight: 600; color: var(--pw-muted); }
+
+.quotes { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.quote { padding: 8px 12px; border-left: 3px solid var(--pw-primary); border-radius: 0 10px 10px 0; background: var(--pw-primary-soft); color: var(--pw-text); font-size: 14px; overflow-wrap: anywhere; white-space: pre-line; }
+.quote span { color: var(--pw-muted); font-weight: 700; }
+.more summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--pw-primary); font-weight: 800; cursor: pointer; }
