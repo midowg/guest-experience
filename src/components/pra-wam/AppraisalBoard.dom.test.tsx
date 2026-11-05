@@ -43,12 +43,13 @@ it("shows each room's day on the plan, without hours to pick, and books the next
   expect(screen.queryByText("Durasi")).toBeNull();
   expect(screen.getByRole("heading", { name: "Denah kantor · Kamis, 5 Nov" })).toBeTruthy();
   expect(screen.getByText(/^Status sepanjang hari, 07.00–22.00\./)).toBeTruthy();
-  expect(screen.getAllByText("Terpakai · 1 booking").length).toBeGreaterThan(0);
-  expect(screen.getByText("1 jam")).toBeTruthy();
-  expect(screen.getAllByText("Booking kamu").length).toBeGreaterThan(0);
-  fireEvent.click(screen.getByRole("button", { name: /^Nagapadma, terpakai · 1 booking\. Lihat detail/ }));
+  // Under the plan, the same room cards as under Kalender: the hours left, the booking, free time to book.
+  const card = within(document.getElementById("ruang-r1")!);
+  expect(card.getByText("14 jam")).toBeTruthy();
+  expect(card.getByText(/Booking kamu/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /^Nagapadma, terpakai · 1 booking\. Lihat kartunya/ }));
   expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Book ruang ini" }));
+  fireEvent.click(card.getAllByRole("button", { name: /^Book Nagapadma, kosong/ })[0]);
   expect(screen.getByRole("dialog", { name: "Book ruang" })).toBeTruthy();
 });
 it("shows the calendar only when the floor plan is switched off", () => {

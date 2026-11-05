@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { wibInstant } from "./appraisal";
-import { bookingFrom, countLabel, daySummaries, durationLabel, hourFills, openHours, roomDay, runLabel, stripDay } from "./room-day";
+import { bookingFrom, countLabel, daySummaries, durationLabel, roomDay, runLabel, stripDay } from "./room-day";
 
 const date = "2026-11-05";
 const hold = (start: string, end: string, session = false) => ({ startsAt: wibInstant(date, start), endsAt: wibInstant(date, end), session });
@@ -111,14 +111,3 @@ describe("a whole day across the rooms, for the date strip", () => {
   });
 });
 
-describe("the Denah meter", () => {
-  it("has one segment per opening hour, 07.00 to 22.00, filled by how much of it is booked", () => {
-    expect(openHours).toBe(15);
-    const fills = hourFills(date, [hold("09:00", "11:00"), hold("10:30", "11:30"), hold("21:30", "23:00", true)]);
-    expect(fills).toHaveLength(15);
-    // 09.00–11.30 merged: hours 09 and 10 full, 11 half; 21.30–22.00 half (after closing is cut).
-    expect(fills.slice(2, 5)).toEqual([1, 1, 0.5]);
-    expect(fills[14]).toBe(0.5);
-    expect(fills.reduce((sum, fill) => sum + fill, 0) * 60).toBe(roomDay({ date, bookable: true, holds: [hold("09:00", "11:00"), hold("10:30", "11:30"), hold("21:30", "23:00", true)], now: before }).takenMinutes);
-  });
-});

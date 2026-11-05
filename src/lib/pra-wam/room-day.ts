@@ -58,22 +58,6 @@ function takenWithin(date: string, holds: DayHold[]): number {
   return takenSpans(date, holds).reduce((total, [from, to]) => total + to - from, 0);
 }
 
-/** How many hours a room is open for booking in a day (07.00–22.00: 15). */
-export const openHours = (CLOSE - OPEN) / 60;
-
-/**
- * The Denah meter (DS "Bilah tersegmentasi · meter"): for each opening hour, how much of it is
- * booked, 0 to 1, so a 2-hour booking fills two segments.
- */
-export function hourFills(date: string, holds: DayHold[]): number[] {
-  const spans = takenSpans(date, holds);
-  return Array.from({ length: openHours }, (_, index) => {
-    const from = OPEN + index * 60, to = from + 60;
-    const taken = spans.reduce((sum, [start, end]) => sum + Math.max(0, Math.min(end, to) - Math.max(start, from)), 0);
-    return taken / 60;
-  });
-}
-
 /**
  * The day of one room on `date`: `holds` are its bookings and sessions that day. A half hour that
  * has begun (`now`) can no longer be booked, so today's past hours never count as free; a day whose

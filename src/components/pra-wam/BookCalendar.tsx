@@ -3,6 +3,7 @@
 import { useState, type CSSProperties, type PointerEvent, type MouseEvent } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { appraisalRules, bookableFrom, clockAt, clockLabel, dayLabel, dayMinutes, hoursInGap, nowOffset, roomDay, startInGap, wibDate, wibTime, type Booking, type DaySegment, type Room } from "@/lib/pra-wam/appraisal";
+import { durationLabel } from "@/lib/pra-wam/room-day";
 import css from "./book-calendar.module.css";
 
 /*
@@ -64,20 +65,33 @@ type DayProps = {
   phoneOnly?: boolean;
 };
 
-/** One day: a card per room on a phone, the room-by-hour timeline from 1024px. */
-export function DayCalendar({ date, rooms, bookings, now, viewerId, canBook, onOpen, onBook, phoneOnly }: DayProps) {
-  const days = rooms.map(room => ({ room, segments: roomDay(date, bookings.filter(booking => booking.roomId === room.id), now) }));
+/**
+ * The rooms of a day as cards (RoomCard), the same list under Kalender and under Denah (5 Nov
+ * 2026: the switch only changes the picture above and its key). `always` keeps it on a desktop
+ * too (Denah); under Kalender a desktop has the timeline instead. A card is `ruang-<id>`, so the
+ * floor plan can bring it into view; `focusId` marks the one picked there.
+ */
+export function RoomList({ date, rooms, bookings, now, viewerId, canBook, onOpen, onBook, always, focusId }: Omit<DayProps, "phoneOnly"> & { always?: boolean; focusId?: string | null }) {
   const line = nowOffset(date, now);
   const over = bookableFrom(date, now) >= dayMinutes;
   const book = (room: Room, gap: Gap, start: number) => onBook({ room, ...hoursInGap(gap, start) });
   if (!rooms.length) return <p className={css.empty}>Belum ada ruang yang bisa dibooking. Admin WAM mengaturnya di Kelola acara.</p>;
+  return <ul className={`${css.phone} ${always ? css.phoneAlways : ""}`} aria-label={`Ruang, ${dayLabel(date)}`}>
+    {rooms.map(room => <li key={room.id} id={`ruang-${room.id}`} tabIndex={-1} className={focusId === room.id ? css.roomOn : undefined}>
+      <RoomCard date={date} room={room} segments={roomDay(date, bookings.filter(booking => booking.roomId === room.id), now)} viewerId={viewerId} line={line} over={over} canBook={canBook} onOpen={onOpen} onBook={book} />
+    </li>)}
+  </ul>;
+}
+
+/** One day: a card per room on a phone (RoomList), the room-by-hour timeline from 1024px. */
+export function DayCalendar({ date, rooms, bookings, now, viewerId, canBook, onOpen, onBook, phoneOnly }: DayProps) {
+  const days = rooms.map(room => ({ room, segments: roomDay(date, bookings.filter(booking => booking.roomId === room.id), now) }));
+  const line = nowOffset(date, now);
+  const book = (room: Room, gap: Gap, start: number) => onBook({ room, ...hoursInGap(gap, start) });
+  if (!rooms.length) return <p className={css.empty}>Belum ada ruang yang bisa dibooking. Admin WAM mengaturnya di Kelola acara.</p>;
 
   return <>
-    <ul className={css.phone} aria-label={`Ruang, ${dayLabel(date)}`}>
-      {days.map(({ room, segments }) => <li key={room.id}>
-        <RoomCard date={date} room={room} segments={segments} viewerId={viewerId} line={line} over={over} canBook={canBook} onOpen={onOpen} onBook={book} />
-      </li>)}
-    </ul>
+    <RoomList date={date} rooms={rooms} bookings={bookings} now={now} viewerId={viewerId} canBook={canBook} onOpen={onOpen} onBook={onBook} />
 
     <div className={`${css.desk} ${phoneOnly ? css.hiddenDesk : ""}`} style={{ "--cols": rooms.length, "--hours": dayMinutes / 60 } as CSSProperties}>
       <div className={css.deskHead}>
@@ -124,6 +138,8 @@ function RoomCard({ date, room, segments, viewerId, line, over, canBook, onOpen,
       {room.capacity ? <span className={css.roomSize}>{room.capacity} orang</span> : null}
       <span className={`${css.pill} ${status.tone}`}>{status.text}</span>
     </header>
+    {/* Sisa jam (DS meter): what of 07.00–22.00 is not booked yet, overlaps counted once. */}
+    <p className={css.left}>Sisa <b>{durationLabel(dayMinutes - takenOf(segments))}</b> dari {dayMinutes / 60} jam</p>
     <DayBar segments={segments} viewerId={viewerId} line={line} />
     {items.length ? <ol className={css.items}>
       {items.map(segment => {
@@ -155,6 +171,16 @@ function RoomCard({ date, room, segments, viewerId, line, over, canBook, onOpen,
   </section>;
 }
 
+/** Minutes of the day taken by bookings and sessions, overlaps counted once. */
+function takenOf(segments: DaySegment<Booking>[]): number {
+  let total = 0, reached = 0;
+  for (const segment of segments.filter(item => item.kind === "busy").sort((a, b) => a.from - b.from)) {
+    const start = Math.max(segment.from, reached);
+    if (segment.to > start) { total += segment.to - start; reached = segment.to; }
+  }
+  return total;
+}
+
 /** The day at a glance: taken blocks with their colour edge, time gone by greyed, a tick for now. */
 function DayBar({ segments, viewerId, line }: { segments: DaySegment<Booking>[]; viewerId: string; line: number | null }) {
   return <div className={css.bar} aria-hidden>
@@ -164,7 +190,7 @@ function DayBar({ segments, viewerId, line }: { segments: DaySegment<Booking>[];
         : segment.kind === "past" ? <i key={`p-${segment.from}`} className={css.barPast} style={across(segment.from, segment.to)} /> : null)}
       {line != null && <b className={css.barNow} style={{ left: `${(line / dayMinutes) * 100}%` }} />}
     </div>
-    <div className={css.ticks}>{[0, 180, 360, 540].map(offset => <span key={offset}>{time(offset)}</span>)}</div>
+    <div className={css.ticks}>{Array.from({ length: dayMinutes / 180 + 1 }, (_, index) => index * 180).map(offset => <span key={offset}>{time(offset)}</span>)}</div>
   </div>;
 }
 

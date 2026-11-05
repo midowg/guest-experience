@@ -52,6 +52,14 @@
 /* Phone: one compact card per room (DS itinerary card). */
 .phone { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 @media (min-width: 40rem) { .phone { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+/* Under Denah the list stays on a desktop too, three across. */
+@media (min-width: 1024px) { .phone.phoneAlways { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.phone > li { scroll-margin-top: 88px; border-radius: var(--pw-r-card); }
+.phone > li:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.roomOn > .room { box-shadow: 0 0 0 2px var(--pw-primary), var(--pw-shadow-card); }
+/* "Sisa 13 jam dari 15 jam" over the day bar. */
+.left { margin: 0 0 -6px; font-size: 13px; color: var(--pw-muted); }
+.left b { font-family: var(--pw-display); font-size: 17px; font-weight: 500; color: var(--pw-text); }
 .room { display: grid; gap: 12px; padding: 16px; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); min-width: 0; }
 .roomHead { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .roomHead h3 { margin: 0; min-width: 0; font-family: var(--pw-display); font-size: 17px; font-weight: 500; color: var(--pw-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
