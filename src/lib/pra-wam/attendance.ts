@@ -29,11 +29,22 @@ export function checkInNow<T extends { kind: string; startsAt: string; endsAt: s
   return items.find(item => item.kind === "sesi" && !item.checkedInAt && windowState(checkInWindow(item.startsAt, item.endsAt), now) === "buka") ?? null;
 }
 
-/** What a scan did, for the page that answers it. */
+/*
+ * How a session takes attendance (decided 5 Nov 2026): a session made from a room booking
+ * (appraisal, a meeting) only with "Saya hadir"; a session the panitia made (forum, pleno…) only
+ * with its printed QR. The server holds to it; the screens show only the one way.
+ */
+export type CheckInWay = "tombol" | "qr";
+export const checkInWay = (session: { booking?: unknown }): CheckInWay => (session.booking ? "tombol" : "qr");
+
+/**
+ * What a scan or "Saya hadir" did, for the page that answers it. "pakai-tombol": a QR scanned for
+ * a booking's session; "pakai-qr": "Saya hadir" for a panitia's session.
+ */
 export type CheckInResult =
   | { kind: "tercatat" | "sudah"; checkedInAt: string }
   | { kind: "belum" | "tutup"; window: CheckInWindow }
-  | { kind: "bukan-peserta" | "belum-terbit" | "tidak-dikenal" };
+  | { kind: "bukan-peserta" | "belum-terbit" | "tidak-dikenal" | "pakai-tombol" | "pakai-qr" };
 
 /**
  * How someone was signed in: qr (scanned the printed QR), manual (panitia marked them), offline
@@ -43,8 +54,8 @@ export type CheckInResult =
 export type AttendanceMethod = "qr" | "manual" | "offline" | "online";
 export const attendanceMethods = ["qr", "manual", "offline", "online"] as const satisfies readonly AttendanceMethod[];
 
-/** For panitia and BOD, next to the time in Daftar hadir. */
-export const methodLabels: Record<AttendanceMethod, string> = { offline: "di kantor", online: "online", qr: "QR", manual: "manual" };
+/** For panitia and BOD, next to the time in Daftar hadir: always which way, so QR and "Saya hadir" read apart. */
+export const methodLabels: Record<AttendanceMethod, string> = { offline: "Saya hadir · di kantor", online: "Saya hadir · online", qr: "Scan QR", manual: "Dicatat panitia" };
 /** For the participant, after "Hadir 09.42 · ". */
 export const ownMethodLabels: Record<AttendanceMethod, string> = { offline: "di kantor", online: "online (Zoom)", qr: "scan QR", manual: "dicatat panitia" };
 
@@ -129,6 +140,8 @@ export function selfCheckInRefusal(result: CheckInResult, clock: (iso: string) =
     case "bukan-peserta": return "Kamu bukan peserta sesi ini. Bila seharusnya ikut, minta panitia menambahkanmu atau mencatat kehadiranmu.";
     case "belum-terbit": return "Sesi ini belum diterbitkan panitia, jadi absen belum bisa dicatat.";
     case "tidak-dikenal": return "Sesi tidak ditemukan.";
+    case "pakai-qr": return "Absen sesi ini dengan scan QR yang ditempel di ruang.";
+    case "pakai-tombol": return "Sesi ini dari booking ruang. Absen dengan tombol Saya hadir di aplikasi, tanpa QR.";
     default: return null;
   }
 }

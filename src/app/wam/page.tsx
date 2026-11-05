@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ArrowLeftRight, Bell, CalendarClock, CheckCircle2, ChevronRight, Clock, Info, MapPin } from "lucide-react";
+import { ArrowLeftRight, Bell, CalendarClock, CheckCircle2, ChevronRight, Clock, Info, MapPin, QrCode } from "lucide-react";
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { Avatar } from "@/components/pra-wam/Avatar";
 import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard, RoomCard } from "@/components/pra-wam/BerandaCards";
@@ -7,9 +7,9 @@ import { SelfCheckIn } from "@/components/pra-wam/SelfCheckIn";
 import { AgendaTimeline } from "@/components/pra-wam/desktop/AgendaTimeline";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
-import { AGENDA_ITEM, checkInStatus, pickDay, withItem } from "@/lib/pra-wam/agenda";
+import { AGENDA_ITEM, checkInStatus, checkInText, heroCheckInNote, pickDay, withItem } from "@/lib/pra-wam/agenda";
 import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
-import { checkInNow } from "@/lib/pra-wam/attendance";
+import { checkInNow, checkInWay } from "@/lib/pra-wam/attendance";
 import { requestStatusLabels, spanLabel } from "@/lib/pra-wam/requests";
 import { bodOnly, cancelsAnyBooking, managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
@@ -25,6 +25,7 @@ import { myOpenRequests, openRequestCount } from "@/lib/server/pra-wam/requests"
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import own from "@/components/pra-wam/desktop/home.module.css";
+import sc from "@/components/pra-wam/self-check-in.module.css";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Beranda · WAM", robots: { index: false } };
@@ -119,9 +120,25 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <h2><a href={open(next)} {...opens(next)}>{next.title}</a></h2>
           <span className={base.heroLine}><Clock aria-hidden />{wibDate(next.startsAt) === today ? "" : `${spanLabel(next.startsAt, next.endsAt).split(" · ")[0]} · `}{clockLabel(wibTime(next.startsAt))}–{clockLabel(wibTime(next.endsAt))}</span>
           <span className={base.heroLine}><MapPin aria-hidden />{next.where}</span>
-          {/* Absen right here: when it opens or until when, "Saya hadir" (enabled while open) and Scan QR; or "Hadir 09.42 · di kantor". */}
+          {/*
+            Absen right here, one way per session: a booking's session "Saya hadir", a panitia's
+            session "Scan QR absen"; with when it opens or until when, or "Hadir 09.42 · ..." once done.
+          */}
           {next.kind === "sesi" && (heroStatus && next.sessionId
-            ? <SelfCheckIn variant="hero" sessionId={next.sessionId} status={heroStatus} now={now.toISOString()} selfReady={!!attendance?.selfReady} autoOpen={absen === "1"} />
+            ? checkInWay(next) === "tombol"
+              ? <SelfCheckIn variant="hero" sessionId={next.sessionId} status={heroStatus} now={now.toISOString()} selfReady={!!attendance?.selfReady} autoOpen={absen === "1"} />
+              : <div className={sc.hero}>
+                {heroStatus.kind === "hadir"
+                  ? <p className={sc.heroDone}><CheckCircle2 size={20} aria-hidden />{checkInText(heroStatus, now).title}</p>
+                  : <>
+                    <p className={sc.heroNote}>{heroCheckInNote(heroStatus, now.toISOString())}{heroStatus.kind === "buka" ? " Scan QR yang ditempel di ruang." : ""}</p>
+                    {heroStatus.kind !== "tutup" && <div className={sc.heroRow}>
+                      {heroStatus.kind === "buka"
+                        ? <a className={sc.heroHadir} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a>
+                        : <span className={`${sc.heroHadir} ${sc.heroOff}`} aria-disabled="true"><QrCode size={20} aria-hidden />Scan QR absen</span>}
+                    </div>}
+                  </>}
+              </div>
             : next.checkedInAt
               ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(next.checkedInAt)}</span>
               : <a className={`${base.heroButton} ${own.wide}`} href={open(next)} {...opens(next)}><Info size={20} aria-hidden />Lihat detail</a>)}

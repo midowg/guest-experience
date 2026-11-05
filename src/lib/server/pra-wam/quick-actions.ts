@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { checkInNow, checkInWindow, windowState } from "@/lib/pra-wam/attendance";
+import { checkInNow, checkInWay, checkInWindow, windowState, type CheckInWay } from "@/lib/pra-wam/attendance";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import { managesSessions } from "@/lib/pra-wam/roles";
 import { agendaItems } from "./agenda";
@@ -12,10 +12,10 @@ import type { Member } from "./session";
 export const myAgenda = cache(agendaItems);
 
 export type QuickActionData = {
-  /** The person's session whose check-in is open now: "Saya hadir" opens its choice on Beranda. */
-  checkIn: { title: string; closes: string } | null;
+  /** The person's session whose check-in is open now, and its one way in (Saya hadir or QR). */
+  checkIn: { title: string; closes: string; way: CheckInWay } | null;
   /** Otherwise the next one still to open, so the row can say when. */
-  upcoming: { title: string; opens: string } | null;
+  upcoming: { title: string; opens: string; way: CheckInWay } | null;
   /** Whether Book ruang takes bookings now. */
   bookingOpen: boolean;
   /** Panitia who run sessions: the published sessions whose check-in is open now, for Daftar hadir. */
@@ -41,8 +41,8 @@ export async function quickActionData(member: Member, now = new Date()): Promise
     .slice(0, 3)
     .map(session => ({ id: session.id, title: session.title }));
   return {
-    checkIn: open && { title: open.title, closes: checkInWindow(open.startsAt, open.endsAt).closes },
-    upcoming: next ? { title: next.title, opens: checkInWindow(next.startsAt, next.endsAt).opens } : null,
+    checkIn: open && { title: open.title, closes: checkInWindow(open.startsAt, open.endsAt).closes, way: checkInWay(open) },
+    upcoming: next ? { title: next.title, opens: checkInWindow(next.startsAt, next.endsAt).opens, way: checkInWay(next) } : null,
     bookingOpen,
     running,
   };

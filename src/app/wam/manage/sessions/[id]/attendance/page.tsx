@@ -28,7 +28,9 @@ export default async function SessionAttendancePage({ params }: { params: Promis
   const session = await getSession(id, member).catch((error: unknown) => { if (error instanceof ServiceError && error.status === 404) return null; throw error; });
   if (!session) notFound();
   const manage = managesSessions(member);
-  const loaded = await Promise.all([attendance(id, member), manage ? qrToken(id, member) : Promise.resolve(null)]).catch((error: unknown) => {
+  // A booking's session has no QR: its participants check in with "Saya hadir" (5 Nov 2026).
+  const byButton = !!session.booking;
+  const loaded = await Promise.all([attendance(id, member), manage && !byButton ? qrToken(id, member) : Promise.resolve(null)]).catch((error: unknown) => {
     if (error instanceof ServiceError) return error.message;
     throw error;
   });
@@ -39,16 +41,17 @@ export default async function SessionAttendancePage({ params }: { params: Promis
   const qrSvg = token ? await QRCode.toString(absolute(origin, praWamPath.checkIn(token)), { type: "svg", margin: 0, errorCorrectionLevel: "M" }) : null;
   const window = session.startsAt && session.endsAt ? checkInWindow(session.startsAt, session.endsAt) : null;
   return <PraWamShell member={member} current="sesi" back={{ href: praWamPath.sessions, title: "QR dan daftar hadir" }}>
-    <ScreenHead eyebrow="Jadwal sesi · QR absen" title={manage ? "Cetak QR absen" : "Daftar hadir"}
-      lead={manage ? "Setiap sesi punya satu QR tetap. Cetak dan tempel di ruang; peserta absen sendiri lewat aplikasi." : `${session.title} · ${sessionWhen(session)}`}
+    <ScreenHead eyebrow={byButton ? "Jadwal sesi · absen Saya hadir" : "Jadwal sesi · QR absen"} title={manage && !byButton ? "Cetak QR absen" : "Daftar hadir"}
+      lead={byButton ? `${session.title} · ${sessionWhen(session)}. Sesi dari booking ruang: peserta absen dengan tombol Saya hadir, tanpa QR.`
+        : manage ? "Setiap sesi punya satu QR tetap. Cetak dan tempel di ruang; peserta absen dengan scan QR." : `${session.title} · ${sessionWhen(session)}`}
       actions={manage && token ? <a className="button button--primary" href={praWamApi.sessionQr(session.id)} target="_blank" rel="noopener"><FileText size={18} aria-hidden /> Unduh PDF A5</a> : undefined} />
     {session.status !== "terbit" && <Notice tone="info">Sesi belum terbit. QR baru mencatat kehadiran setelah sesi diterbitkan.</Notice>}
 
     <div className={styles.printGrid} style={{ marginTop: 16 }}>
       <section className={base.card} aria-labelledby="hadir">
         <div className={styles.cardHead}><h2 id="hadir">Daftar hadir</h2>{manage && <ButtonLink variant="secondary" href={praWamPath.editSession(session.id)}>Ubah sesi</ButtonLink>}</div>
-        <AttendancePanel sessionId={session.id} initial={rows} canEdit={manage} />
-        <p className={styles.noteBlue} style={{ margin: "16px 0 0", display: "flex", gap: 8 }}><Info size={16} aria-hidden style={{ flex: "none", marginTop: 2 }} />QR tetap sama selama sesi ada. Kalau jam atau ruang berubah, cukup cetak ulang kertasnya; QR lama tetap berlaku.</p>
+        <AttendancePanel sessionId={session.id} initial={rows} canEdit={manage} qr={!byButton} />
+        {!byButton && <p className={styles.noteBlue} style={{ margin: "16px 0 0", display: "flex", gap: 8 }}><Info size={16} aria-hidden style={{ flex: "none", marginTop: 2 }} />QR tetap sama selama sesi ada. Kalau jam atau ruang berubah, cukup cetak ulang kertasnya; QR lama tetap berlaku.</p>}
       </section>
 
       {qrSvg && <div>

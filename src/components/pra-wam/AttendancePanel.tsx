@@ -16,7 +16,7 @@ import styles from "./pra-wam.module.css";
  * Who is present and how (di kantor, online, QR, manual), with the Zoom screenshot of an online
  * check-in; a hand correction for panitia; and replacing the QR when a sheet is lost. BOD reads it.
  */
-export function AttendancePanel({ sessionId, initial, canEdit }: { sessionId: string; initial: AttendanceRow[]; canEdit: boolean }) {
+export function AttendancePanel({ sessionId, initial, canEdit, qr = true }: { sessionId: string; initial: AttendanceRow[]; canEdit: boolean; /** The session takes its printed QR (not a booking's session). */ qr?: boolean }) {
   const router = useRouter();
   const [rows, setRows] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
@@ -74,7 +74,7 @@ export function AttendancePanel({ sessionId, initial, canEdit }: { sessionId: st
         </tr>)}</tbody>
       </table>
     </div>}
-    {canEdit && <div><button type="button" className="button button--quiet" disabled={!!busy} onClick={renew}>{busy === "qr" ? "Membuat…" : "Buat QR baru"}</button>
+    {canEdit && qr && <div><button type="button" className="button button--quiet" disabled={!!busy} onClick={renew}>{busy === "qr" ? "Membuat…" : "Buat QR baru"}</button>
       <p className={styles.hint}>Hanya bila lembar QR hilang atau tersebar di luar ruangan.</p></div>}
   </div>;
 }

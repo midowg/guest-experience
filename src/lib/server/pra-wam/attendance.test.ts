@@ -63,7 +63,7 @@ const panitia: Member = { ...member, id: "99999999-2222-4333-8444-555555555555",
 // Senin 9 Nov 2026, 10.00–12.00 WIB: absen 09.30–12.30.
 const during = new Date("2026-11-09T03:10:00Z");
 
-const { attendance, proofTokenMatches, proofViewUrl, selfCheckIn, setPresent, startProofUpload } = await import("./attendance");
+const { attendance, checkIn, proofTokenMatches, proofViewUrl, selfCheckIn, setPresent, startProofUpload } = await import("./attendance");
 
 beforeEach(() => {
   vi.stubEnv("WAM_SESSION_SECRET", secret);
@@ -71,7 +71,8 @@ beforeEach(() => {
   uploaded = webp;
   removeObjects.mockClear();
   db = {
-    pw_sessions: [{ id: SESSION, title: "Review data departemen", status: "terbit", starts_at: "2026-11-09T03:00:00Z", ends_at: "2026-11-09T05:00:00Z" }],
+    // A session made from a room booking: "Saya hadir" is its way in.
+    pw_sessions: [{ id: SESSION, title: "Review data departemen", status: "terbit", starts_at: "2026-11-09T03:00:00Z", ends_at: "2026-11-09T05:00:00Z", booking_id: "b1" }],
     pw_session_participants: [{ session_id: SESSION, employee_id: PERSON }],
     pw_attendance: [],
   };
@@ -178,5 +179,21 @@ describe("panitia and BOD", () => {
     db.pw_attendance.push({ session_id: SESSION, employee_id: PERSON, method: "qr", checked_in_at: during.toISOString() });
     unmigrated = true;
     expect(await attendance(SESSION, panitia)).toEqual([expect.objectContaining({ method: "qr", hasProof: false })]);
+  });
+});
+
+describe("one way per session", () => {
+  it("refuses Saya hadir for a panitia's session: that one takes its QR", async () => {
+    db.pw_sessions[0].booking_id = null;
+    await expect(selfCheckIn(SESSION, member, { mode: "offline" }, during)).rejects.toMatchObject({ status: 409, message: "Absen sesi ini dengan scan QR yang ditempel di ruang." });
+    expect(db.pw_attendance).toEqual([]);
+  });
+  it("refuses a QR scan for a booking's session, and records it for a panitia's session", async () => {
+    db.pw_sessions[0].qr_token = "tok";
+    expect((await checkIn("tok", member, during)).result).toEqual({ kind: "pakai-tombol" });
+    expect(db.pw_attendance).toEqual([]);
+    db.pw_sessions[0].booking_id = null;
+    expect((await checkIn("tok", member, during)).result.kind).toBe("tercatat");
+    expect(db.pw_attendance[0]).toMatchObject({ method: "qr" });
   });
 });

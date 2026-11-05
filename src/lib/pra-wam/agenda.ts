@@ -1,5 +1,5 @@
 import { CHECK_IN_MARGIN_MINUTES, checkInWindow, ownMethodLabels, windowState, type AttendanceMethod } from "./attendance";
-import { clockLabel, wibDate, wibTime, type Person, type Room } from "./appraisal";
+import { clockLabel, dayLabel, wibDate, wibTime, type Person, type Room } from "./appraisal";
 import type { PraWamDocument } from "./documents";
 import type { ScheduleRequest } from "./requests";
 import type { Session } from "./sessions";
@@ -51,6 +51,22 @@ export function checkInText(status: CheckInStatus, now: Date, { self = false }: 
     }
     case "tutup": return { title: "Absen sudah ditutup", body: "Kehadiranmu belum tercatat. Hubungi panitia kalau kamu hadir." };
     case "tidak-tersedia": return { title: "Terdaftar", body: "Absen dengan QR belum tersedia untuk sesi ini." };
+  }
+}
+
+/** "pukul 09.00" today, else "Selasa, 10 Nov pukul 09.00". */
+export function atLabel(iso: string, now: string): string {
+  const day = wibDate(iso) === wibDate(now) ? "" : `${dayLabel(wibDate(iso))} `;
+  return `${day}pukul ${clockLabel(wibTime(iso))}`;
+}
+
+/** The line on Beranda's blue card over its check-in button: when it opens, until when, or closed. */
+export function heroCheckInNote(status: CheckInStatus, now: string): string {
+  switch (status.kind) {
+    case "buka": return `Absen dibuka sampai ${clockLabel(wibTime(status.closes))}.`;
+    case "belum": return `Absen dibuka ${atLabel(status.opens, now)}, 30 menit sebelum mulai.`;
+    case "tutup": return "Absen sudah ditutup. Hubungi panitia kalau kamu hadir.";
+    default: return "";
   }
 }
 

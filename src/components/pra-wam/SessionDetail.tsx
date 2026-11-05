@@ -1,6 +1,7 @@
 import { CalendarClock, CalendarDays, ClipboardList, MapPin, Pencil, Users } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { checkInStatus, type SessionView } from "@/lib/pra-wam/agenda";
+import { checkInWay } from "@/lib/pra-wam/attendance";
 import { bookingSessionLabel, sessionKindLabels, sessionStatusLabels, sessionWhen, sessionWhere, type Session } from "@/lib/pra-wam/sessions";
 import { praWamPath } from "@/lib/routes";
 import { CheckInBlock } from "./CheckInStatus";
@@ -24,11 +25,13 @@ function rights({ view: { session, attendance, requests, viewer, storage }, now 
   // A booking's session moves with its booking (the server refuses a request for it), so no "Ganti jadwal".
   const canAsk = session.isParticipant && live && timed && !session.booking && new Date(session.endsAt!) > now;
   const canUpload = viewer.manage || (session.isParticipant && live);
-  const scan = !!status && (status.kind === "buka" || status.kind === "belum");
+  // One way per session (5 Nov 2026): a booking's session "Saya hadir" only, a panitia's session its QR only.
+  const byButton = checkInWay(session) === "tombol";
+  const open = !!status && (status.kind === "buka" || status.kind === "belum");
+  const scan = open && !byButton;
   return {
-    live, timed, status, canAsk, canUpload, scan,
-    // "Saya hadir" (migration 202611050003) is the main way in; the QR stays beside it.
-    selfCheckIn: scan && !!attendance.selfReady,
+    live, timed, status, canAsk, canUpload, scan, byButton,
+    selfCheckIn: open && byButton && !!attendance.selfReady,
     upload: canUpload && storage,
     reschedule: canAsk && !requests.some(request => request.status === "diajukan"),
     attendanceLink: viewer.staff && live,
@@ -55,7 +58,7 @@ export function SessionDetail(props: Props) {
  */
 export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
   const { view: { session, documents, storage, requests, rooms, viewer, attendance }, now, showTitle } = props;
-  const { live, timed, status, canAsk, canUpload } = rights(props);
+  const { live, timed, status, canAsk, canUpload, byButton } = rights(props);
   const people = session.participants ?? [];
   return <div className={rows.detail}>
     <div className={rows.detailHead}>
@@ -65,7 +68,7 @@ export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
         {!live && <span className={`${styles.pill} ${styles.pillBrass}`}>{sessionStatusLabels[session.status]}</span>}
         {session.booking && <span className={`${styles.pill} ${styles.pillLine}`}>{bookingSessionLabel(session)}</span>}
       </div>
-      {status && (attendance.selfReady
+      {status && (attendance.selfReady && byButton
         ? <SelfCheckIn sessionId={session.id} status={status} now={now.toISOString()} selfReady />
         : <CheckInBlock status={status} now={now} />)}
     </div>

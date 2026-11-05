@@ -3,12 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Building2, Camera, CheckCircle2, ChevronLeft, Images, QrCode, Video } from "lucide-react";
-import { checkInText, type CheckInStatus } from "@/lib/pra-wam/agenda";
-import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { Building2, Camera, CheckCircle2, ChevronLeft, Images, Video } from "lucide-react";
+import { checkInText, heroCheckInNote, type CheckInStatus } from "@/lib/pra-wam/agenda";
 import type { ProofMime, SelfCheckInAnswer } from "@/lib/pra-wam/attendance";
 import { acceptPhotos, sourceProblem } from "@/lib/pra-wam/photo";
-import { praWamPath } from "@/lib/routes";
 import { errorText } from "./api";
 import { CheckInBlock } from "./CheckInStatus";
 import { checkInOffline, checkInOnline, shrinkProof } from "./proofUpload";
@@ -25,8 +23,8 @@ import own from "./self-check-in.module.css";
  * agenda's pill follows. The printed QR keeps working beside it.
  *
  * `variant="hero"` is the same on Beranda's blue card (5 Nov 2026): a line saying when the
- * check-in opens or until when, a white "Saya hadir" and "Scan QR" beside it, or "Hadir 09.42 ·
- * di kantor" once done. `autoOpen` (Beranda ?absen=1, from Aksi cepat) opens the choice at once
+ * check-in opens or until when and a white "Saya hadir", or "Hadir 09.42 · di kantor" once done.
+ * Only for a booking's session: a panitia's session takes its QR (checkInWay). `autoOpen` (Beranda ?absen=1, from Aksi cepat) opens the choice at once
  * while the check-in is open, and takes ?absen off the address.
  */
 
@@ -43,21 +41,6 @@ type Props = {
   autoOpen?: boolean;
 };
 
-/** "pukul 09.00" today, else "Selasa, 10 Nov pukul 09.00". */
-function when(iso: string, now: string): string {
-  const day = wibDate(iso) === wibDate(now) ? "" : `${dayLabel(wibDate(iso))} `;
-  return `${day}pukul ${clockLabel(wibTime(iso))}`;
-}
-
-/** The hero's line over its buttons. */
-function heroNote(status: CheckInStatus, now: string): string {
-  switch (status.kind) {
-    case "buka": return `Absen dibuka sampai ${clockLabel(wibTime(status.closes))}.`;
-    case "belum": return `Absen dibuka ${when(status.opens, now)}, 30 menit sebelum mulai.`;
-    case "tutup": return "Absen sudah ditutup. Hubungi panitia kalau kamu hadir.";
-    default: return "";
-  }
-}
 
 type Step = "pilih" | "online";
 type Busy = { text: string; progress?: number } | null;
@@ -104,7 +87,7 @@ export function SelfCheckIn({ sessionId, status, now, selfReady, variant = "bloc
     if (variant === "hero") return <div className={own.hero}>
       {shown.kind === "hadir"
         ? <p className={own.heroDone}><CheckCircle2 size={20} aria-hidden />{checkInText(shown, at).title}</p>
-        : <div className={own.heroRow}><a className={own.heroScan} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a></div>}
+        : <p className={own.heroNote}>Absen dengan Saya hadir belum tersedia. Hubungi panitia untuk dicatat.</p>}
       {said && <p className={own.heroNote} role="status">{said}</p>}
     </div>;
     return <>
@@ -203,13 +186,12 @@ export function SelfCheckIn({ sessionId, status, now, selfReady, variant = "bloc
     </dialog>;
 
   if (variant === "hero") return <div className={own.hero}>
-    <p className={own.heroNote} id={describe}>{heroNote(shown, now)}</p>
+    <p className={own.heroNote} id={describe}>{heroCheckInNote(shown, now)}</p>
     <div className={own.heroRow}>
       <button ref={trigger} type="button" className={own.heroHadir} disabled={!canTap}
         aria-describedby={describe} aria-haspopup="dialog" aria-expanded={open} onClick={begin}>
         <CheckCircle2 size={20} aria-hidden /> Saya hadir
       </button>
-      <a className={own.heroScan} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR</a>
     </div>
     {chooser}
   </div>;

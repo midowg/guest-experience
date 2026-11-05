@@ -127,12 +127,12 @@ it("goes back from the online step to the choice", () => {
   expect(dialog()).toBeNull();
 });
 
-it("on Beranda's blue card says when the check-in opens, and offers Scan QR beside a disabled Saya hadir", () => {
+it("on Beranda's blue card says when the check-in opens, with Saya hadir disabled and no QR (a booking's session)", () => {
   render(<SelfCheckIn variant="hero" sessionId={SESSION} now="2026-11-25T03:00:00.000Z" selfReady
     status={{ kind: "belum", opens: "2026-11-26T02:30:00.000Z", closes: "2026-11-26T05:30:00.000Z" }} />);
   expect(hadir()).toHaveProperty("disabled", true);
   expect(screen.getByText("Absen dibuka Kamis, 26 Nov pukul 09.30, 30 menit sebelum mulai.")).toBeTruthy();
-  expect(screen.getByRole("link", { name: "Scan QR" }).getAttribute("href")).toBe("/wam/check-in");
+  expect(screen.queryByRole("link", { name: /Scan QR/ })).toBeNull();
 });
 
 it("on the blue card opens the choice at once from Aksi cepat (?absen=1) and takes ?absen off the address", () => {

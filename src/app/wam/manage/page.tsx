@@ -71,7 +71,7 @@ async function PanitiaSummary({ member, data, now }: { member: Member; data: Ove
   const live = todays.filter(session => session.startsAt && session.endsAt && new Date(session.startsAt) <= now && now < new Date(session.endsAt)).length;
   const coming = todays.filter(session => session.startsAt && new Date(session.startsAt) > now).sort((a, b) => a.startsAt!.localeCompare(b.startsAt!));
   // "Cetak QR absen" opens the session that is on now or next today, else the next one at all.
-  const printable = data.upcoming.find(session => session.endsAt && new Date(session.endsAt) > now);
+  const printable = data.upcoming.find(session => session.endsAt && new Date(session.endsAt) > now && !session.booking);
   const rows = data.migrated ? roomRows({
     date: today, rooms: schedule?.rooms ?? [], bookings: schedule?.bookings ?? [], sessions: todays,
     sessionHref: session => praWamPath.sessionAttendance(session.id), bookingHref: booking => praWamPath.appraisal(today, booking.id),
@@ -136,7 +136,7 @@ async function PanitiaSummary({ member, data, now }: { member: Member; data: Ove
               </span>
               <span className={styles.readyEnd}>
                 <Pill tone={status.tone}>{status.label}</Pill>
-                {ended
+                {ended || session.booking
                   ? <ConsoleButtonLink href={praWamPath.sessionAttendance(session.id)}>Lihat absensi</ConsoleButtonLink>
                   : <ConsoleButtonLink href={praWamApi.sessionQr(session.id)} target="_blank" rel="noopener" icon={<QrCode size={16} aria-hidden />}>Cetak QR</ConsoleButtonLink>}
                 <ConsoleButtonLink href={praWamPath.editSession(session.id)}>Ubah</ConsoleButtonLink>

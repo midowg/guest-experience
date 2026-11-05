@@ -27,6 +27,8 @@ function answer(result: CheckInResult, name: string): Shown {
     case "tutup": return { tone: "warning", title: "Absen sudah ditutup", text: `Absen ditutup ${at(result.window.closes)}. Bila kamu hadir, minta panitia mencatat secara manual.`, status: "Belum tercatat" };
     case "bukan-peserta": return { tone: "warning", title: "Kamu tidak terdaftar", text: "Kamu bukan peserta sesi ini. Bila seharusnya ikut, minta panitia menambahkanmu atau mencatat kehadiranmu.", status: "Tidak dicatat" };
     case "belum-terbit": return { tone: "info", title: "Sesi belum terbit", text: "Sesi ini belum diterbitkan panitia, jadi absen belum bisa dicatat.", status: "Belum tercatat" };
+    case "pakai-tombol": return { tone: "info", title: "Absen dengan Saya hadir", text: "Sesi ini dari booking ruang. Buka Beranda dan ketuk Saya hadir; QR tidak dipakai.", status: "Belum tercatat" };
+    case "pakai-qr": return { tone: "info", title: "Absen dengan scan QR", text: "Scan QR yang ditempel di ruang sesi.", status: "Belum tercatat" };
     default: return { tone: "error", title: "QR tidak dikenal", text: "QR ini sudah diganti atau bukan QR absen WAM. Pindai QR yang terpasang di ruang sesi.", status: "Tidak dicatat" };
   }
 }

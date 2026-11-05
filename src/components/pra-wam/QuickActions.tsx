@@ -2,16 +2,18 @@
 
 import { useState, type ReactNode } from "react";
 import { ArrowLeftRight, CalendarClock, CalendarPlus, CheckCircle2, ChevronRight, ClipboardCheck, Plus, QrCode, Send } from "lucide-react";
-import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { atLabel } from "@/lib/pra-wam/agenda";
+import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
+import type { CheckInWay } from "@/lib/pra-wam/attendance";
 import { praWamPath } from "@/lib/routes";
 import { Sheet } from "./Sheet";
 import css from "./quick-actions.module.css";
 
 type Props = {
-  /** The person's session whose check-in is open now. */
-  checkIn: { title: string; closes: string } | null;
+  /** The person's session whose check-in is open now, and its one way in. */
+  checkIn: { title: string; closes: string; way: CheckInWay } | null;
   /** Otherwise the next one to open. */
-  upcoming: { title: string; opens: string } | null;
+  upcoming: { title: string; opens: string; way: CheckInWay } | null;
   bookingOpen: boolean;
   /** Panitia who run sessions also get Daftar hadir, Permintaan jadwal, Buat sesi, Kirim pengumuman. */
   manages: boolean;
@@ -27,33 +29,30 @@ type Props = {
 
 type Action = { key: string; label: string; sub: string; href: string | null; icon: ReactNode; main?: boolean; count?: number };
 
-/** "pukul 09.00" today, else "Selasa, 10 Nov pukul 09.00". */
-function when(iso: string, now: string): string {
-  const day = wibDate(iso) === wibDate(now) ? "" : `${dayLabel(wibDate(iso))} `;
-  return `${day}pukul ${clockLabel(wibTime(iso))}`;
-}
-
-/** Saya hadir and Scan QR go first; "Saya hadir" opens "Kamu hadir di mana?" on Beranda at once. */
+/** "Saya hadir" opens "Kamu hadir di mana?" on Beranda at once. */
 export const CHECK_IN_HREF = `${praWamPath.home}?absen=1`;
 
 /**
  * Aksi cepat (DS · Komponen "Tombol tambah"): the blue + in the middle of the bottom bar opens a
- * sheet of what people do in a hurry, in groups by role. "Saya hadir" leads, in blue while a
- * check-in is open; when none is, it stays in its place and says which session opens next and
- * when. The panitia also get the attendance list of each session running now, where they check
+ * sheet of what people do in a hurry, in groups by role. One way per session (5 Nov 2026): a
+ * booking's session takes "Saya hadir", a panitia's session its QR, so whichever is open now is in
+ * blue; the other stays in its place and says why, or which session opens next and when. The panitia also get the attendance list of each session running now, where they check
  * who is there, and the requests waiting.
  */
 export function QuickActions({ checkIn, upcoming, bookingOpen, manages, running, waiting, place, now }: Props) {
   const [open, setOpen] = useState(false);
+  const until = checkIn && `${checkIn.title} · dibuka sampai ${clockLabel(wibTime(checkIn.closes))}`;
+  const later = (way: CheckInWay) => upcoming?.way === way ? `Belum dibuka. ${upcoming.title}: absen dibuka ${atLabel(upcoming.opens, now)}.` : null;
   const absen: Action[] = [
     {
-      key: "hadir", label: "Saya hadir", icon: <CheckCircle2 aria-hidden />, main: !!checkIn,
-      href: checkIn ? CHECK_IN_HREF : null,
-      sub: checkIn ? `${checkIn.title} · dibuka sampai ${clockLabel(wibTime(checkIn.closes))}`
-        : upcoming ? `Belum dibuka. ${upcoming.title}: absen dibuka ${when(upcoming.opens, now)}.`
-        : "Tidak ada sesi yang perlu diabsen.",
+      key: "hadir", label: "Saya hadir", icon: <CheckCircle2 aria-hidden />, main: checkIn?.way === "tombol",
+      href: checkIn?.way === "tombol" ? CHECK_IN_HREF : null,
+      sub: checkIn?.way === "tombol" ? until! : later("tombol") ?? "Untuk sesi dari booking ruang. Tidak ada yang dibuka sekarang.",
     },
-    { key: "scan", label: "Scan QR absen", sub: "Pindai QR yang dipasang di ruang sesi", href: praWamPath.scan, icon: <QrCode aria-hidden /> },
+    {
+      key: "scan", label: "Scan QR absen", icon: <QrCode aria-hidden />, main: checkIn?.way === "qr", href: praWamPath.scan,
+      sub: checkIn?.way === "qr" ? until! : later("qr") ?? "Untuk sesi panitia: pindai QR yang ditempel di ruang",
+    },
   ];
   const jadwal: Action[] = bookingOpen ? [{ key: "book", label: "Book ruang", sub: "Pesan ruang untuk rapat atau appraisal", href: praWamPath.book(), icon: <CalendarClock aria-hidden /> }] : [];
   const panitia: Action[] = manages ? [

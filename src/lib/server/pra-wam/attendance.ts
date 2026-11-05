@@ -15,6 +15,7 @@ import { isR2Configured, presignDownload, presignUpload, removeObjects, uploaded
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
 import type { Member } from "./session";
+import { withBookingLink } from "./booking-sessions";
 import { getSession } from "./sessions";
 
 /*
@@ -23,6 +24,9 @@ import { getSession } from "./sessions";
  * scan only answers "sudah tercatat". "Saya hadir" (migration 202611050003) signs the person in
  * from Detail sesi in the same window: at the office with one tap, or online with a screenshot of
  * the Zoom meeting in private R2 storage under pra-wam/absen/<session>/<employee>/.
+ *
+ * One way per session (5 Nov 2026, checkInWay): a booking's session only "Saya hadir" (no QR is
+ * made for it, and a scan is refused), a panitia's session only its QR ("Saya hadir" is refused).
  */
 
 const MIGRATION = "202611040005_pra_wam_attendance.sql";
@@ -52,10 +56,11 @@ function requireManager(viewer: Member) {
   if (!managesSessions(viewer)) throw new ServiceError(403, "Hanya panitia yang bisa mengatur absen.");
 }
 
-/** The session's QR token, made the first time panitia opens it. */
+/** The session's QR token, made the first time panitia opens it. None for a booking's session. */
 export async function qrToken(sessionId: string, viewer: Member, renew = false): Promise<string> {
   requireManager(viewer);
-  await getSession(sessionId, viewer);
+  const session = await getSession(sessionId, viewer);
+  if (session.booking) throw new ServiceError(409, "Sesi dari booking ruang tidak memakai QR. Peserta absen dengan tombol Saya hadir.");
   const client = createPrivilegedClient();
   if (!renew) {
     const { data, error } = await client.from("pw_sessions").select("qr_token").eq("id", sessionId).single();
@@ -71,11 +76,14 @@ export async function qrToken(sessionId: string, viewer: Member, renew = false):
 /** A scan: who scanned, which session, and whether the window is open. */
 export async function checkIn(token: string, member: Member, now = new Date()): Promise<{ result: CheckInResult; session: Pick<Session, "id" | "title"> | null }> {
   const client = createPrivilegedClient();
-  const { data: session, error } = await client.from("pw_sessions").select("id,title,status,starts_at,ends_at").eq("qr_token", token).maybeSingle();
+  const { data, error } = await withBookingLink(withLink => client.from("pw_sessions").select(withLink ? "id,title,status,starts_at,ends_at,booking_id" : "id,title,status,starts_at,ends_at").eq("qr_token", token).maybeSingle());
   if (error) fail(error);
+  const session = data as (SessionRow & { title: string; booking_id?: string | null }) | null;
   if (!session) return { result: { kind: "tidak-dikenal" }, session: null };
-  const named = { id: session.id as string, title: session.title as string };
+  const named = { id: session.id, title: session.title };
   if (session.status !== "terbit" || !session.starts_at || !session.ends_at) return { result: { kind: "belum-terbit" }, session: named };
+  // A booking's session takes "Saya hadir" only (an old QR printed before it was a booking's).
+  if (session.booking_id) return { result: { kind: "pakai-tombol" }, session: named };
   const { data: participant, error: participantError } = await client.from("pw_session_participants").select("employee_id").eq("session_id", session.id).eq("employee_id", member.id).maybeSingle();
   if (participantError) fail(participantError);
   if (!participant) return { result: { kind: "bukan-peserta" }, session: named };
@@ -109,11 +117,13 @@ type SessionRow = { id: string; status: string; starts_at: string | null; ends_a
  */
 async function selfCheckInGate(sessionId: string, member: Member, now: Date): Promise<{ result: CheckInResult; method: SelfCheckInAnswer["method"] }> {
   const client = createPrivilegedClient();
-  const { data, error } = await client.from("pw_sessions").select("id,status,starts_at,ends_at").eq("id", sessionId).maybeSingle();
+  const { data, error } = await withBookingLink(withLink => client.from("pw_sessions").select(withLink ? "id,status,starts_at,ends_at,booking_id" : "id,status,starts_at,ends_at").eq("id", sessionId).maybeSingle());
   if (error) fail(error);
-  const session = data as SessionRow | null;
+  const session = data as (SessionRow & { booking_id?: string | null }) | null;
   if (!session) return { result: { kind: "tidak-dikenal" }, method: null };
   if (session.status !== "terbit" || !session.starts_at || !session.ends_at) return { result: { kind: "belum-terbit" }, method: null };
+  // A panitia's session takes its QR only.
+  if (!session.booking_id) return { result: { kind: "pakai-qr" }, method: null };
   const { data: participant, error: participantError } = await client.from("pw_session_participants").select("employee_id").eq("session_id", session.id).eq("employee_id", member.id).maybeSingle();
   if (participantError) fail(participantError);
   if (!participant) return { result: { kind: "bukan-peserta" }, method: null };

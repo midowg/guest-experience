@@ -85,7 +85,7 @@ describe("Saya hadir", () => {
       { checkedInAt: "x", method: "online" as const }, { checkedInAt: null, method: null }, { checkedInAt: "x", method: "qr" as const },
     ];
     expect(methodCounts(rows)).toEqual({ offline: 2, online: 1, qr: 1, manual: 0 });
-    expect(methodLabels).toEqual({ offline: "di kantor", online: "online", qr: "QR", manual: "manual" });
+    expect(methodLabels).toEqual({ offline: "Saya hadir · di kantor", online: "Saya hadir · online", qr: "Scan QR", manual: "Dicatat panitia" });
     expect(ownMethodLabels.online).toBe("online (Zoom)");
     expect(asMethod("online")).toBe("online");
     expect(asMethod("zoom")).toBeNull();
