@@ -109,6 +109,22 @@ describe("FloorPlan", () => {
     expect(screen.getByRole("img", { name: /Kompas: utara ke atas, sisi Limasan/ })).toBeTruthy();
   });
 
+  it("draws the site and Vasuki's divider, and names the other rooms quietly without reading them out", () => {
+    const { container } = render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
+    const site = container.querySelector("g[class*='site']")!;
+    expect(site.getAttribute("aria-hidden")).toBe("true");
+    expect(site.querySelectorAll("rect").length).toBeGreaterThan(20);
+    expect(site.textContent).toBe("Masuk");
+    const vasuki = screen.getByRole("img", { name: /^Vasuki,/ });
+    expect(vasuki.querySelector("line[class*='divider']")).toBeTruthy();
+    // The numbered rooms carry their names (a tiny one only once readable, floor-plan.test.ts), never read out.
+    const svgText = () => [...container.querySelectorAll("svg text")].map(node => node.textContent);
+    expect(svgText()).toContain("Ruang 5");
+    expect(screen.queryByRole("img", { name: /Ruang 5/ })).toBeNull();
+    // Main Office keeps its desks as fixtures, with no table of its own.
+    expect(container.querySelectorAll("rect[class*='desk']")).toHaveLength(10);
+  });
+
   it("zooms with the buttons and the keyboard, between 1× and 4×", () => {
     render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
     const zoomIn = screen.getByRole("button", { name: "Perbesar denah" });
@@ -142,14 +158,15 @@ describe("FloorPlan", () => {
     expect(onPick).toHaveBeenCalledWith(rooms[0]);
   });
 
-  it("lets the super admin pick empty spots, named without whose desk they were", () => {
+  it("lets the super admin pick empty spots, each named Ruang N", () => {
     const onPickSpot = vi.fn();
     const { container } = render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" onPickSpot={onPickSpot}
       emptySpot={{ tone: "closed", text: "Spot kosong" }} />);
     expect(container.textContent).not.toMatch(/Pak Bagus|Pak Fadil|Comms/);
     expect(screen.getAllByText("Spot kosong").length).toBeGreaterThan(0);
-    const spots = screen.getAllByRole("button", { name: "Spot kosong. Ubah spot ini" });
-    fireEvent.click(spots[0]);
-    expect(onPickSpot).toHaveBeenCalledWith("pak-bagus");
+    fireEvent.click(screen.getByRole("button", { name: "Ruang 5, spot kosong. Ubah spot ini" }));
+    expect(onPickSpot).toHaveBeenCalledWith("ruang-5");
+    fireEvent.click(screen.getByRole("button", { name: "Pantry, spot kosong. Ubah spot ini" }));
+    expect(onPickSpot).toHaveBeenLastCalledWith("pantry");
   });
 });

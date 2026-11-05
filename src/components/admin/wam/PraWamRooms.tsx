@@ -24,7 +24,7 @@ type RoomBody = { capacity: number | null; minPeople: number | null; bookable: b
 export type RoomsView = "daftar" | "denah";
 
 const MIGRATION = "202611040009_pra_wam_room_plan.sql";
-/** A spot's name; desks show as "Spot tambahan 1"…, never whose desk it was. */
+/** A spot's name: the room it is for ("Vasuki"), else "Ruang N" from the plan. */
 const spotLabel = (key: string | null) => key ? spotTitle(key) : "Tanpa spot";
 /** The spot a room takes by its name alone, without a picked one. */
 const nameSpot = (room: Room) => planKey({ name: room.name, slug: room.slug });

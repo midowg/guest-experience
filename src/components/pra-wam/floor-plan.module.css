@@ -1,51 +1,83 @@
 /*
- * The office floor plan (FloorPlan.tsx), drawn like an architect's seat map in warm colours
- * (docs/rancangan-admin-wam.md, 3b). Its own --fp-* colours, light and dark (the dark ones follow
- * data-wam-theme as pra-wam.module.css does; the two dark blocks must stay identical); the
- * controls, legend and lists below it use the app's --pw-* tokens. Chairs carry the status.
+ * The office floor plan (FloorPlan.tsx), traced from the office's CAD drawing in a clean, soft
+ * style: the site in the page's pale greys (grass and the communal space soft green, the river
+ * soft sky), bookable rooms in the primary's soft tint, the rest plain surface, no dark outlines
+ * (each room's thin edge is its own fill mixed with a little primary). Every --fp-* colour is made
+ * from the Pra WAM Hospitality tokens (--pw-*, pra-wam.module.css), so dark mode follows
+ * data-wam-theme by itself. Names in navy (or light in dark mode) at least 4.5:1 on their floors;
+ * chairs carry the status.
  */
 .plan {
-  --fp-bg: #faf7f2; --fp-building: #f4efe7; --fp-wall: #3a3f4a; --fp-room: #fffbf4; --fp-off: #eee8de; --fp-service: #e6e0d6;
-  --fp-wood: #d4a877; --fp-wood-edge: #b8895a; --fp-counter: #e2d5c1; --fp-rug: #efe3d0; --fp-sofa: #d9cbb6; --fp-sofa-edge: #b9a78d;
-  --fp-plant: #7fa886; --fp-plant-leaf: #5e8a69;
-  --fp-ink: #2b2f36; --fp-ink-soft: #4f4a42; --fp-ink-muted: #5f574b;
-  --fp-room-busy: #f6f2eb; --fp-room-mine: #f2f5fa; --fp-room-small: #fff5e3; --fp-room-full: #f9ede9;
-  --fp-chair-free: #7fb08f; --fp-chair-busy: #c9c2b6; --fp-chair-mine: #1551a0; --fp-chair-small: #d8a354; --fp-chair-off: #d9d2c6;
-  --fp-chair-part: #ddb06a; --fp-chair-full: #c98f84; --fp-chair-main: #7c9cc9; --fp-chair-kecil: #c9897a; --fp-chair-edge: rgba(43, 36, 28, .3);
-  --fp-ring: #1551a0; --fp-tip: #2b2f36; --fp-tip-ink: #fff; --fp-chip: #e7e1d6; --fp-chip-ink: #4a4339;
-  --fp-shadow: rgba(58, 48, 34, .16); --fp-compass: #fff; --fp-needle: #b5473a;
-}
-[data-wam-theme="dark"] .plan {
-  --fp-bg: #14120f; --fp-building: #1e1b17; --fp-wall: #cfc6b8; --fp-room: #2a2621; --fp-off: #24211d; --fp-service: #302b25;
-  --fp-wood: #9c7650; --fp-wood-edge: #c29a6c; --fp-counter: #4a4136; --fp-rug: #352e26; --fp-sofa: #4f463b; --fp-sofa-edge: #7a6d5c;
-  --fp-plant: #5e8a69; --fp-plant-leaf: #7fa886;
-  --fp-ink: #f3eee6; --fp-ink-soft: #ddd5c9; --fp-ink-muted: #b9af9f;
-  --fp-room-busy: #24211d; --fp-room-mine: #232833; --fp-room-small: #2f2a20; --fp-room-full: #30231f;
-  --fp-chair-free: #6fa581; --fp-chair-busy: #6a645a; --fp-chair-mine: #8db6f2; --fp-chair-small: #d19a4a; --fp-chair-off: #4a453e;
-  --fp-chair-part: #c99a52; --fp-chair-full: #b97a70; --fp-chair-main: #7c9cc9; --fp-chair-kecil: #c9897a; --fp-chair-edge: rgba(0, 0, 0, .45);
-  --fp-ring: #8db6f2; --fp-tip: #f3eee6; --fp-tip-ink: #1e1b17; --fp-chip: #3a352e; --fp-chip-ink: #e6ded2;
-  --fp-shadow: rgba(0, 0, 0, .45); --fp-compass: #2a2621; --fp-needle: #e07a6b;
-}
-@media (prefers-color-scheme: dark) {
-  [data-wam-theme="system"] .plan {
-    --fp-bg: #14120f; --fp-building: #1e1b17; --fp-wall: #cfc6b8; --fp-room: #2a2621; --fp-off: #24211d; --fp-service: #302b25;
-    --fp-wood: #9c7650; --fp-wood-edge: #c29a6c; --fp-counter: #4a4136; --fp-rug: #352e26; --fp-sofa: #4f463b; --fp-sofa-edge: #7a6d5c;
-    --fp-plant: #5e8a69; --fp-plant-leaf: #7fa886;
-    --fp-ink: #f3eee6; --fp-ink-soft: #ddd5c9; --fp-ink-muted: #b9af9f;
-    --fp-room-busy: #24211d; --fp-room-mine: #232833; --fp-room-small: #2f2a20; --fp-room-full: #30231f;
-    --fp-chair-free: #6fa581; --fp-chair-busy: #6a645a; --fp-chair-mine: #8db6f2; --fp-chair-small: #d19a4a; --fp-chair-off: #4a453e;
-    --fp-chair-part: #c99a52; --fp-chair-full: #b97a70; --fp-chair-main: #7c9cc9; --fp-chair-kecil: #c9897a; --fp-chair-edge: rgba(0, 0, 0, .45);
-    --fp-ring: #8db6f2; --fp-tip: #f3eee6; --fp-tip-ink: #1e1b17; --fp-chip: #3a352e; --fp-chip-ink: #e6ded2;
-    --fp-shadow: rgba(0, 0, 0, .45); --fp-compass: #2a2621; --fp-needle: #e07a6b;
-  }
+  --fp-bg: var(--pw-page);
+  --fp-grass: color-mix(in srgb, var(--pw-accent-green-soft) 70%, var(--pw-page));
+  --fp-garden: color-mix(in srgb, var(--pw-accent-green) 14%, var(--pw-accent-green-soft));
+  --fp-water: var(--pw-accent-sky-soft);
+  --fp-road: color-mix(in srgb, var(--pw-muted) 14%, var(--pw-page));
+  --fp-walk: color-mix(in srgb, var(--pw-muted) 7%, var(--pw-page));
+  --fp-pave: var(--pw-app);
+  --fp-yard: color-mix(in srgb, var(--pw-app) 55%, var(--pw-surface));
+  --fp-roof: color-mix(in srgb, var(--pw-accent-navy) 12%, var(--pw-page));
+  --fp-roof-line: color-mix(in srgb, var(--pw-accent-navy) 24%, var(--pw-page));
+  --fp-tread: color-mix(in srgb, var(--pw-muted) 30%, var(--pw-page));
+  --fp-line: color-mix(in srgb, var(--pw-muted) 20%, var(--pw-page));
+  --fp-pad: var(--pw-surface);
+  --fp-deck: color-mix(in srgb, var(--pw-muted) 16%, var(--pw-app));
+  /* Floors: bookable in the primary's soft tint, the rest (services, no room) plain surface. */
+  --fp-room: var(--pw-primary-soft);
+  --fp-off: var(--pw-surface);
+  --fp-communal: var(--pw-accent-green-soft);
+  --fp-edge-tint: var(--pw-primary);
+  --fp-room-edge: color-mix(in srgb, var(--pw-primary) 28%, var(--pw-primary-soft));
+  --fp-off-edge: var(--pw-line);
+  --fp-room-busy: color-mix(in srgb, var(--pw-muted) 10%, var(--pw-surface));
+  --fp-room-mine: color-mix(in srgb, var(--pw-primary) 14%, var(--pw-primary-soft));
+  --fp-room-small: var(--pw-brass-soft);
+  --fp-room-full: var(--pw-danger-soft);
+  --fp-wall: var(--pw-primary);
+  --fp-ink: color-mix(in srgb, var(--pw-accent-navy) 70%, var(--pw-text));
+  --fp-ink-soft: color-mix(in srgb, var(--pw-text) 75%, var(--pw-muted));
+  --fp-ink-muted: color-mix(in srgb, var(--pw-muted) 70%, var(--pw-text));
+  /* Furniture. */
+  --fp-table: var(--pw-surface);
+  --fp-table-edge: color-mix(in srgb, var(--pw-primary) 30%, var(--pw-line));
+  --fp-stage: color-mix(in srgb, var(--pw-primary) 18%, var(--pw-surface));
+  --fp-desk: var(--pw-surface);
+  --fp-desk-edge: color-mix(in srgb, var(--pw-primary) 22%, var(--pw-line));
+  --fp-stool: color-mix(in srgb, var(--pw-primary) 30%, var(--pw-surface));
+  --fp-rug: color-mix(in srgb, var(--pw-surface) 60%, var(--pw-accent-green-soft));
+  --fp-sofa: color-mix(in srgb, var(--pw-accent-navy) 16%, var(--pw-surface));
+  --fp-sofa-edge: color-mix(in srgb, var(--pw-accent-navy) 34%, var(--pw-surface));
+  --fp-plant: color-mix(in srgb, var(--pw-accent-green) 35%, var(--pw-accent-green-soft));
+  --fp-plant-leaf: color-mix(in srgb, var(--pw-accent-green) 62%, var(--pw-accent-green-soft));
+  --fp-entrance: var(--pw-muted);
+  /* Chairs: free green, taken grey, yours (and the chosen room's) primary; the admin's main rooms primary, small rooms brass. */
+  --fp-chair-free: var(--pw-success);
+  --fp-chair-busy: color-mix(in srgb, var(--pw-muted) 55%, var(--pw-surface));
+  --fp-chair-mine: var(--pw-primary);
+  --fp-chair-small: var(--pw-warning);
+  --fp-chair-off: color-mix(in srgb, var(--pw-muted) 32%, var(--pw-surface));
+  --fp-chair-part: color-mix(in srgb, var(--pw-warning) 55%, var(--pw-brass));
+  --fp-chair-full: color-mix(in srgb, var(--pw-danger) 70%, var(--pw-surface));
+  --fp-chair-main: var(--pw-primary);
+  --fp-chair-kecil: var(--pw-brass);
+  --fp-chair-edge: color-mix(in srgb, var(--pw-text) 28%, transparent);
+  --fp-ring: var(--pw-primary);
+  --fp-hover: var(--pw-primary);
+  --fp-tip: var(--pw-accent-navy);
+  --fp-tip-ink: var(--pw-on-primary);
+  --fp-chip: color-mix(in srgb, var(--pw-muted) 16%, var(--pw-surface));
+  --fp-chip-ink: var(--pw-text);
+  --fp-shadow: color-mix(in srgb, var(--pw-primary) 14%, transparent);
+  --fp-compass: var(--pw-surface);
+  --fp-needle: var(--pw-primary);
 }
 .plan { display: grid; gap: 12px; min-width: 0; }
 .caption { margin: 0; font-size: 13px; color: var(--pw-muted); }
 /* The plan, always fitted to its box: zoom and pan happen inside (FloorPlan.tsx, the SVG viewBox). */
 .stage { position: relative; min-width: 0; width: 100%; }
 /* The plan is taller than wide (north up): on a wide screen it is kept within the window's height. */
-@media (min-width: 1024px) { .stage { max-width: min(640px, calc((100vh - 220px) * 1265 / 1580)); margin-inline: auto; } }
-.viewport { position: relative; overflow: hidden; border-radius: 12px; background: var(--fp-bg); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+@media (min-width: 1024px) { .stage { max-width: min(640px, calc((100vh - 220px) * 1043 / 1600)); margin-inline: auto; } }
+.viewport { position: relative; overflow: hidden; border-radius: var(--pw-r-control); background: var(--fp-bg); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   /* Fitted, one finger scrolls the page; pinch is the plan's (FloorPlan.tsx stops the page's own). Zoomed, every touch is the plan's. */
   touch-action: pan-y; }
 .viewport.zoomed { touch-action: none; cursor: grab; }
@@ -56,45 +88,71 @@
 /* + / − / fit in a row in the plan's top-right corner, over the empty part of the building. */
 .controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
 /* The compass in the top-left corner, beside Limasan: it stays put while the plan zooms. */
-.compass { position: absolute; top: 8px; left: 8px; width: 38px; height: 38px; border-radius: 50%; background: var(--fp-compass); box-shadow: 0 2px 8px -3px rgba(43, 36, 28, .35); pointer-events: none; }
+.compass { position: absolute; top: 8px; left: 8px; width: 38px; height: 38px; border-radius: 50%; background: var(--fp-compass); box-shadow: var(--pw-shadow-card); pointer-events: none; }
 .compass svg { display: block; width: 100%; height: 100%; }
 .compassRing { fill: none; stroke: var(--fp-wall); stroke-opacity: .25; stroke-width: 1.2; }
 .compassN { fill: var(--fp-ink); font-family: var(--pw-body); font-size: 8.5px; font-weight: 800; text-anchor: middle; dominant-baseline: middle; }
 .needleNorth { fill: var(--fp-needle); }
 .needleSouth { fill: var(--fp-ink-muted); opacity: .4; }
 .compassHub { fill: var(--fp-compass); stroke: var(--fp-ink-muted); stroke-width: .8; }
-.control { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); color: var(--pw-text); box-shadow: 0 2px 8px -4px rgba(11, 21, 38, .35); cursor: pointer; transition: background .18s ease, border-color .18s ease, color .18s ease; }
+.control { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--pw-line); border-radius: var(--pw-r-chip); background: var(--pw-surface); color: var(--pw-text); box-shadow: var(--pw-shadow-card); cursor: pointer; transition: background .18s ease, border-color .18s ease, color .18s ease; }
 .control:hover { border-color: var(--pw-primary); color: var(--pw-primary); }
 .control:focus { outline: none; }
 .control:focus-visible { outline: 3px solid var(--pw-primary); outline-offset: 2px; }
 .control[aria-disabled='true'] { color: var(--pw-muted); border-color: var(--pw-line); cursor: default; }
 
-/* The building: warm floor, dark walls with rounded corners; stairs, lift and storage a shade darker. */
-.building { fill: var(--fp-building); stroke: var(--fp-wall); stroke-width: 12; stroke-linejoin: round; }
-.decor { fill: var(--fp-service); stroke: var(--fp-wall); stroke-width: 4; stroke-linejoin: round; }
+/* The site: grass, river, road, paving, the yards, roofs, ramps and gardens, in the page's pale greys. */
+.site { pointer-events: none; }
+.grass { fill: var(--fp-grass); }
+.water { fill: var(--fp-water); }
+.road { fill: var(--fp-road); }
+.walk, .ramp { fill: var(--fp-walk); }
+.pave { fill: var(--fp-pave); }
+.yard { fill: var(--fp-yard); }
+.garden { fill: var(--fp-garden); }
+.roof { fill: var(--fp-roof); stroke: var(--fp-roof-line); stroke-width: 2; }
+.pad { fill: var(--fp-pad); stroke: var(--fp-off-edge); stroke-width: 1.2; }
+.deck { fill: var(--fp-deck); }
+.tread { fill: none; stroke: var(--fp-tread); stroke-width: 2; }
+.board { fill: none; stroke: var(--fp-line); stroke-width: 1.5; }
+.ridge { fill: none; stroke: var(--fp-roof-line); stroke-width: 2; }
+.mark { fill: none; stroke: var(--fp-tread); stroke-width: 2; stroke-linecap: round; }
+.fountain { fill: var(--fp-water); stroke: var(--fp-room-edge); stroke-width: 1.5; }
+.entrance { fill: var(--fp-entrance); }
+.entranceText { fill: var(--fp-ink-muted); font-family: var(--pw-body); font-size: 22px; font-weight: 700; dominant-baseline: middle; }
 
-/* Rooms: a cream floor with a soft shadow inside dark walls; the status is in the chairs (below). */
-.spot .box { fill: var(--fp-room); stroke: var(--fp-wall); stroke-width: 6; stroke-linejoin: round; transition: stroke .18s ease, stroke-width .18s ease; }
-.spot.main .box { stroke-width: 7; }
-.spot .door { stroke: var(--fp-building); stroke-width: 9; stroke-linecap: butt; }
-.spot text { fill: var(--fp-ink); font-family: var(--pw-body); font-weight: 800; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
-.spot text.st { fill: var(--fp-ink-soft); font-weight: 600; }
-.busy .box { fill: var(--fp-room-busy); }
-.mine .box { fill: var(--fp-room-mine); }
-.small .box, .part .box { fill: var(--fp-room-small); }
-.full .box { fill: var(--fp-room-full); }
-/* Not bookable, or no room: the grey-beige of the areas around the rooms. */
-.off .box, .closed .box, .plain .box { fill: var(--fp-off); }
-.plain .box { stroke-width: 4; }
+/* Rooms: a soft floor with a thin edge a little darker than itself, rounded; the status is in the chairs (below). */
+.spot { --fill: var(--fp-room); --tint: var(--fp-edge-tint); }
+/* Not bookable, or no room: plain surface, the services' colour. */
+.spot.off, .spot.closed, .spot.plain { --fill: var(--fp-off); }
+/* An open area (Communal Space): soft green, a dashed edge, no walls. */
+.spot.open { --fill: var(--fp-communal); --tint: var(--pw-accent-green); }
+.spot.busy { --fill: var(--fp-room-busy); }
+.spot.mine { --fill: var(--fp-room-mine); }
+.spot.small, .spot.part { --fill: var(--fp-room-small); }
+.spot.full { --fill: var(--fp-room-full); }
+.spot .box { fill: var(--fill); stroke: var(--fp-room-edge); stroke: color-mix(in srgb, var(--fill) 78%, var(--tint)); stroke-width: 1.5; stroke-linejoin: round;
+  transition: stroke .18s ease, stroke-width .18s ease; }
+.spot.open .box { stroke-dasharray: 8 6; stroke-width: 2; }
+.spot .marks { fill: none; stroke: var(--fp-room-edge); stroke: color-mix(in srgb, var(--fill) 70%, var(--tint)); stroke-width: 1.5; stroke-linejoin: round; }
+/* Where a partition splits the room (Vasuki). */
+.spot .divider { stroke: var(--fp-ink-muted); stroke-width: 2; stroke-dasharray: 8 6; stroke-linecap: round; opacity: .75; }
+.spot .door { stroke: var(--fp-pave); stroke-width: 5; stroke-linecap: butt; }
+/* Names in the display face (Poppins); the line under them and the tags in the body face. */
+.spot text { fill: var(--fp-ink); font-family: var(--pw-display); font-weight: 700; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+.spot text.st { fill: var(--fp-ink-soft); font-family: var(--pw-body); font-weight: 600; }
 .off text, .closed text, .plain text, .off text.st, .closed text.st, .plain text.st { fill: var(--fp-ink-muted); }
 .plain text { font-weight: 600; }
 
-/* Furniture: wooden tables and stage, the lounge's rug and sofas; plants and desks (Fixtures). */
+/* Furniture: tables and stage, the lounge's rug and sofas; Main Office's desks, stools and garden, plants (Fixtures). */
 .furniture, .fixtures { pointer-events: none; }
-.wood { fill: var(--fp-wood); stroke: var(--fp-wood-edge); stroke-width: 2; }
-.counter { fill: var(--fp-counter); stroke: var(--fp-wood-edge); stroke-width: 2; }
+.wood { fill: var(--fp-table); stroke: var(--fp-table-edge); stroke-width: 2; }
+.stageBlock { fill: var(--fp-stage); }
 .rug { fill: var(--fp-rug); stroke: var(--fp-sofa-edge); stroke-width: 1.5; stroke-dasharray: 2 5; }
 .sofa { fill: var(--fp-sofa); stroke: var(--fp-sofa-edge); stroke-width: 2; }
+.desk { fill: var(--fp-desk); stroke: var(--fp-desk-edge); stroke-width: 1.2; }
+.stool { fill: var(--fp-stool); }
+.innerGarden { fill: var(--fp-garden); stroke: var(--fp-room-edge); stroke-width: 1.2; }
 .plant { fill: var(--fp-plant); }
 .plantLeaf { fill: var(--fp-plant-leaf); }
 
@@ -108,24 +166,25 @@
 .spot.part { --chair: var(--fp-chair-part); }
 .spot.full { --chair: var(--fp-chair-full); }
 .spot.kindMain { --chair: var(--fp-chair-main); }
-.spot.kindSmall { --chair: var(--fp-chair-kecil); }
+/* Brass is light: its chairs get a darker edge so they stand out on a pale floor. */
+.spot.kindSmall { --chair: var(--fp-chair-kecil); --chair-edge: var(--pw-on-brass-soft); }
 .spot.kindMain.off .seat, .spot.kindMain.off .back, .spot.kindSmall.off .seat, .spot.kindSmall.off .back { opacity: .5; }
 .spot.selected { --chair: var(--fp-chair-mine); }
-.seat { fill: var(--chair); stroke: var(--fp-chair-edge); stroke-width: 1; }
-.back { fill: var(--chair); fill: color-mix(in srgb, var(--chair) 78%, #000); stroke: var(--fp-chair-edge); stroke-width: 1; }
+.seat { fill: var(--chair); stroke: var(--chair-edge, var(--fp-chair-edge)); stroke-width: 1.5; }
+.back { fill: var(--chair); fill: color-mix(in srgb, var(--chair) 78%, #000); stroke: var(--chair-edge, var(--fp-chair-edge)); stroke-width: 1.5; }
 /* "Terpakai" on a taken room. */
 .chip rect { fill: var(--fp-chip); stroke: var(--fp-chair-edge); stroke-width: 1; }
-.spot .chip text { fill: var(--fp-chip-ink); font-weight: 800; }
+.spot .chip text { fill: var(--fp-chip-ink); font-family: var(--pw-body); font-weight: 700; }
 
 .click { cursor: pointer; }
 .click:focus { outline: none; }
-.click:hover .box { stroke: var(--fp-ring); }
-.click:focus-visible .box { stroke: var(--fp-ink); stroke-width: 12; }
+.click:hover .box { stroke: var(--fp-hover); stroke-width: 3; }
+.click:focus-visible .box { stroke: var(--fp-ink); stroke-width: 5; }
 
-/* The chosen room on top: a blue ring on its walls and a dark tooltip above it. */
+/* The chosen room on top: a primary ring on its edge and a navy tooltip above it. */
 .focus { pointer-events: none; }
-.focusHalo { fill: none; stroke: var(--fp-ring); stroke-opacity: .2; stroke-width: 24; stroke-linejoin: round; }
-.focusRing { fill: none; stroke: var(--fp-ring); stroke-width: 8; stroke-linejoin: round; }
+.focusHalo { fill: none; stroke: var(--fp-ring); stroke-opacity: .18; stroke-width: 14; stroke-linejoin: round; }
+.focusRing { fill: none; stroke: var(--fp-ring); stroke-width: 4; stroke-linejoin: round; }
 .tip rect, .tip path { fill: var(--fp-tip); }
 .tip text { fill: var(--fp-tip-ink); font-family: var(--pw-body); font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
 
@@ -143,7 +202,7 @@
 .swatch.kindMain { background: var(--fp-chair-main); }
 .swatch.kindSmall { background: var(--fp-chair-kecil); }
 .swatch.selected { background: var(--fp-chair-mine); outline: 2px solid var(--fp-ring); outline-offset: 2px; }
-.kindLegend .swatch.free, .kindLegend .swatch.off, .kindLegend .swatch.closed { box-shadow: none; border: 2px solid var(--fp-wall); }
+.kindLegend .swatch.free, .kindLegend .swatch.off, .kindLegend .swatch.closed { box-shadow: none; border: 2px solid var(--fp-room-edge); }
 .kindLegend .swatch.free { background: var(--fp-room); }
 .kindLegend .swatch.off { background: var(--fp-off); }
 .kindLegend .swatch.closed { background: var(--fp-off); border-style: dashed; }

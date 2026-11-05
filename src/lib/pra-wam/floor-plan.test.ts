@@ -1,9 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { wibInstant, type Room } from "./appraisal";
 import {
-  BUILDING, FIT_VIEW, FIXTURES, NAME_MIN_PX, PLAN_H, PLAN_SPOTS, PLAN_W, SUB_MIN_PX, ZOOM_MAX, clampView, facilitiesProblem, fitText, isRoomSpot, layoutRooms, moveView, normalizeRoomName,
-  parseFacilities, pickableTone, placeRooms, planKey, planSpotOptions, revealRect, roomSeats, roomSpec, roomStatus, spotLayout, spotText, spotTitle, spotWords, wordsBand, wrapWords, zoomView,
+  BUILDING, FIT_VIEW, FIXTURES, NAME_MIN_PX, PLAN_H, PLAN_SPOTS, PLAN_W, ROOM_COUNT, SITE, SUB_MIN_PX, ZOOM_MAX, clampView, facilitiesProblem, fitText, isRoomSpot, layoutRooms, moveView,
+  normalizeRoomName, parseFacilities, pickableTone, placeRooms, planKey, planSpotOptions, quietName, revealRect, roomBox, roomSeats, roomSpec, roomStatus, spotLayout, spotText, spotTitle,
+  spotWords, wordsBand, wrapWords, zoomView, SEAT_SCALE, type Rect,
 } from "./floor-plan";
+import { seatPlan } from "./seating";
+
+const within = (inner: Rect, outer: Rect) => inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h;
+const apart = (a: Rect, b: Rect) => a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
+const corners = ({ x, y, w, h }: Rect): [number, number][] => [[x, y], [x + w, y], [x, y + h], [x + w, y + h]];
+/** Whether a point is inside a polygon or on its edge. */
+function inside(shape: [number, number][], [px, py]: [number, number]) {
+  let hit = false;
+  for (let index = 0, last = shape.length - 1; index < shape.length; last = index++) {
+    const [x1, y1] = shape[index], [x2, y2] = shape[last];
+    const onEdge = (px - x1) * (y2 - y1) === (py - y1) * (x2 - x1) && px >= Math.min(x1, x2) && px <= Math.max(x1, x2) && py >= Math.min(y1, y2) && py <= Math.max(y1, y2);
+    if (onEdge) return true;
+    if ((y1 > py) !== (y2 > py) && px < (x2 - x1) * (py - y1) / (y2 - y1) + x1) hit = !hit;
+  }
+  return hit;
+}
 
 const room = (name: string, slug = name.toLowerCase().replace(/\s+/g, "-"), bookable = true): Room => ({ id: slug, slug, name, kind: "utama", capacity: null, bookable, minPeople: null, planKey: null, facilities: [] });
 /** The rooms as seeded in production (migration 202611040001). */
@@ -27,7 +44,8 @@ describe("room names on the plan", () => {
   it("splits rooms into placed, other spots (not WAM) and unplaced", () => {
     const { placed, others, unplaced } = layoutRooms(production);
     expect(placed.map(item => item.key).sort()).toEqual(["ananta", "antareja", "communal", "limasan", "main-office", "nagapadma", "pantry", "vasuki"]);
-    expect(others.map(item => item.key).sort()).toEqual(["bs", "comms", "pak-bagus", "pak-fadil"]);
+    const numbered = [1, ...Array.from({ length: 16 }, (_, index) => index + 4), 21, 22, 27, 29, 30, 31];
+    expect(others.map(item => item.key).sort()).toEqual(numbered.map(number => `ruang-${number}`).sort());
     expect(unplaced).toEqual([]);
   });
   it("gives a spot to one room only", () => {
@@ -35,71 +53,117 @@ describe("room names on the plan", () => {
     expect(placed).toHaveLength(1);
     expect(unplaced.map(item => item.slug)).toEqual(["vasuki-2"]);
   });
-  it("is turned so north (Limasan) is up: Limasan along the top, Main Office at the bottom", () => {
-    const top = (key: string) => PLAN_SPOTS[key].rect.y;
-    expect(top("limasan")).toBeLessThan(top("communal"));
-    expect(top("limasan")).toBeLessThan(BUILDING.y + 40);
-    // Main Office is west of Nagapadma, CFC Ananta in the south.
-    expect(PLAN_SPOTS["main-office"].rect.x).toBeLessThan(PLAN_SPOTS.nagapadma.rect.x);
-    expect(top("ananta")).toBeGreaterThan(top("limasan"));
+  it("is turned so north (Limasan) is up: river along the top, the office on the west, the upper building on the east", () => {
+    expect(PLAN_W).toBe(1043);
+    expect(PLAN_H).toBe(1600);
     expect(PLAN_H).toBeGreaterThan(PLAN_W);
-    expect(BUILDING.x + BUILDING.w + 20).toBe(PLAN_W);
-    expect(BUILDING.y + BUILDING.h + 20).toBe(PLAN_H);
-    // Main Office's words sit inside its L.
-    const office = PLAN_SPOTS["main-office"];
-    const words = office.textRect!;
-    expect(words.x).toBeGreaterThanOrEqual(office.rect.x);
-    expect(words.y + words.h).toBeLessThanOrEqual(office.rect.y + office.rect.h);
+    const spot = (key: string) => PLAN_SPOTS[key].rect;
+    expect(spot("limasan").y).toBeLessThan(spot("communal").y);
+    expect(spot("limasan").y).toBeLessThan(spot("nagapadma").y);
+    expect(spot("ananta").y).toBeGreaterThan(spot("nagapadma").y);
+    // Main Office is west of Nagapadma; the upper building (Vasuki, Ruang 19) east of the office.
+    expect(spot("main-office").x).toBeLessThan(spot("nagapadma").x);
+    expect(spot("vasuki").x).toBeGreaterThan(spot("nagapadma").x + spot("nagapadma").w);
+    expect(spot("ruang-19").x).toBeGreaterThan(spot("main-office").x + spot("main-office").w);
+    // The river is the top strip, the road the bottom one.
+    const water = SITE.find(item => item.kind === "water")!.rect, road = SITE.find(item => item.kind === "road")!.rect;
+    expect(water).toMatchObject({ x: 0, y: 0, w: PLAN_W });
+    expect(road.y + road.h).toBe(PLAN_H);
+    expect(within(BUILDING, { x: 0, y: 0, w: PLAN_W, h: PLAN_H })).toBe(true);
   });
-  it("has CFC Ananta as a small room right below Nagapadma, its bottom level with Main Office's (revision 5 Nov)", () => {
-    const ananta = PLAN_SPOTS.ananta.rect, nagapadma = PLAN_SPOTS.nagapadma.rect, office = PLAN_SPOTS["main-office"].rect;
-    expect(nagapadma).toEqual({ x: 505, y: 875, w: 125, h: 354 });
-    expect(ananta).toEqual({ x: 505, y: 1235, w: 125, h: 240 });
-    expect(ananta.y + ananta.h).toBe(office.y + office.h);
-    // Below Nagapadma, as wide, not overlapping it.
-    expect(ananta.x).toBe(nagapadma.x);
-    expect(ananta.w).toBe(nagapadma.w);
-    expect(ananta.y).toBeGreaterThanOrEqual(nagapadma.y + nagapadma.h);
-    // Main Office is on its left (west).
-    expect(office.x + office.w).toBeLessThanOrEqual(ananta.x);
+  it("gives every numbered room a spot, the named rooms keeping their keys", () => {
+    expect(ROOM_COUNT).toBe(31);
+    const named: Record<string, number> = { limasan: 20, nagapadma: 23, ananta: 24, pantry: 25, "main-office": 26, antareja: 28 };
+    for (const [key, number] of Object.entries(named)) {
+      expect(PLAN_SPOTS[key].rect, key).toEqual(roomBox(number));
+      expect(PLAN_SPOTS[key].rooms).toEqual([number]);
+    }
+    for (let number = 1; number <= ROOM_COUNT; number++) {
+      const covered = Object.values(PLAN_SPOTS).filter(spot => spot.rooms.includes(number));
+      expect(covered, `room ${number}`).toHaveLength(1);
+      const key = Object.keys(PLAN_SPOTS).find(item => PLAN_SPOTS[item].rooms.includes(number))!;
+      if (!Object.values(named).includes(number) && number !== 2 && number !== 3) {
+        expect(key).toBe(`ruang-${number}`);
+        expect(PLAN_SPOTS[key].label).toBe(`Ruang ${number}`);
+      }
+    }
+    expect(Object.keys(PLAN_SPOTS)).toHaveLength(31);
+    for (const gone of ["pak-bagus", "bs", "pak-fadil", "comms"]) expect(PLAN_SPOTS[gone]).toBeUndefined();
+    expect(PLAN_SPOTS.ananta.label).toBe("CFC Ananta Room");
+  });
+  it("has Vasuki as one spot over rooms 2 and 3, with a dashed divider between them", () => {
+    const vasuki = PLAN_SPOTS.vasuki, two = roomBox(2), three = roomBox(3);
+    expect(vasuki.rooms).toEqual([2, 3]);
+    expect(within(two, vasuki.rect)).toBe(true);
+    expect(within(three, vasuki.rect)).toBe(true);
+    const [[x1, y1], [x2, y2]] = vasuki.divider!;
+    // Across the room (turned: a horizontal line), between the two boxes.
+    expect(y1).toBe(y2);
+    const [first, second] = [two, three].sort((a, b) => a.y - b.y);
+    expect(y1).toBeGreaterThanOrEqual(first.y + first.h);
+    expect(y1).toBeLessThanOrEqual(second.y);
+    expect(Math.min(x1, x2)).toBeGreaterThanOrEqual(vasuki.rect.x);
+    expect(Math.max(x1, x2)).toBeLessThanOrEqual(vasuki.rect.x + vasuki.rect.w);
+  });
+  it("puts Communal Space round the courtyard plant, clear of Pantry and every room", () => {
+    const communal = PLAN_SPOTS.communal;
+    expect(communal.open).toBe(true);
+    expect(apart(communal.rect, PLAN_SPOTS.pantry.rect)).toBe(true);
+    for (const [key, spot] of Object.entries(PLAN_SPOTS)) if (key !== "communal") expect(apart(communal.rect, spot.rect), key).toBe(true);
+    const plants = FIXTURES.filter(item => item.kind === "plant");
+    expect(plants.some(plant => within(plant.rect, communal.rect))).toBe(true);
+  });
+  it("keeps Main Office's L clear of rooms 27 and 28, its words in its wide part", () => {
+    const office = PLAN_SPOTS["main-office"];
+    expect(office.shape).toHaveLength(8);
+    expect(office.bare).toBe(true);
+    for (const key of ["ruang-27", "antareja"]) {
+      const { x, y, w, h } = PLAN_SPOTS[key].rect;
+      expect(inside(office.shape!, [x + w / 2, y + h / 2]), key).toBe(false);
+      expect(within(PLAN_SPOTS[key].rect, office.rect)).toBe(true);
+    }
+    const words = office.textRect!;
+    expect(within(words, office.rect)).toBe(true);
+    for (const corner of corners(words)) expect(inside(office.shape!, corner)).toBe(true);
+    expect(words.w).toBeGreaterThan(words.h * 4);
   });
   it("sets out Limasan in class rows, Communal Space as a lounge, the rest round a table", () => {
     expect(spotLayout("limasan")).toBe("kelas");
     expect(spotLayout("communal")).toBe("lounge");
-    expect(["nagapadma", "ananta", "vasuki", "antareja", "pantry", "main-office", "pak-bagus"].map(spotLayout)).toEqual(Array(7).fill("rapat"));
+    expect(["nagapadma", "ananta", "vasuki", "antareja", "pantry", "main-office", "ruang-5"].map(spotLayout)).toEqual(Array(7).fill("rapat"));
     expect(spotLayout("gudang")).toBe("rapat");
-    expect(PLAN_SPOTS.pantry.round).toBe(true);
+    expect(PLAN_SPOTS.pantry.round).toBeUndefined();
+    expect(PLAN_SPOTS.limasan.marks).toMatch(/^M/);
   });
-  it("puts each door on the room's wall, and the fixtures where no room is (plants) or inside their room", () => {
-    for (const [key, spot] of Object.entries(PLAN_SPOTS)) {
+  it("puts each door on its room's wall, and the fixtures where no room is (plants) or inside Main Office", () => {
+    const doors = Object.entries(PLAN_SPOTS).filter(([, spot]) => spot.door);
+    expect(doors.map(([key]) => key)).toEqual(expect.arrayContaining(["nagapadma", "ananta", "pantry", "antareja", "main-office"]));
+    for (const [key, spot] of doors) {
       const [[x1, y1], [x2, y2]] = spot.door!;
       const { x, y, w, h } = spot.rect;
       const onWall = (x1 === x2 && (x1 === x || x1 === x + w)) || (y1 === y2 && (y1 === y || y1 === y + h));
       expect(onWall, `${key}'s door`).toBe(true);
     }
-    const within = (inner: { x: number; y: number; w: number; h: number }, outer: typeof inner) => inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h;
-    const apart = (a: { x: number; y: number; w: number; h: number }, b: typeof a) => a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
+    const office = PLAN_SPOTS["main-office"];
     for (const fixture of FIXTURES) {
       expect(within(fixture.rect, BUILDING)).toBe(true);
-      if (fixture.kind === "plant") for (const [key, spot] of Object.entries(PLAN_SPOTS)) expect(apart(fixture.rect, spot.rect), `plant clear of ${key}`).toBe(true);
-      if (fixture.kind === "counter") {
-        expect(within(fixture.rect, PLAN_SPOTS.pantry.rect)).toBe(true);
-        expect(apart(fixture.rect, PLAN_SPOTS.pantry.textRect!)).toBe(true);
-      }
-      if (fixture.kind === "desk") {
-        expect(within(fixture.rect, PLAN_SPOTS["main-office"].rect)).toBe(true);
-        expect(apart(fixture.rect, PLAN_SPOTS["main-office"].textRect!)).toBe(true);
-        expect(apart(fixture.rect, PLAN_SPOTS.antareja.rect)).toBe(true);
+      if (fixture.kind === "plant") {
+        for (const [key, spot] of Object.entries(PLAN_SPOTS)) if (key !== "communal") expect(apart(fixture.rect, spot.rect), `plant clear of ${key}`).toBe(true);
+      } else {
+        for (const corner of corners(fixture.rect)) expect(inside(office.shape!, corner), fixture.kind).toBe(true);
+        expect(apart(fixture.rect, office.textRect!)).toBe(true);
       }
     }
     expect(FIXTURES.filter(item => item.kind === "plant").length).toBeGreaterThanOrEqual(2);
+    expect(FIXTURES.filter(item => item.kind === "desk")).toHaveLength(10);
   });
-  it("keeps every spot inside the building", () => {
-    for (const { rect } of Object.values(PLAN_SPOTS)) {
-      expect(rect.x).toBeGreaterThanOrEqual(BUILDING.x);
-      expect(rect.y).toBeGreaterThanOrEqual(BUILDING.y);
-      expect(rect.x + rect.w).toBeLessThanOrEqual(BUILDING.x + BUILDING.w);
-      expect(rect.y + rect.h).toBeLessThanOrEqual(BUILDING.y + BUILDING.h);
+  it("keeps every spot inside the building, and no two rooms on top of each other", () => {
+    const spots = Object.entries(PLAN_SPOTS);
+    for (const [key, { rect }] of spots) expect(within(rect, BUILDING), key).toBe(true);
+    for (const [a, one] of spots) for (const [b, two] of spots) {
+      // Main Office's box holds rooms 27 and 28 beside its L (checked above).
+      if (a >= b || a === "main-office" || b === "main-office") continue;
+      expect(apart(one.rect, two.rect), `${a} and ${b}`).toBe(true);
     }
   });
 });
@@ -185,12 +249,27 @@ describe("facility tags", () => {
 });
 
 describe("spot names", () => {
-  it("keep room spots' labels and never name a desk", () => {
+  it("name the rooms' spots, and every other spot Ruang N, so the super admin can give it a room", () => {
     expect(spotTitle("vasuki")).toBe("Vasuki");
     expect(spotTitle("communal")).toBe("Communal Space");
-    expect(["pak-bagus", "bs", "pak-fadil", "comms"].map(spotTitle)).toEqual(["Spot tambahan 1", "Spot tambahan 2", "Spot tambahan 3", "Spot tambahan 4"]);
-    expect(isRoomSpot("pak-bagus")).toBe(false);
-    expect(planSpotOptions().map(option => option.label).join(" ")).not.toMatch(/Pak|BS|Comms/);
+    expect(spotTitle("ananta")).toBe("CFC Ananta Room");
+    expect(["ruang-1", "ruang-12", "ruang-27"].map(spotTitle)).toEqual(["Ruang 1", "Ruang 12", "Ruang 27"]);
+    expect(isRoomSpot("ruang-5")).toBe(false);
+    expect(isRoomSpot("antareja")).toBe(true);
+    const options = planSpotOptions();
+    expect(options).toHaveLength(31);
+    expect(options.slice(0, 8).map(option => option.key).sort()).toEqual(["ananta", "antareja", "communal", "limasan", "main-office", "nagapadma", "pantry", "vasuki"]);
+    expect(options[8]).toEqual({ key: "ruang-1", label: "Ruang 1" });
+    expect(options.map(option => option.label).join(" ")).not.toMatch(/Pak|BS|Comms|Spot tambahan/);
+  });
+  it("show a room's quiet name only once it is readable", () => {
+    const small = roomBox(17);
+    const phone = 360 / PLAN_W;
+    expect(quietName("Ruang 17", small, phone)).toBeNull();
+    const zoomed = quietName("Ruang 17", small, phone * 4)!;
+    expect(zoomed.size * phone * 4).toBeGreaterThanOrEqual(NAME_MIN_PX);
+    expect(zoomed.lines).toEqual(["Ruang", "17"]);
+    expect(quietName("Ruang 5", roomBox(5), 860 / PLAN_W)?.lines).toEqual(["Ruang 5"]);
   });
 });
 
@@ -220,8 +299,9 @@ describe("words in a spot", () => {
       }
     }
     const limasan = spotText({ name: "Limasan", sub: "Muat 40 orang · min 10", rect: PLAN_SPOTS.limasan.rect, unitPx: 860 / PLAN_W });
+    // Limasan is square: upright, its specification on two lines.
     expect(limasan.rotate).toBe(false);
-    expect(limasan.sub).toEqual(["Muat 40 orang · min 10"]);
+    expect(limasan.sub.join(" · ")).toBe("Muat 40 orang · min 10");
   });
   it("shows the specification at once on a desktop", () => {
     // A roomy box (CFC Ananta's before 5 Nov).
@@ -234,8 +314,11 @@ describe("words in a spot", () => {
     const antareja = spotWords({ name: "Antareja", sub: "4 kursi", rect: PLAN_SPOTS.antareja.rect, main: true, unitPx: desktop });
     expect(antareja.rotate).toBe(false);
     expect(antareja.sub).toEqual(["4 kursi"]);
-    expect(antareja.band).toBeLessThanOrEqual(PLAN_SPOTS.antareja.rect.h * 0.5);
+    expect(antareja.band).toBeLessThanOrEqual(PLAN_SPOTS.antareja.rect.h * 0.65);
     expect(antareja.band).toBe(wordsBand(antareja));
+    // Below the words its four chairs fit, laid out at seating's size and drawn at SEAT_SCALE.
+    const k = 1 / SEAT_SCALE, { x, y, w, h } = PLAN_SPOTS.antareja.rect;
+    expect(seatPlan({ box: { x: x * k, y: y * k, w: w * k, h: h * k }, capacity: 4, layout: "rapat", top: antareja.band * k }).drawn).toBe(4);
     // Narrow rooms: the name stays inside (two lines or turned) and the chairs start lower. (On a
     // 300px phone CFC Ananta is 30 × 57 px: its name cannot fit at a readable size until zoomed.)
     for (const [unitPx, key] of [[desktop, "nagapadma"], [desktop, "ananta"], [phone, "nagapadma"]] as const) {

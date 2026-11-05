@@ -2,83 +2,141 @@ import { clockLabel, overlaps, wibTime, type Room } from "./appraisal";
 import type { SeatLayout } from "./seating";
 
 /*
- * The office floor plan, taken from "Werkudara Room Booking" (MAP_W, MAP_H, BLDG, DEF.floor.decor
- * and FLOOR_DEFAULT there). The HTML draws it with Limasan on the left; north is Limasan's side,
- * so the plan here is that drawing turned a quarter clockwise: north (Limasan) is up, as the
- * compass on the plan says. The coordinates below are the HTML's (a 1600 × 1340 drawing), turned
- * once when this module loads; the SVG's viewBox is 0 0 PLAN_W PLAN_H.
- * WAM rooms live in the database (pw_rooms); they find their spot here by name, so a room that is
- * renamed or added without a spot is simply listed below the plan.
+ * The office floor plan, traced from the office's CAD drawing (1600 × 1043, the river on the left
+ * and the road on the right): the site (grass, river, road, paving, yard, roofs, ramps, plants),
+ * the upper building with rooms 1–19 and the office below it with
+ * rooms 20–31, numbered in the trace's order. North is Limasan's side (the drawing's left), so the
+ * plan here is that drawing turned a quarter clockwise: north (Limasan) is up, as the compass on
+ * the plan says. The coordinates below are the drawing's, turned once when this module loads; the
+ * SVG's viewBox is 0 0 PLAN_W PLAN_H.
+ * WAM rooms live in the database (pw_rooms); they find their spot here by the spot the super admin
+ * picked, else by name, so a room that is renamed or added without a spot is simply listed below
+ * the plan.
  */
 
 export type Rect = { x: number; y: number; w: number; h: number };
 type Point = [number, number];
 
-/** The HTML drawing's height: its left edge (Limasan's side) becomes the top. */
-const SOURCE_H = 1340;
+/** The drawing's size: its left edge (Limasan's side) becomes the top. */
+const SOURCE_W = 1600;
+const SOURCE_H = 1043;
 /** A quarter turn clockwise: the drawing's left goes to the top, its top to the right. */
 const turn = ({ x, y, w, h }: Rect): Rect => ({ x: SOURCE_H - y - h, y: x, w: h, h: w });
 const turnPoint = ([x, y]: Point): Point => [SOURCE_H - y, x];
+/** A box from its corners, in the drawing's coordinates. */
+const box = (x0: number, y0: number, x1: number, y1: number): Rect => ({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+const n1 = (value: number) => Math.round(value * 10) / 10;
+/** Polylines (in the drawing's coordinates) as one SVG path, turned. */
+const pathOf = (lines: Point[][]) => lines.map(line => line.map(turnPoint).map(([x, y], index) => `${index ? "L" : "M"}${n1(x)} ${n1(y)}`).join("")).join("");
 
-/** The turned building is 1225 × 1540 with a 20-unit margin all round. */
-export const PLAN_W = 1265;
-export const PLAN_H = 1580;
-export const BUILDING: Rect = turn({ x: 20, y: 95, w: 1540, h: 1225 });
-/** Blocks that are not rooms (stairs, lift, storage): drawn plain. */
-export const DECOR: Rect[] = [
-  { x: 565, y: 302, w: 190, h: 238 }, { x: 870, y: 130, w: 228, h: 235 },
-  { x: 1100, y: 110, w: 410, h: 245 }, { x: 670, y: 725, w: 200, h: 120 },
-].map(turn);
+export const PLAN_W = SOURCE_H;
+export const PLAN_H = SOURCE_W;
+/** Both buildings and their terraces (every room, fixture and door is inside). */
+export const BUILDING: Rect = turn(box(11, 30, 1530, 1003));
+
+/**
+ * The rooms as the trace numbers them (1–31), each the box drawn for it: its cell less 2 units all
+ * round, so neighbours keep a gap. 20 is Limasan, the pendopo; 26 is Main Office's L (its bounding box).
+ */
+const SOURCE_ROOMS: Rect[] = ([
+  [211, 50, 358, 180], [363, 50, 527, 180], [532, 50, 762, 180],
+  [211, 184, 280, 298], [285, 184, 496, 392], [501, 184, 672, 392], [211, 303, 280, 392],
+  [211, 397, 358, 527], [363, 397, 608, 527], [674, 184, 768, 223],
+  [776, 43, 889, 223], [894, 43, 981, 130], [894, 135, 981, 223],
+  [986, 43, 1074, 97], [986, 101, 1074, 223], [1078, 43, 1172, 97], [1177, 43, 1228, 97], [1232, 43, 1320, 97],
+  [1078, 101, 1320, 223],
+] as const).map(([x0, y0, x1, y1]) => box(x0 + 2, y0 + 2, x1 - 2, y1 - 2)).concat(
+  box(299, 549, 413, 664),
+  ...([[589, 562, 680, 675], [684, 562, 773, 675], [776, 565, 1050, 672], [1055, 565, 1145, 672], [560, 740, 667, 865]] as const)
+    .map(([x0, y0, x1, y1]) => box(x0 + 2, y0 + 2, x1 - 2, y1 - 2)),
+  box(742, 672, 1205, 1000),
+  ...([[742, 815, 838, 893], [742, 893, 838, 975], [1205, 588, 1300, 760], [1205, 760, 1300, 885], [1205, 888, 1300, 1000]] as const)
+    .map(([x0, y0, x1, y1]) => box(x0 + 2, y0 + 2, x1 - 2, y1 - 2)),
+);
+/** Room N's box on the plan (turned), N from 1 to 31. */
+export const roomBox = (number: number): Rect => turn(SOURCE_ROOMS[number - 1]);
+export const ROOM_COUNT = SOURCE_ROOMS.length;
 
 type Side = "top" | "bottom" | "left" | "right";
 export type PlanSpot = {
   label: string; rect: Rect;
-  /** The outline to draw instead of `rect`, for a room that is not a plain box. */
+  /** The outline to draw instead of `rect`, for a room that is not a plain box (Main Office's L). */
   shape?: Point[];
-  /** Where its words (and chairs) sit, when not `rect` (the wide arm of an L, the pantry beside its counter). */
+  /** Where its words (and chairs) sit, when not `rect` (a band of Main Office's wide part). */
   textRect?: Rect;
   /** How its chairs are set out (seating.ts); "rapat" when not given. No database field: the plan decides. */
   layout?: SeatLayout;
   /** A round table instead of a long one (the pantry). */
   round?: boolean;
-  /** Its door: a break in the wall at `at` (0–1) along one side of `rect`, in the HTML's coordinates. */
+  /** No table or chairs: its furniture is drawn as fixtures (Main Office's desks). */
+  bare?: boolean;
+  /** An open area rather than a room (Communal Space): a dashed edge, no shadow. */
+  open?: boolean;
+  /** A dashed line across the room where a partition can split it (Vasuki, rooms 2 and 3). */
+  divider?: [Point, Point];
+  /** Lines drawn on its floor (Limasan's roof seen from above). */
+  marks?: Point[][];
+  /** Its door: a break in the wall at `at` (0–1) along one side of `rect`, in the drawing's coordinates. */
   door?: { side: Side; at: number };
+  /** The trace's room numbers it covers. */
+  rooms: number[];
 };
-/** A spot as drawn: its layout filled in, its door a wall segment (two points). */
-export type DrawnSpot = Omit<PlanSpot, "door" | "layout"> & { layout: SeatLayout; door?: [Point, Point] };
+/** A spot as drawn: its layout filled in, its door and divider wall segments, its marks a path. */
+export type DrawnSpot = Omit<PlanSpot, "door" | "layout" | "marks" | "divider"> & {
+  layout: SeatLayout; door?: [Point, Point]; divider?: [Point, Point]; marks?: string;
+};
 
 /**
- * Every room drawn on the plan, keyed by the slug the booking HTML uses, in the HTML's coordinates
- * (turned below). `rect` is the room's box (its label sits in the middle); Main Office is an L
- * round Antareja, its words in the L's full-width arm.
+ * Every room drawn on the plan, in the drawing's coordinates (turned below). The named rooms keep
+ * the keys they had on the old plan, so rooms already linked in the database keep their place;
+ * every other numbered room is "ruang-N", "Ruang N", for the super admin to give a room by hand.
  */
-const SOURCE_SPOTS: Record<string, PlanSpot> = {
-  "pak-bagus": { label: "Pak Bagus", rect: { x: 255, y: 165, w: 155, h: 135 }, door: { side: "left", at: 0.5 } },
-  vasuki: { label: "Vasuki", rect: { x: 412, y: 142, w: 453, h: 153 }, door: { side: "bottom", at: 0.88 } },
-  bs: { label: "BS", rect: { x: 255, y: 302, w: 310, h: 243 }, door: { side: "left", at: 0.5 } },
-  "pak-fadil": { label: "Pak Fadil", rect: { x: 250, y: 548, w: 163, h: 140 }, door: { side: "left", at: 0.5 } },
-  comms: { label: "Comms", rect: { x: 415, y: 540, w: 270, h: 148 }, door: { side: "bottom", at: 0.5 } },
-  // Revised 5 Nov (docs/rancangan-admin-wam.md, 3b): CFC Ananta is a small room right below a
-  // shorter Nagapadma, its bottom level with Main Office's; its old place is open floor.
-  nagapadma: { label: "Nagapadma", rect: { x: 875, y: 710, w: 354, h: 125 }, door: { side: "top", at: 0.5 } },
-  ananta: { label: "CFC Ananta Room", rect: { x: 1235, y: 710, w: 240, h: 125 }, door: { side: "top", at: 0.5 } },
-  "main-office": {
-    label: "Main Office", rect: { x: 840, y: 842, w: 635, h: 368 },
-    shape: [[840, 842], [1475, 842], [1475, 1210], [1020, 1210], [1020, 1030], [840, 1030]],
-    textRect: { x: 1020, y: 842, w: 455, h: 368 }, door: { side: "left", at: 0.27 },
+const NAMED: Record<number, Omit<PlanSpot, "rect" | "rooms"> & { key: string }> = {
+  20: {
+    key: "limasan", label: "Limasan", layout: "kelas",
+    marks: [[[299, 549], [340, 590], [372, 590], [413, 549]], [[299, 664], [340, 623], [372, 623], [413, 664]], [[340, 590], [340, 623]], [[372, 590], [372, 623]]],
   },
-  // Added by the owner (Nov 2026): Antareja in Main Office's lower-left corner, and the communal
-  // space between Limasan and Pantry.
-  antareja: { label: "Antareja", rect: { x: 840, y: 1040, w: 170, h: 170 }, door: { side: "left", at: 0.5 } },
-  communal: { label: "Communal Space", rect: { x: 350, y: 860, w: 225, h: 380 }, layout: "lounge", door: { side: "top", at: 0.5 } },
-  // The counter runs along the pantry's west wall (FIXTURES); the round table sits beside it.
-  pantry: { label: "Pantry", rect: { x: 590, y: 930, w: 160, h: 135 }, textRect: { x: 590, y: 930, w: 160, h: 106 }, round: true, door: { side: "top", at: 0.5 } },
-  limasan: { label: "Limasan", rect: { x: 40, y: 740, w: 300, h: 400 }, layout: "kelas", door: { side: "top", at: 0.8 } },
+  23: { key: "nagapadma", label: "Nagapadma", door: { side: "bottom", at: 0.5 } },
+  24: { key: "ananta", label: "CFC Ananta Room", door: { side: "bottom", at: 0.5 } },
+  // Its box is too small for a round table with chairs: a short meeting table instead.
+  25: { key: "pantry", label: "Pantry", door: { side: "bottom", at: 0.5 } },
+  // The L round rooms 27 and 28; its words in a band at the end of its wide part, clear of the desks.
+  26: {
+    key: "main-office", label: "Main Office", bare: true, door: { side: "left", at: 0.2 },
+    shape: [[742, 672], [1205, 672], [1205, 1000], [1015, 1000], [1015, 985], [840, 985], [840, 815], [742, 815]],
+    textRect: box(1144, 676, 1203, 996),
+  },
+  27: { key: "ruang-27", label: "Ruang 27", door: { side: "right", at: 0.5 } },
+  28: { key: "antareja", label: "Antareja", door: { side: "right", at: 0.5 } },
+  29: { key: "ruang-29", label: "Ruang 29", door: { side: "left", at: 0.5 } },
+  30: { key: "ruang-30", label: "Ruang 30", door: { side: "left", at: 0.5 } },
+  31: { key: "ruang-31", label: "Ruang 31", door: { side: "left", at: 0.5 } },
 };
 
-/** The door as a wall segment, 44 units long, in the HTML's coordinates. */
+const SOURCE_SPOTS: Record<string, PlanSpot> = {};
+for (let number = 1; number <= SOURCE_ROOMS.length; number++) {
+  if (number === 3) continue;
+  if (number === 2) {
+    // Rooms 2 and 3 are one room, Vasuki, that a partition can split in two.
+    const two = SOURCE_ROOMS[1], three = SOURCE_ROOMS[2];
+    const middle = (two.x + two.w + three.x) / 2;
+    SOURCE_SPOTS.vasuki = {
+      label: "Vasuki", rooms: [2, 3], rect: box(two.x, two.y, three.x + three.w, two.y + two.h),
+      divider: [[middle, two.y + 4], [middle, two.y + two.h - 4]],
+    };
+    continue;
+  }
+  const { key, ...named } = NAMED[number] ?? { key: `ruang-${number}`, label: `Ruang ${number}` };
+  SOURCE_SPOTS[key] = { ...named, rect: SOURCE_ROOMS[number - 1], rooms: [number] };
+  // Communal Space: the open courtyard round the plant below Pantry.
+  if (number === 25) SOURCE_SPOTS.communal = { label: "Communal Space", rect: box(500, 871, 738, 970), layout: "lounge", open: true, rooms: [],
+    // Its words and sofas below the plant, which stays in view at its top.
+    textRect: box(534, 871, 738, 970) };
+}
+
+/** The door as a wall segment, 30 units long, in the drawing's coordinates. */
 function doorLine({ x, y, w, h }: Rect, door: NonNullable<PlanSpot["door"]>): [Point, Point] {
-  const half = 22;
+  const half = 15;
   if (door.side === "top" || door.side === "bottom") {
     const at = x + w * door.at, wall = door.side === "top" ? y : y + h;
     return [[at - half, wall], [at + half, wall]];
@@ -89,10 +147,14 @@ function doorLine({ x, y, w, h }: Rect, door: NonNullable<PlanSpot["door"]>): [P
 
 /** The spots as drawn: north (Limasan) up. */
 export const PLAN_SPOTS: Record<string, DrawnSpot> = Object.fromEntries(Object.entries(SOURCE_SPOTS).map(([key, spot]) => [key, {
-  label: spot.label, rect: turn(spot.rect), layout: spot.layout ?? "rapat",
+  label: spot.label, rect: turn(spot.rect), layout: spot.layout ?? "rapat", rooms: spot.rooms,
   ...(spot.round ? { round: true } : {}),
+  ...(spot.bare ? { bare: true } : {}),
+  ...(spot.open ? { open: true } : {}),
   ...(spot.shape ? { shape: spot.shape.map(turnPoint) } : {}),
   ...(spot.textRect ? { textRect: turn(spot.textRect) } : {}),
+  ...(spot.divider ? { divider: spot.divider.map(turnPoint) as [Point, Point] } : {}),
+  ...(spot.marks ? { marks: pathOf(spot.marks) } : {}),
   ...(spot.door ? { door: doorLine(spot.rect, spot.door).map(turnPoint) as [Point, Point] } : {}),
 } satisfies DrawnSpot]));
 
@@ -100,22 +162,71 @@ export const PLAN_SPOTS: Record<string, DrawnSpot> = Object.fromEntries(Object.e
 export const spotLayout = (key: string): SeatLayout => PLAN_SPOTS[key]?.layout ?? "rapat";
 
 /**
- * Fixed furniture that is not a room's chairs: wooden desks in Main Office's arm above Antareja,
- * the pantry counter, and plants (two green circles) in corners and the corridor where nothing is.
+ * Chairs and tables are laid out (seating.ts) at this share of their size: the plan's rooms are
+ * small next to seating's chairs, so a room's furniture is planned in a box 1/SEAT_SCALE as big
+ * and drawn shrunk back.
  */
-export type Fixture = { kind: "desk" | "counter" | "plant"; rect: Rect };
-export const FIXTURES: Fixture[] = ([
-  { kind: "desk", rect: { x: 868, y: 866, w: 56, h: 140 } },
-  { kind: "desk", rect: { x: 934, y: 866, w: 56, h: 140 } },
-  { kind: "counter", rect: { x: 596, y: 1040, w: 148, h: 20 } },
-  // The old CFC Ananta corner (twice), the corridor by the stairs, below Limasan, by the pantry, the south-east corner.
-  { kind: "plant", rect: { x: 1125, y: 445, w: 40, h: 40 } },
-  { kind: "plant", rect: { x: 1455, y: 615, w: 40, h: 40 } },
-  { kind: "plant", rect: { x: 790, y: 600, w: 40, h: 40 } },
-  { kind: "plant", rect: { x: 60, y: 1180, w: 40, h: 40 } },
-  { kind: "plant", rect: { x: 770, y: 1250, w: 40, h: 40 } },
-  { kind: "plant", rect: { x: 1500, y: 1262, w: 40, h: 40 } },
-] satisfies Fixture[]).map(item => ({ ...item, rect: turn(item.rect) }));
+export const SEAT_SCALE = 0.4;
+
+/*
+ * The site round the rooms, drawn under them: areas (grass, river, road, paving, the yard, roofs,
+ * ramps, gardens), their lines (ramp treads, terrace boards, roof ridges, porch marks), the
+ * fountain and the way in.
+ */
+export type SiteKind = "grass" | "water" | "road" | "walk" | "pave" | "yard" | "garden" | "roof" | "ramp" | "pad" | "deck";
+export type SiteArea = { kind: SiteKind; rect: Rect; r: number };
+const area = (kind: SiteKind, x0: number, y0: number, x1: number, y1: number, r = 0): SiteArea => ({ kind, rect: turn(box(x0, y0, x1, y1)), r });
+export const SITE: SiteArea[] = [
+  area("grass", 0, 0, SOURCE_W, SOURCE_H), area("water", 0, 0, 16, SOURCE_H), area("road", 1582, 0, SOURCE_W, SOURCE_H), area("walk", 1556, 0, 1582, SOURCE_H),
+  // The upper building: its plinth, the yard with two roofs, the ramps and stairs on the east.
+  area("pave", 200, 38, 1530, 535, 14), area("yard", 705, 227, 1509, 525, 10), area("walk", 160, 298, 206, 397, 10), area("garden", 680, 232, 700, 517, 8),
+  area("roof", 974, 310, 1153, 525, 6), area("roof", 1153, 310, 1335, 525, 6),
+  area("ramp", 1355, 53, 1509, 212, 4), area("ramp", 1355, 356, 1509, 515, 4),
+  area("walk", 1325, 43, 1352, 226, 4), area("walk", 1335, 341, 1352, 525, 4), area("walk", 1525, 30, 1556, 530, 4),
+  // The office: the west terrace, steps and a ramp to the river, the garden, Limasan's deck, the courtyard, the east porch.
+  area("pave", 11, 525, 206, 790, 10), area("walk", 60, 540, 190, 776, 8), area("pad", 75, 552, 160, 610, 10), area("pad", 75, 695, 160, 760, 10),
+  area("ramp", 204, 755, 385, 840, 4), area("ramp", 205, 840, 318, 1000, 4),
+  area("garden", 258, 535, 380, 750, 10), area("yard", 385, 535, 473, 786, 8), area("yard", 300, 805, 473, 975, 8),
+  area("deck", 413, 558, 451, 655, 4), area("walk", 473, 532, 496, 975, 4), area("pave", 496, 552, 742, 974, 8),
+  area("pave", 1300, 553, 1409, 1003, 8), area("walk", 1409, 532, 1525, 1003, 4),
+];
+const across = (x0: number, x1: number, from: number, to: number, step: number): Point[][] => {
+  const lines: Point[][] = [];
+  for (let y = from; y < to; y += step) lines.push([[x0, y], [x1, y]]);
+  return lines;
+};
+/** The site's lines as one path per kind. */
+export const SITE_LINES: { kind: "tread" | "board" | "ridge" | "mark"; d: string }[] = [
+  { kind: "tread", d: pathOf([...across(1355, 1509, 67, 212, 14), ...across(1355, 1509, 370, 515, 14), ...across(204, 385, 765, 840, 10), ...across(205, 318, 852, 1000, 12)]) },
+  { kind: "board", d: pathOf(across(64, 186, 552, 770, 22)) },
+  { kind: "ridge", d: pathOf([[[974, 417], [1335, 417]]]) },
+  { kind: "mark", d: pathOf(across(1370, 1384, 600, 1000, 30)) },
+];
+const [fountainX, fountainY] = turnPoint([543, 583]);
+export const FOUNTAIN = { cx: fountainX, cy: fountainY, r: 18 };
+/** The way in from the road: an arrow and its word. */
+export const ENTRANCE = { arrow: ([[1485, 980], [1545, 995], [1485, 1010]] as Point[]).map(turnPoint), label: { x: 72, y: 1514 } };
+
+/**
+ * Fixed furniture that is not a room's chairs: Main Office's desks with their stools and its inner
+ * garden, and plants (two circles) round the site and in the courtyard.
+ */
+export type Fixture = { kind: "desk" | "stool" | "garden" | "plant"; rect: Rect };
+const desks = (x0: number, y0: number, columns: number, rows: number): Fixture[] => {
+  const items: Fixture[] = [];
+  for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
+    const x = x0 + column * 70, y = y0 + row * 56;
+    items.push({ kind: "desk", rect: box(x, y, x + 46, y + 22) });
+    for (let seat = 0; seat < 2; seat++) items.push({ kind: "stool", rect: box(x + 6 + seat * 22, y + 25, x + 18 + seat * 22, y + 34) });
+  }
+  return items;
+};
+const plant = (x: number, y: number, d = 22): Fixture => ({ kind: "plant", rect: box(x - d / 2, y - d / 2, x + d / 2, y + d / 2) });
+export const FIXTURES: Fixture[] = [
+  { kind: "garden", rect: box(1058, 703, 1142, 786) } as Fixture,
+  ...desks(880, 700, 2, 1), ...desks(880, 820, 4, 2),
+  plant(730, 300), plant(1290, 280), plant(900, 480), plant(1340, 680), plant(1340, 800), plant(520, 900), plant(440, 600),
+].map(item => ({ ...item, rect: turn(item.rect) }));
 
 /** "CFC Ananta Room" → "cfc ananta room"; slugs normalize the same way ("cfc-ananta" → "cfc ananta"). */
 export const normalizeRoomName = (name: string) => name.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -216,6 +327,21 @@ export function wrapWords(text: string, chars: number, maxLines: number): string
   return lines;
 }
 
+/**
+ * The quiet name of a spot no room takes ("Ruang 12"): on one line or, when that lets it be
+ * clearly bigger, two ("Ruang" / "12"), as big as the box allows up to `max` plan units. Null when
+ * it would be smaller on screen than NAME_MIN_PX at `px` screen px per plan unit (the plan's zoom
+ * included): a map's small names show once zoomed in.
+ */
+export function quietName(name: string, rect: Pick<Rect, "w" | "h">, px: number, max = 28): { lines: string[]; size: number } | null {
+  if (!name) return null;
+  const fit = (lines: string[]) => Math.min(max, (rect.w - 10) / (Math.max(...lines.map(line => line.length)) * CHAR), (rect.h - 8) / (lines.length * 1.2));
+  const one = [name];
+  const two = name.includes(" ") ? wrapWords(name, Math.ceil(name.length / 2), 2) : one;
+  const best = two.length > 1 && fit(two) > fit(one) * 1.15 ? { lines: two, size: fit(two) } : { lines: one, size: fit(one) };
+  return best.size * px >= NAME_MIN_PX ? best : null;
+}
+
 export type SpotText = {
   name: string[]; nameSize: number;
   sub: string[]; subSize: number;
@@ -297,7 +423,8 @@ const strip = (text: SpotText & { spills: boolean }): SpotText => {
 function layText(input: TextInput): SpotText & { spills: boolean } {
   const { name, sub, rect, main, compact } = input;
   const unitPx = input.unitPx && input.unitPx > 0 ? input.unitPx : 860 / PLAN_W;
-  const pad = 24, room = rect.w - pad;
+  // The padding shrinks in a small room (CFC Ananta), so its name and chairs both fit.
+  const pad = Math.min(24, Math.max(10, rect.w * 0.14)), room = rect.w - pad;
   const floor = Math.min(NAME_MIN_PX / unitPx, 72);
   const top = Math.max(compact ? (main ? 26 : 22) : main ? 46 : 34, floor);
   const longest = (lines: string[]) => Math.max(...lines.map(line => line.length), 3);
@@ -380,20 +507,12 @@ export function facilitiesProblem(tags: string[]): string | null {
   return bad ? `Setiap fasilitas ${min} sampai ${max} karakter ("${bad.length > 12 ? `${bad.slice(0, 12)}…` : bad}").` : null;
 }
 
-/** Spots that a WAM room is named after; the others (people's desks, Comms) carry no name on the plan. */
+/** Spots that a WAM room is named after (Vasuki, Pantry…); the others are "Ruang N". */
 const ROOM_SPOT_KEYS = new Set(Object.values(ROOM_SPOTS));
 export const isRoomSpot = (key: string) => ROOM_SPOT_KEYS.has(key);
-const EXTRA_SPOTS = Object.keys(PLAN_SPOTS).filter(key => !ROOM_SPOT_KEYS.has(key));
 
-/**
- * A spot's name for people: a room spot's label ("Vasuki"), else "Spot tambahan 1"… in plan order,
- * so the plan and the super admin never show whose desk a spot was.
- */
-export function spotTitle(key: string): string {
-  if (isRoomSpot(key)) return PLAN_SPOTS[key].label;
-  const index = EXTRA_SPOTS.indexOf(key);
-  return index >= 0 ? `Spot tambahan ${index + 1}` : key;
-}
+/** A spot's name for people: a room spot's label ("Vasuki"), else "Ruang N" after the trace's number. */
+export const spotTitle = (key: string): string => PLAN_SPOTS[key]?.label ?? key;
 
 /*
  * Zooming and panning the plan like a map. The view is the part of the plan in the box: its zoom
@@ -448,5 +567,9 @@ export function placeRooms<R extends Pick<Room, "id" | "name" | "slug"> & { plan
   return { placed, others, unplaced: rooms.filter(room => unplaced.includes(room)) };
 }
 
-/** Every spot key with its label, for a picker. */
-export const planSpotOptions = () => Object.keys(PLAN_SPOTS).map(key => ({ key, label: spotTitle(key) }));
+/** Every spot key with its label, for a picker: the named rooms first, then Ruang 1, Ruang 4… in number order. */
+export const planSpotOptions = () => {
+  const keys = Object.keys(PLAN_SPOTS);
+  const ordered = [...keys.filter(isRoomSpot), ...keys.filter(key => !isRoomSpot(key))];
+  return ordered.map(key => ({ key, label: spotTitle(key) }));
+};

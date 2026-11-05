@@ -4,8 +4,8 @@ import { useEffect, useId, useMemo, useRef, useState, type FocusEvent, type Keyb
 import { Minus, Plus, Scan } from "lucide-react";
 import type { Room } from "@/lib/pra-wam/appraisal";
 import {
-  BUILDING, DECOR, FIT_VIEW, FIXTURES, PLAN_H, PLAN_SPOTS, PLAN_W, WORDS_BOTTOM, WORDS_TOP, ZOOM_MAX, ZOOM_MIN, clampView, isRoomSpot, moveView, pickableTone, placeRooms, revealRect,
-  roomSeats, roomSpec, spotText, spotWords, zoomView, type PlanStatus, type PlanTone, type PlanView, type Rect,
+  ENTRANCE, FIT_VIEW, FIXTURES, FOUNTAIN, PLAN_H, PLAN_SPOTS, PLAN_W, SEAT_SCALE, SITE, SITE_LINES, WORDS_BOTTOM, WORDS_TOP, ZOOM_MAX, ZOOM_MIN, clampView, isRoomSpot, moveView,
+  pickableTone, placeRooms, quietName, revealRect, roomSeats, roomSpec, spotText, spotWords, zoomView, type DrawnSpot, type PlanStatus, type PlanTone, type PlanView, type Rect, type SiteKind,
 } from "@/lib/pra-wam/floor-plan";
 import type { DayStatus, DayTone } from "@/lib/pra-wam/room-day";
 import { chairPaths, seatPlan, type SeatLayout } from "@/lib/pra-wam/seating";
@@ -94,9 +94,9 @@ type Gesture = {
 };
 
 /**
- * The office floor plan as an SVG (plan units 0 0 PLAN_W PLAN_H, from "Werkudara Room Booking",
- * north up): the building, the blocks that are not rooms, and every room with its name and
- * specification (or status). A compass in its top-left corner shows north (Limasan's side). It
+ * The office floor plan as an SVG (plan units 0 0 PLAN_W PLAN_H, traced from the office's CAD
+ * drawing, north up): the site and both buildings, and every room with its name and specification
+ * (or status); the rooms no WAM room takes carry a quiet "Ruang N". A compass in its top-left corner shows north (Limasan's side). It
  * always opens fitted to its box, on a phone too, and zooms and pans like a map: pinch or ctrl/⌘ +
  * wheel, double tap, drag when zoomed, the + / − / fit buttons in its top-right corner (the empty
  * corner of the building), and +, −, 0 and the arrows from the keyboard. WAM rooms the plan has no
@@ -275,7 +275,7 @@ export function FloorPlan({
       if (hit) return { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: `${hit.room.name} · ${seatsWord(hit.room)} · ${lower(statusOf(hit.room).text)}` };
       const spot = others.find(item => item.key === selectedSpot);
       if (!spot) return null;
-      return { rect: spot.rect, shape: spot.shape, tip: isRoomSpot(spot.key) ? `${spot.label} · ${lower(emptyStatus.text)}` : emptyStatus.text };
+      return { rect: spot.rect, shape: spot.shape, tip: `${spot.label} · ${lower(emptyStatus.text)}` };
     }
     const hit = placed.find(item => item.room.id === selectedId) ?? placed.find(item => item.room.id === highlightId);
     return hit ? { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: `${hit.room.name} · ${seatsWord(hit.room)} · ${TONE_WORDS[statusOf(hit.room).tone]}` } : null;
@@ -284,28 +284,28 @@ export function FloorPlan({
 
   const otherSpotsDrawn = others.map(spot => {
     const named = isRoomSpot(spot.key);
+    const drawn = spotShape(spot);
     // A room's spot keeps its furniture (Limasan's stage, the lounge's sofas) even with no WAM room in it.
-    const seats = named ? { capacity: null, layout: spot.layout, round: spot.round } : undefined;
+    const seats = named && !spot.bare ? { capacity: null, layout: spot.layout, round: spot.round } : undefined;
     if (onPickSpot) {
       const empty = emptyStatus;
-      // Desks carry no name: only "Spot kosong", so the super admin can still give them a room.
-      return <Spot key={spot.key} {...common} rect={spot.rect} shape={spot.shape} textRect={spot.textRect} door={spot.door} seats={seats} name={named ? spot.label : empty.text} quiet={!named} sub={named ? empty.text : ""}
-        tone={empty.tone} selected={spot.key === selectedSpot} title={named ? `${spot.label} · ${empty.text}` : empty.text}
-        button={spotButton(spot.key, named ? `${spot.label}, ${lower(empty.text)}` : empty.text)} />;
+      // Every spot is named ("Vasuki", "Ruang 12"), so the super admin can give it a room by hand.
+      return <Spot key={spot.key} {...common} {...drawn} seats={seats} name={spot.label} sub={empty.text}
+        tone={empty.tone} selected={spot.key === selectedSpot} title={`${spot.label} · ${empty.text}`}
+        button={spotButton(spot.key, `${spot.label}, ${lower(empty.text)}`)} />;
     }
-    const name = named && otherSpots === "label" ? spot.label : "";
-    return <Spot key={spot.key} {...common} rect={spot.rect} shape={spot.shape} textRect={spot.textRect} door={spot.door} seats={seats} name={name} sub="" tone="off" plain title={name} />;
+    const name = otherSpots === "label" ? spot.label : "";
+    return <Spot key={spot.key} {...common} {...drawn} seats={seats} name={name} sub="" tone="off" plain faint={!named} title={name} />;
   });
   const placedDrawn = placed.map(({ key, room, rect }) => {
     const status = statusOf(room);
     // On the plan the line under the name is how many chairs it has; people and facilities are in the tooltip.
     const spec = roomSpec(room), seatsLine = roomSeats(room);
     const spot = PLAN_SPOTS[key];
-    const shape = spot?.shape, textRect = spot?.textRect;
-    const seats = { capacity: room.capacity, layout: spot?.layout ?? "rapat", round: spot?.round };
+    const seats = spot?.bare ? undefined : { capacity: room.capacity, layout: spot?.layout ?? "rapat", round: spot?.round };
     // The same grouping as the admin's room list: a main room for at most 4 people is a small room.
     const kind: SpotProps["kind"] = byKind ? (roomGroup(room) === "kecil" ? "kindSmall" : "kindMain") : undefined;
-    const drawn = { rect, shape, textRect, door: spot?.door, seats, kind, chip: TAKEN_CHIP[status.tone], main: room.kind === "utama" };
+    const drawn = { ...(spot ? spotShape(spot) : { rect }), seats, kind, chip: TAKEN_CHIP[status.tone], main: room.kind === "utama" };
     if (onPickSpot) {
       return <Spot key={key} {...common} {...drawn} name={room.name} sub={subtitle === "status" ? status.text : seatsLine} tone={status.tone}
         selected={key === selectedSpot} title={`${room.name} · ${spec} · ${status.text}`}
@@ -330,8 +330,7 @@ export function FloorPlan({
               <feDropShadow dx="0" dy="4" stdDeviation="5" style={{ floodColor: "var(--fp-shadow)" }} />
             </filter>
           </defs>
-          <rect className={css.building} x={BUILDING.x} y={BUILDING.y} width={BUILDING.w} height={BUILDING.h} rx={22} />
-          {DECOR.map((rect, index) => <rect key={index} className={css.decor} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={6} />)}
+          <Site />
           {otherSpotsDrawn}
           {placedDrawn}
           <Fixtures />
@@ -371,6 +370,31 @@ export function FloorPlan({
   </div>;
 }
 
+/** What a spot draws of itself, whichever room takes it: its outline, words box, door, divider and floor marks. */
+const spotShape = (spot: DrawnSpot) => ({
+  rect: spot.rect, shape: spot.shape, textRect: spot.textRect, door: spot.door, divider: spot.divider, marks: spot.marks, open: spot.open,
+});
+
+/** Class of each kind of site area. */
+const SITE_CLASS: Record<SiteKind, string> = {
+  grass: css.grass, water: css.water, road: css.road, walk: css.walk, pave: css.pave, yard: css.yard,
+  garden: css.garden, roof: css.roof, ramp: css.ramp, pad: css.pad, deck: css.deck,
+};
+const LINE_CLASS = { tread: css.tread, board: css.board, ridge: css.ridge, mark: css.mark } as const;
+
+/**
+ * The site under the rooms (the trace's grass, river, road, paving, yard, roofs, ramps and
+ * gardens, the fountain and the way in): context only, never read out or tapped.
+ */
+function Site() {
+  return <g className={css.site} aria-hidden="true">
+    {SITE.map(({ kind, rect, r }, index) => <rect key={index} className={SITE_CLASS[kind]} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={r} />)}
+    {SITE_LINES.map(({ kind, d }) => <path key={kind} className={LINE_CLASS[kind]} d={d} />)}
+    <circle className={css.fountain} cx={FOUNTAIN.cx} cy={FOUNTAIN.cy} r={FOUNTAIN.r} />
+    <polygon className={css.entrance} points={ENTRANCE.arrow.map(point => point.join(",")).join(" ")} />
+    <text className={css.entranceText} x={ENTRANCE.label.x} y={ENTRANCE.label.y}>Masuk</text>
+  </g>;
+}
 
 /**
  * North, up: a small compass that stays in the corner while the plan zooms and pans, so a guest
@@ -388,15 +412,16 @@ function Compass() {
   </div>;
 }
 
-/** Furniture that belongs to no room's chairs: Main Office's desks, the pantry counter, plants. Never in the way of a tap. */
+/** Furniture that belongs to no room's chairs: Main Office's desks, stools and inner garden, plants. Never in the way of a tap. */
 function Fixtures() {
   return <g className={css.fixtures} aria-hidden="true">
     {FIXTURES.map(({ kind, rect }, index) => kind === "plant"
       ? <g key={index}>
-        <circle className={css.plant} cx={rect.x + rect.w * 0.42} cy={rect.y + rect.h * 0.56} r={rect.w * 0.4} />
-        <circle className={css.plantLeaf} cx={rect.x + rect.w * 0.66} cy={rect.y + rect.h * 0.36} r={rect.w * 0.28} />
+        <circle className={css.plant} cx={rect.x + rect.w / 2} cy={rect.y + rect.h / 2} r={rect.w / 2} />
+        <circle className={css.plantLeaf} cx={rect.x + rect.w / 2} cy={rect.y + rect.h / 2} r={rect.w / 4} />
       </g>
-      : <rect key={index} className={kind === "desk" ? css.wood : css.counter} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={kind === "desk" ? 5 : 4} />)}
+      : <rect key={index} className={kind === "desk" ? css.desk : kind === "stool" ? css.stool : css.innerGarden} x={rect.x} y={rect.y} width={rect.w} height={rect.h}
+        rx={kind === "stool" ? 3 : kind === "desk" ? 4 : 10} />)}
   </g>;
 }
 
@@ -441,6 +466,14 @@ type SpotProps = {
   textRect?: Rect;
   /** A break in the wall: its door. */
   door?: [Point, Point];
+  /** A dashed line where a partition can split the room (Vasuki). */
+  divider?: [Point, Point];
+  /** Lines on its floor (Limasan's roof), as a path. */
+  marks?: string;
+  /** An open area (Communal Space): a dashed edge, no shadow. */
+  open?: boolean;
+  /** A quiet name ("Ruang 12") that shows only once readable at this zoom; not read out. */
+  faint?: boolean;
   /** Chairs drawn from the capacity, the words then at the top; without it the words sit in the middle. */
   seats?: { capacity: number | null; layout: SeatLayout; round?: boolean };
   name: string;
@@ -480,14 +513,16 @@ function keyboardFocus(element: Element) {
  * at this zoom, its subtitle. With chairs, the words sit at the top and the chairs below them; the
  * chairs are two paths (seats, backrests) coloured by the spot's status or kind.
  */
-function Spot({ rect, shape, textRect, door, seats, name, sub, tone, kind, chip, title, a11y, main, selected, ring, plain, quiet, button, unitPx, scale, onReveal, shadow }: SpotProps) {
+function Spot({ rect, shape, textRect, door, divider, marks, open, faint, seats, name, sub, tone, kind, chip, title, a11y, main, selected, ring, plain, quiet, button, unitPx, scale, onReveal, shadow }: SpotProps) {
   // An L-shaped room keeps its words in its full-width arm, so they stay inside the L.
   const textBox = textRect ?? rect;
   const capacity = seats?.capacity ?? null, layout = seats?.layout, round = !!seats?.round;
   const { text, band, furniture, chairs } = useMemo(() => {
     if (!layout) return { text: spotText({ name, sub, rect: textBox, main, unitPx }), band: 0, furniture: null, chairs: null };
     const words = spotWords({ name, sub, rect: textBox, main, unitPx });
-    const plan = seatPlan({ box: textBox, capacity, layout, round, top: words.band });
+    // Planned at seating's size in a box 1/SEAT_SCALE as big, and drawn shrunk back (below).
+    const k = 1 / SEAT_SCALE;
+    const plan = seatPlan({ box: { x: textBox.x * k, y: textBox.y * k, w: textBox.w * k, h: textBox.h * k }, capacity, layout, round, top: words.band * k });
     return { text: words, band: words.band, furniture: plan, chairs: plan.drawn ? chairPaths(plan.chairs) : null };
   }, [name, sub, textBox, main, unitPx, capacity, layout, round]);
 
@@ -498,11 +533,13 @@ function Spot({ rect, shape, textRect, door, seats, name, sub, tone, kind, chip,
   // At the top when chairs are drawn (turned words centred in their band), else in the middle.
   const cy = layout ? textBox.y + WORDS_TOP + (text.rotate ? (band - WORDS_TOP - WORDS_BOTTOM) / 2 : height / 2) : textBox.y + textBox.h / 2;
   const top = cy - height / 2;
-  const floorTone = tone === "off" || tone === "closed";
-  const className = [css.spot, css[tone], kind ? css[kind] : "", main ? css.main : "", selected ? css.selected : "", ring ? css.ring : "", plain ? css.plain : "", button ? css.click : ""].join(" ");
+  const floorTone = tone === "off" || tone === "closed" || open;
+  const quietText = faint ? quietName(name, textBox, (unitPx && unitPx > 0 ? unitPx : 860 / PLAN_W) * scale) : null;
+  const className = [css.spot, css[tone], kind ? css[kind] : "", main ? css.main : "", selected ? css.selected : "", ring ? css.ring : "", plain ? css.plain : "",
+    open ? css.open : "", faint ? css.faint : "", button ? css.click : ""].join(" ");
   const attributes = button
     ? { role: "button", tabIndex: 0, "aria-label": button.label, "aria-pressed": !!(selected || ring), onClick: button.onClick, onKeyDown: button.onKeyDown, onFocus: (event: FocusEvent<SVGGElement>) => { if (keyboardFocus(event.currentTarget)) onReveal(rect); } }
-    : plain && !name ? { "aria-hidden": true } : { role: "img", "aria-label": a11y ?? (plain ? `${name}, bukan ruang booking` : title.replace(/ · /g, ", ")) };
+    : plain && (!name || faint) ? { "aria-hidden": true } : { role: "img", "aria-label": a11y ?? (plain ? `${name}, bukan ruang booking` : title.replace(/ · /g, ", ")) };
 
   // The tag sits at the room's foot, readable but never wider than a sixth of the room.
   const chipShown = !!chip && !(showSub && sub.startsWith(chip));
@@ -514,10 +551,12 @@ function Spot({ rect, shape, textRect, door, seats, name, sub, tone, kind, chip,
     {shape
       ? <polygon className={css.box} points={shape.map(point => point.join(",")).join(" ")} filter={plain || floorTone ? undefined : shadow} />
       : <rect className={css.box} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={10} filter={plain || floorTone ? undefined : shadow} />}
+    {marks && <path className={css.marks} d={marks} />}
+    {divider && <line className={css.divider} x1={divider[0][0]} y1={divider[0][1]} x2={divider[1][0]} y2={divider[1][1]} />}
     {door && <line className={css.door} x1={door[0][0]} y1={door[0][1]} x2={door[1][0]} y2={door[1][1]} />}
-    {furniture && <g className={css.furniture} aria-hidden="true">
+    {furniture && <g className={css.furniture} aria-hidden="true" transform={`scale(${SEAT_SCALE})`}>
       {furniture.rug && <rect className={css.rug} x={furniture.rug.x} y={furniture.rug.y} width={furniture.rug.w} height={furniture.rug.h} rx={12} />}
-      {furniture.stage && <rect className={css.wood} x={furniture.stage.x} y={furniture.stage.y} width={furniture.stage.w} height={furniture.stage.h} rx={4} />}
+      {furniture.stage && <rect className={css.stageBlock} x={furniture.stage.x} y={furniture.stage.y} width={furniture.stage.w} height={furniture.stage.h} rx={4} />}
       {furniture.sofas.map((sofa, index) => <rect key={index} className={css.sofa} x={sofa.x} y={sofa.y} width={sofa.w} height={sofa.h} rx={9} />)}
       {furniture.table && <rect className={css.wood} x={furniture.table.x} y={furniture.table.y} width={furniture.table.w} height={furniture.table.h} rx={layout === "lounge" ? 10 : 6} />}
       {furniture.roundTable && <circle className={css.wood} cx={furniture.roundTable.cx} cy={furniture.roundTable.cy} r={furniture.roundTable.r} />}
@@ -526,11 +565,13 @@ function Spot({ rect, shape, textRect, door, seats, name, sub, tone, kind, chip,
         <path className={css.back} d={chairs.back} />
       </>}
     </g>}
-    <g transform={text.rotate ? `rotate(-90 ${cx.toFixed(1)} ${cy.toFixed(1)})` : undefined}>
+    {faint ? quietText && quietText.lines.map((line, index) => <text key={`q${index}`} x={cx} y={textBox.y + textBox.h / 2 + quietText.size * 1.2 * (index + 0.5 - quietText.lines.length / 2)}
+      fontSize={quietText.size.toFixed(1)}>{line}</text>)
+    : <g transform={text.rotate ? `rotate(-90 ${cx.toFixed(1)} ${cy.toFixed(1)})` : undefined}>
     {text.name.map((line, index) => <text key={`n${index}`} className={quiet ? css.st : undefined} x={cx} y={top + nameGap * (index + 0.5)} fontSize={text.nameSize.toFixed(1)}>{line}</text>)}
     {showSub && text.sub.map((line, index) => <text key={`s${index}`} className={css.st} x={cx}
       y={top + text.name.length * nameGap + text.subSize * 0.5 + subGap * (index + 0.5)} fontSize={text.subSize.toFixed(1)}>{line}</text>)}
-    </g>
+    </g>}
     {chipShown && <g className={css.chip} aria-hidden="true">
       <rect x={cx - chipW / 2} y={textBox.y + textBox.h - chipH - 8} width={chipW} height={chipH} rx={chipH / 2} />
       <text x={cx} y={textBox.y + textBox.h - chipH / 2 - 8} fontSize={chipSize.toFixed(1)}>{chip}</text>
