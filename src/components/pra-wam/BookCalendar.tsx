@@ -43,7 +43,7 @@ const whoOf = (booking: Booking, viewerId: string) => booking.isSession ? "Sesi 
 export const bookingKey = (booking: Booking) => `${booking.id}@${booking.roomId}@${booking.startsAt}`;
 const bookingSpan = (booking: Booking) => `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`;
 
-/** The colour key as small pills, a dot and a word each; wraps on a narrow screen. */
+/** The colour key as a plain line: a dot and a word each, no pills; wraps on a narrow screen. */
 export function Legend() {
   return <ul className={css.legend} aria-label="Keterangan warna">
     <li><i className={css.mine} aria-hidden />Booking kamu</li>

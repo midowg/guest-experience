@@ -7,7 +7,7 @@
  * The viewer's booking: primary; someone else's: navy; a Pra WAM session: the Hospitality yellow.
  * Free time: green. Nearly full (month calendar dots only): orange.
  */
-.busy { --tone-bg: var(--pw-app); --tone-line: var(--pw-accent-navy); --tone-text: var(--pw-text); }
+.busy { --tone-bg: var(--pw-app); --tone-line: var(--pw-muted); --tone-text: var(--pw-text); }
 .mine { --tone-bg: var(--pw-primary-soft); --tone-line: var(--pw-primary); --tone-text: var(--pw-primary); }
 .session { --tone-bg: var(--pw-brass-soft); --tone-line: var(--pw-brass); --tone-text: var(--pw-on-brass-soft); }
 .free { --tone-bg: var(--pw-success-soft); --tone-line: var(--pw-accent-green); --tone-text: var(--pw-success); }
@@ -25,9 +25,10 @@
 .deskOnly { display: none; }
 
 /* The colour key: small pills, a dot and a word, wrapping. */
-.legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.legend li { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; border-radius: 999px; background: var(--pw-surface); box-shadow: inset 0 0 0 1px var(--pw-line); font-size: 12px; font-weight: 600; color: var(--pw-text); white-space: nowrap; }
-.legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--tone-line); }
+/* The colour key as plain words (5 Nov 2026): a small dot in the colour each mark uses, grey text, one wrapping line. */
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: 12px; font-weight: 500; color: var(--pw-muted); }
+.legend li { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--tone-line); }
 
 /*
  * The calendar's layout: on a phone the month card, the key, then the day. From 1024px the month
