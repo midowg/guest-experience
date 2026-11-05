@@ -303,6 +303,23 @@ describe("words in a spot", () => {
     expect(limasan.rotate).toBe(false);
     expect(limasan.sub.join(" · ")).toBe("Muat 40 orang · min 10");
   });
+  it("keeps the names of the small rooms inside their walls, shown once they are readable", () => {
+    for (const unitPx of [300 / PLAN_W, 343 / PLAN_W, 860 / PLAN_W]) {
+      for (const key of ["ananta", "antareja"]) {
+        const { rect, label } = PLAN_SPOTS[key];
+        const words = spotWords({ name: label, sub: "Muat 4 orang", rect, unitPx });
+        const along = Math.max(...words.name.map(line => line.length)) * 0.6 * words.nameSize;
+        // Never past the walls: upright the widest line fits the width; turned it fits the height.
+        expect(along, `${key} at ${unitPx}`).toBeLessThanOrEqual((words.rotate ? rect.h : rect.w) - 4 + 1e-6);
+        // Shown from the zoom at which it is readable (at once when it already is), never beyond 4×.
+        const from = words.nameFrom ?? 1;
+        expect(words.nameSize * unitPx * from, `${key} readable`).toBeGreaterThanOrEqual(NAME_MIN_PX - 0.01);
+        expect(from).toBeLessThanOrEqual(ZOOM_MAX);
+      }
+    }
+    // CFC Ananta Room fits on a 375 px phone by breaking its name, so it shows at once there.
+    expect(spotWords({ name: "CFC Ananta Room", sub: "", rect: PLAN_SPOTS.ananta.rect, unitPx: 343 / PLAN_W }).nameFrom ?? 1).toBe(1);
+  });
   it("shows the specification at once on a desktop", () => {
     // A roomy box (CFC Ananta's before 5 Nov).
     const ananta = spotText({ name: "CFC Ananta Room", sub: "Maks 12 orang · TV", rect: { w: 235, h: 410 }, main: true, unitPx: 860 / PLAN_W });

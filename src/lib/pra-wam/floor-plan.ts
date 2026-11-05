@@ -349,6 +349,8 @@ export type SpotText = {
   subFrom: number;
   /** The words run up the box (turned a quarter anticlockwise): a tall, narrow room. */
   rotate: boolean;
+  /** The zoom from which the name is shown (it is shrunk to fit a tiny room); 1 or absent: always. */
+  nameFrom?: number;
 };
 
 /**
@@ -375,7 +377,8 @@ function chooseText(input: TextInput): SpotText & { spills: boolean } {
   const { rect } = input;
   const share = Math.min(1, Math.max(0.1, input.band ?? 1));
   const upright = layText({ ...input, rect: { w: rect.w, h: rect.h * share } });
-  if (rect.h <= rect.w * 1.3) return upright;
+  // A squat box keeps its words upright, unless they still run past the walls there.
+  if (rect.h <= rect.w * 1.3 && !upright.spills) return upright;
   const turned = layText({ ...input, rect: { w: rect.h * share, h: rect.w } });
   // Upright reads more easily: turn only when the name runs past the sides, or the subtitle does
   // not show at all or is broken in the middle of its parts ("Muat 6 / orang · / min 1").
@@ -411,7 +414,14 @@ export function spotWords(input: Omit<TextInput, "band">): SpotText & { band: nu
   for (let index = 1; index < shares.length && !done(text, shares[index - 1]); index++) text = chooseText({ ...input, band: shares[index], compact: true });
   // A name too long for the room even with all of it (a tiny phone screen) keeps the small band:
   // it runs past the walls either way, and the chairs stay.
-  const words = strip(text.spills ? first : text);
+  const kept = strip(text.spills ? first : text);
+  // A name that still runs past the walls at the readable size (one word in a tiny room, such as
+  // Antareja on a phone) is shrunk to fit inside and only shown once zoomed in enough to read it;
+  // until then the room keeps its name in its label and tooltip.
+  const along = Math.max(0, ...kept.name.map(line => line.length)) * CHAR * kept.nameSize;
+  const room = (kept.rotate ? input.rect.h : input.rect.w) - 4;
+  const shrink = along > room && along > 0 ? room / along : 1;
+  const words = shrink < 1 ? { ...kept, nameSize: kept.nameSize * shrink, nameFrom: 1 / shrink } : kept;
   return { ...words, band: Math.min(input.rect.h, wordsBand(words)) };
 }
 
@@ -432,8 +442,17 @@ function layText(input: TextInput): SpotText & { spills: boolean } {
   const one = name ? [name] : [];
   const half = Math.ceil(name.length / 2);
   const two = name.includes(" ") ? wrapWords(name, half, 2) : one;
-  // Two lines only when they win by a clear margin: one line reads more easily.
-  const nameLines = two.length > 1 && fit(two) > fit(one) * 1.25 ? two : one;
+  // Two lines only when they win by a clear margin: one line reads more easily. But a name that
+  // runs past the walls at its readable size breaks into two or three lines when that keeps it in
+  // ("CFC Ananta Room" in its small box on a phone), or into the least wide of them.
+  const widthAt = (lines: string[]) => longest(lines) * CHAR * Math.max(fit(lines), floor);
+  const fitsWidth = (lines: string[]) => widthAt(lines) <= rect.w - 8;
+  const three = name.split(" ").length > 2 ? wrapWords(name, Math.ceil(name.length / 3), 3) : two;
+  let nameLines = two.length > 1 && fit(two) > fit(one) * 1.25 ? two : one;
+  if (name && !fitsWidth(nameLines)) {
+    const options = [one, two, three].filter(lines => lines.length > 0);
+    nameLines = options.find(fitsWidth) ?? options.reduce((best, lines) => widthAt(lines) < widthAt(best) ? lines : best);
+  }
   const nameSize = name ? Math.max(fit(nameLines), floor) : 0;
   // Held at the readable floor, a long name can be wider than its box.
   const spills = !!name && longest(nameLines) * CHAR * nameSize > rect.w - 8;

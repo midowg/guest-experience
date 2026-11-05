@@ -568,7 +568,7 @@ function Spot({ rect, shape, textRect, door, divider, marks, open, faint, seats,
     {faint ? quietText && quietText.lines.map((line, index) => <text key={`q${index}`} x={cx} y={textBox.y + textBox.h / 2 + quietText.size * 1.2 * (index + 0.5 - quietText.lines.length / 2)}
       fontSize={quietText.size.toFixed(1)}>{line}</text>)
     : <g transform={text.rotate ? `rotate(-90 ${cx.toFixed(1)} ${cy.toFixed(1)})` : undefined}>
-    {text.name.map((line, index) => <text key={`n${index}`} className={quiet ? css.st : undefined} x={cx} y={top + nameGap * (index + 0.5)} fontSize={text.nameSize.toFixed(1)}>{line}</text>)}
+    {scale >= (text.nameFrom ?? 1) && text.name.map((line, index) => <text key={`n${index}`} className={quiet ? css.st : undefined} x={cx} y={top + nameGap * (index + 0.5)} fontSize={text.nameSize.toFixed(1)}>{line}</text>)}
     {showSub && text.sub.map((line, index) => <text key={`s${index}`} className={css.st} x={cx}
       y={top + text.name.length * nameGap + text.subSize * 0.5 + subGap * (index + 0.5)} fontSize={text.subSize.toFixed(1)}>{line}</text>)}
     </g>}
