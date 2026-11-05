@@ -264,6 +264,10 @@ export const wamAdminPath = {
     settings: `${WAM_ADMIN}/kuesioner/pengaturan`,
     progress: `${WAM_ADMIN}/kuesioner/progres`,
     hrData: `${WAM_ADMIN}/kuesioner/data-hr`,
+    /** Charts and quotes per question, by read level; never a name. */
+    recap: `${WAM_ADMIN}/kuesioner/rekap`,
+    /** Excel per section, by read level; HR answers only with Data HR open. */
+    export: `${WAM_ADMIN}/kuesioner/ekspor`,
     /** The character cards: catalog, rules, levels and odds, pictures, and the cards drawn. */
     cards: `${WAM_ADMIN}/kuesioner/kartu`,
   },
@@ -285,6 +289,8 @@ export const praWamQuestionnaireApi = {
   order: `${QUESTIONNAIRE_ADMIN_API}/order`,
   /** GET: who started, who finished, by department. */
   progress: `${QUESTIONNAIRE_ADMIN_API}/progress`,
+  /** GET ?bagian=<section key>: the answers as .xlsx; with HR answers only when Data HR is open, then logged as `ekspor`. */
+  export: (section?: string) => `${QUESTIONNAIRE_ADMIN_API}/export${section ? `?bagian=${encodeURIComponent(section)}` : ""}`,
 };
 /** Admin WAM, the character cards of the questionnaire (any admin). */
 const CARDS_ADMIN_API = `${QUESTIONNAIRE_ADMIN_API}/cards`;

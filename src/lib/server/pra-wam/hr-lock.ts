@@ -122,6 +122,11 @@ async function logHr(formId: string, action: HrAction, request: Request | null, 
   if (error) { if (hrAccessMissing(error) || /actor_employee_id|ubah_akses/.test(error.message ?? "")) throw hrAccessWaiting(); if (questionnaireMissing(error)) throw questionnaireWaiting(); databaseError(error); }
 }
 
+/** An export that holds HR answers, logged under the person whose email opened Data HR, before the file leaves. */
+export async function logHrExport(unlock: HrUnlock, request: Request) {
+  await logHr(unlock.formId, "ekspor", request, { actor: unlock.actor.id });
+}
+
 /** The recent unlock tries of one count: from this network, or under this person's email. */
 async function recentTries(formId: string, by: { ip: string | null } | { actor: string }): Promise<LockEvent[]> {
   const since = new Date(Date.now() - 2 * HR_LOCKOUT_MINUTES * 60_000).toISOString();

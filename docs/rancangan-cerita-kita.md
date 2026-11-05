@@ -1,8 +1,8 @@
 # Rancangan kuesioner personal WAM
 
 Status: tahap 1 dan 2 dibangun (4 November 2026). Tahap 3 sedang dibangun: **Kartu rekan** (galeri
-dan profil rekan) sudah ada; rekap, ekspor, kamar, kebutuhan panitia, dan ringkasan BOD belum.
-Tahap 4 belum. Ditulis 4 November 2026, diperbarui hari yang sama.
+dan profil rekan), **Rekap**, dan **Ekspor** sudah ada (5 November); kamar, kebutuhan panitia, dan
+ringkasan BOD belum. Tahap 4 belum. Ditulis 4 November 2026, diperbarui 5 November 2026.
 
 Sumber: artifact mockup **"Cerita Kita WAM 2026"**
 (https://claude.ai/artifact/BwHcrRv8Wmcg4oRTNW5Uaq). Isinya 6 bagian, sekitar 60 pertanyaan, level
@@ -233,6 +233,39 @@ kartunya punya dua sumber:
   - Kartu uji dan karyawan nonaktif tidak tampil. Jalan masuk: baris "Kartu rekan" di Beranda dan
     tautan di layar akhir kuesioner.
   - Admin melihat sebaran level di tab Kartu.
+
+## Rekap dan Ekspor (tahap 3, dibangun)
+
+Dua tab baru di Admin WAM → Kuesioner, untuk semua admin. Aturannya ada di
+`src/lib/pra-wam/recap.ts` dan ditegakkan di server: jawaban yang tidak boleh dibaca tidak diambil
+dari database sama sekali.
+
+- **Rekap** (`/admin/wam/kuesioner/rekap`): setiap pertanyaan sebagai grafik batang (pilihan,
+  departemen, rekan yang dipilih: 10 teratas), tabel matriks (angka dan persen per baris), atau
+  kutipan (jawaban sama dikelompokkan dengan "×N", urutan acak tetap, bukan urutan masuk). Tidak
+  pernah ada nama penjawab. Bisa dipilah per departemen.
+  - `rekan`, `fasil`, `pilih`: tampil lengkap.
+  - `hr`: tanpa Data HR dibuka hanya jumlah pilihan (pilih satu/beberapa, matriks, departemen,
+    persetujuan); isian dan rekan yang dipilih (misalnya teman sekamar) baru tampil setelah Data
+    HR dibuka.
+  - `hronly`: hanya setelah Data HR dibuka.
+  - Bagian anonim: hanya untuk semua departemen (jawabannya tidak punya nama atau departemen), dan
+    baru tampil mulai 5 jawaban per pertanyaan.
+  - Dalam tampilan per departemen, jumlah pilihan `hr` (tanpa Data HR) juga baru tampil mulai 5.
+  - Membuka Rekap tidak dicatat di log Data HR (log itu per orang); hanya ekspor yang dicatat.
+- **Ekspor** (`/admin/wam/kuesioner/ekspor`): satu file Excel, lembar "Info" lalu satu lembar per
+  bagian, atau satu bagian saja. Satu baris per orang (nama, departemen, satu kolom per pertanyaan).
+  - Kolom `hr` dan `hronly` hanya ikut bila Data HR dibuka; ekspor seperti itu dicatat sebagai
+    `ekspor` atas nama orang yang membuka Data HR **sebelum** file dikirim. Gagal dicatat, file
+    tidak dikirim.
+  - `pilih` mengikuti pertanyaan 30: "Dibagikan dengan namaku" dan "Hanya dibaca fasilitator"
+    tetap bernama (admin termasuk fasilitator); "Dibagikan tanpa nama", atau belum memilih, pindah
+    ke lembar "… tanpa nama" tanpa nama dan urutannya diacak.
+  - Bagian anonim: satu baris per jawaban (pertanyaan, jawaban), tanpa orang dan tanggal, urutan
+    diacak, dan baru diekspor setelah ada 5 kiriman.
+  - Semua sel teks biasa (bukan rumus), jadi jawaban yang diawali "=" tetap teks.
+- **BOD** nanti memakai aturan yang sama dengan `facilitator: false`: jawaban `pilih` yang
+  memilih "Hanya dibaca fasilitator" tidak ikut, dan `hronly` tidak pernah tampil.
 
 ## Privasi dan penyimpanan
 
