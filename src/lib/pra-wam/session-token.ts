@@ -38,8 +38,4 @@ export function verifyPraWamSession(secret: string | null, token: string | undef
   return { employeeId: match[1], version: Number(match[2]) };
 }
 
-/** Only WAM pages are allowed as the place to go after signing in. */
-export function safePraWamNext(value: string | null | undefined): string | null {
-  if (!value || !/^\/wam(?:[/?#]|$)/.test(value) || /^\/wam\/login(?:[/?#]|$)/.test(value) || /[\\\s]/.test(value)) return null;
-  return value;
-}
+export { safePraWamNext } from "./next-path";

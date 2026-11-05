@@ -1,0 +1,21 @@
+/* A screen's skeleton inside the frame while it loads (ScreenLoading): grey shapes on the app's tokens. */
+.screen { display: grid; gap: 16px; }
+.head { display: grid; gap: 10px; padding: 4px 0 4px; }
+.card { display: grid; gap: 12px; padding: 20px; border-radius: var(--pw-r-card); background: var(--pw-surface); box-shadow: var(--pw-shadow-card); }
+.hero { min-height: 148px; border-radius: var(--pw-r-hero); background: var(--pw-primary-soft); }
+.bar { display: block; height: 12px; border-radius: 999px; background: var(--pw-surface-soft); }
+.card .bar { background: var(--pw-line); }
+.eyebrow { width: 28%; height: 10px; }
+.title { width: 56%; height: 22px; }
+.wide { width: 88%; }
+.mid { width: 64%; }
+.short { width: 40%; }
+.row { display: flex; align-items: center; gap: 12px; }
+.dot { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--pw-line); }
+.lines { flex: 1; display: grid; gap: 8px; }
+@media (min-width: 64rem) { .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .screen { animation: pw-skeleton 1.4s ease-in-out .3s infinite both; }
+  @keyframes pw-skeleton { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+}

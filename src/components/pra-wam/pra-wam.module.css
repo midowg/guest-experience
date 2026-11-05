@@ -473,3 +473,6 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .dialog .tile { width: 40px; height: 40px; border-radius: 14px; background: var(--pw-primary-soft, #eaf0f8); color: var(--pw-primary, #1551a0); }
 .dialog .tile svg { width: 20px; height: 20px; }
 .dialog .tileDanger { background: var(--pw-danger-soft, #f8e3e7); color: var(--pw-danger, #9a273d); }
+
+/* A wrapper that adds no box of its own (the frame keeps one wrapper around the screen). */
+.contents { display: contents; }
