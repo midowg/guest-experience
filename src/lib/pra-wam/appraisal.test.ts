@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alternatives, bookableDates, bookingInputSchema, bookingProblems, bookingWhere, durationsFrom, OUTSIDE_ROOM, overlaps, slotTimes, titleSuggestions, wibDate, wibInstant, wibTime, type Room } from "./appraisal";
+import { alternatives, bookableDates, bookingCancelledText, bookingInputSchema, bookingProblems, bookingSavedText, bookingWhere, durationsFrom, OUTSIDE_ROOM, overlaps, slotTimes, titleSuggestions, wibDate, wibInstant, wibTime, type Room } from "./appraisal";
 
 const now = new Date("2026-11-04T02:05:00Z"); // Rabu 4 Nov, 09.05 WIB
 const room = (id: string, bookable = true): Room => ({ id, slug: id, name: id, kind: "utama", capacity: null, bookable, minPeople: null, planKey: null, facilities: [] });
@@ -92,5 +92,9 @@ describe("Di luar kantor", () => {
     expect(bookingInputSchema.safeParse({ ...input, place: "Kopi Klotok" }).success).toBe(true);
     expect(bookingWhere({ roomId: OUTSIDE_ROOM, place: "Kopi Klotok" }, [])).toBe("Kopi Klotok · di luar kantor");
     expect(bookingWhere({ roomId: "r1" }, [{ id: "r1", name: "Vasuki" }])).toBe("Vasuki");
+    expect(bookingSavedText({ roomId: OUTSIDE_ROOM })).toBe("Booking di luar kantor tersimpan.");
+    expect(bookingSavedText({ roomId: "r1" })).toBe("Ruang berhasil dipesan.");
+    expect(bookingCancelledText({ roomId: OUTSIDE_ROOM })).toBe("Booking dibatalkan.");
+    expect(bookingCancelledText({ roomId: "r1" })).toBe("Booking dibatalkan. Ruang kembali tersedia.");
   });
 });

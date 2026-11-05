@@ -30,7 +30,9 @@ export function BookingSessionPanel({ session }: Props) {
   async function cancel() {
     if (!(await confirm({
       title: "Batalkan sesi?",
-      body: `"${session.title}" hilang dari agenda peserta, booking ruang ${booking.bookedBy.name} ikut dibatalkan, dan ruangnya kembali tersedia.`,
+      body: session.roomId
+        ? `"${session.title}" hilang dari agenda peserta, booking ruang ${booking.bookedBy.name} ikut dibatalkan, dan ruangnya kembali tersedia.`
+        : `"${session.title}" hilang dari agenda peserta dan booking ${booking.bookedBy.name} di luar kantor ikut dibatalkan.`,
       confirmLabel: "Batalkan sesi",
       danger: true,
     }))) return;

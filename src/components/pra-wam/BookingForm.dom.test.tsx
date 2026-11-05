@@ -157,7 +157,8 @@ it("picks people from one list: Departemen as a dropdown, search by name or depa
 });
 
 it("books outside the office: a weekend opens, the place is asked under Tempat, and the place is sent with no room", async () => {
-  request.mockResolvedValue({ data: {}, message: "Booking tersimpan." });
+  // Moving to the weekend loads that day's schedule (a GET); the save is the POST.
+  request.mockImplementation((_url: string, options?: { method?: string }) => Promise.resolve(options?.method ? { data: {}, message: "Booking tersimpan." } : { data: { bookings: [] }, message: "" }));
   const onSaved = vi.fn();
   renderForm({ onSaved });
   // Kapan: the office's hours until Di luar kantor is picked; then a Saturday and the evening are offered.

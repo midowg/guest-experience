@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { bookingInputSchema } from "@/lib/pra-wam/appraisal";
+import { bookingCancelledText, bookingInputSchema } from "@/lib/pra-wam/appraisal";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { cancelBooking, deleteBooking, saveBooking } from "@/lib/server/pra-wam/appraisal";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
@@ -31,7 +31,6 @@ export async function DELETE(request: Request, { params }: Params) {
       await deleteBooking(id, member);
       return success(null, "Booking dihapus.");
     }
-    await cancelBooking(id, member);
-    return success(null, "Booking dibatalkan. Ruang kembali tersedia.");
+    return success(null, bookingCancelledText(await cancelBooking(id, member)));
   });
 }

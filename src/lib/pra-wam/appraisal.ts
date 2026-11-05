@@ -43,6 +43,9 @@ export const isOutside = (booking: { roomId: string }) => booking.roomId === OUT
 /** Where a booking is, in words: the room's name, or "Kopi Klotok · di luar kantor". */
 export const bookingWhere = (booking: { roomId: string; place?: string }, rooms: { id: string; name: string }[]) =>
   isOutside(booking) ? `${booking.place || "Tempat belum diisi"} · di luar kantor` : rooms.find(room => room.id === booking.roomId)?.name ?? "Ruang";
+/** What the person reads after saving or cancelling: no room is freed or booked outside the office. */
+export const bookingSavedText = (booking: { roomId: string }) => isOutside(booking) ? "Booking di luar kantor tersimpan." : "Ruang berhasil dipesan.";
+export const bookingCancelledText = (booking: { roomId: string }) => isOutside(booking) ? "Booking dibatalkan." : "Booking dibatalkan. Ruang kembali tersedia.";
 /** An outside booking may start at any half hour of the day and end by 23.30 the same day. */
 export const OUTSIDE_HOURS = { open: "00:00", close: "23:30" } as const;
 

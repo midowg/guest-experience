@@ -276,7 +276,8 @@ async function roomTaken(input: BookingInput, viewer: Member, now: Date, ignoreI
 }
 
 /** The booker cancels their own; panitia and admin may cancel anyone's (cancelled_by records who). */
-export async function cancelBooking(id: string, viewer: Member): Promise<void> {
+/** Cancels a booking and returns it as it was (its room, or outside the office, words the reply). */
+export async function cancelBooking(id: string, viewer: Member): Promise<Booking> {
   const booking = await getBooking(id, viewer);
   if (!booking.mine && !cancelsAnyBooking(viewer)) throw new ServiceError(403, "Hanya pemesan atau panitia yang bisa membatalkan booking ini.");
   const { error } = await createPrivilegedClient().from("pw_room_bookings")
@@ -285,6 +286,7 @@ export async function cancelBooking(id: string, viewer: Member): Promise<void> {
   if (error) fail(error);
   // Its session was cancelled with it (trigger); its people hear, except whoever cancelled.
   await notifyBookingSession(id, "batal", await bookingFacts(booking), viewer);
+  return booking;
 }
 
 /**

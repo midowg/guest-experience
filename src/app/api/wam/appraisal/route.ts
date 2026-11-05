@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { bookingInputSchema } from "@/lib/pra-wam/appraisal";
+import { bookingInputSchema, bookingSavedText } from "@/lib/pra-wam/appraisal";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { daySchedule, saveBooking } from "@/lib/server/pra-wam/appraisal";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
@@ -24,6 +24,6 @@ export async function POST(request: Request) {
     const body = await readJson(request, 20_000);
     const input = validate(bookingInputSchema, body);
     const confirmed = validate(z.object({ confirmed: z.boolean().default(false) }), body).confirmed;
-    return success(await saveBooking(input, member, { confirmed }), "Ruang berhasil dipesan.");
+    return success(await saveBooking(input, member, { confirmed }), bookingSavedText(input));
   });
 }
