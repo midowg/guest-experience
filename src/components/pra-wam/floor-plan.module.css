@@ -75,6 +75,8 @@
 .stage { position: relative; min-width: 0; width: 100%; }
 /* The plan is taller than wide (north up): on a wide screen it is kept within the window's height. */
 @media (min-width: 1024px) { .stage { max-width: min(640px, calc((100vh - 220px) * 1043 / 1600)); margin-inline: auto; } }
+/* A landscape plan (desktop) fills the card's width, as tall as the screen allows. */
+@media (min-width: 1024px) { .stage.stageWide { max-width: min(100%, calc((100vh - 240px) * 1600 / 1043)); } }
 .viewport { position: relative; overflow: hidden; border-radius: var(--pw-r-control); background: var(--fp-bg); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   /* Fitted, one finger scrolls the page; pinch is the plan's (FloorPlan.tsx stops the page's own). Zoomed, every touch is the plan's. */
   touch-action: pan-y; }

@@ -367,7 +367,7 @@ export function FloorPlan({
   });
 
   return <div className={css.plan}>
-    <div className={css.stage} onKeyDown={onKeyDown}>
+    <div className={`${css.stage} ${landscape ? css.stageWide : ""}`} onKeyDown={onKeyDown}>
       <div ref={box} className={`${css.viewport} ${zoomed ? css.zoomed : ""}`} style={{ aspectRatio: `${size.w} / ${size.h}` }} tabIndex={0} role="group" aria-label={label}
         aria-roledescription="denah" aria-keyshortcuts="+ - 0"
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onClickCapture={onClickCapture}
