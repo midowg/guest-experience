@@ -1,7 +1,7 @@
 import "server-only";
 import type { AgendaBooking, MyAttendance, SessionView } from "@/lib/pra-wam/agenda";
 import { asMethod } from "@/lib/pra-wam/attendance";
-import { wibDate } from "@/lib/pra-wam/appraisal";
+import { bookingWhere, wibDate } from "@/lib/pra-wam/appraisal";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { sessionKindLabels, sessionWhere, withoutSessionBookings, type Session } from "@/lib/pra-wam/sessions";
 import { ServiceError } from "../config";
@@ -57,7 +57,7 @@ export async function agendaItems(member: Member, today: string): Promise<{ item
     for (const row of documents.data ?? []) materials.set(row.session_id, (materials.get(row.session_id) ?? 0) + 1);
   }
   const detail = (booking: (typeof bookings)[number]): AgendaBooking => ({
-    room: rooms.find(item => item.id === booking.roomId)?.name ?? "Ruang", bookedBy: booking.bookedBy,
+    room: bookingWhere(booking, rooms), bookedBy: booking.bookedBy,
     mine: booking.bookedBy.id === member.id, participants: booking.participants, description: booking.description,
   });
   const items: AgendaItem[] = [

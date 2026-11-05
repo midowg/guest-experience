@@ -1,7 +1,7 @@
 import { BookingForm, type BookingDraft } from "@/components/pra-wam/BookingForm";
 import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { Notice } from "@/components/ui";
-import { bookableDates, draftHours, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { bookableDates, draftHours, OUTSIDE_ROOM, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { daySchedule, getBooking, listPeople, usedTitles } from "@/lib/server/pra-wam/appraisal";
@@ -52,12 +52,13 @@ async function loadForm(query: Query, member: Member, now: Date, today: string, 
   if (editId) {
     const booking = await getBooking(editId, member);
     if (!booking.mine) throw new ServiceError(403, "Hanya pemesan yang bisa mengubah booking ini.");
-    initial = { date: wibDate(booking.startsAt), start: wibTime(booking.startsAt), end: wibTime(booking.endsAt), roomId: booking.roomId, title: booking.title, description: booking.description, participants: (booking.participants ?? []).map(person => person.id) };
+    initial = { date: wibDate(booking.startsAt), start: wibTime(booking.startsAt), end: wibTime(booking.endsAt), roomId: booking.roomId, place: booking.place ?? "", title: booking.title, description: booking.description, participants: (booking.participants ?? []).map(person => person.id) };
   } else {
     const date = query.date && dates.includes(query.date) ? query.date : dates[0] ?? today;
     initial = { date, ...draftHours(date, now, query), roomId: query.room ?? "", title: "", description: "", participants: [] };
   }
   const [schedule, people, titles, units] = await Promise.all([daySchedule(initial.date, member), listPeople(), usedTitles(), listUnits()]);
-  if (!schedule.rooms.some(room => room.bookable && room.id === initial.roomId)) initial.roomId = "";
+  // An outside booking keeps its marker; a room no longer bookable is dropped.
+  if (initial.roomId !== OUTSIDE_ROOM && !schedule.rooms.some(room => room.bookable && room.id === initial.roomId)) initial.roomId = "";
   return { editId, initial, schedule, people, titles, units };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alternatives, bookableDates, bookingProblems, overlaps, slotTimes, titleSuggestions, wibDate, wibInstant, wibTime, type Room } from "./appraisal";
+import { alternatives, bookableDates, bookingInputSchema, bookingProblems, bookingWhere, durationsFrom, OUTSIDE_ROOM, overlaps, slotTimes, titleSuggestions, wibDate, wibInstant, wibTime, type Room } from "./appraisal";
 
 const now = new Date("2026-11-04T02:05:00Z"); // Rabu 4 Nov, 09.05 WIB
 const room = (id: string, bookable = true): Room => ({ id, slug: id, name: id, kind: "utama", capacity: null, bookable, minPeople: null, planKey: null, facilities: [] });
@@ -36,7 +36,7 @@ describe("booking rules", () => {
     expect(bookingProblems({ date: "2026-11-05", start: "11:00", end: "10:00" }, now).end).toBe("Jam selesai harus setelah jam mulai.");
     expect(bookingProblems({ date: "2026-11-05", start: "09:00", end: "13:30" }, now).end).toBe("Paling lama 4 jam.");
     expect(bookingProblems({ date: "2026-11-04", start: "09:00", end: "10:00" }, now).start).toBe("Jam ini sudah lewat.");
-    expect(bookingProblems({ date: "2026-11-07", start: "10:00", end: "11:00" }, now).date).toBe("Ruang hanya bisa dipesan Senin–Jumat.");
+    expect(bookingProblems({ date: "2026-11-07", start: "10:00", end: "11:00" }, now).date).toBe("Ruang hanya bisa dipesan Senin–Jumat. Di luar kantor boleh akhir pekan.");
     expect(bookingProblems({ date: "2026-11-23", start: "10:00", end: "11:00" }, now).date).toBeTruthy();
   });
 });
@@ -66,5 +66,31 @@ describe("activity name suggestions", () => {
   it("matches inside a name too, and merges case", () => {
     expect(titleSuggestions("mingg", used)).toEqual(["Sync mingguan"]);
     expect(titleSuggestions("", used).filter(title => /1-on-1/i.test(title))).toHaveLength(1);
+  });
+});
+
+describe("Di luar kantor", () => {
+  const away = (patch: { date?: string; start: string; end: string }) => ({ date: "2026-11-07", roomId: OUTSIDE_ROOM, ...patch });
+  it("may be on a weekend, at any half hour of the day, and longer than 4 hours", () => {
+    expect(bookingProblems(away({ start: "19:00", end: "23:30" }), now)).toEqual({});
+    expect(bookingProblems(away({ start: "08:00", end: "17:00" }), now)).toEqual({});
+    expect(slotTimes(true)[0]).toBe("00:00");
+    expect(slotTimes(true).at(-1)).toBe("23:30");
+    expect(durationsFrom("22:00", true)).toEqual([30, 60, 90]);
+  });
+  it("still keeps the period, the half hours, and one day", () => {
+    expect(bookingProblems(away({ date: "2026-11-23", start: "10:00", end: "11:00" }), now).date).toBeTruthy();
+    expect(bookingProblems(away({ start: "10:15", end: "11:00" }), now).start).toBeTruthy();
+    expect(bookingProblems(away({ start: "23:00", end: "23:45" }), now).end).toBeTruthy();
+  });
+  it("a room booking keeps its weekdays and hours", () => {
+    expect(bookingProblems({ date: "2026-11-07", roomId: "r1", start: "10:00", end: "11:00" }, now).date).toBe("Ruang hanya bisa dipesan Senin–Jumat. Di luar kantor boleh akhir pekan.");
+  });
+  it("needs a place name, and says where it is", () => {
+    const input = { roomId: OUTSIDE_ROOM, date: "2026-11-07", start: "10:00", end: "11:00", title: "Makan siang tim" };
+    expect(bookingInputSchema.safeParse({ ...input, place: " " }).success).toBe(false);
+    expect(bookingInputSchema.safeParse({ ...input, place: "Kopi Klotok" }).success).toBe(true);
+    expect(bookingWhere({ roomId: OUTSIDE_ROOM, place: "Kopi Klotok" }, [])).toBe("Kopi Klotok · di luar kantor");
+    expect(bookingWhere({ roomId: "r1" }, [{ id: "r1", name: "Vasuki" }])).toBe("Vasuki");
   });
 });

@@ -2,11 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Check, Clock, DoorOpen, Info, Pencil, Send, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Clock, DoorOpen, Info, MapPin, Pencil, Send, Users } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import {
   alternatives, appraisalRules, bookingProblems, clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock,
-  periodDates, slotTimes, titleSuggestions, wibDate, wibInstant, type Booking, type Person, type Room,
+  isWorkday, OUTSIDE_ROOM, periodAllDates, periodDates, slotTimes, titleSuggestions, wibDate, wibInstant, type Booking, type Person, type Room,
 } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { roomStatus, type PlanTone } from "@/lib/pra-wam/floor-plan";
@@ -21,7 +21,7 @@ import css from "./booking-form.module.css";
 import styles from "./pra-wam.module.css";
 
 export type { PeopleGroup } from "./PeoplePicker";
-export type BookingDraft = { date: string; start: string; end: string; roomId: string; title: string; description: string; participants: string[] };
+export type BookingDraft = { date: string; start: string; end: string; roomId: string; title: string; description: string; participants: string[]; /** For "Di luar kantor" (roomId OUTSIDE_ROOM). */ place?: string };
 type Props = {
   editId?: string; initial: BookingDraft; dates: string[]; now: string; rooms: Room[]; people: Person[];
   viewer: { id: string }; groups: PeopleGroup[]; usedTitles: { title: string; count: number }[];
@@ -37,10 +37,10 @@ type Props = {
   summary?: Record<string, DaySummary>;
 };
 
-const STEPS = ["Waktu", "Kegiatan", "Partisipan", "Ruang"] as const;
+const STEPS = ["Waktu", "Kegiatan", "Partisipan", "Tempat"] as const;
 const SUMMARY = STEPS.length;
 /** Which step holds each field, so an error (ours or the server's) opens the right one. */
-const FIELD_STEP: Record<string, number> = { date: 0, start: 0, end: 0, title: 1, description: 1, participants: 2, roomId: 3 };
+const FIELD_STEP: Record<string, number> = { date: 0, start: 0, end: 0, title: 1, description: 1, participants: 2, roomId: 3, place: 3 };
 
 const capacityText = (room: Room) => room.capacity
   ? `Kapasitas ${room.capacity} orang${room.minPeople ? `, minimal ${room.minPeople}` : ""}`
@@ -58,6 +58,8 @@ type Choice = { ok: boolean; pending: boolean; tone: PlanTone; text: string };
  * away. The server still has the last word: when someone else saved first the form keeps everything
  * that was typed and offers the nearest free hour or another room that fits. On /wam/book/new it is
  * the page; on Book it sits in a sheet (`frame`, `onSaved`) with the buttons as the sheet's footer.
+ * "Di luar kantor" (5 Nov 2026): chosen under Kapan (it opens weekends, any hour of the day and
+ * more than 4 hours) or under Tempat (with the floor plan); the place name is typed under Tempat.
  */
 export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {} }: Props) {
   const router = useRouter();
@@ -106,11 +108,12 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   }, [step]);
 
   const nowDate = new Date(now);
-  const slots = slotTimes();
+  const outside = draft.roomId === OUTSIDE_ROOM;
+  const slots = slotTimes(outside);
   const startsOn = (date: string) => slots.slice(0, -1).filter(time => new Date(wibInstant(date, time)) > nowDate);
   const starts = startsOn(draft.date);
   const length = clockMinutes(draft.end) - clockMinutes(draft.start);
-  const lengths = durationsFrom(draft.start);
+  const lengths = durationsFrom(draft.start, outside);
   const chosen = { startsAt: wibInstant(draft.date, draft.start), endsAt: wibInstant(draft.date, draft.end) };
   const hours = `${clockLabel(draft.start)}–${clockLabel(draft.end)}`;
 
@@ -137,7 +140,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   // A room from the link or the booking being changed stays picked only while it still suits.
   const wanted = rooms.find(room => room.id === draft.roomId);
   const wantedChoice = wanted ? choiceOf(wanted) : null;
-  const roomId = wantedChoice?.ok ? draft.roomId : "";
+  const roomId = outside ? OUTSIDE_ROOM : wantedChoice?.ok ? draft.roomId : "";
   const room = rooms.find(item => item.id === roomId);
   const dropped = wanted && wantedChoice && !wantedChoice.ok && !wantedChoice.pending ? `${wanted.name} tidak bisa dipakai: ${wantedChoice.text.charAt(0).toLowerCase()}${wantedChoice.text.slice(1)}. Pilih ruang lain.` : null;
   const anyFree = choices.some(item => item.ok);
@@ -149,11 +152,11 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
   // The date strip: the whole window, past days greyed out; the chosen day recounted from its bookings.
   const today = wibDate(now);
-  const stripDays = [...new Set([...periodDates(), ...dates])].sort();
+  const stripDays = outside ? periodAllDates() : [...new Set([...periodDates(), ...dates])].sort();
   const daySummary = dayKnown
     ? { ...summary, ...daySummaries([draft.date], rooms, others.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), nowDate) }
     : summary;
-  const dayFull = draft.date >= today && !!daySummary[draft.date]?.full;
+  const dayFull = !outside && draft.date >= today && !!daySummary[draft.date]?.full;
 
   const suggestions = useMemo(() => titleSuggestions(draft.title, usedTitles), [draft.title, usedTitles]);
   const picked = draft.participants.map(id => people.find(person => person.id === id)).filter((person): person is Person => !!person);
@@ -163,8 +166,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const countLine = guests.size ? `Kamu + ${guests.size} orang = ${peopleLabel(count)}` : "Kamu saja = 1 orang";
 
   /** Keeps the length when the start moves, shortened only to end by closing. */
-  function hoursFrom(start: string) {
-    const options = durationsFrom(start);
+  function hoursFrom(start: string, away = outside) {
+    const options = durationsFrom(start, away);
     const keep = options.includes(length) ? length : options.filter(item => item <= Math.max(length, appraisalRules.stepMinutes)).at(-1) ?? options[0] ?? appraisalRules.stepMinutes;
     return { start, end: minutesClock(clockMinutes(start) + keep) };
   }
@@ -186,12 +189,29 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     if (!choiceOf(item).ok) return;
     set({ roomId: item.id });
   }
+  /**
+   * Ruang kantor or Di luar kantor. Back to the office, a weekend moves to the next weekday and
+   * hours outside 07.00–22.00 (or longer than 4 hours) to the office's.
+   */
+  function chooseWhere(away: boolean) {
+    if (away === outside) return;
+    if (away) { set({ roomId: OUTSIDE_ROOM }); return; }
+    const date = isWorkday(draft.date) ? draft.date : periodDates().find(day => day > draft.date && day >= today) ?? draft.date;
+    const office = slotTimes().slice(0, -1).filter(time => new Date(wibInstant(date, time)) > nowDate);
+    const keepHours = office.includes(draft.start) && durationsFrom(draft.start).includes(length);
+    set({ roomId: "", date, ...(keepHours ? {} : hoursFrom(office.includes(draft.start) ? draft.start : office[0] ?? draft.start, false)) });
+  }
+  const whereSwitch = <div className={css.where} role="group" aria-label="Tempat">
+    <button type="button" aria-pressed={!outside} onClick={() => chooseWhere(false)}><DoorOpen size={18} aria-hidden />Ruang kantor</button>
+    <button type="button" aria-pressed={outside} onClick={() => chooseWhere(true)}><MapPin size={18} aria-hidden />Di luar kantor</button>
+  </div>;
 
   /** What stops a step, as field errors; empty when Lanjut may go on. */
   function problemsOf(at: number): Record<string, string> {
     if (at === 0) return bookingProblems(draft, new Date());
     if (at === 1) return draft.title.trim().length < 2 ? { title: "Isi nama kegiatan." } : {};
     if (at === 2) return guests.size > appraisalRules.maxParticipants ? { participants: `Paling banyak ${appraisalRules.maxParticipants} partisipan.` } : {};
+    if (at === 3 && outside) return (draft.place ?? "").trim().length < 2 ? { place: "Isi nama tempat." } : {};
     if (at === 3) {
       if (!dayKnown) return { roomId: "Tunggu jadwal ruang selesai dimuat." };
       if (!roomId) return { roomId: dropped ?? (anyFree ? "Pilih ruang." : "Belum ada ruang yang bisa dipilih. Ubah waktu atau partisipan.") };
@@ -206,7 +226,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     setFurthest(current => Math.max(current, to));
   }
   function focusField(field: string) {
-    const target = field === "start" ? `${uid}-start` : field === "end" ? `${uid}-length` : field === "title" ? `${uid}-title` : "";
+    const target = field === "start" ? `${uid}-start` : field === "end" ? `${uid}-length` : field === "title" ? `${uid}-title` : field === "place" ? `${uid}-place` : "";
     const element = target ? document.getElementById(target) : headings.current[step];
     element?.focus();
   }
@@ -233,7 +253,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     setFieldErrors({});
     setBusy(true);
     try {
-      const body = { ...draft, roomId, confirmed };
+      const body = { ...draft, roomId, place: outside ? (draft.place ?? "").trim() : "", confirmed };
       const result = await praWamRequest(editId ? praWamApi.bookings(editId) : praWamApi.bookings(), { method: editId ? "PATCH" : "POST", json: body });
       if (onSaved) { setBusy(false); onSaved({ message: result.message, date: draft.date }); return; }
       router.refresh(); router.push(praWamPath.appraisal(draft.date));
@@ -287,6 +307,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(0)}>
       {heading(0, "Kapan?")}
+      {whereSwitch}
       <DateStrip days={stripDays} selected={draft.date} today={today} summary={daySummary} onPick={pickDate} label="Tanggal" />
       {fieldError("date")}
       {dayFull && <p className={css.note} role="status">Semua ruang penuh hari ini. Pilih hari lain atau jam lain.</p>}
@@ -310,8 +331,10 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         </div>
       </div>
       <p className={css.span} role="status"><Clock size={18} aria-hidden />{dayLabel(draft.date)} · {hours}{length > 0 ? ` (${durationLabel(length)})` : ""}</p>
-      {starts.length === 0 && <Notice tone="info">Jam operasional hari ini sudah lewat. Pilih tanggal lain.</Notice>}
-      <p className={styles.hint}>Jam operasional {clockLabel(appraisalRules.open)}–{clockLabel(appraisalRules.close)}, 30 menit sampai 4 jam.</p>
+      {starts.length === 0 && <Notice tone="info">{outside ? "Hari ini sudah lewat. Pilih tanggal lain." : "Jam operasional hari ini sudah lewat. Pilih tanggal lain."}</Notice>}
+      <p className={styles.hint}>{outside
+        ? "Di luar kantor: boleh akhir pekan, jam berapa pun hari itu (sampai 23.30), dan lebih dari 4 jam. Nama tempat diisi di langkah Tempat."
+        : `Ruang kantor ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam.`}</p>
     </section>
 
     <section {...stepProps(1)}>
@@ -354,13 +377,21 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     </section>
 
     <section {...stepProps(3)}>
-      {heading(3, "Di ruang mana?")}
+      {heading(3, outside ? "Di mana?" : "Di ruang mana?")}
       <p className={css.lead}>{peopleLabel(count)} · {dayLabel(draft.date)} {hours}</p>
-      {!dayKnown && (loadError
+      {whereSwitch}
+      {outside && <div>
+        <label className={styles.label} htmlFor={`${uid}-place`}>Nama tempat</label>
+        <input id={`${uid}-place`} className="input" value={draft.place ?? ""} maxLength={120} autoComplete="off" placeholder="Mis. Kopi Klotok, Kaliurang"
+          aria-invalid={!!fieldErrors.place} aria-describedby={described("place")} onChange={event => set({ place: event.target.value })} />
+        {fieldError("place")}
+        <p className={styles.hint}>Tempat di luar kantor tidak dikunci: orang lain tetap bisa memilih tempat yang sama.</p>
+      </div>}
+      {!outside && !dayKnown && (loadError
         ? <Notice tone="error">{loadError} <button type="button" className="button button--quiet" onClick={() => setReload(reload + 1)}>Coba lagi</button></Notice>
         : <p className={styles.meta} role="status">Memuat jadwal ruang {dayLabel(draft.date)}…</p>)}
-      {dropped && <p className={css.note} role="status">{dropped}</p>}
-      {dayKnown && !anyFree && <div className={css.wayOut} role="status">
+      {!outside && dropped && <p className={css.note} role="status">{dropped}</p>}
+      {!outside && dayKnown && !anyFree && <div className={css.wayOut} role="status">
         <p><strong>{fitting.length ? `Semua ruang untuk ${peopleLabel(count)} terpakai pada jam ini.` : `Belum ada ruang untuk ${peopleLabel(count)}.`}</strong></p>
         {freeTimes.length > 0 && <>
           <p>Jam terdekat yang masih kosong:</p>
@@ -372,7 +403,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
           <Button type="button" variant="secondary" onClick={() => goTo(2)}>Ubah partisipan</Button>
         </div>
       </div>}
-      {showPlan
+      {outside ? null : showPlan
         ? step === 3 && <FloorPlan rooms={rooms} selectedId={roomId} onPick={pickRoom}
           statusOf={item => item.bookable ? choiceOf(item) : { tone: "off", text: "Tidak bisa dibooking" }} legendLabels={{ off: "Tidak cocok / tidak bisa dibooking" }}
           label={`Denah kantor untuk ${peopleLabel(count)}, ${dayLabel(draft.date)} ${hours}`}
@@ -388,7 +419,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
             </span>
           </button>)}
         </div>}
-      {showPlan && room && <p className={css.picked}>{room.name} · {capacityText(room)}</p>}
+      {!outside && showPlan && room && <p className={css.picked}>{room.name} · {capacityText(room)}</p>}
       {fieldError("roomId")}
     </section>
 
@@ -404,8 +435,10 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         <SummaryRow label="Partisipan" onEdit={() => goTo(2)}>
           {peopleLabel(count)}<small>{picked.length ? `Kamu, ${picked.map(person => person.name).join(", ")}` : "Hanya kamu"}</small>
         </SummaryRow>
-        <SummaryRow label="Ruang" onEdit={() => goTo(3)}>
-          {room ? <>{room.name}<small>{capacityText(room)}</small></> : <span className={css.missing}>{dayKnown ? "Belum dipilih" : "Memuat jadwal…"}</span>}
+        <SummaryRow label="Tempat" onEdit={() => goTo(3)}>
+          {outside
+            ? (draft.place ?? "").trim() ? <>{(draft.place ?? "").trim()}<small>Di luar kantor</small></> : <span className={css.missing}>Nama tempat belum diisi</span>
+            : room ? <>{room.name}<small>{capacityText(room)}</small></> : <span className={css.missing}>{dayKnown ? "Belum dipilih" : "Memuat jadwal…"}</span>}
         </SummaryRow>
       </dl>
       {conflict && <div className={styles.conflict} role="alert">
@@ -421,7 +454,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         </>}
         {conflict.kind === "participants" && <div className={styles.actions}><Button type="button" variant="secondary" disabled={busy} onClick={() => save(true)}>Tetap simpan</Button></div>}
       </div>}
-      <p className={own.info}><Info size={16} aria-hidden />Booking langsung pasti. Bila ruang keburu dipesan orang lain, isianmu tetap tersimpan dan kami tawarkan jam atau ruang lain.</p>
+      <p className={own.info}><Info size={16} aria-hidden />{outside ? "Booking langsung masuk agenda partisipan sebagai sesi; absen dengan Saya hadir." : "Booking langsung pasti. Bila ruang keburu dipesan orang lain, isianmu tetap tersimpan dan kami tawarkan jam atau ruang lain."}</p>
     </section>
 
     {!frame && <div className={styles.sticky}>{footer}</div>}

@@ -33,8 +33,23 @@ export type Room = {
   facilities: string[];
 };
 export type Person = { id: string; name: string; department: string };
+/**
+ * "Di luar kantor" (5 Nov 2026, migration 202611050006): a booking without an office room, with a
+ * place name instead. Its roomId is this marker (never a room's id, which are uuids), so every list
+ * that goes by room leaves it out on its own; `place` names where it is.
+ */
+export const OUTSIDE_ROOM = "luar";
+export const isOutside = (booking: { roomId: string }) => booking.roomId === OUTSIDE_ROOM;
+/** Where a booking is, in words: the room's name, or "Kopi Klotok · di luar kantor". */
+export const bookingWhere = (booking: { roomId: string; place?: string }, rooms: { id: string; name: string }[]) =>
+  isOutside(booking) ? `${booking.place || "Tempat belum diisi"} · di luar kantor` : rooms.find(room => room.id === booking.roomId)?.name ?? "Ruang";
+/** An outside booking may start at any half hour of the day and end by 23.30 the same day. */
+export const OUTSIDE_HOURS = { open: "00:00", close: "23:30" } as const;
+
 export type Booking = {
   id: string; roomId: string; title: string; description: string; startsAt: string; endsAt: string;
+  /** The place of an outside booking ("Kopi Klotok, Kaliurang"); absent for a room booking. */
+  place?: string;
   bookedBy: Person;
   /** Only sent to the booker, its participants, and the people who manage Pra WAM. */
   participants: Person[] | null;
@@ -54,10 +69,11 @@ export const wibDate = (iso: string) => wibParts(iso).slice(0, 10);
 /** The WIB clock time of an instant, "10:00". */
 export const wibTime = (iso: string) => wibParts(iso).slice(11, 16);
 
-/** Every bookable clock time, open to close (07:00 to 22:00) in half hours. */
-export function slotTimes(): string[] {
+/** Every bookable clock time in half hours: a room's open to close (07:00 to 22:00), or the whole day outside the office. */
+export function slotTimes(outside = false): string[] {
+  const hours = outside ? OUTSIDE_HOURS : appraisalRules;
   const times: string[] = [];
-  for (let at = toMinutes(appraisalRules.open); at <= toMinutes(appraisalRules.close); at += appraisalRules.stepMinutes) times.push(fromMinutes(at));
+  for (let at = toMinutes(hours.open); at <= toMinutes(hours.close); at += appraisalRules.stepMinutes) times.push(fromMinutes(at));
   return times;
 }
 
@@ -78,35 +94,52 @@ export function bookableDates(from: string): string[] {
 /** Every weekday of the appraisal period, 28 Okt–20 Nov: the booking window the date strip shows. */
 export const periodDates = () => bookableDates(appraisalRules.periodStart);
 
+/** Every day of the period, weekends too: the days an outside booking may take. */
+export function periodAllDates(): string[] {
+  const dates: string[] = [];
+  for (let day = new Date(`${appraisalRules.periodStart}T12:00:00Z`); day.toISOString().slice(0, 10) <= appraisalRules.periodEnd; day.setUTCDate(day.getUTCDate() + 1)) dates.push(day.toISOString().slice(0, 10));
+  return dates;
+}
+
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const bookingInputSchema = z.object({
-  roomId: z.uuid("Pilih ruang."),
+  roomId: z.union([z.uuid("Pilih ruang."), z.literal(OUTSIDE_ROOM)], "Pilih ruang."),
+  /** The place of an outside booking; ignored for a room. */
+  place: z.string().trim().max(120, "Nama tempat paling panjang 120 karakter.").default(""),
   date: z.string().regex(DATE, "Pilih tanggal."),
   start: z.string().regex(TIME, "Pilih jam mulai."),
   end: z.string().regex(TIME, "Pilih jam selesai."),
   title: z.string().trim().min(2, "Isi nama kegiatan.").max(120, "Nama kegiatan paling panjang 120 karakter."),
   description: z.string().trim().max(500, "Deskripsi paling panjang 500 karakter.").default(""),
   participants: z.array(z.uuid()).max(appraisalRules.maxParticipants, `Paling banyak ${appraisalRules.maxParticipants} partisipan.`).default([]),
+}).superRefine((input, context) => {
+  if (input.roomId === OUTSIDE_ROOM && input.place.length < 2) context.addIssue({ code: "custom", path: ["place"], message: "Isi nama tempat." });
 });
 export type BookingInput = z.infer<typeof bookingInputSchema>;
 
-/** The rules a booking must meet, as field errors; empty when it may be saved. `now` decides "past". */
-export function bookingProblems(input: Pick<BookingInput, "date" | "start" | "end">, now: Date): Record<string, string> {
+/**
+ * The rules a booking must meet, as field errors; empty when it may be saved. `now` decides "past".
+ * An outside booking (roomId OUTSIDE_ROOM) may be on a weekend, at any hour of the day and longer
+ * than 4 hours; the period, the half hours and "one day" still hold.
+ */
+export function bookingProblems(input: Pick<BookingInput, "date" | "start" | "end"> & { roomId?: string }, now: Date): Record<string, string> {
   const problems: Record<string, string> = {};
-  const times = slotTimes();
+  const outside = input.roomId === OUTSIDE_ROOM;
+  const hours = outside ? OUTSIDE_HOURS : appraisalRules;
+  const times = slotTimes(outside);
   if (input.date < appraisalRules.periodStart || input.date > appraisalRules.periodEnd) problems.date = "Tanggal di luar periode appraisal (28 Okt–20 Nov 2026).";
-  else if (!isWorkday(input.date)) problems.date = "Ruang hanya bisa dipesan Senin–Jumat.";
+  else if (!outside && !isWorkday(input.date)) problems.date = "Ruang hanya bisa dipesan Senin–Jumat. Di luar kantor boleh akhir pekan.";
   const step = appraisalRules.stepMinutes;
   const label = (minutes: number) => fromMinutes(minutes).replace(":", ".");
-  const [open, close] = [toMinutes(appraisalRules.open), toMinutes(appraisalRules.close)];
-  if (!times.includes(input.start) || input.start === appraisalRules.close) problems.start = `Jam mulai ${label(open)}–${label(close - step)}, setiap ${step} menit.`;
-  if (!times.includes(input.end) || input.end === appraisalRules.open) problems.end = `Jam selesai ${label(open + step)}–${label(close)}, setiap ${step} menit.`;
+  const [open, close] = [toMinutes(hours.open), toMinutes(hours.close)];
+  if (!times.includes(input.start) || input.start === hours.close) problems.start = `Jam mulai ${label(open)}–${label(close - step)}, setiap ${step} menit.`;
+  if (!times.includes(input.end) || input.end === hours.open) problems.end = `Jam selesai ${label(open + step)}–${label(close)}, setiap ${step} menit.`;
   const minutes = toMinutes(input.end) - toMinutes(input.start);
   if (!problems.start && !problems.end) {
     if (minutes <= 0) problems.end = "Jam selesai harus setelah jam mulai.";
-    else if (minutes > appraisalRules.maxMinutes) problems.end = "Paling lama 4 jam.";
+    else if (!outside && minutes > appraisalRules.maxMinutes) problems.end = "Paling lama 4 jam.";
   }
   if (!problems.date && !problems.start && new Date(wibInstant(input.date, input.start)) < now) problems.start = "Jam ini sudah lewat.";
   return problems;
@@ -311,8 +344,9 @@ export function durationLabel(minutes: number): string {
 }
 
 /** The lengths a booking from `start` may take: every half hour up to 4 hours, ending by closing. */
-export function durationsFrom(start: string): number[] {
-  const room = Math.min(appraisalRules.maxMinutes, toMinutes(appraisalRules.close) - toMinutes(start));
+export function durationsFrom(start: string, outside = false): number[] {
+  // Outside the office: until 23.30, with no 4-hour cap.
+  const room = outside ? toMinutes(OUTSIDE_HOURS.close) - toMinutes(start) : Math.min(appraisalRules.maxMinutes, toMinutes(appraisalRules.close) - toMinutes(start));
   const lengths: number[] = [];
   for (let length = appraisalRules.stepMinutes; length <= room; length += appraisalRules.stepMinutes) lengths.push(length);
   return lengths;

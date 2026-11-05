@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { CalendarDays, CalendarPlus, ChevronRight, Clock, DoorOpen, Map as MapIcon, MapPin, Plus, Text, User, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { appraisalRules, clockAt, clockLabel, dayLabel, draftHours, nowOffset, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, bookingWhere, clockAt, clockLabel, dayLabel, draftHours, isOutside, nowOffset, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { placeRooms } from "@/lib/pra-wam/floor-plan";
 import { daySummaries, roomDay, type DayStatus, type DaySummary } from "@/lib/pra-wam/room-day";
-import { bookingKey, DayCalendar, Legend, RoomList, WeekCalendar, type BookPick } from "./BookCalendar";
+import { bookingKey, DayCalendar, Legend, OutsideDay, RoomList, WeekCalendar, type BookPick } from "./BookCalendar";
 import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
 import { useConfirm } from "./ConfirmDialog";
 import { FloorPlan } from "./FloorPlan";
@@ -92,7 +92,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     const day = wibDate(booking.startsAt);
     return {
       kind: "form", key: formKey + 1, editId: booking.id, ...dayData(day),
-      initial: { date: day, start: wibTime(booking.startsAt), end: wibTime(booking.endsAt), roomId: booking.roomId, title: booking.title, description: booking.description, participants: (booking.participants ?? []).map(person => person.id) },
+      initial: { date: day, start: wibTime(booking.startsAt), end: wibTime(booking.endsAt), roomId: booking.roomId, place: booking.place ?? "", title: booking.title, description: booking.description, participants: (booking.participants ?? []).map(person => person.id) },
     };
   };
   /** The day's bookings when this week holds them; otherwise the form fetches them. */
@@ -163,10 +163,10 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   /** Cancelling frees the room at once and takes the booking off the schedule and "Booking saya". */
   async function cancel(booking: Booking) {
     const someoneElse = booking.bookedBy.id !== viewerId ? ` milik ${booking.bookedBy.name}` : "";
-    const room = rooms.find(item => item.id === booking.roomId)?.name ?? "Ruang";
+    const room = bookingWhere(booking, rooms);
     if (!(await confirm({
       title: "Batalkan booking?",
-      body: `"${booking.title}"${someoneElse}, ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}, ${room}. Ruang langsung bisa dipesan orang lain.`,
+      body: `"${booking.title}"${someoneElse}, ${dayLabel(wibDate(booking.startsAt))}, ${span(booking)}, ${room}.${isOutside(booking) ? "" : " Ruang langsung bisa dipesan orang lain."}`,
       confirmLabel: "Batalkan booking",
       danger: true,
     }))) return;
@@ -232,6 +232,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
         onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} />
     </>}
 
+    {/* Outside the office: the same under Kalender and Denah, phone and desktop. */}
+    <div className={css.outsideWrap}><OutsideDay date={selected} bookings={dayBookings} now={clockNow} viewerId={viewerId} onOpen={openBooking} /></div>
+
     <p className={styles.sectionLabel}>Booking saya</p>
     {mine.length === 0 ? <div className={styles.emptyRow}>
       <span className={styles.tile} aria-hidden><CalendarPlus /></span>
@@ -243,7 +246,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
           <span className={css.when}><b>{shortDate(wibDate(booking.startsAt))}</b>{span(booking)}</span>
           <span className={css.what}>
             <strong>{booking.title}</strong>
-            <small>{rooms.find(room => room.id === booking.roomId)?.name ?? "Ruang"} · {mineFlag(booking) ? "Kamu pemesannya" : `Dipesan ${booking.bookedBy.name}`}</small>
+            <small>{bookingWhere(booking, rooms)} · {mineFlag(booking) ? "Kamu pemesannya" : `Dipesan ${booking.bookedBy.name}`}</small>
           </span>
           <ChevronRight className={css.rowIcon} aria-hidden />
         </button>
@@ -285,7 +288,9 @@ function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canC
   return <Sheet open={shown} onClose={onClose} side="left" title={booking.title} subtitle={`${dayLabel(wibDate(booking.startsAt))} · ${span(booking)}`} footer={hasActions ? actions : undefined}>
     <span className={`${css.tag} ${tone}`}>{booking.isSession ? "Sesi Pra WAM" : mine ? "Booking kamu" : "Terpakai"}{ended ? " · selesai" : ""}</span>
     <dl className={css.facts}>
-      <div><DoorOpen aria-hidden /><dt>Ruang</dt><dd>{room?.name ?? "Ruang"}{room?.capacity ? <small>Kapasitas {room.capacity} orang</small> : null}</dd></div>
+      {isOutside(booking)
+        ? <div><MapPin aria-hidden /><dt>Tempat</dt><dd>{booking.place || "Tempat belum diisi"}<small>Di luar kantor</small></dd></div>
+        : <div><DoorOpen aria-hidden /><dt>Ruang</dt><dd>{room?.name ?? "Ruang"}{room?.capacity ? <small>Kapasitas {room.capacity} orang</small> : null}</dd></div>}
       <div><Clock aria-hidden /><dt>Waktu</dt><dd>{dayLabel(wibDate(booking.startsAt))}<small>{span(booking)}</small></dd></div>
       <div><User aria-hidden /><dt>Pemesan</dt><dd>{booking.isSession ? "Panitia Pra WAM" : mine ? "Kamu" : booking.bookedBy.name}{!booking.isSession && !mine && booking.bookedBy.department ? <small>{booking.bookedBy.department}</small> : null}</dd></div>
       {booking.participants && <div><Users aria-hidden /><dt>Partisipan</dt><dd>{booking.participants.length ? booking.participants.map(person => person.name).join(", ") : "Tanpa partisipan lain"}</dd></div>}

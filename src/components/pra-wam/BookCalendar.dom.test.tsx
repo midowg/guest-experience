@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { wibInstant, type Booking, type Room } from "@/lib/pra-wam/appraisal";
-import { DayCalendar, Legend, WeekCalendar } from "./BookCalendar";
+import { DayCalendar, Legend, OutsideDay, WeekCalendar } from "./BookCalendar";
 
 afterEach(cleanup);
 // jsdom has no CSS: the phone cards and the desktop timeline are both in the document, phone first.
@@ -117,4 +117,19 @@ it("names every colour in the key in words", () => {
   render(<Legend />);
   const key = screen.getByRole("list", { name: "Keterangan warna" });
   expect(within(key).getAllByRole("listitem").map(item => item.textContent)).toEqual(["Booking kamu", "Terpakai", "Sesi Pra WAM", "Kosong", "Hampir penuh"]);
+});
+
+describe("outside the office", () => {
+  it("lists the day's outside bookings in one card with their place, and nothing on a day without", () => {
+    const onOpen = vi.fn();
+    const away = booking("o1", "luar", "2026-11-05", "19:00", "21:00", undefined, { title: "Makan malam tim", place: "Kopi Klotok" });
+    const { rerender } = render(<OutsideDay date="2026-11-05" bookings={[away, booking("a", "r1", "2026-11-05", "10:00", "11:00")]} now={new Date(wibInstant("2026-11-05", "10:00"))} viewerId="me" onOpen={onOpen} />);
+    const card = within(screen.getByRole("region", { name: /^Di luar kantor/ }));
+    expect(card.getByText("1 kegiatan")).toBeTruthy();
+    fireEvent.click(card.getByRole("button", { name: /Makan malam tim/ }));
+    expect(onOpen).toHaveBeenCalledWith(away);
+    expect(card.getByText(/Kopi Klotok · Sari/)).toBeTruthy();
+    rerender(<OutsideDay date="2026-11-06" bookings={[away]} now={new Date()} viewerId="me" onOpen={onOpen} />);
+    expect(screen.queryByRole("region", { name: /^Di luar kantor/ })).toBeNull();
+  });
 });

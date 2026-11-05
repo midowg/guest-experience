@@ -45,7 +45,7 @@ it("walks waktu, kegiatan, partisipan and ruang, offering only rooms that suit, 
   expect(screen.getByText("Kamu + 1 orang = 2 orang (one-on-one)")).toBeTruthy();
   lanjut();
 
-  expect(screen.getByText("Langkah 4 dari 4 · Ruang")).toBeTruthy();
+  expect(screen.getByText("Langkah 4 dari 4 · Tempat")).toBeTruthy();
   expect(roomCard("Arjuna").disabled).toBe(false);
   expect(roomCard("Bima").disabled).toBe(true);
   expect(roomCard("Bima").textContent).toContain("Untuk minimal 4 orang");
@@ -154,4 +154,31 @@ it("picks people from one list: Departemen as a dropdown, search by name or depa
   expect(names()).toEqual(["Ayu"]);
   fireEvent.keyDown(screen.getByLabelText("Cari nama"), { key: "Enter" });
   expect(screen.getByRole("button", { name: /^Ayu/ }).getAttribute("aria-pressed")).toBe("true");
+});
+
+it("books outside the office: a weekend opens, the place is asked under Tempat, and the place is sent with no room", async () => {
+  request.mockResolvedValue({ data: {}, message: "Booking tersimpan." });
+  const onSaved = vi.fn();
+  renderForm({ onSaved });
+  // Kapan: the office's hours until Di luar kantor is picked; then a Saturday and the evening are offered.
+  expect(screen.queryByRole("button", { name: /^Sabtu, 7 Nov/ })).toBeNull();
+  fireEvent.click(screen.getAllByRole("button", { name: "Di luar kantor" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: /^Sabtu, 7 Nov/ }));
+  fireEvent.change(screen.getByLabelText("Jam mulai"), { target: { value: "19:00" } });
+  fireEvent.change(screen.getByLabelText("Durasi"), { target: { value: "270" } });
+  expect(screen.getAllByText(/19\.00–23\.30/).length).toBeGreaterThan(0);
+  lanjut();
+  fireEvent.change(screen.getByLabelText("Nama kegiatan"), { target: { value: "Makan malam tim" } });
+  lanjut(); lanjut();
+  // Tempat: no rooms, the place is required.
+  expect(screen.getByRole("heading", { name: "Di mana?" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^Arjuna/ })).toBeNull();
+  lanjut();
+  expect(screen.getByText("Isi nama tempat.")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Nama tempat"), { target: { value: "Kopi Klotok" } });
+  lanjut();
+  expect(screen.getByText("Kopi Klotok")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Book ruang/ }));
+  await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+  expect(request.mock.calls.at(-1)?.[1]).toMatchObject({ method: "POST", json: { roomId: "luar", place: "Kopi Klotok", date: "2026-11-07", start: "19:00", end: "23:30" } });
 });
