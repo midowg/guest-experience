@@ -1,6 +1,6 @@
 /* DateStrip.tsx: the booking window's weekdays in one sideways row. --pw-* tokens only. */
 
-.wrap { position: relative; display: flex; align-items: stretch; gap: 8px; min-width: 0; }
+.wrap { position: relative; display: flex; align-items: stretch; gap: 8px; min-width: 0; padding: 10px 8px; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); }
 
 /* Scrolls by touch, trackpad or wheel; no scrollbar. Soft edges where there is more to see. */
 .scroller {
@@ -19,41 +19,45 @@
 /* Where a month begins. */
 .month { flex: none; display: flex; align-items: flex-start; padding: 6px 2px 0; font-size: 12px; font-weight: 600; color: var(--pw-muted); }
 
+/*
+ * A day (DS "Kalender · tanggal terpilih"): the weekday, the date in a 40 circle, a short note.
+ * Picked: the circle filled blue; today: a blue ring; full: a red dot and "Penuh".
+ */
 .day {
-  flex: none; display: grid; justify-items: center; align-content: center; gap: 2px;
-  width: 68px; min-height: 80px; padding: 8px 4px; scroll-snap-align: center;
-  border: 1px solid var(--pw-line); border-radius: 14px; background: var(--pw-surface); color: var(--pw-text);
+  flex: none; display: grid; justify-items: center; align-content: center; gap: 4px;
+  width: 64px; min-height: 84px; padding: 6px 2px; scroll-snap-align: center;
+  border: 0; border-radius: 18px; background: transparent; color: var(--pw-text);
   font: inherit; cursor: pointer;
 }
 .day:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
-.name { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; font-size: 12px; font-weight: 700; color: var(--pw-muted); white-space: nowrap; }
-.number { font-size: 20px; line-height: 1.1; }
-.note { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; min-height: 15px; font-size: 11px; font-weight: 700; color: var(--pw-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.name { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; font-size: 12px; font-weight: 500; color: var(--pw-muted); white-space: nowrap; }
+.number { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; font-family: var(--pw-display); font-size: 17px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+.note { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; min-height: 15px; font-size: 11px; font-weight: 500; color: var(--pw-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .note svg { flex: none; width: 12px; height: 12px; }
 
-/* Today: a ring and a dot, and "Hari ini" in words. */
-.today { border-color: var(--pw-primary); box-shadow: inset 0 0 0 1px var(--pw-primary); }
+/* Today: a blue ring round the date, and "Hari ini" in words. */
+.today .number { box-shadow: inset 0 0 0 2px var(--pw-primary); color: var(--pw-primary); }
 .today .name { color: var(--pw-primary); font-weight: 600; }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 /* Every room full: the danger tint, a stop icon and "Penuh". */
-.full { background: var(--pw-danger-soft); border-color: var(--pw-danger); }
+.full .number { background: var(--pw-danger-soft); color: var(--pw-danger); }
 .full .note { color: var(--pw-danger); }
 
 /* Past: not pickable; muted, dashed, the number struck through, "Lewat". */
-.past { background: transparent; border-style: dashed; color: var(--pw-muted); cursor: not-allowed; }
-.past .number { text-decoration: line-through; text-decoration-thickness: 2px; font-weight: 600; }
+.past { color: var(--pw-muted); cursor: not-allowed; opacity: .7; }
+.past .number { text-decoration: line-through; text-decoration-thickness: 1.5px; }
 
 /* Picked: filled. */
-.day[aria-pressed="true"] { background: var(--pw-primary); border-color: var(--pw-primary); color: var(--pw-on-primary); }
-.day[aria-pressed="true"] .name, .day[aria-pressed="true"] .note { color: var(--pw-on-primary); }
-.day[aria-pressed="true"].today { box-shadow: 0 0 0 2px var(--pw-surface), 0 0 0 4px var(--pw-primary); }
-.day[aria-pressed="true"].full { box-shadow: inset 0 0 0 2px var(--pw-danger); }
+.day[aria-pressed="true"] { background: var(--pw-primary-soft); }
+.day[aria-pressed="true"] .number { background: var(--pw-primary); color: var(--pw-on-primary); box-shadow: 0 8px 16px -8px rgba(0, 110, 193, .7); }
+.day[aria-pressed="true"] .name, .day[aria-pressed="true"] .note { color: var(--pw-primary); font-weight: 600; }
+.day[aria-pressed="true"].full .number { background: var(--pw-danger); color: #fff; }
 
-.day:not([aria-pressed="true"]):not(.past):hover { border-color: var(--pw-primary); }
+.day:not([aria-pressed="true"]):not(.past):hover { background: var(--pw-app); }
 
 /* Arrows to page through, only for a mouse or trackpad pointer. */
-.arrow { display: none; flex: none; place-items: center; width: 44px; min-height: 44px; align-self: center; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); color: var(--pw-primary); cursor: pointer; }
+.arrow { display: none; flex: none; place-items: center; width: 44px; min-height: 44px; align-self: center; border: 1px solid var(--pw-line); border-radius: 50%; background: var(--pw-surface); color: var(--pw-primary); cursor: pointer; }
 .arrow svg { width: 20px; height: 20px; }
 .arrow:disabled { color: var(--pw-muted); background: transparent; cursor: default; }
 .arrow:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }

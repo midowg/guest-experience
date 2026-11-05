@@ -41,7 +41,7 @@ it("walks waktu, kegiatan, partisipan and ruang, offering only rooms that suit, 
 
   expect(screen.getByRole("heading", { name: "Siapa yang ikut?" })).toBeTruthy();
   expect(screen.getByText("Kamu saja = 1 orang")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "+ Budi" }));
+  fireEvent.click(screen.getByRole("button", { name: /^Budi/ }));
   expect(screen.getByText("Kamu + 1 orang = 2 orang (one-on-one)")).toBeTruthy();
   lanjut();
 
@@ -128,4 +128,30 @@ it("counts the chosen day from its bookings when no summary is given", () => {
     groups={[]} usedTitles={[]} dayBookings={[allDay]} dayOf="2026-11-05" showPlan={false} />);
   expect(screen.getByRole("button", { name: "Kamis, 5 Nov, penuh" })).toBeTruthy();
   expect(screen.getByText("Semua ruang penuh hari ini. Pilih hari lain atau jam lain.")).toBeTruthy();
+});
+
+it("picks people from one list: Departemen as a dropdown, search by name or department, tap to add and again to take off", () => {
+  render(<BookingForm initial={draft({ title: "Rapat tim" })} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[kecil, besar]}
+    people={[{ id: "p1", name: "Budi", department: "IT" }, { id: "p2", name: "Citra", department: "IT" }, { id: "p3", name: "Ayu", department: "HR" }]} viewer={{ id: "me" }}
+    groups={[{ id: "it", label: "IT", memberIds: ["p1", "p2"] }, { id: "hr", label: "HR", memberIds: ["p3"] }]} usedTitles={[]} dayBookings={[]} dayOf="2026-11-05" showPlan={false} />);
+  lanjut(); lanjut();
+  const list = () => screen.getByRole("list", { name: "Pilih partisipan" });
+  const names = () => [...list().querySelectorAll("strong")].map(item => item.textContent);
+  // Everyone at first, by name; the department narrows it.
+  expect(names()).toEqual(["Ayu", "Budi", "Citra"]);
+  fireEvent.change(screen.getByLabelText("Departemen"), { target: { value: "it" } });
+  expect(names()).toEqual(["Budi", "Citra"]);
+  fireEvent.click(screen.getByRole("button", { name: /Tambah semua IT \(2\)/ }));
+  expect(screen.getByText("Kamu + 2 orang = 3 orang")).toBeTruthy();
+  // Tapping a picked person takes them off again.
+  const budi = screen.getByRole("button", { name: /^Budi/ });
+  expect(budi.getAttribute("aria-pressed")).toBe("true");
+  fireEvent.click(budi);
+  expect(screen.getByRole("button", { name: /^Budi/ }).getAttribute("aria-pressed")).toBe("false");
+  // The search reads departments too, and Enter adds the one person found.
+  fireEvent.change(screen.getByLabelText("Departemen"), { target: { value: "" } });
+  fireEvent.change(screen.getByLabelText("Cari nama"), { target: { value: "hr" } });
+  expect(names()).toEqual(["Ayu"]);
+  fireEvent.keyDown(screen.getByLabelText("Cari nama"), { key: "Enter" });
+  expect(screen.getByRole("button", { name: /^Ayu/ }).getAttribute("aria-pressed")).toBe("true");
 });
