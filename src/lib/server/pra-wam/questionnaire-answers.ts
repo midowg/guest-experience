@@ -4,6 +4,7 @@ import {
   answered, cleanAnswer, complete, editable, progressOf, shows,
   type AnswerValue, type Answers, type Progress, type QContent, type QForm, type QQuestion,
 } from "@/lib/pra-wam/questionnaire";
+import { withoutPurged } from "@/lib/pra-wam/purge";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -43,17 +44,17 @@ async function openForm(preview = false): Promise<QForm> {
   return form;
 }
 
-/** Sections and questions people see: no hidden ones. */
-export function shownContent(content: Content): Content {
+/** Sections and questions people see: no hidden ones, and none whose answers were deleted on the stay date (see purge.ts). */
+export function shownContent(content: Content, form: Pick<QForm, "stayDeleteOn">): Content {
   const sections = content.sections.filter(section => !section.hidden);
   const ids = new Set(sections.map(section => section.id));
-  return { sections, questions: content.questions.filter(question => !question.hidden && ids.has(question.sectionId)) };
+  return withoutPurged({ sections, questions: content.questions.filter(question => !question.hidden && ids.has(question.sectionId)) }, form);
 }
 
 const anonymousSectionIds = (content: Content) => new Set(content.sections.filter(section => section.anonymous).map(section => section.id));
 
 /** My named answers, consent and completion, and whether my anonymous section is in. */
-export async function myAnswers(form: Pick<QForm, "id">, employeeId: string, content?: Content): Promise<Mine> {
+export async function myAnswers(form: Pick<QForm, "id" | "stayDeleteOn">, employeeId: string, content?: Content): Promise<Mine> {
   const client = createPrivilegedClient();
   const [all, rows, progress, receipt] = await Promise.all([
     content ?? formContent(form.id),
@@ -62,7 +63,7 @@ export async function myAnswers(form: Pick<QForm, "id">, employeeId: string, con
     client.from("cq_anon_receipts").select("submitted_on").eq("form_id", form.id).eq("employee_id", employeeId).maybeSingle(),
   ]);
   for (const result of [rows, progress, receipt]) if (result.error) failed(result.error);
-  const shown = shownContent(all);
+  const shown = shownContent(all, form);
   const keyOf = new Map(shown.questions.map(question => [question.id, question.key]));
   const answers: Answers = {};
   for (const row of (rows.data ?? []) as { question_id: string; value: AnswerValue }[]) {
@@ -116,7 +117,7 @@ async function settleProgress(formId: string, employeeId: string, done: boolean,
  */
 export async function saveAnswer(employeeId: string, key: string, raw: unknown, { preview = false }: { preview?: boolean } = {}): Promise<{ value: AnswerValue; progress: Progress; completedAt: string | null }> {
   const form = await openForm(preview);
-  const content = shownContent(await formContent(form.id));
+  const content = shownContent(await formContent(form.id), form);
   const question = content.questions.find(item => item.key === key);
   if (!question) throw new ServiceError(404, "Pertanyaan ini tidak ada lagi. Muat ulang halaman.");
   if (anonymousSectionIds(content).has(question.sectionId) || question.visibility === "anon") {
@@ -145,7 +146,7 @@ export async function saveAnswer(employeeId: string, key: string, raw: unknown, 
  */
 export async function submitAnonymous(employeeId: string, raw: Record<string, unknown>, { preview = false }: { preview?: boolean } = {}): Promise<{ progress: Progress; completedAt: string | null }> {
   const form = await openForm(preview);
-  const content = shownContent(await formContent(form.id));
+  const content = shownContent(await formContent(form.id), form);
   const anonymous = anonymousSectionIds(content);
   const questions = content.questions.filter(question => anonymous.has(question.sectionId));
   if (!questions.length) throw new ServiceError(404, "Kuesioner ini tidak punya bagian anonim.");

@@ -142,6 +142,23 @@ export async function notifyPeople(employeeIds: string[], note: { title: string;
   catch { /* the answer is saved either way */ }
 }
 
+/**
+ * A note from the app itself, not from a person (Admin WAM has no WAM account): the questionnaire
+ * reminder. Unlike notifyPeople it throws, so the admin hears when it did not go out.
+ */
+export async function notifyFromApp(employeeIds: string[], note: { title: string; body: string; label: string }): Promise<number> {
+  return send({ kind: "sesi", title: note.title, body: note.body, audience: { type: "orang", employeeIds, label: note.label }, createdBy: null });
+}
+
+/** The latest app note sent under this label: when, and to how many; null if none (or before the migration). */
+export async function lastAppNote(label: string): Promise<{ at: string; recipients: number } | null> {
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("pw_announcements").select("id,created_at").eq("audience_label", label).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error || !data) return null;
+  const { count } = await client.from("pw_notification_receipts").select("employee_id", { count: "exact", head: true }).eq("announcement_id", data.id);
+  return { at: data.created_at, recipients: count ?? 0 };
+}
+
 /** Panitia removes an announcement (a test, a mistake); it leaves every recipient's list too. */
 export async function deleteAnnouncement(id: string, viewer: Member): Promise<void> {
   if (!managesSessions(viewer)) throw new ServiceError(403, "Hanya panitia yang bisa menghapus pengumuman.");

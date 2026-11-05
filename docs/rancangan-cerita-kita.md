@@ -2,7 +2,8 @@
 
 Status: tahap 1 dan 2 dibangun (4 November 2026). Tahap 3 sedang dibangun: **Kartu rekan** (galeri
 dan profil rekan), **Rekap**, **Ekspor**, **Kamar**, **Kebutuhan peserta**, dan **Hasil survei** untuk BOD
-sudah ada (5 November; menunggu migrasi 202611050001 dan 202611050002). Tahap 4 belum. Ditulis 4 November 2026, diperbarui 5 November 2026.
+sudah ada (5 November; migrasi 202611050001 dan 202611050002 sudah dijalankan). Tahap 4
+(penghapusan otomatis dan pengingat) dibangun 5 November. Tahap 4 belum. Ditulis 4 November 2026, diperbarui 5 November 2026.
 
 Sumber: artifact mockup **"Cerita Kita WAM 2026"**
 (https://claude.ai/artifact/BwHcrRv8Wmcg4oRTNW5Uaq). Isinya 6 bagian, sekitar 60 pertanyaan, level
@@ -349,8 +350,18 @@ Panitia, dan Admin WAM. Memakai aturan Rekap dengan pembaca `{ hrOpen: false, fa
     dibiarkan di database tetapi tidak dipakai lagi.
 - **Ambang rangkuman anonim.** Rekap anonim baru tampil bila ada minimal 5 jawaban per kelompok,
   supaya departemen kecil tidak bisa ditebak.
-- **Penghapusan otomatis** data menginap dan kesehatan pada tanggal yang diatur. Admin melihat
-  jadwal penghapusannya.
+- **Penghapusan otomatis** (tahap 4, dibangun; keputusan pemilik 5 Nov 2026). Pada "Tanggal hapus
+  data menginap" (Pengaturan), mulai 00.00 WIB, yang dihapus permanen: jawaban menginap (33, 7–13,
+  38), kesehatan (16), alergi dan fobia (14b), dan pairing kamar (penghuni; daftar kamar hotel
+  tetap, dan kamar ditarik dari Beranda). Tidak memakai cron: penghapusan berjalan saat Admin WAM
+  dibuka pada atau setelah tanggal itu, dan ada tombol "Hapus sekarang" di Pengaturan. Sejak tanggal
+  itu pertanyaan-pertanyaan tersebut juga hilang dari form dan dari hitungan progres, jadi yang sudah
+  selesai tetap selesai. Pengaturan menampilkan jadwal, jumlah yang masih tersimpan, atau "Sudah
+  dihapus". Waktu dan pelaku penghapusan tidak dicatat terpisah.
+- **Pengingat** (tahap 4, dibangun): Progres → "Ingatkan yang belum", notifikasi WAM untuk semua yang
+  belum selesai, atau hanya "Belum mulai" / "Sedang mengisi" sesuai saringan. Hanya selama kuesioner
+  dibuka dan belum lewat tenggat, paling sering sekali per jam; Progres menampilkan kapan terakhir
+  dikirim dan ke berapa orang.
 
 ## Tahapan build
 

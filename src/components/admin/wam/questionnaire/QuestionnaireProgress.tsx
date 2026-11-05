@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, CheckCircle2, Circle, CircleDashed, Search } from "lucide-react";
-import { Button, Field } from "@/components/ui";
+import { Button, Field, Notice } from "@/components/ui";
+import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
+import { adminRequest, errorMessage } from "@/components/admin/shared/api";
+import { praWamQuestionnaireApi } from "@/lib/routes";
 import type { ProgressReport, ProgressState } from "@/lib/server/pra-wam/questionnaire-admin";
 import styles from "./questionnaire.module.css";
 
@@ -17,12 +21,31 @@ const percent = (part: number, total: number) => total ? Math.round((part / tota
  * same per department; and everyone with their status and last activity, filtered by status,
  * department or name. No answers are shown here. Reminders come in stage 4.
  */
-export function QuestionnaireProgress({ report }: { report: ProgressReport }) {
+export type ReminderState = { open: boolean; last: { at: string; recipients: number } | null };
+
+export function QuestionnaireProgress({ report, reminder = { open: false, last: null } }: { report: ProgressReport; reminder?: ReminderState }) {
+  const router = useRouter();
+  const [confirm, confirmDialog] = useConfirm();
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [state, setState] = useState<ProgressState | "">("");
   const [department, setDepartment] = useState("");
   const [query, setQuery] = useState("");
   const total = report.people.length;
   const search = query.trim().toLowerCase();
+  const remindWho = state === "belum" || state === "sedang" ? state : "semua";
+  const whoLabel = remindWho === "belum" ? "yang belum mulai" : remindWho === "sedang" ? "yang sedang mengisi" : "yang belum selesai";
+  const remindCount = report.people.filter(person => person.state !== "selesai" && (remindWho === "semua" || person.state === remindWho)).length;
+  const remind = async () => {
+    if (!(await confirm({ title: `Ingatkan ${whoLabel}?`, body: `${remindCount} orang mendapat notifikasi WAM untuk menyelesaikan ${report.formName}.`, confirmLabel: "Kirim pengingat" }))) return;
+    setSending(true); setSent(null);
+    try {
+      const result = await adminRequest(praWamQuestionnaireApi.remind, { method: "POST", body: JSON.stringify({ who: remindWho }) });
+      setSent({ tone: "success", text: result.message });
+      router.refresh();
+    } catch (error) { setSent({ tone: "error", text: errorMessage(error) }); }
+    finally { setSending(false); }
+  };
   const shown = report.people.filter(person => (!state || person.state === state) && (!department || person.department === department) && (!search || person.name.toLowerCase().includes(search)));
 
   return <div className="stack">
@@ -31,9 +54,16 @@ export function QuestionnaireProgress({ report }: { report: ProgressReport }) {
         <h2>Progres</h2>
         <p className={styles.muted}>{total} karyawan aktif · {report.sectionsTotal} bagian. Hanya status, tanpa isi jawaban.</p>
       </div>
-      <Button type="button" variant="secondary" disabled aria-describedby="qp-remind-note"><Bell size={18} aria-hidden /> Ingatkan yang belum (segera)</Button>
+      <Button type="button" variant="secondary" disabled={!reminder.open || !remindCount || sending} aria-describedby="qp-remind-note" onClick={() => void remind()}>
+        <Bell size={18} aria-hidden /> {sending ? "Mengirim…" : `Ingatkan ${whoLabel} (${remindCount})`}
+      </Button>
     </div>
-    <p id="qp-remind-note" className="sr-only">Pengingat lewat notifikasi WAM menyusul di tahap berikutnya.</p>
+    <p id="qp-remind-note" className={styles.muted}>
+      {!reminder.open ? "Pengingat hanya bisa dikirim selama kuesioner dibuka dan belum lewat tenggat." : "Lewat notifikasi WAM. Pilih \"Belum mulai\" atau \"Sedang mengisi\" di bawah untuk mengingatkan kelompok itu saja."}
+      {reminder.last && ` Terakhir dikirim ${when(reminder.last.at)} ke ${reminder.last.recipients} orang.`}
+    </p>
+    {sent && <Notice tone={sent.tone}>{sent.text}</Notice>}
+    {confirmDialog}
 
     <ul className={styles.stats} aria-label="Ringkasan progres">
       {(["belum", "sedang", "selesai"] as const).map(key => <li key={key}>

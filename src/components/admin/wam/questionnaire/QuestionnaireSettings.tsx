@@ -166,7 +166,7 @@ export function QuestionnaireSettings({ initial }: { initial: QForm }) {
           <input id="qs-editUntil" type="datetime-local" className="input" value={draft.editUntil} disabled={locked} onChange={event => set("editUntil", event.target.value)}
             aria-invalid={!!error("editUntil")} aria-describedby={described("editUntil", true)} />
         </Field>
-        <Field label="Tanggal hapus data menginap" name="qs-stayDeleteOn" error={error("stayDeleteOn")} hint="Paling lambat 30 hari setelah WAM. Penghapusan otomatis menyusul (tahap 4).">
+        <Field label="Tanggal hapus data menginap" name="qs-stayDeleteOn" error={error("stayDeleteOn")} hint="Paling lambat 30 hari setelah WAM. Pada tanggal ini data menginap dan kesehatan dihapus permanen (lihat di bawah).">
           <input id="qs-stayDeleteOn" type="date" className="input" value={draft.stayDeleteOn} disabled={locked} onChange={event => set("stayDeleteOn", event.target.value)}
             aria-invalid={!!error("stayDeleteOn")} aria-describedby={described("stayDeleteOn", true)} />
         </Field>

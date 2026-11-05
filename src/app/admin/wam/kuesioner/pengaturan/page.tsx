@@ -4,9 +4,11 @@ import { HrAccessSettings } from "@/components/admin/wam/questionnaire/HrAccessS
 import { QuestionnaireSettings } from "@/components/admin/wam/questionnaire/QuestionnaireSettings";
 import { QuestionnaireTabs } from "@/components/admin/wam/questionnaire/QuestionnaireTabs";
 import { QuestionnaireWaiting } from "@/components/admin/wam/questionnaire/QuestionnaireWaiting";
+import { StayPurge } from "@/components/admin/wam/questionnaire/StayPurge";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { hrAccessSettings } from "@/lib/server/pra-wam/hr-lock";
+import { purgeIfDue, purgeStatus } from "@/lib/server/pra-wam/purge";
 import { adminQuestionnaire } from "@/lib/server/pra-wam/questionnaire-admin";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +18,10 @@ export const metadata = { title: "Pengaturan kuesioner · Admin WAM" };
 export default async function QuestionnaireSettingsPage() {
   const role = await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
+  // Run a due deletion first, so the status below already shows its result.
+  await purgeIfDue();
   const content = await adminQuestionnaire();
+  const purge = content ? await purgeStatus(content.form).catch(() => null) : null;
   // Only the super admin gets the picker's list of people.
   const access = content ? await hrAccessSettings({ withCandidates: role === "super" }) : null;
   return <WamAdminFrame current="kuesioner">
@@ -24,6 +29,7 @@ export default async function QuestionnaireSettingsPage() {
     {content
       ? <div className="stack">
         <QuestionnaireSettings initial={content.form} />
+        {purge && <StayPurge status={purge} />}
         {access && <HrAccessSettings initial={access} canEdit={role === "super"} />}
       </div>
       : <QuestionnaireWaiting />}

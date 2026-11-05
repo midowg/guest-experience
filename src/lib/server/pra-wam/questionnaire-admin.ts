@@ -1,4 +1,5 @@
 import "server-only";
+import { withoutPurged } from "@/lib/pra-wam/purge";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
@@ -551,7 +552,8 @@ export async function questionnaireProgress(): Promise<ProgressReport | null> {
     allRows<{ employee_id: string }>((from, to) => client.from("cq_anon_receipts").select("employee_id").eq("form_id", form.id).order("employee_id").range(from, to)),
   ]);
   return progressReport({
-    formName: form.name, ...content, progress, answers, receipts: receipts.map(row => row.employee_id),
+    // From the stay date, the deleted questions count for no one (see purge.ts).
+    formName: form.name, ...withoutPurged(content, form), progress, answers, receipts: receipts.map(row => row.employee_id),
     people: people.filter(person => person.active).map(({ id, name, department }) => ({ id, name, department })),
   });
 }

@@ -293,6 +293,10 @@ export const praWamQuestionnaireApi = {
   order: `${QUESTIONNAIRE_ADMIN_API}/order`,
   /** GET: who started, who finished, by department. */
   progress: `${QUESTIONNAIRE_ADMIN_API}/progress`,
+  /** POST: "Hapus sekarang", the stay and health data, from the date set in Pengaturan. */
+  purge: `${QUESTIONNAIRE_ADMIN_API}/purge`,
+  /** POST {who}: "Ingatkan yang belum", a WAM notification to those not done. */
+  remind: `${QUESTIONNAIRE_ADMIN_API}/remind`,
   /** GET ?bagian=<section key>: the answers as .xlsx; with HR answers only when Data HR is open, then logged as `ekspor`. */
   export: (section?: string) => `${QUESTIONNAIRE_ADMIN_API}/export${section ? `?bagian=${encodeURIComponent(section)}` : ""}`,
 };

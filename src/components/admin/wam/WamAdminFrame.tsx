@@ -1,4 +1,5 @@
 import { cache, type ReactNode } from "react";
+import { purgeIfDue } from "@/lib/server/pra-wam/purge";
 import { AdminShell } from "@/components/admin/shared/AdminShell";
 import { openResetRequestCount } from "@/lib/server/pra-wam/reset-requests";
 import styles from "@/components/admin/admin.module.css";
@@ -16,7 +17,8 @@ export const waitingResetRequests = cache(() => openResetRequestCount().catch(()
  * between sections; `wide` lets the page itself use that width (a preview or the floor plan).
  */
 export async function WamAdminFrame({ current, children, wide = false }: { current: WamSectionKey; children: ReactNode; wide?: boolean }) {
-  const waiting = await waitingResetRequests();
+  // From the stay date on, opening Admin WAM deletes the stay and health data (see purge.ts).
+  const [waiting] = await Promise.all([waitingResetRequests(), purgeIfDue()]);
   return <AdminShell wide>
     <div className={`${frame.frame} ${wide ? frame.frameWide : ""}`}>
       <div className={frame.frameHead}>

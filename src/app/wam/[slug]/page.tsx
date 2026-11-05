@@ -36,7 +36,7 @@ export default async function QuestionnairePage({ params }: Params) {
   const preview = form.status === "draf";
   if (preview && !managesApp(member)) notFound();
 
-  const content = shownContent(await formContent(form.id));
+  const content = shownContent(await formContent(form.id), form);
   const [mine, card, departments, staff] = await Promise.all([
     myAnswers(form, member.id, content),
     // A trial card from the draft is shown only while trying the draft.
