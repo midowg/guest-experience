@@ -1,9 +1,11 @@
+import { Download } from "lucide-react";
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { QuestionnaireExport } from "@/components/admin/wam/questionnaire/QuestionnaireExport";
-import { QuestionnaireTabs } from "@/components/admin/wam/questionnaire/QuestionnaireTabs";
+import { QuestionnaireFrame } from "@/components/admin/wam/questionnaire/QuestionnaireFrame";
 import { QuestionnaireWaiting } from "@/components/admin/wam/questionnaire/QuestionnaireWaiting";
-import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
+import { ConsoleButtonLink } from "@/components/console";
 import { adminReader } from "@/lib/pra-wam/recap";
+import { praWamQuestionnaireApi } from "@/lib/routes";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { hrUnlocked } from "@/lib/server/pra-wam/hr-lock";
@@ -21,8 +23,9 @@ export default async function QuestionnaireExportPage() {
   const unlock = form ? await hrUnlocked() : null;
   const open = !!form && unlock?.formId === form.id;
   const plan = form ? await exportPlan(form, adminReader(open)) : null;
-  return <WamAdminFrame current="kuesioner">
-    <QuestionnaireTabs current="ekspor" />
+  return <QuestionnaireFrame current="ekspor" primary={form && plan
+    ? <ConsoleButtonLink variant="primary" href={praWamQuestionnaireApi.export()} download icon={<Download size={18} aria-hidden="true" />}>Unduh semua bagian</ConsoleButtonLink>
+    : undefined}>
     {form && plan ? <QuestionnaireExport plan={plan} hrOpenBy={open ? unlock!.actor.name : null} /> : <QuestionnaireWaiting />}
-  </WamAdminFrame>;
+  </QuestionnaireFrame>;
 }

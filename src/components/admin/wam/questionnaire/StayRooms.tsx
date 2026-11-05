@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, BedDouble, CheckCircle2, Plus, Search, Send, Sparkles, Trash2, Undo2, UserMinus } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
+import { SectionToolbar } from "@/components/console";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { praWamStayApi } from "@/lib/routes";
@@ -94,28 +95,23 @@ export function StayRooms({ board }: { board: StayBoard }) {
 
   return <div className="stack">
     {confirmDialog}
-    <div className={styles.head}>
-      <div>
-        <h2>Kamar</h2>
-        <p className={styles.muted}>
-          {board.rooms.length ? `${filled} dari ${board.rooms.length} kamar terisi · ${placed} dari ${beds} kasur` : "Belum ada kamar."}
-          {` · ${board.waiting.length} orang menunggu kamar`}
-          {board.unanswered ? ` · ${board.unanswered} belum mengisi bagian menginap` : ""}
-        </p>
-      </div>
-      <div className={styles.actions}>
-        <Button type="button" variant="secondary" disabled={busy || !board.rooms.length || !board.waiting.length} onClick={() => void run(send(praWamStayApi.suggest, "POST"))}>
-          <Sparkles size={18} aria-hidden /> Usulkan otomatis
-        </Button>
-        {board.publishedAt
-          ? <Button type="button" variant="secondary" disabled={busy} onClick={async () => {
-            if (await confirm({ title: "Tarik kamar dari Beranda?", body: "Peserta tidak lagi melihat kamar dan teman sekamarnya sampai diterbitkan lagi.", confirmLabel: "Tarik" })) void run(send(praWamStayApi.publish, "PUT", { published: false }));
-          }}><Undo2 size={18} aria-hidden /> Tarik dari peserta</Button>
-          : <Button type="button" disabled={busy || !placed} onClick={async () => {
-            if (await confirm({ title: "Terbitkan kamar ke peserta?", body: `Setiap peserta yang sudah dapat kamar melihat nomor kamar dan nama teman sekamarnya di Beranda WAM. Perubahan sesudahnya langsung terlihat.${board.waiting.length ? ` ${board.waiting.length} orang masih menunggu kamar.` : ""}`, confirmLabel: "Terbitkan" })) void run(send(praWamStayApi.publish, "PUT", { published: true }));
-          }}><Send size={18} aria-hidden /> Terbitkan ke peserta</Button>}
-      </div>
-    </div>
+    <SectionToolbar title="Pairing kamar">
+      <Button type="button" variant="secondary" disabled={busy || !board.rooms.length || !board.waiting.length} onClick={() => void run(send(praWamStayApi.suggest, "POST"))}>
+        <Sparkles size={18} aria-hidden /> Usulkan otomatis
+      </Button>
+      {board.publishedAt
+        ? <Button type="button" variant="secondary" disabled={busy} onClick={async () => {
+          if (await confirm({ title: "Tarik kamar dari Beranda?", body: "Peserta tidak lagi melihat kamar dan teman sekamarnya sampai diterbitkan lagi.", confirmLabel: "Tarik" })) void run(send(praWamStayApi.publish, "PUT", { published: false }));
+        }}><Undo2 size={18} aria-hidden /> Tarik dari peserta</Button>
+        : <Button type="button" disabled={busy || !placed} onClick={async () => {
+          if (await confirm({ title: "Terbitkan kamar ke peserta?", body: `Setiap peserta yang sudah dapat kamar melihat nomor kamar dan nama teman sekamarnya di Beranda WAM. Perubahan sesudahnya langsung terlihat.${board.waiting.length ? ` ${board.waiting.length} orang masih menunggu kamar.` : ""}`, confirmLabel: "Terbitkan" })) void run(send(praWamStayApi.publish, "PUT", { published: true }));
+        }}><Send size={18} aria-hidden /> Terbitkan ke peserta</Button>}
+    </SectionToolbar>
+    <p className={styles.muted}>
+      {board.rooms.length ? `${filled} dari ${board.rooms.length} kamar terisi · ${placed} dari ${beds} kasur` : "Belum ada kamar."}
+      {` · ${board.waiting.length} orang menunggu kamar`}
+      {board.unanswered ? ` · ${board.unanswered} belum mengisi bagian menginap` : ""}
+    </p>
 
     {board.publishedAt
       ? <Notice tone="success">Terbit sejak {when(board.publishedAt)}. Peserta melihat kamarnya di Beranda; setiap perubahan di sini langsung terlihat.</Notice>

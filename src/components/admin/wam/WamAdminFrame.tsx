@@ -1,9 +1,8 @@
 import { cache, type ReactNode } from "react";
 import { purgeIfDue } from "@/lib/server/pra-wam/purge";
-import { AdminShell } from "@/components/admin/shared/AdminShell";
+import { adminRole } from "@/lib/server/admin-session";
 import { openResetRequestCount } from "@/lib/server/pra-wam/reset-requests";
-import styles from "@/components/admin/admin.module.css";
-import frame from "./wam-admin.module.css";
+import admin from "@/components/admin/admin.module.css";
 import { WamNav } from "./WamNav";
 import type { WamSectionKey } from "./sections";
 
@@ -11,22 +10,16 @@ import type { WamSectionKey } from "./sections";
 export const waitingResetRequests = cache(() => openResetRequestCount().catch(() => null));
 
 /**
- * Every Admin WAM page: the admin header, the title, and the side menu of sections (with how many
- * "Lupa password" requests wait, and the way into the app). The page checks the session and
- * renders its section beside the menu. The container is always wide, so the menu does not move
- * between sections; `wide` lets the page itself use that width (a preview or the floor plan).
+ * Every Admin WAM page in the console frame (WamNav): the sidebar with how many "Lupa password"
+ * requests wait, and the page in the white panel. The page checks the session itself
+ * (requireAdminPage) and starts with its own PageHeader. `wide` lets the page use the panel's
+ * full width (a preview or the floor plan). The admin skin (admin.module.css .shell) stays on, so
+ * the sections' forms keep their look.
  */
 export async function WamAdminFrame({ current, children, wide = false }: { current: WamSectionKey; children: ReactNode; wide?: boolean }) {
   // From the stay date on, opening Admin WAM deletes the stay and health data (see purge.ts).
-  const [waiting] = await Promise.all([waitingResetRequests(), purgeIfDue()]);
-  return <AdminShell wide>
-    <div className={`${frame.frame} ${wide ? frame.frameWide : ""}`}>
-      <div className={frame.frameHead}>
-        <p className="eyebrow">Admin WAM</p>
-        <h1 className={styles.title}>Aplikasi WAM</h1>
-      </div>
-      <WamNav current={current} badges={waiting ? { reset: String(waiting) } : undefined} />
-      <div className={frame.frameBody}>{children}</div>
-    </div>
-  </AdminShell>;
+  const [waiting, role] = await Promise.all([waitingResetRequests(), adminRole(), purgeIfDue()]);
+  return <WamNav current={current} badges={waiting ? { reset: String(waiting) } : undefined} superAdmin={role === "super"} wide={wide} className={admin.shell}>
+    {children}
+  </WamNav>;
 }

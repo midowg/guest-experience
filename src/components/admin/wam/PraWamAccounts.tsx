@@ -1,47 +1,64 @@
 "use client";
 
-import { useState } from "react";
-import { Pencil } from "lucide-react";
-import { Button, Notice } from "@/components/ui";
+import { useMemo, useState } from "react";
+import { ChevronRight, UserPlus } from "lucide-react";
+import { Notice } from "@/components/ui";
+import { Avatar, CardGrid, ConsoleButton, FilterChips, Pill, PersonCard, RolePills, SectionToolbar, ViewToggle, useViewPreference } from "@/components/console";
+import cs from "@/components/console/console.module.css";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { blockedRoles, praWamRoles, roleConflicts, roleLabels, roleProblem, type PraWamRole } from "@/lib/pra-wam/roles";
+import type { PraWamRole } from "@/lib/pra-wam/roles";
 import { EMPLOYEES_ADMIN, praWamAccountsApi, praWamPath } from "@/lib/routes";
 import type { AccountRow } from "@/lib/server/pra-wam/accounts";
-import styles from "@/components/admin/admin.module.css";
+import { AccountDetail } from "./akun/AccountDetail";
+import { AccountsHeader } from "./akun/AccountsHeader";
+import { accountFilters, accountStatus, accountSummary, byName, lastLoginLabel, matchesFilter, matchesSearch, roleItems, summaryLine, type AccountFilter } from "./akun/account-view";
+import css from "./akun/akun.module.css";
 
 type Message = { tone: "success" | "error"; text: string; skipped?: string[] } | null;
 
-/** What each role does and which go together; the rule itself lives in lib/pra-wam/roles. */
-const roleGuide: { role: string; does: string; combines: string }[] = [
-  { role: "Peserta", does: "Book ruang, agenda dan dokumen sesi sendiri, absen QR.", combines: "Dasar setiap akun" },
-  { role: "Panitia", does: "Kelola acara: sesi, permintaan jadwal, pengumuman; batalkan booking siapa pun.", combines: "Admin WAM, HOD" },
-  { role: "Admin WAM", does: "Seperti Panitia, ditambah pengaturan aplikasi.", combines: "Panitia, HOD" },
-  { role: "HOD", does: "Lead departemen, dari impor unit (tidak dicentang di sini). Aplikasi biasa; unitnya tampil lebih dulu saat memilih partisipan.", combines: "Panitia, Admin WAM" },
-  { role: "BOD", does: "Menu BOD: Ringkasan, Peserta, Survei; melihat semua sesi tanpa mengubah. Tetap bisa ikut sesi dan book ruang.", combines: "Tidak dengan peran lain" },
-];
+export type PraWamAccountsProps = {
+  initial: AccountRow[];
+  migrated: boolean;
+  passwordReady: boolean;
+  /** Data karyawan is the super admin's: whether its link is offered. */
+  superAdmin?: boolean;
+  /** Per employee id: a photo address and a job title (accountExtras); initials and no job without. */
+  photos?: Record<string, string>;
+  jobs?: Record<string, string>;
+  /** Employee ids with an open "Lupa password" request. */
+  resetRequested?: readonly string[];
+  /** Open reset requests, for the tab's badge. */
+  waiting?: number | null;
+};
 
 /**
- * Admin WAM → Akun dan peran: accounts for everyone active in Data karyawan with an email (shared
- * first password), roles on top of peserta, the sign-in email, and password resets. Data karyawan
- * itself is the super admin's: `superAdmin` decides whether its link is offered.
+ * Admin WAM → Akun dan peran, tab Akun: everyone active in Data karyawan with an email gets an
+ * account (shared first password), roles on top of peserta, the sign-in email, and password
+ * resets. People show as cards (or a table, remembered on this device), with search and a role
+ * filter; a card opens the person's detail, where every change is made.
  */
-export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = false }: { initial: AccountRow[]; migrated: boolean; passwordReady: boolean; superAdmin?: boolean }) {
+export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = false, photos = {}, jobs = {}, resetRequested = [], waiting = null }: PraWamAccountsProps) {
   const [rows, setRows] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<Message>(null);
   const [rowError, setRowError] = useState<{ id: string; text: string } | null>(null);
-  const [filter, setFilter] = useState("");
-  const [editing, setEditing] = useState<{ id: string; email: string } | null>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<AccountFilter>("semua");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [view, setView] = useViewPreference("admin-wam-akun");
   const [confirm, confirmDialog] = useConfirm();
-  const active = rows.filter(row => row.active);
-  const missing = active.filter(row => !row.hasAccount);
-  const noEmail = missing.filter(row => !row.email);
-  const query = filter.trim().toLowerCase();
-  // A to Z by name, so a person is easy to find by scrolling.
-  const shown = [...rows].sort((a, b) => a.name.localeCompare(b.name, "id", { sensitivity: "base" })).filter(row => !query || `${row.name} ${row.department} ${row.email}`.toLowerCase().includes(query));
+  const requested = useMemo(() => new Set(resetRequested), [resetRequested]);
 
-  /** `rowId`: a change to one person, whose error shows on their row rather than at the top. */
+  const summary = accountSummary(rows);
+  const sorted = useMemo(() => [...rows].sort(byName), [rows]);
+  const searched = sorted.filter(row => matchesSearch(row, query));
+  const shown = searched.filter(row => matchesFilter(row, filter));
+  const open = openId ? rows.find(row => row.employeeId === openId) ?? null : null;
+  /** A fresh detail: the last change's message belongs to someone else. */
+  const openDetail = (id: string) => { setMessage(null); setRowError(null); setOpenId(id); };
+
+  /** `rowId`: a change to one person, whose error shows in their detail rather than at the top. */
   async function run(key: string, url: string, body: unknown, method: "POST" | "PATCH", rowId?: string): Promise<boolean> {
     setBusy(key); setMessage(null); setRowError(null);
     try {
@@ -58,6 +75,8 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
   }
   const toggleRole = (row: AccountRow, role: PraWamRole) =>
     run(`role-${row.employeeId}`, praWamAccountsApi(row.employeeId), { roles: row.roles.includes(role) ? row.roles.filter(item => item !== role) : [...row.roles, role] }, "PATCH", row.employeeId);
+  const saveEmail = (row: AccountRow, email: string) => run(`email-${row.employeeId}`, praWamAccountsApi(row.employeeId), { email }, "PATCH", row.employeeId);
+  const createOne = (row: AccountRow) => run(`create-${row.employeeId}`, praWamAccountsApi(row.employeeId), null, "POST", row.employeeId);
   const reset = async (row: AccountRow) => {
     if (!(await confirm({
       title: "Atur ulang password?",
@@ -68,57 +87,65 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
     void run(`reset-${row.employeeId}`, praWamAccountsApi(row.employeeId), { resetPassword: true }, "PATCH", row.employeeId);
   };
 
-  if (!migrated) return <Notice tone="warning">Akun Pra WAM menunggu migrasi 202611040001_pra_wam_appraisal.sql.</Notice>;
-  return <div className="stack">
+  if (!migrated) return <>
+    <AccountsHeader tab="akun" waiting={waiting} />
+    <Notice tone="warning">Akun Pra WAM menunggu migrasi 202611040001_pra_wam_appraisal.sql.</Notice>
+  </>;
+
+  const createLabel = busy === "create" ? "Membuat akun…" : summary.creatable ? `Buat ${summary.creatable} akun` : "Buat akun";
+  const chips = accountFilters.map(chip => ({ ...chip, count: searched.filter(row => matchesFilter(row, chip.value)).length }));
+  const status = (row: AccountRow) => accountStatus(row, requested);
+  const label = (row: AccountRow) => `${row.name}${row.active ? "" : " (nonaktif)"}`;
+
+  return <>
     {confirmDialog}
-    <p>{active.length - missing.length} dari {active.length} karyawan aktif sudah punya akun. Mereka masuk di <a href={praWamPath.login()}>{praWamPath.login()}</a> dengan email kantor dan password awal yang sama, lalu bisa menggantinya di Profil → Pengaturan.</p>
+    <AccountsHeader tab="akun" waiting={waiting} subtitle={summaryLine(summary)}
+      actions={<ConsoleButton variant="primary" icon={<UserPlus size={18} aria-hidden />} disabled={!!busy || !passwordReady || summary.creatable === 0}
+        title={summary.creatable === 0 ? "Semua karyawan aktif yang punya email sudah punya akun." : undefined}
+        onClick={() => run("create", praWamAccountsApi(), null, "POST")}>{createLabel}</ConsoleButton>} />
+
     {!passwordReady && <Notice tone="warning">Password awal belum disiapkan. Isi WAM_DEFAULT_PASSWORD (minimal 8 karakter) pada server, lalu muat ulang halaman ini.</Notice>}
-    {noEmail.length > 0 && <Notice tone="info">{noEmail.length} orang belum punya email. Isi emailnya lewat tombol ubah email di tabel di bawah{superAdmin ? <>, atau di <a href={EMPLOYEES_ADMIN}>Data karyawan</a> (impor ulang Excel dengan kolom EMAIL)</> : ""}.</Notice>}
-    <div className={styles.qrActions}>
-      <Button type="button" disabled={!!busy || !passwordReady || missing.length === noEmail.length} onClick={() => run("create", praWamAccountsApi(), null, "POST")}>{busy === "create" ? "Membuat akun…" : `Buat ${missing.length - noEmail.length} akun`}</Button>
-    </div>
+    {summary.missingEmail > 0 && <Notice tone="info">{summary.missingEmail} orang belum punya email. Isi emailnya lewat detail orangnya (filter Semua, status Belum ada akun){superAdmin ? <>, atau di <a href={EMPLOYEES_ADMIN}>Data karyawan</a> (impor ulang Excel dengan kolom EMAIL)</> : ""}.</Notice>}
     {message && <Notice tone={message.tone}>{message.text}{message.skipped?.length ? <ul>{message.skipped.map(item => <li key={item}>{item}</li>)}</ul> : null}</Notice>}
 
-    <h2>Akun dan peran</h2>
-    <p>Semua orang yang punya akun adalah peserta. Centang untuk menambah peran. Panitia, Admin WAM, dan HOD bisa digabung; <strong>BOD berdiri sendiri</strong>. Perubahan peran berlaku di halaman berikutnya yang dibuka orang itu, tanpa perlu masuk ulang.</p>
-    <div style={{ overflowX: "auto" }}>
-      <table className={styles.table}>
-        <caption className="sr-only">Peran dan gabungannya</caption>
-        <thead><tr><th>Peran</th><th>Yang bisa dilakukan</th><th>Bisa digabung dengan</th></tr></thead>
-        <tbody>{roleGuide.map(item => <tr key={item.role}><td><strong>{item.role}</strong></td><td>{item.does}</td><td>{item.combines}</td></tr>)}</tbody>
-      </table>
-    </div>
-    <input className="input" type="search" aria-label="Cari nama, departemen, atau email" placeholder="Cari nama, departemen, atau email" value={filter} onChange={event => setFilter(event.target.value)} />
-    <div style={{ overflowX: "auto" }}>
-      <table className={styles.table}>
-        <thead><tr><th>Nama</th><th>Email</th><th>Akun</th>{praWamRoles.map(role => <th key={role}>{roleLabels[role]}</th>)}<th /></tr></thead>
-        <tbody>{shown.map(row => {
-          const standing = { isLead: row.leads.length > 0 };
-          const blocked = blockedRoles(row.roles, standing);
-          const clash = roleConflicts(row.roles, standing).length ? roleProblem(row.roles, standing) : null;
-          const hintId = `peran-${row.employeeId}`;
-          const hint = clash ? `${clash} Lepas BOD, atau lepas peran lainnya satu per satu.` : Object.values(blocked)[0];
-          return <tr key={row.employeeId}>
-          <td>{row.name}{!row.active && " (nonaktif)"}<br /><small>{row.department}</small>
-            {row.leads.map(name => <span key={name} className={styles.guestBadge} style={{ display: "inline-block", marginTop: 4, marginRight: 4 }}>HOD · {name}</span>)}
-            {hint && <div id={hintId} className={clash ? "field-error" : "field-hint"}>{hint}</div>}
-            {rowError?.id === row.employeeId && <div role="alert" className="field-error">{rowError.text}</div>}
-          </td>
-          <td>{editing?.id === row.employeeId
-            ? <form onSubmit={event => { event.preventDefault(); void run(`email-${row.employeeId}`, praWamAccountsApi(row.employeeId), { email: editing.email }, "PATCH", row.employeeId).then(ok => { if (ok) setEditing(null); }); }} style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                <input className="input" type="email" aria-label={`Email ${row.name}`} value={editing.email} maxLength={200} autoFocus style={{ minWidth: "14rem" }} onChange={event => setEditing({ id: row.employeeId, email: event.target.value })} />
-                <Button type="submit" disabled={!!busy || !editing.email.trim()}>{busy === `email-${row.employeeId}` ? "Menyimpan…" : "Simpan"}</Button>
-                <Button type="button" variant="quiet" disabled={!!busy} onClick={() => setEditing(null)}>Batal</Button>
-              </form>
-            : <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>{row.email || "—"}
-                <button type="button" className="button button--quiet" style={{ minHeight: 44, minWidth: 44, padding: 0 }} aria-label={`Ubah email ${row.name}`} disabled={!!busy} onClick={() => setEditing({ id: row.employeeId, email: row.email })}><Pencil size={16} aria-hidden /></button>
-              </span>}</td>
-          <td>{!row.hasAccount ? "Belum ada" : row.lastLoginAt ? (row.mustChangePassword ? "Masuk, password awal" : "Masuk") : "Siap"}</td>
-          {praWamRoles.map(role => <td key={role}><input type="checkbox" aria-label={`${roleLabels[role]}: ${row.name}`} title={blocked[role]} aria-describedby={hint ? hintId : undefined} checked={row.roles.includes(role)} disabled={!!busy || !!blocked[role]} onChange={() => toggleRole(row, role)} /></td>)}
-          <td>{row.hasAccount && <Button type="button" variant="quiet" disabled={!!busy || !passwordReady} onClick={() => reset(row)}>{busy === `reset-${row.employeeId}` ? "Mengatur…" : "Reset password"}</Button>}</td>
-        </tr>;
-        })}</tbody>
-      </table>
-    </div>
-  </div>;
+    <section className={css.section} aria-labelledby="semua-akun">
+      <SectionToolbar title={<span id="semua-akun">Semua akun</span>} count={`${shown.length} orang`}
+        search={{ label: "Cari nama, unit, atau email", placeholder: "Cari nama, unit, email", value: query, onChange: setQuery }}
+        view={<ViewToggle value={view} onChange={setView} />} />
+      <FilterChips label="Saring peran dan status" chips={chips} value={filter} onChange={setFilter} />
+      <p className={css.lead}>{summary.withAccount} dari {summary.active} karyawan aktif sudah punya akun. Mereka masuk di <a href={praWamPath.login()}>{praWamPath.login()}</a> dengan email kantor dan password awal yang sama, lalu bisa menggantinya di Profil → Pengaturan.</p>
+
+      {shown.length === 0 ? <p className={css.empty}>Tidak ada orang yang cocok. Ganti kata cari atau saringannya.</p>
+        : view === "kartu"
+          ? <CardGrid label="Akun">{shown.map(row => <PersonCard key={row.employeeId} name={label(row)} job={jobs[row.employeeId]} photo={photos[row.employeeId]}
+              status={status(row)} unit={row.department} roles={roleItems(row)} email={row.email || "Belum ada email"}
+              meta={`Terakhir masuk: ${lastLoginLabel(row)}`} onClick={() => openDetail(row.employeeId)} />)}</CardGrid>
+          : <div className={cs.tableWrap}>
+              <table className={cs.table}>
+                <caption className="sr-only">Akun, urut nama</caption>
+                <thead><tr><th scope="col">Nama</th><th scope="col">Unit</th><th scope="col">Peran</th><th scope="col">Email</th><th scope="col">Status</th><th scope="col">Terakhir masuk</th><th scope="col"><span className="sr-only">Buka</span></th></tr></thead>
+                <tbody>{shown.map(row => {
+                  const state = status(row);
+                  return <tr key={row.employeeId}>
+                    <td><span className={css.nameCell}><Avatar name={row.name} photo={photos[row.employeeId]} size={36} />
+                      <span className={css.nameText}><strong>{label(row)}</strong>{jobs[row.employeeId] && <small>{jobs[row.employeeId]}</small>}</span></span></td>
+                    <td className={cs.tableMuted}>{row.department || "—"}</td>
+                    <td><RolePills roles={roleItems(row)} max={1} /></td>
+                    <td className={css.emailCell}>{row.email || "—"}</td>
+                    <td><Pill tone={state.tone}>{state.label}</Pill></td>
+                    <td className={cs.tableMuted}>{lastLoginLabel(row)}</td>
+                    <td><button type="button" className={css.openButton} aria-label={`Buka akun ${row.name}`} onClick={() => openDetail(row.employeeId)}><ChevronRight size={18} aria-hidden /></button></td>
+                  </tr>;
+                })}</tbody>
+              </table>
+            </div>}
+    </section>
+
+    {open && <AccountDetail key={open.employeeId} row={open} status={status(open)} photo={photos[open.employeeId]} job={jobs[open.employeeId]}
+      busy={busy} passwordReady={passwordReady} error={rowError?.id === open.employeeId ? rowError.text : undefined}
+      done={message?.tone === "success" ? message.text : undefined}
+      onClose={() => { setOpenId(null); setRowError(null); }}
+      onToggleRole={role => void toggleRole(open, role)} onSaveEmail={email => saveEmail(open, email)}
+      onReset={() => void reset(open)} onCreate={() => void createOne(open)} />}
+  </>;
 }

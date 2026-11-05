@@ -3,7 +3,7 @@ import { BriefcaseBusiness, Lock, Users } from "lucide-react";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
 import { AccountStatus, ForumStatus } from "@/components/pra-wam/BodPeople";
 import { initials } from "@/lib/pra-wam/bod";
-import { roleLabels, roleSummary, seesAllSessions } from "@/lib/pra-wam/roles";
+import { bodOnly, roleLabels, roleSummary, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { bodProfile } from "@/lib/server/pra-wam/dashboard";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
@@ -34,7 +34,8 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const viewerRole = member.roles.includes("bod") ? roleLabels.bod : member.roles.includes("admin") ? roleLabels.admin : roleLabels.panitia.toLowerCase();
   const attended = person.forums.filter(forum => forum.mark === "hadir").length;
 
-  return <PraWamShell member={member} back={{ href: praWamPath.people, title: "Profil peserta" }}>
+  // The panitia stay in Kelola acara (its sidebar on a desktop); a BOD keeps the BOD frame.
+  return <PraWamShell member={member} current={bodOnly(member) ? undefined : "peserta"} back={{ href: praWamPath.people, title: "Profil peserta" }}>
     <div className={styles.profile}>
       <div className={styles.identity}>
         <span className={styles.avatarLarge} aria-hidden>{initials(person.name)}</span>

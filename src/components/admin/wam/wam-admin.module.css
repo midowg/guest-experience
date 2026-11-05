@@ -1,91 +1,9 @@
-/* Admin WAM's Ringkasan: key numbers that open their section, the schedule, and a card per section. */
-.section { display: grid; gap: var(--space-3); margin-bottom: var(--space-6); }
-.section h2 { margin: 0; font-size: 1.0625rem; }
-.stats { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); margin: 0; padding: 0; list-style: none; }
-.stat { display: grid; gap: 2px; min-height: 44px; height: 100%; padding: var(--space-4); border: 1px solid var(--line); border-radius: 16px; background: #fff; color: var(--color-text); text-decoration: none; }
-a.stat:hover { border-color: var(--blue); }
-.stat strong { font-size: 1.75rem; line-height: 1.1; color: var(--blue); }
-.stat span { color: var(--ink-soft); font-size: .8125rem; font-weight: 600; }
-.statAlert strong { color: var(--st-day); }
-.statAlert { border-color: color-mix(in srgb, var(--st-day) 35%, var(--line)); background: var(--st-day-bg); }
-.events { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-.events li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: 12px; background: #fff; }
-.events strong { flex: 1 1 12rem; }
-.pill { padding: 1px var(--space-2); border-radius: 999px; background: var(--page); color: var(--ink-soft); font-size: .75rem; font-weight: 700; }
-.pillOn { background: var(--st-after-bg); color: var(--st-after); }
-.cards { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); margin: 0; padding: 0; list-style: none; }
-.card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-3); align-items: start; height: 100%; padding: var(--space-4); border: 1px solid var(--line); border-radius: 16px; background: #fff; color: var(--color-text); text-decoration: none; }
-.card:hover { border-color: var(--blue); }
-.cardIcon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: #eef4fd; color: var(--blue); }
-.card h3 { margin: 0 0 2px; font-size: .9375rem; }
-.card p { margin: 0; color: var(--ink-soft); font-size: .8125rem; }
-
 /*
- * Every Admin WAM page: the title and the page on the right of a sticky side menu on a wide screen;
- * on a phone or tablet the title, then the sections as a row of tabs that scrolls sideways, then
- * the page. The frame always uses the wide container, so the menu stays put between sections.
+ * Admin WAM's Ringkasan (Penpot PRAWAM, "07 · Konsol admin", A1): the console's StatRow,
+ * DayTimeline and Cards do the work; these only lay them out. --cs-* variables only.
  */
-.frame { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "head" "nav" "body"; gap: var(--space-4); }
-.frameHead { grid-area: head; }
-.frameHead :global(.eyebrow) { margin: 0; }
-.frameHead h1 { margin-block: var(--space-1) 0; }
-.frameBody { grid-area: body; min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -12px 0 0; color: var(--cs-muted); font-size: 12px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 16px; align-items: start; }
+.allClear { margin: 0; color: var(--cs-muted); font-size: 14px; }
 
-.nav { grid-area: nav; min-width: 0; border: 1px solid var(--line); background: #fff; }
-.groups { min-width: 0; }
-.group ul { margin: 0; padding: 0; list-style: none; }
-.groupLabel { margin: 0 var(--space-3) var(--space-1); color: var(--ink-soft); font-size: .8125rem; font-weight: 700; }
-.item, .app { display: flex; align-items: center; gap: var(--space-3); min-height: 44px; padding: var(--space-2) var(--space-3); border-radius: 10px; font-weight: 600; text-decoration: none; transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease; }
-.item { color: var(--color-text); }
-.item > svg { flex: none; color: var(--ink-soft); transition: color var(--motion-fast) ease; }
-.item:hover, .app:hover { background: var(--page); }
-.item[aria-current="page"] { background: #eef4fd; color: var(--blue); font-weight: 800; }
-.item[aria-current="page"] > svg { color: var(--blue); }
-.item:focus-visible, .app:focus-visible { outline-offset: -3px; }
-.label { flex: 1; min-width: 0; line-height: 1.3; }
-/* A count that waits on the admin (reset requests): the "needs attention" colours. */
-.badge { flex: none; min-width: 1.5rem; padding: 0 7px; border-radius: 999px; background: var(--st-day-bg); color: var(--st-day); font-size: .75rem; font-weight: 800; line-height: 1.5rem; text-align: center; }
-.app { color: var(--blue); font-weight: 700; }
-.app > svg { flex: none; }
-@media (prefers-reduced-motion: reduce) { .item, .app, .item > svg { transition: none; } }
-
-@media (min-width: 64rem) {
-  .frame { grid-template-columns: 15rem minmax(0, 1fr); grid-template-areas: "nav head" "nav body"; grid-template-rows: auto 1fr; gap: var(--space-5) var(--space-6); align-items: start; }
-  .frameHead, .frameBody { max-width: 72rem; }
-  .frameWide .frameHead, .frameWide .frameBody { max-width: none; }
-  /* The admin header scrolls away, so the menu sticks to the top of the window. */
-  .nav { position: sticky; top: var(--space-5); max-height: calc(100vh - 2 * var(--space-5)); overflow-y: auto; padding: var(--space-3); border-radius: 16px; }
-  .bar, .drawer { display: none; }
-}
-
-/* The list itself, the same in the desktop sidebar and the phone's drawer. */
-.list { display: grid; gap: var(--space-3); }
-.groups { display: grid; gap: var(--space-4); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
-.group ul { display: grid; gap: 2px; }
-.item[aria-current="page"] { box-shadow: inset 3px 0 0 var(--blue); }
-
-/* Phone and tablet: a bar with the hamburger and the current section; the list opens as a drawer. */
-@media (max-width: 63.99rem) {
-  .nav { padding: 0; border-radius: 12px; }
-  .nav > .list { display: none; }
-  .bar { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 52px; padding: 4px var(--space-3) 4px 4px; border: 0; border-radius: 12px; background: none; color: var(--color-text); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
-  .bar:hover { background: var(--page); }
-  .bar:focus-visible { outline-offset: -3px; }
-  .burger { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: 10px; background: #eef4fd; color: var(--blue); }
-  .barText { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
-  .barText small { color: var(--ink-soft); font-size: .75rem; font-weight: 600; }
-  .barText strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .drawer { box-sizing: border-box; width: min(86vw, 20rem); max-width: none; height: 100dvh; max-height: none; margin: 0 auto 0 0; padding: 0; border: 0; border-radius: 0 16px 16px 0; background: #fff; color: var(--color-text); box-shadow: 0 24px 64px rgba(17, 24, 46, .28); }
-  .drawer::backdrop { background: rgba(17, 24, 46, .45); }
-  .drawerInner { display: flex; flex-direction: column; gap: var(--space-3); height: 100%; padding: var(--space-3) var(--space-3) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
-  .drawerHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding-left: var(--space-2); }
-  .drawerHead strong { font-size: 1.0625rem; }
-  .close { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 10px; background: none; color: var(--ink-soft); cursor: pointer; }
-  .close:hover { background: var(--page); color: var(--color-text); }
-}
-@media (max-width: 63.99rem) and (prefers-reduced-motion: no-preference) {
-  .drawer[open] { animation: wam-drawer .22s cubic-bezier(.2, .8, .2, 1); }
-  .drawer[open]::backdrop { animation: wam-fade .2s ease-out; }
-}
-@keyframes wam-drawer { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes wam-fade { from { opacity: 0; } to { opacity: 1; } }
+/* The frame and the menu are the console now: src/components/console (ConsoleShell), via WamNav. */

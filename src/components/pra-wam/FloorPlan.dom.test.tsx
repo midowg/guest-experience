@@ -46,21 +46,62 @@ describe("FloorPlan", () => {
     const { container, rerender } = render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
     // What the plan shows, not its tooltips.
     const text = () => [...container.querySelectorAll("svg text")].map(node => node.textContent).join(" ");
-    expect(text()).toContain("Muat 4 orang · min 1");
+    expect(text()).toContain("4 kursi");
     expect(text()).toContain("Kapasitas belum diisi");
     expect(text()).not.toContain("Kosong 09.00–10.00");
     rerender(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" subtitle="status" />);
     expect(text()).toContain("Kosong 09.00–10.00");
     // The status is still read out.
     expect(screen.getByRole("img", { name: "Nagapadma, kosong 09.00–10.00" })).toBeTruthy();
-    // Nagapadma's tall, narrow box runs its words along its length, so they stay inside; the plan
-    // says how many people fit, the tooltip adds the facilities.
+    // The plan says how many chairs; the tooltip adds the people and facilities. Nagapadma's
+    // narrow box keeps its name inside it: upright when it fits, else turned to run down the room.
     rerender(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
-    expect(text()).toContain("Muat 8 orang");
+    expect(text()).toContain("8 kursi");
     expect(text()).not.toContain("TV, Whiteboard");
     const nagapadma = screen.getByRole("img", { name: "Nagapadma, kosong 09.00–10.00" });
-    expect(nagapadma.querySelector("g[transform^='rotate(-90']")).toBeTruthy();
+    const name = [...nagapadma.querySelectorAll("text")].find(node => node.textContent === "Nagapadma")!;
+    const turned = !!nagapadma.querySelector("g[transform^='rotate(-90']");
+    if (!turned) expect(9 * 0.6 * Number(name.getAttribute("font-size"))).toBeLessThanOrEqual(125 - 8);
     expect(nagapadma.querySelector("title")?.textContent).toContain("TV, Whiteboard");
+  });
+
+  it("draws each room's chairs from its capacity, below its name", () => {
+    const { container } = render(<FloorPlan rooms={rooms} statusOf={() => free} label="Denah kantor" />);
+    const seats = (name: string) => screen.getByRole("img", { name: new RegExp(`^${name},`) }).querySelector("path[class*='seat']")?.getAttribute("d")?.match(/M/g)?.length ?? 0;
+    expect(seats("Nagapadma")).toBe(8);
+    expect(seats("Vasuki")).toBe(4);
+    // No capacity: a table without chairs.
+    expect(seats("Antareja")).toBe(0);
+    // Communal Space has no room here, yet keeps its sofas and coffee table; plants stand in the corridor.
+    expect(container.querySelectorAll("rect[class*='sofa']")).toHaveLength(2);
+    expect(container.querySelectorAll("circle[class*='plant']").length).toBeGreaterThan(0);
+    // The chairs are never read out on their own.
+    expect(container.querySelector("[class*='furniture']")?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("rings the chosen room and says it in a tooltip, and tags a taken room", () => {
+    const statusOf = (item: Room): PlanStatus => item.name === "Nagapadma" ? { tone: "busy", text: "Terpakai 09.30–11.00" } : free;
+    const { container, rerender } = render(<FloorPlan rooms={rooms} statusOf={statusOf} label="Denah kantor" onPick={() => {}} selectedId="vasuki" />);
+    const focus = container.querySelector("[class*='focus']")!;
+    expect(focus.getAttribute("aria-hidden")).toBe("true");
+    expect(focus.textContent).toBe("Vasuki · 4 kursi · kosong");
+    expect(screen.getByRole("img", { name: /^Nagapadma, terpakai/ }).textContent).toContain("Terpakai");
+    rerender(<FloorPlan rooms={rooms} statusOf={statusOf} label="Denah kantor" onPick={() => {}} highlightId="antareja" />);
+    expect(container.querySelector("[class*='focus']")?.textContent).toBe("Antareja · kapasitas belum diisi · kosong");
+    rerender(<FloorPlan rooms={rooms} statusOf={statusOf} label="Denah kantor" onPick={() => {}} />);
+    expect(container.querySelector("[class*='focus']")).toBeNull();
+  });
+
+  it("colours chairs by main or small room in the admin's view, as the room list groups them", () => {
+    const mixed = [room("Nagapadma", { capacity: 8 }), room("Antareja", { capacity: 4 }), room("Pantry", { kind: "area", capacity: 4 })];
+    render(<FloorPlan rooms={mixed} statusOf={() => free} label="Denah kantor" onPickSpot={() => {}} selectedSpot="nagapadma" />);
+    const legend = screen.getByRole("list", { name: "Keterangan warna" }).textContent;
+    expect(legend).toContain("Ruang utama");
+    expect(legend).toContain("Ruang kecil");
+    expect(screen.getByRole("button", { name: /^Nagapadma/ }).getAttribute("class")).toMatch(/kindMain/);
+    // A main room for at most 4 people is a small room; an area is not.
+    expect(screen.getByRole("button", { name: /^Antareja/ }).getAttribute("class")).toMatch(/kindSmall/);
+    expect(screen.getByRole("button", { name: /^Pantry/ }).getAttribute("class")).toMatch(/kindMain/);
   });
 
   it("shows a compass with north up, toward Limasan", () => {

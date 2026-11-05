@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Field, Notice } from "@/components/ui";
+import { Eye } from "lucide-react";
+import { Field, Notice } from "@/components/ui";
+import { ConsoleButton, ConsoleButtonLink, PageHeader, type Crumb } from "@/components/console";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { AboutCard, AboutText } from "@/components/pra-wam/BerandaCards";
 import { ABOUT_LIMITS, aboutProblems, cleanAbout, type About } from "@/lib/pra-wam/about";
-import { praWamAboutApi } from "@/lib/routes";
+import { praWamAboutApi, praWamPath } from "@/lib/routes";
 import type { AboutState } from "@/lib/server/pra-wam/about";
 import base from "@/components/pra-wam/pra-wam.module.css";
-import styles from "@/components/admin/admin.module.css";
+import css from "./pra-wam-rooms.module.css";
 
 type Draft = { title: string; summary: string; body: string; points: string };
 type Message = { tone: "success" | "error"; text: string } | null;
@@ -20,10 +22,12 @@ const counter = (value: string, max: number) => `${value.trim().length}/${max} k
 
 /**
  * Admin WAM → Apa itu WAM: an admin writes the title, the short summary for the card,
- * the full text and a few key points, and sees the card and the screen as participants will.
- * Plain text only. Until something is saved, participants see the default text.
+ * the full text and a few key points, and sees the card and the screen as participants will, in
+ * a phone frame beside the form. Plain text only. Until something is saved, participants see the
+ * default text. The page header (with Simpan, which submits the form) is drawn here, since it
+ * follows the draft.
  */
-export function PraWamAbout({ initial }: { initial: AboutState }) {
+export function PraWamAbout({ initial, crumbs = [], title = "Apa itu WAM" }: { initial: AboutState; crumbs?: readonly Crumb[]; title?: string }) {
   const [state, setState] = useState(initial);
   const [draft, setDraft] = useState<Draft>(toDraft(initial.about));
   const [tried, setTried] = useState(false);
@@ -65,14 +69,20 @@ export function PraWamAbout({ initial }: { initial: AboutState }) {
   const locked = !state.migrated || busy !== null;
   const describedBy = (key: keyof About) => `about-${key}-hint${error(key) ? ` about-${key}-error` : ""}`;
   return <div className="stack">
-    <h2>Apa itu WAM</h2>
-    <p>Kartu di Beranda yang menjelaskan WAM kepada peserta. Ketuk kartunya membuka teks lengkap. Tulis teks biasa: HTML tidak dijalankan, paragraf dipisah satu baris kosong.</p>
+    <PageHeader crumbs={crumbs} title={title}
+      subtitle="Kartu di Beranda yang menjelaskan WAM kepada peserta. Ketuk kartunya membuka teks lengkap."
+      actions={<>
+        <ConsoleButtonLink href={praWamPath.home} target="_blank" rel="noopener" icon={<Eye size={18} aria-hidden="true" />}>Lihat di Beranda<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>
+        <ConsoleButton variant="primary" type="submit" form="about-form" disabled={locked || !changed}>{busy === "save" ? "Menyimpan…" : "Simpan"}</ConsoleButton>
+      </>} />
     {!state.migrated
       ? <Notice tone="warning">Apa itu WAM menunggu migrasi 202611040008_pra_wam_about.sql. Sampai saat itu peserta melihat teks bawaan di bawah ini, dan isian belum bisa disimpan.</Notice>
-      : <p><small>{state.custom && state.updatedAt ? `Teks tersimpan, terakhir diubah ${updated(state.updatedAt)} WIB.` : "Belum diubah: peserta melihat teks bawaan."}</small></p>}
+      : <p className={css.note}>{state.custom && state.updatedAt ? `Teks tersimpan, terakhir diubah ${updated(state.updatedAt)} WIB.` : "Belum diubah: peserta melihat teks bawaan."} Tulis teks biasa: HTML tidak dijalankan, paragraf dipisah satu baris kosong.</p>}
 
-    <div style={{ display: "grid", gap: "1.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 22rem), 1fr))", alignItems: "start" }}>
-      <form className="stack" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
+    <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
+
+    <div className={css.aboutLayout}>
+      <form id="about-form" className="stack" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
         <Field label="Judul" name="about-title" error={error("title")} hint={counter(draft.title, ABOUT_LIMITS.title)}>
           <input id="about-title" className="input" value={draft.title} maxLength={ABOUT_LIMITS.title + 20} disabled={locked} onChange={set("title")}
             aria-invalid={!!error("title")} aria-describedby={describedBy("title")} />
@@ -89,19 +99,20 @@ export function PraWamAbout({ initial }: { initial: AboutState }) {
           <textarea id="about-points" className="textarea" rows={5} value={draft.points} disabled={locked} onChange={set("points")}
             aria-invalid={!!error("points")} aria-describedby={describedBy("points")} />
         </Field>
-        <div className={styles.qrActions}>
-          <Button type="submit" disabled={locked || !changed}>{busy === "save" ? "Menyimpan…" : "Simpan"}</Button>
-          {state.custom && <Button type="button" variant="secondary" disabled={locked} onClick={() => void reset()}>{busy === "reset" ? "Mengembalikan…" : "Kembalikan ke teks bawaan"}</Button>}
-          {!changed && state.migrated && !busy && <small>Belum ada perubahan.</small>}
+        <div className={css.actions}>
+          {state.custom && <ConsoleButton disabled={locked} onClick={() => void reset()}>{busy === "reset" ? "Mengembalikan…" : "Kembalikan ke teks bawaan"}</ConsoleButton>}
+          <span className={css.note}>{busy === "save" ? "Menyimpan…" : changed ? "Ada perubahan yang belum disimpan." : state.migrated ? "Belum ada perubahan." : ""}</span>
         </div>
-        {message && <Notice tone={message.tone}>{message.text}</Notice>}
       </form>
 
-      <section aria-label="Pratinjau" className="stack">
-        <p><strong>Pratinjau</strong> <small>(tampilan terang, seperti di HP peserta)</small></p>
-        <div className={base.app} style={{ minHeight: 0, padding: "16px", borderRadius: "16px", border: "1px solid var(--pw-line)", display: "grid", gap: "16px" }}>
-          <AboutCard about={{ title: preview.title || "Judul", summary: preview.summary || "Ringkasan muncul di sini." }} preview />
-          <AboutText about={{ ...preview, title: preview.title || "Judul" }} headingLevel={2} />
+      <section aria-labelledby="about-preview" className={css.previewColumn}>
+        <p id="about-preview" className={css.previewLabel}>Pratinjau <span>tampilan terang, seperti di HP peserta</span></p>
+        <div className={css.phone}>
+          <div className={css.phoneNotch} aria-hidden="true" />
+          <div className={`${base.app} ${css.phoneScreen}`}>
+            <AboutCard about={{ title: preview.title || "Judul", summary: preview.summary || "Ringkasan muncul di sini." }} preview />
+            <AboutText about={{ ...preview, title: preview.title || "Judul" }} headingLevel={2} />
+          </div>
         </div>
       </section>
     </div>

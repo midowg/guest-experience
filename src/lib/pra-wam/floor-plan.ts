@@ -1,4 +1,5 @@
 import { clockLabel, overlaps, wibTime, type Room } from "./appraisal";
+import type { SeatLayout } from "./seating";
 
 /*
  * The office floor plan, taken from "Werkudara Room Booking" (MAP_W, MAP_H, BLDG, DEF.floor.decor
@@ -29,13 +30,22 @@ export const DECOR: Rect[] = [
   { x: 1100, y: 110, w: 410, h: 245 }, { x: 670, y: 725, w: 200, h: 120 },
 ].map(turn);
 
+type Side = "top" | "bottom" | "left" | "right";
 export type PlanSpot = {
   label: string; rect: Rect;
   /** The outline to draw instead of `rect`, for a room that is not a plain box. */
   shape?: Point[];
-  /** Where its words sit, when not the middle of `rect` (the wide arm of an L). */
+  /** Where its words (and chairs) sit, when not `rect` (the wide arm of an L, the pantry beside its counter). */
   textRect?: Rect;
+  /** How its chairs are set out (seating.ts); "rapat" when not given. No database field: the plan decides. */
+  layout?: SeatLayout;
+  /** A round table instead of a long one (the pantry). */
+  round?: boolean;
+  /** Its door: a break in the wall at `at` (0–1) along one side of `rect`, in the HTML's coordinates. */
+  door?: { side: Side; at: number };
 };
+/** A spot as drawn: its layout filled in, its door a wall segment (two points). */
+export type DrawnSpot = Omit<PlanSpot, "door" | "layout"> & { layout: SeatLayout; door?: [Point, Point] };
 
 /**
  * Every room drawn on the plan, keyed by the slug the booking HTML uses, in the HTML's coordinates
@@ -43,32 +53,69 @@ export type PlanSpot = {
  * round Antareja, its words in the L's full-width arm.
  */
 const SOURCE_SPOTS: Record<string, PlanSpot> = {
-  "pak-bagus": { label: "Pak Bagus", rect: { x: 255, y: 165, w: 155, h: 135 } },
-  vasuki: { label: "Vasuki", rect: { x: 412, y: 142, w: 453, h: 153 } },
-  bs: { label: "BS", rect: { x: 255, y: 302, w: 310, h: 243 } },
-  "pak-fadil": { label: "Pak Fadil", rect: { x: 250, y: 548, w: 163, h: 140 } },
-  comms: { label: "Comms", rect: { x: 415, y: 540, w: 270, h: 148 } },
-  ananta: { label: "CFC Ananta Room", rect: { x: 1105, y: 425, w: 410, h: 235 } },
-  nagapadma: { label: "Nagapadma", rect: { x: 875, y: 710, w: 423, h: 125 } },
+  "pak-bagus": { label: "Pak Bagus", rect: { x: 255, y: 165, w: 155, h: 135 }, door: { side: "left", at: 0.5 } },
+  vasuki: { label: "Vasuki", rect: { x: 412, y: 142, w: 453, h: 153 }, door: { side: "bottom", at: 0.88 } },
+  bs: { label: "BS", rect: { x: 255, y: 302, w: 310, h: 243 }, door: { side: "left", at: 0.5 } },
+  "pak-fadil": { label: "Pak Fadil", rect: { x: 250, y: 548, w: 163, h: 140 }, door: { side: "left", at: 0.5 } },
+  comms: { label: "Comms", rect: { x: 415, y: 540, w: 270, h: 148 }, door: { side: "bottom", at: 0.5 } },
+  // Revised 5 Nov (docs/rancangan-admin-wam.md, 3b): CFC Ananta is a small room right below a
+  // shorter Nagapadma, its bottom level with Main Office's; its old place is open floor.
+  nagapadma: { label: "Nagapadma", rect: { x: 875, y: 710, w: 354, h: 125 }, door: { side: "top", at: 0.5 } },
+  ananta: { label: "CFC Ananta Room", rect: { x: 1235, y: 710, w: 240, h: 125 }, door: { side: "top", at: 0.5 } },
   "main-office": {
     label: "Main Office", rect: { x: 840, y: 842, w: 635, h: 368 },
     shape: [[840, 842], [1475, 842], [1475, 1210], [1020, 1210], [1020, 1030], [840, 1030]],
-    textRect: { x: 1020, y: 842, w: 455, h: 368 },
+    textRect: { x: 1020, y: 842, w: 455, h: 368 }, door: { side: "left", at: 0.27 },
   },
   // Added by the owner (Nov 2026): Antareja in Main Office's lower-left corner, and the communal
   // space between Limasan and Pantry.
-  antareja: { label: "Antareja", rect: { x: 840, y: 1040, w: 170, h: 170 } },
-  communal: { label: "Communal Space", rect: { x: 350, y: 860, w: 225, h: 380 } },
-  pantry: { label: "Pantry", rect: { x: 590, y: 930, w: 160, h: 135 } },
-  limasan: { label: "Limasan", rect: { x: 40, y: 740, w: 300, h: 400 } },
+  antareja: { label: "Antareja", rect: { x: 840, y: 1040, w: 170, h: 170 }, door: { side: "left", at: 0.5 } },
+  communal: { label: "Communal Space", rect: { x: 350, y: 860, w: 225, h: 380 }, layout: "lounge", door: { side: "top", at: 0.5 } },
+  // The counter runs along the pantry's west wall (FIXTURES); the round table sits beside it.
+  pantry: { label: "Pantry", rect: { x: 590, y: 930, w: 160, h: 135 }, textRect: { x: 590, y: 930, w: 160, h: 106 }, round: true, door: { side: "top", at: 0.5 } },
+  limasan: { label: "Limasan", rect: { x: 40, y: 740, w: 300, h: 400 }, layout: "kelas", door: { side: "top", at: 0.8 } },
 };
 
+/** The door as a wall segment, 44 units long, in the HTML's coordinates. */
+function doorLine({ x, y, w, h }: Rect, door: NonNullable<PlanSpot["door"]>): [Point, Point] {
+  const half = 22;
+  if (door.side === "top" || door.side === "bottom") {
+    const at = x + w * door.at, wall = door.side === "top" ? y : y + h;
+    return [[at - half, wall], [at + half, wall]];
+  }
+  const at = y + h * door.at, wall = door.side === "left" ? x : x + w;
+  return [[wall, at - half], [wall, at + half]];
+}
+
 /** The spots as drawn: north (Limasan) up. */
-export const PLAN_SPOTS: Record<string, PlanSpot> = Object.fromEntries(Object.entries(SOURCE_SPOTS).map(([key, spot]) => [key, {
-  label: spot.label, rect: turn(spot.rect),
+export const PLAN_SPOTS: Record<string, DrawnSpot> = Object.fromEntries(Object.entries(SOURCE_SPOTS).map(([key, spot]) => [key, {
+  label: spot.label, rect: turn(spot.rect), layout: spot.layout ?? "rapat",
+  ...(spot.round ? { round: true } : {}),
   ...(spot.shape ? { shape: spot.shape.map(turnPoint) } : {}),
   ...(spot.textRect ? { textRect: turn(spot.textRect) } : {}),
-}]));
+  ...(spot.door ? { door: doorLine(spot.rect, spot.door).map(turnPoint) as [Point, Point] } : {}),
+} satisfies DrawnSpot]));
+
+/** How a spot's chairs are set out: Limasan in class rows, Communal Space as a lounge, the rest round a meeting table. */
+export const spotLayout = (key: string): SeatLayout => PLAN_SPOTS[key]?.layout ?? "rapat";
+
+/**
+ * Fixed furniture that is not a room's chairs: wooden desks in Main Office's arm above Antareja,
+ * the pantry counter, and plants (two green circles) in corners and the corridor where nothing is.
+ */
+export type Fixture = { kind: "desk" | "counter" | "plant"; rect: Rect };
+export const FIXTURES: Fixture[] = ([
+  { kind: "desk", rect: { x: 868, y: 866, w: 56, h: 140 } },
+  { kind: "desk", rect: { x: 934, y: 866, w: 56, h: 140 } },
+  { kind: "counter", rect: { x: 596, y: 1040, w: 148, h: 20 } },
+  // The old CFC Ananta corner (twice), the corridor by the stairs, below Limasan, by the pantry, the south-east corner.
+  { kind: "plant", rect: { x: 1125, y: 445, w: 40, h: 40 } },
+  { kind: "plant", rect: { x: 1455, y: 615, w: 40, h: 40 } },
+  { kind: "plant", rect: { x: 790, y: 600, w: 40, h: 40 } },
+  { kind: "plant", rect: { x: 60, y: 1180, w: 40, h: 40 } },
+  { kind: "plant", rect: { x: 770, y: 1250, w: 40, h: 40 } },
+  { kind: "plant", rect: { x: 1500, y: 1262, w: 40, h: 40 } },
+] satisfies Fixture[]).map(item => ({ ...item, rect: turn(item.rect) }));
 
 /** "CFC Ananta Room" → "cfc ananta room"; slugs normalize the same way ("cfc-ananta" → "cfc ananta"). */
 export const normalizeRoomName = (name: string) => name.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -186,17 +233,60 @@ export type SpotText = {
  * fit, has its words turned to run along its length instead. `unitPx` is screen px per plan unit
  * with the plan fitted (zoom 1); without it the plan is taken as 860px wide.
  */
-export function spotText(input: { name: string; sub: string; rect: Pick<Rect, "w" | "h">; main?: boolean; unitPx?: number }): SpotText {
+export function spotText(input: TextInput): SpotText {
+  return strip(chooseText(input));
+}
+
+type TextInput = {
+  name: string; sub: string; rect: Pick<Rect, "w" | "h">; main?: boolean; unitPx?: number;
+  /** The share (0–1) of the box's height the words may take, from its top; the whole box by default. */
+  band?: number;
+  /** Smaller words, the subtitle shrunk to fit under the name: a room whose chairs are drawn below. */
+  compact?: boolean;
+};
+
+function chooseText(input: TextInput): SpotText & { spills: boolean } {
   const { rect } = input;
-  const upright = layText({ ...input, rect });
+  const share = Math.min(1, Math.max(0.1, input.band ?? 1));
+  const upright = layText({ ...input, rect: { w: rect.w, h: rect.h * share } });
   if (rect.h <= rect.w * 1.3) return upright;
-  const turned = layText({ ...input, rect: { w: rect.h, h: rect.w } });
+  const turned = layText({ ...input, rect: { w: rect.h * share, h: rect.w } });
   // Upright reads more easily: turn only when the name runs past the sides, or the subtitle does
   // not show at all or is broken in the middle of its parts ("Muat 6 / orang · / min 1").
   const parts = input.sub ? input.sub.split(" · ").length : 0;
   const awkward = (text: SpotText) => !!input.sub && (text.subFrom > 1 || text.sub.length > parts);
   const better = (upright.spills && !turned.spills) || (awkward(upright) && !awkward(turned) && !turned.spills);
-  return better ? { ...strip(turned), rotate: true } : strip(upright);
+  return better ? { ...turned, rotate: true } : upright;
+}
+
+/** Plan units the words take down from the top of their box (with its padding), the subtitle included. */
+export function wordsBand(text: SpotText): number {
+  const along = (lines: string[], size: number) => lines.length ? Math.max(...lines.map(line => line.length)) * CHAR * size : 0;
+  if (text.rotate) return WORDS_TOP + Math.max(along(text.name, text.nameSize), along(text.sub, text.subSize)) + WORDS_BOTTOM;
+  const subH = text.sub.length ? text.subSize * 0.5 + text.sub.length * text.subSize * 1.2 : 0;
+  return WORDS_TOP + text.name.length * text.nameSize * 1.2 + subH + WORDS_BOTTOM;
+}
+/** Room above and below the words when they sit at the top of a room. */
+export const WORDS_TOP = 12;
+export const WORDS_BOTTOM = 10;
+
+/**
+ * A room's words at its top, with its chairs below (FloorPlan.tsx): as spotText, but the words keep
+ * to the top 40% of the box, or more when that is what keeps the name inside and the subtitle
+ * there (a narrow room such as Nagapadma: two lines, or turned to run down the room), and up to
+ * 55% for the subtitle to be readable without zooming. `band` is how far down they reach, which
+ * is where the chairs start.
+ */
+export function spotWords(input: Omit<TextInput, "band">): SpotText & { band: number } {
+  const done = (text: SpotText & { spills: boolean }, share: number) => !text.spills && (!input.sub || (text.sub.length > 0 && (text.subFrom <= 1 || share >= 0.55)));
+  const shares = [0.4, 0.55, 0.7, 1];
+  const first = chooseText({ ...input, band: shares[0], compact: true });
+  let text = first;
+  for (let index = 1; index < shares.length && !done(text, shares[index - 1]); index++) text = chooseText({ ...input, band: shares[index], compact: true });
+  // A name too long for the room even with all of it (a tiny phone screen) keeps the small band:
+  // it runs past the walls either way, and the chairs stay.
+  const words = strip(text.spills ? first : text);
+  return { ...words, band: Math.min(input.rect.h, wordsBand(words)) };
 }
 
 const strip = (text: SpotText & { spills: boolean }): SpotText => {
@@ -204,12 +294,12 @@ const strip = (text: SpotText & { spills: boolean }): SpotText => {
   return { name, nameSize, sub, subSize, subFrom, rotate };
 };
 
-function layText(input: { name: string; sub: string; rect: Pick<Rect, "w" | "h">; main?: boolean; unitPx?: number }): SpotText & { spills: boolean } {
-  const { name, sub, rect, main } = input;
+function layText(input: TextInput): SpotText & { spills: boolean } {
+  const { name, sub, rect, main, compact } = input;
   const unitPx = input.unitPx && input.unitPx > 0 ? input.unitPx : 860 / PLAN_W;
   const pad = 24, room = rect.w - pad;
   const floor = Math.min(NAME_MIN_PX / unitPx, 72);
-  const top = Math.max(main ? 46 : 34, floor);
+  const top = Math.max(compact ? (main ? 26 : 22) : main ? 46 : 34, floor);
   const longest = (lines: string[]) => Math.max(...lines.map(line => line.length), 3);
   const fit = (lines: string[]) => Math.min(top, room / (longest(lines) * CHAR), (rect.h - pad) / (lines.length * 1.2));
   const one = name ? [name] : [];
@@ -225,12 +315,15 @@ function layText(input: { name: string; sub: string; rect: Pick<Rect, "w" | "h">
   if (!sub) return none;
 
   // The subtitle may grow to the readable size where the box allows, but stays below the name.
-  const subTop = Math.min(Math.max(main ? 28 : 23, SUB_MIN_PX / unitPx), Math.max(nameSize * 0.95, 1));
+  const subTop = Math.min(Math.max(compact ? 15 : main ? 28 : 23, SUB_MIN_PX / unitPx), Math.max(nameSize * (compact ? 0.8 : 0.95), 1));
   const parts = sub.split(" · ");
   const options = [[sub], parts.length > 1 ? [parts[0], parts.slice(1).join(" · ")] : wrapWords(sub, Math.ceil(sub.length / 2), 2), wrapWords(sub, Math.ceil(sub.length / 3), 3)];
   let best: { lines: string[]; size: number } = { lines: [], size: 0 };
   for (const lines of options) {
-    const size = Math.min(subTop, room / (longest(lines) * CHAR));
+    const wide = Math.min(subTop, room / (longest(lines) * CHAR));
+    // Compact: shrunk to the height left under the name rather than dropped.
+    const size = compact ? Math.min(wide, (rect.h - pad / 2 - nameH) / (0.5 + lines.length * 1.2) - 0.01) : wide;
+    if (size <= 0) continue;
     // It must fit under the name, with a gap.
     if (nameH + size * 0.5 + lines.length * size * 1.2 > rect.h - pad / 2) continue;
     // A clearly bigger option wins, and so does any bigger one while the best is still too small to read.
@@ -246,6 +339,9 @@ export function roomPeople(room: Pick<Room, "capacity" | "minPeople">): string {
   if (capacity) return minPeople ? `Muat ${capacity} orang · min ${minPeople}` : `Muat ${capacity} orang`;
   return minPeople ? `Min ${minPeople} orang · kapasitas belum diisi` : "Kapasitas belum diisi";
 }
+
+/** "8 kursi": the line under a room's name on the plan (its chairs are drawn from the same number). */
+export const roomSeats = (room: Pick<Room, "capacity">) => room.capacity ? `${room.capacity} kursi` : "Kapasitas belum diisi";
 
 /** "Muat 8 orang · min 2 · TV, Whiteboard": the room's people and facilities, for lists and tooltips. */
 export function roomSpec(room: Pick<Room, "capacity" | "minPeople"> & { facilities?: string[] | null }): string {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { wibInstant, type Room } from "./appraisal";
 import {
-  BUILDING, FIT_VIEW, NAME_MIN_PX, PLAN_H, PLAN_SPOTS, PLAN_W, SUB_MIN_PX, ZOOM_MAX, clampView, facilitiesProblem, fitText, isRoomSpot, layoutRooms, moveView, normalizeRoomName,
-  parseFacilities, pickableTone, placeRooms, planKey, planSpotOptions, revealRect, roomSpec, roomStatus, spotText, spotTitle, wrapWords, zoomView,
+  BUILDING, FIT_VIEW, FIXTURES, NAME_MIN_PX, PLAN_H, PLAN_SPOTS, PLAN_W, SUB_MIN_PX, ZOOM_MAX, clampView, facilitiesProblem, fitText, isRoomSpot, layoutRooms, moveView, normalizeRoomName,
+  parseFacilities, pickableTone, placeRooms, planKey, planSpotOptions, revealRect, roomSeats, roomSpec, roomStatus, spotLayout, spotText, spotTitle, spotWords, wordsBand, wrapWords, zoomView,
 } from "./floor-plan";
 
 const room = (name: string, slug = name.toLowerCase().replace(/\s+/g, "-"), bookable = true): Room => ({ id: slug, slug, name, kind: "utama", capacity: null, bookable, minPeople: null, planKey: null, facilities: [] });
@@ -50,6 +50,49 @@ describe("room names on the plan", () => {
     const words = office.textRect!;
     expect(words.x).toBeGreaterThanOrEqual(office.rect.x);
     expect(words.y + words.h).toBeLessThanOrEqual(office.rect.y + office.rect.h);
+  });
+  it("has CFC Ananta as a small room right below Nagapadma, its bottom level with Main Office's (revision 5 Nov)", () => {
+    const ananta = PLAN_SPOTS.ananta.rect, nagapadma = PLAN_SPOTS.nagapadma.rect, office = PLAN_SPOTS["main-office"].rect;
+    expect(nagapadma).toEqual({ x: 505, y: 875, w: 125, h: 354 });
+    expect(ananta).toEqual({ x: 505, y: 1235, w: 125, h: 240 });
+    expect(ananta.y + ananta.h).toBe(office.y + office.h);
+    // Below Nagapadma, as wide, not overlapping it.
+    expect(ananta.x).toBe(nagapadma.x);
+    expect(ananta.w).toBe(nagapadma.w);
+    expect(ananta.y).toBeGreaterThanOrEqual(nagapadma.y + nagapadma.h);
+    // Main Office is on its left (west).
+    expect(office.x + office.w).toBeLessThanOrEqual(ananta.x);
+  });
+  it("sets out Limasan in class rows, Communal Space as a lounge, the rest round a table", () => {
+    expect(spotLayout("limasan")).toBe("kelas");
+    expect(spotLayout("communal")).toBe("lounge");
+    expect(["nagapadma", "ananta", "vasuki", "antareja", "pantry", "main-office", "pak-bagus"].map(spotLayout)).toEqual(Array(7).fill("rapat"));
+    expect(spotLayout("gudang")).toBe("rapat");
+    expect(PLAN_SPOTS.pantry.round).toBe(true);
+  });
+  it("puts each door on the room's wall, and the fixtures where no room is (plants) or inside their room", () => {
+    for (const [key, spot] of Object.entries(PLAN_SPOTS)) {
+      const [[x1, y1], [x2, y2]] = spot.door!;
+      const { x, y, w, h } = spot.rect;
+      const onWall = (x1 === x2 && (x1 === x || x1 === x + w)) || (y1 === y2 && (y1 === y || y1 === y + h));
+      expect(onWall, `${key}'s door`).toBe(true);
+    }
+    const within = (inner: { x: number; y: number; w: number; h: number }, outer: typeof inner) => inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.w <= outer.x + outer.w && inner.y + inner.h <= outer.y + outer.h;
+    const apart = (a: { x: number; y: number; w: number; h: number }, b: typeof a) => a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
+    for (const fixture of FIXTURES) {
+      expect(within(fixture.rect, BUILDING)).toBe(true);
+      if (fixture.kind === "plant") for (const [key, spot] of Object.entries(PLAN_SPOTS)) expect(apart(fixture.rect, spot.rect), `plant clear of ${key}`).toBe(true);
+      if (fixture.kind === "counter") {
+        expect(within(fixture.rect, PLAN_SPOTS.pantry.rect)).toBe(true);
+        expect(apart(fixture.rect, PLAN_SPOTS.pantry.textRect!)).toBe(true);
+      }
+      if (fixture.kind === "desk") {
+        expect(within(fixture.rect, PLAN_SPOTS["main-office"].rect)).toBe(true);
+        expect(apart(fixture.rect, PLAN_SPOTS["main-office"].textRect!)).toBe(true);
+        expect(apart(fixture.rect, PLAN_SPOTS.antareja.rect)).toBe(true);
+      }
+    }
+    expect(FIXTURES.filter(item => item.kind === "plant").length).toBeGreaterThanOrEqual(2);
   });
   it("keeps every spot inside the building", () => {
     for (const { rect } of Object.values(PLAN_SPOTS)) {
@@ -122,6 +165,10 @@ describe("room specification", () => {
     expect(spec(10, null, ["TV", "AC", "Whiteboard", "Proyektor", "Speaker"])).toBe("Muat 10 orang · TV, AC, Whiteboard +2");
     expect(roomSpec({ capacity: 6, minPeople: null })).toBe("Muat 6 orang");
   });
+  it("names the chairs under a room's name on the plan", () => {
+    expect(roomSeats({ capacity: 4 })).toBe("4 kursi");
+    expect(roomSeats({ capacity: null })).toBe("Kapasitas belum diisi");
+  });
 });
 
 describe("facility tags", () => {
@@ -177,9 +224,34 @@ describe("words in a spot", () => {
     expect(limasan.sub).toEqual(["Muat 40 orang · min 10"]);
   });
   it("shows the specification at once on a desktop", () => {
-    const ananta = spotText({ name: "CFC Ananta Room", sub: "Maks 12 orang · TV", rect: PLAN_SPOTS.ananta.rect, main: true, unitPx: 860 / PLAN_W });
+    // A roomy box (CFC Ananta's before 5 Nov).
+    const ananta = spotText({ name: "CFC Ananta Room", sub: "Maks 12 orang · TV", rect: { w: 235, h: 410 }, main: true, unitPx: 860 / PLAN_W });
     expect(ananta.subFrom).toBe(1);
     expect(ananta.nameSize).toBeGreaterThan(30);
+  });
+  it("keeps a room's words at its top, leaving the rest for its chairs", () => {
+    const desktop = 860 / PLAN_W, phone = 300 / PLAN_W;
+    const antareja = spotWords({ name: "Antareja", sub: "4 kursi", rect: PLAN_SPOTS.antareja.rect, main: true, unitPx: desktop });
+    expect(antareja.rotate).toBe(false);
+    expect(antareja.sub).toEqual(["4 kursi"]);
+    expect(antareja.band).toBeLessThanOrEqual(PLAN_SPOTS.antareja.rect.h * 0.5);
+    expect(antareja.band).toBe(wordsBand(antareja));
+    // Narrow rooms: the name stays inside (two lines or turned) and the chairs start lower. (On a
+    // 300px phone CFC Ananta is 30 × 57 px: its name cannot fit at a readable size until zoomed.)
+    for (const [unitPx, key] of [[desktop, "nagapadma"], [desktop, "ananta"], [phone, "nagapadma"]] as const) {
+      const rect = PLAN_SPOTS[key].rect;
+      const words = spotWords({ name: PLAN_SPOTS[key].label, sub: "4 kursi", rect, main: true, unitPx });
+      const longest = Math.max(...words.name.map(line => line.length)) * 0.6 * words.nameSize;
+      if (words.rotate) {
+        expect(longest).toBeLessThanOrEqual(words.band);
+        expect(words.name.length * words.nameSize * 1.2).toBeLessThanOrEqual(rect.w);
+      } else expect(longest).toBeLessThanOrEqual(rect.w - 8);
+      expect(words.nameSize * unitPx).toBeGreaterThanOrEqual(NAME_MIN_PX);
+      expect(words.band).toBeLessThanOrEqual(rect.h);
+    }
+    const phoneWords = spotWords({ name: "Nagapadma", sub: "8 kursi", rect: PLAN_SPOTS.nagapadma.rect, main: true, unitPx: phone });
+    expect(phoneWords.rotate).toBe(true);
+    expect(phoneWords.band).toBeGreaterThan(PLAN_SPOTS.nagapadma.rect.h * 0.4);
   });
   it("breaks a long name in a narrow box", () => {
     const narrow = spotText({ name: "Communal Space", sub: "", rect: { w: 225, h: 380 }, unitPx: 860 / PLAN_W });
@@ -216,7 +288,8 @@ describe("zoom and pan", () => {
     expect(shown.y).toBeLessThanOrEqual(rect.y);
     expect(shown.y + PLAN_H / 2).toBeGreaterThanOrEqual(rect.y + rect.h);
     // Taller than the view at 4×: centred on it.
-    expect(revealRect({ scale: 4, x: 0, y: 0 }, rect).y + PLAN_H / 8).toBeCloseTo(rect.y + rect.h / 2);
+    const office = PLAN_SPOTS["main-office"].rect;
+    expect(revealRect({ scale: 4, x: 0, y: 0 }, office).y + PLAN_H / 8).toBeCloseTo(office.y + office.h / 2);
     expect(revealRect({ scale: 1, x: 0, y: 0 }, rect)).toEqual(FIT_VIEW);
   });
 });

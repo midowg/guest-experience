@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { ListChecks } from "lucide-react";
+import { PageHeader } from "@/components/console";
 import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { ParticipationMeter, SurveyRecap } from "@/components/pra-wam/SurveyRecap";
 import type { Reader } from "@/lib/pra-wam/recap";
-import { managesApp, readsNeeds, seesAllSessions } from "@/lib/pra-wam/roles";
+import { managesApp, managesSessions, readsNeeds, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { currentForm } from "@/lib/server/pra-wam/questionnaire";
 import { participationOf, recapOf } from "@/lib/server/pra-wam/recap";
@@ -35,9 +36,12 @@ export default async function SurveyResultsPage({ searchParams }: { searchParams
     ? await Promise.all([recapOf(form, reader, one(asked.departemen)).catch(() => null), participationOf(form).catch(() => null)])
     : [null, null];
 
+  // The panitia read it in the console (its page header); a BOD keeps the app's own title.
+  const inConsole = managesSessions(member);
+  const head = (lead: string) => inConsole ? <PageHeader title="Hasil survei" subtitle={lead} /> : <ScreenHead title="Hasil survei" lead={lead} />;
   if (!form || !open || !recap) {
     return <PraWamShell member={member} current="survei">
-      <ScreenHead title="Hasil survei" lead="Akses baca saja" />
+      {head("Akses baca saja")}
       <section className={`${base.card} ${styles.emptyState}`} aria-labelledby="belum-ada">
         <span className={base.tile}><ListChecks aria-hidden /></span>
         <h2 id="belum-ada">Belum ada survei</h2>
@@ -49,23 +53,26 @@ export default async function SurveyResultsPage({ searchParams }: { searchParams
   const section = one(asked.bagian);
   const chosen = recap.sections.find(item => item.key === section) ?? null;
   return <PraWamShell member={member} current="survei">
-    <ScreenHead title="Hasil survei" lead={`${form.name} · akses baca saja, tanpa nama`} />
-    <form method="get" className={own.filters}>
-      <label>Bagian
-        <select name="bagian" defaultValue={chosen?.key ?? ""}>
-          <option value="">Semua bagian</option>
-          {recap.sections.map(item => <option key={item.key} value={item.key}>{item.title}</option>)}
-        </select>
-      </label>
-      <label>Departemen
-        <select name="departemen" defaultValue={recap.department ?? ""}>
-          <option value="">Semua departemen</option>
-          {recap.departments.map(name => <option key={name} value={name}>{name}</option>)}
-        </select>
-      </label>
-      <button type="submit">Terapkan</button>
-    </form>
-    {participation && <section className={base.card} style={{ marginTop: 16 }} aria-label="Partisipasi"><ParticipationMeter participation={participation} /></section>}
-    <SurveyRecap sections={chosen ? [chosen] : recap.sections} />
+    {head(`${form.name} · akses baca saja, tanpa nama`)}
+    {/* One block, so the panel's gap does not add to the cards' own spacing. */}
+    <div>
+      <form method="get" className={own.filters}>
+        <label>Bagian
+          <select name="bagian" defaultValue={chosen?.key ?? ""}>
+            <option value="">Semua bagian</option>
+            {recap.sections.map(item => <option key={item.key} value={item.key}>{item.title}</option>)}
+          </select>
+        </label>
+        <label>Departemen
+          <select name="departemen" defaultValue={recap.department ?? ""}>
+            <option value="">Semua departemen</option>
+            {recap.departments.map(name => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </label>
+        <button type="submit">Terapkan</button>
+      </form>
+      {participation && <section className={base.card} style={{ marginTop: 16 }} aria-label="Partisipasi"><ParticipationMeter participation={participation} /></section>}
+      <SurveyRecap sections={chosen ? [chosen] : recap.sections} />
+    </div>
   </PraWamShell>;
 }

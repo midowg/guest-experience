@@ -1,7 +1,6 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { HrDataScreen, type HrScreenData } from "@/components/admin/wam/questionnaire/HrData";
-import { QuestionnaireTabs } from "@/components/admin/wam/questionnaire/QuestionnaireTabs";
-import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
+import { QuestionnaireFrame } from "@/components/admin/wam/questionnaire/QuestionnaireFrame";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { hrAccessLog, hrPageState, hrPeople } from "@/lib/server/pra-wam/hr-lock";
@@ -24,9 +23,8 @@ export default async function WamHrDataPage() {
     const [people, log] = await Promise.all([hrPeople(state.unlocked), hrAccessLog(state.unlocked)]);
     data = { ...people, log };
   }
-  return <WamAdminFrame current="kuesioner" wide>
+  return <QuestionnaireFrame current="data-hr" wide>
     <div className="stack">
-      <QuestionnaireTabs current="data-hr" />
       <h2 className="sr-only">Data HR</h2>
       {/* The key gives the screen fresh state whenever the lock opens or closes. */}
       <HrDataScreen key={state.unlocked?.expiresAt ?? "terkunci"} data={data} state={{
@@ -35,5 +33,5 @@ export default async function WamHrDataPage() {
         lockedUntil: state.lockedUntil, attemptsLeft: state.attemptsLeft, renderedAt: state.checkedAt,
       }} />
     </div>
-  </WamAdminFrame>;
+  </QuestionnaireFrame>;
 }

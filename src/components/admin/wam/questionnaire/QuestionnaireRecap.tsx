@@ -1,5 +1,6 @@
 import { Lock } from "lucide-react";
 import { Notice } from "@/components/ui";
+import { SectionToolbar } from "@/components/console";
 import { MIN_GROUP, type RecapItem } from "@/lib/pra-wam/recap";
 import { wamAdminPath } from "@/lib/routes";
 import type { Recap } from "@/lib/server/pra-wam/recap";
@@ -84,9 +85,9 @@ function Body({ item, anonymous }: { item: RecapItem; anonymous: boolean }) {
 export function QuestionnaireRecap({ recap }: { recap: Recap }) {
   return <div className="stack">
     <div className={styles.recapHead}>
-      <div className={styles.head}>
+      <div>
+        <SectionToolbar title="Rekap per pertanyaan" />
         <div>
-          <h2>Rekap</h2>
           <p className={styles.muted}>{recap.respondents} orang sudah menjawab{recap.department ? ` di ${recap.department}` : ""}. Tanpa nama; kutipan diurutkan acak.</p>
         </div>
       </div>

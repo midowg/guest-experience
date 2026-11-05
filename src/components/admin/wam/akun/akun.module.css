@@ -1,0 +1,83 @@
+/*
+ * Akun dan peran (Penpot PRAWAM, "07 · Konsol admin", A2–A5): the account list, one account's
+ * detail, the role cards and the reset requests. Reads the console's --cs-* variables only.
+ */
+
+.section { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.lead { margin: 0; color: var(--cs-muted); font-size: 13px; }
+.lead a { color: var(--cs-primary); font-weight: 700; }
+.empty { margin: 0; padding: 24px 16px; border: 1px dashed var(--cs-line); border-radius: 16px; color: var(--cs-muted); font-size: 14px; text-align: center; }
+.hint { margin: 0; color: var(--cs-muted); font-size: 13px; }
+.error { margin: 0; color: var(--cs-bad-fg); font-size: 13px; font-weight: 600; }
+.done { margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--cs-ok-bg); color: var(--cs-ok-fg); font-size: 13px; font-weight: 600; }
+
+/* ---------- Table ---------- */
+.nameCell { display: flex; align-items: center; gap: 12px; min-width: 12rem; }
+.nameText { display: grid; gap: 1px; min-width: 0; }
+.nameText strong { font-weight: 700; }
+.nameText small { color: var(--cs-muted); font-size: 12px; }
+.emailCell { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.openButton { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; background: none; color: var(--cs-muted); cursor: pointer; }
+.openButton:hover { background: var(--cs-hover); color: var(--cs-text); }
+
+/* ---------- One account (a side panel from 1024px, a sheet from the bottom before) ---------- */
+.detail { box-sizing: border-box; width: 100%; max-width: 100%; max-height: 92dvh; margin: auto 0 0; padding: 0; border: 0; border-radius: 24px 24px 0 0; background: var(--cs-surface); color: var(--cs-text); box-shadow: var(--cs-shadow); overflow: hidden; }
+.detail::backdrop { background: var(--cs-scrim); }
+.detailInner { display: flex; flex-direction: column; max-height: 92dvh; }
+.detailHead { display: flex; align-items: flex-start; gap: 12px; padding: 20px 20px 12px; border-bottom: 1px solid var(--cs-line); }
+.detailName { flex: 1; min-width: 0; display: grid; justify-items: start; gap: 4px; }
+.detailName h2 { margin: 0; font-family: inherit; font-size: 20px; font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; }
+.detailName p { margin: 0; color: var(--cs-muted); font-size: 13px; }
+.close { display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin: -6px -8px 0 0; padding: 0; border: 0; border-radius: 12px; background: none; color: var(--cs-muted); cursor: pointer; }
+.close:hover { background: var(--cs-hover); color: var(--cs-text); }
+.detailBody { flex: 1; min-height: 0; display: grid; align-content: start; gap: 20px; padding: 16px 20px 20px; overflow-y: auto; overscroll-behavior: contain; }
+.facts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 16px; margin: 0; }
+.facts dt { color: var(--cs-subtle); font-size: 12px; font-weight: 600; }
+.facts dd { margin: 2px 0 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.detailSection { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.detailSection h3, .detailSection legend { margin: 0 0 4px; padding: 0; font-size: 15px; font-weight: 800; }
+.emailRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.emailText { min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.emailForm { display: grid; gap: 8px; }
+.formActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.input { box-sizing: border-box; width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-surface); color: var(--cs-text); font: inherit; font-size: 15px; }
+.input:focus-visible { border-color: var(--cs-primary); outline: 2px solid var(--cs-primary); outline-offset: 0; }
+.roleChecks { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.check { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border: 1px solid var(--cs-line); border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.check input { width: 20px; height: 20px; margin: 0; accent-color: var(--cs-primary); }
+.check:has(input:disabled) { color: var(--cs-subtle); cursor: not-allowed; }
+.leads { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.detailFoot { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--cs-line); }
+
+@media (min-width: 1024px) {
+  .detail { width: min(100vw - 48px, 30rem); height: 100dvh; max-height: 100dvh; margin: 0 0 0 auto; border-radius: 24px 0 0 24px; }
+  .detailInner { height: 100%; max-height: 100dvh; }
+  .detailHead { padding: 24px 24px 16px; }
+  .detailBody { padding: 20px 24px 24px; }
+  .detailFoot { padding: 16px 24px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .detail[open] { animation: detail-in .24s cubic-bezier(.2, .8, .2, 1); }
+}
+@keyframes detail-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- Peran ---------- */
+.roleGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.roleCard { display: flex; flex-direction: column; gap: 10px; height: 100%; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); box-sizing: border-box; }
+.roleTop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.roleCount { color: var(--cs-muted); font-size: 13px; font-weight: 700; }
+.roleCard h3 { margin: 0; font-size: 16px; font-weight: 800; }
+.roleDoes { margin: 0; font-size: 14px; line-height: 1.5; }
+.roleCombines { display: flex; align-items: center; gap: 6px; margin: auto 0 0; padding-top: 10px; border-top: 1px solid var(--cs-line); color: var(--cs-muted); font-size: 13px; }
+.roleCombines > svg { flex: none; }
+
+/* ---------- Permintaan reset ---------- */
+.requests { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.request { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px 14px; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.requestMain { display: grid; gap: 4px; min-width: 0; }
+.requestTop { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.requestTop strong { font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+.requestMeta { margin: 0; color: var(--cs-muted); font-size: 13px; overflow-wrap: anywhere; }
+.requestNote { margin: 4px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--cs-surface-2); font-size: 14px; overflow-wrap: anywhere; }
+.requestActions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+@media (min-width: 768px) { .requestActions { grid-column: 2; } }

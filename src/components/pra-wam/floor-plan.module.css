@@ -1,11 +1,51 @@
-/* The office floor plan (FloorPlan.tsx), on the --pw-* tokens of pra-wam.module.css, light and dark. */
+/*
+ * The office floor plan (FloorPlan.tsx), drawn like an architect's seat map in warm colours
+ * (docs/rancangan-admin-wam.md, 3b). Its own --fp-* colours, light and dark (the dark ones follow
+ * data-wam-theme as pra-wam.module.css does; the two dark blocks must stay identical); the
+ * controls, legend and lists below it use the app's --pw-* tokens. Chairs carry the status.
+ */
+.plan {
+  --fp-bg: #faf7f2; --fp-building: #f4efe7; --fp-wall: #3a3f4a; --fp-room: #fffbf4; --fp-off: #eee8de; --fp-service: #e6e0d6;
+  --fp-wood: #d4a877; --fp-wood-edge: #b8895a; --fp-counter: #e2d5c1; --fp-rug: #efe3d0; --fp-sofa: #d9cbb6; --fp-sofa-edge: #b9a78d;
+  --fp-plant: #7fa886; --fp-plant-leaf: #5e8a69;
+  --fp-ink: #2b2f36; --fp-ink-soft: #4f4a42; --fp-ink-muted: #5f574b;
+  --fp-room-busy: #f6f2eb; --fp-room-mine: #f2f5fa; --fp-room-small: #fff5e3; --fp-room-full: #f9ede9;
+  --fp-chair-free: #7fb08f; --fp-chair-busy: #c9c2b6; --fp-chair-mine: #1551a0; --fp-chair-small: #d8a354; --fp-chair-off: #d9d2c6;
+  --fp-chair-part: #ddb06a; --fp-chair-full: #c98f84; --fp-chair-main: #7c9cc9; --fp-chair-kecil: #c9897a; --fp-chair-edge: rgba(43, 36, 28, .3);
+  --fp-ring: #1551a0; --fp-tip: #2b2f36; --fp-tip-ink: #fff; --fp-chip: #e7e1d6; --fp-chip-ink: #4a4339;
+  --fp-shadow: rgba(58, 48, 34, .16); --fp-compass: #fff; --fp-needle: #b5473a;
+}
+[data-wam-theme="dark"] .plan {
+  --fp-bg: #14120f; --fp-building: #1e1b17; --fp-wall: #cfc6b8; --fp-room: #2a2621; --fp-off: #24211d; --fp-service: #302b25;
+  --fp-wood: #9c7650; --fp-wood-edge: #c29a6c; --fp-counter: #4a4136; --fp-rug: #352e26; --fp-sofa: #4f463b; --fp-sofa-edge: #7a6d5c;
+  --fp-plant: #5e8a69; --fp-plant-leaf: #7fa886;
+  --fp-ink: #f3eee6; --fp-ink-soft: #ddd5c9; --fp-ink-muted: #b9af9f;
+  --fp-room-busy: #24211d; --fp-room-mine: #232833; --fp-room-small: #2f2a20; --fp-room-full: #30231f;
+  --fp-chair-free: #6fa581; --fp-chair-busy: #6a645a; --fp-chair-mine: #8db6f2; --fp-chair-small: #d19a4a; --fp-chair-off: #4a453e;
+  --fp-chair-part: #c99a52; --fp-chair-full: #b97a70; --fp-chair-main: #7c9cc9; --fp-chair-kecil: #c9897a; --fp-chair-edge: rgba(0, 0, 0, .45);
+  --fp-ring: #8db6f2; --fp-tip: #f3eee6; --fp-tip-ink: #1e1b17; --fp-chip: #3a352e; --fp-chip-ink: #e6ded2;
+  --fp-shadow: rgba(0, 0, 0, .45); --fp-compass: #2a2621; --fp-needle: #e07a6b;
+}
+@media (prefers-color-scheme: dark) {
+  [data-wam-theme="system"] .plan {
+    --fp-bg: #14120f; --fp-building: #1e1b17; --fp-wall: #cfc6b8; --fp-room: #2a2621; --fp-off: #24211d; --fp-service: #302b25;
+    --fp-wood: #9c7650; --fp-wood-edge: #c29a6c; --fp-counter: #4a4136; --fp-rug: #352e26; --fp-sofa: #4f463b; --fp-sofa-edge: #7a6d5c;
+    --fp-plant: #5e8a69; --fp-plant-leaf: #7fa886;
+    --fp-ink: #f3eee6; --fp-ink-soft: #ddd5c9; --fp-ink-muted: #b9af9f;
+    --fp-room-busy: #24211d; --fp-room-mine: #232833; --fp-room-small: #2f2a20; --fp-room-full: #30231f;
+    --fp-chair-free: #6fa581; --fp-chair-busy: #6a645a; --fp-chair-mine: #8db6f2; --fp-chair-small: #d19a4a; --fp-chair-off: #4a453e;
+    --fp-chair-part: #c99a52; --fp-chair-full: #b97a70; --fp-chair-main: #7c9cc9; --fp-chair-kecil: #c9897a; --fp-chair-edge: rgba(0, 0, 0, .45);
+    --fp-ring: #8db6f2; --fp-tip: #f3eee6; --fp-tip-ink: #1e1b17; --fp-chip: #3a352e; --fp-chip-ink: #e6ded2;
+    --fp-shadow: rgba(0, 0, 0, .45); --fp-compass: #2a2621; --fp-needle: #e07a6b;
+  }
+}
 .plan { display: grid; gap: 12px; min-width: 0; }
 .caption { margin: 0; font-size: 13px; color: var(--pw-muted); }
 /* The plan, always fitted to its box: zoom and pan happen inside (FloorPlan.tsx, the SVG viewBox). */
 .stage { position: relative; min-width: 0; width: 100%; }
 /* The plan is taller than wide (north up): on a wide screen it is kept within the window's height. */
 @media (min-width: 1024px) { .stage { max-width: min(640px, calc((100vh - 220px) * 1265 / 1580)); margin-inline: auto; } }
-.viewport { position: relative; overflow: hidden; border-radius: 12px; background: var(--pw-surface); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+.viewport { position: relative; overflow: hidden; border-radius: 12px; background: var(--fp-bg); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   /* Fitted, one finger scrolls the page; pinch is the plan's (FloorPlan.tsx stops the page's own). Zoomed, every touch is the plan's. */
   touch-action: pan-y; }
 .viewport.zoomed { touch-action: none; cursor: grab; }
@@ -16,58 +56,97 @@
 /* + / − / fit in a row in the plan's top-right corner, over the empty part of the building. */
 .controls { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
 /* The compass in the top-left corner, beside Limasan: it stays put while the plan zooms. */
-.compass { position: absolute; top: 8px; left: 8px; width: 38px; height: 38px; border-radius: 50%; background: var(--pw-surface); box-shadow: 0 2px 8px -4px rgba(11, 21, 38, .35); pointer-events: none; }
+.compass { position: absolute; top: 8px; left: 8px; width: 38px; height: 38px; border-radius: 50%; background: var(--fp-compass); box-shadow: 0 2px 8px -3px rgba(43, 36, 28, .35); pointer-events: none; }
 .compass svg { display: block; width: 100%; height: 100%; }
-.compassRing { fill: none; stroke: var(--pw-line); stroke-width: 1.5; }
-.compassN { fill: var(--pw-text); font-family: var(--pw-body); font-size: 9px; font-weight: 800; text-anchor: middle; dominant-baseline: middle; }
-.needleNorth { fill: var(--pw-danger); }
-.needleSouth { fill: var(--pw-muted); opacity: .45; }
+.compassRing { fill: none; stroke: var(--fp-wall); stroke-opacity: .25; stroke-width: 1.2; }
+.compassN { fill: var(--fp-ink); font-family: var(--pw-body); font-size: 8.5px; font-weight: 800; text-anchor: middle; dominant-baseline: middle; }
+.needleNorth { fill: var(--fp-needle); }
+.needleSouth { fill: var(--fp-ink-muted); opacity: .4; }
+.compassHub { fill: var(--fp-compass); stroke: var(--fp-ink-muted); stroke-width: .8; }
 .control { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); color: var(--pw-text); box-shadow: 0 2px 8px -4px rgba(11, 21, 38, .35); cursor: pointer; transition: background .18s ease, border-color .18s ease, color .18s ease; }
 .control:hover { border-color: var(--pw-primary); color: var(--pw-primary); }
 .control:focus { outline: none; }
 .control:focus-visible { outline: 3px solid var(--pw-primary); outline-offset: 2px; }
 .control[aria-disabled='true'] { color: var(--pw-muted); border-color: var(--pw-line); cursor: default; }
 
-.building { fill: var(--pw-app); stroke: var(--pw-line); stroke-width: 5; }
-.decor { fill: var(--pw-page); stroke: var(--pw-line); stroke-width: 3; }
+/* The building: warm floor, dark walls with rounded corners; stairs, lift and storage a shade darker. */
+.building { fill: var(--fp-building); stroke: var(--fp-wall); stroke-width: 12; stroke-linejoin: round; }
+.decor { fill: var(--fp-service); stroke: var(--fp-wall); stroke-width: 4; stroke-linejoin: round; }
 
-.spot .box { fill: var(--pw-surface); stroke: var(--pw-line); stroke-width: 4; stroke-linejoin: round; transition: stroke-width .18s ease, fill .18s ease; }
-.spot.main .box { stroke-width: 8; }
-.spot text { fill: var(--pw-text); font-family: var(--pw-body); font-weight: 800; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
-.spot text.st { fill: var(--pw-text); font-weight: 600; }
-.free .box { fill: var(--pw-success-soft); stroke: var(--pw-success); }
-.busy .box { fill: var(--pw-danger-soft); stroke: var(--pw-danger); }
-.mine .box { fill: var(--pw-brass-soft); stroke: var(--pw-brass); }
-.small .box { fill: var(--pw-warning-soft); stroke: var(--pw-warning); stroke-dasharray: 18 10; }
-.off .box, .closed .box { fill: var(--pw-page); stroke: var(--pw-muted); stroke-width: 3; }
-.off .box { stroke-dasharray: 6 8; }
-.off text, .closed text { fill: var(--pw-muted); }
-.selected .box { fill: var(--pw-primary-soft); stroke: var(--pw-primary); stroke-width: 14; stroke-dasharray: none; }
-/* Book plan, the whole day: partly used (amber), full (red, hatched by a thicker double line). */
-.part .box { fill: var(--pw-warning-soft); stroke: var(--pw-warning); }
-.full .box { fill: var(--pw-danger-soft); stroke: var(--pw-danger); stroke-width: 8; }
-/* The room whose detail is open: ringed, its status colour kept. */
-.ring .box { stroke: var(--pw-primary); stroke-width: 16; stroke-dasharray: none; }
-/* Building context on the Book plan: no status, quieter. */
-.plain .box { fill: var(--pw-page); stroke: var(--pw-line); stroke-width: 3; stroke-dasharray: none; }
-.plain text { fill: var(--pw-muted); font-weight: 600; }
+/* Rooms: a cream floor with a soft shadow inside dark walls; the status is in the chairs (below). */
+.spot .box { fill: var(--fp-room); stroke: var(--fp-wall); stroke-width: 6; stroke-linejoin: round; transition: stroke .18s ease, stroke-width .18s ease; }
+.spot.main .box { stroke-width: 7; }
+.spot .door { stroke: var(--fp-building); stroke-width: 9; stroke-linecap: butt; }
+.spot text { fill: var(--fp-ink); font-family: var(--pw-body); font-weight: 800; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+.spot text.st { fill: var(--fp-ink-soft); font-weight: 600; }
+.busy .box { fill: var(--fp-room-busy); }
+.mine .box { fill: var(--fp-room-mine); }
+.small .box, .part .box { fill: var(--fp-room-small); }
+.full .box { fill: var(--fp-room-full); }
+/* Not bookable, or no room: the grey-beige of the areas around the rooms. */
+.off .box, .closed .box, .plain .box { fill: var(--fp-off); }
+.plain .box { stroke-width: 4; }
+.off text, .closed text, .plain text, .off text.st, .closed text.st, .plain text.st { fill: var(--fp-ink-muted); }
+.plain text { font-weight: 600; }
+
+/* Furniture: wooden tables and stage, the lounge's rug and sofas; plants and desks (Fixtures). */
+.furniture, .fixtures { pointer-events: none; }
+.wood { fill: var(--fp-wood); stroke: var(--fp-wood-edge); stroke-width: 2; }
+.counter { fill: var(--fp-counter); stroke: var(--fp-wood-edge); stroke-width: 2; }
+.rug { fill: var(--fp-rug); stroke: var(--fp-sofa-edge); stroke-width: 1.5; stroke-dasharray: 2 5; }
+.sofa { fill: var(--fp-sofa); stroke: var(--fp-sofa-edge); stroke-width: 2; }
+.plant { fill: var(--fp-plant); }
+.plantLeaf { fill: var(--fp-plant-leaf); }
+
+/* Chairs: a rounded seat and a darker backrest, in the colour of the room's status (or kind). */
+.spot { --chair: var(--fp-chair-off); }
+.spot.free { --chair: var(--fp-chair-free); }
+.spot.busy { --chair: var(--fp-chair-busy); }
+.spot.mine { --chair: var(--fp-chair-mine); }
+.spot.small { --chair: var(--fp-chair-small); }
+.spot.off, .spot.closed { --chair: var(--fp-chair-off); }
+.spot.part { --chair: var(--fp-chair-part); }
+.spot.full { --chair: var(--fp-chair-full); }
+.spot.kindMain { --chair: var(--fp-chair-main); }
+.spot.kindSmall { --chair: var(--fp-chair-kecil); }
+.spot.kindMain.off .seat, .spot.kindMain.off .back, .spot.kindSmall.off .seat, .spot.kindSmall.off .back { opacity: .5; }
+.spot.selected { --chair: var(--fp-chair-mine); }
+.seat { fill: var(--chair); stroke: var(--fp-chair-edge); stroke-width: 1; }
+.back { fill: var(--chair); fill: color-mix(in srgb, var(--chair) 78%, #000); stroke: var(--fp-chair-edge); stroke-width: 1; }
+/* "Terpakai" on a taken room. */
+.chip rect { fill: var(--fp-chip); stroke: var(--fp-chair-edge); stroke-width: 1; }
+.spot .chip text { fill: var(--fp-chip-ink); font-weight: 800; }
+
 .click { cursor: pointer; }
 .click:focus { outline: none; }
-.click:hover .box, .click:focus-visible .box { stroke-width: 14; }
-.click:focus-visible .box { stroke: var(--pw-text); }
+.click:hover .box { stroke: var(--fp-ring); }
+.click:focus-visible .box { stroke: var(--fp-ink); stroke-width: 12; }
 
+/* The chosen room on top: a blue ring on its walls and a dark tooltip above it. */
+.focus { pointer-events: none; }
+.focusHalo { fill: none; stroke: var(--fp-ring); stroke-opacity: .2; stroke-width: 24; stroke-linejoin: round; }
+.focusRing { fill: none; stroke: var(--fp-ring); stroke-width: 8; stroke-linejoin: round; }
+.tip rect, .tip path { fill: var(--fp-tip); }
+.tip text { fill: var(--fp-tip-ink); font-family: var(--pw-body); font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+
+/* The key: the chair colour of each status (in the super admin's view, the room floors). */
 .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 13px; font-weight: 600; color: var(--pw-muted); }
 .legend li { display: inline-flex; align-items: center; gap: 6px; }
-.swatch { width: 14px; height: 14px; border-radius: 4px; border: 2px solid; flex: none; }
-.swatch.free { background: var(--pw-success-soft); border-color: var(--pw-success); }
-.swatch.busy { background: var(--pw-danger-soft); border-color: var(--pw-danger); }
-.swatch.mine { background: var(--pw-brass-soft); border-color: var(--pw-brass); }
-.swatch.small { background: var(--pw-warning-soft); border-color: var(--pw-warning); border-style: dashed; }
-.swatch.off { background: var(--pw-page); border-color: var(--pw-muted); border-style: dashed; }
-.swatch.part { background: var(--pw-warning-soft); border-color: var(--pw-warning); }
-.swatch.full { background: var(--pw-danger-soft); border-color: var(--pw-danger); border-width: 3px; }
-.swatch.closed { background: var(--pw-page); border-color: var(--pw-muted); }
-.swatch.selected { background: var(--pw-primary-soft); border-color: var(--pw-primary); border-width: 3px; }
+.swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; background: var(--fp-chair-off); box-shadow: inset 0 3px 0 rgba(0, 0, 0, .14); }
+.swatch.free { background: var(--fp-chair-free); }
+.swatch.busy { background: var(--fp-chair-busy); }
+.swatch.mine { background: var(--fp-chair-mine); }
+.swatch.small { background: var(--fp-chair-small); }
+.swatch.off, .swatch.closed { background: var(--fp-chair-off); }
+.swatch.part { background: var(--fp-chair-part); }
+.swatch.full { background: var(--fp-chair-full); }
+.swatch.kindMain { background: var(--fp-chair-main); }
+.swatch.kindSmall { background: var(--fp-chair-kecil); }
+.swatch.selected { background: var(--fp-chair-mine); outline: 2px solid var(--fp-ring); outline-offset: 2px; }
+.kindLegend .swatch.free, .kindLegend .swatch.off, .kindLegend .swatch.closed { box-shadow: none; border: 2px solid var(--fp-wall); }
+.kindLegend .swatch.free { background: var(--fp-room); }
+.kindLegend .swatch.off { background: var(--fp-off); }
+.kindLegend .swatch.closed { background: var(--fp-off); border-style: dashed; }
 
 .extra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .extra > span { font-size: 13px; font-weight: 700; color: var(--pw-muted); }
@@ -76,6 +155,7 @@
 button.extraChip { cursor: pointer; }
 button.extraChip:hover { border-color: var(--pw-primary); }
 .extraChip[aria-pressed='true'] { border: 2px solid var(--pw-primary); background: var(--pw-primary-soft); padding: 5px 13px; }
+
 
 /* Book plan: each bookable room's day below the plan. */
 .days { display: grid; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }

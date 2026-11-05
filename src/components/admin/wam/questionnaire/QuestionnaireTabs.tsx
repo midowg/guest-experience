@@ -1,31 +1,27 @@
 import { Lock } from "lucide-react";
+import { PageTabs, type PageTab } from "@/components/console";
 import { wamAdminPath } from "@/lib/routes";
-import styles from "./questionnaire.module.css";
 
 export type QuestionnaireTab = "konten" | "kartu" | "pengaturan" | "progres" | "rekap" | "ekspor" | "data-hr" | "kamar";
 
-const tabs: { key: QuestionnaireTab; label: string; href: string; locked?: boolean }[] = [
-  { key: "konten", label: "Konten", href: wamAdminPath.questionnaire.content },
-  { key: "kartu", label: "Kartu", href: wamAdminPath.questionnaire.cards },
+/** A lock, and for screen readers the word for it, in front of a tab that opens with Data HR. */
+const locked = <><Lock size={16} aria-hidden="true" /><span className="sr-only">Terkunci, buka dengan email HR: </span></>;
+
+/** The questionnaire's sub-pages in the page's tab order; Kamar and Data HR open with the WAM email of someone on the HR access list. */
+export const questionnaireTabs: readonly (PageTab & { key: QuestionnaireTab })[] = [
+  { key: "konten", label: "Isi", href: wamAdminPath.questionnaire.content },
   { key: "pengaturan", label: "Pengaturan", href: wamAdminPath.questionnaire.settings },
   { key: "progres", label: "Progres", href: wamAdminPath.questionnaire.progress },
   { key: "rekap", label: "Rekap", href: wamAdminPath.questionnaire.recap },
+  { key: "kartu", label: "Kartu", href: wamAdminPath.questionnaire.cards },
+  { key: "kamar", label: "Kamar", href: wamAdminPath.questionnaire.rooms, icon: locked },
   { key: "ekspor", label: "Ekspor", href: wamAdminPath.questionnaire.export },
-  { key: "data-hr", label: "Data HR", href: wamAdminPath.questionnaire.hrData, locked: true },
-  { key: "kamar", label: "Kamar", href: wamAdminPath.questionnaire.rooms, locked: true },
+  { key: "data-hr", label: "Data HR", href: wamAdminPath.questionnaire.hrData, icon: locked },
 ];
 
-/** The questionnaire's sub-pages, as a row of tabs that scrolls sideways on a phone. Data HR opens with the WAM email of someone on the HR access list. */
+export const questionnaireTabLabel = (key: QuestionnaireTab) => questionnaireTabs.find(tab => tab.key === key)!.label;
+
+/** The questionnaire's sub-pages as the page's underlined tabs; the row scrolls sideways on a phone. */
 export function QuestionnaireTabs({ current }: { current: QuestionnaireTab }) {
-  return <nav aria-label="Bagian kuesioner">
-    <ul className={styles.tabs}>
-      {tabs.map(tab => <li key={tab.key}>
-        <a href={tab.href} className={styles.tab} aria-current={tab.key === current ? "page" : undefined}>
-          {tab.locked && <Lock size={16} aria-hidden />}
-          {tab.label}
-          {tab.locked && <span className="sr-only"> (terkunci, buka dengan email HR)</span>}
-        </a>
-      </li>)}
-    </ul>
-  </nav>;
+  return <PageTabs tabs={questionnaireTabs} current={current} label="Bagian kuesioner" />;
 }

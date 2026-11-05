@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { wamAdminPath } from "@/lib/routes";
-import { wamGroups, wamSection, wamSectionAt, wamSections } from "./sections";
+import { wamCrumbs, wamGroups, wamMenuKey, wamSection, wamSectionAt, wamSections } from "./sections";
 
 describe("Admin WAM sections", () => {
   it("give every section its own key and address under /admin/wam", () => {
@@ -17,10 +17,28 @@ describe("Admin WAM sections", () => {
     expect(Object.values(wamAdminPath)).not.toContain("/admin/wam/unit");
   });
 
-  it("group the menu in the order the sections are listed", () => {
+  it("group the menu in the order the sections are listed, leaving tab-only pages out", () => {
     const groups = wamGroups();
     expect(groups.map(group => group.label)).toEqual(["Ikhtisar", "Orang", "Aplikasi", "Data peserta"]);
-    expect(groups.flatMap(group => group.sections)).toEqual(wamSections);
+    expect(groups.flatMap(group => group.sections)).toEqual(wamSections.filter(section => !section.owner));
+    expect(groups.find(group => group.label === "Orang")!.sections.map(section => section.key)).toEqual(["akun"]);
+  });
+
+  it("make Permintaan reset a tab of Akun dan peran, with its own address kept", () => {
+    expect(wamSection("reset").owner).toBe("akun");
+    expect(wamSection("reset").href).toBe(wamAdminPath.resetRequests);
+    expect(wamMenuKey("reset")).toBe("akun");
+    expect(wamMenuKey("ruang")).toBe("ruang");
+    // An owner is always a menu item itself.
+    for (const section of wamSections) if (section.owner) expect(wamSection(section.owner).owner).toBeUndefined();
+  });
+
+  it("build the breadcrumb: Admin WAM, the group, the section, then any extra step", () => {
+    expect(wamCrumbs("akun")).toEqual([{ label: "Admin WAM", href: "/admin/wam" }, { label: "Orang" }, { label: "Akun dan peran" }]);
+    expect(wamCrumbs("akun", "Peran")).toEqual([{ label: "Admin WAM", href: "/admin/wam" }, { label: "Orang" }, { label: "Akun dan peran", href: wamAdminPath.accounts }, { label: "Peran" }]);
+    expect(wamCrumbs("reset").map(step => step.label)).toEqual(["Admin WAM", "Orang", "Akun dan peran", "Permintaan reset password"]);
+    expect(wamCrumbs("reset")[2].href).toBe(wamAdminPath.accounts);
+    expect(wamCrumbs("kuesioner", { label: "Rekap", href: wamAdminPath.questionnaire.recap }).at(-1)).toEqual({ label: "Rekap" });
   });
 
   it("find the section of a path, a deeper one included", () => {

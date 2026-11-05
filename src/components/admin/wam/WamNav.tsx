@@ -1,73 +1,52 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
-import { ExternalLink, Menu, X } from "lucide-react";
-import { praWamPath } from "@/lib/routes";
-import { wamGroups, wamSections, type WamSectionKey } from "./sections";
-import nav from "./wam-admin.module.css";
+import type { ReactNode } from "react";
+import { Crown, ExternalLink, LayoutGrid } from "lucide-react";
+import { ConsoleLogoutButton, ConsoleShell, type ConsoleLink, type ConsoleNavGroup } from "@/components/console";
+import { ADMIN_HOME, ADMIN_LOGIN, ADMIN_LOGOUT_API, SUPER_ADMIN_HOME, praWamPath } from "@/lib/routes";
+import { WAM_ADMIN_LABEL, wamGroups, wamMenuKey, wamSection, wamSections, type WamSectionKey } from "./sections";
 
 type Badges = Partial<Record<WamSectionKey, string>>;
 
-/** Every section, grouped, then the way into the app itself: the same list on every width. */
-function SectionList({ current, badges }: { current: WamSectionKey; badges: Badges }) {
-  return <div className={nav.list}>
-    <div className={nav.groups}>
-      {wamGroups().map(group => <div key={group.label} className={nav.group}>
-        <p className={nav.groupLabel}>{group.label}</p>
-        <ul>{group.sections.map(section => {
-          const Icon = section.icon;
-          const badge = badges[section.key];
-          return <li key={section.key}><a href={section.href} className={nav.item} aria-current={section.key === current ? "page" : undefined}>
-            <Icon size={18} aria-hidden="true" /><span className={nav.label}>{section.label}</span>
-            {badge && <span className={nav.badge}>{badge}<span className="sr-only"> menunggu</span></span>}
-          </a></li>;
-        })}</ul>
-      </div>)}
-    </div>
-    <a href={praWamPath.home} target="_blank" rel="noopener noreferrer" className={nav.app}>
-      <ExternalLink size={18} aria-hidden="true" /><span>Buka aplikasi WAM</span><span className="sr-only"> (tab baru)</span>
-    </a>
-  </div>;
+const badgeLabels: Partial<Record<WamSectionKey, string>> = { reset: "permintaan reset menunggu" };
+
+/** Admin WAM's menu from wamSections; a tab-only page's badge shows on its owner (reset → Akun dan peran). */
+export function wamNavGroups(badges: Badges = {}): ConsoleNavGroup[] {
+  return wamGroups().map(group => ({
+    label: group.label,
+    items: group.sections.map(section => {
+      const owned = wamSections.filter(other => wamMenuKey(other.key) === section.key && badges[other.key]);
+      const badgeFrom = owned[0];
+      const Icon = section.icon;
+      return {
+        key: section.key, label: section.label, href: section.href, icon: <Icon size={20} />,
+        badge: badgeFrom ? badges[badgeFrom.key] : undefined,
+        badgeLabel: badgeFrom ? badgeLabels[badgeFrom.key] : undefined,
+      };
+    }),
+  }));
 }
 
 /**
- * Admin WAM's sections as a side menu, built from wamSections so a new section shows here by
- * itself. A wide screen: a sticky list beside the page. A phone or tablet: a bar with a hamburger
- * and the current section; tapping it opens the same list as a drawer from the left (a native
- * dialog, so focus stays inside and Esc or the dimmed page closes it). `badges` puts a count next
- * to a section (open reset requests).
+ * Every Admin WAM page in the console frame: the sidebar of sections (built from wamSections, so a
+ * new section shows by itself), the way into the app, the rest of the admin and Keluar, and the page
+ * in the white panel. Pages reached only as a tab (reset) mark their owner in the menu.
  */
-export function WamNav({ current, badges = {} }: { current: WamSectionKey; badges?: Badges }) {
-  const drawer = useRef<HTMLDialogElement>(null);
-  const opener = useRef<HTMLButtonElement>(null);
-  const [open, setOpen] = useState(false);
-  const here = wamSections.find(section => section.key === current);
-  const waiting = Object.values(badges).filter(Boolean).length > 0;
-
-  useEffect(() => {
-    const dialog = drawer.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) { dialog.close(); opener.current?.focus(); }
-  }, [open]);
-
-  return <nav className={nav.nav} aria-label="Bagian admin WAM">
-    <SectionList current={current} badges={badges} />
-    <button ref={opener} type="button" className={nav.bar} aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
-      <span className={nav.burger}><Menu size={20} aria-hidden="true" /></span>
-      <span className={nav.barText}><small>Menu admin WAM</small><strong>{here?.label ?? "Ringkasan"}</strong></span>
-      {waiting && <span className={nav.badge} aria-hidden="true">!</span>}
-    </button>
-    <dialog ref={drawer} className={nav.drawer} aria-label="Menu admin WAM"
-      onCancel={event => { event.preventDefault(); setOpen(false); }}
-      onClick={event => { if (event.target === drawer.current) setOpen(false); }}>
-      {open && <div className={nav.drawerInner}>
-        <div className={nav.drawerHead}>
-          <strong>Admin WAM</strong>
-          <button type="button" className={nav.close} aria-label="Tutup menu" onClick={() => setOpen(false)}><X size={22} aria-hidden="true" /></button>
-        </div>
-        <SectionList current={current} badges={badges} />
-      </div>}
-    </dialog>
-  </nav>;
+export function WamNav({ current, badges = {}, superAdmin = false, wide = false, className, children }: {
+  current: WamSectionKey; badges?: Badges; superAdmin?: boolean; wide?: boolean; className?: string; children: ReactNode;
+}) {
+  const footerLinks: ConsoleLink[] = [
+    { key: "app", label: "Buka aplikasi WAM", href: praWamPath.home, icon: <ExternalLink size={20} />, external: true },
+    ...(superAdmin ? [{ key: "super", label: "Super admin", href: SUPER_ADMIN_HOME, icon: <Crown size={20} /> }] : []),
+    { key: "events", label: "Semua acara Journey", href: ADMIN_HOME, icon: <LayoutGrid size={20} /> },
+  ];
+  const hidden = wamSections.filter(section => section.owner).map(section => {
+    const Icon = section.icon;
+    return { key: section.key, label: section.label, href: section.href, sub: wamSection(section.owner!).label, icon: <Icon size={20} /> };
+  });
+  return <ConsoleShell theme="admin" area={WAM_ADMIN_LABEL} storageKey="admin-wam" className={className} wide={wide}
+    person={{ name: superAdmin ? "Super admin" : "Admin", sub: "Werkudara" }}
+    groups={wamNavGroups(badges)} current={wamMenuKey(current)} pageTitle={wamSection(wamMenuKey(current)).label}
+    footerLinks={footerLinks} searchItems={hidden}
+    footer={<ConsoleLogoutButton endpoint={ADMIN_LOGOUT_API} redirectTo={ADMIN_LOGIN} />}>
+    {children}
+  </ConsoleShell>;
 }

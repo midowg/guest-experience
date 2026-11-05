@@ -1,7 +1,8 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
+import { PageHeader } from "@/components/console";
 import { PraWamEvents } from "@/components/admin/wam/PraWamEvents";
 import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
-import { wamSection } from "@/components/admin/wam/sections";
+import { wamCrumbs, wamSection } from "@/components/admin/wam/sections";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { listEvents } from "@/lib/server/pra-wam/events";
@@ -15,6 +16,8 @@ export default async function WamEventsPage() {
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const { events, migrated } = await listEvents();
   return <WamAdminFrame current="acara">
+    <PageHeader crumbs={wamCrumbs("acara")} title={wamSection("acara").label}
+      subtitle="Satu aplikasi untuk Pra WAM dan WAM. Acara berstatus Disiapkan belum tampil untuk peserta; menutup modul Book menutup booking ruang." />
     <PraWamEvents initial={events} migrated={migrated} />
   </WamAdminFrame>;
 }

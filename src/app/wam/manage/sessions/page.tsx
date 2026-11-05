@@ -1,12 +1,17 @@
 import { notFound } from "next/navigation";
-import { Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ConsoleButtonLink, DayTimeline, PageHeader, PageTabs, Pill, SectionToolbar, type TimelineRow } from "@/components/console";
+import cs from "@/components/console/console.module.css";
 import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { SessionStatusPill } from "@/components/pra-wam/SessionStatusPill";
+import { dayRows, hourWindow, nowHours, readiness, roomRows, timelineLegend, withQuery } from "@/components/pra-wam/manage/schedule";
 import { Notice } from "@/components/ui";
+import { dayLabel, wibDate } from "@/lib/pra-wam/appraisal";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { sessionKindLabels, sessionWhen, sessionWhere, type Session, type SessionStatus } from "@/lib/pra-wam/sessions";
 import { praWamPath } from "@/lib/routes";
-import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { daySchedule } from "@/lib/server/pra-wam/appraisal";
+import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
 import { listSessions } from "@/lib/server/pra-wam/sessions";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import styles from "@/components/pra-wam/panitia.module.css";
@@ -19,14 +24,114 @@ const groups: { status: SessionStatus; title: string; empty: string }[] = [
   { status: "terbit", title: "Terbit", empty: "Belum ada sesi yang diterbitkan." },
   { status: "batal", title: "Dibatalkan", empty: "" },
 ];
+const lead = "Forum dari kalender Pra WAM masuk sebagai draf. Isi jam, ruang, dan peserta, lalu terbitkan supaya muncul di agenda peserta.";
 
-/** Jadwal sesi: every session, drafts first, as tables (panitia changes, BOD reads). */
-export default async function SessionsPage() {
+type Search = { view?: string; rentang?: string; tanggal?: string };
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const shift = (date: string, days: number) => { const day = new Date(`${date}T12:00:00Z`); day.setUTCDate(day.getUTCDate() + days); return day.toISOString().slice(0, 10); };
+/** Monday to Sunday of the week holding `date`. */
+const weekOf = (date: string) => { const monday = shift(date, -((new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7)); return [0, 1, 2, 3, 4, 5, 6].map(days => shift(monday, days)); };
+
+/** Jadwal sesi: every session, drafts first (panitia changes, BOD reads); for panitia also a timeline (console "K2"). */
+export default async function SessionsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const member = await requireMemberPage(praWamPath.sessions);
   if (!seesAllSessions(member)) notFound();
   const { sessions, migrated } = await listSessions(member);
   const manage = managesSessions(member);
   const now = new Date();
+  if (!manage) return <BodSessions member={member} sessions={sessions} migrated={migrated} now={now} />;
+
+  const asked = await searchParams;
+  const view = asked.view === "linimasa" ? "linimasa" : "daftar";
+  const tabs = [
+    { key: "daftar", label: "Daftar", href: praWamPath.sessions },
+    { key: "linimasa", label: "Linimasa", href: withQuery(praWamPath.sessions, { view: "linimasa" }) },
+  ];
+  return <PraWamShell member={member} current="sesi">
+    <PageHeader title="Jadwal sesi" subtitle={lead}
+      actions={migrated ? <ConsoleButtonLink variant="primary" href={praWamPath.newSession} icon={<Plus size={18} aria-hidden />}>Buat sesi</ConsoleButtonLink> : undefined} />
+    <PageTabs label="Tampilan jadwal" tabs={tabs} current={view} />
+    {!migrated && <Notice tone="warning">Sesi menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>}
+    {migrated && (view === "daftar" ? <SessionList sessions={sessions} now={now} /> : <Timeline member={member} sessions={sessions} asked={asked} now={now} />)}
+  </PraWamShell>;
+}
+
+/** Daftar: the same groups and actions as before, as console tables. */
+function SessionList({ sessions, now }: { sessions: Session[]; now: Date }) {
+  return <>{groups.map(group => {
+    const items = sessions.filter(session => session.status === group.status);
+    if (!items.length && !group.empty) return null;
+    return <section key={group.status} className={styles.section} aria-labelledby={`grup-${group.status}`}>
+      <SectionToolbar title={<span id={`grup-${group.status}`}>{group.title}</span>} count={items.length} />
+      {items.length === 0 ? <p className={styles.empty}>{group.empty}</p> : <div className={cs.tableWrap}>
+        <table className={cs.table}>
+          <thead><tr><th>Sesi</th><th>Waktu</th><th>Tempat</th><th>Peserta</th><th>Status</th><th>Tindakan</th></tr></thead>
+          <tbody>{items.map(session => {
+            const status = readiness(session, now);
+            return <tr key={session.id}>
+              <td><span className={styles.cellMain}><a className={styles.cellLink} href={praWamPath.session(session.id)}>{session.title}</a><small>{sessionKindLabels[session.kind]}</small></span></td>
+              <td>{sessionWhen(session)}</td>
+              <td>{sessionWhere(session)}</td>
+              <td>{session.participantCount}</td>
+              <td><Pill tone={status.tone}>{status.label}</Pill></td>
+              <td><div className={styles.rowActions}>
+                <ConsoleButtonLink href={praWamPath.editSession(session.id)}>{session.status === "draf" ? "Atur" : "Ubah"}</ConsoleButtonLink>
+                {session.status === "terbit" && <ConsoleButtonLink href={praWamPath.sessionAttendance(session.id)}>QR dan hadir</ConsoleButtonLink>}
+              </div></td>
+            </tr>;
+          })}</tbody>
+        </table>
+      </div>}
+    </section>;
+  })}</>;
+}
+
+/** Linimasa: a week by day (Minggu), or one day by room with the room bookings (Hari). */
+async function Timeline({ member, sessions, asked, now }: { member: Member; sessions: Session[]; asked: Search; now: Date }) {
+  const today = wibDate(now.toISOString());
+  const range = asked.rentang === "hari" ? "hari" : "minggu";
+  const date = asked.tanggal && DATE.test(asked.tanggal) ? asked.tanggal : today;
+  const link = (query: { rentang?: string; tanggal?: string }) => withQuery(praWamPath.sessions, { view: "linimasa", rentang: query.rentang ?? range, tanggal: query.tanggal === today ? undefined : query.tanggal });
+  const hrefs = { hari: link({ rentang: "hari", tanggal: date }), minggu: link({ rentang: "minggu", tanggal: date }) };
+  const sessionHref = (session: Session) => praWamPath.editSession(session.id);
+  const shown = sessions.filter(session => session.status !== "batal");
+
+  let rows: TimelineRow[], title: string, when: string;
+  if (range === "minggu") {
+    const week = weekOf(date);
+    // The weekend shows only when something happens on it.
+    const dates = week.filter((day, index) => index < 5 || shown.some(session => session.startsAt && session.endsAt && wibDate(session.startsAt) <= day && day <= wibDate(session.endsAt)));
+    rows = dayRows(dates, shown, sessionHref, today);
+    title = "Sesi per hari";
+    when = `${week.includes(today) ? "Minggu ini · " : ""}${dayLabel(week[0])} – ${dayLabel(week[6])}`;
+  } else {
+    const schedule = await daySchedule(date, member).catch(() => null);
+    rows = roomRows({ date, rooms: schedule?.rooms ?? [], bookings: schedule?.bookings ?? [], sessions: shown, sessionHref, bookingHref: booking => praWamPath.appraisal(date, booking.id) });
+    title = "Ruang dan sesi";
+    when = `${date === today ? "Hari ini · " : ""}${dayLabel(date)}`;
+  }
+  const hours = hourWindow(rows);
+  const step = range === "minggu" ? 7 : 1;
+  const unit = range === "minggu" ? "Minggu" : "Hari";
+  return <>
+    <div className={styles.toolRow}>
+      <div className={styles.toolGroup}>
+        <ConsoleButtonLink href={link({ tanggal: shift(date, -step) })} icon={<ChevronLeft size={18} aria-hidden />}>{unit} sebelumnya</ConsoleButtonLink>
+        <ConsoleButtonLink href={link({ tanggal: today })}>{range === "minggu" ? "Minggu ini" : "Hari ini"}</ConsoleButtonLink>
+        <ConsoleButtonLink href={link({ tanggal: shift(date, step) })}>{unit} berikutnya<ChevronRight size={18} aria-hidden /></ConsoleButtonLink>
+      </div>
+      <ul className={styles.legend} aria-label="Arti warna">
+        {timelineLegend(range === "hari").map(item => <li key={item.label}><Pill tone={item.tone}>{item.label}</Pill></li>)}
+      </ul>
+    </div>
+    <DayTimeline title={title} date={when} rows={rows} from={hours.from} to={hours.to} range={{ value: range, hrefs }}
+      now={range === "hari" ? (date === today ? nowHours(now) : undefined) : undefined}
+      empty={range === "hari" ? "Belum ada ruang yang bisa dibooking." : "Tidak ada sesi minggu ini."} />
+  </>;
+}
+
+/** A BOD reads the list as before, in the BOD's own frame. */
+function BodSessions({ member, sessions, migrated, now }: { member: Member; sessions: Session[]; migrated: boolean; now: Date }) {
   const table = (items: Session[]) => <div className={base.tableWrap}>
     <table className={base.table}>
       <thead><tr><th>Sesi</th><th>Waktu</th><th>Tempat</th><th>Peserta</th><th>Status</th><th>Tindakan</th></tr></thead>
@@ -37,17 +142,14 @@ export default async function SessionsPage() {
         <td>{session.participantCount}</td>
         <td><SessionStatusPill session={session} now={now} /></td>
         <td><div className={styles.actionsCell}>
-          {manage && <a className="button button--secondary" href={praWamPath.editSession(session.id)}>{session.status === "draf" ? "Atur" : "Ubah"}</a>}
           {session.status === "terbit" && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}>QR dan hadir</a>}
-          {!manage && <a className="button button--secondary" href={praWamPath.session(session.id)}>Lihat</a>}
+          <a className="button button--secondary" href={praWamPath.session(session.id)}>Lihat</a>
         </div></td>
       </tr>)}</tbody>
     </table>
   </div>;
   return <PraWamShell member={member} current="sesi">
-    <ScreenHead eyebrow={manage ? "Kelola acara" : "Baca saja"} title="Jadwal sesi"
-      lead="Forum dari kalender Pra WAM masuk sebagai draf. Isi jam, ruang, dan peserta, lalu terbitkan supaya muncul di agenda peserta."
-      actions={manage && migrated ? <a className="button button--primary" href={praWamPath.newSession}><Plus size={18} aria-hidden /> Buat sesi</a> : undefined} />
+    <ScreenHead eyebrow="Baca saja" title="Jadwal sesi" lead={lead} />
     {!migrated && <Notice tone="warning">Sesi menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>}
     {migrated && groups.map(group => {
       const items = sessions.filter(session => session.status === group.status);

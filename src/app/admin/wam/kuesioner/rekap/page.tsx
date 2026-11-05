@@ -1,8 +1,7 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { QuestionnaireRecap } from "@/components/admin/wam/questionnaire/QuestionnaireRecap";
-import { QuestionnaireTabs } from "@/components/admin/wam/questionnaire/QuestionnaireTabs";
+import { QuestionnaireFrame } from "@/components/admin/wam/questionnaire/QuestionnaireFrame";
 import { QuestionnaireWaiting } from "@/components/admin/wam/questionnaire/QuestionnaireWaiting";
-import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
 import { adminReader } from "@/lib/pra-wam/recap";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
@@ -26,8 +25,7 @@ export default async function QuestionnaireRecapPage({ searchParams }: { searchP
   const department = typeof asked === "string" && asked ? asked.slice(0, 120) : null;
   const unlock = form ? await hrUnlocked() : null;
   const recap = form ? await recapOf(form, adminReader(unlock?.formId === form.id), department) : null;
-  return <WamAdminFrame current="kuesioner" wide>
-    <QuestionnaireTabs current="rekap" />
+  return <QuestionnaireFrame current="rekap" wide>
     {recap ? <QuestionnaireRecap recap={recap} /> : <QuestionnaireWaiting />}
-  </WamAdminFrame>;
+  </QuestionnaireFrame>;
 }

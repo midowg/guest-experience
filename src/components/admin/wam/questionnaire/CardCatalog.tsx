@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { ChevronDown, ImageUp, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
+import { SectionToolbar } from "@/components/console";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import {
@@ -89,9 +90,9 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
   }
 
   return <div className="stack">
-    <div className={styles.head}>
+    <div>
+      <SectionToolbar title="Kartu karakter" count={`${real.length} kartu keluar`} />
       <div>
-        <h2>Kartu karakter</h2>
         <p className={styles.muted}>Karakter dipilih dari jawaban lewat aturan skor. Level dan tampilan diundi sekali di server, lalu dikunci. {real.length} kartu sudah keluar.</p>
       </div>
     </div>

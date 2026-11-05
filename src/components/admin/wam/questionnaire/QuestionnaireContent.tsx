@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, Eye, EyeOff, GitBranch, Plus } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
+import { SectionToolbar } from "@/components/console";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import type { QQuestion, QSection, Visibility } from "@/lib/pra-wam/questionnaire";
@@ -152,13 +153,10 @@ export function QuestionnaireContent({ initial }: { initial: AdminQuestionnaire 
   const locked = busy !== null;
 
   return <div className="stack">
-    <div className={styles.head}>
-      <div>
-        <h2>Konten</h2>
-        <p className={styles.muted}>{sections.length} bagian, {data.questions.length} pertanyaan. Ketuk pertanyaan untuk mengubah; pratinjau mengikuti isian.</p>
-      </div>
+    <SectionToolbar title="Bagian dan pertanyaan" count={`${sections.length} bagian · ${data.questions.length} pertanyaan`}>
       <Button type="button" variant="secondary" disabled={locked} onClick={() => setSectionEditing("new")}><Plus size={18} aria-hidden /> Tambah bagian</Button>
-    </div>
+    </SectionToolbar>
+    <p className={styles.muted}>Ketuk pertanyaan untuk mengubah; pratinjau mengikuti isian.</p>
     {data.answered && <Notice tone="info">Sudah ada jawaban yang masuk. Mengubah teks tidak mengubah jawaban lama; menghapus pertanyaan atau bagian yang sudah dijawab hanya menyembunyikannya.</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
 

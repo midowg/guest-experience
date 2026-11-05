@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Link2 } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
+import { SectionToolbar } from "@/components/console";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { formStatuses, slugFromName, slugProblem, type FormStatus, type QForm } from "@/lib/pra-wam/questionnaire";
@@ -118,7 +119,7 @@ export function QuestionnaireSettings({ initial }: { initial: QForm }) {
   const locked = busy !== null;
   const address = praWamPath.questionnaire(draft.slug.trim().toLowerCase() || form.slug);
   return <div className="stack">
-    <h2>Pengaturan</h2>
+    <SectionToolbar title="Pengaturan kuesioner" />
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
 
     <section className={styles.card} aria-labelledby="qs-status-title">

@@ -1,7 +1,7 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { PraWamAbout } from "@/components/admin/wam/PraWamAbout";
 import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
-import { wamSection } from "@/components/admin/wam/sections";
+import { wamCrumbs, wamSection } from "@/components/admin/wam/sections";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { getAbout } from "@/lib/server/pra-wam/about";
@@ -14,6 +14,6 @@ export default async function WamAboutPage() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   return <WamAdminFrame current="about" wide>
-    <PraWamAbout initial={await getAbout()} />
+    <PraWamAbout initial={await getAbout()} crumbs={wamCrumbs("about")} title={wamSection("about").label} />
   </WamAdminFrame>;
 }

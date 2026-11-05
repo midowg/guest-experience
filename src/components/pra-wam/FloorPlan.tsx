@@ -1,22 +1,32 @@
 "use client";
 
-import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Minus, Plus, Scan } from "lucide-react";
 import type { Room } from "@/lib/pra-wam/appraisal";
 import {
-  BUILDING, DECOR, FIT_VIEW, PLAN_H, PLAN_SPOTS, PLAN_W, ZOOM_MAX, ZOOM_MIN, clampView, isRoomSpot, moveView, pickableTone, placeRooms, revealRect, roomPeople, roomSpec,
-  spotText, zoomView, type PlanStatus, type PlanTone, type PlanView, type Rect,
+  BUILDING, DECOR, FIT_VIEW, FIXTURES, PLAN_H, PLAN_SPOTS, PLAN_W, WORDS_BOTTOM, WORDS_TOP, ZOOM_MAX, ZOOM_MIN, clampView, isRoomSpot, moveView, pickableTone, placeRooms, revealRect,
+  roomSeats, roomSpec, spotText, spotWords, zoomView, type PlanStatus, type PlanTone, type PlanView, type Rect,
 } from "@/lib/pra-wam/floor-plan";
 import type { DayStatus, DayTone } from "@/lib/pra-wam/room-day";
+import { chairPaths, seatPlan, type SeatLayout } from "@/lib/pra-wam/seating";
+import { roomGroup } from "@/lib/pra-wam/room-group";
 import css from "./floor-plan.module.css";
 
-export type LegendKey = PlanTone | DayTone | "selected";
+/** `kindMain` / `kindSmall`: chair colours of main and small rooms (chairColors "kind"). */
+export type LegendKey = PlanTone | DayTone | "selected" | "kindMain" | "kindSmall";
 const defaultLegend: Record<LegendKey, string> = {
   free: "Kosong", busy: "Terpakai", mine: "Booking kamu", small: "Terlalu kecil", selected: "Dipilih", off: "Tidak bisa dibooking", closed: "Tutup",
-  part: "Terpakai sebagian", full: "Penuh",
+  part: "Terpakai sebagian", full: "Penuh", kindMain: "Ruang utama", kindSmall: "Ruang kecil",
 };
 /** A room's status on the plan: for chosen hours (PlanStatus) or a whole day (DayStatus). */
 type Status = PlanStatus | DayStatus;
+/** The status in a few words, for the tooltip over the chosen room ("Antareja · 4 kursi · kosong"). */
+const TONE_WORDS: Record<Status["tone"], string> = {
+  free: "kosong", busy: "terpakai", mine: "booking kamu", small: "terlalu kecil", off: "tidak bisa dibooking", closed: "tutup", part: "terpakai sebagian", full: "penuh",
+};
+/** The tag on a taken room, so it reads as taken before its words do. */
+const TAKEN_CHIP: Partial<Record<Status["tone"], string>> = { busy: "Terpakai", full: "Penuh" };
+type Point = [number, number];
 
 type Props = {
   rooms: Room[];
@@ -54,6 +64,11 @@ type Props = {
   onPickSpot?: (key: string) => void;
   selectedSpot?: string;
   emptySpot?: PlanStatus;
+  /**
+   * What the chairs' colour says: the room's status (default), or whether it is a main or a small
+   * room ("kind", the default with `onPickSpot`: the super admin's view of the rooms).
+   */
+  chairColors?: "status" | "kind";
 };
 
 /** "Kosong 09.00–10.00" → "kosong 09.00–10.00", for the middle of a sentence. */
@@ -89,8 +104,10 @@ type Gesture = {
  */
 export function FloorPlan({
   rooms, statusOf, onPick, selectedId, action = "Pilih ruang ini", label, legend = ["free", "busy", "mine", "off"], caption,
-  legendLabels, pickable, highlightId, otherSpots = "label", showUnplaced = true, subtitle = "spec", onPickSpot, selectedSpot, emptySpot,
+  legendLabels, pickable, highlightId, otherSpots = "label", showUnplaced = true, subtitle = "spec", onPickSpot, selectedSpot, emptySpot, chairColors,
 }: Props) {
+  const byKind = (chairColors ?? (onPickSpot ? "kind" : "status")) === "kind";
+  const shadowId = `fp-shadow-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const [view, setView] = useState<PlanView>(FIT_VIEW);
   const [unitPx, setUnitPx] = useState<number | undefined>(undefined);
   const [said, setSaid] = useState("");
@@ -248,7 +265,59 @@ export function FloorPlan({
   };
   const spotButton = (key: string, text: string) => ({ label: `${text}. Ubah spot ini`, onClick: () => onPickSpot?.(key), onKeyDown: keyed(() => onPickSpot?.(key)) });
   const zoomed = view.scale > ZOOM_MIN + 0.001;
-  const common = { unitPx, scale: view.scale, onReveal: reveal };
+  const common = { unitPx, scale: view.scale, onReveal: reveal, shadow: `url(#${shadowId})` };
+  const seatsWord = (room: Room) => room.capacity ? `${room.capacity} kursi` : "kapasitas belum diisi";
+  const emptyStatus: PlanStatus = emptySpot ?? { tone: "closed", text: "Belum ada ruang" };
+  /** The chosen (or ringed) spot: drawn again on top with a blue ring and a dark tooltip. */
+  const chosen = ((): { rect: Rect; shape?: Point[]; tip: string } | null => {
+    if (onPickSpot) {
+      const hit = placed.find(item => item.key === selectedSpot);
+      if (hit) return { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: `${hit.room.name} · ${seatsWord(hit.room)} · ${lower(statusOf(hit.room).text)}` };
+      const spot = others.find(item => item.key === selectedSpot);
+      if (!spot) return null;
+      return { rect: spot.rect, shape: spot.shape, tip: isRoomSpot(spot.key) ? `${spot.label} · ${lower(emptyStatus.text)}` : emptyStatus.text };
+    }
+    const hit = placed.find(item => item.room.id === selectedId) ?? placed.find(item => item.room.id === highlightId);
+    return hit ? { rect: hit.rect, shape: PLAN_SPOTS[hit.key]?.shape, tip: `${hit.room.name} · ${seatsWord(hit.room)} · ${TONE_WORDS[statusOf(hit.room).tone]}` } : null;
+  })();
+  const legendKeys: LegendKey[] = byKind ? [...(["kindMain", "kindSmall"] as const).filter(key => !legend.includes(key)), ...legend] : legend;
+
+  const otherSpotsDrawn = others.map(spot => {
+    const named = isRoomSpot(spot.key);
+    // A room's spot keeps its furniture (Limasan's stage, the lounge's sofas) even with no WAM room in it.
+    const seats = named ? { capacity: null, layout: spot.layout, round: spot.round } : undefined;
+    if (onPickSpot) {
+      const empty = emptyStatus;
+      // Desks carry no name: only "Spot kosong", so the super admin can still give them a room.
+      return <Spot key={spot.key} {...common} rect={spot.rect} shape={spot.shape} textRect={spot.textRect} door={spot.door} seats={seats} name={named ? spot.label : empty.text} quiet={!named} sub={named ? empty.text : ""}
+        tone={empty.tone} selected={spot.key === selectedSpot} title={named ? `${spot.label} · ${empty.text}` : empty.text}
+        button={spotButton(spot.key, named ? `${spot.label}, ${lower(empty.text)}` : empty.text)} />;
+    }
+    const name = named && otherSpots === "label" ? spot.label : "";
+    return <Spot key={spot.key} {...common} rect={spot.rect} shape={spot.shape} textRect={spot.textRect} door={spot.door} seats={seats} name={name} sub="" tone="off" plain title={name} />;
+  });
+  const placedDrawn = placed.map(({ key, room, rect }) => {
+    const status = statusOf(room);
+    // On the plan the line under the name is how many chairs it has; people and facilities are in the tooltip.
+    const spec = roomSpec(room), seatsLine = roomSeats(room);
+    const spot = PLAN_SPOTS[key];
+    const shape = spot?.shape, textRect = spot?.textRect;
+    const seats = { capacity: room.capacity, layout: spot?.layout ?? "rapat", round: spot?.round };
+    // The same grouping as the admin's room list: a main room for at most 4 people is a small room.
+    const kind: SpotProps["kind"] = byKind ? (roomGroup(room) === "kecil" ? "kindSmall" : "kindMain") : undefined;
+    const drawn = { rect, shape, textRect, door: spot?.door, seats, kind, chip: TAKEN_CHIP[status.tone], main: room.kind === "utama" };
+    if (onPickSpot) {
+      return <Spot key={key} {...common} {...drawn} name={room.name} sub={subtitle === "status" ? status.text : seatsLine} tone={status.tone}
+        selected={key === selectedSpot} title={`${room.name} · ${spec} · ${status.text}`}
+        button={spotButton(key, `${room.name}, ${lower(status.text)}`)} />;
+    }
+    const selected = room.id === selectedId;
+    const pick = canPick(room, status);
+    const sub = subtitle === "status" ? (selected ? `Dipilih · ${status.text}` : status.text) : seatsLine;
+    return <Spot key={key} {...common} {...drawn} name={room.name} sub={sub} tone={status.tone} selected={selected}
+      ring={room.id === highlightId} title={`${room.name} · ${spec} · ${status.text}`} a11y={`${room.name}, ${lower(status.text)}`}
+      button={pick ? { label: `${room.name}, ${lower(status.text)}. ${action}`, onClick: () => onPick?.(room), onKeyDown: keyed(() => onPick?.(room)) } : undefined} />;
+  });
 
   return <div className={css.plan}>
     <div className={css.stage} onKeyDown={onKeyDown}>
@@ -256,35 +325,17 @@ export function FloorPlan({
         aria-roledescription="denah" aria-keyshortcuts="+ - 0"
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onClickCapture={onClickCapture}>
         <svg className={css.svg} viewBox={`${view.x.toFixed(2)} ${view.y.toFixed(2)} ${(PLAN_W / view.scale).toFixed(2)} ${(PLAN_H / view.scale).toFixed(2)}`}>
-          <rect className={css.building} x={BUILDING.x} y={BUILDING.y} width={BUILDING.w} height={BUILDING.h} rx={18} />
+          <defs>
+            <filter id={shadowId} x="-10%" y="-10%" width="120%" height="125%">
+              <feDropShadow dx="0" dy="4" stdDeviation="5" style={{ floodColor: "var(--fp-shadow)" }} />
+            </filter>
+          </defs>
+          <rect className={css.building} x={BUILDING.x} y={BUILDING.y} width={BUILDING.w} height={BUILDING.h} rx={22} />
           {DECOR.map((rect, index) => <rect key={index} className={css.decor} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={6} />)}
-          {others.map(spot => {
-            const named = isRoomSpot(spot.key);
-            if (onPickSpot) {
-              const empty = emptySpot ?? { tone: "closed", text: "Belum ada ruang" };
-              // Desks carry no name: only "Spot kosong", so the super admin can still give them a room.
-              return <Spot key={spot.key} {...common} rect={spot.rect} shape={spot.shape} textRect={spot.textRect} name={named ? spot.label : empty.text} quiet={!named} sub={named ? empty.text : ""}
-                tone={empty.tone} selected={spot.key === selectedSpot} title={named ? `${spot.label} · ${empty.text}` : empty.text}
-                button={spotButton(spot.key, named ? `${spot.label}, ${lower(empty.text)}` : empty.text)} />;
-            }
-            const name = named && otherSpots === "label" ? spot.label : "";
-            return <Spot key={spot.key} {...common} rect={spot.rect} shape={spot.shape} textRect={spot.textRect} name={name} sub="" tone="off" plain title={name} />;
-          })}
-          {placed.map(({ key, room, rect }) => {
-            const status = statusOf(room);
-            // On the plan the line under the name is how many people fit; facilities are in the tooltip.
-            const spec = roomSpec(room), people = roomPeople(room);
-            const shape = PLAN_SPOTS[key]?.shape, textRect = PLAN_SPOTS[key]?.textRect;
-            if (onPickSpot) return <Spot key={key} {...common} rect={rect} shape={shape} textRect={textRect} name={room.name} sub={subtitle === "status" ? status.text : people} tone={status.tone}
-              main={room.kind === "utama"} selected={key === selectedSpot} title={`${room.name} · ${spec} · ${status.text}`}
-              button={spotButton(key, `${room.name}, ${lower(status.text)}`)} />;
-            const selected = room.id === selectedId;
-            const pick = canPick(room, status);
-            const sub = subtitle === "status" ? (selected ? `Dipilih · ${status.text}` : status.text) : people;
-            return <Spot key={key} {...common} rect={rect} shape={shape} textRect={textRect} name={room.name} sub={sub} tone={status.tone} main={room.kind === "utama"} selected={selected}
-              ring={room.id === highlightId} title={`${room.name} · ${spec} · ${status.text}`} a11y={`${room.name}, ${lower(status.text)}`}
-              button={pick ? { label: `${room.name}, ${lower(status.text)}. ${action}`, onClick: () => onPick?.(room), onKeyDown: keyed(() => onPick?.(room)) } : undefined} />;
-          })}
+          {otherSpotsDrawn}
+          {placedDrawn}
+          <Fixtures />
+          {chosen && <Focus {...chosen} view={view} unitPx={unitPx} />}
         </svg>
       </div>
       <Compass />
@@ -314,11 +365,12 @@ export function FloorPlan({
           : <span key={room.id} className={css.extraChip}>{body}</span>;
       })}
     </div>}
-    <ul className={css.legend} aria-label="Keterangan warna">
-      {legend.map(key => <li key={key}><i className={`${css.swatch} ${css[key]}`} aria-hidden />{legendLabels?.[key] ?? defaultLegend[key]}</li>)}
+    <ul className={`${css.legend} ${byKind ? css.kindLegend : ""}`} aria-label="Keterangan warna">
+      {legendKeys.map(key => <li key={key}><i className={`${css.swatch} ${css[key]}`} aria-hidden />{legendLabels?.[key] ?? defaultLegend[key]}</li>)}
     </ul>
   </div>;
 }
+
 
 /**
  * North, up: a small compass that stays in the corner while the plan zooms and pans, so a guest
@@ -327,24 +379,78 @@ export function FloorPlan({
 function Compass() {
   return <div className={css.compass} role="img" aria-label="Kompas: utara ke atas, sisi Limasan" title="Utara ke atas (sisi Limasan)">
     <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-      <circle className={css.compassRing} cx="20" cy="20" r="18.5" />
-      <text className={css.compassN} x="20" y="10.5">U</text>
-      <path className={css.needleNorth} d="M20 14 L24.5 25.5 L15.5 25.5 Z" />
-      <path className={css.needleSouth} d="M20 35 L24.5 25.5 L15.5 25.5 Z" />
+      <circle className={css.compassRing} cx="20" cy="20" r="18" />
+      <text className={css.compassN} x="20" y="9.5">U</text>
+      <path className={css.needleNorth} d="M20 13.5 L23.6 23 L16.4 23 Z" />
+      <path className={css.needleSouth} d="M20 33 L23.6 23 L16.4 23 Z" />
+      <circle className={css.compassHub} cx="20" cy="23" r="1.6" />
     </svg>
   </div>;
+}
+
+/** Furniture that belongs to no room's chairs: Main Office's desks, the pantry counter, plants. Never in the way of a tap. */
+function Fixtures() {
+  return <g className={css.fixtures} aria-hidden="true">
+    {FIXTURES.map(({ kind, rect }, index) => kind === "plant"
+      ? <g key={index}>
+        <circle className={css.plant} cx={rect.x + rect.w * 0.42} cy={rect.y + rect.h * 0.56} r={rect.w * 0.4} />
+        <circle className={css.plantLeaf} cx={rect.x + rect.w * 0.66} cy={rect.y + rect.h * 0.36} r={rect.w * 0.28} />
+      </g>
+      : <rect key={index} className={kind === "desk" ? css.wood : css.counter} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={kind === "desk" ? 5 : 4} />)}
+  </g>;
+}
+
+/**
+ * The chosen room drawn again on top of the plan: a blue ring on its walls and a dark tooltip above
+ * it ("Antareja · 4 kursi · kosong"), sized for the screen at any zoom and kept in view. Read out
+ * already by the room itself, so hidden from screen readers.
+ */
+function Focus({ rect, shape, tip, view, unitPx }: { rect: Rect; shape?: Point[]; tip: string; view: PlanView; unitPx?: number }) {
+  const px = (unitPx && unitPx > 0 ? unitPx : 860 / PLAN_W) * view.scale;
+  const size = 12.5 / px, padX = 9 / px, height = 26 / px, arrow = 6 / px, gap = 5 / px, edge = 4 / px;
+  const viewW = PLAN_W / view.scale, viewH = PLAN_H / view.scale;
+  const width = Math.min(tip.length * size * 0.56 + padX * 2, viewW - edge * 2);
+  const middle = rect.x + rect.w / 2;
+  const x = Math.min(Math.max(middle - width / 2, view.x + edge), view.x + viewW - width - edge);
+  const aboveY = rect.y - gap - arrow - height;
+  const above = aboveY >= view.y + edge || rect.y + rect.h + gap + arrow + height > view.y + viewH - edge;
+  const y = above ? Math.max(aboveY, view.y + edge) : rect.y + rect.h + gap + arrow;
+  const tipX = Math.min(Math.max(middle, x + arrow * 2), x + width - arrow * 2);
+  const pointer = above
+    ? `M${tipX - arrow} ${y + height - 0.5}L${tipX} ${y + height + arrow}L${tipX + arrow} ${y + height - 0.5}Z`
+    : `M${tipX - arrow} ${y + 0.5}L${tipX} ${y - arrow}L${tipX + arrow} ${y + 0.5}Z`;
+  const outline = (className: string) => shape
+    ? <polygon className={className} points={shape.map(point => point.join(",")).join(" ")} />
+    : <rect className={className} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={10} />;
+  return <g className={css.focus} aria-hidden="true">
+    {outline(css.focusHalo)}
+    {outline(css.focusRing)}
+    <g className={css.tip}>
+      <rect x={x} y={y} width={width} height={height} rx={height / 2.4} />
+      <path d={pointer} />
+      <text x={x + width / 2} y={y + height / 2} fontSize={size.toFixed(2)}>{tip}</text>
+    </g>
+  </g>;
 }
 
 type SpotProps = {
   rect: Rect;
   /** The outline to draw instead of `rect` (Main Office's L). */
-  shape?: [number, number][];
-  /** Where the words sit, when not `rect`'s middle (the L's full-width arm). */
+  shape?: Point[];
+  /** Where the words (and chairs) sit, when not `rect` (the L's full-width arm, the pantry beside its counter). */
   textRect?: Rect;
+  /** A break in the wall: its door. */
+  door?: [Point, Point];
+  /** Chairs drawn from the capacity, the words then at the top; without it the words sit in the middle. */
+  seats?: { capacity: number | null; layout: SeatLayout; round?: boolean };
   name: string;
-  /** The line under the name: the room's specification or its status; "" for none. */
+  /** The line under the name: the room's chairs or its status; "" for none. */
   sub: string;
   tone: Status["tone"];
+  /** Chairs coloured by the kind of room rather than its status. */
+  kind?: "kindMain" | "kindSmall";
+  /** A small tag on the room ("Terpakai"), unless its status line already says it. */
+  chip?: string;
   /** The tooltip: name, specification and status. */
   title: string;
   /** Read out when the spot is not a button; by default its name and its tooltip. */
@@ -360,6 +466,8 @@ type SpotProps = {
   unitPx?: number;
   scale: number;
   onReveal: (rect: Rect) => void;
+  /** The soft shadow under a room's floor (an SVG filter url). */
+  shadow?: string;
 };
 
 /** Whether focus came from the keyboard (a tap on a room must not pan the plan under the finger). */
@@ -367,29 +475,65 @@ function keyboardFocus(element: Element) {
   try { return element.matches(":focus-visible"); } catch { return false; }
 }
 
-/** One spot: its box (or outline), its name and, once readable at this zoom, its subtitle. */
-function Spot({ rect, shape, textRect, name, sub, tone, title, a11y, main, selected, ring, plain, quiet, button, unitPx, scale, onReveal }: SpotProps) {
+/**
+ * One spot: its floor (or outline) and door, its furniture and chairs, its name and, once readable
+ * at this zoom, its subtitle. With chairs, the words sit at the top and the chairs below them; the
+ * chairs are two paths (seats, backrests) coloured by the spot's status or kind.
+ */
+function Spot({ rect, shape, textRect, door, seats, name, sub, tone, kind, chip, title, a11y, main, selected, ring, plain, quiet, button, unitPx, scale, onReveal, shadow }: SpotProps) {
   // An L-shaped room keeps its words in its full-width arm, so they stay inside the L.
   const textBox = textRect ?? rect;
-  const text = spotText({ name, sub, rect: textBox, main, unitPx });
+  const capacity = seats?.capacity ?? null, layout = seats?.layout, round = !!seats?.round;
+  const { text, band, furniture, chairs } = useMemo(() => {
+    if (!layout) return { text: spotText({ name, sub, rect: textBox, main, unitPx }), band: 0, furniture: null, chairs: null };
+    const words = spotWords({ name, sub, rect: textBox, main, unitPx });
+    const plan = seatPlan({ box: textBox, capacity, layout, round, top: words.band });
+    return { text: words, band: words.band, furniture: plan, chairs: plan.drawn ? chairPaths(plan.chairs) : null };
+  }, [name, sub, textBox, main, unitPx, capacity, layout, round]);
+
   const showSub = text.sub.length > 0 && scale >= text.subFrom;
   const nameGap = text.nameSize * 1.2, subGap = text.subSize * 1.2;
   const height = text.name.length * nameGap + (showSub ? text.subSize * 0.5 + text.sub.length * subGap : 0);
-  const cx = textBox.x + textBox.w / 2, cy = textBox.y + textBox.h / 2;
+  const cx = textBox.x + textBox.w / 2;
+  // At the top when chairs are drawn (turned words centred in their band), else in the middle.
+  const cy = layout ? textBox.y + WORDS_TOP + (text.rotate ? (band - WORDS_TOP - WORDS_BOTTOM) / 2 : height / 2) : textBox.y + textBox.h / 2;
   const top = cy - height / 2;
-  const className = [css.spot, css[tone], main ? css.main : "", selected ? css.selected : "", ring ? css.ring : "", plain ? css.plain : "", button ? css.click : ""].join(" ");
+  const floorTone = tone === "off" || tone === "closed";
+  const className = [css.spot, css[tone], kind ? css[kind] : "", main ? css.main : "", selected ? css.selected : "", ring ? css.ring : "", plain ? css.plain : "", button ? css.click : ""].join(" ");
   const attributes = button
     ? { role: "button", tabIndex: 0, "aria-label": button.label, "aria-pressed": !!(selected || ring), onClick: button.onClick, onKeyDown: button.onKeyDown, onFocus: (event: FocusEvent<SVGGElement>) => { if (keyboardFocus(event.currentTarget)) onReveal(rect); } }
     : plain && !name ? { "aria-hidden": true } : { role: "img", "aria-label": a11y ?? (plain ? `${name}, bukan ruang booking` : title.replace(/ · /g, ", ")) };
+
+  // The tag sits at the room's foot, readable but never wider than a sixth of the room.
+  const chipShown = !!chip && !(showSub && sub.startsWith(chip));
+  const chipSize = Math.min(Math.max(14, 9 / (unitPx && unitPx > 0 ? unitPx : 860 / PLAN_W)), textBox.w / 6);
+  const chipW = (chip?.length ?? 0) * chipSize * 0.62 + chipSize * 1.1, chipH = chipSize * 1.6;
+
   return <g className={className} {...attributes}>
     {title && <title>{title}</title>}
     {shape
-      ? <polygon className={css.box} points={shape.map(point => point.join(",")).join(" ")} />
-      : <rect className={css.box} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={10} />}
+      ? <polygon className={css.box} points={shape.map(point => point.join(",")).join(" ")} filter={plain || floorTone ? undefined : shadow} />
+      : <rect className={css.box} x={rect.x} y={rect.y} width={rect.w} height={rect.h} rx={10} filter={plain || floorTone ? undefined : shadow} />}
+    {door && <line className={css.door} x1={door[0][0]} y1={door[0][1]} x2={door[1][0]} y2={door[1][1]} />}
+    {furniture && <g className={css.furniture} aria-hidden="true">
+      {furniture.rug && <rect className={css.rug} x={furniture.rug.x} y={furniture.rug.y} width={furniture.rug.w} height={furniture.rug.h} rx={12} />}
+      {furniture.stage && <rect className={css.wood} x={furniture.stage.x} y={furniture.stage.y} width={furniture.stage.w} height={furniture.stage.h} rx={4} />}
+      {furniture.sofas.map((sofa, index) => <rect key={index} className={css.sofa} x={sofa.x} y={sofa.y} width={sofa.w} height={sofa.h} rx={9} />)}
+      {furniture.table && <rect className={css.wood} x={furniture.table.x} y={furniture.table.y} width={furniture.table.w} height={furniture.table.h} rx={layout === "lounge" ? 10 : 6} />}
+      {furniture.roundTable && <circle className={css.wood} cx={furniture.roundTable.cx} cy={furniture.roundTable.cy} r={furniture.roundTable.r} />}
+      {chairs && <>
+        <path className={css.seat} d={chairs.seat} />
+        <path className={css.back} d={chairs.back} />
+      </>}
+    </g>}
     <g transform={text.rotate ? `rotate(-90 ${cx.toFixed(1)} ${cy.toFixed(1)})` : undefined}>
     {text.name.map((line, index) => <text key={`n${index}`} className={quiet ? css.st : undefined} x={cx} y={top + nameGap * (index + 0.5)} fontSize={text.nameSize.toFixed(1)}>{line}</text>)}
     {showSub && text.sub.map((line, index) => <text key={`s${index}`} className={css.st} x={cx}
       y={top + text.name.length * nameGap + text.subSize * 0.5 + subGap * (index + 0.5)} fontSize={text.subSize.toFixed(1)}>{line}</text>)}
     </g>
+    {chipShown && <g className={css.chip} aria-hidden="true">
+      <rect x={cx - chipW / 2} y={textBox.y + textBox.h - chipH - 8} width={chipW} height={chipH} rx={chipH / 2} />
+      <text x={cx} y={textBox.y + textBox.h - chipH / 2 - 8} fontSize={chipSize.toFixed(1)}>{chip}</text>
+    </g>}
   </g>;
 }

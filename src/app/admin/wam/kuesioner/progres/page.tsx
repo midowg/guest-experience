@@ -1,7 +1,6 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
-import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
 import { QuestionnaireProgress } from "@/components/admin/wam/questionnaire/QuestionnaireProgress";
-import { QuestionnaireTabs } from "@/components/admin/wam/questionnaire/QuestionnaireTabs";
+import { QuestionnaireFrame } from "@/components/admin/wam/questionnaire/QuestionnaireFrame";
 import { QuestionnaireWaiting } from "@/components/admin/wam/questionnaire/QuestionnaireWaiting";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
@@ -19,8 +18,7 @@ export default async function QuestionnaireProgressPage() {
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const [report, form, last] = await Promise.all([questionnaireProgress(), currentForm().catch(() => null), lastReminder()]);
   const reminder = { open: !!form && form.status === "buka" && editable(form), last };
-  return <WamAdminFrame current="kuesioner">
-    <QuestionnaireTabs current="progres" />
+  return <QuestionnaireFrame current="progres">
     {report ? <QuestionnaireProgress report={report} reminder={reminder} /> : <QuestionnaireWaiting />}
-  </WamAdminFrame>;
+  </QuestionnaireFrame>;
 }

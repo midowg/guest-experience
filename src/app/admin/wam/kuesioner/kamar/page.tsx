@@ -1,8 +1,7 @@
 import { Lock } from "lucide-react";
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
-import { QuestionnaireTabs } from "@/components/admin/wam/questionnaire/QuestionnaireTabs";
+import { QuestionnaireFrame } from "@/components/admin/wam/questionnaire/QuestionnaireFrame";
 import { StayRooms } from "@/components/admin/wam/questionnaire/StayRooms";
-import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
 import { Notice } from "@/components/ui";
 import { STAY_MIGRATION } from "@/lib/pra-wam/stay";
 import { wamAdminPath } from "@/lib/routes";
@@ -23,12 +22,11 @@ export default async function StayRoomsPage() {
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const unlock = await hrUnlocked();
   const board = unlock ? await stayBoard(unlock) : null;
-  return <WamAdminFrame current="kuesioner" wide>
-    <QuestionnaireTabs current="kamar" />
+  return <QuestionnaireFrame current="kamar" wide>
     {!unlock
       ? <Notice tone="info"><Lock size={14} aria-hidden /> Pairing kamar memakai data menginap, jadi terkunci seperti Data HR. <a href={wamAdminPath.questionnaire.hrData}>Buka Data HR</a> dengan email WAM yang punya akses, lalu kembali ke sini.</Notice>
       : !board?.migrated
         ? <Notice tone="warning">Kamar menunggu migrasi {STAY_MIGRATION}.</Notice>
         : <StayRooms board={board} />}
-  </WamAdminFrame>;
+  </QuestionnaireFrame>;
 }

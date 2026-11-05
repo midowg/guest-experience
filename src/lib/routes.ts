@@ -64,6 +64,12 @@ export const absolute = (origin: string, path: string) => `${origin.replace(/\/$
 
 /* Admin pages */
 
+/** The admin's own pages: the event list, the super admin's dashboard, signing in, and signing out (POST). */
+export const ADMIN_HOME = "/admin";
+export const SUPER_ADMIN_HOME = "/admin/super";
+export const ADMIN_LOGIN = "/admin/login";
+export const ADMIN_LOGOUT_API = "/api/auth/logout";
+
 export type AdminTab = "edit" | "invitations" | "responses" | "checkin" | "beo" | "beo-print" | "gallery" | "feedback" | "preview" | "donations" | "donations-report" | "donations-split";
 const adminTabPaths: Record<AdminTab, string> = {
   edit: "", invitations: "/undangan", responses: "/rsvp", checkin: "/checkin", beo: "/beo", "beo-print": "/beo/cetak",
@@ -255,6 +261,8 @@ export const wamAdminPath = {
   /** Ringkasan: the key numbers and a way into every section. */
   home: WAM_ADMIN,
   accounts: `${WAM_ADMIN}/akun`,
+  /** Akun dan peran, tab Peran: what each role does and which go together. */
+  roles: `${WAM_ADMIN}/akun/peran`,
   /** "Lupa password" requests waiting for an answer. */
   resetRequests: `${WAM_ADMIN}/permintaan-reset`,
   rooms: `${WAM_ADMIN}/ruang`,
