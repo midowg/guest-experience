@@ -4,8 +4,8 @@
 .docRow + .docRow { border-top: 1px solid var(--pw-line); }
 .docBody { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .docBody strong { font-size: 15px; overflow-wrap: anywhere; }
-.docOpen { flex: none; display: inline-flex; align-items: center; min-height: 44px; font-weight: 800; font-size: 14px; text-decoration: none; padding: 0 8px; }
-.docDelete { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--pw-muted); cursor: pointer; }
+.docOpen { flex: none; display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; font-size: 14px; text-decoration: none; padding: 0 8px; }
+.docDelete { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--pw-muted); cursor: pointer; }
 .docDelete:hover { background: var(--pw-danger-soft); color: var(--pw-danger); }
 .docDelete svg { width: 18px; height: 18px; }
 .groupLabel { margin: 16px 0 8px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
@@ -38,14 +38,14 @@
 .detail { display: grid; gap: 16px; }
 .detail > * { margin: 0; }
 .detailHead { display: grid; gap: 10px; justify-items: start; }
-.detailTitle { margin: 0 0 4px; font-family: var(--pw-display); font-size: 28px; line-height: 1.15; font-weight: 600; color: var(--pw-primary); }
+.detailTitle { margin: 0 0 4px; font-family: var(--pw-display); font-size: 28px; line-height: 1.15; font-weight: 500; color: var(--pw-text); }
 @media (min-width: 1024px) { .detailTitle { font-size: 32px; } }
 .description { margin: 16px 0 0; white-space: pre-line; }
 
 /* Check-in status (P3, E2; the states of P5 and P13). The text stays in the text colour for contrast; the tone is the background and icon. */
 .check { display: flex; align-items: flex-start; gap: 10px; max-width: 100%; margin: 0; padding: 10px 14px; border-radius: 12px; color: var(--pw-text); font-size: 14px; line-height: 1.45; }
 .check svg { flex: none; width: 18px; height: 18px; margin-top: 1px; }
-.check strong { font-weight: 800; }
+.check strong { font-weight: 600; }
 .checkWide { width: 100%; padding: 12px 14px; }
 .checkDone, .checkOpen { background: var(--pw-success-soft); }
 .checkDone svg, .checkOpen svg { color: var(--pw-success); }
@@ -55,17 +55,17 @@
 .checkClosed svg { color: var(--pw-warning); }
 
 /* A participant's session that is not published (yet), or cancelled */
-.waiting { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.waiting { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border: 0; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); }
 .waiting strong { display: block; font-size: 17px; }
 .waiting p { margin: 4px 0 0; }
 
 /* Participants: initials, overlapping, then the full list on demand */
 .faces { display: flex; margin-top: 8px; padding-left: 6px; }
-.face { display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--pw-surface); background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 11px; font-weight: 800; }
+.face { display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--pw-surface); background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 11px; font-weight: 600; }
 .faces .face { margin-left: -6px; }
 .faceMore { background: var(--pw-surface-soft); color: var(--pw-muted); }
 .people { margin-top: 12px; border-top: 1px solid var(--pw-line); }
-.people summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 800; color: var(--pw-primary); cursor: pointer; }
+.people summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--pw-primary); cursor: pointer; }
 .people ul { list-style: none; margin: 0; padding: 0 0 4px; display: grid; gap: 8px; }
 .people li { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .people li .face { border-color: transparent; }
@@ -103,8 +103,8 @@
 .sheetHandle { justify-self: center; width: 40px; height: 4px; border-radius: 4px; background: var(--pw-line); }
 @media (min-width: 640px) { .sheetHandle { display: none; } .sheetBody { padding-top: 20px; } }
 .sheetHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.sheetHead h2 { margin: 0; font-family: var(--pw-display); font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--pw-primary); }
-.sheetClose { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; margin-right: -8px; border: 0; border-radius: 12px; background: transparent; color: var(--pw-text); cursor: pointer; transition: background-color .15s ease; }
+.sheetHead h2 { margin: 0; font-family: var(--pw-display); font-size: 24px; font-weight: 500; line-height: 1.2; color: var(--pw-text); }
+.sheetClose { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; margin-right: -8px; border: 0; border-radius: 50%; background: transparent; color: var(--pw-text); cursor: pointer; transition: background-color .15s ease; }
 .sheetClose:hover { background: var(--pw-surface-soft); }
 .sheetClose svg { width: 22px; height: 22px; }
 .compare { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); }

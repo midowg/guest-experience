@@ -1,11 +1,11 @@
 /* Avatar.tsx and ProfilePhoto.tsx: a round photo or initials with a brass ring. --pw-* tokens only. */
-.avatar { flex: none; position: relative; display: inline-grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); font-weight: 800; line-height: 1; user-select: none; }
+.avatar { flex: none; position: relative; display: inline-grid; place-items: center; overflow: hidden; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); font-weight: 600; line-height: 1; user-select: none; }
 .avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.sm { width: 28px; height: 28px; font-size: 11px; box-shadow: 0 0 0 2px var(--pw-surface), 0 0 0 3px var(--pw-brass-line); }
-.md { width: 36px; height: 36px; font-size: 12px; box-shadow: 0 0 0 2px var(--pw-surface), 0 0 0 3px var(--pw-brass-line); }
-.lg { width: 56px; height: 56px; font-size: 20px; box-shadow: 0 0 0 3px var(--pw-surface), 0 0 0 5px var(--pw-brass-line); }
-.xl { width: 96px; height: 96px; font-size: 32px; box-shadow: 0 0 0 3px var(--pw-surface), 0 0 0 5px var(--pw-brass-line); }
-.lg.initials, .xl.initials { background: var(--pw-hero); color: var(--pw-on-hero); font-family: var(--pw-display); font-weight: 600; }
+.sm { width: 28px; height: 28px; font-size: 11px; box-shadow: 0 0 0 2px var(--pw-surface), 0 0 0 3px var(--pw-line); }
+.md { width: 36px; height: 36px; font-size: 12px; box-shadow: 0 0 0 2px var(--pw-surface), 0 0 0 3px var(--pw-line); }
+.lg { width: 56px; height: 56px; font-size: 20px; box-shadow: 0 0 0 3px var(--pw-surface), 0 0 0 4px var(--pw-line); }
+.xl { width: 96px; height: 96px; font-size: 32px; box-shadow: 0 0 0 3px var(--pw-surface), 0 0 0 4px var(--pw-line); }
+.lg.initials, .xl.initials { background: var(--pw-hero); color: var(--pw-on-hero); font-family: var(--pw-display); font-weight: 500; }
 
 .profile { display: grid; justify-items: center; gap: 10px; }
 .frame { position: relative; display: inline-grid; }
@@ -20,7 +20,7 @@
 /* "Ganti foto profil": a small dialog in the middle, like a phone's own photo chooser. */
 .chooser { box-sizing: border-box; width: min(100% - 48px, 20rem); max-width: none; margin: auto; padding: 0; border: 0; border-radius: 20px; background: var(--pw-surface); color: var(--pw-text); box-shadow: var(--pw-shadow); overflow: hidden; }
 .chooser::backdrop { background: rgba(11, 21, 38, .45); }
-.chooser h2 { margin: 0; padding: 18px 20px 6px; font-family: var(--pw-body); font-size: 17px; font-weight: 800; text-align: center; color: var(--pw-text); }
+.chooser h2 { margin: 0; padding: 18px 20px 6px; font-family: var(--pw-body); font-size: 17px; font-weight: 600; text-align: center; color: var(--pw-text); }
 .chooser p { margin: 0; padding: 0 20px 12px; font-size: 13px; text-align: center; color: var(--pw-muted); }
 .actions { display: grid; border-top: 1px solid var(--pw-line); }
 .action { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; padding: 0 20px; border: 0; border-bottom: 1px solid var(--pw-line); background: transparent; color: var(--pw-text); font: inherit; font-size: 16px; font-weight: 700; text-align: left; cursor: pointer; transition: background-color .15s ease; }

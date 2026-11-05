@@ -8,8 +8,8 @@ export type WamTheme = (typeof WAM_THEMES)[number];
 const ONE_YEAR = 60 * 60 * 24 * 365;
 /** The app's page colour and the browser bar colour, per look. */
 export const WAM_THEME_COLORS = {
-  light: { page: "#FAFAF7", bar: "#1551A0" },
-  dark: { page: "#0E1218", bar: "#0E1218" },
+  light: { page: "#F5F7FA", bar: "#F5F7FA" },
+  dark: { page: "#0E1117", bar: "#0E1117" },
 } as const;
 
 /** Anything unknown or missing is "light": dark only appears when the person picks it. */

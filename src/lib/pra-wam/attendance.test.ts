@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
-  asMethod, checkInWindow, encodeProof, fitWithin, isOwnProofKey, MAX_PROOF_BYTES, methodCounts, methodLabels, newQrToken, ownMethodLabels,
+  asMethod, checkInNow, checkInWindow, encodeProof, fitWithin, isOwnProofKey, MAX_PROOF_BYTES, methodCounts, methodLabels, newQrToken, ownMethodLabels,
   proofKeyFor, proofKeyPattern, proofStartSchema, selfCheckInRefusal, selfCheckInSchema, windowState,
 } from "./attendance";
 
@@ -89,5 +89,23 @@ describe("Saya hadir", () => {
     expect(ownMethodLabels.online).toBe("online (Zoom)");
     expect(asMethod("online")).toBe("online");
     expect(asMethod("zoom")).toBeNull();
+  });
+});
+
+describe("Saya hadir in Aksi cepat", () => {
+  const item = (key: string, kind: string, startsAt: string, endsAt: string, checkedInAt: string | null = null) => ({ key, kind, startsAt, endsAt, checkedInAt });
+  const items = [
+    item("b1", "appraisal", "2026-11-10T02:00:00Z", "2026-11-10T03:00:00Z"),
+    item("s1", "sesi", "2026-11-10T02:00:00Z", "2026-11-10T03:00:00Z", "2026-11-10T02:05:00Z"),
+    item("s2", "sesi", "2026-11-10T02:30:00Z", "2026-11-10T04:00:00Z"),
+    item("s3", "sesi", "2026-11-10T06:00:00Z", "2026-11-10T07:00:00Z"),
+  ];
+  it("opens the first session whose check-in is open and not yet recorded, never a booking", () => {
+    expect(checkInNow(items, new Date("2026-11-10T02:10:00Z"))?.key).toBe("s2");
+    expect(checkInNow(items, new Date("2026-11-10T05:31:00Z"))?.key).toBe("s3");
+  });
+  it("has nothing before the window opens or after it closes", () => {
+    expect(checkInNow(items, new Date("2026-11-10T01:00:00Z"))).toBeNull();
+    expect(checkInNow(items, new Date("2026-11-10T08:00:00Z"))).toBeNull();
   });
 });

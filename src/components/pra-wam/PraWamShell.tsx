@@ -7,7 +7,10 @@ import { unreadCount } from "@/lib/server/pra-wam/announcements";
 import { openRequestCount } from "@/lib/server/pra-wam/requests";
 import { currentPhase } from "@/lib/server/pra-wam/events";
 import { wibDate } from "@/lib/pra-wam/appraisal";
+import { quickActionData } from "@/lib/server/pra-wam/quick-actions";
+import type { Member } from "@/lib/server/pra-wam/session";
 import { Avatar } from "./Avatar";
+import { QuickActions } from "./QuickActions";
 import { SignOutButton } from "./SignOutButton";
 import styles from "./pra-wam.module.css";
 import panel from "./panitia.module.css";
@@ -16,15 +19,17 @@ export type Tab = "beranda" | "agenda" | "appraisal" | "dokumen" | "notifikasi" 
 type Who = { roles: readonly PraWamRole[] };
 type Item = { id: Tab; label: string; href: string; icon: ReactNode; show?: (who: Who) => boolean; short?: string };
 
-/** Everyone: the phone's bottom bar shows these, the desktop sidebar too (with Notifikasi). */
+/**
+ * Everyone (DS · Komponen "Bilah dan navigasi"): Beranda, Book, the blue + (Aksi cepat), Dokumen,
+ * Profil. Agenda lives on Beranda now, day by day (decided 5 Nov 2026).
+ */
 const personal: Item[] = [
   { id: "beranda", label: "Beranda", href: praWamPath.home, icon: <Home aria-hidden /> },
-  { id: "agenda", label: "Agenda", href: praWamPath.agenda, icon: <CalendarDays aria-hidden /> },
   { id: "appraisal", label: "Book", href: praWamPath.appraisal(), icon: <DoorOpen aria-hidden /> },
   { id: "dokumen", label: "Dokumen", href: praWamPath.documents, icon: <FileText aria-hidden /> },
   { id: "akun", label: "Profil", href: praWamPath.account, icon: <User aria-hidden /> },
 ];
-/** BOD only (Penpot "Panduan · BOD"): Ringkasan first; Agenda stays, as a BOD also takes part. */
+/** BOD only (Penpot "Panduan · BOD"): Ringkasan first; Agenda stays, as a BOD also takes part. No + : a BOD does not check in. */
 const bod: Item[] = [
   { id: "dashboard", label: "Ringkasan", href: praWamPath.dashboard, icon: <BarChart3 aria-hidden /> },
   { id: "agenda", label: "Agenda", href: praWamPath.agenda, icon: <CalendarDays aria-hidden /> },
@@ -80,7 +85,7 @@ export function manageGroups(who: Who, waiting = 0): ConsoleNavGroup[] {
 
 /**
  * The frame of every signed-in WAM page, as in Penpot.
- * - Phone: the page and a bottom bar (Beranda, Agenda, Book, Dokumen, Profil). A detail
+ * - Phone: the page and a floating glass bottom bar (Beranda, Book, +, Dokumen, Profil). A detail
  *   screen (`back`) is a pushed screen: a top bar with a back arrow and the title, no bottom bar,
  *   sliding in from the right.
  * - Phone, "Kelola acara": an app of its own. A top bar with its name and "Keluar" back to the
@@ -91,12 +96,14 @@ export function manageGroups(who: Who, waiting = 0): ConsoleNavGroup[] {
  *   places in groups and the page in one white panel, on the app's own light or dark tokens.
  */
 export async function PraWamShell({ member, current, back, children }: { member: { id: string; name: string; nickname: string; department: string; roles: PraWamRole[]; photo?: string | null }; current?: Tab; back?: { href: string; title: string }; children: ReactNode }) {
-  const [unread, waiting, phase] = await Promise.all([
+  const onlyBod = bodOnly(member);
+  const [unread, waiting, phase, quick] = await Promise.all([
     unreadCount(member.id), managesSessions(member) ? openRequestCount() : 0,
     currentPhase(wibDate(new Date().toISOString())).catch(() => null),
+    // Aksi cepat, in the app's own frame only and never for a BOD.
+    onlyBod || back ? null : quickActionData(member as Member).catch(() => null),
   ]);
   const badge = (tab: Tab) => (tab === "notifikasi" ? unread : tab === "permintaan" ? waiting : 0);
-  const onlyBod = bodOnly(member);
   // A BOD keeps the app's own frame (top bar, bottom bar) with the BOD menu, never the panitia sidebar.
   const menu = onlyBod ? bod : personal;
   const managed = onlyBod ? [] : manage.filter(item => !item.show || item.show(member));
@@ -147,6 +154,7 @@ export async function PraWamShell({ member, current, back, children }: { member:
         {menu.map(item => <a key={item.id} className={styles.topItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>{item.icon}<span>{item.label}</span></a>)}
       </nav>
       <div className={styles.topRight}>
+        {!onlyBod && <QuickActions place="top" checkIn={quick?.checkIn ?? null} bookingOpen={quick?.bookingOpen ?? false} manages={managesSessions(member)} />}
         {managed.length > 0 && <a className={styles.topManage} href={praWamPath.dashboard}><BarChart3 aria-hidden />Kelola acara{waiting > 0 && <span className={styles.sideBadge}>{waiting}</span>}</a>}
         <a className={styles.iconButton} href={praWamPath.notifications} aria-label={unread ? `Notifikasi, ${unread} belum dibaca` : "Notifikasi"} aria-current={current === "notifikasi" ? "page" : undefined}>
           <Bell aria-hidden />{unread > 0 && <span className={styles.iconDot} />}
@@ -165,10 +173,14 @@ export async function PraWamShell({ member, current, back, children }: { member:
       </main>
     </div>
     {!back && <nav className={styles.bottomNav} aria-label="Menu WAM">
-      {menu.map(item => <a key={item.id} className={styles.navItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>
-        {item.icon}<span>{item.short ?? item.label}</span>
-        {badge(item.id) > 0 && <span className={styles.navBadge}><span aria-hidden>{badge(item.id)}</span><span className="sr-only">, {badge(item.id)} menunggu</span></span>}
-      </a>)}
+      {menu.map((item, index) => [
+        // The blue + sits in the middle of the bar, between Book and Dokumen.
+        !onlyBod && index === 2 && <QuickActions key="aksi-cepat" place="bar" checkIn={quick?.checkIn ?? null} bookingOpen={quick?.bookingOpen ?? false} manages={managesSessions(member)} />,
+        <a key={item.id} className={styles.navItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>
+          {item.icon}<span>{item.short ?? item.label}</span>
+          {badge(item.id) > 0 && <span className={styles.navBadge}><span aria-hidden>{badge(item.id)}</span><span className="sr-only">, {badge(item.id)} menunggu</span></span>}
+        </a>,
+      ])}
     </nav>}
   </div>;
 }

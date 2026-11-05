@@ -24,7 +24,7 @@
 .rowLink small { color: var(--pw-muted); font-size: 13px; }
 .alert { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 16px; background: var(--pw-warning-soft); color: var(--pw-warning); font-weight: 700; }
 .alert svg { flex: none; width: 22px; height: 22px; }
-.alert small { display: block; font-size: 12px; font-weight: 800; }
+.alert small { display: block; font-size: 12px; font-weight: 600; }
 .actionsCell { display: flex; flex-wrap: wrap; gap: 8px; }
 .actionsCell :global(.button) { min-height: 44px; padding: 6px 14px; font-size: 14px; }
 
@@ -61,12 +61,12 @@
 .previewLabel { text-align: center; font-size: 13px; font-weight: 700; color: var(--pw-muted); margin: 0 0 8px; }
 
 /* Permintaan jadwal: one card per request */
-.request { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.request { display: grid; gap: 12px; padding: 16px; border: 0; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); }
 .who { display: flex; gap: 12px; align-items: flex-start; }
 .who > span:nth-child(2) { flex: 1; min-width: 0; }
 .who strong { display: block; }
 .who small { display: block; color: var(--pw-muted); font-size: 13px; }
-.avatar { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 13px; font-weight: 800; }
+.avatar { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 13px; font-weight: 600; }
 .compare { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid var(--pw-line); border-radius: 12px; }
 .compare small { display: block; color: var(--pw-muted); font-size: 12px; }
 .compare strong { font-size: 15px; }
@@ -80,7 +80,7 @@
    Phone: the app's own top bar (.phoneBar) and the panitia's bottom bar, as before; the console's
    phone bar is hidden and its panel lies flat on the app background. */
 .phoneBar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px 20px; box-sizing: border-box; background: var(--pw-app); border-bottom: 1px solid var(--pw-line); }
-.phoneBar strong { font-family: var(--pw-display); font-size: 20px; font-weight: 600; line-height: 1.2; color: var(--pw-primary); }
+.phoneBar strong { font-family: var(--pw-display); font-size: 20px; font-weight: 500; line-height: 1.2; color: var(--pw-text); }
 .phoneBarBack { justify-content: flex-start; gap: 4px; padding-left: 12px; }
 .phoneBarBack strong { font-family: inherit; font-size: 17px; font-weight: 700; color: var(--pw-text); }
 .phoneBarBack svg { width: 24px; height: 24px; }
@@ -134,7 +134,7 @@
 .readyList, .miniList { display: grid; margin: 0; padding: 0; list-style: none; }
 .readyRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 0; border-top: 1px solid var(--cs-line); }
 .readyRow:first-child, .miniRow:first-child { border-top: 0; padding-top: 0; }
-.readyTime { flex: none; width: 4.5rem; color: var(--cs-text); font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.readyTime { flex: none; width: 4.5rem; color: var(--cs-text); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .readyTime small { display: block; color: var(--cs-muted); font-size: 11px; font-weight: 600; }
 .readyMain { flex: 1 1 12rem; min-width: 0; display: grid; gap: 2px; }
 .readyMain > a.cellLink { color: var(--cs-text); font-size: 14px; font-weight: 700; text-decoration: none; }
@@ -173,7 +173,7 @@
 .annList { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .annCard { display: grid; gap: 8px; padding: 16px 20px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
 .annHead { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 12px; }
-.annHead h3 { margin: 0; color: var(--cs-text); font-size: 16px; font-weight: 800; line-height: 1.35; }
+.annHead h3 { margin: 0; color: var(--cs-text); font-size: 16px; font-weight: 600; line-height: 1.35; }
 .annBody { margin: 0; color: var(--cs-text); font-size: 14px; white-space: pre-line; overflow-wrap: anywhere; }
 .annMeta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; color: var(--cs-muted); font-size: 13px; }
 .annRead { display: grid; gap: 4px; min-width: 9rem; }
@@ -186,12 +186,12 @@
 .compose::backdrop { background: var(--cs-scrim); }
 .composeBody { display: grid; gap: 16px; padding: 20px; }
 .composeHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.composeHead h2 { margin: 0; font-size: 19px; font-weight: 800; }
-.composeClose { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px; background: none; color: var(--cs-muted); cursor: pointer; }
+.composeHead h2 { margin: 0; font-size: 19px; font-weight: 600; }
+.composeClose { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--cs-muted); cursor: pointer; }
 .composeClose:hover { background: var(--cs-hover); color: var(--cs-text); }
 .field { display: grid; gap: 6px; }
 .field > label, .fieldLabel { margin: 0; color: var(--cs-text); font-size: 13px; font-weight: 700; }
-.fieldInput { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--cs-line); border-radius: 12px; box-sizing: border-box; background: var(--cs-surface); color: var(--cs-text); font: inherit; font-size: 15px; }
+.fieldInput { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--cs-line); border-radius: 999px; box-sizing: border-box; background: var(--cs-surface); color: var(--cs-text); font: inherit; font-size: 15px; }
 .fieldInput::placeholder { color: var(--cs-subtle); }
 .fieldInput:focus-visible { border-color: var(--cs-primary); outline: 2px solid var(--cs-primary); outline-offset: 0; }
 .hint { margin: 0; color: var(--cs-muted); font-size: 13px; }

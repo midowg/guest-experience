@@ -9,6 +9,9 @@ import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
+// Poppins: the WAM app's greetings, titles and big numbers (design system "Pra WAM · Hospitality").
+import '@fontsource/poppins/500.css';
+import '@fontsource/poppins/600.css';
 // Theme heading faces (src/lib/themes.ts). @font-face only downloads a file when a theme uses it.
 import '@fontsource/lora/400.css';
 import '@fontsource/lora/600.css';

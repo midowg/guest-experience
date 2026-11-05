@@ -17,7 +17,7 @@
 .wrap:not([data-end]) .scroller { --fade-r: 28px; }
 
 /* Where a month begins. */
-.month { flex: none; display: flex; align-items: flex-start; padding: 6px 2px 0; font-size: 12px; font-weight: 800; color: var(--pw-muted); }
+.month { flex: none; display: flex; align-items: flex-start; padding: 6px 2px 0; font-size: 12px; font-weight: 600; color: var(--pw-muted); }
 
 .day {
   flex: none; display: grid; justify-items: center; align-content: center; gap: 2px;
@@ -33,7 +33,7 @@
 
 /* Today: a ring and a dot, and "Hari ini" in words. */
 .today { border-color: var(--pw-primary); box-shadow: inset 0 0 0 1px var(--pw-primary); }
-.today .name { color: var(--pw-primary); font-weight: 800; }
+.today .name { color: var(--pw-primary); font-weight: 600; }
 .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 /* Every room full: the danger tint, a stop icon and "Penuh". */

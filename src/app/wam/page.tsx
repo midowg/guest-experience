@@ -1,23 +1,25 @@
 import { redirect } from "next/navigation";
-import { ArrowLeftRight, Bell, CalendarClock, ChevronRight, Clock, Info, MapPin, QrCode } from "lucide-react";
+import { ArrowLeftRight, Bell, CalendarClock, CheckCircle2, ChevronRight, Clock, Info, MapPin } from "lucide-react";
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { Avatar } from "@/components/pra-wam/Avatar";
 import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard, RoomCard } from "@/components/pra-wam/BerandaCards";
 import { AgendaTimeline } from "@/components/pra-wam/desktop/AgendaTimeline";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
-import { AGENDA_ITEM, withItem } from "@/lib/pra-wam/agenda";
-import { clockLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { AGENDA_ITEM, pickDay, withItem } from "@/lib/pra-wam/agenda";
+import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { checkInWindow, windowState } from "@/lib/pra-wam/attendance";
 import { requestStatusLabels, spanLabel } from "@/lib/pra-wam/requests";
 import { bodOnly, cancelsAnyBooking, managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { getAbout } from "@/lib/server/pra-wam/about";
-import { agendaItems, untilLabel } from "@/lib/server/pra-wam/agenda";
+import { untilLabel } from "@/lib/server/pra-wam/agenda";
 import { myNotifications } from "@/lib/server/pra-wam/announcements";
 import { listDocuments } from "@/lib/server/pra-wam/documents";
 import { myQuestionnaireCard } from "@/lib/server/pra-wam/questionnaire-answers";
 import { myRoom } from "@/lib/server/pra-wam/stay";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
+import { myAgenda } from "@/lib/server/pra-wam/quick-actions";
 import { myOpenRequests, openRequestCount } from "@/lib/server/pra-wam/requests";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import base from "@/components/pra-wam/pra-wam.module.css";
@@ -32,21 +34,30 @@ const greeting = (now: Date) => {
 };
 const longDate = (now: Date) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jakarta" }).format(now);
 const shortTime = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
+const chipDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+const chipDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+/** Beranda with a day picked in Agenda (and an item open over it), scrolled to Agenda. */
+const agendaHref = (query: { date?: string; item?: string }) => {
+  const search = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString();
+  return `${praWamPath.home}${search ? `?${search}` : ""}#agenda`;
+};
 
 /**
- * Beranda (Penpot P1 on a phone, E1 on a desktop): the next thing, what waits on the person, the
- * latest news, "Kelola acara" for the panitia (Penpot K1, phone only: a desktop has it in the top
- * bar) and "Apa itu WAM?"; on a desktop also today's agenda and the newest documents in a side
- * column. An agenda item (the hero, today's agenda) opens over the page (AgendaSheet), as on Agenda.
+ * Beranda (Penpot P1 on a phone, E1 on a desktop): the next thing with "Saya hadir", the agenda day
+ * by day (it was a tab of its own until 5 Nov 2026; ?date= picks the day), what waits on the
+ * person, the latest news, "Kelola acara" for the panitia (Penpot K1, phone only: a desktop has it
+ * in the top bar) and "Apa itu WAM?"; on a desktop also the newest documents in a side column. An
+ * agenda item opens over the page (AgendaSheet); ?item=<key> keeps it open.
  */
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string; item?: string; session?: string }> }) {
+  const { date: tanggal, item: asked, session: older } = await searchParams;
   const member = await requireMemberPage(praWamPath.home);
   // "Akun BOD langsung ke Ringkasan" (Penpot "Panduan · BOD").
   if (bodOnly(member)) redirect(praWamPath.dashboard);
   const now = new Date();
   const today = wibDate(now.toISOString());
-  const [{ items }, notes, requests, appraisal, docs, about, manage, quest, room] = await Promise.all([
-    agendaItems(member, today), myNotifications(member), myOpenRequests(member), appraisalOpen(),
+  const [{ items, migrated }, notes, requests, appraisal, docs, about, manage, quest, room] = await Promise.all([
+    myAgenda(member, today), myNotifications(member), myOpenRequests(member), appraisalOpen(),
     listDocuments(member).catch(() => ({ documents: [], migrated: false, storage: false })),
     getAbout().catch(() => null),
     // "Kelola acara" for the panitia: the card carries only the requests waiting.
@@ -59,6 +70,11 @@ export default async function HomePage() {
   const next = items.find(item => new Date(item.endsAt) > now);
   const todays = items.filter(item => wibDate(item.startsAt) === today);
   const sessionsToday = todays.filter(item => item.kind === "sesi").length;
+  // Agenda: an item asked for in the address opens on its own day.
+  const askedDay = items.find(item => item.key === (asked ?? older));
+  const { days, day } = pickDay(items, tanggal ?? (askedDay && wibDate(askedDay.startsAt)), today, now);
+  const shown = items.filter(item => wibDate(item.startsAt) === day);
+  const later = items.find(item => wibDate(item.startsAt) > day);
   const latest = notes.items[0];
   const request = requests[0];
   const questCard = quest && <QuestionnaireCard name={quest.form.name} cardText={quest.form.cardText} minutes={quest.form.minutes}
@@ -77,7 +93,7 @@ export default async function HomePage() {
             <Avatar name={member.name} photo={member.photo ?? null} size="md" decorative />
           </a>
           <div className={own.homeTitle}>
-            <h1 className={own.greet}>{greeting(now)}, {member.nickname || member.name.split(" ")[0]}</h1>
+            <h1 className={own.greet}>{greeting(now)}, <span className={own.greetName}>{member.nickname || member.name.split(" ")[0]}</span></h1>
             <p className={own.metaLine}>{longDate(now)}{member.department ? ` · ${member.department}` : ""}{sessionsToday ? ` · ${sessionsToday} sesi hari ini` : ""}</p>
           </div>
           <a className={`${base.iconButton} ${own.homeBell} ${own.phoneOnly}`} href={praWamPath.notifications} aria-label={notes.unread ? `Notifikasi, ${notes.unread} belum dibaca` : "Notifikasi"}>
@@ -94,14 +110,36 @@ export default async function HomePage() {
           <h2><a href={open(next)} {...opens(next)}>{next.title}</a></h2>
           <span className={base.heroLine}><Clock aria-hidden />{wibDate(next.startsAt) === today ? "" : `${spanLabel(next.startsAt, next.endsAt).split(" · ")[0]} · `}{clockLabel(wibTime(next.startsAt))}–{clockLabel(wibTime(next.endsAt))}</span>
           <span className={base.heroLine}><MapPin aria-hidden />{next.where}</span>
+          {/* "Saya hadir" only while the check-in is open (30 minutes either side); before that, the detail. */}
           {next.kind === "sesi" && (next.checkedInAt
-            ? <span className={`${base.heroButton} ${own.wide}`}>Absen tercatat {shortTime(next.checkedInAt)}</span>
-            : <a className={`${base.heroButton} ${own.wide}`} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a>)}
+            ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(next.checkedInAt)}</span>
+            : windowState(checkInWindow(next.startsAt, next.endsAt), now) === "buka"
+              ? <a className={`${base.heroButton} ${own.wide}`} href={open(next)} {...opens(next)}><CheckCircle2 size={20} aria-hidden />Saya hadir</a>
+              : <a className={`${base.heroButton} ${own.wide}`} href={open(next)} {...opens(next)}><Info size={20} aria-hidden />Lihat detail</a>)}
           {next.kind === "appraisal" && <a className={`${base.heroButton} ${own.wide}`} href={open(next)} {...opens(next)}><CalendarClock size={20} aria-hidden />Lihat booking</a>}
         </section> : <section className={base.card}>
           <h2>Belum ada agenda</h2>
           <p className={`${base.meta} ${own.prose}`}>Sesi muncul di sini setelah panitia menerbitkannya.</p>
         </section>}
+
+        <section className={`${base.card} ${own.agendaCard}`} id="agenda" aria-labelledby="agenda-judul">
+          <div className={own.cardHead}>
+            <h2 id="agenda-judul">Agenda</h2>
+            {seesAllSessions(member) && <a href={praWamPath.sessions}>Jadwal sesi</a>}
+          </div>
+          {!migrated && <p className={base.meta}>Sesi forum belum tersedia. Booking ruang tetap tampil di sini.</p>}
+          <nav className={base.dates} aria-label="Pilih hari">
+            {days.map(date => <a key={date} className={`${base.chip} ${base.chipStack}`} href={agendaHref({ date })} aria-current={date === day ? "date" : undefined}>
+              {chipDay(date)}<small>{chipDate(date)}{date === today ? " · hari ini" : ""}</small>
+            </a>)}
+          </nav>
+          {shown.length === 0
+            ? <p className={base.meta}>{items.length === 0
+              ? "Belum ada sesi di agenda kamu. Sesi muncul di sini setelah panitia menerbitkannya."
+              : day === today ? "Tidak ada agenda hari ini." : `Tidak ada agenda ${dayLabel(day)}.`}</p>
+            : <AgendaTimeline items={shown} now={now} href={item => agendaHref({ date: day, item: item.key })} />}
+          {later && <a className={`${base.callout} ${own.calloutLink}`} href={agendaHref({ date: wibDate(later.startsAt) })}><Info aria-hidden />{dayLabel(wibDate(later.startsAt))}: {later.title}</a>}
+        </section>
 
         {manage !== null && <ManageCard manages={managesSessions(member)} openRequests={manage} />}
 
@@ -132,11 +170,7 @@ export default async function HomePage() {
         {about && <AboutCard about={about.about} />}
       </div>
 
-      <aside className={own.side} aria-label="Hari ini">
-        <section className={base.card}>
-          <div className={own.cardHead}><h2>Agenda hari ini</h2><a href={praWamPath.agenda}>Lihat semua</a></div>
-          {todays.length ? <AgendaTimeline items={todays} now={now} href={open} /> : <p className={base.meta}>Tidak ada agenda hari ini.</p>}
-        </section>
+      <aside className={own.side} aria-label="Terbaru">
         <section className={base.card}>
           <div className={own.cardHead}><h2>Dokumen terbaru</h2><a href={praWamPath.documents}>Semua</a></div>
           <DocRows documents={docs.documents.slice(0, 3)} empty="Belum ada dokumen." />

@@ -21,41 +21,43 @@
 .homeAvatar { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; margin-left: -4px; border-radius: 50%; text-decoration: none; }
 .homeAvatar:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
 .homeTitle { flex: 1; min-width: 0; }
-.greet.greet { margin: 0; font-family: var(--pw-display); font-size: 24px; font-weight: 600; line-height: 1.25; color: var(--pw-primary); overflow-wrap: anywhere; }
-.metaLine { margin: 4px 0 0; font-size: 14px; font-weight: 600; line-height: 1.4; color: var(--pw-muted); }
+/* Sapaan (DS): Poppins 500 in two tones, the greeting in ink and the name in the second text colour. */
+.greet.greet { margin: 0; font-family: var(--pw-display); font-size: 24px; font-weight: 500; letter-spacing: -.3px; line-height: 1.25; color: var(--pw-text); overflow-wrap: anywhere; }
+.greetName { color: var(--pw-muted); }
+.metaLine { margin: 4px 0 0; font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--pw-muted); }
 .homeBell { flex: none; margin-right: -8px; }
-@media (min-width: 1024px) { .greet.greet { font-size: 34px; } .metaLine { font-size: 15px; } .homeHead { padding-bottom: 0; } }
+@media (min-width: 1024px) { .greet.greet { font-size: 28px; letter-spacing: -.4px; } .metaLine { font-size: 15px; } .homeHead { padding-bottom: 0; } }
 /* Small pieces shared by both screens */
 .cardHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .cardHead h2 { margin: 0 !important; }
-.cardHead a { font-size: 13px; font-weight: 800; text-decoration: none; }
+.cardHead a { font-size: 13px; font-weight: 600; text-decoration: none; }
 .plain { color: var(--pw-text); text-decoration: none; }
 .plain:hover { text-decoration: underline; }
-.label { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.label { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--pw-muted); }
 .gapTop { margin-top: 16px; }
 .prose { margin: 0; white-space: pre-line; }
 .list { list-style: none; margin: 0; padding: 0; }
-.noteCard { display: flex; gap: 12px; align-items: flex-start; text-decoration: none; color: var(--pw-text); }
+.noteCard.noteCard { display: flex; gap: 12px; align-items: flex-start; text-decoration: none; color: var(--pw-text); }
 .noteCard strong { display: block; }
 
 /* Request progress: Diajukan → Diperiksa → Keputusan */
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
-.step { display: grid; gap: 6px; font-size: 12px; font-weight: 700; color: var(--pw-muted); }
-.step::before { content: ''; height: 4px; border-radius: 4px; background: var(--pw-line); }
+.step { display: grid; gap: 6px; font-size: 12px; font-weight: 600; color: var(--pw-muted); }
+.step::before { content: ''; height: 6px; border-radius: 999px; background: var(--pw-grad-track); box-shadow: var(--pw-shadow-inner); }
 .stepOn { color: var(--pw-primary); }
-.stepOn::before { background: var(--pw-primary); }
+.stepOn::before { background: var(--pw-grad-progress); box-shadow: none; }
 
 /* Documents */
 .docRow { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
 .docRow + .docRow { border-top: 1px solid var(--pw-line); }
 .docRow > span:nth-child(2) { flex: 1; min-width: 0; }
 .docRow strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
-.open { margin-left: auto; font-weight: 800; font-size: 14px; text-decoration: none; }
+.open { margin-left: auto; font-weight: 600; font-size: 14px; text-decoration: none; }
 
 /* Agenda: on a phone the timeline sits on the page (Penpot P2); on a desktop it is a card (E2). */
 .timelineCard.timelineCard { padding: 0; background: none; border: 0; border-radius: 0; }
 @media (min-width: 1024px) {
-  .timelineCard.timelineCard { padding: 16px 16px 8px; background: var(--pw-surface); border: 1px solid var(--pw-line); border-radius: 16px; }
+  .timelineCard.timelineCard { padding: 20px 20px 10px; background: var(--pw-surface) var(--pw-grad-surface); border: 0; border-radius: var(--pw-r-card); box-shadow: var(--pw-shadow-card); }
 }
 
 /*
@@ -72,5 +74,9 @@
 }
 .item:active { background: var(--pw-primary-soft); }
 @media (prefers-reduced-motion: no-preference) { .item { transition: background-color .15s ease; } }
-.calloutLink.calloutLink { min-height: 44px; color: var(--pw-on-brass-soft); text-decoration: none; }
+.calloutLink.calloutLink { min-height: 44px; color: var(--pw-text); text-decoration: none; }
+/* Agenda on Beranda: the day chips and the day's timeline in one card; #agenda lands under the bar. */
+.agendaCard { display: grid; gap: 12px; scroll-margin-top: 16px; }
+.agendaCard > .cardHead { margin-bottom: 0; }
+@media (min-width: 1024px) { .agendaCard { scroll-margin-top: 88px; } }
 .calloutLink:hover { text-decoration: underline; }

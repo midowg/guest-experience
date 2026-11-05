@@ -1,29 +1,29 @@
 /* Pages of Agent B's restyle (scan, notifications, profile), on the Pra WAM tokens of pra-wam.module.css. */
 
 /* Scan QR absen (Penpot "P12"): a dark panel with a brass frame. */
-.scan { display: grid; gap: 16px; justify-items: center; padding: 24px 16px; border-radius: 24px; background: #0e1218; color: #e8ecf2; text-align: center; }
-.scanTitle { font-weight: 800; font-size: 17px; margin: 0; }
-.scanSub { margin: 0; color: #9aa4b2; font-size: 13px; }
-.frame { position: relative; width: min(100%, 16rem); aspect-ratio: 1; border-radius: 18px; background: #161c24; overflow: hidden; }
+.scan { display: grid; gap: 16px; justify-items: center; padding: 24px 16px; border-radius: 24px; background: #0e1117; color: #f1f4f8; text-align: center; }
+.scanTitle { font-weight: 600; font-size: 17px; margin: 0; }
+.scanSub { margin: 0; color: #9aa3b2; font-size: 13px; }
+.frame { position: relative; width: min(100%, 16rem); aspect-ratio: 1; border-radius: 18px; background: #161a22; overflow: hidden; }
 .frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.corner { position: absolute; width: 44px; height: 44px; border: 4px solid #d9be8a; z-index: 2; }
+.corner { position: absolute; width: 44px; height: 44px; border: 4px solid #ffc933; z-index: 2; }
 .corner:nth-of-type(1) { top: 8px; left: 8px; border-right: 0; border-bottom: 0; border-radius: 14px 0 0 0; }
 .corner:nth-of-type(2) { top: 8px; right: 8px; border-left: 0; border-bottom: 0; border-radius: 0 14px 0 0; }
 .corner:nth-of-type(3) { bottom: 8px; left: 8px; border-right: 0; border-top: 0; border-radius: 0 0 0 14px; }
 .corner:nth-of-type(4) { bottom: 8px; right: 8px; border-left: 0; border-top: 0; border-radius: 0 0 14px 0; }
-.line { position: absolute; left: 12%; right: 12%; top: 50%; height: 2px; background: #7bcb98; z-index: 2; }
+.line { position: absolute; left: 12%; right: 12%; top: 50%; height: 2px; background: #4fd9a2; z-index: 2; }
 @media (prefers-reduced-motion: no-preference) {
   .line { animation: sweep 2.4s ease-in-out infinite alternate; }
   @keyframes sweep { from { top: 18%; } to { top: 82%; } }
 }
-.scanFoot { margin: 0; color: #9aa4b2; font-size: 12px; }
-.scanButton { min-height: 48px; padding: 0 20px; border: 0; border-radius: 12px; background: #d9be8a; color: #2e2616; font: inherit; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
-.scanError { margin: 0; padding: 10px 12px; border-radius: 12px; background: #3a1a21; color: #f2a0ae; font-size: 13px; font-weight: 700; }
+.scanFoot { margin: 0; color: #9aa3b2; font-size: 12px; }
+.scanButton { min-height: 48px; padding: 0 20px; border: 0; border-radius: 999px; background: #ffc933; color: #2e2510; font: inherit; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.scanError { margin: 0; padding: 10px 12px; border-radius: 12px; background: #3a1420; color: #ff7fa0; font-size: 13px; font-weight: 700; }
 
 /* Notifications (Penpot "P11"): grouped by day, an icon tile, a dot while unread. */
 .group { margin: 20px 0 8px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
 .group:first-child { margin-top: 0; }
-.note { position: relative; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); }
+.note { position: relative; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 0; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); }
 .note + .note { margin-top: 12px; }
 .noteRead { background: var(--pw-app); }
 .noteBody { flex: 1; min-width: 0; display: grid; gap: 4px; }
@@ -81,7 +81,7 @@
 .profileGrid { display: grid; gap: 24px; }
 .profile .headRow { flex-wrap: nowrap; align-items: center; margin-bottom: 0; }
 .profile .headRow > div { flex: 1; min-width: 0; }
-.gear { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface); transition: background-color 150ms ease, color 150ms ease; }
+.gear { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--pw-line); border-radius: 50%; background: var(--pw-surface); transition: background-color 150ms ease, color 150ms ease; }
 .profile .gear { color: var(--pw-text); }
 .profile .gear:hover { background: var(--pw-primary-soft); color: var(--pw-primary); }
 .gear:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
@@ -95,7 +95,7 @@
 @media (max-width: 479.98px) { .warnButton { flex: 1 1 100%; } }
 .heroPhoto { display: grid; place-items: center; margin-bottom: 8px; }
 .settings { width: 100%; display: grid; gap: 24px; align-content: start; }
-.backLink { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: -8px 0 4px -8px; padding: 0 12px 0 4px; border-radius: 12px; font-weight: 800; font-size: 15px; text-decoration: none; transition: background-color 150ms ease; }
+.backLink { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: -8px 0 4px -8px; padding: 0 12px 0 4px; border-radius: 999px; font-weight: 600; font-size: 15px; text-decoration: none; transition: background-color 150ms ease; }
 .backLink:hover { background: var(--pw-primary-soft); }
 .backLink:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
 .backLink svg { width: 20px; height: 20px; }
@@ -103,11 +103,11 @@
 .profile .groupTitle, .settings .groupTitle { margin: 0 0 8px; padding: 0 4px; font-family: var(--pw-body); font-size: 13px; font-weight: 700; color: var(--pw-muted); }
 .groupNote { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0 0; padding: 0 4px; font-size: 13px; color: var(--pw-muted); }
 .groupNote svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
-.group { position: relative; margin: 0; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); overflow: hidden; }
+.group { position: relative; margin: 0; border: 0; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); overflow: hidden; }
 
 /* Identity header: centred on a phone, the photo beside the name on a desktop. */
 .hero { display: grid; justify-items: center; gap: 4px; padding: 24px 16px 20px; text-align: center; }
-.hero .heroName { margin: 0; max-width: 100%; font-family: var(--pw-display); font-size: 24px; font-weight: 600; line-height: 1.2; color: var(--pw-primary); overflow-wrap: anywhere; }
+.hero .heroName { margin: 0; max-width: 100%; font-family: var(--pw-display); font-size: 24px; font-weight: 500; line-height: 1.2; color: var(--pw-text); overflow-wrap: anywhere; }
 .heroMeta { margin: 0; font-size: 14px; color: var(--pw-muted); }
 .heroPills { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .units { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--pw-line); }

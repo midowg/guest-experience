@@ -1,0 +1,28 @@
+/* QuickActions: the blue + (56, blue shadow) in the middle of the bottom bar, and its sheet. */
+.fab { justify-self: center; display: inline-grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: var(--pw-primary); color: var(--pw-on-primary); box-shadow: var(--pw-shadow-fab); cursor: pointer; }
+.fab svg { width: 26px; height: 26px; stroke-width: 2; }
+.fab:hover { background: var(--pw-primary-hover); }
+.fab:focus-visible, .topFab:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 3px; }
+/* Desktop: the same, as a pill in the top bar. */
+.topFab { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 18px 0 14px; border: 0; border-radius: 999px; background: var(--pw-primary); color: var(--pw-on-primary); font: inherit; font-size: 14px; font-weight: 600; box-shadow: var(--pw-shadow-fab); cursor: pointer; }
+.topFab:hover { background: var(--pw-primary-hover); }
+.topFab svg { width: 18px; height: 18px; }
+@media (prefers-reduced-motion: no-preference) { .fab, .topFab { transition: background-color .15s ease, transform .15s ease; } .fab:active { transform: scale(.94); } }
+
+/* The actions: list rows at least 64 high, the icon in a soft 40 box. */
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.row { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 14px; border-radius: var(--pw-r-control); background: var(--pw-surface); box-shadow: var(--pw-shadow-card); color: var(--pw-text); text-decoration: none; }
+/* Rows are links, but read as list rows: ink, not link blue. */
+.list .row { color: var(--pw-text); }
+a.row:hover { background: var(--pw-primary-soft); }
+a.row:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.tile { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 14px; background: var(--pw-primary-soft); color: var(--pw-primary); }
+.tile svg { width: 20px; height: 20px; stroke-width: 1.75; }
+.text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.text strong { font-size: 15px; font-weight: 600; }
+.text small { font-size: 13px; color: var(--pw-muted); overflow-wrap: anywhere; }
+.chevron { flex: none; width: 20px; height: 20px; color: var(--pw-muted); }
+/* Not available now: still in its place, saying why. */
+.off { box-shadow: none; background: var(--pw-surface-soft); }
+.off .tile { background: var(--pw-surface); color: var(--pw-muted); }
+.off strong { color: var(--pw-muted); }

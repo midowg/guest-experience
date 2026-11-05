@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Info, QrCode } from "lucide-react";
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { AgendaTimeline } from "@/components/pra-wam/desktop/AgendaTimeline";
@@ -5,7 +6,7 @@ import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { Notice } from "@/components/ui";
 import { pickDay } from "@/lib/pra-wam/agenda";
 import { dayLabel, wibDate } from "@/lib/pra-wam/appraisal";
-import { cancelsAnyBooking, seesAllSessions } from "@/lib/pra-wam/roles";
+import { bodOnly, cancelsAnyBooking, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { agendaItems } from "@/lib/server/pra-wam/agenda";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
@@ -29,10 +30,17 @@ const agendaHref = (query: { date?: string; item?: string }) => {
  * with something as chips. A tap on an item opens its detail over the page (AgendaSheet): Detail
  * sesi (P3) or the booking, a sheet from the bottom on a phone and a panel from the right on a
  * desktop. ?item=<key> keeps it open (?session= from older links works too).
+ *
+ * Since 5 Nov 2026 the agenda lives on Beranda for everyone but a BOD (whose home is Ringkasan):
+ * they are sent there with the same day and item, so older links and notifications keep working.
  */
 export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ date?: string; item?: string; session?: string }> }) {
   const { date: tanggal, item: asked, session: older } = await searchParams;
   const member = await requireMemberPage(praWamPath.agenda);
+  if (!bodOnly(member)) {
+    const search = new URLSearchParams(Object.entries({ date: tanggal, item: asked ?? older }).filter((entry): entry is [string, string] => !!entry[1])).toString();
+    redirect(`${praWamPath.home}${search ? `?${search}` : ""}#agenda`);
+  }
   const now = new Date();
   const today = wibDate(now.toISOString());
   const [{ items, migrated }, bookingOpen] = await Promise.all([agendaItems(member, today), appraisalOpen()]);

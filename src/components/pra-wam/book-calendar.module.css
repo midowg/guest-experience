@@ -26,26 +26,26 @@
 /* The date strip (DateStrip.tsx) above the calendar. */
 .strip { margin-bottom: 16px; }
 .dayTitle { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin: 0 0 12px; }
-.dayTitle h2 { margin: 0; font-family: var(--pw-display); font-size: 20px; font-weight: 600; color: var(--pw-text); }
+.dayTitle h2 { margin: 0; font-family: var(--pw-display); font-size: 20px; font-weight: 500; color: var(--pw-text); }
 .dayTitle p { margin: 0; font-size: 13px; color: var(--pw-muted); }
 .empty { margin: 0; padding: 16px; border: 1px dashed var(--pw-line); border-radius: 16px; color: var(--pw-muted); font-size: 14px; }
 
 /* Phone: each room as a card, its day as big rows. */
 .phone { display: grid; gap: 12px; }
 @media (min-width: 40rem) { .phone { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
-.room { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); min-width: 0; }
+.room { display: grid; gap: 10px; padding: 14px; border: 0; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); min-width: 0; }
 .roomHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
-.roomHead h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--pw-primary); }
+.roomHead h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--pw-primary); }
 .roomHead span { font-size: 13px; color: var(--pw-muted); }
 .mini { position: relative; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--pw-success) 22%, var(--pw-surface)); overflow: hidden; }
 .mini i { position: absolute; top: 0; bottom: 0; background: var(--tone-line); }
 .mini .miniPast { background: var(--pw-line); }
 .mini b { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: var(--pw-danger); }
 .rows { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.row { display: grid; grid-template-columns: 3.6rem minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 10px 8px 12px; border: 1px solid var(--tone-line); border-left-width: 4px; border-radius: 12px; background: var(--tone-bg); color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; }
+.row { display: grid; grid-template-columns: 3.6rem minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 10px 8px 12px; border: 1px solid var(--tone-line); border-left-width: 4px; border-radius: 999px; background: var(--tone-bg); color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; }
 .row:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
 .when { display: grid; font-size: 12px; font-weight: 600; color: var(--pw-muted); line-height: 1.35; }
-.when b { font-size: 14px; font-weight: 800; color: var(--pw-text); }
+.when b { font-size: 14px; font-weight: 600; color: var(--pw-text); }
 .what { display: grid; min-width: 0; gap: 1px; }
 .what strong { font-size: 15px; font-weight: 700; color: var(--tone-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .what small { font-size: 13px; color: var(--pw-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -56,7 +56,7 @@
 .rowFreeIdle { --tone-bg: transparent; --tone-line: var(--pw-line); --tone-text: var(--pw-muted); border-style: dashed; cursor: default; grid-template-columns: 3.6rem minmax(0, 1fr); }
 .rowPast { display: grid; grid-template-columns: 3.6rem minmax(0, 1fr); align-items: center; gap: 10px; min-height: 40px; padding: 4px 12px; border-radius: 12px; background: var(--pw-surface-soft); color: var(--pw-muted); font-size: 13px; font-weight: 600; }
 .rowPast .when, .rowPast .when b { color: var(--pw-muted); font-size: 12px; }
-.nowRow { display: flex; align-items: center; gap: 8px; color: var(--pw-danger); font-size: 12px; font-weight: 800; }
+.nowRow { display: flex; align-items: center; gap: 8px; color: var(--pw-danger); font-size: 12px; font-weight: 600; }
 .nowRow::after { content: ""; flex: 1; height: 2px; background: var(--pw-danger); border-radius: 2px; }
 .nowRow span { padding: 2px 8px; border-radius: 999px; background: var(--pw-danger-soft); }
 
@@ -67,12 +67,12 @@
   .deskWeek { display: block; }
   .phone { display: none; }
   .deskOnly { display: inline-flex; }
-  .desk { --hour: 88px; display: block; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); padding: 0 12px 16px 0; }
+  .desk { --hour: 88px; display: block; border: 0; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); padding: 0 12px 16px 0; }
   .desk.hiddenDesk { display: none; }
 }
 .deskHead { position: sticky; top: 72px; z-index: 3; display: grid; grid-template-columns: 4.5rem repeat(var(--rooms), minmax(0, 1fr)); gap: 8px; padding: 14px 0 12px; background: var(--pw-surface); border-bottom: 1px solid var(--pw-line); border-radius: 16px 0 0 0; }
 .deskRoom { display: grid; gap: 2px; min-width: 0; }
-.deskRoom strong { font-size: 15px; font-weight: 800; color: var(--pw-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deskRoom strong { font-size: 15px; font-weight: 600; color: var(--pw-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .deskRoom span { font-size: 12px; color: var(--pw-muted); }
 .deskBody { position: relative; display: grid; grid-template-columns: 4.5rem repeat(var(--rooms), minmax(0, 1fr)); gap: 8px; height: calc(9 * var(--hour)); margin-top: 16px;
   background: repeating-linear-gradient(to bottom, var(--pw-line) 0 1px, transparent 1px calc(var(--hour) / 2), color-mix(in srgb, var(--pw-line) 45%, transparent) calc(var(--hour) / 2) calc(var(--hour) / 2 + 1px), transparent calc(var(--hour) / 2 + 1px) var(--hour));
@@ -92,30 +92,30 @@
 .freeSlot:hover { background: color-mix(in srgb, var(--pw-success) 7%, transparent); }
 .freeHint { position: absolute; top: 8px; left: 10px; font-size: 12px; font-weight: 700; color: var(--pw-success); opacity: 0; }
 .freeSlot:hover .freeHint, .freeSlot:focus-visible .freeHint { opacity: 1; }
-.ghost { position: absolute; left: 2px; right: 2px; display: flex; align-items: center; gap: 4px; padding: 0 10px; box-sizing: border-box; border: 1px dashed var(--pw-success); border-left: 4px solid var(--pw-success); border-radius: 10px; background: var(--pw-surface); color: var(--pw-success); font-size: 13px; font-weight: 800; pointer-events: none; }
+.ghost { position: absolute; left: 2px; right: 2px; display: flex; align-items: center; gap: 4px; padding: 0 10px; box-sizing: border-box; border: 1px dashed var(--pw-success); border-left: 4px solid var(--pw-success); border-radius: 10px; background: var(--pw-surface); color: var(--pw-success); font-size: 13px; font-weight: 600; pointer-events: none; }
 .ghost svg { width: 16px; height: 16px; }
 .past { background: repeating-linear-gradient(-45deg, var(--pw-surface-soft) 0 6px, transparent 6px 12px); border-radius: 10px; }
 .freeIdle { pointer-events: none; }
 .nowLine { position: absolute; left: 4.5rem; right: 0; z-index: 2; height: 2px; margin-top: -1px; background: var(--pw-danger); pointer-events: none; }
-.nowLine span { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); margin-right: 4px; padding: 1px 6px; border-radius: 999px; background: var(--pw-danger); color: var(--pw-surface); font-size: 11px; font-weight: 800; }
+.nowLine span { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); margin-right: 4px; padding: 1px 6px; border-radius: 999px; background: var(--pw-danger); color: var(--pw-surface); font-size: 11px; font-weight: 600; }
 
 /* Desktop week: rooms down, Monday to Friday across; a fixed table, so nothing scrolls sideways. */
-.week { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); overflow: hidden; }
+.week { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; border: 0; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); overflow: hidden; }
 .week th, .week td { padding: 0; border-bottom: 1px solid var(--pw-line); vertical-align: top; text-align: left; }
 .week tr:last-child th, .week tr:last-child td { border-bottom: 0; }
 .week td, .week thead th + th { border-left: 1px solid var(--pw-line); }
-.weekCorner { width: 11rem; padding: 14px 16px !important; font-size: 13px; font-weight: 800; color: var(--pw-muted); vertical-align: middle !important; }
+.weekCorner { width: 11rem; padding: 14px 16px !important; font-size: 13px; font-weight: 600; color: var(--pw-muted); vertical-align: middle !important; }
 .week thead th[data-today] .weekDay span { color: var(--pw-primary); }
 .week thead th[data-selected] { box-shadow: inset 0 -3px 0 var(--pw-primary); }
 .week td[data-today] { background: color-mix(in srgb, var(--pw-primary-soft) 45%, var(--pw-surface)); }
 .weekDay { display: grid; gap: 2px; width: 100%; min-height: 56px; padding: 10px 12px; border: 0; background: transparent; font: inherit; text-align: left; color: var(--pw-text); cursor: pointer; }
-.weekDay span { font-size: 14px; font-weight: 800; }
+.weekDay span { font-size: 14px; font-weight: 600; }
 .weekDay small { font-size: 12px; font-weight: 600; color: var(--pw-muted); }
 .weekDay:hover:not(:disabled) { background: var(--pw-surface-soft); }
 .weekDay:disabled { cursor: default; color: var(--pw-muted); }
 .weekDay:focus-visible, .weekCell:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: -2px; }
 .weekRoom { padding: 12px 16px !important; vertical-align: middle !important; }
-.weekRoom strong { display: block; font-size: 14px; font-weight: 800; color: var(--pw-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weekRoom strong { display: block; font-size: 14px; font-weight: 600; color: var(--pw-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .weekRoom small { font-size: 12px; color: var(--pw-muted); }
 .weekCell { display: grid; align-content: start; gap: 8px; width: 100%; min-height: 88px; padding: 10px 12px; border: 0; background: transparent; font: inherit; text-align: left; color: var(--pw-text); cursor: pointer; }
 .weekCell:hover { background: var(--pw-surface-soft); }
@@ -123,7 +123,7 @@
 .weekBar i { position: absolute; top: 0; bottom: 0; background: var(--tone-line); }
 .weekLines { display: grid; gap: 2px; min-width: 0; font-size: 12px; line-height: 1.35; }
 .weekLines > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--pw-text); }
-.weekLines b { font-weight: 800; }
+.weekLines b { font-weight: 600; }
 .textmine { color: var(--pw-on-brass-soft) !important; }
 .textsession { color: var(--pw-warning) !important; }
 .weekMore, .weekFree { font-size: 12px; font-weight: 700; color: var(--pw-muted); }
@@ -145,13 +145,13 @@ td[data-past] .weekCell { opacity: .75; }
 .facts dt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .facts small { display: block; font-size: 13px; color: var(--pw-muted); }
-.tag { justify-self: start; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; background: var(--tone-bg); color: var(--tone-text); border: 1px solid var(--tone-line); }
+.tag { justify-self: start; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--tone-bg); color: var(--tone-text); border: 1px solid var(--tone-line); }
 .sheetNote { margin: 0; font-size: 13px; color: var(--pw-muted); }
 
 /* Feedback after an action: above the phone's bottom bar, bottom right on a desktop. */
 .toast { position: fixed; z-index: 40; left: 16px; right: 16px; bottom: calc(84px + 12px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: flex-start; gap: 4px; padding: 4px; border-radius: 16px; background: var(--pw-surface); box-shadow: var(--pw-shadow); }
 .toast > :first-child { flex: 1; margin: 0; }
-.toastClose { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--pw-muted); cursor: pointer; }
+.toastClose { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--pw-muted); cursor: pointer; }
 .toastClose svg { width: 18px; height: 18px; }
 @media (min-width: 1024px) { .toast { left: auto; right: 24px; bottom: 24px; width: min(26rem, 100vw - 48px); } }
 

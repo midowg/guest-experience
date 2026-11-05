@@ -1,13 +1,13 @@
 /* Sheet.tsx: a sheet from the bottom on a phone, a side panel from 1024px. --pw-* tokens only. */
-.sheet { box-sizing: border-box; width: 100%; max-width: 100%; max-height: 92dvh; margin: auto 0 0; padding: 0; border: 0; border-radius: 24px 24px 0 0; background: var(--pw-app); color: var(--pw-text); box-shadow: var(--pw-shadow); overflow: hidden; }
-.sheet::backdrop { background: rgba(11, 21, 38, .45); }
+.sheet { box-sizing: border-box; width: 100%; max-width: 100%; max-height: 92dvh; margin: auto 0 0; padding: 0; border: 0; border-radius: var(--pw-r-sheet, 32px) var(--pw-r-sheet, 32px) 0 0; background: var(--pw-app); color: var(--pw-text); box-shadow: var(--pw-shadow); overflow: hidden; }
+.sheet::backdrop { background: rgba(20, 23, 31, .4); }
 .inner { display: flex; flex-direction: column; max-height: 92dvh; }
 .handle { align-self: center; flex: none; width: 40px; height: 4px; margin-top: 10px; border-radius: 4px; background: var(--pw-line); }
 .head { display: flex; align-items: flex-start; gap: 12px; padding: 12px 20px 8px; }
 .head > div { flex: 1; min-width: 0; }
-.head h2 { margin: 0; font-family: var(--pw-display); font-size: 20px; font-weight: 600; line-height: 1.3; color: var(--pw-text); }
+.head h2 { margin: 0; font-family: var(--pw-display); font-size: 20px; font-weight: 500; letter-spacing: -.2px; line-height: 1.3; color: var(--pw-text); }
 .head p { margin: 2px 0 0; font-size: 13px; color: var(--pw-muted); }
-.close { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: -6px -10px 0 0; border: 0; border-radius: 12px; background: transparent; color: var(--pw-muted); cursor: pointer; }
+.close { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: -6px -10px 0 0; border: 0; border-radius: 50%; background: transparent; color: var(--pw-muted); cursor: pointer; }
 .close:hover { background: var(--pw-surface-soft); color: var(--pw-text); }
 .close:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
 .close svg { width: 22px; height: 22px; }
@@ -16,8 +16,8 @@
 .foot > * { flex: 1 1 auto; }
 
 @media (min-width: 1024px) {
-  .sheet { width: min(100vw - 48px, 30rem); height: 100dvh; max-height: 100dvh; margin: 0 0 0 auto; border-radius: 24px 0 0 24px; }
-  .sheet.left { margin: 0 auto 0 0; border-radius: 0 24px 24px 0; }
+  .sheet { width: min(100vw - 48px, 30rem); height: 100dvh; max-height: 100dvh; margin: 0 0 0 auto; border-radius: var(--pw-r-sheet, 32px) 0 0 var(--pw-r-sheet, 32px); }
+  .sheet.left { margin: 0 auto 0 0; border-radius: 0 var(--pw-r-sheet, 32px) var(--pw-r-sheet, 32px) 0; }
   .sheet.wide { width: min(100vw - 48px, 44rem); }
   .inner { height: 100%; max-height: 100dvh; }
   .handle { display: none; }

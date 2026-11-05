@@ -17,8 +17,8 @@ export function GET() {
     scope: `${PRA_WAM_PATH}/`,
     display: "standalone",
     orientation: "portrait",
-    background_color: "#FAFAF7",
-    theme_color: "#1551A0",
+    background_color: "#F5F7FA",
+    theme_color: "#006EC1",
     icons: [
       { src: `${PRA_WAM_PATH}/icon-192.png`, sizes: "192x192", type: "image/png", purpose: "any" },
       { src: `${PRA_WAM_PATH}/icon-512.png`, sizes: "512x512", type: "image/png", purpose: "any" },

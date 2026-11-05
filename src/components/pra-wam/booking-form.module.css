@@ -33,7 +33,7 @@
 
 /* Ruang: the cards, those that cannot be taken still readable */
 .rooms { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 12px; }
-.room { display: flex; gap: 12px; align-items: flex-start; min-height: 44px; padding: 14px 16px; border: 1px solid var(--pw-line); border-radius: 16px; background: var(--pw-surface); color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; transition: border-color 150ms ease-out, background-color 150ms ease-out; }
+.room { display: flex; gap: 12px; align-items: flex-start; min-height: 44px; padding: 14px 16px; border: 0; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; transition: border-color 150ms ease-out, background-color 150ms ease-out; }
 .room:hover:not(:disabled) { border-color: var(--pw-primary); }
 .room:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
 .room[aria-pressed='true'] { border: 2px solid var(--pw-primary); background: var(--pw-primary-soft); padding: 13px 15px; }

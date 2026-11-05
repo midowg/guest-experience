@@ -6,6 +6,7 @@ vi.mock("@/lib/server/pra-wam/announcements", () => ({ unreadCount: async () => 
 vi.mock("@/lib/server/pra-wam/requests", () => ({ openRequestCount: async () => 3 }));
 vi.mock("@/lib/server/pra-wam/events", () => ({ currentPhase: async () => ({ kind: "pra_wam", name: "Pra WAM", startDate: "2026-10-28", endDate: "2026-12-23", daysToWam: 60 }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }) }));
+vi.mock("@/lib/server/pra-wam/quick-actions", () => ({ quickActionData: async () => ({ checkIn: null, bookingOpen: true }) }));
 
 import { PraWamShell, manageGroups } from "./PraWamShell";
 
@@ -54,11 +55,23 @@ describe("PraWamShell", () => {
     expect(screen.getByRole("main").textContent).toContain("Isi halaman");
   });
 
-  it("keeps a BOD in the app's own frame with the BOD menu", async () => {
+  it("keeps a BOD in the app's own frame with the BOD menu, and no + (a BOD does not check in)", async () => {
     render(await PraWamShell({ member: member(["bod"]), current: "peserta", children: <p>Isi</p> }));
     expect(screen.queryByText("Kembali ke aplikasi")).toBeNull();
     expect(screen.getAllByRole("navigation", { name: "Menu WAM" }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "Keluar dari Kelola acara" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Aksi cepat" })).toBeNull();
+  });
+
+  it("gives everyone else Beranda, Book, the blue +, Dokumen and Profil; Agenda is on Beranda now", async () => {
+    render(await PraWamShell({ member: member([]), current: "beranda", children: <p>Isi</p> }));
+    const bottom = screen.getAllByRole("navigation", { name: "Menu WAM" }).at(-1)!;
+    // The + carries its sheet (a <dialog>, shown in the top layer) right after it.
+    const parts = [...bottom.children].filter(child => child.tagName !== "DIALOG").map(child => child.getAttribute("aria-label") ?? child.textContent);
+    expect(parts).toEqual(["Beranda", "Book", "Aksi cepat", "Dokumen", "Profil"]);
+    expect(within(bottom).queryByRole("link", { name: "Agenda" })).toBeNull();
+    // The desktop top bar has the same + as a labelled button.
+    expect(screen.getAllByRole("button", { name: "Aksi cepat" })).toHaveLength(2);
   });
 
   it("gives a detail screen its back bar and no bottom bar", async () => {

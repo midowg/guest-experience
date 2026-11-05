@@ -21,6 +21,14 @@ export function windowState(window: CheckInWindow, now: Date): WindowState {
   return now <= new Date(window.closes) ? "buka" : "tutup";
 }
 
+/**
+ * What "Saya hadir" in Aksi cepat is for right now: the first of the person's sessions whose
+ * check-in window is open and that is not recorded yet; null when there is none.
+ */
+export function checkInNow<T extends { kind: string; startsAt: string; endsAt: string; checkedInAt: string | null }>(items: readonly T[], now: Date): T | null {
+  return items.find(item => item.kind === "sesi" && !item.checkedInAt && windowState(checkInWindow(item.startsAt, item.endsAt), now) === "buka") ?? null;
+}
+
 /** What a scan did, for the page that answers it. */
 export type CheckInResult =
   | { kind: "tercatat" | "sudah"; checkedInAt: string }
