@@ -339,8 +339,10 @@ function PlanView({ date, today, now, rooms, bookings, canBook, weekend, note, o
     </div>
     <FloorPlan rooms={rooms} statusOf={statusOf} label={`Denah kantor, ${dayLabel(date)}`}
       otherSpots="plain" showUnplaced={false}
+      activeOf={(room, status) => canBook && room.bookable && (status.tone === "free" || status.tone === "part")}
       tipAction={(room, status) => canBook && room.bookable && (status.tone === "free" || status.tone === "part") ? { label: "Book ruang ini", run: () => onBookRoom(room) } : null}
       legend={anyClosed ? ["free", "part", "full", "closed", "off"] : ["free", "part", "full", "off"]}
-      legendLabels={{ part: "Sebagian", full: "Penuh", closed: weekend ? "Tutup" : outside ? "Di luar periode" : "Sudah lewat", off: "Bukan ruang booking" }} />
+      legendLabels={{ part: "Sebagian", full: "Penuh", closed: weekend ? "Tutup" : outside ? "Di luar periode" : "Sudah lewat", off: "Bukan ruang booking" }}
+      caption={canBook ? "Ruang bergaris biru bisa dibooking. Ketuk untuk detail." : undefined} />
   </section>;
 }

@@ -175,6 +175,10 @@
 .spot .chip text { fill: var(--fp-chip-ink); font-family: var(--pw-body); font-weight: 700; }
 
 .click { cursor: pointer; }
+/* People's plan: a room that can be chosen is outlined in blue; one that cannot is faded. */
+.spot.active .box { stroke: var(--fp-ring); stroke-width: 2.5; }
+.spot.inactive .box { fill: var(--fp-off); stroke-dasharray: none; }
+.spot.inactive .furniture { opacity: .4; }
 .click:focus { outline: none; }
 .click:hover .box { stroke: var(--fp-hover); stroke-width: 3; }
 .click:focus-visible .box { stroke: var(--fp-ink); stroke-width: 5; }

@@ -78,7 +78,7 @@ describe("FloorPlan", () => {
     expect(container.querySelector("[class*='furniture']")?.getAttribute("aria-hidden")).toBe("true");
   });
 
-  it("rings the chosen room with its label; a taken room shows its label when tapped but is not picked", () => {
+  it("rings the chosen room with its label; a taken room is faded and cannot be tapped", () => {
     const statusOf = (item: Room): PlanStatus => item.name === "Nagapadma" ? { tone: "busy", text: "Terpakai 09.30–11.00" } : free;
     const onPick = vi.fn();
     const { container, rerender } = render(<FloorPlan rooms={rooms} statusOf={statusOf} label="Denah kantor" onPick={onPick} selectedId="vasuki" />);
@@ -87,12 +87,13 @@ describe("FloorPlan", () => {
     expect(label()).toEqual(["Vasuki", "4 orang · min 1", "Kosong 09.00–10.00"]);
     rerender(<FloorPlan rooms={rooms} statusOf={statusOf} label="Denah kantor" onPick={onPick} highlightId="antareja" />);
     expect(label()).toEqual(["Antareja", "Kapasitas belum diisi", "Kosong 09.00–10.00"]);
-    // No "Terpakai" tag in the box: the chairs' colour says it.
-    const nagapadma = screen.getByRole("button", { name: /^Nagapadma, .*terpakai 09.30–11.00$/ });
+    // A room that cannot be picked is faded, not a button, and has no "Terpakai" tag in its box.
+    const nagapadma = screen.getByRole("img", { name: /^Nagapadma, .*terpakai 09.30–11.00$/ });
+    expect(nagapadma.getAttribute("class")).toMatch(/inactive/);
     expect(nagapadma.querySelectorAll("text")).toHaveLength(0);
     fireEvent.click(nagapadma);
     expect(onPick).not.toHaveBeenCalled();
-    expect(label()).toEqual(["Nagapadma", "8 orang · TV · Whiteboard", "Terpakai 09.30–11.00"]);
+    expect(screen.getByRole("button", { name: /^Vasuki,/ }).getAttribute("class")).toMatch(/active/);
   });
 
   it("puts the action in the label, and runs it", () => {

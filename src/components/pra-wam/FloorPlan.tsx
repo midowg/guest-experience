@@ -65,6 +65,12 @@ type Props = {
    * room ("kind", the default with `onPickSpot`: the super admin's view of the rooms).
    */
   chairColors?: "status" | "kind";
+  /**
+   * Which rooms can be tapped (people's plan): an active room is outlined in blue, the others are
+   * faded and do nothing, so it is clear what can be chosen. By default the rooms `onPick` can pick,
+   * or every room when nothing is picked.
+   */
+  activeOf?: (room: Room, status: Status) => boolean;
   /** A button in the label of the room tapped, e.g. "Book ruang ini"; none when it returns null. */
   tipAction?: (room: Room, status: Status) => { label: string; run: () => void } | null;
 };
@@ -104,7 +110,7 @@ type Gesture = {
  */
 export function FloorPlan({
   rooms, statusOf, onPick, selectedId, action = "Pilih ruang ini", label, legend = ["free", "busy", "mine", "off"], caption,
-  legendLabels, pickable, highlightId, otherSpots = "label", showUnplaced = true, subtitle = "spec", onPickSpot, selectedSpot, emptySpot, chairColors, tipAction,
+  legendLabels, pickable, highlightId, otherSpots = "label", showUnplaced = true, subtitle = "spec", onPickSpot, selectedSpot, emptySpot, chairColors, tipAction, activeOf,
 }: Props) {
   const byKind = (chairColors ?? (onPickSpot ? "kind" : "status")) === "kind";
   const shadowId = `fp-shadow-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
@@ -332,11 +338,13 @@ export function FloorPlan({
     }
     const selected = room.id === selectedId;
     const pick = canPick(room, status);
-    // A tap shows its label; a room that can be picked is picked too.
+    const active = activeOf ? activeOf(room, status) : onPick ? pick : true;
+    // A tap on an active room shows its label; a room that can be picked is picked too.
     const tap = () => { setPeek(key); if (pick) onPick?.(room); };
     return <Spot key={key} {...common} {...drawn} chip={undefined} name={room.name} sub="" hideWords tone={status.tone} selected={selected}
-      ring={room.id === highlightId || peek === key} title={`${room.name} · ${spec} · ${status.text}`} a11y={`${room.name}, ${lower(status.text)}`}
-      button={{ label: `${room.name}, ${spec}, ${lower(status.text)}${pick ? `. ${action}` : ""}`, onClick: tap, onKeyDown: keyed(tap) }} />;
+      ring={room.id === highlightId || peek === key} title={`${room.name} · ${spec} · ${status.text}`} a11y={`${room.name}, ${spec}, ${lower(status.text)}`}
+      active={active} inactive={!active}
+      button={active ? { label: `${room.name}, ${spec}, ${lower(status.text)}${pick ? `. ${action}` : ""}`, onClick: tap, onKeyDown: keyed(tap) } : undefined} />;
   });
 
   return <div className={css.plan}>
@@ -513,6 +521,8 @@ type SpotProps = {
   faint?: boolean;
   /** Draw no words in the box, only its chairs (the name stays in the label and the tooltip). */
   hideWords?: boolean;
+  /** Can be tapped (outlined in blue), or cannot (faded). */
+  active?: boolean; inactive?: boolean;
   /** Chairs drawn from the capacity, the words then at the top; without it the words sit in the middle. */
   seats?: { capacity: number | null; layout: SeatLayout; round?: boolean };
   name: string;
@@ -552,7 +562,7 @@ function keyboardFocus(element: Element) {
  * at this zoom, its subtitle. With chairs, the words sit at the top and the chairs below them; the
  * chairs are two paths (seats, backrests) coloured by the spot's status or kind.
  */
-function Spot({ rect, shape, textRect, door, divider, marks, open, faint, hideWords, seats, name, sub, tone, kind, chip, title, a11y, main, selected, ring, plain, quiet, button, unitPx, scale, onReveal, shadow }: SpotProps) {
+function Spot({ rect, shape, textRect, door, divider, marks, open, faint, hideWords, active, inactive, seats, name, sub, tone, kind, chip, title, a11y, main, selected, ring, plain, quiet, button, unitPx, scale, onReveal, shadow }: SpotProps) {
   // An L-shaped room keeps its words in its full-width arm, so they stay inside the L.
   const textBox = textRect ?? rect;
   const capacity = seats?.capacity ?? null, layout = seats?.layout, round = !!seats?.round;
@@ -575,7 +585,7 @@ function Spot({ rect, shape, textRect, door, divider, marks, open, faint, hideWo
   const floorTone = tone === "off" || tone === "closed" || open;
   const quietText = faint ? quietName(name, textBox, (unitPx && unitPx > 0 ? unitPx : 860 / PLAN_W) * scale) : null;
   const className = [css.spot, css[tone], kind ? css[kind] : "", main ? css.main : "", selected ? css.selected : "", ring ? css.ring : "", plain ? css.plain : "",
-    open ? css.open : "", faint ? css.faint : "", button ? css.click : ""].join(" ");
+    open ? css.open : "", faint ? css.faint : "", button ? css.click : "", active ? css.active : "", inactive ? css.inactive : ""].join(" ");
   const attributes = button
     ? { role: "button", tabIndex: 0, "aria-label": button.label, "aria-pressed": !!(selected || ring), onClick: button.onClick, onKeyDown: button.onKeyDown, onFocus: (event: FocusEvent<SVGGElement>) => { if (keyboardFocus(event.currentTarget)) onReveal(rect); } }
     : plain && (!name || faint) ? { "aria-hidden": true } : { role: "img", "aria-label": a11y ?? (plain ? `${name}, bukan ruang booking` : title.replace(/ · /g, ", ")) };
