@@ -44,14 +44,15 @@ export function monthDay(date: string, at: { from: string; to: string; today: st
   const outside = date < at.from || date > at.to;
   const weekend = !isWorkday(date);
   const past = date < at.today;
-  const open = !outside && !weekend && !past;
+  // A weekend can be picked (5 Nov 2026): it has no rooms, but "Di luar kantor" may be booked on it.
+  const open = !outside && !past;
   // Dots only on days that can still be picked: yours (blue), a room nearly full (orange), all free (green).
   const dots = !open ? [] : [
     at.mine ? "mine" as const : null,
     at.summary && (at.summary.crowded || at.summary.full) ? "crowded" as const : null,
     at.summary && at.summary.bookings === 0 ? "free" as const : null,
   ].filter(dot => dot != null);
-  const why = outside ? "di luar periode" : weekend ? "akhir pekan" : past ? "lewat" : "";
+  const why = outside ? "di luar periode" : past ? "lewat" : weekend ? "akhir pekan, hanya di luar kantor" : "";
   return { open, past, weekend, outside, dots, why };
 }
 
@@ -60,8 +61,8 @@ const DOT_WORDS = { mine: "ada booking kamu", crowded: "ada ruang hampir penuh",
 /**
  * DS "Kalender · tanggal terpilih": a month card, the picked date as a filled blue circle, today
  * with a blue ring, dots under the dates (blue: a booking of yours, orange: a room nearly full,
- * green: every room free). Past days, weekends and days outside the booking window are muted and
- * cannot be picked. ‹ › page by month inside the window; only the weeks that touch the window show.
+ * green: every room free). Past days and days outside the booking window are muted and cannot be
+ * picked; a weekend can (only "Di luar kantor" is booked on it). ‹ › page by month inside the window; only the weeks that touch the window show.
  * One tab stop: the arrow keys move a day or a week, Home and End to the week's ends.
  */
 export function MonthCalendar({ from, to, selected, today, summary, mine = [], onPick, label = "Pilih tanggal" }: Props) {

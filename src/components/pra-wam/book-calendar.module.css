@@ -226,3 +226,9 @@
 .outsideWrap { margin-top: 12px; }
 @media (min-width: 1024px) { .outsideWrap { max-width: 40rem; } }
 .outside .roomHead h3::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--pw-accent-orange); vertical-align: middle; }
+
+/* A Saturday or Sunday: no rooms, a note and "Book di luar kantor". */
+.weekend { display: grid; gap: 12px; justify-items: start; padding: 20px; }
+.weekend .dayTitle { margin: 0; }
+.weekendText { margin: 0; font-size: 14px; color: var(--pw-muted); max-width: 46ch; }
+.weekendText b { color: var(--pw-text); font-weight: 600; }

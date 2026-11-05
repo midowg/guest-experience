@@ -220,6 +220,12 @@ export function workWeek(date: string): string[] {
   return [0, 1, 2, 3, 4].map(days => shiftDays(monday, days));
 }
 
+/** Monday to Sunday of the week holding `date`: the days Book loads, since "Di luar kantor" may be on a weekend. */
+export function loadedWeek(date: string): string[] {
+  const monday = workWeek(date)[0];
+  return [0, 1, 2, 3, 4, 5, 6].map(days => shiftDays(monday, days));
+}
+
 /** The Monday `weeks` weeks before or after the week holding `date`. */
 export const weekShift = (date: string, weeks: number) => shiftDays(workWeek(date)[0], weeks * 7);
 

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { CalendarDays, CalendarPlus, ChevronRight, Clock, DoorOpen, Map as MapIcon, MapPin, Plus, Text, User, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { appraisalRules, bookingWhere, clockAt, clockLabel, dayLabel, draftHours, isOutside, nowOffset, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, bookingWhere, clockAt, clockLabel, dayLabel, draftHours, isOutside, isWorkday, loadedWeek, nowOffset, OUTSIDE_ROOM, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { placeRooms } from "@/lib/pra-wam/floor-plan";
@@ -59,6 +59,8 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const router = useRouter();
   const [confirm, confirmDialog] = useConfirm();
   const bookable = rooms.filter(room => room.bookable);
+  // Monday to Sunday are loaded: a weekend has no rooms but may hold "Di luar kantor".
+  const loaded = loadedWeek(week[0]);
   const canBook = open && !!form;
   const mineFlag = (booking: Booking) => !booking.isSession && booking.bookedBy.id === viewerId;
   const findBooking = (id?: string) => id ? bookings.find(booking => booking.id === id) ?? mine.find(booking => booking.id === id) : undefined;
@@ -84,8 +86,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
 
   const [formKey, setFormKey] = useState(0);
   const draftFor = (pick: { date?: string; room?: string; start?: string; end?: string }): SheetState => {
-    const day = pick.date && dates.includes(pick.date) ? pick.date : dates.includes(selected) ? selected : dates[0] ?? selected;
-    const roomId = pick.room && bookable.some(room => room.id === pick.room) ? pick.room : "";
+    const ahead = (value: string) => inPeriod(value) && value >= today;
+    const day = pick.date && (dates.includes(pick.date) || (pick.room === OUTSIDE_ROOM && ahead(pick.date))) ? pick.date : dates.includes(selected) ? selected : dates[0] ?? selected;
+    const roomId = pick.room === OUTSIDE_ROOM || (pick.room && bookable.some(room => room.id === pick.room)) ? pick.room! : "";
     return { kind: "form", key: formKey + 1, initial: { date: day, ...draftHours(day, clockNow, pick), roomId, title: "", description: "", participants: [] }, ...dayData(day) };
   };
   const editFor = (booking: Booking): SheetState => {
@@ -97,7 +100,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   };
   /** The day's bookings when this week holds them; otherwise the form fetches them. */
   function dayData(day: string) {
-    return week.includes(day) ? { dayOf: day, dayBookings: bookings.filter(booking => wibDate(booking.startsAt) === day) } : { dayOf: "", dayBookings: [] };
+    return loaded.includes(day) ? { dayOf: day, dayBookings: bookings.filter(booking => wibDate(booking.startsAt) === day) } : { dayOf: "", dayBookings: [] };
   }
 
   // A sheet asked for in the address opens on arrival; one that cannot be found says so.
@@ -136,7 +139,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   function close() { setShown(false); mirror({}); }
   /** A day picked: in this week it shows at once, another week loads. `toDay`: switch the desktop to the day view. */
   function pickDay(day: string, toDay = true) {
-    if (!week.includes(day)) { router.push(praWamPath.appraisal(day), { scroll: false }); return; }
+    if (!loaded.includes(day)) { router.push(praWamPath.appraisal(day), { scroll: false }); return; }
     setSelected(day);
     if (toDay) setMode("hari");
     window.history.replaceState(null, "", praWamPath.bookSheet({ date: day }));
@@ -153,7 +156,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   function saved({ message, date: day }: { message: string; date: string }) {
     setShown(false);
     setNotice({ tone: "success", text: message });
-    if (week.includes(day)) {
+    if (loaded.includes(day)) {
       setSelected(day);
       window.history.replaceState(null, "", praWamPath.bookSheet({ date: day }));
       router.refresh();
@@ -183,13 +186,22 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const dayBookings = bookings.filter(booking => wibDate(booking.startsAt) === selected);
   // The loaded week is recounted from its bookings with the moving clock; the rest is the server's.
   const days = { ...summary, ...daySummaries(week, rooms, bookings.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), clockNow) };
-  const canBookDay = canBook && inPeriod(selected) && selected >= today;
+  const canBookDay = canBook && inPeriod(selected) && selected >= today && isWorkday(selected);
+  // A Saturday or Sunday: no rooms, only "Di luar kantor" (5 Nov 2026).
+  const weekendDay = !isWorkday(selected);
+  const canAway = canBook && inPeriod(selected) && selected >= today;
+  const weekendPanel = <section className={`${styles.card} ${css.weekend}`} aria-label={`Akhir pekan, ${dayLabel(selected)}`}>
+    <div className={css.dayTitle}><h2>{dayLabel(selected)}{selected === today ? " · hari ini" : ""}</h2></div>
+    <p className={css.weekendText}>Ruang kantor hanya bisa dibooking Senin–Jumat. Di akhir pekan kamu bisa membooking kegiatan <b>di luar kantor</b> dengan nama tempatnya; jam bebas, sampai 23.30.</p>
+    {canAway && <button type="button" className="button button--primary" onClick={() => book({ date: selected, room: OUTSIDE_ROOM })} aria-haspopup="dialog"><MapPin size={18} aria-hidden /> Book di luar kantor</button>}
+    {!inPeriod(selected) ? <p className={css.weekendText}>Di luar periode appraisal.</p> : selected < today ? <p className={css.weekendText}>Sudah lewat, hanya untuk dilihat.</p> : !open ? <p className={css.weekendText}>Book ruang sedang ditutup.</p> : null}
+  </section>;
   const nowLine = nowOffset(selected, clockNow);
   // The month calendar (DS "Kalender · tanggal terpilih") picks the day for both views.
   const calendar = <MonthCalendar from={appraisalRules.periodStart} to={appraisalRules.periodEnd} selected={selected} today={today} summary={days}
     mine={mine.map(booking => wibDate(booking.startsAt))} onPick={day => pickDay(day, false)} label="Pilih hari" />;
   const head = <ScreenHead eyebrow="Ruang meeting" title="Book ruang"
-    lead={`Jam ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–20 Nov. Yang tersimpan lebih dulu yang mendapat ruang.`}
+    lead={`Ruang ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–20 Nov; di luar kantor boleh kapan saja. Yang tersimpan lebih dulu yang mendapat ruang.`}
     actions={canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
 
   return <>
@@ -213,7 +225,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
         {calendar}
         <Legend />
       </div>
-      <div className={css.main}>
+      {weekendDay ? <div className={css.main}>{weekendPanel}</div> : <div className={css.main}>
         <div className={`${css.dayTitle} ${mode === "minggu" ? css.deskHide : ""}`}>
           <h2>{dayLabel(selected)}{selected === today ? " · hari ini" : ""}</h2>
           <p>{nowLine != null ? `Sekarang ${clockLabel(clockAt(nowLine))}. ` : ""}{!inPeriod(selected) ? "Di luar periode appraisal." : selected < today ? "Sudah lewat, hanya untuk dilihat." : canBookDay ? "Ketuk waktu yang kosong untuk book." : open ? "" : "Book ruang sedang ditutup."}</p>
@@ -225,11 +237,11 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
         </div>}
         <DayCalendar date={selected} rooms={bookable} bookings={dayBookings} now={clockNow} viewerId={viewerId} canBook={canBookDay}
           onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} phoneOnly={mode === "minggu"} />
-      </div>
+      </div>}
     </div> : <>
       <div className={css.planPicker}>{calendar}</div>
-      <PlanView key={selected} date={selected} today={today} now={clockNow} rooms={rooms} bookable={bookable} bookings={dayBookings} viewerId={viewerId} canBook={canBookDay} open={open}
-        onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} />
+      {weekendDay ? weekendPanel : <PlanView key={selected} date={selected} today={today} now={clockNow} rooms={rooms} bookable={bookable} bookings={dayBookings} viewerId={viewerId} canBook={canBookDay} open={open}
+        onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} />}
     </>}
 
     {/* Outside the office: the same under Kalender and Denah, phone and desktop. */}

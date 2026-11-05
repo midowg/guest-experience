@@ -36,17 +36,20 @@ describe("the month calendar", () => {
     expect(day(/^Jumat, 6 Nov/).getAttribute("aria-label")).toBe("Jumat, 6 Nov");
   });
 
-  it("does not pick past days, weekends or days outside the window", () => {
+  it("does not pick past days or days outside the window, but a weekend can be picked", () => {
     const onPick = vi.fn();
     render(<MonthCalendar from={from} to={to} selected="2026-11-05" today="2026-11-04" summary={summary} onPick={onPick} />);
     const past = day(/^Selasa, 3 Nov/);
     expect(past.getAttribute("aria-label")).toBe("Selasa, 3 Nov, lewat");
     expect(past.getAttribute("aria-disabled")).toBe("true");
     fireEvent.click(past);
-    fireEvent.click(day(/^Sabtu, 7 Nov, akhir pekan/));
     expect(onPick).not.toHaveBeenCalled();
+    fireEvent.click(day(/^Sabtu, 7 Nov, akhir pekan/));
+    expect(onPick).toHaveBeenCalledWith("2026-11-07");
+    onPick.mockClear();
     // 21 Nov ends the last week shown; 22 Nov on is not shown at all.
     expect(day(/^Sabtu, 21 Nov/).getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(day(/^Sabtu, 21 Nov/));
     expect(screen.queryByRole("button", { name: /^Minggu, 22 Nov/ })).toBeNull();
     fireEvent.click(day(/^Jumat, 20 Nov/));
     expect(onPick).toHaveBeenCalledWith("2026-11-20");

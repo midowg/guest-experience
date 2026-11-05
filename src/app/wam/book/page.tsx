@@ -1,7 +1,7 @@
 import { AppraisalBoard, type BookArrival, type BookFormData } from "@/components/pra-wam/AppraisalBoard";
 import { PraWamShell, ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { Notice } from "@/components/ui";
-import { appraisalRules, bookableDates, clockLabel, wibDate, workWeek } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, bookableDates, clockLabel, loadedWeek, wibDate, workWeek } from "@/lib/pra-wam/appraisal";
 import { cancelsAnyBooking } from "@/lib/pra-wam/roles";
 import { participantGroups } from "@/lib/pra-wam/units";
 import { praWamPath } from "@/lib/routes";
@@ -37,7 +37,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
   const date = asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) && asked >= appraisalRules.periodStart && asked <= appraisalRules.periodEnd ? asked : dates[0] ?? appraisalRules.periodEnd;
   const week = workWeek(date);
   // The week in full, and the whole booking window as counts for the date strip.
-  const loaded = await Promise.all([weekSchedule(week, member), myBookings(member, today), appraisalOpen(), appSettings(), windowSummary(appraisalRules.periodStart, appraisalRules.periodEnd, now)])
+  const loaded = await Promise.all([weekSchedule(loadedWeek(date), member), myBookings(member, today), appraisalOpen(), appSettings(), windowSummary(appraisalRules.periodStart, appraisalRules.periodEnd, now)])
     .then(async ([schedule, mine, open, settings, summary]) => ({ schedule, mine, open, settings, summary, form: open ? await formData(member) : null }))
     .catch((error: unknown) => {
       if (error instanceof ServiceError) return error.message;
@@ -57,8 +57,8 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
       end: query.end && TIME.test(query.end) ? query.end : undefined,
     } : undefined,
   };
-  // A week day in the period first, so the calendar does not open on a weekend or outside it.
-  const shown = week.includes(date) ? date : week.find(day => day >= appraisalRules.periodStart && day <= appraisalRules.periodEnd) ?? week[0];
+  // The day asked for when it is in the period (a weekend too); else a week day in the period.
+  const shown = date >= appraisalRules.periodStart && date <= appraisalRules.periodEnd ? date : week.find(day => day >= appraisalRules.periodStart && day <= appraisalRules.periodEnd) ?? week[0];
   return <PraWamShell member={member} current="appraisal">
     <AppraisalBoard date={shown} week={week} dates={dates} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine}
       viewerId={member.id} canCancelAny={cancelsAnyBooking(member)} open={open} form={form} arrive={arrive} floorPlan={settings.floorPlan} summary={summary}

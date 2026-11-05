@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { praWamPath } from "@/lib/routes";
-import { bookableFrom, clockAt, dayMinutes, draftHours, hoursInGap, nowOffset, roomDay, startInGap, weekShift, weekSummary, wibInstant, workWeek } from "./appraisal";
+import { bookableFrom, clockAt, dayMinutes, draftHours, hoursInGap, loadedWeek, nowOffset, roomDay, startInGap, weekShift, weekSummary, wibInstant, workWeek } from "./appraisal";
 
 const at = (date: string, time: string) => new Date(wibInstant(date, time));
 const hold = (id: string, roomId: string, date: string, start: string, end: string) => ({ id, roomId, startsAt: wibInstant(date, start), endsAt: wibInstant(date, end) });
@@ -12,6 +12,10 @@ describe("the work week", () => {
   it("puts a weekend in the week before", () => {
     expect(workWeek("2026-11-08")[0]).toBe("2026-11-02");
     expect(workWeek("2026-11-07")[4]).toBe("2026-11-06");
+  });
+  it("loads Monday to Sunday, so a weekend belongs to the week it ends", () => {
+    expect(loadedWeek("2026-11-07")).toEqual(["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-08"]);
+    expect(loadedWeek("2026-11-04")).toEqual(loadedWeek("2026-11-08"));
   });
   it("moves a week at a time, across months", () => {
     expect(weekShift("2026-11-04", 1)).toBe("2026-11-09");
