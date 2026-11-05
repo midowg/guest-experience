@@ -311,14 +311,17 @@ describe("words in a spot", () => {
         const along = Math.max(...words.name.map(line => line.length)) * 0.6 * words.nameSize;
         // Never past the walls: upright the widest line fits the width; turned it fits the height.
         expect(along, `${key} at ${unitPx}`).toBeLessThanOrEqual((words.rotate ? rect.h : rect.w) - 4 + 1e-6);
+        // And across the lines, under the room's top and bottom padding.
+        const across = words.name.length * 1.2 * words.nameSize;
+        expect(across, `${key} lines at ${unitPx}`).toBeLessThanOrEqual((words.rotate ? rect.w - 4 : rect.h - 22) + 1e-6);
         // Shown from the zoom at which it is readable (at once when it already is), never beyond 4×.
         const from = words.nameFrom ?? 1;
         expect(words.nameSize * unitPx * from, `${key} readable`).toBeGreaterThanOrEqual(NAME_MIN_PX - 0.01);
         expect(from).toBeLessThanOrEqual(ZOOM_MAX);
       }
     }
-    // CFC Ananta Room fits on a 375 px phone by breaking its name, so it shows at once there.
-    expect(spotWords({ name: "CFC Ananta Room", sub: "", rect: PLAN_SPOTS.ananta.rect, unitPx: 343 / PLAN_W }).nameFrom ?? 1).toBe(1);
+    // On a desktop CFC Ananta Room shows its name at once; on a phone after a little zoom.
+    expect(spotWords({ name: "CFC Ananta Room", sub: "", rect: PLAN_SPOTS.ananta.rect, unitPx: 860 / PLAN_W }).nameFrom ?? 1).toBe(1);
   });
   it("shows the specification at once on a desktop", () => {
     // A roomy box (CFC Ananta's before 5 Nov).

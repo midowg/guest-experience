@@ -418,9 +418,12 @@ export function spotWords(input: Omit<TextInput, "band">): SpotText & { band: nu
   // A name that still runs past the walls at the readable size (one word in a tiny room, such as
   // Antareja on a phone) is shrunk to fit inside and only shown once zoomed in enough to read it;
   // until then the room keeps its name in its label and tooltip.
+  // Both ways: along the lines, and across them (three lines of "CFC / Ananta / Room" in a squat box).
   const along = Math.max(0, ...kept.name.map(line => line.length)) * CHAR * kept.nameSize;
+  const across = kept.name.length * 1.2 * kept.nameSize;
   const room = (kept.rotate ? input.rect.h : input.rect.w) - 4;
-  const shrink = along > room && along > 0 ? room / along : 1;
+  const depth = kept.rotate ? input.rect.w - 4 : input.rect.h - WORDS_TOP - WORDS_BOTTOM;
+  const shrink = Math.min(1, along > 0 ? room / along : 1, across > 0 && depth > 0 ? depth / across : 1);
   const words = shrink < 1 ? { ...kept, nameSize: kept.nameSize * shrink, nameFrom: 1 / shrink } : kept;
   return { ...words, band: Math.min(input.rect.h, wordsBand(words)) };
 }
