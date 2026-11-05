@@ -8,7 +8,7 @@ import css from "./book-calendar.module.css";
 /*
  * Book's calendar, in the design system's agenda style (DS "Agenda dan permintaan", "Jadwal,
  * tampilan minggu"). On a phone: under the month calendar, the picked day as one compact card per
- * room: a 09.00–18.00 bar of what is taken, then the bookings and the free stretches to tap, in
+ * room: a 07.00–22.00 bar of what is taken, then the bookings and the free stretches to tap, in
  * order. From 1024px: the day as a timeline (rooms as columns), or the week as a grid (days as
  * columns, hours down) for one room picked above it.
  */
@@ -79,7 +79,7 @@ export function DayCalendar({ date, rooms, bookings, now, viewerId, canBook, onO
       </li>)}
     </ul>
 
-    <div className={`${css.desk} ${phoneOnly ? css.hiddenDesk : ""}`} style={{ "--cols": rooms.length } as CSSProperties}>
+    <div className={`${css.desk} ${phoneOnly ? css.hiddenDesk : ""}`} style={{ "--cols": rooms.length, "--hours": dayMinutes / 60 } as CSSProperties}>
       <div className={css.deskHead}>
         <span />
         {days.map(({ room, segments }) => <div key={room.id} className={css.deskRoom}>
@@ -103,7 +103,7 @@ export function DayCalendar({ date, rooms, bookings, now, viewerId, canBook, onO
 }
 
 /**
- * A room's day on a phone (DS itinerary card): name and size, a status pill, the 09.00–18.00 bar,
+ * A room's day on a phone (DS itinerary card): name and size, a status pill, the 07.00–22.00 bar,
  * then in order its bookings (tap for the detail) and free stretches (soft green chips, tap to
  * book). Time gone by shows only on the bar, greyed, with a thin blue tick for now.
  */
@@ -234,7 +234,7 @@ type WeekProps = {
 };
 
 /**
- * DS "Jadwal, tampilan minggu" from 1024px: Monday to Friday as columns, 09.00–18.00 down, for one
+ * DS "Jadwal, tampilan minggu" from 1024px: Monday to Friday as columns, 07.00–22.00 down, for one
  * room picked in "Pilih ruang". Today's column is tinted, now is a thin blue line, each booking a
  * pale block with a colour edge; free time books that room at that time; a day's head opens its day.
  */
@@ -258,7 +258,7 @@ export function WeekCalendar({ week, rooms, bookings, viewerId, now, today, sele
       </div>
     </div>
 
-    <div className={css.timeline} style={{ "--cols": week.length } as CSSProperties}>
+    <div className={css.timeline} style={{ "--cols": week.length, "--hours": dayMinutes / 60 } as CSSProperties}>
       <div className={css.deskHead}>
         <span />
         {columns.map(({ date, open }) => <button key={date} type="button" className={css.weekDay} data-today={date === today || undefined} data-selected={date === selected || undefined}

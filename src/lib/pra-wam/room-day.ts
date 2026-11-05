@@ -1,7 +1,7 @@
 import { appraisalRules, clockLabel, dayMinutes, overlaps, wibDate, wibInstant, wibTime } from "./appraisal";
 
 /*
- * A room's whole day for the Book plan: how much of 09.00–18.00 is taken (bookings and Pra WAM
+ * A room's whole day for the Book plan: how much of the opening hours (07.00–22.00) is taken (bookings and Pra WAM
  * sessions), the next half hour that can still be booked, and so its status on the plan: empty,
  * partly used, full (no free half hour left), or over (the day's hours have passed).
  */
@@ -35,8 +35,8 @@ export function countLabel(bookings: number, sessions: number): string {
   return [bookings ? `${bookings} booking` : "", sessions ? `${sessions} sesi` : ""].filter(Boolean).join(", ");
 }
 
-/** Minutes of `date`'s opening hours covered by the holds, each minute once. */
-function takenWithin(date: string, holds: DayHold[]): number {
+/** The holds as minutes of `date` inside opening hours, overlaps merged, in order. */
+function takenSpans(date: string, holds: DayHold[]): [number, number][] {
   const spans = holds
     .map(hold => [hold.startsAt, hold.endsAt].map(iso => {
       const day = new Date(iso).getTime() - new Date(wibInstant(date, "00:00")).getTime();
@@ -45,12 +45,33 @@ function takenWithin(date: string, holds: DayHold[]): number {
     .map(([from, to]) => [Math.max(from, OPEN), Math.min(to, CLOSE)] as [number, number])
     .filter(([from, to]) => to > from)
     .sort((a, b) => a[0] - b[0]);
-  let total = 0, reached = OPEN;
+  const merged: [number, number][] = [];
   for (const [from, to] of spans) {
-    const start = Math.max(from, reached);
-    if (to > start) { total += to - start; reached = to; }
+    const last = merged.at(-1);
+    if (last && from <= last[1]) last[1] = Math.max(last[1], to); else merged.push([from, to]);
   }
-  return total;
+  return merged;
+}
+
+/** Minutes of `date`'s opening hours covered by the holds, each minute once. */
+function takenWithin(date: string, holds: DayHold[]): number {
+  return takenSpans(date, holds).reduce((total, [from, to]) => total + to - from, 0);
+}
+
+/** How many hours a room is open for booking in a day (07.00–22.00: 15). */
+export const openHours = (CLOSE - OPEN) / 60;
+
+/**
+ * The Denah meter (DS "Bilah tersegmentasi · meter"): for each opening hour, how much of it is
+ * booked, 0 to 1, so a 2-hour booking fills two segments.
+ */
+export function hourFills(date: string, holds: DayHold[]): number[] {
+  const spans = takenSpans(date, holds);
+  return Array.from({ length: openHours }, (_, index) => {
+    const from = OPEN + index * 60, to = from + 60;
+    const taken = spans.reduce((sum, [start, end]) => sum + Math.max(0, Math.min(end, to) - Math.max(start, from)), 0);
+    return taken / 60;
+  });
 }
 
 /**

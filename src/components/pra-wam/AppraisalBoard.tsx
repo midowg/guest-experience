@@ -14,6 +14,7 @@ import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm"
 import { useConfirm } from "./ConfirmDialog";
 import { FloorPlan } from "./FloorPlan";
 import { MonthCalendar } from "./MonthCalendar";
+import { RoomMeter } from "./RoomMeter";
 import { ScreenHead } from "./ScreenHead";
 import { Sheet } from "./Sheet";
 import styles from "./pra-wam.module.css";
@@ -299,8 +300,8 @@ function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canC
 
 /**
  * Denah: the office floor plan for the whole day, each room empty, partly used, full or not
- * bookable, and below it each bookable room's day: its bookings, the time taken and the next free
- * half hour. Tapping a room on the plan brings its day into view; "Book ruang ini" opens the form
+ * bookable, and below it each bookable room's day: a meter of the hours left (RoomMeter), its
+ * bookings, the time taken and the next free half hour. Tapping a room on the plan brings its day into view; "Book ruang ini" opens the form
  * at that free half hour. How long to book is chosen in the form. WAM rooms without a spot on the
  * plan are not shown here (the calendar has them).
  */
@@ -357,6 +358,7 @@ function PlanView({ date, today, now, rooms, bookings, viewerId, canBook, open, 
               <span className={`${plan.dayTag} ${plan[status.tone]}`}>{status.text}</span>
             </div>
             {fits && <small className={styles.meta}>{fits}</small>}
+            {!outside && <RoomMeter date={date} name={room.name} holds={items.map(booking => ({ startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession }))} />}
             <p className={plan.dayFacts}>
               <span><b>{counted || "Belum ada booking"}</b></span>
               {day.takenMinutes > 0 && <span><b>{durationLabel(day.takenMinutes)}</b> terpakai</span>}

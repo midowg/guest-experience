@@ -9,7 +9,7 @@ import { roomStatus } from "@/lib/pra-wam/floor-plan";
 import { sessionKindLabels, sessionKinds, sessionProblems, sessionSpan, sessionStatusLabels, sessionTimes, sessionWhen, type RoomUse, type Session, type SessionInput } from "@/lib/pra-wam/sessions";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
-import type { PeopleGroup } from "./BookingForm";
+import { PeoplePicker, type PeopleGroup } from "./PeoplePicker";
 import { useConfirm } from "./ConfirmDialog";
 import { FloorPlan } from "./FloorPlan";
 import plan from "./floor-plan.module.css";
@@ -17,7 +17,7 @@ import { ScreenHead } from "./ScreenHead";
 import panel from "./panitia.module.css";
 import styles from "./pra-wam.module.css";
 
-type Props = { session: Session | null; initial: SessionInput; rooms: Room[]; people: Person[]; groups: PeopleGroup[] };
+type Props = { session: Session | null; initial: SessionInput; rooms: Room[]; people: Person[]; groups: PeopleGroup[]; /** The picker opens on this person's own department. */ viewerId?: string };
 type Check = { tone: "ok" | "no" | "wait"; text: string };
 
 /** The Pra WAM period (event pra-wam-2026), for the automatic check. */
@@ -27,12 +27,10 @@ const PRA_WAM_FROM = "2026-10-28", PRA_WAM_TO = "2026-12-23";
  * Panitia makes or changes a session (Penpot "D7 · Buat sesi"): the form on the left, and on the
  * right the checks the server will also make (room free, capacity, period), shown while typing.
  */
-export function SessionForm({ session, initial, rooms, people, groups }: Props) {
+export function SessionForm({ session, initial, rooms, people, groups, viewerId }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
   const [uses, setUses] = useState<RoomUse[]>([]);
-  const [groupId, setGroupId] = useState(groups[0]?.id ?? "");
-  const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -54,10 +52,6 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
 
   const span = sessionSpan(draft);
   const usedBy = (room: Room) => span ? uses.find(use => use.roomId === room.id && use.sourceId !== session?.id && overlaps(use, span)) : undefined;
-  const picked = new Set(draft.participants);
-  const query = search.trim().toLowerCase();
-  const group = groups.find(item => item.id === groupId);
-  const offered = people.filter(person => !picked.has(person.id) && (query ? person.name.toLowerCase().includes(query) : !!group?.memberIds.includes(person.id)));
   const status = session?.status ?? "draf";
 
   async function save(publish: boolean) {
@@ -197,14 +191,7 @@ export function SessionForm({ session, initial, rooms, people, groups }: Props) 
               {person.name}<button type="button" className={styles.chipRemove} aria-label={`Hapus ${person.name}`} onClick={() => set({ participants: draft.participants.filter(item => item !== person.id) })}>×</button>
             </span>)}
           </div>}
-          <input className="input" type="search" aria-label="Cari nama" placeholder="Cari nama, atau pilih unit di bawah" value={search} onChange={event => setSearch(event.target.value)} />
-          {!query && <div className={styles.dates} role="group" aria-label="Departemen dan BU">
-            {groups.map(item => <button key={item.id} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={item.id === groupId} onClick={() => setGroupId(item.id)}>{item.label}</button>)}
-          </div>}
-          {!query && group && offered.length > 1 && <button type="button" className="button button--quiet" style={{ justifySelf: "start" }} onClick={() => set({ participants: [...draft.participants, ...offered.map(person => person.id)] })}>Tambah semua {group.label} ({offered.length})</button>}
-          <div className={styles.people}>
-            {offered.slice(0, 60).map(person => <button key={person.id} type="button" className={`${styles.chip} ${styles.chipSmall}`} onClick={() => { set({ participants: [...draft.participants, person.id] }); setSearch(""); }}>+ {person.name}</button>)}
-          </div>
+          <PeoplePicker people={people} groups={groups} picked={draft.participants} onChange={ids => set({ participants: ids })} viewerId={viewerId} />
         </div>
 
         <div>

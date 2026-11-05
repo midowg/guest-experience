@@ -11,8 +11,9 @@ export const appraisalRules = {
   /** Appraisal & meeting 1-on-1 in the Pra WAM calendar. */
   periodStart: "2026-10-28",
   periodEnd: "2026-11-20",
-  open: "09:00",
-  close: "18:00",
+  /** Opening hours, 07.00–22.00 since 5 Nov 2026 (migration 202611050005; was 09.00–18.00). */
+  open: "07:00",
+  close: "22:00",
   stepMinutes: 30,
   maxMinutes: 240,
   maxPerDay: 4,
@@ -53,7 +54,7 @@ export const wibDate = (iso: string) => wibParts(iso).slice(0, 10);
 /** The WIB clock time of an instant, "10:00". */
 export const wibTime = (iso: string) => wibParts(iso).slice(11, 16);
 
-/** Every bookable clock time, 09:00 to 18:00 in half hours. */
+/** Every bookable clock time, open to close (07:00 to 22:00) in half hours. */
 export function slotTimes(): string[] {
   const times: string[] = [];
   for (let at = toMinutes(appraisalRules.open); at <= toMinutes(appraisalRules.close); at += appraisalRules.stepMinutes) times.push(fromMinutes(at));
@@ -97,8 +98,11 @@ export function bookingProblems(input: Pick<BookingInput, "date" | "start" | "en
   const times = slotTimes();
   if (input.date < appraisalRules.periodStart || input.date > appraisalRules.periodEnd) problems.date = "Tanggal di luar periode appraisal (28 Okt–20 Nov 2026).";
   else if (!isWorkday(input.date)) problems.date = "Ruang hanya bisa dipesan Senin–Jumat.";
-  if (!times.includes(input.start) || input.start === appraisalRules.close) problems.start = "Jam mulai 09.00–17.30, setiap 30 menit.";
-  if (!times.includes(input.end) || input.end === appraisalRules.open) problems.end = "Jam selesai 09.30–18.00, setiap 30 menit.";
+  const step = appraisalRules.stepMinutes;
+  const label = (minutes: number) => fromMinutes(minutes).replace(":", ".");
+  const [open, close] = [toMinutes(appraisalRules.open), toMinutes(appraisalRules.close)];
+  if (!times.includes(input.start) || input.start === appraisalRules.close) problems.start = `Jam mulai ${label(open)}–${label(close - step)}, setiap ${step} menit.`;
+  if (!times.includes(input.end) || input.end === appraisalRules.open) problems.end = `Jam selesai ${label(open + step)}–${label(close)}, setiap ${step} menit.`;
   const minutes = toMinutes(input.end) - toMinutes(input.start);
   if (!problems.start && !problems.end) {
     if (minutes <= 0) problems.end = "Jam selesai harus setelah jam mulai.";

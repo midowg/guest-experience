@@ -22,5 +22,5 @@ export default async function EditSessionPage({ params }: { params: Promise<{ id
   // A booking's session changes with the booking (migration 202611050004); here it is read and may be cancelled.
   if (session.booking) return <PraWamShell member={member} current="sesi" back={back}><BookingSessionPanel session={{ ...session, booking: session.booking }} /></PraWamShell>;
   const data = await sessionFormData(session, member.id);
-  return <PraWamShell member={member} current="sesi" back={back}><SessionForm session={session} {...data} /></PraWamShell>;
+  return <PraWamShell member={member} current="sesi" back={back}><SessionForm session={session} {...data} viewerId={member.id} /></PraWamShell>;
 }

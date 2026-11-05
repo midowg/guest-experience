@@ -1,0 +1,24 @@
+/*
+ * PeoplePicker.tsx: Departemen (a dropdown) and the name search side by side from 640px, then one
+ * list that scrolls down, never sideways. A row: initials, name and department, and + or a check;
+ * picked rows are soft blue. --pw-* tokens only.
+ */
+.picker { display: grid; gap: 12px; }
+.finder { display: grid; gap: 12px; }
+@media (min-width: 640px) { .finder { grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); align-items: end; } }
+.finder :global(.select) { width: 100%; }
+.addAll { justify-self: start; display: inline-flex; align-items: center; gap: 6px; }
+.list { display: grid; gap: 6px; max-height: 20rem; margin: 0; padding: 4px; overflow-y: auto; overscroll-behavior: contain; list-style: none; border-radius: var(--pw-r-control); background: var(--pw-app); box-shadow: var(--pw-shadow-inner); }
+.empty { padding: 16px 12px; font-size: 14px; color: var(--pw-muted); text-align: center; }
+.person { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 12px; border: 0; border-radius: 14px; background: var(--pw-surface); color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; }
+.person:hover:not(:disabled) { background: color-mix(in srgb, var(--pw-primary-soft) 55%, var(--pw-surface)); }
+.person:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.person:disabled { cursor: not-allowed; opacity: .5; }
+.person[aria-pressed='true'] { background: var(--pw-primary-soft); }
+.initials { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 12px; font-weight: 700; }
+.person[aria-pressed='true'] .initials { background: var(--pw-primary); color: var(--pw-on-primary); }
+.text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.text strong { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.text small { font-size: 13px; color: var(--pw-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mark { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--pw-line); color: var(--pw-primary); }
+.person[aria-pressed='true'] .mark { border-color: var(--pw-primary); background: var(--pw-primary); color: var(--pw-on-primary); }

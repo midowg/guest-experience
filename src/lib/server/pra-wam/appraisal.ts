@@ -222,7 +222,7 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
     if (/ROOM_NOT_BOOKABLE/.test(error.message)) throw new ServiceError(422, "Ruang ini tidak bisa dipesan untuk appraisal.", { roomId: ["Pilih ruang lain."] });
     if (/BOOKING_DAILY_LIMIT/.test(error.message)) throw new ServiceError(409, `Kamu sudah punya ${appraisalRules.maxPerDay} booking aktif pada hari itu. Batalkan salah satu dulu.`);
     if (/NOT_FOUND/.test(error.message)) throw new ServiceError(404, "Booking tidak ditemukan atau sudah dibatalkan.");
-    if (error.code === "23514") throw new ServiceError(422, "Jam di luar 09.00–18.00 Senin–Jumat, atau lebih dari 4 jam.");
+    if (error.code === "23514") throw new ServiceError(422, `Jam di luar ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)} Senin–Jumat, atau lebih dari 4 jam.`);
     if (error.code === "23503") throw new ServiceError(422, "Ada partisipan atau ruang yang tidak dikenal. Muat ulang halaman.");
     fail(error);
   }

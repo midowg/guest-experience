@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Check, Clock, DoorOpen, Info, Pencil, Plus, Send, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Clock, DoorOpen, Info, Pencil, Send, Users } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import {
   alternatives, appraisalRules, bookingProblems, clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock,
@@ -15,12 +15,12 @@ import { headcount, peopleLabel, roomFit } from "@/lib/pra-wam/room-fit";
 import { errorText, praWamRequest, PraWamApiError, type Conflict } from "./api";
 import { DateStrip } from "./DateStrip";
 import { FloorPlan } from "./FloorPlan";
+import { PeoplePicker, type PeopleGroup } from "./PeoplePicker";
 import own from "./appraisal.module.css";
 import css from "./booking-form.module.css";
 import styles from "./pra-wam.module.css";
 
-/** A department or BU in the participant picker's Departemen list, and its people. */
-export type PeopleGroup = { id: string; label: string; memberIds: string[] };
+export type { PeopleGroup } from "./PeoplePicker";
 export type BookingDraft = { date: string; start: string; end: string; roomId: string; title: string; description: string; participants: string[] };
 type Props = {
   editId?: string; initial: BookingDraft; dates: string[]; now: string; rooms: Room[]; people: Person[];
@@ -74,8 +74,6 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [active, setActive] = useState(-1);
   // "" is Semua departemen: the whole list, narrowed by typing.
-  const [groupId, setGroupId] = useState("");
-  const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -158,15 +156,9 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const dayFull = draft.date >= today && !!daySummary[draft.date]?.full;
 
   const suggestions = useMemo(() => titleSuggestions(draft.title, usedTitles), [draft.title, usedTitles]);
-  const group = groups.find(item => item.id === groupId);
   const picked = draft.participants.map(id => people.find(person => person.id === id)).filter((person): person is Person => !!person);
-  const query = search.trim().toLowerCase();
-  // The picker's list: everyone but the viewer, in the department picked, matching name or department.
+  // Everyone but the booker can be picked.
   const colleagues = people.filter(person => person.id !== viewer.id);
-  const shown = colleagues
-    .filter(person => (!group || group.memberIds.includes(person.id)) && (!query || person.name.toLowerCase().includes(query) || person.department.toLowerCase().includes(query)))
-    .sort((a, b) => a.name.localeCompare(b.name, "id"));
-  const addable = shown.filter(person => !draft.participants.includes(person.id));
   const full = guests.size >= appraisalRules.maxParticipants;
   const countLine = guests.size ? `Kamu + ${guests.size} orang = ${peopleLabel(count)}` : "Kamu saja = 1 orang";
 
@@ -189,9 +181,6 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     else if (event.key === "Enter" && active >= 0) { event.preventDefault(); chooseTitle(suggestions[active]); }
     // Esc closes only the suggestions, not the sheet the form sits in.
     else if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setSuggestOpen(false); }
-  }
-  function addPeople(ids: string[]) {
-    set({ participants: [...draft.participants, ...ids].slice(0, appraisalRules.maxParticipants) });
   }
   function pickRoom(item: Room) {
     if (!choiceOf(item).ok) return;
@@ -358,47 +347,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
           {person.name}<button type="button" className={styles.chipRemove} aria-label={`Hapus ${person.name}`} onClick={() => set({ participants: draft.participants.filter(id => id !== person.id) })}>×</button>
         </span>)}
       </div>}
-      {/*
-        Departemen as one dropdown (no row of chips to scroll sideways), the name search beside it,
-        and one list underneath: tap a person to add, tap again to take off (5 Nov 2026).
-      */}
-      <div className={css.finder}>
-        <div>
-          <label className={styles.label} htmlFor={`${uid}-group`}>Departemen</label>
-          <select id={`${uid}-group`} className="select" value={groupId} onChange={event => setGroupId(event.target.value)}>
-            <option value="">Semua departemen ({colleagues.length})</option>
-            {groups.map(item => <option key={item.id} value={item.id}>{item.label} ({item.memberIds.filter(id => id !== viewer.id).length})</option>)}
-          </select>
-        </div>
-        <div>
-        <label className={styles.label} htmlFor={`${uid}-search`}>Cari nama</label>
-        <input id={`${uid}-search`} className="input" type="search" value={search} placeholder={group ? `Cari di ${group.label}` : "Nama atau departemen"} onChange={event => setSearch(event.target.value)}
-          onKeyDown={event => {
-            // Esc clears the search first; only an empty search lets Esc close the sheet.
-            if (event.key === "Escape" && search) { event.preventDefault(); event.stopPropagation(); setSearch(""); return; }
-            // Enter picks the one name found rather than leaving the step.
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            if (query && addable.length === 1 && !full) { addPeople([addable[0].id]); setSearch(""); }
-          }} />
-        </div>
-      </div>
-      {group && addable.length > 1 && <button type="button" className={`button button--secondary ${css.addAll}`} disabled={full}
-        onClick={() => addPeople(addable.map(person => person.id))}><Plus size={18} aria-hidden />Tambah semua {group.label} ({addable.length})</button>}
-      <ul className={css.peopleList} aria-label="Pilih partisipan">
-        {shown.length === 0 && <li className={css.peopleEmpty}>{query ? "Tidak ada yang cocok. Coba nama lain, atau pilih Semua departemen." : "Belum ada orang di departemen ini."}</li>}
-        {shown.map(person => {
-          const on = draft.participants.includes(person.id);
-          return <li key={person.id}>
-            <button type="button" className={css.person} aria-pressed={on} disabled={!on && full}
-              onClick={() => on ? set({ participants: draft.participants.filter(id => id !== person.id) }) : addPeople([person.id])}>
-              <span className={css.initials} aria-hidden>{person.name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("")}</span>
-              <span className={css.personText}><strong>{person.name}</strong><small>{person.department || "Tanpa departemen"}</small></span>
-              <span className={css.personMark} aria-hidden>{on ? <Check size={18} /> : <Plus size={18} />}</span>
-            </button>
-          </li>;
-        })}
-      </ul>
+      <PeoplePicker people={colleagues} groups={groups} picked={draft.participants} onChange={ids => set({ participants: ids })}
+        viewerId={viewer.id} max={appraisalRules.maxParticipants} />
       {full && <p className={styles.hint}>Paling banyak {appraisalRules.maxParticipants} partisipan.</p>}
       {fieldError("participants")}
     </section>

@@ -123,7 +123,7 @@ it("shows the whole window on the date strip: a past day cannot be picked, a ful
 });
 
 it("counts the chosen day from its bookings when no summary is given", () => {
-  const allDay: Booking = { ...held, id: "b2", startsAt: wibInstant("2026-11-05", "09:00"), endsAt: wibInstant("2026-11-05", "18:00") };
+  const allDay: Booking = { ...held, id: "b2", startsAt: wibInstant("2026-11-05", "07:00"), endsAt: wibInstant("2026-11-05", "22:00") };
   render(<BookingForm initial={draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[sibuk]} people={[]} viewer={{ id: "me" }}
     groups={[]} usedTitles={[]} dayBookings={[allDay]} dayOf="2026-11-05" showPlan={false} />);
   expect(screen.getByRole("button", { name: "Kamis, 5 Nov, penuh" })).toBeTruthy();

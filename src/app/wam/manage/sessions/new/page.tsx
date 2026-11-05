@@ -13,5 +13,5 @@ export default async function NewSessionPage() {
   const member = await requireMemberPage(praWamPath.newSession);
   if (!managesSessions(member)) notFound();
   const data = await sessionFormData(null, member.id);
-  return <PraWamShell member={member} current="sesi" back={{ href: praWamPath.sessions, title: "Buat sesi" }}><SessionForm session={null} {...data} /></PraWamShell>;
+  return <PraWamShell member={member} current="sesi" back={{ href: praWamPath.sessions, title: "Buat sesi" }}><SessionForm session={null} {...data} viewerId={member.id} /></PraWamShell>;
 }

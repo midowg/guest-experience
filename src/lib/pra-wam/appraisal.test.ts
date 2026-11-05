@@ -11,11 +11,11 @@ describe("WIB time", () => {
     expect(wibDate(iso)).toBe("2026-11-04");
     expect(wibTime(iso)).toBe("10:30");
   });
-  it("offers 09.00 to 18.00 in half hours", () => {
+  it("offers 07.00 to 22.00 in half hours", () => {
     const times = slotTimes();
-    expect(times[0]).toBe("09:00");
-    expect(times.at(-1)).toBe("18:00");
-    expect(times).toHaveLength(19);
+    expect(times[0]).toBe("07:00");
+    expect(times.at(-1)).toBe("22:00");
+    expect(times).toHaveLength(31);
   });
   it("lists only weekdays inside the period", () => {
     const dates = bookableDates("2026-11-19");
@@ -28,9 +28,10 @@ describe("booking rules", () => {
   it("accepts an hour inside office hours", () => {
     expect(bookingProblems({ date: "2026-11-04", start: "10:00", end: "11:00" }, now)).toEqual({});
   });
-  it("refuses times outside 09.00–18.00, off the half hour, past, too long, or on weekends", () => {
-    expect(bookingProblems({ date: "2026-11-05", start: "08:30", end: "09:30" }, now).start).toBeTruthy();
-    expect(bookingProblems({ date: "2026-11-05", start: "17:30", end: "18:30" }, now).end).toBeTruthy();
+  it("refuses times outside 07.00–22.00, off the half hour, past, too long, or on weekends", () => {
+    expect(bookingProblems({ date: "2026-11-05", start: "06:30", end: "07:30" }, now).start).toBe("Jam mulai 07.00–21.30, setiap 30 menit.");
+    expect(bookingProblems({ date: "2026-11-05", start: "21:30", end: "22:30" }, now).end).toBe("Jam selesai 07.30–22.00, setiap 30 menit.");
+    expect(bookingProblems({ date: "2026-11-05", start: "07:00", end: "08:00" }, now)).toEqual({});
     expect(bookingProblems({ date: "2026-11-05", start: "10:15", end: "11:00" }, now).start).toBeTruthy();
     expect(bookingProblems({ date: "2026-11-05", start: "11:00", end: "10:00" }, now).end).toBe("Jam selesai harus setelah jam mulai.");
     expect(bookingProblems({ date: "2026-11-05", start: "09:00", end: "13:30" }, now).end).toBe("Paling lama 4 jam.");

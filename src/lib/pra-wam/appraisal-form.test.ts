@@ -12,10 +12,10 @@ describe("booking form steps", () => {
     expect(durationLabel(240)).toBe("4 jam");
   });
 
-  it("offers half hours up to 4 hours, ending by 18.00", () => {
+  it("offers half hours up to 4 hours, ending by 22.00", () => {
     expect(durationsFrom("09:00")).toEqual([30, 60, 90, 120, 150, 180, 210, 240]);
-    expect(durationsFrom("16:30")).toEqual([30, 60, 90]);
-    expect(durationsFrom("17:30")).toEqual([30]);
+    expect(durationsFrom("20:30")).toEqual([30, 60, 90]);
+    expect(durationsFrom("21:30")).toEqual([30]);
   });
 });
 

@@ -21,19 +21,20 @@ describe("the work week", () => {
 
 describe("now on the calendar", () => {
   it("can book from the next half hour that has not started", () => {
-    expect(bookableFrom("2026-11-04", at("2026-11-04", "10:12"))).toBe(90);
-    expect(bookableFrom("2026-11-04", at("2026-11-04", "10:00"))).toBe(90);
-    expect(bookableFrom("2026-11-04", at("2026-11-04", "07:30"))).toBe(0);
-    expect(bookableFrom("2026-11-04", at("2026-11-04", "19:00"))).toBe(dayMinutes);
+    // Minutes from opening, 07.00.
+    expect(bookableFrom("2026-11-04", at("2026-11-04", "10:12"))).toBe(210);
+    expect(bookableFrom("2026-11-04", at("2026-11-04", "10:00"))).toBe(210);
+    expect(bookableFrom("2026-11-04", at("2026-11-04", "06:30"))).toBe(0);
+    expect(bookableFrom("2026-11-04", at("2026-11-04", "22:30"))).toBe(dayMinutes);
   });
   it("treats other days as all open or all gone", () => {
     expect(bookableFrom("2026-11-05", at("2026-11-04", "10:12"))).toBe(0);
     expect(bookableFrom("2026-11-03", at("2026-11-04", "10:12"))).toBe(dayMinutes);
   });
   it("draws the line only during that day's hours", () => {
-    expect(nowOffset("2026-11-04", at("2026-11-04", "10:12"))).toBe(72);
+    expect(nowOffset("2026-11-04", at("2026-11-04", "10:12"))).toBe(192);
     expect(nowOffset("2026-11-05", at("2026-11-04", "10:12"))).toBeNull();
-    expect(nowOffset("2026-11-04", at("2026-11-04", "18:30"))).toBeNull();
+    expect(nowOffset("2026-11-04", at("2026-11-04", "22:30"))).toBeNull();
   });
 });
 
@@ -44,33 +45,34 @@ describe("a room's day", () => {
   it("places bookings and the free time between them", () => {
     const a = hold("a", "r", "2026-11-05", "10:00", "11:30"), b = hold("b", "r", "2026-11-05", "13:00", "14:00");
     expect(roomDay("2026-11-05", [b, a], at("2026-11-04", "10:00"))).toEqual([
-      { kind: "free", from: 0, to: 60 },
-      { kind: "busy", from: 60, to: 150, booking: a },
-      { kind: "free", from: 150, to: 240 },
-      { kind: "busy", from: 240, to: 300, booking: b },
-      { kind: "free", from: 300, to: dayMinutes },
+      { kind: "free", from: 0, to: 180 },
+      { kind: "busy", from: 180, to: 270, booking: a },
+      { kind: "free", from: 270, to: 360 },
+      { kind: "busy", from: 360, to: 420, booking: b },
+      { kind: "free", from: 420, to: dayMinutes },
     ]);
   });
   it("splits today's gaps at the next bookable half hour", () => {
     const a = hold("a", "r", "2026-11-04", "09:30", "10:00");
     expect(roomDay("2026-11-04", [a], at("2026-11-04", "10:40"))).toEqual([
-      { kind: "past", from: 0, to: 30 },
-      { kind: "busy", from: 30, to: 60, booking: a },
-      { kind: "past", from: 60, to: 120 },
-      { kind: "free", from: 120, to: dayMinutes },
+      { kind: "past", from: 0, to: 150 },
+      { kind: "busy", from: 150, to: 180, booking: a },
+      { kind: "past", from: 180, to: 240 },
+      { kind: "free", from: 240, to: dayMinutes },
     ]);
   });
   it("keeps a day gone as past around its bookings", () => {
     const a = hold("a", "r", "2026-11-03", "09:00", "10:00");
     expect(roomDay("2026-11-03", [a], at("2026-11-04", "10:00"))).toEqual([
-      { kind: "busy", from: 0, to: 60, booking: a },
-      { kind: "past", from: 60, to: dayMinutes },
+      { kind: "past", from: 0, to: 120 },
+      { kind: "busy", from: 120, to: 180, booking: a },
+      { kind: "past", from: 180, to: dayMinutes },
     ]);
   });
   it("clips a session running past closing and opens no gap inside an overlap", () => {
-    const a = hold("a", "r", "2026-11-05", "16:00", "19:00"), b = hold("b", "r", "2026-11-05", "15:00", "17:00");
+    const a = hold("a", "r", "2026-11-05", "20:00", "23:00"), b = hold("b", "r", "2026-11-05", "19:00", "21:00");
     const day = roomDay("2026-11-05", [a, b], at("2026-11-04", "10:00"));
-    expect(day.map(segment => [segment.kind, segment.from, segment.to])).toEqual([["free", 0, 360], ["busy", 360, 480], ["busy", 420, dayMinutes]]);
+    expect(day.map(segment => [segment.kind, segment.from, segment.to])).toEqual([["free", 0, 720], ["busy", 720, 840], ["busy", 780, dayMinutes]]);
   });
 });
 
@@ -82,9 +84,9 @@ describe("booking from a free stretch", () => {
     expect(startInGap(gap, 299)).toBe(270);
   });
   it("offers an hour, or what is left", () => {
-    expect(hoursInGap(gap, 150)).toEqual({ start: "11:30", end: "12:30" });
-    expect(hoursInGap(gap, 270)).toEqual({ start: "13:30", end: "14:00" });
-    expect(clockAt(dayMinutes)).toBe("18:00");
+    expect(hoursInGap(gap, 150)).toEqual({ start: "09:30", end: "10:30" });
+    expect(hoursInGap(gap, 270)).toEqual({ start: "11:30", end: "12:00" });
+    expect(clockAt(dayMinutes)).toBe("22:00");
   });
   it("starts a new booking at the asked hours when they still fit", () => {
     const now = at("2026-11-04", "10:12");
@@ -92,7 +94,7 @@ describe("booking from a free stretch", () => {
     expect(draftHours("2026-11-04", now, { start: "09:30" })).toEqual({ start: "10:30", end: "11:30" });
     expect(draftHours("2026-11-05", now, { start: "13:00", end: "15:00" })).toEqual({ start: "13:00", end: "15:00" });
     expect(draftHours("2026-11-05", now, { start: "13:00", end: "18:00" })).toEqual({ start: "13:00", end: "14:00" });
-    expect(draftHours("2026-11-05", now, { start: "17:30" })).toEqual({ start: "17:30", end: "18:00" });
+    expect(draftHours("2026-11-05", now, { start: "21:30" })).toEqual({ start: "21:30", end: "22:00" });
   });
 });
 
@@ -104,7 +106,7 @@ describe("the week overview", () => {
     expect(summary.map(day => [day.date, day.count, day.busyMinutes])).toEqual([
       ["2026-11-02", 0, 0], ["2026-11-03", 2, 90], ["2026-11-04", 0, 0], ["2026-11-05", 1, 120], ["2026-11-06", 0, 0],
     ]);
-    expect(summary[1].rooms.r1).toEqual([{ from: 60, to: 120, booking: list[0] }]);
+    expect(summary[1].rooms.r1).toEqual([{ from: 180, to: 240, booking: list[0] }]);
     expect(summary[3].rooms.r2).toEqual([]);
   });
 });

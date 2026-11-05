@@ -36,7 +36,7 @@ describe("the day calendar on a phone", () => {
     expect(within(card).getByText("2 terpakai")).toBeTruthy();
     // Bookings and free stretches in order: free from 10.30, a, free, b, free to the end of the day.
     const items = within(card).getAllByRole("button").map(button => button.getAttribute("aria-label") ?? button.textContent);
-    expect(items).toEqual(["Book Nagapadma, kosong 10.30–11.00", "11.00–12.00Rapat aSari · Finance", "Book Nagapadma, kosong 12.00–13.00", "13.00–14.00Rapat bBooking kamu", "Book Nagapadma, kosong 14.00–18.00"]);
+    expect(items).toEqual(["Book Nagapadma, kosong 10.30–11.00", "11.00–12.00Rapat aSari · Finance", "Book Nagapadma, kosong 12.00–13.00", "13.00–14.00Rapat bBooking kamu", "Book Nagapadma, kosong 14.00–22.00"]);
     // The session running now says so.
     expect(within(screen.getByRole("region", { name: "Cendana, Rabu, 4 Nov" })).getByText(/Sesi Pra WAM · berlangsung/)).toBeTruthy();
   });
@@ -46,7 +46,7 @@ describe("the day calendar on a phone", () => {
     render(<DayCalendar date="2026-11-04" rooms={rooms} bookings={list} now={now} viewerId="me" canBook onOpen={() => undefined} onBook={onBook} />);
     fireEvent.click(first("Book Nagapadma, kosong 10.30–11.00"));
     expect(onBook).toHaveBeenCalledWith({ room: rooms[0], start: "10:30", end: "11:00" });
-    fireEvent.click(first("Book Nagapadma, kosong 14.00–18.00"));
+    fireEvent.click(first("Book Nagapadma, kosong 14.00–22.00"));
     expect(onBook).toHaveBeenLastCalledWith({ room: rooms[0], start: "14:00", end: "15:00" });
   });
 
@@ -82,11 +82,11 @@ describe("the week grid", () => {
     render(<WeekCalendar {...props} bookings={[booking("a", "r1", "2026-11-05", "09:00", "10:30"), booking("z", "r2", "2026-11-05", "09:00", "10:30")]} onBook={onBook} onRoom={onRoom} />);
     expect(screen.getByRole("button", { name: /^Rapat a, 09.00–10.30, Sari/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Rapat z/ })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Book Nagapadma, Kamis, 5 Nov, kosong 10.30–18.00" }));
+    fireEvent.click(screen.getByRole("button", { name: "Book Nagapadma, Kamis, 5 Nov, kosong 10.30–22.00" }));
     expect(onBook).toHaveBeenCalledWith({ date: "2026-11-05", room: rooms[0], start: "10:30", end: "11:30" });
     // Past days cannot be booked; today only from the next half hour.
     expect(screen.queryByRole("button", { name: /^Book Nagapadma, Senin/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "Book Nagapadma, Rabu, 4 Nov, kosong 10.30–18.00" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Book Nagapadma, Rabu, 4 Nov, kosong 10.30–22.00" })).toBeTruthy();
     const picker = screen.getByRole("group", { name: "Pilih ruang" });
     expect(within(picker).getByRole("button", { name: "Nagapadma" }).getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(within(picker).getByRole("button", { name: "Cendana" }));
@@ -108,7 +108,7 @@ describe("the week grid", () => {
     render(<WeekCalendar {...props} week={["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30"]} today="2026-10-26" selected="2026-10-28" now={new Date(wibInstant("2026-10-26", "08:00"))} bookings={[]} />);
     expect((screen.getByRole("button", { name: "Buka Senin, 26 Okt, hari ini, di luar periode" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: /^Book Nagapadma, Selasa/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "Book Nagapadma, Rabu, 28 Okt, kosong 09.00–18.00" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Book Nagapadma, Rabu, 28 Okt, kosong 07.00–22.00" })).toBeTruthy();
     expect((screen.getByRole("button", { name: "Minggu sebelumnya" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

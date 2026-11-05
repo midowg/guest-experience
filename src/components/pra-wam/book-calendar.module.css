@@ -63,7 +63,7 @@
 .pillWarn { background: var(--pw-warning-soft); color: var(--pw-warning); }
 .pillMuted { background: var(--pw-app); color: var(--pw-muted); }
 
-/* The 09.00–18.00 bar: free is pale green, taken blocks pale with a colour edge, gone by greyed. */
+/* The opening-hours bar (07.00–22.00): free is pale green, taken blocks pale with a colour edge, gone by greyed. */
 .bar { display: grid; gap: 4px; }
 .track { position: relative; height: 20px; border-radius: 8px; background: var(--pw-success-soft); overflow: hidden; }
 .barBlock { position: absolute; top: 0; bottom: 0; box-sizing: border-box; border-left: 3px solid var(--tone-line); background: color-mix(in srgb, var(--tone-line) 26%, var(--pw-surface)); }
@@ -104,13 +104,13 @@
   .desk { display: block; }
   .desk.hiddenDesk { display: none; }
 }
-.desk, .timeline { --hour: 64px; --axis: 4rem; }
+.desk, .timeline { --hour: 56px; --axis: 4rem; }
 .desk { border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); padding: 0 16px 16px 0; }
 .deskHead { position: sticky; top: 72px; z-index: 3; display: grid; grid-template-columns: var(--axis) repeat(var(--cols), minmax(0, 1fr)); padding: 12px 0; background: var(--pw-surface); border-bottom: 1px solid var(--pw-line); border-radius: var(--pw-r-card) var(--pw-r-card) 0 0; }
 .deskRoom { display: grid; gap: 2px; min-width: 0; padding: 0 8px; }
 .deskRoom strong { font-size: 14px; font-weight: 600; color: var(--pw-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .deskRoom span { font-size: 12px; color: var(--pw-muted); }
-.deskBody { position: relative; display: grid; grid-template-columns: var(--axis) repeat(var(--cols), minmax(0, 1fr)); height: calc(9 * var(--hour)); margin-top: 12px;
+.deskBody { position: relative; display: grid; grid-template-columns: var(--axis) repeat(var(--cols), minmax(0, 1fr)); height: calc(var(--hours, 15) * var(--hour)); margin-top: 12px;
   background: repeating-linear-gradient(to bottom, var(--pw-line) 0 1px, transparent 1px var(--hour));
   background-position: var(--axis) 0; background-repeat: repeat-y; background-size: 100% var(--hour); }
 .deskBody::after { content: ""; position: absolute; left: var(--axis); right: 0; bottom: 0; height: 1px; background: var(--pw-line); }

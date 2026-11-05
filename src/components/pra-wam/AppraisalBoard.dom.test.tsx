@@ -42,7 +42,7 @@ it("shows each room's day on the plan, without hours to pick, and books the next
   expect(screen.queryByLabelText("Mulai")).toBeNull();
   expect(screen.queryByText("Durasi")).toBeNull();
   expect(screen.getByRole("heading", { name: "Denah kantor · Kamis, 5 Nov" })).toBeTruthy();
-  expect(screen.getByText(/^Status sepanjang hari, 09\.00–18\.00\./)).toBeTruthy();
+  expect(screen.getByText(/^Status sepanjang hari, 07.00–22.00\./)).toBeTruthy();
   expect(screen.getAllByText("Terpakai · 1 booking").length).toBeGreaterThan(0);
   expect(screen.getByText("1 jam")).toBeTruthy();
   expect(screen.getAllByText("Booking kamu").length).toBeGreaterThan(0);
