@@ -58,7 +58,8 @@ describe("Apa itu WAM", () => {
     expect(withEvents.points[1]).toBe("WAM 2027: 4–7 Jan 2027");
     expect(aboutProblems(withEvents)).toEqual({});
     const without = defaultAbout([]);
-    expect(without.points).toEqual(["Yang ikut: tim Werkudara yang punya akun WAM"]);
+    expect(without.points.map(point => point.split(":")[0])).toEqual(["SMM", "OPM", "Yang ikut"]);
+    expect(without.summary).toContain("Werkudara Annual Meeting");
     expect(aboutProblems(without)).toEqual({});
   });
 });

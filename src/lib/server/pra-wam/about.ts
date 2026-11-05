@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { defaultAbout, type About } from "@/lib/pra-wam/about";
+import { defaultAbout, WAM_GUIDE_TITLE, type About, type AboutGuide } from "@/lib/pra-wam/about";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -17,19 +17,27 @@ const waiting = () => new ServiceError(503, `Apa itu WAM menunggu migrasi ${ABOU
 
 export type AboutState = { about: About; custom: boolean; migrated: boolean; updatedAt: string | null };
 
+/** The newest general document titled WAM_GUIDE_TITLE; none (or no documents table yet) is null. */
+async function guideDocument(): Promise<AboutGuide | null> {
+  const { data, error } = await createPrivilegedClient().from("pw_documents").select("id,filename,size")
+    .is("session_id", null).eq("title", WAM_GUIDE_TITLE).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  return error || !data ? null : { id: data.id, filename: data.filename, size: data.size };
+}
+
 async function getAboutUncached(): Promise<AboutState> {
-  const [{ events }, { data, error }] = await Promise.all([
+  const [{ events }, { data, error }, guide] = await Promise.all([
     listEvents().catch(() => ({ events: [] })),
     createPrivilegedClient().from("pw_about").select("title,summary,body,points,updated_at").eq("id", true).maybeSingle(),
+    guideDocument().catch(() => null),
   ]);
-  const fallback = defaultAbout(events);
+  const fallback = { ...defaultAbout(events), guide };
   if (error) {
     if (missing(error)) return { about: fallback, custom: false, migrated: false, updatedAt: null };
     databaseError(error);
   }
   if (!data) return { about: fallback, custom: false, migrated: true, updatedAt: null };
   return {
-    about: { title: data.title, summary: data.summary, body: data.body, points: data.points ?? [] },
+    about: { title: data.title, summary: data.summary, body: data.body, points: data.points ?? [], guide },
     custom: true, migrated: true, updatedAt: data.updated_at,
   };
 }

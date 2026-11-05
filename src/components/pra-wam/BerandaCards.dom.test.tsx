@@ -45,6 +45,14 @@ describe("Apa itu WAM", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Apa itu WAM?");
     expect(screen.getByText("Kapan").tagName).toBe("STRONG");
     expect(screen.getByText("Tanpa label")).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("offers the full guide for download when one is uploaded, through the members-only document link", () => {
+    render(<AboutText about={{ ...about, guide: { id: "11111111-1111-4111-8111-111111111111", filename: "panduan.pdf", size: 97_400 } }} />);
+    const link = screen.getByRole("link", { name: /Unduh panduan lengkap/ });
+    expect(link.getAttribute("href")).toBe("/api/wam/documents/11111111-1111-4111-8111-111111111111");
+    expect(link.textContent).toContain("PDF · 95 KB");
   });
 });
 

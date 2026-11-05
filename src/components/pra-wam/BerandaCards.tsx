@@ -1,6 +1,7 @@
-import { BedDouble, CheckCircle2, ChevronRight, ClipboardList, Info, LayoutDashboard, UsersRound } from "lucide-react";
+import { BedDouble, CheckCircle2, ChevronRight, ClipboardList, Download, Info, LayoutDashboard, UsersRound } from "lucide-react";
 import { aboutParagraphs, pointParts, type About } from "@/lib/pra-wam/about";
-import { praWamPath } from "@/lib/routes";
+import { sizeLabel } from "@/lib/pra-wam/documents";
+import { praWamApi, praWamPath } from "@/lib/routes";
 import styles from "./beranda.module.css";
 
 // Plain markup, usable from server pages and the super admin's client preview alike.
@@ -110,5 +111,10 @@ export function AboutText({ about, headingLevel = 1 }: { about: About; headingLe
       })}
     </ul>}
     <div className={styles.aboutBody}>{aboutParagraphs(about.body).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
+    {/* The full guide (Dokumen umum "Panduan Umum WAM"), for members only: the link asks for the login. */}
+    {about.guide && <a className={`button button--secondary ${styles.aboutGuide}`} href={praWamApi.documents(about.guide.id)} target="_blank" rel="noopener">
+      <Download size={18} aria-hidden />
+      <span>Unduh panduan lengkap <small>PDF · {sizeLabel(about.guide.size)}</small></span>
+    </a>}
   </article>;
 }

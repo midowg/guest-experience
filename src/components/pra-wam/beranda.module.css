@@ -50,6 +50,8 @@ a.row:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px;
 .points span { font-weight: 700; }
 .aboutBody p { margin: 0 0 12px; font-size: 16px; line-height: 1.65; white-space: pre-line; overflow-wrap: anywhere; }
 .aboutBody p:last-child { margin-bottom: 0; }
+.aboutGuide { justify-self: start; gap: 10px; }
+.aboutGuide small { margin-left: 4px; font-size: 13px; font-weight: 500; opacity: .75; }
 
 @media (prefers-reduced-motion: reduce) {
   .row.row { transition: none; }

@@ -4,11 +4,21 @@ import { z } from "zod";
  * "Apa itu WAM?": a short text the super admin writes (migration 202611040008), shown as a card on
  * Beranda and in full on its own screen. Plain text only: paragraphs are split here and rendered
  * as text, never as HTML. Until the super admin saves one, a default built from the events applies.
+ * The default follows "WAM Werkudara Group: Panduan Umum" (5 Nov 2026), in short; the full guide
+ * is a general document (Dokumen umum) titled WAM_GUIDE_TITLE, offered for download under the text.
  */
+
+/** The general document with this title is the guide "Apa itu WAM?" offers for download; the newest wins. */
+export const WAM_GUIDE_TITLE = "Panduan Umum WAM";
+export type AboutGuide = { id: string; filename: string; size: number };
 
 export const ABOUT_LIMITS = { title: 80, summary: 220, body: 4000, points: 6, point: 120 } as const;
 
-export type About = { title: string; summary: string; body: string; points: string[] };
+export type About = {
+  title: string; summary: string; body: string; points: string[];
+  /** Only for showing: the guide to download, when one is uploaded. Never saved with the text. */
+  guide?: AboutGuide | null;
+};
 type EventDates = { kind: "pra_wam" | "wam"; name: string; startDate: string; endDate: string };
 
 /** Line endings, spaces at line ends and runs of blank lines tidied; blank points dropped. */
@@ -78,16 +88,19 @@ export function defaultAbout(events: EventDates[]): About {
   const wamName = wam?.name ?? "WAM 2027";
   return {
     title: "Apa itu WAM?",
-    summary: `WAM (Werkudara Annual Meeting) adalah pertemuan tahunan Werkudara. Aplikasi ini menemani kamu dari Pra WAM sampai ${wamName}.`,
+    summary: "WAM (Werkudara Annual Meeting) adalah rangkaian pertemuan tahunan internal Werkudara Group untuk meninjau kinerja, menyepakati arah perusahaan, dan menyelaraskan rencana kerja serta anggaran.",
     body: [
-      `WAM (Werkudara Annual Meeting) adalah pertemuan tahunan Werkudara. Sebelum ${wamName} ada Pra WAM: beberapa minggu yang berisi forum, rapat, dan appraisal.`,
-      "Di aplikasi ini kamu bisa melihat agenda dan sesi yang kamu ikuti, absen dengan scan QR, membaca dokumen dan pengumuman dari panitia, serta book ruang untuk appraisal.",
-      "Jadwal dan isi acara diatur panitia. Kalau ada perubahan, kamu mendapat notifikasi di aplikasi ini.",
+      "WAM meninjau kinerja, mengevaluasi pelaksanaan kerja, menyepakati arah dan prioritas perusahaan, serta menyelaraskan rencana kerja dan anggaran untuk periode berikutnya.",
+      "Rangkaian ini menghubungkan evaluasi individu, pembahasan dalam departemen, koordinasi antar departemen, dan keputusan pimpinan, agar setiap orang memahami kontribusinya terhadap tujuan bersama.",
+      "Alurnya: evaluasi individu dan tim, sinkronisasi lintas departemen, pembahasan bersama pimpinan, lalu penyelarasan seluruh tim dengan ruang masukan bagi karyawan. Hasilnya dicatat dengan penanggung jawab dan tenggat, lalu menjadi dasar pelaksanaan kerja.",
+      `Sebelum ${wamName} ada Pra WAM: beberapa minggu berisi forum, rapat, dan appraisal. Di aplikasi ini kamu bisa melihat agenda dan sesi yang kamu ikuti, absen, membaca dokumen dan pengumuman dari panitia, serta book ruang. Jadwal diatur panitia; setiap perubahan dikabarkan lewat notifikasi.`,
     ].join("\n\n"),
     points: [
       ...(pra ? [`Pra WAM: ${dateRange(pra.startDate, pra.endDate)}, forum, rapat, dan appraisal`] : []),
       ...(wam ? [`${wam.name}: ${dateRange(wam.startDate, wam.endDate)}`] : []),
-      "Yang ikut: tim Werkudara yang punya akun WAM",
+      "SMM: forum pimpinan untuk keuangan, arah dan keberlanjutan perusahaan, serta bisnis dan investasi",
+      "OPM: forum tim untuk appraisal, evaluasi departemen (ITAM), dan sinkronisasi antar departemen (ITEM)",
+      "Yang ikut: BOD, HOD/leader, dan anggota tim Werkudara",
     ],
   };
 }
