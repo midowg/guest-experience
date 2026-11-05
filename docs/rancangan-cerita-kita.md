@@ -1,8 +1,8 @@
 # Rancangan kuesioner personal WAM
 
 Status: tahap 1 dan 2 dibangun (4 November 2026). Tahap 3 sedang dibangun: **Kartu rekan** (galeri
-dan profil rekan), **Rekap**, dan **Ekspor** sudah ada (5 November); kamar, kebutuhan panitia, dan
-ringkasan BOD belum. Tahap 4 belum. Ditulis 4 November 2026, diperbarui 5 November 2026.
+dan profil rekan), **Rekap**, **Ekspor**, dan **Kamar** sudah ada (5 November; Kamar menunggu migrasi
+202611050001); kebutuhan panitia dan ringkasan BOD belum. Tahap 4 belum. Ditulis 4 November 2026, diperbarui 5 November 2026.
 
 Sumber: artifact mockup **"Cerita Kita WAM 2026"**
 (https://claude.ai/artifact/BwHcrRv8Wmcg4oRTNW5Uaq). Isinya 6 bagian, sekitar 60 pertanyaan, level
@@ -266,6 +266,30 @@ dari database sama sekali.
   - Semua sel teks biasa (bukan rumus), jadi jawaban yang diawali "=" tetap teks.
 - **BOD** nanti memakai aturan yang sama dengan `facilitator: false`: jawaban `pilih` yang
   memilih "Hanya dibaca fasilitator" tidak ikut, dan `hronly` tidak pernah tampil.
+
+## Kamar (tahap 3, dibangun)
+
+Pairing kamar WAM di Admin WAM → Kuesioner → **Kamar** 🔒 (`/admin/wam/kuesioner/kamar`), mengikuti
+papan Penpot "21 · K3 · Pairing kamar (WAM)". Terkunci seperti Data HR: tanpa Data HR dibuka, halaman
+tidak memuat nama atau jawaban apa pun. Migrasi `202611050001_wam_stay_rooms.sql` (tabel
+`cq_stay_rooms`, `cq_stay_members`, kolom `cq_forms.rooms_published_at`). Aturan di
+`src/lib/pra-wam/stay.ts`.
+
+- **Daftar kamar** diisi HR, satu per baris: "208, Twin bed, 2"; rentang boleh ("301-310, Triple, 3").
+  Kapasitas per kamar 1–8, dan database menolak kamar melebihi kapasitas.
+- **Usulkan otomatis** mengisi kasur kosong tanpa memindah yang sudah ditempatkan:
+  - wajib: isian "Untuk pembagian kamar" (33) sama, dan perokok tidak sekamar dengan yang keberatan (11);
+  - skor: rekan yang dipilih (13, dua arah lebih tinggi), jam tidur dan bangun (7, 8), AC (10),
+    preferensi departemen (12), kebiasaan tidur yang bentrok (9);
+  - orang yang belum mengisi bagian menginap tidak diusulkan.
+- **Atur manual**: pindah, masukkan, atau keluarkan orang. Beda isian 33 dan kamar penuh ditolak;
+  bentrok lain (misalnya rokok) boleh tetapi tampil merah di kartu kamar. Setiap kamar punya tanda
+  "Sudah ditinjau" yang hilang sendiri bila penghuninya berubah. Yang menempatkan dicatat
+  (`placed_by`, orang yang membuka Data HR; kosong untuk usulan otomatis).
+- **Terbitkan ke peserta**: setelah terbit, Beranda WAM peserta menampilkan "Kamar 208 · Twin bed ·
+  Bersama <nama> (<departemen>)". Hanya nama dan departemen teman sekamar, tanpa jawaban siapa pun.
+  Bisa ditarik kembali; perubahan setelah terbit langsung terlihat.
+- Belum: tampilan "hasil pairing" untuk panitia kamar (tanpa Data HR), dan ekspor daftar kamar.
 
 ## Privasi dan penyimpanan
 

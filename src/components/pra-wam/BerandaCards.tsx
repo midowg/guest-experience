@@ -1,4 +1,4 @@
-import { CheckCircle2, ChevronRight, ClipboardList, Info, LayoutDashboard, UsersRound } from "lucide-react";
+import { BedDouble, CheckCircle2, ChevronRight, ClipboardList, Info, LayoutDashboard, UsersRound } from "lucide-react";
 import { aboutParagraphs, pointParts, type About } from "@/lib/pra-wam/about";
 import { praWamPath } from "@/lib/routes";
 import styles from "./beranda.module.css";
@@ -83,6 +83,18 @@ export function ColleaguesCard({ href }: { href: string }) {
     </span>
     <ChevronRight className={styles.chevron} aria-hidden />
   </a>;
+}
+
+/** "Kamarmu" once HR publishes the room pairing: the room and who shares it (names and departments only). */
+export function RoomCard({ room }: { room: { name: string; kind: string; roommates: { name: string; department: string }[] } }) {
+  const mates = room.roommates.map(person => person.department ? `${person.name} (${person.department})` : person.name);
+  return <section className={styles.row} aria-label="Kamarmu">
+    <span className={styles.questTile}><BedDouble aria-hidden /></span>
+    <span className={styles.aboutText}>
+      <strong>Kamar {room.name}{room.kind ? ` · ${room.kind}` : ""}</strong>
+      <span className={styles.rowLine}>{mates.length ? `Bersama ${mates.join(", ")}` : "Kamu sendiri di kamar ini"}</span>
+    </span>
+  </section>;
 }
 
 /** The full text: the summary as a lead, the paragraphs, and the key points. Text only, no HTML. */

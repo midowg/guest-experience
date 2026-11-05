@@ -1,0 +1,58 @@
+/*
+ * Admin WAM → Kuesioner → Kamar (Penpot "K3 · Pairing kamar"): room cards, the waiting list, the
+ * paste box for rooms. Every target is at least 44px; colour never carries a state alone.
+ */
+
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.head h2 { margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.muted { margin: 0; color: var(--ink-soft); }
+
+.add { border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.add > summary { display: flex; align-items: center; gap: var(--space-2); min-height: 52px; padding: 0 var(--space-4); font-weight: 700; cursor: pointer; }
+.addBody { display: grid; gap: var(--space-3); padding: 0 var(--space-4) var(--space-4); }
+.addBody label { font-weight: 600; }
+.errors { margin: 0; padding-left: var(--space-5); color: var(--color-danger); font-weight: 600; }
+
+.search { display: flex; align-items: center; gap: var(--space-2); max-width: 28rem; min-height: 48px; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink-soft); }
+.search input { flex: 1; min-width: 0; min-height: 44px; border: 0; background: none; color: var(--color-text); font: inherit; }
+.search input:focus { outline: none; }
+.search:focus-within { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+
+.waiting { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid #f3d27a; border-radius: 16px; background: #fffbeb; }
+.waiting h3 { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: 1rem; color: #78350f; }
+
+.rooms { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); margin: 0; padding: 0; list-style: none; align-items: start; }
+.room { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--line); border-radius: 16px; background: #fff; min-width: 0; }
+.roomBlocked { border-color: #e9a3ad; box-shadow: inset 4px 0 0 #b42335; }
+.roomHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.roomHead h3 { margin: 0; font-size: 1.25rem; }
+.status { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 2px var(--space-2); border-radius: 999px; background: var(--page); color: #4b5563; font-size: .8125rem; font-weight: 700; white-space: nowrap; }
+.statusFull { background: #dcfce7; color: #166534; }
+.statusPart { background: #e3ecfd; color: #1d4fb8; }
+
+.people { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.person { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2) var(--space-3); align-items: start; padding: var(--space-2) 0; border-top: 1px solid var(--line); }
+.people > .person:first-child { border-top: 0; }
+.avatar { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: #e3ecfd; color: #1d4fb8; font-size: .8125rem; font-weight: 800; }
+.who { display: grid; gap: 2px; min-width: 0; }
+.who strong { overflow-wrap: anywhere; }
+.who small { color: var(--ink-soft); }
+.facts { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 0; padding: 0; list-style: none; }
+.facts li { padding: 1px var(--space-2); border-radius: 999px; background: #f3f4f6; color: #374151; font-size: .75rem; font-weight: 600; }
+.personActions { grid-column: 2; display: flex; gap: var(--space-2); align-items: center; }
+.personActions select { flex: 1; min-width: 0; min-height: 44px; }
+.iconButton { display: inline-grid; place-items: center; flex: none; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--color-text); cursor: pointer; }
+.iconButton:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
+.iconButton:disabled { color: #9aa1ad; cursor: not-allowed; }
+
+.blocked { display: flex; gap: var(--space-2); margin: 0; padding: var(--space-2) var(--space-3); border-radius: 10px; background: #fbeef0; color: #8a1c2c; font-weight: 600; }
+.blocked svg { flex: none; margin-top: 2px; }
+.notes { display: grid; gap: 4px; margin: 0; padding: var(--space-2) var(--space-3) var(--space-2) var(--space-6); border-radius: 10px; background: #fffbeb; color: #78350f; font-size: .875rem; }
+
+.roomFoot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--line); }
+.check { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; margin-right: auto; font-weight: 600; cursor: pointer; }
+.check input { width: 1.25rem; height: 1.25rem; accent-color: #16a34a; }
+.edit > summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--blue); font-weight: 600; cursor: pointer; }
+.editBody { display: grid; gap: var(--space-2); width: min(100%, 18rem); padding-top: var(--space-2); }
+.editBody label { font-size: .875rem; font-weight: 600; }

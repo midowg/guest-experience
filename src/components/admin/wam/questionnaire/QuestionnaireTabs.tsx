@@ -2,7 +2,7 @@ import { Lock } from "lucide-react";
 import { wamAdminPath } from "@/lib/routes";
 import styles from "./questionnaire.module.css";
 
-export type QuestionnaireTab = "konten" | "kartu" | "pengaturan" | "progres" | "rekap" | "ekspor" | "data-hr";
+export type QuestionnaireTab = "konten" | "kartu" | "pengaturan" | "progres" | "rekap" | "ekspor" | "data-hr" | "kamar";
 
 const tabs: { key: QuestionnaireTab; label: string; href: string; locked?: boolean }[] = [
   { key: "konten", label: "Konten", href: wamAdminPath.questionnaire.content },
@@ -12,6 +12,7 @@ const tabs: { key: QuestionnaireTab; label: string; href: string; locked?: boole
   { key: "rekap", label: "Rekap", href: wamAdminPath.questionnaire.recap },
   { key: "ekspor", label: "Ekspor", href: wamAdminPath.questionnaire.export },
   { key: "data-hr", label: "Data HR", href: wamAdminPath.questionnaire.hrData, locked: true },
+  { key: "kamar", label: "Kamar", href: wamAdminPath.questionnaire.rooms, locked: true },
 ];
 
 /** The questionnaire's sub-pages, as a row of tabs that scrolls sideways on a phone. Data HR opens with the WAM email of someone on the HR access list. */

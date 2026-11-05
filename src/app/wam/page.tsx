@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeftRight, Bell, CalendarClock, ChevronRight, Clock, Info, MapPin, QrCode } from "lucide-react";
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { Avatar } from "@/components/pra-wam/Avatar";
-import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard } from "@/components/pra-wam/BerandaCards";
+import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard, RoomCard } from "@/components/pra-wam/BerandaCards";
 import { AgendaTimeline } from "@/components/pra-wam/desktop/AgendaTimeline";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
@@ -16,6 +16,7 @@ import { agendaItems, untilLabel } from "@/lib/server/pra-wam/agenda";
 import { myNotifications } from "@/lib/server/pra-wam/announcements";
 import { listDocuments } from "@/lib/server/pra-wam/documents";
 import { myQuestionnaireCard } from "@/lib/server/pra-wam/questionnaire-answers";
+import { myRoom } from "@/lib/server/pra-wam/stay";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
 import { myOpenRequests, openRequestCount } from "@/lib/server/pra-wam/requests";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
@@ -44,7 +45,7 @@ export default async function HomePage() {
   if (bodOnly(member)) redirect(praWamPath.dashboard);
   const now = new Date();
   const today = wibDate(now.toISOString());
-  const [{ items }, notes, requests, appraisal, docs, about, manage, quest] = await Promise.all([
+  const [{ items }, notes, requests, appraisal, docs, about, manage, quest, room] = await Promise.all([
     agendaItems(member, today), myNotifications(member), myOpenRequests(member), appraisalOpen(),
     listDocuments(member).catch(() => ({ documents: [], migrated: false, storage: false })),
     getAbout().catch(() => null),
@@ -52,6 +53,8 @@ export default async function HomePage() {
     seesAllSessions(member) ? (managesSessions(member) ? openRequestCount() : 0) : null,
     // The questionnaire, once HR opens it; never in the way of Beranda when it cannot be read.
     myQuestionnaireCard(member.id).catch(() => null),
+    // The WAM room, once HR publishes the pairing; never in the way of Beranda either.
+    myRoom(member.id).catch(() => null),
   ]);
   const next = items.find(item => new Date(item.endsAt) > now);
   const todays = items.filter(item => wibDate(item.startsAt) === today);
@@ -84,6 +87,7 @@ export default async function HomePage() {
 
         {/* Mandatory until done: first thing under the greeting, on a phone and a desktop alike. */}
         {quest && !quest.progress.done && questCard}
+        {room && <RoomCard room={room} />}
 
         {next ? <section className={base.hero} aria-label="Berikutnya">
           <div className={base.heroTop}><span>Berikutnya · {next.tag}</span><span>{untilLabel(next, now, today)}</span></div>
