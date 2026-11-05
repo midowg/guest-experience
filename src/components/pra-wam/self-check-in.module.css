@@ -15,3 +15,17 @@
 .send :global(.button) { width: 100%; min-height: 48px; }
 .dialogStatus { padding: 0 20px 12px; }
 .dialogStatus:empty { display: none; }
+
+/* variant="hero": on Beranda's blue card. The line, then a white "Saya hadir" and a glass "Scan QR". */
+.hero { display: grid; gap: 10px; margin-top: 6px; }
+.heroNote { margin: 0; font-size: 13px; font-weight: 500; color: var(--pw-on-hero-muted); }
+.heroRow { display: flex; flex-wrap: wrap; gap: 8px; }
+.heroHadir, .heroScan { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 18px; border-radius: 999px; font: inherit; font-size: 15px; white-space: nowrap; font-weight: 600; text-decoration: none; cursor: pointer; }
+.heroHadir { flex: 1 1 8rem; border: 0; background: #fff; color: var(--pw-hero); box-shadow: 0 10px 22px -12px rgba(9, 62, 153, .7); }
+.heroHadir:hover:not(:disabled) { background: var(--pw-primary-soft); }
+.heroHadir:disabled { cursor: not-allowed; background: rgba(255, 255, 255, .22); color: var(--pw-on-hero-muted); box-shadow: none; }
+.hero .heroScan { flex: 0 1 auto; border: 1px solid rgba(255, 255, 255, .45); background: rgba(255, 255, 255, .12); color: var(--pw-on-hero); }
+.hero .heroScan:hover { background: rgba(255, 255, 255, .22); }
+.heroHadir:focus-visible, .heroScan:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.heroDone { display: inline-flex; align-items: center; gap: 8px; justify-self: start; min-height: 44px; margin: 0; padding: 0 18px; border-radius: 999px; background: var(--pw-success-soft); color: var(--pw-success); font-weight: 600; }
+@media (min-width: 1024px) { .heroHadir { flex: 0 1 auto; min-width: 14rem; } }

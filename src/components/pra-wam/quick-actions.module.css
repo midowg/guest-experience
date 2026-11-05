@@ -9,7 +9,14 @@
 .topFab svg { width: 18px; height: 18px; }
 @media (prefers-reduced-motion: no-preference) { .fab, .topFab { transition: background-color .15s ease, transform .15s ease; } .fab:active { transform: scale(.94); } }
 
-/* The actions: list rows at least 64 high, the icon in a soft 40 box. */
+/* A dot on the + while a check-in is open, so it is noticed. */
+.fab, .topFab { position: relative; }
+.fabDot { position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--pw-success); border: 2px solid var(--pw-surface); }
+.topFab .fabDot { top: -2px; right: -2px; }
+
+/* The actions, in groups: list rows at least 64 high, the icon in a soft 40 box. */
+.group + .group { margin-top: 8px; }
+.groupLabel { margin: 0 4px 8px; font-size: 12px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--pw-muted); }
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .row { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 14px; border-radius: var(--pw-r-control); background: var(--pw-surface); box-shadow: var(--pw-shadow-card); color: var(--pw-text); text-decoration: none; }
 /* Rows are links, but read as list rows: ink, not link blue. */
@@ -22,6 +29,12 @@ a.row:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px;
 .text strong { font-size: 15px; font-weight: 600; }
 .text small { font-size: 13px; color: var(--pw-muted); overflow-wrap: anywhere; }
 .chevron { flex: none; width: 20px; height: 20px; color: var(--pw-muted); }
+/* "Saya hadir" while a check-in is open: the main card's blue. */
+.list .main { background: var(--pw-hero) var(--pw-grad-hero); color: var(--pw-on-hero); box-shadow: 0 12px 24px -14px rgba(0, 110, 193, .6); }
+a.main:hover { background: var(--pw-hero) var(--pw-grad-hero); filter: brightness(1.05); }
+.main .tile { background: rgba(255, 255, 255, .18); color: var(--pw-on-hero); }
+.main small, .main .chevron { color: var(--pw-on-hero-muted); }
+.count { flex: none; display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--pw-primary); color: var(--pw-on-primary); font-size: 12px; font-weight: 700; }
 /* Not available now: still in its place, saying why. */
 .off { box-shadow: none; background: var(--pw-surface-soft); }
 .off .tile { background: var(--pw-surface); color: var(--pw-muted); }

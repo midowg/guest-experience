@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Building2, Camera, CheckCircle2, ChevronLeft, Images, Video } from "lucide-react";
-import type { CheckInStatus } from "@/lib/pra-wam/agenda";
+import { Building2, Camera, CheckCircle2, ChevronLeft, Images, QrCode, Video } from "lucide-react";
+import { checkInText, type CheckInStatus } from "@/lib/pra-wam/agenda";
+import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import type { ProofMime, SelfCheckInAnswer } from "@/lib/pra-wam/attendance";
 import { acceptPhotos, sourceProblem } from "@/lib/pra-wam/photo";
+import { praWamPath } from "@/lib/routes";
 import { errorText } from "./api";
 import { CheckInBlock } from "./CheckInStatus";
 import { checkInOffline, checkInOnline, shrinkProof } from "./proofUpload";
@@ -21,6 +23,11 @@ import own from "./self-check-in.module.css";
  * window opens and after it closes the button is there but disabled, and the block says why.
  * Once recorded the block says "Hadir 09.42 · di kantor" at once, and the page refreshes so the
  * agenda's pill follows. The printed QR keeps working beside it.
+ *
+ * `variant="hero"` is the same on Beranda's blue card (5 Nov 2026): a line saying when the
+ * check-in opens or until when, a white "Saya hadir" and "Scan QR" beside it, or "Hadir 09.42 ·
+ * di kantor" once done. `autoOpen` (Beranda ?absen=1, from Aksi cepat) opens the choice at once
+ * while the check-in is open, and takes ?absen off the address.
  */
 
 type Props = {
@@ -30,16 +37,36 @@ type Props = {
   now: string;
   /** "Saya hadir" can be stored (the migration is there). */
   selfReady: boolean;
+  /** "block" under Detail sesi (default), "hero" on Beranda's blue card. */
+  variant?: "block" | "hero";
+  /** Open "Kamu hadir di mana?" at once (only while the check-in is open). */
+  autoOpen?: boolean;
 };
+
+/** "pukul 09.00" today, else "Selasa, 10 Nov pukul 09.00". */
+function when(iso: string, now: string): string {
+  const day = wibDate(iso) === wibDate(now) ? "" : `${dayLabel(wibDate(iso))} `;
+  return `${day}pukul ${clockLabel(wibTime(iso))}`;
+}
+
+/** The hero's line over its buttons. */
+function heroNote(status: CheckInStatus, now: string): string {
+  switch (status.kind) {
+    case "buka": return `Absen dibuka sampai ${clockLabel(wibTime(status.closes))}.`;
+    case "belum": return `Absen dibuka ${when(status.opens, now)}, 30 menit sebelum mulai.`;
+    case "tutup": return "Absen sudah ditutup. Hubungi panitia kalau kamu hadir.";
+    default: return "";
+  }
+}
 
 type Step = "pilih" | "online";
 type Busy = { text: string; progress?: number } | null;
 type Picked = { blob: Blob; mime: ProofMime; url: string };
 
-export function SelfCheckIn({ sessionId, status, now, selfReady }: Props) {
+export function SelfCheckIn({ sessionId, status, now, selfReady, variant = "block", autoOpen = false }: Props) {
   const router = useRouter();
   const [recorded, setRecorded] = useState<SelfCheckInAnswer | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen && selfReady && status.kind === "buka");
   const [step, setStep] = useState<Step>("pilih");
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +80,14 @@ export function SelfCheckIn({ sessionId, status, now, selfReady }: Props) {
   const title = useId();
   const pickedUrl = picked?.url;
   useEffect(() => () => { if (pickedUrl) URL.revokeObjectURL(pickedUrl); }, [pickedUrl]);
+  // ?absen=1 is used once: a reload or going back does not open the choice again.
+  useEffect(() => {
+    if (!autoOpen) return;
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("absen")) return;
+    url.searchParams.delete("absen");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [autoOpen]);
 
   // Open and close the dialog with the state; the first choice of each step takes the focus.
   useEffect(() => {
@@ -66,6 +101,12 @@ export function SelfCheckIn({ sessionId, status, now, selfReady }: Props) {
   const shown: CheckInStatus = status.kind !== "hadir" && recorded ? { kind: "hadir", at: recorded.checkedInAt, method: recorded.method } : status;
   const at = new Date(now);
   if (!selfReady || shown.kind === "hadir" || shown.kind === "tidak-tersedia") {
+    if (variant === "hero") return <div className={own.hero}>
+      {shown.kind === "hadir"
+        ? <p className={own.heroDone}><CheckCircle2 size={20} aria-hidden />{checkInText(shown, at).title}</p>
+        : <div className={own.heroRow}><a className={own.heroScan} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a></div>}
+      {said && <p className={own.heroNote} role="status">{said}</p>}
+    </div>;
     return <>
       <CheckInBlock status={shown} now={at} self={selfReady} />
       {said && <p className={css.status} role="status"><span className={css.done}>{said}</span></p>}
@@ -126,13 +167,7 @@ export function SelfCheckIn({ sessionId, status, now, selfReady }: Props) {
     {!busy && error && <span className={css.error}>{error}</span>}
   </div>;
 
-  return <div className={own.block}>
-    <CheckInBlock status={shown} now={at} self id={describe} />
-    <button ref={trigger} type="button" className={`button button--primary ${own.hadir}`} disabled={!canTap}
-      aria-describedby={canTap ? undefined : describe} aria-haspopup="dialog" aria-expanded={open} onClick={begin}>
-      <CheckCircle2 size={20} aria-hidden /> Saya hadir
-    </button>
-    <dialog ref={dialog} className={`${css.chooser} ${step === "online" ? own.wide : ""}`} aria-labelledby={title} aria-busy={busy ? true : undefined}
+  const chooser = <dialog ref={dialog} className={`${css.chooser} ${step === "online" ? own.wide : ""}`} aria-labelledby={title} aria-busy={busy ? true : undefined}
       onCancel={event => { event.preventDefault(); close(); }}
       onClick={event => { if (event.target === dialog.current) close(); }}>
       {step === "pilih" ? <>
@@ -165,6 +200,26 @@ export function SelfCheckIn({ sessionId, status, now, selfReady }: Props) {
         <input ref={gallery} type="file" accept={acceptPhotos} className={css.file} tabIndex={-1} aria-hidden onChange={event => pick(event.target.files?.[0])} />
         <input ref={camera} type="file" accept="image/*" capture="environment" className={css.file} tabIndex={-1} aria-hidden onChange={event => pick(event.target.files?.[0])} />
       </>}
-    </dialog>
+    </dialog>;
+
+  if (variant === "hero") return <div className={own.hero}>
+    <p className={own.heroNote} id={describe}>{heroNote(shown, now)}</p>
+    <div className={own.heroRow}>
+      <button ref={trigger} type="button" className={own.heroHadir} disabled={!canTap}
+        aria-describedby={describe} aria-haspopup="dialog" aria-expanded={open} onClick={begin}>
+        <CheckCircle2 size={20} aria-hidden /> Saya hadir
+      </button>
+      <a className={own.heroScan} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR</a>
+    </div>
+    {chooser}
+  </div>;
+
+  return <div className={own.block}>
+    <CheckInBlock status={shown} now={at} self id={describe} />
+    <button ref={trigger} type="button" className={`button button--primary ${own.hadir}`} disabled={!canTap}
+      aria-describedby={canTap ? undefined : describe} aria-haspopup="dialog" aria-expanded={open} onClick={begin}>
+      <CheckCircle2 size={20} aria-hidden /> Saya hadir
+    </button>
+    {chooser}
   </div>;
 }

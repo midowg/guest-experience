@@ -110,6 +110,10 @@ export async function PraWamShell({ member, current, back, children }: { member:
   const panitiaView = !onlyBod && !!current && managedIds.has(current);
   const phaseLabel = phase ? `${phase.kind === "pra_wam" ? "Pra WAM" : phase.name} · ${month(phase.startDate)}–${month(phase.endDate)} ${phase.endDate.slice(0, 4)}` : "WAM 2027";
   const who = member.nickname || member.name;
+  const quickProps = {
+    checkIn: quick?.checkIn ?? null, upcoming: quick?.upcoming ?? null, bookingOpen: quick?.bookingOpen ?? false,
+    manages: managesSessions(member), running: quick?.running ?? [], waiting, now: new Date().toISOString(),
+  };
 
   if (panitiaView) {
     const searchItems: ConsoleSearchItem[] = [
@@ -154,7 +158,7 @@ export async function PraWamShell({ member, current, back, children }: { member:
         {menu.map(item => <a key={item.id} className={styles.topItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>{item.icon}<span>{item.label}</span></a>)}
       </nav>
       <div className={styles.topRight}>
-        {!onlyBod && <QuickActions place="top" checkIn={quick?.checkIn ?? null} bookingOpen={quick?.bookingOpen ?? false} manages={managesSessions(member)} />}
+        {!onlyBod && <QuickActions place="top" {...quickProps} />}
         {managed.length > 0 && <a className={styles.topManage} href={praWamPath.dashboard}><BarChart3 aria-hidden />Kelola acara{waiting > 0 && <span className={styles.sideBadge}>{waiting}</span>}</a>}
         <a className={styles.iconButton} href={praWamPath.notifications} aria-label={unread ? `Notifikasi, ${unread} belum dibaca` : "Notifikasi"} aria-current={current === "notifikasi" ? "page" : undefined}>
           <Bell aria-hidden />{unread > 0 && <span className={styles.iconDot} />}
@@ -175,7 +179,7 @@ export async function PraWamShell({ member, current, back, children }: { member:
     {!back && <nav className={styles.bottomNav} aria-label="Menu WAM">
       {menu.map((item, index) => [
         // The blue + sits in the middle of the bar, between Book and Dokumen.
-        !onlyBod && index === 2 && <QuickActions key="aksi-cepat" place="bar" checkIn={quick?.checkIn ?? null} bookingOpen={quick?.bookingOpen ?? false} manages={managesSessions(member)} />,
+        !onlyBod && index === 2 && <QuickActions key="aksi-cepat" place="bar" {...quickProps} />,
         <a key={item.id} className={styles.navItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>
           {item.icon}<span>{item.short ?? item.label}</span>
           {badge(item.id) > 0 && <span className={styles.navBadge}><span aria-hidden>{badge(item.id)}</span><span className="sr-only">, {badge(item.id)} menunggu</span></span>}

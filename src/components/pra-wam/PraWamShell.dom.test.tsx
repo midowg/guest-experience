@@ -6,7 +6,7 @@ vi.mock("@/lib/server/pra-wam/announcements", () => ({ unreadCount: async () => 
 vi.mock("@/lib/server/pra-wam/requests", () => ({ openRequestCount: async () => 3 }));
 vi.mock("@/lib/server/pra-wam/events", () => ({ currentPhase: async () => ({ kind: "pra_wam", name: "Pra WAM", startDate: "2026-10-28", endDate: "2026-12-23", daysToWam: 60 }) }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }) }));
-vi.mock("@/lib/server/pra-wam/quick-actions", () => ({ quickActionData: async () => ({ checkIn: null, bookingOpen: true }) }));
+vi.mock("@/lib/server/pra-wam/quick-actions", () => ({ quickActionData: async () => ({ checkIn: null, upcoming: null, bookingOpen: true, running: [] }) }));
 
 import { PraWamShell, manageGroups } from "./PraWamShell";
 

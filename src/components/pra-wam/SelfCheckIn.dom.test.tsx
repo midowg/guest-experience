@@ -126,3 +126,25 @@ it("goes back from the online step to the choice", () => {
   fireEvent.click(screen.getByRole("button", { name: "Batal" }));
   expect(dialog()).toBeNull();
 });
+
+it("on Beranda's blue card says when the check-in opens, and offers Scan QR beside a disabled Saya hadir", () => {
+  render(<SelfCheckIn variant="hero" sessionId={SESSION} now="2026-11-25T03:00:00.000Z" selfReady
+    status={{ kind: "belum", opens: "2026-11-26T02:30:00.000Z", closes: "2026-11-26T05:30:00.000Z" }} />);
+  expect(hadir()).toHaveProperty("disabled", true);
+  expect(screen.getByText("Absen dibuka Kamis, 26 Nov pukul 09.30, 30 menit sebelum mulai.")).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Scan QR" }).getAttribute("href")).toBe("/wam/check-in");
+});
+
+it("on the blue card opens the choice at once from Aksi cepat (?absen=1) and takes ?absen off the address", () => {
+  window.history.replaceState(null, "", "/wam?absen=1#agenda");
+  render(<SelfCheckIn variant="hero" sessionId={SESSION} now={now} selfReady status={open} autoOpen />);
+  expect(screen.getByText("Absen dibuka sampai 12.30.")).toBeTruthy();
+  expect(dialog()?.textContent).toContain("Kamu hadir di mana?");
+  expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe("/wam#agenda");
+});
+
+it("on the blue card says Hadir once recorded", () => {
+  render(<SelfCheckIn variant="hero" sessionId={SESSION} now={now} selfReady status={{ kind: "hadir", at: "2026-11-26T02:42:00.000Z", method: "offline" }} />);
+  expect(screen.getByText("Hadir 09.42 · di kantor")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Saya hadir" })).toBeNull();
+});

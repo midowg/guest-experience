@@ -3,17 +3,18 @@ import { ArrowLeftRight, Bell, CalendarClock, CheckCircle2, ChevronRight, Clock,
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { Avatar } from "@/components/pra-wam/Avatar";
 import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard, RoomCard } from "@/components/pra-wam/BerandaCards";
+import { SelfCheckIn } from "@/components/pra-wam/SelfCheckIn";
 import { AgendaTimeline } from "@/components/pra-wam/desktop/AgendaTimeline";
 import { DocRows } from "@/components/pra-wam/desktop/DocRows";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
-import { AGENDA_ITEM, pickDay, withItem } from "@/lib/pra-wam/agenda";
+import { AGENDA_ITEM, checkInStatus, pickDay, withItem } from "@/lib/pra-wam/agenda";
 import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
-import { checkInWindow, windowState } from "@/lib/pra-wam/attendance";
+import { checkInNow } from "@/lib/pra-wam/attendance";
 import { requestStatusLabels, spanLabel } from "@/lib/pra-wam/requests";
 import { bodOnly, cancelsAnyBooking, managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { getAbout } from "@/lib/server/pra-wam/about";
-import { untilLabel } from "@/lib/server/pra-wam/agenda";
+import { myAttendance, untilLabel } from "@/lib/server/pra-wam/agenda";
 import { myNotifications } from "@/lib/server/pra-wam/announcements";
 import { listDocuments } from "@/lib/server/pra-wam/documents";
 import { myQuestionnaireCard } from "@/lib/server/pra-wam/questionnaire-answers";
@@ -48,9 +49,13 @@ const agendaHref = (query: { date?: string; item?: string }) => {
  * person, the latest news, "Kelola acara" for the panitia (Penpot K1, phone only: a desktop has it
  * in the top bar) and "Apa itu WAM?"; on a desktop also the newest documents in a side column. An
  * agenda item opens over the page (AgendaSheet); ?item=<key> keeps it open.
+ *
+ * The blue card is also where people check in (5 Nov 2026): it shows the session whose check-in is
+ * open, else the next thing, with "Saya hadir" and "Scan QR" for a session (SelfCheckIn, hero).
+ * ?absen=1 (Aksi cepat's "Saya hadir") opens "Kamu hadir di mana?" at once.
  */
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string; item?: string; session?: string }> }) {
-  const { date: tanggal, item: asked, session: older } = await searchParams;
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string; item?: string; session?: string; absen?: string }> }) {
+  const { date: tanggal, item: asked, session: older, absen } = await searchParams;
   const member = await requireMemberPage(praWamPath.home);
   // "Akun BOD langsung ke Ringkasan" (Penpot "Panduan · BOD").
   if (bodOnly(member)) redirect(praWamPath.dashboard);
@@ -67,7 +72,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     // The WAM room, once HR publishes the pairing; never in the way of Beranda either.
     myRoom(member.id).catch(() => null),
   ]);
-  const next = items.find(item => new Date(item.endsAt) > now);
+  // The blue card: the session whose check-in is open now, else the next thing still to come.
+  const next = checkInNow(items, now) ?? items.find(item => new Date(item.endsAt) > now);
+  const attendance = next?.kind === "sesi" && next.sessionId ? await myAttendance(next.sessionId, member).catch(() => null) : null;
+  const heroStatus = next && attendance ? checkInStatus({ status: "terbit", isParticipant: true, startsAt: next.startsAt, endsAt: next.endsAt }, attendance, now) : null;
+  const going = next && new Date(next.startsAt) <= now;
   const todays = items.filter(item => wibDate(item.startsAt) === today);
   const sessionsToday = todays.filter(item => item.kind === "sesi").length;
   // Agenda: an item asked for in the address opens on its own day.
@@ -105,16 +114,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         {quest && !quest.progress.done && questCard}
         {room && <RoomCard room={room} />}
 
-        {next ? <section className={base.hero} aria-label="Berikutnya">
-          <div className={base.heroTop}><span>Berikutnya · {next.tag}</span><span>{untilLabel(next, now, today)}</span></div>
+        {next ? <section className={base.hero} aria-label={going ? "Sedang berlangsung" : "Berikutnya"}>
+          <div className={base.heroTop}><span>{going ? "Sedang berlangsung" : "Berikutnya"} · {next.tag}</span><span>{untilLabel(next, now, today)}</span></div>
           <h2><a href={open(next)} {...opens(next)}>{next.title}</a></h2>
           <span className={base.heroLine}><Clock aria-hidden />{wibDate(next.startsAt) === today ? "" : `${spanLabel(next.startsAt, next.endsAt).split(" · ")[0]} · `}{clockLabel(wibTime(next.startsAt))}–{clockLabel(wibTime(next.endsAt))}</span>
           <span className={base.heroLine}><MapPin aria-hidden />{next.where}</span>
-          {/* "Saya hadir" only while the check-in is open (30 minutes either side); before that, the detail. */}
-          {next.kind === "sesi" && (next.checkedInAt
-            ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(next.checkedInAt)}</span>
-            : windowState(checkInWindow(next.startsAt, next.endsAt), now) === "buka"
-              ? <a className={`${base.heroButton} ${own.wide}`} href={open(next)} {...opens(next)}><CheckCircle2 size={20} aria-hidden />Saya hadir</a>
+          {/* Absen right here: when it opens or until when, "Saya hadir" (enabled while open) and Scan QR; or "Hadir 09.42 · di kantor". */}
+          {next.kind === "sesi" && (heroStatus && next.sessionId
+            ? <SelfCheckIn variant="hero" sessionId={next.sessionId} status={heroStatus} now={now.toISOString()} selfReady={!!attendance?.selfReady} autoOpen={absen === "1"} />
+            : next.checkedInAt
+              ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(next.checkedInAt)}</span>
               : <a className={`${base.heroButton} ${own.wide}`} href={open(next)} {...opens(next)}><Info size={20} aria-hidden />Lihat detail</a>)}
           {next.kind === "appraisal" && <a className={`${base.heroButton} ${own.wide}`} href={open(next)} {...opens(next)}><CalendarClock size={20} aria-hidden />Lihat booking</a>}
         </section> : <section className={base.card}>
