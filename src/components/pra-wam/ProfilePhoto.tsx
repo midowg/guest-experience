@@ -25,7 +25,7 @@ import css from "./avatar.module.css";
 type Step = { kind: "idle" } | { kind: "busy"; text: string; progress?: number } | { kind: "done"; text: string } | { kind: "error"; text: string };
 
 /** The picture, upright as the camera meant it (EXIF), ready to draw. */
-async function decode(file: File): Promise<{ source: CanvasImageSource; width: number; height: number; close: () => void }> {
+export async function decode(file: File): Promise<{ source: CanvasImageSource; width: number; height: number; close: () => void }> {
   try {
     const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
     return { source: bitmap, width: bitmap.width, height: bitmap.height, close: () => bitmap.close() };

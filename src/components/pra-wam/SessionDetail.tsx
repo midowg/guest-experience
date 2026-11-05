@@ -1,11 +1,12 @@
 import { CalendarClock, CalendarDays, ClipboardList, MapPin, Pencil, Users } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { checkInStatus, type SessionView } from "@/lib/pra-wam/agenda";
-import { sessionKindLabels, sessionStatusLabels, sessionWhen, sessionWhere, type Session } from "@/lib/pra-wam/sessions";
+import { bookingSessionLabel, sessionKindLabels, sessionStatusLabels, sessionWhen, sessionWhere, type Session } from "@/lib/pra-wam/sessions";
 import { praWamPath } from "@/lib/routes";
 import { CheckInBlock } from "./CheckInStatus";
 import { DocumentList } from "./DocumentList";
 import { RequestChange } from "./ScheduleRequests";
+import { SelfCheckIn } from "./SelfCheckIn";
 import { SessionActions } from "./SessionActions";
 import styles from "./pra-wam.module.css";
 import rows from "./peserta.module.css";
@@ -20,11 +21,14 @@ function rights({ view: { session, attendance, requests, viewer, storage }, now 
   const live = session.status === "terbit";
   const timed = !!session.startsAt && !!session.endsAt;
   const status = checkInStatus(session, attendance, now);
-  const canAsk = session.isParticipant && live && timed && new Date(session.endsAt!) > now;
+  // A booking's session moves with its booking (the server refuses a request for it), so no "Ganti jadwal".
+  const canAsk = session.isParticipant && live && timed && !session.booking && new Date(session.endsAt!) > now;
   const canUpload = viewer.manage || (session.isParticipant && live);
+  const scan = !!status && (status.kind === "buka" || status.kind === "belum");
   return {
-    live, timed, status, canAsk, canUpload,
-    scan: !!status && (status.kind === "buka" || status.kind === "belum"),
+    live, timed, status, canAsk, canUpload, scan,
+    // "Saya hadir" (migration 202611050003) is the main way in; the QR stays beside it.
+    selfCheckIn: scan && !!attendance.selfReady,
     upload: canUpload && storage,
     reschedule: canAsk && !requests.some(request => request.status === "diajukan"),
     attendanceLink: viewer.staff && live,
@@ -50,7 +54,7 @@ export function SessionDetail(props: Props) {
  * not set yet.
  */
 export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
-  const { view: { session, documents, storage, requests, rooms, viewer }, now, showTitle } = props;
+  const { view: { session, documents, storage, requests, rooms, viewer, attendance }, now, showTitle } = props;
   const { live, timed, status, canAsk, canUpload } = rights(props);
   const people = session.participants ?? [];
   return <div className={rows.detail}>
@@ -59,8 +63,11 @@ export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
       <div className={styles.pills}>
         <span className={`${styles.pill} ${styles.pillLine}`}>{sessionKindLabels[session.kind]}</span>
         {!live && <span className={`${styles.pill} ${styles.pillBrass}`}>{sessionStatusLabels[session.status]}</span>}
+        {session.booking && <span className={`${styles.pill} ${styles.pillLine}`}>{bookingSessionLabel(session)}</span>}
       </div>
-      {status && <CheckInBlock status={status} now={now} />}
+      {status && (attendance.selfReady
+        ? <SelfCheckIn sessionId={session.id} status={status} now={now.toISOString()} selfReady />
+        : <CheckInBlock status={status} now={now} />)}
     </div>
 
     {session.status === "batal" && <Notice tone="warning">Sesi ini dibatalkan.</Notice>}
@@ -105,9 +112,9 @@ export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
  */
 export function sessionDetailActions(props: Props, bare = false) {
   const { view: { session, viewer } } = props;
-  const { timed, scan, upload, reschedule, attendanceLink } = rights(props);
+  const { timed, scan, selfCheckIn, upload, reschedule, attendanceLink } = rights(props);
   if (!scan && !upload && !reschedule && !attendanceLink && !viewer.manage) return null;
-  return <SessionActions scanHref={scan ? praWamPath.scan : null} upload={upload} reschedule={reschedule} bare={bare}>
+  return <SessionActions scanHref={scan ? praWamPath.scan : null} scanSecondary={selfCheckIn} upload={upload} reschedule={reschedule} bare={bare}>
     {attendanceLink && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}><ClipboardList size={18} aria-hidden /> QR dan daftar hadir</a>}
     {viewer.manage && <a className="button button--secondary" href={praWamPath.editSession(session.id)}><Pencil size={18} aria-hidden /> {timed ? "Ubah sesi" : "Atur jadwal"}</a>}
   </SessionActions>;

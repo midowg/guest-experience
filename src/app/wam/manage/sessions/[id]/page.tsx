@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { BookingSessionPanel } from "@/components/pra-wam/BookingSessionPanel";
 import { PraWamShell } from "@/components/pra-wam/PraWamShell";
 import { SessionForm } from "@/components/pra-wam/SessionForm";
 import { managesSessions } from "@/lib/pra-wam/roles";
@@ -17,6 +18,9 @@ export default async function EditSessionPage({ params }: { params: Promise<{ id
   if (!managesSessions(member) || !/^[0-9a-f-]{36}$/.test(id)) notFound();
   const session = await getSession(id, member).catch((error: unknown) => { if (error instanceof ServiceError && error.status === 404) return null; throw error; });
   if (!session) notFound();
+  const back = { href: praWamPath.sessions, title: "Ubah sesi" };
+  // A booking's session changes with the booking (migration 202611050004); here it is read and may be cancelled.
+  if (session.booking) return <PraWamShell member={member} current="sesi" back={back}><BookingSessionPanel session={{ ...session, booking: session.booking }} /></PraWamShell>;
   const data = await sessionFormData(session, member.id);
-  return <PraWamShell member={member} current="sesi" back={{ href: praWamPath.sessions, title: "Ubah sesi" }}><SessionForm session={session} {...data} /></PraWamShell>;
+  return <PraWamShell member={member} current="sesi" back={back}><SessionForm session={session} {...data} /></PraWamShell>;
 }

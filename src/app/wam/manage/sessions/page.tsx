@@ -8,7 +8,7 @@ import { dayRows, hourWindow, nowHours, readiness, roomRows, timelineLegend, wit
 import { Notice } from "@/components/ui";
 import { dayLabel, wibDate } from "@/lib/pra-wam/appraisal";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
-import { sessionKindLabels, sessionWhen, sessionWhere, type Session, type SessionStatus } from "@/lib/pra-wam/sessions";
+import { bookingSessionLabel, sessionKindLabels, sessionWhen, sessionWhere, type Session, type SessionStatus } from "@/lib/pra-wam/sessions";
 import { praWamPath } from "@/lib/routes";
 import { daySchedule } from "@/lib/server/pra-wam/appraisal";
 import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
@@ -24,7 +24,7 @@ const groups: { status: SessionStatus; title: string; empty: string }[] = [
   { status: "terbit", title: "Terbit", empty: "Belum ada sesi yang diterbitkan." },
   { status: "batal", title: "Dibatalkan", empty: "" },
 ];
-const lead = "Forum dari kalender Pra WAM masuk sebagai draf. Isi jam, ruang, dan peserta, lalu terbitkan supaya muncul di agenda peserta.";
+const lead = "Forum dari kalender Pra WAM masuk sebagai draf. Isi jam, ruang, dan peserta, lalu terbitkan supaya muncul di agenda peserta. Booking ruang langsung terbit sebagai sesi.";
 
 type Search = { view?: string; rentang?: string; tanggal?: string };
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -69,13 +69,13 @@ function SessionList({ sessions, now }: { sessions: Session[]; now: Date }) {
           <tbody>{items.map(session => {
             const status = readiness(session, now);
             return <tr key={session.id}>
-              <td><span className={styles.cellMain}><a className={styles.cellLink} href={praWamPath.session(session.id)}>{session.title}</a><small>{sessionKindLabels[session.kind]}</small></span></td>
+              <td><span className={styles.cellMain}><a className={styles.cellLink} href={praWamPath.session(session.id)}>{session.title}</a><small>{sessionKindLabels[session.kind]}</small>{session.booking && <span><Pill tone="blue">{bookingSessionLabel(session)}</Pill></span>}</span></td>
               <td>{sessionWhen(session)}</td>
               <td>{sessionWhere(session)}</td>
               <td>{session.participantCount}</td>
               <td><Pill tone={status.tone}>{status.label}</Pill></td>
               <td><div className={styles.rowActions}>
-                <ConsoleButtonLink href={praWamPath.editSession(session.id)}>{session.status === "draf" ? "Atur" : "Ubah"}</ConsoleButtonLink>
+                <ConsoleButtonLink href={praWamPath.editSession(session.id)}>{session.booking ? "Lihat" : session.status === "draf" ? "Atur" : "Ubah"}</ConsoleButtonLink>
                 {session.status === "terbit" && <ConsoleButtonLink href={praWamPath.sessionAttendance(session.id)}>QR dan hadir</ConsoleButtonLink>}
               </div></td>
             </tr>;
@@ -136,7 +136,7 @@ function BodSessions({ member, sessions, migrated, now }: { member: Member; sess
     <table className={base.table}>
       <thead><tr><th>Sesi</th><th>Waktu</th><th>Tempat</th><th>Peserta</th><th>Status</th><th>Tindakan</th></tr></thead>
       <tbody>{items.map(session => <tr key={session.id}>
-        <td><strong><a href={praWamPath.session(session.id)}>{session.title}</a></strong><small>{sessionKindLabels[session.kind]}</small></td>
+        <td><strong><a href={praWamPath.session(session.id)}>{session.title}</a></strong><small>{sessionKindLabels[session.kind]}</small>{session.booking && <small>{bookingSessionLabel(session)}</small>}</td>
         <td>{sessionWhen(session)}</td>
         <td>{sessionWhere(session)}</td>
         <td>{session.participantCount}</td>

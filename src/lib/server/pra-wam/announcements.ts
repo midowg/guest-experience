@@ -54,8 +54,9 @@ async function resolve(audience: Audience): Promise<{ ids: string[]; label: stri
   return { ids: (data ?? []).map(person => person.id), label: "Semua peserta", sessionId: null };
 }
 
-async function send(input: { kind: "pengumuman" | "sesi"; title: string; body: string; audience: Audience; createdBy: string | null }): Promise<number> {
-  const { ids, label, sessionId } = await resolve(input.audience);
+async function send(input: { kind: "pengumuman" | "sesi"; title: string; body: string; audience: Audience; createdBy: string | null; except?: string }): Promise<number> {
+  const { ids: everyone, label, sessionId } = await resolve(input.audience);
+  const ids = input.except ? everyone.filter(id => id !== input.except) : everyone;
   if (!ids.length) throw new ServiceError(422, "Belum ada penerima untuk pilihan ini.");
   const client = createPrivilegedClient();
   const { data, error } = await client.from("pw_announcements")
@@ -79,11 +80,17 @@ const sessionNotes = {
   batal: (title: string) => `Dibatalkan: ${title}`,
 };
 
-/** The app tells a session's participants it was published, moved, or cancelled. Never throws. */
-export async function notifySession(session: Session, change: keyof typeof sessionNotes, by: Member): Promise<void> {
+/**
+ * The app tells a session's participants it was published, moved, or cancelled; `except` leaves
+ * one person out (a booker who made the change). Never throws.
+ */
+export async function notifySession(
+  session: Pick<Session, "id" | "title" | "startsAt" | "endsAt" | "planFrom" | "planTo" | "roomName" | "location">,
+  change: keyof typeof sessionNotes, by: Member, { except }: { except?: string } = {},
+): Promise<void> {
   try {
     const body = change === "batal" ? "Sesi ini tidak jadi diadakan." : `${sessionWhen(session)} · ${sessionWhere(session)}`;
-    await send({ kind: "sesi", title: sessionNotes[change](session.title), body, audience: { type: "sesi", sessionId: session.id }, createdBy: by.id });
+    await send({ kind: "sesi", title: sessionNotes[change](session.title), body, audience: { type: "sesi", sessionId: session.id }, createdBy: by.id, except });
   } catch { /* the session is saved either way */ }
 }
 

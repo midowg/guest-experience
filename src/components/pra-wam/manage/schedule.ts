@@ -1,7 +1,7 @@
 import type { ConsoleTone, TimelineBlock, TimelineRow } from "@/components/console";
 import { clockLabel, dayLabel, wibDate, wibTime, type Booking, type Room } from "@/lib/pra-wam/appraisal";
 import type { ScheduleRequest } from "@/lib/pra-wam/requests";
-import { sessionKindLabels, sessionWhere, type RoomUse, type Session, type SessionKind } from "@/lib/pra-wam/sessions";
+import { sessionKindLabels, sessionWhere, withoutSessionBookings, type RoomUse, type Session, type SessionKind } from "@/lib/pra-wam/sessions";
 
 /*
  * Kelola acara's timelines and status lines (Ringkasan, Sesi, Permintaan, Peserta), worked out
@@ -53,7 +53,7 @@ export function sessionBlock(session: Session, date: string, href: string, sub?:
   if (!span) return null;
   return {
     key: `sesi-${session.id}`, title: session.title, ...span, href,
-    sub: sub ?? `${session.status === "draf" ? "Draf" : sessionKindLabels[session.kind]} · ${timeRange(session.startsAt, session.endsAt)}`,
+    sub: sub ?? `${session.booking ? `Booking ${session.booking.bookedBy.name}` : session.status === "draf" ? "Draf" : sessionKindLabels[session.kind]} · ${timeRange(session.startsAt, session.endsAt)}`,
     tone: session.status === "draf" ? "neutral" : kindTones[session.kind],
   };
 }
@@ -62,7 +62,8 @@ export function sessionBlock(session: Session, date: string, href: string, sub?:
  * One day by room (Ringkasan, Sesi · Hari): each bookable room, and any room that holds something,
  * in the admin's order; then sessions held elsewhere (a written location), one row per place.
  * Bookings come from daySchedule; its copies of sessions are left out, the sessions themselves
- * (with their kind) are drawn instead.
+ * (with their kind) are drawn instead. So is a booking that is a published session (migration
+ * 202611050004): the room use is drawn once, as the session.
  */
 export function roomRows({ date, rooms, bookings, sessions, sessionHref, bookingHref }: {
   date: string; rooms: readonly Room[]; bookings: readonly Booking[]; sessions: readonly Session[];
@@ -77,7 +78,7 @@ export function roomRows({ date, rooms, bookings, sessions, sessionHref, booking
     if (session.roomId) add(byRoom, session.roomId, block);
     else add(elsewhere, sessionWhere(session), block);
   }
-  for (const booking of bookings) {
+  for (const booking of withoutSessionBookings(bookings, sessions)) {
     if (booking.isSession) continue;
     const span = spanOn(date, booking.startsAt, booking.endsAt);
     if (!span) continue;

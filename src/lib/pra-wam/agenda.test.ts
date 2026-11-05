@@ -28,6 +28,16 @@ describe("check-in status on Detail sesi", () => {
     expect(checkInText({ kind: "belum", opens: "2026-11-26T05:30:00.000Z", closes: "2026-11-26T08:30:00.000Z" }, at("2026-11-24T01:00:00Z")).body).toMatch(/^QR sesi ini berlaku Kam.*26 Nov.*, 12\.30–15\.30\.$/);
     expect(checkInText({ kind: "buka", closes: "2026-11-26T08:30:00.000Z" }, at("2026-11-26T06:00:00Z")).title).toBe("Terdaftar · belum absen");
   });
+  it("says how the person checked in, and points to Saya hadir once it exists", () => {
+    const session = { status: "terbit" as const, isParticipant: true, startsAt: "2026-11-26T06:00:00Z", endsAt: "2026-11-26T08:00:00Z" };
+    expect(checkInStatus(session, { ready: true, checkedInAt: "2026-11-26T02:42:00Z", method: "offline" }, at("2026-11-26T03:00:00Z"))).toEqual({ kind: "hadir", at: "2026-11-26T02:42:00Z", method: "offline" });
+    expect(checkInText({ kind: "hadir", at: "2026-11-26T02:42:00Z", method: "offline" }, at("2026-11-26T03:00:00Z")).title).toBe("Hadir 09.42 · di kantor");
+    expect(checkInText({ kind: "hadir", at: "2026-11-26T02:42:00Z", method: "online" }, at("2026-11-26T03:00:00Z")).title).toBe("Hadir 09.42 · online (Zoom)");
+    expect(checkInText({ kind: "hadir", at: "2026-11-26T02:42:00Z", method: "qr" }, at("2026-11-26T03:00:00Z")).title).toBe("Hadir 09.42 · scan QR");
+    expect(checkInText({ kind: "hadir", at: "2026-11-26T02:42:00Z", method: "manual" }, at("2026-11-26T03:00:00Z")).title).toBe("Hadir 09.42 · dicatat panitia");
+    expect(checkInText({ kind: "belum", opens: "2026-11-26T02:30:00.000Z", closes: "2026-11-26T05:30:00.000Z" }, at("2026-11-26T01:00:00Z"), { self: true }).body).toBe("Absen dibuka 30 menit sebelum mulai (09.30).");
+    expect(checkInText({ kind: "buka", closes: "2026-11-26T05:30:00.000Z" }, at("2026-11-26T03:00:00Z"), { self: true }).body).toMatch(/^Ketuk Saya hadir/);
+  });
 });
 
 describe("which day and item Agenda opens", () => {

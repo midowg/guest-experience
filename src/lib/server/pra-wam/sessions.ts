@@ -2,13 +2,14 @@ import "server-only";
 import { cache } from "react";
 import { clockLabel, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
-import { sessionProblems, sessionSpan, type RoomUse, type Session, type SessionInput, type SessionStatus } from "@/lib/pra-wam/sessions";
+import { BOOKING_SESSION_LOCKED, sessionProblems, sessionSpan, type RoomUse, type Session, type SessionInput, type SessionStatus } from "@/lib/pra-wam/sessions";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { isR2Configured, removeObjects } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
 import { notifySession } from "./announcements";
 import { listPeople, listRooms } from "./appraisal";
+import { withBookingLink } from "./booking-sessions";
 import { listEvents } from "./events";
 import { type Member } from "./session";
 
@@ -26,8 +27,15 @@ function fail(error: { code?: string; message: string }): never {
   databaseError(error);
 }
 
-type SessionRow = { id: string; title: string; kind: Session["kind"]; description: string; status: SessionStatus; plan_from: string | null; plan_to: string | null; starts_at: string | null; ends_at: string | null; room_id: string | null; location: string };
-const columns = "id,title,kind,description,status,plan_from,plan_to,starts_at,ends_at,room_id,location";
+type SessionRow = {
+  id: string; title: string; kind: Session["kind"]; description: string; status: SessionStatus; plan_from: string | null; plan_to: string | null;
+  starts_at: string | null; ends_at: string | null; room_id: string | null; location: string; created_by: string | null;
+  /** Migration 202611050004; absent before it. */
+  booking_id?: string | null;
+};
+const baseColumns = "id,title,kind,description,status,plan_from,plan_to,starts_at,ends_at,room_id,location,created_by";
+/** With the booking link once migration 202611050004 is there (withBookingLink). */
+const columns = (withLink: boolean) => withLink ? `${baseColumns},booking_id` : baseColumns;
 
 /** The Pra WAM event sessions belong to. */
 async function praWamEventId(): Promise<string> {
@@ -47,6 +55,7 @@ async function shape(rows: SessionRow[], viewer: Member): Promise<Session[]> {
   if (error) fail(error);
   const all = seesAllSessions(viewer);
   const byId = new Map(people.map(person => [person.id, { id: person.id, name: person.name, department: person.department }]));
+  const person = (id: string) => byId.get(id) ?? { id, name: "Tanpa nama", department: "" };
   return rows.map(row => {
     const ids = (links ?? []).filter(link => link.session_id === row.id).map(link => link.employee_id);
     return {
@@ -54,7 +63,9 @@ async function shape(rows: SessionRow[], viewer: Member): Promise<Session[]> {
       planFrom: row.plan_from, planTo: row.plan_to, startsAt: row.starts_at, endsAt: row.ends_at,
       roomId: row.room_id, roomName: rooms.find(room => room.id === row.room_id)?.name ?? null, location: row.location,
       participantCount: ids.length, isParticipant: ids.includes(viewer.id),
-      participants: all ? ids.map(id => byId.get(id) ?? { id, name: "Tanpa nama", department: "" }).sort((a, b) => a.name.localeCompare(b.name)) : null,
+      participants: all ? ids.map(person).sort((a, b) => a.name.localeCompare(b.name)) : null,
+      // The booker made it (created_by), so their name rides along.
+      booking: row.booking_id ? { id: row.booking_id, bookedBy: person(row.created_by ?? "") } : null,
     };
   });
 }
@@ -64,25 +75,28 @@ const order = (a: Session, b: Session) => (a.startsAt ?? `${a.planFrom ?? "9999"
 /** Panitia, BOD and admin: every session. Anyone else: the published ones they take part in. */
 async function listSessionsUncached(viewer: Member): Promise<{ sessions: Session[]; migrated: boolean }> {
   const client = createPrivilegedClient();
-  let query = client.from("pw_sessions").select(columns);
+  let ids: string[] | null = null;
   if (!seesAllSessions(viewer)) {
     const { data: links, error } = await client.from("pw_session_participants").select("session_id").eq("employee_id", viewer.id);
     if (error) { if (missing(error)) return { sessions: [], migrated: false }; databaseError(error); }
-    const ids = (links ?? []).map(link => link.session_id);
+    ids = (links ?? []).map(link => link.session_id as string);
     if (!ids.length) return { sessions: [], migrated: true };
-    query = query.eq("status", "terbit").in("id", ids);
   }
-  const { data, error } = await query.limit(500);
+  const only = ids;
+  const { data, error } = await withBookingLink(withLink => {
+    const query = client.from("pw_sessions").select(columns(withLink));
+    return (only ? query.eq("status", "terbit").in("id", only) : query).limit(500);
+  });
   if (error) { if (missing(error)) return { sessions: [], migrated: false }; databaseError(error); }
-  return { sessions: (await shape((data ?? []) as SessionRow[], viewer)).sort(order), migrated: true };
+  return { sessions: (await shape((data ?? []) as unknown as SessionRow[], viewer)).sort(order), migrated: true };
 }
 /** Read once per request, however many parts of the page ask. */
 export const listSessions = cache(listSessionsUncached);
 
 export async function getSession(id: string, viewer: Member): Promise<Session> {
-  const { data, error } = await createPrivilegedClient().from("pw_sessions").select(columns).eq("id", id).maybeSingle();
+  const { data, error } = await withBookingLink(withLink => createPrivilegedClient().from("pw_sessions").select(columns(withLink)).eq("id", id).maybeSingle());
   if (error) fail(error);
-  const [session] = data ? await shape([data as SessionRow], viewer) : [];
+  const [session] = data ? await shape([data as unknown as SessionRow], viewer) : [];
   if (!session || (!seesAllSessions(viewer) && !(session.status === "terbit" && session.isParticipant))) throw new ServiceError(404, "Sesi tidak ditemukan.");
   return session;
 }
@@ -99,14 +113,20 @@ export async function roomUses(date: string): Promise<RoomUse[]> {
   const sessionIds = holds.filter(hold => hold.source === "sesi").map(hold => hold.source_id);
   const [{ data: bookings }, { data: sessions }, people] = await Promise.all([
     bookingIds.length ? client.from("pw_room_bookings").select("id,title,booked_by").in("id", bookingIds) : Promise.resolve({ data: [] as { id: string; title: string; booked_by: string }[] }),
-    sessionIds.length ? client.from("pw_sessions").select("id,title").in("id", sessionIds) : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+    sessionIds.length
+      ? withBookingLink(withLink => client.from("pw_sessions").select(withLink ? "id,title,created_by,booking_id" : "id,title,created_by").in("id", sessionIds))
+      : Promise.resolve({ data: [] }),
     listPeople(),
   ]);
+  const named = (id: string | null | undefined, fallback: string) => people.find(person => person.id === id)?.name ?? fallback;
+  const sessionRows = (sessions ?? []) as unknown as { id: string; title: string; created_by: string | null; booking_id?: string | null }[];
   return holds.map(hold => {
     const booking = bookings?.find(item => item.id === hold.source_id);
+    const session = sessionRows.find(item => item.id === hold.source_id);
+    // A booking's session holds the room instead of the booking (202611050004): named like a booking.
     const label = hold.source === "booking"
-      ? `${booking?.title ?? "Booking ruang"} (${people.find(person => person.id === booking?.booked_by)?.name ?? "pemesan"})`
-      : sessions?.find(item => item.id === hold.source_id)?.title ?? "Sesi";
+      ? `${booking?.title ?? "Booking ruang"} (${named(booking?.booked_by, "pemesan")})`
+      : session?.booking_id ? `${session.title} (${named(session.created_by, "pemesan")})` : session?.title ?? "Sesi";
     return { roomId: hold.room_id, startsAt: hold.starts_at, endsAt: hold.ends_at, source: hold.source as RoomUse["source"], sourceId: hold.source_id, label };
   });
 }
@@ -127,6 +147,8 @@ async function roomTakenError(input: SessionInput, ignoreId?: string): Promise<S
 export async function saveSession(input: SessionInput, viewer: Member, options: { id?: string; publish?: boolean } = {}): Promise<Session> {
   requireManager(viewer);
   const current = options.id ? await getSession(options.id, viewer) : null;
+  // Its time, room and people follow the booking; changing them here would split the two.
+  if (current?.booking) throw new ServiceError(409, BOOKING_SESSION_LOCKED);
   const publish = options.publish ?? current?.status === "terbit";
   const problems = sessionProblems(input, publish);
   if (Object.keys(problems).length) throw new ServiceError(422, "Periksa kembali isian sesi.", Object.fromEntries(Object.entries(problems).map(([key, message]) => [key, [message]])));
@@ -165,7 +187,16 @@ export async function saveSession(input: SessionInput, viewer: Member, options: 
 export async function setSessionStatus(id: string, status: Exclude<SessionStatus, "terbit">, viewer: Member): Promise<Session> {
   requireManager(viewer);
   const before = await getSession(id, viewer);
-  const { error } = await createPrivilegedClient().from("pw_sessions").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+  const client = createPrivilegedClient();
+  if (before.booking) {
+    // Panitia may cancel a booking's session, which cancels the booking (the database does the
+    // same from either side); cancelling the booking first records who did it.
+    if (status !== "batal") throw new ServiceError(409, `${BOOKING_SESSION_LOCKED} Panitia hanya bisa membatalkannya.`);
+    const stamp = new Date().toISOString();
+    const { error } = await client.from("pw_room_bookings").update({ status: "batal", cancelled_by: viewer.id, cancelled_at: stamp, updated_at: stamp }).eq("id", before.booking.id).eq("status", "aktif");
+    if (error) fail(error);
+  }
+  const { error } = await client.from("pw_sessions").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) {
     if (error.code === "23P01") throw new ServiceError(409, "Ruang sesi ini sudah dipakai yang lain. Pilih ruang lain dulu.");
     fail(error);

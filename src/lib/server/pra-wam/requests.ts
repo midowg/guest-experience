@@ -2,6 +2,7 @@ import "server-only";
 import { clockLabel, wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import { spanLabel, type RequestInput, type RequestStatus, type ScheduleRequest } from "@/lib/pra-wam/requests";
 import { managesSessions } from "@/lib/pra-wam/roles";
+import { BOOKING_SESSION_LOCKED } from "@/lib/pra-wam/sessions";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -52,6 +53,7 @@ async function shape(rows: Row[]): Promise<ScheduleRequest[]> {
 export async function requestChange(sessionId: string, input: RequestInput, member: Member): Promise<ScheduleRequest> {
   const session = await getSession(sessionId, member);
   if (!session.isParticipant) throw new ServiceError(403, "Hanya peserta sesi yang bisa mengajukan ganti jadwal.");
+  if (session.booking) throw new ServiceError(409, `Sesi ini dari booking ruang ${session.booking.bookedBy.name}; minta pemesannya mengubah booking.`);
   if (session.status !== "terbit" || !session.startsAt || !session.endsAt) throw new ServiceError(409, "Sesi ini belum terbit atau belum punya jadwal.");
   if (new Date(session.endsAt) < new Date()) throw new ServiceError(409, "Sesi ini sudah lewat.");
   const toStartsAt = wibInstant(input.date, input.start), toEndsAt = wibInstant(input.date, input.end);
@@ -116,6 +118,7 @@ export async function reviewRequest(id: string, approve: boolean, note: string, 
   if (approve) {
     if (!request.stillCurrent) throw new ServiceError(409, "Jadwal sesi sudah berubah sejak permintaan ini diajukan. Tolak permintaan ini, atau ubah sesi langsung.");
     const session = await getSession(request.sessionId, viewer);
+    if (session.booking) throw new ServiceError(409, `${BOOKING_SESSION_LOCKED} Tolak permintaan ini.`);
     const roomId = request.toRoomId ?? session.roomId;
     const { data: moved, error: moveError } = await client.from("pw_sessions")
       .update({ starts_at: request.toStartsAt, ends_at: request.toEndsAt, room_id: roomId, ...(roomId ? { location: "" } : {}), updated_at: new Date().toISOString() })

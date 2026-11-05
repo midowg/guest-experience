@@ -1,0 +1,17 @@
+/* SelfCheckIn.tsx: "Saya hadir" under the check-in block, and its small dialog (avatar.module.css's chooser). --pw-* tokens only. */
+.block { display: grid; gap: 10px; justify-items: start; }
+.hadir { min-height: 48px; }
+.hadir:disabled { cursor: not-allowed; }
+@media (max-width: 639px) { .block { justify-items: stretch; } .hadir { width: 100%; } }
+
+.wide { width: min(100% - 48px, 24rem); }
+.choice { min-height: 68px; }
+.choice svg { width: 24px; height: 24px; }
+.choiceText { display: grid; gap: 2px; }
+.choiceText small { font-size: 13px; font-weight: 500; color: var(--pw-muted); }
+
+.preview { display: block; box-sizing: border-box; width: calc(100% - 40px); max-height: 220px; margin: 0 20px 12px; border: 1px solid var(--pw-line); border-radius: 12px; background: var(--pw-surface-soft); object-fit: contain; }
+.send { display: grid; gap: 8px; padding: 12px 20px 16px; border-top: 1px solid var(--pw-line); }
+.send :global(.button) { width: 100%; min-height: 48px; }
+.dialogStatus { padding: 0 20px 12px; }
+.dialogStatus:empty { display: none; }

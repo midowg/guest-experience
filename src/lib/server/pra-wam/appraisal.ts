@@ -6,6 +6,7 @@ import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
+import { deleteBookingAndSession, notifyBookingSession, withBookingLink } from "./booking-sessions";
 import { appraisalOpen } from "./events";
 import { notMigrated, waitingForMigration, type Member } from "./session";
 
@@ -13,6 +14,8 @@ import { notMigrated, waitingForMigration, type Member } from "./session";
  * Appraisal room bookings. Anyone signed in books for themself; the database settles two people
  * reaching for the same room at once. Everyone sees who booked which room and for what; the
  * participants are only sent to the booker, the participants, and panitia, BOD and admin.
+ * Since migration 202611050004 every active booking is also a published session (the database
+ * keeps them in step); the schedules here still show it once, as the booking.
  */
 
 type BookingRow = { id: string; room_id: string; title: string; description: string; starts_at: string; ends_at: string; booked_by: string };
@@ -94,7 +97,8 @@ async function activeBetween(first: string, last: string): Promise<BookingRow[]>
 
 /**
  * Sessions that hold a room on those days (migration 202611040004), as schedule entries. Nothing
- * before that migration.
+ * before that migration. A booking's own session (202611050004) is left out: the booking itself
+ * is on the schedule already, so the room use counts once.
  */
 const sessionsOn = (date: string) => sessionsBetween(date, date);
 async function sessionsBetween(first: string, last: string): Promise<Booking[]> {
@@ -102,9 +106,11 @@ async function sessionsBetween(first: string, last: string): Promise<Booking[]> 
   const client = createPrivilegedClient();
   const { data: holds, error } = await client.from("pw_room_holds").select("source_id,room_id,starts_at,ends_at").eq("source", "sesi").lt("starts_at", to).gt("ends_at", from);
   if (error || !holds?.length) return [];
-  const { data: sessions } = await client.from("pw_sessions").select("id,title").in("id", holds.map(hold => hold.source_id));
-  return holds.map(hold => ({
-    id: `sesi:${hold.source_id}`, roomId: hold.room_id, title: sessions?.find(item => item.id === hold.source_id)?.title ?? "Sesi Pra WAM", description: "",
+  const { data } = await withBookingLink(withLink => client.from("pw_sessions").select(withLink ? "id,title,booking_id" : "id,title").in("id", holds.map(hold => hold.source_id)));
+  const sessions = (data ?? []) as unknown as { id: string; title: string; booking_id?: string | null }[];
+  const fromBookings = new Set(sessions.filter(item => item.booking_id).map(item => item.id));
+  return holds.filter(hold => !fromBookings.has(hold.source_id)).map(hold => ({
+    id: `sesi:${hold.source_id}`, roomId: hold.room_id, title: sessions.find(item => item.id === hold.source_id)?.title ?? "Sesi Pra WAM", description: "",
     startsAt: hold.starts_at, endsAt: hold.ends_at, bookedBy: { id: "", name: "Panitia Pra WAM", department: "" }, participants: null, isSession: true,
   }));
 }
@@ -183,7 +189,7 @@ async function requireOwn(id: string, viewer: Member) {
 export async function saveBooking(input: BookingInput, viewer: Member, options: { id?: string; confirmed?: boolean; now?: Date } = {}): Promise<Booking> {
   const now = options.now ?? new Date();
   if (!await appraisalOpen()) throw new ServiceError(409, "Booking ruang appraisal sedang ditutup oleh admin Pra WAM.");
-  if (options.id) await requireOwn(options.id, viewer);
+  const before = options.id ? await requireOwn(options.id, viewer) : null;
   const problems = bookingProblems(input, now);
   if (Object.keys(problems).length) throw new ServiceError(422, "Periksa kembali tanggal dan jam.", Object.fromEntries(Object.entries(problems).map(([key, message]) => [key, [message]])));
   // The room must suit how many come (the same rule the form uses): no one-on-one in the big room.
@@ -220,8 +226,18 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
     if (error.code === "23503") throw new ServiceError(422, "Ada partisipan atau ruang yang tidak dikenal. Muat ulang halaman.");
     fail(error);
   }
-  return getBooking(data as string, viewer);
+  const saved = await getBooking(data as string, viewer);
+  // Its session was saved with it (same transaction); the people in it hear as for any session.
+  const moved = before && (before.startsAt !== saved.startsAt || before.endsAt !== saved.endsAt || before.roomId !== saved.roomId);
+  if (!before || moved) await notifyBookingSession(saved.id, before ? "berubah" : "terbit", await bookingFacts(saved), viewer);
+  return saved;
 }
+
+/** What a note about a booking's session says. */
+const bookingFacts = async (booking: Booking) => ({
+  title: booking.title, startsAt: booking.startsAt, endsAt: booking.endsAt,
+  roomName: (await listRooms()).find(room => room.id === booking.roomId)?.name ?? null,
+});
 
 /** The second person to save gets who took the room, and the nearest free options. */
 async function roomTaken(input: BookingInput, viewer: Member, now: Date, ignoreId?: string): Promise<BookingConflict> {
@@ -248,11 +264,14 @@ export async function cancelBooking(id: string, viewer: Member): Promise<void> {
     .update({ status: "batal", cancelled_by: viewer.id, cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", id).eq("status", "aktif");
   if (error) fail(error);
+  // Its session was cancelled with it (trigger); its people hear, except whoever cancelled.
+  await notifyBookingSession(id, "batal", await bookingFacts(booking), viewer);
 }
 
 /**
  * Removes a booking for good (a test or a mistake), not just cancels it: the booker, panitia or
- * admin. The room hold goes with it (trigger), so the slot is free at once.
+ * admin. The room hold goes with it (trigger), so the slot is free at once, and so does its
+ * session with that session's documents and notifications.
  */
 export async function deleteBooking(id: string, viewer: Member): Promise<void> {
   const client = createPrivilegedClient();
@@ -260,6 +279,6 @@ export async function deleteBooking(id: string, viewer: Member): Promise<void> {
   if (error) fail(error);
   if (!data) throw new ServiceError(404, "Booking tidak ditemukan.");
   if (data.booked_by !== viewer.id && !cancelsAnyBooking(viewer)) throw new ServiceError(403, "Hanya pemesan atau panitia yang bisa menghapus booking ini.");
-  const { error: deleteError } = await client.from("pw_room_bookings").delete().eq("id", id);
+  const deleteError = await deleteBookingAndSession(id);
   if (deleteError) fail(deleteError);
 }

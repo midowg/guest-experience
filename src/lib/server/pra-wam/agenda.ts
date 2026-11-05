@@ -1,13 +1,15 @@
 import "server-only";
-import type { AgendaBooking, SessionView } from "@/lib/pra-wam/agenda";
+import type { AgendaBooking, MyAttendance, SessionView } from "@/lib/pra-wam/agenda";
+import { asMethod } from "@/lib/pra-wam/attendance";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
-import { sessionKindLabels, sessionWhere, type Session } from "@/lib/pra-wam/sessions";
+import { sessionKindLabels, sessionWhere, withoutSessionBookings, type Session } from "@/lib/pra-wam/sessions";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listRooms, myBookings } from "./appraisal";
 import { listDocuments } from "./documents";
+import { proofColumnMissing } from "./attendance";
 import { myRequests } from "./requests";
 import type { Member } from "./session";
 import { getSession, listSessions } from "./sessions";
@@ -17,7 +19,9 @@ import { getSession, listSessions } from "./sessions";
  * and their appraisal bookings, from today on, with whether they have checked in and how many
  * documents each session has ("Bahan 3" in Penpot P2). Attendance (migration 202611040005) may
  * not be there yet; everything here keeps working without it. An item opens over the page
- * (AgendaSheet): a booking with what it carries here, a session from its detail API.
+ * (AgendaSheet): a booking with what it carries here, a session from its detail API. A booking
+ * that is also a session (migration 202611050004) is listed once, as the session, still carrying
+ * the booking so its booker can change or cancel it from there.
  */
 
 export type AgendaItem = {
@@ -25,8 +29,10 @@ export type AgendaItem = {
   tag: string; where: string; sessionId: string | null; checkedInAt: string | null;
   /** Documents of the session (0 for a booking). */
   materials: number;
-  /** A booking's detail (null for a session). */
+  /** A booking's detail: of the booking itself, or of the booking a session was made from; null otherwise. */
   booking: AgendaBooking | null;
+  /** The booking's id (the item's key for a booking, the session's booking for a session); null otherwise. */
+  bookingId?: string | null;
 };
 
 /** Attendance or its QR column is not in the database yet. */
@@ -50,29 +56,43 @@ export async function agendaItems(member: Member, today: string): Promise<{ item
     for (const row of attendance.data ?? []) checkIns.set(row.session_id, row.checked_in_at);
     for (const row of documents.data ?? []) materials.set(row.session_id, (materials.get(row.session_id) ?? 0) + 1);
   }
+  const detail = (booking: (typeof bookings)[number]): AgendaBooking => ({
+    room: rooms.find(item => item.id === booking.roomId)?.name ?? "Ruang", bookedBy: booking.bookedBy,
+    mine: booking.bookedBy.id === member.id, participants: booking.participants, description: booking.description,
+  });
   const items: AgendaItem[] = [
-    ...mine.map(session => ({
-      key: session.id, kind: "sesi" as const, startsAt: session.startsAt!, endsAt: session.endsAt!, title: session.title,
-      tag: sessionKindLabels[session.kind], where: sessionWhere(session), sessionId: session.id, checkedInAt: checkIns.get(session.id) ?? null,
-      materials: materials.get(session.id) ?? 0, booking: null,
-    })),
-    ...bookings.map(booking => {
-      const room = rooms.find(item => item.id === booking.roomId)?.name ?? "Ruang";
+    ...mine.map(session => {
+      const booking = session.booking ? bookings.find(item => item.id === session.booking!.id) : undefined;
+      return {
+        key: session.id, kind: "sesi" as const, startsAt: session.startsAt!, endsAt: session.endsAt!, title: session.title,
+        tag: sessionKindLabels[session.kind], where: sessionWhere(session), sessionId: session.id, checkedInAt: checkIns.get(session.id) ?? null,
+        materials: materials.get(session.id) ?? 0, booking: booking ? detail(booking) : null, bookingId: session.booking?.id ?? null,
+      };
+    }),
+    // A booking that is a session already shows as that session.
+    ...withoutSessionBookings(bookings, mine).map(booking => {
+      const shown = detail(booking);
       return {
         key: booking.id, kind: "appraisal" as const, startsAt: booking.startsAt, endsAt: booking.endsAt, title: booking.title,
-        tag: "Book ruang", where: room, sessionId: null, checkedInAt: null, materials: 0,
-        booking: { room, bookedBy: booking.bookedBy, mine: booking.bookedBy.id === member.id, participants: booking.participants, description: booking.description },
+        tag: "Book ruang", where: shown.room, sessionId: null, checkedInAt: null, materials: 0, booking: shown, bookingId: booking.id,
       };
     }),
   ].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   return { items, migrated };
 }
 
-/** The person's check-in for a session, and whether attendance exists at all yet. */
-export async function myAttendance(sessionId: string, member: Member): Promise<{ ready: boolean; checkedInAt: string | null }> {
-  const { data, error } = await createPrivilegedClient().from("pw_attendance").select("checked_in_at").eq("session_id", sessionId).eq("employee_id", member.id).maybeSingle();
-  if (error) { if (attendanceMissing(error)) return { ready: false, checkedInAt: null }; databaseError(error); }
-  return { ready: true, checkedInAt: data?.checked_in_at ?? null };
+/**
+ * The person's check-in for a session and how it was made, whether attendance exists at all yet,
+ * and whether "Saya hadir" does (its proof column, migration 202611050003).
+ */
+export async function myAttendance(sessionId: string, member: Member): Promise<MyAttendance> {
+  const read = (columns: string) => createPrivilegedClient().from("pw_attendance").select(columns).eq("session_id", sessionId).eq("employee_id", member.id).maybeSingle();
+  let selfReady = true;
+  let { data, error } = await read("checked_in_at,method,proof_key");
+  if (error && proofColumnMissing(error)) { selfReady = false; ({ data, error } = await read("checked_in_at,method")); }
+  if (error) { if (attendanceMissing(error)) return { ready: false, checkedInAt: null, method: null, selfReady: false }; databaseError(error); }
+  const row = data as { checked_in_at: string; method: string } | null;
+  return { ready: true, checkedInAt: row?.checked_in_at ?? null, method: asMethod(row?.method), selfReady };
 }
 
 /**
@@ -103,7 +123,7 @@ export async function sessionView(id: string, member: Member): Promise<SessionVi
   }
   const [{ documents, storage }, attendance, requests, rooms] = await Promise.all([
     listDocuments(member, session.id).catch(() => ({ documents: [], migrated: false, storage: false })),
-    session.isParticipant ? myAttendance(session.id, member) : Promise.resolve({ ready: false, checkedInAt: null }),
+    session.isParticipant ? myAttendance(session.id, member) : Promise.resolve({ ready: false, checkedInAt: null, method: null, selfReady: false }),
     session.isParticipant ? myRequests(session.id, member) : Promise.resolve([]),
     listRooms(),
   ]);

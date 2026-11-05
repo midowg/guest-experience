@@ -216,6 +216,12 @@ export const praWamApi = {
   sessionQr: (id: string) => `${WAM_API}/sessions/${id}/qr`,
   /** GET: who is present; POST: panitia marks someone present or not. */
   sessionAttendance: (id: string) => `${WAM_API}/sessions/${id}/attendance`,
+  /** GET (panitia and BOD): one online check-in's Zoom screenshot, a redirect to storage. */
+  attendanceProof: (sessionId: string, employeeId: string) => `${WAM_API}/sessions/${sessionId}/attendance/${employeeId}/proof`,
+  /** POST {mode: "offline"} or {mode: "online", proof}: "Saya hadir", the participant signs in. */
+  selfCheckIn: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in`,
+  /** POST {mime, size}: an upload address for the Zoom screenshot of an online check-in. */
+  selfCheckInProof: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/check-in/proof`,
   /** What holds each room on a day (bookings and sessions), for picking a session's room. */
   roomUses: (date: string) => `${WAM_API}/rooms?date=${date}`,
   /** Documents: ask for an upload address, then register the uploaded file; one document by id. */

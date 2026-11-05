@@ -20,7 +20,28 @@ export type Session = {
   participantCount: number; isParticipant: boolean;
   /** Only for panitia, BOD and admin. */
   participants: Person[] | null;
+  /**
+   * The room booking this session was made from (migration 202611050004), with who booked it.
+   * Its time, room and people follow the booking, so it is changed there; null otherwise.
+   */
+  booking?: { id: string; bookedBy: Person } | null;
 };
+
+/** What panitia sees when trying to change a booking's session here. */
+export const BOOKING_SESSION_LOCKED = "Sesi ini dari booking ruang; ubah lewat booking.";
+
+/** "Dari booking · dipesan Ayu Lestari", the pill on a booking's session; null for other sessions. */
+export const bookingSessionLabel = (session: Pick<Session, "booking">) => session.booking ? `Dari booking · dipesan ${session.booking.bookedBy.name}` : null;
+
+/**
+ * A booking that has its own session is shown once, as that session: the bookings left over once
+ * the sessions are listed (Agenda, Beranda, Ringkasan, Linimasa). Only a published session counts,
+ * so a booking whose session is somehow not published still shows as a booking.
+ */
+export function withoutSessionBookings<T extends { id: string }>(bookings: readonly T[], sessions: readonly Pick<Session, "status" | "booking">[]): T[] {
+  const held = new Set(sessions.flatMap(session => session.status === "terbit" && session.booking ? [session.booking.id] : []));
+  return held.size ? bookings.filter(booking => !held.has(booking.id)) : [...bookings];
+}
 
 /** What uses a room on a day: an appraisal booking or another session. */
 export type RoomUse = { roomId: string; startsAt: string; endsAt: string; source: "booking" | "sesi"; sourceId: string; label: string };

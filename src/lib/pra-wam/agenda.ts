@@ -1,4 +1,4 @@
-import { checkInWindow, windowState } from "./attendance";
+import { CHECK_IN_MARGIN_MINUTES, checkInWindow, ownMethodLabels, windowState, type AttendanceMethod } from "./attendance";
 import { clockLabel, wibDate, wibTime, type Person, type Room } from "./appraisal";
 import type { PraWamDocument } from "./documents";
 import type { ScheduleRequest } from "./requests";
@@ -11,7 +11,7 @@ import type { Session } from "./sessions";
 
 /** Where the person stands with a session's check-in; null when there is nothing to show. */
 export type CheckInStatus =
-  | { kind: "hadir"; at: string }
+  | { kind: "hadir"; at: string; method?: AttendanceMethod | null }
   | { kind: "belum"; opens: string; closes: string }
   | { kind: "buka"; closes: string }
   | { kind: "tutup" }
@@ -20,11 +20,11 @@ export type CheckInStatus =
 
 export function checkInStatus(
   session: Pick<Session, "status" | "isParticipant" | "startsAt" | "endsAt">,
-  attendance: { ready: boolean; checkedInAt: string | null },
+  attendance: MyAttendance,
   now: Date,
 ): CheckInStatus | null {
   if (!session.isParticipant || session.status !== "terbit" || !session.startsAt || !session.endsAt) return null;
-  if (attendance.checkedInAt) return { kind: "hadir", at: attendance.checkedInAt };
+  if (attendance.checkedInAt) return { kind: "hadir", at: attendance.checkedInAt, ...(attendance.method ? { method: attendance.method } : {}) };
   if (!attendance.ready) return { kind: "tidak-tersedia" };
   const window = checkInWindow(session.startsAt, session.endsAt);
   const state = windowState(window, now);
@@ -34,13 +34,19 @@ export function checkInStatus(
 
 const short = (iso: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 
-/** The block's words: a short title and a line that says what to do. */
-export function checkInText(status: CheckInStatus, now: Date): { title: string; body: string } {
+/**
+ * The block's words: a short title and a line that says what to do. With `self` ("Saya hadir" is
+ * there, migration 202611050003) the words point to the button as well as the QR.
+ */
+export function checkInText(status: CheckInStatus, now: Date, { self = false }: { self?: boolean } = {}): { title: string; body: string } {
   switch (status.kind) {
-    case "hadir": return { title: "Hadir", body: `Absen tercatat ${clockLabel(wibTime(status.at))}.` };
-    case "buka": return { title: "Terdaftar · belum absen", body: "Scan QR yang ditempel di ruang memakai ponselmu." };
+    case "hadir": return status.method
+      ? { title: `Hadir ${clockLabel(wibTime(status.at))} · ${ownMethodLabels[status.method]}`, body: "Kehadiranmu sudah tercatat." }
+      : { title: "Hadir", body: `Absen tercatat ${clockLabel(wibTime(status.at))}.` };
+    case "buka": return { title: "Terdaftar · belum absen", body: self ? "Ketuk Saya hadir, atau scan QR yang ditempel di ruang." : "Scan QR yang ditempel di ruang memakai ponselmu." };
     case "belum": {
       const day = wibDate(status.opens) === wibDate(now.toISOString()) ? "" : `${short(status.opens)}, `;
+      if (self) return { title: "Terdaftar · absen belum dibuka", body: `Absen dibuka ${CHECK_IN_MARGIN_MINUTES} menit sebelum mulai (${day}${clockLabel(wibTime(status.opens))}).` };
       return { title: "Terdaftar · absen belum dibuka", body: `QR sesi ini berlaku ${day}${clockLabel(wibTime(status.opens))}–${clockLabel(wibTime(status.closes))}.` };
     }
     case "tutup": return { title: "Absen sudah ditutup", body: "Kehadiranmu belum tercatat. Hubungi panitia kalau kamu hadir." };
@@ -100,10 +106,16 @@ export type AgendaBooking = { room: string; bookedBy: Person; mine: boolean; par
  * (GET /api/wam/sessions/<id>/detail). A participant's session that is not published (yet) or was
  * cancelled is "menunggu": enough to say so.
  */
+/**
+ * The person's own check-in for a session: whether attendance exists at all (202611040005),
+ * whether "Saya hadir" does (202611050003), and when and how they were signed in.
+ */
+export type MyAttendance = { ready: boolean; checkedInAt: string | null; method?: AttendanceMethod | null; selfReady?: boolean };
+
 export type SessionView =
   | {
     kind: "sesi"; session: Session; documents: PraWamDocument[]; storage: boolean;
-    attendance: { ready: boolean; checkedInAt: string | null }; requests: ScheduleRequest[]; rooms: Room[];
+    attendance: MyAttendance; requests: ScheduleRequest[]; rooms: Room[];
     viewer: { name: string; manage: boolean; staff: boolean };
   }
   | { kind: "menunggu"; session: Pick<Session, "id" | "title" | "status" | "planFrom" | "planTo" | "startsAt" | "endsAt"> };

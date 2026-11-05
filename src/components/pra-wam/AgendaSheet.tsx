@@ -117,6 +117,13 @@ export function AgendaSheet({ items, version, cancelsAny, bookingOpen }: Props) 
   } else if (item && view?.kind === "sesi") {
     body = <SessionDetailBody view={view} now={now} />;
     footer = sessionDetailActions({ view, now }, true);
+    // A session made from a booking (202611050004) is changed or cancelled as the booking, by its booker or panitia.
+    const fromBooking: BookingItem | null = item.booking && item.bookingId ? { key: item.bookingId, title: item.title, startsAt: item.startsAt, endsAt: item.endsAt, booking: item.booking } : null;
+    const can = fromBooking ? bookingRights({ mine: fromBooking.booking.mine, endsAt: fromBooking.endsAt }, viewer, now) : null;
+    if (fromBooking && can && (can.edit || can.cancel)) {
+      const bookingFoot = <BookingDetailActions item={fromBooking} viewer={viewer} onDone={done} />;
+      footer = footer ? <div className={own.foot}>{footer}{bookingFoot}</div> : bookingFoot;
+    }
   } else if (item && view?.kind === "menunggu") {
     body = <WaitingSession session={view.session} bare />;
   } else if (item && error) {

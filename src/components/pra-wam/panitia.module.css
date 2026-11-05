@@ -6,6 +6,12 @@
 .live { background: var(--pw-primary-soft); color: var(--pw-primary); }
 .soon { background: var(--pw-surface-soft); color: var(--pw-muted); }
 .warn { background: var(--pw-warning-soft); color: var(--pw-warning); }
+/* Daftar hadir: an online check-in's "Lihat bukti" next to its pill (a 44 px target). */
+.proofCell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.proofLink { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 13px; font-weight: 700; color: var(--pw-primary); text-decoration: none; }
+.proofLink:hover { text-decoration: underline; }
+.proofLink:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; border-radius: 4px; }
+.proofLink svg { width: 16px; height: 16px; }
 .cardHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 .cardHead h2 { margin: 0; }
 .twoCol { display: grid; gap: 16px; margin-top: 16px; }
