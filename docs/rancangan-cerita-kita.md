@@ -1,8 +1,8 @@
 # Rancangan kuesioner personal WAM
 
 Status: tahap 1 dan 2 dibangun (4 November 2026). Tahap 3 sedang dibangun: **Kartu rekan** (galeri
-dan profil rekan), **Rekap**, **Ekspor**, dan **Kamar** sudah ada (5 November; Kamar menunggu migrasi
-202611050001); kebutuhan panitia dan ringkasan BOD belum. Tahap 4 belum. Ditulis 4 November 2026, diperbarui 5 November 2026.
+dan profil rekan), **Rekap**, **Ekspor**, **Kamar**, dan **Kebutuhan peserta** sudah ada (5 November;
+menunggu migrasi 202611050001 dan 202611050002); ringkasan BOD belum. Tahap 4 belum. Ditulis 4 November 2026, diperbarui 5 November 2026.
 
 Sumber: artifact mockup **"Cerita Kita WAM 2026"**
 (https://claude.ai/artifact/BwHcrRv8Wmcg4oRTNW5Uaq). Isinya 6 bagian, sekitar 60 pertanyaan, level
@@ -144,6 +144,13 @@ Kode di mockup dipetakan ke peran yang sudah ada:
 | `anon` | Anonim | Tidak ada yang bisa melihat per orang; hanya rangkuman |
 
 - BOD melihat rekap (tanpa `hronly`), tidak melihat jawaban per orang.
+- **Level per jawaban** (migrasi 202611050002): setiap jawaban menyimpan level pertanyaannya saat
+  diisi (`cq_answers.read_level`, dicap trigger database). Yang dipakai selalu level **paling ketat**
+  di antara level jawaban dan level pertanyaan sekarang, jadi melonggarkan level pertanyaan tidak
+  membuka jawaban yang diisi di bawah label yang lebih ketat. Berlaku di Kartu rekan, Rekap, Ekspor,
+  dan Kebutuhan peserta.
+- **14 dan 14b pindah dari `hr` ke `fasil`** (keputusan pemilik, 5 Nov 2026), supaya panitia
+  konsumsi tahu nama orangnya. Jawaban yang sudah masuk sebelum migrasi tetap `hr`.
 - Server yang menegakkan aturan ini di setiap API, bukan hanya tampilan.
 
 ## Data yang masuk ke akun WAM
@@ -154,7 +161,7 @@ Kode di mockup dipetakan ke peran yang sudah ada:
 | Nomor HP aktif (5) | Kontak darurat panitia selama acara |
 | Minat dan topik (17, 18), lagu (37), keahlian (E7), fakta unik (22, bila diizinkan) | Profil yang bisa dilihat rekan, ice breaking, playlist WAM |
 | Peran di tim (34), kesiapan fisik (35), hal tidak nyaman (36) | Penyusunan kelompok dan keamanan kegiatan (panitia) |
-| Makanan (14), alergi dan fobia (14b), ibadah (15), kesehatan (16) | Panitia konsumsi dan acara; kesehatan hanya HR |
+| Makanan (14), alergi dan fobia (14b), ibadah (15), kesehatan (16) | Panitia konsumsi dan acara (Kebutuhan peserta): 14 dan 14b dengan nama, ibadah hanya jumlah, kesehatan hanya HR |
 | Data menginap (33, 7–13, 38) | Pairing kamar dan kaos; **dihapus otomatis 30 hari setelah WAM** |
 | Kartu karakter | Foto profil (opsional), Beranda, profil rekan |
 
@@ -290,6 +297,21 @@ tidak memuat nama atau jawaban apa pun. Migrasi `202611050001_wam_stay_rooms.sql
   Bersama <nama> (<departemen>)". Hanya nama dan departemen teman sekamar, tanpa jawaban siapa pun.
   Bisa ditarik kembali; perubahan setelah terbit langsung terlihat.
 - Belum: tampilan "hasil pairing" untuk panitia kamar (tanpa Data HR), dan ekspor daftar kamar.
+
+## Kebutuhan peserta (tahap 3, dibangun)
+
+Kelola acara → **Kebutuhan peserta** (`/wam/manage/kebutuhan`), untuk Panitia dan Admin WAM (bukan
+BOD). Satu kartu per pertanyaan, aturannya di `src/lib/pra-wam/needs.ts`:
+
+| Pertanyaan | Yang dilihat panitia |
+|---|---|
+| Makanan (14), alergi dan fobia (14b) | Dengan nama dan departemen; jawaban lama (diisi saat masih HR) hanya dihitung |
+| Ibadah (15, `hr`) | Hanya jumlah yang mengisi; isinya diminta ke HR |
+| Kesiapan fisik (35), hal tidak nyaman (36) | Dengan nama (memang `fasil`) |
+| Ukuran kaos (38, `hr`) | Jumlah per ukuran, tanpa nama |
+| Kesehatan (16), nomor HP (5) | Tidak tampil; catatan bahwa HR menghubungi panitia bila perlu |
+
+Pilihan "Tidak ada" hanya berupa angka.
 
 ## Privasi dan penyimpanan
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarDays, ChevronLeft, ClipboardList, DoorOpen, FileText, Home, Send, User, Users, X } from "lucide-react";
-import { bodOnly, managesSessions, roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
+import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarDays, ChevronLeft, ClipboardList, DoorOpen, FileText, Home, Send, User, Users, Utensils, X } from "lucide-react";
+import { bodOnly, managesSessions, readsNeeds, roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { unreadCount } from "@/lib/server/pra-wam/announcements";
 import { openRequestCount } from "@/lib/server/pra-wam/requests";
@@ -10,7 +10,7 @@ import { Avatar } from "./Avatar";
 import { SignOutButton } from "./SignOutButton";
 import styles from "./pra-wam.module.css";
 
-export type Tab = "beranda" | "agenda" | "appraisal" | "dokumen" | "notifikasi" | "akun" | "dashboard" | "sesi" | "permintaan" | "pengumuman" | "peserta" | "survei";
+export type Tab = "beranda" | "agenda" | "appraisal" | "dokumen" | "notifikasi" | "akun" | "dashboard" | "sesi" | "permintaan" | "pengumuman" | "peserta" | "survei" | "kebutuhan";
 type Who = { roles: readonly PraWamRole[] };
 type Item = { id: Tab; label: string; href: string; icon: ReactNode; show?: (who: Who) => boolean; short?: string };
 
@@ -36,6 +36,7 @@ const manage: Item[] = [
   { id: "sesi", label: "Jadwal sesi", href: praWamPath.sessions, icon: <CalendarDays aria-hidden />, show: seesAllSessions },
   { id: "permintaan", label: "Permintaan jadwal", short: "Permintaan", href: praWamPath.requests, icon: <ArrowLeftRight aria-hidden />, show: managesSessions },
   { id: "pengumuman", label: "Pengumuman", href: praWamPath.announcements, icon: <Send aria-hidden />, show: managesSessions },
+  { id: "kebutuhan", label: "Kebutuhan peserta", short: "Kebutuhan", href: praWamPath.needs, icon: <Utensils aria-hidden />, show: readsNeeds },
 ];
 
 /** Every place in "Kelola acara", also those reached from inside it (Peserta, Survei) without a menu item of their own. */

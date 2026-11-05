@@ -1,5 +1,5 @@
 import "server-only";
-import type { AnswerValue, QForm } from "@/lib/pra-wam/questionnaire";
+import { answerLevel, type AnswerValue, type QForm } from "@/lib/pra-wam/questionnaire";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
@@ -66,10 +66,15 @@ export async function colleagueOf(form: Pick<QForm, "id">, employeeId: string): 
   const asked = questions.filter(question => question.visibility === "rekan" && !question.hidden && question.kind !== "consent" && shown.has(question.sectionId))
     .sort((a, b) => (shown.get(a.sectionId)!.sort - shown.get(b.sectionId)!.sort) || a.sort - b.sort);
   const { data, error } = asked.length
-    ? await createPrivilegedClient().from("cq_answers").select("question_id,value").eq("form_id", form.id).eq("employee_id", employeeId).in("question_id", asked.map(question => question.id))
+    ? await createPrivilegedClient().from("cq_answers").select("*").eq("form_id", form.id).eq("employee_id", employeeId).in("question_id", asked.map(question => question.id))
     : { data: [], error: null };
   if (error) { if (questionnaireMissing(error)) return { person: { id: person.id, name: person.name, department: person.department }, card, answers: [] }; databaseError(error); }
-  const values = new Map((data ?? []).map(item => [item.question_id as string, item.value as AnswerValue]));
+  // "*": read_level comes along once migration 202611050002 is in, and nothing breaks before it.
+  // An answer given under a stricter level than "rekan" (the question was widened later) stays out.
+  const levelOf = new Map(asked.map(question => [question.id, question.visibility]));
+  const values = new Map(((data ?? []) as { question_id: string; value: AnswerValue; read_level?: string | null }[])
+    .filter(item => answerLevel(levelOf.get(item.question_id) ?? "rekan", item.read_level) === "rekan")
+    .map(item => [item.question_id, item.value]));
   const names = new Map(people.map(item => [item.id, item.name]));
   const answers = asked.flatMap(question => {
     const value = values.get(question.id);

@@ -149,6 +149,18 @@ describe("Ekspor", () => {
     expect(book["Bagian d"].slice(1).map(row => row[1]).sort()).toEqual(["Jarang", "Sering", "Sering", "Sering"]);
     expect(Object.keys(book)).toEqual(["Info", "Bagian d"]);
   });
+  it("keeps an answer given under the HR label closed after its question was widened", async () => {
+    // "song" is `rekan` now; Ayu answered while it was still `hr` (migration 202611050002 stamps it).
+    Object.assign(db.cq_answers[0], { read_level: "hr" });
+    let { book, includesHr } = await sheets(false);
+    expect(book["Bagian a"]).toEqual([["Nama", "Departemen", "song. Tanya song"], ["Budi Santoso", "Finance", "Lagu B"]]);
+    expect(includesHr).toBe(false);
+    const recap = await recapOf(form, adminReader(false));
+    expect(recap.sections[0].items.find(item => item.key === "song")?.body).toEqual({ type: "quotes", quotes: [{ text: "Lagu B", count: 1 }] });
+    ({ book, includesHr } = await sheets(true));
+    expect(book["Bagian a"][1].slice(0, 3)).toEqual(["Ayu Lestari", "Comms", "Lagu A"]);
+    expect(includesHr).toBe(true);
+  });
   it("refuses a section that is not there, and plans without reading answers", async () => {
     await expect(exportWorkbook(form, adminReader(false), "ZZ")).rejects.toThrow("Bagian ini tidak ada");
     asked = [];

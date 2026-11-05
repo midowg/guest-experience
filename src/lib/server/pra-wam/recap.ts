@@ -1,5 +1,5 @@
 import "server-only";
-import type { AnswerValue, QForm, QQuestion } from "@/lib/pra-wam/questionnaire";
+import { answerLevel, type AnswerValue, type QForm, type QQuestion, type Visibility } from "@/lib/pra-wam/questionnaire";
 import {
   exportable, MIN_GROUP, orderedSections, recapAccess, sectionQuestions, shareOf, shareQuestion, summarize,
   type Reader, type RecapItem, type Share,
@@ -19,7 +19,8 @@ import { formContent, questionnaireMissing, questionnaireWaiting } from "./quest
  * database. The route or page decides the reader (admin, Data HR open or not) and logs exports.
  */
 
-type Row = { employee_id: string; question_id: string; value: AnswerValue };
+/** One named answer, with the level it is read at (see answerLevel). */
+type Row = { employee_id: string; question_id: string; value: AnswerValue; level: Visibility };
 
 const failed = (error: { code?: string; message?: string }): never => {
   if (questionnaireMissing(error)) throw questionnaireWaiting();
@@ -37,11 +38,17 @@ async function allRows<T>(read: (from: number, to: number) => PromiseLike<{ data
   }
 }
 
-async function namedAnswers(formId: string, questionIds: string[]): Promise<Row[]> {
+/**
+ * Named answers to these questions. "*" brings read_level once migration 202611050002 is in and
+ * breaks nothing before it; each row is then read at the stricter of its own level and its question's.
+ */
+async function namedAnswers(formId: string, questionIds: string[], questions: QQuestion[]): Promise<Row[]> {
   if (!questionIds.length) return [];
   const client = createPrivilegedClient();
-  return allRows<Row>((from, to) => client.from("cq_answers").select("employee_id,question_id,value").eq("form_id", formId)
+  const levelOf = new Map(questions.map(question => [question.id, question.visibility]));
+  const rows = await allRows<Omit<Row, "level"> & { read_level?: string | null }>((from, to) => client.from("cq_answers").select("*").eq("form_id", formId)
     .in("question_id", questionIds).order("employee_id").order("question_id").range(from, to));
+  return rows.map(({ employee_id, question_id, value, read_level }) => ({ employee_id, question_id, value, level: answerLevel(levelOf.get(question_id) ?? "hronly", read_level) }));
 }
 
 /** The anonymous section's answers by question. They carry no person; the order is the database's, not who sent first. */
@@ -92,7 +99,7 @@ export async function recapOf(form: Pick<QForm, "id">, reader: Reader, departmen
   const namedQuestions = named.flatMap(section => sectionQuestions(questions, section.id));
   const wanted = namedQuestions.filter(question => recapAccess(question, reader) !== "needs-hr").map(question => question.id);
   const [rows, anon] = await Promise.all([
-    namedAnswers(form.id, [...new Set([...wanted, ...deciderIds(questions, named.map(section => section.id))])]),
+    namedAnswers(form.id, [...new Set([...wanted, ...deciderIds(questions, named.map(section => section.id))])], questions),
     anonymousAnswers(form.id, anonymous.flatMap(section => sectionQuestions(questions, section.id)).map(question => question.id)),
   ]);
 
@@ -128,7 +135,7 @@ export async function recapOf(form: Pick<QForm, "id">, reader: Reader, departmen
         key: section.key, title: section.title, anonymous: false, notSplit: false,
         items: list.map(question => {
           const access = recapAccess(question, reader);
-          const kept = (byQuestion.get(question.id) ?? []).filter(row =>
+          const kept = (byQuestion.get(question.id) ?? []).filter(row => recapAccess({ visibility: row.level, kind: question.kind }, reader) !== "needs-hr").filter(row =>
             !(question.visibility === "pilih" && !reader.facilitator && (sharing?.get(row.employee_id) ?? "unnamed") === "facilitator"));
           const values = kept.map(row => row.value);
           // Counts of HR answers in one department could single someone out; so could a non-facilitator's view of `pilih`.
@@ -181,7 +188,7 @@ export async function exportWorkbook(form: Pick<QForm, "id" | "name">, reader: R
   const ids = [...new Set([...[...columnsOf.values()].flat().map(question => question.id), ...deciderIds(questions, named.map(section => section.id))])];
   const anonymousSections = shown.filter(section => section.anonymous);
   const [rows, anon, receipts] = await Promise.all([
-    namedAnswers(form.id, ids),
+    namedAnswers(form.id, ids, questions),
     anonymousAnswers(form.id, anonymousSections.flatMap(section => sectionQuestions(questions, section.id)).map(question => question.id)),
     anonymousSections.length
       ? createPrivilegedClient().from("cq_anon_receipts").select("employee_id", { count: "exact", head: true }).eq("form_id", form.id).then(result => (result.error ? failed(result.error) : result.count ?? 0))
@@ -190,7 +197,10 @@ export async function exportWorkbook(form: Pick<QForm, "id" | "name">, reader: R
   const personById = new Map(people.map(person => [person.id, person]));
   const names = new Map(people.map(person => [person.id, person.name]));
   const shares = sharesOf(questions, named.map(section => section.id), rows);
-  const value = new Map(rows.map(row => [`${row.employee_id}:${row.question_id}`, row.value]));
+  // Only answers this reader may have per person; an answer given under a stricter level stays out.
+  const readable = rows.filter(row => exportable({ visibility: row.level }, reader));
+  const value = new Map(readable.map(row => [`${row.employee_id}:${row.question_id}`, row.value]));
+  const hrCells = new Set(readable.filter(row => row.level === "hr" || row.level === "hronly").map(row => row.question_id));
   const notes: string[][] = [];
   const sheets: SheetOut[] = [];
   let includesHr = false;
@@ -211,7 +221,7 @@ export async function exportWorkbook(form: Pick<QForm, "id" | "name">, reader: R
     const columns = columnsOf.get(section.id) ?? [];
     const left = list.length - columns.length;
     if (!columns.length) { notes.push([section.title, "Tidak diekspor: semua pertanyaannya data HR. Buka Data HR dulu."]); continue; }
-    if (columns.some(question => question.visibility === "hr" || question.visibility === "hronly")) includesHr = true;
+    if (columns.some(question => question.visibility === "hr" || question.visibility === "hronly" || hrCells.has(question.id))) includesHr = true;
     const sharing = shares.get(section.id);
     const decider = shareQuestion(questions, section.id);
     const pilih = sharing ? columns.filter(question => question.visibility === "pilih") : [];

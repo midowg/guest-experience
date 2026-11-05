@@ -148,6 +148,8 @@ export const praWamPath = {
   person: (id: string) => `${PRA_WAM_PATH}/manage/people/${id}`,
   /** BOD and panitia: survey results (Penpot B4); empty until surveys exist. */
   surveyResults: `${PRA_WAM_PATH}/manage/surveys`,
+  /** Panitia and admin: food, allergies, prayer, readiness and shirt sizes from the questionnaire. */
+  needs: `${PRA_WAM_PATH}/manage/kebutuhan`,
   /** BOD: the panitia's Ringkasan operasional, read only. */
   panitiaView: `${PRA_WAM_PATH}/manage?lihat=panitia`,
   /** Panitia: write announcements and see who has read them. */

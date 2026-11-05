@@ -44,6 +44,18 @@ export const visibilityLabels: Record<Visibility, string> = {
 /** Answers only HR may open, with the separate HR password. */
 export const hrOnly = (visibility: Visibility) => visibility === "hr" || visibility === "hronly";
 
+/** How closed a level is; `pilih` sits with `fasil` (its own sharing question narrows it further). */
+const readRank: Record<Visibility, number> = { rekan: 0, fasil: 1, pilih: 1, hr: 2, hronly: 3, anon: 4 };
+/**
+ * The level one answer is read at: the stricter of its question's level now and the level the
+ * answer was given under (cq_answers.read_level, migration 202611050002; null before it). So a
+ * question widened later never opens what people answered under the stricter label.
+ */
+export function answerLevel(question: Visibility, given: string | null | undefined): Visibility {
+  const stamp = given && given in readRank ? (given as Visibility) : null;
+  return stamp && readRank[stamp] > readRank[question] ? stamp : question;
+}
+
 /* ---- The address ---------------------------------------------------------------------------- */
 
 /** Pages WAM already has under /wam; a questionnaire can never take these. */

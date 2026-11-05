@@ -25,6 +25,11 @@ export const seesAllSessions = (who: WithRoles) => has(who, "panitia", "bod", "a
  * app it had, until the super admin removes one of the two.
  */
 export const bodOnly = (who: WithRoles) => has(who, "bod") && !has(who, "panitia", "admin");
+/**
+ * Kebutuhan peserta (food and allergies by name, prayer, readiness, shirts): the panitia who serve
+ * and run the activities, and admin. Not BOD, who reads summaries, never people one by one.
+ */
+export const readsNeeds = (who: WithRoles) => has(who, "panitia", "admin");
 /** Accounts, roles and rooms. */
 export const managesApp = (who: WithRoles) => has(who, "admin");
 

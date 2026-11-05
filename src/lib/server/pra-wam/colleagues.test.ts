@@ -105,6 +105,11 @@ describe("a colleague's profile", () => {
     const text = JSON.stringify(profile);
     for (const kept of ["q-fasil", "q-hr", "q-hronly", "q-hidden", "q-anon", "q-gone"]) expect(text).not.toContain(`jawaban ${kept}`);
   });
+  it("leaves out an answer given while its question was stricter than Rekan", async () => {
+    db.cq_answers.find(row => row.employee_id === "p1" && row.question_id === "q-rekan")!.read_level = "fasil";
+    const profile = await colleagueOf(form, "p1");
+    expect(profile?.answers.map(answer => answer.key)).toEqual(["q-first", "q-buddy"]);
+  });
   it("is not there without a numbered card, or for someone no longer active", async () => {
     expect(await colleagueOf(form, "p4")).toBeNull();
     expect(await colleagueOf(form, "p3")).toBeNull();
