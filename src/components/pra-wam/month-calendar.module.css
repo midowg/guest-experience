@@ -1,0 +1,50 @@
+/* MonthCalendar.tsx: DS "Kalender · tanggal terpilih". --pw-* tokens only (light and dark). */
+
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.card { display: grid; gap: 8px; padding: 16px 8px 10px; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); min-width: 0; }
+
+/* "5 Nov Kamis": the date bold in Poppins, the weekday muted; two round outline arrows. */
+.head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px 0 10px; }
+.title { display: flex; align-items: baseline; gap: 6px; margin: 0; min-width: 0; font-size: inherit; font-weight: inherit; }
+.title strong { font-family: var(--pw-display); font-size: 20px; font-weight: 600; color: var(--pw-text); white-space: nowrap; }
+.title span { font-size: 14px; color: var(--pw-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav { display: flex; gap: 8px; flex: none; }
+.arrow { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--pw-line); border-radius: 50%; background: var(--pw-surface); color: var(--pw-text); cursor: pointer; }
+.arrow svg { width: 20px; height: 20px; }
+.arrow:hover:not(:disabled) { border-color: var(--pw-primary); color: var(--pw-primary); }
+.arrow:disabled { color: var(--pw-muted); opacity: .45; cursor: default; }
+.arrow:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+
+.weekdays, .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.weekdays span { padding: 4px 0; text-align: center; font-size: 12px; font-weight: 500; color: var(--pw-muted); }
+.grid { row-gap: 2px; }
+.blank { min-height: 52px; }
+
+/* A date: the number in a 40 circle, the dots under it. Whole cell is the 44+ target. */
+.day { display: grid; justify-items: center; align-content: start; gap: 3px; width: 100%; min-width: 0; min-height: 52px; padding: 2px 0 4px; border: 0; border-radius: 16px; background: transparent; color: var(--pw-text); font: inherit; cursor: pointer; }
+.number { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; font-size: 15px; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+.dots { display: flex; justify-content: center; gap: 3px; height: 5px; }
+.dots i { width: 5px; height: 5px; border-radius: 50%; }
+.dots .mine { background: var(--pw-primary); }
+.dots .crowded { background: var(--pw-accent-orange); }
+.dots .free { background: var(--pw-accent-green); }
+
+.day:focus-visible { outline: none; }
+.day:focus-visible .number { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.day:not(.muted):not([aria-pressed="true"]):hover .number { background: var(--pw-app); }
+
+/* Today, not picked: the number in blue with a ring. */
+.today .number { color: var(--pw-primary); font-weight: 700; box-shadow: inset 0 0 0 1.5px var(--pw-primary); }
+
+/* Past, weekend, outside the window: muted, not pickable. */
+.muted { cursor: default; }
+.muted .number { color: var(--pw-muted); opacity: .55; font-weight: 400; }
+.muted.today .number { opacity: 1; }
+
+/* Picked: a filled blue circle, white number. */
+.day[aria-pressed="true"] .number { background: var(--pw-primary); color: var(--pw-on-primary); font-weight: 600; opacity: 1; box-shadow: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .number, .arrow { transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+}

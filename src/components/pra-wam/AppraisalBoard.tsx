@@ -4,15 +4,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { CalendarDays, CalendarPlus, ChevronRight, Clock, DoorOpen, Map as MapIcon, MapPin, Plus, Text, User, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { appraisalRules, clockLabel, dayLabel, draftHours, wibDate, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, clockAt, clockLabel, dayLabel, draftHours, nowOffset, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { placeRooms } from "@/lib/pra-wam/floor-plan";
 import { bookingFrom, countLabel, daySummaries, durationLabel, roomDay, runLabel, type DayStatus, type DaySummary } from "@/lib/pra-wam/room-day";
-import { bookingKey, DayCalendar, DayStrip, Legend, WeekCalendar, type BookPick } from "./BookCalendar";
+import { bookingKey, DayCalendar, Legend, WeekCalendar, type BookPick } from "./BookCalendar";
 import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
 import { useConfirm } from "./ConfirmDialog";
 import { FloorPlan } from "./FloorPlan";
+import { MonthCalendar } from "./MonthCalendar";
 import { ScreenHead } from "./ScreenHead";
 import { Sheet } from "./Sheet";
 import styles from "./pra-wam.module.css";
@@ -70,7 +71,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const [chosenView, setView] = useState<"kalender" | "denah">("kalender");
   // With the floor plan switched off by the super admin, only the calendar.
   const view = floorPlan ? chosenView : "kalender";
-  const [mode, setMode] = useState<"hari" | "minggu">("hari");
+  // From 1024px the week grid first (DS "Jadwal, tampilan minggu"); a phone always shows the day.
+  const [mode, setMode] = useState<"hari" | "minggu">("minggu");
+  const [weekRoom, setWeekRoom] = useState(() => bookable[0]?.id ?? "");
 
   // "Now" moves on while the page is open: the line and what can still be booked.
   const [clockNow, setClockNow] = useState(() => new Date(now));
@@ -132,11 +135,19 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     else mirror({ date: next.initial.date, new: "1", room: next.initial.roomId, start: next.initial.start, end: next.initial.end });
   }
   function close() { setShown(false); mirror({}); }
-  function pickDay(day: string) {
+  /** A day picked: in this week it shows at once, another week loads. `toDay`: switch the desktop to the day view. */
+  function pickDay(day: string, toDay = true) {
     if (!week.includes(day)) { router.push(praWamPath.appraisal(day), { scroll: false }); return; }
-    setSelected(day); setMode("hari");
+    setSelected(day);
+    if (toDay) setMode("hari");
     window.history.replaceState(null, "", praWamPath.bookSheet({ date: day }));
   }
+  /** The week grid's arrows: the first day of the week before or after that is in the period. */
+  function goWeek(direction: -1 | 1) {
+    const target = workWeek(weekShift(selected, direction)).find(inPeriod);
+    if (target) router.push(praWamPath.appraisal(target), { scroll: false });
+  }
+
   const openBooking = (booking: Booking) => show({ kind: "detail", booking });
   const book = (pick: { date?: string; room?: string; start?: string; end?: string } = {}) => show(draftFor(pick));
 
@@ -174,6 +185,10 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   // The loaded week is recounted from its bookings with the moving clock; the rest is the server's.
   const days = { ...summary, ...daySummaries(week, rooms, bookings.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), clockNow) };
   const canBookDay = canBook && inPeriod(selected) && selected >= today;
+  const nowLine = nowOffset(selected, clockNow);
+  // The month calendar (DS "Kalender · tanggal terpilih") picks the day for both views.
+  const calendar = <MonthCalendar from={appraisalRules.periodStart} to={appraisalRules.periodEnd} selected={selected} today={today} summary={days}
+    mine={mine.map(booking => wibDate(booking.startsAt))} onPick={day => pickDay(day, false)} label="Pilih hari" />;
   const head = <ScreenHead eyebrow="Ruang meeting" title="Book ruang"
     lead={`Jam ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–20 Nov. Yang tersimpan lebih dulu yang mendapat ruang.`}
     actions={canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
@@ -192,23 +207,31 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
         <button type="button" aria-pressed={mode === "hari"} onClick={() => setMode("hari")}>Hari</button>
         <button type="button" aria-pressed={mode === "minggu"} onClick={() => setMode("minggu")}>Minggu</button>
       </div>}
-      {view === "kalender" && <Legend />}
     </div>
 
-    <DayStrip selected={selected} today={today} summary={days} onPick={pickDay} />
-
-    {view === "kalender" ? <>
-      <div className={`${css.dayTitle} ${mode === "minggu" ? css.deskHide : ""}`}>
-        <h2>{dayLabel(selected)}{selected === today ? " · hari ini" : ""}</h2>
-        <p>{!inPeriod(selected) ? "Di luar periode appraisal." : selected < today ? "Sudah lewat, hanya untuk dilihat." : canBookDay ? "Ketuk waktu yang kosong untuk book." : open ? "" : "Book ruang sedang ditutup."}</p>
+    {view === "kalender" ? <div className={css.layout}>
+      <div className={css.side}>
+        {calendar}
+        <Legend />
       </div>
-      {mode === "minggu" && <div className={css.deskWeek}>
-        <WeekCalendar week={week} rooms={bookable} bookings={bookings} viewerId={viewerId} today={today} selected={selected} onPickDay={pickDay} />
-      </div>}
-      <DayCalendar date={selected} rooms={bookable} bookings={dayBookings} now={clockNow} viewerId={viewerId} canBook={canBookDay}
-        onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} phoneOnly={mode === "minggu"} />
-    </> : <PlanView key={selected} date={selected} today={today} now={clockNow} rooms={rooms} bookings={dayBookings} viewerId={viewerId} canBook={canBookDay} open={open}
-      onOpen={openBooking} onBook={(room, hours) => book({ date: selected, room: room.id, ...hours })} />}
+      <div className={css.main}>
+        <div className={`${css.dayTitle} ${mode === "minggu" ? css.deskHide : ""}`}>
+          <h2>{dayLabel(selected)}{selected === today ? " · hari ini" : ""}</h2>
+          <p>{nowLine != null ? `Sekarang ${clockLabel(clockAt(nowLine))}. ` : ""}{!inPeriod(selected) ? "Di luar periode appraisal." : selected < today ? "Sudah lewat, hanya untuk dilihat." : canBookDay ? "Ketuk waktu yang kosong untuk book." : open ? "" : "Book ruang sedang ditutup."}</p>
+        </div>
+        {mode === "minggu" && <div className={css.deskWeek}>
+          <WeekCalendar week={week} rooms={bookable} bookings={bookings} viewerId={viewerId} now={clockNow} today={today} selected={selected} canBook={canBook}
+            roomId={weekRoom} onRoom={setWeekRoom} onPickDay={pickDay} onWeek={goWeek} onOpen={openBooking}
+            onBook={pick => book({ date: pick.date, room: pick.room.id, start: pick.start, end: pick.end })} />
+        </div>}
+        <DayCalendar date={selected} rooms={bookable} bookings={dayBookings} now={clockNow} viewerId={viewerId} canBook={canBookDay}
+          onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} phoneOnly={mode === "minggu"} />
+      </div>
+    </div> : <>
+      <div className={css.planPicker}>{calendar}</div>
+      <PlanView key={selected} date={selected} today={today} now={clockNow} rooms={rooms} bookings={dayBookings} viewerId={viewerId} canBook={canBookDay} open={open}
+      onOpen={openBooking} onBook={(room, hours) => book({ date: selected, room: room.id, ...hours })} />
+    </>}
 
     <p className={styles.sectionLabel}>Booking saya</p>
     {mine.length === 0 ? <div className={styles.emptyRow}>

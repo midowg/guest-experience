@@ -1,35 +1,38 @@
 "use client";
 
-import { Fragment, useState, type CSSProperties, type PointerEvent, type MouseEvent } from "react";
-import { ChevronRight, Plus } from "lucide-react";
-import { appraisalRules, clockAt, clockLabel, dayLabel, dayMinutes, hoursInGap, nowOffset, periodDates, roomDay, startInGap, weekSummary, wibTime, type Booking, type DaySegment, type Room } from "@/lib/pra-wam/appraisal";
-import type { DaySummary } from "@/lib/pra-wam/room-day";
-import { DateStrip } from "./DateStrip";
+import { useState, type CSSProperties, type PointerEvent, type MouseEvent } from "react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { appraisalRules, bookableFrom, clockAt, clockLabel, dayLabel, dayMinutes, hoursInGap, nowOffset, roomDay, startInGap, wibDate, wibTime, type Booking, type DaySegment, type Room } from "@/lib/pra-wam/appraisal";
 import css from "./book-calendar.module.css";
 
 /*
- * Book's calendar, simplified from "Werkudara Room Booking" (rooms by time). On a phone: a date
- * strip, then each room as a card listing its day in big rows (bookings, free time to tap, time
- * gone by) with a "Sekarang" line on today. From 1024px: the day as a timeline (rooms as columns,
- * 09.00–18.00 as rows) or the week overview (Mon–Fri × rooms). No grid of tiny half-hour cells.
+ * Book's calendar, in the design system's agenda style (DS "Agenda dan permintaan", "Jadwal,
+ * tampilan minggu"). On a phone: under the month calendar, the picked day as one compact card per
+ * room: a 09.00–18.00 bar of what is taken, then the bookings and the free stretches to tap, in
+ * order. From 1024px: the day as a timeline (rooms as columns), or the week as a grid (days as
+ * columns, hours down) for one room picked above it.
  */
 
 export type BookPick = { room: Room; start: string; end: string };
 type Kind = "busy" | "mine" | "session";
+type Gap = { from: number; to: number };
 
 const time = (offset: number) => clockLabel(clockAt(offset));
 const spanOf = (from: number, to: number) => `${time(from)}–${time(to)}`;
-const shortDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+const utc = (date: string) => new Date(`${date}T12:00:00Z`);
+const shortDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: "UTC" }).format(utc(date));
 const dayNumber = (date: string) => Number(date.slice(8, 10));
-const monthShort = (date: string) => new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+const monthShort = (date: string) => new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(utc(date));
+const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <= appraisalRules.periodEnd;
 /** "2–6 Nov", or "26 Okt–30 Okt" across months. */
 export const weekLabel = (week: string[]) => {
   const first = week[0], last = week.at(-1) ?? first;
   return monthShort(first) === monthShort(last) ? `${dayNumber(first)}–${dayNumber(last)} ${monthShort(last)}` : `${dayNumber(first)} ${monthShort(first)}–${dayNumber(last)} ${monthShort(last)}`;
 };
-const hours = (minutes: number) => minutes % 60 === 0 ? `${minutes / 60} jam` : `${(minutes / 60).toLocaleString("id-ID", { maximumFractionDigits: 1 })} jam`;
-/** Minutes on the desktop timeline → a CSS length, in multiples of --hour. */
+/** Minutes on a timeline → a CSS length, in multiples of --hour. */
 const at = (minutes: number) => `calc(${minutes / 60} * var(--hour))`;
+/** Minutes on the phone bar → a share of its width. */
+const across = (from: number, to: number) => ({ left: `${(from / dayMinutes) * 100}%`, width: `${((to - from) / dayMinutes) * 100}%` });
 
 function kindOf(booking: Booking, viewerId: string): Kind {
   if (booking.isSession) return "session";
@@ -38,27 +41,17 @@ function kindOf(booking: Booking, viewerId: string): Kind {
 const whoOf = (booking: Booking, viewerId: string) => booking.isSession ? "Sesi Pra WAM" : booking.bookedBy.id === viewerId ? "Booking kamu"
   : `${booking.bookedBy.name}${booking.bookedBy.department ? ` · ${booking.bookedBy.department}` : ""}`;
 export const bookingKey = (booking: Booking) => `${booking.id}@${booking.roomId}@${booking.startsAt}`;
+const bookingSpan = (booking: Booking) => `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`;
 
-/** The colour key, in the words used on the blocks. */
+/** The colour key as small pills, a dot and a word each; wraps on a narrow screen. */
 export function Legend() {
   return <ul className={css.legend} aria-label="Keterangan warna">
-    <li><i className={`${css.swatch} ${css.free}`} aria-hidden />Kosong</li>
-    <li><i className={`${css.swatch} ${css.busy}`} aria-hidden />Terpakai</li>
-    <li><i className={`${css.swatch} ${css.mine}`} aria-hidden />Booking kamu</li>
-    <li><i className={`${css.swatch} ${css.session}`} aria-hidden />Sesi Pra WAM</li>
+    <li><i className={css.mine} aria-hidden />Booking kamu</li>
+    <li><i className={css.busy} aria-hidden />Terpakai</li>
+    <li><i className={css.session} aria-hidden />Sesi Pra WAM</li>
+    <li><i className={css.free} aria-hidden />Kosong</li>
+    <li><i className={css.crowded} aria-hidden />Hampir penuh</li>
   </ul>;
-}
-
-/**
- * The booking window's weekdays above the calendar (DateStrip): past days greyed out, today
- * marked, full days flagged. Replaces the five-day week strip and its week arrows.
- */
-export function DayStrip({ selected, today, summary, onPick }: {
-  selected: string; today: string; summary: Record<string, DaySummary>; onPick: (date: string) => void;
-}) {
-  return <div className={css.strip}>
-    <DateStrip days={periodDates()} selected={selected} today={today} summary={summary} onPick={onPick} label="Pilih hari" />
-  </div>;
 }
 
 type DayProps = {
@@ -67,43 +60,26 @@ type DayProps = {
   canBook: boolean;
   onOpen: (booking: Booking) => void;
   onBook: (pick: BookPick) => void;
-  /** Desktop: hidden from 1024px when the week overview shows instead. */
+  /** Desktop: hidden from 1024px when the week grid shows instead. */
   phoneOnly?: boolean;
 };
 
-/** One day: room cards on a phone, the room-by-hour timeline from 1024px. */
+/** One day: a card per room on a phone, the room-by-hour timeline from 1024px. */
 export function DayCalendar({ date, rooms, bookings, now, viewerId, canBook, onOpen, onBook, phoneOnly }: DayProps) {
   const days = rooms.map(room => ({ room, segments: roomDay(date, bookings.filter(booking => booking.roomId === room.id), now) }));
   const line = nowOffset(date, now);
-  const label = (offset: number) => `Sekarang ${time(offset)}`;
-  const book = (room: Room, gap: { from: number; to: number }, start: number) =>
-    onBook({ room, ...hoursInGap(gap, start) });
+  const over = bookableFrom(date, now) >= dayMinutes;
+  const book = (room: Room, gap: Gap, start: number) => onBook({ room, ...hoursInGap(gap, start) });
   if (!rooms.length) return <p className={css.empty}>Belum ada ruang yang bisa dibooking. Admin WAM mengaturnya di Kelola acara.</p>;
 
   return <>
-    <div className={css.phone}>
-      {days.map(({ room, segments }) => {
-        const taken = segments.filter(segment => segment.kind === "busy").length;
-        // The line goes above the first stretch that is not over yet.
-        const lineAt = line == null ? -1 : segments.findIndex(segment => segment.kind !== "past" && segment.to > line);
-        return <section key={room.id} className={css.room} aria-label={`${room.name}, ${dayLabel(date)}`}>
-          <header className={css.roomHead}>
-            <h3>{room.name}</h3>
-            <span>{room.capacity ? `${room.capacity} orang · ` : ""}{taken ? `${taken} terpakai` : "Kosong seharian"}</span>
-          </header>
-          <MiniBar segments={segments} viewerId={viewerId} line={line} />
-          <ol className={css.rows}>
-            {segments.map((segment, index) => <Fragment key={segment.kind === "busy" ? bookingKey(segment.booking) : `${segment.kind}-${segment.from}`}>
-              {index === lineAt && line != null && <li className={css.nowRow}><span>{label(line)}</span></li>}
-              <li><PhoneRow segment={segment} room={room} viewerId={viewerId} line={line} canBook={canBook} onOpen={onOpen} onBook={book} /></li>
-            </Fragment>)}
-            {lineAt === -1 && line != null && <li className={css.nowRow}><span>{label(line)}</span></li>}
-          </ol>
-        </section>;
-      })}
-    </div>
+    <ul className={css.phone} aria-label={`Ruang, ${dayLabel(date)}`}>
+      {days.map(({ room, segments }) => <li key={room.id}>
+        <RoomCard date={date} room={room} segments={segments} viewerId={viewerId} line={line} over={over} canBook={canBook} onOpen={onOpen} onBook={book} />
+      </li>)}
+    </ul>
 
-    <div className={`${css.desk} ${phoneOnly ? css.hiddenDesk : ""}`} style={{ "--rooms": rooms.length } as CSSProperties}>
+    <div className={`${css.desk} ${phoneOnly ? css.hiddenDesk : ""}`} style={{ "--cols": rooms.length } as CSSProperties}>
       <div className={css.deskHead}>
         <span />
         {days.map(({ room, segments }) => <div key={room.id} className={css.deskRoom}>
@@ -112,75 +88,122 @@ export function DayCalendar({ date, rooms, bookings, now, viewerId, canBook, onO
         </div>)}
       </div>
       <div className={css.deskBody} role="group" aria-label={`Jadwal ruang ${dayLabel(date)}, ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}`}>
-        <div className={css.axis} aria-hidden>
-          {Array.from({ length: dayMinutes / 60 + 1 }, (_, hour) => <span key={hour} style={{ top: at(hour * 60) }}>{time(hour * 60)}</span>)}
-        </div>
+        <Axis line={line} />
         {days.map(({ room, segments }) => <div key={room.id} className={css.column} role="group" aria-label={room.name}>
           {segments.map(segment => segment.kind === "busy"
-            ? <DeskBlock key={bookingKey(segment.booking)} segment={segment} viewerId={viewerId} line={line} onOpen={onOpen} />
+            ? <TimeBlock key={bookingKey(segment.booking)} segment={segment} viewerId={viewerId} line={line} onOpen={onOpen} />
             : segment.kind === "free" && canBook
-              ? <FreeSlot key={`free-${segment.from}`} gap={segment} room={room} onBook={book} />
+              ? <FreeSlot key={`free-${segment.from}`} gap={segment} label={`Book ${room.name}, kosong ${spanOf(segment.from, segment.to)}`} onPick={start => book(room, segment, start)} />
               : <div key={`${segment.kind}-${segment.from}`} className={segment.kind === "past" ? css.past : css.freeIdle} style={{ top: at(segment.from), height: at(segment.to - segment.from) }} aria-hidden />)}
         </div>)}
-        {line != null && <div className={css.nowLine} style={{ top: at(line) }} role="img" aria-label={label(line)}><span>{time(line)}</span></div>}
+        {line != null && <NowLine line={line} />}
       </div>
     </div>
   </>;
 }
 
-/** The day at a glance above a room's rows: where it is taken, and now. */
-function MiniBar({ segments, viewerId, line }: { segments: DaySegment<Booking>[]; viewerId: string; line: number | null }) {
-  const pos = (from: number, to: number) => ({ left: `${(from / dayMinutes) * 100}%`, width: `${((to - from) / dayMinutes) * 100}%` });
-  return <div className={css.mini} aria-hidden>
-    {segments.map(segment => segment.kind === "busy"
-      ? <i key={bookingKey(segment.booking)} className={css[kindOf(segment.booking, viewerId)]} style={pos(segment.from, segment.to)} />
-      : segment.kind === "past" ? <i key={`p-${segment.from}`} className={css.miniPast} style={pos(segment.from, segment.to)} /> : null)}
-    {line != null && <b style={{ left: `${(line / dayMinutes) * 100}%` }} />}
+/**
+ * A room's day on a phone (DS itinerary card): name and size, a status pill, the 09.00–18.00 bar,
+ * then in order its bookings (tap for the detail) and free stretches (soft green chips, tap to
+ * book). Time gone by shows only on the bar, greyed, with a thin blue tick for now.
+ */
+function RoomCard({ date, room, segments, viewerId, line, over, canBook, onOpen, onBook }: {
+  date: string; room: Room; segments: DaySegment<Booking>[]; viewerId: string; line: number | null; over: boolean; canBook: boolean;
+  onOpen: (booking: Booking) => void; onBook: (room: Room, gap: Gap, start: number) => void;
+}) {
+  const taken = segments.filter(segment => segment.kind === "busy").length;
+  const free = segments.filter(segment => segment.kind === "free");
+  const status = over ? { tone: css.pillMuted, text: "Sudah lewat" }
+    : !free.length ? { tone: css.pillWarn, text: "Penuh" }
+    : !taken ? { tone: css.pillFree, text: "Kosong seharian" }
+    : { tone: css.pillMuted, text: `${taken} terpakai` };
+  const items = segments.filter(segment => segment.kind !== "past");
+  return <section className={css.room} aria-label={`${room.name}, ${dayLabel(date)}`}>
+    <header className={css.roomHead}>
+      <h3>{room.name}</h3>
+      {room.capacity ? <span className={css.roomSize}>{room.capacity} orang</span> : null}
+      <span className={`${css.pill} ${status.tone}`}>{status.text}</span>
+    </header>
+    <DayBar segments={segments} viewerId={viewerId} line={line} />
+    {items.length ? <ol className={css.items}>
+      {items.map(segment => {
+        if (segment.kind === "busy") {
+          const { booking } = segment;
+          const done = line != null ? segment.to <= line : over;
+          const running = line != null && segment.from <= line && line < segment.to;
+          return <li key={bookingKey(booking)}>
+            <button type="button" className={`${css.item} ${css[kindOf(booking, viewerId)]} ${done ? css.done : ""}`} onClick={() => onOpen(booking)} aria-haspopup="dialog">
+              <span className={css.itemTime}>{bookingSpan(booking)}</span>
+              <span className={css.itemWhat}>
+                <strong>{booking.title}</strong>
+                <small>{whoOf(booking, viewerId)}{running ? " · berlangsung" : done ? " · selesai" : ""}</small>
+              </span>
+              <ChevronRight className={css.itemIcon} aria-hidden />
+            </button>
+          </li>;
+        }
+        const words = <>Kosong <b>{spanOf(segment.from, segment.to)}</b></>;
+        return <li key={`free-${segment.from}`}>
+          {canBook
+            ? <button type="button" className={css.chip} onClick={() => onBook(room, segment, segment.from)} aria-label={`Book ${room.name}, kosong ${spanOf(segment.from, segment.to)}`} aria-haspopup="dialog">
+              {words}<Plus aria-hidden />
+            </button>
+            : <span className={`${css.chip} ${css.chipIdle}`}>{words}</span>}
+        </li>;
+      })}
+    </ol> : <p className={css.none}>Tidak ada booking.</p>}
+  </section>;
+}
+
+/** The day at a glance: taken blocks with their colour edge, time gone by greyed, a tick for now. */
+function DayBar({ segments, viewerId, line }: { segments: DaySegment<Booking>[]; viewerId: string; line: number | null }) {
+  return <div className={css.bar} aria-hidden>
+    <div className={css.track}>
+      {segments.map(segment => segment.kind === "busy"
+        ? <i key={bookingKey(segment.booking)} className={`${css.barBlock} ${css[kindOf(segment.booking, viewerId)]}`} style={across(segment.from, segment.to)} />
+        : segment.kind === "past" ? <i key={`p-${segment.from}`} className={css.barPast} style={across(segment.from, segment.to)} /> : null)}
+      {line != null && <b className={css.barNow} style={{ left: `${(line / dayMinutes) * 100}%` }} />}
+    </div>
+    <div className={css.ticks}>{[0, 180, 360, 540].map(offset => <span key={offset}>{time(offset)}</span>)}</div>
   </div>;
 }
 
-function PhoneRow({ segment, room, viewerId, line, canBook, onOpen, onBook }: {
-  segment: DaySegment<Booking>; room: Room; viewerId: string; line: number | null; canBook: boolean;
-  onOpen: (booking: Booking) => void; onBook: (room: Room, gap: { from: number; to: number }, start: number) => void;
-}) {
-  const when = <span className={css.when}><b>{time(segment.from)}</b>{time(segment.to)}</span>;
-  if (segment.kind === "past") return <div className={css.rowPast}>{when}<span>Sudah lewat</span></div>;
-  if (segment.kind === "free") return canBook
-    ? <button type="button" className={`${css.row} ${css.rowFree}`} onClick={() => onBook(room, segment, segment.from)} aria-label={`Book ${room.name}, kosong ${spanOf(segment.from, segment.to)}`}>
-      {when}<span className={css.what}><strong>Kosong</strong><small>Ketuk untuk book</small></span><Plus className={css.rowIcon} aria-hidden />
-    </button>
-    : <div className={`${css.row} ${css.rowFreeIdle}`}>{when}<span className={css.what}><strong>Kosong</strong></span></div>;
-  const { booking } = segment;
-  const kind = kindOf(booking, viewerId);
-  const running = line != null && segment.from <= line && line < segment.to;
-  return <button type="button" className={`${css.row} ${css[kind]}`} onClick={() => onOpen(booking)} aria-haspopup="dialog">
-    <span className={css.when}><b>{clockLabel(wibTime(booking.startsAt))}</b>{clockLabel(wibTime(booking.endsAt))}</span>
-    <span className={css.what}>
-      <strong>{booking.title}</strong>
-      <small>{whoOf(booking, viewerId)}{running ? " · berlangsung" : ""}</small>
-    </span>
-    <ChevronRight className={css.rowIcon} aria-hidden />
-  </button>;
+/** The hours down the left of a timeline, and now in blue when it is today. */
+function Axis({ line }: { line: number | null }) {
+  return <div className={css.axis} aria-hidden>
+    {Array.from({ length: dayMinutes / 60 + 1 }, (_, hour) => <span key={hour} style={{ top: at(hour * 60) }}>{time(hour * 60)}</span>)}
+    {line != null && <span className={css.axisNow} style={{ top: at(line) }}>{time(line)}</span>}
+  </div>;
 }
 
-function DeskBlock({ segment, viewerId, line, onOpen }: { segment: Extract<DaySegment<Booking>, { kind: "busy" }>; viewerId: string; line: number | null; onOpen: (booking: Booking) => void }) {
+/** DS "garis sekarang": a thin blue line across the columns with a dot where it starts. */
+function NowLine({ line }: { line: number }) {
+  return <div className={css.nowLine} style={{ top: at(line) }} role="img" aria-label={`Sekarang ${time(line)}`} />;
+}
+
+/** A booking on a timeline (DS "Blok jadwal"): the hours small above the title, a colour edge by kind. */
+function TimeBlock({ segment, viewerId, line, onOpen }: {
+  segment: Extract<DaySegment<Booking>, { kind: "busy" }>; viewerId: string; line: number | null; onOpen: (booking: Booking) => void;
+}) {
   const { booking } = segment;
   const kind = kindOf(booking, viewerId);
   const running = line != null && segment.from <= line && line < segment.to;
-  const span = `${clockLabel(wibTime(booking.startsAt))}–${clockLabel(wibTime(booking.endsAt))}`;
-  return <button type="button" className={`${css.block} ${css[kind]}`} style={{ top: at(segment.from), height: at(segment.to - segment.from) }}
+  const span = bookingSpan(booking);
+  const short = segment.to - segment.from <= 30;
+  return <button type="button" className={`${css.block} ${css[kind]} ${short ? css.blockShort : ""}`} style={{ top: at(segment.from), height: at(segment.to - segment.from) }}
     onClick={() => onOpen(booking)} aria-haspopup="dialog" title={`${booking.title} · ${span} · ${whoOf(booking, viewerId)}`}
     aria-label={`${booking.title}, ${span}, ${whoOf(booking, viewerId)}${running ? ", sedang berlangsung" : ""}`}>
+    <small className={css.blockTime}>{span}</small>
     <strong>{booking.title}</strong>
-    <small>{span} · {whoOf(booking, viewerId)}</small>
+    {!short && <small className={css.blockWho}>{whoOf(booking, viewerId)}</small>}
   </button>;
 }
 
 /**
- * Free time on the desktop timeline: the half hour under the pointer shows "+ 10.30" and a click
- * books from there; from the keyboard it books from the start of the free time.
+ * Free time on a timeline: the half hour under the pointer shows "+ 10.30" and a click books from
+ * there; from the keyboard it books from the start of the free time.
  */
-function FreeSlot({ gap, room, onBook }: { gap: { from: number; to: number }; room: Room; onBook: (room: Room, gap: { from: number; to: number }, start: number) => void }) {
+function FreeSlot({ gap, label, onPick }: { gap: Gap; label: string; onPick: (start: number) => void }) {
   const [hover, setHover] = useState<number | null>(null);
   const startAt = (event: PointerEvent<HTMLButtonElement> | MouseEvent<HTMLButtonElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -188,58 +211,78 @@ function FreeSlot({ gap, room, onBook }: { gap: { from: number; to: number }; ro
   };
   const step = appraisalRules.stepMinutes;
   return <button type="button" className={css.freeSlot} style={{ top: at(gap.from), height: at(gap.to - gap.from) }}
-    aria-label={`Book ${room.name}, kosong ${spanOf(gap.from, gap.to)}`}
+    aria-label={label} aria-haspopup="dialog"
     onPointerMove={event => setHover(startAt(event))} onPointerLeave={() => setHover(null)}
-    onClick={event => onBook(room, gap, event.detail === 0 ? gap.from : startAt(event))}>
+    onClick={event => onPick(event.detail === 0 ? gap.from : startAt(event))}>
     {hover != null
       ? <span className={css.ghost} style={{ top: at(hover - gap.from), height: at(step) }} aria-hidden><Plus aria-hidden />{time(hover)}</span>
       : gap.to - gap.from >= 60 && <span className={css.freeHint} aria-hidden>Kosong</span>}
   </button>;
 }
 
+type WeekProps = {
+  week: string[]; rooms: Room[]; bookings: Booking[]; viewerId: string; now: Date; today: string; selected: string;
+  /** Booking is allowed at all (open, and the form's data is there); past days and days outside the period never are. */
+  canBook: boolean;
+  /** The room shown; the first one when it is not among `rooms`. */
+  roomId: string; onRoom: (roomId: string) => void;
+  onPickDay: (date: string) => void;
+  /** The week before (-1) or after (1). */
+  onWeek: (direction: -1 | 1) => void;
+  onOpen: (booking: Booking) => void;
+  onBook: (pick: BookPick & { date: string }) => void;
+};
+
 /**
- * The week overview from 1024px: rooms down, Monday to Friday across, each day's bookings as a bar
- * from 09.00 to 18.00 and their first lines. A day opens its timeline.
+ * DS "Jadwal, tampilan minggu" from 1024px: Monday to Friday as columns, 09.00–18.00 down, for one
+ * room picked in "Pilih ruang". Today's column is tinted, now is a thin blue line, each booking a
+ * pale block with a colour edge; free time books that room at that time; a day's head opens its day.
  */
-export function WeekCalendar({ week, rooms, bookings, viewerId, today, selected, onPickDay }: {
-  week: string[]; rooms: Room[]; bookings: Booking[]; viewerId: string; today: string; selected: string; onPickDay: (date: string) => void;
-}) {
-  const summary = weekSummary(week, rooms.map(room => room.id), bookings);
-  const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <= appraisalRules.periodEnd;
-  const pos = (from: number, to: number) => ({ left: `${(from / dayMinutes) * 100}%`, width: `${((to - from) / dayMinutes) * 100}%` });
-  return <table className={css.week}>
-    <caption className={css.srOnly}>Ringkasan minggu {weekLabel(week)}: jumlah booking per ruang per hari</caption>
-    <thead>
-      <tr>
-        <th scope="col" className={css.weekCorner}>Ruang</th>
-        {summary.map(day => <th key={day.date} scope="col" data-today={day.date === today || undefined} data-selected={day.date === selected || undefined}>
-          <button type="button" className={css.weekDay} disabled={!inPeriod(day.date)} onClick={() => onPickDay(day.date)} aria-label={`Buka ${dayLabel(day.date)}`}>
-            <span>{day.date === today ? "Hari ini" : shortDay(day.date)}, {dayNumber(day.date)} {monthShort(day.date)}</span>
-            <small>{!inPeriod(day.date) ? "Di luar periode" : day.count ? `${day.count} terpakai · ${hours(day.busyMinutes)}` : "Semua kosong"}</small>
-          </button>
-        </th>)}
-      </tr>
-    </thead>
-    <tbody>
-      {rooms.map(room => <tr key={room.id}>
-        <th scope="row" className={css.weekRoom}><strong>{room.name}</strong>{room.capacity ? <small>{room.capacity} orang</small> : null}</th>
-        {summary.map(day => {
-          const blocks = day.rooms[room.id] ?? [];
-          const busy = blocks.reduce((total, block) => total + block.to - block.from, 0);
-          return <td key={day.date} data-today={day.date === today || undefined} data-past={day.date < today || undefined}>
-            {inPeriod(day.date) ? <button type="button" className={css.weekCell} onClick={() => onPickDay(day.date)}
-              aria-label={`${room.name}, ${dayLabel(day.date)}: ${blocks.length ? `${blocks.length} terpakai, ${hours(busy)}` : "kosong"}. Buka hari ini`}>
-              <span className={css.weekBar} aria-hidden>{blocks.map(block => <i key={bookingKey(block.booking)} className={css[kindOf(block.booking, viewerId)]} style={pos(block.from, block.to)} />)}</span>
-              {blocks.length ? <span className={css.weekLines} aria-hidden>
-                {blocks.slice(0, 3).map(block => <span key={bookingKey(block.booking)} className={css[`text${kindOf(block.booking, viewerId)}`]}>
-                  <b>{time(block.from)}</b> {block.booking.title}
-                </span>)}
-                {blocks.length > 3 && <span className={css.weekMore}>+{blocks.length - 3} lagi</span>}
-              </span> : <span className={css.weekFree} aria-hidden>Kosong</span>}
-            </button> : <span className={css.weekOff} aria-hidden>–</span>}
-          </td>;
+export function WeekCalendar({ week, rooms, bookings, viewerId, now, today, selected, canBook, roomId, onRoom, onPickDay, onWeek, onOpen, onBook }: WeekProps) {
+  const room = rooms.find(item => item.id === roomId) ?? rooms[0];
+  if (!room) return <p className={css.empty}>Belum ada ruang yang bisa dibooking. Admin WAM mengaturnya di Kelola acara.</p>;
+  const ofRoom = bookings.filter(booking => booking.roomId === room.id);
+  const columns = week.map(date => ({ date, open: inPeriod(date), segments: roomDay(date, ofRoom.filter(booking => wibDate(booking.startsAt) === date), now) }));
+  const line = week.includes(today) ? nowOffset(today, now) : null;
+  const first = week[0], last = week.at(-1) ?? first;
+
+  return <section className={css.weekCard} aria-label={`Jadwal ${room.name}, minggu ${weekLabel(week)}`}>
+    <div className={css.weekTop}>
+      <div className={css.weekNav}>
+        <button type="button" className={css.round} onClick={() => onWeek(-1)} disabled={first <= appraisalRules.periodStart} aria-label="Minggu sebelumnya"><ChevronLeft aria-hidden /></button>
+        <h3>{weekLabel(week)}</h3>
+        <button type="button" className={css.round} onClick={() => onWeek(1)} disabled={last >= appraisalRules.periodEnd} aria-label="Minggu berikutnya"><ChevronRight aria-hidden /></button>
+      </div>
+      <div className={`${css.segmented} ${css.roomPick}`} role="group" aria-label="Pilih ruang">
+        {rooms.map(item => <button key={item.id} type="button" aria-pressed={item.id === room.id} onClick={() => onRoom(item.id)}>{item.name}</button>)}
+      </div>
+    </div>
+
+    <div className={css.timeline} style={{ "--cols": week.length } as CSSProperties}>
+      <div className={css.deskHead}>
+        <span />
+        {columns.map(({ date, open }) => <button key={date} type="button" className={css.weekDay} data-today={date === today || undefined} data-selected={date === selected || undefined}
+          disabled={!open} onClick={() => onPickDay(date)} aria-label={`Buka ${dayLabel(date)}${date === today ? ", hari ini" : ""}${open ? "" : ", di luar periode"}`}>
+          <span>{shortDay(date)}</span><strong>{dayNumber(date)}</strong>
+        </button>)}
+      </div>
+      <div className={css.deskBody} role="group" aria-label={`${room.name}, ${weekLabel(week)}, ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}`}>
+        <Axis line={line} />
+        {columns.map(({ date, open, segments }) => {
+          const bookable = canBook && open && date >= today;
+          const dayLine = date === today ? line : null;
+          return <div key={date} className={css.column} data-today={date === today || undefined} role="group" aria-label={`${dayLabel(date)}${open ? "" : ", di luar periode"}`}>
+            {!open ? <div className={css.off} style={{ top: 0, height: at(dayMinutes) }} aria-hidden />
+              : segments.map(segment => segment.kind === "busy"
+                ? <TimeBlock key={bookingKey(segment.booking)} segment={segment} viewerId={viewerId} line={dayLine} onOpen={onOpen} />
+                : segment.kind === "free" && bookable
+                  ? <FreeSlot key={`free-${segment.from}`} gap={segment} label={`Book ${room.name}, ${dayLabel(date)}, kosong ${spanOf(segment.from, segment.to)}`}
+                    onPick={start => onBook({ date, room, ...hoursInGap(segment, start) })} />
+                  : <div key={`${segment.kind}-${segment.from}`} className={segment.kind === "past" ? css.past : css.freeIdle} style={{ top: at(segment.from), height: at(segment.to - segment.from) }} aria-hidden />)}
+          </div>;
         })}
-      </tr>)}
-    </tbody>
-  </table>;
+        {line != null && <NowLine line={line} />}
+      </div>
+    </div>
+  </section>;
 }

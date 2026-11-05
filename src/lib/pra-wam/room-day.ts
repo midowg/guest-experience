@@ -1,4 +1,4 @@
-import { appraisalRules, clockLabel, overlaps, wibDate, wibInstant, wibTime } from "./appraisal";
+import { appraisalRules, clockLabel, dayMinutes, overlaps, wibDate, wibInstant, wibTime } from "./appraisal";
 
 /*
  * A room's whole day for the Book plan: how much of 09.00–18.00 is taken (bookings and Pra WAM
@@ -101,9 +101,13 @@ export const holdLabel = (hold: { startsAt: string; endsAt: string }) => `${cloc
  * One day of the booking window at a glance: how many holds (bookings and Pra WAM sessions) the
  * bookable rooms have, and whether it is full: every bookable room is "full" in roomDay (no free
  * half hour left that has not begun). A day without bookable rooms, or whose hours are over, is
- * not full.
+ * not full. `crowded`: at least one bookable room is full or has three quarters of its hours taken
+ * (the orange dot on Book's month calendar); left out by older callers, read as false.
  */
-export type DaySummary = { bookings: number; full: boolean };
+export type DaySummary = { bookings: number; full: boolean; crowded?: boolean };
+
+/** A room counts as nearly full from this many minutes of its opening hours taken. */
+const CROWDED = dayMinutes * 0.75;
 
 /** The summary of each date: `holds` are the bookings and sessions of any room on those dates. */
 export function daySummaries(
@@ -122,9 +126,10 @@ export function daySummaries(
   }
   return Object.fromEntries(dates.map(date => {
     const day = byDate.get(date) ?? [];
-    const full = bookable.length > 0 && bookable.every(room =>
-      roomDay({ date, bookable: true, now, holds: day.filter(hold => hold.roomId === room.id) }).status.tone === "full");
-    return [date, { bookings: day.length, full }];
+    const each = bookable.map(room => roomDay({ date, bookable: true, now, holds: day.filter(hold => hold.roomId === room.id) }));
+    const full = each.length > 0 && each.every(room => room.status.tone === "full");
+    const crowded = each.some(room => room.status.tone === "full" || room.takenMinutes >= CROWDED);
+    return [date, { bookings: day.length, full, crowded }];
   }));
 }
 

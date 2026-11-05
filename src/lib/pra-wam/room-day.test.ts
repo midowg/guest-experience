@@ -74,12 +74,17 @@ describe("a whole day across the rooms, for the date strip", () => {
 
   it("counts the bookable rooms' bookings and sessions per date, and is not full while a half hour is free", () => {
     const summary = daySummaries(["2026-11-05", "2026-11-06"], rooms, [on("a", "2026-11-05", "09:00", "18:00"), on("b", "2026-11-05", "09:00", "12:00", true), on("x", "2026-11-05", "09:00", "18:00")], before);
-    expect(summary).toEqual({ "2026-11-05": { bookings: 2, full: false }, "2026-11-06": { bookings: 0, full: false } });
+    expect(summary).toEqual({ "2026-11-05": { bookings: 2, full: false, crowded: true }, "2026-11-06": { bookings: 0, full: false, crowded: false } });
   });
 
   it("is full when every bookable room has no free half hour, counting Pra WAM sessions", () => {
     const summary = daySummaries([date], rooms, [on("a", date, "09:00", "18:00"), on("b", date, "09:00", "13:00"), on("b", date, "13:00", "18:00", true)], before);
-    expect(summary[date]).toEqual({ bookings: 3, full: true });
+    expect(summary[date]).toEqual({ bookings: 3, full: true, crowded: true });
+  });
+
+  it("is crowded when one room has three quarters of its hours taken, not before", () => {
+    expect(daySummaries([date], rooms, [on("a", date, "09:00", "15:45")], before)[date].crowded).toBe(true);
+    expect(daySummaries([date], rooms, [on("a", date, "09:00", "15:30")], before)[date].crowded).toBe(false);
   });
 
   it("ignores today's half hours that have begun", () => {
@@ -92,7 +97,7 @@ describe("a whole day across the rooms, for the date strip", () => {
 
   it("is never full on a day whose hours are over, or without a bookable room", () => {
     expect(daySummaries([date], rooms, [], new Date(wibInstant(date, "18:30")))[date].full).toBe(false);
-    expect(daySummaries([date], [{ id: "x", bookable: false }], [], before)[date]).toEqual({ bookings: 0, full: false });
+    expect(daySummaries([date], [{ id: "x", bookable: false }], [], before)[date]).toEqual({ bookings: 0, full: false, crowded: false });
   });
 
   it("says each strip day's state in words", () => {

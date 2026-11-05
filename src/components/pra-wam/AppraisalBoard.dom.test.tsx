@@ -66,18 +66,24 @@ it("offers one way to take a booking off, Batalkan, after a confirmation naming 
   expect(await screen.findByText(/^"Rapat KPI", Kamis, 5 Nov, 10\.00–11\.00, Nagapadma\./)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Batalkan booking" })).toBeTruthy();
 });
-it("lists the whole window on the date strip, past days off, and goes to another week by navigating", () => {
+it("picks the day on the month calendar, past days off, and goes to another week by navigating", () => {
   push.mockReset();
   const week = ["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"];
   render(<AppraisalBoard date="2026-11-05" week={week} dates={["2026-11-04","2026-11-05"]} now={wibInstant("2026-11-04","10:12")}
     rooms={rooms} bookings={[b]} mine={[b]} viewerId="me" canCancelAny={false} open form={{ people: [], groups: [], usedTitles: [] }} arrive={{}}
     summary={{ "2026-11-10": { bookings: 3, full: true } }} />);
-  const strip = within(screen.getByRole("group", { name: "Pilih hari" }));
-  expect(strip.getByRole("button", { name: /^Rabu, 28 Okt, lewat/ }).getAttribute("aria-disabled")).toBe("true");
-  expect(strip.getByRole("button", { name: "Rabu, 4 Nov, hari ini, kosong" })).toBeTruthy();
-  expect(strip.getByRole("button", { name: "Kamis, 5 Nov, 1 terpakai" }).getAttribute("aria-pressed")).toBe("true");
-  expect(strip.getByRole("button", { name: /^Jumat, 20 Nov/ })).toBeTruthy();
-  fireEvent.click(strip.getByRole("button", { name: "Selasa, 10 Nov, penuh" }));
+  const calendar = within(screen.getByRole("region", { name: "Pilih hari" }));
+  expect(calendar.getByRole("heading", { name: "5 Nov Kamis" })).toBeTruthy();
+  expect(calendar.getByRole("button", { name: "Rabu, 4 Nov, hari ini, semua ruang kosong" })).toBeTruthy();
+  expect(calendar.getByRole("button", { name: "Kamis, 5 Nov, ada booking kamu" }).getAttribute("aria-pressed")).toBe("true");
+  expect(calendar.getByRole("button", { name: /^Selasa, 3 Nov, lewat/ }).getAttribute("aria-disabled")).toBe("true");
+  expect(calendar.getByRole("button", { name: /^Jumat, 20 Nov/ })).toBeTruthy();
+  fireEvent.click(calendar.getByRole("button", { name: "Selasa, 10 Nov, ada ruang hampir penuh" }));
   expect(push).toHaveBeenCalledWith("/wam/book?date=2026-11-10", { scroll: false });
+  fireEvent.click(calendar.getByRole("button", { name: "Bulan sebelumnya" }));
+  expect(calendar.getByRole("button", { name: /^Rabu, 28 Okt, lewat/ }).getAttribute("aria-disabled")).toBe("true");
+  // The week grid's arrows load the next week from its first day.
+  fireEvent.click(screen.getByRole("button", { name: "Minggu berikutnya" }));
+  expect(push).toHaveBeenLastCalledWith("/wam/book?date=2026-11-09", { scroll: false });
   expect(screen.queryByRole("link", { name: /Minggu (sebelumnya|berikutnya)/ })).toBeNull();
 });
