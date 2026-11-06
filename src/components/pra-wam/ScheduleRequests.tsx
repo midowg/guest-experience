@@ -14,6 +14,7 @@ import { useSessionIntent } from "./SessionActions";
 import panel from "./panitia.module.css";
 import rows from "./peserta.module.css";
 import styles from "./pra-wam.module.css";
+import { withoutHonorific } from "@/lib/pra-wam/call-name";
 
 type Props = { sessionId: string; startsAt: string; endsAt: string; rooms: Room[]; requests: ScheduleRequest[]; canAsk: boolean };
 
@@ -149,7 +150,7 @@ export function RequestReview({ requests }: { requests: ScheduleRequest[] }) {
     } catch (problem) { setNotice({ tone: "error", text: errorText(problem) }); }
     finally { setBusy(null); }
   }
-  const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase();
+  const initials = (name: string) => withoutHonorific(name).split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]).join("").toUpperCase();
   const short = (startsAt: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(startsAt));
   return <div className={styles.section}>
     {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}

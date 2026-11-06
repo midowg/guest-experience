@@ -121,8 +121,8 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     try {
       let saved: Employee | undefined;
       if (person) {
-        // Only what changed; an empty value saved as null and one never set count as the same.
-        const changed = Object.fromEntries(Object.entries(draft).filter(([key, value]) => (person[key as keyof Employee] ?? null) !== (value ?? null)));
+        // Only what changed; an empty value, null and one never set count as the same.
+        const changed = Object.fromEntries(Object.entries(draft).filter(([key, value]) => (person[key as keyof Employee] || null) !== (value || null)));
         saved = Object.keys(changed).length ? (await adminRequest<Employee>(employeesApi(person.id), { method: "PATCH", body: JSON.stringify(changed) })).data : person;
       } else {
         saved = (await adminRequest<Employee>(employeesApi(), { method: "POST", body: JSON.stringify({ employee: draft }) })).data;

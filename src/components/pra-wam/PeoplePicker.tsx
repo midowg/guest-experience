@@ -5,6 +5,7 @@ import { Check, Plus } from "lucide-react";
 import type { Person } from "@/lib/pra-wam/appraisal";
 import styles from "./pra-wam.module.css";
 import css from "./people-picker.module.css";
+import { withoutHonorific } from "@/lib/pra-wam/call-name";
 
 /** A department or BU and its people, for the Departemen list. */
 export type PeopleGroup = { id: string; label: string; memberIds: string[] };
@@ -21,7 +22,7 @@ type Props = {
   max?: number;
 };
 
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
+const initials = (name: string) => withoutHonorific(name).split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
 
 /**
  * Picking people (5 Nov 2026), for Book ruang and Buat sesi: Departemen as one dropdown, opening on
@@ -38,7 +39,7 @@ export function PeoplePicker({ people, groups, picked, onChange, viewerId, max }
   const group = groups.find(item => item.id === groupId);
   const query = search.trim().toLowerCase();
   const shown = people
-    .filter(person => (!group || group.memberIds.includes(person.id)) && (!query || person.name.toLowerCase().includes(query) || person.department.toLowerCase().includes(query)))
+    .filter(person => (!group || group.memberIds.includes(person.id)) && (!query || person.name.toLowerCase().includes(query) || (person.fullName ?? "").toLowerCase().includes(query) || person.department.toLowerCase().includes(query)))
     .sort((a, b) => a.name.localeCompare(b.name, "id"));
   const addable = shown.filter(person => !picked.includes(person.id));
   const full = max !== undefined && picked.length >= max;

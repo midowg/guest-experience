@@ -40,7 +40,7 @@ vi.mock("./leads", () => ({
   leadsOf: async (id: string) => ({ departments: id === "requester" ? ["HC"] : ["IT"], businessUnits: [] }),
   listLeads: async () => ({ byPerson: new Map(), migrated: true }), leadOptions: async () => ({ departments: [], businessUnits: [] }),
 }));
-vi.mock("./appraisal", () => ({ listPeople: async () => [], listRooms: async () => [] }));
+vi.mock("./appraisal", () => ({ listPeople: async () => [], listRooms: async () => [], callNameOf: async (_id: string, fallback: string) => fallback }));
 
 const { answerHodMeeting, cancelHodMeeting } = await import("./hod");
 const member = (id: string) => ({ id, name: id, nickname: id, department: "", position: "", mustChangePassword: false, roles: [], photo: null });

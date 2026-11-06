@@ -96,4 +96,4 @@ export function photoPath(account: { id: string; photoKey: string | null; photoU
 }
 
 /** "Bagus Werkudara" → "BW". */
-export const initialsOf = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
+export const initialsOf = (name: string) => name.replace(/^(Pak|Bu)\s+/, "").split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");

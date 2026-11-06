@@ -32,7 +32,8 @@ export type Room = {
   /** What the room has, for its line on the floor plan: "TV", "Whiteboard"… */
   facilities: string[];
 };
-export type Person = { id: string; name: string; department: string };
+/** `name` is what colleagues see (nama panggilan); `fullName`, when given, is for search. */
+export type Person = { id: string; name: string; department: string; fullName?: string };
 /**
  * "Di luar kantor" (5 Nov 2026, migration 202611050006): a booking without an office room, with a
  * place name instead. Its roomId is this marker (never a room's id, which are uuids), so every list

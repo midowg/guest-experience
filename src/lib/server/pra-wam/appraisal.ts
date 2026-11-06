@@ -1,3 +1,4 @@
+import { callName } from "@/lib/pra-wam/call-name";
 import "server-only";
 import { cache } from "react";
 import { alternatives, appraisalRules, bookableDates, bookingProblems, clockLabel, OUTSIDE_ROOM, overlaps, roomFitProblem, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
@@ -7,6 +8,7 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { deleteBookingAndSession, notifyBookingSession, withBookingLink } from "./booking-sessions";
+import { seniorIds } from "./call-names";
 import { appraisalOpen } from "./events";
 import { notMigrated, waitingForMigration, type Member } from "./session";
 
@@ -59,11 +61,23 @@ async function listRoomsUncached(): Promise<Room[]> {
 /** Read once per request, however many parts of the page ask. */
 export const listRooms = cache(listRoomsUncached);
 
-/** Everyone in Data karyawan, for names on the schedule and the participant picker. */
-async function listPeopleUncached(): Promise<(Person & { active: boolean })[]> {
-  const { data, error } = await createPrivilegedClient().from("employees").select("id,full_name,department,active").order("department").order("full_name").limit(2000);
+/**
+ * Everyone in Data karyawan, for names on the schedule and the participant picker. `name` is what
+ * colleagues see (the nama panggilan, Pak or Bu for BOD, HOD and lead BU); `fullName` stays for
+ * admin views and for search.
+ */
+async function listPeopleUncached(): Promise<(Person & { fullName: string; active: boolean })[]> {
+  const read = (fields: string) => createPrivilegedClient().from("employees").select(fields).order("department").order("full_name").limit(2000);
+  let { data, error } = await read("id,full_name,nickname,gender,department,active");
+  // Before migration 202611060007 there is no Jenis kelamin: the nama panggilan without Pak or Bu.
+  if (error && ["42703", "PGRST204"].includes(error.code ?? "") && /gender/.test(error.message ?? "")) ({ data, error } = await read("id,full_name,nickname,department,active"));
   if (error) fail(error);
-  return (data ?? []).map(row => ({ id: row.id, name: row.full_name, department: row.department, active: row.active }));
+  const senior = await seniorIds();
+  const rows = (data ?? []) as unknown as { id: string; full_name: string; nickname?: string | null; gender?: string | null; department: string; active: boolean }[];
+  return rows.map(row => ({
+    id: row.id, name: callName({ fullName: row.full_name, nickname: row.nickname, gender: row.gender }, senior.has(row.id)),
+    fullName: row.full_name, department: row.department, active: row.active,
+  }));
 }
 /** Read once per request, however many parts of the page ask. */
 export const listPeople = cache(listPeopleUncached);
@@ -76,7 +90,7 @@ async function withPeople(rows: BookingRow[], viewer: Member): Promise<Booking[]
     client.from("pw_room_booking_participants").select("booking_id,employee_id").in("booking_id", rows.map(row => row.id)),
   ]);
   if (error) fail(error);
-  const byId = new Map(people.map(person => [person.id, { id: person.id, name: person.name, department: person.department }]));
+  const byId = new Map(people.map(person => [person.id, { id: person.id, name: person.name, fullName: person.fullName, department: person.department }]));
   const unknown = (id: string): Person => byId.get(id) ?? { id, name: "Tanpa nama", department: "" };
   const participants = new Map<string, string[]>();
   for (const link of links ?? []) participants.set(link.booking_id, [...(participants.get(link.booking_id) ?? []), link.employee_id]);
@@ -303,4 +317,9 @@ export async function deleteBooking(id: string, viewer: Member): Promise<void> {
   if (data.booked_by !== viewer.id && !cancelsAnyBooking(viewer)) throw new ServiceError(403, "Hanya pemesan atau panitia yang bisa menghapus booking ini.");
   const deleteError = await deleteBookingAndSession(id);
   if (deleteError) fail(deleteError);
+}
+
+/** What colleagues see for one person (the nama panggilan, with Pak or Bu where it applies). */
+export async function callNameOf(employeeId: string, fallback: string): Promise<string> {
+  return (await listPeople()).find(person => person.id === employeeId)?.name ?? fallback;
 }

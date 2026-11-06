@@ -1,3 +1,4 @@
+import { GENDERS, type Gender } from "@/lib/pra-wam/call-name";
 import { z } from "zod";
 
 /*
@@ -20,6 +21,8 @@ export type Employee = {
   business_unit: string;
   /** Atasan langsung, for the Struktur tab (migration 202611060006); null for the usual place. */
   reports_to?: string | null;
+  /** Jenis kelamin, for Pak or Bu in the WAM app (migration 202611060007): "L", "P" or "". */
+  gender?: Gender;
 };
 /** One person as read from HR's sheet; `email` and `nip` only when the sheet has them. */
 export type EmployeeRow = Pick<Employee, "full_name" | "nickname" | "department" | "position" | "office" | "category"> & { email?: string; nip?: string };
@@ -38,6 +41,7 @@ export const employeePatchSchema = z.object({
   nip: z.union([z.literal(""), z.string().trim().regex(NIP, "NIP hanya angka, huruf, titik, atau strip.")]),
   business_unit: text(120).min(1, "Pilih Business Unit."),
   reports_to: z.union([z.uuid(), z.null()]),
+  gender: z.enum(GENDERS),
 }).partial();
 /** A person added by hand (Tambah karyawan): the name, department and job at least. */
 export const employeeCreateSchema = z.object({
@@ -47,6 +51,7 @@ export const employeeCreateSchema = z.object({
   nip: z.union([z.literal(""), z.string().trim().regex(NIP, "NIP hanya angka, huruf, titik, atau strip.")]).default(""),
   business_unit: text(120).min(1).default("WNS"), active: z.boolean().default(true),
   reports_to: z.union([z.uuid(), z.null()]).default(null),
+  gender: z.enum(GENDERS).default(""),
 });
 
 /** The matching key: the database derives the same one (upper case, single spaces). */

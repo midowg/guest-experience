@@ -352,7 +352,7 @@ export async function hrPeople(unlock: HrUnlock): Promise<{ people: HrPersonRow[
     if ((data?.length ?? 0) < page) break;
   }
   const byId = new Map((await listPeople()).map(person => [person.id, person]));
-  const people = [...counts].map(([id, count]) => ({ id, name: byId.get(id)?.name ?? "Tanpa nama", department: byId.get(id)?.department ?? "", answered: count }))
+  const people = [...counts].map(([id, count]) => ({ id, name: byId.get(id)?.fullName ?? "Tanpa nama", department: byId.get(id)?.department ?? "", answered: count }))
     .sort((a, b) => a.name.localeCompare(b.name, "id"));
   return { people, questions: questions.length };
 }
@@ -382,7 +382,7 @@ export async function hrPerson(unlock: HrUnlock, employeeId: string, request: Re
     ? await createPrivilegedClient().from("cq_answers").select("question_id,value,updated_at").eq("form_id", unlock.formId).eq("employee_id", employeeId).in("question_id", questions.map(question => question.id))
     : { data: [], error: null };
   if (error) { if (questionnaireMissing(error)) throw questionnaireWaiting(); databaseError(error); }
-  const names = new Map(people.map(item => [item.id, item.name]));
+  const names = new Map(people.map(item => [item.id, item.fullName]));
   const byQuestion = new Map((data ?? []).map(row => [row.question_id as string, row as { value: AnswerValue; updated_at: string }]));
   const ordered = [...sections].sort((a, b) => a.sort - b.sort);
   return {
@@ -407,7 +407,7 @@ export async function hrAccessLog(unlock: HrUnlock): Promise<HrLogRow[]> {
     .eq("form_id", unlock.formId).order("created_at", { ascending: false }).limit(50);
   if (error) { if (/actor_employee_id/.test(error.message ?? "")) throw hrAccessWaiting(); if (questionnaireMissing(error)) throw questionnaireWaiting(); databaseError(error); }
   const rows = data ?? [];
-  const names = rows.some(row => row.subject_employee_id || row.actor_employee_id) ? new Map((await listPeople()).map(person => [person.id, person.name])) : new Map<string, string>();
+  const names = rows.some(row => row.subject_employee_id || row.actor_employee_id) ? new Map((await listPeople()).map(person => [person.id, person.fullName])) : new Map<string, string>();
   const nameOf = (id: string | null) => (id ? names.get(id) ?? "Tanpa nama" : null);
   return rows.map(row => ({
     id: row.id, action: row.action as HrAction, subject: nameOf(row.subject_employee_id), actor: nameOf(row.actor_employee_id),

@@ -66,7 +66,7 @@ export async function adminCards(): Promise<AdminCards | null> {
   const byId = new Map(people.map(person => [person.id, person]));
   const rows = (cards.data ?? []) as { employee_id: string; card_id: string; tier_key: string; serial: number | null; trial: boolean; drawn_at: string; roll: Roll; dna: string }[];
   const drawn: DrawnCard[] = rows.map(row => ({
-    employeeId: row.employee_id, name: byId.get(row.employee_id)?.name ?? "Tanpa nama", department: byId.get(row.employee_id)?.department ?? "",
+    employeeId: row.employee_id, name: byId.get(row.employee_id)?.fullName ?? "Tanpa nama", department: byId.get(row.employee_id)?.department ?? "",
     serial: row.serial, trial: row.trial, characterId: row.card_id, tierKey: row.tier_key, drawnAt: row.drawn_at, roll: row.roll, dna: row.dna,
   }));
 

@@ -93,7 +93,7 @@ export function forumMark(present: boolean, endsAt: string, now: Date): ForumMar
 
 /** First and last name: "Fadli Fahmi Ali" -> "FA", as on the Penpot avatars. */
 export function initials(name: string): string {
-  const words = name.split(/\s+/).filter(Boolean);
+  const words = name.replace(/^(Pak|Bu)\s+/, "").split(/\s+/).filter(Boolean);
   return (words.length > 1 ? [words[0], words[words.length - 1]] : words).map(word => word[0]?.toUpperCase()).join("");
 }
 

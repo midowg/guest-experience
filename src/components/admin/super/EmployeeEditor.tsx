@@ -6,14 +6,15 @@ import { Button, Notice } from "@/components/ui";
 import { LeadEditor } from "@/components/admin/wam/akun/LeadEditor";
 import { categoryLabels, employeeCategories, type Employee, type EmployeeCategory } from "@/lib/employees";
 import { BUSINESS_UNITS, DEFAULT_BUSINESS_UNIT, buCode, buFromOffice, type Leads } from "@/lib/pra-wam/leads";
+import { GENDERS, asGender, genderLabels } from "@/lib/pra-wam/call-name";
 import type { PraWamRole } from "@/lib/pra-wam/roles";
 import css from "./employee-editor.module.css";
 
 export type EmployeeDraft = Omit<Employee, "id" | "active">;
 
-const blank: EmployeeDraft = { full_name: "", nickname: "", department: "", position: "", office: "", category: "karyawan", phone: "", email: "", nip: "", business_unit: DEFAULT_BUSINESS_UNIT, reports_to: null };
+const blank: EmployeeDraft = { full_name: "", nickname: "", department: "", position: "", office: "", category: "karyawan", phone: "", email: "", nip: "", business_unit: DEFAULT_BUSINESS_UNIT, reports_to: null, gender: "" };
 const draftOf = (person: Employee | null): EmployeeDraft => person
-  ? { full_name: person.full_name, nickname: person.nickname, department: person.department, position: person.position, office: person.office, category: person.category, phone: person.phone, email: person.email, nip: person.nip, business_unit: buCode(person.business_unit), reports_to: person.reports_to ?? null }
+  ? { full_name: person.full_name, nickname: person.nickname, department: person.department, position: person.position, office: person.office, category: person.category, phone: person.phone, email: person.email, nip: person.nip, business_unit: buCode(person.business_unit), reports_to: person.reports_to ?? null, gender: person.gender ?? "" }
   : blank;
 
 /**
@@ -98,6 +99,9 @@ export function EmployeeEditor({ person, leads, roles, options, departments, peo
             {field("nickname", "Nama panggilan", text("nickname", { maxLength: 60 }))}
             {field("nip", "NIP", text("nip", { maxLength: 30 }), "Boleh kosong dulu.")}
           </div>
+          {field("gender", "Jenis kelamin", <select id={`${id}-gender`} className="input" value={draft.gender ?? ""} onChange={event => set({ gender: asGender(event.target.value) })}>
+            {GENDERS.map(key => <option key={key} value={key}>{genderLabels[key]}</option>)}
+          </select>, "Untuk sapaan Pak atau Bu di aplikasi WAM bagi BOD, HOD, dan lead BU.")}
         </fieldset>
 
         <fieldset className={css.group}>

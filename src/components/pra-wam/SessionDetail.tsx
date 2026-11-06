@@ -11,8 +11,9 @@ import { SelfCheckIn } from "./SelfCheckIn";
 import { SessionActions } from "./SessionActions";
 import styles from "./pra-wam.module.css";
 import rows from "./peserta.module.css";
+import { withoutHonorific } from "@/lib/pra-wam/call-name";
 
-const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
+const initials = (name: string) => withoutHonorific(name).split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
 const FACES = 5;
 
 type Props = { view: Extract<SessionView, { kind: "sesi" }>; now: Date };

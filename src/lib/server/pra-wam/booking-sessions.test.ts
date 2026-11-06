@@ -95,8 +95,8 @@ beforeEach(() => {
   notifySession.mockClear(); removeObjects.mockClear();
   db = {
     employees: [
-      { id: "citra", full_name: "Citra Dewi", department: "HC", active: true },
-      { id: "budi", full_name: "Budi Santoso", department: "IT", active: true },
+      { id: "citra", full_name: "Citra Dewi", nickname: "Citra", department: "HC", active: true },
+      { id: "budi", full_name: "Budi Santoso", nickname: "Budi", department: "IT", active: true },
       { id: "panitia", full_name: "Panitia", department: "GA", active: true },
     ],
     pw_rooms: [{ id: "vasuki", slug: "vasuki", name: "Vasuki", kind: "utama", capacity: 6, bookable: true, facilities: [], min_people: null, plan_key: null }],
@@ -129,7 +129,7 @@ function beforeMigration() {
 describe("reading a booking's session", () => {
   it("maps the booking link and the booker onto the session", async () => {
     const session = await getSession("s1", panitia);
-    expect(session).toMatchObject({ status: "terbit", kind: "rapat", roomName: "Vasuki", participantCount: 2, booking: { id: "b1", bookedBy: { id: "citra", name: "Citra Dewi" } } });
+    expect(session).toMatchObject({ status: "terbit", kind: "rapat", roomName: "Vasuki", participantCount: 2, booking: { id: "b1", bookedBy: { id: "citra", name: "Citra" } } });
     expect((await getSession("s2", panitia)).booking).toBeNull();
     // A participant sees it on their list like any published session.
     expect((await listSessions(budi)).sessions.map(item => [item.id, item.booking?.id ?? null])).toEqual([["s1", "b1"], ["s2", null]]);
@@ -159,13 +159,13 @@ describe("one room use, shown once", () => {
   });
 
   it("names the session's hold after its booker for the room picker", async () => {
-    expect((await roomUses("2026-11-16")).map(use => [use.source, use.sourceId, use.label])).toEqual([["sesi", "s1", "1-on-1 Q4 (Citra Dewi)"], ["sesi", "s2", "Forum HC"]]);
+    expect((await roomUses("2026-11-16")).map(use => [use.source, use.sourceId, use.label])).toEqual([["sesi", "s1", "1-on-1 Q4 (Citra)"], ["sesi", "s2", "Forum HC"]]);
   });
 
   it("lists the booking on the agenda once, as the session that carries the booking", async () => {
     const { items } = await agendaItems(citra, "2026-11-16");
     expect(items.map(item => [item.kind, item.key])).toEqual([["sesi", "s1"]]);
-    expect(items[0]).toMatchObject({ sessionId: "s1", bookingId: "b1", booking: { room: "Vasuki", mine: true, bookedBy: { name: "Citra Dewi" } } });
+    expect(items[0]).toMatchObject({ sessionId: "s1", bookingId: "b1", booking: { room: "Vasuki", mine: true, bookedBy: { name: "Citra" } } });
   });
 
   it("keeps the plain booking on the agenda before the migration", async () => {

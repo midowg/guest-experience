@@ -90,7 +90,7 @@ type Group = { id: string; name: string; businessUnits: string[]; members: strin
 export async function departmentGroups(people: People): Promise<{ groups: Group[]; businessUnits: number; unitsMigrated: boolean }> {
   const units = await listUnits();
   const active = people.filter(person => person.active);
-  const firstName = (id: string) => people.find(person => person.id === id)?.name.split(" ")[0] ?? "";
+  const firstName = (id: string) => people.find(person => person.id === id)?.name ?? "";
   const bus = units.units.filter(unit => unit.kind === "bu");
   const departments = units.units.filter(unit => unit.kind === "departemen");
   const groups = departments.length
