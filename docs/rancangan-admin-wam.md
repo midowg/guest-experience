@@ -1,5 +1,7 @@
 # Rancangan refaktor tampilan Admin WAM dan Kelola acara
 
+> **Aturan yang berlaku sekarang ada di [`aturan-wam.md`](aturan-wam.md).** Bila isi berkas ini berbeda, `aturan-wam.md` yang dipakai; berkas ini disimpan sebagai riwayat.
+
 Status: rencana, belum dikerjakan. 5 Nov 2026.
 Acuan: gambar "Teams" (WhatsApp 5 Nov 08.38). Yang diambil adalah polanya, bukan merek atau isinya:
 - sidebar kiri di atas kanvas abu;

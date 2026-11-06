@@ -17,7 +17,7 @@ export const appraisalRules = {
   stepMinutes: 30,
   maxMinutes: 240,
   maxPerDay: 4,
-  maxParticipants: 15,
+  // No cap on participants since 6 Nov 2026 (was 15); see docs/aturan-wam.md §6.
 } as const;
 
 /** Offered while typing the activity name, before the names people have already used. */

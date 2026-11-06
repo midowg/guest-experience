@@ -11,3 +11,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## Format commit
 
 Gunakan subjek singkat dan jelas dalam bahasa Indonesia dengan awalan Conventional Commits, misalnya `feat: tambah formulir RSVP`, `fix: rapikan navigasi`, `refactor: sederhanakan editor`, `docs: perbarui panduan`, atau `chore: siapkan CI`. Kelompokkan perubahan berdasarkan tujuan; hindari nama agen, promosi, atau footer tambahan yang tidak diwajibkan instruksi sesi.
+
+## Aturan WAM
+
+Sebelum mengubah aplikasi WAM, Admin WAM, atau super admin, baca `docs/aturan-wam.md`: aturan yang
+berlaku selama masa pembangunan (proses rilis, data dan privasi, struktur organisasi, nama dan
+sapaan, Book ruang, absen, tampilan). Keputusan baru diperbarui di sana.

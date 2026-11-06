@@ -1,5 +1,7 @@
 # Spesifikasi build Pra WAM
 
+> **Aturan yang berlaku sekarang ada di [`aturan-wam.md`](aturan-wam.md).** Bila isi berkas ini berbeda, `aturan-wam.md` yang dipakai; berkas ini disimpan sebagai riwayat.
+
 Status: siap dipakai untuk mulai build, dengan keputusan terbuka di bagian 10. Dibuat 3 November 2026.
 Dasar: `docs/rancangan-pra-wam.md` (fungsi dan keputusan), desain Penpot file **PRAWAM** halaman
 03–06 (layar dan alur per peran), acuan eksekusi 2 Nov 2026, kalender Pra WAM, dan data karyawan v2.

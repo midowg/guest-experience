@@ -1,5 +1,7 @@
 # Rancangan Pra WAM & WAM (Werkudara Annual Meeting)
 
+> **Aturan yang berlaku sekarang ada di [`aturan-wam.md`](aturan-wam.md).** Bila isi berkas ini berbeda, `aturan-wam.md` yang dipakai; berkas ini disimpan sebagai riwayat.
+
 Status: rancangan, belum diimplementasikan. Diperbarui 3 November 2026. Spesifikasi untuk build
 ada di `docs/spesifikasi-build-pra-wam.md`.
 
