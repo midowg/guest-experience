@@ -54,10 +54,16 @@ it("shows Meeting HOD as a view of Book only for a HOD", () => {
   const { unmount } = render(<AppraisalBoard {...props} />);
   expect(screen.queryByRole("button", { name: "Meeting HOD" })).toBeNull();
   unmount();
-  render(<AppraisalBoard {...props} hod={{ meetings: [], departments: [{ id: "IT", name: "IT", heads: [{ id: "x", name: "Budi" }] }], ownUnits: ["Finance"], migrated: true }} initialView="hod" />);
-  expect(screen.getByRole("button", { name: "Meeting HOD", pressed: true })).toBeTruthy();
+  const invite = { id: "m1", title: "Rencana 2027", agenda: "", place: "Nagapadma", status: "menunggu" as const, startsAt: "2026-11-10T03:00:00Z", endsAt: "2026-11-10T04:00:00Z", createdAt: "2026-11-04T00:00:00Z",
+    requester: { id: "x", name: "Budi", unit: "IT" }, invites: [{ id: "me", name: "Saya", unit: "Finance", response: "menunggu" as const, note: "", respondedAt: null }] };
+  render(<AppraisalBoard {...props} hod={{ meetings: [invite], departments: [{ id: "IT", name: "IT", heads: [{ id: "x", name: "Budi" }] }], ownUnits: ["Finance"], migrated: true }} initialView="hod" />);
+  // The switch says how many wait for an answer.
+  expect(screen.getByRole("button", { name: /Meeting HOD.*1 menunggu jawabanmu/, pressed: true })).toBeTruthy();
   expect(screen.getByRole("heading", { name: "Meeting HOD" })).toBeTruthy();
+  // One add button per view: Ajukan meeting here, no Book ruang; and no Booking saya under it.
   expect(screen.getByRole("button", { name: /Ajukan meeting/ })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^Book ruang$/ })).toBeNull();
+  expect(screen.queryByText("Booking saya")).toBeNull();
 });
 it("shows the calendar only when the floor plan is switched off", () => {
   render(<AppraisalBoard date="2026-11-05" week={["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"]} dates={["2026-11-04","2026-11-05"]} now={wibInstant("2026-11-04","10:12")}

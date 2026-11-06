@@ -9,6 +9,7 @@ import { hodResponseLabels, hodStatusLabels, sortMeetings, type HodDepartment, t
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { DateStrip } from "./DateStrip";
+import { useConfirm } from "./ConfirmDialog";
 import { ScreenHead } from "./ScreenHead";
 import { Sheet } from "./Sheet";
 import styles from "./pra-wam.module.css";
@@ -52,7 +53,7 @@ export function HodBoard({ meetings, departments, viewerId, ownUnits, migrated, 
     {embedded
       ? <div className={css.head}>
         <div><h2>Meeting HOD</h2><p>Meeting antar HOD. Terjadwal setelah semua HOD yang diundang menerima.</p></div>
-        {migrated && <button type="button" className="button button--secondary" onClick={() => setFormOpen(true)} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Ajukan meeting</button>}
+        {migrated && <button type="button" className="button button--primary" onClick={() => setFormOpen(true)} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Ajukan meeting</button>}
       </div>
       : <ScreenHead title="Meeting HOD"
         actions={migrated ? <button type="button" className="button button--primary" onClick={() => setFormOpen(true)} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Ajukan meeting</button> : undefined} />}
@@ -80,6 +81,7 @@ function MeetingCard({ meeting, viewerId, now, onDone, onError }: {
   meeting: HodMeeting; viewerId: string; now: string; onDone: (text: string) => void; onError: (error: unknown) => void;
 }) {
   const uid = useId();
+  const [confirm, confirmDialog] = useConfirm();
   const [busy, setBusy] = useState(false);
   const [declining, setDeclining] = useState(false);
   const [note, setNote] = useState("");
@@ -94,7 +96,10 @@ function MeetingCard({ meeting, viewerId, now, onDone, onError }: {
     try { onDone((await call()).message); } catch (error) { onError(error); } finally { setBusy(false); }
   }
   const answer = (accept: boolean) => run(() => praWamRequest(praWamApi.hodMeetings(meeting.id), { method: "POST", json: { accept, note: accept ? "" : note } }));
-  const cancel = () => { if (window.confirm(`Batalkan "${meeting.title}"? HOD yang diundang akan diberi tahu.`)) void run(() => praWamRequest(praWamApi.hodMeetings(meeting.id), { method: "DELETE" })); };
+  const cancel = async () => {
+    if (!(await confirm({ title: "Batalkan meeting?", body: `"${meeting.title}", ${span(meeting)}. HOD yang diundang akan diberi tahu.`, confirmLabel: "Batalkan meeting", danger: true }))) return;
+    void run(() => praWamRequest(praWamApi.hodMeetings(meeting.id), { method: "DELETE" }));
+  };
 
   return <article className={`${css.card} ${past || meeting.status === "batal" || meeting.status === "ditolak" ? css.quiet : ""}`} aria-labelledby={`${uid}-title`}>
     <header className={css.cardHead}>
@@ -133,7 +138,8 @@ function MeetingCard({ meeting, viewerId, now, onDone, onError }: {
         <button type="button" className="button button--secondary" onClick={() => setDeclining(true)} disabled={busy}>Tolak</button>
         <button type="button" className="button button--primary" onClick={() => void answer(true)} disabled={busy}><Check size={18} aria-hidden /> {busy ? "Mengirim…" : "Terima"}</button>
       </div>)}
-    {canCancel && <div className={css.actions}><button type="button" className={`button button--secondary ${css.cancel}`} onClick={cancel} disabled={busy}>Batalkan meeting</button></div>}
+    {canCancel && <div className={css.actions}><button type="button" className={`button button--secondary ${css.cancel}`} onClick={() => void cancel()} disabled={busy}>Batalkan meeting</button></div>}
+    {confirmDialog}
   </article>;
 }
 
@@ -172,7 +178,9 @@ function MeetingForm({ open, onClose, departments, ownUnits, rooms, bookings, no
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const set = (patch: Partial<typeof draft>) => { setDraft(current => ({ ...current, ...patch })); setError(""); };
-  const offered = departments.filter(department => !ownUnits.includes(department.id));
+  // Departments with a HOD first (they can be picked), then those still without one.
+  const offered = departments.filter(department => !ownUnits.includes(department.id))
+    .sort((a, b) => Number(b.heads.length > 0) - Number(a.heads.length > 0) || a.name.localeCompare(b.name, "id"));
   const toggle = (id: string) => set({ unitIds: draft.unitIds.includes(id) ? draft.unitIds.filter(item => item !== id) : [...draft.unitIds, id] });
   const pickable = offered.filter(department => department.heads.length > 0);
   const allOn = pickable.length > 0 && pickable.every(department => draft.unitIds.includes(department.id));

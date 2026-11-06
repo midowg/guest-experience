@@ -132,7 +132,8 @@ export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, hod 
   // A HOD's meetings waiting for an answer show on Book, where Meeting HOD is.
   const badge = (tab: Tab) => (tab === "notifikasi" ? unread : tab === "permintaan" ? waiting : tab === "appraisal" && hod ? hodWaiting : 0);
   // A BOD keeps the app's own frame (top bar, bottom bar) with the BOD menu, never the panitia sidebar.
-  const menu = onlyBod ? bod : personal;
+  // With invitations waiting, Book opens on Meeting HOD, where they are answered.
+  const menu = (onlyBod ? bod : personal).map(item => item.id === "appraisal" && hod && hodWaiting > 0 ? { ...item, href: praWamPath.bookHod } : item);
   const managed = onlyBod ? [] : manage.filter(item => !item.show || item.show(member));
   const panitiaView = !onlyBod && !!current && managedTabs.has(current);
   const who = member.nickname || member.name;

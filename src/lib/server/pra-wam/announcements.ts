@@ -1,4 +1,5 @@
 import "server-only";
+import { praWamPath } from "@/lib/routes";
 import { cache } from "react";
 import { managesSessions } from "@/lib/pra-wam/roles";
 import { sessionWhen, sessionWhere, type Session } from "@/lib/pra-wam/sessions";
@@ -20,7 +21,13 @@ const missing = (error: { code?: string; message?: string }) => ["42P01", "PGRST
 const waiting = () => new ServiceError(503, `Pengumuman menunggu migrasi ${MIGRATION}.`);
 
 export type Audience = { type: "semua" } | { type: "sesi"; sessionId: string } | { type: "unit"; unitIds: string[] } | { type: "orang"; employeeIds: string[]; label: string; sessionId?: string };
-export type Notification = { id: string; kind: "pengumuman" | "sesi"; title: string; body: string; sessionId: string | null; createdAt: string; readAt: string | null };
+export type Notification = {
+  id: string; kind: "pengumuman" | "sesi"; title: string; body: string; sessionId: string | null; createdAt: string; readAt: string | null;
+  /** Where its button goes when it is not a session's: Meeting HOD's notes open Book → Meeting HOD. */
+  link?: { href: string; label: string };
+};
+/** The label Meeting HOD's notes carry, so each opens Meeting HOD. */
+export const HOD_NOTE_LABEL = "Meeting HOD";
 export type SentAnnouncement = { id: string; title: string; body: string; audienceLabel: string; createdAt: string; recipients: number; read: number };
 
 async function eventId(): Promise<string> {
@@ -101,10 +108,11 @@ export async function myNotifications(member: Member): Promise<{ items: Notifica
   if (error) { if (missing(error)) return { items: [], unread: 0, migrated: false }; databaseError(error); }
   const ids = (receipts ?? []).map(receipt => receipt.announcement_id);
   if (!ids.length) return { items: [], unread: 0, migrated: true };
-  const { data, error: noteError } = await client.from("pw_announcements").select("id,kind,title,body,session_id,created_at").in("id", ids).order("created_at", { ascending: false }).limit(100);
+  const { data, error: noteError } = await client.from("pw_announcements").select("id,kind,title,body,session_id,created_at,audience_label").in("id", ids).order("created_at", { ascending: false }).limit(100);
   if (noteError) databaseError(noteError);
   const items = (data ?? []).map(row => ({
     id: row.id, kind: row.kind, title: row.title, body: row.body, sessionId: row.session_id, createdAt: row.created_at,
+    ...(row.audience_label === HOD_NOTE_LABEL ? { link: { href: praWamPath.bookHod, label: "Buka Meeting HOD" } } : {}),
     readAt: receipts?.find(receipt => receipt.announcement_id === row.id)?.read_at ?? null,
   }));
   return { items, unread: (receipts ?? []).filter(receipt => !receipt.read_at).length, migrated: true };
@@ -144,8 +152,8 @@ export async function sentAnnouncements(viewer: Member): Promise<{ items: SentAn
 }
 
 /** A note from the app to some people (e.g. the answer to their request). Never throws. */
-export async function notifyPeople(employeeIds: string[], note: { title: string; body: string; sessionId?: string }, by: Member): Promise<void> {
-  try { await send({ kind: "sesi", title: note.title, body: note.body, audience: { type: "orang", employeeIds, label: "Pribadi", sessionId: note.sessionId }, createdBy: by.id }); }
+export async function notifyPeople(employeeIds: string[], note: { title: string; body: string; sessionId?: string; label?: string }, by: Member): Promise<void> {
+  try { await send({ kind: "sesi", title: note.title, body: note.body, audience: { type: "orang", employeeIds, label: note.label ?? "Pribadi", sessionId: note.sessionId }, createdBy: by.id }); }
   catch { /* the answer is saved either way */ }
 }
 

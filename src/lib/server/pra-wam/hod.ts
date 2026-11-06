@@ -5,7 +5,7 @@ import { isHod } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
-import { notifyPeople } from "./announcements";
+import { HOD_NOTE_LABEL, notifyPeople } from "./announcements";
 import { listPeople } from "./appraisal";
 import type { Member } from "./session";
 import { leadOptions, leadsOf, listLeads } from "./leads";
@@ -127,6 +127,7 @@ export async function createHodMeeting(member: Member, input: HodMeetingInput): 
   await notifyPeople(invites.map(invite => invite.employee_id), {
     title: `Undangan Meeting HOD: ${input.title}`,
     body: `${member.name} mengajak kamu meeting HOD pada ${when(input.start, input.end, input.date)}${input.place ? ` di ${input.place}` : ""}. Terima atau tolak di Book → Meeting HOD.`,
+    label: HOD_NOTE_LABEL,
   }, member);
   return data.id;
 }
@@ -159,9 +160,9 @@ export async function answerHodMeeting(member: Member, id: string, accept: boole
   }
   const span = when(wibTime(meeting.starts_at), wibTime(meeting.ends_at), wibDate(meeting.starts_at));
   if (status === "terjadwal") {
-    await notifyPeople([meeting.requested_by, ...(all ?? []).map(row => row.employee_id)], { title: `Meeting HOD terjadwal: ${meeting.title}`, body: `Semua HOD menerima. ${span}${meeting.place ? `, ${meeting.place}` : ""}.` }, member);
+    await notifyPeople([meeting.requested_by, ...(all ?? []).map(row => row.employee_id)], { title: `Meeting HOD terjadwal: ${meeting.title}`, body: `Semua HOD menerima. ${span}${meeting.place ? `, ${meeting.place}` : ""}.`, label: HOD_NOTE_LABEL }, member);
   } else if (status === "ditolak") {
-    await notifyPeople([meeting.requested_by], { title: `Meeting HOD ditolak: ${meeting.title}`, body: `${member.name} menolak${note ? `: "${note}"` : "."} Kamu bisa mengajukan waktu lain.` }, member);
+    await notifyPeople([meeting.requested_by], { title: `Meeting HOD ditolak: ${meeting.title}`, body: `${member.name} menolak${note ? `: "${note}"` : "."} Kamu bisa mengajukan waktu lain.`, label: HOD_NOTE_LABEL }, member);
   }
   return status;
 }
@@ -175,5 +176,5 @@ export async function cancelHodMeeting(member: Member, id: string): Promise<void
   const { error } = await client.from("pw_hod_meetings").update({ status: "batal", updated_at: new Date().toISOString() }).eq("id", id);
   if (error) fail(error);
   const { data: invites } = await client.from("pw_hod_meeting_invites").select("employee_id").eq("meeting_id", id);
-  await notifyPeople((invites ?? []).map(row => row.employee_id), { title: `Meeting HOD dibatalkan: ${meeting.title}`, body: `${member.name} membatalkan meeting ini.` }, member);
+  await notifyPeople((invites ?? []).map(row => row.employee_id), { title: `Meeting HOD dibatalkan: ${meeting.title}`, body: `${member.name} membatalkan meeting ini.`, label: HOD_NOTE_LABEL }, member);
 }

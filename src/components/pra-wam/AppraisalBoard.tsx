@@ -76,6 +76,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const [chosenView, setView] = useState<"kalender" | "denah" | "hod">(initialView);
   // With the floor plan switched off by the super admin, no Denah; Meeting HOD only for a HOD.
   const view = chosenView === "denah" && !floorPlan ? "kalender" : chosenView === "hod" && !hod ? "kalender" : chosenView;
+  // Meeting HOD invitations still waiting for this HOD's answer, on the switch.
+  const hodWaiting = hod ? hod.meetings.filter(meeting => meeting.status === "menunggu" && new Date(meeting.endsAt) > new Date(now)
+    && meeting.invites.some(invite => invite.id === viewerId && invite.response === "menunggu")).length : 0;
   // From 1024px the week grid first (DS "Jadwal, tampilan minggu"); a phone always shows the day.
   const [mode, setMode] = useState<"hari" | "minggu">("minggu");
   const [weekRoom, setWeekRoom] = useState(() => bookable[0]?.id ?? "");
@@ -202,8 +205,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   // The month calendar (DS "Kalender · tanggal terpilih") picks the day for both views.
   const calendar = <MonthCalendar from={appraisalRules.periodStart} to={appraisalRules.periodEnd} selected={selected} today={today} summary={days}
     mine={mine.map(booking => wibDate(booking.startsAt))} onPick={day => pickDay(day, false)} label="Pilih hari" />;
+  // Meeting HOD has its own "Ajukan meeting": one add button per view.
   const head = <ScreenHead title="Book ruang"
-    actions={canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
+    actions={view !== "hod" && canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
 
   return <>
     {head}
@@ -211,10 +215,11 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {confirmDialog}
 
     <div className={css.toolbar}>
-      {(floorPlan || hod) && <div className={css.segmented} role="group" aria-label="Tampilan">
+      {(floorPlan || hod) && <div className={`${css.segmented} ${css.views}`} role="group" aria-label="Tampilan">
         <button type="button" aria-pressed={view === "kalender"} onClick={() => setView("kalender")}><CalendarDays aria-hidden />Kalender</button>
         {floorPlan && <button type="button" aria-pressed={view === "denah"} onClick={() => setView("denah")}><MapIcon aria-hidden />Denah</button>}
-        {hod && <button type="button" aria-pressed={view === "hod"} onClick={() => setView("hod")}><Handshake aria-hidden />Meeting HOD</button>}
+        {hod && <button type="button" aria-pressed={view === "hod"} onClick={() => setView("hod")}><Handshake aria-hidden />Meeting HOD
+          {hodWaiting > 0 && <span className={css.viewCount}><span aria-hidden>{hodWaiting}</span><span className="sr-only">, {hodWaiting} menunggu jawabanmu</span></span>}</button>}
       </div>}
       {view === "kalender" && <div className={`${css.segmented} ${css.deskOnly}`} role="group" aria-label="Rentang kalender">
         <button type="button" aria-pressed={mode === "hari"} onClick={() => setMode("hari")}>Hari</button>
@@ -240,6 +245,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     </div> : <PlanView key={selected} date={selected} today={today} now={clockNow} rooms={rooms} bookings={dayBookings} canBook={canBookDay} weekend={weekendDay}
       note={weekendDay ? "Akhir pekan" : dayNote} onDay={day => pickDay(day, false)} onBookRoom={room => book({ date: selected, room: room.id })} />}
 
+    {view !== "hod" && <>
     <p className={styles.sectionLabel}>Booking saya</p>
     {mine.length === 0 ? <div className={styles.emptyRow}>
       <span className={styles.tile} aria-hidden><CalendarPlus /></span>
@@ -257,6 +263,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
         </button>
       </li>)}
     </ul>}
+    </>}
 
     {sheet?.kind === "detail" && <BookingSheet booking={sheet.booking} shown={shown} onClose={close} rooms={rooms} now={clockNow}
       mine={mineFlag(sheet.booking)} canEdit={canBook && mineFlag(sheet.booking)} canCancel={!sheet.booking.isSession && (mineFlag(sheet.booking) || canCancelAny)}

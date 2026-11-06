@@ -64,8 +64,9 @@ export function NotificationList({ items, now }: { items: Notification[]; now: s
             <strong>{item.title}</strong>
             {item.body && <p>{item.body}</p>}
             <span className={styles.meta}>{item.kind === "sesi" ? "Kabar sesi" : "Panitia"} · {clock(item.createdAt)}</span>
-            {(item.sessionId || !item.readAt) && <div className={styles.actions}>
+            {(item.sessionId || item.link || !item.readAt) && <div className={styles.actions}>
               {item.sessionId && <a className="button button--primary" href={praWamPath.session(item.sessionId)} onClick={() => { if (!item.readAt) void read(item.id); }}>Buka sesi</a>}
+              {!item.sessionId && item.link && <a className="button button--primary" href={item.link.href} onClick={() => { if (!item.readAt) void read(item.id); }}>{item.link.label}</a>}
               {!item.readAt && <button type="button" className="button button--quiet" disabled={busy} onClick={() => read(item.id)}>Tandai dibaca</button>}
             </div>}
           </div>
