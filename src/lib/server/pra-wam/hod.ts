@@ -145,6 +145,9 @@ export async function cancelHodMeeting(member: Member, id: string): Promise<void
 /** The HODs of the departments picked, each with the department they are asked for; the booker left out. */
 export async function hodInvitees(member: Member, unitIds: string[]): Promise<{ employee_id: string; department: string }[]> {
   await requireHod(member);
+  // Refused before the booking is saved, so a room is never booked without its invitations.
+  const { error: ready } = await createPrivilegedClient().from("pw_hod_meetings").select("room_id,booking_id").limit(1);
+  if (ready) throw new ServiceError(503, "Booking sebagai HOD menunggu migrasi 202611060003_pra_wam_hod_meeting_room.sql. Sementara itu booking sebagai pribadi.");
   const departments = await headsByDepartment();
   const invites: { employee_id: string; department: string }[] = [];
   const empty: string[] = [];
