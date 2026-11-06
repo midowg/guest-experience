@@ -5,6 +5,7 @@ import { openRequestCount } from "@/lib/server/pra-wam/requests";
 import { currentPhase } from "@/lib/server/pra-wam/events";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import { quickActionData } from "@/lib/server/pra-wam/quick-actions";
+import { hodStanding, hodWaitingCount } from "@/lib/server/pra-wam/hod";
 import type { Member } from "@/lib/server/pra-wam/session";
 import { WamFrame, type FrameMember } from "./WamFrame";
 
@@ -22,15 +23,17 @@ const month = (date: string) => new Intl.DateTimeFormat("id-ID", { month: "short
 export async function PraWamShell({ member, children }: { member: FrameMember; children: ReactNode }) {
   const onlyBod = bodOnly(member);
   const now = new Date();
-  const [unread, waiting, phase, quick] = await Promise.all([
+  const [unread, waiting, phase, quick, hod] = await Promise.all([
     unreadCount(member.id), managesSessions(member) ? openRequestCount() : 0,
     currentPhase(wibDate(now.toISOString())).catch(() => null),
     // Aksi cepat, never for a BOD.
     onlyBod ? null : quickActionData(member as Member).catch(() => null),
+    // Meeting HOD in the menu for a HOD, with the invitations waiting for an answer.
+    onlyBod ? null : hodStanding(member).then(async standing => standing.isHod ? { waiting: await hodWaitingCount(member) } : null).catch(() => null),
   ]);
   const phaseLabel = phase ? `${phase.kind === "pra_wam" ? "Pra WAM" : phase.name} · ${month(phase.startDate)}–${month(phase.endDate)} ${phase.endDate.slice(0, 4)}` : "WAM 2027";
   const frameMember: FrameMember = { id: member.id, name: member.name, nickname: member.nickname, department: member.department, roles: member.roles, photo: member.photo ?? null };
-  return <WamFrame member={frameMember} unread={unread} waiting={waiting} phaseLabel={phaseLabel} now={now.toISOString()}
+  return <WamFrame member={frameMember} unread={unread} waiting={waiting} phaseLabel={phaseLabel} now={now.toISOString()} hod={!!hod} hodWaiting={hod?.waiting ?? 0}
     quick={quick ? { checkIn: quick.checkIn, upcoming: quick.upcoming, bookingOpen: quick.bookingOpen, running: quick.running } : null}>
     {children}
   </WamFrame>;

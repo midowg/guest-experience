@@ -1,0 +1,53 @@
+/* Meeting HOD (HodBoard.tsx): meeting cards, each invited HOD's answer, and the form. --pw-* tokens only. */
+.notice { margin-bottom: 12px; }
+.list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 1024px) { .list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+.empty { margin: 0; padding: 16px 18px; border: 1px dashed var(--pw-line); border-radius: var(--pw-r-card); background: var(--pw-surface); font-size: 14px; color: var(--pw-muted); }
+
+.card { display: grid; gap: 12px; padding: 18px; border-radius: var(--pw-r-card); background: var(--pw-surface); box-shadow: var(--pw-shadow-card); }
+.card.quiet { opacity: .78; }
+.cardHead { display: flex; align-items: flex-start; gap: 10px; }
+.cardHead h3 { flex: 1; min-width: 0; margin: 0; font-family: var(--pw-display); font-size: 17px; font-weight: 600; color: var(--pw-text); }
+.status { flex: none; display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--pw-app); color: var(--pw-muted); }
+.status.menunggu { background: var(--pw-warning-soft); color: var(--pw-warning); }
+.status.terjadwal { background: var(--pw-success-soft); color: var(--pw-success); }
+.status.ditolak { background: var(--pw-danger-soft); color: var(--pw-danger); }
+
+.facts { display: grid; gap: 6px; margin: 0; }
+.facts div { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--pw-text); }
+.facts dt { display: grid; color: var(--pw-muted); }
+.facts dd { margin: 0; min-width: 0; }
+.agenda { margin: 0; font-size: 14px; color: var(--pw-muted); white-space: pre-line; }
+
+.invites { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--pw-line); }
+.invitesHead { display: flex; justify-content: space-between; gap: 8px; margin: 0; font-size: 13px; font-weight: 600; color: var(--pw-text); }
+.invitesHead span { font-weight: 500; color: var(--pw-muted); }
+.invites ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.invites li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 10px; }
+.mark { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--pw-app); color: var(--pw-muted); }
+.terima .mark { background: var(--pw-success-soft); color: var(--pw-success); }
+.tolak .mark { background: var(--pw-danger-soft); color: var(--pw-danger); }
+.who { display: grid; min-width: 0; }
+.who strong { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who small { font-size: 12px; color: var(--pw-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.answer { font-size: 12px; font-weight: 600; color: var(--pw-muted); }
+.terima .answer { color: var(--pw-success); }
+.tolak .answer { color: var(--pw-danger); }
+.note { grid-column: 2 / -1; font-size: 13px; color: var(--pw-muted); }
+
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.cancel { color: var(--pw-danger); }
+.decline { display: grid; gap: 8px; }
+
+.form { display: grid; gap: 16px; }
+.when { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; }
+.when :global(.input), .when :global(.select) { width: 100%; }
+.departments { margin: 0; padding: 0; border: 0; display: grid; gap: 8px; }
+.departments ul { display: grid; gap: 6px; max-height: 18rem; margin: 0; padding: 4px; overflow-y: auto; list-style: none; border-radius: var(--pw-r-control); background: var(--pw-app); }
+.all, .department { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--pw-surface); cursor: pointer; }
+.all { box-shadow: 0 0 0 1px var(--pw-line); font-size: 14px; font-weight: 600; }
+.all input, .department input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--pw-primary); }
+.department span { display: grid; min-width: 0; }
+.department strong { font-size: 14px; font-weight: 600; }
+.department small { font-size: 12px; color: var(--pw-muted); }
+.department.disabled { cursor: not-allowed; opacity: .55; }

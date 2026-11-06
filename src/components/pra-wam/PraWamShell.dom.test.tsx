@@ -13,6 +13,11 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(at.search),
 }));
 vi.mock("@/lib/server/pra-wam/quick-actions", () => ({ quickActionData: async () => ({ checkIn: null, upcoming: null, bookingOpen: true, running: [] }) }));
+// HOD: Admin WAM ticked "hod" (the unit import's leads are HOD too, on the server).
+vi.mock("@/lib/server/pra-wam/hod", () => ({
+  hodStanding: async (who: { roles: string[] }) => ({ isHod: who.roles.includes("hod"), unitIds: [] }),
+  hodWaitingCount: async () => 1,
+}));
 
 import { PraWamShell, manageGroups } from "./PraWamShell";
 
@@ -81,6 +86,17 @@ describe("PraWamShell", () => {
     expect(within(bottom).queryByRole("link", { name: "Agenda" })).toBeNull();
     // The desktop top bar has the same + as a labelled button.
     expect(screen.getAllByRole("button", { name: "Aksi cepat" })).toHaveLength(2);
+  });
+
+  it("adds Meeting HOD after Book for a HOD, with the invitations waiting", async () => {
+    at.path = "/wam/hod";
+    render(await PraWamShell({ member: member(["hod"]), children: <p>Isi</p> }));
+    const bottom = screen.getAllByRole("navigation", { name: "Menu WAM" }).at(-1)!;
+    const parts = [...bottom.children].filter(child => child.tagName !== "DIALOG").map(child => child.getAttribute("aria-label") ?? child.firstElementChild?.nextElementSibling?.textContent);
+    expect(parts).toEqual(["Beranda", "Book", "Aksi cepat", "HOD", "Dokumen", "Profil"]);
+    const hod = within(bottom).getByRole("link", { name: /HOD/ });
+    expect(hod.getAttribute("aria-current")).toBe("page");
+    expect(hod.textContent).toContain("1 menunggu");
   });
 
   it("gives a detail screen its back bar and no bottom bar", async () => {

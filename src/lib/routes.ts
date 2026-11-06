@@ -199,6 +199,8 @@ export const praWamPath = {
   questionnaire: (slug: string) => `${PRA_WAM_PATH}/${enc(slug)}`,
   /** Rekan: the character cards of everyone who finished the questionnaire. */
   colleagues: `${PRA_WAM_PATH}/rekan`,
+  /** Meeting HOD: meetings between department heads, for HODs only. */
+  hod: `${PRA_WAM_PATH}/hod`,
   /** One colleague's card and what they share with colleagues. */
   colleague: (employeeId: string) => `${PRA_WAM_PATH}/rekan/${enc(employeeId)}`,
 };
@@ -233,6 +235,8 @@ export const praWamApi = {
   announcements: `${WAM_API}/announcements`,
   /** DELETE: panitia removes one announcement. */
   announcement: (id: string) => `${WAM_API}/announcements/${id}`,
+  /** Meeting HOD: POST a new meeting; with an id, POST {accept, note} (an invited HOD answers) or DELETE (the asker cancels). */
+  hodMeetings: (id?: string) => `${WAM_API}/hod${id ? `/${id}` : ""}`,
   /** POST: a participant asks to move a session. */
   requestChange: (sessionId: string) => `${WAM_API}/sessions/${sessionId}/reschedule`,
   /** One request: POST {approve, note} (panitia answers), DELETE (the asker withdraws). */

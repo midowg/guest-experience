@@ -105,7 +105,8 @@ export function AccountDetail({ row, status, photo, job, busy, passwordReady, er
             </label>
           </li>)}</ul>
           {busy === `role-${row.employeeId}` && <p className={css.hint} role="status">Menyimpan peran…</p>}
-          {row.leads.length > 0 && <p className={css.leads}>{row.leads.map(name => <Pill key={name} tone="teal">HOD · {name}</Pill>)}</p>}
+          {/* A lead from the unit import is HOD without the tick: say so, with the department. */}
+          {row.leads.length > 0 && <p className={css.leads}>{row.leads.map(name => <Pill key={name} tone="teal">HOD otomatis · lead {name}</Pill>)}</p>}
           {hint && <p id={hintId} className={clash ? css.error : css.hint}>{hint}</p>}
         </fieldset>
       </div>

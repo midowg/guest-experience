@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
-import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarDays, ChevronLeft, ClipboardList, DoorOpen, FileText, Home, Plus, Send, User, Users, Utensils, X } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarDays, ChevronLeft, ClipboardList, DoorOpen, FileText, Handshake, Home, Plus, Send, User, Users, Utensils, X } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleNavGroup, type ConsoleSearchItem } from "@/components/console";
 import { bodOnly, managesSessions, readsNeeds, roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
 import { managedTabs, wamScreen, type Tab } from "@/lib/pra-wam/screen";
@@ -28,6 +28,8 @@ const personal: Item[] = [
   { id: "dokumen", label: "Dokumen", href: praWamPath.documents, icon: <FileText aria-hidden /> },
   { id: "akun", label: "Profil", href: praWamPath.account, icon: <User aria-hidden /> },
 ];
+/** Meeting HOD (6 Nov 2026): after Book, for HODs only. */
+const hodItem: Item = { id: "hod", label: "Meeting HOD", short: "HOD", href: praWamPath.hod, icon: <Handshake aria-hidden /> };
 /** BOD only (Penpot "Panduan · BOD"): Ringkasan first; Agenda stays, as a BOD also takes part. No + : a BOD does not check in. */
 const bod: Item[] = [
   { id: "dashboard", label: "Ringkasan", href: praWamPath.dashboard, icon: <BarChart3 aria-hidden /> },
@@ -96,8 +98,11 @@ const STALE_AFTER_MS = 60_000;
  * - Desktop, "Kelola acara": the console (src/components/console), its sidebar with the panitia's
  *   places in groups and the page in one white panel, on the app's own light or dark tokens.
  */
-export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, children }: {
-  member: FrameMember; unread: number; waiting: number; phaseLabel: string; quick: FrameQuick | null; now: string; children: ReactNode;
+export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, hod = false, hodWaiting = 0, children }: {
+  member: FrameMember; unread: number; waiting: number; phaseLabel: string; quick: FrameQuick | null; now: string;
+  /** A HOD gets Meeting HOD in the menu, with the meetings waiting for their answer. */
+  hod?: boolean; hodWaiting?: number;
+  children: ReactNode;
 }) {
   const pathname = usePathname();
   const search = useSearchParams();
@@ -126,9 +131,9 @@ export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, chil
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [router]);
 
-  const badge = (tab: Tab) => (tab === "notifikasi" ? unread : tab === "permintaan" ? waiting : 0);
+  const badge = (tab: Tab) => (tab === "notifikasi" ? unread : tab === "permintaan" ? waiting : tab === "hod" ? hodWaiting : 0);
   // A BOD keeps the app's own frame (top bar, bottom bar) with the BOD menu, never the panitia sidebar.
-  const menu = onlyBod ? bod : personal;
+  const menu = onlyBod ? bod : hod ? [...personal.slice(0, 2), hodItem, ...personal.slice(2)] : personal;
   const managed = onlyBod ? [] : manage.filter(item => !item.show || item.show(member));
   const panitiaView = !onlyBod && !!current && managedTabs.has(current);
   const who = member.nickname || member.name;
@@ -178,7 +183,7 @@ export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, chil
       <a className={styles.topBrand} href={onlyBod ? praWamPath.dashboard : praWamPath.home}><span aria-hidden />WAM</a>
       <span className={styles.phasePill}>{phaseLabel}</span>
       <nav className={styles.topNav} aria-label="Menu WAM">
-        {menu.map(item => <a key={item.id} className={styles.topItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>{item.icon}<span>{item.label}</span></a>)}
+        {menu.map(item => <a key={item.id} className={styles.topItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>{item.icon}<span>{item.label}</span>{badge(item.id) > 0 && <span className={styles.sideBadge}>{badge(item.id)}</span>}</a>)}
       </nav>
       <div className={styles.topRight}>
         {!onlyBod && <QuickActions place="top" {...quickProps} />}

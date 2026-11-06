@@ -98,7 +98,7 @@ describe("Akun dan peran, tab Akun", () => {
     expect(within(detail).getByRole("status").textContent).toBe("Peran disimpan.");
     // BOD is locked for Panitia, and the reason is written out.
     expect(within(detail).getByRole("checkbox", { name: "BOD: Dewi Lestari" })).toHaveProperty("disabled", true);
-    expect(within(detail).getByText("BOD terkunci karena orang ini Panitia atau Admin WAM.")).toBeTruthy();
+    expect(within(detail).getByText("BOD terkunci karena orang ini Panitia, Admin WAM atau HOD.")).toBeTruthy();
     fireEvent.click(within(detail).getByRole("button", { name: "Tutup" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });

@@ -4,9 +4,9 @@
  * every request and by the pages only to show or hide what the server would refuse anyway.
  */
 
-export const praWamRoles = ["panitia", "bod", "admin"] as const;
+export const praWamRoles = ["panitia", "bod", "admin", "hod"] as const;
 export type PraWamRole = (typeof praWamRoles)[number];
-export const roleLabels: Record<PraWamRole, string> = { panitia: "Panitia", bod: "BOD", admin: "Admin WAM" };
+export const roleLabels: Record<PraWamRole, string> = { panitia: "Panitia", bod: "BOD", admin: "Admin WAM", hod: "HOD" };
 
 type WithRoles = { roles: readonly PraWamRole[] };
 const has = (who: WithRoles, ...roles: PraWamRole[]) => roles.some(role => who.roles.includes(role));
@@ -32,13 +32,18 @@ export const bodOnly = (who: WithRoles) => has(who, "bod") && !has(who, "panitia
 export const readsNeeds = (who: WithRoles) => has(who, "panitia", "admin");
 /** Accounts, roles and rooms. */
 export const managesApp = (who: WithRoles) => has(who, "admin");
+/**
+ * HOD (6 Nov 2026): ticked by Admin WAM, or the lead of a department in the unit import
+ * (`isLead`). Opens Meeting HOD, the meetings between department heads.
+ */
+export const isHod = (who: WithRoles, { isLead = false }: Standing = {}) => has(who, "hod") || isLead;
 
 /*
- * Which roles go together. Peserta is everyone's base. Panitia, Admin WAM and HOD (a department
- * lead, `unit_members.is_lead` from the unit import) combine freely. BOD combines with nothing:
+ * Which roles go together. Peserta is everyone's base. Panitia, Admin WAM and HOD (ticked, or a
+ * department lead, `unit_members.is_lead` from the unit import) combine freely. BOD combines with nothing:
  * a BOD still attends sessions and books rooms as a peserta, but is never panitia, admin or lead.
  */
-export type RoleConflict = { with: "panitia" | "admin" | "lead"; message: string };
+export type RoleConflict = { with: "panitia" | "admin" | "hod" | "lead"; message: string };
 type Standing = { isLead?: boolean };
 
 /** Each thing a BOD also holds, with why it cannot be; empty when the combination is allowed. */
@@ -47,6 +52,7 @@ export function roleConflicts(roles: readonly PraWamRole[], { isLead = false }: 
   const conflicts: RoleConflict[] = [];
   if (roles.includes("panitia")) conflicts.push({ with: "panitia", message: "BOD tidak bisa digabung dengan Panitia." });
   if (roles.includes("admin")) conflicts.push({ with: "admin", message: "BOD tidak bisa digabung dengan Admin WAM." });
+  if (roles.includes("hod")) conflicts.push({ with: "hod", message: "BOD tidak bisa digabung dengan HOD." });
   if (isLead) conflicts.push({ with: "lead", message: "BOD tidak bisa menjadi lead departemen (HOD)." });
   return conflicts;
 }
@@ -58,7 +64,7 @@ export function roleProblem(roles: readonly PraWamRole[], standing: Standing = {
   const roleClash = conflicts.some(conflict => conflict.with !== "lead");
   const leadClash = conflicts.some(conflict => conflict.with === "lead");
   return [
-    roleClash && "BOD tidak bisa digabung dengan Panitia atau Admin WAM.",
+    roleClash && "BOD tidak bisa digabung dengan Panitia, Admin WAM atau HOD.",
     leadClash && "BOD tidak bisa menjadi lead departemen (HOD).",
   ].filter(Boolean).join(" ");
 }
@@ -84,9 +90,9 @@ export function checkRoleChange(current: readonly PraWamRole[], next: readonly P
 export function blockedRoles(roles: readonly PraWamRole[], { isLead = false }: Standing = {}): Partial<Record<PraWamRole, string>> {
   const blocked: Partial<Record<PraWamRole, string>> = {};
   if (roles.includes("bod")) {
-    for (const role of ["panitia", "admin"] as const) if (!roles.includes(role)) blocked[role] = "Panitia dan Admin WAM terkunci karena orang ini BOD.";
-  } else if (has({ roles }, "panitia", "admin")) {
-    blocked.bod = "BOD terkunci karena orang ini Panitia atau Admin WAM.";
+    for (const role of ["panitia", "admin", "hod"] as const) if (!roles.includes(role)) blocked[role] = "Panitia, Admin WAM dan HOD terkunci karena orang ini BOD.";
+  } else if (has({ roles }, "panitia", "admin", "hod")) {
+    blocked.bod = "BOD terkunci karena orang ini Panitia, Admin WAM atau HOD.";
   } else if (isLead) {
     blocked.bod = "BOD terkunci karena orang ini lead departemen (HOD).";
   }
