@@ -38,7 +38,7 @@ type Props = {
   /** Per weekday of the booking window: holds and whether it is full (windowSummary); the loaded week is recounted here. */
   summary?: Record<string, DaySummary>;
   /** A HOD's Meeting HOD (6 Nov 2026): a third view beside Kalender and Denah, for HODs only. */
-  hod?: Omit<ComponentProps<typeof HodBoard>, "viewerId" | "now" | "embedded"> | null;
+  hod?: Omit<ComponentProps<typeof HodBoard>, "viewerId" | "now" | "embedded" | "rooms" | "bookings"> | null;
   /** The view to open on (?lihat=hod from a notification or the old Meeting HOD address). */
   initialView?: "kalender" | "denah" | "hod";
 };
@@ -222,7 +222,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
       </div>}
     </div>
 
-    {view === "hod" && hod ? <HodBoard {...hod} viewerId={viewerId} now={now} embedded /> : view === "kalender" ? <div className={css.layout}>
+    {view === "hod" && hod ? <HodBoard {...hod} viewerId={viewerId} now={now} embedded rooms={rooms} bookings={bookings} /> : view === "kalender" ? <div className={css.layout}>
       <div className={css.side}>
         {calendar}
         <Legend />

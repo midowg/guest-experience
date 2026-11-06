@@ -50,8 +50,13 @@ describe("Meeting HOD", () => {
     await waitFor(() => expect(request).toHaveBeenCalledWith(`/api/wam/hod/${meeting.id}`, { method: "POST", json: { accept: false, note: "Bentrok" } }));
   });
 
-  it("asks the HODs of the departments picked; not my own, and not one without a HOD", async () => {
-    render(<HodBoard meetings={[]} departments={departments} viewerId="me" ownUnits={["u-it"]} migrated now="2026-11-06T02:00:00Z" />);
+  it("asks as Book ruang does: the day, start and length, a room, and the departments picked", async () => {
+    const rooms = [
+      { id: "r1", slug: "nagapadma", name: "Nagapadma", kind: "utama" as const, capacity: 10, bookable: true, minPeople: null, planKey: null, facilities: [] },
+      { id: "r2", slug: "vasuki", name: "Vasuki", kind: "utama" as const, capacity: 30, bookable: true, minPeople: null, planKey: null, facilities: [] },
+    ];
+    const taken = { id: "b1", roomId: "r2", title: "Rapat", description: "", startsAt: "2026-11-09T03:00:00Z", endsAt: "2026-11-09T05:00:00Z", isSession: false, bookedBy: { id: "x", name: "X", department: "" } } as never;
+    render(<HodBoard meetings={[]} departments={departments} viewerId="me" ownUnits={["u-it"]} migrated now="2026-11-06T02:00:00Z" rooms={rooms} bookings={[taken]} />);
     expect(screen.getByText("Belum ada meeting HOD yang akan datang.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Ajukan meeting/ }));
     const form = within(screen.getByRole("dialog", { name: "Ajukan meeting HOD" }));
@@ -60,8 +65,17 @@ describe("Meeting HOD", () => {
     fireEvent.click(form.getByRole("button", { name: "Kirim undangan" }));
     expect(form.getByText("Tulis judul meeting.")).toBeTruthy();
     fireEvent.change(form.getByLabelText("Judul"), { target: { value: "Rencana 2027" } });
+    // Start and length as in Book ruang; the line under them says the day and hours.
+    expect(form.getByLabelText("Jam mulai")).toBeTruthy();
+    expect(form.getByLabelText("Durasi")).toBeTruthy();
     fireEvent.click(form.getByRole("checkbox", { name: /Finance/ }));
     fireEvent.click(form.getByRole("button", { name: "Kirim undangan" }));
-    await waitFor(() => expect(request).toHaveBeenCalledWith("/api/wam/hod", expect.objectContaining({ method: "POST", json: expect.objectContaining({ title: "Rencana 2027", unitIds: ["u-fin"] }) })));
+    expect(form.getByText("Pilih tempat meeting.")).toBeTruthy();
+    // The place is picked from the rooms; another place can be typed.
+    const place = form.getByLabelText("Tempat") as HTMLSelectElement;
+    expect([...place.options].map(option => option.textContent)).toEqual(["Pilih ruangan", "Nagapadma · 10 orang", "Vasuki · 30 orang", "Lainnya (online atau tempat lain)"]);
+    fireEvent.change(place, { target: { value: "r1" } });
+    fireEvent.click(form.getByRole("button", { name: "Kirim undangan" }));
+    await waitFor(() => expect(request).toHaveBeenCalledWith("/api/wam/hod", expect.objectContaining({ method: "POST", json: expect.objectContaining({ title: "Rencana 2027", place: "Nagapadma", unitIds: ["u-fin"] }) })));
   });
 });

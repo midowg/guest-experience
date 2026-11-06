@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { CalendarClock, Check, Clock, MapPin, Plus, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
-import { hodResponseLabels, hodStatusLabels, hodTimes, sortMeetings, type HodDepartment, type HodMeeting } from "@/lib/pra-wam/hod";
+import { clockLabel, dayLabel, durationLabel, durationsFrom, isWorkday, slotTimes, wibDate, wibInstant, wibTime, type Booking, type Room } from "@/lib/pra-wam/appraisal";
+import { hodResponseLabels, hodStatusLabels, sortMeetings, type HodDepartment, type HodMeeting } from "@/lib/pra-wam/hod";
 import { praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
+import { DateStrip } from "./DateStrip";
 import { ScreenHead } from "./ScreenHead";
 import { Sheet } from "./Sheet";
 import styles from "./pra-wam.module.css";
@@ -22,6 +23,9 @@ type Props = {
   now: string;
   /** Inside Book (a view beside Kalender and Denah): a section head instead of the screen title. */
   embedded?: boolean;
+  /** The office rooms to pick as the place; with the bookings Book has loaded, a room taken at those hours says so. */
+  rooms?: Room[];
+  bookings?: Booking[];
 };
 
 const span = (meeting: HodMeeting) => `${dayLabel(wibDate(meeting.startsAt))} · ${clockLabel(wibTime(meeting.startsAt))}–${clockLabel(wibTime(meeting.endsAt))}`;
@@ -31,7 +35,7 @@ const span = (meeting: HodMeeting) => `${dayLabel(wibDate(meeting.startsAt))} ·
  * or still waiting for other HODs), and the history. "Ajukan meeting" asks the HODs of the
  * departments picked; each answers here, and the meeting is scheduled once all accept.
  */
-export function HodBoard({ meetings, departments, viewerId, ownUnits, migrated, now, embedded = false }: Props) {
+export function HodBoard({ meetings, departments, viewerId, ownUnits, migrated, now, embedded = false, rooms = [], bookings = [] }: Props) {
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -66,7 +70,7 @@ export function HodBoard({ meetings, departments, viewerId, ownUnits, migrated, 
       {list(history)}
     </>}
 
-    <MeetingForm open={formOpen} onClose={() => setFormOpen(false)} departments={departments} ownUnits={ownUnits}
+    <MeetingForm open={formOpen} onClose={() => setFormOpen(false)} departments={departments} ownUnits={ownUnits} rooms={rooms} bookings={bookings} now={now}
       onSaved={text => { setFormOpen(false); done(text); }} />
   </>;
 }
@@ -133,13 +137,38 @@ function MeetingCard({ meeting, viewerId, now, onDone, onError }: {
   </article>;
 }
 
-/** Ajukan meeting: title, date and hours, place, the departments whose HODs are asked, and the agenda. */
-function MeetingForm({ open, onClose, departments, ownUnits, onSaved }: {
-  open: boolean; onClose: () => void; departments: HodDepartment[]; ownUnits: string[]; onSaved: (text: string) => void;
+/** Weekdays from today for eight weeks: the days a meeting can be asked for. */
+function meetingDays(today: string): string[] {
+  const days: string[] = [];
+  for (let day = new Date(`${today}T12:00:00Z`), at = 0; at < 56; at++, day.setUTCDate(day.getUTCDate() + 1)) {
+    const date = day.toISOString().slice(0, 10);
+    if (isWorkday(date)) days.push(date);
+  }
+  return days;
+}
+const minutesOf = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+const clockOf = (total: number) => `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+/** "Lainnya": a place that is not an office room (online, a client's office). */
+const OTHER = "lainnya";
+
+/**
+ * Ajukan meeting, as Book ruang asks (6 Nov 2026): the day on the date strip, the start and how
+ * long, then the place from the office rooms (one taken at those hours says so) or another place
+ * typed in, the departments whose HODs are asked, and the agenda.
+ */
+function MeetingForm({ open, onClose, departments, ownUnits, rooms, bookings, now, onSaved }: {
+  open: boolean; onClose: () => void; departments: HodDepartment[]; ownUnits: string[]; rooms: Room[]; bookings: Booking[]; now: string; onSaved: (text: string) => void;
 }) {
   const uid = useId();
-  const today = wibDate(new Date().toISOString());
-  const [draft, setDraft] = useState({ title: "", date: today, start: "10:00", end: "11:00", place: "", agenda: "", unitIds: [] as string[] });
+  const today = wibDate(now);
+  const days = meetingDays(today);
+  const startsOn = (date: string) => slotTimes().slice(0, -1).filter(time => new Date(wibInstant(date, time)) > new Date(now));
+  const firstDay = days.find(day => startsOn(day).length > 0) ?? days[0];
+  const fresh = () => {
+    const start = startsOn(firstDay).find(time => time >= "10:00") ?? startsOn(firstDay)[0] ?? "10:00";
+    return { title: "", date: firstDay, start, end: clockOf(minutesOf(start) + 60), roomId: "", place: "", agenda: "", unitIds: [] as string[] };
+  };
+  const [draft, setDraft] = useState(fresh);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const set = (patch: Partial<typeof draft>) => { setDraft(current => ({ ...current, ...patch })); setError(""); };
@@ -148,14 +177,37 @@ function MeetingForm({ open, onClose, departments, ownUnits, onSaved }: {
   const pickable = offered.filter(department => department.heads.length > 0);
   const allOn = pickable.length > 0 && pickable.every(department => draft.unitIds.includes(department.id));
 
+  const starts = startsOn(draft.date);
+  const length = minutesOf(draft.end) - minutesOf(draft.start);
+  const lengths = durationsFrom(draft.start);
+  /** Keeps the length when the start moves, shortened only to end by closing. */
+  const hoursFrom = (start: string) => {
+    const options = durationsFrom(start);
+    const keep = options.includes(length) ? length : options.filter(item => item <= length).at(-1) ?? options[0] ?? 30;
+    return { start, end: clockOf(minutesOf(start) + keep) };
+  };
+  const pickDate = (date: string) => {
+    const open = startsOn(date);
+    set({ date, ...(open.includes(draft.start) || !open.length ? {} : hoursFrom(open[0])) });
+  };
+  // A room is taken when a booking or session Book has loaded overlaps these hours.
+  const from = new Date(wibInstant(draft.date, draft.start)).getTime(), to = new Date(wibInstant(draft.date, draft.end)).getTime();
+  const known = bookings.some(booking => wibDate(booking.startsAt) === draft.date);
+  const taken = (room: Room) => bookings.some(booking => booking.roomId === room.id && new Date(booking.startsAt).getTime() < to && new Date(booking.endsAt).getTime() > from);
+  const officeRooms = rooms.filter(room => room.bookable);
+  const room = officeRooms.find(item => item.id === draft.roomId);
+
   async function save() {
     if (draft.title.trim().length < 2) { setError("Tulis judul meeting."); return; }
+    if (!draft.roomId) { setError("Pilih tempat meeting."); return; }
+    if (draft.roomId === OTHER && !draft.place.trim()) { setError("Tulis nama tempatnya, mis. Zoom."); return; }
     if (!draft.unitIds.length) { setError("Pilih minimal satu departemen."); return; }
-    if (draft.end <= draft.start) { setError("Jam selesai harus setelah jam mulai."); return; }
+    if (length <= 0) { setError("Pilih durasi."); return; }
     setSaving(true);
     try {
-      const { message } = await praWamRequest(praWamApi.hodMeetings(), { method: "POST", json: draft });
-      setDraft({ title: "", date: today, start: "10:00", end: "11:00", place: "", agenda: "", unitIds: [] });
+      const place = draft.roomId === OTHER ? draft.place.trim() : room?.name ?? "";
+      const { message } = await praWamRequest(praWamApi.hodMeetings(), { method: "POST", json: { title: draft.title, date: draft.date, start: draft.start, end: draft.end, place, agenda: draft.agenda, unitIds: draft.unitIds } });
+      setDraft(fresh());
       onSaved(message);
     } catch (problem) { setError(errorText(problem)); } finally { setSaving(false); }
   }
@@ -171,28 +223,38 @@ function MeetingForm({ open, onClose, departments, ownUnits, onSaved }: {
         <label className={styles.label} htmlFor={`${uid}-title`}>Judul</label>
         <input id={`${uid}-title`} className="input" value={draft.title} maxLength={120} placeholder="Mis. Sinkronisasi target Q1" onChange={event => set({ title: event.target.value })} />
       </div>
-      <div className={css.when}>
+
+      <DateStrip days={days} selected={draft.date} today={today} onPick={pickDate} label="Tanggal" />
+      <div className={styles.times}>
         <div>
-          <label className={styles.label} htmlFor={`${uid}-date`}>Tanggal</label>
-          <input id={`${uid}-date`} className="input" type="date" min={today} value={draft.date} onChange={event => set({ date: event.target.value })} />
-        </div>
-        <div>
-          <label className={styles.label} htmlFor={`${uid}-start`}>Mulai</label>
-          <select id={`${uid}-start`} className="select" value={draft.start} onChange={event => set({ start: event.target.value })}>
-            {hodTimes.slice(0, -1).map(time => <option key={time} value={time}>{clockLabel(time)}</option>)}
+          <label className={styles.label} htmlFor={`${uid}-start`}>Jam mulai</label>
+          <select id={`${uid}-start`} className="select" value={draft.start} onChange={event => set(hoursFrom(event.target.value))}>
+            {!starts.includes(draft.start) && <option value={draft.start} disabled>{clockLabel(draft.start)}</option>}
+            {starts.map(time => <option key={time} value={time}>{clockLabel(time)}</option>)}
           </select>
         </div>
         <div>
-          <label className={styles.label} htmlFor={`${uid}-end`}>Selesai</label>
-          <select id={`${uid}-end`} className="select" value={draft.end} onChange={event => set({ end: event.target.value })}>
-            {hodTimes.slice(1).map(time => <option key={time} value={time}>{clockLabel(time)}</option>)}
+          <label className={styles.label} htmlFor={`${uid}-length`}>Durasi</label>
+          <select id={`${uid}-length`} className="select" value={String(length)} onChange={event => set({ end: clockOf(minutesOf(draft.start) + Number(event.target.value)) })}>
+            {!lengths.includes(length) && <option value={String(length)} disabled>{length > 0 ? durationLabel(length) : "Pilih durasi"}</option>}
+            {lengths.map(item => <option key={item} value={String(item)}>{durationLabel(item)}</option>)}
           </select>
         </div>
       </div>
+      <p className={css.span} role="status"><Clock size={18} aria-hidden />{dayLabel(draft.date)} · {clockLabel(draft.start)}–{clockLabel(draft.end)}{length > 0 ? ` (${durationLabel(length)})` : ""}</p>
+
       <div>
-        <label className={styles.label} htmlFor={`${uid}-place`}>Tempat</label>
-        <input id={`${uid}-place`} className="input" value={draft.place} maxLength={120} placeholder="Mis. Nagapadma, atau Zoom" onChange={event => set({ place: event.target.value })} />
+        <label className={styles.label} htmlFor={`${uid}-room`}>Tempat</label>
+        <select id={`${uid}-room`} className="select" value={draft.roomId} onChange={event => set({ roomId: event.target.value })}>
+          <option value="" disabled>Pilih ruangan</option>
+          {officeRooms.map(item => <option key={item.id} value={item.id}>{item.name}{item.capacity ? ` · ${item.capacity} orang` : ""}{known && taken(item) ? " · terpakai di jam ini" : ""}</option>)}
+          <option value={OTHER}>Lainnya (online atau tempat lain)</option>
+        </select>
+        {room && known && taken(room) && <p className={css.warn}>{room.name} sudah terpakai di jam ini. Pilih ruangan atau jam lain.</p>}
+        {room && !known && <p className={styles.hint}>Jadwal ruangan hari ini belum dimuat di Book; pastikan ruangannya kosong di Kalender.</p>}
+        {draft.roomId === OTHER && <input className="input" style={{ marginTop: 8 }} value={draft.place} maxLength={120} placeholder="Mis. Zoom, atau kantor klien" aria-label="Nama tempat" onChange={event => set({ place: event.target.value })} />}
       </div>
+
       <fieldset className={css.departments}>
         <legend className={styles.label}>Departemen yang diundang</legend>
         {pickable.length > 1 && <label className={css.all}>
