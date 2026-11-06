@@ -71,6 +71,7 @@ export const SUPER_ADMIN_HOME = "/admin/super";
 export const superAdminPath = {
   team: "/admin/super/tim",
   templates: "/admin/super/templat",
+  /** Older address of Visibilitas acara; it now lives on the templates page. */
   visibility: "/admin/super/visibilitas",
   modules: "/admin/super/modul",
   access: "/admin/akses",

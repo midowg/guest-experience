@@ -1,0 +1,50 @@
+/* Templat & acara (super admin): one console card per kind of event. */
+.page { display: grid; gap: var(--space-5); }
+.tools { display: grid; gap: var(--space-3); }
+.tools > label:first-child { max-width: 30rem; }
+.tools > label:first-child input { width: 100%; }
+.status { margin: 0; color: var(--cs-ok-fg); font-weight: 600; }
+.blurb { margin: 0 0 var(--space-4); color: var(--cs-muted); }
+
+/* Templates: the miniature beside its text; one column on a phone. */
+.templates { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(auto-fill, minmax(min(100%, 30rem), 1fr)); }
+.template { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: var(--space-4); padding: var(--space-3); border: 1px solid var(--cs-line); border-radius: 14px; background: var(--cs-surface); transition: opacity .15s, border-color .15s; }
+.template[data-off] { background: var(--cs-surface-2); }
+.template[data-off] .mini { opacity: .45; filter: grayscale(.6); }
+.mini { align-self: start; }
+.templateBody { display: grid; align-content: start; gap: var(--space-2); min-width: 0; }
+.templateHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.templateHead strong { font-size: 1.0625rem; color: var(--cs-text); }
+.description { margin: 0; color: var(--cs-muted); font-size: .875rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pills > span { display: inline-flex; align-items: center; gap: 4px; }
+.modules { margin: 0; color: var(--cs-subtle); font-size: .8125rem; }
+@media (max-width: 34rem) { .template { grid-template-columns: 1fr; } .mini { max-width: 14rem; } }
+
+/* The switch, as everywhere in the admin. */
+.switch { display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: .8125rem; font-weight: 600; white-space: nowrap; color: var(--cs-text); }
+.switch input { appearance: none; position: relative; flex-shrink: 0; width: 42px; height: 24px; margin: 0; border-radius: 999px; background: #c4cad6; cursor: pointer; transition: background-color .15s; }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .25); transition: transform .15s; }
+.switch input:checked { background: var(--cs-primary); }
+.switch input:checked::after { transform: translateX(18px); }
+.switch input:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
+.switch input:disabled { opacity: .5; cursor: default; }
+@media (prefers-reduced-motion: reduce) { .switch input, .switch input::after, .template { transition: none; } }
+
+/* The events of the kind, folded under their count. */
+.events { margin-top: var(--space-4); border-top: 1px solid var(--cs-line); padding-top: var(--space-3); }
+.events > summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); cursor: pointer; color: var(--cs-text); }
+.events > summary::marker { color: var(--cs-muted); }
+.bulk { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.bulk button { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 var(--space-3); border: 1px solid var(--cs-line); border-radius: 999px; background: var(--cs-surface); color: var(--cs-text); font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer; }
+.bulk button:hover:not(:disabled) { background: var(--cs-hover); }
+.bulk button:disabled { opacity: .45; cursor: default; }
+.eventList { display: grid; margin: var(--space-3) 0 0; padding: 0; list-style: none; }
+.event { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--cs-line); }
+.event:first-child { border-top: 0; }
+.event[data-hidden] .eventTitle { color: var(--cs-muted); }
+.eventText { display: grid; gap: 4px; min-width: 0; flex: 1 1 18rem; }
+.eventTitle { color: var(--cs-text); font-weight: 600; text-decoration: none; }
+.eventTitle:hover { text-decoration: underline; }
+.eventMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--space-3); color: var(--cs-muted); font-size: .8125rem; }
+.eventMeta > span { display: inline-flex; align-items: center; gap: 4px; }

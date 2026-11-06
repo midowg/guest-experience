@@ -39,12 +39,12 @@ export default async function SuperAdminPage() {
     <StatRow label="Ringkasan">
       <StatCard label="Karyawan aktif" value={active.length} note={`${withAccount} punya akun WAM`} icon={<Users size={18} />} href={EMPLOYEES_ADMIN} />
       <StatCard label="Tim Werkudara" value={team.staff.length} note="bisa jadi PIC acara" icon={<UserCog size={18} />} href={superAdminPath.team} />
-      <StatCard label="Acara tersembunyi" value={hidden.ids.size} note={`dari ${events.length} acara`} icon={<EyeOff size={18} />} href={superAdminPath.visibility} />
+      <StatCard label="Acara tersembunyi" value={hidden.ids.size} note={`dari ${events.length} acara`} icon={<EyeOff size={18} />} href={superAdminPath.templates} />
       <StatCard label="Percobaan masuk gagal" value={recentFails} note="7 hari terakhir" icon={<ShieldAlert size={18} />} tone={recentFails ? "warn" : undefined} href={`${superAdminPath.access}?jenis=gagal`} />
     </StatRow>
     <Card title="Pengaturan admin">
       <StatRow label="Pengaturan admin">
-        <StatCard label="Templat aktif" value={templates.templates.length} icon={<LayoutTemplate size={18} />} href={superAdminPath.templates} />
+        <StatCard label="Templat di Buat acara" value={templates.templates.length} icon={<LayoutTemplate size={18} />} href={superAdminPath.templates} />
         <StatCard label="Modul dimatikan" value={modules.modules.length} icon={<Blocks size={18} />} href={superAdminPath.modules} />
         <StatCard label="Admin WAM" value="Buka" note="Panitia, akun, ruang" icon={<KeyRound size={18} />} href={wamAdminPath.home} />
       </StatRow>

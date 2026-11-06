@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { Blocks, Crown, EyeOff, LayoutDashboard, LayoutTemplate, ScrollText, ShieldCheck, UserCog, Users } from "lucide-react";
+import { Blocks, Crown, LayoutDashboard, LayoutTemplate, ScrollText, ShieldCheck, UserCog, Users } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleLink, type ConsoleNavGroup } from "@/components/console";
 import admin from "@/components/admin/admin.module.css";
 import { ADMIN_HOME, ADMIN_LOGIN, ADMIN_LOGOUT_API, EMPLOYEES_ADMIN, SUPER_ADMIN_HOME, superAdminPath, wamAdminPath } from "@/lib/routes";
 
-export type SuperSection = "dashboard" | "tim" | "karyawan" | "templat" | "visibilitas" | "modul" | "akses";
+export type SuperSection = "dashboard" | "tim" | "karyawan" | "templat" | "modul" | "akses";
 
 /** Every super admin place, in the side menu's groups (6 Nov 2026: they were links inside the dashboard). */
 const groups: { label: string; items: { key: SuperSection; label: string; href: string; icon: ReactNode }[] }[] = [
@@ -14,8 +14,7 @@ const groups: { label: string; items: { key: SuperSection; label: string; href: 
     { key: "karyawan", label: "Data karyawan", href: EMPLOYEES_ADMIN, icon: <Users size={20} /> },
   ] },
   { label: "Acara", items: [
-    { key: "templat", label: "Templat", href: superAdminPath.templates, icon: <LayoutTemplate size={20} /> },
-    { key: "visibilitas", label: "Visibilitas acara", href: superAdminPath.visibility, icon: <EyeOff size={20} /> },
+    { key: "templat", label: "Templat & acara", href: superAdminPath.templates, icon: <LayoutTemplate size={20} /> },
     { key: "modul", label: "Modul admin", href: superAdminPath.modules, icon: <Blocks size={20} /> },
   ] },
   { label: "Keamanan", items: [{ key: "akses", label: "Log akses", href: superAdminPath.access, icon: <ScrollText size={20} /> }] },
