@@ -11,6 +11,8 @@ import { getDisabledModules, getEnabledTemplates } from "@/lib/server/admin-sett
 import { TemplateSettings } from "@/components/admin/super/TemplateSettings";
 import { ModuleSettings } from "@/components/admin/super/ModuleSettings";
 import { StaffSettings } from "@/components/admin/super/StaffSettings";
+import { SuperAdminFrame } from "@/components/admin/super/SuperAdminFrame";
+import { PageHeader } from "@/components/console";
 import { listStaff } from "@/lib/server/staff";
 import { EMPLOYEES_ADMIN, wamAdminPath } from "@/lib/routes";
 
@@ -27,10 +29,9 @@ export default async function SuperAdminPage() {
     id: event.id, title: event.title, slug: event.slug, status: event.status, starts_at: event.starts_at, timezone: event.timezone,
     event_kind: event.event_kind, audience: event.audience, updated_at: event.updated_at,
   }));
-  return <AdminShell>
-    <p className="eyebrow">Super admin</p>
-    <h1 className={styles.title}>Dashboard super admin</h1>
-    <p className={styles.lead}>Atur tim yang bisa dipilih sebagai PIC, templat yang bisa dipilih admin biasa, acara yang terlihat, dan modul yang boleh dipakai saat membuat atau mengubah acara. Data karyawan yang bersifat rahasia hanya ada di sini; akun, peran, dan ruang WAM diatur semua admin di <Link href={wamAdminPath.home}>Admin WAM</Link>.</p>
+  return <SuperAdminFrame current="dashboard">
+    <PageHeader title="Dashboard super admin" subtitle="Tim, templat, visibilitas acara dan modul admin." />
+    <p className={styles.lead}>Atur tim yang bisa dipilih sebagai PIC, templat yang bisa dipilih admin biasa, acara yang terlihat, dan modul yang boleh dipakai saat membuat atau mengubah acara. Data karyawan dan struktur organisasi (BOD, HOD, Business Unit) hanya ada di sini; Panitia, akun, dan ruang WAM diatur semua admin di <Link href={wamAdminPath.home}>Admin WAM</Link>.</p>
     <nav className={styles.superTabs} aria-label="Bagian dashboard"><a href="#tim">Tim Werkudara</a><Link href={EMPLOYEES_ADMIN}>Data karyawan</Link><Link href="/admin/akses">Log akses</Link><a href="#templat">Templat</a><a href="#visibilitas">Visibilitas acara</a><a href="#modul">Modul admin</a></nav>
     <div id="tim"><StaffSettings initial={team.staff} migrated={team.migrated} /></div>
     <div id="templat"><TemplateSettings initialEnabled={templates.templates} migrated={templates.migrated} /></div>
@@ -40,5 +41,5 @@ export default async function SuperAdminPage() {
       <SuperDashboard events={rows} initialHidden={[...hidden.ids]} migrated={hidden.migrated} />
     </section>
     <div id="modul"><ModuleSettings initialDisabled={modules.modules} migrated={modules.migrated} /></div>
-  </AdminShell>;
+  </SuperAdminFrame>;
 }

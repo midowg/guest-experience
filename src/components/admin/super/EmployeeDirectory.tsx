@@ -39,10 +39,12 @@ const fieldLabels: Record<string, string> = { full_name: "nama", nickname: "pang
  * one panel (EmployeeEditor) with everything, what they head included. `wamAccounts` gives the
  * count of WAM accounts and "Buat akun" for everyone still missing one.
  */
-export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initialLeads, leadOptions }: {
+export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initialLeads, leadOptions, part = "daftar" }: {
   initial: Employee[]; migrated: boolean; wamAccounts?: WamAccounts | null;
   /** Who heads which departments and BUs (6 Nov 2026), and the names to pick from; no column without them. */
   leads?: Record<string, Leads>; leadOptions?: Leads;
+  /** Which tab of Data karyawan: the list, or the Excel import. */
+  part?: "daftar" | "impor";
 }) {
   const [people, setPeople] = useState(initial);
   const [file, setFile] = useState<File | null>(null);
@@ -71,7 +73,9 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   const departments = useMemo(() => [...new Set(people.map(person => person.department).filter(Boolean))].sort(), [people]);
   // By Business Unit (MRP, WNS, TEE, NMU, WNN, as listed), then by name A to Z.
   const buRank = (person: Employee) => { const at = (BUSINESS_UNITS as readonly string[]).indexOf(buCode(person.business_unit)); return at < 0 ? BUSINESS_UNITS.length : at; };
-  const shown = people.filter(person => (!department || person.department === department) && (!businessUnit || buCode(person.business_unit) === businessUnit)
+  // A lead of a BU belongs to it too: their own BU first, then the BUs they lead.
+  const busOf = (person: Employee) => [...new Set([buCode(person.business_unit), ...leadsOf(person.id).businessUnits.map(buCode)])];
+  const shown = people.filter(person => (!department || person.department === department) && (!businessUnit || busOf(person).includes(businessUnit))
     && (!query.trim() || `${person.full_name} ${person.nickname} ${person.position}`.toLowerCase().includes(query.trim().toLowerCase())))
     .sort((a, b) => buRank(a) - buRank(b) || a.full_name.localeCompare(b.full_name, "id", { sensitivity: "base" }));
   const counts = plan ? { baru: plan.plan.filter(item => item.change === "baru").length, berubah: plan.plan.filter(item => item.change === "berubah").length, sama: plan.plan.filter(item => item.change === "sama").length } : null;
@@ -117,7 +121,8 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     try {
       let saved: Employee | undefined;
       if (person) {
-        const changed = Object.fromEntries(Object.entries(draft).filter(([key, value]) => person[key as keyof Employee] !== value));
+        // Only what changed; an empty value saved as null and one never set count as the same.
+        const changed = Object.fromEntries(Object.entries(draft).filter(([key, value]) => (person[key as keyof Employee] ?? null) !== (value ?? null)));
         saved = Object.keys(changed).length ? (await adminRequest<Employee>(employeesApi(person.id), { method: "PATCH", body: JSON.stringify(changed) })).data : person;
       } else {
         saved = (await adminRequest<Employee>(employeesApi(), { method: "POST", body: JSON.stringify({ employee: draft }) })).data;
@@ -182,7 +187,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     {message && <div role="status"><p className={styles.guestMessage}>{message}</p>
       {skipped.length > 0 && <ul aria-label="Dilewati">{skipped.map(item => <li key={item}>{item}</li>)}</ul>}</div>}
 
-    <section className="stack" aria-labelledby="import-title">
+    {part === "impor" && <section className="stack" aria-labelledby="import-title">
       <h2 id="import-title" className={styles.superSectionTitle}><FileSpreadsheet size={20} aria-hidden="true" /> Impor dari Excel HR</h2>
       <p className={styles.lead}>Unggah sheet data karyawan dari HR. Nama, panggilan, departemen, jabatan, dan office dibaca dan dirapikan (huruf kapital dan salah ketik). Setiap orang dicocokkan dengan namanya, jadi impor ulang memperbarui data, tidak menggandakan. Kategori, nomor WhatsApp, email, dan status aktif yang sudah diatur di sini tidak tertimpa. Berkasnya tidak disimpan.</p>
       <Field name="employee-file" label="Berkas Excel (.xlsx)" hint="Sheet dengan kolom Nama karyawan, Nama panggilan, Department, Position, dan Office.">
@@ -209,9 +214,9 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
           <Button type="button" variant="secondary" disabled={!!busy} onClick={() => setPlan(null)}>Batal</Button>
         </div>
       </div>}
-    </section>
+    </section>}
 
-    <section className="stack" aria-labelledby="people-title">
+    {part === "daftar" && <section className="stack" aria-labelledby="people-title">
       <h2 id="people-title" className={styles.superSectionTitle}>Daftar karyawan · {people.filter(person => person.active).length} aktif</h2>
       <p className={styles.lead}>Dipakai bersama oleh aplikasi Journey. Karyawan yang keluar dinonaktifkan, bukan dihapus, supaya catatan lamanya tetap terbaca.</p>
       {wamAccounts === null && <Notice tone="warning">Status akun WAM belum dapat dimuat. Muat ulang halaman ini sebentar lagi.</Notice>}
@@ -227,7 +232,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
       <div className={own.toolbar}>
         <Field name="employee-search" label="Cari"><input id="employee-search" className="input" type="search" value={query} placeholder="Nama, panggilan, atau jabatan" onChange={e => setQuery(e.target.value)} /></Field>
         <Field name="employee-department" label="Departemen"><select id="employee-department" className="input" value={department} onChange={e => setDepartment(e.target.value)}><option value="">Semua departemen</option>{departments.map(name => <option key={name} value={name}>{name}</option>)}</select></Field>
-        <Field name="employee-bu" label="Business Unit"><select id="employee-bu" className="input" value={businessUnit} onChange={e => setBusinessUnit(e.target.value)}><option value="">Semua BU</option>{BUSINESS_UNITS.map(code => <option key={code} value={code}>{code} ({people.filter(person => buCode(person.business_unit) === code).length})</option>)}</select></Field>
+        <Field name="employee-bu" label="Business Unit"><select id="employee-bu" className="input" value={businessUnit} onChange={e => setBusinessUnit(e.target.value)}><option value="">Semua BU</option>{BUSINESS_UNITS.map(code => <option key={code} value={code}>{code} ({people.filter(person => busOf(person).includes(code)).length})</option>)}</select></Field>
         <Button type="button" disabled={!migrated || !!busy} onClick={() => { setEditorError(""); setEditor({ person: null }); }}><Plus size={18} aria-hidden="true" /> Tambah karyawan</Button>
       </div>
 
@@ -250,7 +255,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
                   {person.category !== "karyawan" && <span className={`${own.chip} ${own.chipWork}`}>{categoryLabels[person.category]}</span>}
                 </div>}
               </td>
-              <td><span className={own.bu}>{buCode(person.business_unit)}</span></td>
+              <td><span className={own.buList}>{busOf(person).map((bu, index) => <span key={bu} className={own.bu} title={index ? `Lead BU ${bu}` : undefined}>{bu}</span>)}</span></td>
               <td>{person.phone || person.email ? <><p>{person.phone || "—"}</p><p className={own.muted}>{person.email}</p></> : <p className={own.muted}>Belum ada</p>}</td>
               <td><label className={styles.superSwitch}>
                 <input type="checkbox" role="switch" checked={person.active} disabled={busy === person.id} onChange={e => patch(person, { active: e.target.checked })} aria-label={`${person.full_name} aktif`} />
@@ -264,11 +269,12 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
           })}</tbody>
         </table></div>}
       {people.length > 0 && shown.length === 0 && <p className="field-hint">Tidak ada yang cocok dengan pencarian.</p>}
-    </section>
+    </section>}
 
     {editor && <EmployeeEditor key={editor.person?.id ?? "baru"} person={editor.person} leads={editor.person ? leadsOf(editor.person.id) : { departments: [], businessUnits: [] }}
       roles={editor.person ? rolesOf(editor.person.id) : []}
       options={leadOptions ?? null} departments={departments} saving={busy === "editor"} error={editorError}
+      people={people.filter(item => item.active)}
       onSave={(draft, nextLeads, nextRoles) => void saveEditor(editor.person, draft, nextLeads, nextRoles)} onClose={() => setEditor(undefined)} />}
   </div>;
 }

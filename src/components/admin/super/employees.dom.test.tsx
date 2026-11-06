@@ -18,7 +18,7 @@ it("reads the Excel first, shows who is new or changed, and saves only on reques
     return reply({ ok: true, message: "", data: { employees: [person, { ...person, id: "6a000000-0000-4000-8000-000000000002", full_name: "Contoh Dua" }] } });
   });
   vi.stubGlobal("fetch", fetch);
-  render(<EmployeeDirectory initial={[person]} migrated />);
+  render(<EmployeeDirectory initial={[person]} migrated part="impor" />);
   const input = screen.getByLabelText("Berkas Excel (.xlsx)") as HTMLInputElement;
   fireEvent.change(input, { target: { files: [new File(["x"], "karyawan.xlsx")] } });
   fireEvent.click(screen.getByRole("button", { name: /Baca berkas/ }));
@@ -33,7 +33,8 @@ it("reads the Excel first, shows who is new or changed, and saves only on reques
   fireEvent.click(screen.getByRole("button", { name: "Simpan 2 perubahan" }));
   expect(await screen.findByText("1 karyawan baru, 1 diperbarui, 0 tetap.")).toBeTruthy();
   expect(JSON.parse(fetch.mock.calls[1][1].body as string).rows).toHaveLength(2);
-  expect(await screen.findByText("Contoh Dua")).toBeTruthy();
+  // The list (its own tab) is read again after saving.
+  await vi.waitFor(() => expect(fetch).toHaveBeenLastCalledWith("/api/admin/employees", expect.anything()));
 });
 
 HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };

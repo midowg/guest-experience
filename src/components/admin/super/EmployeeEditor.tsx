@@ -11,9 +11,9 @@ import css from "./employee-editor.module.css";
 
 export type EmployeeDraft = Omit<Employee, "id" | "active">;
 
-const blank: EmployeeDraft = { full_name: "", nickname: "", department: "", position: "", office: "", category: "karyawan", phone: "", email: "", nip: "", business_unit: DEFAULT_BUSINESS_UNIT };
+const blank: EmployeeDraft = { full_name: "", nickname: "", department: "", position: "", office: "", category: "karyawan", phone: "", email: "", nip: "", business_unit: DEFAULT_BUSINESS_UNIT, reports_to: null };
 const draftOf = (person: Employee | null): EmployeeDraft => person
-  ? { full_name: person.full_name, nickname: person.nickname, department: person.department, position: person.position, office: person.office, category: person.category, phone: person.phone, email: person.email, nip: person.nip, business_unit: buCode(person.business_unit) }
+  ? { full_name: person.full_name, nickname: person.nickname, department: person.department, position: person.position, office: person.office, category: person.category, phone: person.phone, email: person.email, nip: person.nip, business_unit: buCode(person.business_unit), reports_to: person.reports_to ?? null }
   : blank;
 
 /**
@@ -22,7 +22,7 @@ const draftOf = (person: Employee | null): EmployeeDraft => person
  * Admin WAM, HOD departemen, lead BU: the structure lives here, Admin WAM only picks Panitia), with one Simpan. GA and Intern are a person's kind of work, so they sit under Pekerjaan.
  * A native <dialog>: Esc, the dimmed page or X close it without saving.
  */
-export function EmployeeEditor({ person, leads, roles, options, departments, saving, error, onSave, onClose }: {
+export function EmployeeEditor({ person, leads, roles, options, departments, people = [], saving, error, onSave, onClose }: {
   /** The person to change; null adds a new one. */
   person: Employee | null;
   leads: Leads;
@@ -32,6 +32,8 @@ export function EmployeeEditor({ person, leads, roles, options, departments, sav
   options: Leads | null;
   /** The departments already in Data karyawan, offered while typing. */
   departments: string[];
+  /** Everyone active, for Atasan langsung. */
+  people?: Employee[];
   saving: boolean;
   error: string;
   onSave: (draft: EmployeeDraft, leads: Leads, roles: PraWamRole[]) => void;
@@ -105,6 +107,12 @@ export function EmployeeEditor({ person, leads, roles, options, departments, sav
             <datalist id={`${id}-departments`}>{departments.map(name => <option key={name} value={name} />)}</datalist>
           </>)}
           {field("position", "Jabatan *", text("position", { maxLength: 150, placeholder: "Mis. Business Solutions Manager" }))}
+          {field("reports_to", "Atasan langsung", <select id={`${id}-reports_to`} className="input" value={draft.reports_to ?? ""} onChange={event => set({ reports_to: event.target.value || null })}>
+            <option value="">Seperti biasa (di bawah HOD departemennya)</option>
+            {[...new Set(people.map(item => item.department || "Tanpa departemen"))].sort((a, b) => Number(b === draft.department) - Number(a === draft.department) || a.localeCompare(b, "id")).map(name => <optgroup key={name} label={name}>
+              {people.filter(item => (item.department || "Tanpa departemen") === name && item.id !== person?.id).sort((a, b) => a.full_name.localeCompare(b.full_name, "id")).map(item => <option key={item.id} value={item.id}>{item.full_name}{item.position ? ` · ${item.position}` : ""}</option>)}
+            </optgroup>)}
+          </select>, "Isi untuk cabang di dalam tim, mis. di bawah Business Solutions Manager.")}
           <div className={css.field}>
             <span className={css.label} id={`${id}-category`}>Status kerja</span>
             <div className={css.segmented} role="radiogroup" aria-labelledby={`${id}-category`}>

@@ -1,0 +1,30 @@
+/* Data karyawan → Struktur (OrgChart): levels joined by a short line, departments as cards with a tree inside. */
+.chart { display: grid; justify-items: stretch; gap: 0; }
+.note { margin: 0 0 20px; font-size: 14px; color: var(--cs-subtle, #6b7280); }
+.level { display: grid; gap: 12px; }
+.level h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; font-weight: 700; color: var(--cs-text, #111827); }
+.row { display: flex; flex-wrap: wrap; gap: 12px; }
+.join { display: block; width: 2px; height: 24px; margin: 8px 0 8px 28px; background: var(--cs-line, #dde3ea); }
+.empty { margin: 0; font-size: 13px; color: var(--cs-subtle, #6b7280); }
+
+.person { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 12px; border: 1px solid var(--cs-line, #dde3ea); border-radius: 12px; background: var(--cs-surface, #fff); }
+.row .person { min-width: 16rem; }
+.strong { border-color: color-mix(in srgb, var(--cs-primary, #2f6feb) 35%, var(--cs-line, #dde3ea)); background: color-mix(in srgb, var(--cs-primary, #2f6feb) 6%, var(--cs-surface, #fff)); }
+.avatar { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: color-mix(in srgb, var(--cs-primary, #2f6feb) 14%, #fff); color: var(--cs-primary, #2f6feb); font-size: 12px; font-weight: 700; }
+.who { display: grid; min-width: 0; }
+.who strong { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who small { font-size: 12px; color: var(--cs-subtle, #6b7280); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag { flex: none; margin-left: auto; padding: 2px 8px; border-radius: 999px; background: #ccfbf1; color: #0f766e; font-size: 11px; font-weight: 700; }
+
+.departments { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 16px; align-items: start; }
+.department { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--cs-line, #dde3ea); border-radius: 16px; background: var(--cs-surface-2, #f6f7f9); }
+.department header { display: grid; gap: 4px; }
+.department header strong { font-size: 15px; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--cs-subtle, #6b7280); }
+.bu { padding: 1px 8px; border-radius: 999px; background: #e3ecfd; color: #1d4ed8; font-weight: 700; }
+
+/* The tree: each level indented, with a line down its left and a tick to each person. */
+.branch { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.branch .branch { margin: 6px 0 0 16px; padding-left: 12px; border-left: 2px solid var(--cs-line, #dde3ea); }
+.branch .branch > li { position: relative; }
+.branch .branch > li::before { content: ""; position: absolute; left: -12px; top: 22px; width: 10px; height: 2px; background: var(--cs-line, #dde3ea); }

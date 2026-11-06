@@ -59,3 +59,5 @@
 .roleTick small { font-size: 12px; font-weight: 500; color: var(--ink-soft, #6b7280); }
 .roleTick:has(input:checked) { border-color: var(--blue, #2f6feb); background: #e3ecfd; }
 .roleTick:has(input:disabled) { cursor: not-allowed; opacity: .55; }
+
+.buList { display: inline-flex; flex-wrap: wrap; gap: 4px; }
