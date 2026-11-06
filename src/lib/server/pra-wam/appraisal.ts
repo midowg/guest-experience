@@ -1,7 +1,7 @@
 import { callName } from "@/lib/pra-wam/call-name";
 import "server-only";
 import { cache } from "react";
-import { alternatives, appraisalRules, bookableDates, bookingProblems, clockLabel, OUTSIDE_ROOM, overlaps, roomFitProblem, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { alternatives, appraisalRules, bookableDates, bookingProblems, clockLabel, OUTSIDE_ROOM, overCapacity, overlaps, roomFitProblem, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
@@ -214,15 +214,22 @@ async function requireOwn(id: string, viewer: Member) {
  * server's clock; the database checks them again and refuses an overlap. A participant who is
  * already booked elsewhere at that time is a warning the person confirms (`confirmed`).
  */
-export async function saveBooking(input: BookingInput, viewer: Member, options: { id?: string; confirmed?: boolean; now?: Date; quiet?: boolean } = {}): Promise<Booking> {
+export async function saveBooking(input: BookingInput, viewer: Member, options: { id?: string; confirmed?: boolean; overCapacity?: boolean; now?: Date; quiet?: boolean } = {}): Promise<Booking> {
   const now = options.now ?? new Date();
   if (!await appraisalOpen()) throw new ServiceError(409, "Booking ruang appraisal sedang ditutup oleh admin Pra WAM.");
   const before = options.id ? await requireOwn(options.id, viewer) : null;
   const problems = bookingProblems(input, now);
   if (Object.keys(problems).length) throw new ServiceError(422, "Periksa kembali tanggal dan jam.", Object.fromEntries(Object.entries(problems).map(([key, message]) => [key, [message]])));
   // The room must suit how many come (the same rule the form uses): no one-on-one in the big room.
-  const unfit = roomFitProblem(await listRooms(), input, viewer.id);
+  const rooms = await listRooms();
+  const unfit = roomFitProblem(rooms, input, viewer.id);
   if (unfit) throw new ServiceError(422, unfit.message, { roomId: [unfit.reason] });
+  // The largest room may hold more than its capacity, only once the booker says yes.
+  const over = overCapacity(rooms, input, viewer.id);
+  if (over && !options.overCapacity) {
+    const message = `${over.room} muat ${over.capacity} orang, yang ikut ${over.people}. Centang "Ya, saya yakin" lalu simpan lagi.`;
+    throw new ServiceError(422, message, { overCapacity: [message] });
+  }
   const span = { startsAt: wibInstant(input.date, input.start), endsAt: wibInstant(input.date, input.end) };
   const participants = [...new Set(input.participants)].filter(id => id !== viewer.id);
   const sameDay = await activeOn(input.date);

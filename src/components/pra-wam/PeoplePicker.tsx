@@ -30,7 +30,8 @@ const initials = (name: string) => withoutHonorific(name).split(/\s+/).filter(Bo
  * department), and one list that scrolls down, never sideways: initials, name and department, and
  * + or a check. Tap to add, tap again to take off. "Pilih semua" above the list checks everyone
  * shown (all departments, the one picked, or what the search finds) or takes them all off again,
- * up to `max`. Enter in the search adds the one person found.
+ * up to `max` (none in Book ruang). "Hapus semua" takes everyone picked off, whatever is shown.
+ * Enter in the search adds the one person found.
  */
 export function PeoplePicker({ people, groups, picked, onChange, viewerId, max }: Props) {
   const uid = useId();
@@ -78,6 +79,7 @@ export function PeoplePicker({ people, groups, picked, onChange, viewerId, max }
       <span>{allLabel}</span>
       {shownPicked > 0 && <small>{shownPicked} dipilih</small>}
     </label>}
+    {picked.length > 0 && <button type="button" className={`button button--quiet ${css.clear}`} onClick={() => onChange([])}>Hapus semua pilihan ({picked.length})</button>}
     <ul className={css.list} aria-label="Pilih partisipan">
       {shown.length === 0 && <li className={css.empty}>{query ? "Tidak ada yang cocok. Coba nama lain, atau pilih Semua departemen." : "Belum ada orang di departemen ini."}</li>}
       {shown.map(person => {

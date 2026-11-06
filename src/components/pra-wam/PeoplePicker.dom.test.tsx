@@ -23,3 +23,14 @@ it("stops adding at the limit but still lets a picked person go", () => {
   fireEvent.click(screen.getByRole("button", { name: /^Budi/ }));
   expect(onChange).toHaveBeenCalledWith([]);
 });
+
+it("picks everyone in Semua departemen with no limit, and Hapus semua takes them all off", () => {
+  const onChange = vi.fn();
+  const { rerender } = render(<PeoplePicker people={people} groups={groups} picked={[]} onChange={onChange} />);
+  fireEvent.click(screen.getByLabelText(/Pilih semua karyawan/));
+  expect(onChange).toHaveBeenLastCalledWith(["p3", "p1", "p2"]);
+  rerender(<PeoplePicker people={people} groups={groups} picked={["p1", "p2", "p3"]} onChange={onChange} />);
+  expect((screen.getByLabelText(/Pilih semua karyawan/) as HTMLInputElement).checked).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Hapus semua pilihan (3)" }));
+  expect(onChange).toHaveBeenLastCalledWith([]);
+});

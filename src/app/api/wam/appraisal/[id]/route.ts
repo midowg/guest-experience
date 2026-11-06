@@ -17,8 +17,8 @@ export async function PATCH(request: Request, { params }: Params) {
     const id = validate(z.uuid(), (await params).id);
     const body = await readJson(request, 20_000);
     const input = validate(bookingInputSchema, body);
-    const confirmed = validate(z.object({ confirmed: z.boolean().default(false) }), body).confirmed;
-    const saved = await saveBooking(input, member, { id, confirmed, quiet: await isHodBooking(id) });
+    const { confirmed, overCapacity } = validate(z.object({ confirmed: z.boolean().default(false), overCapacity: z.boolean().default(false) }), body);
+    const saved = await saveBooking(input, member, { id, confirmed, overCapacity, quiet: await isHodBooking(id) });
     // A booking made as HOD: its meeting follows, and a move asks every HOD again.
     await relinkHodBooking(member, saved);
     return success(saved, "Booking diperbarui.");

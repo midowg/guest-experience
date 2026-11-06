@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { headcount, peopleLabel, roomFit } from "./room-fit";
+import { headcount, isOver, largestCapacity, peopleLabel, roomFit } from "./room-fit";
 
 const room = (capacity: number | null, minPeople: number | null, bookable = true) => ({ capacity, minPeople, bookable });
 
@@ -28,5 +28,16 @@ describe("room fit", () => {
   it("names a pair a one-on-one", () => {
     expect(peopleLabel(2)).toBe("2 orang (one-on-one)");
     expect(peopleLabel(6)).toBe("6 orang");
+  });
+  it("lets only the largest room go over its capacity, flagged for a yes", () => {
+    const big = { bookable: true, capacity: 50, minPeople: 20 };
+    const small = { bookable: true, capacity: 30, minPeople: 10 };
+    const largest = largestCapacity([big, small, { bookable: false, capacity: 80 }]);
+    expect(largest).toBe(50);
+    expect(roomFit(big, 57, largest)).toEqual({ ok: true, over: true, note: "Melebihi kapasitas 50 orang" });
+    expect(isOver(roomFit(big, 57, largest))).toBe(true);
+    expect(isOver(roomFit(big, 40, largest))).toBe(false);
+    expect(roomFit(small, 57, largest)).toMatchObject({ ok: false, reason: "kecil" });
+    expect(roomFit(big, 57)).toMatchObject({ ok: false, reason: "kecil" });
   });
 });

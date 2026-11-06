@@ -11,7 +11,7 @@ import {
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { roomStatus, type PlanTone } from "@/lib/pra-wam/floor-plan";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
-import { headcount, peopleLabel, roomFit } from "@/lib/pra-wam/room-fit";
+import { headcount, isOver, largestCapacity, peopleLabel, roomFit } from "@/lib/pra-wam/room-fit";
 import { errorText, praWamRequest, PraWamApiError, type Conflict } from "./api";
 import { DateStrip } from "./DateStrip";
 import { FloorPlan } from "./FloorPlan";
@@ -99,6 +99,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [conflict, setConflict] = useState<(Conflict & { message: string }) | null>(null);
+  const [sure, setSure] = useState(false);
   const headings = useRef<(HTMLHeadingElement | null)[]>([]);
   const moved = useRef(false);
 
@@ -142,17 +143,19 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const guests = new Set(draft.participants.filter(id => id !== viewer.id));
   const count = headcount(guests.size);
   const bookable = rooms.filter(room => room.bookable);
-  const fitting = bookable.filter(room => roomFit(room, count).ok);
+  const largest = largestCapacity(rooms);
+  const fitting = bookable.filter(room => roomFit(room, count, largest).ok);
+  const roomy = fitting.filter(room => !isOver(roomFit(room, count, largest)));
 
   function choiceOf(room: Room): Choice {
-    const fit = roomFit(room, count);
+    const fit = roomFit(room, count, largest);
     if (!fit.ok) return { ok: false, pending: false, tone: "off", text: fit.text };
     if (!dayKnown) return { ok: false, pending: true, tone: "closed", text: "Memuat jadwal…" };
     const status = roomStatus({
       bookable: room.bookable, span: chosen, now: nowDate,
       holds: others.filter(booking => booking.roomId === room.id).map(booking => ({ startsAt: booking.startsAt, endsAt: booking.endsAt, mine: !booking.isSession && booking.bookedBy.id === viewer.id })),
     });
-    return { ok: status.tone === "free", pending: false, tone: status.tone, text: status.text };
+    return { ok: status.tone === "free", pending: false, tone: status.tone, text: status.tone === "free" && fit.over ? `${status.text} · melebihi kapasitas` : status.text };
   }
   const choices = bookable.map(room => ({ room, ...choiceOf(room) }));
   const listed = [...choices.filter(item => item.ok), ...choices.filter(item => !item.ok)];
@@ -161,6 +164,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const wantedChoice = wanted ? choiceOf(wanted) : null;
   const roomId = outside ? OUTSIDE_ROOM : wantedChoice?.ok ? draft.roomId : "";
   const room = rooms.find(item => item.id === roomId);
+  // The largest room taken by more than it holds: allowed after "Ya, saya yakin".
+  const overRoom = !outside && room && room.capacity != null && isOver(roomFit(room, count, largest)) ? { name: room.name, capacity: room.capacity } : null;
   const dropped = wanted && wantedChoice && !wantedChoice.ok && !wantedChoice.pending ? `${wanted.name} tidak bisa dipakai: ${wantedChoice.text.charAt(0).toLowerCase()}${wantedChoice.text.slice(1)}. Pilih ruang lain.` : null;
   const anyFree = choices.some(item => item.ok);
   // When nothing is free at those hours: the nearest free hours in the rooms that suit.
@@ -181,7 +186,6 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const picked = draft.participants.map(id => people.find(person => person.id === id)).filter((person): person is Person => !!person);
   // Everyone but the booker can be picked.
   const colleagues = people.filter(person => person.id !== viewer.id);
-  const full = guests.size >= appraisalRules.maxParticipants;
   const countLine = guests.size ? `Kamu + ${guests.size} orang = ${peopleLabel(count)}` : "Kamu saja = 1 orang";
 
   /** Keeps the length when the start moves, shortened only to end by closing. */
@@ -230,7 +234,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     if (at === 0) return bookingProblems(draft, new Date());
     if (at === 1) return draft.title.trim().length < 2 ? { title: "Isi nama kegiatan." } : {};
     if (at === 2 && asHod && !hodUnits.length) return { participants: "Pilih minimal satu departemen." };
-    if (at === 2) return guests.size > appraisalRules.maxParticipants ? { participants: `Paling banyak ${appraisalRules.maxParticipants} partisipan.` } : {};
+    if (at === 2) return {};
     if (at === 3 && outside) return (draft.place ?? "").trim().length < 2 ? { place: "Isi nama tempat." } : {};
     if (at === 3) {
       if (!dayKnown) return { roomId: "Tunggu jadwal ruang selesai dimuat." };
@@ -270,10 +274,11 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       const found = problemsOf(at);
       if (Object.keys(found).length) { setFieldErrors(found); goTo(at); return; }
     }
+    if (overRoom && !sure) { setFieldErrors({ overCapacity: "Centang \"Ya, saya yakin\" untuk tetap memakai ruang ini." }); return; }
     setFieldErrors({});
     setBusy(true);
     try {
-      const body = { ...draft, roomId, place: outside ? (draft.place ?? "").trim() : "", confirmed, ...(asHod && !editId ? { hodUnits } : {}) };
+      const body = { ...draft, roomId, place: outside ? (draft.place ?? "").trim() : "", confirmed, overCapacity: !!overRoom && sure, ...(asHod && !editId ? { hodUnits } : {}) };
       const result = await praWamRequest(editId ? praWamApi.bookings(editId) : praWamApi.bookings(), { method: editId ? "PATCH" : "POST", json: body });
       if (onSaved) { setBusy(false); onSaved({ message: result.message, date: draft.date }); return; }
       router.refresh(); router.push(praWamPath.appraisal(draft.date));
@@ -389,8 +394,9 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         </div>
       </div>}
       <p className={css.headcount} role="status"><Users size={18} aria-hidden />{countLine}</p>
-      <p className={styles.hint}>{fitting.length
-        ? `${fitting.length} ruang cocok untuk ${peopleLabel(count)}.`
+      <p className={styles.hint}>{roomy.length
+        ? `${roomy.length} ruang cocok untuk ${peopleLabel(count)}.`
+        : fitting.length ? `Tidak ada ruang yang muat ${peopleLabel(count)}. ${fitting.map(room => room.name).join(", ")} (terbesar, ${largest} orang) tetap bisa dipakai dengan konfirmasi.`
         : `Belum ada ruang untuk ${peopleLabel(count)}. Kurangi atau tambah partisipan.`}</p>
       {asHod ? <fieldset className={css.hodPick}>
         <legend className={styles.label}>Departemen yang diundang</legend>
@@ -410,8 +416,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         </span>)}
       </div>}
       <PeoplePicker people={colleagues} groups={groups} picked={draft.participants} onChange={ids => set({ participants: ids })}
-        viewerId={viewer.id} max={appraisalRules.maxParticipants} />
-      {full && <p className={styles.hint}>Paling banyak {appraisalRules.maxParticipants} partisipan.</p>}
+        viewerId={viewer.id} />
       </>}
       {fieldError("participants")}
     </section>
@@ -482,6 +487,12 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
             : room ? <>{room.name}<small>{capacityText(room)}</small></> : <span className={css.missing}>{dayKnown ? "Belum dipilih" : "Memuat jadwal…"}</span>}
         </SummaryRow>
       </dl>
+      {overRoom && <div className={styles.conflict} role="alert">
+        <h3>Melebihi kapasitas ruang</h3>
+        <p>{overRoom.name} muat {overRoom.capacity} orang, yang ikut {peopleLabel(count)}. Apakah kamu yakin tetap memakai ruang ini?</p>
+        <label className={css.sure}><input type="checkbox" checked={sure} onChange={event => { setSure(event.target.checked); setFieldErrors(({ overCapacity: _gone, ...rest }) => { void _gone; return rest; }); }} /> Ya, saya yakin</label>
+        {fieldError("overCapacity")}
+      </div>}
       {conflict && <div className={styles.conflict} role="alert">
         <h3>{conflict.kind === "room" ? "Ruang sudah diambil" : "Partisipan bentrok"}</h3>
         <p>{conflict.message}</p>

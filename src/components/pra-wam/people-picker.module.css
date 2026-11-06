@@ -27,3 +27,6 @@
 .text small { font-size: 13px; color: var(--pw-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mark { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--pw-line); color: var(--pw-primary); }
 .person[aria-pressed='true'] .mark { border-color: var(--pw-primary); background: var(--pw-primary); color: var(--pw-on-primary); }
+
+/* "Hapus semua pilihan": everyone picked off at once, under the Pilih semua row. */
+.clear { justify-self: start; min-height: 44px; }

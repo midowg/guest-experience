@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { headcount, peopleLabel, roomFit } from "./room-fit";
+import { headcount, largestCapacity, peopleLabel, roomFit } from "./room-fit";
 
 /*
  * Appraisal room booking for Pra WAM: the rules shared by the form, the server and the tests.
@@ -117,7 +117,8 @@ export const bookingInputSchema = z.object({
   end: z.string().regex(TIME, "Pilih jam selesai."),
   title: z.string().trim().min(2, "Isi nama kegiatan.").max(120, "Nama kegiatan paling panjang 120 karakter."),
   description: z.string().trim().max(500, "Deskripsi paling panjang 500 karakter.").default(""),
-  participants: z.array(z.uuid()).max(appraisalRules.maxParticipants, `Paling banyak ${appraisalRules.maxParticipants} partisipan.`).default([]),
+  // No cap on how many come (6 Nov 2026): everyone may be invited; the bound only stops a runaway request.
+  participants: z.array(z.uuid()).max(2000).default([]),
 }).superRefine((input, context) => {
   if (input.roomId === OUTSIDE_ROOM && input.place.length < 2) context.addIssue({ code: "custom", path: ["place"], message: "Isi nama tempat." });
 });
@@ -371,7 +372,16 @@ export function roomFitProblem(rooms: Room[], input: Pick<BookingInput, "roomId"
   const room = rooms.find(item => item.id === input.roomId);
   if (!room || !room.bookable) return null;
   const people = headcount(new Set(input.participants.filter(id => id !== bookerId)).size);
-  const fit = roomFit(room, people);
+  const fit = roomFit(room, people, largestCapacity(rooms));
   if (fit.ok) return null;
   return { message: `${room.name} tidak cocok untuk ${peopleLabel(people)}. ${fit.text}.`, reason: fit.text };
+}
+
+/** The largest room taken by more people than it holds (allowed once confirmed), or null. */
+export function overCapacity(rooms: Room[], input: Pick<BookingInput, "roomId" | "participants">, bookerId: string): { room: string; capacity: number; people: number } | null {
+  const room = rooms.find(item => item.id === input.roomId);
+  if (!room || !room.bookable || room.capacity == null) return null;
+  const people = headcount(new Set(input.participants.filter(id => id !== bookerId)).size);
+  const fit = roomFit(room, people, largestCapacity(rooms));
+  return fit.ok && fit.over ? { room: room.name, capacity: room.capacity, people } : null;
 }
