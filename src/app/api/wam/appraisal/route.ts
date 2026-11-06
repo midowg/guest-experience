@@ -2,6 +2,8 @@ import { z } from "zod";
 import { bookingInputSchema, bookingSavedText } from "@/lib/pra-wam/appraisal";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { daySchedule, saveBooking } from "@/lib/server/pra-wam/appraisal";
+import { hodUnitsSchema } from "@/lib/pra-wam/hod";
+import { hodInvitees, linkHodBooking } from "@/lib/server/pra-wam/hod";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
 import { handleBooking } from "@/lib/server/pra-wam/respond";
 
@@ -24,6 +26,12 @@ export async function POST(request: Request) {
     const body = await readJson(request, 20_000);
     const input = validate(bookingInputSchema, body);
     const confirmed = validate(z.object({ confirmed: z.boolean().default(false) }), body).confirmed;
-    return success(await saveBooking(input, member, { confirmed }), bookingSavedText(input));
+    // Booking as HOD (6 Nov 2026): the participants are the HODs of the departments picked.
+    const { hodUnits } = validate(hodUnitsSchema, body);
+    const invites = hodUnits.length ? await hodInvitees(member, hodUnits) : [];
+    if (invites.length) input.participants = invites.map(invite => invite.employee_id);
+    const saved = await saveBooking(input, member, { confirmed, quiet: invites.length > 0 });
+    if (invites.length) await linkHodBooking(member, saved, invites);
+    return success(saved, invites.length ? `${bookingSavedText(input)} Undangan terkirim ke ${invites.length} HOD.` : bookingSavedText(input));
   });
 }

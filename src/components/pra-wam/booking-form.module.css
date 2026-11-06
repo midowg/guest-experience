@@ -65,3 +65,15 @@
 .where button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; min-height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--pw-muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .where button[aria-pressed='true'] { background: var(--pw-surface); color: var(--pw-primary); box-shadow: var(--pw-shadow-card); }
 .where button:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+
+/* Booking sebagai Pribadi or HOD (a HOD only), and the departments to invite as HOD. */
+.asSwitch { display: grid; gap: 6px; }
+.hodPick { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.hodPick ul { display: grid; gap: 6px; max-height: 20rem; margin: 0; padding: 4px; overflow-y: auto; list-style: none; border-radius: var(--pw-r-control); background: var(--pw-app); box-shadow: var(--pw-shadow-inner); }
+.hodDept { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px; border-radius: 14px; background: var(--pw-surface); cursor: pointer; }
+.hodDept input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--pw-primary); }
+.hodDept span { display: grid; min-width: 0; }
+.hodDept strong { font-size: 15px; font-weight: 600; }
+.hodDept small { font-size: 13px; color: var(--pw-muted); }
+.hodDept:has(input:checked) { background: var(--pw-primary-soft); }
+.hodNone { cursor: not-allowed; opacity: .55; }

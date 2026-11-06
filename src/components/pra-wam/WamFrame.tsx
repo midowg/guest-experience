@@ -96,10 +96,8 @@ const STALE_AFTER_MS = 60_000;
  * - Desktop, "Kelola acara": the console (src/components/console), its sidebar with the panitia's
  *   places in groups and the page in one white panel, on the app's own light or dark tokens.
  */
-export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, hod = false, hodWaiting = 0, children }: {
+export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, children }: {
   member: FrameMember; unread: number; waiting: number; phaseLabel: string; quick: FrameQuick | null; now: string;
-  /** A HOD: the meetings waiting for their answer show as a count on Book (Meeting HOD is a view there). */
-  hod?: boolean; hodWaiting?: number;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -129,11 +127,10 @@ export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, hod 
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [router]);
 
-  // A HOD's meetings waiting for an answer show on Book, where Meeting HOD is.
-  const badge = (tab: Tab) => (tab === "notifikasi" ? unread : tab === "permintaan" ? waiting : tab === "appraisal" && hod ? hodWaiting : 0);
+  const badge = (tab: Tab) => (tab === "notifikasi" ? unread : tab === "permintaan" ? waiting : 0);
   // A BOD keeps the app's own frame (top bar, bottom bar) with the BOD menu, never the panitia sidebar.
   // With invitations waiting, Book opens on Meeting HOD, where they are answered.
-  const menu = (onlyBod ? bod : personal).map(item => item.id === "appraisal" && hod && hodWaiting > 0 ? { ...item, href: praWamPath.bookHod } : item);
+  const menu = onlyBod ? bod : personal;
   const managed = onlyBod ? [] : manage.filter(item => !item.show || item.show(member));
   const panitiaView = !onlyBod && !!current && managedTabs.has(current);
   const who = member.nickname || member.name;

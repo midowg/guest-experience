@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
-import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Clock, Handshake, DoorOpen, Map as MapIcon, MapPin, Plus, Text, User, Users, X } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Clock, DoorOpen, Map as MapIcon, MapPin, Plus, Text, User, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { appraisalRules, bookingWhere, clockLabel, dayLabel, dayMinutes, draftHours, isOutside, isWorkday, loadedWeek, OUTSIDE_ROOM, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, bookingWhere, clockLabel, dayLabel, draftHours, isOutside, isWorkday, loadedWeek, OUTSIDE_ROOM, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { daySummaries, roomDay, type DayStatus, type DaySummary } from "@/lib/pra-wam/room-day";
@@ -12,7 +12,7 @@ import { bookingKey, DayCalendar, Legend, WeekCalendar, type BookPick } from "./
 import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
 import { useConfirm } from "./ConfirmDialog";
 import { FloorPlan } from "./FloorPlan";
-import { HodBoard } from "./HodBoard";
+import { hodResponseLabels, hodStatusLabels, type HodBookingInfo, type HodDepartment } from "@/lib/pra-wam/hod";
 import { MonthCalendar } from "./MonthCalendar";
 import { ScreenHead } from "./ScreenHead";
 import { Sheet } from "./Sheet";
@@ -38,9 +38,9 @@ type Props = {
   /** Per weekday of the booking window: holds and whether it is full (windowSummary); the loaded week is recounted here. */
   summary?: Record<string, DaySummary>;
   /** A HOD's Meeting HOD (6 Nov 2026): a third view beside Kalender and Denah, for HODs only. */
-  hod?: Omit<ComponentProps<typeof HodBoard>, "viewerId" | "now" | "embedded" | "rooms" | "bookings"> | null;
-  /** The view to open on (?lihat=hod from a notification or the old Meeting HOD address). */
-  initialView?: "kalender" | "denah" | "hod";
+  hod?: { departments: HodDepartment[]; ownUnits: string[] } | null;
+  /** Per booking made as HOD: its meeting and each HOD's answer, for the detail sheet (Terima and Tolak). */
+  hodInfo?: Record<string, HodBookingInfo>;
 };
 
 type SheetState =
@@ -59,7 +59,7 @@ const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <=
  * trip), so a reload reopens it; a day in another week (picked on the date strip) is a navigation,
  * since its bookings are loaded on the server.
  */
-export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {}, hod = null, initialView = "kalender" }: Props) {
+export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {}, hod = null, hodInfo = {} }: Props) {
   const router = useRouter();
   const [confirm, confirmDialog] = useConfirm();
   const bookable = rooms.filter(room => room.bookable);
@@ -73,12 +73,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const [selected, setSelected] = useState(date);
   const [weekOf, setWeekOf] = useState(week[0]);
   if (weekOf !== week[0]) { setWeekOf(week[0]); setSelected(date); }
-  const [chosenView, setView] = useState<"kalender" | "denah" | "hod">(initialView);
+  const [chosenView, setView] = useState<"kalender" | "denah">("kalender");
   // With the floor plan switched off by the super admin, no Denah; Meeting HOD only for a HOD.
-  const view = chosenView === "denah" && !floorPlan ? "kalender" : chosenView === "hod" && !hod ? "kalender" : chosenView;
-  // Meeting HOD invitations still waiting for this HOD's answer, on the switch.
-  const hodWaiting = hod ? hod.meetings.filter(meeting => meeting.status === "menunggu" && new Date(meeting.endsAt) > new Date(now)
-    && meeting.invites.some(invite => invite.id === viewerId && invite.response === "menunggu")).length : 0;
+  const view = chosenView === "denah" && !floorPlan ? "kalender" : chosenView;
   // From 1024px the week grid first (DS "Jadwal, tampilan minggu"); a phone always shows the day.
   const [mode, setMode] = useState<"hari" | "minggu">("minggu");
   const [weekRoom, setWeekRoom] = useState(() => bookable[0]?.id ?? "");
@@ -207,7 +204,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     mine={mine.map(booking => wibDate(booking.startsAt))} onPick={day => pickDay(day, false)} label="Pilih hari" />;
   // Meeting HOD has its own "Ajukan meeting": one add button per view.
   const head = <ScreenHead title="Book ruang"
-    actions={view !== "hod" && canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
+    actions={canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
 
   return <>
     {head}
@@ -215,11 +212,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {confirmDialog}
 
     <div className={css.toolbar}>
-      {(floorPlan || hod) && <div className={`${css.segmented} ${css.views}`} role="group" aria-label="Tampilan">
+      {floorPlan && <div className={`${css.segmented} ${css.views}`} role="group" aria-label="Tampilan">
         <button type="button" aria-pressed={view === "kalender"} onClick={() => setView("kalender")}><CalendarDays aria-hidden />Kalender</button>
-        {floorPlan && <button type="button" aria-pressed={view === "denah"} onClick={() => setView("denah")}><MapIcon aria-hidden />Denah</button>}
-        {hod && <button type="button" aria-pressed={view === "hod"} onClick={() => setView("hod")}><Handshake aria-hidden />Meeting HOD
-          {hodWaiting > 0 && <span className={css.viewCount}><span aria-hidden>{hodWaiting}</span><span className="sr-only">, {hodWaiting} menunggu jawabanmu</span></span>}</button>}
+        <button type="button" aria-pressed={view === "denah"} onClick={() => setView("denah")}><MapIcon aria-hidden />Denah</button>
       </div>}
       {view === "kalender" && <div className={`${css.segmented} ${css.deskOnly}`} role="group" aria-label="Rentang kalender">
         <button type="button" aria-pressed={mode === "hari"} onClick={() => setMode("hari")}>Hari</button>
@@ -227,7 +222,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
       </div>}
     </div>
 
-    {view === "hod" && hod ? <HodBoard {...hod} viewerId={viewerId} now={now} embedded rooms={rooms} bookings={bookings} /> : view === "kalender" ? <div className={css.layout}>
+    {view === "kalender" ? <div className={css.layout}>
       <div className={css.side}>
         {calendar}
         <Legend />
@@ -245,7 +240,6 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     </div> : <PlanView key={selected} date={selected} today={today} now={clockNow} rooms={rooms} bookings={dayBookings} canBook={canBookDay} weekend={weekendDay}
       note={weekendDay ? "Akhir pekan" : dayNote} onDay={day => pickDay(day, false)} onBookRoom={room => book({ date: selected, room: room.id })} />}
 
-    {view !== "hod" && <>
     <p className={styles.sectionLabel}>Booking saya</p>
     {mine.length === 0 ? <div className={styles.emptyRow}>
       <span className={styles.tile} aria-hidden><CalendarPlus /></span>
@@ -263,16 +257,17 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
         </button>
       </li>)}
     </ul>}
-    </>}
 
     {sheet?.kind === "detail" && <BookingSheet booking={sheet.booking} shown={shown} onClose={close} rooms={rooms} now={clockNow}
       mine={mineFlag(sheet.booking)} canEdit={canBook && mineFlag(sheet.booking)} canCancel={!sheet.booking.isSession && (mineFlag(sheet.booking) || canCancelAny)}
-      busy={busy} onEdit={() => show(editFor(sheet.booking))} onCancel={() => cancel(sheet.booking)} />}
+      busy={busy} onEdit={() => show(editFor(sheet.booking))} onCancel={() => cancel(sheet.booking)}
+      hod={hodInfo[sheet.booking.id]} viewerId={viewerId} onAnswered={text => { setNotice({ tone: "success", text }); router.refresh(); }}
+      onAnswerError={text => setNotice({ tone: "error", text })} />}
 
     {sheet?.kind === "form" && form && <BookingForm key={sheet.key} editId={sheet.editId} initial={sheet.initial}
       dates={dates.includes(sheet.initial.date) ? dates : [sheet.initial.date, ...dates]} now={clockNow.toISOString()} rooms={rooms}
       people={form.people} groups={form.groups} viewer={{ id: viewerId }} usedTitles={form.usedTitles}
-      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan} summary={days}
+      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan} summary={days} hod={hod}
       frame={(body, footer) => <Sheet open={shown} onClose={close} side="left" wide title={sheet.editId ? "Ubah booking" : "Book ruang"}
         subtitle="Yang tersimpan lebih dulu yang mendapat ruang." footer={footer}>{body}</Sheet>} />}
 
@@ -284,9 +279,11 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
 }
 
 /** One booking in the sheet: when, where, who, and what can be done with it. */
-function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canCancel, busy, onEdit, onCancel }: {
+function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canCancel, busy, onEdit, onCancel, hod, viewerId, onAnswered, onAnswerError }: {
   booking: Booking; shown: boolean; onClose: () => void; rooms: Room[]; now: Date; mine: boolean; canEdit: boolean; canCancel: boolean;
   busy: string | null; onEdit: () => void; onCancel: () => void;
+  /** A booking made as HOD: each HOD's answer, and Terima and Tolak for an invited HOD. */
+  hod?: HodBookingInfo; viewerId: string; onAnswered: (text: string) => void; onAnswerError: (text: string) => void;
 }) {
   const room = rooms.find(item => item.id === booking.roomId);
   const ended = new Date(booking.endsAt) <= now;
@@ -308,9 +305,37 @@ function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canC
       {booking.participants && <div><Users aria-hidden /><dt>Partisipan</dt><dd>{booking.participants.length ? booking.participants.map(person => person.name).join(", ") : "Tanpa partisipan lain"}</dd></div>}
       {booking.description && <div><Text aria-hidden /><dt>Deskripsi</dt><dd>{booking.description}</dd></div>}
     </dl>
+    {hod && <HodAnswers info={hod} viewerId={viewerId} ended={ended} onAnswered={onAnswered} onError={onAnswerError} />}
     {booking.isSession && <p className={css.sheetNote}><MapPin size={14} aria-hidden /> Ruang ini dipegang sesi Pra WAM dan tidak bisa dibooking pada jam itu. Panitia yang mengaturnya.</p>}
     {!booking.isSession && !booking.participants && <p className={css.sheetNote}>Partisipan dan deskripsi hanya terlihat oleh pemesan, partisipan, dan panitia.</p>}
   </Sheet>;
+}
+
+/**
+ * A booking made as HOD (6 Nov 2026): Meeting HOD's state, each invited HOD with their answer, and
+ * for an invited HOD still to answer, Terima and Tolak (as on their notification).
+ */
+function HodAnswers({ info, viewerId, ended, onAnswered, onError }: { info: HodBookingInfo; viewerId: string; ended: boolean; onAnswered: (text: string) => void; onError: (text: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const mine = info.invites.find(invite => invite.id === viewerId);
+  const accepted = info.invites.filter(invite => invite.response === "terima").length;
+  async function answer(accept: boolean) {
+    setBusy(true);
+    try { onAnswered((await praWamRequest(praWamApi.hodMeetings(info.meetingId), { method: "POST", json: { accept, note: "" } })).message); }
+    catch (problem) { onError(errorText(problem)); }
+    finally { setBusy(false); }
+  }
+  return <section className={css.hodBox} aria-label="Meeting HOD">
+    <p className={css.hodHead}><strong>Meeting HOD · {hodStatusLabels[info.status]}</strong><span>{accepted} dari {info.invites.length} menerima</span></p>
+    <ul className={css.hodList}>{info.invites.map(invite => <li key={invite.id}>
+      <span><strong>{invite.id === viewerId ? "Kamu" : invite.name}</strong>{invite.unit && <small>{invite.unit}</small>}</span>
+      <em className={css[`hod_${invite.response}`]}>{hodResponseLabels[invite.response]}</em>
+    </li>)}</ul>
+    {mine?.response === "menunggu" && info.status === "menunggu" && !ended && <div className={styles.actions}>
+      <button type="button" className="button button--secondary" disabled={busy} onClick={() => void answer(false)}>Tolak</button>
+      <button type="button" className="button button--primary" disabled={busy} onClick={() => void answer(true)}>{busy ? "Mengirim…" : "Terima"}</button>
+    </div>}
+  </section>;
 }
 
 /** A day's title: the date, and a small "Hari ini" or a word on why it cannot be booked. */
@@ -318,20 +343,6 @@ function DayHead({ date, today, note, className }: { date: string; today: string
   return <div className={`${css.dayTitle} ${className ?? ""}`}>
     <h2>{dayLabel(date)}</h2>
     {date === today ? <span className={css.dayTag}>Hari ini</span> : note ? <span className={`${css.dayTag} ${css.dayTagMuted}`}>{note}</span> : null}
-  </div>;
-}
-
-/**
- * How full the day is, as one line instead of a key under the plan: a bar from free (green) to full
- * (red) with a marker at the share of opening hours taken across the rooms, and a word for it.
- */
-function DayMeter({ share }: { share: number }) {
-  const percent = Math.round(Math.min(1, Math.max(0, share)) * 100);
-  const word = percent >= 100 ? "Penuh" : percent >= 75 ? "Hampir penuh" : percent >= 35 ? "Mulai ramai" : "Masih lengang";
-  return <div className={css.meter} role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={`Keterisian hari ini, ${percent} persen`} aria-valuetext={`${word}, ${percent}% terisi`}>
-    <div className={css.meterHead}><strong>{word}</strong><span>{percent}% terisi</span></div>
-    <div className={css.meterTrack} aria-hidden><i style={{ left: `${percent}%` }} /></div>
-    <div className={css.meterEnds} aria-hidden><span>Kosong</span><span>Penuh</span></div>
   </div>;
 }
 
@@ -355,16 +366,12 @@ function PlanView({ date, today, now, rooms, bookings, canBook, weekend, note, o
   const statusOf = (room: Room): DayStatus => weekend && room.bookable ? { tone: "closed", text: "Akhir pekan" }
     : outside && room.bookable ? { tone: "closed", text: "Di luar periode" } : dayOf(room).status;
   const before = nextDay(date, -1), after = nextDay(date, 1);
-  // How full the day is: the opening hours taken across the bookable rooms, overlaps counted once.
-  const open = rooms.filter(room => room.bookable);
-  const share = open.length ? open.reduce((sum, room) => sum + dayOf(room).takenMinutes, 0) / (open.length * dayMinutes) : 0;
   return <section className={`${styles.card} ${css.planCard}`} aria-label={`Denah kantor ${dayLabel(date)}`}>
     <div className={css.planDay}>
       <button type="button" className={css.round} onClick={() => onDay(before)} disabled={before < appraisalRules.periodStart} aria-label="Hari sebelumnya"><ChevronLeft aria-hidden /></button>
       <DayHead date={date} today={today} note={note} />
       <button type="button" className={css.round} onClick={() => onDay(after)} disabled={after > appraisalRules.periodEnd} aria-label="Hari berikutnya"><ChevronRight aria-hidden /></button>
     </div>
-    {!note && <DayMeter share={share} />}
     <FloorPlan rooms={rooms} statusOf={statusOf} label={`Denah kantor, ${dayLabel(date)}`}
       otherSpots="plain" showUnplaced={false} landscapeOnDesktop legend={[]}
       activeOf={(room, status) => canBook && room.bookable && (status.tone === "free" || status.tone === "part")}

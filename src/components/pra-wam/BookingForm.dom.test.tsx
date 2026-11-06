@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { wibInstant, type Booking, type Room } from "@/lib/pra-wam/appraisal";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }) }));
 const request = vi.hoisted(() => vi.fn());
@@ -16,10 +16,10 @@ const kecil = room("kecil", "Arjuna", 4, null), besar = room("besar", "Bima", 12
 const held: Booking = { id: "b1", roomId: "sibuk", title: "Rapat", description: "", startsAt: wibInstant("2026-11-05", "13:00"), endsAt: wibInstant("2026-11-05", "14:00"), bookedBy: { id: "other", name: "Sari", department: "HR" }, participants: null };
 const draft = (patch: Partial<BookingDraft> = {}): BookingDraft => ({ date: "2026-11-05", start: "13:00", end: "14:00", roomId: "", title: "", description: "", participants: [], ...patch });
 
-function renderForm(props: { initial?: BookingDraft; rooms?: Room[]; editId?: string; onSaved?: () => void; summary?: Record<string, { bookings: number; full: boolean }> } = {}) {
+function renderForm(props: { initial?: BookingDraft; rooms?: Room[]; editId?: string; onSaved?: () => void; summary?: Record<string, { bookings: number; full: boolean }>; hod?: { departments: { id: string; name: string; heads: { id: string; name: string }[] }[]; ownUnits: string[] } } = {}) {
   return render(<BookingForm editId={props.editId} initial={props.initial ?? draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={props.rooms ?? [kecil, besar, sibuk]}
     people={[{ id: "p1", name: "Budi", department: "IT" }, { id: "p2", name: "Citra", department: "IT" }]} viewer={{ id: "me" }}
-    groups={[{ id: "it", label: "IT", memberIds: ["p1", "p2"] }]} usedTitles={[]} dayBookings={[held]} dayOf="2026-11-05" onSaved={props.onSaved} showPlan={false} summary={props.summary} />);
+    groups={[{ id: "it", label: "IT", memberIds: ["p1", "p2"] }]} usedTitles={[]} dayBookings={[held]} dayOf="2026-11-05" onSaved={props.onSaved} showPlan={false} summary={props.summary} hod={props.hod} />);
 }
 const lanjut = () => fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
 const roomCard = (name: string) => screen.getByRole("button", { name: new RegExp(`^${name}`) }) as HTMLButtonElement;
@@ -192,4 +192,37 @@ it("books outside the office: a weekend opens, the place is asked under Tempat, 
   fireEvent.click(screen.getByRole("button", { name: /Book ruang/ }));
   await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
   expect(request.mock.calls.at(-1)?.[1]).toMatchObject({ method: "POST", json: { roomId: "luar", place: "Kopi Klotok", date: "2026-11-07", start: "19:00", end: "23:30" } });
+});
+
+it("lets a HOD book as HOD: departments instead of people, their HODs invited, the room booked at once", async () => {
+  const onSaved = vi.fn();
+  request.mockResolvedValue({ data: {}, message: "Ruang dibooking. Undangan terkirim ke 2 HOD." });
+  renderForm({ onSaved, hod: { ownUnits: ["Finance"], departments: [
+    { id: "Finance", name: "Finance", heads: [{ id: "me", name: "Saya" }] },
+    { id: "BAS", name: "Business & Administrative Services", heads: [{ id: "p1", name: "Budi" }] },
+    { id: "COE", name: "Center of Excellence", heads: [{ id: "p2", name: "Citra" }] },
+    { id: "ACS", name: "Art & Creative Support", heads: [] },
+  ] } });
+  lanjut();
+  fireEvent.change(screen.getByLabelText("Nama kegiatan"), { target: { value: "Sinkronisasi target" } });
+  lanjut();
+  // Booking sebagai: Pribadi (people) or HOD (departments).
+  const as = within(screen.getByRole("group", { name: "Booking sebagai" }));
+  expect(as.getByRole("button", { name: "Pribadi", pressed: true })).toBeTruthy();
+  fireEvent.click(as.getByRole("button", { name: "HOD" }));
+  expect(screen.queryByLabelText("Departemen")).toBeNull();
+  expect(screen.queryByRole("checkbox", { name: /Finance/ })).toBeNull();
+  expect((screen.getByRole("checkbox", { name: /Art & Creative Support/ }) as HTMLInputElement).disabled).toBe(true);
+  lanjut();
+  expect(screen.getByText("Pilih minimal satu departemen.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("checkbox", { name: /Business & Administrative Services/ }));
+  fireEvent.click(screen.getByRole("checkbox", { name: /Center of Excellence/ }));
+  expect(screen.getByText("Kamu + 2 orang = 3 orang")).toBeTruthy();
+  lanjut();
+  fireEvent.click(roomCard("Nakula").disabled ? roomCard("Arjuna") : roomCard("Nakula"));
+  lanjut();
+  expect(screen.getByText(/Sebagai HOD · Business & Administrative Services, Center of Excellence/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Book ruang/ }));
+  await vi.waitFor(() => expect(request).toHaveBeenCalledWith("/api/wam/appraisal", expect.objectContaining({ method: "POST",
+    json: expect.objectContaining({ hodUnits: ["BAS", "COE"], participants: ["p1", "p2"] }) })));
 });

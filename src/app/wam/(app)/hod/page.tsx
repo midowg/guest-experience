@@ -3,7 +3,7 @@ import { praWamPath } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 
-/** Meeting HOD lives in Book now (6 Nov 2026); old links and notifications land there. */
+/** Meeting HOD is booked from Book ruang now (6 Nov 2026); old links land on Book. */
 export default function HodPage() {
-  redirect(praWamPath.bookHod);
+  redirect(praWamPath.appraisal());
 }

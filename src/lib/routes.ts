@@ -201,7 +201,6 @@ export const praWamPath = {
   colleagues: `${PRA_WAM_PATH}/rekan`,
   /** Meeting HOD: meetings between department heads, for HODs only; a view of Book (the old address redirects there). */
   hod: `${PRA_WAM_PATH}/hod`,
-  bookHod: `${PRA_WAM_PATH}/book?lihat=hod`,
   /** One colleague's card and what they share with colleagues. */
   colleague: (employeeId: string) => `${PRA_WAM_PATH}/rekan/${enc(employeeId)}`,
 };

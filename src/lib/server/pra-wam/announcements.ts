@@ -23,8 +23,10 @@ const waiting = () => new ServiceError(503, `Pengumuman menunggu migrasi ${MIGRA
 export type Audience = { type: "semua" } | { type: "sesi"; sessionId: string } | { type: "unit"; unitIds: string[] } | { type: "orang"; employeeIds: string[]; label: string; sessionId?: string };
 export type Notification = {
   id: string; kind: "pengumuman" | "sesi"; title: string; body: string; sessionId: string | null; createdAt: string; readAt: string | null;
-  /** Where its button goes when it is not a session's: Meeting HOD's notes open Book → Meeting HOD. */
+  /** Where its button goes when it is not a session's (an older Meeting HOD note opens Book). */
   link?: { href: string; label: string };
+  /** A note from Meeting HOD: its session's invitation can be answered on it (Terima, Tolak). */
+  hod?: boolean;
 };
 /** The label Meeting HOD's notes carry, so each opens Meeting HOD. */
 export const HOD_NOTE_LABEL = "Meeting HOD";
@@ -112,7 +114,7 @@ export async function myNotifications(member: Member): Promise<{ items: Notifica
   if (noteError) databaseError(noteError);
   const items = (data ?? []).map(row => ({
     id: row.id, kind: row.kind, title: row.title, body: row.body, sessionId: row.session_id, createdAt: row.created_at,
-    ...(row.audience_label === HOD_NOTE_LABEL ? { link: { href: praWamPath.bookHod, label: "Buka Meeting HOD" } } : {}),
+    ...(row.audience_label === HOD_NOTE_LABEL ? { hod: true, ...(row.session_id ? {} : { link: { href: praWamPath.appraisal(), label: "Buka Book" } }) } : {}),
     readAt: receipts?.find(receipt => receipt.announcement_id === row.id)?.read_at ?? null,
   }));
   return { items, unread: (receipts ?? []).filter(receipt => !receipt.read_at).length, migrated: true };

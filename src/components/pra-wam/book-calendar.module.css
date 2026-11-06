@@ -236,20 +236,25 @@
 .planDay { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; }
 .planDay .dayTitle { justify-content: center; margin: 0; }
 .planDay .dayTitle h2 { font-size: 18px; }
-/* How full the day is (DayMeter): a bar from free to full with a marker, instead of a key. */
-.meter { display: grid; gap: 6px; }
-.meterHead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--pw-muted); }
-.meterHead strong { font-size: 14px; font-weight: 600; color: var(--pw-text); }
-.meterTrack { position: relative; height: 8px; border-radius: 999px; background: linear-gradient(90deg, var(--pw-success) 0%, var(--pw-brass) 50%, var(--pw-warning) 75%, var(--pw-danger) 100%); }
-.meterTrack i { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 50%; background: var(--pw-surface); box-shadow: 0 0 0 3px var(--pw-text), 0 2px 6px rgba(15, 23, 42, .25); transform: translate(-50%, -50%); }
-.meterEnds { display: flex; justify-content: space-between; font-size: 12px; color: var(--pw-muted); }
 @media (min-width: 1024px) { .planCard { max-width: 64rem; } }
 
 /* The views switch (Kalender, Denah, Meeting HOD): on a phone it takes the full width in equal parts,
    words only, so three fit without squeezing their icons. */
-.viewCount { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--pw-danger); color: #fff; font-size: 11px; font-weight: 700; }
 @media (max-width: 479.98px) {
   .views { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; }
   .views button { padding: 0 8px; font-size: 13px; }
   .views button svg { display: none; }
 }
+
+/* A booking made as HOD, in its detail sheet: each HOD's answer, and Terima / Tolak for one still to answer. */
+.hodBox { display: grid; gap: 10px; margin-top: 16px; padding: 14px; border-radius: var(--pw-r-card); background: var(--pw-app); }
+.hodHead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; margin: 0; font-size: 14px; color: var(--pw-text); }
+.hodHead span { font-size: 13px; color: var(--pw-muted); }
+.hodList { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.hodList li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hodList li span { display: grid; min-width: 0; }
+.hodList strong { font-size: 14px; font-weight: 600; }
+.hodList small { font-size: 12px; color: var(--pw-muted); }
+.hodList em { flex: none; font-style: normal; font-size: 12px; font-weight: 700; color: var(--pw-muted); }
+.hodList em.hod_terima { color: var(--pw-success); }
+.hodList em.hod_tolak { color: var(--pw-danger); }

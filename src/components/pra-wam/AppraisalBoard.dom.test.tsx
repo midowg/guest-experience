@@ -48,22 +48,22 @@ it("shows only the plan under Denah: the day with ‹ ›, and a room's label bo
   fireEvent.click(screen.getByRole("button", { name: "Book ruang ini" }));
   expect(screen.getByRole("dialog", { name: "Book ruang" })).toBeTruthy();
 });
-it("shows Meeting HOD as a view of Book only for a HOD", () => {
+it("shows each HOD's answer on a booking made as HOD, with Terima and Tolak for an invited HOD", async () => {
   const week = ["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"];
-  const props = { date: "2026-11-05", week, dates: ["2026-11-04","2026-11-05"], now: wibInstant("2026-11-04","10:12"), rooms, bookings: [b], mine: [b], viewerId: "me", canCancelAny: false, open: true, form: { people: [], groups: [], usedTitles: [] }, arrive: {} };
-  const { unmount } = render(<AppraisalBoard {...props} />);
-  expect(screen.queryByRole("button", { name: "Meeting HOD" })).toBeNull();
-  unmount();
-  const invite = { id: "m1", title: "Rencana 2027", agenda: "", place: "Nagapadma", status: "menunggu" as const, startsAt: "2026-11-10T03:00:00Z", endsAt: "2026-11-10T04:00:00Z", createdAt: "2026-11-04T00:00:00Z", roomId: null, roomBooked: false,
-    requester: { id: "x", name: "Budi", unit: "IT" }, invites: [{ id: "me", name: "Saya", unit: "Finance", response: "menunggu" as const, note: "", respondedAt: null }] };
-  render(<AppraisalBoard {...props} hod={{ meetings: [invite], departments: [{ id: "IT", name: "IT", heads: [{ id: "x", name: "Budi" }] }], ownUnits: ["Finance"], migrated: true }} initialView="hod" />);
-  // The switch says how many wait for an answer.
-  expect(screen.getByRole("button", { name: /Meeting HOD.*1 menunggu jawabanmu/, pressed: true })).toBeTruthy();
-  expect(screen.getByRole("heading", { name: "Meeting HOD" })).toBeTruthy();
-  // One add button per view: Ajukan meeting here, no Book ruang; and no Booking saya under it.
-  expect(screen.getByRole("button", { name: /Ajukan meeting/ })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /^Book ruang$/ })).toBeNull();
-  expect(screen.queryByText("Booking saya")).toBeNull();
+  const hodInfo = { [b.id]: { meetingId: "m1", status: "menunggu" as const, requesterId: "x", invites: [
+    { id: "me", name: "Saya", unit: "Finance", response: "menunggu" as const, note: "", respondedAt: null },
+    { id: "y", name: "Yulia", unit: "BAS", response: "terima" as const, note: "", respondedAt: "x" },
+  ] } };
+  render(<AppraisalBoard date="2026-11-05" week={week} dates={["2026-11-04","2026-11-05"]} now={wibInstant("2026-11-04","10:12")}
+    rooms={rooms} bookings={[b]} mine={[b]} viewerId="me" canCancelAny={false} open form={{ people: [], groups: [], usedTitles: [] }} arrive={{ booking: b.id }} hodInfo={hodInfo} />);
+  // No Meeting HOD tab: it lives in the booking itself.
+  expect(screen.queryByRole("button", { name: /Meeting HOD/ })).toBeNull();
+  const sheet = within(screen.getByRole("dialog", { name: "Rapat KPI" }));
+  const box = within(sheet.getByRole("region", { name: "Meeting HOD" }));
+  expect(box.getByText("1 dari 2 menerima")).toBeTruthy();
+  expect(box.getByText("Menerima")).toBeTruthy();
+  expect(box.getByRole("button", { name: "Terima" })).toBeTruthy();
+  expect(box.getByRole("button", { name: "Tolak" })).toBeTruthy();
 });
 it("shows the calendar only when the floor plan is switched off", () => {
   render(<AppraisalBoard date="2026-11-05" week={["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"]} dates={["2026-11-04","2026-11-05"]} now={wibInstant("2026-11-04","10:12")}

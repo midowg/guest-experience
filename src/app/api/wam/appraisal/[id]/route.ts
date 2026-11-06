@@ -2,6 +2,7 @@ import { z } from "zod";
 import { bookingCancelledText, bookingInputSchema } from "@/lib/pra-wam/appraisal";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { cancelBooking, deleteBooking, saveBooking } from "@/lib/server/pra-wam/appraisal";
+import { cancelHodBooking, isHodBooking, relinkHodBooking } from "@/lib/server/pra-wam/hod";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
 import { handleBooking } from "@/lib/server/pra-wam/respond";
 
@@ -17,7 +18,10 @@ export async function PATCH(request: Request, { params }: Params) {
     const body = await readJson(request, 20_000);
     const input = validate(bookingInputSchema, body);
     const confirmed = validate(z.object({ confirmed: z.boolean().default(false) }), body).confirmed;
-    return success(await saveBooking(input, member, { id, confirmed }), "Booking diperbarui.");
+    const saved = await saveBooking(input, member, { id, confirmed, quiet: await isHodBooking(id) });
+    // A booking made as HOD: its meeting follows, and a move asks every HOD again.
+    await relinkHodBooking(member, saved);
+    return success(saved, "Booking diperbarui.");
   });
 }
 
@@ -31,6 +35,8 @@ export async function DELETE(request: Request, { params }: Params) {
       await deleteBooking(id, member);
       return success(null, "Booking dihapus.");
     }
-    return success(null, bookingCancelledText(await cancelBooking(id, member)));
+    const cancelled = await cancelBooking(id, member);
+    await cancelHodBooking(member, id);
+    return success(null, bookingCancelledText(cancelled));
   });
 }

@@ -30,9 +30,23 @@ function noteIcon(item: Notification): { icon: React.ReactNode; brass: boolean }
  * The person's notifications (Penpot "P11 · Notifikasi"), grouped Hari ini, Kemarin, then by day.
  * A dot marks what is unread; opening one or "Tandai dibaca" clears it.
  */
-export function NotificationList({ items, now }: { items: Notification[]; now: string }) {
+export function NotificationList({ items, now, hodAnswers = {} }: {
+  items: Notification[]; now: string;
+  /** Per session: this HOD's Meeting HOD invitation, answered on its note with Terima or Tolak (6 Nov 2026). */
+  hodAnswers?: Record<string, { meetingId: string; response: "menunggu" | "terima" | "tolak"; status: string }>;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [answerError, setAnswerError] = useState("");
+  async function answer(item: Notification, meetingId: string, accept: boolean) {
+    setBusy(true); setAnswerError("");
+    try {
+      await praWamRequest(praWamApi.hodMeetings(meetingId), { method: "POST", json: { accept, note: "" } });
+      if (!item.readAt) await praWamRequest(praWamApi.notifications, { method: "POST", json: { id: item.id } });
+      router.refresh();
+    } catch (problem) { setAnswerError(errorText(problem)); }
+    finally { setBusy(false); }
+  }
   const unread = items.filter(item => !item.readAt).length;
   async function read(id?: string) {
     setBusy(true);
@@ -53,6 +67,7 @@ export function NotificationList({ items, now }: { items: Notification[]; now: s
   const days = [...new Set(items.map(item => wibDay(item.createdAt)))];
   const label = (day: string) => (day === today ? "Hari ini" : day === yesterday ? "Kemarin" : dayName(day));
   return <div className={notes.noteWrap}>
+    {answerError && <Notice tone="error">{answerError}</Notice>}
     {markAll && <div className={notes.noteBar}>{markAll}</div>}
     {days.map(day => <section key={day} aria-label={label(day)}>
       <p className={notes.noteDay}>{label(day)}</p>
@@ -64,8 +79,18 @@ export function NotificationList({ items, now }: { items: Notification[]; now: s
             <strong>{item.title}</strong>
             {item.body && <p>{item.body}</p>}
             <span className={styles.meta}>{item.kind === "sesi" ? "Kabar sesi" : "Panitia"} · {clock(item.createdAt)}</span>
+            {(() => {
+              // Meeting HOD: answer here, as "Saya hadir" on a session.
+              const invite = item.hod && item.sessionId ? hodAnswers[item.sessionId] : undefined;
+              if (!invite) return null;
+              if (invite.response === "menunggu" && invite.status === "menunggu") return <div className={styles.actions}>
+                <button type="button" className="button button--secondary" disabled={busy} onClick={() => void answer(item, invite.meetingId, false)}>Tolak</button>
+                <button type="button" className="button button--primary" disabled={busy} onClick={() => void answer(item, invite.meetingId, true)}>Terima</button>
+              </div>;
+              return <p className={styles.meta}>{invite.response === "terima" ? "Kamu menerima undangan ini." : invite.response === "tolak" ? "Kamu menolak undangan ini." : "Undangan ini sudah tidak menunggu jawaban."}</p>;
+            })()}
             {(item.sessionId || item.link || !item.readAt) && <div className={styles.actions}>
-              {item.sessionId && <a className="button button--primary" href={praWamPath.session(item.sessionId)} onClick={() => { if (!item.readAt) void read(item.id); }}>Buka sesi</a>}
+              {item.sessionId && <a className={`button ${item.hod ? "button--secondary" : "button--primary"}`} href={praWamPath.session(item.sessionId)} onClick={() => { if (!item.readAt) void read(item.id); }}>Buka sesi</a>}
               {!item.sessionId && item.link && <a className="button button--primary" href={item.link.href} onClick={() => { if (!item.readAt) void read(item.id); }}>{item.link.label}</a>}
               {!item.readAt && <button type="button" className="button button--quiet" disabled={busy} onClick={() => read(item.id)}>Tandai dibaca</button>}
             </div>}

@@ -1,6 +1,6 @@
 import "server-only";
-import { clockLabel, dayLabel, wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
-import { statusFromAnswers, type HodDepartment, type HodMeeting, type HodMeetingInput, type HodMeetingStatus, type HodResponse } from "@/lib/pra-wam/hod";
+import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
+import { statusFromAnswers, type HodBookingInfo, type HodDepartment, type HodMeetingStatus, type HodResponse } from "@/lib/pra-wam/hod";
 import { isHod } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -52,45 +52,6 @@ export async function hodDepartments(): Promise<HodDepartment[]> {
 type MeetingRow = { id: string; title: string; agenda: string; starts_at: string; ends_at: string; place: string; requested_by: string; status: HodMeetingStatus; created_at: string; room_id?: string | null; booking_id?: string | null };
 type InviteRow = { meeting_id: string; employee_id: string; department?: string; response: HodResponse; note: string; responded_at: string | null };
 
-/** Every meeting, with the names of who asked and who was asked; `migrated: false` before the migration. */
-export async function listHodMeetings(): Promise<{ meetings: HodMeeting[]; migrated: boolean }> {
-  const client = createPrivilegedClient();
-  const { data, error } = await client.from("pw_hod_meetings").select("*").order("starts_at", { ascending: false }).limit(300);
-  if (error) { if (missing(error)) return { meetings: [], migrated: false }; databaseError(error); }
-  const rows = (data ?? []) as MeetingRow[];
-  if (!rows.length) return { meetings: [], migrated: true };
-  const [{ data: invites, error: inviteError }, people, leads] = await Promise.all([
-    client.from("pw_hod_meeting_invites").select("*").in("meeting_id", rows.map(row => row.id)),
-    listPeople(), listLeads(),
-  ]);
-  if (inviteError) fail(inviteError);
-  const person = (id: string) => people.find(item => item.id === id);
-  // Who asked speaks for the departments they head, else their own.
-  const homeUnit = (id: string) => leads.byPerson.get(id)?.departments.join(", ") || person(id)?.department || "";
-  return {
-    migrated: true,
-    meetings: rows.map(row => ({
-      id: row.id, title: row.title, agenda: row.agenda, startsAt: row.starts_at, endsAt: row.ends_at, place: row.place, status: row.status, createdAt: row.created_at,
-      roomId: row.room_id ?? null, roomBooked: !!row.booking_id,
-      requester: { id: row.requested_by, name: person(row.requested_by)?.name ?? "Tanpa nama", unit: homeUnit(row.requested_by) },
-      invites: ((invites ?? []) as InviteRow[]).filter(invite => invite.meeting_id === row.id).map(invite => ({
-        id: invite.employee_id, name: person(invite.employee_id)?.name ?? "Tanpa nama",
-        unit: invite.department || homeUnit(invite.employee_id),
-        response: invite.response, note: invite.note, respondedAt: invite.responded_at,
-      })).sort((a, b) => a.unit.localeCompare(b.unit, "id")),
-    })),
-  };
-}
-
-/** How many meetings wait for this HOD's answer, for the menu's badge. */
-export async function hodWaitingCount(member: Pick<Member, "id">): Promise<number> {
-  const client = createPrivilegedClient();
-  const { data, error } = await client.from("pw_hod_meeting_invites").select("meeting_id,pw_hod_meetings!inner(status,ends_at)")
-    .eq("employee_id", member.id).eq("response", "menunggu").eq("pw_hod_meetings.status", "menunggu").gt("pw_hod_meetings.ends_at", new Date().toISOString());
-  if (error) return 0;
-  return (data ?? []).length;
-}
-
 async function requireHod(member: Member) {
   const standing = await hodStanding(member);
   if (!standing.isHod) throw new ServiceError(403, "Meeting HOD hanya untuk HOD.");
@@ -98,44 +59,6 @@ async function requireHod(member: Member) {
 }
 
 const when = (startsAt: string, endsAt: string, date: string) => `${dayLabel(date)}, ${clockLabel(startsAt)}–${clockLabel(endsAt)}`;
-
-/** A HOD asks the HODs of the picked departments; each is told and answers on Meeting HOD. */
-export async function createHodMeeting(member: Member, input: HodMeetingInput): Promise<string> {
-  await requireHod(member);
-  const startsAt = wibInstant(input.date, input.start), endsAt = wibInstant(input.date, input.end);
-  if (new Date(startsAt) <= new Date()) throw new ServiceError(400, "Waktu meeting sudah lewat. Pilih jam yang akan datang.");
-  const departments = await headsByDepartment();
-  const invites: { employee_id: string; department: string }[] = [];
-  const empty: string[] = [];
-  for (const unitId of new Set(input.unitIds)) {
-    const department = departments.find(item => item.id === unitId);
-    if (!department) throw new ServiceError(400, "Ada departemen yang tidak dikenal. Muat ulang lalu pilih lagi.");
-    const heads = department.heads.filter(head => head.id !== member.id);
-    if (!department.heads.length) empty.push(department.name);
-    // A HOD of several departments picked together is asked once, for the first of them.
-    for (const head of heads) if (!invites.some(invite => invite.employee_id === head.id)) invites.push({ employee_id: head.id, department: department.name });
-  }
-  if (empty.length) throw new ServiceError(400, `${empty.join(", ")} belum punya HOD. Minta Admin WAM mencentang HOD-nya.`);
-  if (!invites.length) throw new ServiceError(400, "Pilih departemen lain selain departemenmu sendiri.");
-
-  const client = createPrivilegedClient();
-  // An office room is kept by its id too, to book it once every HOD accepts (migration 202611060003).
-  const room = input.roomId ? (await listRooms()).find(item => item.id === input.roomId && item.bookable) : undefined;
-  if (input.roomId && !room) throw new ServiceError(400, "Ruangan itu tidak bisa dipakai. Pilih ruangan lain.");
-  const values = { title: input.title, agenda: input.agenda, starts_at: startsAt, ends_at: endsAt, place: room?.name ?? input.place, requested_by: member.id };
-  let { data, error } = await client.from("pw_hod_meetings").insert({ ...values, ...(room ? { room_id: room.id } : {}) }).select("id").single();
-  // Before migration 202611060003 the meeting keeps only the room's name (and books nothing).
-  if (error && room && /room_id/.test(error.message)) ({ data, error } = await client.from("pw_hod_meetings").insert(values).select("id").single());
-  if (error || !data) fail(error ?? { message: "Meeting belum tersimpan." });
-  const { error: inviteError } = await client.from("pw_hod_meeting_invites").insert(invites.map(invite => ({ ...invite, meeting_id: data.id })));
-  if (inviteError) { await client.from("pw_hod_meetings").delete().eq("id", data.id); fail(inviteError); }
-  await notifyPeople(invites.map(invite => invite.employee_id), {
-    title: `Undangan Meeting HOD: ${input.title}`,
-    body: `${member.name} mengajak kamu meeting HOD pada ${when(input.start, input.end, input.date)}${input.place ? ` di ${input.place}` : ""}. Terima atau tolak di Book → Meeting HOD.`,
-    label: HOD_NOTE_LABEL,
-  }, member);
-  return data.id;
-}
 
 async function meetingRow(id: string): Promise<MeetingRow> {
   const { data, error } = await createPrivilegedClient().from("pw_hod_meetings").select("*").eq("id", id).maybeSingle();
@@ -215,4 +138,127 @@ export async function cancelHodMeeting(member: Member, id: string): Promise<void
   }
   const { data: invites } = await client.from("pw_hod_meeting_invites").select("employee_id").eq("meeting_id", id);
   await notifyPeople((invites ?? []).map(row => row.employee_id), { title: `Meeting HOD dibatalkan: ${meeting.title}`, body: `${member.name} membatalkan meeting ini.`, label: HOD_NOTE_LABEL }, member);
+}
+
+/* ── Booking "sebagai HOD" (6 Nov 2026): Book ruang's own form, the room locked at once. ── */
+
+/** The HODs of the departments picked, each with the department they are asked for; the booker left out. */
+export async function hodInvitees(member: Member, unitIds: string[]): Promise<{ employee_id: string; department: string }[]> {
+  await requireHod(member);
+  const departments = await headsByDepartment();
+  const invites: { employee_id: string; department: string }[] = [];
+  const empty: string[] = [];
+  for (const unitId of new Set(unitIds)) {
+    const department = departments.find(item => item.id === unitId);
+    if (!department) throw new ServiceError(400, "Ada departemen yang tidak dikenal. Muat ulang lalu pilih lagi.");
+    if (!department.heads.length) empty.push(department.name);
+    for (const head of department.heads) if (head.id !== member.id && !invites.some(invite => invite.employee_id === head.id)) invites.push({ employee_id: head.id, department: department.name });
+  }
+  if (empty.length) throw new ServiceError(422, `${empty.join(", ")} belum punya HOD.`, { participants: [`${empty.join(", ")} belum punya HOD.`] });
+  if (!invites.length) throw new ServiceError(422, "Pilih departemen lain selain departemenmu sendiri.", { participants: ["Pilih departemen lain selain departemenmu sendiri."] });
+  return invites;
+}
+
+/** The session a booking became (its notes point there, so a tap opens it). */
+async function bookingSession(bookingId: string): Promise<string | undefined> {
+  const { data } = await createPrivilegedClient().from("pw_sessions").select("id").eq("booking_id", bookingId).maybeSingle();
+  return data?.id ?? undefined;
+}
+
+type BookedMeeting = { id: string; title: string; description: string; startsAt: string; endsAt: string; roomId: string | null; place?: string | null };
+const placeOf = (room: { name: string } | undefined, booking: BookedMeeting) => room?.name ?? booking.place ?? "";
+
+/** After a booking made as HOD is saved: its meeting and the invitations, and a note to each HOD with Terima and Tolak. */
+export async function linkHodBooking(member: Member, booking: BookedMeeting, invites: { employee_id: string; department: string }[]): Promise<void> {
+  const client = createPrivilegedClient();
+  const room = booking.roomId ? (await listRooms()).find(item => item.id === booking.roomId) : undefined;
+  const { data, error } = await client.from("pw_hod_meetings").insert({
+    title: booking.title, agenda: booking.description, starts_at: booking.startsAt, ends_at: booking.endsAt, place: placeOf(room, booking),
+    requested_by: member.id, room_id: room?.id ?? null, booking_id: booking.id,
+  }).select("id").single();
+  if (error || !data) fail(error ?? { message: "Meeting HOD belum tersimpan." });
+  const { error: inviteError } = await client.from("pw_hod_meeting_invites").insert(invites.map(invite => ({ ...invite, meeting_id: data.id })));
+  if (inviteError) fail(inviteError);
+  const where = placeOf(room, booking);
+  await notifyPeople(invites.map(invite => invite.employee_id), {
+    title: `Undangan Meeting HOD: ${booking.title}`,
+    body: `${member.name} mengajak kamu meeting HOD, ${when(wibTime(booking.startsAt), wibTime(booking.endsAt), wibDate(booking.startsAt))}${where ? ` di ${where}` : ""}. Ruang sudah dibooking. Terima atau tolak di sini.`,
+    sessionId: await bookingSession(booking.id), label: HOD_NOTE_LABEL,
+  }, member);
+}
+
+/** A booking made as HOD moved or changed room: everyone answers again. */
+export async function relinkHodBooking(member: Member, booking: BookedMeeting): Promise<void> {
+  const client = createPrivilegedClient();
+  const { data: meeting } = await client.from("pw_hod_meetings").select("*").eq("booking_id", booking.id).neq("status", "batal").maybeSingle();
+  if (!meeting) return;
+  const moved = new Date(meeting.starts_at).getTime() !== new Date(booking.startsAt).getTime()
+    || new Date(meeting.ends_at).getTime() !== new Date(booking.endsAt).getTime() || (meeting.room_id ?? null) !== (booking.roomId ?? null);
+  const room = booking.roomId ? (await listRooms()).find(item => item.id === booking.roomId) : undefined;
+  const { error } = await client.from("pw_hod_meetings").update({
+    title: booking.title, agenda: booking.description, starts_at: booking.startsAt, ends_at: booking.endsAt, place: placeOf(room, booking),
+    room_id: room?.id ?? null, ...(moved ? { status: "menunggu" } : {}), updated_at: new Date().toISOString(),
+  }).eq("id", meeting.id);
+  if (error) fail(error);
+  if (!moved) return;
+  const { data: invites, error: resetError } = await client.from("pw_hod_meeting_invites").update({ response: "menunggu", note: "", responded_at: null }).eq("meeting_id", meeting.id).select("employee_id");
+  if (resetError) fail(resetError);
+  const where = placeOf(room, booking);
+  await notifyPeople((invites ?? []).map(row => row.employee_id), {
+    title: `Meeting HOD diubah: ${booking.title}`,
+    body: `${member.name} memindah meeting ini ke ${when(wibTime(booking.startsAt), wibTime(booking.endsAt), wibDate(booking.startsAt))}${where ? ` di ${where}` : ""}. Jawab lagi: terima atau tolak.`,
+    sessionId: await bookingSession(booking.id), label: HOD_NOTE_LABEL,
+  }, member);
+}
+
+/** A booking made as HOD was cancelled: its meeting too (the booking's cancel note tells the HODs). */
+export async function cancelHodBooking(member: Member, bookingId: string): Promise<void> {
+  const client = createPrivilegedClient();
+  const { data: meeting, error } = await client.from("pw_hod_meetings").select("id,title").eq("booking_id", bookingId).neq("status", "batal").maybeSingle();
+  if (error && !missing(error)) databaseError(error);
+  if (!meeting) return;
+  await client.from("pw_hod_meetings").update({ status: "batal", updated_at: new Date().toISOString() }).eq("id", meeting.id);
+  // The HODs already heard: the booking's own cancel note goes to its participants.
+}
+
+/** Whether this booking was made as HOD (its changes then tell the HODs once, from here). */
+export async function isHodBooking(bookingId: string): Promise<boolean> {
+  const { data, error } = await createPrivilegedClient().from("pw_hod_meetings").select("id").eq("booking_id", bookingId).neq("status", "batal").maybeSingle();
+  return !error && !!data;
+}
+
+/** Per booking made as HOD: its meeting, status and each HOD's answer (Book's detail sheet). */
+export async function hodByBookings(bookingIds: string[]): Promise<Record<string, HodBookingInfo>> {
+  if (!bookingIds.length) return {};
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("pw_hod_meetings").select("id,status,booking_id,requested_by").in("booking_id", bookingIds).neq("status", "batal");
+  if (error || !data?.length) return {};
+  const [{ data: invites }, people] = await Promise.all([
+    client.from("pw_hod_meeting_invites").select("*").in("meeting_id", data.map(row => row.id)),
+    listPeople(),
+  ]);
+  const name = (id: string) => people.find(person => person.id === id)?.name ?? "Tanpa nama";
+  return Object.fromEntries(data.map(row => [row.booking_id as string, {
+    meetingId: row.id as string, status: row.status as HodMeetingStatus, requesterId: row.requested_by as string,
+    invites: ((invites ?? []) as InviteRow[]).filter(invite => invite.meeting_id === row.id).map(invite => ({
+      id: invite.employee_id, name: name(invite.employee_id), unit: invite.department ?? "", response: invite.response, note: invite.note, respondedAt: invite.responded_at,
+    })),
+  }]));
+}
+
+/** Per session (a booking made as HOD becomes one): this HOD's invitation, for Terima and Tolak on the note. */
+export async function hodInvitesBySession(memberId: string): Promise<Record<string, { meetingId: string; response: HodResponse; status: HodMeetingStatus }>> {
+  const client = createPrivilegedClient();
+  const { data: mine, error } = await client.from("pw_hod_meeting_invites").select("meeting_id,response").eq("employee_id", memberId);
+  if (error || !mine?.length) return {};
+  const { data: meetings } = await client.from("pw_hod_meetings").select("id,status,booking_id").in("id", mine.map(row => row.meeting_id)).not("booking_id", "is", null);
+  if (!meetings?.length) return {};
+  const { data: sessions } = await client.from("pw_sessions").select("id,booking_id").in("booking_id", meetings.map(row => row.booking_id));
+  const result: Record<string, { meetingId: string; response: HodResponse; status: HodMeetingStatus }> = {};
+  for (const session of sessions ?? []) {
+    const meeting = meetings.find(row => row.booking_id === session.booking_id);
+    const invite = mine.find(row => row.meeting_id === meeting?.id);
+    if (meeting && invite) result[session.id] = { meetingId: meeting.id, response: invite.response as HodResponse, status: meeting.status as HodMeetingStatus };
+  }
+  return result;
 }

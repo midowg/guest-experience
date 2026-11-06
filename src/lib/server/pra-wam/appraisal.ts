@@ -200,7 +200,7 @@ async function requireOwn(id: string, viewer: Member) {
  * server's clock; the database checks them again and refuses an overlap. A participant who is
  * already booked elsewhere at that time is a warning the person confirms (`confirmed`).
  */
-export async function saveBooking(input: BookingInput, viewer: Member, options: { id?: string; confirmed?: boolean; now?: Date } = {}): Promise<Booking> {
+export async function saveBooking(input: BookingInput, viewer: Member, options: { id?: string; confirmed?: boolean; now?: Date; quiet?: boolean } = {}): Promise<Booking> {
   const now = options.now ?? new Date();
   if (!await appraisalOpen()) throw new ServiceError(409, "Booking ruang appraisal sedang ditutup oleh admin Pra WAM.");
   const before = options.id ? await requireOwn(options.id, viewer) : null;
@@ -248,7 +248,8 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
   const saved = await getBooking(data as string, viewer);
   // Its session was saved with it (same transaction); the people in it hear as for any session.
   const moved = before && (before.startsAt !== saved.startsAt || before.endsAt !== saved.endsAt || before.roomId !== saved.roomId);
-  if (!before || moved) await notifyBookingSession(saved.id, before ? "berubah" : "terbit", await bookingFacts(saved), viewer);
+  // A booking made as HOD tells its HODs itself, with Terima and Tolak (hod.ts), not twice.
+  if (!options.quiet && (!before || moved)) await notifyBookingSession(saved.id, before ? "berubah" : "terbit", await bookingFacts(saved), viewer);
   return saved;
 }
 

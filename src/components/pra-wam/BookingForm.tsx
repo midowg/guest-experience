@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Check, Clock, DoorOpen, Info, MapPin, Pencil, Send, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Clock, DoorOpen, Info, MapPin, Pencil, Send, User, Users } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import {
   alternatives, appraisalRules, bookingProblems, clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock,
@@ -16,6 +16,7 @@ import { errorText, praWamRequest, PraWamApiError, type Conflict } from "./api";
 import { DateStrip } from "./DateStrip";
 import { FloorPlan } from "./FloorPlan";
 import { PeoplePicker, type PeopleGroup } from "./PeoplePicker";
+import type { HodDepartment } from "@/lib/pra-wam/hod";
 import own from "./appraisal.module.css";
 import css from "./booking-form.module.css";
 import styles from "./pra-wam.module.css";
@@ -35,6 +36,11 @@ type Props = {
   showPlan?: boolean;
   /** Per weekday of the booking window: holds and "Penuh" (Book's windowSummary); without it only the chosen day is counted. */
   summary?: Record<string, DaySummary>;
+  /**
+   * A HOD (6 Nov 2026): "Booking sebagai" Pribadi or HOD under Partisipan. As HOD the departments are
+   * picked instead of people; their HODs are invited and answer Terima or Tolak. The room is booked at once.
+   */
+  hod?: { departments: HodDepartment[]; ownUnits: string[] } | null;
 };
 
 const STEPS = ["Waktu", "Kegiatan", "Partisipan", "Tempat"] as const;
@@ -61,9 +67,22 @@ type Choice = { ok: boolean; pending: boolean; tone: PlanTone; text: string };
  * "Di luar kantor" (5 Nov 2026): chosen under Kapan (it opens weekends, any hour of the day and
  * more than 4 hours) or under Tempat (with the floor plan); the place name is typed under Tempat.
  */
-export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {} }: Props) {
+export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
+  // Booking as HOD: the departments picked; their HODs are the participants.
+  const [asHod, setAsHod] = useState(false);
+  const [hodUnits, setHodUnits] = useState<string[]>([]);
+  const hodOffered = (hod?.departments ?? []).filter(department => !hod?.ownUnits.includes(department.id))
+    .sort((a, b) => Number(b.heads.length > 0) - Number(a.heads.length > 0) || a.name.localeCompare(b.name, "id"));
+  const hodHeads = (units: string[]) => [...new Set(hodOffered.filter(department => units.includes(department.id)).flatMap(department => department.heads.map(head => head.id)))].filter(id => id !== viewer.id);
+  function pickHodUnits(units: string[]) { setHodUnits(units); set({ participants: hodHeads(units) }); }
+  function chooseAs(next: boolean) {
+    if (next === asHod) return;
+    setAsHod(next);
+    // Each way starts from its own pick: the departments' HODs, or no one.
+    set({ participants: next ? hodHeads(hodUnits) : [] });
+  }
   const [step, setStep] = useState(editId ? SUMMARY : 0);
   // The furthest step reached; once the summary has been seen, Lanjut goes back to it.
   const [furthest, setFurthest] = useState(editId ? SUMMARY : 0);
@@ -210,6 +229,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   function problemsOf(at: number): Record<string, string> {
     if (at === 0) return bookingProblems(draft, new Date());
     if (at === 1) return draft.title.trim().length < 2 ? { title: "Isi nama kegiatan." } : {};
+    if (at === 2 && asHod && !hodUnits.length) return { participants: "Pilih minimal satu departemen." };
     if (at === 2) return guests.size > appraisalRules.maxParticipants ? { participants: `Paling banyak ${appraisalRules.maxParticipants} partisipan.` } : {};
     if (at === 3 && outside) return (draft.place ?? "").trim().length < 2 ? { place: "Isi nama tempat." } : {};
     if (at === 3) {
@@ -253,7 +273,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     setFieldErrors({});
     setBusy(true);
     try {
-      const body = { ...draft, roomId, place: outside ? (draft.place ?? "").trim() : "", confirmed };
+      const body = { ...draft, roomId, place: outside ? (draft.place ?? "").trim() : "", confirmed, ...(asHod && !editId ? { hodUnits } : {}) };
       const result = await praWamRequest(editId ? praWamApi.bookings(editId) : praWamApi.bookings(), { method: editId ? "PATCH" : "POST", json: body });
       if (onSaved) { setBusy(false); onSaved({ message: result.message, date: draft.date }); return; }
       router.refresh(); router.push(praWamPath.appraisal(draft.date));
@@ -361,10 +381,29 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(2)}>
       {heading(2, "Siapa yang ikut?")}
+      {hod && !editId && <div className={css.asSwitch} role="group" aria-label="Booking sebagai">
+        <span className={styles.label}>Booking sebagai</span>
+        <div className={css.where}>
+          <button type="button" aria-pressed={!asHod} onClick={() => chooseAs(false)}><User size={18} aria-hidden />Pribadi</button>
+          <button type="button" aria-pressed={asHod} onClick={() => chooseAs(true)}><Users size={18} aria-hidden />HOD</button>
+        </div>
+      </div>}
       <p className={css.headcount} role="status"><Users size={18} aria-hidden />{countLine}</p>
       <p className={styles.hint}>{fitting.length
         ? `${fitting.length} ruang cocok untuk ${peopleLabel(count)}.`
         : `Belum ada ruang untuk ${peopleLabel(count)}. Kurangi atau tambah partisipan.`}</p>
+      {asHod ? <fieldset className={css.hodPick}>
+        <legend className={styles.label}>Departemen yang diundang</legend>
+        <p className={styles.hint}>HOD departemen yang dipilih diundang dan menjawab terima atau tolak. Ruang langsung dibooking.</p>
+        <ul>{hodOffered.map(department => {
+          const none = department.heads.length === 0;
+          return <li key={department.id}><label className={`${css.hodDept} ${none ? css.hodNone : ""}`}>
+            <input type="checkbox" checked={hodUnits.includes(department.id)} disabled={none}
+              onChange={() => pickHodUnits(hodUnits.includes(department.id) ? hodUnits.filter(id => id !== department.id) : [...hodUnits, department.id])} />
+            <span><strong>{department.name}</strong><small>{none ? "Belum ada HOD" : department.heads.map(head => head.name).join(", ")}</small></span>
+          </label></li>;
+        })}</ul>
+      </fieldset> : <>
       {picked.length > 0 && <div className={styles.picked} aria-label="Partisipan terpilih">
         {picked.map(person => <span key={person.id} className={`${styles.chip} ${styles.chipSmall} ${styles.pickedChip}`}>
           {person.name}<button type="button" className={styles.chipRemove} aria-label={`Hapus ${person.name}`} onClick={() => set({ participants: draft.participants.filter(id => id !== person.id) })}>×</button>
@@ -373,6 +412,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       <PeoplePicker people={colleagues} groups={groups} picked={draft.participants} onChange={ids => set({ participants: ids })}
         viewerId={viewer.id} max={appraisalRules.maxParticipants} />
       {full && <p className={styles.hint}>Paling banyak {appraisalRules.maxParticipants} partisipan.</p>}
+      </>}
       {fieldError("participants")}
     </section>
 
@@ -433,7 +473,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
           {draft.title.trim() || <span className={css.missing}>Belum diisi</span>}{draft.description.trim() && <small>{draft.description.trim()}</small>}
         </SummaryRow>
         <SummaryRow label="Partisipan" onEdit={() => goTo(2)}>
-          {peopleLabel(count)}<small>{picked.length ? `Kamu, ${picked.map(person => person.name).join(", ")}` : "Hanya kamu"}</small>
+          {peopleLabel(count)}<small>{asHod ? `Sebagai HOD · ${hodOffered.filter(department => hodUnits.includes(department.id)).map(department => department.name).join(", ")}`
+            : picked.length ? `Kamu, ${picked.map(person => person.name).join(", ")}` : "Hanya kamu"}</small>
         </SummaryRow>
         <SummaryRow label="Tempat" onEdit={() => goTo(3)}>
           {outside

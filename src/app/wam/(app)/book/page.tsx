@@ -9,7 +9,7 @@ import { ServiceError } from "@/lib/server/config";
 import { listPeople, myBookings, usedTitles, weekSchedule, windowSummary } from "@/lib/server/pra-wam/appraisal";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
 import { appSettings } from "@/lib/server/pra-wam/rooms";
-import { hodDepartments, hodStanding, listHodMeetings } from "@/lib/server/pra-wam/hod";
+import { hodByBookings, hodDepartments, hodStanding } from "@/lib/server/pra-wam/hod";
 import { listUnits } from "@/lib/server/pra-wam/units";
 import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
 
@@ -49,6 +49,8 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
     <Notice tone="warning">{loaded}</Notice>
   </>;
   const { schedule, mine, open, settings, summary, form, hod } = loaded;
+  // Bookings made as HOD: each HOD's answer, for the detail sheet.
+  const hodInfo = await hodByBookings([...new Set([...schedule.bookings, ...mine].filter(booking => !booking.isSession).map(booking => booking.id))]).catch(() => ({}));
   const arrive: BookArrival = {
     booking: query.booking && ID.test(query.booking) ? query.booking : undefined,
     edit: query.edit && ID.test(query.edit) ? query.edit : undefined,
@@ -63,17 +65,16 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
   return <>
     <AppraisalBoard date={shown} week={week} dates={dates} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine}
       viewerId={member.id} canCancelAny={cancelsAnyBooking(member)} open={open} form={form} arrive={arrive} floorPlan={settings.floorPlan} summary={summary}
-      hod={hod} initialView={query.lihat === "hod" && hod ? "hod" : "kalender"}
+      hod={hod} hodInfo={hodInfo}
       banner={open ? undefined : <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. {settings.floorPlan ? "Kalender dan denah" : "Kalender"} tetap bisa dilihat.</Notice></div>} />
   </>;
 }
 
-/** Meeting HOD for a HOD (a view of Book); null for anyone else, or when it cannot be read. */
+/** For a HOD, the departments to invite when booking "sebagai HOD"; null for anyone else. */
 async function hodData(member: Member) {
   const standing = await hodStanding(member).catch(() => null);
   if (!standing?.isHod) return null;
-  const [{ meetings, migrated }, departments] = await Promise.all([listHodMeetings(), hodDepartments().catch(() => [])]);
-  return { meetings, departments, ownUnits: standing.unitIds, migrated };
+  return { departments: await hodDepartments().catch(() => []), ownUnits: standing.unitIds };
 }
 
 /** The people, their groups and the names already used, for the booking form in the sheet. */
