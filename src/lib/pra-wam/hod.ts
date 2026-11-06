@@ -14,6 +14,8 @@ export type HodInvite = HodPerson & { response: HodResponse; note: string; respo
 export type HodMeeting = {
   id: string; title: string; agenda: string; startsAt: string; endsAt: string; place: string;
   status: HodMeetingStatus; requester: HodPerson; invites: HodInvite[]; createdAt: string;
+  /** The office room picked, and whether it is booked (once scheduled); false when it could not be. */
+  roomId: string | null; roomBooked: boolean;
 };
 /** A department (by name, from Data karyawan) and the HODs who answer for it: whoever Admin WAM ticked as HOD there, and its leads. */
 export type HodDepartment = { id: string; name: string; heads: { id: string; name: string }[] };
@@ -26,6 +28,8 @@ export const hodMeetingSchema = z.object({
   start: z.string().regex(TIME, "Pilih jam mulai."),
   end: z.string().regex(TIME, "Pilih jam selesai."),
   place: z.string().trim().max(120).default(""),
+  /** The office room picked (booked once every HOD accepts); none for a place outside the office. */
+  roomId: z.union([z.uuid(), z.literal("")]).default(""),
   /** The departments picked, by name (the department column of Data karyawan). */
   unitIds: z.array(z.string().trim().min(1).max(160)).min(1, "Pilih minimal satu departemen.").max(40),
 }).refine(input => input.end > input.start, { message: "Jam selesai harus setelah jam mulai.", path: ["end"] });

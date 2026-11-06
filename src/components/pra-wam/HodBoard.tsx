@@ -108,7 +108,9 @@ function MeetingCard({ meeting, viewerId, now, onDone, onError }: {
     </header>
     <dl className={css.facts}>
       <div><dt><Clock size={16} aria-label="Waktu" /></dt><dd>{span(meeting)}</dd></div>
-      {meeting.place && <div><dt><MapPin size={16} aria-label="Tempat" /></dt><dd>{meeting.place}</dd></div>}
+      {meeting.place && <div><dt><MapPin size={16} aria-label="Tempat" /></dt><dd>{meeting.place}{meeting.roomId
+        ? meeting.status === "terjadwal" ? (meeting.roomBooked ? " · ruang sudah dibooking" : " · ruang belum dibooking (terpakai)") : " · dibooking saat semua menerima"
+        : ""}</dd></div>}
       <div><dt><Users size={16} aria-label="Diajukan oleh" /></dt><dd>{meeting.requester.id === viewerId ? "Kamu" : meeting.requester.name}{meeting.requester.unit ? ` · ${meeting.requester.unit}` : ""}</dd></div>
     </dl>
     {meeting.agenda && <p className={css.agenda}>{meeting.agenda}</p>}
@@ -214,7 +216,7 @@ function MeetingForm({ open, onClose, departments, ownUnits, rooms, bookings, no
     setSaving(true);
     try {
       const place = draft.roomId === OTHER ? draft.place.trim() : room?.name ?? "";
-      const { message } = await praWamRequest(praWamApi.hodMeetings(), { method: "POST", json: { title: draft.title, date: draft.date, start: draft.start, end: draft.end, place, agenda: draft.agenda, unitIds: draft.unitIds } });
+      const { message } = await praWamRequest(praWamApi.hodMeetings(), { method: "POST", json: { title: draft.title, date: draft.date, start: draft.start, end: draft.end, place, roomId: room?.id ?? "", agenda: draft.agenda, unitIds: draft.unitIds } });
       setDraft(fresh());
       onSaved(message);
     } catch (problem) { setError(errorText(problem)); } finally { setSaving(false); }

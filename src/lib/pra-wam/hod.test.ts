@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { hodMeetingSchema, hodTimes, sortMeetings, statusFromAnswers, type HodMeeting } from "./hod";
 
 const meeting = (id: string, patch: Partial<HodMeeting> = {}): HodMeeting => ({
-  id, title: id, agenda: "", startsAt: "2026-11-10T03:00:00Z", endsAt: "2026-11-10T04:00:00Z", place: "", status: "menunggu", createdAt: "2026-11-06T00:00:00Z",
+  id, title: id, agenda: "", startsAt: "2026-11-10T03:00:00Z", endsAt: "2026-11-10T04:00:00Z", place: "", status: "menunggu", createdAt: "2026-11-06T00:00:00Z", roomId: null, roomBooked: false,
   requester: { id: "a", name: "Ana", unit: "HC" }, invites: [{ id: "me", name: "Saya", unit: "IT", response: "menunggu", note: "", respondedAt: null }], ...patch,
 });
 

@@ -6,7 +6,7 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { HOD_NOTE_LABEL, notifyPeople } from "./announcements";
-import { listPeople } from "./appraisal";
+import { listPeople, listRooms } from "./appraisal";
 import type { Member } from "./session";
 import { leadOptions, leadsOf, listLeads } from "./leads";
 
@@ -49,13 +49,13 @@ export async function hodDepartments(): Promise<HodDepartment[]> {
   return headsByDepartment();
 }
 
-type MeetingRow = { id: string; title: string; agenda: string; starts_at: string; ends_at: string; place: string; requested_by: string; status: HodMeetingStatus; created_at: string };
+type MeetingRow = { id: string; title: string; agenda: string; starts_at: string; ends_at: string; place: string; requested_by: string; status: HodMeetingStatus; created_at: string; room_id?: string | null; booking_id?: string | null };
 type InviteRow = { meeting_id: string; employee_id: string; department?: string; response: HodResponse; note: string; responded_at: string | null };
 
 /** Every meeting, with the names of who asked and who was asked; `migrated: false` before the migration. */
 export async function listHodMeetings(): Promise<{ meetings: HodMeeting[]; migrated: boolean }> {
   const client = createPrivilegedClient();
-  const { data, error } = await client.from("pw_hod_meetings").select("id,title,agenda,starts_at,ends_at,place,requested_by,status,created_at").order("starts_at", { ascending: false }).limit(300);
+  const { data, error } = await client.from("pw_hod_meetings").select("*").order("starts_at", { ascending: false }).limit(300);
   if (error) { if (missing(error)) return { meetings: [], migrated: false }; databaseError(error); }
   const rows = (data ?? []) as MeetingRow[];
   if (!rows.length) return { meetings: [], migrated: true };
@@ -71,6 +71,7 @@ export async function listHodMeetings(): Promise<{ meetings: HodMeeting[]; migra
     migrated: true,
     meetings: rows.map(row => ({
       id: row.id, title: row.title, agenda: row.agenda, startsAt: row.starts_at, endsAt: row.ends_at, place: row.place, status: row.status, createdAt: row.created_at,
+      roomId: row.room_id ?? null, roomBooked: !!row.booking_id,
       requester: { id: row.requested_by, name: person(row.requested_by)?.name ?? "Tanpa nama", unit: homeUnit(row.requested_by) },
       invites: ((invites ?? []) as InviteRow[]).filter(invite => invite.meeting_id === row.id).map(invite => ({
         id: invite.employee_id, name: person(invite.employee_id)?.name ?? "Tanpa nama",
@@ -118,9 +119,13 @@ export async function createHodMeeting(member: Member, input: HodMeetingInput): 
   if (!invites.length) throw new ServiceError(400, "Pilih departemen lain selain departemenmu sendiri.");
 
   const client = createPrivilegedClient();
-  const { data, error } = await client.from("pw_hod_meetings").insert({
-    title: input.title, agenda: input.agenda, starts_at: startsAt, ends_at: endsAt, place: input.place, requested_by: member.id,
-  }).select("id").single();
+  // An office room is kept by its id too, to book it once every HOD accepts (migration 202611060003).
+  const room = input.roomId ? (await listRooms()).find(item => item.id === input.roomId && item.bookable) : undefined;
+  if (input.roomId && !room) throw new ServiceError(400, "Ruangan itu tidak bisa dipakai. Pilih ruangan lain.");
+  const values = { title: input.title, agenda: input.agenda, starts_at: startsAt, ends_at: endsAt, place: room?.name ?? input.place, requested_by: member.id };
+  let { data, error } = await client.from("pw_hod_meetings").insert({ ...values, ...(room ? { room_id: room.id } : {}) }).select("id").single();
+  // Before migration 202611060003 the meeting keeps only the room's name (and books nothing).
+  if (error && room && /room_id/.test(error.message)) ({ data, error } = await client.from("pw_hod_meetings").insert(values).select("id").single());
   if (error || !data) fail(error ?? { message: "Meeting belum tersimpan." });
   const { error: inviteError } = await client.from("pw_hod_meeting_invites").insert(invites.map(invite => ({ ...invite, meeting_id: data.id })));
   if (inviteError) { await client.from("pw_hod_meetings").delete().eq("id", data.id); fail(inviteError); }
@@ -133,7 +138,7 @@ export async function createHodMeeting(member: Member, input: HodMeetingInput): 
 }
 
 async function meetingRow(id: string): Promise<MeetingRow> {
-  const { data, error } = await createPrivilegedClient().from("pw_hod_meetings").select("id,title,agenda,starts_at,ends_at,place,requested_by,status,created_at").eq("id", id).maybeSingle();
+  const { data, error } = await createPrivilegedClient().from("pw_hod_meetings").select("*").eq("id", id).maybeSingle();
   if (error) fail(error);
   if (!data) throw new ServiceError(404, "Meeting tidak ditemukan.");
   return data as MeetingRow;
@@ -160,11 +165,37 @@ export async function answerHodMeeting(member: Member, id: string, accept: boole
   }
   const span = when(wibTime(meeting.starts_at), wibTime(meeting.ends_at), wibDate(meeting.starts_at));
   if (status === "terjadwal") {
-    await notifyPeople([meeting.requested_by, ...(all ?? []).map(row => row.employee_id)], { title: `Meeting HOD terjadwal: ${meeting.title}`, body: `Semua HOD menerima. ${span}${meeting.place ? `, ${meeting.place}` : ""}.`, label: HOD_NOTE_LABEL }, member);
+    const invited = (all ?? []).map(row => row.employee_id);
+    const booked = await bookMeetingRoom(meeting, invited);
+    await notifyPeople([meeting.requested_by, ...invited], { title: `Meeting HOD terjadwal: ${meeting.title}`, body: `Semua HOD menerima. ${span}${meeting.place ? `, ${meeting.place}` : ""}.${booked === "terpakai" ? ` ${meeting.place} ternyata sudah terpakai di jam itu, jadi belum dibooking: pilih ruang lain lewat Book.` : ""}`, label: HOD_NOTE_LABEL }, member);
   } else if (status === "ditolak") {
     await notifyPeople([meeting.requested_by], { title: `Meeting HOD ditolak: ${meeting.title}`, body: `${member.name} menolak${note ? `: "${note}"` : "."} Kamu bisa mengajukan waktu lain.`, label: HOD_NOTE_LABEL }, member);
   }
   return status;
+}
+
+/**
+ * Books the meeting's office room once it is scheduled: in the name of the HOD who asked, with the
+ * invited HODs as participants, so the room is held and the meeting shows in their agenda (a
+ * booking becomes a session). The database refuses a room already taken: then the meeting stays
+ * scheduled without it, and everyone hears. "dibooking", "terpakai", or "tanpa-ruang".
+ */
+async function bookMeetingRoom(meeting: MeetingRow, invited: string[]): Promise<"dibooking" | "terpakai" | "tanpa-ruang"> {
+  if (!meeting.room_id || meeting.booking_id) return "tanpa-ruang";
+  const client = createPrivilegedClient();
+  const { data, error } = await client.rpc("pw_save_booking", {
+    p_id: null, p_room: meeting.room_id, p_title: `Meeting HOD: ${meeting.title}`.slice(0, 120), p_description: meeting.agenda.slice(0, 500),
+    p_starts: meeting.starts_at, p_ends: meeting.ends_at, p_booked_by: meeting.requested_by, p_participants: invited,
+    // A meeting between HODs is not one of the asker's own bookings: their daily limit does not stop it.
+    p_max_per_day: 50,
+  });
+  if (error) {
+    if (error.code === "23P01" || /ROOM_NOT_BOOKABLE/.test(error.message)) return "terpakai";
+    databaseError(error);
+  }
+  const { error: linkError } = await client.from("pw_hod_meetings").update({ booking_id: data as string }).eq("id", meeting.id);
+  if (linkError) databaseError(linkError);
+  return "dibooking";
 }
 
 /** The HOD who asked cancels the meeting; everyone invited is told. */
@@ -175,6 +206,13 @@ export async function cancelHodMeeting(member: Member, id: string): Promise<void
   const client = createPrivilegedClient();
   const { error } = await client.from("pw_hod_meetings").update({ status: "batal", updated_at: new Date().toISOString() }).eq("id", id);
   if (error) fail(error);
+  // Its room booking goes with it (its session too, by the booking's trigger), so the room is free again.
+  if (meeting.booking_id) {
+    const { error: bookingError } = await client.from("pw_room_bookings")
+      .update({ status: "batal", cancelled_by: member.id, cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", meeting.booking_id).eq("status", "aktif");
+    if (bookingError) databaseError(bookingError);
+  }
   const { data: invites } = await client.from("pw_hod_meeting_invites").select("employee_id").eq("meeting_id", id);
   await notifyPeople((invites ?? []).map(row => row.employee_id), { title: `Meeting HOD dibatalkan: ${meeting.title}`, body: `${member.name} membatalkan meeting ini.`, label: HOD_NOTE_LABEL }, member);
 }

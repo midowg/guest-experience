@@ -54,7 +54,7 @@ it("shows Meeting HOD as a view of Book only for a HOD", () => {
   const { unmount } = render(<AppraisalBoard {...props} />);
   expect(screen.queryByRole("button", { name: "Meeting HOD" })).toBeNull();
   unmount();
-  const invite = { id: "m1", title: "Rencana 2027", agenda: "", place: "Nagapadma", status: "menunggu" as const, startsAt: "2026-11-10T03:00:00Z", endsAt: "2026-11-10T04:00:00Z", createdAt: "2026-11-04T00:00:00Z",
+  const invite = { id: "m1", title: "Rencana 2027", agenda: "", place: "Nagapadma", status: "menunggu" as const, startsAt: "2026-11-10T03:00:00Z", endsAt: "2026-11-10T04:00:00Z", createdAt: "2026-11-04T00:00:00Z", roomId: null, roomBooked: false,
     requester: { id: "x", name: "Budi", unit: "IT" }, invites: [{ id: "me", name: "Saya", unit: "Finance", response: "menunggu" as const, note: "", respondedAt: null }] };
   render(<AppraisalBoard {...props} hod={{ meetings: [invite], departments: [{ id: "IT", name: "IT", heads: [{ id: "x", name: "Budi" }] }], ownUnits: ["Finance"], migrated: true }} initialView="hod" />);
   // The switch says how many wait for an answer.

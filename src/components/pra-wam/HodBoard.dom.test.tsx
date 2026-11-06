@@ -17,7 +17,7 @@ afterEach(() => { cleanup(); request.mockClear(); });
 
 const meeting: HodMeeting = {
   id: "0b7c2d1e-0000-4000-8000-000000000001", title: "Sinkronisasi target", agenda: "Target Q1", place: "Nagapadma", status: "menunggu",
-  startsAt: "2026-11-10T03:00:00Z", endsAt: "2026-11-10T04:00:00Z", createdAt: "2026-11-06T00:00:00Z",
+  startsAt: "2026-11-10T03:00:00Z", endsAt: "2026-11-10T04:00:00Z", createdAt: "2026-11-06T00:00:00Z", roomId: null, roomBooked: false,
   requester: { id: "a", name: "Ana", unit: "HC" },
   invites: [
     { id: "me", name: "Saya", unit: "IT", response: "menunggu", note: "", respondedAt: null },
@@ -76,6 +76,6 @@ describe("Meeting HOD", () => {
     expect([...place.options].map(option => option.textContent)).toEqual(["Pilih ruangan", "Nagapadma · 10 orang", "Vasuki · 30 orang", "Lainnya (online atau tempat lain)"]);
     fireEvent.change(place, { target: { value: "r1" } });
     fireEvent.click(form.getByRole("button", { name: "Kirim undangan" }));
-    await waitFor(() => expect(request).toHaveBeenCalledWith("/api/wam/hod", expect.objectContaining({ method: "POST", json: expect.objectContaining({ title: "Rencana 2027", place: "Nagapadma", unitIds: ["u-fin"] }) })));
+    await waitFor(() => expect(request).toHaveBeenCalledWith("/api/wam/hod", expect.objectContaining({ method: "POST", json: expect.objectContaining({ title: "Rencana 2027", place: "Nagapadma", roomId: "r1", unitIds: ["u-fin"] }) })));
   });
 });
