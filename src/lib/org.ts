@@ -3,7 +3,7 @@
  *   1. BOD at the top (Managing Director, CEO).
  *   2. Under them the people of the BOD's own department (Corporate: the Chief of Staff) and anyone
  *      whose Atasan langsung is a BOD.
- *   3. Then every other department as a card: its HOD(s), and its people as a tree. A person whose
+ *   3. Then every other department as a card: its HOD(s), from this department or another one, and its people as a tree. A person whose
  *      Atasan langsung is in the same department hangs under them (a Business Solutions Manager's
  *      team); everyone else hangs under the HOD (or at the department's top when it has none).
  * Pure, so the page and the tests read the same rule.
@@ -33,7 +33,8 @@ export function buildOrg(people: OrgPerson[], bodIds: ReadonlySet<string>, heads
   const departments = names.map(name => {
     const members = rest.filter(person => (person.department || "Tanpa departemen") === name);
     const ids = new Set(members.map(person => person.id));
-    const heads = members.filter(person => (headsOf[name] ?? []).includes(person.id)).sort(byName);
+    // A HOD may sit in another department (Sofyan: CoE and Art & Creative Support); they head this card too.
+    const heads = people.filter(person => !bodIds.has(person.id) && (headsOf[name] ?? []).includes(person.id)).sort(byName);
     const headIds = new Set(heads.map(person => person.id));
     // Each person's parent inside this department: their Atasan langsung when it is here (and not a loop), else none.
     const parentOf = new Map<string, string | null>();

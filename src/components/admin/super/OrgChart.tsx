@@ -52,7 +52,7 @@ export function OrgChart({ org }: { org: Org }) {
         </header>
         {department.heads.length === 0 && <p className={css.empty}>Belum ada HOD.</p>}
         <ul className={css.branch}>{department.heads.map(head => <li key={head.id}>
-          <PersonCard person={head} tag="HOD" strong />
+          <PersonCard person={head} tag={head.department === department.name ? "HOD" : `HOD · dari ${head.department}`} strong />
           <Branch nodes={head.children} />
         </li>)}</ul>
         <Branch nodes={department.loose} />

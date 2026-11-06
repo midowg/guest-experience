@@ -33,6 +33,16 @@ describe("buildOrg", () => {
     expect(sales.size).toBe(4);
   });
 
+  it("shows a HOD from another department on the card they head, with its people under them", () => {
+    const shared = buildOrg(people, new Set(["bagus", "fadli"]), { "Sales & Marketing": ["gm"], "Maha Raja Pratama": ["gm"] });
+    const mrp = shared.departments.find(department => department.name === "Maha Raja Pratama")!;
+    expect(mrp.heads.map(head => head.id)).toEqual(["gm"]);
+    expect(mrp.heads[0].children.map(child => child.id)).toEqual(["mrp1"]);
+    expect(mrp.size).toBe(1);
+    const sales = shared.departments.find(department => department.name === "Sales & Marketing")!;
+    expect(sales.heads[0].children.map(child => child.id)).toEqual(["bsm", "des"]);
+  });
+
   it("keeps a department without a HOD flat, and cuts a loop", () => {
     const looped = buildOrg([p("a", "A", "X", "Staff", "b"), p("b", "B", "X", "Staff", "a")], new Set(), {});
     const x = looped.departments[0];
