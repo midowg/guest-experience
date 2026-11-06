@@ -67,6 +67,14 @@ export const absolute = (origin: string, path: string) => `${origin.replace(/\/$
 /** The admin's own pages: the event list, the super admin's dashboard, signing in, and signing out (POST). */
 export const ADMIN_HOME = "/admin";
 export const SUPER_ADMIN_HOME = "/admin/super";
+/** Super admin's places, each a page in its side menu (6 Nov 2026). */
+export const superAdminPath = {
+  team: "/admin/super/tim",
+  templates: "/admin/super/templat",
+  visibility: "/admin/super/visibilitas",
+  modules: "/admin/super/modul",
+  access: "/admin/akses",
+};
 export const ADMIN_LOGIN = "/admin/login";
 export const ADMIN_LOGOUT_API = "/api/auth/logout";
 

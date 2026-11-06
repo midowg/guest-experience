@@ -1,7 +1,8 @@
 import { CircleAlert, CircleCheck, LogOut, MapPin, MonitorSmartphone, Sparkles } from "lucide-react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
+import { SuperAdminFrame } from "@/components/admin/super/SuperAdminFrame";
+import { PageHeader } from "@/components/console";
 import { Notice } from "@/components/ui";
 import styles from "@/components/admin/admin.module.css";
 import { formatDateTime } from "@/lib/format";
@@ -34,9 +35,8 @@ export default async function AccessLogPage({ searchParams }: { searchParams: Pr
   const params = await searchParams;
   const filter = filters.find(item => item.key === params.jenis)?.key ?? "semua";
   const { entries, missing } = await listAccessLog(filter);
-  return <AdminShell>
-    <p className="eyebrow"><Link href="/admin/super">Dashboard super admin</Link> · Keamanan</p>
-    <h1 className={styles.title}>Log akses admin</h1>
+  return <SuperAdminFrame current="akses">
+    <PageHeader title="Log akses admin" subtitle="Setiap percobaan masuk dan keluar admin." />
     <p className={styles.lead}>Setiap percobaan masuk dan keluar tercatat di sini. Password dipakai bersama, jadi log menunjukkan perangkat dan lokasi, bukan nama orangnya. ID perangkat adalah kode acak yang tersimpan di browser; berganti bila cookie dihapus atau memakai browser lain.</p>
     <nav className={styles.filterChips} aria-label="Saring log">
       {filters.map(item => <a key={item.key} href={item.key === "semua" ? "/admin/akses" : `/admin/akses?jenis=${item.key}`} aria-current={filter === item.key ? "page" : undefined}>{item.label}</a>)}
@@ -57,5 +57,5 @@ export default async function AccessLogPage({ searchParams }: { searchParams: Pr
           </li>;
         })}
       </ul>}
-  </AdminShell>;
+  </SuperAdminFrame>;
 }

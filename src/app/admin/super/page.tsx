@@ -1,45 +1,53 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Blocks, EyeOff, KeyRound, LayoutTemplate, ShieldAlert, UserCog, Users } from "lucide-react";
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
-import { SuperDashboard, type SuperEventRow } from "@/components/admin/super/SuperDashboard";
-import styles from "@/components/admin/admin.module.css";
+import { SuperAdminFrame } from "@/components/admin/super/SuperAdminFrame";
+import { Card, PageHeader, StatCard, StatRow } from "@/components/console";
+import { EMPLOYEES_ADMIN, superAdminPath, wamAdminPath } from "@/lib/routes";
 import { isSupabaseConfigured } from "@/lib/server/config";
+import { listAccessLog } from "@/lib/server/access-log";
 import { listAdminEvents } from "@/lib/server/events";
 import { hiddenEventIds } from "@/lib/server/event-visibility";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { getDisabledModules, getEnabledTemplates } from "@/lib/server/admin-settings";
-import { TemplateSettings } from "@/components/admin/super/TemplateSettings";
-import { ModuleSettings } from "@/components/admin/super/ModuleSettings";
-import { StaffSettings } from "@/components/admin/super/StaffSettings";
-import { SuperAdminFrame } from "@/components/admin/super/SuperAdminFrame";
-import { PageHeader } from "@/components/console";
+import { listEmployees } from "@/lib/server/employees";
+import { listAccounts } from "@/lib/server/pra-wam/accounts";
 import { listStaff } from "@/lib/server/staff";
-import { EMPLOYEES_ADMIN, wamAdminPath } from "@/lib/routes";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard super admin" };
 
-/** Super admin only. For anyone else the page does not exist. */
+/**
+ * Super admin only (6 Nov 2026): the numbers that matter, each opening its page in the side menu:
+ * people and WAM accounts, the team, hidden events, templates and modules, and failed sign-ins.
+ */
 export default async function SuperAdminPage() {
   if ((await requireAdminPage()) !== "super") notFound();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
-  const [events, hidden, modules, templates, team] = await Promise.all([listAdminEvents(), hiddenEventIds(), getDisabledModules(), getEnabledTemplates(), listStaff(false)]);
-  // Only what the dashboard shows travels to the browser.
-  const rows: SuperEventRow[] = events.map(event => ({
-    id: event.id, title: event.title, slug: event.slug, status: event.status, starts_at: event.starts_at, timezone: event.timezone,
-    event_kind: event.event_kind, audience: event.audience, updated_at: event.updated_at,
-  }));
+  const [people, accounts, team, events, hidden, templates, modules, failed] = await Promise.all([
+    listEmployees().catch(() => ({ employees: [] })), listAccounts().catch(() => ({ rows: [] })), listStaff(false).catch(() => ({ staff: [] })),
+    listAdminEvents().catch(() => []), hiddenEventIds().catch(() => ({ ids: new Set<string>() })),
+    getEnabledTemplates().catch(() => ({ templates: [] })), getDisabledModules().catch(() => ({ modules: [] })),
+    listAccessLog("gagal").then(result => result.entries).catch(() => []),
+  ]);
+  const active = people.employees.filter(person => person.active);
+  const withAccount = accounts.rows.filter(row => row.active && row.hasAccount).length;
+  const since = new Date(new Date().getTime() - 7 * 86_400_000);
+  const recentFails = failed.filter(entry => new Date(entry.at) >= since).length;
   return <SuperAdminFrame current="dashboard">
-    <PageHeader title="Dashboard super admin" subtitle="Tim, templat, visibilitas acara dan modul admin." />
-    <p className={styles.lead}>Atur tim yang bisa dipilih sebagai PIC, templat yang bisa dipilih admin biasa, acara yang terlihat, dan modul yang boleh dipakai saat membuat atau mengubah acara. Data karyawan dan struktur organisasi (BOD, HOD, Business Unit) hanya ada di sini; Panitia, akun, dan ruang WAM diatur semua admin di <Link href={wamAdminPath.home}>Admin WAM</Link>.</p>
-    <nav className={styles.superTabs} aria-label="Bagian dashboard"><a href="#tim">Tim Werkudara</a><Link href={EMPLOYEES_ADMIN}>Data karyawan</Link><Link href="/admin/akses">Log akses</Link><a href="#templat">Templat</a><a href="#visibilitas">Visibilitas acara</a><a href="#modul">Modul admin</a></nav>
-    <div id="tim"><StaffSettings initial={team.staff} migrated={team.migrated} /></div>
-    <div id="templat"><TemplateSettings initialEnabled={templates.templates} migrated={templates.migrated} /></div>
-    <section id="visibilitas" aria-labelledby="visibility-title" className="stack">
-      <h2 id="visibility-title" className={styles.superSectionTitle}>Visibilitas acara</h2>
-      <p className={styles.lead}>Acara yang disembunyikan tidak muncul di panel admin biasa dan tidak bisa mereka buka, ubah, atau salin. Halaman tamu tidak berubah: acara yang sudah dipublikasikan tetap bisa dibuka lewat tautannya.</p>
-      <SuperDashboard events={rows} initialHidden={[...hidden.ids]} migrated={hidden.migrated} />
-    </section>
-    <div id="modul"><ModuleSettings initialDisabled={modules.modules} migrated={modules.migrated} /></div>
+    <PageHeader title="Dashboard super admin" subtitle="Ringkasan yang perlu dilihat. Buka bagiannya dari menu samping." />
+    <StatRow label="Ringkasan">
+      <StatCard label="Karyawan aktif" value={active.length} note={`${withAccount} punya akun WAM`} icon={<Users size={18} />} href={EMPLOYEES_ADMIN} />
+      <StatCard label="Tim Werkudara" value={team.staff.length} note="bisa jadi PIC acara" icon={<UserCog size={18} />} href={superAdminPath.team} />
+      <StatCard label="Acara tersembunyi" value={hidden.ids.size} note={`dari ${events.length} acara`} icon={<EyeOff size={18} />} href={superAdminPath.visibility} />
+      <StatCard label="Percobaan masuk gagal" value={recentFails} note="7 hari terakhir" icon={<ShieldAlert size={18} />} tone={recentFails ? "warn" : undefined} href={`${superAdminPath.access}?jenis=gagal`} />
+    </StatRow>
+    <Card title="Pengaturan admin">
+      <StatRow label="Pengaturan admin">
+        <StatCard label="Templat aktif" value={templates.templates.length} icon={<LayoutTemplate size={18} />} href={superAdminPath.templates} />
+        <StatCard label="Modul dimatikan" value={modules.modules.length} icon={<Blocks size={18} />} href={superAdminPath.modules} />
+        <StatCard label="Admin WAM" value="Buka" note="Panitia, akun, ruang" icon={<KeyRound size={18} />} href={wamAdminPath.home} />
+      </StatRow>
+    </Card>
   </SuperAdminFrame>;
 }
