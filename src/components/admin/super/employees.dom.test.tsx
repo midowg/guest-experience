@@ -92,10 +92,13 @@ it("adds a person by hand, and asks before deleting one", async () => {
   fireEvent.change(panel.getByLabelText("Nama lengkap *"), { target: { value: "Orang Baru" } });
   fireEvent.change(panel.getByLabelText("Departemen *"), { target: { value: "Corporate" } });
   fireEvent.change(panel.getByLabelText("Jabatan *"), { target: { value: "Staff" } });
+  // The office names the BU: typing TEE sets Business Unit to TEE.
+  fireEvent.change(panel.getByLabelText("Office"), { target: { value: "tee" } });
+  expect((panel.getByLabelText("Business Unit") as HTMLSelectElement).value).toBe("TEE");
   fireEvent.click(panel.getByRole("button", { name: "Tambah karyawan" }));
   expect(await screen.findByText("Orang Baru ditambahkan.")).toBeTruthy();
   expect(fetch.mock.calls[0][0]).toBe("/api/admin/employees");
-  expect(JSON.parse(fetch.mock.calls[0][1].body as string).employee).toMatchObject({ full_name: "Orang Baru", department: "Corporate", position: "Staff", business_unit: "WNS", category: "karyawan" });
+  expect(JSON.parse(fetch.mock.calls[0][1].body as string).employee).toMatchObject({ full_name: "Orang Baru", department: "Corporate", position: "Staff", business_unit: "TEE", category: "karyawan" });
 
   fireEvent.click(screen.getByRole("button", { name: "Hapus Orang Baru" }));
   const ask = await screen.findByRole("dialog", { name: "Hapus Orang Baru?" });

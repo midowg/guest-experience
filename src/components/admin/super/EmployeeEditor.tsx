@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { LeadEditor } from "@/components/admin/wam/akun/LeadEditor";
 import { categoryLabels, employeeCategories, type Employee, type EmployeeCategory } from "@/lib/employees";
-import { BUSINESS_UNITS, DEFAULT_BUSINESS_UNIT, buCode, type Leads } from "@/lib/pra-wam/leads";
+import { BUSINESS_UNITS, DEFAULT_BUSINESS_UNIT, buCode, buFromOffice, type Leads } from "@/lib/pra-wam/leads";
 import css from "./employee-editor.module.css";
 
 export type EmployeeDraft = Omit<Employee, "id" | "active">;
@@ -111,7 +111,8 @@ export function EmployeeEditor({ person, leads, options, departments, saving, er
             {field("business_unit", "Business Unit", <select id={`${id}-business_unit`} className="input" value={draft.business_unit} onChange={event => set({ business_unit: event.target.value })}>
               {[...new Set([...BUSINESS_UNITS, draft.business_unit])].map(code => <option key={code} value={code}>{code}</option>)}
             </select>)}
-            {field("office", "Office", text("office", { maxLength: 20, placeholder: "Mis. WNS" }))}
+            {field("office", "Office", <input id={`${id}-office`} className="input" value={draft.office} maxLength={20} placeholder="Mis. WNS"
+              onChange={event => { const office = event.target.value; const bu = buFromOffice(office); set({ office, ...(bu ? { business_unit: bu } : {}) }); }} />, "Kode office yang sama dengan BU ikut mengisi Business Unit.")}
           </div>
         </fieldset>
 

@@ -1,5 +1,6 @@
 import "server-only";
 import { compareImport, type Employee, type EmployeeRow } from "@/lib/employees";
+import { buFromOffice } from "@/lib/pra-wam/leads";
 import { createPrivilegedClient } from "./supabase/admin";
 import { databaseError } from "./http";
 import { ServiceError } from "./config";
@@ -46,9 +47,12 @@ export async function importEmployees(rows: EmployeeRow[]): Promise<{ added: num
   const plan = compareImport(rows, employees);
   const client = createPrivilegedClient();
   // Without the NIP column a sheet's NIP is left out rather than failing the whole import.
-  const fresh = plan.filter(item => item.change === "baru").map(({ row }) => { const { nip, ...rest } = row; return hasNip && nip ? { ...rest, nip } : rest; });
+  // The sheet's office is the BU (WNS, TEE, MRP...): a new person gets it as their Business Unit.
+  const fresh = plan.filter(item => item.change === "baru").map(({ row }) => { const { nip, ...rest } = row; const bu = buFromOffice(row.office); return { ...(hasNip && nip ? { ...rest, nip } : rest), ...(bu ? { business_unit: bu } : {}) }; });
   if (fresh.length) {
-    const { error } = await client.from("employees").insert(fresh);
+    let { error } = await client.from("employees").insert(fresh);
+    // Before migration 202611060002 there is no BU column: save without it.
+    if (error && noBuColumn(error)) ({ error } = await client.from("employees").insert(fresh.map(({ business_unit: _bu, ...rest }) => { void _bu; return rest; })));
     if (error) databaseError(error);
   }
   const known = new Map(employees.map(person => [person.full_name.trim().replace(/\s+/g, " ").toUpperCase(), person]));

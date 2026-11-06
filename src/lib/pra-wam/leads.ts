@@ -12,6 +12,11 @@ export type Leads = { departments: string[]; businessUnits: string[] };
 export const BUSINESS_UNITS = ["MRP", "WNS", "TEE", "NMU", "WNN"] as const;
 /** Everyone's BU until the super admin sets theirs. */
 export const DEFAULT_BUSINESS_UNIT = "WNS";
+/** HR's "office" already names the BU (WNS, TEE, MRP...): its code when it is one of the five, else null. */
+export function buFromOffice(office: string | null | undefined): string | null {
+  const code = (office ?? "").trim().toUpperCase();
+  return (BUSINESS_UNITS as readonly string[]).includes(code) ? code : null;
+}
 /** A BU as its code: the full names saved before migration 202611060004 read as their codes. */
 export function buCode(name: string | null | undefined): string {
   const value = (name ?? "").trim();
