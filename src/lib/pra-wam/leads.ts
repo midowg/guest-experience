@@ -8,8 +8,15 @@ import { z } from "zod";
 /** Departments led (HOD) and BUs led, by name. */
 export type Leads = { departments: string[]; businessUnits: string[] };
 
-/** Everyone's BU until the super admin sets theirs (migration 202611060002). */
-export const DEFAULT_BUSINESS_UNIT = "Werkudara Nirwana Sakti";
+/** The business units, by their codes (6 Nov 2026). */
+export const BUSINESS_UNITS = ["MRP", "WNS", "TEE", "NMU", "WNN"] as const;
+/** Everyone's BU until the super admin sets theirs. */
+export const DEFAULT_BUSINESS_UNIT = "WNS";
+/** A BU as its code: the full names saved before migration 202611060004 read as their codes. */
+export function buCode(name: string | null | undefined): string {
+  const value = (name ?? "").trim();
+  return ({ "Werkudara Nirwana Sakti": "WNS", "Maha Raja Pratama": "MRP" } as Record<string, string>)[value] ?? (value || DEFAULT_BUSINESS_UNIT);
+}
 
 const names = z.array(z.string().trim().min(1).max(120)).max(30);
 export const leadsSchema = z.object({ departments: names, businessUnits: names });

@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { LeadEditor } from "./LeadEditor";
 
 afterEach(cleanup);
-const options = { departments: ["Art & Creative Support", "Business & Administrative Services", "Center of Excellence"], businessUnits: ["Werkudara Nirwana Sakti"] };
+const options = { departments: ["Art & Creative Support", "Business & Administrative Services", "Center of Excellence"], businessUnits: ["MRP", "WNS", "TEE", "NMU", "WNN"] };
 
 describe("HOD departemen dan lead BU", () => {
   it("makes one person HOD of two departments (Sofyan: COE and ACS)", () => {
@@ -15,15 +15,21 @@ describe("HOD departemen dan lead BU", () => {
     expect(onSave).toHaveBeenCalledWith({ departments: ["Center of Excellence", "Art & Creative Support"], businessUnits: [] });
   });
 
-  it("adds a BU not listed yet and leads it (Yulia Mekar: HOD BAS, lead BU MRP)", () => {
+  it("makes Yulia Mekar HOD of BAS and lead of BU MRP", () => {
     const onSave = vi.fn();
     render(<LeadEditor name="Yulia" value={{ departments: [], businessUnits: [] }} options={options} saving={false} disabled={false} onSave={onSave} />);
     fireEvent.click(screen.getByRole("checkbox", { name: "HOD Business & Administrative Services: Yulia" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Nama BU baru" }), { target: { value: "Maha Raja Pratama" } });
-    fireEvent.click(screen.getByRole("button", { name: "Tambah BU" }));
-    expect((screen.getByRole("checkbox", { name: "Lead BU Maha Raja Pratama: Yulia" }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Lead BU MRP: Yulia" }));
     fireEvent.click(screen.getByRole("button", { name: "Simpan HOD dan lead BU" }));
-    expect(onSave).toHaveBeenCalledWith({ departments: ["Business & Administrative Services"], businessUnits: ["Maha Raja Pratama"] });
+    expect(onSave).toHaveBeenCalledWith({ departments: ["Business & Administrative Services"], businessUnits: ["MRP"] });
+  });
+
+  it("inside a larger form, reports each tick and has no save of its own", () => {
+    const onChange = vi.fn();
+    render(<LeadEditor name="Sofyan" value={{ departments: [], businessUnits: [] }} options={options} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "HOD Center of Excellence: Sofyan" }));
+    expect(onChange).toHaveBeenLastCalledWith({ departments: ["Center of Excellence"], businessUnits: [] });
+    expect(screen.queryByRole("button", { name: "Simpan HOD dan lead BU" })).toBeNull();
   });
 
   it("locks everything for a BOD, with why", () => {

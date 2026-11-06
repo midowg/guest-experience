@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { DEFAULT_BUSINESS_UNIT, type Leads } from "@/lib/pra-wam/leads";
+import { BUSINESS_UNITS, buCode, type Leads } from "@/lib/pra-wam/leads";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -47,7 +47,7 @@ export async function leadsOf(employeeId: string): Promise<Leads> {
   return (await listLeads()).byPerson.get(employeeId) ?? { departments: [], businessUnits: [] };
 }
 
-/** The departments and BUs to pick from: those of Data karyawan, those already led, and Werkudara Nirwana Sakti. */
+/** The departments and BUs to pick from: those of Data karyawan and those already led; BUs are the five codes (and any other already set). */
 export async function leadOptions(): Promise<Leads> {
   const client = createPrivilegedClient();
   const read = (fields: string) => client.from("employees").select(fields).eq("active", true).limit(2000);
@@ -61,7 +61,7 @@ export async function leadOptions(): Promise<Leads> {
   const tidy = (names: (string | undefined)[]) => [...new Set(names.map(name => (name ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
   return {
     departments: tidy([...rows.map(row => row.department), ...led.flatMap(item => item.departments)]),
-    businessUnits: tidy([DEFAULT_BUSINESS_UNIT, ...rows.map(row => row.business_unit), ...led.flatMap(item => item.businessUnits)]),
+    businessUnits: [...new Set([...BUSINESS_UNITS, ...rows.map(row => buCode(row.business_unit)), ...led.flatMap(item => item.businessUnits.map(buCode))])],
   };
 }
 

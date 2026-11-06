@@ -16,7 +16,7 @@ export type Employee = {
   category: EmployeeCategory; phone: string; email: string; active: boolean;
   /** Nomor induk; empty until HR fills it (column from migration 202611040002). */
   nip: string;
-  /** Business unit, such as Werkudara Nirwana Sakti or Maha Raja Pratama (migration 202611060002); "" before it. */
+  /** Business unit by code: MRP, WNS, TEE, NMU or WNN (migrations 202611060002, 202611060004); "" before them. */
   business_unit: string;
 };
 /** One person as read from HR's sheet; `email` and `nip` only when the sheet has them. */
@@ -34,8 +34,16 @@ export const employeePatchSchema = z.object({
   full_name: text(150).min(2), nickname: text(60), department: text(150), position: text(150), office: text(20),
   category: z.enum(employeeCategories), phone: text(30), email: z.union([z.literal(""), z.email("Email tidak valid.").max(200)]), active: z.boolean(),
   nip: z.union([z.literal(""), z.string().trim().regex(NIP, "NIP hanya angka, huruf, titik, atau strip.")]),
-  business_unit: text(120).min(1, "Isi nama BU."),
+  business_unit: text(120).min(1, "Pilih Business Unit."),
 }).partial();
+/** A person added by hand (Tambah karyawan): the name, department and job at least. */
+export const employeeCreateSchema = z.object({
+  full_name: text(150).min(2, "Isi nama lengkap."), nickname: text(60).default(""), department: text(150).min(1, "Pilih departemen."),
+  position: text(150).min(1, "Isi jabatan."), office: text(20).default(""), category: z.enum(employeeCategories).default("karyawan"),
+  phone: text(30).default(""), email: z.union([z.literal(""), z.email("Email tidak valid.").max(200)]).default(""),
+  nip: z.union([z.literal(""), z.string().trim().regex(NIP, "NIP hanya angka, huruf, titik, atau strip.")]).default(""),
+  business_unit: text(120).min(1).default("WNS"), active: z.boolean().default(true),
+});
 
 /** The matching key: the database derives the same one (upper case, single spaces). */
 export const nameKey = (name: string) => name.trim().replace(/\s+/g, " ").toUpperCase();

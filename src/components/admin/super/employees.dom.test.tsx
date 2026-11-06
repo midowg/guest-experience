@@ -5,7 +5,7 @@ import type { Employee } from "@/lib/employees";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 const reply = (body: object, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-const person: Employee = { id: "6a000000-0000-4000-8000-000000000001", full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "karyawan", phone: "", email: "", active: true, nip: "", business_unit: "Werkudara Nirwana Sakti" };
+const person: Employee = { id: "6a000000-0000-4000-8000-000000000001", full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "karyawan", phone: "", email: "", active: true, nip: "", business_unit: "WNS" };
 const row = { full_name: "Contoh Dua", nickname: "Dua", department: "Accounting", position: "Tax Staff", office: "WNS", category: "karyawan" };
 
 it("reads the Excel first, shows who is new or changed, and saves only on request", async () => {
@@ -36,15 +36,73 @@ it("reads the Excel first, shows who is new or changed, and saves only on reques
   expect(await screen.findByText("Contoh Dua")).toBeTruthy();
 });
 
-it("changes a category or switches someone off from the list", async () => {
-  const fetch = vi.fn(async (_url: string, init: RequestInit) => reply({ ok: true, message: "Data karyawan disimpan.", data: { ...person, ...JSON.parse(init.body as string) } }));
+HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
+
+it("lists a person with department and job (HOD, lead BU, GA or Intern beside it), Business Unit, and no WAM column", () => {
+  const intern = { ...person, id: "6a000000-0000-4000-8000-000000000009", full_name: "Contoh Magang", category: "intern" as const, business_unit: "MRP" };
+  render(<EmployeeDirectory initial={[person, intern]} migrated leads={{ [person.id]: { departments: ["Sales & Marketing", "Corporate"], businessUnits: ["MRP"] } }}
+    leadOptions={{ departments: ["Corporate", "Sales & Marketing"], businessUnits: ["MRP", "WNS", "TEE", "NMU", "WNN"] }} />);
+  expect(screen.getAllByRole("columnheader").map(header => header.textContent)).toEqual(["Karyawan", "Departemen & jabatan", "Business Unit", "Kontak", "Status", "Aksi"]);
+  const first = within(screen.getByText("Contoh Satu").closest("tr")!);
+  expect(first.getByText("Business Solutions Manager · HOD")).toBeTruthy();
+  expect(first.getByText("HOD Corporate")).toBeTruthy();
+  expect(first.getByText("Lead BU MRP")).toBeTruthy();
+  expect(first.getByText("WNS")).toBeTruthy();
+  const second = within(screen.getByText("Contoh Magang").closest("tr")!);
+  expect(second.getByText("Intern")).toBeTruthy();
+  expect(second.getByText("MRP")).toBeTruthy();
+});
+
+it("changes a person in one panel, what they head included, and switches someone off from the list", async () => {
+  const fetch = vi.fn(async (url: string, init: RequestInit) => url.includes("/wam/accounts/")
+    ? reply({ ok: true, message: "HOD departemen dan lead BU disimpan.", data: { rows: [] } })
+    : reply({ ok: true, message: "Data karyawan disimpan.", data: { ...person, ...JSON.parse(init.body as string) } }));
+  vi.stubGlobal("fetch", fetch);
+  render(<EmployeeDirectory initial={[person]} migrated leadOptions={{ departments: ["Corporate", "Sales & Marketing"], businessUnits: ["MRP", "WNS", "TEE", "NMU", "WNN"] }} />);
+  fireEvent.click(screen.getByRole("button", { name: "Ubah Contoh Satu" }));
+  const panel = within(screen.getByRole("dialog", { name: "Ubah karyawan" }));
+  fireEvent.click(panel.getByRole("radio", { name: "GA" }));
+  fireEvent.change(panel.getByLabelText("Business Unit"), { target: { value: "TEE" } });
+  fireEvent.click(panel.getByRole("checkbox", { name: "HOD Sales & Marketing: Contoh Satu" }));
+  fireEvent.click(panel.getByRole("button", { name: "Simpan perubahan" }));
+  expect(await screen.findByText("Contoh Satu disimpan.")).toBeTruthy();
+  expect(fetch.mock.calls[0][0]).toBe(`/api/admin/employees/${person.id}`);
+  expect(JSON.parse(fetch.mock.calls[0][1].body as string)).toEqual({ category: "ga", business_unit: "TEE" });
+  expect(JSON.parse(fetch.mock.calls[1][1].body as string)).toEqual({ leads: { departments: ["Sales & Marketing"], businessUnits: [] } });
+  const row = within(screen.getByText("Contoh Satu").closest("tr")!);
+  expect(row.getByText("GA")).toBeTruthy();
+  expect(row.getByText("TEE")).toBeTruthy();
+  fireEvent.click(row.getByRole("switch", { name: "Contoh Satu aktif" }));
+  await screen.findAllByText("Data karyawan disimpan.");
+  expect(JSON.parse(fetch.mock.calls[2][1].body as string)).toEqual({ active: false });
+});
+
+it("adds a person by hand, and asks before deleting one", async () => {
+  const added = { ...person, id: "6a000000-0000-4000-8000-000000000010", full_name: "Orang Baru", department: "Corporate", position: "Staff" };
+  const fetch = vi.fn(async (_url: string, init: RequestInit) => init.method === "DELETE"
+    ? reply({ ok: true, message: "Karyawan dihapus.", data: null })
+    : reply({ ok: true, message: "Orang Baru ditambahkan.", data: added }));
   vi.stubGlobal("fetch", fetch);
   render(<EmployeeDirectory initial={[person]} migrated />);
-  fireEvent.change(screen.getByLabelText("Kategori Contoh Satu"), { target: { value: "ga" } });
-  expect(await screen.findByText("Data karyawan disimpan.")).toBeTruthy();
-  expect(fetch.mock.calls[0][0]).toBe(`/api/admin/employees/${person.id}`);
-  expect(JSON.parse(fetch.mock.calls[0][1].body as string)).toEqual({ category: "ga" });
-  expect((screen.getByLabelText("Kategori Contoh Satu") as HTMLSelectElement).value).toBe("ga");
+  fireEvent.click(screen.getByRole("button", { name: /Tambah karyawan/ }));
+  const panel = within(screen.getByRole("dialog", { name: "Tambah karyawan" }));
+  fireEvent.click(panel.getByRole("button", { name: "Tambah karyawan" }));
+  expect(panel.getByText("Isi nama lengkap.")).toBeTruthy();
+  fireEvent.change(panel.getByLabelText("Nama lengkap *"), { target: { value: "Orang Baru" } });
+  fireEvent.change(panel.getByLabelText("Departemen *"), { target: { value: "Corporate" } });
+  fireEvent.change(panel.getByLabelText("Jabatan *"), { target: { value: "Staff" } });
+  fireEvent.click(panel.getByRole("button", { name: "Tambah karyawan" }));
+  expect(await screen.findByText("Orang Baru ditambahkan.")).toBeTruthy();
+  expect(fetch.mock.calls[0][0]).toBe("/api/admin/employees");
+  expect(JSON.parse(fetch.mock.calls[0][1].body as string).employee).toMatchObject({ full_name: "Orang Baru", department: "Corporate", position: "Staff", business_unit: "WNS", category: "karyawan" });
+
+  fireEvent.click(screen.getByRole("button", { name: "Hapus Orang Baru" }));
+  const ask = await screen.findByRole("dialog", { name: "Hapus Orang Baru?" });
+  fireEvent.click(within(ask).getByRole("button", { name: "Hapus karyawan" }));
+  expect(await screen.findByText("Karyawan dihapus.")).toBeTruthy();
+  expect(fetch.mock.calls[1]).toEqual([`/api/admin/employees/${added.id}`, expect.objectContaining({ method: "DELETE" })]);
+  expect(screen.queryByText("Orang Baru")).toBeNull();
 });
 
 it("says the table waits for its migration and keeps saving off", () => {
@@ -65,39 +123,23 @@ describe("Akun WAM", () => {
   ];
   const accounts = { migrated: true, passwordReady: true, withAccount: [team[1].id] };
   const rowsAfter = (ids: string[]) => team.map(item => ({ employeeId: item.id, hasAccount: ids.includes(item.id) }));
-  const cell = (name: string) => within(screen.getByText(name).closest("tr")!);
 
-  it("shows each person's WAM account and offers Buat akun only to who can have one", () => {
+  it("counts the WAM accounts and offers Buat akun for everyone still missing one, with no column of its own", () => {
     render(<EmployeeDirectory initial={team} migrated wamAccounts={accounts} />);
-    expect(screen.getByRole("columnheader", { name: "Akun WAM" })).toBeTruthy();
-    expect(cell("Contoh Satu").getByText("Belum punya akun")).toBeTruthy();
-    expect(cell("Contoh Dua").getByText("Punya akun")).toBeTruthy();
-    expect(cell("Contoh Tiga").getByText("Tanpa email")).toBeTruthy();
-    expect(cell("Contoh Empat").getAllByText("Nonaktif").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: /^Buat akun WAM/ }).map(button => button.getAttribute("aria-label"))).toEqual(["Buat akun WAM Contoh Satu"]);
-    expect(screen.getByRole("button", { name: "Buat akun untuk 1 karyawan" })).toBeTruthy();
-  });
-
-  it("creates one person's account and shows it on their row", async () => {
-    const fetch = vi.fn(async () => reply({ ok: true, message: "Akun WAM dibuat.", data: { created: 1, skipped: [], rows: rowsAfter([team[0].id, team[1].id]) } }));
-    vi.stubGlobal("fetch", fetch);
-    render(<EmployeeDirectory initial={team} migrated wamAccounts={accounts} />);
-    fireEvent.click(screen.getByRole("button", { name: "Buat akun WAM Contoh Satu" }));
-    expect(await screen.findByText("Akun WAM dibuat.")).toBeTruthy();
-    expect(fetch.mock.calls[0]).toEqual([`/api/admin/wam/accounts/${person.id}`, expect.objectContaining({ method: "POST" })]);
-    expect(cell("Contoh Satu").getByText("Punya akun")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Semua sudah punya akun" })).toHaveProperty("disabled", true);
+    expect(screen.queryByRole("columnheader", { name: "Akun WAM" })).toBeNull();
+    expect(screen.getByText(/1 dari 3 karyawan aktif sudah punya akun/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Buat akun WAM untuk 1 karyawan" })).toBeTruthy();
   });
 
   it("asks before creating everyone's account, then lists who was skipped and why", async () => {
     const fetch = vi.fn(async () => reply({ ok: true, message: "1 akun dibuat, 1 dilewati.", data: { created: 1, skipped: ["Contoh Tiga: email masih kosong."], rows: rowsAfter([team[0].id, team[1].id]) } }));
     vi.stubGlobal("fetch", fetch);
     render(<EmployeeDirectory initial={team} migrated wamAccounts={accounts} />);
-    fireEvent.click(screen.getByRole("button", { name: "Buat akun untuk 1 karyawan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Buat akun WAM untuk 1 karyawan" }));
     const dialog = await screen.findByRole("dialog", { name: "Buat akun WAM untuk 1 karyawan?" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Batal" }));
     expect(fetch).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Buat akun untuk 1 karyawan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Buat akun WAM untuk 1 karyawan" }));
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Buat akun" }));
     expect(await screen.findByText("1 akun WAM dibuat, 1 dilewati.")).toBeTruthy();
     expect(fetch.mock.calls[0]).toEqual(["/api/admin/wam/accounts", expect.objectContaining({ method: "POST" })]);
@@ -107,7 +149,6 @@ describe("Akun WAM", () => {
   it("keeps Buat akun off until the first password is set on the server", () => {
     render(<EmployeeDirectory initial={team} migrated wamAccounts={{ ...accounts, passwordReady: false }} />);
     expect(screen.getByText(/Password awal WAM belum disiapkan/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Buat akun untuk 1 karyawan" })).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: "Buat akun WAM Contoh Satu" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Buat akun WAM untuk 1 karyawan" })).toHaveProperty("disabled", true);
   });
 });

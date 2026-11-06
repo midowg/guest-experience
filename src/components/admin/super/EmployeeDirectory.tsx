@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FileSpreadsheet, Pencil, Upload, UserPlus } from "lucide-react";
+import { FileSpreadsheet, Pencil, Plus, Trash2, Upload, UserPlus } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { categoryLabels, employeeCategories, type Employee, type EmployeeCategory, type EmployeeRow, type ImportChange } from "@/lib/employees";
+import { categoryLabels, type Employee, type EmployeeRow, type ImportChange } from "@/lib/employees";
 import { employeesApi, praWamAccountsApi } from "@/lib/routes";
 import type { AccountRow } from "@/lib/server/pra-wam/accounts";
-import { DEFAULT_BUSINESS_UNIT, leadsLabel, type Leads } from "@/lib/pra-wam/leads";
-import { LeadEditor } from "@/components/admin/wam/akun/LeadEditor";
+import { buCode, type Leads } from "@/lib/pra-wam/leads";
+import { EmployeeEditor, type EmployeeDraft } from "./EmployeeEditor";
+import own from "./employee-editor.module.css";
 import styles from "@/components/admin/admin.module.css";
 
 type Plan = { sheet: string; skipped: string[]; migrated: boolean; plan: { row: EmployeeRow; change: ImportChange; changed: string[] }[] };
@@ -20,7 +21,6 @@ const changeLabels: Record<ImportChange, string> = { baru: "Baru", berubah: "Dip
  */
 export type WamAccounts = { migrated: boolean; passwordReady: boolean; withAccount: string[] };
 type WamStatus = "punya" | "belum" | "tanpa-email" | "nonaktif";
-const wamStatusLabels: Record<WamStatus, string> = { punya: "Punya akun", belum: "Belum punya akun", "tanpa-email": "Tanpa email", nonaktif: "Nonaktif" };
 function wamStatus(person: Employee, has: boolean): WamStatus {
   if (!person.active) return "nonaktif";
   if (has) return "punya";
@@ -28,38 +28,13 @@ function wamStatus(person: Employee, has: boolean): WamStatus {
 }
 const fieldLabels: Record<string, string> = { full_name: "nama", nickname: "panggilan", department: "departemen", position: "jabatan", office: "office", email: "email", nip: "NIP" };
 
-/** Phone and email, the details an app may need that HR's sheet does not have. */
-function ContactForm({ person, busy, onSave, onCancel }: { person: Employee; busy: boolean; onSave: (patch: Pick<Employee, "nickname" | "phone" | "email" | "nip">) => void; onCancel: () => void }) {
-  const [draft, setDraft] = useState({ nickname: person.nickname, phone: person.phone, email: person.email, nip: person.nip });
-  return <form className="stack" onSubmit={e => { e.preventDefault(); onSave(draft); }}>
-    <div className={styles.grid}>
-      <Field name={`nick-${person.id}`} label="Nama panggilan"><input id={`nick-${person.id}`} className="input" value={draft.nickname} maxLength={60} onChange={e => setDraft({ ...draft, nickname: e.target.value })} /></Field>
-      <Field name={`phone-${person.id}`} label="Nomor WhatsApp"><input id={`phone-${person.id}`} className="input" inputMode="tel" value={draft.phone} maxLength={30} placeholder="0812 3456 7890" onChange={e => setDraft({ ...draft, phone: e.target.value })} /></Field>
-      <Field name={`email-${person.id}`} label="Email kantor"><input id={`email-${person.id}`} className="input" type="email" value={draft.email} maxLength={200} onChange={e => setDraft({ ...draft, email: e.target.value })} /></Field>
-      <Field name={`nip-${person.id}`} label="NIP" hint="Boleh kosong dulu."><input id={`nip-${person.id}`} className="input" value={draft.nip} maxLength={30} onChange={e => setDraft({ ...draft, nip: e.target.value })} /></Field>
-    </div>
-    <div className={styles.qrActions}>
-      <Button type="submit" disabled={busy}>{busy ? "Menyimpan…" : "Simpan"}</Button>
-      <Button type="button" variant="secondary" disabled={busy} onClick={onCancel}>Batal</Button>
-    </div>
-  </form>;
-}
-
-/** A person's WAM account on their row, with "Buat akun" when they can have one now. */
-function WamAccountCell({ status, unused, busy, disabled, name, onCreate }: { status: WamStatus; unused: boolean; busy: boolean; disabled: boolean; name: string; onCreate: () => void }) {
-  return <>
-    <p>{wamStatusLabels[status]}</p>
-    {unused && <p className="field-hint">Akunnya ada, tidak dipakai</p>}
-    {status === "tanpa-email" && <p className="field-hint">Isi email lewat Ubah</p>}
-    {status === "belum" && <Button type="button" variant="secondary" disabled={disabled} onClick={onCreate} aria-label={`Buat akun WAM ${name}`}><UserPlus size={15} aria-hidden="true" /> {busy ? "Membuat…" : "Buat akun"}</Button>}
-  </>;
-}
-
 /**
  * Data karyawan: one list of Werkudara's people for every Journey app. An import from HR's Excel
- * is checked first (who is new, who changed) and saved only on request; category, phone, email
- * and active are set here and an import never overwrites them. `wamAccounts` adds the "Akun WAM"
- * column with "Buat akun" (one person or everyone missing one); null says it could not be read.
+ * is checked first (who is new, who changed) and saved only on request. The list (6 Nov 2026): a
+ * person, their department and job (HOD, lead BU, GA or Intern beside it), their Business Unit,
+ * contact and status, with Ubah and Hapus; "Tambah karyawan" adds one by hand. Ubah and Tambah open
+ * one panel (EmployeeEditor) with everything, what they head included. `wamAccounts` gives the
+ * count of WAM accounts and "Buat akun" for everyone still missing one.
  */
 export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initialLeads, leadOptions }: {
   initial: Employee[]; migrated: boolean; wamAccounts?: WamAccounts | null;
@@ -74,21 +49,11 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("");
-  const [editing, setEditing] = useState<string | null>(null);
   const [leads, setLeads] = useState<Record<string, Leads>>(initialLeads ?? {});
-  /** Whose HOD and lead BU editor is open. */
-  const [leading, setLeading] = useState<string | null>(null);
   const leadsOf = (id: string): Leads => leads[id] ?? { departments: [], businessUnits: [] };
-  async function saveLeads(person: Employee, value: Leads) {
-    setBusy(`leads-${person.id}`); setError(""); setMessage("");
-    try {
-      const result = await adminRequest<{ rows: AccountRow[] }>(praWamAccountsApi(person.id), { method: "PATCH", body: JSON.stringify({ leads: value }) });
-      const row = result.data?.rows.find(item => item.employeeId === person.id);
-      setLeads(current => ({ ...current, [person.id]: row ? { departments: row.leads, businessUnits: row.buLeads } : value }));
-      setMessage(result.message); setLeading(null);
-    } catch (err) { setError(errorMessage(err)); }
-    finally { setBusy(null); }
-  }
+  /** The person being changed, or `null` for a new one; closed when undefined. */
+  const [editor, setEditor] = useState<{ person: Employee | null } | undefined>(undefined);
+  const [editorError, setEditorError] = useState("");
   const [withAccount, setWithAccount] = useState(() => new Set(wamAccounts?.withAccount ?? []));
   const [skipped, setSkipped] = useState<string[]>([]);
   const [confirm, confirmDialog] = useConfirm();
@@ -132,7 +97,48 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     try {
       const result = await adminRequest<Employee>(employeesApi(person.id), { method: "PATCH", body: JSON.stringify(change) });
       if (result.data) setPeople(list => list.map(item => item.id === person.id ? result.data! : item));
-      setMessage(result.message); setEditing(null);
+      setMessage(result.message);
+    } catch (err) { setError(errorMessage(err)); }
+    finally { setBusy(null); }
+  }
+
+  /** Saves the editor: the person (new or changed), then what they head when that changed. */
+  async function saveEditor(person: Employee | null, draft: EmployeeDraft, nextLeads: Leads) {
+    setBusy("editor"); setEditorError(""); setError(""); setMessage(""); setSkipped([]);
+    try {
+      let saved: Employee | undefined;
+      if (person) {
+        const changed = Object.fromEntries(Object.entries(draft).filter(([key, value]) => person[key as keyof Employee] !== value));
+        saved = Object.keys(changed).length ? (await adminRequest<Employee>(employeesApi(person.id), { method: "PATCH", body: JSON.stringify(changed) })).data : person;
+      } else {
+        saved = (await adminRequest<Employee>(employeesApi(), { method: "POST", body: JSON.stringify({ employee: draft }) })).data;
+      }
+      if (!saved) throw new Error("Belum tersimpan.");
+      const before = person ? leadsOf(person.id) : { departments: [], businessUnits: [] };
+      const sameLeads = before.departments.join("|") === nextLeads.departments.join("|") && before.businessUnits.join("|") === nextLeads.businessUnits.join("|");
+      if (!sameLeads) {
+        await adminRequest(praWamAccountsApi(saved.id), { method: "PATCH", body: JSON.stringify({ leads: nextLeads }) });
+        setLeads(current => ({ ...current, [saved!.id]: nextLeads }));
+      }
+      const done = saved;
+      setPeople(list => person ? list.map(item => item.id === done.id ? done : item) : [done, ...list]);
+      setMessage(person ? `${done.full_name} disimpan.` : `${done.full_name} ditambahkan.`);
+      setEditor(undefined);
+    } catch (err) { setEditorError(errorMessage(err)); }
+    finally { setBusy(null); }
+  }
+  async function remove(person: Employee) {
+    if (busy) return;
+    if (!(await confirm({
+      title: `Hapus ${person.full_name}?`,
+      body: "Orang ini hilang dari Data karyawan untuk semua aplikasi dan tidak bisa dikembalikan. Kalau ia keluar dari kantor, lebih baik nonaktifkan saja supaya catatan lamanya tetap terbaca.",
+      confirmLabel: "Hapus karyawan", danger: true,
+    }))) return;
+    setBusy(`delete-${person.id}`); setError(""); setMessage(""); setSkipped([]);
+    try {
+      const result = await adminRequest(employeesApi(person.id), { method: "DELETE" });
+      setPeople(list => list.filter(item => item.id !== person.id));
+      setMessage(result.message);
     } catch (err) { setError(errorMessage(err)); }
     finally { setBusy(null); }
   }
@@ -194,56 +200,59 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
 
     <section className="stack" aria-labelledby="people-title">
       <h2 id="people-title" className={styles.superSectionTitle}>Daftar karyawan · {people.filter(person => person.active).length} aktif</h2>
-      <p className={styles.lead}>Dipakai bersama oleh aplikasi Journey, misalnya akun WAM dan jatah Kopi Kantor per kategori. Karyawan yang keluar dinonaktifkan, bukan dihapus, supaya catatan lamanya tetap terbaca.</p>
+      <p className={styles.lead}>Dipakai bersama oleh aplikasi Journey. Karyawan yang keluar dinonaktifkan, bukan dihapus, supaya catatan lamanya tetap terbaca.</p>
       {wamAccounts === null && <Notice tone="warning">Status akun WAM belum dapat dimuat. Muat ulang halaman ini sebentar lagi.</Notice>}
       {wamAccounts && !wamAccounts.migrated && <Notice tone="warning">Akun WAM menunggu migrasi 202611040001_pra_wam_appraisal.sql.</Notice>}
       {wamAccounts?.migrated && <div className="stack">
-        <p><strong>Akun WAM:</strong> {activeWithAccount} dari {activeCount} karyawan aktif sudah punya akun. Akun memakai email kantor dan password awal yang sama; peran diatur di Admin WAM.</p>
+        <p><strong>Akun WAM:</strong> {activeWithAccount} dari {activeCount} karyawan aktif sudah punya akun. Peran diatur di Admin WAM.</p>
         {!wamAccounts.passwordReady && <Notice tone="warning">Password awal WAM belum disiapkan. Isi WAM_DEFAULT_PASSWORD (minimal 8 karakter) pada server, lalu muat ulang halaman ini.</Notice>}
-        <div className={styles.qrActions}>
-          <Button type="button" disabled={!!busy || !wamReady || canCreate.length === 0} onClick={() => createAccounts()}><UserPlus size={17} aria-hidden="true" /> {busy === "accounts" ? "Membuat akun…" : canCreate.length ? `Buat akun untuk ${canCreate.length} karyawan` : "Semua sudah punya akun"}</Button>
-        </div>
+        {canCreate.length > 0 && <div className={styles.qrActions}>
+          <Button type="button" variant="secondary" disabled={!!busy || !wamReady} onClick={() => createAccounts()}><UserPlus size={17} aria-hidden="true" /> {busy === "accounts" ? "Membuat akun…" : `Buat akun WAM untuk ${canCreate.length} karyawan`}</Button>
+        </div>}
       </div>}
-      {people.length > 0 && <div className={styles.grid}>
+
+      <div className={own.toolbar}>
         <Field name="employee-search" label="Cari"><input id="employee-search" className="input" type="search" value={query} placeholder="Nama, panggilan, atau jabatan" onChange={e => setQuery(e.target.value)} /></Field>
         <Field name="employee-department" label="Departemen"><select id="employee-department" className="input" value={department} onChange={e => setDepartment(e.target.value)}><option value="">Semua departemen</option>{departments.map(name => <option key={name} value={name}>{name}</option>)}</select></Field>
-      </div>}
-      {people.length === 0 ? <p className="field-hint">Belum ada data karyawan. Impor dari Excel HR di atas.</p>
+        <Button type="button" disabled={!migrated || !!busy} onClick={() => { setEditorError(""); setEditor({ person: null }); }}><Plus size={18} aria-hidden="true" /> Tambah karyawan</Button>
+      </div>
+
+      {people.length === 0 ? <p className="field-hint">Belum ada data karyawan. Impor dari Excel HR di atas, atau tambah satu per satu.</p>
         : <div className={styles.tableWrap}><table className={styles.table}>
           <caption className="sr-only">Daftar karyawan</caption>
-          <thead><tr><th scope="col">Nama</th><th scope="col">Departemen & jabatan</th>{leadOptions && <th scope="col">BU & memimpin</th>}<th scope="col">Office</th><th scope="col">Kategori</th><th scope="col">Kontak</th>{wamAccounts?.migrated && <th scope="col">Akun WAM</th>}<th scope="col">Status</th></tr></thead>
-          <tbody>{shown.map(person => <tr key={person.id} aria-busy={busy === person.id}>
-            <td><strong>{person.full_name}</strong>{person.nickname && <p className="field-hint">{person.nickname}</p>}</td>
-            <td>{person.department}<p className="field-hint">{person.position}</p></td>
-            {leadOptions && <td>
-              <label className="sr-only" htmlFor={`bu-${person.id}`}>BU {person.full_name}</label>
-              <input id={`bu-${person.id}`} className="input" list="bu-options" defaultValue={person.business_unit || DEFAULT_BUSINESS_UNIT} maxLength={120} disabled={busy === person.id}
-                onBlur={event => { const value = event.target.value.trim(); if (value && value !== (person.business_unit || DEFAULT_BUSINESS_UNIT)) void patch(person, { business_unit: value }); }} />
-              {leading === person.id
-                ? <LeadEditor name={person.full_name} value={leadsOf(person.id)} options={leadOptions} saving={busy === `leads-${person.id}`} disabled={!!busy}
-                  onSave={value => void saveLeads(person, value)} onCancel={() => setLeading(null)} />
-                : <>{leadsLabel(leadsOf(person.id)) && <p className="field-hint">{leadsLabel(leadsOf(person.id))}</p>}
-                  <Button type="button" variant="quiet" onClick={() => setLeading(person.id)} aria-label={`Atur HOD dan lead BU ${person.full_name}`}><Pencil size={15} aria-hidden="true" /> HOD / lead BU</Button></>}
-            </td>}
-            <td>{person.office}</td>
-            <td><label className="sr-only" htmlFor={`category-${person.id}`}>Kategori {person.full_name}</label>
-              <select id={`category-${person.id}`} className="input" value={person.category} disabled={busy === person.id} onChange={e => patch(person, { category: e.target.value as EmployeeCategory })}>
-                {employeeCategories.map(key => <option key={key} value={key}>{categoryLabels[key]}</option>)}
-              </select></td>
-            <td>{editing === person.id
-              ? <ContactForm person={person} busy={busy === person.id} onSave={change => patch(person, change)} onCancel={() => setEditing(null)} />
-              : <>{person.phone || person.email ? <><p>{person.phone}</p><p className="field-hint">{person.email}</p></> : <p className="field-hint">Belum ada</p>}{person.nip && <p className="field-hint">NIP {person.nip}</p>}
-                <Button type="button" variant="quiet" onClick={() => setEditing(person.id)} aria-label={`Ubah kontak ${person.full_name}`}><Pencil size={15} aria-hidden="true" /> Ubah</Button></>}</td>
-            {wamAccounts?.migrated && <td><WamAccountCell status={wamStatus(person, withAccount.has(person.id))} unused={!person.active && withAccount.has(person.id)}
-              busy={busy === `account-${person.id}`} disabled={!!busy || !wamReady} name={person.full_name} onCreate={() => createAccounts(person)} /></td>}
-            <td><label className={styles.superSwitch}>
-              <input type="checkbox" role="switch" checked={person.active} disabled={busy === person.id} onChange={e => patch(person, { active: e.target.checked })} aria-label={`${person.full_name} aktif`} />
-              <span>{person.active ? "Aktif" : "Nonaktif"}</span>
-            </label></td>
-          </tr>)}</tbody>
+          <thead><tr><th scope="col">Karyawan</th><th scope="col">Departemen & jabatan</th><th scope="col">Business Unit</th><th scope="col">Kontak</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Aksi</span></th></tr></thead>
+          <tbody>{shown.map(person => {
+            const led = leadsOf(person.id);
+            const hodHere = led.departments.includes(person.department);
+            return <tr key={person.id} className={person.active ? undefined : own.inactive} aria-busy={busy === person.id || busy === `delete-${person.id}`}>
+              <td className={own.person}><strong>{person.full_name}</strong><p className={own.muted}>{[person.nickname, person.nip && `NIP ${person.nip}`].filter(Boolean).join(" · ") || "—"}</p></td>
+              <td>
+                <strong>{person.department || "—"}</strong>
+                <p className={own.job}>{person.position || "Jabatan belum diisi"}{hodHere ? " · HOD" : ""}</p>
+                {(led.departments.some(name => name !== person.department) || led.businessUnits.length > 0 || person.category !== "karyawan") && <div className={own.chips}>
+                  {led.departments.filter(name => name !== person.department).map(name => <span key={name} className={`${own.chip} ${own.chipHod}`}>HOD {name}</span>)}
+                  {led.businessUnits.map(name => <span key={name} className={`${own.chip} ${own.chipLead}`}>Lead BU {buCode(name)}</span>)}
+                  {person.category !== "karyawan" && <span className={`${own.chip} ${own.chipWork}`}>{categoryLabels[person.category]}</span>}
+                </div>}
+              </td>
+              <td><span className={own.bu}>{buCode(person.business_unit)}</span></td>
+              <td>{person.phone || person.email ? <><p>{person.phone || "—"}</p><p className={own.muted}>{person.email}</p></> : <p className={own.muted}>Belum ada</p>}</td>
+              <td><label className={styles.superSwitch}>
+                <input type="checkbox" role="switch" checked={person.active} disabled={busy === person.id} onChange={e => patch(person, { active: e.target.checked })} aria-label={`${person.full_name} aktif`} />
+                <span>{person.active ? "Aktif" : "Nonaktif"}</span>
+              </label></td>
+              <td><div className={own.actions}>
+                <button type="button" className={own.iconButton} disabled={!!busy} onClick={() => { setEditorError(""); setEditor({ person }); }} aria-label={`Ubah ${person.full_name}`} title="Ubah"><Pencil size={18} aria-hidden="true" /></button>
+                <button type="button" className={`${own.iconButton} ${own.danger}`} disabled={!!busy} onClick={() => void remove(person)} aria-label={`Hapus ${person.full_name}`} title="Hapus"><Trash2 size={18} aria-hidden="true" /></button>
+              </div></td>
+            </tr>;
+          })}</tbody>
         </table></div>}
       {people.length > 0 && shown.length === 0 && <p className="field-hint">Tidak ada yang cocok dengan pencarian.</p>}
-      {leadOptions && <datalist id="bu-options">{leadOptions.businessUnits.map(name => <option key={name} value={name} />)}</datalist>}
     </section>
+
+    {editor && <EmployeeEditor key={editor.person?.id ?? "baru"} person={editor.person} leads={editor.person ? leadsOf(editor.person.id) : { departments: [], businessUnits: [] }}
+      options={leadOptions ?? null} departments={departments} saving={busy === "editor"} error={editorError}
+      onSave={(draft, nextLeads) => void saveEditor(editor.person, draft, nextLeads)} onClose={() => setEditor(undefined)} />}
   </div>;
 }

@@ -20,7 +20,7 @@ export type AccountRow = {
   leads: string[];
   /** BUs this person leads. */
   buLeads: string[];
-  /** Their business unit (Werkudara Nirwana Sakti until set); "" before migration 202611060002. */
+  /** Their business unit by code (WNS until set); "" before migration 202611060002. */
   businessUnit: string;
 };
 

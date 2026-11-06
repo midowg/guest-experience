@@ -65,6 +65,37 @@ export async function importEmployees(rows: EmployeeRow[]): Promise<{ added: num
   return { added: fresh.length, updated: changed.length, unchanged: plan.length - fresh.length - changed.length };
 }
 
+/** Adds one person by hand (Tambah karyawan). A name already in the list is refused, not doubled. */
+export async function createEmployee(input: Omit<Employee, "id">): Promise<Employee> {
+  const { nip, ...rest } = input;
+  let { data, error } = await createPrivilegedClient().from("employees").insert({ ...rest, nip: nip.trim() || null }).select("*").single();
+  // Before migration 202611060004 / 202611060002 the BU column may be missing: save without it.
+  if (error && noBuColumn(error)) {
+    const { business_unit: _bu, ...withoutBu } = rest;
+    void _bu;
+    ({ data, error } = await createPrivilegedClient().from("employees").insert({ ...withoutBu, nip: nip.trim() || null }).select("*").single());
+  }
+  if (error) {
+    if (notMigrated(error)) throw waiting();
+    if (error.code === "23505") throw new ServiceError(409, /nip/i.test(error.message) ? "NIP ini sudah dipakai karyawan lain." : "Nama ini sudah ada di Data karyawan.", /nip/i.test(error.message) ? { nip: ["NIP ini sudah dipakai karyawan lain."] } : { full_name: ["Nama ini sudah ada di Data karyawan."] });
+    databaseError(error);
+  }
+  return tidyRow(data as unknown as Record<string, unknown>);
+}
+
+/**
+ * Removes one person for good. Someone the apps already hold (a WAM account, bookings, sessions,
+ * answers) cannot go: the database refuses, and the super admin is told to make them inactive.
+ */
+export async function deleteEmployee(id: string): Promise<void> {
+  const { data, error } = await createPrivilegedClient().from("employees").delete().eq("id", id).select("id");
+  if (error) {
+    if (error.code === "23503") throw new ServiceError(409, "Karyawan ini sudah punya data di aplikasi (akun WAM, booking, atau jawaban), jadi tidak bisa dihapus. Nonaktifkan saja.");
+    databaseError(error);
+  }
+  if (!data?.length) throw new ServiceError(404, "Karyawan tidak ditemukan.");
+}
+
 export async function updateEmployee(id: string, patch: Partial<Omit<Employee, "id">>): Promise<Employee> {
   const { nip, ...rest } = patch;
   const values = { ...rest, ...(nip !== undefined ? { nip: nip.trim() || null } : {}), updated_at: new Date().toISOString() };
