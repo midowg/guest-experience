@@ -28,3 +28,11 @@
 .branch .branch { margin: 6px 0 0 16px; padding-left: 12px; border-left: 2px solid var(--cs-line, #dde3ea); }
 .branch .branch > li { position: relative; }
 .branch .branch > li::before { content: ""; position: absolute; left: -12px; top: 22px; width: 10px; height: 2px; background: var(--cs-line, #dde3ea); }
+
+/* Sub-groups of a department (Sales & Marketing): under the HOD, a light box each with its people. */
+.groups { display: grid; gap: 8px; margin: 8px 0 0 16px; padding-left: 12px; border-left: 2px solid var(--cs-line, #dde3ea); }
+.group { display: grid; gap: 6px; padding: 8px; border: 1px dashed var(--cs-line, #dde3ea); border-radius: 12px; background: color-mix(in srgb, var(--cs-surface, #fff) 60%, transparent); }
+.group h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--cs-subtle, #6b7280); }
+.group h3 span { padding: 0 6px; border-radius: 999px; background: var(--cs-surface-2, #f6f7f9); font-weight: 600; }
+.branch.root { margin: 0; padding: 0; border: 0; }
+.branch.root > li::before { display: none; }

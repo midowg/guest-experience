@@ -1,5 +1,5 @@
 import { Crown, UserRound, Users } from "lucide-react";
-import type { Org, OrgNode, OrgPerson } from "@/lib/org";
+import type { Org, OrgGroup, OrgNode, OrgPerson } from "@/lib/org";
 import css from "./org-chart.module.css";
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
@@ -12,12 +12,21 @@ function PersonCard({ person, tag, strong = false }: { person: OrgPerson; tag?: 
   </div>;
 }
 
-function Branch({ nodes }: { nodes: OrgNode[] }) {
+function Branch({ nodes, root = false }: { nodes: OrgNode[]; root?: boolean }) {
   if (!nodes.length) return null;
-  return <ul className={css.branch}>{nodes.map(node => <li key={node.id}>
+  return <ul className={`${css.branch} ${root ? css.root : ""}`}>{nodes.map(node => <li key={node.id}>
     <PersonCard person={node} />
     <Branch nodes={node.children} />
   </li>)}</ul>;
+}
+
+/** A department's sub-groups (no lead yet): a labelled box each, with its people. */
+function Groups({ groups }: { groups: OrgGroup[] }) {
+  if (!groups.length) return null;
+  return <div className={css.groups}>{groups.map(group => <section key={group.name} className={css.group} aria-label={group.name}>
+    <h3>{group.name} <span>{group.people.length}</span></h3>
+    <Branch nodes={group.people} root />
+  </section>)}</div>;
 }
 
 /**
@@ -54,8 +63,10 @@ export function OrgChart({ org }: { org: Org }) {
         <ul className={css.branch}>{department.heads.map(head => <li key={head.id}>
           <PersonCard person={head} tag={head.department === department.name ? "HOD" : `HOD · dari ${head.department}`} strong />
           <Branch nodes={head.children} />
+          {department.heads.length === 1 && <Groups groups={department.groups} />}
         </li>)}</ul>
         <Branch nodes={department.loose} />
+        {department.heads.length !== 1 && <Groups groups={department.groups} />}
       </article>)}</div>
     </section>
   </div>;

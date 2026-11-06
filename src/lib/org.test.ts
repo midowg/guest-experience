@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOrg, type OrgPerson } from "./org";
+import { buildOrg, subGroupOf, type OrgPerson } from "./org";
 
 const p = (id: string, name: string, department: string, position: string, reportsTo: string | null = null, businessUnit = "WNS"): OrgPerson => ({ id, name, department, position, businessUnit, reportsTo });
 const people = [
@@ -27,8 +27,9 @@ describe("buildOrg", () => {
     const sales = org.departments.find(department => department.name === "Sales & Marketing")!;
     expect(sales.heads.map(head => head.id)).toEqual(["gm"]);
     const gm = sales.heads[0];
-    expect(gm.children.map(child => child.id)).toEqual(["bsm", "des"]);
-    expect(gm.children[0].children.map(child => child.id)).toEqual(["eng"]);
+    expect(gm.children).toEqual([]);
+    expect(sales.groups.map(group => [group.name, group.people.map(person => person.id)])).toEqual([["Business Solutions", ["bsm"]], ["Creative & Content", ["des"]]]);
+    expect(sales.groups[0].people[0].children.map(child => child.id)).toEqual(["eng"]);
     expect(sales.loose).toEqual([]);
     expect(sales.size).toBe(4);
   });
@@ -40,7 +41,22 @@ describe("buildOrg", () => {
     expect(mrp.heads[0].children.map(child => child.id)).toEqual(["mrp1"]);
     expect(mrp.size).toBe(1);
     const sales = shared.departments.find(department => department.name === "Sales & Marketing")!;
-    expect(sales.heads[0].children.map(child => child.id)).toEqual(["bsm", "des"]);
+    expect(sales.groups.flatMap(group => group.people.map(person => person.id))).toEqual(["bsm", "des"]);
+  });
+
+  it("reads the Sales & Marketing sub-group from the position, first match first", () => {
+    expect(subGroupOf("Sales & Marketing", "Business Solution Manager")).toBe("Business Solutions");
+    expect(subGroupOf("Sales & Marketing", "Business Solutions & Commercial Coordinator")).toBe("Business Solutions");
+    expect(subGroupOf("Sales & Marketing", "Commercial Creative Designer")).toBe("Creative & Content");
+    expect(subGroupOf("Sales & Marketing", "Costing & Pricing Analyst")).toBe("Commercial");
+    expect(subGroupOf("Sales & Marketing", "General Manager")).toBeNull();
+    expect(subGroupOf("Accounting", "Commercial Engineer")).toBeNull();
+  });
+
+  it("keeps a person outside every group under the HOD", () => {
+    const withOther = buildOrg([...people, p("ops", "Oki", "Sales & Marketing", "Sales Admin")], new Set(["bagus", "fadli"]), { "Sales & Marketing": ["gm"] });
+    const sales = withOther.departments.find(department => department.name === "Sales & Marketing")!;
+    expect(sales.heads[0].children.map(child => child.id)).toEqual(["ops"]);
   });
 
   it("keeps a department without a HOD flat, and cuts a loop", () => {
