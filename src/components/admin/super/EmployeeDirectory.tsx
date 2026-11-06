@@ -8,7 +8,8 @@ import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { categoryLabels, type Employee, type EmployeeRow, type ImportChange } from "@/lib/employees";
 import { employeesApi, praWamAccountsApi } from "@/lib/routes";
 import type { AccountRow } from "@/lib/server/pra-wam/accounts";
-import { buCode, type Leads } from "@/lib/pra-wam/leads";
+import { BUSINESS_UNITS, buCode, type Leads } from "@/lib/pra-wam/leads";
+import type { PraWamRole } from "@/lib/pra-wam/roles";
 import { EmployeeEditor, type EmployeeDraft } from "./EmployeeEditor";
 import own from "./employee-editor.module.css";
 import styles from "@/components/admin/admin.module.css";
@@ -19,7 +20,9 @@ const changeLabels: Record<ImportChange, string> = { baru: "Baru", berubah: "Dip
  * WAM sign-ins as Data karyawan shows them: who has one. Each app keeps its own accounts, so
  * another app's (Coffee Werkudara, say) can sit beside this one as its own column later.
  */
-export type WamAccounts = { migrated: boolean; passwordReady: boolean; withAccount: string[] };
+export type WamAccounts = { migrated: boolean; passwordReady: boolean; withAccount: string[];
+  /** Per person: their WAM roles (BOD, Admin WAM and Panitia), for the structure in the editor. */
+  roles?: Record<string, PraWamRole[]> };
 type WamStatus = "punya" | "belum" | "tanpa-email" | "nonaktif";
 function wamStatus(person: Employee, has: boolean): WamStatus {
   if (!person.active) return "nonaktif";
@@ -49,8 +52,11 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("");
+  const [businessUnit, setBusinessUnit] = useState("");
   const [leads, setLeads] = useState<Record<string, Leads>>(initialLeads ?? {});
   const leadsOf = (id: string): Leads => leads[id] ?? { departments: [], businessUnits: [] };
+  const [roles, setRoles] = useState<Record<string, PraWamRole[]>>(wamAccounts?.roles ?? {});
+  const rolesOf = (id: string): PraWamRole[] => roles[id] ?? [];
   /** The person being changed, or `null` for a new one; closed when undefined. */
   const [editor, setEditor] = useState<{ person: Employee | null } | undefined>(undefined);
   const [editorError, setEditorError] = useState("");
@@ -63,8 +69,11 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   const activeWithAccount = people.filter(person => person.active && withAccount.has(person.id)).length;
 
   const departments = useMemo(() => [...new Set(people.map(person => person.department).filter(Boolean))].sort(), [people]);
-  const shown = people.filter(person => (!department || person.department === department)
-    && (!query.trim() || `${person.full_name} ${person.nickname} ${person.position}`.toLowerCase().includes(query.trim().toLowerCase())));
+  // By Business Unit (MRP, WNS, TEE, NMU, WNN, as listed), then by name A to Z.
+  const buRank = (person: Employee) => { const at = (BUSINESS_UNITS as readonly string[]).indexOf(buCode(person.business_unit)); return at < 0 ? BUSINESS_UNITS.length : at; };
+  const shown = people.filter(person => (!department || person.department === department) && (!businessUnit || buCode(person.business_unit) === businessUnit)
+    && (!query.trim() || `${person.full_name} ${person.nickname} ${person.position}`.toLowerCase().includes(query.trim().toLowerCase())))
+    .sort((a, b) => buRank(a) - buRank(b) || a.full_name.localeCompare(b.full_name, "id", { sensitivity: "base" }));
   const counts = plan ? { baru: plan.plan.filter(item => item.change === "baru").length, berubah: plan.plan.filter(item => item.change === "berubah").length, sama: plan.plan.filter(item => item.change === "sama").length } : null;
 
   async function read() {
@@ -103,7 +112,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   }
 
   /** Saves the editor: the person (new or changed), then what they head when that changed. */
-  async function saveEditor(person: Employee | null, draft: EmployeeDraft, nextLeads: Leads) {
+  async function saveEditor(person: Employee | null, draft: EmployeeDraft, nextLeads: Leads, nextRoles: PraWamRole[]) {
     setBusy("editor"); setEditorError(""); setError(""); setMessage(""); setSkipped([]);
     try {
       let saved: Employee | undefined;
@@ -114,11 +123,15 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
         saved = (await adminRequest<Employee>(employeesApi(), { method: "POST", body: JSON.stringify({ employee: draft }) })).data;
       }
       if (!saved) throw new Error("Belum tersimpan.");
+      // The structure: BOD and Admin WAM, and what they head; saved together so the rules hold.
       const before = person ? leadsOf(person.id) : { departments: [], businessUnits: [] };
       const sameLeads = before.departments.join("|") === nextLeads.departments.join("|") && before.businessUnits.join("|") === nextLeads.businessUnits.join("|");
-      if (!sameLeads) {
-        await adminRequest(praWamAccountsApi(saved.id), { method: "PATCH", body: JSON.stringify({ leads: nextLeads }) });
+      const rolesBefore = person ? rolesOf(person.id) : [];
+      const sameRoles = rolesBefore.length === nextRoles.length && rolesBefore.every(role => nextRoles.includes(role));
+      if (!sameLeads || !sameRoles) {
+        await adminRequest(praWamAccountsApi(saved.id), { method: "PATCH", body: JSON.stringify({ ...(sameLeads ? {} : { leads: nextLeads }), ...(sameRoles ? {} : { roles: nextRoles }) }) });
         setLeads(current => ({ ...current, [saved!.id]: nextLeads }));
+        setRoles(current => ({ ...current, [saved!.id]: nextRoles }));
       }
       const done = saved;
       setPeople(list => person ? list.map(item => item.id === done.id ? done : item) : [done, ...list]);
@@ -214,6 +227,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
       <div className={own.toolbar}>
         <Field name="employee-search" label="Cari"><input id="employee-search" className="input" type="search" value={query} placeholder="Nama, panggilan, atau jabatan" onChange={e => setQuery(e.target.value)} /></Field>
         <Field name="employee-department" label="Departemen"><select id="employee-department" className="input" value={department} onChange={e => setDepartment(e.target.value)}><option value="">Semua departemen</option>{departments.map(name => <option key={name} value={name}>{name}</option>)}</select></Field>
+        <Field name="employee-bu" label="Business Unit"><select id="employee-bu" className="input" value={businessUnit} onChange={e => setBusinessUnit(e.target.value)}><option value="">Semua BU</option>{BUSINESS_UNITS.map(code => <option key={code} value={code}>{code} ({people.filter(person => buCode(person.business_unit) === code).length})</option>)}</select></Field>
         <Button type="button" disabled={!migrated || !!busy} onClick={() => { setEditorError(""); setEditor({ person: null }); }}><Plus size={18} aria-hidden="true" /> Tambah karyawan</Button>
       </div>
 
@@ -229,7 +243,8 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
               <td>
                 <strong>{person.department || "—"}</strong>
                 <p className={own.job}>{person.position || "Jabatan belum diisi"}{hodHere ? " · HOD" : ""}</p>
-                {(led.departments.some(name => name !== person.department) || led.businessUnits.length > 0 || person.category !== "karyawan") && <div className={own.chips}>
+                {(rolesOf(person.id).includes("bod") || led.departments.some(name => name !== person.department) || led.businessUnits.length > 0 || person.category !== "karyawan") && <div className={own.chips}>
+                  {rolesOf(person.id).includes("bod") && <span className={`${own.chip} ${own.chipBod}`}>BOD</span>}
                   {led.departments.filter(name => name !== person.department).map(name => <span key={name} className={`${own.chip} ${own.chipHod}`}>HOD {name}</span>)}
                   {led.businessUnits.map(name => <span key={name} className={`${own.chip} ${own.chipLead}`}>Lead BU {buCode(name)}</span>)}
                   {person.category !== "karyawan" && <span className={`${own.chip} ${own.chipWork}`}>{categoryLabels[person.category]}</span>}
@@ -252,7 +267,8 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     </section>
 
     {editor && <EmployeeEditor key={editor.person?.id ?? "baru"} person={editor.person} leads={editor.person ? leadsOf(editor.person.id) : { departments: [], businessUnits: [] }}
+      roles={editor.person ? rolesOf(editor.person.id) : []}
       options={leadOptions ?? null} departments={departments} saving={busy === "editor"} error={editorError}
-      onSave={(draft, nextLeads) => void saveEditor(editor.person, draft, nextLeads)} onClose={() => setEditor(undefined)} />}
+      onSave={(draft, nextLeads, nextRoles) => void saveEditor(editor.person, draft, nextLeads, nextRoles)} onClose={() => setEditor(undefined)} />}
   </div>;
 }

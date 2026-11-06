@@ -88,29 +88,28 @@ describe("Akun dan peran, tab Akun", () => {
     expect(screen.getByRole("table")).toBeTruthy();
   });
 
-  it("opens a person's detail from the card, and saves a role there", async () => {
+  it("opens a person's detail from the card: only Panitia to tick, the structure shown from Data karyawan", async () => {
     renderAccounts();
     fireEvent.click(cards()[3]);
     const detail = screen.getByRole("dialog", { name: "Dewi Lestari" });
     expect(within(detail).getByRole("checkbox", { name: "Panitia: Dewi Lestari" })).toHaveProperty("checked", true);
-    await act(async () => { fireEvent.click(within(detail).getByRole("checkbox", { name: "Admin WAM: Dewi Lestari" })); });
-    expect(fetchMock).toHaveBeenCalledWith(praWamAccountsApi("e1"), expect.objectContaining({ method: "PATCH", body: JSON.stringify({ roles: ["panitia", "admin"] }) }));
-    expect(within(detail).getByRole("status").textContent).toBe("Peran disimpan.");
-    // BOD is locked for Panitia, and the reason is written out.
-    expect(within(detail).getByRole("checkbox", { name: "BOD: Dewi Lestari" })).toHaveProperty("disabled", true);
-    expect(within(detail).getByText("BOD terkunci karena orang ini Panitia atau Admin WAM.")).toBeTruthy();
+    // BOD, Admin WAM, HOD and lead BU are the super admin's, in Data karyawan.
+    expect(within(detail).queryByRole("checkbox", { name: "BOD: Dewi Lestari" })).toBeNull();
+    expect(within(detail).queryByRole("checkbox", { name: "Admin WAM: Dewi Lestari" })).toBeNull();
+    expect(within(detail).getByRole("region", { name: "Struktur" })).toBeTruthy();
+    expect(within(detail).getByText("Diatur super admin di Data karyawan.")).toBeTruthy();
+    await act(async () => { fireEvent.click(within(detail).getByRole("checkbox", { name: "Panitia: Dewi Lestari" })); });
+    expect(fetchMock).toHaveBeenCalledWith(praWamAccountsApi("e1"), expect.objectContaining({ method: "PATCH", body: JSON.stringify({ roles: [] }) }));
     fireEvent.click(within(detail).getByRole("button", { name: "Tutup" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("shows a refused change inside the detail", async () => {
-    fetchMock.mockResolvedValueOnce({ ok: false, status: 422, json: async () => ({ ok: false, message: "BOD tidak bisa digabung dengan Panitia." }) });
+  it("keeps Panitia locked for a BOD, with why", () => {
     renderAccounts();
     fireEvent.click(cards()[1]);
     const detail = screen.getByRole("dialog", { name: "Bagus Santoso" });
     expect(within(detail).getByRole("checkbox", { name: "Panitia: Bagus Santoso" })).toHaveProperty("disabled", true);
-    await act(async () => { fireEvent.click(within(detail).getByRole("checkbox", { name: "BOD: Bagus Santoso" })); });
-    expect(within(detail).getByRole("alert").textContent).toBe("BOD tidak bisa digabung dengan Panitia.");
+    expect(within(detail).getByText(/Jabatan struktural/).nextElementSibling?.textContent).toContain("BOD");
   });
 
   it("changes the sign-in email", async () => {

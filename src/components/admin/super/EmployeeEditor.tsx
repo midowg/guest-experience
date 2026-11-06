@@ -6,6 +6,7 @@ import { Button, Notice } from "@/components/ui";
 import { LeadEditor } from "@/components/admin/wam/akun/LeadEditor";
 import { categoryLabels, employeeCategories, type Employee, type EmployeeCategory } from "@/lib/employees";
 import { BUSINESS_UNITS, DEFAULT_BUSINESS_UNIT, buCode, buFromOffice, type Leads } from "@/lib/pra-wam/leads";
+import type { PraWamRole } from "@/lib/pra-wam/roles";
 import css from "./employee-editor.module.css";
 
 export type EmployeeDraft = Omit<Employee, "id" | "active">;
@@ -17,27 +18,33 @@ const draftOf = (person: Employee | null): EmployeeDraft => person
 
 /**
  * Tambah karyawan or Ubah karyawan (6 Nov 2026): one panel from the side (from the bottom on a
- * phone) with everything about a person in four parts, Identitas, Pekerjaan, Kontak and
- * Memimpin, and one Simpan. GA and Intern are a person's kind of work, so they sit under Pekerjaan.
+ * phone) with everything about a person: Identitas, Pekerjaan, Kontak, and Struktur dan akses (BOD,
+ * Admin WAM, HOD departemen, lead BU: the structure lives here, Admin WAM only picks Panitia), with one Simpan. GA and Intern are a person's kind of work, so they sit under Pekerjaan.
  * A native <dialog>: Esc, the dimmed page or X close it without saving.
  */
-export function EmployeeEditor({ person, leads, options, departments, saving, error, onSave, onClose }: {
+export function EmployeeEditor({ person, leads, roles, options, departments, saving, error, onSave, onClose }: {
   /** The person to change; null adds a new one. */
   person: Employee | null;
   leads: Leads;
+  /** Their WAM roles: BOD and Admin WAM are set here; Panitia stays with Admin WAM and is kept as it is. */
+  roles: PraWamRole[];
   /** The departments and BUs to pick from (HOD and lead BU). */
   options: Leads | null;
   /** The departments already in Data karyawan, offered while typing. */
   departments: string[];
   saving: boolean;
   error: string;
-  onSave: (draft: EmployeeDraft, leads: Leads) => void;
+  onSave: (draft: EmployeeDraft, leads: Leads, roles: PraWamRole[]) => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   const [draft, setDraft] = useState<EmployeeDraft>(() => draftOf(person));
   const [nextLeads, setNextLeads] = useState<Leads>(leads);
+  const [nextRoles, setNextRoles] = useState<PraWamRole[]>(roles);
+  const isBod = nextRoles.includes("bod");
+  const heads = nextLeads.departments.length + nextLeads.businessUnits.length > 0;
+  const toggleRole = (role: PraWamRole) => setNextRoles(current => current.includes(role) ? current.filter(item => item !== role) : [...current, role]);
   const [problems, setProblems] = useState<Partial<Record<keyof EmployeeDraft, string>>>({});
   const set = (patch: Partial<EmployeeDraft>) => { setDraft(current => ({ ...current, ...patch })); setProblems({}); };
 
@@ -56,7 +63,7 @@ export function EmployeeEditor({ person, leads, options, departments, saving, er
     if (!draft.position.trim()) found.position = "Isi jabatan.";
     if (draft.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(draft.email.trim())) found.email = "Email tidak valid.";
     if (Object.keys(found).length) { setProblems(found); return; }
-    onSave({ ...draft, full_name: draft.full_name.trim(), department: draft.department.trim(), position: draft.position.trim() }, nextLeads);
+    onSave({ ...draft, full_name: draft.full_name.trim(), department: draft.department.trim(), position: draft.position.trim() }, nextLeads, nextRoles);
   }
 
   const field = (key: keyof EmployeeDraft, label: string, input: React.ReactNode, hint?: string) => <div className={css.field}>
@@ -124,7 +131,24 @@ export function EmployeeEditor({ person, leads, options, departments, saving, er
           </div>
         </fieldset>
 
-        {options && <LeadEditor name={draft.full_name || "karyawan baru"} value={leads} options={options} onChange={setNextLeads} className={css.group} />}
+        <fieldset className={css.group}>
+          <legend>Struktur dan akses</legend>
+          <p className={css.hint}>Diatur di sini saja; Admin WAM hanya memilih Panitia. BOD berdiri sendiri: tidak memimpin departemen atau BU, dan bukan Panitia atau Admin WAM.</p>
+          <div className={css.roleTicks}>
+            <label className={css.roleTick}>
+              <input type="checkbox" checked={isBod} disabled={!isBod && (heads || nextRoles.includes("panitia") || nextRoles.includes("admin"))} onChange={() => toggleRole("bod")} />
+              <span>BOD<small>Melihat Ringkasan dan semua sesi, tanpa mengubah.</small></span>
+            </label>
+            <label className={css.roleTick}>
+              <input type="checkbox" checked={nextRoles.includes("admin")} disabled={isBod} onChange={() => toggleRole("admin")} />
+              <span>Admin WAM<small>Mengatur aplikasi WAM: akun, ruang, acara.</small></span>
+            </label>
+          </div>
+          {!isBod && (heads || nextRoles.includes("panitia") || nextRoles.includes("admin")) && <p className={css.hint}>BOD terkunci karena orang ini {heads ? "memimpin departemen atau BU" : nextRoles.includes("admin") ? "Admin WAM" : "Panitia"}.</p>}
+        </fieldset>
+
+        {options && <LeadEditor name={draft.full_name || "karyawan baru"} value={leads} options={options} onChange={setNextLeads} className={css.group}
+          locked={isBod ? "BOD tidak memimpin departemen atau BU. Lepas BOD dulu untuk mengisinya." : undefined} />}
       </div>
 
       <footer className={css.foot}>

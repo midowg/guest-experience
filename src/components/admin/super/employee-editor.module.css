@@ -29,7 +29,8 @@
 .segment:has(input:focus-visible) { outline: 2px solid var(--blue, #2f6feb); outline-offset: 1px; }
 
 /* The list: a toolbar (search, department, Tambah karyawan), then one row per person. */
-.toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 16rem) auto; gap: 12px; align-items: end; }
+.toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 15rem) minmax(0, 10rem) auto; gap: 12px; align-items: end; }
+@media (max-width: 1023.98px) { .toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 767.98px) { .toolbar { grid-template-columns: 1fr; } }
 .person strong { display: block; font-weight: 700; }
 .muted { margin: 2px 0 0; font-size: 13px; color: var(--ink-soft, #6b7280); }
@@ -47,3 +48,14 @@
 .iconButton.danger:hover:not(:disabled) { border-color: #dc2626; color: #dc2626; background: #fee2e2; }
 .iconButton:disabled { opacity: .45; cursor: not-allowed; }
 .iconButton:focus-visible { outline: 2px solid var(--blue, #2f6feb); outline-offset: 2px; }
+
+.chipBod { background: #fef3c7; color: #92400e; }
+/* Struktur dan akses: BOD and Admin WAM ticks, above what the person heads. */
+.roleTicks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 479.98px) { .roleTicks { grid-template-columns: 1fr; } }
+.roleTick { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--line, #e4e7ec); border-radius: 12px; cursor: pointer; }
+.roleTick input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--blue, #2f6feb); }
+.roleTick span { display: grid; gap: 2px; font-size: 14px; font-weight: 600; }
+.roleTick small { font-size: 12px; font-weight: 500; color: var(--ink-soft, #6b7280); }
+.roleTick:has(input:checked) { border-color: var(--blue, #2f6feb); background: #e3ecfd; }
+.roleTick:has(input:disabled) { cursor: not-allowed; opacity: .55; }

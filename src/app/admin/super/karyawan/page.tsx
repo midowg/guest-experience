@@ -19,7 +19,8 @@ export const metadata = { title: "Data karyawan" };
 async function wamAccounts(): Promise<WamAccounts | null> {
   try {
     const { rows, migrated } = await listAccounts();
-    return { migrated, passwordReady: defaultPasswordReady(), withAccount: rows.filter(row => row.hasAccount).map(row => row.employeeId) };
+    return { migrated, passwordReady: defaultPasswordReady(), withAccount: rows.filter(row => row.hasAccount).map(row => row.employeeId),
+      roles: Object.fromEntries(rows.filter(row => row.roles.length).map(row => [row.employeeId, row.roles])) };
   } catch { return null; }
 }
 

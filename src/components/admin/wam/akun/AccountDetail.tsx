@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { leadsLabel, type Leads } from "@/lib/pra-wam/leads";
-import { LeadEditor } from "./LeadEditor";
+import { buCode, leadsLabel } from "@/lib/pra-wam/leads";
 import { Pencil, X } from "lucide-react";
 import { Avatar, ConsoleButton, Pill, RolePills } from "@/components/console";
-import { blockedRoles, praWamRoles, roleConflicts, roleLabels, roleProblem, type PraWamRole } from "@/lib/pra-wam/roles";
+import { blockedRoles, roleConflicts, roleLabels, roleProblem, type PraWamRole } from "@/lib/pra-wam/roles";
 import type { AccountRow } from "@/lib/server/pra-wam/accounts";
 import { accountState, lastLoginLabel, roleItems, type AccountStatus } from "./account-view";
 import css from "./akun.module.css";
@@ -24,9 +23,6 @@ export type AccountDetailProps = {
   done?: string;
   onClose: () => void;
   onToggleRole: (role: PraWamRole) => void;
-  /** The departments and BUs to pick from for HOD and lead BU; no editor without them. */
-  leadOptions?: Leads;
-  onSaveLeads?: (leads: Leads) => void;
   /** Resolves true once the new email is saved. */
   onSaveEmail: (email: string) => Promise<boolean>;
   onReset: () => void;
@@ -38,7 +34,7 @@ export type AccountDetailProps = {
  * sign-in email (changeable), the roles to tick with the BOD rule explained, and the password
  * reset or, without an account, making one. A native <dialog>: Esc, the dimmed page or X close it.
  */
-export function AccountDetail({ row, status, photo, job, busy, passwordReady, error, done, onClose, onToggleRole, leadOptions, onSaveLeads, onSaveEmail, onReset, onCreate }: AccountDetailProps) {
+export function AccountDetail({ row, status, photo, job, busy, passwordReady, error, done, onClose, onToggleRole, onSaveEmail, onReset, onCreate }: AccountDetailProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   const [email, setEmail] = useState<string | null>(null);
@@ -77,8 +73,6 @@ export function AccountDetail({ row, status, photo, job, busy, passwordReady, er
         {!error && done && <p role="status" className={css.done}>{done}</p>}
         <dl className={css.facts}>
           <div><dt>Departemen</dt><dd>{row.department || "—"}</dd></div>
-          {row.businessUnit && <div><dt>BU</dt><dd>{row.businessUnit}</dd></div>}
-          {(row.leads.length > 0 || row.buLeads.length > 0) && <div><dt>Memimpin</dt><dd>{leadsLabel({ departments: row.leads, businessUnits: row.buLeads })}</dd></div>}
           <div><dt>Peran</dt><dd><RolePills roles={roleItems(row)} max={5} /></dd></div>
           <div><dt>Akun</dt><dd>{accountState(row)}</dd></div>
           <div><dt>Terakhir masuk</dt><dd>{lastLoginLabel(row)}</dd></div>
@@ -103,8 +97,8 @@ export function AccountDetail({ row, status, photo, job, busy, passwordReady, er
 
         <fieldset className={css.detailSection}>
           <legend>Peran</legend>
-          <p className={css.hint}>Semua orang yang punya akun adalah peserta. Panitia, Admin WAM, dan HOD (diatur di bawah) bisa digabung; BOD berdiri sendiri. Perubahan berlaku di halaman berikutnya yang dibuka orang itu.</p>
-          <ul className={css.roleChecks}>{praWamRoles.map(role => <li key={role}>
+          <p className={css.hint}>Semua orang yang punya akun adalah peserta. Di sini hanya Panitia yang dipilih; BOD, Admin WAM, HOD, lead BU dan Business Unit diatur super admin di Data karyawan. Perubahan berlaku di halaman berikutnya yang dibuka orang itu.</p>
+          <ul className={css.roleChecks}>{(["panitia"] as const).map(role => <li key={role}>
             <label className={css.check} title={blocked[role]}>
               <input type="checkbox" aria-describedby={hint ? hintId : undefined} checked={row.roles.includes(role)} disabled={working || !!blocked[role]} onChange={() => onToggleRole(role)}
                 aria-label={`${roleLabels[role]}: ${row.name}`} />
@@ -115,10 +109,14 @@ export function AccountDetail({ row, status, photo, job, busy, passwordReady, er
           {hint && <p id={hintId} className={clash ? css.error : css.hint}>{hint}</p>}
         </fieldset>
 
-        {leadOptions && onSaveLeads && <LeadEditor key={`${row.leads.join("|")}#${row.buLeads.join("|")}`} name={row.name}
-          value={{ departments: row.leads, businessUnits: row.buLeads }} options={leadOptions}
-          locked={row.roles.includes("bod") ? "BOD tidak bisa menjadi HOD departemen atau lead BU." : undefined}
-          saving={busy === `leads-${row.employeeId}`} disabled={working} onSave={onSaveLeads} className={css.detailSection} />}
+        <section className={css.detailSection} aria-labelledby={`${id}-struktur`}>
+          <h3 id={`${id}-struktur`}>Struktur</h3>
+          <dl className={css.facts}>
+            <div><dt>Business Unit</dt><dd>{row.businessUnit ? buCode(row.businessUnit) : "—"}</dd></div>
+            <div><dt>Jabatan struktural</dt><dd>{[row.roles.includes("bod") && "BOD", row.roles.includes("admin") && "Admin WAM", leadsLabel({ departments: row.leads, businessUnits: row.buLeads })].filter(Boolean).join(" · ") || "—"}</dd></div>
+          </dl>
+          <p className={css.hint}>Diatur super admin di Data karyawan.</p>
+        </section>
       </div>
 
       {(row.hasAccount || row.active) && <footer className={css.detailFoot}>

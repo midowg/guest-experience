@@ -103,7 +103,7 @@ export const roleGuide: readonly RoleGuideItem[] = [
   { key: "peserta", label: "Peserta", does: "Book ruang, agenda dan dokumen sesi sendiri, absen QR. Dasar setiap akun.", combines: ["Panitia", "Admin WAM", "HOD", "BOD"] },
   { key: "panitia", label: "Panitia", does: "Kelola acara: sesi, permintaan jadwal, pengumuman; membatalkan booking siapa pun.", combines: ["Admin WAM", "HOD"] },
   { key: "admin", label: "Admin WAM", does: "Seperti Panitia, ditambah pengaturan aplikasi.", combines: ["Panitia", "HOD"] },
-  { key: "hod", label: "HOD", does: "Kepala departemen, dipilih per orang di detail akun (bisa lebih dari satu departemen); lead BU juga diatur di sana. HOD melihat Meeting HOD di Book.", combines: ["Panitia", "Admin WAM"] },
+  { key: "hod", label: "HOD", does: "Kepala departemen (bisa lebih dari satu), diatur super admin di Data karyawan bersama lead BU. HOD bisa booking ruang sebagai HOD.", combines: ["Panitia", "Admin WAM"] },
   { key: "bod", label: "BOD", does: "Menu BOD: Ringkasan, Peserta, Survei; melihat semua sesi tanpa mengubah. Tetap bisa ikut sesi dan book ruang.", combines: null },
 ];
 

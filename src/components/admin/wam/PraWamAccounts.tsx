@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Leads } from "@/lib/pra-wam/leads";
 import { ChevronRight, UserPlus } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { Avatar, CardGrid, ConsoleButton, FilterChips, Pill, PersonCard, RolePills, SectionToolbar, ViewToggle, useViewPreference } from "@/components/console";
@@ -31,8 +30,6 @@ export type PraWamAccountsProps = {
   resetRequested?: readonly string[];
   /** Open reset requests, for the tab's badge. */
   waiting?: number | null;
-  /** The departments and BUs to pick from for HOD and lead BU (leadOptions). */
-  leadOptions?: Leads;
 };
 
 /**
@@ -41,7 +38,7 @@ export type PraWamAccountsProps = {
  * resets. People show as cards (or a table, remembered on this device), with search and a role
  * filter; a card opens the person's detail, where every change is made.
  */
-export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = false, photos = {}, jobs = {}, resetRequested = [], waiting = null, leadOptions }: PraWamAccountsProps) {
+export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = false, photos = {}, jobs = {}, resetRequested = [], waiting = null }: PraWamAccountsProps) {
   const [rows, setRows] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<Message>(null);
@@ -78,7 +75,6 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
   }
   const toggleRole = (row: AccountRow, role: PraWamRole) =>
     run(`role-${row.employeeId}`, praWamAccountsApi(row.employeeId), { roles: row.roles.includes(role) ? row.roles.filter(item => item !== role) : [...row.roles, role] }, "PATCH", row.employeeId);
-  const saveLeads = (row: AccountRow, leads: Leads) => run(`leads-${row.employeeId}`, praWamAccountsApi(row.employeeId), { leads }, "PATCH", row.employeeId);
   const saveEmail = (row: AccountRow, email: string) => run(`email-${row.employeeId}`, praWamAccountsApi(row.employeeId), { email }, "PATCH", row.employeeId);
   const createOne = (row: AccountRow) => run(`create-${row.employeeId}`, praWamAccountsApi(row.employeeId), null, "POST", row.employeeId);
   const reset = async (row: AccountRow) => {
@@ -150,7 +146,6 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
       done={message?.tone === "success" ? message.text : undefined}
       onClose={() => { setOpenId(null); setRowError(null); }}
       onToggleRole={role => void toggleRole(open, role)} onSaveEmail={email => saveEmail(open, email)}
-      leadOptions={leadOptions} onSaveLeads={leads => void saveLeads(open, leads)}
       onReset={() => void reset(open)} onCreate={() => void createOne(open)} />}
   </>;
 }

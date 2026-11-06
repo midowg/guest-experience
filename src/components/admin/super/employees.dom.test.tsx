@@ -54,6 +54,23 @@ it("lists a person with department and job (HOD, lead BU, GA or Intern beside it
   expect(second.getByText("MRP")).toBeTruthy();
 });
 
+it("filters by department and Business Unit, and lists by BU then name", () => {
+  const people = [
+    { ...person, id: "6a000000-0000-4000-8000-000000000021", full_name: "Zaki", business_unit: "WNS" },
+    { ...person, id: "6a000000-0000-4000-8000-000000000022", full_name: "Bayu", business_unit: "TEE", department: "Takshaka Event & Experience" },
+    { ...person, id: "6a000000-0000-4000-8000-000000000023", full_name: "Adi", business_unit: "WNS" },
+    { ...person, id: "6a000000-0000-4000-8000-000000000024", full_name: "Mira", business_unit: "MRP", department: "Maha Raja Pratama" },
+  ];
+  render(<EmployeeDirectory initial={people} migrated />);
+  const names = () => [...screen.getByRole("table", { name: "Daftar karyawan" }).querySelectorAll("tbody strong:first-child")].map(node => node.textContent).filter(name => ["Zaki", "Bayu", "Adi", "Mira"].includes(name ?? ""));
+  expect(names()).toEqual(["Mira", "Adi", "Zaki", "Bayu"]);
+  fireEvent.change(screen.getByLabelText("Business Unit"), { target: { value: "WNS" } });
+  expect(names()).toEqual(["Adi", "Zaki"]);
+  fireEvent.change(screen.getByLabelText("Business Unit"), { target: { value: "" } });
+  fireEvent.change(screen.getByLabelText("Departemen"), { target: { value: "Takshaka Event & Experience" } });
+  expect(names()).toEqual(["Bayu"]);
+});
+
 it("changes a person in one panel, what they head included, and switches someone off from the list", async () => {
   const fetch = vi.fn(async (url: string, init: RequestInit) => url.includes("/wam/accounts/")
     ? reply({ ok: true, message: "HOD departemen dan lead BU disimpan.", data: { rows: [] } })
@@ -76,6 +93,26 @@ it("changes a person in one panel, what they head included, and switches someone
   fireEvent.click(row.getByRole("switch", { name: "Contoh Satu aktif" }));
   await screen.findAllByText("Data karyawan disimpan.");
   expect(JSON.parse(fetch.mock.calls[2][1].body as string)).toEqual({ active: false });
+});
+
+it("sets BOD and Admin WAM in Data karyawan, keeping Panitia as it is; BOD locked for someone heading a department", async () => {
+  const fetch = vi.fn(async (_url: string, _init: RequestInit) => { void _url; void _init; return reply({ ok: true, message: "Peran dan struktur disimpan.", data: { rows: [] } }); });
+  vi.stubGlobal("fetch", fetch);
+  const other = { ...person, id: "6a000000-0000-4000-8000-000000000031", full_name: "Kepala Satu" };
+  render(<EmployeeDirectory initial={[person, other]} migrated wamAccounts={{ migrated: true, passwordReady: true, withAccount: [], roles: { [person.id]: ["panitia"] } }}
+    leads={{ [other.id]: { departments: ["Corporate"], businessUnits: [] } }} leadOptions={{ departments: ["Corporate", "Sales & Marketing"], businessUnits: ["MRP", "WNS", "TEE", "NMU", "WNN"] }} />);
+  fireEvent.click(screen.getByRole("button", { name: "Ubah Contoh Satu" }));
+  let panel = within(screen.getByRole("dialog", { name: "Ubah karyawan" }));
+  // A Panitia cannot be BOD; Admin WAM can be added.
+  expect(panel.getByRole("checkbox", { name: /^BOD/ })).toHaveProperty("disabled", true);
+  fireEvent.click(panel.getByRole("checkbox", { name: /^Admin WAM/ }));
+  fireEvent.click(panel.getByRole("button", { name: "Simpan perubahan" }));
+  expect(await screen.findByText("Contoh Satu disimpan.")).toBeTruthy();
+  expect(JSON.parse(fetch.mock.calls[0][1].body as string)).toEqual({ roles: ["panitia", "admin"] });
+  fireEvent.click(screen.getByRole("button", { name: "Ubah Kepala Satu" }));
+  panel = within(screen.getByRole("dialog", { name: "Ubah karyawan" }));
+  expect(panel.getByRole("checkbox", { name: /^BOD/ })).toHaveProperty("disabled", true);
+  expect(panel.getByText("BOD terkunci karena orang ini memimpin departemen atau BU.")).toBeTruthy();
 });
 
 it("adds a person by hand, and asks before deleting one", async () => {
