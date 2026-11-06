@@ -13,7 +13,8 @@ const MIGRATION = "202611030001_employees.sql";
 const columns = "id,full_name,nickname,department,position,office,category,phone,email,active";
 const withNip = `${columns},nip`;
 const noNipColumn = (error: { code?: string; message?: string }) => ["42703", "PGRST204"].includes(error.code ?? "") && /nip/.test(error.message ?? "");
-const tidyRow = (row: Record<string, unknown>) => ({ ...row, nip: (row.nip as string | null | undefined) ?? "" }) as Employee;
+const tidyRow = (row: Record<string, unknown>) => ({ ...row, nip: (row.nip as string | null | undefined) ?? "", business_unit: (row.business_unit as string | null | undefined) ?? "" }) as Employee;
+const noBuColumn = (error: { code?: string; message?: string }) => ["42703", "PGRST204"].includes(error.code ?? "") && /business_unit/.test(error.message ?? "");
 const notMigrated = (error: { code?: string; message?: string }) =>
   ["42P01", "PGRST205"].includes(error.code ?? "") || /employees/.test(error.message ?? "");
 const waiting = () => new ServiceError(503, `Data karyawan menunggu migrasi ${MIGRATION}.`);
@@ -26,7 +27,9 @@ export async function listEmployees(activeOnly = false): Promise<{ employees: Em
     return query.order("active", { ascending: false }).order("department").order("full_name").limit(2000);
   };
   let hasNip = true;
-  let { data, error } = await read(withNip);
+  // The BU arrives with migration 202611060002; before it the list is read without it.
+  let { data, error } = await read(`${withNip},business_unit`);
+  if (error && noBuColumn(error)) ({ data, error } = await read(withNip));
   if (error && noNipColumn(error)) { hasNip = false; ({ data, error } = await read(columns)); }
   if (error) { if (notMigrated(error)) return { employees: [], migrated: false, hasNip: false }; databaseError(error); }
   return { employees: ((data ?? []) as unknown as Record<string, unknown>[]).map(tidyRow), migrated: true, hasNip };
@@ -65,10 +68,11 @@ export async function importEmployees(rows: EmployeeRow[]): Promise<{ added: num
 export async function updateEmployee(id: string, patch: Partial<Omit<Employee, "id">>): Promise<Employee> {
   const { nip, ...rest } = patch;
   const values = { ...rest, ...(nip !== undefined ? { nip: nip.trim() || null } : {}), updated_at: new Date().toISOString() };
-  const { data, error } = await createPrivilegedClient().from("employees").update(values).eq("id", id).select(nip !== undefined ? withNip : columns).maybeSingle();
+  const { data, error } = await createPrivilegedClient().from("employees").update(values).eq("id", id).select("*").maybeSingle();
   if (error) {
     if (notMigrated(error)) throw waiting();
     if (noNipColumn(error)) throw new ServiceError(503, "NIP menunggu migrasi 202611040002_pra_wam_roles.sql.");
+    if (noBuColumn(error)) throw new ServiceError(503, "BU menunggu migrasi 202611060002_pra_wam_departments_bu.sql.");
     if (error.code === "23505") throw new ServiceError(409, "NIP ini sudah dipakai karyawan lain.", { nip: ["NIP ini sudah dipakai karyawan lain."] });
     databaseError(error);
   }

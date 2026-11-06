@@ -37,7 +37,7 @@ export function wamScreen(pathname: string, search: Search, viewer: Viewer, came
     case praWamPath.newPassword(): return { back: { href: safePraWamNext(search.get("next")) ?? praWamPath.home, title: "Keamanan akun" } };
     case praWamPath.colleagues: return { back: { href: praWamPath.home, title: "Kartu rekan" } };
     case praWamPath.appraisal(): return { current: "appraisal" };
-    case praWamPath.hod: return { current: "hod" };
+    case praWamPath.hod: return { current: "appraisal" };
     case praWamPath.book(): return { current: "appraisal", back: { href: praWamPath.appraisal(search.get("date") ?? undefined), title: search.get("edit") ? "Ubah booking" : "Book ruang" } };
     case praWamPath.dashboard: return { current: "dashboard" };
     case praWamPath.sessions: return { current: "sesi" };

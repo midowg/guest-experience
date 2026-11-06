@@ -8,7 +8,7 @@ import { createPrivilegedClient } from "../supabase/admin";
 import { notifyPeople } from "./announcements";
 import { listPeople } from "./appraisal";
 import type { Member } from "./session";
-import { listUnits } from "./units";
+import { leadOptions, leadsOf, listLeads } from "./leads";
 
 /*
  * Meeting HOD (migration 202611060001): meetings between department heads, asked by one HOD and
@@ -24,49 +24,33 @@ function fail(error: { code?: string; message: string }): never {
 }
 
 /**
- * The departments and who heads each (6 Nov 2026): the department column of Data karyawan, so it
- * works without the unit import. A department's HODs are its active people Admin WAM ticked as
- * HOD, and the department leads of the unit import once it has run. A department is known by its
- * name (`id` is the name).
+ * The departments and who heads each (6 Nov 2026): the department names of Data karyawan, and the
+ * HODs set per person in Akun dan peran or Data karyawan (pw_leads; one person may head several).
+ * A department is known by its name (`id` is the name).
  */
-async function headsByDepartment(): Promise<{ departments: HodDepartment[]; headOf: Map<string, string[]> }> {
-  const client = createPrivilegedClient();
-  const [{ units, memberships }, people, { data: ticked, error }] = await Promise.all([
-    listUnits().catch(() => ({ units: [], memberships: [] })), listPeople(),
-    client.from("pw_roles").select("employee_id").eq("role", "hod"),
-  ]);
-  if (error && !missing(error)) databaseError(error);
-  const departmentUnits = new Set(units.filter(unit => unit.kind === "departemen").map(unit => unit.id));
-  const heads = new Set([
-    ...(ticked ?? []).map(row => row.employee_id),
-    ...memberships.filter(member => member.isLead && departmentUnits.has(member.unitId)).map(member => member.employeeId),
-  ]);
-  const active = people.filter(person => person.active && person.department.trim());
-  const names = [...new Set(active.map(person => person.department.trim()))].sort((a, b) => a.localeCompare(b, "id"));
-  const headOf = new Map<string, string[]>();
-  const departments = names.map(name => {
-    const list = active.filter(person => person.department.trim() === name && heads.has(person.id)).map(person => ({ id: person.id, name: person.name }));
-    for (const head of list) headOf.set(head.id, [...(headOf.get(head.id) ?? []), name]);
-    return { id: name, name, heads: list.sort((a, b) => a.name.localeCompare(b.name, "id")) };
-  });
-  return { departments, headOf };
+async function headsByDepartment(): Promise<HodDepartment[]> {
+  const [people, { byPerson }, options] = await Promise.all([listPeople(), listLeads(), leadOptions()]);
+  const active = new Map(people.filter(person => person.active).map(person => [person.id, person.name]));
+  return options.departments.map(name => ({
+    id: name, name,
+    heads: [...byPerson.entries()].filter(([id, leads]) => active.has(id) && leads.departments.includes(name))
+      .map(([id]) => ({ id, name: active.get(id)! })).sort((a, b) => a.name.localeCompare(b.name, "id")),
+  }));
 }
 
-/** Whether this person is a HOD, and of which departments (ticked, or a lead of the unit import). */
-export async function hodStanding(member: Pick<Member, "id" | "roles" | "department">): Promise<{ isHod: boolean; unitIds: string[] }> {
-  const { memberships } = await listUnits().catch(() => ({ memberships: [] }));
-  const isLead = memberships.some(row => row.employeeId === member.id && row.isLead);
-  const hod = isHod(member, { isLead });
-  return { isHod: hod, unitIds: hod && member.department.trim() ? [member.department.trim()] : [] };
+/** Whether this person is a HOD, and of which departments. */
+export async function hodStanding(member: Pick<Member, "id">): Promise<{ isHod: boolean; unitIds: string[] }> {
+  const { departments } = await leadsOf(member.id).catch(() => ({ departments: [] as string[] }));
+  return { isHod: isHod({ isLead: departments.length > 0 }), unitIds: departments };
 }
 
 /** The departments to invite, each with its HODs; a department without a HOD shows but cannot be picked. */
 export async function hodDepartments(): Promise<HodDepartment[]> {
-  return (await headsByDepartment()).departments;
+  return headsByDepartment();
 }
 
 type MeetingRow = { id: string; title: string; agenda: string; starts_at: string; ends_at: string; place: string; requested_by: string; status: HodMeetingStatus; created_at: string };
-type InviteRow = { meeting_id: string; employee_id: string; unit_id: string | null; response: HodResponse; note: string; responded_at: string | null };
+type InviteRow = { meeting_id: string; employee_id: string; department?: string; response: HodResponse; note: string; responded_at: string | null };
 
 /** Every meeting, with the names of who asked and who was asked; `migrated: false` before the migration. */
 export async function listHodMeetings(): Promise<{ meetings: HodMeeting[]; migrated: boolean }> {
@@ -75,17 +59,14 @@ export async function listHodMeetings(): Promise<{ meetings: HodMeeting[]; migra
   if (error) { if (missing(error)) return { meetings: [], migrated: false }; databaseError(error); }
   const rows = (data ?? []) as MeetingRow[];
   if (!rows.length) return { meetings: [], migrated: true };
-  const [{ data: invites, error: inviteError }, people, { units, memberships }] = await Promise.all([
-    client.from("pw_hod_meeting_invites").select("meeting_id,employee_id,unit_id,response,note,responded_at").in("meeting_id", rows.map(row => row.id)),
-    listPeople(), listUnits(),
+  const [{ data: invites, error: inviteError }, people, leads] = await Promise.all([
+    client.from("pw_hod_meeting_invites").select("*").in("meeting_id", rows.map(row => row.id)),
+    listPeople(), listLeads(),
   ]);
   if (inviteError) fail(inviteError);
-  const unitName = new Map(units.map(unit => [unit.id, unit.name]));
   const person = (id: string) => people.find(item => item.id === id);
-  const homeUnit = (id: string) => {
-    const primary = memberships.find(row => row.employeeId === id && row.isPrimary) ?? memberships.find(row => row.employeeId === id);
-    return (primary && unitName.get(primary.unitId)) || person(id)?.department || "";
-  };
+  // Who asked speaks for the departments they head, else their own.
+  const homeUnit = (id: string) => leads.byPerson.get(id)?.departments.join(", ") || person(id)?.department || "";
   return {
     migrated: true,
     meetings: rows.map(row => ({
@@ -93,7 +74,7 @@ export async function listHodMeetings(): Promise<{ meetings: HodMeeting[]; migra
       requester: { id: row.requested_by, name: person(row.requested_by)?.name ?? "Tanpa nama", unit: homeUnit(row.requested_by) },
       invites: ((invites ?? []) as InviteRow[]).filter(invite => invite.meeting_id === row.id).map(invite => ({
         id: invite.employee_id, name: person(invite.employee_id)?.name ?? "Tanpa nama",
-        unit: (invite.unit_id && unitName.get(invite.unit_id)) || homeUnit(invite.employee_id),
+        unit: invite.department || homeUnit(invite.employee_id),
         response: invite.response, note: invite.note, respondedAt: invite.responded_at,
       })).sort((a, b) => a.unit.localeCompare(b.unit, "id")),
     })),
@@ -122,16 +103,16 @@ export async function createHodMeeting(member: Member, input: HodMeetingInput): 
   await requireHod(member);
   const startsAt = wibInstant(input.date, input.start), endsAt = wibInstant(input.date, input.end);
   if (new Date(startsAt) <= new Date()) throw new ServiceError(400, "Waktu meeting sudah lewat. Pilih jam yang akan datang.");
-  const { departments } = await headsByDepartment();
-  const invites: { employee_id: string; unit_id: null }[] = [];
+  const departments = await headsByDepartment();
+  const invites: { employee_id: string; department: string }[] = [];
   const empty: string[] = [];
   for (const unitId of new Set(input.unitIds)) {
     const department = departments.find(item => item.id === unitId);
     if (!department) throw new ServiceError(400, "Ada departemen yang tidak dikenal. Muat ulang lalu pilih lagi.");
     const heads = department.heads.filter(head => head.id !== member.id);
     if (!department.heads.length) empty.push(department.name);
-    // The department is the person's own (Data karyawan); the unit column stays for the unit import.
-    for (const head of heads) if (!invites.some(invite => invite.employee_id === head.id)) invites.push({ employee_id: head.id, unit_id: null });
+    // A HOD of several departments picked together is asked once, for the first of them.
+    for (const head of heads) if (!invites.some(invite => invite.employee_id === head.id)) invites.push({ employee_id: head.id, department: department.name });
   }
   if (empty.length) throw new ServiceError(400, `${empty.join(", ")} belum punya HOD. Minta Admin WAM mencentang HOD-nya.`);
   if (!invites.length) throw new ServiceError(400, "Pilih departemen lain selain departemenmu sendiri.");
@@ -145,7 +126,7 @@ export async function createHodMeeting(member: Member, input: HodMeetingInput): 
   if (inviteError) { await client.from("pw_hod_meetings").delete().eq("id", data.id); fail(inviteError); }
   await notifyPeople(invites.map(invite => invite.employee_id), {
     title: `Undangan Meeting HOD: ${input.title}`,
-    body: `${member.name} mengajak kamu meeting HOD pada ${when(input.start, input.end, input.date)}${input.place ? ` di ${input.place}` : ""}. Terima atau tolak di Meeting HOD.`,
+    body: `${member.name} mengajak kamu meeting HOD pada ${when(input.start, input.end, input.date)}${input.place ? ` di ${input.place}` : ""}. Terima atau tolak di Book → Meeting HOD.`,
   }, member);
   return data.id;
 }

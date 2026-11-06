@@ -4,7 +4,7 @@ import { accountState, accountStatus, accountSummary, lastLoginLabel, matchesFil
 
 const row = (patch: Partial<AccountRow> = {}): AccountRow => ({
   employeeId: "e1", name: "Dewi Lestari", department: "Finance", email: "dewi@werkudara.com", active: true,
-  hasAccount: true, lastLoginAt: "2026-11-03T02:12:00Z", mustChangePassword: false, roles: [], leads: [], ...patch,
+  hasAccount: true, lastLoginAt: "2026-11-03T02:12:00Z", mustChangePassword: false, roles: [], leads: [], buLeads: [], businessUnit: "Werkudara Nirwana Sakti", ...patch,
 });
 
 describe("account status", () => {
@@ -27,7 +27,7 @@ describe("account status", () => {
 
 describe("roles as pills", () => {
   it("lists BOD, Panitia, Admin WAM, then HOD, and Peserta alone when there is no other role", () => {
-    expect(roleItems(row({ roles: ["admin", "panitia"], leads: ["Finance"] })).map(item => typeof item === "string" ? item : item.label)).toEqual(["Panitia", "Admin WAM", "HOD"]);
+    expect(roleItems(row({ roles: ["admin", "panitia"], leads: ["Finance"], buLeads: [], businessUnit: "Werkudara Nirwana Sakti" })).map(item => typeof item === "string" ? item : item.label)).toEqual(["Panitia", "Admin WAM", "HOD"]);
     expect(roleItems(row({ roles: ["bod"] })).map(item => typeof item === "string" ? item : item.label)).toEqual(["BOD"]);
     expect(roleItems(row()).map(item => typeof item === "string" ? item : item.label)).toEqual(["Peserta"]);
     expect(roleItems(row({ hasAccount: false }))).toEqual([]);
@@ -38,7 +38,7 @@ describe("filter and search", () => {
   it("filters by role, HOD and never signed in", () => {
     expect(matchesFilter(row({ roles: ["panitia"] }), "panitia")).toBe(true);
     expect(matchesFilter(row(), "panitia")).toBe(false);
-    expect(matchesFilter(row({ leads: ["Finance"] }), "hod")).toBe(true);
+    expect(matchesFilter(row({ leads: ["Finance"], buLeads: [], businessUnit: "Werkudara Nirwana Sakti" }), "hod")).toBe(true);
     expect(matchesFilter(row({ roles: ["admin"] }), "admin")).toBe(true);
     expect(matchesFilter(row({ lastLoginAt: null }), "belum-login")).toBe(true);
     // No account is not "belum login": there is nothing to sign in with yet.

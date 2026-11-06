@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { Leads } from "@/lib/pra-wam/leads";
 import { ChevronRight, UserPlus } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { Avatar, CardGrid, ConsoleButton, FilterChips, Pill, PersonCard, RolePills, SectionToolbar, ViewToggle, useViewPreference } from "@/components/console";
@@ -30,6 +31,8 @@ export type PraWamAccountsProps = {
   resetRequested?: readonly string[];
   /** Open reset requests, for the tab's badge. */
   waiting?: number | null;
+  /** The departments and BUs to pick from for HOD and lead BU (leadOptions). */
+  leadOptions?: Leads;
 };
 
 /**
@@ -38,7 +41,7 @@ export type PraWamAccountsProps = {
  * resets. People show as cards (or a table, remembered on this device), with search and a role
  * filter; a card opens the person's detail, where every change is made.
  */
-export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = false, photos = {}, jobs = {}, resetRequested = [], waiting = null }: PraWamAccountsProps) {
+export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = false, photos = {}, jobs = {}, resetRequested = [], waiting = null, leadOptions }: PraWamAccountsProps) {
   const [rows, setRows] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<Message>(null);
@@ -75,6 +78,7 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
   }
   const toggleRole = (row: AccountRow, role: PraWamRole) =>
     run(`role-${row.employeeId}`, praWamAccountsApi(row.employeeId), { roles: row.roles.includes(role) ? row.roles.filter(item => item !== role) : [...row.roles, role] }, "PATCH", row.employeeId);
+  const saveLeads = (row: AccountRow, leads: Leads) => run(`leads-${row.employeeId}`, praWamAccountsApi(row.employeeId), { leads }, "PATCH", row.employeeId);
   const saveEmail = (row: AccountRow, email: string) => run(`email-${row.employeeId}`, praWamAccountsApi(row.employeeId), { email }, "PATCH", row.employeeId);
   const createOne = (row: AccountRow) => run(`create-${row.employeeId}`, praWamAccountsApi(row.employeeId), null, "POST", row.employeeId);
   const reset = async (row: AccountRow) => {
@@ -110,7 +114,7 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
 
     <section className={css.section} aria-labelledby="semua-akun">
       <SectionToolbar title={<span id="semua-akun">Semua akun</span>} count={`${shown.length} orang`}
-        search={{ label: "Cari nama, unit, atau email", placeholder: "Cari nama, unit, email", value: query, onChange: setQuery }}
+        search={{ label: "Cari nama, departemen, atau email", placeholder: "Cari nama, departemen, email", value: query, onChange: setQuery }}
         view={<ViewToggle value={view} onChange={setView} />} />
       <FilterChips label="Saring peran dan status" chips={chips} value={filter} onChange={setFilter} />
       <p className={css.lead}>{summary.withAccount} dari {summary.active} karyawan aktif sudah punya akun. Mereka masuk di <a href={praWamPath.login()}>{praWamPath.login()}</a> dengan email kantor dan password awal yang sama, lalu bisa menggantinya di Profil → Pengaturan.</p>
@@ -123,7 +127,7 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
           : <div className={cs.tableWrap}>
               <table className={cs.table}>
                 <caption className="sr-only">Akun, urut nama</caption>
-                <thead><tr><th scope="col">Nama</th><th scope="col">Unit</th><th scope="col">Peran</th><th scope="col">Email</th><th scope="col">Status</th><th scope="col">Terakhir masuk</th><th scope="col"><span className="sr-only">Buka</span></th></tr></thead>
+                <thead><tr><th scope="col">Nama</th><th scope="col">Departemen</th><th scope="col">Peran</th><th scope="col">Email</th><th scope="col">Status</th><th scope="col">Terakhir masuk</th><th scope="col"><span className="sr-only">Buka</span></th></tr></thead>
                 <tbody>{shown.map(row => {
                   const state = status(row);
                   return <tr key={row.employeeId}>
@@ -146,6 +150,7 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
       done={message?.tone === "success" ? message.text : undefined}
       onClose={() => { setOpenId(null); setRowError(null); }}
       onToggleRole={role => void toggleRole(open, role)} onSaveEmail={email => saveEmail(open, email)}
+      leadOptions={leadOptions} onSaveLeads={leads => void saveLeads(open, leads)}
       onReset={() => void reset(open)} onCreate={() => void createOne(open)} />}
   </>;
 }

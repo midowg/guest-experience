@@ -4,7 +4,7 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { notMigrated, waitingForMigration } from "./session";
-import { departmentLeads } from "./units";
+import { listLeads, leadsOf } from "./leads";
 
 /*
  * Pra WAM accounts, set up in Admin WAM or per person from Data karyawan (super admin). Each
@@ -16,8 +16,12 @@ import { departmentLeads } from "./units";
 export type AccountRow = {
   employeeId: string; name: string; department: string; email: string; active: boolean;
   hasAccount: boolean; lastLoginAt: string | null; mustChangePassword: boolean; roles: PraWamRole[];
-  /** Departments this person leads (HOD), from the unit import. */
+  /** Departments this person heads (HOD): set by hand, or from the unit import. */
   leads: string[];
+  /** BUs this person leads. */
+  buLeads: string[];
+  /** Their business unit (Werkudara Nirwana Sakti until set); "" before migration 202611060002. */
+  businessUnit: string;
 };
 
 /** Whether the shared first password is set on the server, so accounts can be made and reset. */
@@ -29,13 +33,22 @@ function defaultPassword(): string {
   return password;
 }
 
+/** Everyone in Data karyawan with their BU; without it before migration 202611060002. */
+async function readPeople() {
+  const client = createPrivilegedClient();
+  const read = (fields: string) => client.from("employees").select(fields).order("full_name").limit(2000);
+  let result = await read("id,full_name,department,email,active,business_unit");
+  if (result.error && ["42703", "PGRST204"].includes(result.error.code ?? "")) result = await read("id,full_name,department,email,active");
+  return { data: result.data as unknown as { id: string; full_name: string; department: string; email: string; active: boolean; business_unit?: string }[] | null, error: result.error };
+}
+
 export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: boolean }> {
   const client = createPrivilegedClient();
   const [{ data: people, error: peopleError }, { data: accounts, error }, { data: roles, error: rolesError }, leads] = await Promise.all([
-    client.from("employees").select("id,full_name,department,email,active").order("full_name").limit(2000),
+    readPeople(),
     client.from("pw_accounts").select("employee_id,last_login_at,active,must_change_password"),
     client.from("pw_roles").select("employee_id,role"),
-    departmentLeads(),
+    listLeads().then(result => result.byPerson),
   ]);
   // Roles arrive with migration 202611040002; before it everyone is a peserta.
   if (rolesError && !notMigrated(rolesError)) databaseError(rolesError);
@@ -49,7 +62,9 @@ export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: bo
       hasAccount: byPerson.has(person.id), lastLoginAt: byPerson.get(person.id)?.last_login_at ?? null,
       mustChangePassword: byPerson.get(person.id)?.must_change_password ?? true,
       roles: praWamRoles.filter(role => (roles ?? []).some(row => row.employee_id === person.id && row.role === role)),
-      leads: leads.get(person.id) ?? [],
+      leads: leads.get(person.id)?.departments ?? [],
+      buLeads: leads.get(person.id)?.businessUnits ?? [],
+      businessUnit: person.business_unit ?? "",
     })),
   };
 }
@@ -108,10 +123,10 @@ export async function setRoles(employeeId: string, wanted: PraWamRole[]): Promis
   const client = createPrivilegedClient();
   const [{ data: current, error: currentError }, leads] = await Promise.all([
     client.from("pw_roles").select("role").eq("employee_id", employeeId),
-    departmentLeads(),
+    leadsOf(employeeId),
   ]);
   if (currentError) { if (notMigrated(currentError)) throw new ServiceError(503, "Peran menunggu migrasi 202611040002_pra_wam_roles.sql."); databaseError(currentError); }
-  const problem = checkRoleChange(normalizeRoles((current ?? []).map(row => row.role)), roles, { isLead: leads.has(employeeId) });
+  const problem = checkRoleChange(normalizeRoles((current ?? []).map(row => row.role)), roles, { isLead: leads.departments.length + leads.businessUnits.length > 0 });
   if (problem) throw new ServiceError(422, problem, { roles: [problem] });
   const { error } = await client.from("pw_roles").delete().eq("employee_id", employeeId).not("role", "in", `(${roles.length ? roles.join(",") : "none"})`);
   if (error) { if (notMigrated(error)) throw new ServiceError(503, "Peran menunggu migrasi 202611040002_pra_wam_roles.sql."); databaseError(error); }

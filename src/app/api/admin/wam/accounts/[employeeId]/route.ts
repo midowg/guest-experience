@@ -3,6 +3,8 @@ import { praWamRoles } from "@/lib/pra-wam/roles";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireApiAdmin } from "@/lib/server/admin-session";
 import { createAccount, listAccounts, resetPassword, setRoles, updateEmail } from "@/lib/server/pra-wam/accounts";
+import { leadsSchema } from "@/lib/pra-wam/leads";
+import { setLeads } from "@/lib/server/pra-wam/leads";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ employeeId: string }> };
@@ -10,6 +12,8 @@ const schema = z.object({
   roles: z.array(z.enum(praWamRoles)).max(praWamRoles.length).optional(),
   resetPassword: z.literal(true).optional(),
   email: z.email("Email tidak valid.").max(200).optional(),
+  /** HOD departemen dan lead BU (6 Nov 2026). */
+  leads: leadsSchema.optional(),
 });
 
 /** POST: this one person's account, with the shared first password (any admin, so Data karyawan too). */
@@ -37,8 +41,11 @@ export async function PATCH(request: Request, { params }: Params) {
     // setRoles refuses (422) a combination the role rule does not allow, such as BOD with Panitia.
     if (body.roles) await setRoles(employeeId, body.roles);
     if (body.email) await updateEmail(employeeId, body.email);
+    // setLeads refuses (422) a BOD heading anything.
+    if (body.leads) await setLeads(employeeId, body.leads);
     if (body.resetPassword) await resetPassword(employeeId);
-    const message = body.resetPassword ? "Password kembali ke password awal. Orang ini perlu masuk ulang." : body.email ? "Email disimpan. Login memakai email baru." : "Peran disimpan.";
+    const message = body.resetPassword ? "Password kembali ke password awal. Orang ini perlu masuk ulang." : body.email ? "Email disimpan. Login memakai email baru."
+      : body.leads ? "HOD departemen dan lead BU disimpan." : "Peran disimpan.";
     return success(await listAccounts(), message);
   });
 }

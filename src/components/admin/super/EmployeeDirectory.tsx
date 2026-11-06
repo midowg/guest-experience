@@ -8,6 +8,8 @@ import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { categoryLabels, employeeCategories, type Employee, type EmployeeCategory, type EmployeeRow, type ImportChange } from "@/lib/employees";
 import { employeesApi, praWamAccountsApi } from "@/lib/routes";
 import type { AccountRow } from "@/lib/server/pra-wam/accounts";
+import { DEFAULT_BUSINESS_UNIT, leadsLabel, type Leads } from "@/lib/pra-wam/leads";
+import { LeadEditor } from "@/components/admin/wam/akun/LeadEditor";
 import styles from "@/components/admin/admin.module.css";
 
 type Plan = { sheet: string; skipped: string[]; migrated: boolean; plan: { row: EmployeeRow; change: ImportChange; changed: string[] }[] };
@@ -59,7 +61,11 @@ function WamAccountCell({ status, unused, busy, disabled, name, onCreate }: { st
  * and active are set here and an import never overwrites them. `wamAccounts` adds the "Akun WAM"
  * column with "Buat akun" (one person or everyone missing one); null says it could not be read.
  */
-export function EmployeeDirectory({ initial, migrated, wamAccounts }: { initial: Employee[]; migrated: boolean; wamAccounts?: WamAccounts | null }) {
+export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initialLeads, leadOptions }: {
+  initial: Employee[]; migrated: boolean; wamAccounts?: WamAccounts | null;
+  /** Who heads which departments and BUs (6 Nov 2026), and the names to pick from; no column without them. */
+  leads?: Record<string, Leads>; leadOptions?: Leads;
+}) {
   const [people, setPeople] = useState(initial);
   const [file, setFile] = useState<File | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -69,6 +75,20 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts }: { initial:
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
+  const [leads, setLeads] = useState<Record<string, Leads>>(initialLeads ?? {});
+  /** Whose HOD and lead BU editor is open. */
+  const [leading, setLeading] = useState<string | null>(null);
+  const leadsOf = (id: string): Leads => leads[id] ?? { departments: [], businessUnits: [] };
+  async function saveLeads(person: Employee, value: Leads) {
+    setBusy(`leads-${person.id}`); setError(""); setMessage("");
+    try {
+      const result = await adminRequest<{ rows: AccountRow[] }>(praWamAccountsApi(person.id), { method: "PATCH", body: JSON.stringify({ leads: value }) });
+      const row = result.data?.rows.find(item => item.employeeId === person.id);
+      setLeads(current => ({ ...current, [person.id]: row ? { departments: row.leads, businessUnits: row.buLeads } : value }));
+      setMessage(result.message); setLeading(null);
+    } catch (err) { setError(errorMessage(err)); }
+    finally { setBusy(null); }
+  }
   const [withAccount, setWithAccount] = useState(() => new Set(wamAccounts?.withAccount ?? []));
   const [skipped, setSkipped] = useState<string[]>([]);
   const [confirm, confirmDialog] = useConfirm();
@@ -191,10 +211,20 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts }: { initial:
       {people.length === 0 ? <p className="field-hint">Belum ada data karyawan. Impor dari Excel HR di atas.</p>
         : <div className={styles.tableWrap}><table className={styles.table}>
           <caption className="sr-only">Daftar karyawan</caption>
-          <thead><tr><th scope="col">Nama</th><th scope="col">Departemen & jabatan</th><th scope="col">Office</th><th scope="col">Kategori</th><th scope="col">Kontak</th>{wamAccounts?.migrated && <th scope="col">Akun WAM</th>}<th scope="col">Status</th></tr></thead>
+          <thead><tr><th scope="col">Nama</th><th scope="col">Departemen & jabatan</th>{leadOptions && <th scope="col">BU & memimpin</th>}<th scope="col">Office</th><th scope="col">Kategori</th><th scope="col">Kontak</th>{wamAccounts?.migrated && <th scope="col">Akun WAM</th>}<th scope="col">Status</th></tr></thead>
           <tbody>{shown.map(person => <tr key={person.id} aria-busy={busy === person.id}>
             <td><strong>{person.full_name}</strong>{person.nickname && <p className="field-hint">{person.nickname}</p>}</td>
             <td>{person.department}<p className="field-hint">{person.position}</p></td>
+            {leadOptions && <td>
+              <label className="sr-only" htmlFor={`bu-${person.id}`}>BU {person.full_name}</label>
+              <input id={`bu-${person.id}`} className="input" list="bu-options" defaultValue={person.business_unit || DEFAULT_BUSINESS_UNIT} maxLength={120} disabled={busy === person.id}
+                onBlur={event => { const value = event.target.value.trim(); if (value && value !== (person.business_unit || DEFAULT_BUSINESS_UNIT)) void patch(person, { business_unit: value }); }} />
+              {leading === person.id
+                ? <LeadEditor name={person.full_name} value={leadsOf(person.id)} options={leadOptions} saving={busy === `leads-${person.id}`} disabled={!!busy}
+                  onSave={value => void saveLeads(person, value)} onCancel={() => setLeading(null)} />
+                : <>{leadsLabel(leadsOf(person.id)) && <p className="field-hint">{leadsLabel(leadsOf(person.id))}</p>}
+                  <Button type="button" variant="quiet" onClick={() => setLeading(person.id)} aria-label={`Atur HOD dan lead BU ${person.full_name}`}><Pencil size={15} aria-hidden="true" /> HOD / lead BU</Button></>}
+            </td>}
             <td>{person.office}</td>
             <td><label className="sr-only" htmlFor={`category-${person.id}`}>Kategori {person.full_name}</label>
               <select id={`category-${person.id}`} className="input" value={person.category} disabled={busy === person.id} onChange={e => patch(person, { category: e.target.value as EmployeeCategory })}>
@@ -213,6 +243,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts }: { initial:
           </tr>)}</tbody>
         </table></div>}
       {people.length > 0 && shown.length === 0 && <p className="field-hint">Tidak ada yang cocok dengan pencarian.</p>}
+      {leadOptions && <datalist id="bu-options">{leadOptions.businessUnits.map(name => <option key={name} value={name} />)}</datalist>}
     </section>
   </div>;
 }

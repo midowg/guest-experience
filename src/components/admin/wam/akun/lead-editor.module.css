@@ -1,0 +1,19 @@
+/*
+ * LeadEditor: in Akun dan peran (console tokens) and in Data karyawan (super admin, no console
+ * tokens), so every colour falls back to the app's own or a plain value.
+ */
+.editor { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.editor legend { padding: 0; margin-bottom: 4px; font-size: 15px; font-weight: 700; color: var(--cs-text, #101828); }
+.hint { margin: 0; font-size: 13px; color: var(--cs-subtle, #667085); }
+.head { margin: 4px 0 0; font-size: 13px; font-weight: 600; color: var(--cs-text, #101828); }
+.checks { display: grid; gap: 4px; max-height: 15rem; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.check { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border: 1px solid var(--cs-line, #dde3ea); border-radius: 10px; background: var(--cs-surface, #fff); font-size: 14px; cursor: pointer; }
+.check input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--cs-primary, #006ec1); }
+.check:has(input:checked) { border-color: var(--cs-primary, #006ec1); background: color-mix(in srgb, var(--cs-primary, #006ec1) 8%, var(--cs-surface, #fff)); font-weight: 600; }
+.check:has(input:disabled) { color: var(--cs-subtle, #98a2b3); cursor: not-allowed; }
+.add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.input { box-sizing: border-box; width: 100%; min-height: 40px; padding: 0 12px; border: 1px solid var(--cs-line, #dde3ea); border-radius: 10px; background: var(--cs-surface, #fff); color: var(--cs-text, #101828); font: inherit; font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid var(--cs-line, #dde3ea); border-radius: 999px; background: var(--cs-surface, #fff); color: var(--cs-text, #101828); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.button:disabled { opacity: .5; cursor: not-allowed; }
+.primary { border-color: var(--cs-primary, #006ec1); background: var(--cs-primary, #006ec1); color: #fff; }

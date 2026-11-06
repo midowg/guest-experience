@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
-import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Clock, DoorOpen, Map as MapIcon, MapPin, Plus, Text, User, Users, X } from "lucide-react";
+import { useEffect, useState, type ComponentProps, type ReactNode } from "react";
+import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Clock, Handshake, DoorOpen, Map as MapIcon, MapPin, Plus, Text, User, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { appraisalRules, bookingWhere, clockLabel, dayLabel, dayMinutes, draftHours, isOutside, isWorkday, loadedWeek, OUTSIDE_ROOM, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
@@ -12,6 +12,7 @@ import { bookingKey, DayCalendar, Legend, WeekCalendar, type BookPick } from "./
 import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
 import { useConfirm } from "./ConfirmDialog";
 import { FloorPlan } from "./FloorPlan";
+import { HodBoard } from "./HodBoard";
 import { MonthCalendar } from "./MonthCalendar";
 import { ScreenHead } from "./ScreenHead";
 import { Sheet } from "./Sheet";
@@ -36,6 +37,10 @@ type Props = {
   floorPlan?: boolean;
   /** Per weekday of the booking window: holds and whether it is full (windowSummary); the loaded week is recounted here. */
   summary?: Record<string, DaySummary>;
+  /** A HOD's Meeting HOD (6 Nov 2026): a third view beside Kalender and Denah, for HODs only. */
+  hod?: Omit<ComponentProps<typeof HodBoard>, "viewerId" | "now" | "embedded"> | null;
+  /** The view to open on (?lihat=hod from a notification or the old Meeting HOD address). */
+  initialView?: "kalender" | "denah" | "hod";
 };
 
 type SheetState =
@@ -54,7 +59,7 @@ const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <=
  * trip), so a reload reopens it; a day in another week (picked on the date strip) is a navigation,
  * since its bookings are loaded on the server.
  */
-export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {} }: Props) {
+export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {}, hod = null, initialView = "kalender" }: Props) {
   const router = useRouter();
   const [confirm, confirmDialog] = useConfirm();
   const bookable = rooms.filter(room => room.bookable);
@@ -68,9 +73,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const [selected, setSelected] = useState(date);
   const [weekOf, setWeekOf] = useState(week[0]);
   if (weekOf !== week[0]) { setWeekOf(week[0]); setSelected(date); }
-  const [chosenView, setView] = useState<"kalender" | "denah">("kalender");
-  // With the floor plan switched off by the super admin, only the calendar.
-  const view = floorPlan ? chosenView : "kalender";
+  const [chosenView, setView] = useState<"kalender" | "denah" | "hod">(initialView);
+  // With the floor plan switched off by the super admin, no Denah; Meeting HOD only for a HOD.
+  const view = chosenView === "denah" && !floorPlan ? "kalender" : chosenView === "hod" && !hod ? "kalender" : chosenView;
   // From 1024px the week grid first (DS "Jadwal, tampilan minggu"); a phone always shows the day.
   const [mode, setMode] = useState<"hari" | "minggu">("minggu");
   const [weekRoom, setWeekRoom] = useState(() => bookable[0]?.id ?? "");
@@ -206,9 +211,10 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {confirmDialog}
 
     <div className={css.toolbar}>
-      {floorPlan && <div className={css.segmented} role="group" aria-label="Tampilan">
+      {(floorPlan || hod) && <div className={css.segmented} role="group" aria-label="Tampilan">
         <button type="button" aria-pressed={view === "kalender"} onClick={() => setView("kalender")}><CalendarDays aria-hidden />Kalender</button>
-        <button type="button" aria-pressed={view === "denah"} onClick={() => setView("denah")}><MapIcon aria-hidden />Denah</button>
+        {floorPlan && <button type="button" aria-pressed={view === "denah"} onClick={() => setView("denah")}><MapIcon aria-hidden />Denah</button>}
+        {hod && <button type="button" aria-pressed={view === "hod"} onClick={() => setView("hod")}><Handshake aria-hidden />Meeting HOD</button>}
       </div>}
       {view === "kalender" && <div className={`${css.segmented} ${css.deskOnly}`} role="group" aria-label="Rentang kalender">
         <button type="button" aria-pressed={mode === "hari"} onClick={() => setMode("hari")}>Hari</button>
@@ -216,7 +222,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
       </div>}
     </div>
 
-    {view === "kalender" ? <div className={css.layout}>
+    {view === "hod" && hod ? <HodBoard {...hod} viewerId={viewerId} now={now} embedded /> : view === "kalender" ? <div className={css.layout}>
       <div className={css.side}>
         {calendar}
         <Legend />

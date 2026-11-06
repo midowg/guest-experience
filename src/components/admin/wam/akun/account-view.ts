@@ -18,13 +18,14 @@ export function accountStatus(row: AccountRow, resetRequested: ReadonlySet<strin
 }
 
 /** The tone of each role, the same on every card, row and on the Peran tab. */
-export const roleTones = { peserta: "neutral", panitia: "blue", admin: "purple", hod: "teal", bod: "brass" } as const satisfies Record<PraWamRole | "peserta", ConsoleTone>;
+export const roleTones = { peserta: "neutral", panitia: "blue", admin: "purple", hod: "teal", bod: "brass" } as const satisfies Record<PraWamRole | "peserta" | "hod", ConsoleTone>;
 
-/** The roles on top of peserta (BOD, Panitia, Admin WAM, then HOD, ticked or a lead); "Peserta" alone when there are none. */
-export function roleItems(row: Pick<AccountRow, "roles" | "leads" | "hasAccount">): RoleItem[] {
+/** The roles on top of peserta (BOD, Panitia, Admin WAM, then HOD and Lead BU); "Peserta" alone when there are none. */
+export function roleItems(row: Pick<AccountRow, "roles" | "leads" | "buLeads" | "hasAccount">): RoleItem[] {
   const order: PraWamRole[] = ["bod", "panitia", "admin"];
   const items: RoleItem[] = order.filter(role => row.roles.includes(role)).map(role => ({ label: roleLabels[role], tone: roleTones[role] }));
-  if (row.roles.includes("hod") || row.leads.length) items.push({ label: roleLabels.hod, tone: roleTones.hod });
+  if (row.leads.length) items.push({ label: "HOD", tone: roleTones.hod });
+  if (row.buLeads.length) items.push({ label: "Lead BU", tone: roleTones.hod });
   if (!items.length && row.hasAccount) items.push({ label: "Peserta", tone: roleTones.peserta });
   return items;
 }
@@ -42,7 +43,7 @@ export const accountFilters: readonly { value: AccountFilter; label: string }[] 
 export function matchesFilter(row: AccountRow, filter: AccountFilter): boolean {
   switch (filter) {
     case "semua": return true;
-    case "hod": return row.roles.includes("hod") || row.leads.length > 0;
+    case "hod": return row.leads.length > 0;
     case "belum-login": return row.active && row.hasAccount && !row.lastLoginAt;
     default: return row.roles.includes(filter);
   }
@@ -102,7 +103,7 @@ export const roleGuide: readonly RoleGuideItem[] = [
   { key: "peserta", label: "Peserta", does: "Book ruang, agenda dan dokumen sesi sendiri, absen QR. Dasar setiap akun.", combines: ["Panitia", "Admin WAM", "HOD", "BOD"] },
   { key: "panitia", label: "Panitia", does: "Kelola acara: sesi, permintaan jadwal, pengumuman; membatalkan booking siapa pun.", combines: ["Admin WAM", "HOD"] },
   { key: "admin", label: "Admin WAM", does: "Seperti Panitia, ditambah pengaturan aplikasi.", combines: ["Panitia", "HOD"] },
-  { key: "hod", label: "HOD", does: "Kepala departemen: dicentang di sini, atau otomatis sebagai lead dari impor unit. Membuka Meeting HOD untuk mengajak HOD departemen lain.", combines: ["Panitia", "Admin WAM"] },
+  { key: "hod", label: "HOD", does: "Kepala departemen, dipilih per orang di detail akun (bisa lebih dari satu departemen); lead BU juga diatur di sana. HOD melihat Meeting HOD di Book.", combines: ["Panitia", "Admin WAM"] },
   { key: "bod", label: "BOD", does: "Menu BOD: Ringkasan, Peserta, Survei; melihat semua sesi tanpa mengubah. Tetap bisa ikut sesi dan book ruang.", combines: null },
 ];
 
@@ -113,7 +114,7 @@ export function roleCounts(rows: readonly AccountRow[]): Record<RoleGuideItem["k
     peserta: active.filter(row => row.hasAccount).length,
     panitia: active.filter(row => row.roles.includes("panitia")).length,
     admin: active.filter(row => row.roles.includes("admin")).length,
-    hod: active.filter(row => row.roles.includes("hod") || row.leads.length > 0).length,
+    hod: active.filter(row => row.leads.length > 0).length,
     bod: active.filter(row => row.roles.includes("bod")).length,
   };
 }

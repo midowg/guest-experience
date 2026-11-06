@@ -28,7 +28,7 @@ const auth = {
   },
 };
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => ({ from: query, auth }) }));
-vi.mock("./units", () => ({ departmentLeads: async () => new Map() }));
+vi.mock("./leads", () => ({ listLeads: async () => ({ byPerson: new Map(), migrated: true }), leadsOf: async () => ({ departments: [], businessUnits: [] }) }));
 
 const { createAccount, createMissingAccounts } = await import("./accounts");
 

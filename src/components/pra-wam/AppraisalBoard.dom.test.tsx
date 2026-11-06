@@ -48,6 +48,17 @@ it("shows only the plan under Denah: the day with ‹ ›, and a room's label bo
   fireEvent.click(screen.getByRole("button", { name: "Book ruang ini" }));
   expect(screen.getByRole("dialog", { name: "Book ruang" })).toBeTruthy();
 });
+it("shows Meeting HOD as a view of Book only for a HOD", () => {
+  const week = ["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"];
+  const props = { date: "2026-11-05", week, dates: ["2026-11-04","2026-11-05"], now: wibInstant("2026-11-04","10:12"), rooms, bookings: [b], mine: [b], viewerId: "me", canCancelAny: false, open: true, form: { people: [], groups: [], usedTitles: [] }, arrive: {} };
+  const { unmount } = render(<AppraisalBoard {...props} />);
+  expect(screen.queryByRole("button", { name: "Meeting HOD" })).toBeNull();
+  unmount();
+  render(<AppraisalBoard {...props} hod={{ meetings: [], departments: [{ id: "IT", name: "IT", heads: [{ id: "x", name: "Budi" }] }], ownUnits: ["Finance"], migrated: true }} initialView="hod" />);
+  expect(screen.getByRole("button", { name: "Meeting HOD", pressed: true })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Meeting HOD" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Ajukan meeting/ })).toBeTruthy();
+});
 it("shows the calendar only when the floor plan is switched off", () => {
   render(<AppraisalBoard date="2026-11-05" week={["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"]} dates={["2026-11-04","2026-11-05"]} now={wibInstant("2026-11-04","10:12")}
     rooms={rooms} bookings={[b]} mine={[b]} viewerId="me" canCancelAny={false} open form={{ people: [], groups: [], usedTitles: [] }} arrive={{}} floorPlan={false} />);

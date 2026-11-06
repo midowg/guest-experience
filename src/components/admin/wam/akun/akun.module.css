@@ -81,3 +81,4 @@
 .requestNote { margin: 4px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--cs-surface-2); font-size: 14px; overflow-wrap: anywhere; }
 .requestActions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 @media (min-width: 768px) { .requestActions { grid-column: 2; } }
+

@@ -16,6 +16,8 @@ export type Employee = {
   category: EmployeeCategory; phone: string; email: string; active: boolean;
   /** Nomor induk; empty until HR fills it (column from migration 202611040002). */
   nip: string;
+  /** Business unit, such as Werkudara Nirwana Sakti or Maha Raja Pratama (migration 202611060002); "" before it. */
+  business_unit: string;
 };
 /** One person as read from HR's sheet; `email` and `nip` only when the sheet has them. */
 export type EmployeeRow = Pick<Employee, "full_name" | "nickname" | "department" | "position" | "office" | "category"> & { email?: string; nip?: string };
@@ -32,6 +34,7 @@ export const employeePatchSchema = z.object({
   full_name: text(150).min(2), nickname: text(60), department: text(150), position: text(150), office: text(20),
   category: z.enum(employeeCategories), phone: text(30), email: z.union([z.literal(""), z.email("Email tidak valid.").max(200)]), active: z.boolean(),
   nip: z.union([z.literal(""), z.string().trim().regex(NIP, "NIP hanya angka, huruf, titik, atau strip.")]),
+  business_unit: text(120).min(1, "Isi nama BU."),
 }).partial();
 
 /** The matching key: the database derives the same one (upper case, single spaces). */

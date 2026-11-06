@@ -20,6 +20,8 @@ type Props = {
   migrated: boolean;
   /** When the page was drawn, so server and browser sort the same way. */
   now: string;
+  /** Inside Book (a view beside Kalender and Denah): a section head instead of the screen title. */
+  embedded?: boolean;
 };
 
 const span = (meeting: HodMeeting) => `${dayLabel(wibDate(meeting.startsAt))} · ${clockLabel(wibTime(meeting.startsAt))}–${clockLabel(wibTime(meeting.endsAt))}`;
@@ -29,7 +31,7 @@ const span = (meeting: HodMeeting) => `${dayLabel(wibDate(meeting.startsAt))} ·
  * or still waiting for other HODs), and the history. "Ajukan meeting" asks the HODs of the
  * departments picked; each answers here, and the meeting is scheduled once all accept.
  */
-export function HodBoard({ meetings, departments, viewerId, ownUnits, migrated, now }: Props) {
+export function HodBoard({ meetings, departments, viewerId, ownUnits, migrated, now, embedded = false }: Props) {
   const router = useRouter();
   const [formOpen, setFormOpen] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -43,9 +45,14 @@ export function HodBoard({ meetings, departments, viewerId, ownUnits, migrated, 
     : empty ? <p className={css.empty}>{empty}</p> : null;
 
   return <>
-    <ScreenHead title="Meeting HOD"
-      actions={migrated ? <button type="button" className="button button--primary" onClick={() => setFormOpen(true)} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Ajukan meeting</button> : undefined} />
-    {!migrated && <Notice tone="warning">Meeting HOD menunggu migrasi 202611060001_pra_wam_hod_meetings.sql.</Notice>}
+    {embedded
+      ? <div className={css.head}>
+        <div><h2>Meeting HOD</h2><p>Meeting antar HOD. Terjadwal setelah semua HOD yang diundang menerima.</p></div>
+        {migrated && <button type="button" className="button button--secondary" onClick={() => setFormOpen(true)} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Ajukan meeting</button>}
+      </div>
+      : <ScreenHead title="Meeting HOD"
+        actions={migrated ? <button type="button" className="button button--primary" onClick={() => setFormOpen(true)} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Ajukan meeting</button> : undefined} />}
+    {!migrated && <Notice tone="warning">Meeting HOD menunggu migrasi 202611060001 dan 202611060002.</Notice>}
     {notice && <div className={css.notice}><Notice tone={notice.tone}>{notice.text}</Notice></div>}
 
     {toAnswer.length > 0 && <>
