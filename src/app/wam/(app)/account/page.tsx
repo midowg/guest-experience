@@ -1,7 +1,10 @@
 import { Info, KeyRound, Settings } from "lucide-react";
+import { McpCard } from "@/components/pra-wam/McpCard";
 import { ProfilePhoto } from "@/components/pra-wam/ProfilePhoto";
+import { toolTitle } from "@/lib/pra-wam/mcp";
 import { praWamRoles, roleLabels } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
+import { mcpAccessOf, myMcpCalls } from "@/lib/server/pra-wam/mcp";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import { createPrivilegedClient } from "@/lib/server/supabase/admin";
 import { unitsOf } from "@/lib/server/pra-wam/units";
@@ -26,10 +29,13 @@ function Item({ label, value, stack }: { label: string; value: string; stack?: b
  */
 export default async function AccountPage() {
   const member = await requireMemberPage(praWamPath.account);
-  const [units, { data: person }] = await Promise.all([
+  const [units, { data: person }, mcp] = await Promise.all([
     unitsOf(member.id),
     createPrivilegedClient().from("employees").select("email").eq("id", member.id).maybeSingle(),
+    // Akses MCP shows only with an active grant; null before migration 202611060010, and an error hides it too.
+    mcpAccessOf(member.id).catch(() => null),
   ]);
+  const mcpCalls = mcp?.granted ? (await myMcpCalls(member.id).catch(() => [])).map(call => ({ title: toolTitle(call.tool), ok: call.ok, createdAt: call.createdAt })) : [];
   const roles = praWamRoles.filter(role => member.roles.includes(role));
   return <>
     <div className={own.profile}>
@@ -81,6 +87,8 @@ export default async function AccountPage() {
           <p className={own.groupNote}><Info aria-hidden />Data ini mengikuti Data karyawan dari HR. Email masuk diatur oleh admin WAM.</p>
         </section>
       </div>
+
+      {mcp?.granted && <McpCard hasKey={mcp.hasKey} lastUsedAt={mcp.lastUsedAt} calls={mcpCalls} />}
 
       <p className={own.footer}>Journey by Werkudara</p>
     </div>

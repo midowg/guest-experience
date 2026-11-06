@@ -191,3 +191,29 @@ Butuh migrasi `202610210003_tickets_checkin.sql` dan mode **Tautan per tamu**.
 ## 8. MCP Supabase (khusus pengembangan)
 
 `.mcp.json` berisi server read-only yang dibatasi ke proyek ini. Autentikasi lewat `/mcp` → Supabase → Authenticate di terminal. Ini terpisah dari koneksi aplikasi dan tidak menggantikan variabel environment.
+
+## 9. MCP WAM untuk BOD
+
+Server MCP baca-saja agar BOD dan orang yang dipilih bisa menghubungkan Claude atau ChatGPT ke data
+WAM. Setiap jawaban dijalankan sebagai pemilik tautan, jadi aturan aplikasi tetap berlaku (draf,
+jawaban "Hanya dibaca fasilitator", Data HR, profil per orang).
+
+- **Migrasi:** `supabase/migrations/202611060010_pra_wam_mcp.sql` (tabel `pw_mcp_access` dan
+  `pw_mcp_log`), dijalankan pemilik di Supabase SQL Editor. Sebelum itu semua tautan ditolak (401),
+  kartu Akses MCP di Profil tidak muncul, dan Admin WAM → Akses MCP menampilkan pemberitahuan.
+- **Memberi akses:** Admin WAM → Orang → Akses MCP (`/admin/wam/mcp`). Pilih akun WAM yang aktif,
+  centang cakupan (bawaannya semua kecuali Profil peserta), lalu Buka akses. Cakupan bisa diubah
+  kapan saja.
+- **Menghubungkan:** orangnya membuka Profil WAM → kartu Akses MCP → Buat tautan, lalu menyalin
+  tautan `https://<domain>/api/mcp/<kunci>`.
+  - Claude: Settings → Connectors → Add custom connector → tempel tautan.
+  - ChatGPT: Settings → Apps & Connectors → Advanced → Developer mode → Create → tempel tautan,
+    Authentication: None.
+  - Claude Code / Desktop (header): `https://<domain>/api/mcp` dengan
+    `Authorization: Bearer <kunci>`.
+- **Tautan adalah rahasia.** Siapa pun yang memegangnya bisa membaca data sebagai pemiliknya. Tautan
+  hanya ditampilkan sekali; server menyimpan sha256-nya saja. Buat tautan baru = tautan lama mati.
+  **Cabut** di Akses MCP menghentikannya saat itu juga dan menghapus kuncinya; setelah Pulihkan,
+  orangnya membuat tautan baru. Kunci ada di alamat, jadi bisa tercatat di log permintaan Vercel.
+- **Log:** setiap pemanggilan tool tercatat di `pw_mcp_log` (30 terakhir di Akses MCP, 5 terakhir
+  milik sendiri di Profil).

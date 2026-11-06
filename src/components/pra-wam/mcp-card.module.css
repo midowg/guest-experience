@@ -1,0 +1,36 @@
+/* Profil → Akses MCP: a white card (radius 24), pill buttons, on the Pra WAM tokens of pra-wam.module.css. */
+.card { display: grid; gap: 16px; padding: 20px; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); scroll-margin-top: 80px; }
+.top { display: flex; align-items: center; gap: 12px; }
+.topText { flex: 1; min-width: 0; }
+.topText h2 { margin: 0; font-family: var(--pw-body); font-size: 17px; font-weight: 600; color: var(--pw-text); }
+.topText p { margin: 2px 0 0; font-size: 13px; color: var(--pw-muted); }
+.lead { margin: 0; font-size: 14px; color: var(--pw-text); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions :global(.button) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+@media (max-width: 479.98px) { .actions :global(.button) { flex: 1 1 100%; } }
+
+/* The new link, shown once. */
+.fresh { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--pw-brass-line); border-radius: 16px; background: var(--pw-warning-soft); }
+.fresh strong { font-size: 14px; color: var(--pw-warning); }
+.fresh p { margin: 0; font-size: 13px; color: var(--pw-text); }
+.linkRow { display: flex; flex-wrap: wrap; gap: 8px; }
+.link { flex: 1 1 14rem; min-width: 0; min-height: 48px; padding: 0 14px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); background: var(--pw-surface); color: var(--pw-text); font: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+.link:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.error { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--pw-danger-soft); color: var(--pw-danger); font-size: 13px; font-weight: 700; }
+.status { margin: 0; font-size: 13px; color: var(--pw-success); font-weight: 700; }
+
+/* How to connect: two short lists. */
+.steps { display: grid; gap: 12px; }
+@media (min-width: 720px) { .steps { grid-template-columns: 1fr 1fr; } }
+.step { padding: 14px 16px; border-radius: 16px; background: var(--pw-app); }
+.step h3 { margin: 0 0 6px; font-family: var(--pw-body); font-size: 14px; font-weight: 700; color: var(--pw-text); }
+.step ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 13px; color: var(--pw-text); }
+
+/* Their own last calls. */
+.callsTitle { margin: 0; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.calls { margin: 0; padding: 0; list-style: none; }
+.call { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 0; font-size: 14px; }
+.call + .call { border-top: 1px solid var(--pw-line); }
+.call small { flex: none; font-size: 13px; color: var(--pw-muted); }
+.callFailed { color: var(--pw-danger); }
+.none { margin: 0; font-size: 13px; color: var(--pw-muted); }

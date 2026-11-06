@@ -1,0 +1,24 @@
+/* Admin WAM → Akses MCP: the add form and the grant rows. --cs-* variables only. */
+.form { display: grid; gap: 16px; }
+.scopes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 8px; margin: 0; padding: 0; border: 0; }
+.scopes legend { margin-bottom: 8px; padding: 0; font-size: 14px; font-weight: 700; }
+.scope { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 10px 12px; border: 1px solid var(--cs-line); border-radius: 12px; cursor: pointer; }
+.scope input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--cs-primary); }
+.scope span { display: grid; gap: 2px; min-width: 0; }
+.scope strong { font-size: 14px; }
+.scope small { color: var(--cs-muted); font-size: 12px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rows { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.row { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.rowTop { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.rowName { display: grid; gap: 2px; min-width: 0; }
+.rowName strong { font-size: 15px; overflow-wrap: anywhere; }
+.rowName small { color: var(--cs-muted); font-size: 13px; }
+.meta { margin: 0; color: var(--cs-muted); font-size: 13px; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.revoked { opacity: .72; }
+@media (min-width: 900px) {
+  .row { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+  .row > .rowActions { grid-column: 2; grid-row: 1 / span 3; }
+}
+.rowActions { display: flex; flex-wrap: wrap; gap: 8px; }

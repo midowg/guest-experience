@@ -1,13 +1,12 @@
 import { notFound } from "next/navigation";
-import { ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/console";
 import { ScreenHead } from "@/components/pra-wam/PraWamShell";
-import { AccountStatus } from "@/components/pra-wam/BodPeople";
+import { BodPeopleList } from "@/components/pra-wam/BodPeople";
 import { PeopleBoard, type PersonItem } from "@/components/pra-wam/manage/PeopleBoard";
 import { dayStatus, dayStatusPill, nextSessionLabel } from "@/components/pra-wam/manage/schedule";
 import { Notice } from "@/components/ui";
 import { wibDate } from "@/lib/pra-wam/appraisal";
-import { accountLabels, initials } from "@/lib/pra-wam/bod";
+import { accountLabels } from "@/lib/pra-wam/bod";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { attendance } from "@/lib/server/pra-wam/attendance";
@@ -34,20 +33,7 @@ export default async function PeoplePage() {
     <ScreenHead title="Peserta" lead={`${total} peserta di ${groups.length} departemen · akses baca saja`} />
     {!unitsMigrated && <Notice tone="warning">Unit dan jabatan menunggu migrasi 202611040003_pra_wam_events_units.sql; departemen diambil dari Data karyawan.</Notice>}
     {groups.length === 0 ? <section className={base.card}><p className={styles.empty}>Belum ada peserta. Data karyawan diisi super admin.</p></section>
-      : <div className={styles.groups}>{groups.map(group => <section key={group.id} className={base.card} aria-labelledby={`dep-${group.id}`}>
-        <div className={styles.groupHead}>
-          <h2 id={`dep-${group.id}`}>{group.name}</h2>
-          <span>{[`${group.people.length} orang`, group.businessUnits.join(", "), group.leads.length ? `Lead: ${group.leads.join(", ")}` : ""].filter(Boolean).join(" · ")}</span>
-        </div>
-        <ul className={styles.people}>{group.people.map(person => <li key={person.id}>
-          <a className={styles.personRow} href={praWamPath.person(person.id)}>
-            <span className={styles.initials} aria-hidden>{initials(person.name)}</span>
-            <span><strong>{person.name}</strong>{(person.jobTitle || person.isLead) && <small>{[person.isLead ? "Lead" : "", person.jobTitle].filter(Boolean).join(" · ")}</small>}</span>
-            <AccountStatus state={person.account} />
-            <ChevronRight size={18} aria-hidden />
-          </a>
-        </li>)}</ul>
-      </section>)}</div>}
+      : <BodPeopleList groups={groups} total={total} />}
   </>;
 }
 

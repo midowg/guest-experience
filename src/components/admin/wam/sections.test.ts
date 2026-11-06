@@ -13,7 +13,7 @@ describe("Admin WAM sections", () => {
   });
 
   it("leave units and positions to Data karyawan", () => {
-    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "about", "ruang", "kuesioner"]);
+    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "mcp", "acara", "about", "ruang", "kuesioner"]);
     expect(Object.values(wamAdminPath)).not.toContain("/admin/wam/unit");
   });
 
@@ -21,7 +21,7 @@ describe("Admin WAM sections", () => {
     const groups = wamGroups();
     expect(groups.map(group => group.label)).toEqual(["Ikhtisar", "Orang", "Aplikasi", "Data peserta"]);
     expect(groups.flatMap(group => group.sections)).toEqual(wamSections.filter(section => !section.owner));
-    expect(groups.find(group => group.label === "Orang")!.sections.map(section => section.key)).toEqual(["akun"]);
+    expect(groups.find(group => group.label === "Orang")!.sections.map(section => section.key)).toEqual(["akun", "mcp"]);
   });
 
   it("make Permintaan reset a tab of Akun dan peran, with its own address kept", () => {

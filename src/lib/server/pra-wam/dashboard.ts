@@ -87,7 +87,7 @@ type People = Awaited<ReturnType<typeof listPeople>>;
 type Group = { id: string; name: string; businessUnits: string[]; members: string[]; leads: string[] };
 
 /** Departments with their people: units when imported, else the department column of Data karyawan. */
-async function departmentGroups(people: People): Promise<{ groups: Group[]; businessUnits: number; unitsMigrated: boolean }> {
+export async function departmentGroups(people: People): Promise<{ groups: Group[]; businessUnits: number; unitsMigrated: boolean }> {
   const units = await listUnits();
   const active = people.filter(person => person.active);
   const firstName = (id: string) => people.find(person => person.id === id)?.name.split(" ")[0] ?? "";

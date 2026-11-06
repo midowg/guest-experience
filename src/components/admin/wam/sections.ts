@@ -1,4 +1,5 @@
-import { CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, Map as MapIcon, UsersRound, type LucideIcon } from "lucide-react";
+import { CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, Map as MapIcon, Plug, UsersRound, type LucideIcon } from "lucide-react";
+import { MCP_ADMIN_PATH } from "@/lib/pra-wam/mcp";
 import { wamAdminPath } from "@/lib/routes";
 
 /*
@@ -7,7 +8,7 @@ import { wamAdminPath } from "@/lib/routes";
  * one entry here, its path in wamAdminPath and its page under src/app/admin/wam/. A new group
  * name starts a new group in the menu.
  */
-export type WamSectionKey = "ringkasan" | "akun" | "reset" | "acara" | "about" | "ruang" | "kuesioner";
+export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "ruang" | "kuesioner";
 export type WamSection = {
   key: WamSectionKey;
   label: string;
@@ -28,6 +29,7 @@ export const wamSections: readonly WamSection[] = [
   { key: "ringkasan", label: "Ringkasan", group: "Ikhtisar", href: wamAdminPath.home, icon: LayoutDashboard, summary: "Angka penting dan jalan ke setiap bagian." },
   { key: "akun", label: "Akun dan peran", group: "Orang", href: wamAdminPath.accounts, icon: UsersRound, summary: "Buat akun, atur peran, ubah email login, dan reset password." },
   { key: "reset", label: "Permintaan reset password", group: "Orang", href: wamAdminPath.resetRequests, icon: KeyRound, summary: "Jawab permintaan dari halaman Lupa password.", owner: "akun" },
+  { key: "mcp", label: "Akses MCP", group: "Orang", href: MCP_ADMIN_PATH, icon: Plug, summary: "Siapa boleh menghubungkan Claude atau ChatGPT ke data WAM, dan panggilan terakhir." },
   { key: "acara", label: "Acara dan modul", group: "Aplikasi", href: wamAdminPath.events, icon: CalendarRange, summary: "Status Pra WAM dan WAM, serta modul yang dibuka." },
   { key: "about", label: "Apa itu WAM", group: "Aplikasi", href: wamAdminPath.about, icon: Info, summary: "Teks penjelasan WAM di Beranda peserta." },
   { key: "ruang", label: "Ruang dan denah", group: "Aplikasi", href: wamAdminPath.rooms, icon: MapIcon, summary: "Kapasitas ruang, spot di denah, dan tampil tidaknya denah di Book." },
