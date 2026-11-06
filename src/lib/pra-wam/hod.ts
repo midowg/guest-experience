@@ -15,7 +15,7 @@ export type HodMeeting = {
   id: string; title: string; agenda: string; startsAt: string; endsAt: string; place: string;
   status: HodMeetingStatus; requester: HodPerson; invites: HodInvite[]; createdAt: string;
 };
-/** A department and the HODs who answer for it (its leads, and whoever Admin WAM ticked as HOD there). */
+/** A department (by name, from Data karyawan) and the HODs who answer for it: whoever Admin WAM ticked as HOD there, and its leads. */
 export type HodDepartment = { id: string; name: string; heads: { id: string; name: string }[] };
 
 const TIME = /^([01]\d|2[0-3]):[03]0$/;
@@ -26,7 +26,8 @@ export const hodMeetingSchema = z.object({
   start: z.string().regex(TIME, "Pilih jam mulai."),
   end: z.string().regex(TIME, "Pilih jam selesai."),
   place: z.string().trim().max(120).default(""),
-  unitIds: z.array(z.uuid()).min(1, "Pilih minimal satu departemen.").max(40),
+  /** The departments picked, by name (the department column of Data karyawan). */
+  unitIds: z.array(z.string().trim().min(1).max(160)).min(1, "Pilih minimal satu departemen.").max(40),
 }).refine(input => input.end > input.start, { message: "Jam selesai harus setelah jam mulai.", path: ["end"] });
 export type HodMeetingInput = z.infer<typeof hodMeetingSchema>;
 
