@@ -138,7 +138,7 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   atas setiap layar. Keterangan detail muncul saat diketuk.
 - Status tidak boleh hanya warna: selalu ada kata atau angka.
 - Beranda (layar pertama, 8 Nov 2026): kepala di HP dua baris ringkas, "Selamat malam · Min, 8 Nov"
-  kecil lalu nama panggilan tegas satu baris (dipotong … bila panjang); departemen dan jumlah sesi
+  kecil lalu nama lengkap tegas satu baris (dipotong … bila panjang); departemen dan jumlah sesi
   hanya di desktop. Kartu biru tidak menampilkan tombol yang belum bisa ditekan: sebelum absen
   dibuka cukup satu baris cara dan waktunya; tombol muncul saat absen dibuka.
 - Notifikasi HP memakai ikon pegasus berwarna dan badge pegasus putih transparan

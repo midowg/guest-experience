@@ -108,7 +108,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               <span className={own.hello}>{greeting(now)}<span className="sr-only">,</span>
                 <span aria-hidden> · </span><span className={own.phoneOnly}>{shortDate(now)}</span><span className={own.deskOnly}>{longDate(now)}</span>
               </span>
-              <span className={own.greetName}>{member.nickname || member.name.split(" ")[0]}</span>
+              {/* The full name (8 Nov 2026), one line; a very long one ends with … and shows whole on hover. */}
+              <span className={own.greetName} title={member.name}>{member.name}</span>
             </h1>
             {(member.department || sessionsToday > 0) && <p className={`${own.metaLine} ${own.deskOnly}`}>{[member.department, sessionsToday ? `${sessionsToday} sesi hari ini` : ""].filter(Boolean).join(" · ")}</p>}
           </div>
