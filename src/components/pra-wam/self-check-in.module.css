@@ -20,6 +20,9 @@
 .hero { display: grid; gap: 10px; margin-top: 6px; }
 .heroNote { margin: 0; font-size: 13px; font-weight: 500; color: var(--pw-on-hero-muted); }
 .heroRow { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Before check-in opens: how and when, on a soft band instead of a button that cannot be pressed (8 Nov 2026). */
+.heroWait { display: flex; align-items: flex-start; gap: 10px; margin: 2px 0 0; padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, .14); font-size: 13px; font-weight: 500; line-height: 1.45; color: var(--pw-on-hero); }
+.heroWait svg { flex: none; margin-top: 1px; }
 .heroHadir, .heroScan { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 18px; border-radius: 999px; font: inherit; font-size: 15px; white-space: nowrap; font-weight: 600; text-decoration: none; cursor: pointer; }
 .heroHadir { flex: 1 1 8rem; border: 0; background: #fff; color: var(--pw-hero); box-shadow: 0 10px 22px -12px rgba(9, 62, 153, .7); }
 .heroHadir:hover:not(:disabled) { background: var(--pw-primary-soft); }

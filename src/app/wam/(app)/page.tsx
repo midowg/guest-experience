@@ -136,14 +136,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               : <div className={sc.hero}>
                 {heroStatus.kind === "hadir"
                   ? <p className={sc.heroDone}><CheckCircle2 size={20} aria-hidden />{checkInText(heroStatus, now).title}</p>
-                  : <>
-                    <p className={sc.heroNote}>{heroCheckInNote(heroStatus, now.toISOString())}{heroStatus.kind === "buka" ? " Scan QR yang ditempel di ruang." : ""}</p>
-                    {heroStatus.kind !== "tutup" && <div className={sc.heroRow}>
-                      {heroStatus.kind === "buka"
-                        ? <a className={sc.heroHadir} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a>
-                        : <span className={`${sc.heroHadir} ${sc.heroOff}`} aria-disabled="true"><QrCode size={20} aria-hidden />Scan QR absen</span>}
-                    </div>}
-                  </>}
+                  : heroStatus.kind === "buka"
+                    ? <>
+                      <p className={sc.heroNote}>{heroCheckInNote(heroStatus, now.toISOString())} Scan QR yang ditempel di ruang.</p>
+                      <div className={sc.heroRow}><a className={sc.heroHadir} href={praWamPath.scan}><QrCode size={20} aria-hidden />Scan QR absen</a></div>
+                    </>
+                    // Not open yet (or closed): one quiet line with how to check in, no button that cannot be pressed.
+                    : <p className={sc.heroWait}><QrCode size={18} aria-hidden /><span>{heroStatus.kind === "belum" ? heroCheckInNote(heroStatus, now.toISOString()).replace(/^Absen dibuka/, "Absen lewat Scan QR, dibuka") : heroCheckInNote(heroStatus, now.toISOString())}</span></p>}
               </div>
             : next.checkedInAt
               ? <span className={`${base.heroButton} ${own.wide}`}><CheckCircle2 size={20} aria-hidden />Hadir {shortTime(next.checkedInAt)}</span>
