@@ -137,6 +137,12 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 - **Sedikit kata.** Judul pendek; satu kalimat bantu bila perlu; tidak ada paragraf penjelasan di
   atas setiap layar. Keterangan detail muncul saat diketuk.
 - Status tidak boleh hanya warna: selalu ada kata atau angka.
+- Beranda (layar pertama, 8 Nov 2026): kepala di HP dua baris ringkas, "Selamat malam · Min, 8 Nov"
+  kecil lalu nama panggilan tegas satu baris (dipotong … bila panjang); departemen dan jumlah sesi
+  hanya di desktop. Kartu biru tidak menampilkan tombol yang belum bisa ditekan: sebelum absen
+  dibuka cukup satu baris cara dan waktunya; tombol muncul saat absen dibuka.
+- Notifikasi HP memakai ikon pegasus berwarna dan badge pegasus putih transparan
+  (`/wam/badge-96.png`); badge Android harus transparan, kalau tidak tampil sebagai kotak putih.
 - Tindakan yang berisiko (hapus, batal, melebihi kapasitas, bentrok) selalu lewat konfirmasi yang
   menyebut akibatnya; tindakan biasa tanpa konfirmasi.
 - Isian tidak hilang saat terjadi galat; tombol simpan dikunci selama proses.
