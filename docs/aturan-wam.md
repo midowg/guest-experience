@@ -98,7 +98,7 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 | Bentrok | Ruang yang keburu diambil: isian tetap tersimpan, lalu ditawarkan jam atau ruang lain. Partisipan yang sudah ada di booking lain: peringatan, lalu "Tetap simpan". |
 | Booking = sesi | Setiap booking otomatis menjadi sesi terbit (agenda, Saya hadir, dokumen). Ubah atau batal lewat booking. |
 | Sebagai HOD | HOD memilih "Booking sebagai: Pribadi \| HOD". Sebagai HOD, yang dipilih departemen, dan HOD departemen itu menjadi partisipan. Ruang langsung terkunci. HOD yang diundang menjawab **Terima/Tolak** di notifikasi atau detail booking. Ubah jam atau ruang berarti semua menjawab ulang; batal booking berarti meeting batal. Tidak ada menu atau tab Meeting HOD tersendiri. |
-| Tampilan | Kalender hanya kalender; Denah hanya denah. Kartu ruang punya satu status: Kosong / Sisa X jam / Penuh / Sudah lewat. |
+| Tampilan | Kalender hanya kalender; Denah hanya denah. Kartu ruang punya satu status: Kosong / Sisa X jam / Penuh / Sudah lewat. Desktop: Hari / Minggu / Bulan. Minggu = satu ruang, Senin–Jumat; tombol ruang turun baris, tidak boleh melebarkan kartu. Bulan = Minggu–Sabtu, per hari maks. 3 booking + "+N lagi", Semua ruang atau satu ruang; tanggal membuka harinya (data lewat `GET /api/wam/appraisal?from=&to=`, maks. 6 minggu). |
 | Denah | Di dalam kotak hanya kursi; nama dan spesifikasi muncul saat diketuk (kartu tip yang bisa ditutup ×). Ruang aktif bergaris biru; yang tidak bisa dipilih pudar dan tidak bisa diketuk. Ketuk ruang lain untuk mengganti pilihan. Di desktop denah tampil melintang (landscape). Tanpa legenda dan tanpa indikator keterisian. |
 
 ## 7. Absen
