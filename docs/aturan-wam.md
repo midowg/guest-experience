@@ -81,8 +81,10 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 - Peran aplikasi: **peserta** (semua akun), **panitia**, **BOD**, **admin** (Admin WAM). HOD dan lead
   BU berasal dari Struktur, bukan peran.
 - Hak akses selalu diperiksa di server. Tampilan hanya menyembunyikan; server tetap menolak.
-- Admin biasa (HR) memegang Admin WAM (`/admin/wam`); super admin memegang data rahasia (Data
-  karyawan, struktur, NIP) di `/admin/super/…`.
+- Admin WAM (`/admin/wam`) dibagi dua (8 Nov 2026): **tim CoE** mengatur akun dan Panitia, acara dan
+  modul, Apa itu WAM, ruang dan denah, serta Akses MCP; **HR** khusus data kuesioner (Kuesioner:
+  isi, progres, rekap, ekspor, Data HR, kamar). Super admin memegang data rahasia (Data karyawan,
+  struktur, NIP) di `/admin/super/…` dan tidak ditampilkan dalam presentasi aplikasi.
 
 ## 6. Book ruang
 
