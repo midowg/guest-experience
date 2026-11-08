@@ -240,6 +240,10 @@ export const praWamApi = {
   documentUpload: `${WAM_API}/documents/upload`,
   /** GET: the person's notifications; POST {id?}: mark one, or all, read. */
   notifications: `${WAM_API}/notifications`,
+  /** Notifikasi di HP. GET: the key to subscribe with; POST {subscription, device}: this phone on; DELETE {endpoint}: off. */
+  push: `${WAM_API}/push`,
+  /** POST: a test notification to the person's own phones. */
+  pushTest: `${WAM_API}/push/test`,
   /** GET: sent announcements with read counts; POST: send one (panitia). */
   announcements: `${WAM_API}/announcements`,
   /** DELETE: panitia removes one announcement. */

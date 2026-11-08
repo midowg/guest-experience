@@ -7,6 +7,7 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listEvents } from "./events";
+import { schedulePush } from "./push";
 import type { Member } from "./session";
 
 /*
@@ -74,6 +75,8 @@ async function send(input: { kind: "pengumuman" | "sesi"; title: string; body: s
   if (error) { if (missing(error)) throw waiting(); databaseError(error); }
   const { error: receiptError } = await client.from("pw_notification_receipts").insert(ids.map(employee_id => ({ announcement_id: data.id, employee_id })));
   if (receiptError) databaseError(receiptError);
+  // The same note on the phones that turned it on (Notifikasi di HP); tapping it opens Notifikasi.
+  await schedulePush(ids, { title: input.title, body: input.body, url: praWamPath.notifications, tag: data.id }).catch(() => undefined);
   return ids.length;
 }
 

@@ -177,3 +177,8 @@ section:first-of-type > .noteDay { margin-top: 0; }
   .item dd { text-align: left; }
   .itemStack { grid-template-columns: 11rem minmax(0, 1fr); }
 }
+
+/* Notifikasi di HP (Pengaturan): the state with its icon, then the buttons under it. */
+.pushRow { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; }
+.pushActions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 16px 68px; }
+@media (max-width: 380px) { .pushActions { padding-left: 16px; } }

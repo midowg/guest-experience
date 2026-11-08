@@ -1,5 +1,6 @@
 import { BookOpen, ChevronRight, Info, LogOut } from "lucide-react";
 import { PasswordPanel } from "@/components/pra-wam/PasswordForm";
+import { PushSwitch } from "@/components/pra-wam/PushSwitch";
 import { SignOutButton } from "@/components/pra-wam/SignOutButton";
 import { ThemeSwitch } from "@/components/pra-wam/ThemeSwitch";
 import { praWamPath } from "@/lib/routes";
@@ -26,6 +27,11 @@ export default async function SettingsPage() {
       <section aria-labelledby="keamanan">
         <h2 id="keamanan" className={own.groupTitle}>Keamanan</h2>
         <PasswordPanel firstTime={member.mustChangePassword} />
+      </section>
+
+      <section aria-labelledby="notifikasi">
+        <h2 id="notifikasi" className={own.groupTitle}>Notifikasi di HP</h2>
+        <PushSwitch />
       </section>
 
       <section aria-labelledby="tampilan">

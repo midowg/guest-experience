@@ -110,6 +110,21 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 - BOD tidak absen. Daftar hadir diberi label cara absen: Scan QR, Saya hadir · di kantor,
   Saya hadir · online, Dicatat panitia.
 
+## 7a. Notifikasi
+
+- Setiap notifikasi di aplikasi (pengumuman, kabar sesi terbit/berubah/batal, Meeting HOD,
+  pengingat kuesioner) tersimpan di daftar Notifikasi (lonceng) **dan** dikirim ke HP sebagai Web
+  Push bagi orang yang mengaktifkannya (8 Nov 2026). Mengetuk notifikasi membuka halaman Notifikasi.
+- Diaktifkan per HP di **Pengaturan → Notifikasi di HP** (Aktifkan, Kirim tes, Matikan). Satu orang
+  boleh beberapa HP; HP yang dimatikan atau sudah tidak dikenal layanan push dihapus otomatis.
+- Android (Chrome) dan browser desktop didukung. iPhone hanya iOS 16.4 ke atas dan hanya saat WAM
+  dibuka dari ikon di layar utama, bukan dari Safari.
+- Kirim push tidak pernah menggagalkan yang memicunya: tanpa kunci, sebelum migrasi, atau saat
+  layanan push gagal, notifikasi di aplikasi tetap ada. Push dikirim setelah respons selesai.
+- Kunci VAPID adalah rahasia server: `WAM_VAPID_PUBLIC_KEY`, `WAM_VAPID_PRIVATE_KEY` (opsional
+  `WAM_VAPID_SUBJECT`), di `.env` lokal dan di Vercel. Tabel `pw_push_subscriptions` (migrasi
+  202611080001). Mengganti kunci membuat semua HP harus mengaktifkan ulang.
+
 ## 8. Aplikasi peserta: tampilan dan interaksi
 
 - **Rangka tetap, isi memuat di dalamnya.** Bilah atas, navigasi bawah, dan sidebar digambar sekali
