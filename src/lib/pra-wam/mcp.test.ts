@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  argDate, argUuid, DEFAULT_MCP_SCOPES, handleMcp, handleMcpText, MCP_SCOPES, McpInvalidParams, mcpToolSpecs, negotiateVersion,
-  normalizeScopes, visibleTools, type McpServer, type McpTool,
-} from "./mcp";
+import { DEFAULT_MCP_SCOPES, MCP_SCOPES, McpInvalidParams, argDate, argUuid, handleMcp, handleMcpText, mayUseMcp, mcpToolSpecs, negotiateVersion, normalizeScopes, type McpServer, type McpTool, visibleTools } from "./mcp";
 import type { PraWamRole } from "./roles";
 
 type Who = { roles: PraWamRole[] };
@@ -145,5 +142,14 @@ describe("arguments", () => {
     expect(argDate({}, "dari")).toBeNull();
     expect(argUuid({ id: "2F1C6A4E-8B7D-4C3A-9E21-5D6F7A8B9C0D" }, "id", true)).toBe("2f1c6a4e-8b7d-4c3a-9e21-5d6f7a8b9c0d");
     expect(() => argUuid({ id: "1; drop table" }, "id", true)).toThrow(McpInvalidParams);
+  });
+});
+
+describe("mayUseMcp", () => {
+  it("is for BOD and Admin WAM only", () => {
+    expect(mayUseMcp({ roles: ["bod"] })).toBe(true);
+    expect(mayUseMcp({ roles: ["admin"] })).toBe(true);
+    expect(mayUseMcp({ roles: ["panitia"] })).toBe(false);
+    expect(mayUseMcp({ roles: [] })).toBe(false);
   });
 });

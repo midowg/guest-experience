@@ -14,7 +14,7 @@ const at = (iso: string) => `${when.format(new Date(iso))} WIB`;
 export type McpCardCall = { title: string; ok: boolean; createdAt: string };
 
 /**
- * Profil → Akses MCP (only for someone an admin gave access): the status, a new link shown once
+ * Pengaturan → Asisten AI → Akses MCP (BOD and Admin WAM with access from an admin): the status, a new link shown once
  * (it replaces the old one), how to paste it in Claude or ChatGPT, and their own last calls.
  */
 export function McpCard({ hasKey, lastUsedAt, calls }: { hasKey: boolean; lastUsedAt: string | null; calls: McpCardCall[] }) {

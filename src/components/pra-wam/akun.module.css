@@ -178,7 +178,18 @@ section:first-of-type > .noteDay { margin-top: 0; }
   .itemStack { grid-template-columns: 11rem minmax(0, 1fr); }
 }
 
-/* Notifikasi di HP (Pengaturan): the state with its icon, then the buttons under it. */
+/* Pengaturan as a phone's settings (8 Nov 2026): the person on top, rows with a switch. */
+.settingsMe { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: var(--pw-text); text-decoration: none; }
+.settingsMe:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.settingsMe .rowText strong { font-family: var(--pw-display); font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pushRow { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; }
-.pushActions { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 16px 68px; }
-@media (max-width: 380px) { .pushActions { padding-left: 16px; } }
+.rowDivided { position: relative; }
+.rowDivided::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--pw-line); }
+/* A switch: 52 by 32, the knob slides right and the track turns blue when on. */
+.switch { flex: none; position: relative; width: 52px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: var(--pw-line); cursor: pointer; transition: background-color 180ms ease; }
+.switch[aria-checked="true"] { background: var(--pw-primary); }
+.switch:disabled { cursor: not-allowed; opacity: .55; }
+.switch:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.switchKnob { position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, .3); transition: transform 180ms ease; }
+.switch[aria-checked="true"] .switchKnob { transform: translateX(20px); }
+@media (prefers-reduced-motion: reduce) { .switch, .switchKnob { transition: none; } }

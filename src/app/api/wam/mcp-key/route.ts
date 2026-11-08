@@ -1,3 +1,5 @@
+import { mayUseMcp } from "@/lib/pra-wam/mcp";
+import { ServiceError } from "@/lib/server/config";
 import { checkOrigin, enforceRateLimit, handle, success } from "@/lib/server/http";
 import { rotateKey } from "@/lib/server/pra-wam/mcp";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
@@ -12,6 +14,7 @@ export async function POST(request: Request) {
   return handle(async () => {
     const member = await requireApiMember();
     checkOrigin(request);
+    if (!mayUseMcp(member)) throw new ServiceError(403, "Akses MCP hanya untuk BOD dan Admin WAM.");
     await enforceRateLimit(request, "pra-wam-mcp-key", 10);
     const key = await rotateKey(member.id);
     return success({ url: `${new URL(request.url).origin}/api/mcp/${key}` }, "Tautan MCP baru dibuat. Tautan lama tidak berlaku lagi.");

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BellRing, BellOff, Info } from "lucide-react";
-import { Button } from "@/components/ui";
+import { BellRing, BellOff, Info, Send } from "lucide-react";
 import { deviceLabel, keyBytes, pushSupport } from "@/lib/pra-wam/push";
 import { PRA_WAM_PATH, praWamApi } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
@@ -20,7 +19,7 @@ async function registration(): Promise<ServiceWorkerRegistration> {
 
 const text: Record<Exclude<State, "checking">, { title: string; note: string }> = {
   "on": { title: "Aktif di HP ini", note: "Pengumuman dan kabar sesi muncul di HP walau aplikasi tertutup." },
-  "off": { title: "Belum aktif di HP ini", note: "Aktifkan supaya pengumuman dan kabar sesi muncul di HP." },
+  "off": { title: "Belum aktif di HP ini", note: "Nyalakan supaya pengumuman dan kabar sesi muncul di HP." },
   "denied": { title: "Diblokir", note: "Izinkan notifikasi untuk WAM di pengaturan HP atau browser, lalu muat ulang halaman ini." },
   "ios-install": { title: "Buka dari layar utama", note: "Di iPhone, tambahkan WAM ke layar utama (Bagikan → Tambah ke Layar Utama), buka dari ikonnya, lalu aktifkan di sini." },
   "unsupported": { title: "Tidak didukung", note: "Browser ini belum mendukung notifikasi. Coba Chrome di Android, atau WAM dari layar utama iPhone." },
@@ -102,23 +101,27 @@ export function PushSwitch() {
     } finally { setBusy(false); }
   }
 
-  const shown = state === "checking" ? { title: "Memeriksa…", note: "Melihat apakah HP ini bisa menerima notifikasi." } : text[state];
+  const shown = state === "checking" ? { title: "Notifikasi di HP", note: "Memeriksa HP ini…" } : { title: "Notifikasi di HP", note: text[state].note };
+  const on = state === "on";
+  const usable = state === "on" || state === "off";
   return <>
     <div className={own.group}>
+      {/* One row with a switch, as in a phone's settings; the note under the name says why it cannot be turned on. */}
       <div className={own.pushRow}>
-        <span className={`${styles.tile} ${state === "on" ? "" : styles.tileBrass}`} aria-hidden>{state === "on" ? <BellRing /> : <BellOff />}</span>
-        <span className={own.rowText} role="status">
-          <strong>{shown.title}</strong>
-          <small>{shown.note}</small>
+        <span className={`${styles.tile} ${on ? "" : styles.tileBrass}`} aria-hidden>{on ? <BellRing /> : <BellOff />}</span>
+        <span className={own.rowText}>
+          <strong id="push-label">{shown.title}</strong>
+          <small id="push-note" role="status">{on ? "Aktif: pengumuman dan kabar sesi muncul di HP ini." : shown.note}</small>
         </span>
+        <button type="button" role="switch" aria-checked={on} aria-labelledby="push-label" aria-describedby="push-note"
+          className={own.switch} disabled={!usable || busy} onClick={() => on ? disable() : enable()}>
+          <span className={own.switchKnob} aria-hidden />
+        </button>
       </div>
-      {(state === "off" || state === "on") && <div className={own.pushActions}>
-        {state === "off" && <Button type="button" onClick={enable} disabled={busy}>{busy ? "Mengaktifkan…" : "Aktifkan notifikasi"}</Button>}
-        {state === "on" && <>
-          <Button type="button" variant="secondary" onClick={test} disabled={busy}>Kirim tes</Button>
-          <Button type="button" variant="quiet" onClick={disable} disabled={busy}>Matikan</Button>
-        </>}
-      </div>}
+      {on && <button type="button" className={`${own.rowButton} ${own.rowDivided}`} onClick={test} disabled={busy}>
+        <span className={styles.tile} aria-hidden><Send /></span>
+        <span className={own.rowText}><strong>Kirim notifikasi tes</strong><small>Cek apakah notifikasi muncul di HP ini</small></span>
+      </button>}
     </div>
     {message && <p className={own.groupNote} role={message.tone === "error" ? "alert" : "status"}><Info aria-hidden />{message.text}</p>}
   </>;

@@ -9,6 +9,9 @@ import { seesAllSessions, type PraWamRole } from "./roles";
  * drafts, survey privacy and Data HR still decide what comes back.
  */
 
+/** Akses MCP is for BOD and Admin WAM only (8 Nov 2026); anyone else never sees it, and a key of theirs stops working. */
+export const mayUseMcp = (who: { roles: readonly string[] }) => who.roles.includes("bod") || who.roles.includes("admin");
+
 export const MCP_SCOPES = ["ringkasan", "sesi", "kehadiran", "peserta", "booking", "dokumen", "survei", "permintaan", "pengumuman"] as const;
 export type McpScope = (typeof MCP_SCOPES)[number];
 export const mcpScopeLabels: Record<McpScope, { label: string; hint: string }> = {

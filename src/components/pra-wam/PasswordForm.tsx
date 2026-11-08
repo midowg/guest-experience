@@ -93,11 +93,13 @@ const askedForPassword = () => window.location.hash === "#password";
 export function PasswordPanel({ firstTime }: { firstTime: boolean }) {
   const asked = useSyncExternalStore(subscribeHash, askedForPassword, () => false);
   const [choice, setChoice] = useState<boolean | null>(null);
-  const open = choice ?? (firstTime || asked);
+  // Closed until tapped (or #password from Profil's banner): Pengaturan reads as a list first.
+  const open = choice ?? asked;
   return <div id="password" className={own.group}>
     <button type="button" className={own.rowButton} aria-expanded={open} aria-controls="password-form" onClick={() => setChoice(!open)}>
       <span className={`${styles.tile} ${firstTime ? styles.tileBrass : ""}`} aria-hidden>{firstTime ? <KeyRound /> : <Lock />}</span>
-      <span className={own.rowText}><strong>Ganti password</strong><small>{firstTime ? "Ganti password awal dengan password milikmu" : "Ganti password akunmu"}</small></span>
+      <span className={own.rowText}><strong>Ganti password</strong><small>{firstTime ? "Masih memakai password awal" : "Ganti password akunmu"}</small></span>
+      {firstTime && <span className={`${styles.pill} ${styles.pillBrass}`}>Disarankan</span>}
       <ChevronDown className={own.chevron} aria-hidden />
     </button>
     {open && <div id="password-form" className={own.rowPanel}>

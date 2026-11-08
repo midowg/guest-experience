@@ -1,5 +1,5 @@
 import "server-only";
-import { DEFAULT_MCP_SCOPES, handleMcpText, normalizeScopes, unauthorizedBody, type McpScope } from "@/lib/pra-wam/mcp";
+import { DEFAULT_MCP_SCOPES, handleMcpText, mayUseMcp, normalizeScopes, type McpScope, unauthorizedBody } from "@/lib/pra-wam/mcp";
 import { bearerKey, hashMcpKey, looksLikeMcpKey, mcpKeyHint, newMcpKey } from "@/lib/pra-wam/mcp-key";
 import { photoColumnMissing, photoPath } from "@/lib/pra-wam/photo";
 import { ServiceError } from "../config";
@@ -52,11 +52,14 @@ export type McpAdminList = { migrated: boolean; rows: McpAccessRow[]; recent: Mc
 /** Every grant, the last 30 calls, and the WAM accounts that could still be given access. */
 export async function listMcpAccess(): Promise<McpAdminList> {
   const client = createPrivilegedClient();
-  const [{ data: access, error }, { data: log, error: logError }, { data: accounts, error: accountError }] = await Promise.all([
+  const [{ data: access, error }, { data: log, error: logError }, { data: accounts, error: accountError }, { data: leaders }] = await Promise.all([
     client.from("pw_mcp_access").select(ACCESS_COLUMNS).order("granted_at", { ascending: false }),
     client.from("pw_mcp_log").select("id,employee_id,tool,ok,created_at").order("created_at", { ascending: false }).limit(30),
     client.from("pw_accounts").select("employee_id,active,employees(full_name,department,active)").limit(2000),
+    client.from("pw_roles").select("employee_id").in("role", ["bod", "admin"]),
   ]);
+  // Only BOD and Admin WAM can be given access.
+  const allowed = new Set((leaders ?? []).map(row => row.employee_id as string));
   const problem = error ?? logError;
   if (problem) { if (missing(problem)) return { migrated: false, rows: [], recent: [], candidates: [] }; databaseError(problem); }
   if (accountError) { if (notMigrated(accountError)) return { migrated: true, rows: [], recent: [], candidates: [] }; databaseError(accountError); }
@@ -68,7 +71,7 @@ export async function listMcpAccess(): Promise<McpAdminList> {
     hasKey: !row.revoked_at && !!row.key_hash, keyHint: row.revoked_at ? null : row.key_hint, keyCreatedAt: row.key_created_at, lastUsedAt: row.last_used_at,
   }));
   const granted = new Set(rows.map(row => row.employeeId));
-  const candidates = [...people.entries()].filter(([id, person]) => person.usable && !granted.has(id))
+  const candidates = [...people.entries()].filter(([id, person]) => person.usable && !granted.has(id) && allowed.has(id))
     .map(([employeeId, person]) => ({ employeeId, name: person.name, department: person.department }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const recent = (log ?? []).map(row => ({ id: row.id, employeeId: row.employee_id, name: row.employee_id ? people.get(row.employee_id)?.name ?? "Tanpa nama" : "Tanpa nama", tool: row.tool, ok: row.ok, createdAt: row.created_at }));
@@ -84,6 +87,8 @@ export async function grantMcp(employeeId: string, scopes: readonly string[] = D
   if (accountError) { if (notMigrated(accountError)) throw new ServiceError(503, "Akun WAM menunggu migrasi."); databaseError(accountError); }
   const person = account as unknown as { active: boolean; employees: { active: boolean } | null } | null;
   if (!person || !person.active || !person.employees?.active) throw new ServiceError(422, "Orang ini belum punya akun WAM yang aktif. Buat akunnya dulu di Akun dan peran.");
+  const { data: roles } = await client.from("pw_roles").select("role").eq("employee_id", employeeId);
+  if (!mayUseMcp({ roles: (roles ?? []).map(row => row.role as string) })) throw new ServiceError(422, "Akses MCP hanya untuk BOD dan Admin WAM.");
   const { data: existing, error } = await client.from("pw_mcp_access").select("employee_id").eq("employee_id", employeeId).maybeSingle();
   if (error) fail(error);
   const { error: saveError } = existing
@@ -140,7 +145,8 @@ export async function mcpCallerForKey(key: string | null, now = new Date()): Pro
   if (error) { if (missing(error)) return null; databaseError(error); }
   if (!access || access.revoked_at) return null;
   const member = await memberById(access.employee_id);
-  if (!member) return null;
+  // Only BOD and Admin WAM: a key kept by someone who lost the role stops working.
+  if (!member || !mayUseMcp(member)) return null;
   // Last used, at most once a minute so a busy conversation is not a write per question.
   if (!access.last_used_at || now.getTime() - Date.parse(access.last_used_at) >= USED_EVERY_MS) {
     await client.from("pw_mcp_access").update({ last_used_at: now.toISOString() }).eq("employee_id", access.employee_id);
