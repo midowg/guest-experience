@@ -20,7 +20,7 @@ self.addEventListener("push", event => {
   event.waitUntil(self.registration.showNotification(data.title || "WAM", {
     body: data.body || "",
     icon: "/wam/icon-192.png",
-    badge: "/wam/icon-192.png",
+    badge: "/wam/badge-96.png",
     tag: data.tag || undefined,
     data: { url: data.url || "/wam/notifications" },
   }));

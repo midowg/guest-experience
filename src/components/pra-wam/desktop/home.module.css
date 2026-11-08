@@ -18,17 +18,30 @@
   .wide.wide { justify-self: stretch; justify-content: center; }
 }
 
-/* Beranda's header. Phone: avatar (to Profil), greeting with the date and department, the bell. */
-.homeHead { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; }
+/*
+ * Beranda's header (revised 8 Nov 2026: the greeting took two big lines on a phone). Phone: avatar
+ * (to Profil), then two short lines, "Selamat malam · Min, 8 Nov" small and the name strong on one
+ * line (cut with … when long), then the bell. Desktop: the same two lines larger, and the
+ * department and today's sessions under them.
+ */
+.homeHead { display: flex; align-items: center; gap: 12px; padding-bottom: 4px; }
 .homeAvatar { flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; margin-left: -4px; border-radius: 50%; text-decoration: none; }
 .homeAvatar:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
 .homeTitle { flex: 1; min-width: 0; }
-/* Sapaan (DS): Poppins 500 in two tones, the greeting in ink and the name in the second text colour. */
-.greet.greet { margin: 0; font-family: var(--pw-display); font-size: 24px; font-weight: 500; letter-spacing: -.3px; line-height: 1.25; color: var(--pw-text); overflow-wrap: anywhere; }
-.greetName { color: var(--pw-muted); }
+.greet.greet { display: grid; gap: 1px; margin: 0; font-family: var(--pw-display); font-weight: 500; color: var(--pw-text); }
+.hello { overflow: hidden; font-family: var(--pw-body, inherit); font-size: 13px; font-weight: 500; line-height: 18px; letter-spacing: 0; color: var(--pw-muted); white-space: nowrap; text-overflow: ellipsis; }
+.greetName { overflow: hidden; font-size: 20px; font-weight: 600; line-height: 26px; letter-spacing: -.2px; color: var(--pw-text); white-space: nowrap; text-overflow: ellipsis; }
 .metaLine { margin: 4px 0 0; font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--pw-muted); }
+.deskOnly { display: none; }
 .homeBell { flex: none; margin-right: -8px; }
-@media (min-width: 1024px) { .greet.greet { font-size: 28px; letter-spacing: -.4px; } .metaLine { font-size: 15px; } .homeHead { padding-bottom: 0; } }
+@media (min-width: 1024px) {
+  .homeHead { padding-bottom: 0; }
+  .greet.greet { gap: 2px; }
+  .hello { font-size: 15px; line-height: 22px; }
+  .greetName { font-size: 30px; line-height: 38px; letter-spacing: -.4px; }
+  .metaLine { font-size: 15px; }
+  .deskOnly { display: revert; }
+}
 /* Small pieces shared by both screens */
 .cardHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .cardHead h2 { margin: 0 !important; }

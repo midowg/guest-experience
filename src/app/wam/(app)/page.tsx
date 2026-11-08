@@ -34,6 +34,8 @@ const greeting = (now: Date) => {
   return hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
 };
 const longDate = (now: Date) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jakarta" }).format(now);
+/** "Min, 8 Nov": the date on a phone, where the header has one short line for it. */
+const shortDate = (now: Date) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Jakarta" }).format(now);
 const shortTime = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 const chipDay = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 const chipDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
@@ -102,8 +104,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <Avatar name={member.name} photo={member.photo ?? null} size="md" decorative />
           </a>
           <div className={own.homeTitle}>
-            <h1 className={own.greet}>{greeting(now)}, <span className={own.greetName}>{member.nickname || member.name.split(" ")[0]}</span></h1>
-            <p className={own.metaLine}>{longDate(now)}{member.department ? ` · ${member.department}` : ""}{sessionsToday ? ` · ${sessionsToday} sesi hari ini` : ""}</p>
+            <h1 className={own.greet}>
+              <span className={own.hello}>{greeting(now)}<span className="sr-only">,</span>
+                <span aria-hidden> · </span><span className={own.phoneOnly}>{shortDate(now)}</span><span className={own.deskOnly}>{longDate(now)}</span>
+              </span>
+              <span className={own.greetName}>{member.nickname || member.name.split(" ")[0]}</span>
+            </h1>
+            {(member.department || sessionsToday > 0) && <p className={`${own.metaLine} ${own.deskOnly}`}>{[member.department, sessionsToday ? `${sessionsToday} sesi hari ini` : ""].filter(Boolean).join(" · ")}</p>}
           </div>
           <a className={`${base.iconButton} ${own.homeBell} ${own.phoneOnly}`} href={praWamPath.notifications} aria-label={notes.unread ? `Notifikasi, ${notes.unread} belum dibaca` : "Notifikasi"}>
             <Bell aria-hidden />{notes.unread > 0 && <span className={base.iconDot} />}
