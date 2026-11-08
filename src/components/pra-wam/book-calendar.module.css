@@ -154,8 +154,9 @@
 .nowLine::before { content: ""; position: absolute; left: -4px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--pw-primary); }
 
 /* The week grid's card: week arrows and "Pilih ruang", then the timeline. */
-.weekCard { display: grid; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); padding: 0 16px 16px 0; }
-.weekTop { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 16px 0 12px 16px; }
+/* minmax(0, 1fr): the card never grows past the page; the room pills wrap inside it instead (8 Nov 2026). */
+.weekCard { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); padding: 0 16px 16px 0; }
+.weekTop { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; min-width: 0; padding: 16px 0 12px 16px; }
 .weekNav { display: flex; align-items: center; gap: 8px; }
 .weekNav h3 { margin: 0; min-width: 7.5rem; text-align: center; font-family: var(--pw-display); font-size: 18px; font-weight: 500; color: var(--pw-text); }
 .round { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--pw-line); border-radius: 50%; background: var(--pw-surface); color: var(--pw-text); cursor: pointer; }
@@ -163,8 +164,9 @@
 .round:hover:not(:disabled) { border-color: var(--pw-primary); color: var(--pw-primary); }
 .round:disabled { color: var(--pw-muted); opacity: .45; cursor: default; }
 .round:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
-.roomPick { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-.roomPick::-webkit-scrollbar { display: none; }
+/* Every room stays in sight: the pills wrap to a second row rather than slide out of the card. */
+.roomPick { flex-wrap: wrap; max-width: 100%; min-width: 0; border-radius: 26px; }
+.roomPick button { padding: 0 14px; }
 .timeline .deskHead { border-radius: 0; padding: 0; border-top: 1px solid var(--pw-line); }
 .weekDay { display: flex; align-items: baseline; justify-content: center; gap: 6px; min-height: 48px; padding: 12px 4px 8px; border: 0; border-left: 1px solid var(--pw-line); background: transparent; color: var(--pw-muted); font: inherit; cursor: pointer; }
 .weekDay span { font-size: 13px; font-weight: 600; }
@@ -174,7 +176,8 @@
 .weekDay[data-today] { background: var(--pw-primary-soft); color: var(--pw-primary); }
 .weekDay[data-today] strong { color: var(--pw-primary); font-weight: 600; }
 .weekDay[data-selected] { box-shadow: inset 0 -3px 0 var(--pw-primary); }
-.timeline .deskBody { margin-top: 0; }
+/* Room above the first hour, so "07.00" is not cut by the sticky day row. */
+.timeline .deskBody { margin-top: 14px; }
 
 /* Booking saya, compact rows that open the detail sheet. */
 .mineList { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }

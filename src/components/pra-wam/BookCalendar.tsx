@@ -218,7 +218,8 @@ function TimeBlock({ segment, viewerId, line, onOpen }: {
   return <button type="button" className={`${css.block} ${css[kind]} ${short ? css.blockShort : ""}`} style={{ top: at(segment.from), height: at(segment.to - segment.from) }}
     onClick={() => onOpen(booking)} aria-haspopup="dialog" title={`${booking.title} · ${span} · ${whoOf(booking, viewerId)}`}
     aria-label={`${booking.title}, ${span}, ${whoOf(booking, viewerId)}${running ? ", sedang berlangsung" : ""}`}>
-    <small className={css.blockTime}>{span}</small>
+    {/* A half hour has room for one line: the title (its hours are where it sits, and in the tip). */}
+    {!short && <small className={css.blockTime}>{span}</small>}
     <strong>{booking.title}</strong>
     {!short && <small className={css.blockWho}>{whoOf(booking, viewerId)}</small>}
   </button>;

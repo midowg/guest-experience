@@ -10,6 +10,7 @@ import { errorText, praWamRequest } from "./api";
 import { daySummaries, roomDay, type DayStatus, type DaySummary } from "@/lib/pra-wam/room-day";
 import { bookingKey, DayCalendar, Legend, WeekCalendar, type BookPick } from "./BookCalendar";
 import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
+import { monthOf, MonthView } from "./BookMonth";
 import { useConfirm } from "./ConfirmDialog";
 import { FloorPlan } from "./FloorPlan";
 import { hodResponseLabels, hodStatusLabels, type HodBookingInfo, type HodDepartment } from "@/lib/pra-wam/hod";
@@ -76,8 +77,11 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const [chosenView, setView] = useState<"kalender" | "denah">("kalender");
   // With the floor plan switched off by the super admin, no Denah; Meeting HOD only for a HOD.
   const view = chosenView === "denah" && !floorPlan ? "kalender" : chosenView;
-  // From 1024px the week grid first (DS "Jadwal, tampilan minggu"); a phone always shows the day.
-  const [mode, setMode] = useState<"hari" | "minggu">("minggu");
+  // From 1024px the week grid first (DS "Jadwal, tampilan minggu"), or the day, or the month (8 Nov 2026); a phone always shows the day.
+  const [mode, setMode] = useState<"hari" | "minggu" | "bulan">("minggu");
+  const [month, setMonth] = useState(() => monthOf(date));
+  // Bumped after a save or a cancel, so the month view fetches its bookings again.
+  const [version, setVersion] = useState(0);
   const [weekRoom, setWeekRoom] = useState(() => bookable[0]?.id ?? "");
 
   // "Now" moves on while the page is open: the line and what can still be booked.
@@ -143,9 +147,9 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   function close() { setShown(false); mirror({}); }
   /** A day picked: in this week it shows at once, another week loads. `toDay`: switch the desktop to the day view. */
   function pickDay(day: string, toDay = true) {
+    if (toDay) setMode("hari");
     if (!loaded.includes(day)) { router.push(praWamPath.appraisal(day), { scroll: false }); return; }
     setSelected(day);
-    if (toDay) setMode("hari");
     window.history.replaceState(null, "", praWamPath.bookSheet({ date: day }));
   }
   /** The week grid's arrows: the first day of the week before or after that is in the period. */
@@ -159,6 +163,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
 
   function saved({ message, date: day }: { message: string; date: string }) {
     setShown(false);
+    setVersion(value => value + 1);
     setNotice({ tone: "success", text: message });
     if (loaded.includes(day)) {
       setSelected(day);
@@ -181,6 +186,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     try {
       const result = await praWamRequest(praWamApi.bookings(booking.id), { method: "DELETE" });
       setNotice({ tone: "success", text: result.message || "Booking dibatalkan." });
+      setVersion(value => value + 1);
       close();
       router.refresh();
     } catch (error) { setNotice({ tone: "error", text: errorText(error) }); }
@@ -219,6 +225,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
       {view === "kalender" && <div className={`${css.segmented} ${css.deskOnly}`} role="group" aria-label="Rentang kalender">
         <button type="button" aria-pressed={mode === "hari"} onClick={() => setMode("hari")}>Hari</button>
         <button type="button" aria-pressed={mode === "minggu"} onClick={() => setMode("minggu")}>Minggu</button>
+        <button type="button" aria-pressed={mode === "bulan"} onClick={() => { setMonth(monthOf(selected)); setMode("bulan"); }}>Bulan</button>
       </div>}
     </div>
 
@@ -227,7 +234,11 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
         {calendar}
         <Legend />
       </div>
-      {weekendDay ? <div className={css.main}>{weekendPanel}</div> : <div className={css.main}>
+      {mode === "bulan" && <div className={`${css.main} ${css.deskWeek}`}>
+        <MonthView month={month} rooms={bookable} viewerId={viewerId} today={today} selected={selected} summary={days} version={version}
+          onMonth={setMonth} onPickDay={day => pickDay(day)} onOpen={openBooking} />
+      </div>}
+      {weekendDay ? <div className={`${css.main} ${mode === "bulan" ? css.deskHide : ""}`}>{weekendPanel}</div> : <div className={`${css.main} ${mode === "bulan" ? css.deskHide : ""}`}>
         <DayHead date={selected} today={today} note={dayNote} className={mode === "minggu" ? css.deskHide : undefined} />
         {mode === "minggu" && <div className={css.deskWeek}>
           <WeekCalendar week={week} rooms={bookable} bookings={bookings} viewerId={viewerId} now={clockNow} today={today} selected={selected} canBook={canBook}
@@ -235,7 +246,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
             onBook={pick => book({ date: pick.date, room: pick.room.id, start: pick.start, end: pick.end })} />
         </div>}
         <DayCalendar date={selected} rooms={bookable} bookings={dayBookings} now={clockNow} viewerId={viewerId} canBook={canBookDay}
-          onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} phoneOnly={mode === "minggu"} />
+          onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} phoneOnly={mode !== "hari"} />
       </div>}
     </div> : <PlanView key={selected} date={selected} today={today} now={clockNow} rooms={rooms} bookings={dayBookings} canBook={canBookDay} weekend={weekendDay}
       note={weekendDay ? "Akhir pekan" : dayNote} onDay={day => pickDay(day, false)} onBookRoom={room => book({ date: selected, room: room.id })} />}

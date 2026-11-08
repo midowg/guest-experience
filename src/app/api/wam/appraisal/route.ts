@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { bookingInputSchema, bookingSavedText } from "@/lib/pra-wam/appraisal";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
-import { daySchedule, saveBooking } from "@/lib/server/pra-wam/appraisal";
+import { daySchedule, saveBooking, weekSchedule } from "@/lib/server/pra-wam/appraisal";
 import { hodUnitsSchema } from "@/lib/pra-wam/hod";
 import { hodInvitees, linkHodBooking } from "@/lib/server/pra-wam/hod";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
@@ -9,11 +9,24 @@ import { handleBooking } from "@/lib/server/pra-wam/respond";
 
 export const dynamic = "force-dynamic";
 
-/** GET ?date=YYYY-MM-DD: every room and booking that day. */
+const DAY = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal tidak valid.");
+const MONTH_DAYS = 42;
+
+/**
+ * GET ?date=YYYY-MM-DD: every room and booking that day. GET ?from=&to= (Book's month view, 8 Nov
+ * 2026): every booking from one day to another, at most six weeks.
+ */
 export async function GET(request: Request) {
   return handle(async () => {
     const member = await requireApiMember();
-    const date = validate(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal tidak valid."), new URL(request.url).searchParams.get("date"));
+    const search = new URL(request.url).searchParams;
+    if (search.has("from")) {
+      const { from, to } = validate(z.object({ from: DAY, to: DAY }).refine(range => range.from <= range.to, "Rentang tanggal terbalik.")
+        .refine(range => (Date.parse(range.to) - Date.parse(range.from)) / 86_400_000 < MONTH_DAYS, "Rentang paling lama enam minggu."),
+      { from: search.get("from"), to: search.get("to") });
+      return success(await weekSchedule([from, to], member), "Jadwal ruang dimuat.");
+    }
+    const date = validate(DAY, search.get("date"));
     return success(await daySchedule(date, member), "Jadwal ruang dimuat.");
   });
 }
