@@ -1,4 +1,5 @@
 import "server-only";
+import { bookingTopic } from "@/lib/pra-wam/push";
 import type { Session } from "@/lib/pra-wam/sessions";
 import { isR2Configured, removeObjects } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -41,14 +42,17 @@ export type BookingFacts = Pick<Session, "title" | "startsAt" | "endsAt" | "room
 
 /**
  * Tells the session's participants that the booking became a session, moved, or was cancelled,
- * as panitia's sessions do, except whoever did it (the booker knows). Never throws: the booking
- * is saved either way.
+ * as panitia's sessions do, except whoever did it (the booker knows). On the phone only as its
+ * booking topic: a new booking as booking_baru, a move or cancel within 24 hours as booking_penting,
+ * a later one the bell only. Never throws: the booking is saved either way.
  */
 export async function notifyBookingSession(bookingId: string, change: "terbit" | "berubah" | "batal", facts: BookingFacts, by: Member): Promise<void> {
   try {
     const session = await sessionOfBooking(bookingId);
     if (!session) return;
-    await notifySession({ ...facts, id: session.id, planFrom: null, planTo: null, location: "" }, change, by, { except: by.id });
+    // A booking always has its time; without one, a change is not urgent.
+    const topic = facts.startsAt ? bookingTopic(change, facts.startsAt, new Date()) : change === "terbit" ? "booking_baru" : null;
+    await notifySession({ ...facts, id: session.id, planFrom: null, planTo: null, location: "" }, change, by, { except: by.id, topic });
   } catch { /* the booking is saved either way */ }
 }
 

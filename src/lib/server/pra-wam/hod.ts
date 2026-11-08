@@ -90,9 +90,9 @@ export async function answerHodMeeting(member: Member, id: string, accept: boole
   if (status === "terjadwal") {
     const invited = (all ?? []).map(row => row.employee_id);
     const booked = await bookMeetingRoom(meeting, invited);
-    await notifyPeople([meeting.requested_by, ...invited], { title: `Meeting HOD terjadwal: ${meeting.title}`, body: `Semua HOD menerima. ${span}${meeting.place ? `, ${meeting.place}` : ""}.${booked === "terpakai" ? ` ${meeting.place} ternyata sudah terpakai di jam itu, jadi belum dibooking: pilih ruang lain lewat Book.` : ""}`, label: HOD_NOTE_LABEL }, member);
+    await notifyPeople([meeting.requested_by, ...invited], { title: `Meeting HOD terjadwal: ${meeting.title}`, body: `Semua HOD menerima. ${span}${meeting.place ? `, ${meeting.place}` : ""}.${booked === "terpakai" ? ` ${meeting.place} ternyata sudah terpakai di jam itu, jadi belum dibooking: pilih ruang lain lewat Book.` : ""}`, label: HOD_NOTE_LABEL, topic: "hod", tag: `hod-${meeting.id}` }, member);
   } else if (status === "ditolak") {
-    await notifyPeople([meeting.requested_by], { title: `Meeting HOD ditolak: ${meeting.title}`, body: `${await callNameOf(member.id, member.name)} menolak${note ? `: "${note}"` : "."} Kamu bisa mengajukan waktu lain.`, label: HOD_NOTE_LABEL }, member);
+    await notifyPeople([meeting.requested_by], { title: `Meeting HOD ditolak: ${meeting.title}`, body: `${await callNameOf(member.id, member.name)} menolak${note ? `: "${note}"` : "."} Kamu bisa mengajukan waktu lain.`, label: HOD_NOTE_LABEL, topic: "hod", tag: `hod-${meeting.id}` }, member);
   }
   return status;
 }
@@ -137,7 +137,7 @@ export async function cancelHodMeeting(member: Member, id: string): Promise<void
     if (bookingError) databaseError(bookingError);
   }
   const { data: invites } = await client.from("pw_hod_meeting_invites").select("employee_id").eq("meeting_id", id);
-  await notifyPeople((invites ?? []).map(row => row.employee_id), { title: `Meeting HOD dibatalkan: ${meeting.title}`, body: `${await callNameOf(member.id, member.name)} membatalkan meeting ini.`, label: HOD_NOTE_LABEL }, member);
+  await notifyPeople((invites ?? []).map(row => row.employee_id), { title: `Meeting HOD dibatalkan: ${meeting.title}`, body: `${await callNameOf(member.id, member.name)} membatalkan meeting ini.`, label: HOD_NOTE_LABEL, topic: "hod", tag: `hod-${meeting.id}` }, member);
 }
 
 /* ── Booking "sebagai HOD" (6 Nov 2026): Book ruang's own form, the room locked at once. ── */
@@ -186,7 +186,7 @@ export async function linkHodBooking(member: Member, booking: BookedMeeting, inv
   await notifyPeople(invites.map(invite => invite.employee_id), {
     title: `Undangan Meeting HOD: ${booking.title}`,
     body: `${await callNameOf(member.id, member.name)} mengajak kamu meeting HOD, ${when(wibTime(booking.startsAt), wibTime(booking.endsAt), wibDate(booking.startsAt))}${where ? ` di ${where}` : ""}. Ruang sudah dibooking. Terima atau tolak di sini.`,
-    sessionId: await bookingSession(booking.id), label: HOD_NOTE_LABEL,
+    sessionId: await bookingSession(booking.id), label: HOD_NOTE_LABEL, topic: "hod", tag: `hod-${data.id}`,
   }, member);
 }
 
@@ -210,7 +210,7 @@ export async function relinkHodBooking(member: Member, booking: BookedMeeting): 
   await notifyPeople((invites ?? []).map(row => row.employee_id), {
     title: `Meeting HOD diubah: ${booking.title}`,
     body: `${await callNameOf(member.id, member.name)} memindah meeting ini ke ${when(wibTime(booking.startsAt), wibTime(booking.endsAt), wibDate(booking.startsAt))}${where ? ` di ${where}` : ""}. Jawab lagi: terima atau tolak.`,
-    sessionId: await bookingSession(booking.id), label: HOD_NOTE_LABEL,
+    sessionId: await bookingSession(booking.id), label: HOD_NOTE_LABEL, topic: "hod", tag: `hod-${meeting.id}`,
   }, member);
 }
 

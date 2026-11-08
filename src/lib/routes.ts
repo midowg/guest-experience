@@ -244,6 +244,8 @@ export const praWamApi = {
   push: `${WAM_API}/push`,
   /** POST: a test notification to the person's own phones. */
   pushTest: `${WAM_API}/push/test`,
+  /** GET: which topics reach the person's phones (resolved with the defaults); PUT {prefs}: change them. */
+  pushPrefs: `${WAM_API}/push/prefs`,
   /** GET: sent announcements with read counts; POST: send one (panitia). */
   announcements: `${WAM_API}/announcements`,
   /** DELETE: panitia removes one announcement. */

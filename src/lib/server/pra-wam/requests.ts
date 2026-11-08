@@ -140,7 +140,7 @@ export async function reviewRequest(id: string, approve: boolean, note: string, 
   await notifyPeople([request.requesterId], {
     title: `${approve ? "Disetujui" : "Ditolak"}: ganti jadwal ${request.sessionTitle}`,
     body: `${approve ? "Sesi dipindah ke" : "Usulan"} ${spanLabel(request.toStartsAt, request.toEndsAt)}.${note ? ` Catatan panitia: ${note}` : ""}`,
-    sessionId: request.sessionId,
+    sessionId: request.sessionId, topic: "permintaan", tag: `permintaan-${id}`,
   }, viewer);
 }
 

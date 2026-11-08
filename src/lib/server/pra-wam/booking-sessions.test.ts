@@ -197,7 +197,7 @@ describe("the booker's own changes", () => {
     // The trigger cancels the session in the database; the server only adds the note.
     await cancelBooking("b1", citra);
     expect(db.pw_room_bookings[0]).toMatchObject({ status: "batal", cancelled_by: "citra" });
-    expect(notifySession).toHaveBeenCalledWith(expect.objectContaining({ id: "s1", title: "1-on-1 Q4", roomName: "Vasuki", startsAt: start }), "batal", citra, { except: "citra" });
+    expect(notifySession).toHaveBeenCalledWith(expect.objectContaining({ id: "s1", title: "1-on-1 Q4", roomName: "Vasuki", startsAt: start }), "batal", citra, expect.objectContaining({ except: "citra" }));
   });
 
   it("cancelling before the migration sends nothing", async () => {

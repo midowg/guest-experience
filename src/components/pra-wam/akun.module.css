@@ -181,7 +181,8 @@ section:first-of-type > .noteDay { margin-top: 0; }
 /* Pengaturan as a phone's settings (8 Nov 2026): the person on top, rows with a switch. */
 .settingsMe { display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: var(--pw-text); text-decoration: none; }
 .settingsMe:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
-.settingsMe .rowText strong { font-family: var(--pw-display); font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.settingsMe .rowText strong { font-family: var(--pw-display); font-size: 17px; font-weight: 600; color: var(--pw-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.settingsMe .rowText small { color: var(--pw-muted); }
 .pushRow { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; }
 .rowDivided { position: relative; }
 .rowDivided::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--pw-line); }
@@ -193,3 +194,19 @@ section:first-of-type > .noteDay { margin-top: 0; }
 .switchKnob { position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, .3); transition: transform 180ms ease; }
 .switch[aria-checked="true"] .switchKnob { transform: translateX(20px); }
 @media (prefers-reduced-motion: reduce) { .switch, .switchKnob { transition: none; } }
+
+/* Yang dikirim ke HP: one row per topic, a divider between rows, a smaller switch on the right. */
+.topics { margin-top: 24px; }
+ul.group { padding: 0; list-style: none; }
+.topicRow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; }
+.topicRow + .topicRow::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--pw-line); }
+.topicPill { flex: none; }
+/* 44 by 26 to look, but the hit area reaches 44px tall. */
+.switchSmall { width: 44px; height: 26px; }
+.switchSmall::after { content: ""; position: absolute; inset: -9px -4px; }
+.switchSmall .switchKnob { width: 20px; height: 20px; }
+.switchSmall[aria-checked="true"] .switchKnob { transform: translateX(18px); }
+@media (min-width: 1024px) {
+  .topicRow { padding: 12px 24px; }
+  .topicRow + .topicRow::before { left: 24px; }
+}

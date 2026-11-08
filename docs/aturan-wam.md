@@ -112,9 +112,25 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 
 ## 7a. Notifikasi
 
-- Setiap notifikasi di aplikasi (pengumuman, kabar sesi terbit/berubah/batal, Meeting HOD,
-  pengingat kuesioner) tersimpan di daftar Notifikasi (lonceng) **dan** dikirim ke HP sebagai Web
-  Push bagi orang yang mengaktifkannya (8 Nov 2026). Mengetuk notifikasi membuka halaman Notifikasi.
+- Setiap notifikasi di aplikasi tersimpan di daftar Notifikasi (lonceng). Ke HP (Web Push) hanya
+  **topik penting**, supaya tidak jadi spam, termasuk untuk atasan (8 Nov 2026). Mengetuk notifikasi
+  membuka halaman Notifikasi. Aturannya di `src/lib/pra-wam/push.ts` (`pushTopicInfo`, `shouldPush`):
+
+  | Topik | Ke HP | Bisa dimatikan |
+  | --- | --- | --- |
+  | Pengumuman panitia | selalu | tidak |
+  | Meeting HOD (undangan perlu dijawab, pindah, tolak, batal, terjadwal) | ya | ya |
+  | Sesi dari panitia (forum dan sesi baru, pindah, batal) | ya | ya |
+  | Booking yang kamu ikuti pindah atau batal **kurang dari 24 jam** sebelum mulai | ya | ya |
+  | Undangan booking baru (ditandai di booking ruang) | **tidak**, lonceng saja | bisa dinyalakan |
+  | Jawaban permintaan jadwal | ya | ya |
+  | Pengingat kuesioner | ya | ya |
+
+  Booking yang pindah atau batal lebih dari 24 jam sebelumnya tidak dikirim ke HP. **Jam tenang**
+  21.00–06.00 WIB: topik yang tidak mendesak (sesi panitia, undangan booking, jawaban permintaan,
+  kuesioner) tidak dikirim ke HP. Kabar baru tentang sesi atau Meeting HOD yang sama **menggantikan**
+  notifikasi sebelumnya di HP (tag `sesi-…`, `hod-…`), tidak menumpuk. Pilihan per orang ada di
+  Pengaturan → Notifikasi (tabel `pw_notification_prefs`, migrasi 202611080002).
 - Diaktifkan per HP di **Pengaturan → Notifikasi di HP** (Aktifkan, Kirim tes, Matikan). Satu orang
   boleh beberapa HP; HP yang dimatikan atau sudah tidak dikenal layanan push dihapus otomatis.
 - Android (Chrome) dan browser desktop didukung. iPhone hanya iOS 16.4 ke atas dan hanya saat WAM

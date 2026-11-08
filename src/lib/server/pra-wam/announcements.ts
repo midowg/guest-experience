@@ -7,6 +7,7 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listEvents } from "./events";
+import type { PushTopic } from "@/lib/pra-wam/push";
 import { schedulePush } from "./push";
 import type { Member } from "./session";
 
@@ -64,7 +65,12 @@ async function resolve(audience: Audience): Promise<{ ids: string[]; label: stri
   return { ids: (data ?? []).map(person => person.id), label: "Semua peserta", sessionId: null };
 }
 
-async function send(input: { kind: "pengumuman" | "sesi"; title: string; body: string; audience: Audience; createdBy: string | null; except?: string }): Promise<number> {
+/**
+ * Writes the note to every recipient's bell, and pushes it to the phones of those whose choices
+ * allow its `topic` (null: the bell only). Notes with the same `tag` replace each other on a phone
+ * (the latest news about one session), instead of piling up; without one, each note stands alone.
+ */
+async function send(input: { kind: "pengumuman" | "sesi"; title: string; body: string; audience: Audience; createdBy: string | null; except?: string; topic: PushTopic | null; tag?: string }): Promise<number> {
   const { ids: everyone, label, sessionId } = await resolve(input.audience);
   const ids = input.except ? everyone.filter(id => id !== input.except) : everyone;
   if (!ids.length) throw new ServiceError(422, "Belum ada penerima untuk pilihan ini.");
@@ -76,14 +82,14 @@ async function send(input: { kind: "pengumuman" | "sesi"; title: string; body: s
   const { error: receiptError } = await client.from("pw_notification_receipts").insert(ids.map(employee_id => ({ announcement_id: data.id, employee_id })));
   if (receiptError) databaseError(receiptError);
   // The same note on the phones that turned it on (Notifikasi di HP); tapping it opens Notifikasi.
-  await schedulePush(ids, { title: input.title, body: input.body, url: praWamPath.notifications, tag: data.id }).catch(() => undefined);
+  await schedulePush(ids, { title: input.title, body: input.body, url: praWamPath.notifications, tag: input.tag ?? data.id }, input.topic).catch(() => undefined);
   return ids.length;
 }
 
 /** Panitia sends an announcement now. */
 export async function sendAnnouncement(input: { title: string; body: string; audience: Audience }, viewer: Member): Promise<number> {
   if (!managesSessions(viewer)) throw new ServiceError(403, "Hanya panitia yang bisa mengirim pengumuman.");
-  return send({ kind: "pengumuman", ...input, createdBy: viewer.id });
+  return send({ kind: "pengumuman", ...input, createdBy: viewer.id, topic: "pengumuman" });
 }
 
 const sessionNotes = {
@@ -94,15 +100,17 @@ const sessionNotes = {
 
 /**
  * The app tells a session's participants it was published, moved, or cancelled; `except` leaves
- * one person out (a booker who made the change). Never throws.
+ * one person out (a booker who made the change). Pushed as `topic` (default "forum", panitia's
+ * sessions; a booking passes its own, null for the bell only), tagged per session by default so
+ * the latest news replaces the earlier one on the phone. Never throws.
  */
 export async function notifySession(
   session: Pick<Session, "id" | "title" | "startsAt" | "endsAt" | "planFrom" | "planTo" | "roomName" | "location">,
-  change: keyof typeof sessionNotes, by: Member, { except }: { except?: string } = {},
+  change: keyof typeof sessionNotes, by: Member, { except, topic = "forum", tag }: { except?: string; topic?: PushTopic | null; tag?: string } = {},
 ): Promise<void> {
   try {
     const body = change === "batal" ? "Sesi ini tidak jadi diadakan." : `${sessionWhen(session)} · ${sessionWhere(session)}`;
-    await send({ kind: "sesi", title: sessionNotes[change](session.title), body, audience: { type: "sesi", sessionId: session.id }, createdBy: by.id, except });
+    await send({ kind: "sesi", title: sessionNotes[change](session.title), body, audience: { type: "sesi", sessionId: session.id }, createdBy: by.id, except, topic, tag: tag ?? `sesi-${session.id}` });
   } catch { /* the session is saved either way */ }
 }
 
@@ -156,18 +164,22 @@ export async function sentAnnouncements(viewer: Member): Promise<{ items: SentAn
   };
 }
 
-/** A note from the app to some people (e.g. the answer to their request). Never throws. */
-export async function notifyPeople(employeeIds: string[], note: { title: string; body: string; sessionId?: string; label?: string }, by: Member): Promise<void> {
-  try { await send({ kind: "sesi", title: note.title, body: note.body, audience: { type: "orang", employeeIds, label: note.label ?? "Pribadi", sessionId: note.sessionId }, createdBy: by.id }); }
+/**
+ * A note from the app to some people (e.g. the answer to their request), pushed as `topic` (null:
+ * the bell only) and, with a `tag`, replacing the earlier note of that tag on the phone. Never throws.
+ */
+export async function notifyPeople(employeeIds: string[], note: { title: string; body: string; sessionId?: string; label?: string; topic: PushTopic | null; tag?: string }, by: Member): Promise<void> {
+  try { await send({ kind: "sesi", title: note.title, body: note.body, audience: { type: "orang", employeeIds, label: note.label ?? "Pribadi", sessionId: note.sessionId }, createdBy: by.id, topic: note.topic, tag: note.tag }); }
   catch { /* the answer is saved either way */ }
 }
 
 /**
  * A note from the app itself, not from a person (Admin WAM has no WAM account): the questionnaire
- * reminder. Unlike notifyPeople it throws, so the admin hears when it did not go out.
+ * reminder. Unlike notifyPeople it throws, so the admin hears when it did not go out. Pushed as
+ * Pengingat kuesioner, one at a time on the phone (a new reminder replaces the last).
  */
 export async function notifyFromApp(employeeIds: string[], note: { title: string; body: string; label: string }): Promise<number> {
-  return send({ kind: "sesi", title: note.title, body: note.body, audience: { type: "orang", employeeIds, label: note.label }, createdBy: null });
+  return send({ kind: "sesi", title: note.title, body: note.body, audience: { type: "orang", employeeIds, label: note.label }, createdBy: null, topic: "kuesioner", tag: "kuesioner" });
 }
 
 /** The latest app note sent under this label: when, and to how many; null if none (or before the migration). */

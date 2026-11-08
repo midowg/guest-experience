@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { BellRing, BellOff, Info, Send } from "lucide-react";
-import { deviceLabel, keyBytes, pushSupport } from "@/lib/pra-wam/push";
+import { PUSH_TOPICS, deviceLabel, keyBytes, pushSupport, pushTopicInfo, resolvePrefs, type PushTopic } from "@/lib/pra-wam/push";
 import { PRA_WAM_PATH, praWamApi } from "@/lib/routes";
-import { errorText, praWamRequest } from "./api";
+import { PraWamApiError, errorText, praWamRequest } from "./api";
 import own from "./akun.module.css";
 import styles from "./pra-wam.module.css";
 
@@ -124,5 +124,77 @@ export function PushSwitch() {
       </button>}
     </div>
     {message && <p className={own.groupNote} role={message.tone === "error" ? "alert" : "status"}><Info aria-hidden />{message.text}</p>}
+    {on && <PushTopics />}
   </>;
+}
+
+type Prefs = Record<PushTopic, boolean>;
+
+/**
+ * Yang dikirim ke HP (8 Nov 2026): one switch per topic, saved as soon as it is flipped. Until the
+ * database has the table (503) the list shows the defaults, read-only; the main switch is untouched.
+ */
+export function PushTopics() {
+  const [prefs, setPrefs] = useState<Prefs>(() => resolvePrefs({}));
+  const [status, setStatus] = useState<"loading" | "ready" | "pending-db" | "failed">("loading");
+  const [saving, setSaving] = useState<PushTopic[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    praWamRequest<{ prefs: Prefs; topics: PushTopic[] }>(praWamApi.pushPrefs).then(({ data }) => {
+      if (!live) return;
+      setPrefs(resolvePrefs(data.prefs));
+      setStatus("ready");
+    }).catch((problem: unknown) => {
+      if (!live) return;
+      if (problem instanceof PraWamApiError && problem.status === 503) { setStatus("pending-db"); return; }
+      setStatus("failed");
+      setError(errorText(problem));
+    });
+    return () => { live = false; };
+  }, []);
+
+  async function toggle(topic: PushTopic) {
+    const next = !prefs[topic];
+    // Optimistic: the switch moves now and goes back if the server says no.
+    setPrefs(current => ({ ...current, [topic]: next }));
+    setSaving(current => [...current, topic]);
+    setError(null);
+    try {
+      const { data } = await praWamRequest<{ prefs: Partial<Prefs> }>(praWamApi.pushPrefs, { method: "PUT", json: { prefs: { [topic]: next } } });
+      // Only this topic: another switch may still be on its way to the server.
+      setPrefs(current => ({ ...current, [topic]: data?.prefs?.[topic] ?? next }));
+    } catch (problem) {
+      setPrefs(current => ({ ...current, [topic]: !next }));
+      setError(errorText(problem));
+    } finally {
+      setSaving(current => current.filter(item => item !== topic));
+    }
+  }
+
+  const editable = status === "ready";
+  return <div className={own.topics}>
+    <h3 id="push-topics" className={own.groupTitle}>Yang dikirim ke HP</h3>
+    <ul className={own.group} aria-labelledby="push-topics" aria-busy={status === "loading"}>
+      {PUSH_TOPICS.map(topic => {
+        const info = pushTopicInfo[topic];
+        return <li key={topic} className={own.topicRow}>
+          <span className={own.rowText}>
+            <strong id={`push-topic-${topic}`}>{info.label}</strong>
+            <small id={`push-topic-${topic}-hint`}>{info.hint}</small>
+          </span>
+          {info.locked
+            ? <span className={`${styles.pill} ${styles.pillLine} ${own.topicPill}`}>Selalu</span>
+            : <button type="button" role="switch" aria-checked={prefs[topic]} aria-labelledby={`push-topic-${topic}`} aria-describedby={`push-topic-${topic}-hint`}
+              className={`${own.switch} ${own.switchSmall}`} disabled={!editable || saving.includes(topic)} onClick={() => toggle(topic)}>
+              <span className={own.switchKnob} aria-hidden />
+            </button>}
+        </li>;
+      })}
+    </ul>
+    {status === "pending-db" && <p className={own.groupNote} role="status"><Info aria-hidden />Pilihan per topik aktif setelah pembaruan database.</p>}
+    {error && <p className={own.groupNote} role="alert"><Info aria-hidden />{error}</p>}
+    <p className={own.groupNote}><Info aria-hidden />Semua notifikasi tetap ada di lonceng. Pukul 21.00–06.00 yang tidak mendesak tidak dikirim ke HP.</p>
+  </div>;
 }

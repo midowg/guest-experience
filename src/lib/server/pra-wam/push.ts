@@ -1,7 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import webpush from "web-push";
-import type { PushPayload } from "@/lib/pra-wam/push";
+import { PUSH_TOPICS, pushTopicInfo, resolvePrefs, shouldPush, type PushPayload, type PushPrefs, type PushTopic } from "@/lib/pra-wam/push";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -11,10 +11,77 @@ import type { Member } from "./session";
  * Notifikasi di HP (migration 202611080001): every in-app notification is also pushed to the
  * phones a person turned on. Sending never stops what caused it: without the keys, before the
  * migration, or when a push service fails, the in-app notification is still there.
+ *
+ * Which ones go out (migration 202611080002): each notification has a topic, and only the people
+ * whose choices allow that topic now get it (shouldPush: their choice or the default, and quiet
+ * hours for the quiet topics). Before that migration everyone has the defaults.
  */
 
 const MIGRATION = "202611080001_pra_wam_push.sql";
 const missing = (error: { code?: string; message?: string }) => ["42P01", "PGRST205"].includes(error.code ?? "") || /pw_push_subscriptions/.test(error.message ?? "");
+
+const PREFS_MIGRATION = "202611080002_pra_wam_notification_prefs.sql";
+const prefsMissing = (error: { code?: string; message?: string }) => ["42P01", "PGRST205"].includes(error.code ?? "") || /pw_notification_prefs/.test(error.message ?? "");
+
+/** A person's stored choices, cleaned: only known topics that can be switched, with a yes or no. */
+function storedPrefs(raw: unknown): PushPrefs {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const prefs: PushPrefs = {};
+  for (const topic of PUSH_TOPICS) {
+    const value = (raw as Record<string, unknown>)[topic];
+    if (!pushTopicInfo[topic].locked && typeof value === "boolean") prefs[topic] = value;
+  }
+  return prefs;
+}
+
+/** The person's own stored choices; null before the migration. Other database errors throw. */
+async function ownPrefs(member: Member): Promise<PushPrefs | null> {
+  const { data, error } = await createPrivilegedClient().from("pw_notification_prefs").select("push").eq("employee_id", member.id).maybeSingle();
+  if (error) { if (prefsMissing(error)) return null; databaseError(error); }
+  return storedPrefs(data?.push);
+}
+
+/** What applies to the person for every topic (their choice, else the default; Pengumuman always on). */
+export async function readPushPrefs(member: Member): Promise<Record<PushTopic, boolean>> {
+  return resolvePrefs(await ownPrefs(member));
+}
+
+/**
+ * Saves the person's choices on top of what they chose before (a topic left out keeps its earlier
+ * choice); a locked topic is never stored. Returns what applies now.
+ */
+export async function savePushPrefs(member: Member, prefs: PushPrefs): Promise<Record<PushTopic, boolean>> {
+  const before = await ownPrefs(member);
+  if (before === null) throw new ServiceError(503, `Pilihan notifikasi menunggu migrasi ${PREFS_MIGRATION}.`);
+  const push = { ...before, ...storedPrefs(prefs) };
+  const { error } = await createPrivilegedClient().from("pw_notification_prefs").upsert(
+    { employee_id: member.id, push, updated_at: new Date().toISOString() },
+    { onConflict: "employee_id" },
+  );
+  if (error) { if (prefsMissing(error)) throw new ServiceError(503, `Pilihan notifikasi menunggu migrasi ${PREFS_MIGRATION}.`); databaseError(error); }
+  return resolvePrefs(push);
+}
+
+/**
+ * Of these people, who gets a notification of this topic on the phone now. A null topic, or a
+ * quiet topic at night, reaches nobody; a locked topic reaches everyone without reading choices.
+ * Before the migration everyone has the defaults; on another database error nobody is sent to
+ * (the bell still has it).
+ */
+async function wanting(client: ReturnType<typeof createPrivilegedClient>, ids: string[], topic: PushTopic | null, now: Date): Promise<string[]> {
+  if (!topic || !shouldPush(topic, { [topic]: true }, now)) return [];
+  if (pushTopicInfo[topic].locked) return ids;
+  const prefs = new Map<string, PushPrefs>();
+  for (let at = 0; at < ids.length; at += 500) {
+    const { data, error } = await client.from("pw_notification_prefs").select("employee_id,push").in("employee_id", ids.slice(at, at + 500));
+    if (error) {
+      if (prefsMissing(error)) return ids.filter(() => shouldPush(topic, null, now));
+      return [];
+    }
+    for (const row of (data ?? []) as { employee_id: string; push: unknown }[]) prefs.set(row.employee_id, storedPrefs(row.push));
+  }
+  return ids.filter(id => shouldPush(topic, prefs.get(id) ?? null, now));
+}
 
 /** The VAPID keys from the server's environment; null until both are set. */
 function vapid(): { publicKey: string; privateKey: string; subject: string } | null {
@@ -47,13 +114,17 @@ export async function removeSubscription(member: Member, endpoint: string): Prom
 
 type Row = { id: string; endpoint: string; p256dh: string; auth: string };
 
-/** Sends one notification to every phone of these people. Never throws; says what happened. */
-export async function sendPush(employeeIds: string[], payload: PushPayload): Promise<{ sent: number; failed: number; removed: number; phones: number }> {
+/**
+ * Sends one notification of this topic to every phone of those of these people whose choices allow
+ * it now (see wanting). Never throws; says what happened.
+ */
+export async function sendPush(employeeIds: string[], payload: PushPayload, topic: PushTopic | null, now = new Date()): Promise<{ sent: number; failed: number; removed: number; phones: number }> {
   const keys = vapid();
   const none = { sent: 0, failed: 0, removed: 0, phones: 0 };
-  const ids = [...new Set(employeeIds)];
-  if (!keys || !ids.length) return none;
+  if (!keys || !employeeIds.length || !topic) return none;
   const client = createPrivilegedClient();
+  const ids = await wanting(client, [...new Set(employeeIds)], topic, now);
+  if (!ids.length) return none;
   const rows: Row[] = [];
   for (let at = 0; at < ids.length; at += 500) {
     const { data, error } = await client.from("pw_push_subscriptions").select("id,endpoint,p256dh,auth").in("employee_id", ids.slice(at, at + 500));
@@ -83,11 +154,11 @@ export async function sendPush(employeeIds: string[], payload: PushPayload): Pro
  * Sends after the response has gone (the person who sent it does not wait for the phones). Where
  * there is no request to wait after, it sends right away.
  */
-export async function schedulePush(employeeIds: string[], payload: PushPayload): Promise<void> {
-  if (!vapid() || !employeeIds.length) return;
+export async function schedulePush(employeeIds: string[], payload: PushPayload, topic: PushTopic | null): Promise<void> {
+  if (!vapid() || !employeeIds.length || !topic) return;
   try {
-    after(async () => { await sendPush(employeeIds, payload); });
+    after(async () => { await sendPush(employeeIds, payload, topic); });
   } catch {
-    await sendPush(employeeIds, payload);
+    await sendPush(employeeIds, payload, topic);
   }
 }
