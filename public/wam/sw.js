@@ -17,11 +17,14 @@ self.addEventListener("fetch", event => {
 self.addEventListener("push", event => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data ? event.data.text() : "" }; }
+  // A note with the same tag replaces the older one on the phone; renotify makes it ring and show
+  // again (9 Nov 2026: a second "Kirim notifikasi tes" used to replace the first in silence).
   event.waitUntil(self.registration.showNotification(data.title || "WAM", {
     body: data.body || "",
     icon: "/wam/icon-192.png",
     badge: "/wam/badge-96.png",
     tag: data.tag || undefined,
+    renotify: Boolean(data.tag),
     data: { url: data.url || "/wam/notifications" },
   }));
 });

@@ -6,7 +6,7 @@ import base from "@/components/pra-wam/pra-wam.module.css";
 
 export const dynamic = "force-dynamic";
 
-const KINDS: InstallArtKind[] = ["ios-more", "ios-share-menu", "ios-share-chrome", "ios-add", "ios-webapp", "android-menu", "android-install", "android-confirm", "samsung-menu", "samsung-plus", "samsung-add", "desktop-install", "desktop-dialog", "home-icon", "wam-notif", "allow-prompt", "ios-settings-notif", "android-settings-notif", "desktop-site-notif"];
+const KINDS: InstallArtKind[] = ["ios-more", "ios-share-menu", "ios-share-chrome", "ios-add", "ios-webapp", "android-menu", "android-install", "android-confirm", "samsung-menu", "samsung-plus", "samsung-add", "desktop-install", "desktop-dialog", "home-icon", "wam-notif", "allow-prompt", "ios-settings-notif", "android-settings-notif", "android-battery", "desktop-site-notif"];
 
 /** Layout check for Pengaturan → Install WAM: ?tema=terang for light, ?tampilan=werkudara for that theme; ?semua=1 shows every picture. */
 export default async function DevInstallPage({ searchParams }: { searchParams: Promise<{ tema?: string; tampilan?: string; semua?: string }> }) {

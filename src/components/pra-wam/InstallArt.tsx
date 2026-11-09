@@ -16,7 +16,7 @@ export type ArtKind =
   | "samsung-menu" | "samsung-plus" | "samsung-add"
   | "desktop-install" | "desktop-dialog"
   | "home-icon" | "wam-notif" | "allow-prompt"
-  | "ios-settings-notif" | "android-settings-notif" | "desktop-site-notif";
+  | "ios-settings-notif" | "android-settings-notif" | "android-battery" | "desktop-site-notif";
 
 /* ---- Pieces -------------------------------------------------------------------------------- */
 
@@ -345,6 +345,29 @@ const drawings: Record<ArtKind, () => ReactNode> = {
     <rect className={css.bar} x="18" y="142" width="60" height="3.5" rx="1.75" />
     <rect className={css.bar} x="18" y="159" width="40" height="3.5" rx="1.75" />
     <rect className={css.bar} x="18" y="176" width="54" height="3.5" rx="1.75" />
+  </Phone>,
+
+  // Xiaomi and similar: Chrome's app info, battery saver set to no restrictions, autostart on. The
+  // menu names differ per brand and version, so they are drawn as bars, not words.
+  "android-battery": () => <Phone label="Info aplikasi Chrome: penghemat baterai tanpa batasan, mulai otomatis menyala">
+    <path className={css.glyph} d="M17 26 l-3 3 l3 3" />
+    <T x={22} y={31.5} size={7} tone="muted">Info aplikasi</T>
+    <circle className={css.tile} cx="60" cy="52" r="12" />
+    <circle className={css.ring} cx="60" cy="52" r="5" />
+    <T x={60} y={78} size={9} anchor="middle">Chrome</T>
+    <rect className={css.card} x="12" y="88" width="96" height="24" rx="8" />
+    <rect className={css.glyph} x="19" y="96" width="12" height="8" rx="1.5" />
+    <path className={css.glyph} d="M31 99 v2" />
+    <rect className={css.bar} x="36" y="96" width="34" height="3.5" rx="1.75" />
+    <rect className={css.hi} x="36" y="102" width="40" height="7" rx="3.5" />
+    <Tap x={70} y={102} />
+    <rect className={css.card} x="12" y="118" width="96" height="24" rx="8" />
+    <path className={css.glyph} d="M25 125 v5 M21.5 127.5 a5 5 0 1 0 7 0" />
+    <rect className={css.bar} x="36" y="128" width="38" height="3.5" rx="1.75" />
+    <Switch x={86} y={125} />
+    <rect className={css.card} x="12" y="148" width="96" height="40" rx="8" />
+    <rect className={css.bar} x="18" y="158" width="52" height="3.5" rx="1.75" />
+    <rect className={css.bar} x="18" y="172" width="40" height="3.5" rx="1.75" />
   </Phone>,
 
   "desktop-site-notif": () => <Desktop label="Di laptop: klik Lihat informasi situs di kiri alamat, lalu Notifikasi diubah ke Izinkan">

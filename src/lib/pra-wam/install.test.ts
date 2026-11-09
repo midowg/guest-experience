@@ -14,12 +14,21 @@ describe("Install WAM", () => {
     expect(detectInstall("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36")).toEqual({ device: "laptop", browser: "chrome-desktop" });
   });
 
-  it("has steps for every browser it offers, and notification steps that end with the blocked case", () => {
+  it("has steps for every browser it offers, and notification steps that end with the blocked case (Android: then the Xiaomi step)", () => {
     for (const device of installDevices) {
       for (const browser of device.browsers) expect(installSteps[browser].length).toBeGreaterThan(0);
       const steps = notificationSteps(device.id);
-      expect(steps.at(-1)?.title).toMatch(/^Terblokir\?/);
+      expect(steps.at(device.id === "android" ? -2 : -1)?.title).toMatch(/^Terblokir\?/);
     }
     expect(notificationSteps("iphone")[0].text).toMatch(/bukan dari Safari/);
   });
+});
+
+it("adds the Xiaomi background step on Android only, last", () => {
+  const android = notificationSteps("android");
+  expect(android.at(-1)?.art).toBe("android-battery");
+  expect(android.at(-1)?.text).toMatch(/Tanpa batasan/);
+  expect(android.at(-1)?.text).toMatch(/Mulai otomatis/);
+  expect(notificationSteps("iphone").some(step => step.art === "android-battery")).toBe(false);
+  expect(notificationSteps("laptop").some(step => step.art === "android-battery")).toBe(false);
 });

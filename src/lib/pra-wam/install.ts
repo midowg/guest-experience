@@ -18,6 +18,11 @@
  * - Notifications: Apple "Mengubah pengaturan pemberitahuan di iPhone" (iph7c3d96bab); Google
  *   "Mengontrol notifikasi di Android" (android/answer/9079661); Google "Mengubah izin setelan
  *   situs" (chrome/answer/114662); WebKit "Web Push for Web Apps on iOS and iPadOS" (iOS 16.4).
+ * - Android, the last step (Xiaomi, Redmi, POCO and similar): Xiaomi has no help page on this, so
+ *   it follows dontkillmyapp.com/xiaomi (a developers' community guide, read 9 Nov 2026): such
+ *   phones stop Chrome in the background, so a notification Google already delivered never shows.
+ *   Battery saver to no restrictions and autostart on, for Chrome and for WAM if installed. Seen on a
+ *   Xiaomi on 9 Nov 2026 (Google accepted the test, the phone showed nothing).
  * Check them again after a big iOS or Chrome release.
  */
 
@@ -27,7 +32,7 @@ export type InstallArtKind =
   | "ios-more" | "ios-share-menu" | "ios-share-chrome" | "ios-add" | "ios-webapp"
   | "android-menu" | "android-install" | "android-confirm" | "samsung-menu" | "samsung-plus" | "samsung-add"
   | "desktop-install" | "desktop-dialog" | "home-icon" | "wam-notif" | "allow-prompt"
-  | "ios-settings-notif" | "android-settings-notif" | "desktop-site-notif";
+  | "ios-settings-notif" | "android-settings-notif" | "android-battery" | "desktop-site-notif";
 export type InstallStep = { art: InstallArtKind; title: string; text: string };
 
 export const installDevices: { id: InstallDevice; label: string; browsers: InstallBrowser[] }[] = [
@@ -87,11 +92,15 @@ export function notificationSteps(device: InstallDevice): InstallStep[] {
     : device === "android"
       ? { art: "android-settings-notif", title: "Terblokir? Buka Setelan Android", text: "Buka Setelan → Notifikasi → Notifikasi aplikasi, ketuk WAM, lalu aktifkan notifikasinya. Langkahnya bisa sedikit berbeda menurut merek HP." }
       : { art: "desktop-site-notif", title: "Terblokir? Izinkan di browser", text: "Di kiri alamat, klik Lihat informasi situs → Setelan situs, ubah Notifikasi ke Izinkan, lalu muat ulang WAM." };
+  const battery: InstallStep[] = device === "android"
+    ? [{ art: "android-battery", title: "Xiaomi, Redmi, POCO: izinkan jalan di latar", text: "Sudah diizinkan tapi tidak muncul? HP merek ini sering menghentikan Chrome di latar belakang. Tekan lama ikon Chrome → Info aplikasi: atur Penghemat baterai ke Tanpa batasan (No restrictions) dan nyalakan Mulai otomatis (Autostart). Ulangi untuk WAM bila sudah di-install. Nama menunya berbeda menurut merek dan versi." }]
+    : [];
   return [
     open,
     { art: "wam-notif", title: "Pengaturan → Notifikasi → nyalakan", text: "Di WAM, buka Pengaturan → Notifikasi, lalu nyalakan sakelar Notifikasi di HP." },
     { art: "allow-prompt", title: "Ketuk Izinkan", text: "Saat HP bertanya, pilih Izinkan (Allow). Setelah itu ketuk Kirim notifikasi tes untuk mencoba." },
     blocked,
+    ...battery,
   ];
 }
 
