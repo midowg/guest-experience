@@ -225,7 +225,8 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 - **Beranda: agenda berupa carousel** (9 Nov 2026), satu kartu per agenda urut waktu, terbuka di
   yang sedang berlangsung atau berikutnya (dengan absen di kartunya). Geser ke kiri untuk yang
   sudah lewat (sampai 7 hari ke belakang), ke kanan untuk yang akan datang; di desktop ada ‹ ›.
-  Kartu yang sudah lewat lebih redup.
+  Kartu selebar penuh; bayangan halus di tepi kiri atau kanan menandakan masih ada kartu ke arah
+  itu. Kartu yang sudah lewat lebih redup.
 - Design system "Pra WAM · Hospitality": Poppins untuk judul dan angka, Inter untuk isi; biru
   Werkudara #006EC1 satu-satunya aksen utama, kuning #FFBA00 sekunder. Kartu putih radius 24, tombol
   pill, isian radius 16.

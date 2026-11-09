@@ -12,16 +12,25 @@
 .arrow:disabled { opacity: .35; cursor: default; }
 .arrow:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
 
-/* The next card peeks in on a phone (88%), so a swipe is the obvious move. */
-.track { display: grid; grid-auto-flow: column; grid-auto-columns: 88%; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 4px; }
+/*
+ * One card at a time, full width (9 Nov 2026). A soft shadow on the left or right edge says there
+ * is more that way (the wrapper's data-before / data-after, kept by AgendaCarousel).
+ */
+.frame { position: relative; min-width: 0; }
+.frame::before, .frame::after { content: ""; position: absolute; top: 0; bottom: 18px; z-index: 2; width: 18px; pointer-events: none; opacity: 0; transition: opacity 200ms ease; }
+.frame::before { left: 0; border-radius: var(--pw-r-hero) 0 0 var(--pw-r-hero); background: linear-gradient(to right, var(--pw-edge-shadow), transparent); }
+.frame::after { right: 0; border-radius: 0 var(--pw-r-hero) var(--pw-r-hero) 0; background: linear-gradient(to left, var(--pw-edge-shadow), transparent); }
+.frame[data-before]::before, .frame[data-after]::after { opacity: 1; }
+.frame { --pw-edge-shadow: rgba(16, 24, 40, .16); }
+:global([data-wam-theme="dark"]) .frame { --pw-edge-shadow: rgba(0, 0, 0, .45); }
+@media (prefers-color-scheme: dark) { :global([data-wam-theme="system"]) .frame { --pw-edge-shadow: rgba(0, 0, 0, .45); } }
+.track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 18px; margin-bottom: -14px; }
 .track::-webkit-scrollbar { display: none; }
 .track:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 4px; border-radius: var(--pw-r-hero); }
 .slide { display: grid; min-width: 0; scroll-snap-align: start; }
 .slide > * { height: 100%; box-sizing: border-box; }
+@media (prefers-reduced-motion: reduce) { .frame::before, .frame::after { transition: none; } }
 
-@media (min-width: 768px) {
-  .track { grid-auto-columns: calc(100% - 64px); gap: 16px; }
-}
 /* From a desktop, arrows step through; a mouse has no swipe. */
 @media (min-width: 1024px) {
   .nav { display: flex; }

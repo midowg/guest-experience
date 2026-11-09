@@ -7,8 +7,8 @@ import css from "./agenda-carousel.module.css";
 /**
  * Beranda's agenda as a carousel (9 Nov 2026): one card per item in time order, opening on the one
  * that matters now (`start`: running or next). Earlier ones (yesterday too) are a swipe to the
- * left, later ones to the right; the next card peeks in on a phone so the swipe is obvious. On a
- * desktop ‹ › step through. "3 dari 12" says where one is. Native scrolling with snap points, so
+ * left, later ones to the right. Each card is full width; a soft shadow on the left or right edge
+ * shows there is more that way. On a desktop ‹ › step through. "3 dari 12" says where one is. Native scrolling with snap points, so
  * it follows the finger, a trackpad and the keyboard without any extra code.
  */
 export function AgendaCarousel({ start, labels, title = "Agenda", action, children }: {
@@ -48,8 +48,10 @@ export function AgendaCarousel({ start, labels, title = "Agenda", action, childr
         <button type="button" className={css.arrow} onClick={() => go(index + 1)} disabled={index >= slides.length - 1} aria-label="Agenda berikutnya"><ChevronRight aria-hidden /></button>
       </div>
     </div>
-    <div ref={track} className={css.track} onScroll={onScroll} tabIndex={0} aria-label="Geser untuk agenda lain">
-      {slides.map((slide, at) => <div key={at} className={css.slide} role="group" aria-roledescription="slide" aria-label={`${at + 1} dari ${slides.length}: ${labels[at] ?? ""}`}>{slide}</div>)}
+    <div className={css.frame} data-before={index > 0 ? "" : undefined} data-after={index < slides.length - 1 ? "" : undefined}>
+      <div ref={track} className={css.track} onScroll={onScroll} tabIndex={0} aria-label="Geser untuk agenda lain">
+        {slides.map((slide, at) => <div key={at} className={css.slide} role="group" aria-roledescription="slide" aria-label={`${at + 1} dari ${slides.length}: ${labels[at] ?? ""}`}>{slide}</div>)}
+      </div>
     </div>
   </section>;
 }
