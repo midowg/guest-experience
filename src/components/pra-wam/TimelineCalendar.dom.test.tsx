@@ -1,7 +1,15 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { timelineMonths, type TimelineItem } from "@/lib/pra-wam/timeline";
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }) }));
+const request = vi.hoisted(() => vi.fn());
+vi.mock("./api", async importOriginal => ({ ...await importOriginal<typeof import("./api")>(), praWamRequest: request }));
 import { TimelineCalendar } from "./TimelineCalendar";
+
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
+});
 
 afterEach(cleanup);
 
@@ -28,4 +36,13 @@ it("opens the booking page on every day, weekends too; with Book closed the days
   cleanup();
   render(<TimelineCalendar entries={entries} today="2026-11-09" />);
   expect(screen.queryByRole("link", { name: /^Book ruang,/ })).toBeNull();
+});
+
+it("opens the booking form over Timeline when a day is tapped, without leaving the page", async () => {
+  request.mockReturnValue(new Promise(() => {}));
+  render(<TimelineCalendar entries={entries} today="2026-11-09" canBook viewerId="me" />);
+  fireEvent.click(screen.getByRole("link", { name: "Book ruang, Sabtu, 14 November" }));
+  expect(screen.getByRole("dialog", { name: "Book ruang" })).toBeTruthy();
+  expect(screen.getByText("Memuat form booking…")).toBeTruthy();
+  expect(request).toHaveBeenCalledWith("/api/wam/book-form?date=2026-11-14");
 });

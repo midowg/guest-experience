@@ -55,7 +55,7 @@ export default async function TimelinePage() {
     {!migrated ? <Notice tone="warning">Timeline menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>
       : months.length === 0 ? <Notice tone="info">Panitia belum menyusun timeline. Cek lagi nanti.</Notice>
         : <div className={css.layout}>
-          <TimelineCalendar entries={months.flatMap(month => month.entries)} today={today} canBook={open} />
+          <TimelineCalendar entries={months.flatMap(month => month.entries)} today={today} canBook={open} viewerId={member.id} />
           <div className={css.months}>
           {months.map(month => <section key={month.key} className={css.month} aria-labelledby={`bulan-${month.key}`}>
             <h2 id={`bulan-${month.key}`} className={css.monthName}>{month.label}</h2>

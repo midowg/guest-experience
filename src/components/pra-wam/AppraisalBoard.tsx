@@ -55,7 +55,7 @@ const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <=
  * Book (9 Nov 2026): no calendar and no floor plan any more. The day is picked on Timeline's
  * calendar (a tap opens the booking form on that day) or in the form itself, whose Tempat step
  * shows which rooms are free. Here: Book ruang and the person's own bookings ("Booking saya").
- * Everything opens over the page in a sheet from the left (bottom on a phone):
+ * Everything opens over the page in a sheet: from the right on a desktop, from the bottom on a phone (9 Nov 2026):
  * a booking's detail with Ubah and Batalkan, and the booking form, new or changing one. The open
  * sheet and the day are mirrored in the address (history.replaceState: no reload, no server round
  * trip), so a reload reopens it; a day in another week (picked on the date strip) is a navigation,
@@ -139,6 +139,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   function close() { setShown(false); mirror({}); }
 
   const openBooking = (booking: Booking) => show({ kind: "detail", booking });
+  const book = () => show(draftFor({}));
 
   function saved({ message, date: day }: { message: string; date: string }) {
     setShown(false);
@@ -173,7 +174,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   // The loaded week is recounted from its bookings with the moving clock; the rest is the server's (the form's date strip).
   const days = { ...summary, ...daySummaries(week, rooms, bookings.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), clockNow) };
   const head = <ScreenHead title="Agenda" lead={<>Pilih tanggal di <a href={praWamPath.timeline}>kalender Timeline</a> untuk langsung booking pada hari itu, atau ketuk Book ruang.</>}
-    actions={canBook && dates.length > 0 ? <a className="button button--primary" href={praWamPath.book()}><Plus size={18} aria-hidden /> Book ruang</a> : undefined} />;
+    actions={canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
 
   return <>
     {head}
@@ -200,7 +201,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
 
     {sheet?.kind === "detail" && <BookingSheet booking={sheet.booking} shown={shown} onClose={close} rooms={rooms} now={clockNow}
       mine={mineFlag(sheet.booking)} canEdit={canBook && mineFlag(sheet.booking)} canCancel={!sheet.booking.isSession && (mineFlag(sheet.booking) || canCancelAny)}
-      busy={busy} onEdit={() => router.push(praWamPath.book({ edit: sheet.booking.id }))} onCancel={() => cancel(sheet.booking)}
+      busy={busy} onEdit={() => show(editFor(sheet.booking))} onCancel={() => cancel(sheet.booking)}
       hod={hodInfo[sheet.booking.id]} viewerId={viewerId} onAnswered={text => { setNotice({ tone: "success", text }); router.refresh(); }}
       onAnswerError={text => setNotice({ tone: "error", text })} />}
 
@@ -208,7 +209,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
       dates={dates.includes(sheet.initial.date) ? dates : [sheet.initial.date, ...dates]} now={clockNow.toISOString()} rooms={rooms}
       people={form.people} groups={form.groups} viewer={{ id: viewerId }} usedTitles={form.usedTitles}
       dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan} summary={days} hod={hod} activities={activities}
-      frame={(body, footer) => <Sheet open={shown} onClose={close} side="left" wide title={sheet.editId ? "Ubah booking" : "Book ruang"}
+      frame={(body, footer) => <Sheet open={shown} onClose={close} wide title={sheet.editId ? "Ubah booking" : "Book ruang"}
         subtitle="Yang tersimpan lebih dulu yang mendapat ruang." footer={footer}>{body}</Sheet>} />}
 
     {notice && <div className={css.toast}>
@@ -234,7 +235,7 @@ function BookingSheet({ booking, shown, onClose, rooms, now, mine, canEdit, canC
     {canCancel && !ended && <button type="button" className={`button button--secondary ${styles.dangerQuiet}`} onClick={onCancel} disabled={working}>{working ? "Membatalkan…" : "Batalkan"}</button>}
   </>;
   const hasActions = !ended && (canCancel || canEdit);
-  return <Sheet open={shown} onClose={onClose} side="left" title={booking.title} subtitle={`${dayLabel(wibDate(booking.startsAt))} · ${span(booking)}`} footer={hasActions ? actions : undefined}>
+  return <Sheet open={shown} onClose={onClose} title={booking.title} subtitle={`${dayLabel(wibDate(booking.startsAt))} · ${span(booking)}`} footer={hasActions ? actions : undefined}>
     <span className={`${css.tag} ${tone}`}>{booking.isSession ? "Sesi Pra WAM" : mine ? "Booking kamu" : "Terpakai"}{ended ? " · selesai" : ""}</span>
     <dl className={css.facts}>
       {isOutside(booking)

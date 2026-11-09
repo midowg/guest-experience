@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { calendarWeeks, timelineLanes, type TimelineEntry } from "@/lib/pra-wam/timeline";
 import { praWamPath } from "@/lib/routes";
+import { BookSheet, type BookAsk } from "./BookSheet";
 import css from "./timeline.module.css";
 
 const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
@@ -20,11 +21,13 @@ const shiftMonth = (key: string, by: number) => {
  * colour across its days (the colour its card has in the list below), overlapping ones on their
  * own lines and a bar running on into the next week. A bar jumps to its card. On a phone the bars
  * are thin lines; from a tablet up they carry the title. ‹ › between the months that have entries.
- * Every day opens the booking page on it (9 Nov 2026: Book has no calendar any more; weekends too,
- * since "Di luar kantor" can be booked then, so all days behave alike). The booking page says when a
- * day cannot be booked and offers the nearest one. `canBook` false (Book closed): plain days.
+ * Every day opens the booking form on it in a sheet over the page (BookSheet: from the bottom on a
+ * phone, from the right on a desktop), so booking never leaves Timeline (9 Nov 2026). Weekends
+ * too, since "Di luar kantor" can be booked then; a day that cannot be booked offers the nearest
+ * one. The link still points at the booking page, for a new tab. `canBook` false (Book closed): plain days.
  */
-export function TimelineCalendar({ entries, today, canBook = false }: { entries: TimelineEntry[]; today: string; canBook?: boolean }) {
+export function TimelineCalendar({ entries, today, canBook = false, viewerId = "" }: { entries: TimelineEntry[]; today: string; canBook?: boolean; viewerId?: string }) {
+  const [ask, setAsk] = useState<BookAsk | null>(null);
   const first = entries[0]?.from.slice(0, 7) ?? today.slice(0, 7);
   const last = entries.reduce((max, entry) => entry.to.slice(0, 7) > max ? entry.to.slice(0, 7) : max, first);
   const start = today.slice(0, 7) < first ? first : today.slice(0, 7) > last ? last : today.slice(0, 7);
@@ -48,7 +51,8 @@ export function TimelineCalendar({ entries, today, canBook = false }: { entries:
           {week.days.map((day, index) => {
             const marks = { style: { gridColumn: index + 1 }, "data-out": day.inMonth ? undefined : "", "data-today": day.date === today ? "" : undefined };
             return canBook
-              ? <a key={day.date} className={`${css.calDay} ${css.calDayLink}`} href={praWamPath.book({ date: day.date })} aria-label={`Book ruang, ${dayName(day.date)}`} {...marks}>
+              ? <a key={day.date} className={`${css.calDay} ${css.calDayLink}`} href={praWamPath.book({ date: day.date })} aria-label={`Book ruang, ${dayName(day.date)}`} aria-haspopup="dialog" {...marks}
+                onClick={event => { if (event.metaKey || event.ctrlKey || event.shiftKey) return; event.preventDefault(); setAsk({ date: day.date }); }}>
                 <span>{Number(day.date.slice(8))}</span>
               </a>
               : <span key={day.date} className={css.calDay} {...marks}><span>{Number(day.date.slice(8))}</span></span>;
@@ -60,5 +64,6 @@ export function TimelineCalendar({ entries, today, canBook = false }: { entries:
         </div>;
       })}
     </div>
+    <BookSheet ask={ask} viewerId={viewerId} onClose={() => setAsk(null)} />
   </section>;
 }

@@ -128,8 +128,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         {items.length === 0 ? <section className={base.card}>
           <h2>Belum ada agenda</h2>
           <p className={`${base.meta} ${own.prose}`}>Sesi muncul di sini setelah panitia menerbitkannya.</p>
-        </section> : <AgendaCarousel start={startAt} labels={items.map(item => item.title)}
-          action={seesAllSessions(member) ? <a href={praWamPath.sessions}>Jadwal sesi</a> : undefined}>
+        </section> : <AgendaCarousel start={startAt} labels={items.map(item => item.title)}>
           {items.map(item => {
             const current = item.key === next?.key;
             const ended = new Date(item.endsAt) <= now;

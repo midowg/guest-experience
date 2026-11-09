@@ -1,0 +1,21 @@
+import { handle, success } from "@/lib/server/http";
+import { ServiceError } from "@/lib/server/config";
+import { bookingFormData } from "@/lib/server/pra-wam/booking-form";
+import { appraisalOpen } from "@/lib/server/pra-wam/events";
+import { requireApiMember } from "@/lib/server/pra-wam/session";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * GET ?date=YYYY-MM-DD (or ?edit=<booking id>): what the booking form needs, for the booking sheet
+ * that opens over Timeline and Agenda (9 Nov 2026) without leaving the page.
+ */
+export async function GET(request: Request) {
+  return handle(async () => {
+    const member = await requireApiMember();
+    if (!await appraisalOpen()) throw new ServiceError(409, "Book ruang sedang ditutup oleh admin WAM.");
+    const search = new URL(request.url).searchParams;
+    const pick = (key: string) => search.get(key) ?? undefined;
+    return success(await bookingFormData(member, { date: pick("date"), edit: pick("edit") }), "Form booking dimuat.");
+  });
+}

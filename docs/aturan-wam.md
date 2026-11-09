@@ -212,10 +212,10 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 - **Agenda** (menu bilah bawah, dulu "Book"; 9 Nov 2026): tanpa kalender dan tanpa denah. Isinya
   tombol Book ruang dan daftar Booking saya. Tanggal dipilih di kalender Timeline atau di form;
   ketersediaan ruang terlihat di langkah Tempat pada form.
-- **Booking adalah halaman sendiri** (`/wam/book/new`): Book ruang dan Ubah membuka halaman itu,
-  bukan sheet. Panah kembali ke Timeline (booking baru) atau Agenda (ubah). Setelah disimpan,
-  halaman itu menampilkan yang dibooking dengan "Kembali ke Timeline" dan "Book lagi"; tidak
-  dialihkan ke Agenda.
+- **Booking terbuka di atas halaman** (BookSheet): dari kanan di desktop, dari bawah di HP, dari
+  kalender Timeline maupun Book ruang dan Ubah di Agenda; tidak pindah ke menu lain. Datanya dari
+  `GET /api/wam/book-form?date=` atau `?edit=`. Setelah disimpan, sheet itu bilang tersimpan dengan
+  Tutup dan Book lagi. Halaman `/wam/book/new` tetap ada untuk tautan langsung.
 - **Tile tanpa arsiran kiri**: tile (Booking saya, Kebutuhan, kutipan Survei, blok jadwal) memakai
   outline tipis di keliling tile dengan warna jenisnya, bukan garis tebal di sisi kiri. Booking
   milik sendiri bernada emas hangat.
@@ -226,7 +226,9 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   yang sedang berlangsung atau berikutnya (dengan absen di kartunya). Geser ke kiri untuk yang
   sudah lewat (sampai 7 hari ke belakang), ke kanan untuk yang akan datang; di desktop ada ‹ ›.
   Kartu selebar penuh; bayangan halus di tepi kiri atau kanan menandakan masih ada kartu ke arah
-  itu. Kartu yang sudah lewat lebih redup.
+  itu. Di atasnya hanya tiga titik: yang menyala di tengah selama ada kartu di kedua arah,
+  di ujung kiri pada kartu pertama dan ujung kanan pada kartu terakhir; titik di sebelahnya
+  memindah kartu. Tanpa judul, hitungan, atau tombol Jadwal sesi. Kartu yang sudah lewat lebih redup.
 - Design system "Pra WAM · Hospitality": Poppins untuk judul dan angka, Inter untuk isi; biru
   Werkudara #006EC1 satu-satunya aksen utama, kuning #FFBA00 sekunder. Kartu putih radius 24, tombol
   pill, isian radius 16.

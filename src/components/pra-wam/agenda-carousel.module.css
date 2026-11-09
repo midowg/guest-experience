@@ -1,16 +1,15 @@
 /* AgendaCarousel: Beranda's agenda, one card per item, swiped sideways. --pw-* tokens only. */
 .carousel { display: grid; gap: 10px; min-width: 0; }
-.head { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
-.head h2 { margin: 0; font-family: var(--pw-display); font-size: 18px; font-weight: 600; color: var(--pw-text); }
-.count { font-size: 13px; color: var(--pw-muted); font-variant-numeric: tabular-nums; }
-.head a { margin-left: auto; font-size: 14px; font-weight: 600; }
-.nav { display: none; gap: 6px; margin-left: auto; }
-.head a + .nav { margin-left: 8px; }
-.arrow { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: var(--pw-surface); color: var(--pw-text); cursor: pointer; }
-.arrow svg { width: 20px; height: 20px; }
-.arrow:hover:not(:disabled) { background: var(--pw-surface-soft); }
-.arrow:disabled { opacity: .35; cursor: default; }
-.arrow:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+/* Three dots above the card; the lit one is wider, in the accent colour. */
+.dots { display: flex; justify-content: center; align-items: center; gap: 2px; }
+.dot { display: grid; place-items: center; width: 32px; height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.dot::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--pw-line); transition: width 200ms ease, background-color 200ms ease; }
+.dot:hover:not(:disabled)::before { background: var(--pw-muted); }
+.dot[aria-current="true"] { cursor: default; }
+.dot[aria-current="true"]::before { width: 22px; background: var(--pw-primary); }
+.dot:focus-visible { outline: none; }
+.dot:focus-visible::before { outline: 2px solid var(--pw-primary); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .dot::before { transition: none; } }
 
 /*
  * One card at a time, full width (9 Nov 2026). A soft shadow on the left or right edge says there
@@ -31,7 +30,3 @@
 .slide > * { height: 100%; box-sizing: border-box; }
 @media (prefers-reduced-motion: reduce) { .frame::before, .frame::after { transition: none; } }
 
-/* From a desktop, arrows step through; a mouse has no swipe. */
-@media (min-width: 1024px) {
-  .nav { display: flex; }
-}
