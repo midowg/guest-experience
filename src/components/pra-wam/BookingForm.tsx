@@ -64,7 +64,7 @@ type Choice = { ok: boolean; pending: boolean; tone: PlanTone; text: string };
  * away. The server still has the last word: when someone else saved first the form keeps everything
  * that was typed and offers the nearest free hour or another room that fits. On /wam/book/new it is
  * the page; on Book it sits in a sheet (`frame`, `onSaved`) with the buttons as the sheet's footer.
- * "Di luar kantor" (5 Nov 2026): chosen under Kapan (it opens weekends, any hour of the day and
+ * "Di luar kantor" (5 Nov 2026): chosen at the end of Kapan (it opens weekends, any hour of the day and
  * more than 4 hours) or under Tempat (with the floor plan); the place name is typed under Tempat.
  */
 export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null }: Props) {
@@ -332,7 +332,6 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(0)}>
       {heading(0, "Kapan?")}
-      {whereSwitch}
       <DateStrip days={stripDays} selected={draft.date} today={today} summary={daySummary} onPick={pickDate} label="Tanggal" />
       {fieldError("date")}
       {dayFull && <p className={css.note} role="status">Semua ruang penuh hari ini. Pilih hari lain atau jam lain.</p>}
@@ -357,6 +356,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       </div>
       <p className={css.span} role="status"><Clock size={18} aria-hidden />{dayLabel(draft.date)} · {hours}{length > 0 ? ` (${durationLabel(length)})` : ""}</p>
       {starts.length === 0 && <Notice tone="info">{outside ? "Hari ini sudah lewat. Pilih tanggal lain." : "Jam operasional hari ini sudah lewat. Pilih tanggal lain."}</Notice>}
+      {/* Ruang kantor | Di luar kantor at the end of Kapan (9 Nov 2026): most bookings are in the office, so date and hours come first. */}
+      {whereSwitch}
       <p className={styles.hint}>{outside
         ? "Di luar kantor: boleh akhir pekan, jam berapa pun hari itu (sampai 23.30), dan lebih dari 4 jam. Nama tempat diisi di langkah Tempat."
         : `Ruang kantor ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam.`}</p>
