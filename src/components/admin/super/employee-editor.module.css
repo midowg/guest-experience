@@ -29,6 +29,18 @@
 .segment:has(input:checked) { background: var(--paper, #fff); color: var(--blue, #2f6feb); box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
 .segment:has(input:focus-visible) { outline: 2px solid var(--blue, #2f6feb); outline-offset: 1px; }
 
+/* Pekerjaan (9 Nov 2026): one card per job, the Utama one first, Tambah pekerjaan under them. */
+.job { display: grid; gap: 12px; padding: 14px 16px 16px; border: 1px solid var(--line, #e4e7ec); border-radius: 16px; background: var(--paper, #fff); min-width: 0; }
+.job:first-of-type { border-color: var(--blue, #2f6feb); }
+.jobHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; }
+.jobHead h3 { margin: 0; font-size: 14px; font-weight: 700; }
+.jobRemove { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line, #e4e7ec); border-radius: 12px; background: var(--paper, #fff); color: var(--ink-soft, #4b5563); cursor: pointer; }
+.jobRemove:hover { border-color: #dc2626; color: #dc2626; background: #fee2e2; }
+.jobRemove:focus-visible { outline: 2px solid var(--blue, #2f6feb); outline-offset: 2px; }
+.jobAdd { display: grid; justify-items: start; gap: 6px; }
+.segment:has(input:disabled) { opacity: .45; cursor: not-allowed; }
+.chipJobs { background: #e3ecfd; color: #1d4ed8; }
+
 /* The list: a toolbar (search, department, Tambah karyawan), then one row per person. */
 .toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 15rem) minmax(0, 10rem) auto; gap: 12px; align-items: end; }
 @media (max-width: 1023.98px) { .toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

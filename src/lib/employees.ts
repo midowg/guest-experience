@@ -1,4 +1,5 @@
 import { GENDERS, type Gender } from "@/lib/pra-wam/call-name";
+import { buCode, buFromOffice, leadDepartments, type Leads } from "@/lib/pra-wam/leads";
 import { z } from "zod";
 
 /*
@@ -53,6 +54,100 @@ export const employeeCreateSchema = z.object({
   reports_to: z.union([z.uuid(), z.null()]).default(null),
   gender: z.enum(GENDERS).default(""),
 });
+
+/*
+ * Pekerjaan (9 Nov 2026, migration 202611090003_employee_jobs.sql): one person may hold more than
+ * one job, each in a Business Unit with its own department and post. A post is HOD, Lead (a team
+ * lead under the HOD) or a Jabatan with its title and who it is under: the HOD (null) or a Lead.
+ * The first job is the Utama one and is copied to the employees columns (department, position,
+ * business_unit, office, reports_to); pw_leads keeps a row per HOD and Lead job.
+ */
+export const jobPosts = ["hod", "lead", "staf"] as const;
+export type JobPost = (typeof jobPosts)[number];
+export const jobPostLabels: Record<JobPost, string> = { hod: "HOD", lead: "Lead", staf: "Jabatan" };
+export type EmployeeJob = { business_unit: string; department: string; post: JobPost; job_title: string; reports_to: string | null };
+export const MAX_JOBS = 10;
+export const employeeJobSchema = z.object({
+  business_unit: text(120).min(1, "Pilih Business Unit."),
+  department: text(150).min(1, "Isi departemen."),
+  post: z.enum(jobPosts),
+  job_title: text(150).default(""),
+  reports_to: z.union([z.uuid(), z.null()]).default(null),
+}).refine(job => job.post !== "staf" || job.job_title.length > 0, { message: "Isi nama jabatan.", path: ["job_title"] });
+export const employeeJobsSchema = z.array(employeeJobSchema).min(1, "Isi pekerjaan utama.").max(MAX_JOBS, `Paling banyak ${MAX_JOBS} pekerjaan.`);
+
+/** Trimmed; a HOD or a Lead sits under nobody here (a Lead is under the HOD of the department by rule). */
+export function tidyJob(job: EmployeeJob): EmployeeJob {
+  const post = job.post;
+  return { business_unit: buCode(job.business_unit), department: job.department.trim(), post, job_title: job.job_title.trim(), reports_to: post === "staf" ? job.reports_to || null : null };
+}
+/** The title shown and copied to employees: the job's own, else "HOD Accounting" or "Lead Accounting". */
+export function jobTitleOf(job: EmployeeJob): string {
+  const own = job.job_title.trim();
+  if (own || job.post === "staf") return own;
+  return `${jobPostLabels[job.post]} ${job.department.trim()}`.trim();
+}
+/** The Utama job as the employees columns; an office that is no BU code (HR's own) is kept. */
+export function primaryFields(jobs: EmployeeJob[], office: string): Pick<Employee, "department" | "position" | "business_unit" | "office" | "reports_to"> {
+  const job = tidyJob(jobs[0]);
+  return { department: job.department, position: jobTitleOf(job), business_unit: job.business_unit, office: !office.trim() || buFromOffice(office) ? job.business_unit : office.trim(), reports_to: job.reports_to };
+}
+/** What a person heads, from their jobs (for pw_leads). */
+export function leadsFromJobs(jobs: EmployeeJob[]): Leads {
+  const of = (post: JobPost) => [...new Set(jobs.filter(job => job.post === post).map(job => job.department.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
+  const leadIn = of("lead");
+  return { departments: of("hod"), lead: leadIn.length > 0, leadIn };
+}
+export const sameJobs = (a: EmployeeJob[], b: EmployeeJob[]) => JSON.stringify(a.map(tidyJob)) === JSON.stringify(b.map(tidyJob));
+
+type JobPerson = Pick<Employee, "department" | "position" | "business_unit"> & { reports_to?: string | null };
+/**
+ * A person's jobs from the employees columns and what they head, for someone without rows in
+ * employee_jobs (before its migration, or added since): the Utama job, then a HOD job for every
+ * other department they head and a Lead job for every other department they lead.
+ */
+export function jobsFromEmployee(person: JobPerson, leads?: Leads): EmployeeJob[] {
+  const department = person.department.trim();
+  const business_unit = buCode(person.business_unit);
+  const headed = leads?.departments ?? [];
+  const led = leadDepartments(leads, department);
+  const post: JobPost = headed.includes(department) ? "hod" : led.includes(department) ? "lead" : "staf";
+  const jobs: EmployeeJob[] = [{ business_unit, department, post, job_title: person.position.trim(), reports_to: post === "staf" ? person.reports_to ?? null : null }];
+  for (const name of headed) if (name !== department) jobs.push({ business_unit, department: name, post: "hod", job_title: "", reports_to: null });
+  for (const name of led) if (name !== department && !headed.includes(name)) jobs.push({ business_unit, department: name, post: "lead", job_title: "", reports_to: null });
+  return jobs.slice(0, MAX_JOBS);
+}
+
+/**
+ * A person's saved jobs made to agree with what the app reads elsewhere: the Utama job with the
+ * employees columns (an Excel import may have changed them), and the posts with pw_leads (`leads`,
+ * when it is read): a HOD or Lead no longer there becomes a Jabatan, and one only there is added.
+ */
+export function reconcileJobs(rows: EmployeeJob[], person: JobPerson, leads?: Leads): EmployeeJob[] {
+  if (!rows.length) return jobsFromEmployee(person, leads);
+  const jobs = rows.map(tidyJob);
+  const first = jobs[0];
+  const title = person.position.trim();
+  jobs[0] = { ...first, business_unit: buCode(person.business_unit), department: person.department.trim() || first.department,
+    // "HOD Accounting" was written for a HOD job without a title of its own: it stays without one.
+    job_title: title === jobTitleOf({ ...first, job_title: "" }) ? first.job_title : title,
+    reports_to: first.post === "staf" ? person.reports_to ?? null : null };
+  if (!leads) return jobs;
+  const headed = leads.departments;
+  const led = leadDepartments(leads, jobs[0].department);
+  for (const job of jobs) {
+    if ((job.post === "hod" && !headed.includes(job.department)) || (job.post === "lead" && !led.includes(job.department))) job.post = "staf";
+  }
+  const ensure = (name: string, post: "hod" | "lead") => {
+    if (jobs.some(job => job.department === name && (job.post === post || job.post === "hod"))) return;
+    const same = jobs.find(job => job.department === name && job.post === "staf");
+    if (same) { same.post = post; same.reports_to = null; }
+    else if (jobs.length < MAX_JOBS) jobs.push({ business_unit: jobs[0].business_unit, department: name, post, job_title: "", reports_to: null });
+  };
+  for (const name of headed) ensure(name, "hod");
+  for (const name of led) ensure(name, "lead");
+  return jobs;
+}
 
 /** The matching key: the database derives the same one (upper case, single spaces). */
 export const nameKey = (name: string) => name.trim().replace(/\s+/g, " ").toUpperCase();

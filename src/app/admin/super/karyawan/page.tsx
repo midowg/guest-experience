@@ -4,7 +4,8 @@ import { OrgChart } from "@/components/admin/super/OrgChart";
 import { SuperAdminFrame } from "@/components/admin/super/SuperAdminFrame";
 import { PageHeader, PageTabs } from "@/components/console";
 import { buildOrg } from "@/lib/org";
-import { BUSINESS_UNITS, buCode } from "@/lib/pra-wam/leads";
+import { BUSINESS_UNITS, buCode, leadDepartments } from "@/lib/pra-wam/leads";
+import { listJobs } from "@/lib/server/employee-jobs";
 import { EMPLOYEES_ADMIN } from "@/lib/routes";
 import { EmployeeDirectory, type WamAccounts } from "@/components/admin/super/EmployeeDirectory";
 import { UnitImport } from "@/components/admin/super/UnitImport";
@@ -55,18 +56,23 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const tab: Tab = asked === "struktur" || asked === "impor" ? asked : "daftar";
   const [{ employees, migrated }, accounts, units, leads] = await Promise.all([listEmployees(), wamAccounts(), listUnits(), leadData()]);
   const active = employees.filter(person => person.active);
+  // Each person's jobs (9 Nov 2026); a failure leaves the list reading them from the person's columns.
+  const jobs = tab === "daftar" ? await listJobs(employees).catch(() => null) : null;
   return <SuperAdminFrame current="karyawan" wide={tab === "struktur"}>
     <PageHeader title="Data karyawan" subtitle={`${active.length} karyawan aktif · dipakai bersama semua aplikasi Journey`} />
     <PageTabs label="Bagian Data karyawan" current={tab} tabs={tabs.map(item => ({ key: item.key, label: item.label, href: item.key === "daftar" ? EMPLOYEES_ADMIN : `${EMPLOYEES_ADMIN}?tab=${item.key}` }))} />
     {tab === "struktur"
       ? <OrgChart org={buildOrg(
-        active.map(person => ({ id: person.id, name: person.full_name, position: person.position, department: person.department, businessUnit: buCode(person.business_unit), reportsTo: person.reports_to ?? null, lead: !!leads?.byPerson[person.id]?.lead })),
+        active.map(person => ({ id: person.id, name: person.full_name, position: person.position, department: person.department, businessUnit: buCode(person.business_unit), reportsTo: person.reports_to ?? null,
+          // The chart follows the Utama job: a Lead there, not a Lead job in another department.
+          lead: leadDepartments(leads?.byPerson[person.id], person.department).includes(person.department.trim()) })),
         new Set(Object.entries(accounts?.roles ?? {}).filter(([, roles]) => roles.includes("bod")).map(([id]) => id)),
         Object.entries(leads?.byPerson ?? {}).reduce<Record<string, string[]>>((all, [id, led]) => { for (const name of led.departments) all[name] = [...(all[name] ?? []), id]; return all; }, {}),
         BUSINESS_UNITS,
       )} />
       : <>
-        <EmployeeDirectory initial={employees} migrated={migrated} wamAccounts={accounts} leads={leads?.byPerson} leadOptions={leads?.options} part={tab} />
+        <EmployeeDirectory initial={employees} migrated={migrated} wamAccounts={accounts} leads={leads?.byPerson} leadOptions={leads?.options}
+          jobs={jobs?.byPerson} jobsMigrated={jobs?.migrated ?? true} part={tab} />
         {tab === "impor" && <UnitImport initialUnits={units.units} initialMemberships={units.memberships} migrated={units.migrated} people={employees.map(person => ({ id: person.id, name: person.full_name }))} />}
       </>}
   </SuperAdminFrame>;

@@ -225,6 +225,11 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   sesi, QR dan daftar hadir, atau unggah dokumen untuk panitia. Detail sesi membawa alat panitia
   hanya bila dibuka dari Kelola acara (`?dari=kelola`, `praWamPath.managedSession`). Unggah dokumen
   umum dan materi sesi ada di Kelola acara → Dokumen (`/wam/manage/documents`).
+- **Pekerjaan karyawan** (Data karyawan → Ubah karyawan, 9 Nov 2026): satu kartu per pekerjaan,
+  urut Business Unit → Departemen → Posisi (HOD | Lead | Jabatan; Jabatan memilih "Di bawah" HOD
+  atau Lead departemen itu). Kartu pertama Utama (disalin ke kolom `employees`); Tambah pekerjaan
+  untuk posisi di BU lain. HOD/Lead tidak lagi di bagian terpisah; `pw_leads` diselaraskan dari
+  kartu. Tabel `employee_jobs` (migrasi 202611090003; sebelum jalan hanya Utama yang tersimpan).
 - **Agenda (Booking saya)**: tanggal terbaru di atas, yang lama di bawah (9 Nov 2026).
 - **Kalender bulan di sheet booking** (dibuka dari Agenda) sama dengan kalender Timeline: garis
   forum/acara berwarna, bukan titik ketersediaan; mengetuk tanggal memilihnya (tanggal lewat atau di

@@ -5,12 +5,12 @@ import { FileSpreadsheet, Pencil, Plus, Trash2, Upload, UserPlus } from "lucide-
 import { Button, Field, Notice } from "@/components/ui";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { categoryLabels, type Employee, type EmployeeRow, type ImportChange } from "@/lib/employees";
+import { categoryLabels, jobPostLabels, jobTitleOf, jobsFromEmployee, sameJobs, type Employee, type EmployeeJob, type EmployeeRow, type ImportChange } from "@/lib/employees";
 import { employeesApi, praWamAccountsApi } from "@/lib/routes";
 import type { AccountRow } from "@/lib/server/pra-wam/accounts";
-import { BUSINESS_UNITS, buCode, NO_LEADS, type LeadOptions, type Leads } from "@/lib/pra-wam/leads";
+import { BUSINESS_UNITS, buCode, leadDepartments, NO_LEADS, type LeadOptions, type Leads } from "@/lib/pra-wam/leads";
 import type { PraWamRole } from "@/lib/pra-wam/roles";
-import { EmployeeEditor, type EmployeeDraft } from "./EmployeeEditor";
+import { EmployeeEditor, blankJob, type EmployeeDraft } from "./EmployeeEditor";
 import own from "./employee-editor.module.css";
 import styles from "@/components/admin/admin.module.css";
 
@@ -36,13 +36,18 @@ const fieldLabels: Record<string, string> = { full_name: "nama", nickname: "pang
  * is checked first (who is new, who changed) and saved only on request. The list (6 Nov 2026): a
  * person, their department and job (HOD, Lead, GA or Intern beside it), their Business Unit,
  * contact and status, with Ubah and Hapus; "Tambah karyawan" adds one by hand. Ubah and Tambah open
- * one panel (EmployeeEditor) with everything, what they head included. `wamAccounts` gives the
+ * one panel (EmployeeEditor) with everything, their jobs and what they head included; a person with
+ * more than one job (9 Nov 2026) shows the Utama one and "+1 pekerjaan". `wamAccounts` gives the
  * count of WAM accounts and "Buat akun" for everyone still missing one.
  */
-export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initialLeads, leadOptions, part = "daftar" }: {
+export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initialLeads, leadOptions, jobs: initialJobs, jobsMigrated = true, part = "daftar" }: {
   initial: Employee[]; migrated: boolean; wamAccounts?: WamAccounts | null;
   /** Who heads which departments and who is a Lead (6 and 9 Nov 2026), and the departments to pick from. */
   leads?: Record<string, Leads>; leadOptions?: LeadOptions;
+  /** Per person: their jobs, the Utama one first (9 Nov 2026); someone missing gets theirs from their columns. */
+  jobs?: Record<string, EmployeeJob[]>;
+  /** False while employee_jobs waits for migration 202611090003: only the Utama job is kept. */
+  jobsMigrated?: boolean;
   /** Which tab of Data karyawan: the list, or the Excel import. */
   part?: "daftar" | "impor";
 }) {
@@ -57,6 +62,8 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   const [businessUnit, setBusinessUnit] = useState("");
   const [leads, setLeads] = useState<Record<string, Leads>>(initialLeads ?? {});
   const leadsOf = (id: string): Leads => leads[id] ?? NO_LEADS;
+  const [jobs, setJobs] = useState<Record<string, EmployeeJob[]>>(initialJobs ?? {});
+  const jobsOf = (person: Employee): EmployeeJob[] => jobs[person.id] ?? jobsFromEmployee(person, leadsOf(person.id));
   const [roles, setRoles] = useState<Record<string, PraWamRole[]>>(wamAccounts?.roles ?? {});
   const rolesOf = (id: string): PraWamRole[] => roles[id] ?? [];
   /** The person being changed, or `null` for a new one; closed when undefined. */
@@ -71,11 +78,15 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   const activeWithAccount = people.filter(person => person.active && withAccount.has(person.id)).length;
 
   const departments = useMemo(() => [...new Set(people.map(person => person.department).filter(Boolean))].sort(), [people]);
+  // Offered while typing a job's department: those of Data karyawan, of other jobs, and those headed.
+  const jobDepartments = useMemo(() => [...new Set([...departments, ...Object.values(jobs).flatMap(list => list.map(job => job.department)), ...(leadOptions?.departments ?? [])]
+    .map(name => name.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id")), [departments, jobs, leadOptions]);
   // By Business Unit (MRP, WNS, TEE, NMU, WNN, as listed), then by name A to Z.
   const buRank = (person: Employee) => { const at = (BUSINESS_UNITS as readonly string[]).indexOf(buCode(person.business_unit)); return at < 0 ? BUSINESS_UNITS.length : at; };
-  // A person belongs to one BU inside Werkudara Group; nobody leads one (9 Nov 2026).
-  const busOf = (person: Employee) => [buCode(person.business_unit)];
-  const shown = people.filter(person => (!department || person.department === department) && (!businessUnit || busOf(person).includes(businessUnit))
+  // A person works in a BU per job inside Werkudara Group; nobody leads one (9 Nov 2026).
+  const busOf = (person: Employee) => [...new Set([buCode(person.business_unit), ...jobsOf(person).map(job => buCode(job.business_unit))])];
+  const inDepartment = (person: Employee) => person.department === department || jobsOf(person).some(job => job.department === department);
+  const shown = people.filter(person => (!department || inDepartment(person)) && (!businessUnit || busOf(person).includes(businessUnit))
     && (!query.trim() || `${person.full_name} ${person.nickname} ${person.position}`.toLowerCase().includes(query.trim().toLowerCase())))
     .sort((a, b) => buRank(a) - buRank(b) || a.full_name.localeCompare(b.full_name, "id", { sensitivity: "base" }));
   const counts = plan ? { baru: plan.plan.filter(item => item.change === "baru").length, berubah: plan.plan.filter(item => item.change === "berubah").length, sama: plan.plan.filter(item => item.change === "sama").length } : null;
@@ -115,32 +126,49 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     finally { setBusy(null); }
   }
 
-  /** Saves the editor: the person (new or changed), then what they head when that changed. */
-  async function saveEditor(person: Employee | null, draft: EmployeeDraft, nextLeads: Leads, nextRoles: PraWamRole[]) {
+  /**
+   * Saves the editor: the person (new or changed) with their jobs, and BOD and Admin WAM. The jobs
+   * go with the details (the Utama one fills the person's columns, HOD and Lead go to pw_leads). A
+   * BOD heads nothing: becoming BOD saves the jobs (no HOD or Lead left) before the roles; anyone
+   * else has the roles saved first, so leaving BOD and becoming HOD works in one save.
+   */
+  async function saveEditor(person: Employee | null, draft: EmployeeDraft, nextJobs: EmployeeJob[], nextRoles: PraWamRole[]) {
     setBusy("editor"); setEditorError(""); setError(""); setMessage(""); setSkipped([]);
     try {
-      let saved: Employee | undefined;
-      if (person) {
-        // Only what changed; an empty value, null and one never set count as the same.
-        const changed = Object.fromEntries(Object.entries(draft).filter(([key, value]) => (person[key as keyof Employee] || null) !== (value || null)));
-        saved = Object.keys(changed).length ? (await adminRequest<Employee>(employeesApi(person.id), { method: "PATCH", body: JSON.stringify(changed) })).data : person;
-      } else {
-        saved = (await adminRequest<Employee>(employeesApi(), { method: "POST", body: JSON.stringify({ employee: draft }) })).data;
-      }
-      if (!saved) throw new Error("Belum tersimpan.");
-      // The structure: BOD and Admin WAM, and what they head; saved together so the rules hold.
-      const before = person ? leadsOf(person.id) : NO_LEADS;
-      const sameLeads = before.departments.join("|") === nextLeads.departments.join("|") && before.lead === nextLeads.lead;
       const rolesBefore = person ? rolesOf(person.id) : [];
       const sameRoles = rolesBefore.length === nextRoles.length && rolesBefore.every(role => nextRoles.includes(role));
-      if (!sameLeads || !sameRoles) {
-        await adminRequest(praWamAccountsApi(saved.id), { method: "PATCH", body: JSON.stringify({ ...(sameLeads ? {} : { leads: nextLeads }), ...(sameRoles ? {} : { roles: nextRoles }) }) });
-        setLeads(current => ({ ...current, [saved!.id]: nextLeads }));
-        setRoles(current => ({ ...current, [saved!.id]: nextRoles }));
+      const saveRoles = async (id: string) => {
+        if (sameRoles) return;
+        await adminRequest(praWamAccountsApi(id), { method: "PATCH", body: JSON.stringify({ roles: nextRoles }) });
+        setRoles(current => ({ ...current, [id]: nextRoles }));
+      };
+      const rolesFirst = !nextRoles.includes("bod");
+      let saved: Employee | undefined = person ?? (await adminRequest<Employee>(employeesApi(), { method: "POST", body: JSON.stringify({ employee: draft }) })).data;
+      if (!saved) throw new Error("Belum tersimpan.");
+      const id = saved.id;
+      if (rolesFirst) await saveRoles(id);
+      // Only what changed; an empty value, null and one never set count as the same. The Utama
+      // job's columns go with `jobs`, which a new person always sends (their post and other jobs).
+      const jobColumns = new Set(["department", "position", "business_unit", "office", "reports_to"]);
+      const changed = person ? Object.fromEntries(Object.entries(draft).filter(([key, value]) => !jobColumns.has(key) && (person[key as keyof Employee] || null) !== (value || null))) : {};
+      const jobsChanged = !person || !sameJobs(jobsOf(person), nextJobs);
+      let note = "";
+      if (jobsChanged) {
+        const result = await adminRequest<{ employee: Employee; jobs: EmployeeJob[]; leads: Leads; migrated: boolean }>(employeesApi(id), { method: "PATCH", body: JSON.stringify({ ...changed, jobs: nextJobs }) });
+        if (!result.data) throw new Error("Belum tersimpan.");
+        const { employee, jobs: savedJobs, leads: savedLeads, migrated: jobsSaved } = result.data;
+        saved = employee;
+        setLeads(current => ({ ...current, [id]: savedLeads }));
+        // Before migration 202611090003 only the Utama job stays: the rest is read from the columns again.
+        setJobs(current => { const next = { ...current }; if (jobsSaved) next[id] = savedJobs; else delete next[id]; return next; });
+        if (!jobsSaved && nextJobs.length > 1) note = ` ${result.message}`;
+      } else if (Object.keys(changed).length) {
+        saved = (await adminRequest<Employee>(employeesApi(id), { method: "PATCH", body: JSON.stringify(changed) })).data ?? saved;
       }
+      if (!rolesFirst) await saveRoles(id);
       const done = saved;
       setPeople(list => person ? list.map(item => item.id === done.id ? done : item) : [done, ...list]);
-      setMessage(person ? `${done.full_name} disimpan.` : `${done.full_name} ditambahkan.`);
+      setMessage(`${done.full_name} ${person ? "disimpan" : "ditambahkan"}.${note}`);
       setEditor(undefined);
     } catch (err) { setEditorError(errorMessage(err)); }
     finally { setBusy(null); }
@@ -243,19 +271,25 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
           <tbody>{shown.map(person => {
             const led = leadsOf(person.id);
             const hodHere = led.departments.includes(person.department);
+            const ledIn = leadDepartments(led, person.department);
+            const leadHere = ledIn.includes(person.department);
+            const extra = jobsOf(person).slice(1);
+            const post = hodHere ? "HOD" : leadHere ? "Lead" : "";
             return <tr key={person.id} className={person.active ? undefined : own.inactive} aria-busy={busy === person.id || busy === `delete-${person.id}`}>
               <td className={own.person}><strong>{person.full_name}</strong><p className={own.muted}>{[person.nickname, person.nip && `NIP ${person.nip}`].filter(Boolean).join(" · ") || "—"}</p></td>
               <td>
                 <strong>{person.department || "—"}</strong>
-                <p className={own.job}>{person.position || "Jabatan belum diisi"}{hodHere ? " · HOD" : led.lead ? " · Lead" : ""}</p>
-                {(rolesOf(person.id).includes("bod") || led.departments.some(name => name !== person.department) || (led.lead && hodHere) || person.category !== "karyawan") && <div className={own.chips}>
+                <p className={own.job}>{person.position || "Jabatan belum diisi"}{post && !person.position.startsWith(post) ? ` · ${post}` : ""}</p>
+                {(rolesOf(person.id).includes("bod") || led.departments.some(name => name !== person.department) || ledIn.some(name => name !== person.department) || (leadHere && hodHere) || extra.length > 0 || person.category !== "karyawan") && <div className={own.chips}>
                   {rolesOf(person.id).includes("bod") && <span className={`${own.chip} ${own.chipBod}`}>BOD</span>}
                   {led.departments.filter(name => name !== person.department).map(name => <span key={name} className={`${own.chip} ${own.chipHod}`}>HOD {name}</span>)}
-                  {led.lead && hodHere && <span className={`${own.chip} ${own.chipLead}`}>Lead</span>}
+                  {leadHere && hodHere && <span className={`${own.chip} ${own.chipLead}`}>Lead</span>}
+                  {ledIn.filter(name => name !== person.department && !led.departments.includes(name)).map(name => <span key={name} className={`${own.chip} ${own.chipLead}`}>Lead {name}</span>)}
+                  {extra.length > 0 && <span className={`${own.chip} ${own.chipJobs}`} title={extra.map(job => `${buCode(job.business_unit)} · ${job.department} · ${jobTitleOf(job) || jobPostLabels[job.post]}`).join("\n")}>+{extra.length} pekerjaan</span>}
                   {person.category !== "karyawan" && <span className={`${own.chip} ${own.chipWork}`}>{categoryLabels[person.category]}</span>}
                 </div>}
               </td>
-              <td><span className={own.bu}>{buCode(person.business_unit)}</span></td>
+              <td><span className={own.buList}>{busOf(person).map(code => <span key={code} className={own.bu}>{code}</span>)}</span></td>
               <td>{person.phone || person.email ? <><p>{person.phone || "—"}</p><p className={own.muted}>{person.email}</p></> : <p className={own.muted}>Belum ada</p>}</td>
               <td><label className={styles.superSwitch}>
                 <input type="checkbox" role="switch" checked={person.active} disabled={busy === person.id} onChange={e => patch(person, { active: e.target.checked })} aria-label={`${person.full_name} aktif`} />
@@ -271,10 +305,10 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
       {people.length > 0 && shown.length === 0 && <p className="field-hint">Tidak ada yang cocok dengan pencarian.</p>}
     </section>}
 
-    {editor && <EmployeeEditor key={editor.person?.id ?? "baru"} person={editor.person} leads={editor.person ? leadsOf(editor.person.id) : NO_LEADS}
-      roles={editor.person ? rolesOf(editor.person.id) : []}
-      options={leadOptions ?? null} departments={departments} saving={busy === "editor"} error={editorError}
+    {editor && <EmployeeEditor key={editor.person?.id ?? "baru"} person={editor.person} jobs={editor.person ? jobsOf(editor.person) : [blankJob()]}
+      roles={editor.person ? rolesOf(editor.person.id) : []} leads={leads} jobsReady={jobsMigrated}
+      departments={jobDepartments} saving={busy === "editor"} error={editorError}
       people={people.filter(item => item.active)}
-      onSave={(draft, nextLeads, nextRoles) => void saveEditor(editor.person, draft, nextLeads, nextRoles)} onClose={() => setEditor(undefined)} />}
+      onSave={(draft, nextJobs, nextRoles) => void saveEditor(editor.person, draft, nextJobs, nextRoles)} onClose={() => setEditor(undefined)} />}
   </div>;
 }

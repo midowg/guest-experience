@@ -35,7 +35,12 @@ async function listLeadsUncached(): Promise<{ byPerson: Map<string, Leads>; migr
   };
   for (const row of data ?? []) {
     if (row.kind === "departemen") addDepartment(row.employee_id, row.name);
-    else if (row.kind === "lead") byPerson.set(row.employee_id, { ...current(row.employee_id), lead: true });
+    else if (row.kind === "lead") {
+      // One row per Lead job (9 Nov 2026), named after that job's department.
+      const led = current(row.employee_id);
+      const leadIn = [...new Set([...(led.leadIn ?? []), row.name as string])].sort((a, b) => a.localeCompare(b, "id"));
+      byPerson.set(row.employee_id, { ...led, lead: true, leadIn });
+    }
   }
   // The unit import's leads of a department (a BU has no lead).
   const unitOf = new Map(units.units.map(unit => [unit.id, unit]));
@@ -58,13 +63,14 @@ export async function leadOptions(): Promise<LeadOptions> {
   const { data, error } = await createPrivilegedClient().from("employees").select("department").eq("active", true).limit(2000);
   if (error) databaseError(error);
   const { byPerson } = await listLeads();
-  const names = [...(data ?? []).map(row => row.department as string | null), ...[...byPerson.values()].flatMap(item => item.departments)];
+  const names = [...(data ?? []).map(row => row.department as string | null), ...[...byPerson.values()].flatMap(item => [...item.departments, ...(item.leadIn ?? []).filter(name => name !== "Lead")])];
   return { departments: [...new Set(names.map(name => (name ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id")) };
 }
 
 /**
  * Saves what this person heads, replacing what was set by hand. A BOD heads nothing. The HOD rows
- * go in first, so a Lead tick waiting for its migration never loses them.
+ * go in first, so a Lead tick waiting for its migration never loses them. A Lead gets one row per
+ * department in `leadIn` (their Lead jobs), else one for their own department.
  */
 export async function setLeads(employeeId: string, leads: Leads): Promise<void> {
   const departments = [...new Set(leads.departments.map(name => name.trim()).filter(Boolean))];
@@ -79,10 +85,13 @@ export async function setLeads(employeeId: string, leads: Leads): Promise<void> 
     if (insertError) databaseError(insertError);
   }
   if (!leads.lead) return;
-  // The row names the Lead's own department, for reading the table by hand.
-  const { data: person } = await client.from("employees").select("department").eq("id", employeeId).maybeSingle();
-  const name = ((person?.department as string | undefined) ?? "").trim() || "Lead";
-  const { error: leadError } = await client.from("pw_leads").insert({ employee_id: employeeId, kind: "lead", name });
+  let leadIn = [...new Set((leads.leadIn ?? []).map(name => name.trim()).filter(Boolean))];
+  if (!leadIn.length) {
+    // The row names the Lead's own department, for reading the table by hand.
+    const { data: person } = await client.from("employees").select("department").eq("id", employeeId).maybeSingle();
+    leadIn = [((person?.department as string | undefined) ?? "").trim() || "Lead"];
+  }
+  const { error: leadError } = await client.from("pw_leads").insert(leadIn.map(name => ({ employee_id: employeeId, kind: "lead", name })));
   if (leadError) {
     // 23514: the kind check of 202611060002 does not know 'lead' yet.
     if (leadError.code === "23514") throw new ServiceError(503, `HOD tersimpan; Lead menunggu migrasi ${LEAD_MIGRATION}.`);

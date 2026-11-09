@@ -21,6 +21,7 @@ function from(table: string) {
     select: () => query,
     update: (values: Row) => { patch = values; return query; },
     eq: (key: string, value: unknown) => { filters.push([key, value]); return query; },
+    limit: () => query,
     maybeSingle: async () => ({ data: rows()[0] ?? null, error: null }),
     then: (resolve: (value: { data: Row[]; error: null }) => void) => {
       const hit = rows();
@@ -36,16 +37,23 @@ vi.mock("./announcements", () => ({
   HOD_NOTE_LABEL: "Meeting HOD",
   notifyPeople: async (ids: string[], note: { title: string; body: string }) => { notes.push({ ids, title: note.title, body: note.body }); },
 }));
+type Led = { departments: string[]; lead: boolean; leadIn?: string[] };
+let leadsMap = new Map<string, Led>();
+let peopleList: { id: string; name: string; department: string; active: boolean }[] = [];
+let optionDepartments: string[] = [];
 vi.mock("./leads", () => ({
-  leadsOf: async (id: string) => ({ departments: id === "requester" ? ["HC"] : ["IT"], lead: false }),
-  listLeads: async () => ({ byPerson: new Map(), migrated: true }), leadOptions: async () => ({ departments: [] }),
+  leadsOf: async (id: string) => leadsMap.get(id) ?? ({ departments: id === "requester" ? ["HC"] : ["IT"], lead: false }),
+  listLeads: async () => ({ byPerson: leadsMap, migrated: true }), leadOptions: async () => ({ departments: optionDepartments }),
 }));
-vi.mock("./appraisal", () => ({ listPeople: async () => [], listRooms: async () => [], callNameOf: async (_id: string, fallback: string) => fallback }));
+vi.mock("./appraisal", () => ({ listPeople: async () => peopleList, listRooms: async () => [], callNameOf: async (_id: string, fallback: string) => fallback }));
 
-const { answerHodMeeting, cancelHodMeeting } = await import("./hod");
+const { answerHodMeeting, cancelHodMeeting, hodDepartments, hodInvitees, hodStanding } = await import("./hod");
 const member = (id: string) => ({ id, name: id, nickname: id, department: "", position: "", mustChangePassword: false, roles: [], photo: null });
 
 beforeEach(() => {
+  leadsMap = new Map();
+  peopleList = [];
+  optionDepartments = [];
   notes.length = 0;
   rpc.mockClear();
   rpcResult = { data: "booking-1", error: null };
@@ -85,5 +93,38 @@ describe("Meeting HOD books its room", () => {
     await cancelHodMeeting(member("requester"), "m1");
     expect(tables.pw_hod_meetings[0].status).toBe("batal");
     expect(tables.pw_room_bookings[0]).toMatchObject({ status: "batal", cancelled_by: "requester" });
+  });
+});
+
+describe("HOD and Lead from every job (Pekerjaan, 9 Nov 2026)", () => {
+  beforeEach(() => {
+    peopleList = [
+      { id: "requester", name: "Rina", department: "HC", active: true },
+      { id: "hod-it", name: "Budi", department: "IT", active: true },
+      // Utama job in Sales; a second job as Lead of IT in another BU.
+      { id: "dewi", name: "Dewi", department: "Sales", active: true },
+      // A Lead saved before Lead jobs: a Lead of their own department.
+      { id: "lama", name: "Lama", department: "Sales", active: true },
+    ];
+    leadsMap = new Map<string, Led>([
+      ["requester", { departments: ["HC"], lead: false }],
+      ["hod-it", { departments: ["IT"], lead: false }],
+      ["dewi", { departments: [], lead: true, leadIn: ["IT"] }],
+      ["lama", { departments: [], lead: true }],
+    ]);
+    optionDepartments = ["HC", "IT", "Sales"];
+  });
+
+  it("counts a Lead job in another department, not only the Utama one", async () => {
+    const departments = await hodDepartments();
+    expect(departments.find(item => item.id === "IT")?.heads).toEqual([{ id: "hod-it", name: "Budi", post: "HOD" }, { id: "dewi", name: "Dewi", post: "Lead" }]);
+    // Dewi's Utama department is not where she leads; the older Lead still leads their own.
+    expect(departments.find(item => item.id === "Sales")?.heads).toEqual([{ id: "lama", name: "Lama", post: "Lead" }]);
+  });
+
+  it("invites the Lead of the other job, and lets them stand for that department", async () => {
+    expect(await hodInvitees(member("requester"), ["IT"])).toEqual([{ employee_id: "hod-it", department: "IT" }, { employee_id: "dewi", department: "IT" }]);
+    expect(await hodStanding({ id: "dewi" })).toEqual({ isHod: true, unitIds: ["IT"] });
+    expect(await hodStanding({ id: "lama" })).toEqual({ isHod: true, unitIds: ["Sales"] });
   });
 });

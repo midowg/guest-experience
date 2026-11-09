@@ -1,6 +1,7 @@
 import "server-only";
 import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { statusFromAnswers, type HodBookingInfo, type HodDepartment, type HodMeetingStatus, type HodResponse } from "@/lib/pra-wam/hod";
+import { leadDepartments, type Leads } from "@/lib/pra-wam/leads";
 import { isHod } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -29,8 +30,9 @@ function fail(error: { code?: string; message: string }): never {
  * A department is known by its name (`id` is the name).
  */
 /**
- * Each department with its heads: the HODs who head it and (9 Nov 2026) the Leads who work in it,
- * since a meeting between HODs is a meeting with Leads too.
+ * Each department with its heads: the HODs who head it and (9 Nov 2026) its Leads, since a meeting
+ * between HODs is a meeting with Leads too. Both come from every job a person holds (Pekerjaan in
+ * Data karyawan writes a pw_leads row per HOD and Lead job), not only the Utama one.
  */
 async function headsByDepartment(): Promise<HodDepartment[]> {
   const [people, { byPerson }, options] = await Promise.all([listPeople(), listLeads(), leadOptions()]);
@@ -41,19 +43,21 @@ async function headsByDepartment(): Promise<HodDepartment[]> {
       const person = active.get(id);
       if (!person) return [];
       if (leads.departments.includes(name)) return [{ id, name: person.name, post: "HOD" as const }];
-      return leads.lead && (person.department ?? "").trim() === name ? [{ id, name: person.name, post: "Lead" as const }] : [];
+      return leadDepartments(leads, person.department).includes(name) ? [{ id, name: person.name, post: "Lead" as const }] : [];
     }).sort((a, b) => (a.post === b.post ? 0 : a.post === "HOD" ? -1 : 1) || a.name.localeCompare(b.name, "id")),
   }));
 }
 
 /**
  * Whether this person may hold a Meeting HOD, and the departments they stand for: a HOD for the
- * departments they head, a Lead (9 Nov 2026) for their own department.
+ * departments they head, a Lead (9 Nov 2026) for the departments of their Lead jobs.
  */
 export async function hodStanding(member: Pick<Member, "id">): Promise<{ isHod: boolean; unitIds: string[] }> {
-  const { departments, lead } = await leadsOf(member.id).catch(() => ({ departments: [] as string[], lead: false }));
-  const own = lead ? ((await listPeople().catch(() => [])).find(person => person.id === member.id)?.department ?? "").trim() : "";
-  const unitIds = [...new Set([...departments, ...(own ? [own] : [])])];
+  const leads: Leads = await leadsOf(member.id).catch(() => ({ departments: [] as string[], lead: false }));
+  const { departments, lead } = leads;
+  // A Lead saved before their Lead jobs stands for their own department.
+  const own = lead && !leadDepartments(leads, "").length ? (await listPeople().catch(() => [])).find(person => person.id === member.id)?.department : "";
+  const unitIds = [...new Set([...departments, ...leadDepartments(leads, own)])];
   return { isHod: isHod({ isLead: departments.length > 0 || lead }), unitIds };
 }
 

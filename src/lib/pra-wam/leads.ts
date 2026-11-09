@@ -8,13 +8,25 @@ import { z } from "zod";
  *     A BU is only the business unit a person belongs to inside Werkudara Group; nobody leads one.
  */
 
-/** Departments headed (HOD), and whether the person is a Lead in their department. */
-export type Leads = { departments: string[]; lead: boolean };
+/**
+ * Departments headed (HOD), and whether the person is a Lead. `leadIn` (9 Nov 2026, Pekerjaan
+ * karyawan): the departments they are a Lead in, one per Lead job; absent or empty for a Lead
+ * saved before it, who is a Lead in their own department.
+ */
+export type Leads = { departments: string[]; lead: boolean; leadIn?: string[] };
 /** What can be picked: the departments of Data karyawan (and those already headed). */
 export type LeadOptions = { departments: string[] };
 export const NO_LEADS: Leads = { departments: [], lead: false };
 /** Heads a department or is a Lead: a structural post (no BOD with it, Pak or Bu in the app). */
 export const hasPost = (leads: Leads) => leads.departments.length > 0 || leads.lead;
+/** The departments a person is a Lead in: their Lead jobs, else (a Lead saved before them) their own department. */
+export function leadDepartments(leads: Leads | undefined, ownDepartment: string | null | undefined): string[] {
+  if (!leads?.lead) return [];
+  const named = (leads.leadIn ?? []).map(name => name.trim()).filter(name => name && name !== "Lead");
+  if (named.length) return [...new Set(named)];
+  const own = (ownDepartment ?? "").trim();
+  return own ? [own] : [];
+}
 
 /** The business units, by their codes (6 Nov 2026). */
 export const BUSINESS_UNITS = ["MRP", "WNS", "TEE", "NMU", "WNN"] as const;
@@ -32,7 +44,7 @@ export function buCode(name: string | null | undefined): string {
 }
 
 const names = z.array(z.string().trim().min(1).max(120)).max(30);
-export const leadsSchema = z.object({ departments: names, lead: z.boolean().default(false) });
+export const leadsSchema = z.object({ departments: names, lead: z.boolean().default(false), leadIn: names.optional() });
 
 /** "HOD Center of Excellence, Art & Creative Support", "Lead", or "" when nothing. */
 export function leadsLabel(leads: Leads): string {
