@@ -199,6 +199,10 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   untuk semua orang (hanya baca). Yang terbit menampilkan hari dan jam; yang masih draf hanya rentang
   tanggal rencana dengan label "Jadwal pasti menyusul", tanpa deskripsi dan tanpa daftar orang. Rapat
   (booking ruang) dan yang batal tidak tampil. Yang terbit dan diikuti orang itu membuka detail sesinya.
+  Di atasnya ada kalender bulanan (Senin di depan, ‹ › antarbulan yang berisi): tiap forum atau acara
+  berupa garis dengan warnanya sendiri sepanjang tanggalnya, yang bertumpuk di lajur masing-masing.
+  Di HP garisnya tipis; mulai lebar 640px garisnya memuat judul. Warna yang sama dipakai di kartunya
+  di daftar, dan mengetuk garis menggulir ke kartu itu.
 - Design system "Pra WAM · Hospitality": Poppins untuk judul dan angka, Inter untuk isi; biru
   Werkudara #006EC1 satu-satunya aksen utama, kuning #FFBA00 sekunder. Kartu putih radius 24, tombol
   pill, isian radius 16.

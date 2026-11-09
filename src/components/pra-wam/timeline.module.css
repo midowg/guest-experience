@@ -7,7 +7,7 @@
 .entry { position: relative; }
 .dot { position: absolute; top: 20px; left: -24px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--pw-primary); background: var(--pw-app); box-sizing: border-box; }
 .entry[data-state="selesai"] .dot { border-color: var(--pw-muted); background: var(--pw-muted); }
-.entry[data-state="berlangsung"] .dot { border-color: var(--pw-brass); background: var(--pw-brass); box-shadow: 0 0 0 4px var(--pw-brass-soft); }
+.entry[data-state="berlangsung"] .dot { box-shadow: 0 0 0 4px color-mix(in srgb, var(--tl, var(--pw-brass)) 30%, transparent); }
 
 .card { position: relative; display: grid; gap: 4px; padding: 14px 16px; border-radius: var(--pw-r-control); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); color: var(--pw-text); text-decoration: none; }
 .cardLink { padding-right: 40px; }
@@ -24,3 +24,50 @@
 .tagDone { background: transparent; box-shadow: inset 0 0 0 1px var(--pw-line); }
 .tagPlan { background: transparent; box-shadow: inset 0 0 0 1px var(--pw-line); }
 .tagMine { background: var(--pw-primary-soft); color: var(--pw-primary); }
+
+/* Each forum or event's own colour (lib/pra-wam/timeline.ts, TIMELINE_COLORS), the same in the calendar and the list. */
+.c0 { --tl: var(--pw-primary); }
+.c1 { --tl: var(--pw-brass); }
+.c2 { --tl: var(--pw-accent-sky); }
+.c3 { --tl: var(--pw-accent-green); }
+.c4 { --tl: var(--pw-accent-magenta); }
+.c5 { --tl: var(--pw-accent-orange); }
+.c6 { --tl: var(--pw-accent-cyan); }
+.c7 { --tl: var(--pw-accent-crimson); }
+.c8 { --tl: var(--pw-accent-navy); }
+.entry .dot { border-color: var(--tl, var(--pw-primary)); background: var(--tl, var(--pw-app)); }
+.entry .card { box-shadow: var(--pw-shadow-card), inset 4px 0 0 var(--tl, transparent); }
+.entry .cardLink:hover { box-shadow: var(--pw-shadow), inset 4px 0 0 var(--tl, transparent); }
+.entry { scroll-margin-top: 96px; }
+.entry:target .card { outline: 2px solid var(--tl, var(--pw-primary)); outline-offset: 2px; }
+
+/* The calendar above the list. */
+.calendar { --tl-bar: 8px; display: grid; gap: 8px; max-width: 44rem; margin-bottom: 24px; padding: 14px 10px 12px; border-radius: var(--pw-r-card); background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); }
+.calHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px 0 8px; }
+.calTitle { margin: 0; font-family: var(--pw-display); font-size: 19px; font-weight: 600; color: var(--pw-text); }
+.calNav { display: flex; gap: 8px; }
+.calArrow { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--pw-line); border-radius: 50%; background: var(--pw-surface); color: var(--pw-text); cursor: pointer; }
+.calArrow svg { width: 20px; height: 20px; }
+.calArrow:hover:not(:disabled) { border-color: var(--pw-primary); color: var(--pw-primary); }
+.calArrow:disabled { opacity: .4; cursor: default; }
+.calArrow:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.calWeekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.calWeekdays span { padding: 2px 0; text-align: center; font-size: 12px; font-weight: 600; color: var(--pw-muted); }
+.calWeeks { display: grid; }
+.calWeek { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 3px; padding: 4px 0 8px; border-top: 1px solid var(--pw-line); }
+.calDay { grid-row: 1; display: grid; justify-items: center; }
+.calDay span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--pw-text); }
+.calDay[data-out] span { color: var(--pw-muted); opacity: .5; }
+.calDay[data-today] span { background: var(--pw-primary); color: var(--pw-on-primary); font-weight: 700; opacity: 1; }
+.calBar { display: block; min-width: 0; margin: 0 3px; border-radius: 999px; background: var(--tl); text-decoration: none; overflow: hidden; }
+.calBar[data-before] { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.calBar[data-after] { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.calBar span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.calBar:focus-visible { outline: 2px solid var(--pw-text); outline-offset: 1px; }
+/* From a tablet up the bars are tall enough to carry the title. */
+@media (min-width: 640px) {
+  .calendar { --tl-bar: 22px; padding: 16px 14px 14px; }
+  .calBar { display: flex; align-items: center; padding: 0 8px; border-radius: 6px; background: color-mix(in srgb, var(--tl) 24%, var(--pw-surface)); box-shadow: inset 3px 0 0 var(--tl); }
+  .calBar[data-before] { box-shadow: none; }
+  .calBar span { position: static; width: auto; height: auto; clip: auto; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 600; color: var(--pw-text); }
+}
