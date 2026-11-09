@@ -30,7 +30,7 @@ const text: Record<Exclude<State, "checking">, { title: string; note: string }> 
  * Notifikasi di HP (8 Nov 2026), in Pengaturan: turns Web Push on or off for this phone, and sends
  * a test. The in-app list (the bell) works either way; this only adds the phone's own banner.
  */
-export function PushSwitch() {
+export function PushSwitch({ hod = false }: { hod?: boolean }) {
   const [state, setState] = useState<State>("checking");
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -124,7 +124,7 @@ export function PushSwitch() {
       </button>}
     </div>
     {message && <p className={own.groupNote} role={message.tone === "error" ? "alert" : "status"}><Info aria-hidden />{message.text}</p>}
-    {on && <PushTopics />}
+    {on && <PushTopics hod={hod} />}
   </>;
 }
 
@@ -133,8 +133,10 @@ type Prefs = Record<PushTopic, boolean>;
 /**
  * Yang dikirim ke HP (8 Nov 2026): one switch per topic, saved as soon as it is flipped. Until the
  * database has the table (503) the list shows the defaults, read-only; the main switch is untouched.
+ * Grouped (9 Nov 2026): what everyone gets, then Khusus HOD for a HOD only; peserta and panitia
+ * have nothing of their own, so they see the first group alone.
  */
-export function PushTopics() {
+export function PushTopics({ hod = false }: { hod?: boolean }) {
   const [prefs, setPrefs] = useState<Prefs>(() => resolvePrefs({}));
   const [status, setStatus] = useState<"loading" | "ready" | "pending-db" | "failed">("loading");
   const [saving, setSaving] = useState<PushTopic[]>([]);
@@ -174,25 +176,30 @@ export function PushTopics() {
   }
 
   const editable = status === "ready";
+  const row = (topic: PushTopic) => {
+    const info = pushTopicInfo[topic];
+    return <li key={topic} className={own.topicRow}>
+      <span className={own.rowText}>
+        <strong id={`push-topic-${topic}`}>{info.label}</strong>
+        <small id={`push-topic-${topic}-hint`}>{info.hint}</small>
+      </span>
+      {info.locked
+        ? <span className={`${styles.pill} ${styles.pillLine} ${own.topicPill}`}>Selalu</span>
+        : <button type="button" role="switch" aria-checked={prefs[topic]} aria-labelledby={`push-topic-${topic}`} aria-describedby={`push-topic-${topic}-hint`}
+          className={`${own.switch} ${own.switchSmall}`} disabled={!editable || saving.includes(topic)} onClick={() => toggle(topic)}>
+          <span className={own.switchKnob} aria-hidden />
+        </button>}
+    </li>;
+  };
+  const groups = [
+    { id: "push-topics", title: "Yang dikirim ke HP", topics: PUSH_TOPICS.filter(topic => !pushTopicInfo[topic].only) },
+    ...(hod ? [{ id: "push-topics-hod", title: "Khusus HOD", topics: PUSH_TOPICS.filter(topic => pushTopicInfo[topic].only === "hod") }] : []),
+  ];
   return <div className={own.topics}>
-    <h3 id="push-topics" className={own.groupTitle}>Yang dikirim ke HP</h3>
-    <ul className={own.group} aria-labelledby="push-topics" aria-busy={status === "loading"}>
-      {PUSH_TOPICS.map(topic => {
-        const info = pushTopicInfo[topic];
-        return <li key={topic} className={own.topicRow}>
-          <span className={own.rowText}>
-            <strong id={`push-topic-${topic}`}>{info.label}</strong>
-            <small id={`push-topic-${topic}-hint`}>{info.hint}</small>
-          </span>
-          {info.locked
-            ? <span className={`${styles.pill} ${styles.pillLine} ${own.topicPill}`}>Selalu</span>
-            : <button type="button" role="switch" aria-checked={prefs[topic]} aria-labelledby={`push-topic-${topic}`} aria-describedby={`push-topic-${topic}-hint`}
-              className={`${own.switch} ${own.switchSmall}`} disabled={!editable || saving.includes(topic)} onClick={() => toggle(topic)}>
-              <span className={own.switchKnob} aria-hidden />
-            </button>}
-        </li>;
-      })}
-    </ul>
+    {groups.map(group => <section key={group.id} className={own.topicGroup} aria-labelledby={group.id}>
+      <h3 id={group.id} className={own.groupTitle}>{group.title}</h3>
+      <ul className={own.group} aria-labelledby={group.id} aria-busy={status === "loading"}>{group.topics.map(row)}</ul>
+    </section>)}
     {status === "pending-db" && <p className={own.groupNote} role="status"><Info aria-hidden />Pilihan per topik aktif setelah pembaruan database.</p>}
     {error && <p className={own.groupNote} role="alert"><Info aria-hidden />{error}</p>}
     <p className={own.groupNote}><Info aria-hidden />Semua notifikasi tetap ada di lonceng. Pukul 21.00–06.00 yang tidak mendesak tidak dikirim ke HP.</p>

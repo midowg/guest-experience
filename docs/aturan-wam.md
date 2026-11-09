@@ -130,7 +130,9 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   21.00–06.00 WIB: topik yang tidak mendesak (sesi panitia, undangan booking, jawaban permintaan,
   kuesioner) tidak dikirim ke HP. Kabar baru tentang sesi atau Meeting HOD yang sama **menggantikan**
   notifikasi sebelumnya di HP (tag `sesi-…`, `hod-…`), tidak menumpuk. Pilihan per orang ada di
-  Pengaturan → Notifikasi (tabel `pw_notification_prefs`, migrasi 202611080002).
+  Pengaturan → Notifikasi (tabel `pw_notification_prefs`, migrasi 202611080002). Topik ditampilkan
+  per peran: "Yang dikirim ke HP" untuk semua, lalu **Khusus HOD** (Meeting HOD) hanya untuk HOD.
+  Peserta dan panitia tidak melihat topik Meeting HOD (`pushTopicInfo[...].only`).
 - Diaktifkan per HP di **Pengaturan → Notifikasi di HP** (Aktifkan, Kirim tes, Matikan). Satu orang
   boleh beberapa HP; HP yang dimatikan atau sudah tidak dikenal layanan push dihapus otomatis.
 - Android (Chrome) dan browser desktop didukung. iPhone hanya iOS 16.4 ke atas dan hanya saat WAM
@@ -142,6 +144,17 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   202611080001). Mengganti kunci membuat semua HP harus mengaktifkan ulang.
 
 ## 8. Aplikasi peserta: tampilan dan interaksi
+
+- **Pengaturan berupa menu** (9 Nov 2026). Isinya: kartu profil (ke Profil), lalu kelompok
+  **Aplikasi** (Notifikasi, Tampilan), **Akun** (Ganti password), **Khusus BOD dan admin** (Akses
+  MCP) dan **Bantuan** (Apa itu WAM?, Tentang aplikasi), lalu Keluar.
+  - Tiap baris pendek: ikon, nama, dan keadaan sekarang (misalnya "Aktif di HP ini" atau "Gelap").
+  - Diketuk, detailnya muncul di `Sheet`: dari bawah di HP, panel dari kanan di desktop. Menunya
+    sama di HP dan desktop.
+  - Alamat mengikuti sheet yang terbuka (`#notifikasi`, `#password`, `#mcp`, ...). Tombol Back
+    menutupnya.
+  - Pengingat "masih memakai password awal" **hanya** ada di dalam Ganti password, di bawah
+    formulir. Tidak ada di baris menu atau di Profil.
 
 - **Rangka tetap, isi memuat di dalamnya.** Bilah atas, navigasi bawah, dan sidebar digambar sekali
   di `src/app/wam/(app)/layout.tsx`. Setiap layar punya `loading.tsx` (skeleton). Tab aktif dan

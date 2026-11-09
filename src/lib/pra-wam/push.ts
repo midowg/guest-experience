@@ -34,9 +34,10 @@ export type PushPayload = { title: string; body: string; url: string; tag?: stri
  */
 export const PUSH_TOPICS = ["pengumuman", "hod", "forum", "booking_penting", "booking_baru", "permintaan", "kuesioner"] as const;
 export type PushTopic = (typeof PUSH_TOPICS)[number];
-export const pushTopicInfo: Record<PushTopic, { label: string; hint: string; on: boolean; locked?: boolean; quiet: boolean }> = {
+/** `only: "hod"`: shown in Pengaturan only to a HOD (nobody else is ever invited to a Meeting HOD). */
+export const pushTopicInfo: Record<PushTopic, { label: string; hint: string; on: boolean; locked?: boolean; quiet: boolean; only?: "hod" }> = {
   pengumuman: { label: "Pengumuman panitia", hint: "Selalu dikirim ke semua yang dituju", on: true, locked: true, quiet: false },
-  hod: { label: "Meeting HOD", hint: "Undangan yang perlu dijawab, perubahan, dan pembatalan", on: true, quiet: false },
+  hod: { label: "Meeting HOD", hint: "Undangan yang perlu dijawab, perubahan, dan pembatalan", on: true, quiet: false, only: "hod" },
   forum: { label: "Sesi dari panitia", hint: "Forum dan sesi baru, pindah jadwal, atau batal", on: true, quiet: true },
   booking_penting: { label: "Booking berubah mendadak", hint: "Booking yang kamu ikuti pindah atau batal kurang dari 24 jam sebelum mulai", on: true, quiet: false },
   booking_baru: { label: "Undangan booking baru", hint: "Setiap kali seseorang menandaimu di booking ruang", on: false, quiet: true },

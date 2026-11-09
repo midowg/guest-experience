@@ -1,4 +1,4 @@
-import { Info, KeyRound, Settings } from "lucide-react";
+import { Info, Settings } from "lucide-react";
 import { ProfilePhoto } from "@/components/pra-wam/ProfilePhoto";
 import { praWamRoles, roleLabels } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
@@ -37,15 +37,6 @@ export default async function AccountPage() {
         <div><h1>Profil</h1><p>Satu akun untuk Pra WAM dan WAM 2027</p></div>
         <a className={own.gear} href={praWamPath.settings} aria-label="Pengaturan" title="Pengaturan"><Settings aria-hidden /></a>
       </header>
-
-      {member.mustChangePassword && <section className={own.warnCard} aria-labelledby="password-awal">
-        <span className={`${styles.tile} ${styles.tileBrass}`} aria-hidden><KeyRound /></span>
-        <div className={own.warnText}>
-          <strong id="password-awal">Kamu masih memakai password awal</strong>
-          <small>Ganti dengan password milikmu supaya akunmu aman.</small>
-        </div>
-        <a className={`button button--secondary ${own.warnButton}`} href={`${praWamPath.settings}#password`}>Ganti password</a>
-      </section>}
 
       <div className={own.profileGrid}>
         <section className={own.group} aria-labelledby="profil-nama">

@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
-import { AlertTriangle, CheckCircle2, ChevronDown, Eye, EyeOff, KeyRound, Lock } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { passwordRules } from "@/lib/pra-wam/password";
 import { praWamApi } from "@/lib/routes";
@@ -77,34 +77,13 @@ export function PasswordForm({ firstTime, skipHref, doneHref }: { firstTime: boo
   </form>;
 }
 
-/** A link to `#password` (the "password awal" warning on Profil) asks for the form open. */
-const subscribeHash = (onChange: () => void) => {
-  window.addEventListener("hashchange", onChange);
-  return () => window.removeEventListener("hashchange", onChange);
-};
-const askedForPassword = () => window.location.hash === "#password";
-
 /**
- * Keamanan in Pengaturan (Penpot "P4"): a "Ganti password" row that opens the form below it, inside
- * the same group, on a phone and a desktop alike (no width check, so nothing jumps after load).
- * Open by itself, with a warning, while the person still uses the shared first password, or when
- * the address ends in `#password`; once the person taps the row, their choice wins.
+ * Pengaturan → Ganti password (9 Nov 2026), inside its sheet: the form, and under it, only here,
+ * the reminder while the person still uses the shared first password.
  */
-export function PasswordPanel({ firstTime }: { firstTime: boolean }) {
-  const asked = useSyncExternalStore(subscribeHash, askedForPassword, () => false);
-  const [choice, setChoice] = useState<boolean | null>(null);
-  // Closed until tapped (or #password from Profil's banner): Pengaturan reads as a list first.
-  const open = choice ?? asked;
-  return <div id="password" className={own.group}>
-    <button type="button" className={own.rowButton} aria-expanded={open} aria-controls="password-form" onClick={() => setChoice(!open)}>
-      <span className={`${styles.tile} ${firstTime ? styles.tileBrass : ""}`} aria-hidden>{firstTime ? <KeyRound /> : <Lock />}</span>
-      <span className={own.rowText}><strong>Ganti password</strong><small>{firstTime ? "Masih memakai password awal" : "Ganti password akunmu"}</small></span>
-      {firstTime && <span className={`${styles.pill} ${styles.pillBrass}`}>Disarankan</span>}
-      <ChevronDown className={own.chevron} aria-hidden />
-    </button>
-    {open && <div id="password-form" className={own.rowPanel}>
-      {firstTime && <Notice tone="warning">Kamu masih memakai password awal. Sebaiknya ganti sekarang.</Notice>}
-      <PasswordForm firstTime={firstTime} />
-    </div>}
-  </div>;
+export function PasswordSettings({ firstTime }: { firstTime: boolean }) {
+  return <>
+    <PasswordForm firstTime={firstTime} />
+    {firstTime && <Notice tone="warning">Kamu masih memakai password awal. Ganti dengan password milikmu supaya akunmu aman.</Notice>}
+  </>;
 }

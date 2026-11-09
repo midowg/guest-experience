@@ -23,12 +23,14 @@ const defaults = { pengumuman: true, hod: true, forum: true, booking_penting: tr
 const topicSwitch = (topic: (typeof PUSH_TOPICS)[number]) => screen.getByRole("switch", { name: pushTopicInfo[topic].label });
 const puts = () => fetchMock.mock.calls.filter(([, init]) => init?.method === "PUT").map(([, init]) => JSON.parse(String(init?.body)));
 
-it("lists every topic in order; Pengumuman has no switch but Selalu", async () => {
+const labelsOf = (name: string) => [...screen.getByRole("list", { name }).querySelectorAll("strong")].map(item => item.textContent);
+
+it("lists every topic in order, Meeting HOD apart for a HOD; Pengumuman has no switch but Selalu", async () => {
   replies[`GET ${praWamApi.pushPrefs}`] = () => ({ body: { ok: true, data: { prefs: { ...defaults, forum: false }, topics: PUSH_TOPICS }, message: "" } });
-  render(<PushTopics />);
+  render(<PushTopics hod />);
   await waitFor(() => expect((topicSwitch("hod") as HTMLButtonElement).disabled).toBe(false));
-  const labels = [...screen.getByRole("list", { name: "Yang dikirim ke HP" }).querySelectorAll("strong")].map(item => item.textContent);
-  expect(labels).toEqual(PUSH_TOPICS.map(topic => pushTopicInfo[topic].label));
+  expect(labelsOf("Yang dikirim ke HP")).toEqual(PUSH_TOPICS.filter(topic => topic !== "hod").map(topic => pushTopicInfo[topic].label));
+  expect(labelsOf("Khusus HOD")).toEqual([pushTopicInfo.hod.label]);
   expect(screen.queryByRole("switch", { name: pushTopicInfo.pengumuman.label })).toBeNull();
   expect(screen.getByText("Selalu")).toBeTruthy();
   expect(topicSwitch("forum").getAttribute("aria-checked")).toBe("false");
@@ -37,12 +39,20 @@ it("lists every topic in order; Pengumuman has no switch but Selalu", async () =
   expect(screen.getByText(/Semua notifikasi tetap ada di lonceng/)).toBeTruthy();
 });
 
+it("shows peserta and panitia no Meeting HOD", async () => {
+  replies[`GET ${praWamApi.pushPrefs}`] = () => ({ body: { ok: true, data: { prefs: defaults, topics: PUSH_TOPICS }, message: "" } });
+  render(<PushTopics />);
+  await waitFor(() => expect((topicSwitch("forum") as HTMLButtonElement).disabled).toBe(false));
+  expect(screen.queryByRole("switch", { name: pushTopicInfo.hod.label })).toBeNull();
+  expect(screen.queryByText("Khusus HOD")).toBeNull();
+});
+
 it("saves a flipped topic at once with PUT, the row disabled while it saves", async () => {
   replies[`GET ${praWamApi.pushPrefs}`] = () => ({ body: { ok: true, data: { prefs: defaults, topics: PUSH_TOPICS }, message: "" } });
   let release!: () => void;
   const held = new Promise<void>(resolve => { release = resolve; });
   replies[`PUT ${praWamApi.pushPrefs}`] = () => ({ body: { ok: true, data: { prefs: { ...defaults, booking_baru: true } }, message: "Tersimpan" } });
-  render(<PushTopics />);
+  render(<PushTopics hod />);
   await waitFor(() => expect((topicSwitch("booking_baru") as HTMLButtonElement).disabled).toBe(false));
   // Hold the PUT so the in-flight state can be seen.
   const original = fetchMock.getMockImplementation()!;
@@ -70,7 +80,7 @@ it("puts the switch back and shows the error when saving fails", async () => {
 
 it("before the database update (503) shows the defaults read-only with a note", async () => {
   replies[`GET ${praWamApi.pushPrefs}`] = () => ({ status: 503, body: { ok: false, message: "Belum siap" } });
-  render(<PushTopics />);
+  render(<PushTopics hod />);
   expect(await screen.findByText("Pilihan per topik aktif setelah pembaruan database.")).toBeTruthy();
   for (const topic of PUSH_TOPICS.filter(topic => !pushTopicInfo[topic].locked)) {
     expect((topicSwitch(topic) as HTMLButtonElement).disabled).toBe(true);
@@ -89,7 +99,7 @@ it("shows the topics under the main switch only once this phone is on", async ()
   replies[`POST ${praWamApi.push}`] = () => ({ body: { ok: true, data: {}, message: "" } });
   replies[`GET ${praWamApi.pushPrefs}`] = () => ({ body: { ok: true, data: { prefs: defaults, topics: PUSH_TOPICS }, message: "" } });
   try {
-    render(<PushSwitch />);
+    render(<PushSwitch hod />);
     await waitFor(() => expect(screen.getByRole("switch", { name: "Notifikasi di HP" }).getAttribute("aria-checked")).toBe("true"));
     expect(await screen.findByRole("list", { name: "Yang dikirim ke HP" })).toBeTruthy();
     await waitFor(() => expect((topicSwitch("hod") as HTMLButtonElement).disabled).toBe(false));
