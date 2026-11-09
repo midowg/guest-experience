@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarDays, CalendarRange, ChevronLeft, ClipboardList, DoorOpen, FileText, Home, Plus, Send, User, Users, Utensils, X } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarDays, CalendarRange, ChevronLeft, ClipboardList, FileText, Home, Plus, Send, User, Users, Utensils, X } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleNavGroup, type ConsoleSearchItem } from "@/components/console";
 import { bodOnly, managesSessions, readsNeeds, roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
 import { managedTabs, wamScreen, type Tab } from "@/lib/pra-wam/screen";
@@ -17,14 +17,15 @@ type Item = { id: Tab; label: string; href: string; icon: ReactNode; show?: (who
 export type FrameMember = { id: string; name: string; nickname: string; department: string; roles: PraWamRole[]; photo?: string | null };
 
 /**
- * Everyone (DS · Komponen "Bilah dan navigasi"): Beranda, Book, Timeline, Dokumen. Agenda lives on
+ * Everyone (DS · Komponen "Bilah dan navigasi"): Beranda, Agenda (Book ruang and Booking saya; named
+ * Agenda on 9 Nov 2026), Timeline, Dokumen. Agenda lives on
  * Beranda, day by day (5 Nov 2026). Since 9 Nov 2026 no blue + (Aksi cepat: check-in is on Beranda,
  * Book has its tab) and no Profil (the photo at the top of Beranda, or the person at the top right
  * on a desktop, opens it); Timeline shows Pra WAM's forums and events from Kelola acara.
  */
 const personal: Item[] = [
   { id: "beranda", label: "Beranda", href: praWamPath.home, icon: <Home aria-hidden /> },
-  { id: "appraisal", label: "Book", href: praWamPath.appraisal(), icon: <DoorOpen aria-hidden /> },
+  { id: "appraisal", label: "Agenda", href: praWamPath.appraisal(), icon: <CalendarDays aria-hidden /> },
   { id: "timeline", label: "Timeline", href: praWamPath.timeline, icon: <CalendarRange aria-hidden /> },
   { id: "dokumen", label: "Dokumen", href: praWamPath.documents, icon: <FileText aria-hidden /> },
 ];
@@ -86,7 +87,7 @@ const STALE_AFTER_MS = 60_000;
  * once and stays while the screens under it change: a tap shows the new tab lit at once and the
  * screen's skeleton (loading.tsx) inside the frame, then the screen itself, like an installed app.
  * What it shows for a screen comes from the address (wamScreen), never from the page.
- * - Phone: the page and a floating glass bottom bar (Beranda, Book, Timeline, Dokumen). A detail
+ * - Phone: the page and a floating glass bottom bar (Beranda, Agenda, Timeline, Dokumen). A detail
  *   screen (`back`) is a pushed screen: a top bar with a back arrow and the title, no bottom bar,
  *   sliding in from the right.
  * - Phone, "Kelola acara": an app of its own. A top bar with its name and "Keluar" back to the

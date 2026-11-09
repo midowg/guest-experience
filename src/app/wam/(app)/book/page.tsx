@@ -12,9 +12,11 @@ import { appSettings } from "@/lib/server/pra-wam/rooms";
 import { hodByBookings, hodDepartments, hodStanding } from "@/lib/server/pra-wam/hod";
 import { listUnits } from "@/lib/server/pra-wam/units";
 import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
+import { timelineItems } from "@/lib/server/pra-wam/sessions";
+import { bookingActivities } from "@/lib/pra-wam/timeline";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Book ruang · WAM", robots: { index: false } };
+export const metadata = { title: "Agenda · WAM", robots: { index: false } };
 
 type Query = { date?: string; booking?: string; edit?: string; new?: string; room?: string; start?: string; end?: string; lihat?: string };
 
@@ -45,11 +47,12 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
       throw error;
     });
   if (typeof loaded === "string") return <>
-    <ScreenHead eyebrow="Ruang meeting" title="Book ruang" lead={`Jam ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–20 Nov.`} />
+    <ScreenHead eyebrow="Ruang meeting" title="Agenda" lead={`Jam ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–20 Nov.`} />
     <Notice tone="warning">{loaded}</Notice>
   </>;
   const { schedule, mine, open, settings, summary, form, hod } = loaded;
   // Bookings made as HOD: each HOD's answer, for the detail sheet.
+  const activities = await timelineItems(member).then(result => bookingActivities(result.items, today)).catch(() => []);
   const hodInfo = await hodByBookings([...new Set([...schedule.bookings, ...mine].filter(booking => !booking.isSession).map(booking => booking.id))]).catch(() => ({}));
   const arrive: BookArrival = {
     booking: query.booking && ID.test(query.booking) ? query.booking : undefined,
@@ -65,7 +68,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
   return <>
     <AppraisalBoard date={shown} week={week} dates={dates} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine}
       viewerId={member.id} canCancelAny={cancelsAnyBooking(member)} open={open} form={form} arrive={arrive} floorPlan={settings.floorPlan} summary={summary}
-      hod={hod} hodInfo={hodInfo}
+      hod={hod} hodInfo={hodInfo} activities={activities}
       banner={open ? undefined : <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. Booking-mu tetap bisa dilihat di bawah.</Notice></div>} />
   </>;
 }

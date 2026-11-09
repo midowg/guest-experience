@@ -1,0 +1,28 @@
+/* AgendaCarousel: Beranda's agenda, one card per item, swiped sideways. --pw-* tokens only. */
+.carousel { display: grid; gap: 10px; min-width: 0; }
+.head { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
+.head h2 { margin: 0; font-family: var(--pw-display); font-size: 18px; font-weight: 600; color: var(--pw-text); }
+.count { font-size: 13px; color: var(--pw-muted); font-variant-numeric: tabular-nums; }
+.head a { margin-left: auto; font-size: 14px; font-weight: 600; }
+.nav { display: none; gap: 6px; margin-left: auto; }
+.head a + .nav { margin-left: 8px; }
+.arrow { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: var(--pw-surface); color: var(--pw-text); cursor: pointer; }
+.arrow svg { width: 20px; height: 20px; }
+.arrow:hover:not(:disabled) { background: var(--pw-surface-soft); }
+.arrow:disabled { opacity: .35; cursor: default; }
+.arrow:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+
+/* The next card peeks in on a phone (88%), so a swipe is the obvious move. */
+.track { display: grid; grid-auto-flow: column; grid-auto-columns: 88%; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 4px; }
+.track::-webkit-scrollbar { display: none; }
+.track:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 4px; border-radius: var(--pw-r-hero); }
+.slide { display: grid; min-width: 0; scroll-snap-align: start; }
+.slide > * { height: 100%; box-sizing: border-box; }
+
+@media (min-width: 768px) {
+  .track { grid-auto-columns: calc(100% - 64px); gap: 16px; }
+}
+/* From a desktop, arrows step through; a mouse has no swipe. */
+@media (min-width: 1024px) {
+  .nav { display: flex; }
+}

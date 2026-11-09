@@ -206,11 +206,19 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   di titik kartunya pada garis waktu (tanpa garis warna di tepi kartu, tanpa label bertumpuk: satu
   baris keterangan "Forum · jam atau Jadwal pasti menyusul · Kamu ikut"). Mengetuk garis menggulir
   ke kartu itu.
-  Tanggal yang bisa dibooking (Senin–Jumat, dari hari ini, dalam periode Book, selama Book dibuka)
-  membuka halaman booking pada tanggal itu; tanggal lain redup.
-- **Book ruang** (9 Nov 2026): tanpa kalender dan tanpa denah. Isinya tombol Book ruang dan daftar
-  Booking saya. Tanggal dipilih di kalender Timeline atau di form; ketersediaan ruang terlihat di
-  langkah Tempat pada form.
+  Semua tanggal bisa diketuk (selama Book dibuka) dan membuka halaman booking pada tanggal itu:
+  hari kerja langsung, akhir pekan sebagai Di luar kantor, tanggal yang lewat atau di luar periode
+  diganti ke tanggal terdekat dengan keterangan.
+- **Agenda** (menu bilah bawah, dulu "Book"; 9 Nov 2026): tanpa kalender dan tanpa denah. Isinya
+  tombol Book ruang dan daftar Booking saya. Tanggal dipilih di kalender Timeline atau di form;
+  ketersediaan ruang terlihat di langkah Tempat pada form.
+- **Kegiatan di form booking**: forum dan acara Timeline jadi pilihan nama kegiatan ("Dari
+  Timeline"), yang tanggalnya mencakup hari booking lebih dulu, kalau tidak ada yang berikutnya.
+  Nama lain tetap bisa diketik.
+- **Beranda: agenda berupa carousel** (9 Nov 2026), satu kartu per agenda urut waktu, terbuka di
+  yang sedang berlangsung atau berikutnya (dengan absen di kartunya). Geser ke kiri untuk yang
+  sudah lewat (sampai 7 hari ke belakang), ke kanan untuk yang akan datang; di desktop ada ‹ ›.
+  Kartu yang sudah lewat lebih redup.
 - Design system "Pra WAM · Hospitality": Poppins untuk judul dan angka, Inter untuk isi; biru
   Werkudara #006EC1 satu-satunya aksen utama, kuning #FFBA00 sekunder. Kartu putih radius 24, tombol
   pill, isian radius 16.

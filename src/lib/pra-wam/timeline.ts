@@ -102,3 +102,8 @@ export function calendarWeeks(key: string, entries: TimelineEntry[], lanes = tim
   }
   return weeks;
 }
+
+/** The forums and events a booking can be for (the booking form's Kegiatan): those not over yet, by date. */
+export function bookingActivities(items: TimelineItem[], today: string): { title: string; from: string; to: string }[] {
+  return timelineMonths(items, today).flatMap(month => month.entries).filter(entry => entry.state !== "selesai").map(({ title, from, to }) => ({ title, from, to }));
+}

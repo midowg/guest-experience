@@ -5,7 +5,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: 
 const request = vi.hoisted(() => vi.fn());
 vi.mock("./api", async importOriginal => ({ ...await importOriginal<typeof import("./api")>(), praWamRequest: request }));
 import { PraWamApiError } from "./api";
-import { BookingForm, type BookingDraft } from "./BookingForm";
+import { activitiesFor, BookingForm, type BookingDraft } from "./BookingForm";
 
 const NOW = "2026-11-04T03:00:00.000Z"; // Rabu 4 Nov, 10.00 WIB
 beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(NOW)); request.mockReset(); });
@@ -231,4 +231,22 @@ it("lets a HOD book as HOD: departments instead of people, their HODs invited, t
   fireEvent.click(screen.getByRole("button", { name: /Book ruang/ }));
   await vi.waitFor(() => expect(request).toHaveBeenCalledWith("/api/wam/appraisal", expect.objectContaining({ method: "POST",
     json: expect.objectContaining({ hodUnits: ["BAS", "COE"], participants: ["p1", "p2"] }) })));
+});
+
+it("offers Timeline's forums running on the day as the activity, a tap filling the name", () => {
+  render(<BookingForm initial={draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[kecil]} people={[]} viewer={{ id: "me" }} groups={[]} usedTitles={[]}
+    dayBookings={[]} dayOf="2026-11-05" showPlan={false}
+    activities={[{ title: "HOD Meeting", from: "2026-11-04", to: "2026-11-06" }, { title: "End Year Dinner", from: "2026-12-29", to: "2026-12-29" }]} />);
+  lanjut();
+  const group = within(screen.getByRole("group", { name: /^Dari Timeline/ }));
+  expect(group.queryByRole("button", { name: "End Year Dinner" })).toBeNull();
+  fireEvent.click(group.getByRole("button", { name: "HOD Meeting" }));
+  expect((screen.getByLabelText("Nama kegiatan") as HTMLInputElement).value).toBe("HOD Meeting");
+  expect(group.getByRole("button", { name: "HOD Meeting" }).getAttribute("aria-pressed")).toBe("true");
+});
+
+it("falls back to the next activities when none runs on the day", () => {
+  const list = [{ title: "Lewat", from: "2026-11-01", to: "2026-11-02" }, { title: "Nanti", from: "2026-11-20", to: "2026-11-21" }];
+  expect(activitiesFor(list, "2026-11-05")).toEqual({ list: [list[1]], onDay: false });
+  expect(activitiesFor(list, "2026-11-20")).toEqual({ list: [list[1]], onDay: true });
 });

@@ -21,7 +21,7 @@ export default async function DevTimelinePage({ searchParams }: { searchParams: 
     plan("ITAM: BOD x departemen", "2026-12-14", "2026-12-16"), plan("End Year Dinner", "2026-12-29", "2026-12-29", "acara"),
   ], "2026-11-09").flatMap(month => month.entries);
   return <div data-wam-look={tampilan === "werkudara" ? "werkudara" : "dream"} data-wam-theme={tema === "terang" ? "light" : "dark"}>
-    <div className={base.app} style={{ minHeight: "100vh", padding: 16 }}><div className={css.layout}><TimelineCalendar entries={entries} today="2026-11-09" bookable={["2026-11-09","2026-11-10","2026-11-11","2026-11-12","2026-11-13","2026-11-16","2026-11-17","2026-11-18","2026-11-19","2026-11-20"]} />
+    <div className={base.app} style={{ minHeight: "100vh", padding: 16 }}><div className={css.layout}><TimelineCalendar entries={entries} today="2026-11-09" canBook />
       <ol className={css.list}>{entries.map(entry => <li key={entry.id} className={`${css.entry} ${css[`c${entry.color}`]}`} data-state={entry.state}><span className={css.dot} /><div className={css.card}><span className={css.when}>{entry.when}</span><strong className={css.title}>{entry.title}</strong><span className={css.meta}>Forum · Jadwal pasti menyusul</span></div></li>)}</ol>
     </div></div>
   </div>;

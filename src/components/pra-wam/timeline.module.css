@@ -66,8 +66,7 @@
 .calDay span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--pw-text); }
 .calDay[data-out] span { color: var(--pw-muted); opacity: .45; }
 .calDay[data-today] span { background: var(--pw-primary); color: var(--pw-on-primary); font-weight: 700; opacity: 1; }
-/* A day that can be booked is a link to the booking page; the rest are muted. */
-.calDay[data-closed] span { color: var(--pw-muted); }
+/* Every day is a link to the booking page (all alike, weekends too). */
 .calDayLink { text-decoration: none; border-radius: 10px; }
 .calDayLink:hover span { background: var(--pw-surface-soft); }
 .calDayLink[data-today]:hover span { background: var(--pw-primary-hover); }

@@ -9,7 +9,7 @@ import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { bookingKey } from "./BookCalendar";
-import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
+import { BookingForm, type BookingActivity, type BookingDraft, type PeopleGroup } from "./BookingForm";
 import { useConfirm } from "./ConfirmDialog";
 import { hodResponseLabels, hodStatusLabels, type HodBookingInfo, type HodDepartment } from "@/lib/pra-wam/hod";
 import { ScreenHead } from "./ScreenHead";
@@ -39,6 +39,8 @@ type Props = {
   hod?: { departments: HodDepartment[]; ownUnits: string[] } | null;
   /** Per booking made as HOD: its meeting and each HOD's answer, for the detail sheet (Terima and Tolak). */
   hodInfo?: Record<string, HodBookingInfo>;
+  /** Timeline's forums and events, offered as the activity in the booking form. */
+  activities?: BookingActivity[];
 };
 
 type SheetState =
@@ -59,7 +61,7 @@ const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <=
  * trip), so a reload reopens it; a day in another week (picked on the date strip) is a navigation,
  * since its bookings are loaded on the server.
  */
-export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {}, hod = null, hodInfo = {} }: Props) {
+export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {}, hod = null, hodInfo = {}, activities = [] }: Props) {
   const router = useRouter();
   const [confirm, confirmDialog] = useConfirm();
   const bookable = rooms.filter(room => room.bookable);
@@ -171,7 +173,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
 
   // The loaded week is recounted from its bookings with the moving clock; the rest is the server's (the form's date strip).
   const days = { ...summary, ...daySummaries(week, rooms, bookings.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), clockNow) };
-  const head = <ScreenHead title="Book ruang" lead={<>Pilih tanggal di <a href={praWamPath.timeline}>kalender Timeline</a> untuk langsung booking pada hari itu, atau ketuk Book ruang.</>}
+  const head = <ScreenHead title="Agenda" lead={<>Pilih tanggal di <a href={praWamPath.timeline}>kalender Timeline</a> untuk langsung booking pada hari itu, atau ketuk Book ruang.</>}
     actions={canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
 
   return <>
@@ -206,7 +208,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {sheet?.kind === "form" && form && <BookingForm key={sheet.key} editId={sheet.editId} initial={sheet.initial}
       dates={dates.includes(sheet.initial.date) ? dates : [sheet.initial.date, ...dates]} now={clockNow.toISOString()} rooms={rooms}
       people={form.people} groups={form.groups} viewer={{ id: viewerId }} usedTitles={form.usedTitles}
-      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan} summary={days} hod={hod}
+      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan} summary={days} hod={hod} activities={activities}
       frame={(body, footer) => <Sheet open={shown} onClose={close} side="left" wide title={sheet.editId ? "Ubah booking" : "Book ruang"}
         subtitle="Yang tersimpan lebih dulu yang mendapat ruang." footer={footer}>{body}</Sheet>} />}
 

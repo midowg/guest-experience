@@ -71,13 +71,14 @@ describe("PraWamShell", () => {
     expect(screen.queryByRole("button", { name: "Aksi cepat" })).toBeNull();
   });
 
-  it("gives everyone else Beranda, Book, Timeline and Dokumen: no blue + and no Profil (9 Nov 2026); Agenda is on Beranda", async () => {
+  it("gives everyone else Beranda, Agenda, Timeline and Dokumen: no blue + and no Profil (9 Nov 2026); Agenda is on Beranda", async () => {
     at.path = "/wam";
     render(await PraWamShell({ member: member([]), children: <p>Isi</p> }));
     const bottom = screen.getAllByRole("navigation", { name: "Menu WAM" }).at(-1)!;
-    expect([...bottom.children].map(child => child.textContent)).toEqual(["Beranda", "Book", "Timeline", "Dokumen"]);
+    expect([...bottom.children].map(child => child.textContent)).toEqual(["Beranda", "Agenda", "Timeline", "Dokumen"]);
     expect(within(bottom).getByRole("link", { name: "Timeline" }).getAttribute("href")).toBe("/wam/timeline");
-    expect(within(bottom).queryByRole("link", { name: "Agenda" })).toBeNull();
+    // "Agenda" (9 Nov 2026) is Book ruang and Booking saya; the day-by-day agenda is on Beranda.
+    expect(within(bottom).getByRole("link", { name: "Agenda" }).getAttribute("href")).toBe("/wam/book");
     expect(screen.queryByRole("button", { name: "Aksi cepat" })).toBeNull();
     // Profil stays one tap away from the person at the top right (desktop) and the photo on Beranda.
     expect(within(bottom).queryByRole("link", { name: "Profil" })).toBeNull();

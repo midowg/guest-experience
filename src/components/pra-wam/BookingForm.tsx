@@ -41,7 +41,21 @@ type Props = {
    * picked instead of people; their HODs are invited and answer Terima or Tolak. The room is booked at once.
    */
   hod?: { departments: HodDepartment[]; ownUnits: string[] } | null;
+  /**
+   * Timeline's forums and events (9 Nov 2026), offered under Kegiatan as the activity to book for:
+   * those whose dates hold the booking's day first, else the next ones. A tap fills the name.
+   */
+  activities?: BookingActivity[];
 };
+/** A forum or event from Timeline: its name and the days it runs (or is planned for). */
+export type BookingActivity = { title: string; from: string; to: string };
+
+/** The activities to offer for a day: those running on it, else the next few still ahead. */
+export function activitiesFor(activities: BookingActivity[], date: string): { list: BookingActivity[]; onDay: boolean } {
+  const onDay = activities.filter(item => item.from <= date && item.to >= date);
+  if (onDay.length) return { list: onDay, onDay: true };
+  return { list: activities.filter(item => item.to >= date).slice(0, 6), onDay: false };
+}
 
 const STEPS = ["Waktu", "Kegiatan", "Partisipan", "Tempat"] as const;
 const SUMMARY = STEPS.length;
@@ -67,7 +81,7 @@ type Choice = { ok: boolean; pending: boolean; tone: PlanTone; text: string };
  * "Di luar kantor" (5 Nov 2026; only under Tempat since 9 Nov 2026): it opens weekends, any hour of
  * the day and more than 4 hours, so Tempat offers a way back to Waktu; the place name is typed under Tempat.
  */
-export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null }: Props) {
+export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null, activities = [] }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
   // Booking as HOD: the departments picked; their HODs are the participants.
@@ -183,6 +197,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const dayFull = !outside && draft.date >= today && !!daySummary[draft.date]?.full;
 
   const suggestions = useMemo(() => titleSuggestions(draft.title, usedTitles), [draft.title, usedTitles]);
+  const offered = activitiesFor(activities, draft.date);
   const picked = draft.participants.map(id => people.find(person => person.id === id)).filter((person): person is Person => !!person);
   // Everyone but the booker can be picked.
   const colleagues = people.filter(person => person.id !== viewer.id);
@@ -363,6 +378,13 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(1)}>
       {heading(1, "Kegiatan apa?")}
+      {offered.list.length > 0 && <div className={css.activities}>
+        <p className={styles.label} id={`${uid}-activities`}>{offered.onDay ? `Dari Timeline, ${dayLabel(draft.date)}` : "Dari Timeline"}</p>
+        <div className={styles.actions} role="group" aria-labelledby={`${uid}-activities`}>
+          {offered.list.map(item => <button key={item.title} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={draft.title.trim() === item.title}
+            onClick={() => { set({ title: item.title }); setSuggestOpen(false); }}>{item.title}</button>)}
+        </div>
+      </div>}
       <div className={styles.suggest}>
         <label className={styles.label} htmlFor={`${uid}-title`}>Nama kegiatan</label>
         <input id={`${uid}-title`} className="input" value={draft.title} maxLength={120} autoComplete="off" placeholder="Mis. Appraisal 1-on-1"

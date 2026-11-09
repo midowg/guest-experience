@@ -95,3 +95,6 @@
 .agendaCard > .cardHead { margin-bottom: 0; }
 @media (min-width: 1024px) { .agendaCard { scroll-margin-top: 88px; } }
 .calloutLink:hover { text-decoration: underline; }
+
+/* A card in the agenda carousel that is over: the same card, quieter. */
+.heroPast { opacity: .72; }

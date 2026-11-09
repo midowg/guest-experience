@@ -21,8 +21,11 @@ it("opens on this month, each entry a bar linking to its card, and pages between
   expect((screen.getByRole("button", { name: "Bulan berikutnya" }) as HTMLButtonElement).disabled).toBe(true);
 });
 
-it("opens the booking page on a day a room can be booked on; other days are plain", () => {
-  render(<TimelineCalendar entries={entries} today="2026-11-09" bookable={["2026-11-09", "2026-11-10"]} />);
+it("opens the booking page on every day, weekends too; with Book closed the days are plain", () => {
+  render(<TimelineCalendar entries={entries} today="2026-11-09" canBook />);
   expect(screen.getByRole("link", { name: "Book ruang, Selasa, 10 November" }).getAttribute("href")).toBe("/wam/book/new?date=2026-11-10");
-  expect(screen.queryByRole("link", { name: /Book ruang, Rabu, 11 November/ })).toBeNull();
+  expect(screen.getByRole("link", { name: "Book ruang, Sabtu, 14 November" }).getAttribute("href")).toBe("/wam/book/new?date=2026-11-14");
+  cleanup();
+  render(<TimelineCalendar entries={entries} today="2026-11-09" />);
+  expect(screen.queryByRole("link", { name: /^Book ruang,/ })).toBeNull();
 });
