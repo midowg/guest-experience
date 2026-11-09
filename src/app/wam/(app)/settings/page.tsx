@@ -1,11 +1,14 @@
-import { Bell, BookOpen, ChevronRight, Info, Lock, LogOut, Palette } from "lucide-react";
+import { Bell, BookOpen, ChevronRight, Info, Lock, LogOut, Palette, Plug } from "lucide-react";
+import { McpCard } from "@/components/pra-wam/McpCard";
 import { PasswordSettings } from "@/components/pra-wam/PasswordForm";
 import { PushSwitch } from "@/components/pra-wam/PushSwitch";
 import { PushSummary, SettingsItem, ThemeSummary } from "@/components/pra-wam/SettingsItem";
 import { SignOutButton } from "@/components/pra-wam/SignOutButton";
 import { ThemeSwitch } from "@/components/pra-wam/ThemeSwitch";
+import { mayUseMcp, toolTitle } from "@/lib/pra-wam/mcp";
 import { praWamPath } from "@/lib/routes";
 import { hodStanding } from "@/lib/server/pra-wam/hod";
+import { mcpAccessOf, myMcpCalls } from "@/lib/server/pra-wam/mcp";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import { readWamTheme } from "@/lib/server/pra-wam/theme";
 import own from "@/components/pra-wam/akun.module.css";
@@ -18,14 +21,21 @@ export const metadata = { title: "Pengaturan · WAM", robots: { index: false } }
 
 /**
  * Pengaturan (revised 9 Nov 2026) as a menu: short rows in groups (Aplikasi, Akun, Bantuan) and
- * Keluar; no profile card (Back already leads to Profil) and no Akses MCP (taken out of the
- * peserta app). Each row says what is set now and opens its details in a sheet from the bottom on
+ * Keluar; no profile card (Back already leads to Profil). Akses MCP shows for a BOD only
+ * (Khusus BOD); not in Ringkasan BOD, and Admin WAM manages access in the admin console. Each row says what is set now and opens its details in a sheet from the bottom on
  * a phone, a panel from the right on a desktop (SettingsItem). The "password awal" reminder lives
  * only inside Ganti password; Meeting HOD notifications show for a HOD only.
  */
 export default async function SettingsPage() {
   const member = await requireMemberPage(praWamPath.settings);
-  const [theme, { isHod: hod }] = await Promise.all([readWamTheme(), hodStanding(member).catch(() => ({ isHod: false }))]);
+  // Akses MCP: only a BOD sees it here (Admin WAM manages access in the admin console).
+  const showMcp = mayUseMcp(member);
+  const [theme, { isHod: hod }, mcp] = await Promise.all([
+    readWamTheme(),
+    hodStanding(member).catch(() => ({ isHod: false })),
+    showMcp ? mcpAccessOf(member.id).catch(() => null) : Promise.resolve(null),
+  ]);
+  const mcpCalls = mcp?.granted ? (await myMcpCalls(member.id).catch(() => [])).map(call => ({ title: toolTitle(call.tool), ok: call.ok, createdAt: call.createdAt })) : [];
   return <div className={own.settings}>
     <section aria-labelledby="aplikasi">
       <h2 id="aplikasi" className={own.groupTitle}>Aplikasi</h2>
@@ -47,6 +57,18 @@ export default async function SettingsPage() {
         </SettingsItem>
       </div>
     </section>
+
+    {showMcp && <section aria-labelledby="khusus">
+      <h2 id="khusus" className={own.groupTitle}>Khusus BOD</h2>
+      <div className={`${own.group} ${own.menu}`}>
+        <SettingsItem id="mcp" icon={<Plug />} title="Akses MCP" wide
+          summary={mcp?.granted ? "Tanya data WAM lewat Claude atau ChatGPT" : "Belum diberikan"} sheetSubtitle="Asisten AI, hanya baca">
+          {mcp?.granted
+            ? <McpCard hasKey={mcp.hasKey} lastUsedAt={mcp.lastUsedAt} calls={mcpCalls} />
+            : <p className={own.groupNote}><Info aria-hidden />Akses MCP belum diberikan. Minta ke admin WAM.</p>}
+        </SettingsItem>
+      </div>
+    </section>}
 
     <section aria-labelledby="bantuan">
       <h2 id="bantuan" className={own.groupTitle}>Bantuan</h2>

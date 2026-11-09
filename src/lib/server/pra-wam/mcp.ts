@@ -56,9 +56,9 @@ export async function listMcpAccess(): Promise<McpAdminList> {
     client.from("pw_mcp_access").select(ACCESS_COLUMNS).order("granted_at", { ascending: false }),
     client.from("pw_mcp_log").select("id,employee_id,tool,ok,created_at").order("created_at", { ascending: false }).limit(30),
     client.from("pw_accounts").select("employee_id,active,employees(full_name,department,active)").limit(2000),
-    client.from("pw_roles").select("employee_id").in("role", ["bod", "admin"]),
+    client.from("pw_roles").select("employee_id").eq("role", "bod"),
   ]);
-  // Only BOD and Admin WAM can be given access.
+  // Only BOD can be given access.
   const allowed = new Set((leaders ?? []).map(row => row.employee_id as string));
   const problem = error ?? logError;
   if (problem) { if (missing(problem)) return { migrated: false, rows: [], recent: [], candidates: [] }; databaseError(problem); }
@@ -88,7 +88,7 @@ export async function grantMcp(employeeId: string, scopes: readonly string[] = D
   const person = account as unknown as { active: boolean; employees: { active: boolean } | null } | null;
   if (!person || !person.active || !person.employees?.active) throw new ServiceError(422, "Orang ini belum punya akun WAM yang aktif. Buat akunnya dulu di Akun dan peran.");
   const { data: roles } = await client.from("pw_roles").select("role").eq("employee_id", employeeId);
-  if (!mayUseMcp({ roles: (roles ?? []).map(row => row.role as string) })) throw new ServiceError(422, "Akses MCP hanya untuk BOD dan Admin WAM.");
+  if (!mayUseMcp({ roles: (roles ?? []).map(row => row.role as string) })) throw new ServiceError(422, "Akses MCP hanya untuk BOD.");
   const { data: existing, error } = await client.from("pw_mcp_access").select("employee_id").eq("employee_id", employeeId).maybeSingle();
   if (error) fail(error);
   const { error: saveError } = existing

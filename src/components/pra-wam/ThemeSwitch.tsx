@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { Moon, Smartphone, Sun } from "lucide-react";
+import { Check, Moon, Smartphone, Sun } from "lucide-react";
 import { resolveWamTheme, WAM_THEME_COLORS, wamThemeCookie, type WamTheme } from "@/lib/pra-wam/theme";
+import own from "./akun.module.css";
 import styles from "./pra-wam.module.css";
 
-const OPTIONS: { value: WamTheme; label: string; icon: ReactNode }[] = [
-  { value: "light", label: "Terang", icon: <Sun aria-hidden /> },
-  { value: "dark", label: "Gelap", icon: <Moon aria-hidden /> },
-  { value: "system", label: "Ikuti perangkat", icon: <Smartphone aria-hidden /> },
+const OPTIONS: { value: WamTheme; label: string; hint: string; icon: ReactNode }[] = [
+  { value: "light", label: "Terang", hint: "Latar terang, nyaman di siang hari", icon: <Sun aria-hidden /> },
+  { value: "dark", label: "Gelap", hint: "Latar gelap, nyaman di malam hari", icon: <Moon aria-hidden /> },
+  { value: "system", label: "Ikuti perangkat", hint: "Mengikuti tema HP atau laptopmu", icon: <Smartphone aria-hidden /> },
 ];
 
 /**
@@ -24,15 +25,20 @@ function applyWamTheme(theme: WamTheme) {
   });
 }
 
-/** Terang, Gelap or Ikuti perangkat, in Profil. */
+/**
+ * Pengaturan → Tampilan (9 Nov 2026): Terang, Gelap or Ikuti perangkat as a list of rows like the
+ * menu (an icon tile, the name and a line on it), a check on the one in use. Radios underneath.
+ */
 export function ThemeSwitch({ initial }: { initial: WamTheme }) {
   const name = useId();
   const [theme, setTheme] = useState(initial);
   function choose(next: WamTheme) { setTheme(next); applyWamTheme(next); }
-  return <div role="radiogroup" aria-label="Tema tampilan" className={styles.themeSwitch}>
-    {OPTIONS.map(option => <label key={option.value} className={styles.themeOption}>
+  return <div role="radiogroup" aria-label="Tema tampilan" className={own.group}>
+    {OPTIONS.map(option => <label key={option.value} className={own.choiceRow}>
       <input type="radio" className="sr-only" name={name} value={option.value} checked={theme === option.value} onChange={() => choose(option.value)} />
-      {option.icon}<span>{option.label}</span>
+      <span className={styles.tile} aria-hidden>{option.icon}</span>
+      <span className={own.rowText}><strong>{option.label}</strong><small>{option.hint}</small></span>
+      <Check className={own.choiceCheck} aria-hidden />
     </label>)}
   </div>;
 }

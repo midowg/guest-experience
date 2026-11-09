@@ -9,8 +9,12 @@ import { seesAllSessions, type PraWamRole } from "./roles";
  * drafts, survey privacy and Data HR still decide what comes back.
  */
 
-/** Akses MCP is for BOD and Admin WAM only (8 Nov 2026); anyone else never sees it, and a key of theirs stops working. */
-export const mayUseMcp = (who: { roles: readonly string[] }) => who.roles.includes("bod") || who.roles.includes("admin");
+/**
+ * Akses MCP is for BOD only (9 Nov 2026, was BOD and Admin WAM): in the WAM app it shows only in a
+ * BOD's Pengaturan; Admin WAM gives and takes access in the admin console. Anyone else never sees
+ * it, and a key of theirs stops working.
+ */
+export const mayUseMcp = (who: { roles: readonly string[] }) => who.roles.includes("bod");
 
 export const MCP_SCOPES = ["ringkasan", "sesi", "kehadiran", "peserta", "booking", "dokumen", "survei", "permintaan", "pengumuman"] as const;
 export type McpScope = (typeof MCP_SCOPES)[number];
@@ -293,7 +297,7 @@ export const MCP_ADMIN_PATH = "/admin/wam/mcp";
 export const mcpAdminApi = (employeeId?: string) => `/api/admin/wam/mcp${employeeId ? `/${employeeId}` : ""}`;
 /** POST: a new link for the signed-in person. */
 export const MCP_KEY_API = "/api/wam/mcp-key";
-/** Profil, at the Akses MCP card. */
+/** Pengaturan, at the Akses MCP sheet (BOD only). */
 export const MCP_SETTINGS_ANCHOR = "/wam/settings#mcp";
 /** The tool's title for a log line ("Ringkasan WAM"); the name itself when it is not known. */
 export const toolTitle = (name: string) => mcpToolSpecs.find(tool => tool.name === name)?.title ?? name;

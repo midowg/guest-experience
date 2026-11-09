@@ -148,7 +148,7 @@ describe("arguments", () => {
 describe("mayUseMcp", () => {
   it("is for BOD and Admin WAM only", () => {
     expect(mayUseMcp({ roles: ["bod"] })).toBe(true);
-    expect(mayUseMcp({ roles: ["admin"] })).toBe(true);
+    expect(mayUseMcp({ roles: ["admin"] })).toBe(false);
     expect(mayUseMcp({ roles: ["panitia"] })).toBe(false);
     expect(mayUseMcp({ roles: [] })).toBe(false);
   });

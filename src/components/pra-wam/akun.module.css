@@ -210,3 +210,13 @@ ul.group { padding: 0; list-style: none; }
   .menu > .rowButton { padding: 12px 20px; }
   .menu > .rowButton ~ .rowButton::before { left: 72px; }
 }
+
+/* Tampilan: one row per theme, as the menu; the row in use has a check and a blue name. */
+.choiceRow { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; cursor: pointer; transition: background-color 150ms ease; }
+.choiceRow + .choiceRow::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--pw-line); }
+.choiceRow:hover { background: var(--pw-app); }
+.choiceRow:has(input:focus-visible) { outline: 2px solid var(--pw-primary); outline-offset: -2px; border-radius: 16px; }
+.choiceCheck { flex: none; width: 22px; height: 22px; color: var(--pw-primary); visibility: hidden; }
+.choiceRow:has(input:checked) .choiceCheck { visibility: visible; }
+.choiceRow:has(input:checked) .rowText strong { color: var(--pw-primary); }
+@media (prefers-reduced-motion: reduce) { .choiceRow { transition: none; } }

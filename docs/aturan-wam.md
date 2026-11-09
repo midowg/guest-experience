@@ -148,12 +148,13 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 - **Pengaturan berupa menu** (9 Nov 2026). Isinya kelompok **Aplikasi** (Notifikasi, Tampilan),
   **Akun** (Ganti password) dan **Bantuan** (Apa itu WAM?, Tentang aplikasi), lalu Keluar. Tidak
   ada kartu profil, karena tombol kembali sudah menuju Profil.
-  - **Akses MCP tidak ada di aplikasi peserta**, baik di Pengaturan maupun di Ringkasan BOD. Pemberian
-    akses di Admin WAM dan server MCP tetap ada.
+  - **Akses MCP khusus BOD.** Di aplikasi hanya muncul di Pengaturan milik BOD (kelompok "Khusus
+    BOD"), tidak di Ringkasan BOD dan tidak untuk peran lain. Pemberian dan pencabutan akses ada di
+    Admin WAM → Akses MCP (`mayUseMcp`).
   - Tiap baris pendek: ikon, nama, dan keadaan sekarang (misalnya "Aktif di HP ini" atau "Gelap").
   - Diketuk, detailnya muncul di `Sheet`: dari bawah di HP, panel dari kanan di desktop. Menunya
     sama di HP dan desktop.
-  - Alamat mengikuti sheet yang terbuka (`#notifikasi`, `#tampilan`, `#password`, `#tentang`). Tombol Back
+  - Alamat mengikuti sheet yang terbuka (`#notifikasi`, `#tampilan`, `#password`, `#mcp`, `#tentang`). Tombol Back
     menutupnya.
   - Pengingat "masih memakai password awal" **hanya** ada di dalam Ganti password, di bawah
     formulir. Tidak ada di baris menu atau di Profil.
