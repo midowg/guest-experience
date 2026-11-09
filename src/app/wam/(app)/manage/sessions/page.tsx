@@ -69,7 +69,7 @@ function SessionList({ sessions, now }: { sessions: Session[]; now: Date }) {
           <tbody>{items.map(session => {
             const status = readiness(session, now);
             return <tr key={session.id}>
-              <td><span className={styles.cellMain}><a className={styles.cellLink} href={praWamPath.session(session.id)}>{session.title}</a><small>{sessionKindLabels[session.kind]}</small>{session.booking && <span><Pill tone="blue">{bookingSessionLabel(session)}</Pill></span>}</span></td>
+              <td><span className={styles.cellMain}><a className={styles.cellLink} href={praWamPath.managedSession(session.id)}>{session.title}</a><small>{sessionKindLabels[session.kind]}</small>{session.booking && <span><Pill tone="blue">{bookingSessionLabel(session)}</Pill></span>}</span></td>
               <td>{sessionWhen(session)}</td>
               <td>{sessionWhere(session)}</td>
               <td>{session.participantCount}</td>
@@ -136,14 +136,14 @@ function BodSessions({ sessions, migrated, now }: { sessions: Session[]; migrate
     <table className={base.table}>
       <thead><tr><th>Sesi</th><th>Waktu</th><th>Tempat</th><th>Peserta</th><th>Status</th><th>Tindakan</th></tr></thead>
       <tbody>{items.map(session => <tr key={session.id}>
-        <td><strong><a href={praWamPath.session(session.id)}>{session.title}</a></strong><small>{sessionKindLabels[session.kind]}</small>{session.booking && <small>{bookingSessionLabel(session)}</small>}</td>
+        <td><strong><a href={praWamPath.managedSession(session.id)}>{session.title}</a></strong><small>{sessionKindLabels[session.kind]}</small>{session.booking && <small>{bookingSessionLabel(session)}</small>}</td>
         <td>{sessionWhen(session)}</td>
         <td>{sessionWhere(session)}</td>
         <td>{session.participantCount}</td>
         <td><SessionStatusPill session={session} now={now} /></td>
         <td><div className={styles.actionsCell}>
           {session.status === "terbit" && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}>QR dan hadir</a>}
-          <a className="button button--secondary" href={praWamPath.session(session.id)}>Lihat</a>
+          <a className="button button--secondary" href={praWamPath.managedSession(session.id)}>Lihat</a>
         </div></td>
       </tr>)}</tbody>
     </table>

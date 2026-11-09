@@ -13,12 +13,14 @@ export const metadata = { title: "Sesi · WAM", robots: { index: false } };
  * (AgendaSheet). Panitia, BOD and admin can open every session, drafts without a time too; a
  * participant whose session is not published (yet) or was cancelled gets a short page that says so
  * instead of "not found". Attendance may not be migrated yet; the page then has no QR check-in.
+ * The panitia's tools (Ubah sesi, QR dan daftar hadir, materi) show only when it is opened from
+ * Kelola acara (?dari=kelola, 9 Nov 2026); from the app panitia see it as participants do.
  */
-export default async function SessionPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function SessionPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ dari?: string }> }) {
+  const [{ id }, { dari }] = await Promise.all([params, searchParams]);
   const member = await requireMemberPage(praWamPath.session(id));
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
-  const view = await sessionView(id, member);
+  const view = await sessionView(id, member, dari === "kelola" ? "kelola" : "app");
   if (!view) notFound();
   if (view.kind === "menunggu") {
     return <>

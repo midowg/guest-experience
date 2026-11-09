@@ -1,7 +1,7 @@
 import { praWamPath } from "@/lib/routes";
 import { safePraWamNext } from "./next-path";
 
-export type Tab = "beranda" | "agenda" | "appraisal" | "timeline" | "dokumen" | "notifikasi" | "akun" | "dashboard" | "sesi" | "permintaan" | "pengumuman" | "peserta" | "survei" | "kebutuhan" | "hod";
+export type Tab = "beranda" | "agenda" | "appraisal" | "timeline" | "dokumen" | "notifikasi" | "akun" | "dashboard" | "sesi" | "permintaan" | "pengumuman" | "peserta" | "survei" | "kebutuhan" | "hod" | "materi";
 export type Back = { href: string; title: string };
 export type Screen = { current?: Tab; back?: Back };
 
@@ -9,7 +9,7 @@ type Viewer = { id: string; bod: boolean };
 type Search = { get(name: string): string | null };
 
 /** Every place in "Kelola acara", also those without a bottom bar item of their own (Peserta, Survei). */
-export const managedTabs: ReadonlySet<Tab> = new Set<Tab>(["dashboard", "sesi", "permintaan", "pengumuman", "kebutuhan", "peserta", "survei"]);
+export const managedTabs: ReadonlySet<Tab> = new Set<Tab>(["dashboard", "sesi", "permintaan", "pengumuman", "kebutuhan", "peserta", "survei", "materi"]);
 
 const tail = (pathname: string, base: string) => (pathname.startsWith(`${base}/`) ? pathname.slice(base.length + 1) : null);
 
@@ -53,12 +53,14 @@ export function wamScreen(pathname: string, search: Search, viewer: Viewer, came
     case praWamPath.needs: return { current: "kebutuhan" };
     case praWamPath.people: return { current: "peserta" };
     case praWamPath.surveyResults: return { current: "survei" };
+    case praWamPath.manageDocuments: return { current: "materi" };
   }
   const session = tail(path, praWamPath.sessions);
   if (session) return { current: "sesi", back: { href: praWamPath.sessions, title: session.endsWith("/attendance") ? "QR dan daftar hadir" : "Ubah sesi" } };
   if (tail(path, praWamPath.people)) return { current: viewer.bod ? undefined : "peserta", back: { href: praWamPath.people, title: "Profil peserta" } };
   if (tail(path, praWamPath.session("").slice(0, -1))) {
-    return cameFromPanitia
+    // Opened from Kelola acara (?dari=kelola, 9 Nov 2026) or right after a Kelola acara screen.
+    return cameFromPanitia || search.get("dari") === "kelola"
       ? { current: "sesi", back: { href: praWamPath.sessions, title: "Detail sesi" } }
       : { current: "agenda", back: { href: praWamPath.agenda, title: "Detail sesi" } };
   }

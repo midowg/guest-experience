@@ -2,7 +2,7 @@ import "server-only";
 import type { AgendaBooking, MyAttendance, SessionView } from "@/lib/pra-wam/agenda";
 import { asMethod } from "@/lib/pra-wam/attendance";
 import { bookingWhere, wibDate } from "@/lib/pra-wam/appraisal";
-import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
+import { bodOnly, managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { sessionKindLabels, sessionWhere, withoutSessionBookings, type Session } from "@/lib/pra-wam/sessions";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -114,8 +114,12 @@ export async function waitingSession(id: string, member: Member): Promise<Pick<S
  * Detail sesi's data (its page and the sheet over Agenda and Beranda). Panitia, BOD and admin may
  * open every session; a participant's session that is not published (yet) or was cancelled is
  * "menunggu". Null when the person may not see it at all.
+ *
+ * `from` (9 Nov 2026): panitia tools (Ubah sesi, QR dan daftar hadir, materi for any session) show
+ * only when the session is opened from Kelola acara ("kelola"); in the participant app ("app") a
+ * panitia member sees it as a participant does. A BOD keeps its read-only staff view everywhere.
  */
-export async function sessionView(id: string, member: Member): Promise<SessionView | null> {
+export async function sessionView(id: string, member: Member, from: "app" | "kelola" = "app"): Promise<SessionView | null> {
   const session = await getSession(id, member).catch((error: unknown) => { if (error instanceof ServiceError && error.status === 404) return null; throw error; });
   if (!session) {
     const waiting = await waitingSession(id, member);
@@ -129,7 +133,11 @@ export async function sessionView(id: string, member: Member): Promise<SessionVi
   ]);
   return {
     kind: "sesi", session, documents, storage, attendance, requests, rooms,
-    viewer: { name: member.name, manage: managesSessions(member), staff: seesAllSessions(member) },
+    viewer: {
+      name: member.name,
+      manage: from === "kelola" && managesSessions(member),
+      staff: (from === "kelola" || bodOnly(member)) && seesAllSessions(member),
+    },
   };
 }
 

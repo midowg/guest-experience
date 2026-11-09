@@ -42,5 +42,8 @@ describe("wamScreen: what the frame shows, from the address alone", () => {
   it("keeps a session's detail in Kelola acara only when opened from there", () => {
     expect(wamScreen("/wam/sessions/s1", q(), me)).toEqual({ current: "agenda", back: { href: "/wam/agenda", title: "Detail sesi" } });
     expect(wamScreen("/wam/sessions/s1", q(), me, true)).toEqual({ current: "sesi", back: { href: "/wam/manage/sessions", title: "Detail sesi" } });
+    // Opened from Kelola acara by its link (?dari=kelola): stays in Kelola acara (9 Nov 2026).
+    expect(wamScreen("/wam/sessions/s1", q("dari=kelola"), me)).toEqual({ current: "sesi", back: { href: "/wam/manage/sessions", title: "Detail sesi" } });
+    expect(wamScreen("/wam/manage/documents", q(), me)).toEqual({ current: "materi" });
   });
 });

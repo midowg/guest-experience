@@ -31,7 +31,8 @@ describe("Kelola acara's sidebar", () => {
       ["Ikhtisar", ["Ringkasan"]],
       ["Jadwal", ["Sesi", "Permintaan jadwal"]],
       ["Orang", ["Peserta", "Kebutuhan peserta"]],
-      ["Komunikasi", ["Pengumuman", "Survei"]],
+      // Dokumen (uploading) lives in Kelola acara only since 9 Nov 2026.
+      ["Komunikasi", ["Pengumuman", "Survei", "Dokumen"]],
     ]);
     expect(groups[1].items[1]).toMatchObject({ href: "/wam/manage/requests", badge: "3" });
     expect(manageGroups({ roles: ["panitia"] }, 0)[1].items[1].badge).toBeUndefined();

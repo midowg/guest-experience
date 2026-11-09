@@ -64,6 +64,8 @@ const groups: { label: string; items: Item[] }[] = [
   { label: "Komunikasi", items: [
     { id: "pengumuman", label: "Pengumuman", href: praWamPath.announcements, icon: <Send size={20} />, show: managesSessions },
     { id: "survei", label: "Survei", href: praWamPath.surveyResults, icon: <ClipboardList size={20} />, show: seesAllSessions },
+    // Uploading documents and materials lives here only (9 Nov 2026), not in the participant app.
+    { id: "materi", label: "Dokumen", href: praWamPath.manageDocuments, icon: <FileText size={20} />, show: managesSessions },
   ] },
 ];
 

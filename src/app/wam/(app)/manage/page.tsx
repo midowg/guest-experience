@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { CalendarClock, CalendarDays, ChevronRight, Megaphone, Plus, QrCode, UserCheck } from "lucide-react";
+import { CalendarClock, CalendarDays, ChevronRight, FileText, Megaphone, Plus, QrCode, UserCheck } from "lucide-react";
 import { Avatar, Card, ConsoleButtonLink, DayTimeline, ListRow, PageHeader, Pill, RowList, StatCard, StatRow } from "@/components/console";
 import { ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { BodSummary } from "@/components/pra-wam/BodSummary";
@@ -86,6 +86,8 @@ async function PanitiaSummary({ member, data, now }: { member: Member; data: Ove
     <PageHeader title="Ringkasan operasional" subtitle={[longDate(now), day].filter(Boolean).join(" · ")}
       actions={<>
         {printable && <ConsoleButtonLink href={praWamPath.sessionAttendance(printable.id)} icon={<QrCode size={18} aria-hidden />}>Cetak QR absen</ConsoleButtonLink>}
+        {/* Dokumen has no bottom bar place on a phone: here it is one tap from Kelola acara (9 Nov 2026). */}
+        <ConsoleButtonLink href={praWamPath.manageDocuments} icon={<FileText size={18} aria-hidden />}>Dokumen</ConsoleButtonLink>
         <ConsoleButtonLink variant="primary" href={praWamPath.newSession} icon={<Plus size={18} aria-hidden />}>Buat sesi</ConsoleButtonLink>
       </>} />
     {!data.migrated && <Notice tone="warning">Sesi menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>}
@@ -132,7 +134,7 @@ async function PanitiaSummary({ member, data, now }: { member: Member; data: Ove
             return <li key={session.id} className={styles.readyRow}>
               <span className={styles.readyTime}>{session.startsAt ? clockLabel(wibTime(session.startsAt)) : "—"}{session.startsAt && wibDate(session.startsAt) !== today && <small>{dayLabel(wibDate(session.startsAt))}</small>}</span>
               <span className={styles.readyMain}>
-                <a className={styles.cellLink} href={praWamPath.session(session.id)}>{session.title}</a>
+                <a className={styles.cellLink} href={praWamPath.managedSession(session.id)}>{session.title}</a>
                 <small>{sessionWhere(session)} · {started ? `${session.present} / ${session.participantCount} hadir` : `${session.participantCount} peserta`}</small>
               </span>
               <span className={styles.readyEnd}>
@@ -150,7 +152,7 @@ async function PanitiaSummary({ member, data, now }: { member: Member; data: Ove
 
     {data.waiting.length > 0 && <Card title="Forum yang menunggu jam" id="berikutnya">
       <RowList>{data.waiting.map(session => <ListRow key={session.id} icon={<CalendarDays size={18} />} tone="neutral" title={session.title} sub={sessionWhen(session)}
-        href={praWamPath.session(session.id)} trailing={<ChevronRight size={18} aria-hidden />} />)}</RowList>
+        href={praWamPath.managedSession(session.id)} trailing={<ChevronRight size={18} aria-hidden />} />)}</RowList>
     </Card>}
   </>;
 }
@@ -179,7 +181,7 @@ function BodReadView({ data, now }: { data: Overview; now: Date }) {
           <thead><tr><th>Waktu</th><th>Sesi / lokasi</th><th>Peserta</th><th>Status</th></tr></thead>
           <tbody>{data.upcoming.map(session => <tr key={session.id}>
             <td><strong>{session.startsAt ? clockLabel(wibTime(session.startsAt)) : "—"}</strong>{session.startsAt && wibDate(session.startsAt) !== today && <small>{dayLabel(wibDate(session.startsAt))}</small>}</td>
-            <td><a href={praWamPath.session(session.id)} style={{ color: "inherit", fontWeight: 700, textDecoration: "none" }}>{session.title}</a><small>{sessionWhere(session)}</small></td>
+            <td><a href={praWamPath.managedSession(session.id)} style={{ color: "inherit", fontWeight: 700, textDecoration: "none" }}>{session.title}</a><small>{sessionWhere(session)}</small></td>
             <td>{session.startsAt && new Date(session.startsAt).getTime() - 30 * 60_000 <= now.getTime() ? `${session.present} / ${session.participantCount}` : `${session.participantCount} peserta`}</td>
             <td><SessionStatusPill session={session} now={now} /></td>
           </tr>)}</tbody>
@@ -191,7 +193,7 @@ function BodReadView({ data, now }: { data: Overview; now: Date }) {
       <section className={base.card} aria-labelledby="berikutnya">
         <h2 id="berikutnya">Forum yang menunggu jam</h2>
         {data.waiting.length === 0 ? <p className={base.meta}>Semua forum sudah punya jadwal.</p> : data.waiting.map(session =>
-          <a key={session.id} className={styles.rowLink} href={praWamPath.session(session.id)}>
+          <a key={session.id} className={styles.rowLink} href={praWamPath.managedSession(session.id)}>
             <span className={base.tile}><CalendarDays aria-hidden /></span>
             <span><strong>{session.title}</strong><small>{sessionWhen(session)}</small></span>
             <ChevronRight size={18} aria-hidden />

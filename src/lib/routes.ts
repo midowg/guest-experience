@@ -153,6 +153,10 @@ export const praWamPath = {
   /** The person's sessions, by day. */
   agenda: `${PRA_WAM_PATH}/agenda`,
   session: (id: string) => `${PRA_WAM_PATH}/sessions/${id}`,
+  /** A session opened from Kelola acara: its page with the panitia's tools (9 Nov 2026). */
+  managedSession: (id: string) => `${PRA_WAM_PATH}/sessions/${id}?dari=kelola`,
+  /** Kelola acara → Dokumen: uploading documents and materials (moved out of the participant app, 9 Nov 2026). */
+  manageDocuments: `${PRA_WAM_PATH}/manage/documents`,
   documents: `${PRA_WAM_PATH}/documents`,
   /** Timeline: Pra WAM's forums and events from Kelola acara → Jadwal sesi, for everyone to read. */
   timeline: `${PRA_WAM_PATH}/timeline`,
