@@ -1,14 +1,15 @@
 import { Crown, UserRound, Users } from "lucide-react";
+import { departmentShort } from "@/lib/employees";
 import type { Org, OrgGroup, OrgNode, OrgPerson } from "@/lib/org";
 import css from "./org-chart.module.css";
 
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
 
-function PersonCard({ person, tag, strong = false }: { person: OrgPerson; tag?: string; strong?: boolean }) {
+function PersonCard({ person, tag, tagTitle, strong = false }: { person: OrgPerson; tag?: string; tagTitle?: string; strong?: boolean }) {
   return <div className={`${css.person} ${strong ? css.strong : ""}`}>
     <span className={css.avatar} aria-hidden>{initials(person.name)}</span>
     <span className={css.who}><strong>{person.name}</strong><small>{person.position || "Jabatan belum diisi"}</small></span>
-    {tag && <span className={css.tag}>{tag}</span>}
+    {tag && <span className={css.tag} title={tagTitle}>{tag}</span>}
   </div>;
 }
 
@@ -36,7 +37,7 @@ function Groups({ groups }: { groups: OrgGroup[] }) {
  */
 export function OrgChart({ org }: { org: Org }) {
   return <div className={css.chart}>
-    <p className={css.note}>Disusun dari Data karyawan. Di bawah HOD ada <strong>Lead</strong> dengan anggotanya: anggota memilih Lead-nya di <strong>Atasan langsung</strong> lewat Ubah karyawan. Yang kosong ada langsung di bawah HOD. BU hanya unit usaha tempat orang itu berada.</p>
+    <p className={css.note}>Disusun dari pekerjaan utama di Data karyawan. Di bawah HOD ada <strong>Lead</strong> dengan anggotanya: di Ubah karyawan, anggota memilih Lead-nya di <strong>Di bawah</strong>. Yang tidak memilih ada langsung di bawah HOD. BU hanya unit usaha tempat orang itu berada.</p>
 
     <section className={css.level} aria-labelledby="org-bod">
       <h2 id="org-bod"><Crown size={18} aria-hidden /> BOD</h2>
@@ -61,7 +62,8 @@ export function OrgChart({ org }: { org: Org }) {
         </header>
         {department.heads.length === 0 && <p className={css.empty}>Belum ada HOD.</p>}
         <ul className={css.branch}>{department.heads.map(head => <li key={head.id}>
-          <PersonCard person={head} tag={head.department === department.name ? "HOD" : `HOD · dari ${head.department}`} strong />
+          <PersonCard person={head} tag={head.department === department.name ? "HOD" : `HOD dari ${departmentShort(head.department)}`}
+            tagTitle={head.department === department.name ? undefined : `HOD dari ${head.department}`} strong />
           <Branch nodes={head.children} />
           {department.heads.length === 1 && <Groups groups={department.groups} />}
         </li>)}</ul>

@@ -9,15 +9,15 @@ import { GENDERS, asGender, genderLabels } from "@/lib/pra-wam/call-name";
 import type { PraWamRole } from "@/lib/pra-wam/roles";
 import css from "./employee-editor.module.css";
 
-export type EmployeeDraft = Omit<Employee, "id" | "active">;
+export type EmployeeDraft = Omit<Employee, "id">;
 
 /** A new job card: the Utama job's BU, a Jabatan to fill. */
 export const blankJob = (business_unit: string = DEFAULT_BUSINESS_UNIT): EmployeeJob => ({ business_unit, department: "", post: "staf", job_title: "", reports_to: null });
 const JOBS_MIGRATION = "202611090003_employee_jobs.sql";
 
-const blank: EmployeeDraft = { full_name: "", nickname: "", department: "", position: "", office: "", category: "karyawan", phone: "", email: "", nip: "", business_unit: DEFAULT_BUSINESS_UNIT, reports_to: null, gender: "" };
+const blank: EmployeeDraft = { full_name: "", nickname: "", department: "", position: "", office: "", category: "karyawan", phone: "", email: "", nip: "", business_unit: DEFAULT_BUSINESS_UNIT, reports_to: null, gender: "", active: true };
 const draftOf = (person: Employee | null): EmployeeDraft => person
-  ? { full_name: person.full_name, nickname: person.nickname, department: person.department, position: person.position, office: person.office, category: person.category, phone: person.phone, email: person.email, nip: person.nip, business_unit: buCode(person.business_unit), reports_to: person.reports_to ?? null, gender: person.gender ?? "" }
+  ? { full_name: person.full_name, nickname: person.nickname, department: person.department, position: person.position, office: person.office, category: person.category, phone: person.phone, email: person.email, nip: person.nip, business_unit: buCode(person.business_unit), reports_to: person.reports_to ?? null, gender: person.gender ?? "", active: person.active }
   : blank;
 
 /**
@@ -34,7 +34,7 @@ const draftOf = (person: Employee | null): EmployeeDraft => person
  * office that is no BU code is kept. GA and Intern (Status kerja) are one per person.
  * A native <dialog>: Esc, the dimmed page or X close it without saving.
  */
-export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, people = [], leads = {}, jobsReady = true, saving, error, onSave, onClose }: {
+export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, people = [], leads = {}, jobsReady = true, saving, error, onSave, onDelete, onClose }: {
   /** The person to change; null adds a new one. */
   person: Employee | null;
   /** Their jobs, the Utama one first; a new person starts with one empty card. */
@@ -52,6 +52,8 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
   saving: boolean;
   error: string;
   onSave: (draft: EmployeeDraft, jobs: EmployeeJob[], roles: PraWamRole[]) => void;
+  /** Hapus karyawan (it asks first); only for someone already in the list. */
+  onDelete?: () => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -167,7 +169,7 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
               <div className={css.pair}>
                 {field(`${key}-business_unit`, "Business Unit", <select id={`${id}-${key}-business_unit`} className="input" value={job.business_unit} onChange={event => setJob(index, { business_unit: event.target.value })}>
                   {[...new Set([...BUSINESS_UNITS, job.business_unit])].map(code => <option key={code} value={code}>{code}</option>)}
-                </select>, index === 0 ? "Unit usaha di Werkudara Group (juga Office di data HR)." : undefined)}
+                </select>)}
                 {field(`${key}-department`, "Departemen *", <input id={`${id}-${key}-department`} className="input" value={job.department} maxLength={150} list={`${id}-departments`} placeholder="Pilih atau ketik"
                   aria-invalid={!!problems[`${key}-department`]} aria-describedby={problems[`${key}-department`] ? `${id}-${key}-department-error` : undefined}
                   onChange={event => {
@@ -243,9 +245,20 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
           </div>
           {!isBod && (heads || nextRoles.includes("panitia") || nextRoles.includes("admin")) && <p className={css.hint}>BOD terkunci karena orang ini {heads ? "HOD atau Lead" : nextRoles.includes("admin") ? "Admin WAM" : "Panitia"}.</p>}
         </fieldset>
+
+        {/* Aktif and Hapus live here, not in the list's rows (9 Nov 2026). */}
+        {person && <fieldset className={css.group}>
+          <legend>Status</legend>
+          <label className={css.activeSwitch}>
+            <input type="checkbox" role="switch" checked={draft.active} onChange={event => set({ active: event.target.checked })} />
+            <span>{draft.active ? "Aktif" : "Nonaktif"}</span>
+          </label>
+          <p className={css.hint}>Karyawan yang keluar dinonaktifkan, bukan dihapus, supaya catatan lamanya tetap terbaca.</p>
+        </fieldset>}
       </div>
 
       <footer className={css.foot}>
+        {person && onDelete && <Button type="button" variant="secondary" className={css.deleteButton} disabled={saving} onClick={onDelete}><Trash2 size={17} aria-hidden /> Hapus karyawan</Button>}
         <Button type="button" variant="secondary" disabled={saving} onClick={onClose}>Batal</Button>
         <Button type="submit" disabled={saving}>{saving ? "Menyimpan…" : person ? "Simpan perubahan" : "Tambah karyawan"}</Button>
       </footer>

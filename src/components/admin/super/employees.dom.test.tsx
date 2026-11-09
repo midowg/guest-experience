@@ -6,6 +6,8 @@ import type { Employee } from "@/lib/employees";
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 const reply = (body: object, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 const person: Employee = { id: "6a000000-0000-4000-8000-000000000001", full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "karyawan", phone: "", email: "", active: true, nip: "", business_unit: "WNS" };
+/** The list's one-line "Departemen · Jabatan" (the department is an <abbr> inside it). */
+const jobLine = (text: string) => (_: string, element: Element | null) => element?.tagName === "P" && element.textContent === text;
 const row = { full_name: "Contoh Dua", nickname: "Dua", department: "Accounting", position: "Tax Staff", office: "WNS", category: "karyawan" };
 
 it("reads the Excel first, shows who is new or changed, and saves only on request", async () => {
@@ -44,10 +46,15 @@ it("lists a person with department and job (HOD, Lead, GA or Intern beside it), 
   const intern = { ...person, id: "6a000000-0000-4000-8000-000000000009", full_name: "Contoh Magang", category: "intern" as const, business_unit: "MRP" };
   render(<EmployeeDirectory initial={[person, intern]} migrated leads={{ [person.id]: { departments: ["Sales & Marketing", "Corporate"], lead: false }, [intern.id]: { departments: [], lead: true } }}
     leadOptions={{ departments: ["Corporate", "Sales & Marketing"] }} />);
-  expect(screen.getAllByRole("columnheader").map(header => header.textContent)).toEqual(["Karyawan", "Departemen & jabatan", "Business Unit", "Kontak", "Status", "Aksi"]);
+  // No Status column and no Hapus in the rows (9 Nov 2026): both are inside Ubah karyawan.
+  expect(screen.getAllByRole("columnheader").map(header => header.textContent)).toEqual(["Karyawan", "Departemen & jabatan", "Business Unit", "Kontak", "Aksi"]);
+  expect(screen.queryByRole("switch")).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Hapus/ })).toBeNull();
   const first = within(screen.getByText("Contoh Satu").closest("tr")!);
-  expect(first.getByText("Business Solutions Manager · HOD")).toBeTruthy();
-  expect(first.getByText("HOD Corporate")).toBeTruthy();
+  // One line: the department by its initials (full name on hover), then the job.
+  expect(first.getByText(jobLine("SM · Business Solutions Manager · HOD"))).toBeTruthy();
+  expect(first.getByTitle("Sales & Marketing").textContent).toBe("SM");
+  expect(first.getByText("HOD dari Corporate")).toBeTruthy();
   // No "Lead BU" any more (9 Nov 2026): a person has one BU; a Lead shows beside their job.
   expect(first.queryByText(/Lead BU/)).toBeNull();
   expect(first.getByText("WNS")).toBeTruthy();
@@ -85,7 +92,7 @@ function jobsReply(base: Employee, body: { jobs: { business_unit: string; depart
 }
 const card = (panel: ReturnType<typeof within>, name: string) => within(panel.getByRole("region", { name }));
 
-it("changes a person in one panel, their post included, and switches someone off from the list", async () => {
+it("changes a person in one panel, their post included, and switches someone off there", async () => {
   const fetch = vi.fn(async (_url: string, init: RequestInit) => {
     const body = JSON.parse(init.body as string);
     return body.jobs ? jobsReply(person, body) : reply({ ok: true, message: "Data karyawan disimpan.", data: { ...person, ...body } });
@@ -112,10 +119,18 @@ it("changes a person in one panel, their post included, and switches someone off
   const row = within(screen.getByText("Contoh Satu").closest("tr")!);
   expect(row.getByText("GA")).toBeTruthy();
   expect(row.getByText("TEE")).toBeTruthy();
-  expect(row.getByText("Business Solutions Manager · HOD")).toBeTruthy();
-  fireEvent.click(row.getByRole("switch", { name: "Contoh Satu aktif" }));
-  await screen.findAllByText("Data karyawan disimpan.");
+  expect(row.getByText(jobLine("SM · Business Solutions Manager · HOD"))).toBeTruthy();
+  // Aktif is in the panel's Status part, not in the row.
+  fireEvent.click(row.getByRole("button", { name: "Ubah Contoh Satu" }));
+  const again = within(screen.getByRole("dialog", { name: "Ubah karyawan" }));
+  const active = again.getByRole("switch", { name: "Aktif" });
+  expect(active).toHaveProperty("checked", true);
+  fireEvent.click(active);
+  expect(again.getByRole("switch", { name: "Nonaktif" })).toHaveProperty("checked", false);
+  fireEvent.click(again.getByRole("button", { name: "Simpan perubahan" }));
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   expect(JSON.parse(fetch.mock.calls[1][1].body as string)).toEqual({ active: false });
+  expect(await within(screen.getByText("Contoh Satu").closest("tr")!).findByText("Nonaktif")).toBeTruthy();
 });
 
 describe("Pekerjaan (9 Nov 2026)", () => {
@@ -174,9 +189,9 @@ describe("Pekerjaan (9 Nov 2026)", () => {
     ] });
     // The Utama job stays in the list; the other shows as a chip, its BU beside.
     const row = within(screen.getByText("Contoh Satu").closest("tr")!);
-    expect(row.getByText("Business Solutions Manager")).toBeTruthy();
+    expect(row.getByText(jobLine("SM · Business Solutions Manager"))).toBeTruthy();
     expect(row.getByText("+1 pekerjaan")).toBeTruthy();
-    expect(row.getByText("Lead Finance")).toBeTruthy();
+    expect(row.getByText("Lead dari Finance")).toBeTruthy();
     expect(row.getByText("MRP")).toBeTruthy();
   });
 
@@ -259,6 +274,10 @@ it("adds a person by hand, and asks before deleting one", async () => {
   render(<EmployeeDirectory initial={[person]} migrated />);
   fireEvent.click(screen.getByRole("button", { name: /Tambah karyawan/ }));
   const panel = within(screen.getByRole("dialog", { name: "Tambah karyawan" }));
+  // A new person has no Status or Hapus yet, and the BU field carries no hint.
+  expect(panel.queryByRole("switch")).toBeNull();
+  expect(panel.queryByRole("button", { name: /Hapus karyawan/ })).toBeNull();
+  expect(panel.queryByText(/Unit usaha di Werkudara Group/)).toBeNull();
   fireEvent.click(panel.getByRole("button", { name: "Tambah karyawan" }));
   expect(panel.getByText("Isi nama lengkap.")).toBeTruthy();
   fireEvent.change(panel.getByLabelText("Nama lengkap *"), { target: { value: "Orang Baru" } });
@@ -274,10 +293,15 @@ it("adds a person by hand, and asks before deleting one", async () => {
   expect(fetch.mock.calls[1][0]).toBe(`/api/admin/employees/${added.id}`);
   expect(JSON.parse(fetch.mock.calls[1][1].body as string)).toEqual({ jobs: [{ business_unit: "TEE", department: "Corporate", post: "staf", job_title: "Staff", reports_to: null }] });
 
-  fireEvent.click(screen.getByRole("button", { name: "Hapus Orang Baru" }));
+  // Hapus is inside Ubah karyawan; a new person's panel has none.
+  expect(screen.queryByRole("button", { name: "Hapus Orang Baru" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Ubah Orang Baru" }));
+  const edit = within(screen.getByRole("dialog", { name: "Ubah karyawan" }));
+  fireEvent.click(edit.getByRole("button", { name: /Hapus karyawan/ }));
   const ask = await screen.findByRole("dialog", { name: "Hapus Orang Baru?" });
   fireEvent.click(within(ask).getByRole("button", { name: "Hapus karyawan" }));
   expect(await screen.findByText("Karyawan dihapus.")).toBeTruthy();
+  expect(screen.queryByRole("dialog", { name: "Ubah karyawan" })).toBeNull();
   expect(fetch.mock.calls[2]).toEqual([`/api/admin/employees/${added.id}`, expect.objectContaining({ method: "DELETE" })]);
   expect(screen.queryByText("Orang Baru")).toBeNull();
 });

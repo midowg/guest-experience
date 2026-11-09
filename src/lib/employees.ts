@@ -149,6 +149,25 @@ export function reconcileJobs(rows: EmployeeJob[], person: JobPerson, leads?: Le
   return jobs;
 }
 
+const shortSkip = new Set(["&", "and", "dan", "+"]);
+const shortSmall = new Set(["of", "the", "for", "in", "di"]);
+/**
+ * A department by its initials, for tight places (Data karyawan's list, the Struktur tags):
+ * "Center of Excellence" → "CoE", "Business & Administrative Services" → "BAS", "HR & GA" → "HRGA".
+ * One word stays as it is ("Accounting"). The full name goes beside it as a title.
+ */
+export function departmentShort(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length < 2) return name.trim();
+  return words.filter(word => !shortSkip.has(word.toLowerCase())).map(word => {
+    const lower = word.toLowerCase();
+    if (shortSmall.has(lower)) return lower[0];
+    // An abbreviation already (HR, GA, IT, 3D) stays whole.
+    if (word.length <= 3 && word === word.toUpperCase() && /[A-Z0-9]/.test(word)) return word;
+    return (word.match(/\p{L}|\p{N}/u)?.[0] ?? "").toUpperCase();
+  }).join("");
+}
+
 /** The matching key: the database derives the same one (upper case, single spaces). */
 export const nameKey = (name: string) => name.trim().replace(/\s+/g, " ").toUpperCase();
 

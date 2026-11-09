@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FileSpreadsheet, Pencil, Plus, Trash2, Upload, UserPlus } from "lucide-react";
+import { FileSpreadsheet, Pencil, Plus, Upload, UserPlus } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { categoryLabels, jobPostLabels, jobTitleOf, jobsFromEmployee, sameJobs, type Employee, type EmployeeJob, type EmployeeRow, type ImportChange } from "@/lib/employees";
+import { categoryLabels, departmentShort, jobPostLabels, jobTitleOf, jobsFromEmployee, sameJobs, type Employee, type EmployeeJob, type EmployeeRow, type ImportChange } from "@/lib/employees";
 import { employeesApi, praWamAccountsApi } from "@/lib/routes";
 import type { AccountRow } from "@/lib/server/pra-wam/accounts";
 import { BUSINESS_UNITS, buCode, leadDepartments, NO_LEADS, type LeadOptions, type Leads } from "@/lib/pra-wam/leads";
@@ -116,16 +116,6 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     } catch (err) { setError(errorMessage(err)); }
     finally { setBusy(null); }
   }
-  async function patch(person: Employee, change: Partial<Employee>) {
-    setBusy(person.id); setError(""); setMessage(""); setSkipped([]);
-    try {
-      const result = await adminRequest<Employee>(employeesApi(person.id), { method: "PATCH", body: JSON.stringify(change) });
-      if (result.data) setPeople(list => list.map(item => item.id === person.id ? result.data! : item));
-      setMessage(result.message);
-    } catch (err) { setError(errorMessage(err)); }
-    finally { setBusy(null); }
-  }
-
   /**
    * Saves the editor: the person (new or changed) with their jobs, and BOD and Admin WAM. The jobs
    * go with the details (the Utama one fills the person's columns, HOD and Lead go to pw_leads). A
@@ -173,6 +163,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     } catch (err) { setEditorError(errorMessage(err)); }
     finally { setBusy(null); }
   }
+  /** Hapus karyawan, from Ubah karyawan (9 Nov 2026: no longer in the list's rows); asks first. */
   async function remove(person: Employee) {
     if (busy) return;
     if (!(await confirm({
@@ -180,12 +171,13 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
       body: "Orang ini hilang dari Data karyawan untuk semua aplikasi dan tidak bisa dikembalikan. Kalau ia keluar dari kantor, lebih baik nonaktifkan saja supaya catatan lamanya tetap terbaca.",
       confirmLabel: "Hapus karyawan", danger: true,
     }))) return;
-    setBusy(`delete-${person.id}`); setError(""); setMessage(""); setSkipped([]);
+    setBusy("editor"); setEditorError(""); setError(""); setMessage(""); setSkipped([]);
     try {
       const result = await adminRequest(employeesApi(person.id), { method: "DELETE" });
       setPeople(list => list.filter(item => item.id !== person.id));
       setMessage(result.message);
-    } catch (err) { setError(errorMessage(err)); }
+      setEditor(undefined);
+    } catch (err) { setEditorError(errorMessage(err)); }
     finally { setBusy(null); }
   }
 
@@ -267,7 +259,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
       {people.length === 0 ? <p className="field-hint">Belum ada data karyawan. Impor dari Excel HR di atas, atau tambah satu per satu.</p>
         : <div className={styles.tableWrap}><table className={styles.table}>
           <caption className="sr-only">Daftar karyawan</caption>
-          <thead><tr><th scope="col">Karyawan</th><th scope="col">Departemen & jabatan</th><th scope="col">Business Unit</th><th scope="col">Kontak</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Aksi</span></th></tr></thead>
+          <thead><tr><th scope="col">Karyawan</th><th scope="col">Departemen & jabatan</th><th scope="col">Business Unit</th><th scope="col">Kontak</th><th scope="col"><span className="sr-only">Aksi</span></th></tr></thead>
           <tbody>{shown.map(person => {
             const led = leadsOf(person.id);
             const hodHere = led.departments.includes(person.department);
@@ -275,29 +267,27 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
             const leadHere = ledIn.includes(person.department);
             const extra = jobsOf(person).slice(1);
             const post = hodHere ? "HOD" : leadHere ? "Lead" : "";
-            return <tr key={person.id} className={person.active ? undefined : own.inactive} aria-busy={busy === person.id || busy === `delete-${person.id}`}>
-              <td className={own.person}><strong>{person.full_name}</strong><p className={own.muted}>{[person.nickname, person.nip && `NIP ${person.nip}`].filter(Boolean).join(" · ") || "—"}</p></td>
+            return <tr key={person.id} className={person.active ? undefined : own.inactive}>
+              <td className={own.person}><strong>{person.full_name}</strong><p className={own.muted}>{[person.nickname, person.nip && `NIP ${person.nip}`].filter(Boolean).join(" · ") || "—"}</p>
+                {!person.active && <div className={own.chips}><span className={`${own.chip} ${own.chipOff}`}>Nonaktif</span></div>}</td>
               <td>
-                <strong>{person.department || "—"}</strong>
-                <p className={own.job}>{person.position || "Jabatan belum diisi"}{post && !person.position.startsWith(post) ? ` · ${post}` : ""}</p>
+                {/* One line (9 Nov 2026): the department by its initials (full name on hover), then the job. */}
+                <p className={own.job}>{person.department ? <abbr className={own.dept} title={person.department}>{departmentShort(person.department)}</abbr> : "—"}
+                  {" · "}{person.position || "Jabatan belum diisi"}{post && !person.position.startsWith(post) ? ` · ${post}` : ""}</p>
                 {(rolesOf(person.id).includes("bod") || led.departments.some(name => name !== person.department) || ledIn.some(name => name !== person.department) || (leadHere && hodHere) || extra.length > 0 || person.category !== "karyawan") && <div className={own.chips}>
                   {rolesOf(person.id).includes("bod") && <span className={`${own.chip} ${own.chipBod}`}>BOD</span>}
-                  {led.departments.filter(name => name !== person.department).map(name => <span key={name} className={`${own.chip} ${own.chipHod}`}>HOD {name}</span>)}
+                  {led.departments.filter(name => name !== person.department).map(name => <span key={name} className={`${own.chip} ${own.chipHod}`} title={`HOD dari ${name}`}>HOD dari {departmentShort(name)}</span>)}
                   {leadHere && hodHere && <span className={`${own.chip} ${own.chipLead}`}>Lead</span>}
-                  {ledIn.filter(name => name !== person.department && !led.departments.includes(name)).map(name => <span key={name} className={`${own.chip} ${own.chipLead}`}>Lead {name}</span>)}
+                  {ledIn.filter(name => name !== person.department && !led.departments.includes(name)).map(name => <span key={name} className={`${own.chip} ${own.chipLead}`} title={`Lead dari ${name}`}>Lead dari {departmentShort(name)}</span>)}
                   {extra.length > 0 && <span className={`${own.chip} ${own.chipJobs}`} title={extra.map(job => `${buCode(job.business_unit)} · ${job.department} · ${jobTitleOf(job) || jobPostLabels[job.post]}`).join("\n")}>+{extra.length} pekerjaan</span>}
                   {person.category !== "karyawan" && <span className={`${own.chip} ${own.chipWork}`}>{categoryLabels[person.category]}</span>}
                 </div>}
               </td>
               <td><span className={own.buList}>{busOf(person).map(code => <span key={code} className={own.bu}>{code}</span>)}</span></td>
               <td>{person.phone || person.email ? <><p>{person.phone || "—"}</p><p className={own.muted}>{person.email}</p></> : <p className={own.muted}>Belum ada</p>}</td>
-              <td><label className={styles.superSwitch}>
-                <input type="checkbox" role="switch" checked={person.active} disabled={busy === person.id} onChange={e => patch(person, { active: e.target.checked })} aria-label={`${person.full_name} aktif`} />
-                <span>{person.active ? "Aktif" : "Nonaktif"}</span>
-              </label></td>
+              {/* Only Ubah here: Aktif and Hapus are inside Ubah karyawan (9 Nov 2026). */}
               <td><div className={own.actions}>
                 <button type="button" className={own.iconButton} disabled={!!busy} onClick={() => { setEditorError(""); setEditor({ person }); }} aria-label={`Ubah ${person.full_name}`} title="Ubah"><Pencil size={18} aria-hidden="true" /></button>
-                <button type="button" className={`${own.iconButton} ${own.danger}`} disabled={!!busy} onClick={() => void remove(person)} aria-label={`Hapus ${person.full_name}`} title="Hapus"><Trash2 size={18} aria-hidden="true" /></button>
               </div></td>
             </tr>;
           })}</tbody>
@@ -309,6 +299,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
       roles={editor.person ? rolesOf(editor.person.id) : []} leads={leads} jobsReady={jobsMigrated}
       departments={jobDepartments} saving={busy === "editor"} error={editorError}
       people={people.filter(item => item.active)}
-      onSave={(draft, nextJobs, nextRoles) => void saveEditor(editor.person, draft, nextJobs, nextRoles)} onClose={() => setEditor(undefined)} />}
+      onSave={(draft, nextJobs, nextRoles) => void saveEditor(editor.person, draft, nextJobs, nextRoles)}
+      onDelete={editor.person ? () => void remove(editor.person!) : undefined} onClose={() => setEditor(undefined)} />}
   </div>;
 }

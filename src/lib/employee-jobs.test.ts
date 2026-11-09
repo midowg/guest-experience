@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { employeeJobsSchema, jobsFromEmployee, leadsFromJobs, primaryFields, reconcileJobs, sameJobs, type EmployeeJob } from "./employees";
+import { departmentShort, employeeJobsSchema, jobsFromEmployee, leadsFromJobs, primaryFields, reconcileJobs, sameJobs, type EmployeeJob } from "./employees";
 
 /* Pekerjaan karyawan (9 Nov 2026): the jobs of one person, the Utama one first. */
 
@@ -60,6 +60,19 @@ describe("reconcileJobs", () => {
 
   it("falls back to the person's columns without rows", () => {
     expect(reconcileJobs([], person)).toEqual([staf()]);
+  });
+});
+
+describe("departmentShort", () => {
+  it("shortens a department to its initials, small words in lower case, abbreviations kept whole", () => {
+    expect(departmentShort("Center of Excellence")).toBe("CoE");
+    expect(departmentShort("Business & Administrative Services")).toBe("BAS");
+    expect(departmentShort("Takshaka Event & Experience")).toBe("TEE");
+    expect(departmentShort("Human Resources & General Affair")).toBe("HRGA");
+    expect(departmentShort("HR & GA")).toBe("HRGA");
+    expect(departmentShort("Sales & Marketing")).toBe("SM");
+    expect(departmentShort("Accounting")).toBe("Accounting");
+    expect(departmentShort("  ")).toBe("");
   });
 });
 

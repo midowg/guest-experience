@@ -40,6 +40,14 @@
 .jobAdd { display: grid; justify-items: start; gap: 6px; }
 .segment:has(input:disabled) { opacity: .45; cursor: not-allowed; }
 .chipJobs { background: #e3ecfd; color: #1d4ed8; }
+.chipOff { background: #fee2e2; color: #b91c1c; }
+/* Status (Aktif) and Hapus karyawan: in the panel, not in the list's rows (9 Nov 2026). */
+.activeSwitch { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; font-weight: 600; cursor: pointer; justify-self: start; }
+.activeSwitch input { width: 40px; height: 22px; margin: 0; accent-color: var(--blue, #2f6feb); cursor: pointer; }
+.deleteButton { margin-right: auto; color: #b91c1c; }
+.deleteButton:hover:not(:disabled) { border-color: #dc2626; background: #fee2e2; color: #b91c1c; }
+/* Departemen & jabatan in one line: the department by its initials, full name on hover. */
+.dept { font-weight: 700; text-decoration: none; cursor: help; }
 
 /* The list: a toolbar (search, department, Tambah karyawan), then one row per person. */
 .toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 15rem) minmax(0, 10rem) auto; gap: 12px; align-items: end; }
