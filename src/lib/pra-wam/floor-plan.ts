@@ -36,7 +36,9 @@ export const BUILDING: Rect = turn(box(11, 30, 1530, 1003));
 
 /**
  * The rooms as the trace numbers them (1–31), each the box drawn for it: its cell less 2 units all
- * round, so neighbours keep a gap. 20 is Limasan, the pendopo; 26 is Main Office's L (its bounding box).
+ * round, so neighbours keep a gap. 20 is the Mushola (it was taken for Limasan until 9 Nov 2026);
+ * Limasan, the pendopo, is the boarded terrace above it by the river (LIMASAN below); 26 is Main
+ * Office's L (its bounding box).
  */
 const SOURCE_ROOMS: Rect[] = ([
   [211, 50, 358, 180], [363, 50, 527, 180], [532, 50, 762, 180],
@@ -92,10 +94,7 @@ export type DrawnSpot = Omit<PlanSpot, "door" | "layout" | "marks" | "divider"> 
  * every other numbered room is "ruang-N", "Ruang N", for the super admin to give a room by hand.
  */
 const NAMED: Record<number, Omit<PlanSpot, "rect" | "rooms"> & { key: string }> = {
-  20: {
-    key: "limasan", label: "Limasan", layout: "kelas",
-    marks: [[[299, 549], [340, 590], [372, 590], [413, 549]], [[299, 664], [340, 623], [372, 623], [413, 664]], [[340, 590], [340, 623]], [[372, 590], [372, 623]]],
-  },
+  20: { key: "mushola", label: "Mushola" },
   23: { key: "nagapadma", label: "Nagapadma", door: { side: "bottom", at: 0.5 } },
   24: { key: "ananta", label: "CFC Ananta Room", door: { side: "bottom", at: 0.5 } },
   // Its box is too small for a round table with chairs: a short meeting table instead.
@@ -113,7 +112,18 @@ const NAMED: Record<number, Omit<PlanSpot, "rect" | "rooms"> & { key: string }> 
   31: { key: "ruang-31", label: "Ruang 31", door: { side: "left", at: 0.5 } },
 };
 
-const SOURCE_SPOTS: Record<string, PlanSpot> = {};
+/**
+ * Limasan (corrected 9 Nov 2026): the pendopo on the boarded terrace by the river, above the Mushola
+ * on the plan. Not a numbered room of the trace; its roof (a hip roof seen from above) is drawn on it.
+ * It keeps the key "limasan", so the WAM room linked to it moves here.
+ */
+const LIMASAN = box(60, 540, 190, 776);
+const SOURCE_SPOTS: Record<string, PlanSpot> = {
+  limasan: {
+    label: "Limasan", rect: LIMASAN, layout: "kelas", rooms: [],
+    marks: [[[60, 540], [125, 605], [190, 540]], [[60, 776], [125, 711], [190, 776]], [[125, 605], [125, 711]]],
+  },
+};
 for (let number = 1; number <= SOURCE_ROOMS.length; number++) {
   if (number === 3) continue;
   if (number === 2) {
@@ -237,6 +247,7 @@ const ROOM_SPOTS: Record<string, string> = {
   nagapadma: "nagapadma",
   vasuki: "vasuki",
   limasan: "limasan",
+  mushola: "mushola", musholla: "mushola", musala: "mushola",
   pantry: "pantry",
   "main office": "main-office",
   antareja: "antareja",

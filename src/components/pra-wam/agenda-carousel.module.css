@@ -1,12 +1,14 @@
 /* AgendaCarousel: Beranda's agenda, one card per item, swiped sideways. --pw-* tokens only. */
-.carousel { display: grid; gap: 10px; min-width: 0; }
-/* Three dots above the card; the lit one is wider, in the accent colour. */
-.dots { display: flex; justify-content: center; align-items: center; gap: 2px; }
-.dot { display: grid; place-items: center; width: 32px; height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; }
-.dot::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--pw-line); transition: width 200ms ease, background-color 200ms ease; }
+.carousel { display: grid; gap: 4px; min-width: 0; }
+/* Above the card: the title on the left, three small dots in the right corner; the lit one is wider. */
+.head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-left: 2px; }
+.head h2 { margin: 0; font-family: var(--pw-display); font-size: 18px; font-weight: 600; color: var(--pw-text); }
+.dots { display: flex; align-items: center; margin-right: -8px; }
+.dot { display: grid; place-items: center; width: 22px; height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.dot::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--pw-line); transition: width 200ms ease, background-color 200ms ease; }
 .dot:hover:not(:disabled)::before { background: var(--pw-muted); }
 .dot[aria-current="true"] { cursor: default; }
-.dot[aria-current="true"]::before { width: 22px; background: var(--pw-primary); }
+.dot[aria-current="true"]::before { width: 14px; background: var(--pw-primary); }
 .dot:focus-visible { outline: none; }
 .dot:focus-visible::before { outline: 2px solid var(--pw-primary); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .dot::before { transition: none; } }

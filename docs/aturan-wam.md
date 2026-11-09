@@ -217,6 +217,12 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   kalender Timeline maupun Book ruang dan Ubah di Agenda; tidak pindah ke menu lain. Datanya dari
   `GET /api/wam/book-form?date=` atau `?edit=`. Setelah disimpan, sheet itu bilang tersimpan dengan
   Tutup dan Book lagi. Halaman `/wam/book/new` tetap ada untuk tautan langsung.
+  Langkah Kapan: dari Timeline memakai baris tanggal dengan tanggal yang diketuk sudah terpilih;
+  dari Agenda (yang tidak punya kalender) memakai kalender bulan. Akhir pekan yang dipilih
+  otomatis menjadi Di luar kantor. **Nama kegiatan dipilih dari dropdown**: "Dari Timeline" (yang
+  berlangsung di hari itu lebih dulu) lalu "Lainnya" (nama umum dan yang sering dipakai).
+- **Denah**: ruang 20 adalah **Mushola**; **Limasan** adalah pendopo di teras kayu di atasnya (dekat
+  sungai), kunci `limasan` tetap sehingga ruang Limasan di database ikut pindah (9 Nov 2026).
 - **Tile tanpa arsiran kiri**: tile (Booking saya, Kebutuhan, kutipan Survei, blok jadwal) memakai
   outline tipis di keliling tile dengan warna jenisnya, bukan garis tebal di sisi kiri. Booking
   milik sendiri bernada emas hangat.
@@ -229,7 +235,8 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   Kartu selebar penuh; bayangan halus di tepi kiri atau kanan menandakan masih ada kartu ke arah
   itu. Di atasnya hanya tiga titik: yang menyala di tengah selama ada kartu di kedua arah,
   di ujung kiri pada kartu pertama dan ujung kanan pada kartu terakhir; titik di sebelahnya
-  memindah kartu. Tanpa judul, hitungan, atau tombol Jadwal sesi. Kartu yang sudah lewat lebih redup.
+  memindah kartu. Judul "Agenda" di kiri, titiknya kecil di pojok kanan; tanpa hitungan atau
+  tombol Jadwal sesi. Kartu yang sudah lewat lebih redup.
 - Design system "Pra WAM · Hospitality": Poppins untuk judul dan angka, Inter untuk isi; biru
   Werkudara #006EC1 satu-satunya aksen utama, kuning #FFBA00 sekunder. Kartu putih radius 24, tombol
   pill, isian radius 16.

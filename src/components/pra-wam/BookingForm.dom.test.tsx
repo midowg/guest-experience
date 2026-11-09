@@ -7,6 +7,8 @@ vi.mock("./api", async importOriginal => ({ ...await importOriginal<typeof impor
 import { PraWamApiError } from "./api";
 import { activitiesFor, BookingForm, type BookingDraft } from "./BookingForm";
 
+// The walk-through tests click through every step; under a full parallel run they need more than 5 s.
+vi.setConfig({ testTimeout: 20_000 });
 const NOW = "2026-11-04T03:00:00.000Z"; // Rabu 4 Nov, 10.00 WIB
 beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(NOW)); request.mockReset(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
@@ -175,7 +177,7 @@ it("books outside the office: chosen under Tempat, then a weekend opens back und
   expect(screen.queryByRole("button", { name: /^Sabtu, 7 Nov/ })).toBeNull();
   expect(screen.queryByRole("button", { name: "Di luar kantor" })).toBeNull();
   lanjut();
-  fireEvent.change(screen.getByLabelText("Nama kegiatan"), { target: { value: "Makan malam tim" } });
+  fireEvent.change(screen.getByLabelText("Nama kegiatan"), { target: { value: "Review KPI" } });
   lanjut(); lanjut();
   // Tempat: pick Di luar kantor, then go back to Waktu for the Saturday evening.
   fireEvent.click(screen.getByRole("button", { name: "Di luar kantor" }));
@@ -210,7 +212,7 @@ it("lets a HOD book as HOD: departments instead of people, their HODs invited, t
     { id: "ACS", name: "Art & Creative Support", heads: [] },
   ] } });
   lanjut();
-  fireEvent.change(screen.getByLabelText("Nama kegiatan"), { target: { value: "Sinkronisasi target" } });
+  fireEvent.change(screen.getByLabelText("Nama kegiatan"), { target: { value: "Kalibrasi nilai" } });
   lanjut();
   // Booking sebagai: Pribadi (people) or HOD (departments).
   const as = within(screen.getByRole("group", { name: "Booking sebagai" }));
@@ -233,16 +235,18 @@ it("lets a HOD book as HOD: departments instead of people, their HODs invited, t
     json: expect.objectContaining({ hodUnits: ["BAS", "COE"], participants: ["p1", "p2"] }) })));
 });
 
-it("offers Timeline's forums running on the day as the activity, a tap filling the name", () => {
+it("picks the activity from a dropdown: Timeline's forums (the day's first), then the usual names", () => {
   render(<BookingForm initial={draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[kecil]} people={[]} viewer={{ id: "me" }} groups={[]} usedTitles={[]}
     dayBookings={[]} dayOf="2026-11-05" showPlan={false}
-    activities={[{ title: "HOD Meeting", from: "2026-11-04", to: "2026-11-06" }, { title: "End Year Dinner", from: "2026-12-29", to: "2026-12-29" }]} />);
+    activities={[{ title: "End Year Dinner", from: "2026-12-29", to: "2026-12-29" }, { title: "HOD Meeting", from: "2026-11-04", to: "2026-11-06" }]} />);
   lanjut();
-  const group = within(screen.getByRole("group", { name: /^Dari Timeline/ }));
-  expect(group.queryByRole("button", { name: "End Year Dinner" })).toBeNull();
-  fireEvent.click(group.getByRole("button", { name: "HOD Meeting" }));
-  expect((screen.getByLabelText("Nama kegiatan") as HTMLInputElement).value).toBe("HOD Meeting");
-  expect(group.getByRole("button", { name: "HOD Meeting" }).getAttribute("aria-pressed")).toBe("true");
+  const select = screen.getByLabelText("Nama kegiatan") as HTMLSelectElement;
+  expect(select.tagName).toBe("SELECT");
+  const groups = [...select.querySelectorAll("optgroup")].map(group => [group.label, [...group.querySelectorAll("option")].map(option => option.textContent)]);
+  expect(groups[0]).toEqual(["Dari Timeline · Kamis, 5 Nov dulu", ["HOD Meeting", "End Year Dinner"]]);
+  expect(groups[1][0]).toBe("Lainnya");
+  fireEvent.change(select, { target: { value: "HOD Meeting" } });
+  expect(select.value).toBe("HOD Meeting");
 });
 
 it("falls back to the next activities when none runs on the day", () => {
@@ -260,4 +264,13 @@ it("on its own page, once saved shows what was booked with a way back to Timelin
   expect(screen.getByText("Rapat tim")).toBeTruthy();
   expect(screen.getByRole("link", { name: /Kembali ke Timeline/ }).getAttribute("href")).toBe("/wam/timeline");
   expect(screen.getByRole("link", { name: /Book lagi/ }).getAttribute("href")).toBe("/wam/book/new");
+});
+
+it("from Agenda picks the day on a month calendar, a weekend booking Di luar kantor", () => {
+  request.mockResolvedValue({ data: { bookings: [] }, message: "" });
+  render(<BookingForm initial={draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[kecil]} people={[]} viewer={{ id: "me" }} groups={[]} usedTitles={[]}
+    dayBookings={[]} dayOf="2026-11-05" showPlan={false} datePicker="month" />);
+  expect(screen.getByRole("region", { name: "Tanggal" })).toBeTruthy();
+  fireEvent.click(screen.getAllByRole("button", { name: /^Sabtu, 7 Nov/ })[0]);
+  expect(screen.getByText(/Di luar kantor: boleh akhir pekan/)).toBeTruthy();
 });

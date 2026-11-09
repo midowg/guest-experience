@@ -45,7 +45,7 @@ describe("room names on the plan", () => {
     const { placed, others, unplaced } = layoutRooms(production);
     expect(placed.map(item => item.key).sort()).toEqual(["ananta", "antareja", "communal", "limasan", "main-office", "nagapadma", "pantry", "vasuki"]);
     const numbered = [1, ...Array.from({ length: 16 }, (_, index) => index + 4), 21, 22, 27, 29, 30, 31];
-    expect(others.map(item => item.key).sort()).toEqual(numbered.map(number => `ruang-${number}`).sort());
+    expect(others.map(item => item.key).sort()).toEqual(["mushola", ...numbered.map(number => `ruang-${number}`)].sort());
     expect(unplaced).toEqual([]);
   });
   it("gives a spot to one room only", () => {
@@ -73,7 +73,7 @@ describe("room names on the plan", () => {
   });
   it("gives every numbered room a spot, the named rooms keeping their keys", () => {
     expect(ROOM_COUNT).toBe(31);
-    const named: Record<string, number> = { limasan: 20, nagapadma: 23, ananta: 24, pantry: 25, "main-office": 26, antareja: 28 };
+    const named: Record<string, number> = { mushola: 20, nagapadma: 23, ananta: 24, pantry: 25, "main-office": 26, antareja: 28 };
     for (const [key, number] of Object.entries(named)) {
       expect(PLAN_SPOTS[key].rect, key).toEqual(roomBox(number));
       expect(PLAN_SPOTS[key].rooms).toEqual([number]);
@@ -87,7 +87,8 @@ describe("room names on the plan", () => {
         expect(PLAN_SPOTS[key].label).toBe(`Ruang ${number}`);
       }
     }
-    expect(Object.keys(PLAN_SPOTS)).toHaveLength(31);
+    // 31 traced rooms (2 and 3 one spot, Vasuki), Communal Space and Limasan's terrace.
+    expect(Object.keys(PLAN_SPOTS)).toHaveLength(32);
     for (const gone of ["pak-bagus", "bs", "pak-fadil", "comms"]) expect(PLAN_SPOTS[gone]).toBeUndefined();
     expect(PLAN_SPOTS.ananta.label).toBe("CFC Ananta Room");
   });
@@ -134,6 +135,10 @@ describe("room names on the plan", () => {
     expect(spotLayout("gudang")).toBe("rapat");
     expect(PLAN_SPOTS.pantry.round).toBeUndefined();
     expect(PLAN_SPOTS.limasan.marks).toMatch(/^M/);
+    // Limasan is the pendopo on the terrace above the Mushola (room 20), not room 20 itself (9 Nov 2026).
+    expect(PLAN_SPOTS.mushola.label).toBe("Mushola");
+    expect(PLAN_SPOTS.limasan.rooms).toEqual([]);
+    expect(PLAN_SPOTS.limasan.rect.y + PLAN_SPOTS.limasan.rect.h).toBeLessThanOrEqual(PLAN_SPOTS.mushola.rect.y);
   });
   it("puts each door on its room's wall, and the fixtures where no room is (plants) or inside Main Office", () => {
     const doors = Object.entries(PLAN_SPOTS).filter(([, spot]) => spot.door);
@@ -257,9 +262,9 @@ describe("spot names", () => {
     expect(isRoomSpot("ruang-5")).toBe(false);
     expect(isRoomSpot("antareja")).toBe(true);
     const options = planSpotOptions();
-    expect(options).toHaveLength(31);
-    expect(options.slice(0, 8).map(option => option.key).sort()).toEqual(["ananta", "antareja", "communal", "limasan", "main-office", "nagapadma", "pantry", "vasuki"]);
-    expect(options[8]).toEqual({ key: "ruang-1", label: "Ruang 1" });
+    expect(options).toHaveLength(32);
+    expect(options.slice(0, 9).map(option => option.key).sort()).toEqual(["ananta", "antareja", "communal", "limasan", "main-office", "mushola", "nagapadma", "pantry", "vasuki"]);
+    expect(options[9]).toEqual({ key: "ruang-1", label: "Ruang 1" });
     expect(options.map(option => option.label).join(" ")).not.toMatch(/Pak|BS|Comms|Spot tambahan/);
   });
   it("show a room's quiet name only once it is readable", () => {

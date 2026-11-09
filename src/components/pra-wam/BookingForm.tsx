@@ -14,6 +14,7 @@ import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { headcount, isOver, largestCapacity, peopleLabel, roomFit } from "@/lib/pra-wam/room-fit";
 import { errorText, praWamRequest, PraWamApiError, type Conflict } from "./api";
 import { DateStrip } from "./DateStrip";
+import { MonthCalendar } from "./MonthCalendar";
 import { FloorPlan } from "./FloorPlan";
 import { PeoplePicker, type PeopleGroup } from "./PeoplePicker";
 import type { HodDepartment } from "@/lib/pra-wam/hod";
@@ -46,6 +47,12 @@ type Props = {
    * those whose dates hold the booking's day first, else the next ones. A tap fills the name.
    */
   activities?: BookingActivity[];
+  /**
+   * How Kapan picks the day (9 Nov 2026): "strip", the row of dates (opened from Timeline's
+   * calendar, the day already picked), or "month", a month calendar (opened from Agenda, which
+   * has no calendar of its own).
+   */
+  datePicker?: "strip" | "month";
 };
 /** A forum or event from Timeline: its name and the days it runs (or is planned for). */
 export type BookingActivity = { title: string; from: string; to: string };
@@ -81,7 +88,7 @@ type Choice = { ok: boolean; pending: boolean; tone: PlanTone; text: string };
  * "Di luar kantor" (5 Nov 2026; only under Tempat since 9 Nov 2026): it opens weekends, any hour of
  * the day and more than 4 hours, so Tempat offers a way back to Waktu; the place name is typed under Tempat.
  */
-export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null, activities = [] }: Props) {
+export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null, activities = [], datePicker = "strip" }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
   // On its own page (no sheet): saved, the form gives way to what was booked (9 Nov 2026: booking is
@@ -109,8 +116,6 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const [reload, setReload] = useState(0);
   const uid = useId();
   const formId = `${uid}-form`;
-  const [suggestOpen, setSuggestOpen] = useState(false);
-  const [active, setActive] = useState(-1);
   // "" is Semua departemen: the whole list, narrowed by typing.
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -199,8 +204,12 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     : summary;
   const dayFull = !outside && draft.date >= today && !!daySummary[draft.date]?.full;
 
-  const suggestions = useMemo(() => titleSuggestions(draft.title, usedTitles), [draft.title, usedTitles]);
+  // Nama kegiatan is picked from a list (9 Nov 2026): Timeline's forums and events (those on the
+  // booking's day first), then the usual names; a booking being changed keeps its own name.
   const offered = activitiesFor(activities, draft.date);
+  const fromTimeline = [...new Set([...offered.list, ...activities.filter(item => item.to >= today)].map(item => item.title))];
+  const usualTitles = useMemo(() => titleSuggestions("", usedTitles, 10), [usedTitles]).filter(title => !fromTimeline.includes(title));
+  const ownTitle = draft.title.trim() && !fromTimeline.includes(draft.title.trim()) && !usualTitles.includes(draft.title.trim()) ? draft.title.trim() : null;
   const picked = draft.participants.map(id => people.find(person => person.id === id)).filter((person): person is Person => !!person);
   // Everyone but the booker can be picked.
   const colleagues = people.filter(person => person.id !== viewer.id);
@@ -214,17 +223,10 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   }
   function pickDate(date: string) {
     if (date < today) return;
+    // A weekend has no rooms: picked on the month calendar, it books "Di luar kantor".
+    if (!outside && !isWorkday(date)) { set({ date, roomId: OUTSIDE_ROOM }); return; }
     const open = startsOn(date);
     set({ date, ...(open.includes(draft.start) || !open.length ? {} : hoursFrom(open[0])) });
-  }
-  function chooseTitle(title: string) { set({ title }); setSuggestOpen(false); setActive(-1); }
-  function onTitleKey(event: React.KeyboardEvent) {
-    if (!suggestOpen || !suggestions.length) return;
-    if (event.key === "ArrowDown") { event.preventDefault(); setActive((active + 1) % suggestions.length); }
-    else if (event.key === "ArrowUp") { event.preventDefault(); setActive(active <= 0 ? suggestions.length - 1 : active - 1); }
-    else if (event.key === "Enter" && active >= 0) { event.preventDefault(); chooseTitle(suggestions[active]); }
-    // Esc closes only the suggestions, not the sheet the form sits in.
-    else if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setSuggestOpen(false); }
   }
   function pickRoom(item: Room) {
     if (!choiceOf(item).ok) return;
@@ -366,7 +368,9 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(0)}>
       {heading(0, "Kapan?")}
-      <DateStrip days={stripDays} selected={draft.date} today={today} summary={daySummary} onPick={pickDate} label="Tanggal" />
+      {datePicker === "month"
+        ? <MonthCalendar from={appraisalRules.periodStart} to={appraisalRules.periodEnd} selected={draft.date} today={today} summary={daySummary} onPick={pickDate} label="Tanggal" />
+        : <DateStrip days={stripDays} selected={draft.date} today={today} summary={daySummary} onPick={pickDate} label="Tanggal" />}
       {fieldError("date")}
       {dayFull && <p className={css.note} role="status">Semua ruang penuh hari ini. Pilih hari lain atau jam lain.</p>}
       <div className={styles.times}>
@@ -397,23 +401,17 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(1)}>
       {heading(1, "Kegiatan apa?")}
-      {offered.list.length > 0 && <div className={css.activities}>
-        <p className={styles.label} id={`${uid}-activities`}>{offered.onDay ? `Dari Timeline, ${dayLabel(draft.date)}` : "Dari Timeline"}</p>
-        <div className={styles.actions} role="group" aria-labelledby={`${uid}-activities`}>
-          {offered.list.map(item => <button key={item.title} type="button" className={`${styles.chip} ${styles.chipSmall}`} aria-pressed={draft.title.trim() === item.title}
-            onClick={() => { set({ title: item.title }); setSuggestOpen(false); }}>{item.title}</button>)}
-        </div>
-      </div>}
-      <div className={styles.suggest}>
+      <div>
         <label className={styles.label} htmlFor={`${uid}-title`}>Nama kegiatan</label>
-        <input id={`${uid}-title`} className="input" value={draft.title} maxLength={120} autoComplete="off" placeholder="Mis. Appraisal 1-on-1"
-          role="combobox" aria-expanded={suggestOpen && suggestions.length > 0} aria-controls={`${uid}-suggestions`} aria-autocomplete="list"
-          aria-activedescendant={active >= 0 ? `${uid}-title-${active}` : undefined} aria-invalid={!!fieldErrors.title} aria-describedby={described("title")}
-          onChange={event => { set({ title: event.target.value }); setSuggestOpen(true); setActive(-1); }}
-          onFocus={() => setSuggestOpen(true)} onBlur={() => setTimeout(() => setSuggestOpen(false), 120)} onKeyDown={onTitleKey} />
-        {suggestOpen && suggestions.length > 0 && <ul id={`${uid}-suggestions`} className={styles.suggestList} role="listbox" aria-label="Saran nama kegiatan">
-          {suggestions.map((title, index) => <li key={title} id={`${uid}-title-${index}`} role="option" aria-selected={index === active} onMouseDown={event => { event.preventDefault(); chooseTitle(title); }}>{title}</li>)}
-        </ul>}
+        <select id={`${uid}-title`} className="select" value={draft.title.trim()} aria-invalid={!!fieldErrors.title} aria-describedby={described("title")}
+          onChange={event => set({ title: event.target.value })}>
+          <option value="" disabled>Pilih kegiatan</option>
+          {ownTitle && <option value={ownTitle}>{ownTitle}</option>}
+          {fromTimeline.length > 0 && <optgroup label={offered.onDay ? `Dari Timeline · ${dayLabel(draft.date)} dulu` : "Dari Timeline"}>
+            {fromTimeline.map(title => <option key={title} value={title}>{title}</option>)}
+          </optgroup>}
+          <optgroup label="Lainnya">{usualTitles.map(title => <option key={title} value={title}>{title}</option>)}</optgroup>
+        </select>
         {fieldError("title")}
       </div>
       <div>

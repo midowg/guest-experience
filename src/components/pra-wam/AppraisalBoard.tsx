@@ -208,7 +208,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {sheet?.kind === "form" && form && <BookingForm key={sheet.key} editId={sheet.editId} initial={sheet.initial}
       dates={dates.includes(sheet.initial.date) ? dates : [sheet.initial.date, ...dates]} now={clockNow.toISOString()} rooms={rooms}
       people={form.people} groups={form.groups} viewer={{ id: viewerId }} usedTitles={form.usedTitles}
-      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan} summary={days} hod={hod} activities={activities}
+      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan} summary={days} hod={hod} activities={activities} datePicker="month"
       frame={(body, footer) => <Sheet open={shown} onClose={close} wide title={sheet.editId ? "Ubah booking" : "Book ruang"}
         subtitle="Yang tersimpan lebih dulu yang mendapat ruang." footer={footer}>{body}</Sheet>} />}
 
