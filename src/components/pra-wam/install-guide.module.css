@@ -6,7 +6,7 @@
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { min-height: 40px; padding: 0 16px; border: 1px solid var(--pw-line); border-radius: 999px; background: var(--pw-surface); color: var(--pw-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease; }
 .chip:hover { border-color: var(--pw-primary); }
-.chip[aria-pressed="true"] { border-color: var(--pw-primary); background: var(--pw-primary); color: #fff; }
+.chip[aria-pressed="true"] { border-color: var(--pw-primary); background: var(--pw-primary); color: var(--pw-on-primary); }
 .chip:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
 .chipsSmall .chip { min-height: 36px; padding: 0 14px; font-size: 13px; }
 .chipsSmall .chip[aria-pressed="true"] { background: var(--pw-primary-soft); color: var(--pw-primary); }

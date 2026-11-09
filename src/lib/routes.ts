@@ -293,6 +293,8 @@ export const wamAdminPath = {
   rooms: `${WAM_ADMIN}/ruang`,
   events: `${WAM_ADMIN}/acara`,
   about: `${WAM_ADMIN}/apa-itu-wam`,
+  /** The app's theme for everyone: Dream Out Loud or Werkudara, each light and dark. */
+  theme: `${WAM_ADMIN}/tema`,
   /** The personal questionnaire: content, settings, progress, and the HR-locked answers. */
   questionnaire: {
     content: `${WAM_ADMIN}/kuesioner`,
@@ -401,3 +403,5 @@ export const praWamEventsApi = (eventId: string) => `/api/admin/wam/events/${eve
 export const praWamAboutApi = "/api/admin/wam/about";
 /** Admin WAM: PUT the app settings, e.g. whether Book shows the floor plan. */
 export const praWamSettingsApi = "/api/admin/wam/settings";
+/** Admin WAM → Tema aplikasi (any admin). */
+export const praWamThemeApi = "/api/admin/wam/theme";

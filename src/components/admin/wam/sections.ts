@@ -1,4 +1,4 @@
-import { CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, Map as MapIcon, Plug, UsersRound, type LucideIcon } from "lucide-react";
+import { CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, Map as MapIcon, Palette, Plug, UsersRound, type LucideIcon } from "lucide-react";
 import { MCP_ADMIN_PATH } from "@/lib/pra-wam/mcp";
 import { wamAdminPath } from "@/lib/routes";
 
@@ -8,7 +8,7 @@ import { wamAdminPath } from "@/lib/routes";
  * one entry here, its path in wamAdminPath and its page under src/app/admin/wam/. A new group
  * name starts a new group in the menu.
  */
-export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "ruang" | "kuesioner";
+export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "kuesioner";
 export type WamSection = {
   key: WamSectionKey;
   label: string;
@@ -32,6 +32,7 @@ export const wamSections: readonly WamSection[] = [
   { key: "mcp", label: "Akses MCP", group: "Orang", href: MCP_ADMIN_PATH, icon: Plug, summary: "Siapa boleh menghubungkan Claude atau ChatGPT ke data WAM, dan panggilan terakhir." },
   { key: "acara", label: "Acara dan modul", group: "Aplikasi", href: wamAdminPath.events, icon: CalendarRange, summary: "Status Pra WAM dan WAM, serta modul yang dibuka." },
   { key: "about", label: "Apa itu WAM", group: "Aplikasi", href: wamAdminPath.about, icon: Info, summary: "Teks penjelasan WAM di Beranda peserta." },
+  { key: "tema", label: "Tema aplikasi", group: "Aplikasi", href: wamAdminPath.theme, icon: Palette, summary: "Tema WAM untuk semua orang: Dream Out Loud atau Werkudara." },
   { key: "ruang", label: "Ruang dan denah", group: "Aplikasi", href: wamAdminPath.rooms, icon: MapIcon, summary: "Kapasitas ruang, spot di denah, dan tampil tidaknya denah di Book." },
   { key: "kuesioner", label: "Kuesioner", group: "Data peserta", href: wamAdminPath.questionnaire.content, icon: ClipboardList, summary: "Isi, pengaturan, progres, rekap, dan ekspor kuesioner personal." },
 ];

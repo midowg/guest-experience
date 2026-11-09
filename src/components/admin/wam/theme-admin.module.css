@@ -1,0 +1,33 @@
+/* Admin WAM → Tema aplikasi: one card per theme, each with a dark and a light preview drawn in the app's --pw-* tokens. */
+.choices { display: grid; gap: 16px; margin: 0; padding: 0; border: 0; min-width: 0; }
+@media (min-width: 900px) { .choices { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.choice { position: relative; display: grid; gap: 16px; padding: 18px; border: 2px solid var(--cs-line); border-radius: 18px; background: var(--cs-surface); cursor: pointer; transition: border-color 150ms ease, box-shadow 150ms ease; }
+.choice:hover { border-color: color-mix(in srgb, var(--cs-primary) 50%, var(--cs-line)); }
+.choice:has(input:checked) { border-color: var(--cs-primary); box-shadow: 0 0 0 3px var(--cs-primary-soft); }
+.choice:has(input:focus-visible) { outline: 2px solid var(--cs-primary); outline-offset: 3px; }
+.choices:disabled .choice { cursor: default; opacity: .75; }
+.choiceHead { display: flex; align-items: flex-start; gap: 12px; }
+.choiceText { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.choiceText strong { font-size: 16px; color: var(--cs-text); }
+.choiceText small { font-size: 13px; line-height: 1.45; color: var(--cs-muted); }
+.inUse { flex: none; padding: 4px 10px; border-radius: 999px; background: var(--cs-ok-bg); color: var(--cs-ok-fg); font-size: 12px; font-weight: 700; }
+.check { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--cs-line); border-radius: 50%; color: transparent; }
+.check svg { width: 16px; height: 16px; }
+.choice:has(input:checked) .check { border-color: var(--cs-primary); background: var(--cs-primary); color: var(--cs-on-primary); }
+
+.previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.previewFrame { display: block; min-width: 0; }
+.preview.preview { position: relative; display: grid; gap: 8px; min-height: 0; padding: 10px 10px 34px; border-radius: 16px; border: 1px solid var(--pw-line); background: var(--pw-app); background-image: var(--pw-stars); background-size: 200px; font-size: 12px; overflow: hidden; }
+.hero { display: grid; gap: 2px; padding: 12px; border-radius: 12px; background: var(--pw-stars-hero), var(--pw-grad-hero) var(--pw-hero); background-size: 200px, auto; color: var(--pw-on-hero); }
+.hero strong { font-family: var(--pw-display); font-size: 16px; font-weight: 600; line-height: 1.2; }
+.kicker { color: var(--pw-on-hero-muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.card { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; background: var(--pw-surface) var(--pw-grad-surface); box-shadow: var(--pw-shadow-card); }
+.dot { flex: none; width: 22px; height: 22px; border-radius: 8px; background: var(--pw-primary-soft); box-shadow: inset 0 0 0 6px var(--pw-primary-soft), inset 0 0 0 11px var(--pw-primary); }
+.dotBrass { background: var(--pw-brass-soft); box-shadow: inset 0 0 0 6px var(--pw-brass-soft), inset 0 0 0 11px var(--pw-brass); }
+.lines { display: grid; gap: 5px; flex: 1; }
+.lines i { display: block; height: 6px; border-radius: 3px; background: var(--pw-text); opacity: .8; }
+.lines i + i { width: 60%; background: var(--pw-muted); opacity: .7; }
+.button { display: grid; place-items: center; height: 30px; border-radius: 999px; background: var(--pw-primary); color: var(--pw-on-primary); font-weight: 600; }
+.mode { position: absolute; left: 10px; bottom: 8px; display: inline-flex; align-items: center; gap: 4px; color: var(--pw-muted); font-size: 11px; font-weight: 600; }
+.mode svg { width: 13px; height: 13px; }
+@media (prefers-reduced-motion: reduce) { .choice { transition: none; } }

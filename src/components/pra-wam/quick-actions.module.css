@@ -31,8 +31,8 @@ a.row:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px;
 .text small { font-size: 13px; color: var(--pw-muted); overflow-wrap: anywhere; }
 .chevron { flex: none; width: 20px; height: 20px; color: var(--pw-muted); }
 /* "Saya hadir" while a check-in is open: the main card's blue. */
-.list .main { background: var(--pw-hero) var(--pw-grad-hero); color: var(--pw-on-hero); box-shadow: 0 12px 24px -14px rgba(0, 110, 193, .6); }
-a.main:hover { background: var(--pw-hero) var(--pw-grad-hero); filter: brightness(1.05); }
+.list .main { background: var(--pw-stars-hero), var(--pw-grad-hero) var(--pw-hero); color: var(--pw-on-hero); box-shadow: 0 12px 24px -14px rgba(0, 110, 193, .6); }
+a.main:hover { background: var(--pw-stars-hero), var(--pw-grad-hero) var(--pw-hero); filter: brightness(1.05); }
 .main .tile { background: rgba(255, 255, 255, .18); color: var(--pw-on-hero); }
 .main small, .main .chevron { color: var(--pw-on-hero-muted); }
 .count { flex: none; display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--pw-primary); color: var(--pw-on-primary); font-size: 12px; font-weight: 700; }

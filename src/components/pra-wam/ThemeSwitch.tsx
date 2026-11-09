@@ -2,13 +2,13 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { Check, Moon, Smartphone, Sun } from "lucide-react";
-import { resolveWamTheme, WAM_THEME_COLORS, wamThemeCookie, type WamTheme } from "@/lib/pra-wam/theme";
+import { parseWamLook, resolveWamTheme, WAM_THEME_COLORS, wamThemeCookie, type WamTheme } from "@/lib/pra-wam/theme";
 import own from "./akun.module.css";
 import styles from "./pra-wam.module.css";
 
 const OPTIONS: { value: WamTheme; label: string; hint: string; icon: ReactNode }[] = [
+  { value: "dark", label: "Gelap", hint: "Latar gelap, bawaan WAM", icon: <Moon aria-hidden /> },
   { value: "light", label: "Terang", hint: "Latar terang, nyaman di siang hari", icon: <Sun aria-hidden /> },
-  { value: "dark", label: "Gelap", hint: "Latar gelap, nyaman di malam hari", icon: <Moon aria-hidden /> },
   { value: "system", label: "Ikuti perangkat", hint: "Mengikuti tema HP atau laptopmu", icon: <Smartphone aria-hidden /> },
 ];
 
@@ -19,9 +19,10 @@ const OPTIONS: { value: WamTheme; label: string; hint: string; icon: ReactNode }
 function applyWamTheme(theme: WamTheme) {
   document.cookie = wamThemeCookie(theme, location.protocol === "https:");
   document.querySelectorAll("[data-wam-theme]").forEach(node => node.setAttribute("data-wam-theme", theme));
+  const colors = WAM_THEME_COLORS[parseWamLook(document.querySelector("[data-wam-look]")?.getAttribute("data-wam-look"))];
   document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach(meta => {
     const deviceDark = meta.media ? meta.media.includes("dark") : matchMedia("(prefers-color-scheme: dark)").matches;
-    meta.content = WAM_THEME_COLORS[resolveWamTheme(theme, deviceDark)].bar;
+    meta.content = colors[resolveWamTheme(theme, deviceDark)].bar;
   });
 }
 

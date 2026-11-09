@@ -80,12 +80,12 @@ const profile: BodProfile = {
 /**
  * Layout check for the BOD pages with sample numbers (Penpot "B1", "E3", status pills of "B2").
  * ?keadaan=kosong shows a summary before any forum; ?keadaan=absen, one before migration 05;
- * ?tema=gelap, the dark theme; ?halaman=peserta and ?halaman=profil, Peserta and Profil peserta.
+ * ?tema=terang, the light mode (dark is the default); ?tampilan=werkudara, the Werkudara theme; ?halaman=peserta and ?halaman=profil, Peserta and Profil peserta.
  */
-export default async function DevBodPage({ searchParams }: { searchParams: Promise<{ keadaan?: string; tema?: string; halaman?: string }> }) {
+export default async function DevBodPage({ searchParams }: { searchParams: Promise<{ keadaan?: string; tema?: string; tampilan?: string; halaman?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { keadaan, tema, halaman } = await searchParams;
-  if (halaman) return <div data-wam-theme={tema === "gelap" ? "dark" : "light"}><div className={base.app} style={{ minHeight: "100vh", padding: 20 }}>
+  const { keadaan, tema, tampilan, halaman } = await searchParams;
+  if (halaman) return <div data-wam-look={tampilan === "werkudara" ? "werkudara" : "dream"} data-wam-theme={tema === "terang" ? "light" : "dark"}><div className={base.app} style={{ minHeight: "100vh", padding: 20 }}>
     {halaman === "mcp" ? <div style={{ maxWidth: 640 }}><McpCard hasKey lastUsedAt="2026-11-26T03:12:00Z" calls={[{ title: "Ringkasan WAM", ok: true, createdAt: "2026-11-26T03:12:00Z" }, { title: "Hasil survei", ok: false, createdAt: "2026-11-26T03:10:00Z" }]} /></div>
       : halaman === "mcp-admin" ? <PraWamMcp crumbs={[]} title="Akses MCP" initial={{ migrated: true, candidates: [{ employeeId: "00000000-0000-4000-8000-000000000201", name: "Dimas Pratama", department: "Finance" }],
         rows: [{ employeeId: "00000000-0000-4000-8000-000000000101", name: "Fadli Fahmi Ali", department: "BOD", scopes: ["ringkasan", "sesi", "kehadiran", "survei"], grantedBy: "admin", grantedAt: "2026-11-06T03:00:00Z", revokedAt: null, hasKey: true, keyHint: "x9Qa", keyCreatedAt: "2026-11-06T04:00:00Z", lastUsedAt: "2026-11-26T03:12:00Z" },
@@ -96,7 +96,7 @@ export default async function DevBodPage({ searchParams }: { searchParams: Promi
   const data: Summary = keadaan === "kosong"
     ? { ...sample, active: null, forums: [], units: [], signedIn: 0, attention: [] }
     : keadaan === "absen" ? { ...sample, attendanceReady: false } : sample;
-  return <div data-wam-theme={tema === "gelap" ? "dark" : "light"}><div className={base.app} style={{ minHeight: "100vh", padding: 20 }}>
+  return <div data-wam-look={tampilan === "werkudara" ? "werkudara" : "dream"} data-wam-theme={tema === "terang" ? "light" : "dark"}><div className={base.app} style={{ minHeight: "100vh", padding: 20 }}>
     <BodSummary data={data} insights={keadaan === "kosong" ? emptyInsights : insights} greeting="Selamat pagi, Fadli" date="Kamis, 26 November"
       survey={keadaan === "kosong" ? null : { name: "Kuesioner personal WAM 2027", participation: { done: 38, active: 57 } }} />
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 24 }}>

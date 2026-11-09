@@ -145,6 +145,18 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 
 ## 8. Aplikasi peserta: tampilan dan interaksi
 
+- **Tema dan mode** (9 Nov 2026). Ada dua tema, masing-masing punya mode terang dan gelap:
+  **Dream Out Loud** (tema Pra WAM 2026: langit malam navy, lavender sebagai warna utama, emas
+  sebagai warna kedua, teks krem, judul Lora serif, bintang halus di latar dan kartu utama) dan
+  **Werkudara** (biru perusahaan, tampilan sebelumnya).
+  - Tema berlaku untuk semua orang dan dipilih admin di Admin WAM → Tema aplikasi
+    (`pw_app_settings.theme`, migrasi 202611090001). Bawaannya Dream Out Loud. Kalau migrasi belum
+    jalan atau database gagal dibaca, aplikasi tetap terbuka dengan tema bawaan.
+  - Mode tetap pilihan masing-masing di Pengaturan → Tampilan (cookie `wam_theme`). Bawaannya
+    **Gelap**, karena tema Pra WAM berangkat dari mimpi di malam hari.
+  - Warna hanya lewat token `--pw-*`. Tema Dream Out Loud diatur di `[data-wam-look="dream"]` pada
+    `pra-wam.module.css`. Setiap token ditulis di setiap blok, dan dua blok gelapnya harus sama.
+    Teks di atas warna utama memakai `--pw-on-primary`, bukan `#fff`.
 - **Pengaturan berupa menu** (9 Nov 2026). Halamannya berdiri sendiri: ada judul "Pengaturan" dan
   bilah bawah, tanpa panah kembali dan tanpa kartu profil (Profil dibuka lewat bilah bawah).
   - Kelompok menunya: **Aplikasi** (Install WAM, Notifikasi, Tampilan), **Akun** (Ganti password),

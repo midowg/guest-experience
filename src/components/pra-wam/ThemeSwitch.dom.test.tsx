@@ -11,7 +11,7 @@ it("lists the three themes as rows and switches the app's theme at once", () => 
   document.body.appendChild(app);
   render(<ThemeSwitch initial="light" />, { container: app });
   const rows = screen.getAllByRole("radio");
-  expect(rows.map(row => row.closest("label")?.querySelector("strong")?.textContent)).toEqual(["Terang", "Gelap", "Ikuti perangkat"]);
+  expect(rows.map(row => row.closest("label")?.querySelector("strong")?.textContent)).toEqual(["Gelap", "Terang", "Ikuti perangkat"]);
   expect((screen.getByRole("radio", { name: /Terang/ }) as HTMLInputElement).checked).toBe(true);
   fireEvent.click(screen.getByRole("radio", { name: /Gelap/ }));
   expect((screen.getByRole("radio", { name: /Gelap/ }) as HTMLInputElement).checked).toBe(true);

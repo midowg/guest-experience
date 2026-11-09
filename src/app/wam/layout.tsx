@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Suspense, type ReactNode } from "react";
 import { PwaRegister } from "@/components/pra-wam/PwaRegister";
 import { WamNavigator } from "@/components/pra-wam/WamNavigator";
-import { resolveWamTheme, WAM_THEME_COLORS as C, type WamTheme } from "@/lib/pra-wam/theme";
+import { resolveWamTheme, WAM_THEME_COLORS, wamBodyStyle, type WamLook, type WamTheme } from "@/lib/pra-wam/theme";
 import { PRA_WAM_PATH } from "@/lib/routes";
-import { readWamTheme } from "@/lib/server/pra-wam/theme";
+import { readWamLook, readWamTheme } from "@/lib/server/pra-wam/theme";
 
 /** Every Pra WAM page: the app's own manifest, icons and colours, so it installs as "Pra WAM". */
 export const metadata: Metadata = {
@@ -19,26 +19,27 @@ export const metadata: Metadata = {
  * Always one theme-color per device scheme, each already set for the person's choice, so
  * ThemeSwitch can update both in place without adding or removing tags.
  */
-function themeColor(theme: WamTheme): Viewport["themeColor"] {
+function themeColor(look: WamLook, theme: WamTheme): Viewport["themeColor"] {
+  const colors = WAM_THEME_COLORS[look];
   return [
-    { media: "(prefers-color-scheme: light)", color: C[resolveWamTheme(theme, false)].bar },
-    { media: "(prefers-color-scheme: dark)", color: C[resolveWamTheme(theme, true)].bar },
+    { media: "(prefers-color-scheme: light)", color: colors[resolveWamTheme(theme, false)].bar },
+    { media: "(prefers-color-scheme: dark)", color: colors[resolveWamTheme(theme, true)].bar },
   ];
 }
 export async function generateViewport(): Promise<Viewport> {
-  return { themeColor: themeColor(await readWamTheme()), viewportFit: "cover" };
+  const [look, theme] = await Promise.all([readWamLook(), readWamTheme()]);
+  return { themeColor: themeColor(look, theme), viewportFit: "cover" };
 }
 
-// The page behind WAM is the app's colour from the first paint, so dark never flashes white. It
-// follows the data-wam-theme wrapper, so switching the attribute is enough to repaint it.
-const bodyStyle = `body{background:${C.light.page};color-scheme:light}`
-  + `body:has([data-wam-theme="dark"]){background:${C.dark.page};color-scheme:dark}`
-  + `@media (prefers-color-scheme:dark){body:has([data-wam-theme="system"]){background:${C.dark.page};color-scheme:dark}}`;
-
+/*
+ * The wrapper carries the app's theme (data-wam-look, set by an admin) and the person's mode
+ * (data-wam-theme). The page behind WAM is the app's colour from the first paint, so dark never
+ * flashes white; it follows data-wam-theme, so switching the attribute is enough to repaint it.
+ */
 export default async function PraWamLayout({ children }: { children: ReactNode }) {
-  const theme = await readWamTheme();
-  return <div data-wam-theme={theme} style={{ display: "contents" }}>
-    <style>{bodyStyle}</style>
+  const [look, theme] = await Promise.all([readWamLook(), readWamTheme()]);
+  return <div data-wam-look={look} data-wam-theme={theme} style={{ display: "contents" }}>
+    <style>{wamBodyStyle(look)}</style>
     <PwaRegister /><Suspense fallback={null}><WamNavigator /></Suspense>{children}
   </div>;
 }
