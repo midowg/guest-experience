@@ -25,11 +25,8 @@ describe("BodSummary", () => {
     expect(screen.getByText("Tidak ada yang perlu perhatian saat ini.")).toBeTruthy();
   });
 
-  it("opens MCP from Profil for a granted account, and points others to Admin WAM", () => {
-    const { rerender } = render(<BodSummary data={summary} insights={insights} greeting="Hai" date="Hari ini" mcp={{ granted: true, hasKey: true }} />);
-    expect(screen.getByRole("link", { name: /Tanya data \(MCP\)/ }).getAttribute("href")).toBe("/wam/settings#mcp");
-    rerender(<BodSummary data={summary} insights={insights} greeting="Hai" date="Hari ini" mcp={null} />);
-    expect(screen.queryByRole("link", { name: /Tanya data/ })).toBeNull();
-    expect(screen.getByText("Minta akses ke Admin WAM")).toBeTruthy();
+  it("has no MCP link: Akses MCP is not in the peserta app", () => {
+    render(<BodSummary data={summary} insights={insights} greeting="Hai" date="Hari ini" />);
+    expect(screen.queryByText(/Tanya data/)).toBeNull();
   });
 });

@@ -18,12 +18,12 @@ async function registration(): Promise<ServiceWorkerRegistration> {
 }
 
 const text: Record<Exclude<State, "checking">, { title: string; note: string }> = {
-  "on": { title: "Aktif di HP ini", note: "Pengumuman dan kabar sesi muncul di HP walau aplikasi tertutup." },
-  "off": { title: "Belum aktif di HP ini", note: "Nyalakan supaya pengumuman dan kabar sesi muncul di HP." },
-  "denied": { title: "Diblokir", note: "Izinkan notifikasi untuk WAM di pengaturan HP atau browser, lalu muat ulang halaman ini." },
-  "ios-install": { title: "Buka dari layar utama", note: "Di iPhone, tambahkan WAM ke layar utama (Bagikan → Tambah ke Layar Utama), buka dari ikonnya, lalu aktifkan di sini." },
-  "unsupported": { title: "Tidak didukung", note: "Browser ini belum mendukung notifikasi. Coba Chrome di Android, atau WAM dari layar utama iPhone." },
-  "not-ready": { title: "Belum disiapkan", note: "Notifikasi HP belum disiapkan di server. Hubungi admin WAM." },
+  "on": { title: "Aktif di HP ini", note: "Aktif di HP ini." },
+  "off": { title: "Belum aktif di HP ini", note: "Nyalakan supaya kabar penting muncul di HP." },
+  "denied": { title: "Diblokir", note: "Diblokir. Izinkan notifikasi WAM di pengaturan HP, lalu buka ulang halaman ini." },
+  "ios-install": { title: "Buka dari layar utama", note: "Di iPhone: Bagikan → Tambah ke Layar Utama, lalu buka WAM dari ikonnya." },
+  "unsupported": { title: "Tidak didukung", note: "Browser ini belum mendukung. Pakai Chrome di Android, atau WAM dari layar utama iPhone." },
+  "not-ready": { title: "Belum disiapkan", note: "Belum disiapkan di server. Hubungi admin WAM." },
 };
 
 /**
@@ -111,7 +111,7 @@ export function PushSwitch({ hod = false }: { hod?: boolean }) {
         <span className={`${styles.tile} ${on ? "" : styles.tileBrass}`} aria-hidden>{on ? <BellRing /> : <BellOff />}</span>
         <span className={own.rowText}>
           <strong id="push-label">{shown.title}</strong>
-          <small id="push-note" role="status">{on ? "Aktif: pengumuman dan kabar sesi muncul di HP ini." : shown.note}</small>
+          <small id="push-note" role="status">{shown.note}</small>
         </span>
         <button type="button" role="switch" aria-checked={on} aria-labelledby="push-label" aria-describedby="push-note"
           className={own.switch} disabled={!usable || busy} onClick={() => on ? disable() : enable()}>
@@ -120,7 +120,7 @@ export function PushSwitch({ hod = false }: { hod?: boolean }) {
       </div>
       {on && <button type="button" className={`${own.rowButton} ${own.rowDivided}`} onClick={test} disabled={busy}>
         <span className={styles.tile} aria-hidden><Send /></span>
-        <span className={own.rowText}><strong>Kirim notifikasi tes</strong><small>Cek apakah notifikasi muncul di HP ini</small></span>
+        <span className={own.rowText}><strong>Kirim notifikasi tes</strong><small>Pastikan notifikasi muncul di HP ini</small></span>
       </button>}
     </div>
     {message && <p className={own.groupNote} role={message.tone === "error" ? "alert" : "status"}><Info aria-hidden />{message.text}</p>}
@@ -202,6 +202,6 @@ export function PushTopics({ hod = false }: { hod?: boolean }) {
     </section>)}
     {status === "pending-db" && <p className={own.groupNote} role="status"><Info aria-hidden />Pilihan per topik aktif setelah pembaruan database.</p>}
     {error && <p className={own.groupNote} role="alert"><Info aria-hidden />{error}</p>}
-    <p className={own.groupNote}><Info aria-hidden />Semua notifikasi tetap ada di lonceng. Pukul 21.00–06.00 yang tidak mendesak tidak dikirim ke HP.</p>
+    <p className={own.groupNote}><Info aria-hidden />Semua tetap tercatat di lonceng. Pukul 21.00–06.00 hanya yang mendesak yang dikirim ke HP.</p>
   </div>;
 }

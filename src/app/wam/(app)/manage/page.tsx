@@ -20,7 +20,6 @@ import { currentPhase } from "@/lib/server/pra-wam/events";
 import { currentForm } from "@/lib/server/pra-wam/questionnaire";
 import { participationOf } from "@/lib/server/pra-wam/recap";
 import { allRequests } from "@/lib/server/pra-wam/requests";
-import { mcpAccessOf } from "@/lib/server/pra-wam/mcp";
 import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
 import { listSessions } from "@/lib/server/pra-wam/sessions";
 import base from "@/components/pra-wam/pra-wam.module.css";
@@ -51,10 +50,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const now = new Date();
   // BOD reads everything and changes nothing: their own summary.
   if (!manage && (await searchParams).lihat !== "panitia") {
-    const [summary, insights, survey, mcp] = await Promise.all([bodSummary(member, now), bodInsights(member, now), questionnaireSurvey(), mcpAccessOf(member.id).catch(() => null)]);
+    const [summary, insights, survey] = await Promise.all([bodSummary(member, now), bodInsights(member, now), questionnaireSurvey()]);
     return <>
       {!summary.migrated && <Notice tone="warning">Sesi menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>}
-      <BodSummary data={summary} greeting={`${greeting(now)}, ${member.nickname || member.name.split(" ")[0]}`} date={longDate(now)} insights={insights} survey={survey} mcp={mcp} />
+      <BodSummary data={summary} greeting={`${greeting(now)}, ${member.nickname || member.name.split(" ")[0]}`} date={longDate(now)} insights={insights} survey={survey} />
     </>;
   }
   const data = await overview(member, now);

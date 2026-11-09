@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import {
-  AlertTriangle, ArrowLeftRight, BarChart3, Bot, CalendarClock, CalendarDays, CheckCircle2, ChevronRight, Clock, DoorOpen,
+  AlertTriangle, ArrowLeftRight, BarChart3, CalendarClock, CalendarDays, CheckCircle2, ChevronRight, Clock, DoorOpen,
   FileText, ListChecks, MapPin, Megaphone, UserCheck, UserX, Users, Video,
 } from "lucide-react";
 import { clockLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
@@ -37,18 +37,16 @@ const hoursLabel = (hours: number) => `${hours.toLocaleString("id-ID", { maximum
 type Props = {
   data: Summary; insights: BodInsights; greeting: string; date: string;
   survey?: { name: string; participation: Participation } | null;
-  /** The viewer's MCP access: granted (with or without a link yet), or null (no grant, or before the migration). */
-  mcp?: { granted: boolean; hasKey: boolean } | null;
 };
 
 /**
  * Ringkasan for BOD (design system "Pra WAM · Hospitality", 6 Nov 2026), read only. The greeting
  * and phase, the forum on now in the blue card next to Perlu perhatian, eight summary tiles, then
  * attendance (per forum, per department), room use, app use, how people check in, what is next,
- * requests and HOD meetings, announcements and documents, and quick links (MCP among them).
+ * requests and HOD meetings, announcements and documents, and quick links.
  * Nothing is invented: a part without data says so.
  */
-export function BodSummary({ data, insights, greeting, date, survey = null, mcp = null }: Props) {
+export function BodSummary({ data, insights, greeting, date, survey = null }: Props) {
   const notSignedIn = data.accounts - data.signedIn;
   const started = data.forums.filter(forum => forum.expected > 0);
   const average = data.attendanceReady && started.length ? percent(started.reduce((sum, forum) => sum + forum.present, 0), started.reduce((sum, forum) => sum + forum.expected, 0)) : null;
@@ -169,9 +167,6 @@ export function BodSummary({ data, insights, greeting, date, survey = null, mcp 
       <a className={styles.quickItem} href={praWamPath.people}><span className={styles.quickIcon}><Users aria-hidden /></span><span>Semua peserta<small>per departemen dan BU</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
       <a className={styles.quickItem} href={praWamPath.panitiaView}><span className={styles.quickIcon}><BarChart3 aria-hidden /></span><span>Dashboard panitia<small>baca saja</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
       <a className={styles.quickItem} href={praWamPath.surveyResults}><span className={styles.quickIcon}><ListChecks aria-hidden /></span><span>Hasil survei<small>rekap kuesioner</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
-      {mcp?.granted
-        ? <a className={styles.quickItem} href={`${praWamPath.settings}#mcp`}><span className={styles.quickIcon}><Bot aria-hidden /></span><span>Tanya data (MCP)<small>{mcp.hasKey ? "Tersambung lewat Claude/ChatGPT" : "Buat tautan di Pengaturan"}</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
-        : <div className={`${styles.quickItem} ${styles.quickSoon}`}><span className={styles.quickIcon}><Bot aria-hidden /></span><span>Tanya data (MCP)<small>Minta akses ke Admin WAM</small></span></div>}
     </nav>
   </div>;
 }

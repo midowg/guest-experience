@@ -11,7 +11,7 @@
 .close:hover { background: var(--pw-surface-soft); color: var(--pw-text); }
 .close:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
 .close svg { width: 22px; height: 22px; }
-.body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; align-content: start; gap: 14px; padding: 4px 20px 20px; }
+.body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; align-content: start; grid-auto-rows: max-content; gap: 14px; padding: 4px 20px 20px; }
 .foot { flex: none; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--pw-line); background: var(--pw-app); }
 .foot > * { flex: 1 1 auto; }
 

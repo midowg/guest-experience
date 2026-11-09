@@ -36,7 +36,7 @@ it("lists every topic in order, Meeting HOD apart for a HOD; Pengumuman has no s
   expect(topicSwitch("forum").getAttribute("aria-checked")).toBe("false");
   expect(topicSwitch("booking_baru").getAttribute("aria-checked")).toBe("false");
   expect(topicSwitch("hod").getAttribute("aria-checked")).toBe("true");
-  expect(screen.getByText(/Semua notifikasi tetap ada di lonceng/)).toBeTruthy();
+  expect(screen.getByText(/Semua tetap tercatat di lonceng/)).toBeTruthy();
 });
 
 it("shows peserta and panitia no Meeting HOD", async () => {

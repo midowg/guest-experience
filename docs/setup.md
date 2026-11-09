@@ -200,12 +200,14 @@ jawaban "Hanya dibaca fasilitator", Data HR, profil per orang).
 
 - **Migrasi:** `supabase/migrations/202611060010_pra_wam_mcp.sql` (tabel `pw_mcp_access` dan
   `pw_mcp_log`), dijalankan pemilik di Supabase SQL Editor. Sebelum itu semua tautan ditolak (401),
-  Akses MCP di Pengaturan menampilkan "Belum diberikan", dan Admin WAM → Akses MCP menampilkan pemberitahuan.
+  dan Admin WAM → Akses MCP menampilkan pemberitahuan.
 - **Memberi akses:** Admin WAM → Orang → Akses MCP (`/admin/wam/mcp`). Pilih akun WAM yang aktif,
   centang cakupan (bawaannya semua kecuali Profil peserta), lalu Buka akses. Cakupan bisa diubah
   kapan saja.
-- **Menghubungkan:** orangnya membuka Pengaturan WAM (`/wam/settings#mcp`) → Akses MCP → Buat tautan, lalu menyalin
-  tautan `https://<domain>/api/mcp/<kunci>`.
+- **Menghubungkan:** sejak 9 Nov 2026 Akses MCP **tidak ditampilkan di aplikasi peserta**, sesuai
+  permintaan pemilik. Karena itu belum ada tempat untuk membuat tautan. Server dan pemberian akses
+  tetap ada. Kalau fitur ini dibuka lagi, kartunya `McpCard` (`/api/wam/mcp-key`) dan bentuk
+  tautannya `https://<domain>/api/mcp/<kunci>`.
   - Claude: Settings → Connectors → Add custom connector → tempel tautan.
   - ChatGPT: Settings → Apps & Connectors → Advanced → Developer mode → Create → tempel tautan,
     Authentication: None.
@@ -215,5 +217,4 @@ jawaban "Hanya dibaca fasilitator", Data HR, profil per orang).
   hanya ditampilkan sekali; server menyimpan sha256-nya saja. Buat tautan baru = tautan lama mati.
   **Cabut** di Akses MCP menghentikannya saat itu juga dan menghapus kuncinya; setelah Pulihkan,
   orangnya membuat tautan baru. Kunci ada di alamat, jadi bisa tercatat di log permintaan Vercel.
-- **Log:** setiap pemanggilan tool tercatat di `pw_mcp_log` (30 terakhir di Akses MCP, 5 terakhir
-  milik sendiri di Pengaturan → Akses MCP).
+- **Log:** setiap pemanggilan tool tercatat di `pw_mcp_log` (30 terakhir di Admin WAM → Akses MCP).

@@ -36,13 +36,13 @@ export const PUSH_TOPICS = ["pengumuman", "hod", "forum", "booking_penting", "bo
 export type PushTopic = (typeof PUSH_TOPICS)[number];
 /** `only: "hod"`: shown in Pengaturan only to a HOD (nobody else is ever invited to a Meeting HOD). */
 export const pushTopicInfo: Record<PushTopic, { label: string; hint: string; on: boolean; locked?: boolean; quiet: boolean; only?: "hod" }> = {
-  pengumuman: { label: "Pengumuman panitia", hint: "Selalu dikirim ke semua yang dituju", on: true, locked: true, quiet: false },
-  hod: { label: "Meeting HOD", hint: "Undangan yang perlu dijawab, perubahan, dan pembatalan", on: true, quiet: false, only: "hod" },
-  forum: { label: "Sesi dari panitia", hint: "Forum dan sesi baru, pindah jadwal, atau batal", on: true, quiet: true },
-  booking_penting: { label: "Booking berubah mendadak", hint: "Booking yang kamu ikuti pindah atau batal kurang dari 24 jam sebelum mulai", on: true, quiet: false },
-  booking_baru: { label: "Undangan booking baru", hint: "Setiap kali seseorang menandaimu di booking ruang", on: false, quiet: true },
-  permintaan: { label: "Jawaban permintaan jadwal", hint: "Saat panitia menjawab permintaan ganti jadwalmu", on: true, quiet: true },
-  kuesioner: { label: "Pengingat kuesioner", hint: "Pengingat dari HR sampai kuesioner selesai", on: true, quiet: true },
+  pengumuman: { label: "Pengumuman panitia", hint: "Info resmi dari panitia. Selalu dikirim.", on: true, locked: true, quiet: false },
+  hod: { label: "Meeting HOD", hint: "Undangan yang perlu kamu jawab, juga saat jadwalnya pindah atau batal.", on: true, quiet: false, only: "hod" },
+  forum: { label: "Sesi dari panitia", hint: "Forum atau sesi baru untukmu, juga saat jadwalnya pindah atau batal.", on: true, quiet: true },
+  booking_penting: { label: "Booking berubah mendadak", hint: "Booking ruang yang kamu ikuti pindah atau batal, kurang dari 24 jam sebelum mulai.", on: true, quiet: false },
+  booking_baru: { label: "Diajak ke booking baru", hint: "Saat seseorang mengajakmu ke booking ruang. Bawaannya mati: cukup di lonceng.", on: false, quiet: true },
+  permintaan: { label: "Jawaban permintaan jadwal", hint: "Saat panitia menyetujui atau menolak permintaan ganti jadwalmu.", on: true, quiet: true },
+  kuesioner: { label: "Pengingat kuesioner", hint: "Pengingat dari HR selama kuesionermu belum selesai.", on: true, quiet: true },
 };
 /** A person's own choices (topic → on/off); a topic not in it follows its default. */
 export type PushPrefs = Partial<Record<PushTopic, boolean>>;
