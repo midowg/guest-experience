@@ -114,6 +114,6 @@ export function InstallGuide() {
       <button type="button" className="button button--secondary" onClick={openNotifications}><BellRing aria-hidden />Buka pengaturan Notifikasi</button>
     </section>
 
-    <p className={own.groupNote}><Info aria-hidden />Nama menu bisa sedikit berbeda menurut versi dan bahasa HP. Masih bingung? Hubungi admin WAM.</p>
+    <p className={own.groupNote}><Info aria-hidden />Langkah ini mengikuti panduan resmi Apple, Google, Microsoft, dan Samsung. Nama menu bisa sedikit berbeda menurut versi dan bahasa HP. Masih bingung? Hubungi admin WAM.</p>
   </div>;
 }

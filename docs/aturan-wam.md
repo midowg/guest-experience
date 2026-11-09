@@ -156,8 +156,13 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
     Setelah itu ada cara menyalakan notifikasi, termasuk jalan keluarnya kalau terblokir. Panduan
     langsung terbuka di perangkat yang sedang dipakai. Kalau browser menawarkan pemasangan
     (`beforeinstallprompt`), muncul tombol "Pasang sekarang". Langkahnya ada di
-    `src/lib/pra-wam/install.ts` dan mengikuti halaman bantuan Apple dan Google. Periksa ulang
-    langkah-langkah itu setiap ada versi iOS atau Chrome besar.
+    `src/lib/pra-wam/install.ts`.
+  - Setiap langkah mengikuti halaman bantuan resmi Apple, Google, Microsoft, dan Samsung (versi
+    bahasa Indonesia, dicek 9 Nov 2026; daftar sumbernya ada di kepala berkas). Nama menu memakai
+    nama resmi itu, dengan nama Inggris dalam kurung.
+  - Samsung tidak memberi nama menu berbahasa Indonesia, jadi gambarnya memakai "Home screen".
+  - Bagian gambar yang tidak terverifikasi dibuat batang abu-abu, bukan teks karangan.
+  - Periksa ulang langkah-langkahnya setiap ada versi iOS atau Chrome besar.
   - **Akses MCP khusus BOD.** Di aplikasi hanya muncul di Pengaturan milik BOD (kelompok "Khusus
     BOD"), tidak di Ringkasan BOD dan tidak untuk peran lain. Pemberian dan pencabutan akses ada di
     Admin WAM → Akses MCP (`mayUseMcp`).
