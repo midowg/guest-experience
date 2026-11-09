@@ -201,8 +201,11 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   (booking ruang) dan yang batal tidak tampil. Yang terbit dan diikuti orang itu membuka detail sesinya.
   Di atasnya ada kalender bulanan (Senin di depan, ‹ › antarbulan yang berisi): tiap forum atau acara
   berupa garis dengan warnanya sendiri sepanjang tanggalnya, yang bertumpuk di lajur masing-masing.
-  Di HP garisnya tipis; mulai lebar 640px garisnya memuat judul. Warna yang sama dipakai di kartunya
-  di daftar, dan mengetuk garis menggulir ke kartu itu.
+  Di HP garisnya tipis; mulai lebar 768px (tablet) garisnya memuat judul; mulai 1024px (desktop)
+  kalender di kiri (tetap terlihat saat menggulir) dan daftar di kanan. Warna yang sama hanya dipakai
+  di titik kartunya pada garis waktu (tanpa garis warna di tepi kartu, tanpa label bertumpuk: satu
+  baris keterangan "Forum · jam atau Jadwal pasti menyusul · Kamu ikut"). Mengetuk garis menggulir
+  ke kartu itu.
 - Design system "Pra WAM · Hospitality": Poppins untuk judul dan angka, Inter untuk isi; biru
   Werkudara #006EC1 satu-satunya aksen utama, kuning #FFBA00 sekunder. Kartu putih radius 24, tombol
   pill, isian radius 16.

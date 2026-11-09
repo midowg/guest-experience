@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { TimelineCalendar } from "@/components/pra-wam/TimelineCalendar";
+import css from "@/components/pra-wam/timeline.module.css";
 import { timelineMonths, type TimelineItem } from "@/lib/pra-wam/timeline";
 import base from "@/components/pra-wam/pra-wam.module.css";
 
@@ -20,6 +21,8 @@ export default async function DevTimelinePage({ searchParams }: { searchParams: 
     plan("ITAM: BOD x departemen", "2026-12-14", "2026-12-16"), plan("End Year Dinner", "2026-12-29", "2026-12-29", "acara"),
   ], "2026-11-09").flatMap(month => month.entries);
   return <div data-wam-look={tampilan === "werkudara" ? "werkudara" : "dream"} data-wam-theme={tema === "terang" ? "light" : "dark"}>
-    <div className={base.app} style={{ minHeight: "100vh", padding: 16 }}><TimelineCalendar entries={entries} today="2026-11-09" /></div>
+    <div className={base.app} style={{ minHeight: "100vh", padding: 16 }}><div className={css.layout}><TimelineCalendar entries={entries} today="2026-11-09" />
+      <ol className={css.list}>{entries.map(entry => <li key={entry.id} className={`${css.entry} ${css[`c${entry.color}`]}`} data-state={entry.state}><span className={css.dot} /><div className={css.card}><span className={css.when}>{entry.when}</span><strong className={css.title}>{entry.title}</strong><span className={css.meta}>Forum · Jadwal pasti menyusul</span></div></li>)}</ol>
+    </div></div>
   </div>;
 }
