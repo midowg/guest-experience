@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { CalendarPlus, CalendarRange, ChevronRight, Clock, DoorOpen, MapPin, Plus, Text, User, Users, X } from "lucide-react";
+import { CalendarPlus, ChartGantt, ChevronRight, Clock, DoorOpen, MapPin, Plus, Text, User, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { appraisalRules, bookingWhere, clockLabel, dayLabel, draftHours, isOutside, loadedWeek, OUTSIDE_ROOM, wibDate, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
@@ -184,7 +184,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {mine.length === 0 ? <div className={styles.emptyRow}>
       <span className={styles.tile} aria-hidden><CalendarPlus /></span>
       <p>Belum ada booking yang kamu pesan atau ikuti.</p>
-      {canBook && dates.length > 0 && <a className="button button--secondary" href={praWamPath.timeline}><CalendarRange size={18} aria-hidden /> Lihat kalender</a>}
+      {canBook && dates.length > 0 && <a className="button button--secondary" href={praWamPath.timeline}><ChartGantt size={18} aria-hidden /> Lihat kalender</a>}
     </div> : <ul className={css.mineList}>
       {mine.map(booking => <li key={bookingKey(booking)}>
         <button type="button" className={`${css.mineRow} ${mineFlag(booking) ? css.mine : css.busy}`} onClick={() => openBooking(booking)} aria-haspopup="dialog">

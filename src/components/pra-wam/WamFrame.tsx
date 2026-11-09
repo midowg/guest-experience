@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarDays, CalendarRange, ChevronLeft, ClipboardList, FileText, Home, Plus, Send, User, Users, Utensils, X } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarCheck, CalendarDays, ChartGantt, ChevronLeft, ClipboardList, FileText, Home, Plus, Send, User, Users, Utensils, X } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleNavGroup, type ConsoleSearchItem } from "@/components/console";
 import { bodOnly, managesSessions, readsNeeds, roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
 import { managedTabs, wamScreen, type Tab } from "@/lib/pra-wam/screen";
@@ -25,8 +25,8 @@ export type FrameMember = { id: string; name: string; nickname: string; departme
  */
 const personal: Item[] = [
   { id: "beranda", label: "Beranda", href: praWamPath.home, icon: <Home aria-hidden /> },
-  { id: "appraisal", label: "Agenda", href: praWamPath.appraisal(), icon: <CalendarDays aria-hidden /> },
-  { id: "timeline", label: "Timeline", href: praWamPath.timeline, icon: <CalendarRange aria-hidden /> },
+  { id: "appraisal", label: "Agenda", href: praWamPath.appraisal(), icon: <CalendarCheck aria-hidden /> },
+  { id: "timeline", label: "Timeline", href: praWamPath.timeline, icon: <ChartGantt aria-hidden /> },
   { id: "dokumen", label: "Dokumen", href: praWamPath.documents, icon: <FileText aria-hidden /> },
 ];
 /** BOD only (Penpot "Panduan · BOD"): Ringkasan first; Agenda stays, as a BOD also takes part. No + : a BOD does not check in. */

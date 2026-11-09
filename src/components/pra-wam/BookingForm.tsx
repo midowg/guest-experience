@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, CalendarRange, Check, CheckCircle2, Clock, DoorOpen, Info, MapPin, Pencil, Plus, Send, User, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChartGantt, Check, CheckCircle2, Clock, DoorOpen, Info, MapPin, Pencil, Plus, Send, User, Users } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import {
   alternatives, appraisalRules, bookingProblems, clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock,
@@ -333,7 +333,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       <div><dt>{outside ? "Tempat" : "Ruang"}</dt><dd>{outside ? (draft.place ?? "").trim() : roomName(roomId)}</dd></div>
     </dl>
     <div className={styles.actions}>
-      <a className="button button--primary" href={praWamPath.timeline}><CalendarRange size={18} aria-hidden /> Kembali ke Timeline</a>
+      <a className="button button--primary" href={praWamPath.timeline}><ChartGantt size={18} aria-hidden /> Kembali ke Timeline</a>
       <a className="button button--secondary" href={praWamPath.book()}><Plus size={18} aria-hidden /> Book lagi</a>
     </div>
   </section>;
