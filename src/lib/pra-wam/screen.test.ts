@@ -14,7 +14,7 @@ describe("wamScreen: what the frame shows, from the address alone", () => {
   });
 
   it("gives a pushed screen its back arrow and title, as the pages did", () => {
-    expect(wamScreen("/wam/settings", q(), me)).toEqual({ current: "akun", back: { href: "/wam/account", title: "Pengaturan" } });
+    expect(wamScreen("/wam/settings", q(), me)).toEqual({ current: "akun" });
     expect(wamScreen("/wam/about", q("dari=pengaturan"), me).back).toEqual({ href: "/wam/settings", title: "Tentang WAM" });
     expect(wamScreen("/wam/about", q(), me).back?.href).toBe("/wam");
     expect(wamScreen("/wam/book/new", q("date=2026-11-06&edit=b1"), me)).toEqual({ current: "appraisal", back: { href: "/wam/book?date=2026-11-06", title: "Ubah booking" } });

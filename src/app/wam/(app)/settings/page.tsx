@@ -1,4 +1,5 @@
-import { Bell, BookOpen, ChevronRight, Info, Lock, LogOut, Palette, Plug } from "lucide-react";
+import { Bell, BookOpen, ChevronRight, Download, Info, Lock, LogOut, Palette, Plug } from "lucide-react";
+import { InstallGuide, InstallSummary } from "@/components/pra-wam/InstallGuide";
 import { McpCard } from "@/components/pra-wam/McpCard";
 import { PasswordSettings } from "@/components/pra-wam/PasswordForm";
 import { PushSwitch } from "@/components/pra-wam/PushSwitch";
@@ -20,10 +21,11 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Pengaturan · WAM", robots: { index: false } };
 
 /**
- * Pengaturan (revised 9 Nov 2026) as a menu: short rows in groups (Aplikasi, Akun, Bantuan) and
- * Keluar; no profile card (Back already leads to Profil). Akses MCP shows for a BOD only
- * (Khusus BOD); not in Ringkasan BOD, and Admin WAM manages access in the admin console. Each row says what is set now and opens its details in a sheet from the bottom on
- * a phone, a panel from the right on a desktop (SettingsItem). The "password awal" reminder lives
+ * Pengaturan (revised 9 Nov 2026) as a menu: its own title (no back arrow and no profile card;
+ * the bottom bar leads to Profil), then short rows in groups: Aplikasi (Pasang WAM, Notifikasi,
+ * Tampilan), Akun, Khusus BOD (Akses MCP, a BOD only; Admin WAM manages access), Bantuan, and
+ * Keluar. Each row says what is set now and opens its details in a sheet from the bottom on a
+ * phone, a panel from the right on a desktop (SettingsItem). The "password awal" reminder lives
  * only inside Ganti password; Meeting HOD notifications show for a HOD only.
  */
 export default async function SettingsPage() {
@@ -37,9 +39,15 @@ export default async function SettingsPage() {
   ]);
   const mcpCalls = mcp?.granted ? (await myMcpCalls(member.id).catch(() => [])).map(call => ({ title: toolTitle(call.tool), ok: call.ok, createdAt: call.createdAt })) : [];
   return <div className={own.settings}>
+    <header className={`${styles.head} ${own.settingsHead}`}><div><h1>Pengaturan</h1></div></header>
+
     <section aria-labelledby="aplikasi">
       <h2 id="aplikasi" className={own.groupTitle}>Aplikasi</h2>
       <div className={`${own.group} ${own.menu}`}>
+        <SettingsItem id="pasang" icon={<Download />} title="Pasang WAM" summary={<InstallSummary />} wide
+          sheetTitle="Pasang WAM di perangkatmu" sheetSubtitle="Supaya WAM terbuka seperti aplikasi dan notifikasinya muncul">
+          <InstallGuide />
+        </SettingsItem>
         <SettingsItem id="notifikasi" icon={<Bell />} title="Notifikasi" summary={<PushSummary />} sheetSubtitle="Pilih kabar yang muncul di HP">
           <PushSwitch hod={hod} />
         </SettingsItem>

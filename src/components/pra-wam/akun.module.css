@@ -220,3 +220,4 @@ ul.group { padding: 0; list-style: none; }
 .choiceRow:has(input:checked) .choiceCheck { visibility: visible; }
 .choiceRow:has(input:checked) .rowText strong { color: var(--pw-primary); }
 @media (prefers-reduced-motion: reduce) { .choiceRow { transition: none; } }
+.settings .settingsHead { margin-bottom: -8px; }

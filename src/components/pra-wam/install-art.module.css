@@ -1,0 +1,35 @@
+/* InstallArt.tsx: simple drawings of a phone or a laptop browser for "Pasang WAM". --pw-* tokens only, so light and dark both work. */
+.art { width: 100%; height: auto; display: block; }
+.phone { max-width: 112px; }
+.desktop { max-width: 200px; }
+
+.body { fill: var(--pw-surface); stroke: var(--pw-line); stroke-width: 1.5; }
+.screen { fill: var(--pw-app); }
+.notch { fill: var(--pw-line); }
+.card { fill: var(--pw-surface); stroke: var(--pw-line); stroke-width: .8; }
+.bar { fill: var(--pw-line); }
+.tile { fill: var(--pw-line); }
+.dim { fill: var(--pw-text); opacity: .16; }
+.text { fill: var(--pw-text); font-family: var(--pw-body, inherit); font-weight: 600; }
+.muted { fill: var(--pw-muted); font-family: var(--pw-body, inherit); font-weight: 500; }
+.glyph { fill: none; stroke: var(--pw-text); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.dot { fill: var(--pw-text); }
+
+/* The one thing to tap: a soft blue fill, a blue ring, blue text, and a tap circle. */
+.hi { fill: var(--pw-primary-soft); stroke: var(--pw-primary); stroke-width: 1.4; }
+.hiText { fill: var(--pw-primary); font-family: var(--pw-body, inherit); font-weight: 700; }
+.hiGlyph { fill: none; stroke: var(--pw-primary); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.hiDot { fill: var(--pw-primary); }
+.ring { fill: none; stroke: var(--pw-primary); stroke-width: 1.4; }
+.tapCore { fill: var(--pw-primary); }
+.tapEdge { fill: none; stroke: var(--pw-surface); stroke-width: .9; }
+.tapWave { fill: var(--pw-primary); opacity: .25; transform-box: fill-box; transform-origin: center; }
+.switchOff { fill: var(--pw-line); }
+.switchOn { fill: var(--pw-primary); }
+.knob { fill: #fff; }
+.accent { fill: var(--pw-brass-soft); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .tapWave { animation: tap-pulse 1.6s ease-out infinite; }
+  @keyframes tap-pulse { 0% { transform: scale(.6); opacity: .45; } 100% { transform: scale(1.5); opacity: 0; } }
+}

@@ -145,16 +145,26 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 
 ## 8. Aplikasi peserta: tampilan dan interaksi
 
-- **Pengaturan berupa menu** (9 Nov 2026). Isinya kelompok **Aplikasi** (Notifikasi, Tampilan),
-  **Akun** (Ganti password) dan **Bantuan** (Apa itu WAM?, Tentang aplikasi), lalu Keluar. Tidak
-  ada kartu profil, karena tombol kembali sudah menuju Profil.
+- **Pengaturan berupa menu** (9 Nov 2026). Halamannya berdiri sendiri: ada judul "Pengaturan" dan
+  bilah bawah, tanpa panah kembali dan tanpa kartu profil (Profil dibuka lewat bilah bawah).
+  - Kelompok menunya: **Aplikasi** (Pasang WAM, Notifikasi, Tampilan), **Akun** (Ganti password),
+    **Khusus BOD** (Akses MCP) dan **Bantuan** (Apa itu WAM?, Tentang aplikasi), lalu Keluar.
+  - **Pasang WAM** berisi cara memasang WAM, bergambar, per perangkat dan browser:
+    - iPhone: Safari dan Chrome.
+    - Android: Chrome dan Samsung Internet.
+    - Laptop: Chrome, Edge, dan Safari Mac.
+    Setelah itu ada cara menyalakan notifikasi, termasuk jalan keluarnya kalau terblokir. Panduan
+    langsung terbuka di perangkat yang sedang dipakai. Kalau browser menawarkan pemasangan
+    (`beforeinstallprompt`), muncul tombol "Pasang sekarang". Langkahnya ada di
+    `src/lib/pra-wam/install.ts` dan mengikuti halaman bantuan Apple dan Google. Periksa ulang
+    langkah-langkah itu setiap ada versi iOS atau Chrome besar.
   - **Akses MCP khusus BOD.** Di aplikasi hanya muncul di Pengaturan milik BOD (kelompok "Khusus
     BOD"), tidak di Ringkasan BOD dan tidak untuk peran lain. Pemberian dan pencabutan akses ada di
     Admin WAM → Akses MCP (`mayUseMcp`).
   - Tiap baris pendek: ikon, nama, dan keadaan sekarang (misalnya "Aktif di HP ini" atau "Gelap").
   - Diketuk, detailnya muncul di `Sheet`: dari bawah di HP, panel dari kanan di desktop. Menunya
     sama di HP dan desktop.
-  - Alamat mengikuti sheet yang terbuka (`#notifikasi`, `#tampilan`, `#password`, `#mcp`, `#tentang`). Tombol Back
+  - Alamat mengikuti sheet yang terbuka (`#pasang`, `#notifikasi`, `#tampilan`, `#password`, `#mcp`, `#tentang`). Tombol Back
     menutupnya.
   - Pengingat "masih memakai password awal" **hanya** ada di dalam Ganti password, di bawah
     formulir. Tidak ada di baris menu atau di Profil.
