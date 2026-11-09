@@ -111,7 +111,10 @@ it("a Saturday has no rooms, and Di luar kantor is only in the booking form", ()
   expect(screen.queryByRole("button", { name: /Book di luar kantor/ })).toBeNull();
   fireEvent.click(screen.getAllByRole("button", { name: "Book ruang" })[0]);
   const form = within(screen.getByRole("dialog", { name: "Book ruang" }));
-  expect(form.getByRole("button", { name: "Di luar kantor" })).toBeTruthy();
+  // Di luar kantor is chosen under Tempat (9 Nov 2026); Waktu only points there.
+  expect(form.queryByRole("button", { name: "Di luar kantor" })).toBeNull();
+  expect(form.getByRole("button", { name: "Di luar kantor", hidden: true })).toBeTruthy();
+  expect(form.getByText(/Di luar kantor dipilih di langkah Tempat/)).toBeTruthy();
   fireEvent.click(within(screen.getByRole("dialog", { name: "Book ruang" })).getAllByRole("button", { name: /Tutup|Batal/ })[0]);
   // Denah still shows the plan on a weekend, every room closed, and no room cards.
   fireEvent.click(screen.getByRole("button", { name: "Denah" }));

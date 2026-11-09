@@ -64,8 +64,8 @@ type Choice = { ok: boolean; pending: boolean; tone: PlanTone; text: string };
  * away. The server still has the last word: when someone else saved first the form keeps everything
  * that was typed and offers the nearest free hour or another room that fits. On /wam/book/new it is
  * the page; on Book it sits in a sheet (`frame`, `onSaved`) with the buttons as the sheet's footer.
- * "Di luar kantor" (5 Nov 2026): chosen at the end of Kapan (it opens weekends, any hour of the day and
- * more than 4 hours) or under Tempat (with the floor plan); the place name is typed under Tempat.
+ * "Di luar kantor" (5 Nov 2026; only under Tempat since 9 Nov 2026): it opens weekends, any hour of
+ * the day and more than 4 hours, so Tempat offers a way back to Waktu; the place name is typed under Tempat.
  */
 export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null }: Props) {
   const router = useRouter();
@@ -356,11 +356,9 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       </div>
       <p className={css.span} role="status"><Clock size={18} aria-hidden />{dayLabel(draft.date)} · {hours}{length > 0 ? ` (${durationLabel(length)})` : ""}</p>
       {starts.length === 0 && <Notice tone="info">{outside ? "Hari ini sudah lewat. Pilih tanggal lain." : "Jam operasional hari ini sudah lewat. Pilih tanggal lain."}</Notice>}
-      {/* Ruang kantor | Di luar kantor at the end of Kapan (9 Nov 2026): most bookings are in the office, so date and hours come first. */}
-      {whereSwitch}
       <p className={styles.hint}>{outside
         ? "Di luar kantor: boleh akhir pekan, jam berapa pun hari itu (sampai 23.30), dan lebih dari 4 jam. Nama tempat diisi di langkah Tempat."
-        : `Ruang kantor ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam.`}</p>
+        : `Ruang kantor ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam. Di luar kantor dipilih di langkah Tempat.`}</p>
     </section>
 
     <section {...stepProps(1)}>
@@ -426,6 +424,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       {heading(3, outside ? "Di mana?" : "Di ruang mana?")}
       <p className={css.lead}>{peopleLabel(count)} · {dayLabel(draft.date)} {hours}</p>
       {whereSwitch}
+      {outside && <p className={styles.hint}>Di luar kantor boleh akhir pekan, malam, dan lebih dari 4 jam. Ubah tanggal dan jamnya di langkah <button type="button" className={css.inlineLink} onClick={() => goTo(0)}>Waktu</button>.</p>}
       {outside && <div>
         <label className={styles.label} htmlFor={`${uid}-place`}>Nama tempat</label>
         <input id={`${uid}-place`} className="input" value={draft.place ?? ""} maxLength={120} autoComplete="off" placeholder="Mis. Kopi Klotok, Kaliurang"

@@ -166,24 +166,30 @@ it("picks people from one list: Departemen as a dropdown, search by name or depa
   expect(screen.getByRole("button", { name: /^Ayu/ }).getAttribute("aria-pressed")).toBe("true");
 });
 
-it("books outside the office: a weekend opens, the place is asked under Tempat, and the place is sent with no room", async () => {
+it("books outside the office: chosen under Tempat, then a weekend opens back under Waktu, and the place is sent with no room", async () => {
   // Moving to the weekend loads that day's schedule (a GET); the save is the POST.
   request.mockImplementation((_url: string, options?: { method?: string }) => Promise.resolve(options?.method ? { data: {}, message: "Booking tersimpan." } : { data: { bookings: [] }, message: "" }));
   const onSaved = vi.fn();
   renderForm({ onSaved });
-  // Kapan: the office's hours until Di luar kantor is picked; then a Saturday and the evening are offered.
+  // Waktu: the office's days and hours, and no Ruang kantor | Di luar kantor here (9 Nov 2026).
   expect(screen.queryByRole("button", { name: /^Sabtu, 7 Nov/ })).toBeNull();
-  fireEvent.click(screen.getAllByRole("button", { name: "Di luar kantor" })[0]);
+  expect(screen.queryByRole("button", { name: "Di luar kantor" })).toBeNull();
+  lanjut();
+  fireEvent.change(screen.getByLabelText("Nama kegiatan"), { target: { value: "Makan malam tim" } });
+  lanjut(); lanjut();
+  // Tempat: pick Di luar kantor, then go back to Waktu for the Saturday evening.
+  fireEvent.click(screen.getByRole("button", { name: "Di luar kantor" }));
+  expect(screen.getByRole("heading", { name: "Di mana?" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /^Arjuna/ })).toBeNull();
+  // The link in the Tempat hint (the step list has a "Waktu" button too).
+  fireEvent.click(screen.getAllByRole("button", { name: "Waktu" }).at(-1)!);
   fireEvent.click(screen.getByRole("button", { name: /^Sabtu, 7 Nov/ }));
   fireEvent.change(screen.getByLabelText("Jam mulai"), { target: { value: "19:00" } });
   fireEvent.change(screen.getByLabelText("Durasi"), { target: { value: "270" } });
   expect(screen.getAllByText(/19\.00–23\.30/).length).toBeGreaterThan(0);
-  lanjut();
-  fireEvent.change(screen.getByLabelText("Nama kegiatan"), { target: { value: "Makan malam tim" } });
-  lanjut(); lanjut();
-  // Tempat: no rooms, the place is required.
+  lanjut(); lanjut(); lanjut();
+  // Back at Tempat: the place is required.
   expect(screen.getByRole("heading", { name: "Di mana?" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /^Arjuna/ })).toBeNull();
   lanjut();
   expect(screen.getByText("Isi nama tempat.")).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Nama tempat"), { target: { value: "Kopi Klotok" } });
