@@ -122,7 +122,7 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   | Meeting HOD (undangan perlu dijawab, pindah, tolak, batal, terjadwal) | ya | ya |
   | Sesi dari panitia (forum dan sesi baru, pindah, batal) | ya | ya |
   | Booking yang kamu ikuti pindah atau batal **kurang dari 24 jam** sebelum mulai | ya | ya |
-  | Diajak ke booking baru (ditandai di booking ruang) | **tidak**, lonceng saja | bisa dinyalakan |
+  | Undangan booking baru (ditandai di booking ruang) | **tidak**, lonceng saja | bisa dinyalakan |
   | Jawaban permintaan jadwal | ya | ya |
   | Pengingat kuesioner | ya | ya |
 
@@ -131,7 +131,7 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   kuesioner) tidak dikirim ke HP. Kabar baru tentang sesi atau Meeting HOD yang sama **menggantikan**
   notifikasi sebelumnya di HP (tag `sesi-…`, `hod-…`), tidak menumpuk. Pilihan per orang ada di
   Pengaturan → Notifikasi (tabel `pw_notification_prefs`, migrasi 202611080002). Topik ditampilkan
-  per peran: "Yang dikirim ke HP" untuk semua, lalu **Khusus HOD** (Meeting HOD) hanya untuk HOD.
+  per peran: "Notifikasi yang muncul di HP" untuk semua, lalu **Khusus HOD** (Meeting HOD) hanya untuk HOD.
   Peserta dan panitia tidak melihat topik Meeting HOD (`pushTopicInfo[...].only`).
 - Diaktifkan per HP di **Pengaturan → Notifikasi di HP** (Aktifkan, Kirim tes, Matikan). Satu orang
   boleh beberapa HP; HP yang dimatikan atau sudah tidak dikenal layanan push dihapus otomatis.
@@ -147,15 +147,15 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 
 - **Pengaturan berupa menu** (9 Nov 2026). Halamannya berdiri sendiri: ada judul "Pengaturan" dan
   bilah bawah, tanpa panah kembali dan tanpa kartu profil (Profil dibuka lewat bilah bawah).
-  - Kelompok menunya: **Aplikasi** (Pasang WAM, Notifikasi, Tampilan), **Akun** (Ganti password),
+  - Kelompok menunya: **Aplikasi** (Install WAM, Notifikasi, Tampilan), **Akun** (Ganti password),
     **Khusus BOD** (Akses MCP) dan **Bantuan** (Apa itu WAM?, Tentang aplikasi), lalu Keluar.
-  - **Pasang WAM** berisi cara memasang WAM, bergambar, per perangkat dan browser:
+  - **Install WAM** (sheet "Cara install WAM") berisi cara install WAM, bergambar, per perangkat dan browser:
     - iPhone: Safari dan Chrome.
     - Android: Chrome dan Samsung Internet.
     - Laptop: Chrome, Edge, dan Safari Mac.
     Setelah itu ada cara menyalakan notifikasi, termasuk jalan keluarnya kalau terblokir. Panduan
     langsung terbuka di perangkat yang sedang dipakai. Kalau browser menawarkan pemasangan
-    (`beforeinstallprompt`), muncul tombol "Pasang sekarang". Langkahnya ada di
+    (`beforeinstallprompt`), muncul tombol "Install sekarang". Langkahnya ada di
     `src/lib/pra-wam/install.ts`.
   - Setiap langkah mengikuti halaman bantuan resmi Apple, Google, Microsoft, dan Samsung (versi
     bahasa Indonesia, dicek 9 Nov 2026; daftar sumbernya ada di kepala berkas). Nama menu memakai
@@ -169,7 +169,7 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   - Tiap baris pendek: ikon, nama, dan keadaan sekarang (misalnya "Aktif di HP ini" atau "Gelap").
   - Diketuk, detailnya muncul di `Sheet`: dari bawah di HP, panel dari kanan di desktop. Menunya
     sama di HP dan desktop.
-  - Alamat mengikuti sheet yang terbuka (`#pasang`, `#notifikasi`, `#tampilan`, `#password`, `#mcp`, `#tentang`). Tombol Back
+  - Alamat mengikuti sheet yang terbuka (`#install`, `#notifikasi`, `#tampilan`, `#password`, `#mcp`, `#tentang`). Tombol Back
     menutupnya.
   - Pengingat "masih memakai password awal" **hanya** ada di dalam Ganti password, di bawah
     formulir. Tidak ada di baris menu atau di Profil.

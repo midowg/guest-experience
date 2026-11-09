@@ -8,11 +8,11 @@ import own from "./akun.module.css";
 import css from "./install-guide.module.css";
 
 /*
- * Pengaturan → Pasang WAM (9 Nov 2026): how to install WAM on this device, as pictures and short
+ * Pengaturan → Install WAM (9 Nov 2026): how to install WAM on this device, as pictures and short
  * steps, for iPhone (Safari, Chrome), Android (Chrome, Samsung Internet) and a laptop (Chrome,
  * Edge, Safari Mac), then how to turn notifications on. Opens on the device and browser it is
  * looked at in; the person can switch. Where the browser offers it (Chrome, Edge, Samsung
- * Internet), "Pasang sekarang" installs at once.
+ * Internet), "Install sekarang" installs at once.
  */
 
 type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
@@ -32,10 +32,10 @@ function standalone(): boolean {
 }
 const subscribeNothing = () => () => {};
 
-/** The row's line under "Pasang WAM": installed here, or what the guide covers. */
+/** The row's line under "Install WAM": installed here, or what the guide covers. */
 export function InstallSummary() {
   const installed = useSyncExternalStore(subscribeNothing, standalone, () => false);
-  return <>{installed ? "Sudah terpasang di perangkat ini" : "Cara pasang di iPhone, Android, dan laptop"}</>;
+  return <>{installed ? "Sudah ter-install di perangkat ini" : "Cara install di iPhone, Android, dan laptop"}</>;
 }
 
 function Steps({ steps, label }: { steps: InstallStep[]; label: string }) {
@@ -79,7 +79,7 @@ export function InstallGuide() {
     await asked.prompt();
     const { outcome } = await asked.userChoice;
     offer = null; listeners.forEach(fire => fire());
-    setNote(outcome === "accepted" ? "WAM sedang dipasang. Buka dari ikonnya, lalu nyalakan notifikasi." : "Belum dipasang. Kamu bisa mencoba lagi kapan saja.");
+    setNote(outcome === "accepted" ? "WAM sedang di-install. Buka dari ikonnya, lalu nyalakan notifikasi." : "Belum di-install. Kamu bisa mencoba lagi kapan saja.");
   }
 
   function openNotifications() {
@@ -90,22 +90,22 @@ export function InstallGuide() {
   const browsers = installDevices.find(item => item.id === device)!.browsers;
   return <div className={css.guide}>
     {installed
-      ? <p className={css.done} role="status"><CheckCircle2 aria-hidden />WAM sudah terpasang di perangkat ini. Tinggal nyalakan notifikasinya di bawah.</p>
+      ? <p className={css.done} role="status"><CheckCircle2 aria-hidden />WAM sudah ter-install di perangkat ini. Tinggal nyalakan notifikasinya di bawah.</p>
       : canInstall && <div className={css.now}>
-        <p>Browser ini bisa memasang WAM langsung.</p>
-        <button type="button" className="button" onClick={installNow}><Download aria-hidden />Pasang sekarang</button>
+        <p>Browser ini bisa install WAM langsung.</p>
+        <button type="button" className="button" onClick={installNow}><Download aria-hidden />Install sekarang</button>
       </div>}
     {note && <p className={own.groupNote} role="status"><Info aria-hidden />{note}</p>}
 
-    <section aria-labelledby="pasang-judul" className={css.part}>
-      <h3 id="pasang-judul" className={css.title}>Cara pasang</h3>
+    <section aria-labelledby="install-judul" className={css.part}>
+      <h3 id="install-judul" className={css.title}>Cara install</h3>
       <div className={css.chips} role="group" aria-label="Perangkat">
         {installDevices.map(item => <button key={item.id} type="button" className={css.chip} aria-pressed={device === item.id} onClick={() => chooseDevice(item.id)}>{item.label}</button>)}
       </div>
       {browsers.length > 1 && <div className={`${css.chips} ${css.chipsSmall}`} role="group" aria-label="Browser">
         {browsers.map(item => <button key={item} type="button" className={css.chip} aria-pressed={browser === item} onClick={() => setBrowser(item)}>{installBrowserLabels[item]}</button>)}
       </div>}
-      <Steps steps={installSteps[browser]} label={`Cara pasang di ${installBrowserLabels[browser]}`} />
+      <Steps steps={installSteps[browser]} label={`Cara install di ${installBrowserLabels[browser]}`} />
     </section>
 
     <section aria-labelledby="notif-judul" className={css.part}>

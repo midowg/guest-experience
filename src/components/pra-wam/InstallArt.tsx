@@ -4,7 +4,7 @@ import { useId, type ReactNode } from "react";
 import css from "./install-art.module.css";
 
 /*
- * "Pasang WAM di perangkatmu" (9 Nov 2026): one small drawing per step, a phone or a laptop
+ * "Cara install WAM" (9 Nov 2026): one small drawing per step, a phone or a laptop
  * browser sketched flat (not a screenshot, no brand artwork), with the one thing to tap in blue
  * and a tap circle on it. Labels are the makers' own Indonesian names (Apple id-id, Google hl=id);
  * Samsung gives none, so its "Home screen" stays in English. Anything unverified is a grey bar.

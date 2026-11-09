@@ -40,7 +40,7 @@ export const pushTopicInfo: Record<PushTopic, { label: string; hint: string; on:
   hod: { label: "Meeting HOD", hint: "Undangan yang perlu kamu jawab, juga saat jadwalnya pindah atau batal.", on: true, quiet: false, only: "hod" },
   forum: { label: "Sesi dari panitia", hint: "Forum atau sesi baru untukmu, juga saat jadwalnya pindah atau batal.", on: true, quiet: true },
   booking_penting: { label: "Booking berubah mendadak", hint: "Booking ruang yang kamu ikuti pindah atau batal, kurang dari 24 jam sebelum mulai.", on: true, quiet: false },
-  booking_baru: { label: "Diajak ke booking baru", hint: "Saat seseorang mengajakmu ke booking ruang. Bawaannya mati: cukup di lonceng.", on: false, quiet: true },
+  booking_baru: { label: "Undangan booking baru", hint: "Saat seseorang mengajakmu ke booking ruang. Bawaannya mati: cukup di lonceng.", on: false, quiet: true },
   permintaan: { label: "Jawaban permintaan jadwal", hint: "Saat panitia menyetujui atau menolak permintaan ganti jadwalmu.", on: true, quiet: true },
   kuesioner: { label: "Pengingat kuesioner", hint: "Pengingat dari HR selama kuesionermu belum selesai.", on: true, quiet: true },
 };

@@ -1,5 +1,5 @@
 /*
- * Pasang WAM (9 Nov 2026): how to put WAM on a phone or laptop as an app, and turn its
+ * Install WAM (9 Nov 2026): how to put WAM on a phone or laptop as an app, and turn its
  * notifications on, per device and browser. Every step follows the maker's own help page, read in
  * its Indonesian version on 9 Nov 2026 (menu names as written there; English in brackets):
  * - iPhone, Safari: Apple "Mengubah situs web menjadi app di Safari di iPhone" (iOS 26/27),
@@ -59,7 +59,7 @@ export const installSteps: Record<InstallBrowser, InstallStep[]> = {
     { art: "android-confirm", title: "Ketuk Instal", text: "Ikuti petunjuk di layar. WAM muncul di layar utama dan di daftar aplikasi." },
   ],
   "samsung": [
-    { art: "samsung-plus", title: "Buka WAM di Samsung Internet, ketuk ikon +", text: "Untuk situs yang bisa dipasang, ikon bintang di bilah alamat berganti menjadi ikon tambah (+)." },
+    { art: "samsung-plus", title: "Buka WAM di Samsung Internet, ketuk ikon +", text: "Untuk situs yang bisa di-install, ikon bintang di bilah alamat berganti menjadi ikon tambah (+)." },
     { art: "samsung-add", title: "Pilih layar utama (Home screen)", text: "Lalu konfirmasi. Tidak ada ikon +? Buka menu ≡ di kanan bawah, pilih Add page to, lalu Home screen. Nama menunya bisa berbeda di HP-mu." },
   ],
   "chrome-desktop": [
@@ -68,7 +68,7 @@ export const installSteps: Record<InstallBrowser, InstallStep[]> = {
   ],
   "edge": [
     { art: "desktop-install", title: "Klik Instal saat Edge menawarkan", text: "Kalau tidak ada tawaran: klik Pengaturan dan lainnya (…) → Alat lainnya → Aplikasi → Instal situs ini sebagai aplikasi." },
-    { art: "desktop-dialog", title: "Klik Instal", text: "WAM terbuka di jendelanya sendiri. Semua aplikasi yang terpasang ada di edge://apps." },
+    { art: "desktop-dialog", title: "Klik Instal", text: "WAM terbuka di jendelanya sendiri. Semua aplikasi yang sudah di-install ada di edge://apps." },
   ],
   "safari-mac": [
     { art: "desktop-dialog", title: "Bagikan → Tambahkan ke Dock → Tambah", text: "Di Safari (macOS Sonoma 14 atau lebih baru), klik tombol Bagikan di bar alat, pilih Tambahkan ke Dock (Add to Dock), lalu klik Tambah. Ikon WAM muncul di Dock." },
@@ -81,7 +81,7 @@ export function notificationSteps(device: InstallDevice): InstallStep[] {
     ? { art: "home-icon", title: "Buka WAM dari ikonnya", text: "Di iPhone, notifikasi hanya bisa dinyalakan dari ikon WAM di layar utama, bukan dari Safari. Perlu iOS 16.4 atau lebih baru." }
     : device === "android"
       ? { art: "home-icon", title: "Buka WAM dari ikonnya", text: "Buka WAM dari ikon di layar utama atau daftar aplikasi." }
-      : { art: "desktop-dialog", title: "Buka WAM yang sudah terpasang", text: "Buka WAM dari jendelanya sendiri, atau tetap di browser." };
+      : { art: "desktop-dialog", title: "Buka WAM yang sudah di-install", text: "Buka WAM dari jendelanya sendiri, atau tetap di browser." };
   const blocked: InstallStep = device === "iphone"
     ? { art: "ios-settings-notif", title: "Terblokir? Buka Pengaturan iPhone", text: "Buka Pengaturan → Pemberitahuan, ketuk WAM, lalu nyalakan Izinkan Pemberitahuan (Allow Notifications)." }
     : device === "android"

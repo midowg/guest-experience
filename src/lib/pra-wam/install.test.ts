@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { detectInstall, installDevices, installSteps, notificationSteps } from "./install";
 
-describe("Pasang WAM", () => {
+describe("Install WAM", () => {
   it("opens on the device and browser it is looked at in", () => {
     expect(detectInstall("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1")).toEqual({ device: "iphone", browser: "safari" });
     expect(detectInstall("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 CriOS/130.0 Mobile/15E148 Safari/604.1")).toEqual({ device: "iphone", browser: "chrome-ios" });

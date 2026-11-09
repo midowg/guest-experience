@@ -29,7 +29,7 @@ it("lists every topic in order, Meeting HOD apart for a HOD; Pengumuman has no s
   replies[`GET ${praWamApi.pushPrefs}`] = () => ({ body: { ok: true, data: { prefs: { ...defaults, forum: false }, topics: PUSH_TOPICS }, message: "" } });
   render(<PushTopics hod />);
   await waitFor(() => expect((topicSwitch("hod") as HTMLButtonElement).disabled).toBe(false));
-  expect(labelsOf("Yang dikirim ke HP")).toEqual(PUSH_TOPICS.filter(topic => topic !== "hod").map(topic => pushTopicInfo[topic].label));
+  expect(labelsOf("Notifikasi yang muncul di HP")).toEqual(PUSH_TOPICS.filter(topic => topic !== "hod").map(topic => pushTopicInfo[topic].label));
   expect(labelsOf("Khusus HOD")).toEqual([pushTopicInfo.hod.label]);
   expect(screen.queryByRole("switch", { name: pushTopicInfo.pengumuman.label })).toBeNull();
   expect(screen.getByText("Selalu")).toBeTruthy();
@@ -101,7 +101,7 @@ it("shows the topics under the main switch only once this phone is on", async ()
   try {
     render(<PushSwitch hod />);
     await waitFor(() => expect(screen.getByRole("switch", { name: "Notifikasi di HP" }).getAttribute("aria-checked")).toBe("true"));
-    expect(await screen.findByRole("list", { name: "Yang dikirim ke HP" })).toBeTruthy();
+    expect(await screen.findByRole("list", { name: "Notifikasi yang muncul di HP" })).toBeTruthy();
     await waitFor(() => expect((topicSwitch("hod") as HTMLButtonElement).disabled).toBe(false));
     fireEvent.click(topicSwitch("hod"));
     await waitFor(() => expect(puts()).toEqual([{ prefs: { hod: false } }]));

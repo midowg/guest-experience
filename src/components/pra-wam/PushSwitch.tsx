@@ -19,7 +19,7 @@ async function registration(): Promise<ServiceWorkerRegistration> {
 
 const text: Record<Exclude<State, "checking">, { title: string; note: string }> = {
   "on": { title: "Aktif di HP ini", note: "Aktif di HP ini." },
-  "off": { title: "Belum aktif di HP ini", note: "Nyalakan supaya kabar penting muncul di HP." },
+  "off": { title: "Belum aktif di HP ini", note: "Nyalakan supaya notifikasi penting muncul di HP." },
   "denied": { title: "Diblokir", note: "Diblokir. Izinkan notifikasi WAM di pengaturan HP, lalu buka ulang halaman ini." },
   "ios-install": { title: "Buka dari layar utama", note: "Di iPhone: Bagikan → Tambah ke Layar Utama, lalu buka WAM dari ikonnya." },
   "unsupported": { title: "Tidak didukung", note: "Browser ini belum mendukung. Pakai Chrome di Android, atau WAM dari layar utama iPhone." },
@@ -131,7 +131,7 @@ export function PushSwitch({ hod = false }: { hod?: boolean }) {
 type Prefs = Record<PushTopic, boolean>;
 
 /**
- * Yang dikirim ke HP (8 Nov 2026): one switch per topic, saved as soon as it is flipped. Until the
+ * Notifikasi yang muncul di HP (8 Nov 2026): one switch per topic, saved as soon as it is flipped. Until the
  * database has the table (503) the list shows the defaults, read-only; the main switch is untouched.
  * Grouped (9 Nov 2026): what everyone gets, then Khusus HOD for a HOD only; peserta and panitia
  * have nothing of their own, so they see the first group alone.
@@ -192,7 +192,7 @@ export function PushTopics({ hod = false }: { hod?: boolean }) {
     </li>;
   };
   const groups = [
-    { id: "push-topics", title: "Yang dikirim ke HP", topics: PUSH_TOPICS.filter(topic => !pushTopicInfo[topic].only) },
+    { id: "push-topics", title: "Notifikasi yang muncul di HP", topics: PUSH_TOPICS.filter(topic => !pushTopicInfo[topic].only) },
     ...(hod ? [{ id: "push-topics-hod", title: "Khusus HOD", topics: PUSH_TOPICS.filter(topic => pushTopicInfo[topic].only === "hod") }] : []),
   ];
   return <div className={own.topics}>

@@ -22,7 +22,7 @@ export const metadata = { title: "Pengaturan · WAM", robots: { index: false } }
 
 /**
  * Pengaturan (revised 9 Nov 2026) as a menu: its own title (no back arrow and no profile card;
- * the bottom bar leads to Profil), then short rows in groups: Aplikasi (Pasang WAM, Notifikasi,
+ * the bottom bar leads to Profil), then short rows in groups: Aplikasi (Install WAM, Notifikasi,
  * Tampilan), Akun, Khusus BOD (Akses MCP, a BOD only; Admin WAM manages access), Bantuan, and
  * Keluar. Each row says what is set now and opens its details in a sheet from the bottom on a
  * phone, a panel from the right on a desktop (SettingsItem). The "password awal" reminder lives
@@ -44,11 +44,11 @@ export default async function SettingsPage() {
     <section aria-labelledby="aplikasi">
       <h2 id="aplikasi" className={own.groupTitle}>Aplikasi</h2>
       <div className={`${own.group} ${own.menu}`}>
-        <SettingsItem id="pasang" icon={<Download />} title="Pasang WAM" summary={<InstallSummary />} wide
-          sheetTitle="Pasang WAM di perangkatmu" sheetSubtitle="Supaya WAM terbuka seperti aplikasi dan notifikasinya muncul">
+        <SettingsItem id="install" icon={<Download />} title="Install WAM" summary={<InstallSummary />} wide
+          sheetTitle="Cara install WAM" sheetSubtitle="Supaya WAM terbuka seperti aplikasi dan notifikasinya muncul">
           <InstallGuide />
         </SettingsItem>
-        <SettingsItem id="notifikasi" icon={<Bell />} title="Notifikasi" summary={<PushSummary />} sheetSubtitle="Pilih kabar yang muncul di HP">
+        <SettingsItem id="notifikasi" icon={<Bell />} title="Notifikasi" summary={<PushSummary />} sheetSubtitle="Atur notifikasi yang muncul di HP">
           <PushSwitch hod={hod} />
         </SettingsItem>
         <SettingsItem id="tampilan" icon={<Palette />} title="Tampilan" summary={<ThemeSummary initial={theme} />} sheetSubtitle="Tema WAM di perangkat ini">
