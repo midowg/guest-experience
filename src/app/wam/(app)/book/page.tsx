@@ -47,7 +47,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
       throw error;
     });
   if (typeof loaded === "string") return <>
-    <ScreenHead eyebrow="Ruang meeting" title="Agenda" lead={`Jam ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–20 Nov.`} />
+    <ScreenHead eyebrow="Ruang meeting" title="Agenda" lead={`Jam ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 28 Okt–29 Des.`} />
     <Notice tone="warning">{loaded}</Notice>
   </>;
   const { schedule, mine, open, settings, summary, form, hod } = loaded;

@@ -10,7 +10,8 @@ import { headcount, largestCapacity, peopleLabel, roomFit } from "./room-fit";
 export const appraisalRules = {
   /** Appraisal & meeting 1-on-1 in the Pra WAM calendar. */
   periodStart: "2026-10-28",
-  periodEnd: "2026-11-20",
+  // To 29 Dec since 9 Nov 2026 (was 20 Nov): bookings now serve every forum and event on Timeline, End Year Dinner last.
+  periodEnd: "2026-12-29",
   /** Opening hours, 07.00–22.00 since 5 Nov 2026 (migration 202611050005; was 09.00–18.00). */
   open: "07:00",
   close: "22:00",
@@ -95,7 +96,7 @@ export function bookableDates(from: string): string[] {
   return dates;
 }
 
-/** Every weekday of the appraisal period, 28 Okt–20 Nov: the booking window the date strip shows. */
+/** Every weekday of the booking period, 28 Okt–29 Des: the booking window the date strip shows. */
 export const periodDates = () => bookableDates(appraisalRules.periodStart);
 
 /** Every day of the period, weekends too: the days an outside booking may take. */
@@ -134,7 +135,7 @@ export function bookingProblems(input: Pick<BookingInput, "date" | "start" | "en
   const outside = input.roomId === OUTSIDE_ROOM;
   const hours = outside ? OUTSIDE_HOURS : appraisalRules;
   const times = slotTimes(outside);
-  if (input.date < appraisalRules.periodStart || input.date > appraisalRules.periodEnd) problems.date = "Tanggal di luar periode appraisal (28 Okt–20 Nov 2026).";
+  if (input.date < appraisalRules.periodStart || input.date > appraisalRules.periodEnd) problems.date = "Tanggal di luar periode booking (28 Okt–29 Des 2026).";
   else if (!outside && !isWorkday(input.date)) problems.date = "Ruang hanya bisa dipesan Senin–Jumat. Di luar kantor boleh akhir pekan.";
   const step = appraisalRules.stepMinutes;
   const label = (minutes: number) => fromMinutes(minutes).replace(":", ".");

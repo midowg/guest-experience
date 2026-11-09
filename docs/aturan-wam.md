@@ -206,7 +206,8 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   di titik kartunya pada garis waktu (tanpa garis warna di tepi kartu, tanpa label bertumpuk: satu
   baris keterangan "Forum · jam atau Jadwal pasti menyusul · Kamu ikut"). Mengetuk garis menggulir
   ke kartu itu.
-  Semua tanggal bisa diketuk (selama Book dibuka) dan membuka halaman booking pada tanggal itu:
+  Periode booking 28 Okt–29 Des 2026 (diperpanjang 9 Nov 2026 dari 20 Nov, supaya semua forum dan
+  acara Timeline bisa dibooking; `appraisalRules.periodEnd`). Semua tanggal bisa diketuk (selama Book dibuka) dan membuka halaman booking pada tanggal itu:
   hari kerja langsung, akhir pekan sebagai Di luar kantor, tanggal yang lewat atau di luar periode
   diganti ke tanggal terdekat dengan keterangan.
 - **Agenda** (menu bilah bawah, dulu "Book"; 9 Nov 2026): tanpa kalender dan tanpa denah. Isinya

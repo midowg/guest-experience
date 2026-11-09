@@ -18,8 +18,9 @@ describe("WIB time", () => {
     expect(times).toHaveLength(31);
   });
   it("lists only weekdays inside the period", () => {
-    const dates = bookableDates("2026-11-19");
-    expect(dates).toEqual(["2026-11-19", "2026-11-20"]);
+    // The period runs to 29 Dec (9 Nov 2026): the last week has Mon 28 and Tue 29 only.
+    const dates = bookableDates("2026-12-24");
+    expect(dates).toEqual(["2026-12-24", "2026-12-25", "2026-12-28", "2026-12-29"]);
     expect(bookableDates("2026-11-06")).not.toContain("2026-11-07");
   });
 });
@@ -37,7 +38,7 @@ describe("booking rules", () => {
     expect(bookingProblems({ date: "2026-11-05", start: "09:00", end: "13:30" }, now).end).toBe("Paling lama 4 jam.");
     expect(bookingProblems({ date: "2026-11-04", start: "09:00", end: "10:00" }, now).start).toBe("Jam ini sudah lewat.");
     expect(bookingProblems({ date: "2026-11-07", start: "10:00", end: "11:00" }, now).date).toBe("Ruang hanya bisa dipesan Senin–Jumat. Di luar kantor boleh akhir pekan.");
-    expect(bookingProblems({ date: "2026-11-23", start: "10:00", end: "11:00" }, now).date).toBeTruthy();
+    expect(bookingProblems({ date: "2026-12-30", start: "10:00", end: "11:00" }, now).date).toBeTruthy();
   });
 });
 
@@ -79,7 +80,7 @@ describe("Di luar kantor", () => {
     expect(durationsFrom("22:00", true)).toEqual([30, 60, 90]);
   });
   it("still keeps the period, the half hours, and one day", () => {
-    expect(bookingProblems(away({ date: "2026-11-23", start: "10:00", end: "11:00" }), now).date).toBeTruthy();
+    expect(bookingProblems(away({ date: "2026-12-30", start: "10:00", end: "11:00" }), now).date).toBeTruthy();
     expect(bookingProblems(away({ start: "10:15", end: "11:00" }), now).start).toBeTruthy();
     expect(bookingProblems(away({ start: "23:00", end: "23:45" }), now).end).toBeTruthy();
   });
