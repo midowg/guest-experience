@@ -89,3 +89,13 @@
   .calBar:hover { background: color-mix(in srgb, var(--tl) 32%, var(--pw-surface)); }
 }
 @media (prefers-reduced-motion: reduce) { .cardLink { transition: none; } }
+
+/* The booking form's month picker (TimelineMonth): a day is a button; the picked one filled, a day that cannot be picked faint. */
+.calDayPick { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
+.calDayPick:hover:not(:disabled) span { background: var(--pw-surface-soft); }
+.calDayPick[aria-pressed="true"] span { background: var(--pw-primary); color: var(--pw-on-primary); font-weight: 700; opacity: 1; }
+.calDayPick[data-today]:not([aria-pressed="true"]) span { background: none; box-shadow: inset 0 0 0 1.5px var(--pw-primary); color: var(--pw-primary); }
+.calDayPick:disabled { cursor: default; }
+.calDayPick:disabled span { opacity: .35; }
+.calDayPick:focus-visible { outline: none; }
+.calDayPick:focus-visible span { outline: 2px solid var(--pw-primary); outline-offset: 2px; }

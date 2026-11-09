@@ -10,6 +10,7 @@ import { errorText, praWamRequest } from "./api";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { bookingKey } from "./BookCalendar";
 import { BookingForm, type BookingActivity, type BookingDraft, type PeopleGroup } from "./BookingForm";
+import type { TimelineEntry } from "@/lib/pra-wam/timeline";
 import { useConfirm } from "./ConfirmDialog";
 import { hodResponseLabels, hodStatusLabels, type HodBookingInfo, type HodDepartment } from "@/lib/pra-wam/hod";
 import { ScreenHead } from "./ScreenHead";
@@ -43,6 +44,8 @@ type Props = {
   activities?: BookingActivity[];
   /** The person's cancelled bookings and sessions (9 Nov 2026): listed greyed among Booking saya. */
   cancelled?: CancelledItem[];
+  /** Timeline's forums and events, drawn on the booking form's month picker. */
+  timeline?: TimelineEntry[];
 };
 /** A cancelled booking or session, as Agenda lists it: greyed, not opened. */
 export type CancelledItem = { key: string; title: string; startsAt: string; endsAt: string; where: string };
@@ -65,7 +68,7 @@ const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <=
  * trip), so a reload reopens it; a day in another week (picked on the date strip) is a navigation,
  * since its bookings are loaded on the server.
  */
-export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {}, hod = null, hodInfo = {}, activities = [], cancelled = [] }: Props) {
+export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {}, hod = null, hodInfo = {}, activities = [], cancelled = [], timeline = [] }: Props) {
   const router = useRouter();
   const [confirm, confirmDialog] = useConfirm();
   const bookable = rooms.filter(room => room.bookable);
@@ -201,7 +204,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
           <ChevronRight className={css.rowIcon} aria-hidden />
         </button>
       </li> })),
-      // Cancelled ones (9 Nov 2026): in time order among the rest, greyed and not opened.
+      // Cancelled ones (9 Nov 2026): greyed among the rest, not opened. Newest date on top, oldest at the bottom.
       ...cancelled.map(item => ({ at: item.startsAt, row: <li key={`batal-${item.key}`}>
         <div className={`${css.mineRow} ${css.cancelledRow}`} aria-disabled="true">
           <span className={css.when}><b>{shortDate(wibDate(item.startsAt))}</b>{clockLabel(wibTime(item.startsAt))}–{clockLabel(wibTime(item.endsAt))}</span>
@@ -211,7 +214,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
           </span>
           <span className={css.cancelledTag}>Dibatalkan</span>
         </div>
-      </li> }))].sort((a, b) => a.at.localeCompare(b.at)).map(entry => entry.row)}
+      </li> }))].sort((a, b) => b.at.localeCompare(a.at)).map(entry => entry.row)}
     </ul>}
 
     {sheet?.kind === "detail" && <BookingSheet booking={sheet.booking} shown={shown} onClose={close} rooms={rooms} now={clockNow}
@@ -223,7 +226,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {sheet?.kind === "form" && form && <BookingForm key={sheet.key} editId={sheet.editId} initial={sheet.initial}
       dates={dates.includes(sheet.initial.date) ? dates : [sheet.initial.date, ...dates]} now={clockNow.toISOString()} rooms={rooms}
       people={form.people} groups={form.groups} viewer={{ id: viewerId }} usedTitles={form.usedTitles}
-      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan} summary={days} hod={hod} activities={activities} datePicker="month"
+      dayBookings={sheet.dayBookings} dayOf={sheet.dayOf} onSaved={saved} showPlan={floorPlan} summary={days} hod={hod} activities={activities} datePicker="month" timeline={timeline}
       frame={(body, footer) => <Sheet open={shown} onClose={close} wide title={sheet.editId ? "Ubah booking" : "Book ruang"}
         subtitle="Yang tersimpan lebih dulu yang mendapat ruang." footer={footer}>{body}</Sheet>} />}
 

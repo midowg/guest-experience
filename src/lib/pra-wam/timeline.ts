@@ -103,7 +103,10 @@ export function calendarWeeks(key: string, entries: TimelineEntry[], lanes = tim
   return weeks;
 }
 
-/** The forums and events a booking can be for (the booking form's Kegiatan): those not over yet, by date. */
-export function bookingActivities(items: TimelineItem[], today: string): { title: string; from: string; to: string }[] {
-  return timelineMonths(items, today).flatMap(month => month.entries).filter(entry => entry.state !== "selesai").map(({ title, from, to }) => ({ title, from, to }));
+/**
+ * The forums and events a booking can be for (the booking form's Kegiatan), by date; one already
+ * over is kept with `past` (9 Nov 2026: it may still be picked, after a "sudah lewat" check).
+ */
+export function bookingActivities(items: TimelineItem[], today: string): { title: string; from: string; to: string; past: boolean }[] {
+  return timelineMonths(items, today).flatMap(month => month.entries).map(({ title, from, to }) => ({ title, from, to, past: to < today }));
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calendarWeeks, rangeLabel, timelineLanes, timelineMonths, TIMELINE_COLORS, type TimelineItem } from "./timeline";
+import { bookingActivities, calendarWeeks, rangeLabel, timelineLanes, timelineMonths, TIMELINE_COLORS, type TimelineItem } from "./timeline";
 
 const item = (patch: Partial<TimelineItem>): TimelineItem => ({
   id: patch.title ?? "x", title: "x", kind: "forum", published: false, planFrom: null, planTo: null, startsAt: null, endsAt: null, mine: false, ...patch,
@@ -63,4 +63,9 @@ describe("Timeline calendar", () => {
     const next = weeks.find(item => item.days[0].date === "2026-11-30")!;
     expect(next.bars.find(bar => bar.id === "Revenue")).toMatchObject({ start: 0, end: 4, before: true, after: false });
   });
+});
+
+it("keeps the sessions already over for booking, flagged past", () => {
+  const list = bookingActivities([item({ title: "Lewat", planFrom: "2026-11-02", planTo: "2026-11-03" }), item({ title: "Nanti", planFrom: "2026-11-24", planTo: "2026-11-27" })], "2026-11-09");
+  expect(list.map(entry => [entry.title, entry.past])).toEqual([["Lewat", true], ["Nanti", false]]);
 });

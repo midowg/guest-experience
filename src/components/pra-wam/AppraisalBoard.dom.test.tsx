@@ -64,3 +64,13 @@ it("offers one way to take a booking off, Batalkan, after a confirmation naming 
   expect(await screen.findByText(/^"Rapat KPI", Kamis, 5 Nov, 10\.00–11\.00, Nagapadma\./)).toBeTruthy();
   expect(screen.getByRole("button", { name: "Batalkan booking" })).toBeTruthy();
 });
+
+it("lists Booking saya newest date first, cancelled ones greyed among them", () => {
+  const later: Booking = { ...b, id: "b2", title: "Rapat akhir", startsAt: wibInstant("2026-11-20", "10:00"), endsAt: wibInstant("2026-11-20", "11:00") };
+  render(<AppraisalBoard date="2026-11-04" week={["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"]} dates={["2026-11-04","2026-11-05"]} now={wibInstant("2026-11-04","10:12")}
+    rooms={rooms} bookings={[b]} mine={[b, later]} viewerId="me" canCancelAny={false} open form={{ people: [], groups: [], usedTitles: [] }} arrive={{}}
+    cancelled={[{ key: "x", title: "Rapat batal", startsAt: wibInstant("2026-11-10", "09:00"), endsAt: wibInstant("2026-11-10", "10:00"), where: "Nagapadma" }]} />);
+  const titles = [...document.querySelectorAll("li strong")].map(node => node.textContent);
+  expect(titles).toEqual(["Rapat akhir", "Rapat batal", "Rapat KPI"]);
+  expect(screen.getByText("Rapat batal").closest("[aria-disabled]")).toBeTruthy();
+});

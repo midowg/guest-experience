@@ -266,11 +266,36 @@ it("on its own page, once saved shows what was booked with a way back to Timelin
   expect(screen.getByRole("link", { name: /Book lagi/ }).getAttribute("href")).toBe("/wam/book/new");
 });
 
-it("from Agenda picks the day on a month calendar, a weekend booking Di luar kantor", () => {
+it("from Agenda picks the day on Timeline's month (bars, no dots), a weekend booking Di luar kantor, a past day not pickable", () => {
   request.mockResolvedValue({ data: { bookings: [] }, message: "" });
   render(<BookingForm initial={draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[kecil]} people={[]} viewer={{ id: "me" }} groups={[]} usedTitles={[]}
-    dayBookings={[]} dayOf="2026-11-05" showPlan={false} datePicker="month" />);
-  expect(screen.getByRole("region", { name: "Tanggal" })).toBeTruthy();
-  fireEvent.click(screen.getAllByRole("button", { name: /^Sabtu, 7 Nov/ })[0]);
+    dayBookings={[]} dayOf="2026-11-05" showPlan={false} datePicker="month"
+    timeline={[{ id: "hod", title: "HOD Meeting", kind: "forum", published: false, planFrom: "2026-11-04", planTo: "2026-11-06", startsAt: null, endsAt: null, mine: false,
+      from: "2026-11-04", to: "2026-11-06", state: "berlangsung", when: "4–6 Nov", hours: null, color: 0 }]} />);
+  const month = within(screen.getByRole("group", { name: "Tanggal" }));
+  expect(month.getByText("HOD Meeting")).toBeTruthy();
+  expect(month.queryByRole("link", { name: "HOD Meeting" })).toBeNull();
+  expect((month.getByRole("button", { name: /^Selasa, 3 November/ }) as HTMLButtonElement).disabled).toBe(true);
+  expect(month.getByRole("button", { name: /^Kamis, 5 November/ }).getAttribute("aria-pressed")).toBe("true");
+  fireEvent.click(month.getByRole("button", { name: /^Sabtu, 7 November/ }));
   expect(screen.getByText(/Di luar kantor: boleh akhir pekan/)).toBeTruthy();
+});
+
+it("offers sessions already over under Sudah lewat, asking before one is picked", async () => {
+  // jsdom has no modal dialogs: enough of one for the confirm.
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
+  render(<BookingForm initial={draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[kecil]} people={[]} viewer={{ id: "me" }} groups={[]} usedTitles={[]}
+    dayBookings={[]} dayOf="2026-11-05" showPlan={false}
+    activities={[{ title: "Rekonsiliasi ACC", from: "2026-11-02", to: "2026-11-03", past: true }, { title: "HOD Meeting", from: "2026-11-24", to: "2026-11-27" }]} />);
+  lanjut();
+  const select = screen.getByLabelText("Nama kegiatan") as HTMLSelectElement;
+  expect([...select.querySelectorAll("optgroup")].map(group => group.label)).toEqual(["Dari Timeline", "Sudah lewat", "Lainnya"]);
+  fireEvent.change(select, { target: { value: "Rekonsiliasi ACC" } });
+  const ask = await screen.findByRole("dialog", { name: "Sesi sudah lewat" });
+  fireEvent.click(within(ask).getByRole("button", { name: "Batal" }));
+  await vi.waitFor(() => expect(select.value).toBe(""));
+  fireEvent.change(select, { target: { value: "Rekonsiliasi ACC" } });
+  fireEvent.click(within(await screen.findByRole("dialog", { name: "Sesi sudah lewat" })).getByRole("button", { name: "Tetap pilih" }));
+  await vi.waitFor(() => expect(select.value).toBe("Rekonsiliasi ACC"));
 });

@@ -64,6 +64,24 @@ export function DateStrip({ days, selected, today, summary, onPick, label = "Pil
     measure();
   }, [target, reveal, measure]);
 
+  // In a sheet the row is laid out only once the dialog opens, after the effect above ran with no
+  // width (9 Nov 2026: a day picked on Timeline stayed out of view). When the row first gets a
+  // width, bring the picked day to the middle again.
+  const targetRef = useRef(target);
+  useEffect(() => { targetRef.current = target; }, [target]);
+  useEffect(() => {
+    const box = scroller.current;
+    if (!box || typeof ResizeObserver === "undefined") return;
+    let width = box.clientWidth;
+    const watcher = new ResizeObserver(() => {
+      const now = box.clientWidth;
+      if (width === 0 && now > 0) { reveal(targetRef.current, false, true); measure(); }
+      width = now;
+    });
+    watcher.observe(box);
+    return () => watcher.disconnect();
+  }, [reveal, measure]);
+
   // A vertical wheel scrolls the row sideways while it can; at either end the page scrolls on.
   useEffect(() => {
     const box = scroller.current;

@@ -13,8 +13,11 @@ import { roomStatus, type PlanTone } from "@/lib/pra-wam/floor-plan";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { headcount, isOver, largestCapacity, peopleLabel, roomFit } from "@/lib/pra-wam/room-fit";
 import { errorText, praWamRequest, PraWamApiError, type Conflict } from "./api";
+import { useConfirm } from "./ConfirmDialog";
 import { DateStrip } from "./DateStrip";
-import { MonthCalendar } from "./MonthCalendar";
+import { dayName, TimelineMonth } from "./TimelineMonth";
+import type { TimelineEntry } from "@/lib/pra-wam/timeline";
+import timelineCss from "./timeline.module.css";
 import { FloorPlan } from "./FloorPlan";
 import { PeoplePicker, type PeopleGroup } from "./PeoplePicker";
 import type { HodDepartment } from "@/lib/pra-wam/hod";
@@ -54,9 +57,11 @@ type Props = {
    * has no calendar of its own).
    */
   datePicker?: "strip" | "month";
+  /** Timeline's forums and events, drawn as bars on the month picker (as on Timeline's calendar). */
+  timeline?: TimelineEntry[];
 };
 /** A forum or event from Timeline: its name and the days it runs (or is planned for). */
-export type BookingActivity = { title: string; from: string; to: string };
+export type BookingActivity = { title: string; from: string; to: string; /** Already over (it may still be picked, after a check). */ past?: boolean };
 
 /** The activities to offer for a day: those running on it, else the next few still ahead. */
 export function activitiesFor(activities: BookingActivity[], date: string): { list: BookingActivity[]; onDay: boolean } {
@@ -89,7 +94,7 @@ type Choice = { ok: boolean; pending: boolean; tone: PlanTone; text: string };
  * "Di luar kantor" (5 Nov 2026; only under Tempat since 9 Nov 2026): it opens weekends, any hour of
  * the day and more than 4 hours, so Tempat offers a way back to Waktu; the place name is typed under Tempat.
  */
-export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null, activities = [], datePicker = "strip" }: Props) {
+export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null, activities = [], datePicker = "strip", timeline = [] }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
   // On its own page (no sheet): saved, the form gives way to what was booked (9 Nov 2026: booking is
@@ -208,9 +213,24 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   // Nama kegiatan is picked from a list (9 Nov 2026): Timeline's forums and events (those on the
   // booking's day first), then the usual names; a booking being changed keeps its own name.
   const offered = activitiesFor(activities, draft.date);
-  const fromTimeline = [...new Set([...offered.list, ...activities.filter(item => item.to >= today)].map(item => item.title))];
+  const fromTimeline = [...new Set([...offered.list, ...activities.filter(item => item.to >= today)].filter(item => !item.past && item.to >= today).map(item => item.title))];
+  // Sessions already over (9 Nov 2026): still offered, newest first, with a check when picked.
+  const pastActivities = activities.filter(item => item.past || item.to < today).sort((a, b) => b.to.localeCompare(a.to))
+    .filter((item, index, list) => !fromTimeline.includes(item.title) && list.findIndex(other => other.title === item.title) === index);
+  const pastTitles = pastActivities.map(item => item.title);
   const usualTitles = useMemo(() => titleSuggestions("", usedTitles, 10), [usedTitles]).filter(title => !fromTimeline.includes(title));
-  const ownTitle = draft.title.trim() && !fromTimeline.includes(draft.title.trim()) && !usualTitles.includes(draft.title.trim()) ? draft.title.trim() : null;
+  const ownTitle = draft.title.trim() && !fromTimeline.includes(draft.title.trim()) && !pastTitles.includes(draft.title.trim()) && !usualTitles.includes(draft.title.trim()) ? draft.title.trim() : null;
+  const [confirm, confirmDialog] = useConfirm();
+  /** Picks the activity; one already over asks first (9 Nov 2026). */
+  async function chooseActivity(title: string) {
+    const over = pastActivities.find(item => item.title === title);
+    if (over && !(await confirm({
+      title: "Sesi sudah lewat",
+      body: `${title} sudah berakhir ${dayLabel(over.to)}. Tetap pilih untuk booking ini?`,
+      confirmLabel: "Tetap pilih",
+    }))) return;
+    set({ title });
+  }
   const picked = draft.participants.map(id => people.find(person => person.id === id)).filter((person): person is Person => !!person);
   // Everyone but the booker can be picked.
   const colleagues = people.filter(person => person.id !== viewer.id);
@@ -365,12 +385,21 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       </ol>
     </div>
 
+    {confirmDialog}
     {error && <Notice tone="error">{error}</Notice>}
 
     <section {...stepProps(0)}>
       {heading(0, "Kapan?")}
       {datePicker === "month"
-        ? <MonthCalendar from={appraisalRules.periodStart} to={appraisalRules.periodEnd} selected={draft.date} today={today} summary={daySummary} onPick={pickDate} label="Tanggal" />
+        // The month as on Timeline (9 Nov 2026): the forums' bars instead of free/full dots; a day picks the date.
+        ? <div role="group" aria-label="Tanggal"><TimelineMonth entries={timeline} today={today} open={draft.date} range={{ from: appraisalRules.periodStart, to: appraisalRules.periodEnd }}
+          day={(date, marks, number) => {
+            const closed = date < today || date < appraisalRules.periodStart || date > appraisalRules.periodEnd;
+            return <button key={date} type="button" className={`${timelineCss.calDay} ${timelineCss.calDayPick}`} {...marks} disabled={closed}
+              aria-pressed={date === draft.date} aria-label={`${dayName(date)}${closed ? ", tidak bisa dipilih" : ""}`} onClick={() => pickDate(date)}>
+              <span>{number}</span>
+            </button>;
+          }} /></div>
         : <DateStrip days={stripDays} selected={draft.date} today={today} summary={daySummary} onPick={pickDate} label="Tanggal" />}
       {fieldError("date")}
       {dayFull && <p className={css.note} role="status">Semua ruang penuh hari ini. Pilih hari lain atau jam lain.</p>}
@@ -405,12 +434,13 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       <div>
         <label className={styles.label} htmlFor={`${uid}-title`}>Nama kegiatan</label>
         <select id={`${uid}-title`} className="select" value={draft.title.trim()} aria-invalid={!!fieldErrors.title} aria-describedby={described("title")}
-          onChange={event => set({ title: event.target.value })}>
+          onChange={event => { void chooseActivity(event.target.value); }}>
           <option value="" disabled>Pilih kegiatan</option>
           {ownTitle && <option value={ownTitle}>{ownTitle}</option>}
           {fromTimeline.length > 0 && <optgroup label={offered.onDay ? `Dari Timeline · ${dayLabel(draft.date)} dulu` : "Dari Timeline"}>
             {fromTimeline.map(title => <option key={title} value={title}>{title}</option>)}
           </optgroup>}
+          {pastTitles.length > 0 && <optgroup label="Sudah lewat">{pastTitles.map(title => <option key={title} value={title}>{title}</option>)}</optgroup>}
           <optgroup label="Lainnya">{usualTitles.map(title => <option key={title} value={title}>{title}</option>)}</optgroup>
         </select>
         {fieldError("title")}

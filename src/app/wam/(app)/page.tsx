@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ArrowLeftRight, Bell, CalendarClock, CheckCircle2, Clock, Info, MapPin, QrCode } from "lucide-react";
+import { Bell, CalendarClock, CheckCircle2, Clock, Info, MapPin, QrCode } from "lucide-react";
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { Avatar } from "@/components/pra-wam/Avatar";
 import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard, RoomCard } from "@/components/pra-wam/BerandaCards";
@@ -88,8 +88,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const askedDay = tanggal ? items.findIndex(item => wibDate(item.startsAt) >= tanggal) : -1;
   const nowAt = next ? items.findIndex(item => item.key === next.key) : -1;
   const startAt = askedItem >= 0 ? askedItem : askedDay >= 0 ? askedDay : nowAt >= 0 ? nowAt : Math.max(items.length - 1, 0);
-  // The newest news, leaving out cancellations (9 Nov 2026): those show greyed in Agenda instead.
-  const latest = notes.items.find(note => !/dibatalkan/i.test(note.title));
+  // The newest word from panitia only (9 Nov 2026): news about sessions is agenda, which the carousel
+  // and Agenda already show (cancellations greyed there); it stays in the bell.
+  const latest = notes.items.find(note => note.kind !== "sesi");
   const dayWord = dayWordFor(today);
   const request = requests[0];
   const questCard = quest && <QuestionnaireCard name={quest.form.name} cardText={quest.form.cardText} minutes={quest.form.minutes}
@@ -185,8 +186,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             </div>
           </section>}
           {latest && <a className={`${base.card} ${own.noteCard}`} href={praWamPath.notifications}>
-            <span className={base.tile}>{latest.kind === "sesi" ? <ArrowLeftRight aria-hidden /> : <Info aria-hidden />}</span>
-            <span><strong>{latest.title}</strong><span className={base.meta}>{latest.kind === "sesi" ? "Kabar sesi" : "Dari panitia"} · {shortTime(latest.createdAt)}</span></span>
+            <span className={base.tile}><Info aria-hidden /></span>
+            <span><strong>{latest.title}</strong><span className={base.meta}>Dari panitia · {shortTime(latest.createdAt)}</span></span>
           </a>}
         </div>}
 

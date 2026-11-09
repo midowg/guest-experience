@@ -225,6 +225,16 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   sesi, QR dan daftar hadir, atau unggah dokumen untuk panitia. Detail sesi membawa alat panitia
   hanya bila dibuka dari Kelola acara (`?dari=kelola`, `praWamPath.managedSession`). Unggah dokumen
   umum dan materi sesi ada di Kelola acara → Dokumen (`/wam/manage/documents`).
+- **Agenda (Booking saya)**: tanggal terbaru di atas, yang lama di bawah (9 Nov 2026).
+- **Kalender bulan di sheet booking** (dibuka dari Agenda) sama dengan kalender Timeline: garis
+  forum/acara berwarna, bukan titik ketersediaan; mengetuk tanggal memilihnya (tanggal lewat atau di
+  luar periode tidak bisa). Komponen bersama `TimelineMonth`.
+- **Dari Timeline**, baris tanggal di sheet langsung menampilkan tanggal yang diketuk di tengah
+  (DateStrip menggulir lagi saat sheet terbuka).
+- **Sesi yang sudah lewat** tetap bisa dipilih di Nama kegiatan (grup "Sudah lewat"), setelah
+  konfirmasi "Sesi sudah lewat · Tetap pilih".
+- **Beranda**: kartu kabar di bawah carousel hanya pengumuman panitia; kabar sesi (agenda) tetap di
+  lonceng.
 - **Yang dibatalkan**: kabar pembatalan tidak tampil di kartu kabar Beranda; booking dan sesi yang
   dibatalkan (7 hari ke belakang ke depan) tampil di daftar Agenda, redup dan dicoret, bertanda
   "Dibatalkan", tidak bisa dibuka.
