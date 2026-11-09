@@ -5,10 +5,10 @@ import { FileSpreadsheet, Pencil, Plus, Upload, UserPlus } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { categoryLabels, departmentShort, jobPostLabels, jobTitleOf, jobsFromEmployee, sameJobs, type Employee, type EmployeeJob, type EmployeeRow, type ImportChange } from "@/lib/employees";
+import { categoryLabels, departmentShort, jobPostLabels, jobsFromEmployee, sameJobs, type Employee, type EmployeeJob, type EmployeeRow, type ImportChange } from "@/lib/employees";
 import { employeesApi, praWamAccountsApi } from "@/lib/routes";
 import type { AccountRow } from "@/lib/server/pra-wam/accounts";
-import { BUSINESS_UNITS, buCode, leadDepartments, NO_LEADS, type LeadOptions, type Leads } from "@/lib/pra-wam/leads";
+import { BUSINESS_UNITS, buCode, NO_LEADS, type LeadOptions, type Leads } from "@/lib/pra-wam/leads";
 import type { PraWamRole } from "@/lib/pra-wam/roles";
 import { EmployeeEditor, blankJob, type EmployeeDraft } from "./EmployeeEditor";
 import own from "./employee-editor.module.css";
@@ -261,29 +261,28 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
           <caption className="sr-only">Daftar karyawan</caption>
           <thead><tr><th scope="col">Karyawan</th><th scope="col">Departemen & jabatan</th><th scope="col">Business Unit</th><th scope="col">Kontak</th><th scope="col"><span className="sr-only">Aksi</span></th></tr></thead>
           <tbody>{shown.map(person => {
-            const led = leadsOf(person.id);
-            const hodHere = led.departments.includes(person.department);
-            const ledIn = leadDepartments(led, person.department);
-            const leadHere = ledIn.includes(person.department);
-            const extra = jobsOf(person).slice(1);
-            const post = hodHere ? "HOD" : leadHere ? "Lead" : "";
+            const jobs = jobsOf(person);
+            const utamaBu = buCode(jobs[0]?.business_unit ?? person.business_unit);
+            const notes = [rolesOf(person.id).includes("bod") ? "BOD" : "", person.category !== "karyawan" ? categoryLabels[person.category] : ""].filter(Boolean);
             return <tr key={person.id} className={person.active ? undefined : own.inactive}>
               <td className={own.person}><strong>{person.full_name}</strong><p className={own.muted}>{[person.nickname, person.nip && `NIP ${person.nip}`].filter(Boolean).join(" · ") || "—"}</p>
-                {!person.active && <div className={own.chips}><span className={`${own.chip} ${own.chipOff}`}>Nonaktif</span></div>}</td>
+                {!person.active && <p className={own.off}>Nonaktif</p>}</td>
               <td>
-                {/* One line (9 Nov 2026): the department by its initials (full name on hover), then the job. */}
-                <p className={own.job}>{person.department ? <abbr className={own.dept} title={person.department}>{departmentShort(person.department)}</abbr> : "—"}
-                  {" · "}{person.position || "Jabatan belum diisi"}{post && !person.position.startsWith(post) ? ` · ${post}` : ""}</p>
-                {(rolesOf(person.id).includes("bod") || led.departments.some(name => name !== person.department) || ledIn.some(name => name !== person.department) || (leadHere && hodHere) || extra.length > 0 || person.category !== "karyawan") && <div className={own.chips}>
-                  {rolesOf(person.id).includes("bod") && <span className={`${own.chip} ${own.chipBod}`}>BOD</span>}
-                  {led.departments.filter(name => name !== person.department).map(name => <span key={name} className={`${own.chip} ${own.chipHod}`} title={`HOD dari ${name}`}>HOD dari {departmentShort(name)}</span>)}
-                  {leadHere && hodHere && <span className={`${own.chip} ${own.chipLead}`}>Lead</span>}
-                  {ledIn.filter(name => name !== person.department && !led.departments.includes(name)).map(name => <span key={name} className={`${own.chip} ${own.chipLead}`} title={`Lead dari ${name}`}>Lead dari {departmentShort(name)}</span>)}
-                  {extra.length > 0 && <span className={`${own.chip} ${own.chipJobs}`} title={extra.map(job => `${buCode(job.business_unit)} · ${job.department} · ${jobTitleOf(job) || jobPostLabels[job.post]}`).join("\n")}>+{extra.length} pekerjaan</span>}
-                  {person.category !== "karyawan" && <span className={`${own.chip} ${own.chipWork}`}>{categoryLabels[person.category]}</span>}
-                </div>}
+                {/* Plain text, no chips (9 Nov 2026): every job on its own line, the Utama one first, the
+                    department by its initials (full name on hover); long titles wrap inside the column. */}
+                <ul className={own.jobs} aria-label={`Pekerjaan ${person.full_name}`}>{jobs.map((job, index) => {
+                  const title = job.job_title.trim() || (index === 0 ? person.position.trim() : "");
+                  const post = job.post === "staf" ? "" : jobPostLabels[job.post];
+                  const bu = buCode(job.business_unit);
+                  return <li key={index} className={index === 0 ? own.job : own.jobMore}>
+                    {job.department ? <abbr className={own.dept} title={job.department}>{departmentShort(job.department)}</abbr> : "—"}
+                    {" · "}{[title || (post ? "" : "Jabatan belum diisi"), post && !title.startsWith(post) ? post : ""].filter(Boolean).join(" · ")}
+                    {index > 0 && bu !== utamaBu ? ` (${bu})` : ""}
+                  </li>;
+                })}</ul>
+                {notes.length > 0 && <p className={own.muted}>{notes.join(" · ")}</p>}
               </td>
-              <td><span className={own.buList}>{busOf(person).map(code => <span key={code} className={own.bu}>{code}</span>)}</span></td>
+              <td>{busOf(person).join(", ")}</td>
               <td>{person.phone || person.email ? <><p>{person.phone || "—"}</p><p className={own.muted}>{person.email}</p></> : <p className={own.muted}>Belum ada</p>}</td>
               {/* Only Ubah here: Aktif and Hapus are inside Ubah karyawan (9 Nov 2026). */}
               <td><div className={own.actions}>

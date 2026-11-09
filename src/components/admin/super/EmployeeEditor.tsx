@@ -161,7 +161,7 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
             const { hods, leadsHere, kept } = under(job.department, job.reports_to);
             const title = index === 0 ? "Pekerjaan utama" : `Pekerjaan ${index + 1}`;
             const postName = `${jobPostLabels[job.post]} ${job.department.trim()}`.trim();
-            return <section key={keys[index]} className={css.job} aria-labelledby={`${id}-${key}-title`}>
+            return <section key={keys[index]} className={css.jobCard} aria-labelledby={`${id}-${key}-title`}>
               <div className={css.jobHead}>
                 <h3 id={`${id}-${key}-title`}>{title}</h3>
                 {index > 0 && <button type="button" className={css.jobRemove} onClick={() => removeJob(index)} aria-label={`Hapus ${title.toLowerCase()}`} title="Hapus"><Trash2 size={18} aria-hidden /></button>}

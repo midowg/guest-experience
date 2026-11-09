@@ -30,8 +30,9 @@
 .segment:has(input:focus-visible) { outline: 2px solid var(--blue, #2f6feb); outline-offset: 1px; }
 
 /* Pekerjaan (9 Nov 2026): one card per job, the Utama one first, Tambah pekerjaan under them. */
-.job { display: grid; gap: 12px; padding: 14px 16px 16px; border: 1px solid var(--line, #e4e7ec); border-radius: 16px; background: var(--paper, #fff); min-width: 0; }
-.job:first-of-type { border-color: var(--blue, #2f6feb); }
+/* .jobCard, not .job: .job is the list's job line further down, which must stay plain text. */
+.jobCard { display: grid; gap: 12px; padding: 14px 16px 16px; border: 1px solid var(--line, #e4e7ec); border-radius: 16px; background: var(--paper, #fff); min-width: 0; }
+.jobCard:first-of-type { border-color: var(--blue, #2f6feb); }
 .jobHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; }
 .jobHead h3 { margin: 0; font-size: 14px; font-weight: 700; }
 .jobRemove { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--line, #e4e7ec); border-radius: 12px; background: var(--paper, #fff); color: var(--ink-soft, #4b5563); cursor: pointer; }
@@ -46,8 +47,13 @@
 .activeSwitch input { width: 40px; height: 22px; margin: 0; accent-color: var(--blue, #2f6feb); cursor: pointer; }
 .deleteButton { margin-right: auto; color: #b91c1c; }
 .deleteButton:hover:not(:disabled) { border-color: #dc2626; background: #fee2e2; color: #b91c1c; }
-/* Departemen & jabatan in one line: the department by its initials, full name on hover. */
+/* Departemen & jabatan as plain text: one line per job (Utama first), the department by its
+   initials (full name on hover); a long title wraps inside the column instead of stretching it. */
 .dept { font-weight: 700; text-decoration: none; cursor: help; }
+.jobs { display: grid; gap: 2px; max-width: 26rem; margin: 0; padding: 0; list-style: none; }
+.jobs li { overflow-wrap: anywhere; }
+.jobMore { font-size: 13px; color: var(--ink-soft, #4b5563); }
+.off { margin: 2px 0 0; font-size: 13px; font-weight: 600; color: #b91c1c; }
 
 /* The list: a toolbar (search, department, Tambah karyawan), then one row per person. */
 .toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 15rem) minmax(0, 10rem) auto; gap: 12px; align-items: end; }

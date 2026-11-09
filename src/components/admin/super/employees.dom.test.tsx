@@ -6,8 +6,10 @@ import type { Employee } from "@/lib/employees";
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 const reply = (body: object, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 const person: Employee = { id: "6a000000-0000-4000-8000-000000000001", full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "karyawan", phone: "", email: "", active: true, nip: "", business_unit: "WNS" };
-/** The list's one-line "Departemen · Jabatan" (the department is an <abbr> inside it). */
-const jobLine = (text: string) => (_: string, element: Element | null) => element?.tagName === "P" && element.textContent === text;
+/** One job line of the list, "Departemen · Jabatan" (the department is an <abbr> inside it). */
+const jobLine = (text: string) => (_: string, element: Element | null) => element?.tagName === "LI" && element.textContent === text;
+/** The list's job lines of one row, in order. */
+const jobLines = (row: ReturnType<typeof within>, name: string) => within(row.getByRole("list", { name: `Pekerjaan ${name}` })).getAllByRole("listitem").map(item => item.textContent);
 const row = { full_name: "Contoh Dua", nickname: "Dua", department: "Accounting", position: "Tax Staff", office: "WNS", category: "karyawan" };
 
 it("reads the Excel first, shows who is new or changed, and saves only on request", async () => {
@@ -54,7 +56,8 @@ it("lists a person with department and job (HOD, Lead, GA or Intern beside it), 
   // One line: the department by its initials (full name on hover), then the job.
   expect(first.getByText(jobLine("SM · Business Solutions Manager · HOD"))).toBeTruthy();
   expect(first.getByTitle("Sales & Marketing").textContent).toBe("SM");
-  expect(first.getByText("HOD dari Corporate")).toBeTruthy();
+  // Every job as plain text, one per line (no chips): the other department headed too.
+  expect(jobLines(first, "Contoh Satu")).toEqual(["SM · Business Solutions Manager · HOD", "Corporate · HOD"]);
   // No "Lead BU" any more (9 Nov 2026): a person has one BU; a Lead shows beside their job.
   expect(first.queryByText(/Lead BU/)).toBeNull();
   expect(first.getByText("WNS")).toBeTruthy();
@@ -189,10 +192,8 @@ describe("Pekerjaan (9 Nov 2026)", () => {
     ] });
     // The Utama job stays in the list; the other shows as a chip, its BU beside.
     const row = within(screen.getByText("Contoh Satu").closest("tr")!);
-    expect(row.getByText(jobLine("SM · Business Solutions Manager"))).toBeTruthy();
-    expect(row.getByText("+1 pekerjaan")).toBeTruthy();
-    expect(row.getByText("Lead dari Finance")).toBeTruthy();
-    expect(row.getByText("MRP")).toBeTruthy();
+    expect(jobLines(row, "Contoh Satu")).toEqual(["SM · Business Solutions Manager", "Finance · Lead (MRP)"]);
+    expect(row.getByText("WNS, MRP")).toBeTruthy();
   });
 
   it("shows +N pekerjaan from the saved jobs, and filters by the BU of any job", () => {
@@ -201,7 +202,7 @@ describe("Pekerjaan (9 Nov 2026)", () => {
       { business_unit: "TEE", department: "Event", post: "staf" as const, job_title: "Producer", reports_to: null },
     ] };
     render(<EmployeeDirectory initial={[person, hod]} migrated leads={leads} jobs={jobs} />);
-    expect(within(screen.getByText("Contoh Satu").closest("tr")!).getByText("+1 pekerjaan").getAttribute("title")).toBe("TEE · Event · Producer");
+    expect(jobLines(within(screen.getByText("Contoh Satu").closest("tr")!), "Contoh Satu")).toEqual(["SM · Business Solutions Manager", "Event · Producer (TEE)"]);
     fireEvent.change(screen.getByLabelText("Business Unit"), { target: { value: "TEE" } });
     expect(screen.queryByText("Kepala Sales")).toBeNull();
     expect(screen.getByText("Contoh Satu")).toBeTruthy();
@@ -221,7 +222,7 @@ describe("Pekerjaan (9 Nov 2026)", () => {
     fireEvent.click(panel.getByRole("button", { name: "Simpan perubahan" }));
     expect(await screen.findByText(/Contoh Satu disimpan\. Pekerjaan utama disimpan; pekerjaan lain menunggu migrasi/)).toBeTruthy();
     // Nothing of the second job is kept on the page either.
-    expect(within(screen.getByText("Contoh Satu").closest("tr")!).queryByText("+1 pekerjaan")).toBeNull();
+    expect(jobLines(within(screen.getByText("Contoh Satu").closest("tr")!), "Contoh Satu")).toEqual(["SM · Business Solutions Manager"]);
   });
 
   it("locks HOD and Lead for a BOD, and saves leaving BOD before becoming HOD", async () => {
