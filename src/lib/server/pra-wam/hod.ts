@@ -28,20 +28,33 @@ function fail(error: { code?: string; message: string }): never {
  * HODs set per person in Akun dan peran or Data karyawan (pw_leads; one person may head several).
  * A department is known by its name (`id` is the name).
  */
+/**
+ * Each department with its heads: the HODs who head it and (9 Nov 2026) the Leads who work in it,
+ * since a meeting between HODs is a meeting with Leads too.
+ */
 async function headsByDepartment(): Promise<HodDepartment[]> {
   const [people, { byPerson }, options] = await Promise.all([listPeople(), listLeads(), leadOptions()]);
-  const active = new Map(people.filter(person => person.active).map(person => [person.id, person.name]));
+  const active = new Map(people.filter(person => person.active).map(person => [person.id, person]));
   return options.departments.map(name => ({
     id: name, name,
-    heads: [...byPerson.entries()].filter(([id, leads]) => active.has(id) && leads.departments.includes(name))
-      .map(([id]) => ({ id, name: active.get(id)! })).sort((a, b) => a.name.localeCompare(b.name, "id")),
+    heads: [...byPerson.entries()].flatMap(([id, leads]): HodDepartment["heads"] => {
+      const person = active.get(id);
+      if (!person) return [];
+      if (leads.departments.includes(name)) return [{ id, name: person.name, post: "HOD" as const }];
+      return leads.lead && (person.department ?? "").trim() === name ? [{ id, name: person.name, post: "Lead" as const }] : [];
+    }).sort((a, b) => (a.post === b.post ? 0 : a.post === "HOD" ? -1 : 1) || a.name.localeCompare(b.name, "id")),
   }));
 }
 
-/** Whether this person is a HOD, and of which departments. */
+/**
+ * Whether this person may hold a Meeting HOD, and the departments they stand for: a HOD for the
+ * departments they head, a Lead (9 Nov 2026) for their own department.
+ */
 export async function hodStanding(member: Pick<Member, "id">): Promise<{ isHod: boolean; unitIds: string[] }> {
-  const { departments } = await leadsOf(member.id).catch(() => ({ departments: [] as string[] }));
-  return { isHod: isHod({ isLead: departments.length > 0 }), unitIds: departments };
+  const { departments, lead } = await leadsOf(member.id).catch(() => ({ departments: [] as string[], lead: false }));
+  const own = lead ? ((await listPeople().catch(() => [])).find(person => person.id === member.id)?.department ?? "").trim() : "";
+  const unitIds = [...new Set([...departments, ...(own ? [own] : [])])];
+  return { isHod: isHod({ isLead: departments.length > 0 || lead }), unitIds };
 }
 
 /** The departments to invite, each with its HODs; a department without a HOD shows but cannot be picked. */
@@ -54,7 +67,7 @@ type InviteRow = { meeting_id: string; employee_id: string; department?: string;
 
 async function requireHod(member: Member) {
   const standing = await hodStanding(member);
-  if (!standing.isHod) throw new ServiceError(403, "Meeting HOD hanya untuk HOD.");
+  if (!standing.isHod) throw new ServiceError(403, "Meeting HOD hanya untuk HOD dan Lead.");
   return standing;
 }
 
@@ -157,7 +170,7 @@ export async function hodInvitees(member: Member, unitIds: string[]): Promise<{ 
     if (!department.heads.length) empty.push(department.name);
     for (const head of department.heads) if (head.id !== member.id && !invites.some(invite => invite.employee_id === head.id)) invites.push({ employee_id: head.id, department: department.name });
   }
-  if (empty.length) throw new ServiceError(422, `${empty.join(", ")} belum punya HOD.`, { participants: [`${empty.join(", ")} belum punya HOD.`] });
+  if (empty.length) throw new ServiceError(422, `${empty.join(", ")} belum punya HOD atau Lead.`, { participants: [`${empty.join(", ")} belum punya HOD atau Lead.`] });
   if (!invites.length) throw new ServiceError(422, "Pilih departemen lain selain departemenmu sendiri.", { participants: ["Pilih departemen lain selain departemenmu sendiri."] });
   return invites;
 }

@@ -263,3 +263,8 @@
 .hodList em { flex: none; font-style: normal; font-size: 12px; font-weight: 700; color: var(--pw-muted); }
 .hodList em.hod_terima { color: var(--pw-success); }
 .hodList em.hod_tolak { color: var(--pw-danger); }
+/* A cancelled booking or session in Booking saya (9 Nov 2026): the same row, greyed, not opened. */
+.cancelledRow { --tone-line: var(--pw-line); cursor: default; opacity: .6; background: transparent; }
+.cancelledRow .what strong { text-decoration: line-through; text-decoration-color: var(--pw-muted); }
+.cancelledRow:hover { background: transparent; }
+.cancelledTag { padding: 3px 8px; border-radius: 999px; border: 1px solid var(--pw-line); color: var(--pw-muted); font-size: 12px; font-weight: 600; white-space: nowrap; }

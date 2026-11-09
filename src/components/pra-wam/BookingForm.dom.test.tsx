@@ -217,7 +217,7 @@ it("lets a HOD book as HOD: departments instead of people, their HODs invited, t
   // Booking sebagai: Pribadi (people) or HOD (departments).
   const as = within(screen.getByRole("group", { name: "Booking sebagai" }));
   expect(as.getByRole("button", { name: "Pribadi", pressed: true })).toBeTruthy();
-  fireEvent.click(as.getByRole("button", { name: "HOD" }));
+  fireEvent.click(as.getByRole("button", { name: "HOD/Lead" }));
   expect(screen.queryByLabelText("Departemen")).toBeNull();
   expect(screen.queryByRole("checkbox", { name: /Finance/ })).toBeNull();
   expect((screen.getByRole("checkbox", { name: /Art & Creative Support/ }) as HTMLInputElement).disabled).toBe(true);
@@ -229,7 +229,7 @@ it("lets a HOD book as HOD: departments instead of people, their HODs invited, t
   lanjut();
   fireEvent.click(roomCard("Nakula").disabled ? roomCard("Arjuna") : roomCard("Nakula"));
   lanjut();
-  expect(screen.getByText(/Sebagai HOD · Business & Administrative Services, Center of Excellence/)).toBeTruthy();
+  expect(screen.getByText(/Sebagai HOD\/Lead · Business & Administrative Services, Center of Excellence/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Book ruang/ }));
   await vi.waitFor(() => expect(request).toHaveBeenCalledWith("/api/wam/appraisal", expect.objectContaining({ method: "POST",
     json: expect.objectContaining({ hodUnits: ["BAS", "COE"], participants: ["p1", "p2"] }) })));

@@ -41,7 +41,11 @@ type Props = {
   hodInfo?: Record<string, HodBookingInfo>;
   /** Timeline's forums and events, offered as the activity in the booking form. */
   activities?: BookingActivity[];
+  /** The person's cancelled bookings and sessions (9 Nov 2026): listed greyed among Booking saya. */
+  cancelled?: CancelledItem[];
 };
+/** A cancelled booking or session, as Agenda lists it: greyed, not opened. */
+export type CancelledItem = { key: string; title: string; startsAt: string; endsAt: string; where: string };
 
 type SheetState =
   | { kind: "detail"; booking: Booking }
@@ -61,7 +65,7 @@ const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <=
  * trip), so a reload reopens it; a day in another week (picked on the date strip) is a navigation,
  * since its bookings are loaded on the server.
  */
-export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {}, hod = null, hodInfo = {}, activities = [] }: Props) {
+export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, viewerId, canCancelAny, open, form, arrive, banner, floorPlan = true, summary = {}, hod = null, hodInfo = {}, activities = [], cancelled = [] }: Props) {
   const router = useRouter();
   const [confirm, confirmDialog] = useConfirm();
   const bookable = rooms.filter(room => room.bookable);
@@ -182,12 +186,12 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {confirmDialog}
 
     <p className={styles.sectionLabel}>Booking saya</p>
-    {mine.length === 0 ? <div className={styles.emptyRow}>
+    {mine.length === 0 && cancelled.length === 0 ? <div className={styles.emptyRow}>
       <span className={styles.tile} aria-hidden><CalendarPlus /></span>
       <p>Belum ada booking yang kamu pesan atau ikuti.</p>
       {canBook && dates.length > 0 && <a className="button button--secondary" href={praWamPath.timeline}><ChartGantt size={18} aria-hidden /> Lihat kalender</a>}
     </div> : <ul className={css.mineList}>
-      {mine.map(booking => <li key={bookingKey(booking)}>
+      {[...mine.map(booking => ({ at: booking.startsAt, row: <li key={bookingKey(booking)}>
         <button type="button" className={`${css.mineRow} ${mineFlag(booking) ? css.mine : css.busy}`} onClick={() => openBooking(booking)} aria-haspopup="dialog">
           <span className={css.when}><b>{shortDate(wibDate(booking.startsAt))}</b>{span(booking)}</span>
           <span className={css.what}>
@@ -196,7 +200,18 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
           </span>
           <ChevronRight className={css.rowIcon} aria-hidden />
         </button>
-      </li>)}
+      </li> })),
+      // Cancelled ones (9 Nov 2026): in time order among the rest, greyed and not opened.
+      ...cancelled.map(item => ({ at: item.startsAt, row: <li key={`batal-${item.key}`}>
+        <div className={`${css.mineRow} ${css.cancelledRow}`} aria-disabled="true">
+          <span className={css.when}><b>{shortDate(wibDate(item.startsAt))}</b>{clockLabel(wibTime(item.startsAt))}–{clockLabel(wibTime(item.endsAt))}</span>
+          <span className={css.what}>
+            <strong>{item.title}</strong>
+            <small>{item.where}</small>
+          </span>
+          <span className={css.cancelledTag}>Dibatalkan</span>
+        </div>
+      </li> }))].sort((a, b) => a.at.localeCompare(b.at)).map(entry => entry.row)}
     </ul>}
 
     {sheet?.kind === "detail" && <BookingSheet booking={sheet.booking} shown={shown} onClose={close} rooms={rooms} now={clockNow}

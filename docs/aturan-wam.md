@@ -221,6 +221,15 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   dari Agenda (yang tidak punya kalender) memakai kalender bulan. Akhir pekan yang dipilih
   otomatis menjadi Di luar kantor. **Nama kegiatan dipilih dari dropdown**: "Dari Timeline" (yang
   berlangsung di hari itu lebih dulu) lalu "Lainnya" (nama umum dan yang sering dipakai).
+- **Fitur panitia hanya di Kelola acara** (9 Nov 2026): di aplikasi peserta tidak ada lagi Ubah
+  sesi, QR dan daftar hadir, atau unggah dokumen untuk panitia. Detail sesi membawa alat panitia
+  hanya bila dibuka dari Kelola acara (`?dari=kelola`, `praWamPath.managedSession`). Unggah dokumen
+  umum dan materi sesi ada di Kelola acara → Dokumen (`/wam/manage/documents`).
+- **Yang dibatalkan**: kabar pembatalan tidak tampil di kartu kabar Beranda; booking dan sesi yang
+  dibatalkan (7 hari ke belakang ke depan) tampil di daftar Agenda, redup dan dicoret, bertanda
+  "Dibatalkan", tidak bisa dibuka.
+- **Meeting HOD juga untuk Lead**: Lead setara HOD untuk meeting ini. Pilihan "Booking sebagai"
+  menjadi Pribadi | HOD/Lead; mengundang departemen berarti mengundang HOD dan Lead-nya.
 - **Denah**: ruang 20 adalah **Mushola**; **Limasan** adalah pendopo di teras kayu di atasnya (dekat
   sungai), kunci `limasan` tetap sehingga ruang Limasan di database ikut pindah (9 Nov 2026).
 - **Tile tanpa arsiran kiri**: tile (Booking saya, Kebutuhan, kutipan Survei, blok jadwal) memakai

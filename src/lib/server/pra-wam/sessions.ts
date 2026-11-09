@@ -95,6 +95,23 @@ async function listSessionsUncached(viewer: Member): Promise<{ sessions: Session
 export const listSessions = cache(listSessionsUncached);
 
 /**
+ * The person's own sessions panitia cancelled, from `from` on (9 Nov 2026: shown greyed in Agenda,
+ * no longer on Beranda). A session made from a booking is left out: its booking shows instead.
+ */
+export async function myCancelledSessions(viewer: Member, from: string): Promise<Session[]> {
+  const client = createPrivilegedClient();
+  const { data: links, error: linkError } = await client.from("pw_session_participants").select("session_id").eq("employee_id", viewer.id);
+  if (linkError) { if (missing(linkError)) return []; databaseError(linkError); }
+  const ids = (links ?? []).map(link => link.session_id as string);
+  if (!ids.length) return [];
+  const { data, error } = await withBookingLink(withLink => client.from("pw_sessions").select(columns(withLink))
+    .eq("status", "batal").in("id", ids).gte("starts_at", wibInstant(from, "00:00")).order("starts_at").limit(100));
+  if (error) { if (missing(error)) return []; databaseError(error); }
+  const rows = ((data ?? []) as unknown as SessionRow[]).filter(row => !row.booking_id);
+  return shape(rows, viewer);
+}
+
+/**
  * Timeline, for everyone: the forums and events panitia planned (drafts and published, not
  * cancelled, no rapat), with only what the timeline shows (no description, no people), and
  * whether the viewer takes part. Before the sessions migration it is empty.

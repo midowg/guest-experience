@@ -88,7 +88,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const askedDay = tanggal ? items.findIndex(item => wibDate(item.startsAt) >= tanggal) : -1;
   const nowAt = next ? items.findIndex(item => item.key === next.key) : -1;
   const startAt = askedItem >= 0 ? askedItem : askedDay >= 0 ? askedDay : nowAt >= 0 ? nowAt : Math.max(items.length - 1, 0);
-  const latest = notes.items[0];
+  // The newest news, leaving out cancellations (9 Nov 2026): those show greyed in Agenda instead.
+  const latest = notes.items.find(note => !/dibatalkan/i.test(note.title));
   const dayWord = dayWordFor(today);
   const request = requests[0];
   const questCard = quest && <QuestionnaireCard name={quest.form.name} cardText={quest.form.cardText} minutes={quest.form.minutes}

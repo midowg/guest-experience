@@ -168,14 +168,17 @@ export async function windowSummary(from: string, to: string, now = new Date()):
   return daySummaries(bookableDates(from).filter(date => date <= to), rooms, holds, now);
 }
 
-/** Bookings the person made or takes part in, from today on. */
-export async function myBookings(viewer: Member, today: string): Promise<Booking[]> {
+/**
+ * Bookings the person made or takes part in, from today on. `status` "batal" (9 Nov 2026): the
+ * cancelled ones instead, shown greyed in Agenda (and no longer on Beranda).
+ */
+export async function myBookings(viewer: Member, today: string, status: "aktif" | "batal" = "aktif"): Promise<Booking[]> {
   const client = createPrivilegedClient();
   const { data: links, error: linkError } = await client.from("pw_room_booking_participants").select("booking_id").eq("employee_id", viewer.id).limit(500);
   if (linkError) fail(linkError);
   const ids = (links ?? []).map(link => link.booking_id);
   const { data, error } = await readBookings(columns => {
-    const query = client.from("pw_room_bookings").select(columns).eq("status", "aktif").gte("starts_at", wibInstant(today, "00:00"));
+    const query = client.from("pw_room_bookings").select(columns).eq("status", status).gte("starts_at", wibInstant(today, "00:00"));
     return (ids.length ? query.or(`booked_by.eq.${viewer.id},id.in.(${ids.join(",")})`) : query.eq("booked_by", viewer.id)).order("starts_at").limit(200);
   });
   if (error) fail(error);

@@ -12,7 +12,8 @@ export type HodMeetingStatus = "menunggu" | "terjadwal" | "ditolak" | "batal";
 export type HodPerson = { id: string; name: string; unit: string };
 export type HodInvite = HodPerson & { response: HodResponse; note: string; respondedAt: string | null };
 /** A department (by name, from Data karyawan) and the HODs who answer for it: whoever Admin WAM ticked as HOD there, and its leads. */
-export type HodDepartment = { id: string; name: string; heads: { id: string; name: string }[] };
+/** A department to invite, with its heads: its HODs and (9 Nov 2026) its Leads, who meet as equals. */
+export type HodDepartment = { id: string; name: string; heads: { id: string; name: string; post?: "HOD" | "Lead" }[] };
 
 export const hodAnswerSchema = z.object({ accept: z.boolean(), note: z.string().trim().max(300).default("") });
 

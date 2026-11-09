@@ -38,8 +38,9 @@ type Props = {
   /** Per weekday of the booking window: holds and "Penuh" (Book's windowSummary); without it only the chosen day is counted. */
   summary?: Record<string, DaySummary>;
   /**
-   * A HOD (6 Nov 2026): "Booking sebagai" Pribadi or HOD under Partisipan. As HOD the departments are
-   * picked instead of people; their HODs are invited and answer Terima or Tolak. The room is booked at once.
+   * A HOD or Lead (6 Nov 2026; Leads since 9 Nov 2026): "Booking sebagai" Pribadi or HOD/Lead under
+   * Partisipan. Then departments are picked instead of people; their HODs and Leads are invited and
+   * answer Terima or Tolak. The room is booked at once.
    */
   hod?: { departments: HodDepartment[]; ownUnits: string[] } | null;
   /**
@@ -428,7 +429,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         <span className={styles.label}>Booking sebagai</span>
         <div className={css.where}>
           <button type="button" aria-pressed={!asHod} onClick={() => chooseAs(false)}><User size={18} aria-hidden />Pribadi</button>
-          <button type="button" aria-pressed={asHod} onClick={() => chooseAs(true)}><Users size={18} aria-hidden />HOD</button>
+          <button type="button" aria-pressed={asHod} onClick={() => chooseAs(true)}><Users size={18} aria-hidden />HOD/Lead</button>
         </div>
       </div>}
       <p className={css.headcount} role="status"><Users size={18} aria-hidden />{countLine}</p>
@@ -438,13 +439,13 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         : `Belum ada ruang untuk ${peopleLabel(count)}. Kurangi atau tambah partisipan.`}</p>
       {asHod ? <fieldset className={css.hodPick}>
         <legend className={styles.label}>Departemen yang diundang</legend>
-        <p className={styles.hint}>HOD departemen yang dipilih diundang dan menjawab terima atau tolak. Ruang langsung dibooking.</p>
+        <p className={styles.hint}>HOD dan Lead departemen yang dipilih diundang dan menjawab terima atau tolak. Ruang langsung dibooking.</p>
         <ul>{hodOffered.map(department => {
           const none = department.heads.length === 0;
           return <li key={department.id}><label className={`${css.hodDept} ${none ? css.hodNone : ""}`}>
             <input type="checkbox" checked={hodUnits.includes(department.id)} disabled={none}
               onChange={() => pickHodUnits(hodUnits.includes(department.id) ? hodUnits.filter(id => id !== department.id) : [...hodUnits, department.id])} />
-            <span><strong>{department.name}</strong><small>{none ? "Belum ada HOD" : department.heads.map(head => head.name).join(", ")}</small></span>
+            <span><strong>{department.name}</strong><small>{none ? "Belum ada HOD atau Lead" : department.heads.map(head => head.post === "Lead" ? `${head.name} (Lead)` : head.name).join(", ")}</small></span>
           </label></li>;
         })}</ul>
       </fieldset> : <>
@@ -517,7 +518,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
           {draft.title.trim() || <span className={css.missing}>Belum diisi</span>}{draft.description.trim() && <small>{draft.description.trim()}</small>}
         </SummaryRow>
         <SummaryRow label="Partisipan" onEdit={() => goTo(2)}>
-          {peopleLabel(count)}<small>{asHod ? `Sebagai HOD · ${hodOffered.filter(department => hodUnits.includes(department.id)).map(department => department.name).join(", ")}`
+          {peopleLabel(count)}<small>{asHod ? `Sebagai HOD/Lead · ${hodOffered.filter(department => hodUnits.includes(department.id)).map(department => department.name).join(", ")}`
             : picked.length ? `Kamu, ${picked.map(person => person.name).join(", ")}` : "Hanya kamu"}</small>
         </SummaryRow>
         <SummaryRow label="Tempat" onEdit={() => goTo(3)}>
