@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ArrowLeftRight, Bell, CalendarClock, CheckCircle2, ChevronRight, Clock, Info, MapPin, QrCode } from "lucide-react";
+import { ArrowLeftRight, Bell, CalendarClock, CheckCircle2, Clock, Info, MapPin, QrCode } from "lucide-react";
 import { AgendaSheet } from "@/components/pra-wam/AgendaSheet";
 import { Avatar } from "@/components/pra-wam/Avatar";
 import { AboutCard, ColleaguesCard, ManageCard, QuestionnaireCard, RoomCard } from "@/components/pra-wam/BerandaCards";
@@ -190,9 +190,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </a>}
         </div>}
 
-        {appraisal && <a className={base.cardLink} href={praWamPath.appraisal()}>
-          <CalendarClock size={22} aria-hidden /><span>Book ruang<small>Pesan ruang lewat denah atau lihat siapa memakai ruang</small></span><ChevronRight size={20} aria-hidden />
-        </a>}
         {quest?.progress.done && questCard}
         {quest?.progress.done && quest.card && <ColleaguesCard href={praWamPath.colleagues} />}
         {about && <AboutCard about={about.about} />}
