@@ -1,14 +1,13 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
-import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarDays, ChevronLeft, ClipboardList, DoorOpen, FileText, Home, Plus, Send, User, Users, Utensils, X } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarDays, CalendarRange, ChevronLeft, ClipboardList, DoorOpen, FileText, Home, Plus, Send, User, Users, Utensils, X } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleNavGroup, type ConsoleSearchItem } from "@/components/console";
 import { bodOnly, managesSessions, readsNeeds, roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
 import { managedTabs, wamScreen, type Tab } from "@/lib/pra-wam/screen";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { Avatar } from "./Avatar";
-import { QuickActions } from "./QuickActions";
 import { SignOutButton } from "./SignOutButton";
 import styles from "./pra-wam.module.css";
 import panel from "./panitia.module.css";
@@ -16,17 +15,18 @@ import panel from "./panitia.module.css";
 type Who = { roles: readonly PraWamRole[] };
 type Item = { id: Tab; label: string; href: string; icon: ReactNode; show?: (who: Who) => boolean; short?: string };
 export type FrameMember = { id: string; name: string; nickname: string; department: string; roles: PraWamRole[]; photo?: string | null };
-export type FrameQuick = Omit<ComponentProps<typeof QuickActions>, "place" | "manages" | "waiting" | "now">;
 
 /**
- * Everyone (DS · Komponen "Bilah dan navigasi"): Beranda, Book, the blue + (Aksi cepat), Dokumen,
- * Profil. Agenda lives on Beranda now, day by day (decided 5 Nov 2026).
+ * Everyone (DS · Komponen "Bilah dan navigasi"): Beranda, Book, Timeline, Dokumen. Agenda lives on
+ * Beranda, day by day (5 Nov 2026). Since 9 Nov 2026 no blue + (Aksi cepat: check-in is on Beranda,
+ * Book has its tab) and no Profil (the photo at the top of Beranda, or the person at the top right
+ * on a desktop, opens it); Timeline shows Pra WAM's forums and events from Kelola acara.
  */
 const personal: Item[] = [
   { id: "beranda", label: "Beranda", href: praWamPath.home, icon: <Home aria-hidden /> },
   { id: "appraisal", label: "Book", href: praWamPath.appraisal(), icon: <DoorOpen aria-hidden /> },
+  { id: "timeline", label: "Timeline", href: praWamPath.timeline, icon: <CalendarRange aria-hidden /> },
   { id: "dokumen", label: "Dokumen", href: praWamPath.documents, icon: <FileText aria-hidden /> },
-  { id: "akun", label: "Profil", href: praWamPath.account, icon: <User aria-hidden /> },
 ];
 /** BOD only (Penpot "Panduan · BOD"): Ringkasan first; Agenda stays, as a BOD also takes part. No + : a BOD does not check in. */
 const bod: Item[] = [
@@ -86,7 +86,7 @@ const STALE_AFTER_MS = 60_000;
  * once and stays while the screens under it change: a tap shows the new tab lit at once and the
  * screen's skeleton (loading.tsx) inside the frame, then the screen itself, like an installed app.
  * What it shows for a screen comes from the address (wamScreen), never from the page.
- * - Phone: the page and a floating glass bottom bar (Beranda, Book, +, Dokumen, Profil). A detail
+ * - Phone: the page and a floating glass bottom bar (Beranda, Book, Timeline, Dokumen). A detail
  *   screen (`back`) is a pushed screen: a top bar with a back arrow and the title, no bottom bar,
  *   sliding in from the right.
  * - Phone, "Kelola acara": an app of its own. A top bar with its name and "Keluar" back to the
@@ -96,9 +96,8 @@ const STALE_AFTER_MS = 60_000;
  * - Desktop, "Kelola acara": the console (src/components/console), its sidebar with the panitia's
  *   places in groups and the page in one white panel, on the app's own light or dark tokens.
  */
-export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, children }: {
-  member: FrameMember; unread: number; waiting: number; phaseLabel: string; quick: FrameQuick | null; now: string;
-  children: ReactNode;
+export function WamFrame({ member, unread, waiting, phaseLabel, children }: {
+  member: FrameMember; unread: number; waiting: number; phaseLabel: string; children: ReactNode;
 }) {
   const pathname = usePathname();
   const search = useSearchParams();
@@ -115,7 +114,7 @@ export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, chil
     // eslint-disable-next-line react-hooks/set-state-in-effect -- remembering the screen just left
     if (!isSessionDetail) setFromPanitia(!!current && managedTabs.has(current));
   }, [current, isSessionDetail]);
-  // The counts in the frame (unread, waiting, Aksi cepat) are fetched with the frame; coming back
+  // The counts in the frame (unread, waiting) are fetched with the frame; coming back
   // to the app after a while fetches them again.
   useEffect(() => {
     let hiddenAt = 0;
@@ -134,10 +133,6 @@ export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, chil
   const managed = onlyBod ? [] : manage.filter(item => !item.show || item.show(member));
   const panitiaView = !onlyBod && !!current && managedTabs.has(current);
   const who = member.nickname || member.name;
-  const quickProps = {
-    checkIn: quick?.checkIn ?? null, upcoming: quick?.upcoming ?? null, bookingOpen: quick?.bookingOpen ?? false,
-    manages: managesSessions(member), running: quick?.running ?? [], waiting, now,
-  };
 
   if (panitiaView) {
     const searchItems: ConsoleSearchItem[] = [
@@ -183,7 +178,6 @@ export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, chil
         {menu.map(item => <a key={item.id} className={styles.topItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>{item.icon}<span>{item.label}</span>{badge(item.id) > 0 && <span className={styles.sideBadge}>{badge(item.id)}</span>}</a>)}
       </nav>
       <div className={styles.topRight}>
-        {!onlyBod && <QuickActions place="top" {...quickProps} />}
         {managed.length > 0 && <a className={styles.topManage} href={praWamPath.dashboard}><BarChart3 aria-hidden />Kelola acara{waiting > 0 && <span className={styles.sideBadge}>{waiting}</span>}</a>}
         <a className={styles.iconButton} href={praWamPath.notifications} aria-label={unread ? `Notifikasi, ${unread} belum dibaca` : "Notifikasi"} aria-current={current === "notifikasi" ? "page" : undefined}>
           <Bell aria-hidden />{unread > 0 && <span className={styles.iconDot} />}
@@ -202,14 +196,10 @@ export function WamFrame({ member, unread, waiting, phaseLabel, quick, now, chil
       </main>
     </div>
     {!back && <nav className={styles.bottomNav} aria-label="Menu WAM">
-      {menu.map((item, index) => [
-        // The blue + sits in the middle of the bar, between Book and Dokumen.
-        !onlyBod && index === 2 && <QuickActions key="aksi-cepat" place="bar" {...quickProps} />,
-        <a key={item.id} className={styles.navItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>
-          {item.icon}<span>{item.short ?? item.label}</span>
-          {badge(item.id) > 0 && <span className={styles.navBadge}><span aria-hidden>{badge(item.id)}</span><span className="sr-only">, {badge(item.id)} menunggu</span></span>}
-        </a>,
-      ])}
+      {menu.map(item => <a key={item.id} className={styles.navItem} href={item.href} aria-current={item.id === current ? "page" : undefined}>
+        {item.icon}<span>{item.short ?? item.label}</span>
+        {badge(item.id) > 0 && <span className={styles.navBadge}><span aria-hidden>{badge(item.id)}</span><span className="sr-only">, {badge(item.id)} menunggu</span></span>}
+      </a>)}
     </nav>}
   </div>;
 }

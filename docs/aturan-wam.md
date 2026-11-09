@@ -158,7 +158,7 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
     `pra-wam.module.css`. Setiap token ditulis di setiap blok, dan dua blok gelapnya harus sama.
     Teks di atas warna utama memakai `--pw-on-primary`, bukan `#fff`.
 - **Pengaturan berupa menu** (9 Nov 2026). Halamannya berdiri sendiri: ada judul "Pengaturan" dan
-  bilah bawah, tanpa panah kembali dan tanpa kartu profil (Profil dibuka lewat bilah bawah).
+  bilah bawah, tanpa panah kembali dan tanpa kartu profil (Profil dibuka lewat foto di atas Beranda).
   - Kelompok menunya: **Aplikasi** (Install WAM, Notifikasi, Tampilan), **Akun** (Ganti password),
     **Khusus BOD** (Akses MCP) dan **Bantuan** (Apa itu WAM?, Tentang aplikasi), lalu Keluar.
   - **Install WAM** (sheet "Cara install WAM") berisi cara install WAM, bergambar, per perangkat dan browser:
@@ -191,7 +191,14 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 - **Rangka tetap, isi memuat di dalamnya.** Bilah atas, navigasi bawah, dan sidebar digambar sekali
   di `src/app/wam/(app)/layout.tsx`. Setiap layar punya `loading.tsx` (skeleton). Tab aktif dan
   tombol kembali dibaca dari alamat (`src/lib/pra-wam/screen.ts`), bukan diatur per halaman.
-- Navigasi bawah: Beranda · Book · (+) Aksi cepat · Dokumen · Profil. BOD tanpa tombol +.
+- Navigasi bawah (9 Nov 2026): Beranda · Book · Timeline · Dokumen. Tidak ada tombol + (Aksi cepat):
+  absen ada di Beranda, Book punya menunya sendiri. Tidak ada menu Profil: dibuka lewat foto di atas
+  Beranda (HP) atau nama di kanan atas (desktop). Menu BOD tidak berubah (Ringkasan, Agenda, Peserta,
+  Survei, Profil).
+- **Timeline** (`/wam/timeline`): forum dan acara Pra WAM dari Kelola acara → Jadwal sesi, per bulan,
+  untuk semua orang (hanya baca). Yang terbit menampilkan hari dan jam; yang masih draf hanya rentang
+  tanggal rencana dengan label "Jadwal pasti menyusul", tanpa deskripsi dan tanpa daftar orang. Rapat
+  (booking ruang) dan yang batal tidak tampil. Yang terbit dan diikuti orang itu membuka detail sesinya.
 - Design system "Pra WAM · Hospitality": Poppins untuk judul dan angka, Inter untuk isi; biru
   Werkudara #006EC1 satu-satunya aksen utama, kuning #FFBA00 sekunder. Kartu putih radius 24, tombol
   pill, isian radius 16.

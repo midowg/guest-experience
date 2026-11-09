@@ -1,7 +1,7 @@
 import { praWamPath } from "@/lib/routes";
 import { safePraWamNext } from "./next-path";
 
-export type Tab = "beranda" | "agenda" | "appraisal" | "dokumen" | "notifikasi" | "akun" | "dashboard" | "sesi" | "permintaan" | "pengumuman" | "peserta" | "survei" | "kebutuhan" | "hod";
+export type Tab = "beranda" | "agenda" | "appraisal" | "timeline" | "dokumen" | "notifikasi" | "akun" | "dashboard" | "sesi" | "permintaan" | "pengumuman" | "peserta" | "survei" | "kebutuhan" | "hod";
 export type Back = { href: string; title: string };
 export type Screen = { current?: Tab; back?: Back };
 
@@ -29,6 +29,7 @@ export function wamScreen(pathname: string, search: Search, viewer: Viewer, came
     case praWamPath.home: return { current: "beranda" };
     case praWamPath.agenda: return { current: "agenda" };
     case praWamPath.documents: return { current: "dokumen" };
+    case praWamPath.timeline: return { current: "timeline" };
     case praWamPath.account: return { current: "akun" };
     // Pengaturan (9 Nov 2026): a screen of its own with the bottom bar, no back arrow to Profil.
     case praWamPath.settings: return { current: "akun" };

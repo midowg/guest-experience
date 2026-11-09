@@ -3,6 +3,7 @@ import { cache } from "react";
 import { clockLabel, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { BOOKING_SESSION_LOCKED, sessionProblems, sessionSpan, type RoomUse, type Session, type SessionInput, type SessionStatus } from "@/lib/pra-wam/sessions";
+import type { TimelineItem } from "@/lib/pra-wam/timeline";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { isR2Configured, removeObjects } from "../r2";
@@ -92,6 +93,29 @@ async function listSessionsUncached(viewer: Member): Promise<{ sessions: Session
 }
 /** Read once per request, however many parts of the page ask. */
 export const listSessions = cache(listSessionsUncached);
+
+/**
+ * Timeline, for everyone: the forums and events panitia planned (drafts and published, not
+ * cancelled, no rapat), with only what the timeline shows (no description, no people), and
+ * whether the viewer takes part. Before the sessions migration it is empty.
+ */
+export async function timelineItems(viewer: Member): Promise<{ items: TimelineItem[]; migrated: boolean }> {
+  const client = createPrivilegedClient();
+  const [{ data, error }, { data: links }] = await Promise.all([
+    client.from("pw_sessions").select("id,title,kind,status,plan_from,plan_to,starts_at,ends_at")
+      .in("kind", ["forum", "acara"]).in("status", ["draf", "terbit"]).limit(300),
+    client.from("pw_session_participants").select("session_id").eq("employee_id", viewer.id),
+  ]);
+  if (error) { if (missing(error)) return { items: [], migrated: false }; databaseError(error); }
+  const mine = new Set((links ?? []).map(link => link.session_id as string));
+  return {
+    migrated: true,
+    items: (data ?? []).map(row => ({
+      id: row.id, title: row.title, kind: row.kind, published: row.status === "terbit",
+      planFrom: row.plan_from, planTo: row.plan_to, startsAt: row.starts_at, endsAt: row.ends_at, mine: mine.has(row.id),
+    })),
+  };
+}
 
 export async function getSession(id: string, viewer: Member): Promise<Session> {
   const { data, error } = await withBookingLink(withLink => createPrivilegedClient().from("pw_sessions").select(columns(withLink)).eq("id", id).maybeSingle());

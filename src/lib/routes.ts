@@ -154,6 +154,8 @@ export const praWamPath = {
   agenda: `${PRA_WAM_PATH}/agenda`,
   session: (id: string) => `${PRA_WAM_PATH}/sessions/${id}`,
   documents: `${PRA_WAM_PATH}/documents`,
+  /** Timeline: Pra WAM's forums and events from Kelola acara → Jadwal sesi, for everyone to read. */
+  timeline: `${PRA_WAM_PATH}/timeline`,
   notifications: `${PRA_WAM_PATH}/notifications`,
   /** Panitia and BOD: Ringkasan operasional. */
   dashboard: `${PRA_WAM_PATH}/manage`,

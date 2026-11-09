@@ -12,7 +12,6 @@ vi.mock("next/navigation", () => ({
   usePathname: () => at.path,
   useSearchParams: () => new URLSearchParams(at.search),
 }));
-vi.mock("@/lib/server/pra-wam/quick-actions", () => ({ quickActionData: async () => ({ checkIn: null, upcoming: null, bookingOpen: true, running: [] }) }));
 
 
 import { PraWamShell, manageGroups } from "./PraWamShell";
@@ -72,16 +71,16 @@ describe("PraWamShell", () => {
     expect(screen.queryByRole("button", { name: "Aksi cepat" })).toBeNull();
   });
 
-  it("gives everyone else Beranda, Book, the blue +, Dokumen and Profil; Agenda is on Beranda now", async () => {
+  it("gives everyone else Beranda, Book, Timeline and Dokumen: no blue + and no Profil (9 Nov 2026); Agenda is on Beranda", async () => {
     at.path = "/wam";
     render(await PraWamShell({ member: member([]), children: <p>Isi</p> }));
     const bottom = screen.getAllByRole("navigation", { name: "Menu WAM" }).at(-1)!;
-    // The + carries its sheet (a <dialog>, shown in the top layer) right after it.
-    const parts = [...bottom.children].filter(child => child.tagName !== "DIALOG").map(child => child.getAttribute("aria-label") ?? child.textContent);
-    expect(parts).toEqual(["Beranda", "Book", "Aksi cepat", "Dokumen", "Profil"]);
+    expect([...bottom.children].map(child => child.textContent)).toEqual(["Beranda", "Book", "Timeline", "Dokumen"]);
+    expect(within(bottom).getByRole("link", { name: "Timeline" }).getAttribute("href")).toBe("/wam/timeline");
     expect(within(bottom).queryByRole("link", { name: "Agenda" })).toBeNull();
-    // The desktop top bar has the same + as a labelled button.
-    expect(screen.getAllByRole("button", { name: "Aksi cepat" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Aksi cepat" })).toBeNull();
+    // Profil stays one tap away from the person at the top right (desktop) and the photo on Beranda.
+    expect(within(bottom).queryByRole("link", { name: "Profil" })).toBeNull();
   });
 
   it("gives a detail screen its back bar and no bottom bar", async () => {
