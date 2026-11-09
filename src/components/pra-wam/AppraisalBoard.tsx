@@ -139,7 +139,6 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   function close() { setShown(false); mirror({}); }
 
   const openBooking = (booking: Booking) => show({ kind: "detail", booking });
-  const book = (pick: { date?: string; room?: string; start?: string; end?: string } = {}) => show(draftFor(pick));
 
   function saved({ message, date: day }: { message: string; date: string }) {
     setShown(false);
@@ -174,7 +173,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   // The loaded week is recounted from its bookings with the moving clock; the rest is the server's (the form's date strip).
   const days = { ...summary, ...daySummaries(week, rooms, bookings.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), clockNow) };
   const head = <ScreenHead title="Agenda" lead={<>Pilih tanggal di <a href={praWamPath.timeline}>kalender Timeline</a> untuk langsung booking pada hari itu, atau ketuk Book ruang.</>}
-    actions={canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
+    actions={canBook && dates.length > 0 ? <a className="button button--primary" href={praWamPath.book()}><Plus size={18} aria-hidden /> Book ruang</a> : undefined} />;
 
   return <>
     {head}
@@ -201,7 +200,7 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
 
     {sheet?.kind === "detail" && <BookingSheet booking={sheet.booking} shown={shown} onClose={close} rooms={rooms} now={clockNow}
       mine={mineFlag(sheet.booking)} canEdit={canBook && mineFlag(sheet.booking)} canCancel={!sheet.booking.isSession && (mineFlag(sheet.booking) || canCancelAny)}
-      busy={busy} onEdit={() => show(editFor(sheet.booking))} onCancel={() => cancel(sheet.booking)}
+      busy={busy} onEdit={() => router.push(praWamPath.book({ edit: sheet.booking.id }))} onCancel={() => cancel(sheet.booking)}
       hod={hodInfo[sheet.booking.id]} viewerId={viewerId} onAnswered={text => { setNotice({ tone: "success", text }); router.refresh(); }}
       onAnswerError={text => setNotice({ tone: "error", text })} />}
 

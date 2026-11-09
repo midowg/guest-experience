@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Check, Clock, DoorOpen, Info, MapPin, Pencil, Send, User, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarRange, Check, CheckCircle2, Clock, DoorOpen, Info, MapPin, Pencil, Plus, Send, User, Users } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import {
   alternatives, appraisalRules, bookingProblems, clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock,
@@ -84,6 +84,9 @@ type Choice = { ok: boolean; pending: boolean; tone: PlanTone; text: string };
 export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null, activities = [] }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
+  // On its own page (no sheet): saved, the form gives way to what was booked (9 Nov 2026: booking is
+  // a view of its own; it no longer sends the person to Agenda).
+  const [done, setDone] = useState<string | null>(null);
   // Booking as HOD: the departments picked; their HODs are the participants.
   const [asHod, setAsHod] = useState(false);
   const [hodUnits, setHodUnits] = useState<string[]>([]);
@@ -296,7 +299,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       const body = { ...draft, roomId, place: outside ? (draft.place ?? "").trim() : "", confirmed, overCapacity: !!overRoom && sure, ...(asHod && !editId ? { hodUnits } : {}) };
       const result = await praWamRequest(editId ? praWamApi.bookings(editId) : praWamApi.bookings(), { method: editId ? "PATCH" : "POST", json: body });
       if (onSaved) { setBusy(false); onSaved({ message: result.message, date: draft.date }); return; }
-      router.refresh(); router.push(praWamPath.appraisal(draft.date));
+      setBusy(false); setDone(result.message); router.refresh();
+      window.scrollTo({ top: 0 });
     } catch (problem) {
       if (problem instanceof PraWamApiError && problem.conflict) {
         setConflict({ ...problem.conflict, message: problem.message });
@@ -318,6 +322,21 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const heading = (at: number, text: string) => <h2 id={`${uid}-step-${at}`} ref={element => { headings.current[at] = element; }} tabIndex={-1}>{text}</h2>;
   const stepProps = (at: number) => ({ className: `${styles.card} ${own.formCard} ${css.step}`, "aria-labelledby": `${uid}-step-${at}`, hidden: step !== at });
   const progress = step < SUMMARY ? (step + 1) / SUMMARY : 1;
+
+  if (done) return <section className={`${styles.card} ${css.done}`} aria-labelledby={`${uid}-done`}>
+    <CheckCircle2 className={css.doneIcon} aria-hidden />
+    <h2 id={`${uid}-done`} tabIndex={-1} ref={element => element?.focus()}>{editId ? "Booking diubah" : "Booking tersimpan"}</h2>
+    <p role="status">{done}</p>
+    <dl className={css.doneFacts}>
+      <div><dt>Kegiatan</dt><dd>{draft.title.trim()}</dd></div>
+      <div><dt>Waktu</dt><dd>{dayLabel(draft.date)} · {hours}</dd></div>
+      <div><dt>{outside ? "Tempat" : "Ruang"}</dt><dd>{outside ? (draft.place ?? "").trim() : roomName(roomId)}</dd></div>
+    </dl>
+    <div className={styles.actions}>
+      <a className="button button--primary" href={praWamPath.timeline}><CalendarRange size={18} aria-hidden /> Kembali ke Timeline</a>
+      <a className="button button--secondary" href={praWamPath.book()}><Plus size={18} aria-hidden /> Book lagi</a>
+    </div>
+  </section>;
 
   const footer = <>
     {step > 0 && <Button type="button" variant="secondary" disabled={busy} onClick={() => goTo(step - 1)}><ArrowLeft size={18} aria-hidden /> Kembali</Button>}

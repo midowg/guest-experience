@@ -18,8 +18,9 @@ describe("wamScreen: what the frame shows, from the address alone", () => {
     expect(wamScreen("/wam/settings", q(), me)).toEqual({ current: "akun" });
     expect(wamScreen("/wam/about", q("dari=pengaturan"), me).back).toEqual({ href: "/wam/settings", title: "Tentang WAM" });
     expect(wamScreen("/wam/about", q(), me).back?.href).toBe("/wam");
-    expect(wamScreen("/wam/book/new", q("date=2026-11-06&edit=b1"), me)).toEqual({ current: "appraisal", back: { href: "/wam/book?date=2026-11-06", title: "Ubah booking" } });
-    expect(wamScreen("/wam/book/new", q(), me).back?.title).toBe("Book ruang");
+    expect(wamScreen("/wam/book/new", q("date=2026-11-06&edit=b1"), me)).toEqual({ current: "appraisal", back: { href: "/wam/book", title: "Ubah booking" } });
+    // A new booking is a view of its own under Timeline, back to Timeline (9 Nov 2026).
+    expect(wamScreen("/wam/book/new", q("date=2026-11-14"), me)).toEqual({ current: "timeline", back: { href: "/wam/timeline", title: "Book ruang" } });
     expect(wamScreen("/wam/manage/sessions/new", q(), me).back?.title).toBe("Buat sesi");
     expect(wamScreen("/wam/manage/sessions/s1", q(), me).back?.title).toBe("Ubah sesi");
     expect(wamScreen("/wam/manage/sessions/s1/attendance", q(), me).back?.title).toBe("QR dan daftar hadir");

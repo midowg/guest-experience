@@ -35,7 +35,7 @@
 .list { display: grid; align-content: start; gap: 3px; min-width: 0; margin: 0; padding: 0; list-style: none; }
 .list > li { min-width: 0; }
 /* Two lines: the hour (and the room under "Semua ruang") small, then the title with the whole width. */
-.chip { display: grid; gap: 0; width: 100%; min-width: 0; min-height: 36px; padding: 3px 6px 4px; border: 0; border-left: 3px solid var(--tone-line); border-radius: 8px; background: var(--tone-bg); color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; }
+.chip { display: grid; gap: 0; width: 100%; min-width: 0; min-height: 36px; padding: 3px 6px 4px; border: 1px solid color-mix(in srgb, var(--tone-line) 40%, transparent); border-radius: 8px; background: var(--tone-bg); color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; }
 .chip:hover { box-shadow: inset 0 0 0 1px var(--tone-line); }
 .chip:focus-visible, .more:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 1px; }
 .chipTime { min-width: 0; font-size: 10.5px; font-weight: 600; line-height: 1.35; color: var(--pw-muted); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

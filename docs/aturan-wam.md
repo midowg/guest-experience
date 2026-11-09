@@ -212,6 +212,13 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 - **Agenda** (menu bilah bawah, dulu "Book"; 9 Nov 2026): tanpa kalender dan tanpa denah. Isinya
   tombol Book ruang dan daftar Booking saya. Tanggal dipilih di kalender Timeline atau di form;
   ketersediaan ruang terlihat di langkah Tempat pada form.
+- **Booking adalah halaman sendiri** (`/wam/book/new`): Book ruang dan Ubah membuka halaman itu,
+  bukan sheet. Panah kembali ke Timeline (booking baru) atau Agenda (ubah). Setelah disimpan,
+  halaman itu menampilkan yang dibooking dengan "Kembali ke Timeline" dan "Book lagi"; tidak
+  dialihkan ke Agenda.
+- **Tile tanpa arsiran kiri**: tile (Booking saya, Kebutuhan, kutipan Survei, blok jadwal) memakai
+  outline tipis di keliling tile dengan warna jenisnya, bukan garis tebal di sisi kiri. Booking
+  milik sendiri bernada emas hangat.
 - **Kegiatan di form booking**: forum dan acara Timeline jadi pilihan nama kegiatan ("Dari
   Timeline"), yang tanggalnya mencakup hari booking lebih dulu, kalau tidak ada yang berikutnya.
   Nama lain tetap bisa diketik.

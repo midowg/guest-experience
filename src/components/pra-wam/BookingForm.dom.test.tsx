@@ -250,3 +250,14 @@ it("falls back to the next activities when none runs on the day", () => {
   expect(activitiesFor(list, "2026-11-05")).toEqual({ list: [list[1]], onDay: false });
   expect(activitiesFor(list, "2026-11-20")).toEqual({ list: [list[1]], onDay: true });
 });
+
+it("on its own page, once saved shows what was booked with a way back to Timeline, not Agenda", async () => {
+  window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+  request.mockResolvedValue({ data: {}, message: "Booking diubah." });
+  renderForm({ editId: "b9", initial: draft({ title: "Rapat tim", roomId: "kecil" }) });
+  fireEvent.click(screen.getByRole("button", { name: /Simpan perubahan/ }));
+  await vi.waitFor(() => expect(screen.getByRole("heading", { name: "Booking diubah" })).toBeTruthy());
+  expect(screen.getByText("Rapat tim")).toBeTruthy();
+  expect(screen.getByRole("link", { name: /Kembali ke Timeline/ }).getAttribute("href")).toBe("/wam/timeline");
+  expect(screen.getByRole("link", { name: /Book lagi/ }).getAttribute("href")).toBe("/wam/book/new");
+});

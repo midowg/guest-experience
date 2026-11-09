@@ -269,7 +269,7 @@ button.extraChip:hover { border-color: var(--pw-primary); }
 .dayBooking > span:first-child { font-weight: 800; font-variant-numeric: tabular-nums; }
 .dayBooking strong { display: block; font-weight: 700; overflow-wrap: anywhere; }
 .dayBooking small { display: block; font-size: 13px; color: var(--pw-muted); }
-.dayBooking.dayMine { background: var(--pw-brass-soft); box-shadow: inset 4px 0 0 var(--pw-brass); }
+.dayBooking.dayMine { background: var(--pw-brass-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pw-brass) 55%, transparent); }
 .dayBooking.dayMine small { color: var(--pw-on-brass-soft); font-weight: 700; }
 .dayEmpty { margin: 0; font-size: 14px; color: var(--pw-muted); }
 .dayActions { display: flex; flex-wrap: wrap; gap: 8px; }

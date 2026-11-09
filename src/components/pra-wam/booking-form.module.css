@@ -87,3 +87,12 @@
 /* Kegiatan: Timeline's forums and events as ready names to pick (9 Nov 2026). */
 .activities { display: grid; gap: 6px; }
 .activities p { margin: 0; }
+/* Saved on its own page: what was booked, then back to Timeline or book again. */
+.done { display: grid; gap: 10px; justify-items: start; }
+.done h2 { margin: 0; font-family: var(--pw-display); font-size: 22px; font-weight: 600; color: var(--pw-text); outline: none; }
+.done p { margin: 0; color: var(--pw-muted); }
+.doneIcon { width: 36px; height: 36px; color: var(--pw-success); }
+.doneFacts { display: grid; gap: 8px; width: 100%; margin: 6px 0 8px; padding: 12px 14px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); }
+.doneFacts div { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 8px; }
+.doneFacts dt { font-size: 13px; color: var(--pw-muted); }
+.doneFacts dd { margin: 0; font-size: 14px; font-weight: 600; color: var(--pw-text); overflow-wrap: anywhere; }

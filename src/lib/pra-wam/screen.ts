@@ -40,7 +40,11 @@ export function wamScreen(pathname: string, search: Search, viewer: Viewer, came
     case praWamPath.colleagues: return { back: { href: praWamPath.home, title: "Kartu rekan" } };
     case praWamPath.appraisal(): return { current: "appraisal" };
     case praWamPath.hod: return { current: "appraisal" };
-    case praWamPath.book(): return { current: "appraisal", back: { href: praWamPath.appraisal(search.get("date") ?? undefined), title: search.get("edit") ? "Ubah booking" : "Book ruang" } };
+    // Booking is a view of its own (9 Nov 2026): a new one belongs to Timeline (whose calendar opens
+    // it); changing one of Agenda's bookings goes back there.
+    case praWamPath.book(): return search.get("edit")
+      ? { current: "appraisal", back: { href: praWamPath.appraisal(), title: "Ubah booking" } }
+      : { current: "timeline", back: { href: praWamPath.timeline, title: "Book ruang" } };
     case praWamPath.dashboard: return { current: "dashboard" };
     case praWamPath.sessions: return { current: "sesi" };
     case praWamPath.newSession: return { current: "sesi", back: { href: praWamPath.sessions, title: "Buat sesi" } };

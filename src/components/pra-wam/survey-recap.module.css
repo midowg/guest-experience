@@ -36,6 +36,6 @@
 .matrix td small { display: block; font-weight: 600; color: var(--pw-muted); }
 
 .quotes { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
-.quote { padding: 8px 12px; border-left: 3px solid var(--pw-primary); border-radius: 0 10px 10px 0; background: var(--pw-primary-soft); color: var(--pw-text); font-size: 14px; overflow-wrap: anywhere; white-space: pre-line; }
+.quote { padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--pw-primary) 30%, var(--pw-line)); border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-text); font-size: 14px; overflow-wrap: anywhere; white-space: pre-line; }
 .quote span { color: var(--pw-muted); font-weight: 700; }
 .more summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--pw-primary); font-weight: 600; cursor: pointer; }

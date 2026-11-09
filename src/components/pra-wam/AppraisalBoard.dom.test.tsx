@@ -11,7 +11,7 @@ HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", 
 HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
 const rooms: Room[] = [{ id: "r1", slug: "r1", name: "Nagapadma", kind: "area", capacity: 6, bookable: true, minPeople: null, planKey: null, facilities: [] }];
 const b: Booking = { id: "b1", roomId: "r1", title: "Rapat KPI", description: "x", startsAt: wibInstant("2026-11-05", "10:00"), endsAt: wibInstant("2026-11-05", "11:00"), bookedBy: { id: "me", name: "Aku", department: "IT" }, participants: [] };
-it("renders Book ruang and Booking saya only, and opens detail and new form sheets", () => {
+it("renders Book ruang and Booking saya only; a booking opens its detail, Ubah and Book ruang open the booking page", () => {
   const replace = vi.spyOn(window.history, "replaceState");
   render(<AppraisalBoard date="2026-11-04" week={["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"]} dates={["2026-11-04","2026-11-05"]} now={wibInstant("2026-11-04","10:12")}
     rooms={rooms} bookings={[b]} mine={[b]} viewerId="me" canCancelAny={false} open form={{ people: [], groups: [], usedTitles: [] }} arrive={{}} />);
@@ -23,13 +23,10 @@ it("renders Book ruang and Booking saya only, and opens detail and new form shee
   fireEvent.click(screen.getByRole("button", { name: /Rapat KPI/ }));
   expect(screen.getByRole("dialog", { name: "Rapat KPI" })).toBeTruthy();
   expect(replace.mock.calls.at(-1)?.[2]).toBe("/wam/book?date=2026-11-05&booking=b1");
+  // Booking is a page of its own (9 Nov 2026): Ubah and Book ruang go there, not into a sheet.
   fireEvent.click(screen.getByRole("button", { name: "Ubah" }));
-  expect(screen.getByRole("dialog", { name: "Ubah booking" })).toBeTruthy();
-  expect((screen.getByLabelText("Nama kegiatan") as HTMLInputElement).value).toBe("Rapat KPI");
-  fireEvent.click(screen.getByRole("button", { name: "Tutup" }));
-  fireEvent.click(screen.getAllByRole("button", { name: /Book ruang/ })[0]);
-  expect(screen.getByRole("dialog", { name: "Book ruang" })).toBeTruthy();
-  expect(document.querySelector("button[type=submit]")?.getAttribute("form")).toBe(document.querySelector("form")?.id);
+  expect(push).toHaveBeenLastCalledWith("/wam/book/new?edit=b1");
+  expect(screen.getByRole("link", { name: /Book ruang/ }).getAttribute("href")).toBe("/wam/book/new");
 });
 it("opens a sheet from the address", () => {
   render(<AppraisalBoard date="2026-11-05" week={["2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06"]} dates={["2026-11-04","2026-11-05"]} now={wibInstant("2026-11-04","10:12")}
