@@ -2,19 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { CalendarDays, CalendarPlus, ChevronLeft, ChevronRight, Clock, DoorOpen, Map as MapIcon, MapPin, Plus, Text, User, Users, X } from "lucide-react";
+import { CalendarPlus, CalendarRange, ChevronRight, Clock, DoorOpen, MapPin, Plus, Text, User, Users, X } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { appraisalRules, bookingWhere, clockLabel, dayLabel, draftHours, isOutside, isWorkday, loadedWeek, OUTSIDE_ROOM, weekShift, wibDate, wibTime, workWeek, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, bookingWhere, clockLabel, dayLabel, draftHours, isOutside, loadedWeek, OUTSIDE_ROOM, wibDate, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest } from "./api";
-import { daySummaries, roomDay, type DayStatus, type DaySummary } from "@/lib/pra-wam/room-day";
-import { bookingKey, DayCalendar, Legend, WeekCalendar, type BookPick } from "./BookCalendar";
+import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
+import { bookingKey } from "./BookCalendar";
 import { BookingForm, type BookingDraft, type PeopleGroup } from "./BookingForm";
-import { monthOf, MonthView } from "./BookMonth";
 import { useConfirm } from "./ConfirmDialog";
-import { FloorPlan } from "./FloorPlan";
 import { hodResponseLabels, hodStatusLabels, type HodBookingInfo, type HodDepartment } from "@/lib/pra-wam/hod";
-import { MonthCalendar } from "./MonthCalendar";
 import { ScreenHead } from "./ScreenHead";
 import { Sheet } from "./Sheet";
 import styles from "./pra-wam.module.css";
@@ -34,11 +31,11 @@ type Props = {
   form: BookFormData | null; arrive: BookArrival;
   /** A line under the title, e.g. that booking is closed. */
   banner?: ReactNode;
-  /** Whether the floor plan is offered next to the calendar (the super admin's setting); default true. */
+  /** Whether the booking form's Tempat step offers the floor plan (the super admin's setting); default true. */
   floorPlan?: boolean;
   /** Per weekday of the booking window: holds and whether it is full (windowSummary); the loaded week is recounted here. */
   summary?: Record<string, DaySummary>;
-  /** A HOD's Meeting HOD (6 Nov 2026): a third view beside Kalender and Denah, for HODs only. */
+  /** A HOD's Meeting HOD (6 Nov 2026): booking "sebagai HOD" in the form, for HODs only. */
   hod?: { departments: HodDepartment[]; ownUnits: string[] } | null;
   /** Per booking made as HOD: its meeting and each HOD's answer, for the detail sheet (Terima and Tolak). */
   hodInfo?: Record<string, HodBookingInfo>;
@@ -53,8 +50,10 @@ const shortDate = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: 
 const inPeriod = (date: string) => date >= appraisalRules.periodStart && date <= appraisalRules.periodEnd;
 
 /**
- * Book: a simplified calendar of who has which room (BookCalendar), with the office floor plan as
- * the second view. Everything opens over the page in a sheet from the left (bottom on a phone):
+ * Book (9 Nov 2026): no calendar and no floor plan any more. The day is picked on Timeline's
+ * calendar (a tap opens the booking form on that day) or in the form itself, whose Tempat step
+ * shows which rooms are free. Here: Book ruang and the person's own bookings ("Booking saya").
+ * Everything opens over the page in a sheet from the left (bottom on a phone):
  * a booking's detail with Ubah and Batalkan, and the booking form, new or changing one. The open
  * sheet and the day are mirrored in the address (history.replaceState: no reload, no server round
  * trip), so a reload reopens it; a day in another week (picked on the date strip) is a navigation,
@@ -74,15 +73,6 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
   const [selected, setSelected] = useState(date);
   const [weekOf, setWeekOf] = useState(week[0]);
   if (weekOf !== week[0]) { setWeekOf(week[0]); setSelected(date); }
-  const [chosenView, setView] = useState<"kalender" | "denah">("kalender");
-  // With the floor plan switched off by the super admin, no Denah; Meeting HOD only for a HOD.
-  const view = chosenView === "denah" && !floorPlan ? "kalender" : chosenView;
-  // From 1024px the week grid first (DS "Jadwal, tampilan minggu"), or the day, or the month (8 Nov 2026); a phone always shows the day.
-  const [mode, setMode] = useState<"hari" | "minggu" | "bulan">("minggu");
-  const [month, setMonth] = useState(() => monthOf(date));
-  // Bumped after a save or a cancel, so the month view fetches its bookings again.
-  const [version, setVersion] = useState(0);
-  const [weekRoom, setWeekRoom] = useState(() => bookable[0]?.id ?? "");
 
   // "Now" moves on while the page is open: the line and what can still be booked.
   const [clockNow, setClockNow] = useState(() => new Date(now));
@@ -145,25 +135,12 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     else mirror({ date: next.initial.date, new: "1", room: next.initial.roomId, start: next.initial.start, end: next.initial.end });
   }
   function close() { setShown(false); mirror({}); }
-  /** A day picked: in this week it shows at once, another week loads. `toDay`: switch the desktop to the day view. */
-  function pickDay(day: string, toDay = true) {
-    if (toDay) setMode("hari");
-    if (!loaded.includes(day)) { router.push(praWamPath.appraisal(day), { scroll: false }); return; }
-    setSelected(day);
-    window.history.replaceState(null, "", praWamPath.bookSheet({ date: day }));
-  }
-  /** The week grid's arrows: the first day of the week before or after that is in the period. */
-  function goWeek(direction: -1 | 1) {
-    const target = workWeek(weekShift(selected, direction)).find(inPeriod);
-    if (target) router.push(praWamPath.appraisal(target), { scroll: false });
-  }
 
   const openBooking = (booking: Booking) => show({ kind: "detail", booking });
   const book = (pick: { date?: string; room?: string; start?: string; end?: string } = {}) => show(draftFor(pick));
 
   function saved({ message, date: day }: { message: string; date: string }) {
     setShown(false);
-    setVersion(value => value + 1);
     setNotice({ tone: "success", text: message });
     if (loaded.includes(day)) {
       setSelected(day);
@@ -186,30 +163,15 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     try {
       const result = await praWamRequest(praWamApi.bookings(booking.id), { method: "DELETE" });
       setNotice({ tone: "success", text: result.message || "Booking dibatalkan." });
-      setVersion(value => value + 1);
       close();
       router.refresh();
     } catch (error) { setNotice({ tone: "error", text: errorText(error) }); }
     finally { setBusy(null); }
   }
 
-  const dayBookings = bookings.filter(booking => wibDate(booking.startsAt) === selected);
-  // The loaded week is recounted from its bookings with the moving clock; the rest is the server's.
+  // The loaded week is recounted from its bookings with the moving clock; the rest is the server's (the form's date strip).
   const days = { ...summary, ...daySummaries(week, rooms, bookings.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), clockNow) };
-  const canBookDay = canBook && inPeriod(selected) && selected >= today && isWorkday(selected);
-  // A Saturday or Sunday: no rooms. "Di luar kantor" is chosen inside the booking form only (5 Nov 2026).
-  const weekendDay = !isWorkday(selected);
-  const weekendPanel = <section className={`${styles.card} ${css.weekend}`} aria-label={`Akhir pekan, ${dayLabel(selected)}`}>
-    <DayHead date={selected} today={today} />
-    <p className={css.weekendText}>Ruang kantor tutup di akhir pekan.</p>
-  </section>;
-  // One short word when the day cannot be booked; nothing on an ordinary day.
-  const dayNote = !inPeriod(selected) ? "Di luar periode" : selected < today ? "Sudah lewat" : !open ? "Book ditutup" : null;
-  // The month calendar (DS "Kalender · tanggal terpilih") picks the day for both views.
-  const calendar = <MonthCalendar from={appraisalRules.periodStart} to={appraisalRules.periodEnd} selected={selected} today={today} summary={days}
-    mine={mine.map(booking => wibDate(booking.startsAt))} onPick={day => pickDay(day, false)} label="Pilih hari" />;
-  // Meeting HOD has its own "Ajukan meeting": one add button per view.
-  const head = <ScreenHead title="Book ruang"
+  const head = <ScreenHead title="Book ruang" lead={<>Pilih tanggal di <a href={praWamPath.timeline}>kalender Timeline</a> untuk langsung booking pada hari itu, atau ketuk Book ruang.</>}
     actions={canBook && dates.length > 0 ? <button type="button" className="button button--primary" onClick={() => book()} aria-haspopup="dialog"><Plus size={18} aria-hidden /> Book ruang</button> : undefined} />;
 
   return <>
@@ -217,45 +179,11 @@ export function AppraisalBoard({ date, week, dates, now, rooms, bookings, mine, 
     {banner}
     {confirmDialog}
 
-    <div className={css.toolbar}>
-      {floorPlan && <div className={`${css.segmented} ${css.views}`} role="group" aria-label="Tampilan">
-        <button type="button" aria-pressed={view === "kalender"} onClick={() => setView("kalender")}><CalendarDays aria-hidden />Kalender</button>
-        <button type="button" aria-pressed={view === "denah"} onClick={() => setView("denah")}><MapIcon aria-hidden />Denah</button>
-      </div>}
-      {view === "kalender" && <div className={`${css.segmented} ${css.deskOnly}`} role="group" aria-label="Rentang kalender">
-        <button type="button" aria-pressed={mode === "hari"} onClick={() => setMode("hari")}>Hari</button>
-        <button type="button" aria-pressed={mode === "minggu"} onClick={() => setMode("minggu")}>Minggu</button>
-        <button type="button" aria-pressed={mode === "bulan"} onClick={() => { setMonth(monthOf(selected)); setMode("bulan"); }}>Bulan</button>
-      </div>}
-    </div>
-
-    {view === "kalender" ? <div className={css.layout}>
-      <div className={css.side}>
-        {calendar}
-        <Legend />
-      </div>
-      {mode === "bulan" && <div className={`${css.main} ${css.deskWeek}`}>
-        <MonthView month={month} rooms={bookable} viewerId={viewerId} today={today} selected={selected} summary={days} version={version}
-          onMonth={setMonth} onPickDay={day => pickDay(day)} onOpen={openBooking} />
-      </div>}
-      {weekendDay ? <div className={`${css.main} ${mode === "bulan" ? css.deskHide : ""}`}>{weekendPanel}</div> : <div className={`${css.main} ${mode === "bulan" ? css.deskHide : ""}`}>
-        <DayHead date={selected} today={today} note={dayNote} className={mode === "minggu" ? css.deskHide : undefined} />
-        {mode === "minggu" && <div className={css.deskWeek}>
-          <WeekCalendar week={week} rooms={bookable} bookings={bookings} viewerId={viewerId} now={clockNow} today={today} selected={selected} canBook={canBook}
-            roomId={weekRoom} onRoom={setWeekRoom} onPickDay={pickDay} onWeek={goWeek} onOpen={openBooking}
-            onBook={pick => book({ date: pick.date, room: pick.room.id, start: pick.start, end: pick.end })} />
-        </div>}
-        <DayCalendar date={selected} rooms={bookable} bookings={dayBookings} now={clockNow} viewerId={viewerId} canBook={canBookDay}
-          onOpen={openBooking} onBook={(pick: BookPick) => book({ date: selected, room: pick.room.id, start: pick.start, end: pick.end })} phoneOnly={mode !== "hari"} />
-      </div>}
-    </div> : <PlanView key={selected} date={selected} today={today} now={clockNow} rooms={rooms} bookings={dayBookings} canBook={canBookDay} weekend={weekendDay}
-      note={weekendDay ? "Akhir pekan" : dayNote} onDay={day => pickDay(day, false)} onBookRoom={room => book({ date: selected, room: room.id })} />}
-
     <p className={styles.sectionLabel}>Booking saya</p>
     {mine.length === 0 ? <div className={styles.emptyRow}>
       <span className={styles.tile} aria-hidden><CalendarPlus /></span>
       <p>Belum ada booking yang kamu pesan atau ikuti.</p>
-      {canBook && dates.length > 0 && <button type="button" className="button button--secondary" onClick={() => book()}>Book ruang</button>}
+      {canBook && dates.length > 0 && <a className="button button--secondary" href={praWamPath.timeline}><CalendarRange size={18} aria-hidden /> Lihat kalender</a>}
     </div> : <ul className={css.mineList}>
       {mine.map(booking => <li key={bookingKey(booking)}>
         <button type="button" className={`${css.mineRow} ${mineFlag(booking) ? css.mine : css.busy}`} onClick={() => openBooking(booking)} aria-haspopup="dialog">
@@ -346,47 +274,5 @@ function HodAnswers({ info, viewerId, ended, onAnswered, onError }: { info: HodB
       <button type="button" className="button button--secondary" disabled={busy} onClick={() => void answer(false)}>Tolak</button>
       <button type="button" className="button button--primary" disabled={busy} onClick={() => void answer(true)}>{busy ? "Mengirim…" : "Terima"}</button>
     </div>}
-  </section>;
-}
-
-/** A day's title: the date, and a small "Hari ini" or a word on why it cannot be booked. */
-function DayHead({ date, today, note, className }: { date: string; today: string; note?: string | null; className?: string }) {
-  return <div className={`${css.dayTitle} ${className ?? ""}`}>
-    <h2>{dayLabel(date)}</h2>
-    {date === today ? <span className={css.dayTag}>Hari ini</span> : note ? <span className={`${css.dayTag} ${css.dayTagMuted}`}>{note}</span> : null}
-  </div>;
-}
-
-const nextDay = (date: string, by: number) => new Date(Date.parse(`${date}T12:00:00Z`) + by * 86_400_000).toISOString().slice(0, 10);
-
-/**
- * Denah (5 Nov 2026): only the plan. The day above it steps with ‹ ›, every room shows the day's
- * status in its chairs' colour, and a tap on a room opens its label: name, people and facilities,
- * status and "Book ruang ini" when it can still be booked that day. The room cards stay with Kalender.
- */
-function PlanView({ date, today, now, rooms, bookings, canBook, weekend, note, onDay, onBookRoom }: {
-  date: string; today: string; now: Date; rooms: Room[]; bookings: Booking[]; canBook: boolean;
-  /** A Saturday or Sunday: every room closed. */
-  weekend: boolean;
-  /** Why the day cannot be booked, in a word; null on an ordinary day. */
-  note: string | null;
-  onDay: (date: string) => void; onBookRoom: (room: Room) => void;
-}) {
-  const outside = !inPeriod(date);
-  const dayOf = (room: Room) => roomDay({ date, bookable: room.bookable, now, holds: bookings.filter(booking => booking.roomId === room.id).map(booking => ({ startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })) });
-  const statusOf = (room: Room): DayStatus => weekend && room.bookable ? { tone: "closed", text: "Akhir pekan" }
-    : outside && room.bookable ? { tone: "closed", text: "Di luar periode" } : dayOf(room).status;
-  const before = nextDay(date, -1), after = nextDay(date, 1);
-  return <section className={`${styles.card} ${css.planCard}`} aria-label={`Denah kantor ${dayLabel(date)}`}>
-    <div className={css.planDay}>
-      <button type="button" className={css.round} onClick={() => onDay(before)} disabled={before < appraisalRules.periodStart} aria-label="Hari sebelumnya"><ChevronLeft aria-hidden /></button>
-      <DayHead date={date} today={today} note={note} />
-      <button type="button" className={css.round} onClick={() => onDay(after)} disabled={after > appraisalRules.periodEnd} aria-label="Hari berikutnya"><ChevronRight aria-hidden /></button>
-    </div>
-    <FloorPlan rooms={rooms} statusOf={statusOf} label={`Denah kantor, ${dayLabel(date)}`}
-      otherSpots="plain" showUnplaced={false} landscapeOnDesktop legend={[]}
-      activeOf={(room, status) => canBook && room.bookable && (status.tone === "free" || status.tone === "part")}
-      tipAction={(room, status) => canBook && room.bookable && (status.tone === "free" || status.tone === "part") ? { label: "Book ruang ini", run: () => onBookRoom(room) } : null}
-      caption={canBook ? "Ruang bergaris biru bisa dibooking. Ketuk untuk detail." : undefined} />
   </section>;
 }

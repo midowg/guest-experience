@@ -66,6 +66,13 @@
 .calDay span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--pw-text); }
 .calDay[data-out] span { color: var(--pw-muted); opacity: .45; }
 .calDay[data-today] span { background: var(--pw-primary); color: var(--pw-on-primary); font-weight: 700; opacity: 1; }
+/* A day that can be booked is a link to the booking page; the rest are muted. */
+.calDay[data-closed] span { color: var(--pw-muted); }
+.calDayLink { text-decoration: none; border-radius: 10px; }
+.calDayLink:hover span { background: var(--pw-surface-soft); }
+.calDayLink[data-today]:hover span { background: var(--pw-primary-hover); }
+.calDayLink:focus-visible { outline: none; }
+.calDayLink:focus-visible span { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
 .calBar { display: block; min-width: 0; margin: 0 4px; border-radius: 999px; background: var(--tl); text-decoration: none; overflow: hidden; }
 .calBar[data-before] { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .calBar[data-after] { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }

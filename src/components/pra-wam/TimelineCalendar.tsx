@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { calendarWeeks, timelineLanes, type TimelineEntry } from "@/lib/pra-wam/timeline";
+import { praWamPath } from "@/lib/routes";
 import css from "./timeline.module.css";
 
 const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+const dayName = (date: string) => new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 const monthLabel = (key: string) => new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${key}-01T12:00:00Z`));
 const shiftMonth = (key: string, by: number) => {
   const date = new Date(`${key}-01T12:00:00Z`);
@@ -18,8 +20,11 @@ const shiftMonth = (key: string, by: number) => {
  * colour across its days (the colour its card has in the list below), overlapping ones on their
  * own lines and a bar running on into the next week. A bar jumps to its card. On a phone the bars
  * are thin lines; from a tablet up they carry the title. ‹ › between the months that have entries.
+ * A day a room can be booked on (`bookable`, from today in the booking period, Monday to Friday)
+ * opens the booking page on that day (9 Nov 2026: Book itself has no calendar any more); the other
+ * days are muted.
  */
-export function TimelineCalendar({ entries, today }: { entries: TimelineEntry[]; today: string }) {
+export function TimelineCalendar({ entries, today, bookable = [] }: { entries: TimelineEntry[]; today: string; bookable?: string[] }) {
   const first = entries[0]?.from.slice(0, 7) ?? today.slice(0, 7);
   const last = entries.reduce((max, entry) => entry.to.slice(0, 7) > max ? entry.to.slice(0, 7) : max, first);
   const start = today.slice(0, 7) < first ? first : today.slice(0, 7) > last ? last : today.slice(0, 7);
@@ -40,10 +45,14 @@ export function TimelineCalendar({ entries, today }: { entries: TimelineEntry[];
       {weeks.map(week => {
         const rows = week.bars.reduce((max, bar) => Math.max(max, bar.lane + 1), 0);
         return <div key={week.days[0].date} className={css.calWeek} style={{ gridTemplateRows: `auto repeat(${rows}, var(--tl-bar))` }}>
-          {week.days.map((day, index) => <span key={day.date} className={css.calDay} style={{ gridColumn: index + 1 }}
-            data-out={day.inMonth ? undefined : ""} data-today={day.date === today ? "" : undefined}>
-            <span>{Number(day.date.slice(8))}</span>
-          </span>)}
+          {week.days.map((day, index) => {
+            const marks = { style: { gridColumn: index + 1 }, "data-out": day.inMonth ? undefined : "", "data-today": day.date === today ? "" : undefined };
+            return bookable.includes(day.date)
+              ? <a key={day.date} className={`${css.calDay} ${css.calDayLink}`} href={praWamPath.book({ date: day.date })} aria-label={`Book ruang, ${dayName(day.date)}`} {...marks}>
+                <span>{Number(day.date.slice(8))}</span>
+              </a>
+              : <span key={day.date} className={css.calDay} data-closed={day.inMonth ? "" : undefined} {...marks}><span>{Number(day.date.slice(8))}</span></span>;
+          })}
           {week.bars.map(bar => <a key={bar.id} href={`#t-${bar.id}`} className={`${css.calBar} ${css[`c${bar.color}`]}`} title={bar.title}
             style={{ gridColumn: `${bar.start + 1} / ${bar.end + 2}`, gridRow: bar.lane + 2 }} data-before={bar.before ? "" : undefined} data-after={bar.after ? "" : undefined}>
             <span>{bar.title}</span>

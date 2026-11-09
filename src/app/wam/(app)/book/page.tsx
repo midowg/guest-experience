@@ -22,10 +22,10 @@ const ID = /^[0-9a-zA-Z:_-]{1,64}$/;
 const TIME = /^\d{2}:\d{2}$/;
 
 /**
- * Book: the calendar of who has which room (the day, or on a desktop the week), the floor plan as
- * a second view unless the super admin switched it off, and the person's own bookings. The whole week of the chosen day is loaded, so
- * switching days within it needs no trip to the server; the date strip gets a light count of the
- * whole window (windowSummary). The address may ask for a sheet: ?booking=<id> (from
+ * Book: Book ruang and the person's own bookings; no calendar or floor plan (9 Nov 2026, the day
+ * is picked on Timeline's calendar or in the form). The week of the asked day is still loaded, for
+ * the form opened on it and for a booking opened from the address; the form's date strip gets a
+ * light count of the whole window (windowSummary). The address may ask for a sheet: ?booking=<id> (from
  * an agenda item), ?edit=<id>, or ?new=1 with room, start and end.
  */
 export default async function BookPage({ searchParams }: { searchParams: Promise<Query> }) {
@@ -66,7 +66,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
     <AppraisalBoard date={shown} week={week} dates={dates} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine}
       viewerId={member.id} canCancelAny={cancelsAnyBooking(member)} open={open} form={form} arrive={arrive} floorPlan={settings.floorPlan} summary={summary}
       hod={hod} hodInfo={hodInfo}
-      banner={open ? undefined : <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. {settings.floorPlan ? "Kalender dan denah" : "Kalender"} tetap bisa dilihat.</Notice></div>} />
+      banner={open ? undefined : <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. Booking-mu tetap bisa dilihat di bawah.</Notice></div>} />
   </>;
 }
 

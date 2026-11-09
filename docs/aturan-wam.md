@@ -206,6 +206,11 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   di titik kartunya pada garis waktu (tanpa garis warna di tepi kartu, tanpa label bertumpuk: satu
   baris keterangan "Forum · jam atau Jadwal pasti menyusul · Kamu ikut"). Mengetuk garis menggulir
   ke kartu itu.
+  Tanggal yang bisa dibooking (Senin–Jumat, dari hari ini, dalam periode Book, selama Book dibuka)
+  membuka halaman booking pada tanggal itu; tanggal lain redup.
+- **Book ruang** (9 Nov 2026): tanpa kalender dan tanpa denah. Isinya tombol Book ruang dan daftar
+  Booking saya. Tanggal dipilih di kalender Timeline atau di form; ketersediaan ruang terlihat di
+  langkah Tempat pada form.
 - Design system "Pra WAM · Hospitality": Poppins untuk judul dan angka, Inter untuk isi; biru
   Werkudara #006EC1 satu-satunya aksen utama, kuning #FFBA00 sekunder. Kartu putih radius 24, tombol
   pill, isian radius 16.
