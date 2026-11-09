@@ -47,7 +47,7 @@ export function AccountDetail({ row, status, photo, job, busy, passwordReady, er
     return () => { if (dialog.open) dialog.close(); before?.focus?.(); };
   }, []);
 
-  const standing = { isLead: row.leads.length + row.buLeads.length > 0 };
+  const standing = { isLead: row.leads.length > 0 || row.lead };
   const blocked = blockedRoles(row.roles, standing);
   const clash = roleConflicts(row.roles, standing).length ? roleProblem(row.roles, standing) : null;
   const hintId = `${id}-peran`;
@@ -97,7 +97,7 @@ export function AccountDetail({ row, status, photo, job, busy, passwordReady, er
 
         <fieldset className={css.detailSection}>
           <legend>Peran</legend>
-          <p className={css.hint}>Semua orang yang punya akun adalah peserta. Di sini hanya Panitia yang dipilih; BOD, Admin WAM, HOD, lead BU dan Business Unit diatur super admin di Data karyawan. Perubahan berlaku di halaman berikutnya yang dibuka orang itu.</p>
+          <p className={css.hint}>Semua orang yang punya akun adalah peserta. Di sini hanya Panitia yang dipilih; BOD, Admin WAM, HOD, Lead, dan Business Unit diatur super admin di Data karyawan. Perubahan berlaku di halaman berikutnya yang dibuka orang itu.</p>
           <ul className={css.roleChecks}>{(["panitia"] as const).map(role => <li key={role}>
             <label className={css.check} title={blocked[role]}>
               <input type="checkbox" aria-describedby={hint ? hintId : undefined} checked={row.roles.includes(role)} disabled={working || !!blocked[role]} onChange={() => onToggleRole(role)}
@@ -113,7 +113,7 @@ export function AccountDetail({ row, status, photo, job, busy, passwordReady, er
           <h3 id={`${id}-struktur`}>Struktur</h3>
           <dl className={css.facts}>
             <div><dt>Business Unit</dt><dd>{row.businessUnit ? buCode(row.businessUnit) : "—"}</dd></div>
-            <div><dt>Jabatan struktural</dt><dd>{[row.roles.includes("bod") && "BOD", row.roles.includes("admin") && "Admin WAM", leadsLabel({ departments: row.leads, businessUnits: row.buLeads })].filter(Boolean).join(" · ") || "—"}</dd></div>
+            <div><dt>Jabatan struktural</dt><dd>{[row.roles.includes("bod") && "BOD", row.roles.includes("admin") && "Admin WAM", leadsLabel({ departments: row.leads, lead: row.lead })].filter(Boolean).join(" · ") || "—"}</dd></div>
           </dl>
           <p className={css.hint}>Diatur super admin di Data karyawan.</p>
         </section>

@@ -15,9 +15,10 @@
 .foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line, #e4e7ec); background: var(--paper, #fff); }
 .group { display: grid; gap: 12px; margin: 0; padding: 0; border: 0; min-width: 0; }
 .group legend { padding: 0; margin-bottom: 4px; font-size: 15px; font-weight: 700; }
-.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+/* Two fields a row on both sides of the same width; labels, inputs and hints line up across. */
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; align-items: start; }
 @media (max-width: 479.98px) { .pair { grid-template-columns: 1fr; } }
-.field { display: grid; gap: 6px; min-width: 0; }
+.field { display: grid; grid-template-rows: auto auto 1fr; gap: 6px; min-width: 0; align-content: start; }
 .field label, .label { font-size: 13px; font-weight: 600; }
 .field :global(.input) { width: 100%; box-sizing: border-box; }
 .hint { margin: 0; font-size: 12px; color: var(--ink-soft, #6b7280); }

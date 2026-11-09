@@ -19,7 +19,7 @@ export default function DevEmployeesPage() {
     person(5, "Contoh Yulia Mekar", "Business & Administrative Services", "Head of BAS", { business_unit: "MRP", phone: "0812 0000 0005", email: "yulia@contoh.id" }),
     person(6, "Contoh Dimas Magang", "Center of Excellence", "Design Intern", { category: "intern" }),
   ];
-  const leads = { [people[4].id]: { departments: ["Business & Administrative Services"], businessUnits: ["MRP"] }, [people[0].id]: { departments: ["Sales & Marketing", "Corporate"], businessUnits: [] } };
-  const options = { departments: [...new Set(people.map(item => item.department))].sort(), businessUnits: ["MRP", "WNS", "TEE", "NMU", "WNN"] };
+  const leads = { [people[4].id]: { departments: [], lead: true }, [people[0].id]: { departments: ["Sales & Marketing", "Corporate"], lead: false } };
+  const options = { departments: [...new Set(people.map(item => item.department))].sort() };
   return <AdminShell bare><h1>Data karyawan (contoh)</h1><EmployeeDirectory initial={people} migrated leads={leads} leadOptions={options} /></AdminShell>;
 }

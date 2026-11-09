@@ -37,8 +37,8 @@ vi.mock("./announcements", () => ({
   notifyPeople: async (ids: string[], note: { title: string; body: string }) => { notes.push({ ids, title: note.title, body: note.body }); },
 }));
 vi.mock("./leads", () => ({
-  leadsOf: async (id: string) => ({ departments: id === "requester" ? ["HC"] : ["IT"], businessUnits: [] }),
-  listLeads: async () => ({ byPerson: new Map(), migrated: true }), leadOptions: async () => ({ departments: [], businessUnits: [] }),
+  leadsOf: async (id: string) => ({ departments: id === "requester" ? ["HC"] : ["IT"], lead: false }),
+  listLeads: async () => ({ byPerson: new Map(), migrated: true }), leadOptions: async () => ({ departments: [] }),
 }));
 vi.mock("./appraisal", () => ({ listPeople: async () => [], listRooms: async () => [], callNameOf: async (_id: string, fallback: string) => fallback }));
 

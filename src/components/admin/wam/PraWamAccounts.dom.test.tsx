@@ -11,10 +11,10 @@ beforeAll(() => {
 });
 
 const people: AccountRow[] = [
-  { employeeId: "e1", name: "Dewi Lestari", department: "Finance", email: "dewi@werkudara.com", active: true, hasAccount: true, lastLoginAt: "2026-11-03T02:12:00Z", mustChangePassword: false, roles: ["panitia"], leads: [], buLeads: [], businessUnit: "Werkudara Nirwana Sakti" },
-  { employeeId: "e2", name: "Bagus Santoso", department: "Legal", email: "bagus@werkudara.com", active: true, hasAccount: true, lastLoginAt: null, mustChangePassword: true, roles: ["bod"], leads: [], buLeads: [], businessUnit: "Werkudara Nirwana Sakti" },
-  { employeeId: "e3", name: "Andi Wijaya", department: "Creative", email: "", active: true, hasAccount: false, lastLoginAt: null, mustChangePassword: true, roles: [], leads: ["Creative"], buLeads: [], businessUnit: "Werkudara Nirwana Sakti" },
-  { employeeId: "e4", name: "Citra Ayu", department: "Finance", email: "citra@werkudara.com", active: true, hasAccount: false, lastLoginAt: null, mustChangePassword: true, roles: [], leads: [], buLeads: [], businessUnit: "Werkudara Nirwana Sakti" },
+  { employeeId: "e1", name: "Dewi Lestari", department: "Finance", email: "dewi@werkudara.com", active: true, hasAccount: true, lastLoginAt: "2026-11-03T02:12:00Z", mustChangePassword: false, roles: ["panitia"], leads: [], lead: false, businessUnit: "Werkudara Nirwana Sakti" },
+  { employeeId: "e2", name: "Bagus Santoso", department: "Legal", email: "bagus@werkudara.com", active: true, hasAccount: true, lastLoginAt: null, mustChangePassword: true, roles: ["bod"], leads: [], lead: false, businessUnit: "Werkudara Nirwana Sakti" },
+  { employeeId: "e3", name: "Andi Wijaya", department: "Creative", email: "", active: true, hasAccount: false, lastLoginAt: null, mustChangePassword: true, roles: [], leads: ["Creative"], lead: false, businessUnit: "Werkudara Nirwana Sakti" },
+  { employeeId: "e4", name: "Citra Ayu", department: "Finance", email: "citra@werkudara.com", active: true, hasAccount: false, lastLoginAt: null, mustChangePassword: true, roles: [], leads: [], lead: false, businessUnit: "Werkudara Nirwana Sakti" },
 ];
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -93,7 +93,7 @@ describe("Akun dan peran, tab Akun", () => {
     fireEvent.click(cards()[3]);
     const detail = screen.getByRole("dialog", { name: "Dewi Lestari" });
     expect(within(detail).getByRole("checkbox", { name: "Panitia: Dewi Lestari" })).toHaveProperty("checked", true);
-    // BOD, Admin WAM, HOD and lead BU are the super admin's, in Data karyawan.
+    // BOD, Admin WAM, HOD and Lead are the super admin's, in Data karyawan.
     expect(within(detail).queryByRole("checkbox", { name: "BOD: Dewi Lestari" })).toBeNull();
     expect(within(detail).queryByRole("checkbox", { name: "Admin WAM: Dewi Lestari" })).toBeNull();
     expect(within(detail).getByRole("region", { name: "Struktur" })).toBeTruthy();

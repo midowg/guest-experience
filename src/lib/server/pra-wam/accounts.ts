@@ -4,6 +4,7 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { notMigrated, waitingForMigration } from "./session";
+import { hasPost } from "@/lib/pra-wam/leads";
 import { listLeads, leadsOf } from "./leads";
 
 /*
@@ -18,8 +19,8 @@ export type AccountRow = {
   hasAccount: boolean; lastLoginAt: string | null; mustChangePassword: boolean; roles: PraWamRole[];
   /** Departments this person heads (HOD): set by hand, or from the unit import. */
   leads: string[];
-  /** BUs this person leads. */
-  buLeads: string[];
+  /** A Lead in their department (under the HOD, with their own people; 9 Nov 2026, was "lead BU"). */
+  lead: boolean;
   /** Their business unit by code (WNS until set); "" before migration 202611060002. */
   businessUnit: string;
 };
@@ -63,7 +64,7 @@ export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: bo
       mustChangePassword: byPerson.get(person.id)?.must_change_password ?? true,
       roles: praWamRoles.filter(role => (roles ?? []).some(row => row.employee_id === person.id && row.role === role)),
       leads: leads.get(person.id)?.departments ?? [],
-      buLeads: leads.get(person.id)?.businessUnits ?? [],
+      lead: leads.get(person.id)?.lead ?? false,
       businessUnit: person.business_unit ?? "",
     })),
   };
@@ -126,7 +127,7 @@ export async function setRoles(employeeId: string, wanted: PraWamRole[]): Promis
     leadsOf(employeeId),
   ]);
   if (currentError) { if (notMigrated(currentError)) throw new ServiceError(503, "Peran menunggu migrasi 202611040002_pra_wam_roles.sql."); databaseError(currentError); }
-  const problem = checkRoleChange(normalizeRoles((current ?? []).map(row => row.role)), roles, { isLead: leads.departments.length + leads.businessUnits.length > 0 });
+  const problem = checkRoleChange(normalizeRoles((current ?? []).map(row => row.role)), roles, { isLead: hasPost(leads) });
   if (problem) throw new ServiceError(422, problem, { roles: [problem] });
   const { error } = await client.from("pw_roles").delete().eq("employee_id", employeeId).not("role", "in", `(${roles.length ? roles.join(",") : "none"})`);
   if (error) { if (notMigrated(error)) throw new ServiceError(503, "Peran menunggu migrasi 202611040002_pra_wam_roles.sql."); databaseError(error); }

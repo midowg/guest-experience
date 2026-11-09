@@ -5,7 +5,7 @@ import { requireApiAdmin } from "@/lib/server/admin-session";
 import { ServiceError } from "@/lib/server/config";
 import { rolesOf } from "@/lib/server/pra-wam/session";
 import { createAccount, listAccounts, resetPassword, setRoles, updateEmail } from "@/lib/server/pra-wam/accounts";
-import { leadsSchema } from "@/lib/pra-wam/leads";
+import { hasPost, leadsSchema } from "@/lib/pra-wam/leads";
 import { setLeads } from "@/lib/server/pra-wam/leads";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ const schema = z.object({
   roles: z.array(z.enum(praWamRoles)).max(praWamRoles.length).optional(),
   resetPassword: z.literal(true).optional(),
   email: z.email("Email tidak valid.").max(200).optional(),
-  /** HOD departemen dan lead BU (6 Nov 2026). */
+  /** HOD departemen (6 Nov 2026) dan Lead (9 Nov 2026). */
   leads: leadsSchema.optional(),
 });
 
@@ -40,10 +40,10 @@ export async function PATCH(request: Request, { params }: Params) {
     checkOrigin(request);
     const employeeId = validate(z.uuid(), (await params).employeeId);
     const body = validate(schema, await readJson(request, 2_000));
-    // The structure (BOD, Admin WAM, HOD, lead BU) is the super admin's, in Data karyawan (6 Nov 2026);
+    // The structure (BOD, Admin WAM, HOD, Lead) is the super admin's, in Data karyawan (6 Nov 2026);
     // Admin WAM only picks Panitia.
     if (admin !== "super") {
-      if (body.leads) throw new ServiceError(403, "HOD dan lead BU diatur super admin di Data karyawan.");
+      if (body.leads) throw new ServiceError(403, "HOD dan Lead diatur super admin di Data karyawan.");
       if (body.roles) {
         const current = await rolesOf(employeeId);
         if ((["bod", "admin"] as const).some(role => current.includes(role) !== body.roles!.includes(role))) {
@@ -53,7 +53,7 @@ export async function PATCH(request: Request, { params }: Params) {
     }
     // Rules: a BOD heads nothing, and is neither Panitia nor Admin WAM (422 otherwise). Clearing what
     // someone heads goes first, so the same save can make them BOD; otherwise the roles first.
-    const clearsLeads = !!body.leads && body.leads.departments.length + body.leads.businessUnits.length === 0;
+    const clearsLeads = !!body.leads && !hasPost(body.leads);
     if (body.leads && clearsLeads) await setLeads(employeeId, body.leads);
     if (body.roles) await setRoles(employeeId, body.roles);
     if (body.email) await updateEmail(employeeId, body.email);

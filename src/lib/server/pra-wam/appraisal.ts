@@ -63,7 +63,7 @@ export const listRooms = cache(listRoomsUncached);
 
 /**
  * Everyone in Data karyawan, for names on the schedule and the participant picker. `name` is what
- * colleagues see (the nama panggilan, Pak or Bu for BOD, HOD and lead BU); `fullName` stays for
+ * colleagues see (the nama panggilan, Pak or Bu for BOD, HOD and Lead); `fullName` stays for
  * admin views and for search.
  */
 async function listPeopleUncached(): Promise<(Person & { fullName: string; active: boolean })[]> {

@@ -15,7 +15,7 @@ function PersonCard({ person, tag, strong = false }: { person: OrgPerson; tag?: 
 function Branch({ nodes, root = false }: { nodes: OrgNode[]; root?: boolean }) {
   if (!nodes.length) return null;
   return <ul className={`${css.branch} ${root ? css.root : ""}`}>{nodes.map(node => <li key={node.id}>
-    <PersonCard person={node} />
+    <PersonCard person={node} tag={node.lead ? "Lead" : undefined} />
     <Branch nodes={node.children} />
   </li>)}</ul>;
 }
@@ -36,7 +36,7 @@ function Groups({ groups }: { groups: OrgGroup[] }) {
  */
 export function OrgChart({ org }: { org: Org }) {
   return <div className={css.chart}>
-    <p className={css.note}>Disusun dari Data karyawan. Cabang di dalam departemen mengikuti <strong>Atasan langsung</strong>; isi lewat Ubah karyawan. Yang kosong ada langsung di bawah HOD.</p>
+    <p className={css.note}>Disusun dari Data karyawan. Di bawah HOD ada <strong>Lead</strong> dengan anggotanya: anggota memilih Lead-nya di <strong>Atasan langsung</strong> lewat Ubah karyawan. Yang kosong ada langsung di bawah HOD. BU hanya unit usaha tempat orang itu berada.</p>
 
     <section className={css.level} aria-labelledby="org-bod">
       <h2 id="org-bod"><Crown size={18} aria-hidden /> BOD</h2>

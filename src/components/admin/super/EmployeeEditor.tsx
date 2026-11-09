@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import { LeadEditor } from "@/components/admin/wam/akun/LeadEditor";
 import { categoryLabels, employeeCategories, type Employee, type EmployeeCategory } from "@/lib/employees";
-import { BUSINESS_UNITS, DEFAULT_BUSINESS_UNIT, buCode, buFromOffice, type Leads } from "@/lib/pra-wam/leads";
+import { BUSINESS_UNITS, DEFAULT_BUSINESS_UNIT, buCode, buFromOffice, hasPost, type LeadOptions, type Leads } from "@/lib/pra-wam/leads";
 import { GENDERS, asGender, genderLabels } from "@/lib/pra-wam/call-name";
 import type { PraWamRole } from "@/lib/pra-wam/roles";
 import css from "./employee-editor.module.css";
@@ -20,7 +20,10 @@ const draftOf = (person: Employee | null): EmployeeDraft => person
 /**
  * Tambah karyawan or Ubah karyawan (6 Nov 2026): one panel from the side (from the bottom on a
  * phone) with everything about a person: Identitas, Pekerjaan, Kontak, and Struktur dan akses (BOD,
- * Admin WAM, HOD departemen, lead BU: the structure lives here, Admin WAM only picks Panitia), with one Simpan. GA and Intern are a person's kind of work, so they sit under Pekerjaan.
+ * Admin WAM, HOD and Lead: the structure lives here, Admin WAM only picks Panitia), with one Simpan.
+ * GA and Intern are a person's kind of work, so they sit under Pekerjaan. Fields go two by two so
+ * both columns line up (9 Nov 2026). One "Business Unit" field: HR's "office" holds the same code
+ * (WNS, TEE, MRP...), so picking the BU writes the office too; an office that is no BU code is kept.
  * A native <dialog>: Esc, the dimmed page or X close it without saving.
  */
 export function EmployeeEditor({ person, leads, roles, options, departments, people = [], saving, error, onSave, onClose }: {
@@ -29,8 +32,8 @@ export function EmployeeEditor({ person, leads, roles, options, departments, peo
   leads: Leads;
   /** Their WAM roles: BOD and Admin WAM are set here; Panitia stays with Admin WAM and is kept as it is. */
   roles: PraWamRole[];
-  /** The departments and BUs to pick from (HOD and lead BU). */
-  options: Leads | null;
+  /** The departments to pick from (HOD). */
+  options: LeadOptions | null;
   /** The departments already in Data karyawan, offered while typing. */
   departments: string[];
   /** Everyone active, for Atasan langsung. */
@@ -46,7 +49,7 @@ export function EmployeeEditor({ person, leads, roles, options, departments, peo
   const [nextLeads, setNextLeads] = useState<Leads>(leads);
   const [nextRoles, setNextRoles] = useState<PraWamRole[]>(roles);
   const isBod = nextRoles.includes("bod");
-  const heads = nextLeads.departments.length + nextLeads.businessUnits.length > 0;
+  const heads = hasPost(nextLeads);
   const toggleRole = (role: PraWamRole) => setNextRoles(current => current.includes(role) ? current.filter(item => item !== role) : [...current, role]);
   const [problems, setProblems] = useState<Partial<Record<keyof EmployeeDraft, string>>>({});
   const set = (patch: Partial<EmployeeDraft>) => { setDraft(current => ({ ...current, ...patch })); setProblems({}); };
@@ -66,7 +69,8 @@ export function EmployeeEditor({ person, leads, roles, options, departments, peo
     if (!draft.position.trim()) found.position = "Isi jabatan.";
     if (draft.email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(draft.email.trim())) found.email = "Email tidak valid.";
     if (Object.keys(found).length) { setProblems(found); return; }
-    onSave({ ...draft, full_name: draft.full_name.trim(), department: draft.department.trim(), position: draft.position.trim() }, nextLeads, nextRoles);
+    // An empty office takes the BU's code: the two hold the same thing in HR's data.
+    onSave({ ...draft, full_name: draft.full_name.trim(), department: draft.department.trim(), position: draft.position.trim(), office: draft.office.trim() || draft.business_unit }, nextLeads, nextRoles);
   }
 
   const field = (key: keyof EmployeeDraft, label: string, input: React.ReactNode, hint?: string) => <div className={css.field}>
@@ -94,29 +98,39 @@ export function EmployeeEditor({ person, leads, roles, options, departments, peo
 
         <fieldset className={css.group}>
           <legend>Identitas</legend>
-          {field("full_name", "Nama lengkap *", text("full_name", { maxLength: 150, autoComplete: "off" }))}
           <div className={css.pair}>
+            {field("full_name", "Nama lengkap *", text("full_name", { maxLength: 150, autoComplete: "off" }))}
             {field("nickname", "Nama panggilan", text("nickname", { maxLength: 60 }))}
-            {field("nip", "NIP", text("nip", { maxLength: 30 }), "Boleh kosong dulu.")}
           </div>
-          {field("gender", "Jenis kelamin", <select id={`${id}-gender`} className="input" value={draft.gender ?? ""} onChange={event => set({ gender: asGender(event.target.value) })}>
-            {GENDERS.map(key => <option key={key} value={key}>{genderLabels[key]}</option>)}
-          </select>, "Untuk sapaan Pak atau Bu di aplikasi WAM bagi BOD, HOD, dan lead BU.")}
+          <div className={css.pair}>
+            {field("nip", "NIP", text("nip", { maxLength: 30 }), "Boleh kosong dulu.")}
+            {field("gender", "Jenis kelamin", <select id={`${id}-gender`} className="input" value={draft.gender ?? ""} onChange={event => set({ gender: asGender(event.target.value) })}>
+              {GENDERS.map(key => <option key={key} value={key}>{genderLabels[key]}</option>)}
+            </select>, "Untuk sapaan Pak atau Bu (BOD, HOD, Lead).")}
+          </div>
         </fieldset>
 
         <fieldset className={css.group}>
           <legend>Pekerjaan</legend>
-          {field("department", "Departemen *", <>
-            {text("department", { maxLength: 150, list: `${id}-departments`, placeholder: "Pilih atau ketik" })}
-            <datalist id={`${id}-departments`}>{departments.map(name => <option key={name} value={name} />)}</datalist>
-          </>)}
-          {field("position", "Jabatan *", text("position", { maxLength: 150, placeholder: "Mis. Business Solutions Manager" }))}
-          {field("reports_to", "Atasan langsung", <select id={`${id}-reports_to`} className="input" value={draft.reports_to ?? ""} onChange={event => set({ reports_to: event.target.value || null })}>
-            <option value="">Seperti biasa (di bawah HOD departemennya)</option>
-            {[...new Set(people.map(item => item.department || "Tanpa departemen"))].sort((a, b) => Number(b === draft.department) - Number(a === draft.department) || a.localeCompare(b, "id")).map(name => <optgroup key={name} label={name}>
-              {people.filter(item => (item.department || "Tanpa departemen") === name && item.id !== person?.id).sort((a, b) => a.full_name.localeCompare(b.full_name, "id")).map(item => <option key={item.id} value={item.id}>{item.full_name}{item.position ? ` · ${item.position}` : ""}</option>)}
-            </optgroup>)}
-          </select>, "Isi untuk cabang di dalam tim, mis. di bawah Business Solutions Manager.")}
+          <div className={css.pair}>
+            {field("department", "Departemen *", <>
+              {text("department", { maxLength: 150, list: `${id}-departments`, placeholder: "Pilih atau ketik" })}
+              <datalist id={`${id}-departments`}>{departments.map(name => <option key={name} value={name} />)}</datalist>
+            </>)}
+            {field("position", "Jabatan *", text("position", { maxLength: 150, placeholder: "Mis. Business Solutions Manager" }))}
+          </div>
+          <div className={css.pair}>
+            {field("reports_to", "Atasan langsung", <select id={`${id}-reports_to`} className="input" value={draft.reports_to ?? ""} onChange={event => set({ reports_to: event.target.value || null })}>
+              <option value="">Seperti biasa (di bawah HOD)</option>
+              {[...new Set(people.map(item => item.department || "Tanpa departemen"))].sort((a, b) => Number(b === draft.department) - Number(a === draft.department) || a.localeCompare(b, "id")).map(name => <optgroup key={name} label={name}>
+                {people.filter(item => (item.department || "Tanpa departemen") === name && item.id !== person?.id).sort((a, b) => a.full_name.localeCompare(b.full_name, "id")).map(item => <option key={item.id} value={item.id}>{item.full_name}{item.position ? ` · ${item.position}` : ""}</option>)}
+              </optgroup>)}
+            </select>, "Isi bila di bawah Lead, mis. tim Business Solutions Manager.")}
+            {field("business_unit", "Business Unit", <select id={`${id}-business_unit`} className="input" value={draft.business_unit}
+              onChange={event => { const code = event.target.value; set({ business_unit: code, ...(!draft.office.trim() || buFromOffice(draft.office) ? { office: code } : {}) }); }}>
+              {[...new Set([...BUSINESS_UNITS, draft.business_unit])].map(code => <option key={code} value={code}>{code}</option>)}
+            </select>, "Unit usaha di dalam Werkudara Group (juga Office di data HR).")}
+          </div>
           <div className={css.field}>
             <span className={css.label} id={`${id}-category`}>Status kerja</span>
             <div className={css.segmented} role="radiogroup" aria-labelledby={`${id}-category`}>
@@ -126,26 +140,19 @@ export function EmployeeEditor({ person, leads, roles, options, departments, peo
               </label>)}
             </div>
           </div>
-          <div className={css.pair}>
-            {field("business_unit", "Business Unit", <select id={`${id}-business_unit`} className="input" value={draft.business_unit} onChange={event => set({ business_unit: event.target.value })}>
-              {[...new Set([...BUSINESS_UNITS, draft.business_unit])].map(code => <option key={code} value={code}>{code}</option>)}
-            </select>)}
-            {field("office", "Office", <input id={`${id}-office`} className="input" value={draft.office} maxLength={20} placeholder="Mis. WNS"
-              onChange={event => { const office = event.target.value; const bu = buFromOffice(office); set({ office, ...(bu ? { business_unit: bu } : {}) }); }} />, "Kode office yang sama dengan BU ikut mengisi Business Unit.")}
-          </div>
         </fieldset>
 
         <fieldset className={css.group}>
           <legend>Kontak</legend>
           <div className={css.pair}>
-            {field("phone", "Nomor WhatsApp", text("phone", { maxLength: 30, inputMode: "tel", placeholder: "0812 3456 7890" }))}
+            {field("phone", "Nomor WhatsApp", text("phone", { maxLength: 30, inputMode: "tel", placeholder: "0812 3456 7890" }), "Nomor aktif untuk WhatsApp.")}
             {field("email", "Email kantor", text("email", { maxLength: 200, type: "email" }), "Juga email login WAM.")}
           </div>
         </fieldset>
 
         <fieldset className={css.group}>
           <legend>Struktur dan akses</legend>
-          <p className={css.hint}>Diatur di sini saja; Admin WAM hanya memilih Panitia. BOD berdiri sendiri: tidak memimpin departemen atau BU, dan bukan Panitia atau Admin WAM.</p>
+          <p className={css.hint}>Diatur di sini saja; Admin WAM hanya memilih Panitia. BOD berdiri sendiri: bukan HOD atau Lead, dan bukan Panitia atau Admin WAM.</p>
           <div className={css.roleTicks}>
             <label className={css.roleTick}>
               <input type="checkbox" checked={isBod} disabled={!isBod && (heads || nextRoles.includes("panitia") || nextRoles.includes("admin"))} onChange={() => toggleRole("bod")} />
@@ -156,11 +163,11 @@ export function EmployeeEditor({ person, leads, roles, options, departments, peo
               <span>Admin WAM<small>Mengatur aplikasi WAM: akun, ruang, acara.</small></span>
             </label>
           </div>
-          {!isBod && (heads || nextRoles.includes("panitia") || nextRoles.includes("admin")) && <p className={css.hint}>BOD terkunci karena orang ini {heads ? "memimpin departemen atau BU" : nextRoles.includes("admin") ? "Admin WAM" : "Panitia"}.</p>}
+          {!isBod && (heads || nextRoles.includes("panitia") || nextRoles.includes("admin")) && <p className={css.hint}>BOD terkunci karena orang ini {heads ? "HOD atau Lead" : nextRoles.includes("admin") ? "Admin WAM" : "Panitia"}.</p>}
         </fieldset>
 
         {options && <LeadEditor name={draft.full_name || "karyawan baru"} value={leads} options={options} onChange={setNextLeads} className={css.group}
-          locked={isBod ? "BOD tidak memimpin departemen atau BU. Lepas BOD dulu untuk mengisinya." : undefined} />}
+          locked={isBod ? "BOD bukan HOD atau Lead. Lepas BOD dulu untuk mengisinya." : undefined} />}
       </div>
 
       <footer className={css.foot}>

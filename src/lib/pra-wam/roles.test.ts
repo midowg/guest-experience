@@ -32,8 +32,8 @@ describe("which roles combine", () => {
     expect(roleConflicts(["panitia", "bod", "admin"], { isLead: true }).map(item => item.with)).toEqual(["panitia", "admin", "lead"]);
     expect(roleConflicts(["bod"], { isLead: true }).map(item => item.with)).toEqual(["lead"]);
     expect(roleProblem(["panitia", "bod"])).toBe("BOD tidak bisa digabung dengan Panitia atau Admin WAM.");
-    expect(roleProblem(["bod"], { isLead: true })).toBe("BOD tidak bisa menjadi HOD departemen atau lead BU.");
-    expect(roleProblem(["bod", "admin"], { isLead: true })).toBe("BOD tidak bisa digabung dengan Panitia atau Admin WAM. BOD tidak bisa menjadi HOD departemen atau lead BU.");
+    expect(roleProblem(["bod"], { isLead: true })).toBe("BOD tidak bisa menjadi HOD atau Lead.");
+    expect(roleProblem(["bod", "admin"], { isLead: true })).toBe("BOD tidak bisa digabung dengan Panitia atau Admin WAM. BOD tidak bisa menjadi HOD atau Lead.");
   });
   it("keeps known roles once, in order", () => {
     expect(normalizeRoles(["admin", "panitia", "admin", "super"])).toEqual(["panitia", "admin"]);
@@ -41,7 +41,7 @@ describe("which roles combine", () => {
   it("refuses a change that adds a conflict but allows one that only removes", () => {
     expect(checkRoleChange(["bod"], ["panitia", "bod"])).toBe("BOD tidak bisa digabung dengan Panitia atau Admin WAM.");
     expect(checkRoleChange(["admin"], ["bod", "admin"])).toBe("BOD tidak bisa digabung dengan Panitia atau Admin WAM.");
-    expect(checkRoleChange([], ["bod"], { isLead: true })).toBe("BOD tidak bisa menjadi HOD departemen atau lead BU.");
+    expect(checkRoleChange([], ["bod"], { isLead: true })).toBe("BOD tidak bisa menjadi HOD atau Lead.");
     expect(checkRoleChange(["panitia"], ["panitia", "admin"], { isLead: true })).toBeNull();
     // A row saved before the rule: removing one role at a time is fine, adding back is not.
     expect(checkRoleChange(["panitia", "bod", "admin"], ["bod", "admin"])).toBeNull();

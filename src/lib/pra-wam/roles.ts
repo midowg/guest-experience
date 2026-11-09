@@ -40,7 +40,7 @@ export const isHod = ({ isLead = false }: Standing = {}) => isLead;
 
 /*
  * Which roles go together. Peserta is everyone's base. Panitia, Admin WAM and HOD (who heads a
- * department, or leads a BU) combine freely. BOD combines with nothing:
+ * department, or is a Lead) combine freely. BOD combines with nothing:
  * a BOD still attends sessions and books rooms as a peserta, but is never panitia, admin or lead.
  */
 export type RoleConflict = { with: "panitia" | "admin" | "lead"; message: string };
@@ -52,7 +52,7 @@ export function roleConflicts(roles: readonly PraWamRole[], { isLead = false }: 
   const conflicts: RoleConflict[] = [];
   if (roles.includes("panitia")) conflicts.push({ with: "panitia", message: "BOD tidak bisa digabung dengan Panitia." });
   if (roles.includes("admin")) conflicts.push({ with: "admin", message: "BOD tidak bisa digabung dengan Admin WAM." });
-  if (isLead) conflicts.push({ with: "lead", message: "BOD tidak bisa menjadi HOD departemen atau lead BU." });
+  if (isLead) conflicts.push({ with: "lead", message: "BOD tidak bisa menjadi HOD atau Lead." });
   return conflicts;
 }
 
@@ -64,7 +64,7 @@ export function roleProblem(roles: readonly PraWamRole[], standing: Standing = {
   const leadClash = conflicts.some(conflict => conflict.with === "lead");
   return [
     roleClash && "BOD tidak bisa digabung dengan Panitia atau Admin WAM.",
-    leadClash && "BOD tidak bisa menjadi HOD departemen atau lead BU.",
+    leadClash && "BOD tidak bisa menjadi HOD atau Lead.",
   ].filter(Boolean).join(" ");
 }
 
@@ -93,7 +93,7 @@ export function blockedRoles(roles: readonly PraWamRole[], { isLead = false }: S
   } else if (has({ roles }, "panitia", "admin")) {
     blocked.bod = "BOD terkunci karena orang ini Panitia atau Admin WAM.";
   } else if (isLead) {
-    blocked.bod = "BOD terkunci karena orang ini HOD departemen atau lead BU.";
+    blocked.bod = "BOD terkunci karena orang ini HOD atau Lead.";
   }
   return blocked;
 }

@@ -12,7 +12,8 @@
  * Pure, so the page and the tests read the same rule.
  */
 
-export type OrgPerson = { id: string; name: string; position: string; department: string; businessUnit: string; reportsTo: string | null };
+/** `lead`: a Lead (9 Nov 2026): a team lead under the HOD, whose people point at them in Atasan langsung. */
+export type OrgPerson = { id: string; name: string; position: string; department: string; businessUnit: string; reportsTo: string | null; lead?: boolean };
 export type OrgNode = OrgPerson & { children: OrgNode[] };
 export type OrgGroup = { name: string; people: OrgNode[] };
 export type OrgDepartment = { name: string; businessUnits: string[]; heads: OrgNode[]; loose: OrgNode[]; groups: OrgGroup[]; size: number };
