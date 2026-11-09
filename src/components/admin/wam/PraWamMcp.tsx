@@ -38,7 +38,7 @@ function keyLabel(row: McpAccessRow): string {
 
 /**
  * Admin WAM → Akses MCP: who may connect Claude or ChatGPT to WAM (read only, as themselves),
- * what they may ask about, and the last calls. The person makes their own link in Profil WAM;
+ * what they may ask about, and the last calls. The person makes their own link in Pengaturan WAM (Akses MCP);
  * Cabut stops it at once and forgets the link.
  */
 export function PraWamMcp({ initial, crumbs, title }: { initial: McpAdminList; crumbs: readonly Crumb[]; title: string }) {
@@ -84,7 +84,7 @@ export function PraWamMcp({ initial, crumbs, title }: { initial: McpAdminList; c
 
       <section className={akun.section} aria-labelledby="mcp-akses">
         <SectionToolbar title={<span id="mcp-akses">Punya akses</span>} count={`${active} aktif`} />
-        <p className={akun.lead}>Orangnya membuat tautan sendiri di Profil WAM, lalu menempelkannya di Claude atau ChatGPT. Tautan itu rahasia; Cabut menghentikannya saat itu juga.</p>
+        <p className={akun.lead}>Orangnya membuat tautan sendiri di Pengaturan WAM → Akses MCP, lalu menempelkannya di Claude atau ChatGPT. Tautan itu rahasia; Cabut menghentikannya saat itu juga.</p>
         {list.rows.length === 0 ? <p className={akun.empty}>Belum ada yang diberi akses MCP.</p>
           : <ul className={css.rows} aria-label="Orang dengan akses MCP">{list.rows.map(row => {
             const revoked = !!row.revokedAt;

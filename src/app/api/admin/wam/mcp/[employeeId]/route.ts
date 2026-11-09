@@ -23,7 +23,7 @@ export async function PATCH(request: Request, { params }: Params) {
     let message = "Cakupan MCP disimpan.";
     if ("action" in change) {
       if (change.action === "cabut") { await revokeMcp(employeeId); message = "Akses MCP dicabut. Tautannya langsung tidak berlaku."; }
-      else { await restoreMcp(employeeId, by); message = "Akses MCP dipulihkan. Orangnya perlu membuat tautan baru di Profil."; }
+      else { await restoreMcp(employeeId, by); message = "Akses MCP dipulihkan. Orangnya perlu membuat tautan baru di Pengaturan → Akses MCP."; }
     } else {
       await grantMcp(employeeId, change.scopes, by);
     }

@@ -170,7 +170,7 @@ export function BodSummary({ data, insights, greeting, date, survey = null, mcp 
       <a className={styles.quickItem} href={praWamPath.panitiaView}><span className={styles.quickIcon}><BarChart3 aria-hidden /></span><span>Dashboard panitia<small>baca saja</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
       <a className={styles.quickItem} href={praWamPath.surveyResults}><span className={styles.quickIcon}><ListChecks aria-hidden /></span><span>Hasil survei<small>rekap kuesioner</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
       {mcp?.granted
-        ? <a className={styles.quickItem} href={`${praWamPath.account}#mcp`}><span className={styles.quickIcon}><Bot aria-hidden /></span><span>Tanya data (MCP)<small>{mcp.hasKey ? "Tersambung lewat Claude/ChatGPT" : "Buat tautan di Profil"}</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
+        ? <a className={styles.quickItem} href={`${praWamPath.settings}#mcp`}><span className={styles.quickIcon}><Bot aria-hidden /></span><span>Tanya data (MCP)<small>{mcp.hasKey ? "Tersambung lewat Claude/ChatGPT" : "Buat tautan di Pengaturan"}</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
         : <div className={`${styles.quickItem} ${styles.quickSoon}`}><span className={styles.quickIcon}><Bot aria-hidden /></span><span>Tanya data (MCP)<small>Minta akses ke Admin WAM</small></span></div>}
     </nav>
   </div>;

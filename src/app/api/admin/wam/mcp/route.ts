@@ -26,6 +26,6 @@ export async function POST(request: Request) {
     checkOrigin(request);
     const { employeeId, scopes } = validate(grantSchema, await readJson(request, 2_000));
     await grantMcp(employeeId, scopes, role === "super" ? "super admin" : "admin");
-    return success(await listMcpAccess(), "Akses MCP dibuka. Orangnya membuat tautan sendiri di Profil WAM.");
+    return success(await listMcpAccess(), "Akses MCP dibuka. Orangnya membuat tautan sendiri di Pengaturan WAM → Akses MCP.");
   });
 }

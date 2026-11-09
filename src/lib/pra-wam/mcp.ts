@@ -283,7 +283,7 @@ export async function handleMcpText<C extends WithRoles>(text: string, server: M
 }
 
 /** The answer to a missing, wrong or revoked key: the same every time, so nobody learns which keys existed. */
-export const unauthorizedBody = (): RpcResponse => fail(null, -32001, "Tautan MCP tidak berlaku. Minta tautan baru di Profil WAM.");
+export const unauthorizedBody = (): RpcResponse => fail(null, -32001, "Tautan MCP tidak berlaku. Buat tautan baru di Pengaturan WAM → Akses MCP.");
 
 /* ---- Addresses (kept here while src/lib/routes.ts is being changed elsewhere) ------------------- */
 
@@ -294,6 +294,6 @@ export const mcpAdminApi = (employeeId?: string) => `/api/admin/wam/mcp${employe
 /** POST: a new link for the signed-in person. */
 export const MCP_KEY_API = "/api/wam/mcp-key";
 /** Profil, at the Akses MCP card. */
-export const MCP_PROFILE_ANCHOR = "/wam/account#mcp";
+export const MCP_SETTINGS_ANCHOR = "/wam/settings#mcp";
 /** The tool's title for a log line ("Ringkasan WAM"); the name itself when it is not known. */
 export const toolTitle = (name: string) => mcpToolSpecs.find(tool => tool.name === name)?.title ?? name;
