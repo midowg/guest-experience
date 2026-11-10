@@ -133,6 +133,11 @@ export function RoomBoard({ date, today, dates, prev, next, rooms, bookings, peo
       rooms={rooms} dates={dates.includes(form.draft.date) ? dates : [form.draft.date, ...dates]}
       people={people} meId={meId} departments={departments} now={now}
       onClose={() => { setForm(null); if (editing || openRoom) router.replace(bookingPath.rooms({ date })); }}
-      onSaved={(message, savedDate) => { setForm(null); setSaved(message); router.replace(bookingPath.rooms({ date: savedDate })); router.refresh(); }} />}
+      onSaved={(message, savedDate) => {
+        setForm(null); setSaved(message);
+        // Same day: tidy the address without a navigation, so this board (and its "saved" note) stays; another day: go there.
+        if (savedDate === date) { window.history.replaceState(null, "", bookingPath.rooms({ date })); router.refresh(); }
+        else router.replace(bookingPath.rooms({ date: savedDate }));
+      }} />}
   </>;
 }

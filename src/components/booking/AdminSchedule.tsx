@@ -56,6 +56,11 @@ export function AdminSchedule({ date, today, dates, rooms, bookings, people, meI
     {form && <BookDialog key={`${form.editId ?? "baru"}-${form.draft.roomId}-${form.draft.start}`} initial={form.draft} editId={form.editId} whereKnown={!!form.draft.roomId}
       bookFor bookerName={form.bookerName} rooms={rooms} dates={dates.includes(date) ? dates : [date, ...dates]} people={people} meId={meId} departments={everyone} now={now}
       onClose={() => { setForm(null); if (editing) router.replace(bookingPath.manage(date)); }}
-      onSaved={(message, savedDate) => { setForm(null); setSaved(message); router.replace(bookingPath.manage(savedDate)); router.refresh(); }} />}
+      onSaved={(message, savedDate) => {
+        setForm(null); setSaved(message);
+        // Same day: tidy the address without a navigation, so the "saved" note stays; another day: go there.
+        if (savedDate === date) { window.history.replaceState(null, "", bookingPath.manage(date)); router.refresh(); }
+        else router.replace(bookingPath.manage(savedDate));
+      }} />}
   </section>;
 }

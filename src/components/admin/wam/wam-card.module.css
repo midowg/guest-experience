@@ -1,7 +1,0 @@
-/* The WAM app at the top of the admin's event list: Werkudara blue with the brass accent of WAM. */
-.card { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-5); padding: var(--space-5); background: #fff; border: 1px solid var(--line, #dde3ea); border-left: 6px solid #1551a0; border-radius: 14px; }
-.card h2 { margin: 0 0 var(--space-1); font-size: 1.375rem; color: #1551a0; }
-.eyebrow { margin: 0 0 var(--space-1); font-size: .75rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #a9813f; }
-.meta { margin: 0; color: var(--ink-soft, #5b6573); font-size: var(--text-sm); }
-.meta + .meta { margin-top: var(--space-1); }
-.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
