@@ -3,7 +3,7 @@
 import { EventPreview } from "./EventPreview";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, CalendarCheck, CalendarDays, Copy, ExternalLink, EyeOff, Hourglass, Images, MoreHorizontal, Pencil, Plus, Star, StarOff, Globe, MapPinned, Trash2, X } from "lucide-react";
+import { Archive, CalendarCheck, CalendarDays, Copy, DoorOpen, ExternalLink, EyeOff, Hourglass, Images, KeyRound, LayoutGrid, MoreHorizontal, Pencil, Plus, Settings, Sparkles, Star, StarOff, Globe, Trash2, Tv, X } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
 import type { EventPhase, EventRecord, StaffMember } from "@/lib/types";
 import { formatDate, formatTime } from "@/lib/format";
@@ -15,6 +15,14 @@ import type { AdminModule } from "@/lib/admin-modules";
 import type { TemplateKey } from "@/lib/event-templates";
 import styles from "@/components/admin/admin.module.css";
 import { adminEventPath, adminEventsApi, eventPath, PLACE_GUIDE_PATH } from "@/lib/routes";
+import type { StandaloneApp } from "@/lib/server/standalone-apps";
+
+/** Each standalone app's preview: its own colour and mark (10 Nov 2026). */
+const appLooks: Record<StandaloneApp["key"], { Icon: typeof Tv; background: string; color: string; accent: string }> = {
+  wam: { Icon: Sparkles, background: "linear-gradient(135deg, #0b1230, #2a1f5c)", color: "#f4f1ff", accent: "#f2c46d" },
+  booking: { Icon: DoorOpen, background: "linear-gradient(135deg, #0f3b3a, #146c66)", color: "#effaf8", accent: "#9be7d8" },
+  tv: { Icon: Tv, background: "linear-gradient(135deg, #10203d, #1d4f91)", color: "#eef4ff", accent: "#8cc2ff" },
+};
 
 const kinds = { kunjungan: "Welcome", acara: "Acara", program: "Program", handbook: "Handbook", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;
 /** One word for where an event stands, in the stage colours of the editor. */
@@ -33,7 +41,7 @@ function stageBadge(event: EventRecord, phase: EventPhase | undefined) {
  * the editor, and the rarer actions sit in each card's "⋯" menu (meeting of 20 Oct).
  * `superAdmin` is set only for a super admin session: hidden events then carry a label.
  */
-export function EventList({ events, featuredId, phases = {}, superAdmin, disabledModules = [], templates, staff = [] }: { events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean }; disabledModules?: AdminModule[]; templates?: TemplateKey[]; staff?: StaffMember[] }) {
+export function EventList({ events, featuredId, phases = {}, superAdmin, disabledModules = [], templates, staff = [], apps = [] }: { events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean }; disabledModules?: AdminModule[]; templates?: TemplateKey[]; staff?: StaffMember[]; apps?: StandaloneApp[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -83,7 +91,8 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
     } catch (err) { setError(errorMessage(err)); setBusy(null); }
   }
 
-  // Panduan lokasi has its own place: its fixed address, apart from the events (Rapat Panitia, visits…).
+  // Panduan lokasi has its own place: its fixed address, apart from the events (Rapat Panitia, visits…),
+  // beside the standalone apps (10 Nov 2026).
   const guides = events.filter(event => event.event_kind === "panduan");
   const listed = events.filter(event => event.event_kind !== "panduan");
   // The events by where they stand: on air first (today, then the coming ones by date, then the
@@ -102,6 +111,30 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
     <p className="field-hint">{hint}</p>
     <ul className={styles.eventList}>{items.map(card)}</ul>
   </section>;
+  /** A standalone app as a card shaped like an event's: its preview, where it stands, its address, the way in. */
+  const appCard = (app: StandaloneApp) => {
+    const look = appLooks[app.key];
+    return <li key={app.key} className={`${styles.eventCard} ${styles.stage_guest}`}>
+      <a href={app.manage.href} className={styles.cardPreviewLink} tabIndex={-1} aria-hidden="true">
+        <div className={`${styles.cardPreview} ${styles.appPreview}`} style={{ background: look.background, color: look.color }}>
+          <look.Icon className={styles.appPreviewMark} style={{ color: look.accent }} aria-hidden="true" />
+          <span className={styles.cardPreviewText}>
+            <span className={styles.cardPreviewEyebrow} style={{ color: look.accent }}>{app.eyebrow}</span>
+            <strong className={styles.cardPreviewTitle}>{app.name}</strong>
+          </span>
+        </div>
+      </a>
+      <div className={styles.cardBadges}><span className={styles.stageBadge}><Globe size={14} aria-hidden="true" /> {app.status}</span></div>
+      <h2><a href={app.manage.href} className={styles.cardLink}>{app.name}</a></h2>
+      <p className={styles.eventWhen}><Globe size={16} aria-hidden="true" /> {app.address}</p>
+      <p className={styles.eventKind}>{app.description}</p>
+      {app.waiting && <p className={styles.eventKind}><a href={app.waiting.href}><KeyRound size={14} aria-hidden="true" /> {app.waiting.label}</a></p>}
+      <div className={styles.cardFooter}>
+        <ButtonLink href={app.manage.href}><Settings size={16} aria-hidden="true" /> {app.manage.label}</ButtonLink>
+        <ButtonLink variant="secondary" href={app.open.href} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> {app.open.label}<span className="sr-only"> (tab baru)</span></ButtonLink>
+      </div>
+    </li>;
+  };
   const card = (event: EventRecord) => {
     const badge = stageBadge(event, phases[event.id]);
     const live = event.id === featured && event.status === "published";
@@ -146,6 +179,11 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
         <div className={styles.confirmBody}><DeleteEvent event={deleting} isFeatured={deleting.id === featured} bare startOpen onCancel={() => setDeleting(null)} /></div>
       </div>
     </div>}
+    {(apps.length > 0 || guides.length > 0) && <section className="stack" aria-labelledby="apps-title">
+      <h2 id="apps-title" className={styles.groupTitle}><LayoutGrid size={20} aria-hidden="true" /> Aplikasi <span>{apps.length + guides.length}</span></h2>
+      <p className="field-hint">Aplikasi mandiri di luar acara, masing-masing di alamat tetap: WAM, Booking Kantor, TV Announcement, dan panduan Your Visit di <strong>{PLACE_GUIDE_PATH}</strong> (yang tayang adalah panduan terbaru yang terbit).</p>
+      <ul className={styles.eventList}>{apps.map(appCard)}{guides.map(card)}</ul>
+    </section>}
     {creating && <CreateEventDialog events={events} disabledModules={disabledModules} templates={templates} canStartBlank={!!superAdmin} staff={staff} onClose={() => setCreating(false)} />}
     {error && <Notice tone="error">{error}</Notice>}
     {message && <p role="status" className={styles.guestMessage}>{message}</p>}
@@ -161,10 +199,5 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
         <ul className={styles.eventList}>{archived.map(card)}</ul>
       </details>}
     </>}
-    {guides.length > 0 && <section className="stack" aria-labelledby="guides-title">
-      <h2 id="guides-title" className={styles.listTitle}><MapPinned size={22} aria-hidden="true" /> Your Visit <span>{guides.length}</span></h2>
-      <p className="field-hint">Panduan lokasi untuk umum, di alamat tetap <strong>{PLACE_GUIDE_PATH}</strong>. Terpisah dari acara dan kunjungan; yang tayang adalah panduan terbaru yang terbit.</p>
-      <ul className={styles.eventList}>{guides.map(card)}</ul>
-    </section>}
   </div>;
 }

@@ -301,6 +301,12 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   `PageHeader`, `PageTabs`, `StatCard`/`StatRow`/`Card`). Super admin: `SuperAdminFrame`, menu samping
   dikelompokkan Ringkasan · Orang · Acara · Keamanan.
 - Dashboard hanya angka yang penting dan jalan pintas; detail ada di halaman masing-masing.
+- **Daftar Acara admin Journey (`/admin`), bagian Aplikasi** (10 Nov 2026): di atas Tayang/Draf, satu bagian
+  "Aplikasi" untuk aplikasi mandiri di luar acara, masing-masing kartu seperti kartu acara dengan warna dan
+  ikonnya sendiri: **WAM 2027** (fase, permintaan reset password, Kelola WAM / Buka aplikasi), **Booking Kantor**
+  (`/booking`, Kelola booking), **TV Announcement** (`/tv`, Atur TV: alamat tiap TV, jadwal ruang, gambar dan
+  durasinya, mode, QR), dan panduan **Your Visit** (`/your-visit`). Menggantikan judul "Your Visit" dan kartu WAM
+  di atas daftar (`standaloneApps`).
 - Halaman dengan beberapa bagian memakai tab berupa tautan (`?tab=…`), mis. Data karyawan: Daftar
   karyawan · Struktur · Impor Excel.
 - Tambah dan Ubah memakai satu lembar dari samping (desktop) atau bawah (HP), dengan satu Simpan.
