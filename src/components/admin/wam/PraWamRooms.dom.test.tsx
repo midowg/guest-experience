@@ -83,4 +83,21 @@ it("on Denah lists the rooms per kind, opens one from the plan, and holds the Bo
   expect(within(list()).getByRole("button", { name: /Nagapadma/ }).getAttribute("aria-pressed")).toBe("true");
   expect((screen.getByLabelText("Kapasitas (maks orang)") as HTMLInputElement).value).toBe("8");
   expect((screen.getByRole("switch", { name: "Tampilkan denah di Book" }) as HTMLInputElement).checked).toBe(true);
+  // A spot that holds a room edits it by name, without a second room dropdown.
+  expect((screen.getByLabelText("Nama ruang") as HTMLInputElement).value).toBe("Nagapadma");
+  expect(screen.queryByLabelText("Taruh ruang di spot ini")).toBeNull();
+});
+
+it("renames a room, and will not save an empty name", async () => {
+  request.mockResolvedValue({ message: "Tersimpan.", data: rooms });
+  render(<PraWamRooms initialRooms={rooms} initialSettings={settings} roomsReady />);
+  fireEvent.click(screen.getByRole("button", { name: "Ubah Nagapadma" }));
+  const dialog = screen.getByRole("dialog", { name: "Nagapadma" });
+  const name = within(dialog).getByLabelText("Nama ruang");
+  fireEvent.change(name, { target: { value: " " } });
+  expect((within(dialog).getByRole("button", { name: "Simpan" }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.change(name, { target: { value: "  Ruang   Nagapadma " } });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+  expect(JSON.parse((request.mock.calls[0][1] as { body: string }).body)).toMatchObject({ name: "Ruang Nagapadma", capacity: 8 });
 });

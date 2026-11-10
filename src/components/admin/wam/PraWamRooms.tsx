@@ -18,7 +18,7 @@ type Message = { tone: "success" | "error"; text: string } | null;
 /** The spot clicked on the plan (null: opened from a card or the list) and the room being edited ("" = none). */
 type Editing = { spot: string | null; roomId: string };
 /** What a save sends for one room; the server checks it again. */
-type RoomBody = { capacity: number | null; minPeople: number | null; bookable: boolean; planKey: string | null; facilities: string[]; departments?: string[]; replace?: boolean };
+type RoomBody = { name?: string; capacity: number | null; minPeople: number | null; bookable: boolean; planKey: string | null; facilities: string[]; departments?: string[]; replace?: boolean };
 
 /** The page's two tabs (?tab=denah). */
 export type RoomsView = "daftar" | "denah";
@@ -251,6 +251,7 @@ type EditorProps = {
 /** One room's settings, opened from a spot (which room sits there), a card or the list. */
 function RoomEditor({ spot, room, current, rooms, planReady, departments, spotOf, roomOn, onChooseRoom, onSaved, onClose }: EditorProps) {
   const id = useId();
+  const [name, setName] = useState(room?.name ?? "");
   const [capacity, setCapacity] = useState(room?.capacity?.toString() ?? "");
   const [minPeople, setMinPeople] = useState(room?.minPeople?.toString() ?? "");
   const [bookable, setBookable] = useState(room?.bookable ?? true);
@@ -280,12 +281,14 @@ function RoomEditor({ spot, room, current, rooms, planReady, departments, spotOf
     } catch (problem) { setError({ text: errorMessage(problem), fields: problem instanceof AdminApiError ? problem.fieldErrors : undefined }); }
     finally { setBusy(false); }
   }
+  const cleanName = name.replace(/\s+/g, " ").trim();
+  const nameProblem = cleanName.length < 2 ? "Isi nama ruang, minimal 2 karakter." : null;
   function save() {
-    if (!room || order || tagsProblem) return;
+    if (!room || order || tagsProblem || nameProblem) return;
     void send(room, {
-      capacity: cap, minPeople: planReady ? min : null, bookable, facilities: tags, departments: kept,
+      name: cleanName, capacity: cap, minPeople: planReady ? min : null, bookable, facilities: tags, departments: kept,
       planKey: planReady ? target || null : null, replace: !!takesFrom?.planKey,
-    }, `${room.name} disimpan${planReady ? `, ${target ? `di spot ${spotLabel(target)}` : "tanpa spot"}` : ""}${kept.length ? `, khusus ${kept.join(", ")}` : ""}.`);
+    }, `${cleanName} disimpan${planReady ? `, ${target ? `di spot ${spotLabel(target)}` : "tanpa spot"}` : ""}${kept.length ? `, khusus ${kept.join(", ")}` : ""}.`);
   }
   /** Takes the room off this spot, keeping its other settings. */
   function release() {
@@ -302,12 +305,13 @@ function RoomEditor({ spot, room, current, rooms, planReady, departments, spotOf
     : `${room.name} belum punya spot. Simpan untuk menaruhnya di sini.`;
   const targetOn = target ? roomOn(target) : null;
   return <div className={css.editor}>
-    {spot && <div className="field">
-      <label htmlFor={`${id}-ruang`}>Ruang di spot ini</label>
-      <select id={`${id}-ruang`} className="select" value={room?.id ?? ""} disabled={busy || !planReady && !current} onChange={event => onChooseRoom(event.target.value)}
+    {/* A spot that holds a room edits that room (its name below); only an empty spot asks which room goes there. */}
+    {spot && !current && <div className="field">
+      <label htmlFor={`${id}-ruang`}>Taruh ruang di spot ini</label>
+      <select id={`${id}-ruang`} className="select" value={room?.id ?? ""} disabled={busy || !planReady} onChange={event => onChooseRoom(event.target.value)}
         aria-describedby={`${id}-ruang-hint`}>
         <option value="">Tidak ada ruang WAM</option>
-        {rooms.filter(item => planReady || item.id === current?.id).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+        {planReady && rooms.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
       </select>
       <p id={`${id}-ruang-hint`} className="field-hint">{planReady ? roomHint : `Memindah ruang ke spot lain menunggu migrasi ${MIGRATION}.`}</p>
     </div>}
@@ -321,7 +325,14 @@ function RoomEditor({ spot, room, current, rooms, planReady, departments, spotOf
         : <p className={css.note}>Spot ini belum dipakai ruang WAM. Pilih ruang di atas untuk menaruhnya di sini.</p>}
       <div className={css.actions}><ConsoleButton disabled={busy} onClick={onClose}>Tutup</ConsoleButton></div>
     </> : <>
-      {spot && <p className={css.note}>{room.name}, {roomGroupLabels[roomGroup(room)].toLowerCase()}</p>}
+      <div className="field">
+        <label htmlFor={`${id}-nama`}>Nama ruang</label>
+        <input id={`${id}-nama`} className="input" value={name} maxLength={60} disabled={busy}
+          aria-invalid={!!(nameProblem || fieldError("name"))} aria-describedby={`${id}-nama-hint`} onChange={event => setName(event.target.value)} />
+        <p id={`${id}-nama-hint`} className={nameProblem || fieldError("name") ? "field-error" : "field-hint"}>
+          {nameProblem ?? fieldError("name") ?? `${roomGroupLabels[roomGroup(room)]}. Booking yang sudah ada ikut memakai nama baru.`}
+        </p>
+      </div>
       <div className={css.fields}>
         <div className="field">
           <label htmlFor={`${id}-kapasitas`}>Kapasitas (maks orang)</label>
@@ -382,7 +393,7 @@ function RoomEditor({ spot, room, current, rooms, planReady, departments, spotOf
         </p>
       </div>
       <div className={css.actions}>
-        <ConsoleButton variant="primary" disabled={busy || !!order || !!tagsProblem} onClick={save}>{busy ? "Menyimpan…" : "Simpan"}</ConsoleButton>
+        <ConsoleButton variant="primary" disabled={busy || !!order || !!tagsProblem || !!nameProblem} onClick={save}>{busy ? "Menyimpan…" : "Simpan"}</ConsoleButton>
         <ConsoleButton disabled={busy} onClick={onClose}>Tutup</ConsoleButton>
       </div>
     </>}

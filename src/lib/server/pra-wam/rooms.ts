@@ -39,6 +39,8 @@ export async function setFloorPlan(on: boolean): Promise<AppSettings> {
 }
 
 export type RoomPatch = {
+  /** A new name (10 Nov 2026); left as it is when not given. */
+  name?: string;
   capacity: number | null; minPeople: number | null; bookable: boolean; planKey: string | null;
   /** Facility tags (TV, Whiteboard…); left as they are when not given. */
   facilities?: string[];
@@ -56,6 +58,10 @@ export function roomPatchProblems(patch: RoomPatch): Record<string, string[]> {
   if (!count(patch.minPeople)) problems.minPeople = ["Minimal 1 sampai 500 orang, atau kosongkan."];
   if (!problems.capacity && !problems.minPeople && patch.capacity != null && patch.minPeople != null && patch.minPeople > patch.capacity) {
     problems.minPeople = [`Minimal orang tidak boleh lebih dari kapasitas (${patch.capacity}).`];
+  }
+  if (patch.name !== undefined) {
+    const name = patch.name.replace(/\s+/g, " ").trim();
+    if (name.length < 2 || name.length > 60) problems.name = ["Nama ruang 2 sampai 60 karakter."];
   }
   if (patch.planKey != null && !Object.hasOwn(PLAN_SPOTS, patch.planKey)) problems.planKey = ["Pilih spot dari denah."];
   const facilities = patch.facilities && facilitiesProblem(patch.facilities);
@@ -75,6 +81,7 @@ export async function saveRoom(id: string, patch: RoomPatch, options: { replace?
   const client = createPrivilegedClient();
   // pw_rooms.facilities is older than the migration, so it is saved before and after it.
   const facilities = patch.facilities ? { facilities: patch.facilities } : {};
+  if (patch.name !== undefined) await renameRoom(id, patch.name);
   if (patch.planKey) {
     const { data: holders, error } = await client.from("pw_rooms").select("id,name").eq("plan_key", patch.planKey).neq("id", id);
     if (error) { if (missing(error)) throw waiting(); databaseError(error); }
@@ -100,6 +107,19 @@ export async function saveRoom(id: string, patch: RoomPatch, options: { replace?
   }
   if (!data) throw new ServiceError(404, "Ruang tidak ditemukan.");
   if (patch.departments) await saveDepartments(id, patch.departments);
+}
+
+/** A room's new name (10 Nov 2026); two rooms never share one (any case). Bookings keep the room by its id. */
+async function renameRoom(id: string, raw: string) {
+  const name = raw.replace(/\s+/g, " ").trim();
+  const client = createPrivilegedClient();
+  const { data: rooms, error } = await client.from("pw_rooms").select("id,name");
+  if (error) databaseError(error);
+  if ((rooms ?? []).some(room => room.id !== id && (room.name as string).trim().toLowerCase() === name.toLowerCase())) {
+    throw new ServiceError(409, `Sudah ada ruang bernama ${name}.`, { name: [`Sudah ada ruang bernama ${name}.`] });
+  }
+  const { error: renameError } = await client.from("pw_rooms").update({ name }).eq("id", id);
+  if (renameError) databaseError(renameError);
 }
 
 /** The departments a room is kept for (10 Nov 2026); before migration 202611100001 only "everyone" can be saved. */

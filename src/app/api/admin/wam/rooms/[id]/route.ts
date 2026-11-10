@@ -9,6 +9,8 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 const people = (label: string) => z.number().int(`${label} harus bilangan bulat.`).min(1, `${label} minimal 1.`).max(500, `${label} paling banyak 500.`).nullable();
 const schema = z.object({
+  /** A new name (10 Nov 2026); left as it is when absent. */
+  name: z.string().trim().min(2, "Nama ruang minimal 2 karakter.").max(60, "Nama ruang paling banyak 60 karakter.").optional(),
   capacity: people("Kapasitas"),
   minPeople: people("Minimal orang"),
   bookable: z.boolean(),
@@ -27,7 +29,7 @@ const schema = z.object({
   path: ["minPeople"], message: "Minimal orang tidak boleh lebih dari kapasitas.",
 });
 
-/** PATCH: a room's capacity, fewest people, facilities, bookable and floor plan spot (any admin). */
+/** PATCH: a room's name, capacity, fewest people, facilities, bookable and floor plan spot (any admin). */
 export async function PATCH(request: Request, { params }: Params) {
   return handle(async () => {
     await requireApiAdmin();
