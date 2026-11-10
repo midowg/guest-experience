@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, isPhoneScreen, isTemplateKind, itemLabel, itemShows, playlistOf, scheduleLabel, tvItemCreateSchema, tvItemPatchSchema, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
+  activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, isPhoneScreen, isTemplateKind, itemLabel, itemShows, playlistOf, scheduleLabel, searchEntries, tvItemCreateSchema, tvItemPatchSchema, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
   shouldReload, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
@@ -70,6 +70,39 @@ describe("whose an entry is, on the week calendar", () => {
     expect(entryOwner(owned("Rapat", "Contoh Satu", ""))).toBe("Contoh Satu");
     expect(entryOwner({ title: "Rapat", by: "SM - Contoh" })).toBe("SM - Contoh");
     expect(entryOwner({ title: "Forum Pra WAM", by: "" })).toBe("");
+  });
+});
+
+describe("search on a phone", () => {
+  const booked = (key: string, title: string, person: string, dept: string, start = "10:00"): TvEntry => ({ ...entry(key, start, "23:00"), title, person, dept, by: `${dept} - ${person}` });
+  const week: TvDay[] = [
+    { date: "2026-11-10", rooms: [
+      { id: "gm", name: "Ruang GM", entries: [booked("a", "Appraisal 1-on-1", "Contoh Andri", "Sales & Marketing")] },
+      { id: "naga", name: "Nagapadma", entries: [booked("b", "Internal Dept Meeting", "Contoh Jaka", "Center of Excellence", "11:00")] },
+    ] },
+    { date: "2026-11-11", rooms: [{ id: "gm", name: "Ruang GM", entries: [booked("c", "Résumé tim", "Contoh Dita", "Human Resources")] }] },
+    { date: "2026-11-12", rooms: [] },
+  ];
+  const keys = (query: string) => searchEntries(week, query).map(day => [day.date, day.entries.map(item => item.key)]);
+
+  it("finds by the booker's name, the department, the room or the activity, whatever the capitals", () => {
+    expect(keys("andri")).toEqual([["2026-11-10", ["a"]]]);
+    expect(keys("EXCELLENCE")).toEqual([["2026-11-10", ["b"]]]);
+    expect(keys("ruang gm")).toEqual([["2026-11-10", ["a"]], ["2026-11-11", ["c"]]]);
+    expect(keys("appraisal")).toEqual([["2026-11-10", ["a"]]]);
+    expect(keys("resume")).toEqual([["2026-11-11", ["c"]]]);
+  });
+
+  it("needs every word typed, in any order, and gives each entry its room", () => {
+    expect(keys("gm andri")).toEqual([["2026-11-10", ["a"]]]);
+    expect(keys("gm jaka")).toEqual([]);
+    expect(searchEntries(week, "dita")[0].entries[0].room).toBe("Ruang GM");
+  });
+
+  it("finds nothing for nothing typed, and nothing for what is not there", () => {
+    expect(keys("")).toEqual([]);
+    expect(keys("   ")).toEqual([]);
+    expect(keys("tidak ada")).toEqual([]);
   });
 });
 

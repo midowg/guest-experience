@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Pause, Play, Search, X } from "lucide-react";
 import { clockLabel } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, entryState, itemLabel, legendItem, shownDays, tvDateLabel, tvDayHead, tvWeekLabel,
+  dayEntries, entryState, itemLabel, legendItem, searchEntries, shownDays, tvDateLabel, tvDayHead, tvWeekLabel,
   type TvEntry, type TvFeed, type TvItem, type TvLegendItem, type TvState,
 } from "@/lib/pra-wam/tv";
 import css from "./tv.module.css";
@@ -33,6 +33,12 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
     : item.kind !== "gambar" ? itemLabel(item)
     : pictures > 1 ? `Gambar ${items.slice(0, index + 1).filter(other => other.kind === "gambar").length}` : "Gambar";
 
+  // Search: over the whole week, by name, department, room or activity. While something is typed, the results replace the loop.
+  const [query, setQuery] = useState("");
+  const searching = query.trim().length > 0;
+  const found = searching ? searchEntries(feed.days, query) : [];
+  const foundCount = found.reduce((sum, day) => sum + day.entries.length, 0);
+
   // A new item starts at its top.
   const scroller = useRef<HTMLElement>(null);
   const key = current?.key;
@@ -52,11 +58,33 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
       <p className={css.phoneClock}>{clock}<span>WIB</span></p>
     </header>
 
-    {items.length > 1 && <nav className={css.phoneTabs} aria-label="Tayangan">
+    {!gone && <div className={css.phoneSearch} role="search">
+      <Search size={18} aria-hidden="true" />
+      <input type="search" inputMode="search" enterKeyHint="search" autoComplete="off" spellCheck={false} value={query}
+        placeholder="Cari nama, departemen, atau ruangan" aria-label="Cari jadwal minggu ini: nama, departemen, atau ruangan"
+        onChange={event => { setQuery(event.target.value); if (!paused) onPause(true); }} />
+      {query && <button type="button" aria-label="Hapus pencarian" onClick={() => setQuery("")}><X size={18} aria-hidden="true" /></button>}
+    </div>}
+
+    {searching && !gone && <div className={css.phoneBody} aria-live="polite">
+      {found.length === 0 ? <Empty title="Tidak ada yang cocok" body="Coba nama orang, departemen, ruangan, atau kegiatan lain. Pencarian mencakup jadwal minggu ini." />
+        : <>
+          <p className={css.phoneCount}>{foundCount} jadwal minggu ini</p>
+          {found.map(day => {
+            const head = tvDayHead(day.date);
+            return <section key={day.date} className={css.phoneGroup} aria-label={`${head.name}, ${head.day}`}>
+              <h2>{head.name}, {head.day}{day.date === feed.date ? <em>Hari ini</em> : <span>{day.entries.length} jadwal</span>}</h2>
+              <ul>{day.entries.map(entry => <Row key={`${entry.key}:${entry.room}`} entry={entry} now={now} tone={tones[legendItem(legend, entry.title).color]} detail={[entry.room, bookedBy(entry)].filter(Boolean).join(" · ")} />)}</ul>
+            </section>;
+          })}
+        </>}
+    </div>}
+
+    {!searching && items.length > 1 && <nav className={css.phoneTabs} aria-label="Tayangan">
       {items.map((item, index) => <button key={item.key} type="button" aria-pressed={index === position} onClick={() => go(index)}>{label(item, index)}</button>)}
     </nav>}
 
-    <div className={css.phoneBody}>
+    {(!searching || gone) && <div className={css.phoneBody}>
       {gone ? <Empty title="Tautan TV ini sudah tidak berlaku" body="Minta tautan baru di Admin WAM → TV Announcement." />
         : !current ? <Empty title="Belum ada yang ditayangkan" body="Jadwal ruang dan pengumuman akan muncul di sini." />
         : current.kind === "hari"
@@ -94,9 +122,9 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
             : current.kind === "teks" ? <div className={css.phoneNote}>{current.body && <p className={css.phoneText}>{current.body}</p>}</div>
             // eslint-disable-next-line @next/next/no-img-element
             : <img className={css.phonePicture} src={current.slide.src} alt={current.slide.title || "Gambar pengumuman"} referrerPolicy="no-referrer" />}
-    </div>
+    </div>}
 
-    {items.length > 1 && <div className={css.phoneBar}>
+    {!searching && items.length > 1 && <div className={css.phoneBar}>
       <button type="button" onClick={() => go(position - 1)} aria-label="Tayangan sebelumnya"><ChevronLeft size={22} aria-hidden="true" /></button>
       <button type="button" className={css.phonePlay} aria-pressed={!paused} onClick={() => onPause(!paused)}>
         {paused ? <Play size={18} aria-hidden="true" /> : <Pause size={18} aria-hidden="true" />}

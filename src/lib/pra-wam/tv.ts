@@ -183,6 +183,28 @@ export function dayEntries(day: TvDay): TvDayEntry[] {
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.room.localeCompare(b.room));
 }
 
+/* ---- Search (the phone's) ------------------------------------------------------------------------- */
+
+/** Text as it is compared: no capitals, no accents ("Résepsionis" is found by "resepsionis"). */
+const plain = (text: string) => text.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+export type TvFound = { date: string; entries: TvDayEntry[] };
+/**
+ * The week's entries that match what someone typed on their phone, a day at a time: every word
+ * typed must be somewhere in the entry's activity, room, booker's name or department (so
+ * "andri gm" finds Bu Andri's bookings of Ruang GM). Nothing typed finds nothing.
+ */
+export function searchEntries(days: readonly TvDay[], query: string): TvFound[] {
+  const words = plain(query).split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  return days.flatMap(day => {
+    const entries = dayEntries(day).filter(entry => {
+      const text = plain([entry.title, entry.room, entry.person, entry.dept, entry.by].filter(Boolean).join(" "));
+      return words.every(word => text.includes(word));
+    });
+    return entries.length ? [{ date: day.date, entries }] : [];
+  });
+}
+
 /* ---- The legend: one colour per activity --------------------------------------------------------- */
 
 /*

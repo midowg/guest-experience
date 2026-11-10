@@ -263,3 +263,12 @@
 .phoneNote { display: grid; gap: 6px; padding: 14px 16px; border: 1px solid var(--tv-line); border-radius: 16px; background: var(--tv-surface); }
 .phoneNote p { margin: 0; overflow-wrap: anywhere; }
 .phoneText { color: var(--tv-muted); font-size: 14px; white-space: pre-line; }
+
+/* The phone's search: one field over the week's entries; its results replace the tabs and the loop while something is typed. */
+.phoneSearch { display: flex; flex: none; align-items: center; gap: 10px; min-height: 48px; margin: 4px 20px 8px; padding: 0 6px 0 16px; border: 1px solid var(--tv-line); border-radius: 999px; background: var(--tv-surface); color: var(--tv-muted); }
+.phoneSearch:focus-within { border-color: var(--tv-primary); outline: 2px solid var(--tv-primary); outline-offset: 1px; }
+.phoneSearch input { flex: 1; min-width: 0; min-height: 44px; padding: 0; border: 0; outline: none; background: transparent; color: var(--tv-text); font: inherit; font-size: 16px; }
+.phoneSearch input::placeholder { color: var(--tv-muted); }
+.phoneSearch input::-webkit-search-cancel-button { display: none; }
+.phoneSearch button { display: grid; flex: none; width: 44px; height: 44px; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--tv-text); cursor: pointer; }
+.phoneCount { margin: 0; color: var(--tv-muted); font-size: 13px; }

@@ -153,7 +153,9 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   useEffect(() => { showing.current = showingNow; }, [showingNow]);
 
   // Only a phone can stop the loop (its Jeda button): a TV has no such control and always plays on.
-  const phone = isPhoneScreen(width, height, touch);
+  // `?hp=1` in the address asks for the phone's list on any screen: to check it from a computer, or to share the list on purpose.
+  const asked = useSyncExternalStore(onResize, () => new URLSearchParams(window.location.search).get("hp") === "1", () => false);
+  const phone = asked || isPhoneScreen(width, height, touch);
   const stopped = paused && phone;
   // The loop: each item stays its own time. Keyed on the item, so a clock tick does not restart it.
   const currentKey = current?.key, currentSeconds = current?.seconds, count = items.length;
