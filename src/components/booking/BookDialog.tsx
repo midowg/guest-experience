@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Building2, CalendarDays, Clock, DoorOpen, Handshake, PenLine, Search, Users, X } from "lucide-react";
+import { AlertTriangle, Building2, CalendarDays, Clock, DoorOpen, Handshake, PenLine, Search, User, Users, X } from "lucide-react";
 import { errorText, praWamRequest, type Conflict } from "@/components/pra-wam/api";
-import { audienceLabels, type Audience } from "@/lib/booking/rules";
+import { audienceLabels, withoutMinimum, type Audience } from "@/lib/booking/rules";
 import { clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock, roomKeptFrom, slotTimes, wibInstant, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { headcount, largestCapacity, roomFit } from "@/lib/pra-wam/room-fit";
 import { bookingApi } from "@/lib/routes";
@@ -17,12 +17,21 @@ export type BookDraft = {
 type Failure = { message: string; fields: Record<string, string[]>; conflict?: Conflict };
 
 /**
- * The booking form, one screen: where, when, what for, for whom, who comes. The server decides
+ * The booking form, one screen: where and when (one line when already picked), what for, for whom, who comes. The server decides
  * (and the database settles two people reaching for the same room); a refusal comes back with
  * other hours or rooms to tap.
  */
-export function BookDialog({ initial, editId, rooms, dates, people, meId, departments, now, onClose, onSaved }: {
+export function BookDialog({ initial, editId, whereKnown = false, rooms, dates, people, meId, departments, now, onClose, onSaved, bookFor = false, bookerName }: {
   initial: BookDraft; editId?: string; rooms: Room[]; dates: string[]; people: Person[]; meId: string; departments: string[]; now: string;
+  /**
+   * The room and hours were already picked (a room's Booking button, a grid cell): the form opens
+   * with them as one line and asks only what for, for whom and who comes; "Ubah" shows the fields.
+   */
+  whereKnown?: boolean;
+  /** Kelola (administration staff): book for someone, picked from `people` ("Atas nama"). */
+  bookFor?: boolean;
+  /** Changing someone else's booking (administration staff): whose it is; it stays theirs. */
+  bookerName?: string;
   onClose: () => void; onSaved: (message: string, date: string) => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -32,6 +41,8 @@ export function BookDialog({ initial, editId, rooms, dates, people, meId, depart
   const [failure, setFailure] = useState<Failure | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [over, setOver] = useState(false);
+  const [editWhere, setEditWhere] = useState(!whereKnown);
+  const [forId, setForId] = useState(meId);
   const set = (patch: Partial<BookDraft>) => { setDraft(current => ({ ...current, ...patch })); setFailure(null); };
 
   useEffect(() => { const dialog = ref.current; if (dialog && !dialog.open) dialog.showModal(); }, []);
@@ -42,13 +53,15 @@ export function BookDialog({ initial, editId, rooms, dates, people, meId, depart
   const start = starts.includes(draft.start) ? draft.start : starts[0] ?? draft.start;
   const end = ends.some(option => option.time === draft.end) ? draft.end : ends[1]?.time ?? ends[0]?.time ?? draft.end;
 
-  const others = people.filter(person => person.id !== meId);
+  const others = people.filter(person => person.id !== forId);
   const picked = new Set(draft.participants);
   const count = headcount(picked.size);
   const largest = largestCapacity(rooms);
   const room = rooms.find(item => item.id === draft.roomId);
-  const fit = room ? roomFit(room, count, largest) : null;
-  const kept = room ? roomKeptFrom(room, departments) : null;
+  // No fewest-people rule in Booking Kantor: only the capacity counts.
+  const fit = room ? roomFit(withoutMinimum(room), count, largest) : null;
+  // A room kept for some departments is checked against the booker's own; for someone else the server checks theirs.
+  const kept = room && forId === meId ? roomKeptFrom(room, departments) : null;
   const query = search.trim().toLowerCase();
   const shown = others.filter(person => !query || `${person.name} ${person.fullName ?? ""} ${person.department}`.toLowerCase().includes(query)).slice(0, 60);
   const toggle = (id: string) => set({ participants: picked.has(id) ? draft.participants.filter(item => item !== id) : [...draft.participants, id] });
@@ -57,7 +70,7 @@ export function BookDialog({ initial, editId, rooms, dates, people, meId, depart
   async function submit(extra: { confirmed?: boolean } = {}) {
     setBusy(true); setFailure(null);
     try {
-      const { message } = await praWamRequest(bookingApi.bookings(editId), { method: editId ? "PATCH" : "POST", json: { ...draft, start, end, place: "", confirmed: extra.confirmed ?? confirmed, overCapacity: over } });
+      const { message } = await praWamRequest(bookingApi.bookings(editId), { method: editId ? "PATCH" : "POST", json: { ...draft, start, end, place: "", confirmed: extra.confirmed ?? confirmed, overCapacity: over, ...(!editId && forId !== meId ? { forId } : {}) } });
       onSaved(message, draft.date);
     } catch (error) {
       const known = error as { fieldErrors?: Record<string, string[]>; conflict?: Conflict };
@@ -72,6 +85,26 @@ export function BookDialog({ initial, editId, rooms, dates, people, meId, depart
         <button type="button" className={css.iconBtn} aria-label="Tutup" onClick={() => ref.current?.close()}><X size={20} aria-hidden /></button>
       </div>
       <div className={css.formBody}>
+        {bookerName && <p className={css.note}><User size={18} aria-hidden />Booking milik {bookerName}. Perubahan tetap atas namanya.</p>}
+        {bookFor && !editId && <div className={css.field}>
+          <label className={css.label} htmlFor="book-for-whom"><User size={18} aria-hidden />Atas nama</label>
+          <select id="book-for-whom" className={css.control} value={forId} onChange={event => { setForId(event.target.value); set({ participants: draft.participants.filter(id => id !== event.target.value) }); }}>
+            <option value={meId}>Saya sendiri</option>
+            {[...people].filter(person => person.id !== meId).sort((a, b) => (a.fullName ?? a.name).localeCompare(b.fullName ?? b.name)).map(person =>
+              <option key={person.id} value={person.id}>{person.fullName ?? person.name} · {person.department}</option>)}
+          </select>
+          {fieldError("forId") && <p className={css.error}>{fieldError("forId")}</p>}
+          {forId !== meId && <p className={css.hint}>Pemesan dan peserta mendapat pemberitahuan bahwa booking ini dibuat olehmu.</p>}
+        </div>}
+        {!editWhere && room ? <div className={css.where}>
+          <span className={css.roomIcon}><DoorOpen size={22} aria-hidden /></span>
+          <div className={css.whereText}>
+            <strong>{room.name}</strong>
+            <span>{dayLabel(draft.date)} · {clockLabel(start)}–{clockLabel(end)} ({durationLabel(clockMinutes(end) - clockMinutes(start))})</span>
+            {kept ? <span className={css.error}>{kept}</span> : fit && !fit.ok ? <span className={css.error}>{fit.text}</span> : null}
+          </div>
+          <button type="button" className={css.btnQuiet} onClick={() => setEditWhere(true)}>Ubah</button>
+        </div> : <>
         <div className={css.field}>
           <label className={css.label} htmlFor="book-room"><DoorOpen size={18} aria-hidden />Ruangan</label>
           <select id="book-room" className={css.control} required value={draft.roomId} onChange={event => set({ roomId: event.target.value })}>
@@ -108,6 +141,7 @@ export function BookDialog({ initial, editId, rooms, dates, people, meId, depart
             {fieldError("end") && <p className={css.error}>{fieldError("end")}</p>}
           </div>
         </div>
+        </>}
 
         <div className={css.field}>
           <label className={css.label} htmlFor="book-what"><PenLine size={18} aria-hidden />Nama kegiatan</label>
@@ -129,7 +163,7 @@ export function BookDialog({ initial, editId, rooms, dates, people, meId, depart
         </div>
 
         <div className={css.field}>
-          <label className={css.label} htmlFor="book-people"><Users size={18} aria-hidden />Siapa yang ikut · {count} orang termasuk kamu</label>
+          <label className={css.label} htmlFor="book-people"><Users size={18} aria-hidden />Siapa yang ikut · {count} orang termasuk {forId === meId && !bookerName ? "kamu" : "pemesan"}</label>
           {picked.size > 0 && <div className={css.picked}>{others.filter(person => picked.has(person.id)).map(person =>
             <button key={person.id} type="button" className={css.pickedOne} aria-label={`Hapus ${person.name}`} onClick={() => toggle(person.id)}>{person.name}<X size={14} aria-hidden /></button>)}</div>}
           <div style={{ position: "relative" }}>

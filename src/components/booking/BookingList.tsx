@@ -20,13 +20,14 @@ export function BookingList({ bookings, rooms, manage = false, empty }: { bookin
   const [asking, setAsking] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [reason, setReason] = useState("");
   const days = [...new Set(bookings.map(item => wibDate(item.startsAt)))];
 
   async function cancel(id: string) {
     setBusy(true); setResult(null);
     try {
-      const { message } = await praWamRequest(bookingApi.bookings(id), { method: "DELETE" });
-      setResult({ ok: true, text: message }); setAsking(null); router.refresh();
+      const { message } = await praWamRequest(bookingApi.bookings(id), { method: "DELETE", json: { reason } });
+      setResult({ ok: true, text: message }); setAsking(null); setReason(""); router.refresh();
     } catch (error) { setResult({ ok: false, text: errorText(error) }); } finally { setBusy(false); }
   }
 
@@ -53,16 +54,19 @@ export function BookingList({ bookings, rooms, manage = false, empty }: { bookin
             <div className={css.itemTags}>
               {item.audience === "eksternal" && <span className={css.chipWarn}><Handshake size={14} aria-hidden />Eksternal{item.externalNote ? ` · ${item.externalNote}` : ""}</span>}
               {item.isSession ? <span className={css.chipInfo}>Sesi WAM</span> : !office && <span className={css.chipInfo}>Dibuat di WAM</span>}
+              {item.createdBy && <span className={css.chip}>Dibuat oleh {item.createdBy}</span>}
               {!manage && (item.mine ? <span className={css.chipMine}>Booking saya</span> : <span className={css.chip}>Diundang</span>)}
             </div>
           </div>
           <div className={css.itemActs}>
-            {asking === item.id ? <>
+            {asking === item.id ? <div className={css.cancelBox}>
+              {/* Someone else's booking: the booker reads why. */}
+              {!item.mine && <input className={css.control} aria-label="Alasan pembatalan" placeholder="Alasan, dibaca pemesan" maxLength={300} value={reason} onChange={event => setReason(event.target.value)} />}
               <span className={css.hint}>Batalkan booking ini?</span>
-              <button type="button" className={css.btnDanger} disabled={busy} onClick={() => void cancel(item.id)}>{busy ? "Membatalkan…" : "Ya, batalkan"}</button>
-              <button type="button" className={css.btnQuiet} disabled={busy} onClick={() => setAsking(null)}>Tidak</button>
-            </> : office ? <>
-              {item.mine && <Link href={bookingPath.rooms({ date, edit: item.id })} className={css.btnQuiet}><Pencil size={16} aria-hidden />Ubah</Link>}
+              <button type="button" className={css.btnDanger} disabled={busy || (!item.mine && reason.trim().length < 3)} onClick={() => void cancel(item.id)}>{busy ? "Membatalkan…" : "Ya, batalkan"}</button>
+              <button type="button" className={css.btnQuiet} disabled={busy} onClick={() => { setAsking(null); setReason(""); }}>Tidak</button>
+            </div> : office ? <>
+              {(item.mine || manage) && <Link href={manage ? bookingPath.manage(date, item.id) : bookingPath.rooms({ date, edit: item.id })} className={css.btnQuiet}><Pencil size={16} aria-hidden />Ubah</Link>}
               {(item.mine || manage) && <button type="button" className={css.btnDanger} onClick={() => { setAsking(item.id); setResult(null); }}><X size={16} aria-hidden />Batal</button>}
             </> : !item.isSession && item.mine && <Link href={praWamPath.appraisal(date, item.id)} className={css.btnQuiet}>Buka di WAM</Link>}
           </div>

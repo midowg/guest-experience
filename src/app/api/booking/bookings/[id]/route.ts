@@ -8,7 +8,7 @@ import { requireApiMember } from "@/lib/server/pra-wam/session";
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
-/** PATCH: change one of the person's own office bookings. */
+/** PATCH: change an office booking: the booker their own, the administration staff anyone's (it stays the booker's). */
 export async function PATCH(request: Request, { params }: Params) {
   return handleBooking(async () => {
     const member = await requireApiMember();
@@ -21,12 +21,15 @@ export async function PATCH(request: Request, { params }: Params) {
   });
 }
 
-/** DELETE: cancel a booking (the booker, or the administration staff); the room is free at once. */
+/** DELETE {reason?}: cancel a booking (the booker, or the administration staff with a reason); the room is free at once. */
 export async function DELETE(request: Request, { params }: Params) {
   return handle(async () => {
     const member = await requireApiMember();
     checkOrigin(request);
-    await cancelOfficeBooking(validate(z.uuid(), (await params).id), member);
+    const id = validate(z.uuid(), (await params).id);
+    // The app always sends {reason}: empty from the booker, filled by the administration staff.
+    const { reason } = validate(z.object({ reason: z.string().trim().max(300, "Alasan paling panjang 300 karakter.").default("") }), await readJson(request, 2_000));
+    await cancelOfficeBooking(id, member, reason);
     return success(null, "Booking dibatalkan. Ruangan kembali tersedia.");
   });
 }

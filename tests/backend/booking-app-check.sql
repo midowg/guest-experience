@@ -58,6 +58,12 @@ begin
   begin perform public.pw_save_booking(null, vasuki, 'Tiga', '', '2026-11-25 03:00Z', '2026-11-25 03:30Z', booker, '{}', 2, null, 'kantor', 'internal'); raise exception 'UNEXPECTED: over the daily limit';
   exception when raise_exception then null; end;
 
+  -- Booked by the administration staff for someone: created_by names who made it; null when the booker did.
+  office := public.pw_save_booking(null, vasuki, 'Atas nama', '', '2026-11-26 03:00Z', '2026-11-26 04:00Z', other, '{}', 4, null, 'kantor', 'internal', null, booker);
+  if (select booked_by from public.pw_room_bookings where id = office) <> other or (select created_by from public.pw_room_bookings where id = office) <> booker then raise exception 'created_by not kept'; end if;
+  office := public.pw_save_booking(null, vasuki, 'Sendiri', '', '2026-11-26 05:00Z', '2026-11-26 06:00Z', other, '{}', 4, null, 'kantor', 'internal', null, other);
+  if (select created_by from public.pw_room_bookings where id = office) is not null then raise exception 'created_by set for the booker themself'; end if;
+
   -- The new role is allowed.
   insert into public.pw_roles (employee_id, role) values (booker, 'ga');
   raise notice 'PASS: office bookings share the rooms with WAM, hold them, and stay out of WAM sessions';

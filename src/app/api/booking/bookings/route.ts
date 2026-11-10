@@ -7,14 +7,17 @@ import { requireApiMember } from "@/lib/server/pra-wam/session";
 
 export const dynamic = "force-dynamic";
 
-/** POST: book a room from Booking Kantor. `confirmed` saves even when someone invited is booked elsewhere then. */
+/**
+ * POST: book a room from Booking Kantor. `confirmed` saves even when someone invited is booked
+ * elsewhere then; `forId` books for that person (administration staff only).
+ */
 export async function POST(request: Request) {
   return handleBooking(async () => {
     const member = await requireApiMember();
     checkOrigin(request);
     const body = await readJson(request, 20_000);
     const input = validate(officeBookingSchema, body);
-    const flags = validate(z.object({ confirmed: z.boolean().default(false), overCapacity: z.boolean().default(false) }), body);
+    const flags = validate(z.object({ confirmed: z.boolean().default(false), overCapacity: z.boolean().default(false), forId: z.uuid().optional() }), body);
     return success(await saveOfficeBooking(input, member, flags), "Ruangan berhasil dipesan.");
   });
 }

@@ -11,22 +11,26 @@
 --     sessions and bookings still cannot overlap it.
 --   * pw_room_bookings.audience / external_note: Internal or Eksternal with who the guest is, as
 --     the old booking app asked.
+--   * pw_room_bookings.created_by: who made the booking when it is not the booker (the
+--     administration staff booking for someone, /booking/kelola); null = the booker themself, or
+--     that staff member was later removed from Data karyawan (on delete set null).
 --   * pw_roles gains 'ga': the administration staff who manage every booking in /booking/kelola.
---   * pw_save_booking gains p_source, p_audience and p_external_note (all optional), so WAM's
---     calls keep working unchanged. The daily limit still counts a person's bookings from both apps.
+--   * pw_save_booking gains p_source, p_audience, p_external_note and p_created_by (all optional),
+--     so WAM's calls keep working unchanged. The daily limit still counts a person's bookings from both apps.
 -- Hours, weekdays, the 30-minute step and the 4-hour limit are unchanged (202611050006).
 -- Before this runs, /booking shows rooms and bookings but saving answers "menunggu migrasi".
 --
 -- ROLLBACK (by hand): cancel or delete the bookings with source 'kantor' first (or accept that they
 -- become WAM sessions on their next change), delete the 'ga' rows of pw_roles and restore its
 -- check, recreate pw_save_booking and pw_sync_booking_session from 202611050006, then drop the
--- source, audience and external_note columns.
+-- source, audience, external_note and created_by columns.
 begin;
 
 alter table public.pw_room_bookings
   add column if not exists source text not null default 'wam' check (source in ('wam', 'kantor')),
   add column if not exists audience text not null default 'internal' check (audience in ('internal', 'eksternal')),
-  add column if not exists external_note text;
+  add column if not exists external_note text,
+  add column if not exists created_by uuid references public.employees(id) on delete set null;
 
 alter table public.pw_room_bookings drop constraint if exists pw_booking_external;
 alter table public.pw_room_bookings add constraint pw_booking_external check (
@@ -83,10 +87,12 @@ end $$;
 
 -- pw_save_booking with where the booking comes from. p_audience null on an edit keeps what it had.
 drop function if exists public.pw_save_booking(uuid, uuid, text, text, timestamptz, timestamptz, uuid, uuid[], integer, text);
+drop function if exists public.pw_save_booking(uuid, uuid, text, text, timestamptz, timestamptz, uuid, uuid[], integer, text, text, text, text);
 create function public.pw_save_booking(
   p_id uuid, p_room uuid, p_title text, p_description text, p_starts timestamptz, p_ends timestamptz,
   p_booked_by uuid, p_participants uuid[], p_max_per_day integer, p_place text default null,
-  p_source text default 'wam', p_audience text default null, p_external_note text default null
+  p_source text default 'wam', p_audience text default null, p_external_note text default null,
+  p_created_by uuid default null
 ) returns uuid
 language plpgsql
 set search_path = public, pg_temp
@@ -107,8 +113,9 @@ begin
     raise exception 'BOOKING_DAILY_LIMIT';
   end if;
   if p_id is null then
-    insert into pw_room_bookings (room_id, place, title, description, starts_at, ends_at, booked_by, source, audience, external_note)
-    values (p_room, outside_place, btrim(p_title), btrim(p_description), p_starts, p_ends, p_booked_by, coalesce(p_source, 'wam'), coalesce(p_audience, 'internal'), note)
+    insert into pw_room_bookings (room_id, place, title, description, starts_at, ends_at, booked_by, source, audience, external_note, created_by)
+    values (p_room, outside_place, btrim(p_title), btrim(p_description), p_starts, p_ends, p_booked_by, coalesce(p_source, 'wam'), coalesce(p_audience, 'internal'), note,
+            nullif(p_created_by, p_booked_by))
     returning id into saved;
   else
     update pw_room_bookings
@@ -128,7 +135,7 @@ begin
   return saved;
 end $$;
 
-revoke all on function public.pw_save_booking(uuid, uuid, text, text, timestamptz, timestamptz, uuid, uuid[], integer, text, text, text, text) from public, anon, authenticated;
-grant execute on function public.pw_save_booking(uuid, uuid, text, text, timestamptz, timestamptz, uuid, uuid[], integer, text, text, text, text) to service_role;
+revoke all on function public.pw_save_booking(uuid, uuid, text, text, timestamptz, timestamptz, uuid, uuid[], integer, text, text, text, text, uuid) from public, anon, authenticated;
+grant execute on function public.pw_save_booking(uuid, uuid, text, text, timestamptz, timestamptz, uuid, uuid[], integer, text, text, text, text, uuid) to service_role;
 
 commit;

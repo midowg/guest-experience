@@ -2,7 +2,7 @@ import { callName } from "@/lib/pra-wam/call-name";
 import "server-only";
 import { cache } from "react";
 import { alternatives, appraisalRules, bookableDates, bookingClock, bookingProblems, clockLabel, OUTSIDE_ROOM, overCapacity, overlaps, roomFitProblem, roomKeptFrom, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
-import { MIGRATION_BOOKING_APP, officePeriod, officeRules, type Audience } from "@/lib/booking/rules";
+import { MIGRATION_BOOKING_APP, officePeriod, officeRules, withoutMinimum, type Audience } from "@/lib/booking/rules";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
@@ -243,7 +243,9 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
    * rules, but not WAM's period or its open/closed switch, and the booking does not become a WAM
    * session (so the caller tells its people; nothing is sent from here).
    */
-  office?: { audience: Audience; externalNote: string };
+  office?: { audience: Audience; externalNote: string;
+    /** The administration staff member who made it for the booker (`viewer` is then the booker); absent when it is the booker. */
+    createdBy?: string };
 } = {}): Promise<Booking> {
   const now = options.now ?? new Date();
   const office = options.office;
@@ -256,7 +258,8 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
   if (Object.keys(problems).length) throw new ServiceError(422, "Periksa kembali tanggal dan jam.", Object.fromEntries(Object.entries(problems).map(([key, message]) => [key, [message]])));
   // The room must suit how many come (the same rule the form uses): no one-on-one in the big room.
   const rooms = await listRooms();
-  const unfit = roomFitProblem(rooms, input, viewer.id);
+  // Booking Kantor has no fewest-people rule (11 Nov 2026): only the capacity counts there.
+  const unfit = roomFitProblem(office ? rooms.map(withoutMinimum) : rooms, input, viewer.id);
   if (unfit) throw new ServiceError(422, unfit.message, { roomId: [unfit.reason] });
   // A room kept for some departments (10 Nov 2026): only their people book it.
   const room = rooms.find(item => item.id === input.roomId);
@@ -292,7 +295,7 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
     p_id: options.id ?? null, p_room: outside ? null : input.roomId, p_title: input.title, p_description: input.description,
     p_starts: span.startsAt, p_ends: span.endsAt, p_booked_by: viewer.id, p_participants: participants, p_max_per_day: appraisalRules.maxPerDay,
     ...(outside ? { p_place: input.place } : {}),
-    ...(office ? { p_source: "kantor", p_audience: office.audience, p_external_note: office.audience === "eksternal" ? office.externalNote : null } : {}),
+    ...(office ? { p_source: "kantor", p_audience: office.audience, p_external_note: office.audience === "eksternal" ? office.externalNote : null, ...(office.createdBy ? { p_created_by: office.createdBy } : {}) } : {}),
   });
   if (error) {
     // Before migration 202611100006 the database does not know where a booking comes from, and would make it a WAM session.

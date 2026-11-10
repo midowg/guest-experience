@@ -437,16 +437,32 @@ const query = (values: Record<string, string | undefined>) => {
 export const bookingPath = {
   /** Beranda: what can be booked, and the person's next bookings. */
   home: BOOKING_PATH,
-  /** Ruangan: every room on one day. `new` opens the form (with a room), `edit` opens one of the person's own bookings. */
-  rooms: (options: { date?: string; new?: string; edit?: string } = {}) => `${BOOKING_PATH}/ruangan${query(options)}`,
+  /**
+   * Ruangan: every room on one day, for a start and a length (`start` "10:00", `menit` "60"). `new`
+   * opens the form (with a room), `edit` opens one of the person's own bookings.
+   */
+  rooms: (options: { date?: string; new?: string; edit?: string; start?: string; menit?: string } = {}) => `${BOOKING_PATH}/ruangan${query(options)}`,
   /** Booking saya: made by or inviting the person, from today on. */
   mine: `${BOOKING_PATH}/saya`,
-  /** Kelola (administration staff): every booking of a day. */
-  manage: (date?: string) => `${BOOKING_PATH}/kelola${query({ date })}`,
+  /**
+   * Kelola (administration staff), Ringkasan dan jadwal: the numbers and every room's day, any day;
+   * tap an empty half hour to book for someone (`edit` opens a booking to change for its booker).
+   */
+  manage: (date?: string, edit?: string) => `${BOOKING_PATH}/kelola${query({ date, edit })}`,
+  /** Kelola → Semua booking: from `dari` to `sampai`, searched by `q`, one room (`ruang`), `untuk` internal or eksternal. */
+  manageBookings: (filters: { dari?: string; sampai?: string; q?: string; ruang?: string; untuk?: string } = {}) => `${BOOKING_PATH}/kelola/booking${query(filters)}`,
+  /** Kelola → Ruangan: add rooms, change capacity, facilities, departments, bookable. */
+  manageRooms: `${BOOKING_PATH}/kelola/ruangan`,
+  /** Kelola → Akses: who is Admin Booking. */
+  manageAccess: `${BOOKING_PATH}/kelola/akses`,
 };
 export const bookingApi = {
-  /** POST: a new booking; with an id, PATCH changes it and DELETE cancels it. */
+  /** POST: a new booking (`forId`: for someone, administration staff only); with an id, PATCH changes it and DELETE {reason} cancels it. */
   bookings: (id?: string) => `${BOOKING_API}/bookings${id ? `/${id}` : ""}`,
+  /** Kelola: POST {name, capacity} adds a room; with an id, PATCH saves it. */
+  rooms: (id?: string) => `${BOOKING_API}/kelola/rooms${id ? `/${id}` : ""}`,
+  /** Kelola: PUT {on} gives or takes one person's Admin Booking. */
+  access: (employeeId: string) => `${BOOKING_API}/kelola/access/${employeeId}`,
 };
 
 /*
