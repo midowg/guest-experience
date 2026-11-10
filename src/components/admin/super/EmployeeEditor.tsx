@@ -14,6 +14,7 @@ export type EmployeeDraft = Omit<Employee, "id">;
 /** A new job card: the Utama job's BU, a Jabatan to fill. */
 export const blankJob = (business_unit: string = DEFAULT_BUSINESS_UNIT): EmployeeJob => ({ business_unit, department: "", post: "staf", job_title: "", reports_to: null });
 const JOBS_MIGRATION = "202611090003_employee_jobs.sql";
+const JOBS_GM_MIGRATION = "202611100001_employee_jobs_gm_unit.sql";
 
 const blank: EmployeeDraft = { full_name: "", nickname: "", department: "", position: "", office: "", category: "karyawan", phone: "", email: "", nip: "", business_unit: DEFAULT_BUSINESS_UNIT, reports_to: null, gender: "", active: true };
 const draftOf = (person: Employee | null): EmployeeDraft => person
@@ -34,7 +35,7 @@ const draftOf = (person: Employee | null): EmployeeDraft => person
  * office that is no BU code is kept. GA and Intern (Status kerja) are one per person.
  * A native <dialog>: Esc, the dimmed page or X close it without saving.
  */
-export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, people = [], leads = {}, jobsReady = true, saving, error, onSave, onDelete, onClose }: {
+export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, units = {}, people = [], leads = {}, jobsReady = true, gmReady = true, saving, error, onSave, onDelete, onClose }: {
   /** The person to change; null adds a new one. */
   person: Employee | null;
   /** Their jobs, the Utama one first; a new person starts with one empty card. */
@@ -47,8 +48,12 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
   people?: Employee[];
   /** What everyone heads (HOD and Lead), for Di bawah. */
   leads?: Record<string, Leads>;
+  /** Per department, the teams already used (Tim), offered while typing. */
+  units?: Record<string, string[]>;
   /** False while employee_jobs waits for its migration: only the Utama job is kept. */
   jobsReady?: boolean;
+  /** False while GM, Tim and a HOD under their GM wait for migration 202611100001. */
+  gmReady?: boolean;
   saving: boolean;
   error: string;
   onSave: (draft: EmployeeDraft, jobs: EmployeeJob[], roles: PraWamRole[]) => void;
@@ -82,15 +87,21 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
     setProblems({});
   };
 
-  const nameOf = (personId: string) => people.find(item => item.id === personId)?.full_name ?? "";
-  /** Who a Jabatan in this department can be under: the HOD (null) or one of its Leads. */
+  const byName = (a: Employee, b: Employee) => a.full_name.localeCompare(b.full_name, "id");
+  /**
+   * Who someone in this department can be under (10 Nov 2026, from the org chart): its heads (GM or
+   * HOD; null is "the head of the department"), its Leads, and anyone else working in it (Setiyadi
+   * under Ramadhan, both Staff). Someone set before who fits none of these stays as they are.
+   */
   const under = (department: string, current: string | null) => {
     const name = department.trim();
-    const hods = name ? Object.entries(leads).filter(([personId, led]) => personId !== person?.id && led.departments.includes(name)).map(([personId]) => nameOf(personId)).filter(Boolean).sort((a, b) => a.localeCompare(b, "id")) : [];
-    const leadsHere = name ? people.filter(item => item.id !== person?.id && leadDepartments(leads[item.id], item.department).includes(name)).sort((a, b) => a.full_name.localeCompare(b.full_name, "id")) : [];
-    // Someone set before as Atasan langsung who is no Lead here stays, so opening the panel loses nothing.
-    const kept = current && !leadsHere.some(item => item.id === current) ? people.find(item => item.id === current) : undefined;
-    return { hods, leadsHere, kept };
+    const others = name ? people.filter(item => item.id !== person?.id) : [];
+    const heads = others.filter(item => leads[item.id]?.departments.includes(name)).sort(byName);
+    const leadsHere = others.filter(item => !heads.includes(item) && leadDepartments(leads[item.id], item.department).includes(name)).sort(byName);
+    const colleagues = others.filter(item => !heads.includes(item) && !leadsHere.includes(item) && item.department.trim() === name).sort(byName);
+    const known = [...heads, ...leadsHere, ...colleagues];
+    const kept = current && !known.some(item => item.id === current) ? people.find(item => item.id === current) : undefined;
+    return { heads, leadsHere, colleagues, kept, fits: (id: string | null) => !id || known.some(item => item.id === id) };
   };
 
   useEffect(() => {
@@ -154,11 +165,13 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
 
         <fieldset className={css.group}>
           <legend>Pekerjaan</legend>
-          <p className={css.hint}>Isi berurutan: Business Unit, departemen, lalu posisi. Pekerjaan utama tampil di daftar dan struktur. Tambah pekerjaan bila ia juga bekerja di BU lain.</p>
+          <p className={css.hint}>Isi berurutan: Business Unit, departemen, tim (bila ada), lalu posisi. Pekerjaan utama tampil di daftar dan struktur. Tambah pekerjaan bila ia juga bekerja di BU lain.</p>
           <datalist id={`${id}-departments`}>{departments.map(name => <option key={name} value={name} />)}</datalist>
           {jobs.map((job, index) => {
             const key = `job${index}`;
-            const { hods, leadsHere, kept } = under(job.department, job.reports_to);
+            const { heads: headsHere, leadsHere, colleagues, kept } = under(job.department, job.reports_to);
+            const dept = job.department.trim() || "departemen";
+            const otherHeads = headsHere.filter(item => item.id !== person?.id);
             const title = index === 0 ? "Pekerjaan utama" : `Pekerjaan ${index + 1}`;
             const postName = `${jobPostLabels[job.post]} ${job.department.trim()}`.trim();
             return <section key={keys[index]} className={css.jobCard} aria-labelledby={`${id}-${key}-title`}>
@@ -174,22 +187,23 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
                   aria-invalid={!!problems[`${key}-department`]} aria-describedby={problems[`${key}-department`] ? `${id}-${key}-department-error` : undefined}
                   onChange={event => {
                     const department = event.target.value;
-                    // A Lead picked in Di bawah leads the old department: back to the HOD unless they lead this one too.
-                    const boss = job.reports_to ? people.find(item => item.id === job.reports_to) : undefined;
-                    const stays = !job.reports_to || leadDepartments(leads[job.reports_to], boss?.department).includes(department.trim());
-                    setJob(index, { department, ...(stays ? {} : { reports_to: null }) });
+                    // Someone picked in Di bawah who has no place in the new department: back to its head.
+                    setJob(index, { department, ...(under(department, null).fits(job.reports_to) ? {} : { reports_to: null }) });
                   }} />)}
               </div>
+              {field(`${key}-unit`, "Tim", <input id={`${id}-${key}-unit`} className="input" value={job.unit ?? ""} maxLength={120} list={`${id}-${key}-units`} placeholder="Boleh kosong"
+                onChange={event => setJob(index, { unit: event.target.value })} />, "Tim di dalam departemen, mis. Business Solutions atau Commercial.")}
+              <datalist id={`${id}-${key}-units`}>{(units[job.department.trim()] ?? []).map(name => <option key={name} value={name} />)}</datalist>
               <div className={css.field}>
                 <span className={css.label} id={`${id}-${key}-post`}>Posisi</span>
-                <div className={css.segmented} role="radiogroup" aria-labelledby={`${id}-${key}-post`}>
+                <div className={`${css.segmented} ${css.segmentedPosts}`} role="radiogroup" aria-labelledby={`${id}-${key}-post`}>
                   {jobPosts.map(post => <label key={post} className={css.segment}>
                     <input type="radio" name={`${id}-${key}-post`} value={post} checked={job.post === post} disabled={isBod && post !== "staf"}
-                      onChange={() => setJob(index, { post: post as JobPost, ...(post === "staf" ? {} : { reports_to: null }) })} />
+                      onChange={() => setJob(index, { post: post as JobPost, reports_to: null })} />
                     <span>{jobPostLabels[post]}</span>
                   </label>)}
                 </div>
-                {isBod && <p className={css.hint}>BOD bukan HOD atau Lead. Lepas BOD dulu untuk memilihnya.</p>}
+                {isBod && <p className={css.hint}>BOD bukan GM, HOD, atau Lead. Lepas BOD dulu untuk memilihnya.</p>}
               </div>
               <div className={css.pair}>
                 {field(`${key}-job_title`, job.post === "staf" ? "Nama jabatan *" : "Nama jabatan", <input id={`${id}-${key}-job_title`} className="input" value={job.job_title} maxLength={150}
@@ -199,17 +213,27 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
                   job.post === "staf" ? undefined : `Boleh kosong: tampil sebagai ${job.department.trim() ? postName : jobPostLabels[job.post]}.`)}
                 {job.post === "staf"
                   ? field(`${key}-reports_to`, "Di bawah", <select id={`${id}-${key}-reports_to`} className="input" value={job.reports_to ?? ""} onChange={event => setJob(index, { reports_to: event.target.value || null })}>
-                    <option value="">{`HOD ${job.department.trim() || "departemen"}${hods.length ? ` · ${hods.join(", ")}` : ""}`}</option>
-                    {leadsHere.map(item => <option key={item.id} value={item.id}>{`Lead · ${item.full_name}`}</option>)}
+                    <option value="">{`Pimpinan ${dept}${headsHere.length ? ` · ${headsHere.map(item => item.full_name).join(", ")}` : ""}`}</option>
+                    {/* With several heads (a GM and a HOD under them) each can be picked on their own. */}
+                    {headsHere.length > 1 && <optgroup label="GM dan HOD">{headsHere.map(item => <option key={item.id} value={item.id}>{item.full_name}</option>)}</optgroup>}
+                    {leadsHere.length > 0 && <optgroup label="Lead">{leadsHere.map(item => <option key={item.id} value={item.id}>{`Lead · ${item.full_name}`}</option>)}</optgroup>}
+                    {colleagues.length > 0 && <optgroup label="Rekan di departemen ini">{colleagues.map(item => <option key={item.id} value={item.id}>{item.position ? `${item.full_name} · ${item.position}` : item.full_name}</option>)}</optgroup>}
                     {kept && <option value={kept.id}>{`${kept.full_name} (atasan sekarang)`}</option>}
-                  </select>, leadsHere.length ? "Langsung di bawah HOD, atau di bawah salah satu Lead departemen ini." : "Departemen ini belum punya Lead, jadi langsung di bawah HOD.")
-                  : <p className={css.hint}>{job.post === "lead" ? "Lead otomatis di bawah HOD departemennya." : "HOD memimpin departemen ini."}</p>}
+                  </select>, "Langsung di bawah pimpinan departemen, atau di bawah Lead atau rekan di departemen ini.")
+                  : job.post === "hod" && otherHeads.length > 0
+                    ? field(`${key}-reports_to`, "Di bawah", <select id={`${id}-${key}-reports_to`} className="input" value={job.reports_to ?? ""} onChange={event => setJob(index, { reports_to: event.target.value || null })}>
+                      <option value="">Langsung di bawah BOD</option>
+                      {otherHeads.map(item => <option key={item.id} value={item.id}>{item.full_name}</option>)}
+                      {kept && <option value={kept.id}>{`${kept.full_name} (atasan sekarang)`}</option>}
+                    </select>, `Isi bila HOD ini di bawah GM ${dept}, mis. HOD Commercial di bawah GM Sales & Marketing.`)
+                    : <p className={css.hint}>{job.post === "lead" ? "Lead otomatis di bawah pimpinan departemennya." : job.post === "gm" ? "GM memimpin departemen ini, langsung di bawah BOD. HOD di departemen ini bisa memilih GM sebagai atasannya." : "HOD memimpin departemen ini, langsung di bawah BOD."}</p>}
               </div>
             </section>;
           })}
           <div className={css.jobAdd}>
             <Button type="button" variant="secondary" disabled={jobs.length >= MAX_JOBS} onClick={addJob}><Plus size={17} aria-hidden /> Tambah pekerjaan</Button>
             {!jobsReady && jobs.length > 1 && <p className={css.hint}>Pekerjaan selain utama baru tersimpan setelah migrasi {JOBS_MIGRATION}.</p>}
+            {jobsReady && !gmReady && jobs.some(job => job.post === "gm" || !!job.unit?.trim() || (job.post === "hod" && job.reports_to)) && <p className={css.hint}>GM, Tim, dan atasan HOD baru tersimpan penuh setelah migrasi {JOBS_GM_MIGRATION}; sementara GM disimpan sebagai HOD.</p>}
           </div>
           <div className={css.field}>
             <span className={css.label} id={`${id}-category`}>Status kerja</span>

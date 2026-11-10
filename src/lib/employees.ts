@@ -61,25 +61,36 @@ export const employeeCreateSchema = z.object({
  * lead under the HOD) or a Jabatan with its title and who it is under: the HOD (null) or a Lead.
  * The first job is the Utama one and is copied to the employees columns (department, position,
  * business_unit, office, reports_to); pw_leads keeps a row per HOD and Lead job.
+ *
+ * From the org chart of 10 Nov 2026 (migration 202611100001): a GM heads a department like a HOD
+ * (and counts as one everywhere the app reads HOD), a HOD may sit under their GM, and a job may
+ * name its team inside the department (`unit`: Business Solutions, Commercial...).
  */
-export const jobPosts = ["hod", "lead", "staf"] as const;
+export const jobPosts = ["gm", "hod", "lead", "staf"] as const;
 export type JobPost = (typeof jobPosts)[number];
-export const jobPostLabels: Record<JobPost, string> = { hod: "HOD", lead: "Lead", staf: "Jabatan" };
-export type EmployeeJob = { business_unit: string; department: string; post: JobPost; job_title: string; reports_to: string | null };
+export const jobPostLabels: Record<JobPost, string> = { gm: "GM", hod: "HOD", lead: "Lead", staf: "Jabatan" };
+/** Heads a department: GM or HOD (pw_leads 'departemen'). */
+export const headsDepartment = (post: JobPost) => post === "gm" || post === "hod";
+/** May sit under someone: a Jabatan (under the head, a Lead or a colleague) and a HOD (under their GM). */
+export const mayReport = (post: JobPost) => post === "staf" || post === "hod";
+/** `unit`: the team inside the department, absent when none. */
+export type EmployeeJob = { business_unit: string; department: string; unit?: string; post: JobPost; job_title: string; reports_to: string | null };
 export const MAX_JOBS = 10;
 export const employeeJobSchema = z.object({
   business_unit: text(120).min(1, "Pilih Business Unit."),
   department: text(150).min(1, "Isi departemen."),
+  unit: text(120).optional(),
   post: z.enum(jobPosts),
   job_title: text(150).default(""),
   reports_to: z.union([z.uuid(), z.null()]).default(null),
 }).refine(job => job.post !== "staf" || job.job_title.length > 0, { message: "Isi nama jabatan.", path: ["job_title"] });
 export const employeeJobsSchema = z.array(employeeJobSchema).min(1, "Isi pekerjaan utama.").max(MAX_JOBS, `Paling banyak ${MAX_JOBS} pekerjaan.`);
 
-/** Trimmed; a HOD or a Lead sits under nobody here (a Lead is under the HOD of the department by rule). */
+/** Trimmed; a GM or a Lead sits under nobody here (a Lead is under the head of the department by rule). */
 export function tidyJob(job: EmployeeJob): EmployeeJob {
   const post = job.post;
-  return { business_unit: buCode(job.business_unit), department: job.department.trim(), post, job_title: job.job_title.trim(), reports_to: post === "staf" ? job.reports_to || null : null };
+  const unit = (job.unit ?? "").trim();
+  return { business_unit: buCode(job.business_unit), department: job.department.trim(), ...(unit ? { unit } : {}), post, job_title: job.job_title.trim(), reports_to: mayReport(post) ? job.reports_to || null : null };
 }
 /** The title shown and copied to employees: the job's own, else "HOD Accounting" or "Lead Accounting". */
 export function jobTitleOf(job: EmployeeJob): string {
@@ -96,7 +107,8 @@ export function primaryFields(jobs: EmployeeJob[], office: string): Pick<Employe
 export function leadsFromJobs(jobs: EmployeeJob[]): Leads {
   const of = (post: JobPost) => [...new Set(jobs.filter(job => job.post === post).map(job => job.department.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
   const leadIn = of("lead");
-  return { departments: of("hod"), lead: leadIn.length > 0, leadIn };
+  // A GM heads their department like a HOD.
+  return { departments: [...new Set([...of("gm"), ...of("hod")])].sort((a, b) => a.localeCompare(b, "id")), lead: leadIn.length > 0, leadIn };
 }
 export const sameJobs = (a: EmployeeJob[], b: EmployeeJob[]) => JSON.stringify(a.map(tidyJob)) === JSON.stringify(b.map(tidyJob));
 
@@ -112,7 +124,7 @@ export function jobsFromEmployee(person: JobPerson, leads?: Leads): EmployeeJob[
   const headed = leads?.departments ?? [];
   const led = leadDepartments(leads, department);
   const post: JobPost = headed.includes(department) ? "hod" : led.includes(department) ? "lead" : "staf";
-  const jobs: EmployeeJob[] = [{ business_unit, department, post, job_title: person.position.trim(), reports_to: post === "staf" ? person.reports_to ?? null : null }];
+  const jobs: EmployeeJob[] = [{ business_unit, department, post, job_title: person.position.trim(), reports_to: mayReport(post) ? person.reports_to ?? null : null }];
   for (const name of headed) if (name !== department) jobs.push({ business_unit, department: name, post: "hod", job_title: "", reports_to: null });
   for (const name of led) if (name !== department && !headed.includes(name)) jobs.push({ business_unit, department: name, post: "lead", job_title: "", reports_to: null });
   return jobs.slice(0, MAX_JOBS);
@@ -131,17 +143,17 @@ export function reconcileJobs(rows: EmployeeJob[], person: JobPerson, leads?: Le
   jobs[0] = { ...first, business_unit: buCode(person.business_unit), department: person.department.trim() || first.department,
     // "HOD Accounting" was written for a HOD job without a title of its own: it stays without one.
     job_title: title === jobTitleOf({ ...first, job_title: "" }) ? first.job_title : title,
-    reports_to: first.post === "staf" ? person.reports_to ?? null : null };
+    reports_to: mayReport(first.post) ? person.reports_to ?? null : null };
   if (!leads) return jobs;
   const headed = leads.departments;
   const led = leadDepartments(leads, jobs[0].department);
   for (const job of jobs) {
-    if ((job.post === "hod" && !headed.includes(job.department)) || (job.post === "lead" && !led.includes(job.department))) job.post = "staf";
+    if ((headsDepartment(job.post) && !headed.includes(job.department)) || (job.post === "lead" && !led.includes(job.department))) { job.post = "staf"; }
   }
   const ensure = (name: string, post: "hod" | "lead") => {
-    if (jobs.some(job => job.department === name && (job.post === post || job.post === "hod"))) return;
+    if (jobs.some(job => job.department === name && (job.post === post || headsDepartment(job.post)))) return;
     const same = jobs.find(job => job.department === name && job.post === "staf");
-    if (same) { same.post = post; same.reports_to = null; }
+    if (same) { same.post = post; if (!mayReport(post)) same.reports_to = null; }
     else if (jobs.length < MAX_JOBS) jobs.push({ business_unit: jobs[0].business_unit, department: name, post, job_title: "", reports_to: null });
   };
   for (const name of headed) ensure(name, "hod");
@@ -154,9 +166,12 @@ const shortSmall = new Set(["of", "the", "for", "in", "di"]);
 /**
  * A department by its initials, for tight places (Data karyawan's list, the Struktur tags):
  * "Center of Excellence" → "CoE", "Business & Administrative Services" → "BAS", "HR & GA" → "HRGA".
- * One word stays as it is ("Accounting"). The full name goes beside it as a title.
+ * One word stays as it is ("Accounting"). A code in brackets wins: "Business Transformation & AI
+ * Enablement (CoE)" → "CoE". The full name goes beside it as a title.
  */
 export function departmentShort(name: string): string {
+  const code = name.match(/\(([^()]{1,12})\)\s*$/)?.[1]?.trim();
+  if (code) return code;
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length < 2) return name.trim();
   return words.filter(word => !shortSkip.has(word.toLowerCase())).map(word => {
@@ -166,6 +181,17 @@ export function departmentShort(name: string): string {
     if (word.length <= 3 && word === word.toUpperCase() && /[A-Z0-9]/.test(word)) return word;
     return (word.match(/\p{L}|\p{N}/u)?.[0] ?? "").toUpperCase();
   }).join("");
+}
+
+/**
+ * Each department's short form among these names; two that would share one ("Bali Office" and
+ * "Business Operations" are both "BO") keep their full names, so no short form means two things.
+ */
+export function departmentShorts(names: Iterable<string>): Map<string, string> {
+  const unique = [...new Set([...names].map(name => name.trim()).filter(Boolean))];
+  const count = new Map<string, number>();
+  for (const name of unique) { const short = departmentShort(name).toUpperCase(); count.set(short, (count.get(short) ?? 0) + 1); }
+  return new Map(unique.map(name => { const short = departmentShort(name); return [name, (count.get(short.toUpperCase()) ?? 0) > 1 ? name : short]; }));
 }
 
 /** The matching key: the database derives the same one (upper case, single spaces). */

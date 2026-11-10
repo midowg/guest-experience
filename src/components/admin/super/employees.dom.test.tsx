@@ -136,6 +136,71 @@ it("changes a person in one panel, their post included, and switches someone off
   expect(await within(screen.getByText("Contoh Satu").closest("tr")!).findByText("Nonaktif")).toBeTruthy();
 });
 
+describe("GM, Tim and Di bawah from the org chart (10 Nov 2026)", () => {
+  const gm = { ...person, id: "6a000000-0000-4000-8000-000000000051", full_name: "Etik GM", position: "General Manager Sales & Marketing" };
+  const ramadhan = { ...person, id: "6a000000-0000-4000-8000-000000000052", full_name: "Ramadhan", department: "Bali Office", position: "Office Operation" };
+  const setiyadi = { ...person, id: "6a000000-0000-4000-8000-000000000053", full_name: "Setiyadi", department: "Bali Office", position: "Office Assistant" };
+  const leads = { [gm.id]: { departments: ["Sales & Marketing"], lead: false } };
+
+  it("puts a staff member under a colleague of the department (Setiyadi under Ramadhan)", async () => {
+    const fetch = vi.fn(async (_url: string, init: RequestInit) => jobsReply(setiyadi, JSON.parse(init.body as string)));
+    vi.stubGlobal("fetch", fetch);
+    render(<EmployeeDirectory initial={[setiyadi, ramadhan, gm]} migrated leads={leads} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ubah Setiyadi" }));
+    const utama = card(within(screen.getByRole("dialog", { name: "Ubah karyawan" })), "Pekerjaan utama");
+    const under = utama.getByLabelText("Di bawah") as HTMLSelectElement;
+    expect([...under.options].map(option => option.textContent)).toEqual(["Pimpinan Bali Office", "Ramadhan · Office Operation"]);
+    fireEvent.change(under, { target: { value: ramadhan.id } });
+    fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
+    expect(await screen.findByText("Setiyadi disimpan.")).toBeTruthy();
+    expect(JSON.parse(fetch.mock.calls[0][1].body as string).jobs[0]).toMatchObject({ department: "Bali Office", reports_to: ramadhan.id });
+  });
+
+  it("makes someone a HOD under the GM, in a team, and lists it on one line", async () => {
+    const fetch = vi.fn(async (_url: string, init: RequestInit) => jobsReply(person, JSON.parse(init.body as string)));
+    vi.stubGlobal("fetch", fetch);
+    render(<EmployeeDirectory initial={[person, gm]} migrated leads={leads} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ubah Contoh Satu" }));
+    const utama = card(within(screen.getByRole("dialog", { name: "Ubah karyawan" })), "Pekerjaan utama");
+    fireEvent.change(utama.getByLabelText("Tim"), { target: { value: "Commercial" } });
+    fireEvent.click(utama.getByRole("radio", { name: "HOD" }));
+    // A HOD may be under the GM of the department, or straight under the BOD.
+    const under = utama.getByLabelText("Di bawah") as HTMLSelectElement;
+    expect([...under.options].map(option => option.textContent)).toEqual(["Langsung di bawah BOD", "Etik GM"]);
+    fireEvent.change(under, { target: { value: gm.id } });
+    fireEvent.change(utama.getByLabelText("Nama jabatan"), { target: { value: "Commercial Manager" } });
+    fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
+    expect(await screen.findByText("Contoh Satu disimpan.")).toBeTruthy();
+    expect(JSON.parse(fetch.mock.calls[0][1].body as string).jobs).toEqual([{ business_unit: "WNS", department: "Sales & Marketing", unit: "Commercial", post: "hod", job_title: "Commercial Manager", reports_to: gm.id }]);
+    expect(jobLines(within(screen.getByText("Contoh Satu").closest("tr")!), "Contoh Satu")).toEqual(["SM · Commercial · Commercial Manager · HOD"]);
+  });
+
+  it("offers GM as a post; a GM sits under nobody", () => {
+    render(<EmployeeDirectory initial={[gm]} migrated leads={leads} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ubah Etik GM" }));
+    const utama = card(within(screen.getByRole("dialog", { name: "Ubah karyawan" })), "Pekerjaan utama");
+    fireEvent.click(utama.getByRole("radio", { name: "GM" }));
+    expect(utama.queryByLabelText("Di bawah")).toBeNull();
+    expect(utama.getByText(/GM memimpin departemen ini/)).toBeTruthy();
+  });
+
+  it("says GM and Tim wait for migration 202611100001 when it has not run", async () => {
+    const fetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string);
+      return reply({ ok: true, message: "Pekerjaan utama disimpan; GM, tim, dan atasan HOD menunggu migrasi 202611100001_employee_jobs_gm_unit.sql (sementara GM disimpan sebagai HOD).",
+        data: { employee: { ...gm, ...body }, jobs: [{ ...body.jobs[0], post: "hod" }], leads: { departments: ["Sales & Marketing"], lead: false, leadIn: [] }, migrated: true, gmReady: false } });
+    });
+    vi.stubGlobal("fetch", fetch);
+    render(<EmployeeDirectory initial={[gm]} migrated leads={leads} gmMigrated={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ubah Etik GM" }));
+    const utama = card(within(screen.getByRole("dialog", { name: "Ubah karyawan" })), "Pekerjaan utama");
+    fireEvent.click(utama.getByRole("radio", { name: "GM" }));
+    expect(screen.getByText(/baru tersimpan penuh setelah migrasi 202611100001/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
+    expect(await screen.findByText(/Etik GM disimpan\. Pekerjaan utama disimpan; GM, tim, dan atasan HOD menunggu migrasi/)).toBeTruthy();
+  });
+});
+
 describe("Pekerjaan (9 Nov 2026)", () => {
   const hod = { ...person, id: "6a000000-0000-4000-8000-000000000041", full_name: "Kepala Sales", position: "Head of Sales" };
   const lead = { ...person, id: "6a000000-0000-4000-8000-000000000042", full_name: "Lead Solusi", position: "Business Solutions Lead" };
@@ -147,17 +212,17 @@ describe("Pekerjaan (9 Nov 2026)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ubah Contoh Satu" }));
     const panel = within(screen.getByRole("dialog", { name: "Ubah karyawan" }));
     const utama = card(panel, "Pekerjaan utama");
-    const order = [utama.getByLabelText("Business Unit"), utama.getByLabelText("Departemen *"), utama.getByRole("radiogroup", { name: "Posisi" }), utama.getByLabelText("Nama jabatan *"), utama.getByLabelText("Di bawah")];
+    const order = [utama.getByLabelText("Business Unit"), utama.getByLabelText("Departemen *"), utama.getByLabelText("Tim"), utama.getByRole("radiogroup", { name: "Posisi" }), utama.getByLabelText("Nama jabatan *"), utama.getByLabelText("Di bawah")];
     for (let at = 1; at < order.length; at++) expect(order[at - 1].compareDocumentPosition(order[at]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(within(utama.getByRole("radiogroup", { name: "Posisi" })).getAllByRole("radio").map(radio => radio.parentElement?.textContent)).toEqual(["HOD", "Lead", "Jabatan"]);
+    expect(within(utama.getByRole("radiogroup", { name: "Posisi" })).getAllByRole("radio").map(radio => radio.parentElement?.textContent)).toEqual(["GM", "HOD", "Lead", "Jabatan"]);
     expect(utama.getByRole("radio", { name: "Jabatan" })).toHaveProperty("checked", true);
     const under = utama.getByLabelText("Di bawah") as HTMLSelectElement;
-    // The HOD of Sales & Marketing, then its Leads; the Finance Lead is not offered.
-    expect([...under.options].map(option => option.textContent)).toEqual(["HOD Sales & Marketing · Kepala Sales", "Lead · Lead Solusi"]);
-    // Another department: its own Leads, and a Lead picked before goes back to the HOD.
+    // The head of Sales & Marketing, then its Leads; the Finance Lead is not offered.
+    expect([...under.options].map(option => option.textContent)).toEqual(["Pimpinan Sales & Marketing · Kepala Sales", "Lead · Lead Solusi"]);
+    // Another department: its own Leads, and a Lead picked before goes back to the head.
     fireEvent.change(under, { target: { value: lead.id } });
     fireEvent.change(utama.getByLabelText("Departemen *"), { target: { value: "Finance" } });
-    expect([...(utama.getByLabelText("Di bawah") as HTMLSelectElement).options].map(option => option.textContent)).toEqual(["HOD Finance", "Lead · Lead Lain"]);
+    expect([...(utama.getByLabelText("Di bawah") as HTMLSelectElement).options].map(option => option.textContent)).toEqual(["Pimpinan Finance", "Lead · Lead Lain"]);
     expect((utama.getByLabelText("Di bawah") as HTMLSelectElement).value).toBe("");
     // A Lead has no Di bawah (under the HOD by rule) and its title may stay empty.
     fireEvent.click(utama.getByRole("radio", { name: "Lead" }));

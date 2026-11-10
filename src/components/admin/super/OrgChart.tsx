@@ -1,8 +1,10 @@
 import { Crown, UserRound, Users } from "lucide-react";
-import { departmentShort } from "@/lib/employees";
+import { departmentShort, departmentShorts } from "@/lib/employees";
 import type { Org, OrgGroup, OrgNode, OrgPerson } from "@/lib/org";
 import css from "./org-chart.module.css";
 
+/** A department head's tag: GM or HOD (10 Nov 2026). */
+const headLabel = (person: OrgPerson) => person.post === "gm" ? "GM" : "HOD";
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0]?.toUpperCase()).join("");
 
 function PersonCard({ person, tag, tagTitle, strong = false }: { person: OrgPerson; tag?: string; tagTitle?: string; strong?: boolean }) {
@@ -16,7 +18,7 @@ function PersonCard({ person, tag, tagTitle, strong = false }: { person: OrgPers
 function Branch({ nodes, root = false }: { nodes: OrgNode[]; root?: boolean }) {
   if (!nodes.length) return null;
   return <ul className={`${css.branch} ${root ? css.root : ""}`}>{nodes.map(node => <li key={node.id}>
-    <PersonCard person={node} tag={node.lead ? "Lead" : undefined} />
+    <PersonCard person={node} tag={node.post === "hod" || node.post === "gm" ? (node.post === "gm" ? "GM" : "HOD") : node.lead ? "Lead" : undefined} />
     <Branch nodes={node.children} />
   </li>)}</ul>;
 }
@@ -36,8 +38,10 @@ function Groups({ groups }: { groups: OrgGroup[] }) {
  * HOD and its people as a tree. A team's own branch comes from "Atasan langsung" in Ubah karyawan.
  */
 export function OrgChart({ org }: { org: Org }) {
+  // Short department names without two meaning the same (Bali Office and Business Operations).
+  const shorts = departmentShorts([...org.departments.map(department => department.name), ...org.departments.flatMap(department => department.heads.map(head => head.department))]);
   return <div className={css.chart}>
-    <p className={css.note}>Disusun dari pekerjaan utama di Data karyawan. Di bawah HOD ada <strong>Lead</strong> dengan anggotanya: di Ubah karyawan, anggota memilih Lead-nya di <strong>Di bawah</strong>. Yang tidak memilih ada langsung di bawah HOD. BU hanya unit usaha tempat orang itu berada.</p>
+    <p className={css.note}>Disusun dari pekerjaan utama di Data karyawan. Setiap departemen dipimpin <strong>GM</strong> atau <strong>HOD</strong>; HOD bisa berada di bawah GM. Di bawahnya ada <strong>Lead</strong> dan anggota, dikelompokkan per <strong>Tim</strong> bila diisi. Atasan tiap orang dipilih di <strong>Di bawah</strong> lewat Ubah karyawan; yang tidak memilih ada langsung di bawah pimpinan departemen. BU hanya unit usaha tempat orang itu berada.</p>
 
     <section className={css.level} aria-labelledby="org-bod">
       <h2 id="org-bod"><Crown size={18} aria-hidden /> BOD</h2>
@@ -62,8 +66,8 @@ export function OrgChart({ org }: { org: Org }) {
         </header>
         {department.heads.length === 0 && <p className={css.empty}>Belum ada HOD.</p>}
         <ul className={css.branch}>{department.heads.map(head => <li key={head.id}>
-          <PersonCard person={head} tag={head.department === department.name ? "HOD" : `HOD dari ${departmentShort(head.department)}`}
-            tagTitle={head.department === department.name ? undefined : `HOD dari ${head.department}`} strong />
+          <PersonCard person={head} tag={head.department === department.name ? headLabel(head) : `${headLabel(head)} dari ${shorts.get(head.department.trim()) ?? departmentShort(head.department)}`}
+            tagTitle={head.department === department.name ? undefined : `${headLabel(head)} dari ${head.department}`} strong />
           <Branch nodes={head.children} />
           {department.heads.length === 1 && <Groups groups={department.groups} />}
         </li>)}</ul>

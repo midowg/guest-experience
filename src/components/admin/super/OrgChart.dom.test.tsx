@@ -25,4 +25,22 @@ describe("Struktur", () => {
     const budi = sales.getByText("Budi").closest("li")!;
     expect(within(budi).getByText("Eko")).toBeTruthy();
   });
+
+  it("tags a GM and the HOD under them, groups by team, and shortens another department without clashes", () => {
+    const person = (id: string, department: string, patch = {}) => ({ id, name: id, position: "", department, businessUnit: "WNS", reportsTo: null, ...patch });
+    const org = buildOrg([
+      person("Etik", "Sales & Marketing", { post: "gm" }),
+      person("Linda", "Sales & Marketing", { post: "hod", unit: "Commercial", reportsTo: "Etik" }),
+      person("Dimas", "Strategic Sourcing", { post: "hod" }),
+      person("Gilang", "Business Operations"),
+      person("Nofri", "Bali Office", { post: "gm" }),
+    ], new Set(), { "Sales & Marketing": ["Etik", "Linda"], "Business Operations": ["Dimas"], "Strategic Sourcing": ["Dimas"], "Bali Office": ["Nofri"] });
+    render(<OrgChart org={org} />);
+    const sales = within(screen.getByRole("article", { name: "Sales & Marketing" }));
+    expect(sales.getByText("GM")).toBeTruthy();
+    expect(within(sales.getByRole("region", { name: "Commercial" })).getByText("HOD")).toBeTruthy();
+    // Bali Office and Business Operations would both be "BO": the full name stays.
+    expect(within(screen.getByRole("article", { name: "Business Operations" })).getByText("HOD dari SS")).toBeTruthy();
+    expect(within(screen.getByRole("article", { name: "Bali Office" })).getByText("GM")).toBeTruthy();
+  });
 });

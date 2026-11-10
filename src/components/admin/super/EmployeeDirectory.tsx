@@ -5,7 +5,7 @@ import { FileSpreadsheet, Pencil, Plus, Upload, UserPlus } from "lucide-react";
 import { Button, Field, Notice } from "@/components/ui";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { categoryLabels, departmentShort, jobPostLabels, jobsFromEmployee, sameJobs, type Employee, type EmployeeJob, type EmployeeRow, type ImportChange } from "@/lib/employees";
+import { categoryLabels, departmentShort, departmentShorts, jobPostLabels, jobsFromEmployee, sameJobs, type Employee, type EmployeeJob, type EmployeeRow, type ImportChange } from "@/lib/employees";
 import { employeesApi, praWamAccountsApi } from "@/lib/routes";
 import type { AccountRow } from "@/lib/server/pra-wam/accounts";
 import { BUSINESS_UNITS, buCode, NO_LEADS, type LeadOptions, type Leads } from "@/lib/pra-wam/leads";
@@ -40,7 +40,7 @@ const fieldLabels: Record<string, string> = { full_name: "nama", nickname: "pang
  * more than one job (9 Nov 2026) shows the Utama one and "+1 pekerjaan". `wamAccounts` gives the
  * count of WAM accounts and "Buat akun" for everyone still missing one.
  */
-export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initialLeads, leadOptions, jobs: initialJobs, jobsMigrated = true, part = "daftar" }: {
+export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initialLeads, leadOptions, jobs: initialJobs, jobsMigrated = true, gmMigrated = true, part = "daftar" }: {
   initial: Employee[]; migrated: boolean; wamAccounts?: WamAccounts | null;
   /** Who heads which departments and who is a Lead (6 and 9 Nov 2026), and the departments to pick from. */
   leads?: Record<string, Leads>; leadOptions?: LeadOptions;
@@ -48,6 +48,8 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   jobs?: Record<string, EmployeeJob[]>;
   /** False while employee_jobs waits for migration 202611090003: only the Utama job is kept. */
   jobsMigrated?: boolean;
+  /** False while GM, Tim and a HOD under their GM wait for migration 202611100001. */
+  gmMigrated?: boolean;
   /** Which tab of Data karyawan: the list, or the Excel import. */
   part?: "daftar" | "impor";
 }) {
@@ -81,6 +83,17 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   // Offered while typing a job's department: those of Data karyawan, of other jobs, and those headed.
   const jobDepartments = useMemo(() => [...new Set([...departments, ...Object.values(jobs).flatMap(list => list.map(job => job.department)), ...(leadOptions?.departments ?? [])]
     .map(name => name.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id")), [departments, jobs, leadOptions]);
+  // Short forms among all of them: two that would share one keep their full names (10 Nov 2026).
+  const shorts = useMemo(() => departmentShorts(jobDepartments), [jobDepartments]);
+  // Per department, the teams already used (Tim), offered while typing.
+  const units = useMemo(() => {
+    const all: Record<string, string[]> = {};
+    for (const job of Object.values(jobs).flat()) {
+      const unit = job.unit?.trim();
+      if (unit) all[job.department.trim()] = [...new Set([...(all[job.department.trim()] ?? []), unit])].sort((a, b) => a.localeCompare(b, "id"));
+    }
+    return all;
+  }, [jobs]);
   // By Business Unit (MRP, WNS, TEE, NMU, WNN, as listed), then by name A to Z.
   const buRank = (person: Employee) => { const at = (BUSINESS_UNITS as readonly string[]).indexOf(buCode(person.business_unit)); return at < 0 ? BUSINESS_UNITS.length : at; };
   // A person works in a BU per job inside Werkudara Group; nobody leads one (9 Nov 2026).
@@ -144,14 +157,15 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
       const jobsChanged = !person || !sameJobs(jobsOf(person), nextJobs);
       let note = "";
       if (jobsChanged) {
-        const result = await adminRequest<{ employee: Employee; jobs: EmployeeJob[]; leads: Leads; migrated: boolean }>(employeesApi(id), { method: "PATCH", body: JSON.stringify({ ...changed, jobs: nextJobs }) });
+        const result = await adminRequest<{ employee: Employee; jobs: EmployeeJob[]; leads: Leads; migrated: boolean; gmReady?: boolean }>(employeesApi(id), { method: "PATCH", body: JSON.stringify({ ...changed, jobs: nextJobs }) });
         if (!result.data) throw new Error("Belum tersimpan.");
-        const { employee, jobs: savedJobs, leads: savedLeads, migrated: jobsSaved } = result.data;
+        const { employee, jobs: savedJobs, leads: savedLeads, migrated: jobsSaved, gmReady } = result.data;
         saved = employee;
         setLeads(current => ({ ...current, [id]: savedLeads }));
         // Before migration 202611090003 only the Utama job stays: the rest is read from the columns again.
         setJobs(current => { const next = { ...current }; if (jobsSaved) next[id] = savedJobs; else delete next[id]; return next; });
-        if (!jobsSaved && nextJobs.length > 1) note = ` ${result.message}`;
+        // What waits for a migration (other jobs, or GM and Tim) is said, not hidden.
+        if ((!jobsSaved && nextJobs.length > 1) || gmReady === false) note = ` ${result.message}`;
       } else if (Object.keys(changed).length) {
         saved = (await adminRequest<Employee>(employeesApi(id), { method: "PATCH", body: JSON.stringify(changed) })).data ?? saved;
       }
@@ -275,8 +289,8 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
                   const post = job.post === "staf" ? "" : jobPostLabels[job.post];
                   const bu = buCode(job.business_unit);
                   return <li key={index} className={index === 0 ? own.job : own.jobMore}>
-                    {job.department ? <abbr className={own.dept} title={job.department}>{departmentShort(job.department)}</abbr> : "—"}
-                    {" · "}{[title || (post ? "" : "Jabatan belum diisi"), post && !title.startsWith(post) ? post : ""].filter(Boolean).join(" · ")}
+                    {job.department ? <abbr className={own.dept} title={job.department}>{shorts.get(job.department.trim()) ?? departmentShort(job.department)}</abbr> : "—"}
+                    {" · "}{[job.unit?.trim() ?? "", title || (post ? "" : "Jabatan belum diisi"), post && !title.startsWith(post) ? post : ""].filter(Boolean).join(" · ")}
                     {index > 0 && bu !== utamaBu ? ` (${bu})` : ""}
                   </li>;
                 })}</ul>
@@ -295,8 +309,8 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
     </section>}
 
     {editor && <EmployeeEditor key={editor.person?.id ?? "baru"} person={editor.person} jobs={editor.person ? jobsOf(editor.person) : [blankJob()]}
-      roles={editor.person ? rolesOf(editor.person.id) : []} leads={leads} jobsReady={jobsMigrated}
-      departments={jobDepartments} saving={busy === "editor"} error={editorError}
+      roles={editor.person ? rolesOf(editor.person.id) : []} leads={leads} jobsReady={jobsMigrated} gmReady={gmMigrated}
+      departments={jobDepartments} units={units} saving={busy === "editor"} error={editorError}
       people={people.filter(item => item.active)}
       onSave={(draft, nextJobs, nextRoles) => void saveEditor(editor.person, draft, nextJobs, nextRoles)}
       onDelete={editor.person ? () => void remove(editor.person!) : undefined} onClose={() => setEditor(undefined)} />}

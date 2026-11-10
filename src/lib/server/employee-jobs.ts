@@ -17,20 +17,36 @@ import { createPrivilegedClient } from "./supabase/admin";
  */
 
 export const JOBS_MIGRATION = "202611090003_employee_jobs.sql";
-const missing = (error: { code?: string; message?: string }) => ["42P01", "PGRST205"].includes(error.code ?? "") || /employee_jobs/.test(error.message ?? "");
-type Row = { employee_id: string; sort_order: number; business_unit: string; department: string; post: JobPost; job_title: string | null; reports_to: string | null };
+/** GM, the team (unit) and a HOD under their GM (10 Nov 2026). */
+export const JOBS_GM_MIGRATION = "202611100001_employee_jobs_gm_unit.sql";
+const missing = (error: { code?: string; message?: string }) => ["42P01", "PGRST205"].includes(error.code ?? "") || /relation .*employee_jobs/.test(error.message ?? "");
+// "unit" on its own, not "business_unit".
+const noUnit = (error: { code?: string; message?: string }) => ["42703", "PGRST204"].includes(error.code ?? "") && /(^|[^_a-z])unit\b/i.test(error.message ?? "");
+type Row = { employee_id: string; sort_order: number; business_unit: string; department: string; unit?: string | null; post: JobPost; job_title: string | null; reports_to: string | null };
+const columns = "employee_id,sort_order,business_unit,department,post,job_title,reports_to";
 
-async function readRows(employeeId?: string): Promise<{ rows: Map<string, EmployeeJob[]>; migrated: boolean }> {
-  let query = createPrivilegedClient().from("employee_jobs").select("employee_id,sort_order,business_unit,department,post,job_title,reports_to");
-  if (employeeId) query = query.eq("employee_id", employeeId);
-  const { data, error } = await query.order("employee_id").order("sort_order").limit(5000);
-  if (error) { if (missing(error)) return { rows: new Map(), migrated: false }; databaseError(error); }
+async function readRows(employeeId?: string): Promise<{ rows: Map<string, EmployeeJob[]>; migrated: boolean; gmReady: boolean }> {
+  const read = (fields: string) => {
+    let query = createPrivilegedClient().from("employee_jobs").select(fields);
+    if (employeeId) query = query.eq("employee_id", employeeId);
+    return query.order("employee_id").order("sort_order").limit(5000);
+  };
+  // The team arrives with migration 202611100001; before it the rows are read without.
+  let { data, error } = await read(`${columns},unit`);
+  const gmReady = !(error && noUnit(error));
+  if (!gmReady) ({ data, error } = await read(columns));
+  if (error) { if (missing(error)) return { rows: new Map(), migrated: false, gmReady: false }; databaseError(error); }
   const rows = new Map<string, EmployeeJob[]>();
-  for (const row of ((data ?? []) as Row[]).sort((a, b) => a.sort_order - b.sort_order)) {
-    rows.set(row.employee_id, [...(rows.get(row.employee_id) ?? []), { business_unit: row.business_unit, department: row.department, post: row.post, job_title: row.job_title ?? "", reports_to: row.reports_to ?? null }]);
+  for (const row of ((data ?? []) as unknown as Row[]).sort((a, b) => a.sort_order - b.sort_order)) {
+    const unit = (row.unit ?? "").trim();
+    rows.set(row.employee_id, [...(rows.get(row.employee_id) ?? []), { business_unit: row.business_unit, department: row.department, ...(unit ? { unit } : {}), post: row.post, job_title: row.job_title ?? "", reports_to: row.reports_to ?? null }]);
   }
-  return { rows, migrated: true };
+  return { rows, migrated: true, gmReady };
 }
+
+/** A job as the rows before migration 202611100001 hold it: no GM (a HOD), no team, a HOD under nobody. */
+const beforeGm = (job: EmployeeJob): EmployeeJob => ({ business_unit: job.business_unit, department: job.department, post: job.post === "gm" ? "hod" : job.post, job_title: job.job_title, reports_to: job.post === "staf" ? job.reports_to : null });
+const usesGm = (jobs: EmployeeJob[]) => jobs.some(job => job.post === "gm" || !!job.unit || (job.post === "hod" && !!job.reports_to));
 
 /** pw_leads per person when it is read (it then decides HOD and Lead), else undefined. */
 async function leadsByPerson(): Promise<Map<string, Leads> | undefined> {
@@ -39,9 +55,9 @@ async function leadsByPerson(): Promise<Map<string, Leads> | undefined> {
 }
 
 /** Everyone's jobs for Data karyawan, each agreeing with the employees columns and pw_leads. */
-export async function listJobs(people: Employee[]): Promise<{ byPerson: Record<string, EmployeeJob[]>; migrated: boolean }> {
-  const [{ rows, migrated }, leads] = await Promise.all([readRows(), leadsByPerson()]);
-  return { migrated, byPerson: Object.fromEntries(people.map(person => [person.id, reconcileJobs(rows.get(person.id) ?? [], person, leads ? leads.get(person.id) ?? NO_LEADS : undefined)])) };
+export async function listJobs(people: Employee[]): Promise<{ byPerson: Record<string, EmployeeJob[]>; migrated: boolean; gmReady: boolean }> {
+  const [{ rows, migrated, gmReady }, leads] = await Promise.all([readRows(), leadsByPerson()]);
+  return { migrated, gmReady, byPerson: Object.fromEntries(people.map(person => [person.id, reconcileJobs(rows.get(person.id) ?? [], person, leads ? leads.get(person.id) ?? NO_LEADS : undefined)])) };
 }
 
 /** One person's jobs; the Utama job first. */
@@ -52,10 +68,12 @@ export async function jobsOf(person: Employee): Promise<EmployeeJob[]> {
 
 /**
  * Saves a person's jobs, replacing the ones before: the Utama job to employees, every job to
- * employee_jobs (when migrated), and the HOD and Lead jobs to pw_leads. A BOD heads nothing.
- * `migrated` is false while employee_jobs waits for its migration (only the Utama job is kept).
+ * employee_jobs (when migrated), and the HOD and Lead jobs to pw_leads (a GM as HOD). A BOD heads
+ * nothing. `migrated` is false while employee_jobs waits for its migration (only the Utama job is
+ * kept); `gmReady` is false while GM, the team and a HOD under their GM wait for 202611100001 (the
+ * jobs are then kept without them: a GM as HOD).
  */
-export async function setJobs(employeeId: string, input: EmployeeJob[]): Promise<{ employee: Employee; jobs: EmployeeJob[]; leads: Leads; migrated: boolean }> {
+export async function setJobs(employeeId: string, input: EmployeeJob[]): Promise<{ employee: Employee; jobs: EmployeeJob[]; leads: Leads; migrated: boolean; gmReady: boolean }> {
   const jobs = input.map(tidyJob);
   if (!jobs.length) throw new ServiceError(422, "Isi pekerjaan utama.");
   if (jobs.some(job => job.reports_to === employeeId)) throw new ServiceError(422, "Di bawah: pilih orang lain, bukan orangnya sendiri.");
@@ -70,8 +88,18 @@ export async function setJobs(employeeId: string, input: EmployeeJob[]): Promise
 
   const now = new Date().toISOString();
   let migrated = true;
-  const { error: saveError } = await client.from("employee_jobs")
-    .upsert(jobs.map((job, sort_order) => ({ employee_id: employeeId, sort_order, ...job, updated_at: now })), { onConflict: "employee_id,sort_order" });
+  let gmReady = true;
+  let saved = jobs;
+  const save = (rows: Record<string, unknown>[]) => client.from("employee_jobs").upsert(rows, { onConflict: "employee_id,sort_order" });
+  // Every column, the team included (an emptied team is written as "").
+  let { error: saveError } = await save(jobs.map((job, sort_order) => ({ employee_id: employeeId, sort_order, business_unit: job.business_unit, department: job.department, unit: job.unit ?? "", post: job.post, job_title: job.job_title, reports_to: job.reports_to, updated_at: now })));
+  // Before 202611100001: no unit column (42703/PGRST204), or its checks refuse a GM or a HOD under
+  // someone (23514). Saved again the old way (a GM as HOD, no team), so nothing else is lost.
+  if (saveError && (noUnit(saveError) || saveError.code === "23514")) {
+    gmReady = !usesGm(jobs);
+    saved = jobs.map(beforeGm);
+    ({ error: saveError } = await save(saved.map((job, sort_order) => ({ employee_id: employeeId, sort_order, ...job, updated_at: now }))));
+  }
   if (saveError) {
     if (!missing(saveError)) databaseError(saveError);
     migrated = false;
@@ -80,5 +108,5 @@ export async function setJobs(employeeId: string, input: EmployeeJob[]): Promise
     if (trimError) databaseError(trimError);
   }
   await setLeads(employeeId, leads);
-  return { employee, jobs, leads, migrated };
+  return { employee, jobs: saved, leads, migrated, gmReady };
 }

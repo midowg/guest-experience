@@ -12,8 +12,11 @@
  * Pure, so the page and the tests read the same rule.
  */
 
-/** `lead`: a Lead (9 Nov 2026): a team lead under the HOD, whose people point at them in Atasan langsung. */
-export type OrgPerson = { id: string; name: string; position: string; department: string; businessUnit: string; reportsTo: string | null; lead?: boolean };
+/**
+ * `lead`: a Lead (9 Nov 2026): a team lead under the HOD, whose people point at them in Atasan langsung.
+ * `post` and `unit` (10 Nov 2026, the org chart): GM or HOD of their Utama job, and its team.
+ */
+export type OrgPerson = { id: string; name: string; position: string; department: string; businessUnit: string; reportsTo: string | null; lead?: boolean; post?: "gm" | "hod" | "lead" | "staf"; unit?: string };
 export type OrgNode = OrgPerson & { children: OrgNode[] };
 export type OrgGroup = { name: string; people: OrgNode[] };
 export type OrgDepartment = { name: string; businessUnits: string[]; heads: OrgNode[]; loose: OrgNode[]; groups: OrgGroup[]; size: number };
@@ -57,13 +60,19 @@ export function buildOrg(people: OrgPerson[], bodIds: ReadonlySet<string>, heads
     const members = rest.filter(person => (person.department || "Tanpa departemen") === name);
     const ids = new Set(members.map(person => person.id));
     // A HOD may sit in another department (Sofyan: CoE and Art & Creative Support); they head this card too.
-    const heads = people.filter(person => !bodIds.has(person.id) && (headsOf[name] ?? []).includes(person.id)).sort(byName);
+    const allHeads = people.filter(person => !bodIds.has(person.id) && (headsOf[name] ?? []).includes(person.id));
+    const allHeadIds = new Set(allHeads.map(person => person.id));
+    // A HOD under another head of this department (Commercial's HOD under the GM of Sales &
+    // Marketing, 10 Nov 2026) is no head of the card: they hang in it with their own people.
+    const heads = allHeads.filter(person => !(members.includes(person) && person.reportsTo && person.reportsTo !== person.id && allHeadIds.has(person.reportsTo))).sort(byName);
     const headIds = new Set(heads.map(person => person.id));
-    // Each person's parent inside this department: their Atasan langsung when it is here (and not a loop), else none.
+    // Each person's parent inside this department: their Atasan langsung when it is here (and not a
+    // loop), else none. Under a head of the card counts as none: they hang under the head anyway, and
+    // so they can still be sorted into their team.
     const parentOf = new Map<string, string | null>();
     for (const person of members) {
       if (headIds.has(person.id)) { parentOf.set(person.id, null); continue; }
-      parentOf.set(person.id, person.reportsTo && ids.has(person.reportsTo) && person.reportsTo !== person.id ? person.reportsTo : null);
+      parentOf.set(person.id, person.reportsTo && ids.has(person.reportsTo) && person.reportsTo !== person.id && !headIds.has(person.reportsTo) ? person.reportsTo : null);
     }
     // A loop (A under B under A) is cut: the person whose chain comes back to them goes to the top.
     for (const person of members) {
@@ -80,9 +89,12 @@ export function buildOrg(people: OrgPerson[], bodIds: ReadonlySet<string>, heads
       children: members.filter(other => !headIds.has(other.id) && parentOf.get(other.id) === person.id).sort(byName).map(node),
     });
     const allTops = members.filter(person => !headIds.has(person.id) && !parentOf.get(person.id)).sort(byName);
-    // The tops whose position names a sub-group go into that group; the rest stay as before.
-    const groups: OrgGroup[] = (SUB_GROUPS[name] ?? [])
-      .map(group => ({ name: group.name, people: allTops.filter(person => subGroupOf(name, person.position) === group.name).map(node) }))
+    // The teams (Tim) set in Data karyawan, when this department has any (10 Nov 2026); else the
+    // sub-groups read from the position. The tops of a team go into it; the rest stay as before.
+    const teams = [...new Set(members.map(person => person.unit?.trim() ?? "").filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
+    const groups: OrgGroup[] = (teams.length
+      ? teams.map(team => ({ name: team, people: allTops.filter(person => person.unit?.trim() === team).map(node) }))
+      : (SUB_GROUPS[name] ?? []).map(group => ({ name: group.name, people: allTops.filter(person => subGroupOf(name, person.position) === group.name).map(node) })))
       .filter(group => group.people.length > 0);
     const grouped = new Set(groups.flatMap(group => group.people.map(person => person.id)));
     const tops = allTops.filter(person => !grouped.has(person.id));

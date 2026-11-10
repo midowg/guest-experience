@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { departmentShort, employeeJobsSchema, jobsFromEmployee, leadsFromJobs, primaryFields, reconcileJobs, sameJobs, type EmployeeJob } from "./employees";
+import { departmentShort, departmentShorts, employeeJobsSchema, jobsFromEmployee, leadsFromJobs, primaryFields, reconcileJobs, sameJobs, type EmployeeJob } from "./employees";
 
 /* Pekerjaan karyawan (9 Nov 2026): the jobs of one person, the Utama one first. */
 
@@ -26,8 +26,10 @@ describe("primaryFields", () => {
     expect(primaryFields(jobs, "WNS")).toEqual({ department: "Sales & Marketing", position: "Business Solutions Manager", business_unit: "TEE", office: "TEE", reports_to: "lead-1" });
     expect(primaryFields(jobs, "").office).toBe("TEE");
     expect(primaryFields(jobs, "Jakarta").office).toBe("Jakarta");
-    // A HOD or Lead without a title of its own reads "HOD Finance", and sits under nobody.
-    expect(primaryFields([{ ...jobs[1], reports_to: "x" }], "")).toMatchObject({ position: "HOD Finance", reports_to: null, business_unit: "MRP" });
+    // A HOD without a title of its own reads "HOD Finance"; a HOD may sit under their GM, a GM or a Lead under nobody.
+    expect(primaryFields([{ ...jobs[1], reports_to: "x" }], "")).toMatchObject({ position: "HOD Finance", reports_to: "x", business_unit: "MRP" });
+    expect(primaryFields([{ ...jobs[1], post: "gm", reports_to: "x" }], "")).toMatchObject({ position: "GM Finance", reports_to: null });
+    expect(primaryFields([{ ...jobs[1], post: "lead", reports_to: "x" }], "")).toMatchObject({ position: "Lead Finance", reports_to: null });
   });
 });
 
@@ -63,6 +65,17 @@ describe("reconcileJobs", () => {
   });
 });
 
+describe("GM and Tim (10 Nov 2026)", () => {
+  it("counts a GM as heading their department, and keeps the team", () => {
+    expect(leadsFromJobs([staf({ post: "gm", department: "Bali Office", job_title: "" }), staf({ post: "hod" })]))
+      .toEqual({ departments: ["Bali Office", "Sales & Marketing"], lead: false, leadIn: [] });
+    expect(primaryFields([staf({ unit: " Commercial " })], "").department).toBe("Sales & Marketing");
+    // A GM saved before stays a GM while pw_leads still has them as head.
+    expect(reconcileJobs([staf({ post: "gm", job_title: "General Manager" })], { ...person, position: "General Manager" }, { departments: ["Sales & Marketing"], lead: false })[0].post).toBe("gm");
+    expect(reconcileJobs([staf({ post: "gm", job_title: "General Manager" })], { ...person, position: "General Manager" }, { departments: [], lead: false })[0].post).toBe("staf");
+  });
+});
+
 describe("departmentShort", () => {
   it("shortens a department to its initials, small words in lower case, abbreviations kept whole", () => {
     expect(departmentShort("Center of Excellence")).toBe("CoE");
@@ -73,6 +86,16 @@ describe("departmentShort", () => {
     expect(departmentShort("Sales & Marketing")).toBe("SM");
     expect(departmentShort("Accounting")).toBe("Accounting");
     expect(departmentShort("  ")).toBe("");
+    // A code in brackets wins.
+    expect(departmentShort("Business Transformation & AI Enablement (CoE)")).toBe("CoE");
+  });
+
+  it("keeps the full name where two departments would share a short form", () => {
+    const shorts = departmentShorts(["Bali Office", "Business Operations", "Sales & Marketing", "Accounting"]);
+    expect(shorts.get("Bali Office")).toBe("Bali Office");
+    expect(shorts.get("Business Operations")).toBe("Business Operations");
+    expect(shorts.get("Sales & Marketing")).toBe("SM");
+    expect(shorts.get("Accounting")).toBe("Accounting");
   });
 });
 
@@ -88,7 +111,9 @@ describe("employeeJobsSchema", () => {
 
   it("sameJobs ignores spaces and a reports_to on a HOD", () => {
     expect(sameJobs([staf({ department: " Sales & Marketing " })], [staf()])).toBe(true);
-    expect(sameJobs([staf({ post: "hod", reports_to: "x" })], [staf({ post: "hod" })])).toBe(true);
+    expect(sameJobs([staf({ post: "lead", reports_to: "x" })], [staf({ post: "lead" })])).toBe(true);
+    expect(sameJobs([staf({ unit: " " })], [staf()])).toBe(true);
+    expect(sameJobs([staf({ unit: "Commercial" })], [staf()])).toBe(false);
     expect(sameJobs([staf()], [staf({ business_unit: "TEE" })])).toBe(false);
   });
 });

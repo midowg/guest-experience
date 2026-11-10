@@ -24,6 +24,9 @@
 .hint { margin: 0; font-size: 12px; color: var(--ink-soft, #6b7280); }
 .error { margin: 0; font-size: 12px; font-weight: 600; color: var(--burgundy, #dc2626); }
 .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 12px; background: var(--page, #f1f3f6); }
+/* Posisi: GM, HOD, Lead, Jabatan (10 Nov 2026); two by two on a narrow phone. */
+.segmentedPosts { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 379.98px) { .segmentedPosts { grid-template-columns: repeat(2, 1fr); } }
 .segment { position: relative; display: grid; place-items: center; min-height: 40px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--ink-soft, #4b5563); cursor: pointer; }
 .segment input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .segment:has(input:checked) { background: var(--paper, #fff); color: var(--blue, #2f6feb); box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }

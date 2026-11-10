@@ -68,3 +68,35 @@ describe("buildOrg", () => {
     expect(ids(x.loose).sort()).toEqual(["a", "b"]);
   });
 });
+
+describe("GM, a HOD under them, and teams (org chart of 10 Nov 2026)", () => {
+  const q = (id: string, department: string, patch: Partial<OrgPerson> = {}): OrgPerson => ({ id, name: id, department, position: "", businessUnit: "WNS", reportsTo: null, ...patch });
+  const team = [
+    q("etik", "Sales & Marketing", { post: "gm" }),
+    q("linda", "Sales & Marketing", { post: "hod", unit: "Commercial", reportsTo: "etik" }),
+    q("ivana", "Sales & Marketing", { unit: "Commercial", reportsTo: "linda" }),
+    q("irvani", "Sales & Marketing", { unit: "Business Solutions", lead: true }),
+    q("elifasa", "Sales & Marketing", { unit: "Business Solutions", reportsTo: "etik" }),
+    q("ainur", "Sales & Marketing", { reportsTo: "etik" }),
+    q("nofri", "Bali Office", { post: "gm" }),
+    q("ramadhan", "Bali Office", { reportsTo: "nofri" }),
+    q("setiyadi", "Bali Office", { reportsTo: "ramadhan" }),
+  ];
+  const org = buildOrg(team, new Set(), { "Sales & Marketing": ["etik", "linda"], "Bali Office": ["nofri"] });
+  const sales = org.departments.find(department => department.name === "Sales & Marketing")!;
+  const ids = (nodes: { id: string; children: { id: string }[] }[]) => nodes.map(node => node.id);
+
+  it("heads the card with the GM only; the HOD under them sits in their team with their people", () => {
+    expect(ids(sales.heads)).toEqual(["etik"]);
+    expect(sales.groups.map(group => [group.name, ids(group.people)])).toEqual([["Business Solutions", ["elifasa", "irvani"]], ["Commercial", ["linda"]]]);
+    expect(ids(sales.groups[1].people[0].children)).toEqual(["ivana"]);
+    // Without a team: under the GM.
+    expect(ids(sales.heads[0].children)).toEqual(["ainur"]);
+  });
+
+  it("hangs staff under staff (Setiyadi under Ramadhan)", () => {
+    const bali = org.departments.find(department => department.name === "Bali Office")!;
+    expect(ids(bali.heads[0].children)).toEqual(["ramadhan"]);
+    expect(ids(bali.heads[0].children[0].children)).toEqual(["setiyadi"]);
+  });
+});

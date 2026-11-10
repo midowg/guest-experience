@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { employeeJobsSchema, employeePatchSchema } from "@/lib/employees";
 import { deleteEmployee, updateEmployee } from "@/lib/server/employees";
-import { JOBS_MIGRATION, setJobs } from "@/lib/server/employee-jobs";
+import { JOBS_GM_MIGRATION, JOBS_MIGRATION, setJobs } from "@/lib/server/employee-jobs";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireSuperAdmin } from "@/lib/server/admin-session";
 
@@ -25,7 +25,11 @@ export async function PATCH(request: Request, { params }: Params) {
     const jobs = validate(employeeJobsSchema, rawJobs);
     if (Object.keys(patch).length) await updateEmployee(id, patch);
     const saved = await setJobs(id, jobs);
-    return success(saved, saved.migrated || jobs.length < 2 ? "Data karyawan disimpan." : `Pekerjaan utama disimpan; pekerjaan lain menunggu migrasi ${JOBS_MIGRATION}.`);
+    const waits = [
+      !saved.migrated && jobs.length > 1 ? `pekerjaan lain menunggu migrasi ${JOBS_MIGRATION}` : "",
+      saved.migrated && !saved.gmReady ? `GM, tim, dan atasan HOD menunggu migrasi ${JOBS_GM_MIGRATION} (sementara GM disimpan sebagai HOD)` : "",
+    ].filter(Boolean);
+    return success(saved, waits.length ? `Pekerjaan utama disimpan; ${waits.join("; ")}.` : "Data karyawan disimpan.");
   });
 }
 
