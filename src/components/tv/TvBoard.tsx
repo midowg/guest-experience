@@ -21,7 +21,7 @@ const TICK_MS = 10_000;
 /** How long "Layar penuh" stays after the last touch or mouse move. */
 const CONTROLS_MS = 4_000;
 /** The head's height and the slide's paddings in units, as tv.module.css draws them. */
-const HEAD = 18, PAD_X = 4, PAD_BOTTOM = 5;
+const HEAD = 18, HEAD_TALL = 26, PAD_X = 4, PAD_BOTTOM = 5;
 
 /** When this TV last loaded itself afresh for a new build, kept for the tab so a reload is not repeated at once. */
 const RELOADED_AT = "tv-dimuat-ulang";
@@ -170,7 +170,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const today = feed.days.find(day => day.date === feed.date)?.rooms ?? [];
   const week = shownDays(feed.days);
   /** The room a calendar has below the head, in units. */
-  const room = { width: screen.width - PAD_X * 2, height: screen.height - HEAD - PAD_BOTTOM };
+  const room = { width: screen.width - PAD_X * 2, height: screen.height - (screen.wide ? HEAD : HEAD_TALL) - PAD_BOTTOM };
 
   const entriesToday = today.flatMap(item => item.entries);
   const onNow = entriesToday.filter(entry => entryState(entry, now) === "berlangsung").length;
@@ -334,7 +334,7 @@ function DayWide({ rooms, legend, now, time, room }: { rooms: TvRoom[]; legend: 
               style={{ left: `${spot.at}%`, width: `${spot.size}%`, top: u(GAP), bottom: u(GAP) }}>
               {roomy ? <>
                 {wide >= 4.6 && <Badge code={who.code} size={1.5} />}
-                {entry.by && <span className={`${css.wrap} ${css.title}`} style={{ fontSize: u(text), WebkitLineClamp: lines }}>{entry.by}</span>}
+                {entryOwner(entry) && <span className={`${css.wrap} ${css.title}`} style={{ fontSize: u(text), WebkitLineClamp: lines }}>{entryOwner(entry)}</span>}
                 <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(when.size) }}>{when.text}</span>
                 {on && <span className={`${css.one} ${css.on}`} style={{ fontSize: u(when.size) }}>Berlangsung</span>}
               </> : <span className={css.inline} style={{ fontSize: u(clamp(row * 0.3, 1.25, 1.8)) }}>
@@ -378,7 +378,7 @@ function DayTall({ rooms, legend, now, time, room }: { rooms: TvRoom[]; legend: 
             return <div key={entry.key} className={`${css.block} ${tones[who.color]}`} data-state={state} title={entry.title}
               style={{ top: `${spot.at}%`, height: `${spot.size}%`, left: u(GAP), right: u(GAP) }}>
               {wide >= 4.6 && <Badge code={who.code} size={1.5} />}
-              {entry.by && <span className={`${css.wrap} ${css.title}`} style={{ fontSize: u(text), WebkitLineClamp: 3 }}>{entry.by}</span>}
+              {entryOwner(entry) && <span className={`${css.wrap} ${css.title}`} style={{ fontSize: u(text), WebkitLineClamp: 3 }}>{entryOwner(entry)}</span>}
               <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(when.size) }}>{when.text}</span>
               {state === "berlangsung" && <span className={`${css.one} ${css.on}`} style={{ fontSize: u(when.size) }}>Berlangsung</span>}
             </div>;

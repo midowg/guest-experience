@@ -272,3 +272,13 @@
 .phoneSearch input::-webkit-search-cancel-button { display: none; }
 .phoneSearch button { display: grid; flex: none; width: 44px; height: 44px; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--tv-text); cursor: pointer; }
 .phoneCount { margin: 0; color: var(--tv-muted); font-size: 13px; }
+
+/*
+ * An upright TV: the head is taller (HEAD_TALL in TvBoard, change both together), and what would be
+ * cut on one line wraps onto two: the date and the line under it (the summary, or Pra WAM's countdown).
+ * The clock is smaller, so the text keeps most of the width, also beside a QR code in a top corner.
+ */
+.board[data-orientation="tegak"] .head { height: calc(26 * var(--u)); gap: calc(3 * var(--u)); }
+.board[data-orientation="tegak"] .date { display: -webkit-box; font-size: calc(4 * var(--u)); line-height: 1.15; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.board[data-orientation="tegak"] .summary { display: -webkit-box; line-height: 1.25; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.board[data-orientation="tegak"] .clock { font-size: calc(6.5 * var(--u)); }

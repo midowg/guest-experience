@@ -357,6 +357,12 @@ export async function slideImage(id: string, onlyActive: boolean): Promise<{ byt
   const { data, error } = await createPrivilegedClient().from("pw_tv_slides").select("image_key,active").eq("id", id).maybeSingle();
   if (error) { if (missing(error)) return null; databaseError(error); }
   if (!data || (onlyActive && !data.active)) return null;
+  if (onlyActive) {
+    // With the playlist, the picture's row decides: hidden there (or gone from it) means not shown to any TV.
+    const { data: row, error: rowError } = await createPrivilegedClient().from("pw_tv_items").select("active").eq("slide_id", id).maybeSingle();
+    if (rowError && !noTable(rowError)) databaseError(rowError);
+    if (!rowError && !row?.active) return null;
+  }
   return readObject(data.image_key);
 }
 
@@ -469,6 +475,7 @@ export async function tvFeed(imageSrc: (slideId: string) => string, now = new Da
 const BUILD = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_GIT_COMMIT_SHA || "dev";
 
 const SEEN_EVERY_MS = 60_000;
+const SHOWING_EVERY_MS = 20_000;
 
 /**
  * The TV at an address, or null for one that does not exist (or before its migration). The
@@ -490,7 +497,9 @@ export async function screenForKey(key: unknown, size?: { width: number; height:
   if (!data) return null;
   const resized = !!size && (size.width !== data.last_width || size.height !== data.last_height);
   const item = playlistReady && showing ? showing.slice(0, 80) : undefined;
-  const changed = item !== undefined && item !== (data.last_item ?? "");
+  const quiet = data.last_seen_at ? now.getTime() - Date.parse(data.last_seen_at) : Infinity;
+  // What it shows changes every few seconds: noted when it differs, but not more often than every twenty seconds.
+  const changed = item !== undefined && item !== (data.last_item ?? "") && quiet >= SHOWING_EVERY_MS;
   if (size && (resized || changed || !data.last_seen_at || now.getTime() - Date.parse(data.last_seen_at) >= SEEN_EVERY_MS)) {
     await client.from("pw_tv_screens").update({ last_seen_at: now.toISOString(), last_width: size.width, last_height: size.height, ...(item !== undefined ? { last_item: item } : {}) }).eq("id", data.id);
   }
