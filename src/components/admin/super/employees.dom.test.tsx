@@ -184,10 +184,10 @@ describe("GM, Tim and Di bawah from the org chart (10 Nov 2026)", () => {
     expect(utama.getByText(/GM memimpin departemen ini/)).toBeTruthy();
   });
 
-  it("says GM and Tim wait for migration 202611100001 when it has not run", async () => {
+  it("says GM and Tim wait for migration 202611100002 when it has not run", async () => {
     const fetch = vi.fn(async (_url: string, init: RequestInit) => {
       const body = JSON.parse(init.body as string);
-      return reply({ ok: true, message: "Pekerjaan utama disimpan; GM, tim, dan atasan HOD menunggu migrasi 202611100001_employee_jobs_gm_unit.sql (sementara GM disimpan sebagai HOD).",
+      return reply({ ok: true, message: "Pekerjaan utama disimpan; GM, tim, dan atasan HOD menunggu migrasi 202611100002_employee_jobs_gm_unit.sql (sementara GM disimpan sebagai HOD).",
         data: { employee: { ...gm, ...body }, jobs: [{ ...body.jobs[0], post: "hod" }], leads: { departments: ["Sales & Marketing"], lead: false, leadIn: [] }, migrated: true, gmReady: false } });
     });
     vi.stubGlobal("fetch", fetch);
@@ -195,7 +195,7 @@ describe("GM, Tim and Di bawah from the org chart (10 Nov 2026)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ubah Etik GM" }));
     const utama = card(within(screen.getByRole("dialog", { name: "Ubah karyawan" })), "Pekerjaan utama");
     fireEvent.click(utama.getByRole("radio", { name: "GM" }));
-    expect(screen.getByText(/baru tersimpan penuh setelah migrasi 202611100001/)).toBeTruthy();
+    expect(screen.getByText(/baru tersimpan penuh setelah migrasi 202611100002/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
     expect(await screen.findByText(/Etik GM disimpan\. Pekerjaan utama disimpan; GM, tim, dan atasan HOD menunggu migrasi/)).toBeTruthy();
   });

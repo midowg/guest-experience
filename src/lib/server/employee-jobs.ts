@@ -18,7 +18,7 @@ import { createPrivilegedClient } from "./supabase/admin";
 
 export const JOBS_MIGRATION = "202611090003_employee_jobs.sql";
 /** GM, the team (unit) and a HOD under their GM (10 Nov 2026). */
-export const JOBS_GM_MIGRATION = "202611100001_employee_jobs_gm_unit.sql";
+export const JOBS_GM_MIGRATION = "202611100002_employee_jobs_gm_unit.sql";
 const missing = (error: { code?: string; message?: string }) => ["42P01", "PGRST205"].includes(error.code ?? "") || /relation .*employee_jobs/.test(error.message ?? "");
 // "unit" on its own, not "business_unit".
 const noUnit = (error: { code?: string; message?: string }) => ["42703", "PGRST204"].includes(error.code ?? "") && /(^|[^_a-z])unit\b/i.test(error.message ?? "");
@@ -31,7 +31,7 @@ async function readRows(employeeId?: string): Promise<{ rows: Map<string, Employ
     if (employeeId) query = query.eq("employee_id", employeeId);
     return query.order("employee_id").order("sort_order").limit(5000);
   };
-  // The team arrives with migration 202611100001; before it the rows are read without.
+  // The team arrives with migration 202611100002; before it the rows are read without.
   let { data, error } = await read(`${columns},unit`);
   const gmReady = !(error && noUnit(error));
   if (!gmReady) ({ data, error } = await read(columns));
@@ -44,7 +44,7 @@ async function readRows(employeeId?: string): Promise<{ rows: Map<string, Employ
   return { rows, migrated: true, gmReady };
 }
 
-/** A job as the rows before migration 202611100001 hold it: no GM (a HOD), no team, a HOD under nobody. */
+/** A job as the rows before migration 202611100002 hold it: no GM (a HOD), no team, a HOD under nobody. */
 const beforeGm = (job: EmployeeJob): EmployeeJob => ({ business_unit: job.business_unit, department: job.department, post: job.post === "gm" ? "hod" : job.post, job_title: job.job_title, reports_to: job.post === "staf" ? job.reports_to : null });
 const usesGm = (jobs: EmployeeJob[]) => jobs.some(job => job.post === "gm" || !!job.unit || (job.post === "hod" && !!job.reports_to));
 
@@ -70,7 +70,7 @@ export async function jobsOf(person: Employee): Promise<EmployeeJob[]> {
  * Saves a person's jobs, replacing the ones before: the Utama job to employees, every job to
  * employee_jobs (when migrated), and the HOD and Lead jobs to pw_leads (a GM as HOD). A BOD heads
  * nothing. `migrated` is false while employee_jobs waits for its migration (only the Utama job is
- * kept); `gmReady` is false while GM, the team and a HOD under their GM wait for 202611100001 (the
+ * kept); `gmReady` is false while GM, the team and a HOD under their GM wait for 202611100002 (the
  * jobs are then kept without them: a GM as HOD).
  */
 export async function setJobs(employeeId: string, input: EmployeeJob[]): Promise<{ employee: Employee; jobs: EmployeeJob[]; leads: Leads; migrated: boolean; gmReady: boolean }> {
@@ -93,7 +93,7 @@ export async function setJobs(employeeId: string, input: EmployeeJob[]): Promise
   const save = (rows: Record<string, unknown>[]) => client.from("employee_jobs").upsert(rows, { onConflict: "employee_id,sort_order" });
   // Every column, the team included (an emptied team is written as "").
   let { error: saveError } = await save(jobs.map((job, sort_order) => ({ employee_id: employeeId, sort_order, business_unit: job.business_unit, department: job.department, unit: job.unit ?? "", post: job.post, job_title: job.job_title, reports_to: job.reports_to, updated_at: now })));
-  // Before 202611100001: no unit column (42703/PGRST204), or its checks refuse a GM or a HOD under
+  // Before 202611100002: no unit column (42703/PGRST204), or its checks refuse a GM or a HOD under
   // someone (23514). Saved again the old way (a GM as HOD, no team), so nothing else is lost.
   if (saveError && (noUnit(saveError) || saveError.code === "23514")) {
     gmReady = !usesGm(jobs);

@@ -14,7 +14,7 @@ export type EmployeeDraft = Omit<Employee, "id">;
 /** A new job card: the Utama job's BU, a Jabatan to fill. */
 export const blankJob = (business_unit: string = DEFAULT_BUSINESS_UNIT): EmployeeJob => ({ business_unit, department: "", post: "staf", job_title: "", reports_to: null });
 const JOBS_MIGRATION = "202611090003_employee_jobs.sql";
-const JOBS_GM_MIGRATION = "202611100001_employee_jobs_gm_unit.sql";
+const JOBS_GM_MIGRATION = "202611100002_employee_jobs_gm_unit.sql";
 
 const blank: EmployeeDraft = { full_name: "", nickname: "", department: "", position: "", office: "", category: "karyawan", phone: "", email: "", nip: "", business_unit: DEFAULT_BUSINESS_UNIT, reports_to: null, gender: "", active: true };
 const draftOf = (person: Employee | null): EmployeeDraft => person
@@ -52,7 +52,7 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
   units?: Record<string, string[]>;
   /** False while employee_jobs waits for its migration: only the Utama job is kept. */
   jobsReady?: boolean;
-  /** False while GM, Tim and a HOD under their GM wait for migration 202611100001. */
+  /** False while GM, Tim and a HOD under their GM wait for migration 202611100002. */
   gmReady?: boolean;
   saving: boolean;
   error: string;

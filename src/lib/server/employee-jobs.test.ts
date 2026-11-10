@@ -10,7 +10,7 @@ import type { EmployeeJob } from "@/lib/employees";
 vi.mock("server-only", () => ({}));
 type Row = Record<string, unknown>;
 let jobsTable: Row[] | null;
-/** Whether migration 202611100001 ran (GM, unit, a HOD under their GM). */
+/** Whether migration 202611100002 ran (GM, unit, a HOD under their GM). */
 let gmColumns: boolean;
 let employees: Row[];
 let roles: string[];
@@ -40,7 +40,7 @@ function from(table: string) {
     maybeSingle: async () => { const { data, error } = run(); return { data: data?.[0] ?? null, error }; },
     upsert: async (values: Row[]) => {
       if (!jobsTable) return { error: missingTable };
-      // Before 202611100001: no unit column.
+      // Before 202611100002: no unit column.
       if (!gmColumns && values.some(value => "unit" in value)) return { error: { code: "PGRST204", message: "Could not find the 'unit' column of 'employee_jobs' in the schema cache" } };
       for (const value of values) {
         const at = jobsTable.findIndex(row => row.employee_id === value.employee_id && row.sort_order === value.sort_order);
@@ -108,7 +108,7 @@ describe("setJobs", () => {
   });
 });
 
-describe("GM, Tim and a HOD under their GM (migration 202611100001)", () => {
+describe("GM, Tim and a HOD under their GM (migration 202611100002)", () => {
   const GM = "6a000000-0000-4000-8000-000000000009";
 
   it("keeps GM, the team and the HOD's GM once migrated", async () => {

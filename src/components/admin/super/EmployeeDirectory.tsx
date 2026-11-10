@@ -48,7 +48,7 @@ export function EmployeeDirectory({ initial, migrated, wamAccounts, leads: initi
   jobs?: Record<string, EmployeeJob[]>;
   /** False while employee_jobs waits for migration 202611090003: only the Utama job is kept. */
   jobsMigrated?: boolean;
-  /** False while GM, Tim and a HOD under their GM wait for migration 202611100001. */
+  /** False while GM, Tim and a HOD under their GM wait for migration 202611100002. */
   gmMigrated?: boolean;
   /** Which tab of Data karyawan: the list, or the Excel import. */
   part?: "daftar" | "impor";

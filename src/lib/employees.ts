@@ -62,7 +62,7 @@ export const employeeCreateSchema = z.object({
  * The first job is the Utama one and is copied to the employees columns (department, position,
  * business_unit, office, reports_to); pw_leads keeps a row per HOD and Lead job.
  *
- * From the org chart of 10 Nov 2026 (migration 202611100001): a GM heads a department like a HOD
+ * From the org chart of 10 Nov 2026 (migration 202611100002): a GM heads a department like a HOD
  * (and counts as one everywhere the app reads HOD), a HOD may sit under their GM, and a job may
  * name its team inside the department (`unit`: Business Solutions, Commercial...).
  */
