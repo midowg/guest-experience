@@ -254,7 +254,7 @@ async function weekDays(dates: readonly string[]): Promise<TvDay[]> {
       date,
       rooms: rooms.flatMap((room): TvRoom[] => {
         const entries = today.filter(use => use.roomId === room.id).map(use => ({
-          key: `${use.source}:${use.sourceId}`, title: use.title ?? use.label, by: use.by ?? "",
+          key: `${use.source}:${use.sourceId}`, title: use.title ?? use.label, by: use.by ?? "", person: use.byName ?? "", dept: use.byDept ?? "",
           // A hold from yesterday or into tomorrow is cut at the day's edges.
           start: wibDate(use.startsAt) < date ? "00:00" : wibTime(use.startsAt),
           end: wibDate(use.endsAt) > date ? "24:00" : wibTime(use.endsAt),

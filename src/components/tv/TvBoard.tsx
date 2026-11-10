@@ -7,7 +7,7 @@ import QRCode from "qrcode";
 import { TV_HOME_PATH } from "@/lib/routes";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, decimalHour, entryState, fit, legendFor, legendItem, legendRows, shouldReload, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
+  dayEntries, decimalHour, entryOwner, entryState, fit, legendFor, legendItem, legendRows, shouldReload, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
   type TvDay, type TvDayEntry, type TvEntry, type TvFeed, type TvLegendItem, type TvRoom,
 } from "@/lib/pra-wam/tv";
 import base from "@/components/pra-wam/pra-wam.module.css";
@@ -365,20 +365,21 @@ function DayHead({ date, today, height, text }: { date: string; today: string; h
  * it go underneath when there is the height for it.
  */
 function WeekWide({ days, legend, today, now, room }: { days: TvDay[]; legend: readonly TvLegendItem[]; today: string; now: number; room: Room }) {
-  const HEADING = 6, GAP = 0.6;
+  const HEADING = 7, GAP = 0.9, COLUMN_GAP = 2.4;
   const lists = days.map(day => ({ day, entries: dayEntries(day) }));
-  const unit = fit(room.height - HEADING - 1, Math.max(...lists.map(list => list.entries.length)), 11);
-  const column = room.width / days.length;
-  const stacked = unit >= 6;
-  const hours = stacked ? Math.min(fitText(unit, 0.36, 2.8), fitText(column, 0.08, 2.8)) : Math.min(fitText(unit, 0.42, 2.2), fitText(column, 0.06, 2.2));
-  const small = Math.min(fitText(unit, 0.22, 1.8), fitText(column, 0.05, 1.8));
-  const lines = Math.max(1, Math.floor((unit - GAP - 1 - hours * 1.2) / (small * 1.2)));
-  return <div className={css.week} style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
+  const unit = fit(room.height - HEADING - 1, Math.max(...lists.map(list => list.entries.length)), 10);
+  const column = (room.width - COLUMN_GAP * (days.length - 1)) / days.length;
+  // Two lines an entry (the hours, then the room and whose it is) down to about fourteen entries a day; one line past that.
+  const stacked = unit >= 4.6;
+  const hours = stacked ? Math.min(fitText(unit - GAP, 0.34, 2.6), fitText(column, 0.075, 2.6)) : Math.min(fitText(unit, 0.42, 2.2), fitText(column, 0.06, 2.2));
+  const small = Math.min(fitText(unit - GAP, 0.25, 1.75), fitText(column, 0.052, 1.75));
+  const lines = 1;
+  return <div className={css.week} style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`, gap: u(COLUMN_GAP) }}>
     {lists.map(({ day, entries }) => <div key={day.date} className={css.weekDay} data-today={day.date === today}>
-      <DayHead date={day.date} today={today} height={HEADING} text={fitText(column, 0.085, 2.6)} />
+      <DayHead date={day.date} today={today} height={HEADING - 1} text={fitText(column, 0.085, 2.6)} />
       {entries.length === 0 && <p className={css.free} style={{ marginTop: u(1.2), fontSize: u(2) }}>Kosong</p>}
       {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} who={legendItem(legend, entry.title)} now={now} height={unit - GAP} gap={GAP}
-        hours={hours} small={stacked ? small : null} lines={lines} width={column - 7} />)}
+        hours={hours} small={stacked ? small : null} lines={lines} width={column - 7.6} />)}
     </div>)}
   </div>;
 }
@@ -410,9 +411,11 @@ function WeekItem({ entry, who, now, height, gap, hours, small, lines, width, wi
   width: number; withBooker?: boolean;
 }) {
   const state = entryState(entry, now);
-  const where = `${entry.room}${entry.by ? ` · ${entry.by}` : ""}`;
-  // A letter is about 0.56 of the text size wide: the line gets the size at which all of it fits, down to the smallest readable.
-  const fitted = (size: number, letters: number) => clamp(width * lines / (letters * 0.56), 1.2, size);
+  // Whose it is: the person alone for a one-on-one, the department in full for anything else.
+  const owner = entryOwner(entry);
+  const where = `${entry.room}${owner ? ` · ${owner}` : ""}`;
+  // A letter is about 0.58 of the text size wide: the line gets the size at which all of it fits, down to the smallest readable.
+  const fitted = (size: number, letters: number) => clamp(width * lines / (letters * 0.58), 1.15, size);
   return <div className={`${css.item} ${tones[who.color]}`} data-state={state} title={entry.title} style={{ height: u(height), marginTop: u(gap), fontSize: u(hours) }}>
     <Badge code={who.code} size={Math.min(1.7, hours * 0.75)} />
     {small != null

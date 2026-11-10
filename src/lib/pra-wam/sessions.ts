@@ -48,6 +48,8 @@ export type RoomUse = {
   roomId: string; startsAt: string; endsAt: string; source: "booking" | "sesi"; sourceId: string; label: string;
   /** The label's two parts on their own (TV Announcement): the title, and who booked as "SM - Raja" ("" for a panitia session). */
   title?: string; by?: string;
+  /** The booker's two parts on their own: the name colleagues call them by, and their department in full. */
+  byName?: string; byDept?: string;
 };
 
 export function sessionTimes(): string[] {

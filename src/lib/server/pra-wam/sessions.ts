@@ -179,6 +179,7 @@ export async function roomUsesBetween(from: string, to: string): Promise<RoomUse
       roomId: hold.room_id, startsAt: hold.starts_at, endsAt: hold.ends_at, source: hold.source as RoomUse["source"], sourceId: hold.source_id, label,
       title: (hold.source === "booking" ? booking?.title : session?.title) ?? (hold.source === "booking" ? "Booking ruang" : "Sesi"),
       by: booker ? bookerLabel(booker) : "",
+      byName: booker?.name ?? "", byDept: booker?.department ?? "",
     };
   });
 }

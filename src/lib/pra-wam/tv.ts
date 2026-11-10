@@ -12,7 +12,24 @@ import type { Countdown } from "./timeline";
  */
 
 /** One use of a room on a day. `start`/`end` are WIB clock times cut at the day's edges ("24:00" = runs past midnight). */
-export type TvEntry = { key: string; title: string; by: string; start: string; end: string; startsAt: string; endsAt: string };
+export type TvEntry = {
+  key: string; title: string; by: string; start: string; end: string; startsAt: string; endsAt: string;
+  /** Who booked, in two parts: the name colleagues call them by, and their department in full ("" for a panitia session). */
+  person?: string; dept?: string;
+};
+
+/** A one-on-one: a meeting of two people, so it is told by the person, not by a department. */
+const ONE_ON_ONE = /\b1\s*-?\s*on\s*-?\s*1\b|one[\s-]*on[\s-]*one/i;
+export const isOneOnOne = (title: string) => ONE_ON_ONE.test(title);
+/**
+ * Whose an entry is, for the week calendar's second line: the person's name alone for a
+ * one-on-one, the department in full for anything else; whichever of the two is known when the
+ * other is not, and the short "SM - Raja" form as the last resort.
+ */
+export function entryOwner(entry: Pick<TvEntry, "title" | "by" | "person" | "dept">): string {
+  const person = entry.person?.trim() ?? "", dept = entry.dept?.trim() ?? "";
+  return (isOneOnOne(entry.title) ? person || dept : dept || person) || entry.by;
+}
 export type TvRoom = { id: string; name: string; entries: TvEntry[] };
 /** One day of the week: the rooms in use on it, in the rooms' own order. */
 export type TvDay = { date: string; rooms: TvRoom[] };

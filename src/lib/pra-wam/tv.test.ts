@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  activityKey, agoLabel, dayEntries, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
+  activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
   shouldReload, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
@@ -46,6 +46,30 @@ describe("entries", () => {
       { id: "a", name: "Arjuna", entries: [entry("a2", "13:00", "14:00"), entry("a1", "10:00", "12:00")] },
     ] };
     expect(dayEntries(day).map(item => [item.key, item.room])).toEqual([["a1", "Arjuna"], ["b1", "Vasuki"], ["a2", "Arjuna"]]);
+  });
+});
+
+describe("whose an entry is, on the week calendar", () => {
+  const owned = (title: string, person: string, dept: string, by = "SM - Contoh") => ({ title, person, dept, by });
+
+  it("names the person alone for a one-on-one, however it is written", () => {
+    for (const title of ["Appraisal 1-on-1", "Appraisal: isi form & 1-on-1", "1 on 1 bulanan", "One on One", "one-on-one"]) {
+      expect(isOneOnOne(title), title).toBe(true);
+      expect(entryOwner(owned(title, "Contoh Satu", "Sales & Marketing"))).toBe("Contoh Satu");
+    }
+  });
+
+  it("names the department in full for anything else", () => {
+    expect(isOneOnOne("Internal Dept Meeting")).toBe(false);
+    expect(entryOwner(owned("Internal Dept Meeting", "Contoh Satu", "Sales & Marketing"))).toBe("Sales & Marketing");
+    expect(entryOwner(owned("ITEM: antar-departemen", "Contoh Satu", " Center of Excellence (CoE) "))).toBe("Center of Excellence (CoE)");
+  });
+
+  it("falls back to what is known, and to nothing for a panitia session", () => {
+    expect(entryOwner(owned("Appraisal 1-on-1", "", "Sales & Marketing"))).toBe("Sales & Marketing");
+    expect(entryOwner(owned("Rapat", "Contoh Satu", ""))).toBe("Contoh Satu");
+    expect(entryOwner({ title: "Rapat", by: "SM - Contoh" })).toBe("SM - Contoh");
+    expect(entryOwner({ title: "Forum Pra WAM", by: "" })).toBe("");
   });
 });
 
