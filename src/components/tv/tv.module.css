@@ -47,7 +47,7 @@
 /* A block of the day calendar, and an entry of the week calendar: the same tile. */
 .block, .item { box-sizing: border-box; overflow: hidden; border: calc(.2 * var(--u)) solid var(--tv-line); border-radius: calc(1.2 * var(--u)); background: var(--tv-soft); }
 .block[data-state="berlangsung"], .item[data-state="berlangsung"] { border-color: var(--tv-primary); background: var(--tv-now); }
-.block[data-state="selesai"], .item[data-state="selesai"] { opacity: .55; }
+.block[data-state="selesai"], .item[data-state="selesai"] { opacity: .62; }
 .one { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* A title on several lines: it wraps (a long word breaks) and only what is past the last line is cut. */
 .wrap { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; line-height: 1.2; overflow-wrap: anywhere; }
@@ -99,7 +99,8 @@
 .weekDay[data-today="true"] .dayHead { border-bottom-color: var(--tv-accent); }
 .weekDay[data-today="true"] .dayHead em { margin-left: auto; color: var(--tv-accent); font-style: normal; font-weight: 700; }
 .item { display: flex; flex: none; align-items: center; gap: calc(.8 * var(--u)); padding: 0 calc(1 * var(--u)); }
-.item > .one { flex: 1; min-width: 0; }
+.item > .one, .item > .pair { flex: 1; min-width: 0; }
+.pair { display: grid; gap: calc(.15 * var(--u)); line-height: 1.15; }
 .free { margin: 0; color: var(--tv-muted); }
 .bands { display: flex; flex-direction: column; height: 100%; }
 
@@ -170,7 +171,6 @@
 .chipMore { flex: none; color: var(--tv-muted); font-size: calc(1.8 * var(--u)); }
 .block.c0, .block.c1, .block.c2, .block.c3, .block.c4, .block.c5, .block.c6, .block.c7, .block.c8,
 .item.c0, .item.c1, .item.c2, .item.c3, .item.c4, .item.c5, .item.c6, .item.c7, .item.c8 {
-  border-color: color-mix(in srgb, var(--tl) 55%, var(--tv-line)); background: color-mix(in srgb, var(--tl) 24%, var(--tv-surface));
+  border-color: color-mix(in srgb, var(--tl) 60%, var(--tv-line)); background: color-mix(in srgb, var(--tl) 30%, var(--tv-surface));
 }
 .block[data-state="berlangsung"], .item[data-state="berlangsung"] { border-color: var(--tl, var(--tv-primary)); background: color-mix(in srgb, var(--tl, var(--tv-primary)) 38%, var(--tv-surface)); box-shadow: 0 0 0 calc(.3 * var(--u)) color-mix(in srgb, var(--tl, var(--tv-primary)) 35%, transparent); }
-.block[data-state="selesai"] .dot, .item[data-state="selesai"] .dot { background: var(--tv-line); }

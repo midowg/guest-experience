@@ -184,7 +184,7 @@ export function legendFor(legend: readonly TvLegendItem[], rooms: readonly TvRoo
 }
 
 /** What the legend's layout is measured in, in units: a letter's width, a chip's dot and padding, the gap between chips, a row's height. */
-export const tvLegendUnits = { letter: 1.02, chip: 4.2, gap: 2.4, row: 4.4 } as const;
+export const tvLegendUnits = { letter: 1.22, chip: 4.8, gap: 2.4, row: 4.4 } as const;
 /**
  * The legend laid out in rows that fit `width` units, at most `most` rows; what does not fit is
  * counted in `more` ("+3 lainnya"), never squeezed. A name longer than a row is cut to the row.

@@ -224,7 +224,7 @@ function hoursOf(from: number, to: number) {
   return { all, labelled: all.filter(hour => (hour - from) % step === 0), at: (hour: number) => ((hour - from) / Math.max(1, to - from)) * 100 };
 }
 /** The widest a line of hours ("11.00–12.30") is at a text size, with the block's padding, in units. */
-const HOURS_LETTERS = 6.1, BLOCK_PAD = 1.8;
+const HOURS_LETTERS = 7, BLOCK_PAD = 2.2;
 
 /** Today on a landscape TV: a card per room against the hours. Cards share the height, so every room in use is on screen. */
 function DayWide({ rooms, legend, now, time, room }: { rooms: TvRoom[]; legend: readonly TvLegendItem[]; now: number; time: string; room: Room }) {
@@ -322,14 +322,16 @@ function DayHead({ date, today, height, text }: { date: string; today: string; h
 function WeekWide({ days, legend, today, now, room }: { days: TvDay[]; legend: readonly TvLegendItem[]; today: string; now: number; room: Room }) {
   const HEADING = 6, GAP = 0.6;
   const lists = days.map(day => ({ day, entries: dayEntries(day) }));
-  const unit = fit(room.height - HEADING - 1, Math.max(...lists.map(list => list.entries.length)), 6.5);
+  const unit = fit(room.height - HEADING - 1, Math.max(...lists.map(list => list.entries.length)), 8);
   const column = room.width / days.length;
-  const text = Math.min(fitText(unit, 0.4, 2.1), fitText(column, 0.058, 2.1));
+  // With the height for it, the room goes on a line of its own under the hours, so neither is cut.
+  const stacked = unit >= 6;
+  const text = stacked ? Math.min(fitText(unit, 0.3, 2.1), fitText(column, 0.07, 2.1)) : Math.min(fitText(unit, 0.4, 2.1), fitText(column, 0.058, 2.1));
   return <div className={css.week} style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
     {lists.map(({ day, entries }) => <div key={day.date} className={css.weekDay} data-today={day.date === today}>
       <DayHead date={day.date} today={today} height={HEADING} text={fitText(column, 0.085, 2.6)} />
       {entries.length === 0 && <p className={css.free} style={{ marginTop: u(1.2), fontSize: u(2) }}>Kosong</p>}
-      {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} tone={tones[colorOf(legend, entry.title)]} now={now} height={unit - GAP} gap={GAP} text={text} />)}
+      {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} tone={tones[colorOf(legend, entry.title)]} now={now} height={unit - GAP} gap={GAP} text={text} stacked={stacked} />)}
     </div>)}
   </div>;
 }
@@ -349,12 +351,17 @@ function WeekTall({ days, legend, today, now, room }: { days: TvDay[]; legend: r
   </div>;
 }
 
-/** One entry of the week, on one line: its activity's dot, its hours and its room. The activity's name is in the legend. */
-function WeekItem({ entry, tone, now, height, gap, text }: { entry: TvDayEntry; tone: string; now: number; height: number; gap: number; text: number }) {
+/**
+ * One entry of the week: its activity's dot, its hours and its room (the activity's name is in the
+ * legend). `stacked`: the room on a line of its own under the hours; otherwise both on one line.
+ */
+function WeekItem({ entry, tone, now, height, gap, text, stacked = false }: { entry: TvDayEntry; tone: string; now: number; height: number; gap: number; text: number; stacked?: boolean }) {
   const state = entryState(entry, now);
   return <div className={`${css.item} ${tone}`} data-state={state} title={entry.title} style={{ height: u(height), marginTop: u(gap), fontSize: u(text) }}>
     <i className={css.dot} aria-hidden="true" />
-    <span className={css.one}><span className={css.title}>{span(entry)}</span><span className={css.sub}> · {entry.room}</span></span>
+    {stacked
+      ? <span className={css.pair}><span className={`${css.one} ${css.title}`}>{span(entry)}</span><span className={`${css.one} ${css.sub}`} style={{ fontSize: u(Math.max(1.25, text * 0.82)) }}>{entry.room}</span></span>
+      : <span className={css.one}><span className={css.title}>{span(entry)}</span><span className={css.sub}> · {entry.room}</span></span>}
     {state === "berlangsung" && <span className={css.on}>Kini</span>}
   </div>;
 }
