@@ -177,8 +177,9 @@ function hoursOf(from: number, to: number) {
 function DayWide({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; time: string; room: Room }) {
   const AXIS = 5, NAME = 26, GAP = 0.5;
   const hours = hourSpan(rooms), marks = hoursOf(hours.from, hours.to);
-  const row = fit(room.height - AXIS, rooms.length, 18);
+  const row = fit(room.height - AXIS, rooms.length, 26);
   const two = row >= 7;
+  const track = room.width - NAME;
   const nowPlace = nowAt(time, hours);
   // Before the hours start nothing is over; after they end all of it is.
   const gone = nowPlace ?? (decimalHour(time) > hours.to ? 100 : 0);
@@ -192,19 +193,25 @@ function DayWide({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; tim
       </div>}
       {rooms.map(item => <div key={item.id} className={css.row} style={{ height: u(row) }}>
         <div className={css.rowName} style={{ width: u(NAME) }}>
-          <strong className={css.one} style={{ fontSize: u(fitText(row, 0.3, 3.2)) }}>{item.name}</strong>
-          {two && <small className={css.one} style={{ fontSize: u(fitText(row, 0.18, 1.9)) }}>{item.entries.length} jadwal</small>}
+          <strong className={two ? css.wrap : css.one} style={{ fontSize: u(fitText(row, 0.16, 2.6)), WebkitLineClamp: 2 }}>{item.name}</strong>
+          {row >= 10 && <small className={css.one} style={{ fontSize: u(1.6) }}>{item.entries.length} jadwal</small>}
         </div>
         <div className={css.track}>
           {marks.all.slice(1, -1).map(hour => <i key={hour} style={{ left: `${marks.at(hour)}%` }} />)}
           {gone > 0 && <div className={css.gone} style={{ width: `${gone}%` }} />}
           {item.entries.map(entry => {
             const spot = place(entry, hours), state = entryState(entry, now);
+            // The block's own width decides its text: a short meeting gets small text on several lines, never a cut word.
+            const wide = (spot.size / 100) * track;
+            const text = Math.min(fitText(wide, 0.12, 2.2, 1.3), fitText(row, 0.3, 2.2, 1.3));
+            const small = Math.max(1.25, text * 0.82);
+            const on = state === "berlangsung";
+            const under = two ? (on ? 2 : 1) * small * 1.25 : 0;
+            const lines = Math.max(1, Math.floor((row - GAP * 2 - 1.4 - under) / (text * 1.2)));
             return <div key={entry.key} className={css.block} data-state={state} style={{ left: `${spot.at}%`, width: `${spot.size}%`, top: u(GAP), bottom: u(GAP) }}>
-              <span className={`${css.one} ${css.title}`} style={{ fontSize: u(fitText(row, 0.25, 2.8)) }}>{entry.title}</span>
-              {two && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(fitText(row, 0.18, 2)) }}>
-                {state === "berlangsung" && <span className={css.on}>Sedang berlangsung · </span>}{span(entry)}{entry.by ? ` · ${entry.by}` : ""}
-              </span>}
+              <span className={`${css.wrap} ${css.title}`} style={{ fontSize: u(text), WebkitLineClamp: lines }}>{entry.title}</span>
+              {two && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(small) }}>{wide >= 10 ? span(entry) : clockLabel(entry.start)}{entry.by && wide >= 26 ? ` · ${entry.by}` : ""}</span>}
+              {two && on && <span className={`${css.one} ${css.on}`} style={{ fontSize: u(small) }}>Berlangsung</span>}
             </div>;
           })}
         </div>
@@ -239,9 +246,8 @@ function DayTall({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; tim
             const spot = place(entry, hours), state = entryState(entry, now);
             return <div key={entry.key} className={css.block} data-state={state} style={{ top: `${spot.at}%`, height: `${spot.size}%`, left: u(GAP), right: u(GAP) }}>
               <span className={css.title} style={{ fontSize: u(fitText(column, 0.13, 2.6)) }}>{entry.title}</span>
-              <span className={css.sub} style={{ fontSize: u(fitText(column, 0.1, 2)) }}>
-                {state === "berlangsung" && <span className={css.on}>Sedang berlangsung · </span>}{span(entry)}{entry.by ? ` · ${entry.by}` : ""}
-              </span>
+              <span className={css.sub} style={{ fontSize: u(fitText(column, 0.1, 2)) }}>{span(entry)}{entry.by ? ` · ${entry.by}` : ""}</span>
+              {state === "berlangsung" && <span className={css.on} style={{ fontSize: u(fitText(column, 0.1, 2)) }}>Berlangsung</span>}
             </div>;
           })}
         </div>
@@ -261,15 +267,18 @@ function DayHead({ date, today, height, text }: { date: string; today: string; h
 function WeekWide({ days, today, now, room }: { days: TvDay[]; today: string; now: number; room: Room }) {
   const HEADING = 6, GAP = 0.6;
   const lists = days.map(day => ({ day, entries: dayEntries(day) }));
-  const unit = fit(room.height - HEADING - 1, Math.max(...lists.map(list => list.entries.length)), 9);
-  const two = unit >= 6;
+  const unit = fit(room.height - HEADING - 1, Math.max(...lists.map(list => list.entries.length)), 12);
   const column = room.width / days.length;
+  // Each entry: one small line (hours and room), then the title on as many lines as its height holds.
+  const small = fitText(unit, 0.21, 1.7);
+  const text = Math.min(fitText(unit, 0.25, 2.1, 1.3), fitText(column, 0.065, 2.1, 1.3));
+  const lines = Math.floor((unit - GAP - 1 - small * 1.25) / (text * 1.2));
   return <div className={css.week} style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
     {lists.map(({ day, entries }) => <div key={day.date} className={css.weekDay} data-today={day.date === today}>
       <DayHead date={day.date} today={today} height={HEADING} text={fitText(column, 0.085, 2.6)} />
       {entries.length === 0 && <p className={css.free} style={{ marginTop: u(1.2), fontSize: u(2) }}>Kosong</p>}
       {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} now={now} height={unit - GAP} gap={GAP}
-        text={fitText(unit, two ? 0.3 : 0.5, 2.5)} sub={two ? fitText(unit, 0.23, 2) : null} />)}
+        text={lines >= 1 ? text : fitText(unit, 0.5, 2.1)} sub={lines >= 1 ? small : null} lines={Math.max(1, lines)} />)}
     </div>)}
   </div>;
 }
@@ -289,18 +298,23 @@ function WeekTall({ days, today, now, room }: { days: TvDay[]; today: string; no
   </div>;
 }
 
-/** One entry of the week: two lines when there is room (time and title, then room and who), else one. */
-function WeekItem({ entry, now, height, gap, text, sub, wholeSpan = false }: { entry: TvDayEntry; now: number; height: number; gap: number; text: number; sub: number | null; wholeSpan?: boolean }) {
+/**
+ * One entry of the week. With room for it (`sub`): a small line of hours and room, then the title
+ * on up to `lines` lines, so a long title wraps instead of being cut. Without: one line of everything.
+ */
+function WeekItem({ entry, now, height, gap, text, sub, lines = 1, wholeSpan = false }: { entry: TvDayEntry; now: number; height: number; gap: number; text: number; sub: number | null; lines?: number; wholeSpan?: boolean }) {
   const state = entryState(entry, now);
-  const on = state === "berlangsung" && <span className={css.on}>Sedang berlangsung · </span>;
-  const where = `${entry.room}${entry.by ? ` · ${entry.by}` : ""}`;
+  const on = state === "berlangsung" && <span className={css.on}>Berlangsung · </span>;
+  const hours = wholeSpan ? span(entry) : clockLabel(entry.start);
   return <div className={css.item} data-state={state} style={{ height: u(height), marginTop: u(gap) }}>
-    <span className={css.one} style={{ fontSize: u(text) }}>
-      <span className={css.hour}>{wholeSpan ? span(entry) : clockLabel(entry.start)}</span>{" "}
-      <span className={css.title}>{entry.title}</span>
-      {sub == null && <span className={css.sub}> · {on}{where}</span>}
-    </span>
-    {sub != null && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(sub) }}>{on}{where}</span>}
+    {sub != null
+      ? <>
+        <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(sub) }}>{on}<span className={css.hour}>{span(entry)}</span> · {entry.room}</span>
+        <span className={`${css.wrap} ${css.title}`} style={{ fontSize: u(text), WebkitLineClamp: lines }}>{entry.title}</span>
+      </>
+      : <span className={css.one} style={{ fontSize: u(text) }}>
+        <span className={css.hour}>{hours}</span>{" "}<span className={css.title}>{entry.title}</span><span className={css.sub}> · {on}{entry.room}</span>
+      </span>}
   </div>;
 }
 

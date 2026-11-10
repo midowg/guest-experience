@@ -49,7 +49,9 @@
 .block[data-state="berlangsung"], .item[data-state="berlangsung"] { border-color: var(--tv-primary); background: var(--tv-now); }
 .block[data-state="selesai"], .item[data-state="selesai"] { opacity: .55; }
 .one { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.title { font-weight: 700; }
+/* A title on several lines: it wraps (a long word breaks) and only what is past the last line is cut. */
+.wrap { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; line-height: 1.2; overflow-wrap: anywhere; }
+.title { font-weight: 600; }
 .sub { color: var(--tv-muted); }
 .on { color: var(--tv-accent); font-weight: 700; }
 .hour { color: var(--tv-muted); font-variant-numeric: tabular-nums; }
@@ -66,7 +68,7 @@
 .track > i { position: absolute; top: 0; bottom: 0; width: 0; border-left: calc(.12 * var(--u)) solid var(--tv-line); }
 /* The part of the day that is over: a shade from the start of the hours to now. */
 .gone { position: absolute; top: 0; bottom: 0; left: 0; background: var(--pw-page); opacity: .55; }
-.block { position: absolute; z-index: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 calc(1.2 * var(--u)); }
+.block { position: absolute; z-index: 1; display: flex; flex-direction: column; justify-content: center; gap: calc(.25 * var(--u)); padding: 0 calc(.9 * var(--u)); }
 /* Over every row: only the line of now, so it runs through all the cards. */
 .over { position: absolute; top: 0; z-index: 2; pointer-events: none; }
 .nowLine { position: absolute; top: 0; bottom: 0; width: 0; border-left: calc(.35 * var(--u)) solid var(--tv-accent); }
