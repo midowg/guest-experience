@@ -272,6 +272,12 @@ export function tvScreen(width: number, height: number): TvScreen {
   const unit = Math.max(1, Math.min(width, height)) / 100;
   return { wide: width >= height, width: width / unit, height: height / unit };
 }
+/**
+ * Whether the screen is a phone's (someone scanned the QR code on a TV): its shorter side is under
+ * 600 px, which no TV or monitor is, upright or not. The board then becomes a list that scrolls.
+ */
+export const isPhoneScreen = (width: number, height: number) => width > 0 && height > 0 && Math.min(width, height) < 600;
+
 /** The size of one of `count` equal rows sharing `available` units, never more than `most` (few rows stay a sensible size). */
 export const fit = (available: number, count: number, most: number) => Math.min(most, available / Math.max(1, count));
 /** Text for a row of `unit` units: a share of it, kept between the smallest size still readable on a TV and `most`. */

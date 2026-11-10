@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
+  activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, isPhoneScreen, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
   shouldReload, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
@@ -149,6 +149,11 @@ describe("fitting a calendar to a screen", () => {
     expect(Math.round(tvScreen(1920, 1080).width)).toBe(178);
     expect(tvScreen(1080, 1920)).toMatchObject({ wide: false, width: 100 });
     expect(tvScreen(0, 0).wide).toBe(true);
+  });
+
+  it("knows a phone from a TV, upright or lying down", () => {
+    for (const [width, height] of [[390, 844], [844, 390], [360, 640], [412, 915]]) expect(isPhoneScreen(width, height), `${width}x${height}`).toBe(true);
+    for (const [width, height] of [[1920, 1080], [1080, 1920], [1366, 768], [768, 1024], [3840, 2160], [0, 0]]) expect(isPhoneScreen(width, height), `${width}x${height}`).toBe(false);
   });
 
   it("shares the room among the rows, so more rows are smaller and all fit", () => {

@@ -7,10 +7,11 @@ import QRCode from "qrcode";
 import { TV_HOME_PATH } from "@/lib/routes";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, decimalHour, entryOwner, entryState, fit, legendFor, legendItem, legendRows, shouldReload, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
+  dayEntries, decimalHour, entryOwner, entryState, fit, isPhoneScreen, legendFor, legendItem, legendRows, shouldReload, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
   type TvDay, type TvDayEntry, type TvEntry, type TvFeed, type TvLegendItem, type TvRoom,
 } from "@/lib/pra-wam/tv";
 import base from "@/components/pra-wam/pra-wam.module.css";
+import { TvPhone } from "./TvPhone";
 import css from "./tv.module.css";
 
 /** How often a TV asks for content, and how often it re-reads the clock for "now". */
@@ -47,6 +48,8 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const [now, setNow] = useState(() => Date.parse(initial.now));
   const [gone, setGone] = useState(false);
   const [index, setIndex] = useState(0);
+  /** The loop stopped by hand (a phone's Jeda): the item stays until someone moves on or starts it again. */
+  const [paused, setPaused] = useState(false);
   const [natural, setNatural] = useState<Record<string, [number, number]>>({});
   const [active, setActive] = useState(false);
   /** The server's clock minus this TV's, so a TV with a wrong clock still draws "now" in the right place. */
@@ -133,10 +136,10 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   // The loop: each item stays its own time. Keyed on the item, so a clock tick does not restart it.
   const currentKey = current?.key, currentSeconds = current?.seconds, count = items.length;
   useEffect(() => {
-    if (!currentKey || !currentSeconds || count < 2) return;
+    if (!currentKey || !currentSeconds || count < 2 || paused) return;
     const timer = window.setTimeout(() => setIndex(value => (value + 1) % count), currentSeconds * 1000);
     return () => window.clearTimeout(timer);
-  }, [currentKey, currentSeconds, count]);
+  }, [currentKey, currentSeconds, count, paused]);
 
   const time = wibTime(new Date(now).toISOString());
   const clock = clockLabel(time);
@@ -155,6 +158,13 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const dayLegend = legendRows(legendFor(legend, today), room.width);
   const weekLegend = legendRows(legendFor(legend, week.flatMap(day => day.rooms)), room.width);
   const under = (shown: Legend) => ({ width: room.width, height: room.height - legendHeight(shown) });
+
+  // A phone (someone scanned the QR code): the same content as a list that scrolls, with the loop under the reader's control.
+  if (isPhoneScreen(width, height)) {
+    return <div data-wam-look={feed.look} data-wam-theme={feed.settings.mode} style={{ display: "contents" }}><div className={base.app}>
+      <TvPhone feed={feed} now={now} clock={clock} items={items} position={position} paused={paused} gone={gone} legend={legend} onGo={setIndex} onPause={setPaused} />
+    </div></div>;
+  }
 
   // WAM's own theme (Admin WAM → Tema aplikasi), in the mode picked for the TVs: dark unless the admin chose light.
   return <div data-wam-look={feed.look} data-wam-theme={feed.settings.mode} style={{ display: "contents" }}><div className={base.app}>

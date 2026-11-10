@@ -10,7 +10,7 @@
  * board in the app's theme (data-wam-look, picked in Admin WAM → Tema aplikasi) in its night mode,
  * so the TV follows Dream Out Loud or Werkudara with the app. No colour is written here.
  */
-.board {
+.board, .phone {
   --u: 1vmin;
   --tv-bg: var(--pw-app);
   --tv-surface: var(--pw-surface);
@@ -194,3 +194,46 @@
 /* A week entry's first line: the hours, then the room in what is left of the line. */
 .line { display: flex; align-items: baseline; gap: calc(.9 * var(--u)); min-width: 0; }
 .line > .title { flex: none; }
+
+/*
+ * The board on a phone (TvPhone): a list that scrolls, in px, for someone who scanned the QR code.
+ * The same theme and the same nine colours; here every name is written out, so the colour is a dot.
+ */
+.phone { display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; font-size: 15px; line-height: 1.4; cursor: auto; }
+.phoneHead { display: flex; flex: none; align-items: flex-end; justify-content: space-between; gap: 16px; padding: max(20px, env(safe-area-inset-top)) 20px 12px; }
+.phoneHead > div { min-width: 0; }
+.phoneKicker { margin: 0 0 4px; color: var(--tv-accent); font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.phoneTitle { margin: 0; font-family: var(--tv-display); font-size: 22px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.phoneClock { flex: none; margin: 0; font-family: var(--tv-display); font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.phoneClock span { margin-left: 4px; color: var(--tv-muted); font-family: var(--pw-body); font-size: 12px; font-weight: 500; }
+.phoneTabs { position: sticky; top: 0; z-index: 2; display: flex; flex: none; gap: 8px; padding: 8px 20px; overflow-x: auto; background: var(--tv-bg); scrollbar-width: none; }
+.phoneTabs::-webkit-scrollbar { display: none; }
+.phoneTabs button { flex: none; min-height: 44px; padding: 0 16px; border: 1px solid var(--tv-line); border-radius: 999px; background: var(--tv-surface); color: var(--tv-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.phoneTabs button[aria-pressed="true"] { border-color: var(--tv-primary); background: var(--tv-primary); color: var(--tv-on-accent); }
+.phoneBody { display: grid; flex: 1; align-content: start; gap: 20px; padding: 12px 20px 24px; }
+.phoneGroup { display: grid; gap: 10px; min-width: 0; }
+.phoneGroup h2 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; font-family: var(--tv-display); font-size: 18px; font-weight: 600; }
+.phoneGroup h2 span { color: var(--tv-muted); font-family: var(--pw-body); font-size: 13px; font-weight: 400; }
+.phoneGroup h2 em { color: var(--tv-accent); font-family: var(--pw-body); font-size: 13px; font-style: normal; font-weight: 700; }
+.phoneGroup ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.phoneRow { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--tl) 55%, var(--tv-line)); border-radius: 16px; background: color-mix(in srgb, var(--tl) 14%, var(--tv-surface)); }
+.phoneRow > div { display: grid; gap: 2px; min-width: 0; }
+.phoneRow p { margin: 0; overflow-wrap: anywhere; }
+.phoneRow .dot { width: 12px; height: 12px; margin-top: 5px; }
+.phoneRow[data-state="berlangsung"] { border-color: var(--tl); background: color-mix(in srgb, var(--tl) 28%, var(--tv-surface)); }
+.phoneRow[data-state="selesai"] { opacity: .7; }
+.phoneHours { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.phoneHours span { font-size: 12px; font-weight: 700; color: var(--tv-muted); }
+.phoneHours span[data-state="berlangsung"] { color: var(--tv-accent); }
+.phoneName { font-size: 15px; font-weight: 600; }
+.phoneDetail { color: var(--tv-muted); font-size: 13px; }
+.phoneFree { margin: 0; color: var(--tv-muted); font-size: 14px; }
+.phonePicture { display: block; width: 100%; height: auto; border-radius: 16px; }
+.phoneEmpty { display: grid; gap: 8px; padding: 32px 8px; text-align: center; }
+.phoneEmpty h2 { margin: 0; font-family: var(--tv-display); font-size: 20px; font-weight: 600; }
+.phoneEmpty p { margin: 0; color: var(--tv-muted); }
+.phoneBar { position: sticky; bottom: 0; z-index: 2; display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 20px max(10px, env(safe-area-inset-bottom)); border-top: 1px solid var(--tv-line); background: var(--tv-bg); }
+.phoneBar button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 48px; min-height: 48px; padding: 0 12px; border: 1px solid var(--tv-line); border-radius: 999px; background: var(--tv-surface); color: var(--tv-text); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.phoneBar .phonePlay { flex: 1; }
+.phoneBar .phonePlay[aria-pressed="false"] { border-color: var(--tv-accent); }
+.phoneTabs button:focus-visible, .phoneBar button:focus-visible { outline: 3px solid var(--tv-accent); outline-offset: 2px; }
