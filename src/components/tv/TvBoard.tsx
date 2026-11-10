@@ -304,7 +304,8 @@ function WeekTall({ days, today, now, room }: { days: TvDay[]; today: string; no
  */
 function WeekItem({ entry, now, height, gap, text, sub, lines = 1, wholeSpan = false }: { entry: TvDayEntry; now: number; height: number; gap: number; text: number; sub: number | null; lines?: number; wholeSpan?: boolean }) {
   const state = entryState(entry, now);
-  const on = state === "berlangsung" && <span className={css.on}>Berlangsung · </span>;
+  // "Kini", not "Berlangsung": the line also has to hold the hours and the room in a narrow day column.
+  const on = state === "berlangsung" && <span className={css.on}>Kini · </span>;
   const hours = wholeSpan ? span(entry) : clockLabel(entry.start);
   return <div className={css.item} data-state={state} style={{ height: u(height), marginTop: u(gap) }}>
     {sub != null
