@@ -8,7 +8,7 @@ import { largestCapacity } from "@/lib/pra-wam/room-fit";
 import { bookingPath } from "@/lib/routes";
 import { myOfficeBookings, officeDay } from "@/lib/server/booking/bookings";
 import { memberDepartments } from "@/lib/server/pra-wam/appraisal";
-import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { requireBookingPage } from "@/lib/server/booking/session";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Beranda" };
@@ -25,7 +25,7 @@ const soon = [
  * the person's next bookings.
  */
 export default async function BookingHome() {
-  const member = await requireMemberPage(bookingPath.home);
+  const member = await requireBookingPage(bookingPath.home);
   const now = new Date();
   const today = wibDate(now.toISOString());
   const [day, mine, departments] = await Promise.all([officeDay(today, member), myOfficeBookings(member, today), memberDepartments(member.id).catch(() => [])]);

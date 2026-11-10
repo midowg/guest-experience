@@ -206,6 +206,22 @@ a.tile:hover { border-color: var(--bk-accent); background: color-mix(in srgb, va
 .roomForm { grid-column: 1 / -1; display: flex; flex-direction: column; gap: .875rem; }
 @media (max-width: 560px) { .adminRoom { grid-template-columns: auto 1fr; } .adminRoom > button { grid-column: 1 / -1; justify-self: start; } }
 
+/* Sign-in pages (Masuk, Lupa password, Buat password baru) */
+.authPage { min-height: 100dvh; padding: 2rem 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
+.authCard { width: min(26rem, 100%); padding: 1.75rem 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; border-radius: 18px; background: var(--bk-surface); border: 1px solid var(--bk-line); box-shadow: var(--bk-shadow); }
+.authHead { display: flex; flex-direction: column; align-items: center; gap: .375rem; text-align: center; }
+.authMark { width: 3.25rem; height: 3.25rem; margin-bottom: .25rem; display: grid; place-items: center; border-radius: 14px; background: var(--bk-accent); color: var(--bk-on-accent); }
+.authApp { color: var(--bk-accent); font-weight: 700; font-size: .875rem; letter-spacing: .02em; }
+.authForm { display: flex; flex-direction: column; gap: 1rem; }
+.authForm > .btn { width: 100%; }
+.authLink { align-self: center; min-height: 44px; display: inline-flex; align-items: center; gap: .375rem; font-weight: 600; font-size: .9375rem; text-decoration: none; }
+.authFoot { color: var(--bk-soft); font-size: .8125rem; }
+.secret { display: flex; gap: .5rem; }
+.secret .control { flex: 1; }
+.rules { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .25rem; color: var(--bk-soft); font-size: .875rem; }
+.rules li { display: flex; align-items: center; gap: .5rem; }
+.ruleOk { color: var(--bk-free); font-weight: 600; }
+
 /* Notices */
 .note { padding: .875rem 1rem; border-radius: var(--bk-radius-sm); background: var(--bk-accent-soft); color: var(--bk-ink); display: flex; gap: .625rem; align-items: flex-start; }
 .noteOk { composes: note; background: var(--bk-free-soft); }

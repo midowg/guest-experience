@@ -5,7 +5,7 @@ import css from "@/components/booking/booking.module.css";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import { bookingPath } from "@/lib/routes";
 import { officeRange } from "@/lib/server/booking/bookings";
-import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { requireBookingPage } from "@/lib/server/booking/session";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Semua booking" };
@@ -26,7 +26,7 @@ const shift = (date: string, days: number) => {
  */
 export default async function AllBookings({ searchParams }: { searchParams: Promise<Filters> }) {
   const filters = await searchParams;
-  const member = await requireMemberPage(bookingPath.manageBookings(filters));
+  const member = await requireBookingPage(bookingPath.manageBookings(filters));
   const today = wibDate(new Date().toISOString());
   const from = filters.dari && DAY.test(filters.dari) ? filters.dari : today;
   const wanted = filters.sampai && DAY.test(filters.sampai) && filters.sampai >= from ? filters.sampai : shift(from, 13);

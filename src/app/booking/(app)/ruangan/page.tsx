@@ -4,7 +4,7 @@ import { wibDate } from "@/lib/pra-wam/appraisal";
 import { bookingPath } from "@/lib/routes";
 import { officeBookingToEdit, officeDay } from "@/lib/server/booking/bookings";
 import { listPeople, memberDepartments } from "@/lib/server/pra-wam/appraisal";
-import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { requireBookingPage } from "@/lib/server/booking/session";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Ruangan" };
@@ -17,7 +17,7 @@ type Search = { date?: string; new?: string; edit?: string; start?: string; meni
  */
 export default async function BookingRooms({ searchParams }: { searchParams: Promise<Search> }) {
   const search = await searchParams;
-  const member = await requireMemberPage(bookingPath.rooms(search));
+  const member = await requireBookingPage(bookingPath.rooms(search));
   const now = new Date();
   const today = wibDate(now.toISOString());
   const editing = search.edit && /^[0-9a-f-]{36}$/.test(search.edit) ? await officeBookingToEdit(search.edit, member).catch(() => undefined) : undefined;

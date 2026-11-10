@@ -6,14 +6,14 @@ import { wibDate } from "@/lib/pra-wam/appraisal";
 import { bookingPath } from "@/lib/routes";
 import { myOfficeBookings } from "@/lib/server/booking/bookings";
 import { listRooms } from "@/lib/server/pra-wam/appraisal";
-import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { requireBookingPage } from "@/lib/server/booking/session";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Booking saya" };
 
 /** Booking saya: what the person booked or is invited to, from today on, from this app and from WAM. */
 export default async function MyBookingsPage() {
-  const member = await requireMemberPage(bookingPath.mine);
+  const member = await requireBookingPage(bookingPath.mine);
   const [bookings, rooms] = await Promise.all([myOfficeBookings(member, wibDate(new Date().toISOString())), listRooms()]);
   return <>
     <div className={css.head}>

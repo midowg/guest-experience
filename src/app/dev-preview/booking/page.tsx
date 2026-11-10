@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { BookingFrame } from "@/components/booking/BookingFrame";
 import { AccessAdmin } from "@/components/booking/AccessAdmin";
+import { BookingForgot, BookingLogin, BookingNewPassword } from "@/components/booking/BookingAuth";
+import css from "@/components/booking/booking.module.css";
 import { AdminSchedule } from "@/components/booking/AdminSchedule";
 import { BookingList } from "@/components/booking/BookingList";
 import { RoomsAdmin } from "@/components/booking/RoomsAdmin";
@@ -23,7 +25,8 @@ const people = [me, { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", name: "Pak Ram
 /**
  * Layout check for Booking Kantor with sample rooms and bookings, no sign-in. ?tampilan= daftar
  * (Kelola → Semua booking), kelola (Ringkasan & jadwal), ruangan (Kelola → Ruangan), akses (Kelola → Akses).
- * The Kelola tabs link to the real pages, which need a sign-in.
+ * masuk, lupa, password (the sign-in pages, without signing anyone out). The Kelola tabs link to the
+ * real pages, which need a sign-in.
  */
 export default async function DevBookingPage({ searchParams }: { searchParams: Promise<{ tampilan?: string; new?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
@@ -40,6 +43,9 @@ export default async function DevBookingPage({ searchParams }: { searchParams: P
     booking("d3", rooms[1].id, "Appraisal 1-on-1", at("08:00", "21:30"), people[2], { source: "wam" }),
     booking("d4", rooms[2].id, "Forum Pra WAM", at("10:00", "12:00"), people[1], { source: "wam", isSession: true, participants: null }),
   ];
+  if (search.tampilan === "masuk") return <div className={css.app}><BookingLogin next={null} /></div>;
+  if (search.tampilan === "lupa") return <div className={css.app}><BookingForgot /></div>;
+  if (search.tampilan === "password") return <div className={css.app}><BookingNewPassword next="/booking" /></div>;
   return <BookingFrame name={me.name} canManage>
     {search.tampilan === "daftar"
       ? <><h1>Kelola booking</h1><BookingList manage bookings={bookings} rooms={rooms} empty="Tidak ada booking." /></>

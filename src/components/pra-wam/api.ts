@@ -1,4 +1,4 @@
-import { praWamApi, praWamPath } from "@/lib/routes";
+import { bookingPath, praWamApi, praWamPath } from "@/lib/routes";
 
 export type Conflict = { kind: "room" | "participants"; sameRoom?: { start: string; end: string }[]; otherRooms?: string[]; people?: string[] };
 
@@ -22,9 +22,11 @@ export async function praWamRequest<T>(url: string, init: RequestInit & { json?:
   try { result = await response.json(); } catch { throw new PraWamApiError("Server belum dapat memberikan jawaban. Coba lagi sebentar.", response.status); }
   // A 401 from signing in or from an emailed link means a wrong password or an old link: the form
   // shows the message. From anywhere else it means the session ended.
-  const signingIn = url === praWamApi.login || url === praWamApi.resetPassword;
+  const signingIn = url === praWamApi.login || url === praWamApi.resetPassword || url === praWamApi.password;
   if (response.status === 401 && !signingIn && typeof window !== "undefined") {
-    window.location.assign(praWamPath.login(`${window.location.pathname}${window.location.search}`));
+    // Booking Kantor (/booking) signs in on its own page with the same account (11 Nov 2026).
+    const here = `${window.location.pathname}${window.location.search}`;
+    window.location.assign(window.location.pathname.startsWith(bookingPath.home) ? bookingPath.login(here) : praWamPath.login(here));
   }
   if (!response.ok || !result.ok) throw new PraWamApiError(result.message || "Permintaan gagal. Coba lagi.", response.status, result.fieldErrors, result.conflict);
   return { data: result.data as T, message: result.message ?? "" };

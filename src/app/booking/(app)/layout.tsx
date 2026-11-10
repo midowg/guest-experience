@@ -5,7 +5,7 @@ import { currentMember } from "@/lib/server/pra-wam/session";
 
 /**
  * Every Booking Kantor page shares one frame. The pages check the sign-in themselves
- * (requireMemberPage sends a stranger to the WAM sign-in and back); with no one signed in there is
+ * (requireBookingPage sends a stranger to Booking Kantor's own sign-in and back); with no one signed in there is
  * no frame to draw.
  */
 export default async function BookingAppLayout({ children }: { children: ReactNode }) {

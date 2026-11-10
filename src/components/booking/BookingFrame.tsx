@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { CalendarCheck, CalendarClock, DoorOpen, Home, LogOut, Settings2 } from "lucide-react";
 import { praWamRequest } from "@/components/pra-wam/api";
-import { bookingPath, praWamApi, praWamPath } from "@/lib/routes";
+import { bookingPath, praWamApi } from "@/lib/routes";
 import css from "./booking.module.css";
 
 /** "Dita Contoh" → "DC", for the round mark beside the name. */
@@ -33,7 +33,7 @@ export function BookingFrame({ name, canManage, children }: { name: string; canM
         <button type="button" className={css.out} disabled={leaving} aria-label="Keluar" onClick={async () => {
           setLeaving(true);
           try { await praWamRequest(praWamApi.logout, { method: "POST" }); } catch { /* the cookie may already be gone */ }
-          window.location.assign(praWamPath.login(bookingPath.home));
+          window.location.assign(bookingPath.login());
         }}><LogOut size={20} aria-hidden /></button>
       </div>
     </div></header>
