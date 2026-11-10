@@ -80,6 +80,11 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 
 - Peran aplikasi: **peserta** (semua akun), **panitia**, **BOD**, **admin** (Admin WAM). HOD dan lead
   BU berasal dari Struktur, bukan peran.
+- **Email login = email di Data karyawan** (10 Nov 2026). Satu database: email yang diubah admin
+  (Akun) atau super admin (Data karyawan) langsung ikut ke akun login. Login juga mencari akun lewat
+  email Data karyawan, jadi orang tetap bisa masuk walau email akun loginnya masih yang lama, dan
+  sesudah password benar email akun login ikut disamakan (`signInAddress`). Nama panggilan tidak
+  dipakai untuk login.
 - Hak akses selalu diperiksa di server. Tampilan hanya menyembunyikan; server tetap menolak.
 - Admin WAM (`/admin/wam`) dibagi dua (8 Nov 2026): **tim CoE** mengatur akun dan Panitia, acara dan
   modul, Apa itu WAM, ruang dan denah, serta Akses MCP; **HR** khusus data kuesioner (Kuesioner:

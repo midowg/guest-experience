@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { praWamPath } from "@/lib/routes";
 import { photoColumnMissing, photoPath } from "@/lib/pra-wam/photo";
+import { escapeLike } from "@/lib/pra-wam/reset-requests";
 import { praWamRoles, type PraWamRole } from "@/lib/pra-wam/roles";
 import { PRA_WAM_COOKIE, PRA_WAM_SESSION_TTL_SECONDS, praWamSecret, signPraWamSession, verifyPraWamSession } from "@/lib/pra-wam/session-token";
 import { ServiceError } from "../config";
@@ -85,13 +86,38 @@ export function asksNewPassword(account: { must_change_password: boolean; last_l
   return !!account.password_changed_at && Date.parse(account.last_login_at) < Date.parse(account.password_changed_at);
 }
 
+/**
+ * The address Supabase Auth knows for an email typed at sign-in (10 Nov 2026). Data karyawan's
+ * email is the one people know and the one admins and super admins change (one database); when the
+ * person's login account still holds an older address, sign-in goes by Data karyawan's, and
+ * `follow` names the account to bring in step once the password is right. An email Data karyawan
+ * does not know (or knows twice) is used as typed.
+ */
+export async function signInAddress(typed: string): Promise<{ address: string; follow: string | null }> {
+  const asTyped = { address: typed, follow: null };
+  if (!typed || /[*,()]/.test(typed)) return asTyped;
+  const client = createPrivilegedClient();
+  const { data: people, error } = await client.from("employees").select("id").ilike("email", escapeLike(typed)).limit(2);
+  if (error || people?.length !== 1) return asTyped;
+  const { data: account } = await client.from("pw_accounts").select("auth_user_id").eq("employee_id", people[0].id).maybeSingle();
+  if (!account?.auth_user_id) return asTyped;
+  const { data: user } = await client.auth.admin.getUserById(account.auth_user_id);
+  const current = user?.user?.email?.trim().toLowerCase();
+  if (!current || current === typed) return asTyped;
+  return { address: current, follow: account.auth_user_id };
+}
+
 export async function signIn(email: string, password: string): Promise<{ mustChangePassword: boolean; askNewPassword: boolean }> {
   const secret = praWamSecret();
   if (!secret) throw notReady();
   const wrong = new ServiceError(401, "Email atau password tidak cocok. Periksa lalu coba lagi.");
-  const { data: auth, error: authError } = await createPublicClient().auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+  const typed = email.trim().toLowerCase();
+  const { address, follow } = await signInAddress(typed).catch(() => ({ address: typed, follow: null }));
+  const { data: auth, error: authError } = await createPublicClient().auth.signInWithPassword({ email: address, password });
   if (authError || !auth.user) throw wrong;
   const client = createPrivilegedClient();
+  // The login account takes Data karyawan's email, so the two agree again (best effort; sign-in goes on).
+  if (follow && follow === auth.user.id) await client.auth.admin.updateUserById(follow, { email: typed, email_confirm: true }).catch(() => null);
   const { data, error } = await client.from("pw_accounts").select("employee_id,session_version,active,must_change_password,last_login_at,password_changed_at").eq("auth_user_id", auth.user.id).maybeSingle();
   if (error) { if (notMigrated(error)) throw waitingForMigration(); databaseError(error); }
   if (!data || !data.active) throw wrong;
