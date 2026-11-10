@@ -23,12 +23,13 @@ const many = (date: string): TvRoom[] => Array.from({ length: 14 }, (_, room) =>
 
 /**
  * Layout check for the TV board without a TV key or the database: ?isi=banyak for a full day and
- * week (14 rooms), ?isi=kosong for no room in use, ?isi=gambar for pictures only. The clock is
+ * week (14 rooms), ?isi=kosong for no room in use, ?isi=gambar for pictures only, and
+ * ?tema=werkudara for the Werkudara theme (Dream Out Loud otherwise). The clock is
  * fixed at 10.15 WIB on Tuesday 10 Nov 2026, so the "now" line and "Sedang berlangsung" show.
  */
-export default async function DevTvPage({ searchParams }: { searchParams: Promise<{ isi?: string }> }) {
+export default async function DevTvPage({ searchParams }: { searchParams: Promise<{ isi?: string; tema?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { isi } = await searchParams;
+  const { isi, tema } = await searchParams;
   const days: TvDay[] = weekOf(DATE).map((date, index) => ({ date, rooms: isi === "kosong" || index > 4 ? [] : isi === "banyak" ? many(date) : few(date, index === 1 ? 2 : index) }));
   const feed: TvFeed = {
     now: at(DATE, "10:15"), date: DATE, days,
@@ -37,6 +38,7 @@ export default async function DevTvPage({ searchParams }: { searchParams: Promis
       { id: "s2", title: "Poster tegak", seconds: 5, src: poster("Tegak 4:5", 1080, 1350, "#7a4b00") },
     ],
     settings: { showDay: isi !== "gambar", daySeconds: 8, showWeek: isi !== "gambar", weekSeconds: 8 },
+    look: tema === "werkudara" ? "werkudara" : "dream",
   };
   return <TvBoard initial={feed} />;
 }

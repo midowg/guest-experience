@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  agoLabel, dayEntries, entryState, fit, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
+  agoLabel, dayEntries, entryState, fit, fitText, hourSpan, imageFit, loopCount, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
   tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
@@ -105,6 +105,13 @@ describe("the loop", () => {
     const items = playlist(settings, slides);
     expect(items.map(item => [item.kind, item.seconds])).toEqual([["hari", 20], ["minggu", 30], ["gambar", 8], ["gambar", 12]]);
     expect(new Set(items.map(item => item.key)).size).toBe(items.length);
+  });
+
+  it("counts what the loop plays, so a single item needs no duration", () => {
+    expect(loopCount(settings, 2)).toBe(4);
+    expect(loopCount({ ...settings, showWeek: false }, 0)).toBe(1);
+    expect(loopCount({ ...settings, showDay: false, showWeek: false }, 1)).toBe(1);
+    expect(loopCount({ ...settings, showDay: false, showWeek: false }, 0)).toBe(0);
   });
 
   it("leaves out a calendar that is off, and plays nothing when all is off", () => {

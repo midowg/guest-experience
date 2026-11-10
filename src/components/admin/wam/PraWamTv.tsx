@@ -8,7 +8,7 @@ import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { fitWithin } from "@/lib/gallery";
-import { agoLabel, tvIsOn, tvLimits, type TvSettings } from "@/lib/pra-wam/tv";
+import { agoLabel, loopCount, tvIsOn, tvLimits, type TvSettings } from "@/lib/pra-wam/tv";
 import { absolute, praWamTvApi, wamAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminSlide, TvScreen } from "@/lib/server/pra-wam/tv";
 import akun from "./akun/akun.module.css";
@@ -136,6 +136,8 @@ export function PraWamTv({ initial, crumbs, title }: { initial: TvAdmin; crumbs:
   const createdUrl = created && typeof window !== "undefined" ? absolute(window.location.origin, created.path) : "";
   const settingsChanged = calendars.some(calendar => settings[calendar.show] !== list.settings[calendar.show] || settings[calendar.seconds] !== list.settings[calendar.seconds]);
   const shown = list.slides.filter(slide => slide.active).length;
+  // With a single thing on the loop nothing ever changes on screen, so no duration is asked for.
+  const rotates = loopCount(settings, shown) > 1;
   return <>
     {confirmDialog}
     <PageHeader crumbs={crumbs} title={title}
@@ -202,11 +204,11 @@ export function PraWamTv({ initial, crumbs, title }: { initial: TvAdmin; crumbs:
                 <p className={css.meta}>Urutan {index + 1}</p>
               </div>
               <div className={css.slideTools}>
-                <label>Durasi
+                {rotates && <label>Durasi
                   <select className="select" value={slide.seconds} disabled={!!busy} aria-label={`Durasi ${label}`} onChange={change => void patchSlide(slide, { seconds: Number(change.target.value) })}>
                     {seconds.map(value => <option key={value} value={value}>{value} detik</option>)}
                   </select>
-                </label>
+                </label>}
                 <ConsoleButton className={css.iconButton} disabled={!!busy || index === 0} aria-label={`Naikkan ${label}`} onClick={() => void move(index, -1)}><ArrowUp size={18} aria-hidden /></ConsoleButton>
                 <ConsoleButton className={css.iconButton} disabled={!!busy || index === list.slides.length - 1} aria-label={`Turunkan ${label}`} onClick={() => void move(index, 1)}><ArrowDown size={18} aria-hidden /></ConsoleButton>
                 <ConsoleButton disabled={!!busy} onClick={() => void patchSlide(slide, { active: !slide.active })}>{slide.active ? "Sembunyikan" : "Tayangkan"}</ConsoleButton>
@@ -224,13 +226,14 @@ export function PraWamTv({ initial, crumbs, title }: { initial: TvAdmin; crumbs:
               <input type="checkbox" checked={settings[calendar.show]} disabled={!!busy} onChange={change => setSettings(value => ({ ...value, [calendar.show]: change.target.checked }))} />
               {calendar.label}
             </label>
-            <div className="field">
+            {rotates && <div className="field">
               <label htmlFor={`tv-${calendar.seconds}`}>Durasi</label>
               <select id={`tv-${calendar.seconds}`} className="select" value={settings[calendar.seconds]} disabled={!!busy || !settings[calendar.show]} onChange={change => setSettings(value => ({ ...value, [calendar.seconds]: Number(change.target.value) }))}>
                 {(SCHEDULE_SECONDS.includes(settings[calendar.seconds]) ? SCHEDULE_SECONDS : [...SCHEDULE_SECONDS, settings[calendar.seconds]].sort((a, b) => a - b)).map(value => <option key={value} value={value}>{value} detik</option>)}
               </select>
-            </div>
+            </div>}
           </div>)}
+          {!rotates && <p className={akun.hint}>Hanya satu yang ditayangkan, jadi tampil terus tanpa berganti. Durasi muncul lagi begitu ada lebih dari satu tayangan.</p>}
           <p className={akun.hint}>Yang tampil: nama kegiatan, ruang, jam, dan pemesan. Semua jadwal muat satu layar; makin banyak isinya, makin kecil barisnya.</p>
           <div className={css.buttons}>
             <ConsoleButton type="submit" variant="secondary" disabled={!!busy || !settingsChanged}>{busy === "pengaturan" ? "Menyimpan…" : "Simpan pengaturan"}</ConsoleButton>

@@ -9,8 +9,10 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { isR2Configured, presignUpload, readObject, removeObjects, verifyUpload } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
+import type { WamLook } from "@/lib/pra-wam/theme";
 import { listRooms } from "./appraisal";
 import { roomUsesBetween } from "./sessions";
+import { readWamLook } from "./theme";
 
 /*
  * TV Announcement (migration 202611100003): the office TVs, the pictures they play and the
@@ -216,24 +218,24 @@ async function weekDays(dates: readonly string[]): Promise<TvDay[]> {
  * within the ten seconds).
  */
 const FRESH_MS = 10_000;
-type Content = { date: string; days: TvDay[]; slides: SlideRow[]; settings: TvSettings };
+type Content = { date: string; days: TvDay[]; slides: SlideRow[]; settings: TvSettings; look: WamLook };
 let kept: { at: number; content: Content } | null = null;
 const invalidate = () => { kept = null; };
 
 async function content(now: Date): Promise<Content> {
   const date = wibDate(now.toISOString());
   if (kept && kept.content.date === date && now.getTime() - kept.at < FRESH_MS) return kept.content;
-  const [days, slides, settings] = await Promise.all([weekDays(weekOf(date)), readSlides(), readSettings()]);
-  const fresh = { date, days, slides: slides.filter(slide => slide.active), settings };
+  const [days, slides, settings, look] = await Promise.all([weekDays(weekOf(date)), readSlides(), readSettings(), readWamLook()]);
+  const fresh = { date, days, slides: slides.filter(slide => slide.active), settings, look };
   kept = { at: now.getTime(), content: fresh };
   return fresh;
 }
 
 /** What plays now; `imageSrc` gives each picture's address (a TV's goes through its key, the admin's through the admin API). */
 export async function tvFeed(imageSrc: (slideId: string) => string, now = new Date()): Promise<TvFeed> {
-  const { date, days, slides, settings } = await content(now);
+  const { date, days, slides, settings, look } = await content(now);
   return {
-    now: now.toISOString(), date, days, settings,
+    now: now.toISOString(), date, days, settings, look,
     slides: slides.map(slide => ({ id: slide.id, title: slide.title, seconds: slide.seconds, src: imageSrc(slide.id) })),
   };
 }

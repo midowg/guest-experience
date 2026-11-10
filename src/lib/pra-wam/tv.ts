@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { WamLook } from "./theme";
 
 /*
  * TV Announcement (Admin WAM → TV Announcement, 10 Nov 2026): what an office TV plays. Every TV
@@ -20,7 +21,11 @@ export type TvSettings = { showDay: boolean; daySeconds: number; showWeek: boole
  * `days` is the week of `date`, Monday to Sunday. `now` is the server's clock, so a TV whose own
  * clock is wrong still draws "now" in the right place.
  */
-export type TvFeed = { now: string; date: string; days: TvDay[]; slides: TvSlide[]; settings: TvSettings };
+export type TvFeed = {
+  now: string; date: string; days: TvDay[]; slides: TvSlide[]; settings: TvSettings;
+  /** The WAM theme picked in Admin WAM → Tema aplikasi; the board paints with its night colours. */
+  look: WamLook;
+};
 
 export const TV_DEFAULT_SETTINGS: TvSettings = { showDay: true, daySeconds: 20, showWeek: true, weekSeconds: 20 };
 export const tvLimits = {
@@ -138,6 +143,12 @@ export type TvItem =
   | { key: string; kind: "hari"; seconds: number }
   | { key: string; kind: "minggu"; seconds: number }
   | { key: string; kind: "gambar"; slide: TvSlide; seconds: number };
+
+/**
+ * How many things the loop plays: with one (or none) nothing ever changes on screen, so a
+ * duration means nothing and the admin page does not ask for one.
+ */
+export const loopCount = (settings: TvSettings, activeSlides: number) => Number(settings.showDay) + Number(settings.showWeek) + activeSlides;
 
 /** What plays, in order: today's calendar, the week's, then the pictures. Empty when both calendars are off and there is no picture. */
 export function playlist(settings: TvSettings, slides: readonly TvSlide[]): TvItem[] {

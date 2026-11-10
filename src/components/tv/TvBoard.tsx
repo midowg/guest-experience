@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactN
 import { Maximize } from "lucide-react";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, entryState, fit, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
+  dayEntries, decimalHour, entryState, fit, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
   type TvDay, type TvDayEntry, type TvEntry, type TvFeed, type TvRoom,
 } from "@/lib/pra-wam/tv";
+import base from "@/components/pra-wam/pra-wam.module.css";
 import css from "./tv.module.css";
 
 /** How often a TV asks for content, and how often it re-reads the clock for "now". */
@@ -116,16 +117,23 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   /** The room a calendar has below the head, in units. */
   const room = { width: screen.width - PAD_X * 2, height: screen.height - HEAD - PAD_BOTTOM };
 
-  return <main className={css.board} data-idle={!active} data-orientation={screen.wide ? "mendatar" : "tegak"}>
+  const entriesToday = today.flatMap(item => item.entries);
+  const onNow = entriesToday.filter(entry => entryState(entry, now) === "berlangsung").length;
+  const dayNote = [`${today.length} ruang dipakai`, `${entriesToday.length} jadwal`, ...(onNow ? [`${onNow} sedang berlangsung`] : [])].join(" · ");
+  const weekCount = week.reduce((sum, day) => sum + day.rooms.reduce((count, item) => count + item.entries.length, 0), 0);
+
+  // WAM's own theme (Admin WAM → Tema aplikasi), always in its night mode: a TV is a lit screen in a room.
+  return <div data-wam-look={feed.look} data-wam-theme="dark" style={{ display: "contents" }}><div className={base.app}>
+  <main className={css.board} data-idle={!active} data-orientation={screen.wide ? "mendatar" : "tegak"}>
     {gone ? <div className={css.slide}><Message title="Tautan TV ini sudah tidak berlaku" body="Minta tautan baru di Admin WAM → TV Announcement." /></div>
       : !current ? <div className={css.slide}><Message title="Belum ada yang ditayangkan" body="Tambahkan gambar atau nyalakan jadwal ruang di Admin WAM → TV Announcement." /></div>
       : current.kind === "hari"
-        ? <Schedule key={current.key} kicker="Jadwal ruang hari ini" title={tvDateLabel(feed.date)} clock={clock}>
+        ? <Schedule key={current.key} kicker="Jadwal ruang hari ini" title={tvDateLabel(feed.date)} note={today.length ? dayNote : undefined} clock={clock}>
           {today.length === 0 ? <Message title="Belum ada ruang yang dipakai hari ini" body="Booking baru muncul di sini dengan sendirinya." />
             : screen.wide ? <DayWide rooms={today} now={now} time={time} room={room} /> : <DayTall rooms={today} now={now} time={time} room={room} />}
         </Schedule>
         : current.kind === "minggu"
-          ? <Schedule key={current.key} kicker="Jadwal ruang minggu ini" title={tvWeekLabel(week.map(day => day.date))} clock={clock}>
+          ? <Schedule key={current.key} kicker="Jadwal ruang minggu ini" title={tvWeekLabel(week.map(day => day.date))} note={weekCount ? `${weekCount} jadwal minggu ini` : undefined} clock={clock}>
             {week.every(day => day.rooms.length === 0) ? <Message title="Belum ada ruang yang dipakai minggu ini" body="Booking baru muncul di sini dengan sendirinya." />
               : screen.wide ? <WeekWide days={week} today={feed.date} now={now} room={room} /> : <WeekTall days={week} today={feed.date} now={now} room={room} />}
           </Schedule>
@@ -142,13 +150,14 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
     {active && !fullscreen && <button type="button" className={css.full} onClick={() => void document.documentElement.requestFullscreen?.().catch(() => undefined)}>
       <Maximize size={20} aria-hidden="true" />Layar penuh
     </button>}
-  </main>;
+  </main>
+  </div></div>;
 }
 
-function Schedule({ kicker, title, clock, children }: { kicker: string; title: string; clock: string; children: ReactNode }) {
+function Schedule({ kicker, title, note, clock, children }: { kicker: string; title: string; note?: string; clock: string; children: ReactNode }) {
   return <section className={`${css.slide} ${css.schedule}`} aria-label={kicker}>
     <header className={css.head}>
-      <div className={css.headText}><p className={css.kicker}>{kicker}</p><h1 className={css.date}>{title}</h1></div>
+      <div className={css.headText}><p className={css.kicker}>{kicker}</p><h1 className={css.date}>{title}</h1>{note && <p className={css.summary}>{note}</p>}</div>
       <p className={css.clock}>{clock}<span>WIB</span></p>
     </header>
     <div className={css.body}>{children}</div>
@@ -166,28 +175,34 @@ function hoursOf(from: number, to: number) {
 
 /** Today on a landscape TV: a row per room against the hours. Rows share the height, so every room in use is on screen. */
 function DayWide({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; time: string; room: Room }) {
-  const AXIS = 5, NAME = 24;
+  const AXIS = 5, NAME = 26, GAP = 0.5;
   const hours = hourSpan(rooms), marks = hoursOf(hours.from, hours.to);
-  const row = fit(room.height - AXIS, rooms.length, 16);
+  const row = fit(room.height - AXIS, rooms.length, 18);
   const two = row >= 7;
   const nowPlace = nowAt(time, hours);
+  // Before the hours start nothing is over; after they end all of it is.
+  const gone = nowPlace ?? (decimalHour(time) > hours.to ? 100 : 0);
   return <>
     <div className={css.axis} style={{ left: u(NAME), height: u(AXIS) }}>
       {marks.labelled.map(hour => <span key={hour} className={css.hour} style={{ left: `${marks.at(hour)}%` }}>{pad(hour)}</span>)}
     </div>
     <div className={css.rows} style={{ top: u(AXIS) }}>
-      <div className={css.grid} style={{ left: u(NAME), right: 0, height: u(row * rooms.length) }}>
-        {marks.all.map(hour => <i key={hour} style={{ left: `${marks.at(hour)}%` }} />)}
-        {nowPlace != null && <div className={css.nowLine} style={{ left: `${nowPlace}%` }}><b>{clockLabel(time)}</b></div>}
-      </div>
+      {nowPlace != null && <div className={css.over} style={{ left: u(NAME), right: 0, height: u(row * rooms.length) }}>
+        <div className={css.nowLine} style={{ left: `${nowPlace}%` }}><b>{clockLabel(time)}</b></div>
+      </div>}
       {rooms.map(item => <div key={item.id} className={css.row} style={{ height: u(row) }}>
-        <div className={css.rowName} style={{ width: u(NAME), fontSize: u(fitText(row, 0.3, 3.2)) }}><span className={css.one}>{item.name}</span></div>
+        <div className={css.rowName} style={{ width: u(NAME) }}>
+          <strong className={css.one} style={{ fontSize: u(fitText(row, 0.3, 3.2)) }}>{item.name}</strong>
+          {two && <small className={css.one} style={{ fontSize: u(fitText(row, 0.18, 1.9)) }}>{item.entries.length} jadwal</small>}
+        </div>
         <div className={css.track}>
+          {marks.all.slice(1, -1).map(hour => <i key={hour} style={{ left: `${marks.at(hour)}%` }} />)}
+          {gone > 0 && <div className={css.gone} style={{ width: `${gone}%` }} />}
           {item.entries.map(entry => {
             const spot = place(entry, hours), state = entryState(entry, now);
-            return <div key={entry.key} className={css.block} data-state={state} style={{ left: `${spot.at}%`, width: `${spot.size}%`, top: u(0.3), bottom: u(0.3) }}>
-              <span className={`${css.one} ${css.title}`} style={{ fontSize: u(fitText(row, 0.27, 2.8)) }}>{entry.title}</span>
-              {two && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(fitText(row, 0.2, 2)) }}>
+            return <div key={entry.key} className={css.block} data-state={state} style={{ left: `${spot.at}%`, width: `${spot.size}%`, top: u(GAP), bottom: u(GAP) }}>
+              <span className={`${css.one} ${css.title}`} style={{ fontSize: u(fitText(row, 0.25, 2.8)) }}>{entry.title}</span>
+              {two && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(fitText(row, 0.18, 2)) }}>
                 {state === "berlangsung" && <span className={css.on}>Sedang berlangsung · </span>}{span(entry)}{entry.by ? ` · ${entry.by}` : ""}
               </span>}
             </div>;
@@ -200,10 +215,11 @@ function DayWide({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; tim
 
 /** Today on a portrait TV: a column per room, the hours running down. Columns share the width. */
 function DayTall({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; time: string; room: Room }) {
-  const SIDE = 9, TOP = 7;
+  const SIDE = 9, TOP = 7, GAP = 0.4;
   const hours = hourSpan(rooms), marks = hoursOf(hours.from, hours.to);
   const column = fit(room.width - SIDE, rooms.length, 40);
   const nowPlace = nowAt(time, hours);
+  const gone = nowPlace ?? (decimalHour(time) > hours.to ? 100 : 0);
   return <>
     <div className={css.cols} style={{ left: u(SIDE), height: u(TOP) }}>
       {rooms.map(item => <div key={item.id} className={css.colName} style={{ width: u(column), fontSize: u(fitText(column, 0.15, 2.6)) }}>{item.name}</div>)}
@@ -211,21 +227,24 @@ function DayTall({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; tim
     <div className={css.side} style={{ top: u(TOP), width: u(SIDE) }}>
       {marks.labelled.map(hour => <span key={hour} className={css.hour} style={{ top: `${marks.at(hour)}%` }}>{pad(hour)}</span>)}
     </div>
-    <div className={css.gridDown} style={{ top: u(TOP), left: u(SIDE) }}>
-      {marks.all.map(hour => <i key={hour} style={{ top: `${marks.at(hour)}%` }} />)}
-      {nowPlace != null && <div className={css.nowBar} style={{ top: `${nowPlace}%`, left: 0 }}><b>{clockLabel(time)}</b></div>}
-    </div>
+    {nowPlace != null && <div className={css.overDown} style={{ top: u(TOP), left: u(SIDE) }}>
+      <div className={css.nowBar} style={{ top: `${nowPlace}%` }}><b>{clockLabel(time)}</b></div>
+    </div>}
     <div className={css.down} style={{ top: u(TOP), left: u(SIDE) }}>
       {rooms.map(item => <div key={item.id} className={css.lane} style={{ width: u(column) }}>
-        {item.entries.map(entry => {
-          const spot = place(entry, hours), state = entryState(entry, now);
-          return <div key={entry.key} className={css.block} data-state={state} style={{ top: `${spot.at}%`, height: `${spot.size}%`, left: u(0.3), right: u(0.3) }}>
-            <span className={css.title} style={{ fontSize: u(fitText(column, 0.13, 2.6)) }}>{entry.title}</span>
-            <span className={css.sub} style={{ fontSize: u(fitText(column, 0.1, 2)) }}>
-              {state === "berlangsung" && <span className={css.on}>Sedang berlangsung · </span>}{span(entry)}{entry.by ? ` · ${entry.by}` : ""}
-            </span>
-          </div>;
-        })}
+        <div className={css.laneTrack}>
+          {marks.all.slice(1, -1).map(hour => <i key={hour} style={{ top: `${marks.at(hour)}%` }} />)}
+          {gone > 0 && <div className={css.goneDown} style={{ height: `${gone}%` }} />}
+          {item.entries.map(entry => {
+            const spot = place(entry, hours), state = entryState(entry, now);
+            return <div key={entry.key} className={css.block} data-state={state} style={{ top: `${spot.at}%`, height: `${spot.size}%`, left: u(GAP), right: u(GAP) }}>
+              <span className={css.title} style={{ fontSize: u(fitText(column, 0.13, 2.6)) }}>{entry.title}</span>
+              <span className={css.sub} style={{ fontSize: u(fitText(column, 0.1, 2)) }}>
+                {state === "berlangsung" && <span className={css.on}>Sedang berlangsung · </span>}{span(entry)}{entry.by ? ` · ${entry.by}` : ""}
+              </span>
+            </div>;
+          })}
+        </div>
       </div>)}
     </div>
   </>;

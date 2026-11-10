@@ -5,19 +5,27 @@
  * needs and sets each row's size and text size inline (fit and fitText in src/lib/pra-wam/tv.ts).
  * The head's height and the paddings here are the ones TvBoard subtracts (HEAD, PAD); change both together.
  */
+/*
+ * Colours and faces are WAM's own (the --pw-* tokens of pra-wam.module.css): TvBoard wraps the
+ * board in the app's theme (data-wam-look, picked in Admin WAM → Tema aplikasi) in its night mode,
+ * so the TV follows Dream Out Loud or Werkudara with the app. No colour is written here.
+ */
 .board {
   --u: 1vmin;
-  --tv-bg: #0b1220;
-  --tv-surface: #151e2e;
-  --tv-line: #2a3650;
-  --tv-text: #f4f6fa;
-  --tv-muted: #a9b4c6;
-  --tv-primary: #5aa9f0;
-  --tv-now: #12335a;
-  --tv-accent: #ffba00;
+  --tv-bg: var(--pw-app);
+  --tv-surface: var(--pw-surface);
+  --tv-soft: var(--pw-surface-soft);
+  --tv-line: var(--pw-line);
+  --tv-text: var(--pw-text);
+  --tv-muted: var(--pw-muted);
+  --tv-primary: var(--pw-primary);
+  --tv-now: var(--pw-primary-soft);
+  --tv-accent: var(--pw-brass);
+  --tv-on-accent: var(--pw-on-primary);
+  --tv-display: var(--pw-display);
   position: fixed; inset: 0; z-index: 0; overflow: hidden;
-  background: var(--tv-bg); color: var(--tv-text);
-  font-family: Inter, system-ui, sans-serif; font-size: calc(2.4 * var(--u)); line-height: 1.2;
+  background: var(--tv-bg) var(--pw-stars); color: var(--tv-text);
+  font-family: var(--pw-body); font-size: calc(2.4 * var(--u)); line-height: 1.2;
 }
 .board[data-idle="true"] { cursor: none; }
 
@@ -30,13 +38,14 @@
 .head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: calc(4 * var(--u)); height: calc(18 * var(--u)); }
 .headText { display: grid; gap: calc(.8 * var(--u)); min-width: 0; }
 .kicker { margin: 0; color: var(--tv-accent); font-size: calc(2.3 * var(--u)); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.date { margin: 0; overflow: hidden; font-family: Poppins, Inter, system-ui, sans-serif; font-size: calc(4.6 * var(--u)); font-weight: 600; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
-.clock { flex: none; margin: 0; font-family: Poppins, Inter, system-ui, sans-serif; font-size: calc(8 * var(--u)); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; }
+.date { margin: 0; overflow: hidden; font-family: var(--tv-display); font-size: calc(4.6 * var(--u)); font-weight: 600; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.clock { flex: none; margin: 0; font-family: var(--tv-display); font-size: calc(8 * var(--u)); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; }
+.summary { margin: 0; overflow: hidden; color: var(--tv-muted); font-size: calc(2.2 * var(--u)); text-overflow: ellipsis; white-space: nowrap; }
 .clock span { margin-left: calc(1 * var(--u)); color: var(--tv-muted); font-size: calc(2.4 * var(--u)); font-weight: 500; }
 .body { position: relative; flex: 1; min-height: 0; }
 
 /* A block of the day calendar, and an entry of the week calendar: the same tile. */
-.block, .item { box-sizing: border-box; overflow: hidden; border: calc(.2 * var(--u)) solid var(--tv-line); border-radius: calc(1 * var(--u)); background: var(--tv-surface); }
+.block, .item { box-sizing: border-box; overflow: hidden; border: calc(.2 * var(--u)) solid var(--tv-line); border-radius: calc(1.2 * var(--u)); background: var(--tv-soft); }
 .block[data-state="berlangsung"], .item[data-state="berlangsung"] { border-color: var(--tv-primary); background: var(--tv-now); }
 .block[data-state="selesai"], .item[data-state="selesai"] { opacity: .55; }
 .one { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -45,37 +54,44 @@
 .on { color: var(--tv-accent); font-weight: 700; }
 .hour { color: var(--tv-muted); font-variant-numeric: tabular-nums; }
 
-/* ---- Today, landscape: a row per room against the hours ------------------------------------------ */
+/* ---- Today, landscape: a card per room against the hours ----------------------------------------- */
 .axis { position: absolute; top: 0; right: 0; }
 .axis span { position: absolute; top: 0; transform: translateX(-50%); font-size: calc(2 * var(--u)); }
 .rows { position: absolute; right: 0; bottom: 0; left: 0; }
-.row { display: flex; align-items: stretch; box-sizing: border-box; border-top: calc(.15 * var(--u)) solid var(--tv-line); }
-.rowName { display: flex; flex: none; align-items: center; padding-right: calc(1.5 * var(--u)); font-family: Poppins, Inter, system-ui, sans-serif; font-weight: 600; }
-.track { position: relative; flex: 1; min-width: 0; }
-.block { position: absolute; display: flex; flex-direction: column; justify-content: center; padding: 0 calc(1 * var(--u)); }
-.grid { position: absolute; top: 0; bottom: 0; }
-.grid i { position: absolute; top: 0; bottom: 0; width: 0; border-left: calc(.12 * var(--u)) solid var(--tv-line); opacity: .7; }
-.nowLine { position: absolute; top: 0; bottom: 0; z-index: 1; width: 0; border-left: calc(.35 * var(--u)) solid var(--tv-accent); }
-.nowLine b, .nowBar b { position: absolute; padding: calc(.2 * var(--u)) calc(.9 * var(--u)); border-radius: calc(.8 * var(--u)); background: var(--tv-accent); color: #2a1c00; font-size: calc(1.8 * var(--u)); font-weight: 700; white-space: nowrap; }
-.nowLine b { top: 0; left: 0; transform: translate(-50%, -110%); }
+.row { display: flex; align-items: stretch; box-sizing: border-box; padding: calc(.5 * var(--u)) 0; }
+.rowName { display: flex; flex: none; flex-direction: column; justify-content: center; gap: calc(.2 * var(--u)); min-width: 0; padding-right: calc(1.5 * var(--u)); }
+.rowName strong { font-family: var(--tv-display); font-weight: 600; }
+.rowName small { color: var(--tv-muted); }
+.track { position: relative; flex: 1; min-width: 0; overflow: hidden; border: calc(.15 * var(--u)) solid var(--tv-line); border-radius: calc(1.6 * var(--u)); background: var(--tv-surface); }
+.track > i { position: absolute; top: 0; bottom: 0; width: 0; border-left: calc(.12 * var(--u)) solid var(--tv-line); }
+/* The part of the day that is over: a shade from the start of the hours to now. */
+.gone { position: absolute; top: 0; bottom: 0; left: 0; background: var(--pw-page); opacity: .55; }
+.block { position: absolute; z-index: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 calc(1.2 * var(--u)); }
+/* Over every row: only the line of now, so it runs through all the cards. */
+.over { position: absolute; top: 0; z-index: 2; pointer-events: none; }
+.nowLine { position: absolute; top: 0; bottom: 0; width: 0; border-left: calc(.35 * var(--u)) solid var(--tv-accent); }
+.nowLine b, .nowBar b { position: absolute; padding: calc(.3 * var(--u)) calc(1.1 * var(--u)); border-radius: 999px; background: var(--tv-accent); color: var(--tv-on-accent); font-size: calc(1.8 * var(--u)); font-weight: 700; white-space: nowrap; }
+.nowLine b { top: 0; left: 0; transform: translate(-50%, -115%); }
 
-/* ---- Today, portrait: a column per room, the hours running down ----------------------------------- */
+/* ---- Today, portrait: a card per room, the hours running down ------------------------------------- */
 .cols { position: absolute; top: 0; right: 0; display: flex; }
-.colName { display: flex; align-items: flex-end; justify-content: center; box-sizing: border-box; padding: 0 calc(.4 * var(--u)) calc(.8 * var(--u)); font-family: Poppins, Inter, system-ui, sans-serif; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
+.colName { display: flex; align-items: flex-end; justify-content: center; box-sizing: border-box; padding: 0 calc(.4 * var(--u)) calc(.8 * var(--u)); font-family: var(--tv-display); font-weight: 600; text-align: center; overflow-wrap: anywhere; }
 .down { position: absolute; right: 0; bottom: 0; display: flex; }
-.lane { position: relative; box-sizing: border-box; border-left: calc(.15 * var(--u)) solid var(--tv-line); }
-.lane .block { justify-content: flex-start; padding: calc(.6 * var(--u)); overflow-wrap: anywhere; }
+.lane { box-sizing: border-box; padding: 0 calc(.4 * var(--u)); }
+.laneTrack { position: relative; height: 100%; overflow: hidden; border: calc(.15 * var(--u)) solid var(--tv-line); border-radius: calc(1.6 * var(--u)); background: var(--tv-surface); }
+.laneTrack > i { position: absolute; right: 0; left: 0; height: 0; border-top: calc(.12 * var(--u)) solid var(--tv-line); }
+.goneDown { position: absolute; top: 0; right: 0; left: 0; background: var(--pw-page); opacity: .55; }
+.laneTrack .block { justify-content: flex-start; gap: calc(.3 * var(--u)); padding: calc(.8 * var(--u)); overflow-wrap: anywhere; }
 .side { position: absolute; bottom: 0; left: 0; }
 .side span { position: absolute; left: 0; transform: translateY(-50%); font-size: calc(2 * var(--u)); }
-.gridDown { position: absolute; right: 0; bottom: 0; }
-.gridDown i { position: absolute; right: 0; left: 0; height: 0; border-top: calc(.12 * var(--u)) solid var(--tv-line); opacity: .7; }
-.nowBar { position: absolute; right: 0; z-index: 1; height: 0; border-top: calc(.35 * var(--u)) solid var(--tv-accent); }
+.overDown { position: absolute; right: 0; bottom: 0; z-index: 2; pointer-events: none; }
+.nowBar { position: absolute; right: 0; left: 0; height: 0; border-top: calc(.35 * var(--u)) solid var(--tv-accent); }
 .nowBar b { top: 0; right: 0; transform: translateY(-50%); }
 
 /* ---- The week: a column per day (landscape) or a band per day (portrait) --------------------------- */
 .week { display: grid; gap: calc(1.6 * var(--u)); height: 100%; }
 .weekDay { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-.dayHead { display: flex; flex: none; align-items: baseline; gap: calc(1 * var(--u)); box-sizing: border-box; border-bottom: calc(.25 * var(--u)) solid var(--tv-line); font-family: Poppins, Inter, system-ui, sans-serif; }
+.dayHead { display: flex; flex: none; align-items: baseline; gap: calc(1 * var(--u)); box-sizing: border-box; border-bottom: calc(.25 * var(--u)) solid var(--tv-line); font-family: var(--tv-display); }
 .dayHead strong { font-weight: 600; }
 .dayHead span { color: var(--tv-muted); }
 .weekDay[data-today="true"] .dayHead { border-bottom-color: var(--tv-accent); }
@@ -86,7 +102,7 @@
 
 /* ---- Messages: nothing on, nothing to play, a removed TV ----------------------------------------- */
 .message { display: grid; height: 100%; place-content: center; gap: calc(1.5 * var(--u)); padding: calc(6 * var(--u)); text-align: center; }
-.message h2 { margin: 0; font-family: Poppins, Inter, system-ui, sans-serif; font-size: calc(4.6 * var(--u)); font-weight: 600; }
+.message h2 { margin: 0; font-family: var(--tv-display); font-size: calc(4.6 * var(--u)); font-weight: 600; }
 .message p { margin: 0; color: var(--tv-muted); font-size: calc(2.6 * var(--u)); }
 
 /* ---- Pictures ---------------------------------------------------------------------------------- */
@@ -99,7 +115,7 @@
 .full {
   position: absolute; right: calc(3 * var(--u)); bottom: calc(3 * var(--u)); z-index: 2;
   display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 20px;
-  border: 1px solid rgb(255 255 255 / 35%); border-radius: 999px; background: rgb(11 18 32 / 88%); color: #fff;
+  border: 1px solid var(--tv-line); border-radius: 999px; background: var(--tv-surface); color: var(--tv-text); box-shadow: var(--pw-shadow);
   font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
 }
 .full:focus-visible { outline: 3px solid var(--tv-accent); outline-offset: 2px; }
