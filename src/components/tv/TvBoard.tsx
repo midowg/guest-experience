@@ -6,7 +6,7 @@ import QRCode from "qrcode";
 import { TV_HOME_PATH } from "@/lib/routes";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  colorOf, dayEntries, decimalHour, entryState, fit, legendFor, legendRows, shouldReload, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
+  dayEntries, decimalHour, entryState, fit, legendFor, legendItem, legendRows, shouldReload, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
   type TvDay, type TvDayEntry, type TvEntry, type TvFeed, type TvLegendItem, type TvRoom,
 } from "@/lib/pra-wam/tv";
 import base from "@/components/pra-wam/pra-wam.module.css";
@@ -197,6 +197,12 @@ const tones = [css.c0, css.c1, css.c2, css.c3, css.c4, css.c5, css.c6, css.c7, c
 type Legend = { rows: TvLegendItem[][]; more: number };
 /** The height the legend takes above a calendar, in units. */
 const legendHeight = (legend: Legend) => (legend.rows.length ? legend.rows.length * tvLegendUnits.row + 1 : 0);
+const clamp = (value: number, least: number, most: number) => Math.max(least, Math.min(most, value));
+
+/** An activity's number on a dot of its colour: what ties a block to its name in the legend, colour or no colour. */
+function Badge({ code, size }: { code: number | null; size: number }) {
+  return code == null ? null : <b className={css.badge} style={{ fontSize: u(size) }}>{code}</b>;
+}
 
 function Schedule({ kicker, title, note, clock, legend, children }: { kicker: string; title: string; note?: string; clock: string; legend: Legend; children: ReactNode }) {
   return <section className={`${css.slide} ${css.schedule}`} aria-label={kicker}>
@@ -204,10 +210,10 @@ function Schedule({ kicker, title, note, clock, legend, children }: { kicker: st
       <div className={css.headText}><p className={css.kicker}>{kicker}</p><h1 className={css.date}>{title}</h1>{note && <p className={css.summary}>{note}</p>}</div>
       <p className={css.clock}>{clock}<span>WIB</span></p>
     </header>
-    {/* Each activity once, with its colour: the blocks below carry the colour and the hours, not the name. */}
-    {legend.rows.length > 0 && <ul className={css.legend} aria-label="Kegiatan dan warnanya">
+    {/* Each activity once, with its number and colour: the blocks below carry the number, not the name. */}
+    {legend.rows.length > 0 && <ul className={css.legend} aria-label="Kegiatan, dengan nomor dan warnanya">
       {legend.rows.map((row, index) => <li key={index} className={css.legendRow}>
-        {row.map(item => <span key={item.title} className={`${css.chip} ${tones[item.color]}`}><i className={css.dot} aria-hidden="true" /><span className={css.one}>{item.title}</span></span>)}
+        {row.map(item => <span key={item.title} className={`${css.chip} ${tones[item.color]}`}><Badge code={item.code} size={1.7} /><span className={css.one}>{item.title}</span></span>)}
         {index === legend.rows.length - 1 && legend.more > 0 && <span className={css.chipMore}>+{legend.more} lainnya</span>}
       </li>)}
     </ul>}
@@ -223,15 +229,24 @@ function hoursOf(from: number, to: number) {
   const step = to - from > 12 ? 2 : 1;
   return { all, labelled: all.filter(hour => (hour - from) % step === 0), at: (hour: number) => ((hour - from) / Math.max(1, to - from)) * 100 };
 }
-/** The widest a line of hours ("11.00–12.30") is at a text size, with the block's padding, in units. */
-const HOURS_LETTERS = 7, BLOCK_PAD = 2.2;
+/** The widest a line of hours ("11.00–12.30") is at a text size, and a block's padding, in units. */
+const HOURS_LETTERS = 7, START_LETTERS = 3.4, BLOCK_PAD = 2.2;
+/** The hours of a block `wide` units wide: the whole span when it fits at the smallest size, else the start; and the text size that fits. */
+function hoursIn(entry: Pick<TvEntry, "start" | "end">, wide: number, most: number) {
+  const whole = wide >= 1.25 * HOURS_LETTERS + BLOCK_PAD;
+  return { text: whole ? span(entry) : clockLabel(entry.start), size: clamp((wide - BLOCK_PAD) / (whole ? HOURS_LETTERS : START_LETTERS), 1.25, most) };
+}
 
-/** Today on a landscape TV: a card per room against the hours. Cards share the height, so every room in use is on screen. */
+/**
+ * Today on a landscape TV: a card per room against the hours. Cards share the height, so every
+ * room in use is on screen. A block says who booked it (department and name) on as many lines as
+ * it takes, with its hours small underneath; its activity is its number and colour.
+ */
 function DayWide({ rooms, legend, now, time, room }: { rooms: TvRoom[]; legend: readonly TvLegendItem[]; now: number; time: string; room: Room }) {
   const AXIS = 5, NAME = 26, GAP = 0.5;
   const hours = hourSpan(rooms), marks = hoursOf(hours.from, hours.to);
   const row = fit(room.height - AXIS, rooms.length, 22);
-  const two = row >= 7;
+  const roomy = row >= 11;
   const track = room.width - NAME;
   const nowPlace = nowAt(time, hours);
   // Before the hours start nothing is over; after they end all of it is.
@@ -246,24 +261,30 @@ function DayWide({ rooms, legend, now, time, room }: { rooms: TvRoom[]; legend: 
       </div>}
       {rooms.map(item => <div key={item.id} className={css.row} style={{ height: u(row) }}>
         <div className={css.rowName} style={{ width: u(NAME) }}>
-          <strong className={two ? css.wrap : css.one} style={{ fontSize: u(fitText(row, 0.16, 2.6)), WebkitLineClamp: 2 }}>{item.name}</strong>
+          <strong className={row >= 7 ? css.wrap : css.one} style={{ fontSize: u(fitText(row, 0.16, 2.6)), WebkitLineClamp: 2 }}>{item.name}</strong>
           {row >= 10 && <small className={css.one} style={{ fontSize: u(1.6) }}>{item.entries.length} jadwal</small>}
         </div>
         <div className={css.track}>
           {marks.all.slice(1, -1).map(hour => <i key={hour} style={{ left: `${marks.at(hour)}%` }} />)}
           {gone > 0 && <div className={css.gone} style={{ width: `${gone}%` }} />}
           {item.entries.map(entry => {
-            const spot = place(entry, hours), state = entryState(entry, now);
-            // The block carries its activity's colour and its hours; the text is sized so the hours always fit its width.
+            const spot = place(entry, hours), state = entryState(entry, now), who = legendItem(legend, entry.title);
             const wide = (spot.size / 100) * track;
-            const whole = wide >= 1.25 * HOURS_LETTERS + BLOCK_PAD;
-            const text = Math.min(2.2, fitText(row, 0.3, 2.2), Math.max(1.25, (wide - BLOCK_PAD) / (whole ? HOURS_LETTERS : 3)));
-            const small = Math.max(1.25, text * 0.8);
-            return <div key={entry.key} className={`${css.block} ${tones[colorOf(legend, entry.title)]}`} data-state={state} title={entry.title}
+            const when = hoursIn(entry, wide, 1.6);
+            const on = state === "berlangsung" && wide >= 10;
+            // The booker's text is sized by the block's width and wraps: a narrow block gets more, shorter lines.
+            const text = clamp((wide - BLOCK_PAD) * 0.12, 1.3, 2);
+            const lines = Math.max(1, Math.floor((row - GAP * 2 - 1.6 - 3 - when.size * 1.3 * (on ? 2 : 1)) / (text * 1.2)));
+            return <div key={entry.key} className={`${css.block} ${tones[who.color]}`} data-state={state} title={entry.title}
               style={{ left: `${spot.at}%`, width: `${spot.size}%`, top: u(GAP), bottom: u(GAP) }}>
-              <span className={`${css.one} ${css.title}`} style={{ fontSize: u(text) }}>{whole ? span(entry) : clockLabel(entry.start)}</span>
-              {two && entry.by && wide >= 16 && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(small) }}>{entry.by}</span>}
-              {two && state === "berlangsung" && wide >= 10 && <span className={`${css.one} ${css.on}`} style={{ fontSize: u(small) }}>Berlangsung</span>}
+              {roomy ? <>
+                {wide >= 4.6 && <Badge code={who.code} size={1.5} />}
+                {entry.by && <span className={`${css.wrap} ${css.title}`} style={{ fontSize: u(text), WebkitLineClamp: lines }}>{entry.by}</span>}
+                <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(when.size) }}>{when.text}</span>
+                {on && <span className={`${css.one} ${css.on}`} style={{ fontSize: u(when.size) }}>Berlangsung</span>}
+              </> : <span className={css.inline} style={{ fontSize: u(clamp(row * 0.3, 1.25, 1.8)) }}>
+                {wide >= 4.6 && <Badge code={who.code} size={clamp(row * 0.26, 1.2, 1.5)} />}<span className={css.one}>{when.text}</span>
+              </span>}
             </div>;
           })}
         </div>
@@ -277,10 +298,10 @@ function DayTall({ rooms, legend, now, time, room }: { rooms: TvRoom[]; legend: 
   const SIDE = 9, TOP = 7, GAP = 0.4;
   const hours = hourSpan(rooms), marks = hoursOf(hours.from, hours.to);
   const column = fit(room.width - SIDE, rooms.length, 40);
+  const wide = column - GAP * 2 - 0.8;
   const nowPlace = nowAt(time, hours);
   const gone = nowPlace ?? (decimalHour(time) > hours.to ? 100 : 0);
-  const whole = column >= 1.25 * HOURS_LETTERS + BLOCK_PAD + GAP * 2;
-  const text = Math.min(2.2, Math.max(1.25, (column - BLOCK_PAD - GAP * 2) / (whole ? HOURS_LETTERS : 3)));
+  const text = clamp((wide - BLOCK_PAD) * 0.12, 1.3, 2);
   return <>
     <div className={css.cols} style={{ left: u(SIDE), height: u(TOP) }}>
       {rooms.map(item => <div key={item.id} className={css.colName} style={{ width: u(column), fontSize: u(fitText(column, 0.15, 2.6)) }}>{item.name}</div>)}
@@ -297,12 +318,14 @@ function DayTall({ rooms, legend, now, time, room }: { rooms: TvRoom[]; legend: 
           {marks.all.slice(1, -1).map(hour => <i key={hour} style={{ top: `${marks.at(hour)}%` }} />)}
           {gone > 0 && <div className={css.goneDown} style={{ height: `${gone}%` }} />}
           {item.entries.map(entry => {
-            const spot = place(entry, hours), state = entryState(entry, now);
-            return <div key={entry.key} className={`${css.block} ${tones[colorOf(legend, entry.title)]}`} data-state={state} title={entry.title}
+            const spot = place(entry, hours), state = entryState(entry, now), who = legendItem(legend, entry.title);
+            const when = hoursIn(entry, wide, 1.6);
+            return <div key={entry.key} className={`${css.block} ${tones[who.color]}`} data-state={state} title={entry.title}
               style={{ top: `${spot.at}%`, height: `${spot.size}%`, left: u(GAP), right: u(GAP) }}>
-              <span className={`${css.one} ${css.title}`} style={{ fontSize: u(text) }}>{whole ? span(entry) : clockLabel(entry.start)}</span>
-              {entry.by && column >= 16 && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(Math.max(1.25, text * 0.8)) }}>{entry.by}</span>}
-              {state === "berlangsung" && <span className={`${css.one} ${css.on}`} style={{ fontSize: u(Math.max(1.25, text * 0.8)) }}>Berlangsung</span>}
+              {wide >= 4.6 && <Badge code={who.code} size={1.5} />}
+              {entry.by && <span className={`${css.wrap} ${css.title}`} style={{ fontSize: u(text), WebkitLineClamp: 3 }}>{entry.by}</span>}
+              <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(when.size) }}>{when.text}</span>
+              {state === "berlangsung" && <span className={`${css.one} ${css.on}`} style={{ fontSize: u(when.size) }}>Berlangsung</span>}
             </div>;
           })}
         </div>
@@ -318,20 +341,26 @@ function DayHead({ date, today, height, text }: { date: string; today: string; h
   </div>;
 }
 
-/** The week on a landscape TV: a column per day. The fullest day decides the entry size, so every entry of the week is on screen. */
+/**
+ * The week on a landscape TV: a column per day. The fullest day decides the entry size, so every
+ * entry of the week is on screen. An entry leads with its hours, large; its room and who booked
+ * it go underneath when there is the height for it.
+ */
 function WeekWide({ days, legend, today, now, room }: { days: TvDay[]; legend: readonly TvLegendItem[]; today: string; now: number; room: Room }) {
   const HEADING = 6, GAP = 0.6;
   const lists = days.map(day => ({ day, entries: dayEntries(day) }));
-  const unit = fit(room.height - HEADING - 1, Math.max(...lists.map(list => list.entries.length)), 8);
+  const unit = fit(room.height - HEADING - 1, Math.max(...lists.map(list => list.entries.length)), 11);
   const column = room.width / days.length;
-  // With the height for it, the room goes on a line of its own under the hours, so neither is cut.
   const stacked = unit >= 6;
-  const text = stacked ? Math.min(fitText(unit, 0.3, 2.1), fitText(column, 0.07, 2.1)) : Math.min(fitText(unit, 0.4, 2.1), fitText(column, 0.058, 2.1));
+  const hours = stacked ? Math.min(fitText(unit, 0.36, 2.8), fitText(column, 0.08, 2.8)) : Math.min(fitText(unit, 0.42, 2.2), fitText(column, 0.06, 2.2));
+  const small = Math.min(fitText(unit, 0.22, 1.8), fitText(column, 0.05, 1.8));
+  const lines = Math.max(1, Math.floor((unit - GAP - 1 - hours * 1.2) / (small * 1.2)));
   return <div className={css.week} style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
     {lists.map(({ day, entries }) => <div key={day.date} className={css.weekDay} data-today={day.date === today}>
       <DayHead date={day.date} today={today} height={HEADING} text={fitText(column, 0.085, 2.6)} />
       {entries.length === 0 && <p className={css.free} style={{ marginTop: u(1.2), fontSize: u(2) }}>Kosong</p>}
-      {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} tone={tones[colorOf(legend, entry.title)]} now={now} height={unit - GAP} gap={GAP} text={text} stacked={stacked} />)}
+      {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} who={legendItem(legend, entry.title)} now={now} height={unit - GAP} gap={GAP}
+        hours={hours} small={stacked ? small : null} lines={lines} />)}
     </div>)}
   </div>;
 }
@@ -346,23 +375,31 @@ function WeekTall({ days, legend, today, now, room }: { days: TvDay[]; legend: r
     {lists.map(({ day, entries }) => <div key={day.date} className={css.weekDay} data-today={day.date === today} style={{ flex: "none" }}>
       <DayHead date={day.date} today={today} height={line * HEADING} text={fitText(line, 0.5, 2.8)} />
       {entries.length === 0 && <p className={`${css.free} ${css.one}`} style={{ height: u(line), lineHeight: u(line), fontSize: u(fitText(line, 0.42, 2)) }}>Kosong</p>}
-      {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} tone={tones[colorOf(legend, entry.title)]} now={now} height={line - GAP} gap={GAP} text={fitText(line, 0.42, 2.4)} />)}
+      {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} who={legendItem(legend, entry.title)} now={now} height={line - GAP} gap={GAP}
+        hours={fitText(line, 0.42, 2.4)} small={null} lines={1} withBooker />)}
     </div>)}
   </div>;
 }
 
 /**
- * One entry of the week: its activity's dot, its hours and its room (the activity's name is in the
- * legend). `stacked`: the room on a line of its own under the hours; otherwise both on one line.
+ * One entry of the week: its activity's number, its hours (the thing read from afar), then its
+ * room and who booked it. `small`: the size of that second line under the hours; null puts
+ * everything on one line (the room only, or with the booker where the line is long: `withBooker`).
  */
-function WeekItem({ entry, tone, now, height, gap, text, stacked = false }: { entry: TvDayEntry; tone: string; now: number; height: number; gap: number; text: number; stacked?: boolean }) {
+function WeekItem({ entry, who, now, height, gap, hours, small, lines, withBooker = false }: {
+  entry: TvDayEntry; who: { color: number; code: number | null }; now: number; height: number; gap: number; hours: number; small: number | null; lines: number; withBooker?: boolean;
+}) {
   const state = entryState(entry, now);
-  return <div className={`${css.item} ${tone}`} data-state={state} title={entry.title} style={{ height: u(height), marginTop: u(gap), fontSize: u(text) }}>
-    <i className={css.dot} aria-hidden="true" />
-    {stacked
-      ? <span className={css.pair}><span className={`${css.one} ${css.title}`}>{span(entry)}</span><span className={`${css.one} ${css.sub}`} style={{ fontSize: u(Math.max(1.25, text * 0.82)) }}>{entry.room}</span></span>
-      : <span className={css.one}><span className={css.title}>{span(entry)}</span><span className={css.sub}> · {entry.room}</span></span>}
-    {state === "berlangsung" && <span className={css.on}>Kini</span>}
+  const where = `${entry.room}${entry.by ? ` · ${entry.by}` : ""}`;
+  return <div className={`${css.item} ${tones[who.color]}`} data-state={state} title={entry.title} style={{ height: u(height), marginTop: u(gap), fontSize: u(hours) }}>
+    <Badge code={who.code} size={Math.min(1.7, hours * 0.75)} />
+    {small != null
+      ? <span className={css.pair}>
+        <span className={`${css.one} ${css.title}`}>{span(entry)}</span>
+        <span className={`${css.wrap} ${css.sub}`} style={{ fontSize: u(small), WebkitLineClamp: lines }}>{where}</span>
+      </span>
+      : <span className={css.one}><span className={css.title}>{span(entry)}</span><span className={css.sub}> · {withBooker ? where : entry.room}</span></span>}
+    {state === "berlangsung" && <span className={css.on} style={{ fontSize: u(Math.min(hours, 1.8)) }}>Kini</span>}
   </div>;
 }
 

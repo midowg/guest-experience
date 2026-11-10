@@ -52,7 +52,7 @@
 /* A title on several lines: it wraps (a long word breaks) and only what is past the last line is cut. */
 .wrap { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; line-height: 1.2; overflow-wrap: anywhere; }
 .title { font-weight: 600; }
-.sub { color: var(--tv-muted); }
+.sub { color: color-mix(in srgb, var(--tv-text) 78%, var(--tv-bg)); }
 .on { color: var(--tv-accent); font-weight: 700; }
 .hour { color: var(--tv-muted); font-variant-numeric: tabular-nums; }
 
@@ -68,7 +68,8 @@
 .track > i { position: absolute; top: 0; bottom: 0; width: 0; border-left: calc(.12 * var(--u)) solid var(--tv-line); }
 /* The part of the day that is over: a shade from the start of the hours to now. */
 .gone { position: absolute; top: 0; bottom: 0; left: 0; background: var(--pw-page); opacity: .55; }
-.block { position: absolute; z-index: 1; display: flex; flex-direction: column; justify-content: center; gap: calc(.25 * var(--u)); padding: 0 calc(.9 * var(--u)); }
+.block { position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: calc(.35 * var(--u)); padding: 0 calc(.9 * var(--u)); }
+.block > span { max-width: 100%; }
 /* Over every row: only the line of now, so it runs through all the cards. */
 .over { position: absolute; top: 0; z-index: 2; pointer-events: none; }
 .nowLine { position: absolute; top: 0; bottom: 0; width: 0; border-left: calc(.35 * var(--u)) solid var(--tv-accent); }
@@ -151,26 +152,34 @@
 .board[data-qr="kiri-atas"] .head { padding-left: calc(15 * var(--u)); }
 
 /*
- * One colour per activity, as the app's Timeline gives each forum (timeline.module.css): the
- * theme's own accents, so they follow Dream Out Loud or Werkudara, dark or light. A legend names
- * each activity beside a dot of its colour; its blocks are tinted with it and carry only the hours.
+ * One colour and one number per activity, as the app's Timeline gives each forum a colour. A legend
+ * names each activity beside its numbered dot; its blocks carry the same number and are tinted with
+ * the colour. The number is what ties them: a TV panel may show two colours almost alike.
+ * These nine are the board's only colours of its own (not --pw-* tokens): the theme's accents sit
+ * too close to one another on a TV (lavender, sky, navy and cyan all read as blue), so the hues here
+ * are chosen to be far apart, each bright enough for dark text on it, in dark and in light.
  */
-.c0 { --tl: var(--pw-primary); }
-.c1 { --tl: var(--pw-brass); }
-.c2 { --tl: var(--pw-accent-sky); }
-.c3 { --tl: var(--pw-accent-green); }
-.c4 { --tl: var(--pw-accent-magenta); }
-.c5 { --tl: var(--pw-accent-orange); }
-.c6 { --tl: var(--pw-accent-cyan); }
-.c7 { --tl: var(--pw-accent-crimson); }
-.c8 { --tl: var(--pw-accent-navy); }
+.c0 { --tl: #ffb000; }
+.c1 { --tl: #4da3ff; }
+.c2 { --tl: #2fd67b; }
+.c3 { --tl: #ff5d5d; }
+.c4 { --tl: #b98cff; }
+.c5 { --tl: #00cfc5; }
+.c6 { --tl: #ff7ec8; }
+.c7 { --tl: #c3e03a; }
+.c8 { --tl: #ff8a3d; }
+.badge {
+  display: inline-grid; flex: none; place-items: center; box-sizing: border-box; min-width: 1.7em; height: 1.7em; padding: 0 .35em;
+  border-radius: 999px; background: var(--tl, var(--tv-primary)); color: #101322; font-family: var(--pw-body); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1;
+}
+.inline { display: flex; align-items: center; gap: calc(.6 * var(--u)); min-width: 0; }
 .dot { flex: none; width: calc(1.5 * var(--u)); height: calc(1.5 * var(--u)); border-radius: 50%; background: var(--tl, var(--tv-primary)); }
 .legend { flex: none; margin: 0 0 calc(1 * var(--u)); padding: 0; list-style: none; }
-.legendRow { display: flex; align-items: center; gap: calc(2.4 * var(--u)); height: calc(4.4 * var(--u)); overflow: hidden; }
-.chip { display: inline-flex; align-items: center; gap: calc(.9 * var(--u)); min-width: 0; font-size: calc(2 * var(--u)); font-weight: 600; }
+.legendRow { display: flex; align-items: center; gap: calc(2.6 * var(--u)); height: calc(4.8 * var(--u)); overflow: hidden; }
+.chip { display: inline-flex; align-items: center; gap: calc(1 * var(--u)); min-width: 0; font-size: calc(2 * var(--u)); font-weight: 600; }
 .chipMore { flex: none; color: var(--tv-muted); font-size: calc(1.8 * var(--u)); }
 .block.c0, .block.c1, .block.c2, .block.c3, .block.c4, .block.c5, .block.c6, .block.c7, .block.c8,
 .item.c0, .item.c1, .item.c2, .item.c3, .item.c4, .item.c5, .item.c6, .item.c7, .item.c8 {
-  border-color: color-mix(in srgb, var(--tl) 60%, var(--tv-line)); background: color-mix(in srgb, var(--tl) 30%, var(--tv-surface));
+  border-color: color-mix(in srgb, var(--tl) 70%, var(--tv-line)); background: color-mix(in srgb, var(--tl) 22%, var(--tv-surface));
 }
 .block[data-state="berlangsung"], .item[data-state="berlangsung"] { border-color: var(--tl, var(--tv-primary)); background: color-mix(in srgb, var(--tl, var(--tv-primary)) 38%, var(--tv-surface)); box-shadow: 0 0 0 calc(.3 * var(--u)) color-mix(in srgb, var(--tl, var(--tv-primary)) 35%, transparent); }

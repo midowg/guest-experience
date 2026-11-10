@@ -157,7 +157,12 @@ export function dayEntries(day: TvDay): TvDayEntry[] {
  */
 /** How many colours the board cycles through (tv.module.css, .c0 to .c8; the Timeline's own nine). */
 export const TV_COLORS = 9;
-export type TvLegendItem = { title: string; color: number };
+/**
+ * `code` is the activity's number in the legend (1, 2, 3…), written on its dot and on its blocks: a TV
+ * may show two colours almost alike, and a number still tells them apart. It never repeats;
+ * the colour does, past TV_COLORS.
+ */
+export type TvLegendItem = { title: string; color: number; code: number };
 /** Two spellings of one activity ("Appraisal 1-on-1", "appraisal  1-on-1 ") are the same activity. */
 export const activityKey = (title: string) => title.trim().replace(/\s+/g, " ").toLowerCase();
 
@@ -171,12 +176,13 @@ export function tvLegend(days: readonly TvDay[]): TvLegendItem[] {
   const seen = new Map<string, TvLegendItem>();
   for (const entry of entries) {
     const key = activityKey(entry.title);
-    if (!seen.has(key)) seen.set(key, { title: entry.title.trim().replace(/\s+/g, " "), color: seen.size % TV_COLORS });
+    if (!seen.has(key)) seen.set(key, { title: entry.title.trim().replace(/\s+/g, " "), color: seen.size % TV_COLORS, code: seen.size + 1 });
   }
   return [...seen.values()];
 }
-/** An activity's colour in a legend (0 when it is somehow not there). */
-export const colorOf = (legend: readonly TvLegendItem[], title: string) => legend.find(item => activityKey(item.title) === activityKey(title))?.color ?? 0;
+/** An activity's place in a legend: its colour and number (the first colour and no number when it is somehow not there). */
+export const legendItem = (legend: readonly TvLegendItem[], title: string): { color: number; code: number | null } =>
+  legend.find(item => activityKey(item.title) === activityKey(title)) ?? { color: 0, code: null };
 /** The legend's items that some entry of these rooms uses, in the legend's order. */
 export function legendFor(legend: readonly TvLegendItem[], rooms: readonly TvRoom[]): TvLegendItem[] {
   const used = new Set(rooms.flatMap(room => room.entries.map(entry => activityKey(entry.title))));
@@ -184,7 +190,7 @@ export function legendFor(legend: readonly TvLegendItem[], rooms: readonly TvRoo
 }
 
 /** What the legend's layout is measured in, in units: a letter's width, a chip's dot and padding, the gap between chips, a row's height. */
-export const tvLegendUnits = { letter: 1.22, chip: 4.8, gap: 2.4, row: 4.4 } as const;
+export const tvLegendUnits = { letter: 1.22, chip: 6.4, gap: 2.6, row: 4.8 } as const;
 /**
  * The legend laid out in rows that fit `width` units, at most `most` rows; what does not fit is
  * counted in `more` ("+3 lainnya"), never squeezed. A name longer than a row is cut to the row.
