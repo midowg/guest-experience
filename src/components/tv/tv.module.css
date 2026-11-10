@@ -237,3 +237,29 @@
 .phoneBar .phonePlay { flex: 1; }
 .phoneBar .phonePlay[aria-pressed="false"] { border-color: var(--tv-accent); }
 .phoneTabs button:focus-visible, .phoneBar button:focus-visible { outline: 3px solid var(--tv-accent); outline-offset: 2px; }
+
+/* ---- The playlist's templates (TvTemplates): Timeline, announcements, a typed text ------------------ */
+.tlList { height: 100%; margin: 0; padding: 0; list-style: none; }
+.tlRow { display: flex; align-items: center; gap: calc(2 * var(--u)); box-sizing: border-box; padding: 0 calc(2.4 * var(--u)); border: calc(.2 * var(--u)) solid color-mix(in srgb, var(--tl) 60%, var(--tv-line)); border-radius: calc(1.6 * var(--u)); background: color-mix(in srgb, var(--tl) 16%, var(--tv-surface)); }
+.tlRow[data-state="berlangsung"] { border-color: var(--tl); background: color-mix(in srgb, var(--tl) 30%, var(--tv-surface)); }
+.tlRow .dot { width: calc(2 * var(--u)); height: calc(2 * var(--u)); }
+.tlMain { display: grid; flex: 1; gap: calc(.3 * var(--u)); min-width: 0; }
+.tlMain strong { font-family: var(--tv-display); font-weight: 600; }
+.tlMain span { color: var(--tv-muted); }
+.tlMain em { color: var(--tv-accent); font-style: normal; font-weight: 700; }
+.tlWhen { display: grid; flex: none; gap: calc(.2 * var(--u)); justify-items: end; color: var(--tv-muted); font-variant-numeric: tabular-nums; text-align: right; }
+.tlWhen strong { color: var(--tv-text); font-weight: 700; }
+.noteList { display: grid; grid-auto-rows: minmax(0, 1fr); gap: calc(2 * var(--u)); height: 100%; margin: 0; padding: 0; list-style: none; }
+.note { display: flex; flex-direction: column; gap: calc(1 * var(--u)); box-sizing: border-box; min-height: 0; padding: calc(2.4 * var(--u)) calc(3 * var(--u)); overflow: hidden; border: calc(.2 * var(--u)) solid var(--tv-line); border-radius: calc(2 * var(--u)); background: var(--tv-surface); }
+.note strong { flex: none; font-family: var(--tv-display); font-size: calc(3.4 * var(--u)); font-weight: 600; line-height: 1.2; }
+.note p { flex: 1; min-height: 0; margin: 0; overflow: hidden; font-size: calc(2.5 * var(--u)); line-height: 1.4; white-space: pre-line; }
+.note small { flex: none; color: var(--tv-muted); font-size: calc(1.9 * var(--u)); }
+.noteList[data-count="1"] .note strong { font-size: calc(4.6 * var(--u)); }
+.noteList[data-count="1"] .note p { font-size: calc(3.2 * var(--u)); }
+.textSlide { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(3 * var(--u)); box-sizing: border-box; padding: calc(8 * var(--u)) calc(10 * var(--u)); text-align: center; }
+.textSlide h1 { margin: 0; font-family: var(--tv-display); font-size: calc(7 * var(--u)); font-weight: 600; line-height: 1.15; overflow-wrap: anywhere; }
+.textSlide p { margin: 0; max-width: 100%; color: color-mix(in srgb, var(--tv-text) 86%, var(--tv-bg)); font-size: calc(3.6 * var(--u)); line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere; }
+.phonePlain { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.phoneNote { display: grid; gap: 6px; padding: 14px 16px; border: 1px solid var(--tv-line); border-radius: 16px; background: var(--tv-surface); }
+.phoneNote p { margin: 0; overflow-wrap: anywhere; }
+.phoneText { color: var(--tv-muted); font-size: 14px; white-space: pre-line; }

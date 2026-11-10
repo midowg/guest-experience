@@ -21,8 +21,8 @@ export async function GET(request: Request, { params }: Params) {
     const { key } = await params;
     const search = new URL(request.url).searchParams;
     const width = side(search.get("w")), height = side(search.get("h"));
-    const screen = await screenForKey(key, width && height ? { width, height } : undefined);
+    const screen = await screenForKey(key, width && height ? { width, height } : undefined, new Date(), search.get("item") ?? undefined);
     if (!screen) throw new ServiceError(404, "Tautan TV ini tidak berlaku.");
-    return NextResponse.json({ ok: true, data: await tvFeed(slideId => tvApi.image(key, slideId)) }, { headers: HEADERS });
+    return NextResponse.json({ ok: true, data: await tvFeed(slideId => tvApi.image(key, slideId), new Date(), screen) }, { headers: HEADERS });
   });
 }

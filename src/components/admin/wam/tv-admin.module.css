@@ -48,3 +48,16 @@
 .qrPreview img, .qrPreview > span { display: block; width: 160px; height: 160px; }
 .qrPreview figcaption { display: grid; gap: 2px; max-width: 100%; font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
 .qrPreview small { color: #667085; font-size: 11px; font-weight: 400; }
+
+/* Admin TV → Tayangan: a row's kind (an icon where a picture has its thumbnail), its editor, and the templates to add. */
+.kind { display: grid; width: 112px; height: 63px; place-items: center; border: 1px solid var(--cs-line); border-radius: 8px; color: var(--cs-muted); }
+.slideOpen { border-color: var(--cs-primary); }
+.itemForm { display: grid; grid-column: 1 / -1; gap: 16px; max-width: 40rem; padding-top: 12px; border-top: 1px solid var(--cs-line); }
+.slides + .itemForm, section > .itemForm { padding-top: 0; border-top: 0; }
+.itemGroup { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; border: 0; }
+.itemGroup legend, .itemScreens legend { margin-bottom: 8px; padding: 0; font-size: 14px; font-weight: 700; }
+.itemScreens { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0; padding: 0; border: 0; }
+.templates { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.template { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px 16px; align-items: center; padding: 12px; border: 1px dashed var(--cs-line); border-radius: 16px; }
+.template strong { font-size: 15px; }
+@media (min-width: 900px) { .template { grid-template-columns: 112px minmax(0, 1fr) auto; } }

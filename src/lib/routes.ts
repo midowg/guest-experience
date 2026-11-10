@@ -438,6 +438,15 @@ export const bookingPath = {
   /** Beranda: what can be booked, and the person's next bookings. */
   home: BOOKING_PATH,
   /**
+   * Masuk (11 Nov 2026): Booking Kantor's own sign-in page, with the same employee account as WAM
+   * (one email, one password) but none of WAM's look or name. `next` is where to go afterwards.
+   */
+  login: (next?: string) => `${BOOKING_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
+  /** Lupa password: a request to reset the account to the first password (the same requests as WAM's). */
+  forgot: `${BOOKING_PATH}/lupa-password`,
+  /** Right after signing in with the first password: pick a new one, or skip for now. */
+  newPassword: (next?: string) => `${BOOKING_PATH}/password-baru${next ? `?next=${enc(next)}` : ""}`,
+  /**
    * Ruangan: every room on one day, for a start and a length (`start` "10:00", `menit` "60"). `new`
    * opens the form (with a room), `edit` opens one of the person's own bookings.
    */
@@ -508,4 +517,25 @@ export const praWamTvApi = {
   slideImage: (id: string) => `${TV_ADMIN_API}/slides/${id}/image`,
   /** PUT {ids}: the pictures in a new order. */
   order: `${TV_ADMIN_API}/slides/order`,
+  /** POST {kind, title?, body?}: a template (one of each) or a text joins the playlist. */
+  items: `${TV_ADMIN_API}/items`,
+  /** PATCH: a row's text, duration, on/off, dates, hours and TVs; DELETE removes it (a picture's row with its picture). */
+  item: (id: string) => `${TV_ADMIN_API}/items/${id}`,
+  /** PUT {ids}: the playlist in a new order. */
+  itemOrder: `${TV_ADMIN_API}/items/order`,
+  /** POST: ask one TV to load its page afresh. */
+  screenReload: (id: string) => `${TV_ADMIN_API}/screens/${id}/reload`,
+};
+/**
+ * Admin TV: TV Announcement's own admin, outside Admin WAM (10 Nov 2026), with the same admin
+ * sign-in. Pantauan (which TV is on and what it shows), Tayangan (the playlist), Layar TV (the
+ * addresses), Tampilan (dark or light, the QR code), and the board as a TV plays it.
+ */
+export const TV_ADMIN = "/admin/tv";
+export const tvAdminPath = {
+  home: TV_ADMIN,
+  playlist: `${TV_ADMIN}/tayangan`,
+  screens: `${TV_ADMIN}/layar`,
+  look: `${TV_ADMIN}/tampilan`,
+  preview: `${TV_ADMIN}/pratinjau`,
 };

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { clockLabel } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, entryState, legendItem, shownDays, tvDateLabel, tvDayHead, tvWeekLabel,
+  dayEntries, entryState, itemLabel, legendItem, shownDays, tvDateLabel, tvDayHead, tvWeekLabel,
   type TvEntry, type TvFeed, type TvItem, type TvLegendItem, type TvState,
 } from "@/lib/pra-wam/tv";
 import css from "./tv.module.css";
@@ -30,6 +30,7 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
   const week = shownDays(feed.days);
   const pictures = items.filter(item => item.kind === "gambar").length;
   const label = (item: TvItem, index: number) => item.kind === "hari" ? "Hari ini" : item.kind === "minggu" ? "Minggu ini"
+    : item.kind !== "gambar" ? itemLabel(item)
     : pictures > 1 ? `Gambar ${items.slice(0, index + 1).filter(other => other.kind === "gambar").length}` : "Gambar";
 
   // A new item starts at its top.
@@ -38,12 +39,14 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
   useEffect(() => { scroller.current?.scrollTo({ top: 0 }); }, [key]);
 
   const go = (index: number) => { onPause(true); onGo((index + items.length) % items.length); };
-  const title = !current ? "TV Announcement" : current.kind === "hari" ? tvDateLabel(feed.date) : current.kind === "minggu" ? tvWeekLabel(week.map(day => day.date)) : current.slide.title || "Pengumuman";
+  const title = !current ? "TV Announcement" : current.kind === "hari" ? tvDateLabel(feed.date) : current.kind === "minggu" ? tvWeekLabel(week.map(day => day.date))
+    : current.kind === "timeline" ? "Forum dan acara" : current.kind === "pengumuman" ? "Dari panitia" : current.kind === "teks" ? current.title || "Info" : current.slide.title || "Pengumuman";
+  const kicker = !current || current.kind === "hari" ? "Jadwal ruang hari ini" : current.kind === "minggu" ? "Jadwal ruang minggu ini" : current.kind === "timeline" ? "Timeline Pra WAM" : "Pengumuman";
 
   return <main ref={scroller} className={css.phone} onTouchStart={() => { if (!paused) onPause(true); }} onWheel={() => { if (!paused) onPause(true); }}>
     <header className={css.phoneHead}>
       <div>
-        <p className={css.phoneKicker}>{current?.kind === "minggu" ? "Jadwal ruang minggu ini" : current?.kind === "gambar" ? "Pengumuman" : "Jadwal ruang hari ini"}</p>
+        <p className={css.phoneKicker}>{kicker}</p>
         <h1 className={css.phoneTitle}>{title}</h1>
       </div>
       <p className={css.phoneClock}>{clock}<span>WIB</span></p>
@@ -72,6 +75,23 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
                     : <ul>{entries.map(entry => <Row key={`${entry.key}:${entry.room}`} entry={entry} now={now} tone={tones[legendItem(legend, entry.title).color]} detail={[entry.room, bookedBy(entry)].filter(Boolean).join(" · ")} />)}</ul>}
                 </section>;
               })
+            : current.kind === "timeline"
+              ? (feed.timeline ?? []).length === 0 ? <Empty title="Belum ada forum atau acara berikutnya" body="Jadwal dari Kelola acara muncul di sini dengan sendirinya." />
+                : <ul className={css.phonePlain}>{(feed.timeline ?? []).map(entry => <li key={entry.id} className={`${css.phoneRow} ${tones[entry.color % tones.length]}`} data-state={entry.state}>
+                  <i className={css.dot} aria-hidden="true" />
+                  <div>
+                    <p className={css.phoneHours}>{entry.when}{entry.state === "berlangsung" && <span data-state="berlangsung">Sedang berlangsung</span>}</p>
+                    <p className={css.phoneName}>{entry.title}</p>
+                    <p className={css.phoneDetail}>{[entry.hours, entry.left].filter(Boolean).join(" · ")}</p>
+                  </div>
+                </li>)}</ul>
+            : current.kind === "pengumuman"
+              ? (feed.notes ?? []).length === 0 ? <Empty title="Belum ada pengumuman baru" body="Pengumuman panitia untuk semua peserta muncul di sini." />
+                : <ul className={css.phonePlain}>{(feed.notes ?? []).map(note => <li key={note.id} className={css.phoneNote}>
+                  <p className={css.phoneName}>{note.title}</p>
+                  {note.body && <p className={css.phoneText}>{note.body}</p>}
+                </li>)}</ul>
+            : current.kind === "teks" ? <div className={css.phoneNote}>{current.body && <p className={css.phoneText}>{current.body}</p>}</div>
             // eslint-disable-next-line @next/next/no-img-element
             : <img className={css.phonePicture} src={current.slide.src} alt={current.slide.title || "Gambar pengumuman"} referrerPolicy="no-referrer" />}
     </div>

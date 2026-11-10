@@ -7,11 +7,12 @@ import QRCode from "qrcode";
 import { TV_HOME_PATH } from "@/lib/routes";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, decimalHour, entryOwner, entryState, fit, isPhoneScreen, legendFor, legendItem, legendRows, shouldReload, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
+  dayEntries, decimalHour, entryOwner, entryState, fit, isPhoneScreen, legendFor, legendItem, legendRows, shouldReload, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, itemLabel, nowAt, place, playlistOf, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
   type TvDay, type TvDayEntry, type TvEntry, type TvFeed, type TvLegendItem, type TvRoom,
 } from "@/lib/pra-wam/tv";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import { TvPhone } from "./TvPhone";
+import { NotesSlide, TextSlide, TimelineSlide } from "./TvTemplates";
 import css from "./tv.module.css";
 
 /** How often a TV asks for content, and how often it re-reads the clock for "now". */
@@ -27,6 +28,13 @@ const RELOADED_AT = "tv-dimuat-ulang";
 function lastReload(): number | null {
   try { const at = Number(window.sessionStorage.getItem(RELOADED_AT)); return Number.isFinite(at) && at > 0 ? at : null; }
   catch { return null; }
+}
+
+/** Whether this tab already obeyed a reload request (remembered for the tab, so the reload itself does not ask again). */
+const RELOAD_ASKED = "tv-diminta-muat-ulang";
+function reloadDone(asked: string): boolean {
+  try { if (window.sessionStorage.getItem(RELOAD_ASKED) === asked) return true; window.sessionStorage.setItem(RELOAD_ASKED, asked); return false; }
+  catch { return false; }
 }
 
 const onResize = (notify: () => void) => { window.addEventListener("resize", notify); return () => window.removeEventListener("resize", notify); };
@@ -52,6 +60,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const [paused, setPaused] = useState(false);
   const [natural, setNatural] = useState<Record<string, [number, number]>>({});
   const [active, setActive] = useState(false);
+  const showing = useRef("");
   /** The server's clock minus this TV's, so a TV with a wrong clock still draws "now" in the right place. */
   const offset = useRef(0);
   const size = useSyncExternalStore(onResize, screenSize, () => "1920x1080");
@@ -73,13 +82,17 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
     let stopped = false;
     const load = async () => {
       try {
-        const response = await fetch(`${feedUrl}?w=${window.innerWidth}&h=${window.innerHeight}`, { cache: "no-store", credentials: "same-origin" });
+        // With the screen's size and what it is showing, for Admin TV's Pantauan.
+        const response = await fetch(`${feedUrl}?w=${window.innerWidth}&h=${window.innerHeight}&item=${encodeURIComponent(showing.current)}`, { cache: "no-store", credentials: "same-origin" });
         if (stopped) return;
         if (response.status === 404) { setGone(true); return; }
         if (!response.ok) return;
         const result = await response.json() as { ok?: boolean; data?: TvFeed };
         if (stopped || !result.ok || !result.data) return;
         // A newer build of the site answered: this page is old, so it loads itself afresh (once in a few minutes at most).
+        // Admin TV asked this TV to load itself afresh (Muat ulang TV) after this page was opened: once per request.
+        const asked = result.data.reloadAt;
+        if (asked && Date.parse(asked) > Date.parse(initial.now) && !reloadDone(asked)) { window.location.reload(); return; }
         if (shouldReload(initial.version, result.data.version, lastReload(), Date.now())) {
           try { window.sessionStorage.setItem(RELOADED_AT, String(Date.now())); } catch { /* private mode: reload anyway */ }
           window.location.reload();
@@ -96,7 +109,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
     // A TV stays on for weeks: load the page afresh at 03.00 WIB, so it also picks up a new version.
     const reload = window.setTimeout(() => window.location.reload(), msUntilReload(new Date()));
     return () => { stopped = true; window.clearInterval(timer); window.clearTimeout(reload); document.removeEventListener("visibilitychange", shown); };
-  }, [feedUrl, initial.version]);
+  }, [feedUrl, initial.version, initial.now]);
 
   // Keep the screen awake where the browser allows it; a kiosk app does this better.
   useEffect(() => {
@@ -130,10 +143,14 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   }, []);
 
   const screen = useMemo(() => tvScreen(width, height), [width, height]);
-  const items = useMemo(() => playlist(feed.settings, feed.slides), [feed.settings, feed.slides]);
+  const items = useMemo(() => playlistOf(feed), [feed]);
   const position = items.length ? index % items.length : 0;
   const current = items[position];
   const following = items.length > 1 ? items[(position + 1) % items.length] : undefined;
+
+  // What this TV is showing, said to the server with each ask (a ref: the asking loop is not restarted by it).
+  const showingNow = current ? itemLabel(current) : "";
+  useEffect(() => { showing.current = showingNow; }, [showingNow]);
 
   // Only a phone can stop the loop (its Jeda button): a TV has no such control and always plays on.
   const phone = isPhoneScreen(width, height, touch);
@@ -186,6 +203,9 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
             {week.every(day => day.rooms.length === 0) ? <Message title="Belum ada ruang yang dipakai minggu ini" body="Booking baru muncul di sini dengan sendirinya." />
               : screen.wide ? <WeekWide days={week} legend={legend} today={feed.date} now={now} room={under(weekLegend)} /> : <WeekTall days={week} legend={legend} today={feed.date} now={now} room={under(weekLegend)} />}
           </Schedule>
+          : current.kind === "timeline" ? <TimelineSlide key={current.key} entries={feed.timeline ?? []} clock={clock} height={room.height} />
+          : current.kind === "pengumuman" ? <NotesSlide key={current.key} notes={feed.notes ?? []} clock={clock} />
+          : current.kind === "teks" ? <TextSlide key={current.key} title={current.title} body={current.body} />
           : <section key={current.key} className={`${css.slide} ${css.picture}`} aria-label={current.slide.title || "Gambar pengumuman"}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={current.slide.src} alt={current.slide.title || "Gambar pengumuman"} referrerPolicy="no-referrer"

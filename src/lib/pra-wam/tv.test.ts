@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, isPhoneScreen, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
+  activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, isPhoneScreen, isTemplateKind, itemLabel, itemShows, playlistOf, scheduleLabel, tvItemCreateSchema, tvItemPatchSchema, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
   shouldReload, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
@@ -271,6 +271,101 @@ describe("a TV that stays open for weeks", () => {
   it("does not reload again at once, so two builds answering in turn cannot make it flicker", () => {
     expect(shouldReload("a", "b", 1_000, 1_000 + TV_RELOAD_EVERY_MS - 1)).toBe(false);
     expect(shouldReload("a", "b", 1_000, 1_000 + TV_RELOAD_EVERY_MS)).toBe(true);
+  });
+});
+
+describe("the playlist", () => {
+  const always = { active: true, showFrom: null, showUntil: null, timeFrom: null, timeUntil: null, screenIds: [] as string[] };
+  const lobby = "11111111-1111-4111-8111-111111111111", pantry = "22222222-2222-4222-8222-222222222222";
+  const here = { date: "2026-11-10", time: "10:15", screenId: null as string | null };
+
+  it("plays a row that is on, with no limits, everywhere", () => {
+    expect(itemShows(always, here)).toBe(true);
+    expect(itemShows(always, { ...here, screenId: lobby })).toBe(true);
+    expect(itemShows({ ...always, active: false }, here)).toBe(false);
+  });
+
+  it("keeps a dated row to its days, both ends included", () => {
+    const dated = { ...always, showFrom: "2026-11-10", showUntil: "2026-11-12" };
+    for (const date of ["2026-11-10", "2026-11-11", "2026-11-12"]) expect(itemShows(dated, { ...here, date }), date).toBe(true);
+    for (const date of ["2026-11-09", "2026-11-13"]) expect(itemShows(dated, { ...here, date }), date).toBe(false);
+    expect(itemShows({ ...always, showUntil: "2026-11-09" }, here)).toBe(false);
+    expect(itemShows({ ...always, showFrom: "2026-11-11" }, here)).toBe(false);
+  });
+
+  it("keeps a timed row to its hours, the end excluded, and past midnight when it says so", () => {
+    const office = { ...always, timeFrom: "08:00", timeUntil: "17:00" };
+    expect(itemShows(office, { ...here, time: "08:00" })).toBe(true);
+    expect(itemShows(office, { ...here, time: "16:59" })).toBe(true);
+    expect(itemShows(office, { ...here, time: "17:00" })).toBe(false);
+    expect(itemShows(office, { ...here, time: "07:59" })).toBe(false);
+    const night = { ...always, timeFrom: "22:00", timeUntil: "06:00" };
+    for (const time of ["22:00", "23:30", "00:10", "05:59"]) expect(itemShows(night, { ...here, time }), time).toBe(true);
+    for (const time of ["06:00", "12:00", "21:59"]) expect(itemShows(night, { ...here, time }), time).toBe(false);
+    // The database gives a time with its seconds.
+    expect(itemShows({ ...always, timeFrom: "08:00:00", timeUntil: "17:00:00" }, here)).toBe(true);
+    expect(itemShows({ ...always, timeFrom: "11:00" }, here)).toBe(false);
+    expect(itemShows({ ...always, timeUntil: "10:00" }, here)).toBe(false);
+  });
+
+  it("plays a row kept for some TVs on those only, and never at the one address for all", () => {
+    const forLobby = { ...always, screenIds: [lobby] };
+    expect(itemShows(forLobby, { ...here, screenId: lobby })).toBe(true);
+    expect(itemShows(forLobby, { ...here, screenId: pantry })).toBe(false);
+    expect(itemShows(forLobby, here)).toBe(false);
+  });
+
+  it("says a row's schedule in words", () => {
+    const name = (id: string) => (id === lobby ? "Lobi" : null);
+    expect(scheduleLabel(always, name)).toBe("");
+    expect(scheduleLabel({ ...always, showFrom: "2026-12-01", showUntil: "2026-12-10", timeFrom: "08:00:00", timeUntil: "17:00", screenIds: [lobby] }, name)).toBe("1 Des – 10 Des · 08.00–17.00 · Lobi");
+    expect(scheduleLabel({ ...always, showUntil: "2026-12-10" }, name)).toBe("sampai 10 Des");
+    expect(scheduleLabel({ ...always, showFrom: "2026-12-10", showUntil: "2026-12-10" }, name)).toBe("10 Des");
+    expect(scheduleLabel({ ...always, screenIds: [pantry] }, name)).toBe("TV yang sudah dihapus");
+  });
+
+  const settings = { showDay: true, daySeconds: 20, showWeek: true, weekSeconds: 30, ...TV_DEFAULT_LOOK };
+  const slides = [{ id: "s1", title: "Poster", seconds: 8, src: "/satu" }];
+
+  it("is what the TV plays when the server sends one, in its order, each row with its own time", () => {
+    const sent = [
+      { id: "a", kind: "teks" as const, title: "Selamat datang", body: "Isi", seconds: 10 },
+      { id: "b", kind: "kalender_minggu" as const, title: "", body: "", seconds: 25 },
+      { id: "c", kind: "timeline" as const, title: "", body: "", seconds: 15 },
+      { id: "d", kind: "gambar" as const, title: "Poster", body: "", seconds: 8, src: "/gambar/d" },
+      { id: "e", kind: "pengumuman" as const, title: "", body: "", seconds: 12 },
+      { id: "f", kind: "kalender_hari" as const, title: "", body: "", seconds: 20 },
+    ];
+    const items = playlistOf({ playlist: sent, settings, slides });
+    expect(items.map(item => [item.kind, item.seconds])).toEqual([["teks", 10], ["minggu", 25], ["timeline", 15], ["gambar", 8], ["pengumuman", 12], ["hari", 20]]);
+    expect(new Set(items.map(item => item.key)).size).toBe(items.length);
+    expect(items.map(itemLabel)).toEqual(["Selamat datang", "Kalender minggu ini", "Timeline Pra WAM", "Poster", "Pengumuman", "Kalender hari ini"]);
+  });
+
+  it("leaves out a picture without its address, and plays nothing for an empty playlist", () => {
+    expect(playlistOf({ playlist: [{ id: "d", kind: "gambar", title: "", body: "", seconds: 8 }], settings, slides })).toEqual([]);
+    expect(playlistOf({ playlist: [], settings, slides })).toEqual([]);
+  });
+
+  it("falls back to the two calendars and the pictures before the playlist exists", () => {
+    expect(playlistOf({ settings, slides }).map(item => item.kind)).toEqual(["hari", "minggu", "gambar"]);
+  });
+
+  it("knows the templates fed by WAM from what the admin makes", () => {
+    for (const kind of ["kalender_hari", "kalender_minggu", "timeline", "pengumuman"] as const) expect(isTemplateKind(kind), kind).toBe(true);
+    for (const kind of ["teks", "gambar"] as const) expect(isTemplateKind(kind), kind).toBe(false);
+  });
+
+  it("takes a template or a text to add, and a row's changes", () => {
+    expect(tvItemCreateSchema.safeParse({ kind: "timeline" }).success).toBe(true);
+    expect(tvItemCreateSchema.safeParse({ kind: "teks", title: " Selamat datang " }).success).toBe(true);
+    expect(tvItemCreateSchema.safeParse({ kind: "teks" }).success).toBe(false);
+    expect(tvItemCreateSchema.safeParse({ kind: "gambar" }).success).toBe(false);
+    expect(tvItemPatchSchema.safeParse({ showFrom: "2026-12-01", showUntil: "2026-12-10", timeFrom: "08:00", timeUntil: null, screenIds: [lobby] }).success).toBe(true);
+    expect(tvItemPatchSchema.safeParse({ showFrom: "2026-12-10", showUntil: "2026-12-01" }).success).toBe(false);
+    expect(tvItemPatchSchema.safeParse({ timeFrom: "8 pagi" }).success).toBe(false);
+    expect(tvItemPatchSchema.safeParse({ screenIds: ["lobi"] }).success).toBe(false);
+    expect(tvItemPatchSchema.safeParse({}).success).toBe(false);
   });
 });
 

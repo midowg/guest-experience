@@ -3,7 +3,10 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import type { RoomUse } from "@/lib/pra-wam/sessions";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
-import { looksLikeTvSlug, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf, type TvDay, type TvFeed, type TvRoom, type TvSettings, type TvSlideStart } from "@/lib/pra-wam/tv";
+import {
+  isTemplateKind, itemShows, looksLikeTvSlug, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
+  type TvDay, type TvFeed, type TvItemKind, type TvItemSchedule, type TvNote, type TvPlayItem, type TvRoom, type TvSettings, type TvSlideStart, type TvTimelineEntry,
+} from "@/lib/pra-wam/tv";
 import { hashTvKey, looksLikeTvKey } from "@/lib/pra-wam/tv-key";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -40,12 +43,39 @@ type SlideRow = { id: string; image_key: string; title: string; seconds: number;
 const SCREEN_COLUMNS = "id,name,key_hint,last_seen_at,last_width,last_height,created_at";
 const SLIDE_COLUMNS = "id,image_key,title,seconds,sort_order,active";
 
+/** The playlist (one row per thing a TV plays) arrives with this one; before it TVs play the two calendars and the pictures. */
+export const TV_ITEMS_MIGRATION = "202611100007_pw_tv_playlist.sql";
+const noTable = (error: { code?: string }) => ["42P01", "PGRST205"].includes(error.code ?? "");
+const waitingForItems = () => new ServiceError(503, `Daftar tayangan menunggu migrasi ${TV_ITEMS_MIGRATION}.`);
+type ItemRow = {
+  id: string; kind: TvItemKind; title: string; body: string; slide_id: string | null; seconds: number; sort_order: number; active: boolean;
+  show_from: string | null; show_until: string | null; time_from: string | null; time_until: string | null; screen_ids: string[] | null;
+};
+const ITEM_COLUMNS = "id,kind,title,body,slide_id,seconds,sort_order,active,show_from,show_until,time_from,time_until,screen_ids";
+/** The playlist in order, or null before its migration. */
+async function readItems(): Promise<ItemRow[] | null> {
+  const { data, error } = await createPrivilegedClient().from("pw_tv_items").select(ITEM_COLUMNS).order("sort_order").order("created_at");
+  if (error) { if (noTable(error)) return null; databaseError(error); }
+  return (data ?? []) as ItemRow[];
+}
+const scheduleOf = (row: ItemRow): TvItemSchedule => ({ showFrom: row.show_from, showUntil: row.show_until, timeFrom: row.time_from?.slice(0, 5) ?? null, timeUntil: row.time_until?.slice(0, 5) ?? null, screenIds: row.screen_ids ?? [] });
+
 /* ---- Admin WAM ---------------------------------------------------------------------------------- */
 
 /** `slug` is null for a TV made before the short addresses that has not been given one (it still plays at its key address). */
-export type TvScreen = { id: string; name: string; slug: string | null; keyHint: string; lastSeenAt: string | null; width: number | null; height: number | null; createdAt: string };
+export type TvScreen = {
+  id: string; name: string; slug: string | null; keyHint: string; lastSeenAt: string | null; width: number | null; height: number | null; createdAt: string;
+  /** What the TV last said it was showing ("Kalender hari ini"); null before the playlist's migration or before it said. */
+  lastItem: string | null;
+};
+/** A row of the playlist as the admin edits it. `slideId` is a picture's, for its thumbnail. */
+export type TvAdminItem = TvItemSchedule & { id: string; kind: TvItemKind; title: string; body: string; seconds: number; active: boolean; slideId: string | null };
 export type TvAdminSlide = { id: string; title: string; seconds: number; active: boolean };
-export type TvAdmin = { migrated: boolean; slugReady: boolean; lookReady: boolean; storageReady: boolean; now: string; screens: TvScreen[]; slides: TvAdminSlide[]; settings: TvSettings };
+export type TvAdmin = {
+  migrated: boolean; slugReady: boolean; lookReady: boolean; storageReady: boolean; now: string; screens: TvScreen[]; slides: TvAdminSlide[]; settings: TvSettings;
+  /** The playlist in order; null before its migration (the calendars and the pictures then play as the settings say). */
+  items: TvAdminItem[] | null;
+};
 
 /** The board's mode and QR code arrive with this one; before it the board is dark, without a QR code. */
 export const TV_LOOK_MIGRATION = "202611100005_pw_tv_look.sql";
@@ -89,13 +119,20 @@ export async function tvAdmin(): Promise<TvAdmin> {
   // Before the short addresses: the same list without them.
   if (error && noSlug(error)) { slugReady = false; ({ data, error } = await read(SCREEN_COLUMNS)); }
   if (error) {
-    if (missing(error)) return { migrated: false, slugReady: false, lookReady: false, storageReady: isR2Configured(), now, screens: [], slides: [], settings: TV_DEFAULT_SETTINGS };
+    if (missing(error)) return { migrated: false, slugReady: false, lookReady: false, storageReady: isR2Configured(), now, screens: [], slides: [], settings: TV_DEFAULT_SETTINGS, items: null };
     databaseError(error);
   }
-  const [slides, { settings, lookReady }] = await Promise.all([readSlides(), readSettingsState()]);
+  const [slides, { settings, lookReady }, items] = await Promise.all([readSlides(), readSettingsState(), readItems()]);
+  // What each TV last showed: a column of the playlist's migration, so asked for only once that has run.
+  const shown = new Map<string, string | null>();
+  if (items) {
+    const { data: last } = await client.from("pw_tv_screens").select("id,last_item");
+    for (const row of (last ?? []) as { id: string; last_item: string | null }[]) shown.set(row.id, row.last_item);
+  }
   return {
+    items: items?.map(row => ({ id: row.id, kind: row.kind, title: row.title, body: row.body, seconds: row.seconds, active: row.active, slideId: row.slide_id, ...scheduleOf(row) })) ?? null,
     migrated: true, slugReady, lookReady, storageReady: isR2Configured(), now,
-    screens: ((data ?? []) as unknown as ScreenRow[]).map(row => ({ id: row.id, name: row.name, slug: row.slug ?? null, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at })),
+    screens: ((data ?? []) as unknown as ScreenRow[]).map(row => ({ id: row.id, name: row.name, slug: row.slug ?? null, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at, lastItem: shown.get(row.id) ?? null })),
     slides: slides.map(row => ({ id: row.id, title: row.title, seconds: row.seconds, active: row.active })),
     settings,
   };
@@ -127,9 +164,88 @@ export async function updateScreen(id: string, change: { name?: string; slug?: s
 
 /** Hapus TV: its address stops working at once. */
 export async function deleteScreen(id: string): Promise<void> {
-  const { data, error } = await createPrivilegedClient().from("pw_tv_screens").delete().eq("id", id).select("id");
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("pw_tv_screens").delete().eq("id", id).select("id");
   if (error) fail(error);
   if (!data?.length) throw new ServiceError(404, "TV ini tidak ditemukan. Muat ulang halaman.");
+  // A row that was for this TV among others goes on without it; one that was for this TV alone is switched off, not shown everywhere.
+  const items = await readItems().catch(() => null);
+  for (const row of items ?? []) {
+    if (!(row.screen_ids ?? []).includes(id)) continue;
+    const left = (row.screen_ids ?? []).filter(screen => screen !== id);
+    await client.from("pw_tv_items").update(left.length ? { screen_ids: left } : { screen_ids: [], active: false }).eq("id", row.id);
+  }
+  invalidate();
+}
+
+/** Muat ulang TV: the TV loads its page afresh the next time it asks (within ten seconds, while it is on). */
+export async function reloadScreen(id: string): Promise<void> {
+  const { data, error } = await createPrivilegedClient().from("pw_tv_screens").update({ reload_at: new Date().toISOString() }).eq("id", id).select("id");
+  if (error) { if (noSlug(error)) throw waitingForItems(); fail(error); }
+  if (!data?.length) throw new ServiceError(404, "TV ini tidak ditemukan. Muat ulang halaman.");
+}
+
+/* ---- The playlist ------------------------------------------------------------------------------- */
+
+const itemsOrWait = async (): Promise<ItemRow[]> => (await readItems()) ?? (() => { throw waitingForItems(); })();
+const nextOrder = (items: readonly ItemRow[]) => Math.max(0, ...items.map(item => item.sort_order)) + 1;
+
+/** A template (one of each) or a text joins the playlist, last. Pictures join through their upload. */
+export async function createItem(input: { kind: Exclude<TvItemKind, "gambar">; title: string; body: string }): Promise<void> {
+  const items = await itemsOrWait();
+  if (isTemplateKind(input.kind) && items.some(item => item.kind === input.kind)) throw new ServiceError(409, "Template ini sudah ada di daftar tayangan.");
+  if (items.length >= 200) throw new ServiceError(409, "Daftar tayangan sudah penuh. Hapus yang tidak dipakai dulu.");
+  const { error } = await createPrivilegedClient().from("pw_tv_items")
+    .insert({ kind: input.kind, title: input.title, body: input.kind === "teks" ? input.body : "", seconds: input.kind === "teks" ? 10 : 20, sort_order: nextOrder(items) });
+  if (error) databaseError(error);
+  invalidate();
+}
+
+export type ItemChange = Partial<{ title: string; body: string; seconds: number; active: boolean; showFrom: string | null; showUntil: string | null; timeFrom: string | null; timeUntil: string | null; screenIds: string[] }>;
+export async function updateItem(id: string, change: ItemChange): Promise<void> {
+  const row: Record<string, unknown> = {};
+  if (change.title !== undefined) row.title = change.title;
+  if (change.body !== undefined) row.body = change.body;
+  if (change.seconds !== undefined) row.seconds = change.seconds;
+  if (change.active !== undefined) row.active = change.active;
+  if (change.showFrom !== undefined) row.show_from = change.showFrom;
+  if (change.showUntil !== undefined) row.show_until = change.showUntil;
+  if (change.timeFrom !== undefined) row.time_from = change.timeFrom;
+  if (change.timeUntil !== undefined) row.time_until = change.timeUntil;
+  if (change.screenIds !== undefined) row.screen_ids = change.screenIds;
+  const { data, error } = await createPrivilegedClient().from("pw_tv_items").update(row).eq("id", id).select("id");
+  if (error) {
+    if (noTable(error)) throw waitingForItems();
+    if (error.code === "23514") throw new ServiceError(422, "Tanggal akhir tidak boleh sebelum tanggal mulai.", { showUntil: ["Sebelum tanggal mulai."] });
+    databaseError(error);
+  }
+  if (!data?.length) throw new ServiceError(404, "Tayangan ini tidak ditemukan. Muat ulang halaman.");
+  invalidate();
+}
+
+/** A row leaves the playlist; a picture's row takes its picture with it (out of storage too). */
+export async function deleteItem(id: string): Promise<void> {
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("pw_tv_items").select("id,slide_id").eq("id", id).maybeSingle();
+  if (error) { if (noTable(error)) throw waitingForItems(); databaseError(error); }
+  if (!data) throw new ServiceError(404, "Tayangan ini tidak ditemukan. Muat ulang halaman.");
+  if (data.slide_id) { await deleteSlide(data.slide_id); return; }
+  const { error: deleteError } = await client.from("pw_tv_items").delete().eq("id", id);
+  if (deleteError) databaseError(deleteError);
+  invalidate();
+}
+
+/** The playlist in a new order: every row must be named once. */
+export async function orderItems(ids: readonly string[]): Promise<void> {
+  const items = await itemsOrWait();
+  if (new Set(ids).size !== ids.length || ids.length !== items.length || items.some(item => !ids.includes(item.id))) {
+    throw new ServiceError(409, "Daftar tayangan sudah berubah. Muat ulang halaman, lalu urutkan lagi.");
+  }
+  const client = createPrivilegedClient();
+  const results = await Promise.all(ids.map((id, index) => client.from("pw_tv_items").update({ sort_order: index + 1 }).eq("id", id)));
+  const failed = results.find(result => result.error);
+  if (failed?.error) databaseError(failed.error);
+  invalidate();
 }
 
 export async function saveSettings(settings: TvSettings): Promise<void> {
@@ -193,9 +309,16 @@ export async function confirmSlideUpload(input: TvSlideStart & { key: string; to
   try {
     const slides = await readSlides();
     if (slides.length >= tvLimits.slides) throw full();
-    const { error } = await createPrivilegedClient().from("pw_tv_slides")
-      .insert({ image_key: input.key, title: input.title, sort_order: Math.max(0, ...slides.map(slide => slide.sort_order)) + 1 });
+    const client = createPrivilegedClient();
+    const { data: made, error } = await client.from("pw_tv_slides")
+      .insert({ image_key: input.key, title: input.title, sort_order: Math.max(0, ...slides.map(slide => slide.sort_order)) + 1 }).select("id").single();
     if (error) fail(error);
+    // With the playlist: the picture is a row of it, last (before its migration the pictures' own order is the loop).
+    const items = await readItems();
+    if (items) {
+      const { error: itemError } = await client.from("pw_tv_items").insert({ kind: "gambar", slide_id: made.id, title: input.title, seconds: 8, sort_order: nextOrder(items) });
+      if (itemError) { await client.from("pw_tv_slides").delete().eq("id", made.id); databaseError(itemError); }
+    }
   } catch (error) { await discard(); throw error; }
   invalidate();
 }
@@ -276,30 +399,69 @@ const FRESH_MS = 6_000;
  * Pra WAM's countdown for the board (10 Nov 2026): from Timeline's forums and events, only their
  * names and dates (the board is open to anyone who knows its address). None when it cannot be read.
  */
-async function boardCountdown(date: string): Promise<Countdown | null> {
+async function boardTimeline(date: string): Promise<{ countdown: Countdown | null; timeline: TvTimelineEntry[] }> {
   const { items } = await timelineItems(null).catch(() => ({ items: [] }));
-  return timelineCountdown(timelineMonths(items, date).flatMap(month => month.entries), date);
+  const entries = timelineMonths(items, date).flatMap(month => month.entries);
+  const days = (to: string) => Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${date}T12:00:00Z`)) / 86_400_000);
+  const left = (count: number) => (count <= 0 ? "hari ini" : count === 1 ? "besok" : `${count} hari lagi`);
+  return {
+    countdown: timelineCountdown(entries, date),
+    // For the "timeline" template: what is on and what comes next, names and dates only.
+    timeline: entries.filter(entry => entry.state !== "selesai").slice(0, 12).map(entry => ({
+      id: entry.id, title: entry.title, when: entry.when, hours: entry.hours, state: entry.state === "berlangsung" ? "berlangsung" as const : "akan" as const, color: entry.color,
+      left: entry.state === "berlangsung" ? `berakhir ${left(days(entry.to))}` : `mulai ${left(days(entry.from))}`,
+    })),
+  };
 }
 
-type Content = { date: string; days: TvDay[]; slides: SlideRow[]; settings: TvSettings; look: WamLook; countdown: Countdown | null };
+/**
+ * Panitia's announcements for the "pengumuman" template: only those sent to everyone (the board
+ * is open to anyone who knows its address, so nothing meant for one unit, session or person),
+ * the last four of the past two weeks. None when they cannot be read.
+ */
+async function boardNotes(now: Date): Promise<TvNote[]> {
+  try {
+    const since = new Date(now.getTime() - 14 * 86_400_000).toISOString();
+    const { data, error } = await createPrivilegedClient().from("pw_announcements").select("id,title,body,created_at")
+      .eq("kind", "pengumuman").eq("audience_label", "Semua peserta").gte("created_at", since).order("created_at", { ascending: false }).limit(4);
+    if (error) return [];
+    return (data ?? []).map(row => ({ id: row.id as string, title: row.title as string, body: row.body as string, at: row.created_at as string }));
+  } catch { return []; }
+}
+
+type Content = {
+  date: string; days: TvDay[]; slides: SlideRow[]; settings: TvSettings; look: WamLook; countdown: Countdown | null;
+  items: ItemRow[] | null; allSlides: SlideRow[]; timeline: TvTimelineEntry[]; notes: TvNote[];
+};
 let kept: { at: number; content: Content } | null = null;
 const invalidate = () => { kept = null; };
 
 async function content(now: Date): Promise<Content> {
   const date = wibDate(now.toISOString());
   if (kept && kept.content.date === date && now.getTime() - kept.at < FRESH_MS) return kept.content;
-  const [days, slides, settings, look, countdown] = await Promise.all([weekDays(weekOf(date)), readSlides(), readSettings(), readWamLook(), boardCountdown(date)]);
-  const fresh = { date, days, slides: slides.filter(slide => slide.active), settings, look, countdown };
+  const [days, slides, settings, look, { countdown, timeline }, items] = await Promise.all([weekDays(weekOf(date)), readSlides(), readSettings(), readWamLook(), boardTimeline(date), readItems()]);
+  // The announcements are read only when the playlist has their template.
+  const notes = items?.some(item => item.kind === "pengumuman" && item.active) ? await boardNotes(now) : [];
+  const fresh = { date, days, slides: slides.filter(slide => slide.active), settings, look, countdown, items, allSlides: slides, timeline, notes };
   kept = { at: now.getTime(), content: fresh };
   return fresh;
 }
 
 /** What plays now; `imageSrc` gives each picture's address (a TV's goes through its key, the admin's through the admin API). */
-export async function tvFeed(imageSrc: (slideId: string) => string, now = new Date()): Promise<TvFeed> {
-  const { date, days, slides, settings, look, countdown } = await content(now);
+export async function tvFeed(imageSrc: (slideId: string) => string, now = new Date(), screen: { id: string; reloadAt: string | null } | null = null): Promise<TvFeed> {
+  const { date, days, slides, settings, look, countdown, items, allSlides, timeline, notes } = await content(now);
+  // The playlist, narrowed to this TV, today and this time of day. A picture's row carries its picture's id, so its address is the picture's.
+  const at = { date, time: wibTime(now.toISOString()), screenId: screen?.id ?? null };
+  const playlist: TvPlayItem[] | undefined = items?.filter(item => itemShows({ ...scheduleOf(item), active: item.active }, at))
+    .filter(item => item.kind !== "gambar" || allSlides.some(slide => slide.id === item.slide_id))
+    .map(item => ({ id: item.slide_id ?? item.id, kind: item.kind, title: item.title, body: item.body, seconds: item.seconds, ...(item.slide_id ? { src: imageSrc(item.slide_id) } : {}) }));
   return {
     now: now.toISOString(), date, days, settings, look, countdown, version: BUILD,
     slides: slides.map(slide => ({ id: slide.id, title: slide.title, seconds: slide.seconds, src: imageSrc(slide.id) })),
+    ...(playlist ? { playlist } : {}),
+    ...(playlist?.some(item => item.kind === "timeline") ? { timeline } : {}),
+    ...(playlist?.some(item => item.kind === "pengumuman") ? { notes } : {}),
+    ...(screen ? { reloadAt: screen.reloadAt } : {}),
   };
 }
 
@@ -313,17 +475,24 @@ const SEEN_EVERY_MS = 60_000;
  * address is the TV's short slug ("lobi"); a TV made before those still answers at its long key.
  * Notes when it was last seen and its screen size, at most once a minute.
  */
-export async function screenForKey(key: unknown, size?: { width: number; height: number }, now = new Date()): Promise<{ id: string } | null> {
+export async function screenForKey(key: unknown, size?: { width: number; height: number }, now = new Date(), showing?: string): Promise<{ id: string; reloadAt: string | null } | null> {
   const byKey = looksLikeTvKey(key);
   if (!byKey && !looksLikeTvSlug(key)) return null;
   const client = createPrivilegedClient();
-  const found = client.from("pw_tv_screens").select("id,last_seen_at,last_width,last_height");
-  const { data, error } = await (byKey ? found.eq("key_hash", hashTvKey(key)) : found.eq("slug", key)).maybeSingle();
+  type Found = { id: string; last_seen_at: string | null; last_width: number | null; last_height: number | null; reload_at?: string | null; last_item?: string | null };
+  const find = (columns: string) => { const found = client.from("pw_tv_screens").select(columns); return (byKey ? found.eq("key_hash", hashTvKey(key)) : found.eq("slug", key)).maybeSingle(); };
+  // With the playlist's migration a TV also has a reload request and says what it shows; before it, neither.
+  let playlistReady = true;
+  let { data: row, error } = await find("id,last_seen_at,last_width,last_height,reload_at,last_item");
+  if (error && noSlug(error)) { playlistReady = false; ({ data: row, error } = await find("id,last_seen_at,last_width,last_height")); }
   if (error) { if (missing(error) || noSlug(error)) return null; databaseError(error); }
+  const data = row as unknown as Found | null;
   if (!data) return null;
   const resized = !!size && (size.width !== data.last_width || size.height !== data.last_height);
-  if (size && (resized || !data.last_seen_at || now.getTime() - Date.parse(data.last_seen_at) >= SEEN_EVERY_MS)) {
-    await client.from("pw_tv_screens").update({ last_seen_at: now.toISOString(), last_width: size.width, last_height: size.height }).eq("id", data.id);
+  const item = playlistReady && showing ? showing.slice(0, 80) : undefined;
+  const changed = item !== undefined && item !== (data.last_item ?? "");
+  if (size && (resized || changed || !data.last_seen_at || now.getTime() - Date.parse(data.last_seen_at) >= SEEN_EVERY_MS)) {
+    await client.from("pw_tv_screens").update({ last_seen_at: now.toISOString(), last_width: size.width, last_height: size.height, ...(item !== undefined ? { last_item: item } : {}) }).eq("id", data.id);
   }
-  return { id: data.id };
+  return { id: data.id, reloadAt: data.reload_at ?? null };
 }

@@ -1,28 +1,17 @@
-import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
-import { PraWamTv, type TvAdminView } from "@/components/admin/wam/PraWamTv";
-import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
-import { wamCrumbs, wamSection } from "@/components/admin/wam/sections";
-import { shareUrl } from "@/lib/site-url";
-import { isSupabaseConfigured } from "@/lib/server/config";
+import { redirect } from "next/navigation";
+import { wamSection } from "@/components/admin/wam/sections";
+import { tvAdminPath } from "@/lib/routes";
 import { requireAdminPage } from "@/lib/server/admin-session";
-import { tvAdmin } from "@/lib/server/pra-wam/tv";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: `${wamSection("tv").label} · Admin WAM` };
 
-const views: Record<TvAdminView, string> = { layar: "Layar TV", tayangan: "Tayangan", tampilan: "Tampilan" };
-
 /**
- * Any admin: TV Announcement in three tabs on its own address. Layar TV: the addresses TVs open.
- * Tayangan (?tab=tayangan): the calendars and the pictures. Tampilan (?tab=tampilan): dark or
- * light, and the QR code.
+ * Admin WAM → TV Announcement: the menu item stays, and leads to Admin TV (10 Nov 2026), TV
+ * Announcement's own admin. The old tabs lead to the places that took them over.
  */
 export default async function WamTvPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
   await requireAdminPage();
-  if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const tab = (await searchParams).tab;
-  const view: TvAdminView = tab === "tayangan" || tab === "tampilan" ? tab : "layar";
-  return <WamAdminFrame current="tv">
-    <PraWamTv initial={await tvAdmin()} crumbs={wamCrumbs("tv", views[view])} title={wamSection("tv").label} origin={shareUrl().origin} view={view} />
-  </WamAdminFrame>;
+  redirect(tab === "tayangan" ? tvAdminPath.playlist : tab === "tampilan" ? tvAdminPath.look : tvAdminPath.home);
 }

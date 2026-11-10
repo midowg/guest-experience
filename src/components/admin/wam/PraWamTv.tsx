@@ -10,7 +10,7 @@ import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { fitWithin } from "@/lib/gallery";
 import { agoLabel, looksLikeTvSlug, loopCount, suggestSlug, tvIsOn, tvLimits, tvModeLabels, tvModes, tvQrPositionLabels, tvQrPositions, tvSlugLimits, type TvQrPosition, type TvSettings } from "@/lib/pra-wam/tv";
-import { absolute, praWamTvApi, TV_HOME_PATH, tvPath, wamAdminPath } from "@/lib/routes";
+import { absolute, praWamTvApi, TV_HOME_PATH, tvAdminPath, tvPath, wamAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminSlide, TvScreen } from "@/lib/server/pra-wam/tv";
 import akun from "./akun/akun.module.css";
 import css from "./tv-admin.module.css";
@@ -70,7 +70,7 @@ async function asWebp(file: File): Promise<Blob> {
 }
 
 /** One picture into the loop: the server agrees a key and size, the browser stores it, the server checks it. */
-async function uploadSlide(file: File): Promise<TvAdmin> {
+export async function uploadSlide(file: File): Promise<TvAdmin> {
   const blob = await asWebp(file);
   const agreed = { mime: "image/webp", size: blob.size };
   const start = await adminRequest<{ key: string; uploadUrl: string; token: string }>(praWamTvApi.slideStart, { method: "POST", body: JSON.stringify(agreed) });
@@ -98,7 +98,11 @@ function screenMeta(screen: TvScreen, now: number): string {
  * each stays. Every TV shows the same content, fitted to its own screen. `origin` is the site's
  * public address, for the links to copy.
  */
-export function PraWamTv({ initial, crumbs, title, origin, view }: { initial: TvAdmin; crumbs: readonly Crumb[]; title: string; origin: string; view: TvAdminView }) {
+export function PraWamTv({ initial, crumbs, title, origin, view, standalone = false }: {
+  initial: TvAdmin; crumbs: readonly Crumb[]; title: string; origin: string; view: TvAdminView;
+  /** In Admin TV: the page is one place of its side menu, so it has no tabs of its own. */
+  standalone?: boolean;
+}) {
   const [list, setList] = useState<TvAdmin>(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -178,10 +182,10 @@ export function PraWamTv({ initial, crumbs, title, origin, view }: { initial: Tv
       subtitle="TV kantor menayangkan kalender ruang hari ini, kalender minggu ini, lalu gambar di bawah, bergantian. Semua TV menayangkan isi yang sama."
       actions={list.migrated ? <>
         <ConsoleButton icon={<RefreshCw size={18} aria-hidden />} disabled={!!busy} onClick={() => void refresh()}>{busy === "refresh" ? "Memuat…" : "Muat ulang"}</ConsoleButton>
-        <ConsoleButtonLink href={wamAdminPath.tvPreview} target="_blank" rel="noopener" variant="primary" icon={<ExternalLink size={18} aria-hidden />}>Pratinjau</ConsoleButtonLink>
+        <ConsoleButtonLink href={tvAdminPath.preview} target="_blank" rel="noopener" variant="primary" icon={<ExternalLink size={18} aria-hidden />}>Pratinjau</ConsoleButtonLink>
       </> : undefined} />
     {!list.migrated ? <Notice tone="warning">TV Announcement menunggu migrasi {MIGRATION}. Jalankan di Supabase SQL Editor; sampai itu, belum ada TV yang bisa ditambahkan.</Notice> : <>
-      <PageTabs tabs={tvTabs} current={view} label="Bagian TV Announcement" />
+      {!standalone && <PageTabs tabs={tvTabs} current={view} label="Bagian TV Announcement" />}
       <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
 
       {view === "layar" && <section className={akun.section} aria-labelledby="tv-layar">

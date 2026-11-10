@@ -25,7 +25,7 @@ export default async function TvPage({ params }: { params: Promise<{ key: string
   if (!screen) notFound();
   const now = new Date();
   // Content that cannot be read right now starts the board empty; it fills in on the next ask.
-  const feed: TvFeed = await tvFeed(slideId => tvApi.image(key, slideId), now).catch(() => {
+  const feed: TvFeed = await tvFeed(slideId => tvApi.image(key, slideId), now, screen).catch(() => {
     const date = wibDate(now.toISOString());
     return { now: now.toISOString(), date, days: weekOf(date).map(day => ({ date: day, rooms: [] })), slides: [], settings: TV_DEFAULT_SETTINGS, look: DEFAULT_WAM_LOOK };
   });
