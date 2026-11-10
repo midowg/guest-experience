@@ -148,6 +148,62 @@ export function dayEntries(day: TvDay): TvDayEntry[] {
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.room.localeCompare(b.room));
 }
 
+/* ---- The legend: one colour per activity --------------------------------------------------------- */
+
+/*
+ * As the app's Timeline does for forums: each activity has its own colour, shown as a dot beside
+ * its name in a legend, and its blocks in the calendars are tinted with it. So a block needs no
+ * title (only its hours), and nothing is cut short however narrow the block is.
+ */
+/** How many colours the board cycles through (tv.module.css, .c0 to .c8; the Timeline's own nine). */
+export const TV_COLORS = 9;
+export type TvLegendItem = { title: string; color: number };
+/** Two spellings of one activity ("Appraisal 1-on-1", "appraisal  1-on-1 ") are the same activity. */
+export const activityKey = (title: string) => title.trim().replace(/\s+/g, " ").toLowerCase();
+
+/**
+ * The week's activities, each with its colour, in the order they first start. The colour is fixed
+ * for the week, so an activity is the same colour on the day calendar and on the week's.
+ */
+export function tvLegend(days: readonly TvDay[]): TvLegendItem[] {
+  const entries = days.flatMap(day => day.rooms.flatMap(room => room.entries))
+    .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || activityKey(a.title).localeCompare(activityKey(b.title)));
+  const seen = new Map<string, TvLegendItem>();
+  for (const entry of entries) {
+    const key = activityKey(entry.title);
+    if (!seen.has(key)) seen.set(key, { title: entry.title.trim().replace(/\s+/g, " "), color: seen.size % TV_COLORS });
+  }
+  return [...seen.values()];
+}
+/** An activity's colour in a legend (0 when it is somehow not there). */
+export const colorOf = (legend: readonly TvLegendItem[], title: string) => legend.find(item => activityKey(item.title) === activityKey(title))?.color ?? 0;
+/** The legend's items that some entry of these rooms uses, in the legend's order. */
+export function legendFor(legend: readonly TvLegendItem[], rooms: readonly TvRoom[]): TvLegendItem[] {
+  const used = new Set(rooms.flatMap(room => room.entries.map(entry => activityKey(entry.title))));
+  return legend.filter(item => used.has(activityKey(item.title)));
+}
+
+/** What the legend's layout is measured in, in units: a letter's width, a chip's dot and padding, the gap between chips, a row's height. */
+export const tvLegendUnits = { letter: 1.02, chip: 4.2, gap: 2.4, row: 4.4 } as const;
+/**
+ * The legend laid out in rows that fit `width` units, at most `most` rows; what does not fit is
+ * counted in `more` ("+3 lainnya"), never squeezed. A name longer than a row is cut to the row.
+ */
+export function legendRows(items: readonly TvLegendItem[], width: number, most = 3): { rows: TvLegendItem[][]; more: number } {
+  const rows: TvLegendItem[][] = [];
+  let used = 0;
+  for (const [index, item] of items.entries()) {
+    const size = Math.min(width, item.title.length * tvLegendUnits.letter + tvLegendUnits.chip);
+    if (!rows.length || used + tvLegendUnits.gap + size > width) {
+      if (rows.length === most) return { rows, more: items.length - index };
+      rows.push([]); used = 0;
+    }
+    used += (rows[rows.length - 1].length ? tvLegendUnits.gap : 0) + size;
+    rows[rows.length - 1].push(item);
+  }
+  return { rows, more: 0 };
+}
+
 /* ---- The day calendar's hours ------------------------------------------------------------------- */
 
 /** "10:30" → 10.5. */

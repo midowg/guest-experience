@@ -6,8 +6,8 @@ import QRCode from "qrcode";
 import { TV_HOME_PATH } from "@/lib/routes";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, decimalHour, entryState, fit, shouldReload, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
-  type TvDay, type TvDayEntry, type TvEntry, type TvFeed, type TvRoom,
+  colorOf, dayEntries, decimalHour, entryState, fit, legendFor, legendRows, shouldReload, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
+  type TvDay, type TvDayEntry, type TvEntry, type TvFeed, type TvLegendItem, type TvRoom,
 } from "@/lib/pra-wam/tv";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import css from "./tv.module.css";
@@ -149,20 +149,26 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const dayNote = [`${today.length} ruang dipakai`, `${entriesToday.length} jadwal`, ...(onNow ? [`${onNow} sedang berlangsung`] : [])].join(" · ");
   const weekCount = week.reduce((sum, day) => sum + day.rooms.reduce((count, item) => count + item.entries.length, 0), 0);
 
+  // One colour per activity for the whole week, so it is the same on both calendars; each shows the ones it draws.
+  const legend = useMemo(() => tvLegend(feed.days), [feed.days]);
+  const dayLegend = legendRows(legendFor(legend, today), room.width);
+  const weekLegend = legendRows(legendFor(legend, week.flatMap(day => day.rooms)), room.width);
+  const under = (shown: Legend) => ({ width: room.width, height: room.height - legendHeight(shown) });
+
   // WAM's own theme (Admin WAM → Tema aplikasi), in the mode picked for the TVs: dark unless the admin chose light.
   return <div data-wam-look={feed.look} data-wam-theme={feed.settings.mode} style={{ display: "contents" }}><div className={base.app}>
   <main className={css.board} data-idle={!active} data-orientation={screen.wide ? "mendatar" : "tegak"} data-qr={qrShow ? feed.settings.qrPosition : undefined}>
     {gone ? <div className={css.slide}><Message title="Tautan TV ini sudah tidak berlaku" body="Minta tautan baru di Admin WAM → TV Announcement." /></div>
       : !current ? <div className={css.slide}><Message title="Belum ada yang ditayangkan" body="Tambahkan gambar atau nyalakan jadwal ruang di Admin WAM → TV Announcement." /></div>
       : current.kind === "hari"
-        ? <Schedule key={current.key} kicker="Jadwal ruang hari ini" title={tvDateLabel(feed.date)} note={today.length ? dayNote : undefined} clock={clock}>
+        ? <Schedule key={current.key} kicker="Jadwal ruang hari ini" title={tvDateLabel(feed.date)} note={today.length ? dayNote : undefined} clock={clock} legend={dayLegend}>
           {today.length === 0 ? <Message title="Belum ada ruang yang dipakai hari ini" body="Booking baru muncul di sini dengan sendirinya." />
-            : screen.wide ? <DayWide rooms={today} now={now} time={time} room={room} /> : <DayTall rooms={today} now={now} time={time} room={room} />}
+            : screen.wide ? <DayWide rooms={today} legend={legend} now={now} time={time} room={under(dayLegend)} /> : <DayTall rooms={today} legend={legend} now={now} time={time} room={under(dayLegend)} />}
         </Schedule>
         : current.kind === "minggu"
-          ? <Schedule key={current.key} kicker="Jadwal ruang minggu ini" title={tvWeekLabel(week.map(day => day.date))} note={weekCount ? `${weekCount} jadwal minggu ini` : undefined} clock={clock}>
+          ? <Schedule key={current.key} kicker="Jadwal ruang minggu ini" title={tvWeekLabel(week.map(day => day.date))} note={weekCount ? `${weekCount} jadwal minggu ini` : undefined} clock={clock} legend={weekLegend}>
             {week.every(day => day.rooms.length === 0) ? <Message title="Belum ada ruang yang dipakai minggu ini" body="Booking baru muncul di sini dengan sendirinya." />
-              : screen.wide ? <WeekWide days={week} today={feed.date} now={now} room={room} /> : <WeekTall days={week} today={feed.date} now={now} room={room} />}
+              : screen.wide ? <WeekWide days={week} legend={legend} today={feed.date} now={now} room={under(weekLegend)} /> : <WeekTall days={week} legend={legend} today={feed.date} now={now} room={under(weekLegend)} />}
           </Schedule>
           : <section key={current.key} className={`${css.slide} ${css.picture}`} aria-label={current.slide.title || "Gambar pengumuman"}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -186,12 +192,25 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   </div></div>;
 }
 
-function Schedule({ kicker, title, note, clock, children }: { kicker: string; title: string; note?: string; clock: string; children: ReactNode }) {
+/** The legend's colours, in TV_COLORS order (tv.module.css). */
+const tones = [css.c0, css.c1, css.c2, css.c3, css.c4, css.c5, css.c6, css.c7, css.c8];
+type Legend = { rows: TvLegendItem[][]; more: number };
+/** The height the legend takes above a calendar, in units. */
+const legendHeight = (legend: Legend) => (legend.rows.length ? legend.rows.length * tvLegendUnits.row + 1 : 0);
+
+function Schedule({ kicker, title, note, clock, legend, children }: { kicker: string; title: string; note?: string; clock: string; legend: Legend; children: ReactNode }) {
   return <section className={`${css.slide} ${css.schedule}`} aria-label={kicker}>
     <header className={css.head}>
       <div className={css.headText}><p className={css.kicker}>{kicker}</p><h1 className={css.date}>{title}</h1>{note && <p className={css.summary}>{note}</p>}</div>
       <p className={css.clock}>{clock}<span>WIB</span></p>
     </header>
+    {/* Each activity once, with its colour: the blocks below carry the colour and the hours, not the name. */}
+    {legend.rows.length > 0 && <ul className={css.legend} aria-label="Kegiatan dan warnanya">
+      {legend.rows.map((row, index) => <li key={index} className={css.legendRow}>
+        {row.map(item => <span key={item.title} className={`${css.chip} ${tones[item.color]}`}><i className={css.dot} aria-hidden="true" /><span className={css.one}>{item.title}</span></span>)}
+        {index === legend.rows.length - 1 && legend.more > 0 && <span className={css.chipMore}>+{legend.more} lainnya</span>}
+      </li>)}
+    </ul>}
     <div className={css.body}>{children}</div>
   </section>;
 }
@@ -204,12 +223,14 @@ function hoursOf(from: number, to: number) {
   const step = to - from > 12 ? 2 : 1;
   return { all, labelled: all.filter(hour => (hour - from) % step === 0), at: (hour: number) => ((hour - from) / Math.max(1, to - from)) * 100 };
 }
+/** The widest a line of hours ("11.00–12.30") is at a text size, with the block's padding, in units. */
+const HOURS_LETTERS = 6.1, BLOCK_PAD = 1.8;
 
-/** Today on a landscape TV: a row per room against the hours. Rows share the height, so every room in use is on screen. */
-function DayWide({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; time: string; room: Room }) {
+/** Today on a landscape TV: a card per room against the hours. Cards share the height, so every room in use is on screen. */
+function DayWide({ rooms, legend, now, time, room }: { rooms: TvRoom[]; legend: readonly TvLegendItem[]; now: number; time: string; room: Room }) {
   const AXIS = 5, NAME = 26, GAP = 0.5;
   const hours = hourSpan(rooms), marks = hoursOf(hours.from, hours.to);
-  const row = fit(room.height - AXIS, rooms.length, 26);
+  const row = fit(room.height - AXIS, rooms.length, 22);
   const two = row >= 7;
   const track = room.width - NAME;
   const nowPlace = nowAt(time, hours);
@@ -233,17 +254,16 @@ function DayWide({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; tim
           {gone > 0 && <div className={css.gone} style={{ width: `${gone}%` }} />}
           {item.entries.map(entry => {
             const spot = place(entry, hours), state = entryState(entry, now);
-            // The block's own width decides its text: a short meeting gets small text on several lines, never a cut word.
+            // The block carries its activity's colour and its hours; the text is sized so the hours always fit its width.
             const wide = (spot.size / 100) * track;
-            const text = Math.min(fitText(wide, 0.12, 2.2, 1.3), fitText(row, 0.3, 2.2, 1.3));
-            const small = Math.max(1.25, text * 0.82);
-            const on = state === "berlangsung";
-            const under = two ? (on ? 2 : 1) * small * 1.25 : 0;
-            const lines = Math.max(1, Math.floor((row - GAP * 2 - 1.4 - under) / (text * 1.2)));
-            return <div key={entry.key} className={css.block} data-state={state} style={{ left: `${spot.at}%`, width: `${spot.size}%`, top: u(GAP), bottom: u(GAP) }}>
-              <span className={`${css.wrap} ${css.title}`} style={{ fontSize: u(text), WebkitLineClamp: lines }}>{entry.title}</span>
-              {two && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(small) }}>{wide >= 10 ? span(entry) : clockLabel(entry.start)}{entry.by && wide >= 26 ? ` · ${entry.by}` : ""}</span>}
-              {two && on && <span className={`${css.one} ${css.on}`} style={{ fontSize: u(small) }}>Berlangsung</span>}
+            const whole = wide >= 1.25 * HOURS_LETTERS + BLOCK_PAD;
+            const text = Math.min(2.2, fitText(row, 0.3, 2.2), Math.max(1.25, (wide - BLOCK_PAD) / (whole ? HOURS_LETTERS : 3)));
+            const small = Math.max(1.25, text * 0.8);
+            return <div key={entry.key} className={`${css.block} ${tones[colorOf(legend, entry.title)]}`} data-state={state} title={entry.title}
+              style={{ left: `${spot.at}%`, width: `${spot.size}%`, top: u(GAP), bottom: u(GAP) }}>
+              <span className={`${css.one} ${css.title}`} style={{ fontSize: u(text) }}>{whole ? span(entry) : clockLabel(entry.start)}</span>
+              {two && entry.by && wide >= 16 && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(small) }}>{entry.by}</span>}
+              {two && state === "berlangsung" && wide >= 10 && <span className={`${css.one} ${css.on}`} style={{ fontSize: u(small) }}>Berlangsung</span>}
             </div>;
           })}
         </div>
@@ -252,13 +272,15 @@ function DayWide({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; tim
   </>;
 }
 
-/** Today on a portrait TV: a column per room, the hours running down. Columns share the width. */
-function DayTall({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; time: string; room: Room }) {
+/** Today on a portrait TV: a card per room, the hours running down. Cards share the width. */
+function DayTall({ rooms, legend, now, time, room }: { rooms: TvRoom[]; legend: readonly TvLegendItem[]; now: number; time: string; room: Room }) {
   const SIDE = 9, TOP = 7, GAP = 0.4;
   const hours = hourSpan(rooms), marks = hoursOf(hours.from, hours.to);
   const column = fit(room.width - SIDE, rooms.length, 40);
   const nowPlace = nowAt(time, hours);
   const gone = nowPlace ?? (decimalHour(time) > hours.to ? 100 : 0);
+  const whole = column >= 1.25 * HOURS_LETTERS + BLOCK_PAD + GAP * 2;
+  const text = Math.min(2.2, Math.max(1.25, (column - BLOCK_PAD - GAP * 2) / (whole ? HOURS_LETTERS : 3)));
   return <>
     <div className={css.cols} style={{ left: u(SIDE), height: u(TOP) }}>
       {rooms.map(item => <div key={item.id} className={css.colName} style={{ width: u(column), fontSize: u(fitText(column, 0.15, 2.6)) }}>{item.name}</div>)}
@@ -276,10 +298,11 @@ function DayTall({ rooms, now, time, room }: { rooms: TvRoom[]; now: number; tim
           {gone > 0 && <div className={css.goneDown} style={{ height: `${gone}%` }} />}
           {item.entries.map(entry => {
             const spot = place(entry, hours), state = entryState(entry, now);
-            return <div key={entry.key} className={css.block} data-state={state} style={{ top: `${spot.at}%`, height: `${spot.size}%`, left: u(GAP), right: u(GAP) }}>
-              <span className={css.title} style={{ fontSize: u(fitText(column, 0.13, 2.6)) }}>{entry.title}</span>
-              <span className={css.sub} style={{ fontSize: u(fitText(column, 0.1, 2)) }}>{span(entry)}{entry.by ? ` · ${entry.by}` : ""}</span>
-              {state === "berlangsung" && <span className={css.on} style={{ fontSize: u(fitText(column, 0.1, 2)) }}>Berlangsung</span>}
+            return <div key={entry.key} className={`${css.block} ${tones[colorOf(legend, entry.title)]}`} data-state={state} title={entry.title}
+              style={{ top: `${spot.at}%`, height: `${spot.size}%`, left: u(GAP), right: u(GAP) }}>
+              <span className={`${css.one} ${css.title}`} style={{ fontSize: u(text) }}>{whole ? span(entry) : clockLabel(entry.start)}</span>
+              {entry.by && column >= 16 && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(Math.max(1.25, text * 0.8)) }}>{entry.by}</span>}
+              {state === "berlangsung" && <span className={`${css.one} ${css.on}`} style={{ fontSize: u(Math.max(1.25, text * 0.8)) }}>Berlangsung</span>}
             </div>;
           })}
         </div>
@@ -296,58 +319,43 @@ function DayHead({ date, today, height, text }: { date: string; today: string; h
 }
 
 /** The week on a landscape TV: a column per day. The fullest day decides the entry size, so every entry of the week is on screen. */
-function WeekWide({ days, today, now, room }: { days: TvDay[]; today: string; now: number; room: Room }) {
+function WeekWide({ days, legend, today, now, room }: { days: TvDay[]; legend: readonly TvLegendItem[]; today: string; now: number; room: Room }) {
   const HEADING = 6, GAP = 0.6;
   const lists = days.map(day => ({ day, entries: dayEntries(day) }));
-  const unit = fit(room.height - HEADING - 1, Math.max(...lists.map(list => list.entries.length)), 12);
+  const unit = fit(room.height - HEADING - 1, Math.max(...lists.map(list => list.entries.length)), 6.5);
   const column = room.width / days.length;
-  // Each entry: one small line (hours and room), then the title on as many lines as its height holds.
-  const small = fitText(unit, 0.21, 1.7);
-  const text = Math.min(fitText(unit, 0.25, 2.1, 1.3), fitText(column, 0.065, 2.1, 1.3));
-  const lines = Math.floor((unit - GAP - 1 - small * 1.25) / (text * 1.2));
+  const text = Math.min(fitText(unit, 0.4, 2.1), fitText(column, 0.058, 2.1));
   return <div className={css.week} style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }}>
     {lists.map(({ day, entries }) => <div key={day.date} className={css.weekDay} data-today={day.date === today}>
       <DayHead date={day.date} today={today} height={HEADING} text={fitText(column, 0.085, 2.6)} />
       {entries.length === 0 && <p className={css.free} style={{ marginTop: u(1.2), fontSize: u(2) }}>Kosong</p>}
-      {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} now={now} height={unit - GAP} gap={GAP}
-        text={lines >= 1 ? text : fitText(unit, 0.5, 2.1)} sub={lines >= 1 ? small : null} lines={Math.max(1, lines)} />)}
+      {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} tone={tones[colorOf(legend, entry.title)]} now={now} height={unit - GAP} gap={GAP} text={text} />)}
     </div>)}
   </div>;
 }
 
 /** The week on a portrait TV: a band per day, one line per entry. All lines share the height. */
-function WeekTall({ days, today, now, room }: { days: TvDay[]; today: string; now: number; room: Room }) {
+function WeekTall({ days, legend, today, now, room }: { days: TvDay[]; legend: readonly TvLegendItem[]; today: string; now: number; room: Room }) {
   const HEADING = 1.6, GAP = 0.4;
   const lists = days.map(day => ({ day, entries: dayEntries(day) }));
   const lines = lists.reduce((sum, list) => sum + Math.max(1, list.entries.length) + HEADING, 0);
-  const line = fit(room.height, lines, 7);
+  const line = fit(room.height, lines, 6.5);
   return <div className={css.bands}>
     {lists.map(({ day, entries }) => <div key={day.date} className={css.weekDay} data-today={day.date === today} style={{ flex: "none" }}>
       <DayHead date={day.date} today={today} height={line * HEADING} text={fitText(line, 0.5, 2.8)} />
       {entries.length === 0 && <p className={`${css.free} ${css.one}`} style={{ height: u(line), lineHeight: u(line), fontSize: u(fitText(line, 0.42, 2)) }}>Kosong</p>}
-      {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} now={now} height={line - GAP} gap={GAP} text={fitText(line, 0.42, 2.6)} sub={null} wholeSpan />)}
+      {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} tone={tones[colorOf(legend, entry.title)]} now={now} height={line - GAP} gap={GAP} text={fitText(line, 0.42, 2.4)} />)}
     </div>)}
   </div>;
 }
 
-/**
- * One entry of the week. With room for it (`sub`): a small line of hours and room, then the title
- * on up to `lines` lines, so a long title wraps instead of being cut. Without: one line of everything.
- */
-function WeekItem({ entry, now, height, gap, text, sub, lines = 1, wholeSpan = false }: { entry: TvDayEntry; now: number; height: number; gap: number; text: number; sub: number | null; lines?: number; wholeSpan?: boolean }) {
+/** One entry of the week, on one line: its activity's dot, its hours and its room. The activity's name is in the legend. */
+function WeekItem({ entry, tone, now, height, gap, text }: { entry: TvDayEntry; tone: string; now: number; height: number; gap: number; text: number }) {
   const state = entryState(entry, now);
-  // "Kini", not "Berlangsung": the line also has to hold the hours and the room in a narrow day column.
-  const on = state === "berlangsung" && <span className={css.on}>Kini · </span>;
-  const hours = wholeSpan ? span(entry) : clockLabel(entry.start);
-  return <div className={css.item} data-state={state} style={{ height: u(height), marginTop: u(gap) }}>
-    {sub != null
-      ? <>
-        <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(sub) }}>{on}<span className={css.hour}>{span(entry)}</span> · {entry.room}</span>
-        <span className={`${css.wrap} ${css.title}`} style={{ fontSize: u(text), WebkitLineClamp: lines }}>{entry.title}</span>
-      </>
-      : <span className={css.one} style={{ fontSize: u(text) }}>
-        <span className={css.hour}>{hours}</span>{" "}<span className={css.title}>{entry.title}</span><span className={css.sub}> · {on}{entry.room}</span>
-      </span>}
+  return <div className={`${css.item} ${tone}`} data-state={state} title={entry.title} style={{ height: u(height), marginTop: u(gap), fontSize: u(text) }}>
+    <i className={css.dot} aria-hidden="true" />
+    <span className={css.one}><span className={css.title}>{span(entry)}</span><span className={css.sub}> · {entry.room}</span></span>
+    {state === "berlangsung" && <span className={css.on}>Kini</span>}
   </div>;
 }
 

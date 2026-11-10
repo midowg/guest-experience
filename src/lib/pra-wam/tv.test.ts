@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  agoLabel, dayEntries, entryState, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
+  activityKey, agoLabel, colorOf, dayEntries, entryState, legendFor, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
   shouldReload, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
@@ -46,6 +46,49 @@ describe("entries", () => {
       { id: "a", name: "Arjuna", entries: [entry("a2", "13:00", "14:00"), entry("a1", "10:00", "12:00")] },
     ] };
     expect(dayEntries(day).map(item => [item.key, item.room])).toEqual([["a1", "Arjuna"], ["b1", "Vasuki"], ["a2", "Arjuna"]]);
+  });
+});
+
+describe("the legend: one colour per activity", () => {
+  const named = (key: string, title: string, start: string, date = "2026-11-10"): TvEntry => ({ ...entry(key, start, "23:00"), title, startsAt: at(start, date) });
+  const week: TvDay[] = [
+    { date: "2026-11-09", rooms: [{ id: "a", name: "Ruang A", entries: [named("m1", "Appraisal 1-on-1", "16:00", "2026-11-09")] }] },
+    { date: "2026-11-10", rooms: [
+      { id: "a", name: "Ruang A", entries: [named("t1", "Internal Dept Meeting", "11:00"), named("t2", "appraisal  1-on-1 ", "13:30")] },
+      { id: "b", name: "Ruang B", entries: [named("t3", "HOD Meeting", "09:00")] },
+    ] },
+  ];
+
+  it("gives each activity one colour for the week, in the order they first start, whatever its spelling", () => {
+    expect(tvLegend(week)).toEqual([{ title: "Appraisal 1-on-1", color: 0 }, { title: "HOD Meeting", color: 1 }, { title: "Internal Dept Meeting", color: 2 }]);
+    expect(colorOf(tvLegend(week), "APPRAISAL 1-on-1")).toBe(0);
+    expect(colorOf(tvLegend(week), "Tidak ada")).toBe(0);
+    expect(activityKey("  Appraisal   1-on-1 ")).toBe("appraisal 1-on-1");
+  });
+
+  it("cycles through the colours when there are more activities than colours", () => {
+    const many: TvDay[] = [{ date: "2026-11-10", rooms: [{ id: "a", name: "Ruang A", entries: Array.from({ length: TV_COLORS + 2 }, (_, index) => named(`k${index}`, `Kegiatan ${index}`, `${String(8 + index).padStart(2, "0")}:00`)) }] }];
+    expect(tvLegend(many).map(item => item.color)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1]);
+  });
+
+  it("shows a calendar only the activities it draws, in the same colours", () => {
+    const legend = tvLegend(week);
+    expect(legendFor(legend, week[1].rooms).map(item => item.title)).toEqual(["Appraisal 1-on-1", "HOD Meeting", "Internal Dept Meeting"]);
+    expect(legendFor(legend, week[0].rooms)).toEqual([{ title: "Appraisal 1-on-1", color: 0 }]);
+    expect(legendFor(legend, [])).toEqual([]);
+  });
+
+  it("lays the legend out in rows that fit, and counts what does not", () => {
+    const items = Array.from({ length: 10 }, (_, index) => ({ title: "Kegiatan ke-" + index, color: index % TV_COLORS }));
+    const one = items[0].title.length * tvLegendUnits.letter + tvLegendUnits.chip;
+    const width = one * 3 + tvLegendUnits.gap * 2;
+    const laid = legendRows(items, width, 2);
+    expect(laid.rows.map(row => row.length)).toEqual([3, 3]);
+    expect(laid.more).toBe(4);
+    expect(legendRows(items, width, 4)).toMatchObject({ more: 0 });
+    expect(legendRows([], width)).toEqual({ rows: [], more: 0 });
+    // A name longer than a row still gets its own row.
+    expect(legendRows([{ title: "x".repeat(400), color: 0 }, items[0]], 60).rows.map(row => row.length)).toEqual([1, 1]);
   });
 });
 
