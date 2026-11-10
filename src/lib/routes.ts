@@ -305,6 +305,10 @@ export const wamAdminPath = {
   about: `${WAM_ADMIN}/apa-itu-wam`,
   /** The app's theme for everyone: Dream Out Loud or Werkudara, each light and dark. */
   theme: `${WAM_ADMIN}/tema`,
+  /** TV Announcement: the office TVs, their pictures, and how long each stays. */
+  tv: `${WAM_ADMIN}/tv`,
+  /** The board as a TV plays it, for the signed-in admin (no TV key). */
+  tvPreview: `${WAM_ADMIN}/tv/pratinjau`,
   /** The personal questionnaire: content, settings, progress, and the HR-locked answers. */
   questionnaire: {
     content: `${WAM_ADMIN}/kuesioner`,
@@ -417,3 +421,39 @@ export const praWamAboutApi = "/api/admin/wam/about";
 export const praWamSettingsApi = "/api/admin/wam/settings";
 /** Admin WAM → Tema aplikasi (any admin). */
 export const praWamThemeApi = "/api/admin/wam/theme";
+
+/*
+ * TV Announcement: an office TV opens /tv/{key} with no sign-in; the key in the address is the
+ * secret (only its sha256 is kept). Outside /wam and /admin on purpose: no login, no app frame.
+ */
+export const tvPath = (key: string) => `/tv/${enc(key)}`;
+export const tvApi = {
+  /** GET: what the TV plays now; `?w=&h=` tell the admin how big the screen is. */
+  feed: (key: string) => `/api/tv/${enc(key)}`,
+  /** GET: one picture, through this site (storage stays private). */
+  image: (key: string, slideId: string) => `/api/tv/${enc(key)}/image/${slideId}`,
+};
+/** Admin WAM → TV Announcement (any admin). */
+const TV_ADMIN_API = "/api/admin/wam/tv";
+export const praWamTvApi = {
+  /** GET: the TVs, the pictures and the settings. */
+  list: TV_ADMIN_API,
+  /** GET: what a TV would play now, for the preview. */
+  feed: `${TV_ADMIN_API}/feed`,
+  /** POST {name}: a new TV; its address is in the answer, once. */
+  screens: `${TV_ADMIN_API}/screens`,
+  /** DELETE: the TV's address stops working. */
+  screen: (id: string) => `${TV_ADMIN_API}/screens/${id}`,
+  /** PUT {showSchedule, scheduleSeconds}. */
+  settings: `${TV_ADMIN_API}/settings`,
+  /** POST {mime, size}: an upload address for one picture. */
+  slideStart: `${TV_ADMIN_API}/slides/start`,
+  /** POST: the picture is uploaded; check it and add it to the loop. */
+  slideConfirm: `${TV_ADMIN_API}/slides/confirm`,
+  /** PATCH {title?, seconds?, active?}; DELETE removes the picture. */
+  slide: (id: string) => `${TV_ADMIN_API}/slides/${id}`,
+  /** GET: one picture, for the admin's list and preview. */
+  slideImage: (id: string) => `${TV_ADMIN_API}/slides/${id}/image`,
+  /** PUT {ids}: the pictures in a new order. */
+  order: `${TV_ADMIN_API}/slides/order`,
+};

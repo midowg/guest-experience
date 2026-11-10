@@ -1,0 +1,39 @@
+/* Admin WAM → TV Announcement: the TVs, the pictures and the settings. --cs-* variables only. */
+.addForm { display: grid; gap: 12px; align-items: end; }
+@media (min-width: 700px) { .addForm { grid-template-columns: minmax(0, 24rem) auto; } }
+.created { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--cs-primary); border-radius: 16px; background: var(--cs-surface); }
+.created p { margin: 0; font-size: 14px; }
+.link { display: block; padding: 10px 12px; border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-bg, transparent); font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; user-select: all; }
+.buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.screens, .slides { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.screen { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.screenTop { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.screenTop strong { font-size: 15px; overflow-wrap: anywhere; }
+.meta { margin: 0; color: var(--cs-muted); font-size: 13px; }
+@media (min-width: 900px) {
+  .screen { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .screen > .buttons { grid-column: 2; grid-row: 1 / span 2; }
+}
+
+.slide { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px 16px; padding: 12px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.slideOff .thumb { opacity: .5; }
+.thumb { width: 112px; height: 63px; border-radius: 8px; background: #0b1220; object-fit: contain; }
+.slideMain { display: grid; gap: 6px; min-width: 0; align-content: center; }
+.slideTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.slideTitle strong { font-size: 15px; overflow-wrap: anywhere; }
+.slideTools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; grid-column: 1 / -1; }
+.slideTools label { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.slideTools select { width: auto; min-height: 44px; padding: 6px 10px; }
+.iconButton { min-width: 44px; padding: 0 10px; }
+@media (min-width: 900px) {
+  .slide { grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; }
+  .slideTools { grid-column: auto; justify-content: flex-end; }
+}
+
+.settings { display: grid; gap: 16px; max-width: 36rem; }
+.calendar { display: grid; gap: 8px 16px; align-items: end; padding: 12px 16px; border: 1px solid var(--cs-line); border-radius: 16px; }
+@media (min-width: 700px) { .calendar { grid-template-columns: minmax(0, 1fr) 10rem; align-items: center; } }
+.check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; cursor: pointer; }
+.check input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--cs-primary); }
+.fileInput { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

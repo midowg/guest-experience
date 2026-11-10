@@ -44,7 +44,11 @@ export function withoutSessionBookings<T extends { id: string }>(bookings: reado
 }
 
 /** What uses a room on a day: an appraisal booking or another session. */
-export type RoomUse = { roomId: string; startsAt: string; endsAt: string; source: "booking" | "sesi"; sourceId: string; label: string };
+export type RoomUse = {
+  roomId: string; startsAt: string; endsAt: string; source: "booking" | "sesi"; sourceId: string; label: string;
+  /** The label's two parts on their own (TV Announcement): the title, and who booked as "SM - Raja" ("" for a panitia session). */
+  title?: string; by?: string;
+};
 
 export function sessionTimes(): string[] {
   const times: string[] = [];

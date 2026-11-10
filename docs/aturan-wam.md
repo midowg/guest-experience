@@ -303,16 +303,17 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 
 ## 9a. TV Announcement
 
-TV kantor menayangkan jadwal ruang hari ini dan gambar pengumuman, bergantian (10 Nov 2026).
+TV kantor menayangkan kalender ruang (hari ini dan minggu ini) dan gambar pengumuman, bergantian (10 Nov 2026).
 Diatur di **Admin WAM → TV Announcement**; migrasi `202611100003_pw_tv.sql`.
 
 | Hal | Aturan |
 | --- | --- |
 | Tautan TV | Tiap TV punya tautan sendiri, `/tv/{kunci}`, **tanpa login**. Kuncinya rahasia: tampil sekali saat TV ditambahkan, dan hanya sha256-nya yang disimpan (pola kunci MCP, `src/lib/pra-wam/tv-key.ts`). **Hapus TV** membuat tautannya langsung tidak berlaku. Paling banyak 10 TV. |
-| Isi | **Sama di semua TV.** Urutannya: halaman jadwal ruang, lalu gambar sesuai urutan di admin, lalu mengulang. |
-| Jadwal | Pemakaian ruang hari ini dari `pw_room_holds` (booking dan sesi). Yang tampil hanya **nama kegiatan, ruang, jam, dan pemesan** ("SM - Raja", `bookerLabel`); deskripsi dan peserta tidak pernah tampil. Yang sudah selesai hilang; ruang tanpa jadwal tersisa tidak ditampilkan. Tanda "Sedang berlangsung" dan "Berikutnya" selalu berupa kata. Booking Di luar kantor tidak tampil. |
+| Isi | **Sama di semua TV.** Urutannya: kalender hari ini, kalender minggu ini, lalu gambar sesuai urutan di admin, lalu mengulang. Tiap kalender bisa dimatikan dan punya durasi sendiri (5–120 detik). |
+| Kalender | Pemakaian ruang dari `pw_room_holds` (booking dan sesi), dibaca sekali untuk seminggu (`roomUsesBetween`). **Hari ini**: ruang lawan jam (08–18, melebar bila ada jadwal di luar itu) dengan garis "sekarang"; di TV tegak ruang jadi kolom dan jam menurun. **Minggu ini**: Senin–Jumat per kolom (Sabtu/Minggu hanya bila ada jadwal); di TV tegak per hari satu pita. Yang tampil hanya **nama kegiatan, ruang, jam, dan pemesan** ("SM - Raja", `bookerLabel`); deskripsi dan peserta tidak pernah tampil. Ruang yang tidak dipakai hari itu tidak digambar. Yang sudah selesai tetap tampil tetapi redup; "Sedang berlangsung" selalu berupa kata. Booking Di luar kantor tidak tampil. |
+| Semua terlihat | Kalender **tidak pernah digulir atau dibagi halaman**: ruang di bawah kepala dibagi rata ke baris yang dibutuhkan data, jadi makin banyak jadwal makin kecil baris dan hurufnya (`fit`, `fitText` di `src/lib/pra-wam/tv.ts`), dengan batas huruf terkecil 1,25 % sisi pendek layar. |
 | Gambar | Diunggah admin, diubah ke WebP (sisi terpanjang 2560 px) di browser, disimpan di R2 privat (`pra-wam/tv/`), dan dikirim ke TV lewat situs ini. Paling banyak 30 gambar; tiap gambar punya durasi dan bisa disembunyikan tanpa dihapus. |
-| Layar | Papan digambar dalam satuan 1 % sisi pendek layar, jadi ukuran huruf sama di TV mendatar dan tegak; yang berubah jumlah kolom dan halaman. Tinggi baris di `tv.module.css` dan `tvUnits` (`src/lib/pra-wam/tv.ts`) harus diubah bersama. Gambar yang rasionya mirip layar memenuhi layar; yang lain tampil utuh. |
+| Layar | Papan digambar dalam satuan 1 % sisi pendek layar, jadi skala gambar sama di TV mendatar dan tegak; yang berubah susunannya. Tinggi kepala dan jarak tepi di `tv.module.css` dan `HEAD`/`PAD_*` di `TvBoard.tsx` harus diubah bersama. Gambar yang rasionya mirip layar memenuhi layar; yang lain tampil utuh. |
 | Tetap segar | TV bertanya tiap 20 detik (server menyimpan jawaban 10 detik), jadi perubahan tampil dalam setengah menit. Jaringan putus: TV meneruskan isi terakhir. Halaman dimuat ulang sendiri pukul 03.00 WIB. Tidak memakai Supabase Realtime. |
 | Layar penuh | Tombol "Layar penuh" muncul saat layar disentuh atau mouse digerakkan. Supaya terbuka sendiri saat TV menyala, pakai aplikasi kiosk atau Chrome `--kiosk` di perangkatnya; itu bukan urusan halaman. |
 | Status TV | Admin melihat "Menyala" (bertanya dalam 2 menit terakhir), "Tidak terlihat", atau "Belum pernah dibuka", serta ukuran layarnya. |

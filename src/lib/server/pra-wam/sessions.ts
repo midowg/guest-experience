@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { clockLabel, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
+import { bookerLabel } from "@/lib/pra-wam/schedule-export";
 import { BOOKING_SESSION_LOCKED, sessionProblems, sessionSpan, type RoomUse, type Session, type SessionInput, type SessionStatus } from "@/lib/pra-wam/sessions";
 import type { TimelineItem } from "@/lib/pra-wam/timeline";
 import { ServiceError } from "../config";
@@ -143,11 +144,14 @@ export async function getSession(id: string, viewer: Member): Promise<Session> {
 }
 
 /** Everything that holds a room on a day, with a label people recognise. */
-export async function roomUses(date: string): Promise<RoomUse[]> {
-  const next = new Date(`${date}T12:00:00Z`); next.setUTCDate(next.getUTCDate() + 1);
+export const roomUses = (date: string): Promise<RoomUse[]> => roomUsesBetween(date, date);
+
+/** The same for a run of days, `from` to `to` inclusive (the TV's week), in one read. */
+export async function roomUsesBetween(from: string, to: string): Promise<RoomUse[]> {
+  const next = new Date(`${to}T12:00:00Z`); next.setUTCDate(next.getUTCDate() + 1);
   const client = createPrivilegedClient();
   const { data, error } = await client.from("pw_room_holds").select("source,source_id,room_id,starts_at,ends_at")
-    .lt("starts_at", wibInstant(next.toISOString().slice(0, 10), "00:00")).gt("ends_at", wibInstant(date, "00:00"));
+    .lt("starts_at", wibInstant(next.toISOString().slice(0, 10), "00:00")).gt("ends_at", wibInstant(from, "00:00"));
   if (error) fail(error);
   const holds = data ?? [];
   const bookingIds = holds.filter(hold => hold.source === "booking").map(hold => hold.source_id);
@@ -168,7 +172,13 @@ export async function roomUses(date: string): Promise<RoomUse[]> {
     const label = hold.source === "booking"
       ? `${booking?.title ?? "Booking ruang"} (${named(booking?.booked_by, "pemesan")})`
       : session?.booking_id ? `${session.title} (${named(session.created_by, "pemesan")})` : session?.title ?? "Sesi";
-    return { roomId: hold.room_id, startsAt: hold.starts_at, endsAt: hold.ends_at, source: hold.source as RoomUse["source"], sourceId: hold.source_id, label };
+    const bookerId = hold.source === "booking" ? booking?.booked_by : session?.booking_id ? session.created_by : null;
+    const booker = people.find(person => person.id === bookerId);
+    return {
+      roomId: hold.room_id, startsAt: hold.starts_at, endsAt: hold.ends_at, source: hold.source as RoomUse["source"], sourceId: hold.source_id, label,
+      title: (hold.source === "booking" ? booking?.title : session?.title) ?? (hold.source === "booking" ? "Booking ruang" : "Sesi"),
+      by: booker ? bookerLabel(booker) : "",
+    };
   });
 }
 

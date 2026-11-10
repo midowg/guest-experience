@@ -1,0 +1,175 @@
+import { z } from "zod";
+
+/*
+ * TV Announcement (Admin WAM → TV Announcement, 10 Nov 2026): what an office TV plays. Every TV
+ * shows the same thing, sized to its own screen: today's rooms as a calendar (rooms against the
+ * hours), this week's as a calendar (a column per day), then the uploaded pictures, one after
+ * another, forever. A calendar always fits one screen: its rows and text shrink as the day or the
+ * week fills up, so everything stays in view. The rules here are shared by the TV page, the
+ * admin's preview and the server, and are pure.
+ */
+
+/** One use of a room on a day. `start`/`end` are WIB clock times cut at the day's edges ("24:00" = runs past midnight). */
+export type TvEntry = { key: string; title: string; by: string; start: string; end: string; startsAt: string; endsAt: string };
+export type TvRoom = { id: string; name: string; entries: TvEntry[] };
+/** One day of the week: the rooms in use on it, in the rooms' own order. */
+export type TvDay = { date: string; rooms: TvRoom[] };
+export type TvSlide = { id: string; title: string; seconds: number; src: string };
+export type TvSettings = { showDay: boolean; daySeconds: number; showWeek: boolean; weekSeconds: number };
+/**
+ * `days` is the week of `date`, Monday to Sunday. `now` is the server's clock, so a TV whose own
+ * clock is wrong still draws "now" in the right place.
+ */
+export type TvFeed = { now: string; date: string; days: TvDay[]; slides: TvSlide[]; settings: TvSettings };
+
+export const TV_DEFAULT_SETTINGS: TvSettings = { showDay: true, daySeconds: 20, showWeek: true, weekSeconds: 20 };
+export const tvLimits = {
+  screens: 10, slides: 30,
+  /** A picture as stored: made in the browser as WebP, longest side 2560 px. */
+  imageBytes: 4 * 1024 * 1024, imageEdge: 2560,
+  minSeconds: 3, maxSeconds: 120, minScheduleSeconds: 5,
+} as const;
+
+export const tvImageTypes = { "image/webp": "webp", "image/png": "png", "image/jpeg": "jpg" } as const;
+export type TvImageMime = keyof typeof tvImageTypes;
+export const TV_IMAGE_PREFIX = "pra-wam/tv/";
+export const tvImageKey = (id: string, mime: TvImageMime) => `${TV_IMAGE_PREFIX}${id}.${tvImageTypes[mime]}`;
+
+const seconds = z.number().int().min(tvLimits.minSeconds, `Paling singkat ${tvLimits.minSeconds} detik.`).max(tvLimits.maxSeconds, `Paling lama ${tvLimits.maxSeconds} detik.`);
+const scheduleSeconds = z.number().int().min(tvLimits.minScheduleSeconds, `Paling singkat ${tvLimits.minScheduleSeconds} detik.`).max(tvLimits.maxSeconds, `Paling lama ${tvLimits.maxSeconds} detik.`);
+const title = z.string().trim().max(80, "Nama gambar paling panjang 80 karakter.");
+export const tvScreenSchema = z.object({ name: z.string().trim().min(2, "Isi nama TV, misalnya Lobi.").max(60, "Nama TV paling panjang 60 karakter.") });
+export const tvSettingsSchema = z.object({ showDay: z.boolean(), daySeconds: scheduleSeconds, showWeek: z.boolean(), weekSeconds: scheduleSeconds });
+export const tvSlideStartSchema = z.object({
+  mime: z.enum(Object.keys(tvImageTypes) as [TvImageMime, ...TvImageMime[]], { message: "Pilih gambar WebP, PNG, atau JPG." }),
+  size: z.number().int().min(1).max(tvLimits.imageBytes, "Gambar lebih dari 4 MB."),
+});
+export type TvSlideStart = z.infer<typeof tvSlideStartSchema>;
+export const tvSlideConfirmSchema = tvSlideStartSchema.extend({ key: z.string().min(1).max(200), token: z.string().min(1).max(200), title: title.default("") });
+export const tvSlidePatchSchema = z.object({ title: title.optional(), seconds: seconds.optional(), active: z.boolean().optional() })
+  .refine(value => Object.values(value).some(item => item !== undefined), { message: "Tidak ada yang diubah." });
+export const tvOrderSchema = z.object({ ids: z.array(z.uuid()).min(1).max(tvLimits.slides) });
+
+/* ---- Dates ------------------------------------------------------------------------------------- */
+
+const atNoon = (date: string) => new Date(`${date}T12:00:00Z`);
+const shift = (date: string, days: number) => { const day = atNoon(date); day.setUTCDate(day.getUTCDate() + days); return day.toISOString().slice(0, 10); };
+const format = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("id-ID", { ...options, timeZone: "UTC" });
+const longDate = format({ weekday: "long", day: "numeric", month: "long", year: "numeric" });
+const weekdayName = format({ weekday: "long" });
+const dayMonth = format({ day: "numeric", month: "short" });
+const dayMonthYear = format({ day: "numeric", month: "long", year: "numeric" });
+
+/** The week a date is in, Monday first: seven dates. */
+export function weekOf(date: string): string[] {
+  const monday = shift(date, -((atNoon(date).getUTCDay() + 6) % 7));
+  return Array.from({ length: 7 }, (_, index) => shift(monday, index));
+}
+/** "Selasa, 10 November 2026". */
+export const tvDateLabel = (date: string) => longDate.format(atNoon(date));
+/** A day's column head: "Selasa" and "10 Nov". */
+export const tvDayHead = (date: string) => ({ name: weekdayName.format(atNoon(date)), day: dayMonth.format(atNoon(date)) });
+/** "9 Nov – 13 November 2026", the week on show. */
+export const tvWeekLabel = (dates: readonly string[]) => dates.length ? `${dayMonth.format(atNoon(dates[0]))} – ${dayMonthYear.format(atNoon(dates[dates.length - 1]))}` : "";
+
+/** The days the week calendar draws: Monday to Friday, and a weekend day only when a room is used on it. */
+export const shownDays = (days: readonly TvDay[]): TvDay[] => days.filter((day, index) => index < 5 || day.rooms.length > 0);
+
+/* ---- Entries ----------------------------------------------------------------------------------- */
+
+export type TvState = "selesai" | "berlangsung" | "nanti";
+export const entryState = (entry: Pick<TvEntry, "startsAt" | "endsAt">, now: number): TvState =>
+  Date.parse(entry.endsAt) <= now ? "selesai" : Date.parse(entry.startsAt) <= now ? "berlangsung" : "nanti";
+
+export type TvDayEntry = TvEntry & { room: string };
+/** A day's entries as one list for its column, by start time, each with its room's name. */
+export function dayEntries(day: TvDay): TvDayEntry[] {
+  return day.rooms.flatMap(room => room.entries.map(entry => ({ ...entry, room: room.name })))
+    .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.room.localeCompare(b.room));
+}
+
+/* ---- The day calendar's hours ------------------------------------------------------------------- */
+
+/** "10:30" → 10.5. */
+export const decimalHour = (time: string) => Number(time.slice(0, 2)) + Number(time.slice(3, 5)) / 60;
+export type TvSpan = { from: number; to: number };
+/** The hours the day calendar spans: 08–18, widened to whole hours around anything outside it. */
+export function hourSpan(rooms: readonly TvRoom[], from = 8, to = 18): TvSpan {
+  const entries = rooms.flatMap(room => room.entries);
+  if (!entries.length) return { from, to };
+  return {
+    from: Math.max(0, Math.min(from, Math.floor(Math.min(...entries.map(entry => decimalHour(entry.start)))))),
+    to: Math.min(24, Math.max(to, Math.ceil(Math.max(...entries.map(entry => decimalHour(entry.end)))))),
+  };
+}
+/** Where an entry sits along the hours, in per cent of the span: where it starts and how long it is. */
+export function place(entry: Pick<TvEntry, "start" | "end">, span: TvSpan): { at: number; size: number } {
+  const length = Math.max(1, span.to - span.from);
+  const start = Math.max(span.from, Math.min(span.to, decimalHour(entry.start)));
+  const end = Math.max(start, Math.min(span.to, decimalHour(entry.end)));
+  return { at: ((start - span.from) / length) * 100, size: ((end - start) / length) * 100 };
+}
+/** Where "now" sits along the hours in per cent, or null outside them. */
+export function nowAt(time: string, span: TvSpan): number | null {
+  const hour = decimalHour(time);
+  return hour < span.from || hour > span.to ? null : ((hour - span.from) / Math.max(1, span.to - span.from)) * 100;
+}
+
+/* ---- Fitting a calendar to a screen ------------------------------------------------------------- */
+
+/*
+ * The board is drawn in units of 1 % of the screen's shorter side (CSS: 1vmin). A calendar never
+ * scrolls or pages: the room it has is shared by however many rows the day or the week needs.
+ */
+export type TvScreen = { wide: boolean; width: number; height: number };
+/** The screen in units: a landscape TV is 100 tall and about 178 wide, a portrait one the other way round. */
+export function tvScreen(width: number, height: number): TvScreen {
+  const unit = Math.max(1, Math.min(width, height)) / 100;
+  return { wide: width >= height, width: width / unit, height: height / unit };
+}
+/** The size of one of `count` equal rows sharing `available` units, never more than `most` (few rows stay a sensible size). */
+export const fit = (available: number, count: number, most: number) => Math.min(most, available / Math.max(1, count));
+/** Text for a row of `unit` units: a share of it, kept between the smallest size still readable on a TV and `most`. */
+export const fitText = (unit: number, share: number, most: number, least = 1.25) => Math.max(least, Math.min(most, unit * share));
+
+/* ---- The loop ---------------------------------------------------------------------------------- */
+
+export type TvItem =
+  | { key: string; kind: "hari"; seconds: number }
+  | { key: string; kind: "minggu"; seconds: number }
+  | { key: string; kind: "gambar"; slide: TvSlide; seconds: number };
+
+/** What plays, in order: today's calendar, the week's, then the pictures. Empty when both calendars are off and there is no picture. */
+export function playlist(settings: TvSettings, slides: readonly TvSlide[]): TvItem[] {
+  return [
+    ...(settings.showDay ? [{ key: "hari", kind: "hari" as const, seconds: settings.daySeconds }] : []),
+    ...(settings.showWeek ? [{ key: "minggu", kind: "minggu" as const, seconds: settings.weekSeconds }] : []),
+    ...slides.map(slide => ({ key: `gambar-${slide.id}`, kind: "gambar" as const, slide, seconds: slide.seconds })),
+  ];
+}
+
+/** A picture close to the screen's shape fills it (a sliver is cropped); any other is shown whole. */
+export function imageFit(imageWidth: number, imageHeight: number, screenWidth: number, screenHeight: number): "cover" | "contain" {
+  if (!imageWidth || !imageHeight || !screenWidth || !screenHeight) return "contain";
+  const screen = screenWidth / screenHeight;
+  return Math.abs(imageWidth / imageHeight - screen) / screen <= 0.12 ? "cover" : "contain";
+}
+
+/** Milliseconds until the next 03.00 WIB (20.00 UTC), when a TV loads the page afresh. */
+export function msUntilReload(now: Date): number {
+  const next = new Date(now);
+  next.setUTCHours(20, 0, 0, 0);
+  if (next.getTime() <= now.getTime()) next.setUTCDate(next.getUTCDate() + 1);
+  return next.getTime() - now.getTime();
+}
+
+/** "2 menit lalu", "3 jam lalu", "5 hari lalu", for when a TV last asked for content. */
+export function agoLabel(iso: string, now: number): string {
+  const minutes = Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
+  if (minutes < 1) return "baru saja";
+  if (minutes < 60) return `${minutes} menit lalu`;
+  if (minutes < 60 * 24) return `${Math.round(minutes / 60)} jam lalu`;
+  return `${Math.round(minutes / (60 * 24))} hari lalu`;
+}
+/** A TV counts as on while it asked for content in the last two minutes (it asks every 20 seconds). */
+export const tvIsOn = (lastSeenAt: string | null, now: number) => !!lastSeenAt && now - Date.parse(lastSeenAt) < 2 * 60_000;
