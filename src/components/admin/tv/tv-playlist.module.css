@@ -1,0 +1,56 @@
+/*
+ * Admin TV → Tayangan. --cs-* variables only.
+ * A row is a card in two tiers, so nothing squeezes the title: who it is (thumbnail, name, what
+ * it is and when it shows, its state) on top; what can be done to it (order, duration, show or
+ * hide, edit, remove) in a bar underneath that wraps on a narrow screen. Its editor opens below
+ * the bar, inside the same card. Every control is at least 44 px tall and 8 px from the next.
+ */
+.list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.row { display: grid; gap: 0; min-width: 0; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.rowOpen { border-color: var(--cs-primary); }
+.rowOff .thumb, .rowOff .kind { opacity: .5; }
+
+.top { display: grid; grid-template-columns: auto 96px minmax(0, 1fr); align-items: center; gap: 12px 14px; padding: 14px 16px; }
+.order { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--cs-line); color: var(--cs-text, inherit); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.thumb, .kind { width: 96px; height: 54px; border-radius: 8px; }
+.thumb { background: #0b1220; object-fit: contain; }
+.kind { display: grid; place-items: center; border: 1px solid var(--cs-line); color: var(--cs-muted); }
+.text { display: grid; gap: 4px; min-width: 0; }
+.name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.name strong { min-width: 0; font-size: 15px; overflow-wrap: anywhere; }
+.meta { margin: 0; color: var(--cs-muted); font-size: 13px; overflow-wrap: anywhere; }
+
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--cs-line); }
+.group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.groupEnd { margin-left: auto; }
+.duration { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+.duration select { width: auto; min-height: 44px; padding: 6px 10px; }
+.icon { min-width: 44px; padding: 0 10px; }
+
+.editor { display: grid; gap: 16px; padding: 16px; border-top: 1px solid var(--cs-line); }
+.editorBody { display: grid; gap: 16px; max-width: 40rem; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 12px; margin: 0; padding: 0; border: 0; }
+.pair legend, .screens legend { margin-bottom: 8px; padding: 0; font-size: 14px; font-weight: 700; }
+.screens { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0; padding: 0; border: 0; }
+.check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; cursor: pointer; }
+.check input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--cs-primary); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.hint { margin: 0; color: var(--cs-muted); font-size: 13px; }
+
+/* Tambah tayangan: three ways in, side by side where there is the width, one under the other on a phone. */
+.add { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 12px; align-items: start; }
+.card { display: grid; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.card h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; font-weight: 700; }
+.templates { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.template { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 10px 12px; border: 1px dashed var(--cs-line); border-radius: 12px; }
+.template strong { font-size: 14px; }
+.template p { grid-column: 1; margin: 0; color: var(--cs-muted); font-size: 13px; }
+.template button { grid-column: 2; grid-row: 1 / span 2; }
+.file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+@media (max-width: 560px) {
+  .top { grid-template-columns: auto minmax(0, 1fr); }
+  .thumb, .kind { grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+  .order { grid-row: 2; }
+  .groupEnd { margin-left: 0; }
+}
