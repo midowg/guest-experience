@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookerLabel, exportDates, exportDays, exportRows, exportText, rangeLabel, stampLabel } from "./schedule-export";
+import { bookerLabel, titleWithDepartment, exportDates, exportDays, exportRows, exportText, rangeLabel, stampLabel } from "./schedule-export";
 import type { Session } from "./sessions";
 
 const at = (date: string, time: string) => new Date(`${date}T${time}:00+07:00`).toISOString();
@@ -18,6 +18,13 @@ describe("schedule export", () => {
     expect(bookerLabel({ name: "Raja", department: "" })).toBe("Raja");
   });
 
+  it("puts the booker's department after the name, once", () => {
+    expect(titleWithDepartment("Appraisal team", "SM")).toBe("Appraisal team SM");
+    expect(titleWithDepartment("Appraisal team SM", "SM")).toBe("Appraisal team SM");
+    expect(titleWithDepartment("Rapat (HRGA)", "HRGA")).toBe("Rapat (HRGA)");
+    expect(titleWithDepartment(" Forum HC ", "")).toBe("Forum HC");
+  });
+
   it("covers Monday to Sunday of the week, or the day", () => {
     expect(exportDates("minggu", "2026-11-11")).toEqual(["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14", "2026-11-15"]);
     expect(exportDates("hari", "2026-11-11")).toEqual(["2026-11-11"]);
@@ -29,8 +36,8 @@ describe("schedule export", () => {
     const sessions = [
       session({ day: "2026-11-10", from: "13:30", to: "15:00", participantCount: 3 }),
       session({ day: "2026-11-10", from: "11:00", to: "12:30" }),
-      session({ day: "2026-11-10", from: "18:00", to: "19:00", title: "Appraisal team Comms", roomId: null, roomName: null, location: "Lor Sawah",
-        booking: { id: "b1", bookedBy: { id: "p1", name: "Raja", department: "Communications" } } }),
+      session({ day: "2026-11-10", from: "18:00", to: "19:00", title: "Appraisal team", roomId: null, roomName: null, location: "Lor Sawah",
+        booking: { id: "b1", bookedBy: { id: "p1", name: "Raja", department: "Sales & Marketing" } } }),
       session({ day: "2026-11-10", from: "09:00", to: "10:00", title: "Draf", status: "draf" }),
       session({ day: "2026-11-11", from: "09:00", to: "10:00", title: "Batal", status: "batal" }),
       session({ day: "2026-11-11", from: "13:00", to: "15:00", title: "Internal Departemen SS", participantCount: 0 }),
@@ -43,7 +50,7 @@ describe("schedule export", () => {
     expect(text).toBe([
       "meeting tanggal 10",
       "- Appraisal team SS | *CFC Ananta Room* | 11.00 - 12.30 (2 pax) & 13.30 - 15.00 (3 pax)",
-      "- Appraisal team Comms | *Di luar kantor (Lor Sawah)* | 18.00 - 19.00 (2 pax)",
+      "- Appraisal team SM | *Di luar kantor (Lor Sawah)* | 18.00 - 19.00 (2 pax)",
       "",
       "meeting tanggal 11",
       "- Internal Departemen SS | *CFC Ananta Room* | 13.00 - 15.00",
@@ -51,7 +58,7 @@ describe("schedule export", () => {
       "update per 10/11/2026 11.50 WIB",
     ].join("\n"));
     expect(exportRows(days)[0]).toEqual(["Tanggal", "Kegiatan", "Tempat", "Mulai", "Selesai", "Pax", "Pemesan"]);
-    expect(exportRows(days)).toContainEqual([expect.stringContaining("10 Nov 2026"), "Appraisal team Comms", "Di luar kantor (Lor Sawah)", "18.00", "19.00", "2", "Communications - Raja"]);
+    expect(exportRows(days)).toContainEqual([expect.stringContaining("10 Nov 2026"), "Appraisal team SM", "Di luar kantor (Lor Sawah)", "18.00", "19.00", "2", "SM - Raja"]);
   });
 
   it("says when nothing is published", () => {

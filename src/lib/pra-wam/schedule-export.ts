@@ -9,7 +9,7 @@ import type { Session } from "./sessions";
  *   meeting tanggal 10
  *   - Appraisal team SS | *CFC Ananta Room* | 11.00 - 12.30 (2 pax) & 13.30 - 15.00 (3 pax)
  *
- * One line per name and place on a day, its times joined with "&". Drafts and cancelled sessions
+ * The booker's department follows the name. One line per name and place on a day, its times joined with "&". Drafts and cancelled sessions
  * stay out, so is a session without hours. Pure, so it is tested without a server.
  */
 
@@ -39,6 +39,18 @@ export function exportPlace(session: Pick<Session, "roomName" | "location" | "bo
   return "Tempat belum ditentukan";
 }
 
+/**
+ * The name as the text says it (10 Nov 2026): the booker's department after it, "Appraisal team"
+ * → "Appraisal team SM", unless the name already ends with it ("Appraisal team SM" stays).
+ */
+export function titleWithDepartment(title: string, department: string): string {
+  const name = title.trim();
+  const short = department.trim();
+  if (!short) return name;
+  const tail = name.split(/\s+/).at(-1)?.replace(/[()[\]]/g, "").toLowerCase();
+  return tail === short.toLowerCase() || name.toLowerCase().endsWith(` ${short.toLowerCase()}`) ? name : `${name} ${short}`;
+}
+
 /** Each date that holds something, its sessions by name and place, earliest first. */
 export function exportDays(sessions: readonly Session[], dates: readonly string[]): ExportDay[] {
   const wanted = new Set(dates);
@@ -50,8 +62,9 @@ export function exportDays(sessions: readonly Session[], dates: readonly string[
     const date = wibDate(session.startsAt!);
     const place = exportPlace(session);
     const items = byDay.get(date) ?? new Map();
-    const key = `${session.title.trim().toLowerCase()}|${place.toLowerCase()}`;
-    const item = items.get(key) ?? { title: session.title.trim(), place, slots: [], first: session.startsAt! };
+    const title = titleWithDepartment(session.title, session.booking ? departmentShort(session.booking.bookedBy.department ?? "") : "");
+    const key = `${title.toLowerCase()}|${place.toLowerCase()}`;
+    const item = items.get(key) ?? { title, place, slots: [], first: session.startsAt! };
     item.slots.push({
       start: clockLabel(wibTime(session.startsAt!)), end: clockLabel(wibTime(session.endsAt!)), pax: session.participantCount,
       booker: session.booking ? bookerLabel(session.booking.bookedBy) : null,
