@@ -16,7 +16,20 @@ export type TvRoom = { id: string; name: string; entries: TvEntry[] };
 /** One day of the week: the rooms in use on it, in the rooms' own order. */
 export type TvDay = { date: string; rooms: TvRoom[] };
 export type TvSlide = { id: string; title: string; seconds: number; src: string };
-export type TvSettings = { showDay: boolean; daySeconds: number; showWeek: boolean; weekSeconds: number };
+/** The board's mode: the colours are the WAM theme's (Admin WAM → Tema aplikasi), in its dark or its light. */
+export const tvModes = ["dark", "light"] as const;
+export type TvMode = (typeof tvModes)[number];
+export const tvModeLabels: Record<TvMode, string> = { dark: "Gelap", light: "Terang" };
+/** The corner the QR code sits in. */
+export const tvQrPositions = ["kanan-bawah", "kiri-bawah", "kanan-atas", "kiri-atas"] as const;
+export type TvQrPosition = (typeof tvQrPositions)[number];
+export const tvQrPositionLabels: Record<TvQrPosition, string> = { "kanan-bawah": "Kanan bawah", "kiri-bawah": "Kiri bawah", "kanan-atas": "Kanan atas", "kiri-atas": "Kiri atas" };
+/** Which calendars play and for how long. */
+export type TvLoopSettings = { showDay: boolean; daySeconds: number; showWeek: boolean; weekSeconds: number };
+/** How the board looks: its mode, and the QR code (`qrUrl` empty = the address the TV itself opened). */
+export type TvLookSettings = { mode: TvMode; qrShow: boolean; qrUrl: string; qrLabel: string; qrPosition: TvQrPosition };
+export type TvSettings = TvLoopSettings & TvLookSettings;
+export const TV_DEFAULT_LOOK: TvLookSettings = { mode: "dark", qrShow: false, qrUrl: "", qrLabel: "", qrPosition: "kanan-bawah" };
 /**
  * `days` is the week of `date`, Monday to Sunday. `now` is the server's clock, so a TV whose own
  * clock is wrong still draws "now" in the right place.
@@ -27,7 +40,7 @@ export type TvFeed = {
   look: WamLook;
 };
 
-export const TV_DEFAULT_SETTINGS: TvSettings = { showDay: true, daySeconds: 20, showWeek: true, weekSeconds: 20 };
+export const TV_DEFAULT_SETTINGS: TvSettings = { showDay: true, daySeconds: 20, showWeek: true, weekSeconds: 20, ...TV_DEFAULT_LOOK };
 export const tvLimits = {
   screens: 10, slides: 30,
   /** A picture as stored: made in the browser as WebP, longest side 2560 px. */
@@ -65,7 +78,15 @@ const screenSlug = z.string().trim().toLowerCase()
 export const tvScreenSchema = z.object({ name: screenName, slug: screenSlug });
 export const tvScreenPatchSchema = z.object({ name: screenName.optional(), slug: screenSlug.optional() })
   .refine(value => value.name !== undefined || value.slug !== undefined, { message: "Tidak ada yang diubah." });
-export const tvSettingsSchema = z.object({ showDay: z.boolean(), daySeconds: scheduleSeconds, showWeek: z.boolean(), weekSeconds: scheduleSeconds });
+/** A web address a phone can open, for the QR code; "" means the TV's own address. */
+const isWebAddress = (value: string) => { try { return ["http:", "https:"].includes(new URL(value).protocol); } catch { return false; } };
+export const tvSettingsSchema = z.object({
+  showDay: z.boolean(), daySeconds: scheduleSeconds, showWeek: z.boolean(), weekSeconds: scheduleSeconds,
+  mode: z.enum(tvModes), qrShow: z.boolean(),
+  qrUrl: z.string().trim().max(500, "Alamat QR paling panjang 500 karakter.").refine(value => value === "" || isWebAddress(value), "Isi alamat lengkap yang diawali https://, atau kosongkan untuk alamat TV ini."),
+  qrLabel: z.string().trim().max(60, "Keterangan QR paling panjang 60 karakter."),
+  qrPosition: z.enum(tvQrPositions),
+});
 export const tvSlideStartSchema = z.object({
   mime: z.enum(Object.keys(tvImageTypes) as [TvImageMime, ...TvImageMime[]], { message: "Pilih gambar WebP, PNG, atau JPG." }),
   size: z.number().int().min(1).max(tvLimits.imageBytes, "Gambar lebih dari 4 MB."),
@@ -169,10 +190,10 @@ export type TvItem =
  * How many things the loop plays: with one (or none) nothing ever changes on screen, so a
  * duration means nothing and the admin page does not ask for one.
  */
-export const loopCount = (settings: TvSettings, activeSlides: number) => Number(settings.showDay) + Number(settings.showWeek) + activeSlides;
+export const loopCount = (settings: TvLoopSettings, activeSlides: number) => Number(settings.showDay) + Number(settings.showWeek) + activeSlides;
 
 /** What plays, in order: today's calendar, the week's, then the pictures. Empty when both calendars are off and there is no picture. */
-export function playlist(settings: TvSettings, slides: readonly TvSlide[]): TvItem[] {
+export function playlist(settings: TvLoopSettings, slides: readonly TvSlide[]): TvItem[] {
   return [
     ...(settings.showDay ? [{ key: "hari", kind: "hari" as const, seconds: settings.daySeconds }] : []),
     ...(settings.showWeek ? [{ key: "minggu", kind: "minggu" as const, seconds: settings.weekSeconds }] : []),

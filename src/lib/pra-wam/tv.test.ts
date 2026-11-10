@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agoLabel, dayEntries, entryState, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
-  tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
+  TV_DEFAULT_LOOK, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
 const at = (time: string, date = "2026-11-10") => `${date}T${time}:00+07:00`;
@@ -180,9 +180,21 @@ describe("a TV's short address", () => {
 
 describe("what the admin may send", () => {
   it("keeps durations within sensible bounds", () => {
-    expect(tvSettingsSchema.safeParse({ showDay: true, daySeconds: 20, showWeek: false, weekSeconds: 20 }).success).toBe(true);
-    expect(tvSettingsSchema.safeParse({ showDay: true, daySeconds: 2, showWeek: true, weekSeconds: 20 }).success).toBe(false);
+    const sent = { showDay: true, daySeconds: 20, showWeek: false, weekSeconds: 20, ...TV_DEFAULT_LOOK };
+    expect(tvSettingsSchema.safeParse(sent).success).toBe(true);
+    expect(tvSettingsSchema.safeParse({ ...sent, daySeconds: 2 }).success).toBe(false);
     expect(tvSettingsSchema.safeParse({ showDay: true, daySeconds: 20 }).success).toBe(false);
+  });
+
+  it("takes dark or light, and a QR code to a web address or to the TV's own", () => {
+    const sent = { showDay: true, daySeconds: 20, showWeek: true, weekSeconds: 20, ...TV_DEFAULT_LOOK };
+    expect(TV_DEFAULT_LOOK).toMatchObject({ mode: "dark", qrShow: false, qrUrl: "" });
+    expect(tvSettingsSchema.safeParse({ ...sent, mode: "light", qrShow: true, qrUrl: " https://contoh.test/book ", qrLabel: "Book ruang", qrPosition: "kiri-atas" }).success).toBe(true);
+    expect(tvSettingsSchema.parse({ ...sent, qrUrl: " https://contoh.test/book " }).qrUrl).toBe("https://contoh.test/book");
+    expect(tvSettingsSchema.safeParse({ ...sent, qrShow: true, qrUrl: "" }).success).toBe(true);
+    for (const bad of ["contoh.test/book", "javascript:alert(1)", "ftp://contoh.test", "bukan alamat"]) expect(tvSettingsSchema.safeParse({ ...sent, qrUrl: bad }).success, bad).toBe(false);
+    expect(tvSettingsSchema.safeParse({ ...sent, mode: "biru" }).success).toBe(false);
+    expect(tvSettingsSchema.safeParse({ ...sent, qrPosition: "tengah" }).success).toBe(false);
     expect(tvSlidePatchSchema.safeParse({ seconds: 500 }).success).toBe(false);
     expect(tvSlidePatchSchema.safeParse({}).success).toBe(false);
     expect(tvSlidePatchSchema.safeParse({ active: false }).success).toBe(true);

@@ -3,7 +3,7 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import type { RoomUse } from "@/lib/pra-wam/sessions";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
-import { looksLikeTvSlug, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, weekOf, type TvDay, type TvFeed, type TvRoom, type TvSettings, type TvSlideStart } from "@/lib/pra-wam/tv";
+import { looksLikeTvSlug, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf, type TvDay, type TvFeed, type TvRoom, type TvSettings, type TvSlideStart } from "@/lib/pra-wam/tv";
 import { hashTvKey, looksLikeTvKey } from "@/lib/pra-wam/tv-key";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -44,13 +44,33 @@ const SLIDE_COLUMNS = "id,image_key,title,seconds,sort_order,active";
 /** `slug` is null for a TV made before the short addresses that has not been given one (it still plays at its key address). */
 export type TvScreen = { id: string; name: string; slug: string | null; keyHint: string; lastSeenAt: string | null; width: number | null; height: number | null; createdAt: string };
 export type TvAdminSlide = { id: string; title: string; seconds: number; active: boolean };
-export type TvAdmin = { migrated: boolean; slugReady: boolean; storageReady: boolean; now: string; screens: TvScreen[]; slides: TvAdminSlide[]; settings: TvSettings };
+export type TvAdmin = { migrated: boolean; slugReady: boolean; lookReady: boolean; storageReady: boolean; now: string; screens: TvScreen[]; slides: TvAdminSlide[]; settings: TvSettings };
 
-async function readSettings(): Promise<TvSettings> {
-  const { data, error } = await createPrivilegedClient().from("pw_tv_settings").select("show_day,day_seconds,show_week,week_seconds").eq("id", true).maybeSingle();
+/** The board's mode and QR code arrive with this one; before it the board is dark, without a QR code. */
+export const TV_LOOK_MIGRATION = "202611100005_pw_tv_look.sql";
+const LOOP_COLUMNS = "show_day,day_seconds,show_week,week_seconds";
+type SettingsRow = { show_day: boolean; day_seconds: number; show_week: boolean; week_seconds: number; mode?: string; qr_show?: boolean; qr_url?: string; qr_label?: string; qr_position?: string };
+
+/** The settings, and whether the look columns (mode, QR code) are there yet. */
+async function readSettingsState(): Promise<{ settings: TvSettings; lookReady: boolean }> {
+  const read = (columns: string) => createPrivilegedClient().from("pw_tv_settings").select(columns).eq("id", true).maybeSingle();
+  let lookReady = true;
+  let { data, error } = await read(`${LOOP_COLUMNS},mode,qr_show,qr_url,qr_label,qr_position`);
+  if (error && noSlug(error)) { lookReady = false; ({ data, error } = await read(LOOP_COLUMNS)); }
   if (error) fail(error);
-  return data ? { showDay: data.show_day, daySeconds: data.day_seconds, showWeek: data.show_week, weekSeconds: data.week_seconds } : TV_DEFAULT_SETTINGS;
+  const row = data as unknown as SettingsRow | null;
+  if (!row) return { settings: TV_DEFAULT_SETTINGS, lookReady };
+  return {
+    lookReady,
+    settings: {
+      showDay: row.show_day, daySeconds: row.day_seconds, showWeek: row.show_week, weekSeconds: row.week_seconds,
+      mode: (tvModes as readonly string[]).includes(row.mode ?? "") ? row.mode as TvSettings["mode"] : TV_DEFAULT_LOOK.mode,
+      qrShow: row.qr_show ?? TV_DEFAULT_LOOK.qrShow, qrUrl: row.qr_url ?? "", qrLabel: row.qr_label ?? "",
+      qrPosition: (tvQrPositions as readonly string[]).includes(row.qr_position ?? "") ? row.qr_position as TvSettings["qrPosition"] : TV_DEFAULT_LOOK.qrPosition,
+    },
+  };
 }
+const readSettings = async (): Promise<TvSettings> => (await readSettingsState()).settings;
 
 async function readSlides(): Promise<SlideRow[]> {
   const { data, error } = await createPrivilegedClient().from("pw_tv_slides").select(SLIDE_COLUMNS).order("sort_order").order("created_at");
@@ -68,12 +88,12 @@ export async function tvAdmin(): Promise<TvAdmin> {
   // Before the short addresses: the same list without them.
   if (error && noSlug(error)) { slugReady = false; ({ data, error } = await read(SCREEN_COLUMNS)); }
   if (error) {
-    if (missing(error)) return { migrated: false, slugReady: false, storageReady: isR2Configured(), now, screens: [], slides: [], settings: TV_DEFAULT_SETTINGS };
+    if (missing(error)) return { migrated: false, slugReady: false, lookReady: false, storageReady: isR2Configured(), now, screens: [], slides: [], settings: TV_DEFAULT_SETTINGS };
     databaseError(error);
   }
-  const [slides, settings] = await Promise.all([readSlides(), readSettings()]);
+  const [slides, { settings, lookReady }] = await Promise.all([readSlides(), readSettingsState()]);
   return {
-    migrated: true, slugReady, storageReady: isR2Configured(), now,
+    migrated: true, slugReady, lookReady, storageReady: isR2Configured(), now,
     screens: ((data ?? []) as unknown as ScreenRow[]).map(row => ({ id: row.id, name: row.name, slug: row.slug ?? null, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at })),
     slides: slides.map(row => ({ id: row.id, title: row.title, seconds: row.seconds, active: row.active })),
     settings,
@@ -112,8 +132,19 @@ export async function deleteScreen(id: string): Promise<void> {
 }
 
 export async function saveSettings(settings: TvSettings): Promise<void> {
-  const { error } = await createPrivilegedClient().from("pw_tv_settings")
-    .upsert({ id: true, show_day: settings.showDay, day_seconds: settings.daySeconds, show_week: settings.showWeek, week_seconds: settings.weekSeconds, updated_at: new Date().toISOString() });
+  const client = createPrivilegedClient();
+  const loop = { id: true, show_day: settings.showDay, day_seconds: settings.daySeconds, show_week: settings.showWeek, week_seconds: settings.weekSeconds, updated_at: new Date().toISOString() };
+  const { error } = await client.from("pw_tv_settings")
+    .upsert({ ...loop, mode: settings.mode, qr_show: settings.qrShow, qr_url: settings.qrUrl, qr_label: settings.qrLabel, qr_position: settings.qrPosition });
+  if (error && noSlug(error)) {
+    // Before the look migration: the calendars are still saved; the mode and the QR code wait for it.
+    const { error: loopError } = await client.from("pw_tv_settings").upsert(loop);
+    if (loopError) fail(loopError);
+    invalidate();
+    const look = { mode: settings.mode, qrShow: settings.qrShow, qrUrl: settings.qrUrl, qrLabel: settings.qrLabel, qrPosition: settings.qrPosition };
+    if (JSON.stringify(look) !== JSON.stringify(TV_DEFAULT_LOOK)) throw new ServiceError(503, `Tema dan QR menunggu migrasi ${TV_LOOK_MIGRATION}. Pengaturan kalender sudah tersimpan.`);
+    return;
+  }
   if (error) fail(error);
   invalidate();
 }

@@ -121,3 +121,21 @@
   font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
 }
 .full:focus-visible { outline: 3px solid var(--tv-accent); outline-offset: 2px; }
+
+/*
+ * The QR code, in the corner the admin picked, over whatever plays. Always dark on white, whatever
+ * the theme: that is what a phone's camera reads best.
+ */
+.qr {
+  position: absolute; z-index: 2; display: grid; justify-items: center; gap: calc(.6 * var(--u)); box-sizing: border-box;
+  width: calc(17 * var(--u)); padding: calc(1 * var(--u)); border: calc(.15 * var(--u)) solid var(--tv-line); border-radius: calc(1.6 * var(--u));
+  background: #fff; color: #14171f; box-shadow: var(--pw-shadow-card);
+}
+.qr img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+.qr span { max-width: 100%; overflow: hidden; font-size: calc(1.6 * var(--u)); font-weight: 600; line-height: 1.2; text-align: center; overflow-wrap: anywhere; }
+.qr[data-position="kanan-bawah"] { right: calc(3 * var(--u)); bottom: calc(3 * var(--u)); }
+.qr[data-position="kiri-bawah"] { bottom: calc(3 * var(--u)); left: calc(3 * var(--u)); }
+.qr[data-position="kanan-atas"] { top: calc(3 * var(--u)); right: calc(3 * var(--u)); }
+.qr[data-position="kiri-atas"] { top: calc(3 * var(--u)); left: calc(3 * var(--u)); }
+/* "Layar penuh" moves aside when the QR code has its corner. */
+.qr[data-position="kanan-bawah"] ~ .full { right: auto; left: calc(3 * var(--u)); }

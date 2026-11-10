@@ -1,14 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import QRCode from "qrcode";
 import { ArrowDown, ArrowUp, Copy, ExternalLink, ImageUp, RefreshCw } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { ConsoleButton, ConsoleButtonLink, PageHeader, Pill, SectionToolbar, type Crumb } from "@/components/console";
+import { ConsoleButton, ConsoleButtonLink, PageHeader, PageTabs, Pill, SectionToolbar, type Crumb } from "@/components/console";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { fitWithin } from "@/lib/gallery";
-import { agoLabel, looksLikeTvSlug, loopCount, suggestSlug, tvIsOn, tvLimits, tvSlugLimits, type TvSettings } from "@/lib/pra-wam/tv";
+import { agoLabel, looksLikeTvSlug, loopCount, suggestSlug, tvIsOn, tvLimits, tvModeLabels, tvModes, tvQrPositionLabels, tvQrPositions, tvSlugLimits, type TvQrPosition, type TvSettings } from "@/lib/pra-wam/tv";
 import { absolute, praWamTvApi, TV_HOME_PATH, tvPath, wamAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminSlide, TvScreen } from "@/lib/server/pra-wam/tv";
 import akun from "./akun/akun.module.css";
@@ -23,6 +24,30 @@ const calendars = [
   { show: "showWeek", seconds: "weekSeconds", label: "Kalender minggu ini (per hari)" },
 ] as const;
 const SLUG_MIGRATION = "202611100004_pw_tv_slug.sql";
+const LOOK_MIGRATION = "202611100005_pw_tv_look.sql";
+
+/** The section's three tabs, on its own address: ?tab=tayangan, ?tab=tampilan. */
+export type TvAdminView = "layar" | "tayangan" | "tampilan";
+const tvTabs: { key: TvAdminView; label: string; href: string }[] = [
+  { key: "layar", label: "Layar TV", href: wamAdminPath.tv },
+  { key: "tayangan", label: "Tayangan", href: `${wamAdminPath.tv}?tab=tayangan` },
+  { key: "tampilan", label: "Tampilan", href: `${wamAdminPath.tv}?tab=tampilan` },
+];
+
+/** The QR code as the board will draw it, made here from the address being typed. */
+function QrPreview({ url, label }: { url: string; label: string }) {
+  const [made, setMade] = useState<{ of: string; src: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    void QRCode.toDataURL(url, { margin: 1, width: 320, errorCorrectionLevel: "M" }).then(src => { if (live) setMade({ of: url, src }); }, () => undefined);
+    return () => { live = false; };
+  }, [url]);
+  return <figure className={css.qrPreview}>
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    {made?.of === url ? <img src={made.src} alt={`Kode QR ke ${url}`} /> : <span aria-hidden="true" />}
+    <figcaption>{label || "Tanpa keterangan"}<small>{url}</small></figcaption>
+  </figure>;
+}
 type Answer = TvAdmin;
 
 /** Any picked picture as WebP no longer than 2560 px, made here so the server never decodes an upload. */
@@ -73,7 +98,7 @@ function screenMeta(screen: TvScreen, now: number): string {
  * each stays. Every TV shows the same content, fitted to its own screen. `origin` is the site's
  * public address, for the links to copy.
  */
-export function PraWamTv({ initial, crumbs, title, origin }: { initial: TvAdmin; crumbs: readonly Crumb[]; title: string; origin: string }) {
+export function PraWamTv({ initial, crumbs, title, origin, view }: { initial: TvAdmin; crumbs: readonly Crumb[]; title: string; origin: string; view: TvAdminView }) {
   const [list, setList] = useState<TvAdmin>(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -143,7 +168,7 @@ export function PraWamTv({ initial, crumbs, title, origin }: { initial: TvAdmin;
   }
   const addressOf = (value: string) => absolute(origin, tvPath(value));
   const full = list.screens.length >= tvLimits.screens;
-  const settingsChanged = calendars.some(calendar => settings[calendar.show] !== list.settings[calendar.show] || settings[calendar.seconds] !== list.settings[calendar.seconds]);
+  const settingsChanged = (Object.keys(settings) as (keyof TvSettings)[]).some(key => settings[key] !== list.settings[key]);
   const shown = list.slides.filter(slide => slide.active).length;
   // With a single thing on the loop nothing ever changes on screen, so no duration is asked for.
   const rotates = loopCount(settings, shown) > 1;
@@ -156,9 +181,10 @@ export function PraWamTv({ initial, crumbs, title, origin }: { initial: TvAdmin;
         <ConsoleButtonLink href={wamAdminPath.tvPreview} target="_blank" rel="noopener" variant="primary" icon={<ExternalLink size={18} aria-hidden />}>Pratinjau</ConsoleButtonLink>
       </> : undefined} />
     {!list.migrated ? <Notice tone="warning">TV Announcement menunggu migrasi {MIGRATION}. Jalankan di Supabase SQL Editor; sampai itu, belum ada TV yang bisa ditambahkan.</Notice> : <>
+      <PageTabs tabs={tvTabs} current={view} label="Bagian TV Announcement" />
       <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
 
-      <section className={akun.section} aria-labelledby="tv-layar">
+      {view === "layar" && <section className={akun.section} aria-labelledby="tv-layar">
         <SectionToolbar title={<span id="tv-layar">Layar TV</span>} count={`${list.screens.length} TV`} />
         <p className={akun.lead}>Buka alamat di browser TV, lalu tekan Layar penuh. Alamat TV terbuka: siapa pun yang tahu alamatnya bisa melihat jadwal ruang, tanpa login.</p>
         <div className={css.created}>
@@ -212,9 +238,9 @@ export function PraWamTv({ initial, crumbs, title, origin }: { initial: TvAdmin;
         </form>}
         {list.slugReady && !full && <p className={akun.hint}>{looksLikeTvSlug(newSlug) ? `TV ini dibuka di ${addressOf(newSlug)}` : "Alamat: huruf kecil, angka, dan tanda hubung, misalnya lobi atau pantry-2."}</p>}
         {full && <p className={akun.hint}>Paling banyak {tvLimits.screens} TV.</p>}
-      </section>
+      </section>}
 
-      <section className={akun.section} aria-labelledby="tv-gambar">
+      {view === "tayangan" && <section className={akun.section} aria-labelledby="tv-gambar">
         <SectionToolbar title={<span id="tv-gambar">Gambar</span>} count={`${shown} tayang dari ${list.slides.length}`} />
         {!list.storageReady && <Notice tone="warning">Penyimpanan gambar belum disiapkan (R2). Jadwal ruang tetap tayang; gambar belum bisa diunggah.</Notice>}
         <div className={css.buttons}>
@@ -249,9 +275,57 @@ export function PraWamTv({ initial, crumbs, title, origin }: { initial: TvAdmin;
               </div>
             </li>;
           })}</ol>}
-      </section>
+      </section>}
 
-      <section className={akun.section} aria-labelledby="tv-pengaturan">
+      {view === "tampilan" && <section className={akun.section} aria-labelledby="tv-tampilan">
+        <SectionToolbar title={<span id="tv-tampilan">Tema dan kode QR</span>} />
+        {!list.lookReady && <Notice tone="warning">Tema dan QR menunggu migrasi {LOOK_MIGRATION}. Jalankan di Supabase SQL Editor; sampai itu, papan tetap gelap tanpa QR.</Notice>}
+        <form className={css.settings} onSubmit={event => { event.preventDefault(); void saveSettings(); }}>
+          <fieldset className={css.choice} disabled={!!busy || !list.lookReady}>
+            <legend>Mode papan</legend>
+            {tvModes.map(mode => <label key={mode} className={css.check}>
+              <input type="radio" name="tv-mode" checked={settings.mode === mode} onChange={() => setSettings(value => ({ ...value, mode }))} />
+              {tvModeLabels[mode]}
+            </label>)}
+          </fieldset>
+          <p className={akun.hint}>Warnanya mengikuti tema WAM di Tema aplikasi. Gelap cocok untuk ruang redup; terang untuk ruang yang sangat terang.</p>
+
+          <div className={css.calendar}>
+            <label className={css.check}>
+              <input type="checkbox" checked={settings.qrShow} disabled={!!busy || !list.lookReady} onChange={change => setSettings(value => ({ ...value, qrShow: change.target.checked }))} />
+              Tampilkan kode QR di papan
+            </label>
+          </div>
+          {settings.qrShow && <div className={css.qrForm}>
+            <div className={css.qrFields}>
+              <div className="field">
+                <label htmlFor="tv-qr-alamat">Alamat yang dibuka QR</label>
+                <input id="tv-qr-alamat" className="input" type="url" inputMode="url" value={settings.qrUrl} maxLength={500} placeholder={absolute(origin, TV_HOME_PATH)} disabled={!!busy || !list.lookReady} autoCapitalize="none" spellCheck={false}
+                  onChange={change => setSettings(value => ({ ...value, qrUrl: change.target.value }))} />
+                <span className={akun.hint}>Kosongkan untuk alamat TV itu sendiri. Kalau diisi, pakai alamat lengkap yang diawali https://.</span>
+              </div>
+              <div className="field">
+                <label htmlFor="tv-qr-keterangan">Keterangan di bawah QR</label>
+                <input id="tv-qr-keterangan" className="input" value={settings.qrLabel} maxLength={60} placeholder="Misalnya Book ruang di sini" disabled={!!busy || !list.lookReady}
+                  onChange={change => setSettings(value => ({ ...value, qrLabel: change.target.value }))} />
+              </div>
+              <div className="field">
+                <label htmlFor="tv-qr-letak">Letak di layar</label>
+                <select id="tv-qr-letak" className="select" value={settings.qrPosition} disabled={!!busy || !list.lookReady} onChange={change => setSettings(value => ({ ...value, qrPosition: change.target.value as TvQrPosition }))}>
+                  {tvQrPositions.map(position => <option key={position} value={position}>{tvQrPositionLabels[position]}</option>)}
+                </select>
+                <span className={akun.hint}>QR menumpang di atas tayangan, jadi menutupi sudut itu. Di sudut atas ia menutupi judul atau jam.</span>
+              </div>
+            </div>
+            <QrPreview url={settings.qrUrl.trim() || absolute(origin, TV_HOME_PATH)} label={settings.qrLabel} />
+          </div>}
+          <div className={css.buttons}>
+            <ConsoleButton type="submit" variant="primary" disabled={!!busy || !settingsChanged || !list.lookReady}>{busy === "pengaturan" ? "Menyimpan…" : "Simpan tampilan"}</ConsoleButton>
+          </div>
+        </form>
+      </section>}
+
+      {view === "tayangan" && <section className={akun.section} aria-labelledby="tv-pengaturan">
         <SectionToolbar title={<span id="tv-pengaturan">Jadwal ruang</span>} />
         <form className={css.settings} onSubmit={event => { event.preventDefault(); void saveSettings(); }}>
           {calendars.map(calendar => <div key={calendar.show} className={css.calendar}>
@@ -272,7 +346,7 @@ export function PraWamTv({ initial, crumbs, title, origin }: { initial: TvAdmin;
             <ConsoleButton type="submit" variant="secondary" disabled={!!busy || !settingsChanged}>{busy === "pengaturan" ? "Menyimpan…" : "Simpan pengaturan"}</ConsoleButton>
           </div>
         </form>
-      </section>
+      </section>}
     </>}
   </>;
 }

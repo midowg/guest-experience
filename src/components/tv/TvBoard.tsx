@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Maximize } from "lucide-react";
+import QRCode from "qrcode";
+import { TV_HOME_PATH } from "@/lib/routes";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
   dayEntries, decimalHour, entryState, fit, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
@@ -87,6 +89,18 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
     return () => { document.removeEventListener("visibilitychange", ask); void lock?.release().catch(() => undefined); };
   }, []);
 
+  // The QR code: to the address the admin gave, or to the address this TV itself opened.
+  const { qrShow, qrUrl } = feed.settings;
+  const [qr, setQr] = useState<{ of: string; src: string } | null>(null);
+  useEffect(() => {
+    if (!qrShow) return;
+    let live = true;
+    const here = window.location.pathname.startsWith(TV_HOME_PATH) ? window.location.pathname : TV_HOME_PATH;
+    const target = qrUrl || `${window.location.origin}${here}`;
+    void QRCode.toDataURL(target, { margin: 1, width: 480, errorCorrectionLevel: "M" }).then(src => { if (live) setQr({ of: `${qrUrl}`, src }); }, () => undefined);
+    return () => { live = false; };
+  }, [qrShow, qrUrl]);
+
   // "Layar penuh" shows while someone is at the TV, then goes (and the pointer with it).
   useEffect(() => {
     let timer = 0;
@@ -122,8 +136,8 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const dayNote = [`${today.length} ruang dipakai`, `${entriesToday.length} jadwal`, ...(onNow ? [`${onNow} sedang berlangsung`] : [])].join(" · ");
   const weekCount = week.reduce((sum, day) => sum + day.rooms.reduce((count, item) => count + item.entries.length, 0), 0);
 
-  // WAM's own theme (Admin WAM → Tema aplikasi), always in its night mode: a TV is a lit screen in a room.
-  return <div data-wam-look={feed.look} data-wam-theme="dark" style={{ display: "contents" }}><div className={base.app}>
+  // WAM's own theme (Admin WAM → Tema aplikasi), in the mode picked for the TVs: dark unless the admin chose light.
+  return <div data-wam-look={feed.look} data-wam-theme={feed.settings.mode} style={{ display: "contents" }}><div className={base.app}>
   <main className={css.board} data-idle={!active} data-orientation={screen.wide ? "mendatar" : "tegak"}>
     {gone ? <div className={css.slide}><Message title="Tautan TV ini sudah tidak berlaku" body="Minta tautan baru di Admin WAM → TV Announcement." /></div>
       : !current ? <div className={css.slide}><Message title="Belum ada yang ditayangkan" body="Tambahkan gambar atau nyalakan jadwal ruang di Admin WAM → TV Announcement." /></div>
@@ -147,6 +161,11 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
     {following?.kind === "gambar" && following.key !== current?.key
       // eslint-disable-next-line @next/next/no-img-element
       && <img key={following.key} className={css.preload} src={following.slide.src} alt="" aria-hidden="true" referrerPolicy="no-referrer" />}
+    {!gone && current && qrShow && qr?.of === qrUrl && <aside className={css.qr} data-position={feed.settings.qrPosition} aria-label="Kode QR">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={qr.src} alt={`Kode QR${feed.settings.qrLabel ? `: ${feed.settings.qrLabel}` : ""}`} />
+      {feed.settings.qrLabel && <span>{feed.settings.qrLabel}</span>}
+    </aside>}
     {active && !fullscreen && <button type="button" className={css.full} onClick={() => void document.documentElement.requestFullscreen?.().catch(() => undefined)}>
       <Maximize size={20} aria-hidden="true" />Layar penuh
     </button>}
