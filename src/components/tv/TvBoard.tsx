@@ -273,7 +273,7 @@ function DayWide({ rooms, legend, now, time, room }: { rooms: TvRoom[]; legend: 
             const when = hoursIn(entry, wide, 1.6);
             const on = state === "berlangsung" && wide >= 10;
             // The booker's text is sized by the block's width and wraps: a narrow block gets more, shorter lines.
-            const text = clamp((wide - BLOCK_PAD) * 0.12, 1.3, 2);
+            const text = clamp((wide - BLOCK_PAD) * 0.13, 1.35, 2.6);
             const lines = Math.max(1, Math.floor((row - GAP * 2 - 1.6 - 3 - when.size * 1.3 * (on ? 2 : 1)) / (text * 1.2)));
             return <div key={entry.key} className={`${css.block} ${tones[who.color]}`} data-state={state} title={entry.title}
               style={{ left: `${spot.at}%`, width: `${spot.size}%`, top: u(GAP), bottom: u(GAP) }}>
@@ -360,7 +360,7 @@ function WeekWide({ days, legend, today, now, room }: { days: TvDay[]; legend: r
       <DayHead date={day.date} today={today} height={HEADING} text={fitText(column, 0.085, 2.6)} />
       {entries.length === 0 && <p className={css.free} style={{ marginTop: u(1.2), fontSize: u(2) }}>Kosong</p>}
       {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} who={legendItem(legend, entry.title)} now={now} height={unit - GAP} gap={GAP}
-        hours={hours} small={stacked ? small : null} lines={lines} />)}
+        hours={hours} small={stacked ? small : null} lines={lines} width={column - 7} />)}
     </div>)}
   </div>;
 }
@@ -376,7 +376,7 @@ function WeekTall({ days, legend, today, now, room }: { days: TvDay[]; legend: r
       <DayHead date={day.date} today={today} height={line * HEADING} text={fitText(line, 0.5, 2.8)} />
       {entries.length === 0 && <p className={`${css.free} ${css.one}`} style={{ height: u(line), lineHeight: u(line), fontSize: u(fitText(line, 0.42, 2)) }}>Kosong</p>}
       {entries.map(entry => <WeekItem key={`${entry.key}:${entry.room}`} entry={entry} who={legendItem(legend, entry.title)} now={now} height={line - GAP} gap={GAP}
-        hours={fitText(line, 0.42, 2.4)} small={null} lines={1} withBooker />)}
+        hours={fitText(line, 0.42, 2.4)} small={null} lines={1} width={room.width - 6} withBooker />)}
     </div>)}
   </div>;
 }
@@ -386,17 +386,21 @@ function WeekTall({ days, legend, today, now, room }: { days: TvDay[]; legend: r
  * room and who booked it. `small`: the size of that second line under the hours; null puts
  * everything on one line (the room only, or with the booker where the line is long: `withBooker`).
  */
-function WeekItem({ entry, who, now, height, gap, hours, small, lines, withBooker = false }: {
-  entry: TvDayEntry; who: { color: number; code: number | null }; now: number; height: number; gap: number; hours: number; small: number | null; lines: number; withBooker?: boolean;
+function WeekItem({ entry, who, now, height, gap, hours, small, lines, width, withBooker = false }: {
+  entry: TvDayEntry; who: { color: number; code: number | null }; now: number; height: number; gap: number; hours: number; small: number | null; lines: number;
+  /** The room the text has beside the number, in units. */
+  width: number; withBooker?: boolean;
 }) {
   const state = entryState(entry, now);
   const where = `${entry.room}${entry.by ? ` · ${entry.by}` : ""}`;
+  // A letter is about 0.56 of the text size wide: the line gets the size at which all of it fits, down to the smallest readable.
+  const fitted = (size: number, letters: number) => clamp(width * lines / (letters * 0.56), 1.2, size);
   return <div className={`${css.item} ${tones[who.color]}`} data-state={state} title={entry.title} style={{ height: u(height), marginTop: u(gap), fontSize: u(hours) }}>
     <Badge code={who.code} size={Math.min(1.7, hours * 0.75)} />
     {small != null
       ? <span className={css.pair}>
         <span className={`${css.one} ${css.title}`}>{span(entry)}</span>
-        <span className={`${css.wrap} ${css.sub}`} style={{ fontSize: u(small), WebkitLineClamp: lines }}>{where}</span>
+        <span className={`${css.wrap} ${css.sub}`} style={{ fontSize: u(fitted(small, where.length)), WebkitLineClamp: lines }}>{where}</span>
       </span>
       : <span className={css.one}><span className={css.title}>{span(entry)}</span><span className={css.sub}> · {withBooker ? where : entry.room}</span></span>}
     {state === "berlangsung" && <span className={css.on} style={{ fontSize: u(Math.min(hours, 1.8)) }}>Kini</span>}

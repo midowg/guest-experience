@@ -47,7 +47,7 @@
 /* A block of the day calendar, and an entry of the week calendar: the same tile. */
 .block, .item { box-sizing: border-box; overflow: hidden; border: calc(.2 * var(--u)) solid var(--tv-line); border-radius: calc(1.2 * var(--u)); background: var(--tv-soft); }
 .block[data-state="berlangsung"], .item[data-state="berlangsung"] { border-color: var(--tv-primary); background: var(--tv-now); }
-.block[data-state="selesai"], .item[data-state="selesai"] { opacity: .62; }
+.block[data-state="selesai"], .item[data-state="selesai"] { opacity: .7; }
 .one { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* A title on several lines: it wraps (a long word breaks) and only what is past the last line is cut. */
 .wrap { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; line-height: 1.2; overflow-wrap: anywhere; }
