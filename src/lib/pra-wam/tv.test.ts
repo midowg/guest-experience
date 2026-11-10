@@ -154,7 +154,9 @@ describe("a TV's short address", () => {
     for (const bad of ["", "a", "Lobi", "lobi utama", "-lobi", "lobi-", "lobi--dua", "lobi_dua", "lobi/dua", "é", "a".repeat(41), null, 12]) expect(looksLikeTvSlug(bad), String(bad)).toBe(false);
   });
 
-  it("is never mistaken for an old key address", () => {
+  it("is never mistaken for an old key address, nor takes the address the pictures of /tv use", () => {
+    expect(looksLikeTvSlug("image")).toBe(false);
+    expect(tvScreenSchema.safeParse({ name: "Gambar", slug: "image" }).success).toBe(false);
     expect(looksLikeTvSlug(`tv_${"a".repeat(43)}`)).toBe(false);
   });
 

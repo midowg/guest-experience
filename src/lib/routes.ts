@@ -428,6 +428,14 @@ export const praWamThemeApi = "/api/admin/wam/theme";
  * Outside /wam and /admin on purpose: no login, no app frame.
  */
 export const tvPath = (key: string) => `/tv/${enc(key)}`;
+/** The one address for every TV: the same board, without naming a TV (so Admin WAM cannot tell which TV is on). */
+export const TV_HOME_PATH = "/tv";
+export const tvHomeApi = {
+  /** GET: what TVs play now. */
+  feed: "/api/tv",
+  /** GET: one picture, through this site. */
+  image: (slideId: string) => `/api/tv/image/${slideId}`,
+};
 export const tvApi = {
   /** GET: what the TV plays now; `?w=&h=` tell the admin how big the screen is. */
   feed: (key: string) => `/api/tv/${enc(key)}`,

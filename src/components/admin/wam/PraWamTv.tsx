@@ -9,7 +9,7 @@ import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { fitWithin } from "@/lib/gallery";
 import { agoLabel, looksLikeTvSlug, loopCount, suggestSlug, tvIsOn, tvLimits, tvSlugLimits, type TvSettings } from "@/lib/pra-wam/tv";
-import { absolute, praWamTvApi, tvPath, wamAdminPath } from "@/lib/routes";
+import { absolute, praWamTvApi, TV_HOME_PATH, tvPath, wamAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminSlide, TvScreen } from "@/lib/server/pra-wam/tv";
 import akun from "./akun/akun.module.css";
 import css from "./tv-admin.module.css";
@@ -160,9 +160,17 @@ export function PraWamTv({ initial, crumbs, title, origin }: { initial: TvAdmin;
 
       <section className={akun.section} aria-labelledby="tv-layar">
         <SectionToolbar title={<span id="tv-layar">Layar TV</span>} count={`${list.screens.length} TV`} />
-        <p className={akun.lead}>Buka alamat TV di browser TV-nya, lalu tekan Layar penuh. Alamat ini terbuka: siapa pun yang tahu alamatnya bisa melihat jadwal ruang, tanpa login.</p>
+        <p className={akun.lead}>Buka alamat di browser TV, lalu tekan Layar penuh. Alamat TV terbuka: siapa pun yang tahu alamatnya bisa melihat jadwal ruang, tanpa login.</p>
+        <div className={css.created}>
+          <p><strong>Alamat untuk semua TV.</strong> Cukup alamat ini di TV mana pun; isinya sama.</p>
+          <code className={css.link}>{absolute(origin, TV_HOME_PATH)}</code>
+          <div className={css.buttons}>
+            <ConsoleButton icon={<Copy size={18} aria-hidden />} onClick={() => void copyLink("semua", absolute(origin, TV_HOME_PATH))}>{copied === "semua" ? "Tersalin" : "Salin alamat"}</ConsoleButton>
+          </div>
+          <p className={css.meta}>TV yang memakai alamat ini tidak tercatat di daftar di bawah. Beri TV alamat sendiri kalau ingin tahu TV mana yang menyala.</p>
+        </div>
         {!list.slugReady && <Notice tone="warning">Alamat pendek menunggu migrasi {SLUG_MIGRATION}. Jalankan di Supabase SQL Editor; sampai itu, TV yang sudah ada tetap tayang di tautan panjangnya dan TV baru belum bisa ditambahkan.</Notice>}
-        {list.screens.length === 0 ? <p className={akun.empty}>Belum ada TV. Tambahkan satu, lalu buka alamatnya di TV.</p>
+        {list.screens.length === 0 ? <p className={akun.empty}>Belum ada TV dengan alamat sendiri.</p>
           : <ul className={css.screens} aria-label="Layar TV">{list.screens.map(screen => {
             const state = screenState(screen, now);
             const edit = editing?.id === screen.id ? editing : null;
