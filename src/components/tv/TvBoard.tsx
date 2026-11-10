@@ -133,13 +133,15 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const current = items[position];
   const following = items.length > 1 ? items[(position + 1) % items.length] : undefined;
 
+  // Only a phone can stop the loop (its Jeda button): a TV has no such control and always plays on.
+  const stopped = paused && isPhoneScreen(width, height);
   // The loop: each item stays its own time. Keyed on the item, so a clock tick does not restart it.
   const currentKey = current?.key, currentSeconds = current?.seconds, count = items.length;
   useEffect(() => {
-    if (!currentKey || !currentSeconds || count < 2 || paused) return;
+    if (!currentKey || !currentSeconds || count < 2 || stopped) return;
     const timer = window.setTimeout(() => setIndex(value => (value + 1) % count), currentSeconds * 1000);
     return () => window.clearTimeout(timer);
-  }, [currentKey, currentSeconds, count, paused]);
+  }, [currentKey, currentSeconds, count, stopped]);
 
   const time = wibTime(new Date(now).toISOString());
   const clock = clockLabel(time);
