@@ -110,3 +110,35 @@ export function calendarWeeks(key: string, entries: TimelineEntry[], lanes = tim
 export function bookingActivities(items: TimelineItem[], today: string): { title: string; from: string; to: string; past: boolean }[] {
   return timelineMonths(items, today).flatMap(month => month.entries).map(({ title, from, to }) => ({ title, from, to, past: to < today }));
 }
+
+export type Countdown = {
+  /** What is counted to: the end of what is on now, or the start of what comes next. */
+  entry: Pick<TimelineEntry, "id" | "title" | "color">; edge: "berakhir" | "mulai"; date: string;
+  /** "10 hari lagi", "besok", "hari ini". */
+  left: string;
+  /** What follows it, once it is over. */
+  next: { title: string; date: string } | null;
+};
+
+const daysBetween = (from: string, to: string) => Math.round((at(to).getTime() - at(from).getTime()) / 86_400_000);
+const leftLabel = (days: number) => (days <= 0 ? "hari ini" : days === 1 ? "besok" : `${days} hari lagi`);
+
+/**
+ * Timeline's countdown (10 Nov 2026, asked by panitia): one line above the calendar, "Appraisal
+ * berakhir 10 hari lagi · Jum, 20 Nov", then what comes next. Of what is on today it counts to the
+ * end of the one that ends last (the long phase, not a one-day forum inside it); with nothing on,
+ * to the start of the next. When the last one is over, there is none.
+ */
+export function timelineCountdown(entries: readonly TimelineEntry[], today: string): Countdown | null {
+  const on = entries.filter(entry => entry.from <= today && today <= entry.to)
+    .sort((a, b) => b.to.localeCompare(a.to) || a.from.localeCompare(b.from))[0];
+  const after = (date: string) => entries.filter(entry => entry.from > date).sort((a, b) => a.from.localeCompare(b.from) || a.title.localeCompare(b.title, "id"))[0];
+  const target = on ?? after(today);
+  if (!target) return null;
+  const date = on ? on.to : target.from;
+  const following = on ? after(on.to) ?? after(today) : after(target.from);
+  return {
+    entry: { id: target.id, title: target.title, color: target.color }, edge: on ? "berakhir" : "mulai", date,
+    left: leftLabel(daysBetween(today, date)), next: following && following.id !== target.id ? { title: following.title, date: following.from } : null,
+  };
+}

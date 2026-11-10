@@ -2,11 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, ChartGantt, Check, CheckCircle2, Clock, DoorOpen, Info, MapPin, Pencil, Plus, Send, User, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowLeftRight, ChartGantt, Check, CheckCircle2, Clock, DoorOpen, Info, MapPin, Pencil, Plus, Send, User, Users } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import {
-  alternatives, appraisalRules, bookingProblems, clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock,
-  isWorkday, roomKeptFrom, OUTSIDE_ROOM, periodAllDates, periodDates, slotTimes, titleSuggestions, wibDate, wibInstant, type Booking, type Person, type Room,
+  alternatives, appraisalRules, bookingClock, bookingProblems, clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock,
+  isRecordDate, isWorkday, roomKeptFrom, OUTSIDE_ROOM, periodAllDates, periodDates, slotTimes, titleSuggestions, wibDate, wibInstant, type Booking, type Person, type Room,
 } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { roomStatus, type PlanTone } from "@/lib/pra-wam/floor-plan";
@@ -20,7 +20,7 @@ import type { TimelineEntry } from "@/lib/pra-wam/timeline";
 import timelineCss from "./timeline.module.css";
 import { FloorPlan } from "./FloorPlan";
 import { PeoplePicker, type PeopleGroup } from "./PeoplePicker";
-import type { HodDepartment } from "@/lib/pra-wam/hod";
+import { itemTitle, type HodDepartment } from "@/lib/pra-wam/hod";
 import own from "./appraisal.module.css";
 import css from "./booking-form.module.css";
 import styles from "./pra-wam.module.css";
@@ -102,18 +102,30 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   // On its own page (no sheet): saved, the form gives way to what was booked (9 Nov 2026: booking is
   // a view of its own; it no longer sends the person to Agenda).
   const [done, setDone] = useState<string | null>(null);
-  // Booking as HOD: the departments picked; their HODs are the participants.
-  const [asHod, setAsHod] = useState(false);
+  // Booking as HOD/Lead, or as ITEM (10 Nov 2026: a meeting between departments, "ITEM: HRGA x
+  // CoE"): the departments picked; their HODs and Leads are the participants.
+  const [as, setAs] = useState<"pribadi" | "hod" | "item">("pribadi");
+  const asHod = as !== "pribadi";
   const [hodUnits, setHodUnits] = useState<string[]>([]);
+  // The name before ITEM named it, given back when the booker leaves ITEM.
+  const titleBeforeItem = useRef<string | null>(null);
   const hodOffered = (hod?.departments ?? []).filter(department => !hod?.ownUnits.includes(department.id))
     .sort((a, b) => Number(b.heads.length > 0) - Number(a.heads.length > 0) || a.name.localeCompare(b.name, "id"));
   const hodHeads = (units: string[]) => [...new Set(hodOffered.filter(department => units.includes(department.id)).flatMap(department => department.heads.map(head => head.id)))].filter(id => id !== viewer.id);
-  function pickHodUnits(units: string[]) { setHodUnits(units); set({ participants: hodHeads(units) }); }
-  function chooseAs(next: boolean) {
-    if (next === asHod) return;
-    setAsHod(next);
-    // Each way starts from its own pick: the departments' HODs, or no one.
-    set({ participants: next ? hodHeads(hodUnits) : [] });
+  const ownDepartments = (hod?.departments ?? []).filter(department => hod?.ownUnits.includes(department.id)).map(department => department.name);
+  const itemName = (units: string[]) => itemTitle(ownDepartments, hodOffered.filter(department => units.includes(department.id)).map(department => department.name));
+  function pickHodUnits(units: string[]) {
+    setHodUnits(units);
+    set({ participants: hodHeads(units), ...(as === "item" ? { title: itemName(units) } : {}) });
+  }
+  function chooseAs(next: "pribadi" | "hod" | "item") {
+    if (next === as) return;
+    setAs(next);
+    // Each way starts from its own pick: the departments' HODs, or no one. ITEM names the meeting
+    // after the departments; leaving it gives the name back.
+    const title = next === "item" ? itemName(hodUnits) : as === "item" ? titleBeforeItem.current ?? draft.title : draft.title;
+    if (next === "item") titleBeforeItem.current = draft.title;
+    set({ participants: next === "pribadi" ? [] : hodHeads(hodUnits), title });
   }
   const [step, setStep] = useState(editId ? SUMMARY : 0);
   // The furthest step reached; once the summary has been seen, Lanjut goes back to it.
@@ -158,9 +170,12 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   }, [step]);
 
   const nowDate = new Date(now);
+  // A day already gone is a record (10 Nov 2026): every hour of it open, no one invited.
+  const record = isRecordDate(draft.date, nowDate);
+  const clock = bookingClock(draft.date, nowDate);
   const outside = draft.roomId === OUTSIDE_ROOM;
   const slots = slotTimes(outside);
-  const startsOn = (date: string) => slots.slice(0, -1).filter(time => new Date(wibInstant(date, time)) > nowDate);
+  const startsOn = (date: string) => slots.slice(0, -1).filter(time => new Date(wibInstant(date, time)) > bookingClock(date, nowDate));
   const starts = startsOn(draft.date);
   const length = clockMinutes(draft.end) - clockMinutes(draft.start);
   const lengths = durationsFrom(draft.start, outside);
@@ -184,7 +199,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     if (!fit.ok) return { ok: false, pending: false, tone: "off", text: fit.text };
     if (!dayKnown) return { ok: false, pending: true, tone: "closed", text: "Memuat jadwal…" };
     const status = roomStatus({
-      bookable: room.bookable, span: chosen, now: nowDate,
+      bookable: room.bookable, span: chosen, now: clock,
       holds: others.filter(booking => booking.roomId === room.id).map(booking => ({ startsAt: booking.startsAt, endsAt: booking.endsAt, mine: !booking.isSession && booking.bookedBy.id === viewer.id })),
     });
     return { ok: status.tone === "free", pending: false, tone: status.tone, text: status.tone === "free" && fit.over ? `${status.text} · melebihi kapasitas` : status.text };
@@ -202,7 +217,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const anyFree = choices.some(item => item.ok);
   // When nothing is free at those hours: the nearest free hours in the rooms that suit.
   const freeTimes = !dayKnown || anyFree ? [] : fitting.flatMap(item => {
-    const option = alternatives({ roomId: item.id, date: draft.date, start: draft.start, end: draft.end }, rooms, others, nowDate, editId).sameRoom[0];
+    const option = alternatives({ roomId: item.id, date: draft.date, start: draft.start, end: draft.end }, rooms, others, clock, editId).sameRoom[0];
     return option ? [{ room: item, ...option }] : [];
   }).sort((a, b) => Math.abs(clockMinutes(a.start) - clockMinutes(draft.start)) - Math.abs(clockMinutes(b.start) - clockMinutes(draft.start))).slice(0, 3);
 
@@ -210,7 +225,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const today = wibDate(now);
   const stripDays = outside ? periodAllDates() : [...new Set([...periodDates(), ...dates])].sort();
   const daySummary = dayKnown
-    ? { ...summary, ...daySummaries([draft.date], rooms, others.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), nowDate) }
+    ? { ...summary, ...daySummaries([draft.date], rooms, others.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), clock) }
     : summary;
   const dayFull = !outside && draft.date >= today && !!daySummary[draft.date]?.full;
 
@@ -246,8 +261,15 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     const keep = options.includes(length) ? length : options.filter(item => item <= Math.max(length, appraisalRules.stepMinutes)).at(-1) ?? options[0] ?? appraisalRules.stepMinutes;
     return { start, end: minutesClock(clockMinutes(start) + keep) };
   }
-  function pickDate(date: string) {
-    if (date < today) return;
+  async function pickDate(date: string) {
+    if (date < appraisalRules.periodStart || date > appraisalRules.periodEnd) return;
+    // A day gone is a record, after the booker says so; HOD/Lead and ITEM ask for answers, so not then.
+    if (isRecordDate(date, nowDate) && !record && !(await confirm({
+      title: "Tanggal sudah lewat",
+      body: `${dayLabel(date)} sudah lewat. Catat sebagai meeting yang sudah terjadi? Partisipan tidak diundang atau diberi notifikasi.`,
+      confirmLabel: "Ya, catat",
+    }))) return;
+    if (isRecordDate(date, nowDate) && as !== "pribadi") chooseAs("pribadi");
     // A weekend has no rooms: picked on the month calendar, it books "Di luar kantor".
     if (!outside && !isWorkday(date)) { set({ date, roomId: OUTSIDE_ROOM }); return; }
     const open = startsOn(date);
@@ -264,8 +286,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   function chooseWhere(away: boolean) {
     if (away === outside) return;
     if (away) { set({ roomId: OUTSIDE_ROOM }); return; }
-    const date = isWorkday(draft.date) ? draft.date : periodDates().find(day => day > draft.date && day >= today) ?? draft.date;
-    const office = slotTimes().slice(0, -1).filter(time => new Date(wibInstant(date, time)) > nowDate);
+    const date = isWorkday(draft.date) ? draft.date : periodDates().find(day => day > draft.date && (record || day >= today)) ?? draft.date;
+    const office = slotTimes().slice(0, -1).filter(time => new Date(wibInstant(date, time)) > bookingClock(date, nowDate));
     const keepHours = office.includes(draft.start) && durationsFrom(draft.start).includes(length);
     set({ roomId: "", date, ...(keepHours ? {} : hoursFrom(office.includes(draft.start) ? draft.start : office[0] ?? draft.start, false)) });
   }
@@ -276,7 +298,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
   /** What stops a step, as field errors; empty when Lanjut may go on. */
   function problemsOf(at: number): Record<string, string> {
-    if (at === 0) return bookingProblems(draft, new Date());
+    if (at === 0) return bookingProblems(draft, bookingClock(draft.date, new Date()));
     if (at === 1) return draft.title.trim().length < 2 ? { title: "Isi nama kegiatan." } : {};
     if (at === 2 && asHod && !hodUnits.length) return { participants: "Pilih minimal satu departemen." };
     if (at === 2) return {};
@@ -398,14 +420,15 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         // The month as on Timeline (9 Nov 2026): the forums' bars instead of free/full dots; a day picks the date.
         ? <div role="group" aria-label="Tanggal"><TimelineMonth entries={timeline} today={today} open={draft.date} range={{ from: appraisalRules.periodStart, to: appraisalRules.periodEnd }}
           day={(date, marks, number) => {
-            const closed = date < today || date < appraisalRules.periodStart || date > appraisalRules.periodEnd;
+            const closed = date < appraisalRules.periodStart || date > appraisalRules.periodEnd;
             return <button key={date} type="button" className={`${timelineCss.calDay} ${timelineCss.calDayPick}`} {...marks} disabled={closed}
-              aria-pressed={date === draft.date} aria-label={`${dayName(date)}${closed ? ", tidak bisa dipilih" : ""}`} onClick={() => pickDate(date)}>
+              aria-pressed={date === draft.date} aria-label={`${dayName(date)}${closed ? ", tidak bisa dipilih" : ""}`} onClick={() => { void pickDate(date); }}>
               <span>{number}</span>
             </button>;
           }} /></div>
-        : <DateStrip days={stripDays} selected={draft.date} today={today} summary={daySummary} onPick={pickDate} label="Tanggal" />}
+        : <DateStrip days={stripDays} selected={draft.date} today={today} summary={daySummary} onPick={date => { void pickDate(date); }} pastPickable label="Tanggal" />}
       {fieldError("date")}
+      {record && <Notice tone="info">{dayLabel(draft.date)} sudah lewat: booking ini dicatat sebagai meeting yang sudah terjadi. Bentrok ruang tetap dicek; partisipan tidak diundang atau diberi notifikasi.</Notice>}
       {dayFull && <p className={css.note} role="status">Semua ruang penuh hari ini. Pilih hari lain atau jam lain.</p>}
       <div className={styles.times}>
         <div>
@@ -459,11 +482,12 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(2)}>
       {heading(2, "Siapa yang ikut?")}
-      {hod && !editId && <div className={css.asSwitch} role="group" aria-label="Booking sebagai">
+      {hod && !editId && !record && <div className={css.asSwitch} role="group" aria-label="Booking sebagai">
         <span className={styles.label}>Booking sebagai</span>
         <div className={css.where}>
-          <button type="button" aria-pressed={!asHod} onClick={() => chooseAs(false)}><User size={18} aria-hidden />Pribadi</button>
-          <button type="button" aria-pressed={asHod} onClick={() => chooseAs(true)}><Users size={18} aria-hidden />HOD/Lead</button>
+          <button type="button" aria-pressed={as === "pribadi"} onClick={() => chooseAs("pribadi")}><User size={18} aria-hidden />Pribadi</button>
+          <button type="button" aria-pressed={as === "hod"} onClick={() => chooseAs("hod")}><Users size={18} aria-hidden />HOD/Lead</button>
+          <button type="button" aria-pressed={as === "item"} onClick={() => chooseAs("item")}><ArrowLeftRight size={18} aria-hidden />ITEM</button>
         </div>
       </div>}
       <p className={css.headcount} role="status"><Users size={18} aria-hidden />{countLine}</p>
@@ -473,7 +497,9 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         : `Belum ada ruang untuk ${peopleLabel(count)}. Kurangi atau tambah partisipan.`}</p>
       {asHod ? <fieldset className={css.hodPick}>
         <legend className={styles.label}>Departemen yang diundang</legend>
-        <p className={styles.hint}>HOD dan Lead departemen yang dipilih diundang dan menjawab terima atau tolak. Ruang langsung dibooking.</p>
+        <p className={styles.hint}>{as === "item"
+          ? `ITEM, sinkronisasi antar departemen: HOD dan Lead departemen yang dipilih diundang dan menjawab terima atau tolak. Namanya menjadi "${itemName(hodUnits)}". Ruang langsung dibooking.`
+          : "HOD dan Lead departemen yang dipilih diundang dan menjawab terima atau tolak. Ruang langsung dibooking."}</p>
         <ul>{hodOffered.map(department => {
           const none = department.heads.length === 0;
           return <li key={department.id}><label className={`${css.hodDept} ${none ? css.hodNone : ""}`}>
@@ -552,7 +578,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
           {draft.title.trim() || <span className={css.missing}>Belum diisi</span>}{draft.description.trim() && <small>{draft.description.trim()}</small>}
         </SummaryRow>
         <SummaryRow label="Partisipan" onEdit={() => goTo(2)}>
-          {peopleLabel(count)}<small>{asHod ? `Sebagai HOD/Lead · ${hodOffered.filter(department => hodUnits.includes(department.id)).map(department => department.name).join(", ")}`
+          {peopleLabel(count)}<small>{asHod ? `${as === "item" ? "ITEM" : "Sebagai HOD/Lead"} · ${hodOffered.filter(department => hodUnits.includes(department.id)).map(department => department.name).join(", ")}`
             : picked.length ? `Kamu, ${picked.map(person => person.name).join(", ")}` : "Hanya kamu"}</small>
         </SummaryRow>
         <SummaryRow label="Tempat" onEdit={() => goTo(3)}>

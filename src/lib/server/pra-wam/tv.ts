@@ -11,7 +11,8 @@ import { isR2Configured, presignUpload, readObject, removeObjects, verifyUpload 
 import { createPrivilegedClient } from "../supabase/admin";
 import type { WamLook } from "@/lib/pra-wam/theme";
 import { listRooms } from "./appraisal";
-import { roomUsesBetween } from "./sessions";
+import { roomUsesBetween, timelineItems } from "./sessions";
+import { timelineCountdown, timelineMonths, type Countdown } from "@/lib/pra-wam/timeline";
 import { readWamLook } from "./theme";
 
 /*
@@ -271,24 +272,33 @@ async function weekDays(dates: readonly string[]): Promise<TvDay[]> {
  * within the six seconds).
  */
 const FRESH_MS = 6_000;
-type Content = { date: string; days: TvDay[]; slides: SlideRow[]; settings: TvSettings; look: WamLook };
+/**
+ * Pra WAM's countdown for the board (10 Nov 2026): from Timeline's forums and events, only their
+ * names and dates (the board is open to anyone who knows its address). None when it cannot be read.
+ */
+async function boardCountdown(date: string): Promise<Countdown | null> {
+  const { items } = await timelineItems(null).catch(() => ({ items: [] }));
+  return timelineCountdown(timelineMonths(items, date).flatMap(month => month.entries), date);
+}
+
+type Content = { date: string; days: TvDay[]; slides: SlideRow[]; settings: TvSettings; look: WamLook; countdown: Countdown | null };
 let kept: { at: number; content: Content } | null = null;
 const invalidate = () => { kept = null; };
 
 async function content(now: Date): Promise<Content> {
   const date = wibDate(now.toISOString());
   if (kept && kept.content.date === date && now.getTime() - kept.at < FRESH_MS) return kept.content;
-  const [days, slides, settings, look] = await Promise.all([weekDays(weekOf(date)), readSlides(), readSettings(), readWamLook()]);
-  const fresh = { date, days, slides: slides.filter(slide => slide.active), settings, look };
+  const [days, slides, settings, look, countdown] = await Promise.all([weekDays(weekOf(date)), readSlides(), readSettings(), readWamLook(), boardCountdown(date)]);
+  const fresh = { date, days, slides: slides.filter(slide => slide.active), settings, look, countdown };
   kept = { at: now.getTime(), content: fresh };
   return fresh;
 }
 
 /** What plays now; `imageSrc` gives each picture's address (a TV's goes through its key, the admin's through the admin API). */
 export async function tvFeed(imageSrc: (slideId: string) => string, now = new Date()): Promise<TvFeed> {
-  const { date, days, slides, settings, look } = await content(now);
+  const { date, days, slides, settings, look, countdown } = await content(now);
   return {
-    now: now.toISOString(), date, days, settings, look, version: BUILD,
+    now: now.toISOString(), date, days, settings, look, countdown, version: BUILD,
     slides: slides.map(slide => ({ id: slide.id, title: slide.title, seconds: slide.seconds, src: imageSrc(slide.id) })),
   };
 }

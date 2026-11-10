@@ -44,6 +44,8 @@ export default async function DevTvPage({ searchParams }: { searchParams: Promis
       qrPosition: (tvQrPositions as readonly string[]).includes(qr ?? "") ? qr as TvQrPosition : "kanan-bawah",
     },
     look: tema === "werkudara" ? "werkudara" : "dream",
+    // Pra WAM's countdown (10 Nov 2026): Appraisal ends on Friday 20 Nov.
+    countdown: isi === "kosong" ? null : { entry: { id: "appraisal", title: "Appraisal: isi form & 1-on-1", color: 0 }, edge: "berakhir", date: "2026-11-20", left: "10 hari lagi", next: { title: "HOD Meeting", date: "2026-11-24" } },
   };
   return <TvBoard initial={feed} />;
 }

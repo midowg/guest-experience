@@ -15,6 +15,8 @@ type Props = {
   summary?: Record<string, DaySummary>;
   onPick: (date: string) => void;
   label?: string;
+  /** Past days may be picked too (10 Nov 2026: the booking form, as a record); still dimmed and "Lewat", not struck through. */
+  pastPickable?: boolean;
 };
 
 const utc = (date: string) => new Date(`${date}T12:00:00Z`);
@@ -31,7 +33,7 @@ const still = () => typeof window !== "undefined" && !!window.matchMedia?.("(pre
  * is filled. A month's name stands where it begins. One tab stop: the arrow keys, Home and End move
  * between days. On load the picked day (else today) scrolls into view.
  */
-export function DateStrip({ days, selected, today, summary, onPick, label = "Pilih tanggal" }: Props) {
+export function DateStrip({ days, selected, today, summary, onPick, label = "Pilih tanggal", pastPickable = false }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ start: true, end: true });
   const focusDay = days.includes(selected) ? selected : days.includes(today) ? today : days.find(day => day >= today) ?? days[0];
@@ -122,12 +124,13 @@ export function DateStrip({ days, selected, today, summary, onPick, label = "Pil
         const day = stripDay(date, { today, selected, summary: summary?.[date] });
         const month = index === 0 || monthShort(days[index - 1]) !== monthShort(date);
         const spoken = [dayLabel(date), day.today ? "hari ini" : "", day.note.toLowerCase()].filter(Boolean).join(", ");
-        const tone = day.past ? css.past : day.full ? css.full : "";
+        const closed = day.past && !pastPickable;
+        const tone = closed ? css.past : day.past ? css.gone : day.full ? css.full : "";
         return <Fragment key={date}>
           {month && <span className={css.month} aria-hidden>{monthShort(date)}</span>}
           <button type="button" data-date={date} className={`${css.day} ${tone} ${day.today ? css.today : ""}`}
-            aria-pressed={day.selected} aria-disabled={day.past || undefined} aria-current={day.today ? "date" : undefined} aria-label={spoken}
-            tabIndex={date === focusDay ? 0 : -1} onKeyDown={event => onKey(event, index)} onClick={() => { if (!day.past) onPick(date); }}>
+            aria-pressed={day.selected} aria-disabled={closed || undefined} aria-current={day.today ? "date" : undefined} aria-label={spoken}
+            tabIndex={date === focusDay ? 0 : -1} onKeyDown={event => onKey(event, index)} onClick={() => { if (!closed) onPick(date); }}>
             <span className={css.name}>{day.today && <i className={css.dot} aria-hidden />}{day.today ? "Hari ini" : shortDay(date)}</span>
             <strong className={css.number}>{Number(date.slice(8, 10))}</strong>
             <span className={css.note}>{day.full && <Ban aria-hidden />}{day.note || " "}</span>

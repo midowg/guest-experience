@@ -115,6 +115,15 @@ export function bookableDates(from: string): string[] {
 /** Every weekday of the booking period, 28 Okt–29 Des: the booking window the date strip shows. */
 export const periodDates = () => bookableDates(appraisalRules.periodStart);
 
+/**
+ * A booking on a day already gone, inside the period (10 Nov 2026: SM's evaluation of 2 Nov,
+ * entered afterwards), is a record: saved after the booker says so, every hour of that day open,
+ * a room clash still refused, and no one invited or told (it is over). Today's past hours are not.
+ */
+export const isRecordDate = (date: string, now: Date) => date >= appraisalRules.periodStart && date < wibDate(now.toISOString());
+/** The clock a booking's hours are checked against: for a record, the start of time, so none of its hours is "past". */
+export const bookingClock = (date: string, now: Date) => (isRecordDate(date, now) ? new Date(0) : now);
+
 /** Every day of the period, weekends too: the days an outside booking may take. */
 export function periodAllDates(): string[] {
   const dates: string[] = [];

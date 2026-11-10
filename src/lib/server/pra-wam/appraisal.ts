@@ -1,7 +1,7 @@
 import { callName } from "@/lib/pra-wam/call-name";
 import "server-only";
 import { cache } from "react";
-import { alternatives, appraisalRules, bookableDates, bookingProblems, clockLabel, OUTSIDE_ROOM, overCapacity, overlaps, roomFitProblem, roomKeptFrom, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { alternatives, appraisalRules, bookableDates, bookingClock, bookingProblems, clockLabel, OUTSIDE_ROOM, overCapacity, overlaps, roomFitProblem, roomKeptFrom, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { MIGRATION_BOOKING_APP, officePeriod, officeRules, type Audience } from "@/lib/booking/rules";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
@@ -249,7 +249,10 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
   const office = options.office;
   if (!office && !await appraisalOpen()) throw new ServiceError(409, "Booking ruang appraisal sedang ditutup oleh admin Pra WAM.");
   const before = options.id ? await requireOwn(options.id, viewer) : null;
-  const problems = bookingProblems(input, now, office ? officePeriod(now) : undefined);
+  // A day already gone is a record (WAM only): its hours are not "past", and no one is told.
+  const clock = office ? now : bookingClock(input.date, now);
+  const record = clock !== now;
+  const problems = bookingProblems(input, clock, office ? officePeriod(now) : undefined);
   if (Object.keys(problems).length) throw new ServiceError(422, "Periksa kembali tanggal dan jam.", Object.fromEntries(Object.entries(problems).map(([key, message]) => [key, [message]])));
   // The room must suit how many come (the same rule the form uses): no one-on-one in the big room.
   const rooms = await listRooms();
@@ -297,7 +300,7 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
     if (/EXTERNAL_NOTE_MISSING/.test(error.message)) throw new ServiceError(422, "Isi nama tamu atau perusahaannya.", { externalNote: ["Isi nama tamu atau perusahaannya."] });
     if (outside && (error.code === "PGRST202" || /p_place|place/.test(error.message))) throw new ServiceError(503, `Booking di luar kantor menunggu migrasi ${MIGRATION_OUTSIDE}. Sementara itu pilih ruang kantor.`);
     if (/PLACE_MISSING/.test(error.message)) throw new ServiceError(422, "Isi nama tempat.", { place: ["Isi nama tempat."] });
-    if (error.code === "23P01") throw await roomTaken(input, viewer, now, options.id);
+    if (error.code === "23P01") throw await roomTaken(input, viewer, clock, options.id);
     if (/ROOM_NOT_BOOKABLE/.test(error.message)) throw new ServiceError(422, office ? "Ruangan ini tidak bisa dipesan." : "Ruang ini tidak bisa dipesan untuk appraisal.", { roomId: ["Pilih ruang lain."] });
     if (/BOOKING_DAILY_LIMIT/.test(error.message)) throw new ServiceError(409, `Kamu sudah punya ${office ? officeRules.maxPerDay : appraisalRules.maxPerDay} booking aktif pada hari itu. Batalkan salah satu dulu.`);
     if (/NOT_FOUND/.test(error.message)) throw new ServiceError(404, "Booking tidak ditemukan atau sudah dibatalkan.");
@@ -309,7 +312,7 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
   // Its session was saved with it (same transaction); the people in it hear as for any session.
   const moved = before && (before.startsAt !== saved.startsAt || before.endsAt !== saved.endsAt || before.roomId !== saved.roomId);
   // A booking made as HOD tells its HODs itself, with Terima and Tolak (hod.ts), not twice.
-  if (!office && !options.quiet && (!before || moved)) await notifyBookingSession(saved.id, before ? "berubah" : "terbit", await bookingFacts(saved), viewer);
+  if (!office && !options.quiet && !record && (!before || moved)) await notifyBookingSession(saved.id, before ? "berubah" : "terbit", await bookingFacts(saved), viewer);
   return saved;
 }
 

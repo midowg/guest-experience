@@ -109,13 +109,26 @@ it("opens the room step when the server refuses the room", async () => {
   expect(screen.getByText("Terlalu kecil: muat 4 orang")).toBeTruthy();
 });
 
-it("shows the whole window on the date strip: a past day cannot be picked, a full day can, with a note", () => {
+it("shows the whole window on the date strip: a past day is a record after a check, a full day can be picked, with a note", async () => {
+  // jsdom has no modal dialogs: enough of one for the confirm.
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
   request.mockReturnValue(new Promise(() => undefined));
   renderForm({ summary: { "2026-11-06": { bookings: 8, full: true } } });
-  const past = screen.getByRole("button", { name: /^Selasa, 3 Nov, lewat/ });
-  expect(past.getAttribute("aria-disabled")).toBe("true");
-  fireEvent.click(past);
+  const past = () => screen.getByRole("button", { name: /^Selasa, 3 Nov, lewat/ });
+  expect(past().getAttribute("aria-disabled")).toBeNull();
+  // Asked first; Batal keeps the day.
+  fireEvent.click(past());
+  fireEvent.click(within(await screen.findByRole("dialog", { name: "Tanggal sudah lewat" })).getByRole("button", { name: "Batal" }));
   expect(screen.getByRole("button", { name: /^Kamis, 5 Nov/ }).getAttribute("aria-pressed")).toBe("true");
+  // Yes: a record, every hour of the day open.
+  fireEvent.click(past());
+  fireEvent.click(within(await screen.findByRole("dialog", { name: "Tanggal sudah lewat" })).getByRole("button", { name: "Ya, catat" }));
+  await vi.waitFor(() => expect(past().getAttribute("aria-pressed")).toBe("true"));
+  expect(screen.getByText(/dicatat sebagai meeting yang sudah terjadi/)).toBeTruthy();
+  expect([...(screen.getByLabelText("Jam mulai") as HTMLSelectElement).options].filter(option => !option.disabled)[0].value).toBe("07:00");
+  fireEvent.click(screen.getByRole("button", { name: /^Kamis, 5 Nov/ }));
+  expect(screen.queryByText(/dicatat sebagai meeting yang sudah terjadi/)).toBeNull();
   expect(screen.getByRole("button", { name: /^Rabu, 4 Nov, hari ini/ })).toBeTruthy();
   expect(screen.queryByText("Semua ruang penuh hari ini. Pilih hari lain atau jam lain.")).toBeNull();
 
@@ -235,6 +248,35 @@ it("lets a HOD book as HOD: departments instead of people, their HODs invited, t
     json: expect.objectContaining({ hodUnits: ["BAS", "COE"], participants: ["p1", "p2"] }) })));
 });
 
+it("books an ITEM between departments: their HODs and Leads invited, the name made from the departments and given back on leaving ITEM", async () => {
+  request.mockResolvedValue({ data: {}, message: "Ruang dibooking." });
+  renderForm({ hod: { ownUnits: ["HRGA"], departments: [
+    { id: "HRGA", name: "Human Resources & General Affair", heads: [{ id: "me", name: "Saya" }] },
+    { id: "COE", name: "Business Transformation & AI Enablement (CoE)", heads: [{ id: "p2", name: "Citra" }, { id: "p3", name: "Dewi" }] },
+  ] } });
+  lanjut();
+  fireEvent.change(screen.getByLabelText("Nama kegiatan"), { target: { value: "Kalibrasi nilai" } });
+  lanjut();
+  const as = within(screen.getByRole("group", { name: "Booking sebagai" }));
+  fireEvent.click(as.getByRole("button", { name: "ITEM" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: /Business Transformation/ }));
+  expect(screen.getByText(/Namanya menjadi "ITEM: HRGA x CoE"/)).toBeTruthy();
+  expect(screen.getByText("Kamu + 2 orang = 3 orang")).toBeTruthy();
+  // Leaving ITEM gives the name back; coming back names it again.
+  fireEvent.click(as.getByRole("button", { name: "Pribadi" }));
+  fireEvent.click(screen.getByRole("button", { name: /Kembali/ }));
+  expect((screen.getByLabelText("Nama kegiatan") as HTMLSelectElement).value).toBe("Kalibrasi nilai");
+  lanjut();
+  fireEvent.click(within(screen.getByRole("group", { name: "Booking sebagai" })).getByRole("button", { name: "ITEM" }));
+  lanjut();
+  fireEvent.click(roomCard("Nakula").disabled ? roomCard("Arjuna") : roomCard("Nakula"));
+  lanjut();
+  expect(screen.getByText(/ITEM · Business Transformation/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Book ruang/ }));
+  await vi.waitFor(() => expect(request).toHaveBeenCalledWith("/api/wam/appraisal", expect.objectContaining({ method: "POST",
+    json: expect.objectContaining({ title: "ITEM: HRGA x CoE", hodUnits: ["COE"], participants: ["p2", "p3"] }) })));
+});
+
 it("picks the activity from a dropdown: Timeline's forums (the day's first), then the usual names", () => {
   render(<BookingForm initial={draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[kecil]} people={[]} viewer={{ id: "me" }} groups={[]} usedTitles={[]}
     dayBookings={[]} dayOf="2026-11-05" showPlan={false}
@@ -266,7 +308,7 @@ it("on its own page, once saved shows what was booked with a way back to Timelin
   expect(screen.getByRole("link", { name: /Book lagi/ }).getAttribute("href")).toBe("/wam/book/new");
 });
 
-it("from Agenda picks the day on Timeline's month (bars, no dots), a weekend booking Di luar kantor, a past day not pickable", () => {
+it("from Agenda picks the day on Timeline's month (bars, no dots), a weekend booking Di luar kantor, a day before the period not pickable", () => {
   request.mockResolvedValue({ data: { bookings: [] }, message: "" });
   render(<BookingForm initial={draft()} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[kecil]} people={[]} viewer={{ id: "me" }} groups={[]} usedTitles={[]}
     dayBookings={[]} dayOf="2026-11-05" showPlan={false} datePicker="month"
@@ -275,7 +317,8 @@ it("from Agenda picks the day on Timeline's month (bars, no dots), a weekend boo
   const month = within(screen.getByRole("group", { name: "Tanggal" }));
   expect(month.getByText("HOD Meeting")).toBeTruthy();
   expect(month.queryByRole("link", { name: "HOD Meeting" })).toBeNull();
-  expect((month.getByRole("button", { name: /^Selasa, 3 November/ }) as HTMLButtonElement).disabled).toBe(true);
+  expect((month.getByRole("button", { name: /^Selasa, 27 Oktober/ }) as HTMLButtonElement).disabled).toBe(true);
+  expect((month.getByRole("button", { name: /^Selasa, 3 November/ }) as HTMLButtonElement).disabled).toBe(false);
   expect(month.getByRole("button", { name: /^Kamis, 5 November/ }).getAttribute("aria-pressed")).toBe("true");
   fireEvent.click(month.getByRole("button", { name: /^Sabtu, 7 November/ }));
   expect(screen.getByText(/Di luar kantor: boleh akhir pekan/)).toBeTruthy();

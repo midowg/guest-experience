@@ -117,12 +117,13 @@ export async function myCancelledSessions(viewer: Member, from: string): Promise
  * cancelled, no rapat), with only what the timeline shows (no description, no people), and
  * whether the viewer takes part. Before the sessions migration it is empty.
  */
-export async function timelineItems(viewer: Member): Promise<{ items: TimelineItem[]; migrated: boolean }> {
+export async function timelineItems(viewer: Member | null): Promise<{ items: TimelineItem[]; migrated: boolean }> {
   const client = createPrivilegedClient();
+  // `null` (10 Nov 2026): no one signed in, the office TV's countdown; nothing is "mine" then.
   const [{ data, error }, { data: links }] = await Promise.all([
     client.from("pw_sessions").select("id,title,kind,status,plan_from,plan_to,starts_at,ends_at")
       .in("kind", ["forum", "acara"]).in("status", ["draf", "terbit"]).limit(300),
-    client.from("pw_session_participants").select("session_id").eq("employee_id", viewer.id),
+    viewer ? client.from("pw_session_participants").select("session_id").eq("employee_id", viewer.id) : Promise.resolve({ data: [] as { session_id: string }[] }),
   ]);
   if (error) { if (missing(error)) return { items: [], migrated: false }; databaseError(error); }
   const mine = new Set((links ?? []).map(link => link.session_id as string));

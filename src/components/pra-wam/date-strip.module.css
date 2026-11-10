@@ -47,6 +47,8 @@
 /* Past: not pickable; muted, dashed, the number struck through, "Lewat". */
 .past { color: var(--pw-muted); cursor: not-allowed; opacity: .7; }
 .past .number { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+/* A past day that may still be picked (a record, 10 Nov 2026): dimmed, not struck through. */
+.gone:not([aria-pressed="true"]) { color: var(--pw-muted); }
 
 /* Picked: filled. */
 .day[aria-pressed="true"] { background: var(--pw-primary-soft); }

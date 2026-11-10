@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Maximize } from "lucide-react";
+import { Hourglass, Maximize } from "lucide-react";
+import { rangeLabel, type Countdown } from "@/lib/pra-wam/timeline";
 import QRCode from "qrcode";
 import { TV_HOME_PATH } from "@/lib/routes";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
@@ -161,12 +162,12 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
     {gone ? <div className={css.slide}><Message title="Tautan TV ini sudah tidak berlaku" body="Minta tautan baru di Admin WAM → TV Announcement." /></div>
       : !current ? <div className={css.slide}><Message title="Belum ada yang ditayangkan" body="Tambahkan gambar atau nyalakan jadwal ruang di Admin WAM → TV Announcement." /></div>
       : current.kind === "hari"
-        ? <Schedule key={current.key} kicker="Jadwal ruang hari ini" title={tvDateLabel(feed.date)} note={today.length ? dayNote : undefined} clock={clock} legend={dayLegend}>
+        ? <Schedule key={current.key} kicker="Jadwal ruang hari ini" title={tvDateLabel(feed.date)} note={today.length ? dayNote : undefined} clock={clock} legend={dayLegend} countdown={feed.countdown} wide={screen.wide}>
           {today.length === 0 ? <Message title="Belum ada ruang yang dipakai hari ini" body="Booking baru muncul di sini dengan sendirinya." />
             : screen.wide ? <DayWide rooms={today} legend={legend} now={now} time={time} room={under(dayLegend)} /> : <DayTall rooms={today} legend={legend} now={now} time={time} room={under(dayLegend)} />}
         </Schedule>
         : current.kind === "minggu"
-          ? <Schedule key={current.key} kicker="Jadwal ruang minggu ini" title={tvWeekLabel(week.map(day => day.date))} note={weekCount ? `${weekCount} jadwal minggu ini` : undefined} clock={clock} legend={weekLegend}>
+          ? <Schedule key={current.key} kicker="Jadwal ruang minggu ini" title={tvWeekLabel(week.map(day => day.date))} note={weekCount ? `${weekCount} jadwal minggu ini` : undefined} clock={clock} legend={weekLegend} countdown={feed.countdown} wide={screen.wide}>
             {week.every(day => day.rooms.length === 0) ? <Message title="Belum ada ruang yang dipakai minggu ini" body="Booking baru muncul di sini dengan sendirinya." />
               : screen.wide ? <WeekWide days={week} legend={legend} today={feed.date} now={now} room={under(weekLegend)} /> : <WeekTall days={week} legend={legend} today={feed.date} now={now} room={under(weekLegend)} />}
           </Schedule>
@@ -204,10 +205,15 @@ function Badge({ code, size }: { code: number | null; size: number }) {
   return code == null ? null : <b className={css.badge} style={{ fontSize: u(size) }}>{code}</b>;
 }
 
-function Schedule({ kicker, title, note, clock, legend, children }: { kicker: string; title: string; note?: string; clock: string; legend: Legend; children: ReactNode }) {
+function Schedule({ kicker, title, note, clock, legend, countdown, wide = true, children }: { kicker: string; title: string; note?: string; clock: string; legend: Legend; countdown?: Countdown | null; wide?: boolean; children: ReactNode }) {
+  // On a TV standing up there is no room beside the clock: the countdown takes the note's line.
+  const below = !!countdown && !wide;
   return <section className={`${css.slide} ${css.schedule}`} aria-label={kicker}>
     <header className={css.head}>
-      <div className={css.headText}><p className={css.kicker}>{kicker}</p><h1 className={css.date}>{title}</h1>{note && <p className={css.summary}>{note}</p>}</div>
+      <div className={css.headText}><p className={css.kicker}>{kicker}</p><h1 className={css.date}>{title}</h1>
+        {below ? <p className={`${css.summary} ${css.countdownLine}`} role="note"><Hourglass aria-hidden="true" />{countdownText(countdown)}</p>
+          : note && <p className={css.summary}>{note}</p>}</div>
+      {countdown && !below && <CountdownNote countdown={countdown} />}
       <p className={css.clock}>{clock}<span>WIB</span></p>
     </header>
     {/* Each activity once, with its number and colour: the blocks below carry the number, not the name. */}
@@ -219,6 +225,18 @@ function Schedule({ kicker, title, note, clock, legend, children }: { kicker: st
     </ul>}
     <div className={css.body}>{children}</div>
   </section>;
+}
+
+/**
+ * Pra WAM's countdown in the head (10 Nov 2026, asked by panitia): what is on and how long until it
+ * ends, or what comes next and how long until it starts. Two lines, beside the clock.
+ */
+const countdownText = (countdown: Countdown) => `${countdown.entry.title} ${countdown.edge} ${countdown.left} · ${rangeLabel(countdown.date, countdown.date)}`;
+function CountdownNote({ countdown }: { countdown: Countdown }) {
+  return <p className={css.countdown} role="note">
+    <span className={css.countdownTitle}><Hourglass aria-hidden="true" /><span className={css.one}>{countdown.entry.title}</span></span>
+    <span className={css.countdownLeft}>{countdown.edge} <strong>{countdown.left}</strong> · {rangeLabel(countdown.date, countdown.date)}</span>
+  </p>;
 }
 
 type Room = { width: number; height: number };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookingActivities, calendarWeeks, rangeLabel, timelineLanes, timelineMonths, TIMELINE_COLORS, type TimelineItem } from "./timeline";
+import { bookingActivities, calendarWeeks, rangeLabel, timelineCountdown, timelineLanes, timelineMonths, TIMELINE_COLORS, type TimelineItem } from "./timeline";
 
 const item = (patch: Partial<TimelineItem>): TimelineItem => ({
   id: patch.title ?? "x", title: "x", kind: "forum", published: false, planFrom: null, planTo: null, startsAt: null, endsAt: null, mine: false, ...patch,
@@ -68,4 +68,28 @@ describe("Timeline calendar", () => {
 it("keeps the sessions already over for booking, flagged past", () => {
   const list = bookingActivities([item({ title: "Lewat", planFrom: "2026-11-02", planTo: "2026-11-03" }), item({ title: "Nanti", planFrom: "2026-11-24", planTo: "2026-11-27" })], "2026-11-09");
   expect(list.map(entry => [entry.title, entry.past])).toEqual([["Lewat", true], ["Nanti", false]]);
+});
+
+describe("timelineCountdown", () => {
+  const plan = (id: string, title: string, from: string, to: string): TimelineItem => ({ id, title, kind: "forum", published: false, planFrom: from, planTo: to, startsAt: null, endsAt: null, mine: false });
+  const items = [
+    plan("a", "Appraisal: isi form & 1-on-1", "2026-10-28", "2026-11-20"),
+    plan("b", "Meeting Evaluasi Internal Departemen", "2026-11-02", "2026-11-13"),
+    plan("c", "Rekonsiliasi ACC", "2026-11-11", "2026-11-12"),
+    plan("d", "HOD Meeting", "2026-11-24", "2026-11-27"),
+    plan("e", "End Year Dinner", "2026-12-29", "2026-12-29"),
+  ];
+  const at = (today: string) => timelineCountdown(timelineMonths(items, today).flatMap(month => month.entries), today);
+
+  it("counts to the end of what is on that ends last, then names what follows", () => {
+    expect(at("2026-11-10")).toMatchObject({ entry: { title: "Appraisal: isi form & 1-on-1" }, edge: "berakhir", date: "2026-11-20", left: "10 hari lagi", next: { title: "HOD Meeting", date: "2026-11-24" } });
+    expect(at("2026-11-19")).toMatchObject({ left: "besok" });
+    expect(at("2026-11-20")).toMatchObject({ edge: "berakhir", left: "hari ini" });
+  });
+
+  it("with nothing on, counts to the start of the next; after the last, none", () => {
+    expect(at("2026-11-21")).toMatchObject({ entry: { title: "HOD Meeting" }, edge: "mulai", left: "3 hari lagi", next: { title: "End Year Dinner" } });
+    expect(at("2026-12-28")).toMatchObject({ entry: { title: "End Year Dinner" }, edge: "mulai", left: "besok", next: null });
+    expect(at("2026-12-30")).toBeNull();
+  });
 });

@@ -1,6 +1,6 @@
 import "server-only";
 import type { BookingActivity, BookingDraft, PeopleGroup } from "@/components/pra-wam/BookingForm";
-import { appraisalRules, bookableDates, draftHours, OUTSIDE_ROOM, wibDate, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { appraisalRules, bookableDates, bookingClock, draftHours, isRecordDate, isWorkday, OUTSIDE_ROOM, wibDate, wibTime, type Booking, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import type { HodDepartment } from "@/lib/pra-wam/hod";
 import { bookingActivities } from "@/lib/pra-wam/timeline";
 import { participantGroups } from "@/lib/pra-wam/units";
@@ -43,10 +43,12 @@ export async function bookingFormData(member: Member, query: BookingFormQuery, n
     initial = { date: wibDate(booking.startsAt), start: wibTime(booking.startsAt), end: wibTime(booking.endsAt), roomId: booking.roomId, place: booking.place ?? "", title: booking.title, description: booking.description, participants: (booking.participants ?? []).map(person => person.id) };
   } else {
     const asked = query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : null;
-    const weekend = !!asked && !dates.includes(asked) && asked >= today && asked >= appraisalRules.periodStart && asked <= appraisalRules.periodEnd;
-    const date = asked && (dates.includes(asked) || weekend) ? asked : dates[0] ?? today;
+    // A day gone inside the period opens on itself, as a record (10 Nov 2026); the form says so.
+    const record = !!asked && isRecordDate(asked, now);
+    const weekend = !!asked && !dates.includes(asked) && (asked >= today || record) && asked >= appraisalRules.periodStart && asked <= appraisalRules.periodEnd && !isWorkday(asked);
+    const date = asked && (dates.includes(asked) || weekend || record) ? asked : dates[0] ?? today;
     if (asked && date !== asked) moved = asked;
-    initial = { date, ...draftHours(date, now, query), roomId: weekend ? OUTSIDE_ROOM : query.room ?? "", title: "", description: "", participants: [] };
+    initial = { date, ...draftHours(date, bookingClock(date, now), query), roomId: weekend ? OUTSIDE_ROOM : query.room ?? "", title: "", description: "", participants: [] };
   }
   const [schedule, people, titles, units, activities, standing, viewerDepartments] = await Promise.all([
     daySchedule(initial.date, member), listPeople(), usedTitles(), listUnits(),

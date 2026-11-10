@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { departmentShort } from "../employees";
 
 /*
  * Meeting HOD (6 Nov 2026): a HOD books a room "sebagai HOD" in Book ruang and picks departments
@@ -30,3 +31,13 @@ export function statusFromAnswers(responses: readonly HodResponse[]): Exclude<Ho
 
 export const hodStatusLabels: Record<HodMeetingStatus, string> = { menunggu: "Menunggu jawaban", terjadwal: "Terjadwal", ditolak: "Ditolak", batal: "Dibatalkan" };
 export const hodResponseLabels: Record<HodResponse, string> = { menunggu: "Belum menjawab", terima: "Menerima", tolak: "Menolak" };
+
+/**
+ * ITEM, sinkronisasi antar departemen (10 Nov 2026): the meeting's name from the booker's own
+ * departments and the ones invited, by their short forms, as panitia write it on WhatsApp:
+ * "ITEM: HRGA x CoE". Without an invited department yet it is plain "ITEM".
+ */
+export function itemTitle(own: readonly string[], invited: readonly string[]): string {
+  const shorts = [...new Set([...own, ...invited].map(name => departmentShort(name)).filter(Boolean))];
+  return invited.length ? `ITEM: ${shorts.join(" x ")}` : "ITEM";
+}

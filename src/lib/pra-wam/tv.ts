@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { WamLook } from "./theme";
+import type { Countdown } from "./timeline";
 
 /*
  * TV Announcement (Admin WAM → TV Announcement, 10 Nov 2026): what an office TV plays. Every TV
@@ -38,6 +39,11 @@ export type TvFeed = {
   now: string; date: string; days: TvDay[]; slides: TvSlide[]; settings: TvSettings;
   /** The WAM theme picked in Admin WAM → Tema aplikasi; the board paints with its colours. */
   look: WamLook;
+  /**
+   * Pra WAM's countdown (10 Nov 2026, asked by panitia): what is on and when it ends, or what
+   * comes next, from Timeline. Absent before it is known or after the last one.
+   */
+  countdown?: Countdown | null;
   /**
    * Which build of the site answered. A TV stays open for weeks: when this is no longer the build
    * its page came from, the page loads itself afresh, so a new version reaches every TV by itself.

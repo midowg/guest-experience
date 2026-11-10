@@ -42,6 +42,14 @@
 .clock { flex: none; margin: 0; font-family: var(--tv-display); font-size: calc(8 * var(--u)); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; }
 .summary { margin: 0; overflow: hidden; color: var(--tv-muted); font-size: calc(2.2 * var(--u)); text-overflow: ellipsis; white-space: nowrap; }
 .clock span { margin-left: calc(1 * var(--u)); color: var(--tv-muted); font-size: calc(2.4 * var(--u)); font-weight: 500; }
+/* Pra WAM's countdown (10 Nov 2026), between the date and the clock. */
+.countdown { display: grid; justify-items: end; gap: calc(.6 * var(--u)); min-width: 0; max-width: calc(64 * var(--u)); margin: 0 0 0 auto; padding-right: calc(4 * var(--u)); border-right: 1px solid var(--tv-line); text-align: right; }
+.countdownTitle { display: flex; align-items: center; gap: calc(1 * var(--u)); max-width: 100%; min-width: 0; color: var(--tv-text); font-size: calc(2.6 * var(--u)); font-weight: 700; }
+.countdownTitle svg { flex: none; width: calc(2.6 * var(--u)); height: calc(2.6 * var(--u)); color: var(--tv-accent); }
+.countdownLeft { color: var(--tv-muted); font-size: calc(2.3 * var(--u)); white-space: nowrap; }
+.countdownLeft strong { color: var(--tv-accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.countdownLine { color: var(--tv-text); }
+.countdownLine svg { width: calc(2.2 * var(--u)); height: calc(2.2 * var(--u)); margin-right: calc(.8 * var(--u)); color: var(--tv-accent); vertical-align: calc(-.3 * var(--u)); }
 .body { position: relative; flex: 1; min-height: 0; }
 
 /* A block of the day calendar, and an entry of the week calendar: the same tile. */

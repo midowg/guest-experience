@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alternatives, bookableDates, bookingCancelledText, bookingInputSchema, bookingProblems, bookingSavedText, bookingWhere, durationsFrom, OUTSIDE_ROOM, overlaps, slotTimes, titleSuggestions, wibDate, wibInstant, wibTime, type Room } from "./appraisal";
+import { alternatives, bookableDates, bookingCancelledText, bookingClock, isRecordDate, bookingInputSchema, bookingProblems, bookingSavedText, bookingWhere, durationsFrom, OUTSIDE_ROOM, overlaps, slotTimes, titleSuggestions, wibDate, wibInstant, wibTime, type Room } from "./appraisal";
 
 const now = new Date("2026-11-04T02:05:00Z"); // Rabu 4 Nov, 09.05 WIB
 const room = (id: string, bookable = true): Room => ({ id, slug: id, name: id, kind: "utama", capacity: null, bookable, minPeople: null, planKey: null, facilities: [] });
@@ -107,5 +107,17 @@ describe("rooms kept for departments (10 Nov 2026)", () => {
     expect(roomKeptFrom({}, [])).toBeNull();
     expect(roomKeptFrom({ departments: ["Sales & Marketing"] }, ["sales & marketing"])).toBeNull();
     expect(roomKeptFrom({ departments: ["Sales & Marketing"] }, ["Accounting", "Corporate"])).toBe("Khusus Sales & Marketing");
+  });
+});
+
+describe("a booking on a day gone (a record)", () => {
+  it("is a record inside the period before today; its hours are not past, today's still are", () => {
+    expect(isRecordDate("2026-11-02", now)).toBe(true);
+    expect(isRecordDate("2026-10-27", now)).toBe(false);
+    expect(isRecordDate("2026-11-04", now)).toBe(false);
+    expect(bookingProblems({ date: "2026-11-02", start: "09:00", end: "10:00" }, bookingClock("2026-11-02", now))).toEqual({});
+    expect(bookingProblems({ date: "2026-11-02", start: "09:00", end: "10:00" }, now)).toHaveProperty("start");
+    expect(bookingProblems({ date: "2026-11-04", start: "08:00", end: "09:00" }, bookingClock("2026-11-04", now))).toHaveProperty("start");
+    expect(bookingProblems({ date: "2026-10-27", start: "09:00", end: "10:00" }, bookingClock("2026-10-27", now))).toHaveProperty("date");
   });
 });
