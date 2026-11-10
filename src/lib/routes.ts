@@ -423,8 +423,9 @@ export const praWamSettingsApi = "/api/admin/wam/settings";
 export const praWamThemeApi = "/api/admin/wam/theme";
 
 /*
- * TV Announcement: an office TV opens /tv/{key} with no sign-in; the key in the address is the
- * secret (only its sha256 is kept). Outside /wam and /admin on purpose: no login, no app frame.
+ * TV Announcement: an office TV opens /tv/{address} with no sign-in, e.g. /tv/lobi; the address
+ * is the TV's short slug, picked by the admin and open on purpose (an older TV's is its long key).
+ * Outside /wam and /admin on purpose: no login, no app frame.
  */
 export const tvPath = (key: string) => `/tv/${enc(key)}`;
 export const tvApi = {
@@ -440,9 +441,9 @@ export const praWamTvApi = {
   list: TV_ADMIN_API,
   /** GET: what a TV would play now, for the preview. */
   feed: `${TV_ADMIN_API}/feed`,
-  /** POST {name}: a new TV; its address is in the answer, once. */
+  /** POST {name, slug}: a new TV at /tv/{slug}. */
   screens: `${TV_ADMIN_API}/screens`,
-  /** DELETE: the TV's address stops working. */
+  /** PATCH {name?, slug?}: rename or move the TV; DELETE: its address stops working. */
   screen: (id: string) => `${TV_ADMIN_API}/screens/${id}`,
   /** PUT {showSchedule, scheduleSeconds}. */
   settings: `${TV_ADMIN_API}/settings`,

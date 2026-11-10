@@ -1,6 +1,6 @@
 /* Admin WAM → TV Announcement: the TVs, the pictures and the settings. --cs-* variables only. */
 .addForm { display: grid; gap: 12px; align-items: end; }
-@media (min-width: 700px) { .addForm { grid-template-columns: minmax(0, 24rem) auto; } }
+@media (min-width: 700px) { .addForm { grid-template-columns: minmax(0, 18rem) minmax(0, 14rem) auto; } }
 .created { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--cs-primary); border-radius: 16px; background: var(--cs-surface); }
 .created p { margin: 0; font-size: 14px; }
 .link { display: block; padding: 10px 12px; border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-bg, transparent); font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; user-select: all; }

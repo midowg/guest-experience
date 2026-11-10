@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  agoLabel, dayEntries, entryState, fit, fitText, hourSpan, imageFit, loopCount, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
+  agoLabel, dayEntries, entryState, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
   tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
@@ -145,6 +145,34 @@ describe("pictures and clocks", () => {
     expect(tvIsOn(at("11:59"), base)).toBe(true);
     expect(tvIsOn(at("11:50"), base)).toBe(false);
     expect(tvIsOn(null, base)).toBe(false);
+  });
+});
+
+describe("a TV's short address", () => {
+  it("is lower-case letters, digits and single dashes, 2 to 40 long", () => {
+    for (const good of ["lobi", "tv", "pantry-2", "ruang-meeting-lantai-3", "a1"]) expect(looksLikeTvSlug(good), good).toBe(true);
+    for (const bad of ["", "a", "Lobi", "lobi utama", "-lobi", "lobi-", "lobi--dua", "lobi_dua", "lobi/dua", "é", "a".repeat(41), null, 12]) expect(looksLikeTvSlug(bad), String(bad)).toBe(false);
+  });
+
+  it("is never mistaken for an old key address", () => {
+    expect(looksLikeTvSlug(`tv_${"a".repeat(43)}`)).toBe(false);
+  });
+
+  it("is suggested from the TV's name", () => {
+    expect(suggestSlug("Lobi")).toBe("lobi");
+    expect(suggestSlug("  Lobi Utama ")).toBe("lobi-utama");
+    expect(suggestSlug("Pantry (Lt. 2)")).toBe("pantry-lt-2");
+    expect(suggestSlug("Résepsionis")).toBe("resepsionis");
+    expect(suggestSlug("!!")).toBe("");
+    expect(looksLikeTvSlug(suggestSlug("Ruang ".repeat(20)))).toBe(true);
+  });
+
+  it("is checked and lower-cased when the admin sends it", () => {
+    expect(tvScreenSchema.parse({ name: " Lobi ", slug: " Lobi-Utama " })).toEqual({ name: "Lobi", slug: "lobi-utama" });
+    expect(tvScreenSchema.safeParse({ name: "Lobi", slug: "lobi utama" }).success).toBe(false);
+    expect(tvScreenSchema.safeParse({ name: "Lobi" }).success).toBe(false);
+    expect(tvScreenPatchSchema.safeParse({}).success).toBe(false);
+    expect(tvScreenPatchSchema.safeParse({ slug: "pantry-2" }).success).toBe(true);
   });
 });
 

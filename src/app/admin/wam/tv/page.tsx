@@ -2,6 +2,7 @@ import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
 import { PraWamTv } from "@/components/admin/wam/PraWamTv";
 import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
 import { wamCrumbs, wamSection } from "@/components/admin/wam/sections";
+import { shareUrl } from "@/lib/site-url";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { tvAdmin } from "@/lib/server/pra-wam/tv";
@@ -14,6 +15,6 @@ export default async function WamTvPage() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   return <WamAdminFrame current="tv">
-    <PraWamTv initial={await tvAdmin()} crumbs={wamCrumbs("tv")} title={wamSection("tv").label} />
+    <PraWamTv initial={await tvAdmin()} crumbs={wamCrumbs("tv")} title={wamSection("tv").label} origin={shareUrl().origin} />
   </WamAdminFrame>;
 }

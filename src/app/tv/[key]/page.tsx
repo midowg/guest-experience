@@ -13,9 +13,10 @@ export const metadata: Metadata = { title: "TV Announcement", robots: { index: f
 export const viewport: Viewport = { themeColor: "#0b1220" };
 
 /**
- * What an office TV opens: /tv/{key}, with no sign-in. The key in the address is the secret (Admin
- * WAM → TV Announcement makes it); a wrong or removed key is "not found", like any unknown address.
- * The page then keeps itself fresh through GET /api/tv/{key}.
+ * What an office TV opens: /tv/{address}, with no sign-in, e.g. /tv/lobi. The address is the short
+ * one the admin picked in Admin WAM → TV Announcement and is open on purpose (a TV made before the
+ * short addresses still answers at its long key); an address no TV has is "not found". The page
+ * then keeps itself fresh through GET /api/tv/{address}.
  */
 export default async function TvPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;

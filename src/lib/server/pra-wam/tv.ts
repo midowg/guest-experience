@@ -3,8 +3,8 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import type { RoomUse } from "@/lib/pra-wam/sessions";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
-import { TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, weekOf, type TvDay, type TvFeed, type TvRoom, type TvSettings, type TvSlideStart } from "@/lib/pra-wam/tv";
-import { hashTvKey, looksLikeTvKey, newTvKey, tvKeyHint } from "@/lib/pra-wam/tv-key";
+import { looksLikeTvSlug, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, weekOf, type TvDay, type TvFeed, type TvRoom, type TvSettings, type TvSlideStart } from "@/lib/pra-wam/tv";
+import { hashTvKey, looksLikeTvKey } from "@/lib/pra-wam/tv-key";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { isR2Configured, presignUpload, readObject, removeObjects, verifyUpload } from "../r2";
@@ -29,16 +29,22 @@ function fail(error: { code?: string; message: string }): never {
   databaseError(error);
 }
 
-type ScreenRow = { id: string; name: string; key_hint: string; last_seen_at: string | null; last_width: number | null; last_height: number | null; created_at: string };
+/** The short addresses (/tv/lobi) arrive with this one; before it TVs keep their long key address and none can be added. */
+export const TV_SLUG_MIGRATION = "202611100004_pw_tv_slug.sql";
+const noSlug = (error: { code?: string }) => ["42703", "PGRST204"].includes(error.code ?? "");
+const waitingForSlug = () => new ServiceError(503, `Alamat pendek TV menunggu migrasi ${TV_SLUG_MIGRATION}.`);
+
+type ScreenRow = { id: string; name: string; slug?: string | null; key_hint: string; last_seen_at: string | null; last_width: number | null; last_height: number | null; created_at: string };
 type SlideRow = { id: string; image_key: string; title: string; seconds: number; sort_order: number; active: boolean };
 const SCREEN_COLUMNS = "id,name,key_hint,last_seen_at,last_width,last_height,created_at";
 const SLIDE_COLUMNS = "id,image_key,title,seconds,sort_order,active";
 
 /* ---- Admin WAM ---------------------------------------------------------------------------------- */
 
-export type TvScreen = { id: string; name: string; keyHint: string; lastSeenAt: string | null; width: number | null; height: number | null; createdAt: string };
+/** `slug` is null for a TV made before the short addresses that has not been given one (it still plays at its key address). */
+export type TvScreen = { id: string; name: string; slug: string | null; keyHint: string; lastSeenAt: string | null; width: number | null; height: number | null; createdAt: string };
 export type TvAdminSlide = { id: string; title: string; seconds: number; active: boolean };
-export type TvAdmin = { migrated: boolean; storageReady: boolean; now: string; screens: TvScreen[]; slides: TvAdminSlide[]; settings: TvSettings };
+export type TvAdmin = { migrated: boolean; slugReady: boolean; storageReady: boolean; now: string; screens: TvScreen[]; slides: TvAdminSlide[]; settings: TvSettings };
 
 async function readSettings(): Promise<TvSettings> {
   const { data, error } = await createPrivilegedClient().from("pw_tv_settings").select("show_day,day_seconds,show_week,week_seconds").eq("id", true).maybeSingle();
@@ -55,31 +61,47 @@ async function readSlides(): Promise<SlideRow[]> {
 /** Everything the admin page shows. `migrated: false` before the migration, with nothing listed. */
 export async function tvAdmin(): Promise<TvAdmin> {
   const now = new Date().toISOString();
-  const { data, error } = await createPrivilegedClient().from("pw_tv_screens").select(SCREEN_COLUMNS).order("created_at");
+  const client = createPrivilegedClient();
+  const read = (columns: string) => client.from("pw_tv_screens").select(columns).order("created_at");
+  let slugReady = true;
+  let { data, error } = await read(`${SCREEN_COLUMNS},slug`);
+  // Before the short addresses: the same list without them.
+  if (error && noSlug(error)) { slugReady = false; ({ data, error } = await read(SCREEN_COLUMNS)); }
   if (error) {
-    if (missing(error)) return { migrated: false, storageReady: isR2Configured(), now, screens: [], slides: [], settings: TV_DEFAULT_SETTINGS };
+    if (missing(error)) return { migrated: false, slugReady: false, storageReady: isR2Configured(), now, screens: [], slides: [], settings: TV_DEFAULT_SETTINGS };
     databaseError(error);
   }
   const [slides, settings] = await Promise.all([readSlides(), readSettings()]);
   return {
-    migrated: true, storageReady: isR2Configured(), now,
-    screens: ((data ?? []) as ScreenRow[]).map(row => ({ id: row.id, name: row.name, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at })),
+    migrated: true, slugReady, storageReady: isR2Configured(), now,
+    screens: ((data ?? []) as unknown as ScreenRow[]).map(row => ({ id: row.id, name: row.name, slug: row.slug ?? null, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at })),
     slides: slides.map(row => ({ id: row.id, title: row.title, seconds: row.seconds, active: row.active })),
     settings,
   };
 }
 
-/** A new TV. Its key is returned once, for the address, and never kept. */
-export async function createScreen(name: string): Promise<string> {
+/** What a save of a TV's name or address ran into, in words: the address is taken, or its migration has not run. */
+function screenSaveError(error: { code?: string; message: string }): never {
+  if (noSlug(error)) throw waitingForSlug();
+  if (error.code === "23505") throw new ServiceError(409, "Alamat ini sudah dipakai TV lain. Pilih alamat lain.", { slug: ["Sudah dipakai TV lain."] });
+  fail(error);
+}
+
+/** A new TV at /tv/{slug}. The address is open: it is the admin's to pick and to share. */
+export async function createScreen(name: string, slug: string): Promise<void> {
   const client = createPrivilegedClient();
   const { count, error: countError } = await client.from("pw_tv_screens").select("id", { count: "exact", head: true });
   if (countError) fail(countError);
   if ((count ?? 0) >= tvLimits.screens) throw new ServiceError(409, `Paling banyak ${tvLimits.screens} TV. Hapus TV yang sudah tidak dipakai dulu.`);
-  const key = newTvKey();
-  const { error } = await client.from("pw_tv_screens").insert({ name, key_hash: hashTvKey(key), key_hint: tvKeyHint(key) });
-  if (error) fail(error);
-  invalidate();
-  return key;
+  const { error } = await client.from("pw_tv_screens").insert({ name, slug });
+  if (error) screenSaveError(error);
+}
+
+/** A TV's name or address changed. A new address takes over at once; the old one stops working. */
+export async function updateScreen(id: string, change: { name?: string; slug?: string }): Promise<void> {
+  const { data, error } = await createPrivilegedClient().from("pw_tv_screens").update(change).eq("id", id).select("id");
+  if (error) screenSaveError(error);
+  if (!data?.length) throw new ServiceError(404, "TV ini tidak ditemukan. Muat ulang halaman.");
 }
 
 /** Hapus TV: its address stops working at once. */
@@ -243,14 +265,17 @@ export async function tvFeed(imageSrc: (slideId: string) => string, now = new Da
 const SEEN_EVERY_MS = 60_000;
 
 /**
- * The TV behind a key, or null for a wrong or removed key (or before the migration). Notes when
- * it was last seen and its screen size, at most once a minute.
+ * The TV at an address, or null for one that does not exist (or before its migration). The
+ * address is the TV's short slug ("lobi"); a TV made before those still answers at its long key.
+ * Notes when it was last seen and its screen size, at most once a minute.
  */
 export async function screenForKey(key: unknown, size?: { width: number; height: number }, now = new Date()): Promise<{ id: string } | null> {
-  if (!looksLikeTvKey(key)) return null;
+  const byKey = looksLikeTvKey(key);
+  if (!byKey && !looksLikeTvSlug(key)) return null;
   const client = createPrivilegedClient();
-  const { data, error } = await client.from("pw_tv_screens").select("id,last_seen_at,last_width,last_height").eq("key_hash", hashTvKey(key)).maybeSingle();
-  if (error) { if (missing(error)) return null; databaseError(error); }
+  const found = client.from("pw_tv_screens").select("id,last_seen_at,last_width,last_height");
+  const { data, error } = await (byKey ? found.eq("key_hash", hashTvKey(key)) : found.eq("slug", key)).maybeSingle();
+  if (error) { if (missing(error) || noSlug(error)) return null; databaseError(error); }
   if (!data) return null;
   const resized = !!size && (size.width !== data.last_width || size.height !== data.last_height);
   if (size && (resized || !data.last_seen_at || now.getTime() - Date.parse(data.last_seen_at) >= SEEN_EVERY_MS)) {

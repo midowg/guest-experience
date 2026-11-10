@@ -43,7 +43,25 @@ export const tvImageKey = (id: string, mime: TvImageMime) => `${TV_IMAGE_PREFIX}
 const seconds = z.number().int().min(tvLimits.minSeconds, `Paling singkat ${tvLimits.minSeconds} detik.`).max(tvLimits.maxSeconds, `Paling lama ${tvLimits.maxSeconds} detik.`);
 const scheduleSeconds = z.number().int().min(tvLimits.minScheduleSeconds, `Paling singkat ${tvLimits.minScheduleSeconds} detik.`).max(tvLimits.maxSeconds, `Paling lama ${tvLimits.maxSeconds} detik.`);
 const title = z.string().trim().max(80, "Nama gambar paling panjang 80 karakter.");
-export const tvScreenSchema = z.object({ name: z.string().trim().min(2, "Isi nama TV, misalnya Lobi.").max(60, "Nama TV paling panjang 60 karakter.") });
+/*
+ * A TV's address is /tv/{slug}, short and picked by the admin: "lobi", "pantry-lantai-2". Lower
+ * case letters, digits and single dashes, so it is easy to type on a TV remote. It is not a
+ * secret: whoever knows or guesses it sees the board (the owner's decision, 10 Nov 2026).
+ */
+const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+export const tvSlugLimits = { min: 2, max: 40 } as const;
+export const looksLikeTvSlug = (value: unknown): value is string =>
+  typeof value === "string" && value.length >= tvSlugLimits.min && value.length <= tvSlugLimits.max && SLUG_PATTERN.test(value);
+/** A name as an address: "Lobi Utama" → "lobi-utama", "Pantry (Lt. 2)" → "pantry-lt-2". May be too short to use ("" for "!!"). */
+export const suggestSlug = (name: string) =>
+  name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, tvSlugLimits.max).replace(/-+$/, "");
+const screenName = z.string().trim().min(2, "Isi nama TV, misalnya Lobi.").max(60, "Nama TV paling panjang 60 karakter.");
+const screenSlug = z.string().trim().toLowerCase()
+  .min(tvSlugLimits.min, "Alamat paling pendek 2 karakter.").max(tvSlugLimits.max, "Alamat paling panjang 40 karakter.")
+  .regex(SLUG_PATTERN, "Alamat hanya huruf kecil, angka, dan tanda hubung, misalnya lobi atau pantry-2.");
+export const tvScreenSchema = z.object({ name: screenName, slug: screenSlug });
+export const tvScreenPatchSchema = z.object({ name: screenName.optional(), slug: screenSlug.optional() })
+  .refine(value => value.name !== undefined || value.slug !== undefined, { message: "Tidak ada yang diubah." });
 export const tvSettingsSchema = z.object({ showDay: z.boolean(), daySeconds: scheduleSeconds, showWeek: z.boolean(), weekSeconds: scheduleSeconds });
 export const tvSlideStartSchema = z.object({
   mime: z.enum(Object.keys(tvImageTypes) as [TvImageMime, ...TvImageMime[]], { message: "Pilih gambar WebP, PNG, atau JPG." }),

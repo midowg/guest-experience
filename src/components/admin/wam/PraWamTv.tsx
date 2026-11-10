@@ -8,8 +8,8 @@ import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { fitWithin } from "@/lib/gallery";
-import { agoLabel, loopCount, tvIsOn, tvLimits, type TvSettings } from "@/lib/pra-wam/tv";
-import { absolute, praWamTvApi, wamAdminPath } from "@/lib/routes";
+import { agoLabel, looksLikeTvSlug, loopCount, suggestSlug, tvIsOn, tvLimits, tvSlugLimits, type TvSettings } from "@/lib/pra-wam/tv";
+import { absolute, praWamTvApi, tvPath, wamAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminSlide, TvScreen } from "@/lib/server/pra-wam/tv";
 import akun from "./akun/akun.module.css";
 import css from "./tv-admin.module.css";
@@ -22,8 +22,8 @@ const calendars = [
   { show: "showDay", seconds: "daySeconds", label: "Kalender hari ini (ruang dan jam)" },
   { show: "showWeek", seconds: "weekSeconds", label: "Kalender minggu ini (per hari)" },
 ] as const;
-type Created = { name: string; path: string };
-type Answer = TvAdmin & { created?: Created };
+const SLUG_MIGRATION = "202611100004_pw_tv_slug.sql";
+type Answer = TvAdmin;
 
 /** Any picked picture as WebP no longer than 2560 px, made here so the server never decodes an upload. */
 async function asWebp(file: File): Promise<Blob> {
@@ -61,24 +61,27 @@ function screenState(screen: TvScreen, now: number): { label: string; tone: "ok"
   return tvIsOn(screen.lastSeenAt, now) ? { label: "Menyala", tone: "ok" } : { label: "Tidak terlihat", tone: "warn" };
 }
 function screenMeta(screen: TvScreen, now: number): string {
-  const parts = [`Tautan berakhiran …${screen.keyHint}`];
+  const parts = screen.slug ? [] : [`Masih memakai tautan panjang lama (berakhiran …${screen.keyHint})`];
   if (screen.lastSeenAt) parts.push(`terakhir terlihat ${agoLabel(screen.lastSeenAt, now)}`);
   if (screen.width && screen.height) parts.push(`layar ${screen.width}×${screen.height} (${screen.height > screen.width ? "tegak" : "mendatar"})`);
   return parts.join(" · ");
 }
 
 /**
- * Admin WAM → TV Announcement: the office TVs (each opens its own secret address, no sign-in),
- * the pictures they play after today's room schedule, and how long each stays. Every TV shows
- * the same content, fitted to its own screen.
+ * Admin WAM → TV Announcement: the office TVs (each opens its own short address, /tv/lobi, with no
+ * sign-in; the address is open), the pictures they play after the room calendars, and how long
+ * each stays. Every TV shows the same content, fitted to its own screen. `origin` is the site's
+ * public address, for the links to copy.
  */
-export function PraWamTv({ initial, crumbs, title }: { initial: TvAdmin; crumbs: readonly Crumb[]; title: string }) {
+export function PraWamTv({ initial, crumbs, title, origin }: { initial: TvAdmin; crumbs: readonly Crumb[]; title: string; origin: string }) {
   const [list, setList] = useState<TvAdmin>(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
-  const [created, setCreated] = useState<Created | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
   const [name, setName] = useState("");
+  /** The new TV's address: follows the name until the admin types one of their own. */
+  const [slug, setSlug] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ id: string; slug: string } | null>(null);
   const [settings, setSettings] = useState<TvSettings>(initial.settings);
   const [progress, setProgress] = useState("");
   const [confirm, confirmDialog] = useConfirm();
@@ -95,10 +98,16 @@ export function PraWamTv({ initial, crumbs, title }: { initial: TvAdmin; crumbs:
     finally { setBusy(null); }
   }
   const refresh = () => run("refresh", praWamTvApi.list, {}, answer => setSettings(answer.settings));
-  const addScreen = () => run("tambah", praWamTvApi.screens, { method: "POST", body: JSON.stringify({ name }) }, answer => { setName(""); setCopied(false); setCreated(answer.created ?? null); });
+  const newSlug = slug ?? suggestSlug(name);
+  const addScreen = () => run("tambah", praWamTvApi.screens, { method: "POST", body: JSON.stringify({ name, slug: newSlug }) }, () => { setName(""); setSlug(null); });
   async function removeScreen(screen: TvScreen) {
-    if (!(await confirm({ title: "Hapus TV ini?", body: `Tautan ${screen.name} langsung tidak berlaku, dan TV-nya berhenti menayangkan. Untuk memakainya lagi, tambah TV baru dan buka tautan barunya.`, confirmLabel: "Hapus TV", danger: true }))) return;
+    if (!(await confirm({ title: "Hapus TV ini?", body: `Alamat ${screen.name} langsung tidak berlaku, dan TV-nya berhenti menayangkan. Untuk memakainya lagi, tambah TV baru dan buka alamatnya.`, confirmLabel: "Hapus TV", danger: true }))) return;
     await run(`hapus-tv-${screen.id}`, praWamTvApi.screen(screen.id), { method: "DELETE" });
+  }
+  async function saveSlug(screen: TvScreen, next: string) {
+    // A TV that is already playing at its address goes dark until someone opens the new one on it.
+    if (screen.slug && screen.lastSeenAt && !(await confirm({ title: "Ganti alamat TV ini?", body: `Alamat lama ${screen.name} langsung tidak berlaku. TV-nya berhenti menayangkan sampai alamat baru dibuka di browsernya.`, confirmLabel: "Ganti alamat", danger: true }))) return;
+    await run(`alamat-${screen.id}`, praWamTvApi.screen(screen.id), { method: "PATCH", body: JSON.stringify({ slug: next }) }, () => setEditing(null));
   }
   const patchSlide = (slide: TvAdminSlide, change: Partial<Pick<TvAdminSlide, "seconds" | "active">>) =>
     run(`gambar-${slide.id}`, praWamTvApi.slide(slide.id), { method: "PATCH", body: JSON.stringify(change) });
@@ -128,12 +137,12 @@ export function PraWamTv({ initial, crumbs, title }: { initial: TvAdmin; crumbs:
       : { tone: "success", text: `${done} gambar ditambahkan. TV menayangkannya dalam setengah menit.` });
   }
 
-  async function copyLink(url: string) {
-    try { await navigator.clipboard.writeText(url); setCopied(true); }
-    catch { setMessage({ tone: "error", text: "Tautan tidak bisa disalin otomatis. Blok tautannya, lalu salin sendiri." }); }
+  async function copyLink(id: string, url: string) {
+    try { await navigator.clipboard.writeText(url); setCopied(id); }
+    catch { setMessage({ tone: "error", text: "Alamat tidak bisa disalin otomatis. Blok alamatnya, lalu salin sendiri." }); }
   }
-
-  const createdUrl = created && typeof window !== "undefined" ? absolute(window.location.origin, created.path) : "";
+  const addressOf = (value: string) => absolute(origin, tvPath(value));
+  const full = list.screens.length >= tvLimits.screens;
   const settingsChanged = calendars.some(calendar => settings[calendar.show] !== list.settings[calendar.show] || settings[calendar.seconds] !== list.settings[calendar.seconds]);
   const shown = list.slides.filter(slide => slide.active).length;
   // With a single thing on the loop nothing ever changes on screen, so no duration is asked for.
@@ -151,34 +160,50 @@ export function PraWamTv({ initial, crumbs, title }: { initial: TvAdmin; crumbs:
 
       <section className={akun.section} aria-labelledby="tv-layar">
         <SectionToolbar title={<span id="tv-layar">Layar TV</span>} count={`${list.screens.length} TV`} />
-        <p className={akun.lead}>Buka tautan TV di browser TV-nya, lalu tekan Layar penuh. Tautan itu rahasia: siapa pun yang memegangnya bisa melihat jadwal ruang.</p>
-        {created && <div className={css.created} role="status">
-          <p><strong>Tautan untuk {created.name}.</strong> Salin sekarang; tautan ini tidak ditampilkan lagi.</p>
-          <code className={css.link}>{createdUrl}</code>
-          <div className={css.buttons}>
-            <ConsoleButton variant="primary" icon={<Copy size={18} aria-hidden />} onClick={() => void copyLink(createdUrl)}>{copied ? "Tersalin" : "Salin tautan"}</ConsoleButton>
-            <ConsoleButton onClick={() => setCreated(null)}>Sudah saya simpan</ConsoleButton>
-          </div>
-        </div>}
-        {list.screens.length === 0 ? <p className={akun.empty}>Belum ada TV. Tambahkan satu untuk mendapat tautannya.</p>
+        <p className={akun.lead}>Buka alamat TV di browser TV-nya, lalu tekan Layar penuh. Alamat ini terbuka: siapa pun yang tahu alamatnya bisa melihat jadwal ruang, tanpa login.</p>
+        {!list.slugReady && <Notice tone="warning">Alamat pendek menunggu migrasi {SLUG_MIGRATION}. Jalankan di Supabase SQL Editor; sampai itu, TV yang sudah ada tetap tayang di tautan panjangnya dan TV baru belum bisa ditambahkan.</Notice>}
+        {list.screens.length === 0 ? <p className={akun.empty}>Belum ada TV. Tambahkan satu, lalu buka alamatnya di TV.</p>
           : <ul className={css.screens} aria-label="Layar TV">{list.screens.map(screen => {
             const state = screenState(screen, now);
+            const edit = editing?.id === screen.id ? editing : null;
+            const meta = screenMeta(screen, now);
             return <li key={screen.id} className={css.screen}>
               <div className={css.screenTop}><strong>{screen.name}</strong><Pill tone={state.tone}>{state.label}</Pill></div>
-              <p className={css.meta}>{screenMeta(screen, now)}</p>
+              {edit
+                ? <div className="field">
+                  <label htmlFor={`tv-alamat-${screen.id}`}>Alamat baru</label>
+                  <input id={`tv-alamat-${screen.id}`} className="input" value={edit.slug} maxLength={tvSlugLimits.max} disabled={!!busy} autoCapitalize="none" spellCheck={false}
+                    onChange={change => setEditing({ id: screen.id, slug: change.target.value.toLowerCase() })} />
+                  <span className={akun.hint}>{looksLikeTvSlug(edit.slug) ? addressOf(edit.slug) : "Huruf kecil, angka, dan tanda hubung; minimal 2 karakter."}</span>
+                </div>
+                : screen.slug && <code className={css.link}>{addressOf(screen.slug)}</code>}
+              {meta && <p className={css.meta}>{meta}</p>}
               <div className={css.buttons}>
-                <ConsoleButton disabled={!!busy} onClick={() => void removeScreen(screen)}>{busy === `hapus-tv-${screen.id}` ? "Menghapus…" : "Hapus TV"}</ConsoleButton>
+                {edit ? <>
+                  <ConsoleButton disabled={!!busy} onClick={() => setEditing(null)}>Batal</ConsoleButton>
+                  <ConsoleButton variant="primary" disabled={!!busy || !looksLikeTvSlug(edit.slug) || edit.slug === screen.slug} onClick={() => void saveSlug(screen, edit.slug)}>{busy === `alamat-${screen.id}` ? "Menyimpan…" : "Simpan alamat"}</ConsoleButton>
+                </> : <>
+                  {screen.slug && <ConsoleButton icon={<Copy size={18} aria-hidden />} onClick={() => void copyLink(screen.id, addressOf(screen.slug!))}>{copied === screen.id ? "Tersalin" : "Salin alamat"}</ConsoleButton>}
+                  {list.slugReady && <ConsoleButton disabled={!!busy} onClick={() => setEditing({ id: screen.id, slug: screen.slug ?? suggestSlug(screen.name) })}>{screen.slug ? "Ubah alamat" : "Beri alamat pendek"}</ConsoleButton>}
+                  <ConsoleButton disabled={!!busy} onClick={() => void removeScreen(screen)}>{busy === `hapus-tv-${screen.id}` ? "Menghapus…" : "Hapus TV"}</ConsoleButton>
+                </>}
               </div>
             </li>;
           })}</ul>}
-        <form className={css.addForm} onSubmit={event => { event.preventDefault(); void addScreen(); }}>
+        {list.slugReady && <form className={css.addForm} onSubmit={event => { event.preventDefault(); void addScreen(); }}>
           <div className="field">
             <label htmlFor="tv-nama">Nama TV baru</label>
-            <input id="tv-nama" className="input" value={name} maxLength={60} placeholder="Misalnya Lobi" disabled={!!busy || list.screens.length >= tvLimits.screens} onChange={change => setName(change.target.value)} />
+            <input id="tv-nama" className="input" value={name} maxLength={60} placeholder="Misalnya Lobi" disabled={!!busy || full} onChange={change => setName(change.target.value)} />
           </div>
-          <ConsoleButton type="submit" disabled={!!busy || name.trim().length < 2 || list.screens.length >= tvLimits.screens}>{busy === "tambah" ? "Menambahkan…" : "Tambah TV"}</ConsoleButton>
-        </form>
-        {list.screens.length >= tvLimits.screens && <p className={akun.hint}>Paling banyak {tvLimits.screens} TV.</p>}
+          <div className="field">
+            <label htmlFor="tv-alamat">Alamat</label>
+            <input id="tv-alamat" className="input" value={newSlug} maxLength={tvSlugLimits.max} placeholder="lobi" disabled={!!busy || full} autoCapitalize="none" spellCheck={false}
+              onChange={change => setSlug(change.target.value.toLowerCase())} />
+          </div>
+          <ConsoleButton type="submit" disabled={!!busy || name.trim().length < 2 || !looksLikeTvSlug(newSlug) || full}>{busy === "tambah" ? "Menambahkan…" : "Tambah TV"}</ConsoleButton>
+        </form>}
+        {list.slugReady && !full && <p className={akun.hint}>{looksLikeTvSlug(newSlug) ? `TV ini dibuka di ${addressOf(newSlug)}` : "Alamat: huruf kecil, angka, dan tanda hubung, misalnya lobi atau pantry-2."}</p>}
+        {full && <p className={akun.hint}>Paling banyak {tvLimits.screens} TV.</p>}
       </section>
 
       <section className={akun.section} aria-labelledby="tv-gambar">
