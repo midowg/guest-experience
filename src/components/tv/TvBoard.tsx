@@ -56,6 +56,8 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const offset = useRef(0);
   const size = useSyncExternalStore(onResize, screenSize, () => "1920x1080");
   const fullscreen = useSyncExternalStore(onFullscreen, () => !!document.fullscreenElement, () => false);
+  /** A touch screen: what a phone has and a TV does not (see isPhoneScreen). */
+  const touch = useSyncExternalStore(onResize, () => navigator.maxTouchPoints > 0, () => false);
   const [width, height] = size.split("x").map(Number);
 
   // The clock: the server's time at first, then this TV's own clock corrected by the difference.
@@ -134,7 +136,8 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const following = items.length > 1 ? items[(position + 1) % items.length] : undefined;
 
   // Only a phone can stop the loop (its Jeda button): a TV has no such control and always plays on.
-  const stopped = paused && isPhoneScreen(width, height);
+  const phone = isPhoneScreen(width, height, touch);
+  const stopped = paused && phone;
   // The loop: each item stays its own time. Keyed on the item, so a clock tick does not restart it.
   const currentKey = current?.key, currentSeconds = current?.seconds, count = items.length;
   useEffect(() => {
@@ -162,7 +165,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const under = (shown: Legend) => ({ width: room.width, height: room.height - legendHeight(shown) });
 
   // A phone (someone scanned the QR code): the same content as a list that scrolls, with the loop under the reader's control.
-  if (isPhoneScreen(width, height)) {
+  if (phone) {
     return <div data-wam-look={feed.look} data-wam-theme={feed.settings.mode} style={{ display: "contents" }}><div className={base.app}>
       <TvPhone feed={feed} now={now} clock={clock} items={items} position={position} paused={paused} gone={gone} legend={legend} onGo={setIndex} onPause={setPaused} />
     </div></div>;

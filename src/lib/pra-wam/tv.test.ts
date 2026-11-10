@@ -152,8 +152,13 @@ describe("fitting a calendar to a screen", () => {
   });
 
   it("knows a phone from a TV, upright or lying down", () => {
-    for (const [width, height] of [[390, 844], [844, 390], [360, 640], [412, 915]]) expect(isPhoneScreen(width, height), `${width}x${height}`).toBe(true);
-    for (const [width, height] of [[1920, 1080], [1080, 1920], [1366, 768], [768, 1024], [3840, 2160], [0, 0]]) expect(isPhoneScreen(width, height), `${width}x${height}`).toBe(false);
+    for (const [width, height] of [[390, 844], [360, 640], [412, 915]]) expect(isPhoneScreen(width, height, true), `${width}x${height}`).toBe(true);
+    // A TV, whatever its browser says its size is: many report 960 × 540, and an upright one 540 × 960; none has a touch screen.
+    for (const [width, height] of [[1920, 1080], [960, 540], [1280, 720], [540, 960], [1080, 1920], [3840, 2160]]) expect(isPhoneScreen(width, height, false), `TV ${width}x${height}`).toBe(false);
+    // Lying on its side it is never a phone, touch or not (a TV box that claims touch, a phone held sideways).
+    for (const [width, height] of [[960, 540], [844, 390], [1366, 768], [1920, 1080]]) expect(isPhoneScreen(width, height, true), `mendatar ${width}x${height}`).toBe(false);
+    // A tablet or a wide touch screen upright keeps the board too.
+    for (const [width, height] of [[768, 1024], [1080, 1920], [0, 0]]) expect(isPhoneScreen(width, height, true), `${width}x${height}`).toBe(false);
   });
 
   it("shares the room among the rows, so more rows are smaller and all fit", () => {

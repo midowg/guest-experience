@@ -273,10 +273,13 @@ export function tvScreen(width: number, height: number): TvScreen {
   return { wide: width >= height, width: width / unit, height: height / unit };
 }
 /**
- * Whether the screen is a phone's (someone scanned the QR code on a TV): its shorter side is under
- * 600 px, which no TV or monitor is, upright or not. The board then becomes a list that scrolls.
+ * Whether the screen is a phone's (someone scanned the QR code on a TV): the board then becomes a
+ * list that scrolls, with a Jeda button. Size alone does not tell: many TV browsers report a
+ * small screen (960 × 540, at twice the pixel density), and a TV must never get the phone's
+ * controls. So a phone is all three: narrow (under 600 px wide), held upright, and a touch screen.
+ * A TV lies on its side or has no touch screen; a phone held sideways gets the TV's board.
  */
-export const isPhoneScreen = (width: number, height: number) => width > 0 && height > 0 && Math.min(width, height) < 600;
+export const isPhoneScreen = (width: number, height: number, touch: boolean) => touch && width > 0 && width < 600 && height > width;
 
 /** The size of one of `count` equal rows sharing `available` units, never more than `most` (few rows stay a sensible size). */
 export const fit = (available: number, count: number, most: number) => Math.min(most, available / Math.max(1, count));
