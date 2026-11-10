@@ -36,9 +36,22 @@ export const TV_DEFAULT_LOOK: TvLookSettings = { mode: "dark", qrShow: false, qr
  */
 export type TvFeed = {
   now: string; date: string; days: TvDay[]; slides: TvSlide[]; settings: TvSettings;
-  /** The WAM theme picked in Admin WAM → Tema aplikasi; the board paints with its night colours. */
+  /** The WAM theme picked in Admin WAM → Tema aplikasi; the board paints with its colours. */
   look: WamLook;
+  /**
+   * Which build of the site answered. A TV stays open for weeks: when this is no longer the build
+   * its page came from, the page loads itself afresh, so a new version reaches every TV by itself.
+   */
+  version?: string;
 };
+
+/** How long a TV waits before loading itself afresh again, so two builds answering in turn (a deploy in progress) cannot make it flicker. */
+export const TV_RELOAD_EVERY_MS = 3 * 60_000;
+/** Whether a TV should load its page afresh: the site answers from another build than the page's, and it has not just done so. */
+export function shouldReload(pageVersion: string | undefined, feedVersion: string | undefined, lastReloadAt: number | null, now: number): boolean {
+  if (!pageVersion || !feedVersion || pageVersion === feedVersion) return false;
+  return lastReloadAt == null || now - lastReloadAt >= TV_RELOAD_EVERY_MS;
+}
 
 export const TV_DEFAULT_SETTINGS: TvSettings = { showDay: true, daySeconds: 20, showWeek: true, weekSeconds: 20, ...TV_DEFAULT_LOOK };
 export const tvLimits = {
@@ -224,5 +237,5 @@ export function agoLabel(iso: string, now: number): string {
   if (minutes < 60 * 24) return `${Math.round(minutes / 60)} jam lalu`;
   return `${Math.round(minutes / (60 * 24))} hari lalu`;
 }
-/** A TV counts as on while it asked for content in the last two minutes (it asks every 20 seconds). */
+/** A TV counts as on while it asked for content in the last two minutes (it asks every 10 seconds). */
 export const tvIsOn = (lastSeenAt: string | null, now: number) => !!lastSeenAt && now - Date.parse(lastSeenAt) < 2 * 60_000;

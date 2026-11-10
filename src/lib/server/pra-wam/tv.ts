@@ -266,11 +266,11 @@ async function weekDays(dates: readonly string[]): Promise<TvDay[]> {
 }
 
 /*
- * Every TV asks every 20 seconds and all get the same content, so it is read at most once in ten
+ * Every TV asks every 10 seconds and all get the same content, so it is read at most once in six
  * seconds per server instance; a change by the admin clears it here (other instances catch up
- * within the ten seconds).
+ * within the six seconds).
  */
-const FRESH_MS = 10_000;
+const FRESH_MS = 6_000;
 type Content = { date: string; days: TvDay[]; slides: SlideRow[]; settings: TvSettings; look: WamLook };
 let kept: { at: number; content: Content } | null = null;
 const invalidate = () => { kept = null; };
@@ -288,10 +288,13 @@ async function content(now: Date): Promise<Content> {
 export async function tvFeed(imageSrc: (slideId: string) => string, now = new Date()): Promise<TvFeed> {
   const { date, days, slides, settings, look } = await content(now);
   return {
-    now: now.toISOString(), date, days, settings, look,
+    now: now.toISOString(), date, days, settings, look, version: BUILD,
     slides: slides.map(slide => ({ id: slide.id, title: slide.title, seconds: slide.seconds, src: imageSrc(slide.id) })),
   };
 }
+
+/** This build of the site, so a TV can tell when a newer one answers (Vercel names each deployment; "dev" on a laptop). */
+const BUILD = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_GIT_COMMIT_SHA || "dev";
 
 const SEEN_EVERY_MS = 60_000;
 

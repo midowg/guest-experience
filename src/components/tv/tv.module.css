@@ -139,3 +139,11 @@
 .qr[data-position="kiri-atas"] { top: calc(3 * var(--u)); left: calc(3 * var(--u)); }
 /* "Layar penuh" moves aside when the QR code has its corner. */
 .qr[data-position="kanan-bawah"] ~ .full { right: auto; left: calc(3 * var(--u)); }
+/*
+ * In a top corner the QR code is smaller and sits inside the head's height, and the head makes
+ * room on that side, so the title and the clock stay in view beside it.
+ */
+.qr[data-position="kanan-atas"], .qr[data-position="kiri-atas"] { top: calc(1.5 * var(--u)); width: calc(13 * var(--u)); gap: calc(.3 * var(--u)); padding: calc(.7 * var(--u)); }
+.qr[data-position="kanan-atas"] span, .qr[data-position="kiri-atas"] span { font-size: calc(1.25 * var(--u)); text-overflow: ellipsis; white-space: nowrap; }
+.board[data-qr="kanan-atas"] .head { padding-right: calc(15 * var(--u)); }
+.board[data-qr="kiri-atas"] .head { padding-left: calc(15 * var(--u)); }

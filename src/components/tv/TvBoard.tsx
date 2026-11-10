@@ -6,19 +6,26 @@ import QRCode from "qrcode";
 import { TV_HOME_PATH } from "@/lib/routes";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, decimalHour, entryState, fit, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
+  dayEntries, decimalHour, entryState, fit, shouldReload, fitText, hourSpan, imageFit, msUntilReload, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
   type TvDay, type TvDayEntry, type TvEntry, type TvFeed, type TvRoom,
 } from "@/lib/pra-wam/tv";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import css from "./tv.module.css";
 
 /** How often a TV asks for content, and how often it re-reads the clock for "now". */
-const POLL_MS = 20_000;
+const POLL_MS = 10_000;
 const TICK_MS = 10_000;
 /** How long "Layar penuh" stays after the last touch or mouse move. */
 const CONTROLS_MS = 4_000;
 /** The head's height and the slide's paddings in units, as tv.module.css draws them. */
 const HEAD = 18, PAD_X = 4, PAD_BOTTOM = 5;
+
+/** When this TV last loaded itself afresh for a new build, kept for the tab so a reload is not repeated at once. */
+const RELOADED_AT = "tv-dimuat-ulang";
+function lastReload(): number | null {
+  try { const at = Number(window.sessionStorage.getItem(RELOADED_AT)); return Number.isFinite(at) && at > 0 ? at : null; }
+  catch { return null; }
+}
 
 const onResize = (notify: () => void) => { window.addEventListener("resize", notify); return () => window.removeEventListener("resize", notify); };
 const screenSize = () => `${window.innerWidth}x${window.innerHeight}`;
@@ -30,7 +37,7 @@ const span = (entry: Pick<TvEntry, "start" | "end">) => `${clockLabel(entry.star
 /**
  * The board an office TV plays: today's rooms as a calendar, the week's as a calendar, then the
  * pictures, on a loop. A calendar always fits the screen: its rows and text shrink as it fills.
- * With `feedUrl` the board keeps itself fresh (every 20 seconds, and when the tab is shown again),
+ * With `feedUrl` the board keeps itself fresh (every 10 seconds, and when the tab is shown again),
  * keeps playing what it has when the network drops, and loads the page afresh once a night.
  * Without it (a layout check) it plays `initial` as given.
  */
@@ -66,6 +73,12 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
         if (!response.ok) return;
         const result = await response.json() as { ok?: boolean; data?: TvFeed };
         if (stopped || !result.ok || !result.data) return;
+        // A newer build of the site answered: this page is old, so it loads itself afresh (once in a few minutes at most).
+        if (shouldReload(initial.version, result.data.version, lastReload(), Date.now())) {
+          try { window.sessionStorage.setItem(RELOADED_AT, String(Date.now())); } catch { /* private mode: reload anyway */ }
+          window.location.reload();
+          return;
+        }
         offset.current = Date.parse(result.data.now) - Date.now();
         setGone(false); setFeed(result.data); setNow(Date.parse(result.data.now));
       } catch { /* offline: keep playing */ }
@@ -77,7 +90,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
     // A TV stays on for weeks: load the page afresh at 03.00 WIB, so it also picks up a new version.
     const reload = window.setTimeout(() => window.location.reload(), msUntilReload(new Date()));
     return () => { stopped = true; window.clearInterval(timer); window.clearTimeout(reload); document.removeEventListener("visibilitychange", shown); };
-  }, [feedUrl]);
+  }, [feedUrl, initial.version]);
 
   // Keep the screen awake where the browser allows it; a kiosk app does this better.
   useEffect(() => {
@@ -138,7 +151,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
 
   // WAM's own theme (Admin WAM → Tema aplikasi), in the mode picked for the TVs: dark unless the admin chose light.
   return <div data-wam-look={feed.look} data-wam-theme={feed.settings.mode} style={{ display: "contents" }}><div className={base.app}>
-  <main className={css.board} data-idle={!active} data-orientation={screen.wide ? "mendatar" : "tegak"}>
+  <main className={css.board} data-idle={!active} data-orientation={screen.wide ? "mendatar" : "tegak"} data-qr={qrShow ? feed.settings.qrPosition : undefined}>
     {gone ? <div className={css.slide}><Message title="Tautan TV ini sudah tidak berlaku" body="Minta tautan baru di Admin WAM → TV Announcement." /></div>
       : !current ? <div className={css.slide}><Message title="Belum ada yang ditayangkan" body="Tambahkan gambar atau nyalakan jadwal ruang di Admin WAM → TV Announcement." /></div>
       : current.kind === "hari"

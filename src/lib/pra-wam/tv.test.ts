@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   agoLabel, dayEntries, entryState, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
-  TV_DEFAULT_LOOK, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
+  shouldReload, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
 const at = (time: string, date = "2026-11-10") => `${date}T${time}:00+07:00`;
@@ -175,6 +175,23 @@ describe("a TV's short address", () => {
     expect(tvScreenSchema.safeParse({ name: "Lobi" }).success).toBe(false);
     expect(tvScreenPatchSchema.safeParse({}).success).toBe(false);
     expect(tvScreenPatchSchema.safeParse({ slug: "pantry-2" }).success).toBe(true);
+  });
+});
+
+describe("a TV that stays open for weeks", () => {
+  it("loads itself afresh when a newer build of the site answers", () => {
+    expect(shouldReload("a", "b", null, 1_000)).toBe(true);
+    expect(shouldReload("a", "a", null, 1_000)).toBe(false);
+  });
+
+  it("does nothing when either side does not say which build it is", () => {
+    expect(shouldReload(undefined, "b", null, 1_000)).toBe(false);
+    expect(shouldReload("a", undefined, null, 1_000)).toBe(false);
+  });
+
+  it("does not reload again at once, so two builds answering in turn cannot make it flicker", () => {
+    expect(shouldReload("a", "b", 1_000, 1_000 + TV_RELOAD_EVERY_MS - 1)).toBe(false);
+    expect(shouldReload("a", "b", 1_000, 1_000 + TV_RELOAD_EVERY_MS)).toBe(true);
   });
 });
 
