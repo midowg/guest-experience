@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { listAccounts } from "@/lib/server/pra-wam/accounts";
 import { listRooms } from "@/lib/server/pra-wam/appraisal";
+import { leadOptions } from "@/lib/server/pra-wam/leads";
 import { appSettings } from "@/lib/server/pra-wam/rooms";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +27,13 @@ export default async function WamRoomsPage({ searchParams }: { searchParams: Pro
   const view: RoomsView = (await searchParams).tab === "denah" ? "denah" : "daftar";
   // The rooms arrive with the accounts' migration (202611040001); before it there is nothing to list.
   const { migrated } = await listAccounts();
-  const [rooms, settings] = await Promise.all([migrated ? listRooms() : [], appSettings()]);
+  // The departments of Data karyawan, for "Khusus departemen" (10 Nov 2026).
+  const [rooms, settings, departments] = await Promise.all([migrated ? listRooms() : [], appSettings(), leadOptions().then(options => options.departments).catch(() => [])]);
   const tab = tabs.find(item => item.key === view)!;
   return <WamAdminFrame current="ruang" wide>
     <PageHeader crumbs={wamCrumbs("ruang", tab.label)} title={wamSection("ruang").label}
-      subtitle="Kapasitas dan fasilitas dipakai saat orang memilih ruang di Book." />
+      subtitle="Tambah ruang, atur kapasitas, fasilitas, spot di denah, dan departemen yang boleh memakainya." />
     <PageTabs tabs={tabs} current={view} label="Bagian ruang dan denah" />
-    <PraWamRooms initialRooms={rooms} initialSettings={settings} roomsReady={migrated} view={view} />
+    <PraWamRooms initialRooms={rooms} initialSettings={settings} roomsReady={migrated} view={view} departments={departments} />
   </WamAdminFrame>;
 }

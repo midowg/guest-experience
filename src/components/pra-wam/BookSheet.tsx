@@ -62,7 +62,7 @@ export function BookSheet({ ask, viewerId, onClose }: { ask: BookAsk | null; vie
   </Sheet>;
   return <BookingForm key={key} editId={data.editId} initial={data.initial} dates={data.dates} now={data.now} rooms={data.rooms}
     people={data.people} groups={data.groups} viewer={{ id: viewerId }} usedTitles={data.usedTitles}
-    dayBookings={data.dayBookings} dayOf={data.dayOf} activities={data.activities} hod={data.hod}
+    dayBookings={data.dayBookings} dayOf={data.dayOf} activities={data.activities} hod={data.hod} viewerDepartments={data.viewerDepartments}
     onSaved={({ message }) => setSaved(message)}
     frame={(body, footer) => <Sheet open onClose={close} wide title={title}
       subtitle={data.moved ? `${dayLabel(data.moved)} tidak bisa dibooking; dipilih ${dayLabel(data.initial.date)}.` : "Yang tersimpan lebih dulu yang mendapat ruang."}

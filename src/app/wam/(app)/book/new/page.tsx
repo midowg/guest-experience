@@ -32,6 +32,6 @@ export default async function BookRoomPage({ searchParams }: { searchParams: Pro
     {moved && <div style={{ marginBottom: 16 }}><Notice tone="info">{dayLabel(moved)} tidak bisa dibooking (sudah lewat atau di luar periode Book). Dipilih {dayLabel(initial.date)}; tanggalnya bisa diganti di bawah.</Notice></div>}
     <BookingForm editId={editId} initial={initial} dates={loaded.dates} now={loaded.now} rooms={loaded.rooms}
       people={loaded.people} groups={loaded.groups} viewer={{ id: member.id }} usedTitles={loaded.usedTitles}
-      dayBookings={loaded.dayBookings} dayOf={loaded.dayOf} activities={loaded.activities} hod={loaded.hod} />
+      dayBookings={loaded.dayBookings} dayOf={loaded.dayOf} activities={loaded.activities} hod={loaded.hod} viewerDepartments={loaded.viewerDepartments} />
   </>;
 }

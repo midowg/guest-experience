@@ -403,6 +403,8 @@ export const praWamAccountsApi = (employeeId?: string) => `/api/admin/wam/accoun
 export const praWamResetRequestsApi = (requestId?: string) => `/api/admin/wam/reset-requests${requestId ? `/${requestId}` : ""}`;
 /** Admin WAM: PATCH one room's capacity, fewest people, bookable and floor plan spot. */
 export const praWamRoomsApi = (roomId: string) => `/api/admin/wam/rooms/${roomId}`;
+/** Admin WAM: add a room (POST). */
+export const praWamRoomsCreateApi = "/api/admin/wam/rooms";
 /** Admin WAM: import units and positions from the Data karyawan workbook. */
 export const praWamUnitsApi = "/api/admin/wam/units";
 /** Admin WAM: one event's status and modules. */

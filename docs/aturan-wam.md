@@ -221,6 +221,12 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
   dari Agenda (yang tidak punya kalender) memakai kalender bulan. Akhir pekan yang dipilih
   otomatis menjadi Di luar kantor. **Nama kegiatan dipilih dari dropdown**: "Dari Timeline" (yang
   berlangsung di hari itu lebih dulu) lalu "Lainnya" (nama umum dan yang sering dipakai).
+- **Ruang dan denah, diatur admin sendiri** (10 Nov 2026): Admin WAM → Ruang dan denah punya
+  **Tambah ruang** (nama dan jenis; ruang baru belum bisa dibooking sampai diatur) dan, di editor
+  ruang, **Khusus departemen** (centang departemen; tanpa centang = semua). Ruang khusus tampil
+  "Khusus …" dan tidak bisa dipilih bagi departemen lain, dan server menolak booking-nya
+  (`roomKeptFrom`, `pw_rooms.departments`, migrasi 202611100001). Departemen orang = departemen Utama
+  dan pekerjaan lainnya (`employee_jobs`).
 - **Fitur panitia hanya di Kelola acara** (9 Nov 2026): di aplikasi peserta tidak ada lagi Ubah
   sesi, QR dan daftar hadir, atau unggah dokumen untuk panitia. Detail sesi membawa alat panitia
   hanya bila dibuka dari Kelola acara (`?dari=kelola`, `praWamPath.managedSession`). Unggah dokumen

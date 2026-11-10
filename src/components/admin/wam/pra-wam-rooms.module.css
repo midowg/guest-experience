@@ -95,3 +95,9 @@
 .phone { position: relative; box-sizing: border-box; width: min(100%, 360px); padding: 12px; border: 1px solid var(--cs-line); border-radius: 40px; background: var(--cs-strong); box-shadow: var(--cs-raise); }
 .phoneNotch { position: absolute; top: 18px; left: 50%; z-index: 1; width: 84px; height: 20px; border-radius: 999px; background: var(--cs-strong); transform: translateX(-50%); }
 .phoneScreen { display: grid; align-content: start; gap: 16px; min-height: 0; max-height: 640px; padding: 44px 16px 20px; overflow-y: auto; border-radius: 30px; }
+/* Khusus departemen (10 Nov 2026): one tick per department of Data karyawan, in two columns where there is room. */
+.kept { display: grid; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.kept legend { padding: 0; margin-bottom: 4px; font-weight: 600; color: var(--cs-text); }
+.keptList { display: grid; gap: 2px 12px; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); max-height: 16rem; overflow-y: auto; }
+.keptItem { display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 14px; color: var(--cs-text); cursor: pointer; }
+.keptItem input { width: 18px; height: 18px; accent-color: var(--cs-primary); }

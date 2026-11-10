@@ -99,3 +99,13 @@ describe("Di luar kantor", () => {
     expect(bookingCancelledText({ roomId: "r1" })).toBe("Booking dibatalkan. Ruang kembali tersedia.");
   });
 });
+
+describe("rooms kept for departments (10 Nov 2026)", () => {
+  it("lets everyone book a room kept for no one, and only the named departments otherwise", async () => {
+    const { roomKeptFrom } = await import("./appraisal");
+    expect(roomKeptFrom({ departments: [] }, ["Accounting"])).toBeNull();
+    expect(roomKeptFrom({}, [])).toBeNull();
+    expect(roomKeptFrom({ departments: ["Sales & Marketing"] }, ["sales & marketing"])).toBeNull();
+    expect(roomKeptFrom({ departments: ["Sales & Marketing"] }, ["Accounting", "Corporate"])).toBe("Khusus Sales & Marketing");
+  });
+});

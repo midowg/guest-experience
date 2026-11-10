@@ -32,7 +32,23 @@ export type Room = {
   planKey: string | null;
   /** What the room has, for its line on the floor plan: "TV", "Whiteboard"… */
   facilities: string[];
+  /**
+   * The departments the room is kept for (10 Nov 2026, migration 202611100001), by name as in
+   * Data karyawan; empty or absent = everyone.
+   */
+  departments?: string[];
 };
+
+/**
+ * Why this person may not book a room kept for some departments ("Khusus Sales & Marketing"),
+ * or null when they may: the room is for everyone, or one of their departments is on its list.
+ */
+export function roomKeptFrom(room: Pick<Room, "departments">, mine: readonly string[]): string | null {
+  const kept = room.departments ?? [];
+  if (!kept.length) return null;
+  const own = new Set(mine.map(name => name.trim().toLowerCase()));
+  return kept.some(name => own.has(name.trim().toLowerCase())) ? null : `Khusus ${kept.join(", ")}`;
+}
 /** `name` is what colleagues see (nama panggilan); `fullName`, when given, is for search. */
 export type Person = { id: string; name: string; department: string; fullName?: string };
 /**

@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, ChartGantt, Check, CheckCircle2, Clock, DoorOpen
 import { Button, Notice } from "@/components/ui";
 import {
   alternatives, appraisalRules, bookingProblems, clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock,
-  isWorkday, OUTSIDE_ROOM, periodAllDates, periodDates, slotTimes, titleSuggestions, wibDate, wibInstant, type Booking, type Person, type Room,
+  isWorkday, roomKeptFrom, OUTSIDE_ROOM, periodAllDates, periodDates, slotTimes, titleSuggestions, wibDate, wibInstant, type Booking, type Person, type Room,
 } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { roomStatus, type PlanTone } from "@/lib/pra-wam/floor-plan";
@@ -59,6 +59,8 @@ type Props = {
   datePicker?: "strip" | "month";
   /** Timeline's forums and events, drawn as bars on the month picker (as on Timeline's calendar). */
   timeline?: TimelineEntry[];
+  /** The departments the booker works in: a room kept for other departments cannot be picked (10 Nov 2026). */
+  viewerDepartments?: string[];
 };
 /** A forum or event from Timeline: its name and the days it runs (or is planned for). */
 export type BookingActivity = { title: string; from: string; to: string; /** Already over (it may still be picked, after a check). */ past?: boolean };
@@ -94,7 +96,7 @@ type Choice = { ok: boolean; pending: boolean; tone: PlanTone; text: string };
  * "Di luar kantor" (5 Nov 2026; only under Tempat since 9 Nov 2026): it opens weekends, any hour of
  * the day and more than 4 hours, so Tempat offers a way back to Waktu; the place name is typed under Tempat.
  */
-export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null, activities = [], datePicker = "strip", timeline = [] }: Props) {
+export function BookingForm({ editId, initial, dates, now, rooms, people, viewer, groups, usedTitles, dayBookings, dayOf, onSaved, frame, showPlan = true, summary = {}, hod = null, activities = [], datePicker = "strip", timeline = [], viewerDepartments = [] }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
   // On its own page (no sheet): saved, the form gives way to what was booked (9 Nov 2026: booking is
@@ -176,6 +178,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const roomy = fitting.filter(room => !isOver(roomFit(room, count, largest)));
 
   function choiceOf(room: Room): Choice {
+    const kept = roomKeptFrom(room, viewerDepartments);
+    if (kept) return { ok: false, pending: false, tone: "off", text: kept };
     const fit = roomFit(room, count, largest);
     if (!fit.ok) return { ok: false, pending: false, tone: "off", text: fit.text };
     if (!dayKnown) return { ok: false, pending: true, tone: "closed", text: "Memuat jadwal…" };

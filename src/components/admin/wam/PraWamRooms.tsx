@@ -8,7 +8,7 @@ import { Card, CardGrid, ConsoleButton, Pill, SectionToolbar, SegmentedControl, 
 import { FloorPlan } from "@/components/pra-wam/FloorPlan";
 import type { Room } from "@/lib/pra-wam/appraisal";
 import { FACILITY_LIMITS, facilitiesProblem, parseFacilities, placeRooms, planKey, planSpotOptions, spotTitle, type PlanStatus } from "@/lib/pra-wam/floor-plan";
-import { praWamRoomsApi, praWamSettingsApi } from "@/lib/routes";
+import { praWamRoomsApi, praWamRoomsCreateApi, praWamSettingsApi } from "@/lib/routes";
 import type { AppSettings } from "@/lib/server/pra-wam/rooms";
 import { roomGroup, roomGroupLabels, type RoomGroup } from "@/lib/pra-wam/room-group";
 import base from "@/components/pra-wam/pra-wam.module.css";
@@ -18,7 +18,7 @@ type Message = { tone: "success" | "error"; text: string } | null;
 /** The spot clicked on the plan (null: opened from a card or the list) and the room being edited ("" = none). */
 type Editing = { spot: string | null; roomId: string };
 /** What a save sends for one room; the server checks it again. */
-type RoomBody = { capacity: number | null; minPeople: number | null; bookable: boolean; planKey: string | null; facilities: string[]; replace?: boolean };
+type RoomBody = { capacity: number | null; minPeople: number | null; bookable: boolean; planKey: string | null; facilities: string[]; departments?: string[]; replace?: boolean };
 
 /** The page's two tabs (?tab=denah). */
 export type RoomsView = "daftar" | "denah";
@@ -57,7 +57,7 @@ function listLine(room: Room, placed: boolean): string {
  * whether Book shows the plan at all. Before migration 202611040009 only capacity, facilities and
  * bookable can be saved.
  */
-export function PraWamRooms({ initialRooms, initialSettings, roomsReady, view = "daftar" }: { initialRooms: Room[]; initialSettings: AppSettings; roomsReady: boolean; view?: RoomsView }) {
+export function PraWamRooms({ initialRooms, initialSettings, roomsReady, view = "daftar", departments = [] }: { initialRooms: Room[]; initialSettings: AppSettings; roomsReady: boolean; view?: RoomsView; departments?: string[] }) {
   const [rooms, setRooms] = useState(initialRooms);
   const [settings, setSettings] = useState(initialSettings);
   const [planBusy, setPlanBusy] = useState(false);
@@ -68,6 +68,11 @@ export function PraWamRooms({ initialRooms, initialSettings, roomsReady, view = 
   const [switching, setSwitching] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState<RoomGroup>("utama");
+  // Tambah ruang (10 Nov 2026): admins add rooms themselves; the new room's editor opens next.
+  const [adding, setAdding] = useState(false);
+  function added(next: Room[], id: string, text: string) {
+    setAdding(false); saved(next, text); setEditing({ spot: null, roomId: id });
+  }
   const planReady = settings.migrated;
   const { placed } = placeRooms(rooms);
   const spotOf = (room: Room) => placed.find(item => item.room.id === room.id)?.key ?? null;
@@ -115,7 +120,7 @@ export function PraWamRooms({ initialRooms, initialSettings, roomsReady, view = 
   const waiting = !planReady && <Notice tone="warning">Denah, minimal orang, dan pilihan spot menunggu migrasi {MIGRATION}. Sampai saat itu denah tetap tampil di Book, ruang ditaruh di denah menurut namanya, dan hanya kapasitas, fasilitas, serta &ldquo;Bisa dibooking&rdquo; yang bisa disimpan.</Notice>;
   const notice = <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>;
   const editor = editing && <RoomEditor key={`${editing.spot}-${editing.roomId}-${saves}`} spot={editing.spot} room={editRoomNow} current={editing.spot ? roomOn(editing.spot) : null}
-    rooms={sorted} spotOf={spotOf} roomOn={roomOn} planReady={planReady}
+    rooms={sorted} spotOf={spotOf} roomOn={roomOn} planReady={planReady} departments={departments}
     onChooseRoom={roomId => setEditing({ spot: editing.spot, roomId })} onSaved={saved} onClose={() => setEditing(null)} />;
 
   if (view === "daftar") {
@@ -125,6 +130,7 @@ export function PraWamRooms({ initialRooms, initialSettings, roomsReady, view = 
       {waiting}
       <SectionToolbar title={`${rooms.length} ruang`} count={`${rooms.filter(room => room.bookable).length} bisa dibooking`}
         search={{ label: "Cari ruang atau fasilitas", placeholder: "Cari ruang", value: query, onChange: setQuery }} />
+      <div className={css.actions}><ConsoleButton variant="primary" icon={<Plus size={18} aria-hidden="true" />} onClick={() => { setMessage(null); setAdding(true); }}>Tambah ruang</ConsoleButton></div>
       {notice}
       {shown.length
         ? <CardGrid label="Ruang">{shown.map(room => {
@@ -134,6 +140,7 @@ export function PraWamRooms({ initialRooms, initialSettings, roomsReady, view = 
         })}</CardGrid>
         : <p className={css.note}>{rooms.length ? "Tidak ada ruang yang cocok dengan pencarian." : "Belum ada ruang."}</p>}
       <RoomDialog open={!!editing} title={editRoomNow?.name ?? "Ruang"} onClose={() => setEditing(null)}>{editor}</RoomDialog>
+      <RoomDialog open={adding} title="Tambah ruang" onClose={() => setAdding(false)}><AddRoom onAdded={added} onClose={() => setAdding(false)} /></RoomDialog>
     </div>;
   }
 
@@ -149,6 +156,7 @@ export function PraWamRooms({ initialRooms, initialSettings, roomsReady, view = 
       </div>
 
       <div className={css.side}>
+        <div className={css.actions}><ConsoleButton icon={<Plus size={18} aria-hidden="true" />} onClick={() => { setMessage(null); setAdding(true); }}>Tambah ruang</ConsoleButton></div>
         <SegmentedControl label="Jenis ruang" value={group} onChange={setGroup}
           options={(Object.keys(roomGroupLabels) as RoomGroup[]).map(key => ({ value: key, label: roomGroupLabels[key] }))} />
         {inGroup.length
@@ -167,6 +175,7 @@ export function PraWamRooms({ initialRooms, initialSettings, roomsReady, view = 
         {editor
           ? <Card title={editing?.spot ? `Spot ${spotLabel(editing.spot)}` : editRoomNow?.name ?? "Ruang"} headingLevel={3}>{editor}</Card>
           : <p className={css.note}>Pilih spot di denah atau ruang di daftar untuk mengaturnya.</p>}
+        <RoomDialog open={adding} title="Tambah ruang" onClose={() => setAdding(false)}><AddRoom onAdded={added} onClose={() => setAdding(false)} /></RoomDialog>
         {planReady && <Card title="Denah di Book" headingLevel={3}>
           <Switch label="Tampilkan denah di Book" checked={settings.floorPlan} disabled={planBusy} onChange={on => void togglePlan(on)} />
           <p className={css.note}>{planBusy ? "Menyimpan…" : settings.floorPlan ? "Peserta bisa memilih Kalender atau Denah di Book, dan memilih ruang dari denah di form booking." : "Book hanya menampilkan kalender. Form booking memakai daftar ruang."}</p>
@@ -233,18 +242,22 @@ function RoomDialog({ open, title, onClose, children }: { open: boolean; title: 
 
 type EditorProps = {
   spot: string | null; room: Room | null; current: Room | null; rooms: Room[]; planReady: boolean;
+  /** The departments of Data karyawan, for "Khusus departemen". */
+  departments: string[];
   spotOf: (room: Room) => string | null; roomOn: (key: string) => Room | null;
   onChooseRoom: (roomId: string) => void; onSaved: (rooms: Room[], text: string) => void; onClose: () => void;
 };
 
 /** One room's settings, opened from a spot (which room sits there), a card or the list. */
-function RoomEditor({ spot, room, current, rooms, planReady, spotOf, roomOn, onChooseRoom, onSaved, onClose }: EditorProps) {
+function RoomEditor({ spot, room, current, rooms, planReady, departments, spotOf, roomOn, onChooseRoom, onSaved, onClose }: EditorProps) {
   const id = useId();
   const [capacity, setCapacity] = useState(room?.capacity?.toString() ?? "");
   const [minPeople, setMinPeople] = useState(room?.minPeople?.toString() ?? "");
   const [bookable, setBookable] = useState(room?.bookable ?? true);
   const [facilities, setFacilities] = useState((room?.facilities ?? []).join(", "));
   const [target, setTarget] = useState<string>((room && (spot ?? spotOf(room))) ?? "");
+  const [kept, setKept] = useState<string[]>(room?.departments ?? []);
+  const keptOptions = [...new Set([...departments, ...kept])].sort((a, b) => a.localeCompare(b, "id"));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ text: string; fields?: Record<string, string[]> } | null>(null);
   const number = (value: string) => value.trim() ? Number(value) : null;
@@ -270,9 +283,9 @@ function RoomEditor({ spot, room, current, rooms, planReady, spotOf, roomOn, onC
   function save() {
     if (!room || order || tagsProblem) return;
     void send(room, {
-      capacity: cap, minPeople: planReady ? min : null, bookable, facilities: tags,
+      capacity: cap, minPeople: planReady ? min : null, bookable, facilities: tags, departments: kept,
       planKey: planReady ? target || null : null, replace: !!takesFrom?.planKey,
-    }, `${room.name} disimpan${planReady ? `, ${target ? `di spot ${spotLabel(target)}` : "tanpa spot"}` : ""}.`);
+    }, `${room.name} disimpan${planReady ? `, ${target ? `di spot ${spotLabel(target)}` : "tanpa spot"}` : ""}${kept.length ? `, khusus ${kept.join(", ")}` : ""}.`);
   }
   /** Takes the room off this spot, keeping its other settings. */
   function release() {
@@ -341,6 +354,16 @@ function RoomEditor({ spot, room, current, rooms, planReady, spotOf, roomOn, onC
         </p>
       </div>
       <Switch label="Bisa dibooking" checked={bookable} disabled={busy} onChange={setBookable} />
+      <fieldset className={`field ${css.kept}`} disabled={busy} aria-describedby={`${id}-khusus-hint`}>
+        <legend>Khusus departemen</legend>
+        <div className={css.keptList}>{keptOptions.map(name => <label key={name} className={css.keptItem}>
+          <input type="checkbox" checked={kept.includes(name)} onChange={event => setKept(event.target.checked ? [...kept, name] : kept.filter(item => item !== name))} />
+          <span>{name}</span>
+        </label>)}</div>
+        <p id={`${id}-khusus-hint`} className={fieldError("departments") ? "field-error" : "field-hint"}>
+          {fieldError("departments") ?? (kept.length ? `Hanya ${kept.join(", ")} yang bisa booking ruang ini; orang lain melihatnya tidak bisa dipilih.` : "Tanpa centang: semua departemen bisa booking ruang ini.")}
+        </p>
+      </fieldset>
       <div className="field">
         <label htmlFor={`${id}-spot`}>Spot di denah</label>
         <select id={`${id}-spot`} className="select" value={target} disabled={busy || !planReady} onChange={event => setTarget(event.target.value)}
@@ -365,4 +388,45 @@ function RoomEditor({ spot, room, current, rooms, planReady, spotOf, roomOn, onC
     </>}
     {error && <div role="alert" className="field-error">{error.text}</div>}
   </div>;
+}
+
+/**
+ * Tambah ruang (10 Nov 2026): a name and a kind; the room starts not bookable and its editor opens
+ * right after for capacity, spot, departments and the rest.
+ */
+function AddRoom({ onAdded, onClose }: { onAdded: (rooms: Room[], id: string, text: string) => void; onClose: () => void }) {
+  const id = useId();
+  const [name, setName] = useState("");
+  const [kind, setKind] = useState<"utama" | "area">("utama");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function add() {
+    if (name.trim().length < 2) { setError("Isi nama ruang, minimal 2 karakter."); return; }
+    setBusy(true); setError(null);
+    try {
+      const result = await adminRequest<{ id: string; rooms: Room[] }>(praWamRoomsCreateApi, { method: "POST", body: JSON.stringify({ name: name.trim(), kind }) });
+      if (result.data) onAdded(result.data.rooms, result.data.id, result.message);
+    } catch (problem) { setError(errorMessage(problem)); }
+    finally { setBusy(false); }
+  }
+  return <form className={css.editor} noValidate onSubmit={event => { event.preventDefault(); void add(); }}>
+    <div className="field">
+      <label htmlFor={`${id}-nama`}>Nama ruang</label>
+      <input id={`${id}-nama`} className="input" value={name} maxLength={60} placeholder="Mis. Ruang 4" disabled={busy} autoFocus
+        aria-invalid={!!error} aria-describedby={`${id}-nama-hint`} onChange={event => setName(event.target.value)} />
+      <p id={`${id}-nama-hint`} className={error ? "field-error" : "field-hint"}>{error ?? "Nama yang dilihat orang saat booking dan di denah."}</p>
+    </div>
+    <div className="field">
+      <label htmlFor={`${id}-jenis`}>Jenis</label>
+      <select id={`${id}-jenis`} className="select" value={kind} disabled={busy} onChange={event => setKind(event.target.value as "utama" | "area")}>
+        <option value="utama">Ruang meeting</option>
+        <option value="area">Area terbuka</option>
+      </select>
+    </div>
+    <p className={css.note}>Setelah ditambahkan, atur kapasitas, spot di denah, dan departemen yang boleh memakainya, lalu nyalakan Bisa dibooking.</p>
+    <div className={css.actions}>
+      <ConsoleButton variant="primary" type="submit" disabled={busy}>{busy ? "Menambahkan…" : "Tambah ruang"}</ConsoleButton>
+      <ConsoleButton disabled={busy} onClick={onClose}>Batal</ConsoleButton>
+    </div>
+  </form>;
 }

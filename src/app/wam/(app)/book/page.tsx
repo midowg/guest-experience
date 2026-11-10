@@ -7,7 +7,7 @@ import { cancelsAnyBooking } from "@/lib/pra-wam/roles";
 import { participantGroups } from "@/lib/pra-wam/units";
 import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
-import { listPeople, myBookings, usedTitles, weekSchedule, windowSummary } from "@/lib/server/pra-wam/appraisal";
+import { listPeople, memberDepartments, myBookings, usedTitles, weekSchedule, windowSummary } from "@/lib/server/pra-wam/appraisal";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
 import { appSettings } from "@/lib/server/pra-wam/rooms";
 import { hodByBookings, hodDepartments, hodStanding } from "@/lib/server/pra-wam/hod";
@@ -55,10 +55,11 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
   // Bookings made as HOD: each HOD's answer, for the detail sheet.
   // Cancelled bookings and sessions from a week back (9 Nov 2026): greyed among Booking saya.
   const weekBack = new Date(Date.parse(`${today}T12:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10);
-  const [timelineRows, cancelledBookings, cancelledSessions] = await Promise.all([
+  const [timelineRows, cancelledBookings, cancelledSessions, viewerDepartments] = await Promise.all([
     timelineItems(member).then(result => result.items).catch(() => []),
     myBookings(member, weekBack, "batal").catch(() => []),
     myCancelledSessions(member, weekBack).catch(() => []),
+    memberDepartments(member.id).catch(() => []),
   ]);
   const activities = bookingActivities(timelineRows, today);
   const timeline = timelineMonths(timelineRows, today).flatMap(month => month.entries);
@@ -82,7 +83,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
   return <>
     <AppraisalBoard date={shown} week={week} dates={dates} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine}
       viewerId={member.id} canCancelAny={cancelsAnyBooking(member)} open={open} form={form} arrive={arrive} floorPlan={settings.floorPlan} summary={summary}
-      hod={hod} hodInfo={hodInfo} activities={activities} cancelled={cancelled} timeline={timeline}
+      hod={hod} hodInfo={hodInfo} activities={activities} cancelled={cancelled} timeline={timeline} viewerDepartments={viewerDepartments}
       banner={open ? undefined : <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. Booking-mu tetap bisa dilihat di bawah.</Notice></div>} />
   </>;
 }

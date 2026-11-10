@@ -5,7 +5,7 @@ import type { HodDepartment } from "@/lib/pra-wam/hod";
 import { bookingActivities } from "@/lib/pra-wam/timeline";
 import { participantGroups } from "@/lib/pra-wam/units";
 import { ServiceError } from "../config";
-import { daySchedule, getBooking, listPeople, usedTitles } from "./appraisal";
+import { daySchedule, getBooking, listPeople, memberDepartments, usedTitles } from "./appraisal";
 import { hodDepartments, hodStanding } from "./hod";
 import { timelineItems } from "./sessions";
 import type { Member } from "./session";
@@ -21,6 +21,8 @@ export type BookingFormData = {
   activities: BookingActivity[]; hod: { departments: HodDepartment[]; ownUnits: string[] } | null;
   /** The day asked for when it could not be booked (past, outside the period); `initial.date` is the one offered instead. */
   moved: string | null;
+  /** The departments the booker works in, for rooms kept for some departments. */
+  viewerDepartments: string[];
 };
 
 /**
@@ -46,10 +48,11 @@ export async function bookingFormData(member: Member, query: BookingFormQuery, n
     if (asked && date !== asked) moved = asked;
     initial = { date, ...draftHours(date, now, query), roomId: weekend ? OUTSIDE_ROOM : query.room ?? "", title: "", description: "", participants: [] };
   }
-  const [schedule, people, titles, units, activities, standing] = await Promise.all([
+  const [schedule, people, titles, units, activities, standing, viewerDepartments] = await Promise.all([
     daySchedule(initial.date, member), listPeople(), usedTitles(), listUnits(),
     timelineItems(member).then(result => bookingActivities(result.items, today)).catch(() => []),
     hodStanding(member).catch(() => null),
+    memberDepartments(member.id).catch(() => []),
   ]);
   // An outside booking keeps its marker; a room no longer bookable is dropped.
   if (initial.roomId !== OUTSIDE_ROOM && !schedule.rooms.some(room => room.bookable && room.id === initial.roomId)) initial.roomId = "";
@@ -59,6 +62,6 @@ export async function bookingFormData(member: Member, query: BookingFormQuery, n
     editId, initial, dates: dates.includes(initial.date) ? dates : [initial.date, ...dates], now: now.toISOString(),
     rooms: schedule.rooms, dayBookings: schedule.bookings, dayOf: initial.date,
     people: active, groups: participantGroups(active, member.id, units.units, units.memberships), usedTitles: titles,
-    activities, hod: editId ? null : hod, moved,
+    activities, hod: editId ? null : hod, moved, viewerDepartments,
   };
 }

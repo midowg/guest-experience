@@ -19,6 +19,8 @@ const schema = z.object({
     .max(FACILITY_LIMITS.count, `Paling banyak ${FACILITY_LIMITS.count} fasilitas.`)
     .transform(tags => tags.filter((tag, index) => tags.findIndex(other => other.toLowerCase() === tag.toLowerCase()) === index))
     .optional(),
+  /** The departments it is kept for (10 Nov 2026); empty = everyone. Left as they are when absent. */
+  departments: z.array(z.string().trim().min(1).max(150)).max(30, "Paling banyak 30 departemen.").optional(),
   /** Take the spot from the room that has it. */
   replace: z.boolean().optional(),
 }).refine(patch => patch.capacity == null || patch.minPeople == null || patch.minPeople <= patch.capacity, {

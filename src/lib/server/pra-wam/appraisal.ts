@@ -1,7 +1,7 @@
 import { callName } from "@/lib/pra-wam/call-name";
 import "server-only";
 import { cache } from "react";
-import { alternatives, appraisalRules, bookableDates, bookingProblems, clockLabel, OUTSIDE_ROOM, overCapacity, overlaps, roomFitProblem, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { alternatives, appraisalRules, bookableDates, bookingProblems, clockLabel, OUTSIDE_ROOM, overCapacity, overlaps, roomFitProblem, roomKeptFrom, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
@@ -50,16 +50,34 @@ function fail(error: { code?: string; message: string }): never {
 
 async function listRoomsUncached(): Promise<Room[]> {
   const client = createPrivilegedClient();
+  // With the departments a room is kept for (migration 202611100001), else without them.
+  const full = await client.from("pw_rooms").select("id,slug,name,kind,capacity,bookable,facilities,min_people,plan_key,departments").order("sort_order");
+  if (!full.error) return (full.data ?? []).map(({ min_people, plan_key, departments, ...room }) => ({ ...room, minPeople: min_people, planKey: plan_key, departments: departments ?? [] }) as Room);
+  if (full.error.code !== "42703" && full.error.code !== "PGRST204") fail(full.error);
   const { data, error } = await client.from("pw_rooms").select("id,slug,name,kind,capacity,bookable,facilities,min_people,plan_key").order("sort_order");
-  if (!error) return (data ?? []).map(({ min_people, plan_key, ...room }) => ({ ...room, minPeople: min_people, planKey: plan_key }) as Room);
+  if (!error) return (data ?? []).map(({ min_people, plan_key, ...room }) => ({ ...room, minPeople: min_people, planKey: plan_key, departments: [] }) as Room);
   // Before migration 202611040009: no lower limit and no picked plan spot yet.
   if (error.code !== "42703" && error.code !== "PGRST204") fail(error);
   const { data: rows, error: oldError } = await client.from("pw_rooms").select("id,slug,name,kind,capacity,bookable,facilities").order("sort_order");
   if (oldError) fail(oldError);
-  return (rows ?? []).map(room => ({ ...room, minPeople: null, planKey: null }) as Room);
+  return (rows ?? []).map(room => ({ ...room, minPeople: null, planKey: null, departments: [] }) as Room);
 }
 /** Read once per request, however many parts of the page ask. */
 export const listRooms = cache(listRoomsUncached);
+
+/**
+ * Every department a person works in: their Utama department and (once migration 202611090003 has
+ * run) the departments of their other jobs. For rooms kept for some departments (10 Nov 2026).
+ */
+export const memberDepartments = cache(async (employeeId: string): Promise<string[]> => {
+  const client = createPrivilegedClient();
+  const [{ data: person }, jobs] = await Promise.all([
+    client.from("employees").select("department").eq("id", employeeId).maybeSingle(),
+    client.from("employee_jobs").select("department").eq("employee_id", employeeId),
+  ]);
+  const names = [person?.department as string | undefined, ...(jobs.error ? [] : (jobs.data ?? []).map(row => row.department as string))];
+  return [...new Set(names.map(name => (name ?? "").trim()).filter(Boolean))];
+});
 
 /**
  * Everyone in Data karyawan, for names on the schedule and the participant picker. `name` is what
@@ -227,6 +245,10 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
   const rooms = await listRooms();
   const unfit = roomFitProblem(rooms, input, viewer.id);
   if (unfit) throw new ServiceError(422, unfit.message, { roomId: [unfit.reason] });
+  // A room kept for some departments (10 Nov 2026): only their people book it.
+  const room = rooms.find(item => item.id === input.roomId);
+  const kept = room ? roomKeptFrom(room, await memberDepartments(viewer.id)) : null;
+  if (room && kept) throw new ServiceError(403, `${room.name} ${kept.charAt(0).toLowerCase()}${kept.slice(1)}. Pilih ruang lain.`, { roomId: [kept] });
   // The largest room may hold more than its capacity, only once the booker says yes.
   const over = overCapacity(rooms, input, viewer.id);
   if (over && !options.overCapacity) {

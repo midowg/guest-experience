@@ -42,7 +42,11 @@ export type RoomPatch = {
   capacity: number | null; minPeople: number | null; bookable: boolean; planKey: string | null;
   /** Facility tags (TV, Whiteboard…); left as they are when not given. */
   facilities?: string[];
+  /** The departments it is kept for (empty = everyone); left as they are when not given. */
+  departments?: string[];
 };
+
+export const ROOM_DEPARTMENTS_MIGRATION = "202611100001_pw_rooms_departments.sql";
 
 /** What is wrong with a patch, by field; empty when it can be saved. */
 export function roomPatchProblems(patch: RoomPatch): Record<string, string[]> {
@@ -95,6 +99,49 @@ export async function saveRoom(id: string, patch: RoomPatch, options: { replace?
     return;
   }
   if (!data) throw new ServiceError(404, "Ruang tidak ditemukan.");
+  if (patch.departments) await saveDepartments(id, patch.departments);
+}
+
+/** The departments a room is kept for (10 Nov 2026); before migration 202611100001 only "everyone" can be saved. */
+async function saveDepartments(id: string, departments: string[]) {
+  const clean = [...new Set(departments.map(name => name.trim()).filter(Boolean))];
+  const { error } = await createPrivilegedClient().from("pw_rooms").update({ departments: clean }).eq("id", id);
+  if (!error) return;
+  if (["42703", "PGRST204"].includes(error.code ?? "") || /departments/.test(error.message ?? "")) {
+    if (clean.length) throw new ServiceError(503, `Ruang khusus departemen menunggu migrasi ${ROOM_DEPARTMENTS_MIGRATION}. Isian lain sudah tersimpan.`, { departments: [`Menunggu migrasi ${ROOM_DEPARTMENTS_MIGRATION}.`] });
+    return;
+  }
+  databaseError(error);
+}
+
+/** "Ruang 4" → "ruang-4": the room's address-safe key, unique among the rooms. */
+export function roomSlug(name: string, taken: readonly string[]): string {
+  const base = name.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 34) || "ruang";
+  const padded = base.length < 2 ? `${base}-ruang` : base;
+  if (!taken.includes(padded)) return padded;
+  for (let n = 2; n < 1000; n++) if (!taken.includes(`${padded}-${n}`)) return `${padded}-${n}`;
+  return `${padded}-${Date.now() % 100000}`;
+}
+
+/**
+ * Any admin (10 Nov 2026): adds a room by its name and kind, at the end of the list. It starts
+ * not bookable; capacity, spot, departments and the rest are set in its editor right after.
+ */
+export async function createRoom(input: { name: string; kind: "utama" | "area" }): Promise<string> {
+  const name = input.name.replace(/\s+/g, " ").trim();
+  if (name.length < 2 || name.length > 60) throw new ServiceError(422, "Nama ruang 2 sampai 60 karakter.", { name: ["Nama ruang 2 sampai 60 karakter."] });
+  const client = createPrivilegedClient();
+  const { data: rooms, error } = await client.from("pw_rooms").select("slug,name,sort_order");
+  if (error) databaseError(error);
+  if ((rooms ?? []).some(room => (room.name as string).trim().toLowerCase() === name.toLowerCase())) {
+    throw new ServiceError(409, `Sudah ada ruang bernama ${name}.`, { name: [`Sudah ada ruang bernama ${name}.`] });
+  }
+  const order = Math.max(0, ...(rooms ?? []).map(room => Number(room.sort_order) || 0)) + 1;
+  const { data, error: insertError } = await client.from("pw_rooms")
+    .insert({ slug: roomSlug(name, (rooms ?? []).map(room => room.slug as string)), name, kind: input.kind, bookable: false, sort_order: order })
+    .select("id").single();
+  if (insertError) databaseError(insertError);
+  return data.id as string;
 }
 
 function spotTaken(key: string, holder: string | null) {

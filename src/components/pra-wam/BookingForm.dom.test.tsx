@@ -299,3 +299,13 @@ it("offers sessions already over under Sudah lewat, asking before one is picked"
   fireEvent.click(within(await screen.findByRole("dialog", { name: "Sesi sudah lewat" })).getByRole("button", { name: "Tetap pilih" }));
   await vi.waitFor(() => expect(select.value).toBe("Rekonsiliasi ACC"));
 });
+
+it("greys out a room kept for another department, with its reason", () => {
+  const sales = { ...besar, id: "sales", name: "Ruang 4", departments: ["Sales & Marketing"] };
+  render(<BookingForm initial={draft({ title: "Review KPI" })} dates={["2026-11-04", "2026-11-05"]} now={NOW} rooms={[kecil, sales]} people={[]} viewer={{ id: "me" }} groups={[]} usedTitles={[]}
+    dayBookings={[]} dayOf="2026-11-05" showPlan={false} viewerDepartments={["Accounting"]} />);
+  lanjut(); lanjut(); lanjut();
+  const room = screen.getByRole("button", { name: /^Ruang 4/ }) as HTMLButtonElement;
+  expect(room.getAttribute("aria-disabled") === "true" || room.disabled).toBe(true);
+  expect(screen.getByText(/Khusus Sales & Marketing/)).toBeTruthy();
+});
