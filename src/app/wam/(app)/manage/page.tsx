@@ -4,7 +4,7 @@ import { Avatar, Card, ConsoleButtonLink, DayTimeline, ListRow, PageHeader, Pill
 import { ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { BodSummary } from "@/components/pra-wam/BodSummary";
 import { SessionStatusPill } from "@/components/pra-wam/SessionStatusPill";
-import { hourWindow, nowHours, phaseDay, readiness, roomRows, timelineLegend } from "@/components/pra-wam/manage/schedule";
+import { hourWindow, nowHours, phaseDay, readiness, roomRows, timelineLegend, withQuery } from "@/components/pra-wam/manage/schedule";
 import { Notice } from "@/components/ui";
 import { clockLabel, dayLabel, wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { greeting } from "@/lib/pra-wam/bod";
@@ -73,8 +73,9 @@ async function PanitiaSummary({ member, data, now }: { member: Member; data: Ove
   const coming = todays.filter(session => session.startsAt && new Date(session.startsAt) > now).sort((a, b) => a.startsAt!.localeCompare(b.startsAt!));
   // "Cetak QR absen" opens the session that is on now or next today, else the next one at all.
   const printable = data.upcoming.find(session => session.endsAt && new Date(session.endsAt) > now && !session.booking);
+  // The same rows as Linimasa · Hari for today (10 Nov 2026): every session not cancelled, drafts grey.
   const rows = data.migrated ? roomRows({
-    date: today, rooms: schedule?.rooms ?? [], bookings: schedule?.bookings ?? [], sessions: todays,
+    date: today, rooms: schedule?.rooms ?? [], bookings: schedule?.bookings ?? [], sessions: sessions.filter(session => session.status !== "batal"),
     sessionHref: session => praWamPath.sessionAttendance(session.id), bookingHref: booking => praWamPath.appraisal(today, booking.id),
   }) : [];
   const hours = hourWindow(rows);
@@ -103,7 +104,7 @@ async function PanitiaSummary({ member, data, now }: { member: Member; data: Ove
         note={latest ? `Terakhir: ${latest.read} dari ${latest.recipients} sudah membaca` : "Belum ada yang dikirim"} />
     </StatRow>
 
-    <DayTimeline title="Sesi hari ini" titleHref={praWamPath.sessions} date={longDate(now)} rows={rows} from={hours.from} to={hours.to} now={nowHours(now)}
+    <DayTimeline title="Sesi hari ini" titleHref={withQuery(praWamPath.sessions, { view: "linimasa", rentang: "hari" })} date={longDate(now)} rows={rows} from={hours.from} to={hours.to} now={nowHours(now)}
       empty={data.migrated ? "Belum ada ruang atau sesi untuk hari ini." : "Linimasa muncul setelah migrasi sesi."} />
     {rows.some(row => row.blocks.length) && <ul className={styles.legend} aria-label="Arti warna">
       {timelineLegend(true).map(item => <li key={item.label}><Pill tone={item.tone}>{item.label}</Pill></li>)}
