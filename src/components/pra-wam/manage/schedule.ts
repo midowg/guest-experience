@@ -101,7 +101,12 @@ export function roomRows({ date, rooms, bookings, sessions, sessionHref, booking
 export function dayRows(dates: readonly string[], sessions: readonly Session[], sessionHref: (session: Session) => string, today?: string): TimelineRow[] {
   return dates.map(date => {
     const blocks = sessions.flatMap(session => {
-      const block = sessionBlock(session, date, sessionHref(session), session.status === "draf" ? `Draf · ${sessionWhere(session)}` : sessionWhere(session));
+      // A booking says who booked it, as in a day by room (10 Nov 2026): "SM - Raja · 11.00–12.30 · GMSM Room".
+      const where = sessionWhere(session);
+      const sub = session.booking && session.startsAt && session.endsAt
+        ? `${bookerLabel(session.booking.bookedBy)} · ${timeRange(session.startsAt, session.endsAt)} · ${where}`
+        : session.status === "draf" ? `Draf · ${where}` : where;
+      const block = sessionBlock(session, date, sessionHref(session), sub);
       return block ? [block] : [];
     }).sort((a, b) => a.start - b.start);
     return { key: date, label: dayLabel(date), sub: date === today ? "Hari ini" : `${blocks.length} sesi`, blocks };

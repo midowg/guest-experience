@@ -77,6 +77,9 @@ describe("timeline blocks", () => {
     expect(rows[0]).toMatchObject({ key: "2026-11-04", sub: "0 sesi", blocks: [] });
     expect(rows[1]).toMatchObject({ sub: "Hari ini" });
     expect(rows[1].blocks[0]).toMatchObject({ sub: "Limasan", href: "/sesi/s1" });
+    const booked = session({ id: "s9", title: "Appraisal tim", kind: "rapat", roomName: "GMSM Room", startsAt: "2026-11-05T04:00:00.000Z", endsAt: "2026-11-05T05:30:00.000Z",
+      booking: { id: "b1", bookedBy: { id: "p3", name: "Raja", department: "Sales & Marketing" } } });
+    expect(dayRows(["2026-11-05"], [booked], item => `/sesi/${item.id}`)[0].blocks[0]).toMatchObject({ sub: "SM - Raja · 11.00–12.30 · GMSM Room" });
     expect(hourWindow([])).toEqual({ from: 8, to: 18 });
   });
 });
