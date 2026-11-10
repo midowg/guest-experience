@@ -87,11 +87,11 @@ describe("reset rules", () => {
 
 describe("tab Peran", () => {
   it("gives every role a card with its count and what it goes with; BOD stands alone", () => {
-    render(<RoleGuide counts={{ peserta: 40, panitia: 6, admin: 2, hod: 9, bod: 3 }} />);
+    render(<RoleGuide counts={{ peserta: 40, panitia: 6, admin: 2, ga: 1, hod: 9, bod: 3 }} />);
     const cards = within(screen.getByRole("list", { name: "Peran dan gabungannya" })).getAllByRole("article");
-    expect(cards.map(card => card.querySelector("h3")?.textContent)).toEqual(["Peserta", "Panitia", "Admin WAM", "HOD", "BOD"]);
+    expect(cards.map(card => card.querySelector("h3")?.textContent)).toEqual(["Peserta", "Panitia", "Admin WAM", "Admin Booking", "HOD", "BOD"]);
     expect(cards[1].textContent).toContain("6 orang");
     expect(cards[1].textContent).toContain("Bisa digabung: Admin WAM, HOD");
-    expect(cards[4].textContent).toContain("Tidak bisa digabung");
+    expect(cards[5].textContent).toContain("Tidak bisa digabung");
   });
 });

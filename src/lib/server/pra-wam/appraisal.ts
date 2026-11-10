@@ -2,6 +2,7 @@ import { callName } from "@/lib/pra-wam/call-name";
 import "server-only";
 import { cache } from "react";
 import { alternatives, appraisalRules, bookableDates, bookingProblems, clockLabel, OUTSIDE_ROOM, overCapacity, overlaps, roomFitProblem, roomKeptFrom, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { MIGRATION_BOOKING_APP, officePeriod, officeRules, type Audience } from "@/lib/booking/rules";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
@@ -235,11 +236,20 @@ async function requireOwn(id: string, viewer: Member) {
  * server's clock; the database checks them again and refuses an overlap. A participant who is
  * already booked elsewhere at that time is a warning the person confirms (`confirmed`).
  */
-export async function saveBooking(input: BookingInput, viewer: Member, options: { id?: string; confirmed?: boolean; overCapacity?: boolean; now?: Date; quiet?: boolean } = {}): Promise<Booking> {
+export async function saveBooking(input: BookingInput, viewer: Member, options: {
+  id?: string; confirmed?: boolean; overCapacity?: boolean; now?: Date; quiet?: boolean;
+  /**
+   * From Booking Kantor (/booking, migration 202611100006): the same rooms and the same database
+   * rules, but not WAM's period or its open/closed switch, and the booking does not become a WAM
+   * session (so the caller tells its people; nothing is sent from here).
+   */
+  office?: { audience: Audience; externalNote: string };
+} = {}): Promise<Booking> {
   const now = options.now ?? new Date();
-  if (!await appraisalOpen()) throw new ServiceError(409, "Booking ruang appraisal sedang ditutup oleh admin Pra WAM.");
+  const office = options.office;
+  if (!office && !await appraisalOpen()) throw new ServiceError(409, "Booking ruang appraisal sedang ditutup oleh admin Pra WAM.");
   const before = options.id ? await requireOwn(options.id, viewer) : null;
-  const problems = bookingProblems(input, now);
+  const problems = bookingProblems(input, now, office ? officePeriod(now) : undefined);
   if (Object.keys(problems).length) throw new ServiceError(422, "Periksa kembali tanggal dan jam.", Object.fromEntries(Object.entries(problems).map(([key, message]) => [key, [message]])));
   // The room must suit how many come (the same rule the form uses): no one-on-one in the big room.
   const rooms = await listRooms();
@@ -279,13 +289,17 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
     p_id: options.id ?? null, p_room: outside ? null : input.roomId, p_title: input.title, p_description: input.description,
     p_starts: span.startsAt, p_ends: span.endsAt, p_booked_by: viewer.id, p_participants: participants, p_max_per_day: appraisalRules.maxPerDay,
     ...(outside ? { p_place: input.place } : {}),
+    ...(office ? { p_source: "kantor", p_audience: office.audience, p_external_note: office.audience === "eksternal" ? office.externalNote : null } : {}),
   });
   if (error) {
+    // Before migration 202611100006 the database does not know where a booking comes from, and would make it a WAM session.
+    if (office && (error.code === "PGRST202" || /p_source|p_audience/.test(error.message))) throw new ServiceError(503, `Booking Kantor menunggu migrasi ${MIGRATION_BOOKING_APP}.`);
+    if (/EXTERNAL_NOTE_MISSING/.test(error.message)) throw new ServiceError(422, "Isi nama tamu atau perusahaannya.", { externalNote: ["Isi nama tamu atau perusahaannya."] });
     if (outside && (error.code === "PGRST202" || /p_place|place/.test(error.message))) throw new ServiceError(503, `Booking di luar kantor menunggu migrasi ${MIGRATION_OUTSIDE}. Sementara itu pilih ruang kantor.`);
     if (/PLACE_MISSING/.test(error.message)) throw new ServiceError(422, "Isi nama tempat.", { place: ["Isi nama tempat."] });
     if (error.code === "23P01") throw await roomTaken(input, viewer, now, options.id);
-    if (/ROOM_NOT_BOOKABLE/.test(error.message)) throw new ServiceError(422, "Ruang ini tidak bisa dipesan untuk appraisal.", { roomId: ["Pilih ruang lain."] });
-    if (/BOOKING_DAILY_LIMIT/.test(error.message)) throw new ServiceError(409, `Kamu sudah punya ${appraisalRules.maxPerDay} booking aktif pada hari itu. Batalkan salah satu dulu.`);
+    if (/ROOM_NOT_BOOKABLE/.test(error.message)) throw new ServiceError(422, office ? "Ruangan ini tidak bisa dipesan." : "Ruang ini tidak bisa dipesan untuk appraisal.", { roomId: ["Pilih ruang lain."] });
+    if (/BOOKING_DAILY_LIMIT/.test(error.message)) throw new ServiceError(409, `Kamu sudah punya ${office ? officeRules.maxPerDay : appraisalRules.maxPerDay} booking aktif pada hari itu. Batalkan salah satu dulu.`);
     if (/NOT_FOUND/.test(error.message)) throw new ServiceError(404, "Booking tidak ditemukan atau sudah dibatalkan.");
     if (error.code === "23514") throw new ServiceError(422, outside ? "Tanggal atau jam tidak bisa disimpan. Booking di luar kantor harus dalam satu hari." : `Jam di luar ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)} Senin–Jumat, atau lebih dari 4 jam.`);
     if (error.code === "23503") throw new ServiceError(422, "Ada partisipan atau ruang yang tidak dikenal. Muat ulang halaman.");
@@ -295,7 +309,7 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
   // Its session was saved with it (same transaction); the people in it hear as for any session.
   const moved = before && (before.startsAt !== saved.startsAt || before.endsAt !== saved.endsAt || before.roomId !== saved.roomId);
   // A booking made as HOD tells its HODs itself, with Terima and Tolak (hod.ts), not twice.
-  if (!options.quiet && (!before || moved)) await notifyBookingSession(saved.id, before ? "berubah" : "terbit", await bookingFacts(saved), viewer);
+  if (!office && !options.quiet && (!before || moved)) await notifyBookingSession(saved.id, before ? "berubah" : "terbit", await bookingFacts(saved), viewer);
   return saved;
 }
 

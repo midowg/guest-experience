@@ -71,8 +71,8 @@ describe("counts", () => {
   });
 
   it("count each role over active people, and have a guide card for each", () => {
-    expect(roleCounts(rows)).toEqual({ peserta: 2, panitia: 1, admin: 0, hod: 0, bod: 0 });
-    expect(roleGuide.map(item => item.key)).toEqual(["peserta", "panitia", "admin", "hod", "bod"]);
+    expect(roleCounts(rows)).toEqual({ peserta: 2, panitia: 1, admin: 0, ga: 0, hod: 0, bod: 0 });
+    expect(roleGuide.map(item => item.key)).toEqual(["peserta", "panitia", "admin", "ga", "hod", "bod"]);
     expect(roleGuide.find(item => item.key === "bod")!.combines).toBeNull();
   });
 });

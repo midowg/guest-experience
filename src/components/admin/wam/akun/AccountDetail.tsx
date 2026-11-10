@@ -97,8 +97,8 @@ export function AccountDetail({ row, status, photo, job, busy, passwordReady, er
 
         <fieldset className={css.detailSection}>
           <legend>Peran</legend>
-          <p className={css.hint}>Semua orang yang punya akun adalah peserta. Di sini hanya Panitia yang dipilih; BOD, Admin WAM, HOD, Lead, dan Business Unit diatur super admin di Data karyawan. Perubahan berlaku di halaman berikutnya yang dibuka orang itu.</p>
-          <ul className={css.roleChecks}>{(["panitia"] as const).map(role => <li key={role}>
+          <p className={css.hint}>Semua orang yang punya akun adalah peserta. Di sini Panitia dan Admin Booking (bagian administrasi yang mengelola Booking Kantor) yang dipilih; BOD, Admin WAM, HOD, Lead, dan Business Unit diatur super admin di Data karyawan. Perubahan berlaku di halaman berikutnya yang dibuka orang itu.</p>
+          <ul className={css.roleChecks}>{(["panitia", "ga"] as const).map(role => <li key={role}>
             <label className={css.check} title={blocked[role]}>
               <input type="checkbox" aria-describedby={hint ? hintId : undefined} checked={row.roles.includes(role)} disabled={working || !!blocked[role]} onChange={() => onToggleRole(role)}
                 aria-label={`${roleLabels[role]}: ${row.name}`} />

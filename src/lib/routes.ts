@@ -423,6 +423,33 @@ export const praWamSettingsApi = "/api/admin/wam/settings";
 export const praWamThemeApi = "/api/admin/wam/theme";
 
 /*
+ * Booking Kantor (10 Nov 2026): the office's own booking app, outside WAM, replacing
+ * booking.werkudaragroup.com. Rooms first; cars, Zoom and activities come later. It signs in with
+ * the WAM account (praWamPath.login) and shares WAM's rooms and bookings (pw_*), so a room is never
+ * taken twice. The administration staff (role "ga") manage it under /booking/kelola.
+ */
+export const BOOKING_PATH = "/booking";
+const BOOKING_API = "/api/booking";
+const query = (values: Record<string, string | undefined>) => {
+  const search = new URLSearchParams(Object.entries(values).filter((entry): entry is [string, string] => !!entry[1])).toString();
+  return search ? `?${search}` : "";
+};
+export const bookingPath = {
+  /** Beranda: what can be booked, and the person's next bookings. */
+  home: BOOKING_PATH,
+  /** Ruangan: every room on one day. `new` opens the form (with a room), `edit` opens one of the person's own bookings. */
+  rooms: (options: { date?: string; new?: string; edit?: string } = {}) => `${BOOKING_PATH}/ruangan${query(options)}`,
+  /** Booking saya: made by or inviting the person, from today on. */
+  mine: `${BOOKING_PATH}/saya`,
+  /** Kelola (administration staff): every booking of a day. */
+  manage: (date?: string) => `${BOOKING_PATH}/kelola${query({ date })}`,
+};
+export const bookingApi = {
+  /** POST: a new booking; with an id, PATCH changes it and DELETE cancels it. */
+  bookings: (id?: string) => `${BOOKING_API}/bookings${id ? `/${id}` : ""}`,
+};
+
+/*
  * TV Announcement: an office TV opens /tv/{address} with no sign-in, e.g. /tv/lobi; the address
  * is the TV's short slug, picked by the admin and open on purpose (an older TV's is its long key).
  * Outside /wam and /admin on purpose: no login, no app frame.

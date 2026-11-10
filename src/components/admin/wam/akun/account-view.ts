@@ -18,11 +18,11 @@ export function accountStatus(row: AccountRow, resetRequested: ReadonlySet<strin
 }
 
 /** The tone of each role, the same on every card, row and on the Peran tab. */
-export const roleTones = { peserta: "neutral", panitia: "blue", admin: "purple", hod: "teal", bod: "brass" } as const satisfies Record<PraWamRole | "peserta" | "hod", ConsoleTone>;
+export const roleTones = { peserta: "neutral", panitia: "blue", admin: "purple", hod: "teal", bod: "brass", ga: "ok" } as const satisfies Record<PraWamRole | "peserta" | "hod", ConsoleTone>;
 
 /** The roles on top of peserta (BOD, Panitia, Admin WAM, then HOD and Lead); "Peserta" alone when there are none. */
 export function roleItems(row: Pick<AccountRow, "roles" | "leads" | "lead" | "hasAccount">): RoleItem[] {
-  const order: PraWamRole[] = ["bod", "panitia", "admin"];
+  const order: PraWamRole[] = ["bod", "panitia", "admin", "ga"];
   const items: RoleItem[] = order.filter(role => row.roles.includes(role)).map(role => ({ label: roleLabels[role], tone: roleTones[role] }));
   if (row.leads.length) items.push({ label: "HOD", tone: roleTones.hod });
   if (row.lead) items.push({ label: "Lead", tone: roleTones.hod });
@@ -103,6 +103,7 @@ export const roleGuide: readonly RoleGuideItem[] = [
   { key: "peserta", label: "Peserta", does: "Book ruang, agenda dan dokumen sesi sendiri, absen QR. Dasar setiap akun.", combines: ["Panitia", "Admin WAM", "HOD", "BOD"] },
   { key: "panitia", label: "Panitia", does: "Kelola acara: sesi, permintaan jadwal, pengumuman; membatalkan booking siapa pun.", combines: ["Admin WAM", "HOD"] },
   { key: "admin", label: "Admin WAM", does: "Seperti Panitia, ditambah pengaturan aplikasi.", combines: ["Panitia", "HOD"] },
+  { key: "ga", label: "Admin Booking", does: "Bagian administrasi: mengelola Booking Kantor (melihat dan membatalkan semua booking ruangan). Tidak mengubah apa pun di WAM.", combines: ["Panitia", "Admin WAM", "HOD"] },
   { key: "hod", label: "HOD", does: "Kepala departemen (bisa lebih dari satu), diatur super admin di Data karyawan. HOD bisa booking ruang sebagai HOD. Lead memimpin tim di bawah HOD, juga diatur di sana.", combines: ["Panitia", "Admin WAM"] },
   { key: "bod", label: "BOD", does: "Menu BOD: Ringkasan, Peserta, Survei; melihat semua sesi tanpa mengubah. Tetap bisa ikut sesi dan book ruang.", combines: null },
 ];
@@ -114,6 +115,7 @@ export function roleCounts(rows: readonly AccountRow[]): Record<RoleGuideItem["k
     peserta: active.filter(row => row.hasAccount).length,
     panitia: active.filter(row => row.roles.includes("panitia")).length,
     admin: active.filter(row => row.roles.includes("admin")).length,
+    ga: active.filter(row => row.roles.includes("ga")).length,
     hod: active.filter(row => row.leads.length > 0).length,
     bod: active.filter(row => row.roles.includes("bod")).length,
   };

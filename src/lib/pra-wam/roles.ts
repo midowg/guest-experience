@@ -4,17 +4,22 @@
  * every request and by the pages only to show or hide what the server would refuse anyway.
  */
 
-export const praWamRoles = ["panitia", "bod", "admin"] as const;
+export const praWamRoles = ["panitia", "bod", "admin", "ga"] as const;
 export type PraWamRole = (typeof praWamRoles)[number];
-export const roleLabels: Record<PraWamRole, string> = { panitia: "Panitia", bod: "BOD", admin: "Admin WAM" };
+export const roleLabels: Record<PraWamRole, string> = { panitia: "Panitia", bod: "BOD", admin: "Admin WAM", ga: "Admin Booking" };
 
 type WithRoles = { roles: readonly PraWamRole[] };
 const has = (who: WithRoles, ...roles: PraWamRole[]) => roles.some(role => who.roles.includes(role));
 
 /** Sees who takes part in every appraisal booking, not only in their own. */
-export const seesAllParticipants = (who: WithRoles) => has(who, "panitia", "bod", "admin");
+export const seesAllParticipants = (who: WithRoles) => has(who, "panitia", "bod", "admin", "ga");
 /** May cancel someone else's booking (for a forum that needs the room, say). */
-export const cancelsAnyBooking = (who: WithRoles) => has(who, "panitia", "admin");
+export const cancelsAnyBooking = (who: WithRoles) => has(who, "panitia", "admin", "ga");
+/**
+ * Booking Kantor (/booking, 10 Nov 2026): the administration staff ("ga", migration 202611100006)
+ * and Admin WAM see and cancel every booking in /booking/kelola.
+ */
+export const managesFacilities = (who: WithRoles) => has(who, "ga", "admin");
 /** Makes, publishes and cancels sessions, picks their rooms, and uploads any document. */
 export const managesSessions = (who: WithRoles) => has(who, "panitia", "admin");
 /** Sees every session, drafts included (BOD reads, panitia and admin also change). */

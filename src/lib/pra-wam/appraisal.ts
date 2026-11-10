@@ -141,17 +141,21 @@ export const bookingInputSchema = z.object({
 });
 export type BookingInput = z.infer<typeof bookingInputSchema>;
 
+/** The days a booking may be on, and what to say outside them. WAM's is its period; the office app (/booking) has its own. */
+export type BookingPeriod = { start: string; end: string; message: string };
+const appraisalPeriod: BookingPeriod = { start: appraisalRules.periodStart, end: appraisalRules.periodEnd, message: "Tanggal di luar periode booking (28 Okt–29 Des 2026)." };
+
 /**
  * The rules a booking must meet, as field errors; empty when it may be saved. `now` decides "past".
  * An outside booking (roomId OUTSIDE_ROOM) may be on a weekend, at any hour of the day and longer
  * than 4 hours; the period, the half hours and "one day" still hold.
  */
-export function bookingProblems(input: Pick<BookingInput, "date" | "start" | "end"> & { roomId?: string }, now: Date): Record<string, string> {
+export function bookingProblems(input: Pick<BookingInput, "date" | "start" | "end"> & { roomId?: string }, now: Date, period: BookingPeriod = appraisalPeriod): Record<string, string> {
   const problems: Record<string, string> = {};
   const outside = input.roomId === OUTSIDE_ROOM;
   const hours = outside ? OUTSIDE_HOURS : appraisalRules;
   const times = slotTimes(outside);
-  if (input.date < appraisalRules.periodStart || input.date > appraisalRules.periodEnd) problems.date = "Tanggal di luar periode booking (28 Okt–29 Des 2026).";
+  if (input.date < period.start || input.date > period.end) problems.date = period.message;
   else if (!outside && !isWorkday(input.date)) problems.date = "Ruang hanya bisa dipesan Senin–Jumat. Di luar kantor boleh akhir pekan.";
   const step = appraisalRules.stepMinutes;
   const label = (minutes: number) => fromMinutes(minutes).replace(":", ".");
