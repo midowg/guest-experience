@@ -371,7 +371,7 @@ function WeekWide({ days, legend, today, now, room }: { days: TvDay[]; legend: r
   const column = (room.width - COLUMN_GAP * (days.length - 1)) / days.length;
   // Two lines an entry (the hours, then the room and whose it is) down to about fourteen entries a day; one line past that.
   const stacked = unit >= 4.6;
-  const hours = stacked ? Math.min(fitText(unit - GAP, 0.34, 2.6), fitText(column, 0.075, 2.6)) : Math.min(fitText(unit, 0.42, 2.2), fitText(column, 0.06, 2.2));
+  const hours = stacked ? Math.min(fitText(unit - GAP, 0.4, 2.4), fitText(column, 0.062, 2.4)) : Math.min(fitText(unit, 0.42, 2.2), fitText(column, 0.06, 2.2));
   const small = Math.min(fitText(unit - GAP, 0.25, 1.75), fitText(column, 0.052, 1.75));
   const lines = 1;
   return <div className={css.week} style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`, gap: u(COLUMN_GAP) }}>
@@ -415,13 +415,17 @@ function WeekItem({ entry, who, now, height, gap, hours, small, lines, width, wi
   const owner = entryOwner(entry);
   const where = `${entry.room}${owner ? ` · ${owner}` : ""}`;
   // A letter is about 0.58 of the text size wide: the line gets the size at which all of it fits, down to the smallest readable.
-  const fitted = (size: number, letters: number) => clamp(width * lines / (letters * 0.58), 1.15, size);
+  const fitted = (size: number, letters: number) => clamp(width * lines / (letters * 0.58), 1.1, size);
   return <div className={`${css.item} ${tones[who.color]}`} data-state={state} title={entry.title} style={{ height: u(height), marginTop: u(gap), fontSize: u(hours) }}>
     <Badge code={who.code} size={Math.min(1.7, hours * 0.75)} />
     {small != null
       ? <span className={css.pair}>
-        <span className={`${css.one} ${css.title}`}>{span(entry)}</span>
-        <span className={`${css.wrap} ${css.sub}`} style={{ fontSize: u(fitted(small, where.length)), WebkitLineClamp: lines }}>{where}</span>
+        {/* Line one: the hours, then the room in what is left of the line. Line two: whose it is, in full. */}
+        <span className={css.line}>
+          <span className={css.title}>{span(entry)}</span>
+          <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(clamp((width - hours * 0.6 * 11 - 1.2) / (entry.room.length * 0.58), 1.1, small)) }}>{entry.room}</span>
+        </span>
+        {owner && <span className={`${css.one} ${css.sub}`} style={{ fontSize: u(fitted(small, owner.length)) }}>{owner}</span>}
       </span>
       : <span className={css.one}><span className={css.title}>{span(entry)}</span><span className={css.sub}> · {withBooker ? where : entry.room}</span></span>}
     {state === "berlangsung" && <span className={css.on} style={{ fontSize: u(Math.min(hours, 1.8)) }}>Kini</span>}
