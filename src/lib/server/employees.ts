@@ -4,6 +4,7 @@ import { asGender } from "@/lib/pra-wam/call-name";
 import { buFromOffice } from "@/lib/pra-wam/leads";
 import { createPrivilegedClient } from "./supabase/admin";
 import { databaseError } from "./http";
+import { updateEmail } from "./pra-wam/accounts";
 import { ServiceError } from "./config";
 
 /*
@@ -108,8 +109,14 @@ export async function deleteEmployee(id: string): Promise<void> {
   if (!data?.length) throw new ServiceError(404, "Karyawan tidak ditemukan.");
 }
 
+/**
+ * Saves one person's details. A new email goes through updateEmail first, so a person with a WAM
+ * account signs in with it too (until 10 Nov 2026 only this table changed and the sign-in stayed
+ * on the old address); a refused email (used by someone else) saves nothing.
+ */
 export async function updateEmployee(id: string, patch: Partial<Omit<Employee, "id">>): Promise<Employee> {
-  const { nip, ...rest } = patch;
+  const { nip, email, ...rest } = patch;
+  if (email !== undefined) await updateEmail(id, email);
   const values = { ...rest, ...(nip !== undefined ? { nip: nip.trim() || null } : {}), updated_at: new Date().toISOString() };
   const { data, error } = await createPrivilegedClient().from("employees").update(values).eq("id", id).select("*").maybeSingle();
   if (error) {

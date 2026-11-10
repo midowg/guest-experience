@@ -153,30 +153,41 @@ export async function resetPassword(employeeId: string): Promise<void> {
 }
 
 /**
- * An admin corrects a person's email: in Data karyawan and, when they have an account, as
- * their sign-in too, so they sign in (and receive "Lupa password") with the new address. Nothing
- * changes if another person already uses it.
+ * A person's email, from Admin WAM → Akun or from Data karyawan (Ubah karyawan): in Data karyawan
+ * and, when they have an account, as their sign-in too, so they sign in (and receive "Lupa
+ * password") with the new address. Any domain is fine. Nothing changes if another person already
+ * uses it. Saving the same address again also mends a sign-in left on an older address (before
+ * 10 Nov 2026 Data karyawan changed only its own column). An account's email cannot be emptied.
  */
 export async function updateEmail(employeeId: string, email: string): Promise<void> {
   const address = email.trim().toLowerCase();
   const client = createPrivilegedClient();
   const { data: people, error } = await client.from("employees").select("id,email").limit(2000);
   if (error) databaseError(error);
+  const same = (value: string | null | undefined) => (value ?? "").trim().toLowerCase() === address;
   if (!people?.some(person => person.id === employeeId)) throw new ServiceError(404, "Karyawan tidak ditemukan.");
-  if (people.some(person => person.id !== employeeId && person.email.trim().toLowerCase() === address)) {
+  if (address && people.some(person => person.id !== employeeId && same(person.email))) {
     throw new ServiceError(409, "Email ini sudah dipakai karyawan lain.", { email: ["Email ini sudah dipakai karyawan lain."] });
   }
-  const before = people.find(person => person.id === employeeId)!.email;
+  const before = people.find(person => person.id === employeeId)!.email ?? "";
   const { data: account, error: accountError } = await client.from("pw_accounts").select("auth_user_id").eq("employee_id", employeeId).maybeSingle();
   if (accountError && !notMigrated(accountError)) databaseError(accountError);
+  let signInBefore: string | null = null;
   if (account) {
-    const { error: authError } = await client.auth.admin.updateUserById(account.auth_user_id, { email: address, email_confirm: true });
-    if (authError) throw new ServiceError(/registered|exists|already/i.test(authError.message) ? 409 : 503, /registered|exists|already/i.test(authError.message) ? "Email ini sudah dipakai akun login lain." : "Email login belum dapat diubah. Coba lagi sebentar.", { email: ["Email belum tersimpan."] });
+    if (!address) throw new ServiceError(422, "Orang ini punya akun WAM, jadi emailnya tidak bisa dikosongkan.", { email: ["Isi email untuk masuk WAM."] });
+    const { data: user } = await client.auth.admin.getUserById(account.auth_user_id);
+    const current = user?.user?.email ?? null;
+    if (!same(current)) {
+      const { error: authError } = await client.auth.admin.updateUserById(account.auth_user_id, { email: address, email_confirm: true });
+      if (authError) throw new ServiceError(/registered|exists|already/i.test(authError.message) ? 409 : 503, /registered|exists|already/i.test(authError.message) ? "Email ini sudah dipakai akun login lain." : "Email login belum dapat diubah. Coba lagi sebentar.", { email: ["Email belum tersimpan."] });
+      signInBefore = current;
+    }
   }
+  if (before === address) return;
   const { error: saveError } = await client.from("employees").update({ email: address, updated_at: new Date().toISOString() }).eq("id", employeeId);
   if (saveError) {
     // Keep the sign-in and Data karyawan the same if the second write fails.
-    if (account) await client.auth.admin.updateUserById(account.auth_user_id, { email: before, email_confirm: true });
+    if (account && signInBefore) await client.auth.admin.updateUserById(account.auth_user_id, { email: signInBefore, email_confirm: true });
     databaseError(saveError);
   }
 }
