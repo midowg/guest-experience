@@ -1,17 +1,17 @@
 import "server-only";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
-import { wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
+import { clockLabel, wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import type { RoomUse } from "@/lib/pra-wam/sessions";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import {
-  isTemplateKind, itemShows, looksLikeTvSlug, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
-  type TvDay, type TvFeed, type TvItemKind, type TvItemSchedule, type TvNote, type TvPlayItem, type TvRoom, type TvSettings, type TvSlideStart, type TvTimelineEntry,
+  isTemplateKind, itemShows, looksLikeTvSlug, takeoverOn, takeoverRuns, TV_WELCOME_GREETING, TV_WELCOMES_MOST, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
+  type TvDay, type TvFeed, type TvItemKind, type TvItemSchedule, type TvNote, type TvPlayItem, type TvRoom, type TvSettings, type TvSlideStart, type TvTakeover, type TvTimelineEntry, type TvWelcome,
 } from "@/lib/pra-wam/tv";
 import { hashTvKey, looksLikeTvKey } from "@/lib/pra-wam/tv-key";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { isR2Configured, presignUpload, readObject, removeObjects, verifyUpload } from "../r2";
-import { createPrivilegedClient } from "../supabase/admin";
+import { createPrivilegedClient, createPublicClient } from "../supabase/admin";
 import type { WamLook } from "@/lib/pra-wam/theme";
 import { listRooms } from "./appraisal";
 import { roomUsesBetween, timelineItems } from "./sessions";
@@ -60,6 +60,48 @@ async function readItems(): Promise<ItemRow[] | null> {
 }
 const scheduleOf = (row: ItemRow): TvItemSchedule => ({ showFrom: row.show_from, showUntil: row.show_until, timeFrom: row.time_from?.slice(0, 5) ?? null, timeUntil: row.time_until?.slice(0, 5) ?? null, screenIds: row.screen_ids ?? [] });
 
+/**
+ * Sambutan tamu and Tayangkan sekarang arrive with this one. Before it the playlist works as it
+ * did: the two new kinds cannot be added, and nothing takes the TVs over.
+ */
+export const TV_WELCOME_MIGRATION = "202611100008_pw_tv_welcome.sql";
+const waitingForWelcome = () => new ServiceError(503, `Sambutan tamu dan Tayangkan sekarang menunggu migrasi ${TV_WELCOME_MIGRATION}.`);
+
+/** What takes the TVs over as it is kept (its time may be up), and whether its columns are there yet. */
+async function readTakeover(): Promise<{ ready: boolean; takeover: TvTakeover | null }> {
+  const { data, error } = await createPrivilegedClient().from("pw_tv_settings").select("now_item_id,now_until,now_screen_ids").eq("id", true).maybeSingle();
+  if (error) return { ready: false, takeover: null };
+  const row = data as { now_item_id: string | null; now_until: string | null; now_screen_ids: string[] | null } | null;
+  return { ready: true, takeover: row?.now_item_id ? { itemId: row.now_item_id, until: row.now_until, screenIds: row.now_screen_ids ?? [] } : null };
+}
+
+/**
+ * Today's office visits for the "sambutan" template: published Kunjungan Kantor whose day (WIB) is
+ * today. Read as a guest would read them (the public client: published only), and only what the
+ * visit's own public page opens with: its name, greeting, cover photo, hours and place.
+ */
+async function boardWelcomes(date: string): Promise<TvWelcome[]> {
+  try {
+    const { data, error } = await createPublicClient().from("event_documents").select("document").eq("status", "published").eq("document->>event_kind", "kunjungan").limit(300);
+    if (error) return [];
+    type Visit = { id?: string; title?: string; greeting?: string; starts_at?: string; ends_at?: string | null; venue_name?: string; hero?: { url?: string } };
+    return (data ?? []).map(row => row.document as Visit)
+      .filter(visit => !!visit?.id && !!visit.title?.trim() && !!visit.starts_at && !Number.isNaN(Date.parse(visit.starts_at)))
+      .filter(visit => wibDate(visit.starts_at!) <= date && wibDate(visit.ends_at && !Number.isNaN(Date.parse(visit.ends_at)) ? visit.ends_at : visit.starts_at!) >= date)
+      .sort((a, b) => Date.parse(a.starts_at!) - Date.parse(b.starts_at!))
+      .slice(0, TV_WELCOMES_MOST)
+      .map(visit => {
+        const sameDay = !visit.ends_at || wibDate(visit.ends_at) === wibDate(visit.starts_at!);
+        const start = wibDate(visit.starts_at!) === date ? clockLabel(wibTime(visit.starts_at!)) : "";
+        const end = visit.ends_at && sameDay ? clockLabel(wibTime(visit.ends_at)) : "";
+        return {
+          id: visit.id!, name: visit.title!.trim(), greeting: visit.greeting?.trim() || `${TV_WELCOME_GREETING} di Werkudara`, note: "",
+          hours: start && end && end !== start ? `${start}–${end} WIB` : start ? `${start} WIB` : "", place: visit.venue_name?.trim() ?? "", image: visit.hero?.url ?? "",
+        };
+      });
+  } catch { return []; }
+}
+
 /* ---- Admin WAM ---------------------------------------------------------------------------------- */
 
 /** `slug` is null for a TV made before the short addresses that has not been given one (it still plays at its key address). */
@@ -75,6 +117,12 @@ export type TvAdmin = {
   migrated: boolean; slugReady: boolean; lookReady: boolean; storageReady: boolean; now: string; screens: TvScreen[]; slides: TvAdminSlide[]; settings: TvSettings;
   /** The playlist in order; null before its migration (the calendars and the pictures then play as the settings say). */
   items: TvAdminItem[] | null;
+  /** Whether Sambutan tamu and Tayangkan sekarang can be used (migration 202611100008). */
+  welcomeReady: boolean;
+  /** What takes the TVs over now; null when nothing does (or its time is up). */
+  takeover: TvTakeover | null;
+  /** The names of today's visits, for the Sambutan tamu row ("hari ini: …"). */
+  welcomes: string[];
 };
 
 /** The board's mode and QR code arrive with this one; before it the board is dark, without a QR code. */
@@ -119,10 +167,11 @@ export async function tvAdmin(): Promise<TvAdmin> {
   // Before the short addresses: the same list without them.
   if (error && noSlug(error)) { slugReady = false; ({ data, error } = await read(SCREEN_COLUMNS)); }
   if (error) {
-    if (missing(error)) return { migrated: false, slugReady: false, lookReady: false, storageReady: isR2Configured(), now, screens: [], slides: [], settings: TV_DEFAULT_SETTINGS, items: null };
+    if (missing(error)) return { migrated: false, slugReady: false, lookReady: false, storageReady: isR2Configured(), now, screens: [], slides: [], settings: TV_DEFAULT_SETTINGS, items: null, welcomeReady: false, takeover: null, welcomes: [] };
     databaseError(error);
   }
-  const [slides, { settings, lookReady }, items] = await Promise.all([readSlides(), readSettingsState(), readItems()]);
+  const [slides, { settings, lookReady }, items, taking] = await Promise.all([readSlides(), readSettingsState(), readItems(), readTakeover()]);
+  const welcomes = items?.some(item => item.kind === "sambutan") ? await boardWelcomes(wibDate(now)) : [];
   // What each TV last showed: a column of the playlist's migration, so asked for only once that has run.
   const shown = new Map<string, string | null>();
   if (items) {
@@ -132,6 +181,7 @@ export async function tvAdmin(): Promise<TvAdmin> {
   return {
     items: items?.map(row => ({ id: row.id, kind: row.kind, title: row.title, body: row.body, seconds: row.seconds, active: row.active, slideId: row.slide_id, ...scheduleOf(row) })) ?? null,
     migrated: true, slugReady, lookReady, storageReady: isR2Configured(), now,
+    welcomeReady: taking.ready, takeover: takeoverRuns(taking.takeover, Date.parse(now)) ? taking.takeover : null, welcomes: welcomes.map(visit => visit.name),
     screens: ((data ?? []) as unknown as ScreenRow[]).map(row => ({ id: row.id, name: row.name, slug: row.slug ?? null, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at, lastItem: shown.get(row.id) ?? null })),
     slides: slides.map(row => ({ id: row.id, title: row.title, seconds: row.seconds, active: row.active })),
     settings,
@@ -195,9 +245,33 @@ export async function createItem(input: { kind: Exclude<TvItemKind, "gambar">; t
   const items = await itemsOrWait();
   if (isTemplateKind(input.kind) && items.some(item => item.kind === input.kind)) throw new ServiceError(409, "Template ini sudah ada di daftar tayangan.");
   if (items.length >= 200) throw new ServiceError(409, "Daftar tayangan sudah penuh. Hapus yang tidak dipakai dulu.");
+  const typed = input.kind === "teks" || input.kind === "tamu";
   const { error } = await createPrivilegedClient().from("pw_tv_items")
-    .insert({ kind: input.kind, title: input.title, body: input.kind === "teks" ? input.body : "", seconds: input.kind === "teks" ? 10 : 20, sort_order: nextOrder(items) });
-  if (error) databaseError(error);
+    .insert({ kind: input.kind, title: typed ? input.title : "", body: typed ? input.body : "", seconds: input.kind === "teks" ? 10 : typed || input.kind === "sambutan" ? 15 : 20, sort_order: nextOrder(items) });
+  // The two welcome kinds are not allowed by the table before their migration.
+  if (error) { if (error.code === "23514") throw waitingForWelcome(); databaseError(error); }
+  invalidate();
+}
+
+/**
+ * Tayangkan sekarang: one row takes the TVs over, for `minutes` or until stopped (null), on every
+ * TV or on those named. A new one replaces the one that runs.
+ */
+export async function startTakeover(input: { itemId: string; minutes: number | null; screenIds: string[] }, now = new Date()): Promise<void> {
+  const items = await itemsOrWait();
+  if (!items.some(item => item.id === input.itemId)) throw new ServiceError(404, "Tayangan ini tidak ditemukan. Muat ulang halaman.");
+  const { error } = await createPrivilegedClient().from("pw_tv_settings").upsert({
+    id: true, now_item_id: input.itemId, now_screen_ids: input.screenIds,
+    now_until: input.minutes == null ? null : new Date(now.getTime() + input.minutes * 60_000).toISOString(),
+  });
+  if (error) { if (noSlug(error)) throw waitingForWelcome(); fail(error); }
+  invalidate();
+}
+
+/** Hentikan: the TVs go back to the playlist the next time they ask. */
+export async function stopTakeover(): Promise<void> {
+  const { error } = await createPrivilegedClient().from("pw_tv_settings").update({ now_item_id: null, now_until: null, now_screen_ids: [] }).eq("id", true);
+  if (error) { if (noSlug(error)) throw waitingForWelcome(); fail(error); }
   invalidate();
 }
 
@@ -359,9 +433,14 @@ export async function slideImage(id: string, onlyActive: boolean): Promise<{ byt
   if (!data || (onlyActive && !data.active)) return null;
   if (onlyActive) {
     // With the playlist, the picture's row decides: hidden there (or gone from it) means not shown to any TV.
-    const { data: row, error: rowError } = await createPrivilegedClient().from("pw_tv_items").select("active").eq("slide_id", id).maybeSingle();
+    const { data: row, error: rowError } = await createPrivilegedClient().from("pw_tv_items").select("id,active").eq("slide_id", id).maybeSingle();
     if (rowError && !noTable(rowError)) databaseError(rowError);
-    if (!rowError && !row?.active) return null;
+    if (!rowError && !row?.active) {
+      // Hidden, but it is what takes the TVs over now: then it is shown after all.
+      const { takeover } = await readTakeover();
+      const taken = takeoverRuns(takeover, Date.now()) ? await createPrivilegedClient().from("pw_tv_items").select("slide_id").eq("id", takeover.itemId).maybeSingle() : null;
+      if (taken?.data?.slide_id !== id) return null;
+    }
   }
   return readObject(data.image_key);
 }
@@ -438,6 +517,7 @@ async function boardNotes(now: Date): Promise<TvNote[]> {
 type Content = {
   date: string; days: TvDay[]; slides: SlideRow[]; settings: TvSettings; look: WamLook; countdown: Countdown | null;
   items: ItemRow[] | null; allSlides: SlideRow[]; timeline: TvTimelineEntry[]; notes: TvNote[];
+  welcomes: TvWelcome[]; takeover: TvTakeover | null;
 };
 let kept: { at: number; content: Content } | null = null;
 const invalidate = () => { kept = null; };
@@ -445,21 +525,25 @@ const invalidate = () => { kept = null; };
 async function content(now: Date): Promise<Content> {
   const date = wibDate(now.toISOString());
   if (kept && kept.content.date === date && now.getTime() - kept.at < FRESH_MS) return kept.content;
-  const [days, slides, settings, look, { countdown, timeline }, items] = await Promise.all([weekDays(weekOf(date)), readSlides(), readSettings(), readWamLook(), boardTimeline(date), readItems()]);
+  const [days, slides, settings, look, { countdown, timeline }, items, { takeover }] = await Promise.all([weekDays(weekOf(date)), readSlides(), readSettings(), readWamLook(), boardTimeline(date), readItems(), readTakeover()]);
+  // The visits are read only when the playlist has their template (shown, or taking the TVs over).
+  const welcomes = items?.some(item => item.kind === "sambutan" && (item.active || item.id === takeover?.itemId)) ? await boardWelcomes(date) : [];
   // The announcements are read only when the playlist has their template.
-  const notes = items?.some(item => item.kind === "pengumuman" && item.active) ? await boardNotes(now) : [];
-  const fresh = { date, days, slides: slides.filter(slide => slide.active), settings, look, countdown, items, allSlides: slides, timeline, notes };
+  const notes = items?.some(item => item.kind === "pengumuman" && (item.active || item.id === takeover?.itemId)) ? await boardNotes(now) : [];
+  const fresh = { date, days, slides: slides.filter(slide => slide.active), settings, look, countdown, items, allSlides: slides, timeline, notes, welcomes, takeover };
   kept = { at: now.getTime(), content: fresh };
   return fresh;
 }
 
 /** What plays now; `imageSrc` gives each picture's address (a TV's goes through its key, the admin's through the admin API). */
 export async function tvFeed(imageSrc: (slideId: string) => string, now = new Date(), screen: { id: string; reloadAt: string | null } | null = null): Promise<TvFeed> {
-  const { date, days, slides, settings, look, countdown, items, allSlides, timeline, notes } = await content(now);
+  const { date, days, slides, settings, look, countdown, items, allSlides, timeline, notes, welcomes, takeover } = await content(now);
   // The playlist, narrowed to this TV, today and this time of day. A picture's row carries its picture's id, so its address is the picture's.
   const at = { date, time: wibTime(now.toISOString()), screenId: screen?.id ?? null };
-  const playlist: TvPlayItem[] | undefined = items?.filter(item => itemShows({ ...scheduleOf(item), active: item.active }, at))
-    .filter(item => item.kind !== "gambar" || allSlides.some(slide => slide.id === item.slide_id))
+  // Tayangkan sekarang: while one row takes this TV over, it plays that row alone, whatever the row's own schedule says.
+  const taken = takeoverOn(takeover, { now: now.getTime(), screenId: at.screenId }) ? items?.find(item => item.id === takeover.itemId) : undefined;
+  const playlist: TvPlayItem[] | undefined = (taken ? [taken] : items?.filter(item => itemShows({ ...scheduleOf(item), active: item.active }, at)))
+    ?.filter(item => item.kind !== "gambar" || allSlides.some(slide => slide.id === item.slide_id))
     .map(item => ({ id: item.slide_id ?? item.id, kind: item.kind, title: item.title, body: item.body, seconds: item.seconds, ...(item.slide_id ? { src: imageSrc(item.slide_id) } : {}) }));
   return {
     now: now.toISOString(), date, days, settings, look, countdown, version: BUILD,
@@ -467,6 +551,7 @@ export async function tvFeed(imageSrc: (slideId: string) => string, now = new Da
     ...(playlist ? { playlist } : {}),
     ...(playlist?.some(item => item.kind === "timeline") ? { timeline } : {}),
     ...(playlist?.some(item => item.kind === "pengumuman") ? { notes } : {}),
+    ...(playlist?.some(item => item.kind === "sambutan") ? { welcomes } : {}),
     ...(screen ? { reloadAt: screen.reloadAt } : {}),
   };
 }

@@ -523,6 +523,8 @@ export const praWamTvApi = {
   item: (id: string) => `${TV_ADMIN_API}/items/${id}`,
   /** PUT {ids}: the playlist in a new order. */
   itemOrder: `${TV_ADMIN_API}/items/order`,
+  /** POST {itemId, minutes, screenIds}: one row takes the TVs over (Tayangkan sekarang); DELETE stops it. */
+  takeover: `${TV_ADMIN_API}/now`,
   /** POST: ask one TV to load its page afresh. */
   screenReload: (id: string) => `${TV_ADMIN_API}/screens/${id}/reload`,
 };

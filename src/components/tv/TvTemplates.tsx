@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { fit, fitText, type TvNote, type TvTimelineEntry } from "@/lib/pra-wam/tv";
+import { Clock, MapPin } from "lucide-react";
+import { fit, fitText, type TvNote, type TvTimelineEntry, type TvWelcome } from "@/lib/pra-wam/tv";
 import css from "./tv.module.css";
 
 /*
@@ -57,5 +58,28 @@ export function TextSlide({ title, body }: { title: string; body: string }) {
   return <section className={`${css.slide} ${css.textSlide}`} aria-label={title || "Teks"}>
     {title && <h1>{title}</h1>}
     {body && <p>{body}</p>}
+  </section>;
+}
+
+/**
+ * A guest is welcomed: the greeting, the guest's name large, then the visit's hours and place (or
+ * the greeting typed in Admin TV). A visit's cover photo fills the screen behind it, darkened so
+ * the words stay readable; without one the slide is the board's own colours.
+ */
+export function WelcomeSlide({ welcome }: { welcome: TvWelcome }) {
+  // A long name is set smaller, so it stays on two lines at most.
+  const size = welcome.name.length > 36 ? 6.5 : welcome.name.length > 20 ? 8.5 : 11;
+  return <section className={`${css.slide} ${css.welcome}`} data-photo={!!welcome.image} aria-label={`Sambutan untuk ${welcome.name}`}>
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    {welcome.image && <img className={css.welcomePhoto} src={welcome.image} alt="" aria-hidden="true" referrerPolicy="no-referrer" />}
+    <div className={css.welcomeText}>
+      <p className={css.welcomeGreeting}>{welcome.greeting}</p>
+      <h1 style={{ fontSize: u(size) }}>{welcome.name}</h1>
+      {welcome.note && <p className={css.welcomeNote}>{welcome.note}</p>}
+      {(welcome.hours || welcome.place) && <ul className={css.welcomeFacts}>
+        {welcome.hours && <li><Clock aria-hidden="true" />{welcome.hours}</li>}
+        {welcome.place && <li><MapPin aria-hidden="true" />{welcome.place}</li>}
+      </ul>}
+    </div>
   </section>;
 }

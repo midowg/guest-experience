@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, isPhoneScreen, isTemplateKind, itemLabel, itemShows, playlistOf, scheduleLabel, searchEntries, tvItemCreateSchema, tvItemPatchSchema, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
-  shouldReload, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
+  shouldReload, takeoverOn, takeoverRuns, tvTakeoverSchema, TV_DEFAULT_SETTINGS, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
 const at = (time: string, date = "2026-11-10") => `${date}T${time}:00+07:00`;
@@ -103,6 +103,49 @@ describe("search on a phone", () => {
     expect(keys("")).toEqual([]);
     expect(keys("   ")).toEqual([]);
     expect(keys("tidak ada")).toEqual([]);
+  });
+});
+
+describe("welcoming guests and taking the TVs over", () => {
+  const visit = { id: "v1", name: "Contoh Satu", greeting: "Selamat datang di Werkudara", note: "", hours: "10.00–12.00", place: "Lobi", image: "" };
+  const row = (kind: "sambutan" | "tamu", title = "", body = "") => ({ id: kind, kind, title, body, seconds: 15 });
+  const base = { settings: TV_DEFAULT_SETTINGS, slides: [] };
+
+  it("gives each of today's visits its own slide, and passes the template over on a day without one", () => {
+    const two = playlistOf({ ...base, playlist: [row("sambutan")], welcomes: [visit, { ...visit, id: "v2", name: "Contoh Dua" }] });
+    expect(two.map(item => item.key)).toEqual(["item-sambutan-v1", "item-sambutan-v2"]);
+    expect(two.map(itemLabel)).toEqual(["Sambutan: Contoh Satu", "Sambutan: Contoh Dua"]);
+    expect(playlistOf({ ...base, playlist: [row("sambutan")], welcomes: [] })).toEqual([]);
+    expect(playlistOf({ ...base, playlist: [row("sambutan")] })).toEqual([]);
+  });
+
+  it("welcomes a typed guest by name with the typed greeting", () => {
+    const [item] = playlistOf({ ...base, playlist: [row("tamu", "Contoh Satu", "Senang Anda datang.")] });
+    expect(item).toMatchObject({ kind: "sambutan", welcome: { name: "Contoh Satu", greeting: "Selamat datang", note: "Senang Anda datang.", image: "" } });
+    expect(tvItemCreateSchema.safeParse({ kind: "tamu", title: " " }).success).toBe(false);
+    expect(tvItemCreateSchema.safeParse({ kind: "sambutan" }).success).toBe(true);
+  });
+
+  it("takes over until its time is up, on every TV or only on the ones named", () => {
+    const now = Date.parse("2026-11-10T03:00:00Z");
+    const all = { itemId: "a", until: "2026-11-10T03:15:00Z", screenIds: [] };
+    expect(takeoverOn(all, { now, screenId: null })).toBe(true);
+    expect(takeoverOn(all, { now, screenId: "lobi" })).toBe(true);
+    expect(takeoverOn(all, { now: now + 15 * 60_000, screenId: null })).toBe(false);
+    expect(takeoverOn({ ...all, until: null }, { now: now + 86_400_000, screenId: null })).toBe(true);
+    const some = { ...all, screenIds: ["lobi"] };
+    expect(takeoverOn(some, { now, screenId: "lobi" })).toBe(true);
+    expect(takeoverOn(some, { now, screenId: "pantry" })).toBe(false);
+    expect(takeoverOn(some, { now, screenId: null })).toBe(false);
+    expect(takeoverRuns(some, now)).toBe(true);
+    expect(takeoverOn(null, { now, screenId: null })).toBe(false);
+  });
+
+  it("accepts the four lengths or until stopped", () => {
+    const id = "6f1c2b7e-3a4d-4e5f-8a9b-0c1d2e3f4a5b";
+    expect(tvTakeoverSchema.safeParse({ itemId: id, minutes: 15 }).success).toBe(true);
+    expect(tvTakeoverSchema.safeParse({ itemId: id, minutes: null }).success).toBe(true);
+    expect(tvTakeoverSchema.safeParse({ itemId: id, minutes: 7 }).success).toBe(false);
   });
 });
 

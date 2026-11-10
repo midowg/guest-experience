@@ -60,6 +60,7 @@ export function TvMonitor({ initial, crumbs, title, origin }: { initial: TvAdmin
       </> : undefined} />
     {!list.migrated ? <Notice tone="warning">TV Announcement menunggu migrasi 202611100003_pw_tv.sql. Jalankan di Supabase SQL Editor.</Notice> : <>
       <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
+      {list.takeover && <Notice tone="warning">Tayangkan sekarang sedang berjalan: {list.items?.find(item => item.id === list.takeover?.itemId)?.title || "satu tayangan"} mengambil alih {list.takeover.screenIds.length ? "sebagian TV" : "semua TV"}. Hentikan di halaman Tayangan.</Notice>}
       <StatRow label="Angka penting">
         <StatCard label="TV menyala" value={`${on}/${list.screens.length}`} tone={list.screens.length > 0 && on === 0 ? "warn" : undefined} note={list.screens.length ? "dari TV yang punya alamat sendiri" : "Belum ada TV beralamat sendiri"} href={tvAdminPath.screens} />
         {playing != null && <StatCard label="Tayangan aktif" value={playing} note={`${list.items!.length} baris di daftar tayangan`} href={tvAdminPath.playlist} />}

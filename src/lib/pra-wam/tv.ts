@@ -78,6 +78,8 @@ export type TvFeed = {
   notes?: TvNote[];
   /** When Admin TV last asked this TV to load itself afresh; a page older than that reloads. */
   reloadAt?: string | null;
+  /** Today's office visits (Kunjungan Kantor, published), for the "sambutan" template: one slide each. */
+  welcomes?: TvWelcome[];
 };
 
 /** How long a TV waits before loading itself afresh again, so two builds answering in turn (a deploy in progress) cannot make it flicker. */
@@ -328,6 +330,7 @@ export type TvItem =
   | { key: string; kind: "timeline"; seconds: number }
   | { key: string; kind: "pengumuman"; seconds: number }
   | { key: string; kind: "teks"; title: string; body: string; seconds: number }
+  | { key: string; kind: "sambutan"; welcome: TvWelcome; seconds: number }
   | { key: string; kind: "gambar"; slide: TvSlide; seconds: number };
 
 /* ---- The playlist (migration 202611100007) ------------------------------------------------------- */
@@ -337,11 +340,11 @@ export type TvItem =
  * calendars, Timeline, panitia's announcements), text typed in Admin TV, and uploaded pictures.
  * A row may be for some TVs only, and may show only between two days or two times of day.
  */
-export const tvItemKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "teks", "gambar"] as const;
+export const tvItemKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "teks", "gambar"] as const;
 export type TvItemKind = (typeof tvItemKinds)[number];
 export const tvItemKindLabels: Record<TvItemKind, string> = {
   kalender_hari: "Kalender hari ini", kalender_minggu: "Kalender minggu ini", timeline: "Timeline Pra WAM",
-  pengumuman: "Pengumuman panitia", teks: "Teks", gambar: "Gambar",
+  pengumuman: "Pengumuman panitia", sambutan: "Sambutan tamu", tamu: "Sambutan tamu (diketik)", teks: "Teks", gambar: "Gambar",
 };
 /** What each template shows and where its data comes from, for the admin's "Tambah tayangan". */
 export const tvItemKindHints: Record<TvItemKind, string> = {
@@ -349,11 +352,13 @@ export const tvItemKindHints: Record<TvItemKind, string> = {
   kalender_minggu: "Jadwal ruang Senin sampai Jumat, dari booking ruang dan sesi WAM.",
   timeline: "Forum dan acara Pra WAM yang sedang berjalan dan berikutnya, dari Kelola acara.",
   pengumuman: "Pengumuman panitia untuk semua peserta, terbaru lebih dulu.",
+  sambutan: "Kunjungan Kantor yang sudah terbit dan berlangsung hari ini: nama tamu, ucapan, foto sampul, jam, dan tempat. Tanpa kunjungan hari ini, tayangan ini dilewati.",
+  tamu: "Sambutan untuk tamu yang tidak punya halaman kunjungan: nama tamu dan ucapan yang Anda ketik.",
   teks: "Tulisan yang Anda ketik sendiri: judul dan isi.",
   gambar: "Gambar yang Anda unggah.",
 };
 /** The templates fed by WAM: there is one of each at most (two day calendars would say the same thing). */
-export const tvTemplateKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman"] as const;
+export const tvTemplateKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan"] as const;
 export const isTemplateKind = (kind: TvItemKind) => (tvTemplateKinds as readonly string[]).includes(kind);
 
 /** When and where a row shows: null = no limit; `screenIds` empty = every TV. */
@@ -394,8 +399,18 @@ export type TvTimelineEntry = { id: string; title: string; when: string; hours: 
 /** One announcement of panitia's, for the template. */
 export type TvNote = { id: string; title: string; body: string; at: string };
 
+/**
+ * A guest being welcomed (stage 1, 10 Nov 2026): from a published Kunjungan Kantor that is on today
+ * (its name, greeting, cover photo, hours and place), or typed in Admin TV (a name and a greeting).
+ * The board is open to anyone who knows its address, so nothing else of the visit is here.
+ */
+export type TvWelcome = { id: string; name: string; greeting: string; note: string; hours: string; place: string; image: string };
+export const TV_WELCOME_GREETING = "Selamat datang";
+/** Most visits welcomed in one round of the loop. */
+export const TV_WELCOMES_MOST = 6;
+
 /** What a TV plays, in order: its playlist when the server sends one, else the two calendars and the pictures as the settings say. */
-export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides">): TvItem[] {
+export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides" | "welcomes">): TvItem[] {
   if (!feed.playlist) return playlist(feed.settings, feed.slides);
   return feed.playlist.flatMap((item): TvItem[] => {
     const key = `item-${item.id}`;
@@ -404,6 +419,9 @@ export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides"
     if (item.kind === "timeline") return [{ key, kind: "timeline", seconds: item.seconds }];
     if (item.kind === "pengumuman") return [{ key, kind: "pengumuman", seconds: item.seconds }];
     if (item.kind === "teks") return [{ key, kind: "teks", title: item.title, body: item.body, seconds: item.seconds }];
+    // One slide per visit on today; none today, and the row is passed over.
+    if (item.kind === "sambutan") return (feed.welcomes ?? []).map(welcome => ({ key: `${key}-${welcome.id}`, kind: "sambutan" as const, welcome, seconds: item.seconds }));
+    if (item.kind === "tamu") return item.title ? [{ key, kind: "sambutan", seconds: item.seconds, welcome: { id: item.id, name: item.title, greeting: TV_WELCOME_GREETING, note: item.body, hours: "", place: "", image: "" } }] : [];
     return item.src ? [{ key, kind: "gambar", seconds: item.seconds, slide: { id: item.id, title: item.title, seconds: item.seconds, src: item.src } }] : [];
   });
 }
@@ -414,6 +432,7 @@ export function itemLabel(item: TvItem): string {
   if (item.kind === "timeline") return tvItemKindLabels.timeline;
   if (item.kind === "pengumuman") return "Pengumuman";
   if (item.kind === "teks") return item.title || "Teks";
+  if (item.kind === "sambutan") return `Sambutan: ${item.welcome.name}`;
   return item.slide.title || "Gambar";
 }
 
@@ -423,9 +442,10 @@ const itemTitle = z.string().trim().max(80, "Judul paling panjang 80 karakter.")
 const itemBody = z.string().trim().max(600, "Isi paling panjang 600 karakter.");
 /** POST: a template (once each) or a text. A picture arrives through its upload instead. */
 export const tvItemCreateSchema = z.object({
-  kind: z.enum(["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "teks"]),
+  kind: z.enum(["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "teks"]),
   title: itemTitle.default(""), body: itemBody.default(""),
-}).refine(value => value.kind !== "teks" || value.title.length > 0 || value.body.length > 0, { message: "Isi judul atau isi teksnya.", path: ["title"] });
+}).refine(value => value.kind !== "teks" || value.title.length > 0 || value.body.length > 0, { message: "Isi judul atau isi teksnya.", path: ["title"] })
+  .refine(value => value.kind !== "tamu" || value.title.length > 0, { message: "Isi nama tamunya.", path: ["title"] });
 export const tvItemPatchSchema = z.object({
   title: itemTitle.optional(), body: itemBody.optional(), seconds: seconds.optional(), active: z.boolean().optional(),
   showFrom: day.optional(), showUntil: day.optional(), timeFrom: timeOfDay.optional(), timeUntil: timeOfDay.optional(),
@@ -433,6 +453,29 @@ export const tvItemPatchSchema = z.object({
 }).refine(value => Object.values(value).some(item => item !== undefined), { message: "Tidak ada yang diubah." })
   .refine(value => !value.showFrom || !value.showUntil || value.showFrom <= value.showUntil, { message: "Tanggal akhir tidak boleh sebelum tanggal mulai.", path: ["showUntil"] });
 export const tvItemOrderSchema = z.object({ ids: z.array(z.uuid()).min(1).max(200) });
+
+/* ---- Tayangkan sekarang (migration 202611100008) -------------------------------------------------- */
+
+/*
+ * One row of the playlist takes the TVs over: for some minutes or until it is stopped, on every TV
+ * or on some. While it is on, a TV it is for plays that row alone, whatever the row's own schedule
+ * or "Disembunyikan" says (the admin asked for it now); then the playlist goes on by itself.
+ */
+/** `until` null = until stopped; `screenIds` empty = every TV, and the one address for all (/tv). */
+export type TvTakeover = { itemId: string; until: string | null; screenIds: string[] };
+export const tvTakeoverMinutes = [5, 15, 30, 60] as const;
+/** Whether a takeover still runs (its time is not up). */
+export const takeoverRuns = (takeover: TvTakeover | null | undefined, now: number): takeover is TvTakeover =>
+  !!takeover && (takeover.until == null || Date.parse(takeover.until) > now);
+/** Whether it runs on this TV (`screenId` null: the one address for all, and the admin's preview). */
+export const takeoverOn = (takeover: TvTakeover | null | undefined, at: { now: number; screenId: string | null }): takeover is TvTakeover =>
+  takeoverRuns(takeover, at.now) && (takeover.screenIds.length === 0 || (at.screenId != null && takeover.screenIds.includes(at.screenId)));
+/** POST: `minutes` null = until stopped. */
+export const tvTakeoverSchema = z.object({
+  itemId: z.uuid(),
+  minutes: z.number().int().refine(value => (tvTakeoverMinutes as readonly number[]).includes(value), "Pilih 5, 15, 30, atau 60 menit.").nullable(),
+  screenIds: z.array(z.uuid()).max(tvLimits.screens).default([]),
+});
 
 /**
  * How many things the loop plays: with one (or none) nothing ever changes on screen, so a

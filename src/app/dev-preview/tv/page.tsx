@@ -23,7 +23,8 @@ const many = (date: string): TvRoom[] => Array.from({ length: 14 }, (_, room) =>
 
 /**
  * Layout check for the TV board without a TV key or the database: ?isi=banyak for a full day and
- * week (14 rooms), ?isi=kosong for no room in use, ?isi=gambar for pictures only, and
+ * week (14 rooms), ?isi=kosong for no room in use, ?isi=gambar for pictures only, ?isi=sambutan for
+ * two guests being welcomed (one with a cover photo, one typed), and
  * ?tema=werkudara for the Werkudara theme (Dream Out Loud otherwise), ?mode=terang for light, and
  * ?qr=kanan-bawah (or another corner) for the QR code. The clock is
  * fixed at 10.15 WIB on Tuesday 10 Nov 2026, so the "now" line and "Sedang berlangsung" show.
@@ -45,6 +46,10 @@ export default async function DevTvPage({ searchParams }: { searchParams: Promis
     },
     look: tema === "werkudara" ? "werkudara" : "dream",
     // Pra WAM's countdown (10 Nov 2026): Appraisal ends on Friday 20 Nov.
+    ...(isi === "sambutan" ? {
+      playlist: [{ id: "w", kind: "sambutan" as const, title: "", body: "", seconds: 8 }, { id: "t", kind: "tamu" as const, title: "Contoh Satu", body: "Terima kasih sudah berkunjung ke kantor kami.", seconds: 8 }],
+      welcomes: [{ id: "v1", name: "PT Contoh Dua Sejahtera", greeting: "Selamat datang di Werkudara", note: "", hours: "10.00–12.00 WIB", place: "Kantor Werkudara", image: poster("Foto sampul", 1920, 1080, "#35506b") }],
+    } : {}),
     countdown: isi === "kosong" ? null : { entry: { id: "appraisal", title: "Appraisal: isi form & 1-on-1", color: 0 }, edge: "berakhir", date: "2026-11-20", left: "10 hari lagi", next: { title: "HOD Meeting", date: "2026-11-24" } },
   };
   return <TvBoard initial={feed} />;

@@ -46,8 +46,8 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
 
   const go = (index: number) => { onPause(true); onGo((index + items.length) % items.length); };
   const title = !current ? "TV Announcement" : current.kind === "hari" ? tvDateLabel(feed.date) : current.kind === "minggu" ? tvWeekLabel(week.map(day => day.date))
-    : current.kind === "timeline" ? "Forum dan acara" : current.kind === "pengumuman" ? "Dari panitia" : current.kind === "teks" ? current.title || "Info" : current.slide.title || "Pengumuman";
-  const kicker = !current || current.kind === "hari" ? "Jadwal ruang hari ini" : current.kind === "minggu" ? "Jadwal ruang minggu ini" : current.kind === "timeline" ? "Timeline Pra WAM" : "Pengumuman";
+    : current.kind === "timeline" ? "Forum dan acara" : current.kind === "pengumuman" ? "Dari panitia" : current.kind === "teks" ? current.title || "Info" : current.kind === "sambutan" ? current.welcome.name : current.slide.title || "Pengumuman";
+  const kicker = !current || current.kind === "hari" ? "Jadwal ruang hari ini" : current.kind === "minggu" ? "Jadwal ruang minggu ini" : current.kind === "timeline" ? "Timeline Pra WAM" : current.kind === "sambutan" ? current.welcome.greeting : "Pengumuman";
 
   return <main ref={scroller} className={css.phone} onTouchStart={() => { if (!paused) onPause(true); }} onWheel={() => { if (!paused) onPause(true); }}>
     <header className={css.phoneHead}>
@@ -120,6 +120,12 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
                   {note.body && <p className={css.phoneText}>{note.body}</p>}
                 </li>)}</ul>
             : current.kind === "teks" ? <div className={css.phoneNote}>{current.body && <p className={css.phoneText}>{current.body}</p>}</div>
+            : current.kind === "sambutan" ? <div className={css.phoneNote}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {current.welcome.image && <img className={css.phonePicture} src={current.welcome.image} alt="" referrerPolicy="no-referrer" />}
+              {current.welcome.note && <p className={css.phoneText}>{current.welcome.note}</p>}
+              {(current.welcome.hours || current.welcome.place) && <p className={css.phoneDetail}>{[current.welcome.hours, current.welcome.place].filter(Boolean).join(" · ")}</p>}
+            </div>
             // eslint-disable-next-line @next/next/no-img-element
             : <img className={css.phonePicture} src={current.slide.src} alt={current.slide.title || "Gambar pengumuman"} referrerPolicy="no-referrer" />}
     </div>}

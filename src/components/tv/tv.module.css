@@ -282,3 +282,20 @@
 .board[data-orientation="tegak"] .date { display: -webkit-box; font-size: calc(4 * var(--u)); line-height: 1.15; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .board[data-orientation="tegak"] .summary { display: -webkit-box; line-height: 1.25; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
 .board[data-orientation="tegak"] .clock { font-size: calc(6.5 * var(--u)); }
+
+/*
+ * Sambutan tamu: the guest's name in the middle of the screen. With the visit's cover photo the
+ * slide is that photo, darkened (the same in the light mode: words on a photo are always light).
+ */
+.welcome { display: grid; place-items: center; overflow: hidden; }
+.welcomePhoto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.welcome[data-photo="true"]::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgb(5 10 24 / .55), rgb(5 10 24 / .78)); }
+.welcomeText { position: relative; z-index: 1; display: grid; justify-items: center; gap: calc(2.4 * var(--u)); box-sizing: border-box; max-width: 100%; padding: calc(8 * var(--u)) calc(9 * var(--u)); text-align: center; }
+.welcome[data-photo="true"] .welcomeText { color: #fff; }
+.welcomeGreeting { margin: 0; color: var(--tv-accent); font-size: calc(3.4 * var(--u)); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; overflow-wrap: anywhere; }
+.welcome[data-photo="true"] .welcomeGreeting { color: #ffd98a; }
+.welcomeText h1 { display: -webkit-box; margin: 0; overflow: hidden; font-family: var(--tv-display); font-weight: 600; line-height: 1.1; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow-wrap: anywhere; }
+.welcomeNote { margin: 0; font-size: calc(3.4 * var(--u)); line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere; }
+.welcomeFacts { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(1.6 * var(--u)) calc(4 * var(--u)); margin: calc(1.5 * var(--u)) 0 0; padding: 0; list-style: none; font-size: calc(3.2 * var(--u)); font-weight: 600; }
+.welcomeFacts li { display: flex; align-items: center; gap: calc(1.2 * var(--u)); min-width: 0; overflow-wrap: anywhere; }
+.welcomeFacts svg { flex: none; width: calc(3.2 * var(--u)); height: calc(3.2 * var(--u)); }
