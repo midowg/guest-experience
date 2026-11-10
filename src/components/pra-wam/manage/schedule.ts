@@ -2,6 +2,7 @@ import type { ConsoleTone, TimelineBlock, TimelineRow } from "@/components/conso
 import { clockLabel, dayLabel, wibDate, wibTime, type Booking, type Room } from "@/lib/pra-wam/appraisal";
 import type { ScheduleRequest } from "@/lib/pra-wam/requests";
 import { sessionKindLabels, sessionWhere, withoutSessionBookings, type RoomUse, type Session, type SessionKind } from "@/lib/pra-wam/sessions";
+import { bookerLabel } from "@/lib/pra-wam/schedule-export";
 
 /*
  * Kelola acara's timelines and status lines (Ringkasan, Sesi, Permintaan, Peserta), worked out
@@ -53,7 +54,7 @@ export function sessionBlock(session: Session, date: string, href: string, sub?:
   if (!span) return null;
   return {
     key: `sesi-${session.id}`, title: session.title, ...span, href,
-    sub: sub ?? `${session.booking ? `Booking ${session.booking.bookedBy.name}` : session.status === "draf" ? "Draf" : sessionKindLabels[session.kind]} · ${timeRange(session.startsAt, session.endsAt)}`,
+    sub: sub ?? `${session.booking ? bookerLabel(session.booking.bookedBy) : session.status === "draf" ? "Draf" : sessionKindLabels[session.kind]} · ${timeRange(session.startsAt, session.endsAt)}`,
     tone: session.status === "draf" ? "neutral" : kindTones[session.kind],
   };
 }
@@ -84,7 +85,7 @@ export function roomRows({ date, rooms, bookings, sessions, sessionHref, booking
     if (!span) continue;
     add(byRoom, booking.roomId, {
       key: `booking-${booking.id}`, title: booking.title, ...span, href: bookingHref(booking),
-      sub: `${booking.bookedBy.name} · ${timeRange(booking.startsAt, booking.endsAt)}`, tone: bookingTone(booking.title),
+      sub: `${bookerLabel(booking.bookedBy)} · ${timeRange(booking.startsAt, booking.endsAt)}`, tone: bookingTone(booking.title),
     });
   }
   const sorted = (blocks: TimelineBlock[]) => [...blocks].sort((a, b) => a.start - b.start);

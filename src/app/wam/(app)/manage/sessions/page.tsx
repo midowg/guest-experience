@@ -4,9 +4,11 @@ import { ConsoleButtonLink, DayTimeline, PageHeader, PageTabs, Pill, SectionTool
 import cs from "@/components/console/console.module.css";
 import { ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { SessionStatusPill } from "@/components/pra-wam/SessionStatusPill";
+import { ScheduleExport } from "@/components/pra-wam/manage/ScheduleExport";
 import { dayRows, hourWindow, nowHours, readiness, roomRows, timelineLegend, withQuery } from "@/components/pra-wam/manage/schedule";
 import { Notice } from "@/components/ui";
 import { dayLabel, wibDate } from "@/lib/pra-wam/appraisal";
+import { exportDates, rangeLabel } from "@/lib/pra-wam/schedule-export";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { bookingSessionLabel, sessionKindLabels, sessionWhen, sessionWhere, type Session, type SessionStatus } from "@/lib/pra-wam/sessions";
 import { praWamPath } from "@/lib/routes";
@@ -119,6 +121,7 @@ async function Timeline({ member, sessions, asked, now }: { member: Member; sess
         <ConsoleButtonLink href={link({ tanggal: shift(date, -step) })} icon={<ChevronLeft size={18} aria-hidden />}>{unit} sebelumnya</ConsoleButtonLink>
         <ConsoleButtonLink href={link({ tanggal: today })}>{range === "minggu" ? "Minggu ini" : "Hari ini"}</ConsoleButtonLink>
         <ConsoleButtonLink href={link({ tanggal: shift(date, step) })}>{unit} berikutnya<ChevronRight size={18} aria-hidden /></ConsoleButtonLink>
+        <ScheduleExport range={range} date={date} label={rangeLabel(exportDates(range, date))} />
       </div>
       <ul className={styles.legend} aria-label="Arti warna">
         {timelineLegend(range === "hari").map(item => <li key={item.label}><Pill tone={item.tone}>{item.label}</Pill></li>)}

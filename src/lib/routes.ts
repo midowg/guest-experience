@@ -227,6 +227,8 @@ export const praWamApi = {
   resetPassword: `${WAM_API}/reset-password`,
   sessions: (id?: string) => `${WAM_API}/sessions${id ? `/${id}` : ""}`,
   sessionStatus: (id: string) => `${WAM_API}/sessions/${id}/status`,
+  /** GET (panitia): Linimasa's week or day as PDF, Excel, or the WhatsApp text. */
+  sessionsExport: (format: "pdf" | "xlsx" | "text", rentang: string, tanggal: string) => `${WAM_API}/sessions/export?${new URLSearchParams({ format, rentang, tanggal })}`,
   /** GET: everything Detail sesi shows, for the sheet over Agenda and Beranda. */
   sessionDetail: (id: string) => `${WAM_API}/sessions/${id}/detail`,
   /** GET: the session's QR as an A5 PDF to print; POST: a new QR (the printed one stops working). */

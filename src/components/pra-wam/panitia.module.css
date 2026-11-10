@@ -195,7 +195,12 @@
 .fieldInput::placeholder { color: var(--cs-subtle); }
 .fieldInput:focus-visible { border-color: var(--cs-primary); outline: 2px solid var(--cs-primary); outline-offset: 0; }
 .hint { margin: 0; color: var(--cs-muted); font-size: 13px; }
-.composeActions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.composeActions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+.composeHead h2 + .hint { margin-top: 4px; }
+/* Linimasa's Export (10 Nov 2026) */
+.exportFiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.fieldInput.exportText { min-height: 220px; border-radius: 14px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; resize: vertical; white-space: pre-wrap; }
+.composeActions [role="status"] { margin-right: auto; }
 
 /* Peserta (K3) and Kebutuhan peserta (K5) */
 .namesCell { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }

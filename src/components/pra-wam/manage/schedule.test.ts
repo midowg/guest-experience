@@ -57,14 +57,14 @@ describe("timeline blocks", () => {
   });
 
   it("draws a booking that is a published session once, as the session with its booker", () => {
-    const fromBooking = session({ id: "s9", title: "Appraisal tim", kind: "rapat", roomId: "r2", roomName: "Antareja", startsAt: "2026-11-05T06:00:00.000Z", endsAt: "2026-11-05T07:00:00.000Z", booking: { id: "b1", bookedBy: { id: "p3", name: "Citra", department: "" } } });
+    const fromBooking = session({ id: "s9", title: "Appraisal tim", kind: "rapat", roomId: "r2", roomName: "Antareja", startsAt: "2026-11-05T06:00:00.000Z", endsAt: "2026-11-05T07:00:00.000Z", booking: { id: "b1", bookedBy: { id: "p3", name: "Citra", department: "Sales & Marketing" } } });
     const rows = roomRows({
       date: "2026-11-05", rooms: [room({}), room({ id: "r2", name: "Antareja", capacity: 4 })],
       bookings: [booking({}), booking({ id: "b2", roomId: "r1", startsAt: "2026-11-05T08:00:00.000Z", endsAt: "2026-11-05T09:00:00.000Z" })],
       sessions: [fromBooking], sessionHref: item => `/sesi/${item.id}`, bookingHref: item => `/book/${item.id}`,
     });
     expect(rows[1].blocks.map(block => block.key)).toEqual(["sesi-s9"]);
-    expect(rows[1].blocks[0]).toMatchObject({ href: "/sesi/s9", sub: "Booking Citra · 13.00–14.00" });
+    expect(rows[1].blocks[0]).toMatchObject({ href: "/sesi/s9", sub: "SM - Citra · 13.00–14.00" });
     // Another booking without a session is still drawn.
     expect(rows[0].blocks.map(block => block.key)).toEqual(["booking-b2"]);
     // A cancelled session gives the room back to its booking row (nothing drawn twice, nothing lost).
