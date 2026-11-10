@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowDown, ArrowUp, CalendarDays, CalendarRange, DoorOpen, ExternalLink, Eye, EyeOff, ImageUp, ListOrdered, Megaphone, Pencil, Plus, Square, Trash2, Type, UserRound, X, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, CalendarRange, DoorOpen, ExternalLink, Eye, EyeOff, ImageUp, ListOrdered, Megaphone, Plus, SlidersHorizontal, Square, Trash2, Type, UserRound, X, Zap } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { ConsoleButton, ConsoleButtonLink, PageHeader, Pill, SectionToolbar, SegmentedControl, type Crumb } from "@/components/console";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
@@ -21,9 +21,11 @@ const icons: Record<TvItemKind, typeof Type> = { kalender_hari: CalendarDays, ka
 const isTyped = (kind: TvItemKind) => kind === "teks" || kind === "tamu";
 /** Where a row's content comes from, for the line under its name. */
 const sourceOf = (kind: TvItemKind) => kind === "sambutan" ? "Dari Kunjungan Kantor" : isTemplateKind(kind) ? "Dari WAM" : kind === "tamu" ? "Sambutan tamu" : tvItemKindLabels[kind];
-type Draft = { title: string; body: string; showFrom: string; showUntil: string; timeFrom: string; timeUntil: string; screenIds: string[] };
+type Draft = { title: string; body: string; seconds: number; showFrom: string; showUntil: string; timeFrom: string; timeUntil: string; screenIds: string[] };
+/** What "Tayangkan sekarang" is asked with (`minutes` null: until stopped). */
+type Take = { minutes: number | null; screenIds: string[] };
 const draftOf = (item: TvAdminItem): Draft => ({
-  title: item.title, body: item.body, showFrom: item.showFrom ?? "", showUntil: item.showUntil ?? "",
+  title: item.title, body: item.body, seconds: item.seconds, showFrom: item.showFrom ?? "", showUntil: item.showUntil ?? "",
   timeFrom: item.timeFrom ?? "", timeUntil: item.timeUntil ?? "", screenIds: item.screenIds,
 });
 /** The four ways to add a row, one shown at a time. */
@@ -31,22 +33,22 @@ const adds = [{ value: "template", label: "Template" }, { value: "tamu", label: 
 type AddKind = (typeof adds)[number]["value"];
 
 /**
- * Admin TV → Tayangan: the playlist. Every row is one thing a TV plays, in this order, over and
- * over: a template (the room calendars, Timeline, panitia's announcements, today's guests), a text,
- * a typed welcome, or a picture. The rows are one list: what a row is on the left, and on the right
- * its order, its duration and four tools with their names under them (Sekarang, Sembunyi or Tayang,
- * Ubah, Hapus). On a narrow screen the tools move under the row, in one even line. Ubah and
- * Sekarang open their form inside the row. Tambah tayangan is one card with a choice of four.
+ * Admin TV → Tayangan: the playlist. Every thing a TV plays is a card, in playing order, in as
+ * many columns as the page has room for (one on a phone). A card is for reading: its number and
+ * where it comes from, its name in full, what it says, then its duration, its schedule and its TVs
+ * as labelled facts. It carries only what is used in passing: the two arrows that move it, and
+ * Atur. Atur opens the card across the page with everything else inside: its words, its duration,
+ * its schedule and TVs, and the actions (Simpan, Tayangkan sekarang, Sembunyikan, Hapus).
+ * Tambah tayangan is one card with a choice of four.
  */
 export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumbs: readonly Crumb[]; title: string }) {
   const [list, setList] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
-  const [editing, setEditing] = useState<{ id: string; draft: Draft } | null>(null);
+  /** The card that is open (Atur), with what is typed in it; `take` is set while its "Tayangkan sekarang" is being asked. */
+  const [editing, setEditing] = useState<{ id: string; draft: Draft; take: Take | null } | null>(null);
   const [text, setText] = useState({ title: "", body: "" });
   const [guest, setGuest] = useState({ title: "", body: "" });
-  /** The row whose "Tayangkan sekarang" is open, with what is picked in it (`minutes` null: until stopped). */
-  const [taking, setTaking] = useState<{ id: string; minutes: number | null; screenIds: string[] } | null>(null);
   const [adding, setAdding] = useState<AddKind>("template");
   const [progress, setProgress] = useState("");
   const [confirm, confirmDialog] = useConfirm();
@@ -84,6 +86,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
     return patch(item, {
       ...(isTyped(item.kind) || item.kind === "gambar" ? { title: draft.title } : {}),
       ...(isTyped(item.kind) ? { body: draft.body } : {}),
+      seconds: draft.seconds,
       showFrom: draft.showFrom || null, showUntil: draft.showUntil || null, timeFrom: draft.timeFrom || null, timeUntil: draft.timeUntil || null,
       screenIds: draft.screenIds,
     }, () => setEditing(null));
@@ -105,8 +108,8 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
 
   const screenName = (id: string) => list.screens.find(screen => screen.id === id)?.name ?? null;
   const nameOf = (item: TvAdminItem) => isTyped(item.kind) || item.kind === "gambar" ? item.title || tvItemKindLabels[item.kind] : tvItemKindLabels[item.kind];
-  const takeOver = (pick: NonNullable<typeof taking>) =>
-    run("ambil-alih", praWamTvApi.takeover, { method: "POST", body: JSON.stringify({ itemId: pick.id, minutes: pick.minutes, screenIds: pick.screenIds }) }, () => setTaking(null));
+  const takeOver = (item: TvAdminItem, take: Take) =>
+    run("ambil-alih", praWamTvApi.takeover, { method: "POST", body: JSON.stringify({ itemId: item.id, ...take }) }, () => setEditing(null));
   const taken = list.takeover ? items.find(item => item.id === list.takeover?.itemId) : undefined;
   const takenWhere = list.takeover?.screenIds.length ? list.takeover.screenIds.map(id => screenName(id) ?? "TV yang sudah dihapus").join(", ") : "semua TV";
   const missing = tvTemplateKinds.filter(kind => !items.some(item => item.kind === kind));
@@ -128,116 +131,118 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
     <section className={akun.section} aria-labelledby="tv-daftar">
       <SectionToolbar title={<span id="tv-daftar">Daftar tayangan</span>} count={`${active} tayang dari ${items.length}`} />
       {items.length === 0 ? <p className={akun.empty}>Daftar tayangan kosong, jadi TV menulis &quot;Belum ada yang ditayangkan&quot;. Tambahkan tayangan di bawah.</p>
-        : <ol className={css.plList} aria-label="Tayangan, urut tayang">{items.map((item, index) => {
+        : <ol className={css.plGrid} aria-label="Tayangan, urut tayang">{items.map((item, index) => {
           const Icon = icons[item.kind];
           const name = nameOf(item);
-          const take = taking?.id === item.id ? taking : null;
           const isTaking = list.takeover?.itemId === item.id;
-          const when = scheduleLabel(item, screenName) || "Selalu, di semua TV";
+          const days = scheduleLabel({ ...item, screenIds: [] }, screenName) || "Setiap hari, sepanjang hari";
+          const screens = item.screenIds.length ? item.screenIds.map(id => screenName(id) ?? "TV yang sudah dihapus").join(", ") : "Semua TV";
           const note = item.kind === "sambutan" ? (list.welcomes.length ? `Hari ini: ${list.welcomes.join(", ")}` : "Tidak ada kunjungan terbit hari ini, jadi dilewati.")
-            : isTyped(item.kind) ? item.body : "";
-          const edit = editing?.id === item.id ? editing.draft : null;
-          const change = (more: Partial<Draft>) => setEditing({ id: item.id, draft: { ...(edit ?? draftOf(item)), ...more } });
-          const seconds = SECONDS.includes(item.seconds) ? SECONDS : [...SECONDS, item.seconds].sort((a, b) => a - b);
+            : isTyped(item.kind) ? item.body : isTemplateKind(item.kind) ? tvItemKindHints[item.kind] : "";
+          const open = editing?.id === item.id ? editing : null;
+          const edit = open?.draft ?? null, take = open?.take ?? null;
+          const change = (more: Partial<Draft>) => { if (open) setEditing({ ...open, draft: { ...open.draft, ...more } }); };
+          const seconds = edit && !SECONDS.includes(edit.seconds) ? [...SECONDS, edit.seconds].sort((a, b) => a - b) : SECONDS;
           const saving = busy === `baris-${item.id}`;
-          return <li key={item.id} className={css.plRow} data-off={!item.active} data-open={!!edit || !!take}>
-            <div className={css.plMain}>
-              <span className={css.plOrder} aria-label={`Urutan ${index + 1}`}>{index + 1}</span>
+          return <li key={item.id} className={css.plCard} data-off={!item.active} data-open={!!open}>
+            <div className={css.plHead}>
               {item.kind === "gambar" && item.slideId
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img className={css.plThumb} src={praWamTvApi.slideImage(item.slideId)} alt="" loading="lazy" width={72} height={40} />
+                ? <img className={css.plThumb} src={praWamTvApi.slideImage(item.slideId)} alt="" loading="lazy" width={80} height={45} />
                 : <span className={css.plKind} aria-hidden="true"><Icon size={22} /></span>}
-              <div className={css.plText}>
-                <p className={css.plName}>
-                  <strong>{name}</strong>
-                  {!item.active && <Pill tone="neutral">Disembunyikan</Pill>}
-                  {isTaking && <Pill tone="warn">Mengambil alih</Pill>}
-                </p>
-                <p className={css.plMeta}>{sourceOf(item.kind)} · {when}</p>
-                {note && !edit && <p className={`${css.plMeta} ${css.plNote}`}>{note}</p>}
-              </div>
+              <p className={css.plOrder}><span aria-label={`Urutan ${index + 1}`}>{index + 1}</span>{sourceOf(item.kind)}</p>
+              {isTaking ? <Pill tone="warn">Mengambil alih</Pill> : <Pill tone={item.active ? "ok" : "neutral"}>{item.active ? "Tayang" : "Disembunyikan"}</Pill>}
             </div>
-
-            <div className={css.plTools}>
+            <div className={css.plText}>
+              <h3 className={css.plName}>{name}</h3>
+              {note && <p className={css.plNote}>{note}</p>}
+            </div>
+            <dl className={css.plFacts}>
+              <div><dt>Durasi</dt><dd>{item.seconds} detik</dd></div>
+              <div><dt>Tayang di</dt><dd>{screens}</dd></div>
+              <div className={css.plWide}><dt>Jadwal</dt><dd>{days}</dd></div>
+            </dl>
+            <div className={css.plFoot}>
               <div className={css.plMove}>
-                <button type="button" className={css.plStep} disabled={!!busy || index === 0} aria-label={`Naikkan ${name}`} title="Naikkan" onClick={() => void move(index, -1)}><ArrowUp size={18} aria-hidden /></button>
-                <button type="button" className={css.plStep} disabled={!!busy || index === items.length - 1} aria-label={`Turunkan ${name}`} title="Turunkan" onClick={() => void move(index, 1)}><ArrowDown size={18} aria-hidden /></button>
-                <select className={css.plSeconds} value={item.seconds} disabled={!!busy} aria-label={`Durasi ${name}`} title="Durasi tayang" onChange={event => void patch(item, { seconds: Number(event.target.value) })}>
-                  {seconds.map(value => <option key={value} value={value}>{value} detik</option>)}
-                </select>
+                <button type="button" className={css.plStep} disabled={!!busy || index === 0} aria-label={`Naikkan ${name}`} title="Naikkan urutan" onClick={() => void move(index, -1)}><ArrowUp size={20} aria-hidden /></button>
+                <button type="button" className={css.plStep} disabled={!!busy || index === items.length - 1} aria-label={`Turunkan ${name}`} title="Turunkan urutan" onClick={() => void move(index, 1)}><ArrowDown size={20} aria-hidden /></button>
               </div>
-              <div className={css.plActs}>
-                {list.welcomeReady && <button type="button" className={css.plAct} disabled={!!busy} aria-expanded={!!take} aria-label={`Tayangkan sekarang: ${name}`} title="Tayangkan sekarang"
-                  onClick={() => { setEditing(null); setTaking(take ? null : { id: item.id, minutes: 15, screenIds: [] }); }}>{take ? <X size={18} aria-hidden /> : <Zap size={18} aria-hidden />}<span>{take ? "Tutup" : "Sekarang"}</span></button>}
-                <button type="button" className={css.plAct} disabled={!!busy} aria-label={`${item.active ? "Sembunyikan" : "Tayangkan"} ${name}`} title={item.active ? "Sembunyikan dari TV" : "Tayangkan lagi"}
-                  onClick={() => void patch(item, { active: !item.active })}>{item.active ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}<span>{item.active ? "Sembunyi" : "Tayang"}</span></button>
-                <button type="button" className={css.plAct} disabled={!!busy} aria-expanded={!!edit} aria-label={`Ubah ${name}`} title="Ubah isi dan jadwal"
-                  onClick={() => { setTaking(null); setEditing(edit ? null : { id: item.id, draft: draftOf(item) }); }}>{edit ? <X size={18} aria-hidden /> : <Pencil size={18} aria-hidden />}<span>{edit ? "Tutup" : "Ubah"}</span></button>
-                <button type="button" className={`${css.plAct} ${css.plDanger}`} disabled={!!busy} aria-label={`Hapus ${name}`} title="Hapus" onClick={() => void remove(item)}><Trash2 size={18} aria-hidden /><span>Hapus</span></button>
-              </div>
+              <ConsoleButton icon={open ? <X size={18} aria-hidden /> : <SlidersHorizontal size={18} aria-hidden />} disabled={!!busy} aria-expanded={!!open} aria-label={`${open ? "Tutup" : "Atur"} ${name}`}
+                onClick={() => setEditing(open ? null : { id: item.id, draft: draftOf(item), take: null })}>{open ? "Tutup" : "Atur"}</ConsoleButton>
             </div>
 
-            {take && <form className={css.plForm} onSubmit={event => { event.preventDefault(); void takeOver(take); }}>
-              <h3>Tayangkan sekarang</h3>
-              <p className={css.plHint}>{name} tayang sendirian di TV yang dipilih, menggantikan daftar tayangan, lalu TV kembali ke daftar dengan sendirinya.{item.kind === "sambutan" && !list.welcomes.length ? " Hari ini tidak ada kunjungan terbit, jadi TV akan menulis belum ada yang ditayangkan." : ""}</p>
-              <div className={css.plFields}>
-                <div className={css.plField}>
-                  <label htmlFor={`lama-${item.id}`}>Lama</label>
-                  <select id={`lama-${item.id}`} value={take.minutes ?? ""} disabled={!!busy} onChange={event => setTaking({ ...take, minutes: event.target.value ? Number(event.target.value) : null })}>
-                    {tvTakeoverMinutes.map(value => <option key={value} value={value}>{value} menit</option>)}
-                    <option value="">Sampai dihentikan</option>
-                  </select>
-                </div>
-              </div>
-              {list.screens.length > 0 && <fieldset className={css.plScreens} disabled={!!busy}>
-                <legend>Di TV</legend>
-                {list.screens.map(screen => <label key={screen.id} className={css.plCheck}>
-                  <input type="checkbox" checked={take.screenIds.includes(screen.id)}
-                    onChange={event => setTaking({ ...take, screenIds: event.target.checked ? [...take.screenIds, screen.id] : take.screenIds.filter(id => id !== screen.id) })} />
-                  {screen.name}
-                </label>)}
-              </fieldset>}
-              <p className={css.plHint}>{take.screenIds.length === 0 ? "Semua TV, termasuk alamat umum /tv." : "Hanya TV yang dicentang. TV lain dan alamat umum /tv tetap memutar daftar tayangan."}{list.takeover ? " Ini menggantikan tayangan yang sedang mengambil alih." : ""}</p>
-              <div className={css.plSubmit}>
-                <ConsoleButton type="submit" variant="primary" icon={<Zap size={18} aria-hidden />} disabled={!!busy}>{busy === "ambil-alih" ? "Memulai…" : "Mulai tayangkan"}</ConsoleButton>
-                <ConsoleButton disabled={!!busy} onClick={() => setTaking(null)}>Batal</ConsoleButton>
-              </div>
-            </form>}
+            {open && edit && <form className={css.plDetail} onSubmit={event => { event.preventDefault(); void save(item, edit); }}>
+              <div className={css.plCols}>
+                <fieldset className={css.plGroup} disabled={!!busy}>
+                  <legend>Isi dan durasi</legend>
+                  {(isTyped(item.kind) || item.kind === "gambar") && <div className={css.plField}>
+                    <label htmlFor={`judul-${item.id}`}>{item.kind === "teks" ? "Judul" : item.kind === "tamu" ? "Nama tamu" : "Nama gambar"}</label>
+                    <input id={`judul-${item.id}`} value={edit.title} maxLength={80} onChange={event => change({ title: event.target.value })} />
+                  </div>}
+                  {isTyped(item.kind) && <div className={css.plField}>
+                    <label htmlFor={`isi-${item.id}`}>{item.kind === "tamu" ? "Ucapan" : "Isi"}</label>
+                    <textarea id={`isi-${item.id}`} rows={3} value={edit.body} maxLength={600} onChange={event => change({ body: event.target.value })} />
+                  </div>}
+                  {isTemplateKind(item.kind) && <p className={css.plHint}>{tvItemKindHints[item.kind]}</p>}
+                  <div className={css.plField}>
+                    <label htmlFor={`durasi-${item.id}`}>Durasi tayang</label>
+                    <select id={`durasi-${item.id}`} value={edit.seconds} onChange={event => change({ seconds: Number(event.target.value) })}>
+                      {seconds.map(value => <option key={value} value={value}>{value} detik</option>)}
+                    </select>
+                  </div>
+                </fieldset>
 
-            {edit && <form className={css.plForm} onSubmit={event => { event.preventDefault(); void save(item, edit); }}>
-              <h3>Ubah {name}</h3>
-              {(isTyped(item.kind) || item.kind === "gambar") && <div className={css.plField}>
-                <label htmlFor={`judul-${item.id}`}>{item.kind === "teks" ? "Judul" : item.kind === "tamu" ? "Nama tamu" : "Nama gambar"}</label>
-                <input id={`judul-${item.id}`} value={edit.title} maxLength={80} disabled={!!busy} onChange={event => change({ title: event.target.value })} />
-              </div>}
-              {isTyped(item.kind) && <div className={css.plField}>
-                <label htmlFor={`isi-${item.id}`}>{item.kind === "tamu" ? "Ucapan" : "Isi"}</label>
-                <textarea id={`isi-${item.id}`} rows={3} value={edit.body} maxLength={600} disabled={!!busy} onChange={event => change({ body: event.target.value })} />
-              </div>}
-              <fieldset className={css.plGroup} disabled={!!busy}>
-                <legend>Jadwal tayang</legend>
+                <fieldset className={css.plGroup} disabled={!!busy}>
+                  <legend>Jadwal dan TV</legend>
+                  <div className={css.plFields}>
+                    <div className={css.plField}><label htmlFor={`dari-${item.id}`}>Mulai tanggal</label><input id={`dari-${item.id}`} type="date" value={edit.showFrom} onChange={event => change({ showFrom: event.target.value })} /></div>
+                    <div className={css.plField}><label htmlFor={`sampai-${item.id}`}>Sampai tanggal</label><input id={`sampai-${item.id}`} type="date" value={edit.showUntil} min={edit.showFrom || undefined} onChange={event => change({ showUntil: event.target.value })} /></div>
+                    <div className={css.plField}><label htmlFor={`jam-dari-${item.id}`}>Dari jam (WIB)</label><input id={`jam-dari-${item.id}`} type="time" value={edit.timeFrom} onChange={event => change({ timeFrom: event.target.value })} /></div>
+                    <div className={css.plField}><label htmlFor={`jam-sampai-${item.id}`}>Sampai jam (WIB)</label><input id={`jam-sampai-${item.id}`} type="time" value={edit.timeUntil} onChange={event => change({ timeUntil: event.target.value })} /></div>
+                  </div>
+                  <p className={css.plHint}>Kosongkan untuk tayang tanpa batas. Di luar jadwalnya, tayangan dilewati dan muncul lagi dengan sendirinya.</p>
+                  {list.screens.length > 0 && <div className={css.plScreens} role="group" aria-label="Tayang di TV">
+                    {list.screens.map(screen => <label key={screen.id} className={css.plCheck}>
+                      <input type="checkbox" checked={edit.screenIds.includes(screen.id)}
+                        onChange={event => change({ screenIds: event.target.checked ? [...edit.screenIds, screen.id] : edit.screenIds.filter(id => id !== screen.id) })} />
+                      {screen.name}
+                    </label>)}
+                  </div>}
+                  <p className={css.plHint}>{list.screens.length === 0 ? "Belum ada TV beralamat sendiri, jadi tayangan ini untuk semua TV."
+                    : edit.screenIds.length === 0 ? "Tidak ada TV yang dicentang: tayang di semua TV, termasuk alamat umum /tv." : "Hanya di TV yang dicentang. Alamat umum /tv tidak menayangkannya."}</p>
+                </fieldset>
+              </div>
+
+              <div className={css.plActions}>
+                <ConsoleButton type="submit" variant="primary" disabled={!!busy}>{saving ? "Menyimpan…" : "Simpan"}</ConsoleButton>
+                {list.welcomeReady && <ConsoleButton icon={<Zap size={18} aria-hidden />} disabled={!!busy} aria-expanded={!!take} onClick={() => setEditing({ ...open, take: take ? null : { minutes: 15, screenIds: [] } })}>Tayangkan sekarang</ConsoleButton>}
+                <ConsoleButton icon={item.active ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />} disabled={!!busy} onClick={() => void patch(item, { active: !item.active })}>{item.active ? "Sembunyikan" : "Tayangkan lagi"}</ConsoleButton>
+                <ConsoleButton className={css.plDanger} icon={<Trash2 size={18} aria-hidden />} disabled={!!busy} onClick={() => void remove(item)}>Hapus</ConsoleButton>
+              </div>
+
+              {take && <div className={css.plTake} role="group" aria-label="Tayangkan sekarang">
+                <p className={css.plHint}><strong>{name}</strong> tayang sendirian di TV yang dipilih, menggantikan daftar tayangan, lalu TV kembali ke daftar dengan sendirinya.{item.kind === "sambutan" && !list.welcomes.length ? " Hari ini tidak ada kunjungan terbit, jadi TV akan menulis belum ada yang ditayangkan." : ""}{list.takeover ? " Ini menggantikan tayangan yang sedang mengambil alih." : ""}</p>
                 <div className={css.plFields}>
-                  <div className={css.plField}><label htmlFor={`dari-${item.id}`}>Mulai tanggal</label><input id={`dari-${item.id}`} type="date" value={edit.showFrom} onChange={event => change({ showFrom: event.target.value })} /></div>
-                  <div className={css.plField}><label htmlFor={`sampai-${item.id}`}>Sampai tanggal</label><input id={`sampai-${item.id}`} type="date" value={edit.showUntil} min={edit.showFrom || undefined} onChange={event => change({ showUntil: event.target.value })} /></div>
-                  <div className={css.plField}><label htmlFor={`jam-dari-${item.id}`}>Dari jam (WIB)</label><input id={`jam-dari-${item.id}`} type="time" value={edit.timeFrom} onChange={event => change({ timeFrom: event.target.value })} /></div>
-                  <div className={css.plField}><label htmlFor={`jam-sampai-${item.id}`}>Sampai jam (WIB)</label><input id={`jam-sampai-${item.id}`} type="time" value={edit.timeUntil} onChange={event => change({ timeUntil: event.target.value })} /></div>
+                  <div className={css.plField}>
+                    <label htmlFor={`lama-${item.id}`}>Lama</label>
+                    <select id={`lama-${item.id}`} value={take.minutes ?? ""} disabled={!!busy} onChange={event => setEditing({ ...open, take: { ...take, minutes: event.target.value ? Number(event.target.value) : null } })}>
+                      {tvTakeoverMinutes.map(value => <option key={value} value={value}>{value} menit</option>)}
+                      <option value="">Sampai dihentikan</option>
+                    </select>
+                  </div>
                 </div>
-                <p className={css.plHint}>Kosongkan untuk tayang tanpa batas. Di luar jadwalnya, tayangan dilewati dan muncul lagi dengan sendirinya.</p>
-              </fieldset>
-              <fieldset className={css.plScreens} disabled={!!busy}>
-                <legend>Tayang di TV</legend>
-                {list.screens.length === 0 ? <p className={css.plHint}>Belum ada TV beralamat sendiri, jadi tayangan ini untuk semua TV.</p>
-                  : list.screens.map(screen => <label key={screen.id} className={css.plCheck}>
-                    <input type="checkbox" checked={edit.screenIds.includes(screen.id)}
-                      onChange={event => change({ screenIds: event.target.checked ? [...edit.screenIds, screen.id] : edit.screenIds.filter(id => id !== screen.id) })} />
+                {list.screens.length > 0 && <div className={css.plScreens} role="group" aria-label="Ambil alih di TV">
+                  {list.screens.map(screen => <label key={screen.id} className={css.plCheck}>
+                    <input type="checkbox" checked={take.screenIds.includes(screen.id)} disabled={!!busy}
+                      onChange={event => setEditing({ ...open, take: { ...take, screenIds: event.target.checked ? [...take.screenIds, screen.id] : take.screenIds.filter(id => id !== screen.id) } })} />
                     {screen.name}
                   </label>)}
-              </fieldset>
-              {list.screens.length > 0 && <p className={css.plHint}>{edit.screenIds.length === 0 ? "Tidak ada yang dicentang: tayang di semua TV, termasuk alamat umum /tv." : "Hanya di TV yang dicentang. Alamat umum /tv tidak menayangkannya."}</p>}
-              <div className={css.plSubmit}>
-                <ConsoleButton type="submit" variant="primary" disabled={!!busy}>{saving ? "Menyimpan…" : "Simpan"}</ConsoleButton>
-                <ConsoleButton disabled={!!busy} onClick={() => setEditing(null)}>Batal</ConsoleButton>
-              </div>
+                </div>}
+                <p className={css.plHint}>{take.screenIds.length === 0 ? "Semua TV, termasuk alamat umum /tv." : "Hanya TV yang dicentang. TV lain dan alamat umum /tv tetap memutar daftar tayangan."}</p>
+                <div className={css.plActions}>
+                  <ConsoleButton variant="primary" icon={<Zap size={18} aria-hidden />} disabled={!!busy} onClick={() => void takeOver(item, take)}>{busy === "ambil-alih" ? "Memulai…" : "Mulai tayangkan"}</ConsoleButton>
+                </div>
+              </div>}
             </form>}
           </li>;
         })}</ol>}

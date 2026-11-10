@@ -39,43 +39,55 @@ function keep(name: string, container: HTMLElement) {
 }
 
 describe("Admin TV → Tayangan", () => {
-  it("lists every row with its source and schedule, and marks the hidden one", () => {
+  it("shows every row as a card to read: its source, its name, and its duration, TVs and schedule as facts", () => {
     const { container } = show();
-    const rows = within(screen.getByRole("list", { name: "Tayangan, urut tayang" })).getAllByRole("listitem");
-    expect(rows).toHaveLength(5);
-    expect(rows[0].textContent).toContain("Kalender hari ini");
-    expect(rows[0].textContent).toContain("Dari WAM · Selalu, di semua TV");
-    expect(rows[1].textContent).toContain("Disembunyikan");
-    expect(rows[2].textContent).toContain("Hari ini: PT Contoh Dua Sejahtera");
-    expect(rows[4].textContent).toContain("1 Des – 10 Des · 08.00–17.00 · Lobi");
+    const cards = within(screen.getByRole("list", { name: "Tayangan, urut tayang" })).getAllByRole("listitem");
+    expect(cards).toHaveLength(5);
+    expect(within(cards[0]).getByRole("heading", { name: "Kalender hari ini" })).toBeTruthy();
+    expect(cards[0].textContent).toContain("Dari WAM");
+    expect(cards[0].textContent).toContain("Durasi15 detik");
+    expect(cards[0].textContent).toContain("Tayang diSemua TV");
+    expect(cards[0].textContent).toContain("JadwalSetiap hari, sepanjang hari");
+    expect(cards[1].textContent).toContain("Disembunyikan");
+    expect(cards[2].textContent).toContain("Hari ini: PT Contoh Dua Sejahtera");
+    expect(cards[4].textContent).toContain("Tayang diLobi");
+    expect(cards[4].textContent).toContain("Jadwal1 Des – 10 Des · 08.00–17.00");
     expect(screen.getByText("4 tayang dari 5")).toBeTruthy();
     keep("daftar", container);
   });
 
-  it("gives every row the same named tools, and no Sekarang before its migration", () => {
+  it("keeps on a card only the arrows and Atur; the rest is inside Atur", () => {
     show();
-    for (const name of ["Naikkan", "Turunkan", "Durasi", "Tayangkan sekarang:", "Ubah", "Hapus"]) expect(screen.getAllByRole(name === "Durasi" ? "combobox" : "button", { name: new RegExp(`^${name} `) })).toHaveLength(5);
-    expect(screen.getByRole("button", { name: "Tayangkan Kalender minggu ini" })).toBeTruthy();
+    for (const name of ["Naikkan", "Turunkan", "Atur"]) expect(screen.getAllByRole("button", { name: new RegExp(`^${name} `) })).toHaveLength(5);
     expect((screen.getByRole("button", { name: "Naikkan Kalender hari ini" }) as HTMLButtonElement).disabled).toBe(true);
-    cleanup();
-    show(admin({ welcomeReady: false }));
-    expect(screen.queryByRole("button", { name: /^Tayangkan sekarang:/ })).toBeNull();
-    expect(screen.getByText(/menunggu migrasi 202611100008/)).toBeTruthy();
+    for (const name of ["Simpan", "Hapus", "Sembunyikan", "Tayangkan sekarang"]) expect(screen.queryByRole("button", { name })).toBeNull();
   });
 
-  it("opens one form at a time inside the row: Ubah, or Tayangkan sekarang", () => {
+  it("opens one card at a time with its words, duration, schedule, TVs and actions", () => {
     const { container } = show();
-    fireEvent.click(screen.getByRole("button", { name: "Ubah Contoh Satu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Atur Contoh Satu" }));
     expect((screen.getByLabelText("Nama tamu") as HTMLInputElement).value).toBe("Contoh Satu");
-    expect(screen.getByLabelText("Ucapan")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /^Tayangkan sekarang: Contoh Satu/ }));
-    expect(screen.queryByLabelText("Ucapan")).toBeNull();
+    expect((screen.getByLabelText("Durasi tayang") as HTMLSelectElement).value).toBe("15");
+    for (const name of ["Simpan", "Hapus", "Sembunyikan", "Tayangkan sekarang"]) expect(screen.getByRole("button", { name })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tayangkan sekarang" }));
     expect((screen.getByLabelText("Lama") as HTMLSelectElement).value).toBe("15");
     expect(screen.getByRole("button", { name: "Mulai tayangkan" })).toBeTruthy();
     keep("sekarang", container);
-    fireEvent.click(screen.getByRole("button", { name: /^Ubah Rapat bulanan/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Sambutan" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Atur Rapat bulanan/ }));
+    expect(screen.queryByLabelText("Nama tamu")).toBeNull();
+    expect((screen.getByLabelText("Judul") as HTMLInputElement).value).toContain("Rapat bulanan");
+    expect((screen.getByLabelText("Lobi") as HTMLInputElement).checked).toBe(true);
     keep("ubah", container);
+    fireEvent.click(screen.getByRole("button", { name: /^Tutup Rapat bulanan/ }));
+    expect(screen.queryByLabelText("Judul")).toBeNull();
+  });
+
+  it("offers Tayangkan lagi for a hidden card, and no Tayangkan sekarang before its migration", () => {
+    show(admin({ welcomeReady: false }));
+    fireEvent.click(screen.getByRole("button", { name: "Atur Kalender minggu ini" }));
+    expect(screen.getByRole("button", { name: "Tayangkan lagi" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Tayangkan sekarang" })).toBeNull();
+    expect(screen.getByText(/menunggu migrasi 202611100008/)).toBeTruthy();
   });
 
   it("adds through one card with a choice of four, the templates not yet in the list first", () => {

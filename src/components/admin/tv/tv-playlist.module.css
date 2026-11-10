@@ -1,92 +1,89 @@
 /*
- * Admin TV → Tayangan. --cs-* variables only.
- * The playlist is one list in one frame, a line between rows. A row: what it is on the left (its
- * number, a thumbnail or an icon, its name and one line about it), and on the right its tools, all
- * of one size: two arrows and the duration, then four buttons with their names under the icons.
- * Where the list is narrower than 54rem (a phone, a small window) the tools go under the row: the
- * arrows and the duration on a line, the four buttons in four equal columns. Forms open under the
- * row on a quieter ground. Every control is at least 44 px tall.
+ * Admin TV → Tayangan. --cs-* variables only; the console's own measures (docs/rancangan-admin-wam.md,
+ * brain/aturan/desain-ui.md): radius 12 for controls and 16 for cards, spacing in fours, body 15,
+ * labels 13/600, captions 12, every control at least 44 px.
+ *
+ * The playlist is a grid of cards, as many columns as fit (one on a phone). A card reads from the
+ * top: its icon with its number and source, its state as a pill; its name and what it says, on as
+ * many lines as they need; its facts under small labels; and a foot with the two arrows and Atur.
+ * Atur opens the card across the whole grid, with its form in two columns and its actions below.
  */
-.plList { container-type: inline-size; display: grid; margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); list-style: none; }
-.plRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 16px; min-width: 0; padding: 12px 16px; }
-.plRow + .plRow { border-top: 1px solid var(--cs-line); }
-.plRow[data-open="true"] { background: color-mix(in srgb, var(--cs-primary-soft) 45%, var(--cs-surface)); }
+.plGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.plCard { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.plCard[data-open="true"] { grid-column: 1 / -1; border-color: var(--cs-primary); }
 
-.plMain { display: grid; grid-template-columns: 28px 72px minmax(0, 1fr); align-items: center; gap: 12px; min-width: 0; }
-.plOrder { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: var(--cs-fill); color: var(--cs-text); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.plThumb, .plKind { display: grid; width: 72px; height: 44px; place-items: center; border-radius: 8px; box-sizing: border-box; }
+.plHead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.plThumb, .plKind { display: grid; width: 56px; height: 44px; place-items: center; border-radius: 12px; box-sizing: border-box; }
 .plThumb { background: #0b1220; object-fit: contain; }
 .plKind { background: var(--cs-primary-soft); color: var(--cs-primary); }
-.plRow[data-off="true"] .plThumb, .plRow[data-off="true"] .plKind { opacity: .45; }
-.plRow[data-off="true"] .plName strong { color: var(--cs-muted); }
-.plText { display: grid; gap: 2px; min-width: 0; }
-.plName { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0; }
-.plName strong { min-width: 0; color: var(--cs-text); font-size: 15px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
-.plMeta { margin: 0; color: var(--cs-muted); font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
-.plNote { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+.plCard[data-off="true"] .plThumb, .plCard[data-off="true"] .plKind { opacity: .45; }
+.plOrder { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; min-width: 0; margin: 0; color: var(--cs-muted); font-size: 13px; font-weight: 600; line-height: 1.35; }
+.plOrder span { display: grid; flex: none; min-width: 24px; height: 24px; place-items: center; padding: 0 4px; border-radius: 999px; box-sizing: border-box; background: var(--cs-fill); color: var(--cs-text); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-.plTools { display: flex; align-items: center; gap: 12px; }
-.plMove { display: flex; align-items: center; gap: 4px; }
+.plText { display: grid; gap: 4px; min-width: 0; }
+.plName { margin: 0; color: var(--cs-text); font-family: inherit; font-size: 17px; font-weight: 700; line-height: 1.3; letter-spacing: 0; overflow-wrap: anywhere; }
+.plCard[data-off="true"] .plName { color: var(--cs-muted); }
+.plNote { margin: 0; color: var(--cs-muted); font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.plCard:not([data-open="true"]) .plNote { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+
+.plFacts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin: 0; }
+.plFacts div { display: grid; align-content: start; gap: 2px; min-width: 0; }
+.plWide { grid-column: 1 / -1; }
+/* Open: the facts are the form's own fields below, so they are not said twice. */
+.plCard[data-open="true"] .plFacts { display: none; }
+.plFacts dt { color: var(--cs-subtle); font-size: 12px; font-weight: 600; }
+.plFacts dd { margin: 0; color: var(--cs-text); font-size: 14px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+
+.plFoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--cs-line); }
+.plFoot > button { min-height: 44px; }
+.plMove { display: flex; gap: 8px; }
 .plStep { display: grid; width: 44px; height: 44px; place-items: center; padding: 0; border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-surface); color: var(--cs-text); cursor: pointer; }
-.plStep:hover:not(:disabled), .plAct:hover:not(:disabled) { background: var(--cs-hover); }
-.plStep:disabled, .plAct:disabled, .plSeconds:disabled { opacity: .45; cursor: not-allowed; }
-.plSeconds { height: 44px; margin-left: 4px; padding: 0 10px; border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-surface); color: var(--cs-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-.plActs { display: flex; gap: 2px; padding-left: 12px; border-left: 1px solid var(--cs-line); }
-.plAct { display: grid; width: 68px; min-height: 48px; place-items: center; align-content: center; gap: 2px; padding: 4px 2px; border: 0; border-radius: 12px; background: none; color: var(--cs-text); font: inherit; font-size: 12px; font-weight: 600; line-height: 1.2; cursor: pointer; }
-.plAct svg { color: var(--cs-muted); }
-.plAct[aria-expanded="true"] { background: var(--cs-primary-soft); color: var(--cs-primary); }
-.plAct[aria-expanded="true"] svg { color: var(--cs-primary); }
-.plDanger, .plDanger svg { color: var(--cs-bad-fg); }
+.plStep:hover:not(:disabled) { background: var(--cs-hover); }
+.plStep:disabled { opacity: .4; cursor: not-allowed; }
 
-/* The forms that open in a row (Ubah, Tayangkan sekarang) and the panes of Tambah tayangan share their fields. */
-.plForm { grid-column: 1 / -1; display: grid; gap: 14px; max-width: 46rem; margin-top: 12px; padding-top: 14px; border-top: 1px solid var(--cs-line); }
-.plForm h3 { margin: 0; color: var(--cs-text); font-size: 15px; font-weight: 800; }
-.plFields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr)); gap: 12px; }
-.plField { display: grid; gap: 6px; min-width: 0; }
-.plField label, .plGroup legend, .plScreens legend { padding: 0; color: var(--cs-text); font-size: 13px; font-weight: 700; }
-.plField input, .plField textarea, .plField select { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--cs-line); border-radius: 12px; box-sizing: border-box; background: var(--cs-surface); color: var(--cs-text); font: inherit; font-size: 15px; }
+/* Atur: the open card's form. Two groups side by side where there is the width, then the actions. */
+.plDetail { display: grid; gap: 16px; padding-top: 16px; border-top: 1px solid var(--cs-line); }
+.plCols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 16px 32px; align-items: start; }
+.plGroup { display: grid; align-content: start; gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.plGroup legend { margin-bottom: 12px; padding: 0; color: var(--cs-text); font-size: 15px; font-weight: 700; }
+.plFields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.plTake .plFields { grid-template-columns: minmax(0, 16rem); }
+.plField { display: grid; gap: 4px; min-width: 0; }
+.plField label { color: var(--cs-text); font-size: 13px; font-weight: 600; }
+.plField input, .plField textarea, .plField select { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--cs-line); border-radius: 12px; box-sizing: border-box; background: var(--cs-surface); color: var(--cs-text); font: inherit; font-size: 15px; }
 .plField textarea { min-height: 0; resize: vertical; line-height: 1.45; }
 .plField input::placeholder { color: var(--cs-subtle); }
-.plField input:focus-visible, .plField textarea:focus-visible, .plField select:focus-visible, .plSeconds:focus-visible { border-color: var(--cs-primary); outline: 2px solid var(--cs-primary); outline-offset: 0; }
-.plGroup { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
-.plGroup legend, .plScreens legend { margin-bottom: 8px; }
-.plScreens { display: flex; flex-wrap: wrap; gap: 0 24px; min-width: 0; margin: 0; padding: 0; border: 0; }
-.plCheck { display: flex; align-items: center; gap: 10px; min-height: 44px; color: var(--cs-text); font-size: 14px; font-weight: 600; cursor: pointer; }
+.plField input:focus-visible, .plField textarea:focus-visible, .plField select:focus-visible { border-color: var(--cs-primary); outline: 2px solid var(--cs-primary); outline-offset: 0; }
+.plScreens { display: flex; flex-wrap: wrap; gap: 0 24px; min-width: 0; }
+.plCheck { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--cs-text); font-size: 15px; font-weight: 600; cursor: pointer; }
 .plCheck input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--cs-primary); }
 .plHint { margin: 0; color: var(--cs-muted); font-size: 13px; line-height: 1.45; }
-.plSubmit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.plHint strong { color: var(--cs-text); }
+.plActions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.plActions > button { min-height: 44px; }
+.plActions .plDanger { margin-left: auto; color: var(--cs-bad-fg); }
+.plTake { display: grid; gap: 12px; max-width: 40rem; padding: 16px; border-radius: 12px; background: var(--cs-primary-soft); }
 
 /* Tambah tayangan: one card, a choice of four, one pane at a time. */
 .plAdd { display: grid; gap: 16px; min-width: 0; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
 .plPick { min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.plPane { display: grid; gap: 14px; max-width: 46rem; min-width: 0; }
+.plPane { display: grid; gap: 12px; max-width: 40rem; min-width: 0; }
+.plSubmit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.plSubmit > button { min-height: 44px; }
 .plDone { margin: 0; padding: 16px; border: 1px dashed var(--cs-line); border-radius: 12px; color: var(--cs-muted); font-size: 14px; text-align: center; }
 .plTemplates { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.plTemplate { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--cs-line); border-radius: 12px; }
-.plTemplate strong { color: var(--cs-text); font-size: 14px; font-weight: 700; }
-.plTemplate p { margin: 2px 0 0; color: var(--cs-muted); font-size: 13px; line-height: 1.4; }
+.plTemplate { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 12px; padding: 12px; border: 1px solid var(--cs-line); border-radius: 12px; }
+.plTemplate strong { color: var(--cs-text); font-size: 15px; font-weight: 700; }
+.plTemplate p { margin: 4px 0 0; color: var(--cs-muted); font-size: 13px; line-height: 1.45; }
+.plTemplate > button { grid-column: 2; justify-self: start; min-height: 44px; }
 .plFile { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 /* Tayangkan sekarang is running: said at the top of the page, with the way to stop it. */
-.plTaking { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px; border: 1px solid var(--cs-primary); border-radius: 16px; background: var(--cs-primary-soft); }
+.plTaking { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 12px 16px; border: 1px solid var(--cs-primary); border-radius: 16px; background: var(--cs-primary-soft); }
 .plTaking svg { flex: none; color: var(--cs-primary); }
-.plTaking p { flex: 1 1 16rem; min-width: 0; margin: 0; color: var(--cs-text); font-size: 14px; overflow-wrap: anywhere; }
+.plTaking p { flex: 1 1 16rem; min-width: 0; margin: 0; color: var(--cs-text); font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
 
-/* A narrow list: the tools go under the row, the four buttons in equal columns. */
-@container (max-width: 54rem) {
-  .plRow { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 12px; }
-  .plTools { flex-wrap: wrap; gap: 8px; }
-  .plMove { flex: 1 1 100%; }
-  .plSeconds { flex: 1; min-width: 0; }
-  .plActs { flex: 1 1 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 0; border: 0; }
-  .plAct { width: auto; background: var(--cs-surface-2); }
-  .plForm { margin-top: 2px; }
-}
-@container (max-width: 26rem) {
-  .plMain { grid-template-columns: 28px 56px minmax(0, 1fr); gap: 10px; }
-  .plThumb, .plKind { width: 56px; height: 40px; }
-}
 @media (max-width: 30rem) {
-  .plTemplate { grid-template-columns: minmax(0, 1fr); }
-  .plTemplate .plKind { display: none; }
+  .plActions > button { flex: 1 1 100%; }
+  .plActions .plDanger { margin-left: 0; }
 }
