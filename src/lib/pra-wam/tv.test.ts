@@ -389,6 +389,9 @@ describe("a TV's short address", () => {
   it("is never mistaken for an old key address, nor takes the address the pictures of /tv use", () => {
     expect(looksLikeTvSlug("image")).toBe(false);
     expect(tvScreenSchema.safeParse({ name: "Gambar", slug: "image" }).success).toBe(false);
+    // /tv/lite is the board for old TV browsers.
+    expect(looksLikeTvSlug("lite")).toBe(false);
+    expect(tvScreenSchema.safeParse({ name: "Lite", slug: "lite" }).success).toBe(false);
     expect(looksLikeTvSlug(`tv_${"a".repeat(43)}`)).toBe(false);
   });
 

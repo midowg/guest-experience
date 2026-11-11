@@ -482,6 +482,13 @@ export const bookingApi = {
 export const tvPath = (key: string) => `/tv/${enc(key)}`;
 /** The one address for every TV: the same board, without naming a TV (so Admin WAM cannot tell which TV is on). */
 export const TV_HOME_PATH = "/tv";
+/**
+ * The board for an old TV browser that cannot run the board's script (a Samsung of 2017, an LG on
+ * webOS): the room calendars as plain HTML that reloads itself each minute. /tv/lite for the one
+ * address, /tv/{address}/lite for one TV; `?v=hari` or `?v=minggu` picks the calendar.
+ */
+export const tvLitePath = (key?: string | null, view?: "hari" | "minggu") =>
+  `${key ? `/tv/${enc(key)}` : TV_HOME_PATH}/lite${view ? `?v=${view}` : ""}`;
 export const tvHomeApi = {
   /** GET: what TVs play now. */
   feed: "/api/tv",

@@ -115,8 +115,11 @@ const title = z.string().trim().max(80, "Nama gambar paling panjang 80 karakter.
  */
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 export const tvSlugLimits = { min: 2, max: 40 } as const;
-/** Not for a TV: /api/tv/image/… is where the one address for every TV (/tv) gets its pictures. */
-const RESERVED_SLUGS: readonly string[] = ["image"];
+/**
+ * Not for a TV: /api/tv/image/… is where the one address for every TV (/tv) gets its pictures, and
+ * /tv/lite is the board for old TV browsers (tvLitePath).
+ */
+const RESERVED_SLUGS: readonly string[] = ["image", "lite"];
 export const looksLikeTvSlug = (value: unknown): value is string =>
   typeof value === "string" && value.length >= tvSlugLimits.min && value.length <= tvSlugLimits.max && SLUG_PATTERN.test(value) && !RESERVED_SLUGS.includes(value);
 /** A name as an address: "Lobi Utama" → "lobi-utama", "Pantry (Lt. 2)" → "pantry-lt-2". May be too short to use ("" for "!!"). */
