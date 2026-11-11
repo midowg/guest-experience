@@ -498,6 +498,8 @@ export const tvApi = {
 const TV_ADMIN_API = "/api/admin/wam/tv";
 /** The Werkudara welcome sign's background (from "Welcome Sign Template.pptx"), a file of the site, in public/wam: a file under public/tv is answered by the TV page (/tv/{slug}) instead. */
 export const TV_WELCOME_ART = "/wam/tv-welcome-werkudara.webp";
+/** GET: a video file of the playlist, for a TV; answers with a short-lived address in storage. */
+export const tvVideoApi = (itemId: string) => `/api/tv/video/${itemId}`;
 export const praWamTvApi = {
   /** GET: the TVs, the pictures and the settings. */
   list: TV_ADMIN_API,
@@ -525,6 +527,10 @@ export const praWamTvApi = {
   item: (id: string) => `${TV_ADMIN_API}/items/${id}`,
   /** PUT {ids}: the playlist in a new order. */
   itemOrder: `${TV_ADMIN_API}/items/order`,
+  /** POST {mime, size}: an upload address for one video file. */
+  videoStart: `${TV_ADMIN_API}/videos/start`,
+  /** POST: the video is uploaded; check it and add it to the playlist. */
+  videoConfirm: `${TV_ADMIN_API}/videos/confirm`,
   /** POST {itemId, minutes, screenIds}: one row takes the TVs over (Tayangkan sekarang); DELETE stops it. */
   takeover: `${TV_ADMIN_API}/now`,
   /** POST: ask one TV to load its page afresh. */

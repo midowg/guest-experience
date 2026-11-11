@@ -8,10 +8,10 @@ import { TvPlaylist } from "./TvPlaylist";
 afterEach(cleanup);
 
 const always = { showFrom: null, showUntil: null, timeFrom: null, timeUntil: null, screenIds: [] as string[] };
-const row = (id: string, kind: TvAdminItem["kind"], more: Partial<TvAdminItem> = {}): TvAdminItem => ({ id, kind, title: "", body: "", seconds: 15, active: true, slideId: null, design: "werkudara", ...always, ...more });
+const row = (id: string, kind: TvAdminItem["kind"], more: Partial<TvAdminItem> = {}): TvAdminItem => ({ id, kind, title: "", body: "", seconds: 15, active: true, slideId: null, design: "werkudara", videoFile: false, ...always, ...more });
 const admin = (more: Partial<TvAdmin> = {}): TvAdmin => ({
   migrated: true, slugReady: true, lookReady: true, storageReady: true, now: "2026-11-10T03:00:00Z", slides: [], settings: TV_DEFAULT_SETTINGS,
-  screens: [{ id: "lobi", name: "Lobi", slug: "lobi", keyHint: "", lastSeenAt: null, width: null, height: null, createdAt: "2026-11-10T00:00:00Z", lastItem: null }],
+  screens: [{ id: "lobi", name: "Lobi", slug: "lobi", keyHint: "", lastSeenAt: null, width: null, height: null, createdAt: "2026-11-10T00:00:00Z", lastItem: null, playsVideo: true }],
   items: [
     row("a", "kalender_hari"),
     row("b", "kalender_minggu", { active: false }),
@@ -20,7 +20,7 @@ const admin = (more: Partial<TvAdmin> = {}): TvAdmin => ({
     row("f", "video", { title: "Annual Meeting 2025", body: "FWN1B1B7Gu8" }),
     row("e", "teks", { title: "Rapat bulanan pindah ke lantai dua mulai pekan depan", body: "Mohon perhatikan papan ruang.", showFrom: "2026-12-01", showUntil: "2026-12-10", timeFrom: "08:00", timeUntil: "17:00", screenIds: ["lobi"] }),
   ],
-  welcomeReady: true, takeover: null, welcomes: ["PT Contoh Dua Sejahtera"], ...more,
+  welcomeReady: true, takeover: null, welcomes: ["PT Contoh Dua Sejahtera"], videoReady: true, ...more,
 });
 const show = (data = admin()) => render(<TvPlaylist initial={data} crumbs={["Admin TV", "Tayangan"]} title="Tayangan" />);
 
@@ -116,6 +116,7 @@ describe("Admin TV → Tayangan", () => {
     expect(screen.getByText("Alamat ini bukan alamat video YouTube.")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Alamat video YouTube"), { target: { value: "https://youtu.be/FWN1B1B7Gu8" } });
     expect(addVideo.disabled).toBe(false);
+    expect(screen.getByRole("button", { name: "Unggah berkas video" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Gambar" }));
     expect(screen.getByRole("button", { name: "Unggah gambar" })).toBeTruthy();
   });

@@ -126,8 +126,8 @@ const screenSlug = z.string().trim().toLowerCase()
   .regex(SLUG_PATTERN, "Alamat hanya huruf kecil, angka, dan tanda hubung, misalnya lobi atau pantry-2.")
   .refine(value => !RESERVED_SLUGS.includes(value), "Alamat ini dipakai sistem. Pilih alamat lain.");
 export const tvScreenSchema = z.object({ name: screenName, slug: screenSlug });
-export const tvScreenPatchSchema = z.object({ name: screenName.optional(), slug: screenSlug.optional() })
-  .refine(value => value.name !== undefined || value.slug !== undefined, { message: "Tidak ada yang diubah." });
+export const tvScreenPatchSchema = z.object({ name: screenName.optional(), slug: screenSlug.optional(), playsVideo: z.boolean().optional() })
+  .refine(value => value.name !== undefined || value.slug !== undefined || value.playsVideo !== undefined, { message: "Tidak ada yang diubah." });
 /** A web address a phone can open, for the QR code; "" means the TV's own address. */
 const isWebAddress = (value: string) => { try { return ["http:", "https:"].includes(new URL(value).protocol); } catch { return false; } };
 export const tvSettingsSchema = z.object({
@@ -331,7 +331,7 @@ export type TvItem =
   | { key: string; kind: "pengumuman"; seconds: number }
   | { key: string; kind: "teks"; title: string; body: string; seconds: number }
   | { key: string; kind: "sambutan"; welcome: TvWelcome; design: TvWelcomeDesign; seconds: number }
-  | { key: string; kind: "video"; title: string; video: string; seconds: number }
+  | { key: string; kind: "video"; title: string; video: string; file?: string; seconds: number }
   | { key: string; kind: "gambar"; slide: TvSlide; seconds: number };
 
 /* ---- The playlist (migration 202611100007) ------------------------------------------------------- */
@@ -422,6 +422,32 @@ export const youtubeWatch = (id: string) => `https://www.youtube.com/watch?v=${i
 /** A video that never says it ended (the network dropped, the player failed) is left after this long. */
 export const TV_VIDEO_MOST_MS = 30 * 60_000;
 
+/*
+ * A video may also be a file the admin uploads (MP4 or WebM): its row's body then keeps the file's
+ * place in storage instead of a YouTube id, and a TV plays it in its own player, muted, to its end.
+ * A TV can be told not to play videos at all (pw_tv_screens.plays_video, migration 202611100011):
+ * an old or slow TV then passes over every video row.
+ */
+export const TV_VIDEO_PREFIX = "pra-wam/tv/video-";
+export const isVideoFile = (body: string) => body.startsWith(TV_VIDEO_PREFIX);
+export const tvVideoTypes = { "video/mp4": "mp4", "video/webm": "webm" } as const;
+export type TvVideoMime = keyof typeof tvVideoTypes;
+export const tvVideoKey = (id: string, mime: TvVideoMime) => `${TV_VIDEO_PREFIX}${id}.${tvVideoTypes[mime]}`;
+/** The largest video file taken: 200 MB (a few minutes at TV quality). */
+export const TV_VIDEO_BYTES = 200 * 1024 * 1024;
+export const tvVideoStartSchema = z.object({
+  mime: z.enum(Object.keys(tvVideoTypes) as [TvVideoMime, ...TvVideoMime[]], { message: "Pilih berkas video MP4 atau WebM." }),
+  size: z.number().int().min(1).max(TV_VIDEO_BYTES, "Berkas video lebih dari 200 MB."),
+});
+export type TvVideoStart = z.infer<typeof tvVideoStartSchema>;
+export const tvVideoConfirmSchema = tvVideoStartSchema.extend({ key: z.string().min(1).max(200), token: z.string().min(1).max(200), title: title.default("") });
+/** What a file is by its first bytes: MP4 says "ftyp" at the fifth, WebM starts with its EBML mark; null for anything else. */
+export function sniffVideo(start: Uint8Array): TvVideoMime | null {
+  if (start.length >= 8 && String.fromCharCode(...start.slice(4, 8)) === "ftyp") return "video/mp4";
+  if (start.length >= 4 && start[0] === 0x1a && start[1] === 0x45 && start[2] === 0xdf && start[3] === 0xa3) return "video/webm";
+  return null;
+}
+
 /** A row as a TV gets it. `src` is a picture's address. */
 export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string; design?: string };
 /** One forum or event of Timeline, for the template: its dates, hours when set, and how far off it is. */
@@ -464,6 +490,7 @@ export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides"
     // One slide per visit on today; none today, and the row is passed over.
     if (item.kind === "sambutan") return (feed.welcomes ?? []).map(welcome => ({ key: `${key}-${welcome.id}`, kind: "sambutan" as const, welcome, design: welcomeDesign(item.design), seconds: item.seconds }));
     if (item.kind === "tamu") return item.title ? [{ key, kind: "sambutan", seconds: item.seconds, design: welcomeDesign(item.design), welcome: { id: item.id, name: item.title, greeting: TV_WELCOME_GREETING, note: item.body, hours: "", place: "", image: "" } }] : [];
+    if (item.kind === "video" && item.src) return [{ key, kind: "video", title: item.title, video: "", file: item.src, seconds: item.seconds }];
     if (item.kind === "video") return YOUTUBE_ID.test(item.body) ? [{ key, kind: "video", title: item.title, video: item.body, seconds: item.seconds }] : [];
     return item.src ? [{ key, kind: "gambar", seconds: item.seconds, slide: { id: item.id, title: item.title, seconds: item.seconds, src: item.src } }] : [];
   });

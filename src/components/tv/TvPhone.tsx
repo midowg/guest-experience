@@ -121,10 +121,13 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
                 </li>)}</ul>
             : current.kind === "teks" ? <div className={css.phoneNote}>{current.body && <p className={css.phoneText}>{current.body}</p>}</div>
             : current.kind === "video" ? <div className={css.phoneNote}>
-              {/* A phone does not play it by itself: a still, and the way to YouTube. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className={css.phonePicture} src={youtubeThumb(current.video)} alt="" referrerPolicy="no-referrer" />
-              <p className={css.phoneText}><a href={youtubeWatch(current.video)} target="_blank" rel="noopener noreferrer">Tonton di YouTube</a></p>
+              {/* A phone does not play it by itself: a file with its controls, or a YouTube still and the way there. */}
+              {current.file ? <video className={css.phonePicture} src={current.file} controls muted playsInline preload="metadata" />
+                : <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className={css.phonePicture} src={youtubeThumb(current.video)} alt="" referrerPolicy="no-referrer" />
+                  <p className={css.phoneText}><a href={youtubeWatch(current.video)} target="_blank" rel="noopener noreferrer">Tonton di YouTube</a></p>
+                </>}
             </div>
             : current.kind === "sambutan" ? <div className={css.phoneNote}>
               {/* eslint-disable-next-line @next/next/no-img-element */}

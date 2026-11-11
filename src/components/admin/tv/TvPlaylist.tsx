@@ -1,21 +1,23 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowDown, ArrowUp, CalendarDays, CalendarRange, DoorOpen, ExternalLink, Eye, EyeOff, ImageUp, ListOrdered, Megaphone, Play, Plus, SlidersHorizontal, Square, Trash2, Type, UserRound, X, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarDays, CalendarRange, DoorOpen, ExternalLink, Eye, EyeOff, ImageUp, FileVideo, ListOrdered, Megaphone, Play, Plus, SlidersHorizontal, Square, Trash2, Type, UserRound, X, Zap } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { ConsoleButton, ConsoleButtonLink, PageHeader, Pill, SectionToolbar, SegmentedControl, type Crumb } from "@/components/console";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/shared/api";
+import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { uploadSlide } from "@/components/admin/wam/PraWamTv";
 import akun from "@/components/admin/wam/akun/akun.module.css";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
-import { isTemplateKind, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, tvWelcomeDesignLabels, tvWelcomeDesigns, youtubeId, youtubeWatch, type TvItemKind, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { isTemplateKind, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, tvVideoTypes, TV_VIDEO_BYTES, tvWelcomeDesignLabels, tvWelcomeDesigns, youtubeId, youtubeWatch, type TvItemKind, type TvVideoMime, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
 import { praWamTvApi, tvAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminItem } from "@/lib/server/pra-wam/tv";
 import { TvPreview } from "./TvPreview";
 import css from "./tv-playlist.module.css";
 
 const ACCEPT = "image/jpeg,image/png,image/webp";
+const ACCEPT_VIDEO = Object.keys(tvVideoTypes).join(",");
 const SECONDS = [5, 8, 10, 15, 20, 30, 45, 60];
 const icons: Record<TvItemKind, typeof Type> = { kalender_hari: CalendarDays, kalender_minggu: CalendarRange, timeline: ListOrdered, pengumuman: Megaphone, sambutan: DoorOpen, tamu: UserRound, teks: Type, video: Play, gambar: ImageUp };
 /** The kinds whose words the admin types: a title (a guest's name for a typed welcome) and what it says. */
@@ -58,6 +60,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
   const [progress, setProgress] = useState("");
   const [confirm, confirmDialog] = useConfirm();
   const fileInput = useRef<HTMLInputElement>(null);
+  const videoInput = useRef<HTMLInputElement>(null);
   const items = list.items ?? [];
 
   async function run(tag: string, url: string, init: RequestInit, after?: () => void) {
@@ -112,6 +115,25 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
       : { tone: "success", text: `${done} gambar ditambahkan di urutan terakhir.` });
   }
 
+  /** One video file: the server agrees the upload, the browser sends it to storage, the server checks it and adds its row. */
+  async function uploadVideo(file: File) {
+    if (!(file.type in tvVideoTypes)) { setMessage({ tone: "error", text: "Pilih berkas video MP4 atau WebM." }); return; }
+    if (file.size > TV_VIDEO_BYTES) { setMessage({ tone: "error", text: "Berkas video lebih dari 200 MB. Perkecil dulu, atau unggah ke YouTube dan tempel alamatnya." }); return; }
+    setBusy("unggah-video"); setMessage(null); setProgress("Menyiapkan unggahan…");
+    try {
+      const agreed = { mime: file.type as TvVideoMime, size: file.size };
+      const start = await adminRequest<{ key: string; uploadUrl: string; token: string }>(praWamTvApi.videoStart, { method: "POST", body: JSON.stringify(agreed) });
+      const problem = putProblem(await putFile(start.data!.uploadUrl, file, agreed.mime, share => setProgress(`Mengunggah ${file.name}: ${Math.round(share * 100)}%`)));
+      if (problem) throw new AdminApiError(problem);
+      setProgress("Memeriksa berkas…");
+      const title = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 80);
+      const done = await adminRequest<TvAdmin>(praWamTvApi.videoConfirm, { method: "POST", body: JSON.stringify({ ...agreed, key: start.data!.key, token: start.data!.token, title }) });
+      if (done.data) setList(done.data);
+      setMessage({ tone: "success", text: done.message });
+    } catch (error) { setMessage({ tone: "error", text: errorMessage(error) }); }
+    finally { setBusy(null); setProgress(""); }
+  }
+
   const screenName = (id: string) => list.screens.find(screen => screen.id === id)?.name ?? null;
   const nameOf = (item: TvAdminItem) => isTyped(item.kind) || item.kind === "gambar" || item.kind === "video" ? item.title || tvItemKindLabels[item.kind] : tvItemKindLabels[item.kind];
   const takeOver = (item: TvAdminItem, take: Take) =>
@@ -144,7 +166,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
           const days = scheduleLabel({ ...item, screenIds: [] }, screenName) || "Setiap hari, sepanjang hari";
           const screens = item.screenIds.length ? item.screenIds.map(id => screenName(id) ?? "TV yang sudah dihapus").join(", ") : "Semua TV";
           const note = item.kind === "sambutan" ? (list.welcomes.length ? `Hari ini: ${list.welcomes.join(", ")}` : "Tidak ada kunjungan terbit hari ini, jadi dilewati.")
-            : isTyped(item.kind) ? item.body : item.kind === "video" ? youtubeWatch(item.body) : isTemplateKind(item.kind) ? tvItemKindHints[item.kind] : "";
+            : isTyped(item.kind) ? item.body : item.kind === "video" ? (item.videoFile ? "Berkas video yang diunggah" : youtubeWatch(item.body)) : isTemplateKind(item.kind) ? tvItemKindHints[item.kind] : "";
           const open = editing?.id === item.id ? editing : null;
           const edit = open?.draft ?? null, take = open?.take ?? null;
           const change = (more: Partial<Draft>) => { if (open) setEditing({ ...open, draft: { ...open.draft, ...more } }); };
@@ -156,7 +178,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
               {item.kind === "gambar" && item.slideId
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={praWamTvApi.slideImage(item.slideId)} alt="" loading="lazy" width={320} height={180} />
-                : <TvPreview kind={item.kind} title={edit?.title ?? item.title} body={edit?.body ?? item.body} design={edit?.design ?? item.design} />}
+                : <TvPreview kind={item.kind} title={edit?.title ?? item.title} body={item.videoFile ? "" : edit?.body ?? item.body} design={edit?.design ?? item.design} />}
             </div>
             <div className={css.plHead}>
               <span className={css.plKind} aria-hidden="true"><Icon size={18} /></span>
@@ -318,7 +340,8 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
         </form>}
 
         {adding === "video" && <form className={css.plPane} onSubmit={event => { event.preventDefault(); void add("video", clip, () => setClip({ title: "", body: "" })); }}>
-          <p className={css.plHint}>Video dari YouTube. TV memutarnya tanpa suara sampai selesai, lalu lanjut ke tayangan berikutnya. TV perlu tersambung ke internet.</p>
+          <p className={css.plHint}>TV memutar video tanpa suara sampai selesai, lalu lanjut ke tayangan berikutnya. TV yang tidak kuat memutar video bisa diatur melewatinya di Layar TV.</p>
+          <h3 className={css.plSub}><Play size={16} aria-hidden />Dari YouTube</h3>
           {youtubeId(clip.body) && <TvPreview className={css.plLive} kind="video" title={clip.title} body={youtubeId(clip.body) ?? ""} />}
           <div className={css.plField}>
             <label htmlFor="video-alamat">Alamat video YouTube</label>
@@ -333,6 +356,14 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
           <div className={css.plSubmit}>
             <ConsoleButton type="submit" variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!!busy || !youtubeId(clip.body)}>{busy === "tambah-video" ? "Menambahkan…" : "Tambah video"}</ConsoleButton>
           </div>
+          <h3 className={css.plSub}><FileVideo size={16} aria-hidden />Dari berkas video</h3>
+          <p className={css.plHint}>MP4 atau WebM, paling besar 200 MB. Berkas disimpan di penyimpanan Journey, jadi TV tidak perlu membuka YouTube. Nama dan jadwalnya diatur lewat Atur setelah diunggah.</p>
+          <input ref={videoInput} className={css.plFile} type="file" accept={ACCEPT_VIDEO} tabIndex={-1} aria-hidden="true"
+            onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void uploadVideo(file); }} />
+          <div className={css.plSubmit}>
+            <ConsoleButton icon={<FileVideo size={18} aria-hidden />} disabled={!!busy || !list.storageReady} onClick={() => videoInput.current?.click()}>{busy === "unggah-video" ? "Mengunggah…" : "Unggah berkas video"}</ConsoleButton>
+          </div>
+          {busy === "unggah-video" && progress && <p className={css.plHint} aria-live="polite">{progress}</p>}
         </form>}
 
         {adding === "gambar" && <div className={css.plPane}>
@@ -344,7 +375,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
               {busy === "unggah" ? "Mengunggah…" : "Unggah gambar"}
             </ConsoleButton>
           </div>
-          {progress && <p className={css.plHint} aria-live="polite">{progress}</p>}
+          {busy === "unggah" && progress && <p className={css.plHint} aria-live="polite">{progress}</p>}
         </div>}
       </div>
     </section>

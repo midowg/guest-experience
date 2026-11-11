@@ -73,6 +73,10 @@
 .plPick { min-width: 0; }
 .plPick > * { display: flex; flex-wrap: wrap; width: fit-content; max-width: 100%; }
 .plPane { display: grid; gap: 12px; max-width: 40rem; min-width: 0; }
+/* A heading inside a pane that offers two ways (a video from YouTube, or from a file). */
+.plSub { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; color: var(--cs-text); font-family: inherit; font-size: 15px; font-weight: 700; }
+.plSub svg { flex: none; color: var(--cs-primary); }
+.plSub:not(:first-of-type) { margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--cs-line); }
 .plSubmit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .plSubmit > button { min-height: 44px; }
 .plDone { margin: 0; padding: 16px; border: 1px dashed var(--cs-line); border-radius: 12px; color: var(--cs-muted); font-size: 14px; text-align: center; }

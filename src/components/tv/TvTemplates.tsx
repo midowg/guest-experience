@@ -104,16 +104,18 @@ export function WelcomeSlide({ welcome, design }: { welcome: TvWelcome; design: 
 }
 
 /**
- * A YouTube video, in YouTube's own player across the whole screen, without sound. The player says
- * when the video has ended (or failed), and the board moves on; one that never says so is left
- * after TV_VIDEO_MOST_MS. With `loop` (the only thing in the playlist) it repeats instead.
+ * A video across the whole screen, without sound (a browser only starts a video by itself when it
+ * is muted): a YouTube video in YouTube's own player, or an uploaded file (`file`, its address) in
+ * the browser's. Either says when it has ended or failed, and the board moves on; a YouTube video
+ * that never says so is left after TV_VIDEO_MOST_MS. With `loop` (the only thing in the playlist)
+ * it repeats instead.
  */
-export function VideoSlide({ video, title, loop, onEnd }: { video: string; title: string; loop: boolean; onEnd: () => void }) {
+export function VideoSlide({ video, file, title, loop, onEnd }: { video: string; file?: string; title: string; loop: boolean; onEnd: () => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const end = useRef(onEnd);
   useEffect(() => { end.current = onEnd; }, [onEnd]);
   useEffect(() => {
-    if (loop) return;
+    if (loop || file) return;
     let heard = false;
     const onMessage = (event: MessageEvent) => {
       if (event.source !== frame.current?.contentWindow) return;
@@ -134,8 +136,11 @@ export function VideoSlide({ video, title, loop, onEnd }: { video: string; title
     }, 500);
     const most = window.setTimeout(() => end.current(), TV_VIDEO_MOST_MS);
     return () => { window.removeEventListener("message", onMessage); window.clearInterval(ask); window.clearTimeout(most); };
-  }, [video, loop]);
+  }, [video, file, loop]);
   return <section className={`${css.slide} ${css.video}`} aria-label={title || "Video"}>
-    <iframe ref={frame} src={youtubeEmbed(video, loop)} title={title || "Video YouTube"} allow="autoplay; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" />
+    {file
+      // A file that cannot be played (gone, or a kind this TV does not know) is passed over, not left black.
+      ? <video src={file} autoPlay muted playsInline loop={loop} preload="auto" disablePictureInPicture onEnded={() => end.current()} onError={() => { if (!loop) end.current(); }} />
+      : <iframe ref={frame} src={youtubeEmbed(video, loop)} title={title || "Video YouTube"} allow="autoplay; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" />}
   </section>;
 }

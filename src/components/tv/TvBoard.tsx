@@ -209,7 +209,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
           : current.kind === "timeline" ? <TimelineSlide key={current.key} entries={feed.timeline ?? []} clock={clock} height={room.height} />
           : current.kind === "pengumuman" ? <NotesSlide key={current.key} notes={feed.notes ?? []} clock={clock} />
           : current.kind === "teks" ? <TextSlide key={current.key} title={current.title} body={current.body} />
-          : current.kind === "video" ? <VideoSlide key={current.key} video={current.video} title={current.title} loop={count < 2} onEnd={() => setIndex(value => (value + 1) % Math.max(1, count))} />
+          : current.kind === "video" ? <VideoSlide key={current.key} video={current.video} file={current.file} title={current.title} loop={count < 2} onEnd={() => setIndex(value => (value + 1) % Math.max(1, count))} />
           : current.kind === "sambutan" ? <WelcomeSlide key={current.key} welcome={current.welcome} design={current.design} />
           : <section key={current.key} className={`${css.slide} ${css.picture}`} aria-label={current.slide.title || "Gambar pengumuman"}>
             {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -223,6 +223,8 @@ export function PraWamTv({ initial, crumbs, title, origin, view, standalone = fa
                 </> : <>
                   {screen.slug && <ConsoleButton icon={<Copy size={18} aria-hidden />} onClick={() => void copyLink(screen.id, addressOf(screen.slug!))}>{copied === screen.id ? "Tersalin" : "Salin alamat"}</ConsoleButton>}
                   {list.slugReady && <ConsoleButton disabled={!!busy} onClick={() => setEditing({ id: screen.id, slug: screen.slug ?? suggestSlug(screen.name) })}>{screen.slug ? "Ubah alamat" : "Beri alamat pendek"}</ConsoleButton>}
+                  {list.videoReady && <ConsoleButton disabled={!!busy} aria-pressed={screen.playsVideo} title={screen.playsVideo ? "TV ini memutar tayangan video" : "TV ini melewati tayangan video"}
+                    onClick={() => void run(`video-${screen.id}`, praWamTvApi.screen(screen.id), { method: "PATCH", body: JSON.stringify({ playsVideo: !screen.playsVideo }) })}>{screen.playsVideo ? "Video: diputar" : "Video: dilewati"}</ConsoleButton>}
                   <ConsoleButton disabled={!!busy} onClick={() => void removeScreen(screen)}>{busy === `hapus-tv-${screen.id}` ? "Menghapus…" : "Hapus TV"}</ConsoleButton>
                 </>}
               </div>

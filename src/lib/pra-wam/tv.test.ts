@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, isPhoneScreen, isTemplateKind, itemLabel, itemShows, playlistOf, scheduleLabel, searchEntries, tvItemCreateSchema, tvItemPatchSchema, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
-  shouldReload, youtubeEmbed, youtubeId, takeoverOn, takeoverRuns, tvTakeoverSchema, TV_DEFAULT_SETTINGS, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
+  shouldReload, sniffVideo, tvVideoStartSchema, youtubeEmbed, youtubeId, takeoverOn, takeoverRuns, tvTakeoverSchema, TV_DEFAULT_SETTINGS, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
 const at = (time: string, date = "2026-11-10") => `${date}T${time}:00+07:00`;
@@ -174,6 +174,28 @@ describe("a YouTube video", () => {
     expect(playlistOf({ ...base, playlist: [{ ...video, body: "rusak" }] })).toEqual([]);
     expect(tvItemCreateSchema.safeParse({ kind: "video", title: "A", body: "https://youtu.be/FWN1B1B7Gu8" }).success).toBe(true);
     expect(tvItemCreateSchema.safeParse({ kind: "video", title: "A", body: "https://example.com" }).success).toBe(false);
+  });
+});
+
+describe("a video file", () => {
+  it("is played from its own address, whatever its row's body says", () => {
+    const base = { settings: TV_DEFAULT_SETTINGS, slides: [] };
+    const [item] = playlistOf({ ...base, playlist: [{ id: "v", kind: "video" as const, title: "Profil", body: "", seconds: 15, src: "/api/tv/video/v" }] });
+    expect(item).toEqual({ key: "item-v", kind: "video", title: "Profil", video: "", file: "/api/tv/video/v", seconds: 15 });
+  });
+
+  it("is told from other files by its first bytes, and has a size limit", () => {
+    expect(sniffVideo(new Uint8Array([0, 0, 0, 32, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]))).toBe("video/mp4");
+    expect(sniffVideo(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 1, 2, 3, 4]))).toBe("video/webm");
+    expect(sniffVideo(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0]))).toBeNull();
+    expect(tvVideoStartSchema.safeParse({ mime: "video/mp4", size: 50 * 1024 * 1024 }).success).toBe(true);
+    expect(tvVideoStartSchema.safeParse({ mime: "video/mp4", size: 201 * 1024 * 1024 }).success).toBe(false);
+    expect(tvVideoStartSchema.safeParse({ mime: "video/quicktime", size: 10 }).success).toBe(false);
+  });
+
+  it("lets a TV be told whether it plays videos", () => {
+    expect(tvScreenPatchSchema.safeParse({ playsVideo: false }).success).toBe(true);
+    expect(tvScreenPatchSchema.safeParse({}).success).toBe(false);
   });
 });
 
