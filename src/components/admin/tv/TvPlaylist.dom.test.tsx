@@ -112,7 +112,9 @@ describe("Admin TV → Tayangan", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ulang tahun" }));
     const addBirthday = screen.getByRole("button", { name: "Tambah ucapan" }) as HTMLButtonElement;
     expect(addBirthday.disabled).toBe(true);
-    expect((screen.getByLabelText("Ucapan") as HTMLTextAreaElement).value).toContain("Wishing you a year ahead");
+    // The photo is picked right here, before the greeting is added.
+    expect(screen.getByRole("button", { name: "Pilih foto" })).toBeTruthy();
+    expect((screen.getByLabelText("Ucapan") as HTMLTextAreaElement).value).toContain("May you always find happiness");
     expect((screen.getByLabelText("Tanggal ulang tahun") as HTMLInputElement).value).toBe("2026-11-10");
     fireEvent.change(screen.getByLabelText("Nama lengkap"), { target: { value: "Contoh Empat" } });
     fireEvent.change(screen.getByLabelText("Nama panggilan"), { target: { value: "Bu Contoh" } });

@@ -475,7 +475,8 @@ export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: st
  */
 /** `cut`: the photo is the person alone, without a background, so they stand in front of the frame as on the card. */
 export type TvBirthday = { name: string; call: string; day: string; month: string; wish: string; photo: string; cut: boolean };
-export const TV_BIRTHDAY_WISH = "Wishing you a year ahead filled with meaningful moments, new opportunities, and continued growth. May it be a year of happiness, fulfillment, and many wonderful things to come.";
+/** The wish on the team's card of November 2026; the admin may write another. */
+export const TV_BIRTHDAY_WISH = "May you always find happiness in the little things, strength in difficult moments, and countless reasons to be grateful. Wishing you a truly wonderful birthday";
 const BIRTHDAY_MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] as const;
 /** "2026-11-11" → the card's "11" and "NOV"; both empty for no date. */
 export function birthdayDate(date: string | null | undefined): { day: string; month: string } {

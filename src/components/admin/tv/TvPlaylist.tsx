@@ -59,6 +59,9 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
   const [clip, setClip] = useState({ title: "", body: "" });
   const [bday, setBday] = useState({ title: "", call: "", date: initial.now.slice(0, 10), body: TV_BIRTHDAY_WISH });
   const photoInput = useRef<HTMLInputElement>(null);
+  /** The photo picked for a greeting that is not added yet: already cut out, with an address to show it by. */
+  const [bdayPhoto, setBdayPhoto] = useState<{ file: File; cut: boolean; shown: string; note: string } | null>(null);
+  const newPhotoInput = useRef<HTMLInputElement>(null);
   /** The birthday greeting whose photo is being picked. */
   const photoFor = useRef<string | null>(null);
   const [adding, setAdding] = useState<AddKind>("template");
@@ -131,6 +134,36 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
       setMessage(made.cut ? { tone: "success", text: "Foto tersimpan. Orangnya sudah dipotong dari latarnya." } : { tone: "success", text: `Foto tersimpan utuh. ${made.problem ?? ""}`.trim() });
     }
     catch (error) { setMessage({ tone: "error", text: errorMessage(error) }); }
+    finally { setBusy(null); }
+  }
+
+  /** The photo for a greeting being added: cut out at once, here, so the preview shows the card as the TV will. */
+  async function pickBirthdayPhoto(file: File) {
+    setBusy("foto-baru"); setMessage(null);
+    try {
+      const made = await cutOutPerson(file);
+      if (bdayPhoto) URL.revokeObjectURL(bdayPhoto.shown);
+      setBdayPhoto({ file: made.file, cut: made.cut, shown: URL.createObjectURL(made.file), note: made.cut ? "Foto siap. Orangnya sudah dipotong dari latarnya." : `Foto siap, dipakai utuh. ${made.problem ?? ""}`.trim() });
+    } finally { setBusy(null); }
+  }
+  /** Tambah ucapan: the greeting first, then its photo, when one was picked. */
+  async function addBirthday() {
+    setBusy("tambah-ultah"); setMessage(null);
+    try {
+      const before = new Set(items.map(item => item.id));
+      const added = await adminRequest<TvAdmin>(praWamTvApi.items, { method: "POST", body: JSON.stringify({ kind: "ultah", ...bday, date: bday.date || null }) });
+      let data = added.data ?? list, text = added.message;
+      const made = data.items?.find(item => item.kind === "ultah" && !before.has(item.id));
+      if (bdayPhoto && made) {
+        try { data = await uploadSlide(bdayPhoto.file, made.id, bdayPhoto.cut); text = "Ucapan ulang tahun ditambahkan dengan fotonya."; }
+        catch (error) { text = `Ucapan ditambahkan, tetapi fotonya belum tersimpan: ${errorMessage(error)} Unggah lagi lewat Atur.`; }
+      }
+      setList(data);
+      setMessage({ tone: "success", text });
+      setBday(value => ({ ...value, title: "", call: "" }));
+      if (bdayPhoto) URL.revokeObjectURL(bdayPhoto.shown);
+      setBdayPhoto(null);
+    } catch (error) { setMessage({ tone: "error", text: errorMessage(error) }); }
     finally { setBusy(null); }
   }
 
@@ -355,9 +388,15 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
           </div>
         </form>}
 
-        {adding === "ultah" && <form className={css.plPane} onSubmit={event => { event.preventDefault(); void add("ultah", { ...bday, date: bday.date || null }, () => setBday(value => ({ ...value, title: "", call: "" }))); }}>
-          <p className={css.plHint}>Kartu ulang tahun Werkudara untuk satu orang. Tayang pada tanggal ulang tahunnya tahun ini; ubah harinya lewat Atur. Fotonya diunggah lewat Atur setelah ditambahkan.</p>
-          <TvPreview className={css.plLive} kind="ultah" title={bday.title} body={bday.body} call={bday.call} date={bday.date} />
+        {adding === "ultah" && <form className={css.plPane} onSubmit={event => { event.preventDefault(); void addBirthday(); }}>
+          <p className={css.plHint}>Kartu ulang tahun Werkudara untuk satu orang. Tayang pada tanggal ulang tahunnya tahun ini; ubah harinya lewat Atur.</p>
+          <TvPreview className={css.plLive} kind="ultah" title={bday.title} body={bday.body} call={bday.call} date={bday.date} photo={bdayPhoto?.shown ?? ""} />
+          <input ref={newPhotoInput} className={css.plFile} type="file" accept={ACCEPT} tabIndex={-1} aria-hidden="true"
+            onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void pickBirthdayPhoto(file); }} />
+          <div className={css.plSubmit}>
+            <ConsoleButton icon={<ImageUp size={18} aria-hidden />} disabled={!!busy || !list.storageReady} onClick={() => newPhotoInput.current?.click()}>{busy === "foto-baru" ? "Memotong foto…" : bdayPhoto ? "Ganti foto" : "Pilih foto"}</ConsoleButton>
+            <span className={css.plHint} aria-live="polite">{bdayPhoto?.note ?? "Foto setengah badan, tegak. Orangnya dipotong dari latarnya secara otomatis di browser ini."}</span>
+          </div>
           <div className={css.plField}>
             <label htmlFor="ultah-nama">Nama lengkap</label>
             <input id="ultah-nama" value={bday.title} maxLength={80} disabled={!!busy} onChange={event => setBday(value => ({ ...value, title: event.target.value }))} />
