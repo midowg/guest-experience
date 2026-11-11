@@ -35,6 +35,6 @@ export default async function NeedsPage() {
         </StatRow>
         <NeedsList blocks={needs.blocks} />
       </>}
-    <p className={styles.infoNote}><Lock size={18} aria-hidden /><span>Nama hanya tampil bila jawabannya diberi level baca untuk panitia; jawaban berlabel &ldquo;Hanya HR dan manajemen&rdquo; dihitung saja, tanpa nama dan isi. Kondisi kesehatan dan nomor HP hanya dibaca HR. HR menghubungi panitia bila ada yang perlu disiapkan.</span></p>
+    <p className={styles.infoNote}><Lock size={18} aria-hidden /><span>Nama hanya tampil bila jawabannya diberi level baca untuk panitia; jawaban berlabel &ldquo;HR, manajemen, dan admin WAM&rdquo; dihitung saja, tanpa nama dan isi. Kondisi kesehatan dan nomor HP hanya dibaca HR. HR menghubungi panitia bila ada yang perlu disiapkan.</span></p>
   </>;
 }

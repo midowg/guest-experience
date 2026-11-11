@@ -114,8 +114,11 @@ Keputusan pemilik ("dibuka saja semua, sekarang terlalu ribet"): Admin WAM → K
   Pembacaan dicatat di log dengan nama orang bila browser itu masih membuka dengan email, selain
   itu tanpa nama.
 - Alamat lama Progres, Data HR, dan Ekspor mengalihkan ke Rekap.
-- **Perlu diingat**: label di kartu pertanyaan peserta ("Hanya HR dan manajemen", "Rahasia, hanya
-  HR") masih menjanjikan pembaca yang lebih sempit daripada sekarang.
+- **Label pembaca ikut disesuaikan**: di kartu pertanyaan peserta "Panitia, HR, dan admin WAM",
+  "HR, manajemen, dan admin WAM", dan "Rahasia: HR dan admin WAM" (dulu "Panitia dan HR", "Hanya
+  HR dan manajemen", "Rahasia, hanya HR"). Pengantar bagian Kenalan dan Menginap ikut menyebut admin
+  WAM lewat migrasi `202611110005_wam_questionnaire_readers.sql` (hanya bila teksnya masih asli).
+  Jawaban yang sudah masuk sebelumnya diberikan di bawah label lama.
 
 ### Opsi dan isian dari Data karyawan (11 November 2026)
 

@@ -54,12 +54,15 @@ export type QContent = { form: QForm; sections: QSection[]; questions: QQuestion
 export type AnswerValue = string | string[] | boolean | Record<string, string>;
 export type Answers = Record<string, AnswerValue>;
 
-/** Who reads an answer, in the words people see next to the question. */
+/**
+ * Who reads an answer, in the words people see next to the question. Since 11 Nov 2026 every Admin
+ * WAM sees every named answer (Rekap), so the labels say so.
+ */
 export const visibilityLabels: Record<Visibility, string> = {
   rekan: "Rekan bisa lihat ini",
-  fasil: "Panitia dan HR",
-  hr: "Hanya HR dan manajemen",
-  hronly: "Rahasia, hanya HR",
+  fasil: "Panitia, HR, dan admin WAM",
+  hr: "HR, manajemen, dan admin WAM",
+  hronly: "Rahasia: HR dan admin WAM",
   pilih: "Kamu yang tentukan nanti",
   anon: "Anonim",
 };

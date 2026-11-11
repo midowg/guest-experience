@@ -17,7 +17,7 @@ export const visibilityShort: Record<Visibility, string> = {
   rekan: "Rekan",
   fasil: "Panitia",
   hr: "HR",
-  hronly: "Hanya HR",
+  hronly: "Rahasia",
   pilih: "Pilihan peserta",
   anon: "Anonim",
 };
@@ -25,9 +25,9 @@ export const visibilityShort: Record<Visibility, string> = {
 /** For the admin, what each read level means. */
 export const visibilityHelp: Record<Visibility, string> = {
   rekan: "Semua peserta, di profil orang itu.",
-  fasil: "Panitia dan admin (rekap dan per orang).",
-  hr: "Orang HR yang terdaftar di Akses Data HR. Panitia kamar hanya melihat hasil pairing.",
-  hronly: "Hanya orang HR yang terdaftar di Akses Data HR; tidak tampil ke panitia atau BOD.",
+  fasil: "Panitia di aplikasi (dengan nama), HR, dan semua admin WAM.",
+  hr: "HR, manajemen, dan semua admin WAM (Rekap). Panitia di aplikasi hanya melihat jumlahnya; panitia kamar hanya hasil pairing.",
+  hronly: "HR dan semua admin WAM (Rekap); tidak tampil ke panitia atau BOD di aplikasi.",
   pilih: "Sesuai pilihan peserta di bagian itu: dengan nama, tanpa nama, atau hanya fasilitator.",
   anon: "Tidak ada yang melihat per orang; hanya rangkuman. Hanya untuk bagian anonim.",
 };

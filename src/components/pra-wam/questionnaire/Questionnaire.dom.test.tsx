@@ -69,7 +69,7 @@ describe("the questionnaire", () => {
     expect(card()).toContain("Posisimu?");
     // Leaving the card sends the typed answer at once, without waiting for the pause.
     await waitFor(() => expect(answerSaves()[0]?.body).toEqual({ question: "1", value: "Dewi Lestari" }));
-    expect(screen.getByText("Hanya HR dan manajemen")).toBeTruthy();
+    expect(screen.getByText("HR, manajemen, dan admin WAM")).toBeTruthy();
   });
 
   it("shows Data karyawan's answers filled in, saves them when moving on, and keeps a change as mine", async () => {

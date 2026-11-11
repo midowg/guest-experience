@@ -40,7 +40,7 @@ export function needRows(blocks: readonly NeedBlock[]): NeedRow[] {
       key: `${block.key}-hr`, ...about(block), answer: "Hanya dibaca HR", written: false, count: block.hrOnly, kind: "hr", names: [],
       note: block.hrQuestion
         ? `${block.hrOnly} orang mengisi. Isinya hanya dibaca HR; minta ke HR bila panitia perlu menyiapkannya.`
-        : `${block.hrOnly} jawaban lain hanya dibaca HR, karena diisi saat pertanyaan ini masih berlabel "Hanya HR dan manajemen".`,
+        : `${block.hrOnly} jawaban lain hanya dibaca HR, karena diisi saat pertanyaan ini masih berlabel "HR, manajemen, dan admin WAM" (dulu "Hanya HR dan manajemen").`,
     });
     if (!rows.length) rows.push({ key: `${block.key}-kosong`, ...about(block), answer: "Belum ada jawaban.", written: false, count: 0, kind: "kosong", names: [] });
     return rows;
