@@ -8,7 +8,7 @@ import { TvPlaylist } from "./TvPlaylist";
 afterEach(cleanup);
 
 const always = { showFrom: null, showUntil: null, timeFrom: null, timeUntil: null, screenIds: [] as string[] };
-const row = (id: string, kind: TvAdminItem["kind"], more: Partial<TvAdminItem> = {}): TvAdminItem => ({ id, kind, title: "", body: "", seconds: 15, active: true, slideId: null, design: "werkudara", videoFile: false, ...always, ...more });
+const row = (id: string, kind: TvAdminItem["kind"], more: Partial<TvAdminItem> = {}): TvAdminItem => ({ id, kind, title: "", body: "", seconds: 15, active: true, slideId: null, design: "werkudara", videoFile: false, call: "", date: "", ...always, ...more });
 const admin = (more: Partial<TvAdmin> = {}): TvAdmin => ({
   migrated: true, slugReady: true, lookReady: true, storageReady: true, now: "2026-11-10T03:00:00Z", slides: [], settings: TV_DEFAULT_SETTINGS,
   screens: [{ id: "lobi", name: "Lobi", slug: "lobi", keyHint: "", lastSeenAt: null, width: null, height: null, createdAt: "2026-11-10T00:00:00Z", lastItem: null, playsVideo: true }],
@@ -109,6 +109,15 @@ describe("Admin TV → Tayangan", () => {
     fireEvent.change(screen.getByLabelText("Nama tamu"), { target: { value: "Contoh Tiga" } });
     expect(document.querySelector("form svg[viewBox='0 0 160 90']")?.textContent).toContain("Contoh Tiga");
     expect(addGuest.disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Ulang tahun" }));
+    const addBirthday = screen.getByRole("button", { name: "Tambah ucapan" }) as HTMLButtonElement;
+    expect(addBirthday.disabled).toBe(true);
+    expect((screen.getByLabelText("Ucapan") as HTMLTextAreaElement).value).toContain("Wishing you a year ahead");
+    expect((screen.getByLabelText("Tanggal ulang tahun") as HTMLInputElement).value).toBe("2026-11-10");
+    fireEvent.change(screen.getByLabelText("Nama lengkap"), { target: { value: "Contoh Empat" } });
+    fireEvent.change(screen.getByLabelText("Nama panggilan"), { target: { value: "Bu Contoh" } });
+    expect(addBirthday.disabled).toBe(false);
+    expect(document.querySelector("form svg[viewBox='0 0 160 90']")?.textContent).toContain("Happy Birthday, Bu Contoh");
     fireEvent.click(screen.getByRole("button", { name: "Video" }));
     const addVideo = screen.getByRole("button", { name: "Tambah video" }) as HTMLButtonElement;
     fireEvent.change(screen.getByLabelText("Alamat video YouTube"), { target: { value: "https://example.com/video" } });

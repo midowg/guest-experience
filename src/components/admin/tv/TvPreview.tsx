@@ -1,5 +1,5 @@
-import { youtubeThumb, type TvItemKind, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
-import { TV_WELCOME_ART } from "@/lib/routes";
+import { birthdayDate, youtubeThumb, type TvItemKind, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { TV_MARK, TV_WELCOME_ART } from "@/lib/routes";
 
 /*
  * What a kind of playlist row looks like on a TV, at a glance: a small drawing of the slide
@@ -22,7 +22,7 @@ function Head({ wide = 44 }: { wide?: number }) {
   </>;
 }
 
-function Shapes({ kind, title, body, design }: { kind: TvItemKind; title: string; body: string; design: TvWelcomeDesign }) {
+function Shapes({ kind, title, body, design, call, date, photo }: { kind: TvItemKind; title: string; body: string; design: TvWelcomeDesign; call: string; date: string; photo: string }) {
   if (kind === "kalender_hari") return <>
     <Head />
     {[0, 1, 2].map(row => <g key={row}>
@@ -88,6 +88,21 @@ function Shapes({ kind, title, body, design }: { kind: TvItemKind; title: string
     {body ? <text x="80" y="55" textAnchor="middle" fontSize="6.5" fill={ink.muted}>{short(body, 40)}</text>
       : <><rect x="40" y="50" width="80" height="3" rx="1.5" fill={ink.muted} /><rect x="52" y="57" width="56" height="3" rx="1.5" fill={ink.muted} /></>}
   </>;
+  // A birthday greeting: the card on its side, the photo in its white frame on the left.
+  if (kind === "ultah") {
+    const on = birthdayDate(date);
+    return <>
+      <rect width="160" height="90" fill="#f3efe4" />
+      <rect x="14" y="10" width="48" height="70" fill="#fff" stroke="#e2dccd" />
+      {photo ? <image href={photo} x="17" y="13" width="42" height="56" preserveAspectRatio="xMidYMin slice" /> : <rect x="17" y="13" width="42" height="56" fill="#e7e1d2" />}
+      <image href={TV_MARK} x="76" y="10" width="9" height="10" />
+      <text x="76" y="37" fontSize={title.length > 16 ? 8 : 10} fontWeight="700" fill="#16130f">{short(title || "Nama lengkap", 22)}</text>
+      {on.day && <text x="148" y="37" textAnchor="end" fontSize="10" fontWeight="700" fill="#16130f">{on.day}</text>}
+      {on.day && <text x="148" y="44" textAnchor="end" fontSize="5" fill="#16130f">{on.month}</text>}
+      <text x="76" y="55" fontSize="6" fontStyle="italic" fontWeight="700" fill="#16130f">{short(`Happy Birthday, ${call || title || "…"}`, 30)}</text>
+      <text x="76" y="63" fontSize="4.2" fontStyle="italic" fill="#4a443a">{short(body, 46)}</text>
+    </>;
+  }
   // A video: its own still from YouTube (`body` is the video's id), with the play mark over it.
   if (kind === "video") return <>
     {body && <image href={youtubeThumb(body)} width="160" height="90" preserveAspectRatio="xMidYMid slice" />}
@@ -104,9 +119,9 @@ function Shapes({ kind, title, body, design }: { kind: TvItemKind; title: string
 }
 
 /** The drawing for a kind; `title` and `body` are a typed row's own words, shown in it. */
-export function TvPreview({ kind, title = "", body = "", design = "werkudara", className }: { kind: TvItemKind; title?: string; body?: string; design?: TvWelcomeDesign; className?: string }) {
+export function TvPreview({ kind, title = "", body = "", design = "werkudara", call = "", date = "", photo = "", className }: { kind: TvItemKind; title?: string; body?: string; design?: TvWelcomeDesign; call?: string; date?: string; photo?: string; className?: string }) {
   return <svg className={className} viewBox="0 0 160 90" role="img" aria-hidden="true" focusable="false" preserveAspectRatio="xMidYMid slice">
     <rect width="160" height="90" fill={ink.bg} />
-    <Shapes kind={kind} title={title} body={body} design={design} />
+    <Shapes kind={kind} title={title} body={body} design={design} call={call} date={date} photo={photo} />
   </svg>;
 }

@@ -4,7 +4,7 @@ import { clockLabel, wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisa
 import type { RoomUse } from "@/lib/pra-wam/sessions";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import {
-  isTemplateKind, itemShows, looksLikeTvSlug, isVideoFile, sniffVideo, takeoverOn, takeoverRuns, tvVideoKey, welcomeDesign, youtubeId, TV_WELCOME_GREETING, TV_WELCOMES_MOST, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
+  isTemplateKind, itemShows, looksLikeTvSlug, isVideoFile, sniffVideo, TV_BIRTHDAY_WISH, takeoverOn, takeoverRuns, tvVideoKey, welcomeDesign, youtubeId, TV_WELCOME_GREETING, TV_WELCOMES_MOST, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
   type TvDay, type TvFeed, type TvItemKind, type TvItemSchedule, type TvNote, type TvPlayItem, type TvRoom, type TvSettings, type TvSlideStart, type TvTakeover, type TvTimelineEntry, type TvVideoStart, type TvWelcome, type TvWelcomeDesign,
 } from "@/lib/pra-wam/tv";
 import { hashTvKey, looksLikeTvKey } from "@/lib/pra-wam/tv-key";
@@ -53,7 +53,12 @@ type ItemRow = {
   show_from: string | null; show_until: string | null; time_from: string | null; time_until: string | null; screen_ids: string[] | null;
   /** How a welcome is drawn; absent before migration 202611100009. */
   design?: string | null;
+  /** A birthday greeting's "call" and "date"; absent before migration 202611100012. */
+  extra?: { call?: string; date?: string } | null;
 };
+/** Birthday greetings arrive with this one; before it none can be added. */
+export const TV_BIRTHDAY_MIGRATION = "202611100012_pw_tv_birthday.sql";
+const waitingForBirthday = () => new ServiceError(503, `Ucapan ulang tahun menunggu migrasi ${TV_BIRTHDAY_MIGRATION}.`);
 /** A welcome's design is picked per row with this one; before it every welcome is the Werkudara sign. */
 export const TV_DESIGN_MIGRATION = "202611100009_pw_tv_design.sql";
 /** A YouTube video is a kind of row with this one; before it none can be added. */
@@ -64,8 +69,9 @@ const ITEM_COLUMNS = "id,kind,title,body,slide_id,seconds,sort_order,active,show
 /** The playlist in order, or null before its migration. */
 async function readItems(): Promise<ItemRow[] | null> {
   const read = (columns: string) => createPrivilegedClient().from("pw_tv_items").select(columns).order("sort_order").order("created_at");
-  let { data, error } = await read(`${ITEM_COLUMNS},design`);
-  // Before the design's migration: the same rows without it.
+  let { data, error } = await read(`${ITEM_COLUMNS},design,extra`);
+  // Before the birthday's migration, then before the design's: the same rows without those columns.
+  if (error && noSlug(error)) ({ data, error } = await read(`${ITEM_COLUMNS},design`));
   if (error && noSlug(error)) ({ data, error } = await read(ITEM_COLUMNS));
   if (error) { if (noTable(error)) return null; databaseError(error); }
   return (data ?? []) as unknown as ItemRow[];
@@ -126,6 +132,8 @@ export type TvScreen = {
 };
 /** A row of the playlist as the admin edits it. `slideId` is a picture's, for its thumbnail. */
 export type TvAdminItem = TvItemSchedule & { id: string; kind: TvItemKind; title: string; body: string; seconds: number; active: boolean; slideId: string | null; design: TvWelcomeDesign;
+  /** A birthday greeting's: what the greeting calls the person, and their birthday ("" before either is set). */
+  call: string; date: string;
   /** A video row whose video is an uploaded file (its `body` is then the file's place in storage, not a YouTube id). */
   videoFile: boolean };
 export type TvAdminSlide = { id: string; title: string; seconds: number; active: boolean };
@@ -200,7 +208,7 @@ export async function tvAdmin(): Promise<TvAdmin> {
   const { data: video, error: videoError } = await client.from("pw_tv_screens").select("id,plays_video");
   const silent = new Set(videoError ? [] : ((video ?? []) as { id: string; plays_video: boolean }[]).filter(row => row.plays_video === false).map(row => row.id));
   return {
-    items: items?.map(row => ({ id: row.id, kind: row.kind, title: row.title, body: row.body, seconds: row.seconds, active: row.active, slideId: row.slide_id, design: welcomeDesign(row.design), videoFile: row.kind === "video" && isVideoFile(row.body), ...scheduleOf(row) })) ?? null,
+    items: items?.map(row => ({ id: row.id, kind: row.kind, title: row.title, body: row.body, seconds: row.seconds, active: row.active, slideId: row.slide_id, design: welcomeDesign(row.design), videoFile: row.kind === "video" && isVideoFile(row.body), call: row.extra?.call ?? "", date: row.extra?.date ?? "", ...scheduleOf(row) })) ?? null,
     migrated: true, slugReady, lookReady, storageReady: isR2Configured(), now,
     videoReady: !videoError, welcomeReady: taking.ready, takeover: takeoverRuns(taking.takeover, Date.parse(now)) ? taking.takeover : null, welcomes: welcomes.map(visit => visit.name),
     screens: ((data ?? []) as unknown as ScreenRow[]).map(row => ({ id: row.id, name: row.name, slug: row.slug ?? null, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at, lastItem: shown.get(row.id) ?? null, playsVideo: !silent.has(row.id) })),
@@ -265,11 +273,22 @@ const itemsOrWait = async (): Promise<ItemRow[]> => (await readItems()) ?? (() =
 const nextOrder = (items: readonly ItemRow[]) => Math.max(0, ...items.map(item => item.sort_order)) + 1;
 
 /** A template (one of each) or a text joins the playlist, last. Pictures join through their upload. */
-export async function createItem(input: { kind: Exclude<TvItemKind, "gambar">; title: string; body: string }): Promise<void> {
+export async function createItem(input: { kind: Exclude<TvItemKind, "gambar">; title: string; body: string; call?: string; date?: string | null }): Promise<void> {
   const items = await itemsOrWait();
   if (isTemplateKind(input.kind) && items.some(item => item.kind === input.kind)) throw new ServiceError(409, "Template ini sudah ada di daftar tayangan.");
   if (items.length >= 200) throw new ServiceError(409, "Daftar tayangan sudah penuh. Hapus yang tidak dipakai dulu.");
   const typed = input.kind === "teks" || input.kind === "tamu";
+  if (input.kind === "ultah") {
+    // A birthday greeting shows on the birthday itself (this year's), unless the admin sets other days in Atur.
+    const on = input.date ? `${wibDate(new Date().toISOString()).slice(0, 4)}${input.date.slice(4)}` : null;
+    const { error } = await createPrivilegedClient().from("pw_tv_items").insert({
+      kind: "ultah", title: input.title, body: input.body || TV_BIRTHDAY_WISH, extra: { call: input.call ?? "", date: input.date ?? "" },
+      show_from: on, show_until: on, seconds: 20, sort_order: nextOrder(items),
+    });
+    if (error) { if (error.code === "23514" || noSlug(error)) throw waitingForBirthday(); databaseError(error); }
+    invalidate();
+    return;
+  }
   if (input.kind === "video") {
     // A video's row keeps the video's id, not the address that was pasted.
     const id = youtubeId(input.body);
@@ -308,7 +327,7 @@ export async function stopTakeover(): Promise<void> {
   invalidate();
 }
 
-export type ItemChange = Partial<{ title: string; body: string; seconds: number; active: boolean; showFrom: string | null; showUntil: string | null; timeFrom: string | null; timeUntil: string | null; screenIds: string[]; design: TvWelcomeDesign }>;
+export type ItemChange = Partial<{ title: string; body: string; seconds: number; active: boolean; showFrom: string | null; showUntil: string | null; timeFrom: string | null; timeUntil: string | null; screenIds: string[]; design: TvWelcomeDesign; call: string; date: string | null }>;
 export async function updateItem(id: string, change: ItemChange): Promise<void> {
   const row: Record<string, unknown> = {};
   if (change.title !== undefined) row.title = change.title;
@@ -321,6 +340,8 @@ export async function updateItem(id: string, change: ItemChange): Promise<void> 
   if (change.timeUntil !== undefined) row.time_until = change.timeUntil;
   if (change.screenIds !== undefined) row.screen_ids = change.screenIds;
   if (change.design !== undefined) row.design = change.design;
+  // A birthday's "call" and "date" are kept together: the page sends both when either changes.
+  if (change.call !== undefined || change.date !== undefined) row.extra = { call: change.call ?? "", date: change.date ?? "" };
   let { data, error } = await createPrivilegedClient().from("pw_tv_items").update(row).eq("id", id).select("id");
   // Before the design's migration: everything else is saved, and a design other than the only one there is waits for it.
   if (error && noSlug(error) && change.design !== undefined) {
@@ -418,7 +439,7 @@ export async function startSlideUpload(input: TvSlideStart): Promise<{ key: stri
 }
 
 /** Step two: the picture is there with the agreed size and is WebP, PNG or JPEG; then it joins the loop, last. */
-export async function confirmSlideUpload(input: TvSlideStart & { key: string; token: string; title: string }): Promise<void> {
+export async function confirmSlideUpload(input: TvSlideStart & { key: string; token: string; title: string; itemId?: string }): Promise<void> {
   if (!isR2Configured()) throw notReady();
   if (!input.key.startsWith(TV_IMAGE_PREFIX) || !tvTokenMatches(input.token, input.key, input)) throw new ServiceError(403, "Unggahan tidak dikenali. Ulangi dari awal.");
   const discard = () => removeObjects([input.key]).catch(() => undefined);
@@ -430,9 +451,21 @@ export async function confirmSlideUpload(input: TvSlideStart & { key: string; to
     const { data: made, error } = await client.from("pw_tv_slides")
       .insert({ image_key: input.key, title: input.title, sort_order: Math.max(0, ...slides.map(slide => slide.sort_order)) + 1 }).select("id").single();
     if (error) fail(error);
-    // With the playlist: the picture is a row of it, last (before its migration the pictures' own order is the loop).
     const items = await readItems();
-    if (items) {
+    if (input.itemId) {
+      // A birthday greeting's photo: the picture belongs to that row, in place of the one it had.
+      const row = items?.find(item => item.id === input.itemId && item.kind === "ultah");
+      if (!row) { await client.from("pw_tv_slides").delete().eq("id", made.id); throw new ServiceError(404, "Ucapan ulang tahun ini tidak ditemukan. Muat ulang halaman."); }
+      const { error: linkError } = await client.from("pw_tv_items").update({ slide_id: made.id }).eq("id", row.id);
+      if (linkError) { await client.from("pw_tv_slides").delete().eq("id", made.id); databaseError(linkError); }
+      // The old photo goes only now that no row points at it (a picture takes its row with it).
+      if (row.slide_id) {
+        const { data: old } = await client.from("pw_tv_slides").delete().eq("id", row.slide_id).select("image_key");
+        await removeObjects((old ?? []).map(slide => slide.image_key as string)).catch(() => undefined);
+      }
+    }
+    // With the playlist: the picture is a row of it, last (before its migration the pictures' own order is the loop).
+    else if (items) {
       const { error: itemError } = await client.from("pw_tv_items").insert({ kind: "gambar", slide_id: made.id, title: input.title, seconds: 8, sort_order: nextOrder(items) });
       if (itemError) { await client.from("pw_tv_slides").delete().eq("id", made.id); databaseError(itemError); }
     }
@@ -646,7 +679,7 @@ export async function tvFeed(imageSrc: (slideId: string) => string, now = new Da
     .filter(item => item.kind !== "video" || screen?.playsVideo !== false)
     // A video file's place in storage stays here: the TV gets an address of this site instead.
     .map(item => item.kind === "video" && isVideoFile(item.body) ? { ...item, body: "", video_src: tvVideoApi(item.id) } : { ...item, video_src: "" })
-    .map(item => ({ id: item.slide_id ?? item.id, kind: item.kind, title: item.title, body: item.body, seconds: item.seconds, ...(item.slide_id ? { src: imageSrc(item.slide_id) } : item.video_src ? { src: item.video_src } : {}), ...(item.kind === "sambutan" || item.kind === "tamu" ? { design: welcomeDesign(item.design) } : {}) }));
+    .map(item => ({ id: item.slide_id ?? item.id, kind: item.kind, title: item.title, body: item.body, seconds: item.seconds, ...(item.slide_id ? { src: imageSrc(item.slide_id) } : item.video_src ? { src: item.video_src } : {}), ...(item.kind === "sambutan" || item.kind === "tamu" ? { design: welcomeDesign(item.design) } : {}), ...(item.kind === "ultah" ? { call: item.extra?.call ?? "", date: item.extra?.date ?? "" } : {}) }));
   return {
     now: now.toISOString(), date, days, settings, look, countdown, version: BUILD,
     slides: slides.map(slide => ({ id: slide.id, title: slide.title, seconds: slide.seconds, src: imageSrc(slide.id) })),

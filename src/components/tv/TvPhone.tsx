@@ -46,8 +46,8 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
 
   const go = (index: number) => { onPause(true); onGo((index + items.length) % items.length); };
   const title = !current ? "TV Announcement" : current.kind === "hari" ? tvDateLabel(feed.date) : current.kind === "minggu" ? tvWeekLabel(week.map(day => day.date))
-    : current.kind === "timeline" ? "Forum dan acara" : current.kind === "pengumuman" ? "Dari panitia" : current.kind === "teks" ? current.title || "Info" : current.kind === "sambutan" ? current.welcome.name : current.kind === "video" ? current.title || "Video" : current.slide.title || "Pengumuman";
-  const kicker = !current || current.kind === "hari" ? "Jadwal ruang hari ini" : current.kind === "minggu" ? "Jadwal ruang minggu ini" : current.kind === "timeline" ? "Timeline Pra WAM" : current.kind === "sambutan" ? current.welcome.greeting : "Pengumuman";
+    : current.kind === "timeline" ? "Forum dan acara" : current.kind === "pengumuman" ? "Dari panitia" : current.kind === "teks" ? current.title || "Info" : current.kind === "sambutan" ? current.welcome.name : current.kind === "video" ? current.title || "Video" : current.kind === "ultah" ? current.birthday.name : current.slide.title || "Pengumuman";
+  const kicker = !current || current.kind === "hari" ? "Jadwal ruang hari ini" : current.kind === "minggu" ? "Jadwal ruang minggu ini" : current.kind === "timeline" ? "Timeline Pra WAM" : current.kind === "sambutan" ? current.welcome.greeting : current.kind === "ultah" ? "Happy Birthday" : "Pengumuman";
 
   return <main ref={scroller} className={css.phone} onTouchStart={() => { if (!paused) onPause(true); }} onWheel={() => { if (!paused) onPause(true); }}>
     <header className={css.phoneHead}>
@@ -120,6 +120,13 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
                   {note.body && <p className={css.phoneText}>{note.body}</p>}
                 </li>)}</ul>
             : current.kind === "teks" ? <div className={css.phoneNote}>{current.body && <p className={css.phoneText}>{current.body}</p>}</div>
+            : current.kind === "ultah" ? <div className={css.phoneNote}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {current.birthday.photo && <img className={css.phonePicture} src={current.birthday.photo} alt="" referrerPolicy="no-referrer" />}
+              <p className={css.phoneName}>Happy Birthday, {current.birthday.call}</p>
+              <p className={css.phoneText}>{current.birthday.wish}</p>
+              {current.birthday.day && <p className={css.phoneDetail}>{current.birthday.day} {current.birthday.month}</p>}
+            </div>
             : current.kind === "video" ? <div className={css.phoneNote}>
               {/* A phone does not play it by itself: a file with its controls, or a YouTube still and the way there. */}
               {current.file ? <video className={css.phonePicture} src={current.file} controls muted playsInline preload="metadata" />

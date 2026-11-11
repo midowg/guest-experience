@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, isPhoneScreen, isTemplateKind, itemLabel, itemShows, playlistOf, scheduleLabel, searchEntries, tvItemCreateSchema, tvItemPatchSchema, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
-  shouldReload, sniffVideo, tvVideoStartSchema, youtubeEmbed, youtubeId, takeoverOn, takeoverRuns, tvTakeoverSchema, TV_DEFAULT_SETTINGS, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
+  shouldReload, birthdayDate, TV_BIRTHDAY_WISH, sniffVideo, tvVideoStartSchema, youtubeEmbed, youtubeId, takeoverOn, takeoverRuns, tvTakeoverSchema, TV_DEFAULT_SETTINGS, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
 const at = (time: string, date = "2026-11-10") => `${date}T${time}:00+07:00`;
@@ -174,6 +174,33 @@ describe("a YouTube video", () => {
     expect(playlistOf({ ...base, playlist: [{ ...video, body: "rusak" }] })).toEqual([]);
     expect(tvItemCreateSchema.safeParse({ kind: "video", title: "A", body: "https://youtu.be/FWN1B1B7Gu8" }).success).toBe(true);
     expect(tvItemCreateSchema.safeParse({ kind: "video", title: "A", body: "https://example.com" }).success).toBe(false);
+  });
+});
+
+describe("a birthday greeting", () => {
+  const base = { settings: TV_DEFAULT_SETTINGS, slides: [] };
+  const row = { id: "u", kind: "ultah" as const, title: "Contoh Satu Dua", body: "", seconds: 20 };
+
+  it("writes the day and the month as the card does", () => {
+    expect(birthdayDate("2026-09-20")).toEqual({ day: "20", month: "Sept" });
+    expect(birthdayDate("2026-01-05")).toEqual({ day: "5", month: "Jan" });
+    expect(birthdayDate(null)).toEqual({ day: "", month: "" });
+    expect(birthdayDate("20 Sept")).toEqual({ day: "", month: "" });
+  });
+
+  it("is a slide with the name, what to call them, the date, the photo and a wish", () => {
+    const [item] = playlistOf({ ...base, playlist: [{ ...row, body: "Selamat ulang tahun.", call: "Pak Contoh", date: "2026-09-20", src: "/foto" }] });
+    expect(item).toEqual({ key: "item-u", kind: "ultah", seconds: 20, birthday: { name: "Contoh Satu Dua", call: "Pak Contoh", day: "20", month: "Sept", wish: "Selamat ulang tahun.", photo: "/foto" } });
+    expect(itemLabel(item)).toBe("Ulang tahun: Contoh Satu Dua");
+  });
+
+  it("falls back to the full name and the card's own wish, and needs a name", () => {
+    const [item] = playlistOf({ ...base, playlist: [row] });
+    expect(item).toMatchObject({ birthday: { call: "Contoh Satu Dua", day: "", wish: TV_BIRTHDAY_WISH, photo: "" } });
+    expect(playlistOf({ ...base, playlist: [{ ...row, title: "" }] })).toEqual([]);
+    expect(tvItemCreateSchema.safeParse({ kind: "ultah", title: "" }).success).toBe(false);
+    expect(tvItemCreateSchema.safeParse({ kind: "ultah", title: "Contoh Satu", call: "Bu Contoh", date: "2026-11-11" }).success).toBe(true);
+    expect(tvItemCreateSchema.safeParse({ kind: "ultah", title: "Contoh Satu", date: "11 Nov" }).success).toBe(false);
   });
 });
 

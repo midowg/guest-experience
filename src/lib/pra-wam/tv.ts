@@ -144,7 +144,11 @@ export const tvSlideStartSchema = z.object({
   size: z.number().int().min(1).max(tvLimits.imageBytes, "Gambar lebih dari 4 MB."),
 });
 export type TvSlideStart = z.infer<typeof tvSlideStartSchema>;
-export const tvSlideConfirmSchema = tvSlideStartSchema.extend({ key: z.string().min(1).max(200), token: z.string().min(1).max(200), title: title.default("") });
+export const tvSlideConfirmSchema = tvSlideStartSchema.extend({
+  key: z.string().min(1).max(200), token: z.string().min(1).max(200), title: title.default(""),
+  /** The birthday greeting this picture is the photo of; without it the picture is a row of its own. */
+  itemId: z.uuid().optional(),
+});
 export const tvSlidePatchSchema = z.object({ title: title.optional(), seconds: seconds.optional(), active: z.boolean().optional() })
   .refine(value => Object.values(value).some(item => item !== undefined), { message: "Tidak ada yang diubah." });
 export const tvOrderSchema = z.object({ ids: z.array(z.uuid()).min(1).max(tvLimits.slides) });
@@ -333,6 +337,7 @@ export type TvItem =
   | { key: string; kind: "pengumuman"; seconds: number }
   | { key: string; kind: "teks"; title: string; body: string; seconds: number }
   | { key: string; kind: "sambutan"; welcome: TvWelcome; design: TvWelcomeDesign; seconds: number }
+  | { key: string; kind: "ultah"; birthday: TvBirthday; seconds: number }
   | { key: string; kind: "video"; title: string; video: string; file?: string; seconds: number }
   | { key: string; kind: "gambar"; slide: TvSlide; seconds: number };
 
@@ -343,11 +348,11 @@ export type TvItem =
  * calendars, Timeline, panitia's announcements), text typed in Admin TV, and uploaded pictures.
  * A row may be for some TVs only, and may show only between two days or two times of day.
  */
-export const tvItemKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "teks", "video", "gambar"] as const;
+export const tvItemKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "ultah", "teks", "video", "gambar"] as const;
 export type TvItemKind = (typeof tvItemKinds)[number];
 export const tvItemKindLabels: Record<TvItemKind, string> = {
   kalender_hari: "Kalender hari ini", kalender_minggu: "Kalender minggu ini", timeline: "Timeline Pra WAM",
-  pengumuman: "Pengumuman panitia", sambutan: "Sambutan tamu", tamu: "Sambutan tamu (diketik)", teks: "Teks", video: "Video YouTube", gambar: "Gambar",
+  pengumuman: "Pengumuman panitia", sambutan: "Sambutan tamu", tamu: "Sambutan tamu (diketik)", ultah: "Ucapan ulang tahun", teks: "Teks", video: "Video YouTube", gambar: "Gambar",
 };
 /** What each template shows and where its data comes from, for the admin's "Tambah tayangan". */
 export const tvItemKindHints: Record<TvItemKind, string> = {
@@ -357,6 +362,7 @@ export const tvItemKindHints: Record<TvItemKind, string> = {
   pengumuman: "Pengumuman panitia untuk semua peserta, terbaru lebih dulu.",
   sambutan: "Kunjungan Kantor yang sudah terbit dan berlangsung hari ini: nama tamu, ucapan, foto sampul, jam, dan tempat. Tanpa kunjungan hari ini, tayangan ini dilewati.",
   tamu: "Sambutan untuk tamu yang tidak punya halaman kunjungan: nama tamu dan ucapan yang Anda ketik.",
+  ultah: "Ucapan ulang tahun untuk satu orang: nama, tanggal, foto, dan ucapan, dengan desain kartu ulang tahun Werkudara.",
   teks: "Tulisan yang Anda ketik sendiri: judul dan isi.",
   video: "Video dari YouTube, diputar tanpa suara sampai selesai, lalu lanjut ke tayangan berikutnya.",
   gambar: "Gambar yang Anda unggah.",
@@ -455,7 +461,25 @@ export function sniffVideo(start: Uint8Array): TvVideoMime | null {
 }
 
 /** A row as a TV gets it. `src` is a picture's address. */
-export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string; design?: string };
+export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string; design?: string; call?: string; date?: string };
+
+/*
+ * A birthday greeting (migration 202611100012), after the team's own card ("WG Bday", a portrait
+ * flyer): cream paper, Werkudara's mark, the person's name with the day and month beside it, their
+ * photo in a white frame, "Happy Birthday, …" and a wish. On a TV lying on its side the photo
+ * stands on the left and the words on the right; upright it is the flyer's own order. The row's
+ * title is the name, its body the wish, its picture the photo; `call` is what the greeting calls
+ * them ("Pak Fadli") and `date` their birthday.
+ */
+export type TvBirthday = { name: string; call: string; day: string; month: string; wish: string; photo: string };
+export const TV_BIRTHDAY_WISH = "Wishing you a year ahead filled with meaningful moments, new opportunities, and continued growth. May it be a year of happiness, fulfillment, and many wonderful things to come.";
+const BIRTHDAY_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"] as const;
+/** "2026-09-20" → the card's "20" and "Sept"; both empty for no date. */
+export function birthdayDate(date: string | null | undefined): { day: string; month: string } {
+  const found = /^\d{4}-(\d{2})-(\d{2})$/.exec(date ?? "");
+  const month = found ? BIRTHDAY_MONTHS[Number(found[1]) - 1] : undefined;
+  return found && month ? { day: String(Number(found[2])), month } : { day: "", month: "" };
+}
 /** One forum or event of Timeline, for the template: its dates, hours when set, and how far off it is. */
 export type TvTimelineEntry = { id: string; title: string; when: string; hours: string | null; state: "berlangsung" | "akan"; color: number; left: string };
 /** One announcement of panitia's, for the template. */
@@ -496,6 +520,7 @@ export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides"
     // One slide per visit on today; none today, and the row is passed over.
     if (item.kind === "sambutan") return (feed.welcomes ?? []).map(welcome => ({ key: `${key}-${welcome.id}`, kind: "sambutan" as const, welcome, design: welcomeDesign(item.design), seconds: item.seconds }));
     if (item.kind === "tamu") return item.title ? [{ key, kind: "sambutan", seconds: item.seconds, design: welcomeDesign(item.design), welcome: { id: item.id, name: item.title, greeting: TV_WELCOME_GREETING, note: item.body, hours: "", place: "", image: "" } }] : [];
+    if (item.kind === "ultah") return item.title ? [{ key, kind: "ultah", seconds: item.seconds, birthday: { name: item.title, call: item.call?.trim() || item.title, ...birthdayDate(item.date), wish: item.body || TV_BIRTHDAY_WISH, photo: item.src ?? "" } }] : [];
     if (item.kind === "video" && item.src) return [{ key, kind: "video", title: item.title, video: "", file: item.src, seconds: item.seconds }];
     if (item.kind === "video") return YOUTUBE_ID.test(item.body) ? [{ key, kind: "video", title: item.title, video: item.body, seconds: item.seconds }] : [];
     return item.src ? [{ key, kind: "gambar", seconds: item.seconds, slide: { id: item.id, title: item.title, seconds: item.seconds, src: item.src } }] : [];
@@ -510,6 +535,7 @@ export function itemLabel(item: TvItem): string {
   if (item.kind === "teks") return item.title || "Teks";
   if (item.kind === "sambutan") return `Sambutan: ${item.welcome.name}`;
   if (item.kind === "video") return item.title || "Video";
+  if (item.kind === "ultah") return `Ulang tahun: ${item.birthday.name}`;
   return item.slide.title || "Gambar";
 }
 
@@ -517,18 +543,23 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Isi tanggal.").nullable();
 const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Isi jam, misalnya 08:00.").nullable();
 const itemTitle = z.string().trim().max(80, "Judul paling panjang 80 karakter.");
 const itemBody = z.string().trim().max(600, "Isi paling panjang 600 karakter.");
+const itemCall = z.string().trim().max(40, "Nama panggilan paling panjang 40 karakter.");
 /** POST: a template (once each) or a text. A picture arrives through its upload instead. */
 export const tvItemCreateSchema = z.object({
-  kind: z.enum(["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "teks", "video"]),
+  kind: z.enum(["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "ultah", "teks", "video"]),
   title: itemTitle.default(""), body: itemBody.default(""),
+  /** A birthday greeting's: what the greeting calls the person, and their birthday. */
+  call: itemCall.default(""), date: day.default(null),
 }).refine(value => value.kind !== "teks" || value.title.length > 0 || value.body.length > 0, { message: "Isi judul atau isi teksnya.", path: ["title"] })
   .refine(value => value.kind !== "tamu" || value.title.length > 0, { message: "Isi nama tamunya.", path: ["title"] })
+  .refine(value => value.kind !== "ultah" || value.title.length > 0, { message: "Isi nama yang berulang tahun.", path: ["title"] })
   .refine(value => value.kind !== "video" || youtubeId(value.body) !== null, { message: "Tempel alamat video YouTube, misalnya https://www.youtube.com/watch?v=…", path: ["body"] });
 export const tvItemPatchSchema = z.object({
   title: itemTitle.optional(), body: itemBody.optional(), seconds: seconds.optional(), active: z.boolean().optional(),
   showFrom: day.optional(), showUntil: day.optional(), timeFrom: timeOfDay.optional(), timeUntil: timeOfDay.optional(),
   screenIds: z.array(z.uuid()).max(tvLimits.screens).optional(),
   design: z.enum(tvWelcomeDesigns).optional(),
+  call: itemCall.optional(), date: day.optional(),
 }).refine(value => Object.values(value).some(item => item !== undefined), { message: "Tidak ada yang diubah." })
   .refine(value => !value.showFrom || !value.showUntil || value.showFrom <= value.showUntil, { message: "Tanggal akhir tidak boleh sebelum tanggal mulai.", path: ["showUntil"] });
 export const tvItemOrderSchema = z.object({ ids: z.array(z.uuid()).min(1).max(200) });

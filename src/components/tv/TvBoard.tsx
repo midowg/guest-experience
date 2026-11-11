@@ -12,7 +12,7 @@ import {
 } from "@/lib/pra-wam/tv";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import { TvPhone } from "./TvPhone";
-import { NotesSlide, TextSlide, TimelineSlide, TvLoader, VideoSlide, WelcomeSlide } from "./TvTemplates";
+import { BirthdaySlide, NotesSlide, TextSlide, TimelineSlide, TvLoader, VideoSlide, WelcomeSlide } from "./TvTemplates";
 import css from "./tv.module.css";
 
 /** How often a TV asks for content, and how often it re-reads the clock for "now". */
@@ -220,6 +220,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
           : current.kind === "timeline" ? <TimelineSlide key={current.key} entries={feed.timeline ?? []} clock={clock} height={room.height} />
           : current.kind === "pengumuman" ? <NotesSlide key={current.key} notes={feed.notes ?? []} clock={clock} />
           : current.kind === "teks" ? <TextSlide key={current.key} title={current.title} body={current.body} />
+          : current.kind === "ultah" ? <BirthdaySlide key={current.key} birthday={current.birthday} />
           : current.kind === "video" ? <VideoSlide key={current.key} video={current.video} file={current.file} title={current.title} loop={count < 2} onEnd={() => setIndex(value => (value + 1) % Math.max(1, count))} />
           : current.kind === "sambutan" ? <WelcomeSlide key={current.key} welcome={current.welcome} design={current.design} />
           : <section key={current.key} className={`${css.slide} ${css.picture}`} aria-label={current.slide.title || "Gambar pengumuman"}>

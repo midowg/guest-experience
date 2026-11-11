@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Clock, MapPin } from "lucide-react";
-import { fit, fitText, TV_VIDEO_MOST_MS, TV_VIDEO_START_MS, youtubeEmbed, type TvNote, type TvTimelineEntry, type TvWelcome, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { fit, fitText, TV_VIDEO_MOST_MS, TV_VIDEO_START_MS, youtubeEmbed, type TvBirthday, type TvNote, type TvTimelineEntry, type TvWelcome, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
 import { TV_MARK, TV_WELCOME_ART } from "@/lib/routes";
 import css from "./tv.module.css";
 
@@ -184,5 +184,34 @@ export function VideoSlide({ video, file, title, loop, onEnd }: { video: string;
         onPlaying={play} onEnded={() => end.current()} onError={() => { if (loop) setStuck(true); else end.current(); }} />
       : <iframe ref={frame} src={youtubeEmbed(video, loop)} title={title || "Video YouTube"} allow="autoplay; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" />}
     {!playing && <TvLoader note={stuck ? "TV ini belum bisa memulai video sendiri" : "Menyiapkan video"} />}
+  </section>;
+}
+
+/**
+ * A birthday greeting, after the team's card: cream paper, Werkudara's mark, the name with the day
+ * and month beside it, the photo in a white frame, "Happy Birthday, …" and the wish. Lying on its
+ * side the photo stands on the left and the words on the right; upright (tv.module.css) it is the
+ * card's own order, the photo between the name and the greeting. Without a photo the frame shows
+ * the mark, never an empty box.
+ */
+export function BirthdaySlide({ birthday }: { birthday: TvBirthday }) {
+  // A long name is set smaller, so it stays on two lines.
+  const size = birthday.name.length > 30 ? "kecil" : birthday.name.length > 18 ? "sedang" : "besar";
+  const mark = { maskImage: `url(${TV_MARK})`, WebkitMaskImage: `url(${TV_MARK})` };
+  return <section className={`${css.slide} ${css.bday}`} aria-label={`Ucapan ulang tahun untuk ${birthday.name}`}>
+    <i className={css.bdayMark} style={mark} aria-hidden="true" />
+    <div className={css.bdayName}>
+      <h1 data-size={size}>{birthday.name}</h1>
+      {birthday.day && <p><strong>{birthday.day}</strong><span>{birthday.month}</span></p>}
+    </div>
+    <div className={css.bdayPhoto}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {birthday.photo ? <img src={birthday.photo} alt="" referrerPolicy="no-referrer" /> : <i style={mark} aria-hidden="true" />}
+    </div>
+    <div className={css.bdayWish}>
+      <h2>Happy Birthday, {birthday.call}</h2>
+      <p>{birthday.wish}</p>
+    </div>
+    <p className={css.bdayFoot}><strong>Werkudara</strong> Group | werkudara.com</p>
   </section>;
 }

@@ -337,3 +337,30 @@
 /* A video is not shown before it plays: the player's own play button and poster stay under the waiting screen. */
 .video iframe, .video video { opacity: 0; transition: opacity .4s ease-out; }
 .video[data-playing="true"] iframe, .video[data-playing="true"] video { opacity: 1; }
+
+/*
+ * A birthday greeting (BirthdaySlide), after the team's card: cream paper and dark ink whatever the
+ * board's mode, Werkudara's mark in its blue, the photo in a white frame with a soft shadow.
+ * Lying on its side: the photo on the left over the full height, on the right the mark, the name
+ * with the date, the greeting and the wish, and the foot. Upright: the card's own order.
+ */
+.bday { display: grid; grid-template-columns: minmax(0, 38fr) minmax(0, 62fr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "photo mark" "photo name" "photo wish" "photo foot";
+  gap: calc(3 * var(--u)) calc(7 * var(--u)); box-sizing: border-box; padding: calc(8 * var(--u)) calc(10 * var(--u)); background: #f3efe4; color: #16130f; }
+.bdayMark { grid-area: mark; display: block; width: calc(9 * var(--u)); height: calc(10 * var(--u)); background: #0a3a9c; mask-position: left center; mask-repeat: no-repeat; mask-size: contain; -webkit-mask-position: left center; -webkit-mask-repeat: no-repeat; -webkit-mask-size: contain; }
+.bdayName { grid-area: name; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: calc(4 * var(--u)); }
+.bdayName h1 { display: -webkit-box; margin: 0; overflow: hidden; font-family: var(--tv-display); font-size: calc(9 * var(--u)); font-weight: 700; line-height: 1.02; letter-spacing: -.01em; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.bdayName h1[data-size="sedang"] { font-size: calc(7.4 * var(--u)); }
+.bdayName h1[data-size="kecil"] { font-size: calc(6 * var(--u)); }
+.bdayName p { display: grid; justify-items: end; margin: 0; font-family: var(--tv-display); line-height: 1; }
+.bdayName p strong { font-size: calc(9 * var(--u)); font-weight: 700; }
+.bdayName p span { margin-top: calc(.8 * var(--u)); font-size: calc(4 * var(--u)); }
+.bdayPhoto { grid-area: photo; align-self: center; justify-self: center; display: grid; box-sizing: border-box; height: 100%; max-width: 100%; aspect-ratio: 4 / 5; padding: calc(1.6 * var(--u)) calc(1.6 * var(--u)) calc(6 * var(--u)); place-items: center; overflow: hidden; background: #fff; box-shadow: 0 calc(.8 * var(--u)) calc(3 * var(--u)) rgb(40 30 10 / .18); }
+.bdayPhoto img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.bdayPhoto > i { display: block; width: 46%; height: 46%; background: #c9c2b2; mask-position: center; mask-repeat: no-repeat; mask-size: contain; -webkit-mask-position: center; -webkit-mask-repeat: no-repeat; -webkit-mask-size: contain; }
+.bdayWish { grid-area: wish; align-self: center; display: grid; gap: calc(2 * var(--u)); min-height: 0; }
+.bdayWish h2 { margin: 0; font-family: var(--tv-display); font-size: calc(4.8 * var(--u)); font-style: italic; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.bdayWish p { display: -webkit-box; margin: 0; overflow: hidden; font-family: var(--tv-display); font-size: calc(3.3 * var(--u)); font-style: italic; line-height: 1.45; white-space: pre-line; -webkit-box-orient: vertical; -webkit-line-clamp: 6; overflow-wrap: anywhere; }
+.bdayFoot { grid-area: foot; margin: 0; font-size: calc(2.2 * var(--u)); letter-spacing: .02em; }
+.board[data-orientation="tegak"] .bday { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto auto; grid-template-areas: "mark" "name" "photo" "wish" "foot"; gap: calc(4 * var(--u)); padding: calc(9 * var(--u)) calc(11 * var(--u)); }
+.board[data-orientation="tegak"] .bdayMark { justify-self: center; mask-position: center; -webkit-mask-position: center; }
+.board[data-orientation="tegak"] .bdayWish, .board[data-orientation="tegak"] .bdayFoot { text-align: center; }
