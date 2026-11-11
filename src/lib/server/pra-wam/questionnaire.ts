@@ -4,6 +4,8 @@ import type { FormStatus, QContent, QForm, QQuestion, QSection, QuestionKind, Sh
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
+import { listJobs } from "../employee-jobs";
+import { listEmployees } from "../employees";
 import { listPeople } from "./appraisal";
 
 /*
@@ -95,13 +97,22 @@ async function formContentUncached(formId: string): Promise<Pick<QContent, "sect
 }
 export const formContent = cache(formContentUncached);
 
-/** What a department question offers: the departments of Data karyawan's units, else departments named on employees. */
+/**
+ * What a department question offers: the departments in Data karyawan as it is now (11 Nov 2026),
+ * those of active people and of their other jobs, spelled exactly as there, so an answer always
+ * matches the person's department. The old unit import (org_units) is only the fallback when Data
+ * karyawan cannot be read.
+ */
 async function departmentOptionsUncached(): Promise<string[]> {
-  const client = createPrivilegedClient();
-  const { data, error } = await client.from("org_units").select("name,sort_order").eq("kind", "departemen").order("sort_order").order("name");
-  if (!error && data?.length) return data.map(unit => unit.name);
-  const people = await listPeople();
-  return [...new Set(people.filter(person => person.active && person.department).map(person => person.department))].sort((a, b) => a.localeCompare(b, "id"));
+  const fromEmployees = await (async () => {
+    const { employees } = await listEmployees(true);
+    const { byPerson } = await listJobs(employees).catch(() => ({ byPerson: {} as Record<string, { department: string }[]> }));
+    const names = [...employees.map(person => person.department), ...Object.values(byPerson).flatMap(jobs => jobs.map(job => job.department))];
+    return [...new Set(names.map(name => (name ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
+  })().catch(() => [] as string[]);
+  if (fromEmployees.length) return fromEmployees;
+  const { data, error } = await createPrivilegedClient().from("org_units").select("name,sort_order").eq("kind", "departemen").order("sort_order").order("name");
+  return !error && data?.length ? data.map(unit => unit.name) : [];
 }
 export const departmentOptions = cache(departmentOptionsUncached);
 

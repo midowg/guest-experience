@@ -9,6 +9,7 @@ import { praWamPath } from "@/lib/routes";
 import { departmentOptions, formAt, formContent, peopleOptions } from "@/lib/server/pra-wam/questionnaire";
 import { myCard } from "@/lib/server/pra-wam/cards";
 import { myAnswers, shownContent } from "@/lib/server/pra-wam/questionnaire-answers";
+import { prefillFor } from "@/lib/server/pra-wam/questionnaire-prefill";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,8 @@ export default async function QuestionnairePage({ params }: Params) {
     myAnswers(form, member.id, content),
     // A trial card from the draft is shown only while trying the draft.
     myCard(form, member.id).then(view => view?.trial && !preview ? null : view).catch(() => null),
-    content.questions.some(question => question.kind === "department") ? departmentOptions() : [],
+    // Always: the department list is also what Data karyawan's department is checked against.
+    departmentOptions().catch(() => []),
     content.questions.some(question => question.kind === "person") ? peopleOptions() : [],
   ]);
   // "Pilih rekan" never offers the person themself.
@@ -55,9 +57,11 @@ export default async function QuestionnairePage({ params }: Params) {
       answers={mine.answers} anonymousSent={mine.anonymousSent} slots={sectionsDone(content, mine.answers, mine.anonymousSent)} people={people}
       card={card && { formId: form.id, view: card, nickname, hasPhoto: !!member.photo }} />;
   }
+  // Name, department, position, phone and gender from Data karyawan, for the questions not answered yet.
+  const prefill = await prefillFor(member.id, content.questions, mine.answers, departments, { bod: member.roles.includes("bod") });
   return <Questionnaire
     form={{ id: form.id, name: form.name, intro: form.intro, minutes: form.minutes, editUntil: form.editUntil }}
     sections={content.sections} questions={content.questions} departments={departments} people={people}
     initial={{ answers: mine.answers, anonymousSent: mine.anonymousSent }}
-    nickname={nickname} home={praWamPath.home} preview={preview} card={card} hasPhoto={!!member.photo} />;
+    nickname={nickname} home={praWamPath.home} preview={preview} card={card} hasPhoto={!!member.photo} prefill={prefill} />;
 }

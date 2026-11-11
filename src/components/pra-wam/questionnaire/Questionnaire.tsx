@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { ArrowLeft, Check, Clock, CloudOff, Eye, Hand, Info, Lock, Pause, Send, Sparkles, Users, VenetianMask } from "lucide-react";
+import { ArrowLeft, Check, Clock, CloudOff, Database, Eye, Hand, Info, Lock, Pause, Send, Sparkles, Users, VenetianMask } from "lucide-react";
 import {
   answered, complete, progressOf, visibilityLabels,
   type AnswerValue, type Answers, type QForm, type QQuestion, type QSection, type Visibility,
@@ -29,12 +29,15 @@ export type QuestionnaireProps = {
   card?: CardView | null;
   /** Whether I have a profile photo now (using the card as one asks first). */
   hasPhoto?: boolean;
+  /** Answers Data karyawan already knows (name, department, position, phone, gender), shown filled in and saved when I move on. */
+  prefill?: Answers;
 };
 
 const visibilityIcons: Record<Visibility, typeof Eye> = { rekan: Eye, fasil: Users, hr: Lock, hronly: Lock, pilih: Hand, anon: VenetianMask };
 /** Intro card colours, one per section in turn (the mockup's sticker sheet). */
 const introFills = ["--c-sky-2", "--c-yellow", "--c-green", "--c-ice", "--c-orange", "--c-sky-2"];
 const PEEL_MS = 260;
+const NO_PREFILL: Answers = {};
 const TYPING_MS = 800;
 
 const reducedMotion = () => typeof window === "undefined" || typeof window.matchMedia !== "function" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -44,7 +47,7 @@ const reducedMotion = () => typeof window === "undefined" || typeof window.match
  * an intro card and one card per question, then "Selesai". Named answers save themselves as the
  * person goes; the anonymous section stays on this device until it is sent once, without a name.
  */
-export function Questionnaire({ form, sections, questions, departments, people, initial, nickname, home, preview, card: drawnCard = null, hasPhoto = false }: QuestionnaireProps) {
+export function Questionnaire({ form, sections, questions, departments, people, initial, nickname, home, preview, card: drawnCard = null, hasPhoto = false, prefill = NO_PREFILL }: QuestionnaireProps) {
   const content = useMemo(() => ({ sections, questions }), [sections, questions]);
   const anonymousIds = useMemo(() => new Set(sections.filter(section => section.anonymous).map(section => section.id)), [sections]);
   const names = useMemo(() => new Map(people.map(person => [person.id, person.name])), [people]);
@@ -82,7 +85,11 @@ export function Questionnaire({ form, sections, questions, departments, people, 
   }, [form.id, initial.anonymousSent, resume]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const seen = useMemo(() => ({ ...answers, ...draft }), [answers, draft]);
+  // What I gave, and what is shown: Data karyawan's answers stand in until I give my own.
+  const stored = useMemo(() => ({ ...answers, ...draft }), [answers, draft]);
+  const seen = useMemo(() => ({ ...prefill, ...stored }), [prefill, stored]);
+  // Until I touch it: an answer I changed or emptied is mine, even when empty.
+  const prefilled = (key: string) => prefill[key] !== undefined && !(key in answers);
   const steps = useMemo(() => stepsOf(content, seen, anonymousSent), [content, seen, anonymousSent]);
   const found = steps.findIndex(step => step.id === stepId);
   // A card that branching just removed: stay at the same place in the stack.
@@ -167,7 +174,7 @@ export function Questionnaire({ form, sections, questions, departments, people, 
   }
 
   function next() {
-    if (step.kind === "welcome") { go(started ? resumeIndex(steps, seen) : 1); return; }
+    if (step.kind === "welcome") { go(started ? resumeIndex(steps, stored) : 1); return; }
     if (step.kind === "intro") { go(index + 1); return; }
     if (step.kind !== "question") return;
     const { question, section } = step;
@@ -176,6 +183,12 @@ export function Questionnaire({ form, sections, questions, departments, people, 
       return;
     }
     if (section.anonymous && step.lastOfSection) { void sendAnonymous(section); return; }
+    // Moving on from a card Data karyawan filled in is saying it is right: save it as mine.
+    if (prefilled(question.key)) {
+      const value = prefill[question.key];
+      setAnswers(current => ({ ...current, [question.key]: value }));
+      autosave.save(question.key, value, 0);
+    }
     go(index + 1);
   }
 
@@ -232,7 +245,7 @@ export function Questionnaire({ form, sections, questions, departments, people, 
             : <p className={styles.lead}>Jawaban di bagian ini disimpan tanpa namamu. Selama kamu mengisi, jawabannya hanya ada di HP ini. Saat kamu menekan Kirim bagian anonim, semuanya dikirim sekali, tanpa nama, dan tidak bisa diubah lagi.</p>)}
         </section>}
 
-        {step.kind === "question" && <QuestionCard key={step.id} step={step} className={card} value={seen[step.question.key]} heading={heading}
+        {step.kind === "question" && <QuestionCard key={step.id} step={step} className={card} value={seen[step.question.key]} heading={heading} prefilled={prefilled(step.question.key)}
           departments={departments} people={people} nudge={nudge} problem={problems[step.question.key] ?? (step.section.anonymous && step.lastOfSection ? sendProblem : "")}
           reaction={reaction} onChange={(value, typing) => change(step.question, value, typing)}
           onBlur={() => showReaction(step.question, seen[step.question.key])} onEnter={next} />}
@@ -249,7 +262,7 @@ export function Questionnaire({ form, sections, questions, departments, people, 
         {step.kind === "done" && !progress.done && <section className={card} aria-labelledby="cq-heading">
           <h1 id="cq-heading" ref={heading} tabIndex={-1}>Hampir selesai</h1>
           <p className={styles.lead}>{progress.requiredLeft > 0 ? `Masih ada ${progress.requiredLeft} pertanyaan wajib yang belum dijawab.` : "Masih ada bagian yang belum selesai."}</p>
-          <button type="button" className={`${styles.btn} ${styles.outline}`} onClick={() => go(resumeIndex(steps, seen))}>Isi yang tersisa</button>
+          <button type="button" className={`${styles.btn} ${styles.outline}`} onClick={() => go(resumeIndex(steps, stored))}>Isi yang tersisa</button>
         </section>}
       </div>
     </main>
@@ -286,11 +299,13 @@ function primaryLabel(step: Step, started: boolean, anonymousSent: boolean, send
 type CardProps = {
   step: Extract<Step, { kind: "question" }>; className: string; value: AnswerValue | undefined; heading: RefObject<HTMLHeadingElement | null>;
   departments: string[]; people: Person[]; nudge: string; problem: string; reaction: { text: string; fading: boolean } | null;
+  /** Filled in from Data karyawan and not confirmed yet. */
+  prefilled?: boolean;
   onChange: (value: AnswerValue, typing?: boolean) => void; onBlur: () => void; onEnter: () => void;
 };
 
 /** One question: its number, the prompt, who reads it, a note, the control, and what to fix. */
-function QuestionCard({ step, className, value, heading, departments, people, nudge, problem, reaction, onChange, onBlur, onEnter }: CardProps) {
+function QuestionCard({ step, className, value, heading, departments, people, nudge, problem, reaction, prefilled = false, onChange, onBlur, onEnter }: CardProps) {
   const { question, section } = step;
   const Icon = visibilityIcons[question.visibility];
   const visibility = section.anonymous ? "anon" : question.visibility;
@@ -299,6 +314,7 @@ function QuestionCard({ step, className, value, heading, departments, people, nu
     <h2 id="cq-heading" ref={heading} tabIndex={-1}>{question.kind === "consent" ? "Satu hal sebelum mulai" : question.prompt}</h2>
     <span className={`${styles.tag} ${visibility === "rekan" ? styles.rekan : visibility === "anon" ? styles.anon : ""}`}><Icon aria-hidden />{visibilityLabels[visibility]}</span>
     {question.note && <p className={styles.note}><Info aria-hidden /><span>{question.note}</span></p>}
+    {prefilled && <p className={styles.note}><Database aria-hidden /><span>Sudah terisi dari Data karyawan. Ubah bila kurang tepat, lalu Lanjut.</span></p>}
     <QuestionField question={question} value={value} onChange={onChange} labelledBy="cq-heading" departments={departments} people={people} onBlur={onBlur} onEnter={onEnter} />
     <p className={styles.nudge} aria-live="polite">{nudge}</p>
     {problem && <p className={styles.fieldProblem} role="alert">{problem}</p>}

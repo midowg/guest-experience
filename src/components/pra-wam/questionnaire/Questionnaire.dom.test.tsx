@@ -72,6 +72,26 @@ describe("the questionnaire", () => {
     expect(screen.getByText("Hanya HR dan manajemen")).toBeTruthy();
   });
 
+  it("shows Data karyawan's answers filled in, saves them when moving on, and keeps a change as mine", async () => {
+    render(<Questionnaire {...props()} prefill={{ 1: "Dewi Lestari (Dewi)", 3: "Lead" }} />);
+    primary("Mulai");
+    primary("Buka kartu");
+    expect((screen.getByRole("textbox", { name: "Siapa namamu?" }) as HTMLInputElement).value).toBe("Dewi Lestari (Dewi)");
+    expect(screen.getByText(/Sudah terisi dari Data karyawan/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Lanjut" }).getAttribute("aria-disabled")).toBeNull();
+    expect(answerSaves()).toHaveLength(0);
+    primary("Lanjut");
+    await waitFor(() => expect(answerSaves()[0]?.body).toEqual({ question: "1", value: "Dewi Lestari (Dewi)" }));
+    expect(card()).toContain("Posisimu?");
+    // Prefilled "Lead" brings the leads' question; changing it to Staf is mine and is saved as such.
+    expect(screen.getByText(/Sudah terisi dari Data karyawan/)).toBeTruthy();
+    primary("Staf");
+    expect(screen.queryByText(/Sudah terisi dari Data karyawan/)).toBeNull();
+    await waitFor(() => expect(answerSaves().at(-1)?.body).toEqual({ question: "3", value: "Staf" }));
+    primary("Selesaikan bagian");
+    expect(answerSaves().some(call => (call.body as { value: string }).value === "Lead")).toBe(false);
+  });
+
   it("branches on an answer: the leads' question shows only when the position is not Staf", async () => {
     render(<Questionnaire {...props({ answers: { 1: "Dewi" }, anonymousSent: false })} />);
     primary("Lanjutkan");

@@ -99,6 +99,22 @@ makanan yang kuhindari"), **14b** hanya fobia, **16** ditambah obat rutin, catat
 14 dan 14b kembali ke `hr`. Teks hanya diganti bila masih teks awal, jadi suntingan HR tetap. Karena
 5b wajib, orang yang sudah selesai sebelum migrasi tercatat belum selesai sampai mengisinya.
 
+### Opsi dan isian dari Data karyawan (11 November 2026)
+
+Keputusan pemilik: data yang sudah ada di database tidak ditanyakan ulang dengan pilihan lain.
+- **Departemen** (pertanyaan 2 dan E1) ditawarkan persis seperti di Data karyawan: departemen orang
+  aktif dan pekerjaan lain mereka (`departmentOptions`). Impor unit lama (`org_units`) hanya cadangan
+  bila Data karyawan tidak bisa dibaca.
+- **Posisi** (3) memakai jabatan Data karyawan: Staf, Lead, HOD, GM (migrasi
+  `202611110004_wam_questionnaire_position.sql`; jawaban lama "Supervisor / lead" menjadi Lead,
+  "Manajer ke atas" menjadi HOD). Pertanyaan khusus lead (31) tetap untuk selain Staf.
+- **Terisi otomatis**: nama lengkap (panggilan) (1), departemen (2), posisi (3, jabatan tertinggi
+  dari pekerjaannya; tidak untuk BOD), nomor HP (5), dan jenis kelamin untuk kamar (33) tampil sudah
+  terisi dengan tanda "Sudah terisi dari Data karyawan". Jawabannya baru tersimpan saat orangnya
+  menekan Lanjut di kartu itu; yang diubah atau dikosongkan menjadi jawabannya sendiri. Pertanyaan
+  yang sudah dijawab tidak pernah ditimpa, dan isian yang tidak cocok dengan pilihan (HR mengubah
+  pertanyaannya) dilewati. Aturannya `prefillAnswers` (`src/lib/pra-wam/questionnaire-prefill.ts`).
+
 ### Untuk siapa (11 November 2026)
 
 Kuesioner bisa dibuka untuk **semua peserta** (bawaan, seperti sebelumnya) atau hanya untuk
