@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, CheckCircle2, Circle, CircleDashed, Download, Users } from "lucide-react";
 import { ConsoleButton, ConsoleButtonLink, FilterChips, Pill, SearchField, StatCard, StatRow, type ConsoleTone } from "@/components/console";
@@ -26,12 +26,34 @@ const percent = (part: number, total: number) => total ? Math.round((part / tota
 const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 
 type StateFilter = ProgressState | "semua";
+/** What the search looks in (11 Nov 2026): the people, their answers, or the questions. */
+type Scope = "orang" | "jawaban" | "pertanyaan";
+const scopes: Record<Scope, { label: string; placeholder: string }> = {
+  orang: { label: "Cari nama atau departemen", placeholder: "Cari nama atau departemen" },
+  jawaban: { label: "Cari di jawaban", placeholder: "Kata di jawaban, mis. inhaler" },
+  pertanyaan: { label: "Cari pertanyaan", placeholder: "Kata di pertanyaan, mis. kesehatan" },
+};
+/** "Belum dijawab" in the answer filter (no answer can be this). */
+const UNANSWERED = "__belum_dijawab__";
+const wordsOf = (query: string) => query.trim().toLocaleLowerCase("id").split(/\s+/).filter(Boolean);
+const holdsAll = (text: string, words: string[]) => { const lower = text.toLocaleLowerCase("id"); return words.every(word => lower.includes(word)); };
+/** One answer's values for the filter: a multiple choice gives each choice, a matrix each row's choice. */
+const valuesOf = (text: string) => text.split(/\n|, /).map(value => value.replace(/^[^:]+: /, "").trim()).filter(Boolean);
+
+/** The text with each searched word marked. */
+function marked(text: string, words: string[]): ReactNode {
+  if (!words.length) return text;
+  const pattern = new RegExp(`(${words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+  return text.split(pattern).map((part, index) => index % 2 ? <mark key={index} className={css.hit}>{part}</mark> : <Fragment key={index}>{part}</Fragment>);
+}
 
 /**
  * Admin WAM → Kuesioner → Rekap (11 Nov 2026): everything on one page. The counts, "Ingatkan", then
  * one table with a row per person (name, department, status) and a column per question with the
  * answer, HR and Rahasia included; filtered by name, department, status and section, and the same
- * table as Excel. The name stays in view while the answers scroll sideways.
+ * table as Excel. The name stays in view while the answers scroll sideways. Since 11 Nov 2026 the
+ * search also looks in the answers (the words marked) or the questions (the other columns hidden),
+ * and "Saring jawaban" keeps the people who gave one answer to one question.
  */
 export function AnswerTable({ table, reminder }: { table: Table; reminder: ReminderState }) {
   const router = useRouter();
@@ -40,17 +62,37 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
   const [department, setDepartment] = useState("");
   const [state, setState] = useState<StateFilter>("semua");
   const [section, setSection] = useState("");
+  const [scope, setScope] = useState<Scope>("orang");
+  // The answer filter: one question, then one of its answers (or none given).
+  const [filterKey, setFilterKey] = useState("");
+  const [filterValue, setFilterValue] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   const total = table.rows.length;
   const departments = useMemo(() => [...new Set(table.rows.map(row => row.department).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id")), [table.rows]);
-  const columns = section ? table.columns.filter(column => column.sectionId === section) : table.columns;
-  const rows = useMemo(() => {
-    const words = query.trim().toLocaleLowerCase("id").split(/\s+/).filter(Boolean);
-    return table.rows.filter(row => (state === "semua" || row.state === state) && (!department || row.department === department)
-      && words.every(word => `${row.name} ${row.department}`.toLocaleLowerCase("id").includes(word)));
-  }, [table.rows, query, state, department]);
+  const words = useMemo(() => wordsOf(query), [query]);
+  const inSection = useMemo(() => section ? table.columns.filter(column => column.sectionId === section) : table.columns, [table.columns, section]);
+  // Searching the questions keeps only the columns that hold the words.
+  const columns = useMemo(() => scope === "pertanyaan" && words.length ? inSection.filter(column => holdsAll(`${column.number} ${column.prompt} ${column.section}`, words)) : inSection, [scope, words, inSection]);
+  const filterColumn = table.columns.find(column => column.key === filterKey);
+  const filterValues = useMemo(() => filterColumn
+    ? [...new Set(table.rows.flatMap(row => row.cells[filterColumn.key] ? valuesOf(row.cells[filterColumn.key]) : []))].sort((a, b) => a.localeCompare(b, "id"))
+    : [], [table.rows, filterColumn]);
+  const rows = useMemo(() => table.rows.filter(row => {
+    if (state !== "semua" && row.state !== state) return false;
+    if (department && row.department !== department) return false;
+    if (filterColumn && filterValue) {
+      const text = row.cells[filterColumn.key];
+      if (filterValue === UNANSWERED ? !!text : !text || !valuesOf(text).includes(filterValue)) return false;
+    }
+    if (!words.length) return true;
+    if (scope === "orang") return holdsAll(`${row.name} ${row.department}`, words);
+    // Searching the answers: a person with every word in one of the answers shown.
+    if (scope === "jawaban") return columns.some(column => !!row.cells[column.key] && holdsAll(row.cells[column.key], words));
+    return true;
+  }), [table.rows, state, department, filterColumn, filterValue, words, scope, columns]);
+  const hits = scope === "jawaban" ? words : [];
 
   const remindWho = state === "belum" || state === "sedang" ? state : "semua";
   const whoLabel = remindWho === "belum" ? "yang belum mulai" : remindWho === "sedang" ? "yang sedang mengisi" : "yang belum selesai";
@@ -87,7 +129,14 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
     {sent && <Notice tone={sent.tone}>{sent.text}</Notice>}
 
     <div className={css.tools}>
-      <SearchField label="Cari nama atau departemen" placeholder="Cari nama atau departemen" value={query} onChange={setQuery} />
+      <label className={css.scope}><span className="sr-only">Cari di</span>
+        <select className="input" value={scope} onChange={event => setScope(event.target.value as Scope)}>
+          <option value="orang">Cari di nama</option>
+          <option value="jawaban">Cari di jawaban</option>
+          <option value="pertanyaan">Cari di pertanyaan</option>
+        </select>
+      </label>
+      <SearchField label={scopes[scope].label} placeholder={scopes[scope].placeholder} value={query} onChange={setQuery} />
       <label className={css.select}><span className="sr-only">Departemen</span>
         <select className="input" value={department} onChange={event => setDepartment(event.target.value)}>
           <option value="">Semua departemen</option>
@@ -102,6 +151,26 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
       </label>
       <ConsoleButtonLink href={praWamQuestionnaireApi.table} download icon={<Download size={18} aria-hidden="true" />}>Unduh Excel</ConsoleButtonLink>
     </div>
+    {/* Who answered what (11 Nov 2026): one question, then one of its answers. */}
+    <div className={css.tools} role="group" aria-label="Saring jawaban">
+      <span className={css.toolLabel}>Saring jawaban</span>
+      <label className={css.select}><span className="sr-only">Pertanyaan untuk disaring</span>
+        <select className="input" value={filterKey} onChange={event => { setFilterKey(event.target.value); setFilterValue(""); }}>
+          <option value="">Pilih pertanyaan</option>
+          {table.sections.map(item => <optgroup key={item.id} label={item.title}>
+            {table.columns.filter(column => column.sectionId === item.id).map(column => <option key={column.key} value={column.key}>{column.number}. {column.prompt}</option>)}
+          </optgroup>)}
+        </select>
+      </label>
+      <label className={css.select}><span className="sr-only">Jawaban untuk disaring</span>
+        <select className="input" value={filterValue} disabled={!filterColumn} onChange={event => setFilterValue(event.target.value)}>
+          <option value="">{filterColumn ? "Semua jawaban" : "Pilih pertanyaan dulu"}</option>
+          {filterValues.map(value => <option key={value} value={value}>{value.length > 80 ? `${value.slice(0, 80)}…` : value}</option>)}
+          {filterColumn && <option value={UNANSWERED}>Belum dijawab</option>}
+        </select>
+      </label>
+      {(filterKey || query || department || section || state !== "semua") && <ConsoleButton onClick={() => { setQuery(""); setDepartment(""); setSection(""); setState("semua"); setFilterKey(""); setFilterValue(""); }}>Hapus saringan</ConsoleButton>}
+    </div>
     <FilterChips<StateFilter> label="Status" value={state} onChange={setState} chips={[
       { value: "semua", label: "Semua", count: total },
       { value: "selesai", label: stateLabels.selesai, count: table.counts.selesai },
@@ -110,7 +179,8 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
     ]} />
 
     <p className={css.count} aria-live="polite">{rows.length} dari {total} orang · {columns.length} pertanyaan. Geser tabel ke samping untuk melihat semua jawaban.</p>
-    {rows.length ? <div className={css.scroller} role="region" aria-label="Tabel jawaban" tabIndex={0}>
+    {scope === "pertanyaan" && words.length > 0 && !columns.length ? <p className={css.count}>Tidak ada pertanyaan yang cocok dengan pencarian ini.</p>
+      : rows.length ? <div className={css.scroller} role="region" aria-label="Tabel jawaban" tabIndex={0}>
       <table className={css.table}>
         <thead>
           <tr>
@@ -132,7 +202,7 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
             </td>
             {columns.map(column => {
               const text = row.cells[column.key];
-              return <td key={column.key} className={css.answer}>{text ? <span title={text}>{text}</span> : <span className={css.empty} aria-label="Belum dijawab">–</span>}</td>;
+              return <td key={column.key} className={css.answer}>{text ? <span title={text}>{marked(text, hits)}</span> : <span className={css.empty} aria-label="Belum dijawab">–</span>}</td>;
             })}
           </tr>)}
         </tbody>

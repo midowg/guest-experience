@@ -5,7 +5,15 @@
 
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .tools > label:first-child { flex: 1 1 16rem; }
+/* With "Cari di" in front, the search field after it takes the room. */
+.tools > label.scope:first-child { flex: 0 0 11.5rem; }
+.tools > .scope + label { flex: 1 1 16rem; }
 .select { flex: 0 1 15rem; min-width: 11rem; }
+.scope { flex: 0 0 11.5rem; }
+.scope select { width: 100%; }
+.toolLabel { font-size: 13px; font-weight: 700; color: var(--cs-muted); }
+.tools[role="group"] .select { flex: 1 1 16rem; max-width: 28rem; }
+.hit { padding: 0 1px; border-radius: 3px; background: color-mix(in srgb, var(--cs-warn, #f5b301) 40%, transparent); color: inherit; }
 .select select { width: 100%; }
 .count { margin: 0; font-size: 13px; color: var(--cs-muted); }
 .note { margin: 0; font-size: 13px; color: var(--cs-muted); }
