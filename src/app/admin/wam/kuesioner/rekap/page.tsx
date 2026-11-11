@@ -1,31 +1,29 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
-import { QuestionnaireRecap } from "@/components/admin/wam/questionnaire/QuestionnaireRecap";
+import { AnswerTable } from "@/components/admin/wam/questionnaire/AnswerTable";
 import { QuestionnaireFrame } from "@/components/admin/wam/questionnaire/QuestionnaireFrame";
 import { QuestionnaireWaiting } from "@/components/admin/wam/questionnaire/QuestionnaireWaiting";
-import { adminReader } from "@/lib/pra-wam/recap";
+import { editable } from "@/lib/pra-wam/questionnaire";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
-import { hrUnlocked } from "@/lib/server/pra-wam/hr-lock";
+import { answerTable } from "@/lib/server/pra-wam/answer-table";
 import { currentForm } from "@/lib/server/pra-wam/questionnaire";
-import { recapOf } from "@/lib/server/pra-wam/recap";
+import { lastReminder } from "@/lib/server/pra-wam/reminders";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Rekap kuesioner · Admin WAM", robots: { index: false, follow: false } };
 
 /**
- * Any admin: the questionnaire per question as charts and quotes, never with a name, for everyone
- * or one department. HR questions show as counts until Data HR is open in this browser; the
- * anonymous section only as a whole and from five answers on.
+ * Any admin (11 Nov 2026, owner's decision: one page, everything open): the progress counts,
+ * "Ingatkan", and one table with a row per person and every named answer, HR and Rahasia included,
+ * with its Excel download. Progres, Data HR and Ekspor now lead here.
  */
-export default async function QuestionnaireRecapPage({ searchParams }: { searchParams: Promise<{ departemen?: string | string[] }> }) {
+export default async function QuestionnaireRecapPage() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const form = await currentForm();
-  const asked = (await searchParams).departemen;
-  const department = typeof asked === "string" && asked ? asked.slice(0, 120) : null;
-  const unlock = form ? await hrUnlocked() : null;
-  const recap = form ? await recapOf(form, adminReader(unlock?.formId === form.id), department) : null;
+  const [table, last] = form ? await Promise.all([answerTable(form), lastReminder()]) : [null, null];
+  const reminder = { open: !!form && form.status === "buka" && editable(form), last };
   return <QuestionnaireFrame current="rekap" wide>
-    {recap ? <QuestionnaireRecap recap={recap} /> : <QuestionnaireWaiting />}
+    {table ? <AnswerTable table={table} reminder={reminder} /> : <QuestionnaireWaiting />}
   </QuestionnaireFrame>;
 }

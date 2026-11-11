@@ -23,6 +23,11 @@ import { notMigrated } from "./session";
  * that names the person and is bound to the admin session cookie (it dies with it); taking the
  * person off the list, or switching their account off, ends it at once. Every HR data read checks
  * the admin session and that cookie, here on the server.
+ *
+ * Since 11 Nov 2026 (owner's decision: "dibuka saja semua", the lock was too much work) every
+ * signed-in admin sees everything: hrUnlocked() is open for any admin session, without the email
+ * step or the cookie, so Rekap, Kamar and the export hold the HR and Rahasia answers for every
+ * admin. The unlock pieces below stay for the log and in case the lock comes back.
  */
 
 export const HR_COOKIE = "wk_hr";
@@ -225,10 +230,31 @@ export async function lockHr(request: Request) {
   if (unlocked) await logHr(unlocked.formId, "kunci", request, { actor: unlocked.actor.id });
 }
 
-export type HrUnlock = { formId: string; expiresAt: string; actor: { id: string; name: string } };
+/** `actor.id` is null for an admin who opened without a WAM email (every admin, since 11 Nov 2026). */
+export type HrUnlock = { formId: string; expiresAt: string; actor: { id: string | null; name: string } };
 
-/** For pages (after requireAdminPage): the unlock this browser holds, or null. Never throws for a locked state. */
+/** Far enough that the open state never runs out while a page is open. */
+const OPEN_UNTIL = "9999-12-31T23:59:59.000Z";
+
+/**
+ * For pages (after requireAdminPage): open for every admin session (11 Nov 2026); null only
+ * without one, or before the questionnaire exists. Never throws for a locked state.
+ */
 export async function hrUnlocked(): Promise<HrUnlock | null> {
+  const config = adminAuthConfig();
+  if (!config) return null;
+  const adminToken = (await cookies()).get(SESSION_COOKIE)?.value;
+  const role = verifySession(config, adminToken);
+  if (!role) return null;
+  const form = await hrForm();
+  if (!form) return null;
+  // Whoever opened it with their WAM email before keeps their name on the log.
+  const named = await emailUnlocked();
+  return { formId: form.id, expiresAt: OPEN_UNTIL, actor: named?.actor ?? { id: null, name: role === "super" ? "Super admin" : "Admin" } };
+}
+
+/** The older email unlock this browser may still hold (named on the log), or null. */
+async function emailUnlocked(): Promise<HrUnlock | null> {
   const config = adminAuthConfig();
   if (!config) return null;
   const store = await cookies();
@@ -253,7 +279,7 @@ export async function requireHrUnlocked(): Promise<HrUnlock> {
   const form = await hrForm();
   if (!form) throw questionnaireWaiting();
   if (!form.access) throw hrAccessWaiting();
-  throw new ServiceError(403, "Data HR terkunci. Buka dulu dengan email WAM yang punya akses di halaman Data HR.");
+  throw new ServiceError(403, "Data HR belum bisa dibuka. Muat ulang halaman lalu coba lagi.");
 }
 
 /**

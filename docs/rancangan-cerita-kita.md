@@ -99,6 +99,24 @@ makanan yang kuhindari"), **14b** hanya fobia, **16** ditambah obat rutin, catat
 14 dan 14b kembali ke `hr`. Teks hanya diganti bila masih teks awal, jadi suntingan HR tetap. Karena
 5b wajib, orang yang sudah selesai sebelum migrasi tercatat belum selesai sampai mengisinya.
 
+### Admin: satu halaman Rekap, semua terbuka (11 November 2026)
+
+Keputusan pemilik ("dibuka saja semua, sekarang terlalu ribet"): Admin WAM → Kuesioner tinggal
+**Isi, Rekap, Pengaturan, Kartu, Kamar**.
+- **Rekap** satu tabel: satu baris per orang yang dituju (nama, departemen, status, bagian selesai,
+  aktivitas terakhir), satu kolom per pertanyaan bernama dengan jawabannya sebagai teks, termasuk
+  HR dan Rahasia. Saring per nama, departemen, status, dan bagian; nama tetap terlihat saat tabel
+  digeser. Di atasnya ringkasan dan "Ingatkan yang belum". **Unduh Excel** berisi tabel yang sama
+  (`GET /api/admin/wam/questionnaire/table`, dicatat sebagai `ekspor`). Bagian anonim tidak ada di
+  tabel karena jawabannya tanpa nama.
+- **Tidak ada kunci lagi**: semua admin yang masuk melihat semuanya (Rekap, Kamar, Data HR lewat
+  API). Tidak perlu email WAM, dan daftar Akses Data HR tidak lagi ditampilkan di Pengaturan.
+  Pembacaan dicatat di log dengan nama orang bila browser itu masih membuka dengan email, selain
+  itu tanpa nama.
+- Alamat lama Progres, Data HR, dan Ekspor mengalihkan ke Rekap.
+- **Perlu diingat**: label di kartu pertanyaan peserta ("Hanya HR dan manajemen", "Rahasia, hanya
+  HR") masih menjanjikan pembaca yang lebih sempit daripada sekarang.
+
 ### Opsi dan isian dari Data karyawan (11 November 2026)
 
 Keputusan pemilik: data yang sudah ada di database tidak ditanyakan ulang dengan pilihan lain.

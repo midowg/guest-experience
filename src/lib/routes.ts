@@ -315,7 +315,7 @@ export const wamAdminPath = {
     settings: `${WAM_ADMIN}/kuesioner/pengaturan`,
     progress: `${WAM_ADMIN}/kuesioner/progres`,
     hrData: `${WAM_ADMIN}/kuesioner/data-hr`,
-    /** Charts and quotes per question, by read level; never a name. */
+    /** One table: a row per person, a column per question, every answer (11 Nov 2026; was charts and quotes). */
     recap: `${WAM_ADMIN}/kuesioner/rekap`,
     /** Excel per section, by read level; HR answers only with Data HR open. */
     export: `${WAM_ADMIN}/kuesioner/ekspor`,
@@ -346,6 +346,8 @@ export const praWamQuestionnaireApi = {
   purge: `${QUESTIONNAIRE_ADMIN_API}/purge`,
   /** POST {who}: "Ingatkan yang belum", a WAM notification to those not done. */
   remind: `${QUESTIONNAIRE_ADMIN_API}/remind`,
+  /** GET: Rekap's table (one row per person, one column per question, HR included) as .xlsx; logged as `ekspor`. */
+  table: `${QUESTIONNAIRE_ADMIN_API}/table`,
   /** GET ?bagian=<section key>: the answers as .xlsx; with HR answers only when Data HR is open, then logged as `ekspor`. */
   export: (section?: string) => `${QUESTIONNAIRE_ADMIN_API}/export${section ? `?bagian=${encodeURIComponent(section)}` : ""}`,
 };

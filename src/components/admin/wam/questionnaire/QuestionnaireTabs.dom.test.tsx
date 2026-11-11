@@ -10,13 +10,13 @@ const { questionnaireSubtitle } = await import("./QuestionnaireFrame");
 
 afterEach(cleanup);
 
-it("shows the questionnaire's tabs in order, marks the open one, and locks the HR ones", () => {
-  render(<QuestionnaireTabs current="progres" />);
+it("shows the questionnaire's tabs in order, with Rekap holding everything and nothing locked", () => {
+  render(<QuestionnaireTabs current="rekap" />);
   const nav = screen.getByRole("navigation", { name: "Bagian kuesioner" });
   const links = within(nav).getAllByRole("link");
-  expect(links.map(link => link.textContent)).toEqual(["Isi", "Pengaturan", "Progres", "Rekap", "Kartu", "Terkunci, buka dengan email HR: Kamar", "Ekspor", "Terkunci, buka dengan email HR: Data HR"]);
+  expect(links.map(link => link.textContent)).toEqual(["Isi", "Rekap", "Pengaturan", "Kartu", "Kamar"]);
   expect(links.map(link => link.getAttribute("href"))).toEqual(questionnaireTabs.map(tab => tab.href));
-  expect(within(nav).getByRole("link", { name: "Progres" }).getAttribute("aria-current")).toBe("page");
+  expect(within(nav).getByRole("link", { name: "Rekap" }).getAttribute("aria-current")).toBe("page");
   expect(links.filter(link => link.getAttribute("aria-current"))).toHaveLength(1);
   expect(questionnaireTabs[0].href).toBe(wamAdminPath.questionnaire.content);
 });

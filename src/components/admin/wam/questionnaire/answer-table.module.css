@@ -1,0 +1,36 @@
+/* AnswerTable.tsx: Admin WAM → Kuesioner → Rekap, one row per person. Console tokens (--cs-*), light and dark. */
+
+.remind { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 14px 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface-2); }
+.remind > p { flex: 1 1 20rem; margin: 0; font-size: 14px; color: var(--cs-muted); }
+
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.tools > label:first-child { flex: 1 1 16rem; }
+.select { flex: 0 1 15rem; min-width: 11rem; }
+.select select { width: 100%; }
+.count { margin: 0; font-size: 13px; color: var(--cs-muted); }
+.note { margin: 0; font-size: 13px; color: var(--cs-muted); }
+
+/* The table scrolls on its own, both ways; the header row and the name column stay in view. */
+.scroller { max-height: min(72vh, 52rem); overflow: auto; border: 1px solid var(--cs-line); border-radius: 14px; background: var(--cs-surface); overscroll-behavior: contain; }
+.scroller:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
+.table { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: 13px; color: var(--cs-text); }
+.table th, .table td { padding: 10px 12px; border-bottom: 1px solid var(--cs-line); border-right: 1px solid var(--cs-line); text-align: left; vertical-align: top; }
+.table thead th { position: sticky; top: 0; z-index: 2; background: var(--cs-surface-2); font-weight: 600; }
+.table tbody tr:hover > * { background: var(--cs-hover); }
+
+.who { position: sticky; left: 0; z-index: 1; min-width: 13rem; max-width: 15rem; background: var(--cs-surface); }
+.table thead .who { z-index: 3; }
+.table tbody tr:hover > .who { background: color-mix(in srgb, var(--cs-surface) 92%, var(--cs-text)); }
+.who strong { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.who small { display: block; margin-top: 2px; color: var(--cs-muted); font-size: 12px; font-weight: 400; }
+.status { min-width: 9.5rem; white-space: nowrap; }
+.status small { display: block; margin-top: 4px; color: var(--cs-muted); font-size: 12px; }
+
+.question { min-width: 13rem; max-width: 17rem; }
+.question > * + * { margin-top: 4px; }
+.qno { display: inline-block; min-width: 1.6em; color: var(--cs-muted); font-variant-numeric: tabular-nums; }
+.prompt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; font-weight: 600; line-height: 1.35; }
+
+.answer { min-width: 13rem; max-width: 17rem; line-height: 1.45; }
+.answer > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; white-space: pre-line; overflow-wrap: anywhere; }
+.empty { color: var(--cs-muted); }

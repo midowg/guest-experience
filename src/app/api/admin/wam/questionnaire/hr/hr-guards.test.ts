@@ -1,8 +1,9 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 /*
- * The HR APIs refuse without the admin session, and the data routes refuse without the HR unlock
- * cookie for this very session and a person still on the access list. Data HR opens with the WAM
+ * The HR APIs refuse without the admin session. Since 11 Nov 2026 (owner's decision) the data is
+ * open for every signed-in admin: no unlock is needed, and a read without one is logged with no
+ * name. An email unlock still works and names the person on the log while they stay on the list. Data HR opens with the WAM
  * email of someone on the list; an unknown email and one without access get the same answer.
  * Cookies and the database are fakes (a tiny in-memory table store); the session and cookie
  * checks are the real ones. Obvious fake emails and secrets only.
@@ -131,25 +132,22 @@ describe("HR data routes", () => {
     expect(fake.state.reads).toEqual([]);
   });
 
-  it("answer 403 for a signed-in admin who has not unlocked, and read no answers", async () => {
+  it("open for every signed-in admin without an unlock, and log a read with no name", async () => {
     fake.jar.set("wk_admin", adminToken());
-    for (const [, call] of dataRoutes()) {
-      const { status, body } = await json(await call());
-      expect(status).toBe(403);
-      expect(body.message).toMatch(/Data HR terkunci/);
-    }
-    expect(fake.state.reads).toEqual([]);
+    for (const [, call] of dataRoutes()) expect((await call()).status).toBe(200);
+    expect(logRows().map(row => [row.action, row.actor_employee_id, row.subject_employee_id])).toEqual([["lihat", null, OTHER]]);
   });
 
-  it("refuse an unlock cookie from another admin session, and one of a person taken off the list", async () => {
+  it("name the person only for an unlock cookie of this session and of someone still on the list", async () => {
     const config = (await import("@/lib/admin-token")).adminAuthConfig()!;
     fake.jar.set("wk_admin", adminToken());
     fake.jar.set("wk_hr", lock.signHrToken(config.secret, adminToken("super"), HR));
-    expect(await lock.hrUnlocked()).toBeNull();
+    // Open anyway, but not under that person's name.
+    expect((await lock.hrUnlocked())?.actor).toEqual({ id: null, name: "Admin" });
     fake.jar.set("wk_hr", lock.signHrToken(config.secret, fake.jar.get("wk_admin")!, HR));
     expect((await lock.hrUnlocked())?.actor).toEqual({ id: HR, name: "Dewi HR" });
     fake.tables.cq_forms[0].hr_access = [ASLEEP];
-    expect(await lock.hrUnlocked()).toBeNull();
+    expect((await lock.hrUnlocked())?.actor).toEqual({ id: null, name: "Admin" });
   });
 
   it("refuse a cross-site read even when unlocked", async () => {
@@ -189,9 +187,10 @@ describe("unlocking with the WAM email", () => {
     expect(fake.jar.get("wk_hr")).toMatch(new RegExp(`^v2\\.\\d+\\.${HR}\\.[0-9a-f]{64}$`));
     expect(logRows()).toEqual([expect.objectContaining({ action: "buka", actor_employee_id: HR, user_agent: "Vitest" })]);
     expect((await routes.log.GET(get("/x"))).status).toBe(200);
-    // Signing in again (a new admin cookie) ends the unlock.
+    // Signing in again (a new admin cookie) ends the named unlock; the data stays open to the admin.
     fake.jar.set("wk_admin", adminToken("super"));
-    expect((await routes.log.GET(get("/x"))).status).toBe(403);
+    expect((await lock.hrUnlocked())?.actor).toEqual({ id: null, name: "Super admin" });
+    expect((await routes.log.GET(get("/x"))).status).toBe(200);
   });
 
   it("logs every read and the lock under the person who opened it", async () => {
@@ -201,7 +200,8 @@ describe("unlocking with the WAM email", () => {
     expect(fake.jar.has("wk_hr")).toBe(false);
     expect(logRows().map(row => [row.action, row.actor_employee_id, row.subject_employee_id ?? null]))
       .toEqual([["buka", HR, null], ["lihat", HR, OTHER], ["kunci", HR, null]]);
-    expect((await routes.people.GET(get("/x"))).status).toBe(403);
+    // Locked again, the admin still reads (open for every admin).
+    expect((await routes.people.GET(get("/x"))).status).toBe(200);
   });
 
   it("shows who did what in the log", async () => {
@@ -279,7 +279,7 @@ describe("the access list", () => {
     expect(fake.tables.cq_forms[0].hr_access).toEqual([HR]);
   });
 
-  it("ends the unlock of a person who is taken off it", async () => {
+  it("stops naming a person who is taken off it, while the data stays open to the admin", async () => {
     await unlockAsHr();
     expect((await routes.people.GET(get("/x"))).status).toBe(200);
     fake.jar.set("wk_admin", adminToken("super"));
@@ -288,6 +288,7 @@ describe("the access list", () => {
     expect((await routes.people.GET(get("/x"))).status).toBe(200);
     await routes.accessPerson.DELETE(del("/x"), { params: Promise.resolve({ employeeId: HR }) });
     expect(fake.jar.get("wk_admin")).toBe(superCookie);
-    expect((await routes.people.GET(get("/x"))).status).toBe(403);
+    expect((await lock.hrUnlocked())?.actor.id).toBeNull();
+    expect((await routes.people.GET(get("/x"))).status).toBe(200);
   });
 });
