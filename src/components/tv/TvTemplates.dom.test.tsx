@@ -16,7 +16,7 @@ function keep(name: string, container: HTMLElement) {
   const sheet = readFileSync("src/components/tv/tv.module.css", "utf8");
   const html = container.innerHTML.replace(/_([A-Za-z][A-Za-z0-9]*)_[0-9a-f]{6}(?=[ "])/g, "$1");
   writeFileSync(`${folder}/${name}.html`, `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${name}</title><style>${sheet}</style></head>`
-    + `<body style="margin:0;font-family:system-ui,sans-serif"><main class="board" data-orientation="mendatar" style="position:relative;width:100vw;height:100vh;overflow:hidden;--u:1vmin;--tv-display:Georgia,serif">${html}</main>`
+    + `<body style="margin:0;font-family:system-ui,sans-serif"><main class="board" data-orientation="mendatar" style="position:relative;width:100vw;height:100vh;overflow:hidden;--u:1vmin;--tv-display:Georgia,serif;--bd-serif:Georgia,serif">${html}</main>`
     + `<script>const b=document.querySelector("main");const o=()=>{b.dataset.orientation=innerWidth>=innerHeight?"mendatar":"tegak"};o();addEventListener("resize",o)</script></body></html>`);
 }
 
@@ -90,13 +90,13 @@ describe("the waiting screen and videos", () => {
 });
 
 describe("the birthday greeting", () => {
-  const birthday = { name: "Contoh Satu Dua", call: "Pak Contoh", day: "20", month: "Sept", wish: "Wishing you a year ahead filled with meaningful moments, new opportunities, and continued growth. May it be a year of happiness, fulfillment, and many wonderful things to come.", photo: "" };
+  const birthday = { name: "Contoh Satu Dua", call: "Pak Contoh", day: "20", month: "SEP", wish: "Wishing you a year ahead filled with meaningful moments, new opportunities, and continued growth. May it be a year of happiness, fulfillment, and many wonderful things to come.", photo: "", cut: false };
 
   it("writes the name, the date, the greeting, the wish and the foot", () => {
     const { container } = render(<BirthdaySlide birthday={birthday} />);
     expect(screen.getByRole("heading", { level: 1, name: "Contoh Satu Dua" })).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 2, name: "Happy Birthday, Pak Contoh" })).toBeTruthy();
-    expect(container.textContent).toContain("20Sept");
+    expect(screen.getByRole("heading", { level: 2, name: "Happy Birthday Pak Contoh" })).toBeTruthy();
+    expect(container.textContent).toContain("20SEP");
     expect(container.textContent).toContain("Wishing you a year ahead");
     expect(container.textContent).toContain("Werkudara Group | werkudara.com");
     expect(container.querySelector("img")).toBeNull();
@@ -106,6 +106,16 @@ describe("the birthday greeting", () => {
   it("shows the photo in the frame, and leaves the date out when there is none", () => {
     const { container } = render(<BirthdaySlide birthday={{ ...birthday, day: "", month: "", photo: "/foto.webp" }} />);
     expect(container.querySelector("img")?.getAttribute("src")).toBe("/foto.webp");
-    expect(container.textContent).not.toContain("Sept");
+    expect(container.textContent).not.toContain("SEP");
+    expect(container.querySelector("[data-cut]")?.getAttribute("data-cut")).toBe("false");
+  });
+
+  it("stands a cut-out person in front of the frame instead of inside the panel", () => {
+    const { container } = render(<BirthdaySlide birthday={{ ...birthday, photo: "uji/orang.webp", cut: true }} />);
+    expect(container.querySelector("[data-cut]")?.getAttribute("data-cut")).toBe("true");
+    const person = container.querySelector("img") as HTMLImageElement;
+    expect(container.querySelector("[class*=bdayPanel] img")).toBeNull();
+    expect(person.getAttribute("src")).toBe("uji/orang.webp");
+    keep("ultah-potong", container);
   });
 });

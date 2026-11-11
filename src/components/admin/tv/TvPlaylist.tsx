@@ -13,6 +13,7 @@ import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import { isTemplateKind, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, TV_BIRTHDAY_WISH, tvVideoTypes, TV_VIDEO_BYTES, tvWelcomeDesignLabels, tvWelcomeDesigns, youtubeId, youtubeWatch, type TvItemKind, type TvVideoMime, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
 import { praWamTvApi, tvAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminItem } from "@/lib/server/pra-wam/tv";
+import { cutOutPerson } from "./cutout";
 import { TvPreview } from "./TvPreview";
 import css from "./tv-playlist.module.css";
 
@@ -123,7 +124,12 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
   /** A birthday greeting's photo: made smaller in the browser, sent to storage, then kept as that row's picture. */
   async function uploadPhoto(itemId: string, file: File) {
     setBusy(`foto-${itemId}`); setMessage(null);
-    try { setList(await uploadSlide(file, itemId)); setMessage({ tone: "success", text: "Foto tersimpan." }); }
+    try {
+      // The person is cut out of the photo here, in this browser, so they stand in front of the frame as on the card.
+      const made = await cutOutPerson(file);
+      setList(await uploadSlide(made.file, itemId, made.cut));
+      setMessage(made.cut ? { tone: "success", text: "Foto tersimpan. Orangnya sudah dipotong dari latarnya." } : { tone: "success", text: `Foto tersimpan utuh. ${made.problem ?? ""}`.trim() });
+    }
     catch (error) { setMessage({ tone: "error", text: errorMessage(error) }); }
     finally { setBusy(null); }
   }
@@ -179,7 +185,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
           const days = scheduleLabel({ ...item, screenIds: [] }, screenName) || "Setiap hari, sepanjang hari";
           const screens = item.screenIds.length ? item.screenIds.map(id => screenName(id) ?? "TV yang sudah dihapus").join(", ") : "Semua TV";
           const note = item.kind === "sambutan" ? (list.welcomes.length ? `Hari ini: ${list.welcomes.join(", ")}` : "Tidak ada kunjungan terbit hari ini, jadi dilewati.")
-            : item.kind === "ultah" ? [item.call && `Happy Birthday, ${item.call}`, item.slideId ? "" : "Belum ada foto."].filter(Boolean).join(" · ")
+            : item.kind === "ultah" ? [item.call && `Happy Birthday ${item.call}`, item.slideId ? "" : "Belum ada foto."].filter(Boolean).join(" · ")
             : isTyped(item.kind) ? item.body : item.kind === "video" ? (item.videoFile ? "Berkas video yang diunggah" : youtubeWatch(item.body)) : isTemplateKind(item.kind) ? tvItemKindHints[item.kind] : "";
           const open = editing?.id === item.id ? editing : null;
           const edit = open?.draft ?? null, take = open?.take ?? null;
@@ -231,8 +237,8 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
                     <div className={css.plField}><label htmlFor={`lahir-${item.id}`}>Tanggal ulang tahun</label><input id={`lahir-${item.id}`} type="date" value={edit.date} onChange={event => change({ date: event.target.value })} /></div>
                   </div>}
                   {item.kind === "ultah" && <div className={css.plSubmit}>
-                    <ConsoleButton icon={<ImageUp size={18} aria-hidden />} disabled={!!busy || !list.storageReady} onClick={() => { photoFor.current = item.id; photoInput.current?.click(); }}>{busy === `foto-${item.id}` ? "Mengunggah…" : item.slideId ? "Ganti foto" : "Unggah foto"}</ConsoleButton>
-                    <span className={css.plHint}>Foto setengah badan, tegak. JPG, PNG, atau WebP.</span>
+                    <ConsoleButton icon={<ImageUp size={18} aria-hidden />} disabled={!!busy || !list.storageReady} onClick={() => { photoFor.current = item.id; photoInput.current?.click(); }}>{busy === `foto-${item.id}` ? "Memotong dan mengunggah…" : item.slideId ? "Ganti foto" : "Unggah foto"}</ConsoleButton>
+                    <span className={css.plHint}>Foto setengah badan, tegak. Orangnya dipotong dari latarnya secara otomatis di browser ini (beberapa detik; perlu internet saat pertama).</span>
                   </div>}
                   {isTyped(item.kind) && <div className={css.plField}>
                     <label htmlFor={`isi-${item.id}`}>{item.kind === "tamu" || item.kind === "ultah" ? "Ucapan" : "Isi"}</label>
@@ -366,7 +372,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
               <input id="ultah-tanggal" type="date" value={bday.date} disabled={!!busy} onChange={event => setBday(value => ({ ...value, date: event.target.value }))} />
             </div>
           </div>
-          <p id="ultah-panggilan-ket" className={css.plHint}>Nama panggilan dipakai di tulisan &quot;Happy Birthday, …&quot;. Kosongkan untuk memakai nama lengkap.</p>
+          <p id="ultah-panggilan-ket" className={css.plHint}>Nama panggilan dipakai di tulisan &quot;Happy Birthday …&quot;. Kosongkan untuk memakai nama lengkap.</p>
           <div className={css.plField}>
             <label htmlFor="ultah-ucapan">Ucapan</label>
             <textarea id="ultah-ucapan" rows={4} value={bday.body} maxLength={600} disabled={!!busy} onChange={event => setBday(value => ({ ...value, body: event.target.value }))} />

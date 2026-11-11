@@ -148,6 +148,8 @@ export const tvSlideConfirmSchema = tvSlideStartSchema.extend({
   key: z.string().min(1).max(200), token: z.string().min(1).max(200), title: title.default(""),
   /** The birthday greeting this picture is the photo of; without it the picture is a row of its own. */
   itemId: z.uuid().optional(),
+  /** That photo is the person alone, without a background. */
+  cut: z.boolean().optional(),
 });
 export const tvSlidePatchSchema = z.object({ title: title.optional(), seconds: seconds.optional(), active: z.boolean().optional() })
   .refine(value => Object.values(value).some(item => item !== undefined), { message: "Tidak ada yang diubah." });
@@ -461,7 +463,7 @@ export function sniffVideo(start: Uint8Array): TvVideoMime | null {
 }
 
 /** A row as a TV gets it. `src` is a picture's address. */
-export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string; design?: string; call?: string; date?: string };
+export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string; design?: string; call?: string; date?: string; cut?: boolean };
 
 /*
  * A birthday greeting (migration 202611100012), after the team's own card ("WG Bday", a portrait
@@ -471,10 +473,11 @@ export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: st
  * title is the name, its body the wish, its picture the photo; `call` is what the greeting calls
  * them ("Pak Fadli") and `date` their birthday.
  */
-export type TvBirthday = { name: string; call: string; day: string; month: string; wish: string; photo: string };
+/** `cut`: the photo is the person alone, without a background, so they stand in front of the frame as on the card. */
+export type TvBirthday = { name: string; call: string; day: string; month: string; wish: string; photo: string; cut: boolean };
 export const TV_BIRTHDAY_WISH = "Wishing you a year ahead filled with meaningful moments, new opportunities, and continued growth. May it be a year of happiness, fulfillment, and many wonderful things to come.";
-const BIRTHDAY_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"] as const;
-/** "2026-09-20" → the card's "20" and "Sept"; both empty for no date. */
+const BIRTHDAY_MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"] as const;
+/** "2026-11-11" → the card's "11" and "NOV"; both empty for no date. */
 export function birthdayDate(date: string | null | undefined): { day: string; month: string } {
   const found = /^\d{4}-(\d{2})-(\d{2})$/.exec(date ?? "");
   const month = found ? BIRTHDAY_MONTHS[Number(found[1]) - 1] : undefined;
@@ -520,7 +523,7 @@ export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides"
     // One slide per visit on today; none today, and the row is passed over.
     if (item.kind === "sambutan") return (feed.welcomes ?? []).map(welcome => ({ key: `${key}-${welcome.id}`, kind: "sambutan" as const, welcome, design: welcomeDesign(item.design), seconds: item.seconds }));
     if (item.kind === "tamu") return item.title ? [{ key, kind: "sambutan", seconds: item.seconds, design: welcomeDesign(item.design), welcome: { id: item.id, name: item.title, greeting: TV_WELCOME_GREETING, note: item.body, hours: "", place: "", image: "" } }] : [];
-    if (item.kind === "ultah") return item.title ? [{ key, kind: "ultah", seconds: item.seconds, birthday: { name: item.title, call: item.call?.trim() || item.title, ...birthdayDate(item.date), wish: item.body || TV_BIRTHDAY_WISH, photo: item.src ?? "" } }] : [];
+    if (item.kind === "ultah") return item.title ? [{ key, kind: "ultah", seconds: item.seconds, birthday: { name: item.title, call: item.call?.trim() || item.title, ...birthdayDate(item.date), wish: item.body || TV_BIRTHDAY_WISH, photo: item.src ?? "", cut: !!item.src && item.cut === true } }] : [];
     if (item.kind === "video" && item.src) return [{ key, kind: "video", title: item.title, video: "", file: item.src, seconds: item.seconds }];
     if (item.kind === "video") return YOUTUBE_ID.test(item.body) ? [{ key, kind: "video", title: item.title, video: item.body, seconds: item.seconds }] : [];
     return item.src ? [{ key, kind: "gambar", seconds: item.seconds, slide: { id: item.id, title: item.title, seconds: item.seconds, src: item.src } }] : [];

@@ -70,14 +70,14 @@ async function asWebp(file: File): Promise<Blob> {
 }
 
 /** One picture into the loop: the server agrees a key and size, the browser stores it, the server checks it. */
-export async function uploadSlide(file: File, itemId?: string): Promise<TvAdmin> {
+export async function uploadSlide(file: File, itemId?: string, cut?: boolean): Promise<TvAdmin> {
   const blob = await asWebp(file);
   const agreed = { mime: "image/webp", size: blob.size };
   const start = await adminRequest<{ key: string; uploadUrl: string; token: string }>(praWamTvApi.slideStart, { method: "POST", body: JSON.stringify(agreed) });
   const problem = putProblem(await putFile(start.data!.uploadUrl, blob, agreed.mime));
   if (problem) throw new AdminApiError(problem);
   const title = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim().slice(0, 80);
-  const done = await adminRequest<TvAdmin>(praWamTvApi.slideConfirm, { method: "POST", body: JSON.stringify({ ...agreed, key: start.data!.key, token: start.data!.token, title, ...(itemId ? { itemId } : {}) }) });
+  const done = await adminRequest<TvAdmin>(praWamTvApi.slideConfirm, { method: "POST", body: JSON.stringify({ ...agreed, key: start.data!.key, token: start.data!.token, title, ...(itemId ? { itemId, cut: cut === true } : {}) }) });
   return done.data!;
 }
 

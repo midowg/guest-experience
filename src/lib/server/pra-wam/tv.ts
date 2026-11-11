@@ -54,7 +54,7 @@ type ItemRow = {
   /** How a welcome is drawn; absent before migration 202611100009. */
   design?: string | null;
   /** A birthday greeting's "call" and "date"; absent before migration 202611100012. */
-  extra?: { call?: string; date?: string } | null;
+  extra?: { call?: string; date?: string; cut?: boolean } | null;
 };
 /** Birthday greetings arrive with this one; before it none can be added. */
 export const TV_BIRTHDAY_MIGRATION = "202611100012_pw_tv_birthday.sql";
@@ -341,7 +341,11 @@ export async function updateItem(id: string, change: ItemChange): Promise<void> 
   if (change.screenIds !== undefined) row.screen_ids = change.screenIds;
   if (change.design !== undefined) row.design = change.design;
   // A birthday's "call" and "date" are kept together: the page sends both when either changes.
-  if (change.call !== undefined || change.date !== undefined) row.extra = { call: change.call ?? "", date: change.date ?? "" };
+  if (change.call !== undefined || change.date !== undefined) {
+    // Whether its photo is a cut-out stays as the upload left it.
+    const { data: now } = await createPrivilegedClient().from("pw_tv_items").select("extra").eq("id", id).maybeSingle();
+    row.extra = { call: change.call ?? "", date: change.date ?? "", cut: (now?.extra as { cut?: boolean } | null)?.cut === true };
+  }
   let { data, error } = await createPrivilegedClient().from("pw_tv_items").update(row).eq("id", id).select("id");
   // Before the design's migration: everything else is saved, and a design other than the only one there is waits for it.
   if (error && noSlug(error) && change.design !== undefined) {
@@ -439,7 +443,7 @@ export async function startSlideUpload(input: TvSlideStart): Promise<{ key: stri
 }
 
 /** Step two: the picture is there with the agreed size and is WebP, PNG or JPEG; then it joins the loop, last. */
-export async function confirmSlideUpload(input: TvSlideStart & { key: string; token: string; title: string; itemId?: string }): Promise<void> {
+export async function confirmSlideUpload(input: TvSlideStart & { key: string; token: string; title: string; itemId?: string; cut?: boolean }): Promise<void> {
   if (!isR2Configured()) throw notReady();
   if (!input.key.startsWith(TV_IMAGE_PREFIX) || !tvTokenMatches(input.token, input.key, input)) throw new ServiceError(403, "Unggahan tidak dikenali. Ulangi dari awal.");
   const discard = () => removeObjects([input.key]).catch(() => undefined);
@@ -456,7 +460,7 @@ export async function confirmSlideUpload(input: TvSlideStart & { key: string; to
       // A birthday greeting's photo: the picture belongs to that row, in place of the one it had.
       const row = items?.find(item => item.id === input.itemId && item.kind === "ultah");
       if (!row) { await client.from("pw_tv_slides").delete().eq("id", made.id); throw new ServiceError(404, "Ucapan ulang tahun ini tidak ditemukan. Muat ulang halaman."); }
-      const { error: linkError } = await client.from("pw_tv_items").update({ slide_id: made.id }).eq("id", row.id);
+      const { error: linkError } = await client.from("pw_tv_items").update({ slide_id: made.id, extra: { ...(row.extra ?? {}), cut: input.cut === true } }).eq("id", row.id);
       if (linkError) { await client.from("pw_tv_slides").delete().eq("id", made.id); databaseError(linkError); }
       // The old photo goes only now that no row points at it (a picture takes its row with it).
       if (row.slide_id) {
@@ -679,7 +683,7 @@ export async function tvFeed(imageSrc: (slideId: string) => string, now = new Da
     .filter(item => item.kind !== "video" || screen?.playsVideo !== false)
     // A video file's place in storage stays here: the TV gets an address of this site instead.
     .map(item => item.kind === "video" && isVideoFile(item.body) ? { ...item, body: "", video_src: tvVideoApi(item.id) } : { ...item, video_src: "" })
-    .map(item => ({ id: item.slide_id ?? item.id, kind: item.kind, title: item.title, body: item.body, seconds: item.seconds, ...(item.slide_id ? { src: imageSrc(item.slide_id) } : item.video_src ? { src: item.video_src } : {}), ...(item.kind === "sambutan" || item.kind === "tamu" ? { design: welcomeDesign(item.design) } : {}), ...(item.kind === "ultah" ? { call: item.extra?.call ?? "", date: item.extra?.date ?? "" } : {}) }));
+    .map(item => ({ id: item.slide_id ?? item.id, kind: item.kind, title: item.title, body: item.body, seconds: item.seconds, ...(item.slide_id ? { src: imageSrc(item.slide_id) } : item.video_src ? { src: item.video_src } : {}), ...(item.kind === "sambutan" || item.kind === "tamu" ? { design: welcomeDesign(item.design) } : {}), ...(item.kind === "ultah" ? { call: item.extra?.call ?? "", date: item.extra?.date ?? "", cut: item.extra?.cut === true } : {}) }));
   return {
     now: now.toISOString(), date, days, settings, look, countdown, version: BUILD,
     slides: slides.map(slide => ({ id: slide.id, title: slide.title, seconds: slide.seconds, src: imageSrc(slide.id) })),

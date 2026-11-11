@@ -117,7 +117,7 @@ describe("Admin TV → Tayangan", () => {
     fireEvent.change(screen.getByLabelText("Nama lengkap"), { target: { value: "Contoh Empat" } });
     fireEvent.change(screen.getByLabelText("Nama panggilan"), { target: { value: "Bu Contoh" } });
     expect(addBirthday.disabled).toBe(false);
-    expect(document.querySelector("form svg[viewBox='0 0 160 90']")?.textContent).toContain("Happy Birthday, Bu Contoh");
+    expect(document.querySelector("form svg[viewBox='0 0 160 90']")?.textContent).toContain("Happy Birthday Bu Contoh");
     fireEvent.click(screen.getByRole("button", { name: "Video" }));
     const addVideo = screen.getByRole("button", { name: "Tambah video" }) as HTMLButtonElement;
     fireEvent.change(screen.getByLabelText("Alamat video YouTube"), { target: { value: "https://example.com/video" } });

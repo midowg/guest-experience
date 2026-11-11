@@ -182,21 +182,21 @@ describe("a birthday greeting", () => {
   const row = { id: "u", kind: "ultah" as const, title: "Contoh Satu Dua", body: "", seconds: 20 };
 
   it("writes the day and the month as the card does", () => {
-    expect(birthdayDate("2026-09-20")).toEqual({ day: "20", month: "Sept" });
-    expect(birthdayDate("2026-01-05")).toEqual({ day: "5", month: "Jan" });
+    expect(birthdayDate("2026-09-20")).toEqual({ day: "20", month: "SEP" });
+    expect(birthdayDate("2026-01-05")).toEqual({ day: "5", month: "JAN" });
     expect(birthdayDate(null)).toEqual({ day: "", month: "" });
     expect(birthdayDate("20 Sept")).toEqual({ day: "", month: "" });
   });
 
   it("is a slide with the name, what to call them, the date, the photo and a wish", () => {
-    const [item] = playlistOf({ ...base, playlist: [{ ...row, body: "Selamat ulang tahun.", call: "Pak Contoh", date: "2026-09-20", src: "/foto" }] });
-    expect(item).toEqual({ key: "item-u", kind: "ultah", seconds: 20, birthday: { name: "Contoh Satu Dua", call: "Pak Contoh", day: "20", month: "Sept", wish: "Selamat ulang tahun.", photo: "/foto" } });
+    const [item] = playlistOf({ ...base, playlist: [{ ...row, body: "Selamat ulang tahun.", call: "Pak Contoh", date: "2026-09-20", src: "/foto", cut: true }] });
+    expect(item).toEqual({ key: "item-u", kind: "ultah", seconds: 20, birthday: { name: "Contoh Satu Dua", call: "Pak Contoh", day: "20", month: "SEP", wish: "Selamat ulang tahun.", photo: "/foto", cut: true } });
     expect(itemLabel(item)).toBe("Ulang tahun: Contoh Satu Dua");
   });
 
   it("falls back to the full name and the card's own wish, and needs a name", () => {
     const [item] = playlistOf({ ...base, playlist: [row] });
-    expect(item).toMatchObject({ birthday: { call: "Contoh Satu Dua", day: "", wish: TV_BIRTHDAY_WISH, photo: "" } });
+    expect(item).toMatchObject({ birthday: { call: "Contoh Satu Dua", day: "", wish: TV_BIRTHDAY_WISH, photo: "", cut: false } });
     expect(playlistOf({ ...base, playlist: [{ ...row, title: "" }] })).toEqual([]);
     expect(tvItemCreateSchema.safeParse({ kind: "ultah", title: "" }).success).toBe(false);
     expect(tvItemCreateSchema.safeParse({ kind: "ultah", title: "Contoh Satu", call: "Bu Contoh", date: "2026-11-11" }).success).toBe(true);

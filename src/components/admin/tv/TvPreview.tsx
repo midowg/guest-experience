@@ -92,14 +92,15 @@ function Shapes({ kind, title, body, design, call, date, photo }: { kind: TvItem
   if (kind === "ultah") {
     const on = birthdayDate(date);
     return <>
-      <rect width="160" height="90" fill="#f3efe4" />
-      <rect x="14" y="10" width="48" height="70" fill="#fff" stroke="#e2dccd" />
-      {photo ? <image href={photo} x="17" y="13" width="42" height="56" preserveAspectRatio="xMidYMin slice" /> : <rect x="17" y="13" width="42" height="56" fill="#e7e1d2" />}
+      <rect width="160" height="90" fill="#f1f1ef" />
+      <rect x="14" y="18" width="50" height="62" fill="#d9d9d9" />
+      <rect x="19" y="25" width="40" height="45" fill="#0b2f9f" />
+      {photo && <image href={photo} x="14" y="8" width="50" height="62" preserveAspectRatio="xMidYMax meet" />}
       <image href={TV_MARK} x="76" y="10" width="9" height="10" />
       <text x="76" y="37" fontSize={title.length > 16 ? 8 : 10} fontWeight="700" fill="#16130f">{short(title || "Nama lengkap", 22)}</text>
       {on.day && <text x="148" y="37" textAnchor="end" fontSize="10" fontWeight="700" fill="#16130f">{on.day}</text>}
       {on.day && <text x="148" y="44" textAnchor="end" fontSize="5" fill="#16130f">{on.month}</text>}
-      <text x="76" y="55" fontSize="6" fontStyle="italic" fontWeight="700" fill="#16130f">{short(`Happy Birthday, ${call || title || "…"}`, 30)}</text>
+      <text x="76" y="55" fontSize="6" fontStyle="italic" fontWeight="700" fill="#16130f">{short(`Happy Birthday ${call || title || "…"}`, 30)}</text>
       <text x="76" y="63" fontSize="4.2" fontStyle="italic" fill="#4a443a">{short(body, 46)}</text>
     </>;
   }
