@@ -2,28 +2,30 @@
 
 import { useState } from "react";
 import type { TimelineEntry } from "@/lib/pra-wam/timeline";
-import { praWamPath } from "@/lib/routes";
 import { BookSheet, type BookAsk } from "./BookSheet";
+import { DayRooms, type DayLoader } from "./DayRooms";
 import { dayName, TimelineMonth } from "./TimelineMonth";
 import css from "./timeline.module.css";
 
 /**
- * Timeline's calendar (9 Nov 2026): one month of TimelineMonth, a bar jumping to its card in the
- * list below. On a phone the bars are thin lines; from a tablet up they carry the title. Every day
- * opens the booking form on it in a sheet over the page (BookSheet: from the bottom on a phone, from
- * the right on a desktop), so booking never leaves Timeline. Weekends too, since "Di luar kantor" can
- * be booked then; a day that cannot be booked offers the nearest one. The link still points at the
- * booking page, for a new tab. `canBook` false (Book closed): plain days.
+ * Timeline's calendar (11 Nov 2026): one month of TimelineMonth, each forum or event a bar of its
+ * colour, named once in the legend below the month. A day is picked (today at first) and below the
+ * calendar every room shows that day as a card (DayRooms): what is left, and its bookings with who
+ * booked. "Book" on a card opens the booking form on that day and room in a sheet over the page
+ * (BookSheet), so booking never leaves Timeline; saved, the cards are read again. `canBook` false
+ * (Book closed): no Book buttons.
  */
-export function TimelineCalendar({ entries, today, canBook = false, viewerId = "" }: { entries: TimelineEntry[]; today: string; canBook?: boolean; viewerId?: string }) {
+export function TimelineCalendar({ entries, today, canBook = false, viewerId = "", loadDay }: { entries: TimelineEntry[]; today: string; canBook?: boolean; viewerId?: string; loadDay?: DayLoader }) {
+  const [picked, setPicked] = useState(today);
   const [ask, setAsk] = useState<BookAsk | null>(null);
+  const [round, setRound] = useState(0);
   return <>
-    <TimelineMonth entries={entries} today={today} linkBars day={(date, marks, number) => canBook
-      ? <a key={date} className={`${css.calDay} ${css.calDayLink}`} href={praWamPath.book({ date })} aria-label={`Book ruang, ${dayName(date)}`} aria-haspopup="dialog" {...marks}
-        onClick={event => { if (event.metaKey || event.ctrlKey || event.shiftKey) return; event.preventDefault(); setAsk({ date }); }}>
+    <TimelineMonth entries={entries} today={today} open={picked} legend day={(date, marks, number) =>
+      <button key={date} type="button" className={`${css.calDay} ${css.calDayPick}`} {...marks} aria-pressed={date === picked}
+        aria-label={`${dayName(date)}${date === today ? ", hari ini" : ""}`} onClick={() => setPicked(date)}>
         <span>{number}</span>
-      </a>
-      : <span key={date} className={css.calDay} {...marks}><span>{number}</span></span>} />
-    <BookSheet ask={ask} viewerId={viewerId} onClose={() => setAsk(null)} />
+      </button>} />
+    <DayRooms date={picked} today={today} canBook={canBook} round={round} onBook={room => setAsk({ date: picked, room })} load={loadDay} />
+    <BookSheet ask={ask} viewerId={viewerId} onClose={() => { setAsk(null); setRound(value => value + 1); }} />
   </>;
 }

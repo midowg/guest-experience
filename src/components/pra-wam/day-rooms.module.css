@@ -1,0 +1,40 @@
+/* Timeline's room cards for the day picked (11 Nov 2026), as the card panitia shared. */
+.day { display: grid; gap: 12px; min-width: 0; container-type: inline-size; }
+.heading { margin: 0; font-family: var(--pw-body); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pw-muted); }
+.loading { margin: 0; color: var(--pw-muted); font-size: 14px; }
+.cards { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+
+.card { display: grid; gap: 14px; padding: 18px 18px 14px; border-radius: var(--pw-r-card); background: var(--pw-surface); box-shadow: var(--pw-shadow-card); }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.name { margin: 0; min-width: 0; font-family: var(--pw-display, var(--pw-heading, serif)); font-size: 22px; font-weight: 500; line-height: 1.15; color: var(--pw-text); overflow-wrap: break-word; }
+.book { display: inline-flex; flex: none; align-items: center; gap: 6px; min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--pw-accent-sky, var(--pw-primary-soft)); color: var(--pw-on-accent-sky, #06223a); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.book:hover { filter: brightness(1.06); }
+.book:focus-visible { outline: 2px solid var(--pw-text); outline-offset: 2px; }
+
+.use { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.capacity { display: inline-flex; flex: none; align-items: center; gap: 4px; color: var(--pw-muted); font-size: 18px; font-variant-numeric: tabular-nums; }
+.capacity svg { width: 20px; height: 20px; }
+.bar { display: flex; flex: 1; min-width: 0; height: 28px; overflow: hidden; border-radius: 999px; background: var(--pw-line); }
+.free { display: flex; align-items: center; min-width: 0; padding: 0 12px; background: color-mix(in srgb, var(--pw-muted) 45%, var(--pw-surface)); color: var(--pw-on-primary, #fff); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.free span { overflow: hidden; text-overflow: ellipsis; }
+.block { min-width: 4px; background: var(--pw-accent-sky, #3b82f6); }
+.block[data-tone="1"] { background: var(--pw-primary); }
+
+.items { display: grid; gap: 6px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--pw-line); list-style: none; }
+.items li { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--pw-accent-sky, #3b82f6); }
+.dot[data-tone="1"] { background: var(--pw-primary); }
+.what { display: flex; flex: 1; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.title { min-width: 0; color: var(--pw-text); font-size: 15px; overflow-wrap: anywhere; }
+.what small { color: var(--pw-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.who { flex: none; max-width: 40%; overflow: hidden; color: var(--pw-muted); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Two cards a row only when the list itself is wide (beside the calendar it stays one). */
+@container (min-width: 44rem) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 22rem) {
+  .card { padding: 16px 14px 12px; }
+  .name { font-size: 19px; }
+  .book { padding: 0 14px; }
+}

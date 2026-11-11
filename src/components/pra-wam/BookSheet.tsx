@@ -12,7 +12,7 @@ import { BookingForm } from "./BookingForm";
 import { Sheet } from "./Sheet";
 import css from "./booking-form.module.css";
 
-export type BookAsk = { date?: string; edit?: string };
+export type BookAsk = { date?: string; edit?: string; room?: string };
 
 /**
  * The booking form over the page (9 Nov 2026): from the bottom on a phone, from the right on a
@@ -26,7 +26,7 @@ export function BookSheet({ ask, viewerId, onClose }: { ask: BookAsk | null; vie
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [round, setRound] = useState(0);
-  const key = ask ? `${ask.date ?? ""}|${ask.edit ?? ""}|${round}` : "";
+  const key = ask ? `${ask.date ?? ""}|${ask.edit ?? ""}|${ask.room ?? ""}|${round}` : "";
 
   useEffect(() => {
     if (!ask) return;

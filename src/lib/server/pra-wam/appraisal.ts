@@ -120,6 +120,7 @@ async function withPeople(rows: BookingRow[], viewer: Member): Promise<Booking[]
       id: row.id, roomId: roomOf(row), ...(row.place ? { place: row.place } : {}), title: row.title, description: involved ? row.description : "",
       startsAt: row.starts_at, endsAt: row.ends_at, bookedBy: unknown(row.booked_by),
       participants: involved ? ids.filter(id => id !== row.booked_by).map(unknown) : null,
+      others: ids.filter(id => id !== row.booked_by).length,
     };
   });
 }

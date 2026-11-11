@@ -74,6 +74,8 @@ export type Booking = {
   bookedBy: Person;
   /** Only sent to the booker, its participants, and the people who manage Pra WAM. */
   participants: Person[] | null;
+  /** How many others take part besides the booker (11 Nov 2026: "Sofyan +3" on Timeline's room cards); a count only, sent to everyone. */
+  others?: number;
   /** A Pra WAM session holding the room (set by panitia), shown on the schedule but not a booking. */
   isSession?: boolean;
 };

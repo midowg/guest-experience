@@ -24,9 +24,12 @@ export type DayMarks = { style: { gridColumn: number }; "data-out"?: string; "da
  * picker (days pick the date), which decide what a day is through `day`. `linkBars`: a bar jumps to
  * its card in Timeline's list (`#t-…`); otherwise it is only drawn. `range` widens the months to page
  * through (the booking period), `open` the month shown first.
+ *
+ * `legend` (11 Nov 2026, Timeline): the bars are colour only, on every screen, and below the month
+ * each forum or event shown in it is named once with its colour and dates.
  */
-export function TimelineMonth({ entries, today, open, range, linkBars = false, day }: {
-  entries: TimelineEntry[]; today: string; open?: string; range?: { from: string; to: string }; linkBars?: boolean;
+export function TimelineMonth({ entries, today, open, range, linkBars = false, legend = false, day }: {
+  entries: TimelineEntry[]; today: string; open?: string; range?: { from: string; to: string }; linkBars?: boolean; legend?: boolean;
   day: (date: string, marks: DayMarks, number: number) => ReactNode;
 }) {
   const months = [...entries.map(entry => entry.from.slice(0, 7)), ...entries.map(entry => entry.to.slice(0, 7)), ...(range ? [range.from.slice(0, 7), range.to.slice(0, 7)] : [])];
@@ -39,8 +42,9 @@ export function TimelineMonth({ entries, today, open, range, linkBars = false, d
   if (open && seen !== open) { setSeen(open); setMonth(open.slice(0, 7) < first ? first : open.slice(0, 7) > last ? last : open.slice(0, 7)); }
   const lanes = useMemo(() => timelineLanes(entries), [entries]);
   const weeks = useMemo(() => calendarWeeks(month, entries, lanes), [month, entries, lanes]);
+  const named = legend ? entries.filter(entry => entry.from.slice(0, 7) <= month && entry.to.slice(0, 7) >= month) : [];
 
-  return <section className={css.calendar} aria-label={`Kalender ${monthLabel(month)}`}>
+  return <section className={`${css.calendar} ${legend ? css.calPlain : ""}`} aria-label={`Kalender ${monthLabel(month)}`}>
     <div className={css.calHead}>
       <h2 className={css.calTitle} aria-live="polite">{monthLabel(month)}</h2>
       <div className={css.calNav}>
@@ -64,5 +68,11 @@ export function TimelineMonth({ entries, today, open, range, linkBars = false, d
         </div>;
       })}
     </div>
+    {legend && (named.length > 0
+      ? <ul className={css.legend} aria-label={`Kegiatan Pra WAM, ${monthLabel(month)}`}>{named.map(entry => <li key={entry.id} className={css[`c${entry.color}`]} data-state={entry.state}>
+        <span className={css.legendDot} aria-hidden />
+        <span className={css.legendText}><span className={css.legendTitle}>{entry.title}</span><small>{entry.when}{entry.state === "berlangsung" ? " · Sedang berlangsung" : entry.state === "selesai" ? " · Selesai" : ""}</small></span>
+      </li>)}</ul>
+      : <p className={css.legendNone}>Tidak ada kegiatan Pra WAM di bulan ini.</p>)}
   </section>;
 }

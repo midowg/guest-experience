@@ -99,3 +99,20 @@
 .calDayPick:disabled span { opacity: .35; }
 .calDayPick:focus-visible { outline: none; }
 .calDayPick:focus-visible span { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+
+/* Timeline with a legend (11 Nov 2026): bars are colour only on every screen; the names sit below. */
+@media (min-width: 768px) {
+  .calPlain { --tl-bar: 8px; }
+  .calPlain .calBar { display: block; padding: 0; border-radius: 999px; background: var(--tl); }
+  .calPlain .calBar::before { display: none; }
+  .calPlain .calBar span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+.legend { display: grid; gap: 6px 16px; margin: 6px 0 0; padding: 10px 6px 2px; border-top: 1px solid var(--pw-line); list-style: none; }
+.legend li { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.legendDot { flex: none; width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: var(--tl); }
+.legendText { display: grid; min-width: 0; }
+.legendTitle { color: var(--pw-text); font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.legendText small { color: var(--pw-muted); font-size: 12px; }
+.legend li[data-state="selesai"] .legendTitle { color: var(--pw-muted); }
+.legendNone { margin: 6px 0 0; padding: 10px 6px 2px; border-top: 1px solid var(--pw-line); color: var(--pw-muted); font-size: 14px; }
+@media (min-width: 640px) { .legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

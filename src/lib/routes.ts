@@ -244,7 +244,7 @@ export const praWamApi = {
   /** What holds each room on a day (bookings and sessions), for picking a session's room. */
   roomUses: (date: string) => `${WAM_API}/rooms?date=${date}`,
   /** What the booking form needs (the booking sheet over Timeline and Agenda): ?date= or ?edit=. */
-  bookForm: (query: { date?: string; edit?: string }) => `${WAM_API}/book-form?${new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString()}`,
+  bookForm: (query: { date?: string; edit?: string; room?: string }) => `${WAM_API}/book-form?${new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString()}`,
   /** Documents: ask for an upload address, then register the uploaded file; one document by id. */
   documents: (id?: string) => `${WAM_API}/documents${id ? `/${id}` : ""}`,
   documentUpload: `${WAM_API}/documents/upload`,

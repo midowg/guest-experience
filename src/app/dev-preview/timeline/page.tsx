@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { TimelineCalendar } from "@/components/pra-wam/TimelineCalendar";
+import { SampleTimeline } from "./Sample";
 import css from "@/components/pra-wam/timeline.module.css";
 import { timelineMonths, type TimelineItem } from "@/lib/pra-wam/timeline";
 import base from "@/components/pra-wam/pra-wam.module.css";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const plan = (title: string, from: string, to: string, kind: TimelineItem["kind"] = "forum"): TimelineItem =>
   ({ id: title, title, kind, published: false, planFrom: from, planTo: to, startsAt: null, endsAt: null, mine: false });
 
-/** Layout check for Timeline's calendar with Pra WAM's planned forums: ?tema=terang, ?tampilan=werkudara. */
+/** Layout check for Timeline (calendar, legend, room cards) with Pra WAM's planned forums and sample bookings: ?tema=terang, ?tampilan=werkudara. */
 export default async function DevTimelinePage({ searchParams }: { searchParams: Promise<{ tema?: string; tampilan?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const { tema, tampilan } = await searchParams;
@@ -21,8 +21,7 @@ export default async function DevTimelinePage({ searchParams }: { searchParams: 
     plan("ITAM: BOD x departemen", "2026-12-14", "2026-12-16"), plan("End Year Dinner", "2026-12-29", "2026-12-29", "acara"),
   ], "2026-11-09").flatMap(month => month.entries);
   return <div data-wam-look={tampilan === "werkudara" ? "werkudara" : "dream"} data-wam-theme={tema === "terang" ? "light" : "dark"}>
-    <div className={base.app} style={{ minHeight: "100vh", padding: 16 }}><div className={css.layout}><TimelineCalendar entries={entries} today="2026-11-09" canBook />
-      <ol className={css.list}>{entries.map(entry => <li key={entry.id} className={`${css.entry} ${css[`c${entry.color}`]}`} data-state={entry.state}><span className={css.dot} /><div className={css.card}><span className={css.when}>{entry.when}</span><strong className={css.title}>{entry.title}</strong><span className={css.meta}>Forum · Jadwal pasti menyusul</span></div></li>)}</ol>
+    <div className={base.app} style={{ minHeight: "100vh", padding: 16 }}><div className={css.layout}><SampleTimeline entries={entries} />
     </div></div>
   </div>;
 }

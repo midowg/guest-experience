@@ -220,21 +220,22 @@ Sejak 11 Nov 2026 (migrasi `202611110002_pw_session_minutes.sql`), aturan di `sr
   absen ada di Beranda, Book punya menunya sendiri. Tidak ada menu Profil: dibuka lewat foto di atas
   Beranda (HP) atau nama di kanan atas (desktop). Menu BOD tidak berubah (Ringkasan, Agenda, Peserta,
   Survei, Profil).
-- **Timeline** (`/wam/timeline`): forum dan acara Pra WAM dari Kelola acara → Jadwal sesi, per bulan,
-  untuk semua orang (hanya baca). Yang terbit menampilkan hari dan jam; yang masih draf hanya rentang
-  tanggal rencana dengan label "Jadwal pasti menyusul", tanpa deskripsi dan tanpa daftar orang. Rapat
-  (booking ruang) dan yang batal tidak tampil. Yang terbit dan diikuti orang itu membuka detail sesinya.
-  Di atasnya ada kalender bulanan (Senin di depan, ‹ › antarbulan yang berisi): tiap forum atau acara
-  berupa garis dengan warnanya sendiri sepanjang tanggalnya, yang bertumpuk di lajur masing-masing.
-  Di HP garisnya tipis; mulai lebar 768px (tablet) garisnya memuat judul; mulai 1024px (desktop)
-  kalender di kiri (tetap terlihat saat menggulir) dan daftar di kanan. Warna yang sama hanya dipakai
-  di titik kartunya pada garis waktu (tanpa garis warna di tepi kartu, tanpa label bertumpuk: satu
-  baris keterangan "Forum · jam atau Jadwal pasti menyusul · Kamu ikut"). Mengetuk garis menggulir
-  ke kartu itu.
-  Periode booking 28 Okt–29 Des 2026 (diperpanjang 9 Nov 2026 dari 20 Nov, supaya semua forum dan
-  acara Timeline bisa dibooking; `appraisalRules.periodEnd`). Semua tanggal bisa diketuk (selama Book dibuka) dan membuka halaman booking pada tanggal itu:
-  hari kerja langsung, akhir pekan sebagai Di luar kantor, tanggal yang lewat atau di luar periode
-  diganti ke tanggal terdekat dengan keterangan.
+- **Timeline** (`/wam/timeline`, susunan sejak 11 Nov 2026): kalender bulanan (Senin di depan, ‹ ›
+  antarbulan) berisi forum dan acara Pra WAM dari Kelola acara → Jadwal sesi, masing-masing **garis
+  warna saja** (di semua ukuran layar) sepanjang tanggalnya, bertumpuk di lajur masing-masing. Nama dan
+  tanggalnya ada di **legenda** di bawah kalender (hanya kegiatan di bulan yang tampil; "Sedang
+  berlangsung"/"Selesai"). Draf hanya rentang rencana; rapat (booking) dan yang batal tidak masuk.
+  Daftar bergaris (rail) di bawah kalender sudah tidak ada.
+  Di bawah kalender (desktop: di kanannya) tampil **kartu ruang untuk tanggal yang dipilih**, awalnya
+  hari ini; mengetuk tanggal mengganti daftarnya. Kartu mengikuti desain panitia: nama ruang dan tombol
+  **Book**, kapasitas, bar jam buka 07.00–22.00 ("Sisa X jam" lalu tiap booking sebagai blok sendiri;
+  "Penuh", "Sudah lewat", "Tutup akhir pekan"), lalu daftar booking hari itu dengan jam dan pemesan
+  ("Sofyan +3"; sesi panitia "Panitia"). Yang tampil: ruang yang bisa dibooking dan ruang lain yang
+  dipakai hari itu (`roomCards`, `src/lib/pra-wam/room-card.ts`; data `GET /api/wam/appraisal?date=`,
+  jumlah peserta lain `others` dikirim ke semua orang, nama peserta tetap tidak). **Book** membuka
+  form booking di atas halaman pada tanggal dan ruang itu (`book-form?date=&room=`); setelah tersimpan
+  kartunya dibaca ulang. Tanpa tombol Book bila Book ditutup admin atau tanggal di luar periode.
+  Periode booking 28 Okt–29 Des 2026 (`appraisalRules.periodEnd`).
 - **Agenda** (menu bilah bawah, dulu "Book"; 9 Nov 2026): tanpa kalender dan tanpa denah. Isinya
   tombol Book ruang dan daftar Booking saya. Tanggal dipilih di kalender Timeline atau di form;
   ketersediaan ruang terlihat di langkah Tempat pada form.
