@@ -1,4 +1,5 @@
-import type { TvItemKind } from "@/lib/pra-wam/tv";
+import type { TvItemKind, TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { TV_WELCOME_ART } from "@/lib/routes";
 
 /*
  * What a kind of playlist row looks like on a TV, at a glance: a small drawing of the slide
@@ -21,7 +22,7 @@ function Head({ wide = 44 }: { wide?: number }) {
   </>;
 }
 
-function Shapes({ kind, title, body }: { kind: TvItemKind; title: string; body: string }) {
+function Shapes({ kind, title, body, design }: { kind: TvItemKind; title: string; body: string; design: TvWelcomeDesign }) {
   if (kind === "kalender_hari") return <>
     <Head />
     {[0, 1, 2].map(row => <g key={row}>
@@ -60,8 +61,15 @@ function Shapes({ kind, title, body }: { kind: TvItemKind; title: string; body: 
       <rect x="14" y={43 + card * 28} width={[96, 110][card]} height="2.5" rx="1.25" fill={ink.muted} />
     </g>)}
   </>;
+  // The Werkudara sign: its own picture, with the name where the TV writes it.
+  if ((kind === "sambutan" || kind === "tamu") && design === "werkudara") return <>
+    <image href={TV_WELCOME_ART} width="160" height="90" preserveAspectRatio="xMidYMid slice" />
+    <text x="80" y={body && kind === "tamu" ? 54 : 58} textAnchor="middle" fontSize={title.length > 22 ? 7 : 9} fontWeight="600" fill={ink.text}>{title ? short(title, 30) : "Nama tamu"}</text>
+    {kind === "tamu" && body ? <text x="80" y="63" textAnchor="middle" fontSize="4.5" fill="#cfe6fb">{short(body, 48)}</text>
+      : kind === "sambutan" ? <><rect x="56" y="63" width="20" height="2.4" rx="1.2" fill="#8fd0f5" /><rect x="82" y="63" width="24" height="2.4" rx="1.2" fill="#8fd0f5" /></> : null}
+  </>;
   if (kind === "sambutan" || kind === "tamu") return <>
-    {kind === "sambutan" && <>
+    {kind === "sambutan" && design === "foto" && <>
       {/* A visit's cover photo, darkened, behind the words. */}
       <rect width="160" height="90" fill="#27405e" />
       <path d="M0 90 L46 46 L74 70 L104 38 L160 90 Z" fill="#1c3049" />
@@ -89,9 +97,9 @@ function Shapes({ kind, title, body }: { kind: TvItemKind; title: string; body: 
 }
 
 /** The drawing for a kind; `title` and `body` are a typed row's own words, shown in it. */
-export function TvPreview({ kind, title = "", body = "", className }: { kind: TvItemKind; title?: string; body?: string; className?: string }) {
+export function TvPreview({ kind, title = "", body = "", design = "werkudara", className }: { kind: TvItemKind; title?: string; body?: string; design?: TvWelcomeDesign; className?: string }) {
   return <svg className={className} viewBox="0 0 160 90" role="img" aria-hidden="true" focusable="false" preserveAspectRatio="xMidYMid slice">
     <rect width="160" height="90" fill={ink.bg} />
-    <Shapes kind={kind} title={title} body={body} />
+    <Shapes kind={kind} title={title} body={body} design={design} />
   </svg>;
 }

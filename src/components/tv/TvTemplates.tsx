@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Clock, MapPin } from "lucide-react";
-import { fit, fitText, type TvNote, type TvTimelineEntry, type TvWelcome } from "@/lib/pra-wam/tv";
+import { fit, fitText, type TvNote, type TvTimelineEntry, type TvWelcome, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { TV_WELCOME_ART } from "@/lib/routes";
 import css from "./tv.module.css";
 
 /*
@@ -62,24 +63,42 @@ export function TextSlide({ title, body }: { title: string; body: string }) {
 }
 
 /**
- * A guest is welcomed: the greeting, the guest's name large, then the visit's hours and place (or
- * the greeting typed in Admin TV). A visit's cover photo fills the screen behind it, darkened so
- * the words stay readable; without one the slide is the board's own colours.
+ * A guest is welcomed, in the design picked for the row. "werkudara": the office's welcome sign
+ * (its own picture: the logo, WELCOME, the four lines of business) with the guest's name in its
+ * empty middle; the sign keeps its 16:9 shape on any screen, on the sign's own blue. "foto": the
+ * visit's cover photo, darkened, behind the greeting and the name. "polos": the board's colours.
  */
-export function WelcomeSlide({ welcome }: { welcome: TvWelcome }) {
+export function WelcomeSlide({ welcome, design }: { welcome: TvWelcome; design: TvWelcomeDesign }) {
+  const facts = (welcome.hours || welcome.place) && <ul className={css.welcomeFacts}>
+    {welcome.hours && <li><Clock aria-hidden="true" />{welcome.hours}</li>}
+    {welcome.place && <li><MapPin aria-hidden="true" />{welcome.place}</li>}
+  </ul>;
+  if (design === "werkudara") {
+    // A long name is set smaller, so it stays inside the sign's empty middle.
+    const size = welcome.name.length > 44 ? "kecil" : welcome.name.length > 26 ? "sedang" : "besar";
+    return <section className={`${css.slide} ${css.sign}`} aria-label={`Sambutan untuk ${welcome.name}`}>
+      <div className={css.signFrame}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={TV_WELCOME_ART} alt="Welcome. Werkudara Group." />
+        <div className={css.signText}>
+          <h1 data-size={size}>{welcome.name}</h1>
+          {welcome.note && <p>{welcome.note}</p>}
+          {facts}
+        </div>
+      </div>
+    </section>;
+  }
+  const photo = design === "foto" ? welcome.image : "";
   // A long name is set smaller, so it stays on two lines at most.
   const size = welcome.name.length > 36 ? 6.5 : welcome.name.length > 20 ? 8.5 : 11;
-  return <section className={`${css.slide} ${css.welcome}`} data-photo={!!welcome.image} aria-label={`Sambutan untuk ${welcome.name}`}>
+  return <section className={`${css.slide} ${css.welcome}`} data-photo={!!photo} aria-label={`Sambutan untuk ${welcome.name}`}>
     {/* eslint-disable-next-line @next/next/no-img-element */}
-    {welcome.image && <img className={css.welcomePhoto} src={welcome.image} alt="" aria-hidden="true" referrerPolicy="no-referrer" />}
+    {photo && <img className={css.welcomePhoto} src={photo} alt="" aria-hidden="true" referrerPolicy="no-referrer" />}
     <div className={css.welcomeText}>
       <p className={css.welcomeGreeting}>{welcome.greeting}</p>
       <h1 style={{ fontSize: u(size) }}>{welcome.name}</h1>
       {welcome.note && <p className={css.welcomeNote}>{welcome.note}</p>}
-      {(welcome.hours || welcome.place) && <ul className={css.welcomeFacts}>
-        {welcome.hours && <li><Clock aria-hidden="true" />{welcome.hours}</li>}
-        {welcome.place && <li><MapPin aria-hidden="true" />{welcome.place}</li>}
-      </ul>}
+      {facts}
     </div>
   </section>;
 }

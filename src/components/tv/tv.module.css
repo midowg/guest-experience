@@ -299,3 +299,19 @@
 .welcomeFacts { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(1.6 * var(--u)) calc(4 * var(--u)); margin: calc(1.5 * var(--u)) 0 0; padding: 0; list-style: none; font-size: calc(3.2 * var(--u)); font-weight: 600; }
 .welcomeFacts li { display: flex; align-items: center; gap: calc(1.2 * var(--u)); min-width: 0; overflow-wrap: anywhere; }
 .welcomeFacts svg { flex: none; width: calc(3.2 * var(--u)); height: calc(3.2 * var(--u)); }
+
+/*
+ * The Werkudara welcome sign: its picture whole, 16:9, in the middle of any screen on the sign's
+ * own blue; the guest's name in the sign's empty middle (between its rule and its foot), sized by
+ * the sign's width so it sits the same on every TV.
+ */
+.sign { display: grid; place-items: center; background: #003797; }
+.signFrame { position: relative; container-type: size; width: min(100vw, 100vh * 16 / 9); aspect-ratio: 16 / 9; }
+.signFrame > img { display: block; width: 100%; height: 100%; }
+.signText { position: absolute; inset: 44% 12% 23%; display: grid; align-content: center; justify-items: center; gap: 1.6cqw; color: #fff; text-align: center; }
+.signText h1 { display: -webkit-box; margin: 0; overflow: hidden; font-size: 5.6cqw; font-family: var(--tv-body, inherit); font-weight: 600; line-height: 1.15; letter-spacing: .02em; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.signText h1[data-size="sedang"] { font-size: 4.4cqw; }
+.signText h1[data-size="kecil"] { font-size: 3.4cqw; }
+.signText p { display: -webkit-box; margin: 0; overflow: hidden; color: #cfe6fb; font-size: 2cqw; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.signText .welcomeFacts { margin: 0; gap: 1cqw 3cqw; color: #8fd0f5; font-size: 1.9cqw; }
+.signText .welcomeFacts svg { width: 1.9cqw; height: 1.9cqw; }

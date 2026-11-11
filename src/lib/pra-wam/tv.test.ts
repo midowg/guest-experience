@@ -115,6 +115,11 @@ describe("welcoming guests and taking the TVs over", () => {
     const two = playlistOf({ ...base, playlist: [row("sambutan")], welcomes: [visit, { ...visit, id: "v2", name: "Contoh Dua" }] });
     expect(two.map(item => item.key)).toEqual(["item-sambutan-v1", "item-sambutan-v2"]);
     expect(two.map(itemLabel)).toEqual(["Sambutan: Contoh Satu", "Sambutan: Contoh Dua"]);
+    expect(two.every(item => item.kind === "sambutan" && item.design === "werkudara")).toBe(true);
+    expect(playlistOf({ ...base, playlist: [{ ...row("sambutan"), design: "foto" }], welcomes: [visit] })[0]).toMatchObject({ design: "foto" });
+    expect(playlistOf({ ...base, playlist: [{ ...row("sambutan"), design: "apa saja" }], welcomes: [visit] })[0]).toMatchObject({ design: "werkudara" });
+    expect(tvItemPatchSchema.safeParse({ design: "polos" }).success).toBe(true);
+    expect(tvItemPatchSchema.safeParse({ design: "lain" }).success).toBe(false);
     expect(playlistOf({ ...base, playlist: [row("sambutan")], welcomes: [] })).toEqual([]);
     expect(playlistOf({ ...base, playlist: [row("sambutan")] })).toEqual([]);
   });

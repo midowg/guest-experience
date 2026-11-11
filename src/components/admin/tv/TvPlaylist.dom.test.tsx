@@ -8,7 +8,7 @@ import { TvPlaylist } from "./TvPlaylist";
 afterEach(cleanup);
 
 const always = { showFrom: null, showUntil: null, timeFrom: null, timeUntil: null, screenIds: [] as string[] };
-const row = (id: string, kind: TvAdminItem["kind"], more: Partial<TvAdminItem> = {}): TvAdminItem => ({ id, kind, title: "", body: "", seconds: 15, active: true, slideId: null, ...always, ...more });
+const row = (id: string, kind: TvAdminItem["kind"], more: Partial<TvAdminItem> = {}): TvAdminItem => ({ id, kind, title: "", body: "", seconds: 15, active: true, slideId: null, design: "werkudara", ...always, ...more });
 const admin = (more: Partial<TvAdmin> = {}): TvAdmin => ({
   migrated: true, slugReady: true, lookReady: true, storageReady: true, now: "2026-11-10T03:00:00Z", slides: [], settings: TV_DEFAULT_SETTINGS,
   screens: [{ id: "lobi", name: "Lobi", slug: "lobi", keyHint: "", lastSeenAt: null, width: null, height: null, createdAt: "2026-11-10T00:00:00Z", lastItem: null }],
@@ -71,6 +71,10 @@ describe("Admin TV → Tayangan", () => {
     fireEvent.click(screen.getByRole("button", { name: "Atur Contoh Satu" }));
     expect((screen.getByLabelText("Nama tamu") as HTMLInputElement).value).toBe("Contoh Satu");
     expect((screen.getByLabelText("Durasi tayang") as HTMLSelectElement).value).toBe("15");
+    // A typed welcome picks its design; it has no visit, so no cover photo to pick.
+    const design = screen.getByLabelText("Desain layar") as HTMLSelectElement;
+    expect(design.value).toBe("werkudara");
+    expect([...design.options].map(option => option.value)).toEqual(["werkudara", "polos"]);
     for (const name of ["Simpan", "Hapus", "Sembunyikan", "Tayangkan sekarang"]) expect(screen.getByRole("button", { name })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Tayangkan sekarang" }));
     expect((screen.getByLabelText("Lama") as HTMLSelectElement).value).toBe("15");

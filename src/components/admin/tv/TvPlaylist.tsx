@@ -9,7 +9,7 @@ import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/sh
 import { uploadSlide } from "@/components/admin/wam/PraWamTv";
 import akun from "@/components/admin/wam/akun/akun.module.css";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
-import { isTemplateKind, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, type TvItemKind } from "@/lib/pra-wam/tv";
+import { isTemplateKind, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, tvWelcomeDesignLabels, tvWelcomeDesigns, type TvItemKind, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
 import { praWamTvApi, tvAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminItem } from "@/lib/server/pra-wam/tv";
 import { TvPreview } from "./TvPreview";
@@ -20,13 +20,16 @@ const SECONDS = [5, 8, 10, 15, 20, 30, 45, 60];
 const icons: Record<TvItemKind, typeof Type> = { kalender_hari: CalendarDays, kalender_minggu: CalendarRange, timeline: ListOrdered, pengumuman: Megaphone, sambutan: DoorOpen, tamu: UserRound, teks: Type, gambar: ImageUp };
 /** The kinds whose words the admin types: a title (a guest's name for a typed welcome) and what it says. */
 const isTyped = (kind: TvItemKind) => kind === "teks" || kind === "tamu";
+/** The kinds that welcome a guest, and so have a design to pick. A typed welcome has no visit, so no cover photo. */
+const isWelcome = (kind: TvItemKind) => kind === "sambutan" || kind === "tamu";
+const designsFor = (kind: TvItemKind) => tvWelcomeDesigns.filter(design => kind === "sambutan" || design !== "foto");
 /** Where a row's content comes from, for the line under its name. */
 const sourceOf = (kind: TvItemKind) => kind === "sambutan" ? "Dari Kunjungan Kantor" : isTemplateKind(kind) ? "Dari WAM" : kind === "tamu" ? "Sambutan tamu" : tvItemKindLabels[kind];
-type Draft = { title: string; body: string; seconds: number; showFrom: string; showUntil: string; timeFrom: string; timeUntil: string; screenIds: string[] };
+type Draft = { title: string; body: string; design: TvWelcomeDesign; seconds: number; showFrom: string; showUntil: string; timeFrom: string; timeUntil: string; screenIds: string[] };
 /** What "Tayangkan sekarang" is asked with (`minutes` null: until stopped). */
 type Take = { minutes: number | null; screenIds: string[] };
 const draftOf = (item: TvAdminItem): Draft => ({
-  title: item.title, body: item.body, seconds: item.seconds, showFrom: item.showFrom ?? "", showUntil: item.showUntil ?? "",
+  title: item.title, body: item.body, design: item.design, seconds: item.seconds, showFrom: item.showFrom ?? "", showUntil: item.showUntil ?? "",
   timeFrom: item.timeFrom ?? "", timeUntil: item.timeUntil ?? "", screenIds: item.screenIds,
 });
 /** The four ways to add a row, one shown at a time. */
@@ -88,6 +91,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
       ...(isTyped(item.kind) || item.kind === "gambar" ? { title: draft.title } : {}),
       ...(isTyped(item.kind) ? { body: draft.body } : {}),
       seconds: draft.seconds,
+      ...(isWelcome(item.kind) ? { design: draft.design } : {}),
       showFrom: draft.showFrom || null, showUntil: draft.showUntil || null, timeFrom: draft.timeFrom || null, timeUntil: draft.timeUntil || null,
       screenIds: draft.screenIds,
     }, () => setEditing(null));
@@ -151,7 +155,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
               {item.kind === "gambar" && item.slideId
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={praWamTvApi.slideImage(item.slideId)} alt="" loading="lazy" width={320} height={180} />
-                : <TvPreview kind={item.kind} title={item.title} body={item.body} />}
+                : <TvPreview kind={item.kind} title={edit?.title ?? item.title} body={edit?.body ?? item.body} design={edit?.design ?? item.design} />}
             </div>
             <div className={css.plHead}>
               <span className={css.plKind} aria-hidden="true"><Icon size={18} /></span>
@@ -189,6 +193,12 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
                     <textarea id={`isi-${item.id}`} rows={3} value={edit.body} maxLength={600} onChange={event => change({ body: event.target.value })} />
                   </div>}
                   {isTemplateKind(item.kind) && <p className={css.plHint}>{tvItemKindHints[item.kind]}</p>}
+                  {isWelcome(item.kind) && <div className={css.plField}>
+                    <label htmlFor={`desain-${item.id}`}>Desain layar</label>
+                    <select id={`desain-${item.id}`} value={edit.design} onChange={event => change({ design: event.target.value as TvWelcomeDesign })}>
+                      {designsFor(item.kind).map(design => <option key={design} value={design}>{tvWelcomeDesignLabels[design]}</option>)}
+                    </select>
+                  </div>}
                   <div className={css.plField}>
                     <label htmlFor={`durasi-${item.id}`}>Durasi tayang</label>
                     <select id={`durasi-${item.id}`} value={edit.seconds} onChange={event => change({ seconds: Number(event.target.value) })}>

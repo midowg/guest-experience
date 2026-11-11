@@ -330,7 +330,7 @@ export type TvItem =
   | { key: string; kind: "timeline"; seconds: number }
   | { key: string; kind: "pengumuman"; seconds: number }
   | { key: string; kind: "teks"; title: string; body: string; seconds: number }
-  | { key: string; kind: "sambutan"; welcome: TvWelcome; seconds: number }
+  | { key: string; kind: "sambutan"; welcome: TvWelcome; design: TvWelcomeDesign; seconds: number }
   | { key: string; kind: "gambar"; slide: TvSlide; seconds: number };
 
 /* ---- The playlist (migration 202611100007) ------------------------------------------------------- */
@@ -393,7 +393,7 @@ export function scheduleLabel(item: TvItemSchedule, screenName: (id: string) => 
 }
 
 /** A row as a TV gets it. `src` is a picture's address. */
-export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string };
+export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string; design?: string };
 /** One forum or event of Timeline, for the template: its dates, hours when set, and how far off it is. */
 export type TvTimelineEntry = { id: string; title: string; when: string; hours: string | null; state: "berlangsung" | "akan"; color: number; left: string };
 /** One announcement of panitia's, for the template. */
@@ -405,6 +405,18 @@ export type TvNote = { id: string; title: string; body: string; at: string };
  * The board is open to anyone who knows its address, so nothing else of the visit is here.
  */
 export type TvWelcome = { id: string; name: string; greeting: string; note: string; hours: string; place: string; image: string };
+/*
+ * How a welcome is drawn (migration 202611100009; "werkudara" before it and by default):
+ * "werkudara" is the office's own welcome sign (the blue one with the logo and WELCOME, from
+ * "Welcome Sign Template.pptx"), with the guest's name in its empty middle; "foto" is the visit's
+ * cover photo, darkened, behind the words (the plain one when the visit has none); "polos" is the
+ * board's own colours.
+ */
+export const tvWelcomeDesigns = ["werkudara", "foto", "polos"] as const;
+export type TvWelcomeDesign = (typeof tvWelcomeDesigns)[number];
+export const tvWelcomeDesignLabels: Record<TvWelcomeDesign, string> = { werkudara: "Werkudara (biru, logo, WELCOME)", foto: "Foto sampul kunjungan", polos: "Polos, warna tema TV" };
+export const TV_WELCOME_DESIGN: TvWelcomeDesign = "werkudara";
+export const welcomeDesign = (value: unknown): TvWelcomeDesign => (tvWelcomeDesigns as readonly unknown[]).includes(value) ? value as TvWelcomeDesign : TV_WELCOME_DESIGN;
 export const TV_WELCOME_GREETING = "Selamat datang";
 /** Most visits welcomed in one round of the loop. */
 export const TV_WELCOMES_MOST = 6;
@@ -420,8 +432,8 @@ export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides"
     if (item.kind === "pengumuman") return [{ key, kind: "pengumuman", seconds: item.seconds }];
     if (item.kind === "teks") return [{ key, kind: "teks", title: item.title, body: item.body, seconds: item.seconds }];
     // One slide per visit on today; none today, and the row is passed over.
-    if (item.kind === "sambutan") return (feed.welcomes ?? []).map(welcome => ({ key: `${key}-${welcome.id}`, kind: "sambutan" as const, welcome, seconds: item.seconds }));
-    if (item.kind === "tamu") return item.title ? [{ key, kind: "sambutan", seconds: item.seconds, welcome: { id: item.id, name: item.title, greeting: TV_WELCOME_GREETING, note: item.body, hours: "", place: "", image: "" } }] : [];
+    if (item.kind === "sambutan") return (feed.welcomes ?? []).map(welcome => ({ key: `${key}-${welcome.id}`, kind: "sambutan" as const, welcome, design: welcomeDesign(item.design), seconds: item.seconds }));
+    if (item.kind === "tamu") return item.title ? [{ key, kind: "sambutan", seconds: item.seconds, design: welcomeDesign(item.design), welcome: { id: item.id, name: item.title, greeting: TV_WELCOME_GREETING, note: item.body, hours: "", place: "", image: "" } }] : [];
     return item.src ? [{ key, kind: "gambar", seconds: item.seconds, slide: { id: item.id, title: item.title, seconds: item.seconds, src: item.src } }] : [];
   });
 }
@@ -450,6 +462,7 @@ export const tvItemPatchSchema = z.object({
   title: itemTitle.optional(), body: itemBody.optional(), seconds: seconds.optional(), active: z.boolean().optional(),
   showFrom: day.optional(), showUntil: day.optional(), timeFrom: timeOfDay.optional(), timeUntil: timeOfDay.optional(),
   screenIds: z.array(z.uuid()).max(tvLimits.screens).optional(),
+  design: z.enum(tvWelcomeDesigns).optional(),
 }).refine(value => Object.values(value).some(item => item !== undefined), { message: "Tidak ada yang diubah." })
   .refine(value => !value.showFrom || !value.showUntil || value.showFrom <= value.showUntil, { message: "Tanggal akhir tidak boleh sebelum tanggal mulai.", path: ["showUntil"] });
 export const tvItemOrderSchema = z.object({ ids: z.array(z.uuid()).min(1).max(200) });

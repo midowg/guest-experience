@@ -4,8 +4,8 @@ import { clockLabel, wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisa
 import type { RoomUse } from "@/lib/pra-wam/sessions";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import {
-  isTemplateKind, itemShows, looksLikeTvSlug, takeoverOn, takeoverRuns, TV_WELCOME_GREETING, TV_WELCOMES_MOST, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
-  type TvDay, type TvFeed, type TvItemKind, type TvItemSchedule, type TvNote, type TvPlayItem, type TvRoom, type TvSettings, type TvSlideStart, type TvTakeover, type TvTimelineEntry, type TvWelcome,
+  isTemplateKind, itemShows, looksLikeTvSlug, takeoverOn, takeoverRuns, welcomeDesign, TV_WELCOME_GREETING, TV_WELCOMES_MOST, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
+  type TvDay, type TvFeed, type TvItemKind, type TvItemSchedule, type TvNote, type TvPlayItem, type TvRoom, type TvSettings, type TvSlideStart, type TvTakeover, type TvTimelineEntry, type TvWelcome, type TvWelcomeDesign,
 } from "@/lib/pra-wam/tv";
 import { hashTvKey, looksLikeTvKey } from "@/lib/pra-wam/tv-key";
 import { ServiceError } from "../config";
@@ -50,13 +50,20 @@ const waitingForItems = () => new ServiceError(503, `Daftar tayangan menunggu mi
 type ItemRow = {
   id: string; kind: TvItemKind; title: string; body: string; slide_id: string | null; seconds: number; sort_order: number; active: boolean;
   show_from: string | null; show_until: string | null; time_from: string | null; time_until: string | null; screen_ids: string[] | null;
+  /** How a welcome is drawn; absent before migration 202611100009. */
+  design?: string | null;
 };
+/** A welcome's design is picked per row with this one; before it every welcome is the Werkudara sign. */
+export const TV_DESIGN_MIGRATION = "202611100009_pw_tv_design.sql";
 const ITEM_COLUMNS = "id,kind,title,body,slide_id,seconds,sort_order,active,show_from,show_until,time_from,time_until,screen_ids";
 /** The playlist in order, or null before its migration. */
 async function readItems(): Promise<ItemRow[] | null> {
-  const { data, error } = await createPrivilegedClient().from("pw_tv_items").select(ITEM_COLUMNS).order("sort_order").order("created_at");
+  const read = (columns: string) => createPrivilegedClient().from("pw_tv_items").select(columns).order("sort_order").order("created_at");
+  let { data, error } = await read(`${ITEM_COLUMNS},design`);
+  // Before the design's migration: the same rows without it.
+  if (error && noSlug(error)) ({ data, error } = await read(ITEM_COLUMNS));
   if (error) { if (noTable(error)) return null; databaseError(error); }
-  return (data ?? []) as ItemRow[];
+  return (data ?? []) as unknown as ItemRow[];
 }
 const scheduleOf = (row: ItemRow): TvItemSchedule => ({ showFrom: row.show_from, showUntil: row.show_until, timeFrom: row.time_from?.slice(0, 5) ?? null, timeUntil: row.time_until?.slice(0, 5) ?? null, screenIds: row.screen_ids ?? [] });
 
@@ -111,7 +118,7 @@ export type TvScreen = {
   lastItem: string | null;
 };
 /** A row of the playlist as the admin edits it. `slideId` is a picture's, for its thumbnail. */
-export type TvAdminItem = TvItemSchedule & { id: string; kind: TvItemKind; title: string; body: string; seconds: number; active: boolean; slideId: string | null };
+export type TvAdminItem = TvItemSchedule & { id: string; kind: TvItemKind; title: string; body: string; seconds: number; active: boolean; slideId: string | null; design: TvWelcomeDesign };
 export type TvAdminSlide = { id: string; title: string; seconds: number; active: boolean };
 export type TvAdmin = {
   migrated: boolean; slugReady: boolean; lookReady: boolean; storageReady: boolean; now: string; screens: TvScreen[]; slides: TvAdminSlide[]; settings: TvSettings;
@@ -179,7 +186,7 @@ export async function tvAdmin(): Promise<TvAdmin> {
     for (const row of (last ?? []) as { id: string; last_item: string | null }[]) shown.set(row.id, row.last_item);
   }
   return {
-    items: items?.map(row => ({ id: row.id, kind: row.kind, title: row.title, body: row.body, seconds: row.seconds, active: row.active, slideId: row.slide_id, ...scheduleOf(row) })) ?? null,
+    items: items?.map(row => ({ id: row.id, kind: row.kind, title: row.title, body: row.body, seconds: row.seconds, active: row.active, slideId: row.slide_id, design: welcomeDesign(row.design), ...scheduleOf(row) })) ?? null,
     migrated: true, slugReady, lookReady, storageReady: isR2Configured(), now,
     welcomeReady: taking.ready, takeover: takeoverRuns(taking.takeover, Date.parse(now)) ? taking.takeover : null, welcomes: welcomes.map(visit => visit.name),
     screens: ((data ?? []) as unknown as ScreenRow[]).map(row => ({ id: row.id, name: row.name, slug: row.slug ?? null, keyHint: row.key_hint, lastSeenAt: row.last_seen_at, width: row.last_width, height: row.last_height, createdAt: row.created_at, lastItem: shown.get(row.id) ?? null })),
@@ -275,7 +282,7 @@ export async function stopTakeover(): Promise<void> {
   invalidate();
 }
 
-export type ItemChange = Partial<{ title: string; body: string; seconds: number; active: boolean; showFrom: string | null; showUntil: string | null; timeFrom: string | null; timeUntil: string | null; screenIds: string[] }>;
+export type ItemChange = Partial<{ title: string; body: string; seconds: number; active: boolean; showFrom: string | null; showUntil: string | null; timeFrom: string | null; timeUntil: string | null; screenIds: string[]; design: TvWelcomeDesign }>;
 export async function updateItem(id: string, change: ItemChange): Promise<void> {
   const row: Record<string, unknown> = {};
   if (change.title !== undefined) row.title = change.title;
@@ -287,7 +294,15 @@ export async function updateItem(id: string, change: ItemChange): Promise<void> 
   if (change.timeFrom !== undefined) row.time_from = change.timeFrom;
   if (change.timeUntil !== undefined) row.time_until = change.timeUntil;
   if (change.screenIds !== undefined) row.screen_ids = change.screenIds;
-  const { data, error } = await createPrivilegedClient().from("pw_tv_items").update(row).eq("id", id).select("id");
+  if (change.design !== undefined) row.design = change.design;
+  let { data, error } = await createPrivilegedClient().from("pw_tv_items").update(row).eq("id", id).select("id");
+  // Before the design's migration: everything else is saved, and a design other than the only one there is waits for it.
+  if (error && noSlug(error) && change.design !== undefined) {
+    delete row.design;
+    if (Object.keys(row).length) ({ data, error } = await createPrivilegedClient().from("pw_tv_items").update(row).eq("id", id).select("id"));
+    else ({ data, error } = await createPrivilegedClient().from("pw_tv_items").select("id").eq("id", id));
+    if (!error && change.design !== welcomeDesign(null)) { invalidate(); throw new ServiceError(503, `Pilihan desain sambutan menunggu migrasi ${TV_DESIGN_MIGRATION}. Perubahan lain sudah tersimpan.`); }
+  }
   if (error) {
     if (noTable(error)) throw waitingForItems();
     if (error.code === "23514") throw new ServiceError(422, "Tanggal akhir tidak boleh sebelum tanggal mulai.", { showUntil: ["Sebelum tanggal mulai."] });
@@ -544,7 +559,7 @@ export async function tvFeed(imageSrc: (slideId: string) => string, now = new Da
   const taken = takeoverOn(takeover, { now: now.getTime(), screenId: at.screenId }) ? items?.find(item => item.id === takeover.itemId) : undefined;
   const playlist: TvPlayItem[] | undefined = (taken ? [taken] : items?.filter(item => itemShows({ ...scheduleOf(item), active: item.active }, at)))
     ?.filter(item => item.kind !== "gambar" || allSlides.some(slide => slide.id === item.slide_id))
-    .map(item => ({ id: item.slide_id ?? item.id, kind: item.kind, title: item.title, body: item.body, seconds: item.seconds, ...(item.slide_id ? { src: imageSrc(item.slide_id) } : {}) }));
+    .map(item => ({ id: item.slide_id ?? item.id, kind: item.kind, title: item.title, body: item.body, seconds: item.seconds, ...(item.slide_id ? { src: imageSrc(item.slide_id) } : {}), ...(item.kind === "sambutan" || item.kind === "tamu" ? { design: welcomeDesign(item.design) } : {}) }));
   return {
     now: now.toISOString(), date, days, settings, look, countdown, version: BUILD,
     slides: slides.map(slide => ({ id: slide.id, title: slide.title, seconds: slide.seconds, src: imageSrc(slide.id) })),
