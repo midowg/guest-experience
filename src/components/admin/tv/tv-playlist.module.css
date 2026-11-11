@@ -13,10 +13,13 @@
 .plCard[data-open="true"] { grid-column: 1 / -1; border-color: var(--cs-primary); }
 
 .plHead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
-.plThumb, .plKind { display: grid; width: 56px; height: 44px; place-items: center; border-radius: 12px; box-sizing: border-box; }
-.plThumb { background: #0b1220; object-fit: contain; }
-.plKind { background: var(--cs-primary-soft); color: var(--cs-primary); }
-.plCard[data-off="true"] .plThumb, .plCard[data-off="true"] .plKind { opacity: .45; }
+/* The slide at a glance, across the top of the card: the picture, or a drawing of the template (TvPreview). */
+.plShot { aspect-ratio: 16 / 9; overflow: hidden; border-radius: 12px; background: #0b1430; }
+.plShot img, .plShot svg { display: block; width: 100%; height: 100%; }
+.plShot img { object-fit: contain; }
+.plCard[data-off="true"] .plShot { opacity: .45; }
+.plCard[data-open="true"] .plShot { max-width: 20rem; }
+.plKind { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; background: var(--cs-primary-soft); color: var(--cs-primary); }
 .plOrder { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; min-width: 0; margin: 0; color: var(--cs-muted); font-size: 13px; font-weight: 600; line-height: 1.35; }
 .plOrder span { display: grid; flex: none; min-width: 24px; height: 24px; place-items: center; padding: 0 4px; border-radius: 999px; box-sizing: border-box; background: var(--cs-fill); color: var(--cs-text); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
@@ -72,8 +75,11 @@
 .plSubmit > button { min-height: 44px; }
 .plDone { margin: 0; padding: 16px; border: 1px dashed var(--cs-line); border-radius: 12px; color: var(--cs-muted); font-size: 14px; text-align: center; }
 .plTemplates { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.plTemplate { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 12px; padding: 12px; border: 1px solid var(--cs-line); border-radius: 12px; }
-.plTemplate strong { color: var(--cs-text); font-size: 15px; font-weight: 700; }
+.plTemplate { display: grid; grid-template-columns: 128px minmax(0, 1fr); align-items: start; gap: 12px; padding: 12px; border: 1px solid var(--cs-line); border-radius: 12px; }
+.plMini { display: block; width: 128px; aspect-ratio: 16 / 9; grid-row: span 2; border-radius: 8px; }
+.plLive { display: block; width: min(100%, 20rem); aspect-ratio: 16 / 9; border-radius: 12px; }
+.plTemplate strong { display: flex; align-items: center; gap: 8px; color: var(--cs-text); font-size: 15px; font-weight: 700; }
+.plTemplate strong svg { flex: none; color: var(--cs-primary); }
 .plTemplate p { margin: 4px 0 0; color: var(--cs-muted); font-size: 13px; line-height: 1.45; }
 .plTemplate > button { grid-column: 2; justify-self: start; min-height: 44px; }
 .plFile { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
@@ -84,6 +90,9 @@
 .plTaking p { flex: 1 1 16rem; min-width: 0; margin: 0; color: var(--cs-text); font-size: 15px; line-height: 1.45; overflow-wrap: anywhere; }
 
 @media (max-width: 30rem) {
+  .plTemplate { grid-template-columns: minmax(0, 1fr); }
+  .plMini { width: 100%; grid-row: auto; }
+  .plTemplate > button { grid-column: 1; }
   .plActions > button { flex: 1 1 100%; }
   .plActions .plDanger { margin-left: 0; }
 }

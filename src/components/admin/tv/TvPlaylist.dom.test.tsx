@@ -53,6 +53,9 @@ describe("Admin TV → Tayangan", () => {
     expect(cards[4].textContent).toContain("Tayang diLobi");
     expect(cards[4].textContent).toContain("Jadwal1 Des – 10 Des · 08.00–17.00");
     expect(screen.getByText("4 tayang dari 5")).toBeTruthy();
+    // Each card opens with a drawing of its slide; a typed one shows its own words in it.
+    expect(cards.every(card => !!card.querySelector("svg[viewBox='0 0 160 90']"))).toBe(true);
+    expect(cards[3].querySelector("svg[viewBox='0 0 160 90']")?.textContent).toContain("Contoh Satu");
     keep("daftar", container);
   });
 
@@ -98,6 +101,7 @@ describe("Admin TV → Tayangan", () => {
     const addGuest = screen.getByRole("button", { name: "Tambah sambutan" }) as HTMLButtonElement;
     expect(addGuest.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText("Nama tamu"), { target: { value: "Contoh Tiga" } });
+    expect(document.querySelector("form svg[viewBox='0 0 160 90']")?.textContent).toContain("Contoh Tiga");
     expect(addGuest.disabled).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Gambar" }));
     expect(screen.getByRole("button", { name: "Unggah gambar" })).toBeTruthy();

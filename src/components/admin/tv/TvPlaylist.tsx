@@ -12,6 +12,7 @@ import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import { isTemplateKind, scheduleLabel, tvItemKindHints, tvItemKindLabels, tvLimits, tvTakeoverMinutes, tvTemplateKinds, type TvItemKind } from "@/lib/pra-wam/tv";
 import { praWamTvApi, tvAdminPath } from "@/lib/routes";
 import type { TvAdmin, TvAdminItem } from "@/lib/server/pra-wam/tv";
+import { TvPreview } from "./TvPreview";
 import css from "./tv-playlist.module.css";
 
 const ACCEPT = "image/jpeg,image/png,image/webp";
@@ -145,11 +146,15 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
           const seconds = edit && !SECONDS.includes(edit.seconds) ? [...SECONDS, edit.seconds].sort((a, b) => a - b) : SECONDS;
           const saving = busy === `baris-${item.id}`;
           return <li key={item.id} className={css.plCard} data-off={!item.active} data-open={!!open}>
-            <div className={css.plHead}>
+            {/* What it looks like on a TV, at a glance: the picture itself, or a drawing of the slide. */}
+            <div className={css.plShot}>
               {item.kind === "gambar" && item.slideId
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img className={css.plThumb} src={praWamTvApi.slideImage(item.slideId)} alt="" loading="lazy" width={80} height={45} />
-                : <span className={css.plKind} aria-hidden="true"><Icon size={22} /></span>}
+                ? <img src={praWamTvApi.slideImage(item.slideId)} alt="" loading="lazy" width={320} height={180} />
+                : <TvPreview kind={item.kind} title={item.title} body={item.body} />}
+            </div>
+            <div className={css.plHead}>
+              <span className={css.plKind} aria-hidden="true"><Icon size={18} /></span>
               <p className={css.plOrder}><span aria-label={`Urutan ${index + 1}`}>{index + 1}</span>{sourceOf(item.kind)}</p>
               {isTaking ? <Pill tone="warn">Mengambil alih</Pill> : <Pill tone={item.active ? "ok" : "neutral"}>{item.active ? "Tayang" : "Disembunyikan"}</Pill>}
             </div>
@@ -260,8 +265,8 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
             : <ul className={css.plTemplates}>{missing.map(kind => {
               const Icon = icons[kind];
               return <li key={kind} className={css.plTemplate}>
-                <span className={css.plKind} aria-hidden="true"><Icon size={22} /></span>
-                <div><strong>{tvItemKindLabels[kind]}</strong><p>{tvItemKindHints[kind]}</p></div>
+                <TvPreview className={css.plMini} kind={kind} />
+                <div><strong><Icon size={16} aria-hidden />{tvItemKindLabels[kind]}</strong><p>{tvItemKindHints[kind]}</p></div>
                 <ConsoleButton icon={<Plus size={18} aria-hidden />} disabled={!!busy || (kind === "sambutan" && !list.welcomeReady)} aria-label={`Tambah ${tvItemKindLabels[kind]}`} onClick={() => void add(kind)}>{busy === `tambah-${kind}` ? "Menambahkan…" : "Tambah"}</ConsoleButton>
               </li>;
             })}</ul>}
@@ -269,7 +274,8 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
         </div>}
 
         {adding === "tamu" && <form className={css.plPane} onSubmit={event => { event.preventDefault(); void add("tamu", guest, () => setGuest({ title: "", body: "" })); }}>
-          <p className={css.plHint}>Untuk tamu tanpa halaman Kunjungan Kantor. Tanggal dan jam tayangnya diatur lewat Ubah setelah ditambahkan.</p>
+          <p className={css.plHint}>Untuk tamu tanpa halaman Kunjungan Kantor. Tanggal dan jam tayangnya diatur lewat Atur setelah ditambahkan.</p>
+          <TvPreview className={css.plLive} kind="tamu" title={guest.title} body={guest.body} />
           <div className={css.plField}>
             <label htmlFor="tamu-nama">Nama tamu</label>
             <input id="tamu-nama" value={guest.title} maxLength={80} placeholder="Nama orang atau perusahaan" disabled={!!busy} onChange={event => setGuest(value => ({ ...value, title: event.target.value }))} />
@@ -285,6 +291,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
 
         {adding === "teks" && <form className={css.plPane} onSubmit={event => { event.preventDefault(); void add("teks", text, () => setText({ title: "", body: "" })); }}>
           <p className={css.plHint}>Tulisan besar di tengah layar: judul dan isi.</p>
+          <TvPreview className={css.plLive} kind="teks" title={text.title} body={text.body} />
           <div className={css.plField}>
             <label htmlFor="teks-judul">Judul</label>
             <input id="teks-judul" value={text.title} maxLength={80} placeholder="Misalnya Selamat datang" disabled={!!busy} onChange={event => setText(value => ({ ...value, title: event.target.value }))} />
