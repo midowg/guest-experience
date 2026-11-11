@@ -235,6 +235,9 @@ Sejak 11 Nov 2026 (migrasi `202611110002_pw_session_minutes.sql`), aturan di `sr
   jumlah peserta lain `others` dikirim ke semua orang, nama peserta tetap tidak). **Book** membuka
   form booking di atas halaman pada tanggal dan ruang itu (`book-form?date=&room=`); setelah tersimpan
   kartunya dibaca ulang. Tanpa tombol Book bila Book ditutup admin atau tanggal di luar periode.
+  Kartu ruang yang sama juga tampil di **form booking, langkah Kapan** ("Jadwal ruang · tanggal"), ikut
+  berganti saat tanggal diganti, tanpa tombol Book (ruang tetap dipilih di langkah Tempat), supaya
+  tidak perlu kembali ke Timeline untuk melihat ruang yang sudah terpakai (`RoomCardList`).
   Periode booking 28 Okt–29 Des 2026 (`appraisalRules.periodEnd`).
 - **Agenda** (menu bilah bawah, dulu "Book"; 9 Nov 2026): tanpa kalender dan tanpa denah. Isinya
   tombol Book ruang dan daftar Booking saya. Tanggal dipilih di kalender Timeline atau di form;

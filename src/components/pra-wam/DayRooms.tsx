@@ -35,13 +35,20 @@ export function DayRooms({ date, today, canBook, round = 0, onBook, load = fromS
   const title = <h2 className={css.heading}>{date === today ? "Hari ini" : "Ruang"} · {dayLabel(date)}</h2>;
   if (error?.key === key) return <section className={css.day} aria-label={`Ruang ${dayLabel(date)}`}>{title}<Notice tone="error">{error.text}</Notice></section>;
   if (loaded?.key !== key) return <section className={css.day} aria-label={`Ruang ${dayLabel(date)}`} aria-busy="true">{title}<p className={css.loading} role="status">Memuat ruang…</p></section>;
-  const cards = roomCards(loaded.rooms, loaded.bookings, date, new Date());
   const inPeriod = date >= appraisalRules.periodStart && date <= appraisalRules.periodEnd;
   return <section className={css.day} aria-label={`Ruang ${dayLabel(date)}`}>
     {title}
-    {cards.length === 0 ? <p className={css.loading}>Belum ada ruang yang bisa dibooking.</p>
-      : <ul className={css.cards}>{cards.map(card => <li key={card.room.id}><Card card={card} book={canBook && inPeriod && card.room.bookable ? () => onBook(card.room.id) : null} /></li>)}</ul>}
+    <RoomCardList cards={roomCards(loaded.rooms, loaded.bookings, date, new Date())} book={canBook && inPeriod ? onBook : null} />
   </section>;
+}
+
+/**
+ * The room cards of one day, shared by Timeline (with Book) and the booking form's Kapan step
+ * (11 Nov 2026: the day's rooms and bookings in view while picking the date, without Book).
+ */
+export function RoomCardList({ cards, book = null }: { cards: RoomCard[]; book?: ((roomId: string) => void) | null }) {
+  if (!cards.length) return <p className={css.loading}>Belum ada ruang yang bisa dibooking.</p>;
+  return <ul className={css.cards}>{cards.map(card => <li key={card.room.id}><Card card={card} book={book && card.room.bookable ? () => book(card.room.id) : null} /></li>)}</ul>;
 }
 
 function Card({ card, book }: { card: RoomCard; book: (() => void) | null }) {

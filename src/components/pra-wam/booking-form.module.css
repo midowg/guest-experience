@@ -96,3 +96,7 @@
 .doneFacts div { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 8px; }
 .doneFacts dt { font-size: 13px; color: var(--pw-muted); }
 .doneFacts dd { margin: 0; font-size: 14px; font-weight: 600; color: var(--pw-text); overflow-wrap: anywhere; }
+
+/* The day's rooms and bookings in the Kapan step (11 Nov 2026), sized to the sheet. */
+.dayRooms { display: grid; gap: 8px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--pw-line); container-type: inline-size; }
+.dayRooms > p { margin: 0; }

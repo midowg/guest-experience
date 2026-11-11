@@ -19,6 +19,8 @@ import { dayName, TimelineMonth } from "./TimelineMonth";
 import type { TimelineEntry } from "@/lib/pra-wam/timeline";
 import timelineCss from "./timeline.module.css";
 import { FloorPlan } from "./FloorPlan";
+import { RoomCardList } from "./DayRooms";
+import { roomCards } from "@/lib/pra-wam/room-card";
 import { PeoplePicker, type PeopleGroup } from "./PeoplePicker";
 import { itemTitle, type HodDepartment } from "@/lib/pra-wam/hod";
 import own from "./appraisal.module.css";
@@ -454,6 +456,12 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       <p className={styles.hint}>{outside
         ? "Di luar kantor: boleh akhir pekan, jam berapa pun hari itu (sampai 23.30), dan lebih dari 4 jam. Nama tempat diisi di langkah Tempat."
         : `Ruang kantor ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam. Di luar kantor dipilih di langkah Tempat.`}</p>
+      {/* The day's rooms and bookings while the date is picked (11 Nov 2026), as on Timeline, so no going back there. */}
+      <div className={css.dayRooms} aria-label={`Jadwal ruang ${dayLabel(draft.date)}`} role="region">
+        <p className={styles.label}>Jadwal ruang · {dayLabel(draft.date)}</p>
+        {dayKnown ? <RoomCardList cards={roomCards(rooms, others, draft.date, nowDate)} />
+          : <p className={styles.hint} role="status">{loadError ?? "Memuat jadwal ruang…"}</p>}
+      </div>
     </section>
 
     <section {...stepProps(1)}>

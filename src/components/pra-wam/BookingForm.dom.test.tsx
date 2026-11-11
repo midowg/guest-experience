@@ -352,3 +352,19 @@ it("greys out a room kept for another department, with its reason", () => {
   expect(room.getAttribute("aria-disabled") === "true" || room.disabled).toBe(true);
   expect(screen.getByText(/Khusus Sales & Marketing/)).toBeTruthy();
 });
+
+it("shows the day's rooms and bookings while the date is picked, as on Timeline", async () => {
+  request.mockResolvedValue({ data: { bookings: [] }, message: "" });
+  renderForm();
+  const day = within(screen.getByRole("region", { name: "Jadwal ruang Kamis, 5 Nov" }));
+  const nakula = within(day.getByRole("article", { name: "Nakula" }));
+  expect(nakula.getByText("Rapat")).toBeTruthy();
+  expect(nakula.getByText("13.00–14.00")).toBeTruthy();
+  expect(nakula.getByText("Sari")).toBeTruthy();
+  // No Book here: the room is picked at Tempat.
+  expect(day.queryByRole("button", { name: /^Book / })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /^Jumat, 6 Nov/ }));
+  const next = within(await screen.findByRole("region", { name: "Jadwal ruang Jumat, 6 Nov" }));
+  await vi.waitFor(() => expect(next.getByRole("article", { name: "Nakula" })).toBeTruthy());
+  expect(next.queryByText("Rapat")).toBeNull();
+});
