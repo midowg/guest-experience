@@ -17,7 +17,7 @@ describe("the deletion date", () => {
     expect(purgeDue({ stayDeleteOn: null }, new Date("2030-01-01T00:00:00Z"))).toBe(false);
   });
   it("names the stay, health, and allergy questions, and nothing else", () => {
-    expect([...PURGE_KEYS].sort()).toEqual(["10", "11", "12", "13", "14b", "16", "33", "38", "7", "8", "9"]);
+    expect([...PURGE_KEYS].sort()).toEqual(["10", "11", "12", "13", "14b", "14c", "14d", "16", "33", "38", "5b", "7", "8", "9"]);
   });
 });
 

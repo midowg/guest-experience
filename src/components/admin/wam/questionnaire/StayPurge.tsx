@@ -11,7 +11,7 @@ import type { PurgeStatus } from "@/lib/server/pra-wam/purge";
 import hr from "./hr.module.css";
 
 const longDate = (date: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
-const WHAT = "jawaban menginap (pertanyaan 33, 7–13, 38), kesehatan (16), alergi dan fobia (14b), dan pairing kamar";
+const WHAT = "jawaban menginap (pertanyaan 33, 7–13, 38), kesehatan (16), alergi dan fobia (14b, 14c), kebutuhan khusus (14d), kontak darurat (5b), dan pairing kamar";
 
 /**
  * Pengaturan → "Penghapusan data menginap": when it happens, what goes, and whether it already
@@ -48,7 +48,7 @@ export function StayPurge({ status }: { status: PurgeStatus }) {
         ? <Notice tone="info">Terjadwal: {longDate(status.date)}, mulai pukul 00.00 WIB, saat Admin WAM dibuka. Saat ini tersimpan {status.answers} jawaban dan {status.roommates} penempatan kamar.</Notice>
         : left
           ? <Notice tone="warning">Tanggal hapus ({longDate(status.date)}) sudah lewat, tetapi masih ada {status.answers} jawaban dan {status.roommates} penempatan kamar.</Notice>
-          : <Notice tone="success">Sudah dihapus. Tanggal hapus: {longDate(status.date)}. Tidak ada lagi data menginap, kesehatan, alergi, atau pairing kamar yang tersimpan.</Notice>}
+          : <Notice tone="success">Sudah dihapus. Tanggal hapus: {longDate(status.date)}. Tidak ada lagi data menginap, kesehatan, alergi, kebutuhan khusus, kontak darurat, atau pairing kamar yang tersimpan.</Notice>}
     {message && <Notice tone={message.tone}>{message.text}</Notice>}
     {status.due && left > 0 && <div><Button type="button" variant="secondary" disabled={busy} onClick={() => void purge()}><Trash2 size={18} aria-hidden /> {busy ? "Menghapus…" : "Hapus sekarang"}</Button></div>}
   </section>;

@@ -4,13 +4,14 @@ import type { QContent, QForm } from "./questionnaire";
  * Deleting the stay and health data on the date HR sets (Pengaturan → "Tanggal hapus data
  * menginap"), decided by the owner on 5 Nov 2026: the stay answers (33, 7-13, 38), health (16),
  * allergies and phobias (14b), and the room pairing (who shares which room; the hotel's room list
- * stays). It runs when someone opens Admin WAM on or after that date, or with "Hapus sekarang".
+ * stays). With the revision of 11 Nov 2026 also the allergy details (14c), special needs (14d) and
+ * the emergency contact (5b, someone else's name and number). It runs when someone opens Admin WAM on or after that date, or with "Hapus sekarang".
  * From that day those questions are also gone from the form and from everyone's progress, so a
  * finished person never turns unfinished. Pure, so the rules can be tested.
  */
 
 /** The questions whose answers go, by fixed key. */
-export const PURGE_KEYS = ["33", "7", "8", "9", "10", "11", "12", "13", "38", "16", "14b"] as const;
+export const PURGE_KEYS = ["33", "7", "8", "9", "10", "11", "12", "13", "38", "16", "14b", "14c", "14d", "5b"] as const;
 const purged = new Set<string>(PURGE_KEYS);
 
 /** Today in Jakarta as YYYY-MM-DD. */

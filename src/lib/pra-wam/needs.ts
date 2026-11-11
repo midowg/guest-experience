@@ -11,7 +11,9 @@ import { answerLevel, type AnswerValue, type QQuestion, type Visibility } from "
 /** The blocks of the page, by fixed question key, in order. A key the form lacks is left out. */
 export const NEED_BLOCKS = [
   { key: "14", title: "Makanan", purpose: "Untuk panitia konsumsi." },
-  { key: "14b", title: "Alergi, fobia, dan hal yang perlu dijauhkan", purpose: "Untuk panitia konsumsi dan acara." },
+  { key: "14c", title: "Alergi dan makanan yang dihindari", purpose: "Untuk panitia konsumsi." },
+  { key: "14b", title: "Fobia dan hal yang perlu dijauhkan", purpose: "Untuk panitia acara." },
+  { key: "14d", title: "Kebutuhan khusus", purpose: "Untuk menyusun kegiatan dan memilih ruang." },
   { key: "15", title: "Ibadah", purpose: "Untuk menyiapkan waktu dan tempat ibadah." },
   { key: "35", title: "Kesiapan aktivitas fisik", purpose: "Untuk keamanan kegiatan." },
   { key: "36", title: "Aktivitas yang membuat tidak nyaman", purpose: "Untuk keamanan kegiatan." },

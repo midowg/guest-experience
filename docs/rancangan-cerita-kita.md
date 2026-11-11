@@ -89,6 +89,16 @@ Supaya data tidak rusak:
 - Pertanyaan "pilih rekan" (13 dan 23) memakai daftar karyawan dengan pencarian, bukan isian bebas,
   supaya bisa langsung dipakai untuk pairing.
 
+### Revisi pertanyaan (11 November 2026)
+
+Mengikuti "Cerita Kita WAM 2026: daftar pertanyaan" (58 pertanyaan; sebelumnya 55), lewat migrasi
+`202611110003_wam_questionnaire_revision.sql`. Baru: **5b** kontak darurat (wajib, HR), **14c**
+alergi dan makanan yang dihindari (HR), **14d** kebutuhan khusus untuk ikut kegiatan (Panitia dan HR).
+Diubah: **14** "kebutuhan atau batasan makanan" ("Ada alergi" menjadi "Alergi makanan" dan "Ada
+makanan yang kuhindari"), **14b** hanya fobia, **16** ditambah obat rutin, catatan **3** tanpa nomor.
+14 dan 14b kembali ke `hr`. Teks hanya diganti bila masih teks awal, jadi suntingan HR tetap. Karena
+5b wajib, orang yang sudah selesai sebelum migrasi tercatat belum selesai sampai mengisinya.
+
 ### Untuk siapa (11 November 2026)
 
 Kuesioner bisa dibuka untuk **semua peserta** (bawaan, seperti sebelumnya) atau hanya untuk
@@ -181,10 +191,10 @@ Kode di mockup dipetakan ke peran yang sudah ada:
 | Data dari kuesioner | Dipakai di |
 |---|---|
 | Nama panggilan (1) | Usulan perubahan ke Data karyawan; HR yang menyetujui |
-| Nomor HP aktif (5) | Kontak darurat panitia selama acara |
+| Nomor HP aktif (5), kontak darurat (5b) | Kontak darurat panitia selama acara; 5b dihapus otomatis bersama data menginap |
 | Minat dan topik (17, 18), lagu (37), keahlian (E7), fakta unik (22, bila diizinkan) | Profil yang bisa dilihat rekan, ice breaking, playlist WAM |
 | Peran di tim (34), kesiapan fisik (35), hal tidak nyaman (36) | Penyusunan kelompok dan keamanan kegiatan (panitia) |
-| Makanan (14), alergi dan fobia (14b), ibadah (15), kesehatan (16) | Panitia konsumsi dan acara (Kebutuhan peserta): 14 dan 14b dengan nama, ibadah hanya jumlah, kesehatan hanya HR |
+| Makanan (14), alergi (14c), fobia (14b), kebutuhan khusus (14d), ibadah (15), kesehatan (16) | Panitia konsumsi dan acara (Kebutuhan peserta): sejak 11 Nov 2026 makanan, alergi, dan fobia `hr` (panitia hanya melihat jumlah, HR meneruskan ke dapur), kebutuhan khusus dengan nama, ibadah hanya jumlah, kesehatan hanya HR |
 | Data menginap (33, 7–13, 38) | Pairing kamar dan kaos; **dihapus otomatis 30 hari setelah WAM** |
 | Kartu karakter | Foto profil (opsional), Beranda, profil rekan |
 
@@ -328,7 +338,8 @@ BOD). Satu kartu per pertanyaan, aturannya di `src/lib/pra-wam/needs.ts`:
 
 | Pertanyaan | Yang dilihat panitia |
 |---|---|
-| Makanan (14), alergi dan fobia (14b) | Dengan nama dan departemen; jawaban lama (diisi saat masih HR) hanya dihitung |
+| Makanan (14), alergi (14c), fobia (14b) | Sejak 11 Nov 2026 `hr` lagi (keputusan pemilik, mengikuti daftar pertanyaan): pilihan makanan hanya jumlah per pilihan, isian alergi dan fobia hanya jumlah yang mengisi |
+| Kebutuhan khusus (14d, `fasil`) | Dengan nama, untuk menyusun kegiatan dan memilih ruang |
 | Ibadah (15, `hr`) | Hanya jumlah yang mengisi; isinya diminta ke HR |
 | Kesiapan fisik (35), hal tidak nyaman (36) | Dengan nama (memang `fasil`) |
 | Ukuran kaos (38, `hr`) | Jumlah per ukuran, tanpa nama |
@@ -374,7 +385,7 @@ Panitia, dan Admin WAM. Memakai aturan Rekap dengan pembaca `{ hrOpen: false, fa
   supaya departemen kecil tidak bisa ditebak.
 - **Penghapusan otomatis** (tahap 4, dibangun; keputusan pemilik 5 Nov 2026). Pada "Tanggal hapus
   data menginap" (Pengaturan), mulai 00.00 WIB, yang dihapus permanen: jawaban menginap (33, 7–13,
-  38), kesehatan (16), alergi dan fobia (14b), dan pairing kamar (penghuni; daftar kamar hotel
+  38), kesehatan (16), alergi dan fobia (14b, 14c), kebutuhan khusus (14d), kontak darurat (5b), dan pairing kamar (penghuni; daftar kamar hotel
   tetap, dan kamar ditarik dari Beranda). Tidak memakai cron: penghapusan berjalan saat Admin WAM
   dibuka pada atau setelah tanggal itu, dan ada tombol "Hapus sekarang" di Pengaturan. Sejak tanggal
   itu pertanyaan-pertanyaan tersebut juga hilang dari form dan dari hitungan progres, jadi yang sudah
