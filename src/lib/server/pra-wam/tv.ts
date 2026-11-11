@@ -654,6 +654,7 @@ export async function tvFeed(imageSrc: (slideId: string) => string, now = new Da
     ...(playlist?.some(item => item.kind === "timeline") ? { timeline } : {}),
     ...(playlist?.some(item => item.kind === "pengumuman") ? { notes } : {}),
     ...(playlist?.some(item => item.kind === "sambutan") ? { welcomes } : {}),
+    ...(taken ? { takeover: taken.id } : {}),
     ...(screen ? { reloadAt: screen.reloadAt } : {}),
   };
 }

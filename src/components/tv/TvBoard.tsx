@@ -7,12 +7,12 @@ import QRCode from "qrcode";
 import { TV_HOME_PATH } from "@/lib/routes";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, decimalHour, entryOwner, entryState, fit, isPhoneScreen, legendFor, legendItem, legendRows, shouldReload, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, itemLabel, nowAt, place, playlistOf, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
+  dayEntries, decimalHour, entryOwner, entryState, fit, isPhoneScreen, legendFor, legendItem, legendRows, shouldReload, TV_SWITCH_MS, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, itemLabel, nowAt, place, playlistOf, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
   type TvDay, type TvDayEntry, type TvEntry, type TvFeed, type TvLegendItem, type TvRoom,
 } from "@/lib/pra-wam/tv";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import { TvPhone } from "./TvPhone";
-import { NotesSlide, TextSlide, TimelineSlide, VideoSlide, WelcomeSlide } from "./TvTemplates";
+import { NotesSlide, TextSlide, TimelineSlide, TvLoader, VideoSlide, WelcomeSlide } from "./TvTemplates";
 import css from "./tv.module.css";
 
 /** How often a TV asks for content, and how often it re-reads the clock for "now". */
@@ -142,6 +142,17 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
     return () => { window.clearTimeout(timer); for (const name of events) window.removeEventListener(name, wake); };
   }, []);
 
+  // Something takes this TV over, or hands it back: the waiting screen for a moment, so the change is not a jump.
+  const taken = feed.takeover ?? "";
+  const [takenSeen, setTakenSeen] = useState(taken);
+  const [switching, setSwitching] = useState(false);
+  if (takenSeen !== taken) { setTakenSeen(taken); setSwitching(true); }
+  useEffect(() => {
+    if (!switching) return;
+    const timer = window.setTimeout(() => setSwitching(false), TV_SWITCH_MS);
+    return () => window.clearTimeout(timer);
+  }, [switching]);
+
   const screen = useMemo(() => tvScreen(width, height), [width, height]);
   const items = useMemo(() => playlistOf(feed), [feed]);
   const position = items.length ? index % items.length : 0;
@@ -217,6 +228,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
               data-fit={natural[current.slide.id] ? imageFit(...natural[current.slide.id], width, height) : "contain"}
               onLoad={event => { const { naturalWidth, naturalHeight } = event.currentTarget; const id = current.slide.id; setNatural(known => ({ ...known, [id]: [naturalWidth, naturalHeight] })); }} />
           </section>}
+    {switching && !gone && <TvLoader note={taken ? "Menyiapkan tayangan" : "Kembali ke daftar tayangan"} />}
     {/* The next picture is fetched while this item shows, so it appears at once. */}
     {following?.kind === "gambar" && following.key !== current?.key
       // eslint-disable-next-line @next/next/no-img-element

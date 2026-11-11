@@ -80,6 +80,8 @@ export type TvFeed = {
   reloadAt?: string | null;
   /** Today's office visits (Kunjungan Kantor, published), for the "sambutan" template: one slide each. */
   welcomes?: TvWelcome[];
+  /** The row that takes this TV over now (Tayangkan sekarang), when one does: the board shows its waiting screen as that starts and ends. */
+  takeover?: string;
 };
 
 /** How long a TV waits before loading itself afresh again, so two builds answering in turn (a deploy in progress) cannot make it flicker. */
@@ -421,6 +423,10 @@ export const youtubeThumb = (id: string) => `https://i.ytimg.com/vi/${id}/hqdefa
 export const youtubeWatch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
 /** A video that never says it ended (the network dropped, the player failed) is left after this long. */
 export const TV_VIDEO_MOST_MS = 30 * 60_000;
+/** A video that has not started after this long is passed over (or, alone in the playlist, says the TV cannot start it). */
+export const TV_VIDEO_START_MS = 25_000;
+/** How long the waiting screen stays when something takes the TV over, or hands it back. */
+export const TV_SWITCH_MS = 1_800;
 
 /*
  * A video may also be a file the admin uploads (MP4 or WebM): its row's body then keeps the file's

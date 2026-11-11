@@ -320,3 +320,20 @@
 .video { background: #000; }
 .video iframe, .video video { display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }
 .video video { object-fit: contain; }
+
+/*
+ * The waiting screen (TvLoader): the sign's blue, Werkudara's mark cut out of it on a light disc,
+ * a thin ring turning around the disc, one quiet line under it. Over a video until it plays, and
+ * over the board as something takes the TV over.
+ */
+.loader { position: absolute; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: calc(5 * var(--u)); background: #003797; color: #cfe6fb; animation: tvIn .3s ease-out; }
+.loaderMark { position: relative; display: grid; width: calc(18 * var(--u)); aspect-ratio: 1; place-items: center; border-radius: 50%; background: #f4f6f8; animation: tvBreath 2.6s ease-in-out infinite; }
+.loaderMark::before { content: ""; position: absolute; inset: calc(-2.4 * var(--u)); border: calc(.35 * var(--u)) solid rgb(255 255 255 / .16); border-top-color: #8fd0f5; border-radius: 50%; animation: tvTurn 1.5s linear infinite; }
+.loaderMark i { display: block; width: 56%; height: 56%; background: #003797; mask-position: center; mask-repeat: no-repeat; mask-size: contain; -webkit-mask-position: center; -webkit-mask-repeat: no-repeat; -webkit-mask-size: contain; }
+.loader p { margin: 0; font-size: calc(2.4 * var(--u)); font-weight: 600; letter-spacing: .04em; }
+@keyframes tvTurn { to { transform: rotate(360deg); } }
+@keyframes tvBreath { 50% { transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .loader, .loaderMark, .loaderMark::before { animation: none; } }
+/* A video is not shown before it plays: the player's own play button and poster stay under the waiting screen. */
+.video iframe, .video video { opacity: 0; transition: opacity .4s ease-out; }
+.video[data-playing="true"] iframe, .video[data-playing="true"] video { opacity: 1; }

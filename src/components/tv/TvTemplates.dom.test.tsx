@@ -1,8 +1,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { TV_WELCOME_ART } from "@/lib/routes";
-import { WelcomeSlide } from "./TvTemplates";
+import { TvLoader, VideoSlide, WelcomeSlide } from "./TvTemplates";
 
 afterEach(cleanup);
 
@@ -46,5 +46,44 @@ describe("the welcome slide", () => {
     const plain = render(<WelcomeSlide welcome={visit} design="polos" />);
     expect(plain.container.querySelector("img")).toBeNull();
     expect(plain.container.textContent).toContain("PT Contoh Dua Sejahtera");
+  });
+});
+
+describe("the waiting screen and videos", () => {
+  it("says what is being made ready, with Werkudara's mark", () => {
+    const { container } = render(<TvLoader note="Menyiapkan tayangan" />);
+    expect(screen.getByRole("status").textContent).toBe("Menyiapkan tayangan");
+    keep("tunggu", container);
+  });
+
+  it("covers a video file with the waiting screen until it plays, and mutes it by hand", () => {
+    const { container } = render(<VideoSlide video="" file="/api/tv/video/contoh" title="Profil" loop={false} onEnd={() => undefined} />);
+    const video = container.querySelector("video") as HTMLVideoElement;
+    expect(video.muted).toBe(true);
+    expect(video.hasAttribute("muted")).toBe(true);
+    expect(screen.getByRole("status").textContent).toBe("Menyiapkan video");
+    expect(container.querySelector("section")?.getAttribute("data-playing")).toBe("false");
+    fireEvent.playing(video);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(container.querySelector("section")?.getAttribute("data-playing")).toBe("true");
+  });
+
+  it("moves on when a video file ends or cannot be played, but not when it is alone", () => {
+    let ended = 0;
+    const first = render(<VideoSlide video="" file="/api/tv/video/contoh" title="Profil" loop={false} onEnd={() => { ended += 1; }} />);
+    fireEvent.ended(first.container.querySelector("video")!);
+    fireEvent.error(first.container.querySelector("video")!);
+    expect(ended).toBe(2);
+    cleanup();
+    const alone = render(<VideoSlide video="" file="/api/tv/video/contoh" title="Profil" loop onEnd={() => { ended += 1; }} />);
+    fireEvent.error(alone.container.querySelector("video")!);
+    expect(ended).toBe(2);
+    expect(screen.getByRole("status").textContent).toBe("TV ini belum bisa memulai video sendiri");
+  });
+
+  it("covers a YouTube video too until its player says it plays", () => {
+    const { container } = render(<VideoSlide video="FWN1B1B7Gu8" title="Annual Meeting" loop={false} onEnd={() => undefined} />);
+    expect(container.querySelector("iframe")?.getAttribute("src")).toContain("/embed/FWN1B1B7Gu8?autoplay=1&mute=1");
+    expect(screen.getByRole("status").textContent).toBe("Menyiapkan video");
   });
 });

@@ -498,6 +498,8 @@ export const tvApi = {
 const TV_ADMIN_API = "/api/admin/wam/tv";
 /** The Werkudara welcome sign's background (from "Welcome Sign Template.pptx"), a file of the site, in public/wam: a file under public/tv is answered by the TV page (/tv/{slug}) instead. */
 export const TV_WELCOME_ART = "/wam/tv-welcome-werkudara.webp";
+/** Werkudara's mark (the winged horse), a black shape on nothing: the TV's waiting screen cuts it out of the sign's blue. */
+export const TV_MARK = "/werkudara-mark.png";
 /** GET: a video file of the playlist, for a TV; answers with a short-lived address in storage. */
 export const tvVideoApi = (itemId: string) => `/api/tv/video/${itemId}`;
 export const praWamTvApi = {
