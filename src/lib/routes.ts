@@ -484,11 +484,11 @@ export const tvPath = (key: string) => `/tv/${enc(key)}`;
 export const TV_HOME_PATH = "/tv";
 /**
  * The board for an old TV browser that cannot run the board's script (a Samsung of 2017, an LG on
- * webOS): the room calendars as plain HTML that reloads itself each minute. /tv/lite for the one
- * address, /tv/{address}/lite for one TV; `?v=hari` or `?v=minggu` picks the calendar.
+ * webOS): the TV's list as plain HTML, one item a load. /tv/lite for the one address,
+ * /tv/{address}/lite for one TV; `?s=` is the item on show (an older `?v=hari|minggu` still works).
  */
-export const tvLitePath = (key?: string | null, view?: "hari" | "minggu") =>
-  `${key ? `/tv/${enc(key)}` : TV_HOME_PATH}/lite${view ? `?v=${view}` : ""}`;
+export const tvLitePath = (key?: string | null, item?: string) =>
+  `${key ? `/tv/${enc(key)}` : TV_HOME_PATH}/lite${item ? `?s=${enc(item)}` : ""}`;
 export const tvHomeApi = {
   /** GET: what TVs play now. */
   feed: "/api/tv",

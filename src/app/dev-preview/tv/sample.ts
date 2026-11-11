@@ -37,6 +37,27 @@ export function sampleTvFeed({ isi, tema, mode, qr }: SampleTvAsk): TvFeed {
     },
     look: tema === "werkudara" ? "werkudara" : "dream",
     // Pra WAM's countdown (10 Nov 2026): Appraisal ends on Friday 20 Nov.
+    // ?isi=daftar: one of every kind the list can hold, for the lite board (/dev-preview/tv/lite?isi=daftar).
+    ...(isi === "daftar" ? {
+      playlist: [
+        { id: "w", kind: "sambutan" as const, title: "", body: "", seconds: 10, design: "werkudara" },
+        { id: "t", kind: "tamu" as const, title: "Pak Contoh Dua", body: "Terima kasih sudah berkunjung ke kantor kami.", seconds: 10, design: "polos" },
+        { id: "h", kind: "kalender_hari" as const, title: "", body: "", seconds: 20 },
+        { id: "m", kind: "kalender_minggu" as const, title: "", body: "", seconds: 20 },
+        { id: "x", kind: "teks" as const, title: "Rapat bulanan", body: "Jumat, 13 November\npukul 14.00 di Limasan", seconds: 10 },
+        { id: "s1", kind: "gambar" as const, title: "Poster mendatar", body: "", seconds: 10, src: poster("Mendatar 16:9", 1920, 1080, "#006EC1") },
+        { id: "u", kind: "ultah" as const, title: "Contoh Tiga Lengkap", body: "", seconds: 10, call: "Tiga", date: "2026-11-11" },
+        { id: "l", kind: "timeline" as const, title: "", body: "", seconds: 10 },
+        { id: "p", kind: "pengumuman" as const, title: "", body: "", seconds: 10 },
+        { id: "v", kind: "video" as const, title: "Video", body: "dQw4w9WgXcQ", seconds: 10 },
+      ],
+      welcomes: [{ id: "v1", name: "PT Contoh Dua Sejahtera", greeting: "Selamat datang di Werkudara", note: "", hours: "10.00–12.00 WIB", place: "Kantor Werkudara", image: poster("Foto sampul", 1920, 1080, "#35506b") }],
+      timeline: [
+        { id: "a", title: "Appraisal: isi form & 1-on-1", when: "28 Okt–20 Nov", hours: null, state: "berlangsung" as const, color: 0, left: "berakhir 9 hari lagi" },
+        { id: "b", title: "HOD Meeting", when: "Sel, 24 Nov", hours: "09.00–12.00", state: "akan" as const, color: 1, left: "mulai 13 hari lagi" },
+      ],
+      notes: [{ id: "n1", title: "Kumpul di lobi", body: "Semua peserta diminta berkumpul di lobi pukul 08.30.", at: at(DATE, "08:00") }],
+    } : {}),
     ...(isi === "sambutan" ? {
       playlist: [{ id: "w", kind: "sambutan" as const, title: "", body: "", seconds: 8 }, { id: "t", kind: "tamu" as const, title: "Contoh Satu", body: "Terima kasih sudah berkunjung ke kantor kami.", seconds: 8 }],
       welcomes: [{ id: "v1", name: "PT Contoh Dua Sejahtera", greeting: "Selamat datang di Werkudara", note: "", hours: "10.00–12.00 WIB", place: "Kantor Werkudara", image: poster("Foto sampul", 1920, 1080, "#35506b") }],

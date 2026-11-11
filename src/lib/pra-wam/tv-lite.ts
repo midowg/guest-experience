@@ -3,36 +3,45 @@ import { rangeLabel, type Countdown } from "./timeline";
 import type { WamLook } from "./theme";
 import {
   dayEntries, decimalHour, entryOwner, entryState, fit, fitText, hourSpan, legendFor, legendItem, legendRows, nowAt, place, playlistOf,
-  shownDays, tvDateLabel, tvDayHead, tvLegend, tvLegendUnits, tvWeekLabel, type TvDay, type TvDayEntry, type TvEntry, type TvFeed,
-  type TvLegendItem, type TvMode, type TvRoom,
+  shownDays, tvDateLabel, tvDayHead, tvLegend, tvLegendUnits, tvWeekLabel, type TvBirthday, type TvDay, type TvDayEntry, type TvEntry, type TvFeed,
+  type TvItem, type TvLegendItem, type TvMode, type TvNote, type TvRoom, type TvSlide, type TvTimelineEntry, type TvWelcome, type TvWelcomeDesign,
 } from "./tv";
+import { TV_BIRTHDAY_CARD, TV_BIRTHDAY_FLOWERS, TV_WELCOME_ART } from "@/lib/routes";
 
 /*
- * TV Announcement, lite (11 Nov 2026): the room calendars for an old smart-TV browser (a Samsung
- * of 2017 on Tizen 3.0, about Chromium 47; an LG on webOS 23, about Chromium 94). The board at
- * /tv needs a browser of 2023 (Next 16 builds for Chrome 111), so on those TVs it stays empty.
- * This page is the same content as plain HTML, written whole on the server: no script at all,
- * and CSS such a browser knows (flexbox and absolute positions; no grid, no custom properties,
- * no `gap`, no color-mix, no `inset`). Sizes are in vmin, worked out here as TvBoard does in
- * JavaScript. It loads itself afresh at the next minute (meta refresh), so the clock, "now" and
- * the data are never more than a minute old and a new build of the site reaches the TV by itself;
- * each load shows the other calendar when both are in the TV's list. A landscape TV only.
+ * TV Announcement, lite (11 Nov 2026): the board for an old smart-TV browser (a Samsung of 2017
+ * on Tizen 3.0, about Chromium 47; an LG on webOS 23, about Chromium 94). The board at /tv needs a
+ * browser of 2023 (Next 16 builds for Chrome 111), so on those TVs it stays empty. This page plays
+ * the same list (Admin TV → Tayangan, narrowed to this TV, today and now, or what takes it over)
+ * as plain HTML written whole on the server: no script at all, and CSS such a browser knows
+ * (flexbox and absolute positions; no grid, no custom properties, no `gap`, no color-mix, no
+ * `inset`, no container units). Sizes are in vmin, worked out here as TvBoard does in JavaScript.
+ * One item a load: a meta refresh opens the next item (`?s=` its key) after the item's own time,
+ * at most a minute, so a change in the admin and a new build of the site reach the TV within a
+ * minute. Videos are passed over (a page without script cannot tell when one ends). A landscape TV only.
  */
 
-export const tvLiteViews = ["hari", "minggu"] as const;
-export type TvLiteView = (typeof tvLiteViews)[number];
-/** What the address asked for (`?v=`): a calendar, or nothing. */
-export const parseLiteView = (value: string | null | undefined): TvLiteView | null =>
-  (tvLiteViews as readonly string[]).includes(value ?? "") ? value as TvLiteView : null;
+/** What this page plays of the TV's list, in its order: everything but videos. */
+export function liteItems(feed: Pick<TvFeed, "playlist" | "settings" | "slides" | "welcomes">): TvItem[] {
+  return playlistOf(feed).filter(item => item.kind !== "video");
+}
 
 /**
- * The calendars this TV plays, in the order of its list (Admin TV → Tayangan). The lite page shows
- * only calendars: a list with neither still gets both, since the schedule is why the page is open.
+ * Which item an address asks for: `?s=` its key; an address from before the whole list was played
+ * (`?v=hari`, `?v=minggu`) the first calendar of that kind. Anything else, or an item no longer in
+ * the list, starts it from the top.
  */
-export function liteViews(feed: Pick<TvFeed, "playlist" | "settings" | "slides" | "welcomes">): TvLiteView[] {
-  const views = playlistOf(feed).flatMap((item): TvLiteView[] => (item.kind === "hari" ? ["hari"] : item.kind === "minggu" ? ["minggu"] : []));
-  const unique = views.filter((view, index) => views.indexOf(view) === index);
-  return unique.length ? unique : ["hari", "minggu"];
+export function liteIndex(items: readonly TvItem[], ask: { s?: string | null; v?: string | null }): number {
+  const byKey = ask.s ? items.findIndex(item => item.key === ask.s) : -1;
+  if (byKey >= 0) return byKey;
+  const byView = ask.v === "hari" || ask.v === "minggu" ? items.findIndex(item => item.kind === ask.v) : -1;
+  return Math.max(0, byView);
+}
+
+/** What a lite address asks for: `?s=` (an item's key) and the older `?v=`. */
+export function liteAsk(url: string): { s: string | null; v: string | null } {
+  const search = new URL(url).searchParams;
+  return { s: search.get("s"), v: search.get("v") };
 }
 
 /** Seconds until just past the next whole minute, so the clock on the page is the right minute. */
@@ -40,6 +49,10 @@ export function refreshSeconds(nowIso: string): number {
   const second = new Date(nowIso).getUTCSeconds();
   return 60 - second + 1;
 }
+/** The shortest an item stays: each one is a whole page load, which an old TV takes a moment over. */
+export const LITE_LEAST_SECONDS = 8;
+/** How long an item stays before the next load: its own time, between LITE_LEAST_SECONDS and a minute (so changes arrive within one). */
+export const liteSeconds = (item: Pick<TvItem, "seconds">) => Math.min(60, Math.max(LITE_LEAST_SECONDS, Math.round(item.seconds || 0)));
 
 /* ---- Colours: WAM's theme tokens (pra-wam.module.css), written out, since old browsers have no var() ---- */
 
@@ -219,6 +232,103 @@ function weekHtml(p: Palette, days: TvDay[], legend: readonly TvLegendItem[], to
   }).join("")}</div>`;
 }
 
+/* ---- The other items of the list (TvTemplates.tsx), without script ------------------------------- */
+
+const noteDate = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jakarta" });
+/** The welcome sign is 16:9: one hundredth of its width is this many hundredths of its height. */
+const SIGN = 16 / 9;
+/** The birthday card is 1131 × 1600: one hundredth of its height is this many hundredths of its width. */
+const CARD = 1600 / 1131;
+const sized = (value: number, unit: "vh" | "vw") => `${round(value)}${unit}`;
+/**
+ * The welcome sign's sizes, `k` `unit`s to one hundredth of its width: on a screen wider than 16:9
+ * the sign is the screen's height (vh), on any narrower one, a portrait TV too, its width (vw). The
+ * board does this with min() and container units, which old browsers do not have.
+ */
+function signSizes(unit: "vh" | "vw", k: number): string {
+  const at = (value: number) => sized(value * k, unit);
+  return `.signFrame{width:${at(100)};height:${at(56.25)};margin:${at(-28.125)} 0 0 ${at(-50)}}`
+    + `.signText h1{font-size:${at(5.6)}}.signText h1.sedang{font-size:${at(4.4)}}.signText h1.kecil{font-size:${at(3.4)}}`
+    + `.signText p{margin-top:${at(1.6)};font-size:${at(2)}}`
+    + `.signText .facts{margin-top:${at(1.6)};font-size:${at(1.9)}}.signText .facts li{margin:0 ${at(1.5)}}`;
+}
+/**
+ * The birthday card's sizes, `k` `unit`s to one hundredth of its height: the screen's height, or on a
+ * screen narrower than the card (a portrait TV), its width. The wish is a little smaller than the
+ * board's: an old TV has no Cormorant Garamond, and its Georgia is wider.
+ */
+function cardSizes(unit: "vh" | "vw", k: number): string {
+  const at = (value: number) => sized(value * k, unit);
+  return `.bdayCard{width:${at(100 / CARD)};height:${at(100)};margin:${at(-50)} 0 0 ${at(-50 / CARD)}}`
+    + `.bdayName{font-size:${at(6)}}.bdayName.sedang{font-size:${at(4.9)}}.bdayName.kecil{font-size:${at(3.9)}}`
+    + `.bdayDate strong{font-size:${at(6)}}.bdayDate span{margin-top:${at(1)};font-size:${at(2.8)}}`
+    + `.bdayWish h2{font-size:${at(1.95)}}.bdayWish p{margin-top:${at(0.4)};font-size:${at(1.8)}}`;
+}
+
+/** Timeline: what is on and what comes next. Rows share the height, so all of them are on screen. */
+function timelineHtml(p: Palette, entries: readonly TvTimelineEntry[], height: number): string {
+  if (!entries.length) return message("Belum ada forum atau acara berikutnya", "Jadwal dari Kelola acara muncul di sini dengan sendirinya.");
+  const row = fit(height, entries.length, 13);
+  const text = fitText(row, 0.3, 3.2), small = fitText(row, 0.2, 2.1);
+  return entries.map(entry => {
+    const tone = TONES[entry.color % TONES.length], on = entry.state === "berlangsung";
+    return `<div class="tlRow" style="height:${u(row - 1)};margin-bottom:${u(1)};border-color:${on ? tone : mix(tone, p.line, 0.6)};background-color:${mix(tone, p.surface, on ? 0.3 : 0.16)}">`
+      + `<i class="dot" style="background-color:${tone}"></i>`
+      + `<span class="tlMain"><strong class="one" style="font-size:${u(text)}">${esc(entry.title)}</strong><span class="one" style="font-size:${u(small)}">${on ? "<em>Sedang berlangsung · </em>" : ""}${esc(entry.left)}</span></span>`
+      + `<span class="tlWhen" style="font-size:${u(small)}"><strong style="font-size:${u(Math.min(text, 2.6))}">${esc(entry.when)}</strong>${entry.hours ? `<span>${esc(entry.hours)}</span>` : ""}</span></div>`;
+  }).join("");
+}
+
+/** Panitia's announcements to everyone, newest first (three at most), sharing the height. */
+function notesHtml(notes: readonly TvNote[]): string {
+  const shown = notes.slice(0, 3);
+  if (!shown.length) return message("Belum ada pengumuman baru", "Pengumuman panitia untuk semua peserta muncul di sini.");
+  return `<div class="noteList${shown.length === 1 ? " single" : ""}">${shown.map((note, index) => `<div class="note"${index ? ' style="margin-top:2vmin"' : ""}>`
+    + `<strong>${esc(note.title)}</strong>${note.body ? `<p>${esc(note.body)}</p>` : ""}<small>${esc(noteDate.format(new Date(note.at)))}</small></div>`).join("")}</div>`;
+}
+
+const textHtml = (title: string, body: string) =>
+  `<div class="slide textSlide" data-item="teks">${title ? `<h1>${esc(title)}</h1>` : ""}${body ? `<p${title ? ' style="margin-top:3vmin"' : ""}>${esc(body)}</p>` : ""}</div>`;
+
+/** Lucide's clock and map pin, for a visit's hours and place. */
+const CLOCK = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><polyline points=\"12 6 12 12 16 14\"/></svg>";
+const PIN = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/></svg>";
+const facts = (welcome: TvWelcome) => (welcome.hours || welcome.place
+  ? `<ul class="facts">${welcome.hours ? `<li>${CLOCK}${esc(welcome.hours)}</li>` : ""}${welcome.place ? `<li>${PIN}${esc(welcome.place)}</li>` : ""}</ul>` : "");
+
+/**
+ * A guest is welcomed, in the row's design: "werkudara", the office's welcome sign with the name in
+ * its empty middle; "foto", the visit's cover photo, darkened, behind the greeting and the name;
+ * "polos", the board's colours.
+ */
+function welcomeHtml(welcome: TvWelcome, design: TvWelcomeDesign): string {
+  if (design === "werkudara") {
+    const size = welcome.name.length > 44 ? "kecil" : welcome.name.length > 26 ? "sedang" : "besar";
+    return `<div class="slide sign" data-item="sambutan"><div class="signFrame"><img src="${esc(TV_WELCOME_ART)}" alt="Welcome. Werkudara Group.">`
+      + `<div class="signText"><h1 class="${size}">${esc(welcome.name)}</h1>${welcome.note ? `<p>${esc(welcome.note)}</p>` : ""}${facts(welcome)}</div></div></div>`;
+  }
+  const photo = design === "foto" ? welcome.image : "";
+  const size = welcome.name.length > 36 ? 6.5 : welcome.name.length > 20 ? 8.5 : 11;
+  return `<div class="slide welcome${photo ? " withPhoto" : ""}" data-item="sambutan">`
+    + (photo ? `<img class="welcomePhoto" src="${esc(photo)}" alt=""><div class="shade"></div>` : "")
+    + `<div class="welcomeText"><p class="greeting">${esc(welcome.greeting)}</p><h1 style="font-size:${u(size)}">${esc(welcome.name)}</h1>`
+    + `${welcome.note ? `<p class="welcomeNote">${esc(welcome.note)}</p>` : ""}${facts(welcome)}</div></div>`;
+}
+
+/** A birthday greeting on the team's own card, whole and upright in the middle of the screen (BirthdaySlide). */
+function birthdayHtml(birthday: TvBirthday): string {
+  const size = birthday.name.length > 28 ? "kecil" : birthday.name.length > 18 ? "sedang" : "besar";
+  return `<div class="slide bday" data-item="ultah"><div class="bdayCard"><img class="bdayArt" src="${esc(TV_BIRTHDAY_CARD)}" alt="">`
+    + `<h1 class="bdayName ${size}">${esc(birthday.name)}</h1>`
+    + (birthday.day ? `<p class="bdayDate"><strong>${esc(birthday.day)}</strong><span>${esc(birthday.month)}</span></p>` : "")
+    + (birthday.photo ? `<img class="${birthday.cut ? "bdayPerson" : "bdayPhoto"}" src="${esc(birthday.photo)}" alt="">` : "")
+    + (birthday.photo && birthday.cut ? `<img class="bdayArt" src="${esc(TV_BIRTHDAY_FLOWERS)}" alt="">` : "")
+    + `<div class="bdayWish"><h2>Happy Birthday ${esc(birthday.call)}</h2><p>${esc(birthday.wish)}</p></div></div></div>`;
+}
+
+const pictureHtml = (slide: TvSlide) =>
+  `<div class="slide picture" data-item="gambar"><img src="${esc(slide.src)}" alt="${esc(slide.title || "Gambar pengumuman")}"></div>`;
+
 /* ---- The page ------------------------------------------------------------------------------------- */
 
 function styles(p: Palette, stars: string): string {
@@ -291,7 +401,68 @@ function styles(p: Palette, stars: string): string {
     + `.message{position:absolute;top:0;left:0;right:0;bottom:0;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;padding:0 10vmin;text-align:center}`
     + `.message h2{font-family:${p.display};font-size:5vmin;font-weight:600}`
     + `.message p{margin-top:2vmin;color:${p.muted};font-size:2.6vmin}`
-    + ".schedule .message{position:static;height:60vmin}";
+    + ".schedule .message{position:static;height:60vmin}"
+    // A whole-screen item
+    + ".slide{position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden}"
+    // Timeline
+    + `.tlRow{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;box-sizing:border-box;padding:0 2.4vmin;border:.2vmin solid ${p.line};border-radius:1.6vmin}`
+    + ".dot{display:block;-webkit-flex:none;flex:none;width:2vmin;height:2vmin;margin-right:2vmin;border-radius:50%}"
+    + ".tlMain{-webkit-flex:1 1 0;flex:1 1 0;min-width:0}"
+    + `.tlMain strong{font-family:${p.display};font-weight:600}`
+    + `.tlMain span{margin-top:.3vmin;color:${p.muted}}`
+    + `.tlMain em{color:${p.accent};font-style:normal;font-weight:700}`
+    + `.tlWhen{-webkit-flex:none;flex:none;margin-left:2vmin;color:${p.muted};text-align:right}`
+    + `.tlWhen strong{display:block;color:${p.text};font-weight:700}`
+    + ".tlWhen span{display:block;margin-top:.2vmin}"
+    // Announcements
+    + ".noteList{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;height:77vmin}"
+    + `.note{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-flex:1 1 0;flex:1 1 0;box-sizing:border-box;min-height:0;padding:2.4vmin 3vmin;overflow:hidden;border:.2vmin solid ${p.line};border-radius:2vmin;background-color:${p.surface}}`
+    + `.note strong{-webkit-flex:none;flex:none;font-family:${p.display};font-size:3.4vmin;font-weight:600;line-height:1.2}`
+    + ".note p{-webkit-flex:1 1 0;flex:1 1 0;min-height:0;margin-top:1vmin;overflow:hidden;font-size:2.5vmin;line-height:1.4;white-space:pre-line}"
+    + `.note small{-webkit-flex:none;flex:none;margin-top:1vmin;color:${p.muted};font-size:1.9vmin}`
+    + ".single .note strong{font-size:4.6vmin}.single .note p{font-size:3.2vmin}"
+    // Text
+    + ".textSlide{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;box-sizing:border-box;padding:8vmin 10vmin;text-align:center}"
+    + `.textSlide h1{font-family:${p.display};font-size:7vmin;font-weight:600;line-height:1.15;word-wrap:break-word}`
+    + `.textSlide p{max-width:100%;color:${mix(p.text, p.app, 0.86)};font-size:3.6vmin;line-height:1.4;white-space:pre-line;word-wrap:break-word}`
+    // Welcome: the sign, or the photo or the board's colours
+    + ".facts{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;-webkit-justify-content:center;justify-content:center;margin:1.5vmin 0 0;padding:0;list-style:none;font-size:3.2vmin;font-weight:600}"
+    + ".facts li{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;margin:.8vmin 2vmin 0;word-wrap:break-word}"
+    + ".facts svg{-webkit-flex:none;flex:none;width:1em;height:1em;margin-right:1.2vmin}"
+    + ".sign{background-color:#003797}"
+    + ".signFrame{position:absolute;top:50%;left:50%}"
+    + ".signFrame img{display:block;width:100%;height:100%}"
+    + `.signText{position:absolute;top:44%;left:12%;right:12%;bottom:23%;display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;color:#ffffff;font-family:${p.body};text-align:center}`
+    + ".signText h1{display:-webkit-box;max-width:100%;overflow:hidden;font-weight:600;line-height:1.15;letter-spacing:.02em;-webkit-box-orient:vertical;-webkit-line-clamp:2;word-wrap:break-word}"
+    + `.signText p{display:-webkit-box;max-width:100%;overflow:hidden;color:#cfe6fb;line-height:1.35;-webkit-box-orient:vertical;-webkit-line-clamp:2;word-wrap:break-word}`
+    + ".signText .facts{color:#8fd0f5}"
+    + signSizes("vh", SIGN) + `@media (max-aspect-ratio:16/9){${signSizes("vw", 1)}}`
+    + ".welcome{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}"
+    + ".welcomePhoto{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}"
+    + ".shade{position:absolute;top:0;left:0;right:0;bottom:0;background-color:rgba(5,10,24,.66);background-image:-webkit-linear-gradient(top,rgba(5,10,24,.55),rgba(5,10,24,.78));background-image:linear-gradient(180deg,rgba(5,10,24,.55),rgba(5,10,24,.78))}"
+    + ".welcomeText{position:relative;z-index:1;box-sizing:border-box;max-width:100%;padding:8vmin 9vmin;text-align:center}"
+    + ".withPhoto .welcomeText{color:#ffffff}"
+    + `.greeting{color:${p.accent};font-size:3.4vmin;font-weight:700;letter-spacing:.06em;text-transform:uppercase;word-wrap:break-word}`
+    + ".withPhoto .greeting{color:#ffd98a}"
+    + `.welcomeText h1{display:-webkit-box;margin-top:2.4vmin;overflow:hidden;font-family:${p.display};font-weight:600;line-height:1.1;-webkit-box-orient:vertical;-webkit-line-clamp:3;word-wrap:break-word}`
+    + ".welcomeNote{margin-top:2.4vmin;font-size:3.4vmin;line-height:1.4;white-space:pre-line;word-wrap:break-word}"
+    // Birthday: the card is 1131 × 1600, the screen's height; its own sizes are in its height (cqh = vmin here)
+    + ".bday{background-color:#f0f0f0;color:#0d0d0f}"
+    + ".bdayCard{position:absolute;top:50%;left:50%;overflow:hidden}"
+    + cardSizes("vh", 1) + `@media (max-aspect-ratio:1131/1600){${cardSizes("vw", CARD)}}`
+    + ".bdayArt{position:absolute;top:0;left:0;display:block;width:100%;height:100%}"
+    + ".bdayName{position:absolute;left:21%;bottom:75.9%;display:-webkit-box;width:46%;padding-bottom:.14em;overflow:hidden;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-weight:800;line-height:.94;letter-spacing:-.02em;-webkit-box-orient:vertical;-webkit-line-clamp:2;word-wrap:break-word}"
+    + ".bdayDate{position:absolute;left:66%;top:12.6%;width:17%;line-height:1;text-align:center}"
+    + ".bdayDate strong{display:block;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-weight:800}"
+    + ".bdayDate span{display:block;font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;font-weight:700;letter-spacing:.01em}"
+    + ".bdayPerson{position:absolute;left:50%;bottom:27.8%;height:47%;max-width:62%;object-fit:contain;object-position:center bottom;-webkit-transform:translateX(-50%);transform:translateX(-50%)}"
+    + ".bdayPhoto{position:absolute;left:26.3%;top:35.3%;width:47.4%;height:36.9%;object-fit:cover;object-position:center top}"
+    + ".bdayWish{position:absolute;left:21.5%;top:81.4%;width:57%;text-align:center;font-family:'Cormorant Garamond',Georgia,'Times New Roman',serif;font-style:italic}"
+    + ".bdayWish h2{font-weight:700;line-height:1.25;word-wrap:break-word}"
+    + ".bdayWish p{display:-webkit-box;overflow:hidden;font-weight:600;line-height:1.22;white-space:pre-line;-webkit-box-orient:vertical;-webkit-line-clamp:5;word-wrap:break-word}"
+    // A picture, whole, on black
+    + ".picture{background-color:#000000}"
+    + ".picture img{display:block;width:100%;height:100%;object-fit:contain}";
 }
 
 function page(p: Palette, stars: string, refresh: string, body: string): string {
@@ -304,18 +475,33 @@ function page(p: Palette, stars: string, refresh: string, body: string): string 
 }
 
 /**
- * The lite board for one load: the calendar `view` asks for (when the TV plays it), else the
- * first of the TV's calendars. `path` gives the address of a view, for the next load.
+ * The lite board for one load: the item of this TV's list the address asks for (`ask`, see
+ * liteIndex), drawn whole, and a meta refresh that opens the next one (`path` gives an item's
+ * address) after the item's time. A list of one reloads itself just past each minute.
  */
-export function tvLiteHtml(feed: TvFeed, options: { view?: TvLiteView | null; path: (view: TvLiteView) => string }): string {
+export function tvLiteHtml(feed: TvFeed, options: { ask?: { s?: string | null; v?: string | null }; path: (key: string) => string }): string {
   const p = LITE_PALETTES[feed.look]?.[feed.settings.mode] ?? LITE_PALETTES.dream.dark;
-  const views = liteViews(feed);
-  const view = options.view && views.includes(options.view) ? options.view : views[0];
-  const next = views[(views.indexOf(view) + 1) % views.length];
-  const wait = refreshSeconds(feed.now);
-  const refresh = views.length > 1 ? `${wait};url=${options.path(next)}` : String(wait);
-
+  const stars = SKY[feed.look]?.[feed.settings.mode] ?? "none";
+  const items = liteItems(feed);
+  if (!items.length) {
+    return page(p, stars, String(refreshSeconds(feed.now)), message("Belum ada yang ditayangkan", "Tambahkan tayangan di Admin TV → Tayangan."));
+  }
+  const index = liteIndex(items, options.ask ?? {});
+  const item = items[index], next = items[(index + 1) % items.length];
+  const refresh = items.length > 1 ? `${liteSeconds(item)};url=${options.path(next.key)}` : String(refreshSeconds(feed.now));
   const now = Date.parse(feed.now), time = wibTime(feed.now), clock = clockLabel(time);
+
+  if (item.kind === "teks") return page(p, stars, refresh, textHtml(item.title, item.body));
+  if (item.kind === "sambutan") return page(p, stars, refresh, welcomeHtml(item.welcome, item.design));
+  if (item.kind === "ultah") return page(p, stars, refresh, birthdayHtml(item.birthday));
+  if (item.kind === "gambar") return page(p, stars, refresh, pictureHtml(item.slide));
+  if (item.kind === "timeline") {
+    return page(p, stars, refresh, `<main class="schedule" data-item="timeline">${head("Timeline Pra WAM", "Forum dan acara", "", clock, null)}<div class="body">${timelineHtml(p, feed.timeline ?? [], ROOM.height)}</div></main>`);
+  }
+  if (item.kind === "pengumuman") {
+    return page(p, stars, refresh, `<main class="schedule" data-item="pengumuman">${head("Pengumuman", "Dari panitia", "", clock, null)}${notesHtml(feed.notes ?? [])}</main>`);
+  }
+  const view = item.kind === "minggu" ? "minggu" : "hari";
   const legend = tvLegend(feed.days);
   let content: string;
   if (view === "hari") {
@@ -337,7 +523,7 @@ export function tvLiteHtml(feed: TvFeed, options: { view?: TvLiteView | null; pa
         ? `<div class="body">${weekHtml(p, week, legend, feed.date, now, ROOM.height - legendHeight(shown))}</div>`
         : message("Belum ada jadwal ruang minggu ini", "Ruang yang dibooking lewat WAM tampil di sini."));
   }
-  return page(p, SKY[feed.look]?.[feed.settings.mode] ?? "none", refresh, `<main class="schedule" data-view="${view}">${content}</main>`);
+  return page(p, stars, refresh, `<main class="schedule" data-item="${view}">${content}</main>`);
 }
 
 /**
