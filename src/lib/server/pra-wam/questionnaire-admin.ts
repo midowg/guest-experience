@@ -3,14 +3,14 @@ import { withoutPurged } from "@/lib/pra-wam/purge";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
-  formStatuses, progressOf, questionKinds, slugProblem, visibilities,
+  AUDIENCE_MAX, AUDIENCE_MIGRATION, audiences, formStatuses, inAudience, progressOf, questionKinds, slugProblem, visibilities,
   type Answers, type AnswerValue, type QForm, type QQuestion, type QSection, type QuestionKind, type ShowIf, type Visibility,
 } from "@/lib/pra-wam/questionnaire";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
-import { departmentOptions, FORM_COLUMNS, FORM_COLUMNS_BEFORE_HR_ACCESS, hrAccessMissing, questionnaireMissing, questionnaireWaiting, toForm, toQuestion } from "./questionnaire";
+import { audienceMissing, departmentOptions, questionnaireMissing, questionnaireWaiting, readFormRow, toForm, toQuestion } from "./questionnaire";
 
 /*
  * Admin WAM → Kuesioner: HR edits the form's settings, its sections and its questions, and sees
@@ -63,6 +63,8 @@ export const formSettingsSchema = z.object({
     .min(FORM_LIMITS.minutes[0], `Perkiraan minimal ${FORM_LIMITS.minutes[0]} menit.`).max(FORM_LIMITS.minutes[1], `Perkiraan paling lama ${FORM_LIMITS.minutes[1]} menit.`),
   editUntil: moment,
   stayDeleteOn: z.iso.date({ message: "Pilih tanggal yang valid." }).nullable(),
+  audience: z.enum(audiences, { message: "Pilih untuk semua peserta atau orang terpilih." }),
+  audienceIds: z.array(z.uuid("Orang tidak dikenal."), { message: "Pilih orangnya." }).max(AUDIENCE_MAX, `Paling banyak ${AUDIENCE_MAX} orang.`),
 }).partial().refine(patch => Object.keys(patch).length > 0, { message: "Tidak ada yang diubah.", path: ["form"] });
 export type FormSettingsPatch = z.infer<typeof formSettingsSchema>;
 
@@ -217,11 +219,9 @@ const fail = (error: { code?: string; message: string }): never => { if (questio
 
 /** The form, with nothing cached; null before the migration (or without its first form). */
 async function readFormOrNull(): Promise<QForm | null> {
-  const read = (columns: string) => createPrivilegedClient().from("cq_forms").select(columns).order("created_at").limit(1).maybeSingle();
-  let { data, error } = await read(FORM_COLUMNS);
-  if (error && hrAccessMissing(error)) ({ data, error } = await read(FORM_COLUMNS_BEFORE_HR_ACCESS));
+  const { data, error } = await readFormRow();
   if (error) { if (questionnaireMissing(error)) return null; databaseError(error); }
-  return data ? toForm(data as unknown as Parameters<typeof toForm>[0]) : null;
+  return data ? toForm(data) : null;
 }
 async function readForm(): Promise<QForm> {
   const form = await readFormOrNull();
@@ -275,7 +275,28 @@ async function fresh(): Promise<AdminQuestionnaire> {
 
 /* ---- Writes: the form ------------------------------------------------------------------------- */
 
-/** Name, address, status, texts and dates. A new address keeps the old one redirecting. */
+/**
+ * Who the form is for after a patch: the chosen people are active employees only, each once. It
+ * cannot be open for nobody: choosing people with none chosen is refused while it is open, and
+ * opening is refused while none are chosen.
+ */
+export async function audienceRow(form: QForm, patch: FormSettingsPatch): Promise<{ row: Record<string, unknown>; label: string; changed: boolean }> {
+  const audience = patch.audience ?? form.audience;
+  let ids = form.audienceIds;
+  if (patch.audienceIds !== undefined) {
+    const active = new Set((await listPeople()).filter(person => person.active).map(person => person.id));
+    ids = [...new Set(patch.audienceIds)].filter(id => active.has(id));
+  }
+  const status = patch.status ?? form.status;
+  if (audience === "pilih" && !ids.length && status === "buka") {
+    throw new ServiceError(422, "Pilih minimal satu orang, atau buka untuk semua peserta.", { audienceIds: ["Pilih minimal satu orang."] });
+  }
+  const changed = audience !== form.audience || (audience === "pilih" && (ids.length !== form.audienceIds.length || ids.some(id => !form.audienceIds.includes(id))));
+  const row = patch.audience !== undefined || patch.audienceIds !== undefined ? { audience, audience_ids: ids } : {};
+  return { row, changed, label: audience === "semua" ? "semua peserta" : `${ids.length} orang terpilih` };
+}
+
+/** Name, address, status, texts and dates, and who it is for. A new address keeps the old one redirecting. */
 export async function saveFormSettings(patch: FormSettingsPatch): Promise<{ result: AdminQuestionnaire; message: string }> {
   const form = await readForm();
   const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -289,6 +310,8 @@ export async function saveFormSettings(patch: FormSettingsPatch): Promise<{ resu
     }
     row.status = patch.status;
   }
+  const audience = await audienceRow(form, patch);
+  Object.assign(row, audience.row);
   if (patch.intro !== undefined) row.intro = patch.intro;
   if (patch.cardText !== undefined) row.card_text = patch.cardText;
   if (patch.minutes !== undefined) row.minutes = patch.minutes;
@@ -297,11 +320,14 @@ export async function saveFormSettings(patch: FormSettingsPatch): Promise<{ resu
   const { error } = await createPrivilegedClient().from("cq_forms").update(row).eq("id", form.id);
   if (error) {
     if (error.code === "23505") throw new ServiceError(409, "Alamat ini sudah dipakai. Pilih alamat lain.", { slug: ["Alamat ini sudah dipakai. Pilih alamat lain."] });
+    if (audienceMissing(error)) throw new ServiceError(503, `Pilihan peserta menunggu migrasi ${AUDIENCE_MIGRATION}.`);
     fail(error);
   }
-  const statusWord = { draf: "Kuesioner disimpan sebagai draf.", buka: "Kuesioner dibuka untuk semua peserta.", tutup: "Kuesioner ditutup." } as const;
+  const forWhom = audience.label;
+  const statusWord = { draf: "Kuesioner disimpan sebagai draf.", buka: `Kuesioner dibuka untuk ${forWhom}.`, tutup: "Kuesioner ditutup." } as const;
   const message = patch.status !== undefined && patch.status !== form.status ? statusWord[patch.status]
-    : row.slug ? `Disimpan. Alamat baru /wam/${patch.slug}; alamat lama tetap dialihkan.` : "Pengaturan kuesioner disimpan.";
+    : audience.changed ? `Disimpan. Kuesioner sekarang untuk ${forWhom}.`
+      : row.slug ? `Disimpan. Alamat baru /wam/${patch.slug}; alamat lama tetap dialihkan.` : "Pengaturan kuesioner disimpan.";
   return { result: await fresh(), message };
 }
 
@@ -554,6 +580,7 @@ export async function questionnaireProgress(): Promise<ProgressReport | null> {
   return progressReport({
     // From the stay date, the deleted questions count for no one (see purge.ts).
     formName: form.name, ...withoutPurged(content, form), progress, answers, receipts: receipts.map(row => row.employee_id),
-    people: people.filter(person => person.active).map(({ id, name, department }) => ({ id, name, department })),
+    // Only the people it is for: the chosen ones when HR chose (answers of others stay, uncounted).
+    people: people.filter(person => person.active && inAudience(form, person.id)).map(({ id, name, department }) => ({ id, name, department })),
   });
 }

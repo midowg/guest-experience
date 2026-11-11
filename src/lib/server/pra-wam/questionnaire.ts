@@ -19,27 +19,46 @@ export const questionnaireWaiting = () => new ServiceError(503, `Kuesioner menun
 
 type FormRow = {
   id: string; name: string; slug: string; old_slugs: string[]; status: FormStatus; intro: string; card_text: string; minutes: number;
-  edit_until: string | null; stay_delete_on: string | null; hr_access?: string[] | null;
+  edit_until: string | null; stay_delete_on: string | null; hr_access?: string[] | null; audience?: string | null; audience_ids?: string[] | null;
 };
 /** Without hr_access: the columns before migration 202611040012, read as "nobody has HR access". */
 export const FORM_COLUMNS_BEFORE_HR_ACCESS = "id,name,slug,old_slugs,status,intro,card_text,minutes,edit_until,stay_delete_on";
-export const FORM_COLUMNS = `${FORM_COLUMNS_BEFORE_HR_ACCESS},hr_access`;
+/** Without audience: the columns before migration 202611110001, read as "for everyone". */
+export const FORM_COLUMNS_BEFORE_AUDIENCE = `${FORM_COLUMNS_BEFORE_HR_ACCESS},hr_access`;
+export const FORM_COLUMNS = `${FORM_COLUMNS_BEFORE_AUDIENCE},audience,audience_ids`;
 /** cq_forms.hr_access is missing (before migration 202611040012); not cq_hr_access_log, which is older. */
 export const hrAccessMissing = (error: { code?: string; message?: string }) =>
   ["42703", "PGRST204"].includes(error.code ?? "") && /\bhr_access\b/.test(error.message ?? "");
+/** cq_forms.audience or audience_ids is missing (before migration 202611110001). */
+export const audienceMissing = (error: { code?: string; message?: string }) =>
+  ["42703", "PGRST204"].includes(error.code ?? "") && /\baudience(_ids)?\b/.test(error.message ?? "");
 
 export const toForm = (row: FormRow): QForm => ({
   id: row.id, name: row.name, slug: row.slug, oldSlugs: row.old_slugs ?? [], status: row.status, intro: row.intro, cardText: row.card_text,
   minutes: row.minutes, editUntil: row.edit_until, stayDeleteOn: row.stay_delete_on, hrAccess: row.hr_access ?? [],
+  audience: row.audience === "pilih" ? "pilih" : "semua", audienceIds: row.audience_ids ?? [],
 });
+
+/** Reads the one form with the newest columns the database has; null data before the first migration. */
+export async function readFormRow(): Promise<{ data: FormRow | null; error: { code?: string; message: string } | null }> {
+  const read = (columns: string) => createPrivilegedClient().from("cq_forms").select(columns).order("created_at").limit(1).maybeSingle();
+  let { data, error } = await read(FORM_COLUMNS);
+  if (error && audienceMissing(error)) ({ data, error } = await read(FORM_COLUMNS_BEFORE_AUDIENCE));
+  if (error && hrAccessMissing(error)) ({ data, error } = await read(FORM_COLUMNS_BEFORE_HR_ACCESS));
+  return { data: data as unknown as FormRow | null, error };
+}
+
+/** Whether cq_forms has the audience columns (migration 202611110001), so people can be chosen. */
+export async function audienceReady(): Promise<boolean> {
+  const { error } = await createPrivilegedClient().from("cq_forms").select("audience,audience_ids").limit(1);
+  return !error;
+}
 
 /** The questionnaire (there is one); null before the migration. */
 async function currentFormUncached(): Promise<QForm | null> {
-  const read = (columns: string) => createPrivilegedClient().from("cq_forms").select(columns).order("created_at").limit(1).maybeSingle();
-  let { data, error } = await read(FORM_COLUMNS);
-  if (error && hrAccessMissing(error)) ({ data, error } = await read(FORM_COLUMNS_BEFORE_HR_ACCESS));
+  const { data, error } = await readFormRow();
   if (error) { if (questionnaireMissing(error)) return null; databaseError(error); }
-  return data ? toForm(data as unknown as FormRow) : null;
+  return data ? toForm(data) : null;
 }
 export const currentForm = cache(currentFormUncached);
 

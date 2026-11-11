@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { CardImage } from "@/components/pra-wam/colleagues/CardImage";
 import { serialLabel } from "@/lib/pra-wam/cards";
+import { seesQuestionnaire } from "@/lib/pra-wam/questionnaire";
 import { managesApp, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { colleagueOf, hasNumberedCard } from "@/lib/server/pra-wam/colleagues";
@@ -23,7 +24,7 @@ export default async function ColleaguePage({ params }: { params: Promise<{ id: 
   if (!UUID.test(id)) notFound();
   const member = await requireMemberPage(praWamPath.colleague(id));
   const form = await currentForm().catch(() => null);
-  if (!form || (form.status === "draf" && !managesApp(member))) notFound();
+  if (!form || !seesQuestionnaire(form, member.id, managesApp(member) || (form.status !== "draf" && seesAllSessions(member)))) notFound();
   if (!seesAllSessions(member) && !await hasNumberedCard(form, member.id)) redirect(praWamPath.colleagues);
   const profile = await colleagueOf(form, id);
   if (!profile) notFound();

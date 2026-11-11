@@ -57,7 +57,7 @@ vi.mock("./questionnaire", () => ({
 const { exportPlan, exportWorkbook, participationOf, recapOf } = await import("./recap");
 const { readXlsx } = await import("../xlsx");
 
-const form = { id: "f1", name: "Kuesioner" };
+const form = { id: "f1", name: "Kuesioner", audience: "semua" as const, audienceIds: [] as string[] };
 const answer = (employee_id: string, question_id: string, value: unknown) => ({ form_id: "f1", employee_id, question_id, value });
 
 beforeEach(() => {
@@ -129,6 +129,14 @@ describe("Hasil survei for BOD", () => {
       { form_id: "f1", employee_id: "gone", completed_at: "2026-11-05T01:00:00Z" },
     ];
     expect(await participationOf(form)).toEqual({ done: 1, active: 3 });
+  });
+
+  it("counts only the chosen people when HR chose who it is for", async () => {
+    db.cq_progress = [
+      { form_id: "f1", employee_id: "p1", completed_at: "2026-11-05T01:00:00Z" },
+      { form_id: "f1", employee_id: "p2", completed_at: "2026-11-05T02:00:00Z" },
+    ];
+    expect(await participationOf({ ...form, audience: "pilih", audienceIds: ["p1", "p3"] })).toEqual({ done: 1, active: 2 });
   });
 });
 

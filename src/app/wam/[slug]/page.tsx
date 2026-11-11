@@ -3,7 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { Questionnaire } from "@/components/pra-wam/questionnaire/Questionnaire";
 import { ReadOnlyAnswers } from "@/components/pra-wam/questionnaire/ReadOnly";
 import { sectionsDone } from "@/components/pra-wam/questionnaire/steps";
-import { editable } from "@/lib/pra-wam/questionnaire";
+import { editable, seesQuestionnaire } from "@/lib/pra-wam/questionnaire";
 import { managesApp } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { departmentOptions, formAt, formContent, peopleOptions } from "@/lib/server/pra-wam/questionnaire";
@@ -24,7 +24,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
  * pages are static routes and win over this one; any other address is not found unless it is the
  * form's, and an old address moves permanently to the current one. A draft is not found for
  * participants, but Admin WAM can try it (marked "Pratinjau draf"; its answers are test data);
- * once closed, or past the deadline, the person sees their answers read only.
+ * once closed, or past the deadline, the person sees their answers read only. When HR chose who it
+ * is for, it is not found for everyone else either.
  */
 export default async function QuestionnairePage({ params }: Params) {
   const { slug } = await params;
@@ -34,7 +35,8 @@ export default async function QuestionnairePage({ params }: Params) {
   if (found.moved) permanentRedirect(praWamPath.questionnaire(form.slug));
   const member = await requireMemberPage(praWamPath.questionnaire(form.slug));
   const preview = form.status === "draf";
-  if (preview && !managesApp(member)) notFound();
+  // Not found for a draft, or for someone it is not for (HR chose other people); Admin WAM can try both.
+  if (!seesQuestionnaire(form, member.id, managesApp(member))) notFound();
 
   const content = shownContent(await formContent(form.id), form);
   const [mine, card, departments, staff] = await Promise.all([

@@ -74,7 +74,7 @@ Satu entri baru di `wamSections`, grup baru **"Data peserta"**, dengan sub-halam
 |---|---|
 | **Konten** | Nama dan alamat kuesioner. Bagian: judul, sapaan, pengantar. Pertanyaan: teks, tipe, pilihan, maks pilihan, wajib, level baca, catatan, placeholder, percabangan, urutan. Ada pratinjau persis seperti di HP. |
 | **Kartu** | Katalog karakter dan aturan yang memilihnya dari jawaban; peluang dan batas jumlah tiap level; sebaran level yang sudah keluar. Kartu baru bisa ditambah kapan saja. |
-| **Pengaturan** | Dibuka/ditutup, tenggat ubah jawaban, tanggal hapus data menginap, teks kartu Beranda, Akses Data HR (siapa yang boleh membuka; diubah super admin). |
+| **Pengaturan** | Dibuka/ditutup, **Untuk siapa** (semua peserta atau orang terpilih, lihat di bawah), tenggat ubah jawaban, tanggal hapus data menginap, teks kartu Beranda, Akses Data HR (siapa yang boleh membuka; diubah super admin). |
 | **Progres** | Siapa sudah dan belum, per departemen. Tombol "Ingatkan yang belum" lewat notifikasi WAM. |
 | **Data HR** 🔒 | Jawaban per orang untuk data `hr` dan `hronly`. Hanya terbuka dengan email WAM orang yang punya akses. |
 | **Rekap** | Grafik per pertanyaan dan kutipan jawaban terbuka, mengikuti level baca. Bagian anonim hanya rangkuman. |
@@ -88,6 +88,28 @@ Supaya data tidak rusak:
 - Daftar departemen (pertanyaan 2) diambil dari unit di Data karyawan, bukan isian manual.
 - Pertanyaan "pilih rekan" (13 dan 23) memakai daftar karyawan dengan pencarian, bukan isian bebas,
   supaya bisa langsung dipakai untuk pairing.
+
+### Untuk siapa (11 November 2026)
+
+Kuesioner bisa dibuka untuk **semua peserta** (bawaan, seperti sebelumnya) atau hanya untuk
+**orang terpilih** (`cq_forms.audience` = `semua` | `pilih`, `audience_ids`; migrasi
+`202611110001_wam_questionnaire_audience.sql`, sebelum itu selalu untuk semua).
+
+- **Memilih:** Pengaturan → Untuk siapa. Satu departemen sekaligus (ketuk lagi untuk membuang semua
+  orangnya; garis putus-putus = sebagian), lalu tambah atau buang per orang (cari nama atau
+  departemen, "Hanya yang dipilih"). Hanya karyawan aktif yang bisa dipilih; disimpan sebagai daftar
+  orang, jadi karyawan baru di departemen itu **tidak** ikut otomatis.
+- **Yang tidak terpilih tidak melihatnya sama sekali:** tidak ada kartu kuesioner di Beranda,
+  alamat kuesioner dan Kartu rekan "tidak ditemukan", jawaban ditolak server, dan tidak mendapat
+  pengingat. Admin WAM tetap bisa membuka dan mencoba (jawabannya data uji, tidak dihitung). BOD dan
+  panitia tetap melihat galeri Kartu rekan.
+- **Hitungan:** Progres, "Ingatkan yang belum", partisipasi di Hasil survei, Ringkasan BOD, dan MCP
+  `hasil_survei` hanya menghitung orang yang dituju. Jawaban orang yang kemudian tidak terpilih tetap
+  tersimpan (dan tetap di Rekap), hanya tidak dihitung di progres.
+- **Tidak boleh terbuka untuk tidak seorang pun:** memilih "Orang terpilih" tanpa satu orang pun ditolak selama
+  kuesioner dibuka, dan membuka kuesioner ditolak selama belum ada yang dipilih.
+- Aturan murninya `inAudience`, `seesQuestionnaire` (`src/lib/pra-wam/questionnaire.ts`); simpan lewat
+  `PATCH /api/admin/wam/questionnaire` dengan `audience` dan `audienceIds`.
 
 ## Akses Data HR
 

@@ -20,7 +20,29 @@ export type QForm = {
   minutes: number; editUntil: string | null; stayDeleteOn: string | null;
   /** Who may open Data HR with their own WAM account (employee ids); empty before migration 202611040012. */
   hrAccess: string[];
+  /** Who it is for: everyone ("semua"), or only `audienceIds` ("pilih"). "semua" before migration 202611110001. */
+  audience: Audience;
+  audienceIds: string[];
 };
+export const audiences = ["semua", "pilih"] as const;
+export type Audience = (typeof audiences)[number];
+export const AUDIENCE_MIGRATION = "202611110001_wam_questionnaire_audience.sql";
+export const AUDIENCE_MAX = 2000;
+
+/** Whether the questionnaire is for this person: everyone's, or theirs when people are chosen. */
+export const inAudience = (form: Pick<QForm, "audience" | "audienceIds">, employeeId: string): boolean =>
+  form.audience === "semua" || form.audienceIds.includes(employeeId);
+
+/**
+ * Whether this person sees the questionnaire (its page, its answers, Kartu rekan): open or closed
+ * and meant for them. `manages` (Admin WAM) sees it always, a draft too, to try it out.
+ */
+export const seesQuestionnaire = (form: Pick<QForm, "status" | "audience" | "audienceIds">, employeeId: string, manages: boolean): boolean =>
+  manages || (form.status !== "draf" && inAudience(form, employeeId));
+
+/** Who it is for, in a few words for the admin: "Semua peserta" or "12 orang terpilih". */
+export const audienceLabel = (form: Pick<QForm, "audience" | "audienceIds">): string =>
+  form.audience === "semua" ? "Semua peserta" : `${form.audienceIds.length} orang terpilih`;
 export type QSection = { id: string; key: string; title: string; short: string; hello: string; intro: string; tease: string; anonymous: boolean; sort: number; hidden: boolean };
 export type QQuestion = {
   id: string; sectionId: string; key: string; prompt: string; kind: QuestionKind; required: boolean; visibility: Visibility;

@@ -23,7 +23,7 @@ function query(table: string) {
 }
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => ({ from: query }) }));
 
-const form: QForm = { id: "f1", name: "Kuesioner", slug: "kuesioner", oldSlugs: [], status: "buka", intro: "", cardText: "", minutes: 15, editUntil: null, stayDeleteOn: null, hrAccess: [] };
+const form: QForm = { id: "f1", name: "Kuesioner", slug: "kuesioner", oldSlugs: [], status: "buka", intro: "", cardText: "", minutes: 15, editUntil: null, stayDeleteOn: null, hrAccess: [], audience: "semua", audienceIds: [] };
 const section = (id: string, anonymous = false): QSection => ({ id, key: id, title: id, short: id, hello: "", intro: "", tease: "", anonymous, sort: anonymous ? 2 : 1, hidden: false });
 const question = (key: string, sectionId: string, rest: Partial<QQuestion>): QQuestion => ({
   id: `q-${key}`, sectionId, key, prompt: `Pertanyaan ${key}`, kind: "text", required: false, visibility: "hr", options: [], maxChoices: null, matrixRows: [], scale: [],
@@ -76,6 +76,17 @@ describe("saveAnswer", () => {
     current = { ...form, editUntil: new Date(Date.now() - 60_000).toISOString() };
     await expect(saveAnswer(me, "1", "Dewi")).rejects.toMatchObject({ status: 409 });
     expect(writes).toEqual([]);
+  });
+
+  it("refuses someone the form is not for, but lets Admin WAM try it", async () => {
+    current = { ...form, audience: "pilih", audienceIds: ["p2"] };
+    await expect(saveAnswer(me, "1", "Dewi")).rejects.toMatchObject({ status: 404, message: "Kuesioner ini tidak dibuka untukmu." });
+    await expect(submitAnonymous(me, {})).rejects.toMatchObject({ status: 404 });
+    expect(writes).toEqual([]);
+    await saveAnswer(me, "1", "Dewi", { preview: true });
+    current = { ...form, audience: "pilih", audienceIds: [me] };
+    await saveAnswer(me, "1", "Dewi");
+    expect(writes.filter(write => write.table === "cq_answers")).toHaveLength(2);
   });
 
   it("never saves an anonymous question with a name", async () => {

@@ -1,3 +1,4 @@
+import { seesQuestionnaire } from "@/lib/pra-wam/questionnaire";
 import { ServiceError } from "@/lib/server/config";
 import { handle, success } from "@/lib/server/http";
 import { currentForm } from "@/lib/server/pra-wam/questionnaire";
@@ -11,7 +12,7 @@ export async function GET() {
   return handle(async () => {
     const member = await requireApiMember();
     const form = await currentForm();
-    if (!form || form.status === "draf") throw new ServiceError(404, "Kuesioner belum dibuka.");
+    if (!form || !seesQuestionnaire(form, member.id, false)) throw new ServiceError(404, "Kuesioner belum dibuka.");
     return success(await myAnswers(form, member.id), "Jawaban dimuat.");
   });
 }

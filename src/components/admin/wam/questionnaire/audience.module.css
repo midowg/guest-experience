@@ -1,0 +1,40 @@
+/* QuestionnaireAudience.tsx: Pengaturan → Untuk siapa. Admin console tokens, as questionnaire.module.css. */
+
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.head h3 { margin: 0; font-size: 1.0625rem; }
+.icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #eef4fd; color: var(--blue); flex: none; }
+.count { margin-left: auto; padding: 2px var(--space-3); border-radius: 999px; background: var(--page); color: var(--ink-soft); font-size: .8125rem; font-weight: 700; white-space: nowrap; }
+
+.picker { display: grid; gap: var(--space-4); min-width: 0; padding: var(--space-4); border: 1px solid var(--line); border-radius: 12px; background: #fbfcfe; }
+.pickerHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 40px; }
+.pickerHead strong { font-size: .9375rem; font-variant-numeric: tabular-nums; }
+
+.groupBlock { display: grid; gap: var(--space-2); }
+.label { color: var(--ink-soft); font-size: .8125rem; font-weight: 700; }
+.groups { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.group { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--color-text); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; }
+.group small { color: var(--ink-soft); font-size: .75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.group:hover:not(:disabled) { border-color: var(--blue); }
+.group[data-state="sebagian"] { border-color: var(--blue); border-style: dashed; }
+.group[data-state="penuh"] { border-color: var(--blue); background: #eef4fd; color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue); }
+.group[data-state="penuh"] small { color: var(--blue); }
+.group:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.group:disabled { cursor: not-allowed; opacity: .7; }
+
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.search { position: relative; display: flex; align-items: center; flex: 1 1 16rem; min-width: 0; }
+.search > svg { position: absolute; left: 12px; color: var(--ink-soft); pointer-events: none; }
+.search input { width: 100%; padding-left: 40px; }
+.onlyChosen { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; font-size: .875rem; font-weight: 600; cursor: pointer; }
+.onlyChosen input { width: 1.125rem; height: 1.125rem; accent-color: var(--blue); }
+
+/* Everyone, two columns where there is room; the list scrolls on its own. */
+.people { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: 2px var(--space-3); max-height: 26rem; margin: 0; padding: 0; overflow-y: auto; list-style: none; overscroll-behavior: contain; }
+.person { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; padding: var(--space-1) var(--space-2); border-radius: 10px; cursor: pointer; }
+.person:hover { background: #eef4fd; }
+.person input { width: 1.25rem; height: 1.25rem; accent-color: var(--blue); flex: none; }
+.person span { display: grid; min-width: 0; }
+.person strong { overflow: hidden; font-size: .9375rem; text-overflow: ellipsis; white-space: nowrap; }
+.person small { overflow: hidden; color: var(--ink-soft); font-size: .8125rem; text-overflow: ellipsis; white-space: nowrap; }
+
+.error { margin: 0; color: #b42318; font-size: .875rem; font-weight: 600; }

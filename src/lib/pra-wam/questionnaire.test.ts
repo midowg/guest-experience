@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanAnswer, complete, editable, progressOf, reservedSlugs, shows, slugFromName, slugProblem, type QQuestion, type QSection } from "./questionnaire";
+import { audienceLabel, cleanAnswer, complete, editable, inAudience, progressOf, seesQuestionnaire, reservedSlugs, shows, slugFromName, slugProblem, type QQuestion, type QSection } from "./questionnaire";
 
 const question = (key: string, extra: Partial<QQuestion> = {}): QQuestion => ({
   id: `q-${key}`, sectionId: "s1", key, prompt: "Pertanyaan", kind: "text", required: false, visibility: "rekan", options: [], maxChoices: null,
@@ -80,5 +80,24 @@ describe("changing answers", () => {
     expect(editable({ status: "buka", editUntil: null }, now)).toBe(true);
     expect(editable({ status: "buka", editUntil: "2026-11-09T00:00:00Z" }, now)).toBe(false);
     expect(editable({ status: "draf", editUntil: null }, now)).toBe(false);
+  });
+});
+
+describe("who it is for", () => {
+  const all = { status: "buka" as const, audience: "semua" as const, audienceIds: [] };
+  const chosen = { status: "buka" as const, audience: "pilih" as const, audienceIds: ["a", "b"] };
+  it("is everyone's, or only the chosen people's", () => {
+    expect(inAudience(all, "z")).toBe(true);
+    expect(inAudience(chosen, "a")).toBe(true);
+    expect(inAudience(chosen, "z")).toBe(false);
+    expect(audienceLabel(all)).toBe("Semua peserta");
+    expect(audienceLabel(chosen)).toBe("2 orang terpilih");
+  });
+  it("hides a draft and a form for others, except from Admin WAM", () => {
+    expect(seesQuestionnaire(chosen, "a", false)).toBe(true);
+    expect(seesQuestionnaire(chosen, "z", false)).toBe(false);
+    expect(seesQuestionnaire({ ...all, status: "draf" }, "a", false)).toBe(false);
+    expect(seesQuestionnaire({ ...chosen, status: "draf" }, "z", true)).toBe(true);
+    expect(seesQuestionnaire({ ...chosen, status: "tutup" }, "a", false)).toBe(true);
   });
 });

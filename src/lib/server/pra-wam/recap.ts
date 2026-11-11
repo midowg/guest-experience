@@ -1,5 +1,5 @@
 import "server-only";
-import { answerLevel, type AnswerValue, type QForm, type QQuestion, type Visibility } from "@/lib/pra-wam/questionnaire";
+import { answerLevel, inAudience, type AnswerValue, type QForm, type QQuestion, type Visibility } from "@/lib/pra-wam/questionnaire";
 import {
   exportable, MIN_GROUP, orderedSections, recapAccess, sectionQuestions, shareOf, shareQuestion, summarize,
   type Reader, type RecapItem, type Share,
@@ -273,13 +273,14 @@ export async function exportWorkbook(form: Pick<QForm, "id" | "name">, reader: R
 
 export type Participation = { done: number; active: number };
 
-/** How many active employees finished the questionnaire, of all active employees (Hasil survei, Ringkasan BOD). */
-export async function participationOf(form: Pick<QForm, "id">): Promise<Participation> {
+/** How many of the people it is for finished the questionnaire (Hasil survei, Ringkasan BOD). */
+export async function participationOf(form: Pick<QForm, "id" | "audience" | "audienceIds">): Promise<Participation> {
   const [people, rows] = await Promise.all([
     listPeople(),
     allRows<{ employee_id: string; completed_at: string | null }>((from, to) => createPrivilegedClient().from("cq_progress").select("employee_id,completed_at")
       .eq("form_id", form.id).order("employee_id").range(from, to)),
   ]);
-  const active = new Set(people.filter(person => person.active).map(person => person.id));
+  // Out of the people it is for: everyone active, or the chosen ones when HR chose.
+  const active = new Set(people.filter(person => person.active && inAudience(form, person.id)).map(person => person.id));
   return { done: rows.filter(row => row.completed_at && active.has(row.employee_id)).length, active: active.size };
 }

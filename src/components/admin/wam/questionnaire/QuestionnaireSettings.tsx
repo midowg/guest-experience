@@ -10,6 +10,7 @@ import { formStatuses, slugFromName, slugProblem, type FormStatus, type QForm } 
 import { praWamPath, praWamQuestionnaireApi } from "@/lib/routes";
 import type { AdminQuestionnaire } from "@/lib/server/pra-wam/questionnaire-admin";
 import { statusHelp, statusLabels } from "./labels";
+import { QuestionnaireAudience, type AudiencePerson } from "./QuestionnaireAudience";
 import styles from "./questionnaire.module.css";
 
 type Message = { tone: "success" | "error" | "warning"; text: string } | null;
@@ -48,9 +49,10 @@ export function settingsProblems(draft: Draft): Errors {
 /**
  * Admin WAM → Kuesioner → Pengaturan: the name (which also gives the address unless the address
  * is set apart), the status (opening asks first), the texts on Beranda and the page, the time
- * estimate, the deadline for changing answers, and the day the stay data is deleted.
+ * estimate, the deadline for changing answers, the day the stay data is deleted, and who it is
+ * for (QuestionnaireAudience: everyone, or chosen people).
  */
-export function QuestionnaireSettings({ initial }: { initial: QForm }) {
+export function QuestionnaireSettings({ initial, people = [], audienceReady = true }: { initial: QForm; people?: AudiencePerson[]; audienceReady?: boolean }) {
   const [form, setForm] = useState(initial);
   const [draft, setDraft] = useState(() => toDraft(initial));
   const [follow, setFollow] = useState(initial.slug === slugFromName(initial.name));
@@ -108,7 +110,9 @@ export function QuestionnaireSettings({ initial }: { initial: QForm }) {
   async function setStatus(status: FormStatus) {
     if (status === form.status) return;
     const asks: Record<FormStatus, { title: string; body: string; confirmLabel: string; danger?: boolean }> = {
-      buka: { title: "Buka untuk semua peserta?", body: "Kuesioner langsung tampil di Beranda semua peserta dan bisa diisi. Pastikan isi dan pengaturannya sudah benar.", confirmLabel: "Buka kuesioner" },
+      buka: form.audience === "pilih"
+        ? { title: `Buka untuk ${form.audienceIds.length} orang terpilih?`, body: "Kuesioner langsung tampil di Beranda orang yang dipilih di Untuk siapa dan bisa diisi. Yang lain tidak melihatnya. Pastikan isi dan pengaturannya sudah benar.", confirmLabel: "Buka kuesioner" }
+        : { title: "Buka untuk semua peserta?", body: "Kuesioner langsung tampil di Beranda semua peserta dan bisa diisi. Pastikan isi dan pengaturannya sudah benar.", confirmLabel: "Buka kuesioner" },
       tutup: { title: "Tutup kuesioner?", body: "Peserta tidak bisa mengisi atau mengubah jawaban lagi. Jawaban yang sudah masuk tetap tersimpan.", confirmLabel: "Tutup kuesioner", danger: true },
       draf: { title: "Kembalikan ke draf?", body: "Kuesioner disembunyikan dari peserta. Jawaban yang sudah masuk tetap tersimpan.", confirmLabel: "Jadikan draf" },
     };
@@ -131,6 +135,8 @@ export function QuestionnaireSettings({ initial }: { initial: QForm }) {
         </button>)}
       </div>
     </section>
+
+    <QuestionnaireAudience form={form} people={people} ready={audienceReady} onSaved={next => setForm(next)} />
 
     <form className={styles.card} noValidate onSubmit={save} aria-labelledby="qs-form-title">
       <h3 id="qs-form-title">Nama, alamat, dan teks</h3>

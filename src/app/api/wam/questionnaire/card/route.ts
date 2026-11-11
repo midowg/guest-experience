@@ -1,4 +1,5 @@
 import { managesApp } from "@/lib/pra-wam/roles";
+import { seesQuestionnaire } from "@/lib/pra-wam/questionnaire";
 import { ServiceError } from "@/lib/server/config";
 import { checkOrigin, handle, success } from "@/lib/server/http";
 import { cardsWaiting, ensureCard, myCard } from "@/lib/server/pra-wam/cards";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 /** The form someone may have a card of: an open or closed one, or a draft for Admin WAM trying it. */
 async function formFor(member: Awaited<ReturnType<typeof requireApiMember>>) {
   const form = await currentForm();
-  if (!form || (form.status === "draf" && !managesApp(member))) throw new ServiceError(404, "Kuesioner belum dibuka.");
+  if (!form || !seesQuestionnaire(form, member.id, managesApp(member))) throw new ServiceError(404, "Kuesioner belum dibuka.");
   return form;
 }
 

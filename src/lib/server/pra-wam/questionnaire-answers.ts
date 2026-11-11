@@ -1,7 +1,7 @@
 import "server-only";
 import { randomInt } from "node:crypto";
 import {
-  answered, cleanAnswer, complete, editable, progressOf, shows,
+  answered, cleanAnswer, complete, editable, inAudience, progressOf, shows,
   type AnswerValue, type Answers, type Progress, type QContent, type QForm, type QQuestion,
 } from "@/lib/pra-wam/questionnaire";
 import { withoutPurged } from "@/lib/pra-wam/purge";
@@ -30,16 +30,18 @@ const failed = (error: { code?: string; message?: string }): never => {
 };
 
 /**
- * The form as people may answer it right now, or why not. `preview` (Admin WAM only) also lets a
- * draft be answered, so it can be tried before it opens; those answers are test data.
+ * The form as this person may answer it right now, or why not. `preview` (Admin WAM only) also
+ * lets a draft be answered, so it can be tried before it opens, and a form chosen for other
+ * people; those answers are test data (and not counted).
  */
-async function openForm(preview = false): Promise<QForm> {
+async function openForm(employeeId: string, preview = false): Promise<QForm> {
   const form = await currentForm();
   if (!form) throw new ServiceError(404, "Kuesioner belum dibuka.");
   if (form.status === "draf") {
     if (!preview) throw new ServiceError(404, "Kuesioner belum dibuka.");
     return form;
   }
+  if (!preview && !inAudience(form, employeeId)) throw new ServiceError(404, "Kuesioner ini tidak dibuka untukmu.");
   if (!editable(form)) throw new ServiceError(409, "Kuesioner sudah ditutup. Jawaban tidak bisa diubah lagi.");
   return form;
 }
@@ -78,7 +80,8 @@ export async function myAnswers(form: Pick<QForm, "id" | "stayDeleteOn">, employ
 /** For Beranda: how far I am and my character card, or null when there is nothing to show (no form, a draft, or no migration). */
 export async function myQuestionnaireCard(employeeId: string): Promise<{ form: QForm; progress: Progress; card: CardView | null } | null> {
   const form = await currentForm();
-  if (!form || form.status === "draf") return null;
+  // Nothing for a draft, or for someone it is not for (HR chose other people).
+  if (!form || form.status === "draf" || !inAudience(form, employeeId)) return null;
   const [mine, card] = await Promise.all([myAnswers(form, employeeId), myCard(form, employeeId).catch(() => null)]);
   return { form, progress: mine.progress, card: card?.trial ? null : card };
 }
@@ -116,7 +119,7 @@ async function settleProgress(formId: string, employeeId: string, done: boolean,
  * for the anonymous section: that goes in one piece through submitAnonymous.
  */
 export async function saveAnswer(employeeId: string, key: string, raw: unknown, { preview = false }: { preview?: boolean } = {}): Promise<{ value: AnswerValue; progress: Progress; completedAt: string | null }> {
-  const form = await openForm(preview);
+  const form = await openForm(employeeId, preview);
   const content = shownContent(await formContent(form.id), form);
   const question = content.questions.find(item => item.key === key);
   if (!question) throw new ServiceError(404, "Pertanyaan ini tidak ada lagi. Muat ulang halaman.");
@@ -145,7 +148,7 @@ export async function saveAnswer(employeeId: string, key: string, raw: unknown, 
  * person can try again. The rows are shuffled so their order does not follow the questions.
  */
 export async function submitAnonymous(employeeId: string, raw: Record<string, unknown>, { preview = false }: { preview?: boolean } = {}): Promise<{ progress: Progress; completedAt: string | null }> {
-  const form = await openForm(preview);
+  const form = await openForm(employeeId, preview);
   const content = shownContent(await formContent(form.id), form);
   const anonymous = anonymousSectionIds(content);
   const questions = content.questions.filter(question => anonymous.has(question.sectionId));

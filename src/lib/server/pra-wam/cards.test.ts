@@ -50,7 +50,7 @@ vi.mock("server-only", () => ({}));
 
 const { ensureCard, followAnswers, myCard } = await import("./cards");
 
-const form = (status: QForm["status"] = "buka"): QForm => ({ id: "f1", name: "Kuesioner", slug: "kuesioner", oldSlugs: [], status, intro: "", cardText: "", minutes: 15, editUntil: null, stayDeleteOn: null, hrAccess: [] });
+const form = (status: QForm["status"] = "buka"): QForm => ({ id: "f1", name: "Kuesioner", slug: "kuesioner", oldSlugs: [], status, intro: "", cardText: "", minutes: 15, editUntil: null, stayDeleteOn: null, hrAccess: [], audience: "semua", audienceIds: [] });
 const tier = (key: string, odds: number, sort: number, max_cards: number | null = null) => ({ form_id: "f1", key, name: key, color: "#AEB7C7", odds, max_cards, line: "", sort });
 const card = (id: string, number: number, rules: { question_key: string; option: string; weight: number }[]) => ({
   form_id: "f1", id, number, key: id, name: id, figure: "", class: id, title: "", description: "", powers: [], partner_id: null, hidden: false, image_key: null, image_updated_at: null, cq_card_rules: rules,

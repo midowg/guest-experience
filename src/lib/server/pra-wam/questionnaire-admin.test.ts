@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import type { QQuestion, QSection } from "@/lib/pra-wam/questionnaire";
+import type { QForm, QQuestion, QSection } from "@/lib/pra-wam/questionnaire";
 
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => { throw new Error("no database in this test"); } }));
 vi.mock("./appraisal", () => ({ listPeople: vi.fn() }));
 
+const { listPeople } = await import("./appraisal");
 const {
-  cleanQuestion, formSettingsSchema, movedSlugs, newKey, orderSchema, progressReport, questionCreateSchema, questionPatchSchema, questionProblems, sectionPatchSchema,
+  audienceRow, cleanQuestion, formSettingsSchema, movedSlugs, newKey, orderSchema, progressReport, questionCreateSchema, questionPatchSchema, questionProblems, sectionPatchSchema,
 } = await import("./questionnaire-admin");
 
 const named = "11111111-1111-4111-8111-111111111111";
@@ -45,6 +46,23 @@ describe("form settings", () => {
     expect(formSettingsSchema.parse({ editUntil: "2026-12-20T23:59:00+07:00", stayDeleteOn: "2027-02-08" })).toEqual({ editUntil: "2026-12-20T23:59:00+07:00", stayDeleteOn: "2027-02-08" });
     expect(formSettingsSchema.safeParse({ editUntil: "besok" }).success).toBe(false);
     expect(formSettingsSchema.safeParse({}).error?.issues[0].message).toBe("Tidak ada yang diubah.");
+  });
+
+  it("take who it is for: everyone, or chosen people by id", () => {
+    expect(formSettingsSchema.parse({ audience: "pilih", audienceIds: [named] })).toEqual({ audience: "pilih", audienceIds: [named] });
+    expect(formSettingsSchema.safeParse({ audience: "sebagian" }).error?.issues[0].message).toBe("Pilih untuk semua peserta atau orang terpilih.");
+    expect(formSettingsSchema.safeParse({ audienceIds: ["bukan-id"] }).error?.issues[0].message).toBe("Orang tidak dikenal.");
+  });
+
+  it("keep only active employees, each once, and never open it for nobody", async () => {
+    vi.mocked(listPeople).mockResolvedValue([{ id: "a", active: true }, { id: "b", active: true }, { id: "gone", active: false }] as never);
+    const open = { status: "buka", audience: "semua", audienceIds: [] } as unknown as QForm;
+    expect(await audienceRow(open, { audience: "pilih", audienceIds: ["a", "a", "gone", "b"] })).toEqual({ row: { audience: "pilih", audience_ids: ["a", "b"] }, changed: true, label: "2 orang terpilih" });
+    await expect(audienceRow(open, { audience: "pilih", audienceIds: ["gone"] })).rejects.toMatchObject({ status: 422 });
+    const draft = { ...open, status: "draf" } as QForm;
+    expect((await audienceRow(draft, { audience: "pilih", audienceIds: [] })).label).toBe("0 orang terpilih");
+    await expect(audienceRow({ ...draft, audience: "pilih", audienceIds: [] }, { status: "buka" })).rejects.toMatchObject({ status: 422 });
+    expect(await audienceRow({ ...open, audience: "pilih", audienceIds: ["a"] }, { name: "Baru" })).toEqual({ row: {}, changed: false, label: "1 orang terpilih" });
   });
 
   it("keep an old address redirecting, and never list the new one as old", () => {

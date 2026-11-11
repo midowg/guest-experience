@@ -35,6 +35,6 @@ export const visibilityHelp: Record<Visibility, string> = {
 export const statusLabels: Record<FormStatus, string> = { draf: "Draf", buka: "Dibuka", tutup: "Ditutup" };
 export const statusHelp: Record<FormStatus, string> = {
   draf: "Belum terlihat peserta. Aman untuk menyusun isi.",
-  buka: "Tampil di Beranda semua peserta dan bisa diisi.",
+  buka: "Tampil di Beranda peserta (semua, atau yang dipilih di Untuk siapa) dan bisa diisi.",
   tutup: "Tidak bisa diisi lagi. Jawaban yang ada tetap tersimpan.",
 };

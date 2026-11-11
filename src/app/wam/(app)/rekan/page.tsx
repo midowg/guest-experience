@@ -3,6 +3,7 @@ import { ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { Gallery } from "@/components/pra-wam/colleagues/Gallery";
 import { Notice } from "@/components/ui";
 import { CARDS_MIGRATION } from "@/lib/pra-wam/cards";
+import { seesQuestionnaire } from "@/lib/pra-wam/questionnaire";
 import { managesApp, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { galleryOf, hasNumberedCard } from "@/lib/server/pra-wam/colleagues";
@@ -22,7 +23,7 @@ export const metadata = { title: "Kartu rekan · WAM", robots: { index: false } 
 export default async function ColleaguesPage() {
   const member = await requireMemberPage(praWamPath.colleagues);
   const form = await currentForm().catch(() => null);
-  if (!form || (form.status === "draf" && !managesApp(member))) notFound();
+  if (!form || !seesQuestionnaire(form, member.id, managesApp(member) || (form.status !== "draf" && seesAllSessions(member)))) notFound();
   const open = seesAllSessions(member) || await hasNumberedCard(form, member.id);
 
   if (!open) {
