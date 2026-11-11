@@ -53,13 +53,17 @@ export function QuestionnaireCard({ name, cardText, minutes, sectionsDone, secti
   character?: { name: string; tier: string; color: string; image: string | null } | null;
 }) {
   const share = sectionsTotal ? Math.round((sectionsDone / sectionsTotal) * 100) : 0;
-  return <a className={`${styles.row} ${done ? "" : styles.questRow}`} href={href}>
+  // Highlighted only while it still waits to be filled; done or closed it is a plain row.
+  const waiting = !done && !closed;
+  return <a className={`${styles.row} ${waiting ? styles.questRow : ""}`} href={href}>
     {done && character
       // eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas or served privately by this site; next/image cannot help
       ? <span className={styles.questArt} style={{ borderColor: character.color }}>{character.image ? <img src={character.image} alt="" /> : <CheckCircle2 aria-hidden />}</span>
       : <span className={done ? styles.questTileDone : styles.questTile}>{done ? <CheckCircle2 aria-hidden /> : <ClipboardList aria-hidden />}</span>}
     <span className={styles.aboutText}>
-      <strong>{done && character ? `Kamu ${character.name}` : name}</strong>
+      {waiting
+        ? <span className={styles.questTitle}><strong>{name}</strong><span className={styles.questPill}>{sectionsDone ? "Lanjutkan" : "Perlu diisi"}</span></span>
+        : <strong>{done && character ? `Kamu ${character.name}` : name}</strong>}
       {done
         ? <span className={styles.rowLine}>{character ? `${character.tier} · lihat kartu karaktermu` : "Selesai · terima kasih"}</span>
         : <>

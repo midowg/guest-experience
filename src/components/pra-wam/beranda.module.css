@@ -26,8 +26,23 @@ a.row:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px;
 .aboutSummary { font-size: 14px; color: var(--pw-muted); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; }
 .aboutMore { margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--pw-primary); }
 
-/* The questionnaire: mandatory until done, so it stands out a little with a primary border. */
-.row.questRow { border-color: var(--pw-primary); }
+/*
+ * The questionnaire, while it still waits to be filled (11 Nov 2026): a soft wash of Werkudara blue,
+ * a thin blue edge, a solid blue tile, and a small yellow "Perlu diisi" / "Lanjutkan" pill, so it
+ * stands out from the white cards without shouting (no motion, no strong fill). Done or closed, it
+ * is a plain row again.
+ */
+.row.questRow {
+  background: linear-gradient(135deg, var(--pw-primary-soft) 0%, color-mix(in srgb, var(--pw-primary-soft) 45%, var(--pw-surface)) 100%);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pw-primary) 38%, transparent), var(--pw-shadow-card);
+}
+a.row.questRow:hover { box-shadow: inset 0 0 0 1.5px var(--pw-primary), var(--pw-shadow-card); }
+.questRow .questTile { background: var(--pw-primary); color: var(--pw-on-primary); }
+.questRow .chevron { color: var(--pw-primary); }
+/* Grey text on the blue wash would fall under 4.5:1; a step darker keeps it readable. */
+.questRow .aboutSummary { color: color-mix(in srgb, var(--pw-text) 55%, var(--pw-muted)); }
+.questTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.questPill { flex: none; padding: 1px 8px; border-radius: 999px; background: var(--pw-brass-soft); box-shadow: inset 0 0 0 1px var(--pw-brass-line); color: var(--pw-on-brass-soft); font-size: 11px; font-weight: 700; line-height: 18px; letter-spacing: .02em; white-space: nowrap; }
 .questTile, .questTileDone { flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 14px; background: var(--pw-primary-soft); color: var(--pw-primary); }
 .questTileDone { background: var(--pw-success-soft); color: var(--pw-success); }
 .questTile svg, .questTileDone svg { width: 20px; height: 20px; }
