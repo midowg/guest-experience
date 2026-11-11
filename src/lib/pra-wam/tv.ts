@@ -331,6 +331,7 @@ export type TvItem =
   | { key: string; kind: "pengumuman"; seconds: number }
   | { key: string; kind: "teks"; title: string; body: string; seconds: number }
   | { key: string; kind: "sambutan"; welcome: TvWelcome; design: TvWelcomeDesign; seconds: number }
+  | { key: string; kind: "video"; title: string; video: string; seconds: number }
   | { key: string; kind: "gambar"; slide: TvSlide; seconds: number };
 
 /* ---- The playlist (migration 202611100007) ------------------------------------------------------- */
@@ -340,11 +341,11 @@ export type TvItem =
  * calendars, Timeline, panitia's announcements), text typed in Admin TV, and uploaded pictures.
  * A row may be for some TVs only, and may show only between two days or two times of day.
  */
-export const tvItemKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "teks", "gambar"] as const;
+export const tvItemKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "teks", "video", "gambar"] as const;
 export type TvItemKind = (typeof tvItemKinds)[number];
 export const tvItemKindLabels: Record<TvItemKind, string> = {
   kalender_hari: "Kalender hari ini", kalender_minggu: "Kalender minggu ini", timeline: "Timeline Pra WAM",
-  pengumuman: "Pengumuman panitia", sambutan: "Sambutan tamu", tamu: "Sambutan tamu (diketik)", teks: "Teks", gambar: "Gambar",
+  pengumuman: "Pengumuman panitia", sambutan: "Sambutan tamu", tamu: "Sambutan tamu (diketik)", teks: "Teks", video: "Video YouTube", gambar: "Gambar",
 };
 /** What each template shows and where its data comes from, for the admin's "Tambah tayangan". */
 export const tvItemKindHints: Record<TvItemKind, string> = {
@@ -355,6 +356,7 @@ export const tvItemKindHints: Record<TvItemKind, string> = {
   sambutan: "Kunjungan Kantor yang sudah terbit dan berlangsung hari ini: nama tamu, ucapan, foto sampul, jam, dan tempat. Tanpa kunjungan hari ini, tayangan ini dilewati.",
   tamu: "Sambutan untuk tamu yang tidak punya halaman kunjungan: nama tamu dan ucapan yang Anda ketik.",
   teks: "Tulisan yang Anda ketik sendiri: judul dan isi.",
+  video: "Video dari YouTube, diputar tanpa suara sampai selesai, lalu lanjut ke tayangan berikutnya.",
   gambar: "Gambar yang Anda unggah.",
 };
 /** The templates fed by WAM: there is one of each at most (two day calendars would say the same thing). */
@@ -391,6 +393,34 @@ export function scheduleLabel(item: TvItemSchedule, screenName: (id: string) => 
   const screens = item.screenIds.map(id => screenName(id) ?? "TV yang sudah dihapus").join(", ");
   return [dates, times, screens].filter(Boolean).join(" · ");
 }
+
+/*
+ * A YouTube video (migration 202611100010): the row's body keeps the video's id; its title is the
+ * admin's name for it. A TV plays it in YouTube's own player, muted (a browser only starts a video
+ * by itself without sound), to its end, then moves on; a video alone in the playlist repeats.
+ */
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+/** The id of a YouTube video from what an admin pasted: a watch, youtu.be, shorts, live or embed address, or the id itself; null for anything else. */
+export function youtubeId(value: string): string | null {
+  const text = value.trim();
+  if (YOUTUBE_ID.test(text)) return text;
+  let url: URL;
+  try { url = new URL(/^https?:\/\//i.test(text) ? text : `https://${text}`); } catch { return null; }
+  const host = url.hostname.replace(/^(www|m|music)\./, "");
+  const id = host === "youtu.be" ? url.pathname.slice(1).split("/")[0]
+    : host === "youtube.com" || host === "youtube-nocookie.com"
+      ? url.pathname === "/watch" ? url.searchParams.get("v") ?? "" : (url.pathname.match(/^\/(?:embed|shorts|live|v)\/([^/?#]+)/)?.[1] ?? "")
+      : "";
+  return YOUTUBE_ID.test(id) ? id : null;
+}
+/** The player's address for a TV: starts by itself without sound, no controls, no other videos at its end. */
+export const youtubeEmbed = (id: string, loop: boolean) =>
+  `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&controls=0&rel=0&playsinline=1&disablekb=1&iv_load_policy=3&enablejsapi=1${loop ? `&loop=1&playlist=${id}` : ""}`;
+/** A still of the video, for the admin's card and a phone. */
+export const youtubeThumb = (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+export const youtubeWatch = (id: string) => `https://www.youtube.com/watch?v=${id}`;
+/** A video that never says it ended (the network dropped, the player failed) is left after this long. */
+export const TV_VIDEO_MOST_MS = 30 * 60_000;
 
 /** A row as a TV gets it. `src` is a picture's address. */
 export type TvPlayItem = { id: string; kind: TvItemKind; title: string; body: string; seconds: number; src?: string; design?: string };
@@ -434,6 +464,7 @@ export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides"
     // One slide per visit on today; none today, and the row is passed over.
     if (item.kind === "sambutan") return (feed.welcomes ?? []).map(welcome => ({ key: `${key}-${welcome.id}`, kind: "sambutan" as const, welcome, design: welcomeDesign(item.design), seconds: item.seconds }));
     if (item.kind === "tamu") return item.title ? [{ key, kind: "sambutan", seconds: item.seconds, design: welcomeDesign(item.design), welcome: { id: item.id, name: item.title, greeting: TV_WELCOME_GREETING, note: item.body, hours: "", place: "", image: "" } }] : [];
+    if (item.kind === "video") return YOUTUBE_ID.test(item.body) ? [{ key, kind: "video", title: item.title, video: item.body, seconds: item.seconds }] : [];
     return item.src ? [{ key, kind: "gambar", seconds: item.seconds, slide: { id: item.id, title: item.title, seconds: item.seconds, src: item.src } }] : [];
   });
 }
@@ -445,6 +476,7 @@ export function itemLabel(item: TvItem): string {
   if (item.kind === "pengumuman") return "Pengumuman";
   if (item.kind === "teks") return item.title || "Teks";
   if (item.kind === "sambutan") return `Sambutan: ${item.welcome.name}`;
+  if (item.kind === "video") return item.title || "Video";
   return item.slide.title || "Gambar";
 }
 
@@ -454,10 +486,11 @@ const itemTitle = z.string().trim().max(80, "Judul paling panjang 80 karakter.")
 const itemBody = z.string().trim().max(600, "Isi paling panjang 600 karakter.");
 /** POST: a template (once each) or a text. A picture arrives through its upload instead. */
 export const tvItemCreateSchema = z.object({
-  kind: z.enum(["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "teks"]),
+  kind: z.enum(["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "teks", "video"]),
   title: itemTitle.default(""), body: itemBody.default(""),
 }).refine(value => value.kind !== "teks" || value.title.length > 0 || value.body.length > 0, { message: "Isi judul atau isi teksnya.", path: ["title"] })
-  .refine(value => value.kind !== "tamu" || value.title.length > 0, { message: "Isi nama tamunya.", path: ["title"] });
+  .refine(value => value.kind !== "tamu" || value.title.length > 0, { message: "Isi nama tamunya.", path: ["title"] })
+  .refine(value => value.kind !== "video" || youtubeId(value.body) !== null, { message: "Tempel alamat video YouTube, misalnya https://www.youtube.com/watch?v=…", path: ["body"] });
 export const tvItemPatchSchema = z.object({
   title: itemTitle.optional(), body: itemBody.optional(), seconds: seconds.optional(), active: z.boolean().optional(),
   showFrom: day.optional(), showUntil: day.optional(), timeFrom: timeOfDay.optional(), timeUntil: timeOfDay.optional(),

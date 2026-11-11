@@ -1,4 +1,4 @@
-import type { TvItemKind, TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { youtubeThumb, type TvItemKind, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
 import { TV_WELCOME_ART } from "@/lib/routes";
 
 /*
@@ -87,6 +87,13 @@ function Shapes({ kind, title, body, design }: { kind: TvItemKind; title: string
     <text x="80" y="40" textAnchor="middle" fontSize="11" fontWeight="700" fill={ink.text}>{short(title || "Judul teks", 22)}</text>
     {body ? <text x="80" y="55" textAnchor="middle" fontSize="6.5" fill={ink.muted}>{short(body, 40)}</text>
       : <><rect x="40" y="50" width="80" height="3" rx="1.5" fill={ink.muted} /><rect x="52" y="57" width="56" height="3" rx="1.5" fill={ink.muted} /></>}
+  </>;
+  // A video: its own still from YouTube (`body` is the video's id), with the play mark over it.
+  if (kind === "video") return <>
+    {body && <image href={youtubeThumb(body)} width="160" height="90" preserveAspectRatio="xMidYMid slice" />}
+    <rect width="160" height="90" fill="#050a18" opacity=".3" />
+    <circle cx="80" cy="45" r="13" fill="#050a18" opacity=".7" />
+    <path d="M76 38 L88 45 L76 52 Z" fill={ink.text} />
   </>;
   // A picture without its file at hand (the upload's pane): a frame with a landscape.
   return <>

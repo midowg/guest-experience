@@ -17,6 +17,7 @@ const admin = (more: Partial<TvAdmin> = {}): TvAdmin => ({
     row("b", "kalender_minggu", { active: false }),
     row("c", "sambutan"),
     row("d", "tamu", { title: "Contoh Satu", body: "Terima kasih sudah berkunjung ke kantor kami." }),
+    row("f", "video", { title: "Annual Meeting 2025", body: "FWN1B1B7Gu8" }),
     row("e", "teks", { title: "Rapat bulanan pindah ke lantai dua mulai pekan depan", body: "Mohon perhatikan papan ruang.", showFrom: "2026-12-01", showUntil: "2026-12-10", timeFrom: "08:00", timeUntil: "17:00", screenIds: ["lobi"] }),
   ],
   welcomeReady: true, takeover: null, welcomes: ["PT Contoh Dua Sejahtera"], ...more,
@@ -42,7 +43,7 @@ describe("Admin TV → Tayangan", () => {
   it("shows every row as a card to read: its source, its name, and its duration, TVs and schedule as facts", () => {
     const { container } = show();
     const cards = within(screen.getByRole("list", { name: "Tayangan, urut tayang" })).getAllByRole("listitem");
-    expect(cards).toHaveLength(5);
+    expect(cards).toHaveLength(6);
     expect(within(cards[0]).getByRole("heading", { name: "Kalender hari ini" })).toBeTruthy();
     expect(cards[0].textContent).toContain("Dari WAM");
     expect(cards[0].textContent).toContain("Durasi15 detik");
@@ -50,9 +51,10 @@ describe("Admin TV → Tayangan", () => {
     expect(cards[0].textContent).toContain("JadwalSetiap hari, sepanjang hari");
     expect(cards[1].textContent).toContain("Disembunyikan");
     expect(cards[2].textContent).toContain("Hari ini: PT Contoh Dua Sejahtera");
-    expect(cards[4].textContent).toContain("Tayang diLobi");
-    expect(cards[4].textContent).toContain("Jadwal1 Des – 10 Des · 08.00–17.00");
-    expect(screen.getByText("4 tayang dari 5")).toBeTruthy();
+    expect(cards[5].textContent).toContain("Tayang diLobi");
+    expect(cards[5].textContent).toContain("Jadwal1 Des – 10 Des · 08.00–17.00");
+    expect(screen.getByText("5 tayang dari 6")).toBeTruthy();
+    expect(cards[4].textContent).toContain("DurasiSampai video selesai");
     // Each card opens with a drawing of its slide; a typed one shows its own words in it.
     expect(cards.every(card => !!card.querySelector("svg[viewBox='0 0 160 90']"))).toBe(true);
     expect(cards[3].querySelector("svg[viewBox='0 0 160 90']")?.textContent).toContain("Contoh Satu");
@@ -61,7 +63,7 @@ describe("Admin TV → Tayangan", () => {
 
   it("keeps on a card only the arrows and Atur; the rest is inside Atur", () => {
     show();
-    for (const name of ["Naikkan", "Turunkan", "Atur"]) expect(screen.getAllByRole("button", { name: new RegExp(`^${name} `) })).toHaveLength(5);
+    for (const name of ["Naikkan", "Turunkan", "Atur"]) expect(screen.getAllByRole("button", { name: new RegExp(`^${name} `) })).toHaveLength(6);
     expect((screen.getByRole("button", { name: "Naikkan Kalender hari ini" }) as HTMLButtonElement).disabled).toBe(true);
     for (const name of ["Simpan", "Hapus", "Sembunyikan", "Tayangkan sekarang"]) expect(screen.queryByRole("button", { name })).toBeNull();
   });
@@ -107,6 +109,13 @@ describe("Admin TV → Tayangan", () => {
     fireEvent.change(screen.getByLabelText("Nama tamu"), { target: { value: "Contoh Tiga" } });
     expect(document.querySelector("form svg[viewBox='0 0 160 90']")?.textContent).toContain("Contoh Tiga");
     expect(addGuest.disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Video" }));
+    const addVideo = screen.getByRole("button", { name: "Tambah video" }) as HTMLButtonElement;
+    fireEvent.change(screen.getByLabelText("Alamat video YouTube"), { target: { value: "https://example.com/video" } });
+    expect(addVideo.disabled).toBe(true);
+    expect(screen.getByText("Alamat ini bukan alamat video YouTube.")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Alamat video YouTube"), { target: { value: "https://youtu.be/FWN1B1B7Gu8" } });
+    expect(addVideo.disabled).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Gambar" }));
     expect(screen.getByRole("button", { name: "Unggah gambar" })).toBeTruthy();
   });

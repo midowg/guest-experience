@@ -12,7 +12,7 @@ import {
 } from "@/lib/pra-wam/tv";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import { TvPhone } from "./TvPhone";
-import { NotesSlide, TextSlide, TimelineSlide, WelcomeSlide } from "./TvTemplates";
+import { NotesSlide, TextSlide, TimelineSlide, VideoSlide, WelcomeSlide } from "./TvTemplates";
 import css from "./tv.module.css";
 
 /** How often a TV asks for content, and how often it re-reads the clock for "now". */
@@ -158,12 +158,13 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   const phone = asked || isPhoneScreen(width, height, touch);
   const stopped = paused && phone;
   // The loop: each item stays its own time. Keyed on the item, so a clock tick does not restart it.
-  const currentKey = current?.key, currentSeconds = current?.seconds, count = items.length;
+  const currentKey = current?.key, currentSeconds = current?.seconds, count = items.length, isVideo = current?.kind === "video";
   useEffect(() => {
-    if (!currentKey || !currentSeconds || count < 2 || stopped) return;
+    // A video stays until it ends (VideoSlide says so), not for a number of seconds.
+    if (!currentKey || !currentSeconds || count < 2 || stopped || isVideo) return;
     const timer = window.setTimeout(() => setIndex(value => (value + 1) % count), currentSeconds * 1000);
     return () => window.clearTimeout(timer);
-  }, [currentKey, currentSeconds, count, stopped]);
+  }, [currentKey, currentSeconds, count, stopped, isVideo]);
 
   const time = wibTime(new Date(now).toISOString());
   const clock = clockLabel(time);
@@ -208,6 +209,7 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
           : current.kind === "timeline" ? <TimelineSlide key={current.key} entries={feed.timeline ?? []} clock={clock} height={room.height} />
           : current.kind === "pengumuman" ? <NotesSlide key={current.key} notes={feed.notes ?? []} clock={clock} />
           : current.kind === "teks" ? <TextSlide key={current.key} title={current.title} body={current.body} />
+          : current.kind === "video" ? <VideoSlide key={current.key} video={current.video} title={current.title} loop={count < 2} onEnd={() => setIndex(value => (value + 1) % Math.max(1, count))} />
           : current.kind === "sambutan" ? <WelcomeSlide key={current.key} welcome={current.welcome} design={current.design} />
           : <section key={current.key} className={`${css.slide} ${css.picture}`} aria-label={current.slide.title || "Gambar pengumuman"}>
             {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play, Search, X } from "lucide-react";
 import { clockLabel } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, entryState, itemLabel, legendItem, searchEntries, shownDays, tvDateLabel, tvDayHead, tvWeekLabel,
+  dayEntries, entryState, itemLabel, legendItem, searchEntries, shownDays, youtubeThumb, youtubeWatch, tvDateLabel, tvDayHead, tvWeekLabel,
   type TvEntry, type TvFeed, type TvItem, type TvLegendItem, type TvState,
 } from "@/lib/pra-wam/tv";
 import css from "./tv.module.css";
@@ -46,7 +46,7 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
 
   const go = (index: number) => { onPause(true); onGo((index + items.length) % items.length); };
   const title = !current ? "TV Announcement" : current.kind === "hari" ? tvDateLabel(feed.date) : current.kind === "minggu" ? tvWeekLabel(week.map(day => day.date))
-    : current.kind === "timeline" ? "Forum dan acara" : current.kind === "pengumuman" ? "Dari panitia" : current.kind === "teks" ? current.title || "Info" : current.kind === "sambutan" ? current.welcome.name : current.slide.title || "Pengumuman";
+    : current.kind === "timeline" ? "Forum dan acara" : current.kind === "pengumuman" ? "Dari panitia" : current.kind === "teks" ? current.title || "Info" : current.kind === "sambutan" ? current.welcome.name : current.kind === "video" ? current.title || "Video" : current.slide.title || "Pengumuman";
   const kicker = !current || current.kind === "hari" ? "Jadwal ruang hari ini" : current.kind === "minggu" ? "Jadwal ruang minggu ini" : current.kind === "timeline" ? "Timeline Pra WAM" : current.kind === "sambutan" ? current.welcome.greeting : "Pengumuman";
 
   return <main ref={scroller} className={css.phone} onTouchStart={() => { if (!paused) onPause(true); }} onWheel={() => { if (!paused) onPause(true); }}>
@@ -120,6 +120,12 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
                   {note.body && <p className={css.phoneText}>{note.body}</p>}
                 </li>)}</ul>
             : current.kind === "teks" ? <div className={css.phoneNote}>{current.body && <p className={css.phoneText}>{current.body}</p>}</div>
+            : current.kind === "video" ? <div className={css.phoneNote}>
+              {/* A phone does not play it by itself: a still, and the way to YouTube. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className={css.phonePicture} src={youtubeThumb(current.video)} alt="" referrerPolicy="no-referrer" />
+              <p className={css.phoneText}><a href={youtubeWatch(current.video)} target="_blank" rel="noopener noreferrer">Tonton di YouTube</a></p>
+            </div>
             : current.kind === "sambutan" ? <div className={css.phoneNote}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {current.welcome.image && <img className={css.phonePicture} src={current.welcome.image} alt="" referrerPolicy="no-referrer" />}

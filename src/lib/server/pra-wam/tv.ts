@@ -4,7 +4,7 @@ import { clockLabel, wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisa
 import type { RoomUse } from "@/lib/pra-wam/sessions";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import {
-  isTemplateKind, itemShows, looksLikeTvSlug, takeoverOn, takeoverRuns, welcomeDesign, TV_WELCOME_GREETING, TV_WELCOMES_MOST, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
+  isTemplateKind, itemShows, looksLikeTvSlug, takeoverOn, takeoverRuns, welcomeDesign, youtubeId, TV_WELCOME_GREETING, TV_WELCOMES_MOST, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
   type TvDay, type TvFeed, type TvItemKind, type TvItemSchedule, type TvNote, type TvPlayItem, type TvRoom, type TvSettings, type TvSlideStart, type TvTakeover, type TvTimelineEntry, type TvWelcome, type TvWelcomeDesign,
 } from "@/lib/pra-wam/tv";
 import { hashTvKey, looksLikeTvKey } from "@/lib/pra-wam/tv-key";
@@ -55,6 +55,8 @@ type ItemRow = {
 };
 /** A welcome's design is picked per row with this one; before it every welcome is the Werkudara sign. */
 export const TV_DESIGN_MIGRATION = "202611100009_pw_tv_design.sql";
+/** A YouTube video is a kind of row with this one; before it none can be added. */
+export const TV_VIDEO_MIGRATION = "202611100010_pw_tv_video.sql";
 const ITEM_COLUMNS = "id,kind,title,body,slide_id,seconds,sort_order,active,show_from,show_until,time_from,time_until,screen_ids";
 /** The playlist in order, or null before its migration. */
 async function readItems(): Promise<ItemRow[] | null> {
@@ -253,6 +255,15 @@ export async function createItem(input: { kind: Exclude<TvItemKind, "gambar">; t
   if (isTemplateKind(input.kind) && items.some(item => item.kind === input.kind)) throw new ServiceError(409, "Template ini sudah ada di daftar tayangan.");
   if (items.length >= 200) throw new ServiceError(409, "Daftar tayangan sudah penuh. Hapus yang tidak dipakai dulu.");
   const typed = input.kind === "teks" || input.kind === "tamu";
+  if (input.kind === "video") {
+    // A video's row keeps the video's id, not the address that was pasted.
+    const id = youtubeId(input.body);
+    if (!id) throw new ServiceError(422, "Alamat video YouTube tidak dikenali.", { body: ["Tempel alamat video YouTube."] });
+    const { error } = await createPrivilegedClient().from("pw_tv_items").insert({ kind: "video", title: input.title, body: id, seconds: 15, sort_order: nextOrder(items) });
+    if (error) { if (error.code === "23514") throw new ServiceError(503, `Video YouTube menunggu migrasi ${TV_VIDEO_MIGRATION}.`); databaseError(error); }
+    invalidate();
+    return;
+  }
   const { error } = await createPrivilegedClient().from("pw_tv_items")
     .insert({ kind: input.kind, title: typed ? input.title : "", body: typed ? input.body : "", seconds: input.kind === "teks" ? 10 : typed || input.kind === "sambutan" ? 15 : 20, sort_order: nextOrder(items) });
   // The two welcome kinds are not allowed by the table before their migration.

@@ -69,7 +69,9 @@
 
 /* Tambah tayangan: one card, a choice of four, one pane at a time. */
 .plAdd { display: grid; gap: 16px; min-width: 0; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
-.plPick { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+/* The choice wraps onto a second line on a narrow phone, so none of its options is out of sight. */
+.plPick { min-width: 0; }
+.plPick > * { display: flex; flex-wrap: wrap; width: fit-content; max-width: 100%; }
 .plPane { display: grid; gap: 12px; max-width: 40rem; min-width: 0; }
 .plSubmit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .plSubmit > button { min-height: 44px; }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activityKey, agoLabel, dayEntries, entryOwner, isOneOnOne, isPhoneScreen, isTemplateKind, itemLabel, itemShows, playlistOf, scheduleLabel, searchEntries, tvItemCreateSchema, tvItemPatchSchema, entryState, legendFor, legendItem, legendRows, TV_COLORS, tvLegend, tvLegendUnits, fit, fitText, hourSpan, imageFit, looksLikeTvSlug, loopCount, msUntilReload, suggestSlug, tvScreenPatchSchema, tvScreenSchema, nowAt, place, playlist, shownDays, tvDateLabel, tvDayHead, tvIsOn,
-  shouldReload, takeoverOn, takeoverRuns, tvTakeoverSchema, TV_DEFAULT_SETTINGS, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
+  shouldReload, youtubeEmbed, youtubeId, takeoverOn, takeoverRuns, tvTakeoverSchema, TV_DEFAULT_SETTINGS, TV_DEFAULT_LOOK, TV_RELOAD_EVERY_MS, tvScreen, tvSettingsSchema, tvSlidePatchSchema, tvWeekLabel, weekOf, type TvDay, type TvEntry, type TvRoom,
 } from "./tv";
 
 const at = (time: string, date = "2026-11-10") => `${date}T${time}:00+07:00`;
@@ -151,6 +151,29 @@ describe("welcoming guests and taking the TVs over", () => {
     expect(tvTakeoverSchema.safeParse({ itemId: id, minutes: 15 }).success).toBe(true);
     expect(tvTakeoverSchema.safeParse({ itemId: id, minutes: null }).success).toBe(true);
     expect(tvTakeoverSchema.safeParse({ itemId: id, minutes: 7 }).success).toBe(false);
+  });
+});
+
+describe("a YouTube video", () => {
+  it("reads the video's id from the addresses people paste, and nothing from anything else", () => {
+    for (const address of ["https://www.youtube.com/watch?v=FWN1B1B7Gu8", "https://youtu.be/FWN1B1B7Gu8?si=abc", "youtube.com/shorts/FWN1B1B7Gu8", "https://m.youtube.com/watch?t=10&v=FWN1B1B7Gu8", "https://www.youtube.com/embed/FWN1B1B7Gu8", " FWN1B1B7Gu8 "]) expect(youtubeId(address)).toBe("FWN1B1B7Gu8");
+    for (const address of ["", "https://example.com/watch?v=FWN1B1B7Gu8", "https://www.youtube.com/watch?v=pendek", "https://www.youtube.com/@werkudara", "bukan alamat"]) expect(youtubeId(address)).toBeNull();
+  });
+
+  it("plays muted from the start, and repeats only when it is alone", () => {
+    expect(youtubeEmbed("FWN1B1B7Gu8", false)).toContain("/embed/FWN1B1B7Gu8?autoplay=1&mute=1");
+    expect(youtubeEmbed("FWN1B1B7Gu8", false)).not.toContain("loop=1");
+    expect(youtubeEmbed("FWN1B1B7Gu8", true)).toContain("loop=1&playlist=FWN1B1B7Gu8");
+  });
+
+  it("is a slide of its own, left out when its id is not one", () => {
+    const base = { settings: TV_DEFAULT_SETTINGS, slides: [] };
+    const video = { id: "v", kind: "video" as const, title: "Annual Meeting", body: "FWN1B1B7Gu8", seconds: 15 };
+    expect(playlistOf({ ...base, playlist: [video] })).toEqual([{ key: "item-v", kind: "video", title: "Annual Meeting", video: "FWN1B1B7Gu8", seconds: 15 }]);
+    expect(itemLabel(playlistOf({ ...base, playlist: [video] })[0])).toBe("Annual Meeting");
+    expect(playlistOf({ ...base, playlist: [{ ...video, body: "rusak" }] })).toEqual([]);
+    expect(tvItemCreateSchema.safeParse({ kind: "video", title: "A", body: "https://youtu.be/FWN1B1B7Gu8" }).success).toBe(true);
+    expect(tvItemCreateSchema.safeParse({ kind: "video", title: "A", body: "https://example.com" }).success).toBe(false);
   });
 });
 

@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Clock, MapPin } from "lucide-react";
-import { fit, fitText, type TvNote, type TvTimelineEntry, type TvWelcome, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
+import { fit, fitText, TV_VIDEO_MOST_MS, youtubeEmbed, type TvNote, type TvTimelineEntry, type TvWelcome, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
 import { TV_WELCOME_ART } from "@/lib/routes";
 import css from "./tv.module.css";
 
@@ -100,5 +100,42 @@ export function WelcomeSlide({ welcome, design }: { welcome: TvWelcome; design: 
       {welcome.note && <p className={css.welcomeNote}>{welcome.note}</p>}
       {facts}
     </div>
+  </section>;
+}
+
+/**
+ * A YouTube video, in YouTube's own player across the whole screen, without sound. The player says
+ * when the video has ended (or failed), and the board moves on; one that never says so is left
+ * after TV_VIDEO_MOST_MS. With `loop` (the only thing in the playlist) it repeats instead.
+ */
+export function VideoSlide({ video, title, loop, onEnd }: { video: string; title: string; loop: boolean; onEnd: () => void }) {
+  const frame = useRef<HTMLIFrameElement>(null);
+  const end = useRef(onEnd);
+  useEffect(() => { end.current = onEnd; }, [onEnd]);
+  useEffect(() => {
+    if (loop) return;
+    let heard = false;
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== frame.current?.contentWindow) return;
+      let data: { event?: string; info?: unknown };
+      try { data = typeof event.data === "string" ? JSON.parse(event.data) : event.data; } catch { return; }
+      if (!data || typeof data !== "object") return;
+      heard = true;
+      // The player's state arrives as "onStateChange" (a number) or inside "infoDelivery"; 0 is "ended".
+      const state = data.event === "onStateChange" ? data.info
+        : data.event === "infoDelivery" && data.info && typeof data.info === "object" ? (data.info as { playerState?: unknown }).playerState : undefined;
+      if (state === 0 || data.event === "onError") end.current();
+    };
+    window.addEventListener("message", onMessage);
+    // The player only reports to a page that has said it is listening; asked until it answers.
+    const ask = window.setInterval(() => {
+      if (heard) { window.clearInterval(ask); return; }
+      frame.current?.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*");
+    }, 500);
+    const most = window.setTimeout(() => end.current(), TV_VIDEO_MOST_MS);
+    return () => { window.removeEventListener("message", onMessage); window.clearInterval(ask); window.clearTimeout(most); };
+  }, [video, loop]);
+  return <section className={`${css.slide} ${css.video}`} aria-label={title || "Video"}>
+    <iframe ref={frame} src={youtubeEmbed(video, loop)} title={title || "Video YouTube"} allow="autoplay; encrypted-media" referrerPolicy="strict-origin-when-cross-origin" />
   </section>;
 }
