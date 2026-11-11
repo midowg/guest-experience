@@ -1,4 +1,5 @@
 import { AppraisalBoard, type BookArrival, type BookFormData, type CancelledItem } from "@/components/pra-wam/AppraisalBoard";
+import { MinutesDue } from "@/components/pra-wam/MinutesDue";
 import { ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { Notice } from "@/components/ui";
 import { appraisalRules, bookableDates, bookingWhere, clockLabel, loadedWeek, wibDate, workWeek } from "@/lib/pra-wam/appraisal";
@@ -9,6 +10,7 @@ import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { listPeople, memberDepartments, myBookings, usedTitles, weekSchedule, windowSummary } from "@/lib/server/pra-wam/appraisal";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
+import { myMinutesDue } from "@/lib/server/pra-wam/minutes";
 import { appSettings } from "@/lib/server/pra-wam/rooms";
 import { hodByBookings, hodDepartments, hodStanding } from "@/lib/server/pra-wam/hod";
 import { listUnits } from "@/lib/server/pra-wam/units";
@@ -55,11 +57,13 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
   // Bookings made as HOD: each HOD's answer, for the detail sheet.
   // Cancelled bookings and sessions from a week back (9 Nov 2026): greyed among Booking saya.
   const weekBack = new Date(Date.parse(`${today}T12:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10);
-  const [timelineRows, cancelledBookings, cancelledSessions, viewerDepartments] = await Promise.all([
+  const [timelineRows, cancelledBookings, cancelledSessions, viewerDepartments, minutesDue] = await Promise.all([
     timelineItems(member).then(result => result.items).catch(() => []),
     myBookings(member, weekBack, "batal").catch(() => []),
     myCancelledSessions(member, weekBack).catch(() => []),
     memberDepartments(member.id).catch(() => []),
+    // Meetings over without a MoM (11 Nov 2026), above the board.
+    myMinutesDue(member, now).catch(() => []),
   ]);
   const activities = bookingActivities(timelineRows, today);
   const timeline = timelineMonths(timelineRows, today).flatMap(month => month.entries);
@@ -84,7 +88,10 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
     <AppraisalBoard date={shown} week={week} dates={dates} now={now.toISOString()} rooms={schedule.rooms} bookings={schedule.bookings} mine={mine}
       viewerId={member.id} canCancelAny={cancelsAnyBooking(member)} open={open} form={form} arrive={arrive} floorPlan={settings.floorPlan} summary={summary}
       hod={hod} hodInfo={hodInfo} activities={activities} cancelled={cancelled} timeline={timeline} viewerDepartments={viewerDepartments}
-      banner={open ? undefined : <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. Booking-mu tetap bisa dilihat di bawah.</Notice></div>} />
+      banner={<>
+        <MinutesDue sessions={minutesDue} />
+        {!open && <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. Booking-mu tetap bisa dilihat di bawah.</Notice></div>}
+      </>} />
   </>;
 }
 

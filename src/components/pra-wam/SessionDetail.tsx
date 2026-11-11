@@ -6,6 +6,7 @@ import { bookingSessionLabel, sessionKindLabels, sessionStatusLabels, sessionWhe
 import { praWamPath } from "@/lib/routes";
 import { CheckInBlock } from "./CheckInStatus";
 import { DocumentList } from "./DocumentList";
+import { MinutesPanel } from "./MinutesPanel";
 import { RequestChange } from "./ScheduleRequests";
 import { SelfCheckIn } from "./SelfCheckIn";
 import { SessionActions } from "./SessionActions";
@@ -59,7 +60,7 @@ export function SessionDetail(props: Props) {
  * not set yet.
  */
 export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
-  const { view: { session, documents, storage, requests, rooms, viewer, attendance }, now, showTitle } = props;
+  const { view: { session, documents, storage, requests, rooms, viewer, attendance, minutes }, now, showTitle } = props;
   const { live, timed, status, canAsk, canUpload, byButton } = rights(props);
   const people = session.participants ?? [];
   return <div className={rows.detail}>
@@ -105,6 +106,9 @@ export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
       <p className={rows.groupLabel}>Materi</p>
       <DocumentList plain documents={documents} sessionId={session.id} storage={storage} viewerName={viewer.name} uploadLabel="Unggah materi" canUpload={canUpload} />
     </div>
+
+    {/* Notulen (11 Nov 2026): every meeting but a one-on-one or an Acara needs one once it is over. */}
+    {minutes && (minutes.needed || minutes.minutes || minutes.canWrite) && <MinutesPanel key={session.id} sessionId={session.id} initial={minutes} />}
 
     {(canAsk || requests.length > 0) && timed && <RequestChange sessionId={session.id} startsAt={session.startsAt!} endsAt={session.endsAt!} rooms={rooms} requests={requests} canAsk={canAsk} />}
   </div>;

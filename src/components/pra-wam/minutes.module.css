@@ -1,0 +1,41 @@
+/* Notulen (MoM) in Detail sesi (11 Nov 2026). */
+.panel { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-card); background: var(--pw-surface); }
+.head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.title { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-weight: 700; font-size: 15px; color: var(--pw-text); }
+.title svg { color: var(--pw-primary); }
+.label { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--pw-text); line-height: 1.5; }
+.saved { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--pw-success, var(--pw-primary)); font-size: 14px; font-weight: 600; }
+
+.actionList { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.actionItem { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; }
+.actionItem input[type="checkbox"] { flex: none; width: 20px; height: 20px; margin-top: 2px; accent-color: var(--pw-primary); }
+.bullet { flex: none; width: 20px; text-align: center; color: var(--pw-muted); }
+.actionText { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.actionText small { color: var(--pw-muted); font-size: 13px; }
+.done { color: var(--pw-muted); text-decoration: line-through; }
+
+.form { display: grid; gap: 14px; }
+.actionsField { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.actionRows { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.actionRow { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; padding: 10px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); }
+.actionRow > :first-child { grid-column: 1 / -1; }
+.actionRow > select, .actionRow > input[type="date"] { grid-column: 1; }
+.actionRow > .remove { grid-column: 2; grid-row: 2 / span 2; align-self: center; }
+.remove { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--pw-muted); cursor: pointer; }
+.remove:hover { background: var(--pw-surface-soft); color: var(--pw-text); }
+.buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+@media (min-width: 720px) {
+  .actionRow { grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) 10.5rem 44px; align-items: center; }
+  .actionRow > :first-child, .actionRow > select, .actionRow > input[type="date"], .actionRow > .remove { grid-column: auto; grid-row: auto; }
+}
+
+/* Agenda's reminder: meetings over without a MoM. */
+.due { display: grid; gap: 8px; margin-bottom: 16px; padding: 16px; border: 1px solid var(--pw-brass-line); border-radius: var(--pw-r-card); background: var(--pw-surface); }
+.count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--pw-brass-soft); box-shadow: inset 0 0 0 1px var(--pw-brass-line); color: var(--pw-on-brass-soft); font-size: 12px; font-weight: 700; }
+.dueLead { margin: 0; color: var(--pw-muted); font-size: 14px; }
+.dueList { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.dueRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 8px 4px; border-radius: var(--pw-r-control); color: var(--pw-text); text-decoration: none; }
+.dueRow:hover { background: var(--pw-surface-soft); }
+.dueGo { display: inline-flex; flex: none; align-items: center; gap: 2px; color: var(--pw-primary); font-weight: 600; font-size: 14px; }

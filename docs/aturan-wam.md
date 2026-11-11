@@ -121,6 +121,20 @@ lama dari Data karyawan, jadi **departemen tetap mengikuti Data karyawan**.
 - BOD tidak absen. Daftar hadir diberi label cara absen: Scan QR, Saya hadir · di kantor,
   Saya hadir · online, Dicatat panitia.
 
+## 7b. Notulen (MoM)
+
+Sejak 11 Nov 2026 (migrasi `202611110002_pw_session_minutes.sql`), aturan di `src/lib/pra-wam/minutes.ts`.
+
+| Hal | Aturan |
+| --- | --- |
+| Wajib | Setiap meeting **terbit** dengan jam, **kecuali one-on-one** (2 orang atau kurang) dan **Acara**, wajib punya MoM setelah selesai. Yang tidak wajib tetap boleh diisi. |
+| Siapa menulis | **Semua yang ikut meeting** (pemesan dan partisipan), juga panitia/admin. Yang menyimpan pertama tercatat sebagai pencatat (notetaker); perubahan berikutnya dicatat "diubah …". Bisa ditulis sejak meeting dimulai. |
+| Isi | Di aplikasi (bukan berkas): **Ringkasan**, **Keputusan**, dan **Tindak lanjut** (tugas, PIC dari peserta meeting, tenggat, selesai/belum). Lampiran tetap lewat Materi sesi. |
+| Siapa membaca | Yang ikut, panitia, BOD, admin, dan **HOD/Lead departemen pemesan** (untuk meeting dari booking). HOD/Lead itu bisa membuka detail meeting walau tidak ikut, hanya baca: absen, unggah, dan permintaan jadwal tetap hanya untuk peserta/panitia. |
+| Tindak lanjut | Dicentang selesai oleh yang ikut meeting atau **PIC-nya**. |
+| Tampil di | Detail sesi (panel Notulen); **Agenda**: kotak "Notulen belum diisi" berisi meeting milik orang itu yang sudah selesai tanpa MoM; **Jadwal sesi** (panitia dan BOD): kolom MoM sudah/belum; **Ringkasan** panitia: kartu "MoM belum masuk". |
+| Sebelum migrasi | Panel bilang menunggu pembaruan sistem; tidak ada yang dihitung "belum". |
+
 ## 7a. Notifikasi
 
 - Setiap notifikasi di aplikasi tersimpan di daftar Notifikasi (lonceng). Ke HP (Web Push) hanya

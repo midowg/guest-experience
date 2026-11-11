@@ -15,6 +15,8 @@ import { praWamPath } from "@/lib/routes";
 import { daySchedule } from "@/lib/server/pra-wam/appraisal";
 import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
 import { listSessions } from "@/lib/server/pra-wam/sessions";
+import { sessionsWithMinutes } from "@/lib/server/pra-wam/minutes";
+import { minutesStatus, minutesStatusLabels } from "@/lib/pra-wam/minutes";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import styles from "@/components/pra-wam/panitia.module.css";
 
@@ -41,7 +43,8 @@ export default async function SessionsPage({ searchParams }: { searchParams: Pro
   const { sessions, migrated } = await listSessions(member);
   const manage = managesSessions(member);
   const now = new Date();
-  if (!manage) return <BodSessions sessions={sessions} migrated={migrated} now={now} />;
+  if (!manage) return <BodSessions sessions={sessions} migrated={migrated} now={now}
+    minutes={await sessionsWithMinutes(sessions.filter(session => session.status === "terbit").map(session => session.id)).catch(() => null)} />;
 
   const asked = await searchParams;
   const view = asked.view === "linimasa" ? "linimasa" : "daftar";
@@ -54,12 +57,15 @@ export default async function SessionsPage({ searchParams }: { searchParams: Pro
       actions={migrated ? <ConsoleButtonLink variant="primary" href={praWamPath.newSession} icon={<Plus size={18} aria-hidden />}>Buat sesi</ConsoleButtonLink> : undefined} />
     <PageTabs label="Tampilan jadwal" tabs={tabs} current={view} />
     {!migrated && <Notice tone="warning">Sesi menunggu migrasi 202611040004_pra_wam_sessions.sql.</Notice>}
-    {migrated && (view === "daftar" ? <SessionList sessions={sessions} now={now} /> : <Timeline member={member} sessions={sessions} asked={asked} now={now} />)}
+    {migrated && (view === "daftar" ? <SessionList sessions={sessions} now={now} minutes={await sessionsWithMinutes(sessions.filter(session => session.status === "terbit").map(session => session.id)).catch(() => null)} /> : <Timeline member={member} sessions={sessions} asked={asked} now={now} />)}
   </>;
 }
 
-/** Daftar: the same groups and actions as before, as console tables. */
-function SessionList({ sessions, now }: { sessions: Session[]; now: Date }) {
+/**
+ * Daftar: the same groups and actions as before, as console tables. A published meeting also
+ * says where its MoM stands (11 Nov 2026); `minutes` is null before migration 202611110002.
+ */
+function SessionList({ sessions, now, minutes }: { sessions: Session[]; now: Date; minutes: Set<string> | null }) {
   return <>{groups.map(group => {
     const items = sessions.filter(session => session.status === group.status);
     if (!items.length && !group.empty) return null;
@@ -67,7 +73,7 @@ function SessionList({ sessions, now }: { sessions: Session[]; now: Date }) {
       <SectionToolbar title={<span id={`grup-${group.status}`}>{group.title}</span>} count={items.length} />
       {items.length === 0 ? <p className={styles.empty}>{group.empty}</p> : <div className={cs.tableWrap}>
         <table className={cs.table}>
-          <thead><tr><th>Sesi</th><th>Waktu</th><th>Tempat</th><th>Peserta</th><th>Status</th><th>Tindakan</th></tr></thead>
+          <thead><tr><th>Sesi</th><th>Waktu</th><th>Tempat</th><th>Peserta</th><th>Status</th><th>MoM</th><th>Tindakan</th></tr></thead>
           <tbody>{items.map(session => {
             const status = readiness(session, now);
             return <tr key={session.id}>
@@ -76,6 +82,7 @@ function SessionList({ sessions, now }: { sessions: Session[]; now: Date }) {
               <td>{sessionWhere(session)}</td>
               <td>{session.participantCount}</td>
               <td><Pill tone={status.tone}>{status.label}</Pill></td>
+              <td><MomCell session={session} minutes={minutes} now={now} /></td>
               <td><div className={styles.rowActions}>
                 <ConsoleButtonLink href={praWamPath.editSession(session.id)}>{session.booking ? "Lihat" : session.status === "draf" ? "Atur" : "Ubah"}</ConsoleButtonLink>
                 {session.status === "terbit" && <ConsoleButtonLink href={praWamPath.sessionAttendance(session.id)}>QR dan hadir</ConsoleButtonLink>}
@@ -133,17 +140,28 @@ async function Timeline({ member, sessions, asked, now }: { member: Member; sess
   </>;
 }
 
-/** A BOD reads the list as before, in the BOD's own frame. */
-function BodSessions({ sessions, migrated, now }: { sessions: Session[]; migrated: boolean; now: Date }) {
+/** Where a published meeting's MoM stands, for the tables; a dash when it does not need one yet. */
+function MomCell({ session, minutes, now, app = false }: { session: Session; minutes: Set<string> | null; now: Date; app?: boolean }) {
+  if (!minutes || session.status !== "terbit") return <>—</>;
+  const status = minutesStatus(session, minutes.has(session.id), now);
+  if (status === "tidak-perlu" || status === "belum-waktunya") return <>—</>;
+  // The BOD's frame is the app's, not the console's: its own pills there.
+  return app ? <span className={`${base.pill} ${status === "sudah" ? base.pillLine : base.pillBrass}`}>{minutesStatusLabels[status]}</span>
+    : <Pill tone={status === "sudah" ? "ok" : "warn"}>{minutesStatusLabels[status]}</Pill>;
+}
+
+/** A BOD reads the list as before, in the BOD's own frame, with where each MoM stands (11 Nov 2026). */
+function BodSessions({ sessions, migrated, now, minutes }: { sessions: Session[]; migrated: boolean; now: Date; minutes: Set<string> | null }) {
   const table = (items: Session[]) => <div className={base.tableWrap}>
     <table className={base.table}>
-      <thead><tr><th>Sesi</th><th>Waktu</th><th>Tempat</th><th>Peserta</th><th>Status</th><th>Tindakan</th></tr></thead>
+      <thead><tr><th>Sesi</th><th>Waktu</th><th>Tempat</th><th>Peserta</th><th>Status</th><th>MoM</th><th>Tindakan</th></tr></thead>
       <tbody>{items.map(session => <tr key={session.id}>
         <td><strong><a href={praWamPath.managedSession(session.id)}>{session.title}</a></strong><small>{sessionKindLabels[session.kind]}</small>{session.booking && <small>{bookingSessionLabel(session)}</small>}</td>
         <td>{sessionWhen(session)}</td>
         <td>{sessionWhere(session)}</td>
         <td>{session.participantCount}</td>
         <td><SessionStatusPill session={session} now={now} /></td>
+        <td><MomCell session={session} minutes={minutes} now={now} app /></td>
         <td><div className={styles.actionsCell}>
           {session.status === "terbit" && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}>QR dan hadir</a>}
           <a className="button button--secondary" href={praWamPath.managedSession(session.id)}>Lihat</a>

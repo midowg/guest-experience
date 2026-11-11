@@ -9,6 +9,7 @@ import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listRooms, myBookings } from "./appraisal";
 import { listDocuments } from "./documents";
+import { minutesView } from "./minutes";
 import { proofColumnMissing } from "./attendance";
 import { myRequests } from "./requests";
 import type { Member } from "./session";
@@ -125,14 +126,15 @@ export async function sessionView(id: string, member: Member, from: "app" | "kel
     const waiting = await waitingSession(id, member);
     return waiting ? { kind: "menunggu", session: waiting } : null;
   }
-  const [{ documents, storage }, attendance, requests, rooms] = await Promise.all([
+  const [{ documents, storage }, attendance, requests, rooms, minutes] = await Promise.all([
     listDocuments(member, session.id).catch(() => ({ documents: [], migrated: false, storage: false })),
     session.isParticipant ? myAttendance(session.id, member) : Promise.resolve({ ready: false, checkedInAt: null, method: null, selfReady: false }),
     session.isParticipant ? myRequests(session.id, member) : Promise.resolve([]),
     listRooms(),
+    session.status === "terbit" ? minutesView(session, member).catch(() => null) : Promise.resolve(null),
   ]);
   return {
-    kind: "sesi", session, documents, storage, attendance, requests, rooms,
+    kind: "sesi", session, documents, storage, attendance, requests, rooms, minutes,
     viewer: {
       name: member.name,
       manage: from === "kelola" && managesSessions(member),

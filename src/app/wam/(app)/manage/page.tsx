@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { CalendarClock, CalendarDays, ChevronRight, FileText, Megaphone, Plus, QrCode, UserCheck } from "lucide-react";
+import { CalendarClock, CalendarDays, ChevronRight, FileText, Megaphone, NotebookPen, Plus, QrCode, UserCheck } from "lucide-react";
 import { Avatar, Card, ConsoleButtonLink, DayTimeline, ListRow, PageHeader, Pill, RowList, StatCard, StatRow } from "@/components/console";
 import { ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { BodSummary } from "@/components/pra-wam/BodSummary";
@@ -22,6 +22,7 @@ import { participationOf } from "@/lib/server/pra-wam/recap";
 import { allRequests } from "@/lib/server/pra-wam/requests";
 import { requireMemberPage, type Member } from "@/lib/server/pra-wam/session";
 import { listSessions } from "@/lib/server/pra-wam/sessions";
+import { missingMinutes } from "@/lib/server/pra-wam/minutes";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import styles from "@/components/pra-wam/panitia.module.css";
 
@@ -68,6 +69,8 @@ async function PanitiaSummary({ member, data, now }: { member: Member; data: Ove
     listSessions(member), daySchedule(today, member).catch(() => null), currentPhase(today).catch(() => null),
     allRequests(member).catch(() => null), sentAnnouncements(member).catch(() => null),
   ]);
+  // Meetings over without a MoM (11 Nov 2026).
+  const mom = await missingMinutes(sessions, now).catch(() => ({ migrated: false, sessions: [] }));
   const todays = sessions.filter(session => session.status === "terbit" && session.startsAt && wibDate(session.startsAt) === today);
   const live = todays.filter(session => session.startsAt && session.endsAt && new Date(session.startsAt) <= now && now < new Date(session.endsAt)).length;
   const coming = todays.filter(session => session.startsAt && new Date(session.startsAt) > now).sort((a, b) => a.startsAt!.localeCompare(b.startsAt!));
@@ -100,6 +103,8 @@ async function PanitiaSummary({ member, data, now }: { member: Member; data: Ove
         note={data.openRequests ? "Menunggu jawaban panitia" : "Tidak ada yang menunggu"} />
       <StatCard label="Hadir hari ini" value={data.todayExpected ? `${data.todayPresent} / ${data.todayExpected}` : "—"} tone={data.todayExpected ? "ok" : undefined} icon={<UserCheck size={18} />}
         note={data.todayExpected ? "Peserta sesi hari ini yang sudah absen" : "Belum ada peserta yang diharapkan"} />
+      <StatCard label="MoM belum masuk" value={mom.migrated ? mom.sessions.length : "—"} tone={mom.sessions.length ? "warn" : undefined} icon={<NotebookPen size={18} />} href={praWamPath.sessions}
+        note={!mom.migrated ? "Menunggu migrasi notulen" : mom.sessions.length ? `Terakhir: ${mom.sessions[0].title}` : "Semua meeting yang selesai sudah ada notulennya"} />
       <StatCard label="Pengumuman" value={announcements?.items.length ?? "—"} icon={<Megaphone size={18} />} href={praWamPath.announcements}
         note={latest ? `Terakhir: ${latest.read} dari ${latest.recipients} sudah membaca` : "Belum ada yang dikirim"} />
     </StatRow>

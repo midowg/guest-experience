@@ -10,7 +10,7 @@ import { databaseError } from "../http";
 import { isR2Configured, removeObjects } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
 import { notifySession } from "./announcements";
-import { listPeople, listRooms } from "./appraisal";
+import { listPeople, listRooms, memberDepartments } from "./appraisal";
 import { withBookingLink } from "./booking-sessions";
 import { listEvents } from "./events";
 import { type Member } from "./session";
@@ -136,11 +136,24 @@ export async function timelineItems(viewer: Member | null): Promise<{ items: Tim
   };
 }
 
+/**
+ * The HOD or Lead of the department of the person who booked it (11 Nov 2026): they read the
+ * meeting and its MoM, without being in it.
+ */
+async function headOfBooker(session: Session, viewer: Member): Promise<boolean> {
+  if (!session.booking?.bookedBy.id) return false;
+  const { hodStanding } = await import("./hod");
+  const [standing, departments] = await Promise.all([hodStanding(viewer).catch(() => null), memberDepartments(session.booking.bookedBy.id).catch(() => [] as string[])]);
+  if (!standing?.isHod || !standing.unitIds.length) return false;
+  const led = new Set(standing.unitIds.map(name => name.trim().toLowerCase()));
+  return departments.some(name => led.has(name.trim().toLowerCase()));
+}
+
 export async function getSession(id: string, viewer: Member): Promise<Session> {
   const { data, error } = await withBookingLink(withLink => createPrivilegedClient().from("pw_sessions").select(columns(withLink)).eq("id", id).maybeSingle());
   if (error) fail(error);
   const [session] = data ? await shape([data as unknown as SessionRow], viewer) : [];
-  if (!session || (!seesAllSessions(viewer) && !(session.status === "terbit" && session.isParticipant))) throw new ServiceError(404, "Sesi tidak ditemukan.");
+  if (!session || (!seesAllSessions(viewer) && !(session.status === "terbit" && (session.isParticipant || await headOfBooker(session, viewer))))) throw new ServiceError(404, "Sesi tidak ditemukan.");
   return session;
 }
 

@@ -1,3 +1,4 @@
+import type { MinutesView } from "./minutes";
 import { CHECK_IN_MARGIN_MINUTES, checkInWindow, ownMethodLabels, windowState, type AttendanceMethod } from "./attendance";
 import { clockLabel, dayLabel, wibDate, wibTime, type Person, type Room } from "./appraisal";
 import type { PraWamDocument } from "./documents";
@@ -133,5 +134,7 @@ export type SessionView =
     kind: "sesi"; session: Session; documents: PraWamDocument[]; storage: boolean;
     attendance: MyAttendance; requests: ScheduleRequest[]; rooms: Room[];
     viewer: { name: string; manage: boolean; staff: boolean };
+    /** The meeting's MoM (11 Nov 2026); null where it is not shown (a draft or a cancelled session). */
+    minutes?: MinutesView | null;
   }
   | { kind: "menunggu"; session: Pick<Session, "id" | "title" | "status" | "planFrom" | "planTo" | "startsAt" | "endsAt"> };
