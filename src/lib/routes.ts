@@ -496,8 +496,8 @@ export const tvApi = {
 };
 /** Admin WAM → TV Announcement (any admin). */
 const TV_ADMIN_API = "/api/admin/wam/tv";
-/** The Werkudara welcome sign's background (from "Welcome Sign Template.pptx"), a file of the site: public/tv. */
-export const TV_WELCOME_ART = "/tv/welcome-werkudara.webp";
+/** The Werkudara welcome sign's background (from "Welcome Sign Template.pptx"), a file of the site, in public/wam: a file under public/tv is answered by the TV page (/tv/{slug}) instead. */
+export const TV_WELCOME_ART = "/wam/tv-welcome-werkudara.webp";
 export const praWamTvApi = {
   /** GET: the TVs, the pictures and the settings. */
   list: TV_ADMIN_API,
