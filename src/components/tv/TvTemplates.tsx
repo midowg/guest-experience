@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Clock, MapPin } from "lucide-react";
 import { fit, fitText, TV_VIDEO_MOST_MS, TV_VIDEO_START_MS, youtubeEmbed, type TvBirthday, type TvNote, type TvTimelineEntry, type TvWelcome, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
-import { TV_MARK, TV_WELCOME_ART } from "@/lib/routes";
+import { TV_BIRTHDAY_CARD, TV_BIRTHDAY_FLOWERS, TV_MARK, TV_WELCOME_ART } from "@/lib/routes";
 import "@fontsource/playfair-display/800.css";
 import "@fontsource/cormorant-garamond/600-italic.css";
 import "@fontsource/cormorant-garamond/700-italic.css";
@@ -191,54 +191,32 @@ export function VideoSlide({ video, file, title, loop, onEnd }: { video: string;
   </section>;
 }
 
-/** A sprig of small white blossoms, drawn here (the card's own flowers are stock pictures of its design tool). */
-function Sprig({ className }: { className: string }) {
-  const blossom = (x: number, y: number, size: number, key: number) => <g key={key} transform={`translate(${x} ${y}) scale(${size})`}>
-    {[0, 72, 144, 216, 288].map(turn => <ellipse key={turn} cx="0" cy="-5.2" rx="3.4" ry="5.2" fill="#fdfcf8" stroke="#e4dfd2" strokeWidth=".5" transform={`rotate(${turn})`} />)}
-    <circle r="1.9" fill="#e9c452" />
-  </g>;
-  return <svg className={className} viewBox="0 0 120 90" aria-hidden="true" focusable="false">
-    <path d="M6 86 C30 70 44 52 62 40 C78 30 96 26 114 12" fill="none" stroke="#7d6a4a" strokeWidth="1.6" strokeLinecap="round" />
-    <path d="M62 40 C66 30 74 24 84 22 M44 54 C40 44 42 36 48 30" fill="none" stroke="#7d6a4a" strokeWidth="1.2" strokeLinecap="round" />
-    <path d="M114 12 C108 8 100 9 96 14 C102 18 110 17 114 12 Z" fill="#8ea05c" />
-    {[[30, 68, 1.15], [50, 28, 1], [66, 44, 1.2], [86, 20, .95], [96, 30, 1.05], [44, 50, .85], [76, 34, .8]].map(([x, y, size], index) => blossom(x, y, size, index))}
-  </svg>;
-}
-
 /**
- * A birthday greeting, after the team's card: light paper, Werkudara's mark, the name heavy with
- * "Birthday" in blue under it and the day and month beside it, the person in a grey frame on a
- * blue panel, "Happy Birthday …" and the wish in italics, the foot. A photo that is the person
- * alone (`cut`) stands in front of the frame, the head above its edge, as on the card; any other
- * photo fills the blue panel. Lying on its side the frame is on the left and the words on the
- * right; upright (tv.module.css) it is the card's own order. Without a photo the panel shows the mark.
+ * A birthday greeting: the team's own card. The card's picture (blank: paper, mark, "Birthday",
+ * the grey frame with its blue panel, the flowers, the foot) is shown whole, upright, in the
+ * middle of any screen on the card's paper colour; on it, where the card has them, the name, the
+ * day and month, the person, "Happy Birthday …" and the wish. A photo that is the person alone
+ * (`cut`) stands on the panel's lower edge with the head above the frame, behind the card's own
+ * flowers; any other photo fills the blue panel. Everything is sized by the card's height, so it
+ * sits the same on every TV.
  */
 export function BirthdaySlide({ birthday }: { birthday: TvBirthday }) {
-  // A long name is set smaller, so it stays on two lines.
-  const size = birthday.name.length > 30 ? "kecil" : birthday.name.length > 18 ? "sedang" : "besar";
-  const mark = { maskImage: `url(${TV_MARK})`, WebkitMaskImage: `url(${TV_MARK})` };
+  // A long name is set smaller, so it stays on two lines beside the date.
+  const size = birthday.name.length > 28 ? "kecil" : birthday.name.length > 18 ? "sedang" : "besar";
   return <section className={`${css.slide} ${css.bday}`} aria-label={`Ucapan ulang tahun untuk ${birthday.name}`}>
-    <i className={css.bdayMark} style={mark} aria-hidden="true" />
-    <div className={css.bdayName}>
-      <div><h1 data-size={size}>{birthday.name}</h1><span className={css.bdayScript} aria-hidden="true">Birthday</span></div>
-      {birthday.day && <p><strong>{birthday.day}</strong><span>{birthday.month}</span></p>}
-    </div>
-    <div className={css.bdayPhoto} data-cut={birthday.cut}>
-      <div className={css.bdayFrame}>
-        <div className={css.bdayPanel}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {birthday.photo && !birthday.cut ? <img src={birthday.photo} alt="" referrerPolicy="no-referrer" /> : !birthday.photo && <i style={mark} aria-hidden="true" />}
-        </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {birthday.photo && birthday.cut && <img className={css.bdayPerson} src={birthday.photo} alt="" referrerPolicy="no-referrer" />}
-        <Sprig className={css.bdaySprigLeft} />
-        <Sprig className={css.bdaySprigRight} />
+    <div className={css.bdayCard}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className={css.bdayArt} src={TV_BIRTHDAY_CARD} alt="" />
+      <h1 className={css.bdayName} data-size={size}>{birthday.name}</h1>
+      {birthday.day && <p className={css.bdayDate}><strong>{birthday.day}</strong><span>{birthday.month}</span></p>}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {birthday.photo && <img className={birthday.cut ? css.bdayPerson : css.bdayPhoto} src={birthday.photo} alt="" referrerPolicy="no-referrer" />}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {birthday.photo && birthday.cut && <img className={css.bdayArt} src={TV_BIRTHDAY_FLOWERS} alt="" />}
+      <div className={css.bdayWish}>
+        <h2>Happy Birthday {birthday.call}</h2>
+        <p>{birthday.wish}</p>
       </div>
     </div>
-    <div className={css.bdayWish}>
-      <h2>Happy Birthday {birthday.call}</h2>
-      <p>{birthday.wish}</p>
-    </div>
-    <p className={css.bdayFoot}><strong>Werkudara</strong> Group | werkudara.com</p>
   </section>;
 }

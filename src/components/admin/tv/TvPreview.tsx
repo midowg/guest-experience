@@ -1,5 +1,5 @@
 import { birthdayDate, youtubeThumb, type TvItemKind, type TvWelcomeDesign } from "@/lib/pra-wam/tv";
-import { TV_MARK, TV_WELCOME_ART } from "@/lib/routes";
+import { TV_BIRTHDAY_CARD, TV_WELCOME_ART } from "@/lib/routes";
 
 /*
  * What a kind of playlist row looks like on a TV, at a glance: a small drawing of the slide
@@ -88,20 +88,19 @@ function Shapes({ kind, title, body, design, call, date, photo }: { kind: TvItem
     {body ? <text x="80" y="55" textAnchor="middle" fontSize="6.5" fill={ink.muted}>{short(body, 40)}</text>
       : <><rect x="40" y="50" width="80" height="3" rx="1.5" fill={ink.muted} /><rect x="52" y="57" width="56" height="3" rx="1.5" fill={ink.muted} /></>}
   </>;
-  // A birthday greeting: the card on its side, the photo in its white frame on the left.
+  // A birthday greeting: the team's card, upright in the middle, with the name, the date and the photo where the TV puts them.
   if (kind === "ultah") {
     const on = birthdayDate(date);
+    // The card is 1131 × 1600: 63.6 wide at the drawing's full height, starting 48.2 from the left.
     return <>
-      <rect width="160" height="90" fill="#f1f1ef" />
-      <rect x="14" y="18" width="50" height="62" fill="#d9d9d9" />
-      <rect x="19" y="25" width="40" height="45" fill="#0b2f9f" />
-      {photo && <image href={photo} x="14" y="8" width="50" height="62" preserveAspectRatio="xMidYMax meet" />}
-      <image href={TV_MARK} x="76" y="10" width="9" height="10" />
-      <text x="76" y="37" fontSize={title.length > 16 ? 8 : 10} fontWeight="700" fill="#16130f">{short(title || "Nama lengkap", 22)}</text>
-      {on.day && <text x="148" y="37" textAnchor="end" fontSize="10" fontWeight="700" fill="#16130f">{on.day}</text>}
-      {on.day && <text x="148" y="44" textAnchor="end" fontSize="5" fill="#16130f">{on.month}</text>}
-      <text x="76" y="55" fontSize="6" fontStyle="italic" fontWeight="700" fill="#16130f">{short(`Happy Birthday ${call || title || "…"}`, 30)}</text>
-      <text x="76" y="63" fontSize="4.2" fontStyle="italic" fill="#4a443a">{short(body, 46)}</text>
+      <rect width="160" height="90" fill="#f0f0f0" />
+      <image href={TV_BIRTHDAY_CARD} x="48.2" y="0" width="63.6" height="90" />
+      <text x="61.6" y="20.2" fontSize={title.length > 14 ? 3.6 : 4.8} fontWeight="800" fill="#0d0d0f">{short(title || "Nama lengkap", 20)}</text>
+      {on.day && <text x="95.6" y="16" textAnchor="middle" fontSize="5" fontWeight="800" fill="#0d0d0f">{on.day}</text>}
+      {on.day && <text x="95.6" y="19.6" textAnchor="middle" fontSize="2.4" fontWeight="700" fill="#0d0d0f">{on.month}</text>}
+      {photo && <image href={photo} x="62" y="23" width="36" height="42" preserveAspectRatio="xMidYMax meet" />}
+      <text x="80" y="75" textAnchor="middle" fontSize="2.3" fontStyle="italic" fontWeight="700" fill="#0d0d0f">{short(`Happy Birthday ${call || title || "…"}`, 34)}</text>
+      <text x="80" y="78" textAnchor="middle" fontSize="1.9" fontStyle="italic" fill="#3b3b40">{short(body, 60)}</text>
     </>;
   }
   // A video: its own still from YouTube (`body` is the video's id), with the play mark over it.

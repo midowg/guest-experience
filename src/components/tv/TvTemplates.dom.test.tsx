@@ -98,24 +98,21 @@ describe("the birthday greeting", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Happy Birthday Pak Contoh" })).toBeTruthy();
     expect(container.textContent).toContain("20SEP");
     expect(container.textContent).toContain("Wishing you a year ahead");
-    expect(container.textContent).toContain("Werkudara Group | werkudara.com");
-    expect(container.querySelector("img")).toBeNull();
+    // The card's own picture carries the mark, "Birthday", the frame, the flowers and the foot.
+    expect([...container.querySelectorAll("img")].map(image => image.getAttribute("src"))).toEqual(["/wam/tv-bday-card.webp"]);
     keep("ultah", container);
   });
 
   it("shows the photo in the frame, and leaves the date out when there is none", () => {
     const { container } = render(<BirthdaySlide birthday={{ ...birthday, day: "", month: "", photo: "/foto.webp" }} />);
-    expect(container.querySelector("img")?.getAttribute("src")).toBe("/foto.webp");
+    expect([...container.querySelectorAll("img")].map(image => image.getAttribute("src"))).toEqual(["/wam/tv-bday-card.webp", "/foto.webp"]);
     expect(container.textContent).not.toContain("SEP");
-    expect(container.querySelector("[data-cut]")?.getAttribute("data-cut")).toBe("false");
   });
 
-  it("stands a cut-out person in front of the frame instead of inside the panel", () => {
+  it("stands a cut-out person in front of the frame, behind the card's flowers", () => {
     const { container } = render(<BirthdaySlide birthday={{ ...birthday, photo: "uji/orang.webp", cut: true }} />);
-    expect(container.querySelector("[data-cut]")?.getAttribute("data-cut")).toBe("true");
-    const person = container.querySelector("img") as HTMLImageElement;
-    expect(container.querySelector("[class*=bdayPanel] img")).toBeNull();
-    expect(person.getAttribute("src")).toBe("uji/orang.webp");
+    // The card, the person, then the card's flowers over the person.
+    expect([...container.querySelectorAll("img")].map(image => image.getAttribute("src"))).toEqual(["/wam/tv-bday-card.webp", "uji/orang.webp", "/wam/tv-bday-flowers.webp"]);
     keep("ultah-potong", container);
   });
 });
