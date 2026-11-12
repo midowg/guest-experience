@@ -106,16 +106,20 @@ export async function withChatInfo(groups: readonly TelegramGroup[], now = Date.
     const kept = chats.get(group.chatId);
     if (kept && now - kept.at < CHAT_FRESH_MS) return { ...group, title: kept.title, inviteLink: kept.link };
     if (group.botStatus === "dikeluarkan") return { ...group, inviteLink: null };
-    const chat = await telegramCall<{ title?: string; invite_link?: string }>(config, "getChat", { chat_id: group.chatId }).catch(() => null);
+    const [chat, status] = await Promise.all([
+      telegramCall<{ title?: string; invite_link?: string; is_forum?: boolean }>(config, "getChat", { chat_id: group.chatId }).catch(() => null),
+      // The bot's standing as it is now: a promotion the webhook missed (the group moved to a supergroup meanwhile) is caught here.
+      botStatusIn(config, Number(group.chatId)),
+    ]);
     if (!chat) return { ...group, inviteLink: kept?.link ?? null };
     let link = chat.invite_link ?? null;
-    if (!link && group.botStatus === "admin") link = await telegramCall<string>(config, "exportChatInviteLink", { chat_id: group.chatId }).catch(() => null);
+    if (!link && status === "admin") link = await telegramCall<string>(config, "exportChatInviteLink", { chat_id: group.chatId }).catch(() => null);
     const title = chat.title?.trim() || group.title;
-    if (title !== group.title) {
-      await createPrivilegedClient().from("pw_telegram_groups").update({ title, updated_at: new Date(now).toISOString() }).eq("chat_id", group.chatId);
+    if (title !== group.title || status !== group.botStatus) {
+      await createPrivilegedClient().from("pw_telegram_groups").update({ title, bot_status: status, updated_at: new Date(now).toISOString() }).eq("chat_id", group.chatId);
     }
     chats.set(group.chatId, { at: now, title, link });
-    return { ...group, title, inviteLink: link };
+    return { ...group, title, botStatus: status, inviteLink: link };
   }));
 }
 
