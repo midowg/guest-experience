@@ -4,11 +4,12 @@ import { clockLabel, wibDate, wibInstant, wibTime } from "@/lib/pra-wam/appraisa
 import type { RoomUse } from "@/lib/pra-wam/sessions";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import {
-  isTemplateKind, itemShows, looksLikeTvSlug, isVideoFile, sniffVideo, TV_BIRTHDAY_WISH, takeoverOn, takeoverRuns, tvVideoKey, welcomeDesign, youtubeId, TV_WELCOME_GREETING, TV_WELCOMES_MOST, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
+  isTemplateKind, itemShows, looksLikeTvSlug, isVideoFile, sniffVideo, TV_BIRTHDAY_WISH, TV_MEETING_PHOTOS, takeoverOn, takeoverRuns, tvVideoKey, welcomeDesign, youtubeId, TV_WELCOME_GREETING, TV_WELCOMES_MOST, TV_DEFAULT_LOOK, TV_DEFAULT_SETTINGS, TV_IMAGE_PREFIX, tvImageKey, tvLimits, tvModes, tvQrPositions, weekOf,
   type TvDay, type TvFeed, type TvItemKind, type TvItemSchedule, type TvNote, type TvPlayItem, type TvRoom, type TvSettings, type TvSlideStart, type TvTakeover, type TvTimelineEntry, type TvVideoStart, type TvWelcome, type TvWelcomeDesign,
 } from "@/lib/pra-wam/tv";
 import { hashTvKey, looksLikeTvKey } from "@/lib/pra-wam/tv-key";
-import { tvVideoApi } from "@/lib/routes";
+import { tvMeetingPhotoApi, tvVideoApi } from "@/lib/routes";
+import { MOM_CABINET_MIGRATION } from "@/lib/pra-wam/minutes-photos";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { isR2Configured, presignDownload, presignUpload, readObject, removeObjects, uploadedStart, verifyUpload } from "../r2";
@@ -299,9 +300,12 @@ export async function createItem(input: { kind: Exclude<TvItemKind, "gambar">; t
     return;
   }
   const { error } = await createPrivilegedClient().from("pw_tv_items")
-    .insert({ kind: input.kind, title: typed ? input.title : "", body: typed ? input.body : "", seconds: input.kind === "teks" ? 10 : typed || input.kind === "sambutan" ? 15 : 20, sort_order: nextOrder(items) });
-  // The two welcome kinds are not allowed by the table before their migration.
-  if (error) { if (error.code === "23514") throw waitingForWelcome(); databaseError(error); }
+    .insert({ kind: input.kind, title: typed ? input.title : "", body: typed ? input.body : "", seconds: input.kind === "teks" ? 10 : input.kind === "foto_meeting" ? 8 : typed || input.kind === "sambutan" ? 15 : 20, sort_order: nextOrder(items) });
+  // The two welcome kinds, and Foto meeting, are not allowed by the table before their migrations.
+  if (error) {
+    if (error.code === "23514") throw input.kind === "foto_meeting" ? new ServiceError(503, `Foto meeting menunggu migrasi ${MOM_CABINET_MIGRATION}.`) : waitingForWelcome();
+    databaseError(error);
+  }
   invalidate();
 }
 
@@ -581,6 +585,16 @@ export async function orderSlides(ids: readonly string[]): Promise<void> {
   invalidate();
 }
 
+/** A meeting photo's bytes for a TV, or null: only one the "Foto meeting" template plays now. */
+export async function meetingPhotoImage(photoId: string, now = new Date()): Promise<{ bytes: Uint8Array; type: string } | null> {
+  if (!isR2Configured()) return null;
+  const { meetingPhotos } = await content(now);
+  if (!meetingPhotos.some(photo => photo.id === photoId)) return null;
+  const { data, error } = await createPrivilegedClient().from("pw_session_minute_photos").select("file_key").eq("id", photoId).maybeSingle();
+  if (error || !data) return null;
+  return readObject(data.file_key as string);
+}
+
 /** One picture's bytes, or null. A TV only gets pictures that are in the loop. */
 export async function slideImage(id: string, onlyActive: boolean): Promise<{ bytes: Uint8Array; type: string } | null> {
   if (!isR2Configured()) return null;
@@ -670,10 +684,37 @@ async function boardNotes(now: Date): Promise<TvNote[]> {
   } catch { return []; }
 }
 
+/**
+ * The "foto_meeting" template's photos: those of the MoMs sent in the last 30 days that did not stay
+ * out of Telegram, newest first, at most twelve, each named by its meeting and day. None when they
+ * cannot be read (before the MoM migrations).
+ */
+async function boardMeetingPhotos(now: Date): Promise<{ id: string; caption: string }[]> {
+  try {
+    const client = createPrivilegedClient();
+    const since = new Date(now.getTime() - TV_MEETING_PHOTOS.days * 86_400_000).toISOString();
+    const { data: sent, error } = await client.from("pw_session_minutes").select("session_id")
+      .not("sent_at", "is", null).gte("sent_at", since).eq("telegram_off", false).order("sent_at", { ascending: false }).limit(60);
+    if (error || !sent?.length) return [];
+    const ids = sent.map(row => row.session_id as string);
+    const [{ data: photos, error: photoError }, { data: sessions }] = await Promise.all([
+      client.from("pw_session_minute_photos").select("id,session_id,created_at").in("session_id", ids).order("created_at", { ascending: false }).limit(TV_MEETING_PHOTOS.most),
+      client.from("pw_sessions").select("id,title,starts_at").in("id", ids),
+    ]);
+    if (photoError || !photos?.length) return [];
+    const dayMonthOf = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", timeZone: "Asia/Jakarta" });
+    return photos.map(photo => {
+      const session = (sessions ?? []).find(row => row.id === photo.session_id);
+      const day = session?.starts_at ? ` · ${dayMonthOf.format(new Date(session.starts_at as string)).replace(/\.$/, "")}` : "";
+      return { id: photo.id as string, caption: session ? `${session.title as string}${day}` : "Foto meeting" };
+    });
+  } catch { return []; }
+}
+
 type Content = {
   date: string; days: TvDay[]; slides: SlideRow[]; settings: TvSettings; look: WamLook; countdown: Countdown | null;
   items: ItemRow[] | null; allSlides: SlideRow[]; timeline: TvTimelineEntry[]; notes: TvNote[];
-  welcomes: TvWelcome[]; takeover: TvTakeover | null;
+  welcomes: TvWelcome[]; takeover: TvTakeover | null; meetingPhotos: { id: string; caption: string }[];
 };
 let kept: { at: number; content: Content } | null = null;
 const invalidate = () => { kept = null; };
@@ -686,14 +727,16 @@ async function content(now: Date): Promise<Content> {
   const welcomes = items?.some(item => item.kind === "sambutan" && (item.active || item.id === takeover?.itemId)) ? await boardWelcomes(date) : [];
   // The announcements are read only when the playlist has their template.
   const notes = items?.some(item => item.kind === "pengumuman" && (item.active || item.id === takeover?.itemId)) ? await boardNotes(now) : [];
-  const fresh = { date, days, slides: slides.filter(slide => slide.active), settings, look, countdown, items, allSlides: slides, timeline, notes, welcomes, takeover };
+  // The meeting photos are read only when the playlist has their template.
+  const meetingPhotos = items?.some(item => item.kind === "foto_meeting" && (item.active || item.id === takeover?.itemId)) ? await boardMeetingPhotos(now) : [];
+  const fresh = { date, days, slides: slides.filter(slide => slide.active), settings, look, countdown, items, allSlides: slides, timeline, notes, welcomes, takeover, meetingPhotos };
   kept = { at: now.getTime(), content: fresh };
   return fresh;
 }
 
 /** What plays now; `imageSrc` gives each picture's address (a TV's goes through its key, the admin's through the admin API). */
 export async function tvFeed(imageSrc: (slideId: string) => string, now = new Date(), screen: { id: string; reloadAt: string | null; playsVideo?: boolean } | null = null): Promise<TvFeed> {
-  const { date, days, slides, settings, look, countdown, items, allSlides, timeline, notes, welcomes, takeover } = await content(now);
+  const { date, days, slides, settings, look, countdown, items, allSlides, timeline, notes, welcomes, takeover, meetingPhotos } = await content(now);
   // The playlist, narrowed to this TV, today and this time of day. A picture's row carries its picture's id, so its address is the picture's.
   const at = { date, time: wibTime(now.toISOString()), screenId: screen?.id ?? null };
   // Tayangkan sekarang: while one row takes this TV over, it plays that row alone, whatever the row's own schedule says.
@@ -712,6 +755,7 @@ export async function tvFeed(imageSrc: (slideId: string) => string, now = new Da
     ...(playlist?.some(item => item.kind === "timeline") ? { timeline } : {}),
     ...(playlist?.some(item => item.kind === "pengumuman") ? { notes } : {}),
     ...(playlist?.some(item => item.kind === "sambutan") ? { welcomes } : {}),
+    ...(playlist?.some(item => item.kind === "foto_meeting") ? { meetingPhotos: meetingPhotos.map(photo => ({ ...photo, src: tvMeetingPhotoApi(photo.id) })) } : {}),
     ...(taken ? { takeover: taken.id } : {}),
     ...(screen ? { reloadAt: screen.reloadAt } : {}),
   };

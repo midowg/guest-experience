@@ -533,6 +533,8 @@ export const TV_BIRTHDAY_CARD = "/wam/tv-bday-card.webp";
 export const TV_BIRTHDAY_FLOWERS = "/wam/tv-bday-flowers.webp";
 /** Werkudara's mark (the winged horse), a black shape on nothing: the TV's waiting screen cuts it out of the sign's blue. */
 export const TV_MARK = "/werkudara-mark.png";
+/** GET: a meeting photo of the "Foto meeting" template, for a TV, through this site (12 Nov 2026). */
+export const tvMeetingPhotoApi = (photoId: string) => `/api/tv/foto-meeting/${photoId}`;
 /** GET: a video file of the playlist, for a TV; answers with a short-lived address in storage. */
 export const tvVideoApi = (itemId: string) => `/api/tv/video/${itemId}`;
 export const praWamTvApi = {

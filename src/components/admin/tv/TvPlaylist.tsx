@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Cake, CalendarDays, CalendarRange, DoorOpen, ExternalLink, Eye, EyeOff, ImageUp, FileVideo, ListOrdered, Megaphone, Play, Plus, SlidersHorizontal, Square, Trash2, Type, UserRound, X, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, Cake, CalendarDays, CalendarRange, DoorOpen, ExternalLink, Eye, EyeOff, ImageUp, Images, FileVideo, ListOrdered, Megaphone, Play, Plus, SlidersHorizontal, Square, Trash2, Type, UserRound, X, Zap } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { ConsoleButton, ConsoleButtonLink, PageHeader, Pill, SectionToolbar, SegmentedControl, type Crumb } from "@/components/console";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
@@ -20,7 +20,7 @@ import css from "./tv-playlist.module.css";
 const ACCEPT = "image/jpeg,image/png,image/webp";
 const ACCEPT_VIDEO = Object.keys(tvVideoTypes).join(",");
 const SECONDS = [5, 8, 10, 15, 20, 30, 45, 60];
-const icons: Record<TvItemKind, typeof Type> = { kalender_hari: CalendarDays, kalender_minggu: CalendarRange, timeline: ListOrdered, pengumuman: Megaphone, sambutan: DoorOpen, tamu: UserRound, ultah: Cake, teks: Type, video: Play, gambar: ImageUp };
+const icons: Record<TvItemKind, typeof Type> = { kalender_hari: CalendarDays, kalender_minggu: CalendarRange, timeline: ListOrdered, pengumuman: Megaphone, sambutan: DoorOpen, tamu: UserRound, ultah: Cake, foto_meeting: Images, teks: Type, video: Play, gambar: ImageUp };
 /** The kinds whose words the admin types: a title (a guest's name for a typed welcome) and what it says. */
 const isTyped = (kind: TvItemKind) => kind === "teks" || kind === "tamu" || kind === "ultah";
 /** The kinds that welcome a guest, and so have a design to pick. A typed welcome has no visit, so no cover photo. */

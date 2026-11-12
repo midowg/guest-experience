@@ -106,6 +106,21 @@ describe("search on a phone", () => {
   });
 });
 
+describe("the Foto meeting template", () => {
+  const base = { settings: TV_DEFAULT_SETTINGS, slides: [] };
+  const row = { id: "foto", kind: "foto_meeting" as const, title: "", body: "", seconds: 8 };
+  it("plays each meeting photo as a picture at the row's seconds, and passes the row over without photos", () => {
+    const items = playlistOf({ ...base, playlist: [row], meetingPhotos: [
+      { id: "p1", src: "/api/tv/foto-meeting/p1", caption: "Appraisal team SS · 10 Nov" },
+      { id: "p2", src: "/api/tv/foto-meeting/p2", caption: "Evaluasi Meeting · 11 Nov" },
+    ] });
+    expect(items.map(item => [item.key, item.kind, item.seconds])).toEqual([["item-foto-p1", "gambar", 8], ["item-foto-p2", "gambar", 8]]);
+    expect(items.map(itemLabel)).toEqual(["Appraisal team SS · 10 Nov", "Evaluasi Meeting · 11 Nov"]);
+    expect(playlistOf({ ...base, playlist: [row], meetingPhotos: [] })).toEqual([]);
+    expect(playlistOf({ ...base, playlist: [row] })).toEqual([]);
+  });
+});
+
 describe("welcoming guests and taking the TVs over", () => {
   const visit = { id: "v1", name: "Contoh Satu", greeting: "Selamat datang di Werkudara", note: "", hours: "10.00–12.00", place: "Lobi", image: "" };
   const row = (kind: "sambutan" | "tamu", title = "", body = "") => ({ id: kind, kind, title, body, seconds: 15 });

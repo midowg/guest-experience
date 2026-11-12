@@ -22,7 +22,7 @@ import { TV_BIRTHDAY_CARD, TV_BIRTHDAY_FLOWERS, TV_WELCOME_ART } from "@/lib/rou
  */
 
 /** What this page plays of the TV's list, in its order: everything but videos. */
-export function liteItems(feed: Pick<TvFeed, "playlist" | "settings" | "slides" | "welcomes">): TvItem[] {
+export function liteItems(feed: Pick<TvFeed, "playlist" | "settings" | "slides" | "welcomes" | "meetingPhotos">): TvItem[] {
   return playlistOf(feed).filter(item => item.kind !== "video");
 }
 

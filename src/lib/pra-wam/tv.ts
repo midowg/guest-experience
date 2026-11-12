@@ -82,7 +82,17 @@ export type TvFeed = {
   welcomes?: TvWelcome[];
   /** The row that takes this TV over now (Tayangkan sekarang), when one does: the board shows its waiting screen as that starts and ends. */
   takeover?: string;
+  /** The latest meeting photos, for the "foto_meeting" template (migration 202611120006): each plays as a picture. */
+  meetingPhotos?: TvMeetingPhoto[];
 };
+
+/*
+ * Foto meeting (12 Nov 2026): a template that plays the photos of the MoMs sent in the last days,
+ * newest first, one picture each, at the row's own seconds. A MoM kept out of Telegram (a sensitive
+ * meeting) never shows. Its photos come through this site, like the pictures.
+ */
+export type TvMeetingPhoto = { id: string; src: string; caption: string };
+export const TV_MEETING_PHOTOS = { days: 30, most: 12 } as const;
 
 /** How long a TV waits before loading itself afresh again, so two builds answering in turn (a deploy in progress) cannot make it flicker. */
 export const TV_RELOAD_EVERY_MS = 3 * 60_000;
@@ -353,11 +363,11 @@ export type TvItem =
  * calendars, Timeline, panitia's announcements), text typed in Admin TV, and uploaded pictures.
  * A row may be for some TVs only, and may show only between two days or two times of day.
  */
-export const tvItemKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "ultah", "teks", "video", "gambar"] as const;
+export const tvItemKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "ultah", "foto_meeting", "teks", "video", "gambar"] as const;
 export type TvItemKind = (typeof tvItemKinds)[number];
 export const tvItemKindLabels: Record<TvItemKind, string> = {
   kalender_hari: "Kalender hari ini", kalender_minggu: "Kalender minggu ini", timeline: "Timeline Pra WAM",
-  pengumuman: "Pengumuman panitia", sambutan: "Sambutan tamu", tamu: "Sambutan tamu (diketik)", ultah: "Ucapan ulang tahun", teks: "Teks", video: "Video YouTube", gambar: "Gambar",
+  pengumuman: "Pengumuman panitia", sambutan: "Sambutan tamu", tamu: "Sambutan tamu (diketik)", ultah: "Ucapan ulang tahun", foto_meeting: "Foto meeting", teks: "Teks", video: "Video YouTube", gambar: "Gambar",
 };
 /** What each template shows and where its data comes from, for the admin's "Tambah tayangan". */
 export const tvItemKindHints: Record<TvItemKind, string> = {
@@ -368,12 +378,13 @@ export const tvItemKindHints: Record<TvItemKind, string> = {
   sambutan: "Kunjungan Kantor yang sudah terbit dan berlangsung hari ini: nama tamu, ucapan, foto sampul, jam, dan tempat. Tanpa kunjungan hari ini, tayangan ini dilewati.",
   tamu: "Sambutan untuk tamu yang tidak punya halaman kunjungan: nama tamu dan ucapan yang Anda ketik.",
   ultah: "Ucapan ulang tahun untuk satu orang: nama, tanggal, foto, dan ucapan, dengan desain kartu ulang tahun Werkudara.",
+  foto_meeting: "Foto dari MoM yang sudah dikirim dalam 30 hari terakhir, terbaru lebih dulu, satu foto per layar (paling banyak 12). MoM yang ditandai Jangan kirim ke Telegram tidak ikut. Tanpa foto, tayangan ini dilewati.",
   teks: "Tulisan yang Anda ketik sendiri: judul dan isi.",
   video: "Video dari YouTube, diputar tanpa suara sampai selesai, lalu lanjut ke tayangan berikutnya.",
   gambar: "Gambar yang Anda unggah.",
 };
 /** The templates fed by WAM: there is one of each at most (two day calendars would say the same thing). */
-export const tvTemplateKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan"] as const;
+export const tvTemplateKinds = ["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "foto_meeting"] as const;
 export const isTemplateKind = (kind: TvItemKind) => (tvTemplateKinds as readonly string[]).includes(kind);
 
 /** When and where a row shows: null = no limit; `screenIds` empty = every TV. */
@@ -515,7 +526,7 @@ export const TV_WELCOME_GREETING = "Selamat datang";
 export const TV_WELCOMES_MOST = 6;
 
 /** What a TV plays, in order: its playlist when the server sends one, else the two calendars and the pictures as the settings say. */
-export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides" | "welcomes">): TvItem[] {
+export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides" | "welcomes" | "meetingPhotos">): TvItem[] {
   if (!feed.playlist) return playlist(feed.settings, feed.slides);
   return feed.playlist.flatMap((item): TvItem[] => {
     const key = `item-${item.id}`;
@@ -528,6 +539,8 @@ export function playlistOf(feed: Pick<TvFeed, "playlist" | "settings" | "slides"
     if (item.kind === "sambutan") return (feed.welcomes ?? []).map(welcome => ({ key: `${key}-${welcome.id}`, kind: "sambutan" as const, welcome, design: welcomeDesign(item.design), seconds: item.seconds }));
     if (item.kind === "tamu") return item.title ? [{ key, kind: "sambutan", seconds: item.seconds, design: welcomeDesign(item.design), welcome: { id: item.id, name: item.title, greeting: TV_WELCOME_GREETING, note: item.body, hours: "", place: "", image: "" } }] : [];
     if (item.kind === "ultah") return item.title ? [{ key, kind: "ultah", seconds: item.seconds, birthday: { name: item.title, call: item.call?.trim() || item.title, ...birthdayDate(item.date), wish: item.body || TV_BIRTHDAY_WISH, photo: item.src ?? "", cut: !!item.src && item.cut === true } }] : [];
+    // One picture per meeting photo; none, and the row is passed over.
+    if (item.kind === "foto_meeting") return (feed.meetingPhotos ?? []).map(photo => ({ key: `${key}-${photo.id}`, kind: "gambar" as const, seconds: item.seconds, slide: { id: photo.id, title: photo.caption, seconds: item.seconds, src: photo.src } }));
     if (item.kind === "video" && item.src) return [{ key, kind: "video", title: item.title, video: "", file: item.src, seconds: item.seconds }];
     if (item.kind === "video") return YOUTUBE_ID.test(item.body) ? [{ key, kind: "video", title: item.title, video: item.body, seconds: item.seconds }] : [];
     return item.src ? [{ key, kind: "gambar", seconds: item.seconds, slide: { id: item.id, title: item.title, seconds: item.seconds, src: item.src } }] : [];
@@ -553,7 +566,7 @@ const itemBody = z.string().trim().max(600, "Isi paling panjang 600 karakter.");
 const itemCall = z.string().trim().max(40, "Nama panggilan paling panjang 40 karakter.");
 /** POST: a template (once each) or a text. A picture arrives through its upload instead. */
 export const tvItemCreateSchema = z.object({
-  kind: z.enum(["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "ultah", "teks", "video"]),
+  kind: z.enum(["kalender_hari", "kalender_minggu", "timeline", "pengumuman", "sambutan", "tamu", "ultah", "foto_meeting", "teks", "video"]),
   title: itemTitle.default(""), body: itemBody.default(""),
   /** A birthday greeting's: what the greeting calls the person, and their birthday. */
   call: itemCall.default(""), date: day.default(null),
