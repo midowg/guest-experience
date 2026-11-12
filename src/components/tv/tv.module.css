@@ -29,6 +29,25 @@
 }
 .board[data-idle="true"] { cursor: none; }
 
+/*
+ * Two rows (TvBoard, TV_ROWS): the playlist has the top 65 % and a row of photos runs along the
+ * bottom 35 %. TvBoard sets --u to 1 % of the top's shorter side, so everything above is drawn to
+ * the room it has. The photos stand side by side at the row's height; the run is there twice and
+ * moves left by half its width, for ever, so its end meets its start. On a TV standing up the
+ * photos run in two lines. The run does not stop for "reduce motion": it is the row's whole
+ * purpose, on a screen nobody operates (a phone gets a row to swipe instead).
+ */
+.board[data-rows="dua"] .slide { bottom: 35%; }
+.board[data-rows="dua"] .qr[data-position="kanan-bawah"], .board[data-rows="dua"] .qr[data-position="kiri-bawah"] { bottom: calc(35% + 3 * var(--u)); }
+.strip { position: absolute; right: 0; bottom: 0; left: 0; display: flex; flex-direction: column; gap: 1.6vmin; box-sizing: border-box; height: 35%; padding: 1.6vmin 0; overflow: hidden; border-top: 1px solid var(--tv-line); background: var(--tv-bg); }
+.strip[data-hidden="true"] { visibility: hidden; }
+.stripLine { flex: 1; min-height: 0; overflow: hidden; }
+.stripTrack { display: flex; width: max-content; height: 100%; animation: tvRun 120s linear infinite; will-change: transform; }
+.stripRun { display: flex; flex: none; gap: 1.6vmin; height: 100%; margin: 0; padding: 0 1.6vmin 0 0; list-style: none; }
+.stripRun li { flex: none; height: 100%; overflow: hidden; border-radius: 1.4vmin; background: var(--tv-soft); }
+.stripRun img { display: block; width: auto; height: 100%; aspect-ratio: auto 3 / 2; object-fit: cover; }
+@keyframes tvRun { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
 .slide { position: absolute; inset: 0; animation: tvIn .4s ease-out; }
 @keyframes tvIn { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .slide { animation: none; } }
@@ -232,6 +251,23 @@
 .phoneEmpty { display: grid; gap: 8px; padding: 32px 8px; text-align: center; }
 .phoneEmpty h2 { margin: 0; font-family: var(--tv-display); font-size: 20px; font-weight: 600; }
 .phoneEmpty p { margin: 0; color: var(--tv-muted); }
+/* The photo row on a phone: swiped by hand, and a photo opens large over the page. */
+.phonePhotos { display: grid; flex: none; gap: 12px; padding: 4px 0 24px; }
+.phonePhotos h2 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; padding: 0 20px; font-size: 13px; font-weight: 600; }
+.phonePhotos h2 span { color: var(--tv-muted); font-size: 12px; font-weight: 400; }
+.phonePhotos ul { display: flex; gap: 12px; margin: 0; padding: 0 20px; overflow-x: auto; list-style: none; scroll-padding: 0 20px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.phonePhotos li { flex: none; scroll-snap-align: start; }
+.phonePhotos li button { display: block; height: 148px; padding: 0; overflow: hidden; border: 0; border-radius: 16px; background: var(--tv-soft); cursor: pointer; }
+.phonePhotos li img { display: block; width: auto; height: 100%; aspect-ratio: auto 3 / 2; object-fit: cover; }
+.phonePhotos button:focus-visible, .phoneViewer button:focus-visible { outline: 3px solid var(--tv-accent); outline-offset: 2px; }
+.phoneViewer { position: fixed; inset: 0; z-index: 5; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: #0b0b0d; color: #fff; }
+.phoneViewer header, .phoneViewer footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; }
+.phoneViewer footer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+.phoneViewer p { min-width: 0; margin: 0; overflow: hidden; font-size: 13px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.phoneViewer > img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.phoneViewer button { display: inline-grid; flex: none; place-items: center; width: 48px; height: 48px; padding: 0; border: 1px solid #ffffff33; border-radius: 999px; background: #ffffff14; color: #fff; cursor: pointer; }
+.phoneViewer button:disabled { opacity: .4; cursor: default; }
+
 .phoneBar { position: sticky; bottom: 0; z-index: 2; display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 20px max(10px, env(safe-area-inset-bottom)); border-top: 1px solid var(--tv-line); background: var(--tv-bg); }
 .phoneBar button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 48px; min-height: 48px; padding: 0 12px; border: 1px solid var(--tv-line); border-radius: 999px; background: var(--tv-surface); color: var(--tv-text); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
 .phoneBar .phonePlay { flex: 1; }

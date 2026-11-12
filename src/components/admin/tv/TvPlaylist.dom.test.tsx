@@ -139,3 +139,24 @@ describe("Admin TV → Tayangan", () => {
     expect(screen.getByText("Mengambil alih")).toBeTruthy();
   });
 });
+
+describe("a picture on a TV laid out in two rows", () => {
+  const withPicture = (more: Partial<TvAdmin> = {}) => {
+    const data = admin(more);
+    return { ...data, items: [...data.items!, { ...data.items![0], id: "g", kind: "gambar" as const, title: "Rapat Contoh", slideId: "s1", strip: true }] };
+  };
+
+  it("says where the picture goes and lets Atur move it, once TVs can be laid out so", () => {
+    show(withPicture({ rowsReady: true }));
+    expect(screen.getByText("Baris foto bawah")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Atur Rapat Contoh" }));
+    expect((screen.getByLabelText("Di TV dua baris") as HTMLSelectElement).value).toBe("bawah");
+  });
+
+  it("says nothing of it before that migration", () => {
+    show(withPicture());
+    expect(screen.queryByText("Baris foto bawah")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Atur Rapat Contoh" }));
+    expect(screen.queryByLabelText("Di TV dua baris")).toBeNull();
+  });
+});

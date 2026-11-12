@@ -5,8 +5,9 @@ import { ChevronLeft, ChevronRight, Pause, Play, Search, X } from "lucide-react"
 import { clockLabel } from "@/lib/pra-wam/appraisal";
 import {
   dayEntries, entryState, itemLabel, legendItem, searchEntries, shownDays, youtubeThumb, youtubeWatch, tvDateLabel, tvDayHead, tvWeekLabel,
-  type TvEntry, type TvFeed, type TvItem, type TvLegendItem, type TvState,
+  type TvEntry, type TvFeed, type TvItem, type TvLegendItem, type TvState, type TvStripPhoto,
 } from "@/lib/pra-wam/tv";
+import { PhonePhotos } from "./TvStrip";
 import css from "./tv.module.css";
 
 const tones = [css.c0, css.c1, css.c2, css.c3, css.c4, css.c5, css.c6, css.c7, css.c8];
@@ -21,9 +22,9 @@ const stateWords: Record<TvState, string> = { berlangsung: "Sedang berlangsung",
  * every activity's name, hours, room and booker is written out in full. The loop can be stopped
  * (Jeda) and stepped by hand; touching the list stops it too, so it never moves under a reader.
  */
-export function TvPhone({ feed, now, clock, items, position, paused, gone, legend, onGo, onPause }: {
+export function TvPhone({ feed, now, clock, items, position, paused, gone, legend, photos = [], onGo, onPause }: {
   feed: TvFeed; now: number; clock: string; items: readonly TvItem[]; position: number; paused: boolean; gone: boolean;
-  legend: readonly TvLegendItem[]; onGo: (index: number) => void; onPause: (paused: boolean) => void;
+  legend: readonly TvLegendItem[]; photos?: readonly TvStripPhoto[]; onGo: (index: number) => void; onPause: (paused: boolean) => void;
 }) {
   const current = items[position];
   const today = feed.days.find(day => day.date === feed.date)?.rooms ?? [];
@@ -145,6 +146,9 @@ export function TvPhone({ feed, now, clock, items, position, paused, gone, legen
             // eslint-disable-next-line @next/next/no-img-element
             : <img className={css.phonePicture} src={current.slide.src} alt={current.slide.title || "Gambar pengumuman"} referrerPolicy="no-referrer" />}
     </div>}
+
+    {/* The photos a TV in two rows runs along its bottom: here a row to swipe and open by hand. */}
+    {!searching && !gone && <PhonePhotos photos={photos} />}
 
     {!searching && items.length > 1 && <div className={css.phoneBar}>
       <button type="button" onClick={() => go(position - 1)} aria-label="Tayangan sebelumnya"><ChevronLeft size={22} aria-hidden="true" /></button>

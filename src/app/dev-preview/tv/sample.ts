@@ -62,6 +62,8 @@ export function sampleTvFeed({ isi, tema, mode, qr }: SampleTvAsk): TvFeed {
       playlist: [{ id: "w", kind: "sambutan" as const, title: "", body: "", seconds: 8 }, { id: "t", kind: "tamu" as const, title: "Contoh Satu", body: "Terima kasih sudah berkunjung ke kantor kami.", seconds: 8 }],
       welcomes: [{ id: "v1", name: "PT Contoh Dua Sejahtera", greeting: "Selamat datang di Werkudara", note: "", hours: "10.00–12.00 WIB", place: "Kantor Werkudara", image: poster("Foto sampul", 1920, 1080, "#35506b") }],
     } : {}),
+    // ?isi=dua: a TV laid out in two rows, with photos of several shapes running along the bottom.
+    ...(isi === "dua" ? { strip: [["Rapat mingguan", 1920, 1280, "#1f5f8b"], ["Forum HOD", 1920, 1080, "#7a4b00"], ["Foto tegak", 1080, 1440, "#2f6f4f"], ["Kunjungan", 1600, 1200, "#6b3fa0"], ["Pelatihan", 1920, 1280, "#a03f4f"]].map(([title, width, height, color], index) => ({ id: `foto-${index}`, title: String(title), src: poster(String(title), Number(width), Number(height), String(color)) })) } : {}),
     countdown: isi === "kosong" ? null : { entry: { id: "appraisal", title: "Appraisal: isi form & 1-on-1", color: 0 }, edge: "berakhir", date: "2026-11-20", left: "10 hari lagi", next: { title: "HOD Meeting", date: "2026-11-24" } },
   };
 }

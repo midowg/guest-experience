@@ -21,7 +21,7 @@ export async function GET(request: Request, { params }: Params) {
   const screen = await screenForKey(key).catch(() => null);
   if (!screen) return tvLiteResponse(tvLiteNotice("Alamat TV tidak ditemukan", "Periksa alamatnya di Admin TV → Layar TV."), 404);
   const now = new Date();
-  const feed: TvFeed = await tvFeed(slideId => tvApi.image(key, slideId), now, screen).catch(() => {
+  const feed: TvFeed = await tvFeed(slideId => tvApi.image(key, slideId), now, { ...screen, layout: "penuh" }).catch(() => {
     const date = wibDate(now.toISOString());
     return { now: now.toISOString(), date, days: weekOf(date).map(day => ({ date: day, rooms: [] })), slides: [], settings: TV_DEFAULT_SETTINGS, look: DEFAULT_WAM_LOOK };
   });

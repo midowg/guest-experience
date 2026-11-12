@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { Hourglass, Maximize } from "lucide-react";
 import { rangeLabel, type Countdown } from "@/lib/pra-wam/timeline";
 import QRCode from "qrcode";
 import { TV_HOME_PATH } from "@/lib/routes";
 import { clockLabel, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  dayEntries, decimalHour, entryOwner, entryState, fit, isPhoneScreen, legendFor, legendItem, legendRows, shouldReload, TV_SWITCH_MS, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, itemLabel, nowAt, place, playlistOf, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
+  dayEntries, decimalHour, entryOwner, entryState, fit, isPhoneScreen, legendFor, legendItem, legendRows, shouldReload, stripHidden, TV_ROWS, TV_SWITCH_MS, tvLegend, tvLegendUnits, fitText, hourSpan, imageFit, msUntilReload, itemLabel, nowAt, place, playlistOf, shownDays, tvDateLabel, tvDayHead, tvScreen, tvWeekLabel,
   type TvDay, type TvDayEntry, type TvEntry, type TvFeed, type TvLegendItem, type TvRoom,
 } from "@/lib/pra-wam/tv";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import { TvPhone } from "./TvPhone";
+import { TvStrip } from "./TvStrip";
 import { BirthdaySlide, NotesSlide, TextSlide, TimelineSlide, TvLoader, VideoSlide, WelcomeSlide } from "./TvTemplates";
 import css from "./tv.module.css";
 
@@ -153,10 +154,15 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
     return () => window.clearTimeout(timer);
   }, [switching]);
 
-  const screen = useMemo(() => tvScreen(width, height), [width, height]);
   const items = useMemo(() => playlistOf(feed), [feed]);
   const position = items.length ? index % items.length : 0;
   const current = items[position];
+  // Two rows: the playlist has the top of the screen and the photos run below, except while an item needs all of it.
+  const strip = feed.strip ?? [];
+  const rows = strip.length > 0 && !gone && !!current && !stripHidden(current.kind);
+  const topHeight = rows ? (height * TV_ROWS.top) / 100 : height;
+  // Everything is drawn in units of the room the playlist has, so it shrinks with it and still fits.
+  const screen = useMemo(() => tvScreen(width, topHeight), [width, topHeight]);
   const following = items.length > 1 ? items[(position + 1) % items.length] : undefined;
 
   // What this TV is showing, said to the server with each ask (a ref: the asking loop is not restarted by it).
@@ -198,13 +204,14 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
   // A phone (someone scanned the QR code): the same content as a list that scrolls, with the loop under the reader's control.
   if (phone) {
     return <div data-wam-look={feed.look} data-wam-theme={feed.settings.mode} style={{ display: "contents" }}><div className={base.app}>
-      <TvPhone feed={feed} now={now} clock={clock} items={items} position={position} paused={paused} gone={gone} legend={legend} onGo={setIndex} onPause={setPaused} />
+      <TvPhone feed={feed} now={now} clock={clock} items={items} position={position} paused={paused} gone={gone} legend={legend} photos={feed.strip ?? []} onGo={setIndex} onPause={setPaused} />
     </div></div>;
   }
 
   // WAM's own theme (Admin WAM → Tema aplikasi), in the mode picked for the TVs: dark unless the admin chose light.
   return <div data-wam-look={feed.look} data-wam-theme={feed.settings.mode} style={{ display: "contents" }}><div className={base.app}>
-  <main className={css.board} data-idle={!active} data-orientation={screen.wide ? "mendatar" : "tegak"} data-qr={qrShow ? feed.settings.qrPosition : undefined}>
+  <main className={css.board} data-idle={!active} data-orientation={screen.wide ? "mendatar" : "tegak"} data-qr={qrShow ? feed.settings.qrPosition : undefined}
+    data-rows={rows ? "dua" : undefined} style={rows ? { "--u": `${Math.min(width, topHeight) / 100}px` } as CSSProperties : undefined}>
     {gone ? <div className={css.slide}><Message title="Tautan TV ini sudah tidak berlaku" body="Minta tautan baru di Admin WAM → TV Announcement." /></div>
       : !current ? <div className={css.slide}><Message title="Belum ada yang ditayangkan" body="Tambahkan gambar atau nyalakan jadwal ruang di Admin WAM → TV Announcement." /></div>
       : current.kind === "hari"
@@ -226,9 +233,10 @@ export function TvBoard({ initial, feedUrl }: { initial: TvFeed; feedUrl?: strin
           : <section key={current.key} className={`${css.slide} ${css.picture}`} aria-label={current.slide.title || "Gambar pengumuman"}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={current.slide.src} alt={current.slide.title || "Gambar pengumuman"} referrerPolicy="no-referrer"
-              data-fit={natural[current.slide.id] ? imageFit(...natural[current.slide.id], width, height) : "contain"}
+              data-fit={natural[current.slide.id] ? imageFit(...natural[current.slide.id], width, topHeight) : "contain"}
               onLoad={event => { const { naturalWidth, naturalHeight } = event.currentTarget; const id = current.slide.id; setNatural(known => ({ ...known, [id]: [naturalWidth, naturalHeight] })); }} />
           </section>}
+    {strip.length > 0 && !gone && <TvStrip photos={strip} hidden={!rows} lines={width >= height ? 1 : 2} />}
     {switching && !gone && <TvLoader note={taken ? "Menyiapkan tayangan" : "Kembali ke daftar tayangan"} />}
     {/* The next picture is fetched while this item shows, so it appears at once. */}
     {following?.kind === "gambar" && following.key !== current?.key

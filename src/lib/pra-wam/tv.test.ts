@@ -562,3 +562,37 @@ describe("what the admin may send", () => {
     expect(tvSlidePatchSchema.safeParse({ active: false }).success).toBe(true);
   });
 });
+
+describe("a TV laid out in two rows", () => {
+  it("runs a meeting photo in the photo row and keeps an uploaded picture on top, unless its row says otherwise", async () => {
+    const { inStrip } = await import("./tv");
+    expect(inStrip({ kind: "gambar", fromMeeting: true })).toBe(true);
+    expect(inStrip({ kind: "gambar", fromMeeting: false })).toBe(false);
+    expect(inStrip({ kind: "gambar", strip: false, fromMeeting: true })).toBe(false);
+    expect(inStrip({ kind: "gambar", strip: true, fromMeeting: false })).toBe(true);
+    // Only pictures: a text or a calendar never runs below, whatever its row remembers.
+    expect(inStrip({ kind: "teks", strip: true, fromMeeting: false })).toBe(false);
+  });
+
+  it("gives the whole screen to a birthday card, a video and a welcome", async () => {
+    const { stripHidden } = await import("./tv");
+    expect(["ultah", "video", "sambutan"].map(stripHidden)).toEqual([true, true, true]);
+    expect(["hari", "minggu", "timeline", "pengumuman", "teks", "gambar", undefined].map(stripHidden)).toEqual([false, false, false, false, false, false, false]);
+  });
+
+  it("repeats a few photos until a run can fill a screen, and leaves many as they are", async () => {
+    const { stripRun } = await import("./tv");
+    expect(stripRun([])).toEqual([]);
+    expect(stripRun(["a", "b", "c"])).toEqual(["a", "b", "c", "a", "b", "c", "a", "b", "c"]);
+    expect(stripRun(Array.from({ length: 12 }, (_, index) => index))).toHaveLength(12);
+  });
+
+  it("reads a TV's layout, and takes anything unknown as full screen", async () => {
+    const { tvLayout, tvScreenPatchSchema, tvItemPatchSchema } = await import("./tv");
+    expect(tvLayout("dua_baris")).toBe("dua_baris");
+    expect([tvLayout("penuh"), tvLayout(null), tvLayout("kolom")]).toEqual(["penuh", "penuh", "penuh"]);
+    expect(tvScreenPatchSchema.safeParse({ layout: "dua_baris" }).success).toBe(true);
+    expect(tvScreenPatchSchema.safeParse({ layout: "kolom" }).success).toBe(false);
+    expect(tvItemPatchSchema.safeParse({ strip: true }).success).toBe(true);
+  });
+});

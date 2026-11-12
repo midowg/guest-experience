@@ -84,7 +84,36 @@ export type TvFeed = {
   takeover?: string;
   /** The latest meeting photos, for the "foto_meeting" template (migration 202611120006): each plays as a picture. */
   meetingPhotos?: TvMeetingPhoto[];
+  /**
+   * The photos that run along the bottom of a TV laid out in two rows (migration 202611120007):
+   * present only for such a TV with photos to run. They are then not in `playlist`.
+   */
+  strip?: TvStripPhoto[];
 };
+
+/*
+ * Two rows (12 Nov 2026, asked by management): a TV can be laid out as the playlist on top and a
+ * row of photos below that runs from right to left without stopping, slowly. The photos are the
+ * pictures put on the TV from Arsip MoM's gallery; an uploaded picture (a poster) stays on top
+ * unless its row says otherwise (Atur). Some rows need the whole screen (a birthday card, a video,
+ * a welcome): the photo row steps aside while they show. Tayangkan sekarang always has the whole screen.
+ */
+export const tvLayouts = ["penuh", "dua_baris"] as const;
+export type TvLayout = typeof tvLayouts[number];
+export const tvLayoutLabels: Record<TvLayout, string> = { penuh: "Layar penuh", dua_baris: "Dua baris" };
+export const tvLayout = (value: unknown): TvLayout => (value === "dua_baris" ? "dua_baris" : "penuh");
+export type TvStripPhoto = { id: string; src: string; title: string };
+/** The rows' shares of the screen's height in per cent, how long one photo takes to pass, and the fewest photos a run needs to fill any screen. */
+export const TV_ROWS = { top: 65, strip: 35, secondsPerPhoto: 14, least: 8 } as const;
+/** Whether a picture's row runs in the photo row: as its row says, else a photo from a meeting does and an uploaded picture does not. */
+export const inStrip = (row: { kind: string; strip?: boolean | null; fromMeeting: boolean }): boolean => row.kind === "gambar" && (row.strip ?? row.fromMeeting);
+/** Whether the photo row steps aside for an item: the ones drawn for the whole screen. */
+export const stripHidden = (kind: string | undefined): boolean => kind === "ultah" || kind === "video" || kind === "sambutan";
+/** One run of the photo row: the photos in order, repeated until there are enough to fill a screen. */
+export function stripRun<T>(photos: readonly T[], least: number = TV_ROWS.least): T[] {
+  if (!photos.length) return [];
+  return Array.from({ length: Math.ceil(least / photos.length) }, () => photos).flat();
+}
 
 /*
  * Foto meeting (12 Nov 2026): a template that plays the photos of the MoMs sent in the last days,
@@ -141,8 +170,8 @@ const screenSlug = z.string().trim().toLowerCase()
   .regex(SLUG_PATTERN, "Alamat hanya huruf kecil, angka, dan tanda hubung, misalnya lobi atau pantry-2.")
   .refine(value => !RESERVED_SLUGS.includes(value), "Alamat ini dipakai sistem. Pilih alamat lain.");
 export const tvScreenSchema = z.object({ name: screenName, slug: screenSlug });
-export const tvScreenPatchSchema = z.object({ name: screenName.optional(), slug: screenSlug.optional(), playsVideo: z.boolean().optional() })
-  .refine(value => value.name !== undefined || value.slug !== undefined || value.playsVideo !== undefined, { message: "Tidak ada yang diubah." });
+export const tvScreenPatchSchema = z.object({ name: screenName.optional(), slug: screenSlug.optional(), playsVideo: z.boolean().optional(), layout: z.enum(["penuh", "dua_baris"]).optional() })
+  .refine(value => value.name !== undefined || value.slug !== undefined || value.playsVideo !== undefined || value.layout !== undefined, { message: "Tidak ada yang diubah." });
 /** A web address a phone can open, for the QR code; "" means the TV's own address. */
 const isWebAddress = (value: string) => { try { return ["http:", "https:"].includes(new URL(value).protocol); } catch { return false; } };
 export const tvSettingsSchema = z.object({
@@ -580,6 +609,8 @@ export const tvItemPatchSchema = z.object({
   screenIds: z.array(z.uuid()).max(tvLimits.screens).optional(),
   design: z.enum(tvWelcomeDesigns).optional(),
   call: itemCall.optional(), date: day.optional(),
+  /** A picture's: whether it runs in the photo row of a TV laid out in two rows. */
+  strip: z.boolean().optional(),
 }).refine(value => Object.values(value).some(item => item !== undefined), { message: "Tidak ada yang diubah." })
   .refine(value => !value.showFrom || !value.showUntil || value.showFrom <= value.showUntil, { message: "Tanggal akhir tidak boleh sebelum tanggal mulai.", path: ["showUntil"] });
 export const tvItemOrderSchema = z.object({ ids: z.array(z.uuid()).min(1).max(200) });

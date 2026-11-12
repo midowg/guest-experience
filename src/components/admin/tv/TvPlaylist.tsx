@@ -28,12 +28,14 @@ const isWelcome = (kind: TvItemKind) => kind === "sambutan" || kind === "tamu";
 const designsFor = (kind: TvItemKind) => tvWelcomeDesigns.filter(design => kind === "sambutan" || design !== "foto");
 /** Where a row's content comes from, for the line under its name. */
 const sourceOf = (kind: TvItemKind) => kind === "sambutan" ? "Dari Kunjungan Kantor" : isTemplateKind(kind) ? "Dari WAM" : kind === "tamu" ? "Sambutan tamu" : tvItemKindLabels[kind];
-type Draft = { title: string; body: string; call: string; date: string; design: TvWelcomeDesign; seconds: number; showFrom: string; showUntil: string; timeFrom: string; timeUntil: string; screenIds: string[] };
+type Draft = { title: string; body: string; call: string; date: string; design: TvWelcomeDesign; seconds: number; showFrom: string; showUntil: string; timeFrom: string; timeUntil: string; screenIds: string[];
+  /** A picture's: whether it runs in the photo row of a TV laid out in two rows. */
+  strip: boolean };
 /** What "Tayangkan sekarang" is asked with (`minutes` null: until stopped). */
 type Take = { minutes: number | null; screenIds: string[] };
 const draftOf = (item: TvAdminItem): Draft => ({
   title: item.title, body: item.body, call: item.call, date: item.date, design: item.design, seconds: item.seconds, showFrom: item.showFrom ?? "", showUntil: item.showUntil ?? "",
-  timeFrom: item.timeFrom ?? "", timeUntil: item.timeUntil ?? "", screenIds: item.screenIds,
+  timeFrom: item.timeFrom ?? "", timeUntil: item.timeUntil ?? "", screenIds: item.screenIds, strip: item.strip ?? false,
 });
 /** The four ways to add a row, one shown at a time. */
 const adds = [{ value: "template", label: "Template" }, { value: "tamu", label: "Sambutan" }, { value: "ultah", label: "Ulang tahun" }, { value: "teks", label: "Teks" }, { value: "video", label: "Video" }, { value: "gambar", label: "Gambar" }] as const;
@@ -105,6 +107,8 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
       seconds: draft.seconds,
       ...(isWelcome(item.kind) ? { design: draft.design } : {}),
       ...(item.kind === "ultah" ? { call: draft.call, date: draft.date || null } : {}),
+      // Sent only when changed, so saving anything else never waits for the photo row's own migration.
+      ...(item.kind === "gambar" && draft.strip !== (item.strip ?? false) ? { strip: draft.strip } : {}),
       showFrom: draft.showFrom || null, showUntil: draft.showUntil || null, timeFrom: draft.timeFrom || null, timeUntil: draft.timeUntil || null,
       screenIds: draft.screenIds,
     }, () => setEditing(null));
@@ -246,6 +250,7 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
             <dl className={css.plFacts}>
               <div><dt>Durasi</dt><dd>{item.kind === "video" ? "Sampai video selesai" : `${item.seconds} detik`}</dd></div>
               <div><dt>Tayang di</dt><dd>{screens}</dd></div>
+              {item.kind === "gambar" && list.rowsReady && <div><dt>Di TV dua baris</dt><dd>{item.strip ? "Baris foto bawah" : "Bagian atas"}</dd></div>}
               <div className={css.plWide}><dt>Jadwal</dt><dd>{days}</dd></div>
             </dl>
             <div className={css.plFoot}>
@@ -283,6 +288,14 @@ export function TvPlaylist({ initial, crumbs, title }: { initial: TvAdmin; crumb
                     <select id={`desain-${item.id}`} value={edit.design} onChange={event => change({ design: event.target.value as TvWelcomeDesign })}>
                       {designsFor(item.kind).map(design => <option key={design} value={design}>{tvWelcomeDesignLabels[design]}</option>)}
                     </select>
+                  </div>}
+                  {item.kind === "gambar" && list.rowsReady && <div className={css.plField}>
+                    <label htmlFor={`baris-foto-${item.id}`}>Di TV dua baris</label>
+                    <select id={`baris-foto-${item.id}`} value={edit.strip ? "bawah" : "atas"} onChange={event => change({ strip: event.target.value === "bawah" })}>
+                      <option value="atas">Bagian atas, bergantian dengan tayangan lain</option>
+                      <option value="bawah">Baris foto bawah, berjalan terus</option>
+                    </select>
+                    <p className={css.plHint}>Hanya berlaku di TV yang susunannya dua baris (Layar TV). Di TV layar penuh gambar ini tayang seperti biasa.</p>
                   </div>}
                   {item.kind === "video" ? <p className={css.plHint}>Diputar tanpa suara sampai selesai, lalu TV lanjut ke tayangan berikutnya. Untuk mengganti videonya, hapus tayangan ini dan tambahkan yang baru.</p>
                   : <div className={css.plField}>
