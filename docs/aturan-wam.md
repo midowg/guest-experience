@@ -135,6 +135,19 @@ Sejak 11 Nov 2026 (migrasi `202611110002_pw_session_minutes.sql`), aturan di `sr
 | Tampil di | Detail sesi (panel Notulen); **Agenda**: kotak "Notulen belum diisi" berisi meeting milik orang itu yang sudah selesai tanpa MoM; **Jadwal sesi** (panitia dan BOD): kolom MoM sudah/belum; **Ringkasan** panitia: kartu "MoM belum masuk". |
 | Sebelum migrasi | Panel bilang menunggu pembaruan sistem; tidak ada yang dihitung "belum". |
 
+### MoM lewat Telegram (tahap 1, 12 Nov 2026)
+
+Rancangan lengkapnya ada di `docs/rancangan-mom-telegram.md`. Tahap 1 memakai migrasi `202611120002_pw_telegram.sql` (belum dijalankan).
+
+| Hal | Aturan |
+| --- | --- |
+| Bot | Satu bot untuk semua grup: **WAM Werkudara** (`@wam_werkudara_bot`). Token hanya di environment server (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`); rahasia webhook diturunkan dari token. |
+| Grup | Satu grup per departemen Data karyawan ("Werkudara {singkatan} · {departemen}") dan satu **grup HOD** bersama. Satu departemen hanya punya satu grup aktif; memasang grup baru melepas yang lama. |
+| Memasang | Admin WAM → **Telegram** (semua admin): Pasang webhook sekali, lalu **Pasang grup** per baris. Hasilnya tautan sekali pakai yang berlaku 30 menit dan menambahkan bot dengan hak admin. Untuk grup yang sudah berisi bot, kirim perintah `/start@wam_werkudara_bot {kode}` di grup itu. |
+| Topik | Grup yang memakai Topics mendapat topik **📝 MoM** buatan bot (perlu hak Kelola topik). Ubah grup ke supergroup dan nyalakan Topics **sebelum** dipasang, karena ID grup berubah saat itu. |
+| Pesan | Satu pesan per MoM, bisa dibaca tanpa membuka WAM dan netral saat diteruskan (tanpa "kamu"). Departemen ditulis lengkap, ada baris versi, dan panjangnya dibatasi 3.900 karakter (tindak lanjut didahulukan). Aturannya di `src/lib/pra-wam/minutes-message.ts`. |
+| Uji | **Kirim contoh MoM** mengirim MoM bertanda UJI COBA ke grup itu. Kiriman MoM sungguhan dari panel Notulen menyusul di tahap 2. |
+
 ## 7a. Notifikasi
 
 - Setiap notifikasi di aplikasi tersimpan di daftar Notifikasi (lonceng). Ke HP (Web Push) hanya

@@ -1,4 +1,4 @@
-import { CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, Map as MapIcon, Palette, Plug, Tv, UsersRound, type LucideIcon } from "lucide-react";
+import { CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, Map as MapIcon, Palette, Plug, Send, Tv, UsersRound, type LucideIcon } from "lucide-react";
 import { MCP_ADMIN_PATH } from "@/lib/pra-wam/mcp";
 import { wamAdminPath } from "@/lib/routes";
 
@@ -8,7 +8,7 @@ import { wamAdminPath } from "@/lib/routes";
  * one entry here, its path in wamAdminPath and its page under src/app/admin/wam/. A new group
  * name starts a new group in the menu.
  */
-export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "kuesioner";
+export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "kuesioner";
 export type WamSection = {
   key: WamSectionKey;
   label: string;
@@ -35,6 +35,7 @@ export const wamSections: readonly WamSection[] = [
   { key: "tema", label: "Tema aplikasi", group: "Aplikasi", href: wamAdminPath.theme, icon: Palette, summary: "Tema WAM untuk semua orang: Dream Out Loud atau Werkudara." },
   { key: "ruang", label: "Ruang dan denah", group: "Aplikasi", href: wamAdminPath.rooms, icon: MapIcon, summary: "Kapasitas ruang, spot di denah, dan tampil tidaknya denah di Book." },
   { key: "tv", label: "TV Announcement", group: "Aplikasi", href: wamAdminPath.tv, icon: Tv, summary: "TV kantor: jadwal ruang hari ini dan gambar pengumuman, berganti otomatis." },
+  { key: "telegram", label: "Telegram", group: "Aplikasi", href: wamAdminPath.telegram, icon: Send, summary: "Bot MoM, webhook, dan grup Telegram tiap departemen." },
   { key: "kuesioner", label: "Kuesioner", group: "Data peserta", href: wamAdminPath.questionnaire.content, icon: ClipboardList, summary: "Isi, pengaturan, progres, rekap, dan ekspor kuesioner personal." },
 ];
 

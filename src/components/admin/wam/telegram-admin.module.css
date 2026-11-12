@@ -1,0 +1,21 @@
+/* Admin WAM → Telegram: the bot, then one row per department. --cs-* variables only, light and dark. */
+.bot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+.botInfo { display: grid; gap: 4px; min-width: 0; }
+.botInfo p { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.muted { margin: 0; color: var(--cs-muted); font-size: 13px; }
+.warn { margin: 0; color: var(--cs-bad-fg); font-size: 13px; }
+
+.rows { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
+.row { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.rowMain { display: grid; gap: 6px; min-width: 0; }
+.rowMain strong { font-size: 15px; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+.buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+@media (min-width: 900px) {
+  .row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .code { grid-column: 1 / -1; }
+}
+
+.code { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--cs-primary); border-radius: 14px; background: var(--cs-surface-2); }
+.code p { margin: 0; font-size: 14px; }
+.command { display: block; padding: 10px 12px; border: 1px solid var(--cs-line); border-radius: 10px; background: var(--cs-surface); font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; user-select: all; }

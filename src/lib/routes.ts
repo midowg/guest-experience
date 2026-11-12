@@ -309,6 +309,8 @@ export const wamAdminPath = {
   tv: `${WAM_ADMIN}/tv`,
   /** The board as a TV plays it, for the signed-in admin (no TV key). */
   tvPreview: `${WAM_ADMIN}/tv/pratinjau`,
+  /** Telegram: the MoM bot, its webhook, and the group of each department (12 Nov 2026). */
+  telegram: `${WAM_ADMIN}/telegram`,
   /** The personal questionnaire: content, settings, progress, and the HR-locked answers. */
   questionnaire: {
     content: `${WAM_ADMIN}/kuesioner`,
@@ -505,6 +507,8 @@ export const tvApi = {
   /** GET: one picture, through this site (storage stays private). */
   image: (key: string, slideId: string) => `/api/tv/${enc(key)}/image/${slideId}`,
 };
+/** Admin WAM → Telegram (any admin, 12 Nov 2026): GET the bot and groups; POST {action} webhook, install, sample, topic, remove. */
+export const praWamTelegramApi = "/api/admin/wam/telegram";
 /** Admin WAM → TV Announcement (any admin). */
 const TV_ADMIN_API = "/api/admin/wam/tv";
 /** The Werkudara welcome sign's background (from "Welcome Sign Template.pptx"), a file of the site, in public/wam: a file under public/tv is answered by the TV page (/tv/{slug}) instead. */
