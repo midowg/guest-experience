@@ -46,6 +46,9 @@
 .slots { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--space-xs); margin: 0; padding: 0; list-style: none; }
 .slot { height: 40px; border-radius: 12px; display: grid; place-items: center; font-family: var(--font-display); font-size: var(--text-md); color: var(--muted);
   border: var(--rule-bar) dashed var(--rule); background: transparent; transition: transform var(--dur-short) var(--ease-back), background-color var(--dur-short) var(--ease-out); }
+/* A slot to tap (12 Nov 2026): the whole sticker is the button. */
+.slotButton { display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border: 0; border-radius: inherit; background: none; color: inherit; font: inherit; cursor: pointer; }
+.slotButton:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 .slot.now { border: 2px solid var(--ink); color: var(--ink); background: var(--paper-3); }
 .slot.got { border: 3px solid var(--white); box-shadow: 2px 3px 0 var(--ink); color: var(--ink); background: var(--accent-2); transform: rotate(-3deg); }
 .slot.got:nth-child(even) { transform: rotate(3deg); }
@@ -136,6 +139,8 @@ textarea.field { min-height: 130px; }
 
 /* Person picker: search, results, chosen chips */
 .picker { display: grid; gap: var(--space-sm); }
+/* "Lainnya": the person writes their own answer under the choices (12 Nov 2026). */
+.other { display: grid; gap: var(--space-xs); margin-top: var(--space-sm); }
 .searchBox { position: relative; }
 .searchBox .field { padding-left: 44px; }
 .searchIcon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--muted); pointer-events: none; }

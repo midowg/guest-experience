@@ -192,6 +192,13 @@ export function Questionnaire({ form, sections, questions, departments, people, 
     go(index + 1);
   }
 
+  /** A section's number at the top: straight to its first card (its intro when it has none). */
+  function pick(sectionId: string) {
+    const first = steps.findIndex(item => item.kind === "question" && item.section.id === sectionId);
+    const target = first >= 0 ? first : steps.findIndex(item => item.id === `intro:${sectionId}`);
+    if (target >= 0 && target !== index) go(target, target < index);
+  }
+
   const blocked = step.kind === "question" && step.question.required && !complete(step.question, seen[step.question.key]);
   const currentSection = step.kind === "intro" || step.kind === "question" ? step.section : undefined;
   const local = !!currentSection?.anonymous && !anonymousSent;
@@ -216,7 +223,7 @@ export function Questionnaire({ form, sections, questions, departments, people, 
   }).reverse();
 
   return <QuestionnaireApp>
-    <Top name={form.name} home={home} slots={slots} current={currentSection?.id} popped={popped} preview={preview}
+    <Top name={form.name} home={home} slots={slots} current={currentSection?.id} popped={popped} preview={preview} onPick={pick}
       status={<><b>{where}</b><span aria-live="polite">{saveLine ?? left}</span></>} />
     <main className={`${styles.wrap} ${styles.main}`}>
       <div className={styles.stage}>

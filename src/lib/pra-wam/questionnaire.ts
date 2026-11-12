@@ -107,12 +107,32 @@ export function slugProblem(slug: string): string | null {
 
 const asList = (value: AnswerValue | undefined): string[] => (Array.isArray(value) ? value : typeof value === "string" && value ? [value] : []);
 
+/*
+ * "Lainnya" (12 Nov 2026): a choice whose text starts with "Lainnya" lets the person write their
+ * own answer. It is kept as "Lainnya: <what they wrote>" (just "Lainnya" until they write), so the
+ * Rekap and Excel read it as it is, and every rule that looks at the choice sees "Lainnya".
+ */
+export const OTHER_LIMIT = 200;
+export const isOtherOption = (option: string) => /^lainnya\b/i.test(option.trim());
+/** The choice an answer is: "Lainnya: badminton" is "Lainnya"; anything else is itself. */
+export const baseChoice = (value: string) => value.match(/^(lainnya[^:]*): /i)?.[1] ?? value;
+/** What was written after "Lainnya: ", or "". */
+export const otherText = (value: string) => (baseChoice(value) === value ? "" : value.slice(baseChoice(value).length + 2));
+/** "Lainnya" with what was written, or just "Lainnya". */
+export const withOther = (option: string, text: string) => (text.trim() ? `${option}: ${text.replace(/\s+/g, " ").trimStart().slice(0, OTHER_LIMIT)}` : option);
+/** Whether a given choice is one of the options, "Lainnya: …" included. */
+function choiceAllowed(value: string, options: readonly string[]): boolean {
+  if (options.includes(value)) return true;
+  const base = baseChoice(value);
+  return base !== value && isOtherOption(base) && options.includes(base) && otherText(value).length <= OTHER_LIMIT;
+}
+
 /** Whether a question shows, given the answers so far (its `show_if`). */
 export function shows(question: Pick<QQuestion, "showIf" | "hidden">, answers: Answers): boolean {
   if (question.hidden) return false;
   const rule = question.showIf;
   if (!rule) return true;
-  const given = asList(answers[rule.question]);
+  const given = asList(answers[rule.question]).map(baseChoice);
   if (!given.length) return false;
   if (rule.any && !rule.any.some(option => given.includes(option))) return false;
   if (rule.not && given.some(option => rule.not!.includes(option))) return false;
@@ -144,14 +164,14 @@ export function cleanAnswer(question: QQuestion, raw: unknown, known: { departme
     case "single": case "department": {
       if (typeof raw !== "string") return { problem: "Pilih satu jawaban." };
       const allowed = question.kind === "department" ? known.departments : question.options;
-      if (raw && allowed && !allowed.includes(raw)) return { problem: "Pilihan ini tidak ada di daftar." };
-      return { value: raw };
+      if (raw && allowed && !(question.kind === "single" ? choiceAllowed(raw, allowed) : allowed.includes(raw))) return { problem: "Pilihan ini tidak ada di daftar." };
+      return { value: question.kind === "single" ? raw.trim() : raw };
     }
     case "multi": case "person": {
       if (!Array.isArray(raw) || raw.some(item => typeof item !== "string")) return { problem: "Pilih dari daftar." };
       const list = [...new Set(raw as string[])];
       const allowed = question.kind === "person" ? known.people : question.options;
-      if (allowed && list.some(item => !allowed.includes(item))) return { problem: "Ada pilihan yang tidak ada di daftar." };
+      if (allowed && list.some(item => !(question.kind === "multi" ? choiceAllowed(item, allowed) : allowed.includes(item)))) return { problem: "Ada pilihan yang tidak ada di daftar." };
       if (question.maxChoices && list.length > question.maxChoices) return { problem: `Pilih paling banyak ${question.maxChoices}.` };
       return { value: list };
     }

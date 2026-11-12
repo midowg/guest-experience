@@ -37,6 +37,10 @@ const moved = <T,>(items: T[], index: number, by: -1 | 1) => { const next = [...
  * opens its editor in place; the preview beside the list follows the open question as it is typed.
  * Up and down buttons reorder (focus stays on the moved item); moving to another section is in
  * the editor. Deleting something already answered hides it instead (the server decides).
+ *
+ * 12 Nov 2026: a question shows its running number (1, 2, 3 … in the order participants see),
+ * not its key, which for a question added here is a code like "q2p09mu". A hidden question, or one
+ * in a hidden section, has no number.
  */
 export function QuestionnaireContent({ initial }: { initial: AdminQuestionnaire }) {
   const [data, setData] = useState(initial);
@@ -54,6 +58,18 @@ export function QuestionnaireContent({ initial }: { initial: AdminQuestionnaire 
 
   const sections = [...data.sections].sort((a, b) => a.sort - b.sort);
   const questionsOf = (sectionId: string) => data.questions.filter(question => question.sectionId === sectionId).sort((a, b) => a.sort - b.sort);
+  // The running number of each question shown to participants, by id and by key.
+  const numbers = new Map<string, number>();
+  const numberByKey = new Map<string, number>();
+  for (const section of sections) {
+    if (section.hidden) continue;
+    for (const question of questionsOf(section.id)) {
+      if (question.hidden) continue;
+      numbers.set(question.id, numbers.size + 1);
+      numberByKey.set(question.key, numbers.size);
+    }
+  }
+  const label = (question: QQuestion) => numbers.has(question.id) ? `${numbers.get(question.id)}` : "tersembunyi";
 
   useEffect(() => {
     if (!focusNext.current) return;
@@ -203,26 +219,26 @@ export function QuestionnaireContent({ initial }: { initial: AdminQuestionnaire 
                     const isEditing = editing === question.id;
                     return <li key={question.id} className={`${styles.question} ${selected === question.id ? styles.questionSelected : ""} ${question.hidden ? styles.questionHidden : ""}`}>
                       <div className={styles.questionRow}>
-                        <button type="button" className={styles.questionOpen} aria-expanded={isEditing} onClick={() => select(question)} aria-label={`Pertanyaan ${question.key}: ${question.prompt}. ${isEditing ? "Tutup editor" : "Ubah"}`}>
-                          <span className={styles.questionNumber}>{question.key}</span>
+                        <button type="button" className={styles.questionOpen} aria-expanded={isEditing} onClick={() => select(question)} aria-label={`Pertanyaan ${label(question)}: ${question.prompt}. ${isEditing ? "Tutup editor" : "Ubah"}`}>
+                          <span className={styles.questionNumber}>{numbers.get(question.id) ?? "–"}</span>
                           <span className={styles.questionPrompt}>{question.prompt}</span>
                           <span className={styles.questionMeta}>
                             <span>{kindLabels[question.kind]}</span>
                             <span className={`${styles.pill} ${pillClass[question.visibility]}`}>{visibilityShort[question.visibility]}</span>
                             {question.required && <span className={`${styles.pill} ${styles.pillRequired}`}>Wajib</span>}
                             {question.hidden && <span className={`${styles.pill} ${styles.pillHidden}`}><EyeOff size={12} aria-hidden />Disembunyikan</span>}
-                            {question.showIf && <span className={styles.pill}><GitBranch size={12} aria-hidden />Bersyarat ({question.showIf.question})</span>}
+                            {question.showIf && <span className={styles.pill}><GitBranch size={12} aria-hidden />Bersyarat (no. {numberByKey.get(question.showIf.question) ?? "tersembunyi"})</span>}
                           </span>
                         </button>
                         <span className={styles.order}>
-                          <button type="button" id={`q-${question.id}-up`} className={styles.iconButton} disabled={locked || position === 0} onClick={() => void moveQuestion(section.id, position, -1)} aria-label={`Naikkan pertanyaan ${question.key}`}><ArrowUp size={18} aria-hidden /></button>
-                          <button type="button" id={`q-${question.id}-down`} className={styles.iconButton} disabled={locked || position === questions.length - 1} onClick={() => void moveQuestion(section.id, position, 1)} aria-label={`Turunkan pertanyaan ${question.key}`}><ArrowDown size={18} aria-hidden /></button>
-                          <button type="button" className={styles.iconButton} disabled={locked} onClick={() => void toggleQuestionHidden(question)} aria-label={question.hidden ? `Tampilkan pertanyaan ${question.key}` : `Sembunyikan pertanyaan ${question.key}`}>
+                          <button type="button" id={`q-${question.id}-up`} className={styles.iconButton} disabled={locked || position === 0} onClick={() => void moveQuestion(section.id, position, -1)} aria-label={`Naikkan pertanyaan ${label(question)}`}><ArrowUp size={18} aria-hidden /></button>
+                          <button type="button" id={`q-${question.id}-down`} className={styles.iconButton} disabled={locked || position === questions.length - 1} onClick={() => void moveQuestion(section.id, position, 1)} aria-label={`Turunkan pertanyaan ${label(question)}`}><ArrowDown size={18} aria-hidden /></button>
+                          <button type="button" className={styles.iconButton} disabled={locked} onClick={() => void toggleQuestionHidden(question)} aria-label={question.hidden ? `Tampilkan pertanyaan: ${question.prompt}` : `Sembunyikan pertanyaan ${label(question)}`}>
                             {question.hidden ? <Eye size={18} aria-hidden /> : <EyeOff size={18} aria-hidden />}
                           </button>
                         </span>
                       </div>
-                      {isEditing && <QuestionEditor key={question.id} initial={toDraft(question)} questionKey={question.key} sections={sections} questions={data.questions}
+                      {isEditing && <QuestionEditor key={question.id} initial={toDraft(question)} questionKey={question.key} hidden={question.hidden} numbers={numberByKey} sections={sections} questions={data.questions}
                         departments={data.departments} answered={data.answered} onDraft={setPreview}
                         onSave={payload => saveQuestion(question.id, payload)} onCancel={() => { setEditing(null); setPreview(null); }} onDelete={() => void deleteQuestion(question)} />}
                     </li>;
@@ -231,7 +247,7 @@ export function QuestionnaireContent({ initial }: { initial: AdminQuestionnaire 
                 {!questions.length && <p className={styles.muted}>Belum ada pertanyaan di bagian ini.</p>}
                 {editing === `new:${section.id}`
                   ? <div className={styles.question}>
-                    <QuestionEditor key={`new-${section.id}`} initial={newDraft(section)} questionKey={null} sections={sections} questions={data.questions}
+                    <QuestionEditor key={`new-${section.id}`} initial={newDraft(section)} questionKey={null} numbers={numberByKey} sections={sections} questions={data.questions}
                       departments={data.departments} answered={false} onDraft={setPreview}
                       onSave={payload => saveQuestion(null, payload)} onCancel={() => { setEditing(null); setPreview(null); }} />
                   </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Search, X } from "lucide-react";
-import type { AnswerValue, QQuestion } from "@/lib/pra-wam/questionnaire";
+import { baseChoice, isOtherOption, OTHER_LIMIT, otherText, withOther, type AnswerValue, type QQuestion } from "@/lib/pra-wam/questionnaire";
 import { toggleChoice } from "./steps";
 import styles from "./questionnaire.module.css";
 
@@ -42,26 +42,40 @@ export function QuestionField({ question, value, onChange, labelledBy, departmen
     case "single": case "department": {
       const options = question.kind === "department" ? departments : question.options;
       if (!options.length) return <p className={styles.hint}>Daftar pilihan belum tersedia. Hubungi HR.</p>;
-      return <div className={styles.choices} role="group" aria-labelledby={labelledBy}>
-        {options.map(option => <button key={option} type="button" className={styles.choice} aria-pressed={value === option} onClick={() => onChange(option)}>
-          <span className={styles.dot} aria-hidden />{option}
-        </button>)}
-      </div>;
+      const picked = baseChoice(asText(value));
+      return <>
+        <div className={styles.choices} role="group" aria-labelledby={labelledBy}>
+          {options.map(option => <button key={option} type="button" className={styles.choice} aria-pressed={picked === option}
+            onClick={() => { if (picked !== option) onChange(option); }}>
+            <span className={styles.dot} aria-hidden />{option}
+          </button>)}
+        </div>
+        {question.kind === "single" && isOtherOption(picked) && options.includes(picked) &&
+          <OtherField option={picked} text={otherText(asText(value))} onText={text => onChange(withOther(picked, text), true)} onBlur={onBlur} onEnter={onEnter} />}
+      </>;
     }
     case "multi": {
       const chosen = asList(value);
       const full = !!question.maxChoices && chosen.length >= question.maxChoices;
+      const other = chosen.find(item => isOtherOption(baseChoice(item)) && question.options.includes(baseChoice(item)));
       return <>
         <p className={styles.hint}>{question.maxChoices ? `Pilih sampai ${question.maxChoices}` : "Boleh pilih lebih dari satu"}</p>
         <div className={styles.choices} role="group" aria-labelledby={labelledBy}>
           {question.options.map(option => {
-            const on = chosen.includes(option);
+            const on = chosen.some(item => baseChoice(item) === option);
             return <button key={option} type="button" className={`${styles.choice} ${styles.multi}`} aria-pressed={on} disabled={full && !on}
-              onClick={() => commit(toggleChoice(asList(live.current), option, question.maxChoices))}>
+              onClick={() => {
+                const list = asList(live.current);
+                // "Lainnya: …" goes as a whole when "Lainnya" is tapped again.
+                const given = list.find(item => item !== option && baseChoice(item) === option);
+                commit(given ? list.filter(item => item !== given) : toggleChoice(list, option, question.maxChoices));
+              }}>
               <span className={styles.dot} aria-hidden />{option}
             </button>;
           })}
         </div>
+        {other && <OtherField option={baseChoice(other)} text={otherText(other)} onBlur={onBlur} onEnter={onEnter}
+          onText={text => { const base = baseChoice(other); onChange(asList(live.current).map(item => baseChoice(item) === base ? withOther(base, text) : item), true); }} />}
       </>;
     }
     case "consent":
@@ -89,6 +103,17 @@ export function QuestionField({ question, value, onChange, labelledBy, departmen
     case "person":
       return <PersonPicker question={question} chosen={asList(value)} people={people} onChange={list => commit(list)} />;
   }
+}
+
+/** "Lainnya" chosen: where the person writes their own answer (12 Nov 2026). */
+function OtherField({ option, text, onText, onBlur, onEnter }: { option: string; text: string; onText: (text: string) => void; onBlur?: () => void; onEnter?: () => void }) {
+  const id = useId();
+  return <div className={styles.other}>
+    <label className={styles.hint} htmlFor={id}>{option}, tulis sendiri:</label>
+    <input id={id} className={styles.field} type="text" value={text} maxLength={OTHER_LIMIT} autoComplete="off" enterKeyHint="next" autoFocus
+      placeholder="Tulis jawabanmu" onBlur={onBlur} onChange={event => onText(event.target.value)}
+      onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => { if (event.key === "Enter") { event.preventDefault(); onEnter?.(); } }} />
+  </div>;
 }
 
 const fold = (text: string) => text.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();

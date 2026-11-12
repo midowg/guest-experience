@@ -15,6 +15,18 @@ export const PREFILL_KEYS = { name: "1", department: "2", position: "3", phone: 
 /** Data karyawan's posts as the position question's options (migration 202611110004). */
 export const postAnswers: Record<JobPost, string> = { staf: "Staf", lead: "Lead", hod: "HOD", gm: "GM" };
 const rank: Record<JobPost, number> = { staf: 0, lead: 1, hod: 2, gm: 3 };
+/**
+ * What each post may be called in the position question's options: HR may rename them in Admin WAM
+ * (12 Nov 2026 the options read "Staff", "Leader", "HOD", " GM"), and the post still fills in.
+ */
+const postNames: Record<JobPost, string[]> = {
+  staf: ["staf", "staff"], lead: ["lead", "leader", "team lead", "team leader", "supervisor", "supervisor / lead"],
+  hod: ["hod", "head of department", "kepala departemen"], gm: ["gm", "general manager"],
+};
+const plain = (text: string) => text.trim().toLocaleLowerCase("id").replace(/\s+/g, " ");
+/** The option of the position question that is this post, as HR wrote it; null when none is. */
+export const postOption = (options: readonly string[], post: JobPost): string | null => options.find(option => postNames[post].includes(plain(option))) ?? null;
+
 /** The highest post among a person's jobs (a Staf who also leads a team is a Lead); null without jobs. */
 export const highestPost = (posts: JobPost[]): JobPost | null =>
   posts.length ? posts.reduce((best, post) => (rank[post] > rank[best] ? post : best)) : null;
@@ -53,7 +65,8 @@ export function prefillAnswers(questions: QQuestion[], answers: Answers, person:
   const department = at(PREFILL_KEYS.department);
   if (department?.kind === "department" && departments.includes(person.department.trim())) out[department.key] = person.department.trim();
   const position = at(PREFILL_KEYS.position);
-  if (position?.kind === "single" && person.post && position.options.includes(postAnswers[person.post])) out[position.key] = postAnswers[person.post];
+  const post = position?.kind === "single" && person.post ? postOption(position.options, person.post) : null;
+  if (position && post) out[position.key] = post;
   const phone = at(PREFILL_KEYS.phone);
   if (phone?.kind === "text" && person.phone.trim()) out[phone.key] = person.phone.trim().slice(0, 300);
   const gender = at(PREFILL_KEYS.gender);

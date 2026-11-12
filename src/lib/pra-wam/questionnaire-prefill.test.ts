@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { QQuestion } from "./questionnaire";
-import { highestPost, nameAnswer, prefillAnswers, tidyName, type PrefillPerson } from "./questionnaire-prefill";
+import { highestPost, nameAnswer, postOption, prefillAnswers, tidyName, type PrefillPerson } from "./questionnaire-prefill";
 
 const question = (key: string, rest: Partial<QQuestion>): QQuestion => ({
   id: `q-${key}`, sectionId: "s", key, prompt: key, kind: "text", required: true, visibility: "hr", options: [], maxChoices: null, matrixRows: [], scale: [],
@@ -36,5 +36,16 @@ describe("prefill from Data karyawan", () => {
     expect(highestPost(["staf", "lead", "staf"])).toBe("lead");
     expect(highestPost(["hod", "gm"])).toBe("gm");
     expect(highestPost([])).toBeNull();
+  });
+});
+
+describe("position options as HR renamed them", () => {
+  it("fills the post into the option HR wrote, spaces and spelling aside", () => {
+    const renamed = [question("3", { kind: "single", options: ["Staff", "Leader", "HOD", " GM"] })];
+    expect(prefillAnswers(renamed, {}, dewi, [])).toEqual({ 3: "Leader" });
+    expect(prefillAnswers(renamed, {}, { ...dewi, post: "staf" }, [])).toEqual({ 3: "Staff" });
+    expect(prefillAnswers(renamed, {}, { ...dewi, post: "gm" }, [])).toEqual({ 3: " GM" });
+    expect(postOption(["Staf", "Head of Department"], "hod")).toBe("Head of Department");
+    expect(postOption(["Staf", "Manajer"], "hod")).toBeNull();
   });
 });

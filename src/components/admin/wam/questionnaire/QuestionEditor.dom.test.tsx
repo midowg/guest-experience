@@ -19,14 +19,15 @@ const other: QQuestion = { ...base, id: "q31", key: "31", prompt: "Satu hal yang
 
 function setup(question: QQuestion | null, onSave = vi.fn(async (payload: QuestionPayload) => { void payload; return null as Record<string, string[]> | null; })) {
   const onDraft = vi.fn();
-  render(<QuestionEditor initial={question ? toDraft(question) : newDraft(sections[0])} questionKey={question?.key ?? null} sections={sections}
+  render(<QuestionEditor initial={question ? toDraft(question) : newDraft(sections[0])} questionKey={question?.key ?? null} numbers={new Map([["3", 3], ["31", 4]])} sections={sections}
     questions={[base, other]} departments={["IT", "HR"]} answered={false} onDraft={onDraft} onSave={onSave} onCancel={() => {}} />);
   return { onSave, onDraft };
 }
 
-it("shows the fixed key, edits options one per line, and saves them cleaned", async () => {
+it("shows the running number, not the key, edits options one per line, and saves them cleaned", async () => {
   const { onSave, onDraft } = setup(base);
-  expect(screen.getByText("3").tagName).toBe("CODE");
+  expect(screen.getByText(/Pertanyaan nomor 3./)).toBeTruthy();
+  expect(screen.queryByText("3", { selector: "code" })).toBeNull();
   const options = screen.getByLabelText("Pilihan") as HTMLTextAreaElement;
   expect(options.value).toBe("Staf\nSupervisor / lead\nManajer ke atas");
   fireEvent.change(options, { target: { value: "Staf\n\n  Lead  \nManajer" } });
@@ -74,4 +75,15 @@ it("moves to the anonymous section as anonymous, and shows the server's field er
   expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ sectionId: anon, visibility: "anon" }));
   expect(screen.getByText("Pertanyaan paling panjang 300 karakter.")).toBeTruthy();
   expect(screen.getByText("Periksa isian yang ditandai.")).toBeTruthy();
+});
+
+it("does not undo a hide made with the eye button while the editor was open", async () => {
+  const onSave = vi.fn(async (payload: QuestionPayload) => { void payload; return null as Record<string, string[]> | null; });
+  const { rerender } = render(<QuestionEditor initial={toDraft(base)} questionKey="3" hidden={false} sections={sections} questions={[base, other]} departments={[]} answered={false} onSave={onSave} onCancel={() => {}} />);
+  // The eye button beside the list hid it; the editor stays open.
+  rerender(<QuestionEditor initial={toDraft(base)} questionKey="3" hidden sections={sections} questions={[base, other]} departments={[]} answered={false} onSave={onSave} onCancel={() => {}} />);
+  expect((screen.getByRole("checkbox", { name: "Sembunyikan dari peserta" }) as HTMLInputElement).checked).toBe(true);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Simpan pertanyaan" })); });
+  expect(onSave.mock.calls[0][0].hidden).toBe(true);
+  expect(screen.getByText("Pertanyaan ini tidak tampil ke peserta, jadi tidak bernomor.")).toBeTruthy();
 });

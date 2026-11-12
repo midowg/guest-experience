@@ -49,6 +49,15 @@ const primary = (name: string | RegExp) => fireEvent.click(screen.getByRole("but
 const answerSaves = () => calls.filter(call => call.url === praWamApi.questionnaireAnswer);
 
 describe("the questionnaire", () => {
+  it("goes straight to a section from its number at the top, to check an answer without Kembali card by card", () => {
+    render(<Questionnaire {...props()} />);
+    primary("Mulai");
+    primary(/Ke bagian 2, Anonim/);
+    expect(card()).toContain("Pendapatmu didengar?");
+    primary(/Ke bagian 1, Kenalan/);
+    expect(card()).toContain("Siapa namamu?");
+  });
+
   it("holds a required card with a nudge until it is answered, and saves the answer", async () => {
     render(<Questionnaire {...props()} />);
     expect(heading()).toContain("Hai, Dewi!");
@@ -135,7 +144,7 @@ describe("the questionnaire", () => {
     // The card is drawn once the answers are in: one request for it.
     await waitFor(() => expect(calls.filter(call => call.url === praWamApi.questionnaireCard)).toHaveLength(1));
     expect(answerSaves()).toEqual([]);
-    expect(screen.getByRole("list", { name: "Bagian kuesioner" }).querySelectorAll("li")[1].getAttribute("aria-label")).toContain("selesai");
+    expect(screen.getByRole("list", { name: "Bagian kuesioner" }).querySelectorAll("li")[1].querySelector("button")!.getAttribute("aria-label")).toContain("selesai");
 
     primary("Kembali");
     expect(screen.getByText("Sudah terkirim tanpa nama")).toBeTruthy();

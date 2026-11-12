@@ -28,3 +28,28 @@ it("keeps every choice of a multi question tapped quickly", () => {
   fireEvent.click(screen.getByRole("button", { name: "Film" }));
   expect(onChange).toHaveBeenLastCalledWith(["Musik", "Film"]);
 });
+
+it("asks what Lainnya is when it is chosen, in a single and a multi question", () => {
+  const onChange = vi.fn<(value: AnswerValue, typing?: boolean) => void>();
+  const single = question({ kind: "single", options: ["Musik", "Lainnya"] });
+  const { rerender } = render(<QuestionField question={single} value="Musik" onChange={onChange} labelledBy="h" departments={[]} people={[]} />);
+  expect(screen.queryByLabelText(/tulis sendiri/)).toBeNull();
+  rerender(<QuestionField question={single} value="Lainnya: Bad" onChange={onChange} labelledBy="h" departments={[]} people={[]} />);
+  expect(screen.getByRole("button", { name: "Lainnya" }).getAttribute("aria-pressed")).toBe("true");
+  const field = screen.getByLabelText("Lainnya, tulis sendiri:") as HTMLInputElement;
+  expect(field.value).toBe("Bad");
+  fireEvent.change(field, { target: { value: "Badminton" } });
+  expect(onChange).toHaveBeenLastCalledWith("Lainnya: Badminton", true);
+  // Tapping the chosen Lainnya again keeps what was written.
+  onChange.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Lainnya" }));
+  expect(onChange).not.toHaveBeenCalled();
+  cleanup();
+
+  const multi = question({ kind: "multi", options: ["Outdoor", "Lainnya"], maxChoices: null });
+  render(<QuestionField question={multi} value={["Outdoor", "Lainnya: Mem"]} onChange={onChange} labelledBy="h" departments={[]} people={[]} />);
+  fireEvent.change(screen.getByLabelText("Lainnya, tulis sendiri:"), { target: { value: "Memancing" } });
+  expect(onChange).toHaveBeenLastCalledWith(["Outdoor", "Lainnya: Memancing"], true);
+  fireEvent.click(screen.getByRole("button", { name: "Lainnya" }));
+  expect(onChange).toHaveBeenLastCalledWith(["Outdoor"]);
+});

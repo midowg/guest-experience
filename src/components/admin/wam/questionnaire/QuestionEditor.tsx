@@ -66,16 +66,23 @@ export function draftProblems(payload: QuestionPayload): FieldErrors {
 /**
  * The inline editor of one question (or a new one): text, kind and what the kind needs, who reads
  * it, the show-if rule, the section it sits in, and hidden. `onDraft` feeds the live preview;
- * `onSave` returns the server's field errors, if any. The key is shown, never edited.
+ * `onSave` returns the server's field errors, if any. The key never changes and is not shown
+ * (12 Nov 2026): questions go by their running number (`numbers`, by key).
+ *
+ * `hidden` is whether the question is hidden now: the eye button beside the list can change it
+ * while this editor is open, and saving here must not undo that (12 Nov 2026). Until the box here
+ * is ticked or unticked, the editor follows it.
  */
-export function QuestionEditor({ initial, questionKey, sections, questions, departments, answered, onDraft, onSave, onCancel, onDelete }: {
-  initial: QuestionDraft; questionKey: string | null; sections: QSection[]; questions: QQuestion[]; departments: string[]; answered: boolean;
+export function QuestionEditor({ initial, questionKey, hidden, numbers = new Map(), sections, questions, departments, answered, onDraft, onSave, onCancel, onDelete }: {
+  initial: QuestionDraft; questionKey: string | null; hidden?: boolean; numbers?: Map<string, number>; sections: QSection[]; questions: QQuestion[]; departments: string[]; answered: boolean;
   onDraft?: (draft: QuestionDraft) => void; onSave: (payload: QuestionPayload) => Promise<FieldErrors | null>; onCancel: () => void; onDelete?: () => void;
 }) {
   const id = useId();
   const [draft, setDraft] = useState(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
+  const [hiddenTouched, setHiddenTouched] = useState(false);
+  const hiddenNow = hiddenTouched || hidden === undefined ? draft.hidden : hidden;
   const section = sections.find(item => item.id === draft.sectionId);
   const set = <K extends keyof QuestionDraft>(key: K, value: QuestionDraft[K]) => {
     const next = { ...draft, [key]: value };
@@ -102,7 +109,7 @@ export function QuestionEditor({ initial, questionKey, sections, questions, depa
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const payload = fromDraft(draft);
+    const payload = { ...fromDraft(draft), hidden: hiddenNow };
     const problems = draftProblems(payload);
     setErrors(problems);
     if (Object.keys(problems).length) return;
@@ -114,10 +121,10 @@ export function QuestionEditor({ initial, questionKey, sections, questions, depa
   }
 
   const hasErrors = Object.values(errors).some(list => list?.length);
-  return <form className={styles.editor} noValidate onSubmit={submit} aria-label={questionKey ? `Ubah pertanyaan ${questionKey}` : "Pertanyaan baru"}>
-    {questionKey
-      ? <p className={styles.keyNote}>Kunci <code>{questionKey}</code> tetap, supaya jawaban tidak terputus saat teksnya diubah.</p>
-      : <p className={styles.keyNote}>Kunci dibuat otomatis saat disimpan dan tidak berubah lagi.</p>}
+  return <form className={styles.editor} noValidate onSubmit={submit} aria-label={questionKey ? `Ubah pertanyaan ${numbers.get(questionKey) ?? "tersembunyi"}` : "Pertanyaan baru"}>
+    <p className={styles.keyNote}>{questionKey
+      ? numbers.has(questionKey) ? `Pertanyaan nomor ${numbers.get(questionKey)}. Nomornya mengikuti urutan.` : "Pertanyaan ini tidak tampil ke peserta, jadi tidak bernomor."
+      : "Nomor diberikan otomatis mengikuti urutan pertanyaan."}</p>
 
     <Field label="Pertanyaan" name={field("prompt")} error={error("prompt")}>
       <textarea id={field("prompt")} className="textarea" rows={2} value={draft.prompt} maxLength={320} onChange={event => set("prompt", event.target.value)}
@@ -147,7 +154,7 @@ export function QuestionEditor({ initial, questionKey, sections, questions, depa
 
     <div className={styles.actions}>
       <label className={styles.check}><input type="checkbox" checked={draft.required} onChange={event => set("required", event.target.checked)} />Wajib dijawab</label>
-      <label className={styles.check}><input type="checkbox" checked={draft.hidden} onChange={event => set("hidden", event.target.checked)} />Sembunyikan dari peserta</label>
+      <label className={styles.check}><input type="checkbox" checked={hiddenNow} onChange={event => { setHiddenTouched(true); set("hidden", event.target.checked); }} />Sembunyikan dari peserta</label>
     </div>
 
     {(draft.kind === "single" || draft.kind === "multi") && <Field label="Pilihan" name={field("options")} error={error("options")} hint="Satu pilihan per baris.">
@@ -189,8 +196,8 @@ export function QuestionEditor({ initial, questionKey, sections, questions, depa
       <Field label="Tampil bila pertanyaan ini dijawab" name={field("showIfQuestion")}>
         <select id={field("showIfQuestion")} className="select" value={draft.showIfQuestion} onChange={event => set("showIfQuestion", event.target.value)}>
           <option value="">Selalu tampil</option>
-          {draft.showIfQuestion && !target && <option value={draft.showIfQuestion}>Pertanyaan {draft.showIfQuestion} (tidak ada lagi)</option>}
-          {targets.map(item => <option key={item.id} value={item.key}>{item.key}. {item.prompt.length > 70 ? `${item.prompt.slice(0, 70)}…` : item.prompt}</option>)}
+          {draft.showIfQuestion && !target && <option value={draft.showIfQuestion}>Pertanyaan yang sudah tidak ada</option>}
+          {targets.map(item => <option key={item.id} value={item.key}>{numbers.get(item.key) ?? "–"}. {item.prompt.length > 70 ? `${item.prompt.slice(0, 70)}…` : item.prompt}</option>)}
         </select>
       </Field>
       {draft.showIfQuestion && <>

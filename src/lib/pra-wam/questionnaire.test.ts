@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { audienceLabel, cleanAnswer, complete, editable, inAudience, progressOf, seesQuestionnaire, reservedSlugs, shows, slugFromName, slugProblem, type QQuestion, type QSection } from "./questionnaire";
+import { audienceLabel, baseChoice, isOtherOption, otherText, withOther, cleanAnswer, complete, editable, inAudience, progressOf, seesQuestionnaire, reservedSlugs, shows, slugFromName, slugProblem, type QQuestion, type QSection } from "./questionnaire";
 
 const question = (key: string, extra: Partial<QQuestion> = {}): QQuestion => ({
   id: `q-${key}`, sectionId: "s1", key, prompt: "Pertanyaan", kind: "text", required: false, visibility: "rekan", options: [], maxChoices: null,
@@ -99,5 +99,23 @@ describe("who it is for", () => {
     expect(seesQuestionnaire({ ...all, status: "draf" }, "a", false)).toBe(false);
     expect(seesQuestionnaire({ ...chosen, status: "draf" }, "z", true)).toBe(true);
     expect(seesQuestionnaire({ ...chosen, status: "tutup" }, "a", false)).toBe(true);
+  });
+});
+
+describe("Lainnya, written in", () => {
+  it("keeps what was written after Lainnya, and every rule still sees Lainnya", () => {
+    const single = question("17", { kind: "single", options: ["Musik", "Lainnya"] });
+    expect(cleanAnswer(single, "Lainnya: Badminton ")).toEqual({ value: "Lainnya: Badminton" });
+    expect(cleanAnswer(single, "Lainnya")).toEqual({ value: "Lainnya" });
+    expect(cleanAnswer(single, "Musik: rock")).toEqual({ problem: "Pilihan ini tidak ada di daftar." });
+    expect(cleanAnswer(single, `Lainnya: ${"x".repeat(201)}`)).toEqual({ problem: "Pilihan ini tidak ada di daftar." });
+    const multi = question("21", { kind: "multi", options: ["Outdoor", "Lainnya"] });
+    expect(cleanAnswer(multi, ["Outdoor", "Lainnya: Memancing"])).toEqual({ value: ["Outdoor", "Lainnya: Memancing"] });
+    expect(baseChoice("Lainnya: Memancing")).toBe("Lainnya");
+    expect([otherText("Lainnya: Memancing"), otherText("Outdoor")]).toEqual(["Memancing", ""]);
+    expect([withOther("Lainnya", "  Memancing"), withOther("Lainnya", " ")]).toEqual(["Lainnya: Memancing", "Lainnya"]);
+    expect([isOtherOption("Lainnya"), isOtherOption("lainnya, sebutkan"), isOtherOption("Tidak ada")]).toEqual([true, true, false]);
+    const follow = question("18", { showIf: { question: "17", any: ["Lainnya"] } });
+    expect(shows(follow, { 17: "Lainnya: Badminton" })).toBe(true);
   });
 });

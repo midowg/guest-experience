@@ -13,29 +13,36 @@ export function QuestionnaireApp({ children }: { children: ReactNode }) {
 
 export type Slot = { section: QSection; done: boolean };
 
-/** One sticker slot per section: a tick once done, the number of the one in hand, else "?". */
-export function Slots({ slots, current, popped }: { slots: Slot[]; current?: string; popped?: string | null }) {
+/**
+ * One sticker slot per section: a tick once done, the number of the one in hand, else "?". With
+ * `onPick` (12 Nov 2026) each slot is a button with its number that goes straight to that
+ * section, to check or change an answer without pressing Kembali card by card.
+ */
+export function Slots({ slots, current, popped, onPick }: { slots: Slot[]; current?: string; popped?: string | null; onPick?: (sectionId: string) => void }) {
   return <ol className={styles.slots} aria-label="Bagian kuesioner">
     {slots.map(({ section, done }, index) => {
       const now = section.id === current;
       const state = done ? "selesai" : now ? "sedang diisi" : "belum";
-      return <li key={section.id} aria-label={`Bagian ${index + 1}, ${section.title}: ${state}`} aria-current={now ? "step" : undefined}
+      const mark = done ? <Check size={18} strokeWidth={3} /> : now || onPick ? index + 1 : "?";
+      return <li key={section.id} aria-label={onPick ? undefined : `Bagian ${index + 1}, ${section.title}: ${state}`} aria-current={now ? "step" : undefined}
         className={`${styles.slot} ${done ? styles.got : now ? styles.now : ""} ${section.id === popped ? styles.pop : ""}`}>
-        <span aria-hidden>{done ? <Check size={18} strokeWidth={3} /> : now ? index + 1 : "?"}</span>
+        {onPick
+          ? <button type="button" className={styles.slotButton} aria-label={`Ke bagian ${index + 1}, ${section.title}: ${state}`} onClick={() => onPick(section.id)}><span aria-hidden>{mark}</span></button>
+          : <span aria-hidden>{mark}</span>}
       </li>;
     })}
   </ol>;
 }
 
 /** The top bar: Keluar to Beranda, the form's name, the slots and a status line. */
-export function Top({ name, home, slots, current, popped, status, preview }: { name: string; home: string; slots: Slot[]; current?: string; popped?: string | null; status: ReactNode; preview?: boolean }) {
+export function Top({ name, home, slots, current, popped, status, preview, onPick }: { name: string; home: string; slots: Slot[]; current?: string; popped?: string | null; status: ReactNode; preview?: boolean; onPick?: (sectionId: string) => void }) {
   return <header className={`${styles.wrap} ${styles.top}`}>
     <div className={styles.bar}>
       <a className={styles.exit} href={home}><ArrowLeft aria-hidden />Keluar</a>
       <span className={styles.formName}>{name}</span>
     </div>
     {preview && <p className={styles.preview} role="note">Pratinjau draf: hanya Admin WAM yang melihat. Jawaban di sini data uji.</p>}
-    <Slots slots={slots} current={current} popped={popped} />
+    <Slots slots={slots} current={current} popped={popped} onPick={onPick} />
     <div className={styles.status}>{status}</div>
   </header>;
 }
