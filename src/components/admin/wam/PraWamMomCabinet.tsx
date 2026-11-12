@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { ChevronRight, Download, FileArchive, FileSpreadsheet, FileText, Folder, FolderOpen, List, MonitorPlay } from "lucide-react";
+import { Check, ChevronRight, Download, ExternalLink, FileArchive, FileSpreadsheet, FileText, Folder, FolderOpen, Images, List, MonitorPlay } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, ConsoleButtonLink, PageHeader, Pill, SearchField, SegmentedControl, type Crumb } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { MOM_CABINET_MIGRATION } from "@/lib/pra-wam/minutes-photos";
 import {
-  CABINET_EXPORT_LIMIT, filterEntries, filterOptions, monthName, NO_FILTER, pdfName, photoName, placeEntries,
+  CABINET_EXPORT_LIMIT, filterEntries, filterOptions, monthName, NO_FILTER, pdfName, photoName, placeEntries, tvTitleOf,
   type CabinetFilter, type CabinetPhoto, type CabinetView, type PlacedEntry,
 } from "@/lib/pra-wam/mom-cabinet";
 import { momCabinetApi } from "@/lib/routes";
@@ -15,7 +15,7 @@ import { zipStore, type ZipFile } from "@/lib/zip-store";
 import css from "./mom-cabinet.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
-type Mode = "daftar" | "folder";
+type Mode = "galeri" | "folder" | "daftar";
 type Progress = { label: string; done: number; total: number } | null;
 
 const LEVELS = ["Bulan", "Kegiatan", "Tanggal", "Tim"] as const;
@@ -65,7 +65,7 @@ async function inTurn<T>(jobs: readonly (() => Promise<T>)[], each: () => void, 
 export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetView; crumbs?: readonly Crumb[] }) {
   const [view, setView] = useState(initial);
   const [filter, setFilter] = useState<CabinetFilter>(NO_FILTER);
-  const [mode, setMode] = useState<Mode>("folder");
+  const [mode, setMode] = useState<Mode>("galeri");
   const [path, setPath] = useState<string[]>([]);
   const [message, setMessage] = useState<Message>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -76,6 +76,16 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
   const placed = useMemo(() => placeEntries(filterEntries(view.entries, filter)), [view.entries, filter]);
   const inFolder = useMemo(() => placed.filter(entry => path.every((name, level) => entry.path[level] === name)), [placed, path]);
   const scope = mode === "folder" ? inFolder : [...placed].reverse();
+  // Galeri: every photo of what is shown, newest meeting first, without opening folders; chosen like a phone's gallery.
+  const [chosen, setChosen] = useState<ReadonlySet<string>>(() => new Set());
+  const groups = useMemo(() => [...placed].reverse().filter(entry => entry.photos.length > 0), [placed]);
+  const shownPhotos = useMemo(() => groups.flatMap(entry => entry.photos.map((photo, index) => ({ entry, photo, index }))), [groups]);
+  const picked = shownPhotos.filter(item => chosen.has(item.photo.id));
+  const toggle = (ids: readonly string[], on: boolean) => setChosen(current => {
+    const next = new Set(current);
+    for (const id of ids) { if (on) next.add(id); else next.delete(id); }
+    return next;
+  });
   const photos = scope.reduce((sum, entry) => sum + entry.photos.length, 0);
   const photoBytes = scope.reduce((sum, entry) => sum + entry.photos.reduce((total, photo) => total + photo.size, 0), 0);
   const where = mode === "folder" && path.length ? path[path.length - 1] : filter.month ? monthName(filter.month) : "semua";
@@ -139,6 +149,33 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
       save(zipStore(files), zipName("Foto"), "application/zip");
       setMessage({ tone: "success", text: `${files.length} foto tersimpan dalam satu ZIP, per folder.` });
     }, jobs.length);
+  }
+
+  /** Galeri → Masukkan ke TV: the chosen photos not yet on the TV, in the gallery's order. */
+  async function pickedToTv() {
+    const going = picked.filter(item => !item.photo.onTv);
+    if (!going.length) { setMessage({ tone: "error", text: "Foto yang dipilih sudah ada di TV semua." }); return; }
+    if (going.length > 30) { setMessage({ tone: "error", text: `TV menampung paling banyak 30 gambar. Pilih ${going.length - 30} foto lebih sedikit.` }); return; }
+    const sensitive = going.some(item => item.entry.telegramOff) ? "\n\nAda foto dari MoM yang ditandai Jangan kirim ke Telegram (meeting sensitif). Pastikan boleh dilihat semua orang di kantor." : "";
+    if (!window.confirm(`Masukkan ${going.length} foto ke daftar tayangan TV kantor?${sensitive}`)) return;
+    setBusy("tv-many"); setMessage(null);
+    try {
+      const result = await adminRequest<CabinetView>(momCabinetApi.photosTv, { method: "POST", body: JSON.stringify({ photos: going.map(item => ({ id: item.photo.id, title: tvTitleOf(item.entry) })) }) });
+      if (result.data) setView(result.data);
+      setChosen(new Set());
+      setMessage({ tone: "success", text: result.message });
+    } catch (problem) { setMessage({ tone: "error", text: errorMessage(problem) }); }
+    finally { setBusy(null); }
+  }
+
+  /** Galeri → Unduh: the chosen photos as one ZIP, each in its meeting's folder. */
+  function pickedZip() {
+    void run("foto-pilih", "Mengambil foto", async (signal, step) => {
+      const files = await inTurn(picked.map(({ entry, photo, index }) => async (): Promise<ZipFile> =>
+        ({ name: `${entry.path.join("/")}/${photoName(entry, index)}`, bytes: await fetchFile(momCabinetApi.photoFile(photo.id), signal), date: new Date(photo.at) })), step, 4);
+      save(zipStore(files), zipName("Foto pilihan"), "application/zip");
+      setMessage({ tone: "success", text: `${files.length} foto tersimpan dalam satu ZIP.` });
+    }, picked.length);
   }
 
   async function toTv(entry: PlacedEntry, photo: CabinetPhoto, index: number) {
@@ -231,6 +268,7 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
           {options.departments.map(name => <option key={name} value={name}>{name}</option>)}
         </select>
         <SegmentedControl label="Tampilan" value={mode} onChange={value => { setMode(value); setPath([]); }} options={[
+          { value: "galeri", label: "Galeri", icon: <Images size={16} aria-hidden="true" /> },
           { value: "folder", label: "Folder", icon: <Folder size={16} aria-hidden="true" /> },
           { value: "daftar", label: "Daftar", icon: <List size={16} aria-hidden="true" /> },
         ]} />
@@ -247,6 +285,45 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
     </nav>}
 
     {!placed.length ? <Card title="Lemari kosong"><p className={css.empty}>{view.entries.length ? "Tidak ada MoM yang cocok dengan pencarian ini." : "Belum ada MoM yang dikirim."}</p></Card>
+      : mode === "galeri" ? <section aria-label="Galeri foto" className={css.galleryView}>
+        {!shownPhotos.length ? <Card title="Belum ada foto"><p className={css.empty}>MoM yang tampil belum punya foto.</p></Card> : <>
+          <div className={css.pickBar} role="toolbar" aria-label="Pilihan foto">
+            <p className={css.scope}>{picked.length ? `${picked.length} dipilih` : `${shownPhotos.length} foto`}</p>
+            <div className={css.buttons}>
+              {picked.length < shownPhotos.length
+                ? <ConsoleButton disabled={busy !== null} onClick={() => toggle(shownPhotos.map(item => item.photo.id), true)}>Pilih semua</ConsoleButton>
+                : <ConsoleButton disabled={busy !== null} onClick={() => setChosen(new Set())}>Batal pilih</ConsoleButton>}
+              {picked.length > 0 && picked.length < shownPhotos.length && <ConsoleButton disabled={busy !== null} onClick={() => setChosen(new Set())}>Batal pilih</ConsoleButton>}
+              {view.tvReady && <ConsoleButton variant="primary" icon={<MonitorPlay size={16} aria-hidden="true" />} disabled={!picked.length || busy !== null} onClick={() => { void pickedToTv(); }}>
+                {busy === "tv-many" ? "Memasukkan…" : `Masukkan ke TV${picked.length ? ` (${picked.length})` : ""}`}
+              </ConsoleButton>}
+              <ConsoleButton icon={<Download size={16} aria-hidden="true" />} disabled={!picked.length || busy !== null} onClick={pickedZip}>Unduh{picked.length ? ` (${picked.length})` : ""}</ConsoleButton>
+            </div>
+          </div>
+          {groups.map(entry => {
+            const ids = entry.photos.map(photo => photo.id);
+            const all = ids.every(id => chosen.has(id));
+            return <div key={entry.sessionId} className={css.galleryGroup}>
+              <div className={css.galleryHead}>
+                <p><strong>{entry.title}</strong> <span className={css.muted}>{longDay(entry.date)} · {entry.department}</span></p>
+                <button type="button" className={css.pickGroup} onClick={() => toggle(ids, !all)}>{all ? "Batal pilih" : "Pilih"}</button>
+              </div>
+              <ul className={css.galleryGrid}>{entry.photos.map((photo, index) => {
+                const on = chosen.has(photo.id);
+                return <li key={photo.id} className={css.tile} data-on={on ? "" : undefined}>
+                  <button type="button" className={css.tilePick} aria-pressed={on} aria-label={`Foto ${index + 1} ${entry.title}${photo.onTv ? ", sudah di TV" : ""}`} onClick={() => toggle([photo.id], !on)}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- a redirect to a signed address that expires */}
+                    <img src={momCabinetApi.photo(photo.id)} alt="" loading="lazy" decoding="async" />
+                    <span className={css.tileCheck} aria-hidden="true">{on && <Check size={16} />}</span>
+                    {photo.onTv && <span className={css.tileTv}>Di TV</span>}
+                  </button>
+                  <a className={css.tileOpen} href={momCabinetApi.photo(photo.id)} target="_blank" rel="noopener" aria-label={`Buka foto ${index + 1} ${entry.title} (tab baru)`}><ExternalLink size={14} aria-hidden="true" /></a>
+                </li>;
+              })}</ul>
+            </div>;
+          })}
+        </>}
+      </section>
       : mode === "folder" && path.length < 4 ? <section aria-label={`Folder ${LEVELS[path.length]}`}>
         <p className={css.level}>{LEVELS[path.length]}</p>
         <ul className={css.folders}>{children.map(child => <li key={child.name}>

@@ -110,3 +110,10 @@ export function filterEntries<T extends CabinetEntry>(entries: readonly T[], fil
 export const CABINET_EXPORT_LIMIT = { files: 1500, bytes: 700 * 1024 * 1024 } as const;
 export const cabinetExportSchema = z.object({ ids: z.array(z.uuid()).min(1, "Pilih minimal satu MoM.").max(1000, "Paling banyak 1000 MoM sekali ekspor.") });
 export const cabinetTvSchema = z.object({ title: z.string().trim().max(80, "Judul paling panjang 80 karakter.").default("") });
+/** Many photos to the TV at once (Galeri): each with its picture's name; the TV holds 30 pictures. */
+export const cabinetTvManySchema = z.object({
+  photos: z.array(z.object({ id: z.uuid(), title: z.string().trim().max(80).default("") })).min(1, "Pilih minimal satu foto.").max(30, "Paling banyak 30 foto sekali kirim ke TV."),
+});
+/** "Appraisal team SS · Sel, 10 Nov 2026", a picture's name on the TV, at most 80 characters. */
+export const tvTitleOf = (entry: Pick<CabinetEntry, "title" | "date">) =>
+  `${entry.title} · ${new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${entry.date}T00:00:00Z`))}`.slice(0, 80);

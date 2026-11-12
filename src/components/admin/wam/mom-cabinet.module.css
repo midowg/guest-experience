@@ -42,3 +42,24 @@
 .photoBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
 .iconLink { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--cs-line); border-radius: 10px; color: inherit; }
 .iconLink:hover { border-color: var(--cs-primary); color: var(--cs-primary); }
+
+/* Galeri (12 Nov 2026): every photo at once, chosen like a phone's gallery, for the TV or a ZIP. */
+.galleryView { display: grid; gap: 16px; }
+.pickBar { position: sticky; top: 64px; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 14px; border: 1px solid var(--cs-line); border-radius: 14px; background: var(--cs-surface); box-shadow: 0 6px 18px rgb(0 0 0 / 0.08); }
+.galleryGroup { display: grid; gap: 8px; }
+.galleryHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.galleryHead p { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.pickGroup { min-height: 36px; padding: 4px 10px; border: 0; border-radius: 8px; background: none; color: var(--cs-primary); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pickGroup:hover { background: var(--cs-surface-2); }
+.galleryGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(30%, 150px), 1fr)); gap: 4px; margin: 0; padding: 0; list-style: none; }
+.tile { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 6px; background: var(--cs-surface-2); }
+.tilePick { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
+.tilePick img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.12s ease; }
+.tile[data-on] .tilePick img { transform: scale(0.88); border-radius: 6px; }
+.tile[data-on] { background: color-mix(in srgb, var(--cs-primary) 18%, var(--cs-surface)); }
+.tilePick:focus-visible { outline: 3px solid var(--cs-primary); outline-offset: -3px; }
+.tileCheck { position: absolute; top: 6px; left: 6px; display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid #fff; border-radius: 50%; background: rgb(0 0 0 / 0.25); color: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / 0.4); }
+.tile[data-on] .tileCheck { border-color: var(--cs-primary); background: var(--cs-primary); }
+.tileTv { position: absolute; bottom: 6px; left: 6px; padding: 2px 8px; border-radius: 999px; background: rgb(0 0 0 / 0.6); color: #fff; font-size: 11px; font-weight: 700; }
+.tileOpen { position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: rgb(0 0 0 / 0.45); color: #fff; }
+.tileOpen:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }

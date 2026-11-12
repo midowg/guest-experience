@@ -222,6 +222,24 @@ export async function cabinetPhotoFile(photoId: string): Promise<Uint8Array> {
   return object.bytes;
 }
 
+/**
+ * Galeri → Masukkan ke TV: each photo as Tampilkan di TV does, in order. A photo already on the TV
+ * is passed over; when the TV is full the rest stay out. Says how many went in.
+ */
+export async function cabinetPhotosToTv(photos: readonly { id: string; title: string }[]): Promise<{ added: number; already: number; left: number }> {
+  let added = 0, already = 0;
+  for (const [index, photo] of photos.entries()) {
+    try { await cabinetPhotoToTv(photo.id, photo.title); added += 1; }
+    catch (error) {
+      if (error instanceof ServiceError && error.status === 409 && /sudah ada di TV/.test(error.message)) { already += 1; continue; }
+      if (error instanceof ServiceError && error.status === 409) return { added, already, left: photos.length - index };
+      if (added || already) return { added, already, left: photos.length - index };
+      throw error;
+    }
+  }
+  return { added, already, left: 0 };
+}
+
 /** Tampilkan di TV: the photo, copied to the TV's storage, becomes a picture of the playlist (last, shown). */
 export async function cabinetPhotoToTv(photoId: string, title: string): Promise<void> {
   if (!(await tvReady())) throw new ServiceError(503, `Foto meeting di TV menunggu migrasi ${MOM_CABINET_MIGRATION}.`);

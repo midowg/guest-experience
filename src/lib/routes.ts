@@ -519,6 +519,7 @@ export const momCabinetApi = {
   photoDownload: (photoId: string, name: string) => `/api/admin/wam/mom/photos/${photoId}?unduh=${encodeURIComponent(name)}`,
   photoFile: (photoId: string) => `/api/admin/wam/mom/photos/${photoId}?berkas=1`,
   photoTv: (photoId: string) => `/api/admin/wam/mom/photos/${photoId}/tv`,
+  photosTv: "/api/admin/wam/mom/photos/tv",
   export: "/api/admin/wam/mom/export",
 } as const;
 /** Admin WAM → TV Announcement (any admin). */
