@@ -75,8 +75,9 @@ export async function minutesMessage(session: Session, minutes: Minutes, hod: bo
   const names = people.filter(person => ids.includes(person.id)).map(person => person.name).sort((a, b) => a.localeCompare(b, "id"));
   const date = session.startsAt ? wibDate(session.startsAt) : wibDate(minutes.submittedAt);
   return {
-    // The MoM's number (FRM form) is its mark from then on; before it, the code.
-    code: minutes.number ?? minutesCode(short, date, session.id),
+    // The nomor surat typed (13 Nov 2026), else the automatic number (FRM form); before it, the code.
+    code: minutes.docNumber ?? minutes.number ?? minutesCode(short, date, session.id),
+    numbered: !!(minutes.docNumber || minutes.number),
     title: session.title, departmentShort: short, department, date,
     from: clock(session.startsAt), to: clock(session.endsAt), place: session.roomName ?? session.location ?? "",
     participants: names, notetaker: minutes.submittedBy,

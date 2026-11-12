@@ -29,6 +29,9 @@ import { getSession, sessionsByIds } from "./sessions";
  * Form FRM (12 Nov 2026, migration 202611120005): the MoM's number, chairperson, who came, the
  * agenda items, the next meeting and the photos; one save is one transaction (pw_save_minutes).
  * Before that migration the agenda items are kept as the summary and decisions, as before.
+ *
+ * Nomor surat MoM (13 Nov 2026, migration 202611130001): the number the notetaker types, kept in
+ * pw_session_minutes.doc_number, read and written on its own so the MoM works without the column.
  */
 
 export const MINUTES_MIGRATION = "202611110002_pw_session_minutes.sql";
@@ -38,6 +41,9 @@ const columnMissing = (error: { code?: string; message?: string }) =>
   (["42703", "PGRST204"].includes(error.code ?? "") || /column .* does not exist|Could not find the .* column/.test(error.message ?? ""))
   && /sent_at|sent_by|telegram_off|version|done_at|done_by|number|chair_id|items|absent_ids|guests|next_(date|time|place|agenda)/.test(error.message ?? "");
 const missing = (error: { code?: string; message?: string }) => tableMissing(error) || columnMissing(error);
+/** doc_number is not there yet (before migration 202611130001). */
+const docNumberMissing = (error: { code?: string; message?: string }) =>
+  ["42703", "PGRST204"].includes(error.code ?? "") || /doc_number/.test(error.message ?? "");
 const waiting = () => new ServiceError(503, `Notulen menunggu migrasi ${MINUTES_MIGRATION}.`);
 
 const BASE = "session_id,summary,decisions,submitted_by,submitted_at,updated_by,updated_at";
@@ -75,6 +81,20 @@ async function readRow(sessionId: string): Promise<{ row: MinutesRow | null; lev
   throw new Error("unreachable");
 }
 
+/** The nomor surat MoM typed for this session; null when none, or before migration 202611130001. */
+async function readDocNumber(sessionId: string): Promise<string | null> {
+  const { data, error } = await createPrivilegedClient().from("pw_session_minutes").select("doc_number").eq("session_id", sessionId).maybeSingle();
+  if (error) { if (docNumberMissing(error) || missing(error)) return null; databaseError(error); }
+  const value = (data as { doc_number?: string | null } | null)?.doc_number?.trim();
+  return value || null;
+}
+
+/** Keeps the nomor surat MoM as typed (empty = none); before migration 202611130001 it is not kept. */
+async function saveDocNumber(sessionId: string, docNumber: string): Promise<void> {
+  const { error } = await createPrivilegedClient().from("pw_session_minutes").update({ doc_number: (docNumber ?? "").trim() || null }).eq("session_id", sessionId);
+  if (error && !docNumberMissing(error)) databaseError(error);
+}
+
 type Read = { migrated: boolean; level: Level; minutes: Minutes | null };
 
 async function readMinutes(session: Pick<Session, "id" | "startsAt">): Promise<Read> {
@@ -90,7 +110,8 @@ async function readMinutes(session: Pick<Session, "id" | "startsAt">): Promise<R
   if (actionError) { if (missing(actionError)) return { migrated: false, level: 0, minutes: null }; databaseError(actionError); }
   const { row, level } = read;
   if (!row) return { migrated: true, level, minutes: null };
-  const names = new Map((await listPeople()).map(person => [person.id, person.name]));
+  const [people, docNumber] = await Promise.all([listPeople(), readDocNumber(session.id)]);
+  const names = new Map(people.map(person => [person.id, person.name]));
   const name = (id: string | null | undefined) => (id ? names.get(id) ?? "Tanpa nama" : null);
   const sending = level >= 1;
   const frm = level >= 2;
@@ -107,6 +128,7 @@ async function readMinutes(session: Pick<Session, "id" | "startsAt">): Promise<R
       sentAt: sending ? row.sent_at ?? null : row.submitted_at, sentBy: sending ? name(row.sent_by) : name(row.submitted_by),
       version: sending ? row.version ?? 0 : 1, telegramOff: sending ? !!row.telegram_off : false,
       number: frm && row.number ? minutesNumber(row.number, day) : null,
+      docNumber,
       items: frm ? asItems(row.items) : [],
       chairId: frm ? row.chair_id ?? null : null, chairName: frm ? name(row.chair_id) : null,
       absentIds: frm ? row.absent_ids ?? [] : [], guests: frm ? row.guests ?? "" : "", next,
@@ -237,6 +259,9 @@ export async function saveMinutes(sessionId: string, input: MinutesInput, member
   const sentNow = before.level >= 2
     ? await saveFrm(sessionId, checked, member, at)
     : await saveBefore(sessionId, checked, member, at, before.row, before.level >= 1);
+  // Before the MoM is read back below: the PDF and Telegram of this save carry the number typed.
+  // An app opened before the field sends none: the number typed earlier then stays.
+  if (checked.docNumber !== undefined) await saveDocNumber(sessionId, checked.docNumber);
 
   // The MoM's attendance is the check-in too (FRM form only: before it the MoM keeps no attendance).
   if (before.level >= 2) await recordMinutesAttendance(sessionId, session.startsAt, checked.absentIds, member, now);

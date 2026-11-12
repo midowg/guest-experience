@@ -1,6 +1,6 @@
 import "server-only";
 import { PDFDocument, PDFString, rgb, StandardFonts, type PDFFont, type PDFImage, type PDFPage, type RGB } from "pdf-lib";
-import { decisionLines, frmDate, frmDue, frmStamp, frmTime, guestNames, isMinutesNumber, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
+import { decisionLines, frmDate, frmDue, frmStamp, frmTime, guestNames, hasMinutesNumber, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
 import { pdfSafe } from "../beo-pdf";
 import { FRM_LOGO_PNG_BASE64 } from "./frm-logo";
 
@@ -68,7 +68,7 @@ type Spec = { columns: readonly number[]; head?: readonly string[]; headBold?: b
 /** The MoM as a PDF; `photos` are the meeting's JPEGs, in order (one that cannot be read is left out). */
 export async function minutesPdf(message: MinutesMessage, photos: readonly Uint8Array[] = []): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const mark = isMinutesNumber(message.code) ? message.code : `MoM ${message.code}`;
+  const mark = hasMinutesNumber(message) ? message.code : `MoM ${message.code}`;
   const version = Math.max(1, message.version);
   pdf.setTitle(pdfSafe(`${mark} ${message.title}`));
   pdf.setSubject(`Minutes of Meeting (${FORM.number}), version ${version}`);

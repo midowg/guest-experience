@@ -43,6 +43,12 @@ export type Minutes = {
   summary: string; decisions: string; actions: MinuteAction[];
   /** "MoM/2026/11/0012", given on the first save; null before migration 202611120005. */
   number: string | null;
+  /**
+   * Nomor surat MoM (13 Nov 2026, migration 202611130001): typed by the notetaker, taken from the
+   * register in SharePoint (MOM_NUMBER_REGISTER). When given, it is the MoM's number everywhere
+   * (PDF, Telegram, Arsip MoM); null until typed (then `number` stands).
+   */
+  docNumber: string | null;
   items: MinuteItem[];
   chairId: string | null; chairName: string | null;
   /** Who of the people in the meeting did not come; everyone else came. */
@@ -166,7 +172,13 @@ const itemSchema = z.object({
   decision: z.string().trim().max(minutesLimits.decision, `Keputusan paling banyak ${minutesLimits.decision} karakter.`).default(""),
   added: z.boolean().default(false),
 }).refine(item => item.discussion.length >= 2 || item.decision.length >= 2, { path: ["discussion"], message: "Isi pembahasan atau keputusan untuk topik ini." });
+/** The register the nomor surat MoM is taken from (SharePoint, baslibrary); employees know how. */
+export const MOM_NUMBER_REGISTER = "https://werkudara.sharepoint.com/:x:/s/baslibrary/IQApFMkQx9PdRJ6hLrfSSC26AVjVrvcwEPLi042Kavz-wis?e=mizovl";
+export const MOM_DOC_NUMBER_MAX = 60;
+
 export const minutesInputSchema = z.object({
+  /** Nomor surat MoM as typed (13 Nov 2026); empty = none yet. */
+  docNumber: z.string().trim().max(MOM_DOC_NUMBER_MAX, `Nomor surat paling panjang ${MOM_DOC_NUMBER_MAX} karakter.`).optional(),
   /** The agenda items (FRM form, 12 Nov 2026). */
   items: z.array(itemSchema).max(minutesLimits.items, `Paling banyak ${minutesLimits.items} topik.`).default([]),
   /** Before the FRM form: one summary and the decisions. Still taken, from an app opened before the update. */

@@ -23,7 +23,7 @@ const written: MinutesView = {
   frm: true, attendees, defaultChairId: RAJA, photos: [photo("p1", "tv-welcome-werkudara.webp"), photo("p2", "tv-bday-flowers.webp"), photo("p3", "icon-512.png")], photosReady: true, photoHd: true, staff: [{ id: "andi", name: "Andi", fullName: "Andi Wijaya", department: "Finance" }, { id: "sari", name: "Sari", fullName: "Sari Melati", department: "Human Resources" }],
   telegram: { ready: true, reason: null, destinations: ["Werkudara SM · Commercial"], deliveries: [{ title: "Werkudara SM · Commercial", status: "terkirim", error: null, version: 2, at: "2026-11-10T06:30:00.000Z" }] },
   minutes: {
-    summary: "", decisions: "", number: "MoM/2026/11/0012",
+    summary: "", decisions: "", number: "MoM/2026/11/0012", docNumber: null,
     items: [
       { topic: "Target penjualan Q1", discussion: "Realisasi Q4 98% dari target. Pasar korporat tumbuh.", decision: "Target Q1 naik 10%.", added: false },
       { topic: "Event klien di Bali", discussion: "Dua pilihan venue dibandingkan dari sisi kapasitas dan biaya.", decision: "Event Bali dipegang tim SM.\nSurvei venue minggu depan.", added: false },

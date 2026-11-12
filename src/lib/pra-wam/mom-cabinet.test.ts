@@ -33,6 +33,14 @@ describe("Arsip MoM folders", () => {
     expect(pdfName(entry({ version: 2 }))).toBe("MoM-2026-11-0012_v2.pdf");
     expect(photoName(entry(), 0)).toBe("MoM-2026-11-0012_foto-01.jpg");
     expect(photoName(entry({ code: "CoE-20261112-4F3A" }), 9)).toBe("CoE-20261112-4F3A_foto-10.jpg");
+    expect(pdfName(entry({ code: "CoE-20261112-4F3A", numbered: false }))).toBe("MoM_CoE-20261112-4F3A_v1.pdf");
+  });
+
+  it("names them after the nomor surat typed, slashes made safe", () => {
+    const typed = entry({ code: "001/MoM/BAS/XI/2026", numbered: true, version: 3 });
+    expect(pdfName(typed)).toBe("001-MoM-BAS-XI-2026_v3.pdf");
+    expect(photoName(typed, 1)).toBe("001-MoM-BAS-XI-2026_foto-02.jpg");
+    expect(photoName(entry({ code: "002\\MoM:BAS*XI?2026" }), 0)).toBe("002-MoM-BAS-XI-2026_foto-01.jpg");
   });
 });
 

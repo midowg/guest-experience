@@ -67,6 +67,17 @@ describe("minutesPdf", () => {
     expect((link.lookup(PDFName.of("URI")) as PDFString).decodeText()).toBe("https://journey.werkudara.group/wam/sessions/x");
   });
 
+  it("with a nomor surat typed: the title, the number cell and every page's foot carry it", async () => {
+    const pdf = await PDFDocument.load(await minutesPdf({ ...frm, code: "001/MoM/BAS/XI/2026", numbered: true }));
+    expect(pdf.getTitle()).toBe("001/MoM/BAS/XI/2026 Review alur onboarding klien");
+    const pages = pdf.getPages();
+    expect(pages.flatMap(texts)).toContain("001/MoM/BAS/XI/2026");
+    for (const page of pages) expect(texts(page).some(text => text.startsWith("001/MoM/BAS/XI/2026 · Version"))).toBe(true);
+    // A code said not to be a number keeps the "MoM" in front.
+    const coded = await PDFDocument.load(await minutesPdf({ ...frm, numbered: false }));
+    expect(coded.getTitle()).toBe("MoM MoM/2026/11/0012 Review alur onboarding klien");
+  });
+
   it("before the form: the summary and decisions stand as one agenda item, IV says there are no new topics", async () => {
     const pdf = await PDFDocument.load(await minutesPdf({ ...message, actions: [] }));
     expect(pdf.getTitle()).toBe("MoM CoE-20261112-4F3A Review alur onboarding klien");

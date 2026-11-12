@@ -27,7 +27,7 @@ import { addMeetingPicture } from "./tv";
 type Row = {
   session_id: string; summary: string; decisions: string; submitted_by: string | null; submitted_at: string;
   sent_at?: string | null; version?: number; telegram_off?: boolean;
-  number?: number | null; chair_id?: string | null; items?: unknown; absent_ids?: string[] | null; guests?: string | null;
+  number?: number | null; doc_number?: string | null; chair_id?: string | null; items?: unknown; absent_ids?: string[] | null; guests?: string | null;
 };
 type ActionRow = { session_id: string; sort_order: number; task: string; pic_id: string | null; due_date: string | null; done: boolean };
 type PhotoRow = { id: string; session_id: string; file_key: string; size: number; width: number | null; height: number | null; created_at: string };
@@ -35,6 +35,8 @@ type PhotoRow = { id: string; session_id: string; file_key: string; size: number
 const BASE = "session_id,summary,decisions,submitted_by,submitted_at";
 const SEND = `${BASE},sent_at,version,telegram_off`;
 const FRM = `${SEND},number,chair_id,items,absent_ids,guests`;
+/** With the nomor surat MoM (migration 202611130001). */
+const DOC = `${FRM},doc_number`;
 const tableMissing = (error: { code?: string; message?: string }) => ["42P01", "PGRST205"].includes(error.code ?? "");
 const columnMissing = (error: { code?: string; message?: string }) => ["42703", "PGRST204"].includes(error.code ?? "") || /column .* does not exist|Could not find the .* column/.test(error.message ?? "");
 
@@ -52,7 +54,7 @@ async function inParts<T>(ids: readonly string[], read: (part: string[]) => Prom
 /** The sent MoMs (every saved one before drafts existed), with as many columns as the migrations allow. */
 async function sentRows(ids: readonly string[] | null): Promise<{ migrated: boolean; sending: boolean; rows: Row[] }> {
   const client = createPrivilegedClient();
-  for (const [columns, sending] of [[FRM, true], [SEND, true], [BASE, false]] as const) {
+  for (const [columns, sending] of [[DOC, true], [FRM, true], [SEND, true], [BASE, false]] as const) {
     const query = (part: string[] | null) => {
       let select = client.from("pw_session_minutes").select(columns);
       if (sending) select = select.not("sent_at", "is", null);
@@ -126,8 +128,11 @@ async function load(ids: readonly string[] | null): Promise<Loaded> {
     const guests = guestNames(row.guests);
     const pictures: CabinetPhoto[] = (photos.error ? [] : photos.rows).filter(photo => photo.session_id === row.session_id)
       .map(photo => ({ id: photo.id, width: photo.width, height: photo.height, size: photo.size, at: photo.created_at, onTv: tv.has(photo.id) }));
+    // The nomor surat typed (13 Nov 2026), else the automatic number, else the code.
+    const docNumber = row.doc_number?.trim() || null;
+    const number = docNumber ?? (row.number ? minutesNumber(row.number, day) : null);
     entries.push({
-      sessionId: session.id, code: row.number ? minutesNumber(row.number, day) : minutesCode(short, day, session.id),
+      sessionId: session.id, code: number ?? minutesCode(short, day, session.id), numbered: !!number,
       title: session.title, date: day,
       from: session.startsAt ? wibTime(session.startsAt).replace(":", ".") : null, to: session.endsAt ? wibTime(session.endsAt).replace(":", ".") : null,
       place: session.roomName ?? session.location ?? "", department, short, hod,

@@ -103,6 +103,19 @@ describe("minutesCaption", () => {
     expect(minutesFileName({ code: "MoM/2026/11/0012", version: 2 })).toBe("MoM-2026-11-0012_v2.pdf");
   });
 
+  it("with a nomor surat typed: it is the number in the caption and the file name, slashes and unsafe characters made safe", () => {
+    const typed = { ...base, code: "001/MoM/BAS/XI/2026", numbered: true };
+    expect(minutesCaption(typed)).toContain("No.: <code>001/MoM/BAS/XI/2026</code>");
+    expect(minutesCaption(typed)).not.toContain("Kode:");
+    expect(minutesFileName({ ...typed, version: 2 })).toBe("001-MoM-BAS-XI-2026_v2.pdf");
+    expect(minutesFileName({ ...typed, trial: true })).toBe("001-MoM-BAS-XI-2026_v1_UJI.pdf");
+    expect(minutesFileName({ code: "  02 / MoM: \"BAS\" <XI>|2026 ", version: 1, numbered: true })).toBe("02-MoM-BAS-XI-2026_v1.pdf");
+    expect(minutesFileName({ code: "///", version: 1, numbered: true })).toBe("MoM_v1.pdf");
+    // `numbered` says so, whatever the shape: a fallback code stays a code, as before.
+    expect(minutesCaption({ ...base, code: "MoM/2026/11/0012", numbered: false })).toContain("Kode: <code>MoM/2026/11/0012</code>");
+    expect(minutesFileName({ code: "SM-20261110-4F3A", version: 1, numbered: false })).toBe("MoM_SM-20261110-4F3A_v1.pdf");
+  });
+
   it("counts decisions by line, skipping empty ones", () => {
     expect(decisionLines("1. Satu\n\n 2. Dua \n")).toEqual(["1. Satu", "2. Dua"]);
   });

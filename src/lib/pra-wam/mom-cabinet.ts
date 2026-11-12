@@ -12,8 +12,13 @@ import { minutesFileName } from "./minutes-message";
 export type CabinetPhoto = { id: string; width: number | null; height: number | null; size: number; at: string; onTv: boolean };
 export type CabinetEntry = {
   sessionId: string;
-  /** "MoM/2026/11/0012", or before the form its code "CoE-20261112-4F3A". */
+  /**
+   * The nomor surat MoM typed ("001/MoM/BAS/XI/2026"), else the automatic number
+   * ("MoM/2026/11/0012"), or before the form its code "CoE-20261112-4F3A".
+   */
   code: string;
+  /** Whether `code` is a MoM number (typed or automatic), not the code; left out: told from its shape. */
+  numbered?: boolean;
   title: string;
   /** YYYY-MM-DD and HH.MM (WIB). */
   date: string; from: string | null; to: string | null; place: string;
@@ -83,7 +88,7 @@ export function placeEntries(entries: readonly CabinetEntry[]): PlacedEntry[] {
 }
 
 /** What goes in a meeting's folder: its PDF and its photos, by these names. */
-export const pdfName = (entry: Pick<CabinetEntry, "code" | "version">) => minutesFileName({ code: entry.code, version: entry.version });
+export const pdfName = (entry: Pick<CabinetEntry, "code" | "version" | "numbered">) => minutesFileName({ code: entry.code, version: entry.version, numbered: entry.numbered });
 export const photoName = (entry: Pick<CabinetEntry, "code">, index: number) => `${safeName(entry.code.replace(/\//g, "-"))}_foto-${String(index + 1).padStart(2, "0")}.jpg`;
 
 export type CabinetFilter = { query: string; month: string; department: string };

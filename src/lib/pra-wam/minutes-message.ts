@@ -13,10 +13,16 @@ export type MinutesMessageItem = { topic: string; discussion: string; decision: 
 export type MinutesMessageAttendee = { name: string; department: string; position: string; present: boolean };
 export type MinutesMessage = {
   /**
-   * The MoM's number, e.g. "MoM/2026/11/0012" (FRM form, migration 202611120005), or before it
-   * its code, e.g. "CoE-20261112-4F3A": the same in the message, the PDF and its file name.
+   * The MoM's number: the nomor surat typed by the notetaker, e.g. "001/MoM/BAS/XI/2026" (13 Nov
+   * 2026), else the automatic one, e.g. "MoM/2026/11/0012" (FRM form, migration 202611120005), or
+   * before that its code, e.g. "CoE-20261112-4F3A": the same in the message, the PDF and its file name.
    */
   code: string;
+  /**
+   * Whether `code` is a real MoM number (typed or automatic), not the fallback code. When left out,
+   * it is told from the code's shape (isMinutesNumber), as before the nomor surat.
+   */
+  numbered?: boolean;
   title: string;
   /** The department's (or team's) short form and its full name. */
   departmentShort: string;
@@ -145,10 +151,19 @@ export function minutesCode(short: string, date: string, sessionId: string): str
 }
 /** A MoM's number, not a code: "MoM/2026/11/0012". */
 export const isMinutesNumber = (code: string) => /^MoM\/\d{4}\/\d{2}\/\d+$/.test(code);
-/** "MoM_CoE-20261112-4F3A_v2.pdf", or with a number "MoM-2026-11-0012_v2.pdf". */
-export function minutesFileName(message: Pick<MinutesMessage, "code" | "version" | "trial">): string {
+/** Whether a message's code is a MoM number: as it says, else told from the code's shape. */
+export const hasMinutesNumber = (message: Pick<MinutesMessage, "code" | "numbered">) => message.numbered ?? isMinutesNumber(message.code);
+/** A code as part of a file name: anything but letters, digits, ".", "_" and "-" becomes "-". */
+const fileSafe = (code: string) => code.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/-{2,}/g, "-").replace(/^[-.]+|[-.]+$/g, "");
+/**
+ * "MoM_CoE-20261112-4F3A_v2.pdf", or with a number "MoM-2026-11-0012_v2.pdf" and
+ * "001-MoM-BAS-XI-2026_v2.pdf" (slashes and other unsafe characters become "-").
+ */
+export function minutesFileName(message: Pick<MinutesMessage, "code" | "version" | "trial" | "numbered">): string {
   const end = `_v${Math.max(1, message.version)}${message.trial ? "_UJI" : ""}.pdf`;
-  return isMinutesNumber(message.code) ? `${message.code.replace(/\//g, "-")}${end}` : `MoM_${message.code}${end}`;
+  const code = fileSafe(message.code);
+  if (!code) return `MoM${end}`;
+  return hasMinutesNumber(message) ? `${code}${end}` : `MoM_${code}${end}`;
 }
 
 /** The decisions as lines (one per line, list marks kept as typed). */
@@ -175,7 +190,7 @@ export function minutesCaption(message: MinutesMessage): string {
   const lines = [
     `📝 <b>MoM · ${escapeHtml(message.departmentShort)} · ${escapeHtml(cut(message.title, 140))}</b>`,
     ...(message.trial ? ["<i>UJI COBA dari WAM, bukan meeting sungguhan.</i>"] : []),
-    `${isMinutesNumber(message.code) ? "No." : "Kode"}: <code>${escapeHtml(message.code)}</code>`,
+    `${hasMinutesNumber(message) ? "No." : "Kode"}: <code>${escapeHtml(message.code)}</code>`,
     "",
     `${escapeHtml(message.department)} · ${longDate(message.date)}`,
     message.from && message.to ? `${message.from}–${message.to} WIB · ${escapeHtml(cut(message.place, 80))}` : escapeHtml(cut(message.place, 80)),

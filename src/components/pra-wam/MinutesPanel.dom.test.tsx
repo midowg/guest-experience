@@ -29,7 +29,7 @@ const view = (patch: Partial<MinutesView> = {}): MinutesView => ({
   ...patch,
 });
 const written = (patch: Partial<Minutes> = {}): Minutes => ({
-  summary: "", decisions: "", number: "MoM/2026/11/0012",
+  summary: "", decisions: "", number: "MoM/2026/11/0012", docNumber: null,
   items: [{ topic: "Target Q1", discussion: "Bahas target Q1", decision: "Target naik 10%", added: false }],
   chairId: RAJA, chairName: "Raja", absentIds: ["me"], guests: "", next: null,
   submittedBy: "Raja", submittedAt: "2026-11-10T04:00:00.000Z", updatedBy: "Raja", updatedAt: "2026-11-10T04:00:00.000Z",
@@ -56,7 +56,7 @@ const items = [{ topic: "Target Q1", discussion: "Bahas target Q1", decision: "T
 // An empty second follow-up is left out.
 const actions = [{ task: "Kirim data penjualan", picId: RAJA, dueDate: "2026-11-14", done: false }];
 const body = (send: boolean, telegramOff = false) => ({
-  items, chairId: RAJA, absentIds: ["me"], guests: "", next: { date: null, time: null, place: "", agenda: "" }, actions, send, telegramOff,
+  items, chairId: RAJA, absentIds: ["me"], guests: "", next: { date: null, time: null, place: "", agenda: "" }, actions, send, telegramOff, docNumber: "",
 });
 
 it("keeps a draft to those in the meeting: Simpan draf sends nothing", async () => {
@@ -83,7 +83,7 @@ it("sends a draft straight from reading it, after naming where it goes", async (
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   expect(request.mock.calls[0][1].json).toEqual({
     items, chairId: RAJA, absentIds: ["me"], guests: "", next: { date: null, time: null, place: "", agenda: "" },
-    actions: [{ id: ACTION, task: "Kirim data penjualan", picId: "me", dueDate: "2026-11-14", done: false }], send: true, telegramOff: false,
+    actions: [{ id: ACTION, task: "Kirim data penjualan", picId: "me", dueDate: "2026-11-14", done: false }], send: true, telegramOff: false, docNumber: "",
   });
   expect(await screen.findByText("MoM dikirim.")).toBeTruthy();
   // Sent: no Kirim MoM any more.
@@ -100,7 +100,9 @@ it("fills the FRM form: chair from the booker, who came from check-in, new topic
   ]);
   // No IV in the form (13 Nov 2026), and the next meeting is open, not folded away.
   expect(document.querySelector("details")).toBeNull();
-  expect(screen.getByText("Dibuat otomatis saat pertama disimpan")).toBeTruthy();
+  // Nomor surat: typed, with the register a tap away.
+  expect(screen.getByRole("link", { name: /Ambil nomor/ }).getAttribute("href")).toMatch(/^https:\/\/werkudara\.sharepoint\.com\//);
+  fireEvent.change(screen.getByLabelText("MoM Number"), { target: { value: " 001/MoM/BAS/XI/2026 " } });
   expect(screen.getByText("Review target Q1")).toBeTruthy();
   expect(screen.getByText("10 Nov. 26")).toBeTruthy();
   expect(screen.getByText("09:00 WIB")).toBeTruthy();
@@ -154,7 +156,7 @@ it("fills the FRM form: chair from the booker, who came from check-in, new topic
   expect(request.mock.calls[0][1].json).toEqual({
     items: [{ topic: "Target Q1", discussion: "Bahas target Q1", decision: "", added: false }, { topic: "Seragam", discussion: "", decision: "Pakai batik", added: false }],
     chairId: RAJA, absentIds: [], guests: "Andi Wijaya, Pak Andi (klien)", next: { date: "2026-11-24", time: "10:00", place: "Ruang Vasuki", agenda: "" },
-    actions: [], send: false, telegramOff: false,
+    actions: [], send: false, telegramOff: false, docNumber: "001/MoM/BAS/XI/2026",
   });
 });
 
@@ -193,13 +195,17 @@ it("names where Kirim MoM goes before it goes, and sends nothing when cancelled"
 it("says when a group is missing, a meeting still runs, or the MoM stays out of Telegram", async () => {
   render(<MinutesPanel sessionId={SESSION} initial={view({ endsAt: "2999-01-01T03:00:00.000Z", telegram: telegram({ destinations: [] }) })} />);
   fill();
-  fireEvent.click(screen.getByRole("checkbox", { name: /Jangan kirim ke Telegram/ }));
+  // Kirim ke Telegram is on, with how to join a group; unticked keeps the MoM out.
+  expect((screen.getByRole("checkbox", { name: /Kirim ke Telegram/ }) as HTMLInputElement).checked).toBe(true);
+  expect(screen.getByText("Belum masuk grup Telegram?")).toBeTruthy();
+  fireEvent.click(screen.getByRole("checkbox", { name: /Kirim ke Telegram/ }));
+  expect(screen.queryByText("Belum masuk grup Telegram?")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
   const dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
   expect(dialog.getByText(/Meeting ini belum selesai/)).toBeTruthy();
   expect(dialog.getByText(/tidak dikirim ke Telegram/)).toBeTruthy();
   fireEvent.click(dialog.getByRole("button", { name: "Batal" }));
-  fireEvent.click(screen.getByRole("checkbox", { name: /Jangan kirim ke Telegram/ }));
+  fireEvent.click(screen.getByRole("checkbox", { name: /Kirim ke Telegram/ }));
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
   // Without a group, only WAM: no word about the system.
   const plain = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
@@ -333,10 +339,10 @@ it("before the FRM and drafts migrations, saves the agenda items straight away a
   expect(screen.queryByLabelText("Chairperson")).toBeNull();
   expect(screen.queryByText(/present ·/)).toBeNull();
   expect(screen.queryByRole("button", { name: "Simpan draf" })).toBeNull();
-  expect(screen.queryByRole("checkbox", { name: /Jangan kirim ke Telegram/ })).toBeNull();
+  expect(screen.queryByRole("checkbox", { name: /Kirim ke Telegram/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Simpan notulen" }));
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
-  expect(request.mock.calls[0][1].json).toEqual({ items, actions, send: false, telegramOff: false });
+  expect(request.mock.calls[0][1].json).toEqual({ items, actions, send: false, telegramOff: false, docNumber: "" });
 });
 
 it("waits for the meeting to start, and for the migration", () => {
@@ -377,7 +383,13 @@ it("on a phone, is a few steps with Kembali, Simpan draf and Lanjut, and sends f
     expect(shown(screen.getByLabelText("Topic/Agenda Item 1"))).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Kembali" }));
     expect(shown(screen.getByLabelText("Topic/Agenda Item 1"))).toBe(true);
-    fireEvent.click(steps().getByRole("button", { name: /Selesai/ }));
+    // From step 4, Lanjut opens step 5; it does not send (13 Nov 2026).
+    fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
+    expect(steps().getByRole("button", { name: /Tindak lanjut/ }).getAttribute("aria-current")).toBe("step");
+    fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(request).not.toHaveBeenCalled();
+    expect(steps().getByRole("button", { name: /Selesai/ }).getAttribute("aria-current")).toBe("step");
     expect(within(screen.getByRole("list", { name: "Isi MoM" })).getAllByRole("listitem").map(item => item.textContent)).toEqual(["1 topik dibahas", "0 tindak lanjut", "1 dari 2 hadir", "0 foto"]);
     expect(screen.getAllByRole("button", { name: "Simpan draf" })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));

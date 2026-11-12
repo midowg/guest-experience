@@ -1,11 +1,11 @@
 "use client";
 
 import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Camera, CheckCircle2, ChevronRight, Download, ImagePlus, NotebookPen, Plus, Search, Send, Trash2, X } from "lucide-react";
+import { Camera, CheckCircle2, ChevronRight, Download, ExternalLink, ImagePlus, NotebookPen, Plus, Search, Send, Trash2, X } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  defaultAbsent, minutesApi, minutesItems, minutesLimits, minutesStatusLabels, presence, selfCheckedIn,
+  defaultAbsent, minutesApi, minutesItems, minutesLimits, minutesStatusLabels, MOM_DOC_NUMBER_MAX, MOM_NUMBER_REGISTER, presence, selfCheckedIn,
   type MinuteAction, type MinuteAttendee, type MinuteItem, type MinutePhoto, type MinutesView, type NextMeeting,
 } from "@/lib/pra-wam/minutes";
 import { frmDate, frmDue, frmTime, guestNames } from "@/lib/pra-wam/minutes-message";
@@ -19,7 +19,7 @@ import css from "./minutes.module.css";
 
 type Draft = {
   items: MinuteItem[]; chairId: string | null; absentIds: string[]; guests: string; next: NextMeeting;
-  actions: MinuteAction[]; telegramOff: boolean;
+  actions: MinuteAction[]; telegramOff: boolean; docNumber: string;
 };
 const stamp = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso)).replace(":", ".");
 const clock = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso)).replace(":", ".");
@@ -101,9 +101,9 @@ function GuestPicker({ id, value, staff, taken, onChange }: {
 }
 
 /** Section I's rows: the meeting from WAM, the number, the chairperson and the minute taker. */
-function MeetingFacts({ view, number, chair, taker }: { view: MinutesView; number: string | null | undefined; chair: ReactNode; taker: string }) {
+function MeetingFacts({ view, number, chair, taker }: { view: MinutesView; number: ReactNode; chair: ReactNode; taker: string }) {
   return <dl className={css.facts}>
-    <dt>MoM Number</dt><dd>{number ?? "Dibuat otomatis saat pertama disimpan"}</dd>
+    {typeof number === "string" || number == null ? <><dt>MoM Number</dt><dd>{number ?? "-"}</dd></> : number}
     <dt>Meeting Title</dt><dd>{view.title || "-"}</dd>
     <dt>Date</dt><dd>{view.startsAt ? frmDate(wibDate(view.startsAt)) : "-"}</dd>
     <dt>Time Start</dt><dd>{view.startsAt ? frmTime(wibTime(view.startsAt)) : "-"}</dd>
@@ -242,6 +242,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       absentIds: (minutes ? [...minutes.absentIds] : defaultAbsent(attendees)).filter(id => !attendees.some(person => person.id === id && selfCheckedIn(person))),
       guests: minutes?.guests ?? "", next: minutes?.next ? { ...minutes.next } : noNext(),
       actions: minutes ? minutes.actions.map(action => ({ ...action })) : [], telegramOff: minutes?.telegramOff ?? false,
+      docNumber: minutes?.docNumber ?? "",
     };
   }
   function start() {
@@ -280,7 +281,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     } : {};
     try {
       const result = await praWamRequest<MinutesView>(minutesApi.session(sessionId), {
-        method: "PUT", json: { items, ...form, actions, send, telegramOff: content.telegramOff },
+        method: "PUT", json: { items, ...form, actions, send, telegramOff: content.telegramOff, docNumber: content.docNumber.trim() },
       });
       setView(result.data); setDraft(null); setNotice(result.message);
     } catch (problem) { setError(errorText(problem)); }
@@ -373,7 +374,14 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
 
         <fieldset className={css.group} {...part("info")}>
           <legend className={css.groupTitle}>{sectionTitle("I.", "MEETING INFORMATION")}</legend>
-          <MeetingFacts view={view} number={minutes?.number} taker={minutes?.submittedBy ?? "Yang pertama menyimpan"} chair={frm && <>
+          <MeetingFacts view={view} taker={minutes?.submittedBy ?? "Yang pertama menyimpan"} number={<>
+            <dt><label htmlFor={`${uid}-number`}>MoM Number</label></dt>
+            <dd><div className={css.numberField}>
+              <input id={`${uid}-number`} className="input" value={draft.docNumber} maxLength={MOM_DOC_NUMBER_MAX} autoComplete="off"
+                placeholder={minutes?.number ?? "Nomor surat MoM"} onChange={event => patch({ docNumber: event.target.value })} />
+              <a className="button button--secondary" href={MOM_NUMBER_REGISTER} target="_blank" rel="noopener">Ambil nomor <ExternalLink size={16} aria-hidden /><span className="sr-only"> (tab baru)</span></a>
+            </div></dd>
+          </>} chair={frm && <>
             <dt><label htmlFor={`${uid}-chair`}>Chairperson</label></dt>
             <dd><select id={`${uid}-chair`} className="select" value={draft.chairId ?? ""} onChange={event => patch({ chairId: event.target.value || null })}>
               <option value="">Belum dipilih</option>
@@ -449,9 +457,18 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
             {frm && <li>{view.photos.length} foto</li>}
           </ul>}
           {drafts && <label className={css.check}>
-            <input type="checkbox" checked={draft.telegramOff} onChange={event => patch({ telegramOff: event.target.checked })} />
-            <span>Jangan kirim ke Telegram<small>Untuk meeting yang sensitif.</small></span>
+            <input type="checkbox" checked={!draft.telegramOff} onChange={event => patch({ telegramOff: !event.target.checked })} />
+            <span>Kirim ke Telegram<small>Hapus centang untuk meeting yang sensitif.</small></span>
           </label>}
+          {drafts && !draft.telegramOff && <div className={css.tgHelp} role="note">
+            <p>{telegram.ready && telegram.destinations.length ? `MoM otomatis masuk ke grup Telegram ${joined(telegram.destinations)}, sesuai departemen setiap peserta.` : "MoM otomatis masuk ke grup Telegram departemen setiap peserta."}</p>
+            <p><strong>Belum masuk grup Telegram?</strong></p>
+            <ol>
+              <li>Pasang aplikasi Telegram di HP, lalu daftar dengan nomor HP Anda.</li>
+              <li>Minta tautan undangan grup departemen Anda ke panitia atau admin WAM.</li>
+              <li>Buka tautannya dan tekan Gabung. MoM berikutnya masuk sendiri ke topik 📝 MoM di grup itu.</li>
+            </ol>
+          </div>}
           {drafts && <p className={styles.hint}>{sent ? "Perubahan menggantikan MoM yang sudah dikirim." : "Draf hanya terlihat oleh yang ikut meeting sampai MoM dikirim."}</p>}
         </div>
         {error && <Notice tone="error">{error}</Notice>}
@@ -461,10 +478,11 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
           <button type="submit" className="button button--primary" disabled={busy !== null}>{primary}</button>
         </div>}
         {phone && <div className={css.stepBar}>
-          <button type="button" className="button button--secondary" disabled={busy !== null} onClick={() => (at === 0 ? cancel() : go(at - 1))}>{at === 0 ? "Batal" : "Kembali"}</button>
-          {drafts && !sent && <button type="button" className="button button--secondary" disabled={busy !== null} onClick={() => { void save(false); }}>{busy === "draft" ? "Menyimpan…" : "Simpan draf"}</button>}
-          {last ? <button type="submit" className="button button--primary" disabled={busy !== null}>{primary}</button>
-            : <button type="button" className="button button--primary" onClick={() => go(at + 1)}>Lanjut <ChevronRight size={18} aria-hidden /></button>}
+          <button key="kembali" type="button" className="button button--secondary" disabled={busy !== null} onClick={() => (at === 0 ? cancel() : go(at - 1))}>{at === 0 ? "Batal" : "Kembali"}</button>
+          {drafts && !sent && <button key="draf" type="button" className="button button--secondary" disabled={busy !== null} onClick={() => { void save(false); }}>{busy === "draft" ? "Menyimpan…" : "Simpan draf"}</button>}
+          {/* Separate keys: React must not turn the tapped Lanjut into the submit button of the last step (it would send at once). */}
+          {last ? <button key="kirim" type="submit" className="button button--primary" disabled={busy !== null}>{primary}</button>
+            : <button key="lanjut" type="button" className="button button--primary" onClick={event => { event.preventDefault(); go(at + 1); }}>Lanjut <ChevronRight size={18} aria-hidden /></button>}
         </div>}
       </form>
       {confirmDialog}
@@ -492,7 +510,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       {!sent && <Notice tone="info">Masih draf. Peserta lain bisa membacanya setelah MoM dikirim.</Notice>}
       <section className={css.group}>
         <h3 className={css.groupTitle}>{sectionTitle("I.", "MEETING INFORMATION")}</h3>
-        <MeetingFacts view={view} number={minutes.number ?? "-"} taker={minutes.submittedBy ?? "Peserta"}
+        <MeetingFacts view={view} number={minutes.docNumber ?? minutes.number ?? "-"} taker={minutes.submittedBy ?? "Peserta"}
           chair={frm && <><dt>Chairperson</dt><dd>{minutes.chairName ?? "-"}</dd></>} />
       </section>
       {showPresence && <section className={css.group}>
