@@ -7,8 +7,15 @@
  */
 
 export type MinutesMessageAction = { task: string; pic: string | null; dueDate: string | null; done: boolean };
+/** An agenda item of the FRM form (12 Nov 2026): topic, discussion, decision; `added`: a new topic, outside the agenda. */
+export type MinutesMessageItem = { topic: string; discussion: string; decision: string; added: boolean };
+/** A row of the PDF's attendance list. */
+export type MinutesMessageAttendee = { name: string; department: string; position: string; present: boolean };
 export type MinutesMessage = {
-  /** The MoM's code, e.g. "CoE-20261112-4F3A": the same in the message, the PDF and its file name. */
+  /**
+   * The MoM's number, e.g. "MoM/2026/11/0012" (FRM form, migration 202611120005), or before it
+   * its code, e.g. "CoE-20261112-4F3A": the same in the message, the PDF and its file name.
+   */
   code: string;
   title: string;
   /** The department's (or team's) short form and its full name. */
@@ -31,6 +38,18 @@ export type MinutesMessage = {
   link: string;
   /** A sample from Admin WAM → Telegram, marked so nobody takes it for a real meeting. */
   trial?: boolean;
+  /*
+   * The FRM form (12 Nov 2026). Without items the summary and decisions above are the MoM, as
+   * before; with them, summary and decisions are not used.
+   */
+  chair?: string | null;
+  items?: readonly MinutesMessageItem[];
+  /** Everyone in the meeting, and whether they came. */
+  attendance?: readonly MinutesMessageAttendee[];
+  /** Others who came and are not on the list. */
+  guests?: string;
+  next?: { date: string | null; time: string | null; place: string; agenda: string } | null;
+  photoCount?: number;
 };
 
 /** Telegram's limit for the text under a file. */
@@ -82,32 +101,43 @@ export function minutesCode(short: string, date: string, sessionId: string): str
   const unit = short.replace(/[^A-Za-z0-9]/g, "").slice(0, 12) || "WAM";
   return `${unit}-${date.replace(/-/g, "")}-${sessionId.replace(/[^A-Za-z0-9]/g, "").slice(0, 4).toUpperCase()}`;
 }
-/** "MoM_CoE-20261112-4F3A_v2.pdf". */
-export const minutesFileName = (message: Pick<MinutesMessage, "code" | "version" | "trial">) =>
-  `MoM_${message.code}_v${Math.max(1, message.version)}${message.trial ? "_UJI" : ""}.pdf`;
+/** A MoM's number, not a code: "MoM/2026/11/0012". */
+export const isMinutesNumber = (code: string) => /^MoM\/\d{4}\/\d{2}\/\d+$/.test(code);
+/** "MoM_CoE-20261112-4F3A_v2.pdf", or with a number "MoM-2026-11-0012_v2.pdf". */
+export function minutesFileName(message: Pick<MinutesMessage, "code" | "version" | "trial">): string {
+  const end = `_v${Math.max(1, message.version)}${message.trial ? "_UJI" : ""}.pdf`;
+  return isMinutesNumber(message.code) ? `${message.code.replace(/\//g, "-")}${end}` : `MoM_${message.code}${end}`;
+}
 
 /** The decisions as lines (one per line, list marks kept as typed). */
 export const decisionLines = (text: string) => text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+/** How many decisions a MoM has: by line, in every agenda item (or in the decisions, before the FRM form). */
+export const decisionCount = (message: Pick<MinutesMessage, "decisions" | "items">) => message.items?.length
+  ? message.items.reduce((sum, item) => sum + decisionLines(item.decision).length, 0) : decisionLines(message.decisions).length;
 
 /** The text under the PDF in Telegram: who, when, where, how much, which version. */
 export function minutesCaption(message: MinutesMessage): string {
   const open = message.actions.filter(action => !action.done).length;
-  const decisions = decisionLines(message.decisions).length;
+  const decisions = decisionCount(message);
   const counts = [
+    ...(message.items?.length ? [`${message.items.length} topik`] : []),
     `${decisions} keputusan`,
     `${message.actions.length} tindak lanjut${message.actions.length ? ` (${open} belum selesai)` : ""}`,
+    ...(message.photoCount ? [`${message.photoCount} foto`] : []),
   ].join(" · ");
+  const present = message.attendance?.filter(person => person.present).length;
+  const people = message.attendance?.length ? `${present} dari ${message.attendance.length} hadir` : `${message.participants.length} peserta`;
   const version = message.version > 1
     ? `Versi ${message.version} · diperbarui ${stamp(message.at)}${message.changedBy ? ` oleh ${escapeHtml(message.changedBy)}` : ""}`
     : `Versi 1 · dikirim ${stamp(message.at)} lewat WAM`;
   const lines = [
     `📝 <b>MoM · ${escapeHtml(message.departmentShort)} · ${escapeHtml(cut(message.title, 140))}</b>`,
     ...(message.trial ? ["<i>UJI COBA dari WAM, bukan meeting sungguhan.</i>"] : []),
-    `Kode: <code>${escapeHtml(message.code)}</code>`,
+    `${isMinutesNumber(message.code) ? "No." : "Kode"}: <code>${escapeHtml(message.code)}</code>`,
     "",
     `${escapeHtml(message.department)} · ${longDate(message.date)}`,
     message.from && message.to ? `${message.from}–${message.to} WIB · ${escapeHtml(cut(message.place, 80))}` : escapeHtml(cut(message.place, 80)),
-    `${message.notetaker ? `Notulis: ${escapeHtml(message.notetaker)} · ` : ""}${message.participants.length} peserta`,
+    `${message.chair ? `Pimpinan: ${escapeHtml(message.chair)} · ` : ""}${message.notetaker ? `Notulis: ${escapeHtml(message.notetaker)} · ` : ""}${people}`,
     counts,
     "",
     "Detail lengkap ada di PDF terlampir.",

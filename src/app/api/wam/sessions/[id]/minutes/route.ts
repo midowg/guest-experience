@@ -26,7 +26,7 @@ export async function PUT(request: Request, { params }: Params) {
     const member = await requireApiMember();
     checkOrigin(request);
     const id = validate(z.uuid(), (await params).id);
-    const input = validate(minutesInputSchema, await readJson(request, 60_000));
+    const input = validate(minutesInputSchema, await readJson(request, 200_000));
     const { view, sentNow } = await saveMinutes(id, input, member);
     const sent = !!view.minutes?.sentAt;
     return success(view, sentNow ? "MoM dikirim." : sent ? `Perubahan disimpan sebagai versi ${view.minutes?.version ?? 2}.` : "Draf disimpan. Belum dikirim ke siapa pun.");

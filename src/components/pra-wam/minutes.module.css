@@ -49,3 +49,51 @@
 .dueRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 8px 4px; border-radius: var(--pw-r-control); color: var(--pw-text); text-decoration: none; }
 .dueRow:hover { background: var(--pw-surface-soft); }
 .dueGo { display: inline-flex; flex: none; align-items: center; gap: 2px; color: var(--pw-primary); font-weight: 600; font-size: 14px; }
+
+/* Form FRM.05.00.00.027, kept simple (12 Nov 2026): grouped parts, agenda items, attendance, photos. */
+.group { display: grid; gap: 10px; margin: 0; padding: 14px 0 0; border: 0; border-top: 1px solid var(--pw-line); min-width: 0; }
+.group > legend, .group > summary { padding: 0; }
+.groupTitle { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; font-weight: 700; color: var(--pw-text); }
+details.group > summary { min-height: 44px; cursor: pointer; list-style: none; }
+details.group > summary::-webkit-details-marker { display: none; }
+.chevron { margin-left: auto; color: var(--pw-muted); transition: transform 0.15s ease; }
+details[open] > summary .chevron { transform: rotate(180deg); }
+details.group[open] > summary { margin-bottom: 2px; }
+.groupCount { font-size: 13px; font-weight: 600; color: var(--pw-muted); }
+
+.people { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.people .check { padding: 6px 4px; border-radius: var(--pw-r-control); }
+.people .check span { font-weight: 600; }
+.checkSmall { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; color: var(--pw-text); cursor: pointer; }
+.checkSmall input { flex: none; width: 20px; height: 20px; accent-color: var(--pw-primary); }
+
+.items { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.item { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); }
+.itemHead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.itemNo { display: inline-grid; flex: none; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 12px; font-weight: 700; }
+.fieldLabel { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--pw-muted); }
+.nextGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+/* Reading a MoM. */
+.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 14px; }
+.facts dt { color: var(--pw-muted); font-weight: 600; }
+.facts dd { margin: 0; color: var(--pw-text); overflow-wrap: anywhere; }
+.readItems { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.readItems > li { display: grid; gap: 4px; }
+.readTopic { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-weight: 700; color: var(--pw-text); }
+.decision { margin: 0; padding: 8px 10px; border-radius: var(--pw-r-control); background: var(--pw-surface-soft); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--pw-text); line-height: 1.5; }
+
+/* Foto meeting: a gallery of squares; each opens the full photo. */
+.photos { display: grid; gap: 10px; }
+.photosHead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.photosHead .label { margin: 0; }
+.photosCount { font-size: 13px; color: var(--pw-muted); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.gallery > li { position: relative; }
+.thumb { display: block; aspect-ratio: 1; overflow: hidden; border-radius: var(--pw-r-control); background: var(--pw-surface-soft); }
+.thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.thumb:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; }
+.thumbRemove { position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: rgb(0 0 0 / 0.6); color: #fff; cursor: pointer; }
+.thumbRemove::after { content: ""; position: absolute; inset: -6px; }
+.thumbRemove:hover { background: rgb(0 0 0 / 0.78); }
+.photos > .button { justify-self: start; }

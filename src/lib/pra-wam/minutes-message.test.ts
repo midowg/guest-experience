@@ -63,6 +63,18 @@ describe("minutesCaption", () => {
     expect(escapeHtml("<b>")).toBe("&lt;b&gt;");
   });
 
+  it("with the FRM form: the number, the chair, who came, topics and decisions per item, and photos", () => {
+    const caption = minutesCaption({
+      ...base, code: "MoM/2026/11/0012", chair: "Sofyan", photoCount: 3,
+      items: [{ topic: "KPI", discussion: "Bahas", decision: "Format baru\nEvaluasi Desember", added: false }, { topic: "Seragam", discussion: "Usulan", decision: "", added: true }],
+      attendance: [{ name: "Raja", department: "SM", position: "HOD", present: true }, { name: "Sofyan", department: "SM", position: "Staff", present: true }, { name: "Kayana", department: "SM", position: "Staff", present: false }],
+    });
+    expect(caption).toContain("No.: <code>MoM/2026/11/0012</code>");
+    expect(caption).toContain("Pimpinan: Sofyan · Notulis: Raja · 2 dari 3 hadir");
+    expect(caption).toContain("2 topik · 2 keputusan · 2 tindak lanjut (1 belum selesai) · 3 foto");
+    expect(minutesFileName({ code: "MoM/2026/11/0012", version: 2 })).toBe("MoM-2026-11-0012_v2.pdf");
+  });
+
   it("counts decisions by line, skipping empty ones", () => {
     expect(decisionLines("1. Satu\n\n 2. Dua \n")).toEqual(["1. Satu", "2. Dua"]);
   });

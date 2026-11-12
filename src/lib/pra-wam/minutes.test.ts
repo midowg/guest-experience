@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { asMinutesRule, choiceOf, DEFAULT_MINUTES_RULE, minutesInputSchema, minutesOpen, minutesStatus, needsMinutes, openActions, ruleNeeds, storedOf } from "./minutes";
+import {
+  asMinutesRule, choiceOf, DEFAULT_MINUTES_RULE, defaultAbsent, itemsAsText, minutesInputSchema, minutesItems, minutesNumber, minutesOpen, minutesStatus, needsMinutes, openActions, presence, ruleNeeds, storedOf,
+} from "./minutes";
+import { fitWithin, isJpeg, isMeetingPhotoKey, momPhotoKeyFor } from "./minutes-photos";
 
 const meeting = (patch: Partial<Parameters<typeof needsMinutes>[0]> = {}) => ({
   status: "terbit" as const, kind: "rapat" as const, startsAt: "2026-11-10T02:00:00.000Z", endsAt: "2026-11-10T03:00:00.000Z", participantCount: 4, ...patch,
@@ -62,5 +65,53 @@ describe("notulen (MoM)", () => {
       { task: "Telat", picId: null, dueDate: "2026-11-05", done: false },
     ], "2026-11-11");
     expect(list.map(action => [action.task, action.late])).toEqual([["Telat", true], ["Nanti", false]]);
+  });
+
+  it("takes the FRM form: agenda items with a topic and their discussion or decision, chair, who did not come, next meeting", () => {
+    const ok = minutesInputSchema.safeParse({
+      items: [{ topic: "Target Q1", discussion: "Bahas target", decision: "" }, { topic: "Seragam", decision: "Batik", added: true }],
+      chairId: "11111111-1111-4111-8111-111111111111", absentIds: [], guests: " Pak Andi ",
+      next: { date: "2026-11-24", time: "10:00", place: "Vasuki", agenda: "" },
+    });
+    expect(ok.success && ok.data.items.map(item => item.added)).toEqual([false, true]);
+    expect(ok.success && ok.data.guests).toBe("Pak Andi");
+    const issues = (input: unknown) => { const parsed = minutesInputSchema.safeParse(input); return parsed.success ? [] : parsed.error.issues.map(issue => issue.message); };
+    expect(issues({ items: [{ topic: "Target", discussion: "", decision: "" }] })).toEqual(["Isi pembahasan atau keputusan untuk topik ini."]);
+    expect(issues({ items: [{ topic: "x", discussion: "Bahas" }] })).toEqual(["Isi topiknya."]);
+    expect(issues({ items: [] })).toEqual(["Isi minimal satu topik dengan pembahasan atau keputusannya."]);
+    expect(issues({ items: [{ topic: "Target", discussion: "Bahas" }], next: { time: "25:00" } })).toEqual(["Jam meeting berikutnya tidak valid."]);
+    expect(issues({ items: [{ topic: "Target", discussion: "Bahas" }], chairId: "bukan" })).toEqual(["Pilih pimpinan rapat dari daftar."]);
+  });
+
+  it("reads a MoM from before the form as one agenda item, and keeps the items as text before its migration", () => {
+    expect(minutesItems({ items: [], summary: " Bahas target ", decisions: "Naik 10%" })).toEqual([{ topic: "Pembahasan", discussion: "Bahas target", decision: "Naik 10%", added: false }]);
+    expect(minutesItems({ items: [], summary: "", decisions: " " })).toEqual([]);
+    const items = [{ topic: "Target", discussion: "Bahas target", decision: "Naik 10%", added: false }, { topic: "Seragam", discussion: "", decision: "Batik", added: true }];
+    expect(minutesItems({ items, summary: "lama", decisions: "" })).toBe(items);
+    expect(itemsAsText(items)).toEqual({ summary: "1. Target\nBahas target\n\n2. Seragam (topik baru)", decisions: "Target: Naik 10%\nSeragam (topik baru): Batik" });
+    expect(itemsAsText([items[0]])).toEqual({ summary: "Bahas target", decisions: "Naik 10%" });
+  });
+
+  it("numbers a MoM in the month of its meeting, and marks absent who did not check in once anyone did", () => {
+    expect(minutesNumber(12, "2026-11-10")).toBe("MoM/2026/11/0012");
+    expect(minutesNumber(12345, "2027-01-05")).toBe("MoM/2027/01/12345");
+    const person = (id: string, checkedIn: boolean) => ({ id, name: id, fullName: id, department: "", position: "", checkedIn });
+    expect(defaultAbsent([person("a", true), person("b", false)])).toEqual(["b"]);
+    expect(defaultAbsent([person("a", false), person("b", false)])).toEqual([]);
+    const { present, absent } = presence([person("a", true), person("b", false)], ["b"]);
+    expect([present.map(one => one.id), absent.map(one => one.id)]).toEqual([["a"], ["b"]]);
+  });
+
+  it("keeps meeting photos at most 1280 px, in the meeting's own folder, JPEG only", () => {
+    expect(fitWithin(4032, 3024)).toEqual({ width: 1280, height: 960 });
+    expect(fitWithin(3024, 4032)).toEqual({ width: 960, height: 1280 });
+    expect(fitWithin(800, 600)).toEqual({ width: 800, height: 600 });
+    const session = "5e550000-0000-4000-8000-000000000001";
+    const key = momPhotoKeyFor(session, "0a000000-0000-4000-8000-000000000001");
+    expect(isMeetingPhotoKey(key, session)).toBe(true);
+    expect(isMeetingPhotoKey(key, "5e550000-0000-4000-8000-000000000002")).toBe(false);
+    expect(isMeetingPhotoKey("pra-wam/mom/../x.jpg", session)).toBe(false);
+    expect(isJpeg(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toBe(true);
+    expect(isJpeg(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toBe(false);
   });
 });

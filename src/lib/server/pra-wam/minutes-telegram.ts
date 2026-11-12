@@ -1,7 +1,7 @@
 import "server-only";
 import { departmentShorts } from "@/lib/employees";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
-import type { Minutes, MinutesTelegram } from "@/lib/pra-wam/minutes";
+import { minutesItems, type Minutes, type MinutesTelegram } from "@/lib/pra-wam/minutes";
 import { minutesCode, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
 import type { Session } from "@/lib/pra-wam/sessions";
 import { momTargets, type PersonPlace, type TelegramGroup } from "@/lib/pra-wam/telegram";
@@ -10,7 +10,9 @@ import { shareUrl } from "@/lib/site-url";
 import { createPrivilegedClient } from "../supabase/admin";
 import { telegramConfig } from "../telegram";
 import { listPeople, memberDepartments } from "./appraisal";
+import { attendeesOf } from "./minutes-people";
 import { minutesPdf } from "./minutes-pdf";
+import { minutePhotoBytes } from "./minutes-photos";
 import { listGroups, postMinutes, teamsReady } from "./telegram";
 
 /*
@@ -63,15 +65,18 @@ export async function minutesTargets(session: Session): Promise<{ ready: boolean
 
 /** What a MoM's message and PDF say. The department is the booker's (the HOD group's for a Meeting HOD). */
 export async function minutesMessage(session: Session, minutes: Minutes, hod: boolean): Promise<MinutesMessage> {
-  const [people, ids, owner] = await Promise.all([
+  const [people, ids, owner, attendees, photos] = await Promise.all([
     listPeople(), participantIds(session.id), session.booking ? memberDepartments(session.booking.bookedBy.id).catch(() => [] as string[]) : Promise.resolve([] as string[]),
+    attendeesOf(session.id).catch(() => []), photoCount(session.id),
   ]);
+  const away = new Set(minutes.absentIds);
   const department = hod ? "Meeting HOD" : owner[0] ?? "WAM Werkudara";
   const short = hod ? "HOD" : owner[0] ? departmentShorts([owner[0]]).get(owner[0]) ?? owner[0] : "WAM";
   const names = people.filter(person => ids.includes(person.id)).map(person => person.name).sort((a, b) => a.localeCompare(b, "id"));
   const date = session.startsAt ? wibDate(session.startsAt) : wibDate(minutes.submittedAt);
   return {
-    code: minutesCode(short, date, session.id),
+    // The MoM's number (FRM form) is its mark from then on; before it, the code.
+    code: minutes.number ?? minutesCode(short, date, session.id),
     title: session.title, departmentShort: short, department, date,
     from: clock(session.startsAt), to: clock(session.endsAt), place: session.roomName ?? session.location ?? "",
     participants: names, notetaker: minutes.submittedBy,
@@ -80,7 +85,22 @@ export async function minutesMessage(session: Session, minutes: Minutes, hod: bo
     version: Math.max(1, minutes.version), at: minutes.version > 1 ? minutes.updatedAt : minutes.sentAt ?? minutes.updatedAt,
     changedBy: minutes.version > 1 ? minutes.updatedBy : null,
     link: new URL(praWamPath.session(session.id), shareUrl()).toString().replace(/^https?:\/\//, ""),
+    chair: minutes.chairName, items: minutesItems(minutes),
+    // Who came is kept from the FRM form on (a MoM with a number); before it, only who was in it.
+    attendance: minutes.number ? attendees.map(person => ({ name: person.fullName, department: person.department, position: person.position, present: !away.has(person.id) })) : undefined,
+    guests: minutes.guests, next: minutes.next, photoCount: photos,
   };
+}
+
+/** How many photos the meeting has (0 before migration 202611120005). */
+async function photoCount(sessionId: string): Promise<number> {
+  const { count, error } = await createPrivilegedClient().from("pw_session_minute_photos").select("id", { count: "exact", head: true }).eq("session_id", sessionId);
+  return error ? 0 : count ?? 0;
+}
+
+/** A MoM's PDF with the meeting's photos: what Telegram gets and what Unduh PDF gives. */
+export async function minutesPdfWithPhotos(sessionId: string, message: MinutesMessage): Promise<Uint8Array> {
+  return minutesPdf(message, await minutePhotoBytes(sessionId).catch(() => []));
 }
 
 /** The posts of a MoM so far, per group (empty before migration 202611120004). */
@@ -101,7 +121,7 @@ export async function deliverMinutes(session: Session, minutes: Minutes, now = n
     const { ready, groups } = await minutesTargets(session);
     if (!ready || !groups.length) return;
     const message = await minutesMessage(session, minutes, await isHodMeeting(session));
-    const pdf = await minutesPdf(message);
+    const pdf = await minutesPdfWithPhotos(session.id, message);
     const client = createPrivilegedClient();
     const { data: before } = await client.from("pw_telegram_messages").select("chat_id,message_id").eq("session_id", session.id);
     const earlier = new Map((before ?? []).map(row => [String(row.chat_id), row.message_id as number | null]));

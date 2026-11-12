@@ -6,16 +6,43 @@ import type { Session } from "./sessions";
  * Notulen (MoM) per meeting (11 Nov 2026, migration 202611110002). A published meeting needs its
  * Minutes of Meeting once it is over when Admin WAM's rule or the session itself says so (12 Nov
  * 2026; by default every Forum and Rapat, not an Acara or a one-on-one). Anyone
- * who took part writes it in the app (whoever saves it is its notetaker): a summary, the
- * decisions, and the follow-ups (task, PIC, due date). Panitia, BOD and the HOD/Lead of the
+ * who took part writes it in the app (whoever saves it is its notetaker). Since 12 Nov 2026 it
+ * follows the paper form FRM.05.00.00.027, kept simple: its number, the chairperson, who came, the
+ * agenda items (topic, discussion, decision; new topics marked), the follow-ups (task, PIC, due
+ * date, Open/Done), the next meeting, the attendance list, and the meeting's photos. Panitia, BOD and the HOD/Lead of the
  * booker's department read it. Pure, so it is tested without a server.
  */
 
 export type MinuteAction = {
   id?: string; task: string; picId: string | null; picName?: string | null; dueDate: string | null; done: boolean;
 };
+/**
+ * An agenda item, as on the paper form FRM.05.00.00.027 (12 Nov 2026): its topic, what was
+ * discussed (the key points), and what was decided. `added` marks a new topic, outside the agenda.
+ */
+export type MinuteItem = { topic: string; discussion: string; decision: string; added: boolean };
+/** The next meeting, all optional: day (YYYY-MM-DD), time (HH:MM), place, draft agenda. */
+export type NextMeeting = { date: string | null; time: string | null; place: string; agenda: string };
+/** Someone in the meeting, for Kehadiran and the PDF's attendance list (Data karyawan). */
+export type MinuteAttendee = { id: string; name: string; fullName: string; department: string; position: string; checkedIn: boolean };
+/** A photo of the meeting: its address in WAM (opens the full photo) and who added it. */
+export type MinutePhoto = { id: string; url: string; width: number | null; height: number | null; uploadedBy: string | null; canDelete: boolean };
+
 export type Minutes = {
+  /**
+   * Before the FRM form (migration 202611120005) a MoM was one summary and one list of decisions;
+   * they are kept, and read as one agenda item (`minutesItems`). A MoM saved after it leaves them empty.
+   */
   summary: string; decisions: string; actions: MinuteAction[];
+  /** "MoM/2026/11/0012", given on the first save; null before migration 202611120005. */
+  number: string | null;
+  items: MinuteItem[];
+  chairId: string | null; chairName: string | null;
+  /** Who of the people in the meeting did not come; everyone else came. */
+  absentIds: string[];
+  /** Others who came and are not on the list. */
+  guests: string;
+  next: NextMeeting | null;
   submittedBy: string | null; submittedAt: string; updatedBy: string | null; updatedAt: string;
   /**
    * Kirim MoM (12 Nov 2026, migration 202611120004): null while a draft; the version counts the
@@ -44,6 +71,15 @@ export type MinutesView = {
   /** Drafts and Kirim MoM exist (migration 202611120004); before it a save is the MoM itself. */
   drafts: boolean;
   telegram: MinutesTelegram;
+  /** The FRM form (chair, attendance, agenda items, next meeting, photos) is there: migration 202611120005. */
+  frm: boolean;
+  /** The people in the meeting with their department, position and check-in. */
+  attendees: MinuteAttendee[];
+  /** Who chairs it unless changed: the one who booked it, when in it. */
+  defaultChairId: string | null;
+  photos: MinutePhoto[];
+  /** Photos can be added: the FRM migration has run and storage is set up. */
+  photosReady: boolean;
 };
 
 export type MinutesStatus = "tidak-perlu" | "belum-waktunya" | "belum" | "draf" | "sudah";
@@ -107,10 +143,29 @@ export function minutesStatus(meeting: Meeting, has: boolean, now: Date, sent = 
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-export const minutesLimits = { text: 4000, task: 300, actions: 30 } as const;
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+export const minutesLimits = { text: 4000, task: 300, actions: 30, items: 20, topic: 200, decision: 2000, guests: 500, place: 200, agenda: 2000 } as const;
+const itemSchema = z.object({
+  topic: z.string().trim().min(2, "Isi topiknya.").max(minutesLimits.topic, `Topik paling banyak ${minutesLimits.topic} karakter.`),
+  discussion: z.string().trim().max(minutesLimits.text, `Pembahasan paling banyak ${minutesLimits.text} karakter.`).default(""),
+  decision: z.string().trim().max(minutesLimits.decision, `Keputusan paling banyak ${minutesLimits.decision} karakter.`).default(""),
+  added: z.boolean().default(false),
+}).refine(item => item.discussion.length >= 2 || item.decision.length >= 2, { path: ["discussion"], message: "Isi pembahasan atau keputusan untuk topik ini." });
 export const minutesInputSchema = z.object({
+  /** The agenda items (FRM form, 12 Nov 2026). */
+  items: z.array(itemSchema).max(minutesLimits.items, `Paling banyak ${minutesLimits.items} topik.`).default([]),
+  /** Before the FRM form: one summary and the decisions. Still taken, from an app opened before the update. */
   summary: z.string().trim().max(minutesLimits.text, `Ringkasan paling banyak ${minutesLimits.text} karakter.`).default(""),
   decisions: z.string().trim().max(minutesLimits.text, `Keputusan paling banyak ${minutesLimits.text} karakter.`).default(""),
+  chairId: z.uuid("Pilih pimpinan rapat dari daftar.").nullable().default(null),
+  absentIds: z.array(z.uuid()).max(300).default([]),
+  guests: z.string().trim().max(minutesLimits.guests, `Tamu paling banyak ${minutesLimits.guests} karakter.`).default(""),
+  next: z.object({
+    date: z.string().regex(DATE, "Tanggal meeting berikutnya tidak valid.").nullable().default(null),
+    time: z.string().regex(TIME, "Jam meeting berikutnya tidak valid.").nullable().default(null),
+    place: z.string().trim().max(minutesLimits.place, `Tempat paling banyak ${minutesLimits.place} karakter.`).default(""),
+    agenda: z.string().trim().max(minutesLimits.agenda, `Rancangan agenda paling banyak ${minutesLimits.agenda} karakter.`).default(""),
+  }).default({ date: null, time: null, place: "", agenda: "" }),
   actions: z.array(z.object({
     /** A follow-up kept from before (its done and who ticked it stay). */
     id: z.uuid().optional(),
@@ -123,8 +178,41 @@ export const minutesInputSchema = z.object({
   send: z.boolean().default(false),
   /** Keep this MoM out of Telegram (a sensitive meeting). */
   telegramOff: z.boolean().default(false),
-}).refine(input => input.summary.length >= 2 || input.decisions.length >= 2, { path: ["summary"], message: "Isi ringkasan atau keputusan meeting." });
+}).refine(input => input.items.length > 0 || input.summary.length >= 2 || input.decisions.length >= 2, { path: ["items"], message: "Isi minimal satu topik dengan pembahasan atau keputusannya." });
 export type MinutesInput = z.infer<typeof minutesInputSchema>;
+
+/** The agenda items of a MoM: its own, or (a MoM from before the FRM form) its summary and decisions as one. */
+export function minutesItems(minutes: Pick<Minutes, "items" | "summary" | "decisions">): MinuteItem[] {
+  if (minutes.items.length) return minutes.items;
+  if (!minutes.summary.trim() && !minutes.decisions.trim()) return [];
+  return [{ topic: "Pembahasan", discussion: minutes.summary.trim(), decision: minutes.decisions.trim(), added: false }];
+}
+
+/** "MoM/2026/11/0012": the number in the month of the meeting (YYYY-MM-DD). */
+export const minutesNumber = (number: number, date: string) => `MoM/${date.slice(0, 4)}/${date.slice(5, 7)}/${String(number).padStart(4, "0")}`;
+
+/** What a MoM saved before the FRM form can hold of the agenda items: one summary and the decisions. */
+export function itemsAsText(items: readonly MinuteItem[]): { summary: string; decisions: string } {
+  const label = (item: MinuteItem) => `${item.topic}${item.added ? " (topik baru)" : ""}`;
+  const one = items.length === 1 && !items[0].added;
+  const summary = one ? items[0].discussion || items[0].topic
+    : items.map((item, index) => [`${index + 1}. ${label(item)}`, item.discussion].filter(Boolean).join("\n")).join("\n\n");
+  const decisions = items.filter(item => item.decision).map(item => one ? item.decision : `${label(item)}: ${item.decision}`).join("\n");
+  return { summary: summary.slice(0, minutesLimits.text), decisions: decisions.slice(0, minutesLimits.text) };
+}
+
+/** Who came and who did not, of the people in the meeting. */
+export function presence<T extends { id: string }>(attendees: readonly T[], absentIds: readonly string[]): { present: T[]; absent: T[] } {
+  const away = new Set(absentIds);
+  return { present: attendees.filter(person => !away.has(person.id)), absent: attendees.filter(person => away.has(person.id)) };
+}
+
+/**
+ * Who is marked absent in a new MoM: those without a check-in, once anyone checked in (a meeting
+ * nobody checked in to did not use check-in, so everyone counts as present).
+ */
+export const defaultAbsent = (attendees: readonly MinuteAttendee[]) =>
+  attendees.some(person => person.checkedIn) ? attendees.filter(person => !person.checkedIn).map(person => person.id) : [];
 
 /** Follow-ups still open, the late ones first. */
 export function openActions(actions: readonly MinuteAction[], today: string): (MinuteAction & { late: boolean })[] {
@@ -139,4 +227,9 @@ export const minutesApi = {
   /** GET: the MoM as a PDF, for whoever may read it (12 Nov 2026). */
   pdf: (sessionId: string) => `/api/wam/sessions/${sessionId}/minutes/pdf`,
   action: (sessionId: string, actionId: string) => `/api/wam/sessions/${sessionId}/minutes/actions/${actionId}`,
+  /** POST: agree a photo's upload; POST confirm: keep it (12 Nov 2026). */
+  photos: (sessionId: string) => `/api/wam/sessions/${sessionId}/minutes/photos`,
+  photosConfirm: (sessionId: string) => `/api/wam/sessions/${sessionId}/minutes/photos/confirm`,
+  /** GET: the photo itself; DELETE: removes it. */
+  photo: (sessionId: string, photoId: string) => `/api/wam/sessions/${sessionId}/minutes/photos/${photoId}`,
 };
