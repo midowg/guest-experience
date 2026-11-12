@@ -17,6 +17,19 @@ export type MinuteAction = {
 export type Minutes = {
   summary: string; decisions: string; actions: MinuteAction[];
   submittedBy: string | null; submittedAt: string; updatedBy: string | null; updatedAt: string;
+  /**
+   * Kirim MoM (12 Nov 2026, migration 202611120004): null while a draft; the version counts the
+   * saves since it was sent (1 when sent). telegramOff keeps it out of Telegram.
+   */
+  sentAt: string | null; sentBy: string | null; version: number; telegramOff: boolean;
+};
+/** Where a sent MoM went in Telegram, per group, and where it would go (for the writer). */
+export type MinutesTelegram = {
+  /** The bot is set up and the groups' migration has run; else why not, in a sentence. */
+  ready: boolean; reason: string | null;
+  /** The groups a send reaches now (only for whoever may write it). */
+  destinations: string[];
+  deliveries: { title: string; status: "terkirim" | "gagal"; error: string | null; version: number; at: string | null }[];
 };
 /** What Detail sesi gets: the MoM (or none yet), whether the viewer may write it, and who may be a PIC. */
 export type MinutesView = {
@@ -26,11 +39,16 @@ export type MinutesView = {
   viewerId: string;
   /** Whether the meeting has started (the MoM can be written from then). */
   open: boolean;
+  /** When the meeting ends (ISO), to warn before sending a MoM of a meeting still running. */
+  endsAt: string | null;
+  /** Drafts and Kirim MoM exist (migration 202611120004); before it a save is the MoM itself. */
+  drafts: boolean;
+  telegram: MinutesTelegram;
 };
 
-export type MinutesStatus = "tidak-perlu" | "belum-waktunya" | "belum" | "sudah";
+export type MinutesStatus = "tidak-perlu" | "belum-waktunya" | "belum" | "draf" | "sudah";
 export const minutesStatusLabels: Record<MinutesStatus, string> = {
-  "tidak-perlu": "MoM tidak wajib", "belum-waktunya": "MoM setelah meeting", belum: "MoM belum diisi", sudah: "MoM sudah diisi",
+  "tidak-perlu": "MoM tidak wajib", "belum-waktunya": "MoM setelah meeting", belum: "MoM belum diisi", draf: "MoM masih draf", sudah: "MoM sudah dikirim",
 };
 
 type Meeting = Pick<Session, "status" | "kind" | "startsAt" | "endsAt" | "participantCount" | "minutesRequired">;
@@ -78,9 +96,12 @@ export function needsMinutes(meeting: Meeting, rule: MinutesRule = DEFAULT_MINUT
 export const minutesOpen = (meeting: Pick<Session, "status" | "startsAt">, now: Date) =>
   meeting.status === "terbit" && !!meeting.startsAt && new Date(meeting.startsAt) <= now;
 
-/** Where a meeting's MoM stands: only one that is over and needs one can be "belum". */
-export function minutesStatus(meeting: Meeting, has: boolean, now: Date): MinutesStatus {
-  if (has) return "sudah";
+/**
+ * Where a meeting's MoM stands: only one that is over and needs one can be "belum". A MoM saved but
+ * not sent yet is a draft, and does not count as in (12 Nov 2026).
+ */
+export function minutesStatus(meeting: Meeting, has: boolean, now: Date, sent = true): MinutesStatus {
+  if (has) return sent ? "sudah" : "draf";
   if (!needsMinutes(meeting)) return "tidak-perlu";
   return new Date(meeting.endsAt!) <= now ? "belum" : "belum-waktunya";
 }
@@ -91,11 +112,17 @@ export const minutesInputSchema = z.object({
   summary: z.string().trim().max(minutesLimits.text, `Ringkasan paling banyak ${minutesLimits.text} karakter.`).default(""),
   decisions: z.string().trim().max(minutesLimits.text, `Keputusan paling banyak ${minutesLimits.text} karakter.`).default(""),
   actions: z.array(z.object({
+    /** A follow-up kept from before (its done and who ticked it stay). */
+    id: z.uuid().optional(),
     task: z.string().trim().min(2, "Isi tugasnya.").max(minutesLimits.task, `Tugas paling banyak ${minutesLimits.task} karakter.`),
     picId: z.uuid("Pilih PIC dari daftar.").nullable().default(null),
     dueDate: z.string().regex(DATE, "Tanggal tidak valid.").nullable().default(null),
     done: z.boolean().default(false),
   })).max(minutesLimits.actions, `Paling banyak ${minutesLimits.actions} tindak lanjut.`).default([]),
+  /** Kirim MoM: true sends it (a draft stays a draft without it); once sent, every save is a new version. */
+  send: z.boolean().default(false),
+  /** Keep this MoM out of Telegram (a sensitive meeting). */
+  telegramOff: z.boolean().default(false),
 }).refine(input => input.summary.length >= 2 || input.decisions.length >= 2, { path: ["summary"], message: "Isi ringkasan atau keputusan meeting." });
 export type MinutesInput = z.infer<typeof minutesInputSchema>;
 
@@ -109,5 +136,7 @@ export function openActions(actions: readonly MinuteAction[], today: string): (M
 /** The MoM's API (11 Nov 2026): GET the view, PUT a new version; PATCH a follow-up's done. */
 export const minutesApi = {
   session: (sessionId: string) => `/api/wam/sessions/${sessionId}/minutes`,
+  /** GET: the MoM as a PDF, for whoever may read it (12 Nov 2026). */
+  pdf: (sessionId: string) => `/api/wam/sessions/${sessionId}/minutes/pdf`,
   action: (sessionId: string, actionId: string) => `/api/wam/sessions/${sessionId}/minutes/actions/${actionId}`,
 };

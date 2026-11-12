@@ -2,8 +2,12 @@
 
 Status (12 November 2026): **tahap 1 sudah dibangun**. Admin WAM → Telegram punya status bot, Pasang webhook,
 Pasang grup lewat tautan sekali pakai, Buat topik, Kirim contoh MoM, dan Lepas; migrasinya `202611120002_pw_telegram.sql`.
-**Tahap 2 belum dibangun**: Simpan draf / Kirim MoM dari panel Notulen, kartu Gabung grup, dan undangan pribadi. Tahap 2
-menunggu sesi lain selesai mengubah aturan wajib MoM. Keputusan yang masih perlu dari pemilik ada di bagian terakhir.
+**Tahap 2 dibangun 12 November 2026** di form MoM yang ada (migrasi `202611120004_pw_minutes_telegram.sql`):
+Simpan draf / Kirim MoM, versi, PDF MoM dengan keterangan singkat (kode MoM sebagai penanda unik), Unduh PDF,
+dan grup per unit (Sales & Marketing: Business Solutions, Commercial, Corporate Marketing Communication, tanpa
+grup induk). Aturan lengkapnya di `docs/aturan-wam.md` bagian 7b. **Belum dibangun**: kartu Gabung grup dan
+undangan pribadi untuk karyawan. Form MoM FRM.05.00.00.027 (butir agenda, hadir, foto) nanti dibangun sesi lain
+di atas ini. Keputusan yang masih perlu dari pemilik ada di bagian terakhir.
 
 Revisi 12 November 2026: pemilik memilih **grup Telegram per departemen**. Pemilik yang membuat semua grup,
 karyawan diarahkan masuk ke grup departemennya, lalu kepemilikan grup diserahkan ke orang lain (bukan

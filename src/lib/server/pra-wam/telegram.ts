@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { minutesTelegramHtml } from "@/lib/pra-wam/minutes-message";
+import { CAPTION_LIMIT, cut, minutesCaption, minutesFileName, visibleLength, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
 import {
   departmentGroups, HELP_TEXT, INSTALL_CODE, INSTALL_MINUTES, installCommand, installLink, installReply, MOM_TOPIC, readUpdate, sampleMinutes,
   type BotStatus, type GroupChat, type InstallCode, type TelegramGroup, type TelegramScope, type TelegramStatus, type TelegramUpdate,
@@ -10,7 +10,8 @@ import { shareUrl } from "@/lib/site-url";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
-import { telegramCall, TelegramError, telegramConfig, webhookSecret, type TelegramConfig } from "../telegram";
+import { telegramCall, TelegramError, telegramConfig, telegramUpload, webhookSecret, type TelegramConfig } from "../telegram";
+import { minutesPdf } from "./minutes-pdf";
 import { leadOptions } from "./leads";
 
 /*
@@ -29,12 +30,14 @@ const hash = (code: string) => createHash("sha256").update(code).digest("hex");
 const say = (error: unknown) => error instanceof TelegramError ? error.description : error instanceof Error ? error.message : "galat";
 
 type GroupRow = {
-  chat_id: number | string; title: string; scope: TelegramScope; department: string | null; is_forum: boolean;
+  chat_id: number | string; title: string; scope: TelegramScope; department: string | null; unit?: string | null; is_forum: boolean;
   mom_topic_id: number | null; bot_status: BotStatus; installed_at: string;
 };
-const GROUP_COLUMNS = "chat_id,title,scope,department,is_forum,mom_topic_id,bot_status,installed_at";
+const BASE_COLUMNS = "chat_id,title,scope,department,is_forum,mom_topic_id,bot_status,installed_at";
+/** With the team column of migration 202611120004; before it, groups have none. */
+const GROUP_COLUMNS = `${BASE_COLUMNS},unit`;
 const toGroup = (row: GroupRow): TelegramGroup => ({
-  chatId: String(row.chat_id), title: row.title, scope: row.scope, department: row.department, isForum: row.is_forum,
+  chatId: String(row.chat_id), title: row.title, scope: row.scope, department: row.department, unit: row.unit?.trim() || null, isForum: row.is_forum,
   momTopicId: row.mom_topic_id, botStatus: row.bot_status, installedAt: row.installed_at,
 });
 
@@ -50,17 +53,52 @@ async function botUsername(config: TelegramConfig): Promise<string> {
 }
 const botId = (config: TelegramConfig) => Number(config.token.split(":")[0]);
 
-async function listGroups(): Promise<{ migrated: boolean; groups: TelegramGroup[] }> {
-  const { data, error } = await createPrivilegedClient().from("pw_telegram_groups").select(GROUP_COLUMNS).eq("active", true).order("installed_at");
+const columnMissing = (error: { code?: string; message?: string }) => ["42703", "PGRST204"].includes(error.code ?? "") || /\bunit\b/.test(error.message ?? "");
+/** Whether migration 202611120004 (teams, MoM sending) has run. */
+export async function teamsReady(): Promise<boolean> {
+  const { error } = await createPrivilegedClient().from("pw_telegram_groups").select("unit").limit(1);
+  return !error;
+}
+
+/** The groups WAM posts in; before migration 202611120002, none. */
+export async function listGroups(): Promise<{ migrated: boolean; groups: TelegramGroup[] }> {
+  const client = createPrivilegedClient();
+  const first = await client.from("pw_telegram_groups").select(GROUP_COLUMNS).eq("active", true).order("installed_at");
+  let rows = first.data as GroupRow[] | null, error = first.error;
+  if (error && columnMissing(error)) {
+    const second = await client.from("pw_telegram_groups").select(BASE_COLUMNS).eq("active", true).order("installed_at");
+    rows = second.data as GroupRow[] | null; error = second.error;
+  }
   if (error) { if (missing(error)) return { migrated: false, groups: [] }; databaseError(error); }
-  return { migrated: true, groups: ((data ?? []) as GroupRow[]).map(toGroup) };
+  return { migrated: true, groups: (rows ?? []).map(toGroup) };
+}
+
+/** The teams of each department (employee_jobs.unit of active people), for groups per team. */
+export async function teamsByDepartment(): Promise<Record<string, string[]>> {
+  const client = createPrivilegedClient();
+  const [{ data: jobs, error }, { data: people }] = await Promise.all([
+    client.from("employee_jobs").select("employee_id,department,unit").neq("unit", "").limit(5000),
+    client.from("employees").select("id").eq("active", true).limit(5000),
+  ]);
+  if (error || !jobs) return {};
+  const active = new Set((people ?? []).map(row => row.id as string));
+  const teams: Record<string, Set<string>> = {};
+  for (const job of jobs as { employee_id: string; department: string; unit: string | null }[]) {
+    const unit = job.unit?.trim();
+    if (!unit || !active.has(job.employee_id)) continue;
+    (teams[job.department.trim()] ??= new Set()).add(unit);
+  }
+  return Object.fromEntries(Object.entries(teams).map(([department, units]) => [department, [...units]]));
 }
 
 /** Admin WAM → Telegram: the bot, its webhook, the groups and the departments. */
 export async function telegramStatus(): Promise<TelegramStatus> {
   const config = telegramConfig();
-  const [{ migrated, groups }, names] = await Promise.all([listGroups(), leadOptions().then(options => options.departments).catch(() => [] as string[])]);
-  const base: TelegramStatus = { configured: !!config, bot: null, botError: null, webhook: null, migrated, groups, departments: departmentGroups(names) };
+  const [{ migrated, groups }, names, teams, ready] = await Promise.all([
+    listGroups(), leadOptions().then(options => options.departments).catch(() => [] as string[]), teamsByDepartment().catch(() => ({})), teamsReady().catch(() => false),
+  ]);
+  // Groups per team need migration 202611120004; before it, one per department.
+  const base: TelegramStatus = { configured: !!config, bot: null, botError: null, webhook: null, migrated, groups, departments: departmentGroups(names, ready ? teams : {}) };
   if (!config) return base;
   try {
     const [me, hook] = await Promise.all([
@@ -89,29 +127,96 @@ export async function installWebhook(): Promise<void> {
   });
 }
 
-/** A one-time code to tie a group to a department (or to the HOD group), valid for 30 minutes. */
-export async function createInstallCode(scope: TelegramScope, department: string | null, now = new Date()): Promise<InstallCode> {
+/** A one-time code to tie a group to a department or one of its teams (or to the HOD group), valid for 30 minutes. */
+export async function createInstallCode(scope: TelegramScope, department: string | null, unit: string | null = null, now = new Date()): Promise<InstallCode> {
   const config = requireBot();
   const name = scope === "departemen" ? department?.trim() ?? "" : null;
+  const team = scope === "departemen" ? unit?.trim() || null : null;
   if (scope === "departemen") {
     const known = (await leadOptions()).departments;
     if (!name || !known.some(item => item.toLowerCase() === name.toLowerCase())) throw new ServiceError(422, "Departemen tidak ada di Data karyawan.");
+    const ready = await teamsReady();
+    const teams = ready ? Object.entries(await teamsByDepartment()).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1] ?? [] : [];
+    if (team && !teams.some(item => item.toLowerCase() === team.toLowerCase())) throw new ServiceError(422, `${team} tidak ada sebagai unit ${name} di Data karyawan.`);
+    if (!team && teams.length) throw new ServiceError(422, `${name} dibagi per unit. Pasang grup untuk tiap unitnya.`);
   }
   const code = randomBytes(24).toString("base64url");
   const expiresAt = new Date(now.getTime() + INSTALL_MINUTES * 60_000).toISOString();
   const client = createPrivilegedClient();
   // Codes over a day past their end are of no use, even to explain a refusal.
   await client.from("pw_telegram_codes").delete().lt("expires_at", new Date(now.getTime() - 86_400_000).toISOString());
-  const { error } = await client.from("pw_telegram_codes").insert({ code_hash: hash(code), scope, department: name, expires_at: expiresAt });
+  const { error } = await client.from("pw_telegram_codes").insert({ code_hash: hash(code), scope, department: name, expires_at: expiresAt, ...(team ? { unit: team } : {}) });
   if (error) { if (missing(error)) throw waiting(); databaseError(error); }
   const username = await botUsername(config);
-  return { scope, department: name, link: installLink(username, code), command: installCommand(username, code), expiresAt };
+  return { scope, department: name, unit: team, link: installLink(username, code), command: installCommand(username, code), expiresAt };
 }
 
 async function send(config: TelegramConfig, chatId: number | string, html: string, threadId?: number | null) {
   return telegramCall<{ message_id: number }>(config, "sendMessage", {
     chat_id: chatId, text: html, parse_mode: "HTML", link_preview_options: { is_disabled: true }, ...(threadId ? { message_thread_id: threadId } : {}),
   });
+}
+
+/** 21.00–07.00 WIB: a MoM still arrives, without a sound. */
+export const quietHour = (now: Date) => { const hour = (now.getUTCHours() + 7) % 24; return hour >= 21 || hour < 7; };
+
+/** A MoM's post in a group: where it went (the id may move when the group became a supergroup). */
+export type Posted = { chatId: string; messageId: number; topicLost: boolean };
+
+/**
+ * Posts a MoM in a group as one message: the PDF with its caption, in the MoM topic when there is
+ * one. With an earlier message, that message is changed in place instead (Telegram does not ring
+ * for a change); when it is gone, a new one is sent. A group that moved follows its new id, a topic
+ * that is gone falls back to the group, and a bot that was removed is marked so.
+ */
+export async function postMinutes(group: TelegramGroup, message: MinutesMessage, earlier: number | null, now = new Date(), pdf?: Uint8Array): Promise<Posted> {
+  const config = requireBot();
+  const bytes = pdf ?? await minutesPdf(message);
+  let caption = minutesCaption(message);
+  if (visibleLength(caption) > CAPTION_LIMIT) caption = minutesCaption({ ...message, title: cut(message.title, 60), place: cut(message.place, 40) });
+  const file = { field: "document", name: minutesFileName(message), bytes, type: "application/pdf" };
+  const client = createPrivilegedClient();
+  let chatId = group.chatId, topic = group.momTopicId, topicLost = false;
+
+  const send = async (): Promise<number> => (await telegramUpload<{ message_id: number }>(config, "sendDocument", {
+    chat_id: chatId, caption, parse_mode: "HTML", ...(topic ? { message_thread_id: topic } : {}), ...(quietHour(now) ? { disable_notification: true } : {}),
+  }, file)).message_id;
+  const edit = async (messageId: number): Promise<number> => {
+    await telegramUpload(config, "editMessageMedia", {
+      chat_id: chatId, message_id: messageId, media: { type: "document", media: "attach://document", caption, parse_mode: "HTML" },
+    }, file);
+    return messageId;
+  };
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (earlier) {
+        try { return { chatId, messageId: await edit(earlier), topicLost }; }
+        catch (error) {
+          if (error instanceof TelegramError && error.unchanged) return { chatId, messageId: earlier, topicLost };
+          if (!(error instanceof TelegramError && /not found|can't be edited|MESSAGE_ID_INVALID/i.test(error.description))) throw error;
+          earlier = null; // The message was deleted in the group: send it anew.
+        }
+      }
+      return { chatId, messageId: await send(), topicLost };
+    } catch (error) {
+      if (!(error instanceof TelegramError)) throw new ServiceError(502, say(error));
+      if (error.migrateTo) {
+        await client.from("pw_telegram_groups").update({ chat_id: error.migrateTo, updated_at: now.toISOString() }).eq("chat_id", chatId);
+        chatId = String(error.migrateTo); earlier = null;
+      } else if (error.gone) {
+        await client.from("pw_telegram_groups").update({ bot_status: "dikeluarkan", updated_at: now.toISOString() }).eq("chat_id", chatId);
+        throw new ServiceError(409, `Bot sudah tidak ada di grup ${group.title}. Pasang ulang bot ke grup itu.`);
+      } else if (topic && /thread|topic/i.test(error.description)) {
+        // The topic was deleted or closed to the bot: post in the group, and forget the topic.
+        await client.from("pw_telegram_groups").update({ mom_topic_id: null, updated_at: now.toISOString() }).eq("chat_id", chatId);
+        topic = null; topicLost = true; earlier = null;
+      } else if (error.retryAfter && error.retryAfter <= 5) {
+        await new Promise(resolve => setTimeout(resolve, error.retryAfter! * 1000));
+      } else throw new ServiceError(502, `Telegram menolak: ${error.description}`);
+    }
+  }
+  throw new ServiceError(502, `Telegram belum menerima MoM untuk ${group.title}. Coba kirim ulang.`);
 }
 
 /** Opens the "📝 MoM" topic in a group with topics, when the bot may; null when it may not. */
@@ -131,11 +236,13 @@ async function botStatusIn(config: TelegramConfig, chatId: number): Promise<BotS
 async function install(config: TelegramConfig, chat: GroupChat, code: string, now: Date): Promise<string> {
   if (!INSTALL_CODE.test(code)) return "Kode pemasangan tidak dikenali. Buat tautan baru di Admin WAM → Telegram.";
   const client = createPrivilegedClient();
-  const { data: row, error } = await client.from("pw_telegram_codes").select("scope,department,expires_at,used_at").eq("code_hash", hash(code)).maybeSingle();
+  let { data: row, error } = await client.from("pw_telegram_codes").select("scope,department,unit,expires_at,used_at").eq("code_hash", hash(code)).maybeSingle();
+  if (error && columnMissing(error)) ({ data: row, error } = await client.from("pw_telegram_codes").select("scope,department,expires_at,used_at").eq("code_hash", hash(code)).maybeSingle());
   if (error) { if (missing(error)) return "Grup Telegram belum siap di WAM (menunggu migrasi)."; databaseError(error); }
   if (!row || row.used_at || Date.parse(row.expires_at) < now.getTime()) return "Kode pemasangan tidak dikenali atau sudah kedaluwarsa. Buat tautan baru di Admin WAM → Telegram.";
   const scope = row.scope as TelegramScope;
   const department = row.department as string | null;
+  const unit = ((row as { unit?: string | null }).unit ?? "").trim() || null;
   // Mark the code used first, so a repeated update cannot install twice.
   const { data: claimed, error: claimError } = await client.from("pw_telegram_codes").update({ used_at: now.toISOString(), used_chat_id: chat.id })
     .eq("code_hash", hash(code)).is("used_at", null).select("code_hash");
@@ -143,17 +250,20 @@ async function install(config: TelegramConfig, chat: GroupChat, code: string, no
   if (!claimed?.length) return "Kode ini sudah dipakai. Buat tautan baru di Admin WAM → Telegram.";
   // The department's (or HOD's) earlier group, and this chat's earlier place, step aside.
   const earlier = client.from("pw_telegram_groups").update({ active: false, updated_at: now.toISOString() }).eq("active", true).eq("scope", scope).neq("chat_id", chat.id);
-  const { error: clearError } = await (department ? earlier.ilike("department", department.replace(/[\\%_]/g, "\\$&")) : earlier);
+  const like = (text: string) => text.replace(/[\\%_]/g, "\\$&");
+  // The same department and team: a team's group leaves the department's other teams alone.
+  const sameSpot = !department ? earlier : unit ? earlier.ilike("department", like(department)).ilike("unit", like(unit)) : earlier.ilike("department", like(department));
+  const { error: clearError } = await sameSpot;
   if (clearError) databaseError(clearError);
   const status = await botStatusIn(config, chat.id);
   const { data: before } = await client.from("pw_telegram_groups").select("mom_topic_id").eq("chat_id", chat.id).maybeSingle();
   const topic = chat.isForum ? before?.mom_topic_id ?? await openTopic(config, chat.id) : null;
   const { error: saveError } = await client.from("pw_telegram_groups").upsert({
     chat_id: chat.id, title: chat.title, scope, department, is_forum: chat.isForum, mom_topic_id: topic, bot_status: status,
-    active: true, installed_at: now.toISOString(), updated_at: now.toISOString(),
+    active: true, installed_at: now.toISOString(), updated_at: now.toISOString(), ...(unit ? { unit } : {}),
   }, { onConflict: "chat_id" });
   if (saveError) databaseError(saveError);
-  return installReply({ scope, department, topic, isForum: chat.isForum });
+  return installReply({ scope, department, unit, topic, isForum: chat.isForum });
 }
 
 /** After a group became a supergroup (Topics turned on, say): its row follows the new id, with the new chat's title and topics. */
@@ -203,37 +313,21 @@ export async function handleUpdate(update: TelegramUpdate, now = new Date()): Pr
 
 async function activeGroup(chatId: string): Promise<TelegramGroup> {
   if (!/^-?\d{1,20}$/.test(chatId)) throw new ServiceError(422, "Grup tidak dikenali.");
-  const { data, error } = await createPrivilegedClient().from("pw_telegram_groups").select(GROUP_COLUMNS).eq("chat_id", chatId).eq("active", true).maybeSingle();
-  if (error) { if (missing(error)) throw waiting(); databaseError(error); }
-  if (!data) throw new ServiceError(404, "Grup ini tidak lagi terpasang. Muat ulang halaman.");
-  return toGroup(data as GroupRow);
+  const { groups, migrated } = await listGroups();
+  if (!migrated) throw waiting();
+  const group = groups.find(item => item.chatId === chatId);
+  if (!group) throw new ServiceError(404, "Grup ini tidak lagi terpasang. Muat ulang halaman.");
+  return group;
 }
 
-/** Sends a sample MoM (marked UJI COBA) to a group, to its MoM topic when it has one. */
+/** Sends a sample MoM (marked UJI COBA) to a group, as the real ones go: a PDF with its caption, in the MoM topic. */
 export async function sendSample(chatId: string, now = new Date()): Promise<string> {
-  const config = requireBot();
+  requireBot();
   const group = await activeGroup(chatId);
   const short = departmentGroups(group.department ? [group.department] : [])[0]?.short ?? "";
-  const { html } = minutesTelegramHtml(sampleMinutes(group, short, now, new URL(praWamPath.home, shareUrl()).toString().replace(/^https?:\/\//, "")));
-  const client = createPrivilegedClient();
-  try {
-    await send(config, group.chatId, html, group.momTopicId);
-  } catch (error) {
-    if (!(error instanceof TelegramError)) throw new ServiceError(502, say(error));
-    if (error.migrateTo) {
-      await client.from("pw_telegram_groups").update({ chat_id: error.migrateTo, updated_at: now.toISOString() }).eq("chat_id", group.chatId);
-      await send(config, error.migrateTo, html, group.momTopicId);
-    } else if (error.gone) {
-      await client.from("pw_telegram_groups").update({ bot_status: "dikeluarkan", updated_at: now.toISOString() }).eq("chat_id", group.chatId);
-      throw new ServiceError(409, `Bot sudah tidak ada di grup ${group.title}. Pasang ulang bot ke grup itu.`);
-    } else if (group.momTopicId && /thread|topic/i.test(error.description)) {
-      // The topic was deleted or closed to the bot: post in the group, and forget the topic.
-      await client.from("pw_telegram_groups").update({ mom_topic_id: null, updated_at: now.toISOString() }).eq("chat_id", group.chatId);
-      await send(config, group.chatId, html);
-      return `Contoh MoM terkirim ke ${group.title}, tetapi tidak di topik ${MOM_TOPIC} (topiknya tidak bisa dipakai bot). Tekan Buat topik untuk membuatnya lagi.`;
-    } else throw new ServiceError(502, `Telegram menolak: ${error.description}`);
-  }
-  return `Contoh MoM terkirim ke ${group.title}${group.momTopicId ? ` (topik ${MOM_TOPIC})` : ""}.`;
+  const posted = await postMinutes(group, sampleMinutes(group, short, now, new URL(praWamPath.home, shareUrl()).toString().replace(/^https?:\/\//, "")), null, now);
+  if (posted.topicLost) return `Contoh MoM terkirim ke ${group.title}, tetapi tidak di topik ${MOM_TOPIC} (topiknya tidak bisa dipakai bot). Tekan Buat topik untuk membuatnya lagi.`;
+  return `Contoh MoM (PDF) terkirim ke ${group.title}${group.momTopicId ? ` (topik ${MOM_TOPIC})` : ""}.`;
 }
 
 /** Opens the MoM topic for a group that turned on topics after it was installed. */

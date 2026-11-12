@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 const chatId = z.string().regex(/^-?\d{1,20}$/, "Grup tidak dikenali.");
 const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("webhook") }),
-  z.object({ action: z.literal("install"), scope: z.enum(["departemen", "hod"]), department: z.string().trim().max(150).nullable().default(null) }),
+  z.object({
+    action: z.literal("install"), scope: z.enum(["departemen", "hod"]),
+    department: z.string().trim().max(150).nullable().default(null), unit: z.string().trim().max(120).nullable().default(null),
+  }),
   z.object({ action: z.literal("sample"), chatId }),
   z.object({ action: z.literal("topic"), chatId }),
   z.object({ action: z.literal("remove"), chatId }),
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
       return success(await telegramStatus(), "Webhook terpasang. Bot sekarang menjawab lewat WAM.");
     }
     if (input.action === "install") {
-      const code = await createInstallCode(input.scope, input.scope === "hod" ? null : input.department);
+      const code = await createInstallCode(input.scope, input.scope === "hod" ? null : input.department, input.scope === "hod" ? null : input.unit);
       return success(code, "Tautan pemasangan dibuat. Berlaku 30 menit dan sekali pakai.");
     }
     const message = input.action === "sample" ? await sendSample(input.chatId)

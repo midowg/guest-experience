@@ -9,10 +9,12 @@ export const dynamic = "force-dynamic";
 
 const people = [{ id: "11111111-1111-4111-8111-111111111111", name: "Raja" }, { id: "22222222-2222-4222-8222-222222222222", name: "Dewi" }, { id: "me", name: "Saya" }];
 const written: MinutesView = {
-  migrated: true, needed: true, status: "sudah", canWrite: true, open: true, viewerId: "me", people,
+  migrated: true, needed: true, status: "sudah", canWrite: true, open: true, viewerId: "me", people, endsAt: "2026-11-10T03:30:00.000Z", drafts: true,
+  telegram: { ready: true, reason: null, destinations: ["Werkudara SM · Commercial"], deliveries: [{ title: "Werkudara SM · Commercial", status: "terkirim", error: null, version: 2, at: "2026-11-10T06:30:00.000Z" }] },
   minutes: {
     summary: "Membahas target penjualan Q1 dan rencana event klien di Bali.", decisions: "Target Q1 naik 10%.\nEvent Bali dipegang tim SM.",
     submittedBy: "Raja", submittedAt: "2026-11-10T04:00:00.000Z", updatedBy: "Dewi", updatedAt: "2026-11-10T06:30:00.000Z",
+    sentAt: "2026-11-10T04:10:00.000Z", sentBy: "Raja", version: 2, telegramOff: false,
     actions: [
       { id: "a1", task: "Kirim data penjualan Oktober ke Finance", picId: "me", picName: "Saya", dueDate: "2026-11-14", done: false },
       { id: "a2", task: "Survei venue Bali", picId: "22222222-2222-4222-8222-222222222222", picName: "Dewi", dueDate: "2026-11-20", done: true },

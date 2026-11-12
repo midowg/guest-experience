@@ -10,24 +10,34 @@ import { praWamTelegramApi } from "@/lib/routes";
 import css from "./telegram-admin.module.css";
 
 type Message = { tone: "success" | "error"; text: string } | null;
-/** One row: the HOD group, or a department (with the group it has, if any). */
-type Row = { key: string; scope: TelegramScope; department: string | null; label: string; suggested: string; group: TelegramGroup | null; unknown?: boolean };
+/** One row: the HOD group, or a department or one of its teams (with the group it has, if any). */
+type Row = { key: string; scope: TelegramScope; department: string | null; unit: string | null; label: string; suggested: string; group: TelegramGroup | null; unknown?: boolean };
 
 const time = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 const dateTime = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
 const botLabels: Record<BotStatus, [string, ConsoleTone]> = { admin: ["Bot admin", "ok"], anggota: ["Bot anggota", "warn"], dikeluarkan: ["Bot dikeluarkan", "bad"] };
 const same = (a: string | null, b: string | null) => (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
 
-/** The HOD group first, then every department of Data karyawan; a group whose department is gone shows too. */
+/**
+ * The HOD group first, then every department of Data karyawan, or each of its teams when it has
+ * them (Sales & Marketing · Business Solutions); a group whose department or team is gone shows too.
+ */
 export function telegramRows(status: Pick<TelegramStatus, "groups" | "departments">): Row[] {
   const hod = status.groups.find(group => group.scope === "hod") ?? null;
-  const rows: Row[] = [{ key: "hod", scope: "hod", department: null, label: "Grup HOD", suggested: HOD_GROUP_TITLE, group: hod }];
+  const rows: Row[] = [{ key: "hod", scope: "hod", department: null, unit: null, label: "Grup HOD", suggested: HOD_GROUP_TITLE, group: hod }];
+  const at = (department: string | null, unit: string | null) => (group: TelegramGroup) => group.scope === "departemen" && same(group.department, department) && same(group.unit, unit);
   for (const item of status.departments) {
-    rows.push({ key: `d:${item.name}`, scope: "departemen", department: item.name, label: item.name, suggested: item.groupTitle, group: status.groups.find(group => group.scope === "departemen" && same(group.department, item.name)) ?? null });
+    rows.push({
+      key: `d:${item.name}:${item.unit ?? ""}`, scope: "departemen", department: item.name, unit: item.unit,
+      label: item.unit ? `${item.name} · ${item.unit}` : item.name, suggested: item.groupTitle, group: status.groups.find(at(item.name, item.unit)) ?? null,
+    });
   }
   for (const group of status.groups) {
-    if (group.scope === "departemen" && !status.departments.some(item => same(item.name, group.department))) {
-      rows.push({ key: `g:${group.chatId}`, scope: "departemen", department: group.department, label: group.department ?? "", suggested: group.title, group, unknown: true });
+    if (group.scope === "departemen" && !status.departments.some(item => at(item.name, item.unit)(group))) {
+      rows.push({
+        key: `g:${group.chatId}`, scope: "departemen", department: group.department, unit: group.unit,
+        label: group.unit ? `${group.department ?? ""} · ${group.unit}` : group.department ?? "", suggested: group.title, group, unknown: true,
+      });
     }
   }
   return rows;
@@ -133,7 +143,7 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
                 {busy === `topic:${group.chatId}` ? "Membuat…" : "Buat topik"}
               </ConsoleButton>}
               {!row.unknown && <ConsoleButton icon={<Link2 size={16} aria-hidden="true" />} disabled={!ready || !status.migrated || busy !== null}
-                onClick={() => run(row.key, { action: "install", scope: row.scope, department: row.department })}>
+                onClick={() => run(row.key, { action: "install", scope: row.scope, department: row.department, unit: row.unit })}>
                 {busy === row.key ? "Membuat…" : group ? "Pasang ulang" : "Pasang grup"}
               </ConsoleButton>}
               {group && <ConsoleButton disabled={busy !== null} onClick={() => {

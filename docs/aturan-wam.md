@@ -135,18 +135,22 @@ Sejak 11 Nov 2026 (migrasi `202611110002_pw_session_minutes.sql`), aturan di `sr
 | Tampil di | Detail sesi (panel Notulen); **Agenda**: kotak "Notulen belum diisi" berisi meeting milik orang itu yang sudah selesai tanpa MoM; **Jadwal sesi** (panitia dan BOD): kolom MoM sudah/belum; **Ringkasan** panitia: kartu "MoM belum masuk". |
 | Sebelum migrasi | Panel bilang menunggu pembaruan sistem; tidak ada yang dihitung "belum". |
 
-### MoM lewat Telegram (tahap 1, 12 Nov 2026)
+### MoM lewat Telegram (12 Nov 2026)
 
-Rancangan lengkapnya ada di `docs/rancangan-mom-telegram.md`. Tahap 1 memakai migrasi `202611120002_pw_telegram.sql` (belum dijalankan).
+Rancangan lengkapnya ada di `docs/rancangan-mom-telegram.md`. Migrasi: `202611120002_pw_telegram.sql` (sudah dijalankan) dan `202611120004_pw_minutes_telegram.sql` (draf, Kirim MoM, grup per unit, catatan pesan).
 
 | Hal | Aturan |
 | --- | --- |
-| Bot | Satu bot untuk semua grup: **WAM Werkudara** (`@wam_werkudara_bot`). Token hanya di environment server (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`); rahasia webhook diturunkan dari token. |
-| Grup | Satu grup per departemen Data karyawan ("Werkudara {singkatan} · {departemen}") dan satu **grup HOD** bersama. Satu departemen hanya punya satu grup aktif; memasang grup baru melepas yang lama. |
+| Bot | Satu bot untuk semua grup: **WAM Werkudara** (`@wam_werkudara_bot`). Token hanya di environment server (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`); rahasia webhook diturunkan dari token. Di tiap grup bot bisa diberi label admin, misalnya "Notulen CoE". |
+| Grup | Satu grup per departemen Data karyawan ("Werkudara {singkatan} · {departemen}") dan satu **grup HOD** bersama. Departemen yang dibagi per **unit** (kolom unit di Data karyawan → Pekerjaan; Sales & Marketing: Business Solutions, Commercial, Corporate Marketing Communication) punya satu grup per unit ("Werkudara SM · Commercial") dan tidak punya grup departemen. Satu departemen/unit hanya punya satu grup aktif; memasang grup baru melepas yang lama. |
 | Memasang | Admin WAM → **Telegram** (semua admin): Pasang webhook sekali, lalu **Pasang grup** per baris. Hasilnya tautan sekali pakai yang berlaku 30 menit dan menambahkan bot dengan hak admin. Untuk grup yang sudah berisi bot, kirim perintah `/start@wam_werkudara_bot {kode}` di grup itu. |
-| Topik | Grup yang memakai Topics mendapat topik **📝 MoM** buatan bot (perlu hak Kelola topik). Ubah grup ke supergroup dan nyalakan Topics **sebelum** dipasang, karena ID grup berubah saat itu. |
-| Pesan | Satu pesan per MoM, bisa dibaca tanpa membuka WAM dan netral saat diteruskan (tanpa "kamu"). Departemen ditulis lengkap, ada baris versi, dan panjangnya dibatasi 3.900 karakter (tindak lanjut didahulukan). Aturannya di `src/lib/pra-wam/minutes-message.ts`. |
-| Uji | **Kirim contoh MoM** mengirim MoM bertanda UJI COBA ke grup itu. Kiriman MoM sungguhan dari panel Notulen menyusul di tahap 2. |
+| Topik | Grup yang memakai Topics mendapat topik **📝 MoM** buatan bot (perlu hak Kelola topik); begitu bot dijadikan admin, topiknya dibuat sendiri. Grup yang menyalakan Topics setelah dipasang ikut pindah ke ID barunya. |
+| Draf dan kirim | MoM yang disimpan adalah **draf**: hanya terlihat oleh yang ikut meeting, belum dihitung "MoM masuk". **Kirim MoM** (setelah konfirmasi yang menyebut grup tujuannya) membagikannya: peserta lain diberi tahu di WAM, dan PDF-nya dikirim ke Telegram. Sesudah dikirim, setiap simpan adalah **versi baru** dan pesan di Telegram diganti di tempat tanpa bunyi. Centang selesai pada tindak lanjut tetap tersimpan siapa dan kapan. MoM yang disimpan sebelum migrasi 0004 dihitung sudah dikirim. |
+| Tujuan | Meeting HOD/Lead dan ITEM hanya ke **grup HOD**. Meeting lain ke grup departemen/unit setiap peserta (sekali per grup). Peserta tanpa unit di departemen yang dibagi per unit (GM/HOD-nya) masuk ke semua grup unit departemen itu. Grup yang botnya dikeluarkan dilewati. **Jangan kirim ke Telegram** di form menahan satu MoM dari Telegram. |
+| Pesan | PDF MoM (kode, data meeting, ringkasan, keputusan, tabel tindak lanjut Open/Done) dengan keterangan singkat: **kode MoM** sebagai penanda unik (`{singkatan}-{tanggal}-{4 karakter sesi}`), departemen lengkap, hari, jam, tempat, notulis, jumlah keputusan dan tindak lanjut, versi. Netral saat diteruskan (tanpa "kamu"). Malam (21.00–07.00 WIB) dikirim tanpa bunyi. Aturannya di `src/lib/pra-wam/minutes-message.ts` dan `src/lib/server/pra-wam/minutes-pdf.ts`. |
+| PDF di WAM | **Unduh PDF** di panel notulen, untuk yang boleh membaca MoM (draf hanya untuk penulisnya, bertanda DRAF). |
+| Gagal | Grup yang gagal ditandai di bawah MoM beserta alasannya, dan dicoba lagi saat MoM disimpan berikutnya. |
+| Uji | Admin WAM → Telegram → **Kirim contoh MoM** mengirim PDF contoh bertanda UJI COBA ke grup itu. |
 
 ## 7a. Notifikasi
 

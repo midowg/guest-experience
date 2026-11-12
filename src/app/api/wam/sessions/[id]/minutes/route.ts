@@ -17,13 +17,18 @@ export async function GET(_request: Request, { params }: Params) {
   });
 }
 
-/** PUT: writes the MoM anew (anyone in the meeting, or panitia), once the meeting has started. */
+/**
+ * PUT: writes the MoM anew (anyone in the meeting, or panitia), once the meeting has started.
+ * `send` sends a draft (12 Nov 2026); a sent MoM's every save is a new version, in Telegram too.
+ */
 export async function PUT(request: Request, { params }: Params) {
   return handle(async () => {
     const member = await requireApiMember();
     checkOrigin(request);
     const id = validate(z.uuid(), (await params).id);
     const input = validate(minutesInputSchema, await readJson(request, 60_000));
-    return success(await saveMinutes(id, input, member), "Notulen disimpan.");
+    const { view, sentNow } = await saveMinutes(id, input, member);
+    const sent = !!view.minutes?.sentAt;
+    return success(view, sentNow ? "MoM dikirim." : sent ? `Perubahan disimpan sebagai versi ${view.minutes?.version ?? 2}.` : "Draf disimpan. Belum dikirim ke siapa pun.");
   });
 }

@@ -12,12 +12,12 @@ const status: TelegramStatus = {
   configured: true, bot: { username: "wam_werkudara_bot", name: "WAM Werkudara" }, botError: null,
   webhook: { set: true, ours: true, pending: 0, lastError: null, lastErrorAt: null }, migrated: true,
   groups: [
-    { chatId: "-1001", title: "Werkudara CoE · Center of Excellence", scope: "departemen", department: "Center of Excellence", isForum: true, momTopicId: 12, botStatus: "admin", installedAt: "2026-11-12T04:00:00Z" },
-    { chatId: "-1002", title: "Lama", scope: "departemen", department: "Divisi Lama", isForum: false, momTopicId: null, botStatus: "dikeluarkan", installedAt: "2026-11-12T04:00:00Z" },
+    { chatId: "-1001", title: "Werkudara CoE · Center of Excellence", scope: "departemen", department: "Center of Excellence", unit: null, isForum: true, momTopicId: 12, botStatus: "admin", installedAt: "2026-11-12T04:00:00Z" },
+    { chatId: "-1002", title: "Lama", scope: "departemen", department: "Divisi Lama", unit: null, isForum: false, momTopicId: null, botStatus: "dikeluarkan", installedAt: "2026-11-12T04:00:00Z" },
   ],
   departments: [
-    { name: "Center of Excellence", short: "CoE", groupTitle: "Werkudara CoE · Center of Excellence" },
-    { name: "Sales & Marketing", short: "SM", groupTitle: "Werkudara SM · Sales & Marketing" },
+    { name: "Center of Excellence", short: "CoE", unit: null, groupTitle: "Werkudara CoE · Center of Excellence" },
+    { name: "Sales & Marketing", short: "SM", unit: null, groupTitle: "Werkudara SM · Sales & Marketing" },
   ],
 };
 
@@ -50,7 +50,7 @@ it("makes a one-time link for a department and shows both ways to install it", a
   const sm = screen.getByText("Sales & Marketing", { selector: "strong" }).closest("li")!;
   fireEvent.click(within(sm).getByRole("button", { name: "Pasang grup" }));
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
-  expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({ action: "install", scope: "departemen", department: "Sales & Marketing" });
+  expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({ action: "install", scope: "departemen", department: "Sales & Marketing", unit: null });
   const panel = await within(sm).findByRole("group", { name: "Pasang grup Sales & Marketing" });
   expect(within(panel).getByRole("link", { name: /Buka di Telegram/ }).getAttribute("href")).toBe("https://t.me/wam_werkudara_bot?startgroup=CODE");
   expect(within(panel).getByText("/start@wam_werkudara_bot CODE")).toBeTruthy();
@@ -73,4 +73,25 @@ it("says what is missing before the bot or the migration is ready, and keeps the
   expect(screen.getByText(/menunggu migrasi 202611120002_pw_telegram.sql/)).toBeTruthy();
   expect((screen.getByRole("button", { name: "Pasang webhook" }) as HTMLButtonElement).disabled).toBe(true);
   for (const button of screen.getAllByRole("button", { name: "Pasang grup" })) expect((button as HTMLButtonElement).disabled).toBe(true);
+});
+
+it("gives each team of a department its own row and install, and a team's group its row", async () => {
+  request.mockResolvedValue({ message: "Tautan pemasangan dibuat.", data: { scope: "departemen", department: "Sales & Marketing", unit: "Commercial", link: "https://t.me/x?startgroup=C", command: "/start@x C", expiresAt: "2026-11-12T05:00:00Z" } });
+  const teams: TelegramStatus = {
+    ...status,
+    groups: [{ chatId: "-1009", title: "Werkudara SM · Business Solutions", scope: "departemen", department: "Sales & Marketing", unit: "Business Solutions", isForum: true, momTopicId: 3, botStatus: "admin", installedAt: "2026-11-12T04:00:00Z" }],
+    departments: [
+      { name: "Sales & Marketing", short: "SM", unit: "Business Solutions", groupTitle: "Werkudara SM · Business Solutions" },
+      { name: "Sales & Marketing", short: "SM", unit: "Commercial", groupTitle: "Werkudara SM · Commercial" },
+    ],
+  };
+  expect(telegramRows(teams).map(row => [row.label, row.group?.chatId ?? null])).toEqual([
+    ["Grup HOD", null], ["Sales & Marketing · Business Solutions", "-1009"], ["Sales & Marketing · Commercial", null],
+  ]);
+  render(<PraWamTelegram initial={teams} />);
+  const commercial = screen.getByText("Sales & Marketing · Commercial", { selector: "strong" }).closest("li")!;
+  expect(within(commercial).getByText(/nama disarankan: Werkudara SM · Commercial/)).toBeTruthy();
+  fireEvent.click(within(commercial).getByRole("button", { name: "Pasang grup" }));
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+  expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({ action: "install", scope: "departemen", department: "Sales & Marketing", unit: "Commercial" });
 });

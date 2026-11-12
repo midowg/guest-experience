@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { isOurWebhook, telegramCall, TelegramError, telegramConfig, webhookSecret } from "./telegram";
+import { isOurWebhook, telegramCall, TelegramError, telegramConfig, telegramUpload, webhookSecret } from "./telegram";
 
 const TOKEN = "123456789:AAH-fake_token_for_tests_only_0123456789";
 const config = { token: TOKEN, username: "wam_werkudara_bot" };
@@ -48,6 +48,22 @@ describe("telegramCall", () => {
     expect(gone.gone).toBe(true);
     const same = await failure(telegramCall(config, "editMessageText", {}, reply({ ok: false, error_code: 400, description: "Bad Request: message is not modified" }, 400)));
     expect(same.unchanged).toBe(true);
+  });
+
+  it("sends a file as multipart: values as text, objects as JSON, the file under its field", async () => {
+    const fetcher = reply({ ok: true, result: { message_id: 9 } });
+    const bytes = new TextEncoder().encode("%PDF-1.7");
+    await expect(telegramUpload(config, "editMessageMedia", { chat_id: -100, message_id: 4, media: { type: "document", media: "attach://document" }, skip: null }, { field: "document", name: "MoM_X_v2.pdf", bytes, type: "application/pdf" }, fetcher))
+      .resolves.toEqual({ message_id: 9 });
+    const [url, init] = (fetcher as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls[0];
+    expect(url).toBe(`https://api.telegram.org/bot${TOKEN}/editMessageMedia`);
+    const form = init.body as FormData;
+    expect(form.get("chat_id")).toBe("-100");
+    expect(JSON.parse(String(form.get("media")))).toEqual({ type: "document", media: "attach://document" });
+    expect(form.has("skip")).toBe(false);
+    const file = form.get("document") as File;
+    expect(file.name).toBe("MoM_X_v2.pdf");
+    expect(file.type).toBe("application/pdf");
   });
 
   it("reports a network fault without the address (which holds the token)", async () => {

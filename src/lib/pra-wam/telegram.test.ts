@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { minutesTelegramHtml } from "./minutes-message";
-import { departmentGroups, groupTitle, installCommand, installLink, installReply, INSTALL_CODE, readUpdate, sampleMinutes, type TelegramUpdate } from "./telegram";
+import { minutesCaption } from "./minutes-message";
+import { departmentGroups, groupTitle, installCommand, installLink, installReply, INSTALL_CODE, momTargets, readUpdate, sampleMinutes, type TelegramGroup, type TelegramUpdate } from "./telegram";
 
 const BOT = "wam_werkudara_bot";
 const CODE = "abcdefghijklmnopqrstuvwxyz012345";
@@ -13,6 +13,16 @@ describe("group names", () => {
     expect(groupTitle("Corporate", "Corporate")).toBe("Werkudara · Corporate");
     expect(departmentGroups(["Sales & Marketing", "Center of Excellence", "Corporate"]).map(item => item.groupTitle))
       .toEqual(["Werkudara CoE · Center of Excellence", "Werkudara · Corporate", "Werkudara SM · Sales & Marketing"]);
+  });
+
+  it("gives a department with teams one group per team and none of its own", () => {
+    expect(groupTitle("Sales & Marketing", "SM", "Business Solutions")).toBe("Werkudara SM · Business Solutions");
+    const rows = departmentGroups(["Sales & Marketing", "Center of Excellence"], { "Sales & Marketing": ["Commercial", "Business Solutions", " Commercial "] });
+    expect(rows.map(row => [row.name, row.unit, row.groupTitle])).toEqual([
+      ["Center of Excellence", null, "Werkudara CoE · Center of Excellence"],
+      ["Sales & Marketing", "Business Solutions", "Werkudara SM · Business Solutions"],
+      ["Sales & Marketing", "Commercial", "Werkudara SM · Commercial"],
+    ]);
   });
 
   it("makes the link that adds the bot with the rights it needs, and the command for a group it is in", () => {
@@ -62,16 +72,46 @@ describe("installReply", () => {
 });
 
 describe("sampleMinutes", () => {
-  it("is marked UJI COBA, names placeholders, and fits one message", () => {
+  it("is marked UJI COBA, names placeholders and its team, and has a code of its own", () => {
     const now = new Date("2026-11-12T04:38:00Z");
-    const sample = sampleMinutes({ scope: "departemen", department: "Center of Excellence" }, "CoE", now, "journey.werkudara.group/wam");
+    const sample = sampleMinutes({ scope: "departemen", department: "Center of Excellence", unit: null, chatId: "-1004445165356" }, "CoE", now, "journey.werkudara.group/wam");
     expect(sample.trial).toBe(true);
     expect(sample.date).toBe("2026-11-12");
+    expect(sample.code).toBe("CoE-20261112-UJI6");
     expect(sample.actions[0].dueDate).toBe("2026-11-20");
-    const { html, trimmed } = minutesTelegramHtml(sample);
-    expect(trimmed).toBe(false);
-    expect(html).toContain("📝 <b>MoM · CoE · Review alur kerja tim</b>");
-    expect(html).toContain("UJI COBA");
-    expect(sampleMinutes({ scope: "hod", department: null }, "", now, "x").departmentShort).toBe("HOD");
+    const caption = minutesCaption(sample);
+    expect(caption).toContain("📝 <b>MoM · CoE · Review alur kerja tim</b>");
+    expect(caption).toContain("UJI COBA");
+    expect(sampleMinutes({ scope: "departemen", department: "Sales & Marketing", unit: "Commercial", chatId: "-1" }, "SM", now, "x").department).toBe("Sales & Marketing · Commercial");
+    expect(sampleMinutes({ scope: "hod", department: null, unit: null, chatId: "-2" }, "", now, "x").departmentShort).toBe("HOD");
+  });
+});
+
+describe("momTargets", () => {
+  const group = (chatId: string, scope: TelegramGroup["scope"], department: string | null, unit: string | null, botStatus: TelegramGroup["botStatus"] = "admin"): TelegramGroup =>
+    ({ chatId, title: chatId, scope, department, unit, isForum: true, momTopicId: 1, botStatus, installedAt: "" });
+  const groups = [
+    group("coe", "departemen", "Center of Excellence", null), group("bs", "departemen", "Sales & Marketing", "Business Solutions"),
+    group("com", "departemen", "Sales & Marketing", "Commercial"), group("cmc", "departemen", "Sales & Marketing", "Corporate Marketing Communication"),
+    group("hod", "hod", null, null), group("gone", "departemen", "Accounting", null, "dikeluarkan"),
+  ];
+  const ids = (list: TelegramGroup[]) => list.map(item => item.chatId).sort();
+
+  it("sends a Meeting HOD or ITEM only to the HOD group", () => {
+    expect(ids(momTargets(groups, [{ department: "Center of Excellence", unit: "" }], true))).toEqual(["hod"]);
+  });
+
+  it("sends to each participant's department or team once", () => {
+    expect(ids(momTargets(groups, [
+      { department: "Center of Excellence", unit: "" }, { department: "center of excellence", unit: "" }, { department: "Sales & Marketing", unit: "Commercial" },
+    ], false))).toEqual(["coe", "com"]);
+  });
+
+  it("puts a head without a team (the GM of a department split into teams) in all its team groups", () => {
+    expect(ids(momTargets(groups, [{ department: "Sales & Marketing", unit: "" }], false))).toEqual(["bs", "cmc", "com"]);
+  });
+
+  it("skips groups the bot was removed from, and departments with no group", () => {
+    expect(momTargets(groups, [{ department: "Accounting", unit: "" }, { department: "Corporate", unit: "" }], false)).toEqual([]);
   });
 });

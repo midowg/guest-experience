@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { cut, dueDate, escapeHtml, longDate, minutesTelegramHtml, stamp, visibleLength, type MinutesMessage } from "./minutes-message";
+import {
+  CAPTION_LIMIT, cut, decisionLines, dueDate, escapeHtml, longDate, minutesCaption, minutesCode, minutesFileName, stamp, visibleLength, type MinutesMessage,
+} from "./minutes-message";
 
 const base: MinutesMessage = {
+  code: "SM-20261110-4F3A",
   title: "Appraisal team SS", departmentShort: "SM", department: "Sales & Marketing",
   date: "2026-11-10", from: "11.00", to: "12.30", place: "CFC Ananta Room",
   participants: ["Raja", "Sofyan", "Kayana"], notetaker: "Raja",
-  summary: "Penilaian kinerja dibahas per orang.", decisions: "1. KPI Q4 memakai format baru.\n2. Evaluasi 15 Desember.",
+  summary: "Penilaian kinerja dibahas per orang.", decisions: "1. KPI Q4 memakai format baru.\n\n2. Evaluasi 15 Desember.",
   actions: [
     { task: "Kirim draf KPI", pic: "Sofyan", dueDate: "2026-11-14", done: false },
     { task: "Rekap nilai Q3", pic: "Kayana", dueDate: null, done: true },
@@ -21,66 +24,47 @@ describe("dates", () => {
   });
 });
 
-describe("minutesTelegramHtml", () => {
-  it("reads on its own: department in full, hours, room, people, notetaker, sections and the version line", () => {
-    const { html, trimmed } = minutesTelegramHtml(base);
-    expect(trimmed).toBe(false);
-    expect(html).toContain("📝 <b>MoM · SM · Appraisal team SS</b>");
-    expect(html).toContain("Sales &amp; Marketing · Selasa, 10 November 2026");
-    expect(html).toContain("11.00–12.30 WIB · CFC Ananta Room");
-    expect(html).toContain("Peserta (3): Raja, Sofyan, Kayana");
-    expect(html).toContain("Notulis: Raja");
-    expect(html).toContain("<b>Ringkasan</b>\nPenilaian kinerja dibahas per orang.");
-    expect(html).toContain("☐ Kirim draf KPI — <b>Sofyan</b> · tenggat Sab, 14 Nov");
-    expect(html).toContain("☑ Rekap nilai Q3 — <b>Kayana</b>");
-    expect(html).toContain("<i>Versi 1 · dikirim 10 Nov 2026, 13.05 WIB lewat WAM</i>");
-    expect(html).not.toMatch(/\bkamu\b/i);
-    expect(html).not.toContain("UJI COBA");
+describe("the MoM's code and file", () => {
+  it("is the short form, the day and four characters of the session, the same for every version", () => {
+    expect(minutesCode("CoE", "2026-11-12", "4f3a9c2e-1111-4111-8111-111111111111")).toBe("CoE-20261112-4F3A");
+    expect(minutesCode("S&M", "2026-11-12", "ab-cd")).toBe("SM-20261112-ABCD");
+    expect(minutesCode("", "2026-11-12", "x1y2")).toBe("WAM-20261112-X1Y2");
+    expect(minutesFileName(base)).toBe("MoM_SM-20261110-4F3A_v1.pdf");
+    expect(minutesFileName({ ...base, version: 3, trial: true })).toBe("MoM_SM-20261110-4F3A_v3_UJI.pdf");
+  });
+});
+
+describe("minutesCaption", () => {
+  it("says only what tells the MoM apart: code, meeting, department in full, day, hours, place, notetaker, counts, version", () => {
+    const caption = minutesCaption(base);
+    expect(caption).toContain("📝 <b>MoM · SM · Appraisal team SS</b>");
+    expect(caption).toContain("Kode: <code>SM-20261110-4F3A</code>");
+    expect(caption).toContain("Sales &amp; Marketing · Selasa, 10 November 2026");
+    expect(caption).toContain("11.00–12.30 WIB · CFC Ananta Room");
+    expect(caption).toContain("Notulis: Raja · 3 peserta");
+    expect(caption).toContain("2 keputusan · 2 tindak lanjut (1 belum selesai)");
+    expect(caption).toContain("Detail lengkap ada di PDF terlampir.");
+    expect(caption).toContain("<i>Versi 1 · dikirim 10 Nov 2026, 13.05 WIB lewat WAM</i>");
+    // The text of the MoM itself stays in the PDF.
+    expect(caption).not.toContain("Penilaian kinerja");
+    expect(caption).not.toContain("Kirim draf KPI");
+    expect(caption).not.toMatch(/\bkamu\b/i);
   });
 
-  it("escapes what people typed, so a < or & cannot break Telegram's HTML", () => {
-    const { html } = minutesTelegramHtml({ ...base, title: "Q&A <draft>", summary: "a < b & c > d" });
-    expect(html).toContain("MoM · SM · Q&amp;A &lt;draft&gt;");
-    expect(html).toContain("a &lt; b &amp; c &gt; d");
+  it("escapes what people typed, marks a sample and a later version, and stays under Telegram's limit", () => {
+    const caption = minutesCaption({ ...base, title: "Q&A <draft>", trial: true, version: 3, changedBy: "Sofyan", at: "2026-11-11T02:10:00Z", actions: [], from: null, to: null });
+    expect(caption).toContain("MoM · SM · Q&amp;A &lt;draft&gt;");
+    expect(caption).toContain("<i>UJI COBA dari WAM, bukan meeting sungguhan.</i>");
+    expect(caption).toContain("Versi 3 · diperbarui 11 Nov 2026, 09.10 WIB oleh Sofyan");
+    expect(caption).toContain("0 tindak lanjut");
+    expect(caption).toContain("\nCFC Ananta Room\n");
+    const long = minutesCaption({ ...base, title: "Judul ".repeat(100), place: "Tempat ".repeat(60), department: "D".repeat(150), notetaker: "N".repeat(150), changedBy: "C".repeat(150), version: 2 });
+    expect(visibleLength(long)).toBeLessThanOrEqual(CAPTION_LIMIT);
     expect(escapeHtml("<b>")).toBe("&lt;b&gt;");
   });
 
-  it("leaves out empty sections, the hours when there are none, and marks a sample and a later version", () => {
-    const { html } = minutesTelegramHtml({ ...base, summary: " ", actions: [], from: null, to: null, trial: true, version: 3, changedBy: "Sofyan", at: "2026-11-11T02:10:00Z" });
-    expect(html).not.toContain("Ringkasan");
-    expect(html).not.toContain("Tindak lanjut");
-    expect(html).toContain("\nCFC Ananta Room\n");
-    expect(html).toContain("<i>UJI COBA dari WAM, bukan meeting sungguhan.</i>");
-    expect(html).toContain("Versi 3 · diperbarui 11 Nov 2026, 09.10 WIB oleh Sofyan");
-  });
-
-  it("shows twelve names, then +N lainnya", () => {
-    const people = Array.from({ length: 15 }, (_, index) => `Orang ${index + 1}`);
-    const { html } = minutesTelegramHtml({ ...base, participants: people });
-    expect(html).toContain("Peserta (15): Orang 1,");
-    expect(html).toContain("Orang 12, +3 lainnya");
-  });
-
-  it("fits the longest MoM the form allows: text shortened, every follow-up that fits kept, the rest counted", () => {
-    const long = "Kalimat yang cukup panjang untuk mengisi notulen meeting ini. ".repeat(70).slice(0, 4000);
-    const actions = Array.from({ length: 30 }, (_, index) => ({ task: `${"Tugas ".repeat(48)}${index + 1}`.slice(0, 300), pic: "Peserta", dueDate: "2026-11-20", done: false }));
-    const { html, trimmed } = minutesTelegramHtml({ ...base, summary: long, decisions: long, actions });
-    expect(trimmed).toBe(true);
-    expect(visibleLength(html)).toBeLessThanOrEqual(3900);
-    expect(html).toMatch(/\+\d+ tindak lanjut lain di WAM/);
-    expect(html).toContain("<i>Isi lengkapnya ada di WAM.</i>");
-  });
-
-  it("shortens only the summary and decisions when the follow-ups fit", () => {
-    const long = "Kalimat yang cukup panjang untuk mengisi notulen meeting ini. ".repeat(70).slice(0, 4000);
-    const { html, trimmed } = minutesTelegramHtml({ ...base, summary: long, decisions: long });
-    expect(trimmed).toBe(true);
-    expect(visibleLength(html)).toBeLessThanOrEqual(3900);
-    expect(html).toContain("<b>Ringkasan</b>");
-    expect(html).toContain("<b>Keputusan</b>");
-    expect(html).toContain("☐ Kirim draf KPI");
-    expect(html).toContain("…");
-    expect(html).not.toContain("tindak lanjut lain");
+  it("counts decisions by line, skipping empty ones", () => {
+    expect(decisionLines("1. Satu\n\n 2. Dua \n")).toEqual(["1. Satu", "2. Dua"]);
   });
 });
 

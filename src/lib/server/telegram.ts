@@ -44,11 +44,27 @@ type Reply<T> = { ok: boolean; result?: T; error_code?: number; description?: st
 
 /** Calls a Bot API method; a refusal throws TelegramError, a network fault a plain Error without the token. */
 export async function telegramCall<T>(config: TelegramConfig, method: string, params: Record<string, unknown> = {}, fetcher: typeof fetch = fetch): Promise<T> {
+  return request<T>(config, method, { headers: { "Content-Type": "application/json" }, body: JSON.stringify(params) }, fetcher);
+}
+
+/** A file sent with a call: attached as `attach://{field}` (editMessageMedia) or as the field itself (sendDocument). */
+export type TelegramFile = { field: string; name: string; bytes: Uint8Array; type: string };
+
+/** Calls a method with a file (multipart); other values go as text, objects as JSON. */
+export async function telegramUpload<T>(config: TelegramConfig, method: string, params: Record<string, unknown>, file: TelegramFile, fetcher: typeof fetch = fetch): Promise<T> {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) continue;
+    form.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+  }
+  form.append(file.field, new Blob([file.bytes as BlobPart], { type: file.type }), file.name);
+  return request<T>(config, method, { body: form }, fetcher, 30_000);
+}
+
+async function request<T>(config: TelegramConfig, method: string, init: { headers?: Record<string, string>; body: BodyInit }, fetcher: typeof fetch, timeout = 10_000): Promise<T> {
   let response: Response;
   try {
-    response = await fetcher(`https://api.telegram.org/bot${config.token}/${method}`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(params), signal: AbortSignal.timeout(10_000), cache: "no-store",
-    });
+    response = await fetcher(`https://api.telegram.org/bot${config.token}/${method}`, { method: "POST", ...init, signal: AbortSignal.timeout(timeout), cache: "no-store" });
   } catch (error) {
     throw new Error(`Telegram tidak dapat dihubungi (${method}): ${error instanceof Error ? error.name : "galat"}`);
   }
