@@ -164,6 +164,22 @@ async function headOfBooker(session: Session, viewer: Member): Promise<boolean> 
   return departments.some(name => led.has(name.trim().toLowerCase()));
 }
 
+/** How the admin console sees sessions (Lemari MoM): as an admin, all of them, without being in any. */
+const CONSOLE_VIEWER: Member = { id: "00000000-0000-0000-0000-000000000000", name: "Admin", nickname: "", department: "", position: "", mustChangePassword: false, roles: ["admin"], photo: null };
+
+/** Sessions by id for the admin console, whatever their status, a hundred ids a read. */
+export async function sessionsByIds(ids: readonly string[]): Promise<Session[]> {
+  const unique = [...new Set(ids)];
+  const sessions: Session[] = [];
+  for (let start = 0; start < unique.length; start += 100) {
+    const part = unique.slice(start, start + 100);
+    const { data, error } = await withBookingLink(withLink => createPrivilegedClient().from("pw_sessions").select(columns(withLink)).in("id", part));
+    if (error) fail(error);
+    sessions.push(...await shape((data ?? []) as unknown as SessionRow[], CONSOLE_VIEWER));
+  }
+  return sessions;
+}
+
 export async function getSession(id: string, viewer: Member): Promise<Session> {
   const { data, error } = await withBookingLink(withLink => createPrivilegedClient().from("pw_sessions").select(columns(withLink)).eq("id", id).maybeSingle());
   if (error) fail(error);

@@ -2,7 +2,7 @@ import "server-only";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { MinutePhoto } from "@/lib/pra-wam/minutes";
 import { minutesApi, minutesOpen } from "@/lib/pra-wam/minutes";
-import { isJpeg, isMeetingPhotoKey, MOM_PHOTO_MIGRATION, MOM_PHOTOS_MAX, momPhotoKeyFor, type MomPhotoStart } from "@/lib/pra-wam/minutes-photos";
+import { isJpeg, isMeetingPhotoKey, MOM_PHOTO_MIGRATION, MOM_PHOTOS_MAX, momPhotoKeyFor, momPhotoRule, photoLimitLabel, type MomPhotoStart } from "@/lib/pra-wam/minutes-photos";
 import { managesSessions } from "@/lib/pra-wam/roles";
 import type { Session } from "@/lib/pra-wam/sessions";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
@@ -81,12 +81,23 @@ export function momTokenMatches(token: string, key: string, input: MomPhotoStart
   return timingSafeEqual(Buffer.from(given, "hex"), Buffer.from(signature(key, input, sessionId, member, expires), "hex"));
 }
 
+/**
+ * Whether Full HD photos (1920 px, 1 MB) may be kept: migration 202611120006 ran. Its column on
+ * pw_tv_slides tells; before it the photo table still allows 400 KB.
+ */
+export async function photosHd(): Promise<boolean> {
+  const { error } = await createPrivilegedClient().from("pw_tv_slides").select("mom_photo_id").limit(1);
+  return !error;
+}
+
 /** Step one: where to put the photo, and a token to confirm it with. */
 export async function startMinutePhoto(sessionId: string, input: MomPhotoStart, member: Member): Promise<{ key: string; uploadUrl: string; token: string }> {
   if (!isR2Configured()) throw notReady();
   const session = await getSession(sessionId, member);
   requireWriter(session, member);
   if ((await rows(sessionId)).length >= MOM_PHOTOS_MAX) throw new ServiceError(409, `Paling banyak ${MOM_PHOTOS_MAX} foto per meeting. Hapus satu dulu.`);
+  const rule = momPhotoRule(await photosHd());
+  if (input.size > rule.bytes) throw new ServiceError(413, `Foto lebih dari ${photoLimitLabel(rule.bytes)}. Muat ulang halaman, lalu unggah lagi.`);
   const key = momPhotoKeyFor(sessionId, randomUUID());
   const expires = Math.floor(Date.now() / 1000) + TOKEN_SECONDS;
   return { key, uploadUrl: await presignUpload(key, "image/jpeg", input.size), token: `${expires}.${signature(key, input, sessionId, member, expires)}` };
@@ -135,10 +146,26 @@ export async function minutePhotoUrl(sessionId: string, photoId: string, member:
   return presignDownload(row.file_key, { seconds: VIEW_SECONDS });
 }
 
-/** The photos' bytes for the PDF, in order; one that cannot be read is left out. */
+/**
+ * A photo's copy for the PDF: at most 1280 px, JPEG 0.8. Ten Full HD photos would make the PDF too
+ * heavy to download from the server and to open on a phone. When the server cannot make it
+ * smaller, the photo goes as it is.
+ */
+export async function pdfCopy(bytes: Uint8Array): Promise<Uint8Array> {
+  try {
+    const sharp = (await import("sharp")).default;
+    const out = await sharp(Buffer.from(bytes)).resize({ width: 1280, height: 1280, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 80, mozjpeg: true }).toBuffer();
+    return out.length < bytes.length ? new Uint8Array(out) : bytes;
+  } catch {
+    return bytes;
+  }
+}
+
+/** The photos for the PDF, in order, each made small (`pdfCopy`); one that cannot be read is left out. */
 export async function minutePhotoBytes(sessionId: string): Promise<Uint8Array[]> {
   if (!isR2Configured()) return [];
   const found = await rows(sessionId).catch(() => [] as PhotoRow[]);
   const read = await Promise.all(found.map(row => readObject(row.file_key).catch(() => null)));
-  return read.filter((object): object is { bytes: Uint8Array; type: string } => !!object && isJpeg(object.bytes)).map(object => object.bytes);
+  const photos = read.filter((object): object is { bytes: Uint8Array; type: string } => !!object && isJpeg(object.bytes)).map(object => object.bytes);
+  return Promise.all(photos.map(pdfCopy));
 }

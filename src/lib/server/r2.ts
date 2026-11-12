@@ -1,5 +1,5 @@
 import "server-only";
-import { DeleteObjectsCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectsCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { sniffPhoto, type PhotoKind } from "@/lib/image-signature";
 import { ServiceError } from "./config";
@@ -73,6 +73,14 @@ export async function uploadedStart(key: string, length: number): Promise<Uint8A
   if (head.ContentLength !== length) throw new ServiceError(422, "Ukuran berkas tidak sesuai. Coba unggah ulang.");
   const start = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key, Range: "bytes=0-15" }));
   return new Uint8Array(await start.Body!.transformToByteArray());
+}
+
+/** A copy of an object under another key, made inside storage (a meeting photo becoming a TV picture). */
+export async function copyObject(from: string, to: string, contentType: string): Promise<void> {
+  const { client, bucket } = connect();
+  await client.send(new CopyObjectCommand({
+    Bucket: bucket, Key: to, CopySource: `${bucket}/${from.split("/").map(encodeURIComponent).join("/")}`, ContentType: contentType, MetadataDirective: "REPLACE",
+  }));
 }
 
 export async function removeObjects(keys: string[]): Promise<void> {

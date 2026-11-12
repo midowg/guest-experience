@@ -11,10 +11,10 @@ import { isR2Configured } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
 import { attendeesOf } from "./minutes-people";
-import { listMinutePhotos, mayWriteMinutes } from "./minutes-photos";
+import { listMinutePhotos, mayWriteMinutes, photosHd } from "./minutes-photos";
 import { deliverMinutes, isHodMeeting, minutesDeliveries, minutesTargets } from "./minutes-telegram";
 import type { Member } from "./session";
-import { getSession } from "./sessions";
+import { getSession, sessionsByIds } from "./sessions";
 
 /*
  * Notulen (MoM) per meeting (11 Nov 2026, migration 202611110002): read and written here only.
@@ -138,10 +138,11 @@ export async function minutesView(session: Session, member: Member, now = new Da
   // A draft is only for those who may write it; the others see that it is being written.
   const shown = minutes && !minutes.sentAt && !write ? null : minutes;
   const frm = level >= 2;
-  const [attendees, photos, telegram] = await Promise.all([
+  const [attendees, photos, telegram, photoHd] = await Promise.all([
     shown || write ? attendeesOf(session.id).catch(() => []) : Promise.resolve([]),
     frm && (shown || write) ? listMinutePhotos(session.id, write).catch(() => []) : Promise.resolve([]),
     telegramView(session, level >= 1, write),
+    frm && write ? photosHd().catch(() => false) : Promise.resolve(false),
   ]);
   const booker = session.booking?.bookedBy.id ?? null;
   return {
@@ -150,7 +151,7 @@ export async function minutesView(session: Session, member: Member, now = new Da
     viewerId: member.id, open, endsAt: session.endsAt, drafts: level >= 1, telegram,
     title: session.title, startsAt: session.startsAt, place: session.roomName ?? session.location ?? "",
     frm, attendees, defaultChairId: booker && attendees.some(person => person.id === booker) ? booker : null,
-    photos, photosReady: frm && isR2Configured(),
+    photos, photosReady: frm && isR2Configured(), photoHd,
   };
 }
 
@@ -270,6 +271,15 @@ export async function minutesForPdf(sessionId: string, member: Member): Promise<
   const session = await getSession(sessionId, member);
   const { minutes } = await readMinutes(session);
   if (!minutes || (!minutes.sentAt && !mayWriteMinutes(session, member))) throw new ServiceError(404, "Notulen belum ada.");
+  return { session, minutes, hod: await isHodMeeting(session) };
+}
+
+/** A sent MoM for the admin console (Lemari MoM): its session, the MoM, and whether it is a Meeting HOD's. */
+export async function minutesForConsole(sessionId: string): Promise<{ session: Session; minutes: Minutes; hod: boolean }> {
+  const [session] = await sessionsByIds([sessionId]);
+  if (!session) throw new ServiceError(404, "MoM tidak ditemukan.");
+  const { minutes } = await readMinutes(session);
+  if (!minutes?.sentAt) throw new ServiceError(404, "MoM ini belum dikirim.");
   return { session, minutes, hod: await isHodMeeting(session) };
 }
 

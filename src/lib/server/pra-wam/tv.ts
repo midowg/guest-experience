@@ -477,6 +477,27 @@ export async function confirmSlideUpload(input: TvSlideStart & { key: string; to
   invalidate();
 }
 
+/**
+ * A picture made from a meeting photo (Admin WAM → Lemari MoM → Tampilkan di TV, migration
+ * 202611120006): its copy is already in the TV's storage under `key`. It joins the playlist last,
+ * shown, and remembers the photo it came from.
+ */
+export async function addMeetingPicture(key: string, title: string, momPhotoId: string): Promise<void> {
+  if (!key.startsWith(TV_IMAGE_PREFIX)) throw new ServiceError(400, "Gambar TV tidak dikenali.");
+  const slides = await readSlides();
+  if (slides.length >= tvLimits.slides) throw full();
+  const client = createPrivilegedClient();
+  const { data: made, error } = await client.from("pw_tv_slides")
+    .insert({ image_key: key, title, mom_photo_id: momPhotoId, sort_order: Math.max(0, ...slides.map(slide => slide.sort_order)) + 1 }).select("id").single();
+  if (error) fail(error);
+  const items = await readItems();
+  if (items) {
+    const { error: itemError } = await client.from("pw_tv_items").insert({ kind: "gambar", slide_id: made.id, title, seconds: 8, sort_order: nextOrder(items) });
+    if (itemError) { await client.from("pw_tv_slides").delete().eq("id", made.id); databaseError(itemError); }
+  }
+  invalidate();
+}
+
 /* ---- Video files, in two steps like the pictures -------------------------------------------------- */
 
 function videoSignature(key: string, input: TvVideoStart, expires: number): string {

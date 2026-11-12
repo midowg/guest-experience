@@ -24,7 +24,7 @@ const view = (patch: Partial<MinutesView> = {}): MinutesView => ({
   migrated: true, needed: true, status: "belum", minutes: null, canWrite: true, open: true, viewerId: "me", endsAt: "2026-11-10T03:00:00.000Z", drafts: true,
   title: "Review target Q1", startsAt: "2026-11-10T02:00:00.000Z", place: "Ruang Rapat 1",
   people: [{ id: RAJA, name: "Raja" }, { id: "me", name: "Saya" }], telegram: telegram(),
-  frm: true, attendees, defaultChairId: RAJA, photos: [], photosReady: true, ...patch,
+  frm: true, attendees, defaultChairId: RAJA, photos: [], photosReady: true, photoHd: true, ...patch,
 });
 const written = (patch: Partial<Minutes> = {}): Minutes => ({
   summary: "", decisions: "", number: "MoM/2026/11/0012",

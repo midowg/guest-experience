@@ -311,6 +311,8 @@ export const wamAdminPath = {
   tvPreview: `${WAM_ADMIN}/tv/pratinjau`,
   /** Telegram: the MoM bot, its webhook, and the group of each department (12 Nov 2026). */
   telegram: `${WAM_ADMIN}/telegram`,
+  /** Lemari MoM: every sent MoM with its PDF and photos, in folders, with exports (12 Nov 2026). */
+  momCabinet: `${WAM_ADMIN}/lemari-mom`,
   /** The personal questionnaire: content, settings, progress, and the HR-locked answers. */
   questionnaire: {
     content: `${WAM_ADMIN}/kuesioner`,
@@ -509,6 +511,16 @@ export const tvApi = {
 };
 /** Admin WAM → Telegram (any admin, 12 Nov 2026): GET the bot and groups; POST {action} webhook, install, sample, topic, remove. */
 export const praWamTelegramApi = "/api/admin/wam/telegram";
+/** Admin WAM → Lemari MoM (any admin): the list, a MoM's PDF, a photo (view, download, bytes), a photo to the TV, Excel rekap. */
+export const momCabinetApi = {
+  list: "/api/admin/wam/mom",
+  pdf: (sessionId: string) => `/api/admin/wam/mom/${sessionId}/pdf`,
+  photo: (photoId: string) => `/api/admin/wam/mom/photos/${photoId}`,
+  photoDownload: (photoId: string, name: string) => `/api/admin/wam/mom/photos/${photoId}?unduh=${encodeURIComponent(name)}`,
+  photoFile: (photoId: string) => `/api/admin/wam/mom/photos/${photoId}?berkas=1`,
+  photoTv: (photoId: string) => `/api/admin/wam/mom/photos/${photoId}/tv`,
+  export: "/api/admin/wam/mom/export",
+} as const;
 /** Admin WAM → TV Announcement (any admin). */
 const TV_ADMIN_API = "/api/admin/wam/tv";
 /** The Werkudara welcome sign's background (from "Welcome Sign Template.pptx"), a file of the site, in public/wam: a file under public/tv is answered by the TV page (/tv/{slug}) instead. */

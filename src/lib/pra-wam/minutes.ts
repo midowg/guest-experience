@@ -85,6 +85,8 @@ export type MinutesView = {
   photos: MinutePhoto[];
   /** Photos can be added: the FRM migration has run and storage is set up. */
   photosReady: boolean;
+  /** Photos are kept Full HD, 1 MB (migration 202611120006); before it 1280 px, 400 KB. */
+  photoHd: boolean;
 };
 
 export type MinutesStatus = "tidak-perlu" | "belum-waktunya" | "belum" | "draf" | "sudah";

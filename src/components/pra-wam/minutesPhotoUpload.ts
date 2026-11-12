@@ -1,34 +1,37 @@
 import { minutesApi, type MinutePhoto } from "@/lib/pra-wam/minutes";
-import { fitWithin, MOM_PHOTO_BYTES, MOM_PHOTO_STEPS } from "@/lib/pra-wam/minutes-photos";
+import { fitWithin, MOM_PHOTO_HD, photoLimitLabel, type MomPhotoRule } from "@/lib/pra-wam/minutes-photos";
 import { sourceProblem } from "@/lib/pra-wam/photo";
 import { praWamRequest, PraWamApiError } from "./api";
 import { putFile, putProblem } from "./photoUpload";
 import { decode } from "./ProfilePhoto";
 
 /**
- * A picked photo made ready for the MoM (12 Nov 2026): upright, at most 1280 px on its long side,
- * JPEG of at most 400 KB (lowering the quality until it fits).
+ * A picked photo made ready for the MoM: upright, JPEG, as the rule says (12 Nov 2026: Full HD,
+ * 1920 px on its long side, at most 1 MB, at a quality that keeps it sharp; a photo too detailed
+ * for that is made 1600 px). The quality is never lowered past the rule's last step.
  */
-export async function prepareMinutePhoto(file: File): Promise<{ blob: Blob; width: number; height: number }> {
+export async function prepareMinutePhoto(file: File, rule: MomPhotoRule = MOM_PHOTO_HD): Promise<{ blob: Blob; width: number; height: number }> {
   const problem = sourceProblem(file);
   if (problem) throw new PraWamApiError(problem);
   const picture = await decode(file);
   try {
-    const { width, height } = fitWithin(picture.width, picture.height);
-    const canvas = document.createElement("canvas");
-    canvas.width = width; canvas.height = height;
-    const context = canvas.getContext("2d");
-    if (!context) throw new PraWamApiError("Browser ini belum dapat memperkecil foto. Coba browser lain.");
-    context.fillStyle = "#fff"; // JPEG has no transparency
-    context.fillRect(0, 0, width, height);
-    context.imageSmoothingQuality = "high";
-    context.drawImage(picture.source, 0, 0, width, height);
-    for (const quality of MOM_PHOTO_STEPS) {
-      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/jpeg", quality));
-      if (!blob || blob.type !== "image/jpeg") break;
-      if (blob.size <= MOM_PHOTO_BYTES) return { blob, width, height };
+    for (const side of rule.sides) {
+      const { width, height } = fitWithin(picture.width, picture.height, side);
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new PraWamApiError("Browser ini belum dapat memperkecil foto. Coba browser lain.");
+      context.fillStyle = "#fff"; // JPEG has no transparency
+      context.fillRect(0, 0, width, height);
+      context.imageSmoothingQuality = "high";
+      context.drawImage(picture.source, 0, 0, width, height);
+      for (const quality of rule.steps) {
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/jpeg", quality));
+        if (!blob || blob.type !== "image/jpeg") throw new PraWamApiError("Browser ini belum dapat menyimpan foto sebagai JPEG. Coba browser lain.");
+        if (blob.size <= rule.bytes) return { blob, width, height };
+      }
     }
-    throw new PraWamApiError("Foto belum dapat diperkecil sampai 400 KB. Coba foto lain.");
+    throw new PraWamApiError(`Foto belum dapat dibuat ${photoLimitLabel(rule.bytes)} tanpa mengurangi ketajamannya. Coba foto lain.`);
   } finally {
     picture.close();
   }

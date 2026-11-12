@@ -9,7 +9,7 @@ import {
   type MinuteAction, type MinuteAttendee, type MinuteItem, type MinutePhoto, type MinutesView, type NextMeeting,
 } from "@/lib/pra-wam/minutes";
 import { frmDate, frmDue, frmTime, guestNames } from "@/lib/pra-wam/minutes-message";
-import { MOM_PHOTOS_MAX } from "@/lib/pra-wam/minutes-photos";
+import { MOM_PHOTOS_MAX, momPhotoRule, photoLimitLabel } from "@/lib/pra-wam/minutes-photos";
 import { acceptPhotos } from "@/lib/pra-wam/photo";
 import { errorText, praWamRequest } from "./api";
 import { useConfirm } from "./ConfirmDialog";
@@ -92,9 +92,10 @@ function AttendanceList({ attendees, absentIds, guests }: { attendees: readonly 
  * the MoM adds them (made small here, then uploaded one by one with progress) and removes them;
  * they are kept at once and go into the MoM's PDF.
  */
-function MinutePhotos({ sessionId, photos, editable, ready, sent, onChange }: {
-  sessionId: string; photos: MinutePhoto[]; editable: boolean; ready: boolean; sent: boolean; onChange: (photos: MinutePhoto[]) => void;
+function MinutePhotos({ sessionId, photos, editable, ready, sent, hd, onChange }: {
+  sessionId: string; photos: MinutePhoto[]; editable: boolean; ready: boolean; sent: boolean; hd: boolean; onChange: (photos: MinutePhoto[]) => void;
 }) {
+  const rule = momPhotoRule(hd);
   const input = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState<{ at: number; total: number; share: number } | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -109,7 +110,7 @@ function MinutePhotos({ sessionId, photos, editable, ready, sent, onChange }: {
     for (const [index, file] of taken.entries()) {
       setProgress({ at: index + 1, total: taken.length, share: 0 });
       try {
-        const ready = await prepareMinutePhoto(file);
+        const ready = await prepareMinutePhoto(file, rule);
         onChange(await uploadMinutePhoto(sessionId, ready, share => setProgress({ at: index + 1, total: taken.length, share })));
       } catch (error) { problems.push(`${file.name}: ${errorText(error)}`); }
     }
@@ -143,7 +144,10 @@ function MinutePhotos({ sessionId, photos, editable, ready, sent, onChange }: {
       {room > 0 && <button type="button" className="button button--secondary" disabled={!!progress} onClick={() => input.current?.click()}>
         <ImagePlus size={18} aria-hidden /> {progress ? `Mengunggah ${progress.at} dari ${progress.total} (${Math.round(progress.share * 100)}%)` : photos.length ? "Tambah foto" : "Unggah foto meeting"}
       </button>}
-      <p className={styles.hint}>{sent ? "Foto langsung tersimpan. PDF di Telegram ikut diperbarui saat notulen disimpan berikutnya." : "Foto langsung tersimpan dan ikut di PDF MoM."}</p>
+      <p className={styles.hint}>
+        {sent ? "Foto langsung tersimpan. PDF di Telegram ikut diperbarui saat notulen disimpan berikutnya." : "Foto langsung tersimpan dan ikut di PDF MoM."}
+        {` Disimpan ${hd ? "Full HD" : "1280 px"}, paling besar ${photoLimitLabel(rule.bytes)} per foto.`}
+      </p>
     </>}
     {problem && <Notice tone="error">{problem}</Notice>}
     {confirmDialog}
@@ -246,7 +250,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     <p className={css.title}><NotebookPen size={18} aria-hidden /> Notulen (MoM)</p>
     {view.migrated && <span className={`${styles.pill} ${status === "belum" || status === "draf" ? styles.pillBrass : styles.pillLine}`}>{minutesStatusLabels[status]}</span>}
   </div>;
-  const photoBlock = (editable: boolean) => frm && <MinutePhotos sessionId={sessionId} photos={view.photos} editable={editable && canWrite} ready={view.photosReady} sent={sent} onChange={setPhotos} />;
+  const photoBlock = (editable: boolean) => frm && <MinutePhotos sessionId={sessionId} photos={view.photos} editable={editable && canWrite} ready={view.photosReady} sent={sent} hd={view.photoHd} onChange={setPhotos} />;
 
   if (!view.migrated) return <section className={css.panel} aria-label="Notulen">{heading}<p className={styles.hint}>Notulen bisa ditulis setelah pembaruan sistem selesai.</p></section>;
 

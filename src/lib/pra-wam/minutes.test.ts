@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   asMinutesRule, choiceOf, DEFAULT_MINUTES_RULE, defaultAbsent, itemsAsText, minutesInputSchema, minutesItems, minutesNumber, minutesOpen, minutesStatus, needsMinutes, openActions, presence, ruleNeeds, storedOf,
 } from "./minutes";
-import { fitWithin, isJpeg, isMeetingPhotoKey, momPhotoKeyFor } from "./minutes-photos";
+import { fitWithin, isJpeg, isMeetingPhotoKey, momPhotoKeyFor, momPhotoRule, photoLimitLabel } from "./minutes-photos";
 
 const meeting = (patch: Partial<Parameters<typeof needsMinutes>[0]> = {}) => ({
   status: "terbit" as const, kind: "rapat" as const, startsAt: "2026-11-10T02:00:00.000Z", endsAt: "2026-11-10T03:00:00.000Z", participantCount: 4, ...patch,
@@ -102,10 +102,15 @@ describe("notulen (MoM)", () => {
     expect([present.map(one => one.id), absent.map(one => one.id)]).toEqual([["a"], ["b"]]);
   });
 
-  it("keeps meeting photos at most 1280 px, in the meeting's own folder, JPEG only", () => {
-    expect(fitWithin(4032, 3024)).toEqual({ width: 1280, height: 960 });
-    expect(fitWithin(3024, 4032)).toEqual({ width: 960, height: 1280 });
+  it("keeps meeting photos Full HD within 1 MB (1280 px, 400 KB before the migration), in the meeting's own folder, JPEG only", () => {
+    expect(fitWithin(4032, 3024)).toEqual({ width: 1920, height: 1440 });
+    expect(fitWithin(3024, 4032)).toEqual({ width: 1440, height: 1920 });
     expect(fitWithin(800, 600)).toEqual({ width: 800, height: 600 });
+    expect(fitWithin(4032, 3024, momPhotoRule(false).sides[0])).toEqual({ width: 1280, height: 960 });
+    expect(momPhotoRule(true)).toMatchObject({ sides: [1920, 1600], bytes: 1024 * 1024 });
+    // The quality is never lowered until the photo breaks up.
+    expect(Math.min(...momPhotoRule(true).steps)).toBeGreaterThanOrEqual(0.8);
+    expect([photoLimitLabel(1024 * 1024), photoLimitLabel(400 * 1024)]).toEqual(["1 MB", "400 KB"]);
     const session = "5e550000-0000-4000-8000-000000000001";
     const key = momPhotoKeyFor(session, "0a000000-0000-4000-8000-000000000001");
     expect(isMeetingPhotoKey(key, session)).toBe(true);

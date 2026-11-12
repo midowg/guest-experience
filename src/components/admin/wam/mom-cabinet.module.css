@@ -1,0 +1,44 @@
+/* Admin WAM → Lemari MoM (12 Nov 2026): filters, exports, folders, meetings and their photos. --cs-* only, light and dark. */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.toolbar > label { flex: 1 1 240px; min-width: 0; }
+.toolbar > select { flex: 1 1 200px; min-width: 0; min-height: 44px; }
+.exports { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--cs-line); }
+.scope { margin: 0; font-size: 14px; font-weight: 600; }
+.buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.progress { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; }
+.progress progress { flex: 1 1 160px; height: 8px; accent-color: var(--cs-primary); }
+.muted { color: var(--cs-muted); font-size: 13px; }
+.empty { margin: 0; color: var(--cs-muted); }
+
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; font-size: 14px; }
+.crumbStep { display: inline-flex; align-items: center; gap: 4px; color: var(--cs-muted); min-width: 0; }
+.crumb { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 8px; border: 0; border-radius: 8px; background: none; color: var(--cs-primary); font: inherit; font-weight: 600; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.crumb:hover { background: var(--cs-surface-2); }
+.crumb[aria-current="page"] { color: var(--cs-text, inherit); cursor: default; }
+.crumb:focus-visible, .folder:focus-visible, .thumb:focus-visible, .iconLink:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
+
+.level { margin: 0 0 8px; color: var(--cs-muted); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.folders { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.folder { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; align-items: center; width: 100%; min-height: 64px; padding: 12px 14px; border: 1px solid var(--cs-line); border-radius: 14px; background: var(--cs-surface); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.folder:hover { border-color: var(--cs-primary); }
+.folder > svg { grid-row: 1 / span 2; color: var(--cs-primary); }
+.folderName { font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
+
+.meetings { display: grid; gap: 12px; }
+.meeting { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); min-width: 0; }
+.meetingHead { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.meetingTitle { display: grid; gap: 2px; min-width: 0; }
+.meetingTitle strong { font-size: 16px; overflow-wrap: anywhere; }
+.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 8px 16px; margin: 0; }
+.facts div { min-width: 0; }
+.facts dt { color: var(--cs-muted); font-size: 12px; font-weight: 600; }
+.facts dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.photo { display: grid; gap: 6px; min-width: 0; }
+.thumb { display: block; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 12px; background: var(--cs-surface-2); }
+.thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.photoBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.iconLink { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--cs-line); border-radius: 10px; color: inherit; }
+.iconLink:hover { border-color: var(--cs-primary); color: var(--cs-primary); }
