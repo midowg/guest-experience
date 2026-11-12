@@ -311,8 +311,8 @@ export const wamAdminPath = {
   tvPreview: `${WAM_ADMIN}/tv/pratinjau`,
   /** Telegram: the MoM bot, its webhook, and the group of each department (12 Nov 2026). */
   telegram: `${WAM_ADMIN}/telegram`,
-  /** Lemari MoM: every sent MoM with its PDF and photos, in folders, with exports (12 Nov 2026). */
-  momCabinet: `${WAM_ADMIN}/lemari-mom`,
+  /** Arsip MoM: every sent MoM with its PDF and photos, in folders, with exports (12 Nov 2026). */
+  momCabinet: `${WAM_ADMIN}/arsip-mom`,
   /** The personal questionnaire: content, settings, progress, and the HR-locked answers. */
   questionnaire: {
     content: `${WAM_ADMIN}/kuesioner`,
@@ -511,7 +511,7 @@ export const tvApi = {
 };
 /** Admin WAM → Telegram (any admin, 12 Nov 2026): GET the bot and groups; POST {action} webhook, install, sample, topic, remove. */
 export const praWamTelegramApi = "/api/admin/wam/telegram";
-/** Admin WAM → Lemari MoM (any admin): the list, a MoM's PDF, a photo (view, download, bytes), a photo to the TV, Excel rekap. */
+/** Admin WAM → Arsip MoM (any admin): the list, a MoM's PDF, a photo (view, download, bytes), a photo to the TV, Excel rekap. */
 export const momCabinetApi = {
   list: "/api/admin/wam/mom",
   pdf: (sessionId: string) => `/api/admin/wam/mom/${sessionId}/pdf`,

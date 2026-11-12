@@ -34,6 +34,8 @@ const config: NextConfig = {
       // Appraisal became Book (room booking for everyone); query strings (?date=, ?edit=) pass through.
       { source: "/wam/appraisal/book", destination: "/wam/book/new", permanent: true },
       { source: "/wam/appraisal", destination: "/wam/book", permanent: true },
+      // Lemari MoM was renamed Arsip MoM (12 Nov 2026) the day it opened.
+      { source: "/admin/wam/lemari-mom", destination: "/admin/wam/arsip-mom", permanent: true },
     ];
   },
   async headers() {

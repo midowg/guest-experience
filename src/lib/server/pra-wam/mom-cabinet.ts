@@ -18,7 +18,7 @@ import { sessionsByIds } from "./sessions";
 import { addMeetingPicture } from "./tv";
 
 /*
- * Lemari MoM (12 Nov 2026), for any admin of Admin WAM: every sent MoM, read in a few queries for
+ * Arsip MoM (12 Nov 2026), for any admin of Admin WAM: every sent MoM, read in a few queries for
  * all of them, with its numbers, its photos and whether a photo is on the TV. Its PDF is the one
  * Telegram gets (minutesForConsole); its photos are given as they are kept (Full HD); a photo can
  * be copied to the TV as a picture. A draft never shows here: it is only for those in the meeting.
@@ -154,7 +154,7 @@ async function tvReady(): Promise<boolean> {
   return !error;
 }
 
-/** Lemari MoM: every sent MoM, newest first. */
+/** Arsip MoM: every sent MoM, newest first. */
 export async function momCabinet(): Promise<CabinetView> {
   const { migrated, tvReady: ready, entries } = await load(null);
   return { migrated, tvReady: ready, entries };

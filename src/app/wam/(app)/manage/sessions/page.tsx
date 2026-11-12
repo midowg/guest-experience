@@ -85,7 +85,7 @@ function SessionList({ sessions, now, minutes }: { sessions: Session[]; now: Dat
               <td><MomCell session={session} minutes={minutes} now={now} /></td>
               <td><div className={styles.rowActions}>
                 <ConsoleButtonLink href={praWamPath.editSession(session.id)}>{session.booking ? "Lihat" : session.status === "draf" ? "Atur" : "Ubah"}</ConsoleButtonLink>
-                {session.status === "terbit" && <ConsoleButtonLink href={praWamPath.sessionAttendance(session.id)}>QR dan hadir</ConsoleButtonLink>}
+                {session.status === "terbit" && <ConsoleButtonLink href={praWamPath.sessionAttendance(session.id)}>Absen (ubah)</ConsoleButtonLink>}
               </div></td>
             </tr>;
           })}</tbody>
@@ -163,7 +163,7 @@ function BodSessions({ sessions, migrated, now, minutes }: { sessions: Session[]
         <td><SessionStatusPill session={session} now={now} /></td>
         <td><MomCell session={session} minutes={minutes} now={now} app /></td>
         <td><div className={styles.actionsCell}>
-          {session.status === "terbit" && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}>QR dan hadir</a>}
+          {session.status === "terbit" && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}>Absen (ubah)</a>}
           <a className="button button--secondary" href={praWamPath.managedSession(session.id)}>Lihat</a>
         </div></td>
       </tr>)}</tbody>

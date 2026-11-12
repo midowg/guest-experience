@@ -9,7 +9,7 @@ import { DocumentList } from "./DocumentList";
 import { MinutesPanel } from "./MinutesPanel";
 import { RequestChange } from "./ScheduleRequests";
 import { SelfCheckIn } from "./SelfCheckIn";
-import { SessionActions } from "./SessionActions";
+import { SessionActions, UploadMaterialButton } from "./SessionActions";
 import styles from "./pra-wam.module.css";
 import rows from "./peserta.module.css";
 import { withoutHonorific } from "@/lib/pra-wam/call-name";
@@ -61,7 +61,7 @@ export function SessionDetail(props: Props) {
  */
 export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
   const { view: { session, documents, storage, requests, rooms, viewer, attendance, minutes }, now, showTitle } = props;
-  const { live, timed, status, canAsk, canUpload, byButton } = rights(props);
+  const { live, timed, status, canAsk, canUpload, byButton, upload } = rights(props);
   const people = session.participants ?? [];
   return <div className={rows.detail}>
     <div className={rows.detailHead}>
@@ -100,9 +100,10 @@ export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
         <summary>Lihat semua peserta</summary>
         <ul>{people.map(person => <li key={person.id}><span className={rows.face} aria-hidden>{initials(person.name)}</span><span>{person.name}{person.department && <small>{person.department}</small>}</span></li>)}</ul>
       </details>}
+      {upload && <div className={rows.uploadHere}><UploadMaterialButton /></div>}
     </section>
 
-    <div>
+    <div id="materi">
       <p className={rows.groupLabel}>Materi</p>
       <DocumentList plain documents={documents} sessionId={session.id} storage={storage} viewerName={viewer.name} uploadLabel="Unggah materi" canUpload={canUpload} />
     </div>
@@ -121,10 +122,11 @@ export function SessionDetailBody(props: Props & { showTitle?: boolean }) {
  */
 export function sessionDetailActions(props: Props, bare = false) {
   const { view: { session, viewer } } = props;
-  const { timed, scan, selfCheckIn, upload, reschedule, attendanceLink } = rights(props);
-  if (!scan && !upload && !reschedule && !attendanceLink && !viewer.manage) return null;
-  return <SessionActions scanHref={scan ? praWamPath.scan : null} scanSecondary={selfCheckIn} upload={upload} reschedule={reschedule} bare={bare}>
-    {attendanceLink && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}><ClipboardList size={18} aria-hidden /> QR dan daftar hadir</a>}
+  const { timed, scan, selfCheckIn, reschedule, attendanceLink } = rights(props);
+  // Unggah materi sits under the participants now (12 Nov 2026), not in this bar.
+  if (!scan && !reschedule && !attendanceLink && !viewer.manage) return null;
+  return <SessionActions scanHref={scan ? praWamPath.scan : null} scanSecondary={selfCheckIn} upload={false} reschedule={reschedule} bare={bare}>
+    {attendanceLink && <a className="button button--secondary" href={praWamPath.sessionAttendance(session.id)}><ClipboardList size={18} aria-hidden /> {viewer.manage ? "Absen: lihat dan ubah" : "Daftar hadir"}</a>}
     {viewer.manage && <a className="button button--secondary" href={praWamPath.editSession(session.id)}><Pencil size={18} aria-hidden /> {timed ? "Ubah sesi" : "Atur jadwal"}</a>}
   </SessionActions>;
 }

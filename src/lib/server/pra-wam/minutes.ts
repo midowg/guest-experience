@@ -1,7 +1,7 @@
 import "server-only";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import {
-  itemsAsText, minutesNumber, minutesOpen, minutesStatus, needsMinutes,
+  itemsAsText, minutesNumber, minutesOpen, minutesStatus, needsMinutes, selfCheckedIn,
   type MinuteAction, type MinuteItem, type Minutes, type MinutesInput, type MinutesTelegram, type MinutesView,
 } from "@/lib/pra-wam/minutes";
 import type { Session } from "@/lib/pra-wam/sessions";
@@ -10,7 +10,7 @@ import { databaseError } from "../http";
 import { isR2Configured } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
-import { attendeesOf } from "./minutes-people";
+import { attendeesOf, recordMinutesAttendance } from "./minutes-people";
 import { listMinutePhotos, mayWriteMinutes, photosHd } from "./minutes-photos";
 import { deliverMinutes, isHodMeeting, minutesDeliveries, minutesTargets } from "./minutes-telegram";
 import type { Member } from "./session";
@@ -221,11 +221,14 @@ export async function saveMinutes(sessionId: string, input: MinutesInput, member
   const session = await getSession(sessionId, member);
   if (!mayWriteMinutes(session, member)) throw new ServiceError(403, "Hanya yang ikut meeting ini yang bisa menulis notulennya.");
   if (!minutesOpen(session, now)) throw new ServiceError(409, session.status === "terbit" ? "Notulen bisa ditulis setelah meeting dimulai." : "Notulen hanya untuk meeting yang terbit.");
-  const people = new Set((await attendeesOf(sessionId)).map(person => person.id));
+  const attendees = await attendeesOf(sessionId);
+  const people = new Set(attendees.map(person => person.id));
+  // Who checked in by themselves came: the MoM cannot mark them absent.
+  const self = new Set(attendees.filter(selfCheckedIn).map(person => person.id));
   const stranger = input.actions.find(action => action.picId && !people.has(action.picId));
   if (stranger) throw new ServiceError(422, "PIC tindak lanjut harus orang yang ikut meeting ini.", { actions: ["Pilih PIC dari peserta meeting."] });
   if (input.chairId && !people.has(input.chairId)) throw new ServiceError(422, "Pimpinan rapat harus orang yang ikut meeting ini.", { chairId: ["Pilih dari peserta meeting."] });
-  const checked: MinutesInput = { ...input, absentIds: [...new Set(input.absentIds)].filter(id => people.has(id)) };
+  const checked: MinutesInput = { ...input, absentIds: [...new Set(input.absentIds)].filter(id => people.has(id) && !self.has(id)) };
   const at = now.toISOString();
   let before: { row: MinutesRow | null; level: Level };
   try { before = await readRow(sessionId); }
@@ -234,6 +237,8 @@ export async function saveMinutes(sessionId: string, input: MinutesInput, member
     ? await saveFrm(sessionId, checked, member, at)
     : await saveBefore(sessionId, checked, member, at, before.row, before.level >= 1);
 
+  // The MoM's attendance is the check-in too (FRM form only: before it the MoM keeps no attendance).
+  if (before.level >= 2) await recordMinutesAttendance(sessionId, session.startsAt, checked.absentIds, member, now);
   const { minutes } = await readMinutes(session);
   if (minutes?.sentAt && !minutes.telegramOff) await deliverMinutes(session, minutes, now);
   if (sentNow) {
@@ -274,7 +279,7 @@ export async function minutesForPdf(sessionId: string, member: Member): Promise<
   return { session, minutes, hod: await isHodMeeting(session) };
 }
 
-/** A sent MoM for the admin console (Lemari MoM): its session, the MoM, and whether it is a Meeting HOD's. */
+/** A sent MoM for the admin console (Arsip MoM): its session, the MoM, and whether it is a Meeting HOD's. */
 export async function minutesForConsole(sessionId: string): Promise<{ session: Session; minutes: Minutes; hod: boolean }> {
   const [session] = await sessionsByIds([sessionId]);
   if (!session) throw new ServiceError(404, "MoM tidak ditemukan.");

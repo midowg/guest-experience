@@ -63,7 +63,7 @@ export function BookingSessionPanel({ session }: Props) {
     </section>
     <div className={styles.actions}>
       <ButtonLink variant="secondary" href={praWamPath.appraisal(date, booking.id)}>Buka booking</ButtonLink>
-      {session.status === "terbit" && <ButtonLink variant="secondary" href={praWamPath.sessionAttendance(session.id)}>QR dan hadir</ButtonLink>}
+      {session.status === "terbit" && <ButtonLink variant="secondary" href={praWamPath.sessionAttendance(session.id)}>Absen (ubah)</ButtonLink>}
       {session.status === "terbit" && <button type="button" className={`button button--secondary ${styles.dangerQuiet}`} disabled={busy} onClick={cancel}>{busy ? "Membatalkan…" : "Batalkan sesi"}</button>}
     </div>
   </div>;

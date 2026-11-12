@@ -10,10 +10,10 @@ export const dynamic = "force-dynamic";
 
 const RAJA = "11111111-1111-4111-8111-111111111111", DEWI = "22222222-2222-4222-8222-222222222222", BIMA = "33333333-3333-4333-8333-333333333333";
 const attendees: MinutesView["attendees"] = [
-  { id: RAJA, name: "Raja", fullName: "Raja Pratama", department: "Sales & Marketing", position: "Head of Department", frmPosition: "Head of Department", checkedIn: true },
-  { id: DEWI, name: "Dewi", fullName: "Dewi Lestari", department: "Sales & Marketing", position: "Coordinator", frmPosition: "Coordinator", checkedIn: true },
-  { id: BIMA, name: "Bima", fullName: "Bima Putra", department: "Finance", position: "Staff", frmPosition: "Staff", checkedIn: false },
-  { id: "me", name: "Saya", fullName: "Saya Sendiri", department: "Comms", position: "Staff", frmPosition: "Staff", checkedIn: true },
+  { id: RAJA, name: "Raja", fullName: "Raja Pratama", department: "Sales & Marketing", position: "Head of Department", frmPosition: "Head of Department", checkedIn: true, checkInMethod: "offline" },
+  { id: DEWI, name: "Dewi", fullName: "Dewi Lestari", department: "Sales & Marketing", position: "Coordinator", frmPosition: "Coordinator", checkedIn: true, checkInMethod: "offline" },
+  { id: BIMA, name: "Bima", fullName: "Bima Putra", department: "Finance", position: "Staff", frmPosition: "Staff", checkedIn: false, checkInMethod: null },
+  { id: "me", name: "Saya", fullName: "Saya Sendiri", department: "Comms", position: "Staff", frmPosition: "Staff", checkedIn: true, checkInMethod: "offline" },
 ];
 const people = attendees.map(({ id, name }) => ({ id, name }));
 const photo = (id: string, file: string) => ({ id, url: `${PRA_WAM_PATH}/${file}`, width: 1280, height: 720, uploadedBy: "Raja", canDelete: true });

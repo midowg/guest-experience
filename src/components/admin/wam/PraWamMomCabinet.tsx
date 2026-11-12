@@ -57,7 +57,7 @@ async function inTurn<T>(jobs: readonly (() => Promise<T>)[], each: () => void, 
 }
 
 /**
- * Admin WAM → Lemari MoM (12 Nov 2026), for the administration team: every sent MoM with its PDF
+ * Admin WAM → Arsip MoM (12 Nov 2026), for the administration team: every sent MoM with its PDF
  * and photos, as a list or as folders like the panitia's documentation archive (month, activity,
  * day, team). What is shown can be exported: Excel rekap, the PDFs as a zip, the photos as a zip,
  * each in its meeting's folder. A photo can go to the office TV.
@@ -118,7 +118,7 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
     } finally { setBusy(null); setProgress(null); stop.current = null; }
   }
 
-  const zipName = (kind: string) => `Lemari MoM - ${kind} - ${where}.zip`.replace(/[\\/:*?"<>|]/g, "-");
+  const zipName = (kind: string) => `Arsip MoM - ${kind} - ${where}.zip`.replace(/[\\/:*?"<>|]/g, "-");
 
   function exportExcel() {
     void run("excel", "Menyusun Excel rekap", async signal => {
@@ -250,10 +250,10 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
   </article>;
 
   return <div className="stack">
-    <PageHeader crumbs={crumbs} title="Lemari MoM"
+    <PageHeader crumbs={crumbs} title="Arsip MoM"
       subtitle="Semua MoM yang sudah dikirim, dengan PDF dan foto meetingnya, tersusun seperti arsip dokumentasi panitia: bulan, kegiatan, tanggal, lalu tim." />
     {message && <Notice tone={message.tone}>{message.text}</Notice>}
-    {!view.migrated && <Notice tone="warning">Lemari MoM menunggu migrasi notulen. Setelah dijalankan, MoM yang dikirim muncul di sini.</Notice>}
+    {!view.migrated && <Notice tone="warning">Arsip MoM menunggu migrasi notulen. Setelah dijalankan, MoM yang dikirim muncul di sini.</Notice>}
     {view.migrated && !view.tvReady && <Notice tone="info">Foto Full HD (1 MB) dan Tampilkan di TV menunggu migrasi {MOM_CABINET_MIGRATION}. Sementara itu foto tetap disimpan 1280 px.</Notice>}
 
     <Card title="Cari dan ekspor">
@@ -277,14 +277,14 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
     </Card>
 
     {mode === "folder" && <nav aria-label="Letak folder" className={css.crumbs}>
-      <button type="button" className={css.crumb} aria-current={path.length === 0 ? "page" : undefined} onClick={() => setPath([])}><FolderOpen size={16} aria-hidden="true" /> Lemari</button>
+      <button type="button" className={css.crumb} aria-current={path.length === 0 ? "page" : undefined} onClick={() => setPath([])}><FolderOpen size={16} aria-hidden="true" /> Arsip</button>
       {path.map((name, level) => <span key={level} className={css.crumbStep}>
         <ChevronRight size={14} aria-hidden="true" />
         <button type="button" className={css.crumb} aria-current={level === path.length - 1 ? "page" : undefined} onClick={() => setPath(path.slice(0, level + 1))}>{name}</button>
       </span>)}
     </nav>}
 
-    {!placed.length ? <Card title="Lemari kosong"><p className={css.empty}>{view.entries.length ? "Tidak ada MoM yang cocok dengan pencarian ini." : "Belum ada MoM yang dikirim."}</p></Card>
+    {!placed.length ? <Card title="Arsip kosong"><p className={css.empty}>{view.entries.length ? "Tidak ada MoM yang cocok dengan pencarian ini." : "Belum ada MoM yang dikirim."}</p></Card>
       : mode === "galeri" ? <section aria-label="Galeri foto" className={css.galleryView}>
         {!shownPhotos.length ? <Card title="Belum ada foto"><p className={css.empty}>MoM yang tampil belum punya foto.</p></Card> : <>
           <div className={css.pickBar} role="toolbar" aria-label="Pilihan foto">

@@ -17,8 +17,8 @@ const RAJA = "11111111-1111-4111-8111-111111111111";
 const telegram = (patch: Partial<MinutesView["telegram"]> = {}): MinutesView["telegram"] =>
   ({ ready: true, reason: null, destinations: ["Werkudara CoE · Center of Excellence"], deliveries: [], ...patch });
 const attendees: MinutesView["attendees"] = [
-  { id: RAJA, name: "Raja", fullName: "Raja Pratama", department: "Center of Excellence", position: "Head of Department", frmPosition: "Head of Department", checkedIn: true },
-  { id: "me", name: "Saya", fullName: "Saya Sendiri", department: "Comms", position: "Staff", frmPosition: "Staff", checkedIn: false },
+  { id: RAJA, name: "Raja", fullName: "Raja Pratama", department: "Center of Excellence", position: "Head of Department", frmPosition: "Head of Department", checkedIn: true, checkInMethod: "offline" },
+  { id: "me", name: "Saya", fullName: "Saya Sendiri", department: "Comms", position: "Staff", frmPosition: "Staff", checkedIn: false, checkInMethod: null },
 ];
 const view = (patch: Partial<MinutesView> = {}): MinutesView => ({
   migrated: true, needed: true, status: "belum", minutes: null, canWrite: true, open: true, viewerId: "me", endsAt: "2026-11-10T03:00:00.000Z", drafts: true,
@@ -107,7 +107,9 @@ it("fills the FRM form: chair from the booker, who came from check-in, new topic
   expect(screen.getByText("1 present · 1 absent")).toBeTruthy();
   expect((screen.getByRole("checkbox", { name: /Raja Pratama/ }) as HTMLInputElement).checked).toBe(true);
   expect((screen.getByRole("checkbox", { name: /Saya Sendiri/ }) as HTMLInputElement).checked).toBe(false);
-  expect(screen.getByText(/Center of Excellence · Head of Department · check-in/)).toBeTruthy();
+  // Raja checked in by themselves: present, and not changed from the MoM.
+  expect((screen.getByRole("checkbox", { name: /Raja Pratama/ }) as HTMLInputElement).disabled).toBe(true);
+  expect(screen.getByText(/Center of Excellence · Head of Department · sudah absen sendiri/)).toBeTruthy();
   fireEvent.click(screen.getByRole("checkbox", { name: /Saya Sendiri/ }));
   expect(screen.getByText("2 present · 0 absent")).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Others present"), { target: { value: " Pak Andi (klien) " } });

@@ -118,3 +118,7 @@
 .sheetNote { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 13px; font-weight: 600; }
 .sheetNote svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
 .actionPair :global(.button) { padding-inline: .75rem; white-space: nowrap; }
+
+/* Unggah materi under the participants (12 Nov 2026). */
+.uploadHere { display: flex; margin-top: 12px; }
+.uploadHere > :global(.button) { flex: 1 1 auto; justify-content: center; }

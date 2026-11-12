@@ -5,7 +5,7 @@ import { CheckCircle2, ChevronDown, ChevronRight, Download, ImagePlus, NotebookP
 import { Notice } from "@/components/ui";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  defaultAbsent, minutesApi, minutesItems, minutesLimits, minutesStatusLabels, presence,
+  defaultAbsent, minutesApi, minutesItems, minutesLimits, minutesStatusLabels, presence, selfCheckedIn,
   type MinuteAction, type MinuteAttendee, type MinuteItem, type MinutePhoto, type MinutesView, type NextMeeting,
 } from "@/lib/pra-wam/minutes";
 import { frmDate, frmDue, frmTime, guestNames } from "@/lib/pra-wam/minutes-message";
@@ -199,7 +199,8 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       // Section III always has a row to fill.
       items: items.some(item => !item.added) ? items : [blankItem(), ...items],
       chairId: minutes?.chairId ?? view.defaultChairId,
-      absentIds: minutes ? [...minutes.absentIds] : defaultAbsent(attendees),
+      // Whoever checked in by themselves came, whatever an older draft said.
+      absentIds: (minutes ? [...minutes.absentIds] : defaultAbsent(attendees)).filter(id => !attendees.some(person => person.id === id && selfCheckedIn(person))),
       guests: minutes?.guests ?? "", next: minutes?.next ? { ...minutes.next } : noNext(),
       actions: minutes ? minutes.actions.map(action => ({ ...action })) : [], telegramOff: minutes?.telegramOff ?? false,
     };
@@ -345,12 +346,12 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
 
         {frm && attendees.length > 0 && <fieldset className={css.group} {...part("hadir")}>
           <legend className={css.groupTitle}>{sectionTitle("II.", "ATTENDANCE", <span className={css.groupCount}>{here} present · {attendees.length - here} absent</span>)}</legend>
-          <p className={styles.hint}>{attendees.some(person => person.checkedIn) ? "Diisi dari check-in. Hapus centang untuk yang tidak hadir." : "Hapus centang untuk yang tidak hadir."}</p>
+          <p className={styles.hint}>Centang yang hadir. Saat MoM disimpan, kehadiran ini langsung tercatat sebagai absen mereka.</p>
           <ul className={css.people}>{attendees.map(person => <li key={person.id}>
             <label className={css.check}>
-              <input type="checkbox" checked={!away.has(person.id)}
+              <input type="checkbox" checked={!away.has(person.id)} disabled={selfCheckedIn(person)}
                 onChange={event => patch({ absentIds: event.target.checked ? draft.absentIds.filter(id => id !== person.id) : [...draft.absentIds, person.id] })} />
-              <span>{person.fullName}<small>{[person.department, person.frmPosition || person.position, person.checkedIn ? "check-in" : null].filter(Boolean).join(" · ") || "Data karyawan belum lengkap"}</small></span>
+              <span>{person.fullName}<small>{[person.department, person.frmPosition || person.position, selfCheckedIn(person) ? "sudah absen sendiri" : person.checkedIn ? "tercatat hadir" : null].filter(Boolean).join(" · ") || "Data karyawan belum lengkap"}</small></span>
             </label>
           </li>)}</ul>
           <div>

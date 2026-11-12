@@ -2,7 +2,7 @@ import { z } from "zod";
 import { minutesFileName } from "./minutes-message";
 
 /*
- * Lemari MoM (12 Nov 2026): every sent MoM with its PDF and photos, in Admin WAM for the
+ * Arsip MoM (12 Nov 2026): every sent MoM with its PDF and photos, in Admin WAM for the
  * administration team. The folders follow the panitia's documentation archive in Drive ("REKAP
  * DOKUMENTASI MEETING PRA WAM-NOVEMBER 2026 / DOKUMENTASI APPRAISAL / APPRAISAL-10 NOVEMBER 2026 /
  * TEAM SS"): month, activity, day, team; a meeting's folder holds its MoM PDF and its photos, the

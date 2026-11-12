@@ -23,7 +23,7 @@ export const MOM_PHOTO_SIDE = MOM_PHOTO_HD.sides[0];
 export const MOM_PHOTO_BYTES = MOM_PHOTO_HD.bytes;
 export const MOM_PHOTOS_MAX = 10;
 export const MOM_PHOTO_MIGRATION = "202611120005_pw_minutes_frm.sql";
-/** Full HD photos, meeting photos on TV, and Lemari MoM. */
+/** Full HD photos, meeting photos on TV, and Arsip MoM. */
 export const MOM_CABINET_MIGRATION = "202611120006_pw_mom_cabinet.sql";
 
 /** Where a meeting's photo lives in storage; the migration's check allows only this shape. */

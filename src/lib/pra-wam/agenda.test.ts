@@ -34,7 +34,7 @@ describe("check-in status on Detail sesi", () => {
     expect(checkInText({ kind: "hadir", at: "2026-11-26T02:42:00Z", method: "offline" }, at("2026-11-26T03:00:00Z")).title).toBe("Hadir 09.42 · di kantor");
     expect(checkInText({ kind: "hadir", at: "2026-11-26T02:42:00Z", method: "online" }, at("2026-11-26T03:00:00Z")).title).toBe("Hadir 09.42 · online (Zoom)");
     expect(checkInText({ kind: "hadir", at: "2026-11-26T02:42:00Z", method: "qr" }, at("2026-11-26T03:00:00Z")).title).toBe("Hadir 09.42 · scan QR");
-    expect(checkInText({ kind: "hadir", at: "2026-11-26T02:42:00Z", method: "manual" }, at("2026-11-26T03:00:00Z")).title).toBe("Hadir 09.42 · dicatat panitia");
+    expect(checkInText({ kind: "hadir", at: "2026-11-26T02:42:00Z", method: "manual" }, at("2026-11-26T03:00:00Z")).title).toBe("Hadir 09.42 · dicatat panitia/notulis");
     expect(checkInText({ kind: "belum", opens: "2026-11-26T02:30:00.000Z", closes: "2026-11-26T05:30:00.000Z" }, at("2026-11-26T01:00:00Z"), { self: true }).body).toBe("Absen dibuka 30 menit sebelum mulai (09.30).");
     expect(checkInText({ kind: "buka", closes: "2026-11-26T05:30:00.000Z" }, at("2026-11-26T03:00:00Z"), { self: true }).body).toMatch(/^Ketuk Saya hadir/);
   });

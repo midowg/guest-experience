@@ -7,7 +7,7 @@ const entry = (patch: Partial<CabinetEntry> = {}): CabinetEntry => ({
   present: 3, total: 4, guests: 0, topics: 2, decisions: 3, actions: 2, open: 1, version: 1, sentAt: "2026-11-10T07:00:00Z", telegramOff: false, photos: [], ...patch,
 });
 
-describe("Lemari MoM folders", () => {
+describe("Arsip MoM folders", () => {
   it("names the activity without the team, as the panitia's archive does", () => {
     expect(activityOf("Appraisal team SS", "SM")).toBe("Appraisal");
     expect(activityOf("Appraisal tim", "SM")).toBe("Appraisal");
@@ -36,7 +36,7 @@ describe("Lemari MoM folders", () => {
   });
 });
 
-describe("Lemari MoM filters", () => {
+describe("Arsip MoM filters", () => {
   const all = [
     entry({ sessionId: "a" }),
     entry({ sessionId: "b", code: "MoM/2026/12/0001", title: "Evaluasi Meeting", date: "2026-12-02", department: "Center of Excellence", short: "CoE", notetaker: "Sofyan" }),

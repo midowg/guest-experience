@@ -13,7 +13,7 @@ const entry = (patch: Partial<CabinetEntry>): CabinetEntry => ({
   present: 3, total: 4, guests: 1, topics: 2, decisions: 3, actions: 2, open: 1, version: 2, sentAt: "2026-11-10T07:00:00Z", telegramOff: false, photos: [photo(1), photo(2), photo(3)], ...patch,
 });
 
-/** Layout check for Admin WAM → Lemari MoM without signing in (?keadaan=baru: before migration 0006). The buttons call the real API, which refuses without an admin session. */
+/** Layout check for Admin WAM → Arsip MoM without signing in (?keadaan=baru: before migration 0006). The buttons call the real API, which refuses without an admin session. */
 export default async function DevMomCabinetPage({ searchParams }: { searchParams: Promise<{ keadaan?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const fresh = (await searchParams).keadaan === "baru";
@@ -26,5 +26,5 @@ export default async function DevMomCabinetPage({ searchParams }: { searchParams
       entry({ sessionId: "5e550000-0000-4000-8000-000000000004", code: "MoM/2026/10/0003", title: "Meeting HOD Oktober", date: "2026-10-28", department: "Meeting HOD", short: "HOD", hod: true, photos: [photo(5)] }),
     ],
   };
-  return <AdminShell bare><ConsoleTheme canvas><div style={{ padding: 24, maxWidth: 1100 }}><PraWamMomCabinet initial={view} crumbs={[{ label: "Admin WAM" }, { label: "Data peserta" }, { label: "Lemari MoM" }]} /></div></ConsoleTheme></AdminShell>;
+  return <AdminShell bare><ConsoleTheme canvas><div style={{ padding: 24, maxWidth: 1100 }}><PraWamMomCabinet initial={view} crumbs={[{ label: "Admin WAM" }, { label: "Data peserta" }, { label: "Arsip MoM" }]} /></div></ConsoleTheme></AdminShell>;
 }

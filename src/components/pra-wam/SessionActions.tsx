@@ -49,6 +49,17 @@ type Props = {
   bare?: boolean;
 };
 
+/**
+ * Unggah materi right under "Lihat semua peserta" (12 Nov 2026), no longer in the bar at the
+ * bottom: it opens the upload form of the Materi part below, and scrolls to it.
+ */
+export function UploadMaterialButton() {
+  return <button type="button" className="button button--secondary" onClick={() => {
+    askSessionIntent("unggah-materi");
+    window.setTimeout(() => document.getElementById("materi")?.scrollIntoView?.({ behavior: "smooth", block: "start" }), 60);
+  }}><Upload size={18} aria-hidden /> Unggah materi</button>;
+}
+
 export function SessionActions({ scanHref, scanSecondary, upload, reschedule, children, bare }: Props) {
   if (!scanHref && !upload && !reschedule && !children) return null;
   return <div className={`${rows.actionBar} ${bare ? rows.actionBarBare : ""}`}>

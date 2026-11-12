@@ -8,7 +8,7 @@ type Params = { params: Promise<{ photoId: string }> };
 const filename = z.string().regex(/^[\w .()-]{1,120}\.jpg$/i, "Nama berkas tidak dikenali.");
 
 /**
- * GET: a photo of a sent MoM for Lemari MoM (any admin): to its storage address (?unduh=<name>.jpg
+ * GET: a photo of a sent MoM for Arsip MoM (any admin): to its storage address (?unduh=<name>.jpg
  * downloads it under that name), or with ?berkas=1 its bytes, for a zip made in the browser.
  */
 export async function GET(request: Request, { params }: Params) {

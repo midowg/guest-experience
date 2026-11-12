@@ -8,7 +8,7 @@ import { wamAdminPath } from "@/lib/routes";
  * one entry here, its path in wamAdminPath and its page under src/app/admin/wam/. A new group
  * name starts a new group in the menu.
  */
-export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "lemari" | "kuesioner";
+export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner";
 export type WamSection = {
   key: WamSectionKey;
   label: string;
@@ -36,7 +36,7 @@ export const wamSections: readonly WamSection[] = [
   { key: "ruang", label: "Ruang dan denah", group: "Aplikasi", href: wamAdminPath.rooms, icon: MapIcon, summary: "Kapasitas ruang, spot di denah, dan tampil tidaknya denah di Book." },
   { key: "tv", label: "TV Announcement", group: "Aplikasi", href: wamAdminPath.tv, icon: Tv, summary: "TV kantor: jadwal ruang hari ini dan gambar pengumuman, berganti otomatis." },
   { key: "telegram", label: "Telegram", group: "Aplikasi", href: wamAdminPath.telegram, icon: Send, summary: "Bot MoM, webhook, dan grup Telegram tiap departemen." },
-  { key: "lemari", label: "Lemari MoM", group: "Data peserta", href: wamAdminPath.momCabinet, icon: Archive, summary: "Semua MoM terkirim dengan PDF dan fotonya, per bulan, kegiatan, tanggal, dan tim; ekspor Excel dan ZIP." },
+  { key: "arsip", label: "Arsip MoM", group: "Data peserta", href: wamAdminPath.momCabinet, icon: Archive, summary: "Semua MoM terkirim dengan PDF dan fotonya, per bulan, kegiatan, tanggal, dan tim; ekspor Excel dan ZIP." },
   { key: "kuesioner", label: "Kuesioner", group: "Data peserta", href: wamAdminPath.questionnaire.content, icon: ClipboardList, summary: "Isi, pengaturan, progres, rekap, dan ekspor kuesioner personal." },
 ];
 

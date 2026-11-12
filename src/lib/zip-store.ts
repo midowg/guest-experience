@@ -1,9 +1,9 @@
 /*
- * A small zip writer (12 Nov 2026, Lemari MoM): files stored as they are, without compression,
+ * A small zip writer (12 Nov 2026, Arsip MoM): files stored as they are, without compression,
  * since PDFs and JPEGs are compressed already. It runs in the browser, so a large export (every
  * MoM of a month with its photos) is put together on the admin's computer instead of in one server
  * answer, which Vercel caps at a few megabytes. Names are UTF-8 and may hold folders ("a/b/c.pdf").
- * No zip64: one archive stays under 4 GB, far above what Lemari MoM lets one export hold.
+ * No zip64: one archive stays under 4 GB, far above what Arsip MoM lets one export hold.
  */
 
 export type ZipFile = { name: string; bytes: Uint8Array; date?: Date };

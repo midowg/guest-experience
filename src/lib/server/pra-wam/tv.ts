@@ -482,7 +482,7 @@ export async function confirmSlideUpload(input: TvSlideStart & { key: string; to
 }
 
 /**
- * A picture made from a meeting photo (Admin WAM → Lemari MoM → Tampilkan di TV, migration
+ * A picture made from a meeting photo (Admin WAM → Arsip MoM → Tampilkan di TV, migration
  * 202611120006): its copy is already in the TV's storage under `key`. It joins the playlist last,
  * shown, and remembers the photo it came from.
  */

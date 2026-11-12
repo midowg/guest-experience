@@ -55,9 +55,9 @@ export type AttendanceMethod = "qr" | "manual" | "offline" | "online";
 export const attendanceMethods = ["qr", "manual", "offline", "online"] as const satisfies readonly AttendanceMethod[];
 
 /** For panitia and BOD, next to the time in Daftar hadir: always which way, so QR and "Saya hadir" read apart. */
-export const methodLabels: Record<AttendanceMethod, string> = { offline: "Saya hadir · di kantor", online: "Saya hadir · online", qr: "Scan QR", manual: "Dicatat panitia" };
+export const methodLabels: Record<AttendanceMethod, string> = { offline: "Saya hadir · di kantor", online: "Saya hadir · online", qr: "Scan QR", manual: "Dicatat panitia/notulis" };
 /** For the participant, after "Hadir 09.42 · ". */
-export const ownMethodLabels: Record<AttendanceMethod, string> = { offline: "di kantor", online: "online (Zoom)", qr: "scan QR", manual: "dicatat panitia" };
+export const ownMethodLabels: Record<AttendanceMethod, string> = { offline: "di kantor", online: "online (Zoom)", qr: "scan QR", manual: "dicatat panitia/notulis" };
 
 export const asMethod = (value: unknown): AttendanceMethod | null => attendanceMethods.includes(value as AttendanceMethod) ? value as AttendanceMethod : null;
 

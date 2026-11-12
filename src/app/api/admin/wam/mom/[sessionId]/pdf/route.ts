@@ -8,7 +8,7 @@ import { minutesMessage, minutesPdfWithPhotos } from "@/lib/server/pra-wam/minut
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ sessionId: string }> };
 
-/** GET: a sent MoM's PDF for Lemari MoM (any admin): the same one its Telegram groups got, with its photos. */
+/** GET: a sent MoM's PDF for Arsip MoM (any admin): the same one its Telegram groups got, with its photos. */
 export async function GET(_request: Request, { params }: Params) {
   return handle(async () => {
     await requireApiAdmin();
