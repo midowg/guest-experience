@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { minutesInputSchema, minutesOpen, minutesStatus, needsMinutes, openActions } from "./minutes";
+import { asMinutesRule, choiceOf, DEFAULT_MINUTES_RULE, minutesInputSchema, minutesOpen, minutesStatus, needsMinutes, openActions, ruleNeeds, storedOf } from "./minutes";
 
 const meeting = (patch: Partial<Parameters<typeof needsMinutes>[0]> = {}) => ({
   status: "terbit" as const, kind: "rapat" as const, startsAt: "2026-11-10T02:00:00.000Z", endsAt: "2026-11-10T03:00:00.000Z", participantCount: 4, ...patch,
@@ -15,6 +15,26 @@ describe("notulen (MoM)", () => {
     expect(needsMinutes(meeting({ kind: "acara" }))).toBe(false);
     expect(needsMinutes(meeting({ status: "draf" }))).toBe(false);
     expect(needsMinutes(meeting({ startsAt: null, endsAt: null }))).toBe(false);
+  });
+
+  it("follows Admin WAM's rule per kind and for one-on-ones, unless the session chose", () => {
+    const rule = { forum: false, rapat: true, acara: true, berdua: true };
+    expect(needsMinutes(meeting({ kind: "forum" }), rule)).toBe(false);
+    expect(needsMinutes(meeting({ kind: "acara" }), rule)).toBe(true);
+    expect(needsMinutes(meeting({ participantCount: 2 }), rule)).toBe(true);
+    expect(ruleNeeds({ kind: "rapat", participantCount: 2 }, DEFAULT_MINUTES_RULE)).toBe(false);
+    // The session's own choice wins over the rule; a draft or one without hours never needs one.
+    expect(needsMinutes(meeting({ kind: "acara", minutesRequired: true }))).toBe(true);
+    expect(needsMinutes(meeting({ minutesRequired: false }))).toBe(false);
+    expect(needsMinutes(meeting({ status: "draf", minutesRequired: true }))).toBe(false);
+    expect(minutesStatus(meeting({ minutesRequired: false }), false, new Date("2027-01-01T00:00:00Z"))).toBe("tidak-perlu");
+  });
+
+  it("reads a stored rule safely and maps the session's choice", () => {
+    expect(asMinutesRule(null)).toEqual(DEFAULT_MINUTES_RULE);
+    expect(asMinutesRule({ acara: true, forum: "ya" })).toEqual({ ...DEFAULT_MINUTES_RULE, acara: true });
+    expect([choiceOf(true), choiceOf(false), choiceOf(null), choiceOf(undefined)]).toEqual(["wajib", "tidak", "ikut", "ikut"]);
+    expect([storedOf("wajib"), storedOf("tidak"), storedOf("ikut")]).toEqual([true, false, null]);
   });
 
   it("is missing only once the meeting is over; written, it is done; it can be written from the start", () => {

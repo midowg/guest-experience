@@ -417,6 +417,8 @@ export const praWamRoomsCreateApi = "/api/admin/wam/rooms";
 export const praWamUnitsApi = "/api/admin/wam/units";
 /** Admin WAM: one event's status and modules. */
 export const praWamEventsApi = (eventId: string) => `/api/admin/wam/events/${eventId}`;
+/** PUT {forum, rapat, acara, berdua}: which meetings need a MoM (Admin WAM → Acara, any admin). */
+export const praWamMinutesRuleApi = "/api/admin/wam/minutes-rule";
 /** Admin WAM: PUT saves the "Apa itu WAM?" text, DELETE goes back to the default text. */
 export const praWamAboutApi = "/api/admin/wam/about";
 /** Admin WAM: PUT the app settings, e.g. whether Book shows the floor plan. */

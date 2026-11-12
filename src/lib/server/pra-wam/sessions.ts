@@ -4,6 +4,7 @@ import { clockLabel, wibInstant, wibTime } from "@/lib/pra-wam/appraisal";
 import { managesSessions, seesAllSessions } from "@/lib/pra-wam/roles";
 import { bookerLabel } from "@/lib/pra-wam/schedule-export";
 import { BOOKING_SESSION_LOCKED, sessionProblems, sessionSpan, type RoomUse, type Session, type SessionInput, type SessionStatus } from "@/lib/pra-wam/sessions";
+import { choiceOf, ruleNeeds, storedOf } from "@/lib/pra-wam/minutes";
 import type { TimelineItem } from "@/lib/pra-wam/timeline";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -13,6 +14,7 @@ import { notifySession } from "./announcements";
 import { listPeople, listRooms, memberDepartments } from "./appraisal";
 import { withBookingLink } from "./booking-sessions";
 import { listEvents } from "./events";
+import { isMinutesColumnMissing, MINUTES_RULE_MIGRATION, minutesRule } from "./minutes-rule";
 import { type Member } from "./session";
 
 /*
@@ -47,12 +49,23 @@ async function praWamEventId(): Promise<string> {
   return event.id;
 }
 
+/**
+ * Each session's own MoM choice (pw_sessions.minutes_required, migration 202611120001), read on
+ * its own so the sessions read the same before that migration: then every session follows the rule.
+ */
+async function minutesChoices(ids: string[]): Promise<Map<string, boolean | null>> {
+  const { data, error } = await createPrivilegedClient().from("pw_sessions").select("id,minutes_required").in("id", ids);
+  if (error) { if (isMinutesColumnMissing(error)) return new Map(); databaseError(error); }
+  return new Map((data ?? []).map(row => [row.id as string, (row.minutes_required as boolean | null) ?? null]));
+}
+
 async function shape(rows: SessionRow[], viewer: Member): Promise<Session[]> {
   if (!rows.length) return [];
   const client = createPrivilegedClient();
-  const [rooms, people, { data: links, error }] = await Promise.all([
+  const [rooms, people, { data: links, error }, choices, rule] = await Promise.all([
     listRooms(), listPeople(),
     client.from("pw_session_participants").select("session_id,employee_id").in("session_id", rows.map(row => row.id)),
+    minutesChoices(rows.map(row => row.id)).catch(() => new Map<string, boolean | null>()), minutesRule(),
   ]);
   if (error) fail(error);
   const all = seesAllSessions(viewer);
@@ -60,6 +73,7 @@ async function shape(rows: SessionRow[], viewer: Member): Promise<Session[]> {
   const person = (id: string) => byId.get(id) ?? { id, name: "Tanpa nama", department: "" };
   return rows.map(row => {
     const ids = (links ?? []).filter(link => link.session_id === row.id).map(link => link.employee_id);
+    const own = choices.get(row.id) ?? null;
     return {
       id: row.id, title: row.title, kind: row.kind, description: row.description, status: row.status,
       planFrom: row.plan_from, planTo: row.plan_to, startsAt: row.starts_at, endsAt: row.ends_at,
@@ -68,6 +82,7 @@ async function shape(rows: SessionRow[], viewer: Member): Promise<Session[]> {
       participants: all ? ids.map(person).sort((a, b) => a.name.localeCompare(b.name)) : null,
       // The booker made it (created_by), so their name rides along.
       booking: row.booking_id ? { id: row.booking_id, bookedBy: person(row.created_by ?? "") } : null,
+      minutesChoice: choiceOf(own), minutesRequired: own ?? ruleNeeds({ kind: row.kind, participantCount: ids.length }, rule),
     };
   });
 }
@@ -223,6 +238,8 @@ export async function saveSession(input: SessionInput, viewer: Member, options: 
     title: input.title, kind: input.kind, description: input.description,
     starts_at: span?.startsAt ?? null, ends_at: span?.endsAt ?? null, room_id: input.roomId || null, location: input.roomId ? "" : input.location,
     status: publish ? "terbit" : current?.status === "batal" ? "draf" : current?.status ?? "draf",
+    // Written only when it is not "follow the rule" or was not before, so saving works before migration 202611120001.
+    ...(input.minutes !== "ikut" || (current?.minutesChoice ?? "ikut") !== "ikut" ? { minutes_required: storedOf(input.minutes) } : {}),
     ...(publish && current?.status !== "terbit" ? { published_at: new Date().toISOString() } : {}),
     updated_at: new Date().toISOString(),
   };
@@ -232,6 +249,7 @@ export async function saveSession(input: SessionInput, viewer: Member, options: 
     : await client.from("pw_sessions").insert({ ...values, event_id: await praWamEventId(), created_by: viewer.id }).select("id").single();
   if (result.error) {
     if (result.error.code === "23P01") throw await roomTakenError(input, current?.id);
+    if (isMinutesColumnMissing(result.error)) throw new ServiceError(503, `Pilihan MoM per sesi menunggu migrasi ${MINUTES_RULE_MIGRATION}. Pilih "Ikuti aturan" dulu.`, { minutes: ["Belum bisa disimpan."] });
     fail(result.error);
   }
   const id = result.data.id as string;

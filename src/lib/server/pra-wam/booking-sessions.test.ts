@@ -176,7 +176,7 @@ describe("one room use, shown once", () => {
 });
 
 describe("changing a booking's session from Kelola acara", () => {
-  const input = { title: "Lain", kind: "rapat" as const, description: "", date: "2026-11-16", start: "13:00", end: "14:00", roomId: "", location: "", participants: [] };
+  const input = { title: "Lain", kind: "rapat" as const, description: "", date: "2026-11-16", start: "13:00", end: "14:00", roomId: "", location: "", participants: [], minutes: "ikut" as const };
 
   it("is refused: it changes with the booking", async () => {
     await expect(saveSession(input, panitia, { id: "s1" })).rejects.toMatchObject({ status: 409, message: "Sesi ini dari booking ruang; ubah lewat booking." });

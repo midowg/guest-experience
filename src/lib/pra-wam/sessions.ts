@@ -25,6 +25,12 @@ export type Session = {
    * Its time, room and people follow the booking, so it is changed there; null otherwise.
    */
   booking?: { id: string; bookedBy: Person } | null;
+  /**
+   * Notulen (12 Nov 2026): the session's own choice (follow Admin WAM's rule, always, never), and
+   * whether it needs a MoM after that choice and the rule. Absent where a session is made by hand.
+   */
+  minutesChoice?: "ikut" | "wajib" | "tidak";
+  minutesRequired?: boolean;
 };
 
 /** What panitia sees when trying to change a booking's session here. */
@@ -72,6 +78,8 @@ export const sessionInputSchema = z.object({
   roomId: z.union([z.literal(""), z.uuid()]).default(""),
   location: z.string().trim().max(200).default(""),
   participants: z.array(z.uuid()).max(500).default([]),
+  /** MoM: follow Admin WAM's rule (default), always, or never (migration 202611120001). */
+  minutes: z.enum(["ikut", "wajib", "tidak"]).default("ikut"),
 });
 export type SessionInput = z.infer<typeof sessionInputSchema>;
 

@@ -7,6 +7,7 @@ import { Button, ButtonLink, Notice } from "@/components/ui";
 import { clockLabel, dayLabel, overlaps, wibTime, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { roomStatus } from "@/lib/pra-wam/floor-plan";
 import { sessionKindLabels, sessionKinds, sessionProblems, sessionSpan, sessionStatusLabels, sessionTimes, sessionWhen, type RoomUse, type Session, type SessionInput } from "@/lib/pra-wam/sessions";
+import { DEFAULT_MINUTES_RULE, ruleNeeds, type MinutesChoice, type MinutesRule } from "@/lib/pra-wam/minutes";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { errorText, praWamRequest, PraWamApiError } from "./api";
 import { PeoplePicker, type PeopleGroup } from "./PeoplePicker";
@@ -17,7 +18,11 @@ import { ScreenHead } from "./ScreenHead";
 import panel from "./panitia.module.css";
 import styles from "./pra-wam.module.css";
 
-type Props = { session: Session | null; initial: SessionInput; rooms: Room[]; people: Person[]; groups: PeopleGroup[]; /** The picker opens on this person's own department. */ viewerId?: string };
+type Props = {
+  session: Session | null; initial: SessionInput; rooms: Room[]; people: Person[]; groups: PeopleGroup[]; /** The picker opens on this person's own department. */ viewerId?: string;
+  /** Admin WAM's MoM rule, so "Ikuti aturan" can say what it means for this session. */
+  minutesRule?: MinutesRule;
+};
 type Check = { tone: "ok" | "no" | "wait"; text: string };
 
 /** The Pra WAM period (event pra-wam-2026), for the automatic check. */
@@ -27,7 +32,7 @@ const PRA_WAM_FROM = "2026-10-28", PRA_WAM_TO = "2026-12-23";
  * Panitia makes or changes a session (Penpot "D7 · Buat sesi"): the form on the left, and on the
  * right the checks the server will also make (room free, capacity, period), shown while typing.
  */
-export function SessionForm({ session, initial, rooms, people, groups, viewerId }: Props) {
+export function SessionForm({ session, initial, rooms, people, groups, viewerId, minutesRule = DEFAULT_MINUTES_RULE }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState(initial);
   const [uses, setUses] = useState<RoomUse[]>([]);
@@ -150,6 +155,16 @@ export function SessionForm({ session, initial, rooms, people, groups, viewerId 
             <select id="end" className="select" value={draft.end} aria-invalid={!!fieldErrors.end} onChange={event => set({ end: event.target.value })}>
               <option value="">—</option>{sessionTimes().filter(time => !draft.start || time > draft.start).map(time => <option key={time} value={time}>{clockLabel(time)}</option>)}
             </select>{fieldError("end")}</div>
+        </div>
+        <div>
+          <label className={styles.label} htmlFor="minutes">Notulen (MoM)</label>
+          <select id="minutes" className="select" value={draft.minutes} aria-invalid={!!fieldErrors.minutes} aria-describedby="minutes-hint" onChange={event => set({ minutes: event.target.value as MinutesChoice })}>
+            <option value="ikut">Ikuti aturan ({ruleNeeds({ kind: draft.kind, participantCount: draft.participants.length }, minutesRule) ? "wajib" : "tidak wajib"})</option>
+            <option value="wajib">Wajib MoM</option>
+            <option value="tidak">Tidak wajib</option>
+          </select>
+          <p className={styles.hint} id="minutes-hint">Aturannya diatur di Admin WAM → Acara dan modul. Pilih Wajib atau Tidak wajib untuk mengecualikan sesi ini.</p>
+          {fieldError("minutes")}
         </div>
 
         <div className={styles.section}>
