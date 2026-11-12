@@ -93,6 +93,8 @@ export type MinutesView = {
   photosReady: boolean;
   /** Photos are kept Full HD, 1 MB (migration 202611120006); before it 1280 px, 400 KB. */
   photoHd: boolean;
+  /** Everyone in Data karyawan, for "Others present" (only for whoever may write the MoM). */
+  staff?: { id: string; name: string; fullName: string; department: string }[];
 };
 
 export type MinutesStatus = "tidak-perlu" | "belum-waktunya" | "belum" | "draf" | "sudah";

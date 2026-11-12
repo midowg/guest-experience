@@ -24,7 +24,9 @@ const view = (patch: Partial<MinutesView> = {}): MinutesView => ({
   migrated: true, needed: true, status: "belum", minutes: null, canWrite: true, open: true, viewerId: "me", endsAt: "2026-11-10T03:00:00.000Z", drafts: true,
   title: "Review target Q1", startsAt: "2026-11-10T02:00:00.000Z", place: "Ruang Rapat 1",
   people: [{ id: RAJA, name: "Raja" }, { id: "me", name: "Saya" }], telegram: telegram(),
-  frm: true, attendees, defaultChairId: RAJA, photos: [], photosReady: true, photoHd: true, ...patch,
+  frm: true, attendees, defaultChairId: RAJA, photos: [], photosReady: true, photoHd: true,
+  staff: [{ id: RAJA, name: "Raja", fullName: "Raja Pratama", department: "Center of Excellence" }, { id: "andi", name: "Andi", fullName: "Andi Wijaya", department: "Finance" }],
+  ...patch,
 });
 const written = (patch: Partial<Minutes> = {}): Minutes => ({
   summary: "", decisions: "", number: "MoM/2026/11/0012",
@@ -94,9 +96,10 @@ it("fills the FRM form: chair from the booker, who came from check-in, new topic
   fireEvent.click(screen.getByRole("button", { name: /Tulis notulen/ }));
   // The form's sections, in its words and order.
   expect(screen.getAllByRole("group").map(group => group.querySelector("legend")?.textContent).filter(Boolean)).toEqual([
-    "I. MEETING INFORMATION", "II. ATTENDANCE 1 present · 1 absent", "III. AGENDA ITEMS AND DISCUSSION", "IV. NEW ITEMS/TOPICS", "V. ACTION ITEMS", "VII. ATTENDANCE LIST",
+    "I. MEETING INFORMATION", "II. ATTENDANCE 1 present · 1 absent", "III. AGENDA ITEMS AND DISCUSSION", "V. ACTION ITEMS", "VI. NEXT MEETING isi kalau ada", "VII. ATTENDANCE LIST",
   ]);
-  expect(document.querySelector("summary")?.textContent).toMatch(/^VI\. NEXT MEETING/);
+  // No IV in the form (13 Nov 2026), and the next meeting is open, not folded away.
+  expect(document.querySelector("details")).toBeNull();
   expect(screen.getByText("Dibuat otomatis saat pertama disimpan")).toBeTruthy();
   expect(screen.getByText("Review target Q1")).toBeTruthy();
   expect(screen.getByText("10 Nov. 26")).toBeTruthy();
@@ -112,21 +115,36 @@ it("fills the FRM form: chair from the booker, who came from check-in, new topic
   expect(screen.getByText(/Center of Excellence · Head of Department · sudah absen sendiri/)).toBeTruthy();
   fireEvent.click(screen.getByRole("checkbox", { name: /Saya Sendiri/ }));
   expect(screen.getByText("2 present · 0 absent")).toBeTruthy();
-  fireEvent.change(screen.getByLabelText("Others present"), { target: { value: " Pak Andi (klien) " } });
+  // Others present: a search of Data karyawan, or a guest's name as typed.
+  fireEvent.change(screen.getByLabelText("Others present"), { target: { value: "andi fin" } });
+  const suggest = within(screen.getByRole("listbox", { name: "Saran dari Data karyawan" }));
+  fireEvent.click(suggest.getByRole("option", { name: /Andi Wijaya/ }));
+  expect((screen.getByLabelText("Others present") as HTMLInputElement).value).toBe("");
+  fireEvent.change(screen.getByLabelText("Others present"), { target: { value: "Pak Andi (klien)" } });
+  fireEvent.keyDown(screen.getByLabelText("Others present"), { key: "Enter" });
+  expect(within(screen.getByRole("list", { name: "Peserta lain yang hadir" })).getAllByRole("listitem").map(item => item.textContent)).toEqual(["Andi Wijaya", "Pak Andi (klien)"]);
+  // Someone in the meeting is not offered.
+  fireEvent.change(screen.getByLabelText("Others present"), { target: { value: "raja" } });
+  expect(within(screen.getByRole("listbox", { name: "Saran dari Data karyawan" })).queryByText("Raja Pratama")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Others present"), { target: { value: "" } });
   // VII follows II: everyone with the form's position, Present or Absent, and the others who came.
   expect(within(screen.getByRole("table")).getAllByRole("row").map(row => row.textContent)).toEqual([
-    "#Full NameDeptPositionSign", "1.Raja PratamaCenter of ExcellenceHead of DepartmentPresent", "2.Saya SendiriCommsStaffPresent", "3.Pak Andi (klien)--Present",
+    "#Full NameDeptPositionSign", "1.Raja PratamaCenter of ExcellenceHead of DepartmentPresent", "2.Saya SendiriCommsStaffPresent", "3.Andi Wijaya--Present", "4.Pak Andi (klien)--Present",
   ]);
 
   fireEvent.change(screen.getByLabelText("Topic/Agenda Item 1"), { target: { value: "Target Q1" } });
   fireEvent.change(screen.getByLabelText("Discussion Summary & Key Points, agenda item 1"), { target: { value: "Bahas target Q1" } });
-  // A new topic goes in IV, numbered on its own.
-  fireEvent.click(screen.getByRole("button", { name: "Tambah topik baru" }));
-  fireEvent.change(screen.getByLabelText("Topic Raised 1"), { target: { value: "Seragam" } });
-  fireEvent.change(screen.getByLabelText("Decisions/Outcomes, new topic 1"), { target: { value: "Pakai batik" } });
-  // A second, empty agenda item is left out.
+  expect(screen.queryByRole("button", { name: "Tambah topik baru" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Tambah agenda" }));
-  expect(screen.getByLabelText("Topic/Agenda Item 2")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Topic/Agenda Item 2"), { target: { value: "Seragam" } });
+  fireEvent.change(screen.getByLabelText("Decisions/Outcomes, agenda item 2"), { target: { value: "Pakai batik" } });
+  // A third, empty agenda item is left out.
+  fireEvent.click(screen.getByRole("button", { name: "Tambah agenda" }));
+  expect(screen.getByLabelText("Topic/Agenda Item 3")).toBeTruthy();
+  // Each follow-up names its fields where they can be seen, the due date too.
+  fireEvent.click(screen.getByRole("button", { name: /Tambah tindak lanjut/ }));
+  expect(screen.getByText("Due Date (tenggat)")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Hapus tindak lanjut 1" }));
 
   fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-11-24" } });
   fireEvent.change(screen.getByLabelText("Time"), { target: { value: "10:00" } });
@@ -134,8 +152,8 @@ it("fills the FRM form: chair from the booker, who came from check-in, new topic
   fireEvent.click(screen.getByRole("button", { name: "Simpan draf" }));
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   expect(request.mock.calls[0][1].json).toEqual({
-    items: [{ topic: "Target Q1", discussion: "Bahas target Q1", decision: "", added: false }, { topic: "Seragam", discussion: "", decision: "Pakai batik", added: true }],
-    chairId: RAJA, absentIds: [], guests: "Pak Andi (klien)", next: { date: "2026-11-24", time: "10:00", place: "Ruang Vasuki", agenda: "" },
+    items: [{ topic: "Target Q1", discussion: "Bahas target Q1", decision: "", added: false }, { topic: "Seragam", discussion: "", decision: "Pakai batik", added: false }],
+    chairId: RAJA, absentIds: [], guests: "Andi Wijaya, Pak Andi (klien)", next: { date: "2026-11-24", time: "10:00", place: "Ruang Vasuki", agenda: "" },
     actions: [], send: false, telegramOff: false,
   });
 });
@@ -199,7 +217,7 @@ it("reads a MoM as the form has it: number, chair, who came, agenda items and ne
   })} />);
   const panel = within(screen.getByRole("region", { name: "Notulen" }));
   expect(panel.getAllByRole("heading", { level: 3 }).map(heading => heading.textContent)).toEqual([
-    "I. MEETING INFORMATION", "II. ATTENDANCE 1 present · 1 absent", "III. AGENDA ITEMS AND DISCUSSION", "IV. NEW ITEMS/TOPICS", "V. ACTION ITEMS", "VI. NEXT MEETING", "VII. ATTENDANCE LIST",
+    "I. MEETING INFORMATION", "II. ATTENDANCE 1 present · 1 absent", "III. AGENDA ITEMS AND DISCUSSION", "V. ACTION ITEMS", "VI. NEXT MEETING", "VII. ATTENDANCE LIST",
   ]);
   const part = (title: string) => panel.getAllByRole("heading", { level: 3 }).find(heading => heading.textContent?.startsWith(title))!.parentElement!;
   const facts = (title: string) => Object.fromEntries([...part(title).querySelectorAll("dt")].map(term => [term.textContent, term.nextElementSibling?.textContent]));
@@ -209,8 +227,9 @@ it("reads a MoM as the form has it: number, chair, who came, agenda items and ne
   });
   expect(facts("II.")).toEqual({ Present: "Raja Pratama, Pak Andi (klien)", Absent: "Saya Sendiri" });
   expect(within(part("III.")).getByText("Target Q1")).toBeTruthy();
-  expect(within(part("III.")).queryByText("Seragam")).toBeNull();
-  expect(within(part("IV.")).getByText("Seragam")).toBeTruthy();
+  // A topic added outside the agenda is under III too, marked.
+  expect(within(part("III.")).getByText("Seragam")).toBeTruthy();
+  expect(within(part("III.")).getByText("Topik baru")).toBeTruthy();
   expect(facts("VI.")).toEqual({ Date: "24 Nov. 26", Time: "13:30 WIB", "Location/Platform": "Ruang Vasuki", "Draft Agenda Items": "Survei venue" });
   expect(within(panel.getByRole("table")).getAllByRole("row").map(row => row.textContent)).toEqual([
     "#Full NameDeptPositionSign", "1.Raja PratamaCenter of ExcellenceHead of DepartmentPresent", "2.Saya SendiriCommsStaffAbsent", "3.Pak Andi (klien)--Present",
@@ -251,6 +270,10 @@ it("adds meeting photos one by one with progress, at most ten, and removes one a
   const { container } = render(<MinutesPanel sessionId={SESSION} initial={view({ status: "sudah", minutes: written() })} />);
   const input = container.querySelector('input[type="file"]') as HTMLInputElement;
   expect(input.multiple).toBe(true);
+  // Ambil foto opens the camera straight away; Dari galeri picks several.
+  expect(container.querySelector('input[type="file"][capture="environment"]')).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Ambil foto/ })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Dari galeri/ })).toBeTruthy();
   fireEvent.change(input, { target: { files: [new File(["a"], "a.jpg", { type: "image/jpeg" }), new File(["b"], "b.jpg", { type: "image/jpeg" })] } });
   await waitFor(() => expect(screen.getAllByRole("link", { name: /Buka foto/ })).toHaveLength(2));
   expect(upload.put).toHaveBeenCalledTimes(2);

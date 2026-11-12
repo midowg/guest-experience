@@ -156,3 +156,28 @@ details.group[open] > summary { margin-bottom: 2px; }
   }
   .readBar :global(.button) { justify-content: center; min-height: 48px; padding-inline: 8px; white-space: nowrap; }
 }
+
+/* 13 Nov 2026: Others present as a search of Data karyawan, named action fields, camera or gallery. */
+.guests { display: grid; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.chips li { display: inline-flex; align-items: center; gap: 2px; padding: 2px 2px 2px 10px; border-radius: 999px; background: var(--pw-primary-soft); color: var(--pw-text); font-size: 13px; font-weight: 600; }
+.chips button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--pw-muted); cursor: pointer; }
+.chips button:hover { color: var(--pw-text); }
+.guestSearch { position: relative; }
+.guestSearch > svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--pw-muted); pointer-events: none; }
+.guestSearch :global(.input) { padding-left: 42px !important; }
+.suggest { display: grid; gap: 2px; margin: 0; padding: 4px; list-style: none; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); background: var(--pw-surface); }
+.suggest button { display: grid; gap: 1px; width: 100%; min-height: 44px; padding: 6px 10px; border: 0; border-radius: var(--pw-r-control); background: none; color: var(--pw-text); font: inherit; text-align: left; cursor: pointer; }
+.suggest button:hover, .suggest button:focus-visible { background: var(--pw-surface-soft); }
+.suggest small { color: var(--pw-muted); font-size: 12px; }
+.actionField { display: grid; gap: 4px; min-width: 0; }
+.actionField .fieldLabel { margin: 0; }
+.actionRow > .actionField { grid-column: 1; }
+.actionRow > .taskField { grid-column: 1 / -1; }
+.actionRow > .remove { grid-column: 2; grid-row: 2 / span 2; align-self: center; }
+@media (min-width: 720px) {
+  .actionRow { align-items: end; }
+  .actionRow > .actionField, .actionRow > .taskField, .actionRow > .remove { grid-column: auto; grid-row: auto; }
+}
+.photoButtons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.photoButtons :global(.button) { justify-content: center; padding-inline: 10px; white-space: nowrap; }

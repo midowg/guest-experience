@@ -20,7 +20,7 @@ const photo = (id: string, file: string) => ({ id, url: `${PRA_WAM_PATH}/${file}
 const written: MinutesView = {
   migrated: true, needed: true, status: "sudah", canWrite: true, open: true, viewerId: "me", people, endsAt: "2026-11-10T03:30:00.000Z", drafts: true,
   title: "Appraisal team SS", startsAt: "2026-11-10T02:00:00.000Z", place: "CFC Ananta Room",
-  frm: true, attendees, defaultChairId: RAJA, photos: [photo("p1", "tv-welcome-werkudara.webp"), photo("p2", "tv-bday-flowers.webp"), photo("p3", "icon-512.png")], photosReady: true, photoHd: true,
+  frm: true, attendees, defaultChairId: RAJA, photos: [photo("p1", "tv-welcome-werkudara.webp"), photo("p2", "tv-bday-flowers.webp"), photo("p3", "icon-512.png")], photosReady: true, photoHd: true, staff: [{ id: "andi", name: "Andi", fullName: "Andi Wijaya", department: "Finance" }, { id: "sari", name: "Sari", fullName: "Sari Melati", department: "Human Resources" }],
   telegram: { ready: true, reason: null, destinations: ["Werkudara SM · Commercial"], deliveries: [{ title: "Werkudara SM · Commercial", status: "terkirim", error: null, version: 2, at: "2026-11-10T06:30:00.000Z" }] },
   minutes: {
     summary: "", decisions: "", number: "MoM/2026/11/0012",

@@ -144,6 +144,7 @@ export async function minutesView(session: Session, member: Member, now = new Da
     telegramView(session, level >= 1, write),
     frm && write ? photosHd().catch(() => false) : Promise.resolve(false),
   ]);
+  const staff = frm && write ? (await listPeople().catch(() => [])).map(person => ({ id: person.id, name: person.name, fullName: person.fullName ?? person.name, department: person.department })) : [];
   const booker = session.booking?.bookedBy.id ?? null;
   return {
     migrated, needed: needsMinutes(session), status: minutesStatus(session, !!minutes, now, !!minutes?.sentAt), minutes: shown,
@@ -151,7 +152,7 @@ export async function minutesView(session: Session, member: Member, now = new Da
     viewerId: member.id, open, endsAt: session.endsAt, drafts: level >= 1, telegram,
     title: session.title, startsAt: session.startsAt, place: session.roomName ?? session.location ?? "",
     frm, attendees, defaultChairId: booker && attendees.some(person => person.id === booker) ? booker : null,
-    photos, photosReady: frm && isR2Configured(), photoHd,
+    photos, photosReady: frm && isR2Configured(), photoHd, staff,
   };
 }
 
