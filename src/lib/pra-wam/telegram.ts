@@ -1,5 +1,5 @@
 import { departmentShorts } from "../employees";
-import type { MinutesMessage } from "./minutes-message";
+import { escapeHtml, type MinutesMessage } from "./minutes-message";
 
 /*
  * MoM lewat Telegram, tahap 1 (12 Nov 2026, migration 202611120002): one bot in one group per
@@ -95,6 +95,17 @@ export function readUpdate(update: TelegramUpdate, botUsername: string): UpdateI
   }
   if (message.chat.type === "private" && message.text) return { kind: "help", chatId: message.chat.id };
   return { kind: "ignore" };
+}
+
+/**
+ * The bot's answer in a group after an install, as Telegram HTML: the department is escaped, as
+ * Telegram's HTML rules ask (five departments hold "&"; a bare "& " happens to pass, a "<" would not).
+ */
+export function installReply(install: { scope: TelegramScope; department: string | null; topic: number | null; isForum: boolean }): string {
+  const what = install.scope === "hod" ? "MoM meeting antar HOD" : `MoM ${escapeHtml(install.department ?? "")}`;
+  const where = install.topic ? ` MoM akan masuk ke topik ${MOM_TOPIC}.`
+    : install.isForum ? ` Topik ${MOM_TOPIC} belum bisa dibuat: jadikan bot admin dengan hak Kelola topik, lalu tekan Buat topik di Admin WAM.` : "";
+  return `✅ Grup ini terpasang di WAM untuk ${what}.${where}`;
 }
 
 /** The bot's answer in a private chat (tahap 1: it only posts MoM in groups). */

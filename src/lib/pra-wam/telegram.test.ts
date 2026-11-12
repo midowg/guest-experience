@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { minutesTelegramHtml } from "./minutes-message";
-import { departmentGroups, groupTitle, installCommand, installLink, INSTALL_CODE, readUpdate, sampleMinutes, type TelegramUpdate } from "./telegram";
+import { departmentGroups, groupTitle, installCommand, installLink, installReply, INSTALL_CODE, readUpdate, sampleMinutes, type TelegramUpdate } from "./telegram";
 
 const BOT = "wam_werkudara_bot";
 const CODE = "abcdefghijklmnopqrstuvwxyz012345";
@@ -49,6 +49,15 @@ describe("readUpdate", () => {
   it("answers any private message with the help text", () => {
     expect(readUpdate(update({ message: { chat: { id: 42, type: "private" }, text: "/start" } }), BOT)).toEqual({ kind: "help", chatId: 42 });
     expect(readUpdate(update({ message: { chat: { id: 42, type: "private" }, text: "halo" } }), BOT)).toEqual({ kind: "help", chatId: 42 });
+  });
+});
+
+describe("installReply", () => {
+  it("escapes the department, as Telegram's HTML rules ask", () => {
+    expect(installReply({ scope: "departemen", department: "Sales & Marketing", topic: 7, isForum: true }))
+      .toBe("✅ Grup ini terpasang di WAM untuk MoM Sales &amp; Marketing. MoM akan masuk ke topik 📝 MoM.");
+    expect(installReply({ scope: "hod", department: null, topic: null, isForum: false })).toBe("✅ Grup ini terpasang di WAM untuk MoM meeting antar HOD.");
+    expect(installReply({ scope: "departemen", department: "Accounting", topic: null, isForum: true })).toContain("hak Kelola topik");
   });
 });
 

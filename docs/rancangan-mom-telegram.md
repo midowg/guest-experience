@@ -53,6 +53,23 @@ Temuan:
   `migrate_to_chat_id` tetap dibuat untuk berjaga-jaga.
 - Tanda ☐ tampil sebagai kotak polos, ☑ sebagai kotak centang berwarna. Keduanya terbaca jelas.
 
+Uji tahap 1 di produksi (12 November 2026, setelah migrasi `202611120002` dijalankan), semuanya berhasil:
+
+1. Admin WAM → Telegram membaca bot dari env Vercel, lalu **Pasang webhook** membuat statusnya aktif.
+2. Grup CoE dinyalakan Topics, sehingga otomatis jadi supergroup. Bot dijadikan admin dengan empat hak saja: hapus
+   pesan, undang lewat tautan, sematkan, dan kelola topik.
+3. **Pasang grup** CoE lewat Cara 2 (perintah `/start@wam_werkudara_bot <kode>` di grup). Bot membalas "Grup ini
+   terpasang di WAM untuk MoM Center of Excellence" dan membuat topik 📝 MoM sendiri.
+4. **Kirim contoh MoM** masuk ke topik 📝 MoM.
+
+Temuan:
+
+- Telegram punya **label anggota (member tag) per grup** untuk admin, termasuk bot, misalnya "Notulen CoE" di
+  samping nama WAM Werkudara. Ini menjawab keinginan "nama bot berbeda di tiap grup" tanpa membuat banyak bot.
+  Label diisi saat bot dijadikan admin.
+- Nama topik "📝 MoM" tampil dengan ikon 📝 dobel di Telegram Web, karena ikon topik juga memakai emoji yang sama.
+  Kosmetik saja; bisa diganti nama topiknya jadi "MoM".
+
 ## Bot: satu bot untuk semua grup
 
 Nama bot di Telegram berlaku sama di semua grup. Satu bot bisa masuk ke banyak grup sekaligus, jadi
@@ -340,8 +357,10 @@ MoM diperluas ke atasan langsung para peserta (keputusan pemilik). Isi lengkapny
 `supabase/migrations/2026111200NN_pw_telegram.sql` (LOCAL REVIEW ONLY, dengan catatan ROLLBACK). Nomornya
 setelah `202611120001_pw_minutes_rule.sql`, migrasi aturan wajib MoM dari sesi lain yang sedang dikerjakan.
 
-- `pw_session_minutes` + kolom `sent_at`, `sent_by`, `version` (mulai 1), `telegram_off`. Produksi masih 0
-  baris, jadi tidak perlu isi awal.
+- `pw_session_minutes` + kolom `sent_at`, `sent_by`, `version` (mulai 1), `telegram_off`: dibuat sesi lain di
+  migrasi `202611120003`, bersama form MoM baru (FRM.05.00.00.027: butir agenda, hadir/tidak hadir, meeting
+  berikutnya, foto) dan simpan atomik yang mempertahankan status tindak lanjut. Telegram cukup membaca kolom itu
+  dan memakai titik kait "Kirim MoM" dari sesi tersebut.
 - `pw_telegram_groups`: `chat_id` (PK), `title`, `scope` (`departemen` atau `hod`), `department`,
   `mom_topic_id`, `bot_status`, `added_by`, `active`.
 - `pw_telegram_members`:

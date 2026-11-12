@@ -128,7 +128,8 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
                 onClick={() => run(`sample:${group.chatId}`, { action: "sample", chatId: group.chatId })}>
                 {busy === `sample:${group.chatId}` ? "Mengirim…" : "Kirim contoh MoM"}
               </ConsoleButton>}
-              {group && group.isForum && !group.momTopicId && <ConsoleButton disabled={!ready || busy !== null} onClick={() => run(`topic:${group.chatId}`, { action: "topic", chatId: group.chatId })}>
+              {/* Not only for a group known to have topics: one that turned them on later is checked by the server. */}
+              {group && !group.momTopicId && <ConsoleButton disabled={!ready || busy !== null} onClick={() => run(`topic:${group.chatId}`, { action: "topic", chatId: group.chatId })}>
                 {busy === `topic:${group.chatId}` ? "Membuat…" : "Buat topik"}
               </ConsoleButton>}
               {!row.unknown && <ConsoleButton icon={<Link2 size={16} aria-hidden="true" />} disabled={!ready || !status.migrated || busy !== null}

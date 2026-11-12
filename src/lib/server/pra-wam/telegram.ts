@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { minutesTelegramHtml } from "@/lib/pra-wam/minutes-message";
 import {
-  departmentGroups, HELP_TEXT, INSTALL_CODE, INSTALL_MINUTES, installCommand, installLink, MOM_TOPIC, readUpdate, sampleMinutes,
+  departmentGroups, HELP_TEXT, INSTALL_CODE, INSTALL_MINUTES, installCommand, installLink, installReply, MOM_TOPIC, readUpdate, sampleMinutes,
   type BotStatus, type GroupChat, type InstallCode, type TelegramGroup, type TelegramScope, type TelegramStatus, type TelegramUpdate,
 } from "@/lib/pra-wam/telegram";
 import { praWamPath } from "@/lib/routes";
@@ -99,7 +99,10 @@ export async function createInstallCode(scope: TelegramScope, department: string
   }
   const code = randomBytes(24).toString("base64url");
   const expiresAt = new Date(now.getTime() + INSTALL_MINUTES * 60_000).toISOString();
-  const { error } = await createPrivilegedClient().from("pw_telegram_codes").insert({ code_hash: hash(code), scope, department: name, expires_at: expiresAt });
+  const client = createPrivilegedClient();
+  // Codes over a day past their end are of no use, even to explain a refusal.
+  await client.from("pw_telegram_codes").delete().lt("expires_at", new Date(now.getTime() - 86_400_000).toISOString());
+  const { error } = await client.from("pw_telegram_codes").insert({ code_hash: hash(code), scope, department: name, expires_at: expiresAt });
   if (error) { if (missing(error)) throw waiting(); databaseError(error); }
   const username = await botUsername(config);
   return { scope, department: name, link: installLink(username, code), command: installCommand(username, code), expiresAt };
@@ -150,9 +153,21 @@ async function install(config: TelegramConfig, chat: GroupChat, code: string, no
     active: true, installed_at: now.toISOString(), updated_at: now.toISOString(),
   }, { onConflict: "chat_id" });
   if (saveError) databaseError(saveError);
-  const what = scope === "hod" ? "MoM meeting antar HOD" : `MoM ${department}`;
-  const where = topic ? ` MoM akan masuk ke topik ${MOM_TOPIC}.` : chat.isForum ? ` Topik ${MOM_TOPIC} belum bisa dibuat: jadikan bot admin dengan hak Kelola topik, lalu tekan Buat topik di Admin WAM.` : "";
-  return `✅ Grup ini terpasang di WAM untuk ${what}.${where}`;
+  return installReply({ scope, department, topic, isForum: chat.isForum });
+}
+
+/** After a group became a supergroup (Topics turned on, say): its row follows the new id, with the new chat's title and topics. */
+async function migrate(config: TelegramConfig, from: number, to: number, now: Date) {
+  const client = createPrivilegedClient();
+  const { data } = await client.from("pw_telegram_groups").select("chat_id").eq("chat_id", from).maybeSingle();
+  if (!data) return;
+  const chat = await telegramCall<{ title?: string; is_forum?: boolean }>(config, "getChat", { chat_id: to }).catch(() => null);
+  // A row left over for the new id (an earlier install that was let go) gives way.
+  await client.from("pw_telegram_groups").delete().eq("chat_id", to).eq("active", false);
+  const { error } = await client.from("pw_telegram_groups").update({
+    chat_id: to, ...(chat ? { title: chat.title ?? "", is_forum: !!chat.is_forum } : {}), updated_at: now.toISOString(),
+  }).eq("chat_id", from);
+  if (error) databaseError(error);
 }
 
 /** One webhook update. Never throws: Telegram would only send it again. */
@@ -163,11 +178,14 @@ export async function handleUpdate(update: TelegramUpdate, now = new Date()): Pr
     const intent = readUpdate(update, await botUsername(config));
     const client = createPrivilegedClient();
     if (intent.kind === "install") {
-      const reply = await install(config, intent.chat, intent.code, now);
-      await send(config, intent.chat.id, reply).catch(() => undefined);
+      // A failure still answers in the group, so the admin knows to make a new link.
+      const reply = await install(config, intent.chat, intent.code, now).catch(error => {
+        console.error("telegram install", say(error));
+        return "Pemasangan gagal di WAM. Buat tautan baru di Admin WAM → Telegram, lalu coba lagi.";
+      });
+      await send(config, intent.chat.id, reply).catch(error => console.error("telegram install reply", say(error)));
     } else if (intent.kind === "migrate") {
-      // A group that became a supergroup gets a new id; the old id's row moves with it.
-      await client.from("pw_telegram_groups").update({ chat_id: intent.to, updated_at: now.toISOString() }).eq("chat_id", intent.from);
+      await migrate(config, intent.from, intent.to, now);
     } else if (intent.kind === "bot-status") {
       const { data } = await client.from("pw_telegram_groups").select("mom_topic_id").eq("chat_id", intent.chat.id).maybeSingle();
       if (!data) return;
