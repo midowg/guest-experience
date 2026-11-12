@@ -74,6 +74,34 @@ details.group[open] > summary { margin-bottom: 2px; }
 .fieldLabel { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--pw-muted); }
 .nextGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 
+/* The form's sections in its own words (FRM.05.00.00.027): "III." then the title, its italic note. */
+.sectionNo { flex: none; min-width: 2.1em; color: var(--pw-primary); }
+.groupTitle .groupCount { margin-left: 2px; }
+.note { margin: 0; font-size: 13px; font-style: italic; line-height: 1.45; color: var(--pw-muted); }
+.facts dt label { font: inherit; color: inherit; }
+.facts dd .select { width: 100%; }
+/*
+ * VII Attendance list: a bordered table like the form's. On a phone each row is two lines (number,
+ * name and Sign; then department and position) so no word is cut; the roles keep it a table.
+ */
+.listTable { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--pw-text); }
+.listTable th, .listTable td { padding: 7px 8px; border: 1px solid var(--pw-line); text-align: left; vertical-align: top; overflow-wrap: break-word; }
+.listTable th { font-weight: 700; background: var(--pw-surface-soft); }
+.listTable td:first-child, .listTable th:first-child { width: 2.5em; text-align: center; }
+.absent { color: var(--pw-muted); }
+@media (max-width: 539px) {
+  .listTable, .listTable tbody, .listTable tr, .listTable td { display: block; }
+  .listTable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .listTable tr { display: grid; grid-template-columns: 2em minmax(0, 1fr) auto; gap: 2px 8px; padding: 8px; border: 1px solid var(--pw-line); }
+  .listTable tr + tr { border-top-width: 0; }
+  .listTable td { padding: 0; border: 0; }
+  .listTable td:first-child { width: auto; grid-row: 1 / span 3; text-align: left; color: var(--pw-muted); }
+  .listTable td:nth-child(2) { grid-column: 2; font-weight: 600; }
+  .listTable td:nth-child(5) { grid-column: 3; grid-row: 1; font-weight: 600; }
+  .listTable td:nth-child(3), .listTable td:nth-child(4) { grid-column: 2 / 4; font-size: 12px; color: var(--pw-muted); }
+  .listTable td.blank { display: none; }
+}
+
 /* Reading a MoM. */
 .facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 14px; }
 .facts dt { color: var(--pw-muted); font-weight: 600; }

@@ -82,6 +82,48 @@ export function stamp(at: string): string {
   return `${p.day} ${p.month.replace(/\.$/, "")} ${p.year}, ${p.hour}.${p.minute} WIB`;
 }
 
+/*
+ * The FRM form's own words (12 Nov 2026, FRM.05.00.00.027 Minutes of Meeting): the PDF is in
+ * English like the paper form, with its date formats and its list of positions.
+ */
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const ymd = (iso: string) => { const [y, m, d] = iso.slice(0, 10).split("-").map(Number); return { y, m, d }; };
+/** The form's meeting date, "dd MMM. yy": "07 Aug. 26". */
+export function frmDate(iso: string): string {
+  const { y, m, d } = ymd(iso);
+  return `${String(d).padStart(2, "0")} ${MONTHS[m - 1]}. ${String(y % 100).padStart(2, "0")}`;
+}
+/** The form's due date, "d-MMM-yy": "20-Nov-26". */
+export function frmDue(iso: string): string {
+  const { y, m, d } = ymd(iso);
+  return `${d}-${MONTHS[m - 1]}-${String(y % 100).padStart(2, "0")}`;
+}
+/** A time as the form writes it: "09.00" or "09:00" → "09:00 WIB". */
+export const frmTime = (time: string) => `${time.replace(".", ":").slice(0, 5)} WIB`;
+/** "12 Nov 2026, 13:05 WIB": when a version was sent, in the PDF's foot. */
+export function frmStamp(at: string): string {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: TZ, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .formatToParts(new Date(at)).map(part => [part.type, part.value]));
+  return `${p.day} ${p.month.replace(/\.$/, "").slice(0, 3)} ${p.year}, ${p.hour}:${p.minute} WIB`;
+}
+
+/** Others who came, typed as a list ("Pak Andi (klien), Bu Sari"): one name each. */
+export const guestNames = (text: string | null | undefined) => (text ?? "").split(/[,;\n]/).map(name => name.trim()).filter(Boolean);
+
+/** The form's positions, as in its list. Assistant HOD has no source in Data karyawan yet. */
+export const FRM_POSITIONS = ["Board of Director", "Head of Department", "Assistant HOD", "Coordinator", "Staff"] as const;
+export type FrmPosition = (typeof FRM_POSITIONS)[number];
+/**
+ * A person's position on the form, from WAM: BOD → Board of Director; GM or HOD in any job → Head of
+ * Department; Lead → Coordinator; otherwise Staff. Nothing known (no job) → "".
+ */
+export function frmPosition(bod: boolean, posts: readonly ("gm" | "hod" | "lead" | "staf")[]): FrmPosition | "" {
+  if (bod) return "Board of Director";
+  if (posts.some(post => post === "gm" || post === "hod")) return "Head of Department";
+  if (posts.includes("lead")) return "Coordinator";
+  return posts.length ? "Staff" : "";
+}
+
 /** Cuts text to at most `max` characters, at a sentence or word end, with "…". */
 export function cut(text: string, max: number): string {
   const clean = text.trim();

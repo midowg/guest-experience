@@ -148,6 +148,7 @@ export async function minutesView(session: Session, member: Member, now = new Da
     migrated, needed: needsMinutes(session), status: minutesStatus(session, !!minutes, now, !!minutes?.sentAt), minutes: shown,
     canWrite: write, people: write ? attendees.map(({ id, name }) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, "id")) : [],
     viewerId: member.id, open, endsAt: session.endsAt, drafts: level >= 1, telegram,
+    title: session.title, startsAt: session.startsAt, place: session.roomName ?? session.location ?? "",
     frm, attendees, defaultChairId: booker && attendees.some(person => person.id === booker) ? booker : null,
     photos, photosReady: frm && isR2Configured(),
   };

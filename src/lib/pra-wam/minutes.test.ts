@@ -95,7 +95,7 @@ describe("notulen (MoM)", () => {
   it("numbers a MoM in the month of its meeting, and marks absent who did not check in once anyone did", () => {
     expect(minutesNumber(12, "2026-11-10")).toBe("MoM/2026/11/0012");
     expect(minutesNumber(12345, "2027-01-05")).toBe("MoM/2027/01/12345");
-    const person = (id: string, checkedIn: boolean) => ({ id, name: id, fullName: id, department: "", position: "", checkedIn });
+    const person = (id: string, checkedIn: boolean) => ({ id, name: id, fullName: id, department: "", position: "", frmPosition: "", checkedIn });
     expect(defaultAbsent([person("a", true), person("b", false)])).toEqual(["b"]);
     expect(defaultAbsent([person("a", false), person("b", false)])).toEqual([]);
     const { present, absent } = presence([person("a", true), person("b", false)], ["b"]);

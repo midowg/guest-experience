@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  CAPTION_LIMIT, cut, decisionLines, dueDate, escapeHtml, longDate, minutesCaption, minutesCode, minutesFileName, stamp, visibleLength, type MinutesMessage,
+  CAPTION_LIMIT, cut, decisionLines, dueDate, escapeHtml, frmDate, frmDue, frmPosition, frmStamp, frmTime, guestNames, longDate, minutesCaption, minutesCode,
+  minutesFileName, stamp, visibleLength, type MinutesMessage,
 } from "./minutes-message";
 
 const base: MinutesMessage = {
@@ -21,6 +22,33 @@ describe("dates", () => {
     expect(longDate("2026-11-10")).toBe("Selasa, 10 November 2026");
     expect(dueDate("2026-11-14")).toBe("Sab, 14 Nov");
     expect(stamp("2026-11-10T06:05:00Z")).toBe("10 Nov 2026, 13.05 WIB");
+  });
+});
+
+describe("form FRM.05.00.00.027's words", () => {
+  it("writes dates and times as the form does: dd MMM. yy, d-MMM-yy, HH:MM WIB", () => {
+    expect(frmDate("2026-08-07")).toBe("07 Aug. 26");
+    expect(frmDate("2026-11-12T00:00:00Z")).toBe("12 Nov. 26");
+    expect(frmDue("2026-11-20")).toBe("20-Nov-26");
+    expect(frmDue("2026-09-04")).toBe("4-Sep-26");
+    expect(frmTime("09.00")).toBe("09:00 WIB");
+    expect(frmTime("14:45")).toBe("14:45 WIB");
+    expect(frmStamp("2026-11-12T06:05:00Z")).toBe("12 Nov 2026, 13:05 WIB");
+    expect(frmStamp("2026-09-01T00:00:00Z")).toBe("1 Sep 2026, 07:00 WIB");
+  });
+
+  it("names a position from the form's list: BOD, then GM or HOD, Lead, else Staff", () => {
+    expect(frmPosition(true, ["staf"])).toBe("Board of Director");
+    expect(frmPosition(false, ["staf", "gm"])).toBe("Head of Department");
+    expect(frmPosition(false, ["hod"])).toBe("Head of Department");
+    expect(frmPosition(false, ["lead", "staf"])).toBe("Coordinator");
+    expect(frmPosition(false, ["staf"])).toBe("Staff");
+    expect(frmPosition(false, [])).toBe("");
+  });
+
+  it("reads others who came as one name each", () => {
+    expect(guestNames(" Pak Andi (klien), Bu Sari;\nTim vendor ,")).toEqual(["Pak Andi (klien)", "Bu Sari", "Tim vendor"]);
+    expect(guestNames(null)).toEqual([]);
   });
 });
 

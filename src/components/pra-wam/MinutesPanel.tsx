@@ -1,13 +1,14 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { CheckCircle2, ChevronDown, Download, ImagePlus, NotebookPen, Plus, Send, Trash2, X } from "lucide-react";
 import { Notice } from "@/components/ui";
-import { dayLabel } from "@/lib/pra-wam/appraisal";
+import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import {
   defaultAbsent, minutesApi, minutesItems, minutesLimits, minutesStatusLabels, presence,
-  type MinuteAction, type MinuteItem, type MinutePhoto, type MinutesView, type NextMeeting,
+  type MinuteAction, type MinuteAttendee, type MinuteItem, type MinutePhoto, type MinutesView, type NextMeeting,
 } from "@/lib/pra-wam/minutes";
+import { frmDate, frmDue, frmTime, guestNames } from "@/lib/pra-wam/minutes-message";
 import { MOM_PHOTOS_MAX } from "@/lib/pra-wam/minutes-photos";
 import { acceptPhotos } from "@/lib/pra-wam/photo";
 import { errorText, praWamRequest } from "./api";
@@ -29,16 +30,61 @@ const noNext = (): NextMeeting => ({ date: null, time: null, place: "", agenda: 
 const joined = (names: readonly string[]) => names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} dan ${names[names.length - 1]}`;
 const filled = (item: MinuteItem) => !!(item.topic.trim() || item.discussion.trim() || item.decision.trim());
 
-/** Why the agenda items cannot be saved yet, or null. */
+/** Why the agenda items (III) and new topics (IV) cannot be saved yet, or null. */
 function itemsProblem(items: readonly MinuteItem[]): string | null {
-  const given = items.filter(filled);
-  if (!given.length) return "Isi minimal satu topik dengan pembahasan atau keputusannya.";
-  for (const [index, item] of items.entries()) {
+  if (!items.some(filled)) return "Isi minimal satu agenda (III) dengan pembahasan atau keputusannya.";
+  const counted = { agenda: 0, added: 0 };
+  for (const item of items) {
+    const number = item.added ? (counted.added += 1) : (counted.agenda += 1);
     if (!filled(item)) continue;
-    if (item.topic.trim().length < 2) return `Isi topik nomor ${index + 1}.`;
+    if (item.topic.trim().length < 2) return `Isi topik ${item.added ? "topik baru (IV)" : "agenda (III)"} nomor ${number}.`;
     if (item.discussion.trim().length < 2 && item.decision.trim().length < 2) return `Isi pembahasan atau keputusan untuk "${item.topic.trim()}".`;
   }
   return null;
+}
+
+/*
+ * Form FRM.05.00.00.027 Minutes of Meeting, in its own words and order (12 Nov 2026): I Meeting
+ * Information, II Attendance, III Agenda Items and Discussion, IV New Items/Topics, V Action Items,
+ * VI Next Meeting, VII Attendance List, then the photos. Hints and buttons stay in Indonesian.
+ */
+const NEW_ITEMS_NOTE = "This section is reserved for the brief discussion of new subjects or issues that were not formally listed on the agenda.";
+const ACTIONS_NOTE = "List all tasks that resulted from the meeting, who is responsible, and the deadline.";
+
+/** A section's title as the form numbers it: "III. AGENDA ITEMS AND DISCUSSION". */
+const sectionTitle = (number: string, title: string, extra?: ReactNode) => <>
+  {number && <><span className={css.sectionNo}>{number}</span>{" "}</>}<span>{title}</span>{extra && <>{" "}{extra}</>}
+</>;
+
+/** Section I's rows: the meeting from WAM, the number, the chairperson and the minute taker. */
+function MeetingFacts({ view, number, chair, taker }: { view: MinutesView; number: string | null | undefined; chair: ReactNode; taker: string }) {
+  return <dl className={css.facts}>
+    <dt>MoM Number</dt><dd>{number ?? "Dibuat otomatis saat pertama disimpan"}</dd>
+    <dt>Meeting Title</dt><dd>{view.title || "-"}</dd>
+    <dt>Date</dt><dd>{view.startsAt ? frmDate(wibDate(view.startsAt)) : "-"}</dd>
+    <dt>Time Start</dt><dd>{view.startsAt ? frmTime(wibTime(view.startsAt)) : "-"}</dd>
+    <dt>Time End</dt><dd>{view.endsAt ? frmTime(wibTime(view.endsAt)) : "-"}</dd>
+    <dt>Location/Platform</dt><dd>{view.place || "-"}</dd>
+    {chair}
+    <dt>Minute Taker</dt><dd>{taker}</dd>
+  </dl>;
+}
+
+/** Section VII: everyone in the meeting and the others who came; Sign is Present or Absent from WAM. */
+function AttendanceList({ attendees, absentIds, guests }: { attendees: readonly MinuteAttendee[]; absentIds: readonly string[]; guests: string }) {
+  const away = new Set(absentIds);
+  const rows = [
+    ...attendees.map(person => ({ key: person.id, cells: [person.fullName, person.department || "-", person.frmPosition || "-", away.has(person.id) ? "Absent" : "Present"] })),
+    ...guestNames(guests).map((name, index) => ({ key: `guest-${index}`, cells: [name, "-", "-", "Present"] })),
+  ];
+  // The roles keep it a table for screen readers when a phone lays its rows out as blocks.
+  return <table className={css.listTable} role="table">
+    <thead role="rowgroup"><tr role="row">{["#", "Full Name", "Dept", "Position", "Sign"].map(head => <th key={head} scope="col" role="columnheader">{head}</th>)}</tr></thead>
+    <tbody role="rowgroup">{rows.map((row, index) => <tr key={row.key} role="row">
+      <td role="cell">{index + 1}.</td>
+      {row.cells.map((cell, at) => <td key={at} role="cell" className={at === 3 && cell === "Absent" ? css.absent : cell === "-" ? css.blank : undefined}>{cell}</td>)}
+    </tr>)}</tbody>
+  </table>;
 }
 
 /**
@@ -79,9 +125,9 @@ function MinutePhotos({ sessionId, photos, editable, ready, sent, onChange }: {
   }
 
   if (!photos.length && !(editable && ready)) return null;
-  return <div className={css.photos}>
+  return <div className={`${css.group} ${css.photos}`}>
     <div className={css.photosHead}>
-      <p className={css.label}>Foto meeting</p>
+      <p className={css.groupTitle}>{sectionTitle("", "DOCUMENTATION")}</p>
       {editable && <span className={css.photosCount}>{photos.length} dari {MOM_PHOTOS_MAX}</span>}
     </div>
     {photos.length > 0 && <ul className={css.gallery}>{photos.map((photo, index) => <li key={photo.id}>
@@ -135,7 +181,8 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   function draftOf(): Draft {
     const items = minutes ? minutesItems(minutes).map(item => ({ ...item })) : [];
     return {
-      items: items.length ? items : [blankItem()],
+      // Section III always has a row to fill.
+      items: items.some(item => !item.added) ? items : [blankItem(), ...items],
       chairId: minutes?.chairId ?? view.defaultChairId,
       absentIds: minutes ? [...minutes.absentIds] : defaultAbsent(attendees),
       guests: minutes?.guests ?? "", next: minutes?.next ? { ...minutes.next } : noNext(),
@@ -208,96 +255,113 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     const away = new Set(draft.absentIds);
     const here = attendees.filter(person => !away.has(person.id)).length;
     const nextGiven = !!(draft.next.date || draft.next.time || draft.next.place || draft.next.agenda);
+    const agenda = draft.items.map((item, index) => ({ item, index })).filter(({ item }) => !item.added);
+    const added = draft.items.map((item, index) => ({ item, index })).filter(({ item }) => item.added);
+    const room = draft.items.length < minutesLimits.items;
+    /** An agenda item (III) or a new topic (IV): topic, discussion summary and decisions. */
+    const itemEditor = ({ item, index }: { item: MinuteItem; index: number }, number: number, removable: boolean) => {
+      const where = item.added ? "new topic" : "agenda item";
+      return <li key={index} className={css.item}>
+        <div className={css.itemHead}>
+          <span className={css.itemNo}>{number}</span>
+          <input className="input" aria-label={`${item.added ? "Topic Raised" : "Topic/Agenda Item"} ${number}`} value={item.topic} maxLength={minutesLimits.topic}
+            placeholder={item.added ? "Topic Raised" : "Topic/Agenda Item"} onChange={event => setItem(index, { topic: event.target.value })} />
+          {removable && <button type="button" className={css.remove} aria-label={`Hapus ${item.added ? "topik baru" : "agenda"} ${number}`}
+            onClick={() => patch({ items: draft.items.filter((_, at) => at !== index) })}><Trash2 size={18} aria-hidden /></button>}
+        </div>
+        <div>
+          <label className={css.fieldLabel} htmlFor={`${uid}-discussion-${index}`}>Discussion Summary &amp; Key Points</label>
+          <textarea id={`${uid}-discussion-${index}`} className="textarea" rows={3} aria-label={`Discussion Summary & Key Points, ${where} ${number}`} maxLength={minutesLimits.text}
+            value={item.discussion} placeholder="Apa yang dibahas dan poin pentingnya" onChange={event => setItem(index, { discussion: event.target.value })} />
+        </div>
+        <div>
+          <label className={css.fieldLabel} htmlFor={`${uid}-decision-${index}`}>Decisions/Outcomes</label>
+          <textarea id={`${uid}-decision-${index}`} className="textarea" rows={2} aria-label={`Decisions/Outcomes, ${where} ${number}`} maxLength={minutesLimits.decision}
+            value={item.decision} placeholder="Yang disepakati, satu per baris" onChange={event => setItem(index, { decision: event.target.value })} />
+        </div>
+      </li>;
+    };
     return <section className={css.panel} aria-label="Notulen">
       {heading}
       <form className={css.form} onSubmit={event => { event.preventDefault(); void save(drafts && !sent); }}>
-        {!frm && <Notice tone="info">Pimpinan rapat, kehadiran, meeting berikutnya, dan foto bisa diisi setelah pembaruan sistem selesai. Sementara itu agenda disimpan sebagai ringkasan dan keputusan.</Notice>}
+        {!frm && <Notice tone="info">Chairperson, kehadiran, meeting berikutnya, dan foto bisa diisi setelah pembaruan sistem selesai. Sementara itu agenda disimpan sebagai ringkasan dan keputusan.</Notice>}
 
-        {frm && <fieldset className={css.group}>
-          <legend className={css.groupTitle}>Info meeting</legend>
-          <p className={styles.hint}>{minutes?.number ? `No. ${minutes.number}` : "Nomor MoM dibuat otomatis saat pertama disimpan."} · Notulis: {minutes?.submittedBy ?? "yang pertama menyimpan"}</p>
-          <div>
-            <label className={styles.label} htmlFor={`${uid}-chair`}>Pimpinan rapat</label>
-            <select id={`${uid}-chair`} className="select" value={draft.chairId ?? ""} onChange={event => patch({ chairId: event.target.value || null })}>
+        <fieldset className={css.group}>
+          <legend className={css.groupTitle}>{sectionTitle("I.", "MEETING INFORMATION")}</legend>
+          <MeetingFacts view={view} number={minutes?.number} taker={minutes?.submittedBy ?? "Yang pertama menyimpan"} chair={frm && <>
+            <dt><label htmlFor={`${uid}-chair`}>Chairperson</label></dt>
+            <dd><select id={`${uid}-chair`} className="select" value={draft.chairId ?? ""} onChange={event => patch({ chairId: event.target.value || null })}>
               <option value="">Belum dipilih</option>
               {people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
-            </select>
-          </div>
-        </fieldset>}
+            </select></dd>
+          </>} />
+        </fieldset>
 
         {frm && attendees.length > 0 && <fieldset className={css.group}>
-          <legend className={css.groupTitle}>Kehadiran <span className={css.groupCount}>{here} dari {attendees.length} hadir</span></legend>
+          <legend className={css.groupTitle}>{sectionTitle("II.", "ATTENDANCE", <span className={css.groupCount}>{here} present · {attendees.length - here} absent</span>)}</legend>
           <p className={styles.hint}>{attendees.some(person => person.checkedIn) ? "Diisi dari check-in. Hapus centang untuk yang tidak hadir." : "Hapus centang untuk yang tidak hadir."}</p>
           <ul className={css.people}>{attendees.map(person => <li key={person.id}>
             <label className={css.check}>
               <input type="checkbox" checked={!away.has(person.id)}
                 onChange={event => patch({ absentIds: event.target.checked ? draft.absentIds.filter(id => id !== person.id) : [...draft.absentIds, person.id] })} />
-              <span>{person.fullName}<small>{[person.department, person.position, person.checkedIn ? "check-in" : null].filter(Boolean).join(" · ") || "Data karyawan belum lengkap"}</small></span>
+              <span>{person.fullName}<small>{[person.department, person.frmPosition || person.position, person.checkedIn ? "check-in" : null].filter(Boolean).join(" · ") || "Data karyawan belum lengkap"}</small></span>
             </label>
           </li>)}</ul>
           <div>
-            <label className={styles.label} htmlFor={`${uid}-guests`}>Peserta lain yang hadir</label>
+            <label className={styles.label} htmlFor={`${uid}-guests`}>Others present</label>
             <input id={`${uid}-guests`} className="input" maxLength={minutesLimits.guests} value={draft.guests} placeholder="Tamu atau rekan di luar daftar, pisahkan dengan koma"
               onChange={event => patch({ guests: event.target.value })} />
           </div>
         </fieldset>}
 
         <fieldset className={css.group}>
-          <legend className={css.groupTitle}>Agenda dan pembahasan</legend>
-          <ol className={css.items}>{draft.items.map((item, index) => <li key={index} className={css.item}>
-            <div className={css.itemHead}>
-              <span className={css.itemNo}>{index + 1}</span>
-              <input className="input" aria-label={`Topik ${index + 1}`} value={item.topic} maxLength={minutesLimits.topic} placeholder="Topik"
-                onChange={event => setItem(index, { topic: event.target.value })} />
-              {draft.items.length > 1 && <button type="button" className={css.remove} aria-label={`Hapus topik ${index + 1}`} onClick={() => patch({ items: draft.items.filter((_, at) => at !== index) })}><Trash2 size={18} aria-hidden /></button>}
-            </div>
-            <div>
-              <label className={css.fieldLabel} htmlFor={`${uid}-discussion-${index}`}>Pembahasan dan poin penting</label>
-              <textarea id={`${uid}-discussion-${index}`} className="textarea" rows={3} aria-label={`Pembahasan topik ${index + 1}`} maxLength={minutesLimits.text} value={item.discussion} placeholder="Apa yang dibahas"
-                onChange={event => setItem(index, { discussion: event.target.value })} />
-            </div>
-            <div>
-              <label className={css.fieldLabel} htmlFor={`${uid}-decision-${index}`}>Keputusan</label>
-              <textarea id={`${uid}-decision-${index}`} className="textarea" rows={2} aria-label={`Keputusan topik ${index + 1}`} maxLength={minutesLimits.decision} value={item.decision} placeholder="Yang disepakati, satu per baris"
-                onChange={event => setItem(index, { decision: event.target.value })} />
-            </div>
-            <label className={css.checkSmall}>
-              <input type="checkbox" checked={item.added} onChange={event => setItem(index, { added: event.target.checked })} />
-              <span>Topik baru (di luar agenda)</span>
-            </label>
-          </li>)}</ol>
-          {draft.items.length < minutesLimits.items && <button type="button" className="button button--secondary" onClick={() => patch({ items: [...draft.items, blankItem()] })}><Plus size={18} aria-hidden /> Tambah topik</button>}
+          <legend className={css.groupTitle}>{sectionTitle("III.", "AGENDA ITEMS AND DISCUSSION")}</legend>
+          <ol className={css.items}>{agenda.map((entry, at) => itemEditor(entry, at + 1, agenda.length > 1))}</ol>
+          {room && <button type="button" className="button button--secondary" onClick={() => patch({ items: [...draft.items, blankItem()] })}><Plus size={18} aria-hidden /> Tambah agenda</button>}
         </fieldset>
 
         <fieldset className={css.group}>
-          <legend className={css.groupTitle}>Tindak lanjut</legend>
-          {draft.actions.length === 0 && <p className={styles.hint}>Belum ada. Tambahkan tugas dengan PIC dan tenggatnya.</p>}
+          <legend className={css.groupTitle}>{sectionTitle("IV.", "NEW ITEMS/TOPICS")}</legend>
+          <p className={css.note}>{NEW_ITEMS_NOTE}</p>
+          {added.length > 0 && <ol className={css.items}>{added.map((entry, at) => itemEditor(entry, at + 1, true))}</ol>}
+          {room && <button type="button" className="button button--secondary" onClick={() => patch({ items: [...draft.items, { ...blankItem(), added: true }] })}><Plus size={18} aria-hidden /> Tambah topik baru</button>}
+        </fieldset>
+
+        <fieldset className={css.group}>
+          <legend className={css.groupTitle}>{sectionTitle("V.", "ACTION ITEMS")}</legend>
+          <p className={css.note}>{ACTIONS_NOTE}</p>
           <ol className={css.actionRows}>{draft.actions.map((action, index) => <li key={action.id ?? `new-${index}`} className={css.actionRow}>
-            <input className="input" aria-label={`Tugas ${index + 1}`} value={action.task} maxLength={minutesLimits.task} placeholder="Tugas"
+            <input className="input" aria-label={`Action Item/Task ${index + 1}`} value={action.task} maxLength={minutesLimits.task} placeholder="Action Item/Task"
               onChange={event => setAction(index, { task: event.target.value })} />
-            <select className="select" aria-label={`PIC tugas ${index + 1}`} value={action.picId ?? ""} onChange={event => setAction(index, { picId: event.target.value || null })}>
+            <select className="select" aria-label={`PIC ${index + 1}`} value={action.picId ?? ""} onChange={event => setAction(index, { picId: event.target.value || null })}>
               <option value="">PIC belum dipilih</option>
               {people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
             </select>
-            <input className="input" type="date" aria-label={`Tenggat tugas ${index + 1}`} value={action.dueDate ?? ""} onChange={event => setAction(index, { dueDate: event.target.value || null })} />
-            <button type="button" className={css.remove} aria-label={`Hapus tugas ${index + 1}`} onClick={() => patch({ actions: draft.actions.filter((_, at) => at !== index) })}><Trash2 size={18} aria-hidden /></button>
+            <input className="input" type="date" aria-label={`Due Date ${index + 1}`} value={action.dueDate ?? ""} onChange={event => setAction(index, { dueDate: event.target.value || null })} />
+            <button type="button" className={css.remove} aria-label={`Hapus tindak lanjut ${index + 1}`} onClick={() => patch({ actions: draft.actions.filter((_, at) => at !== index) })}><Trash2 size={18} aria-hidden /></button>
           </li>)}</ol>
           {draft.actions.length < minutesLimits.actions && <button type="button" className="button button--secondary" onClick={() => patch({ actions: [...draft.actions, blankAction()] })}><Plus size={18} aria-hidden /> Tambah tindak lanjut</button>}
         </fieldset>
 
         {frm && <details className={css.group} open={nextGiven || undefined}>
-          <summary className={css.groupTitle}>Meeting berikutnya <span className={css.groupCount}>opsional</span><ChevronDown className={css.chevron} size={18} aria-hidden /></summary>
+          <summary className={css.groupTitle}>{sectionTitle("VI.", "NEXT MEETING", <span className={css.groupCount}>opsional</span>)}<ChevronDown className={css.chevron} size={18} aria-hidden /></summary>
           <div className={css.nextGrid}>
-            <div><label className={styles.label} htmlFor={`${uid}-next-date`}>Tanggal</label>
+            <div><label className={styles.label} htmlFor={`${uid}-next-date`}>Date</label>
               <input id={`${uid}-next-date`} className="input" type="date" value={draft.next.date ?? ""} onChange={event => setNext({ date: event.target.value || null })} /></div>
-            <div><label className={styles.label} htmlFor={`${uid}-next-time`}>Jam</label>
+            <div><label className={styles.label} htmlFor={`${uid}-next-time`}>Time</label>
               <input id={`${uid}-next-time`} className="input" type="time" value={draft.next.time ?? ""} onChange={event => setNext({ time: event.target.value || null })} /></div>
           </div>
-          <div><label className={styles.label} htmlFor={`${uid}-next-place`}>Tempat atau platform</label>
+          <div><label className={styles.label} htmlFor={`${uid}-next-place`}>Location/Platform</label>
             <input id={`${uid}-next-place`} className="input" maxLength={minutesLimits.place} value={draft.next.place} placeholder="Ruang rapat, Zoom, atau lainnya" onChange={event => setNext({ place: event.target.value })} /></div>
-          <div><label className={styles.label} htmlFor={`${uid}-next-agenda`}>Rancangan agenda</label>
+          <div><label className={styles.label} htmlFor={`${uid}-next-agenda`}>Draft Agenda Items</label>
             <textarea id={`${uid}-next-agenda`} className="textarea" rows={2} maxLength={minutesLimits.agenda} value={draft.next.agenda} placeholder="Yang akan dibahas" onChange={event => setNext({ agenda: event.target.value })} /></div>
         </details>}
+
+        {frm && attendees.length > 0 && <fieldset className={css.group}>
+          <legend className={css.groupTitle}>{sectionTitle("VII.", "ATTENDANCE LIST")}</legend>
+          <p className={styles.hint}>Terisi otomatis dari II. Sign: Present atau Absent dari WAM.</p>
+          <AttendanceList attendees={attendees} absentIds={draft.absentIds} guests={draft.guests} />
+        </fieldset>}
 
         {photoBlock(true)}
 
@@ -323,53 +387,70 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
 
   const failed = telegram.deliveries.filter(item => item.status === "gagal");
   const items = minutes ? minutesItems(minutes) : [];
+  const agenda = items.filter(item => !item.added);
+  const added = items.filter(item => item.added);
   // Who came is kept from the FRM form on (a MoM with a number).
   const { present, absent } = presence(attendees, minutes?.absentIds ?? []);
   const showPresence = frm && !!minutes?.number && attendees.length > 0;
   const next = minutes?.next;
+  /** Agenda items or new topics, as read. */
+  const readItems = (list: typeof items) => <ol className={css.readItems}>{list.map((item, index) => <li key={index}>
+    <p className={css.readTopic}><span className={css.itemNo}>{index + 1}</span> {item.topic}</p>
+    {item.discussion && <p className={css.text}>{item.discussion}</p>}
+    {item.decision && <p className={css.decision}><strong>Decisions/Outcomes:</strong> {item.decision}</p>}
+  </li>)}</ol>;
   return <section className={css.panel} aria-label="Notulen">
     {heading}
     {notice && <p role="status" className={css.saved}><CheckCircle2 size={16} aria-hidden /> {notice}</p>}
     {minutes ? <>
       {!sent && <Notice tone="info">Draf: belum dikirim ke siapa pun. Yang lain baru bisa membacanya setelah Kirim MoM.</Notice>}
-      {(minutes.number || minutes.chairName) && <dl className={css.facts}>
-        {minutes.number && <><dt>No. MoM</dt><dd>{minutes.number}</dd></>}
-        {frm && <><dt>Pimpinan rapat</dt><dd>{minutes.chairName ?? "Belum dipilih"}</dd></>}
-        <dt>Notulis</dt><dd>{minutes.submittedBy ?? "Peserta"}</dd>
-      </dl>}
-      {showPresence && <div>
-        <p className={css.label}>Kehadiran · {present.length} dari {attendees.length} hadir</p>
-        <p className={css.text}>Hadir: {present.map(person => person.fullName).join(", ") || "belum ada"}</p>
-        {absent.length > 0 && <p className={css.text}>Tidak hadir: {absent.map(person => person.fullName).join(", ")}</p>}
-        {minutes.guests && <p className={css.text}>Peserta lain: {minutes.guests}</p>}
-      </div>}
-      {items.length > 0 && <div>
-        <p className={css.label}>Agenda dan pembahasan</p>
-        <ol className={css.readItems}>{items.map((item, index) => <li key={index}>
-          <p className={css.readTopic}><span className={css.itemNo}>{index + 1}</span> {item.topic}{item.added && <span className={`${styles.pill} ${styles.pillLine}`}>Topik baru</span>}</p>
-          {item.discussion && <p className={css.text}>{item.discussion}</p>}
-          {item.decision && <p className={css.decision}><strong>Keputusan:</strong> {item.decision}</p>}
-        </li>)}</ol>
-      </div>}
-      {minutes.actions.length > 0 && <div>
-        <p className={css.label}>Tindak lanjut</p>
-        <ul className={css.actionList}>{minutes.actions.map(action => {
+      <section className={css.group}>
+        <h3 className={css.groupTitle}>{sectionTitle("I.", "MEETING INFORMATION")}</h3>
+        <MeetingFacts view={view} number={minutes.number ?? "-"} taker={minutes.submittedBy ?? "Peserta"}
+          chair={frm && <><dt>Chairperson</dt><dd>{minutes.chairName ?? "-"}</dd></>} />
+      </section>
+      {showPresence && <section className={css.group}>
+        <h3 className={css.groupTitle}>{sectionTitle("II.", "ATTENDANCE", <span className={css.groupCount}>{present.length} present · {absent.length} absent</span>)}</h3>
+        <dl className={css.facts}>
+          <dt>Present</dt><dd>{[...present.map(person => person.fullName), ...guestNames(minutes.guests)].join(", ") || "-"}</dd>
+          <dt>Absent</dt><dd>{absent.map(person => person.fullName).join(", ") || "-"}</dd>
+        </dl>
+      </section>}
+      <section className={css.group}>
+        <h3 className={css.groupTitle}>{sectionTitle("III.", "AGENDA ITEMS AND DISCUSSION")}</h3>
+        {agenda.length ? readItems(agenda) : <p className={css.text}>-</p>}
+      </section>
+      {frm && <section className={css.group}>
+        <h3 className={css.groupTitle}>{sectionTitle("IV.", "NEW ITEMS/TOPICS")}</h3>
+        {added.length ? readItems(added) : <p className={styles.hint}>Tidak ada topik baru.</p>}
+      </section>}
+      <section className={css.group}>
+        <h3 className={css.groupTitle}>{sectionTitle("V.", "ACTION ITEMS")}</h3>
+        {minutes.actions.length ? <ul className={css.actionList}>{minutes.actions.map(action => {
           const mayTick = sent && (canWrite || action.picId === view.viewerId);
           const text = <span className={css.actionText}>
             <span className={action.done ? css.done : undefined}>{action.task}</span>
-            <small>{[action.picName ? `PIC ${action.picName}` : "PIC belum dipilih", action.dueDate ? `tenggat ${dayLabel(action.dueDate)}` : null].filter(Boolean).join(" · ")}</small>
+            <small>{[action.picName ? `PIC ${action.picName}` : "PIC belum dipilih", action.dueDate ? `Due ${frmDue(action.dueDate)}` : null, action.done ? "Done" : "Open"].filter(Boolean).join(" · ")}</small>
           </span>;
           return <li key={action.id ?? action.task}>
             {mayTick ? <label className={css.actionItem}><input type="checkbox" checked={action.done} onChange={event => { void tick(action, event.target.checked); }} />{text}</label>
               : <div className={css.actionItem}><span className={css.bullet} aria-hidden>{action.done ? "✓" : "•"}</span>{text}</div>}
           </li>;
-        })}</ul>
-      </div>}
-      {next && <div>
-        <p className={css.label}>Meeting berikutnya</p>
-        <p className={css.text}>{[next.date ? dayLabel(next.date) : null, next.time ? `${next.time.replace(":", ".")} WIB` : null, next.place || null].filter(Boolean).join(" · ") || "Belum dijadwalkan"}</p>
-        {next.agenda && <p className={css.text}>Agenda: {next.agenda}</p>}
-      </div>}
+        })}</ul> : <p className={styles.hint}>Tidak ada tindak lanjut.</p>}
+      </section>
+      {frm && <section className={css.group}>
+        <h3 className={css.groupTitle}>{sectionTitle("VI.", "NEXT MEETING")}</h3>
+        <dl className={css.facts}>
+          <dt>Date</dt><dd>{next?.date ? frmDate(next.date) : "-"}</dd>
+          <dt>Time</dt><dd>{next?.time ? frmTime(next.time) : "-"}</dd>
+          <dt>Location/Platform</dt><dd>{next?.place || "-"}</dd>
+          <dt>Draft Agenda Items</dt><dd>{next?.agenda || "-"}</dd>
+        </dl>
+      </section>}
+      {showPresence && <section className={css.group}>
+        <h3 className={css.groupTitle}>{sectionTitle("VII.", "ATTENDANCE LIST")}</h3>
+        <AttendanceList attendees={attendees} absentIds={minutes.absentIds} guests={minutes.guests ?? ""} />
+      </section>}
       {photoBlock(true)}
       <p className={styles.hint}>
         Dicatat {minutes.submittedBy ?? "peserta"} · {stamp(minutes.submittedAt)}

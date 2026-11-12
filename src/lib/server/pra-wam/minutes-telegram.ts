@@ -87,7 +87,8 @@ export async function minutesMessage(session: Session, minutes: Minutes, hod: bo
     link: new URL(praWamPath.session(session.id), shareUrl()).toString().replace(/^https?:\/\//, ""),
     chair: minutes.chairName, items: minutesItems(minutes),
     // Who came is kept from the FRM form on (a MoM with a number); before it, only who was in it.
-    attendance: minutes.number ? attendees.map(person => ({ name: person.fullName, department: person.department, position: person.position, present: !away.has(person.id) })) : undefined,
+    // The position is the form's (Head of Department, Staff…), not the job title.
+    attendance: minutes.number ? attendees.map(person => ({ name: person.fullName, department: person.department, position: person.frmPosition, present: !away.has(person.id) })) : undefined,
     guests: minutes.guests, next: minutes.next, photoCount: photos,
   };
 }

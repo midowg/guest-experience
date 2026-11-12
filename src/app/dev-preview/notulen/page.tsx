@@ -10,15 +10,16 @@ export const dynamic = "force-dynamic";
 
 const RAJA = "11111111-1111-4111-8111-111111111111", DEWI = "22222222-2222-4222-8222-222222222222", BIMA = "33333333-3333-4333-8333-333333333333";
 const attendees: MinutesView["attendees"] = [
-  { id: RAJA, name: "Raja", fullName: "Raja Pratama", department: "Sales & Marketing", position: "Head of Department", checkedIn: true },
-  { id: DEWI, name: "Dewi", fullName: "Dewi Lestari", department: "Sales & Marketing", position: "Coordinator", checkedIn: true },
-  { id: BIMA, name: "Bima", fullName: "Bima Putra", department: "Finance", position: "Staff", checkedIn: false },
-  { id: "me", name: "Saya", fullName: "Saya Sendiri", department: "Comms", position: "Staff", checkedIn: true },
+  { id: RAJA, name: "Raja", fullName: "Raja Pratama", department: "Sales & Marketing", position: "Head of Department", frmPosition: "Head of Department", checkedIn: true },
+  { id: DEWI, name: "Dewi", fullName: "Dewi Lestari", department: "Sales & Marketing", position: "Coordinator", frmPosition: "Coordinator", checkedIn: true },
+  { id: BIMA, name: "Bima", fullName: "Bima Putra", department: "Finance", position: "Staff", frmPosition: "Staff", checkedIn: false },
+  { id: "me", name: "Saya", fullName: "Saya Sendiri", department: "Comms", position: "Staff", frmPosition: "Staff", checkedIn: true },
 ];
 const people = attendees.map(({ id, name }) => ({ id, name }));
 const photo = (id: string, file: string) => ({ id, url: `${PRA_WAM_PATH}/${file}`, width: 1280, height: 720, uploadedBy: "Raja", canDelete: true });
 const written: MinutesView = {
   migrated: true, needed: true, status: "sudah", canWrite: true, open: true, viewerId: "me", people, endsAt: "2026-11-10T03:30:00.000Z", drafts: true,
+  title: "Appraisal team SS", startsAt: "2026-11-10T02:00:00.000Z", place: "CFC Ananta Room",
   frm: true, attendees, defaultChairId: RAJA, photos: [photo("p1", "tv-welcome-werkudara.webp"), photo("p2", "tv-bday-flowers.webp"), photo("p3", "icon-512.png")], photosReady: true,
   telegram: { ready: true, reason: null, destinations: ["Werkudara SM · Commercial"], deliveries: [{ title: "Werkudara SM · Commercial", status: "terkirim", error: null, version: 2, at: "2026-11-10T06:30:00.000Z" }] },
   minutes: {

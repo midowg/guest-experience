@@ -24,7 +24,8 @@ export type MinuteItem = { topic: string; discussion: string; decision: string; 
 /** The next meeting, all optional: day (YYYY-MM-DD), time (HH:MM), place, draft agenda. */
 export type NextMeeting = { date: string | null; time: string | null; place: string; agenda: string };
 /** Someone in the meeting, for Kehadiran and the PDF's attendance list (Data karyawan). */
-export type MinuteAttendee = { id: string; name: string; fullName: string; department: string; position: string; checkedIn: boolean };
+/** `frmPosition`: the person's position on form FRM.05.00.00.027 (Head of Department, Staff…), "" when unknown. */
+export type MinuteAttendee = { id: string; name: string; fullName: string; department: string; position: string; frmPosition: string; checkedIn: boolean };
 /** A photo of the meeting: its address in WAM (opens the full photo) and who added it. */
 export type MinutePhoto = { id: string; url: string; width: number | null; height: number | null; uploadedBy: string | null; canDelete: boolean };
 
@@ -68,6 +69,10 @@ export type MinutesView = {
   open: boolean;
   /** When the meeting ends (ISO), to warn before sending a MoM of a meeting still running. */
   endsAt: string | null;
+  /** The meeting as section I of the FRM form shows it: title, start (ISO) and room or place. */
+  title: string;
+  startsAt: string | null;
+  place: string;
   /** Drafts and Kirim MoM exist (migration 202611120004); before it a save is the MoM itself. */
   drafts: boolean;
   telegram: MinutesTelegram;
