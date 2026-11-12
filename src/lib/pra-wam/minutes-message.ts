@@ -172,34 +172,60 @@ export const decisionLines = (text: string) => text.split(/\r?\n/).map(line => l
 export const decisionCount = (message: Pick<MinutesMessage, "decisions" | "items">) => message.items?.length
   ? message.items.reduce((sum, item) => sum + decisionLines(item.decision).length, 0) : decisionLines(message.decisions).length;
 
-/** The text under the PDF in Telegram: who, when, where, how much, which version. */
+/** "21 Nov": a follow-up's due date in the caption. */
+const shortDay = (iso: string) => { const p = parts(day(iso), { day: "numeric", month: "short" }); return `${p.day} ${p.month.replace(/\.$/, "")}`; };
+
+/**
+ * The text under the PDF in Telegram (13 Nov 2026, rewritten for superiors who read it at a
+ * glance): no icons, plain labels, the meeting's facts, then its decisions and the follow-ups
+ * still open (who and by when), a few of each; the rest is in the PDF. Under Telegram's limit:
+ * fewer lines first, then shorter title and place.
+ */
 export function minutesCaption(message: MinutesMessage): string {
-  const open = message.actions.filter(action => !action.done).length;
-  const decisions = decisionCount(message);
-  const counts = [
-    ...(message.items?.length ? [`${message.items.length} topik`] : []),
-    `${decisions} keputusan`,
-    `${message.actions.length} tindak lanjut${message.actions.length ? ` (${open} belum selesai)` : ""}`,
-    ...(message.photoCount ? [`${message.photoCount} foto`] : []),
-  ].join(" · ");
+  // Numbered here, so a number or bullet typed at a line's start goes.
+  const decisions = (message.items?.length ? message.items.flatMap(item => decisionLines(item.decision)) : decisionLines(message.decisions))
+    .map(line => line.replace(/^(?:\d+[.)]|[-•*])\s+/, "")).filter(Boolean);
+  const open = message.actions.filter(action => !action.done);
+  const done = message.actions.length - open.length;
   const present = message.attendance?.filter(person => person.present).length;
-  const people = message.attendance?.length ? `${present} dari ${message.attendance.length} hadir` : `${message.participants.length} peserta`;
+  const attendance = message.attendance?.length ? `${present} dari ${message.attendance.length} hadir` : `${message.participants.length} peserta`;
   const version = message.version > 1
-    ? `Versi ${message.version} · diperbarui ${stamp(message.at)}${message.changedBy ? ` oleh ${escapeHtml(message.changedBy)}` : ""}`
-    : `Versi 1 · dikirim ${stamp(message.at)} lewat WAM`;
-  const lines = [
-    `📝 <b>MoM · ${escapeHtml(message.departmentShort)} · ${escapeHtml(cut(message.title, 140))}</b>`,
-    ...(message.trial ? ["<i>UJI COBA dari WAM, bukan meeting sungguhan.</i>"] : []),
-    `${hasMinutesNumber(message) ? "No." : "Kode"}: <code>${escapeHtml(message.code)}</code>`,
-    "",
-    `${escapeHtml(message.department)} · ${longDate(message.date)}`,
-    message.from && message.to ? `${message.from}–${message.to} WIB · ${escapeHtml(cut(message.place, 80))}` : escapeHtml(cut(message.place, 80)),
-    `${message.chair ? `Pimpinan: ${escapeHtml(message.chair)} · ` : ""}${message.notetaker ? `Notulis: ${escapeHtml(message.notetaker)} · ` : ""}${people}`,
-    counts,
-    "",
-    "Detail lengkap ada di PDF terlampir.",
-    `Buka di WAM: ${escapeHtml(message.link)}`,
-    `<i>${version}</i>`,
+    ? `Versi ${message.version}, diperbarui ${stamp(message.at)}${message.changedBy ? ` oleh ${escapeHtml(message.changedBy)}` : ""}`
+    : `Dikirim ${stamp(message.at)} lewat WAM`;
+  const when = `${longDate(message.date)}${message.from && message.to ? `, ${message.from}–${message.to} WIB` : ""}`;
+  /** A numbered list of at most `shown`, then "dan N lainnya (lihat PDF)". */
+  const list = (items: readonly string[], shown: number) => [
+    ...items.slice(0, shown).map((text, index) => `${index + 1}. ${text}`),
+    ...(items.length > shown ? [`dan ${items.length - shown} lainnya (lihat PDF)`] : []),
   ];
-  return lines.join("\n");
+  const build = (shown: number, title: number, place: number, line: number) => {
+    const followUps = open.map(action => {
+      const who = [action.pic ? escapeHtml(action.pic) : null, action.dueDate ? shortDay(action.dueDate) : null].filter(Boolean).join(", ");
+      return `${escapeHtml(cut(action.task, line))}${who ? ` (${who})` : ""}`;
+    });
+    return [
+      `<b>${escapeHtml(cut(message.title, title))}</b>`,
+      `Minutes of Meeting · ${escapeHtml(message.department)}`,
+      ...(message.trial ? ["<i>Uji coba dari WAM, bukan meeting sungguhan.</i>"] : []),
+      "",
+      `${hasMinutesNumber(message) ? "Nomor" : "Kode"}: ${escapeHtml(message.code)}`,
+      `Waktu: ${when}`,
+      ...(message.place.trim() ? [`Tempat: ${escapeHtml(cut(message.place, place))}`] : []),
+      ...(message.chair ? [`Pimpinan: ${escapeHtml(message.chair)}`] : []),
+      ...(message.notetaker ? [`Notulis: ${escapeHtml(message.notetaker)}`] : []),
+      `Kehadiran: ${attendance}`,
+      ...(decisions.length ? ["", "<b>Keputusan</b>", ...list(decisions.map(text => escapeHtml(cut(text, line))), shown)] : []),
+      ...(message.actions.length ? ["", "<b>Tindak lanjut</b>",
+        ...(open.length ? list(followUps, shown) : ["Semua sudah selesai."]),
+        ...(open.length && done ? [`${done} sudah selesai.`] : [])] : []),
+      "",
+      `Dokumen lengkap di PDF terlampir${message.photoCount ? `, termasuk ${message.photoCount} foto` : ""}.`,
+      `<i>${version}</i>`,
+    ].join("\n");
+  };
+  for (const [shown, title, place, line] of [[3, 140, 80, 110], [2, 140, 80, 80], [1, 100, 60, 60], [0, 60, 40, 40]] as const) {
+    const caption = build(shown, title, place, line);
+    if (visibleLength(caption) <= CAPTION_LIMIT) return caption;
+  }
+  return build(0, 40, 30, 30);
 }

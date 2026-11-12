@@ -101,8 +101,8 @@ describe("sampleMinutes", () => {
     expect(sample.code).toBe("CoE-20261112-UJI6");
     expect(sample.actions[0].dueDate).toBe("2026-11-20");
     const caption = minutesCaption(sample);
-    expect(caption).toContain("📝 <b>MoM · CoE · Review alur kerja tim</b>");
-    expect(caption).toContain("UJI COBA");
+    expect(caption).toContain("<b>Review alur kerja tim</b>\nMinutes of Meeting · Center of Excellence");
+    expect(caption).toContain("Uji coba dari WAM");
     expect(sampleMinutes({ scope: "departemen", department: "Sales & Marketing", unit: "Commercial", chatId: "-1" }, "SM", now, "x").department).toBe("Sales & Marketing · Commercial");
     expect(sampleMinutes({ scope: "hod", department: null, unit: null, chatId: "-2" }, "", now, "x").departmentShort).toBe("HOD");
   });

@@ -63,56 +63,75 @@ describe("the MoM's code and file", () => {
 });
 
 describe("minutesCaption", () => {
-  it("says only what tells the MoM apart: code, meeting, department in full, day, hours, place, notetaker, counts, version", () => {
+  it("reads at a glance, without icons: title, kind and department, number, time, place, notetaker, attendance, decisions, open follow-ups, version", () => {
     const caption = minutesCaption(base);
-    expect(caption).toContain("📝 <b>MoM · SM · Appraisal team SS</b>");
-    expect(caption).toContain("Kode: <code>SM-20261110-4F3A</code>");
-    expect(caption).toContain("Sales &amp; Marketing · Selasa, 10 November 2026");
-    expect(caption).toContain("11.00–12.30 WIB · CFC Ananta Room");
-    expect(caption).toContain("Notulis: Raja · 3 peserta");
-    expect(caption).toContain("2 keputusan · 2 tindak lanjut (1 belum selesai)");
-    expect(caption).toContain("Detail lengkap ada di PDF terlampir.");
-    expect(caption).toContain("<i>Versi 1 · dikirim 10 Nov 2026, 13.05 WIB lewat WAM</i>");
-    // The text of the MoM itself stays in the PDF.
-    expect(caption).not.toContain("Penilaian kinerja");
-    expect(caption).not.toContain("Kirim draf KPI");
+    expect(caption.split("\n")).toEqual([
+      "<b>Appraisal team SS</b>",
+      "Minutes of Meeting · Sales &amp; Marketing",
+      "",
+      "Kode: SM-20261110-4F3A",
+      "Waktu: Selasa, 10 November 2026, 11.00–12.30 WIB",
+      "Tempat: CFC Ananta Room",
+      "Notulis: Raja",
+      "Kehadiran: 3 peserta",
+      "",
+      "<b>Keputusan</b>",
+      "1. KPI Q4 memakai format baru.",
+      "2. Evaluasi 15 Desember.",
+      "",
+      "<b>Tindak lanjut</b>",
+      "1. Kirim draf KPI (Sofyan, 14 Nov)",
+      "1 sudah selesai.",
+      "",
+      "Dokumen lengkap di PDF terlampir.",
+      "<i>Dikirim 10 Nov 2026, 13.05 WIB lewat WAM</i>",
+    ]);
+    // No icons, and neutral when forwarded to a superior.
+    expect(caption).not.toMatch(/\p{Extended_Pictographic}/u);
     expect(caption).not.toMatch(/\bkamu\b/i);
   });
 
   it("escapes what people typed, marks a sample and a later version, and stays under Telegram's limit", () => {
     const caption = minutesCaption({ ...base, title: "Q&A <draft>", trial: true, version: 3, changedBy: "Sofyan", at: "2026-11-11T02:10:00Z", actions: [], from: null, to: null });
-    expect(caption).toContain("MoM · SM · Q&amp;A &lt;draft&gt;");
-    expect(caption).toContain("<i>UJI COBA dari WAM, bukan meeting sungguhan.</i>");
-    expect(caption).toContain("Versi 3 · diperbarui 11 Nov 2026, 09.10 WIB oleh Sofyan");
-    expect(caption).toContain("0 tindak lanjut");
-    expect(caption).toContain("\nCFC Ananta Room\n");
-    const long = minutesCaption({ ...base, title: "Judul ".repeat(100), place: "Tempat ".repeat(60), department: "D".repeat(150), notetaker: "N".repeat(150), changedBy: "C".repeat(150), version: 2 });
+    expect(caption).toContain("<b>Q&amp;A &lt;draft&gt;</b>");
+    expect(caption).toContain("<i>Uji coba dari WAM, bukan meeting sungguhan.</i>");
+    expect(caption).toContain("<i>Versi 3, diperbarui 11 Nov 2026, 09.10 WIB oleh Sofyan</i>");
+    expect(caption).toContain("Waktu: Selasa, 10 November 2026\n");
+    expect(caption).not.toContain("Tindak lanjut");
+    const many = Array.from({ length: 12 }, (_, index) => `Keputusan panjang nomor ${index + 1} `.repeat(6));
+    const long = minutesCaption({
+      ...base, title: "Judul ".repeat(100), place: "Tempat ".repeat(60), department: "D".repeat(150), notetaker: "N".repeat(150), changedBy: "C".repeat(150), version: 2,
+      decisions: many.join("\n"), actions: many.map(task => ({ task, pic: "P".repeat(40), dueDate: "2026-11-20", done: false })),
+    });
     expect(visibleLength(long)).toBeLessThanOrEqual(CAPTION_LIMIT);
+    expect(long).toContain("lainnya (lihat PDF)");
     expect(escapeHtml("<b>")).toBe("&lt;b&gt;");
   });
 
-  it("with the FRM form: the number, the chair, who came, topics and decisions per item, and photos", () => {
+  it("with the FRM form: the number, the chair, who came, decisions from every item (three shown), and photos", () => {
     const caption = minutesCaption({
       ...base, code: "MoM/2026/11/0012", chair: "Sofyan", photoCount: 3,
-      items: [{ topic: "KPI", discussion: "Bahas", decision: "Format baru\nEvaluasi Desember", added: false }, { topic: "Seragam", discussion: "Usulan", decision: "", added: true }],
+      items: [{ topic: "KPI", discussion: "Bahas", decision: "Format baru\nEvaluasi Desember", added: false }, { topic: "Seragam", discussion: "Usulan", decision: "- Seragam biru\n2) Ukuran dicek", added: true }],
       attendance: [{ name: "Raja", department: "SM", position: "HOD", present: true }, { name: "Sofyan", department: "SM", position: "Staff", present: true }, { name: "Kayana", department: "SM", position: "Staff", present: false }],
     });
-    expect(caption).toContain("No.: <code>MoM/2026/11/0012</code>");
-    expect(caption).toContain("Pimpinan: Sofyan · Notulis: Raja · 2 dari 3 hadir");
-    expect(caption).toContain("2 topik · 2 keputusan · 2 tindak lanjut (1 belum selesai) · 3 foto");
+    expect(caption).toContain("Nomor: MoM/2026/11/0012");
+    expect(caption).toContain("Pimpinan: Sofyan\nNotulis: Raja\nKehadiran: 2 dari 3 hadir");
+    expect(caption).toContain("<b>Keputusan</b>\n1. Format baru\n2. Evaluasi Desember\n3. Seragam biru\ndan 1 lainnya (lihat PDF)");
+    expect(caption).toContain("Dokumen lengkap di PDF terlampir, termasuk 3 foto.");
+    expect(minutesCaption({ ...base, actions: [{ task: "Selesai", pic: null, dueDate: null, done: true }] })).toContain("<b>Tindak lanjut</b>\nSemua sudah selesai.");
     expect(minutesFileName({ code: "MoM/2026/11/0012", version: 2 })).toBe("MoM-2026-11-0012_v2.pdf");
   });
 
   it("with a nomor surat typed: it is the number in the caption and the file name, slashes and unsafe characters made safe", () => {
     const typed = { ...base, code: "001/MoM/BAS/XI/2026", numbered: true };
-    expect(minutesCaption(typed)).toContain("No.: <code>001/MoM/BAS/XI/2026</code>");
+    expect(minutesCaption(typed)).toContain("Nomor: 001/MoM/BAS/XI/2026");
     expect(minutesCaption(typed)).not.toContain("Kode:");
     expect(minutesFileName({ ...typed, version: 2 })).toBe("001-MoM-BAS-XI-2026_v2.pdf");
     expect(minutesFileName({ ...typed, trial: true })).toBe("001-MoM-BAS-XI-2026_v1_UJI.pdf");
     expect(minutesFileName({ code: "  02 / MoM: \"BAS\" <XI>|2026 ", version: 1, numbered: true })).toBe("02-MoM-BAS-XI-2026_v1.pdf");
     expect(minutesFileName({ code: "///", version: 1, numbered: true })).toBe("MoM_v1.pdf");
     // `numbered` says so, whatever the shape: a fallback code stays a code, as before.
-    expect(minutesCaption({ ...base, code: "MoM/2026/11/0012", numbered: false })).toContain("Kode: <code>MoM/2026/11/0012</code>");
+    expect(minutesCaption({ ...base, code: "MoM/2026/11/0012", numbered: false })).toContain("Kode: MoM/2026/11/0012");
     expect(minutesFileName({ code: "SM-20261110-4F3A", version: 1, numbered: false })).toBe("MoM_SM-20261110-4F3A_v1.pdf");
   });
 

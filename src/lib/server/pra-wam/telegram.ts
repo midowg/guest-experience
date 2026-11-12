@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { CAPTION_LIMIT, cut, minutesCaption, minutesFileName, visibleLength, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
+import { minutesCaption, minutesFileName, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
 import {
   canonicalTitle, departmentGroups, HELP_TEXT, INSTALL_CODE, INSTALL_MINUTES, installCommand, installLink, installReply, MOM_TOPIC, privateLink, readUpdate, sampleMinutes,
   type BotStatus, type GroupChat, type InstallCode, type TelegramGroup, type TelegramScope, type TelegramStatus, type TelegramUpdate,
@@ -211,8 +211,8 @@ export type Posted = { chatId: string; messageId: number; topicLost: boolean };
 export async function postMinutes(group: TelegramGroup, message: MinutesMessage, earlier: number | null, now = new Date(), pdf?: Uint8Array): Promise<Posted> {
   const config = requireBot();
   const bytes = pdf ?? await minutesPdf(message);
-  let caption = minutesCaption(message);
-  if (visibleLength(caption) > CAPTION_LIMIT) caption = minutesCaption({ ...message, title: cut(message.title, 60), place: cut(message.place, 40) });
+  // Kept under Telegram's limit by minutesCaption itself.
+  const caption = minutesCaption(message);
   const file = { field: "document", name: minutesFileName(message), bytes, type: "application/pdf" };
   const client = createPrivilegedClient();
   let chatId = group.chatId, topic = group.momTopicId, topicLost = false;
@@ -430,7 +430,7 @@ export async function sendMinutePhotos(group: TelegramGroup, chatId: string, cod
   if (!photos.length) return;
   const config = requireBot();
   const files = photos.slice(0, 10).map((bytes, index) => ({ field: `foto${index}`, name: `foto-${index + 1}.jpg`, bytes, type: "image/jpeg" }));
-  const media = files.map((file, index) => ({ type: "photo", media: `attach://${file.field}`, ...(index === 0 ? { caption: `📷 Foto meeting · ${code}` } : {}) }));
+  const media = files.map((file, index) => ({ type: "photo", media: `attach://${file.field}`, ...(index === 0 ? { caption: `Foto meeting · ${code}` } : {}) }));
   await telegramUploadMany(config, "sendMediaGroup", {
     chat_id: chatId, media, disable_notification: true, ...(group.momTopicId ? { message_thread_id: group.momTopicId } : {}),
   }, files);
