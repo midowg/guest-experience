@@ -131,16 +131,20 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   const drafts = view.drafts;
   const setPhotos = (photos: MinutePhoto[]) => setView(current => ({ ...current, photos }));
 
-  function start() {
-    setNotice(null); setError(null);
+  /** The form's content: the MoM as saved, or a new one (chair, who came from check-in). */
+  function draftOf(): Draft {
     const items = minutes ? minutesItems(minutes).map(item => ({ ...item })) : [];
-    setDraft({
+    return {
       items: items.length ? items : [blankItem()],
       chairId: minutes?.chairId ?? view.defaultChairId,
       absentIds: minutes ? [...minutes.absentIds] : defaultAbsent(attendees),
       guests: minutes?.guests ?? "", next: minutes?.next ? { ...minutes.next } : noNext(),
       actions: minutes ? minutes.actions.map(action => ({ ...action })) : [], telegramOff: minutes?.telegramOff ?? false,
-    });
+    };
+  }
+  function start() {
+    setNotice(null); setError(null);
+    setDraft(draftOf());
   }
   const patch = (change: Partial<Draft>) => setDraft(current => current && { ...current, ...change });
   const setAction = (index: number, change: Partial<MinuteAction>) => setDraft(current => current && { ...current, actions: current.actions.map((action, at) => at === index ? { ...action, ...change } : action) });
@@ -157,21 +161,25 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     return `${running}${where} Setelah dikirim, perubahan tetap bisa disimpan sebagai versi baru.`;
   }
 
-  async function save(send: boolean) {
-    if (!draft) return;
-    const problem = itemsProblem(draft.items);
+  /**
+   * Saves the form's content; with `send`, after asking where it goes. A draft is also sent straight
+   * from reading it (12 Nov 2026): the same content, sent.
+   */
+  async function save(send: boolean, content: Draft | null = draft) {
+    if (!content) return;
+    const problem = itemsProblem(content.items);
     if (problem) { setError(problem); return; }
-    const items = draft.items.filter(filled).map(item => ({ topic: item.topic.trim(), discussion: item.discussion.trim(), decision: item.decision.trim(), added: item.added }));
-    const actions = draft.actions.filter(action => action.task.trim()).map(({ id, task, picId, dueDate, done }) => ({ ...(id ? { id } : {}), task: task.trim(), picId, dueDate, done }));
-    if (send && !(await confirm({ title: "Kirim MoM?", body: sendQuestion(draft.telegramOff), confirmLabel: "Kirim MoM" }))) return;
+    const items = content.items.filter(filled).map(item => ({ topic: item.topic.trim(), discussion: item.discussion.trim(), decision: item.decision.trim(), added: item.added }));
+    const actions = content.actions.filter(action => action.task.trim()).map(({ id, task, picId, dueDate, done }) => ({ ...(id ? { id } : {}), task: task.trim(), picId, dueDate, done }));
+    if (send && !(await confirm({ title: "Kirim MoM?", body: sendQuestion(content.telegramOff), confirmLabel: "Kirim MoM" }))) return;
     setBusy(send ? "send" : "draft"); setError(null);
     const form = frm ? {
-      chairId: draft.chairId, absentIds: draft.absentIds, guests: draft.guests.trim(),
-      next: { date: draft.next.date || null, time: draft.next.time || null, place: draft.next.place.trim(), agenda: draft.next.agenda.trim() },
+      chairId: content.chairId, absentIds: content.absentIds, guests: content.guests.trim(),
+      next: { date: content.next.date || null, time: content.next.time || null, place: content.next.place.trim(), agenda: content.next.agenda.trim() },
     } : {};
     try {
       const result = await praWamRequest<MinutesView>(minutesApi.session(sessionId), {
-        method: "PUT", json: { items, ...form, actions, send, telegramOff: draft.telegramOff },
+        method: "PUT", json: { items, ...form, actions, send, telegramOff: content.telegramOff },
       });
       setView(result.data); setDraft(null); setNotice(result.message);
     } catch (problem) { setError(errorText(problem)); }
@@ -386,6 +394,10 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       <button type="button" className={`button ${minutes ? "button--secondary" : "button--primary"}`} onClick={start}>
         <NotebookPen size={18} aria-hidden /> {!minutes ? "Tulis notulen" : sent ? "Ubah notulen" : "Lanjutkan draf"}
       </button>
+      {/* A draft that is ready goes without opening the form again. */}
+      {minutes && !sent && drafts && <button type="button" className="button button--primary" disabled={busy !== null} onClick={() => { void save(true, draftOf()); }}>
+        <Send size={18} aria-hidden /> {busy === "send" ? "Mengirim…" : "Kirim MoM"}
+      </button>}
     </div>}
     {confirmDialog}
   </section>;

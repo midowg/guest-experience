@@ -70,6 +70,23 @@ it("keeps a draft to those in the meeting: Simpan draf sends nothing", async () 
   expect(screen.getByRole("button", { name: /Lanjutkan draf/ })).toBeTruthy();
 });
 
+it("sends a draft straight from reading it, after naming where it goes", async () => {
+  request.mockResolvedValue({ data: view({ status: "sudah", minutes: written() }), message: "MoM dikirim." });
+  render(<MinutesPanel sessionId={SESSION} initial={view({ status: "draf", minutes: written({ sentAt: null, sentBy: null, version: 0 }) })} />);
+  fireEvent.click(screen.getByRole("button", { name: /^Kirim MoM/ }));
+  const dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
+  expect(dialog.getByText(/ke grup Telegram Werkudara CoE · Center of Excellence/)).toBeTruthy();
+  fireEvent.click(dialog.getByRole("button", { name: "Kirim MoM" }));
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+  expect(request.mock.calls[0][1].json).toEqual({
+    items, chairId: RAJA, absentIds: ["me"], guests: "", next: { date: null, time: null, place: "", agenda: "" },
+    actions: [{ id: ACTION, task: "Kirim data penjualan", picId: "me", dueDate: "2026-11-14", done: false }], send: true, telegramOff: false,
+  });
+  expect(await screen.findByText("MoM dikirim.")).toBeTruthy();
+  // Sent: no Kirim MoM any more.
+  expect(screen.queryByRole("button", { name: /^Kirim MoM/ })).toBeNull();
+});
+
 it("fills the FRM form: chair from the booker, who came from check-in, new topics, others who came, and the next meeting", async () => {
   request.mockResolvedValue({ data: view({ status: "draf", minutes: written({ sentAt: null, version: 0 }) }), message: "Draf disimpan." });
   render(<MinutesPanel sessionId={SESSION} initial={view()} />);

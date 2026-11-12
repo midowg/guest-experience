@@ -258,6 +258,9 @@ export async function setActionDone(sessionId: string, actionId: string, done: b
   const view = await readMinutes(session);
   const action = view.minutes?.actions.find(item => item.id === actionId);
   if (!action) throw new ServiceError(404, "Tindak lanjut tidak ditemukan.");
+  // Telegram's message and PDF say how many are still open: changed in place, without a sound,
+  // and without a new version (only a follow-up's state changed).
+  if (view.minutes?.sentAt && !view.minutes.telegramOff) await deliverMinutes(session, view.minutes);
   return action;
 }
 
@@ -288,9 +291,17 @@ export async function missingMinutes(sessions: readonly Session[], now = new Dat
   return { migrated: true, sessions: due.filter(session => !has.has(session.id)).sort((a, b) => b.endsAt!.localeCompare(a.endsAt!)) };
 }
 
-/** The viewer's own meetings that are over and still need a MoM, newest first (Agenda's reminder). */
-export async function myMinutesDue(member: Member, now = new Date()): Promise<Session[]> {
+/**
+ * The viewer's own meetings that are over and still need a MoM, newest first (Agenda's reminder),
+ * and which of them have a draft already (to continue rather than write).
+ */
+export async function myMinutesDue(member: Member, now = new Date()): Promise<{ sessions: Session[]; drafts: string[] }> {
   const { listSessions } = await import("./sessions");
   const { sessions } = await listSessions(member);
-  return (await missingMinutes(sessions.filter(session => session.isParticipant), now)).sessions;
+  const due = (await missingMinutes(sessions.filter(session => session.isParticipant), now)).sessions;
+  if (!due.length) return { sessions: due, drafts: [] };
+  const { data, error } = await createPrivilegedClient().from("pw_session_minutes").select("session_id")
+    .in("session_id", due.map(session => session.id)).is("sent_at", null);
+  // Before migration 202611120004 there are no drafts.
+  return { sessions: due, drafts: error ? [] : (data ?? []).map(row => row.session_id as string) };
 }

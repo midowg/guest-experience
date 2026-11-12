@@ -55,7 +55,7 @@ export default async function DevMinutesPage({ searchParams }: { searchParams: P
       : written;
   return <div data-wam-look="dream" data-wam-theme={tema === "terang" ? "light" : "dark"}>
     <div className={base.app} style={{ minHeight: "100vh", padding: 20, display: "grid", gap: 20, maxWidth: 760 }}>
-      <MinutesDue sessions={[due("s1", "Appraisal team SM", "2026-11-10"), due("s2", "ITEM: HRGA x CoE", "2026-11-09")]} />
+      <MinutesDue sessions={[due("s1", "Appraisal team SM", "2026-11-10"), due("s2", "ITEM: HRGA x CoE", "2026-11-09")]} drafts={["s2"]} />
       <MinutesPanel sessionId="5e550000-0000-4000-8000-000000000001" initial={view} />
     </div>
   </div>;

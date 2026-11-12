@@ -63,7 +63,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
     myCancelledSessions(member, weekBack).catch(() => []),
     memberDepartments(member.id).catch(() => []),
     // Meetings over without a MoM (11 Nov 2026), above the board.
-    myMinutesDue(member, now).catch(() => []),
+    myMinutesDue(member, now).catch(() => ({ sessions: [], drafts: [] as string[] })),
   ]);
   const activities = bookingActivities(timelineRows, today);
   const timeline = timelineMonths(timelineRows, today).flatMap(month => month.entries);
@@ -89,7 +89,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
       viewerId={member.id} canCancelAny={cancelsAnyBooking(member)} open={open} form={form} arrive={arrive} floorPlan={settings.floorPlan} summary={summary}
       hod={hod} hodInfo={hodInfo} activities={activities} cancelled={cancelled} timeline={timeline} viewerDepartments={viewerDepartments}
       banner={<>
-        <MinutesDue sessions={minutesDue} />
+        <MinutesDue sessions={minutesDue.sessions} drafts={minutesDue.drafts} />
         {!open && <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. Booking-mu tetap bisa dilihat di bawah.</Notice></div>}
       </>} />
   </>;
