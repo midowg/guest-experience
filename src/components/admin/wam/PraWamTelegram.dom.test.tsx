@@ -67,6 +67,26 @@ it("sends a sample MoM and shows the answer", async () => {
   expect(await screen.findByText(/Contoh MoM terkirim/)).toBeTruthy();
 });
 
+it("ties the CoS's own chat with a link to open in Telegram, and shows it once tied", async () => {
+  request.mockResolvedValue({ message: "Tautan pemasangan dibuat.", data: { scope: "cos", department: null, unit: null, link: "https://t.me/wam_werkudara_bot?start=CODE", command: "/start CODE", expiresAt: "2026-11-12T05:00:00Z" } });
+  const { unmount } = render(<PraWamTelegram initial={status} />);
+  expect(screen.getByRole("heading", { name: "MoM untuk BOD (lewat CoS)" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Sambungkan CoS" }));
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+  expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({ action: "install", scope: "cos" });
+  const panel = await screen.findByRole("group", { name: "Sambungkan chat CoS" });
+  expect(within(panel).getByRole("link", { name: /Buka di Telegram/ }).getAttribute("href")).toBe("https://t.me/wam_werkudara_bot?start=CODE");
+  unmount();
+
+  const cos = { chatId: "42", title: "CoS · Rina Putri", scope: "cos" as const, department: null, unit: null, isForum: false, momTopicId: null, botStatus: "admin" as const, installedAt: "2026-11-12T04:00:00Z" };
+  render(<PraWamTelegram initial={{ ...status, groups: [...status.groups, cos] }} />);
+  expect(screen.getByText("CoS · Rina Putri")).toBeTruthy();
+  expect(screen.getByText("Tersambung")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Ganti CoS" })).toBeTruthy();
+  // Not a department row, and not counted with the groups.
+  expect(screen.getByRole("heading", { name: "Grup (2 terpasang)" })).toBeTruthy();
+});
+
 it("says what is missing before the bot or the migration is ready, and keeps the buttons off", () => {
   render(<PraWamTelegram initial={{ ...status, configured: false, bot: null, webhook: null, migrated: false, groups: [] }} />);
   expect(screen.getByText(/Bot belum disiapkan di server/)).toBeTruthy();

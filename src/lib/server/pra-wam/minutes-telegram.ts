@@ -47,6 +47,13 @@ async function placesOf(ids: readonly string[]): Promise<PersonPlace[]> {
   return places.filter(place => place.department.trim());
 }
 
+/** Whether a BOD member is in the meeting: its MoM then also goes to the CoS, who forwards it (13 Nov 2026). */
+async function withBod(ids: readonly string[]): Promise<boolean> {
+  if (!ids.length) return false;
+  const { data, error } = await createPrivilegedClient().from("pw_roles").select("employee_id").eq("role", "bod").in("employee_id", [...ids]).limit(1);
+  return !error && (data ?? []).length > 0;
+}
+
 /** A Meeting HOD or ITEM (a booking made as HOD): its MoM goes to the HOD group only. */
 export async function isHodMeeting(session: Session): Promise<boolean> {
   if (!session.booking) return false;
@@ -59,8 +66,9 @@ export async function minutesTargets(session: Session): Promise<{ ready: boolean
   if (!telegramConfig()) return { ready: false, reason: "Bot Telegram belum disiapkan.", groups: [] };
   const [ready, { migrated, groups }] = await Promise.all([teamsReady().catch(() => false), listGroups().catch(() => ({ migrated: false, groups: [] as TelegramGroup[] }))]);
   if (!ready || !migrated) return { ready: false, reason: "Pengiriman MoM ke Telegram menunggu pembaruan sistem.", groups: [] };
-  const [places, hod] = await Promise.all([participantIds(session.id).then(placesOf), isHodMeeting(session)]);
-  return { ready: true, reason: null, groups: await withChatInfo(momTargets(groups, places, hod)) };
+  const ids = await participantIds(session.id);
+  const [places, hod, bod] = await Promise.all([placesOf(ids), isHodMeeting(session), withBod(ids)]);
+  return { ready: true, reason: null, groups: await withChatInfo(momTargets(groups, places, hod, bod)) };
 }
 
 /** What a MoM's message and PDF say. The department is the booker's (the HOD group's for a Meeting HOD). */

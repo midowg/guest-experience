@@ -10,7 +10,11 @@ import { escapeHtml, minutesCode, type MinutesMessage } from "./minutes-message"
  * Marketing's three) has one group per team instead, and momTargets picks a MoM's groups.
  */
 
-export type TelegramScope = "departemen" | "hod";
+/**
+ * "cos" (13 Nov 2026, migration 202611130002): the Chief of Staff's own chat with the bot. A MoM of a
+ * meeting with a BOD member also goes there, and the CoS forwards it to the BOD.
+ */
+export type TelegramScope = "departemen" | "hod" | "cos";
 export type BotStatus = "admin" | "anggota" | "dikeluarkan";
 
 /** A group the bot posts in. */
@@ -84,9 +88,11 @@ export type PersonPlace = { department: string; unit: string };
  * group of each participant's department or team. Someone without a team in a department split into
  * teams (its GM or HOD) belongs to all of that department's team groups. Each group once.
  */
-export function momTargets(groups: readonly TelegramGroup[], places: readonly PersonPlace[], hodMeeting: boolean): TelegramGroup[] {
+export function momTargets(groups: readonly TelegramGroup[], places: readonly PersonPlace[], hodMeeting: boolean, bodMeeting = false): TelegramGroup[] {
   const live = groups.filter(group => group.botStatus !== "dikeluarkan");
-  if (hodMeeting) return live.filter(group => group.scope === "hod");
+  // A meeting with a BOD member: also to the CoS, who forwards it to the BOD (13 Nov 2026).
+  const cos = bodMeeting ? live.filter(group => group.scope === "cos") : [];
+  if (hodMeeting) return [...live.filter(group => group.scope === "hod"), ...cos];
   const picked = new Map<string, TelegramGroup>();
   for (const place of places) {
     const ofDepartment = live.filter(group => group.scope === "departemen" && same(group.department, place.department));
@@ -95,20 +101,25 @@ export function momTargets(groups: readonly TelegramGroup[], places: readonly Pe
     const hits = team ? [team] : whole ? [whole] : place.unit ? [] : ofDepartment;
     for (const group of hits) picked.set(group.chatId, group);
   }
+  for (const group of cos) picked.set(group.chatId, group);
   return [...picked.values()];
 }
 
 export const installLink = (username: string, code: string) => `https://t.me/${username}?startgroup=${code}&admin=${BOT_RIGHTS.join("+")}`;
 export const installCommand = (username: string, code: string) => `/start@${username} ${code}`;
+/** The CoS's chat: the link opens the bot itself, and Start sends the code. */
+export const privateLink = (username: string, code: string) => `https://t.me/${username}?start=${code}`;
+/** The name kept for the CoS's chat: "CoS · Rina Putri". */
+export const cosTitle = (first: string, last = "") => `CoS · ${`${first} ${last}`.trim() || "tanpa nama"}`;
 
 /** The parts of Telegram's Update this app reads. */
-type Chat = { id: number; type: "private" | "group" | "supergroup" | "channel"; title?: string; is_forum?: boolean };
+type Chat = { id: number; type: "private" | "group" | "supergroup" | "channel"; title?: string; is_forum?: boolean; first_name?: string; last_name?: string };
 export type TelegramUpdate = {
   update_id: number;
   message?: { chat: Chat; text?: string; migrate_to_chat_id?: number; message_thread_id?: number };
   my_chat_member?: { chat: Chat; new_chat_member: { status: string } };
 };
-export type GroupChat = { id: number; title: string; isForum: boolean };
+export type GroupChat = { id: number; title: string; isForum: boolean; private?: boolean };
 export type UpdateIntent =
   | { kind: "install"; chat: GroupChat; code: string }
   | { kind: "migrate"; from: number; to: number }
@@ -118,11 +129,17 @@ export type UpdateIntent =
 
 const isGroup = (chat: Chat) => chat.type === "group" || chat.type === "supergroup";
 const groupChat = (chat: Chat): GroupChat => ({ id: chat.id, title: chat.title ?? "", isForum: !!chat.is_forum });
+const privateChat = (chat: Chat): GroupChat => ({ id: chat.id, title: cosTitle(chat.first_name ?? "", chat.last_name ?? ""), isForum: false, private: true });
 const START = /^\/start(?:@([A-Za-z0-9_]+))?(?:\s+(\S+))?\s*$/;
 
 /** What an update asks of the bot. Group chatter never reaches it (privacy mode); anything unknown is ignored. */
 export function readUpdate(update: TelegramUpdate, botUsername: string): UpdateIntent {
   const member = update.my_chat_member;
+  // The CoS's chat: blocking the bot stops it; unblocking lets it post again.
+  if (member && member.chat.type === "private") {
+    const status = member.new_chat_member.status;
+    return { kind: "bot-status", chat: privateChat(member.chat), status: status === "kicked" || status === "left" ? "dikeluarkan" : "admin" };
+  }
   if (member && isGroup(member.chat)) {
     const status = member.new_chat_member.status;
     return {
@@ -139,6 +156,8 @@ export function readUpdate(update: TelegramUpdate, botUsername: string): UpdateI
     if (start[1] && start[1].toLowerCase() !== botUsername.toLowerCase()) return { kind: "ignore" };
     return { kind: "install", chat: groupChat(message.chat), code: start[2] };
   }
+  // /start CODE in a private chat: the CoS's chat being tied (the link's Start button sends it).
+  if (message.chat.type === "private" && start?.[2] && INSTALL_CODE.test(start[2])) return { kind: "install", chat: privateChat(message.chat), code: start[2] };
   if (message.chat.type === "private" && message.text) return { kind: "help", chatId: message.chat.id };
   return { kind: "ignore" };
 }
@@ -148,6 +167,7 @@ export function readUpdate(update: TelegramUpdate, botUsername: string): UpdateI
  * Telegram's HTML rules ask (five departments hold "&"; a bare "& " happens to pass, a "<" would not).
  */
 export function installReply(install: { scope: TelegramScope; department: string | null; unit?: string | null; topic: number | null; isForum: boolean }): string {
+  if (install.scope === "cos") return "✅ Chat ini terpasang di WAM untuk CoS. MoM meeting yang diikuti BOD akan masuk ke sini untuk diteruskan ke BOD.";
   const what = install.scope === "hod" ? "MoM meeting antar HOD"
     : `MoM ${escapeHtml(install.department ?? "")}${install.unit ? ` · ${escapeHtml(install.unit)}` : ""}`;
   const where = install.topic ? ` MoM akan masuk ke topik ${MOM_TOPIC}.`
@@ -168,12 +188,13 @@ export function sampleMinutes(group: Pick<TelegramGroup, "scope" | "department" 
   const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(now);
   const plus = (days: number) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date(now.getTime() + days * 86_400_000));
   const hod = group.scope === "hod";
-  const tag = hod ? "HOD" : short;
+  const cos = group.scope === "cos";
+  const tag = hod ? "HOD" : cos ? "BOD" : short;
   return {
     code: minutesCode(tag, date, `UJI${group.chatId.replace(/\D/g, "").slice(-1)}`),
     title: hod ? "Koordinasi HOD mingguan" : "Review alur kerja tim",
     departmentShort: tag,
-    department: hod ? "Grup HOD" : `${group.department ?? ""}${group.unit ? ` · ${group.unit}` : ""}`,
+    department: hod ? "Grup HOD" : cos ? "Untuk BOD (lewat CoS)" : `${group.department ?? ""}${group.unit ? ` · ${group.unit}` : ""}`,
     date, from: "09.00", to: "10.00", place: "Ruang Rapat 1",
     participants: ["Peserta 1", "Peserta 2", "Peserta 3", "Peserta 4"], notetaker: "Peserta 1",
     summary: "Alur kerja tim dibahas dari brief sampai serah terima. Tahap persetujuan paling sering terlambat & perlu batas waktu yang jelas.",

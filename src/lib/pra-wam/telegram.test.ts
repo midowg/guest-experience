@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { minutesCaption } from "./minutes-message";
-import { departmentGroups, groupTitle, installCommand, installLink, installReply, INSTALL_CODE, momTargets, readUpdate, sampleMinutes, type TelegramGroup, type TelegramUpdate } from "./telegram";
+import { cosTitle, departmentGroups, groupTitle, installCommand, installLink, installReply, INSTALL_CODE, momTargets, privateLink, readUpdate, sampleMinutes, type TelegramGroup, type TelegramUpdate } from "./telegram";
 
 const BOT = "wam_werkudara_bot";
 const CODE = "abcdefghijklmnopqrstuvwxyz012345";
@@ -56,6 +56,16 @@ describe("readUpdate", () => {
     expect(status("left")).toMatchObject({ kind: "bot-status", status: "dikeluarkan" });
   });
 
+  it("ties the CoS's own chat from /start with a code, and follows a block or unblock there", () => {
+    const chat = { id: 42, type: "private" as const, first_name: "Rina", last_name: "Putri" };
+    expect(readUpdate(update({ message: { chat, text: `/start ${CODE}` } }), BOT))
+      .toEqual({ kind: "install", chat: { id: 42, title: "CoS · Rina Putri", isForum: false, private: true }, code: CODE });
+    expect(readUpdate(update({ my_chat_member: { chat, new_chat_member: { status: "kicked" } } }), BOT)).toMatchObject({ kind: "bot-status", status: "dikeluarkan" });
+    expect(readUpdate(update({ my_chat_member: { chat, new_chat_member: { status: "member" } } }), BOT)).toMatchObject({ kind: "bot-status", status: "admin" });
+    expect(cosTitle("", "")).toBe("CoS · tanpa nama");
+    expect(privateLink(BOT, CODE)).toBe(`https://t.me/${BOT}?start=${CODE}`);
+  });
+
   it("answers any private message with the help text", () => {
     expect(readUpdate(update({ message: { chat: { id: 42, type: "private" }, text: "/start" } }), BOT)).toEqual({ kind: "help", chatId: 42 });
     expect(readUpdate(update({ message: { chat: { id: 42, type: "private" }, text: "halo" } }), BOT)).toEqual({ kind: "help", chatId: 42 });
@@ -68,6 +78,7 @@ describe("installReply", () => {
       .toBe("✅ Grup ini terpasang di WAM untuk MoM Sales &amp; Marketing. MoM akan masuk ke topik 📝 MoM.");
     expect(installReply({ scope: "hod", department: null, topic: null, isForum: false })).toBe("✅ Grup ini terpasang di WAM untuk MoM meeting antar HOD.");
     expect(installReply({ scope: "departemen", department: "Accounting", topic: null, isForum: true })).toContain("hak Kelola topik");
+    expect(installReply({ scope: "cos", department: null, topic: null, isForum: false })).toContain("diteruskan ke BOD");
   });
 });
 
@@ -93,7 +104,7 @@ describe("momTargets", () => {
   const groups = [
     group("coe", "departemen", "Center of Excellence", null), group("bs", "departemen", "Sales & Marketing", "Business Solutions"),
     group("com", "departemen", "Sales & Marketing", "Commercial"), group("cmc", "departemen", "Sales & Marketing", "Corporate Marketing Communication"),
-    group("hod", "hod", null, null), group("gone", "departemen", "Accounting", null, "dikeluarkan"),
+    group("hod", "hod", null, null), group("gone", "departemen", "Accounting", null, "dikeluarkan"), group("cos", "cos", null, null),
   ];
   const ids = (list: TelegramGroup[]) => list.map(item => item.chatId).sort();
 
@@ -109,6 +120,13 @@ describe("momTargets", () => {
 
   it("puts a head without a team (the GM of a department split into teams) in all its team groups", () => {
     expect(ids(momTargets(groups, [{ department: "Sales & Marketing", unit: "" }], false))).toEqual(["bs", "cmc", "com"]);
+  });
+
+  it("also sends a meeting with a BOD member to the CoS, who forwards it to the BOD", () => {
+    expect(ids(momTargets(groups, [{ department: "Center of Excellence", unit: "" }], false, true))).toEqual(["coe", "cos"]);
+    expect(ids(momTargets(groups, [{ department: "Center of Excellence", unit: "" }], true, true))).toEqual(["cos", "hod"]);
+    expect(ids(momTargets(groups, [{ department: "Center of Excellence", unit: "" }], false, false))).toEqual(["coe"]);
+    expect(momTargets([group("cos", "cos", null, null, "dikeluarkan")], [], false, true)).toEqual([]);
   });
 
   it("skips groups the bot was removed from, and departments with no group", () => {

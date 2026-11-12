@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { CAPTION_LIMIT, cut, minutesCaption, minutesFileName, visibleLength, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
 import {
-  departmentGroups, HELP_TEXT, INSTALL_CODE, INSTALL_MINUTES, installCommand, installLink, installReply, MOM_TOPIC, readUpdate, sampleMinutes,
+  departmentGroups, HELP_TEXT, INSTALL_CODE, INSTALL_MINUTES, installCommand, installLink, installReply, MOM_TOPIC, privateLink, readUpdate, sampleMinutes,
   type BotStatus, type GroupChat, type InstallCode, type TelegramGroup, type TelegramScope, type TelegramStatus, type TelegramUpdate,
 } from "@/lib/pra-wam/telegram";
 import { praWamPath } from "@/lib/routes";
@@ -103,6 +103,8 @@ export async function withChatInfo(groups: readonly TelegramGroup[], now = Date.
   const config = telegramConfig();
   if (!config) return [...groups];
   return Promise.all(groups.map(async group => {
+    // The CoS's own chat has no address and no members to ask about.
+    if (group.scope === "cos") return { ...group, inviteLink: null };
     const kept = chats.get(group.chatId);
     if (kept && now - kept.at < CHAT_FRESH_MS) return { ...group, title: kept.title, inviteLink: kept.link };
     if (group.botStatus === "dikeluarkan") return { ...group, inviteLink: null };
@@ -178,8 +180,12 @@ export async function createInstallCode(scope: TelegramScope, department: string
   // Codes over a day past their end are of no use, even to explain a refusal.
   await client.from("pw_telegram_codes").delete().lt("expires_at", new Date(now.getTime() - 86_400_000).toISOString());
   const { error } = await client.from("pw_telegram_codes").insert({ code_hash: hash(code), scope, department: name, expires_at: expiresAt, ...(team ? { unit: team } : {}) });
+  // Before migration 202611130002 the scope check refuses "cos".
+  if (error && scope === "cos" && error.code === "23514") throw new ServiceError(503, "Chat CoS menunggu migrasi 202611130002_pw_telegram_cos.sql.");
   if (error) { if (missing(error)) throw waiting(); databaseError(error); }
   const username = await botUsername(config);
+  // The CoS's chat: the link opens the bot, and Start sends the code from that person's own chat.
+  if (scope === "cos") return { scope, department: null, unit: null, link: privateLink(username, code), command: `/start ${code}`, expiresAt };
   return { scope, department: name, unit: team, link: installLink(username, code), command: installCommand(username, code), expiresAt };
 }
 
@@ -273,6 +279,9 @@ async function install(config: TelegramConfig, chat: GroupChat, code: string, no
   if (error) { if (missing(error)) return "Grup Telegram belum siap di WAM (menunggu migrasi)."; databaseError(error); }
   if (!row || row.used_at || Date.parse(row.expires_at) < now.getTime()) return "Kode pemasangan tidak dikenali atau sudah kedaluwarsa. Buat tautan baru di Admin WAM → Telegram.";
   const scope = row.scope as TelegramScope;
+  // A CoS code is for a person's own chat with the bot; the others for a group.
+  if (scope === "cos" && !chat.private) return "Kode ini untuk chat pribadi CoS dengan bot, bukan untuk grup. Buka tautannya dari akun Telegram CoS.";
+  if (scope !== "cos" && chat.private) return "Kode ini untuk grup. Tambahkan bot ke grup departemennya, lalu kirim kodenya di grup itu.";
   const department = row.department as string | null;
   const unit = ((row as { unit?: string | null }).unit ?? "").trim() || null;
   // Mark the code used first, so a repeated update cannot install twice.
@@ -287,7 +296,7 @@ async function install(config: TelegramConfig, chat: GroupChat, code: string, no
   const sameSpot = !department ? earlier : unit ? earlier.ilike("department", like(department)).ilike("unit", like(unit)) : earlier.ilike("department", like(department));
   const { error: clearError } = await sameSpot;
   if (clearError) databaseError(clearError);
-  const status = await botStatusIn(config, chat.id);
+  const status = chat.private ? "admin" : await botStatusIn(config, chat.id);
   const { data: before } = await client.from("pw_telegram_groups").select("mom_topic_id").eq("chat_id", chat.id).maybeSingle();
   const topic = chat.isForum ? before?.mom_topic_id ?? await openTopic(config, chat.id) : null;
   const { error: saveError } = await client.from("pw_telegram_groups").upsert({

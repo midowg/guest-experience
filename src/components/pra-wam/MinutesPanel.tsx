@@ -398,15 +398,15 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
         <fieldset className={css.group} {...part("info")}>
           <legend className={css.groupTitle}>{sectionTitle("I.", "MEETING INFORMATION")}</legend>
           <MeetingFacts view={view} taker={minutes?.submittedBy ?? "Yang pertama menyimpan"} number={<>
-            <dt><label htmlFor={`${uid}-number`}>MoM Number</label></dt>
-            <dd><div className={css.numberField}>
+            <dt className={css.wide}><label htmlFor={`${uid}-number`}>MoM Number</label></dt>
+            <dd className={css.wide}><div className={css.numberField}>
               <input id={`${uid}-number`} className="input" value={draft.docNumber} maxLength={MOM_DOC_NUMBER_MAX} autoComplete="off"
                 placeholder={minutes?.number ?? "Nomor surat MoM"} onChange={event => patch({ docNumber: event.target.value })} />
               <a className="button button--secondary" href={MOM_NUMBER_REGISTER} target="_blank" rel="noopener">Ambil nomor <ExternalLink size={16} aria-hidden /><span className="sr-only"> (tab baru)</span></a>
             </div></dd>
           </>} chair={frm && <>
-            <dt><label htmlFor={`${uid}-chair`}>Chairperson</label></dt>
-            <dd><select id={`${uid}-chair`} className="select" value={draft.chairId ?? ""} onChange={event => patch({ chairId: event.target.value || null })}>
+            <dt className={css.wide}><label htmlFor={`${uid}-chair`}>Chairperson</label></dt>
+            <dd className={css.wide}><select id={`${uid}-chair`} className="select" value={draft.chairId ?? ""} onChange={event => patch({ chairId: event.target.value || null })}>
               <option value="">Belum dipilih</option>
               {people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
             </select></dd>
@@ -500,7 +500,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
         </div>}
         {phone && <div className={css.stepBar}>
           <button key="kembali" type="button" className="button button--secondary" disabled={busy !== null} onClick={() => (at === 0 ? cancel() : go(at - 1))}>{at === 0 ? "Batal" : "Kembali"}</button>
-          {drafts && !sent && <button key="draf" type="button" className="button button--secondary" disabled={busy !== null} onClick={() => { void save(false); }}>{busy === "draft" ? "Menyimpan…" : "Simpan draf"}</button>}
+          {drafts && !sent && <button key="draf" type="button" className={`button button--secondary ${css.draftButton}`} disabled={busy !== null} onClick={() => { void save(false); }}>{busy === "draft" ? "Menyimpan…" : "Simpan draf"}</button>}
           {/* Separate keys: React must not turn the tapped Lanjut into the submit button of the last step (it would send at once). */}
           {last ? <button key="kirim" type="submit" className="button button--primary" disabled={busy !== null}>{primary}</button>
             : <button key="lanjut" type="button" className="button button--primary" onClick={event => { event.preventDefault(); go(at + 1); }}>Lanjut <ChevronRight size={18} aria-hidden /></button>}
@@ -596,7 +596,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
         <NotebookPen size={18} aria-hidden /> {!minutes ? "Tulis notulen" : sent ? "Ubah notulen" : "Lanjutkan draf"}
       </button>}
       {/* A draft that is ready goes without opening the form again. */}
-      {canWrite && minutes && !sent && drafts && <button type="button" className="button button--primary" disabled={busy !== null} onClick={() => { void save(true, draftOf()); }}>
+      {canWrite && minutes && !sent && drafts && <button type="button" className={`button button--primary ${css.readMain}`} disabled={busy !== null} onClick={() => { void save(true, draftOf()); }}>
         <Send size={18} aria-hidden /> {busy === "send" ? "Mengirim…" : "Kirim MoM"}
       </button>}
     </div>}

@@ -2,20 +2,61 @@
 .bot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
 .botInfo { display: grid; gap: 4px; min-width: 0; }
 .botInfo p { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
-.muted { margin: 0; color: var(--cs-muted); font-size: 13px; }
+.muted { margin: 0; color: var(--cs-muted); font-size: 13px; overflow-wrap: anywhere; }
 .warn { margin: 0; color: var(--cs-bad-fg); font-size: 13px; }
+.hint { margin: 0; color: var(--cs-warn-fg, var(--cs-muted)); font-size: 13px; }
 
+/*
+ * One row per group (13 Nov 2026, tidied): its name and the bot's standing on top, the group (its
+ * address when there is one) under it, then at most two buttons and "Lainnya" for the rest. On a
+ * phone the buttons share the row's width evenly; from 900px they sit at the row's right.
+ */
 .rows { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
-.row { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); }
+.row { display: grid; gap: 12px; padding: 14px 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: var(--cs-surface); min-width: 0; }
+.single { margin-top: 12px; }
 .rowMain { display: grid; gap: 6px; min-width: 0; }
-.rowMain strong { font-size: 15px; overflow-wrap: anywhere; }
+.rowHead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.rowHead strong { font-size: 15px; overflow-wrap: anywhere; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0; font-size: 13px; overflow-wrap: anywhere; }
-.buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.groupLink { display: inline-flex; align-items: center; gap: 4px; color: var(--cs-primary); font-weight: 600; text-decoration: none; }
+.groupLink:hover { text-decoration: underline; }
+.groupLink svg { flex: none; }
+
+.actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: 0; }
+.actions > :global(*) { min-width: 0; }
+.actions > button, .actions > a, .actions > .more > summary { width: 100%; }
+/* The main action across the row; the others share the next one (one alone takes it whole). Words may wrap rather than be cut. */
+.actions > :first-child, .actions > :first-child + :last-child { grid-column: 1 / -1; }
+.actions > button, .actions > a { white-space: normal; text-align: center; }
+
+/* Lainnya: the rarely used actions, under one button. */
+.more { position: relative; min-width: 0; }
+.moreButton {
+  display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; box-sizing: border-box;
+  border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-surface); color: var(--cs-text);
+  font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; list-style: none; user-select: none;
+}
+.moreButton::-webkit-details-marker { display: none; }
+.moreButton:hover { background: var(--cs-surface-2); }
+.moreButton:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
+.more[open] > .moreButton { background: var(--cs-surface-2); }
+/* On a phone the list opens in place across the row (nothing hangs past the screen); from 900px it drops down. */
+.more[open] { grid-column: 1 / -1; }
+.moreList { display: grid; gap: 6px; margin-top: 6px; padding: 8px; border: 1px solid var(--cs-line); border-radius: 14px; background: var(--cs-surface); }
+.moreList > button { width: 100%; justify-content: flex-start; }
+
 @media (min-width: 900px) {
   .row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; }
+  .actions > button, .actions > a, .actions > .more > summary { width: auto; }
+  .more[open], .actions > :first-child, .actions > :first-child + :last-child { grid-column: auto; }
+  .actions > button, .actions > a { white-space: nowrap; }
+  .moreList { position: absolute; right: 0; top: calc(100% + 6px); z-index: 5; min-width: 200px; margin: 0; box-shadow: 0 12px 32px rgb(0 0 0 / 0.18); }
   .code { grid-column: 1 / -1; }
 }
 
-.code { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--cs-primary); border-radius: 14px; background: var(--cs-surface-2); }
-.code p { margin: 0; font-size: 14px; }
+.code { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--cs-primary); border-radius: 14px; background: var(--cs-surface-2); min-width: 0; }
+.code p { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.codeButtons { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+@media (min-width: 900px) { .codeButtons { display: flex; flex-wrap: wrap; } }
 .command { display: block; padding: 10px 12px; border: 1px solid var(--cs-line); border-radius: 10px; background: var(--cs-surface); font-family: ui-monospace, monospace; font-size: 13px; overflow-wrap: anywhere; user-select: all; }

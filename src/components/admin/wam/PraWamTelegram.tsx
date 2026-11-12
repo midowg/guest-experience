@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Copy, ExternalLink, Link2, Send } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Copy, ExternalLink, Link2, MoreHorizontal, Send } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, ConsoleButtonLink, PageHeader, Pill, type ConsoleTone, type Crumb } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
@@ -53,6 +53,17 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
   const [message, setMessage] = useState<Message>(null);
   const [codes, setCodes] = useState<Record<string, InstallCode>>({});
   const [copied, setCopied] = useState<string | null>(null);
+  // An open Lainnya closes on a tap elsewhere or Esc.
+  useEffect(() => {
+    const close = (event: Event) => {
+      for (const menu of document.querySelectorAll<HTMLDetailsElement>(`details.${css.more}[open]`)) {
+        if (event instanceof KeyboardEvent ? event.key === "Escape" : !menu.contains(event.target as Node)) menu.open = false;
+      }
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", close); };
+  }, []);
 
   async function run(key: string, body: Record<string, unknown>) {
     setBusy(key); setMessage(null);
@@ -83,7 +94,8 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
   const webhook = status.webhook;
   const ready = status.configured && !!status.bot;
   const rows = telegramRows(status);
-  const installed = status.groups.length;
+  const cos = status.groups.find(group => group.scope === "cos") ?? null;
+  const installed = status.groups.filter(group => group.scope !== "cos").length;
   return <div className="stack">
     <PageHeader crumbs={crumbs} title="Telegram"
       subtitle="Bot WAM Werkudara mengirim MoM ke grup Telegram tiap departemen dan grup HOD. Pasang bot ke setiap grup dari sini."
@@ -113,56 +125,68 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
 
     <Card title={`Grup (${installed} terpasang)`}>
       <p className={css.muted}>
-        Buat grup di Telegram dengan nama yang disarankan. Kalau ingin topik {MOM_TOPIC}, ubah grup ke supergroup dan nyalakan Topics dulu,
-        baru tekan Pasang grup. Tautannya berlaku 30 menit dan sekali pakai.
+        Buat grup di Telegram dengan nama yang disarankan, tekan Pasang grup, lalu jadikan bot admin di grup itu. Kalau ingin topik {MOM_TOPIC},
+        nyalakan Topics di grup dulu. Tautannya berlaku 30 menit dan sekali pakai.
       </p>
       <ul className={css.rows}>
         {rows.map(row => {
           const code = codes[row.key];
           const group = row.group;
           const [botText, botTone] = group ? botLabels[group.botStatus] : ["", "neutral" as ConsoleTone];
+          const gone = group?.botStatus === "dikeluarkan";
+          const install = !row.unknown && <ConsoleButton variant={group && !gone ? "secondary" : "primary"} icon={<Link2 size={16} aria-hidden="true" />} disabled={!ready || !status.migrated || busy !== null}
+            onClick={() => run(row.key, { action: "install", scope: row.scope, department: row.department, unit: row.unit })}>
+            {busy === row.key ? "Membuat…" : group ? "Pasang ulang" : "Pasang grup"}
+          </ConsoleButton>;
           return <li key={row.key} className={css.row}>
             <div className={css.rowMain}>
-              <strong>{row.label}</strong>
+              <div className={css.rowHead}>
+                <strong>{row.label}</strong>
+                {group && <Pill tone={botTone}>{botText}</Pill>}
+              </div>
               {group
                 ? <p className={css.meta}>
-                    <span>{group.title || "Tanpa nama"}</span>
-                    <Pill tone={botTone}>{botText}</Pill>
+                    {group.inviteLink
+                      ? <a className={css.groupLink} href={group.inviteLink} target="_blank" rel="noopener">{group.title || "Tanpa nama"} <ExternalLink size={14} aria-hidden="true" /><span className="sr-only"> (buka grup, tab baru)</span></a>
+                      : <span>{group.title || "Tanpa nama"}</span>}
                     <Pill tone={group.momTopicId ? "ok" : "neutral"}>{group.momTopicId ? `Topik ${MOM_TOPIC}` : group.isForum ? "Topik belum dibuat" : "Tanpa topik"}</Pill>
                     {row.unknown && <Pill tone="warn">Tidak ada di Data karyawan</Pill>}
-                    {group.inviteLink && <a href={group.inviteLink} target="_blank" rel="noopener">Buka grup<span className="sr-only"> {group.title} (tab baru)</span></a>}
                   </p>
-                : <p className={css.meta}><span className={css.muted}>Belum ada grup · nama disarankan: {row.suggested}</span></p>}
+                : <p className={css.muted}>Belum ada grup · nama disarankan: {row.suggested}</p>}
+              {group?.botStatus === "anggota" && <p className={css.hint}>Jadikan bot admin di grup ini (Edit → Administrators) agar alamat grupnya bisa dibuka dari WAM.</p>}
             </div>
-            <div className={css.buttons}>
-              {group?.inviteLink && <ConsoleButton icon={<Copy size={16} aria-hidden="true" />} onClick={() => copy(`invite:${group.chatId}`, group.inviteLink!)}>
-                {copied === `invite:${group.chatId}` ? "Alamat tersalin" : "Salin alamat grup"}
-              </ConsoleButton>}
-              {group && <ConsoleButton variant="primary" icon={<Send size={16} aria-hidden="true" />} disabled={!ready || busy !== null}
+            <div className={css.actions}>
+              {group && !gone && <ConsoleButton variant="primary" icon={<Send size={16} aria-hidden="true" />} disabled={!ready || busy !== null}
                 onClick={() => run(`sample:${group.chatId}`, { action: "sample", chatId: group.chatId })}>
                 {busy === `sample:${group.chatId}` ? "Mengirim…" : "Kirim contoh MoM"}
               </ConsoleButton>}
-              {/* Not only for a group known to have topics: one that turned them on later is checked by the server. */}
-              {group && !group.momTopicId && <ConsoleButton disabled={!ready || busy !== null} onClick={() => run(`topic:${group.chatId}`, { action: "topic", chatId: group.chatId })}>
-                {busy === `topic:${group.chatId}` ? "Membuat…" : "Buat topik"}
+              {(!group || gone) && install}
+              {group?.inviteLink && <ConsoleButton icon={<Copy size={16} aria-hidden="true" />} onClick={() => copy(`invite:${group.chatId}`, group.inviteLink!)}>
+                {copied === `invite:${group.chatId}` ? "Alamat tersalin" : "Salin alamat"}
               </ConsoleButton>}
-              {!row.unknown && <ConsoleButton icon={<Link2 size={16} aria-hidden="true" />} disabled={!ready || !status.migrated || busy !== null}
-                onClick={() => run(row.key, { action: "install", scope: row.scope, department: row.department, unit: row.unit })}>
-                {busy === row.key ? "Membuat…" : group ? "Pasang ulang" : "Pasang grup"}
-              </ConsoleButton>}
-              {group && <ConsoleButton disabled={busy !== null} onClick={() => {
-                if (window.confirm(`Lepas ${group.title} dari WAM? MoM tidak dikirim ke grup itu lagi. Bot tetap di grup sampai dikeluarkan.`)) void run(`remove:${group.chatId}`, { action: "remove", chatId: group.chatId });
-              }}>Lepas</ConsoleButton>}
+              {group && <details className={css.more}>
+                <summary className={css.moreButton}><MoreHorizontal size={16} aria-hidden="true" /> Lainnya</summary>
+                <div className={css.moreList} onClick={event => { if ((event.target as HTMLElement).closest("button")) (event.currentTarget.parentElement as HTMLDetailsElement).open = false; }}>
+                  {/* Not only for a group known to have topics: one that turned them on later is checked by the server. */}
+                  {!group.momTopicId && <ConsoleButton disabled={!ready || busy !== null} onClick={() => run(`topic:${group.chatId}`, { action: "topic", chatId: group.chatId })}>
+                    {busy === `topic:${group.chatId}` ? "Membuat…" : "Buat topik"}
+                  </ConsoleButton>}
+                  {!gone && install}
+                  <ConsoleButton disabled={busy !== null} onClick={() => {
+                    if (window.confirm(`Lepas ${group.title} dari WAM? MoM tidak dikirim ke grup itu lagi. Bot tetap di grup sampai dikeluarkan.`)) void run(`remove:${group.chatId}`, { action: "remove", chatId: group.chatId });
+                  }}>Lepas</ConsoleButton>
+                </div>
+              </details>}
             </div>
             {code && <div className={css.code} role="group" aria-label={`Pasang grup ${row.label}`}>
               <p><strong>Cara 1:</strong> buka tautan ini di perangkat yang ada Telegram-nya, pilih grup <strong>{row.suggested}</strong>, lalu tambahkan bot sebagai admin.</p>
-              <div className={css.buttons}>
+              <div className={css.codeButtons}>
                 <ConsoleButtonLink variant="primary" href={code.link} target="_blank" rel="noopener" icon={<ExternalLink size={16} aria-hidden="true" />}>Buka di Telegram<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>
                 <ConsoleButton icon={<Copy size={16} aria-hidden="true" />} onClick={() => copy(`link:${row.key}`, code.link)}>{copied === `link:${row.key}` ? "Tautan tersalin" : "Salin tautan"}</ConsoleButton>
               </div>
               <p><strong>Cara 2</strong> (bot sudah ada di grup): kirim perintah ini di grup tersebut.</p>
               <code className={css.command}>{code.command}</code>
-              <div className={css.buttons}>
+              <div className={css.codeButtons}>
                 <ConsoleButton icon={<Copy size={16} aria-hidden="true" />} onClick={() => copy(`cmd:${row.key}`, code.command)}>{copied === `cmd:${row.key}` ? "Perintah tersalin" : "Salin perintah"}</ConsoleButton>
               </div>
               <p className={css.muted}>Berlaku sampai {time(code.expiresAt)} WIB. Setelah bot membalas “Grup ini terpasang”, tekan Muat ulang.</p>
@@ -170,6 +194,41 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
           </li>;
         })}
       </ul>
+    </Card>
+
+    {/* 13 Nov 2026: a meeting with a BOD member also goes to the CoS's own chat, who forwards it to the BOD. */}
+    <Card title="MoM untuk BOD (lewat CoS)">
+      <p className={css.muted}>MoM meeting yang diikuti BOD juga dikirim ke chat Telegram pribadi CoS. CoS yang meneruskannya ke BOD.</p>
+      <div className={`${css.row} ${css.single}`}>
+        <div className={css.rowMain}>
+          <div className={css.rowHead}>
+            <strong>{cos ? cos.title : "Chat CoS"}</strong>
+            {cos && <Pill tone={cos.botStatus === "dikeluarkan" ? "bad" : "ok"}>{cos.botStatus === "dikeluarkan" ? "Bot diblokir" : "Tersambung"}</Pill>}
+          </div>
+          <p className={css.muted}>{!cos ? "Belum tersambung. Buat tautan, lalu kirim ke CoS." : cos.botStatus === "dikeluarkan" ? "CoS memblokir bot. Minta CoS membuka bot lagi dan menekan Start, atau sambungkan ulang." : `Tersambung sejak ${dateTime(cos.installedAt)}.`}</p>
+        </div>
+        <div className={css.actions}>
+          {cos && cos.botStatus !== "dikeluarkan" && <ConsoleButton variant="primary" icon={<Send size={16} aria-hidden="true" />} disabled={!ready || busy !== null}
+            onClick={() => run(`sample:${cos.chatId}`, { action: "sample", chatId: cos.chatId })}>
+            {busy === `sample:${cos.chatId}` ? "Mengirim…" : "Kirim contoh MoM"}
+          </ConsoleButton>}
+          <ConsoleButton variant={cos && cos.botStatus !== "dikeluarkan" ? "secondary" : "primary"} icon={<Link2 size={16} aria-hidden="true" />} disabled={!ready || !status.migrated || busy !== null}
+            onClick={() => run("cos", { action: "install", scope: "cos" })}>
+            {busy === "cos" ? "Membuat…" : cos ? "Ganti CoS" : "Sambungkan CoS"}
+          </ConsoleButton>
+          {cos && <ConsoleButton disabled={busy !== null} onClick={() => {
+            if (window.confirm(`Lepas ${cos.title} dari WAM? MoM meeting BOD tidak dikirim ke CoS lagi.`)) void run(`remove:${cos.chatId}`, { action: "remove", chatId: cos.chatId });
+          }}>Lepas</ConsoleButton>}
+        </div>
+        {codes.cos && <div className={css.code} role="group" aria-label="Sambungkan chat CoS">
+          <p>Kirim tautan ini ke CoS. CoS membukanya di Telegram, lalu menekan <strong>Start</strong>. Bot membalas “Chat ini terpasang”.</p>
+          <div className={css.codeButtons}>
+            <ConsoleButtonLink variant="primary" href={codes.cos.link} target="_blank" rel="noopener" icon={<ExternalLink size={16} aria-hidden="true" />}>Buka di Telegram<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>
+            <ConsoleButton icon={<Copy size={16} aria-hidden="true" />} onClick={() => copy("link:cos", codes.cos.link)}>{copied === "link:cos" ? "Tautan tersalin" : "Salin tautan"}</ConsoleButton>
+          </div>
+          <p className={css.muted}>Berlaku sampai {time(codes.cos.expiresAt)} WIB dan sekali pakai. Setelah tersambung, tekan Muat ulang.</p>
+        </div>}
+      </div>
     </Card>
   </div>;
 }

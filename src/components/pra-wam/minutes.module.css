@@ -142,17 +142,18 @@ details.group[open] > summary { margin-bottom: 2px; }
 .stepper button[data-done] .stepNo { border-color: var(--pw-primary); color: var(--pw-primary); }
 .ready { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .ready li { padding: 6px 10px; border-radius: 999px; background: var(--pw-surface-soft); color: var(--pw-text); font-size: 13px; font-weight: 600; }
-.stepBar {
-  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; margin: 0 -8px; padding: 8px;
-  border: 1px solid var(--pw-line); border-radius: calc(var(--pw-r-control) + 8px); background: var(--pw-surface); box-shadow: var(--pw-shadow);
-}
-.stepBar :global(.button) { justify-content: center; min-height: 48px; padding-inline: 8px; white-space: nowrap; }
+/*
+ * 13 Nov 2026, tidied: Kembali and Lanjut (wider) side by side, Simpan draf as a quiet text button
+ * under them; no card inside the card. A reader's buttons share the width, the main one on top.
+ */
+.stepBar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 8px; padding-top: 12px; border-top: 1px solid var(--pw-line); }
+.stepBar :global(.button) { justify-content: center; min-height: 48px; padding-inline: 10px; white-space: nowrap; }
+.stepBar :global(.button).draftButton { grid-column: 1 / -1; order: 3; min-height: 44px; border-color: transparent; background: none; box-shadow: none; color: var(--pw-primary); }
 @media (max-width: 719px) {
-  .readBar {
-    display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; margin: 0 -8px; padding: 8px;
-    border: 1px solid var(--pw-line); border-radius: calc(var(--pw-r-control) + 8px); background: var(--pw-surface); box-shadow: var(--pw-shadow);
-  }
-  .readBar :global(.button) { justify-content: center; min-height: 48px; padding-inline: 8px; white-space: nowrap; }
+  .readBar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .readBar :global(.button) { justify-content: center; min-height: 48px; padding-inline: 10px; white-space: nowrap; }
+  .readBar > :only-child, .readBar > .readMain { grid-column: 1 / -1; }
+  .readBar > .readMain { order: -1; }
 }
 
 /* 13 Nov 2026: Others present as a search of Data karyawan, named action fields, camera or gallery. */
@@ -170,9 +171,10 @@ details.group[open] > summary { margin-bottom: 2px; }
 .suggest small { color: var(--pw-muted); font-size: 12px; }
 .actionField { display: grid; gap: 4px; min-width: 0; }
 .actionField .fieldLabel { margin: 0; }
-.actionRow > .actionField { grid-column: 1; }
-.actionRow > .taskField { grid-column: 1 / -1; }
-.actionRow > .remove { grid-column: 2; grid-row: 2 / span 2; align-self: center; }
+/* A phone: the task with its remove button beside it, then PIC and Due Date across the whole row. */
+.actionRow > .actionField { grid-column: 1 / -1; }
+.actionRow > .taskField { grid-column: 1; grid-row: 1; }
+.actionRow > .remove { grid-column: 2; grid-row: 1; align-self: end; }
 @media (min-width: 720px) {
   .actionRow { align-items: end; }
   .actionRow > .actionField, .actionRow > .taskField, .actionRow > .remove { grid-column: auto; grid-row: auto; }
@@ -192,10 +194,21 @@ details.group[open] > summary { margin-bottom: 2px; }
 .terms p { margin: 0; }
 .terms h3 { margin: 4px 0 0; font-size: 15px; }
 .terms ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+/* A phone: a field's label sits above it, the field takes the whole width (13 Nov 2026). */
 @media (max-width: 539px) {
-  .numberField { grid-template-columns: minmax(0, 1fr); }
-  .numberField :global(.button) { justify-content: center; }
+  .facts .wide { grid-column: 1 / -1; }
+  .facts dt.wide { margin-top: 6px; }
   .facts dd { min-width: 0; }
+}
+/* The register under the field on a phone, as a link: the field keeps its whole width. */
+@media (max-width: 539px) {
+  .numberField { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .numberField :global(.button.button--secondary) { justify-self: start; min-height: 40px; padding: 0 2px; border-color: transparent; background: none; box-shadow: none; color: var(--pw-primary); font-size: 14px; }
+}
+/* A larger screen: the add buttons and the photo buttons as wide as their words, not the whole form. */
+@media (min-width: 720px) {
+  .group > :global(.button) { justify-self: start; }
+  .photoButtons { grid-template-columns: repeat(2, max-content); }
 }
 
 /* The groups' invite addresses, to open and join (13 Nov 2026). */
@@ -203,3 +216,8 @@ details.group[open] > summary { margin-bottom: 2px; }
 .groupLinks a { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 12px; border: 1px solid var(--pw-line); border-radius: 999px; color: var(--pw-primary); font-weight: 600; text-decoration: none; }
 .groupLinks a:hover { border-color: var(--pw-primary); }
 .telegram a { color: var(--pw-primary); font-weight: 600; }
+
+/* Next Meeting's date and time one above the other on a narrow phone, so neither is cut. */
+@media (max-width: 399px) {
+  .nextGrid { grid-template-columns: minmax(0, 1fr); }
+}

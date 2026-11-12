@@ -159,6 +159,8 @@ Rancangan lengkapnya ada di `docs/rancangan-mom-telegram.md`. Migrasi: `20261112
 | Foto meeting di TV | Dua cara (setelah migrasi `202611120006`): **Tampilkan di TV** per foto di Arsip MoM (jadi gambar biasa di TV Announcement), atau template **Foto meeting** di TV Announcement → Tambah tayangan: foto dari MoM yang dikirim 30 hari terakhir, terbaru dulu, paling banyak 12, satu foto per layar sesuai detik barisnya; MoM yang ditandai Jangan kirim ke Telegram tidak ikut; tanpa foto, tayangan dilewati. Foto lewat situs ini (`/api/tv/foto-meeting/{id}`), hanya foto yang sedang dimainkan template. Tayangan TV yang lain tidak berubah. |
 | Gagal | Grup yang gagal ditandai di bawah MoM beserta alasannya, dan dicoba lagi saat MoM disimpan berikutnya. |
 | Uji | Admin WAM → Telegram → **Kirim contoh MoM** mengirim PDF contoh bertanda UJI COBA ke grup itu. |
+| BOD lewat CoS (13 Nov 2026) | MoM meeting yang diikuti BOD (peserta dengan peran BOD) juga dikirim ke **chat Telegram pribadi CoS**; CoS yang meneruskannya ke BOD. Admin WAM → Telegram → kartu **MoM untuk BOD (lewat CoS)** → **Sambungkan CoS** membuat tautan sekali pakai (30 menit); CoS membukanya lalu menekan Start. Satu chat CoS aktif; **Ganti CoS** memindahkannya. Kalau CoS memblokir bot, pengiriman ke CoS dilewati. Perlu migrasi `202611130002_pw_telegram_cos.sql`. |
+| Tampilan (13 Nov 2026) | Admin Telegram: tiap baris paling banyak dua tombol, sisanya di **Lainnya** (Buat topik, Pasang ulang, Lepas); di ponsel tombol utama selebar baris. Form MoM di ponsel: label di atas kolom, **Ambil nomor** sebagai tautan di bawah kolom nomor, **Kembali** dan **Lanjut** berdampingan dengan **Simpan draf** di bawahnya (tidak lagi kartu melayang). |
 
 ## 7a. Notifikasi
 
