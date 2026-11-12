@@ -161,7 +161,7 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
               <div className={css.buttons}>
                 <ConsoleButton icon={<Copy size={16} aria-hidden="true" />} onClick={() => copy(`cmd:${row.key}`, code.command)}>{copied === `cmd:${row.key}` ? "Perintah tersalin" : "Salin perintah"}</ConsoleButton>
               </div>
-              <p className={css.muted}>Berlaku sampai {time(code.expiresAt)} WIB. Setelah bot membalas "Grup ini terpasang", tekan Muat ulang.</p>
+              <p className={css.muted}>Berlaku sampai {time(code.expiresAt)} WIB. Setelah bot membalas “Grup ini terpasang”, tekan Muat ulang.</p>
             </div>}
           </li>;
         })}
