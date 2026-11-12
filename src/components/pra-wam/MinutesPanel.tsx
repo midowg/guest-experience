@@ -241,7 +241,8 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       // Whoever checked in by themselves came, whatever an older draft said.
       absentIds: (minutes ? [...minutes.absentIds] : defaultAbsent(attendees)).filter(id => !attendees.some(person => person.id === id && selfCheckedIn(person))),
       guests: minutes?.guests ?? "", next: minutes?.next ? { ...minutes.next } : noNext(),
-      actions: minutes ? minutes.actions.map(action => ({ ...action })) : [], telegramOff: minutes?.telegramOff ?? false,
+      actions: minutes ? minutes.actions.map(action => ({ ...action })) : [], // A new MoM goes to Telegram only once the notetaker ticks it and agrees (13 Nov 2026).
+      telegramOff: minutes ? minutes.telegramOff : true,
       docNumber: minutes?.docNumber ?? "",
     };
   }
@@ -268,9 +269,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
    * goes and how to get into the group; installing Telegram is left to each person.
    */
   function telegramTerms() {
-    const running = view.endsAt && new Date(view.endsAt) > new Date() ? `Meeting ini belum selesai (selesai ${clock(view.endsAt)}).` : null;
     return <div className={css.terms}>
-      {running && <p><strong>{running}</strong></p>}
       <p>{telegram.destinations.length ? <>PDF MoM dikirim ke grup Telegram <strong>{joined(telegram.destinations)}</strong>.</> : "PDF MoM dikirim ke grup Telegram departemen setiap peserta."}</p>
       <p>Grupnya dipilih otomatis dari departemen setiap peserta di Data karyawan. Peserta lain juga diberi tahu di WAM.</p>
       <h3>Cara masuk grup Telegram</h3>
@@ -293,9 +292,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     if (problem) { setError(problem); setStep(frm && attendees.length ? 2 : 1); return; }
     const items = content.items.filter(filled).map(item => ({ topic: item.topic.trim(), discussion: item.discussion.trim(), decision: item.decision.trim(), added: item.added }));
     const actions = content.actions.filter(action => action.task.trim()).map(({ id, task, picId, dueDate, done }) => ({ ...(id ? { id } : {}), task: task.trim(), picId, dueDate, done }));
-    if (send && !(await confirm(content.telegramOff || !telegram.ready
-      ? { title: "Kirim MoM?", body: sendQuestion(content.telegramOff), confirmLabel: "Kirim MoM" }
-      : { title: "Kirim ke Telegram", body: telegramTerms(), confirmLabel: "Kirim ke Telegram", cancelLabel: "Batalkan", mustRead: true }))) return;
+    if (send && !(await confirm({ title: "Kirim MoM?", body: sendQuestion(content.telegramOff), confirmLabel: "Kirim MoM" }))) return;
     setBusy(send ? "send" : "draft"); setError(null);
     const form = frm ? {
       chairId: content.chairId, absentIds: content.absentIds, guests: content.guests.trim(),
@@ -479,8 +476,14 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
             {frm && <li>{view.photos.length} foto</li>}
           </ul>}
           {drafts && <label className={css.check}>
-            <input type="checkbox" checked={!draft.telegramOff} onChange={event => patch({ telegramOff: !event.target.checked })} />
-            <span>Kirim ke Telegram<small>Hapus centang untuk meeting yang sensitif.</small></span>
+            <input type="checkbox" checked={!draft.telegramOff} onChange={event => {
+              if (!event.target.checked) { patch({ telegramOff: true }); return; }
+              // Like agreeing to terms: read to the end, then Kirim ke Telegram; Batalkan leaves it off.
+              void (async () => {
+                if (await confirm({ title: "Kirim ke Telegram", body: telegramTerms(), confirmLabel: "Kirim ke Telegram", cancelLabel: "Batalkan", mustRead: true })) patch({ telegramOff: false });
+              })();
+            }} />
+            <span>Kirim ke Telegram<small>Centang untuk mengirim PDF MoM ke grup Telegram departemen peserta. Biarkan kosong untuk meeting yang sensitif.</small></span>
           </label>}
 
           {drafts && <p className={styles.hint}>{sent ? "Perubahan menggantikan MoM yang sudah dikirim." : "Draf hanya terlihat oleh yang ikut meeting sampai MoM dikirim."}</p>}
