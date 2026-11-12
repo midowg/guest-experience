@@ -22,7 +22,7 @@ export type Employee = {
   business_unit: string;
   /** Atasan langsung, for the Struktur tab (migration 202611060006); null for the usual place. */
   reports_to?: string | null;
-  /** Jenis kelamin, for Pak or Bu in the WAM app (migration 202611060007): "L", "P" or "". */
+  /** Jenis kelamin, to prefill the questionnaire (migration 202611060007): "L", "P" or "". */
   gender?: Gender;
 };
 /** One person as read from HR's sheet; `email` and `nip` only when the sheet has them. */

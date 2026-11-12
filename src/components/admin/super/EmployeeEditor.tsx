@@ -159,7 +159,7 @@ export function EmployeeEditor({ person, jobs: initialJobs, roles, departments, 
             {field("nip", "NIP", text("nip", { maxLength: 30 }), "Boleh kosong dulu.")}
             {field("gender", "Jenis kelamin", <select id={`${id}-gender`} className="input" value={draft.gender ?? ""} onChange={event => set({ gender: asGender(event.target.value) })}>
               {GENDERS.map(key => <option key={key} value={key}>{genderLabels[key]}</option>)}
-            </select>, "Untuk sapaan Pak atau Bu (BOD, HOD, Lead).")}
+            </select>, "Untuk mengisi kuesioner otomatis.")}
           </div>
         </fieldset>
 

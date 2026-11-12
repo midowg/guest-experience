@@ -9,7 +9,6 @@ import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { deleteBookingAndSession, notifyBookingSession, withBookingLink } from "./booking-sessions";
-import { seniorIds } from "./call-names";
 import { appraisalOpen } from "./events";
 import { notMigrated, waitingForMigration, type Member } from "./session";
 
@@ -82,19 +81,15 @@ export const memberDepartments = cache(async (employeeId: string): Promise<strin
 
 /**
  * Everyone in Data karyawan, for names on the schedule and the participant picker. `name` is what
- * colleagues see (the nama panggilan, Pak or Bu for BOD, HOD and Lead); `fullName` stays for
- * admin views and for search.
+ * colleagues see (the nama panggilan, without Pak or Bu for anyone); `fullName` stays for admin
+ * views and for search.
  */
 async function listPeopleUncached(): Promise<(Person & { fullName: string; active: boolean })[]> {
-  const read = (fields: string) => createPrivilegedClient().from("employees").select(fields).order("department").order("full_name").limit(2000);
-  let { data, error } = await read("id,full_name,nickname,gender,department,active");
-  // Before migration 202611060007 there is no Jenis kelamin: the nama panggilan without Pak or Bu.
-  if (error && ["42703", "PGRST204"].includes(error.code ?? "") && /gender/.test(error.message ?? "")) ({ data, error } = await read("id,full_name,nickname,department,active"));
+  const { data, error } = await createPrivilegedClient().from("employees").select("id,full_name,nickname,department,active").order("department").order("full_name").limit(2000);
   if (error) fail(error);
-  const senior = await seniorIds();
-  const rows = (data ?? []) as unknown as { id: string; full_name: string; nickname?: string | null; gender?: string | null; department: string; active: boolean }[];
+  const rows = (data ?? []) as unknown as { id: string; full_name: string; nickname?: string | null; department: string; active: boolean }[];
   return rows.map(row => ({
-    id: row.id, name: callName({ fullName: row.full_name, nickname: row.nickname, gender: row.gender }, senior.has(row.id)),
+    id: row.id, name: callName({ fullName: row.full_name, nickname: row.nickname }),
     fullName: row.full_name, department: row.department, active: row.active,
   }));
 }
