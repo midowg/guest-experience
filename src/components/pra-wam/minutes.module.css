@@ -186,3 +186,14 @@ details.group[open] > summary { margin-bottom: 2px; }
 .tgHelp { display: grid; gap: 6px; padding: 12px 14px; border-radius: var(--pw-r-control); background: var(--pw-surface-soft); color: var(--pw-text); font-size: 14px; line-height: 1.5; }
 .tgHelp p { margin: 0; }
 .tgHelp ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+
+/* 13 Nov 2026: Kirim ke Telegram, read like terms; the nomor surat button under its field on a phone. */
+.terms { display: grid; gap: 10px; }
+.terms p { margin: 0; }
+.terms h3 { margin: 4px 0 0; font-size: 15px; }
+.terms ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+@media (max-width: 539px) {
+  .numberField { grid-template-columns: minmax(0, 1fr); }
+  .numberField :global(.button) { justify-content: center; }
+  .facts dd { min-width: 0; }
+}

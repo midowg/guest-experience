@@ -264,6 +264,26 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   }
 
   /**
+   * Kirim ke Telegram (13 Nov 2026): read to the end, like agreeing to terms, then sent. Where it
+   * goes and how to get into the group; installing Telegram is left to each person.
+   */
+  function telegramTerms() {
+    const running = view.endsAt && new Date(view.endsAt) > new Date() ? `Meeting ini belum selesai (selesai ${clock(view.endsAt)}).` : null;
+    return <div className={css.terms}>
+      {running && <p><strong>{running}</strong></p>}
+      <p>{telegram.destinations.length ? <>PDF MoM dikirim ke grup Telegram <strong>{joined(telegram.destinations)}</strong>.</> : "PDF MoM dikirim ke grup Telegram departemen setiap peserta."}</p>
+      <p>Grupnya dipilih otomatis dari departemen setiap peserta di Data karyawan. Peserta lain juga diberi tahu di WAM.</p>
+      <h3>Cara masuk grup Telegram</h3>
+      <ol>
+        <li>Buka tautan undangan grup departemen Anda dari panitia atau admin WAM. Belum punya? Minta ke mereka.</li>
+        <li>Tekan <strong>Gabung</strong> (Join Group).</li>
+        <li>Selesai. Setiap MoM masuk sendiri ke topik <strong>📝 MoM</strong> di grup itu, tanpa perlu dibagikan lagi.</li>
+      </ol>
+      <p>Setelah dikirim, MoM masih bisa diubah; pesannya di Telegram ikut diganti tanpa bunyi.</p>
+    </div>;
+  }
+
+  /**
    * Saves the form's content; with `send`, after asking where it goes. A draft is also sent straight
    * from reading it (12 Nov 2026): the same content, sent.
    */
@@ -273,7 +293,9 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     if (problem) { setError(problem); setStep(frm && attendees.length ? 2 : 1); return; }
     const items = content.items.filter(filled).map(item => ({ topic: item.topic.trim(), discussion: item.discussion.trim(), decision: item.decision.trim(), added: item.added }));
     const actions = content.actions.filter(action => action.task.trim()).map(({ id, task, picId, dueDate, done }) => ({ ...(id ? { id } : {}), task: task.trim(), picId, dueDate, done }));
-    if (send && !(await confirm({ title: "Kirim MoM?", body: sendQuestion(content.telegramOff), confirmLabel: "Kirim MoM" }))) return;
+    if (send && !(await confirm(content.telegramOff || !telegram.ready
+      ? { title: "Kirim MoM?", body: sendQuestion(content.telegramOff), confirmLabel: "Kirim MoM" }
+      : { title: "Kirim ke Telegram", body: telegramTerms(), confirmLabel: "Kirim ke Telegram", cancelLabel: "Batalkan", mustRead: true }))) return;
     setBusy(send ? "send" : "draft"); setError(null);
     const form = frm ? {
       chairId: content.chairId, absentIds: content.absentIds, guests: content.guests.trim(),
@@ -460,15 +482,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
             <input type="checkbox" checked={!draft.telegramOff} onChange={event => patch({ telegramOff: !event.target.checked })} />
             <span>Kirim ke Telegram<small>Hapus centang untuk meeting yang sensitif.</small></span>
           </label>}
-          {drafts && !draft.telegramOff && <div className={css.tgHelp} role="note">
-            <p>{telegram.ready && telegram.destinations.length ? `MoM otomatis masuk ke grup Telegram ${joined(telegram.destinations)}, sesuai departemen setiap peserta.` : "MoM otomatis masuk ke grup Telegram departemen setiap peserta."}</p>
-            <p><strong>Belum masuk grup Telegram?</strong></p>
-            <ol>
-              <li>Pasang aplikasi Telegram di HP, lalu daftar dengan nomor HP Anda.</li>
-              <li>Minta tautan undangan grup departemen Anda ke panitia atau admin WAM.</li>
-              <li>Buka tautannya dan tekan Gabung. MoM berikutnya masuk sendiri ke topik 📝 MoM di grup itu.</li>
-            </ol>
-          </div>}
+
           {drafts && <p className={styles.hint}>{sent ? "Perubahan menggantikan MoM yang sudah dikirim." : "Draf hanya terlihat oleh yang ikut meeting sampai MoM dikirim."}</p>}
         </div>
         {error && <Notice tone="error">{error}</Notice>}

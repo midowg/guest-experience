@@ -77,9 +77,10 @@ it("sends a draft straight from reading it, after naming where it goes", async (
   request.mockResolvedValue({ data: view({ status: "sudah", minutes: written() }), message: "MoM dikirim." });
   render(<MinutesPanel sessionId={SESSION} initial={view({ status: "draf", minutes: written({ sentAt: null, sentBy: null, version: 0 }) })} />);
   fireEvent.click(screen.getByRole("button", { name: /^Kirim MoM/ }));
-  const dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
-  expect(dialog.getByText(/ke grup Telegram Werkudara CoE · Center of Excellence/)).toBeTruthy();
-  fireEvent.click(dialog.getByRole("button", { name: "Kirim MoM" }));
+  const dialog = within(await screen.findByRole("dialog", { name: "Kirim ke Telegram" }));
+  expect(dialog.getByText("Werkudara CoE · Center of Excellence")).toBeTruthy();
+  await waitFor(() => expect((dialog.getByRole("button", { name: "Kirim ke Telegram" }) as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(dialog.getByRole("button", { name: "Kirim ke Telegram" }));
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   expect(request.mock.calls[0][1].json).toEqual({
     items, chairId: RAJA, absentIds: ["me"], guests: "", next: { date: null, time: null, place: "", agenda: "" },
@@ -176,15 +177,19 @@ it("names where Kirim MoM goes before it goes, and sends nothing when cancelled"
   render(<MinutesPanel sessionId={SESSION} initial={view()} />);
   fill();
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
-  let dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
-  expect(dialog.getByText(/ke grup Telegram Werkudara CoE · Center of Excellence/)).toBeTruthy();
-  fireEvent.click(dialog.getByRole("button", { name: "Batal" }));
+  // Like agreeing to terms: where it goes, how to join the group, then Kirim ke Telegram or Batalkan.
+  let dialog = within(await screen.findByRole("dialog", { name: "Kirim ke Telegram" }));
+  expect(dialog.getByText("Werkudara CoE · Center of Excellence")).toBeTruthy();
+  expect(dialog.getByRole("heading", { name: "Cara masuk grup Telegram" })).toBeTruthy();
+  expect(dialog.queryByText(/Pasang aplikasi Telegram/)).toBeNull();
+  fireEvent.click(dialog.getByRole("button", { name: "Batalkan" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(request).not.toHaveBeenCalled();
 
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
-  dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
-  fireEvent.click(dialog.getByRole("button", { name: "Kirim MoM" }));
+  dialog = within(await screen.findByRole("dialog", { name: "Kirim ke Telegram" }));
+  await waitFor(() => expect((dialog.getByRole("button", { name: "Kirim ke Telegram" }) as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(dialog.getByRole("button", { name: "Kirim ke Telegram" }));
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   expect(request.mock.calls[0][1].json).toEqual(body(true));
   expect(await screen.findByText("MoM dikirim.")).toBeTruthy();
@@ -195,11 +200,9 @@ it("names where Kirim MoM goes before it goes, and sends nothing when cancelled"
 it("says when a group is missing, a meeting still runs, or the MoM stays out of Telegram", async () => {
   render(<MinutesPanel sessionId={SESSION} initial={view({ endsAt: "2999-01-01T03:00:00.000Z", telegram: telegram({ destinations: [] }) })} />);
   fill();
-  // Kirim ke Telegram is on, with how to join a group; unticked keeps the MoM out.
+  // Kirim ke Telegram is on; unticked keeps the MoM out.
   expect((screen.getByRole("checkbox", { name: /Kirim ke Telegram/ }) as HTMLInputElement).checked).toBe(true);
-  expect(screen.getByText("Belum masuk grup Telegram?")).toBeTruthy();
   fireEvent.click(screen.getByRole("checkbox", { name: /Kirim ke Telegram/ }));
-  expect(screen.queryByText("Belum masuk grup Telegram?")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
   const dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
   expect(dialog.getByText(/Meeting ini belum selesai/)).toBeTruthy();
@@ -208,9 +211,9 @@ it("says when a group is missing, a meeting still runs, or the MoM stays out of 
   fireEvent.click(screen.getByRole("checkbox", { name: /Kirim ke Telegram/ }));
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
   // Without a group, only WAM: no word about the system.
-  const plain = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
-  expect(plain.getByText(/Peserta lain diberi tahu di WAM\./)).toBeTruthy();
-  expect(plain.queryByText(/Telegram/)).toBeNull();
+  const plain = within(await screen.findByRole("dialog", { name: "Kirim ke Telegram" }));
+  expect(plain.getByText(/Meeting ini belum selesai/)).toBeTruthy();
+  expect(plain.getByText("PDF MoM dikirim ke grup Telegram departemen setiap peserta.")).toBeTruthy();
 });
 
 it("reads a MoM as the form has it: number, chair, who came, agenda items and new topics, next meeting, photos", () => {
@@ -393,8 +396,9 @@ it("on a phone, is a few steps with Kembali, Simpan draf and Lanjut, and sends f
     expect(within(screen.getByRole("list", { name: "Isi MoM" })).getAllByRole("listitem").map(item => item.textContent)).toEqual(["1 topik dibahas", "0 tindak lanjut", "1 dari 2 hadir", "0 foto"]);
     expect(screen.getAllByRole("button", { name: "Simpan draf" })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
-    const dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
-    fireEvent.click(dialog.getByRole("button", { name: "Kirim MoM" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Kirim ke Telegram" }));
+    await waitFor(() => expect((dialog.getByRole("button", { name: "Kirim ke Telegram" }) as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(dialog.getByRole("button", { name: "Kirim ke Telegram" }));
     await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
     expect(request.mock.calls[0][1].json.send).toBe(true);
   } finally {

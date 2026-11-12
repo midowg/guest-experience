@@ -20,11 +20,38 @@ export type ConfirmOptions = {
   confirmLabel: string;
   /** Removing or anything that cannot be undone: red. */
   danger?: boolean;
+  /**
+   * Read to the end first (13 Nov 2026, like agreeing to terms): the text scrolls in its box and the
+   * action opens only once its end has been seen.
+   */
+  mustRead?: boolean;
+  /** The safe choice's words; "Batal" by default. */
+  cancelLabel?: string;
 };
 
-function ConfirmDialog({ title, body, confirmLabel, danger, onClose }: ConfirmOptions & { onClose: (ok: boolean) => void }) {
+function ConfirmDialog({ title, body, confirmLabel, danger, mustRead, cancelLabel = "Batal", onClose }: ConfirmOptions & { onClose: (ok: boolean) => void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const box = useRef<HTMLDivElement>(null);
   const id = useId();
+  const [read, setRead] = useState(!mustRead);
+  // Read when its end shows: scrolled there, or short enough to show whole.
+  const check = useCallback(() => {
+    const element = box.current;
+    // Not laid out yet (the dialog opens after this component's first effects): nothing is read.
+    if (!element || element.clientHeight === 0) return;
+    if (element.scrollTop + element.clientHeight >= element.scrollHeight - 8) setRead(true);
+  }, []);
+  // Once the dialog is open and laid out: a short text that shows whole is read at once.
+  useEffect(() => {
+    if (!mustRead) return;
+    const frame = requestAnimationFrame(() => {
+      const element = box.current;
+      // No layout at all (a test's DOM): nothing to scroll, so it counts as read.
+      if (element && element.clientHeight === 0 && element.scrollHeight === 0) setRead(true);
+      else check();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [mustRead, check]);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -39,12 +66,15 @@ function ConfirmDialog({ title, body, confirmLabel, danger, onClose }: ConfirmOp
       <span className={`${styles.tile} ${danger ? styles.tileDanger : ""}`} aria-hidden>{danger ? <AlertTriangle /> : <HelpCircle />}</span>
       <div>
         <h2 id={`${id}-judul`}>{title}</h2>
-        <div id={`${id}-isi`} className={styles.dialogText}>{body}</div>
+        {mustRead
+          ? <div id={`${id}-isi`} ref={box} className={`${styles.dialogText} ${styles.dialogRead}`} tabIndex={0} onScroll={check}>{body}</div>
+          : <div id={`${id}-isi`} className={styles.dialogText}>{body}</div>}
+        {!read && <p className={styles.dialogReadHint} role="status">Gulir sampai akhir untuk melanjutkan.</p>}
       </div>
     </div>
     <div className={styles.dialogActions}>
-      <button type="button" className="button button--secondary" onClick={() => onClose(false)}>Batal</button>
-      <button type="button" className={`button button--primary ${danger ? styles.dangerSolid : ""}`} onClick={() => onClose(true)}>{confirmLabel}</button>
+      <button type="button" className="button button--secondary" onClick={() => onClose(false)}>{cancelLabel}</button>
+      <button type="button" className={`button button--primary ${danger ? styles.dangerSolid : ""}`} disabled={!read} onClick={() => onClose(true)}>{confirmLabel}</button>
     </div>
   </dialog>;
 }

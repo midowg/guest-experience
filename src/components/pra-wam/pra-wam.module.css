@@ -563,3 +563,8 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 
 /* A wrapper that adds no box of its own (the frame keeps one wrapper around the screen). */
 .contents { display: contents; }
+
+/* A confirmation read to the end first (13 Nov 2026): its text scrolls in a box. */
+.dialogRead { max-height: min(50vh, 22rem); overflow-y: auto; padding-right: 6px; overscroll-behavior: contain; }
+.dialogRead:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; border-radius: 6px; }
+.dialogReadHint { margin: 8px 0 0; color: var(--pw-muted); font-size: 13px; }
