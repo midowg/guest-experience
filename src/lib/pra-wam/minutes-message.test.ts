@@ -82,10 +82,10 @@ describe("minutesCaption", () => {
       "<b>Tindak lanjut</b>",
       "1. Kirim draf KPI (Sofyan, 14 Nov)",
       "1 sudah selesai.",
-      "",
-      "Dokumen lengkap di PDF terlampir.",
-      "<i>Dikirim 10 Nov 2026, 13.05 WIB lewat WAM</i>",
     ]);
+    // No closing line about the PDF or when it was sent.
+    expect(caption).not.toContain("PDF terlampir");
+    expect(caption).not.toContain("Dikirim");
     // No icons, and neutral when forwarded to a superior.
     expect(caption).not.toMatch(/\p{Extended_Pictographic}/u);
     expect(caption).not.toMatch(/\bkamu\b/i);
@@ -95,7 +95,7 @@ describe("minutesCaption", () => {
     const caption = minutesCaption({ ...base, title: "Q&A <draft>", trial: true, version: 3, changedBy: "Sofyan", at: "2026-11-11T02:10:00Z", actions: [], from: null, to: null });
     expect(caption).toContain("<b>Q&amp;A &lt;draft&gt;</b>");
     expect(caption).toContain("<i>Uji coba dari WAM, bukan meeting sungguhan.</i>");
-    expect(caption).toContain("<i>Versi 3, diperbarui 11 Nov 2026, 09.10 WIB oleh Sofyan</i>");
+    expect(caption).not.toContain("Versi 3");
     expect(caption).toContain("Waktu: Selasa, 10 November 2026\n");
     expect(caption).not.toContain("Tindak lanjut");
     const many = Array.from({ length: 12 }, (_, index) => `Keputusan panjang nomor ${index + 1} `.repeat(6));
@@ -117,7 +117,6 @@ describe("minutesCaption", () => {
     expect(caption).toContain("Nomor: MoM/2026/11/0012");
     expect(caption).toContain("Pimpinan: Sofyan\nNotulis: Raja\nKehadiran: 2 dari 3 hadir");
     expect(caption).toContain("<b>Keputusan</b>\n1. Format baru\n2. Evaluasi Desember\n3. Seragam biru\ndan 1 lainnya (lihat PDF)");
-    expect(caption).toContain("Dokumen lengkap di PDF terlampir, termasuk 3 foto.");
     expect(minutesCaption({ ...base, actions: [{ task: "Selesai", pic: null, dueDate: null, done: true }] })).toContain("<b>Tindak lanjut</b>\nSemua sudah selesai.");
     expect(minutesFileName({ code: "MoM/2026/11/0012", version: 2 })).toBe("MoM-2026-11-0012_v2.pdf");
   });

@@ -178,7 +178,8 @@ const shortDay = (iso: string) => { const p = parts(day(iso), { day: "numeric", 
 /**
  * The text under the PDF in Telegram (13 Nov 2026, rewritten for superiors who read it at a
  * glance): no icons, plain labels, the meeting's facts, then its decisions and the follow-ups
- * still open (who and by when), a few of each; the rest is in the PDF. Under Telegram's limit:
+ * still open (who and by when), a few of each; the rest is in the PDF. No closing line about the
+ * PDF or when it was sent (13 Nov 2026): the PDF is right above it. Under Telegram's limit:
  * fewer lines first, then shorter title and place.
  */
 export function minutesCaption(message: MinutesMessage): string {
@@ -189,9 +190,6 @@ export function minutesCaption(message: MinutesMessage): string {
   const done = message.actions.length - open.length;
   const present = message.attendance?.filter(person => person.present).length;
   const attendance = message.attendance?.length ? `${present} dari ${message.attendance.length} hadir` : `${message.participants.length} peserta`;
-  const version = message.version > 1
-    ? `Versi ${message.version}, diperbarui ${stamp(message.at)}${message.changedBy ? ` oleh ${escapeHtml(message.changedBy)}` : ""}`
-    : `Dikirim ${stamp(message.at)} lewat WAM`;
   const when = `${longDate(message.date)}${message.from && message.to ? `, ${message.from}–${message.to} WIB` : ""}`;
   /** A numbered list of at most `shown`, then "dan N lainnya (lihat PDF)". */
   const list = (items: readonly string[], shown: number) => [
@@ -218,9 +216,6 @@ export function minutesCaption(message: MinutesMessage): string {
       ...(message.actions.length ? ["", "<b>Tindak lanjut</b>",
         ...(open.length ? list(followUps, shown) : ["Semua sudah selesai."]),
         ...(open.length && done ? [`${done} sudah selesai.`] : [])] : []),
-      "",
-      `Dokumen lengkap di PDF terlampir${message.photoCount ? `, termasuk ${message.photoCount} foto` : ""}.`,
-      `<i>${version}</i>`,
     ].join("\n");
   };
   for (const [shown, title, place, line] of [[3, 140, 80, 110], [2, 140, 80, 80], [1, 100, 60, 60], [0, 60, 40, 40]] as const) {
