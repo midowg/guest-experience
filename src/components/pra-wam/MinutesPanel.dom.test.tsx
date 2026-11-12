@@ -62,11 +62,11 @@ it("keeps a draft to those in the meeting: Simpan draf sends nothing", async () 
   render(<MinutesPanel sessionId={SESSION} initial={view()} />);
   expect(screen.getByText("MoM belum diisi")).toBeTruthy();
   fill();
-  expect(screen.getByText(/Simpan draf hanya terlihat oleh yang ikut meeting/)).toBeTruthy();
+  expect(screen.getByText("Draf hanya terlihat oleh yang ikut meeting sampai MoM dikirim.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Simpan draf" }));
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   expect(request.mock.calls[0]).toEqual([`/api/wam/sessions/${SESSION}/minutes`, { method: "PUT", json: body(false) }]);
-  expect(await screen.findByText(/Draf: belum dikirim ke siapa pun/)).toBeTruthy();
+  expect(await screen.findByText(/Masih draf/)).toBeTruthy();
   expect(screen.getByText("MoM masih draf")).toBeTruthy();
   expect(screen.getByRole("button", { name: /Lanjutkan draf/ })).toBeTruthy();
 });
@@ -166,7 +166,7 @@ it("names where Kirim MoM goes before it goes, and sends nothing when cancelled"
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   expect(request.mock.calls[0][1].json).toEqual(body(true));
   expect(await screen.findByText("MoM dikirim.")).toBeTruthy();
-  expect(screen.getByText(/Telegram: Werkudara CoE · Center of Excellence \(versi 1\)/)).toBeTruthy();
+  expect(screen.getByText("Terkirim ke Telegram: Werkudara CoE · Center of Excellence")).toBeTruthy();
   expect(screen.getByRole("link", { name: /Unduh PDF/ }).getAttribute("href")).toBe(`/api/wam/sessions/${SESSION}/minutes/pdf`);
 });
 
@@ -181,7 +181,10 @@ it("says when a group is missing, a meeting still runs, or the MoM stays out of 
   fireEvent.click(dialog.getByRole("button", { name: "Batal" }));
   fireEvent.click(screen.getByRole("checkbox", { name: /Jangan kirim ke Telegram/ }));
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
-  expect(within(await screen.findByRole("dialog", { name: "Kirim MoM?" })).getByText(/Belum ada grup Telegram untuk peserta meeting ini/)).toBeTruthy();
+  // Without a group, only WAM: no word about the system.
+  const plain = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
+  expect(plain.getByText(/Peserta lain diberi tahu di WAM\./)).toBeTruthy();
+  expect(plain.queryByText(/Telegram/)).toBeNull();
 });
 
 it("reads a MoM as the form has it: number, chair, who came, agenda items and new topics, next meeting, photos", () => {
@@ -221,12 +224,14 @@ it("opens a MoM from before the FRM form as one agenda item, and saves a sent on
     status: "sudah", minutes: written({ items: [], summary: "Bahas target Q1", decisions: "Target naik 10%", number: null, chairId: null, chairName: null, absentIds: [] }),
     telegram: telegram({ deliveries: [{ title: "Werkudara SM · Commercial", status: "gagal", error: "Bot sudah tidak ada di grup.", version: 1, at: null }] }),
   })} />);
-  expect(screen.getByText(/Werkudara SM · Commercial: Bot sudah tidak ada di grup/)).toBeTruthy();
+  expect(screen.getByText("Belum terkirim ke Werkudara SM · Commercial. Dicoba lagi saat MoM disimpan berikutnya.")).toBeTruthy();
+  // The reason is for the admin, not for the notetaker.
+  expect(screen.queryByText(/Bot sudah tidak ada/)).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: /Ubah notulen/ }));
   expect((screen.getByLabelText("Topic/Agenda Item 1") as HTMLInputElement).value).toBe("Pembahasan");
   expect((screen.getByLabelText("Discussion Summary & Key Points, agenda item 1") as HTMLTextAreaElement).value).toBe("Bahas target Q1");
   expect(screen.queryByRole("button", { name: "Simpan draf" })).toBeNull();
-  expect(screen.getByText(/Disimpan sebagai versi 2. Pesan MoM di Telegram ikut diganti tanpa bunyi/)).toBeTruthy();
+  expect(screen.getByText("Perubahan menggantikan MoM yang sudah dikirim.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Simpan perubahan" }));
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   const json = request.mock.calls[0][1].json;
@@ -249,7 +254,9 @@ it("adds meeting photos one by one with progress, at most ten, and removes one a
   expect(upload.put).toHaveBeenCalledTimes(2);
   expect(upload.put.mock.calls[0][0]).toBe(SESSION);
   expect(screen.getByText("2 dari 10")).toBeTruthy();
-  expect(screen.getByText(/PDF di Telegram ikut diperbarui saat notulen disimpan berikutnya/)).toBeTruthy();
+  expect(screen.getByText("Foto langsung tersimpan dan ikut di PDF MoM.")).toBeTruthy();
+  // No sizes, pixels or storage words for the person adding photos.
+  expect(screen.queryByText(/MB|px|KB/)).toBeNull();
 
   request.mockResolvedValue({ data: [photo("f2")], message: "Foto dihapus." });
   fireEvent.click(screen.getByRole("button", { name: "Hapus foto 1" }));
@@ -297,7 +304,7 @@ it("before the FRM and drafts migrations, saves the agenda items straight away a
   request.mockResolvedValue({ data: view({ status: "sudah", minutes: written(), drafts: false, frm: false }), message: "Notulen disimpan." });
   render(<MinutesPanel sessionId={SESSION} initial={view({ drafts: false, frm: false, photosReady: false, telegram: telegram({ ready: false, reason: "Pengiriman MoM ke Telegram menunggu pembaruan sistem.", destinations: [] }) })} />);
   fill();
-  expect(screen.getByText(/bisa diisi setelah pembaruan sistem selesai/)).toBeTruthy();
+  expect(screen.queryByText(/pembaruan sistem|migrasi/)).toBeNull();
   expect(screen.queryByLabelText("Chairperson")).toBeNull();
   expect(screen.queryByText(/present ·/)).toBeNull();
   expect(screen.queryByRole("button", { name: "Simpan draf" })).toBeNull();
@@ -312,5 +319,48 @@ it("waits for the meeting to start, and for the migration", () => {
   expect(screen.getByText("Notulen bisa ditulis setelah meeting dimulai.")).toBeTruthy();
   unmount();
   render(<MinutesPanel sessionId={SESSION} initial={view({ migrated: false, canWrite: false })} />);
-  expect(screen.getByText(/setelah pembaruan sistem selesai/)).toBeTruthy();
+  expect(screen.getByText("Notulen belum bisa ditulis.")).toBeTruthy();
+});
+
+it("on a phone, is a few steps with Kembali, Simpan draf and Lanjut, and sends from the last", async () => {
+  Object.defineProperty(window, "matchMedia", { configurable: true, value: (query: string) => ({
+    matches: query === "(max-width: 719px)", media: query, onchange: null,
+    addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => false,
+  }) });
+  const shown = (element: HTMLElement) => !element.closest("[hidden]");
+  try {
+    request.mockResolvedValue({ data: view({ status: "sudah", minutes: written() }), message: "MoM dikirim." });
+    render(<MinutesPanel sessionId={SESSION} initial={view()} />);
+    fireEvent.click(screen.getByRole("button", { name: /Tulis notulen/ }));
+    const steps = () => within(screen.getByRole("list", { name: "Langkah mengisi MoM" }));
+    expect(steps().getAllByRole("button").map(button => button.textContent)).toEqual(["1Info", "2Hadir", "3Bahasan", "4Tindak lanjut", "5Selesai"]);
+    // One part at a time: Info first; the attendance table is for a larger screen.
+    expect(shown(screen.getByLabelText("Chairperson"))).toBe(true);
+    expect(shown(screen.getByLabelText("Topic/Agenda Item 1"))).toBe(false);
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.getByRole("button", { name: "Batal" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
+    expect(shown(screen.getByRole("checkbox", { name: /Raja Pratama/ }))).toBe(true);
+    expect(shown(screen.getByLabelText("Chairperson"))).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
+    fireEvent.change(screen.getByLabelText("Topic/Agenda Item 1"), { target: { value: "Target Q1" } });
+    fireEvent.change(screen.getByLabelText("Discussion Summary & Key Points, agenda item 1"), { target: { value: "Bahas target Q1" } });
+    // Enter in a field moves on a step; it does not send.
+    fireEvent.submit(screen.getByLabelText("Topic/Agenda Item 1").closest("form")!);
+    expect(request).not.toHaveBeenCalled();
+    expect(shown(screen.getByRole("button", { name: /Tambah tindak lanjut/ }))).toBe(true);
+    expect(shown(screen.getByLabelText("Topic/Agenda Item 1"))).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Kembali" }));
+    expect(shown(screen.getByLabelText("Topic/Agenda Item 1"))).toBe(true);
+    fireEvent.click(steps().getByRole("button", { name: /Selesai/ }));
+    expect(within(screen.getByRole("list", { name: "Isi MoM" })).getAllByRole("listitem").map(item => item.textContent)).toEqual(["1 topik dibahas", "0 tindak lanjut", "1 dari 2 hadir", "0 foto"]);
+    expect(screen.getAllByRole("button", { name: "Simpan draf" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
+    fireEvent.click(dialog.getByRole("button", { name: "Kirim MoM" }));
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+    expect(request.mock.calls[0][1].json.send).toBe(true);
+  } finally {
+    delete (window as { matchMedia?: unknown }).matchMedia;
+  }
 });

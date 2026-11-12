@@ -125,3 +125,34 @@ details.group[open] > summary { margin-bottom: 2px; }
 .thumbRemove::after { content: ""; position: absolute; inset: -6px; }
 .thumbRemove:hover { background: rgb(0 0 0 / 0.78); }
 .photos > .button { justify-self: start; }
+
+/*
+ * The MoM form on a phone (12 Nov 2026): a few steps, one screen each (the others are hidden), the
+ * steps across the top and Kembali, Simpan draf and Lanjut fixed above the app's bottom bar. A
+ * reader's buttons stay at hand there too.
+ */
+.form [hidden] { display: none !important; }
+.stepPart { display: grid; gap: 14px; }
+.stepper { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; margin: 0; padding: 0; list-style: none; }
+.stepper button { display: grid; justify-items: center; gap: 4px; width: 100%; min-height: 56px; padding: 4px 2px; border: 0; border-radius: var(--pw-r-control); background: none; color: var(--pw-muted); font: inherit; font-size: 11px; font-weight: 600; line-height: 1.2; text-align: center; cursor: pointer; }
+.stepper button:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 1px; }
+.stepNo { display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid var(--pw-line); border-radius: 50%; background: var(--pw-surface); color: inherit; font-size: 13px; font-weight: 700; }
+.stepper button[aria-current="step"] { color: var(--pw-primary); }
+.stepper button[aria-current="step"] .stepNo { border-color: var(--pw-primary); background: var(--pw-primary); color: var(--pw-on-primary); }
+.stepper button[data-done] .stepNo { border-color: var(--pw-primary); color: var(--pw-primary); }
+.ready { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.ready li { padding: 6px 10px; border-radius: 999px; background: var(--pw-surface-soft); color: var(--pw-text); font-size: 13px; font-weight: 600; }
+.stepBar {
+  position: sticky; bottom: calc(64px + 16px + 10px + env(safe-area-inset-bottom, 0px)); z-index: 6;
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; margin: 0 -8px; padding: 8px;
+  border: 1px solid var(--pw-line); border-radius: calc(var(--pw-r-control) + 8px); background: var(--pw-surface); box-shadow: var(--pw-shadow);
+}
+.stepBar :global(.button) { justify-content: center; min-height: 48px; padding-inline: 8px; white-space: nowrap; }
+@media (max-width: 719px) {
+  .readBar {
+    position: sticky; bottom: calc(64px + 16px + 10px + env(safe-area-inset-bottom, 0px)); z-index: 6;
+    display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; margin: 0 -8px; padding: 8px;
+    border: 1px solid var(--pw-line); border-radius: calc(var(--pw-r-control) + 8px); background: var(--pw-surface); box-shadow: var(--pw-shadow);
+  }
+  .readBar :global(.button) { justify-content: center; min-height: 48px; padding-inline: 8px; white-space: nowrap; }
+}

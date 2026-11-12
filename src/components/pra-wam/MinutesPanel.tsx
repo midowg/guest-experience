@@ -1,7 +1,7 @@
 "use client";
 
-import { useId, useRef, useState, type ReactNode } from "react";
-import { CheckCircle2, ChevronDown, Download, ImagePlus, NotebookPen, Plus, Send, Trash2, X } from "lucide-react";
+import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { CheckCircle2, ChevronDown, ChevronRight, Download, ImagePlus, NotebookPen, Plus, Send, Trash2, X } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import {
@@ -9,7 +9,7 @@ import {
   type MinuteAction, type MinuteAttendee, type MinuteItem, type MinutePhoto, type MinutesView, type NextMeeting,
 } from "@/lib/pra-wam/minutes";
 import { frmDate, frmDue, frmTime, guestNames } from "@/lib/pra-wam/minutes-message";
-import { MOM_PHOTOS_MAX, momPhotoRule, photoLimitLabel } from "@/lib/pra-wam/minutes-photos";
+import { MOM_PHOTOS_MAX, momPhotoRule } from "@/lib/pra-wam/minutes-photos";
 import { acceptPhotos } from "@/lib/pra-wam/photo";
 import { errorText, praWamRequest } from "./api";
 import { useConfirm } from "./ConfirmDialog";
@@ -29,6 +29,17 @@ const noNext = (): NextMeeting => ({ date: null, time: null, place: "", agenda: 
 /** "Werkudara CoE · Center of Excellence dan Werkudara SM · Commercial". */
 const joined = (names: readonly string[]) => names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} dan ${names[names.length - 1]}`;
 const filled = (item: MinuteItem) => !!(item.topic.trim() || item.discussion.trim() || item.decision.trim());
+
+/** A phone-sized screen (12 Nov 2026): the MoM form is then a few steps, one screen each. */
+const PHONE = "(max-width: 719px)";
+const phoneQuery = () => (typeof window !== "undefined" && typeof window.matchMedia === "function" ? window.matchMedia(PHONE) : null);
+function usePhone(): boolean {
+  return useSyncExternalStore(
+    change => { const query = phoneQuery(); query?.addEventListener("change", change); return () => query?.removeEventListener("change", change); },
+    () => phoneQuery()?.matches ?? false,
+    () => false,
+  );
+}
 
 /** Why the agenda items (III) and new topics (IV) cannot be saved yet, or null. */
 function itemsProblem(items: readonly MinuteItem[]): string | null {
@@ -92,8 +103,8 @@ function AttendanceList({ attendees, absentIds, guests }: { attendees: readonly 
  * the MoM adds them (made small here, then uploaded one by one with progress) and removes them;
  * they are kept at once and go into the MoM's PDF.
  */
-function MinutePhotos({ sessionId, photos, editable, ready, sent, hd, onChange }: {
-  sessionId: string; photos: MinutePhoto[]; editable: boolean; ready: boolean; sent: boolean; hd: boolean; onChange: (photos: MinutePhoto[]) => void;
+function MinutePhotos({ sessionId, photos, editable, ready, hd, onChange }: {
+  sessionId: string; photos: MinutePhoto[]; editable: boolean; ready: boolean; hd: boolean; onChange: (photos: MinutePhoto[]) => void;
 }) {
   const rule = momPhotoRule(hd);
   const input = useRef<HTMLInputElement>(null);
@@ -144,10 +155,7 @@ function MinutePhotos({ sessionId, photos, editable, ready, sent, hd, onChange }
       {room > 0 && <button type="button" className="button button--secondary" disabled={!!progress} onClick={() => input.current?.click()}>
         <ImagePlus size={18} aria-hidden /> {progress ? `Mengunggah ${progress.at} dari ${progress.total} (${Math.round(progress.share * 100)}%)` : photos.length ? "Tambah foto" : "Unggah foto meeting"}
       </button>}
-      <p className={styles.hint}>
-        {sent ? "Foto langsung tersimpan. PDF di Telegram ikut diperbarui saat notulen disimpan berikutnya." : "Foto langsung tersimpan dan ikut di PDF MoM."}
-        {` Disimpan ${hd ? "Full HD" : "1280 px"}, paling besar ${photoLimitLabel(rule.bytes)} per foto.`}
-      </p>
+      <p className={styles.hint}>Foto langsung tersimpan dan ikut di PDF MoM.</p>
     </>}
     {problem && <Notice tone="error">{problem}</Notice>}
     {confirmDialog}
@@ -175,6 +183,9 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirm, confirmDialog] = useConfirm();
+  const [step, setStep] = useState(0);
+  const phone = usePhone();
+  const formTop = useRef<HTMLFormElement>(null);
   const { minutes, status, canWrite, people, telegram, frm, attendees } = view;
   const sent = !!minutes?.sentAt;
   // Before migration 202611120004 there are no drafts: a save is the MoM itself.
@@ -194,7 +205,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     };
   }
   function start() {
-    setNotice(null); setError(null);
+    setNotice(null); setError(null); setStep(0);
     setDraft(draftOf());
   }
   const patch = (change: Partial<Draft>) => setDraft(current => current && { ...current, ...change });
@@ -205,11 +216,10 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   /** Where Kirim MoM goes, in words, for the question before it goes. */
   function sendQuestion(off: boolean) {
     const running = view.endsAt && new Date(view.endsAt) > new Date() ? `Meeting ini belum selesai (selesai ${clock(view.endsAt)}). ` : "";
-    const where = off ? "MoM tidak dikirim ke Telegram (Anda memilih begitu); peserta lain diberi tahu di WAM."
-      : !telegram.ready ? `${telegram.reason ?? "Telegram belum siap."} Peserta lain tetap diberi tahu di WAM.`
-        : telegram.destinations.length ? `PDF MoM dikirim ke grup Telegram ${joined(telegram.destinations)}, dan peserta lain diberi tahu di WAM.`
-          : "Belum ada grup Telegram untuk peserta meeting ini, jadi MoM hanya dikirim di WAM.";
-    return `${running}${where} Setelah dikirim, perubahan tetap bisa disimpan sebagai versi baru.`;
+    const where = off ? "MoM tidak dikirim ke Telegram; peserta lain diberi tahu di WAM."
+      : telegram.ready && telegram.destinations.length ? `PDF MoM dikirim ke grup Telegram ${joined(telegram.destinations)}, dan peserta lain diberi tahu di WAM.`
+        : "Peserta lain diberi tahu di WAM.";
+    return `${running}${where} Setelah dikirim, MoM masih bisa diubah.`;
   }
 
   /**
@@ -219,7 +229,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   async function save(send: boolean, content: Draft | null = draft) {
     if (!content) return;
     const problem = itemsProblem(content.items);
-    if (problem) { setError(problem); return; }
+    if (problem) { setError(problem); setStep(frm && attendees.length ? 2 : 1); return; }
     const items = content.items.filter(filled).map(item => ({ topic: item.topic.trim(), discussion: item.discussion.trim(), decision: item.decision.trim(), added: item.added }));
     const actions = content.actions.filter(action => action.task.trim()).map(({ id, task, picId, dueDate, done }) => ({ ...(id ? { id } : {}), task: task.trim(), picId, dueDate, done }));
     if (send && !(await confirm({ title: "Kirim MoM?", body: sendQuestion(content.telegramOff), confirmLabel: "Kirim MoM" }))) return;
@@ -250,18 +260,39 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     <p className={css.title}><NotebookPen size={18} aria-hidden /> Notulen (MoM)</p>
     {view.migrated && <span className={`${styles.pill} ${status === "belum" || status === "draf" ? styles.pillBrass : styles.pillLine}`}>{minutesStatusLabels[status]}</span>}
   </div>;
-  const photoBlock = (editable: boolean) => frm && <MinutePhotos sessionId={sessionId} photos={view.photos} editable={editable && canWrite} ready={view.photosReady} sent={sent} hd={view.photoHd} onChange={setPhotos} />;
+  const photoBlock = (editable: boolean) => frm && <MinutePhotos sessionId={sessionId} photos={view.photos} editable={editable && canWrite} ready={view.photosReady} hd={view.photoHd} onChange={setPhotos} />;
 
-  if (!view.migrated) return <section className={css.panel} aria-label="Notulen">{heading}<p className={styles.hint}>Notulen bisa ditulis setelah pembaruan sistem selesai.</p></section>;
+  if (!view.migrated) return <section className={css.panel} aria-label="Notulen">{heading}<p className={styles.hint}>Notulen belum bisa ditulis.</p></section>;
 
   if (draft) {
-    const nextVersion = (minutes?.version ?? 1) + 1;
     const away = new Set(draft.absentIds);
     const here = attendees.filter(person => !away.has(person.id)).length;
     const nextGiven = !!(draft.next.date || draft.next.time || draft.next.place || draft.next.agenda);
     const agenda = draft.items.map((item, index) => ({ item, index })).filter(({ item }) => !item.added);
     const added = draft.items.map((item, index) => ({ item, index })).filter(({ item }) => item.added);
     const room = draft.items.length < minutesLimits.items;
+    /*
+     * On a phone (12 Nov 2026) the form is a few steps, one screen each, with Kembali, Simpan draf and
+     * Lanjut at the bottom; on a larger screen every part shows at once, with its buttons at the end.
+     */
+    const steps = [
+      { key: "info", label: "Info" },
+      ...(frm && attendees.length ? [{ key: "hadir", label: "Hadir" }] : []),
+      { key: "bahasan", label: "Bahasan" },
+      { key: "tindak", label: "Tindak lanjut" },
+      { key: "selesai", label: "Selesai" },
+    ];
+    const at = Math.min(step, steps.length - 1);
+    const last = at === steps.length - 1;
+    const part = (key: string) => ({ hidden: phone && key !== steps[at].key ? true : undefined });
+    const go = (to: number) => {
+      setStep(Math.max(0, Math.min(steps.length - 1, to)));
+      formTop.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
+    };
+    const cancel = () => { setDraft(null); setError(null); };
+    const primary = drafts && !sent ? <><Send size={18} aria-hidden /> {busy === "send" ? "Mengirim…" : "Kirim MoM"}</> : busy ? "Menyimpan…" : sent ? "Simpan perubahan" : "Simpan notulen";
+    const topics = draft.items.filter(filled).length;
+    const tasks = draft.actions.filter(action => action.task.trim()).length;
     /** An agenda item (III) or a new topic (IV): topic, discussion summary and decisions. */
     const itemEditor = ({ item, index }: { item: MinuteItem; index: number }, number: number, removable: boolean) => {
       const where = item.added ? "new topic" : "agenda item";
@@ -287,10 +318,21 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     };
     return <section className={css.panel} aria-label="Notulen">
       {heading}
-      <form className={css.form} onSubmit={event => { event.preventDefault(); void save(drafts && !sent); }}>
-        {!frm && <Notice tone="info">Chairperson, kehadiran, meeting berikutnya, dan foto bisa diisi setelah pembaruan sistem selesai. Sementara itu agenda disimpan sebagai ringkasan dan keputusan.</Notice>}
+      <form ref={formTop} className={css.form} onSubmit={event => {
+        event.preventDefault();
+        // Enter in a field on a phone moves on a step; it sends only from the last one.
+        if (phone && !last) { go(at + 1); return; }
+        void save(drafts && !sent);
+      }}>
+        {phone && <ol className={css.stepper} aria-label="Langkah mengisi MoM">
+          {steps.map((each, index) => <li key={each.key}>
+            <button type="button" aria-current={index === at ? "step" : undefined} data-done={index < at ? "" : undefined} onClick={() => go(index)}>
+              <span className={css.stepNo}>{index + 1}</span><span>{each.label}</span>
+            </button>
+          </li>)}
+        </ol>}
 
-        <fieldset className={css.group}>
+        <fieldset className={css.group} {...part("info")}>
           <legend className={css.groupTitle}>{sectionTitle("I.", "MEETING INFORMATION")}</legend>
           <MeetingFacts view={view} number={minutes?.number} taker={minutes?.submittedBy ?? "Yang pertama menyimpan"} chair={frm && <>
             <dt><label htmlFor={`${uid}-chair`}>Chairperson</label></dt>
@@ -301,7 +343,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
           </>} />
         </fieldset>
 
-        {frm && attendees.length > 0 && <fieldset className={css.group}>
+        {frm && attendees.length > 0 && <fieldset className={css.group} {...part("hadir")}>
           <legend className={css.groupTitle}>{sectionTitle("II.", "ATTENDANCE", <span className={css.groupCount}>{here} present · {attendees.length - here} absent</span>)}</legend>
           <p className={styles.hint}>{attendees.some(person => person.checkedIn) ? "Diisi dari check-in. Hapus centang untuk yang tidak hadir." : "Hapus centang untuk yang tidak hadir."}</p>
           <ul className={css.people}>{attendees.map(person => <li key={person.id}>
@@ -318,20 +360,20 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
           </div>
         </fieldset>}
 
-        <fieldset className={css.group}>
+        <fieldset className={css.group} {...part("bahasan")}>
           <legend className={css.groupTitle}>{sectionTitle("III.", "AGENDA ITEMS AND DISCUSSION")}</legend>
           <ol className={css.items}>{agenda.map((entry, at) => itemEditor(entry, at + 1, agenda.length > 1))}</ol>
           {room && <button type="button" className="button button--secondary" onClick={() => patch({ items: [...draft.items, blankItem()] })}><Plus size={18} aria-hidden /> Tambah agenda</button>}
         </fieldset>
 
-        <fieldset className={css.group}>
+        <fieldset className={css.group} {...part("bahasan")}>
           <legend className={css.groupTitle}>{sectionTitle("IV.", "NEW ITEMS/TOPICS")}</legend>
           <p className={css.note}>{NEW_ITEMS_NOTE}</p>
           {added.length > 0 && <ol className={css.items}>{added.map((entry, at) => itemEditor(entry, at + 1, true))}</ol>}
           {room && <button type="button" className="button button--secondary" onClick={() => patch({ items: [...draft.items, { ...blankItem(), added: true }] })}><Plus size={18} aria-hidden /> Tambah topik baru</button>}
         </fieldset>
 
-        <fieldset className={css.group}>
+        <fieldset className={css.group} {...part("tindak")}>
           <legend className={css.groupTitle}>{sectionTitle("V.", "ACTION ITEMS")}</legend>
           <p className={css.note}>{ACTIONS_NOTE}</p>
           <ol className={css.actionRows}>{draft.actions.map((action, index) => <li key={action.id ?? `new-${index}`} className={css.actionRow}>
@@ -347,7 +389,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
           {draft.actions.length < minutesLimits.actions && <button type="button" className="button button--secondary" onClick={() => patch({ actions: [...draft.actions, blankAction()] })}><Plus size={18} aria-hidden /> Tambah tindak lanjut</button>}
         </fieldset>
 
-        {frm && <details className={css.group} open={nextGiven || undefined}>
+        {frm && <details className={css.group} open={nextGiven || undefined} {...part("selesai")}>
           <summary className={css.groupTitle}>{sectionTitle("VI.", "NEXT MEETING", <span className={css.groupCount}>opsional</span>)}<ChevronDown className={css.chevron} size={18} aria-hidden /></summary>
           <div className={css.nextGrid}>
             <div><label className={styles.label} htmlFor={`${uid}-next-date`}>Date</label>
@@ -361,35 +403,45 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
             <textarea id={`${uid}-next-agenda`} className="textarea" rows={2} maxLength={minutesLimits.agenda} value={draft.next.agenda} placeholder="Yang akan dibahas" onChange={event => setNext({ agenda: event.target.value })} /></div>
         </details>}
 
-        {frm && attendees.length > 0 && <fieldset className={css.group}>
+        {!phone && frm && attendees.length > 0 && <fieldset className={css.group}>
           <legend className={css.groupTitle}>{sectionTitle("VII.", "ATTENDANCE LIST")}</legend>
-          <p className={styles.hint}>Terisi otomatis dari II. Sign: Present atau Absent dari WAM.</p>
           <AttendanceList attendees={attendees} absentIds={draft.absentIds} guests={draft.guests} />
         </fieldset>}
 
-        {photoBlock(true)}
-
-        {drafts && <label className={css.check}>
-          <input type="checkbox" checked={draft.telegramOff} onChange={event => patch({ telegramOff: event.target.checked })} />
-          <span>Jangan kirim ke Telegram<small>Untuk meeting yang sensitif. MoM tetap ada di WAM untuk yang boleh membacanya.</small></span>
-        </label>}
-        {error && <Notice tone="error">{error}</Notice>}
-        <p className={styles.hint}>{!drafts ? "Notulen langsung terlihat oleh yang boleh membacanya setelah disimpan."
-          : sent ? (draft.telegramOff ? `Disimpan sebagai versi ${nextVersion}, tanpa Telegram.` : `Disimpan sebagai versi ${nextVersion}. Pesan MoM di Telegram ikut diganti tanpa bunyi.`)
-            : "Simpan draf hanya terlihat oleh yang ikut meeting. Kirim MoM membagikannya."}</p>
-        <div className={css.buttons}>
-          <button type="button" className="button button--secondary" disabled={busy !== null} onClick={() => { setDraft(null); setError(null); }}>Batal</button>
-          {drafts && !sent && <button type="button" className="button button--secondary" disabled={busy !== null} onClick={() => { void save(false); }}>{busy === "draft" ? "Menyimpan…" : "Simpan draf"}</button>}
-          <button type="submit" className="button button--primary" disabled={busy !== null}>
-            {drafts && !sent ? <><Send size={18} aria-hidden /> {busy === "send" ? "Mengirim…" : "Kirim MoM"}</> : busy ? "Menyimpan…" : sent ? "Simpan perubahan" : "Simpan notulen"}
-          </button>
+        <div className={css.stepPart} {...part("selesai")}>
+          {photoBlock(true)}
+          {/* What is filled, before it goes (a phone shows one part at a time). */}
+          {phone && <ul className={css.ready} aria-label="Isi MoM">
+            <li>{topics} topik dibahas</li>
+            <li>{tasks} tindak lanjut</li>
+            {frm && attendees.length > 0 && <li>{here} dari {attendees.length} hadir</li>}
+            {frm && <li>{view.photos.length} foto</li>}
+          </ul>}
+          {drafts && <label className={css.check}>
+            <input type="checkbox" checked={draft.telegramOff} onChange={event => patch({ telegramOff: event.target.checked })} />
+            <span>Jangan kirim ke Telegram<small>Untuk meeting yang sensitif.</small></span>
+          </label>}
+          {drafts && <p className={styles.hint}>{sent ? "Perubahan menggantikan MoM yang sudah dikirim." : "Draf hanya terlihat oleh yang ikut meeting sampai MoM dikirim."}</p>}
         </div>
+        {error && <Notice tone="error">{error}</Notice>}
+        {!phone && <div className={css.buttons}>
+          <button type="button" className="button button--secondary" disabled={busy !== null} onClick={cancel}>Batal</button>
+          {drafts && !sent && <button type="button" className="button button--secondary" disabled={busy !== null} onClick={() => { void save(false); }}>{busy === "draft" ? "Menyimpan…" : "Simpan draf"}</button>}
+          <button type="submit" className="button button--primary" disabled={busy !== null}>{primary}</button>
+        </div>}
+        {phone && <div className={css.stepBar}>
+          <button type="button" className="button button--secondary" disabled={busy !== null} onClick={() => (at === 0 ? cancel() : go(at - 1))}>{at === 0 ? "Batal" : "Kembali"}</button>
+          {drafts && !sent && <button type="button" className="button button--secondary" disabled={busy !== null} onClick={() => { void save(false); }}>{busy === "draft" ? "Menyimpan…" : "Simpan draf"}</button>}
+          {last ? <button type="submit" className="button button--primary" disabled={busy !== null}>{primary}</button>
+            : <button type="button" className="button button--primary" onClick={() => go(at + 1)}>Lanjut <ChevronRight size={18} aria-hidden /></button>}
+        </div>}
       </form>
       {confirmDialog}
     </section>;
   }
 
   const failed = telegram.deliveries.filter(item => item.status === "gagal");
+  const delivered = telegram.deliveries.filter(item => item.status === "terkirim");
   const items = minutes ? minutesItems(minutes) : [];
   const agenda = items.filter(item => !item.added);
   const added = items.filter(item => item.added);
@@ -407,7 +459,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     {heading}
     {notice && <p role="status" className={css.saved}><CheckCircle2 size={16} aria-hidden /> {notice}</p>}
     {minutes ? <>
-      {!sent && <Notice tone="info">Draf: belum dikirim ke siapa pun. Yang lain baru bisa membacanya setelah Kirim MoM.</Notice>}
+      {!sent && <Notice tone="info">Masih draf. Peserta lain bisa membacanya setelah MoM dikirim.</Notice>}
       <section className={css.group}>
         <h3 className={css.groupTitle}>{sectionTitle("I.", "MEETING INFORMATION")}</h3>
         <MeetingFacts view={view} number={minutes.number ?? "-"} taker={minutes.submittedBy ?? "Peserta"}
@@ -457,30 +509,26 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       </section>}
       {photoBlock(true)}
       <p className={styles.hint}>
-        Dicatat {minutes.submittedBy ?? "peserta"} · {stamp(minutes.submittedAt)}
-        {sent && minutes.sentAt && drafts ? ` · dikirim ${minutes.sentBy ?? ""}${minutes.sentBy ? ", " : ""}${stamp(minutes.sentAt)} · versi ${Math.max(1, minutes.version)}` : ""}
+        {sent && minutes.sentAt ? `Dikirim ${minutes.sentBy ?? minutes.submittedBy ?? "peserta"} · ${stamp(minutes.sentAt)}` : `Ditulis ${minutes.submittedBy ?? "peserta"} · ${stamp(minutes.submittedAt)}`}
         {minutes.updatedAt !== minutes.submittedAt && minutes.updatedBy ? ` · diubah ${minutes.updatedBy}, ${stamp(minutes.updatedAt)}` : ""}
       </p>
-      {sent && drafts && <div className={css.telegram}>
-        {minutes.telegramOff ? <p>Tidak dikirim ke Telegram (dipilih notulis).</p>
-          : telegram.deliveries.length ? <p>Telegram: {telegram.deliveries.map(item => `${item.title} (${item.status === "terkirim" ? `versi ${item.version}` : "gagal"})`).join(" · ")}</p>
-            : <p>{telegram.reason ?? "Belum ada grup Telegram untuk peserta meeting ini."}</p>}
-        {failed.length > 0 && <p className={css.warn}>{failed.map(item => `${item.title}: ${item.error ?? "gagal"}`).join(" · ")}. Dicoba lagi saat notulen disimpan berikutnya.</p>}
+      {sent && drafts && (minutes.telegramOff || delivered.length > 0 || failed.length > 0) && <div className={css.telegram}>
+        {minutes.telegramOff ? <p>Tidak dikirim ke Telegram.</p>
+          : delivered.length > 0 && <p>Terkirim ke Telegram: {delivered.map(item => item.title).join(", ")}</p>}
+        {!minutes.telegramOff && failed.length > 0 && <p className={css.warn}>Belum terkirim ke {failed.map(item => item.title).join(", ")}. Dicoba lagi saat MoM disimpan berikutnya.</p>}
       </div>}
-      <div className={css.buttons}>
-        <a className="button button--secondary" href={minutesApi.pdf(sessionId)} download><Download size={18} aria-hidden /> Unduh PDF</a>
-      </div>
     </> : <>
       <p className={styles.hint}>{status === "belum" ? "Meeting sudah selesai, notulennya belum diisi." : status === "draf" ? "Notulen sedang ditulis." : view.open ? "Belum ada notulen." : "Notulen bisa ditulis setelah meeting dimulai."}</p>
       {canWrite && photoBlock(true)}
     </>}
     {error && <Notice tone="error">{error}</Notice>}
-    {canWrite && <div className={css.buttons}>
-      <button type="button" className={`button ${minutes ? "button--secondary" : "button--primary"}`} onClick={start}>
+    {(minutes || canWrite) && <div className={`${css.buttons} ${css.readBar}`}>
+      {minutes && <a className="button button--secondary" href={minutesApi.pdf(sessionId)} download><Download size={18} aria-hidden /> Unduh PDF</a>}
+      {canWrite && <button type="button" className={`button ${minutes ? "button--secondary" : "button--primary"}`} onClick={start}>
         <NotebookPen size={18} aria-hidden /> {!minutes ? "Tulis notulen" : sent ? "Ubah notulen" : "Lanjutkan draf"}
-      </button>
+      </button>}
       {/* A draft that is ready goes without opening the form again. */}
-      {minutes && !sent && drafts && <button type="button" className="button button--primary" disabled={busy !== null} onClick={() => { void save(true, draftOf()); }}>
+      {canWrite && minutes && !sent && drafts && <button type="button" className="button button--primary" disabled={busy !== null} onClick={() => { void save(true, draftOf()); }}>
         <Send size={18} aria-hidden /> {busy === "send" ? "Mengirim…" : "Kirim MoM"}
       </button>}
     </div>}
