@@ -42,3 +42,17 @@
 .answer { min-width: 13rem; max-width: 17rem; line-height: 1.45; }
 .answer > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; white-space: pre-line; overflow-wrap: anywhere; }
 .empty { color: var(--cs-muted); }
+
+/* Deleting answers (12 Nov 2026): a tick per person, the bar for the chosen, and starting again. */
+.pick { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.pick input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--cs-primary); cursor: pointer; }
+.pick > span { min-width: 0; }
+.chosen { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border: 1px solid var(--cs-line); border-radius: 14px; background: var(--cs-surface-2); }
+.chosen > p { flex: 1 1 12rem; margin: 0; font-size: 14px; font-weight: 600; color: var(--cs-text); }
+.danger { color: var(--cs-bad-fg); }
+.wipe { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; margin-top: 8px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--cs-bad-fg) 35%, var(--cs-line)); border-radius: 16px; }
+.wipe > div:first-child { flex: 1 1 20rem; }
+.wipeTitle { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: var(--cs-text); }
+.wipeConfirm { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.wipeConfirm label { display: grid; gap: 4px; }
+.wipeConfirm input { width: 10rem; }

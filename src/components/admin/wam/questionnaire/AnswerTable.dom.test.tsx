@@ -1,9 +1,13 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { AnswerTable as Table } from "@/lib/server/pra-wam/answer-table";
 import { AnswerTable } from "./AnswerTable";
 
+const request = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("@/components/admin/shared/api", async importOriginal => ({ ...await importOriginal<typeof import("@/components/admin/shared/api")>(), adminRequest: request }));
+HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
 afterEach(cleanup);
 
 const table: Table = {
@@ -67,4 +71,34 @@ it("searches the answers (the words marked) or the questions, and keeps who gave
   fireEvent.change(answer, { target: { value: "__belum_dijawab__" } });
   expect(within(screen.getByRole("table")).getByText("Bima Putra")).toBeTruthy();
   expect(within(screen.getByRole("table")).queryByText("Ayu Lestari")).toBeNull();
+});
+
+it("deletes the answers of the people ticked, after asking, and everything only once HAPUS is typed", async () => {
+  request.mockResolvedValue({ data: {}, message: "Jawaban 1 orang dihapus (2 jawaban). Statusnya kembali Belum mulai." });
+  render(<AnswerTable table={table} reminder={{ open: true, last: null }} />);
+  expect(screen.queryByRole("group", { name: "Orang yang dipilih" })).toBeNull();
+  fireEvent.click(screen.getByRole("checkbox", { name: "Pilih Ayu Lestari" }));
+  expect(screen.getByText("1 orang dipilih")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Hapus jawaban (1)" }));
+  const dialog = within(await screen.findByRole("dialog", { name: "Hapus jawaban 1 orang?" }));
+  expect(dialog.getByText(/Ayu Lestari dihapus permanen/)).toBeTruthy();
+  fireEvent.click(dialog.getByRole("button", { name: "Hapus jawaban" }));
+  await waitFor(() => expect(request).toHaveBeenCalledWith("/api/admin/wam/questionnaire/answers", { method: "DELETE", body: JSON.stringify({ who: "pilih", employeeIds: ["a"] }) }));
+  expect(await screen.findByText(/Jawaban 1 orang dihapus/)).toBeTruthy();
+  expect(screen.queryByText("1 orang dipilih")).toBeNull();
+
+  // Every row shown at once.
+  fireEvent.click(screen.getByRole("checkbox", { name: "Pilih semua yang tampil (2 orang)" }));
+  expect(screen.getByText("2 orang dipilih")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Batal pilih" }));
+
+  request.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: /Hapus semua data/ }));
+  const now = screen.getByRole("button", { name: /Hapus semua sekarang/ }) as HTMLButtonElement;
+  expect(now.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText(/Ketik HAPUS untuk lanjut/), { target: { value: "hapus" } });
+  expect(now.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText(/Ketik HAPUS untuk lanjut/), { target: { value: "HAPUS" } });
+  fireEvent.click(now);
+  await waitFor(() => expect(request).toHaveBeenCalledWith("/api/admin/wam/questionnaire/answers", { method: "DELETE", body: JSON.stringify({ who: "semua", confirm: "HAPUS" }) }));
 });

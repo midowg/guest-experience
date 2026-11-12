@@ -2,11 +2,12 @@
 
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, CheckCircle2, Circle, CircleDashed, Download, Users } from "lucide-react";
+import { Bell, CheckCircle2, Circle, CircleDashed, Download, Trash2, Users } from "lucide-react";
 import { ConsoleButton, ConsoleButtonLink, FilterChips, Pill, SearchField, StatCard, StatRow, type ConsoleTone } from "@/components/console";
 import { Notice } from "@/components/ui";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
+import { DELETE_ALL_WORD } from "@/lib/pra-wam/answer-delete";
 import type { Visibility } from "@/lib/pra-wam/questionnaire";
 import { praWamQuestionnaireApi } from "@/lib/routes";
 import type { AnswerTable as Table } from "@/lib/server/pra-wam/answer-table";
@@ -54,6 +55,10 @@ function marked(text: string, words: string[]): ReactNode {
  * table as Excel. The name stays in view while the answers scroll sideways. Since 11 Nov 2026 the
  * search also looks in the answers (the words marked) or the questions (the other columns hidden),
  * and "Saring jawaban" keeps the people who gave one answer to one question.
+ *
+ * 12 Nov 2026: answers can be deleted. Tick people (or every row shown) and "Hapus jawaban": their
+ * named answers go and they are back to "Belum mulai". "Hapus semua data" (typing HAPUS) deletes
+ * every answer, anonymous ones too, and the room pairing.
  */
 export function AnswerTable({ table, reminder }: { table: Table; reminder: ReminderState }) {
   const router = useRouter();
@@ -68,6 +73,12 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
   const [filterValue, setFilterValue] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  // Deleting answers (12 Nov 2026).
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [wipeOpen, setWipeOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [deleted, setDeleted] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   const total = table.rows.length;
   const departments = useMemo(() => [...new Set(table.rows.map(row => row.department).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id")), [table.rows]);
@@ -106,6 +117,33 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
       router.refresh();
     } catch (problem) { setSent({ tone: "error", text: errorMessage(problem) }); }
     finally { setSending(false); }
+  }
+
+  const shownIds = rows.map(row => row.id);
+  const allShown = shownIds.length > 0 && shownIds.every(id => selected.has(id));
+  // A person chosen and then filtered away stays chosen: the bar says how many in all.
+  const chosen = table.rows.filter(row => selected.has(row.id));
+  const toggle = (id: string, on: boolean) => setSelected(current => { const next = new Set(current); if (on) next.add(id); else next.delete(id); return next; });
+  const toggleShown = (on: boolean) => setSelected(current => { const next = new Set(current); for (const id of shownIds) { if (on) next.add(id); else next.delete(id); } return next; });
+
+  async function remove(body: object, done: () => void) {
+    setDeleting(true); setDeleted(null);
+    try {
+      const result = await adminRequest(praWamQuestionnaireApi.answers, { method: "DELETE", body: JSON.stringify(body) });
+      setDeleted({ tone: "success", text: result.message });
+      done();
+      router.refresh();
+    } catch (problem) { setDeleted({ tone: "error", text: errorMessage(problem) }); }
+    finally { setDeleting(false); }
+  }
+  async function removeChosen() {
+    const names = chosen.slice(0, 3).map(row => row.name).join(", ") + (chosen.length > 3 ? `, dan ${chosen.length - 3} orang lain` : "");
+    if (!(await confirm({
+      title: `Hapus jawaban ${chosen.length} orang?`,
+      body: `Jawaban ${names} dihapus permanen dan statusnya kembali Belum mulai. Mereka bisa mengisi lagi dari awal. Jawaban anonim tidak ikut terhapus.`,
+      confirmLabel: "Hapus jawaban", danger: true,
+    }))) return;
+    await remove({ who: "pilih", employeeIds: chosen.map(row => row.id) }, () => setSelected(new Set()));
   }
 
   return <div className="stack">
@@ -178,13 +216,27 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
       { value: "belum", label: stateLabels.belum, count: table.counts.belum },
     ]} />
 
+    {chosen.length > 0 && <div className={css.chosen} role="group" aria-label="Orang yang dipilih">
+      <p>{chosen.length} orang dipilih</p>
+      <ConsoleButton className={css.danger} disabled={deleting} onClick={() => void removeChosen()} icon={<Trash2 size={18} aria-hidden="true" />}>
+        {deleting ? "Menghapus…" : `Hapus jawaban (${chosen.length})`}
+      </ConsoleButton>
+      <ConsoleButton disabled={deleting} onClick={() => setSelected(new Set())}>Batal pilih</ConsoleButton>
+    </div>}
+    {deleted && <Notice tone={deleted.tone}>{deleted.text}</Notice>}
+
     <p className={css.count} aria-live="polite">{rows.length} dari {total} orang · {columns.length} pertanyaan. Geser tabel ke samping untuk melihat semua jawaban.</p>
     {scope === "pertanyaan" && words.length > 0 && !columns.length ? <p className={css.count}>Tidak ada pertanyaan yang cocok dengan pencarian ini.</p>
       : rows.length ? <div className={css.scroller} role="region" aria-label="Tabel jawaban" tabIndex={0}>
       <table className={css.table}>
         <thead>
           <tr>
-            <th scope="col" className={css.who}>Nama</th>
+            <th scope="col" className={css.who}>
+              <label className={css.pick}>
+                <input type="checkbox" checked={allShown} aria-label={`Pilih semua yang tampil (${rows.length} orang)`} onChange={event => toggleShown(event.target.checked)} />
+                <span>Nama</span>
+              </label>
+            </th>
             <th scope="col" className={css.status}>Status</th>
             {columns.map(column => <th key={column.key} scope="col" className={css.question} title={`${column.section}: ${column.prompt}`}>
               <span className={css.qno}>{column.number}</span>
@@ -195,7 +247,12 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
         </thead>
         <tbody>
           {rows.map(row => <tr key={row.id}>
-            <th scope="row" className={css.who}><strong>{row.name}</strong><small>{row.department || "Tanpa departemen"}</small></th>
+            <th scope="row" className={css.who}>
+              <label className={css.pick}>
+                <input type="checkbox" checked={selected.has(row.id)} aria-label={`Pilih ${row.name}`} onChange={event => toggle(row.id, event.target.checked)} />
+                <span><strong>{row.name}</strong><small>{row.department || "Tanpa departemen"}</small></span>
+              </label>
+            </th>
             <td className={css.status}>
               <Pill tone={stateTone[row.state]}>{stateLabels[row.state]}</Pill>
               <small>{row.sectionsDone}/{row.sectionsTotal} bagian{row.lastActivity ? ` · ${when(row.lastActivity)}` : ""}</small>
@@ -209,5 +266,23 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
       </table>
     </div> : <p className={css.count}>Tidak ada orang yang cocok dengan saringan ini.</p>}
     <p className={css.note}>Bagian anonim tidak ada di tabel: jawabannya disimpan tanpa nama.{table.outside ? ` ${table.outside} orang yang sudah menjawab tidak tampil karena tidak aktif lagi atau tidak termasuk orang yang dituju.` : ""}</p>
+
+    {/* Starting again (12 Nov 2026): every answer, anonymous ones and the room pairing too. */}
+    <div className={css.wipe}>
+      <div>
+        <p className={css.wipeTitle}>Hapus semua data kuesioner</p>
+        <p className={css.note}>Semua jawaban (termasuk anonim) dan penempatan kamar dihapus permanen. Semua orang kembali Belum mulai. Unduh Excel dulu bila perlu arsip.</p>
+      </div>
+      {!wipeOpen ? <ConsoleButton className={css.danger} onClick={() => { setWipeOpen(true); setTyped(""); }} icon={<Trash2 size={18} aria-hidden="true" />}>Hapus semua data</ConsoleButton>
+        : <div className={css.wipeConfirm}>
+          <label><span className={css.toolLabel}>Ketik {DELETE_ALL_WORD} untuk lanjut</span>
+            <input className="input" value={typed} autoComplete="off" onChange={event => setTyped(event.target.value)} />
+          </label>
+          <ConsoleButton className={css.danger} disabled={deleting || typed.trim() !== DELETE_ALL_WORD}
+            onClick={() => void remove({ who: "semua", confirm: DELETE_ALL_WORD }, () => { setWipeOpen(false); setTyped(""); setSelected(new Set()); })}
+            icon={<Trash2 size={18} aria-hidden="true" />}>{deleting ? "Menghapus…" : "Hapus semua sekarang"}</ConsoleButton>
+          <ConsoleButton disabled={deleting} onClick={() => setWipeOpen(false)}>Batal</ConsoleButton>
+        </div>}
+    </div>
   </div>;
 }

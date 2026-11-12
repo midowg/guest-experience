@@ -348,6 +348,8 @@ export const praWamQuestionnaireApi = {
   progress: `${QUESTIONNAIRE_ADMIN_API}/progress`,
   /** POST: "Hapus sekarang", the stay and health data, from the date set in Pengaturan. */
   purge: `${QUESTIONNAIRE_ADMIN_API}/purge`,
+  /** DELETE {who: "pilih", employeeIds} or {who: "semua", confirm}: Rekap's Hapus jawaban (12 Nov 2026). */
+  answers: `${QUESTIONNAIRE_ADMIN_API}/answers`,
   /** POST {who}: "Ingatkan yang belum", a WAM notification to those not done. */
   remind: `${QUESTIONNAIRE_ADMIN_API}/remind`,
   /** GET: Rekap's table (one row per person, one column per question, HR included) as .xlsx; logged as `ekspor`. */
