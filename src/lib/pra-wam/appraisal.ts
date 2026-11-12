@@ -122,9 +122,12 @@ export const periodDates = () => bookableDates(appraisalRules.periodStart);
  * entered afterwards), is a record: saved after the booker says so, every hour of that day open,
  * a room clash still refused, and no one invited or told (it is over). Today's past hours are not.
  */
-export const isRecordDate = (date: string, now: Date) => date >= appraisalRules.periodStart && date < wibDate(now.toISOString());
+export const isRecordDate = (date: string, now: Date, start?: string) => date >= appraisalRules.periodStart
+  && (date < wibDate(now.toISOString())
+    // 13 Nov 2026: today's hours already gone too, when a start is given (a booking put on the wrong day, moved back afterwards).
+    || (!!start && date === wibDate(now.toISOString()) && new Date(wibInstant(date, start)) < now));
 /** The clock a booking's hours are checked against: for a record, the start of time, so none of its hours is "past". */
-export const bookingClock = (date: string, now: Date) => (isRecordDate(date, now) ? new Date(0) : now);
+export const bookingClock = (date: string, now: Date, start?: string) => (isRecordDate(date, now, start) ? new Date(0) : now);
 
 /** Every day of the period, weekends too: the days an outside booking may take. */
 export function periodAllDates(): string[] {

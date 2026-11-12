@@ -120,4 +120,16 @@ describe("a booking on a day gone (a record)", () => {
     expect(bookingProblems({ date: "2026-11-04", start: "08:00", end: "09:00" }, bookingClock("2026-11-04", now))).toHaveProperty("start");
     expect(bookingProblems({ date: "2026-10-27", start: "09:00", end: "10:00" }, bookingClock("2026-10-27", now))).toHaveProperty("date");
   });
+
+  it("takes an hour already gone today as a record too, once its start is given (a booking put on the wrong day)", () => {
+    const today = wibDate(now.toISOString());
+    // 09.05 WIB now: 08.00 is gone, inside office hours.
+    const gone = "08:00";
+    expect(isRecordDate(today, now)).toBe(false);
+    expect(isRecordDate(today, now, gone)).toBe(true);
+    expect(bookingProblems({ date: today, start: gone, end: "09:00" }, bookingClock(today, now, gone))).not.toHaveProperty("start");
+    // A start still to come today is not a record: it invites as always.
+    const later = wibTime(new Date(now.getTime() + 2 * 3600_000).toISOString()).slice(0, 2) + ":00";
+    expect(isRecordDate(today, now, later)).toBe(false);
+  });
 });

@@ -107,6 +107,8 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   // Booking as HOD/Lead, or as ITEM (10 Nov 2026: a meeting between departments, "ITEM: HRGA x
   // CoE"): the departments picked; their HODs and Leads are the participants.
   const [as, setAs] = useState<"pribadi" | "hod" | "item">("pribadi");
+  /** Today's hours already gone are offered (13 Nov 2026), after the booker says so: a meeting already held. */
+  const [pastToday, setPastToday] = useState(false);
   const asHod = as !== "pribadi";
   const [hodUnits, setHodUnits] = useState<string[]>([]);
   // The name before ITEM named it, given back when the booker leaves ITEM.
@@ -172,12 +174,12 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   }, [step]);
 
   const nowDate = new Date(now);
-  // A day already gone is a record (10 Nov 2026): every hour of it open, no one invited.
-  const record = isRecordDate(draft.date, nowDate);
-  const clock = bookingClock(draft.date, nowDate);
+  // A day already gone is a record (10 Nov 2026): every hour of it open, no one invited. So is an hour gone today.
+  const record = isRecordDate(draft.date, nowDate, draft.start);
+  const clock = bookingClock(draft.date, nowDate, draft.start);
   const outside = draft.roomId === OUTSIDE_ROOM;
   const slots = slotTimes(outside);
-  const startsOn = (date: string) => slots.slice(0, -1).filter(time => new Date(wibInstant(date, time)) > bookingClock(date, nowDate));
+  const startsOn = (date: string) => slots.slice(0, -1).filter(time => new Date(wibInstant(date, time)) > (pastToday && date === wibDate(now) ? new Date(0) : bookingClock(date, nowDate)));
   const starts = startsOn(draft.date);
   const length = clockMinutes(draft.end) - clockMinutes(draft.start);
   const lengths = durationsFrom(draft.start, outside);
@@ -300,7 +302,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
   /** What stops a step, as field errors; empty when Lanjut may go on. */
   function problemsOf(at: number): Record<string, string> {
-    if (at === 0) return bookingProblems(draft, bookingClock(draft.date, new Date()));
+    if (at === 0) return bookingProblems(draft, bookingClock(draft.date, new Date(), draft.start));
     if (at === 1) return draft.title.trim().length < 2 ? { title: "Isi nama kegiatan." } : {};
     if (at === 2 && asHod && !hodUnits.length) return { participants: "Pilih minimal satu departemen." };
     if (at === 2) return {};
@@ -430,7 +432,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
           }} /></div>
         : <DateStrip days={stripDays} selected={draft.date} today={today} summary={daySummary} onPick={date => { void pickDate(date); }} pastPickable label="Tanggal" />}
       {fieldError("date")}
-      {record && <Notice tone="info">{dayLabel(draft.date)} sudah lewat: booking ini dicatat sebagai meeting yang sudah terjadi. Bentrok ruang tetap dicek; partisipan tidak diundang atau diberi notifikasi.</Notice>}
+      {record && <Notice tone="info">{draft.date === today ? `Jam ${clockLabel(draft.start)} hari ini sudah lewat` : `${dayLabel(draft.date)} sudah lewat`}: booking ini dicatat sebagai meeting yang sudah terjadi. Bentrok ruang tetap dicek; partisipan tidak diundang atau diberi notifikasi.</Notice>}
       {dayFull && <p className={css.note} role="status">Semua ruang penuh hari ini. Pilih hari lain atau jam lain.</p>}
       <div className={styles.times}>
         <div>
@@ -453,6 +455,15 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
       </div>
       <p className={css.span} role="status"><Clock size={18} aria-hidden />{dayLabel(draft.date)} · {hours}{length > 0 ? ` (${durationLabel(length)})` : ""}</p>
       {starts.length === 0 && <Notice tone="info">{outside ? "Hari ini sudah lewat. Pilih tanggal lain." : "Jam operasional hari ini sudah lewat. Pilih tanggal lain."}</Notice>}
+      {draft.date === today && !pastToday && <button type="button" className={css.pastLink} onClick={() => { void (async () => {
+        if (!(await confirm({
+          title: "Pilih jam yang sudah lewat?",
+          body: "Untuk mencatat meeting yang sudah terjadi hari ini, misalnya booking yang salah tanggal. Partisipan tidak diundang atau diberi notifikasi.",
+          confirmLabel: "Ya, tampilkan",
+        }))) return;
+        setPastToday(true);
+        if (as !== "pribadi") chooseAs("pribadi");
+      })(); }}>Meeting-nya sudah lewat hari ini? Pilih jam yang sudah lewat</button>}
       <p className={styles.hint}>{outside
         ? "Di luar kantor: boleh akhir pekan, jam berapa pun hari itu (sampai 23.30), dan lebih dari 4 jam. Nama tempat diisi di langkah Tempat."
         : `Ruang kantor ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam. Di luar kantor dipilih di langkah Tempat.`}</p>

@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     // Booking as HOD (6 Nov 2026): the participants are the HODs of the departments picked.
     const { hodUnits } = validate(hodUnitsSchema, body);
     // A record of a day gone (10 Nov 2026) invites no one, so HOD/Lead and ITEM have nothing to ask.
-    if (hodUnits.length && isRecordDate(input.date, new Date())) throw new ServiceError(422, "Meeting HOD/Lead atau ITEM tidak bisa dicatat untuk tanggal yang sudah lewat. Pilih Pribadi.", { participants: ["Pilih Pribadi untuk tanggal yang sudah lewat."] });
+    if (hodUnits.length && isRecordDate(input.date, new Date(), input.start)) throw new ServiceError(422, "Meeting HOD/Lead atau ITEM tidak bisa dicatat untuk tanggal yang sudah lewat. Pilih Pribadi.", { participants: ["Pilih Pribadi untuk tanggal yang sudah lewat."] });
     const invites = hodUnits.length ? await hodInvitees(member, hodUnits) : [];
     if (invites.length) input.participants = invites.map(invite => invite.employee_id);
     const saved = await saveBooking(input, member, { confirmed, overCapacity, quiet: invites.length > 0 });

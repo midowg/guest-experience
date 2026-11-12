@@ -253,7 +253,7 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
   if (!office && !await appraisalOpen()) throw new ServiceError(409, "Booking ruang appraisal sedang ditutup oleh admin Pra WAM.");
   const before = options.id ? await requireOwn(options.id, viewer) : null;
   // A day already gone is a record (WAM only): its hours are not "past", and no one is told.
-  const clock = office ? now : bookingClock(input.date, now);
+  const clock = office ? now : bookingClock(input.date, now, input.start);
   const record = clock !== now;
   const problems = bookingProblems(input, clock, office ? officePeriod(now) : undefined);
   if (Object.keys(problems).length) throw new ServiceError(422, "Periksa kembali tanggal dan jam.", Object.fromEntries(Object.entries(problems).map(([key, message]) => [key, [message]])));
