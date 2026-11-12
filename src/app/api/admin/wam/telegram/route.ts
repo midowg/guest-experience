@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireApiAdmin } from "@/lib/server/admin-session";
-import { createInstallCode, ensureTopic, installWebhook, removeGroup, sendSample, telegramStatus } from "@/lib/server/pra-wam/telegram";
+import { createInstallCode, ensureTopic, installWebhook, removeGroup, renameGroup, sendSample, telegramStatus } from "@/lib/server/pra-wam/telegram";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +15,7 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("sample"), chatId }),
   z.object({ action: z.literal("topic"), chatId }),
   z.object({ action: z.literal("remove"), chatId }),
+  z.object({ action: z.literal("rename"), chatId }),
 ]);
 
 /** GET: Admin WAM → Telegram (any admin): the bot, its webhook, the groups and the departments. */
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
     }
     const message = input.action === "sample" ? await sendSample(input.chatId)
       : input.action === "topic" ? await ensureTopic(input.chatId)
+        : input.action === "rename" ? await renameGroup(input.chatId)
         : await removeGroup(input.chatId);
     return success(await telegramStatus(), message);
   });

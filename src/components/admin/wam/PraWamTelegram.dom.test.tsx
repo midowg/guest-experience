@@ -16,7 +16,7 @@ const status: TelegramStatus = {
     { chatId: "-1002", title: "Lama", scope: "departemen", department: "Divisi Lama", unit: null, isForum: false, momTopicId: null, botStatus: "dikeluarkan", installedAt: "2026-11-12T04:00:00Z" },
   ],
   departments: [
-    { name: "Center of Excellence", short: "CoE", unit: null, groupTitle: "Werkudara CoE · Center of Excellence" },
+    { name: "Center of Excellence", short: "CoE", unit: null, groupTitle: "WG CoE · Center of Excellence" },
     { name: "Sales & Marketing", short: "SM", unit: null, groupTitle: "Werkudara SM · Sales & Marketing" },
   ],
 };
@@ -55,6 +55,16 @@ it("makes a one-time link for a department and shows both ways to install it", a
   expect(within(panel).getByRole("link", { name: /Buka di Telegram/ }).getAttribute("href")).toBe("https://t.me/wam_werkudara_bot?startgroup=CODE");
   expect(within(panel).getByText("/start@wam_werkudara_bot CODE")).toBeTruthy();
   expect(within(panel).getByText(/Berlaku sampai 12\.00 WIB/)).toBeTruthy();
+});
+
+it("asks for one name: a group called otherwise in Telegram is renamed by the bot", async () => {
+  request.mockResolvedValue({ message: "Nama grup diganti jadi WG CoE · Center of Excellence.", data: status });
+  render(<PraWamTelegram initial={status} />);
+  const coe = screen.getByText("Center of Excellence", { selector: "strong" }).closest("li")!;
+  expect(within(coe).getByText(/Nama di Telegram belum seragam/)).toBeTruthy();
+  fireEvent.click(within(coe).getByRole("button", { name: "Samakan nama" }));
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+  expect(JSON.parse(request.mock.calls[0][1].body)).toEqual({ action: "rename", chatId: "-1001" });
 });
 
 it("sends a sample MoM and shows the answer", async () => {

@@ -22,8 +22,8 @@ export default async function DevTelegramPage({ searchParams }: { searchParams: 
       webhook: { set: true, ours: true, pending: 0, lastError: "Wrong response from the webhook: 503 Service Unavailable", lastErrorAt: "2026-11-12T04:20:00Z" },
       groups: [
         { chatId: "-1001", title: "Werkudara CoE · Center of Excellence", scope: "departemen", department: "Center of Excellence", unit: null, isForum: true, momTopicId: 12, botStatus: "admin", installedAt: "2026-11-12T04:00:00Z" },
-        { chatId: "-1002", title: "Werkudara SM · Commercial", scope: "departemen", department: "Sales & Marketing", unit: "Commercial", isForum: true, momTopicId: null, botStatus: "anggota", installedAt: "2026-11-12T04:00:00Z" },
-        { chatId: "-1004", title: "WG BAS", scope: "departemen", department: "Business & Administrative Services", unit: null, isForum: false, momTopicId: null, botStatus: "anggota", installedAt: "2026-11-13T04:00:00Z", inviteLink: "https://t.me/+contoh" },
+        { chatId: "-1002", title: "WG SM · Commercial", scope: "departemen", department: "Sales & Marketing", unit: "Commercial", isForum: true, momTopicId: null, botStatus: "anggota", installedAt: "2026-11-12T04:00:00Z" },
+        { chatId: "-1004", title: "WG BAS · Business & Administrative Services", scope: "departemen", department: "Business & Administrative Services", unit: null, isForum: false, momTopicId: null, botStatus: "anggota", installedAt: "2026-11-13T04:00:00Z", inviteLink: "https://t.me/+contoh" },
         { chatId: "777", title: "CoS · Rina Putri", scope: "cos", department: null, unit: null, isForum: false, momTopicId: null, botStatus: "admin", installedAt: "2026-11-13T05:00:00Z" },
         { chatId: "-1003", title: "Werkudara · HOD", scope: "hod", department: null, unit: null, isForum: false, momTopicId: null, botStatus: "dikeluarkan", installedAt: "2026-11-12T04:00:00Z" },
       ],

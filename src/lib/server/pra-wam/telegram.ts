@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { CAPTION_LIMIT, cut, minutesCaption, minutesFileName, visibleLength, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
 import {
-  departmentGroups, HELP_TEXT, INSTALL_CODE, INSTALL_MINUTES, installCommand, installLink, installReply, MOM_TOPIC, privateLink, readUpdate, sampleMinutes,
+  canonicalTitle, departmentGroups, HELP_TEXT, INSTALL_CODE, INSTALL_MINUTES, installCommand, installLink, installReply, MOM_TOPIC, privateLink, readUpdate, sampleMinutes,
   type BotStatus, type GroupChat, type InstallCode, type TelegramGroup, type TelegramScope, type TelegramStatus, type TelegramUpdate,
 } from "@/lib/pra-wam/telegram";
 import { praWamPath } from "@/lib/routes";
@@ -12,6 +12,7 @@ import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { telegramCall, TelegramError, telegramConfig, telegramUpload, telegramUploadMany, webhookSecret, type TelegramConfig } from "../telegram";
 import { minutesPdf } from "./minutes-pdf";
+import { departmentShorts } from "@/lib/employees";
 import { leadOptions } from "./leads";
 
 /*
@@ -386,6 +387,33 @@ export async function ensureTopic(chatId: string, now = new Date()): Promise<str
 }
 
 /** Stops posting MoM to a group; the bot stays in it until someone removes it. */
+/** The short forms of every department of Data karyawan, as the group names use them. */
+export async function groupShorts(): Promise<Map<string, string>> {
+  return departmentShorts(await leadOptions().then(options => options.departments).catch(() => [] as string[]));
+}
+
+/**
+ * Gives a group its WAM name in Telegram (13 Nov 2026): "WG {short} · {full name}". The bot may do it
+ * as an admin with "change group info"; without that right, the admin is told the name to type.
+ */
+export async function renameGroup(chatId: string, now = new Date()): Promise<string> {
+  const config = requireBot();
+  const group = await activeGroup(chatId);
+  const title = canonicalTitle(group, await groupShorts());
+  if (title === group.title) return `Nama grup sudah ${title}.`;
+  try { await telegramCall(config, "setChatTitle", { chat_id: group.chatId, title }); }
+  catch (error) {
+    if (error instanceof TelegramError && /rights|admin|forbidden|not enough/i.test(error.description)) {
+      throw new ServiceError(409, `Bot belum boleh mengganti nama grup. Ganti nama grup di Telegram jadi "${title}", atau jadikan bot admin dengan hak Ubah info grup.`);
+    }
+    throw new ServiceError(502, `Telegram menolak: ${say(error)}`);
+  }
+  const { error } = await createPrivilegedClient().from("pw_telegram_groups").update({ title, updated_at: now.toISOString() }).eq("chat_id", group.chatId);
+  if (error) databaseError(error);
+  chats.delete(group.chatId);
+  return `Nama grup diganti jadi ${title}.`;
+}
+
 export async function removeGroup(chatId: string, now = new Date()): Promise<string> {
   const group = await activeGroup(chatId);
   const { error } = await createPrivilegedClient().from("pw_telegram_groups").update({ active: false, updated_at: now.toISOString() }).eq("chat_id", group.chatId);

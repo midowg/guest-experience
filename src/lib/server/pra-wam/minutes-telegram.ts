@@ -4,7 +4,7 @@ import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { minutesItems, type Minutes, type MinutesTelegram } from "@/lib/pra-wam/minutes";
 import { minutesCode, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
 import type { Session } from "@/lib/pra-wam/sessions";
-import { momTargets, type PersonPlace, type TelegramGroup } from "@/lib/pra-wam/telegram";
+import { canonicalTitle, momTargets, type PersonPlace, type TelegramGroup } from "@/lib/pra-wam/telegram";
 import { praWamPath } from "@/lib/routes";
 import { shareUrl } from "@/lib/site-url";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -13,7 +13,7 @@ import { listPeople, memberDepartments } from "./appraisal";
 import { attendeesOf } from "./minutes-people";
 import { minutesPdf } from "./minutes-pdf";
 import { minutePhotoBytes } from "./minutes-photos";
-import { listGroups, postMinutes, sendMinutePhotos, teamsReady, withChatInfo } from "./telegram";
+import { groupShorts, listGroups, postMinutes, sendMinutePhotos, teamsReady, withChatInfo } from "./telegram";
 
 /*
  * Kirim MoM ke Telegram (12 Nov 2026, migration 202611120004): which groups a meeting's MoM goes to
@@ -67,8 +67,10 @@ export async function minutesTargets(session: Session): Promise<{ ready: boolean
   const [ready, { migrated, groups }] = await Promise.all([teamsReady().catch(() => false), listGroups().catch(() => ({ migrated: false, groups: [] as TelegramGroup[] }))]);
   if (!ready || !migrated) return { ready: false, reason: "Pengiriman MoM ke Telegram menunggu pembaruan sistem.", groups: [] };
   const ids = await participantIds(session.id);
-  const [places, hod, bod] = await Promise.all([placesOf(ids), isHodMeeting(session), withBod(ids)]);
-  return { ready: true, reason: null, groups: await withChatInfo(momTargets(groups, places, hod, bod)) };
+  const [places, hod, bod, shorts] = await Promise.all([placesOf(ids), isHodMeeting(session), withBod(ids), groupShorts()]);
+  // WAM names each group one way (13 Nov 2026), whatever it is called in Telegram now.
+  const named = (await withChatInfo(momTargets(groups, places, hod, bod))).map(group => ({ ...group, title: canonicalTitle(group, shorts) }));
+  return { ready: true, reason: null, groups: named };
 }
 
 /** What a MoM's message and PDF say. The department is the booker's (the HOD group's for a Meeting HOD). */

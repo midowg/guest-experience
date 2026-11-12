@@ -154,6 +154,8 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
                   </p>
                 : <p className={css.muted}>Belum ada grup · nama disarankan: {row.suggested}</p>}
               {group?.botStatus === "anggota" && <p className={css.hint}>Jadikan bot admin di grup ini (Edit → Administrators) agar alamat grupnya bisa dibuka dari WAM.</p>}
+              {/* One name for every group (13 Nov 2026): WG {singkatan} · {nama lengkap}. */}
+              {group && !row.unknown && group.title !== row.suggested && <p className={css.hint}>Nama di Telegram belum seragam. Seharusnya <strong>{row.suggested}</strong> (Lainnya → Samakan nama).</p>}
             </div>
             <div className={css.actions}>
               {group && !gone && <ConsoleButton variant="primary" icon={<Send size={16} aria-hidden="true" />} disabled={!ready || busy !== null}
@@ -168,6 +170,9 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
                 <summary className={css.moreButton}><MoreHorizontal size={16} aria-hidden="true" /> Lainnya</summary>
                 <div className={css.moreList} onClick={event => { if ((event.target as HTMLElement).closest("button")) (event.currentTarget.parentElement as HTMLDetailsElement).open = false; }}>
                   {/* Not only for a group known to have topics: one that turned them on later is checked by the server. */}
+                  {!row.unknown && !gone && group.title !== row.suggested && <ConsoleButton disabled={!ready || busy !== null} onClick={() => run(`rename:${group.chatId}`, { action: "rename", chatId: group.chatId })}>
+                    {busy === `rename:${group.chatId}` ? "Mengganti…" : "Samakan nama"}
+                  </ConsoleButton>}
                   {!group.momTopicId && <ConsoleButton disabled={!ready || busy !== null} onClick={() => run(`topic:${group.chatId}`, { action: "topic", chatId: group.chatId })}>
                     {busy === `topic:${group.chatId}` ? "Membuat…" : "Buat topik"}
                   </ConsoleButton>}

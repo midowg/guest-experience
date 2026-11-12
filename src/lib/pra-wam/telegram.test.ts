@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { minutesCaption } from "./minutes-message";
-import { cosTitle, departmentGroups, groupTitle, installCommand, installLink, installReply, INSTALL_CODE, momTargets, privateLink, readUpdate, sampleMinutes, type TelegramGroup, type TelegramUpdate } from "./telegram";
+import { canonicalTitle, cosTitle, departmentGroups, groupTitle, installCommand, installLink, installReply, INSTALL_CODE, momTargets, privateLink, readUpdate, sampleMinutes, type TelegramGroup, type TelegramUpdate } from "./telegram";
 
 const BOT = "wam_werkudara_bot";
 const CODE = "abcdefghijklmnopqrstuvwxyz012345";
@@ -8,18 +8,28 @@ const group = { id: -1001, type: "supergroup" as const, title: "Werkudara CoE ·
 const update = (part: Omit<TelegramUpdate, "update_id">): TelegramUpdate => ({ update_id: 1, ...part });
 
 describe("group names", () => {
-  it("names a group WG and the short form; a one-word department by its name", () => {
-    expect(groupTitle("Sales & Marketing", "SM")).toBe("WG SM");
-    expect(groupTitle("Corporate", "Corporate")).toBe("WG Corporate");
+  it("names every group WG, its short form and its full name; a one-word department gets a short form too", () => {
+    expect(groupTitle("Sales & Marketing", "SM")).toBe("WG SM · Sales & Marketing");
+    expect(groupTitle("Corporate", "Corporate")).toBe("WG CORP · Corporate");
+    expect(groupTitle("Accounting", "Accounting")).toBe("WG ACC · Accounting");
+    expect(groupTitle("Logistik", "Logistik")).toBe("WG LOGI · Logistik");
     expect(departmentGroups(["Sales & Marketing", "Center of Excellence", "Corporate"]).map(item => item.groupTitle))
-      .toEqual(["WG CoE", "WG Corporate", "WG SM"]);
+      .toEqual(["WG CoE · Center of Excellence", "WG CORP · Corporate", "WG SM · Sales & Marketing"]);
+  });
+
+  it("shows WAM's name for a group whatever it is called in Telegram", () => {
+    const base = { title: "Werkudara SM · Commercial", unit: null };
+    expect(canonicalTitle({ ...base, scope: "departemen", department: "Sales & Marketing", unit: "Commercial" })).toBe("WG SM · Commercial");
+    expect(canonicalTitle({ ...base, scope: "departemen", department: "Business & Administrative Services" })).toBe("WG BAS · Business & Administrative Services");
+    expect(canonicalTitle({ ...base, scope: "hod", department: null })).toBe("WG HOD · Head of Department");
+    expect(canonicalTitle({ ...base, title: "CoS · Rina", scope: "cos", department: null })).toBe("CoS · Rina");
   });
 
   it("gives a department with teams one group per team and none of its own", () => {
     expect(groupTitle("Sales & Marketing", "SM", "Business Solutions")).toBe("WG SM · Business Solutions");
     const rows = departmentGroups(["Sales & Marketing", "Center of Excellence"], { "Sales & Marketing": ["Commercial", "Business Solutions", " Commercial "] });
     expect(rows.map(row => [row.name, row.unit, row.groupTitle])).toEqual([
-      ["Center of Excellence", null, "WG CoE"],
+      ["Center of Excellence", null, "WG CoE · Center of Excellence"],
       ["Sales & Marketing", "Business Solutions", "WG SM · Business Solutions"],
       ["Sales & Marketing", "Commercial", "WG SM · Commercial"],
     ]);
@@ -27,7 +37,7 @@ describe("group names", () => {
 
   it("makes the link that adds the bot with the rights it needs, and the command for a group it is in", () => {
     expect(INSTALL_CODE.test(CODE)).toBe(true);
-    expect(installLink(BOT, CODE)).toBe(`https://t.me/${BOT}?startgroup=${CODE}&admin=delete_messages+pin_messages+invite_users+manage_topics`);
+    expect(installLink(BOT, CODE)).toBe(`https://t.me/${BOT}?startgroup=${CODE}&admin=change_info+delete_messages+pin_messages+invite_users+manage_topics`);
     expect(installCommand(BOT, CODE)).toBe(`/start@${BOT} ${CODE}`);
   });
 });

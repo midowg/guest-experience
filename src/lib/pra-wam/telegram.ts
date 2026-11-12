@@ -50,17 +50,38 @@ export const INSTALL_MINUTES = 30;
 /** 24 random bytes as base64url: 32 characters, inside Telegram's 64 for a start parameter. */
 export const INSTALL_CODE = /^[A-Za-z0-9_-]{32}$/;
 /** The rights the link asks for when it adds the bot (the admin can untick them). */
-export const BOT_RIGHTS = ["delete_messages", "pin_messages", "invite_users", "manage_topics"] as const;
+/** change_info (13 Nov 2026): the bot keeps the group's name as WAM names it. */
+export const BOT_RIGHTS = ["change_info", "delete_messages", "pin_messages", "invite_users", "manage_topics"] as const;
 export const MOM_TOPIC = "📝 MoM";
-export const HOD_GROUP_TITLE = "WG HOD";
+export const HOD_GROUP_TITLE = "WG HOD · Head of Department";
+
+/** A one-word department has no short form of its own; its group's is set here (else its first four letters). */
+const ONE_WORD_SHORTS: Readonly<Record<string, string>> = { accounting: "ACC", corporate: "CORP" };
+/** The short form a group's name starts with: "CoE", "ACC", "CORP". */
+export function groupShort(department: string, short: string): string {
+  const name = department.trim();
+  if (short && short.trim() && short.trim() !== name) return short.trim();
+  return ONE_WORD_SHORTS[name.toLowerCase()] ?? name.replace(/[^\p{L}\p{N}]/gu, "").slice(0, 4).toUpperCase();
+}
 
 /**
- * Short names that read at a glance in a chat list (13 Nov 2026): "WG CoE"; a one-word department
- * has no short form: "WG Corporate"; a team: "WG SM · Business Solutions".
+ * One name for every group (13 Nov 2026): "WG {short} · {full name}", so each reads the same in
+ * Telegram and in WAM: "WG CoE · Center of Excellence", "WG ACC · Accounting"; a team keeps its
+ * department's short form and its own name: "WG SM · Business Solutions".
  */
 export function groupTitle(department: string, short: string, unit: string | null = null): string {
-  const tag = short && short !== department ? `WG ${short}` : `WG ${department}`;
-  return unit ? `${tag} · ${unit}` : tag;
+  return `WG ${groupShort(department, short)} · ${unit?.trim() || department.trim()}`;
+}
+
+/**
+ * The name WAM shows for a group (what the MoM dialog and its log say), whatever it is called in
+ * Telegram now: the HOD group's, a department's or team's by the rule above, the CoS's chat as kept.
+ */
+export function canonicalTitle(group: Pick<TelegramGroup, "scope" | "department" | "unit" | "title">, shorts: ReadonlyMap<string, string> = new Map()): string {
+  if (group.scope === "hod") return HOD_GROUP_TITLE;
+  if (group.scope !== "departemen" || !group.department) return group.title;
+  const short = shorts.get(group.department.trim()) ?? departmentShorts([group.department]).get(group.department.trim()) ?? "";
+  return groupTitle(group.department, short, group.unit);
 }
 
 const same = (a: string | null | undefined, b: string | null | undefined) => (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
