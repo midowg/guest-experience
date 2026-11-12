@@ -8,20 +8,20 @@ const group = { id: -1001, type: "supergroup" as const, title: "Werkudara CoE ·
 const update = (part: Omit<TelegramUpdate, "update_id">): TelegramUpdate => ({ update_id: 1, ...part });
 
 describe("group names", () => {
-  it("puts Werkudara and the short form first; a one-word department has none", () => {
-    expect(groupTitle("Sales & Marketing", "SM")).toBe("Werkudara SM · Sales & Marketing");
-    expect(groupTitle("Corporate", "Corporate")).toBe("Werkudara · Corporate");
+  it("names a group WG and the short form; a one-word department by its name", () => {
+    expect(groupTitle("Sales & Marketing", "SM")).toBe("WG SM");
+    expect(groupTitle("Corporate", "Corporate")).toBe("WG Corporate");
     expect(departmentGroups(["Sales & Marketing", "Center of Excellence", "Corporate"]).map(item => item.groupTitle))
-      .toEqual(["Werkudara CoE · Center of Excellence", "Werkudara · Corporate", "Werkudara SM · Sales & Marketing"]);
+      .toEqual(["WG CoE", "WG Corporate", "WG SM"]);
   });
 
   it("gives a department with teams one group per team and none of its own", () => {
-    expect(groupTitle("Sales & Marketing", "SM", "Business Solutions")).toBe("Werkudara SM · Business Solutions");
+    expect(groupTitle("Sales & Marketing", "SM", "Business Solutions")).toBe("WG SM · Business Solutions");
     const rows = departmentGroups(["Sales & Marketing", "Center of Excellence"], { "Sales & Marketing": ["Commercial", "Business Solutions", " Commercial "] });
     expect(rows.map(row => [row.name, row.unit, row.groupTitle])).toEqual([
-      ["Center of Excellence", null, "Werkudara CoE · Center of Excellence"],
-      ["Sales & Marketing", "Business Solutions", "Werkudara SM · Business Solutions"],
-      ["Sales & Marketing", "Commercial", "Werkudara SM · Commercial"],
+      ["Center of Excellence", null, "WG CoE"],
+      ["Sales & Marketing", "Business Solutions", "WG SM · Business Solutions"],
+      ["Sales & Marketing", "Commercial", "WG SM · Commercial"],
     ]);
   });
 

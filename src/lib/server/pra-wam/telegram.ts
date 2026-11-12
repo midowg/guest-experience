@@ -10,7 +10,7 @@ import { shareUrl } from "@/lib/site-url";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
-import { telegramCall, TelegramError, telegramConfig, telegramUpload, webhookSecret, type TelegramConfig } from "../telegram";
+import { telegramCall, TelegramError, telegramConfig, telegramUpload, telegramUploadMany, webhookSecret, type TelegramConfig } from "../telegram";
 import { minutesPdf } from "./minutes-pdf";
 import { leadOptions } from "./leads";
 
@@ -91,6 +91,34 @@ export async function teamsByDepartment(): Promise<Record<string, string[]>> {
   return Object.fromEntries(Object.entries(teams).map(([department, units]) => [department, [...units]]));
 }
 
+/**
+ * Each group's current title and invite address, from Telegram (13 Nov 2026): getChat gives both
+ * (the address once there is one); a group without one gets its address from exportChatInviteLink,
+ * which the bot may do as an admin with "invite users". A title changed in Telegram is kept here
+ * too. Read again after half an hour; a group Telegram cannot answer for keeps what it has.
+ */
+const CHAT_FRESH_MS = 30 * 60_000;
+const chats = new Map<string, { at: number; title: string; link: string | null }>();
+export async function withChatInfo(groups: readonly TelegramGroup[], now = Date.now()): Promise<TelegramGroup[]> {
+  const config = telegramConfig();
+  if (!config) return [...groups];
+  return Promise.all(groups.map(async group => {
+    const kept = chats.get(group.chatId);
+    if (kept && now - kept.at < CHAT_FRESH_MS) return { ...group, title: kept.title, inviteLink: kept.link };
+    if (group.botStatus === "dikeluarkan") return { ...group, inviteLink: null };
+    const chat = await telegramCall<{ title?: string; invite_link?: string }>(config, "getChat", { chat_id: group.chatId }).catch(() => null);
+    if (!chat) return { ...group, inviteLink: kept?.link ?? null };
+    let link = chat.invite_link ?? null;
+    if (!link && group.botStatus === "admin") link = await telegramCall<string>(config, "exportChatInviteLink", { chat_id: group.chatId }).catch(() => null);
+    const title = chat.title?.trim() || group.title;
+    if (title !== group.title) {
+      await createPrivilegedClient().from("pw_telegram_groups").update({ title, updated_at: new Date(now).toISOString() }).eq("chat_id", group.chatId);
+    }
+    chats.set(group.chatId, { at: now, title, link });
+    return { ...group, title, inviteLink: link };
+  }));
+}
+
 /** Admin WAM → Telegram: the bot, its webhook, the groups and the departments. */
 export async function telegramStatus(): Promise<TelegramStatus> {
   const config = telegramConfig();
@@ -106,7 +134,7 @@ export async function telegramStatus(): Promise<TelegramStatus> {
       telegramCall<{ url: string; pending_update_count: number; last_error_message?: string; last_error_date?: number }>(config, "getWebhookInfo"),
     ]);
     return {
-      ...base, bot: { username: me.username, name: me.first_name },
+      ...base, groups: await withChatInfo(groups), bot: { username: me.username, name: me.first_name },
       webhook: {
         set: !!hook.url, ours: hook.url === webhookUrl(), pending: hook.pending_update_count,
         lastError: hook.last_error_message ?? null, lastErrorAt: hook.last_error_date ? new Date(hook.last_error_date * 1000).toISOString() : null,
@@ -350,4 +378,19 @@ export async function removeGroup(chatId: string, now = new Date()): Promise<str
   const { error } = await createPrivilegedClient().from("pw_telegram_groups").update({ active: false, updated_at: now.toISOString() }).eq("chat_id", group.chatId);
   if (error) databaseError(error);
   return `${group.title} dilepas dari WAM. MoM tidak dikirim ke sana lagi.`;
+}
+
+/**
+ * The meeting's photos in the group, under its MoM (13 Nov 2026): one album of up to ten, in the MoM
+ * topic, without a sound (the MoM just rang). Sent once, when the MoM first reaches the group; the
+ * PDF keeps every photo for later versions.
+ */
+export async function sendMinutePhotos(group: TelegramGroup, chatId: string, code: string, photos: readonly Uint8Array[]): Promise<void> {
+  if (!photos.length) return;
+  const config = requireBot();
+  const files = photos.slice(0, 10).map((bytes, index) => ({ field: `foto${index}`, name: `foto-${index + 1}.jpg`, bytes, type: "image/jpeg" }));
+  const media = files.map((file, index) => ({ type: "photo", media: `attach://${file.field}`, ...(index === 0 ? { caption: `📷 Foto meeting · ${code}` } : {}) }));
+  await telegramUploadMany(config, "sendMediaGroup", {
+    chat_id: chatId, media, disable_notification: true, ...(group.momTopicId ? { message_thread_id: group.momTopicId } : {}),
+  }, files);
 }

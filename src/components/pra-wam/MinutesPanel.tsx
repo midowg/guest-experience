@@ -268,13 +268,17 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
    * Kirim ke Telegram (13 Nov 2026): read to the end, like agreeing to terms, then sent. Where it
    * goes and how to get into the group; installing Telegram is left to each person.
    */
+  const groupLinks = (telegram.links ?? []).filter(group => !!group.url);
   function telegramTerms() {
     return <div className={css.terms}>
       <p>{telegram.destinations.length ? <>PDF MoM dikirim ke grup Telegram <strong>{joined(telegram.destinations)}</strong>.</> : "PDF MoM dikirim ke grup Telegram departemen setiap peserta."}</p>
+      {groupLinks.length > 0 && <ul className={css.groupLinks} aria-label="Grup Telegram">{groupLinks.map(group => <li key={group.title}>
+        <a href={group.url!} target="_blank" rel="noopener">{group.title} <ExternalLink size={14} aria-hidden /><span className="sr-only"> (buka di Telegram)</span></a>
+      </li>)}</ul>}
       <p>Grupnya dipilih otomatis dari departemen setiap peserta di Data karyawan. Peserta lain juga diberi tahu di WAM.</p>
       <h3>Cara masuk grup Telegram</h3>
       <ol>
-        <li>Buka tautan undangan grup departemen Anda dari panitia atau admin WAM. Belum punya? Minta ke mereka.</li>
+        <li>{groupLinks.length ? "Ketuk nama grup di atas untuk membuka undangannya." : "Buka tautan undangan grup departemen Anda dari panitia atau admin WAM. Belum punya? Minta ke mereka."}</li>
         <li>Tekan <strong>Gabung</strong> (Join Group).</li>
         <li>Selesai. Setiap MoM masuk sendiri ke topik <strong>📝 MoM</strong> di grup itu, tanpa perlu dibagikan lagi.</li>
       </ol>
@@ -575,7 +579,10 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       </p>
       {sent && drafts && (minutes.telegramOff || delivered.length > 0 || failed.length > 0) && <div className={css.telegram}>
         {minutes.telegramOff ? <p>Tidak dikirim ke Telegram.</p>
-          : delivered.length > 0 && <p>Terkirim ke Telegram: {delivered.map(item => item.title).join(", ")}</p>}
+          : delivered.length > 0 && <p>Terkirim ke Telegram: {delivered.map((item, index) => {
+            const url = groupLinks.find(group => group.title === item.title)?.url;
+            return <span key={item.title}>{index ? ", " : ""}{url ? <a href={url} target="_blank" rel="noopener">{item.title}</a> : item.title}</span>;
+          })}</p>}
         {!minutes.telegramOff && failed.length > 0 && <p className={css.warn}>Belum terkirim ke {failed.map(item => item.title).join(", ")}. Dicoba lagi saat MoM disimpan berikutnya.</p>}
       </div>}
     </> : <>

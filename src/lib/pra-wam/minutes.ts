@@ -69,6 +69,8 @@ export type MinutesTelegram = {
   ready: boolean; reason: string | null;
   /** The groups a send reaches now (only for whoever may write it). */
   destinations: string[];
+  /** The same groups with their invite address, to open and join (13 Nov 2026). */
+  links?: { title: string; url: string | null }[];
   deliveries: { title: string; status: "terkirim" | "gagal"; error: string | null; version: number; at: string | null }[];
 };
 /** What Detail sesi gets: the MoM (or none yet), whether the viewer may write it, and who may be a PIC. */

@@ -61,6 +61,17 @@ export async function telegramUpload<T>(config: TelegramConfig, method: string, 
   return request<T>(config, method, { body: form }, fetcher, 30_000);
 }
 
+/** Calls a method with several files (sendMediaGroup: each named in `media` as attach://{field}). */
+export async function telegramUploadMany<T>(config: TelegramConfig, method: string, params: Record<string, unknown>, files: readonly TelegramFile[], fetcher: typeof fetch = fetch): Promise<T> {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) continue;
+    form.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+  }
+  for (const file of files) form.append(file.field, new Blob([file.bytes as BlobPart], { type: file.type }), file.name);
+  return request<T>(config, method, { body: form }, fetcher, 60_000);
+}
+
 async function request<T>(config: TelegramConfig, method: string, init: { headers?: Record<string, string>; body: BodyInit }, fetcher: typeof fetch, timeout = 10_000): Promise<T> {
   let response: Response;
   try {

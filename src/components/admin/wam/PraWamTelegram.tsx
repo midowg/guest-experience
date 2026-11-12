@@ -130,10 +130,14 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
                     <Pill tone={botTone}>{botText}</Pill>
                     <Pill tone={group.momTopicId ? "ok" : "neutral"}>{group.momTopicId ? `Topik ${MOM_TOPIC}` : group.isForum ? "Topik belum dibuat" : "Tanpa topik"}</Pill>
                     {row.unknown && <Pill tone="warn">Tidak ada di Data karyawan</Pill>}
+                    {group.inviteLink && <a href={group.inviteLink} target="_blank" rel="noopener">Buka grup<span className="sr-only"> {group.title} (tab baru)</span></a>}
                   </p>
                 : <p className={css.meta}><span className={css.muted}>Belum ada grup · nama disarankan: {row.suggested}</span></p>}
             </div>
             <div className={css.buttons}>
+              {group?.inviteLink && <ConsoleButton icon={<Copy size={16} aria-hidden="true" />} onClick={() => copy(`invite:${group.chatId}`, group.inviteLink!)}>
+                {copied === `invite:${group.chatId}` ? "Alamat tersalin" : "Salin alamat grup"}
+              </ConsoleButton>}
               {group && <ConsoleButton variant="primary" icon={<Send size={16} aria-hidden="true" />} disabled={!ready || busy !== null}
                 onClick={() => run(`sample:${group.chatId}`, { action: "sample", chatId: group.chatId })}>
                 {busy === `sample:${group.chatId}` ? "Mengirim…" : "Kirim contoh MoM"}

@@ -15,7 +15,7 @@ const SESSION = "5e550000-0000-4000-8000-000000000001";
 const ACTION = "ac000000-0000-4000-8000-000000000001";
 const RAJA = "11111111-1111-4111-8111-111111111111";
 const telegram = (patch: Partial<MinutesView["telegram"]> = {}): MinutesView["telegram"] =>
-  ({ ready: true, reason: null, destinations: ["Werkudara CoE · Center of Excellence"], deliveries: [], ...patch });
+  ({ ready: true, reason: null, destinations: ["Werkudara CoE · Center of Excellence"], links: [{ title: "Werkudara CoE · Center of Excellence", url: "https://t.me/+abcDEF123" }], deliveries: [], ...patch });
 const attendees: MinutesView["attendees"] = [
   { id: RAJA, name: "Raja", fullName: "Raja Pratama", department: "Center of Excellence", position: "Head of Department", frmPosition: "Head of Department", checkedIn: true, checkInMethod: "offline" },
   { id: "me", name: "Saya", fullName: "Saya Sendiri", department: "Comms", position: "Staff", frmPosition: "Staff", checkedIn: false, checkInMethod: null },
@@ -180,8 +180,10 @@ it("names where Kirim MoM goes before it goes, and sends nothing when cancelled"
   expect(box.checked).toBe(false);
   fireEvent.click(box);
   let dialog = within(await screen.findByRole("dialog", { name: "Kirim ke Telegram" }));
-  expect(dialog.getByText("Werkudara CoE · Center of Excellence")).toBeTruthy();
+  expect(dialog.getByText("Werkudara CoE · Center of Excellence", { selector: "strong" })).toBeTruthy();
   expect(dialog.getByRole("heading", { name: "Cara masuk grup Telegram" })).toBeTruthy();
+  // The group's address, to open and join at once.
+  expect(dialog.getByRole("link", { name: /Werkudara CoE · Center of Excellence/ }).getAttribute("href")).toBe("https://t.me/+abcDEF123");
   expect(dialog.queryByText(/Pasang aplikasi Telegram/)).toBeNull();
   fireEvent.click(dialog.getByRole("button", { name: "Batalkan" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -205,7 +207,7 @@ it("names where Kirim MoM goes before it goes, and sends nothing when cancelled"
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   expect(request.mock.calls[0][1].json).toEqual(body(true, false));
   expect(await screen.findByText("MoM dikirim.")).toBeTruthy();
-  expect(screen.getByText("Terkirim ke Telegram: Werkudara CoE · Center of Excellence")).toBeTruthy();
+  expect(screen.getByText(/Terkirim ke Telegram:/).textContent).toBe("Terkirim ke Telegram: Werkudara CoE · Center of Excellence");
   expect(screen.getByRole("link", { name: /Unduh PDF/ }).getAttribute("href")).toBe(`/api/wam/sessions/${SESSION}/minutes/pdf`);
 });
 

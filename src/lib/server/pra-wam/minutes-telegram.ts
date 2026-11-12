@@ -13,7 +13,7 @@ import { listPeople, memberDepartments } from "./appraisal";
 import { attendeesOf } from "./minutes-people";
 import { minutesPdf } from "./minutes-pdf";
 import { minutePhotoBytes } from "./minutes-photos";
-import { listGroups, postMinutes, teamsReady } from "./telegram";
+import { listGroups, postMinutes, sendMinutePhotos, teamsReady, withChatInfo } from "./telegram";
 
 /*
  * Kirim MoM ke Telegram (12 Nov 2026, migration 202611120004): which groups a meeting's MoM goes to
@@ -60,7 +60,7 @@ export async function minutesTargets(session: Session): Promise<{ ready: boolean
   const [ready, { migrated, groups }] = await Promise.all([teamsReady().catch(() => false), listGroups().catch(() => ({ migrated: false, groups: [] as TelegramGroup[] }))]);
   if (!ready || !migrated) return { ready: false, reason: "Pengiriman MoM ke Telegram menunggu pembaruan sistem.", groups: [] };
   const [places, hod] = await Promise.all([participantIds(session.id).then(placesOf), isHodMeeting(session)]);
-  return { ready: true, reason: null, groups: momTargets(groups, places, hod) };
+  return { ready: true, reason: null, groups: await withChatInfo(momTargets(groups, places, hod)) };
 }
 
 /** What a MoM's message and PDF say. The department is the booker's (the HOD group's for a Meeting HOD). */
@@ -127,10 +127,16 @@ export async function deliverMinutes(session: Session, minutes: Minutes, now = n
     const client = createPrivilegedClient();
     const { data: before } = await client.from("pw_telegram_messages").select("chat_id,message_id").eq("session_id", session.id);
     const earlier = new Map((before ?? []).map(row => [String(row.chat_id), row.message_id as number | null]));
+    // The photos go once, as an album under the MoM, to a group the MoM reaches for the first time.
+    const firstTime = groups.some(group => !earlier.get(group.chatId));
+    const photos = firstTime ? await minutePhotoBytes(session.id).catch(() => [] as Uint8Array[]) : [];
     for (const group of groups) {
       const at = new Date().toISOString();
       try {
         const posted = await postMinutes(group, message, earlier.get(group.chatId) ?? null, now, pdf);
+        if (!earlier.get(group.chatId) && photos.length) {
+          await sendMinutePhotos(group, posted.chatId, message.code, photos).catch(error => console.error("minutes photos", error instanceof Error ? error.message : error));
+        }
         if (posted.chatId !== group.chatId) await client.from("pw_telegram_messages").delete().eq("session_id", session.id).eq("chat_id", group.chatId);
         await client.from("pw_telegram_messages").upsert({
           session_id: session.id, chat_id: posted.chatId, title: group.title, message_id: posted.messageId, version: message.version,

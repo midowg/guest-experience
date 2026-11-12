@@ -149,6 +149,7 @@ async function telegramView(session: Session, sending: boolean, write: boolean):
   return {
     ready: targets ? targets.ready : true, reason: targets?.reason ?? null,
     destinations: targets ? targets.groups.map(group => group.title) : [], deliveries,
+    links: targets ? targets.groups.map(group => ({ title: group.title, url: group.inviteLink ?? null })) : [],
   };
 }
 

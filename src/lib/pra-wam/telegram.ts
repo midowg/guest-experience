@@ -19,6 +19,8 @@ export type TelegramGroup = {
   /** The team inside the department this group stands for (Business Solutions), else null. */
   unit: string | null;
   isForum: boolean; momTopicId: number | null; botStatus: BotStatus; installedAt: string;
+  /** The group's invite address (t.me/+…), from Telegram through the bot; null when the bot may not give one. */
+  inviteLink?: string | null;
 };
 /** Admin WAM → Telegram. */
 export type TelegramStatus = {
@@ -46,15 +48,15 @@ export const INSTALL_CODE = /^[A-Za-z0-9_-]{32}$/;
 /** The rights the link asks for when it adds the bot (the admin can untick them). */
 export const BOT_RIGHTS = ["delete_messages", "pin_messages", "invite_users", "manage_topics"] as const;
 export const MOM_TOPIC = "📝 MoM";
-export const HOD_GROUP_TITLE = "Werkudara · HOD";
+export const HOD_GROUP_TITLE = "WG HOD";
 
 /**
- * "Werkudara SM · Sales & Marketing"; a one-word department has no short form: "Werkudara · Corporate";
- * a team keeps its department's short form: "Werkudara SM · Business Solutions".
+ * Short names that read at a glance in a chat list (13 Nov 2026): "WG CoE"; a one-word department
+ * has no short form: "WG Corporate"; a team: "WG SM · Business Solutions".
  */
 export function groupTitle(department: string, short: string, unit: string | null = null): string {
-  const tag = short && short !== department ? `Werkudara ${short}` : "Werkudara";
-  return `${tag} · ${unit ?? department}`;
+  const tag = short && short !== department ? `WG ${short}` : `WG ${department}`;
+  return unit ? `${tag} · ${unit}` : tag;
 }
 
 const same = (a: string | null | undefined, b: string | null | undefined) => (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
