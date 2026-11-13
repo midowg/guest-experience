@@ -105,3 +105,6 @@ function zip(files: [string, Buffer][]): Buffer {
   end.writeUInt32LE(directory.length, 12); end.writeUInt32LE(offset, 16);
   return Buffer.concat([...locals, directory, end]);
 }
+
+/** The same zip writer for other Office files (13 Nov 2026: a MoM as .docx). */
+export const zipParts = zip;

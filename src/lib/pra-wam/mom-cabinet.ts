@@ -89,6 +89,8 @@ export function placeEntries(entries: readonly CabinetEntry[]): PlacedEntry[] {
 
 /** What goes in a meeting's folder: its PDF and its photos, by these names. */
 export const pdfName = (entry: Pick<CabinetEntry, "code" | "version" | "numbered">) => minutesFileName({ code: entry.code, version: entry.version, numbered: entry.numbered });
+/** The Word file's name: the PDF's, as .docx. */
+export const docxName = (entry: Pick<CabinetEntry, "code" | "version" | "numbered">) => pdfName(entry).replace(/\.pdf$/, ".docx");
 export const photoName = (entry: Pick<CabinetEntry, "code">, index: number) => `${safeName(entry.code.replace(/\//g, "-"))}_foto-${String(index + 1).padStart(2, "0")}.jpg`;
 
 export type CabinetFilter = { query: string; month: string; department: string };

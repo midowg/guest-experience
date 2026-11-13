@@ -517,6 +517,8 @@ export const praWamTelegramApi = "/api/admin/wam/telegram";
 export const momCabinetApi = {
   list: "/api/admin/wam/mom",
   pdf: (sessionId: string) => `/api/admin/wam/mom/${sessionId}/pdf`,
+  /** The MoM as a Word file, to change it (13 Nov 2026). */
+  docx: (sessionId: string) => `/api/admin/wam/mom/${sessionId}/docx`,
   photo: (photoId: string) => `/api/admin/wam/mom/photos/${photoId}`,
   photoDownload: (photoId: string, name: string) => `/api/admin/wam/mom/photos/${photoId}?unduh=${encodeURIComponent(name)}`,
   photoFile: (photoId: string) => `/api/admin/wam/mom/photos/${photoId}?berkas=1`,

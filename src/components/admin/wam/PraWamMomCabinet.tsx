@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Check, ChevronRight, Download, ExternalLink, FileArchive, FileSpreadsheet, FileText, Folder, FolderOpen, Images, List, MonitorPlay } from "lucide-react";
+import { Check, ChevronRight, Download, ExternalLink, FileArchive, FilePen, FileSpreadsheet, FileText, Folder, FolderOpen, Images, List, MonitorPlay } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, ConsoleButtonLink, PageHeader, Pill, SearchField, SegmentedControl, type Crumb } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { MOM_CABINET_MIGRATION } from "@/lib/pra-wam/minutes-photos";
 import {
-  CABINET_EXPORT_LIMIT, filterEntries, filterOptions, monthName, NO_FILTER, pdfName, photoName, placeEntries, tvTitleOf,
+  CABINET_EXPORT_LIMIT, docxName, filterEntries, filterOptions, monthName, NO_FILTER, pdfName, photoName, placeEntries, tvTitleOf,
   type CabinetFilter, type CabinetPhoto, type CabinetView, type PlacedEntry,
 } from "@/lib/pra-wam/mom-cabinet";
 import { momCabinetApi } from "@/lib/routes";
@@ -137,6 +137,16 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
     }, scope.length);
   }
 
+  /** Every MoM shown as a Word file, to change them (13 Nov 2026), in their folders. */
+  function exportWord() {
+    void run("docx", "Menyiapkan Word", async (signal, step) => {
+      const files = await inTurn(scope.map(entry => async (): Promise<ZipFile> =>
+        ({ name: `${entry.path.join("/")}/${docxName(entry)}`, bytes: await fetchFile(momCabinetApi.docx(entry.sessionId), signal) })), step);
+      save(zipStore(files), zipName("Word"), "application/zip");
+      setMessage({ tone: "success", text: `${files.length} MoM dalam format Word tersimpan dalam satu ZIP, per folder.` });
+    }, scope.length);
+  }
+
   function exportPhotos() {
     if (photos > CABINET_EXPORT_LIMIT.files || photoBytes > CABINET_EXPORT_LIMIT.bytes) {
       setMessage({ tone: "error", text: `Terlalu besar untuk sekali unduh (${photos} foto, ${megabytes(photoBytes)}). Pilih satu bulan atau buka satu folder dulu.` });
@@ -195,6 +205,7 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
     <div className={css.buttons}>
       <ConsoleButton icon={<FileSpreadsheet size={16} aria-hidden="true" />} disabled={!scope.length || busy !== null} onClick={exportExcel}>Excel rekap</ConsoleButton>
       <ConsoleButton icon={<FileArchive size={16} aria-hidden="true" />} disabled={!scope.length || busy !== null} onClick={exportPdfs}>ZIP PDF</ConsoleButton>
+      <ConsoleButton icon={<FileArchive size={16} aria-hidden="true" />} disabled={!scope.length || busy !== null} onClick={exportWord}>ZIP Word</ConsoleButton>
       <ConsoleButton icon={<FileArchive size={16} aria-hidden="true" />} disabled={!photos || busy !== null} onClick={exportPhotos}>ZIP foto</ConsoleButton>
     </div>
     {progress && <div className={css.progress} role="status">
@@ -213,6 +224,7 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
       </div>
       <div className={css.buttons}>
         <ConsoleButtonLink href={momCabinetApi.pdf(entry.sessionId)} icon={<FileText size={16} aria-hidden="true" />}>Unduh PDF</ConsoleButtonLink>
+        <ConsoleButtonLink href={momCabinetApi.docx(entry.sessionId)} icon={<FilePen size={16} aria-hidden="true" />}>Unduh Word</ConsoleButtonLink>
         {mode === "daftar" && <ConsoleButton icon={<FolderOpen size={16} aria-hidden="true" />} onClick={() => { setMode("folder"); setPath([...entry.path]); }}>Buka folder</ConsoleButton>}
       </div>
     </div>
