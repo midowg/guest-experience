@@ -24,7 +24,7 @@ export async function PraWamShell({ member, children }: { member: FrameMember; c
     currentPhase(wibDate(now.toISOString())).catch(() => null),
   ]);
   const phaseLabel = phase ? `${phase.kind === "pra_wam" ? "Pra WAM" : phase.name} · ${month(phase.startDate)}–${month(phase.endDate)} ${phase.endDate.slice(0, 4)}` : "WAM 2027";
-  const frameMember: FrameMember = { id: member.id, name: member.name, nickname: member.nickname, department: member.department, roles: member.roles, photo: member.photo ?? null };
+  const frameMember: FrameMember = { id: member.id, name: member.name, nickname: member.nickname, department: member.department, roles: member.roles, photo: member.photo ?? null, category: member.category };
   return <WamFrame member={frameMember} unread={unread} waiting={waiting} phaseLabel={phaseLabel}>
     {children}
   </WamFrame>;

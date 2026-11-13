@@ -25,6 +25,8 @@ export const managesFacilities = (who: WithRoles) => has(who, "ga", "admin");
  * job ladder and need not book; they still take part, help as panitia, and fill the questionnaire.
  */
 export const booksRooms = (who: { category?: string }) => who.category !== "intern";
+/** The Agenda tab (Book ruang, Booking saya): not for Intern or DW (13 Nov 2026, the owner's choice). */
+export const seesAgendaTab = (who: { category?: string }) => who.category !== "intern" && who.category !== "dw";
 export const NO_BOOKING_TEXT = "Booking ruang hanya untuk karyawan. Intern tidak perlu booking.";
 
 /** Makes, publishes and cancels sessions, picks their rooms, and uploads any document. */

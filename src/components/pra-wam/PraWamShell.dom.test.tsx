@@ -86,6 +86,17 @@ describe("PraWamShell", () => {
     expect(within(bottom).queryByRole("link", { name: "Profil" })).toBeNull();
   });
 
+  it("leaves Agenda out for Intern and DW (13 Nov 2026)", async () => {
+    at.path = "/wam";
+    for (const category of ["intern", "dw"] as const) {
+      const { unmount } = render(await PraWamShell({ member: { ...member([]), category }, children: <p>Isi</p> }));
+      const bottom = screen.getAllByRole("navigation", { name: "Menu WAM" }).at(-1)!;
+      expect([...bottom.children].map(child => child.textContent)).toEqual(["Beranda", "Timeline", "Dokumen"]);
+      expect(screen.queryByRole("link", { name: "Agenda" })).toBeNull();
+      unmount();
+    }
+  });
+
   it("gives a detail screen its back bar and no bottom bar", async () => {
     at.path = "/wam/manage/sessions/0b7c2d1e-0000-4000-8000-000000000001";
     render(await PraWamShell({ member: member(["panitia"]), children: <p>Form</p> }));

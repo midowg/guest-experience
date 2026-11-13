@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarCheck, CalendarDays, ChartGantt, ChevronLeft, FileText, Home, Plus, Send, User, Users, X } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleNavGroup, type ConsoleSearchItem } from "@/components/console";
-import { bodOnly, managesSessions, roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
+import { bodOnly, managesSessions, roleSummary, seesAgendaTab, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
 import { managedTabs, wamScreen, type Tab } from "@/lib/pra-wam/screen";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { Avatar } from "./Avatar";
@@ -12,9 +12,9 @@ import { SignOutButton } from "./SignOutButton";
 import styles from "./pra-wam.module.css";
 import panel from "./panitia.module.css";
 
-type Who = { roles: readonly PraWamRole[] };
+type Who = { roles: readonly PraWamRole[]; category?: string };
 type Item = { id: Tab; label: string; href: string; icon: ReactNode; show?: (who: Who) => boolean; short?: string };
-export type FrameMember = { id: string; name: string; nickname: string; department: string; roles: PraWamRole[]; photo?: string | null };
+export type FrameMember = { id: string; name: string; nickname: string; department: string; roles: PraWamRole[]; photo?: string | null; category?: string };
 
 /**
  * Everyone (DS · Komponen "Bilah dan navigasi"): Beranda, Agenda (Book ruang and Booking saya; named
@@ -25,7 +25,8 @@ export type FrameMember = { id: string; name: string; nickname: string; departme
  */
 const personal: Item[] = [
   { id: "beranda", label: "Beranda", href: praWamPath.home, icon: <Home aria-hidden /> },
-  { id: "appraisal", label: "Agenda", href: praWamPath.appraisal(), icon: <CalendarCheck aria-hidden /> },
+  // Not for Intern or DW (13 Nov 2026).
+  { id: "appraisal", label: "Agenda", href: praWamPath.appraisal(), icon: <CalendarCheck aria-hidden />, show: seesAgendaTab },
   { id: "timeline", label: "Timeline", href: praWamPath.timeline, icon: <ChartGantt aria-hidden /> },
   { id: "dokumen", label: "Dokumen", href: praWamPath.documents, icon: <FileText aria-hidden /> },
 ];
@@ -128,7 +129,7 @@ export function WamFrame({ member, unread, waiting, phaseLabel, children }: {
   const badge = (tab: Tab) => (tab === "notifikasi" ? unread : tab === "permintaan" ? waiting : 0);
   // A BOD keeps the app's own frame (top bar, bottom bar) with the BOD menu, never the panitia sidebar.
   // With invitations waiting, Book opens on Meeting HOD, where they are answered.
-  const menu = onlyBod ? bod : personal;
+  const menu = (onlyBod ? bod : personal).filter(item => !item.show || item.show(member));
   const managed = onlyBod ? [] : manage.filter(item => !item.show || item.show(member));
   const panitiaView = !onlyBod && !!current && managedTabs.has(current);
   const who = member.nickname || member.name;
