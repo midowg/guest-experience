@@ -19,7 +19,7 @@ describe("admin login form (13 Nov 2026: own WAM account)", () => {
     vi.stubGlobal("fetch", fetch);
     render(<LoginForm next="/admin" />);
     fireEvent.change(screen.getByLabelText("Email atau nama panggilan"), { target: { value: "dewi" } });
-    const input = screen.getByLabelText("Password WAM") as HTMLInputElement;
+    const input = screen.getByLabelText("Password") as HTMLInputElement;
     expect(input.type).toBe("password");
     fireEvent.change(input, { target: { value: "salah-sekali-ini" } });
     submit();
@@ -33,30 +33,31 @@ describe("admin login form (13 Nov 2026: own WAM account)", () => {
     vi.stubGlobal("fetch", vi.fn(async () => reply({ ok: true, data: { logged: true, role: "admin" }, message: "Berhasil masuk." })));
     render(<LoginForm next="/admin/events/abc" />);
     fireEvent.change(screen.getByLabelText("Email atau nama panggilan"), { target: { value: "dewi@werkudara.com" } });
-    fireEvent.change(screen.getByLabelText("Password WAM"), { target: { value: "password-yang-benar" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password-yang-benar" } });
     submit();
     await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/events/abc"));
   });
 
   it("can reveal the typed password", () => {
     render(<LoginForm next="/admin" />);
-    const input = screen.getByLabelText("Password WAM") as HTMLInputElement;
+    const input = screen.getByLabelText("Password") as HTMLInputElement;
     fireEvent.click(screen.getByRole("button", { name: "Tampilkan password" }));
     expect(input.type).toBe("text");
     expect(screen.getByRole("button", { name: "Sembunyikan password" }).getAttribute("aria-pressed")).toBe("true");
   });
 });
 
-describe("super admin login", () => {
-  const asOwner = () => fireEvent.click(screen.getByRole("button", { name: "Masuk sebagai super admin" }));
-  it("asks for the super admin password only and lands on the super admin dashboard", async () => {
+describe("super admin login (hidden: the first field left empty)", () => {
+  const asOwner = () => expect(screen.queryByText(/super admin/i)).toBeNull();
+  it("sends the password alone when the first field is empty, and lands on the super admin dashboard", async () => {
     replace.mockClear();
     const fetch = vi.fn(async () => reply({ ok: true, data: { logged: true, role: "super" }, message: "Berhasil masuk sebagai super admin." }));
     vi.stubGlobal("fetch", fetch);
     render(<LoginForm next="/admin" />);
     asOwner();
-    expect(screen.queryByLabelText("Email atau nama panggilan")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Password super admin"), { target: { value: "password-super-admin" } });
+    expect((screen.getByLabelText("Email atau nama panggilan") as HTMLInputElement).required).toBe(false);
+    fireEvent.change(screen.getByLabelText("Email atau nama panggilan"), { target: { value: "   " } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password-super-admin" } });
     submit();
     await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/super"));
     expect(fetch).toHaveBeenCalledWith("/api/auth/login", expect.objectContaining({ body: JSON.stringify({ password: "password-super-admin" }) }));
@@ -66,7 +67,7 @@ describe("super admin login", () => {
     vi.stubGlobal("fetch", vi.fn(async () => reply({ ok: true, data: { logged: true, role: "super" }, message: "OK" })));
     render(<LoginForm next="/admin/akses" />);
     asOwner();
-    fireEvent.change(screen.getByLabelText("Password super admin"), { target: { value: "password-super-admin" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "password-super-admin" } });
     submit();
     await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/akses"));
   });

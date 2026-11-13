@@ -10,20 +10,21 @@ import shell from "./shell.module.css";
 
 /**
  * 13 Nov 2026: an admin signs in with their own WAM account (email or nama panggilan and
- * password); "Masuk sebagai super admin" switches to the super admin password alone.
+ * password). The super admin leaves the first field empty and types their password; nothing on
+ * the page says so, on purpose.
  */
 export function LoginForm({ next }: { next: string }) {
   const [pending, setPending] = useState(false);
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState("");
-  const [owner, setOwner] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
     const data = new FormData(event.currentTarget);
     setPending(true); setError("");
     try {
-      const body = owner ? { password: data.get("password") } : { identifier: data.get("identifier"), password: data.get("password") };
+      const identifier = String(data.get("identifier") ?? "").trim();
+      const body = identifier ? { identifier, password: data.get("password") } : { password: data.get("password") };
       const result = await adminRequest<{ role: "admin" | "super" }>("/api/auth/login", { method: "POST", body: JSON.stringify(body) });
       // A super admin lands on their own dashboard unless they were heading somewhere specific.
       // A full load: a client navigation raced by a refresh of this page could hang on a blank screen.
@@ -32,22 +33,19 @@ export function LoginForm({ next }: { next: string }) {
   }
   return <form onSubmit={submit} className={styles.loginForm} aria-busy={pending}>
     {error && <Notice tone="error">{error}</Notice>}
-    {!owner && <Field label="Email atau nama panggilan" name="identifier">
+    <Field label="Email atau nama panggilan" name="identifier">
       <input className="input" id="identifier" name="identifier" type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
-        placeholder="nama@werkudara.com atau dewi" required maxLength={200} disabled={pending} autoFocus />
-    </Field>}
-    <Field label={owner ? "Password super admin" : "Password WAM"} name="password">
+        placeholder="nama@werkudara.com atau dewi" maxLength={200} disabled={pending} autoFocus />
+    </Field>
+    <Field label="Password" name="password">
       <span className={styles.passwordRow}>
-        <input className="input" id="password" name="password" type={visible ? "text" : "password"} autoComplete="current-password" required maxLength={200} disabled={pending} autoFocus={owner} />
+        <input className="input" id="password" name="password" type={visible ? "text" : "password"} autoComplete="current-password" required maxLength={200} disabled={pending} />
         <button type="button" className={styles.passwordToggle} onClick={() => setVisible(value => !value)} aria-pressed={visible} aria-label={visible ? "Sembunyikan password" : "Tampilkan password"}>
           {visible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
         </button>
       </span>
     </Field>
     <Button type="submit" disabled={pending}><LogIn size={17} aria-hidden="true" /> {pending ? "Memeriksa…" : "Masuk"}</Button>
-    <button type="button" className={styles.linkButton} disabled={pending} onClick={() => { setOwner(value => !value); setError(""); }}>
-      {owner ? "Masuk dengan akun WAM" : "Masuk sebagai super admin"}
-    </button>
   </form>;
 }
 

@@ -45,8 +45,8 @@ export async function POST(request: Request) {
     const role = retired ? null : matched;
     const newDevice = role ? (await isKnownDevice(deviceId)) === false : false;
     const logged = await recordAccess(role ? "login_success" : "login_failure", client, deviceId, newDevice, role, { actor: role === "super" ? "Super admin" : role === "admin" ? "Admin (password bersama)" : retired ? "Password admin bersama (sudah tidak dipakai)" : null });
-    if (retired) throw new ServiceError(401, "Password admin bersama sudah tidak dipakai. Masuk dengan email atau nama panggilan dan password WAM Anda.");
-    if (!role) throw new ServiceError(401, "Password tidak cocok. Periksa lalu coba lagi.");
+    // The same words as a wrong WAM sign-in: the page never tells that the password alone is a way in.
+    if (!role) throw new ServiceError(401, "Email/nama panggilan atau password tidak cocok. Periksa lalu coba lagi.");
     store.set(SESSION_COOKIE, signSession(config, role), { httpOnly: true, secure, sameSite: "lax", path: "/", maxAge: SESSION_TTL_SECONDS });
     return success({ logged, role }, role === "super" ? "Berhasil masuk sebagai super admin." : "Berhasil masuk.");
   });
