@@ -4,7 +4,7 @@ import {
   actionPicIds, closedText, MINUTES_EMPTY, minutesFilled, itemsAsText, minutesClosed, minutesDeadline, minutesNumber, minutesOpen, minutesStatus, needsMinutes, selfCheckedIn,
   type MinuteAction, type MinuteItem, type Minutes, type MinutesInput, type MinutesTelegram, type MinutesView,
 } from "@/lib/pra-wam/minutes";
-import type { Session } from "@/lib/pra-wam/sessions";
+import { outsideWam, type Session } from "@/lib/pra-wam/sessions";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { isR2Configured } from "../r2";
@@ -294,6 +294,7 @@ async function saveBefore(sessionId: string, input: MinutesInput, member: Member
  */
 export async function saveMinutes(sessionId: string, input: MinutesInput, member: Member, now = new Date()): Promise<{ view: MinutesView; sentNow: boolean }> {
   const session = await getSession(sessionId, member);
+  if (outsideWam(session)) throw new ServiceError(409, "Booking ini untuk keperluan di luar WAM, jadi tidak memakai MoM.");
   if (!mayWriteMinutes(session, member)) throw new ServiceError(403, "Hanya yang ikut meeting ini yang bisa menulis notulennya.");
   const { windowHours } = await minutesRule();
   if (minutesClosed(session, now, windowHours)) throw new ServiceError(409, closedText(windowHours));

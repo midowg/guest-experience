@@ -124,6 +124,9 @@ async function selfCheckInGate(sessionId: string, member: Member, now: Date): Pr
   if (session.status !== "terbit" || !session.starts_at || !session.ends_at) return { result: { kind: "belum-terbit" }, method: null };
   // A panitia's session takes its QR only.
   if (!session.booking_id) return { result: { kind: "pakai-qr" }, method: null };
+  // A booking outside WAM asks for no check-in (13 Nov 2026).
+  const { data: purpose } = await client.from("pw_room_bookings").select("purpose").eq("id", session.booking_id).maybeSingle();
+  if ((purpose as { purpose?: string } | null)?.purpose === "lain") return { result: { kind: "tanpa-absen" }, method: null };
   const { data: participant, error: participantError } = await client.from("pw_session_participants").select("employee_id").eq("session_id", session.id).eq("employee_id", member.id).maybeSingle();
   if (participantError) fail(participantError);
   if (!participant) return { result: { kind: "bukan-peserta" }, method: null };

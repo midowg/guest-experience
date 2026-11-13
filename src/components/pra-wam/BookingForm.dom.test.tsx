@@ -368,3 +368,25 @@ it("shows the day's rooms and bookings while the date is picked, as on Timeline"
   await vi.waitFor(() => expect(next.getByRole("article", { name: "Nakula" })).toBeTruthy());
   expect(next.queryByText("Rapat")).toBeNull();
 });
+
+it("books a room for something outside WAM: its name typed, no HOD or ITEM, the purpose sent", async () => {
+  const onSaved = vi.fn();
+  request.mockResolvedValue({ data: {}, message: "Ruang dibooking." });
+  renderForm({ onSaved, hod: { departments: [{ id: "it", name: "IT", heads: [{ id: "p1", name: "Budi" }] }], ownUnits: ["it"] } });
+  lanjut();
+  expect(screen.getByRole("button", { name: /Meeting WAM/ }).getAttribute("aria-pressed")).toBe("true");
+  fireEvent.click(screen.getByRole("button", { name: /Di luar WAM/ }));
+  expect(screen.getByText(/tanpa absen dan tanpa MoM/)).toBeTruthy();
+  // A typed name, not the list of WAM meetings.
+  const name = screen.getByLabelText("Nama kegiatan") as HTMLInputElement;
+  expect(name.tagName).toBe("INPUT");
+  fireEvent.change(name, { target: { value: "Meeting klien PT Sinar" } });
+  lanjut();
+  expect(screen.queryByRole("group", { name: "Booking sebagai" })).toBeNull();
+  lanjut();
+  fireEvent.click(roomCard("Arjuna"));
+  lanjut();
+  fireEvent.click(screen.getByRole("button", { name: /Book ruang/ }));
+  await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
+  expect(request.mock.calls[0][1]).toMatchObject({ method: "POST", json: { title: "Meeting klien PT Sinar", purpose: "lain", roomId: "kecil" } });
+});

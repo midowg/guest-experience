@@ -1,7 +1,7 @@
 import { callName } from "@/lib/pra-wam/call-name";
 import "server-only";
 import { cache } from "react";
-import { alternatives, appraisalRules, bookableDates, bookingClock, bookingProblems, clockLabel, OUTSIDE_ROOM, overCapacity, overlaps, roomFitProblem, roomKeptFrom, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
+import { alternatives, appraisalRules, BOOKING_PURPOSE_MIGRATION, bookableDates, bookingClock, bookingProblems, clockLabel, OUTSIDE_ROOM, overCapacity, overlaps, roomFitProblem, roomKeptFrom, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { MIGRATION_BOOKING_APP, officePeriod, officeRules, withoutMinimum, type Audience } from "@/lib/booking/rules";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
 import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
@@ -99,9 +99,12 @@ export const listPeople = cache(listPeopleUncached);
 async function withPeople(rows: BookingRow[], viewer: Member): Promise<Booking[]> {
   if (!rows.length) return [];
   const client = createPrivilegedClient();
-  const [people, { data: links, error }] = await Promise.all([
+  const [people, { data: links, error }, outside] = await Promise.all([
     listPeople(),
     client.from("pw_room_booking_participants").select("booking_id,employee_id").in("booking_id", rows.map(row => row.id)),
+    // Bookings outside WAM (migration 202611130005); none before it.
+    client.from("pw_room_bookings").select("id,purpose").in("id", rows.map(row => row.id)).eq("purpose", "lain")
+      .then(({ data, error: purposeError }) => new Set(purposeError ? [] : (data ?? []).map(row => row.id as string))),
   ]);
   if (error) fail(error);
   const byId = new Map(people.map(person => [person.id, { id: person.id, name: person.name, fullName: person.fullName, department: person.department }]));
@@ -116,6 +119,7 @@ async function withPeople(rows: BookingRow[], viewer: Member): Promise<Booking[]
       startsAt: row.starts_at, endsAt: row.ends_at, bookedBy: unknown(row.booked_by),
       participants: involved ? ids.filter(id => id !== row.booked_by).map(unknown) : null,
       others: ids.filter(id => id !== row.booked_by).length,
+      ...(outside.has(row.id) ? { purpose: "lain" as const } : {}),
     };
   });
 }
@@ -306,6 +310,11 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
     if (error.code === "23514") throw new ServiceError(422, outside ? "Tanggal atau jam tidak bisa disimpan. Booking di luar kantor harus dalam satu hari." : `Jam di luar ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)} Senin–Jumat, atau lebih dari 4 jam.`);
     if (error.code === "23503") throw new ServiceError(422, "Ada partisipan atau ruang yang tidak dikenal. Muat ulang halaman.");
     fail(error);
+  }
+  // What it is for (13 Nov 2026): kept on its own, so bookings work before migration 202611130005.
+  if (!office) {
+    const { error: purposeError } = await createPrivilegedClient().from("pw_room_bookings").update({ purpose: input.purpose }).eq("id", data as string);
+    if (purposeError && input.purpose === "lain") throw new ServiceError(503, `Booking di luar WAM menunggu migrasi ${BOOKING_PURPOSE_MIGRATION}. Bookingnya tersimpan sebagai meeting WAM.`);
   }
   const saved = await getBooking(data as string, viewer);
   // Its session was saved with it (same transaction); the people in it hear as for any session.

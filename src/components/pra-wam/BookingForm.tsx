@@ -2,11 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, ArrowLeftRight, ChartGantt, Check, CheckCircle2, Clock, DoorOpen, Info, MapPin, Pencil, Plus, Send, User, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowLeftRight, Briefcase, ChartGantt, Check, CheckCircle2, Clock, DoorOpen, Info, MapPin, Pencil, Plus, Send, User, Users } from "lucide-react";
 import { Button, Notice } from "@/components/ui";
 import {
   alternatives, appraisalRules, bookingClock, bookingProblems, clockLabel, clockMinutes, dayLabel, durationLabel, durationsFrom, minutesClock,
-  isRecordDate, isWorkday, roomKeptFrom, OUTSIDE_ROOM, periodAllDates, periodDates, slotTimes, titleSuggestions, wibDate, wibInstant, type Booking, type Person, type Room,
+  isRecordDate, isWorkday, roomKeptFrom, OUTSIDE_ROOM, periodAllDates, periodDates, slotTimes, titleSuggestions, wibDate, wibInstant, type Booking, type BookingPurpose, type Person, type Room,
 } from "@/lib/pra-wam/appraisal";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { roomStatus, type PlanTone } from "@/lib/pra-wam/floor-plan";
@@ -28,7 +28,9 @@ import css from "./booking-form.module.css";
 import styles from "./pra-wam.module.css";
 
 export type { PeopleGroup } from "./PeoplePicker";
-export type BookingDraft = { date: string; start: string; end: string; roomId: string; title: string; description: string; participants: string[]; /** For "Di luar kantor" (roomId OUTSIDE_ROOM). */ place?: string };
+export type BookingDraft = { date: string; start: string; end: string; roomId: string; title: string; description: string; participants: string[]; /** For "Di luar kantor" (roomId OUTSIDE_ROOM). */ place?: string;
+  /** What it is for (13 Nov 2026): a WAM meeting, or something outside WAM (no check-in, no MoM). */
+  purpose?: BookingPurpose };
 type Props = {
   editId?: string; initial: BookingDraft; dates: string[]; now: string; rooms: Room[]; people: Person[];
   viewer: { id: string }; groups: PeopleGroup[]; usedTitles: { title: string; count: number }[];
@@ -121,6 +123,13 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   function pickHodUnits(units: string[]) {
     setHodUnits(units);
     set({ participants: hodHeads(units), ...(as === "item" ? { title: itemName(units) } : {}) });
+  }
+  const purpose: BookingPurpose = draft.purpose ?? "wam";
+  /** Outside WAM: a booking of one's own (not as HOD or ITEM), its name typed. */
+  function choosePurpose(next: BookingPurpose) {
+    if (next === purpose) return;
+    if (next === "lain" && as !== "pribadi") chooseAs("pribadi");
+    set({ purpose: next });
   }
   function chooseAs(next: "pribadi" | "hod" | "item") {
     if (next === as) return;
@@ -477,7 +486,23 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(1)}>
       {heading(1, "Kegiatan apa?")}
-      <div>
+      {/* 13 Nov 2026: a room may be booked for something outside WAM; it stays on the schedule, without check-in or MoM. */}
+      <div className={css.asSwitch} role="group" aria-label="Keperluan">
+        <span className={styles.label}>Keperluan</span>
+        <div className={css.where}>
+          <button type="button" aria-pressed={purpose === "wam"} onClick={() => choosePurpose("wam")}><Users size={18} aria-hidden />Meeting WAM</button>
+          <button type="button" aria-pressed={purpose === "lain"} onClick={() => choosePurpose("lain")}><Briefcase size={18} aria-hidden />Di luar WAM</button>
+        </div>
+        <p className={styles.hint}>{purpose === "lain"
+          ? "Untuk keperluan lain, misalnya tamu klien atau interview. Tetap masuk jadwal ruang dan kalender, tanpa absen dan tanpa MoM."
+          : "Meeting WAM memakai absen dan MoM seperti biasa."}</p>
+      </div>
+      {purpose === "lain" ? <div>
+        <label className={styles.label} htmlFor={`${uid}-title`}>Nama kegiatan</label>
+        <input id={`${uid}-title`} className="input" maxLength={120} value={draft.title} placeholder="Misalnya Meeting klien PT Sinar" aria-invalid={!!fieldErrors.title} aria-describedby={described("title")}
+          onChange={event => set({ title: event.target.value })} />
+        {fieldError("title")}
+      </div> : <div>
         <label className={styles.label} htmlFor={`${uid}-title`}>Nama kegiatan</label>
         <select id={`${uid}-title`} className="select" value={draft.title.trim()} aria-invalid={!!fieldErrors.title} aria-describedby={described("title")}
           onChange={event => { void chooseActivity(event.target.value); }}>
@@ -490,7 +515,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
           <optgroup label="Lainnya">{usualTitles.map(title => <option key={title} value={title}>{title}</option>)}</optgroup>
         </select>
         {fieldError("title")}
-      </div>
+      </div>}
       <div>
         <label className={styles.label} htmlFor={`${uid}-description`}>Deskripsi <span className={styles.meta}>(opsional)</span></label>
         <textarea id={`${uid}-description`} className="textarea" rows={3} maxLength={500} value={draft.description} aria-describedby={described("description")} onChange={event => set({ description: event.target.value })} />
@@ -501,7 +526,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(2)}>
       {heading(2, "Siapa yang ikut?")}
-      {hod && !editId && !record && <div className={css.asSwitch} role="group" aria-label="Booking sebagai">
+      {hod && !editId && !record && purpose === "wam" && <div className={css.asSwitch} role="group" aria-label="Booking sebagai">
         <span className={styles.label}>Booking sebagai</span>
         <div className={css.where}>
           <button type="button" aria-pressed={as === "pribadi"} onClick={() => chooseAs("pribadi")}><User size={18} aria-hidden />Pribadi</button>

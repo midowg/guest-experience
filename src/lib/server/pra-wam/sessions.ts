@@ -62,11 +62,16 @@ async function minutesChoices(ids: string[]): Promise<Map<string, boolean | null
 async function shape(rows: SessionRow[], viewer: Member): Promise<Session[]> {
   if (!rows.length) return [];
   const client = createPrivilegedClient();
-  const [rooms, people, { data: links, error }, choices, rule] = await Promise.all([
+  const bookingIds = rows.flatMap(row => row.booking_id ? [row.booking_id] : []);
+  const [rooms, people, { data: links, error }, choices, rule, purposes] = await Promise.all([
     listRooms(), listPeople(),
     client.from("pw_session_participants").select("session_id,employee_id").in("session_id", rows.map(row => row.id)),
     minutesChoices(rows.map(row => row.id)).catch(() => new Map<string, boolean | null>()), minutesRule(),
+    // Bookings outside WAM (migration 202611130005); none before it.
+    bookingIds.length ? client.from("pw_room_bookings").select("id,purpose").in("id", bookingIds).then(({ data, error: purposeError }) => purposeError ? [] : (data ?? []) as { id: string; purpose: string }[])
+      : Promise.resolve([] as { id: string; purpose: string }[]),
   ]);
+  const outside = new Set(purposes.filter(item => item.purpose === "lain").map(item => item.id));
   if (error) fail(error);
   const all = seesAllSessions(viewer);
   const byId = new Map(people.map(person => [person.id, { id: person.id, name: person.name, department: person.department }]));
@@ -81,8 +86,9 @@ async function shape(rows: SessionRow[], viewer: Member): Promise<Session[]> {
       participantCount: ids.length, isParticipant: ids.includes(viewer.id),
       participants: all ? ids.map(person).sort((a, b) => a.name.localeCompare(b.name)) : null,
       // The booker made it (created_by), so their name rides along.
-      booking: row.booking_id ? { id: row.booking_id, bookedBy: person(row.created_by ?? "") } : null,
-      minutesChoice: choiceOf(own), minutesRequired: own ?? ruleNeeds({ kind: row.kind, participantCount: ids.length }, rule),
+      booking: row.booking_id ? { id: row.booking_id, bookedBy: person(row.created_by ?? ""), ...(outside.has(row.booking_id) ? { outside: true } : {}) } : null,
+      // A booking outside WAM needs no MoM, whatever the rule says.
+      minutesChoice: choiceOf(own), minutesRequired: row.booking_id && outside.has(row.booking_id) ? false : own ?? ruleNeeds({ kind: row.kind, participantCount: ids.length }, rule),
     };
   });
 }

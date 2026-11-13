@@ -4,7 +4,7 @@ import type { MinutePhoto } from "@/lib/pra-wam/minutes";
 import { closedText, minutesApi, minutesClosed, minutesOpen } from "@/lib/pra-wam/minutes";
 import { isJpeg, isMeetingPhotoKey, MOM_PHOTO_MIGRATION, MOM_PHOTOS_MAX, momPhotoKeyFor, momPhotoRule, photoLimitLabel, type MomPhotoStart } from "@/lib/pra-wam/minutes-photos";
 import { managesSessions } from "@/lib/pra-wam/roles";
-import type { Session } from "@/lib/pra-wam/sessions";
+import { outsideWam, type Session } from "@/lib/pra-wam/sessions";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -36,7 +36,7 @@ const notReady = () => new ServiceError(503, "Penyimpanan foto belum disiapkan. 
 const unknownUpload = () => new ServiceError(403, "Unggahan tidak dikenali. Ulangi dari awal.");
 
 /** Anyone in the meeting, or panitia/admin, may write its MoM. */
-export const mayWriteMinutes = (session: Session, member: Member) => session.isParticipant || managesSessions(member);
+export const mayWriteMinutes = (session: Session, member: Member) => !outsideWam(session) && (session.isParticipant || managesSessions(member));
 
 /** Adds or removes photos: may write the MoM, and the meeting has started. */
 export async function requireWriter(session: Session, member: Member) {

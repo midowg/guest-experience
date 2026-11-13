@@ -11,6 +11,8 @@ describe("check-in status on Detail sesi", () => {
     expect(checkInStatus({ ...session, status: "draf" }, ready, at("2026-11-26T06:30:00Z"))).toBeNull();
     expect(checkInStatus({ ...session, startsAt: null, endsAt: null }, ready, at("2026-11-26T06:30:00Z"))).toBeNull();
     expect(checkInStatus({ ...session, isParticipant: false }, ready, at("2026-11-26T06:30:00Z"))).toBeNull();
+    // A booking outside WAM asks for no check-in (13 Nov 2026).
+    expect(checkInStatus({ ...session, booking: { id: "b1", bookedBy: { id: "x", name: "Sari", department: "" }, outside: true } }, ready, at("2026-11-26T06:30:00Z"))).toBeNull();
   });
   it("follows the window: 30 minutes before the start to 30 minutes after the end", () => {
     expect(checkInStatus(session, ready, at("2026-11-26T05:00:00Z"))).toEqual({ kind: "belum", opens: "2026-11-26T05:30:00.000Z", closes: "2026-11-26T08:30:00.000Z" });

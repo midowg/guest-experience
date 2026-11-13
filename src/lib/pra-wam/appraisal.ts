@@ -67,8 +67,18 @@ export const bookingCancelledText = (booking: { roomId: string }) => isOutside(b
 /** An outside booking may start at any half hour of the day and end by 23.30 the same day. */
 export const OUTSIDE_HOURS = { open: "00:00", close: "23:30" } as const;
 
+/**
+ * What a booking is for (13 Nov 2026, migration 202611130005): a WAM meeting, or something else
+ * ("lain": a client visit, an interview): that one stays on the schedule but asks for no check-in and no MoM.
+ */
+export type BookingPurpose = "wam" | "lain";
+export const BOOKING_PURPOSE_MIGRATION = "202611130005_pw_booking_purpose.sql";
+export const bookingPurposeLabels: Record<BookingPurpose, string> = { wam: "Meeting WAM", lain: "Di luar WAM" };
+
 export type Booking = {
   id: string; roomId: string; title: string; description: string; startsAt: string; endsAt: string;
+  /** "lain": outside WAM, no check-in and no MoM; absent or "wam" for a WAM meeting. */
+  purpose?: BookingPurpose;
   /** The place of an outside booking ("Kopi Klotok, Kaliurang"); absent for a room booking. */
   place?: string;
   bookedBy: Person;
@@ -150,6 +160,7 @@ export const bookingInputSchema = z.object({
   description: z.string().trim().max(500, "Deskripsi paling panjang 500 karakter.").default(""),
   // No cap on how many come (6 Nov 2026): everyone may be invited; the bound only stops a runaway request.
   participants: z.array(z.uuid()).max(2000).default([]),
+  purpose: z.enum(["wam", "lain"]).default("wam"),
 }).superRefine((input, context) => {
   if (input.roomId === OUTSIDE_ROOM && input.place.length < 2) context.addIssue({ code: "custom", path: ["place"], message: "Isi nama tempat." });
 });

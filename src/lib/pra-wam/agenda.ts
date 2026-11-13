@@ -20,10 +20,12 @@ export type CheckInStatus =
   | { kind: "tidak-tersedia" };
 
 export function checkInStatus(
-  session: Pick<Session, "status" | "isParticipant" | "startsAt" | "endsAt">,
+  session: Pick<Session, "status" | "isParticipant" | "startsAt" | "endsAt"> & Partial<Pick<Session, "booking">>,
   attendance: MyAttendance,
   now: Date,
 ): CheckInStatus | null {
+  // A booking outside WAM (13 Nov 2026) asks for no check-in.
+  if (session.booking?.outside) return null;
   if (!session.isParticipant || session.status !== "terbit" || !session.startsAt || !session.endsAt) return null;
   if (attendance.checkedInAt) return { kind: "hadir", at: attendance.checkedInAt, ...(attendance.method ? { method: attendance.method } : {}) };
   if (!attendance.ready) return { kind: "tidak-tersedia" };

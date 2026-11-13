@@ -44,7 +44,7 @@ export const checkInWay = (session: { booking?: unknown }): CheckInWay => (sessi
 export type CheckInResult =
   | { kind: "tercatat" | "sudah"; checkedInAt: string }
   | { kind: "belum" | "tutup"; window: CheckInWindow }
-  | { kind: "bukan-peserta" | "belum-terbit" | "tidak-dikenal" | "pakai-tombol" | "pakai-qr" };
+  | { kind: "bukan-peserta" | "belum-terbit" | "tidak-dikenal" | "pakai-tombol" | "pakai-qr" | "tanpa-absen" };
 
 /**
  * How someone was signed in: qr (scanned the printed QR), manual (panitia marked them), offline
@@ -141,6 +141,7 @@ export function selfCheckInRefusal(result: CheckInResult, clock: (iso: string) =
     case "belum-terbit": return "Sesi ini belum diterbitkan panitia, jadi absen belum bisa dicatat.";
     case "tidak-dikenal": return "Sesi tidak ditemukan.";
     case "pakai-qr": return "Absen sesi ini dengan scan QR yang ditempel di ruang.";
+    case "tanpa-absen": return "Booking ini untuk keperluan di luar WAM, jadi tidak perlu absen.";
     case "pakai-tombol": return "Sesi ini dari booking ruang. Absen dengan tombol Saya hadir di aplikasi, tanpa QR.";
     default: return null;
   }

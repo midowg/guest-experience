@@ -37,7 +37,8 @@ function rights({ view: { session, attendance, requests, viewer, storage }, now 
     selfCheckIn: open && byButton && !!attendance.selfReady,
     upload: canUpload && storage,
     reschedule: canAsk && !requests.some(request => request.status === "diajukan"),
-    attendanceLink: viewer.staff && live,
+    // A booking outside WAM (13 Nov 2026) keeps no attendance.
+    attendanceLink: viewer.staff && live && !session.booking?.outside,
   };
 }
 

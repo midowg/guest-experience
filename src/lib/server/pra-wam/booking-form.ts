@@ -40,7 +40,7 @@ export async function bookingFormData(member: Member, query: BookingFormQuery, n
   if (editId) {
     const booking = await getBooking(editId, member);
     if (!booking.mine) throw new ServiceError(403, "Hanya pemesan yang bisa mengubah booking ini.");
-    initial = { date: wibDate(booking.startsAt), start: wibTime(booking.startsAt), end: wibTime(booking.endsAt), roomId: booking.roomId, place: booking.place ?? "", title: booking.title, description: booking.description, participants: (booking.participants ?? []).map(person => person.id) };
+    initial = { date: wibDate(booking.startsAt), start: wibTime(booking.startsAt), end: wibTime(booking.endsAt), roomId: booking.roomId, place: booking.place ?? "", title: booking.title, description: booking.description, participants: (booking.participants ?? []).map(person => person.id), purpose: booking.purpose ?? "wam" };
   } else {
     const asked = query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : null;
     // A day gone inside the period opens on itself, as a record (10 Nov 2026); the form says so.

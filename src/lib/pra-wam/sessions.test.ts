@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookingSessionLabel, sessionInputSchema, sessionProblems, sessionTimes, sessionWhen, withoutSessionBookings } from "./sessions";
+import { bookingSessionLabel, outsideWam, sessionInputSchema, sessionProblems, sessionTimes, sessionWhen, withoutSessionBookings } from "./sessions";
 
 describe("session rules", () => {
   it("lets a draft wait without time, but not half a time", () => {
@@ -31,6 +31,8 @@ describe("sessions made from a room booking", () => {
   it("names who booked it", () => {
     expect(bookingSessionLabel({ booking: { id: "b1", bookedBy: citra } })).toBe("Dari booking · dipesan Citra Dewi");
     expect(bookingSessionLabel({ booking: null })).toBeNull();
+    expect(bookingSessionLabel({ booking: { id: "b1", bookedBy: citra, outside: true } })).toBe("Di luar WAM · dipesan Citra Dewi");
+    expect([outsideWam({ booking: { id: "b1", bookedBy: citra, outside: true } }), outsideWam({ booking: { id: "b1", bookedBy: citra } }), outsideWam({})]).toEqual([true, false, false]);
     expect(bookingSessionLabel({})).toBeNull();
   });
   it("keeps only the bookings that are not a published session already", () => {

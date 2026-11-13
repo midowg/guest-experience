@@ -24,7 +24,7 @@ export type Session = {
    * The room booking this session was made from (migration 202611050004), with who booked it.
    * Its time, room and people follow the booking, so it is changed there; null otherwise.
    */
-  booking?: { id: string; bookedBy: Person } | null;
+  booking?: { id: string; bookedBy: Person; /** Booked for something outside WAM (13 Nov 2026): no check-in, no MoM. */ outside?: boolean } | null;
   /**
    * Notulen (12 Nov 2026): the session's own choice (follow Admin WAM's rule, always, never), and
    * whether it needs a MoM after that choice and the rule. Absent where a session is made by hand.
@@ -37,7 +37,10 @@ export type Session = {
 export const BOOKING_SESSION_LOCKED = "Sesi ini dari booking ruang; ubah lewat booking.";
 
 /** "Dari booking · dipesan Ayu Lestari", the pill on a booking's session; null for other sessions. */
-export const bookingSessionLabel = (session: Pick<Session, "booking">) => session.booking ? `Dari booking · dipesan ${session.booking.bookedBy.name}` : null;
+export const bookingSessionLabel = (session: Pick<Session, "booking">) => !session.booking ? null
+  : `${session.booking.outside ? "Di luar WAM" : "Dari booking"} · dipesan ${session.booking.bookedBy.name}`;
+/** A session from a booking outside WAM (13 Nov 2026): on the schedule, without check-in or MoM. */
+export const outsideWam = (session: Partial<Pick<Session, "booking">>) => !!session.booking?.outside;
 
 /**
  * A booking that has its own session is shown once, as that session: the bookings left over once
