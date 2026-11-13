@@ -99,6 +99,15 @@ const clean = async (question: QQuestion, raw: unknown, employeeId: string): Pro
   return result.value;
 };
 
+/**
+ * Done by the questions shown now, though not marked yet: Admin WAM hid what was left (a whole
+ * section) after the last answer was saved. Marks it, so the card can be drawn (13 Nov 2026).
+ */
+export async function completedNow(form: Pick<QForm, "id">, employeeId: string, mine: Pick<Mine, "completedAt" | "progress" | "consentAt">): Promise<string | null> {
+  if (mine.completedAt || !mine.progress.done) return mine.completedAt;
+  return (await settleProgress(form.id, employeeId, true)).completedAt;
+}
+
 /** Sets or clears completed_at to match the progress now; keeps the first time it was done. */
 async function settleProgress(formId: string, employeeId: string, done: boolean, patch: { consent_at?: string | null } = {}) {
   const client = createPrivilegedClient();

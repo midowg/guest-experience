@@ -68,6 +68,10 @@ describe("progress", () => {
     expect(progressOf({ sections, questions }, { "1": "Dewi", m: { A: "1" } }, false).requiredLeft).toBe(2);
     expect(progressOf({ sections, questions }, { "1": "Dewi", m: { A: "1", B: "2" } }, true)).toEqual({ sectionsDone: 2, sectionsTotal: 2, requiredLeft: 0, done: true });
   });
+  it("leaves out a section whose every question is hidden, so an emptied anonymous part never blocks finishing", () => {
+    const hidden = questions.map(item => item.sectionId === "s2" ? { ...item, hidden: true } : item);
+    expect(progressOf({ sections, questions: hidden }, { "1": "Dewi", m: { A: "1", B: "2" } }, false)).toEqual({ sectionsDone: 1, sectionsTotal: 1, requiredLeft: 0, done: true });
+  });
   it("needs a ticked consent and every matrix row", () => {
     expect(complete(question("6", { kind: "consent" }), false)).toBe(false);
     expect(complete(question("6", { kind: "consent" }), true)).toBe(true);

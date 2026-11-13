@@ -195,9 +195,14 @@ export function complete(question: QQuestion, value: AnswerValue | undefined): b
   return true;
 }
 
-/** The sections and questions someone actually sees, in order. */
+/**
+ * The sections and questions someone actually sees, in order. A section whose every question is
+ * hidden is not shown at all (13 Nov 2026): an empty anonymous section could never be sent, so
+ * nobody could finish.
+ */
 export function visibleContent(content: Pick<QContent, "sections" | "questions">, answers: Answers) {
-  return content.sections.filter(section => !section.hidden).sort((a, b) => a.sort - b.sort).map(section => ({
+  const filled = new Set(content.questions.filter(question => !question.hidden).map(question => question.sectionId));
+  return content.sections.filter(section => !section.hidden && filled.has(section.id)).sort((a, b) => a.sort - b.sort).map(section => ({
     section,
     questions: content.questions.filter(question => question.sectionId === section.id && shows(question, answers)).sort((a, b) => a.sort - b.sort),
   }));

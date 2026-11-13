@@ -4,7 +4,7 @@ import { ServiceError } from "@/lib/server/config";
 import { checkOrigin, handle, success } from "@/lib/server/http";
 import { cardsWaiting, ensureCard, myCard } from "@/lib/server/pra-wam/cards";
 import { currentForm } from "@/lib/server/pra-wam/questionnaire";
-import { myAnswers } from "@/lib/server/pra-wam/questionnaire-answers";
+import { completedNow, myAnswers } from "@/lib/server/pra-wam/questionnaire-answers";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,8 @@ export async function POST(request: Request) {
     checkOrigin(request);
     const form = await formFor(member);
     const mine = await myAnswers(form, member.id);
-    if (!mine.completedAt) throw new ServiceError(409, "Selesaikan dulu semua bagian wajib, lalu kartumu dibuka.");
+    // Done by the questions shown now counts, even when no answer was saved since Admin WAM hid the rest.
+    if (!(await completedNow(form, member.id, mine))) throw new ServiceError(409, "Selesaikan dulu semua bagian wajib, lalu kartumu dibuka.");
     const card = await ensureCard(form, member.id, mine.answers);
     if (!card) throw cardsWaiting();
     return success({ card }, "Kartu siap.");
