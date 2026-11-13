@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Camera, CheckCircle2, ChevronDown, ChevronRight, Download, ExternalLink, ImagePlus, NotebookPen, Plus, Search, Send, Trash2, X } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
@@ -41,6 +41,27 @@ function usePhone(): boolean {
     () => phoneQuery()?.matches ?? false,
     () => false,
   );
+}
+
+/**
+ * The MoM form on a larger screen (13 Nov 2026): a dialog over the whole page, its title and a close
+ * button on top, the form scrolling under it with its buttons kept at the bottom. Esc does not
+ * close it (nothing typed is lost by a stray key); Tutup does, like Batal.
+ */
+function FullDialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (dialog && !dialog.open) dialog.showModal?.();
+    return () => { if (dialog?.open) dialog.close(); };
+  }, []);
+  return <dialog ref={ref} className={css.fullDialog} aria-label={title} onCancel={event => event.preventDefault()}>
+    <header className={css.fullHead}>
+      <h2><NotebookPen size={20} aria-hidden /> {title}</h2>
+      <button type="button" className={css.remove} aria-label="Tutup" onClick={onClose}><X size={20} aria-hidden /></button>
+    </header>
+    <div className={css.fullBody}>{children}</div>
+  </dialog>;
 }
 
 /** Why the agenda items (III) and new topics (IV) cannot be saved yet, or null. */
@@ -425,9 +446,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
         </div>
       </li>;
     };
-    return <section className={css.panel} aria-label="Notulen">
-      {heading}
-      <form ref={formTop} className={css.form} onSubmit={event => {
+    const form = <form ref={formTop} className={css.form} onSubmit={event => {
         event.preventDefault();
         // Enter in a field on a phone moves on a step; it sends only from the last one.
         if (phone && !last) { go(at + 1); return; }
@@ -568,7 +587,13 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
           {last ? <button key="kirim" type="submit" className="button button--primary" disabled={busy !== null}>{primary}</button>
             : <button key="lanjut" type="button" className="button button--primary" onClick={event => { event.preventDefault(); go(at + 1); }}>Lanjut <ChevronRight size={18} aria-hidden /></button>}
         </div>}
-      </form>
+      </form>;
+    // A phone keeps the form in the page, in steps; a larger screen opens it over the whole page.
+    if (phone) return <section className={css.panel} aria-label="Notulen">{heading}{form}{confirmDialog}</section>;
+    return <section className={css.panel} aria-label="Notulen">
+      {heading}
+      <p className={styles.hint}>Notulen sedang diisi.</p>
+      <FullDialog title={`Notulen (MoM) · ${view.title || "Meeting"}`} onClose={cancel}>{form}</FullDialog>
       {confirmDialog}
     </section>;
   }
@@ -611,7 +636,8 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       <section className={css.group}>
         <h3 className={css.groupTitle}>{sectionTitle("V.", "ACTION ITEMS")}</h3>
         {minutes.actions.length ? <ul className={css.actionList}>{minutes.actions.map(action => {
-          const mayTick = sent && (canWrite || actionPicIds(action).includes(view.viewerId));
+          // Ticking a follow-up done is not a revision: still allowed after the 24 hours.
+          const mayTick = sent && (canWrite || !!view.closed || actionPicIds(action).includes(view.viewerId));
           const text = <span className={css.actionText}>
             <span className={action.done ? css.done : undefined}>{action.task}</span>
             <small>{[action.picNames?.length ? `PIC ${action.picNames.join(", ")}` : action.picName ? `PIC ${action.picName}` : "PIC belum dipilih", action.dueDate ? `Due ${frmDue(action.dueDate)}` : null, action.done ? "Done" : "Open"].filter(Boolean).join(" · ")}</small>
@@ -649,17 +675,20 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
         {!minutes.telegramOff && failed.length > 0 && <p className={css.warn}>Belum terkirim ke {failed.map(item => item.title).join(", ")}. Dicoba lagi saat MoM disimpan berikutnya.</p>}
       </div>}
     </> : <>
-      <p className={styles.hint}>{status === "belum" ? "Meeting sudah selesai, notulennya belum diisi." : status === "draf" ? "Notulen sedang ditulis." : view.open ? "Belum ada notulen." : "Notulen bisa ditulis setelah meeting dimulai."}</p>
+      <p className={styles.hint}>{view.closed ? "MoM meeting ini tidak diisi." : status === "belum" ? "Meeting sudah selesai, notulennya belum diisi." : status === "draf" ? "Notulen sedang ditulis." : view.open ? "Belum ada notulen." : "Notulen bisa ditulis setelah meeting dimulai."}</p>
       {canWrite && photoBlock(true)}
     </>}
     {error && <Notice tone="error">{error}</Notice>}
-    {(minutes || canWrite) && <div className={`${css.buttons} ${css.readBar}`}>
+    {/* 1 x 24 hours after the meeting (13 Nov 2026): until when, or that the time is past (the buttons then stay, off). */}
+    {canWrite && view.deadline && <p className={css.deadline}>Bisa diisi atau direvisi sampai {stamp(view.deadline)}.</p>}
+    {view.closed && <p className={css.deadline} role="status">Batas mengisi atau merevisi MoM sudah lewat{view.deadline ? ` (${stamp(view.deadline)})` : ""}. MoM tetap bisa dibaca.</p>}
+    {(minutes || canWrite || view.closed) && <div className={`${css.buttons} ${css.readBar}`}>
       {minutes && <a className="button button--secondary" href={minutesApi.pdf(sessionId)} download><Download size={18} aria-hidden /> Unduh PDF</a>}
-      {canWrite && <button type="button" className={`button ${minutes ? "button--secondary" : "button--primary"}`} onClick={start}>
+      {(canWrite || view.closed) && <button type="button" className={`button ${minutes ? "button--secondary" : "button--primary"}`} disabled={!canWrite} onClick={start}>
         <NotebookPen size={18} aria-hidden /> {!minutes ? "Tulis notulen" : sent ? "Ubah notulen" : "Lanjutkan draf"}
       </button>}
       {/* A draft that is ready goes without opening the form again. */}
-      {canWrite && minutes && !sent && drafts && <button type="button" className={`button button--primary ${css.readMain}`} disabled={busy !== null} onClick={() => { void save(true, draftOf()); }}>
+      {(canWrite || view.closed) && minutes && !sent && drafts && <button type="button" className={`button button--primary ${css.readMain}`} disabled={busy !== null || !canWrite} onClick={() => { void save(true, draftOf()); }}>
         <Send size={18} aria-hidden /> {busy === "send" ? "Mengirim…" : "Kirim MoM"}
       </button>}
     </div>}

@@ -95,7 +95,9 @@ describe("minutesCaption", () => {
     const caption = minutesCaption({ ...base, title: "Q&A <draft>", trial: true, version: 3, changedBy: "Sofyan", at: "2026-11-11T02:10:00Z", actions: [], from: null, to: null });
     expect(caption).toContain("<b>Q&amp;A &lt;draft&gt;</b>");
     expect(caption).toContain("<i>Uji coba dari WAM, bukan meeting sungguhan.</i>");
-    expect(caption).not.toContain("Versi 3");
+    // A revision says which and when, under the title.
+    expect(caption.split("\n")[2]).toBe("<b>Revisi 2</b> · 11 Nov 2026, 09.10 WIB oleh Sofyan");
+    expect(minutesCaption(base)).not.toContain("Revisi");
     expect(caption).toContain("Waktu: Selasa, 10 November 2026\n");
     expect(caption).not.toContain("Tindak lanjut");
     const many = Array.from({ length: 12 }, (_, index) => `Keputusan panjang nomor ${index + 1} `.repeat(6));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  asMinutesRule, choiceOf, DEFAULT_MINUTES_RULE, defaultAbsent, itemsAsText, minutesInputSchema, minutesItems, minutesNumber, minutesOpen, minutesStatus, needsMinutes, openActions, presence, ruleNeeds, storedOf,
+  asMinutesRule, choiceOf, DEFAULT_MINUTES_RULE, defaultAbsent, itemsAsText, minutesClosed, minutesDeadline, minutesInputSchema, minutesItems, minutesNumber, minutesOpen, minutesStatus, needsMinutes, openActions, presence, ruleNeeds, storedOf,
 } from "./minutes";
 import { fitWithin, isJpeg, isMeetingPhotoKey, momPhotoKeyFor, momPhotoRule, photoLimitLabel } from "./minutes-photos";
 
@@ -48,6 +48,18 @@ describe("notulen (MoM)", () => {
     expect(minutesStatus(meeting({ participantCount: 2 }), true, after)).toBe("sudah");
     expect(minutesOpen(meeting(), new Date("2026-11-10T01:59:00.000Z"))).toBe(false);
     expect(minutesOpen(meeting(), during)).toBe(true);
+  });
+
+  it("can be written or revised until 1 x 24 hours after the meeting ends, then is closed", () => {
+    const end = new Date(meeting().endsAt!);
+    const deadline = minutesDeadline(meeting())!;
+    expect(new Date(deadline).getTime() - end.getTime()).toBe(24 * 3_600_000);
+    expect(minutesOpen(meeting(), new Date(deadline))).toBe(true);
+    const later = new Date(new Date(deadline).getTime() + 60_000);
+    expect(minutesOpen(meeting(), later)).toBe(false);
+    expect(minutesClosed(meeting(), later)).toBe(true);
+    // Before it starts it is neither open nor closed.
+    expect(minutesClosed(meeting(), new Date("2026-11-10T01:59:00.000Z"))).toBe(false);
   });
 
   it("asks for a summary or decisions, and a task for each follow-up", () => {

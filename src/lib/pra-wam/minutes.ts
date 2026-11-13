@@ -98,8 +98,14 @@ export type MinutesView = {
   canWrite: boolean; people: Pick<Person, "id" | "name">[];
   /** Who is looking: a follow-up's PIC may tick it done. */
   viewerId: string;
-  /** Whether the meeting has started (the MoM can be written from then). */
+  /** Whether the MoM can be written now: from the meeting's start to 24 hours after its end. */
   open: boolean;
+  /**
+   * 13 Nov 2026: until when it can be written or revised (ISO), and whether that time is past for
+   * someone who could have written it (the MoM then shows, its buttons off).
+   */
+  deadline?: string | null;
+  closed?: boolean;
   /** When the meeting ends (ISO), to warn before sending a MoM of a meeting still running. */
   endsAt: string | null;
   /** The meeting as section I of the FRM form shows it: title, start (ISO) and room or place. */
@@ -170,9 +176,27 @@ export function needsMinutes(meeting: Meeting, rule: MinutesRule = DEFAULT_MINUT
   return typeof meeting.minutesRequired === "boolean" ? meeting.minutesRequired : ruleNeeds(meeting, rule);
 }
 
-/** May be written once the meeting has started (notes are taken while it runs). */
-export const minutesOpen = (meeting: Pick<Session, "status" | "startsAt">, now: Date) =>
+/**
+ * How long after the meeting a MoM can still be written or revised (13 Nov 2026): 1 x 24 hours from
+ * its end. After that it stays readable, and its follow-ups can still be ticked done.
+ */
+export const MINUTES_WINDOW_HOURS = 24;
+/** Until when a meeting's MoM can be written or revised (ISO); null without a start. */
+export function minutesDeadline(meeting: Pick<Session, "startsAt" | "endsAt">): string | null {
+  const from = meeting.endsAt ?? meeting.startsAt;
+  return from ? new Date(new Date(from).getTime() + MINUTES_WINDOW_HOURS * 3_600_000).toISOString() : null;
+}
+/** The meeting has started (notes are taken while it runs). */
+export const minutesStarted = (meeting: Pick<Session, "status" | "startsAt">, now: Date) =>
   meeting.status === "terbit" && !!meeting.startsAt && new Date(meeting.startsAt) <= now;
+/** The 24 hours after the meeting are over: the MoM is closed to writing. */
+export const minutesClosed = (meeting: Pick<Session, "status" | "startsAt" | "endsAt">, now: Date) => {
+  const deadline = minutesDeadline(meeting);
+  return minutesStarted(meeting, now) && !!deadline && new Date(deadline) < now;
+};
+/** May be written or revised: from the meeting's start to 24 hours after its end. */
+export const minutesOpen = (meeting: Pick<Session, "status" | "startsAt" | "endsAt">, now: Date) =>
+  minutesStarted(meeting, now) && !minutesClosed(meeting, now);
 
 /**
  * Where a meeting's MoM stands: only one that is over and needs one can be "belum". A MoM saved but

@@ -205,10 +205,12 @@ export type Posted = { chatId: string; messageId: number; topicLost: boolean };
 /**
  * Posts a MoM in a group as one message: the PDF with its caption, in the MoM topic when there is
  * one. With an earlier message, that message is changed in place instead (Telegram does not ring
- * for a change); when it is gone, a new one is sent. A group that moved follows its new id, a topic
+ * for a change: a follow-up ticked done); when it is gone, a new one is sent. With `revise` (13 Nov
+ * 2026: a new version of the MoM) a new message is sent as a reply to the earlier one, so the group
+ * hears of the revision; the earlier one stays as it was. A group that moved follows its new id, a topic
  * that is gone falls back to the group, and a bot that was removed is marked so.
  */
-export async function postMinutes(group: TelegramGroup, message: MinutesMessage, earlier: number | null, now = new Date(), pdf?: Uint8Array): Promise<Posted> {
+export async function postMinutes(group: TelegramGroup, message: MinutesMessage, earlier: number | null, now = new Date(), pdf?: Uint8Array, revise = false): Promise<Posted> {
   const config = requireBot();
   const bytes = pdf ?? await minutesPdf(message);
   // Kept under Telegram's limit by minutesCaption itself.
@@ -217,8 +219,10 @@ export async function postMinutes(group: TelegramGroup, message: MinutesMessage,
   const client = createPrivilegedClient();
   let chatId = group.chatId, topic = group.momTopicId, topicLost = false;
 
+  let replyTo = revise ? earlier : null;
   const send = async (): Promise<number> => (await telegramUpload<{ message_id: number }>(config, "sendDocument", {
     chat_id: chatId, caption, parse_mode: "HTML", ...(topic ? { message_thread_id: topic } : {}), ...(quietHour(now) ? { disable_notification: true } : {}),
+    ...(replyTo ? { reply_parameters: { message_id: replyTo, allow_sending_without_reply: true } } : {}),
   }, file)).message_id;
   const edit = async (messageId: number): Promise<number> => {
     await telegramUpload(config, "editMessageMedia", {
@@ -229,7 +233,7 @@ export async function postMinutes(group: TelegramGroup, message: MinutesMessage,
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      if (earlier) {
+      if (earlier && !revise) {
         try { return { chatId, messageId: await edit(earlier), topicLost }; }
         catch (error) {
           if (error instanceof TelegramError && error.unchanged) return { chatId, messageId: earlier, topicLost };
@@ -242,14 +246,14 @@ export async function postMinutes(group: TelegramGroup, message: MinutesMessage,
       if (!(error instanceof TelegramError)) throw new ServiceError(502, say(error));
       if (error.migrateTo) {
         await client.from("pw_telegram_groups").update({ chat_id: error.migrateTo, updated_at: now.toISOString() }).eq("chat_id", chatId);
-        chatId = String(error.migrateTo); earlier = null;
+        chatId = String(error.migrateTo); earlier = null; replyTo = null;
       } else if (error.gone) {
         await client.from("pw_telegram_groups").update({ bot_status: "dikeluarkan", updated_at: now.toISOString() }).eq("chat_id", chatId);
         throw new ServiceError(409, `Bot sudah tidak ada di grup ${group.title}. Pasang ulang bot ke grup itu.`);
       } else if (topic && /thread|topic/i.test(error.description)) {
         // The topic was deleted or closed to the bot: post in the group, and forget the topic.
         await client.from("pw_telegram_groups").update({ mom_topic_id: null, updated_at: now.toISOString() }).eq("chat_id", chatId);
-        topic = null; topicLost = true; earlier = null;
+        topic = null; topicLost = true; earlier = null; replyTo = null;
       } else if (error.retryAfter && error.retryAfter <= 5) {
         await new Promise(resolve => setTimeout(resolve, error.retryAfter! * 1000));
       } else throw new ServiceError(502, `Telegram menolak: ${error.description}`);

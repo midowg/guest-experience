@@ -142,15 +142,18 @@ export async function deliverMinutes(session: Session, minutes: Minutes, now = n
     const message = await minutesMessage(session, minutes, await isHodMeeting(session));
     const pdf = await minutesPdfWithPhotos(session.id, message);
     const client = createPrivilegedClient();
-    const { data: before } = await client.from("pw_telegram_messages").select("chat_id,message_id").eq("session_id", session.id);
+    const { data: before } = await client.from("pw_telegram_messages").select("chat_id,message_id,version,status").eq("session_id", session.id);
     const earlier = new Map((before ?? []).map(row => [String(row.chat_id), row.message_id as number | null]));
+    // The version each group last received: a newer one is a revision, sent anew so the group hears of it (13 Nov 2026).
+    const received = new Map((before ?? []).filter(row => row.status === "terkirim").map(row => [String(row.chat_id), row.version as number]));
     // The photos go once, as an album under the MoM, to a group the MoM reaches for the first time.
     const firstTime = groups.some(group => !earlier.get(group.chatId));
     const photos = firstTime ? await minutePhotoBytes(session.id).catch(() => [] as Uint8Array[]) : [];
     for (const group of groups) {
       const at = new Date().toISOString();
       try {
-        const posted = await postMinutes(group, message, earlier.get(group.chatId) ?? null, now, pdf);
+        const last = received.get(group.chatId);
+        const posted = await postMinutes(group, message, earlier.get(group.chatId) ?? null, now, pdf, last !== undefined && message.version > last);
         if (!earlier.get(group.chatId) && photos.length) {
           await sendMinutePhotos(group, posted.chatId, message.code, photos).catch(error => console.error("minutes photos", error instanceof Error ? error.message : error));
         }

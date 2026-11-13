@@ -190,7 +190,7 @@ it("names where Kirim MoM goes before it goes, and sends nothing when cancelled"
   expect(dialog.getByRole("link", { name: /Werkudara CoE · Center of Excellence/ }).getAttribute("href")).toBe("https://t.me/+abcDEF123");
   expect(dialog.queryByText(/Pasang aplikasi Telegram/)).toBeNull();
   fireEvent.click(dialog.getByRole("button", { name: "Batalkan" }));
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: /^Kirim/ })).toBeNull());
   expect(box.checked).toBe(false);
   fireEvent.click(box);
   dialog = within(await screen.findByRole("dialog", { name: "Kirim ke Telegram" }));
@@ -209,7 +209,7 @@ it("names where Kirim MoM goes before it goes, and sends nothing when cancelled"
   dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
   expect(dialog.getByText(/ke grup Telegram Werkudara CoE · Center of Excellence dan WG HOD · Head of Department/)).toBeTruthy();
   fireEvent.click(dialog.getByRole("button", { name: "Batal" }));
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: /^Kirim/ })).toBeNull());
   expect(request).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
   dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
@@ -237,7 +237,7 @@ it("says when a group is missing, a meeting still runs, or the MoM stays out of 
   expect(terms.getByText(/dicentang di bawah kotak/)).toBeTruthy();
   await waitFor(() => expect((terms.getByRole("button", { name: "Kirim ke Telegram" }) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(terms.getByRole("button", { name: "Kirim ke Telegram" }));
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: /^Kirim/ })).toBeNull());
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
   const plain = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
   expect(plain.getByText(/tidak dikirim ke Telegram; peserta lain diberi tahu di WAM\./)).toBeTruthy();
@@ -339,6 +339,23 @@ it("takes only the photos that fit in ten, and says how many were left out", asy
   expect(screen.queryByRole("button", { name: /Tambah foto/ })).toBeNull();
 });
 
+it("after the 24 hours: the MoM still shows, says the time is past, and its buttons are off", () => {
+  render(<MinutesPanel sessionId={SESSION} initial={view({ status: "sudah", minutes: written(), canWrite: false, open: false, closed: true, deadline: "2026-11-11T03:30:00.000Z" })} />);
+  expect(screen.getByText(/Batas mengisi atau merevisi MoM sudah lewat \(11 Nov, 10\.30\)/)).toBeTruthy();
+  expect((screen.getByRole("button", { name: /Ubah notulen/ }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByRole("link", { name: /Unduh PDF/ })).toBeTruthy();
+});
+
+it("on a larger screen, writes the MoM in a dialog over the page; Tutup closes it", () => {
+  render(<MinutesPanel sessionId={SESSION} initial={view({ deadline: "2026-11-11T03:30:00.000Z" })} />);
+  expect(screen.getByText("Bisa diisi atau direvisi sampai 11 Nov, 10.30.")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Tulis notulen/ }));
+  const full = within(screen.getByRole("dialog", { name: /^Notulen \(MoM\)/ }));
+  expect(full.getByLabelText("Topic/Agenda Item 1")).toBeTruthy();
+  fireEvent.click(full.getByRole("button", { name: "Tutup" }));
+  expect(screen.queryByRole("dialog", { name: /^Notulen \(MoM\)/ })).toBeNull();
+});
+
 it("lets the PIC tick a follow-up done without writing the MoM; others only read", async () => {
   request.mockResolvedValue({ data: { ...written().actions[0], done: true }, message: "Tindak lanjut ditandai selesai." });
   const { unmount } = render(<MinutesPanel sessionId={SESSION} initial={view({ status: "sudah", minutes: written(), canWrite: false })} />);
@@ -417,7 +434,7 @@ it("on a phone, is a few steps with Kembali, Simpan draf and Lanjut, and sends f
     fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
     expect(steps().getByRole("button", { name: /Tindak lanjut/ }).getAttribute("aria-current")).toBe("step");
     fireEvent.click(screen.getByRole("button", { name: /Lanjut/ }));
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("dialog", { name: /^Kirim/ })).toBeNull();
     expect(request).not.toHaveBeenCalled();
     expect(steps().getByRole("button", { name: /Selesai/ }).getAttribute("aria-current")).toBe("step");
     expect(within(screen.getByRole("list", { name: "Isi MoM" })).getAllByRole("listitem").map(item => item.textContent)).toEqual(["1 topik dibahas", "0 tindak lanjut", "1 dari 2 hadir", "0 foto"]);

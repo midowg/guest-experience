@@ -1,7 +1,7 @@
 import "server-only";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { MinutePhoto } from "@/lib/pra-wam/minutes";
-import { minutesApi, minutesOpen } from "@/lib/pra-wam/minutes";
+import { minutesApi, minutesClosed, minutesOpen } from "@/lib/pra-wam/minutes";
 import { isJpeg, isMeetingPhotoKey, MOM_PHOTO_MIGRATION, MOM_PHOTOS_MAX, momPhotoKeyFor, momPhotoRule, photoLimitLabel, type MomPhotoStart } from "@/lib/pra-wam/minutes-photos";
 import { managesSessions } from "@/lib/pra-wam/roles";
 import type { Session } from "@/lib/pra-wam/sessions";
@@ -41,6 +41,7 @@ export const mayWriteMinutes = (session: Session, member: Member) => session.isP
 /** Adds or removes photos: may write the MoM, and the meeting has started. */
 function requireWriter(session: Session, member: Member) {
   if (!mayWriteMinutes(session, member)) throw new ServiceError(403, "Hanya yang ikut meeting ini yang bisa menambah fotonya.");
+  if (minutesClosed(session, new Date())) throw new ServiceError(409, "Batas mengisi atau merevisi MoM sudah lewat (1 x 24 jam setelah meeting selesai).");
   if (!minutesOpen(session, new Date())) throw new ServiceError(409, "Foto bisa ditambah setelah meeting dimulai.");
 }
 

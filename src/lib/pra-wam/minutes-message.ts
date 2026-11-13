@@ -204,6 +204,8 @@ export function minutesCaption(message: MinutesMessage): string {
     return [
       `<b>${escapeHtml(cut(message.title, title))}</b>`,
       `Minutes of Meeting · ${escapeHtml(message.department)}`,
+      // A revision says so, and when (13 Nov 2026): it is sent anew, as a reply to the earlier one.
+      ...(message.version > 1 ? [`<b>Revisi ${message.version - 1}</b> · ${stamp(message.at)}${message.changedBy ? ` oleh ${escapeHtml(message.changedBy)}` : ""}`] : []),
       ...(message.trial ? ["<i>Uji coba dari WAM, bukan meeting sungguhan.</i>"] : []),
       "",
       `${hasMinutesNumber(message) ? "Nomor" : "Kode"}: ${escapeHtml(message.code)}`,
