@@ -191,6 +191,10 @@ export async function removeCharacter(id: string): Promise<{ hidden: boolean }> 
   const form = await formOrWait();
   await checkOneVisible(form.id, id);
   const client = createPrivilegedClient();
+  // Since the tokoh card (13 Nov 2026) a character is a persona: its figures belong to it, and
+  // hiding it would leave them out of the match. It stays; its old picture can go.
+  const figures = await client.from("cq_figures").select("id", { count: "exact", head: true }).eq("form_id", form.id).eq("persona_id", id);
+  if (!figures.error && figures.count) throw new ServiceError(409, `Karakter ini sekarang persona untuk ${figures.count} tokoh kartu, jadi tidak bisa dihapus atau disembunyikan. Gambar animenya bisa dihapus lewat Hapus gambar karakter lama.`);
   const { count, error } = await client.from("cq_person_cards").select("employee_id", { count: "exact", head: true }).eq("form_id", form.id).eq("card_id", id);
   if (error) failed(error);
   if (count) {
@@ -203,6 +207,23 @@ export async function removeCharacter(id: string): Promise<{ hidden: boolean }> 
   const key = (data as { image_key: string | null } | null)?.image_key;
   if (key && isR2Configured()) await removeObjects([key]).catch(() => undefined);
   return { hidden: false };
+}
+
+/**
+ * The characters' old anime pictures (13 Nov 2026): the tokoh card never shows them, so Admin WAM
+ * can clear them. The personas stay. Returns how many pictures went.
+ */
+export async function removeCharacterArt(): Promise<number> {
+  const form = await formOrWait();
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("cq_cards").select("id,image_key").eq("form_id", form.id).not("image_key", "is", null);
+  if (error) failed(error);
+  const rows = (data ?? []) as { id: string; image_key: string }[];
+  if (!rows.length) return 0;
+  const { error: clearError } = await client.from("cq_cards").update({ image_key: null, image_updated_at: new Date().toISOString() }).eq("form_id", form.id).in("id", rows.map(row => row.id));
+  if (clearError) failed(clearError);
+  if (isR2Configured()) await removeObjects(rows.map(row => row.image_key)).catch(() => undefined);
+  return rows.length;
 }
 
 /** Removes the trial cards Admin WAM drew while trying the draft. */

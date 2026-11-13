@@ -387,6 +387,8 @@ export const praWamCardsApi = {
   /** DELETE: the trial cards drawn while the form was a draft. */
   trials: `${CARDS_ADMIN_API}/trials`,
   /** POST {kind, ref, mime, size}: an upload address for one picture of the catalog. */
+  /** DELETE: the characters' old anime pictures (13 Nov 2026). */
+  characterArt: `${CARDS_ADMIN_API}/art`,
   artStart: `${CARDS_ADMIN_API}/art/start`,
   /** POST: the picture is uploaded; check it and keep it. */
   artConfirm: `${CARDS_ADMIN_API}/art/confirm`,

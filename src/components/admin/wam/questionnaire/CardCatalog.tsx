@@ -39,6 +39,16 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
   /** The draw record names characters by their fixed key; show their names. */
   const named = (key: string) => catalog.characters.find(character => character.key === key)?.name ?? key;
   const real = data.drawn.filter(card => !card.trial);
+  // The tokoh card (13 Nov 2026): the characters are the personas behind the figures.
+  const tokoh = catalog.figures.length > 0;
+  const oldArt = catalog.characters.filter(character => character.stored).length;
+  async function removeOldArt() {
+    if (!(await confirm({ title: `Hapus ${oldArt} gambar karakter lama?`, body: "Gambar anime para persona dihapus permanen. Kartu tokoh tidak memakainya; personanya tetap.", confirmLabel: "Hapus gambar", danger: true }))) return;
+    await run("gambar-lama", async () => {
+      const result = await adminRequest<{ cards: AdminCards }>(praWamCardsApi.characterArt, { method: "DELETE" });
+      return { message: result.message ?? "Dihapus.", cards: result.data?.cards };
+    });
+  }
   const trials = data.drawn.length - real.length;
 
   async function reload() {
@@ -100,12 +110,15 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
     {data.willChange > 0 && <Notice tone="warning">{data.willChange} orang akan berganti karakter saat jawabannya berikutnya tersimpan atau kartunya dibuka, karena aturan skor sekarang tidak lagi memilih karakter mereka. Level, tampilan, dan nomornya tetap.</Notice>}
 
+    {tokoh && oldArt > 0 && <Notice tone="info">
+      {oldArt} gambar anime karakter lama masih tersimpan. Kartu tokoh tidak memakainya. <Button type="button" variant="secondary" disabled={!!busy} onClick={() => void removeOldArt()}><Trash2 size={18} aria-hidden /> Hapus gambar karakter lama</Button>
+    </Notice>}
     <Pictures data={data} busy={busy} setBusy={setBusy} setMessage={setMessage} reload={reload} />
 
     <section className={styles.card} aria-labelledby="cc-characters">
       <div className={styles.head}>
-        <h3 id="cc-characters">Karakter ({catalog.characters.filter(character => !character.hidden).length} tampil)</h3>
-        <Button type="button" variant="secondary" disabled={!!busy || editing === "baru"} onClick={() => { setEditing("baru"); setErrors({}); }}><Plus size={18} aria-hidden /> Tambah karakter</Button>
+        <h3 id="cc-characters">{tokoh ? `Persona (${catalog.characters.filter(character => !character.hidden).length})` : `Karakter (${catalog.characters.filter(character => !character.hidden).length} tampil)`}</h3>
+        {!tokoh && <Button type="button" variant="secondary" disabled={!!busy || editing === "baru"} onClick={() => { setEditing("baru"); setErrors({}); }}><Plus size={18} aria-hidden /> Tambah karakter</Button>}
       </div>
       {editing === "baru" && <CharacterEditor characters={catalog.characters} questions={data.questions} busy={busy === "karakter:baru"} errors={errors}
         onSave={input => void saveCharacter(undefined, input)} onCancel={() => setEditing(null)} />}
@@ -126,7 +139,7 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
               </button>
             </div>
             {open && <CharacterEditor character={character} characters={catalog.characters} questions={data.questions} busy={busy === `karakter:${character.id}` || busy === `hapus:${character.id}`} errors={errors}
-              onSave={input => void saveCharacter(character, input)} onCancel={() => setEditing(null)} onRemove={() => void removeCharacter(character)} />}
+              onSave={input => void saveCharacter(character, input)} onCancel={() => setEditing(null)} onRemove={tokoh ? undefined : () => void removeCharacter(character)} />}
           </li>;
         })}
       </ul>
@@ -204,7 +217,7 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
   const [progress, setProgress] = useState("");
   const { catalog } = data;
   const slots: { kind: ArtKind; ref: string; number: number; name: string; image: string | null; stored: boolean; key?: string }[] = [
-    ...catalog.characters.map(character => ({ kind: "karakter" as const, ref: character.id, number: character.number, name: character.name, image: character.image, stored: character.stored })),
+    ...(catalog.figures.length ? [] : catalog.characters).map(character => ({ kind: "karakter" as const, ref: character.id, number: character.number, name: character.name, image: character.image, stored: character.stored })),
     ...catalog.figures.map(figure => ({ kind: "tokoh" as const, ref: figure.id, number: figure.number, name: figure.name, image: figure.image, stored: figure.stored, key: figure.key })),
     ...partKinds.flatMap(kind => catalog.parts.filter(part => part.kind === kind).map(part => ({ kind, ref: String(part.number), number: part.number, name: part.name, image: part.image, stored: part.stored }))),
   ];
@@ -257,7 +270,7 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
     {catalog.figures.length > 0 && <p className={styles.muted}>Tokoh: ekspor PNG 1x dari Figma, beri nama sesuai kunci tokoh seperti <code>ki-hajar-dewantara.png</code> (sama dengan <code>gambar</code> di tokoh.json), lalu unggah sekaligus. Sebelum diunggah, kartu memakai gambar pratinjau dari handoff yang ikut di aplikasi; gambar yang diunggah di sini menggantikannya.</p>}
     <p className={styles.muted}>Unggah sekaligus: pilih semua berkas dengan nama <code>karakter-01.webp</code>, <code>latar-01.png</code>, <code>aksen-01.png</code>, <code>stiker-01.png</code> (nomor sesuai daftar di bawah). WebP, PNG, atau JPG, paling besar 3 MB per gambar. Karakter sebaiknya potret 4:5 atau lebih tinggi.</p>
     <p className={styles.muted} aria-live="polite">{progress}</p>
-    {(["karakter", ...(catalog.figures.length ? ["tokoh" as const] : []), ...partKinds] as ArtKind[]).map(kind => <div key={kind} className={styles.slotGroup}>
+    {((catalog.figures.length ? ["tokoh"] : ["karakter"]).concat(partKinds) as ArtKind[]).map(kind => <div key={kind} className={styles.slotGroup}>
       <h4>{artKindLabels[kind]}</h4>
       <ul className={styles.slots}>
         {slots.filter(slot => slot.kind === kind).map(slot => <li key={`${slot.kind}-${slot.ref}`} className={`${styles.slot} ${slot.stored ? "" : styles.empty}`}>

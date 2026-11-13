@@ -33,3 +33,21 @@ it("uploads every picked file whose name matches a slot, and says which were ski
     ["stiker", "12", expect.any(File)],
   ]);
 });
+it("with tokoh cards, shows the characters as personas that cannot be deleted, uploads figures by key, and clears the old anime pictures", async () => {
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
+  const { adminRequest } = await import("@/components/admin/shared/api");
+  const figure = { id: "00000000-0000-4000-8000-0000000000f1", number: 1, key: "edmund-hillary", name: "Edmund Hillary", personaId: data.catalog.characters[0].id, costume: "", hobbies: [], activities: [], energy: "", genre: "", indonesian: false, funny: false, quote: null, hidden: false, image: "/figur/edmund-hillary.webp", stored: false };
+  const tokoh: AdminCards = { ...data, catalog: { ...data.catalog, characters: [{ ...data.catalog.characters[0], image: "/x.webp", stored: true }], figures: [figure], figuresReady: true } };
+  const { container } = render(<CardCatalog initial={tokoh} />);
+  expect(screen.getByRole("heading", { name: "Persona (1)" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Tambah karakter/ })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /Ubah Urban DJ/ }));
+  expect(screen.queryByRole("button", { name: "Hapus" })).toBeNull();
+  const input = container.querySelector("input[type=file][multiple]") as HTMLInputElement;
+  fireEvent.change(input, { target: { files: [new File(["x"], "edmund-hillary.png", { type: "image/png" })] } });
+  await waitFor(() => expect(uploadArt).toHaveBeenCalledWith("tokoh", figure.id, expect.any(File)));
+  fireEvent.click(screen.getByRole("button", { name: /Hapus gambar karakter lama/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Hapus gambar" }));
+  await waitFor(() => expect(adminRequest).toHaveBeenCalledWith("/api/admin/wam/questionnaire/cards/art", { method: "DELETE" }));
+});
