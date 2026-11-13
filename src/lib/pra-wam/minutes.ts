@@ -145,16 +145,32 @@ export const isOneOnOne = (meeting: Pick<Session, "participantCount">) => meetin
  * Notulen, migration 202611120001): per kind, and whether a one-on-one (two people or fewer) does
  * too. The default is the rule of 11 Nov: Forum and Rapat yes, Acara and one-on-ones no.
  */
-export type MinutesRule = { forum: boolean; rapat: boolean; acara: boolean; berdua: boolean };
-export const DEFAULT_MINUTES_RULE: MinutesRule = { forum: true, rapat: true, acara: false, berdua: false };
-export const minutesRuleSchema = z.object({ forum: z.boolean(), rapat: z.boolean(), acara: z.boolean(), berdua: z.boolean() });
-export const minutesRuleLabels: Record<keyof MinutesRule, string> = { forum: "Forum", rapat: "Rapat (termasuk booking ruang)", acara: "Acara", berdua: "Meeting berdua (one-on-one)" };
-/** A stored rule read safely: anything missing or not a yes/no keeps the default. */
+/** The yes/no parts of the rule: which meetings need a MoM. */
+export type MinutesNeedKey = "forum" | "rapat" | "acara" | "berdua";
+/**
+ * Admin WAM's MoM rule. `windowHours` (13 Nov 2026): how long after a meeting ends its MoM can be
+ * written or revised, in hours; null: always open.
+ */
+export type MinutesRule = Record<MinutesNeedKey, boolean> & { windowHours: number | null };
+/** The window Admin WAM may set: 1 hour to 30 days. */
+export const MINUTES_WINDOW_MAX_HOURS = 720;
+export const DEFAULT_MINUTES_RULE: MinutesRule = { forum: true, rapat: true, acara: false, berdua: false, windowHours: 24 };
+export const minutesRuleSchema = z.object({
+  forum: z.boolean(), rapat: z.boolean(), acara: z.boolean(), berdua: z.boolean(),
+  windowHours: z.number().int("Isi jam dengan angka bulat.").min(1, "Paling sebentar 1 jam.").max(MINUTES_WINDOW_MAX_HOURS, `Paling lama ${MINUTES_WINDOW_MAX_HOURS} jam (30 hari).`).nullable().default(24),
+});
+export const minutesRuleLabels: Record<MinutesNeedKey, string> = { forum: "Forum", rapat: "Rapat (termasuk booking ruang)", acara: "Acara", berdua: "Meeting berdua (one-on-one)" };
+/** A stored rule read safely: anything missing or not a yes/no keeps the default; the window a whole number in range, or null (always open). */
 export const asMinutesRule = (value: unknown): MinutesRule => {
   const raw = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
-  const pick = (key: keyof MinutesRule) => (typeof raw[key] === "boolean" ? raw[key] as boolean : DEFAULT_MINUTES_RULE[key]);
-  return { forum: pick("forum"), rapat: pick("rapat"), acara: pick("acara"), berdua: pick("berdua") };
+  const pick = (key: MinutesNeedKey) => (typeof raw[key] === "boolean" ? raw[key] as boolean : DEFAULT_MINUTES_RULE[key]);
+  const hours = raw.windowHours;
+  const windowHours = hours === null ? null
+    : typeof hours === "number" && Number.isInteger(hours) && hours >= 1 && hours <= MINUTES_WINDOW_MAX_HOURS ? hours : DEFAULT_MINUTES_RULE.windowHours;
+  return { forum: pick("forum"), rapat: pick("rapat"), acara: pick("acara"), berdua: pick("berdua"), windowHours };
 };
+/** "24 jam", "3 hari", "36 jam": the window in words. */
+export const windowLabel = (hours: number) => hours >= 48 && hours % 24 === 0 ? `${hours / 24} hari` : `${hours} jam`;
 
 /** One session's own choice (pw_sessions.minutes_required): follow the rule, or always, or never. */
 export const minutesChoices = ["ikut", "wajib", "tidak"] as const;
@@ -163,7 +179,7 @@ export const choiceOf = (stored: boolean | null | undefined): MinutesChoice => s
 export const storedOf = (choice: MinutesChoice): boolean | null => choice === "wajib" ? true : choice === "tidak" ? false : null;
 
 /** What the rule alone says for a meeting of this kind and size. */
-export const ruleNeeds = (meeting: Pick<Session, "kind" | "participantCount">, rule: MinutesRule = DEFAULT_MINUTES_RULE) =>
+export const ruleNeeds = (meeting: Pick<Session, "kind" | "participantCount">, rule: Pick<MinutesRule, MinutesNeedKey> = DEFAULT_MINUTES_RULE) =>
   rule[meeting.kind] && (rule.berdua || !isOneOnOne(meeting));
 
 /**
@@ -171,32 +187,35 @@ export const ruleNeeds = (meeting: Pick<Session, "kind" | "participantCount">, r
  * rule, by the rule. `minutesRequired` is the answer already worked out when the session was read
  * (sessions.ts); without it the rule given here decides.
  */
-export function needsMinutes(meeting: Meeting, rule: MinutesRule = DEFAULT_MINUTES_RULE): boolean {
+export function needsMinutes(meeting: Meeting, rule: Pick<MinutesRule, MinutesNeedKey> = DEFAULT_MINUTES_RULE): boolean {
   if (meeting.status !== "terbit" || !meeting.startsAt || !meeting.endsAt) return false;
   return typeof meeting.minutesRequired === "boolean" ? meeting.minutesRequired : ruleNeeds(meeting, rule);
 }
 
 /**
- * How long after the meeting a MoM can still be written or revised (13 Nov 2026): 1 x 24 hours from
- * its end. After that it stays readable, and its follow-ups can still be ticked done.
+ * How long after the meeting a MoM can still be written or revised (13 Nov 2026): by default 1 x 24
+ * hours from its end; Admin WAM sets it (MinutesRule.windowHours), or leaves it always open. After
+ * it the MoM stays readable, and its follow-ups can still be ticked done.
  */
 export const MINUTES_WINDOW_HOURS = 24;
-/** Until when a meeting's MoM can be written or revised (ISO); null without a start. */
-export function minutesDeadline(meeting: Pick<Session, "startsAt" | "endsAt">): string | null {
+/** Until when a meeting's MoM can be written or revised (ISO); null without a start, or always open (`hours` null). */
+export function minutesDeadline(meeting: Pick<Session, "startsAt" | "endsAt">, hours: number | null = MINUTES_WINDOW_HOURS): string | null {
   const from = meeting.endsAt ?? meeting.startsAt;
-  return from ? new Date(new Date(from).getTime() + MINUTES_WINDOW_HOURS * 3_600_000).toISOString() : null;
+  return from && hours !== null ? new Date(new Date(from).getTime() + hours * 3_600_000).toISOString() : null;
 }
 /** The meeting has started (notes are taken while it runs). */
 export const minutesStarted = (meeting: Pick<Session, "status" | "startsAt">, now: Date) =>
   meeting.status === "terbit" && !!meeting.startsAt && new Date(meeting.startsAt) <= now;
-/** The 24 hours after the meeting are over: the MoM is closed to writing. */
-export const minutesClosed = (meeting: Pick<Session, "status" | "startsAt" | "endsAt">, now: Date) => {
-  const deadline = minutesDeadline(meeting);
+/** The window after the meeting is over: the MoM is closed to writing. */
+export const minutesClosed = (meeting: Pick<Session, "status" | "startsAt" | "endsAt">, now: Date, hours: number | null = MINUTES_WINDOW_HOURS) => {
+  const deadline = minutesDeadline(meeting, hours);
   return minutesStarted(meeting, now) && !!deadline && new Date(deadline) < now;
 };
-/** May be written or revised: from the meeting's start to 24 hours after its end. */
-export const minutesOpen = (meeting: Pick<Session, "status" | "startsAt" | "endsAt">, now: Date) =>
-  minutesStarted(meeting, now) && !minutesClosed(meeting, now);
+/** May be written or revised: from the meeting's start to the end of the window after it. */
+export const minutesOpen = (meeting: Pick<Session, "status" | "startsAt" | "endsAt">, now: Date, hours: number | null = MINUTES_WINDOW_HOURS) =>
+  minutesStarted(meeting, now) && !minutesClosed(meeting, now, hours);
+/** The refusal once the window is past, in its own length. */
+export const closedText = (hours: number | null) => `Batas mengisi atau merevisi MoM sudah lewat (${hours ? windowLabel(hours) : "-"} setelah meeting selesai).`;
 
 /**
  * Where a meeting's MoM stands: only one that is over and needs one can be "belum". A MoM saved but

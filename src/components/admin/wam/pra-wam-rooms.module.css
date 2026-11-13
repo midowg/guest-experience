@@ -82,6 +82,14 @@
 .moduleRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--cs-line); }
 .moduleRow:first-child { border-top: 0; }
 .moduleText { display: grid; gap: 1px; min-width: 0; }
+/* MoM: how long after a meeting it can be written (13 Nov 2026). */
+.windowTitle { margin: 18px 0 4px; font-size: 15px; font-weight: 700; color: var(--cs-text); }
+.windowRow { display: grid; gap: 10px; padding: 10px 0 6px; border-top: 1px solid var(--cs-line); }
+.windowField { display: grid; gap: 6px; font-size: 14px; font-weight: 600; color: var(--cs-text); }
+.windowInput { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-weight: 400; color: var(--cs-muted); }
+.windowInput :global(.input) { width: 7rem; min-height: 44px; }
+.windowPresets { display: flex; flex-wrap: wrap; gap: 8px; }
+.windowError { margin: 0; color: var(--cs-bad-fg); font-size: 14px; }
 .moduleText > span:first-child { font-size: 14px; font-weight: 700; }
 .moduleText > span + span { color: var(--cs-muted); font-size: 12px; }
 

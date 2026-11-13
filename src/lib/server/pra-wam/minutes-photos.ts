@@ -1,7 +1,7 @@
 import "server-only";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { MinutePhoto } from "@/lib/pra-wam/minutes";
-import { minutesApi, minutesClosed, minutesOpen } from "@/lib/pra-wam/minutes";
+import { closedText, minutesApi, minutesClosed, minutesOpen } from "@/lib/pra-wam/minutes";
 import { isJpeg, isMeetingPhotoKey, MOM_PHOTO_MIGRATION, MOM_PHOTOS_MAX, momPhotoKeyFor, momPhotoRule, photoLimitLabel, type MomPhotoStart } from "@/lib/pra-wam/minutes-photos";
 import { managesSessions } from "@/lib/pra-wam/roles";
 import type { Session } from "@/lib/pra-wam/sessions";
@@ -39,10 +39,12 @@ const unknownUpload = () => new ServiceError(403, "Unggahan tidak dikenali. Ulan
 export const mayWriteMinutes = (session: Session, member: Member) => session.isParticipant || managesSessions(member);
 
 /** Adds or removes photos: may write the MoM, and the meeting has started. */
-function requireWriter(session: Session, member: Member) {
+async function requireWriter(session: Session, member: Member) {
   if (!mayWriteMinutes(session, member)) throw new ServiceError(403, "Hanya yang ikut meeting ini yang bisa menambah fotonya.");
-  if (minutesClosed(session, new Date())) throw new ServiceError(409, "Batas mengisi atau merevisi MoM sudah lewat (1 x 24 jam setelah meeting selesai).");
-  if (!minutesOpen(session, new Date())) throw new ServiceError(409, "Foto bisa ditambah setelah meeting dimulai.");
+  const { minutesRule } = await import("./minutes-rule");
+  const { windowHours } = await minutesRule();
+  if (minutesClosed(session, new Date(), windowHours)) throw new ServiceError(409, closedText(windowHours));
+  if (!minutesOpen(session, new Date(), windowHours)) throw new ServiceError(409, "Foto bisa ditambah setelah meeting dimulai.");
 }
 
 async function rows(sessionId: string): Promise<PhotoRow[]> {
@@ -95,7 +97,7 @@ export async function photosHd(): Promise<boolean> {
 export async function startMinutePhoto(sessionId: string, input: MomPhotoStart, member: Member): Promise<{ key: string; uploadUrl: string; token: string }> {
   if (!isR2Configured()) throw notReady();
   const session = await getSession(sessionId, member);
-  requireWriter(session, member);
+  await requireWriter(session, member);
   if ((await rows(sessionId)).length >= MOM_PHOTOS_MAX) throw new ServiceError(409, `Paling banyak ${MOM_PHOTOS_MAX} foto per meeting. Hapus satu dulu.`);
   const rule = momPhotoRule(await photosHd());
   if (input.size > rule.bytes) throw new ServiceError(413, `Foto lebih dari ${photoLimitLabel(rule.bytes)}. Muat ulang halaman, lalu unggah lagi.`);
@@ -110,7 +112,7 @@ export async function confirmMinutePhoto(sessionId: string, input: MomPhotoStart
   if (!isMeetingPhotoKey(input.key, sessionId) || !momTokenMatches(input.token, input.key, input, sessionId, member)) throw unknownUpload();
   const discard = () => removeObjects([input.key]).catch(() => undefined);
   const session = await getSession(sessionId, member);
-  try { requireWriter(session, member); } catch (error) { await discard(); throw error; }
+  try { await requireWriter(session, member); } catch (error) { await discard(); throw error; }
   let start: Uint8Array;
   try { start = await uploadedStart(input.key, input.size); } catch (error) { await discard(); throw error; }
   if (!isJpeg(start)) { await discard(); throw new ServiceError(422, "Isi berkas bukan foto JPEG. Pilih foto lain."); }
@@ -131,7 +133,7 @@ async function photoRow(sessionId: string, photoId: string): Promise<PhotoRow> {
 
 export async function deleteMinutePhoto(sessionId: string, photoId: string, member: Member): Promise<MinutePhoto[]> {
   const session = await getSession(sessionId, member);
-  requireWriter(session, member);
+  await requireWriter(session, member);
   const row = await photoRow(sessionId, photoId);
   const { error } = await createPrivilegedClient().from("pw_session_minute_photos").delete().eq("id", row.id);
   if (error) databaseError(error);

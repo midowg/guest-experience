@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  asMinutesRule, choiceOf, DEFAULT_MINUTES_RULE, defaultAbsent, itemsAsText, minutesClosed, minutesDeadline, minutesInputSchema, minutesItems, minutesNumber, minutesOpen, minutesStatus, needsMinutes, openActions, presence, ruleNeeds, storedOf,
+  asMinutesRule, choiceOf, DEFAULT_MINUTES_RULE, defaultAbsent, itemsAsText, minutesClosed, minutesDeadline, windowLabel, minutesInputSchema, minutesItems, minutesNumber, minutesOpen, minutesStatus, needsMinutes, openActions, presence, ruleNeeds, storedOf,
 } from "./minutes";
 import { fitWithin, isJpeg, isMeetingPhotoKey, momPhotoKeyFor, momPhotoRule, photoLimitLabel } from "./minutes-photos";
 
@@ -60,6 +60,20 @@ describe("notulen (MoM)", () => {
     expect(minutesClosed(meeting(), later)).toBe(true);
     // Before it starts it is neither open nor closed.
     expect(minutesClosed(meeting(), new Date("2026-11-10T01:59:00.000Z"))).toBe(false);
+    // Admin WAM's window: 72 hours, or always open.
+    expect(minutesOpen(meeting(), later, 72)).toBe(true);
+    expect(minutesDeadline(meeting(), null)).toBeNull();
+    expect(minutesOpen(meeting(), new Date("2030-01-01T00:00:00.000Z"), null)).toBe(true);
+    expect(minutesClosed(meeting(), new Date("2030-01-01T00:00:00.000Z"), null)).toBe(false);
+    expect([windowLabel(24), windowLabel(36), windowLabel(72)]).toEqual(["24 jam", "36 jam", "3 hari"]);
+  });
+
+  it("reads the stored window safely: a whole number in range, null for always open, else 24 hours", () => {
+    expect(asMinutesRule({ windowHours: 72 }).windowHours).toBe(72);
+    expect(asMinutesRule({ windowHours: null }).windowHours).toBeNull();
+    expect(asMinutesRule({ windowHours: 0 }).windowHours).toBe(24);
+    expect(asMinutesRule({ windowHours: "48" }).windowHours).toBe(24);
+    expect(asMinutesRule({}).windowHours).toBe(24);
   });
 
   it("asks for a summary or decisions, and a task for each follow-up", () => {

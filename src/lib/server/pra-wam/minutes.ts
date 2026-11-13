@@ -1,7 +1,7 @@
 import "server-only";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import {
-  actionPicIds, itemsAsText, minutesClosed, minutesDeadline, minutesNumber, minutesOpen, minutesStatus, needsMinutes, selfCheckedIn,
+  actionPicIds, closedText, itemsAsText, minutesClosed, minutesDeadline, minutesNumber, minutesOpen, minutesStatus, needsMinutes, selfCheckedIn,
   type MinuteAction, type MinuteItem, type Minutes, type MinutesInput, type MinutesTelegram, type MinutesView,
 } from "@/lib/pra-wam/minutes";
 import type { Session } from "@/lib/pra-wam/sessions";
@@ -11,6 +11,7 @@ import { isR2Configured } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
 import { attendeesOf, recordMinutesAttendance } from "./minutes-people";
+import { minutesRule } from "./minutes-rule";
 import { listMinutePhotos, mayWriteMinutes, photosHd } from "./minutes-photos";
 import { deliverMinutes, isHodMeeting, minutesDeliveries, minutesTargets } from "./minutes-telegram";
 import type { Member } from "./session";
@@ -196,10 +197,11 @@ async function telegramView(session: Session, sending: boolean, write: boolean):
 /** Detail sesi's MoM part, for a session the viewer may already open. */
 export async function minutesView(session: Session, member: Member, now = new Date()): Promise<MinutesView> {
   const { migrated, level, minutes } = await readMinutes(session).catch((): Read => ({ migrated: false, level: 0, minutes: null }));
-  const open = minutesOpen(session, now);
+  const { windowHours } = await minutesRule();
+  const open = minutesOpen(session, now, windowHours);
   const write = migrated && mayWriteMinutes(session, member) && open;
-  // Past the 24 hours: those who could write it still see it (a draft too), its buttons off.
-  const closed = migrated && mayWriteMinutes(session, member) && minutesClosed(session, now);
+  // Past the window: those who could write it still see it (a draft too), its buttons off.
+  const closed = migrated && mayWriteMinutes(session, member) && minutesClosed(session, now, windowHours);
   // A draft is only for those who may write it; the others see that it is being written.
   const shown = minutes && !minutes.sentAt && !write && !closed ? null : minutes;
   const frm = level >= 2;
@@ -214,7 +216,7 @@ export async function minutesView(session: Session, member: Member, now = new Da
   return {
     migrated, needed: needsMinutes(session), status: minutesStatus(session, !!minutes, now, !!minutes?.sentAt), minutes: shown,
     canWrite: write, people: write ? attendees.map(({ id, name }) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, "id")) : [],
-    viewerId: member.id, open, endsAt: session.endsAt, drafts: level >= 1, telegram, deadline: minutesDeadline(session), closed,
+    viewerId: member.id, open, endsAt: session.endsAt, drafts: level >= 1, telegram, deadline: minutesDeadline(session, windowHours), closed,
     title: session.title, startsAt: session.startsAt, place: session.roomName ?? session.location ?? "",
     frm, attendees, defaultChairId: booker && attendees.some(person => person.id === booker) ? booker : null,
     photos, photosReady: frm && isR2Configured(), photoHd, staff,
@@ -286,8 +288,9 @@ async function saveBefore(sessionId: string, input: MinutesInput, member: Member
 export async function saveMinutes(sessionId: string, input: MinutesInput, member: Member, now = new Date()): Promise<{ view: MinutesView; sentNow: boolean }> {
   const session = await getSession(sessionId, member);
   if (!mayWriteMinutes(session, member)) throw new ServiceError(403, "Hanya yang ikut meeting ini yang bisa menulis notulennya.");
-  if (minutesClosed(session, now)) throw new ServiceError(409, "Batas mengisi atau merevisi MoM sudah lewat (1 x 24 jam setelah meeting selesai).");
-  if (!minutesOpen(session, now)) throw new ServiceError(409, session.status === "terbit" ? "Notulen bisa ditulis setelah meeting dimulai." : "Notulen hanya untuk meeting yang terbit.");
+  const { windowHours } = await minutesRule();
+  if (minutesClosed(session, now, windowHours)) throw new ServiceError(409, closedText(windowHours));
+  if (!minutesOpen(session, now, windowHours)) throw new ServiceError(409, session.status === "terbit" ? "Notulen bisa ditulis setelah meeting dimulai." : "Notulen hanya untuk meeting yang terbit.");
   const attendees = await attendeesOf(sessionId);
   const people = new Set(attendees.map(person => person.id));
   // Who checked in by themselves came: the MoM cannot mark them absent.
@@ -398,8 +401,9 @@ export async function missingMinutes(sessions: readonly Session[], now = new Dat
 export async function myMinutesDue(member: Member, now = new Date()): Promise<{ sessions: Session[]; drafts: string[] }> {
   const { listSessions } = await import("./sessions");
   const { sessions } = await listSessions(member);
-  // Only those still open: past the 24 hours a MoM can no longer be written (13 Nov 2026).
-  const due = (await missingMinutes(sessions.filter(session => session.isParticipant), now)).sessions.filter(session => !minutesClosed(session, now));
+  // Only those still open: past the window a MoM can no longer be written (13 Nov 2026).
+  const { windowHours } = await minutesRule();
+  const due = (await missingMinutes(sessions.filter(session => session.isParticipant), now)).sessions.filter(session => !minutesClosed(session, now, windowHours));
   if (!due.length) return { sessions: due, drafts: [] };
   const { data, error } = await createPrivilegedClient().from("pw_session_minutes").select("session_id")
     .in("session_id", due.map(session => session.id)).is("sent_at", null);
