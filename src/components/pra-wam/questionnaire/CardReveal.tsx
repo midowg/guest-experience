@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Download, ImageIcon, RotateCcw, Share2, Smartphone, UserRound, X } from "lucide-react";
 import { oddsLabel, serialLabel } from "@/lib/pra-wam/cards";
 import { encodeWithinLimit, PHOTO_SIDE } from "@/lib/pra-wam/photo";
@@ -29,7 +29,56 @@ const remember = (formId: string) => { try { window.localStorage.setItem(openedK
 const reducedMotion = () => typeof window === "undefined" || typeof window.matchMedia !== "function" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const wait = (ms: number) => new Promise(resolve => window.setTimeout(resolve, reducedMotion() ? 0 : ms));
 const buzz = (pattern: number | number[]) => { try { navigator.vibrate?.(pattern); } catch { /* not on this phone */ } };
-const STEPS = ["Membaca jawabanmu", "Memilih karakter", "Mengundi level"];
+const STEPS = ["Membaca jawabanmu", "Mencocokkan tokoh", "Mengundi rarity"];
+
+/**
+ * The opened card tilts with a finger (or the phone, after it asks on iOS), with a shine and,
+ * from Rare up, a holo layer, and the picture moves a little (handoff 12 Nov 2026, approved by
+ * Hanung). Off under reduced motion. Writes only CSS variables on the card, never React state.
+ */
+function useTilt(open: boolean) {
+  const flip = useRef<HTMLDivElement>(null);
+  const listening = useRef(false);
+  const set = useCallback((x: number, y: number) => {
+    const element = flip.current;
+    if (!element || reducedMotion()) return;
+    const tx = Math.max(-1, Math.min(1, x)), ty = Math.max(-1, Math.min(1, y));
+    element.style.setProperty("--ry", `${(tx * 16).toFixed(2)}deg`); element.style.setProperty("--rx", `${(ty * 12).toFixed(2)}deg`);
+    element.style.setProperty("--sx", `${(50 + tx * 45).toFixed(1)}%`); element.style.setProperty("--sy", `${(50 + ty * 45).toFixed(1)}%`);
+    element.style.setProperty("--px", `${(tx * -9).toFixed(1)}px`); element.style.setProperty("--py", `${(ty * -9).toFixed(1)}px`);
+    element.dataset.tilt = "1";
+  }, []);
+  const reset = useCallback(() => {
+    const element = flip.current;
+    if (!element) return;
+    delete element.dataset.tilt;
+    for (const name of ["--ry", "--rx", "--sx", "--sy", "--px", "--py"]) element.style.removeProperty(name);
+  }, []);
+  useEffect(() => { if (!open) reset(); }, [open, reset]);
+  useEffect(() => () => { listening.current = false; }, []);
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!open) return;
+    const box = event.currentTarget.getBoundingClientRect();
+    set(((event.clientX - box.left) / box.width) * 2 - 1, ((event.clientY - box.top) / box.height) * 2 - 1);
+  };
+  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => { if (event.pointerType !== "mouse") reset(); };
+  /** The phone's motion: on iOS only after a tap asks for it. */
+  const listen = useCallback(async () => {
+    if (listening.current || reducedMotion() || typeof window === "undefined" || !("DeviceOrientationEvent" in window)) return;
+    const ask = (window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission;
+    if (ask) { try { if ((await ask()) !== "granted") return; } catch { return; } }
+    listening.current = true;
+    let idle = 0;
+    const move = (event: DeviceOrientationEvent) => {
+      if (!listening.current) { window.removeEventListener("deviceorientation", move); return; }
+      if (event.gamma == null || event.beta == null) return;
+      set(event.gamma / 25, (event.beta - 50) / 25);
+      window.clearTimeout(idle); idle = window.setTimeout(reset, 4000);
+    };
+    window.addEventListener("deviceorientation", move);
+  }, [reset, set]);
+  return { flip, onPointerMove, onPointerLeave: reset, onPointerCancel: reset, onPointerUp, listen };
+}
 
 export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
   formId: string; initial: CardView | null; nickname: string; hasPhoto: boolean;
@@ -47,6 +96,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
   const [confirm, confirmElement] = useConfirm();
   const confetti = useRef<HTMLCanvasElement>(null);
   const started = useRef(false);
+  const tilt = useTilt(phase.kind === "open");
 
   // Draw (or fetch) the card, paint both faces, then show the back, or the front if opened before here.
   const prepare = useCallback(async () => {
@@ -97,7 +147,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
       const blob = await blobOf(canvas);
       if (!blob) throw new Error("Gambar belum dapat dibuat di browser ini.");
       setSaved(kind === "kartu"
-        ? { url: URL.createObjectURL(blob), blob, filename: "kartu-karakter-wam-2026.png", caption: "Kartu 1080 × 1350, siap dibagikan." }
+        ? { url: URL.createObjectURL(blob), blob, filename: card.figure ? "kartu-tokoh-wam-2026.png" : "kartu-karakter-wam-2026.png", caption: "Kartu 1080 × 1350, siap dibagikan." }
         : { url: URL.createObjectURL(blob), blob, filename: "wallpaper-wam-2026.png", caption: "Wallpaper HP 1080 × 2340. Bagian atas sengaja kosong untuk jam layar kunci.", tall: true });
     } catch (error) {
       setNote({ tone: "error", text: errorText(error) });
@@ -142,9 +192,12 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
 
   const open = phase.kind === "open";
   const name = nickname || "Kamu";
+  const figure = card.figure;
+  const { flip, listen, ...tiltEvents } = tilt;
   return <div className={`${styles.reveal} ${burst ? styles.burst : ""}`} style={{ ["--glow" as string]: card.tier.color }}>
-    {!settled && <p className={styles.hint} aria-live="polite">{phase.kind === "closed" ? "Level sudah diundi. Siapa tahu kamu dapat Legendary." : ""}</p>}
-    <div className={`${styles.flip} ${open ? styles.open : ""} ${phase.kind === "opening" ? styles.charge : ""}`}>
+    {!settled && <p className={styles.hint} aria-live="polite">{phase.kind === "closed" ? `${figure ? "Rarity" : "Level"} sudah diundi. Siapa tahu kamu dapat Legendary.` : ""}</p>}
+    <div ref={flip} className={`${styles.flip} ${open ? styles.open : ""} ${phase.kind === "opening" ? styles.charge : ""}`} {...tiltEvents}
+      onClick={() => { if (open) void listen(); }}>
       <div className={styles.rays} aria-hidden />
       <div className={styles.inner}>
         <button type="button" className={`${styles.face} ${styles.down}`} onClick={() => void reveal()} disabled={phase.kind !== "closed"} aria-label="Buka kartu karaktermu" tabIndex={open ? -1 : 0} aria-hidden={open || undefined}>
@@ -154,17 +207,20 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
         </button>
         <div className={`${styles.face} ${styles.up}`} aria-hidden={!open || undefined}>
           {/* eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas or served privately by this site; next/image cannot help */}
-          {front && <img src={front} alt={`Kartu ${card.character.name}, level ${card.tier.name}, nomor ${serialLabel(card.serial)}`} />}
+          {front && <img src={front} alt={figure ? `Kartu ${figure.name}, ${card.character.class}, ${card.tier.name}, nomor ${serialLabel(card.serial)}` : `Kartu ${card.character.name}, level ${card.tier.name}, nomor ${serialLabel(card.serial)}`} />}
+          {figure && <span className={styles.shine} aria-hidden />}
+          {figure && card.tier.sort >= 2 && <span className={styles.holo} aria-hidden />}
         </div>
       </div>
       <canvas className={styles.confetti} ref={confetti} aria-hidden />
     </div>
+    {open && figure && !settled && <p className={styles.tiltHint}>Geser kartu atau miringkan HP untuk melihat kilapnya.</p>}
 
     {open && <>
       <div className={styles.banner} role="status">
         <b style={{ background: card.tier.color }}>{card.tier.name}</b>
         {card.tier.line && <span>{card.tier.line}</span>}
-        <strong>{name}, kamu {card.character.name}</strong>
+        <strong>{name}, kamu {figure ? `dapat ${figure.name}` : card.character.name}</strong>
       </div>
       {card.trial && <p className={styles.trial}>Kartu uji dari pratinjau draf: tanpa nomor, tidak dihitung. Saat kuesioner dibuka, kartumu diundi ulang sungguhan.</p>}
       <div className={styles.actions}>
@@ -175,6 +231,34 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
       </div>
       <p className={note?.tone === "error" ? styles.problem : styles.done} aria-live="polite">{note?.text}</p>
 
+      {figure ? <>
+        <section className={styles.panel} aria-labelledby="cq-card-who">
+          <p className={styles.who}>{name}, tokohmu</p>
+          <h2 id="cq-card-who" className={styles.name}>{figure.name}</h2>
+          {card.reason && <p>{card.reason}</p>}
+          {figure.costume && <p className={styles.small}>Figurnya: {figure.costume.charAt(0).toLowerCase() + figure.costume.slice(1)}.</p>}
+          {figure.quote && <blockquote className={styles.small}>{figure.quote}</blockquote>}
+        </section>
+        <section className={styles.panel} aria-labelledby="cq-card-role">
+          <p className={styles.who}>Tipemu</p>
+          <h2 id="cq-card-role" className={styles.name}>{card.character.class}</h2>
+          {card.character.title && <p className={styles.role}>{card.character.title}.</p>}
+          {card.character.description && <p>{card.character.description}</p>}
+          {card.character.powers.length > 0 && <ul className={styles.powers} aria-label="Kekuatan">{card.character.powers.map(power => <li key={power}>{power}</li>)}</ul>}
+          {card.character.partner && <p className={styles.small}>Partner ideal: <b>{card.character.partner.class}</b></p>}
+        </section>
+        <section className={styles.panel} aria-labelledby="cq-card-traits">
+          <h2 id="cq-card-traits" className={styles.heading}>Trait kartumu</h2>
+          <p className={styles.small}>Tokoh dan tipe dicocokkan dari jawabanmu. Rarity diundi terpisah, sekali, lalu kartunya dikunci. Satu tokoh paling banyak dimiliki dua orang.</p>
+          <dl className={styles.traits}>
+            <div><dt>Tokoh</dt><dd>{figure.name}</dd><span>Dicocokkan dari jawabanmu</span></div>
+            <div><dt>Peran</dt><dd>{card.character.class}</dd><span>Dari peranmu di tim</span></div>
+            <div className={card.tier.sort >= 3 ? styles.rare : ""}><dt>Rarity</dt><dd>{card.tier.name}</dd><span>Peluang {oddsLabel(card.tier.odds)}, diundi terpisah</span></div>
+            <div><dt>Nomor</dt><dd>{serialLabel(card.serial)}</dd><span>Urutan selesai mengisi</span></div>
+          </dl>
+          <p className={styles.dna}>DNA kartu {card.dna}</p>
+        </section>
+      </> : <>
       <section className={styles.panel} aria-labelledby="cq-card-who">
         <p className={styles.who}>{name}, karaktermu</p>
         <h2 id="cq-card-who" className={styles.name}>{card.character.name}</h2>
@@ -196,6 +280,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
         </dl>
         <p className={styles.dna}>DNA kartu {card.dna}</p>
       </section>
+      </>}
     </>}
 
     {saved && <SavedDialog onClose={closeSaved}>

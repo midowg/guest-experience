@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 import { praWamApi } from "@/lib/routes";
 import { CardReveal } from "./CardReveal";
@@ -13,10 +13,11 @@ vi.mock("./cardArt", () => {
 
 const card: CardView = {
   serial: 7, trial: false, dna: "a1b2c3d4e5", drawnAt: "2026-11-04T10:00:00.000Z",
-  character: { id: "c1", name: "Urban DJ", figure: "Jaka", class: "Bard Penghibur", title: "Yang membuat kerja berat terasa ringan", description: "Humor dan keceriaanmu jadi bahan bakar tim.", powers: ["Humor", "Gampang akrab"], image: null, partner: { name: "Story Collector", class: "Penyembuh Hati" } },
+  character: { id: "c1", key: "penghibur", name: "Urban DJ", figure: "Jaka", class: "Bard Penghibur", title: "Yang membuat kerja berat terasa ringan", description: "Humor dan keceriaanmu jadi bahan bakar tim.", powers: ["Humor", "Gampang akrab"], image: null, partner: { name: "Story Collector", class: "Penyembuh Hati" } },
   tier: { key: "epic", name: "Epic", color: "#C37BFF", line: "Langka. Sekitar 1 dari 14 orang.", odds: 700, sort: 3 },
   background: { number: 2, name: "Sunset Pink", image: null }, accent: { number: 1, name: "Sudut Magenta", image: null },
   stickers: [{ number: 1, name: "Bintang", image: null }],
+  figure: null, reason: null, colors: ["#F08A3C", "#A9461A"],
 };
 
 let posts: number;
@@ -57,4 +58,37 @@ it("says plainly when the card cannot be drawn yet, and can try again", async ()
   render(<CardReveal formId="f1" initial={null} nickname="Dewi" hasPhoto={false} />);
   expect(await screen.findByText("Selesaikan dulu semua bagian wajib, lalu kartumu dibuka.")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Coba lagi" })).toBeTruthy();
+});
+
+it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts with a finger, with holo from Rare up", { timeout: 10_000 }, async () => {
+  window.matchMedia = ((query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+  window.localStorage.setItem("wam-cq-card-open:f2", "1");
+  const tokoh: CardView = {
+    ...card, character: { ...card.character, key: "garda", class: "Garda Depan", title: "Yang maju duluan", partner: { name: "Kirana", class: "Penyihir Ide" } },
+    figure: { id: "f", key: "edmund-hillary", name: "Edmund Hillary", costume: "Jaket pendaki, kapak es", quote: null, image: null },
+    reason: "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan dan suka olahraga & outdoor.", colors: ["#C2303F", "#6E1023"],
+  };
+  const { container } = render(<CardReveal formId="f2" initial={tokoh} nickname="Dewi" hasPhoto={false} />);
+  // With motion on, printing takes its real time.
+  expect(await screen.findByText("Dewi, kamu dapat Edmund Hillary", undefined, { timeout: 5000 })).toBeTruthy();
+  expect(screen.getByText(tokoh.reason!)).toBeTruthy();
+  expect(screen.getByText("Figurnya: jaket pendaki, kapak es.")).toBeTruthy();
+  expect(screen.getAllByText("Garda Depan").length).toBeGreaterThan(0);
+  expect(screen.getByText("Rarity")).toBeTruthy();
+  expect(screen.queryByText("Latar")).toBeNull();
+  // Epic: shine and holo.
+  expect(container.querySelector("[class*='holo']")).toBeTruthy();
+  const flip = container.querySelector("[class*='flip']") as HTMLDivElement;
+  flip.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100, right: 100, bottom: 100, x: 0, y: 0, toJSON() {} });
+  // jsdom has no PointerEvent with coordinates: a mouse event named pointermove stands in.
+  act(() => { flip.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 100, clientY: 50 })); });
+  expect(flip.dataset.tilt).toBe("1");
+  expect(flip.style.getPropertyValue("--ry")).toBe("16.00deg");
+  fireEvent.pointerLeave(flip);
+  expect(flip.dataset.tilt).toBeUndefined();
+  // Under reduced motion it stays still.
+  window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+  // jsdom has no PointerEvent with coordinates: a mouse event named pointermove stands in.
+  act(() => { flip.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 100, clientY: 50 })); });
+  expect(flip.dataset.tilt).toBeUndefined();
 });

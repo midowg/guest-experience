@@ -38,6 +38,8 @@ const ruleKinds: readonly QuestionKind[] = ["single", "multi"];
 export type DrawnCard = {
   employeeId: string; name: string; department: string; serial: number | null; trial: boolean;
   characterId: string; tierKey: string; drawnAt: string; roll: Roll; dna: string;
+  /** The tokoh card's figure (migration 202611130010), and the sentence on the card. */
+  figureId: string | null; reason: string | null;
 };
 export type AdminCards = {
   catalog: Catalog;
@@ -59,19 +61,21 @@ export async function adminCards(): Promise<AdminCards | null> {
   const client = createPrivilegedClient();
   const [content, cards, people] = await Promise.all([
     formContent(form.id),
-    client.from("cq_person_cards").select("employee_id,card_id,tier_key,serial,trial,drawn_at,roll,dna").eq("form_id", form.id).order("serial", { nullsFirst: false }),
+    client.from("cq_person_cards").select(`employee_id,card_id,tier_key,serial,trial,drawn_at,roll,dna${catalog.figuresReady ? ",figure_id,reason" : ""}`).eq("form_id", form.id).order("serial", { nullsFirst: false }),
     listPeople(),
   ]);
   if (cards.error) failed(cards.error);
   const byId = new Map(people.map(person => [person.id, person]));
-  const rows = (cards.data ?? []) as { employee_id: string; card_id: string; tier_key: string; serial: number | null; trial: boolean; drawn_at: string; roll: Roll; dna: string }[];
+  const rows = (cards.data ?? []) as unknown as { employee_id: string; card_id: string; tier_key: string; serial: number | null; trial: boolean; drawn_at: string; roll: Roll; dna: string; figure_id?: string | null; reason?: string | null }[];
   const drawn: DrawnCard[] = rows.map(row => ({
     employeeId: row.employee_id, name: byId.get(row.employee_id)?.fullName ?? "Tanpa nama", department: byId.get(row.employee_id)?.department ?? "",
     serial: row.serial, trial: row.trial, characterId: row.card_id, tierKey: row.tier_key, drawnAt: row.drawn_at, roll: row.roll, dna: row.dna,
+    figureId: row.figure_id ?? null, reason: row.reason ?? null,
   }));
 
   // Who would change character: the current one is no longer among the best for their answers.
-  const following = editable(form);
+  // A tokoh card is locked once drawn: nothing follows the answers then.
+  const following = editable(form) && !catalog.figures.some(figure => !figure.hidden);
   let willChange = 0;
   const real = rows.filter(row => !row.trial);
   if (following && real.length) {
@@ -218,11 +222,11 @@ function signature(key: string, input: ArtStart, expires: number): string {
   return createHmac("sha256", secret).update(`kartu\0${key}\0${input.kind}\0${input.ref}\0${input.size}\0${input.mime}\0${expires}`).digest("hex");
 }
 
-/** The slot a picture fills: a character (by id) or a look part (by number), with its picture number. */
+/** The slot a picture fills: a character or a figure (by id) or a look part (by number), with its picture number. */
 async function slotOf(formId: string, kind: ArtKind, ref: string): Promise<{ number: number; key: string | null }> {
   const client = createPrivilegedClient();
-  const { data, error } = kind === "karakter"
-    ? await client.from("cq_cards").select("number,image_key").eq("form_id", formId).eq("id", ref).maybeSingle()
+  const { data, error } = kind === "karakter" || kind === "tokoh"
+    ? await client.from(kind === "karakter" ? "cq_cards" : "cq_figures").select("number,image_key").eq("form_id", formId).eq("id", ref).maybeSingle()
     : await client.from("cq_card_parts").select("number,image_key").eq("form_id", formId).eq("kind", kind).eq("number", Number(ref)).maybeSingle();
   if (error) failed(error);
   if (!data) throw new ServiceError(404, "Tempat gambar ini tidak ditemukan. Muat ulang halaman.");
@@ -257,8 +261,8 @@ export async function confirmArtUpload(input: ArtStart & { key: string; token: s
   const slot = await slotOf(form.id, input.kind, input.ref);
   const now = new Date().toISOString();
   const client = createPrivilegedClient();
-  const { error } = input.kind === "karakter"
-    ? await client.from("cq_cards").update({ image_key: input.key, image_updated_at: now }).eq("form_id", form.id).eq("id", input.ref)
+  const { error } = input.kind === "karakter" || input.kind === "tokoh"
+    ? await client.from(input.kind === "karakter" ? "cq_cards" : "cq_figures").update({ image_key: input.key, image_updated_at: now }).eq("form_id", form.id).eq("id", input.ref)
     : await client.from("cq_card_parts").update({ image_key: input.key, image_updated_at: now }).eq("form_id", form.id).eq("kind", input.kind).eq("number", Number(input.ref));
   if (error) { await discard(); failed(error); }
   if (slot.key && slot.key !== input.key) await removeObjects([slot.key]).catch(() => undefined);

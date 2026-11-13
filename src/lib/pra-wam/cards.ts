@@ -17,9 +17,10 @@ export const CARDS_MIGRATION = "202611040013_wam_cards.sql";
 export const ODDS_TOTAL = 10_000;
 export const partKinds = ["latar", "aksen", "stiker"] as const;
 export type PartKind = (typeof partKinds)[number];
-export const artKinds = ["karakter", ...partKinds] as const;
+/** The pictures: the characters (the personas), the figures of the tokoh card (migration 202611130010), and the look parts. */
+export const artKinds = ["karakter", "tokoh", ...partKinds] as const;
 export type ArtKind = (typeof artKinds)[number];
-export const artKindLabels: Record<ArtKind, string> = { karakter: "Karakter", latar: "Latar", aksen: "Aksen sudut", stiker: "Stiker" };
+export const artKindLabels: Record<ArtKind, string> = { karakter: "Karakter", tokoh: "Tokoh", latar: "Latar", aksen: "Aksen sudut", stiker: "Stiker" };
 export const MAX_STICKERS = 2;
 
 export type Random = (n: number) => number;

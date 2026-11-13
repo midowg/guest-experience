@@ -10,6 +10,7 @@ import {
   artKindLabels, ODDS_TOTAL, oddsLabel, partKinds, serialLabel, slotOfFile,
   type ArtKind, type Character, type CharacterInput, type Tier,
 } from "@/lib/pra-wam/cards";
+import { figureOfFile } from "@/lib/pra-wam/figures";
 import { praWamCardsApi } from "@/lib/routes";
 import type { AdminCards } from "@/lib/server/pra-wam/cards-admin";
 import { uploadArt } from "./cardArtUpload";
@@ -140,19 +141,20 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
       </div>
       {!data.following && real.length > 0 && <p className={styles.muted}>Karakter sudah terkunci: kuesioner tidak dibuka atau tenggatnya lewat.</p>}
       {data.drawn.length ? <div className={styles.tableWrap}><table className={styles.table}>
-        <thead><tr><th scope="col">Nomor</th><th scope="col">Nama</th><th scope="col">Karakter</th><th scope="col">Level</th><th scope="col">Diundi</th><th scope="col">Catatan undian</th></tr></thead>
+        <thead><tr><th scope="col">Nomor</th><th scope="col">Nama</th><th scope="col">{catalog.figures.length ? "Tokoh" : "Karakter"}</th><th scope="col">Level</th><th scope="col">Diundi</th><th scope="col">Catatan undian</th></tr></thead>
         <tbody>{data.drawn.map(card => {
           const tier = tierOf.get(card.tierKey);
           const roll = card.roll;
           return <tr key={card.employeeId}>
             <td>{serialLabel(card.serial)}</td>
             <td><strong>{card.name}</strong><br /><span className={styles.muted}>{card.department}</span></td>
-            <td>{nameOf.get(card.characterId)?.name ?? "?"}</td>
+            <td>{card.figureId ? <><strong>{catalog.figures.find(figure => figure.id === card.figureId)?.name ?? "?"}</strong><br /><span className={styles.muted}>{nameOf.get(card.characterId)?.class ?? ""}</span></> : nameOf.get(card.characterId)?.name ?? "?"}</td>
             <td><span className={styles.tier} style={{ background: tier?.color }}>{tier?.name ?? card.tierKey}</span></td>
             <td>{when(card.drawnAt)}</td>
             <td><details><summary>Lihat</summary>
               <p>Angka undian {roll.number} dari 0–{ODDS_TOTAL - 1}, jatuh di {tierOf.get(roll.landed)?.name ?? roll.landed}{roll.passed?.length ? `, turun karena batas penuh: ${roll.passed.map(key => tierOf.get(key)?.name ?? key).join(", ")}` : ""}.</p>
               <p>Karakter saat diundi: {named(roll.character)}{roll.tied?.length > 1 ? `, diundi di antara yang seri: ${roll.tied.map(named).join(", ")}` : ""}.</p>
+              {roll.figure ? <p>Tokoh: {catalog.figures.find(figure => figure.key === roll.figure!.key)?.name ?? roll.figure.key}, skor {roll.figure.score}{roll.figure.tied.length > 1 ? `, diundi di antara yang seri: ${roll.figure.tied.map(key => catalog.figures.find(figure => figure.key === key)?.name ?? key).join(", ")}` : ""}.{card.reason ? ` ${card.reason}` : ""}</p> : null}
               {roll.changes?.length ? <p>Berganti karakter: {roll.changes.map(change => `${named(change.from)} → ${named(change.to)}${change.kept ? " (dibatalkan, kombinasi sudah dipakai)" : ""}`).join("; ")}.</p> : null}
               <p className={styles.muted}>DNA {card.dna}</p>
             </details></td>
@@ -201,8 +203,9 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
   const folder = useRef<HTMLInputElement>(null);
   const [progress, setProgress] = useState("");
   const { catalog } = data;
-  const slots: { kind: ArtKind; ref: string; number: number; name: string; image: string | null; stored: boolean }[] = [
+  const slots: { kind: ArtKind; ref: string; number: number; name: string; image: string | null; stored: boolean; key?: string }[] = [
     ...catalog.characters.map(character => ({ kind: "karakter" as const, ref: character.id, number: character.number, name: character.name, image: character.image, stored: character.stored })),
+    ...catalog.figures.map(figure => ({ kind: "tokoh" as const, ref: figure.id, number: figure.number, name: figure.name, image: figure.image, stored: figure.stored, key: figure.key })),
     ...partKinds.flatMap(kind => catalog.parts.filter(part => part.kind === kind).map(part => ({ kind, ref: String(part.number), number: part.number, name: part.name, image: part.image, stored: part.stored }))),
   ];
   const missing = slots.filter(slot => !slot.stored).length;
@@ -233,7 +236,9 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
     if (!picked.length) return;
     const files: { slot: (typeof slots)[number]; file: File }[] = [], unknown: string[] = [];
     for (const file of picked) {
-      const match = slotOfFile(file.name);
+      // A figure by its key as exported from Figma (ki-hajar-dewantara.png) or tokoh-01.png; the rest by karakter-01.webp …
+      const figure = figureOfFile(file.name, catalog.figures);
+      const match = figure ? { kind: "tokoh" as const, number: figure.number } : slotOfFile(file.name);
       const slot = match && slots.find(item => item.kind === match.kind && item.number === match.number);
       if (slot) files.push({ slot, file }); else unknown.push(file.name);
     }
@@ -249,14 +254,15 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
       <Button type="button" variant="secondary" disabled={!!busy} onClick={() => folder.current?.click()}><Upload size={18} aria-hidden /> Unggah sekaligus</Button>
       <input ref={folder} type="file" multiple accept="image/webp,image/png,image/jpeg,.webp,.png,.jpg,.jpeg" hidden onChange={event => pickFolder(event.target.files)} />
     </div>
+    {catalog.figures.length > 0 && <p className={styles.muted}>Tokoh: ekspor PNG 1x dari Figma, beri nama sesuai kunci tokoh seperti <code>ki-hajar-dewantara.png</code> (sama dengan <code>gambar</code> di tokoh.json), lalu unggah sekaligus. Figur yang belum ada gambarnya tampil sebagai siluet &quot;Figur menyusul&quot;.</p>}
     <p className={styles.muted}>Unggah sekaligus: pilih semua berkas dengan nama <code>karakter-01.webp</code>, <code>latar-01.png</code>, <code>aksen-01.png</code>, <code>stiker-01.png</code> (nomor sesuai daftar di bawah). WebP, PNG, atau JPG, paling besar 3 MB per gambar. Karakter sebaiknya potret 4:5 atau lebih tinggi.</p>
     <p className={styles.muted} aria-live="polite">{progress}</p>
-    {(["karakter", ...partKinds] as ArtKind[]).map(kind => <div key={kind} className={styles.slotGroup}>
+    {(["karakter", ...(catalog.figures.length ? ["tokoh" as const] : []), ...partKinds] as ArtKind[]).map(kind => <div key={kind} className={styles.slotGroup}>
       <h4>{artKindLabels[kind]}</h4>
       <ul className={styles.slots}>
         {slots.filter(slot => slot.kind === kind).map(slot => <li key={`${slot.kind}-${slot.ref}`} className={`${styles.slot} ${slot.stored ? "" : styles.empty}`}>
           {/* eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas or served privately by this site; next/image cannot help */}
-          <span className={`${styles.slotArt} ${kind === "karakter" ? styles.tall : ""}`}>{slot.image ? <img src={slot.image} alt="" loading="lazy" /> : <ImageUp size={20} aria-hidden />}</span>
+          <span className={`${styles.slotArt} ${kind === "karakter" || kind === "tokoh" ? styles.tall : ""}`}>{slot.image ? <img src={slot.image} alt="" loading="lazy" /> : <ImageUp size={20} aria-hidden />}</span>
           <span className={styles.slotName}>{String(slot.number).padStart(2, "0")} · {slot.name}</span>
           <label className={styles.slotPick}>
             {slot.stored ? "Ganti" : "Unggah"}

@@ -8,6 +8,11 @@ import { body, display } from "./font";
  * the number and the level label sit on a dark fade at the bottom. Also the back of the card (the
  * drawn background), a phone wallpaper, and the square profile photo. Pictures come from this
  * site, so the canvas may be saved. A missing picture is drawn as plain colours, never an error.
+ *
+ * Kartu tokoh dunia (handoff 12 Nov 2026): a card with a figure is drawn as the handoff's mockup:
+ * the figure fills the card on its persona's colour, the figure's name, the persona and the
+ * number at the bottom, the rarity label bottom right; a figure without its picture yet is a
+ * silhouette with "Figur menyusul". The back is blue with a big "?".
  */
 
 export const CARD = { width: 1080, height: 1350 } as const;
@@ -64,6 +69,94 @@ function plain(context: CanvasRenderingContext2D, color: string, x: number, y: n
   context.fillStyle = fill; context.fillRect(x, y, width, height);
 }
 
+/** The persona's colour, light in the middle to dark at the edges. */
+function personaBackground(context: CanvasRenderingContext2D, colors: [string, string], width: number, height: number) {
+  const fill = context.createRadialGradient(width / 2, height * 0.38, 40, width / 2, height * 0.5, height * 0.8);
+  fill.addColorStop(0, colors[0]); fill.addColorStop(1, colors[1]);
+  context.fillStyle = fill; context.fillRect(0, 0, width, height);
+}
+
+/** "Ki Hajar Dewantara" → "KH": the initials on a figure's silhouette. */
+export const initials = (name: string) => name.replace(/[^\p{L} ]/gu, "").split(" ").filter(Boolean).map(word => word[0]).slice(0, 2).join("").toUpperCase();
+
+/** A figure without its picture yet: a soft silhouette with the initials, and "Figur menyusul". */
+function silhouette(context: CanvasRenderingContext2D, name: string, x: number, y: number, width: number, height: number) {
+  context.save();
+  context.fillStyle = "rgba(255,248,233,.22)";
+  context.beginPath(); context.arc(x + width / 2, y + height * 0.33, width * 0.27, 0, Math.PI * 2); context.fill();
+  rounded(context, x + width * 0.3, y + height * 0.55, width * 0.4, height * 0.32, width * 0.12); context.fill();
+  context.fillStyle = "rgba(255,248,233,.9)"; context.textAlign = "center"; context.textBaseline = "middle";
+  context.font = fontOf(width * 0.2, true);
+  context.fillText(initials(name), x + width / 2, y + height * 0.33);
+  context.font = fontOf(Math.max(14, width * 0.0375)); context.fillText("Figur menyusul", x + width / 2, y + height * 0.93);
+  context.restore();
+}
+
+type FigureCard = CardView & { figure: NonNullable<CardView["figure"]> };
+const withFigure = (card: CardView): card is FigureCard => !!card.figure;
+
+/** The tokoh card's front, 1080 × 1350. */
+async function drawFigureFront(card: FigureCard, scale: number): Promise<HTMLCanvasElement> {
+  const [image] = await Promise.all([loadImage(card.figure.image), fontsReady()]);
+  const { width: W, height: H } = CARD;
+  const [canvas, g] = canvasOf(W, H, scale);
+  personaBackground(g, card.colors, W, H);
+  if (image) cover(g, image, 0, 0, W, H, 0.2); else silhouette(g, card.figure.name, 140, 60, 800, 980);
+  const fade = g.createLinearGradient(0, H - 360, 0, H);
+  fade.addColorStop(0, "rgba(20,19,37,0)"); fade.addColorStop(1, "rgba(20,19,37,.78)");
+  g.fillStyle = fade; g.fillRect(0, H - 360, W, 360);
+  g.textBaseline = "alphabetic"; g.textAlign = "left"; g.fillStyle = CREAM;
+  const name = card.figure.name.toUpperCase();
+  let size = 64;
+  g.font = fontOf(size, true);
+  while (g.measureText(name).width > W - 112 && size > 36) { size -= 2; g.font = fontOf(size, true); }
+  g.fillText(name, 56, H - 150, W - 112);
+  g.font = fontOf(36); g.fillStyle = "rgba(255,248,233,.92)"; g.fillText(card.character.class, 58, H - 96);
+  g.font = fontOf(30); g.fillStyle = "rgba(255,248,233,.75)"; g.fillText(`${YEAR_LABEL}  ·  ${serialLabel(card.serial)}`, 58, H - 50);
+  g.font = fontOf(30);
+  const label = card.tier.name.toUpperCase();
+  const tw = g.measureText(label).width + 44, tx = W - 56 - tw, ty = H - 96;
+  g.fillStyle = card.tier.color; rounded(g, tx, ty, tw, 56, 28); g.fill();
+  g.fillStyle = INK; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(label, tx + tw / 2, ty + 30);
+  return canvas;
+}
+
+/** The tokoh card's back: blue, a big "?", the number. */
+async function drawFigureBack(card: CardView, scale: number): Promise<HTMLCanvasElement> {
+  await fontsReady();
+  const { width: W, height: H } = CARD;
+  const [canvas, g] = canvasOf(W, H, scale);
+  const fill = g.createLinearGradient(0, 0, W, H);
+  fill.addColorStop(0, "#233E91"); fill.addColorStop(1, "#56A3EE");
+  g.fillStyle = fill; g.fillRect(0, 0, W, H);
+  g.fillStyle = "rgba(255,255,255,.08)";
+  for (let index = 0; index < 9; index++) { g.beginPath(); g.arc(120 + index * 110, 160 + ((index * 337) % 1000), 40 + (index % 3) * 30, 0, Math.PI * 2); g.fill(); }
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillStyle = "#F0BB3E"; g.font = fontOf(460, true); g.fillText("?", W / 2, 600);
+  g.fillStyle = CREAM; g.font = fontOf(44, true); g.fillText(YEAR_LABEL, W / 2, 960);
+  g.font = fontOf(32); g.fillStyle = "rgba(255,248,233,.85)";
+  g.fillText(card.serial === null ? "Kartu uji, belum dibuka" : `Kartu ${serialLabel(card.serial)}, belum dibuka`, W / 2, 1015);
+  return canvas;
+}
+
+/** The tokoh card as a phone wallpaper, 1080 × 2340: the card in the middle, the top clear for the clock. */
+async function drawFigureWallpaper(card: FigureCard): Promise<HTMLCanvasElement> {
+  const front = await drawFigureFront(card, 1);
+  const { width: W, height: H } = WALL;
+  const [canvas, g] = canvasOf(W, H);
+  personaBackground(g, card.colors, W, H);
+  const shade = g.createLinearGradient(0, 0, 0, H);
+  shade.addColorStop(0, "rgba(20,19,37,.45)"); shade.addColorStop(0.3, "rgba(20,19,37,0)"); shade.addColorStop(1, "rgba(20,19,37,.6)");
+  g.fillStyle = shade; g.fillRect(0, 0, W, H);
+  const x = 100, y = 760, w = 880, h = 1100;
+  g.save(); g.shadowColor = card.tier.color; g.shadowBlur = card.tier.sort >= 2 ? 90 : 40; g.fillStyle = card.tier.color; rounded(g, x - 8, y - 8, w + 16, h + 16, 52); g.fill(); g.restore();
+  g.save(); rounded(g, x, y, w, h, 44); g.clip(); g.drawImage(front, x, y, w, h); g.restore();
+  g.lineWidth = 6; g.strokeStyle = CREAM; rounded(g, x, y, w, h, 44); g.stroke();
+  g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = card.tier.color; g.font = fontOf(36);
+  g.fillText(`${YEAR_LABEL}  ·  ${card.tier.name.toUpperCase()}  ·  ${serialLabel(card.serial)}`, W / 2, 1990);
+  return canvas;
+}
+
 async function pictures(card: CardView) {
   const [character, background, ...stickers] = await Promise.all([
     loadImage(card.character.image), loadImage(card.background.image), ...card.stickers.map(sticker => loadImage(sticker.image)),
@@ -74,6 +167,7 @@ async function pictures(card: CardView) {
 
 /** The front: 1080 × 1350 (4:5). */
 export async function drawFront(card: CardView, scale = 1): Promise<HTMLCanvasElement> {
+  if (withFigure(card)) return drawFigureFront(card, scale);
   const art = await pictures(card);
   const { width: W, height: H } = CARD;
   const [canvas, g] = canvasOf(W, H, scale);
@@ -96,6 +190,7 @@ export async function drawFront(card: CardView, scale = 1): Promise<HTMLCanvasEl
 
 /** The back, before it is opened: the drawn background and a big "?". */
 export async function drawBack(card: CardView, scale = 0.6): Promise<HTMLCanvasElement> {
+  if (withFigure(card)) return drawFigureBack(card, scale);
   const art = await pictures(card);
   const { width: W, height: H } = CARD;
   const [canvas, g] = canvasOf(W, H, scale);
@@ -110,6 +205,7 @@ export async function drawBack(card: CardView, scale = 0.6): Promise<HTMLCanvasE
 
 /** A phone wallpaper, 1080 × 2340: the card in the middle, the top left clear for the clock. */
 export async function drawWallpaper(card: CardView): Promise<HTMLCanvasElement> {
+  if (withFigure(card)) return drawFigureWallpaper(card);
   const art = await pictures(card);
   const { width: W, height: H } = WALL;
   const [canvas, g] = canvasOf(W, H);
@@ -137,6 +233,13 @@ export async function drawWallpaper(card: CardView): Promise<HTMLCanvasElement> 
 
 /** The profile photo: a square from the top of the character's picture, at `side` pixels. */
 export async function drawAvatar(card: CardView, side: number): Promise<HTMLCanvasElement> {
+  if (withFigure(card)) {
+    const [image] = await Promise.all([loadImage(card.figure.image), fontsReady()]);
+    const [canvas, g] = canvasOf(side, side);
+    personaBackground(g, card.colors, side, side);
+    if (image) cover(g, image, 0, 0, side, side, 0.12); else silhouette(g, card.figure.name, side * 0.1, side * 0.02, side * 0.8, side * 0.98);
+    return canvas;
+  }
   const art = await pictures(card);
   const [canvas, g] = canvasOf(side, side);
   if (art.background) cover(g, art.background, 0, 0, side, side); else plain(g, card.tier.color, 0, 0, side, side);

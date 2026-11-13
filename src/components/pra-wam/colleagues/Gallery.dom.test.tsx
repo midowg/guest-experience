@@ -10,9 +10,10 @@ const entry = (employeeId: string, name: string, department: string, character: 
   employeeId, name, department,
   card: {
     serial, trial: false, dna: "0123456789", drawnAt: "2026-11-04T10:00:00.000Z",
-    character: { id: character, name: character, figure: "", class: "", title: "", description: "", powers: [], image: null, partner: null },
+    character: { id: character, key: character, name: character, figure: "", class: "", title: "", description: "", powers: [], image: null, partner: null },
     tier: { key: "common", name: "Common", color: "#AEB7C7", line: "", odds: 4500, sort: 0 },
     background: { number: 1, name: "L1", image: null }, accent: { number: 1, name: "A1", image: null }, stickers: [],
+    figure: null, reason: null, colors: ["#3A6FBF", "#1B2C66"],
   },
 });
 const entries = [

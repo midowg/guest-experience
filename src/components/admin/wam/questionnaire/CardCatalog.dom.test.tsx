@@ -16,6 +16,7 @@ const data: AdminCards = {
     tiers: [{ key: "common", name: "Common", color: "#AEB7C7", odds: 10_000, maxCards: null, line: "", sort: 0 }],
     characters: [{ id: "00000000-0000-4000-8000-000000000001", number: 1, key: "penghibur", name: "Urban DJ", figure: "Jaka", class: "Bard Penghibur", title: "", description: "", powers: [], partnerId: null, hidden: false, rules: [], image: null, stored: false }],
     parts: [{ kind: "latar", number: 1, name: "Senja Ungu", image: null, stored: false }, { kind: "stiker", number: 12, name: "Logo W", image: null, stored: false }],
+    figures: [], figuresReady: false,
   },
   questions: [], drawn: [], willChange: 0, following: false,
 };

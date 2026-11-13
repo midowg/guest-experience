@@ -10,17 +10,18 @@ type Row = Record<string, unknown>;
 let db: Record<string, Row[]>;
 
 function query(table: string) {
-  const filters: [string, unknown][] = [];
+  const filters: ((row: Row) => boolean)[] = [];
   let op: "select" | "insert" | "update" | "delete" = "select";
   let payload: Row | null = null;
   let single = false;
-  const matches = (row: Row) => filters.every(([key, value]) => row[key] === value);
+  const matches = (row: Row) => filters.every(test => test(row));
   const run = () => {
     const rows = db[table] ?? (db[table] = []);
     if (op === "insert") {
       const row = { ...payload! };
       const clash = rows.find(other => other.form_id === row.form_id && (other.employee_id === row.employee_id
-        ? "cq_person_cards_pkey" : (row.serial !== null && other.serial === row.serial) ? "cq_person_cards_serial" : (!row.trial && !other.trial && other.combo === row.combo) ? "cq_person_cards_combo" : ""));
+        ? "cq_person_cards_pkey" : (row.serial !== null && other.serial === row.serial) ? "cq_person_cards_serial" : (!row.trial && !other.trial && other.combo === row.combo) ? "cq_person_cards_combo"
+          : (!row.trial && !other.trial && !!row.figure_id && other.figure_id === row.figure_id && other.figure_slot === row.figure_slot) ? "cq_person_cards_figure_place" : ""));
       if (clash) {
         const name = clash.employee_id === row.employee_id ? "cq_person_cards_pkey" : clash.serial === row.serial ? "cq_person_cards_serial" : "cq_person_cards_combo";
         return { data: null, error: { code: "23505", message: `duplicate key value violates unique constraint "${name}"` } };
@@ -30,13 +31,20 @@ function query(table: string) {
       return { data: row, error: null };
     }
     const found = rows.filter(matches);
-    if (op === "update") { found.forEach(row => Object.assign(row, payload)); return { data: single ? found[0] ?? null : found, error: null }; }
+    if (op === "update") {
+      // The figure place is unique too, as in migration 202611130010.
+      const place = payload && payload.figure_id ? rows.find(other => !found.includes(other) && !other.trial && other.figure_id === payload!.figure_id && other.figure_slot === payload!.figure_slot) : undefined;
+      if (place) return { data: null, error: { code: "23505", message: 'duplicate key value violates unique constraint "cq_person_cards_figure_place"' } };
+      found.forEach(row => Object.assign(row, payload)); return { data: single ? found[0] ?? null : found, error: null };
+    }
     if (op === "delete") { db[table] = rows.filter(row => !matches(row)); return { data: found, error: null }; }
     return { data: single ? found[0] ?? null : found, error: null };
   };
   const builder = {
     select: () => builder, order: () => builder, limit: () => builder, neq: () => builder, in: () => builder,
-    eq: (key: string, value: unknown) => { filters.push([key, value]); return builder; },
+    eq: (key: string, value: unknown) => { filters.push(row => row[key] === value); return builder; },
+    is: (key: string, value: unknown) => { filters.push(row => (row[key] ?? null) === value); return builder; },
+    not: (key: string, _op: string, value: unknown) => { filters.push(row => (row[key] ?? null) !== value); return builder; },
     insert: (row: Row) => { op = "insert"; payload = row; return builder; },
     update: (patch: Row) => { op = "update"; payload = patch; return builder; },
     delete: () => { op = "delete"; return builder; },
@@ -132,5 +140,56 @@ describe("the character follows the answers", () => {
     await ensureCard(form(), "p1", { "34": ["Eksekutor"] });
     await ensureCard(form("tutup"), "p1", { "34": ["Pencetus ide"] });
     expect((await myCard(form(), "p1"))?.character.id).toBe("garda");
+  });
+});
+
+describe("kartu tokoh dunia", () => {
+  const figure = (key: string, number: number, persona: string, rest: Record<string, unknown> = {}) => ({
+    form_id: "f1", id: key, number, key, name: key.replace(/-/g, " "), persona_id: persona, costume: "", hobbies: [], activities: [], energy: "", genre: "",
+    indonesian: false, funny: false, quote: null, hidden: false, image_key: null, image_updated_at: null, ...rest,
+  });
+  beforeEach(() => {
+    db.cq_figures = [
+      figure("edmund-hillary", 1, "garda", { name: "Edmund Hillary", hobbies: ["Olahraga & outdoor"], activities: ["Outdoor"] }),
+      figure("gordon-ramsay", 2, "garda", { name: "Gordon Ramsay", hobbies: ["Kuliner & masak"] }),
+      figure("affandi", 3, "penyihir", { name: "Affandi" }),
+    ];
+  });
+  const outdoorsy = { "34": ["Eksekutor"], "17": ["Olahraga & outdoor"], "21": ["Outdoor"] };
+
+  it("matches the figure inside the persona, says why, and gives no figure to more than two people", async () => {
+    const first = await ensureCard(form(), "p1", outdoorsy);
+    expect(first?.figure?.key).toBe("edmund-hillary");
+    expect(first?.character.class).toBe("garda");
+    expect(first?.reason).toBe("Kamu dapat Edmund Hillary karena kamu tipe garda, suka olahraga & outdoor dan paling menikmati kegiatan outdoor.");
+    expect(first?.colors).toEqual(["#C2303F", "#6E1023"]);
+    const second = await ensureCard(form(), "p2", outdoorsy);
+    const third = await ensureCard(form(), "p3", outdoorsy);
+    expect([second?.figure?.key, third?.figure?.key]).toEqual(["edmund-hillary", "gordon-ramsay"]);
+    expect(db.cq_person_cards.map(row => [row.figure_id, row.figure_slot])).toEqual([["edmund-hillary", 1], ["edmund-hillary", 2], ["gordon-ramsay", 1]]);
+    // The persona's figures full: a figure of another persona with a place.
+    expect((await ensureCard(form(), "p4", outdoorsy))?.figure?.key).toBe("gordon-ramsay");
+    expect((await ensureCard(form(), "p5", outdoorsy))?.figure?.key).toBe("affandi");
+    expect((db.cq_person_cards[0].roll as { figure: { key: string; score: number } }).figure).toMatchObject({ key: "edmund-hillary", score: 4 });
+  });
+
+  it("is locked: changed answers never change the figure, the persona, the level or the number", async () => {
+    const before = await ensureCard(form(), "p1", outdoorsy);
+    await followAnswers(form(), "p1", { "34": ["Pencetus ide"] });
+    const after = await ensureCard(form(), "p1", { "34": ["Pencetus ide"] });
+    expect(after).toEqual(before);
+  });
+
+  it("gives a card from before the figures its figure, keeping its level and number", async () => {
+    db.cq_person_cards.push({ form_id: "f1", employee_id: "old", card_id: "garda", tier_key: "epic", background: 2, accent: 1, stickers: [], serial: 9, trial: false, combo: "garda|2|1|", dna: "0123456789", roll: { character: "garda" }, drawn_at: "2026-11-05T10:00:00.000Z" });
+    const card = await ensureCard(form(), "old", outdoorsy);
+    expect(card).toMatchObject({ serial: 9, tier: { key: "epic" }, figure: { key: "edmund-hillary" } });
+    expect(card?.reason).toContain("Edmund Hillary");
+  });
+
+  it("draws an anime character as before when the catalog has no figures", async () => {
+    db.cq_figures = [];
+    const card = await ensureCard(form(), "p1", outdoorsy);
+    expect([card?.figure, card?.reason]).toEqual([null, null]);
   });
 });

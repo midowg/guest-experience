@@ -3,7 +3,7 @@ import { answerLevel, type AnswerValue, type QForm } from "@/lib/pra-wam/questio
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
-import { PERSON_COLUMNS, cardsMissing, catalogOf, viewOf, type CardView, type PersonCardRow } from "./cards";
+import { cardsMissing, catalogOf, columnsFor, viewOf, type CardView, type PersonCardRow } from "./cards";
 import { answerLines } from "./hr-lock";
 import { formContent, questionnaireMissing } from "./questionnaire";
 
@@ -23,10 +23,10 @@ export async function galleryOf(form: Pick<QForm, "id">): Promise<Gallery> {
   const rows: PersonCardRow[] = [];
   const page = 1000;
   for (let from = 0; ; from += page) {
-    const { data, error } = await createPrivilegedClient().from("cq_person_cards").select(PERSON_COLUMNS)
+    const { data, error } = await createPrivilegedClient().from("cq_person_cards").select(columnsFor(catalog))
       .eq("form_id", form.id).eq("trial", false).order("serial").range(from, from + page - 1);
     if (error) { if (cardsMissing(error)) return { entries: [], ready: false }; databaseError(error); }
-    rows.push(...((data ?? []) as PersonCardRow[]));
+    rows.push(...((data ?? []) as unknown as PersonCardRow[]));
     if ((data?.length ?? 0) < page) break;
   }
   const people = new Map((await listPeople()).map(person => [person.id, person]));
@@ -52,13 +52,12 @@ export type ColleagueProfile = { person: { id: string; name: string; department:
 
 /** One colleague's card and their answers marked `rekan`, in the questionnaire's order; null without a numbered card. */
 export async function colleagueOf(form: Pick<QForm, "id">, employeeId: string): Promise<ColleagueProfile | null> {
-  const [people, catalog, row] = await Promise.all([
-    listPeople(), catalogOf(form.id),
-    createPrivilegedClient().from("cq_person_cards").select(PERSON_COLUMNS).eq("form_id", form.id).eq("employee_id", employeeId).eq("trial", false).maybeSingle(),
-  ]);
+  const [people, catalog] = await Promise.all([listPeople(), catalogOf(form.id)]);
+  if (!catalog) return null;
+  const row = await createPrivilegedClient().from("cq_person_cards").select(columnsFor(catalog)).eq("form_id", form.id).eq("employee_id", employeeId).eq("trial", false).maybeSingle();
   if (row.error) { if (cardsMissing(row.error)) return null; databaseError(row.error); }
   const person = people.find(item => item.id === employeeId);
-  const card = row.data && catalog ? viewOf(row.data as PersonCardRow, catalog) : null;
+  const card = row.data ? viewOf(row.data as unknown as PersonCardRow, catalog) : null;
   if (!person?.active || !card) return null;
 
   const { sections, questions } = await formContent(form.id);
