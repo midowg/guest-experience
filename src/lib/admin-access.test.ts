@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { areaOfPath, grantEventsLabel, mayOpenArea, mayOpenEvent, tidyGrant, type AdminGrant } from "./admin-access";
+import { areaOfPath, grantEventsLabel, mayOpenArea, mayOpenEvent, showsAppCard, tidyGrant, type AdminGrant } from "./admin-access";
+
+describe("showsAppCard", () => {
+  it("shows a personal admin only the apps given, never Booking Kantor; the super admin everything", () => {
+    expect(showsAppCard({ apps: ["friday_sharing"] }, "booking")).toBe(false);
+    expect(showsAppCard({ apps: ["friday_sharing"] }, "wam")).toBe(false);
+    expect(showsAppCard({ apps: ["wam", "tv"] }, "wam")).toBe(true);
+    expect(showsAppCard({ apps: ["tv"] }, "tv")).toBe(true);
+    expect(showsAppCard(null, "booking")).toBe(true);
+  });
+});
 
 const grant = (patch: Partial<AdminGrant> = {}): AdminGrant => ({ employeeId: "e1", apps: [], allEvents: false, eventIds: [], ...patch });
 const event = (patch: Partial<{ id: string; kind: string; hidden: boolean; picStaffId: string }> = {}) => ({ id: "ev1", kind: "acara", hidden: false, picStaffId: "", ...patch });

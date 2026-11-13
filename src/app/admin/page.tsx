@@ -5,6 +5,7 @@ import { EventList } from "@/components/admin/events/EventList";
 import { currentPhase } from "@/lib/event-phase";
 import { currentAdmin, requireAdminPage } from "@/lib/server/admin-session";
 import { actorHasApp, eventsFor } from "@/lib/server/admin-actor";
+import { showsAppCard } from "@/lib/admin-access";
 import { hiddenEventIds } from "@/lib/server/event-visibility";
 import { disabledModulesFor, templatesFor } from "@/lib/server/admin-settings";
 import { listStaff } from "@/lib/server/staff";
@@ -19,8 +20,9 @@ export default async function AdminPage() {
   // An admin never receives events they may not open, not even in the page payload: hidden ones,
   // and for a personal admin (13 Nov 2026) everything outside their grant.
   const events = actor ? eventsFor(actor, all, hidden.ids) : [];
-  // Apps they were not given are not shown; Booking Kantor has its own access (Admin Booking).
-  const shown = apps.filter(app => !actor || app.key === "booking" || actorHasApp(actor, app.key === "wam" ? "wam" : "tv"));
+  // A personal admin sees only the apps they were given. Booking Kantor is not one of them (it is
+  // managed in the booking app by Admin Booking), so it shows to the super admin only.
+  const shown = apps.filter(app => showsAppCard(actor?.kind === "person" ? actor.grant : null, app.key));
   return <AdminShell>
     <EventList events={events} featuredId={featuredId} phases={Object.fromEntries(events.map(event => [event.id, currentPhase(event)]))}
       superAdmin={role === "super" ? { hiddenIds: [...hidden.ids], migrated: hidden.migrated } : undefined} disabledModules={disabledModules} templates={templates} staff={team.staff} apps={shown}

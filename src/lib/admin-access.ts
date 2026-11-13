@@ -96,6 +96,16 @@ export function mayOpenEvent(grant: AdminGrant, staffIds: ReadonlySet<string>, e
   return grant.apps.includes("acara") && grant.allEvents;
 }
 
+/**
+ * Which app cards the admin home shows (Aplikasi): everything for the super admin (grant null);
+ * for a personal admin only WAM and TV kantor when given. Booking Kantor is never theirs here: it
+ * is managed inside the booking app by Admin Booking.
+ */
+export function showsAppCard(grant: Pick<AdminGrant, "apps"> | null, key: string): boolean {
+  if (!grant) return true;
+  return (key === "wam" || key === "tv") && grant.apps.includes(key);
+}
+
 /** "Acara: semua", "3 acara", "hanya acara PIC-nya" — the events part of a grant in a few words. */
 export function grantEventsLabel(grant: Pick<AdminGrant, "apps" | "allEvents" | "eventIds">): string {
   if (grant.allEvents) return "Semua acara";
