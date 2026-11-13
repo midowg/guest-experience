@@ -18,10 +18,7 @@
 .form { display: grid; gap: 14px; }
 .actionsField { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
 .actionRows { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-.actionRow { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; padding: 10px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); }
-.actionRow > :first-child { grid-column: 1 / -1; }
-.actionRow > select, .actionRow > input[type="date"] { grid-column: 1; }
-.actionRow > .remove { grid-column: 2; grid-row: 2 / span 2; align-self: center; }
+.actionRow { display: grid; gap: 10px; padding: 10px 12px 12px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); }
 .remove { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--pw-muted); cursor: pointer; }
 .remove:hover { background: var(--pw-surface-soft); color: var(--pw-text); }
 .buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
@@ -36,10 +33,6 @@
 .telegram p { margin: 0; overflow-wrap: anywhere; }
 .warn { color: var(--pw-danger, #b42318); }
 
-@media (min-width: 720px) {
-  .actionRow { grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) 10.5rem 44px; align-items: center; }
-  .actionRow > :first-child, .actionRow > select, .actionRow > input[type="date"], .actionRow > .remove { grid-column: auto; grid-row: auto; }
-}
 
 /* Agenda's reminder: meetings over without a MoM. */
 .due { display: grid; gap: 8px; margin-bottom: 16px; padding: 16px; border: 1px solid var(--pw-brass-line); border-radius: var(--pw-r-card); background: var(--pw-surface); }
@@ -68,8 +61,7 @@ details.group[open] > summary { margin-bottom: 2px; }
 .checkSmall input { flex: none; width: 20px; height: 20px; accent-color: var(--pw-primary); }
 
 .items { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-.item { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); }
-.itemHead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.item { display: grid; gap: 10px; padding: 10px 12px 12px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); }
 .itemNo { display: inline-grid; flex: none; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; background: var(--pw-primary-soft); color: var(--pw-primary); font-size: 12px; font-weight: 700; }
 .fieldLabel { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: var(--pw-muted); }
 .nextGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -171,14 +163,16 @@ details.group[open] > summary { margin-bottom: 2px; }
 .suggest small { color: var(--pw-muted); font-size: 12px; }
 .actionField { display: grid; gap: 4px; min-width: 0; }
 .actionField .fieldLabel { margin: 0; }
-/* A phone: the task with its remove button beside it, then PIC and Due Date across the whole row. */
-.actionRow > .actionField { grid-column: 1 / -1; }
-.actionRow > .taskField { grid-column: 1; grid-row: 1; }
-.actionRow > .remove { grid-column: 2; grid-row: 1; align-self: end; }
-@media (min-width: 720px) {
-  .actionRow { align-items: end; }
-  .actionRow > .actionField, .actionRow > .taskField, .actionRow > .remove { grid-column: auto; grid-row: auto; }
-}
+/*
+ * Agenda items and follow-ups as cards, one field under another (13 Nov 2026): a head with the
+ * number and the remove button, then each field with its label above it, the full width.
+ * PIC and Due Date share a line from 540px; the task and the texts always have the whole width.
+ */
+.cardHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
+.cardTitle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--pw-muted); }
+.actionMeta { display: grid; gap: 10px; }
+@media (min-width: 540px) { .actionMeta { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.item :global(.textarea), .actionRow :global(.textarea) { width: 100%; resize: vertical; }
 .photoButtons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .photoButtons :global(.button) { justify-content: center; padding-inline: 10px; white-space: nowrap; }
 
@@ -195,11 +189,10 @@ details.group[open] > summary { margin-bottom: 2px; }
 .terms h3 { margin: 4px 0 0; font-size: 15px; }
 .terms ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
 /* A phone: a field's label sits above it, the field takes the whole width (13 Nov 2026). */
-@media (max-width: 539px) {
-  .facts .wide { grid-column: 1 / -1; }
-  .facts dt.wide { margin-top: 6px; }
-  .facts dd { min-width: 0; }
-}
+/* A field's label sits above it and the field takes the whole width, on every screen (13 Nov 2026). */
+.facts .wide { grid-column: 1 / -1; }
+.facts dt.wide { margin-top: 8px; }
+.facts dd { min-width: 0; }
 /* The register under the field on a phone, as a link: the field keeps its whole width. */
 @media (max-width: 539px) {
   .numberField { grid-template-columns: minmax(0, 1fr); gap: 2px; }

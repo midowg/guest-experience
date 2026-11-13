@@ -360,21 +360,24 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     const itemEditor = ({ item, index }: { item: MinuteItem; index: number }, number: number, removable: boolean) => {
       const where = "agenda item";
       return <li key={index} className={css.item}>
-        <div className={css.itemHead}>
-          <span className={css.itemNo}>{number}</span>
-          <input className="input" aria-label={`Topic/Agenda Item ${number}`} value={item.topic} maxLength={minutesLimits.topic}
-            placeholder="Topic/Agenda Item" onChange={event => setItem(index, { topic: event.target.value })} />
+        <div className={css.cardHead}>
+          <span className={css.cardTitle}><span className={css.itemNo}>{number}</span> Agenda {number}</span>
           {removable && <button type="button" className={css.remove} aria-label={`Hapus agenda ${number}`}
             onClick={() => patch({ items: draft.items.filter((_, at) => at !== index) })}><Trash2 size={18} aria-hidden /></button>}
         </div>
         <div>
+          <label className={css.fieldLabel} htmlFor={`${uid}-topic-${index}`}>Topic/Agenda Item</label>
+          <input id={`${uid}-topic-${index}`} className="input" aria-label={`Topic/Agenda Item ${number}`} value={item.topic} maxLength={minutesLimits.topic}
+            placeholder="Judul agenda" onChange={event => setItem(index, { topic: event.target.value })} />
+        </div>
+        <div>
           <label className={css.fieldLabel} htmlFor={`${uid}-discussion-${index}`}>Discussion Summary &amp; Key Points</label>
-          <textarea id={`${uid}-discussion-${index}`} className="textarea" rows={3} aria-label={`Discussion Summary & Key Points, ${where} ${number}`} maxLength={minutesLimits.text}
+          <textarea id={`${uid}-discussion-${index}`} className="textarea" rows={4} aria-label={`Discussion Summary & Key Points, ${where} ${number}`} maxLength={minutesLimits.text}
             value={item.discussion} placeholder="Apa yang dibahas dan poin pentingnya" onChange={event => setItem(index, { discussion: event.target.value })} />
         </div>
         <div>
           <label className={css.fieldLabel} htmlFor={`${uid}-decision-${index}`}>Decisions/Outcomes</label>
-          <textarea id={`${uid}-decision-${index}`} className="textarea" rows={2} aria-label={`Decisions/Outcomes, ${where} ${number}`} maxLength={minutesLimits.decision}
+          <textarea id={`${uid}-decision-${index}`} className="textarea" rows={3} aria-label={`Decisions/Outcomes, ${where} ${number}`} maxLength={minutesLimits.decision}
             value={item.decision} placeholder="Yang disepakati, satu per baris" onChange={event => setItem(index, { decision: event.target.value })} />
         </div>
       </li>;
@@ -436,9 +439,16 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
           <legend className={css.groupTitle}>{sectionTitle("V.", "ACTION ITEMS")}</legend>
           <p className={css.note}>{ACTIONS_NOTE}</p>
           <ol className={css.actionRows}>{draft.actions.map((action, index) => <li key={action.id ?? `new-${index}`} className={css.actionRow}>
-            <label className={`${css.actionField} ${css.taskField}`}><span className={css.fieldLabel}>Action Item/Task</span>
-              <input className="input" aria-label={`Action Item/Task ${index + 1}`} value={action.task} maxLength={minutesLimits.task} placeholder="Apa yang harus dikerjakan"
-                onChange={event => setAction(index, { task: event.target.value })} /></label>
+            <div className={css.cardHead}>
+              <span className={css.cardTitle}><span className={css.itemNo}>{index + 1}</span> Tindak lanjut {index + 1}</span>
+              <button type="button" className={css.remove} aria-label={`Hapus tindak lanjut ${index + 1}`} onClick={() => patch({ actions: draft.actions.filter((_, at) => at !== index) })}><Trash2 size={18} aria-hidden /></button>
+            </div>
+            <label className={css.actionField}><span className={css.fieldLabel}>Action Item/Task</span>
+              {/* A text box that wraps, so the whole task shows while typing; one line (Enter adds none). */}
+              <textarea className="textarea" rows={2} aria-label={`Action Item/Task ${index + 1}`} value={action.task} maxLength={minutesLimits.task} placeholder="Apa yang harus dikerjakan"
+                onKeyDown={event => { if (event.key === "Enter") event.preventDefault(); }}
+                onChange={event => setAction(index, { task: event.target.value.replace(/\s*\n\s*/g, " ") })} /></label>
+            <div className={css.actionMeta}>
             <label className={css.actionField}><span className={css.fieldLabel}>PIC</span>
               <select className="select" aria-label={`PIC ${index + 1}`} value={action.picId ?? ""} onChange={event => setAction(index, { picId: event.target.value || null })}>
                 <option value="">Pilih PIC</option>
@@ -446,7 +456,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
               </select></label>
             <label className={css.actionField}><span className={css.fieldLabel}>Due Date (tenggat)</span>
               <input className="input" type="date" aria-label={`Due Date ${index + 1}`} value={action.dueDate ?? ""} onChange={event => setAction(index, { dueDate: event.target.value || null })} /></label>
-            <button type="button" className={css.remove} aria-label={`Hapus tindak lanjut ${index + 1}`} onClick={() => patch({ actions: draft.actions.filter((_, at) => at !== index) })}><Trash2 size={18} aria-hidden /></button>
+            </div>
           </li>)}</ol>
           {draft.actions.length < minutesLimits.actions && <button type="button" className="button button--secondary" onClick={() => patch({ actions: [...draft.actions, blankAction()] })}><Plus size={18} aria-hidden /> Tambah tindak lanjut</button>}
         </fieldset>
