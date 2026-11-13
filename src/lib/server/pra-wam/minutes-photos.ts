@@ -117,7 +117,8 @@ export async function confirmMinutePhoto(sessionId: string, input: MomPhotoStart
   const { error } = await createPrivilegedClient().from("pw_session_minute_photos").insert({
     session_id: sessionId, file_key: input.key, size: input.size, width: input.width, height: input.height, uploaded_by: member.id,
   });
-  if (error) { await discard(); if (photosMissing(error)) throw waiting(); databaseError(error); }
+  // The same upload confirmed twice (a double tap, a retry): it is kept already, so its file stays.
+  if (error && !(error.code === "23505" && /file_key/.test(error.message ?? ""))) { await discard(); if (photosMissing(error)) throw waiting(); databaseError(error); }
   return listMinutePhotos(sessionId, true);
 }
 

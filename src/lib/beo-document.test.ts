@@ -56,6 +56,8 @@ describe("BEO PDF", () => {
   it("keeps text the standard fonts can draw", () => {
     expect(pdfSafe("Café – “Pak” · 18.00")).toBe("Café – “Pak” · 18.00");
     expect(pdfSafe("Kacang 🥜 ≈ 3")).toBe("Kacang ? ? 3");
+    // DEL and C1 controls (U+0085 from pasted text) have no glyph: never handed to the PDF.
+    expect(pdfSafe("A\u0085B\u007fC\u009fD")).toBe("A?B?C?D");
   });
 
   it("produces a PDF for both versions", async () => {

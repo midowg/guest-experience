@@ -39,28 +39,32 @@ beforeEach(() => {
     cq_anon_receipts: [{ form_id: "f1", employee_id: A }],
     cq_stay_members: [{ form_id: "f1", employee_id: A }, { form_id: "f1", employee_id: B }],
     cq_forms: [{ id: "f1", rooms_published_at: "2026-11-10T00:00:00Z" }],
+    cq_person_cards: [{ form_id: "f1", employee_id: A }, { form_id: "f1", employee_id: B }, { form_id: "f0", employee_id: A }],
   };
 });
 
 describe("Hapus jawaban", () => {
   it("deletes the chosen people's named answers and progress, nothing else", async () => {
     const result = await deleteAnswers({ id: "f1" }, { who: "pilih", employeeIds: [A, A] });
-    expect(result).toEqual({ people: 1, answers: 2, anonymous: 0, roommates: 0 });
+    expect(result).toEqual({ people: 1, answers: 2, anonymous: 0, roommates: 0, cards: 1 });
+    // Their card goes too, so filling in again draws a new one and the figure place frees up.
+    expect(db.cq_person_cards.map(row => [row.form_id, row.employee_id])).toEqual([["f1", B], ["f0", A]]);
     expect(db.cq_answers.map(row => row.employee_id)).toEqual([B, A]);
     expect(db.cq_answers[1].form_id).toBe("f0");
     expect(db.cq_progress.map(row => row.employee_id)).toEqual([B]);
     // Anonymous answers, their receipt and the rooms stay.
     expect([db.cq_anon_answers.length, db.cq_anon_receipts.length, db.cq_stay_members.length]).toEqual([2, 1, 2]);
-    expect(deletedText({ who: "pilih" }, result)).toBe("Jawaban 1 orang dihapus (2 jawaban). Statusnya kembali Belum mulai.");
+    expect(deletedText({ who: "pilih" }, result)).toBe("Jawaban 1 orang dihapus (2 jawaban, 1 kartu). Statusnya kembali Belum mulai.");
   });
 
   it("deletes everything of this questionnaire, anonymous answers and the rooms too, and takes the rooms off Beranda", async () => {
     const result = await deleteAnswers({ id: "f1" }, { who: "semua", confirm: "HAPUS" });
-    expect(result).toEqual({ people: 2, answers: 3, anonymous: 2, roommates: 2 });
+    expect(result).toEqual({ people: 2, answers: 3, anonymous: 2, roommates: 2, cards: 2 });
+    expect(db.cq_person_cards).toEqual([{ form_id: "f0", employee_id: A }]);
     expect(db.cq_answers).toEqual([{ form_id: "f0", employee_id: A, question_id: "q9" }]);
     expect([db.cq_progress.length, db.cq_anon_answers.length, db.cq_anon_receipts.length, db.cq_stay_members.length]).toEqual([0, 0, 0, 0]);
     expect(db.cq_forms[0].rooms_published_at).toBeNull();
-    expect(deletedText({ who: "semua" }, result)).toBe("Semua data kuesioner dihapus: 3 jawaban bernama, 2 jawaban anonim, dan 2 penempatan kamar.");
+    expect(deletedText({ who: "semua" }, result)).toBe("Semua data kuesioner dihapus: 3 jawaban bernama, 2 jawaban anonim, 2 kartu, dan 2 penempatan kamar.");
   });
 
   it("asks for people, and for HAPUS typed before everything goes", () => {

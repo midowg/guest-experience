@@ -1,4 +1,4 @@
-import { answered, type AnswerValue, type QQuestion, type QSection } from "./questionnaire";
+import { answered, baseChoice, type AnswerValue, type QQuestion, type QSection } from "./questionnaire";
 
 /*
  * Rekap and Ekspor of the questionnaire, the parts that need no database: who may read which
@@ -134,7 +134,8 @@ export function summarize(question: QQuestion, values: AnswerValue[], { access, 
     }
     default: {
       const counts = new Map<string, number>();
-      for (const value of given) for (const item of new Set(asList(value))) counts.set(item, (counts.get(item) ?? 0) + 1);
+      // A written-in "Lainnya: …" counts as Lainnya (its text is in Rekap and Excel).
+      for (const value of given) for (const item of new Set(asList(value).map(entry => question.kind === "person" ? entry : baseChoice(entry)))) counts.set(item, (counts.get(item) ?? 0) + 1);
       const label = (item: string) => (question.kind === "person" ? names.get(item) ?? "Tanpa nama" : item);
       if (question.kind === "single") {
         // In the question's own order (often a scale), zeros included; old choices no longer listed go last.

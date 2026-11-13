@@ -3,7 +3,7 @@ import { answerLevel, type AnswerValue, type QForm } from "@/lib/pra-wam/questio
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
-import { cardsMissing, catalogOf, columnsFor, viewOf, type CardView, type PersonCardRow } from "./cards";
+import { cardsMissing, catalogOf, columnsFor, viewOf, withFigures, type CardView, type PersonCardRow } from "./cards";
 import { answerLines } from "./hr-lock";
 import { formContent, questionnaireMissing } from "./questionnaire";
 
@@ -30,7 +30,9 @@ export async function galleryOf(form: Pick<QForm, "id">): Promise<Gallery> {
     if ((data?.length ?? 0) < page) break;
   }
   const people = new Map((await listPeople()).map(person => [person.id, person]));
-  const entries = rows.flatMap(row => {
+  // Cards from before the figures get theirs here too, so the gallery shows one kind of card.
+  const shown = await withFigures(form, rows, catalog).catch(() => rows);
+  const entries = shown.flatMap(row => {
     const person = people.get(row.employee_id);
     const card = viewOf(row, catalog);
     // Someone no longer in Data karyawan (or no longer active) is not shown to colleagues.
@@ -57,7 +59,8 @@ export async function colleagueOf(form: Pick<QForm, "id">, employeeId: string): 
   const row = await createPrivilegedClient().from("cq_person_cards").select(columnsFor(catalog)).eq("form_id", form.id).eq("employee_id", employeeId).eq("trial", false).maybeSingle();
   if (row.error) { if (cardsMissing(row.error)) return null; databaseError(row.error); }
   const person = people.find(item => item.id === employeeId);
-  const card = row.data ? viewOf(row.data as unknown as PersonCardRow, catalog) : null;
+  const [given] = row.data ? await withFigures(form, [row.data as unknown as PersonCardRow], catalog).catch(() => [row.data as unknown as PersonCardRow]) : [];
+  const card = given ? viewOf(given, catalog) : null;
   if (!person?.active || !card) return null;
 
   const { sections, questions } = await formContent(form.id);

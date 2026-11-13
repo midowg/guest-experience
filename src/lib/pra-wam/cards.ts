@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Answers } from "./questionnaire";
+import { baseChoice, type Answers } from "./questionnaire";
 
 /*
  * Character cards of the questionnaire (migration 202611040013), the parts the app, the admin and
@@ -42,7 +42,7 @@ export function scoresOf(characters: Pick<Character, "id" | "rules">[], answers:
   const scores: Record<string, number> = {};
   for (const character of characters) {
     let score = 0;
-    for (const rule of character.rules) if (asList(answers[rule.questionKey]).includes(rule.option)) score += rule.weight;
+    for (const rule of character.rules) if (asList(answers[rule.questionKey]).map(baseChoice).includes(rule.option)) score += rule.weight;
     scores[character.id] = score;
   }
   return scores;

@@ -38,10 +38,14 @@ const STEPS = ["Membaca jawabanmu", "Mencocokkan tokoh", "Mengundi rarity"];
  */
 function useTilt(open: boolean) {
   const flip = useRef<HTMLDivElement>(null);
-  const listening = useRef(false);
+  const isOpen = useRef(open);
+  // The phone's motion listener and its idle timer, removed when the card goes.
+  const motion = useRef<{ move: (event: DeviceOrientationEvent) => void; idle: number } | null>(null);
+  useEffect(() => { isOpen.current = open; }, [open]);
   const set = useCallback((x: number, y: number) => {
     const element = flip.current;
-    if (!element || reducedMotion()) return;
+    // Only an open card tilts: after "Ulangi animasi" the closed card stays still and flips with its own easing.
+    if (!element || !isOpen.current || reducedMotion()) return;
     const tx = Math.max(-1, Math.min(1, x)), ty = Math.max(-1, Math.min(1, y));
     element.style.setProperty("--ry", `${(tx * 16).toFixed(2)}deg`); element.style.setProperty("--rx", `${(ty * 12).toFixed(2)}deg`);
     element.style.setProperty("--sx", `${(50 + tx * 45).toFixed(1)}%`); element.style.setProperty("--sy", `${(50 + ty * 45).toFixed(1)}%`);
@@ -55,7 +59,12 @@ function useTilt(open: boolean) {
     for (const name of ["--ry", "--rx", "--sx", "--sy", "--px", "--py"]) element.style.removeProperty(name);
   }, []);
   useEffect(() => { if (!open) reset(); }, [open, reset]);
-  useEffect(() => () => { listening.current = false; }, []);
+  useEffect(() => () => {
+    if (!motion.current) return;
+    window.removeEventListener("deviceorientation", motion.current.move);
+    window.clearTimeout(motion.current.idle);
+    motion.current = null;
+  }, []);
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!open) return;
     const box = event.currentTarget.getBoundingClientRect();
@@ -64,18 +73,17 @@ function useTilt(open: boolean) {
   const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => { if (event.pointerType !== "mouse") reset(); };
   /** The phone's motion: on iOS only after a tap asks for it. */
   const listen = useCallback(async () => {
-    if (listening.current || reducedMotion() || typeof window === "undefined" || !("DeviceOrientationEvent" in window)) return;
+    if (motion.current || reducedMotion() || typeof window === "undefined" || !("DeviceOrientationEvent" in window)) return;
     const ask = (window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission;
     if (ask) { try { if ((await ask()) !== "granted") return; } catch { return; } }
-    listening.current = true;
-    let idle = 0;
-    const move = (event: DeviceOrientationEvent) => {
-      if (!listening.current) { window.removeEventListener("deviceorientation", move); return; }
+    if (motion.current) return;
+    const state = { idle: 0, move: (event: DeviceOrientationEvent) => {
       if (event.gamma == null || event.beta == null) return;
       set(event.gamma / 25, (event.beta - 50) / 25);
-      window.clearTimeout(idle); idle = window.setTimeout(reset, 4000);
-    };
-    window.addEventListener("deviceorientation", move);
+      window.clearTimeout(state.idle); state.idle = window.setTimeout(reset, 4000);
+    } };
+    motion.current = state;
+    window.addEventListener("deviceorientation", state.move);
   }, [reset, set]);
   return { flip, onPointerMove, onPointerLeave: reset, onPointerCancel: reset, onPointerUp, listen };
 }

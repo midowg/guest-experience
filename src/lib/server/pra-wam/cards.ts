@@ -4,7 +4,7 @@ import {
   CARDS_MIGRATION, chooseCharacter, comboOf, drawLook, drawTier, partKinds, scoresOf,
   type ArtKind, type Character, type Look, type Part, type PartKind, type Tier,
 } from "@/lib/pra-wam/cards";
-import { colorsOf, pickFigure, reasonText, type Figure } from "@/lib/pra-wam/figures";
+import { colorsOf, FIGURE_KEYS, pickFigure, reasonText, type Figure } from "@/lib/pra-wam/figures";
 import { editable, type Answers, type QForm } from "@/lib/pra-wam/questionnaire";
 import { praWamApi } from "@/lib/routes";
 import { ServiceError } from "../config";
@@ -28,7 +28,7 @@ import { createPrivilegedClient } from "../supabase/admin";
  */
 
 export const cardsMissing = (error: { code?: string; message?: string }) =>
-  ["42P01", "PGRST205"].includes(error.code ?? "") || /cq_(tiers|cards|card_rules|card_parts|person_cards)/.test(error.message ?? "");
+  ["42P01", "PGRST205"].includes(error.code ?? "") || (!error.code && /relation .*cq_(tiers|cards|card_rules|card_parts|person_cards).* does not exist/.test(error.message ?? ""));
 const figuresMissing = (error: { code?: string; message?: string }) =>
   ["42P01", "PGRST205", "42703", "PGRST204"].includes(error.code ?? "") && /cq_figures|figure_(id|slot)|reason/.test(error.message ?? "");
 export const cardsWaiting = () => new ServiceError(503, `Kartu karakter menunggu migrasi ${CARDS_MIGRATION}.`);
@@ -167,12 +167,48 @@ async function personCard(formId: string, employeeId: string, catalog: Pick<Cata
   return data as PersonCardRow | null;
 }
 
-/** My card as it shows now; null when I have none yet, or before the migration. Never draws. */
+/** The answers a figure is matched on (17, 20, 21, 37), by question key: nothing else is read. */
+async function figureAnswers(formId: string, employeeIds: readonly string[]): Promise<Map<string, Answers>> {
+  const out = new Map<string, Answers>();
+  if (!employeeIds.length) return out;
+  const client = createPrivilegedClient();
+  const { data: questions, error } = await client.from("cq_questions").select("id,key").eq("form_id", formId).in("key", Object.values(FIGURE_KEYS));
+  if (error) failed(error);
+  const keyOf = new Map(((questions ?? []) as { id: string; key: string }[]).map(question => [question.id, question.key]));
+  if (!keyOf.size) return out;
+  const { data, error: answerError } = await client.from("cq_answers").select("employee_id,question_id,value")
+    .eq("form_id", formId).in("employee_id", [...employeeIds]).in("question_id", [...keyOf.keys()]);
+  if (answerError) failed(answerError);
+  for (const row of (data ?? []) as { employee_id: string; question_id: string; value: Answers[string] }[]) {
+    const key = keyOf.get(row.question_id);
+    if (key) out.set(row.employee_id, { ...out.get(row.employee_id), [key]: row.value });
+  }
+  return out;
+}
+
+/**
+ * Cards drawn before the figures (anime characters) get their figure now, matched to their own
+ * answers, keeping level and number: on any page that shows them (the questionnaire, Beranda, the
+ * gallery), not only when the card is drawn. Cards that have one come back as they are.
+ */
+export async function withFigures(form: Pick<QForm, "id">, rows: PersonCardRow[], catalog: Catalog): Promise<PersonCardRow[]> {
+  if (!figureMode(catalog)) return rows;
+  const bare = rows.filter(row => !row.figure_id);
+  if (!bare.length) return rows;
+  const answers = await figureAnswers(form.id, bare.map(row => row.employee_id));
+  const given = new Map<string, PersonCardRow>();
+  for (const row of bare) given.set(row.employee_id, await giveFigure(form, row, answers.get(row.employee_id) ?? {}, catalog));
+  return rows.map(row => given.get(row.employee_id) ?? row);
+}
+
+/** My card as it shows now; null when I have none yet, or before the migration. Never draws (a card from before the figures gets its figure). */
 export async function myCard(form: Pick<QForm, "id">, employeeId: string): Promise<CardView | null> {
   const catalog = await catalogOf(form.id);
   if (!catalog) return null;
   const row = await personCard(form.id, employeeId, catalog);
-  return row ? viewOf(row, catalog) : null;
+  if (!row) return null;
+  const [shown] = await withFigures(form, [row], catalog);
+  return viewOf(shown, catalog);
 }
 
 const counts = (catalog: Catalog): Record<PartKind, number> =>
@@ -271,7 +307,7 @@ async function draw(form: QForm, employeeId: string, answers: Answers, catalog: 
  * to the answers; its level and number stay. A clash with someone taking the same place a moment
  * ago is matched again.
  */
-async function giveFigure(form: QForm, row: PersonCardRow, answers: Answers, catalog: Catalog): Promise<PersonCardRow> {
+async function giveFigure(form: Pick<QForm, "id">, row: PersonCardRow, answers: Answers, catalog: Catalog): Promise<PersonCardRow> {
   const client = createPrivilegedClient();
   for (let attempt = 0; attempt < 6; attempt++) {
     const match = await matchFigure(form.id, catalog, row.card_id, answers, row.trial);

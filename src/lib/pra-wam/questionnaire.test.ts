@@ -115,6 +115,8 @@ describe("Lainnya, written in", () => {
     expect([otherText("Lainnya: Memancing"), otherText("Outdoor")]).toEqual(["Memancing", ""]);
     expect([withOther("Lainnya", "  Memancing"), withOther("Lainnya", " ")]).toEqual(["Lainnya: Memancing", "Lainnya"]);
     expect([isOtherOption("Lainnya"), isOtherOption("lainnya, sebutkan"), isOtherOption("Tidak ada")]).toEqual([true, true, false]);
+    // A chosen option is kept as HR wrote it, a leading space included (" GM"); only a written-in Lainnya is tidied.
+    expect(cleanAnswer(question("3", { kind: "single", options: ["Staff", " GM"] }), " GM")).toEqual({ value: " GM" });
     const follow = question("18", { showIf: { question: "17", any: ["Lainnya"] } });
     expect(shows(follow, { 17: "Lainnya: Badminton" })).toBe(true);
   });

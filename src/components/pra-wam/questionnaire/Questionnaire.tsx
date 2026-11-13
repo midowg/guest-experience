@@ -194,9 +194,16 @@ export function Questionnaire({ form, sections, questions, departments, people, 
 
   /** A section's number at the top: straight to its first card (its intro when it has none). */
   function pick(sectionId: string) {
+    if (sending) return;
     const first = steps.findIndex(item => item.kind === "question" && item.section.id === sectionId);
     const target = first >= 0 ? first : steps.findIndex(item => item.id === `intro:${sectionId}`);
-    if (target >= 0 && target !== index) go(target, target < index);
+    if (target < 0 || target === index) return;
+    if (step.kind === "question" && prefilled(step.question.key)) {
+      const value = prefill[step.question.key];
+      setAnswers(current => ({ ...current, [step.question.key]: value }));
+      autosave.save(step.question.key, value, 0);
+    }
+    go(target, target < index);
   }
 
   const blocked = step.kind === "question" && step.question.required && !complete(step.question, seen[step.question.key]);
@@ -264,7 +271,7 @@ export function Questionnaire({ form, sections, questions, departments, people, 
             ? <p className={styles.hint} aria-live="polite">Menyimpan jawaban terakhir…</p>
             : <CardReveal formId={form.id} initial={drawnCard} nickname={nickname} hasPhoto={hasPhoto} />}
           {!preview && !saving && <p className={styles.hint}><a href={praWamPath.colleagues}>Lihat kartu rekan-rekanmu</a></p>}
-          {form.editUntil && <p className={styles.hint}>Jawabanmu masih bisa diubah sampai {deadlineLabel(form.editUntil)}, kecuali bagian anonim. Karaktermu bisa ikut berubah; level, latar, dan nomor kartu tetap.</p>}
+          {form.editUntil && <p className={styles.hint}>Jawabanmu masih bisa diubah sampai {deadlineLabel(form.editUntil)}, kecuali bagian anonim. Kartumu sudah dikunci: tokoh, rarity, dan nomornya tetap.</p>}
         </section>}
         {step.kind === "done" && !progress.done && <section className={card} aria-labelledby="cq-heading">
           <h1 id="cq-heading" ref={heading} tabIndex={-1}>Hampir selesai</h1>

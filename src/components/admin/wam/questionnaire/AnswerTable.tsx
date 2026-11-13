@@ -39,7 +39,7 @@ const UNANSWERED = "__belum_dijawab__";
 const wordsOf = (query: string) => query.trim().toLocaleLowerCase("id").split(/\s+/).filter(Boolean);
 const holdsAll = (text: string, words: string[]) => { const lower = text.toLocaleLowerCase("id"); return words.every(word => lower.includes(word)); };
 /** One answer's values for the filter: a multiple choice gives each choice, a matrix each row's choice. */
-const valuesOf = (text: string) => text.split(/\n|, /).map(value => value.replace(/^[^:]+: /, "").trim()).filter(Boolean);
+const valuesOf = (text: string) => text.split(/\n|, /).map(value => /^lainnya[^:]*: /i.test(value) ? value.slice(0, value.indexOf(":")) : value.replace(/^[^:]+: /, "").trim()).filter(Boolean);
 
 /** The text with each searched word marked. */
 function marked(text: string, words: string[]): ReactNode {
@@ -140,7 +140,7 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
     const names = chosen.slice(0, 3).map(row => row.name).join(", ") + (chosen.length > 3 ? `, dan ${chosen.length - 3} orang lain` : "");
     if (!(await confirm({
       title: `Hapus jawaban ${chosen.length} orang?`,
-      body: `Jawaban ${names} dihapus permanen dan statusnya kembali Belum mulai. Mereka bisa mengisi lagi dari awal. Jawaban anonim tidak ikut terhapus.`,
+      body: `Jawaban ${names} dihapus permanen, begitu juga kartu tokohnya, dan statusnya kembali Belum mulai. Mereka bisa mengisi lagi dari awal dan mendapat kartu baru. Jawaban anonim tidak ikut terhapus.`,
       confirmLabel: "Hapus jawaban", danger: true,
     }))) return;
     await remove({ who: "pilih", employeeIds: chosen.map(row => row.id) }, () => setSelected(new Set()));
@@ -271,7 +271,7 @@ export function AnswerTable({ table, reminder }: { table: Table; reminder: Remin
     <div className={css.wipe}>
       <div>
         <p className={css.wipeTitle}>Hapus semua data kuesioner</p>
-        <p className={css.note}>Semua jawaban (termasuk anonim) dan penempatan kamar dihapus permanen. Semua orang kembali Belum mulai. Unduh Excel dulu bila perlu arsip.</p>
+        <p className={css.note}>Semua jawaban (termasuk anonim), semua kartu tokoh, dan penempatan kamar dihapus permanen. Semua orang kembali Belum mulai. Unduh Excel dulu bila perlu arsip.</p>
       </div>
       {!wipeOpen ? <ConsoleButton className={css.danger} onClick={() => { setWipeOpen(true); setTyped(""); }} icon={<Trash2 size={18} aria-hidden="true" />}>Hapus semua data</ConsoleButton>
         : <div className={css.wipeConfirm}>

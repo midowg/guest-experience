@@ -189,6 +189,17 @@ describe("kartu tokoh dunia", () => {
     expect(card?.reason).toContain("Edmund Hillary");
   });
 
+  it("gives an old card its figure wherever it is read, matched on the person's own answers", async () => {
+    db.cq_person_cards.push({ form_id: "f1", employee_id: "old", card_id: "garda", tier_key: "epic", background: 2, accent: 1, stickers: [], serial: 9, trial: false, combo: "garda|2|1|", dna: "0123456789", roll: { character: "garda" }, drawn_at: "2026-11-05T10:00:00.000Z" });
+    db.cq_questions = [{ form_id: "f1", id: "q17", key: "17" }, { form_id: "f1", id: "q21", key: "21" }];
+    db.cq_answers = [{ form_id: "f1", employee_id: "old", question_id: "q17", value: ["Kuliner & masak"] }];
+    // The questionnaire page, Beranda and the card's GET read it with myCard, which never draws.
+    const card = await myCard(form(), "old");
+    expect(card).toMatchObject({ serial: 9, tier: { key: "epic" }, figure: { key: "gordon-ramsay" } });
+    expect(db.cq_person_cards[0]).toMatchObject({ figure_id: "gordon-ramsay", figure_slot: 1 });
+    expect(await myCard(form(), "old")).toEqual(card);
+  });
+
   it("draws an anime character as before when the catalog has no figures", async () => {
     db.cq_figures = [];
     const card = await ensureCard(form(), "p1", outdoorsy);

@@ -36,10 +36,15 @@ export function sectionsDone(content: Content, answers: Answers, anonymousSent: 
   }));
 }
 
-/** Where to pick up: the first required question not answered yet, else the done card. */
+/**
+ * Where to pick up: the first required question not answered yet, else the last card of an
+ * anonymous part not sent yet (it has "Kirim bagian anonim"), else the done card.
+ */
 export function resumeIndex(steps: Step[], answers: Answers): number {
   const index = steps.findIndex(step => step.kind === "question" && step.question.required && !complete(step.question, answers[step.question.key]));
-  return index >= 0 ? index : steps.length - 1;
+  if (index >= 0) return index;
+  const unsent = steps.findIndex(step => step.kind === "question" && step.section.anonymous && step.lastOfSection);
+  return unsent >= 0 ? unsent : steps.length - 1;
 }
 
 /** Rough seconds per kind of card, as in the mockup. */

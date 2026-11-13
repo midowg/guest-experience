@@ -165,7 +165,7 @@ export function cleanAnswer(question: QQuestion, raw: unknown, known: { departme
       if (typeof raw !== "string") return { problem: "Pilih satu jawaban." };
       const allowed = question.kind === "department" ? known.departments : question.options;
       if (raw && allowed && !(question.kind === "single" ? choiceAllowed(raw, allowed) : allowed.includes(raw))) return { problem: "Pilihan ini tidak ada di daftar." };
-      return { value: question.kind === "single" ? raw.trim() : raw };
+      return { value: question.kind === "single" && baseChoice(raw) !== raw ? raw.trim() : raw };
     }
     case "multi": case "person": {
       if (!Array.isArray(raw) || raw.some(item => typeof item !== "string")) return { problem: "Pilih dari daftar." };

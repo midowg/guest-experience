@@ -11,7 +11,8 @@ const BAND = { vendor: rgb(0.08, 0.32, 0.63), internal: rgb(0.6, 0.15, 0.24) };
 const WIN_ANSI_EXTRA = new Set("€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ");
 /** The standard fonts cannot draw every character; others become their plain letter or "?". */
 export function pdfSafe(text: string): string {
-  const drawable = (char: string) => (char.charCodeAt(0) >= 0x20 && char.charCodeAt(0) <= 0xff) || WIN_ANSI_EXTRA.has(char);
+  // Printable Latin-1 only: DEL and the C1 controls (U+007F–U+009F, e.g. U+0085 from pasted text) have no glyph and make pdf-lib throw.
+  const drawable = (char: string) => { const code = char.charCodeAt(0); return (code >= 0x20 && code < 0x7f) || (code >= 0xa0 && code <= 0xff) || WIN_ANSI_EXTRA.has(char); };
   return [...text.normalize("NFC")].map(char => {
     if (char === "\n" || char === "\t") return " ";
     if (drawable(char)) return char;

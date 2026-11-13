@@ -34,6 +34,8 @@ async function formOrWait() {
 
 /** Questions a rule can point at: those with fixed options to pick. */
 const ruleKinds: readonly QuestionKind[] = ["single", "multi"];
+/** Never an anonymous, HR or HR-only answer: health and private data never pick a card (handoff 12 Nov 2026). */
+const ruleVisible = (visibility: string) => !["anon", "hr", "hronly"].includes(visibility);
 
 export type DrawnCard = {
   employeeId: string; name: string; department: string; serial: number | null; trial: boolean;
@@ -91,7 +93,7 @@ export async function adminCards(): Promise<AdminCards | null> {
     willChange = real.filter(row => !topCharacters(catalog.characters, answers.get(row.employee_id) ?? {}).includes(row.card_id)).length;
   }
 
-  const questions = content.questions.filter(question => ruleKinds.includes(question.kind) && !question.hidden && question.visibility !== "anon")
+  const questions = content.questions.filter(question => ruleKinds.includes(question.kind) && !question.hidden && ruleVisible(question.visibility))
     .sort((a, b) => a.sort - b.sort).map(question => ({ key: question.key, prompt: question.prompt, options: question.options }));
   return { catalog, questions, drawn, willChange, following };
 }
@@ -117,7 +119,7 @@ async function checkRules(formId: string, input: CharacterInput) {
   const errors: Record<string, string[]> = {};
   input.rules.forEach((rule, index) => {
     const question = content.questions.find(item => item.key === rule.questionKey);
-    if (!question || !ruleKinds.includes(question.kind) || question.visibility === "anon") errors[`rules.${index}.questionKey`] = ["Pertanyaan ini tidak bisa dipakai untuk aturan."];
+    if (!question || !ruleKinds.includes(question.kind) || !ruleVisible(question.visibility)) errors[`rules.${index}.questionKey`] = ["Pertanyaan ini tidak bisa dipakai untuk aturan."];
     else if (!question.options.includes(rule.option)) errors[`rules.${index}.option`] = ["Jawaban ini tidak ada lagi di pertanyaan itu."];
   });
   if (Object.keys(errors).length) throw new ServiceError(422, "Ada aturan yang perlu diperbaiki.", errors);
