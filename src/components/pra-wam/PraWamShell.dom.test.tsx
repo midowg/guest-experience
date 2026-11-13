@@ -30,9 +30,10 @@ describe("Kelola acara's sidebar", () => {
     expect(groups.map(group => [group.label, group.items.map(item => item.label)])).toEqual([
       ["Ikhtisar", ["Ringkasan"]],
       ["Jadwal", ["Sesi", "Permintaan jadwal"]],
-      ["Orang", ["Peserta", "Kebutuhan peserta"]],
+      // Kebutuhan peserta and Survei moved to Admin WAM on 13 Nov 2026.
+      ["Orang", ["Peserta"]],
       // Dokumen (uploading) lives in Kelola acara only since 9 Nov 2026.
-      ["Komunikasi", ["Pengumuman", "Survei", "Dokumen"]],
+      ["Komunikasi", ["Pengumuman", "Dokumen"]],
     ]);
     expect(groups[1].items[1]).toMatchObject({ href: "/wam/manage/requests", badge: "3" });
     expect(manageGroups({ roles: ["panitia"] }, 0)[1].items[1].badge).toBeUndefined();
@@ -40,7 +41,7 @@ describe("Kelola acara's sidebar", () => {
 
   it("shows a BOD only what a BOD may open", () => {
     expect(manageGroups({ roles: ["bod"] }).map(group => [group.label, group.items.map(item => item.label)])).toEqual([
-      ["Ikhtisar", ["Ringkasan"]], ["Jadwal", ["Sesi"]], ["Orang", ["Peserta"]], ["Komunikasi", ["Survei"]],
+      ["Ikhtisar", ["Ringkasan"]], ["Jadwal", ["Sesi"]], ["Orang", ["Peserta"]],
     ]);
     expect(manageGroups({ roles: [] })).toEqual([]);
   });

@@ -2,9 +2,9 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarCheck, CalendarDays, ChartGantt, ChevronLeft, ClipboardList, FileText, Home, Plus, Send, User, Users, Utensils, X } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, BarChart3, Bell, CalendarCheck, CalendarDays, ChartGantt, ChevronLeft, FileText, Home, Plus, Send, User, Users, X } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, type ConsoleNavGroup, type ConsoleSearchItem } from "@/components/console";
-import { bodOnly, managesSessions, readsNeeds, roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
+import { bodOnly, managesSessions, roleSummary, seesAllSessions, type PraWamRole } from "@/lib/pra-wam/roles";
 import { managedTabs, wamScreen, type Tab } from "@/lib/pra-wam/screen";
 import { praWamApi, praWamPath } from "@/lib/routes";
 import { Avatar } from "./Avatar";
@@ -34,7 +34,6 @@ const bod: Item[] = [
   { id: "dashboard", label: "Ringkasan", href: praWamPath.dashboard, icon: <BarChart3 aria-hidden /> },
   { id: "agenda", label: "Agenda", href: praWamPath.agenda, icon: <CalendarDays aria-hidden /> },
   { id: "peserta", label: "Peserta", href: praWamPath.people, icon: <Users aria-hidden /> },
-  { id: "survei", label: "Survei", href: praWamPath.surveyResults, icon: <ClipboardList aria-hidden /> },
   { id: "akun", label: "Profil", href: praWamPath.account, icon: <User aria-hidden /> },
 ];
 /** Panitia ("Kelola acara" in Penpot): the phone's bottom bar. */
@@ -43,7 +42,6 @@ const manage: Item[] = [
   { id: "sesi", label: "Jadwal sesi", href: praWamPath.sessions, icon: <CalendarDays aria-hidden />, show: seesAllSessions },
   { id: "permintaan", label: "Permintaan jadwal", short: "Permintaan", href: praWamPath.requests, icon: <ArrowLeftRight aria-hidden />, show: managesSessions },
   { id: "pengumuman", label: "Pengumuman", href: praWamPath.announcements, icon: <Send aria-hidden />, show: managesSessions },
-  { id: "kebutuhan", label: "Kebutuhan peserta", short: "Kebutuhan", href: praWamPath.needs, icon: <Utensils aria-hidden />, show: readsNeeds },
 ];
 
 /**
@@ -59,11 +57,9 @@ const groups: { label: string; items: Item[] }[] = [
   ] },
   { label: "Orang", items: [
     { id: "peserta", label: "Peserta", href: praWamPath.people, icon: <Users size={20} />, show: seesAllSessions },
-    { id: "kebutuhan", label: "Kebutuhan peserta", href: praWamPath.needs, icon: <Utensils size={20} />, show: readsNeeds },
   ] },
   { label: "Komunikasi", items: [
     { id: "pengumuman", label: "Pengumuman", href: praWamPath.announcements, icon: <Send size={20} />, show: managesSessions },
-    { id: "survei", label: "Survei", href: praWamPath.surveyResults, icon: <ClipboardList size={20} />, show: seesAllSessions },
     // Uploading documents and materials lives here only (9 Nov 2026), not in the participant app.
     { id: "materi", label: "Dokumen", href: praWamPath.manageDocuments, icon: <FileText size={20} />, show: managesSessions },
   ] },

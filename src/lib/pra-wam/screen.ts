@@ -50,9 +50,7 @@ export function wamScreen(pathname: string, search: Search, viewer: Viewer, came
     case praWamPath.newSession: return { current: "sesi", back: { href: praWamPath.sessions, title: "Buat sesi" } };
     case praWamPath.requests: return { current: "permintaan" };
     case praWamPath.announcements: return { current: "pengumuman" };
-    case praWamPath.needs: return { current: "kebutuhan" };
     case praWamPath.people: return { current: "peserta" };
-    case praWamPath.surveyResults: return { current: "survei" };
     case praWamPath.manageDocuments: return { current: "materi" };
   }
   const session = tail(path, praWamPath.sessions);

@@ -91,7 +91,7 @@ export function BodSummary({ data, insights, greeting, date, survey = null }: Pr
       <Tile value={data.published} label="Sesi terbit" note={data.drafts ? `${data.drafts} draf menunggu jam` : "Tidak ada draf"} href={praWamPath.sessions} dot="var(--bod-c1)" />
       <Tile value={insights.rooms ? hoursLabel(weekHours) : "—"} label="Ruang terpakai minggu ini" note={insights.rooms ? `${weekUses} booking dan sesi` : "Jadwal ruang belum tersedia"} href={praWamPath.appraisal()} dot="var(--bod-c2)" />
       <Tile value={insights.documents?.total ?? "—"} label="Dokumen" note={insights.documents ? `${insights.documents.general} umum · ${insights.documents.perSession} materi sesi` : "Dokumen belum tersedia"} href={praWamPath.documents} dot="var(--bod-c3)" />
-      <Tile value={survey ? `${percent(survey.participation.done, survey.participation.active)}%` : "—"} label="Kuesioner terisi" note={survey ? `${survey.participation.done} dari ${survey.participation.active} karyawan` : "Belum dibuka"} href={praWamPath.surveyResults} dot="var(--bod-c4)" />
+      <Tile value={survey ? `${percent(survey.participation.done, survey.participation.active)}%` : "—"} label="Kuesioner terisi" note={survey ? `${survey.participation.done} dari ${survey.participation.active} karyawan` : "Belum dibuka"} dot="var(--bod-c4)" />
     </ul>
 
     <div className={styles.grid}>
@@ -138,7 +138,7 @@ export function BodSummary({ data, insights, greeting, date, survey = null }: Pr
       </section>
 
       <section className={`${base.card} ${styles.span3}`} aria-labelledby="survei">
-        <div className={styles.cardHead}><h2 id="survei">Kuesioner</h2><a href={praWamPath.surveyResults}>Hasil</a></div>
+        <div className={styles.cardHead}><h2 id="survei">Kuesioner</h2></div>
         {survey
           ? <><p className={styles.surveyName}>{survey.name}</p><Meter value={survey.participation.done} of={survey.participation.active} label={`${survey.participation.done} dari ${survey.participation.active} selesai`} /></>
           : <p className={styles.empty}>Belum ada kuesioner. Partisipasinya muncul di sini setelah dibuka.</p>}
@@ -166,7 +166,6 @@ export function BodSummary({ data, insights, greeting, date, survey = null }: Pr
     <nav className={styles.quick} aria-label="Akses cepat">
       <a className={styles.quickItem} href={praWamPath.people}><span className={styles.quickIcon}><Users aria-hidden /></span><span>Semua peserta<small>per departemen dan BU</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
       <a className={styles.quickItem} href={praWamPath.panitiaView}><span className={styles.quickIcon}><BarChart3 aria-hidden /></span><span>Dashboard panitia<small>baca saja</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
-      <a className={styles.quickItem} href={praWamPath.surveyResults}><span className={styles.quickIcon}><ListChecks aria-hidden /></span><span>Hasil survei<small>rekap kuesioner</small></span><ChevronRight className={styles.chevron} aria-hidden /></a>
     </nav>
   </div>;
 }

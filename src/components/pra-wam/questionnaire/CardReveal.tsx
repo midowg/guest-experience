@@ -38,14 +38,12 @@ const STEPS = ["Membaca jawabanmu", "Mencocokkan tokoh", "Mengundi rarity"];
  */
 function useTilt(open: boolean) {
   const flip = useRef<HTMLDivElement>(null);
-  const isOpen = useRef(open);
   // The phone's motion listener and its idle timer, removed when the card goes.
   const motion = useRef<{ move: (event: DeviceOrientationEvent) => void; idle: number } | null>(null);
-  useEffect(() => { isOpen.current = open; }, [open]);
   const set = useCallback((x: number, y: number) => {
     const element = flip.current;
     // Only an open card tilts: after "Ulangi animasi" the closed card stays still and flips with its own easing.
-    if (!element || !isOpen.current || reducedMotion()) return;
+    if (!element || !element.classList.contains(styles.open) || reducedMotion()) return;
     const tx = Math.max(-1, Math.min(1, x)), ty = Math.max(-1, Math.min(1, y));
     element.style.setProperty("--ry", `${(tx * 16).toFixed(2)}deg`); element.style.setProperty("--rx", `${(ty * 12).toFixed(2)}deg`);
     element.style.setProperty("--sx", `${(50 + tx * 45).toFixed(1)}%`); element.style.setProperty("--sy", `${(50 + ty * 45).toFixed(1)}%`);
