@@ -21,16 +21,18 @@ export function accountStatus(row: AccountRow, resetRequested: ReadonlySet<strin
 export const roleTones = { peserta: "neutral", panitia: "blue", admin: "purple", hod: "teal", bod: "brass", ga: "ok" } as const satisfies Record<PraWamRole | "peserta" | "hod", ConsoleTone>;
 
 /** The roles on top of peserta (BOD, Panitia, Admin WAM, then HOD and Lead); "Peserta" alone when there are none. */
-export function roleItems(row: Pick<AccountRow, "roles" | "leads" | "lead" | "hasAccount">): RoleItem[] {
+export function roleItems(row: Pick<AccountRow, "roles" | "leads" | "lead" | "hasAccount"> & Partial<Pick<AccountRow, "category">>): RoleItem[] {
   const order: PraWamRole[] = ["bod", "panitia", "admin", "ga"];
-  const items: RoleItem[] = order.filter(role => row.roles.includes(role)).map(role => ({ label: roleLabels[role], tone: roleTones[role] }));
+  // Status kerja first (13 Nov 2026), so interns and daily workers are seen at a glance.
+  const status: RoleItem[] = row.category === "intern" ? [{ label: "Intern", tone: "brass" }] : row.category === "dw" ? [{ label: "DW", tone: "neutral" }] : [];
+  const items: RoleItem[] = [...status, ...order.filter(role => row.roles.includes(role)).map(role => ({ label: roleLabels[role], tone: roleTones[role] }))];
   if (row.leads.length) items.push({ label: "HOD", tone: roleTones.hod });
   if (row.lead) items.push({ label: "Lead", tone: roleTones.hod });
-  if (!items.length && row.hasAccount) items.push({ label: "Peserta", tone: roleTones.peserta });
+  if (items.length === status.length && row.hasAccount) items.push({ label: "Peserta", tone: roleTones.peserta });
   return items;
 }
 
-export type AccountFilter = "semua" | "panitia" | "hod" | "bod" | "admin" | "belum-login";
+export type AccountFilter = "semua" | "panitia" | "hod" | "bod" | "admin" | "belum-login" | "intern" | "dw";
 export const accountFilters: readonly { value: AccountFilter; label: string }[] = [
   { value: "semua", label: "Semua" },
   { value: "panitia", label: "Panitia" },
@@ -38,6 +40,8 @@ export const accountFilters: readonly { value: AccountFilter; label: string }[] 
   { value: "bod", label: "BOD" },
   { value: "admin", label: "Admin WAM" },
   { value: "belum-login", label: "Belum login" },
+  { value: "intern", label: "Intern" },
+  { value: "dw", label: "DW" },
 ];
 
 export function matchesFilter(row: AccountRow, filter: AccountFilter): boolean {
@@ -45,6 +49,7 @@ export function matchesFilter(row: AccountRow, filter: AccountFilter): boolean {
     case "semua": return true;
     case "hod": return row.leads.length > 0;
     case "belum-login": return row.active && row.hasAccount && !row.lastLoginAt;
+    case "intern": case "dw": return row.category === filter;
     default: return row.roles.includes(filter);
   }
 }

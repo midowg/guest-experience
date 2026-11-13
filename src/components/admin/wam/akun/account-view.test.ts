@@ -76,3 +76,15 @@ describe("counts", () => {
     expect(roleGuide.find(item => item.key === "bod")!.combines).toBeNull();
   });
 });
+
+describe("interns and daily workers in Akun dan peran", () => {
+  it("shows their status first and filters by it", () => {
+    const base = { roles: [] as never[], leads: [], lead: false, hasAccount: true };
+    const labels = (items: ReturnType<typeof roleItems>) => items.map(item => typeof item === "string" ? item : item.label);
+    expect(labels(roleItems({ ...base, category: "intern" }))).toEqual(["Intern", "Peserta"]);
+    expect(labels(roleItems({ ...base, roles: ["panitia"] as never[], category: "dw" }))).toEqual(["DW", "Panitia"]);
+    expect(labels(roleItems({ ...base, category: "karyawan" }))).toEqual(["Peserta"]);
+    const row = { employeeId: "a", name: "A", department: "", email: "", active: true, hasAccount: true, lastLoginAt: null, mustChangePassword: true, roles: [], leads: [], lead: false, businessUnit: "", category: "intern" as const };
+    expect([matchesFilter(row, "intern"), matchesFilter(row, "dw"), matchesFilter({ ...row, category: "dw" }, "dw")]).toEqual([true, false, true]);
+  });
+});

@@ -1,4 +1,5 @@
 import "server-only";
+import { asCategory, type EmployeeCategory } from "@/lib/employees";
 import { checkRoleChange, normalizeRoles, praWamRoles, type PraWamRole } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -23,6 +24,8 @@ export type AccountRow = {
   lead: boolean;
   /** Their business unit by code (WNS until set); "" before migration 202611060002. */
   businessUnit: string;
+  /** Status kerja from Data karyawan (13 Nov 2026): karyawan, dw or intern. */
+  category?: EmployeeCategory;
 };
 
 /** Whether the shared first password is set on the server, so accounts can be made and reset. */
@@ -38,9 +41,9 @@ function defaultPassword(): string {
 async function readPeople() {
   const client = createPrivilegedClient();
   const read = (fields: string) => client.from("employees").select(fields).order("full_name").limit(2000);
-  let result = await read("id,full_name,department,email,active,business_unit");
-  if (result.error && ["42703", "PGRST204"].includes(result.error.code ?? "")) result = await read("id,full_name,department,email,active");
-  return { data: result.data as unknown as { id: string; full_name: string; department: string; email: string; active: boolean; business_unit?: string }[] | null, error: result.error };
+  let result = await read("id,full_name,department,email,active,business_unit,category");
+  if (result.error && ["42703", "PGRST204"].includes(result.error.code ?? "")) result = await read("id,full_name,department,email,active,category");
+  return { data: result.data as unknown as { id: string; full_name: string; department: string; email: string; active: boolean; business_unit?: string; category?: string }[] | null, error: result.error };
 }
 
 export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: boolean }> {
@@ -66,6 +69,7 @@ export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: bo
       leads: leads.get(person.id)?.departments ?? [],
       lead: leads.get(person.id)?.lead ?? false,
       businessUnit: person.business_unit ?? "",
+      category: asCategory(person.category),
     })),
   };
 }

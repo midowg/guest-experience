@@ -130,7 +130,7 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
                     <td><span className={css.nameCell}><Avatar name={row.name} photo={photos[row.employeeId]} size={36} />
                       <span className={css.nameText}><strong>{label(row)}</strong>{jobs[row.employeeId] && <small>{jobs[row.employeeId]}</small>}</span></span></td>
                     <td className={cs.tableMuted}>{row.department || "—"}</td>
-                    <td><RolePills roles={roleItems(row)} max={1} /></td>
+                    <td><RolePills roles={roleItems(row)} max={row.category === "intern" || row.category === "dw" ? 2 : 1} /></td>
                     <td className={css.emailCell}>{row.email || "—"}</td>
                     <td><Pill tone={state.tone}>{state.label}</Pill></td>
                     <td className={cs.tableMuted}>{lastLoginLabel(row)}</td>
