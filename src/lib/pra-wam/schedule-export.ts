@@ -1,6 +1,6 @@
 import { departmentShort } from "../employees";
 import { clockLabel, dayLabel, wibDate, wibTime } from "./appraisal";
-import type { Session } from "./sessions";
+import { sessionKindLabels, type Session } from "./sessions";
 
 /*
  * Linimasa's export (10 Nov 2026): the published sessions of the week or day on screen, as PDF,
@@ -117,3 +117,46 @@ export function exportRows(days: readonly ExportDay[]): string[][] {
     ]))),
   ];
 }
+
+/*
+ * Data lengkap (13 Nov 2026, for panitia and admin): every published meeting between two dates (or
+ * all of them), one row each, with who was in it by full name, which departments met ("SM x CoE"),
+ * and the room and hours; a second sheet has one row per person, to filter or count in Excel.
+ */
+export type FullPerson = { fullName: string; department: string };
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+/** The meetings in the range (either end may be open), earliest first. */
+export function fullSessions(sessions: readonly Session[], from: string | null, to: string | null): Session[] {
+  return sessions
+    .filter(session => session.status === "terbit" && session.startsAt && session.endsAt)
+    .filter(session => { const day = wibDate(session.startsAt!); return (!from || day >= from) && (!to || day <= to); })
+    .sort((a, b) => a.startsAt!.localeCompare(b.startsAt!));
+}
+/** A date given in the query, or null. */
+export const queryDate = (value: string | null) => (value && DATE_ONLY.test(value) ? value : null);
+/** "SM x CoE x HRGA": the departments of those in it, the most people first, each once. */
+export function departmentsMet(people: readonly FullPerson[]): string {
+  const count = new Map<string, number>();
+  for (const person of people) { const name = person.department.trim(); if (name) count.set(name, (count.get(name) ?? 0) + 1); }
+  return [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "id")).map(([name]) => departmentShort(name) || name).join(" x ");
+}
+/** The two sheets: Jadwal (one row per meeting) and Peserta (one row per person in a meeting). */
+export function fullSheets(sessions: readonly Session[], peopleOf: (sessionId: string) => readonly FullPerson[]): { meetings: string[][]; people: string[][] } {
+  const meetings: string[][] = [["Tanggal", "Mulai", "Selesai", "Ruang / tempat", "Kegiatan", "Jenis", "Pemesan", "Dept x Dept", "Jumlah peserta", "Peserta"]];
+  const people: string[][] = [["Tanggal", "Mulai", "Selesai", "Ruang / tempat", "Kegiatan", "Nama lengkap", "Departemen"]];
+  for (const session of sessions) {
+    const day = wibDate(session.startsAt!);
+    const date = `${dayLabel(day)} ${day.slice(0, 4)}`;
+    const start = clockLabel(wibTime(session.startsAt!)), end = clockLabel(wibTime(session.endsAt!));
+    const place = exportPlace(session);
+    const inIt = [...peopleOf(session.id)].sort((a, b) => a.fullName.localeCompare(b.fullName, "id"));
+    meetings.push([
+      date, start, end, place, session.title, sessionKindLabels[session.kind] ?? session.kind,
+      session.booking ? bookerLabel(session.booking.bookedBy) : "", departmentsMet(inIt), String(inIt.length || session.participantCount || ""),
+      inIt.map(person => person.fullName).join(", "),
+    ]);
+    for (const person of inIt) people.push([date, start, end, place, session.title, person.fullName, person.department || "-"]);
+  }
+  return { meetings, people };
+}
+

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Copy, Download, FileSpreadsheet, FileText, MessageCircle, X } from "lucide-react";
+import { Copy, Download, FileSpreadsheet, FileText, MessageCircle, Table2, X } from "lucide-react";
 import { ConsoleButton, ConsoleButtonLink } from "@/components/console";
 import { Notice } from "@/components/ui";
 import { praWamApi } from "@/lib/routes";
@@ -19,6 +19,10 @@ export function ScheduleExport({ range, date, label }: { range: "minggu" | "hari
   const [text, setText] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [copied, setCopied] = useState(false);
+  // Data lengkap (13 Nov 2026): every meeting between two dates; either left empty is open.
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const backwards = !!from && !!to && from > to;
 
   useEffect(() => {
     const element = dialog.current;
@@ -62,6 +66,17 @@ export function ScheduleExport({ range, date, label }: { range: "minggu" | "hari
           <ConsoleButtonLink href={praWamApi.sessionsExport("pdf", range, date)} download icon={<FileText size={18} aria-hidden />}>PDF</ConsoleButtonLink>
           <ConsoleButtonLink href={praWamApi.sessionsExport("xlsx", range, date)} download icon={<FileSpreadsheet size={18} aria-hidden />}>Excel</ConsoleButtonLink>
         </div>
+        <fieldset className={styles.exportFull}>
+          <legend>Data lengkap semua meeting</legend>
+          <p className={styles.hint}>Excel berisi semua meeting terbit: tanggal, jam, ruang, nama lengkap peserta, dan Dept x Dept. Kosongkan tanggal untuk semua jadwal.</p>
+          <div className={styles.exportRange}>
+            <label className={styles.field}><span>Dari</span><input className={styles.fieldInput} type="date" value={from} max={to || undefined} onChange={event => setFrom(event.target.value)} /></label>
+            <label className={styles.field}><span>Sampai</span><input className={styles.fieldInput} type="date" value={to} min={from || undefined} onChange={event => setTo(event.target.value)} /></label>
+          </div>
+          {backwards && <p className={styles.hint} role="alert">Tanggal &ldquo;Dari&rdquo; harus sebelum &ldquo;Sampai&rdquo;.</p>}
+          <ConsoleButtonLink href={praWamApi.sessionsFullExport(from, to)} download aria-disabled={backwards || undefined}
+            onClick={event => { if (backwards) event.preventDefault(); }} icon={<Table2 size={18} aria-hidden />}>Unduh data lengkap (Excel)</ConsoleButtonLink>
+        </fieldset>
         <div className={styles.field}>
           <label htmlFor="export-text">Teks untuk WhatsApp</label>
           {state === "error" ? <Notice tone="error">Teks belum bisa dibuat. Tutup lalu coba lagi.</Notice>

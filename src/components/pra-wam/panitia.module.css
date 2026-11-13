@@ -209,3 +209,12 @@ p.cellSub { margin: 0; }
 .nameChip { padding: 2px 8px; border-radius: 999px; background: var(--cs-fill); color: var(--cs-text); font-size: 12px; font-weight: 600; }
 .answerText { white-space: pre-line; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { .compose { animation: none; } }
+
+/* Export jadwal → Data lengkap (13 Nov 2026): two dates and one button. */
+.exportFull { display: grid; gap: 10px; margin: 0; padding: 12px 14px; border: 1px solid var(--cs-line); border-radius: 14px; min-width: 0; }
+.exportFull > legend, .exportRange .field > span { color: var(--cs-text); }
+.exportRange .field > span { font-size: 13px; font-weight: 700; }
+.exportFull > legend { padding: 0 4px; font-weight: 700; }
+.exportRange { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 379px) { .exportRange { grid-template-columns: minmax(0, 1fr); } }
+

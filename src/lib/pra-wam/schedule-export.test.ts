@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookerLabel, titleWithDepartment, exportDates, exportDays, exportRows, exportText, rangeLabel, stampLabel } from "./schedule-export";
+import { bookerLabel, departmentsMet, exportDates, exportDays, exportRows, exportText, fullSessions, fullSheets, queryDate, rangeLabel, stampLabel, titleWithDepartment } from "./schedule-export";
 import type { Session } from "./sessions";
 
 const at = (date: string, time: string) => new Date(`${date}T${time}:00+07:00`).toISOString();
@@ -64,5 +64,37 @@ describe("schedule export", () => {
   it("says when nothing is published", () => {
     expect(exportText([], new Date("2026-11-10T04:50:00Z"), ["2026-11-10"])).toMatch(/^Belum ada meeting terbit .*\n\nupdate per 10\/11\/2026 11\.50 WIB$/);
     expect(stampLabel(new Date("2026-11-10T17:05:00Z"))).toBe("11/11/2026 00.05 WIB");
+  });
+});
+
+describe("data lengkap", () => {
+  const meetings = [
+    session({ day: "2026-11-12", from: "13:00", to: "14:00", title: "Koordinasi event", id: "b" }),
+    session({ day: "2026-11-10", from: "09:00", to: "10:30", title: "Appraisal", id: "a" }),
+    session({ day: "2026-11-20", from: "09:00", to: "10:00", title: "Nanti", id: "c" }),
+    session({ day: "2026-11-11", from: "09:00", to: "10:00", title: "Draf", id: "d", status: "draf" }),
+  ];
+  const people: Record<string, { fullName: string; department: string }[]> = {
+    a: [{ fullName: "Raja Pratama", department: "Sales & Marketing" }, { fullName: "Dewi Lestari", department: "Center of Excellence" }, { fullName: "Bima Putra", department: "Sales & Marketing" }],
+    b: [{ fullName: "Sari", department: "" }],
+  };
+
+  it("keeps the published meetings in the range, earliest first; an empty end is open", () => {
+    expect(fullSessions(meetings, "2026-11-10", "2026-11-12").map(each => each.id)).toEqual(["a", "b"]);
+    expect(fullSessions(meetings, null, null).map(each => each.id)).toEqual(["a", "b", "c"]);
+    expect(fullSessions(meetings, "2026-11-11", null).map(each => each.id)).toEqual(["b", "c"]);
+    expect([queryDate("2026-11-10"), queryDate("10/11/2026"), queryDate(null)]).toEqual(["2026-11-10", null, null]);
+  });
+
+  it("names the departments that met, the most people first, and everyone by full name", () => {
+    expect(departmentsMet(people.a)).toBe("SM x CoE");
+    const sheets = fullSheets(fullSessions(meetings, "2026-11-10", "2026-11-12"), id => people[id] ?? []);
+    expect(sheets.meetings[0]).toEqual(["Tanggal", "Mulai", "Selesai", "Ruang / tempat", "Kegiatan", "Jenis", "Pemesan", "Dept x Dept", "Jumlah peserta", "Peserta"]);
+    expect(sheets.meetings[1]).toEqual(["Selasa, 10 Nov 2026", "09.00", "10.30", "CFC Ananta Room", "Appraisal", "Rapat", "", "SM x CoE", "3", "Bima Putra, Dewi Lestari, Raja Pratama"]);
+    expect(sheets.meetings[2].slice(7)).toEqual(["", "1", "Sari"]);
+    expect(sheets.people.slice(1).map(row => [row[4], row[5], row[6]])).toEqual([
+      ["Appraisal", "Bima Putra", "Sales & Marketing"], ["Appraisal", "Dewi Lestari", "Center of Excellence"], ["Appraisal", "Raja Pratama", "Sales & Marketing"],
+      ["Koordinasi event", "Sari", "-"],
+    ]);
   });
 });

@@ -229,6 +229,8 @@ export const praWamApi = {
   sessionStatus: (id: string) => `${WAM_API}/sessions/${id}/status`,
   /** GET (panitia): Linimasa's week or day as PDF, Excel, or the WhatsApp text. */
   sessionsExport: (format: "pdf" | "xlsx" | "text", rentang: string, tanggal: string) => `${WAM_API}/sessions/export?${new URLSearchParams({ format, rentang, tanggal })}`,
+  /** Data lengkap: every published meeting between two dates (either may be empty), with everyone in it (13 Nov 2026). */
+  sessionsFullExport: (dari: string, sampai: string) => `${WAM_API}/sessions/export?${new URLSearchParams({ format: "lengkap", ...(dari ? { dari } : {}), ...(sampai ? { sampai } : {}) })}`,
   /** GET: everything Detail sesi shows, for the sheet over Agenda and Beranda. */
   sessionDetail: (id: string) => `${WAM_API}/sessions/${id}/detail`,
   /** GET: the session's QR as an A5 PDF to print; POST: a new QR (the printed one stops working). */
