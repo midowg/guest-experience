@@ -1,5 +1,5 @@
 import "server-only";
-import { compareImport, type Employee, type EmployeeRow } from "@/lib/employees";
+import { asCategory, compareImport, type Employee, type EmployeeRow } from "@/lib/employees";
 import { asGender } from "@/lib/pra-wam/call-name";
 import { buFromOffice } from "@/lib/pra-wam/leads";
 import { createPrivilegedClient } from "./supabase/admin";
@@ -16,7 +16,7 @@ const MIGRATION = "202611030001_employees.sql";
 const columns = "id,full_name,nickname,department,position,office,category,phone,email,active";
 const withNip = `${columns},nip`;
 const noNipColumn = (error: { code?: string; message?: string }) => ["42703", "PGRST204"].includes(error.code ?? "") && /nip/.test(error.message ?? "");
-const tidyRow = (row: Record<string, unknown>) => ({ ...row, nip: (row.nip as string | null | undefined) ?? "", business_unit: (row.business_unit as string | null | undefined) ?? "", reports_to: (row.reports_to as string | null | undefined) ?? null, gender: asGender(row.gender) }) as Employee;
+const tidyRow = (row: Record<string, unknown>) => ({ ...row, category: asCategory(row.category), nip: (row.nip as string | null | undefined) ?? "", business_unit: (row.business_unit as string | null | undefined) ?? "", reports_to: (row.reports_to as string | null | undefined) ?? null, gender: asGender(row.gender) }) as Employee;
 const noGenderColumn = (error: { code?: string; message?: string }) => ["42703", "PGRST204"].includes(error.code ?? "") && /gender/.test(error.message ?? "");
 const noReportsColumn = (error: { code?: string; message?: string }) => ["42703", "PGRST204"].includes(error.code ?? "") && /reports_to/.test(error.message ?? "");
 const noBuColumn = (error: { code?: string; message?: string }) => ["42703", "PGRST204"].includes(error.code ?? "") && /business_unit/.test(error.message ?? "");

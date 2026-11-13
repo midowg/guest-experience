@@ -13,7 +13,7 @@ export default function DevEmployeesPage() {
   });
   const people = [
     person(1, "Contoh Raka Pratama", "Sales & Marketing", "Business Solutions Manager", { phone: "0812 0000 0001", email: "raka@contoh.id" }),
-    person(2, "Contoh Sari Dewi", "Human Resources & General Affair", "General Affair", { category: "ga" }),
+    person(2, "Contoh Sari Dewi", "Human Resources & General Affair", "General Affair", { category: "dw" }),
     person(3, "Contoh Bima Putra", "Takshaka Event & Experience", "Experience & Service Innovation Lead", { office: "TEE" }),
     person(4, "Contoh Lala Ayu", "Accounting", "Tax Staff", { active: false }),
     person(5, "Contoh Yulia Mekar", "Business & Administrative Services", "Head of BAS", { business_unit: "MRP", phone: "0812 0000 0005", email: "yulia@contoh.id" }),

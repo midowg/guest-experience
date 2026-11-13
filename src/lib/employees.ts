@@ -9,9 +9,13 @@ import { z } from "zod";
  * left out.
  */
 
-export const employeeCategories = ["karyawan", "ga", "intern"] as const;
+/** Status kerja (13 Nov 2026, migration 202611130006: GA became DW, Daily Worker). */
+export const employeeCategories = ["karyawan", "dw", "intern"] as const;
 export type EmployeeCategory = (typeof employeeCategories)[number];
-export const categoryLabels: Record<EmployeeCategory, string> = { karyawan: "Karyawan", ga: "GA", intern: "Intern" };
+export const categoryLabels: Record<EmployeeCategory, string> = { karyawan: "Karyawan", dw: "DW (Daily Worker)", intern: "Intern" };
+/** A stored status read safely: "ga" (before migration 202611130006) is DW now; anything unknown is Karyawan. */
+export const asCategory = (value: unknown): EmployeeCategory => value === "ga" ? "dw"
+  : employeeCategories.includes(value as EmployeeCategory) ? value as EmployeeCategory : "karyawan";
 
 export type Employee = {
   id: string; full_name: string; nickname: string; department: string; position: string; office: string;
@@ -217,11 +221,11 @@ export function tidy(value: string): string {
   }).join(" ");
 }
 
-/** Pantry's category from the job title; anyone else is a karyawan, and the admin can change it. */
+/** The work status from the job title: Intern, DW (Daily Worker), else Karyawan; the admin can change it. */
 export function guessCategory(position: string): EmployeeCategory {
   const title = position.toUpperCase();
   if (/\b(INTERN|MAGANG)\b/.test(title)) return "intern";
-  if (/^GENERAL AFFAIRS?$/.test(title.trim())) return "ga";
+  if (/\b(DAILY WORKERS?|DW|PEKERJA HARIAN|HARIAN LEPAS)\b/.test(title)) return "dw";
   return "karyawan";
 }
 

@@ -106,7 +106,7 @@ it("changes a person in one panel, their post included, and switches someone off
   const panel = within(screen.getByRole("dialog", { name: "Ubah karyawan" }));
   // No separate HOD and Lead part any more: they are a job's Posisi.
   expect(panel.queryByRole("checkbox", { name: /HOD Sales & Marketing/ })).toBeNull();
-  fireEvent.click(panel.getByRole("radio", { name: "GA" }));
+  fireEvent.click(panel.getByRole("radio", { name: "DW (Daily Worker)" }));
   const utama = card(panel, "Pekerjaan utama");
   fireEvent.change(utama.getByLabelText("Business Unit"), { target: { value: "TEE" } });
   // One Business Unit field (Office is the same code and follows it).
@@ -118,9 +118,9 @@ it("changes a person in one panel, their post included, and switches someone off
   expect(await screen.findByText("Contoh Satu disimpan.")).toBeTruthy();
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(fetch.mock.calls[0][0]).toBe(`/api/admin/employees/${person.id}`);
-  expect(JSON.parse(fetch.mock.calls[0][1].body as string)).toEqual({ category: "ga", jobs: [{ business_unit: "TEE", department: "Sales & Marketing", post: "hod", job_title: "Business Solutions Manager", reports_to: null }] });
+  expect(JSON.parse(fetch.mock.calls[0][1].body as string)).toEqual({ category: "dw", jobs: [{ business_unit: "TEE", department: "Sales & Marketing", post: "hod", job_title: "Business Solutions Manager", reports_to: null }] });
   const row = within(screen.getByText("Contoh Satu").closest("tr")!);
-  expect(row.getByText("GA")).toBeTruthy();
+  expect(row.getByText("DW (Daily Worker)")).toBeTruthy();
   expect(row.getByText("TEE")).toBeTruthy();
   expect(row.getByText(jobLine("SM · Business Solutions Manager · HOD"))).toBeTruthy();
   // Aktif is in the panel's Status part, not in the row.

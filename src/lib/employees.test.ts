@@ -1,6 +1,6 @@
 import { deflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { compareImport, employeesFromSheets, guessCategory, nameKey, tidy, type Employee } from "./employees";
+import { asCategory, compareImport, employeesFromSheets, guessCategory, nameKey, tidy, type Employee } from "./employees";
 import { readXlsx } from "./server/xlsx";
 
 /** A minimal .xlsx: a zip of the parts readXlsx reads, the sheet deflated and the rest stored. */
@@ -58,7 +58,11 @@ describe("tidying HR's sheet", () => {
   });
 
   it("guesses the Pantry category from the title, karyawan unless it says otherwise", () => {
-    expect(guessCategory("GENERAL AFFAIR")).toBe("ga");
+    // GA became DW, Daily Worker (13 Nov 2026): it is read from the title, General Affair is a job.
+    expect(guessCategory("DAILY WORKER")).toBe("dw");
+    expect(guessCategory("Pekerja Harian")).toBe("dw");
+    expect(guessCategory("GENERAL AFFAIR")).toBe("karyawan");
+    expect([asCategory("ga"), asCategory("dw"), asCategory("intern"), asCategory("lain")]).toEqual(["dw", "dw", "intern", "karyawan"]);
     expect(guessCategory("Intern Desain")).toBe("intern");
     expect(guessCategory("HUMAN RESOURCES & GENERAL AFFAIR MANAGER")).toBe("karyawan");
     expect(nameKey("  contoh   nama ")).toBe("CONTOH NAMA");
@@ -83,7 +87,7 @@ describe("employeesFromSheets", () => {
     expect(parsed.sheet).toBe("Data");
     expect(parsed.rows).toEqual([
       { full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "karyawan" },
-      { full_name: "Contoh Dua", nickname: "Dua", department: "Human Resources & General Affair", position: "General Affair", office: "WNS", category: "ga" },
+      { full_name: "Contoh Dua", nickname: "Dua", department: "Human Resources & General Affair", position: "General Affair", office: "WNS", category: "karyawan" },
     ]);
     expect(parsed.skipped).toEqual(["Contoh Satu tercantum dua kali; baris kedua dilewati."]);
     expect(JSON.stringify(parsed.rows)).not.toMatch(/LAKI|PEREMPUAN/i);
@@ -95,7 +99,7 @@ describe("employeesFromSheets", () => {
 });
 
 describe("compareImport", () => {
-  const known: Employee = { id: "e1", full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "ga", phone: "0812", email: "", active: true, nip: "", business_unit: "Werkudara Nirwana Sakti" };
+  const known: Employee = { id: "e1", full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "dw", phone: "0812", email: "", active: true, nip: "", business_unit: "Werkudara Nirwana Sakti" };
   const row = { full_name: "Contoh Satu", nickname: "Satu", department: "Sales & Marketing", position: "Business Solutions Manager", office: "WNS", category: "karyawan" as const };
 
   it("matches people by name, names what changed, and ignores the category the admin set", () => {
