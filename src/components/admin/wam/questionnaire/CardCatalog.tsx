@@ -254,7 +254,7 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
       <Button type="button" variant="secondary" disabled={!!busy} onClick={() => folder.current?.click()}><Upload size={18} aria-hidden /> Unggah sekaligus</Button>
       <input ref={folder} type="file" multiple accept="image/webp,image/png,image/jpeg,.webp,.png,.jpg,.jpeg" hidden onChange={event => pickFolder(event.target.files)} />
     </div>
-    {catalog.figures.length > 0 && <p className={styles.muted}>Tokoh: ekspor PNG 1x dari Figma, beri nama sesuai kunci tokoh seperti <code>ki-hajar-dewantara.png</code> (sama dengan <code>gambar</code> di tokoh.json), lalu unggah sekaligus. Figur yang belum ada gambarnya tampil sebagai siluet &quot;Figur menyusul&quot;.</p>}
+    {catalog.figures.length > 0 && <p className={styles.muted}>Tokoh: ekspor PNG 1x dari Figma, beri nama sesuai kunci tokoh seperti <code>ki-hajar-dewantara.png</code> (sama dengan <code>gambar</code> di tokoh.json), lalu unggah sekaligus. Sebelum diunggah, kartu memakai gambar pratinjau dari handoff yang ikut di aplikasi; gambar yang diunggah di sini menggantikannya.</p>}
     <p className={styles.muted}>Unggah sekaligus: pilih semua berkas dengan nama <code>karakter-01.webp</code>, <code>latar-01.png</code>, <code>aksen-01.png</code>, <code>stiker-01.png</code> (nomor sesuai daftar di bawah). WebP, PNG, atau JPG, paling besar 3 MB per gambar. Karakter sebaiknya potret 4:5 atau lebih tinggi.</p>
     <p className={styles.muted} aria-live="polite">{progress}</p>
     {(["karakter", ...(catalog.figures.length ? ["tokoh" as const] : []), ...partKinds] as ArtKind[]).map(kind => <div key={kind} className={styles.slotGroup}>

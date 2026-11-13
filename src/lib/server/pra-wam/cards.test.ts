@@ -163,6 +163,8 @@ describe("kartu tokoh dunia", () => {
     expect(first?.character.class).toBe("garda");
     expect(first?.reason).toBe("Kamu dapat Edmund Hillary karena kamu tipe garda, suka olahraga & outdoor dan paling menikmati kegiatan outdoor.");
     expect(first?.colors).toEqual(["#C2303F", "#6E1023"]);
+    // No picture uploaded yet: the one shipped with the app.
+    expect(first?.figure?.image).toBe("/figur/edmund-hillary.webp");
     const second = await ensureCard(form(), "p2", outdoorsy);
     const third = await ensureCard(form(), "p3", outdoorsy);
     expect([second?.figure?.key, third?.figure?.key]).toEqual(["edmund-hillary", "gordon-ramsay"]);

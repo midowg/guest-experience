@@ -88,11 +88,18 @@ export async function catalogOf(formId: string): Promise<Catalog | null> {
     figures: figures.error ? [] : ((figures.data ?? []) as FigureRow[]).map(row => ({
       id: row.id, number: row.number, key: row.key, name: row.name, personaId: row.persona_id, costume: row.costume, hobbies: row.hobbies ?? [], activities: row.activities ?? [],
       energy: row.energy, genre: row.genre, indonesian: row.indonesian, funny: row.funny, quote: row.quote, hidden: row.hidden,
-      image: artUrl("tokoh", row.id, row.image_key, row.image_updated_at), stored: !!row.image_key,
+      // A picture uploaded in Admin WAM wins; until then the handoff's picture that ships with the app.
+      image: row.image_key ? artUrl("tokoh", row.id, row.image_key, row.image_updated_at) : builtInFigure(row.key), stored: !!row.image_key,
     })),
     figuresReady: !figures.error,
   };
 }
+
+/**
+ * The handoff's picture of a figure, shipped with the app in public/figur (13 Nov 2026, the owner's
+ * choice: the previews of the handoff, 820 × 1024). A missing file draws the silhouette instead.
+ */
+const builtInFigure = (key: string) => `/figur/${encodeURIComponent(key)}.webp`;
 
 /** Whether cards show figures: the migration ran and the catalog has a figure to give. */
 const figureMode = (catalog: Catalog) => catalog.figuresReady && catalog.figures.some(figure => !figure.hidden);
