@@ -210,20 +210,33 @@ export async function removeCharacter(id: string): Promise<{ hidden: boolean }> 
 }
 
 /**
- * The characters' old anime pictures (13 Nov 2026): the tokoh card never shows them, so Admin WAM
- * can clear them. The personas stay. Returns how many pictures went.
+ * The old card's pictures (13 Nov 2026): the characters' anime pictures and the backgrounds,
+ * corner accents and stickers. The tokoh card never shows them, so Admin WAM can clear them. The
+ * personas (and the parts' rows, which old draws point at) stay. Returns how many pictures went.
  */
 export async function removeCharacterArt(): Promise<number> {
   const form = await formOrWait();
   const client = createPrivilegedClient();
-  const { data, error } = await client.from("cq_cards").select("id,image_key").eq("form_id", form.id).not("image_key", "is", null);
-  if (error) failed(error);
-  const rows = (data ?? []) as { id: string; image_key: string }[];
-  if (!rows.length) return 0;
-  const { error: clearError } = await client.from("cq_cards").update({ image_key: null, image_updated_at: new Date().toISOString() }).eq("form_id", form.id).in("id", rows.map(row => row.id));
-  if (clearError) failed(clearError);
-  if (isR2Configured()) await removeObjects(rows.map(row => row.image_key)).catch(() => undefined);
-  return rows.length;
+  const [cards, parts] = await Promise.all([
+    client.from("cq_cards").select("id,image_key").eq("form_id", form.id).not("image_key", "is", null),
+    client.from("cq_card_parts").select("kind,number,image_key").eq("form_id", form.id).not("image_key", "is", null),
+  ]);
+  if (cards.error) failed(cards.error);
+  if (parts.error) failed(parts.error);
+  const cardRows = (cards.data ?? []) as { id: string; image_key: string }[];
+  const partRows = (parts.data ?? []) as { kind: string; number: number; image_key: string }[];
+  const at = new Date().toISOString();
+  if (cardRows.length) {
+    const { error } = await client.from("cq_cards").update({ image_key: null, image_updated_at: at }).eq("form_id", form.id).in("id", cardRows.map(row => row.id));
+    if (error) failed(error);
+  }
+  if (partRows.length) {
+    const { error } = await client.from("cq_card_parts").update({ image_key: null, image_updated_at: at }).eq("form_id", form.id).not("image_key", "is", null);
+    if (error) failed(error);
+  }
+  const keys = [...cardRows, ...partRows].map(row => row.image_key);
+  if (keys.length && isR2Configured()) await removeObjects(keys).catch(() => undefined);
+  return keys.length;
 }
 
 /** Removes the trial cards Admin WAM drew while trying the draft. */

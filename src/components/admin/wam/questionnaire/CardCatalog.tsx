@@ -41,9 +41,9 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
   const real = data.drawn.filter(card => !card.trial);
   // The tokoh card (13 Nov 2026): the characters are the personas behind the figures.
   const tokoh = catalog.figures.length > 0;
-  const oldArt = catalog.characters.filter(character => character.stored).length;
+  const oldArt = catalog.characters.filter(character => character.stored).length + catalog.parts.filter(part => part.stored).length;
   async function removeOldArt() {
-    if (!(await confirm({ title: `Hapus ${oldArt} gambar karakter lama?`, body: "Gambar anime para persona dihapus permanen. Kartu tokoh tidak memakainya; personanya tetap.", confirmLabel: "Hapus gambar", danger: true }))) return;
+    if (!(await confirm({ title: `Hapus ${oldArt} gambar kartu lama?`, body: "Gambar karakter anime, latar, aksen sudut, dan stiker dihapus permanen. Kartu tokoh tidak memakainya.", confirmLabel: "Hapus gambar", danger: true }))) return;
     await run("gambar-lama", async () => {
       const result = await adminRequest<{ cards: AdminCards }>(praWamCardsApi.characterArt, { method: "DELETE" });
       return { message: result.message ?? "Dihapus.", cards: result.data?.cards };
@@ -102,20 +102,23 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
 
   return <div className="stack">
     <div>
-      <SectionToolbar title="Kartu karakter" count={`${real.length} kartu keluar`} />
+      <SectionToolbar title={tokoh ? "Kartu tokoh" : "Kartu karakter"} count={`${real.length} kartu keluar`} />
       <div>
-        <p className={styles.muted}>Karakter dipilih dari jawaban lewat aturan skor. Level dan tampilan diundi sekali di server, lalu dikunci. {real.length} kartu sudah keluar.</p>
+        <p className={styles.muted}>{tokoh
+          ? `Tokoh dicocokkan dari jawaban (peran di tim, hobi, aktivitas, energi, genre musik), paling banyak dua orang per tokoh, tiga bila semua sudah terisi dua. Rarity diundi sekali di server, lalu kartu dikunci. ${real.length} kartu sudah keluar.`
+          : `Karakter dipilih dari jawaban lewat aturan skor. Level dan tampilan diundi sekali di server, lalu dikunci. ${real.length} kartu sudah keluar.`}</p>
       </div>
     </div>
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
     {data.willChange > 0 && <Notice tone="warning">{data.willChange} orang akan berganti karakter saat jawabannya berikutnya tersimpan atau kartunya dibuka, karena aturan skor sekarang tidak lagi memilih karakter mereka. Level, tampilan, dan nomornya tetap.</Notice>}
 
     {tokoh && oldArt > 0 && <Notice tone="info">
-      {oldArt} gambar anime karakter lama masih tersimpan. Kartu tokoh tidak memakainya. <Button type="button" variant="secondary" disabled={!!busy} onClick={() => void removeOldArt()}><Trash2 size={18} aria-hidden /> Hapus gambar karakter lama</Button>
+      {oldArt} gambar kartu lama (karakter anime, latar, aksen sudut, stiker) masih tersimpan. Kartu tokoh tidak memakainya. <Button type="button" variant="secondary" disabled={!!busy} onClick={() => void removeOldArt()}><Trash2 size={18} aria-hidden /> Hapus gambar kartu lama</Button>
     </Notice>}
     <Pictures data={data} busy={busy} setBusy={setBusy} setMessage={setMessage} reload={reload} />
 
-    <section className={styles.card} aria-labelledby="cc-characters">
+    {/* The personas work behind the tokoh card (which group of figures, the colour, "Tipemu"); with figures they are not edited here (13 Nov 2026). */}
+    {!tokoh && <section className={styles.card} aria-labelledby="cc-characters">
       <div className={styles.head}>
         <h3 id="cc-characters">{tokoh ? `Persona (${catalog.characters.filter(character => !character.hidden).length})` : `Karakter (${catalog.characters.filter(character => !character.hidden).length} tampil)`}</h3>
         {!tokoh && <Button type="button" variant="secondary" disabled={!!busy || editing === "baru"} onClick={() => { setEditing("baru"); setErrors({}); }}><Plus size={18} aria-hidden /> Tambah karakter</Button>}
@@ -143,7 +146,7 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
           </li>;
         })}
       </ul>
-    </section>
+    </section>}
 
     <Tiers tiers={catalog.tiers} taken={real} busy={busy} run={run} errors={errors} />
 
@@ -219,7 +222,7 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
   const slots: { kind: ArtKind; ref: string; number: number; name: string; image: string | null; stored: boolean; key?: string }[] = [
     ...(catalog.figures.length ? [] : catalog.characters).map(character => ({ kind: "karakter" as const, ref: character.id, number: character.number, name: character.name, image: character.image, stored: character.stored })),
     ...catalog.figures.map(figure => ({ kind: "tokoh" as const, ref: figure.id, number: figure.number, name: figure.name, image: figure.image, stored: figure.stored, key: figure.key })),
-    ...partKinds.flatMap(kind => catalog.parts.filter(part => part.kind === kind).map(part => ({ kind, ref: String(part.number), number: part.number, name: part.name, image: part.image, stored: part.stored }))),
+    ...(catalog.figures.length ? [] : partKinds).flatMap(kind => catalog.parts.filter(part => part.kind === kind).map(part => ({ kind, ref: String(part.number), number: part.number, name: part.name, image: part.image, stored: part.stored }))),
   ];
   const missing = slots.filter(slot => !slot.stored).length;
 
@@ -270,7 +273,7 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
     {catalog.figures.length > 0 && <p className={styles.muted}>Tokoh: ekspor PNG 1x dari Figma, beri nama sesuai kunci tokoh seperti <code>ki-hajar-dewantara.png</code> (sama dengan <code>gambar</code> di tokoh.json), lalu unggah sekaligus. Sebelum diunggah, kartu memakai gambar pratinjau dari handoff yang ikut di aplikasi; gambar yang diunggah di sini menggantikannya.</p>}
     <p className={styles.muted}>Unggah sekaligus: pilih semua berkas dengan nama <code>karakter-01.webp</code>, <code>latar-01.png</code>, <code>aksen-01.png</code>, <code>stiker-01.png</code> (nomor sesuai daftar di bawah). WebP, PNG, atau JPG, paling besar 3 MB per gambar. Karakter sebaiknya potret 4:5 atau lebih tinggi.</p>
     <p className={styles.muted} aria-live="polite">{progress}</p>
-    {((catalog.figures.length ? ["tokoh"] : ["karakter"]).concat(partKinds) as ArtKind[]).map(kind => <div key={kind} className={styles.slotGroup}>
+    {((catalog.figures.length ? ["tokoh"] : ["karakter", ...partKinds]) as ArtKind[]).map(kind => <div key={kind} className={styles.slotGroup}>
       <h4>{artKindLabels[kind]}</h4>
       <ul className={styles.slots}>
         {slots.filter(slot => slot.kind === kind).map(slot => <li key={`${slot.kind}-${slot.ref}`} className={`${styles.slot} ${slot.stored ? "" : styles.empty}`}>
