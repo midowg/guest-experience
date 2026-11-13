@@ -44,7 +44,7 @@ export function ForgotPasswordForm() {
     </div>
     {done.sent && <ol className={styles.rules} style={{ listStyle: "decimal", paddingLeft: 20, fontSize: 15, color: "var(--pw-text)" }}>
       <li>Admin mengatur ulang password-mu ke password awal.</li>
-      <li>Masuk dengan email kantor dan password awal.</li>
+      <li>Masuk dengan email kantor atau nama panggilan, dan password awal.</li>
       <li>Buat password baru saat diminta.</li>
     </ol>}
     <p className={styles.hint}>Belum bisa masuk setelah beberapa waktu? Hubungi admin WAM langsung.</p>
@@ -55,8 +55,8 @@ export function ForgotPasswordForm() {
     <div className={styles.loginHead}><h1>Lupa password</h1><p>Admin akan mengatur ulang password-mu ke password awal. Setelah itu masuk dengan password awal lalu buat password baru.</p></div>
     {error && <Notice tone="error">{error.text}</Notice>}
     <div>
-      <label className={styles.label} htmlFor="email">Email kantor</label>
-      <input id="email" className="input" type="email" autoComplete="username" inputMode="email" placeholder="nama@werkudara.com" value={email} maxLength={200} required
+      <label className={styles.label} htmlFor="email">Email kantor atau nama panggilan</label>
+      <input id="email" className="input" type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="nama@werkudara.com atau dewi" value={email} maxLength={200} required
         aria-invalid={error?.email ? true : undefined} aria-describedby={error?.email ? "email-error" : undefined} onChange={change => setEmail(change.target.value)} />
       {error?.email && <p id="email-error" className="field-error">{error.email}</p>}
     </div>

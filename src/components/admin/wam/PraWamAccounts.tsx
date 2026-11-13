@@ -101,11 +101,11 @@ export function PraWamAccounts({ initial, migrated, passwordReady, superAdmin = 
     {confirmDialog}
     <AccountsHeader tab="akun" waiting={waiting} subtitle={summaryLine(summary)}
       actions={<ConsoleButton variant="primary" icon={<UserPlus size={18} aria-hidden />} disabled={!!busy || !passwordReady || summary.creatable === 0}
-        title={summary.creatable === 0 ? "Semua karyawan aktif yang punya email sudah punya akun." : undefined}
+        title={summary.creatable === 0 ? "Semua karyawan aktif sudah punya akun." : undefined}
         onClick={() => run("create", praWamAccountsApi(), null, "POST")}>{createLabel}</ConsoleButton>} />
 
     {!passwordReady && <Notice tone="warning">Password awal belum disiapkan. Isi WAM_DEFAULT_PASSWORD (minimal 8 karakter) pada server, lalu muat ulang halaman ini.</Notice>}
-    {summary.missingEmail > 0 && <Notice tone="info">{summary.missingEmail} orang belum punya email. Isi emailnya lewat detail orangnya (filter Semua, status Belum ada akun){superAdmin ? <>, atau di <a href={EMPLOYEES_ADMIN}>Data karyawan</a> (impor ulang Excel dengan kolom EMAIL)</> : ""}.</Notice>}
+    {summary.missingEmail > 0 && <Notice tone="info">{summary.missingEmail} orang belum punya email. Akunnya tetap bisa dibuat: mereka masuk dengan nama panggilan (lihat Nama login di detail orangnya), dan lupa password direset oleh admin. Email bisa diisi kapan saja{superAdmin ? <> di <a href={EMPLOYEES_ADMIN}>Data karyawan</a></> : ""}.</Notice>}
     {message && <Notice tone={message.tone}>{message.text}{message.skipped?.length ? <ul>{message.skipped.map(item => <li key={item}>{item}</li>)}</ul> : null}</Notice>}
 
     <section className={css.section} aria-labelledby="semua-akun">

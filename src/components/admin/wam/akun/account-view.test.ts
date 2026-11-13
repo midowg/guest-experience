@@ -66,7 +66,7 @@ describe("counts", () => {
 
   it("count active people only, for the header and Buat akun", () => {
     const summary = accountSummary(rows);
-    expect(summary).toEqual({ active: 4, withAccount: 2, signedIn: 1, neverSignedIn: 1, missing: 2, missingEmail: 1, creatable: 1 });
+    expect(summary).toEqual({ active: 4, withAccount: 2, signedIn: 1, neverSignedIn: 1, missing: 2, missingEmail: 1, creatable: 2 });
     expect(summaryLine(summary)).toBe("2 orang punya akun. 1 sudah masuk, 1 belum pernah.");
   });
 

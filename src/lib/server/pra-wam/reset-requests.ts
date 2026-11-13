@@ -25,8 +25,23 @@ export type ResetRequestList = { migrated: boolean; open: ResetRequestRow[]; his
 
 /** Records a request; the answer does not depend on whether the email has an account. */
 export async function submitResetRequest(input: ResetRequestInput): Promise<{ sent: boolean; message: string }> {
-  const email = normalizeEmail(input.email);
   const client = createPrivilegedClient();
+  // A nama panggilan (13 Nov 2026): the account that signs in with it; kept as "nama panggilan: …" for the admin.
+  if (!input.email.includes("@")) {
+    const name = input.email.trim().toLowerCase();
+    const { data: account } = await client.from("pw_accounts").select("employee_id").eq("login_name", name).maybeSingle();
+    const { data: open, error: openError } = await client.from("pw_reset_requests").select("employee_id,email,created_at").eq("status", "menunggu").order("created_at", { ascending: false }).limit(500);
+    if (openError) { if (missing(openError)) return resetRequestAnswer({ migrated: false }); databaseError(openError); }
+    const asked = `nama panggilan: ${name}`;
+    const employeeId = (account?.employee_id as string | undefined) ?? null;
+    const rows = (open ?? []).map(row => ({ employeeId: row.employee_id as string | null, email: row.email as string, createdAt: row.created_at as string }));
+    if (shouldRecord({ employeeId, email: asked }, rows)) {
+      const { error } = await client.from("pw_reset_requests").insert({ employee_id: employeeId, email: asked, note: input.note });
+      if (error && error.code !== "23505") { if (missing(error)) return resetRequestAnswer({ migrated: false }); databaseError(error); }
+    }
+    return resetRequestAnswer({ migrated: true });
+  }
+  const email = normalizeEmail(input.email);
   const [{ data: people, error: peopleError }, { data: open, error: openError }] = await Promise.all([
     // A contains match, then the exact comparison in code, so stray spaces in Data karyawan still match.
     client.from("employees").select("id,email,active").ilike("email", `%${escapeLike(email)}%`).limit(20),

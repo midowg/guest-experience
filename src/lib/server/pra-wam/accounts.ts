@@ -1,5 +1,6 @@
 import "server-only";
 import { asCategory, type EmployeeCategory } from "@/lib/employees";
+import { LOGIN_NAME_MIGRATION, loginSlug, nextLoginName, noEmailAddress } from "@/lib/pra-wam/login-name";
 import { checkRoleChange, normalizeRoles, praWamRoles, type PraWamRole } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -26,6 +27,9 @@ export type AccountRow = {
   businessUnit: string;
   /** Status kerja from Data karyawan (13 Nov 2026): karyawan, dw or intern. */
   category?: EmployeeCategory;
+  /** The name they may sign in with instead of an email (13 Nov 2026, migration 202611130007); null before it or without an account. */
+  loginName?: string | null;
+  nickname?: string;
 };
 
 /** Whether the shared first password is set on the server, so accounts can be made and reset. */
@@ -41,16 +45,18 @@ function defaultPassword(): string {
 async function readPeople() {
   const client = createPrivilegedClient();
   const read = (fields: string) => client.from("employees").select(fields).order("full_name").limit(2000);
-  let result = await read("id,full_name,department,email,active,business_unit,category");
-  if (result.error && ["42703", "PGRST204"].includes(result.error.code ?? "")) result = await read("id,full_name,department,email,active,category");
-  return { data: result.data as unknown as { id: string; full_name: string; department: string; email: string; active: boolean; business_unit?: string; category?: string }[] | null, error: result.error };
+  let result = await read("id,full_name,nickname,department,email,active,business_unit,category");
+  if (result.error && ["42703", "PGRST204"].includes(result.error.code ?? "")) result = await read("id,full_name,nickname,department,email,active,category");
+  return { data: result.data as unknown as { id: string; full_name: string; nickname?: string; department: string; email: string; active: boolean; business_unit?: string; category?: string }[] | null, error: result.error };
 }
 
 export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: boolean }> {
   const client = createPrivilegedClient();
   const [{ data: people, error: peopleError }, { data: accounts, error }, { data: roles, error: rolesError }, leads] = await Promise.all([
     readPeople(),
-    client.from("pw_accounts").select("employee_id,last_login_at,active,must_change_password"),
+    // With the login name (migration 202611130007); without it before.
+    client.from("pw_accounts").select("employee_id,last_login_at,active,must_change_password,login_name")
+      .then(result => result.error && /login_name/.test(result.error.message) ? client.from("pw_accounts").select("employee_id,last_login_at,active,must_change_password") : result),
     client.from("pw_roles").select("employee_id,role"),
     listLeads().then(result => result.byPerson),
   ]);
@@ -70,26 +76,41 @@ export async function listAccounts(): Promise<{ rows: AccountRow[]; migrated: bo
       lead: leads.get(person.id)?.lead ?? false,
       businessUnit: person.business_unit ?? "",
       category: asCategory(person.category),
+      loginName: (byPerson.get(person.id) as { login_name?: string | null } | undefined)?.login_name ?? null,
+      nickname: person.nickname ?? "",
     })),
   };
 }
 
 type CreateResult = { created: number; skipped: string[] };
 
+/** The login names in use; null before migration 202611130007. */
+async function takenLoginNames(): Promise<Set<string> | null> {
+  const { data, error } = await createPrivilegedClient().from("pw_accounts").select("login_name").not("login_name", "is", null);
+  if (error) return null;
+  return new Set((data ?? []).map(row => row.login_name as string));
+}
+
 /**
- * Makes the sign-in and the pw_accounts row for each of these people, or says why not. A person
- * without an email, or whose email is already used by another sign-in, is reported and skipped.
+ * Makes the sign-in and the pw_accounts row for each of these people, or says why not. Each gets a
+ * login name from their nama panggilan (13 Nov 2026); someone without an email signs in with it
+ * only (their Auth address is one that never receives mail). An email already used by another
+ * sign-in is reported and skipped.
  */
 async function createFor(people: AccountRow[], password: string): Promise<CreateResult> {
   const client = createPrivilegedClient();
   const skipped: string[] = [];
   let created = 0;
+  const taken = await takenLoginNames();
   for (const person of people) {
-    if (!person.email) { skipped.push(`${person.name}: email masih kosong.`); continue; }
-    const { data, error } = await client.auth.admin.createUser({ email: person.email.toLowerCase(), password, email_confirm: true, user_metadata: { employee_id: person.employeeId } });
+    if (!person.email && !taken) { skipped.push(`${person.name}: email masih kosong (masuk dengan nama panggilan menunggu migrasi ${LOGIN_NAME_MIGRATION}).`); continue; }
+    const loginName = taken ? nextLoginName(loginSlug(person.nickname ?? "", person.name), taken) : null;
+    const address = person.email ? person.email.toLowerCase() : noEmailAddress(loginName!);
+    const { data, error } = await client.auth.admin.createUser({ email: address, password, email_confirm: true, user_metadata: { employee_id: person.employeeId } });
     if (error || !data.user) { skipped.push(`${person.name}: ${/registered|exists/i.test(error?.message ?? "") ? "email sudah dipakai akun lain." : "akun belum dapat dibuat."}`); continue; }
-    const { error: linkError } = await client.from("pw_accounts").insert({ employee_id: person.employeeId, auth_user_id: data.user.id });
+    const { error: linkError } = await client.from("pw_accounts").insert({ employee_id: person.employeeId, auth_user_id: data.user.id, ...(loginName ? { login_name: loginName } : {}) });
     if (linkError) { await client.auth.admin.deleteUser(data.user.id); skipped.push(`${person.name}: akun belum dapat disimpan.`); continue; }
+    if (loginName) taken!.add(loginName);
     created += 1;
   }
   return { created, skipped };

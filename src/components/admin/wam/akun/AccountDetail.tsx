@@ -75,6 +75,8 @@ export function AccountDetail({ row, status, photo, job, busy, passwordReady, er
           <div><dt>Departemen</dt><dd>{row.department || "—"}</dd></div>
           <div><dt>Peran</dt><dd><RolePills roles={roleItems(row)} max={5} /></dd></div>
           <div><dt>Akun</dt><dd>{accountState(row)}</dd></div>
+          {/* 13 Nov 2026: what they may type instead of an email at sign-in. */}
+          {row.loginName && <div><dt>Nama login</dt><dd><strong>{row.loginName}</strong>{row.email ? " · atau email" : " · tanpa email, password direset admin"}</dd></div>}
           <div><dt>Terakhir masuk</dt><dd>{lastLoginLabel(row)}</dd></div>
         </dl>
 
@@ -122,8 +124,8 @@ export function AccountDetail({ row, status, photo, job, busy, passwordReady, er
       {(row.hasAccount || row.active) && <footer className={css.detailFoot}>
         {row.hasAccount
           ? <ConsoleButton disabled={working || !passwordReady} onClick={onReset}>{busy === `reset-${row.employeeId}` ? "Mengatur…" : "Reset password"}</ConsoleButton>
-          : row.active && <ConsoleButton variant="primary" disabled={working || !passwordReady || !row.email} onClick={onCreate}>{busy === `create-${row.employeeId}` ? "Membuat akun…" : "Buat akun"}</ConsoleButton>}
-        {!row.hasAccount && row.active && !row.email && <p className={css.hint}>Isi emailnya dulu untuk membuat akun.</p>}
+          : row.active && <ConsoleButton variant="primary" disabled={working || !passwordReady} onClick={onCreate}>{busy === `create-${row.employeeId}` ? "Membuat akun…" : "Buat akun"}</ConsoleButton>}
+        {!row.hasAccount && row.active && !row.email && <p className={css.hint}>Belum ada email: akunnya tetap dibuat, dan ia masuk dengan nama panggilan.</p>}
       </footer>}
     </div>
   </dialog>;

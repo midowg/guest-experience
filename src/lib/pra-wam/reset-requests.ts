@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LOGIN_NAME } from "./login-name";
 
 /*
  * "Lupa password" as a request to the admin WAM, who resets the account to the shared first
@@ -18,7 +19,9 @@ export const UNKNOWN_OPEN_CAP = 30;
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 export const resetRequestSchema = z.object({
-  email: z.string().trim().toLowerCase().pipe(z.email("Isi email kantor yang valid.").max(200, "Email terlalu panjang.")),
+  // An email, or (13 Nov 2026) the nama panggilan someone without an email signs in with.
+  email: z.string().trim().toLowerCase().max(200, "Email terlalu panjang.")
+    .refine(value => value.includes("@") ? z.email().safeParse(value).success : LOGIN_NAME.test(value), "Isi email kantor atau nama panggilan yang valid."),
   note: z.string().trim().max(RESET_NOTE_MAX, `Catatan paling banyak ${RESET_NOTE_MAX} karakter.`).default(""),
 });
 export type ResetRequestInput = z.infer<typeof resetRequestSchema>;

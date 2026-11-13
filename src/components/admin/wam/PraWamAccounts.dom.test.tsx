@@ -41,7 +41,7 @@ describe("Akun dan peran, tab Akun", () => {
     expect(tabs[0].getAttribute("aria-current")).toBe("page");
     expect(tabs[2].textContent).toContain("1 permintaan reset menunggu");
     // Citra has an email and no account; Andi has no email, so only one can be made.
-    expect(screen.getByRole("button", { name: "Buat 1 akun" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Buat 2 akun" })).toBeTruthy();
   });
 
   it("shows people as cards A to Z, with status, roles, photo and last sign-in", () => {
@@ -134,25 +134,25 @@ describe("Akun dan peran, tab Akun", () => {
 
   it("makes the missing accounts, or one person's account from the detail", async () => {
     renderAccounts();
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Buat 1 akun" })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Buat 2 akun" })); });
     expect(fetchMock).toHaveBeenLastCalledWith(praWamAccountsApi(), expect.objectContaining({ method: "POST" }));
     fireEvent.click(cards()[2]);
     await act(async () => { fireEvent.click(within(screen.getByRole("dialog", { name: "Citra Ayu" })).getByRole("button", { name: "Buat akun" })); });
     expect(fetchMock).toHaveBeenLastCalledWith(praWamAccountsApi("e4"), expect.objectContaining({ method: "POST" }));
   });
 
-  it("cannot make an account without an email, and says so", () => {
+  it("makes an account without an email too (sign-in by nama panggilan), and says so", () => {
     renderAccounts();
     fireEvent.click(cards()[0]);
     const detail = screen.getByRole("dialog", { name: "Andi Wijaya" });
-    expect(within(detail).getByRole("button", { name: "Buat akun" })).toHaveProperty("disabled", true);
-    expect(within(detail).getByText("Isi emailnya dulu untuk membuat akun.")).toBeTruthy();
+    expect(within(detail).getByRole("button", { name: "Buat akun" })).toHaveProperty("disabled", false);
+    expect(within(detail).getByText(/masuk dengan nama panggilan/)).toBeTruthy();
   });
 
   it("waits for the first password before making or resetting accounts", () => {
     renderAccounts({ passwordReady: false });
     expect(screen.getByText(/Password awal belum disiapkan/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Buat 1 akun" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "Buat 2 akun" })).toHaveProperty("disabled", true);
   });
 
   it("says the migration is missing instead of an empty list", () => {

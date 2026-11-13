@@ -74,8 +74,8 @@ export function accountSummary(rows: readonly AccountRow[]) {
   return {
     active: active.length, withAccount: withAccount.length, signedIn, neverSignedIn: withAccount.length - signedIn,
     missing: missing.length, missingEmail: missing.filter(row => !row.email).length,
-    /** How many "Buat akun" would make now: no account yet, but an email. */
-    creatable: missing.filter(row => row.email).length,
+    /** How many "Buat akun" would make now: everyone without an account (13 Nov 2026: without an email too, by nama panggilan). */
+    creatable: missing.length,
   };
 }
 

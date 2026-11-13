@@ -37,8 +37,9 @@ export function LoginForm({ next }: { next: string | null }) {
     </div>
     {error && <Notice tone="error">{error}</Notice>}
     <div>
-      <label className={styles.label} htmlFor="email">Email</label>
-      <input id="email" className="input" type="email" autoComplete="username" inputMode="email" placeholder="nama@werkudara.com" value={email} onChange={e => setEmail(e.target.value)} required />
+      {/* An email or a nama panggilan (13 Nov 2026): interns and daily workers without an email use the latter. */}
+      <label className={styles.label} htmlFor="email">Email atau nama panggilan</label>
+      <input id="email" className="input" type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="nama@werkudara.com atau dewi" value={email} onChange={e => setEmail(e.target.value)} required />
     </div>
     <div>
       <label className={styles.label} htmlFor="password">Password</label>

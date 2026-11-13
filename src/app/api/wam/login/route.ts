@@ -3,7 +3,8 @@ import { checkOrigin, enforceRateLimit, handle, readJson, success, validate } fr
 import { signIn } from "@/lib/server/pra-wam/session";
 
 export const dynamic = "force-dynamic";
-const schema = z.object({ email: z.string().trim().min(3, "Isi email.").max(200), password: z.string().min(1, "Isi password.").max(200) });
+// An email or a nama panggilan (13 Nov 2026).
+const schema = z.object({ email: z.string().trim().min(2, "Isi email atau nama panggilan.").max(200), password: z.string().min(1, "Isi password.").max(200) });
 
 /** POST: sign in to Pra WAM with the work email and password. */
 export async function POST(request: Request) {

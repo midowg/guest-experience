@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { asCategory, type EmployeeCategory } from "@/lib/employees";
+import { isEmailLike, LOGIN_NAME, normalizeLoginName } from "@/lib/pra-wam/login-name";
 import { praWamPath } from "@/lib/routes";
 import { photoColumnMissing, photoPath } from "@/lib/pra-wam/photo";
 import { escapeLike } from "@/lib/pra-wam/reset-requests";
@@ -111,12 +112,26 @@ export async function signInAddress(typed: string): Promise<{ address: string; f
   return { address: current, follow: account.auth_user_id };
 }
 
+/** The sign-in address of a login name (13 Nov 2026): its account's Auth email; null when no account has it. */
+export async function loginNameAddress(typed: string): Promise<string | null> {
+  const name = normalizeLoginName(typed);
+  if (!LOGIN_NAME.test(name)) return null;
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("pw_accounts").select("auth_user_id").eq("login_name", name).maybeSingle();
+  if (error || !data?.auth_user_id) return null;
+  const { data: user } = await client.auth.admin.getUserById(data.auth_user_id);
+  return user?.user?.email?.toLowerCase() ?? null;
+}
+
 export async function signIn(email: string, password: string): Promise<{ mustChangePassword: boolean; askNewPassword: boolean }> {
   const secret = praWamSecret();
   if (!secret) throw notReady();
-  const wrong = new ServiceError(401, "Email atau password tidak cocok. Periksa lalu coba lagi.");
+  const wrong = new ServiceError(401, "Email/nama panggilan atau password tidak cocok. Periksa lalu coba lagi.");
   const typed = email.trim().toLowerCase();
-  const { address, follow } = await signInAddress(typed).catch(() => ({ address: typed, follow: null }));
+  // A nama panggilan (no @) is the sign-in of its account; an email as before.
+  const byName = isEmailLike(typed) ? null : await loginNameAddress(typed).catch(() => null);
+  if (!isEmailLike(typed) && !byName) throw wrong;
+  const { address, follow } = byName ? { address: byName, follow: null } : await signInAddress(typed).catch(() => ({ address: typed, follow: null }));
   const { data: auth, error: authError } = await createPublicClient().auth.signInWithPassword({ email: address, password });
   if (authError || !auth.user) throw wrong;
   const client = createPrivilegedClient();
