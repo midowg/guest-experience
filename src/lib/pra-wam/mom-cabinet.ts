@@ -30,6 +30,8 @@ export type CabinetEntry = {
   topics: number; decisions: number; actions: number; open: number;
   version: number; sentAt: string; telegramOff: boolean;
   photos: CabinetPhoto[];
+  /** The MoM uploaded as a file (13 Nov 2026), null when it was written in the form. */
+  file?: { name: string; size: number; type: string } | null;
 };
 export type CabinetView = {
   /** The MoM tables are there. */
@@ -89,6 +91,9 @@ export function placeEntries(entries: readonly CabinetEntry[]): PlacedEntry[] {
 
 /** What goes in a meeting's folder: its PDF and its photos, by these names. */
 export const pdfName = (entry: Pick<CabinetEntry, "code" | "version" | "numbered">) => minutesFileName({ code: entry.code, version: entry.version, numbered: entry.numbered });
+/** The uploaded file's name in a zip: the PDF's, "(berkas)", its own kind. */
+export const uploadedName = (entry: Pick<CabinetEntry, "code" | "version" | "numbered" | "file">) =>
+  pdfName(entry).replace(/\.pdf$/, ` (berkas).${entry.file?.name.split(".").pop() ?? "pdf"}`);
 /** The Word file's name: the PDF's, as .docx. */
 export const docxName = (entry: Pick<CabinetEntry, "code" | "version" | "numbered">) => pdfName(entry).replace(/\.pdf$/, ".docx");
 export const photoName = (entry: Pick<CabinetEntry, "code">, index: number) => `${safeName(entry.code.replace(/\//g, "-"))}_foto-${String(index + 1).padStart(2, "0")}.jpg`;

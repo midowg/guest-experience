@@ -1,7 +1,7 @@
 import "server-only";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import {
-  actionPicIds, closedText, itemsAsText, minutesClosed, minutesDeadline, minutesNumber, minutesOpen, minutesStatus, needsMinutes, selfCheckedIn,
+  actionPicIds, closedText, MINUTES_EMPTY, minutesFilled, itemsAsText, minutesClosed, minutesDeadline, minutesNumber, minutesOpen, minutesStatus, needsMinutes, selfCheckedIn,
   type MinuteAction, type MinuteItem, type Minutes, type MinutesInput, type MinutesTelegram, type MinutesView,
 } from "@/lib/pra-wam/minutes";
 import type { Session } from "@/lib/pra-wam/sessions";
@@ -11,6 +11,7 @@ import { isR2Configured } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
 import { attendeesOf, recordMinutesAttendance } from "./minutes-people";
+import { filesReady, minuteFileOf, minuteFileRow } from "./minutes-file";
 import { minutesRule } from "./minutes-rule";
 import { listMinutePhotos, mayWriteMinutes, photosHd } from "./minutes-photos";
 import { deliverMinutes, isHodMeeting, minutesDeliveries, minutesTargets } from "./minutes-telegram";
@@ -205,11 +206,14 @@ export async function minutesView(session: Session, member: Member, now = new Da
   // A draft is only for those who may write it; the others see that it is being written.
   const shown = minutes && !minutes.sentAt && !write && !closed ? null : minutes;
   const frm = level >= 2;
-  const [attendees, photos, telegram, photoHd] = await Promise.all([
+  const [attendees, photos, telegram, photoHd, file, fileReady] = await Promise.all([
     shown || write ? attendeesOf(session.id).catch(() => []) : Promise.resolve([]),
     frm && (shown || write) ? listMinutePhotos(session.id, write).catch(() => []) : Promise.resolve([]),
     telegramView(session, level >= 1, write),
     frm && write ? photosHd().catch(() => false) : Promise.resolve(false),
+    // The MoM as a file (13 Nov 2026): for those who may read the MoM, a draft's only for its writers.
+    shown || write || closed ? minuteFileOf(session.id, write).catch(() => null) : Promise.resolve(null),
+    write ? filesReady().catch(() => false) : Promise.resolve(false),
   ]);
   const staff = frm && write ? (await listPeople().catch(() => [])).map(person => ({ id: person.id, name: person.name, fullName: person.fullName ?? person.name, department: person.department })) : [];
   const booker = session.booking?.bookedBy.id ?? null;
@@ -219,13 +223,16 @@ export async function minutesView(session: Session, member: Member, now = new Da
     viewerId: member.id, open, endsAt: session.endsAt, drafts: level >= 1, telegram, deadline: minutesDeadline(session, windowHours), closed,
     title: session.title, startsAt: session.startsAt, place: session.roomName ?? session.location ?? "",
     frm, attendees, defaultChairId: booker && attendees.some(person => person.id === booker) ? booker : null,
-    photos, photosReady: frm && isR2Configured(), photoHd, staff,
+    photos, photosReady: frm && isR2Configured(), photoHd, staff, file, fileReady,
   };
 }
 
-/** The agenda items to keep: as given, or (from an app opened before the update) the summary and decisions as one. */
+/**
+ * The agenda items to keep: as given, or (from an app opened before the update) the summary and
+ * decisions as one; none when the MoM is a file and the form was left empty.
+ */
 const givenItems = (input: MinutesInput): MinuteItem[] => input.items.length ? input.items
-  : [{ topic: "Pembahasan", discussion: input.summary, decision: input.decisions, added: false }];
+  : input.summary.trim() || input.decisions.trim() ? [{ topic: "Pembahasan", discussion: input.summary, decision: input.decisions, added: false }] : [];
 
 /** One save in one transaction (migration 202611120005). */
 async function saveFrm(sessionId: string, input: MinutesInput, member: Member, at: string): Promise<boolean> {
@@ -291,6 +298,8 @@ export async function saveMinutes(sessionId: string, input: MinutesInput, member
   const { windowHours } = await minutesRule();
   if (minutesClosed(session, now, windowHours)) throw new ServiceError(409, closedText(windowHours));
   if (!minutesOpen(session, now, windowHours)) throw new ServiceError(409, session.status === "terbit" ? "Notulen bisa ditulis setelah meeting dimulai." : "Notulen hanya untuk meeting yang terbit.");
+  // An empty form is a MoM only when its file was uploaded (13 Nov 2026).
+  if (!minutesFilled(input) && !(await minuteFileRow(sessionId))) throw new ServiceError(422, MINUTES_EMPTY, { items: [MINUTES_EMPTY] });
   const attendees = await attendeesOf(sessionId);
   const people = new Set(attendees.map(person => person.id));
   // Who checked in by themselves came: the MoM cannot mark them absent.

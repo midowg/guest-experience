@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  asMinutesRule, choiceOf, DEFAULT_MINUTES_RULE, defaultAbsent, itemsAsText, minutesClosed, minutesDeadline, windowLabel, minutesInputSchema, minutesItems, minutesNumber, minutesOpen, minutesStatus, needsMinutes, openActions, presence, ruleNeeds, storedOf,
+  asMinutesRule, choiceOf, DEFAULT_MINUTES_RULE, defaultAbsent, itemsAsText, minutesClosed, minutesDeadline, windowLabel, minutesFilled, minutesInputSchema, minutesItems, minutesNumber, minutesOpen, minutesStatus, needsMinutes, openActions, presence, ruleNeeds, storedOf,
 } from "./minutes";
 import { fitWithin, isJpeg, isMeetingPhotoKey, momPhotoKeyFor, momPhotoRule, photoLimitLabel } from "./minutes-photos";
 
@@ -78,7 +78,8 @@ describe("notulen (MoM)", () => {
 
   it("asks for a summary or decisions, and a task for each follow-up", () => {
     expect(minutesInputSchema.safeParse({ summary: "Bahas target", decisions: "", actions: [] }).success).toBe(true);
-    expect(minutesInputSchema.safeParse({ summary: " ", decisions: "", actions: [] }).success).toBe(false);
+    // An empty summary parses, and is not filled: the server asks for a topic or the MoM's file.
+    expect(minutesFilled(minutesInputSchema.parse({ summary: " ", decisions: "", actions: [] }))).toBe(false);
     const task = minutesInputSchema.safeParse({ summary: "Bahas", actions: [{ task: "x", picId: null, dueDate: null }] });
     expect(task.success ? [] : task.error.issues.map(issue => issue.message)).toEqual(["Isi tugasnya."]);
     expect(minutesInputSchema.safeParse({ summary: "Bahas", actions: [{ task: "Kirim data", picId: "bukan-id", dueDate: null }] }).success).toBe(false);
@@ -104,7 +105,10 @@ describe("notulen (MoM)", () => {
     const issues = (input: unknown) => { const parsed = minutesInputSchema.safeParse(input); return parsed.success ? [] : parsed.error.issues.map(issue => issue.message); };
     expect(issues({ items: [{ topic: "Target", discussion: "", decision: "" }] })).toEqual(["Isi pembahasan atau keputusan untuk topik ini."]);
     expect(issues({ items: [{ topic: "x", discussion: "Bahas" }] })).toEqual(["Isi topiknya."]);
-    expect(issues({ items: [] })).toEqual(["Isi minimal satu topik dengan pembahasan atau keputusannya."]);
+    // An empty form passes here: the server refuses it unless the MoM was uploaded as a file.
+    expect(issues({ items: [] })).toEqual([]);
+    expect(minutesFilled(minutesInputSchema.parse({ items: [] }))).toBe(false);
+    expect(minutesFilled(minutesInputSchema.parse({ items: [{ topic: "Target", discussion: "Bahas" }] }))).toBe(true);
     expect(issues({ items: [{ topic: "Target", discussion: "Bahas" }], next: { time: "25:00" } })).toEqual(["Jam meeting berikutnya tidak valid."]);
     expect(issues({ items: [{ topic: "Target", discussion: "Bahas" }], chairId: "bukan" })).toEqual(["Pilih pimpinan rapat dari daftar."]);
   });

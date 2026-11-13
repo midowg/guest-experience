@@ -124,6 +124,12 @@ export type MinutesView = {
   photos: MinutePhoto[];
   /** Photos can be added: the FRM migration has run and storage is set up. */
   photosReady: boolean;
+  /**
+   * The MoM uploaded as a file (13 Nov 2026), null when none; with one, the form is not needed: the
+   * file is the MoM. `fileReady`: a file can be uploaded (migration 202611130004, storage set up).
+   */
+  file?: import("./minutes-file").MinuteFile | null;
+  fileReady?: boolean;
   /** Photos are kept Full HD, 1 MB (migration 202611120006); before it 1280 px, 400 KB. */
   photoHd: boolean;
   /** Everyone in Data karyawan, for "Others present" (only for whoever may write the MoM). */
@@ -272,8 +278,11 @@ export const minutesInputSchema = z.object({
   telegramOff: z.boolean().default(false),
   /** The groups picked (chat ids); left out by an app opened before the update: kept as it was. */
   telegramChats: z.array(z.string().regex(/^-?\d{1,20}$/, "Grup Telegram tidak dikenali.")).max(40).optional(),
-}).refine(input => input.items.length > 0 || input.summary.length >= 2 || input.decisions.length >= 2, { path: ["items"], message: "Isi minimal satu topik dengan pembahasan atau keputusannya." });
+});
 export type MinutesInput = z.infer<typeof minutesInputSchema>;
+/** The form says something: a topic, or (an app from before the FRM form) a summary or decisions. */
+export const minutesFilled = (input: Pick<MinutesInput, "items" | "summary" | "decisions">) => input.items.length > 0 || input.summary.length >= 2 || input.decisions.length >= 2;
+export const MINUTES_EMPTY = "Isi minimal satu topik dengan pembahasan atau keputusannya, atau unggah berkas MoM.";
 
 /** The agenda items of a MoM: its own, or (a MoM from before the FRM form) its summary and decisions as one. */
 export function minutesItems(minutes: Pick<Minutes, "items" | "summary" | "decisions">): MinuteItem[] {
@@ -326,4 +335,7 @@ export const minutesApi = {
   photosConfirm: (sessionId: string) => `/api/wam/sessions/${sessionId}/minutes/photos/confirm`,
   /** GET: the photo itself; DELETE: removes it. */
   photo: (sessionId: string, photoId: string) => `/api/wam/sessions/${sessionId}/minutes/photos/${photoId}`,
+  /** The MoM as a file (13 Nov 2026): POST agrees its upload, GET downloads it, DELETE removes it; POST confirm keeps it. */
+  file: (sessionId: string) => `/api/wam/sessions/${sessionId}/minutes/file`,
+  fileConfirm: (sessionId: string) => `/api/wam/sessions/${sessionId}/minutes/file/confirm`,
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Camera, CheckCircle2, ChevronDown, ChevronRight, Download, ExternalLink, ImagePlus, NotebookPen, Plus, Search, Send, Trash2, X } from "lucide-react";
+import { Camera, CheckCircle2, ChevronDown, ChevronRight, Download, ExternalLink, FileText, FileUp, ImagePlus, NotebookPen, Plus, Search, Send, Trash2, X } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import {
@@ -9,11 +9,13 @@ import {
   type MinuteAction, type MinuteAttendee, type MinuteItem, type MinutePhoto, type MinutesView, type NextMeeting,
 } from "@/lib/pra-wam/minutes";
 import { frmDate, frmDue, frmTime, guestNames } from "@/lib/pra-wam/minutes-message";
+import { fileSizeLabel, momFileAccept, momFileKind, momFileProblem, type MinuteFile } from "@/lib/pra-wam/minutes-file";
 import { MOM_PHOTOS_MAX, momPhotoRule } from "@/lib/pra-wam/minutes-photos";
 import { acceptPhotos } from "@/lib/pra-wam/photo";
-import { errorText, praWamRequest } from "./api";
+import { errorText, praWamRequest, PraWamApiError } from "./api";
 import { useConfirm } from "./ConfirmDialog";
 import { prepareMinutePhoto, uploadMinutePhoto } from "./minutesPhotoUpload";
+import { putFile, putProblem } from "./photoUpload";
 import styles from "./pra-wam.module.css";
 import css from "./minutes.module.css";
 
@@ -182,6 +184,71 @@ function AttendanceList({ attendees, absentIds, guests }: { attendees: readonly 
 }
 
 /**
+ * The MoM as a file (13 Nov 2026): who already wrote it in Word or as a PDF uploads it, and the
+ * form need not be filled; the file is the MoM (Telegram gets it, Arsip MoM keeps it). One file:
+ * a new one replaces it. Uploaded straight to storage with progress, then checked by the server.
+ */
+function MinuteFileBlock({ sessionId, file, editable, ready, removable, onChange }: {
+  sessionId: string; file: MinuteFile | null; editable: boolean; ready: boolean; removable: boolean; onChange: (file: MinuteFile | null, replaced: boolean) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
+
+  async function upload(picked: File) {
+    setProblem(null);
+    const wrong = momFileProblem(picked);
+    if (wrong) { setProblem(wrong); return; }
+    setProgress(0);
+    try {
+      const agreed = { name: picked.name, size: picked.size };
+      const start = await praWamRequest<{ key: string; uploadUrl: string; token: string; type: string }>(minutesApi.file(sessionId), { method: "POST", json: agreed });
+      const failed = putProblem(await putFile(start.data.uploadUrl, picked, start.data.type, share => setProgress(Math.min(share, 0.99))));
+      if (failed) throw new PraWamApiError(failed);
+      const done = await praWamRequest<MinuteFile>(minutesApi.fileConfirm(sessionId), { method: "POST", json: { ...agreed, key: start.data.key, token: start.data.token } });
+      onChange(done.data, !!file);
+    } catch (error) { setProblem(errorText(error)); }
+    finally { setProgress(null); }
+  }
+
+  async function remove() {
+    if (!(await confirm({ title: "Hapus berkas MoM?", body: "Berkas dihapus dari MoM dan dari penyimpanan.", confirmLabel: "Hapus berkas", danger: true }))) return;
+    setProblem(null);
+    try { await praWamRequest(minutesApi.file(sessionId), { method: "DELETE" }); onChange(null, false); }
+    catch (error) { setProblem(errorText(error)); }
+  }
+
+  if (!file && !(editable && ready)) return null;
+  const picker = <input ref={input} type="file" accept={momFileAccept} hidden aria-hidden="true" tabIndex={-1}
+    onChange={event => { const picked = event.target.files?.[0]; event.target.value = ""; if (picked) void upload(picked); }} />;
+  return <div className={`${css.group} ${css.fileBlock}`}>
+    <p className={css.groupTitle}>{sectionTitle("", "BERKAS MoM")}</p>
+    {file ? <div className={css.fileCard}>
+      <span className={css.fileIcon} aria-hidden><FileText size={22} /></span>
+      <span className={css.fileText}>
+        <strong>{file.name}</strong>
+        <small>{momFileKind(file.type)} · {fileSizeLabel(file.size)}{file.uploadedBy ? ` · diunggah ${file.uploadedBy}` : ""}</small>
+      </span>
+      <a className="button button--secondary" href={file.url} target="_blank" rel="noopener"><Download size={18} aria-hidden /> Unduh</a>
+    </div> : <p className={styles.hint}>Sudah menulis MoM di Word atau PDF? Unggah saja; form tidak perlu diisi.</p>}
+    {editable && ready && <>
+      {picker}
+      {progress !== null ? <p className={styles.hint} role="status">Mengunggah berkas ({Math.round(progress * 100)}%)</p>
+        : <div className={css.photoButtons}>
+          <button type="button" className={`button ${file ? "button--secondary" : "button--primary"}`} onClick={() => input.current?.click()}>
+            <FileUp size={18} aria-hidden /> {file ? "Ganti berkas" : "Unggah berkas MoM"}
+          </button>
+          {file && removable && <button type="button" className="button button--secondary" onClick={() => { void remove(); }}><Trash2 size={18} aria-hidden /> Hapus berkas</button>}
+        </div>}
+      <p className={styles.hint}>PDF atau Word (.pdf, .doc, .docx), paling besar 10 MB.</p>
+    </>}
+    {problem && <Notice tone="error">{problem}</Notice>}
+    {confirmDialog}
+  </div>;
+}
+
+/**
  * The meeting's photos (12 Nov 2026): a gallery, each opening the full photo. Whoever may write
  * the MoM adds them (made small here, then uploaded one by one with progress) and removes them;
  * they are kept at once and go into the MoM's PDF.
@@ -277,6 +344,8 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   const formTop = useRef<HTMLFormElement>(null);
   const { minutes, status, canWrite, people, telegram, frm, attendees } = view;
   const groups = telegram.groups ?? [];
+  // The MoM uploaded as a file (13 Nov 2026): with one, the form is not needed.
+  const file = view.file ?? null;
   const sent = !!minutes?.sentAt;
   // Before migration 202611120004 there are no drafts: a save is the MoM itself.
   const drafts = view.drafts;
@@ -353,7 +422,8 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
    */
   async function save(send: boolean, content: Draft | null = draft) {
     if (!content) return;
-    const problem = itemsProblem(content.items);
+    // A MoM uploaded as a file needs no topic in the form.
+    const problem = file && !content.items.some(filled) ? null : itemsProblem(content.items);
     if (problem) { setError(problem); setStep(frm && attendees.length ? 2 : 1); return; }
     const items = content.items.filter(filled).map(item => ({ topic: item.topic.trim(), discussion: item.discussion.trim(), decision: item.decision.trim(), added: item.added }));
     const actions = content.actions.filter(action => action.task.trim()).map(action => {
@@ -601,6 +671,15 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   const failed = telegram.deliveries.filter(item => item.status === "gagal");
   const delivered = telegram.deliveries.filter(item => item.status === "terkirim");
   const items = minutes ? minutesItems(minutes) : [];
+  // Only the file: the form's parts left empty are not shown.
+  const fileOnly = !!file && !items.length && !minutes?.actions.length;
+  const fileBlock = <MinuteFileBlock sessionId={sessionId} file={file} editable={canWrite && drafts} ready={!!view.fileReady} removable={!sent || !fileOnly}
+    onChange={(next, replaced) => {
+      setView(current => ({ ...current, file: next }));
+      setNotice(next ? (replaced ? "Berkas MoM diganti." : "Berkas MoM tersimpan. Tekan Kirim MoM untuk mengirimnya.") : "Berkas MoM dihapus.");
+      // A sent MoM's new file is a revision: saved again, so Telegram gets it as one.
+      if (next && replaced && sent) void save(false, draftOf());
+    }} />;
 
   // Who came is kept from the FRM form on (a MoM with a number).
   const { present, absent } = presence(attendees, minutes?.absentIds ?? []);
@@ -622,6 +701,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
         <MeetingFacts view={view} number={minutes.docNumber ?? minutes.number ?? "-"} taker={minutes.submittedBy ?? "Peserta"}
           chair={frm && <><dt>Chairperson</dt><dd>{minutes.chairName ?? "-"}</dd></>} />
       </section>
+      {fileBlock}
       {showPresence && <section className={css.group}>
         <h3 className={css.groupTitle}>{sectionTitle("II.", "ATTENDANCE", <span className={css.groupCount}>{present.length} present · {absent.length} absent</span>)}</h3>
         <dl className={css.facts}>
@@ -629,7 +709,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
           <dt>Absent</dt><dd>{absent.map(person => person.fullName).join(", ") || "-"}</dd>
         </dl>
       </section>}
-      <section className={css.group}>
+      {!fileOnly && <><section className={css.group}>
         <h3 className={css.groupTitle}>{sectionTitle("III.", "AGENDA ITEMS AND DISCUSSION")}</h3>
         {items.length ? readItems(items) : <p className={css.text}>-</p>}
       </section>
@@ -660,7 +740,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       {showPresence && <section className={css.group}>
         <h3 className={css.groupTitle}>{sectionTitle("VII.", "ATTENDANCE LIST")}</h3>
         <AttendanceList attendees={attendees} absentIds={minutes.absentIds} guests={minutes.guests ?? ""} />
-      </section>}
+      </section>}</>}
       {photoBlock(true)}
       <p className={styles.hint}>
         {sent && minutes.sentAt ? `Dikirim ${minutes.sentBy ?? minutes.submittedBy ?? "peserta"} · ${stamp(minutes.sentAt)}` : `Ditulis ${minutes.submittedBy ?? "peserta"} · ${stamp(minutes.submittedAt)}`}
@@ -675,20 +755,22 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
         {!minutes.telegramOff && failed.length > 0 && <p className={css.warn}>Belum terkirim ke {failed.map(item => item.title).join(", ")}. Dicoba lagi saat MoM disimpan berikutnya.</p>}
       </div>}
     </> : <>
-      <p className={styles.hint}>{view.closed ? "MoM meeting ini tidak diisi." : status === "belum" ? "Meeting sudah selesai, notulennya belum diisi." : status === "draf" ? "Notulen sedang ditulis." : view.open ? "Belum ada notulen." : "Notulen bisa ditulis setelah meeting dimulai."}</p>
-      {canWrite && photoBlock(true)}
+      <p className={styles.hint}>{file && canWrite ? "Berkas MoM sudah diunggah. Tekan Kirim MoM untuk mengirimnya; form tidak perlu diisi." : view.closed ? "MoM meeting ini tidak diisi." : status === "belum" ? "Meeting sudah selesai, notulennya belum diisi." : status === "draf" ? "Notulen sedang ditulis." : view.open ? "Belum ada notulen." : "Notulen bisa ditulis setelah meeting dimulai."}</p>
+      {fileBlock}
+      {canWrite && !file && photoBlock(true)}
     </>}
     {error && <Notice tone="error">{error}</Notice>}
     {/* 1 x 24 hours after the meeting (13 Nov 2026): until when, or that the time is past (the buttons then stay, off). */}
     {canWrite && view.deadline && <p className={css.deadline}>Bisa diisi atau direvisi sampai {stamp(view.deadline)}.</p>}
     {view.closed && <p className={css.deadline} role="status">Batas mengisi atau merevisi MoM sudah lewat{view.deadline ? ` (${stamp(view.deadline)})` : ""}. MoM tetap bisa dibaca.</p>}
     {(minutes || canWrite || view.closed) && <div className={`${css.buttons} ${css.readBar}`}>
-      {minutes && <a className="button button--secondary" href={minutesApi.pdf(sessionId)} download><Download size={18} aria-hidden /> Unduh PDF</a>}
-      {(canWrite || view.closed) && <button type="button" className={`button ${minutes ? "button--secondary" : "button--primary"}`} disabled={!canWrite} onClick={start}>
+      {minutes && !fileOnly && <a className="button button--secondary" href={minutesApi.pdf(sessionId)} download><Download size={18} aria-hidden /> Unduh PDF</a>}
+      {/* With a file the form is not needed (13 Nov 2026): no Tulis notulen while one is there. */}
+      {(canWrite || view.closed) && !file && <button type="button" className={`button ${minutes ? "button--secondary" : "button--primary"}`} disabled={!canWrite} onClick={start}>
         <NotebookPen size={18} aria-hidden /> {!minutes ? "Tulis notulen" : sent ? "Ubah notulen" : "Lanjutkan draf"}
       </button>}
-      {/* A draft that is ready goes without opening the form again. */}
-      {(canWrite || view.closed) && minutes && !sent && drafts && <button type="button" className={`button button--primary ${css.readMain}`} disabled={busy !== null || !canWrite} onClick={() => { void save(true, draftOf()); }}>
+      {/* A draft that is ready, or a file uploaded, goes without opening the form. */}
+      {(canWrite || view.closed) && (minutes || file) && !sent && drafts && <button type="button" className={`button button--primary ${css.readMain}`} disabled={busy !== null || !canWrite} onClick={() => { void save(true, draftOf()); }}>
         <Send size={18} aria-hidden /> {busy === "send" ? "Mengirim…" : "Kirim MoM"}
       </button>}
     </div>}

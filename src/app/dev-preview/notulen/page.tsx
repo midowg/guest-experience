@@ -57,7 +57,10 @@ const due = (id: string, title: string, day: string): Session => ({
 export default async function DevMinutesPage({ searchParams }: { searchParams: Promise<{ tema?: string; isi?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const { tema, isi } = await searchParams;
-  const view: MinutesView = isi === "kosong" ? { ...written, status: "belum", minutes: null, photos: [] }
+  const uploaded = { name: "MoM Appraisal team SS.docx", size: 182_000, type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" as const, uploadedBy: "Dewi", uploadedAt: "2026-11-10T04:00:00.000Z", url: "#", canDelete: true };
+  const view: MinutesView = isi === "kosong" ? { ...written, status: "belum", minutes: null, photos: [], fileReady: true }
+    // ?isi=berkas: the MoM uploaded as a Word file, not sent yet (13 Nov 2026).
+    : isi === "berkas" ? { ...written, status: "belum", minutes: null, photos: [], file: uploaded, fileReady: true }
     : isi === "lama" ? { ...written, frm: false, photos: [], photosReady: false, minutes: { ...written.minutes!, number: null, items: [], chairId: null, chairName: null, absentIds: [], guests: "", next: null, summary: "Membahas target penjualan Q1 dan rencana event klien di Bali.", decisions: "Target Q1 naik 10%.\nEvent Bali dipegang tim SM." } }
       : written;
   return <div data-wam-look="dream" data-wam-theme={tema === "terang" ? "light" : "dark"}>

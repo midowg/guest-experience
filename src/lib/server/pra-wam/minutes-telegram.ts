@@ -2,7 +2,7 @@ import "server-only";
 import { departmentShorts } from "@/lib/employees";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { minutesItems, type Minutes, type MinutesTelegram } from "@/lib/pra-wam/minutes";
-import { minutesCode, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
+import { minutesCode, minutesFileName, type MinutesMessage } from "@/lib/pra-wam/minutes-message";
 import type { Session } from "@/lib/pra-wam/sessions";
 import { canonicalTitle, momTargets, type PersonPlace, type TelegramGroup } from "@/lib/pra-wam/telegram";
 import { praWamPath } from "@/lib/routes";
@@ -11,9 +11,10 @@ import { createPrivilegedClient } from "../supabase/admin";
 import { telegramConfig } from "../telegram";
 import { listPeople, memberDepartments } from "./appraisal";
 import { attendeesOf } from "./minutes-people";
+import { minuteFileBytes } from "./minutes-file";
 import { minutesPdf } from "./minutes-pdf";
 import { minutePhotoBytes } from "./minutes-photos";
-import { groupShorts, listGroups, postMinutes, sendMinutePhotos, teamsReady, withChatInfo } from "./telegram";
+import { groupShorts, listGroups, postMinutes, sendMinutePhotos, teamsReady, withChatInfo, type MinutesDocument } from "./telegram";
 
 /*
  * Kirim MoM ke Telegram (12 Nov 2026, migration 202611120004): which groups a meeting's MoM goes to
@@ -169,10 +170,13 @@ async function deliverNow(session: Session, minutes: Minutes, now: Date): Promis
     earlier = new Map((rows ?? []).map(row => [String(row.chat_id), row.message_id as number | null]));
     // The version each group last received (a message is there): a newer one is a revision, sent anew so the group hears of it.
     delivered = new Map((rows ?? []).filter(row => row.message_id).map(row => [String(row.chat_id), row.version as number]));
-    let message: MinutesMessage, pdf: Uint8Array;
+    let message: MinutesMessage, pdf: Uint8Array | MinutesDocument;
     try {
       message = await minutesMessage(session, minutes, await isHodMeeting(session));
-      pdf = await minutesPdfWithPhotos(session.id, message);
+      // A MoM uploaded as a file goes as that file (13 Nov 2026), named like the PDF would be.
+      const file = await minuteFileBytes(session.id);
+      pdf = file ? { bytes: file.bytes, type: file.type, name: minutesFileName(message).replace(/\.pdf$/, `.${file.name.split(".").pop()}`) }
+        : await minutesPdfWithPhotos(session.id, message);
     } catch (error) {
       // The MoM could not be made at all (audit, 13 Nov 2026): every group says so under the MoM.
       for (const group of groups) await failed(group, error).catch(() => undefined);

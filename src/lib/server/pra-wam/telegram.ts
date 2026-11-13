@@ -210,12 +210,16 @@ export type Posted = { chatId: string; messageId: number; topicLost: boolean };
  * hears of the revision; the earlier one stays as it was. A group that moved follows its new id, a topic
  * that is gone falls back to the group, and a bot that was removed is marked so.
  */
-export async function postMinutes(group: TelegramGroup, message: MinutesMessage, earlier: number | null, now = new Date(), pdf?: Uint8Array, revise = false): Promise<Posted> {
+/** The document a MoM goes as: its PDF, or (13 Nov 2026) the file it was uploaded as. */
+export type MinutesDocument = { bytes: Uint8Array; name: string; type: string };
+
+export async function postMinutes(group: TelegramGroup, message: MinutesMessage, earlier: number | null, now = new Date(), pdf?: Uint8Array | MinutesDocument, revise = false): Promise<Posted> {
   const config = requireBot();
-  const bytes = pdf ?? await minutesPdf(message);
+  const doc: MinutesDocument = pdf && !(pdf instanceof Uint8Array) ? pdf
+    : { bytes: pdf ?? await minutesPdf(message), name: minutesFileName(message), type: "application/pdf" };
   // Kept under Telegram's limit by minutesCaption itself.
   const caption = minutesCaption(message);
-  const file = { field: "document", name: minutesFileName(message), bytes, type: "application/pdf" };
+  const file = { field: "document", name: doc.name, bytes: doc.bytes, type: doc.type };
   const client = createPrivilegedClient();
   let chatId = group.chatId, topic = group.momTopicId, topicLost = false;
 

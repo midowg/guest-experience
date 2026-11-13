@@ -521,6 +521,9 @@ export const momCabinetApi = {
   pdf: (sessionId: string) => `/api/admin/wam/mom/${sessionId}/pdf`,
   /** The MoM as a Word file, to change it (13 Nov 2026). */
   docx: (sessionId: string) => `/api/admin/wam/mom/${sessionId}/docx`,
+  /** The MoM uploaded as a file (13 Nov 2026): a download, or its bytes for a zip made in the browser. */
+  file: (sessionId: string) => `/api/admin/wam/mom/${sessionId}/file`,
+  fileBytes: (sessionId: string) => `/api/admin/wam/mom/${sessionId}/file?berkas=1`,
   photo: (photoId: string) => `/api/admin/wam/mom/photos/${photoId}`,
   photoDownload: (photoId: string, name: string) => `/api/admin/wam/mom/photos/${photoId}?unduh=${encodeURIComponent(name)}`,
   photoFile: (photoId: string) => `/api/admin/wam/mom/photos/${photoId}?berkas=1`,

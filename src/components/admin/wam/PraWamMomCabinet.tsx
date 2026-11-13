@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Check, ChevronRight, Download, ExternalLink, FileArchive, FilePen, FileSpreadsheet, FileText, Folder, FolderOpen, Images, List, MonitorPlay } from "lucide-react";
+import { Check, ChevronRight, Download, ExternalLink, FileArchive, FilePen, FileSpreadsheet, FileText, FileUp, Folder, FolderOpen, Images, List, MonitorPlay } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, ConsoleButtonLink, PageHeader, Pill, SearchField, SegmentedControl, type Crumb } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
 import { MOM_CABINET_MIGRATION } from "@/lib/pra-wam/minutes-photos";
 import {
-  CABINET_EXPORT_LIMIT, docxName, filterEntries, filterOptions, monthName, NO_FILTER, pdfName, photoName, placeEntries, tvTitleOf,
+  CABINET_EXPORT_LIMIT, docxName, filterEntries, uploadedName, filterOptions, monthName, NO_FILTER, pdfName, photoName, placeEntries, tvTitleOf,
   type CabinetFilter, type CabinetPhoto, type CabinetView, type PlacedEntry,
 } from "@/lib/pra-wam/mom-cabinet";
 import { momCabinetApi } from "@/lib/routes";
@@ -132,6 +132,9 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
     void run("pdf", "Menyiapkan PDF", async (signal, step) => {
       const files = await inTurn(scope.map(entry => async (): Promise<ZipFile> =>
         ({ name: `${entry.path.join("/")}/${pdfName(entry)}`, bytes: await fetchFile(momCabinetApi.pdf(entry.sessionId), signal) })), step);
+      // A MoM uploaded as a PDF goes in too, next to its form (13 Nov 2026).
+      files.push(...await inTurn(scope.filter(entry => entry.file?.type === "application/pdf").map(entry => async (): Promise<ZipFile> =>
+        ({ name: `${entry.path.join("/")}/${uploadedName(entry)}`, bytes: await fetchFile(momCabinetApi.fileBytes(entry.sessionId), signal) })), () => undefined));
       save(zipStore(files), zipName("PDF"), "application/zip");
       setMessage({ tone: "success", text: `${files.length} PDF MoM tersimpan dalam satu ZIP, per folder.` });
     }, scope.length);
@@ -142,6 +145,9 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
     void run("docx", "Menyiapkan Word", async (signal, step) => {
       const files = await inTurn(scope.map(entry => async (): Promise<ZipFile> =>
         ({ name: `${entry.path.join("/")}/${docxName(entry)}`, bytes: await fetchFile(momCabinetApi.docx(entry.sessionId), signal) })), step);
+      // A MoM uploaded as a Word file goes in too, next to the one made from its form.
+      files.push(...await inTurn(scope.filter(entry => entry.file && entry.file.type !== "application/pdf").map(entry => async (): Promise<ZipFile> =>
+        ({ name: `${entry.path.join("/")}/${uploadedName(entry)}`, bytes: await fetchFile(momCabinetApi.fileBytes(entry.sessionId), signal) })), () => undefined));
       save(zipStore(files), zipName("Word"), "application/zip");
       setMessage({ tone: "success", text: `${files.length} MoM dalam format Word tersimpan dalam satu ZIP, per folder.` });
     }, scope.length);
@@ -225,6 +231,7 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
       <div className={css.buttons}>
         <ConsoleButtonLink href={momCabinetApi.pdf(entry.sessionId)} icon={<FileText size={16} aria-hidden="true" />}>Unduh PDF</ConsoleButtonLink>
         <ConsoleButtonLink href={momCabinetApi.docx(entry.sessionId)} icon={<FilePen size={16} aria-hidden="true" />}>Unduh Word</ConsoleButtonLink>
+        {entry.file && <ConsoleButtonLink variant="primary" href={momCabinetApi.file(entry.sessionId)} icon={<FileUp size={16} aria-hidden="true" />}>Berkas unggahan</ConsoleButtonLink>}
         {mode === "daftar" && <ConsoleButton icon={<FolderOpen size={16} aria-hidden="true" />} onClick={() => { setMode("folder"); setPath([...entry.path]); }}>Buka folder</ConsoleButton>}
       </div>
     </div>

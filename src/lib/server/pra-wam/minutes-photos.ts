@@ -39,7 +39,7 @@ const unknownUpload = () => new ServiceError(403, "Unggahan tidak dikenali. Ulan
 export const mayWriteMinutes = (session: Session, member: Member) => session.isParticipant || managesSessions(member);
 
 /** Adds or removes photos: may write the MoM, and the meeting has started. */
-async function requireWriter(session: Session, member: Member) {
+export async function requireWriter(session: Session, member: Member) {
   if (!mayWriteMinutes(session, member)) throw new ServiceError(403, "Hanya yang ikut meeting ini yang bisa menambah fotonya.");
   const { minutesRule } = await import("./minutes-rule");
   const { windowHours } = await minutesRule();
@@ -54,7 +54,7 @@ async function rows(sessionId: string): Promise<PhotoRow[]> {
 }
 
 /** Whether a reader who may not write sees the MoM: only once it is sent. */
-async function sent(sessionId: string): Promise<boolean> {
+export async function sent(sessionId: string): Promise<boolean> {
   const { data, error } = await createPrivilegedClient().from("pw_session_minutes").select("sent_at").eq("session_id", sessionId).maybeSingle();
   if (error) return false;
   return !!(data as { sent_at?: string | null } | null)?.sent_at;

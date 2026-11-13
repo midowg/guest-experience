@@ -83,7 +83,7 @@ async function load(ids: readonly string[] | null): Promise<Loaded> {
   if (!migrated || !rows.length) return { migrated, tvReady: await tvReady(), entries: [], details: new Map() };
   const client = createPrivilegedClient();
   const sessionIds = rows.map(row => row.session_id);
-  const [sessions, people, actions, photos, onTv, links] = await Promise.all([
+  const [sessions, people, actions, photos, onTv, links, files] = await Promise.all([
     sessionsByIds(sessionIds), listPeople(),
     // Every PIC of a follow-up (migration 202611130003); before it, the one.
     inParts<ActionRow>(sessionIds, part => client.from("pw_session_minute_actions").select("session_id,sort_order,task,pic_id,pic_ids,due_date,done").in("session_id", part).order("sort_order"))
@@ -91,7 +91,10 @@ async function load(ids: readonly string[] | null): Promise<Loaded> {
     inParts<PhotoRow>(sessionIds, part => client.from("pw_session_minute_photos").select("id,session_id,file_key,size,width,height,created_at").in("session_id", part).order("created_at")),
     client.from("pw_tv_slides").select("mom_photo_id").not("mom_photo_id", "is", null),
     inParts<{ session_id: string; employee_id: string }>(sessionIds, part => client.from("pw_session_participants").select("session_id,employee_id").in("session_id", part)),
+    // The MoMs uploaded as a file (migration 202611130004); none before it.
+    inParts<{ session_id: string; name: string; size: number; content_type: string }>(sessionIds, part => client.from("pw_session_minute_files").select("session_id,name,size,content_type").in("session_id", part)),
   ]);
+  const fileOf = new Map((files.error ? [] : files.rows).map(row => [row.session_id, { name: row.name, size: row.size, type: row.content_type }]));
   if (actions.error && !tableMissing(actions.error)) databaseError(actions.error);
   const bySession = new Map(sessions.map(session => [session.id, session]));
   const name = (id: string | null | undefined) => (id ? people.find(person => person.id === id)?.name ?? "Tanpa nama" : null);
@@ -143,7 +146,7 @@ async function load(ids: readonly string[] | null): Promise<Loaded> {
       topics: items.length || (row.summary.trim() ? 1 : 0), decisions: decisionCount({ decisions: row.decisions, items }),
       actions: own.length, open: own.filter(action => !action.done).length,
       version: sending ? Math.max(1, row.version ?? 1) : 1, sentAt: (sending ? row.sent_at : null) ?? row.submitted_at, telegramOff: !!row.telegram_off,
-      photos: pictures,
+      photos: pictures, file: fileOf.get(session.id) ?? null,
     });
     details.set(session.id, {
       session, absent: [...away].map(fullName), present: inMeeting.filter(id => !away.has(id)).map(fullName), guests,
@@ -178,7 +181,7 @@ export async function cabinetWorkbook(ids: readonly string[]): Promise<Buffer> {
   const yesNo = (value: boolean) => (value ? "Ya" : "Tidak");
   const moms: string[][] = [[
     "No. MoM", "Tanggal", "Mulai", "Selesai", "Meeting", "Kegiatan", "Departemen", "Location/Platform", "Chairperson", "Minute Taker",
-    "Hadir", "Tidak hadir", "Peserta lain", "Topik", "Keputusan", "Tindak lanjut", "Belum selesai (Open)", "Foto", "Versi", "Dikirim (WIB)", "Telegram", "Folder",
+    "Hadir", "Tidak hadir", "Peserta lain", "Topik", "Keputusan", "Tindak lanjut", "Belum selesai (Open)", "Foto", "Versi", "Dikirim (WIB)", "Telegram", "Folder", "Berkas MoM",
   ]];
   const agenda: string[][] = [["No. MoM", "Tanggal", "Meeting", "Bagian", "#", "Topic", "Discussion Summary & Key Points", "Decisions/Outcomes"]];
   const actionRows: string[][] = [["No. MoM", "Tanggal", "Meeting", "#", "Action Item/Task", "PIC", "Due Date", "Status"]];
@@ -189,6 +192,7 @@ export async function cabinetWorkbook(ids: readonly string[]): Promise<Buffer> {
       entry.chair ?? "", entry.notetaker ?? "", detail.present.join(", "), detail.absent.join(", "), detail.guests.join(", "),
       String(entry.topics), String(entry.decisions), String(entry.actions), String(entry.open), String(entry.photos.length), String(entry.version),
       `${wibDate(entry.sentAt)} ${wibTime(entry.sentAt)}`, entry.telegramOff ? "Tidak dikirim (dipilih notulis)" : yesNo(true), entry.path.join(" / "),
+      entry.file?.name ?? "",
     ]);
     const parts = [detail.items.filter(item => !item.added), detail.items.filter(item => item.added)];
     parts.forEach((list, part) => list.forEach((item, index) => agenda.push([

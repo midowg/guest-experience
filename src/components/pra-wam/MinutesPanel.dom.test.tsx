@@ -339,6 +339,33 @@ it("takes only the photos that fit in ten, and says how many were left out", asy
   expect(screen.queryByRole("button", { name: /Tambah foto/ })).toBeNull();
 });
 
+it("with the MoM uploaded as a file: no form to fill, Kirim MoM sends it as it is", async () => {
+  const file = { name: "MoM rapat.docx", size: 182_000, type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" as const, uploadedBy: "Raja", uploadedAt: "2026-11-10T04:00:00.000Z", url: "/berkas", canDelete: true };
+  request.mockResolvedValue({ data: view({ status: "sudah", minutes: written({ items: [], actions: [] }), file, fileReady: true }), message: "MoM dikirim." });
+  render(<MinutesPanel sessionId={SESSION} initial={view({ status: "belum", minutes: null, file, fileReady: true })} />);
+  expect(screen.getByText("MoM rapat.docx")).toBeTruthy();
+  expect(screen.getByText(/Word · 178 KB · diunggah Raja/)).toBeTruthy();
+  // The file is the MoM: no Tulis notulen while it is there.
+  expect(screen.queryByRole("button", { name: /Tulis notulen/ })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
+  const dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
+  fireEvent.click(dialog.getByRole("button", { name: "Kirim MoM" }));
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+  expect(request.mock.calls[0][1].json.items).toEqual([]);
+  expect(request.mock.calls[0][1].json.send).toBe(true);
+  // Sent, only the file and the meeting's facts: no empty agenda or follow-ups.
+  expect(await screen.findByText("MoM dikirim.")).toBeTruthy();
+  expect(screen.queryByText("AGENDA ITEMS AND DISCUSSION")).toBeNull();
+  expect(screen.queryByRole("link", { name: /Unduh PDF/ })).toBeNull();
+});
+
+it("offers to upload the MoM as a file instead of writing it", () => {
+  render(<MinutesPanel sessionId={SESSION} initial={view({ status: "belum", minutes: null, fileReady: true })} />);
+  expect(screen.getByText(/Sudah menulis MoM di Word atau PDF\? Unggah saja/)).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Unggah berkas MoM/ })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /Tulis notulen/ })).toBeTruthy();
+});
+
 it("after the 24 hours: the MoM still shows, says the time is past, and its buttons are off", () => {
   render(<MinutesPanel sessionId={SESSION} initial={view({ status: "sudah", minutes: written(), canWrite: false, open: false, closed: true, deadline: "2026-11-11T03:30:00.000Z" })} />);
   expect(screen.getByText(/Batas mengisi atau merevisi MoM sudah lewat \(11 Nov, 10\.30\)/)).toBeTruthy();
