@@ -25,7 +25,7 @@ export const waitingForMigration = () => new ServiceError(503, `Pra WAM menunggu
 
 /** `photo`: the app address of the profile photo, or null (initials are shown). */
 export type Member = { id: string; name: string; nickname: string; department: string; position: string; mustChangePassword: boolean; roles: PraWamRole[]; photo: string | null;
-  /** Status kerja from Data karyawan (13 Nov 2026): karyawan, dw or intern; interns and daily workers do not book rooms. */
+  /** Status kerja from Data karyawan (13 Nov 2026): karyawan, dw or intern; interns do not book rooms. */
   category?: EmployeeCategory };
 
 /** A person's roles; none before migration 202611040002, so everyone is simply a peserta then. */

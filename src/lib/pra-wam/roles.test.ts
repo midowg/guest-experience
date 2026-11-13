@@ -86,8 +86,8 @@ describe("password from the emailed link", () => {
 });
 
 describe("who books rooms", () => {
-  it("lets karyawan book, not interns or daily workers (a status not read yet counts as karyawan)", async () => {
+  it("lets every karyawan book, daily workers too; not interns (a status not read yet counts as karyawan)", async () => {
     const { booksRooms } = await import("./roles");
-    expect([booksRooms({ category: "karyawan" }), booksRooms({ category: "intern" }), booksRooms({ category: "dw" }), booksRooms({})]).toEqual([true, false, false, true]);
+    expect([booksRooms({ category: "karyawan" }), booksRooms({ category: "intern" }), booksRooms({ category: "dw" }), booksRooms({})]).toEqual([true, false, true, true]);
   });
 });

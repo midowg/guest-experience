@@ -50,11 +50,11 @@ describe("position options as HR renamed them", () => {
   });
 });
 
-describe("interns and daily workers", () => {
-  it("fills in the option that names them, never Staf; nothing when HR has no such option", () => {
-    const withThem = [question("3", { kind: "single", options: ["Staff", "Leader", "HOD", "Intern / Magang", "Daily Worker"] })];
+describe("interns", () => {
+  it("fills in the option that names them, never Staf; nothing when HR has no such option; a daily worker by post", () => {
+    const withThem = [question("3", { kind: "single", options: ["Staff", "Leader", "HOD", "Intern / Magang"] })];
     expect(prefillAnswers(withThem, {}, { ...dewi, post: "staf", category: "intern" }, [])).toEqual({ 3: "Intern / Magang" });
-    expect(prefillAnswers(withThem, {}, { ...dewi, post: "staf", category: "dw" }, [])).toEqual({ 3: "Daily Worker" });
+    expect(prefillAnswers(withThem, {}, { ...dewi, post: "staf", category: "dw" }, [])).toEqual({ 3: "Staff" });
     const without = [question("3", { kind: "single", options: ["Staff", "Leader", "HOD"] })];
     expect(prefillAnswers(without, {}, { ...dewi, post: "staf", category: "intern" }, [])).toEqual({});
     expect(prefillAnswers(without, {}, { ...dewi, post: "staf", category: "karyawan" }, [])).toEqual({ 3: "Staff" });
