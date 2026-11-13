@@ -24,6 +24,8 @@ it("shows every photo in one gallery, newest meeting first, and sends the chosen
   const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ ok: true, data: view, message: "2 foto masuk ke daftar tayangan TV." }), { status: 200 }));
   vi.spyOn(window, "confirm").mockReturnValue(true);
   render(<PraWamMomCabinet initial={view} />);
+  // Daftar is shown first (13 Nov 2026); the gallery is one tap away.
+  fireEvent.click(screen.getByRole("button", { name: /Galeri foto/ }));
   const gallery = within(screen.getByRole("region", { name: "Galeri foto" }));
   // Grouped by meeting, newest first; a meeting without photos is left out.
   expect(gallery.getAllByText(/Appraisal team SS|Evaluasi Meeting|Tanpa foto/).map(item => item.textContent)).toEqual(["Evaluasi Meeting", "Appraisal team SS"]);
@@ -56,8 +58,19 @@ it("asks before a sensitive meeting's photo goes to the TV, and sends nothing wh
   const fetch = vi.spyOn(globalThis, "fetch");
   const ask = vi.spyOn(window, "confirm").mockReturnValue(false);
   render(<PraWamMomCabinet initial={{ ...view, entries: [entry({ telegramOff: true, photos: [photo(1)] })] }} />);
+  fireEvent.click(screen.getByRole("button", { name: /Galeri foto/ }));
   fireEvent.click(screen.getByRole("button", { name: "Pilih semua" }));
   fireEvent.click(screen.getByRole("button", { name: "Masukkan ke TV (1)" }));
   expect(ask.mock.calls[0][0]).toMatch(/meeting sensitif/);
   expect(fetch).not.toHaveBeenCalled();
+});
+
+it("shows every MoM first, one without photos too; the gallery says which it leaves out", () => {
+  render(<PraWamMomCabinet initial={view} />);
+  expect(screen.getByRole("button", { name: /Daftar/ }).getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByText("Tanpa foto")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: /Galeri foto/ }));
+  expect(screen.getByText(/1 MoM tanpa foto tidak tampil di Galeri/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Lihat semua MoM" }));
+  expect(screen.getByText("Tanpa foto")).toBeTruthy();
 });

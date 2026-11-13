@@ -65,7 +65,8 @@ async function inTurn<T>(jobs: readonly (() => Promise<T>)[], each: () => void, 
 export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetView; crumbs?: readonly Crumb[] }) {
   const [view, setView] = useState(initial);
   const [filter, setFilter] = useState<CabinetFilter>(NO_FILTER);
-  const [mode, setMode] = useState<Mode>("galeri");
+  // Every MoM first (13 Nov 2026): Galeri shows only those with photos, so a MoM without one seemed missing.
+  const [mode, setMode] = useState<Mode>("daftar");
   const [path, setPath] = useState<string[]>([]);
   const [message, setMessage] = useState<Message>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -287,9 +288,9 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
           {options.departments.map(name => <option key={name} value={name}>{name}</option>)}
         </select>
         <SegmentedControl label="Tampilan" value={mode} onChange={value => { setMode(value); setPath([]); }} options={[
-          { value: "galeri", label: "Galeri", icon: <Images size={16} aria-hidden="true" /> },
-          { value: "folder", label: "Folder", icon: <Folder size={16} aria-hidden="true" /> },
           { value: "daftar", label: "Daftar", icon: <List size={16} aria-hidden="true" /> },
+          { value: "folder", label: "Folder", icon: <Folder size={16} aria-hidden="true" /> },
+          { value: "galeri", label: "Galeri foto", icon: <Images size={16} aria-hidden="true" /> },
         ]} />
       </div>
       {exportBar}
@@ -305,7 +306,12 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
 
     {!placed.length ? <Card title="Arsip kosong"><p className={css.empty}>{view.entries.length ? "Tidak ada MoM yang cocok dengan pencarian ini." : "Belum ada MoM yang dikirim."}</p></Card>
       : mode === "galeri" ? <section aria-label="Galeri foto" className={css.galleryView}>
-        {!shownPhotos.length ? <Card title="Belum ada foto"><p className={css.empty}>MoM yang tampil belum punya foto.</p></Card> : <>
+        {/* Galeri holds photos only: what has none is named, with the way to it. */}
+        {placed.some(entry => !entry.photos.length) && <p className={css.scope} role="status">
+          {placed.filter(entry => !entry.photos.length).length} MoM tanpa foto tidak tampil di Galeri.{" "}
+          <button type="button" className={css.pickGroup} onClick={() => setMode("daftar")}>Lihat semua MoM</button>
+        </p>}
+        {!shownPhotos.length ? <Card title="Belum ada foto"><p className={css.empty}>MoM yang tampil belum punya foto. Semua MoM ada di tampilan Daftar.</p></Card> : <>
           <div className={css.pickBar} role="toolbar" aria-label="Pilihan foto">
             <p className={css.scope}>{picked.length ? `${picked.length} dipilih` : `${shownPhotos.length} foto`}</p>
             <div className={css.buttons}>
