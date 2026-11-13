@@ -36,11 +36,11 @@ export default async function DevAdminAccessPage({ searchParams }: { searchParam
           { employeeId: C, apps: ["wam"], allEvents: false, eventIds: [] },
         ]}
         people={[
-          { id: A, name: "Dewi Lestari", department: "Center of Excellence", category: "karyawan", hasAccount: true, picOf: 1 },
-          { id: B, name: "Raja Damai Sejahtera Waruwu", department: "Human Resources & General Affair", category: "karyawan", hasAccount: true, picOf: 0 },
-          { id: C, name: "Shaira Kamila", department: "", category: "intern", hasAccount: true, picOf: 0 },
-          { id: "3b6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c11", name: "Tri Wiyono", department: "Human Resources & General Affair", category: "dw", hasAccount: true, picOf: 0 },
-          { id: "4b6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c11", name: "Orang Tanpa Akun", department: "Accounting", category: "karyawan", hasAccount: false, picOf: 0 },
+          { id: A, name: "Dewi Lestari", nickname: "Dewi", department: "Center of Excellence", category: "karyawan", hasAccount: true, picOf: 1 },
+          { id: B, name: "Raja Damai Sejahtera Waruwu", nickname: "Raja", department: "Human Resources & General Affair", category: "karyawan", hasAccount: true, picOf: 0 },
+          { id: C, name: "Shaira Kamila", nickname: "Rara", department: "", category: "intern", hasAccount: true, picOf: 0 },
+          { id: "3b6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c11", name: "Tri Wiyono", nickname: "Ion", department: "Human Resources & General Affair", category: "dw", hasAccount: true, picOf: 0 },
+          { id: "4b6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c11", name: "Orang Tanpa Akun", nickname: "", department: "Accounting", category: "karyawan", hasAccount: false, picOf: 0 },
         ]}
         events={[{ id: E1, title: "Gathering Klien 2026", kind: "acara" }, { id: E2, title: "Kunjungan PT Contoh", kind: "kunjungan" }, { id: "5a6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c03", title: "Friday Sharing", kind: "csr" }]} />
     </>}

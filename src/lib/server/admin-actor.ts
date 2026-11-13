@@ -138,7 +138,7 @@ export async function signInPersonAdmin(identifier: string, password: string): P
 
 /* ---- The super admin's list ---- */
 
-export type GrantPerson = { id: string; name: string; department: string; category: string; hasAccount: boolean };
+export type GrantPerson = { id: string; name: string; nickname: string; department: string; category: string; hasAccount: boolean };
 export type GrantEvent = { id: string; title: string; kind: string };
 
 export async function listGrants(): Promise<{ grants: AdminGrant[]; migrated: boolean }> {
@@ -151,12 +151,12 @@ export async function listGrants(): Promise<{ grants: AdminGrant[]; migrated: bo
 export async function grantPeople(): Promise<GrantPerson[]> {
   const client = createPrivilegedClient();
   const [{ data: people, error }, { data: accounts }] = await Promise.all([
-    client.from("employees").select("id,full_name,department,category,active").eq("active", true).order("full_name").limit(2000),
+    client.from("employees").select("id,full_name,nickname,department,category,active").eq("active", true).order("full_name").limit(2000),
     client.from("pw_accounts").select("employee_id,active").limit(2000),
   ]);
   if (error) databaseError(error);
   const active = new Set((accounts ?? []).filter(row => row.active).map(row => row.employee_id as string));
-  return (people ?? []).map(person => ({ id: person.id as string, name: person.full_name as string, department: (person.department as string) ?? "", category: (person.category as string) ?? "karyawan", hasAccount: active.has(person.id as string) }));
+  return (people ?? []).map(person => ({ id: person.id as string, name: person.full_name as string, nickname: (person.nickname as string) ?? "", department: (person.department as string) ?? "", category: (person.category as string) ?? "karyawan", hasAccount: active.has(person.id as string) }));
 }
 
 export async function saveGrant(employeeId: string, input: AdminGrantInput): Promise<AdminGrant> {

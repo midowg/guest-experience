@@ -8,11 +8,22 @@ import { ADMIN_APPS, ADMIN_GRANTS_MIGRATION, adminAppHints, adminAppLabels, gran
 import { adminGrantsApi } from "@/lib/routes";
 import css from "./admin-table.module.css";
 
-export type GrantPersonView = { id: string; name: string; department: string; category: string; hasAccount: boolean; picOf: number };
+export type GrantPersonView = { id: string; name: string; nickname: string; department: string; category: string; hasAccount: boolean; picOf: number };
 export type GrantEventView = { id: string; title: string; kind: string };
 type Draft = { employeeId: string; apps: AdminApp[]; allEvents: boolean; eventIds: string[] };
 
 const categoryLabel = (category: string) => category === "intern" ? "Intern" : category === "dw" ? "DW" : "";
+const fold = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+/** Every word typed is found in the name, nama panggilan, department or status kerja: "dewi coe", "tyo hr", "intern". */
+export function findPeople(people: GrantPersonView[], query: string, limit = 8): GrantPersonView[] {
+  const words = fold(query).split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  return people.filter(person => {
+    const haystack = fold([person.name, person.nickname, person.department, categoryLabel(person.category)].join(" "));
+    return words.every(word => haystack.includes(word));
+  }).slice(0, limit);
+}
+const personLine = (person: GrantPersonView) => [person.nickname && `Panggilan ${person.nickname}`, person.department, categoryLabel(person.category)].filter(Boolean).join(" · ");
 
 /**
  * Super admin → Akses admin (13 Nov 2026): who may sign in to the admin with their own WAM account,
@@ -21,15 +32,15 @@ const categoryLabel = (category: string) => category === "intern" ? "Intern" : c
 export function AdminGrants({ initial, people, events, migrated }: { initial: AdminGrant[]; people: GrantPersonView[]; events: GrantEventView[]; migrated: boolean }) {
   const [grants, setGrants] = useState(initial);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [adding, setAdding] = useState("");
+  const [who, setWho] = useState("");
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const byId = useMemo(() => new Map(people.map(person => [person.id, person])), [people]);
   const eventTitle = useMemo(() => new Map(events.map(event => [event.id, event.title])), [events]);
-  const granted = new Set(grants.map(grant => grant.employeeId));
-  const candidates = people.filter(person => !granted.has(person.id));
+  const granted = new Map(grants.map(grant => [grant.employeeId, grant]));
+  const found = findPeople(people, who);
   // Only Acara's events are picked here; Friday Sharing and Your Visit open by their app.
   const pickable = events.filter(event => event.kind !== "csr" && event.kind !== "panduan" && event.title.toLowerCase().includes(search.trim().toLowerCase()));
 
@@ -47,7 +58,7 @@ export function AdminGrants({ initial, people, events, migrated }: { initial: Ad
       const result = await adminRequest<AdminGrant>(adminGrantsApi(draft.employeeId), { method: "PUT", body: JSON.stringify({ apps: draft.apps, allEvents: draft.allEvents, eventIds: draft.eventIds }) });
       const saved = result.data!;
       setGrants(list => list.some(item => item.employeeId === saved.employeeId) ? list.map(item => item.employeeId === saved.employeeId ? saved : item) : [...list, saved]);
-      setDraft(null); setAdding(""); setMessage(result.message);
+      setDraft(null); setWho(""); setMessage(result.message);
     } catch (cause) { setError(errorMessage(cause)); }
     finally { setBusy(false); }
   }
@@ -71,16 +82,26 @@ export function AdminGrants({ initial, people, events, migrated }: { initial: Ad
     {error && <Notice tone="error" role="alert">{error}</Notice>}
     {message && <p role="status" className={css.muted}>{message}</p>}
 
-    {!draft && <div className={css.toolbar}>
-      <label>Tambah admin
-        <select className={css.select} value={adding} onChange={event => setAdding(event.target.value)} aria-label="Pilih orang">
-          <option value="">Pilih orang dari Data karyawan…</option>
-          {candidates.map(person => <option key={person.id} value={person.id} disabled={!person.hasAccount}>
-            {person.name}{categoryLabel(person.category) ? ` (${categoryLabel(person.category)})` : ""}{person.department ? ` · ${person.department}` : ""}{person.hasAccount ? "" : " · belum punya akun WAM"}
-          </option>)}
-        </select>
-      </label>
-      <ConsoleButton variant="primary" disabled={!adding || busy} onClick={() => open(null, adding)}>Atur akses</ConsoleButton>
+    {/* 13 Nov 2026: one search box over Data karyawan, by name, nama panggilan or department. */}
+    {!draft && <div className={css.finder}>
+      <label htmlFor="cari-orang" className={css.finderLabel}>Tambah atau ubah admin</label>
+      <input id="cari-orang" className={css.search} type="search" value={who} onChange={event => setWho(event.target.value)} autoComplete="off"
+        placeholder="Cari nama, nama panggilan, atau departemen" aria-describedby="cari-orang-hasil" />
+      <p id="cari-orang-hasil" className="sr-only" aria-live="polite">{who.trim() ? `${found.length} orang ditemukan` : ""}</p>
+      {who.trim() !== "" && (found.length === 0 ? <p className={css.muted}>Tidak ada orang yang cocok.</p> : <ul className={css.results}>
+        {found.map(person => {
+          const grant = granted.get(person.id);
+          return <li key={person.id}>
+            <button type="button" className={css.result} disabled={busy || !person.hasAccount} onClick={() => open(grant ?? null, person.id)}>
+              <span className={css.resultText}>
+                <span className={css.strong}>{person.name}</span>
+                <span className={css.muted}>{personLine(person) || "—"}</span>
+              </span>
+              <span className={css.resultTag}>{!person.hasAccount ? "Belum punya akun WAM" : grant ? "Sudah admin · Ubah" : "Beri akses"}</span>
+            </button>
+          </li>;
+        })}
+      </ul>)}
     </div>}
 
     {draft && editing && <section className={css.editor} aria-labelledby="grant-editor">
@@ -121,7 +142,7 @@ export function AdminGrants({ initial, people, events, migrated }: { initial: Ad
           const person = byId.get(grant.employeeId);
           const picked = grant.eventIds.map(id => eventTitle.get(id)).filter(Boolean).join(", ");
           return <tr key={grant.employeeId}>
-            <td data-label="Nama"><div><span className={css.strong}>{person?.name ?? "(tidak di Data karyawan)"}</span>{person?.department && <div className={css.muted}>{person.department}</div>}</div></td>
+            <td data-label="Nama"><div><span className={css.strong}>{person?.name ?? "(tidak di Data karyawan)"}</span>{person && personLine(person) && <div className={css.muted}>{personLine(person)}</div>}</div></td>
             <td data-label="Aplikasi">{grant.apps.length ? <span className={css.chips}>{grant.apps.map(app => <Pill key={app} tone="blue">{adminAppLabels[app]}</Pill>)}</span> : <span className={css.muted}>Hanya acara PIC-nya</span>}</td>
             <td data-label="Acara" title={picked || undefined}><div>{grantEventsLabel(grant)}{person?.picOf ? <div className={css.muted}>PIC di Tim Werkudara</div> : null}</div></td>
             <td className={css.actions}>
