@@ -37,7 +37,11 @@
 .wrap { width: 100%; max-width: 560px; margin-inline: auto; }
 
 /* Top: Keluar, the six sticker slots, where and how long */
-.top { position: sticky; top: 0; z-index: 5; background: var(--paper); padding-top: max(var(--space-sm), env(safe-area-inset-top, 0px)); padding-bottom: var(--space-xs); }
+.top { position: sticky; top: 0; z-index: 5; background: var(--paper); padding-top: max(var(--space-sm), env(safe-area-inset-top, 0px)); padding-bottom: var(--space-xs); isolation: isolate; }
+/* The bar's paper reaches both edges of the screen (13 Nov 2026): the content's column is narrower, and what scrolls under it must not show at the sides. .app clips it to the screen. */
+.top::before, .dock::before { content: ""; position: absolute; inset: 0 calc(50% - 50vw); z-index: -1; background: var(--paper); pointer-events: none; }
+.top::before { box-shadow: 0 1px 0 rgba(20, 19, 37, .08); }
+.dock::before { box-shadow: 0 -1px 0 rgba(20, 19, 37, .08); }
 .bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); margin-bottom: var(--space-xs); }
 .exit { display: inline-flex; align-items: center; gap: var(--space-2xs); min-height: 44px; padding: 0 var(--space-sm) 0 var(--space-2xs); margin-left: calc(-1 * var(--space-2xs)); border-radius: var(--radius-pill); color: var(--ink); font-weight: 700; font-size: var(--text-sm); text-decoration: none; }
 .exit:hover { background: var(--paper-2); }
@@ -165,7 +169,7 @@ textarea.field { min-height: 130px; }
 .alert .btn { justify-self: start; min-height: 44px; }
 
 /* Bottom action bar, in the thumb zone */
-.dock { position: sticky; bottom: 0; z-index: 6; background: var(--paper); padding-block: var(--space-sm) calc(var(--space-sm) + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: var(--space-xs); }
+.dock { position: sticky; bottom: 0; z-index: 6; isolation: isolate; background: var(--paper); padding-block: var(--space-sm) calc(var(--space-sm) + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: var(--space-xs); }
 .grow { flex: 1; }
 .btn { font: inherit; font-weight: 700; font-size: var(--text-md); display: inline-flex; align-items: center; justify-content: center; gap: var(--space-xs); min-height: 52px; padding: 0 var(--space-lg); border: 0; border-radius: var(--radius-pill); cursor: pointer; color: var(--ink); background: transparent; text-decoration: none;
   transition: transform var(--dur-micro) var(--ease-out), box-shadow var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out); -webkit-tap-highlight-color: transparent; }
