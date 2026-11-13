@@ -165,6 +165,8 @@ describe("kartu tokoh dunia", () => {
     expect(first?.colors).toEqual(["#C2303F", "#6E1023"]);
     // No picture uploaded yet: the one shipped with the app.
     expect(first?.figure?.image).toBe("/figur/edmund-hillary.webp");
+    // The persona's old anime picture never shows on a tokoh card.
+    expect(first?.character.image).toBeNull();
     const second = await ensureCard(form(), "p2", outdoorsy);
     const third = await ensureCard(form(), "p3", outdoorsy);
     expect([second?.figure?.key, third?.figure?.key]).toEqual(["edmund-hillary", "gordon-ramsay"]);

@@ -152,7 +152,8 @@ export function viewOf(row: PersonCardRow, catalog: Catalog): CardView | null {
   const figure = row.figure_id ? catalog.figures.find(item => item.id === row.figure_id) : undefined;
   return {
     serial: row.serial, trial: row.trial, dna: row.dna, drawnAt: row.drawn_at,
-    character: { id: character.id, key: character.key, name: character.name, figure: character.figure, class: character.class, title: character.title, description: character.description, powers: character.powers, image: character.image, partner: partner ? { name: partner.name, class: partner.class } : null },
+    // A tokoh card never shows the persona's old anime picture (13 Nov 2026).
+    character: { id: character.id, key: character.key, name: character.name, figure: character.figure, class: character.class, title: character.title, description: character.description, powers: character.powers, image: figure ? null : character.image, partner: partner ? { name: partner.name, class: partner.class } : null },
     tier: { key: tier.key, name: tier.name, color: tier.color, line: tier.line, odds: tier.odds, sort: tier.sort },
     background: part("latar", row.background), accent: part("aksen", row.accent), stickers: row.stickers.map(number => part("stiker", number)),
     figure: figure ? { id: figure.id, key: figure.key, name: figure.name, costume: figure.costume, quote: figure.quote, image: figure.image } : null,

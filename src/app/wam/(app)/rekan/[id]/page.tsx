@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { CardImage } from "@/components/pra-wam/colleagues/CardImage";
 import { serialLabel } from "@/lib/pra-wam/cards";
+import { cardName } from "@/lib/pra-wam/figures";
 import { seesQuestionnaire } from "@/lib/pra-wam/questionnaire";
 import { managesApp, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
@@ -34,7 +35,7 @@ export default async function ColleaguePage({ params }: { params: Promise<{ id: 
   return <>
     <div className={css.profile}>
       <div className={css.big}>
-        <CardImage card={card} alt={`Kartu ${card.character.name}, ${card.tier.name}, ${serialLabel(card.serial)}`} scale={0.5} eager />
+        <CardImage card={card} alt={`Kartu ${cardName(card)}, ${card.tier.name}, ${serialLabel(card.serial)}`} scale={0.5} eager />
       </div>
       <div className={base.section}>
         <div>
@@ -43,8 +44,9 @@ export default async function ColleaguePage({ params }: { params: Promise<{ id: 
         </div>
         <section className={`${base.card} ${css.character}`} aria-label="Karakter">
           <span className={css.tier} style={{ background: card.tier.color }}>{card.tier.name} · {serialLabel(card.serial)}</span>
-          <h2>{card.character.name}</h2>
-          <p className={css.sub}>{[card.character.figure, card.character.class].filter(Boolean).join(" · ")}</p>
+          <h2>{cardName(card)}</h2>
+          <p className={css.sub}>{card.figure ? card.character.class : [card.character.figure, card.character.class].filter(Boolean).join(" · ")}</p>
+          {card.reason && <p>{card.reason}</p>}
           {card.character.description && <p>{card.character.description}</p>}
           {card.character.powers.length > 0 && <ul className={css.powers} aria-label="Kekuatan">{card.character.powers.map(power => <li key={power}>{power}</li>)}</ul>}
           {card.character.partner && <p className={css.sub}>Partner ideal: <b>{card.character.partner.class || card.character.partner.name}</b></p>}

@@ -75,4 +75,11 @@ describe("the questionnaire on Beranda", () => {
     expect(screen.getByRole("link").getAttribute("href")).toBe("/wam/kuesioner");
     expect(screen.queryByRole("progressbar")).toBeNull();
   });
+
+  it("once done, shows the tokoh card's figure and name, never the old character", () => {
+    const { container } = render(<QuestionnaireCard {...card} sectionsDone={6} done character={{ name: "Edmund Hillary", tier: "Rare", color: "#449DFF", image: "/figur/edmund-hillary.webp", tokoh: true }} />);
+    expect(screen.getByRole("link").textContent).toContain("Kamu dapat Edmund Hillary");
+    expect(screen.getByRole("link").textContent).toContain("Rare · lihat kartu tokohmu");
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("/figur/edmund-hillary.webp");
+  });
 });

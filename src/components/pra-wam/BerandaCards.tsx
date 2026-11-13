@@ -50,7 +50,7 @@ export function AboutCard({ about, preview = false }: { about: Pick<About, "titl
 export function QuestionnaireCard({ name, cardText, minutes, sectionsDone, sectionsTotal, done, closed, href, character }: {
   name: string; cardText: string; minutes: number; sectionsDone: number; sectionsTotal: number; done: boolean; closed: boolean; href: string;
   /** Once done and drawn: the character card instead of the tick (its picture, name and level). */
-  character?: { name: string; tier: string; color: string; image: string | null } | null;
+  character?: { name: string; tier: string; color: string; image: string | null; tokoh?: boolean } | null;
 }) {
   const share = sectionsTotal ? Math.round((sectionsDone / sectionsTotal) * 100) : 0;
   // Highlighted only while it still waits to be filled; done or closed it is a plain row.
@@ -63,9 +63,9 @@ export function QuestionnaireCard({ name, cardText, minutes, sectionsDone, secti
     <span className={styles.aboutText}>
       {waiting
         ? <span className={styles.questTitle}><strong>{name}</strong><span className={styles.questPill}>{sectionsDone ? "Lanjutkan" : "Perlu diisi"}</span></span>
-        : <strong>{done && character ? `Kamu ${character.name}` : name}</strong>}
+        : <strong>{done && character ? (character.tokoh ? `Kamu dapat ${character.name}` : `Kamu ${character.name}`) : name}</strong>}
       {done
-        ? <span className={styles.rowLine}>{character ? `${character.tier} · lihat kartu karaktermu` : "Selesai · terima kasih"}</span>
+        ? <span className={styles.rowLine}>{character ? `${character.tier} · lihat kartu ${character.tokoh ? "tokohmu" : "karaktermu"}` : "Selesai · terima kasih"}</span>
         : <>
           {cardText && <span className={styles.aboutSummary}>{cardText}</span>}
           <span className={styles.questMeta}>{closed ? "Sudah ditutup" : `Sekitar ${minutes} menit`} · {sectionsDone} dari {sectionsTotal} bagian</span>

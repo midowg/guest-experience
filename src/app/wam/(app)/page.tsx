@@ -17,6 +17,7 @@ import { myAttendance, untilLabel } from "@/lib/server/pra-wam/agenda";
 import { myNotifications } from "@/lib/server/pra-wam/announcements";
 import { listDocuments } from "@/lib/server/pra-wam/documents";
 import { myQuestionnaireCard } from "@/lib/server/pra-wam/questionnaire-answers";
+import { cardName } from "@/lib/pra-wam/figures";
 import { myRoom } from "@/lib/server/pra-wam/stay";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
 import { myAgenda } from "@/lib/server/pra-wam/quick-actions";
@@ -96,7 +97,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const questCard = quest && <QuestionnaireCard name={quest.form.name} cardText={quest.form.cardText} minutes={quest.form.minutes}
     sectionsDone={quest.progress.sectionsDone} sectionsTotal={quest.progress.sectionsTotal} done={quest.progress.done}
     closed={quest.form.status === "tutup"} href={praWamPath.questionnaire(quest.form.slug)}
-    character={quest.card && { name: quest.card.character.name, tier: quest.card.tier.name, color: quest.card.tier.color, image: quest.card.character.image }} />;
+    // The tokoh card's figure (its picture and name); a card without one, its character.
+    character={quest.card && { name: cardName(quest.card), tier: quest.card.tier.name, color: quest.card.tier.color, image: quest.card.figure ? quest.card.figure.image : quest.card.character.image, tokoh: !!quest.card.figure }} />;
   /** This page with the item open: AgendaSheet opens it in place, and the address keeps it. */
   const open = (item: { key: string }) => withItem(praWamPath.home, item.key);
   const opens = (item: { key: string }) => ({ [AGENDA_ITEM]: item.key, "aria-haspopup": "dialog" as const });

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { serialLabel } from "@/lib/pra-wam/cards";
+import { cardName } from "@/lib/pra-wam/figures";
 import { praWamPath } from "@/lib/routes";
 import type { GalleryEntry } from "@/lib/server/pra-wam/colleagues";
 import { CardImage } from "./CardImage";
@@ -10,7 +11,7 @@ import css from "./colleagues.module.css";
 
 /** "a b" matches "Budi Aris": every word somewhere in the name, department or character. */
 const matches = (entry: GalleryEntry, query: string) => {
-  const haystack = `${entry.name} ${entry.department} ${entry.card.character.name} ${entry.card.tier.name}`.toLowerCase();
+  const haystack = `${entry.name} ${entry.department} ${cardName(entry.card)} ${entry.card.character.class} ${entry.card.tier.name}`.toLowerCase();
   return query.toLowerCase().split(/\s+/).filter(Boolean).every(word => haystack.includes(word));
 };
 
@@ -49,10 +50,10 @@ export function Gallery({ entries, viewerId }: { entries: GalleryEntry[]; viewer
         {shown.map(entry => {
           const mine = entry.employeeId === viewerId;
           return <li key={entry.employeeId}>
-            <a className={css.tile} href={praWamPath.colleague(entry.employeeId)} aria-label={`${entry.name}${mine ? " (kamu)" : ""}, ${entry.card.character.name}, ${entry.card.tier.name}, kartu ${serialLabel(entry.card.serial)}`}>
+            <a className={css.tile} href={praWamPath.colleague(entry.employeeId)} aria-label={`${entry.name}${mine ? " (kamu)" : ""}, ${cardName(entry.card)}, ${entry.card.tier.name}, kartu ${serialLabel(entry.card.serial)}`}>
               <CardImage card={entry.card} alt="" />
               <span className={css.who}><b>{entry.name}</b>{mine && <i className={css.you}>Kamu</i>}</span>
-              <span className={css.meta}>{entry.card.character.name} · {entry.card.tier.name}</span>
+              <span className={css.meta}>{cardName(entry.card)} · {entry.card.tier.name}</span>
             </a>
           </li>;
         })}

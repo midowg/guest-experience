@@ -94,6 +94,9 @@ export function reasonText(personaClass: string, figureName: string, why: readon
   return `Kamu dapat ${figureName} karena ${joined}.`.slice(0, 400);
 }
 
+/** What a card is called: its figure, or (a card without one) its character. */
+export const cardName = (card: { figure: { name: string } | null; character: { name: string } }) => card.figure?.name ?? card.character.name;
+
 /** Which figure a picked file is for: its key ("ki-hajar-dewantara.png") or its number ("tokoh-01.webp"). */
 export function figureOfFile<T extends Pick<Figure, "key" | "number">>(name: string, figures: readonly T[]): T | null {
   const match = /^(.+)\.(webp|png|jpe?g)$/i.exec(name.trim());
