@@ -25,19 +25,24 @@ export type WamSection = {
   owner?: WamSectionKey;
 };
 
+/*
+ * 13 Nov 2026, regrouped by what the admin does there: people; the event and its meetings (rooms,
+ * MoM and where it goes); what participants see (questionnaire, Beranda's text, the office TV);
+ * and the settings rarely touched (theme, MCP access) at the bottom.
+ */
 export const wamSections: readonly WamSection[] = [
   { key: "ringkasan", label: "Ringkasan", group: "Ikhtisar", href: wamAdminPath.home, icon: LayoutDashboard, summary: "Angka penting dan jalan ke setiap bagian." },
   { key: "akun", label: "Akun dan peran", group: "Orang", href: wamAdminPath.accounts, icon: UsersRound, summary: "Buat akun, atur peran, ubah email login, dan reset password." },
   { key: "reset", label: "Permintaan reset password", group: "Orang", href: wamAdminPath.resetRequests, icon: KeyRound, summary: "Jawab permintaan dari halaman Lupa password.", owner: "akun" },
-  { key: "mcp", label: "Akses MCP", group: "Orang", href: MCP_ADMIN_PATH, icon: Plug, summary: "Siapa boleh menghubungkan Claude atau ChatGPT ke data WAM, dan panggilan terakhir." },
-  { key: "acara", label: "Acara dan modul", group: "Aplikasi", href: wamAdminPath.events, icon: CalendarRange, summary: "Status Pra WAM dan WAM, modul yang dibuka, dan meeting yang wajib MoM." },
-  { key: "about", label: "Apa itu WAM", group: "Aplikasi", href: wamAdminPath.about, icon: Info, summary: "Teks penjelasan WAM di Beranda peserta." },
-  { key: "tema", label: "Tema aplikasi", group: "Aplikasi", href: wamAdminPath.theme, icon: Palette, summary: "Tema WAM untuk semua orang: Dream Out Loud atau Werkudara." },
-  { key: "ruang", label: "Ruang dan denah", group: "Aplikasi", href: wamAdminPath.rooms, icon: MapIcon, summary: "Kapasitas ruang, spot di denah, dan tampil tidaknya denah di Book." },
-  { key: "tv", label: "TV Announcement", group: "Aplikasi", href: wamAdminPath.tv, icon: Tv, summary: "TV kantor: jadwal ruang hari ini dan gambar pengumuman, berganti otomatis." },
-  { key: "telegram", label: "Telegram", group: "Aplikasi", href: wamAdminPath.telegram, icon: Send, summary: "Bot MoM, webhook, dan grup Telegram tiap departemen." },
-  { key: "arsip", label: "Arsip MoM", group: "Data peserta", href: wamAdminPath.momCabinet, icon: Archive, summary: "Semua MoM terkirim dengan PDF dan fotonya, per bulan, kegiatan, tanggal, dan tim; ekspor Excel dan ZIP." },
-  { key: "kuesioner", label: "Kuesioner", group: "Data peserta", href: wamAdminPath.questionnaire.content, icon: ClipboardList, summary: "Isi, pengaturan, progres, rekap, dan ekspor kuesioner personal." },
+  { key: "acara", label: "Acara dan modul", group: "Acara dan meeting", href: wamAdminPath.events, icon: CalendarRange, summary: "Status Pra WAM dan WAM, modul yang dibuka, dan meeting yang wajib MoM." },
+  { key: "ruang", label: "Ruang dan denah", group: "Acara dan meeting", href: wamAdminPath.rooms, icon: MapIcon, summary: "Kapasitas ruang, spot di denah, dan tampil tidaknya denah di Book." },
+  { key: "arsip", label: "Arsip MoM", group: "Acara dan meeting", href: wamAdminPath.momCabinet, icon: Archive, summary: "Semua MoM terkirim dengan PDF dan fotonya, per bulan, kegiatan, tanggal, dan tim; ekspor Excel, Word, dan ZIP." },
+  { key: "telegram", label: "Telegram", group: "Acara dan meeting", href: wamAdminPath.telegram, icon: Send, summary: "Bot MoM, grup Telegram tiap departemen, dan chat CoS untuk BOD." },
+  { key: "kuesioner", label: "Kuesioner", group: "Untuk peserta", href: wamAdminPath.questionnaire.content, icon: ClipboardList, summary: "Isi, pengaturan, progres, rekap, dan ekspor kuesioner personal." },
+  { key: "about", label: "Apa itu WAM", group: "Untuk peserta", href: wamAdminPath.about, icon: Info, summary: "Teks penjelasan WAM di Beranda peserta." },
+  { key: "tv", label: "TV Announcement", group: "Untuk peserta", href: wamAdminPath.tv, icon: Tv, summary: "TV kantor: jadwal ruang hari ini dan gambar pengumuman, berganti otomatis." },
+  { key: "tema", label: "Tema aplikasi", group: "Pengaturan", href: wamAdminPath.theme, icon: Palette, summary: "Tema WAM untuk semua orang: Dream Out Loud atau Werkudara." },
+  { key: "mcp", label: "Akses MCP", group: "Pengaturan", href: MCP_ADMIN_PATH, icon: Plug, summary: "Siapa boleh menghubungkan Claude atau ChatGPT ke data WAM, dan panggilan terakhir." },
 ];
 
 export const wamSection = (key: WamSectionKey): WamSection => wamSections.find(section => section.key === key)!;
