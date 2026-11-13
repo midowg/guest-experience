@@ -172,6 +172,10 @@ describe("kartu tokoh dunia", () => {
     // The persona's figures full: a figure of another persona with a place.
     expect((await ensureCard(form(), "p4", outdoorsy))?.figure?.key).toBe("gordon-ramsay");
     expect((await ensureCard(form(), "p5", outdoorsy))?.figure?.key).toBe("affandi");
+    // Every figure has two: the seventh person is a third for the best figure of the persona, in place 3.
+    await ensureCard(form(), "p6", outdoorsy);
+    expect((await ensureCard(form(), "p7", outdoorsy))?.figure?.key).toBe("edmund-hillary");
+    expect(db.cq_person_cards.find(row => row.employee_id === "p7")).toMatchObject({ figure_slot: 3 });
     expect((db.cq_person_cards[0].roll as { figure: { key: string; score: number } }).figure).toMatchObject({ key: "edmund-hillary", score: 4 });
   });
 

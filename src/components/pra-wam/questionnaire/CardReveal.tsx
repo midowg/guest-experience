@@ -257,7 +257,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
         </section>
         <section className={styles.panel} aria-labelledby="cq-card-traits">
           <h2 id="cq-card-traits" className={styles.heading}>Trait kartumu</h2>
-          <p className={styles.small}>Tokoh dan tipe dicocokkan dari jawabanmu. Rarity diundi terpisah, sekali, lalu kartunya dikunci. Satu tokoh paling banyak dimiliki dua orang.</p>
+          <p className={styles.small}>Tokoh dan tipe dicocokkan dari jawabanmu. Rarity diundi terpisah, sekali, lalu kartunya dikunci. Satu tokoh dimiliki paling banyak dua orang, tiga bila semua tokoh sudah terisi dua.</p>
           <dl className={styles.traits}>
             <div><dt>Tokoh</dt><dd>{figure.name}</dd><span>Dicocokkan dari jawabanmu</span></div>
             <div><dt>Peran</dt><dd>{card.character.class}</dd><span>Dari peranmu di tim</span></div>

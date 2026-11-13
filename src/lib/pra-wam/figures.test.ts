@@ -26,7 +26,10 @@ describe("matching a figure", () => {
     expect(pickFigure("garda", [ramsay, hillary, mercury], answers, { "edmund-hillary": 2 }, first)?.figure.key).toBe("gordon-ramsay");
     // Every figure of the persona taken twice: the best of the rest.
     expect(pickFigure("garda", [ramsay, hillary, mercury], answers, { "edmund-hillary": 2, "gordon-ramsay": 2 }, first)?.figure.key).toBe("freddie-mercury");
-    expect(pickFigure("garda", [ramsay, hillary], answers, { "edmund-hillary": 2, "gordon-ramsay": 2 }, first)).toBeNull();
+    // Every figure has two: a third person may have one, the persona's best first.
+    expect(pickFigure("garda", [ramsay, hillary], answers, { "edmund-hillary": 2, "gordon-ramsay": 2 }, first)?.figure.key).toBe("edmund-hillary");
+    expect(pickFigure("garda", [ramsay, hillary], answers, { "edmund-hillary": 3, "gordon-ramsay": 2 }, first)?.figure.key).toBe("gordon-ramsay");
+    expect(pickFigure("garda", [ramsay, hillary], answers, { "edmund-hillary": 3, "gordon-ramsay": 3 }, first)).toBeNull();
     expect(pickFigure("garda", [{ ...hillary, hidden: true }, ramsay], answers, {}, first)?.figure.key).toBe("gordon-ramsay");
   });
 

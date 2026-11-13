@@ -227,13 +227,14 @@ async function figuresTaken(formId: string): Promise<{ used: Record<string, numb
   return { used, places };
 }
 
-/** A figure for someone of this persona, with its free place, or null when every figure is taken twice. */
+/** A figure for someone of this persona, with its free place, or null when every figure is taken three times. */
 async function matchFigure(formId: string, catalog: Catalog, personaId: string, answers: Answers, trial: boolean) {
   const { used, places } = trial ? { used: {}, places: new Set<string>() } : await figuresTaken(formId);
   const persona = catalog.characters.find(item => item.id === personaId);
   const match = pickFigure(personaId, catalog.figures, answers, used, secure);
   if (!match) return null;
-  const slot = places.has(`${match.figure.id}|1`) ? 2 : 1;
+  // The first free place, 1 to 3 (the database refuses a taken one, so a clash draws again).
+  const slot = [1, 2, 3].find(place => !places.has(`${match.figure.id}|${place}`)) ?? 3;
   return {
     figure: match.figure, slot, reason: reasonText(persona?.class ?? "", match.figure.name, match.why),
     record: { key: match.figure.key, score: match.score, tied: match.tied, at: new Date().toISOString() },
@@ -266,7 +267,7 @@ async function draw(form: QForm, employeeId: string, answers: Answers, catalog: 
     const chosen = chooseCharacter(shown, answers, null, secure)!;
     const tier = drawTier(catalog.tiers, trial ? {} : taken, secure);
     const match = figures ? await matchFigure(form.id, catalog, chosen.id, answers, trial) : null;
-    if (figures && !match) throw new ServiceError(409, "Semua tokoh sudah dipakai dua orang. Hubungi admin WAM untuk menambah tokoh.");
+    if (figures && !match) throw new ServiceError(409, "Semua tokoh sudah dipakai tiga orang. Hubungi admin WAM untuk menambah tokoh.");
     let look: Look = { background: 1, accent: 1, stickers: [] };
     if (!match) {
       look = drawLook(parts, secure);

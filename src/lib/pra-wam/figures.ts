@@ -8,7 +8,8 @@ import type { Answers } from "./questionnaire";
  *   2. The figure, inside that persona: +2 for each of its hobbies chosen at 17, +2 for each of its
  *      activities chosen at 21, +1 when its energy is the answer at 20, +1 when its music genre is
  *      chosen at 37. Only figures with a place left (two people each) take part; when the persona
- *      has none left, every figure with a place does.
+ *      has none left, every figure with a place does. Once every figure has two, a third person
+ *      may have one (13 Nov 2026, the owner's choice, for more than 96 people), the same way.
  *   3. A tie: a figure nobody has yet goes first, then a draw.
  *   4. The reason on the card: "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan, suka
  *      olahraga & outdoor, paling menikmati kegiatan outdoor dan nyaman di kelompok kecil."
@@ -17,6 +18,8 @@ import type { Answers } from "./questionnaire";
  */
 
 export const FIGURE_QUOTA = 2;
+/** The most people a figure may have, once every figure has FIGURE_QUOTA (migration 202611130011). */
+export const FIGURE_MAX = 3;
 export const FIGURES_MIGRATION = "202611130010_wam_figures.sql";
 /** The questions a figure is matched on, by their fixed keys. */
 export const FIGURE_KEYS = { hobbies: "17", energy: "20", activities: "21", genre: "37" } as const;
@@ -65,10 +68,13 @@ export function figureScore(figure: Pick<Figure, "hobbies" | "activities" | "ene
 
 /**
  * The figure for someone of this persona. `used` counts the people who have each figure (by id).
- * Null only when every figure is taken twice.
+ * Null only when every figure is taken three times.
  */
 export function pickFigure(personaId: string, figures: readonly Figure[], answers: Answers, used: Record<string, number>, pick: Random): { figure: Figure; score: number; why: string[]; tied: string[] } | null {
-  const open = figures.filter(figure => !figure.hidden && (used[figure.id] ?? 0) < FIGURE_QUOTA);
+  const shown = figures.filter(figure => !figure.hidden);
+  // Two people a figure first; a third only once every figure has two.
+  const under = (limit: number) => shown.filter(figure => (used[figure.id] ?? 0) < limit);
+  const open = under(FIGURE_QUOTA).length ? under(FIGURE_QUOTA) : under(FIGURE_MAX);
   const own = open.filter(figure => figure.personaId === personaId);
   const pool = own.length ? own : open;
   if (!pool.length) return null;
