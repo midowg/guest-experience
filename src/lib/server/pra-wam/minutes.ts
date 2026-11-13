@@ -292,11 +292,14 @@ export async function saveMinutes(sessionId: string, input: MinutesInput, member
   const people = new Set(attendees.map(person => person.id));
   // Who checked in by themselves came: the MoM cannot mark them absent.
   const self = new Set(attendees.filter(selfCheckedIn).map(person => person.id));
-  // A follow-up's PICs, whichever field an app sent them in; the first is its PIC as before.
-  input = { ...input, actions: input.actions.map(action => { const picIds = [...new Set(actionPicIds(action))]; return { ...action, picIds, picId: picIds[0] ?? null }; }) };
-  const stranger = input.actions.find(action => action.picIds.some(id => !people.has(id)));
-  if (stranger) throw new ServiceError(422, "PIC tindak lanjut harus orang yang ikut meeting ini.", { actions: ["Pilih PIC dari peserta meeting."] });
-  if (input.chairId && !people.has(input.chairId)) throw new ServiceError(422, "Pimpinan rapat harus orang yang ikut meeting ini.", { chairId: ["Pilih dari peserta meeting."] });
+  // A follow-up's PICs, whichever field an app sent them in; the first is its PIC as before. Someone
+  // no longer in the meeting (taken off the list after being picked) is left out, as the form shows
+  // them no more, rather than refusing every save (audit, 13 Nov 2026); so is such a chairperson.
+  input = {
+    ...input,
+    chairId: input.chairId && people.has(input.chairId) ? input.chairId : null,
+    actions: input.actions.map(action => { const picIds = [...new Set(actionPicIds(action))].filter(id => people.has(id)); return { ...action, picIds, picId: picIds[0] ?? null }; }),
+  };
   const checked: MinutesInput = { ...input, absentIds: [...new Set(input.absentIds)].filter(id => people.has(id) && !self.has(id)) };
   const at = now.toISOString();
   let before: { row: MinutesRow | null; level: Level };
@@ -305,22 +308,27 @@ export async function saveMinutes(sessionId: string, input: MinutesInput, member
   const sentNow = before.level >= 2
     ? await saveFrm(sessionId, checked, member, at)
     : await saveBefore(sessionId, checked, member, at, before.row, before.level >= 1);
-  // Before the MoM is read back below: the PDF and Telegram of this save carry the number typed.
-  // An app opened before the field sends none: the number typed earlier then stays.
-  if (checked.docNumber !== undefined) await saveDocNumber(sessionId, checked.docNumber);
-  await savePicIds(sessionId, checked.actions);
-  if (checked.telegramChats !== undefined) await saveTelegramChats(sessionId, checked.telegramChats);
+  try {
+    // Before the MoM is read back below: the PDF and Telegram of this save carry the number typed.
+    // An app opened before the field sends none: the number typed earlier then stays.
+    if (checked.docNumber !== undefined) await saveDocNumber(sessionId, checked.docNumber);
+    await savePicIds(sessionId, checked.actions);
+    if (checked.telegramChats !== undefined) await saveTelegramChats(sessionId, checked.telegramChats);
 
-  // The MoM's attendance is the check-in too (FRM form only: before it the MoM keeps no attendance).
-  if (before.level >= 2) await recordMinutesAttendance(sessionId, session.startsAt, checked.absentIds, member, now);
-  const { minutes } = await readMinutes(session);
-  if (minutes?.sentAt && !minutes.telegramOff) await deliverMinutes(session, minutes, now);
-  if (sentNow) {
-    // Everyone in the meeting hears of it in WAM too, Telegram or not.
-    const { notifyPeople } = await import("./announcements");
-    await notifyPeople([...people].filter(id => id !== member.id), {
-      title: `MoM ${session.title} sudah dikirim`, body: "Notulen meeting ini bisa dibaca di Detail sesi.", sessionId, topic: "forum", tag: `mom-${sessionId}`,
-    }, member);
+    // The MoM's attendance is the check-in too (FRM form only: before it the MoM keeps no attendance).
+    if (before.level >= 2) await recordMinutesAttendance(sessionId, session.startsAt, checked.absentIds, member, now);
+    const { minutes } = await readMinutes(session);
+    if (minutes?.sentAt && !minutes.telegramOff) await deliverMinutes(session, minutes, now);
+  } finally {
+    // The MoM is sent once the save above is in: everyone hears of it even when a step after it failed
+    // (a second Kirim would be a revision and tell no one; audit, 13 Nov 2026).
+    if (sentNow) {
+      // Everyone in the meeting hears of it in WAM too, Telegram or not.
+      const { notifyPeople } = await import("./announcements");
+      await notifyPeople([...people].filter(id => id !== member.id), {
+        title: `MoM ${session.title} sudah dikirim`, body: "Notulen meeting ini bisa dibaca di Detail sesi.", sessionId, topic: "forum", tag: `mom-${sessionId}`,
+      }, member).catch(error => console.error("minutes notify", error instanceof Error ? error.message : error));
+    }
   }
   return { view: await minutesView(session, member, now), sentNow };
 }

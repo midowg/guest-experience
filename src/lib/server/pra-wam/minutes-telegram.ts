@@ -127,32 +127,64 @@ export async function minutesDeliveries(sessionId: string): Promise<MinutesTeleg
     .sort((a, b) => a.title.localeCompare(b.title, "id"));
 }
 
+/*
+ * One delivery at a time per MoM on this server (13 Nov 2026, audit): Kirim MoM and a follow-up
+ * ticked at once would otherwise both send to a group that has no message yet.
+ */
+const delivering = new Map<string, Promise<void>>();
+
 /**
  * Sends (or changes) a sent MoM in each of its groups. Never throws: each group's outcome is kept
  * in pw_telegram_messages and shown under the MoM.
  */
-export async function deliverMinutes(session: Session, minutes: Minutes, now = new Date()): Promise<void> {
+export function deliverMinutes(session: Session, minutes: Minutes, now = new Date()): Promise<void> {
+  const before = delivering.get(session.id) ?? Promise.resolve();
+  const run = before.then(() => deliverNow(session, minutes, now));
+  delivering.set(session.id, run);
+  return run.finally(() => { if (delivering.get(session.id) === run) delivering.delete(session.id); });
+}
+
+async function deliverNow(session: Session, minutes: Minutes, now: Date): Promise<void> {
   if (!minutes.sentAt || minutes.telegramOff) return;
+  const client = createPrivilegedClient();
+  let groups: TelegramGroup[] = [];
+  let earlier = new Map<string, number | null>();
+  let delivered = new Map<string, number>();
+  const failed = async (group: TelegramGroup, error: unknown) => {
+    const messageId = earlier.get(group.chatId) ?? null;
+    await client.from("pw_telegram_messages").upsert({
+      // The version stays the one the group last received, so the next save knows to send a revision.
+      session_id: session.id, chat_id: group.chatId, title: group.title, message_id: messageId,
+      version: messageId ? delivered.get(group.chatId) ?? minutes.version : minutes.version,
+      status: "gagal", error: (error instanceof Error ? error.message : "Gagal mengirim.").slice(0, 500), updated_at: new Date().toISOString(),
+    }, { onConflict: "session_id,chat_id" });
+  };
   try {
     const targets = await minutesTargets(session);
     // The groups the notetaker picked, when they picked (13 Nov 2026); else WAM's pick.
     const chosen = minutes.telegramChats ? new Set(minutes.telegramChats) : null;
-    const groups = chosen ? targets.all.filter(group => chosen.has(group.chatId)) : targets.groups;
+    groups = chosen ? targets.all.filter(group => chosen.has(group.chatId)) : targets.groups;
     if (!targets.ready || !groups.length) return;
-    const message = await minutesMessage(session, minutes, await isHodMeeting(session));
-    const pdf = await minutesPdfWithPhotos(session.id, message);
-    const client = createPrivilegedClient();
-    const { data: before } = await client.from("pw_telegram_messages").select("chat_id,message_id,version,status").eq("session_id", session.id);
-    const earlier = new Map((before ?? []).map(row => [String(row.chat_id), row.message_id as number | null]));
-    // The version each group last received: a newer one is a revision, sent anew so the group hears of it (13 Nov 2026).
-    const received = new Map((before ?? []).filter(row => row.status === "terkirim").map(row => [String(row.chat_id), row.version as number]));
+    const { data: rows } = await client.from("pw_telegram_messages").select("chat_id,message_id,version").eq("session_id", session.id);
+    earlier = new Map((rows ?? []).map(row => [String(row.chat_id), row.message_id as number | null]));
+    // The version each group last received (a message is there): a newer one is a revision, sent anew so the group hears of it.
+    delivered = new Map((rows ?? []).filter(row => row.message_id).map(row => [String(row.chat_id), row.version as number]));
+    let message: MinutesMessage, pdf: Uint8Array;
+    try {
+      message = await minutesMessage(session, minutes, await isHodMeeting(session));
+      pdf = await minutesPdfWithPhotos(session.id, message);
+    } catch (error) {
+      // The MoM could not be made at all (audit, 13 Nov 2026): every group says so under the MoM.
+      for (const group of groups) await failed(group, error).catch(() => undefined);
+      throw error;
+    }
     // The photos go once, as an album under the MoM, to a group the MoM reaches for the first time.
     const firstTime = groups.some(group => !earlier.get(group.chatId));
     const photos = firstTime ? await minutePhotoBytes(session.id).catch(() => [] as Uint8Array[]) : [];
     for (const group of groups) {
       const at = new Date().toISOString();
       try {
-        const last = received.get(group.chatId);
+        const last = delivered.get(group.chatId);
         const posted = await postMinutes(group, message, earlier.get(group.chatId) ?? null, now, pdf, last !== undefined && message.version > last);
         if (!earlier.get(group.chatId) && photos.length) {
           await sendMinutePhotos(group, posted.chatId, message.code, photos).catch(error => console.error("minutes photos", error instanceof Error ? error.message : error));
@@ -163,10 +195,7 @@ export async function deliverMinutes(session: Session, minutes: Minutes, now = n
           status: "terkirim", error: posted.topicLost ? "Topik MoM tidak bisa dipakai bot; MoM masuk ke grup." : null, sent_at: at, updated_at: at,
         }, { onConflict: "session_id,chat_id" });
       } catch (error) {
-        await client.from("pw_telegram_messages").upsert({
-          session_id: session.id, chat_id: group.chatId, title: group.title, message_id: earlier.get(group.chatId) ?? null, version: message.version,
-          status: "gagal", error: (error instanceof Error ? error.message : "Gagal mengirim.").slice(0, 500), updated_at: at,
-        }, { onConflict: "session_id,chat_id" });
+        await failed(group, error);
       }
     }
   } catch (error) {
