@@ -68,9 +68,22 @@ it("asks before a sensitive meeting's photo goes to the TV, and sends nothing wh
 it("shows every MoM first, one without photos too; the gallery says which it leaves out", () => {
   render(<PraWamMomCabinet initial={view} />);
   expect(screen.getByRole("button", { name: /Daftar/ }).getAttribute("aria-pressed")).toBe("true");
-  expect(screen.getByText("Tanpa foto")).toBeTruthy();
+  expect(screen.getByText("Tanpa foto", { selector: "strong" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /Galeri foto/ }));
   expect(screen.getByText(/1 MoM tanpa foto tidak tampil di Galeri/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Lihat semua MoM" }));
-  expect(screen.getByText("Tanpa foto")).toBeTruthy();
+  expect(screen.getByText("Tanpa foto", { selector: "strong" })).toBeTruthy();
+});
+
+it("lists the MoMs by month with totals, each row with its downloads, an uploaded file first", () => {
+  const file = { name: "MoM.docx", size: 1000, type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+  render(<PraWamMomCabinet initial={{ ...view, entries: [...view.entries, entry({ sessionId: "5e550000-0000-4000-8000-000000000009", code: "WNS/DOC/1", title: "Berkas saja", date: "2026-10-30", photos: [], file })] }} />);
+  expect(within(screen.getByRole("list", { name: "Ringkasan arsip" })).getByText("MoM tampil").previousSibling?.textContent).toBe("4");
+  expect(screen.getByRole("heading", { name: "November 2026 3 MoM" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Oktober 2026 1 MoM" })).toBeTruthy();
+  const row = screen.getByText("Berkas saja", { selector: "strong" }).closest("article")!;
+  expect(within(row).getByText("Berkas MoM (Word)")).toBeTruthy();
+  expect(within(row).getByRole("link", { name: /Berkas/ }).getAttribute("href")).toBe("/api/admin/wam/mom/5e550000-0000-4000-8000-000000000009/file");
+  expect(within(row).getByRole("link", { name: /PDF/ })).toBeTruthy();
+  expect(within(row).getByRole("link", { name: /Word/ })).toBeTruthy();
 });

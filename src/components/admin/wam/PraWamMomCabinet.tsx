@@ -21,6 +21,8 @@ type Progress = { label: string; done: number; total: number } | null;
 const LEVELS = ["Bulan", "Kegiatan", "Tanggal", "Tim"] as const;
 const longDay = (iso: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+/** "November 2026": the month as a heading (the folders keep the archive's capitals). */
+const monthTitle = (month: string) => { const name = monthName(month); return name.charAt(0) + name.slice(1).toLowerCase(); };
 const hours = (entry: PlacedEntry) => (entry.from && entry.to ? `${entry.from}–${entry.to} WIB` : "");
 
 /** Saves bytes the browser made as a file. */
@@ -208,7 +210,7 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
   }
 
   const exportBar = <div className={css.exports}>
-    <p className={css.scope}>{scope.length} MoM · {photos} foto{photos ? ` (${megabytes(photoBytes)})` : ""}</p>
+    <p className={css.scope}>Ekspor yang tampil: {scope.length} MoM · {photos} foto{photos ? ` (${megabytes(photoBytes)})` : ""}</p>
     <div className={css.buttons}>
       <ConsoleButton icon={<FileSpreadsheet size={16} aria-hidden="true" />} disabled={!scope.length || busy !== null} onClick={exportExcel}>Excel rekap</ConsoleButton>
       <ConsoleButton icon={<FileArchive size={16} aria-hidden="true" />} disabled={!scope.length || busy !== null} onClick={exportPdfs}>ZIP PDF</ConsoleButton>
@@ -222,34 +224,44 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
     </div>}
   </div>;
 
-  /** One meeting: what the MoM says in short, its PDF, and its photos. */
-  const meeting = (entry: PlacedEntry) => <article key={entry.sessionId} className={css.meeting}>
-    <div className={css.meetingHead}>
-      <div className={css.meetingTitle}>
-        <strong>{entry.title}</strong>
-        <span className={css.muted}>{entry.code} · versi {entry.version}</span>
-      </div>
-      <div className={css.buttons}>
-        <ConsoleButtonLink href={momCabinetApi.pdf(entry.sessionId)} icon={<FileText size={16} aria-hidden="true" />}>Unduh PDF</ConsoleButtonLink>
-        <ConsoleButtonLink href={momCabinetApi.docx(entry.sessionId)} icon={<FilePen size={16} aria-hidden="true" />}>Unduh Word</ConsoleButtonLink>
-        {entry.file && <ConsoleButtonLink variant="primary" href={momCabinetApi.file(entry.sessionId)} icon={<FileUp size={16} aria-hidden="true" />}>Berkas unggahan</ConsoleButtonLink>}
-        {mode === "daftar" && <ConsoleButton icon={<FolderOpen size={16} aria-hidden="true" />} onClick={() => { setMode("folder"); setPath([...entry.path]); }}>Buka folder</ConsoleButton>}
-      </div>
+  /**
+   * One MoM as a row (13 Nov 2026, tidied for the administration team): its day on the left, its
+   * name and number, then where and who, its contents as short chips, and the downloads on the right
+   * (PDF, Word, the uploaded file when there is one). In a folder its photos follow, each to the TV.
+   */
+  const meeting = (entry: PlacedEntry) => <article key={entry.sessionId} className={css.row}>
+    <div className={css.day} aria-hidden="true">
+      <span className={css.dayNo}>{Number(entry.date.slice(8, 10))}</span>
+      <span className={css.dayName}>{new Intl.DateTimeFormat("id-ID", { weekday: "short", month: "short", timeZone: "UTC" }).format(new Date(`${entry.date}T00:00:00Z`))}</span>
     </div>
-    <dl className={css.facts}>
-      <div><dt>Tanggal</dt><dd>{longDay(entry.date)}{hours(entry) ? ` · ${hours(entry)}` : ""}</dd></div>
-      <div><dt>Departemen</dt><dd>{entry.department}</dd></div>
-      <div><dt>Tempat</dt><dd>{entry.place || "-"}</dd></div>
-      <div><dt>Chairperson</dt><dd>{entry.chair ?? "-"}</dd></div>
-      <div><dt>Minute Taker</dt><dd>{entry.notetaker ?? "-"}</dd></div>
-      <div><dt>Hadir</dt><dd>{entry.present} dari {entry.total}{entry.guests ? ` + ${entry.guests} lainnya` : ""}</dd></div>
-      <div><dt>Isi</dt><dd>{entry.topics} topik · {entry.decisions} keputusan · {entry.actions} tindak lanjut{entry.open ? ` (${entry.open} Open)` : ""}</dd></div>
-    </dl>
-    <p className={css.pills}>
-      {entry.telegramOff ? <Pill tone="warn">Tidak ke Telegram (sensitif)</Pill> : <Pill tone="ok">Terkirim ke Telegram</Pill>}
-      <Pill tone="neutral">{entry.photos.length} foto</Pill>
-    </p>
-    {mode === "folder" && entry.photos.length > 0 && <ul className={css.gallery} aria-label={`Foto ${entry.title}`}>
+    <div className={css.rowMain}>
+      <p className={css.rowTitle}><strong>{entry.title}</strong>{entry.version > 1 && <span className={css.version}>versi {entry.version}</span>}</p>
+      <p className={css.rowLine}>
+        <span className={css.code}>{entry.code}</span>
+        <span>{entry.department}</span>
+        <span>{longDay(entry.date)}{hours(entry) ? `, ${hours(entry)}` : ""}</span>
+        {entry.place && <span>{entry.place}</span>}
+      </p>
+      <p className={css.rowLine}>
+        <span>Pimpinan {entry.chair ?? "-"}</span>
+        <span>Notulis {entry.notetaker ?? "-"}</span>
+        <span>Hadir {entry.present}/{entry.total}{entry.guests ? ` + ${entry.guests}` : ""}</span>
+      </p>
+      <p className={css.chips}>
+        {entry.file ? <Pill tone="blue">Berkas MoM ({entry.file.type === "application/pdf" ? "PDF" : "Word"})</Pill>
+          : <Pill tone="neutral">{entry.topics} topik · {entry.decisions} keputusan</Pill>}
+        {entry.actions > 0 && <Pill tone={entry.open ? "warn" : "ok"}>{entry.open ? `${entry.open} dari ${entry.actions} tindak lanjut belum selesai` : `${entry.actions} tindak lanjut selesai`}</Pill>}
+        <Pill tone="neutral">{entry.photos.length ? `${entry.photos.length} foto` : "Tanpa foto"}</Pill>
+        {entry.telegramOff ? <Pill tone="warn">Tidak ke Telegram</Pill> : <Pill tone="ok">Terkirim ke Telegram</Pill>}
+      </p>
+    </div>
+    <div className={css.rowActions}>
+      {entry.file && <ConsoleButtonLink variant="primary" href={momCabinetApi.file(entry.sessionId)} icon={<FileUp size={16} aria-hidden="true" />}>Berkas</ConsoleButtonLink>}
+      <ConsoleButtonLink variant={entry.file ? "secondary" : "primary"} href={momCabinetApi.pdf(entry.sessionId)} icon={<FileText size={16} aria-hidden="true" />}>PDF</ConsoleButtonLink>
+      <ConsoleButtonLink href={momCabinetApi.docx(entry.sessionId)} icon={<FilePen size={16} aria-hidden="true" />}>Word</ConsoleButtonLink>
+      {mode === "daftar" && <ConsoleButton icon={<FolderOpen size={16} aria-hidden="true" />} onClick={() => { setMode("folder"); setPath([...entry.path]); }}>Folder</ConsoleButton>}
+    </div>
+    {mode === "folder" && entry.photos.length > 0 && <ul className={`${css.gallery} ${css.rowPhotos}`} aria-label={`Foto ${entry.title}`}>
       {entry.photos.map((photo, index) => <li key={photo.id} className={css.photo}>
         <a href={momCabinetApi.photo(photo.id)} target="_blank" rel="noopener" className={css.thumb} aria-label={`Buka foto ${index + 1} (tab baru)`}>
           {/* eslint-disable-next-line @next/next/no-img-element -- a redirect to a signed address that expires */}
@@ -269,12 +281,35 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
     </ul>}
   </article>;
 
+  /** Daftar: the MoMs by month, newest first, each month's count on its head. */
+  const months = useMemo(() => {
+    const out: { month: string; entries: PlacedEntry[] }[] = [];
+    for (const entry of [...placed].reverse()) {
+      const month = entry.date.slice(0, 7);
+      const last = out[out.length - 1];
+      if (last?.month === month) last.entries.push(entry); else out.push({ month, entries: [entry] });
+    }
+    return out;
+  }, [placed]);
+  /** What the shown MoMs hold, at a glance. */
+  const totals = {
+    moms: placed.length, open: placed.reduce((sum, entry) => sum + entry.open, 0),
+    photos: placed.reduce((sum, entry) => sum + entry.photos.length, 0), files: placed.filter(entry => entry.file).length,
+  };
+
   return <div className="stack">
     <PageHeader crumbs={crumbs} title="Arsip MoM"
       subtitle="Semua MoM yang sudah dikirim, dengan PDF dan foto meetingnya, tersusun seperti arsip dokumentasi panitia: bulan, kegiatan, tanggal, lalu tim." />
     {message && <Notice tone={message.tone}>{message.text}</Notice>}
     {!view.migrated && <Notice tone="warning">Arsip MoM menunggu migrasi notulen. Setelah dijalankan, MoM yang dikirim muncul di sini.</Notice>}
     {view.migrated && !view.tvReady && <Notice tone="info">Foto Full HD (1 MB) dan Tampilkan di TV menunggu migrasi {MOM_CABINET_MIGRATION}. Sementara itu foto tetap disimpan 1280 px.</Notice>}
+
+    {view.entries.length > 0 && <ul className={css.totals} aria-label="Ringkasan arsip">
+      <li><strong>{totals.moms}</strong><span>MoM tampil</span></li>
+      <li><strong>{totals.open}</strong><span>tindak lanjut belum selesai</span></li>
+      <li><strong>{totals.photos}</strong><span>foto</span></li>
+      <li><strong>{totals.files}</strong><span>berkas unggahan</span></li>
+    </ul>}
 
     <Card title="Cari dan ekspor">
       <div className={css.toolbar}>
@@ -359,6 +394,10 @@ export function PraWamMomCabinet({ initial, crumbs = [] }: { initial: CabinetVie
           </button>
         </li>)}</ul>
       </section>
-      : <div className={css.meetings}>{scope.map(meeting)}</div>}
+      : mode === "daftar" ? <div className={css.months}>{months.map(group => <section key={group.month} aria-label={monthTitle(group.month)} className={css.month}>
+        <h2 className={css.monthHead}>{monthTitle(group.month)} <span>{group.entries.length} MoM</span></h2>
+        <div className={css.rows}>{group.entries.map(meeting)}</div>
+      </section>)}</div>
+      : <div className={css.rows}>{scope.map(meeting)}</div>}
   </div>;
 }

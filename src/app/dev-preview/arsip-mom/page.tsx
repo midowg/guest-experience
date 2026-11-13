@@ -23,6 +23,7 @@ export default async function DevMomCabinetPage({ searchParams }: { searchParams
       entry({}),
       entry({ sessionId: "5e550000-0000-4000-8000-000000000002", code: "MoM/2026/11/0013", title: "Appraisal team SS", from: "15.00", to: "16.00", photos: [photo(4)] }),
       entry({ sessionId: "5e550000-0000-4000-8000-000000000003", code: "MoM/2026/11/0014", title: "Evaluasi Meeting", date: "2026-11-11", department: "Center of Excellence", short: "CoE", notetaker: "Sofyan", telegramOff: true, photos: [] }),
+      entry({ sessionId: "5e550000-0000-4000-8000-000000000005", code: "WNS/DOC.MM/013-00.0106.00/XI/2026", title: "Department Internal Meeting", date: "2026-11-13", from: "09.30", to: "11.00", department: "Corporate Marketing Communication", short: "CMC", topics: 0, decisions: 0, actions: 0, open: 0, photos: [], file: { name: "MoM CMC.docx", size: 182_000, type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" } }),
       entry({ sessionId: "5e550000-0000-4000-8000-000000000004", code: "MoM/2026/10/0003", title: "Meeting HOD Oktober", date: "2026-10-28", department: "Meeting HOD", short: "HOD", hod: true, photos: [photo(5)] }),
     ],
   };
