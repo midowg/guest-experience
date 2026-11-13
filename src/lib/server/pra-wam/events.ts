@@ -25,6 +25,12 @@ async function listEventsUncached(): Promise<{ events: PraWamEvent[]; migrated: 
 export const listEvents = cache(listEventsUncached);
 
 /** Whether people may book appraisal rooms: Pra WAM is active and its appraisal module is on. */
+/** Book ruang is open, and this person books rooms (karyawan; 13 Nov 2026). */
+export async function bookingOpenFor(member: { category?: string }): Promise<boolean> {
+  const { booksRooms } = await import("@/lib/pra-wam/roles");
+  return booksRooms(member) && appraisalOpen();
+}
+
 export async function appraisalOpen(): Promise<boolean> {
   const { events, migrated } = await listEvents();
   if (!migrated) return true;

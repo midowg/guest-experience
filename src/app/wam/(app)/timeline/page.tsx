@@ -4,7 +4,7 @@ import { Notice } from "@/components/ui";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import { timelineMonths } from "@/lib/pra-wam/timeline";
 import { praWamPath } from "@/lib/routes";
-import { appraisalOpen } from "@/lib/server/pra-wam/events";
+import { bookingOpenFor } from "@/lib/server/pra-wam/events";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import { timelineItems } from "@/lib/server/pra-wam/sessions";
 import css from "@/components/pra-wam/timeline.module.css";
@@ -22,7 +22,7 @@ export const metadata = { title: "Timeline · WAM", robots: { index: false } };
 export default async function TimelinePage() {
   const member = await requireMemberPage(praWamPath.timeline);
   const today = wibDate(new Date().toISOString());
-  const [{ items, migrated }, open] = await Promise.all([timelineItems(member), appraisalOpen().catch(() => false)]);
+  const [{ items, migrated }, open] = await Promise.all([timelineItems(member), bookingOpenFor(member).catch(() => false)]);
   const entries = timelineMonths(items, today).flatMap(month => month.entries);
   return <>
     <ScreenHead eyebrow="Pra WAM 2026" title="Timeline" lead="Kegiatan Pra WAM per bulan. Ketuk tanggal untuk melihat ruang dan booking di hari itu." />

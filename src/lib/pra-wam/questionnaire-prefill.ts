@@ -1,4 +1,4 @@
-import type { JobPost } from "@/lib/employees";
+import type { EmployeeCategory, JobPost } from "@/lib/employees";
 import { genderLabels } from "./call-name";
 import { answered, type Answers, type QQuestion } from "./questionnaire";
 
@@ -27,6 +27,16 @@ const plain = (text: string) => text.trim().toLocaleLowerCase("id").replace(/\s+
 /** The option of the position question that is this post, as HR wrote it; null when none is. */
 export const postOption = (options: readonly string[], post: JobPost): string | null => options.find(option => postNames[post].includes(plain(option))) ?? null;
 
+/**
+ * Interns and daily workers are not on the job ladder (13 Nov 2026): their position is the option
+ * that names them, as HR wrote it; none fits, nothing is filled in (never "Staf").
+ */
+const categoryNames: Record<Exclude<EmployeeCategory, "karyawan">, RegExp> = {
+  intern: /\b(intern|internship|magang)\b/, dw: /\b(daily workers?|dw|pekerja harian|harian)\b/,
+};
+export const categoryOption = (options: readonly string[], category: Exclude<EmployeeCategory, "karyawan">): string | null =>
+  options.find(option => categoryNames[category].test(plain(option))) ?? null;
+
 /** The highest post among a person's jobs (a Staf who also leads a team is a Lead); null without jobs. */
 export const highestPost = (posts: JobPost[]): JobPost | null =>
   posts.length ? posts.reduce((best, post) => (rank[post] > rank[best] ? post : best)) : null;
@@ -35,6 +45,8 @@ export type PrefillPerson = {
   fullName: string; nickname: string; phone: string; gender: string; department: string;
   /** Null when the position should not be guessed (no jobs yet, or BOD, which no option fits). */
   post: JobPost | null;
+  /** Status kerja; an intern or daily worker is filled in as such, not by post. */
+  category?: EmployeeCategory;
 };
 
 /** "SATU DUA" (an HR sheet in capitals) as "Satu Dua"; a name already in mixed case stays as written. */
@@ -65,7 +77,10 @@ export function prefillAnswers(questions: QQuestion[], answers: Answers, person:
   const department = at(PREFILL_KEYS.department);
   if (department?.kind === "department" && departments.includes(person.department.trim())) out[department.key] = person.department.trim();
   const position = at(PREFILL_KEYS.position);
-  const post = position?.kind === "single" && person.post ? postOption(position.options, person.post) : null;
+  const outside = person.category === "intern" || person.category === "dw" ? person.category : null;
+  const post = position?.kind !== "single" ? null
+    : outside ? categoryOption(position.options, outside)
+      : person.post ? postOption(position.options, person.post) : null;
   if (position && post) out[position.key] = post;
   const phone = at(PREFILL_KEYS.phone);
   if (phone?.kind === "text" && person.phone.trim()) out[phone.key] = person.phone.trim().slice(0, 300);

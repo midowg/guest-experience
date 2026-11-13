@@ -2,6 +2,7 @@ import { BookingForm } from "@/components/pra-wam/BookingForm";
 import { ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { Notice } from "@/components/ui";
 import { dayLabel } from "@/lib/pra-wam/appraisal";
+import { booksRooms, NO_BOOKING_TEXT } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { bookingFormData, type BookingFormQuery } from "@/lib/server/pra-wam/booking-form";
@@ -20,6 +21,7 @@ export default async function BookRoomPage({ searchParams }: { searchParams: Pro
   const query = await searchParams;
   const member = await requireMemberPage(praWamPath.book(query));
   const top = (title: string) => <><ScreenHead eyebrow="Ruang meeting" title={title} /></>;
+  if (!booksRooms(member)) return <>{top("Book ruang")}<Notice tone="info">{NO_BOOKING_TEXT}</Notice></>;
   if (!await appraisalOpen()) return <>{top("Book ruang")}<Notice tone="info">Book ruang sedang ditutup oleh admin WAM.</Notice></>;
   const loaded = await bookingFormData(member, query).catch((error: unknown) => {
     if (error instanceof ServiceError) return error.message;

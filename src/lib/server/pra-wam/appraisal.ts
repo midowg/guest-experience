@@ -4,7 +4,7 @@ import { cache } from "react";
 import { alternatives, appraisalRules, BOOKING_PURPOSE_MIGRATION, bookableDates, bookingClock, bookingProblems, clockLabel, OUTSIDE_ROOM, overCapacity, overlaps, roomFitProblem, roomKeptFrom, wibInstant, wibTime, type Booking, type BookingInput, type Person, type Room } from "@/lib/pra-wam/appraisal";
 import { MIGRATION_BOOKING_APP, officePeriod, officeRules, withoutMinimum, type Audience } from "@/lib/booking/rules";
 import { daySummaries, type DaySummary } from "@/lib/pra-wam/room-day";
-import { cancelsAnyBooking, seesAllParticipants } from "@/lib/pra-wam/roles";
+import { booksRooms, cancelsAnyBooking, NO_BOOKING_TEXT, seesAllParticipants } from "@/lib/pra-wam/roles";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -249,6 +249,7 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
 } = {}): Promise<Booking> {
   const now = options.now ?? new Date();
   const office = options.office;
+  if (!office && !booksRooms(viewer)) throw new ServiceError(403, NO_BOOKING_TEXT);
   if (!office && !await appraisalOpen()) throw new ServiceError(409, "Booking ruang appraisal sedang ditutup oleh admin Pra WAM.");
   const before = options.id ? await requireOwn(options.id, viewer) : null;
   // A day already gone is a record (WAM only): its hours are not "past", and no one is told.

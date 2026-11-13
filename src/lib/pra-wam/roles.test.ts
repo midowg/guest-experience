@@ -84,3 +84,10 @@ describe("password from the emailed link", () => {
     expect(passwordResetSchema.safeParse({ accessToken: token, next: "pendek", confirm: "pendek" }).success).toBe(false);
   });
 });
+
+describe("who books rooms", () => {
+  it("lets karyawan book, not interns or daily workers (a status not read yet counts as karyawan)", async () => {
+    const { booksRooms } = await import("./roles");
+    expect([booksRooms({ category: "karyawan" }), booksRooms({ category: "intern" }), booksRooms({ category: "dw" }), booksRooms({})]).toEqual([true, false, false, true]);
+  });
+});

@@ -1,6 +1,7 @@
 import { handle, success } from "@/lib/server/http";
 import { ServiceError } from "@/lib/server/config";
 import { bookingFormData } from "@/lib/server/pra-wam/booking-form";
+import { booksRooms, NO_BOOKING_TEXT } from "@/lib/pra-wam/roles";
 import { appraisalOpen } from "@/lib/server/pra-wam/events";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
 
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   return handle(async () => {
     const member = await requireApiMember();
+    if (!booksRooms(member)) throw new ServiceError(403, NO_BOOKING_TEXT);
     if (!await appraisalOpen()) throw new ServiceError(409, "Book ruang sedang ditutup oleh admin WAM.");
     const search = new URL(request.url).searchParams;
     const pick = (key: string) => search.get(key) ?? undefined;

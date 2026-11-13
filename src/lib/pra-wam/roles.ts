@@ -20,6 +20,14 @@ export const cancelsAnyBooking = (who: WithRoles) => has(who, "panitia", "admin"
  * and Admin WAM see and cancel every booking in /booking/kelola.
  */
 export const managesFacilities = (who: WithRoles) => has(who, "ga", "admin");
+/**
+ * Books rooms (13 Nov 2026): karyawan only. Interns and daily workers (Data karyawan's status kerja)
+ * are not on the job ladder and need not book; they still take part, help as panitia, and fill the
+ * questionnaire.
+ */
+export const booksRooms = (who: { category?: string }) => (who.category ?? "karyawan") === "karyawan";
+export const NO_BOOKING_TEXT = "Booking ruang hanya untuk karyawan. Intern dan daily worker tidak perlu booking.";
+
 /** Makes, publishes and cancels sessions, picks their rooms, and uploads any document. */
 export const managesSessions = (who: WithRoles) => has(who, "panitia", "admin");
 /** Sees every session, drafts included (BOD reads, panitia and admin also change). */

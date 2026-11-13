@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { asCategory, type EmployeeCategory } from "@/lib/employees";
 import { praWamPath } from "@/lib/routes";
 import { photoColumnMissing, photoPath } from "@/lib/pra-wam/photo";
 import { escapeLike } from "@/lib/pra-wam/reset-requests";
@@ -23,7 +24,9 @@ export const notMigrated = (error: { code?: string; message?: string }) =>
 export const waitingForMigration = () => new ServiceError(503, `Pra WAM menunggu migrasi ${PRA_WAM_MIGRATION}.`);
 
 /** `photo`: the app address of the profile photo, or null (initials are shown). */
-export type Member = { id: string; name: string; nickname: string; department: string; position: string; mustChangePassword: boolean; roles: PraWamRole[]; photo: string | null };
+export type Member = { id: string; name: string; nickname: string; department: string; position: string; mustChangePassword: boolean; roles: PraWamRole[]; photo: string | null;
+  /** Status kerja from Data karyawan (13 Nov 2026): karyawan, dw or intern; interns and daily workers do not book rooms. */
+  category?: EmployeeCategory };
 
 /** A person's roles; none before migration 202611040002, so everyone is simply a peserta then. */
 async function rolesOfUncached(employeeId: string): Promise<PraWamRole[]> {
@@ -40,17 +43,18 @@ async function currentMemberUncached(): Promise<Member | null> {
   const secret = praWamSecret();
   const session = verifyPraWamSession(secret, (await cookies()).get(PRA_WAM_COOKIE)?.value);
   if (!session) return null;
-  const columns = "session_version,active,must_change_password,employees(id,full_name,nickname,department,position,active)";
+  const columns = "session_version,active,must_change_password,employees(id,full_name,nickname,department,position,active,category)";
   const account = (select: string) => createPrivilegedClient().from("pw_accounts").select(select).eq("employee_id", session.employeeId).maybeSingle();
   let { data: found, error } = await account(`${columns},photo_key,photo_updated_at`);
   // Before migration 202611040010 there are no photo columns: read the rest, and show initials.
   if (error && photoColumnMissing(error)) ({ data: found, error } = await account(columns));
   if (error) { if (notMigrated(error)) return null; databaseError(error); }
   const data = found as unknown as { session_version: number; active: boolean; must_change_password: boolean; photo_key?: string | null; photo_updated_at?: string | null; employees: unknown } | null;
-  const person = data?.employees as { id: string; full_name: string; nickname: string; department: string; position: string; active: boolean } | null;
+  const person = data?.employees as { id: string; full_name: string; nickname: string; department: string; position: string; active: boolean; category?: string } | null;
   if (!data || !person || !data.active || !person.active || data.session_version !== session.version) return null;
   return {
     id: person.id, name: person.full_name, nickname: person.nickname, department: person.department, position: person.position, mustChangePassword: data.must_change_password, roles: await rolesOf(person.id),
+    category: asCategory(person.category),
     photo: photoPath({ id: person.id, photoKey: data.photo_key ?? null, photoUpdatedAt: data.photo_updated_at ?? null }),
   };
 }

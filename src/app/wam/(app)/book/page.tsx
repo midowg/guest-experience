@@ -9,7 +9,8 @@ import { participantGroups } from "@/lib/pra-wam/units";
 import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { listPeople, memberDepartments, myBookings, usedTitles, weekSchedule, windowSummary } from "@/lib/server/pra-wam/appraisal";
-import { appraisalOpen } from "@/lib/server/pra-wam/events";
+import { booksRooms, NO_BOOKING_TEXT } from "@/lib/pra-wam/roles";
+import { bookingOpenFor } from "@/lib/server/pra-wam/events";
 import { myMinutesDue } from "@/lib/server/pra-wam/minutes";
 import { appSettings } from "@/lib/server/pra-wam/rooms";
 import { hodByBookings, hodDepartments, hodStanding } from "@/lib/server/pra-wam/hod";
@@ -43,7 +44,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
   const date = asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) && asked >= appraisalRules.periodStart && asked <= appraisalRules.periodEnd ? asked : dates[0] ?? appraisalRules.periodEnd;
   const week = workWeek(date);
   // The week in full, and the whole booking window as counts for the date strip.
-  const loaded = await Promise.all([weekSchedule(loadedWeek(date), member), myBookings(member, today), appraisalOpen(), appSettings(), windowSummary(appraisalRules.periodStart, appraisalRules.periodEnd, now), hodData(member)])
+  const loaded = await Promise.all([weekSchedule(loadedWeek(date), member), myBookings(member, today), bookingOpenFor(member), appSettings(), windowSummary(appraisalRules.periodStart, appraisalRules.periodEnd, now), hodData(member)])
     .then(async ([schedule, mine, open, settings, summary, hod]) => ({ schedule, mine, open, settings, summary, hod, form: open ? await formData(member) : null }))
     .catch((error: unknown) => {
       if (error instanceof ServiceError) return error.message;
@@ -90,7 +91,7 @@ export default async function BookPage({ searchParams }: { searchParams: Promise
       hod={hod} hodInfo={hodInfo} activities={activities} cancelled={cancelled} timeline={timeline} viewerDepartments={viewerDepartments}
       banner={<>
         <MinutesDue sessions={minutesDue.sessions} drafts={minutesDue.drafts} />
-        {!open && <div style={{ marginBottom: 16 }}><Notice tone="info">Book ruang sedang ditutup oleh admin WAM. Booking-mu tetap bisa dilihat di bawah.</Notice></div>}
+        {!open && <div style={{ marginBottom: 16 }}><Notice tone="info">{booksRooms(member) ? "Book ruang sedang ditutup oleh admin WAM. Booking-mu tetap bisa dilihat di bawah." : `${NO_BOOKING_TEXT} Jadwal ruang tetap bisa dilihat di bawah.`}</Notice></div>}
       </>} />
   </>;
 }

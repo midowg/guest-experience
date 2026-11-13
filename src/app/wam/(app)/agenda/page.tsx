@@ -9,7 +9,7 @@ import { dayLabel, wibDate } from "@/lib/pra-wam/appraisal";
 import { bodOnly, cancelsAnyBooking, seesAllSessions } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { agendaItems } from "@/lib/server/pra-wam/agenda";
-import { appraisalOpen } from "@/lib/server/pra-wam/events";
+import { bookingOpenFor } from "@/lib/server/pra-wam/events";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import own from "@/components/pra-wam/desktop/home.module.css";
@@ -43,7 +43,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
   }
   const now = new Date();
   const today = wibDate(now.toISOString());
-  const [{ items, migrated }, bookingOpen] = await Promise.all([agendaItems(member, today), appraisalOpen()]);
+  const [{ items, migrated }, bookingOpen] = await Promise.all([agendaItems(member, today), bookingOpenFor(member)]);
   // An item asked for in the address opens on its own day.
   const askedDay = items.find(item => item.key === (asked ?? older));
   const { days, day } = pickDay(items, tanggal ?? (askedDay && wibDate(askedDay.startsAt)), today, now);

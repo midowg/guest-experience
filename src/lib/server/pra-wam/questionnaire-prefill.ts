@@ -17,7 +17,7 @@ export async function prefillFor(employeeId: string, questions: QQuestion[], ans
     const jobs = bod ? [] : await jobsOf(person).catch(() => []);
     const known: PrefillPerson = {
       fullName: person.full_name, nickname: person.nickname ?? "", phone: person.phone ?? "", gender: person.gender ?? "",
-      department: person.department ?? "", post: bod ? null : highestPost(jobs.map(job => job.post)),
+      department: person.department ?? "", post: bod ? null : highestPost(jobs.map(job => job.post)), category: person.category,
     };
     return prefillAnswers(questions, answers, known, departments);
   } catch {

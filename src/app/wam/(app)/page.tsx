@@ -19,7 +19,7 @@ import { listDocuments } from "@/lib/server/pra-wam/documents";
 import { myQuestionnaireCard } from "@/lib/server/pra-wam/questionnaire-answers";
 import { cardName } from "@/lib/pra-wam/figures";
 import { myRoom } from "@/lib/server/pra-wam/stay";
-import { appraisalOpen } from "@/lib/server/pra-wam/events";
+import { bookingOpenFor } from "@/lib/server/pra-wam/events";
 import { myAgenda } from "@/lib/server/pra-wam/quick-actions";
 import { myOpenRequests, openRequestCount } from "@/lib/server/pra-wam/requests";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
@@ -66,7 +66,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const today = wibDate(now.toISOString());
   const [{ items }, notes, requests, appraisal, docs, about, manage, quest, room] = await Promise.all([
     // From a week back: the carousel's earlier cards (yesterday too) are a swipe to the left.
-    myAgenda(member, daysBefore(today, 7)), myNotifications(member), myOpenRequests(member), appraisalOpen(),
+    myAgenda(member, daysBefore(today, 7)), myNotifications(member), myOpenRequests(member), bookingOpenFor(member),
     listDocuments(member).catch(() => ({ documents: [], migrated: false, storage: false })),
     getAbout().catch(() => null),
     // "Kelola acara" for the panitia: the card carries only the requests waiting.
