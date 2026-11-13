@@ -60,8 +60,10 @@ it("says plainly when the card cannot be drawn yet, and can try again", async ()
   expect(screen.getByRole("button", { name: "Coba lagi" })).toBeTruthy();
 });
 
-it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts with a finger, with holo from Rare up", { timeout: 10_000 }, async () => {
-  window.matchMedia = ((query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts with a finger, with holo from Rare up", async () => {
+  const motion = (reduced: boolean) => { window.matchMedia = ((query: string) => ({ matches: reduced, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia; };
+  // Printing and opening without waiting (reduced motion); the tilt is tried with motion on below.
+  motion(true);
   window.localStorage.setItem("wam-cq-card-open:f2", "1");
   const tokoh: CardView = {
     ...card, character: { ...card.character, key: "garda", class: "Garda Depan", title: "Yang maju duluan", partner: { name: "Kirana", class: "Penyihir Ide" } },
@@ -69,8 +71,7 @@ it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts w
     reason: "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan dan suka olahraga & outdoor.", colors: ["#C2303F", "#6E1023"],
   };
   const { container } = render(<CardReveal formId="f2" initial={tokoh} nickname="Dewi" hasPhoto={false} />);
-  // With motion on, printing takes its real time.
-  expect(await screen.findByText("Dewi, kamu dapat Edmund Hillary", undefined, { timeout: 5000 })).toBeTruthy();
+  expect(await screen.findByText("Dewi, kamu dapat Edmund Hillary")).toBeTruthy();
   expect(screen.getByText(tokoh.reason!)).toBeTruthy();
   expect(screen.getByText("Figurnya: jaket pendaki, kapak es.")).toBeTruthy();
   expect(screen.getAllByText("Garda Depan").length).toBeGreaterThan(0);
@@ -78,6 +79,7 @@ it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts w
   expect(screen.queryByText("Latar")).toBeNull();
   // Epic: shine and holo.
   expect(container.querySelector("[class*='holo']")).toBeTruthy();
+  motion(false);
   const flip = container.querySelector("[class*='flip']") as HTMLDivElement;
   flip.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100, right: 100, bottom: 100, x: 0, y: 0, toJSON() {} });
   // jsdom has no PointerEvent with coordinates: a mouse event named pointermove stands in.
@@ -87,7 +89,7 @@ it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts w
   fireEvent.pointerLeave(flip);
   expect(flip.dataset.tilt).toBeUndefined();
   // Under reduced motion it stays still.
-  window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+  motion(true);
   // jsdom has no PointerEvent with coordinates: a mouse event named pointermove stands in.
   act(() => { flip.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 100, clientY: 50 })); });
   expect(flip.dataset.tilt).toBeUndefined();
