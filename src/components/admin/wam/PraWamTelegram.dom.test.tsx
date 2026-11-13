@@ -34,13 +34,15 @@ it("shows the bot and webhook, and a department's group with its bot status and 
   expect(screen.getByRole("button", { name: "Pasang ulang webhook" })).toBeTruthy();
   const coe = screen.getByText("Center of Excellence", { selector: "strong" }).closest("li")!;
   expect(within(coe).getByText("Bot admin")).toBeTruthy();
-  expect(within(coe).getByText("Topik 📝 MoM")).toBeTruthy();
+  // Groups are plain chats: one with Topics on is pointed out, with how to turn them off; no Buat topik.
+  expect(within(coe).getByText("Topics menyala")).toBeTruthy();
+  expect(within(coe).getByText(/Matikan Topics di Telegram/)).toBeTruthy();
   expect(within(coe).queryByRole("button", { name: "Buat topik" })).toBeNull();
   const old = screen.getByText("Divisi Lama", { selector: "strong" }).closest("li")!;
   expect(within(old).getByText("Bot dikeluarkan")).toBeTruthy();
   expect(within(old).getByText("Tidak ada di Data karyawan")).toBeTruthy();
-  // A group without the topic can ask for it, even when WAM does not know yet that it turned topics on.
-  expect(within(old).getByRole("button", { name: "Buat topik" })).toBeTruthy();
+  expect(within(old).queryByText("Topics menyala")).toBeNull();
+  expect(within(old).queryByRole("button", { name: "Buat topik" })).toBeNull();
   expect(within(old).queryByRole("button", { name: /Pasang/ })).toBeNull();
 });
 

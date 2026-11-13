@@ -118,11 +118,15 @@ export async function withChatInfo(groups: readonly TelegramGroup[], now = Date.
     let link = chat.invite_link ?? null;
     if (!link && status === "admin") link = await telegramCall<string>(config, "exportChatInviteLink", { chat_id: group.chatId }).catch(() => null);
     const title = chat.title?.trim() || group.title;
-    if (title !== group.title || status !== group.botStatus) {
-      await createPrivilegedClient().from("pw_telegram_groups").update({ title, bot_status: status, updated_at: new Date(now).toISOString() }).eq("chat_id", group.chatId);
+    // Topics turned off in Telegram (13 Nov 2026): the group is a plain chat again; its MoM topic is forgotten.
+    const plain = chat.is_forum === false && (group.isForum || !!group.momTopicId);
+    if (title !== group.title || status !== group.botStatus || plain) {
+      await createPrivilegedClient().from("pw_telegram_groups").update({
+        title, bot_status: status, ...(plain ? { is_forum: false, mom_topic_id: null } : {}), updated_at: new Date(now).toISOString(),
+      }).eq("chat_id", group.chatId);
     }
     chats.set(group.chatId, { at: now, title, link });
-    return { ...group, title, botStatus: status, inviteLink: link };
+    return { ...group, title, botStatus: status, inviteLink: link, ...(plain ? { isForum: false, momTopicId: null } : {}) };
   }));
 }
 
@@ -307,7 +311,8 @@ async function install(config: TelegramConfig, chat: GroupChat, code: string, no
   if (clearError) databaseError(clearError);
   const status = chat.private ? "admin" : await botStatusIn(config, chat.id);
   const { data: before } = await client.from("pw_telegram_groups").select("mom_topic_id").eq("chat_id", chat.id).maybeSingle();
-  const topic = chat.isForum ? before?.mom_topic_id ?? await openTopic(config, chat.id) : null;
+  // 13 Nov 2026: no MoM topic is opened any more (groups are plain chats); one opened before stays.
+  const topic = chat.isForum ? before?.mom_topic_id ?? null : null;
   const { error: saveError } = await client.from("pw_telegram_groups").upsert({
     chat_id: chat.id, title: chat.title, scope, department, is_forum: chat.isForum, mom_topic_id: topic, bot_status: status,
     active: true, installed_at: now.toISOString(), updated_at: now.toISOString(), ...(unit ? { unit } : {}),
@@ -349,7 +354,8 @@ export async function handleUpdate(update: TelegramUpdate, now = new Date()): Pr
     } else if (intent.kind === "bot-status") {
       const { data } = await client.from("pw_telegram_groups").select("mom_topic_id").eq("chat_id", intent.chat.id).maybeSingle();
       if (!data) return;
-      const topic = data.mom_topic_id ?? (intent.status === "admin" && intent.chat.isForum ? await openTopic(config, intent.chat.id) : null);
+      // A group that turned Topics off forgets its MoM topic: MoM goes to the chat.
+      const topic = intent.chat.isForum ? data.mom_topic_id : null;
       await client.from("pw_telegram_groups").update({
         bot_status: intent.status, title: intent.chat.title, is_forum: intent.chat.isForum, mom_topic_id: topic, updated_at: now.toISOString(),
       }).eq("chat_id", intent.chat.id);

@@ -191,8 +191,9 @@ export function installReply(install: { scope: TelegramScope; department: string
   if (install.scope === "cos") return "✅ Chat ini terpasang di WAM untuk CoS. MoM meeting yang diikuti BOD akan masuk ke sini untuk diteruskan ke BOD.";
   const what = install.scope === "hod" ? "MoM meeting antar HOD"
     : `MoM ${escapeHtml(install.department ?? "")}${install.unit ? ` · ${escapeHtml(install.unit)}` : ""}`;
+  // 13 Nov 2026: groups are plain chats; a group with Topics on is told how to make it one.
   const where = install.topic ? ` MoM akan masuk ke topik ${MOM_TOPIC}.`
-    : install.isForum ? ` Topik ${MOM_TOPIC} belum bisa dibuat: jadikan bot admin dengan hak Kelola topik, lalu tekan Buat topik di Admin WAM.` : "";
+    : install.isForum ? " Supaya grup tampil sebagai chat biasa, matikan Topics di pengaturan grup." : "";
   return `✅ Grup ini terpasang di WAM untuk ${what}.${where}`;
 }
 

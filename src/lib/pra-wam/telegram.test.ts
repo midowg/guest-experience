@@ -87,7 +87,7 @@ describe("installReply", () => {
     expect(installReply({ scope: "departemen", department: "Sales & Marketing", topic: 7, isForum: true }))
       .toBe("✅ Grup ini terpasang di WAM untuk MoM Sales &amp; Marketing. MoM akan masuk ke topik 📝 MoM.");
     expect(installReply({ scope: "hod", department: null, topic: null, isForum: false })).toBe("✅ Grup ini terpasang di WAM untuk MoM meeting antar HOD.");
-    expect(installReply({ scope: "departemen", department: "Accounting", topic: null, isForum: true })).toContain("hak Kelola topik");
+    expect(installReply({ scope: "departemen", department: "Accounting", topic: null, isForum: true })).toContain("matikan Topics");
     expect(installReply({ scope: "cos", department: null, topic: null, isForum: false })).toContain("diteruskan ke BOD");
   });
 });

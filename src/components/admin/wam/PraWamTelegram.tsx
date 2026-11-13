@@ -5,7 +5,7 @@ import { Copy, ExternalLink, Link2, MoreHorizontal, Send } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { Card, ConsoleButton, ConsoleButtonLink, PageHeader, Pill, type ConsoleTone, type Crumb } from "@/components/console";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { HOD_GROUP_TITLE, MOM_TOPIC, type BotStatus, type InstallCode, type TelegramGroup, type TelegramScope, type TelegramStatus } from "@/lib/pra-wam/telegram";
+import { HOD_GROUP_TITLE, type BotStatus, type InstallCode, type TelegramGroup, type TelegramScope, type TelegramStatus } from "@/lib/pra-wam/telegram";
 import { praWamTelegramApi } from "@/lib/routes";
 import css from "./telegram-admin.module.css";
 
@@ -125,8 +125,8 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
 
     <Card title={`Grup (${installed} terpasang)`}>
       <p className={css.muted}>
-        Buat grup di Telegram dengan nama yang disarankan, tekan Pasang grup, lalu jadikan bot admin di grup itu. Kalau ingin topik {MOM_TOPIC},
-        nyalakan Topics di grup dulu. Tautannya berlaku 30 menit dan sekali pakai.
+        Buat grup biasa di Telegram dengan nama yang disarankan, tekan Pasang grup, lalu jadikan bot admin di grup itu. Biarkan Topics mati,
+        supaya grup tampil sebagai chat biasa yang mudah dipahami. Tautannya berlaku 30 menit dan sekali pakai.
       </p>
       <ul className={css.rows}>
         {rows.map(row => {
@@ -149,10 +149,12 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
                     {group.inviteLink
                       ? <a className={css.groupLink} href={group.inviteLink} target="_blank" rel="noopener">{group.title || "Tanpa nama"} <ExternalLink size={14} aria-hidden="true" /><span className="sr-only"> (buka grup, tab baru)</span></a>
                       : <span>{group.title || "Tanpa nama"}</span>}
-                    <Pill tone={group.momTopicId ? "ok" : "neutral"}>{group.momTopicId ? `Topik ${MOM_TOPIC}` : group.isForum ? "Topik belum dibuat" : "Tanpa topik"}</Pill>
+                    {/* 13 Nov 2026: groups are plain chats; one with Topics on is pointed out. */}
+                    {group.isForum && <Pill tone="warn">Topics menyala</Pill>}
                     {row.unknown && <Pill tone="warn">Tidak ada di Data karyawan</Pill>}
                   </p>
                 : <p className={css.muted}>Belum ada grup · nama disarankan: {row.suggested}</p>}
+              {group?.isForum && <p className={css.hint}>Grup ini tampil sebagai topik (ada General). Matikan Topics di Telegram (Edit → Topics) supaya jadi chat biasa; MoM tetap masuk.</p>}
               {group?.botStatus === "anggota" && <p className={css.hint}>Jadikan bot admin di grup ini (Edit → Administrators) agar alamat grupnya bisa dibuka dari WAM.</p>}
               {/* One name for every group (13 Nov 2026): WG {singkatan} · {nama lengkap}. */}
               {group && !row.unknown && group.title !== row.suggested && <p className={css.hint}>Nama di Telegram belum seragam. Seharusnya <strong>{row.suggested}</strong> (Lainnya → Samakan nama).</p>}
@@ -169,12 +171,8 @@ export function PraWamTelegram({ initial, crumbs = [] }: { initial: TelegramStat
               {group && <details className={css.more}>
                 <summary className={css.moreButton}><MoreHorizontal size={16} aria-hidden="true" /> Lainnya</summary>
                 <div className={css.moreList} onClick={event => { if ((event.target as HTMLElement).closest("button")) (event.currentTarget.parentElement as HTMLDetailsElement).open = false; }}>
-                  {/* Not only for a group known to have topics: one that turned them on later is checked by the server. */}
                   {!row.unknown && !gone && group.title !== row.suggested && <ConsoleButton disabled={!ready || busy !== null} onClick={() => run(`rename:${group.chatId}`, { action: "rename", chatId: group.chatId })}>
                     {busy === `rename:${group.chatId}` ? "Mengganti…" : "Samakan nama"}
-                  </ConsoleButton>}
-                  {!group.momTopicId && <ConsoleButton disabled={!ready || busy !== null} onClick={() => run(`topic:${group.chatId}`, { action: "topic", chatId: group.chatId })}>
-                    {busy === `topic:${group.chatId}` ? "Membuat…" : "Buat topik"}
                   </ConsoleButton>}
                   {!gone && install}
                   <ConsoleButton disabled={busy !== null} onClick={() => {
