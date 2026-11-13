@@ -99,13 +99,22 @@ async function listSessionsUncached(viewer: Member): Promise<{ sessions: Session
     ids = (links ?? []).map(link => link.session_id as string);
     if (!ids.length) return { sessions: [], migrated: true };
   }
-  const only = ids;
-  const { data, error } = await withBookingLink(withLink => {
-    const query = client.from("pw_sessions").select(columns(withLink));
-    return (only ? query.eq("status", "terbit").in("id", only) : query).limit(500);
-  });
-  if (error) { if (missing(error)) return { sessions: [], migrated: false }; databaseError(error); }
-  return { sessions: (await shape((data ?? []) as unknown as SessionRow[], viewer)).sort(order), migrated: true };
+  // Every session, read in pages (13 Nov 2026: no longer stopped at 500, so exports hold the whole
+  // schedule); a participant's own, 100 ids a query so the address stays short.
+  const PAGE = 1000;
+  const parts = ids ? Array.from({ length: Math.ceil(ids.length / 100) }, (_, index) => ids!.slice(index * 100, index * 100 + 100)) : null;
+  const rows: SessionRow[] = [];
+  for (let index = 0; ; index++) {
+    const { data, error } = await withBookingLink(withLink => {
+      const query = client.from("pw_sessions").select(columns(withLink));
+      return parts ? query.eq("status", "terbit").in("id", parts[index]) : query.order("id").range(index * PAGE, index * PAGE + PAGE - 1);
+    });
+    if (error) { if (missing(error)) return { sessions: [], migrated: false }; databaseError(error); }
+    const page = (data ?? []) as unknown as SessionRow[];
+    rows.push(...page);
+    if (parts ? index + 1 >= parts.length : page.length < PAGE) break;
+  }
+  return { sessions: (await shape(rows, viewer)).sort(order), migrated: true };
 }
 /** Read once per request, however many parts of the page ask. */
 export const listSessions = cache(listSessionsUncached);

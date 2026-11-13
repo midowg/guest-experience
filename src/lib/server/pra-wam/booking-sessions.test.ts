@@ -61,6 +61,7 @@ function query(table: string) {
     },
     order: () => builder,
     limit: () => builder,
+    range: () => builder,
     maybeSingle: () => { single = "maybe"; return builder; },
     single: () => { single = "one"; return builder; },
     update: (values: Row) => { mode = { kind: "update", values }; return builder; },
