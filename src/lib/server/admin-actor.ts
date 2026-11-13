@@ -50,14 +50,15 @@ async function staffIdsOf(employeeId: string): Promise<Set<string>> {
   return new Set(error ? [] : (data ?? []).map(row => row.id as string));
 }
 
-/** A person as an admin: their account must be active with its own password, and they must have a grant. */
+/** A person as an admin: their account must be active (the first WAM password is fine), and they must have a grant. */
 async function personActor(employeeId: string, version: number): Promise<AdminActor | null> {
   const client = createPrivilegedClient();
   const [{ data: account }, { data: grant, error }] = await Promise.all([
-    client.from("pw_accounts").select("session_version,active,must_change_password,employees(full_name,active)").eq("employee_id", employeeId).maybeSingle(),
+    client.from("pw_accounts").select("session_version,active,employees(full_name,active)").eq("employee_id", employeeId).maybeSingle(),
     client.from("admin_grants").select("employee_id,apps,all_events,event_ids").eq("employee_id", employeeId).maybeSingle(),
   ]);
-  if (error || !grant || !account?.active || account.must_change_password || account.session_version !== version) return null;
+  // The first (shared) WAM password is allowed too (decided 13 Nov 2026).
+  if (error || !grant || !account?.active || account.session_version !== version) return null;
   const person = account.employees as unknown as { full_name: string; active: boolean } | null;
   if (!person?.active) return null;
   return { role: "admin", kind: "person", name: person.full_name, employeeId, grant: fromRow(grant as GrantRow), staffIds: await staffIdsOf(employeeId) };
@@ -115,7 +116,8 @@ export type PersonSignIn = { employeeId: string; version: number; name: string }
 
 /**
  * Signs a person in to the admin with their WAM email or nama panggilan and password. 401 when
- * the pair is wrong; 403 when it is right but they are not an admin, or still on the first password.
+ * the pair is wrong; 403 when it is right but they are not an admin. The first WAM password works
+ * too (13 Nov 2026), so new admins need not open the WAM app first.
  */
 export async function signInPersonAdmin(identifier: string, password: string): Promise<PersonSignIn> {
   if (!(await grantsMigrated())) throw waiting();
@@ -126,11 +128,10 @@ export async function signInPersonAdmin(identifier: string, password: string): P
   const { data: auth, error: authError } = await createPublicClient().auth.signInWithPassword({ email: address, password });
   if (authError || !auth.user) throw wrong;
   const client = createPrivilegedClient();
-  const { data: account, error } = await client.from("pw_accounts").select("employee_id,session_version,active,must_change_password,employees(full_name,active)").eq("auth_user_id", auth.user.id).maybeSingle();
+  const { data: account, error } = await client.from("pw_accounts").select("employee_id,session_version,active,employees(full_name,active)").eq("auth_user_id", auth.user.id).maybeSingle();
   if (error) databaseError(error);
   const person = account?.employees as unknown as { full_name: string; active: boolean } | null;
   if (!account?.active || !person?.active) throw wrong;
-  if (account.must_change_password) throw new ServiceError(403, "Ganti dulu password awal Anda di aplikasi WAM, lalu masuk lagi di sini dengan password baru.");
   const { data: grant } = await client.from("admin_grants").select("employee_id").eq("employee_id", account.employee_id).maybeSingle();
   if (!grant) throw new ServiceError(403, "Akun ini belum punya akses admin. Minta super admin memberi akses di Super admin → Akses admin.");
   return { employeeId: account.employee_id as string, version: account.session_version as number, name: person.full_name };

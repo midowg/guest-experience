@@ -115,17 +115,18 @@ describe("the super admin and the shared password", () => {
 });
 
 describe("signing in with a WAM account", () => {
-  it("lets in an admin with their own password", async () => {
+  it("lets in an admin with their password, the first WAM password too", async () => {
     await expect(actor.signInPersonAdmin("dewi", "pw")).resolves.toEqual({ employeeId: DEWI, version: 1, name: "Dewi Lestari" });
+    (fake.tables.pw_accounts as Row[])[0].must_change_password = true;
+    await expect(actor.signInPersonAdmin("dewi", "pw")).resolves.toMatchObject({ employeeId: DEWI });
+    asDewi("/api/admin/wam/accounts");
+    await expect(session.requireApiAdmin()).resolves.toBe("admin");
   });
-  it("refuses a wrong pair, the first password, and someone without access", async () => {
+  it("refuses a wrong pair and someone without access", async () => {
     fake.auth.userId = null;
     await expect(actor.signInPersonAdmin("dewi", "pw")).rejects.toMatchObject({ status: 401 });
     fake.auth.userId = "auth-1";
     await expect(actor.signInPersonAdmin("orang-lain", "pw")).rejects.toMatchObject({ status: 401 });
-    (fake.tables.pw_accounts as Row[])[0].must_change_password = true;
-    await expect(actor.signInPersonAdmin("dewi", "pw")).rejects.toMatchObject({ status: 403, message: expect.stringMatching(/password awal/) });
-    (fake.tables.pw_accounts as Row[])[0].must_change_password = false;
     fake.tables.admin_grants = [];
     await expect(actor.signInPersonAdmin("dewi", "pw")).rejects.toMatchObject({ status: 403, message: expect.stringMatching(/belum punya akses admin/) });
   });
