@@ -89,5 +89,8 @@ describe("who books rooms", () => {
   it("lets every karyawan book, daily workers too; not interns (a status not read yet counts as karyawan)", async () => {
     const { booksRooms } = await import("./roles");
     expect([booksRooms({ category: "karyawan" }), booksRooms({ category: "intern" }), booksRooms({ category: "dw" }), booksRooms({})]).toEqual([true, false, true, true]);
+    // The Agenda tab and pages: not for Intern or DW (13 Nov 2026).
+    const { seesAgendaTab } = await import("./roles");
+    expect([seesAgendaTab({ category: "karyawan" }), seesAgendaTab({ category: "intern" }), seesAgendaTab({ category: "dw" }), seesAgendaTab({})]).toEqual([true, false, false, true]);
   });
 });

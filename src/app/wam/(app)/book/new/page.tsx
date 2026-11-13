@@ -2,7 +2,8 @@ import { BookingForm } from "@/components/pra-wam/BookingForm";
 import { ScreenHead } from "@/components/pra-wam/PraWamShell";
 import { Notice } from "@/components/ui";
 import { dayLabel } from "@/lib/pra-wam/appraisal";
-import { booksRooms, NO_BOOKING_TEXT } from "@/lib/pra-wam/roles";
+import { redirect } from "next/navigation";
+import { booksRooms, NO_BOOKING_TEXT, seesAgendaTab } from "@/lib/pra-wam/roles";
 import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { bookingFormData, type BookingFormQuery } from "@/lib/server/pra-wam/booking-form";
@@ -20,6 +21,8 @@ export const metadata = { title: "Book ruang · WAM", robots: { index: false } }
 export default async function BookRoomPage({ searchParams }: { searchParams: Promise<BookingFormQuery> }) {
   const query = await searchParams;
   const member = await requireMemberPage(praWamPath.book(query));
+  // No Agenda for Intern and DW (13 Nov 2026): an old link or a typed address goes to Beranda.
+  if (!seesAgendaTab(member)) redirect(praWamPath.home);
   const top = (title: string) => <><ScreenHead eyebrow="Ruang meeting" title={title} /></>;
   if (!booksRooms(member)) return <>{top("Book ruang")}<Notice tone="info">{NO_BOOKING_TEXT}</Notice></>;
   if (!await appraisalOpen()) return <>{top("Book ruang")}<Notice tone="info">Book ruang sedang ditutup oleh admin WAM.</Notice></>;

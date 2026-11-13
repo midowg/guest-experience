@@ -9,7 +9,8 @@ import { participantGroups } from "@/lib/pra-wam/units";
 import { praWamPath } from "@/lib/routes";
 import { ServiceError } from "@/lib/server/config";
 import { listPeople, memberDepartments, myBookings, usedTitles, weekSchedule, windowSummary } from "@/lib/server/pra-wam/appraisal";
-import { booksRooms, NO_BOOKING_TEXT } from "@/lib/pra-wam/roles";
+import { redirect } from "next/navigation";
+import { booksRooms, NO_BOOKING_TEXT, seesAgendaTab } from "@/lib/pra-wam/roles";
 import { bookingOpenFor } from "@/lib/server/pra-wam/events";
 import { myMinutesDue } from "@/lib/server/pra-wam/minutes";
 import { appSettings } from "@/lib/server/pra-wam/rooms";
@@ -37,6 +38,8 @@ const TIME = /^\d{2}:\d{2}$/;
 export default async function BookPage({ searchParams }: { searchParams: Promise<Query> }) {
   const query = await searchParams;
   const member = await requireMemberPage(praWamPath.bookSheet({ ...query, new: query.new === "1" ? "1" : undefined }));
+  // No Agenda for Intern and DW (13 Nov 2026): an old link or a typed address goes to Beranda.
+  if (!seesAgendaTab(member)) redirect(praWamPath.home);
   const now = new Date();
   const today = wibDate(now.toISOString());
   const dates = bookableDates(today);
