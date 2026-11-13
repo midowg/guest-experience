@@ -568,3 +568,17 @@ a.gridCell:hover { background: var(--pw-primary-soft); }
 .dialogRead { max-height: min(50vh, 22rem); overflow-y: auto; padding-right: 6px; overscroll-behavior: contain; }
 .dialogRead:focus-visible { outline: 2px solid var(--pw-primary); outline-offset: 2px; border-radius: 6px; }
 .dialogReadHint { margin: 8px 0 0; color: var(--pw-muted); font-size: 13px; }
+
+/*
+ * A dialog read to the end, like terms (13 Nov 2026): wider, no icon, the text in a soft box that
+ * scrolls, then Batalkan and the action side by side (the action on the right).
+ */
+.dialogTerms { width: min(100% - 24px, 32rem); }
+.dialogTerms .dialogBody { display: block; padding: 22px 20px 12px; }
+.dialogTerms .dialogBody > div { display: grid; gap: 10px; }
+.dialogTerms .dialogBody h2 { margin: 0; font-size: 18px; }
+.dialogTerms .dialogRead { max-height: min(55vh, 26rem); padding: 14px 16px; border: 1px solid var(--pw-line, #dde3ea); border-radius: 14px; background: var(--pw-surface-soft, #f4f6f9); color: var(--pw-text, #1e2733); font-size: 14px; line-height: 1.55; }
+.dialogTerms .dialogReadHint { margin: 0; }
+.dialogTerms .dialogActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px 20px 20px; }
+.dialogTerms .dialogActions :global(.button) { flex: none; width: 100%; padding-inline: 8px; font-size: 14px; white-space: nowrap; }
+.dialogTerms .dialogActions :global(.button:disabled) { opacity: .5; cursor: not-allowed; }

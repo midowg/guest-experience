@@ -1,11 +1,11 @@
 "use client";
 
 import { useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Camera, CheckCircle2, ChevronRight, Download, ExternalLink, ImagePlus, NotebookPen, Plus, Search, Send, Trash2, X } from "lucide-react";
+import { Camera, CheckCircle2, ChevronDown, ChevronRight, Download, ExternalLink, ImagePlus, NotebookPen, Plus, Search, Send, Trash2, X } from "lucide-react";
 import { Notice } from "@/components/ui";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import {
-  defaultAbsent, minutesApi, minutesItems, minutesLimits, minutesStatusLabels, MOM_DOC_NUMBER_MAX, MOM_NUMBER_REGISTER, presence, selfCheckedIn,
+  actionPicIds, defaultAbsent, MINUTE_PICS_MAX, minutesApi, minutesItems, minutesLimits, minutesStatusLabels, MOM_DOC_NUMBER_MAX, MOM_NUMBER_REGISTER, presence, selfCheckedIn,
   type MinuteAction, type MinuteAttendee, type MinuteItem, type MinutePhoto, type MinutesView, type NextMeeting,
 } from "@/lib/pra-wam/minutes";
 import { frmDate, frmDue, frmTime, guestNames } from "@/lib/pra-wam/minutes-message";
@@ -20,10 +20,12 @@ import css from "./minutes.module.css";
 type Draft = {
   items: MinuteItem[]; chairId: string | null; absentIds: string[]; guests: string; next: NextMeeting;
   actions: MinuteAction[]; telegramOff: boolean; docNumber: string;
+  /** The Telegram groups picked (chat ids); null when there is nothing to pick from (WAM picks). */
+  telegramChats: string[] | null;
 };
 const stamp = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso)).replace(":", ".");
 const clock = (iso: string) => new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso)).replace(":", ".");
-const blankAction = (): MinuteAction => ({ task: "", picId: null, dueDate: null, done: false });
+const blankAction = (): MinuteAction => ({ task: "", picId: null, picIds: [], dueDate: null, done: false });
 const blankItem = (): MinuteItem => ({ topic: "", discussion: "", decision: "", added: false });
 const noNext = (): NextMeeting => ({ date: null, time: null, place: "", agenda: "" });
 /** "Werkudara CoE · Center of Excellence dan Werkudara SM · Commercial". */
@@ -63,6 +65,33 @@ const ACTIONS_NOTE = "List all tasks that resulted from the meeting, who is resp
 const sectionTitle = (number: string, title: string, extra?: ReactNode) => <>
   {number && <><span className={css.sectionNo}>{number}</span>{" "}</>}<span>{title}</span>{extra && <>{" "}{extra}</>}
 </>;
+
+/**
+ * A follow-up's PICs (13 Nov 2026): more than one, picked from those in the meeting. Closed it
+ * reads like a select ("Raja, Dewi"); open it lists everyone with a tick box.
+ */
+function PicPicker({ id, label, people, value, onChange }: {
+  id: string; label: string; people: readonly { id: string; name: string }[]; value: readonly string[]; onChange: (ids: string[]) => void;
+}) {
+  const picked = people.filter(person => value.includes(person.id));
+  const full = value.length >= MINUTE_PICS_MAX;
+  return <details className={css.picker}>
+    <summary className={`select ${css.pickerSummary}`} id={id}>
+      <span className={picked.length ? undefined : css.pickerEmpty}>{picked.length ? picked.map(person => person.name).join(", ") : "Pilih PIC"}</span>
+      <ChevronDown size={18} aria-hidden />
+    </summary>
+    <fieldset className={css.pickerList} aria-label={label}>
+      {people.map(person => {
+        const on = value.includes(person.id);
+        return <label key={person.id} className={css.checkSmall}>
+          <input type="checkbox" checked={on} disabled={!on && full} onChange={event => onChange(event.target.checked ? [...value, person.id] : value.filter(item => item !== person.id))} />
+          {person.name}
+        </label>;
+      })}
+      {!people.length && <p className={styles.hint}>Belum ada peserta.</p>}
+    </fieldset>
+  </details>;
+}
 
 /**
  * "Others present" (13 Nov 2026): typed like a search of Data karyawan, a name picked from it or a
@@ -226,6 +255,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   const phone = usePhone();
   const formTop = useRef<HTMLFormElement>(null);
   const { minutes, status, canWrite, people, telegram, frm, attendees } = view;
+  const groups = telegram.groups ?? [];
   const sent = !!minutes?.sentAt;
   // Before migration 202611120004 there are no drafts: a save is the MoM itself.
   const drafts = view.drafts;
@@ -241,8 +271,10 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       // Whoever checked in by themselves came, whatever an older draft said.
       absentIds: (minutes ? [...minutes.absentIds] : defaultAbsent(attendees)).filter(id => !attendees.some(person => person.id === id && selfCheckedIn(person))),
       guests: minutes?.guests ?? "", next: minutes?.next ? { ...minutes.next } : noNext(),
-      actions: minutes ? minutes.actions.map(action => ({ ...action })) : [], // A new MoM goes to Telegram only once the notetaker ticks it and agrees (13 Nov 2026).
+      actions: minutes ? minutes.actions.map(action => ({ ...action, picIds: actionPicIds(action) })) : [], // A new MoM goes to Telegram only once the notetaker ticks it and agrees (13 Nov 2026).
       telegramOff: minutes ? minutes.telegramOff : true,
+      // The groups picked before, else WAM's pick (the participants' departments).
+      telegramChats: groups.length ? minutes?.telegramChats ?? groups.filter(group => group.suggested).map(group => group.chatId) : null,
       docNumber: minutes?.docNumber ?? "",
     };
   }
@@ -255,11 +287,15 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   const setItem = (index: number, change: Partial<MinuteItem>) => setDraft(current => current && { ...current, items: current.items.map((item, at) => at === index ? { ...item, ...change } : item) });
   const setNext = (change: Partial<NextMeeting>) => setDraft(current => current && { ...current, next: { ...current.next, ...change } });
 
+  /** The groups a draft goes to: those picked, else WAM's pick. */
+  const goesTo = (content: Pick<Draft, "telegramChats">) => content.telegramChats
+    ? groups.filter(group => content.telegramChats!.includes(group.chatId)).map(group => group.title) : telegram.destinations;
   /** Where Kirim MoM goes, in words, for the question before it goes. */
-  function sendQuestion(off: boolean) {
+  function sendQuestion(content: Draft) {
     const running = view.endsAt && new Date(view.endsAt) > new Date() ? `Meeting ini belum selesai (selesai ${clock(view.endsAt)}). ` : "";
-    const where = off ? "MoM tidak dikirim ke Telegram; peserta lain diberi tahu di WAM."
-      : telegram.ready && telegram.destinations.length ? `PDF MoM dikirim ke grup Telegram ${joined(telegram.destinations)}, dan peserta lain diberi tahu di WAM.`
+    const destinations = goesTo(content);
+    const where = content.telegramOff || !destinations.length ? "MoM tidak dikirim ke Telegram; peserta lain diberi tahu di WAM."
+      : telegram.ready ? `PDF MoM dikirim ke grup Telegram ${joined(destinations)}, dan peserta lain diberi tahu di WAM.`
         : "Peserta lain diberi tahu di WAM.";
     return `${running}${where} Setelah dikirim, MoM masih bisa diubah.`;
   }
@@ -271,18 +307,22 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
   const groupLinks = (telegram.links ?? []).filter(group => !!group.url);
   function telegramTerms() {
     return <div className={css.terms}>
-      <p>{telegram.destinations.length ? <>PDF MoM dikirim ke grup Telegram <strong>{joined(telegram.destinations)}</strong>.</> : "PDF MoM dikirim ke grup Telegram departemen setiap peserta."}</p>
+      <p>PDF MoM dan ringkasannya dikirim ke grup Telegram yang dicentang di bawah kotak <strong>Kirim ke Telegram</strong>. Grup departemen peserta sudah dicentang; Anda bisa menambah atau menghapusnya.</p>
+      <h3>Cara masuk grup Telegram</h3>
+      <ol>
+        <li>{groupLinks.length ? "Ketuk nama grup di bawah ini untuk membuka undangannya." : "Minta tautan undangan grup departemen Anda ke panitia atau admin WAM."}</li>
+        <li>Tekan <strong>Gabung</strong> (Join Group).</li>
+        <li>Selesai. MoM berikutnya masuk sendiri ke grup itu.</li>
+      </ol>
       {groupLinks.length > 0 && <ul className={css.groupLinks} aria-label="Grup Telegram">{groupLinks.map(group => <li key={group.title}>
         <a href={group.url!} target="_blank" rel="noopener">{group.title} <ExternalLink size={14} aria-hidden /><span className="sr-only"> (buka di Telegram)</span></a>
       </li>)}</ul>}
-      <p>Grupnya dipilih otomatis dari departemen setiap peserta di Data karyawan. Peserta lain juga diberi tahu di WAM.</p>
-      <h3>Cara masuk grup Telegram</h3>
-      <ol>
-        <li>{groupLinks.length ? "Ketuk nama grup di atas untuk membuka undangannya." : "Buka tautan undangan grup departemen Anda dari panitia atau admin WAM. Belum punya? Minta ke mereka."}</li>
-        <li>Tekan <strong>Gabung</strong> (Join Group).</li>
-        <li>Selesai. Setiap MoM masuk sendiri ke topik <strong>📝 MoM</strong> di grup itu, tanpa perlu dibagikan lagi.</li>
-      </ol>
-      <p>Setelah dikirim, MoM masih bisa diubah; pesannya di Telegram ikut diganti tanpa bunyi.</p>
+      <h3>Perlu diingat</h3>
+      <ul>
+        <li>Semua anggota grup bisa membaca MoM dan PDF-nya. Jangan kirim meeting yang rahasia.</li>
+        <li>Peserta lain tetap diberi tahu di WAM.</li>
+        <li>Setelah dikirim, MoM masih bisa diubah; pesannya di Telegram ikut diganti tanpa bunyi.</li>
+      </ul>
     </div>;
   }
 
@@ -295,8 +335,11 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     const problem = itemsProblem(content.items);
     if (problem) { setError(problem); setStep(frm && attendees.length ? 2 : 1); return; }
     const items = content.items.filter(filled).map(item => ({ topic: item.topic.trim(), discussion: item.discussion.trim(), decision: item.decision.trim(), added: item.added }));
-    const actions = content.actions.filter(action => action.task.trim()).map(({ id, task, picId, dueDate, done }) => ({ ...(id ? { id } : {}), task: task.trim(), picId, dueDate, done }));
-    if (send && !(await confirm({ title: "Kirim MoM?", body: sendQuestion(content.telegramOff), confirmLabel: "Kirim MoM" }))) return;
+    const actions = content.actions.filter(action => action.task.trim()).map(action => {
+      const picIds = actionPicIds(action);
+      return { ...(action.id ? { id: action.id } : {}), task: action.task.trim(), picId: picIds[0] ?? null, picIds, dueDate: action.dueDate, done: action.done };
+    });
+    if (send && !(await confirm({ title: "Kirim MoM?", body: sendQuestion(content), confirmLabel: "Kirim MoM" }))) return;
     setBusy(send ? "send" : "draft"); setError(null);
     const form = frm ? {
       chairId: content.chairId, absentIds: content.absentIds, guests: content.guests.trim(),
@@ -304,7 +347,7 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
     } : {};
     try {
       const result = await praWamRequest<MinutesView>(minutesApi.session(sessionId), {
-        method: "PUT", json: { items, ...form, actions, send, telegramOff: content.telegramOff, docNumber: content.docNumber.trim() },
+        method: "PUT", json: { items, ...form, actions, send, telegramOff: content.telegramOff, docNumber: content.docNumber.trim(), ...(content.telegramChats ? { telegramChats: content.telegramChats } : {}) },
       });
       setView(result.data); setDraft(null); setNotice(result.message);
     } catch (problem) { setError(errorText(problem)); }
@@ -449,11 +492,9 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
                 onKeyDown={event => { if (event.key === "Enter") event.preventDefault(); }}
                 onChange={event => setAction(index, { task: event.target.value.replace(/\s*\n\s*/g, " ") })} /></label>
             <div className={css.actionMeta}>
-            <label className={css.actionField}><span className={css.fieldLabel}>PIC</span>
-              <select className="select" aria-label={`PIC ${index + 1}`} value={action.picId ?? ""} onChange={event => setAction(index, { picId: event.target.value || null })}>
-                <option value="">Pilih PIC</option>
-                {people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
-              </select></label>
+            <div className={css.actionField}><span className={css.fieldLabel}>PIC <small>(bisa lebih dari satu)</small></span>
+              <PicPicker id={`${uid}-pic-${index}`} label={`PIC ${index + 1}`} people={people} value={actionPicIds(action)}
+                onChange={ids => setAction(index, { picIds: ids, picId: ids[0] ?? null })} /></div>
             <label className={css.actionField}><span className={css.fieldLabel}>Due Date (tenggat)</span>
               <input className="input" type="date" aria-label={`Due Date ${index + 1}`} value={action.dueDate ?? ""} onChange={event => setAction(index, { dueDate: event.target.value || null })} /></label>
             </div>
@@ -497,8 +538,20 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
                 if (await confirm({ title: "Kirim ke Telegram", body: telegramTerms(), confirmLabel: "Kirim ke Telegram", cancelLabel: "Batalkan", mustRead: true })) patch({ telegramOff: false });
               })();
             }} />
-            <span>Kirim ke Telegram<small>Centang untuk mengirim PDF MoM ke grup Telegram departemen peserta. Biarkan kosong untuk meeting yang sensitif.</small></span>
+            <span>Kirim ke Telegram<small>Centang untuk mengirim PDF MoM ke grup Telegram. Biarkan kosong untuk meeting yang sensitif.</small></span>
           </label>}
+          {drafts && !draft.telegramOff && draft.telegramChats && <fieldset className={css.groupPick}>
+            <legend>Kirim ke grup <span className={css.groupCount}>{draft.telegramChats.length} dipilih</span></legend>
+            <p className={styles.hint}>Grup departemen peserta sudah dicentang. Tambah atau hapus sesuai kebutuhan.</p>
+            <ul>{groups.map(group => {
+              const on = draft.telegramChats!.includes(group.chatId);
+              return <li key={group.chatId}><label className={css.checkSmall}>
+                <input type="checkbox" checked={on} onChange={event => patch({ telegramChats: event.target.checked ? [...draft.telegramChats!, group.chatId] : draft.telegramChats!.filter(id => id !== group.chatId) })} />
+                <span>{group.title}{group.suggested && <small className={css.suggested}> · peserta</small>}</span>
+              </label></li>;
+            })}</ul>
+            {!draft.telegramChats.length && <p className={css.warn}>Belum ada grup dipilih: MoM tidak dikirim ke Telegram.</p>}
+          </fieldset>}
 
           {drafts && <p className={styles.hint}>{sent ? "Perubahan menggantikan MoM yang sudah dikirim." : "Draf hanya terlihat oleh yang ikut meeting sampai MoM dikirim."}</p>}
         </div>
@@ -558,10 +611,10 @@ export function MinutesPanel({ sessionId, initial }: { sessionId: string; initia
       <section className={css.group}>
         <h3 className={css.groupTitle}>{sectionTitle("V.", "ACTION ITEMS")}</h3>
         {minutes.actions.length ? <ul className={css.actionList}>{minutes.actions.map(action => {
-          const mayTick = sent && (canWrite || action.picId === view.viewerId);
+          const mayTick = sent && (canWrite || actionPicIds(action).includes(view.viewerId));
           const text = <span className={css.actionText}>
             <span className={action.done ? css.done : undefined}>{action.task}</span>
-            <small>{[action.picName ? `PIC ${action.picName}` : "PIC belum dipilih", action.dueDate ? `Due ${frmDue(action.dueDate)}` : null, action.done ? "Done" : "Open"].filter(Boolean).join(" · ")}</small>
+            <small>{[action.picNames?.length ? `PIC ${action.picNames.join(", ")}` : action.picName ? `PIC ${action.picName}` : "PIC belum dipilih", action.dueDate ? `Due ${frmDue(action.dueDate)}` : null, action.done ? "Done" : "Open"].filter(Boolean).join(" · ")}</small>
           </span>;
           return <li key={action.id ?? action.task}>
             {mayTick ? <label className={css.actionItem}><input type="checkbox" checked={action.done} onChange={event => { void tick(action, event.target.checked); }} />{text}</label>

@@ -1,7 +1,7 @@
 import "server-only";
 import { wibDate } from "@/lib/pra-wam/appraisal";
 import {
-  itemsAsText, minutesNumber, minutesOpen, minutesStatus, needsMinutes, selfCheckedIn,
+  actionPicIds, itemsAsText, minutesNumber, minutesOpen, minutesStatus, needsMinutes, selfCheckedIn,
   type MinuteAction, type MinuteItem, type Minutes, type MinutesInput, type MinutesTelegram, type MinutesView,
 } from "@/lib/pra-wam/minutes";
 import type { Session } from "@/lib/pra-wam/sessions";
@@ -95,6 +95,39 @@ async function saveDocNumber(sessionId: string, docNumber: string): Promise<void
   if (error && !docNumberMissing(error)) databaseError(error);
 }
 
+/*
+ * 13 Nov 2026 (migration 202611130003): a follow-up's PICs (pic_ids) and the Telegram groups picked
+ * (telegram_chats), read and written on their own so the MoM works without the columns.
+ */
+const extrasMissing = (error: { code?: string; message?: string }) =>
+  ["42703", "PGRST204"].includes(error.code ?? "") || /pic_ids|telegram_chats/.test(error.message ?? "");
+
+async function readExtras(sessionId: string): Promise<{ pics: Map<string, string[]>; chats: string[] | null }> {
+  const client = createPrivilegedClient();
+  const [actions, minutes] = await Promise.all([
+    client.from("pw_session_minute_actions").select("id,pic_ids").eq("session_id", sessionId),
+    client.from("pw_session_minutes").select("telegram_chats").eq("session_id", sessionId).maybeSingle(),
+  ]);
+  const pics = new Map(actions.error ? [] : ((actions.data ?? []) as { id: string; pic_ids: string[] | null }[]).map(row => [row.id, row.pic_ids ?? []]));
+  const chats = minutes.error ? null : ((minutes.data as { telegram_chats?: string[] | null } | null)?.telegram_chats ?? null);
+  return { pics, chats };
+}
+
+/** Keeps each follow-up's PICs, by its place in the list (the save above gave it that place). */
+async function savePicIds(sessionId: string, actions: MinutesInput["actions"]): Promise<void> {
+  const client = createPrivilegedClient();
+  for (const [index, action] of actions.entries()) {
+    const { error } = await client.from("pw_session_minute_actions").update({ pic_ids: actionPicIds(action) }).eq("session_id", sessionId).eq("sort_order", index);
+    if (error) { if (extrasMissing(error)) return; databaseError(error); }
+  }
+}
+
+/** Keeps the Telegram groups picked (none picked is an empty list: the MoM goes nowhere in Telegram). */
+async function saveTelegramChats(sessionId: string, chats: readonly string[]): Promise<void> {
+  const { error } = await createPrivilegedClient().from("pw_session_minutes").update({ telegram_chats: [...new Set(chats)] }).eq("session_id", sessionId);
+  if (error && !extrasMissing(error)) databaseError(error);
+}
+
 type Read = { migrated: boolean; level: Level; minutes: Minutes | null };
 
 async function readMinutes(session: Pick<Session, "id" | "startsAt">): Promise<Read> {
@@ -110,7 +143,7 @@ async function readMinutes(session: Pick<Session, "id" | "startsAt">): Promise<R
   if (actionError) { if (missing(actionError)) return { migrated: false, level: 0, minutes: null }; databaseError(actionError); }
   const { row, level } = read;
   if (!row) return { migrated: true, level, minutes: null };
-  const [people, docNumber] = await Promise.all([listPeople(), readDocNumber(session.id)]);
+  const [people, docNumber, extras] = await Promise.all([listPeople(), readDocNumber(session.id), readExtras(session.id)]);
   const names = new Map(people.map(person => [person.id, person.name]));
   const name = (id: string | null | undefined) => (id ? names.get(id) ?? "Tanpa nama" : null);
   const sending = level >= 1;
@@ -132,9 +165,15 @@ async function readMinutes(session: Pick<Session, "id" | "startsAt">): Promise<R
       items: frm ? asItems(row.items) : [],
       chairId: frm ? row.chair_id ?? null : null, chairName: frm ? name(row.chair_id) : null,
       absentIds: frm ? row.absent_ids ?? [] : [], guests: frm ? row.guests ?? "" : "", next,
-      actions: ((actions ?? []) as ActionRow[]).map(action => ({
-        id: action.id, task: action.task, picId: action.pic_id, picName: name(action.pic_id), dueDate: action.due_date, done: action.done,
-      })),
+      actions: ((actions ?? []) as ActionRow[]).map(action => {
+        const kept = extras.pics.get(action.id) ?? [];
+        const picIds = kept.length ? kept : action.pic_id ? [action.pic_id] : [];
+        return {
+          id: action.id, task: action.task, picId: picIds[0] ?? null, picName: name(picIds[0]), dueDate: action.due_date, done: action.done,
+          picIds, picNames: picIds.map(id => name(id) ?? "Tanpa nama"),
+        };
+      }),
+      telegramChats: extras.chats,
     },
   };
 }
@@ -143,13 +182,14 @@ async function readMinutes(session: Pick<Session, "id" | "startsAt">): Promise<R
 async function telegramView(session: Session, sending: boolean, write: boolean): Promise<MinutesTelegram> {
   if (!sending) return { ready: false, reason: "Pengiriman MoM ke Telegram menunggu pembaruan sistem.", destinations: [], deliveries: [] };
   const [targets, deliveries] = await Promise.all([
-    write ? minutesTargets(session).catch(() => ({ ready: false, reason: "Tujuan Telegram belum terbaca.", groups: [] })) : Promise.resolve(null),
+    write ? minutesTargets(session).catch(() => ({ ready: false, reason: "Tujuan Telegram belum terbaca.", groups: [], all: [] })) : Promise.resolve(null),
     minutesDeliveries(session.id).catch(() => []),
   ]);
   return {
     ready: targets ? targets.ready : true, reason: targets?.reason ?? null,
     destinations: targets ? targets.groups.map(group => group.title) : [], deliveries,
     links: targets ? targets.groups.map(group => ({ title: group.title, url: group.inviteLink ?? null })) : [],
+    groups: targets ? targets.all.map(group => ({ chatId: group.chatId, title: group.title, url: group.inviteLink ?? null, suggested: targets.groups.some(item => item.chatId === group.chatId) })) : [],
   };
 }
 
@@ -249,7 +289,9 @@ export async function saveMinutes(sessionId: string, input: MinutesInput, member
   const people = new Set(attendees.map(person => person.id));
   // Who checked in by themselves came: the MoM cannot mark them absent.
   const self = new Set(attendees.filter(selfCheckedIn).map(person => person.id));
-  const stranger = input.actions.find(action => action.picId && !people.has(action.picId));
+  // A follow-up's PICs, whichever field an app sent them in; the first is its PIC as before.
+  input = { ...input, actions: input.actions.map(action => { const picIds = [...new Set(actionPicIds(action))]; return { ...action, picIds, picId: picIds[0] ?? null }; }) };
+  const stranger = input.actions.find(action => action.picIds.some(id => !people.has(id)));
   if (stranger) throw new ServiceError(422, "PIC tindak lanjut harus orang yang ikut meeting ini.", { actions: ["Pilih PIC dari peserta meeting."] });
   if (input.chairId && !people.has(input.chairId)) throw new ServiceError(422, "Pimpinan rapat harus orang yang ikut meeting ini.", { chairId: ["Pilih dari peserta meeting."] });
   const checked: MinutesInput = { ...input, absentIds: [...new Set(input.absentIds)].filter(id => people.has(id) && !self.has(id)) };
@@ -263,6 +305,8 @@ export async function saveMinutes(sessionId: string, input: MinutesInput, member
   // Before the MoM is read back below: the PDF and Telegram of this save carry the number typed.
   // An app opened before the field sends none: the number typed earlier then stays.
   if (checked.docNumber !== undefined) await saveDocNumber(sessionId, checked.docNumber);
+  await savePicIds(sessionId, checked.actions);
+  if (checked.telegramChats !== undefined) await saveTelegramChats(sessionId, checked.telegramChats);
 
   // The MoM's attendance is the check-in too (FRM form only: before it the MoM keeps no attendance).
   if (before.level >= 2) await recordMinutesAttendance(sessionId, session.startsAt, checked.absentIds, member, now);
@@ -282,10 +326,12 @@ export async function saveMinutes(sessionId: string, input: MinutesInput, member
 export async function setActionDone(sessionId: string, actionId: string, done: boolean, member: Member): Promise<MinuteAction> {
   const session = await getSession(sessionId, member);
   const client = createPrivilegedClient();
-  const { data, error } = await client.from("pw_session_minute_actions").select("id,pic_id").eq("id", actionId).eq("session_id", sessionId).maybeSingle();
+  let { data, error } = await client.from("pw_session_minute_actions").select("id,pic_id,pic_ids").eq("id", actionId).eq("session_id", sessionId).maybeSingle();
+  if (error && extrasMissing(error)) ({ data, error } = await client.from("pw_session_minute_actions").select("id,pic_id").eq("id", actionId).eq("session_id", sessionId).maybeSingle());
   if (error) { if (missing(error)) throw waiting(); databaseError(error); }
   if (!data) throw new ServiceError(404, "Tindak lanjut tidak ditemukan.");
-  if (!mayWriteMinutes(session, member) && data.pic_id !== member.id) throw new ServiceError(403, "Hanya peserta meeting atau PIC-nya yang bisa menandai tindak lanjut.");
+  const pics = [data.pic_id, ...(((data as { pic_ids?: string[] | null }).pic_ids) ?? [])];
+  if (!mayWriteMinutes(session, member) && !pics.includes(member.id)) throw new ServiceError(403, "Hanya peserta meeting atau PIC-nya yang bisa menandai tindak lanjut.");
   const { error: saveError } = await client.from("pw_session_minute_actions")
     .update({ done, done_at: done ? new Date().toISOString() : null, done_by: done ? member.id : null }).eq("id", actionId);
   if (saveError) databaseError(saveError);

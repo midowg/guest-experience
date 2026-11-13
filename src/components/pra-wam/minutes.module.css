@@ -214,3 +214,25 @@ details.group[open] > summary { margin-bottom: 2px; }
 @media (max-width: 399px) {
   .nextGrid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Terms: lists with room between them (13 Nov 2026). */
+.terms ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+
+/* A follow-up's PICs (13 Nov 2026): closed like a select, open as a list of tick boxes. */
+.picker { position: relative; min-width: 0; }
+.pickerSummary { display: flex !important; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; background-image: none !important; }
+.pickerSummary::-webkit-details-marker { display: none; }
+.pickerSummary > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pickerSummary > svg { flex: none; color: var(--pw-muted); transition: transform .15s ease; }
+.picker[open] > .pickerSummary > svg { transform: rotate(180deg); }
+.pickerEmpty { color: var(--pw-muted); }
+.pickerList { display: grid; gap: 0; max-height: 15rem; overflow-y: auto; margin: 6px 0 0; padding: 4px 10px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); background: var(--pw-surface); }
+.fieldLabel small { font-weight: 400; }
+
+/* The Telegram groups to send to, under Kirim ke Telegram (13 Nov 2026). */
+.groupPick { display: grid; gap: 6px; margin: 0 0 0 30px; padding: 10px 12px; border: 1px solid var(--pw-line); border-radius: var(--pw-r-control); min-width: 0; }
+.groupPick > legend { padding: 0 4px; font-size: 14px; font-weight: 700; color: var(--pw-text); }
+.groupPick ul { display: grid; margin: 0; padding: 0; list-style: none; }
+.groupPick .checkSmall span { overflow-wrap: anywhere; }
+.suggested { color: var(--pw-muted); font-size: 12px; }
+@media (max-width: 539px) { .groupPick { margin-left: 0; } }

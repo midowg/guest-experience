@@ -21,7 +21,13 @@ const written: MinutesView = {
   migrated: true, needed: true, status: "sudah", canWrite: true, open: true, viewerId: "me", people, endsAt: "2026-11-10T03:30:00.000Z", drafts: true,
   title: "Appraisal team SS", startsAt: "2026-11-10T02:00:00.000Z", place: "CFC Ananta Room",
   frm: true, attendees, defaultChairId: RAJA, photos: [photo("p1", "tv-welcome-werkudara.webp"), photo("p2", "tv-bday-flowers.webp"), photo("p3", "icon-512.png")], photosReady: true, photoHd: true, staff: [{ id: "andi", name: "Andi", fullName: "Andi Wijaya", department: "Finance" }, { id: "sari", name: "Sari", fullName: "Sari Melati", department: "Human Resources" }],
-  telegram: { ready: true, reason: null, destinations: ["WG SM · Commercial"], deliveries: [{ title: "WG SM · Commercial", status: "terkirim", error: null, version: 2, at: "2026-11-10T06:30:00.000Z" }] },
+  telegram: { ready: true, reason: null, destinations: ["WG SM · Commercial"], links: [{ title: "WG SM · Commercial", url: "https://t.me/+contoh" }],
+    groups: [
+      { chatId: "-1002", title: "WG SM · Commercial", url: "https://t.me/+contoh", suggested: true },
+      { chatId: "-1001", title: "WG CoE · Center of Excellence", url: null, suggested: false },
+      { chatId: "-1003", title: "WG HOD · Head of Department", url: null, suggested: false },
+      { chatId: "777", title: "CoS · Rina Putri", url: null, suggested: false },
+    ], deliveries: [{ title: "WG SM · Commercial", status: "terkirim", error: null, version: 2, at: "2026-11-10T06:30:00.000Z" }] },
   minutes: {
     summary: "", decisions: "", number: "MoM/2026/11/0012", docNumber: null,
     items: [
@@ -34,7 +40,7 @@ const written: MinutesView = {
     submittedBy: "Dewi", submittedAt: "2026-11-10T04:00:00.000Z", updatedBy: "Dewi", updatedAt: "2026-11-10T06:30:00.000Z",
     sentAt: "2026-11-10T04:10:00.000Z", sentBy: "Dewi", version: 2, telegramOff: false,
     actions: [
-      { id: "a1", task: "Kirim data penjualan Oktober ke Finance", picId: "me", picName: "Saya", dueDate: "2026-11-14", done: false },
+      { id: "a1", task: "Kirim data penjualan Oktober ke Finance", picId: "me", picName: "Saya", picIds: ["me", DEWI], picNames: ["Saya", "Dewi"], dueDate: "2026-11-14", done: false },
       { id: "a2", task: "Survei venue Bali", picId: DEWI, picName: "Dewi", dueDate: "2026-11-20", done: true },
     ],
   },

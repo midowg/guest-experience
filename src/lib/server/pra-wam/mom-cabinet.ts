@@ -29,7 +29,7 @@ type Row = {
   sent_at?: string | null; version?: number; telegram_off?: boolean;
   number?: number | null; doc_number?: string | null; chair_id?: string | null; items?: unknown; absent_ids?: string[] | null; guests?: string | null;
 };
-type ActionRow = { session_id: string; sort_order: number; task: string; pic_id: string | null; due_date: string | null; done: boolean };
+type ActionRow = { session_id: string; sort_order: number; task: string; pic_id: string | null; pic_ids?: string[] | null; due_date: string | null; done: boolean };
 type PhotoRow = { id: string; session_id: string; file_key: string; size: number; width: number | null; height: number | null; created_at: string };
 
 const BASE = "session_id,summary,decisions,submitted_by,submitted_at";
@@ -85,7 +85,9 @@ async function load(ids: readonly string[] | null): Promise<Loaded> {
   const sessionIds = rows.map(row => row.session_id);
   const [sessions, people, actions, photos, onTv, links] = await Promise.all([
     sessionsByIds(sessionIds), listPeople(),
-    inParts<ActionRow>(sessionIds, part => client.from("pw_session_minute_actions").select("session_id,sort_order,task,pic_id,due_date,done").in("session_id", part).order("sort_order")),
+    // Every PIC of a follow-up (migration 202611130003); before it, the one.
+    inParts<ActionRow>(sessionIds, part => client.from("pw_session_minute_actions").select("session_id,sort_order,task,pic_id,pic_ids,due_date,done").in("session_id", part).order("sort_order"))
+      .then(result => result.error && /pic_ids/.test(result.error.message) ? inParts<ActionRow>(sessionIds, part => client.from("pw_session_minute_actions").select("session_id,sort_order,task,pic_id,due_date,done").in("session_id", part).order("sort_order")) : result),
     inParts<PhotoRow>(sessionIds, part => client.from("pw_session_minute_photos").select("id,session_id,file_key,size,width,height,created_at").in("session_id", part).order("created_at")),
     client.from("pw_tv_slides").select("mom_photo_id").not("mom_photo_id", "is", null),
     inParts<{ session_id: string; employee_id: string }>(sessionIds, part => client.from("pw_session_participants").select("session_id,employee_id").in("session_id", part)),
@@ -146,7 +148,10 @@ async function load(ids: readonly string[] | null): Promise<Loaded> {
     details.set(session.id, {
       session, absent: [...away].map(fullName), present: inMeeting.filter(id => !away.has(id)).map(fullName), guests,
       items: items.length ? items : [{ topic: session.title, discussion: row.summary, decision: row.decisions, added: false }],
-      actions: own.map(action => ({ task: action.task, pic: name(action.pic_id), dueDate: action.due_date, done: action.done })),
+      actions: own.map(action => ({
+        task: action.task, dueDate: action.due_date, done: action.done,
+        pic: (action.pic_ids?.length ? action.pic_ids : action.pic_id ? [action.pic_id] : []).map(id => name(id)).join(", ") || null,
+      })),
     });
   }
   entries.sort((a, b) => `${b.date}${b.from ?? ""}`.localeCompare(`${a.date}${a.from ?? ""}`));

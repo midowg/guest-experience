@@ -49,12 +49,12 @@ function fill() {
   fireEvent.click(screen.getByRole("button", { name: /Tambah tindak lanjut/ }));
   fireEvent.click(screen.getByRole("button", { name: /Tambah tindak lanjut/ }));
   fireEvent.change(screen.getByLabelText("Action Item/Task 1"), { target: { value: "Kirim data penjualan" } });
-  fireEvent.change(screen.getByLabelText("PIC 1"), { target: { value: RAJA } });
+  fireEvent.click(within(screen.getByRole("group", { name: "PIC 1" })).getByRole("checkbox", { name: "Raja" }));
   fireEvent.change(screen.getByLabelText("Due Date 1"), { target: { value: "2026-11-14" } });
 }
 const items = [{ topic: "Target Q1", discussion: "Bahas target Q1", decision: "Target naik 10%", added: false }];
 // An empty second follow-up is left out.
-const actions = [{ task: "Kirim data penjualan", picId: RAJA, dueDate: "2026-11-14", done: false }];
+const actions = [{ task: "Kirim data penjualan", picId: RAJA, picIds: [RAJA], dueDate: "2026-11-14", done: false }];
 const body = (send: boolean, telegramOff = true) => ({
   items, chairId: RAJA, absentIds: ["me"], guests: "", next: { date: null, time: null, place: "", agenda: "" }, actions, send, telegramOff, docNumber: "",
 });
@@ -83,7 +83,7 @@ it("sends a draft straight from reading it, after naming where it goes", async (
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   expect(request.mock.calls[0][1].json).toEqual({
     items, chairId: RAJA, absentIds: ["me"], guests: "", next: { date: null, time: null, place: "", agenda: "" },
-    actions: [{ id: ACTION, task: "Kirim data penjualan", picId: "me", dueDate: "2026-11-14", done: false }], send: true, telegramOff: false, docNumber: "",
+    actions: [{ id: ACTION, task: "Kirim data penjualan", picId: "me", picIds: ["me"], dueDate: "2026-11-14", done: false }], send: true, telegramOff: false, docNumber: "",
   });
   expect(await screen.findByText("MoM dikirim.")).toBeTruthy();
   // Sent: no Kirim MoM any more.
@@ -173,14 +173,18 @@ it("asks for a topic with its discussion or decision before saving", () => {
 
 it("names where Kirim MoM goes before it goes, and sends nothing when cancelled", async () => {
   request.mockResolvedValue({ data: view({ status: "sudah", minutes: written(), telegram: telegram({ deliveries: [{ title: "Werkudara CoE · Center of Excellence", status: "terkirim", error: null, version: 1, at: "2026-11-10T04:00:00.000Z" }] }) }), message: "MoM dikirim." });
-  render(<MinutesPanel sessionId={SESSION} initial={view()} />);
+  const groups = [
+    { chatId: "-1001", title: "Werkudara CoE · Center of Excellence", url: "https://t.me/+abcDEF123", suggested: true },
+    { chatId: "-1003", title: "WG HOD · Head of Department", url: null, suggested: false },
+  ];
+  render(<MinutesPanel sessionId={SESSION} initial={view({ telegram: telegram({ groups }) })} />);
   fill();
   // Kirim ke Telegram starts off; ticking it is like agreeing to terms: where it goes and how to join the group.
   const box = screen.getByRole("checkbox", { name: /Kirim ke Telegram/ }) as HTMLInputElement;
   expect(box.checked).toBe(false);
   fireEvent.click(box);
   let dialog = within(await screen.findByRole("dialog", { name: "Kirim ke Telegram" }));
-  expect(dialog.getByText("Werkudara CoE · Center of Excellence", { selector: "strong" })).toBeTruthy();
+  expect(dialog.getByText(/dicentang di bawah kotak/)).toBeTruthy();
   expect(dialog.getByRole("heading", { name: "Cara masuk grup Telegram" })).toBeTruthy();
   // The group's address, to open and join at once.
   expect(dialog.getByRole("link", { name: /Werkudara CoE · Center of Excellence/ }).getAttribute("href")).toBe("https://t.me/+abcDEF123");
@@ -194,10 +198,16 @@ it("names where Kirim MoM goes before it goes, and sends nothing when cancelled"
   fireEvent.click(dialog.getByRole("button", { name: "Kirim ke Telegram" }));
   await waitFor(() => expect(box.checked).toBe(true));
 
+  // Under the box, the groups to send to: the participants' department ticked; the HOD group added.
+  const pick = within(screen.getByRole("group", { name: /Kirim ke grup/ }));
+  expect((pick.getByRole("checkbox", { name: /Werkudara CoE/ }) as HTMLInputElement).checked).toBe(true);
+  expect((pick.getByRole("checkbox", { name: /WG HOD/ }) as HTMLInputElement).checked).toBe(false);
+  fireEvent.click(pick.getByRole("checkbox", { name: /WG HOD/ }));
+
   // Then Kirim MoM names the groups and asks plainly.
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
   dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
-  expect(dialog.getByText(/ke grup Telegram Werkudara CoE · Center of Excellence/)).toBeTruthy();
+  expect(dialog.getByText(/ke grup Telegram Werkudara CoE · Center of Excellence dan WG HOD · Head of Department/)).toBeTruthy();
   fireEvent.click(dialog.getByRole("button", { name: "Batal" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(request).not.toHaveBeenCalled();
@@ -205,7 +215,7 @@ it("names where Kirim MoM goes before it goes, and sends nothing when cancelled"
   dialog = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
   fireEvent.click(dialog.getByRole("button", { name: "Kirim MoM" }));
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
-  expect(request.mock.calls[0][1].json).toEqual(body(true, false));
+  expect(request.mock.calls[0][1].json).toEqual({ ...body(true, false), telegramChats: ["-1001", "-1003"] });
   expect(await screen.findByText("MoM dikirim.")).toBeTruthy();
   expect(screen.getByText(/Terkirim ke Telegram:/).textContent).toBe("Terkirim ke Telegram: Werkudara CoE · Center of Excellence");
   expect(screen.getByRole("link", { name: /Unduh PDF/ }).getAttribute("href")).toBe(`/api/wam/sessions/${SESSION}/minutes/pdf`);
@@ -221,16 +231,16 @@ it("says when a group is missing, a meeting still runs, or the MoM stays out of 
   expect(dialog.getByText(/Meeting ini belum selesai/)).toBeTruthy();
   expect(dialog.getByText(/tidak dikirim ke Telegram/)).toBeTruthy();
   fireEvent.click(dialog.getByRole("button", { name: "Batal" }));
-  // Ticked without a known group: the terms say each participant's department group.
+  // Ticked without a known group: the terms still say how it works, and nothing goes to Telegram.
   fireEvent.click(screen.getByRole("checkbox", { name: /Kirim ke Telegram/ }));
   const terms = within(await screen.findByRole("dialog", { name: "Kirim ke Telegram" }));
-  expect(terms.getByText("PDF MoM dikirim ke grup Telegram departemen setiap peserta.")).toBeTruthy();
+  expect(terms.getByText(/dicentang di bawah kotak/)).toBeTruthy();
   await waitFor(() => expect((terms.getByRole("button", { name: "Kirim ke Telegram" }) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(terms.getByRole("button", { name: "Kirim ke Telegram" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   fireEvent.click(screen.getByRole("button", { name: /Kirim MoM/ }));
   const plain = within(await screen.findByRole("dialog", { name: "Kirim MoM?" }));
-  expect(plain.getByText(/Peserta lain diberi tahu di WAM\./)).toBeTruthy();
+  expect(plain.getByText(/tidak dikirim ke Telegram; peserta lain diberi tahu di WAM\./)).toBeTruthy();
 });
 
 it("reads a MoM as the form has it: number, chair, who came, agenda items and new topics, next meeting, photos", () => {
@@ -283,7 +293,7 @@ it("opens a MoM from before the FRM form as one agenda item, and saves a sent on
   await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   const json = request.mock.calls[0][1].json;
   expect(json.items).toEqual([{ topic: "Pembahasan", discussion: "Bahas target Q1", decision: "Target naik 10%", added: false }]);
-  expect(json.actions).toEqual([{ id: ACTION, task: "Kirim data penjualan", picId: "me", dueDate: "2026-11-14", done: false }]);
+  expect(json.actions).toEqual([{ id: ACTION, task: "Kirim data penjualan", picId: "me", picIds: ["me"], dueDate: "2026-11-14", done: false }]);
   expect(json.send).toBe(false);
   // Chair from the booker, everyone present: the old MoM kept no attendance.
   expect(json.chairId).toBe(RAJA);

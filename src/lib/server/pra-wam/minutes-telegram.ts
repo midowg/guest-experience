@@ -62,15 +62,19 @@ export async function isHodMeeting(session: Session): Promise<boolean> {
 }
 
 /** Where this meeting's MoM goes now, or why it cannot go to Telegram. */
-export async function minutesTargets(session: Session): Promise<{ ready: boolean; reason: string | null; groups: TelegramGroup[] }> {
-  if (!telegramConfig()) return { ready: false, reason: "Bot Telegram belum disiapkan.", groups: [] };
+export async function minutesTargets(session: Session): Promise<{ ready: boolean; reason: string | null; groups: TelegramGroup[]; all: TelegramGroup[] }> {
+  if (!telegramConfig()) return { ready: false, reason: "Bot Telegram belum disiapkan.", groups: [], all: [] };
   const [ready, { migrated, groups }] = await Promise.all([teamsReady().catch(() => false), listGroups().catch(() => ({ migrated: false, groups: [] as TelegramGroup[] }))]);
-  if (!ready || !migrated) return { ready: false, reason: "Pengiriman MoM ke Telegram menunggu pembaruan sistem.", groups: [] };
+  if (!ready || !migrated) return { ready: false, reason: "Pengiriman MoM ke Telegram menunggu pembaruan sistem.", groups: [], all: [] };
   const ids = await participantIds(session.id);
   const [places, hod, bod, shorts] = await Promise.all([placesOf(ids), isHodMeeting(session), withBod(ids), groupShorts()]);
   // WAM names each group one way (13 Nov 2026), whatever it is called in Telegram now.
-  const named = (await withChatInfo(momTargets(groups, places, hod, bod))).map(group => ({ ...group, title: canonicalTitle(group, shorts) }));
-  return { ready: true, reason: null, groups: named };
+  // Every group the bot can post in, for the notetaker to pick (13 Nov 2026): WAM's own pick first, then A–Z.
+  const live = groups.filter(group => group.botStatus !== "dikeluarkan");
+  const picked = new Set(momTargets(groups, places, hod, bod).map(group => group.chatId));
+  const all = (await withChatInfo(live)).map(group => ({ ...group, title: canonicalTitle(group, shorts) }))
+    .sort((a, b) => Number(picked.has(b.chatId)) - Number(picked.has(a.chatId)) || a.title.localeCompare(b.title, "id"));
+  return { ready: true, reason: null, groups: all.filter(group => picked.has(group.chatId)), all };
 }
 
 /** What a MoM's message and PDF say. The department is the booker's (the HOD group's for a Meeting HOD). */
@@ -92,7 +96,7 @@ export async function minutesMessage(session: Session, minutes: Minutes, hod: bo
     from: clock(session.startsAt), to: clock(session.endsAt), place: session.roomName ?? session.location ?? "",
     participants: names, notetaker: minutes.submittedBy,
     summary: minutes.summary, decisions: minutes.decisions,
-    actions: minutes.actions.map(action => ({ task: action.task, pic: action.picName ?? null, dueDate: action.dueDate, done: action.done })),
+    actions: minutes.actions.map(action => ({ task: action.task, pic: action.picNames?.length ? action.picNames.join(", ") : action.picName ?? null, dueDate: action.dueDate, done: action.done })),
     version: Math.max(1, minutes.version), at: minutes.version > 1 ? minutes.updatedAt : minutes.sentAt ?? minutes.updatedAt,
     changedBy: minutes.version > 1 ? minutes.updatedBy : null,
     link: new URL(praWamPath.session(session.id), shareUrl()).toString().replace(/^https?:\/\//, ""),
@@ -130,8 +134,11 @@ export async function minutesDeliveries(sessionId: string): Promise<MinutesTeleg
 export async function deliverMinutes(session: Session, minutes: Minutes, now = new Date()): Promise<void> {
   if (!minutes.sentAt || minutes.telegramOff) return;
   try {
-    const { ready, groups } = await minutesTargets(session);
-    if (!ready || !groups.length) return;
+    const targets = await minutesTargets(session);
+    // The groups the notetaker picked, when they picked (13 Nov 2026); else WAM's pick.
+    const chosen = minutes.telegramChats ? new Set(minutes.telegramChats) : null;
+    const groups = chosen ? targets.all.filter(group => chosen.has(group.chatId)) : targets.groups;
+    if (!targets.ready || !groups.length) return;
     const message = await minutesMessage(session, minutes, await isHodMeeting(session));
     const pdf = await minutesPdfWithPhotos(session.id, message);
     const client = createPrivilegedClient();

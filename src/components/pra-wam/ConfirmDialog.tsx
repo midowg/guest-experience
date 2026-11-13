@@ -59,11 +59,12 @@ function ConfirmDialog({ title, body, confirmLabel, danger, mustRead, cancelLabe
     if (!dialog.open) dialog.showModal();
     return () => { if (dialog.open) dialog.close(); before?.focus?.(); };
   }, []);
-  return <dialog ref={ref} className={styles.dialog} aria-labelledby={`${id}-judul`} aria-describedby={`${id}-isi`}
+  // Read to the end (13 Nov 2026): wider, without the icon, the text in its own box, the two buttons side by side.
+  return <dialog ref={ref} className={`${styles.dialog} ${mustRead ? styles.dialogTerms : ""}`} aria-labelledby={`${id}-judul`} aria-describedby={`${id}-isi`}
     onCancel={event => { event.preventDefault(); onClose(false); }}
     onClick={event => { if (event.target === ref.current) onClose(false); }}>
     <div className={styles.dialogBody}>
-      <span className={`${styles.tile} ${danger ? styles.tileDanger : ""}`} aria-hidden>{danger ? <AlertTriangle /> : <HelpCircle />}</span>
+      {!mustRead && <span className={`${styles.tile} ${danger ? styles.tileDanger : ""}`} aria-hidden>{danger ? <AlertTriangle /> : <HelpCircle />}</span>}
       <div>
         <h2 id={`${id}-judul`}>{title}</h2>
         {mustRead

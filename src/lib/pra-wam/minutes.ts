@@ -13,9 +13,18 @@ import type { Session } from "./sessions";
  * booker's department read it. Pure, so it is tested without a server.
  */
 
+/**
+ * A follow-up. 13 Nov 2026 (migration 202611130003): more than one PIC, `picIds` in order; `picId`
+ * and `picName` are the first, as before (an app opened before the update sends only `picId`).
+ */
 export type MinuteAction = {
   id?: string; task: string; picId: string | null; picName?: string | null; dueDate: string | null; done: boolean;
+  picIds?: string[]; picNames?: string[];
 };
+/** A follow-up's PICs: all of them, or the one of an older follow-up. */
+export const actionPicIds = (action: Pick<MinuteAction, "picId" | "picIds">): string[] =>
+  action.picIds?.length ? action.picIds : action.picId ? [action.picId] : [];
+export const MINUTE_PICS_MAX = 10;
 /**
  * An agenda item, as on the paper form FRM.05.00.00.027 (12 Nov 2026): its topic, what was
  * discussed (the key points), and what was decided. `added` marks a new topic, outside the agenda.
@@ -62,6 +71,11 @@ export type Minutes = {
    * saves since it was sent (1 when sent). telegramOff keeps it out of Telegram.
    */
   sentAt: string | null; sentBy: string | null; version: number; telegramOff: boolean;
+  /**
+   * The Telegram groups the notetaker picked (13 Nov 2026, migration 202611130003), as chat ids;
+   * null: the groups of the participants' departments, picked by WAM.
+   */
+  telegramChats?: string[] | null;
 };
 /** Where a sent MoM went in Telegram, per group, and where it would go (for the writer). */
 export type MinutesTelegram = {
@@ -71,6 +85,11 @@ export type MinutesTelegram = {
   destinations: string[];
   /** The same groups with their invite address, to open and join (13 Nov 2026). */
   links?: { title: string; url: string | null }[];
+  /**
+   * Every group a MoM may go to, for the notetaker to pick (13 Nov 2026): its name, address, and
+   * whether WAM would pick it (a participant's department); the picked ones first.
+   */
+  groups?: { chatId: string; title: string; url: string | null; suggested: boolean }[];
   deliveries: { title: string; status: "terkirim" | "gagal"; error: string | null; version: number; at: string | null }[];
 };
 /** What Detail sesi gets: the MoM (or none yet), whether the viewer may write it, and who may be a PIC. */
@@ -200,6 +219,7 @@ export const minutesInputSchema = z.object({
     id: z.uuid().optional(),
     task: z.string().trim().min(2, "Isi tugasnya.").max(minutesLimits.task, `Tugas paling banyak ${minutesLimits.task} karakter.`),
     picId: z.uuid("Pilih PIC dari daftar.").nullable().default(null),
+    picIds: z.array(z.uuid("Pilih PIC dari daftar.")).max(MINUTE_PICS_MAX, `Paling banyak ${MINUTE_PICS_MAX} PIC per tindak lanjut.`).default([]),
     dueDate: z.string().regex(DATE, "Tanggal tidak valid.").nullable().default(null),
     done: z.boolean().default(false),
   })).max(minutesLimits.actions, `Paling banyak ${minutesLimits.actions} tindak lanjut.`).default([]),
@@ -207,6 +227,8 @@ export const minutesInputSchema = z.object({
   send: z.boolean().default(false),
   /** Keep this MoM out of Telegram (a sensitive meeting). */
   telegramOff: z.boolean().default(false),
+  /** The groups picked (chat ids); left out by an app opened before the update: kept as it was. */
+  telegramChats: z.array(z.string().regex(/^-?\d{1,20}$/, "Grup Telegram tidak dikenali.")).max(40).optional(),
 }).refine(input => input.items.length > 0 || input.summary.length >= 2 || input.decisions.length >= 2, { path: ["items"], message: "Isi minimal satu topik dengan pembahasan atau keputusannya." });
 export type MinutesInput = z.infer<typeof minutesInputSchema>;
 
