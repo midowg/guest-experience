@@ -17,7 +17,9 @@ export type EventContact = {
   staff_id?: string;
 };
 /** Someone in Tim Werkudara who can be an event's PIC. */
-export type StaffMember = { id: string; name: string; role: string; phone: string; photo: PlainImage; active: boolean; sort_order: number };
+export type StaffMember = { id: string; name: string; role: string; phone: string; photo: PlainImage; active: boolean; sort_order: number;
+  /** The Data karyawan person behind this entry (migration 202611130012): as PIC they open the event in the admin. */
+  employee_id?: string | null };
 export type FeedbackQuestion = { id: string; label: string; kind: "rating" | "choice" | "text"; required: boolean; options: string[]; sort_order: number };
 export type ImageSource = { width: number; url: string };
 export type ImageFocus = "top" | "center" | "bottom";

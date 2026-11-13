@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminAuthConfig, isDeviceId, passwordRole, safeNext, SESSION_TTL_SECONDS, signSession, verifySession } from "./admin-token";
+import { adminAuthConfig, isDeviceId, passwordRole, readSession, safeNext, SESSION_TTL_SECONDS, signPersonSession, signSession, verifySession } from "./admin-token";
 
 const env = { ADMIN_PASSWORD: "correct horse battery", ADMIN_SESSION_SECRET: "s".repeat(32), SUPER_ADMIN_PASSWORD: "super secret owner" };
 const config = adminAuthConfig(env)!;
@@ -64,6 +64,27 @@ describe("session tokens", () => {
 
   it("no longer accepts tokens from before roles", () => {
     expect(verifySession(config, `v1.${Math.floor(now / 1000) + 60}.${"a".repeat(64)}`, now)).toBeNull();
+  });
+});
+
+describe("personal admin sessions (13 Nov 2026)", () => {
+  const person = "0b6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c11";
+  it("names the person and their account version, as the admin role", () => {
+    const token = signPersonSession(config, person, 3, now);
+    expect(readSession(config, token, now)).toEqual({ role: "admin", kind: "person", employeeId: person, version: 3 });
+    expect(readSession(config, token, now + SESSION_TTL_SECONDS * 1000)).toBeNull();
+  });
+  it("rejects another person, another version, or another secret; and does not open the old role check", () => {
+    const token = signPersonSession(config, person, 3, now);
+    const other = "1b6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c11";
+    expect(readSession(config, token.replace(person, other), now)).toBeNull();
+    expect(readSession(config, token.replace(".3.", ".4."), now)).toBeNull();
+    expect(readSession({ ...config, secret: "t".repeat(32) }, token, now)).toBeNull();
+    expect(verifySession(config, token, now)).toBeNull();
+  });
+  it("still reads the super admin and the shared password", () => {
+    expect(readSession(config, signSession(config, "super", now), now)).toEqual({ role: "super", kind: "super" });
+    expect(readSession(config, signSession(config, "admin", now), now)).toEqual({ role: "admin", kind: "shared" });
   });
 });
 

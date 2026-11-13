@@ -75,7 +75,11 @@ export const superAdminPath = {
   visibility: "/admin/super/visibilitas",
   modules: "/admin/super/modul",
   access: "/admin/akses",
+  /** Akses admin (13 Nov 2026): who signs in to the admin with their own account, and what they open. */
+  admins: "/admin/super/admin",
 };
+/** The super admin's grants: the list, or one person's (PUT to save, DELETE to revoke). */
+export const adminGrantsApi = (employeeId?: string) => employeeId ? `/api/admin/grants/${employeeId}` : "/api/admin/grants";
 export const ADMIN_LOGIN = "/admin/login";
 export const ADMIN_LOGOUT_API = "/api/auth/logout";
 

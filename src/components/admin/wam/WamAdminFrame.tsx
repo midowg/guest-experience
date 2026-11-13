@@ -1,6 +1,6 @@
 import { cache, type ReactNode } from "react";
 import { purgeIfDue } from "@/lib/server/pra-wam/purge";
-import { adminRole } from "@/lib/server/admin-session";
+import { currentAdmin } from "@/lib/server/admin-session";
 import { openResetRequestCount } from "@/lib/server/pra-wam/reset-requests";
 import admin from "@/components/admin/admin.module.css";
 import { WamNav } from "./WamNav";
@@ -18,8 +18,10 @@ export const waitingResetRequests = cache(() => openResetRequestCount().catch(()
  */
 export async function WamAdminFrame({ current, children, wide = false }: { current: WamSectionKey; children: ReactNode; wide?: boolean }) {
   // From the stay date on, opening Admin WAM deletes the stay and health data (see purge.ts).
-  const [waiting, role] = await Promise.all([waitingResetRequests(), adminRole(), purgeIfDue()]);
-  return <WamNav current={current} badges={waiting ? { reset: String(waiting) } : undefined} superAdmin={role === "super"} wide={wide} className={admin.shell}>
+  const [waiting, actor] = await Promise.all([waitingResetRequests(), currentAdmin(), purgeIfDue()]);
+  const noTv = actor?.kind === "person" && !actor.grant.apps.includes("tv");
+  return <WamNav current={current} badges={waiting ? { reset: String(waiting) } : undefined} superAdmin={actor?.role === "super"} wide={wide} className={admin.shell}
+    personName={actor?.name} without={noTv ? ["tv"] : []}>
     {children}
   </WamNav>;
 }

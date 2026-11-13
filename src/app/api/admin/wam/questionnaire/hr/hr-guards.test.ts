@@ -32,6 +32,8 @@ vi.mock("@/lib/server/supabase/admin", () => {
     let mode: { kind: "select" } | { kind: "insert"; row: Row } | { kind: "update"; values: Row } = { kind: "select" };
     const rows = () => (fake.tables[table] ??= []);
     const run = () => {
+      // These tests sign in with the shared admin password, which works until migration 202611130012.
+      if (table === "admin_grants") return { data: null, error: { code: "PGRST205", message: "relation admin_grants does not exist" } };
       if (mode.kind === "insert") {
         rows().push({ id: `r${rows().length + 1}`, created_at: new Date(Date.now() + ++fake.state.clock).toISOString(), ...mode.row });
         return { data: null, error: null };

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
-import { adminAuthConfig, SESSION_COOKIE, signSession } from "./lib/admin-token";
+import { adminAuthConfig, SESSION_COOKIE, signPersonSession, signSession } from "./lib/admin-token";
 import { config as proxyConfig, proxy } from "./proxy";
 
 const env = { ADMIN_PASSWORD: "correct horse battery", ADMIN_SESSION_SECRET: "s".repeat(32) };
@@ -36,6 +36,14 @@ describe("proxy", () => {
     expect(proxy(request("/api/admin/events", token)).headers.get("x-middleware-next")).toBe("1");
     expect(proxy(request("/admin/login")).headers.get("x-middleware-next")).toBe("1");
     expect(proxy(request("/admin", "v1.1.bad")).status).toBe(307);
+  });
+
+  it("lets a personal admin through and passes the path on, replacing any the browser sent", () => {
+    const token = signPersonSession(adminAuthConfig(env)!, "0b6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c11", 1);
+    const asked = new NextRequest("http://localhost:3000/admin/wam/akun", { headers: { cookie: `${SESSION_COOKIE}=${token}`, "x-wk-admin-path": "/admin" } });
+    const response = proxy(asked);
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.headers.get("x-middleware-request-x-wk-admin-path")).toBe("/admin/wam/akun");
   });
 
   it("stays locked when the password is not configured", () => {

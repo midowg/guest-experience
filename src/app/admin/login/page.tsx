@@ -21,9 +21,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <h1 id="login-title" className={styles.loginTitle}>Masuk ke admin</h1>
       {configured ? <>
         {params.berakhir === "1" && <Notice tone="warning">Sesi Anda berakhir. Masuk kembali untuk melanjutkan.</Notice>}
-        <p className={styles.loginLead}>Masukkan password admin untuk mengelola acara.</p>
+        <p className={styles.loginLead}>Masuk dengan email atau nama panggilan dan password WAM Anda. Yang bisa masuk adalah orang yang sudah diberi akses admin oleh super admin.</p>
         <LoginForm next={next} />
-        <p className={styles.loginNote}>Aktivitas login dicatat: waktu, IP, perkiraan lokasi, dan perangkat. Sesi berlaku 12 jam.</p>
+        <p className={styles.loginNote}>Aktivitas login dicatat: nama, waktu, IP, perkiraan lokasi, dan perangkat. Sesi berlaku 12 jam.</p>
       </> : <>
         <Notice tone="warning">Login admin belum disiapkan, jadi panel ini terkunci.</Notice>
         <ol className={styles.loginSteps}>

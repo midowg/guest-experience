@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
 import { StaffSettings } from "@/components/admin/super/StaffSettings";
 import { listStaff } from "@/lib/server/staff";
+import { grantPeople } from "@/lib/server/admin-actor";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Tim Werkudara · Super admin" };
@@ -14,9 +15,9 @@ export const metadata = { title: "Tim Werkudara · Super admin" };
 export default async function SuperTeamPage() {
   if ((await requireAdminPage()) !== "super") notFound();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
-  const team = await listStaff(false);
+  const [team, people] = await Promise.all([listStaff(false), grantPeople().catch(() => [])]);
   return <SuperAdminFrame current="tim">
     <PageHeader title="Tim Werkudara" subtitle="Orang yang bisa dipilih sebagai PIC acara." />
-    <StaffSettings initial={team.staff} migrated={team.migrated} />
+    <StaffSettings initial={team.staff} migrated={team.migrated} people={people.map(person => ({ id: person.id, name: person.name }))} />
   </SuperAdminFrame>;
 }

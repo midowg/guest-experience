@@ -41,6 +41,7 @@ export const staffInputSchema = z.object({
   photo: plainImage.default(emptyImage),
   active: z.boolean().default(true),
   sort_order: z.number().int().min(0).max(10000).default(0),
+  employee_id: z.union([z.uuid(), z.null()]).optional(),
 });
 export type StaffInput = z.infer<typeof staffInputSchema>;
 export const momentIcons = ["coffee", "utensils", "gift", "users", "camera", "music", "map", "sparkles", "presentation", "heart"] as const;

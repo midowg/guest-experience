@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Crown, LayoutGrid } from "lucide-react";
-import { adminRole } from "@/lib/server/admin-session";
+import { currentAdmin } from "@/lib/server/admin-session";
 import { ButtonLink, Notice } from "@/components/ui";
 import type { EventRecord } from "@/lib/types";
 import { LogoutButton } from "@/components/admin/shared/AuthControls";
@@ -25,7 +25,8 @@ async function visitBadges(eventId: string): Promise<{ guests?: string; beo?: st
 /** `bare` drops the signed-in links, for the login and setup screens. */
 /** `wide` gives pages with a side preview (the editor) more room than the usual reading width. */
 export async function AdminShell({ children, bare = false, wide = false }: { children: ReactNode; bare?: boolean; wide?: boolean }) {
-  const role = bare ? null : await adminRole();
+  const actor = bare ? null : await currentAdmin();
+  const role = actor?.role ?? null;
   return <div className={styles.shell}>
     <header className={styles.header}>
       <div className={`container ${styles.headerInner} ${shell.inner}`}>
@@ -37,6 +38,7 @@ export async function AdminShell({ children, bare = false, wide = false }: { chi
         {!bare && <nav className={`${styles.headerNav} ${shell.nav}`} aria-label="Admin">
           {/* On a phone only the icons show; each link keeps its name for screen readers. */}
           {role === "super" && <Link href="/admin/super" aria-label="Dashboard super admin" className={`${styles.headerLink} ${styles.roleLink}`}><Crown size={16} aria-hidden="true" /> <span className={shell.linkText}>Super admin</span></Link>}
+          {actor?.kind === "person" && <span className={`${styles.headerLink} ${shell.linkText}`} title="Masuk dengan akun WAM">{actor.name}</span>}
           <Link href="/admin" aria-label="Semua acara" className={styles.headerLink}><LayoutGrid size={16} aria-hidden="true" /> <span className={shell.linkText}>Semua acara</span></Link>
           <LogoutButton />
         </nav>}

@@ -6,7 +6,7 @@ import {
   HR_ACCESS_MAX, HR_ACCESS_MIGRATION, HR_LOCKOUT_MINUTES, HR_MAX_FAILURES, HR_NO_ACCESS, HR_UNLOCK_MINUTES, normalEmail,
 } from "@/lib/pra-wam/hr-access";
 import { answered, hrOnly, type AnswerValue, type QuestionKind, type Visibility } from "@/lib/pra-wam/questionnaire";
-import { clientInfo, requireApiAdmin } from "../admin-session";
+import { clientInfo, currentAdmin, requireApiAdmin } from "../admin-session";
 import { rateLimitSecret, ServiceError } from "../config";
 import { databaseError, enforceRateLimit } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
@@ -250,7 +250,10 @@ export async function hrUnlocked(): Promise<HrUnlock | null> {
   if (!form) return null;
   // Whoever opened it with their WAM email before keeps their name on the log.
   const named = await emailUnlocked();
-  return { formId: form.id, expiresAt: OPEN_UNTIL, actor: named?.actor ?? { id: null, name: role === "super" ? "Super admin" : "Admin" } };
+  // A personal admin (13 Nov 2026) is on the log by name.
+  const person = named ? null : await currentAdmin().catch(() => null);
+  const fallback = person?.kind === "person" ? { id: person.employeeId, name: person.name } : { id: null, name: role === "super" ? "Super admin" : "Admin" };
+  return { formId: form.id, expiresAt: OPEN_UNTIL, actor: named?.actor ?? fallback };
 }
 
 /** The older email unlock this browser may still hold (named on the log), or null. */

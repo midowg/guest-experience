@@ -41,7 +41,7 @@ function stageBadge(event: EventRecord, phase: EventPhase | undefined) {
  * the editor, and the rarer actions sit in each card's "⋯" menu (meeting of 20 Oct).
  * `superAdmin` is set only for a super admin session: hidden events then carry a label.
  */
-export function EventList({ events, featuredId, phases = {}, superAdmin, disabledModules = [], templates, staff = [], apps = [] }: { events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean }; disabledModules?: AdminModule[]; templates?: TemplateKey[]; staff?: StaffMember[]; apps?: StandaloneApp[] }) {
+export function EventList({ events, featuredId, phases = {}, superAdmin, disabledModules = [], templates, staff = [], apps = [], canCreate = true }: { canCreate?: boolean; events: EventRecord[]; featuredId: string | null; phases?: Record<string, EventPhase>; superAdmin?: { hiddenIds: string[]; migrated: boolean }; disabledModules?: AdminModule[]; templates?: TemplateKey[]; staff?: StaffMember[]; apps?: StandaloneApp[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -154,7 +154,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
           <summary aria-label={`Aksi lain untuk ${event.title}`}><MoreHorizontal size={18} aria-hidden="true" /></summary>
           <div className={styles.cardMenuList} role="group" aria-label={`Aksi lain untuk ${event.title}`}>
             {event.status === "published" && <a href={eventPath(event)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" /> {event.event_kind === "eguide" ? "Lihat E-Guide" : event.event_kind === "panduan" ? "Lihat panduan" : event.event_kind === "kunjungan" ? "Lihat halaman tamu" : "Lihat undangan"}<span className="sr-only"> (tab baru)</span></a>}
-            <button type="button" disabled={!!busy} onClick={() => duplicate(event.id)}><Copy size={16} aria-hidden="true" /> {busy === event.id ? "Menyalin…" : "Duplikasi"}</button>
+            {canCreate && <button type="button" disabled={!!busy} onClick={() => duplicate(event.id)}><Copy size={16} aria-hidden="true" /> {busy === event.id ? "Menyalin…" : "Duplikasi"}</button>}
             {/* An event shown on the front page before it stopped featuring any can still be taken down. */}
             {live && <button type="button" disabled={!!busy} onClick={() => setHomepage(null)}><StarOff size={16} aria-hidden="true" /> Turunkan dari halaman utama</button>}
             <button type="button" className={styles.cardMenuDanger} disabled={!!busy} onClick={click => { click.currentTarget.closest("details")?.removeAttribute("open"); setDeleting(event); }}><Trash2 size={16} aria-hidden="true" /> Hapus</button>
@@ -167,7 +167,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
   return <div className="stack" aria-busy={!!busy}>
     <div className={styles.listHeader}>
       <h1 className={styles.listTitle}>Acara <span>{listed.length}</span></h1>
-      <Button type="button" disabled={!!busy} onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" /> Buat acara</Button>
+      {canCreate && <Button type="button" disabled={!!busy} onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" /> Buat acara</Button>}
     </div>
     {deleting && <div className={styles.panelLayer}>
       <div className={styles.panelBackdrop} onClick={() => setDeleting(null)} aria-hidden="true" />
@@ -188,8 +188,8 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
     {error && <Notice tone="error">{error}</Notice>}
     {message && <p role="status" className={styles.guestMessage}>{message}</p>}
     {!listed.length ? <div className={styles.emptyList}>
-      <p>Belum ada acara.</p>
-      <Button type="button" onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" /> Buat acara pertama</Button>
+      <p>{canCreate ? "Belum ada acara." : "Belum ada acara yang bisa Anda buka. Minta super admin memberi akses."}</p>
+      {canCreate && <Button type="button" onClick={() => setCreating(true)}><Plus size={18} aria-hidden="true" /> Buat acara pertama</Button>}
     </div> : <>
       {group("group-live", "Tayang", onAir, "Sudah terbit dan bisa dibuka tamu lewat tautannya: hari ini dulu, lalu yang akan datang, lalu yang sudah selesai.")}
       {group("group-draft", "Draf", drafts, "Belum terbit. Tamu belum bisa membukanya.")}

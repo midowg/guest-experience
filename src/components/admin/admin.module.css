@@ -342,6 +342,9 @@
 .loginSteps { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-2); }
 .loginForm { display: grid; gap: var(--space-4); }
 .loginForm button[type="submit"] { justify-content: center; }
+/* "Masuk sebagai super admin" under the form (13 Nov 2026). */
+.linkButton { justify-self: center; background: none; border: 0; padding: 8px; min-height: 40px; color: var(--color-primary, var(--blue)); font: inherit; font-size: .875rem; text-decoration: underline; cursor: pointer; }
+.linkButton:disabled { opacity: .6; cursor: default; }
 .passwordRow { position: relative; display: block; }
 .passwordRow input { width: 100%; padding-right: 48px; }
 .passwordToggle { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 8px; background: transparent; color: var(--ink-soft); }

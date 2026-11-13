@@ -9,7 +9,12 @@ export type AccessEntry = {
   city: string | null; user_agent: string | null; device_id: string | null; new_device: boolean;
   /** Since 202610200005; null on older rows and for failed attempts. */
   role?: "admin" | "super" | null;
+  /** Since 202611130012: the person who signed in (their own WAM account), else null. */
+  employee_id?: string | null;
+  /** Since 202611130012: who, in words: their name, "Super admin", or what was typed when it failed. */
+  actor?: string | null;
 };
+export type AccessWho = { employeeId?: string | null; actor?: string | null };
 
 const TABLE = "admin_access_log";
 // PostgREST reports a table that has not been migrated yet as PGRST205 (or 42P01 from Postgres).
@@ -27,10 +32,13 @@ export async function isKnownDevice(deviceId: string): Promise<boolean | null> {
  * Best effort: a log outage must not lock the owner out, so failures are reported to the
  * server console and to the caller instead of being thrown.
  */
-export async function recordAccess(kind: AccessKind, client: ClientInfo, deviceId: string, newDevice: boolean, role: "admin" | "super" | null = null): Promise<boolean> {
+export async function recordAccess(kind: AccessKind, client: ClientInfo, deviceId: string, newDevice: boolean, role: "admin" | "super" | null = null, who: AccessWho = {}): Promise<boolean> {
   try {
     const row = { kind, ip: client.ip, country: client.country, region: client.region, city: client.city, user_agent: client.userAgent, device_id: deviceId, new_device: newDevice };
-    let { error } = await createPrivilegedClient().from(TABLE).insert({ ...row, role });
+    const named = { employee_id: who.employeeId ?? null, actor: who.actor ? who.actor.slice(0, 200) : null };
+    let { error } = await createPrivilegedClient().from(TABLE).insert({ ...row, role, ...(who.employeeId || who.actor ? named : {}) });
+    // Before 202611130012 there is no employee_id or actor column: record without them.
+    if (error && /employee_id|actor/.test(error.message ?? "") && ["42703", "PGRST204"].includes(error.code ?? "")) ({ error } = await createPrivilegedClient().from(TABLE).insert({ ...row, role }));
     // Before 202610200005 there is no role column: still record the attempt.
     if (error && /role/.test(error.message ?? "") && ["42703", "PGRST204"].includes(error.code ?? "")) ({ error } = await createPrivilegedClient().from(TABLE).insert(row));
     if (error) console.error(`admin_access_log: ${missingTable(error) ? "tabel belum dimigrasikan" : error.message}`);

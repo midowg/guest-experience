@@ -61,6 +61,41 @@ export function verifySession(config: AdminAuthConfig | null, token: string | un
   return timingSafeEqual(Buffer.from(match[3], "hex"), Buffer.from(signature(config, role, expires), "hex")) ? role : null;
 }
 
+/*
+ * Admin per orang (13 Nov 2026): an admin signs in with their own WAM account, and the session
+ * names them: `v2.p.<employee id>.<account session version>.<expires>.<hmac>`. It opens the admin
+ * role; what they may open is read from their grant on every request (admin-access), and the
+ * version ends the session when their WAM password changes. Keyed by the secret alone.
+ */
+const PERSON = /^v2\.p\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.(\d{1,9})\.(\d{1,12})\.([0-9a-f]{64})$/;
+function personSignature(config: AdminAuthConfig, employeeId: string, version: number, expires: number) {
+  return createHmac("sha256", `${config.secret}\0person`).update(`admin\0v2\0p\0${employeeId}\0${version}\0${expires}`).digest("hex");
+}
+export function signPersonSession(config: AdminAuthConfig, employeeId: string, version: number, now = Date.now()): string {
+  const expires = Math.floor(now / 1000) + SESSION_TTL_SECONDS;
+  return `v2.p.${employeeId}.${version}.${expires}.${personSignature(config, employeeId, version, expires)}`;
+}
+
+export type AdminSession =
+  | { role: "super"; kind: "super" }
+  | { role: "admin"; kind: "shared" }
+  | { role: "admin"; kind: "person"; employeeId: string; version: number };
+
+/** Who a valid session cookie is: the super admin, the shared admin password, or one person; null when invalid. */
+export function readSession(config: AdminAuthConfig | null, token: string | undefined, now = Date.now()): AdminSession | null {
+  if (!config || !token) return null;
+  const person = PERSON.exec(token);
+  if (person) {
+    const expires = Number(person[3]);
+    if (expires * 1000 <= now || expires * 1000 > now + SESSION_TTL_SECONDS * 1000) return null;
+    const version = Number(person[2]);
+    const ok = timingSafeEqual(Buffer.from(person[4], "hex"), Buffer.from(personSignature(config, person[1], version, expires), "hex"));
+    return ok ? { role: "admin", kind: "person", employeeId: person[1], version } : null;
+  }
+  const role = verifySession(config, token, now);
+  return role === "super" ? { role, kind: "super" } : role === "admin" ? { role, kind: "shared" } : null;
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 export function isDeviceId(value: string | undefined): value is string { return !!value && UUID.test(value); }
 

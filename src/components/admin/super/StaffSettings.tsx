@@ -10,10 +10,11 @@ import { staffApi } from "@/lib/routes";
 import type { StaffMember } from "@/lib/types";
 import styles from "@/components/admin/admin.module.css";
 
-type Draft = { name: string; role: string; phone: string; photo: StaffMember["photo"]; active: boolean };
-const blank: Draft = { name: "", role: "", phone: "", photo: { url: "", alt: "", srcset: [] }, active: true };
+type Draft = { name: string; role: string; phone: string; photo: StaffMember["photo"]; active: boolean; employee_id?: string | null };
+const blank: Draft = { name: "", role: "", phone: "", photo: { url: "", alt: "", srcset: [] }, active: true, employee_id: null };
+export type StaffPerson = { id: string; name: string };
 
-function StaffForm({ initial, busy, onSave, onCancel }: { initial: Draft; busy: boolean; onSave: (draft: Draft) => void; onCancel: () => void }) {
+function StaffForm({ initial, busy, people, onSave, onCancel }: { initial: Draft; busy: boolean; people: StaffPerson[]; onSave: (draft: Draft) => void; onCancel: () => void }) {
   const [draft, setDraft] = useState(initial);
   const set = (patch: Partial<Draft>) => setDraft(current => ({ ...current, ...patch }));
   return <form className={styles.staffForm} onSubmit={e => { e.preventDefault(); onSave(draft); }}>
@@ -24,6 +25,13 @@ function StaffForm({ initial, busy, onSave, onCancel }: { initial: Draft; busy: 
     <Field name="staff-phone" label="Nomor WhatsApp" hint="Nomor HP 08…, misalnya 0812 3456 7890. Dipakai tombol hubungi PIC di undangan.">
       <input id="staff-phone" className="input" inputMode="tel" value={draft.phone} maxLength={30} required onChange={e => set({ phone: e.target.value })} aria-describedby="staff-phone-hint" />
     </Field>
+    {/* 13 Nov 2026: as PIC, the linked person opens the event in the admin with their own account. */}
+    {people.length > 0 && <Field name="staff-employee" label="Orangnya di Data karyawan (opsional)" hint="Kalau dihubungkan dan ia punya akses admin, acara yang PIC-nya dia otomatis bisa ia buka di admin.">
+      <select id="staff-employee" className="input" value={draft.employee_id ?? ""} onChange={e => set({ employee_id: e.target.value || null })} aria-describedby="staff-employee-hint">
+        <option value="">Tidak dihubungkan</option>
+        {people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
+      </select>
+    </Field>}
     <PhotoField name="staff-photo" label="Foto (opsional)" value={draft.photo.url} srcset={draft.photo.srcset} hint="Foto wajah yang boleh tampil untuk tamu. Tanpa foto, kartu PIC memakai inisial." onChange={value => set({ photo: { ...draft.photo, ...value, alt: draft.name } })} />
     <label className={styles.superSwitch}>
       <input type="checkbox" role="switch" checked={draft.active} onChange={e => set({ active: e.target.checked })} />
@@ -40,7 +48,7 @@ function StaffForm({ initial, busy, onSave, onCancel }: { initial: Draft; busy: 
  * Tim Werkudara: the people an event's PIC can be picked from. Picking copies their details into
  * the event, so changing someone here does not alter events already set up.
  */
-export function StaffSettings({ initial, migrated }: { initial: StaffMember[]; migrated: boolean }) {
+export function StaffSettings({ initial, migrated, people = [] }: { initial: StaffMember[]; migrated: boolean; people?: StaffPerson[] }) {
   const [staff, setStaff] = useState(initial);
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [busy, setBusy] = useState(false);
@@ -74,11 +82,11 @@ export function StaffSettings({ initial, migrated }: { initial: StaffMember[]; m
     {!migrated && <Notice tone="warning">Daftar tim menunggu migrasi <code>202610210005_staff_members.sql</code>.</Notice>}
     {error && <Notice tone="error" role="alert">{error}</Notice>}
     {message && <p role="status" className={styles.guestMessage}>{message}</p>}
-    {migrated && editing === "new" && <StaffForm initial={blank} busy={busy} onSave={draft => void save("new", draft)} onCancel={() => setEditing(null)} />}
+    {migrated && editing === "new" && <StaffForm initial={blank} busy={busy} people={people} onSave={draft => void save("new", draft)} onCancel={() => setEditing(null)} />}
     {migrated && editing !== "new" && <Button type="button" style={{ justifySelf: "start" }} onClick={() => { setEditing("new"); setMessage(""); }}><Plus size={16} aria-hidden="true" /> Tambah orang</Button>}
     {staff.length === 0 ? migrated && <p className="muted">Belum ada anggota tim. Tambahkan orang yang biasa menjadi PIC acara.</p> : <ul className={styles.staffList}>
       {staff.map(person => <li key={person.id} data-inactive={person.active ? undefined : ""}>
-        {editing === person.id ? <StaffForm initial={person} busy={busy} onSave={draft => void save(person.id, draft)} onCancel={() => setEditing(null)} /> : <>
+        {editing === person.id ? <StaffForm initial={person} busy={busy} people={people} onSave={draft => void save(person.id, draft)} onCancel={() => setEditing(null)} /> : <>
           <StaffAvatar person={person} size={52} />
           <div className={styles.staffText}>
             <strong>{person.name}</strong>

@@ -9,10 +9,11 @@ type Badges = Partial<Record<WamSectionKey, string>>;
 const badgeLabels: Partial<Record<WamSectionKey, string>> = { reset: "permintaan reset menunggu" };
 
 /** Admin WAM's menu from wamSections; a tab-only page's badge shows on its owner (reset → Akun dan peran). */
-export function wamNavGroups(badges: Badges = {}): ConsoleNavGroup[] {
+/** `without`: sections this admin may not open (13 Nov 2026: TV kantor without its grant). */
+export function wamNavGroups(badges: Badges = {}, without: readonly WamSectionKey[] = []): ConsoleNavGroup[] {
   return wamGroups().map(group => ({
     label: group.label,
-    items: group.sections.map(section => {
+    items: group.sections.filter(section => !without.includes(section.key)).map(section => {
       const owned = wamSections.filter(other => wamMenuKey(other.key) === section.key && badges[other.key]);
       const badgeFrom = owned[0];
       const Icon = section.icon;
@@ -30,8 +31,10 @@ export function wamNavGroups(badges: Badges = {}): ConsoleNavGroup[] {
  * new section shows by itself), the way into the app, the rest of the admin and Keluar, and the page
  * in the white panel. Pages reached only as a tab (reset) mark their owner in the menu.
  */
-export function WamNav({ current, badges = {}, superAdmin = false, wide = false, className, children }: {
+export function WamNav({ current, badges = {}, superAdmin = false, wide = false, className, children, personName, without = [] }: {
   current: WamSectionKey; badges?: Badges; superAdmin?: boolean; wide?: boolean; className?: string; children: ReactNode;
+  /** The signed-in admin's name (13 Nov 2026: each admin has their own account). */
+  personName?: string; without?: readonly WamSectionKey[];
 }) {
   const footerLinks: ConsoleLink[] = [
     { key: "app", label: "Buka aplikasi WAM", href: praWamPath.home, icon: <ExternalLink size={20} />, external: true },
@@ -43,8 +46,8 @@ export function WamNav({ current, badges = {}, superAdmin = false, wide = false,
     return { key: section.key, label: section.label, href: section.href, sub: wamSection(section.owner!).label, icon: <Icon size={20} /> };
   });
   return <ConsoleShell theme="admin" area={WAM_ADMIN_LABEL} storageKey="admin-wam" className={className} wide={wide}
-    person={{ name: superAdmin ? "Super admin" : "Admin", sub: "Werkudara" }}
-    groups={wamNavGroups(badges)} current={wamMenuKey(current)} pageTitle={wamSection(wamMenuKey(current)).label}
+    person={{ name: personName ?? (superAdmin ? "Super admin" : "Admin"), sub: "Werkudara" }}
+    groups={wamNavGroups(badges, without).filter(group => group.items.length > 0)} current={wamMenuKey(current)} pageTitle={wamSection(wamMenuKey(current)).label}
     footerLinks={footerLinks} searchItems={hidden}
     footer={<ConsoleLogoutButton endpoint={ADMIN_LOGOUT_API} redirectTo={ADMIN_LOGIN} />}>
     {children}
