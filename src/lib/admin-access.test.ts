@@ -1,5 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { areaOfPath, grantEventsLabel, mayOpenArea, mayOpenEvent, showsAppCard, tidyGrant, type AdminGrant } from "./admin-access";
+import { areaOfPath, grantEventsLabel, mayOpenArea, mayOpenEvent, showsAppCard, tidyGrant, wamSectionsWithout, type AdminGrant } from "./admin-access";
+
+describe("Kuesioner WAM, given on its own (14 Nov 2026)", () => {
+  const g = (apps: AdminGrant["apps"]): AdminGrant => ({ employeeId: "e1", apps, allEvents: false, eventIds: [] });
+  it("places the questionnaire's pages and APIs apart from the rest of Admin WAM", () => {
+    expect(areaOfPath("/admin/wam/kuesioner/rekap")).toBe("kuesioner");
+    expect(areaOfPath("/api/admin/wam/questionnaire/hr/person")).toBe("kuesioner");
+    expect(areaOfPath("/admin/wam/akun")).toBe("wam");
+  });
+  it("opens it only with its own grant, also for Admin WAM", () => {
+    expect(mayOpenArea(g(["kuesioner"]), "kuesioner")).toBe(true);
+    expect(mayOpenArea(g(["wam"]), "kuesioner")).toBe(false);
+    expect(mayOpenArea(g(["kuesioner"]), "wam")).toBe(false);
+  });
+  it("leaves out of the WAM menu what the grant does not open", () => {
+    const keys = ["ringkasan", "akun", "kuesioner", "tv"] as const;
+    expect(wamSectionsWithout(["kuesioner"], keys)).toEqual(["ringkasan", "akun", "tv"]);
+    expect(wamSectionsWithout(["wam"], keys)).toEqual(["kuesioner", "tv"]);
+    expect(wamSectionsWithout(["wam", "kuesioner", "tv"], keys)).toEqual([]);
+  });
+  it("shows the WAM card with either", () => {
+    expect(showsAppCard({ apps: ["kuesioner"] }, "wam")).toBe(true);
+    expect(showsAppCard({ apps: ["tv"] }, "wam")).toBe(false);
+  });
+});
 
 describe("showsAppCard", () => {
   it("shows a personal admin only the apps given, never Booking Kantor; the super admin everything", () => {

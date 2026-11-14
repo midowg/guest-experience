@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { adminAuthConfig, readSession, SESSION_COOKIE } from "@/lib/admin-token";
-import { ADMIN_APPS, ADMIN_GRANTS_MIGRATION, mayOpenEvent, tidyGrant, type AdminApp, type AdminGrant, type AdminGrantInput, type EventForAccess } from "@/lib/admin-access";
+import { ADMIN_APPS, ADMIN_GRANTS_MIGRATION, ADMIN_KUESIONER_MIGRATION, mayOpenEvent, tidyGrant, type AdminApp, type AdminGrant, type AdminGrantInput, type EventForAccess } from "@/lib/admin-access";
 import { isEmailLike } from "@/lib/pra-wam/login-name";
 import { createPrivilegedClient, createPublicClient } from "./supabase/admin";
 import { databaseError } from "./http";
@@ -168,7 +168,12 @@ export async function saveGrant(employeeId: string, input: AdminGrantInput): Pro
   const { data, error } = await client.from("admin_grants")
     .upsert({ employee_id: employeeId, apps: grant.apps, all_events: grant.allEvents, event_ids: grant.eventIds, updated_at: new Date().toISOString() }, { onConflict: "employee_id" })
     .select("employee_id,apps,all_events,event_ids").single();
-  if (error) { if (missing(error)) throw waiting(); databaseError(error); }
+  if (error) {
+    if (missing(error)) throw waiting();
+    // Before 202611140001 the apps check does not know Kuesioner WAM.
+    if (error.code === "23514" && grant.apps.includes("kuesioner")) throw new ServiceError(503, `Akses Kuesioner WAM menunggu migrasi ${ADMIN_KUESIONER_MIGRATION}.`);
+    databaseError(error);
+  }
   return fromRow(data as GrantRow);
 }
 

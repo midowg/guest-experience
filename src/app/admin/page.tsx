@@ -6,6 +6,7 @@ import { currentPhase } from "@/lib/event-phase";
 import { currentAdmin, requireAdminPage } from "@/lib/server/admin-session";
 import { actorHasApp, eventsFor } from "@/lib/server/admin-actor";
 import { showsAppCard } from "@/lib/admin-access";
+import { wamAdminPath } from "@/lib/routes";
 import { hiddenEventIds } from "@/lib/server/event-visibility";
 import { disabledModulesFor, templatesFor } from "@/lib/server/admin-settings";
 import { listStaff } from "@/lib/server/staff";
@@ -22,7 +23,11 @@ export default async function AdminPage() {
   const events = actor ? eventsFor(actor, all, hidden.ids) : [];
   // A personal admin sees only the apps they were given. Booking Kantor is not one of them (it is
   // managed in the booking app by Admin Booking), so it shows to the super admin only.
-  const shown = apps.filter(app => showsAppCard(actor?.kind === "person" ? actor.grant : null, app.key));
+  const grant = actor?.kind === "person" ? actor.grant : null;
+  const questionnaireOnly = !!grant && !grant.apps.includes("wam");
+  // With Kuesioner WAM alone (14 Nov 2026) the WAM card leads straight to the questionnaire.
+  const shown = apps.filter(app => showsAppCard(grant, app.key)).map(app => app.key === "wam" && questionnaireOnly
+    ? { ...app, manage: { label: "Kelola kuesioner", href: wamAdminPath.questionnaire.content }, waiting: undefined } : app);
   return <AdminShell>
     <EventList events={events} featuredId={featuredId} phases={Object.fromEntries(events.map(event => [event.id, currentPhase(event)]))}
       superAdmin={role === "super" ? { hiddenIds: [...hidden.ids], migrated: hidden.migrated } : undefined} disabledModules={disabledModules} templates={templates} staff={team.staff} apps={shown}

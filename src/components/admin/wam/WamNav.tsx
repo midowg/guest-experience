@@ -41,7 +41,7 @@ export function WamNav({ current, badges = {}, superAdmin = false, wide = false,
     ...(superAdmin ? [{ key: "super", label: "Super admin", href: SUPER_ADMIN_HOME, icon: <Crown size={20} /> }] : []),
     { key: "events", label: "Semua acara Journey", href: ADMIN_HOME, icon: <LayoutGrid size={20} /> },
   ];
-  const hidden = wamSections.filter(section => section.owner).map(section => {
+  const hidden = wamSections.filter(section => section.owner && !without.includes(section.key) && !without.includes(section.owner)).map(section => {
     const Icon = section.icon;
     return { key: section.key, label: section.label, href: section.href, sub: wamSection(section.owner!).label, icon: <Icon size={20} /> };
   });

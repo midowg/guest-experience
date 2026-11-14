@@ -11,7 +11,8 @@ import { dateRange } from "@/lib/pra-wam/about";
 import { wibDate, wibTime } from "@/lib/pra-wam/appraisal";
 import { praWamPath, wamAdminPath } from "@/lib/routes";
 import { isSupabaseConfigured } from "@/lib/server/config";
-import { requireAdminPage } from "@/lib/server/admin-session";
+import { currentAdmin, requireAdminPage } from "@/lib/server/admin-session";
+import { wamSectionsWithout } from "@/lib/admin-access";
 import { defaultPasswordReady, listAccounts } from "@/lib/server/pra-wam/accounts";
 import { dayLine, decimalHours, longDateLabel, questionnaireCounts, scheduleSpan, todaySchedule } from "@/lib/server/pra-wam/admin-overview";
 import { listRooms } from "@/lib/server/pra-wam/appraisal";
@@ -33,6 +34,9 @@ type Todo = { key: string; icon: ReactNode; tone: ConsoleTone; title: string; su
 export default async function WamAdminPage() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
+  // A personal admin sees only the sections their grant opens (14 Nov 2026: Kuesioner on its own).
+  const actor = await currentAdmin();
+  const without: string[] = actor?.kind === "person" ? wamSectionsWithout(actor.grant.apps, wamSections.map(section => section.key)) : [];
   const now = new Date();
   const today = wibDate(now.toISOString());
   const accounts = await listAccounts();
@@ -76,7 +80,7 @@ export default async function WamAdminPage() {
       : <StatRow label="Angka penting">
         <StatCard label="Akun aktif" value={`${summary.signedIn}/${summary.withAccount}`} note={`${summary.neverSignedIn} belum pernah masuk`} href={wamAdminPath.accounts} />
         {waiting != null && <StatCard label="Reset menunggu" value={waiting} tone={waiting > 0 ? "warn" : undefined} icon={<KeyRound size={18} />} note={waiting ? "Permintaan dari Lupa password" : "Tidak ada yang menunggu"} href={wamAdminPath.resetRequests} />}
-        {questionnaire && summary.active > 0 && <StatCard label="Kuesioner terisi" value={`${Math.round((questionnaire.done / summary.active) * 100)}%`} icon={<ClipboardList size={18} />}
+        {questionnaire && summary.active > 0 && !without.includes("kuesioner") && <StatCard label="Kuesioner terisi" value={`${Math.round((questionnaire.done / summary.active) * 100)}%`} icon={<ClipboardList size={18} />}
           note={`${questionnaire.done} dari ${summary.active} selesai, ${Math.max(0, questionnaire.started - questionnaire.done)} sedang mengisi`} href={wamAdminPath.questionnaire.progress} />}
         {schedule && <StatCard label="Booking hari ini" value={bookings} note={`${sessions} sesi Pra WAM`} />}
       </StatRow>}
@@ -106,7 +110,7 @@ export default async function WamAdminPage() {
     </div>
 
     <Card title="Semua bagian" id="semua-bagian">
-      <RowList label="Bagian Admin WAM">{wamSections.filter(section => section.key !== "ringkasan").map(section => {
+      <RowList label="Bagian Admin WAM">{wamSections.filter(section => section.key !== "ringkasan" && !without.includes(section.key)).map(section => {
         const Icon = section.icon;
         return <ListRow key={section.key} icon={<Icon size={18} />} tone="neutral" title={section.label} sub={section.summary} href={section.href} />;
       })}</RowList>

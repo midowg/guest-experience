@@ -4,7 +4,8 @@ import { currentAdmin } from "@/lib/server/admin-session";
 import { openResetRequestCount } from "@/lib/server/pra-wam/reset-requests";
 import admin from "@/components/admin/admin.module.css";
 import { WamNav } from "./WamNav";
-import type { WamSectionKey } from "./sections";
+import { wamSections, type WamSectionKey } from "./sections";
+import { wamSectionsWithout } from "@/lib/admin-access";
 
 /** Open "Lupa password" requests, read once per request; null before the migration or on an error. */
 export const waitingResetRequests = cache(() => openResetRequestCount().catch(() => null));
@@ -19,9 +20,10 @@ export const waitingResetRequests = cache(() => openResetRequestCount().catch(()
 export async function WamAdminFrame({ current, children, wide = false }: { current: WamSectionKey; children: ReactNode; wide?: boolean }) {
   // From the stay date on, opening Admin WAM deletes the stay and health data (see purge.ts).
   const [waiting, actor] = await Promise.all([waitingResetRequests(), currentAdmin(), purgeIfDue()]);
-  const noTv = actor?.kind === "person" && !actor.grant.apps.includes("tv");
-  return <WamNav current={current} badges={waiting ? { reset: String(waiting) } : undefined} superAdmin={actor?.role === "super"} wide={wide} className={admin.shell}
-    personName={actor?.name} without={noTv ? ["tv"] : []}>
+  // A personal admin's menu holds only what their grant opens (Kuesioner WAM alone: only Kuesioner).
+  const without = actor?.kind === "person" ? wamSectionsWithout(actor.grant.apps, wamSections.map(section => section.key)) : [];
+  return <WamNav current={current} badges={waiting && !without.includes("reset") ? { reset: String(waiting) } : undefined} superAdmin={actor?.role === "super"} wide={wide} className={admin.shell}
+    personName={actor?.name} without={without}>
     {children}
   </WamNav>;
 }

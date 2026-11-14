@@ -11,18 +11,24 @@ export const ADMIN_GRANTS_MIGRATION = "202611130012_admin_grants.sql";
 /** Set by src/proxy.ts on every admin request (any value a browser sends is replaced): the path asked for. */
 export const ADMIN_PATH_HEADER = "x-wk-admin-path";
 
-export const ADMIN_APPS = ["acara", "friday_sharing", "your_visit", "wam", "tv"] as const;
+// "kuesioner" (14 Nov 2026, migration 202611140001): the WAM questionnaire inside Admin WAM, given
+// on its own, for Admin WAM holders too (Admin WAM alone no longer opens it).
+export const ADMIN_APPS = ["acara", "friday_sharing", "your_visit", "wam", "kuesioner", "tv"] as const;
 export type AdminApp = (typeof ADMIN_APPS)[number];
+export const ADMIN_KUESIONER_MIGRATION = "202611140001_admin_grants_kuesioner.sql";
 export const adminAppLabels: Record<AdminApp, string> = {
-  acara: "Acara", friday_sharing: "Friday Sharing", your_visit: "Your Visit", wam: "Admin WAM", tv: "TV kantor",
+  acara: "Acara", friday_sharing: "Friday Sharing", your_visit: "Your Visit", wam: "Admin WAM", kuesioner: "Kuesioner WAM", tv: "TV kantor",
 };
 export const adminAppHints: Record<AdminApp, string> = {
   acara: "Undangan, kartu, e-guide, dan kunjungan: membuat acara dan membuka acara yang dipilih di bawah.",
   friday_sharing: "Halaman donasi Friday Sharing dan laporannya.",
   your_visit: "Panduan kunjungan kantor (Your Visit).",
-  wam: "Seluruh Admin WAM: akun, ruang, MoM, kuesioner, Telegram.",
+  wam: "Admin WAM: akun, ruang, MoM, Telegram, tema, dan lainnya. Kuesioner diatur sendiri di bawah.",
+  kuesioner: "Kuesioner di Admin WAM: isi, pengaturan, progres, rekap, Data HR, kamar, dan kartu. Bisa diberikan tanpa Admin WAM; Admin WAM tanpa centang ini tidak bisa membuka kuesioner.",
   tv: "TV kantor: layar, tayangan, dan tampilan.",
 };
+/** Opens the WAM questionnaire: only with its own grant. */
+export const opensQuestionnaire = (apps: readonly AdminApp[]) => apps.includes("kuesioner");
 
 export type AdminGrant = {
   employeeId: string;
@@ -57,12 +63,14 @@ const areas: [RegExp, AdminArea][] = [
   [/^\/admin\/?$/, "home"],
   [/^\/admin\/(super|akses)(\/|$)/, "super"],
   [/^\/admin\/wam\/tv(\/|$)/, "tv"],
+  [/^\/admin\/wam\/kuesioner(\/|$)/, "kuesioner"],
   [/^\/admin\/wam(\/|$)/, "wam"],
   [/^\/admin\/tv(\/|$)/, "tv"],
   [/^\/admin\/friday-sharing(\/|$)/, "friday_sharing"],
   [/^\/admin\/your-visit(\/|$)/, "your_visit"],
   [/^\/admin\/(acara|checkin|events|hero-preview|pratinjau-langsung)(\/|$)/, "events"],
   [/^\/api\/admin\/wam\/tv(\/|$)/, "tv"],
+  [/^\/api\/admin\/wam\/questionnaire(\/|$)/, "kuesioner"],
   [/^\/api\/admin\/wam(\/|$)/, "wam"],
   [/^\/api\/admin\/(events|featured|photos|poster-designs|staff)(\/|$)/, "events"],
   [/^\/api\/admin\/(employees|modules|templates|visibility|grants)(\/|$)/, "super"],
@@ -77,6 +85,7 @@ export function areaOfPath(path: string | null | undefined): AdminArea | null {
 export function mayOpenArea(grant: AdminGrant, area: AdminArea | null): boolean {
   if (area === "home" || area === "events") return true;
   if (area === null || area === "super") return false;
+  if (area === "kuesioner") return opensQuestionnaire(grant.apps);
   return grant.apps.includes(area);
 }
 
@@ -103,7 +112,16 @@ export function mayOpenEvent(grant: AdminGrant, staffIds: ReadonlySet<string>, e
  */
 export function showsAppCard(grant: Pick<AdminGrant, "apps"> | null, key: string): boolean {
   if (!grant) return true;
-  return (key === "wam" || key === "tv") && grant.apps.includes(key);
+  if (key === "wam") return grant.apps.includes("wam") || opensQuestionnaire(grant.apps);
+  return key === "tv" && grant.apps.includes("tv");
+}
+
+/**
+ * The Admin WAM menu sections a personal admin does not get (14 Nov 2026): Kuesioner without its
+ * grant, TV kantor without its grant, and the rest of Admin WAM without Admin WAM.
+ */
+export function wamSectionsWithout<K extends string>(apps: readonly AdminApp[], keys: readonly K[]): K[] {
+  return keys.filter(key => key === "kuesioner" ? !apps.includes("kuesioner") : key === "tv" ? !apps.includes("tv") : !apps.includes("wam"));
 }
 
 /** "Acara: semua", "3 acara", "hanya acara PIC-nya" — the events part of a grant in a few words. */
