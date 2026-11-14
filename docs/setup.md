@@ -12,9 +12,9 @@ Salin `.env.example` menjadi `.env.local`, lalu isi dari Supabase Dashboard → 
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable/anon key | Boleh terlihat publik. Dibatasi oleh RLS. |
 | `SUPABASE_SECRET_KEY` | Secret/service-role key | **Rahasia.** Hanya di server. Jangan pernah diberi awalan `NEXT_PUBLIC_`. |
 | `RATE_LIMIT_SECRET` | Buat sendiri, acak minimal 32 karakter | Menyamarkan identitas jaringan pada pembatasan laju. |
-| `ADMIN_PASSWORD` | Buat sendiri, minimal 8 karakter | **Rahasia.** Password bersama untuk masuk ke `/admin`. Mengganti nilainya mengeluarkan semua sesi. |
-| `ADMIN_SESSION_SECRET` | Buat sendiri, acak minimal 32 karakter | **Rahasia.** Menandatangani cookie sesi admin. |
-| `SUPER_ADMIN_PASSWORD` | Opsional, minimal 8 karakter, berbeda dari `ADMIN_PASSWORD` | **Rahasia.** Password super admin, yang bisa menyembunyikan acara dari admin biasa. |
+| `ADMIN_PASSWORD` | Buat sendiri, minimal 8 karakter | **Rahasia.** Tetap wajib diisi agar panel admin aktif, tetapi sejak migrasi `202611130012` **tidak lagi bisa dipakai untuk masuk** (admin masuk dengan akun WAM masing-masing, lihat bagian 3). |
+| `ADMIN_SESSION_SECRET` | Buat sendiri, acak minimal 32 karakter | **Rahasia.** Menandatangani cookie sesi admin. Menggantinya mengeluarkan semua sesi admin, termasuk admin per orang. |
+| `SUPER_ADMIN_PASSWORD` | Minimal 8 karakter, berbeda dari `ADMIN_PASSWORD` | **Rahasia.** Password super admin: mengatur akses admin per orang, Data karyawan, templat, dan modul. Satu-satunya cara masuk tanpa akun WAM. |
 
 `.env*` sudah masuk `.gitignore`, kecuali `.env.example` yang hanya berisi template. Jangan mengirim kunci apa pun melalui chat. `NEXT_PUBLIC_SITE_URL` adalah alamat publik situs (di produksi `https://journey.werkudara.group`). Dipakai untuk gambar pratinjau tautan WhatsApp dan isi QR undangan. Bila kosong, Vercel memakai domain produksinya, dan lokal memakai `http://localhost:3000`.
 
@@ -28,30 +28,50 @@ Tinjau isinya sebelum diterapkan. Setelah disetujui, jalankan melalui Supabase D
 
 Yang dijamin skema ini:
 - Tamu anonim hanya membaca acara berstatus `published`.
-- Database menolak pembacaan RSVP/feedback langsung oleh anon. Panel dan API admin aplikasi dilindungi password admin (lihat bagian 3).
+- Database menolak pembacaan RSVP/feedback langsung oleh anon. Panel dan API admin aplikasi dilindungi login admin (lihat bagian 3).
 - Tidak ada izin tulis langsung dari browser; penulisan hanya lewat fungsi transaksional yang diperiksa.
 - Pertanyaan survei yang sudah menerima jawaban tidak dapat diubah.
 
 ## 3. Login admin dan log akses
 
-`/admin` dan semua `/api/admin/*` memerlukan **password admin** dari `ADMIN_PASSWORD`. Tanpa `ADMIN_PASSWORD` (minimal 8 karakter) dan `ADMIN_SESSION_SECRET` (minimal 32 karakter) panel **terkunci** dan halaman login menampilkan petunjuk pengaturan. Setelah masuk, sesi berlaku 12 jam (cookie httpOnly `wk_admin`). Percobaan login dibatasi 5 per 10 menit per IP.
+`/admin` dan semua `/api/admin/*` memerlukan login admin. Tanpa `ADMIN_PASSWORD` (minimal 8 karakter) dan `ADMIN_SESSION_SECRET` (minimal 32 karakter) panel **terkunci** dan halaman login menampilkan petunjuk pengaturan. Setelah masuk, sesi berlaku 12 jam (cookie httpOnly `wk_admin`).
 
-Pemeriksaan berlapis: `src/proxy.ts` menolak permintaan tanpa sesi, lalu setiap halaman dan route admin memeriksa sesi lagi.
+### Admin per orang (sejak 13 Nov 2026, migrasi `202611130012_admin_grants.sql`)
 
-Setiap login berhasil, password salah, dan keluar dicatat di tabel `admin_access_log` (migrasi `202610200001_admin_access_log.sql`) dan dapat dilihat super admin di **Log akses** (`/admin/akses`, tautannya di Dashboard super admin; admin biasa mendapat halaman tidak ditemukan): waktu, IP, perkiraan kota/wilayah/negara dari header Vercel, browser dan OS, serta **ID perangkat** acak yang tersimpan di cookie `wk_device` (berlaku 2 tahun). Perangkat yang pertama kali berhasil masuk diberi tanda **Perangkat baru**. Keterbatasan yang perlu dipahami:
-- Password dipakai bersama, jadi log menunjukkan perangkat dan lokasi, bukan nama orang.
+Setiap admin masuk dengan **akun WAM-nya sendiri**: kolom pertama diisi email atau nama panggilan (nama login, misalnya `dita`), kolom kedua password WAM. Password awal WAM juga diterima. Password admin bersama (`ADMIN_PASSWORD`) tidak bisa dipakai lagi sejak migrasi itu dijalankan, dan sesi lama yang dibuka dengannya ikut berakhir.
+
+Yang bisa masuk hanya orang yang diberi akses oleh super admin di **Super admin → Akses admin** (`/admin/super/admin`):
+1. Cari orangnya di kotak cari (nama, nama panggilan, departemen, atau Intern/DW). Orangnya harus sudah punya akun WAM yang aktif (Admin WAM → Akun dan peran).
+2. Centang aplikasi yang boleh dibuka: **Acara**, **Friday Sharing**, **Your Visit**, **Admin WAM**, **Kuesioner WAM** (migrasi `202611140001`, diatur terpisah dari Admin WAM: Admin WAM tanpa centang ini tidak bisa membuka kuesioner), dan **TV kantor**.
+3. Untuk Acara, pilih **Semua acara** atau **Acara tertentu**. Acara yang dibuat admin itu sendiri otomatis masuk daftarnya.
+4. Acara yang **PIC**-nya orang itu selalu terbuka untuknya, asalkan anggota Tim Werkudara (Super admin → Tim Werkudara) dihubungkan ke orangnya di Data karyawan.
+
+Apa yang tidak diberikan tidak tampil sama sekali: acara, kartu aplikasi, dan menu Admin WAM di luar aksesnya disembunyikan, dan membuka alamatnya langsung menghasilkan halaman tidak ditemukan (API menjawab 403/404). Booking Kantor hanya tampil untuk super admin karena dikelola di aplikasi booking oleh Admin Booking. Mencabut akses, menonaktifkan akun WAM, atau mengganti password WAM langsung mengakhiri sesi admin orang itu pada permintaan berikutnya.
+
+**Nama login.** Setiap akun WAM punya nama login dari nama panggilannya (huruf kecil, tanpa spasi; nama yang sama diberi angka: `dewi`, `dewi2`). Lihat di Admin WAM → Akun dan peran → detail orang → *Nama login*. Migrasi `202611130007` sempat memotong nama akun lama menjadi 2 huruf (`ad`, `mi2`); migrasi `202611140002_pw_login_name_fix.sql` mengembalikannya ke nama panggilan lengkap. Orang tanpa email (Intern/DW) hanya bisa masuk dengan nama login; lupa password mereka direset admin.
+
+**Super admin.** Halaman login tidak menampilkan jalan masuk super admin. Kosongkan kolom email/nama panggilan, isi `SUPER_ADMIN_PASSWORD` di kolom password, lalu Masuk. Pesan gagalnya sama dengan login biasa. Super admin tercatat di log sebagai "Super admin", bukan nama orang.
+
+**Batas percobaan.** Per jaringan (IP) maksimal 30 percobaan per 10 menit, dan per nama/email yang diketik maksimal 5 per 10 menit (super admin dihitung sebagai satu nama). Percobaan yang berhasil ikut terhitung. Bila terkena batas, muncul *Terlalu banyak permintaan. Tunggu sepuluh menit…*; tunggu 10 menit dari percobaan pertama.
+
+Pemeriksaan berlapis: `src/proxy.ts` menolak permintaan tanpa sesi dan meneruskan alamat yang diminta (header `x-wk-admin-path`, selalu ditimpa proxy), lalu setiap halaman dan route admin memeriksa sesi dan akses orangnya lagi (`src/lib/server/admin-session.ts`, aturan di `src/lib/admin-access.ts`).
+
+### Log akses
+
+Setiap login berhasil, gagal, dan keluar dicatat di tabel `admin_access_log` (migrasi `202610200001_admin_access_log.sql`; kolom nama dari `202611130012`) dan dapat dilihat super admin di **Super admin → Log akses** (`/admin/akses`; admin lain mendapat halaman tidak ditemukan) sebagai tabel: **Waktu, Siapa, Kejadian, Perangkat, Lokasi, IP**. *Siapa* berisi nama orang untuk login dengan akun WAM, "Super admin" untuk super admin, dan pada login gagal berisi apa yang diketik di kolom email/nama panggilan. Lokasi adalah perkiraan kota/wilayah/negara dari header Vercel; perangkat adalah browser dan OS, serta **ID perangkat** acak yang tersimpan di cookie `wk_device` (berlaku 2 tahun). Perangkat yang pertama kali berhasil masuk diberi tanda **Baru**. Keterbatasan yang perlu dipahami:
+- Catatan sebelum 13 Nov 2026 (password bersama) hanya menunjukkan perangkat dan lokasi, bukan nama orang.
 - Browser tidak dapat membaca nomor seri, MAC, atau kode perangkat keras laptop. ID perangkat berganti bila cookie dihapus, memakai mode penyamaran, atau browser lain.
 - Lokasi berasal dari IP (perkiraan) dan hanya tersedia saat berjalan di Vercel. Di lokal kolom lokasi kosong.
 - Sebelum migrasi log diterapkan, login tetap berjalan tetapi belum tercatat; halaman Log akses memberi peringatan.
 - Log hanya bisa ditambah oleh server (tanpa izin ubah/hapus). Hapus catatan lama secara manual lewat SQL Editor bila diperlukan.
 
-Bila password bocor: ganti `ADMIN_PASSWORD` di Vercel lalu deploy ulang; semua sesi lama otomatis tidak berlaku.
+Bila password super admin bocor: ganti `SUPER_ADMIN_PASSWORD` di Vercel lalu deploy ulang; sesi super admin lama otomatis tidak berlaku. Bila akun seorang admin disalahgunakan: cabut aksesnya di Akses admin (berlaku seketika), lalu reset password WAM-nya. Untuk mengeluarkan semua sesi admin sekaligus, ganti `ADMIN_SESSION_SECRET`.
 
-**Super admin (migrasi `202610200005_admin_roles.sql`).** Login dengan `SUPER_ADMIN_PASSWORD` di halaman login yang sama memberi peran super admin (lencana *Super admin* di bilah atas, dicatat di Log akses). Setelah login, super admin langsung masuk ke **Dashboard super admin** (`/admin/super`, juga lewat tautan di bilah atas): ringkasan jumlah acara, pencarian, saringan Terlihat/Disembunyikan, sakelar *Terlihat oleh admin* per acara, dan pilih banyak acara untuk disembunyikan atau ditampilkan sekaligus. Panel acara biasa tetap bisa dibuka; di sana acara tersembunyi hanya diberi label. Admin biasa yang membuka `/admin/super` mendapat halaman tidak ditemukan.
+**Dashboard super admin (migrasi `202610200005_admin_roles.sql`).** Setelah login, super admin langsung masuk ke **Dashboard super admin** (`/admin/super`, juga lewat tautan di bilah atas): ringkasan jumlah acara, pencarian, saringan Terlihat/Disembunyikan, sakelar *Terlihat oleh admin* per acara, dan pilih banyak acara untuk disembunyikan atau ditampilkan sekaligus. Panel acara biasa tetap bisa dibuka; di sana acara tersembunyi hanya diberi label. Admin biasa yang membuka `/admin/super` mendapat halaman tidak ditemukan.
 
 **Modul untuk admin biasa (migrasi `202610200006_admin_modules.sql`).** Di bagian *Modul admin* dashboard super admin, setiap modul acara punya sakelar *Boleh/Mati*: Pengalaman kunjungan, Rundown, Lokasi, Panduan rute bergambar, Galeri foto lokasi, Persiapan tamu, Our Team, RSVP, Tautan per tamu, Kontak PIC, Dua bahasa/English, Survei feedback, Ulasan Google, dan Ajakan kolaborasi. Modul yang dimatikan tidak tampil di editor maupun survei Buat acara untuk admin biasa, dan dibuang dari draf baru (templat, draf kosong, atau salinan). Server menolak penyimpanan yang menyalakan modul itu. Acara lama yang sudah memakainya tetap utuh dan diberi catatan; admin boleh mengubah atau mematikannya, tetapi tidak menyalakannya lagi. Halaman tamu tidak terpengaruh, dan super admin tetap bisa memakai semua modul. Acara tersembunyi tidak muncul di daftar admin biasa, tidak bisa dibuka, disalin, atau diubah lewat API oleh mereka (dijawab *tidak ditemukan*). Halaman tamu tidak berubah: acara yang dipublikasikan tetap bisa dibuka lewat tautannya. Penanda sembunyi disimpan di baris acara, di luar konten, sehingga menyimpan acara tidak mengubahnya; setiap sembunyi/tampil tercatat di `event_audit`. Tanpa `SUPER_ADMIN_PASSWORD` tidak ada super admin. Mengganti atau menghapus password ini mengakhiri sesi super admin tanpa mengeluarkan admin biasa.
 
-Operasi database memakai service-role client **hanya di server**. Jangan pernah membagikan secret key ke browser. Migrasi 007 memberi RPC pengelolaan izin service_role; aturan publikasi, pertanyaan terjawab dan larangan menghapus acara featured tetap berlaku. Audit acara mempunyai actor_id null karena tidak ada akun per orang. Akun/keanggotaan Supabase lama tidak dipakai lagi dan tidak dihapus otomatis.
+Operasi database memakai service-role client **hanya di server**. Jangan pernah membagikan secret key ke browser. Migrasi 007 memberi RPC pengelolaan izin service_role; aturan publikasi, pertanyaan terjawab dan larangan menghapus acara featured tetap berlaku. Audit acara mempunyai actor_id null (dibuat sebelum ada admin per orang; siapa yang masuk tercatat di Log akses). Akun/keanggotaan Supabase lama tidak dipakai lagi dan tidak dihapus otomatis.
 
 URL Preview Vercel memakai password yang sama bila variabelnya diisi untuk Preview; tanpa variabel itu, admin di Preview terkunci.
 
@@ -74,7 +94,7 @@ Halaman `/dev-preview` adalah pemeriksaan tampilan untuk pengembangan dan tidak 
 
 ## 5. Alur penggunaan
 
-1. Buka `/admin` dan masuk dengan password admin.
+1. Buka `/admin` dan masuk dengan email atau nama panggilan dan password WAM (akses diberikan super admin di Akses admin).
 2. Buat acara, isi undangan, rundown, lokasi, dan pengaturan.
 3. Periksa `/admin/events/<id>/preview` — menampilkan versi tersimpan, pengiriman dinonaktifkan.
 4. Ubah status menjadi **Dipublikasikan** dan simpan.
@@ -94,7 +114,7 @@ Acara lama tetap memakai mode **Tautan umum**. Untuk undangan individual, pilih 
 - **Status dibuka** dicatat dari browser tamu setelah halaman tampil (sekali per sesi browser). Pratinjau link WhatsApp dan pratinjau admin tidak dihitung.
 - Sebelum migrasi diterapkan, daftar tetap tampil dan tamu bisa ditambah satu per satu; nomor WA, pendamping, impor, dan status menunggu migrasi.
 
-**Penting:** siapa pun yang memegang password admin dapat membaca nama, token, dan data RSVP, membuat/mencabut tautan, atau mengubah acara; bagikan password hanya kepada panitia yang perlu. Token acak hanya mengaitkan jawaban ke undangan. Feedback tetap anonim dan tidak diikat ke tamu. Setelah migrasi `202610200004_rsvp_needs.sql`, RSVP menanyakan jumlah pendamping (tautan personal), kebutuhan makanan dan akses, dan opsi tidak ditampilkan di foto; semuanya tampil di tab RSVP dan CSV. Sebelum migrasi itu, form hanya menanyakan alergi makanan.
+**Penting:** admin yang bisa membuka sebuah acara dapat membaca nama, token, dan data RSVP-nya, membuat/mencabut tautan, atau mengubah acara itu; beri akses acara (Super admin → Akses admin) hanya kepada panitia yang perlu. Token acak hanya mengaitkan jawaban ke undangan. Feedback tetap anonim dan tidak diikat ke tamu. Setelah migrasi `202610200004_rsvp_needs.sql`, RSVP menanyakan jumlah pendamping (tautan personal), kebutuhan makanan dan akses, dan opsi tidak ditampilkan di foto; semuanya tampil di tab RSVP dan CSV. Sebelum migrasi itu, form hanya menanyakan alergi makanan.
 
 Untuk kembali ke alur umum, ubah mode menjadi **Tautan umum** dan simpan. Data undangan serta jawaban personal lama tetap tersimpan dan diberi label berbeda pada RSVP/CSV; tautan personal berhenti berlaku saat mode umum aktif. Mengaktifkan kembali mode personal memungkinkan tautan aktif dipakai lagi, kecuali sudah dicabut atau diterbitkan ulang. Jangan menghapus acara bila ingin menjaga data RSVP. Migrasi personal perlu diterapkan sebelum mode ini dipakai; jika belum, pengelolaan tautan dan RSVP personal akan gagal.
 

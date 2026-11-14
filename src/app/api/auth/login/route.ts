@@ -18,8 +18,12 @@ export async function POST(request: Request) {
     checkOrigin(request);
     const config = adminAuthConfig();
     if (!config) throw new ServiceError(503, "Login admin belum disiapkan. Isi ADMIN_PASSWORD dan ADMIN_SESSION_SECRET pada server.");
-    await enforceRateLimit(request, "admin-login", 5);
     const { identifier, password } = validate(schema, await readJson(request, 2_000));
+    // 14 Nov 2026: the office shares one network, and every admin signs in on their own now. So
+    // 5 tries per 10 minutes count per account typed (the password alone is one "account"), and
+    // the network as a whole gets 30.
+    await enforceRateLimit(request, "admin-login", 30);
+    await enforceRateLimit(request, `admin-login:${(identifier ?? "").toLowerCase()}`, 5);
     const store = await cookies();
     const existing = store.get(DEVICE_COOKIE)?.value;
     const deviceId = isDeviceId(existing) ? existing : randomUUID();
