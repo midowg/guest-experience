@@ -11,6 +11,7 @@ import {
   type ArtKind, type Character, type CharacterInput, type Tier,
 } from "@/lib/pra-wam/cards";
 import { figureOfFile } from "@/lib/pra-wam/figures";
+import { fromZoneInput, toZoneInput } from "@/lib/format";
 import { praWamCardsApi } from "@/lib/routes";
 import type { AdminCards } from "@/lib/server/pra-wam/cards-admin";
 import { uploadArt } from "./cardArtUpload";
@@ -105,7 +106,7 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
       <SectionToolbar title={tokoh ? "Kartu tokoh" : "Kartu karakter"} count={`${real.length} kartu keluar`} />
       <div>
         <p className={styles.muted}>{tokoh
-          ? `Tokoh dicocokkan dari jawaban (peran di tim, hobi, aktivitas, energi, genre musik), paling banyak dua orang per tokoh, tiga bila semua sudah terisi dua. Rarity diundi sekali di server, lalu kartu dikunci. ${real.length} kartu sudah keluar.`
+          ? `Tokoh dicocokkan dari jawaban (peran di tim, hobi, aktivitas, energi, genre musik), satu orang per tokoh, jadi setiap kartu edisi 1 dari 1. Rarity diundi sekali di server, lalu kartu dikunci. ${real.length} kartu sudah keluar.`
           : `Karakter dipilih dari jawaban lewat aturan skor. Level dan tampilan diundi sekali di server, lalu dikunci. ${real.length} kartu sudah keluar.`}</p>
       </div>
     </div>
@@ -115,6 +116,7 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
     {tokoh && oldArt > 0 && <Notice tone="info">
       {oldArt} gambar kartu lama (karakter anime, latar, aksen sudut, stiker) masih tersimpan. Kartu tokoh tidak memakainya. <Button type="button" variant="secondary" disabled={!!busy} onClick={() => void removeOldArt()}><Trash2 size={18} aria-hidden /> Hapus gambar kartu lama</Button>
     </Notice>}
+    {tokoh && <Reroll data={data} busy={busy} run={run} confirm={confirm} />}
     <Pictures data={data} busy={busy} setBusy={setBusy} setMessage={setMessage} reload={reload} />
 
     {/* The personas work behind the tokoh card (which group of figures, the colour, "Tipemu"); with figures they are not edited here (13 Nov 2026). */}
@@ -171,6 +173,7 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
               <p>Angka undian {roll.number} dari 0–{ODDS_TOTAL - 1}, jatuh di {tierOf.get(roll.landed)?.name ?? roll.landed}{roll.passed?.length ? `, turun karena batas penuh: ${roll.passed.map(key => tierOf.get(key)?.name ?? key).join(", ")}` : ""}.</p>
               <p>Karakter saat diundi: {named(roll.character)}{roll.tied?.length > 1 ? `, diundi di antara yang seri: ${roll.tied.map(named).join(", ")}` : ""}.</p>
               {roll.figure ? <p>Tokoh: {catalog.figures.find(figure => figure.key === roll.figure!.key)?.name ?? roll.figure.key}, skor {roll.figure.score}{roll.figure.tied.length > 1 ? `, diundi di antara yang seri: ${roll.figure.tied.map(key => catalog.figures.find(figure => figure.key === key)?.name ?? key).join(", ")}` : ""}.{card.reason ? ` ${card.reason}` : ""}</p> : null}
+              {roll.reroll ? <p>Re-roll {when(roll.reroll.at)}: {catalog.figures.find(figure => figure.key === roll.reroll!.from)?.name ?? roll.reroll.from} → {catalog.figures.find(figure => figure.key === roll.reroll!.to)?.name ?? roll.reroll.to}.</p> : null}
               {roll.changes?.length ? <p>Berganti karakter: {roll.changes.map(change => `${named(change.from)} → ${named(change.to)}${change.kept ? " (dibatalkan, kombinasi sudah dipakai)" : ""}`).join("; ")}.</p> : null}
               <p className={styles.muted}>DNA {card.dna}</p>
             </details></td>
@@ -289,5 +292,49 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
         </li>)}
       </ul>
     </div>)}
+  </section>;
+}
+
+const ZONE = "Asia/Jakarta";
+/** Seven days from now, at 21:00 WIB: a first suggestion for when the re-roll closes. */
+function weekFromNow() {
+  const day = new Date(Date.now() + 7 * 86_400_000);
+  const date = new Intl.DateTimeFormat("en-CA", { timeZone: ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(day);
+  return `${date}T21:00`;
+}
+
+/**
+ * Re-roll tokoh (v3, Hanung 16 Nov 2026): every person may re-roll their figure once, while it is
+ * open. HR opens it a few days after the cards are out, until a moment, and may close it earlier.
+ */
+function Reroll({ data, busy, run, confirm }: {
+  data: AdminCards; busy: string;
+  run: (key: string, work: () => Promise<{ message: string; cards?: AdminCards | null }>) => Promise<boolean>;
+  confirm: ReturnType<typeof useConfirm>[0];
+}) {
+  // The moment this opened, to tell whether the saved time has passed (kept pure across renders).
+  const [now] = useState(() => Date.now());
+  const until = data.rerollUntil && new Date(data.rerollUntil).getTime() > now ? data.rerollUntil : null;
+  const [value, setValue] = useState(() => until ? toZoneInput(until, ZONE) : weekFromNow());
+  const real = data.drawn.filter(card => !card.trial);
+  const used = real.filter(card => card.roll.reroll).length;
+  const save = (rerollUntil: string | null) => run("reroll", async () => {
+    const result = await adminRequest<{ cards: AdminCards }>(praWamCardsApi.catalog, { method: "PATCH", body: JSON.stringify({ rerollUntil }) });
+    return { message: result.message ?? "Tersimpan.", cards: result.data?.cards };
+  });
+  async function close() {
+    if (!(await confirm({ title: "Tutup re-roll sekarang?", body: "Yang belum memakai jatah re-roll tidak bisa lagi mengganti tokohnya.", confirmLabel: "Tutup re-roll", danger: true }))) return;
+    await save(null);
+  }
+  const iso = fromZoneInput(value, ZONE);
+  return <section className={styles.card} aria-labelledby="cc-reroll">
+    <div className={styles.head}><h3 id="cc-reroll">Re-roll tokoh</h3></div>
+    <p className={styles.muted}>Setiap orang boleh mengganti tokohnya satu kali. Tokoh baru diundi dari tokoh yang belum dipakai di tipe yang sama, dan hasilnya wajib diterima. Rarity dan nomor kartu tetap. {used} dari {real.length} orang sudah memakai re-roll.</p>
+    <p><strong>{until ? `Dibuka sampai ${when(until)} WIB.` : "Sedang ditutup."}</strong></p>
+    <div className={styles.head}>
+      <label>Tutup pada (WIB) <input className="input" type="datetime-local" value={value} onChange={event => setValue(event.target.value)} /></label>
+      <Button type="button" disabled={!!busy || !iso} onClick={() => void save(iso || null)}>{until ? "Simpan waktu tutup" : "Buka re-roll"}</Button>
+      {until && <Button type="button" variant="secondary" disabled={!!busy} onClick={() => void close()}>Tutup sekarang</Button>}
+    </div>
   </section>;
 }

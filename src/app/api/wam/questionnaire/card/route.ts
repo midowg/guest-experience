@@ -2,7 +2,7 @@ import { managesApp } from "@/lib/pra-wam/roles";
 import { seesQuestionnaire } from "@/lib/pra-wam/questionnaire";
 import { ServiceError } from "@/lib/server/config";
 import { checkOrigin, handle, success } from "@/lib/server/http";
-import { cardsWaiting, ensureCard, myCard } from "@/lib/server/pra-wam/cards";
+import { cardsWaiting, ensureCard, myCard, rerollCard } from "@/lib/server/pra-wam/cards";
 import { currentForm } from "@/lib/server/pra-wam/questionnaire";
 import { completedNow, myAnswers } from "@/lib/server/pra-wam/questionnaire-answers";
 import { requireApiMember } from "@/lib/server/pra-wam/session";
@@ -39,5 +39,18 @@ export async function POST(request: Request) {
     const card = await ensureCard(form, member.id, mine.answers);
     if (!card) throw cardsWaiting();
     return success({ card }, "Kartu siap.");
+  });
+}
+
+/**
+ * PATCH: re-roll my card's figure, once, while Admin WAM keeps the re-roll open (v3, 16 Nov 2026).
+ * The new figure is final; the rarity and the number stay.
+ */
+export async function PATCH(request: Request) {
+  return handle(async () => {
+    const member = await requireApiMember();
+    checkOrigin(request);
+    const card = await rerollCard(await formFor(member), member.id);
+    return success({ card }, `Tokoh barumu: ${card.figure?.name ?? "siap"}.`);
   });
 }

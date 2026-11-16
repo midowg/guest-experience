@@ -56,7 +56,7 @@ function query(table: string) {
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => ({ from: query }) }));
 vi.mock("server-only", () => ({}));
 
-const { ensureCard, followAnswers, myCard } = await import("./cards");
+const { ensureCard, followAnswers, myCard, rerollCard } = await import("./cards");
 
 const form = (status: QForm["status"] = "buka"): QForm => ({ id: "f1", name: "Kuesioner", slug: "kuesioner", oldSlugs: [], status, intro: "", cardText: "", minutes: 15, editUntil: null, stayDeleteOn: null, hrAccess: [], audience: "semua", audienceIds: [] });
 const tier = (key: string, odds: number, sort: number, max_cards: number | null = null) => ({ form_id: "f1", key, name: key, color: "#AEB7C7", odds, max_cards, line: "", sort });
@@ -157,7 +157,7 @@ describe("kartu tokoh dunia", () => {
   });
   const outdoorsy = { "34": ["Eksekutor"], "17": ["Olahraga & outdoor"], "21": ["Outdoor"] };
 
-  it("matches the figure inside the persona, says why, and gives no figure to more than two people", async () => {
+  it("matches the figure inside the persona, says why, and gives each figure to one person", async () => {
     const first = await ensureCard(form(), "p1", outdoorsy);
     expect(first?.figure?.key).toBe("edmund-hillary");
     expect(first?.character.class).toBe("garda");
@@ -167,18 +167,57 @@ describe("kartu tokoh dunia", () => {
     expect(first?.figure?.image).toBe("/figur/edmund-hillary.webp");
     // The persona's old anime picture never shows on a tokoh card.
     expect(first?.character.image).toBeNull();
-    const second = await ensureCard(form(), "p2", outdoorsy);
-    const third = await ensureCard(form(), "p3", outdoorsy);
-    expect([second?.figure?.key, third?.figure?.key]).toEqual(["edmund-hillary", "gordon-ramsay"]);
-    expect(db.cq_person_cards.map(row => [row.figure_id, row.figure_slot])).toEqual([["edmund-hillary", 1], ["edmund-hillary", 2], ["gordon-ramsay", 1]]);
-    // The persona's figures full: a figure of another persona with a place.
-    expect((await ensureCard(form(), "p4", outdoorsy))?.figure?.key).toBe("gordon-ramsay");
-    expect((await ensureCard(form(), "p5", outdoorsy))?.figure?.key).toBe("affandi");
-    // Every figure has two: the seventh person is a third for the best figure of the persona, in place 3.
-    await ensureCard(form(), "p6", outdoorsy);
-    expect((await ensureCard(form(), "p7", outdoorsy))?.figure?.key).toBe("edmund-hillary");
-    expect(db.cq_person_cards.find(row => row.employee_id === "p7")).toMatchObject({ figure_slot: 3 });
+    // Edmund Hillary is taken: the next garda, then (the persona's full) a figure of another persona.
+    expect((await ensureCard(form(), "p2", outdoorsy))?.figure?.key).toBe("gordon-ramsay");
+    expect((await ensureCard(form(), "p3", outdoorsy))?.figure?.key).toBe("affandi");
+    expect(db.cq_person_cards.map(row => [row.figure_id, row.figure_slot])).toEqual([["edmund-hillary", 1], ["gordon-ramsay", 1], ["affandi", 1]]);
+    // Every figure taken: no card, and nobody shares one.
+    await expect(ensureCard(form(), "p4", outdoorsy)).rejects.toThrow("Semua tokoh sudah dipakai");
     expect((db.cq_person_cards[0].roll as { figure: { key: string; score: number } }).figure).toMatchObject({ key: "edmund-hillary", score: 4 });
+  });
+
+  it("shows a Legendary card's RPG form", async () => {
+    db.cq_tiers = [tier("legendary", 10_000, 4)];
+    const card = await ensureCard(form(), "p1", outdoorsy);
+    expect(card?.figure).toMatchObject({ key: "edmund-hillary", legend: true, image: "/figur/leg/edmund-hillary.webp" });
+  });
+
+  describe("re-roll once", () => {
+    const open = () => { db.cq_forms = [{ id: "f1", reroll_until: "2999-01-01T00:00:00.000Z" }]; };
+
+    it("is offered only while Admin WAM keeps it open", async () => {
+      expect((await ensureCard(form(), "p1", outdoorsy))?.reroll).toEqual({ state: "closed", until: null });
+      await expect(rerollCard(form(), "p1")).rejects.toThrow("tidak dibuka");
+      db.cq_forms = [{ id: "f1", reroll_until: "2020-01-01T00:00:00.000Z" }];
+      await expect(rerollCard(form(), "p1")).rejects.toThrow("tidak dibuka");
+      open();
+      expect((await myCard(form(), "p1"))?.reroll).toEqual({ state: "open", until: "2999-01-01T00:00:00.000Z" });
+    });
+
+    it("lets the old figure go, takes a free one, keeps the rarity and the number, and only once", async () => {
+      open();
+      const before = await ensureCard(form(), "p1", outdoorsy);
+      await ensureCard(form(), "p2", outdoorsy);
+      const after = await rerollCard(form(), "p1");
+      // Gordon Ramsay is taken: the persona has no other free figure, so a free one of any persona.
+      expect(after.figure?.key).toBe("affandi");
+      expect([after.serial, after.tier.key]).toEqual([before?.serial, before?.tier.key]);
+      expect(after.reroll).toEqual({ state: "used", until: null });
+      expect(db.cq_person_cards[0]).toMatchObject({ figure_id: "affandi", figure_slot: 1, combo: "tokoh|affandi|1" });
+      expect((db.cq_person_cards[0].roll as { reroll: { from: string; to: string } }).reroll).toMatchObject({ from: "edmund-hillary", to: "affandi" });
+      await expect(rerollCard(form(), "p1")).rejects.toThrow("sudah memakai jatah");
+      // Edmund Hillary is free again for the next person.
+      expect((await ensureCard(form(), "p3", outdoorsy))?.figure?.key).toBe("edmund-hillary");
+    });
+
+    it("says so when no other figure is free, and never for a trial card", async () => {
+      open();
+      db.cq_figures = db.cq_figures.slice(0, 1);
+      await ensureCard(form(), "p1", outdoorsy);
+      await expect(rerollCard(form(), "p1")).rejects.toThrow("Tidak ada tokoh lain");
+      await ensureCard(form("draf"), "uji", outdoorsy);
+      await expect(rerollCard(form("draf"), "uji")).rejects.toThrow("belum keluar");
+    });
   });
 
   it("is locked: changed answers never change the figure, the persona, the level or the number", async () => {

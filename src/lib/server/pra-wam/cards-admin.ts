@@ -11,7 +11,8 @@ import { databaseError } from "../http";
 import { isR2Configured, presignUpload, removeObjects, verifyUpload } from "../r2";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listPeople } from "./appraisal";
-import { cardsMissing, cardsWaiting, catalogOf, type Catalog, type Roll } from "./cards";
+import { FIGURES_V3_MIGRATION, type RerollWindowInput } from "@/lib/pra-wam/figures";
+import { cardsMissing, cardsWaiting, catalogOf, rerollUntil, type Catalog, type Roll } from "./cards";
 import { currentForm, formContent, questionnaireWaiting } from "./questionnaire";
 
 /*
@@ -52,6 +53,8 @@ export type AdminCards = {
   willChange: number;
   /** Whether characters still follow answers (the form is open and before its deadline). */
   following: boolean;
+  /** Until when staff may re-roll their figure once (v3); null while closed. */
+  rerollUntil: string | null;
 };
 
 /** The catalog, the questions rules may use, and every card drawn; null before the migration. */
@@ -61,10 +64,11 @@ export async function adminCards(): Promise<AdminCards | null> {
   const catalog = await catalogOf(form.id);
   if (!catalog) return null;
   const client = createPrivilegedClient();
-  const [content, cards, people] = await Promise.all([
+  const [content, cards, people, until] = await Promise.all([
     formContent(form.id),
     client.from("cq_person_cards").select(`employee_id,card_id,tier_key,serial,trial,drawn_at,roll,dna${catalog.figuresReady ? ",figure_id,reason" : ""}`).eq("form_id", form.id).order("serial", { nullsFirst: false }),
     listPeople(),
+    rerollUntil(form.id),
   ]);
   if (cards.error) failed(cards.error);
   const byId = new Map(people.map(person => [person.id, person]));
@@ -95,7 +99,18 @@ export async function adminCards(): Promise<AdminCards | null> {
 
   const questions = content.questions.filter(question => ruleKinds.includes(question.kind) && !question.hidden && ruleVisible(question.visibility))
     .sort((a, b) => a.sort - b.sort).map(question => ({ key: question.key, prompt: question.prompt, options: question.options }));
-  return { catalog, questions, drawn, willChange, following };
+  return { catalog, questions, drawn, willChange, following, rerollUntil: until };
+}
+
+/** Opens the one re-roll per person until a moment, or closes it (v3, Hanung 16 Nov 2026). */
+export async function saveRerollWindow(input: RerollWindowInput): Promise<void> {
+  const form = await formOrWait();
+  if (input.rerollUntil && new Date(input.rerollUntil).getTime() <= Date.now()) throw new ServiceError(422, "Pilih waktu tutup yang belum lewat.", { rerollUntil: ["Waktu ini sudah lewat."] });
+  const { error } = await createPrivilegedClient().from("cq_forms").update({ reroll_until: input.rerollUntil }).eq("id", form.id);
+  if (error) {
+    if (["42703", "PGRST204"].includes(error.code ?? "") || /reroll_until/.test(error.message ?? "")) throw new ServiceError(503, `Re-roll menunggu migrasi ${FIGURES_V3_MIGRATION}.`);
+    failed(error);
+  }
 }
 
 /** The levels' names, colours, odds and caps. The keys stay; odds add up to 100 % (checked by the schema). */

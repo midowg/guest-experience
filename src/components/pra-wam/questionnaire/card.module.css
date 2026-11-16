@@ -36,6 +36,56 @@
 .flip[data-tilt] .shine { opacity: 1; }
 .flip[data-tilt] .holo { opacity: .28; }
 .tiltHint { margin: 6px 0 0; text-align: center; font-size: var(--text-sm); color: var(--muted); }
+
+/*
+ * The rarity on the open tokoh card (handoff v3, 16 Nov 2026, no frame): r0 Common … r4 Legendary.
+ * Stars twinkle, a holo layer moves (white for Uncommon, rainbow for Rare and Epic, gold for
+ * Legendary), a ring of light turns on the edge (faster and thicker when rarer), a glare sweeps
+ * and sparks rise; Epic and Legendary glow and float. Needs @property for the ring (Chrome, Safari
+ * 16.4+); without it the ring stands still.
+ */
+.r0, .r1, .r2, .r3, .r4 { container-type: size; }
+.holo { -webkit-mask-image: linear-gradient(#000 62%, transparent 78%); mask-image: linear-gradient(#000 62%, transparent 78%); }
+.flip.open .r1 .holo { opacity: .28; animation: holo 4.5s linear infinite; background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .9) 50%, transparent 65%); background-size: 250% 250%; }
+.flip.open .r2 .holo, .flip.open .r3 .holo, .flip.open .r4 .holo { opacity: .3; animation: holo 5s linear infinite; }
+.flip.open .r3 .holo { opacity: .26; }
+.flip.open .r4 .holo { opacity: .22; background: linear-gradient(115deg, transparent 20%, #FFF4C9 38%, #FFD45C 50%, #FFF8E0 62%, transparent 80%); background-size: 250% 250%; }
+.flip[data-tilt] .r2 .holo, .flip[data-tilt] .r3 .holo, .flip[data-tilt] .r4 .holo { animation: none; opacity: .4; }
+@keyframes holo { from { background-position: 0% 0%; } to { background-position: 100% 100%; } }
+.spark { position: absolute; inset: 0; pointer-events: none; }
+.spark i { position: absolute; left: var(--x); top: var(--y); width: var(--s); aspect-ratio: 1; margin: calc(var(--s) / -2); background: var(--sc, #DDF0FF); clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%); opacity: 0; animation: twinkle 2.4s ease-in-out infinite; animation-delay: var(--d); }
+.r1 .spark i { --sc: #D9FFF1; } .r3 .spark i { --sc: #E6C4FF; } .r4 .spark i { --sc: #FFE27A; }
+@keyframes twinkle { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0deg); } 50% { opacity: 1; transform: scale(1) rotate(45deg); } }
+@property --ring { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.edge { position: absolute; inset: 0; border-radius: inherit; padding: 4px; pointer-events: none; z-index: 3;
+  background: conic-gradient(from var(--ring), transparent 0 55%, var(--ec, #fff) 70%, #fff 75%, var(--ec, #fff) 80%, transparent 95%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: ring var(--es, 4s) linear infinite; filter: drop-shadow(0 0 6px var(--ec, #fff)); }
+@keyframes ring { to { --ring: 360deg; } }
+.r1 .edge { --ec: #47D6AA; --es: 5s; padding: 3px; }
+.r2 .edge { --ec: #449DFF; --es: 3.4s; }
+.r3 .edge { --ec: #C37BFF; --es: 2.4s; padding: 5px; background: conic-gradient(from var(--ring), transparent 0 10%, var(--ec) 22%, #fff 25%, var(--ec) 28%, transparent 40% 60%, var(--ec) 72%, #fff 75%, var(--ec) 78%, transparent 90%); }
+.r4 .edge { --ec: #FFC94A; --es: 1.8s; padding: 6px; background: conic-gradient(from var(--ring), #FFE89A, #E3A82B, #FFF4C9, #FFC94A, #B9801A, #FFE89A); filter: drop-shadow(0 0 10px #FFC94A); }
+.glare { position: absolute; inset: -20%; pointer-events: none; z-index: 2; background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, .75) 50%, transparent 60%); transform: translateX(-80%); animation: glare var(--gs, 4s) ease-in-out infinite; mix-blend-mode: overlay; }
+.r1 .glare { --gs: 5.5s; } .r2 .glare { --gs: 3.6s; } .r3 .glare { --gs: 2.8s; }
+.r4 .glare { --gs: 2.2s; background: linear-gradient(105deg, transparent 38%, rgba(255, 236, 160, .95) 50%, transparent 62%); }
+@keyframes glare { 0% { transform: translateX(-80%); } 55%, 100% { transform: translateX(80%); } }
+.riseFx { position: absolute; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; border-radius: inherit; }
+.riseFx i { position: absolute; left: var(--x); bottom: -10px; width: var(--z); height: var(--z); border-radius: 50%; background: var(--pc, #fff); box-shadow: 0 0 8px 2px var(--pc, #fff); opacity: 0; animation: sparkRise var(--du) linear infinite; animation-delay: var(--d); }
+.r1 .riseFx i { --pc: #BFFFE9; } .r2 .riseFx i { --pc: #BFE0FF; } .r3 .riseFx i { --pc: #E6C4FF; } .r4 .riseFx i { --pc: #FFE27A; }
+@keyframes sparkRise { 0% { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: .95; } 80% { opacity: .8; } 100% { transform: translateY(-115cqh) scale(1.1); opacity: 0; } }
+/* The layers wait for the card to open. */
+.flip:not(.open) .edge, .flip:not(.open) .glare, .flip:not(.open) .riseFx, .flip:not(.open) .spark { display: none; }
+.flip.open .r3 { animation: aura 2.6s ease-in-out infinite; }
+.flip.open .r4 { animation: aura 1.8s ease-in-out infinite; }
+@keyframes aura { 0%, 100% { box-shadow: 0 0 0 5px var(--white), 0 0 18px 2px color-mix(in oklch, var(--glow) 60%, transparent); } 50% { box-shadow: 0 0 0 5px var(--white), 0 0 46px 10px var(--glow); } }
+.flip.open:has(.r3), .flip.open:has(.r4) { animation: floaty 3.2s ease-in-out infinite; }
+@keyframes floaty { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+/* Epic and Legendary: the screen flashes in their colour as the card opens. */
+.flash { position: fixed; inset: 0; z-index: 50; pointer-events: none; background: radial-gradient(circle at 50% 45%, #fff 0%, var(--glow) 45%, transparent 75%); animation: flash 900ms ease-out forwards; }
+@keyframes flash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+.goldBanner b { background: linear-gradient(90deg, #FFE89A, #E3A82B, #FFF4C9, #E3A82B) !important; background-size: 300% 100% !important; animation: goldText 3s linear infinite; }
+@keyframes goldText { to { background-position: 300% 0; } }
 .tap { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); white-space: nowrap; padding: 8px 16px; border-radius: var(--radius-pill); background: var(--c-yellow); color: var(--ink); font-weight: 700; font-size: var(--text-sm); box-shadow: inset 0 0 0 2px var(--ink); animation: bob 1.6s var(--ease-out) infinite; }
 @keyframes bob { 50% { transform: translate(-50%, -6px); } }
 .charge .inner { animation: charge 1.3s ease-in-out both; }
@@ -97,4 +147,7 @@
   .flip.open .inner { transform: rotateY(180deg); }
   .flip.open .up img { transform: none; }
   .shine, .holo, .tiltHint { display: none; }
+  .edge, .glare, .spark i, .goldBanner b, .flip.open .r3, .flip.open .r4, .flip.open:has(.r3), .flip.open:has(.r4) { animation: none !important; }
+  .spark i { opacity: .8; transform: none; }
+  .riseFx, .flash { display: none; }
 }

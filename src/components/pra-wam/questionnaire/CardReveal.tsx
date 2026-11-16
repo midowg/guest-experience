@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { Download, ImageIcon, RotateCcw, Share2, Smartphone, UserRound, X } from "lucide-react";
+import { Dices, Download, ImageIcon, RotateCcw, Share2, Smartphone, UserRound, X } from "lucide-react";
 import { oddsLabel, serialLabel } from "@/lib/pra-wam/cards";
+import { rarityOf, SPARK_COUNT } from "@/lib/pra-wam/figures";
 import { encodeWithinLimit, PHOTO_SIDE } from "@/lib/pra-wam/photo";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 import { praWamApi } from "@/lib/routes";
@@ -18,6 +19,11 @@ import styles from "./card.module.css";
  * card to tap, the flip with confetti, then the level, the actions (profile photo, save the card,
  * wallpaper) and what the card says. Opening it once is remembered on this device, so coming
  * back shows it open.
+ *
+ * v3 (16 Nov 2026, Hanung): the rarity moves on the open card (a light ring turning on the edge,
+ * a sweeping glare, rising sparks, stars; Epic and Legendary float), Epic and Legendary take
+ * longer to open with a flash of the screen, Legendary throws gold confetti. Once Admin WAM opens
+ * the re-roll, the opened card offers one re-roll of the figure; the new card is opened again.
  */
 
 type Phase = { kind: "printing"; step: number } | { kind: "closed" } | { kind: "opening" } | { kind: "open" } | { kind: "error"; text: string };
@@ -30,6 +36,32 @@ const reducedMotion = () => typeof window === "undefined" || typeof window.match
 const wait = (ms: number) => new Promise(resolve => window.setTimeout(resolve, reducedMotion() ? 0 : ms));
 const buzz = (pattern: number | number[]) => { try { navigator.vibrate?.(pattern); } catch { /* not on this phone */ } };
 const STEPS = ["Membaca jawabanmu", "Mencocokkan tokoh", "Mengundi rarity"];
+/** Rising sparks per rarity, Common to Legendary (handoff v3). */
+const RISING = [0, 8, 12, 18, 26];
+const dateLabel = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
+
+/** The moving rarity layers on the open card: ring, glare, rising sparks, holo and stars (none for Common). */
+function RarityLayers({ rarity }: { rarity: number }) {
+  if (rarity < 1) return null;
+  return <>
+    <span className={styles.edge} aria-hidden />
+    <span className={styles.glare} aria-hidden />
+    <span className={styles.riseFx} aria-hidden>{Array.from({ length: RISING[rarity] }, (_, index) => <i key={index} style={{
+      ["--x" as string]: `${(index * 37 + 11) % 100}%`, ["--d" as string]: `${((index * 0.53) % 3.2).toFixed(2)}s`,
+      ["--du" as string]: `${(2.6 + ((index * 0.71) % 2.2)).toFixed(2)}s`, ["--z" as string]: `${(rarity >= 3 ? 6 : 4) + (index % 3) * 2}px`,
+    }} />)}</span>
+    <span className={styles.holo} aria-hidden />
+    <span className={styles.spark} aria-hidden>{SPARKS.slice(0, SPARK_COUNT[rarity]).map(([x, y, size], index) => <i key={index} style={{
+      ["--x" as string]: `${x * 100}%`, ["--y" as string]: `${y * 78}%`, ["--s" as string]: `${(size * 250).toFixed(1)}%`, ["--d" as string]: `${((index * 0.37) % 2.4).toFixed(2)}s`,
+    }} />)}</span>
+  </>;
+}
+/** Both faces of a card, as pictures. */
+async function facesOf(view: CardView) {
+  const [face, cover] = await Promise.all([drawFront(view), drawBack(view)]);
+  return { front: face.toDataURL("image/png"), back: cover.toDataURL("image/jpeg", 0.9) };
+}
+const SPARKS: readonly [number, number, number][] = [[.12, .1, .05], [.86, .16, .04], [.91, .44, .055], [.07, .46, .035], [.16, .66, .04], [.8, .06, .03], [.5, .05, .032], [.9, .64, .035], [.3, .2, .025], [.7, .3, .028]];
 
 /**
  * The opened card tilts with a finger (or the phone, after it asks on iOS), with a shine and,
@@ -101,6 +133,9 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
   const [busy, setBusy] = useState("");
   const [note, setNote] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [burst, setBurst] = useState(false);
+  const [flash, setFlash] = useState(false);
+  /** The re-roll: "ask" once tapped (Ya / Batal), "busy" while the server draws, "done" when the new card is in. */
+  const [reroll, setReroll] = useState<"" | "ask" | "busy" | "done">("");
   const [confirm, confirmElement] = useConfirm();
   const confetti = useRef<HTMLCanvasElement>(null);
   const started = useRef(false);
@@ -114,9 +149,8 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
       const view = initial ?? (await praWamRequest<{ card: CardView }>(praWamApi.questionnaireCard, { method: "POST" })).data.card;
       setCard(view);
       onReady?.(view);
-      const [face, cover] = await Promise.all([drawFront(view), drawBack(view)]);
-      setFront(face.toDataURL("image/png"));
-      setBack(cover.toDataURL("image/jpeg", 0.9));
+      const faces = await facesOf(view);
+      setFront(faces.front); setBack(faces.back);
       await ticks; await wait(450);
       setPhase(remembered(formId) ? { kind: "open" } : { kind: "closed" });
     } catch (error) {
@@ -136,15 +170,36 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
 
   async function reveal() {
     if (!card || phase.kind !== "closed") return;
+    const level = card.figure ? rarityOf(card.tier) : Math.min(4, card.tier.sort);
     setPhase({ kind: "opening" });
-    buzz([20, 80, 20, 80, 40]);
-    await wait(1300);
+    buzz(level >= 3 ? [20, 60, 20, 60, 20, 60, 80] : [20, 80, 20, 80, 40]);
+    // Epic and Legendary take longer, then the screen flashes in their colour.
+    await wait(level === 4 ? 2200 : level === 3 ? 1700 : 1300);
+    if (level >= 3 && !reducedMotion()) { setFlash(true); window.setTimeout(() => setFlash(false), 950); }
     setPhase({ kind: "open" });
-    buzz(card.tier.sort >= 3 ? [60, 40, 120] : 60);
+    buzz(level >= 3 ? [60, 40, 120] : 60);
     remember(formId);
     await wait(620);
     setBurst(true);
-    if (!reducedMotion() && confetti.current) throwConfetti(confetti.current, card.tier.color, card.tier.sort);
+    if (!reducedMotion() && confetti.current) throwConfetti(confetti.current, card.tier.color, level);
+  }
+
+  /** The one re-roll: the server draws the new figure; its card comes back closed, to open again. */
+  async function rerollFigure() {
+    if (reroll !== "ask") { setReroll("ask"); return; }
+    setReroll("busy"); setNote(null);
+    try {
+      const view = (await praWamRequest<{ card: CardView }>(praWamApi.questionnaireCard, { method: "PATCH" })).data.card;
+      setCard(view);
+      const faces = await facesOf(view);
+      setFront(faces.front); setBack(faces.back);
+      setBurst(false); setReroll("done");
+      setPhase({ kind: "closed" });
+      window.scrollTo?.({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
+    } catch (error) {
+      setReroll("");
+      setNote({ tone: "error", text: errorText(error) });
+    }
   }
 
   function replay() { setBurst(false); setPhase({ kind: "closed" }); window.scrollTo?.({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" }); }
@@ -203,9 +258,11 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
   const open = phase.kind === "open";
   const name = nickname || "Kamu";
   const figure = card.figure;
+  const rarity = figure ? rarityOf(card.tier) : 0;
   const { flip, listen, ...tiltEvents } = tilt;
   return <div className={`${styles.reveal} ${burst ? styles.burst : ""}`} style={{ ["--glow" as string]: card.tier.color }}>
-    {!settled && <p className={styles.hint} aria-live="polite">{phase.kind === "closed" ? `${figure ? "Rarity" : "Level"} sudah diundi. Siapa tahu kamu dapat Legendary.` : ""}</p>}
+    {(!settled || reroll === "done") && <p className={styles.hint} aria-live="polite">{phase.kind === "closed" ? reroll === "done" ? "Tokoh barumu sudah diundi. Ketuk kartunya untuk membuka." : `${figure ? "Rarity" : "Level"} sudah diundi. Siapa tahu kamu dapat Legendary.` : ""}</p>}
+    {flash && <div className={styles.flash} aria-hidden />}
     <div ref={flip} className={`${styles.flip} ${open ? styles.open : ""} ${phase.kind === "opening" ? styles.charge : ""}`} {...tiltEvents}
       onClick={() => { if (open) void listen(); }}>
       <div className={styles.rays} aria-hidden />
@@ -215,11 +272,11 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
           {back && <img src={back} alt="" />}
           <span className={styles.tap}>Ketuk untuk membuka</span>
         </button>
-        <div className={`${styles.face} ${styles.up}`} aria-hidden={!open || undefined}>
+        <div className={`${styles.face} ${styles.up} ${figure ? styles[`r${rarity}`] : ""}`} aria-hidden={!open || undefined}>
           {/* eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas or served privately by this site; next/image cannot help */}
           {front && <img src={front} alt={figure ? `Kartu ${figure.name}, ${card.character.class}, ${card.tier.name}, nomor ${serialLabel(card.serial)}` : `Kartu ${card.character.name}, level ${card.tier.name}, nomor ${serialLabel(card.serial)}`} />}
           {figure && <span className={styles.shine} aria-hidden />}
-          {figure && card.tier.sort >= 2 && <span className={styles.holo} aria-hidden />}
+          {figure && <RarityLayers rarity={rarity} />}
         </div>
       </div>
       <canvas className={styles.confetti} ref={confetti} aria-hidden />
@@ -227,7 +284,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
     {open && figure && !settled && <p className={styles.tiltHint}>Geser kartu atau miringkan HP untuk melihat kilapnya.</p>}
 
     {open && <>
-      <div className={styles.banner} role="status">
+      <div className={`${styles.banner} ${rarity === 4 ? styles.goldBanner : ""}`} role="status">
         <b style={{ background: card.tier.color }}>{card.tier.name}</b>
         {card.tier.line && <span>{card.tier.line}</span>}
         <strong>{name}, kamu {figure ? `dapat ${figure.name}` : card.character.name}</strong>
@@ -246,9 +303,24 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
           <p className={styles.who}>{name}, tokohmu</p>
           <h2 id="cq-card-who" className={styles.name}>{figure.name}</h2>
           {card.reason && <p>{card.reason}</p>}
+          {figure.legend && <p className={styles.role}>Wujud Legendary: {figure.legendClass ?? "kelas RPG"}.</p>}
           {figure.costume && <p className={styles.small}>Figurnya: {figure.costume.charAt(0).toLowerCase() + figure.costume.slice(1)}.</p>}
           {figure.quote && <blockquote className={styles.small}>{figure.quote}</blockquote>}
         </section>
+        {card.reroll?.state === "open" && reroll !== "done" && <section className={styles.panel} aria-labelledby="cq-card-reroll">
+          <h2 id="cq-card-reroll" className={styles.heading}>Kurang sreg dengan tokohmu?</h2>
+          <p className={styles.small}>Kamu boleh re-roll tokoh <b>satu kali</b>{card.reroll.until ? `, sampai ${dateLabel(card.reroll.until)} WIB` : ""}. Tokoh baru diundi dari tokoh yang masih tersedia di tipe {card.character.class}. Hasilnya wajib diterima, jadi bisa lebih cocok atau malah kurang. Rarity <b>{card.tier.name}</b> dan nomor kartumu tetap.</p>
+          <div className={styles.row}>
+            {reroll === "ask" && <button type="button" className={`${styles.btn} ${styles.text}`} onClick={() => setReroll("")}>Batal</button>}
+            <button type="button" className={`${styles.btn} ${reroll === "ask" ? styles.primary : ""}`} onClick={() => void rerollFigure()} disabled={reroll === "busy" || !!busy}>
+              <Dices aria-hidden />{reroll === "busy" ? "Mengundi…" : reroll === "ask" ? "Ya, undi ulang sekarang" : "Re-roll tokoh (1x)"}
+            </button>
+          </div>
+        </section>}
+        {(card.reroll?.state === "used" || reroll === "done") && <section className={styles.panel} aria-labelledby="cq-card-rerolled">
+          <h2 id="cq-card-rerolled" className={styles.heading}>Re-roll tokoh</h2>
+          <p className={styles.small}>Kamu sudah memakai jatah re-roll. {figure.name} sekarang tokohmu, edisi 1 dari 1.</p>
+        </section>}
         <section className={styles.panel} aria-labelledby="cq-card-role">
           <p className={styles.who}>Tipemu</p>
           <h2 id="cq-card-role" className={styles.name}>{card.character.class}</h2>
@@ -259,12 +331,13 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
         </section>
         <section className={styles.panel} aria-labelledby="cq-card-traits">
           <h2 id="cq-card-traits" className={styles.heading}>Trait kartumu</h2>
-          <p className={styles.small}>Tokoh dan tipe dicocokkan dari jawabanmu. Rarity diundi terpisah, sekali, lalu kartunya dikunci. Satu tokoh dimiliki paling banyak dua orang, tiga bila semua tokoh sudah terisi dua.</p>
+          <p className={styles.small}>Tokoh dan tipe dicocokkan dari jawabanmu. Rarity diundi terpisah, sekali, lalu kartunya dikunci. Setiap tokoh hanya dimiliki satu orang, jadi kartumu edisi 1 dari 1. Tokoh boleh di-re-roll sekali saat dibuka, rarity tetap.</p>
           <dl className={styles.traits}>
             <div><dt>Tokoh</dt><dd>{figure.name}</dd><span>Dicocokkan dari jawabanmu</span></div>
             <div><dt>Peran</dt><dd>{card.character.class}</dd><span>Dari peranmu di tim</span></div>
             <div className={card.tier.sort >= 3 ? styles.rare : ""}><dt>Rarity</dt><dd>{card.tier.name}</dd><span>Peluang {oddsLabel(card.tier.odds)}, diundi terpisah</span></div>
             <div><dt>Nomor</dt><dd>{serialLabel(card.serial)}</dd><span>Urutan selesai mengisi</span></div>
+            <div><dt>Edisi</dt><dd>1 dari 1</dd><span>Satu tokoh, satu orang</span></div>
           </dl>
           <p className={styles.dna}>DNA kartu {card.dna}</p>
         </section>
@@ -325,7 +398,7 @@ function SavedDialog({ onClose, children }: { onClose: () => void; children: Rea
   </dialog>;
 }
 
-/** Confetti from the middle of the card: more pieces for a rarer level. */
+/** Confetti from the middle of the card: more pieces for a rarer level, all gold for Legendary. */
 function throwConfetti(canvas: HTMLCanvasElement, color: string, level: number) {
   const pieces = [18, 45, 80, 120, 170][Math.max(0, Math.min(4, level))];
   const box = canvas.getBoundingClientRect(), ratio = Math.min(2, window.devicePixelRatio || 1);
@@ -333,7 +406,7 @@ function throwConfetti(canvas: HTMLCanvasElement, color: string, level: number) 
   const g = canvas.getContext("2d");
   if (!g) return;
   g.scale(ratio, ratio);
-  const colours = [color, "#3A6FBF", "#75C3F5", "#F0BB3E", "#5BB37C", "#E5722D", "#D42E7E"];
+  const colours = level >= 4 ? ["#FFC94A", "#FFE27A", "#F0BB3E", "#FFF4C9", "#E3A82B"] : [color, "#3A6FBF", "#75C3F5", "#F0BB3E", "#5BB37C", "#E5722D", "#D42E7E"];
   const flying = Array.from({ length: pieces }, (_, index) => {
     const angle = Math.random() * Math.PI * 2, speed = 4 + Math.random() * 9;
     return { x: box.width / 2, y: box.height * 0.45, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 4, size: 4 + Math.random() * 7, colour: colours[index % colours.length], turn: Math.random() * 6, spin: (Math.random() - 0.5) * 0.4 };

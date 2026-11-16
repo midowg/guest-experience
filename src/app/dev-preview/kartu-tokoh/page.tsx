@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { CardImage } from "@/components/pra-wam/colleagues/CardImage";
 import { QuestionnaireApp } from "@/components/pra-wam/questionnaire/Frame";
 import { CardReveal } from "@/components/pra-wam/questionnaire/CardReveal";
-import { colorsOf } from "@/lib/pra-wam/figures";
+import { colorsOf, legendClasses } from "@/lib/pra-wam/figures";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 
 export const dynamic = "force-dynamic";
@@ -29,38 +29,44 @@ const personas: Record<string, { class: string; title: string; description: stri
 };
 
 type Seed = { number: number; key: string; name: string; persona: string; costume: string };
-/** The 48 figures, read from their migration's seed rows (this page only, while developing). */
+/** The 100 figures, read from their migrations' seed rows (this page only, while developing). */
 async function figures(): Promise<Seed[]> {
-  const sql = await readFile(join(process.cwd(), "supabase", "migrations", "202611130010_wam_figures.sql"), "utf8");
+  const files = ["202611130010_wam_figures.sql", "202611160010_wam_figures_v3.sql"];
+  const sql = (await Promise.all(files.map(file => readFile(join(process.cwd(), "supabase", "migrations", file), "utf8")))).join("\n");
   return [...sql.matchAll(/^\s*\((\d+), '([^']+)', '((?:[^']|'')+)', '([a-z]+)', '((?:[^']|'')*)'/gm)]
     .map(([, number, key, name, persona, costume]) => ({ number: Number(number), key, name: name.replace(/''/g, "'"), persona, costume: costume.replace(/''/g, "'") }));
 }
 
-function cardOf(seed: Seed, tier: (typeof tierList)[number], serial: number, picture = true): CardView {
+function cardOf(seed: Seed, tier: (typeof tierList)[number], serial: number, picture = true, reroll = false): CardView {
   const persona = personas[seed.persona] ?? personas.garda;
+  const legend = tier.key === "legendary";
   return {
     serial, trial: false, dna: "a1b2c3d4e5", drawnAt: "2026-11-13T03:00:00.000Z",
     character: { id: seed.persona, key: seed.persona, name: persona.class, figure: "", ...persona, image: null, partner: null },
     tier, background: { number: 1, name: "", image: null }, accent: { number: 1, name: "", image: null }, stickers: [],
-    figure: { id: seed.key, key: seed.key, name: seed.name, costume: seed.costume, quote: null, image: picture ? `/figur/${seed.key}.webp` : null },
+    figure: {
+      id: seed.key, key: seed.key, name: seed.name, costume: seed.costume, quote: null, image: picture ? `/figur/${legend ? "leg/" : ""}${seed.key}.webp` : null,
+      legend: legend && picture, legendClass: legend && picture ? legendClasses[seed.persona] ?? null : null,
+    },
     reason: `Kamu dapat ${seed.name} karena kamu tipe ${persona.class}.`,
     colors: colorsOf(seed.persona),
+    ...(reroll ? { reroll: { state: "open" as const, until: "2026-11-23T14:00:00.000Z" } } : {}),
   };
 }
 
 /**
  * Layout check for the tokoh card (handoff 12 Nov 2026) without signing in, with the pictures
  * shipped in public/figur. One card to open: ?tokoh=freddie-mercury&rarity=legendary (?gambar=0
- * for the silhouette). Every card at once: ?semua=1.
+ * for the silhouette, ?reroll=1 with the re-roll offered). Every card at once: ?semua=1.
  */
-export default async function DevFigureCardPage({ searchParams }: { searchParams: Promise<{ tokoh?: string; rarity?: string; gambar?: string; semua?: string }> }) {
+export default async function DevFigureCardPage({ searchParams }: { searchParams: Promise<{ tokoh?: string; rarity?: string; gambar?: string; semua?: string; reroll?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { tokoh = "edmund-hillary", rarity = "rare", gambar, semua } = await searchParams;
+  const { tokoh = "edmund-hillary", rarity = "rare", gambar, semua, reroll } = await searchParams;
   const all = await figures();
 
   if (semua) return <QuestionnaireApp>
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
-      <h1 style={{ margin: "8px 0 16px" }}>48 kartu tokoh</h1>
+      <h1 style={{ margin: "8px 0 16px" }}>{all.length} kartu tokoh</h1>
       <ul style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12, margin: 0, padding: 0, listStyle: "none" }}>
         {all.map((seed, index) => <li key={seed.key}>
           <a href={`?tokoh=${seed.key}&rarity=${tierList[index % tierList.length].key}`} style={{ display: "block", textDecoration: "none", color: "inherit" }}>
@@ -73,11 +79,11 @@ export default async function DevFigureCardPage({ searchParams }: { searchParams
   </QuestionnaireApp>;
 
   const seed = all.find(item => item.key === tokoh) ?? all[0];
-  const card = cardOf(seed, tiers[rarity as keyof typeof tiers] ?? tiers.rare, 12, gambar !== "0");
+  const card = cardOf(seed, tiers[rarity as keyof typeof tiers] ?? tiers.rare, 12, gambar !== "0", !!reroll);
   return <QuestionnaireApp>
     <main style={{ maxWidth: 480, margin: "0 auto", padding: 16 }}>
-      <p style={{ margin: "0 0 12px" }}><a href="?semua=1">Lihat semua 48 kartu</a></p>
-      <CardReveal key={`${seed.key}-${rarity}-${gambar}`} formId={`dev-${seed.key}-${rarity}-${gambar ?? ""}`} initial={card} nickname="Dewi" hasPhoto={false} />
+      <p style={{ margin: "0 0 12px" }}><a href="?semua=1">Lihat semua {all.length} kartu</a></p>
+      <CardReveal key={`${seed.key}-${rarity}-${gambar}-${reroll}`} formId={`dev-${seed.key}-${rarity}-${gambar ?? ""}`} initial={card} nickname="Dewi" hasPhoto={false} />
     </main>
   </QuestionnaireApp>;
 }

@@ -4,7 +4,7 @@ import {
   CARDS_MIGRATION, chooseCharacter, comboOf, drawLook, drawTier, partKinds, scoresOf,
   type ArtKind, type Character, type Look, type Part, type PartKind, type Tier,
 } from "@/lib/pra-wam/cards";
-import { colorsOf, FIGURE_KEYS, pickFigure, reasonText, type Figure } from "@/lib/pra-wam/figures";
+import { colorsOf, FIGURE_KEYS, legendClasses, pickFigure, rarityOf, reasonText, rerollFigure, type Figure } from "@/lib/pra-wam/figures";
 import { editable, type Answers, type QForm } from "@/lib/pra-wam/questionnaire";
 import { praWamApi } from "@/lib/routes";
 import { ServiceError } from "../config";
@@ -20,11 +20,12 @@ import { createPrivilegedClient } from "../supabase/admin";
  *
  * Kartu tokoh dunia (migration 202611130010, handoff 12 Nov 2026): with figures in the catalog the
  * card shows a figure. The character is the persona, then a figure of that persona is matched to
- * the answers (lib/pra-wam/figures.ts), at most two people per figure: the database refuses a
- * third (a unique place 1 or 2), so two people finishing at once never pass the quota. The figure,
- * the level and the number are drawn once and locked; they no longer follow changed answers. A
- * card drawn before the figures gets its figure the next time it is opened, keeping its level and
- * number.
+ * the answers (lib/pra-wam/figures.ts), one person per figure (v3, 16 Nov 2026, "1 dari 1"): a new
+ * card takes place 1 of its figure, and the unique combo and place indexes refuse a second person,
+ * so two people finishing at once never share one. The figure, the level and the number are drawn
+ * once and locked; they no longer follow changed answers. A card drawn before the figures gets its
+ * figure the next time it is opened, keeping its level and number. Once Admin WAM opens it, each
+ * person may re-roll the figure once (rerollCard); the level and the number stay.
  */
 
 export const cardsMissing = (error: { code?: string; message?: string }) =>
@@ -90,6 +91,7 @@ export async function catalogOf(formId: string): Promise<Catalog | null> {
       energy: row.energy, genre: row.genre, indonesian: row.indonesian, funny: row.funny, quote: row.quote, hidden: row.hidden,
       // A picture uploaded in Admin WAM wins; until then the handoff's picture that ships with the app.
       image: row.image_key ? artUrl("tokoh", row.id, row.image_key, row.image_updated_at) : builtInFigure(row.key), stored: !!row.image_key,
+      legendImage: builtInLegend(row.key),
     })),
     figuresReady: !figures.error,
   };
@@ -100,6 +102,8 @@ export async function catalogOf(formId: string): Promise<Catalog | null> {
  * choice: the previews of the handoff, 820 × 1024). A missing file draws the silhouette instead.
  */
 const builtInFigure = (key: string) => `/figur/${encodeURIComponent(key)}.webp`;
+/** The figure's Legendary RPG form, shipped with the app in public/figur/leg (handoff v3, 16 Nov 2026). */
+const builtInLegend = (key: string) => `/figur/leg/${encodeURIComponent(key)}.webp`;
 
 /** Whether cards show figures: the migration ran and the catalog has a figure to give. */
 const figureMode = (catalog: Catalog) => catalog.figuresReady && catalog.figures.some(figure => !figure.hidden);
@@ -118,6 +122,8 @@ export type Roll = {
   changes?: { at: string; from: string; to: string; kept?: "bentrok" }[];
   /** The figure matched (its key), how it scored, and the figures tied with it. */
   figure?: { key: string; score: number; tied: string[]; at: string };
+  /** The one re-roll (v3): when, and the figure before and after. Never shown to staff. */
+  reroll?: { at: string; from: string; to: string; score: number };
 };
 
 export const PERSON_COLUMNS = "employee_id,card_id,tier_key,background,accent,stickers,serial,trial,combo,dna,roll,drawn_at";
@@ -134,11 +140,18 @@ export type CardView = {
   character: Pick<Character, "id" | "key" | "name" | "figure" | "class" | "title" | "description" | "powers" | "image"> & { partner: { name: string; class: string } | null };
   tier: Pick<Tier, "key" | "name" | "color" | "line" | "odds" | "sort">;
   background: Pick<Part, "number" | "name" | "image">; accent: Pick<Part, "number" | "name" | "image">; stickers: Pick<Part, "number" | "name" | "image">[];
-  /** The tokoh card's figure (null for a card without one), the reason, and the persona's colours. */
-  figure: Pick<Figure, "id" | "key" | "name" | "costume" | "quote" | "image"> | null;
+  /**
+   * The tokoh card's figure (null for a card without one), the reason, and the persona's colours.
+   * A Legendary card shows the figure's RPG form (`legend`, its class in `legendClass`).
+   */
+  figure: (Pick<Figure, "id" | "key" | "name" | "costume" | "quote" | "image"> & { legend: boolean; legendClass: string | null }) | null;
   reason: string | null;
   colors: [string, string];
+  /** My own card only: whether I may re-roll its figure now (once, while Admin WAM keeps it open). */
+  reroll?: Reroll;
 };
+/** "open" until `until`; "used" once done; "closed" while Admin WAM has not opened it (or it ended). */
+export type Reroll = { state: "open" | "used" | "closed"; until: string | null };
 
 export function viewOf(row: PersonCardRow, catalog: Catalog): CardView | null {
   const character = catalog.characters.find(item => item.id === row.card_id);
@@ -150,13 +163,18 @@ export function viewOf(row: PersonCardRow, catalog: Catalog): CardView | null {
   };
   const partner = character.partnerId ? catalog.characters.find(item => item.id === character.partnerId) : undefined;
   const figure = row.figure_id ? catalog.figures.find(item => item.id === row.figure_id) : undefined;
+  // Legendary: the figure's RPG form (Hanung, 16 Nov 2026), with the persona's RPG class.
+  const legend = !!figure?.legendImage && rarityOf(tier) === 4;
   return {
     serial: row.serial, trial: row.trial, dna: row.dna, drawnAt: row.drawn_at,
     // A tokoh card never shows the persona's old anime picture (13 Nov 2026).
     character: { id: character.id, key: character.key, name: character.name, figure: character.figure, class: character.class, title: character.title, description: character.description, powers: character.powers, image: figure ? null : character.image, partner: partner ? { name: partner.name, class: partner.class } : null },
     tier: { key: tier.key, name: tier.name, color: tier.color, line: tier.line, odds: tier.odds, sort: tier.sort },
     background: part("latar", row.background), accent: part("aksen", row.accent), stickers: row.stickers.map(number => part("stiker", number)),
-    figure: figure ? { id: figure.id, key: figure.key, name: figure.name, costume: figure.costume, quote: figure.quote, image: figure.image } : null,
+    figure: figure ? {
+      id: figure.id, key: figure.key, name: figure.name, costume: figure.costume, quote: figure.quote, image: legend ? figure.legendImage : figure.image,
+      legend, legendClass: legend ? legendClasses[character.key] ?? null : null,
+    } : null,
     reason: figure ? row.reason ?? null : null,
     colors: colorsOf(character.key),
   };
@@ -209,8 +227,25 @@ export async function myCard(form: Pick<QForm, "id">, employeeId: string): Promi
   const row = await personCard(form.id, employeeId, catalog);
   if (!row) return null;
   const [shown] = await withFigures(form, [row], catalog);
-  return viewOf(shown, catalog);
+  return mine(form, shown, catalog);
 }
+
+/** My own card's view, with whether I may re-roll it. */
+async function mine(form: Pick<QForm, "id">, row: PersonCardRow, catalog: Catalog): Promise<CardView | null> {
+  const view = viewOf(row, catalog);
+  if (!view?.figure || row.trial) return view;
+  return { ...view, reroll: rerollOf(row, await rerollUntil(form.id)) };
+}
+
+/** Until when Admin WAM keeps the re-roll open (migration 202611160010); null when closed or before it. */
+export async function rerollUntil(formId: string): Promise<string | null> {
+  const { data, error } = await createPrivilegedClient().from("cq_forms").select("reroll_until").eq("id", formId).maybeSingle();
+  if (error) { if (["42703", "PGRST204"].includes(error.code ?? "") || /reroll_until/.test(error.message ?? "")) return null; databaseError(error); }
+  return (data as { reroll_until: string | null } | null)?.reroll_until ?? null;
+}
+
+const rerollOf = (row: PersonCardRow, until: string | null, now = Date.now()): Reroll =>
+  row.roll.reroll ? { state: "used", until: null } : until && new Date(until).getTime() > now ? { state: "open", until } : { state: "closed", until: null };
 
 const counts = (catalog: Catalog): Record<PartKind, number> =>
   Object.fromEntries(partKinds.map(kind => [kind, catalog.parts.filter(part => part.kind === kind).length])) as Record<PartKind, number>;
@@ -228,14 +263,15 @@ async function figuresTaken(formId: string): Promise<{ used: Record<string, numb
   return { used, places };
 }
 
-/** A figure for someone of this persona, with its free place, or null when every figure is taken three times. */
+/** A figure for someone of this persona (place 1: one person per figure), or null when every figure is taken. */
 async function matchFigure(formId: string, catalog: Catalog, personaId: string, answers: Answers, trial: boolean) {
   const { used, places } = trial ? { used: {}, places: new Set<string>() } : await figuresTaken(formId);
   const persona = catalog.characters.find(item => item.id === personaId);
   const match = pickFigure(personaId, catalog.figures, answers, used, secure);
   if (!match) return null;
-  // The first free place, 1 to 3 (the database refuses a taken one, so a clash draws again).
-  const slot = [1, 2, 3].find(place => !places.has(`${match.figure.id}|${place}`)) ?? 3;
+  // Place 1 only (v3): the database refuses a taken one, so a clash draws again.
+  const slot = 1;
+  if (places.has(`${match.figure.id}|${slot}`)) return null;
   return {
     figure: match.figure, slot, reason: reasonText(persona?.class ?? "", match.figure.name, match.why),
     record: { key: match.figure.key, score: match.score, tied: match.tied, at: new Date().toISOString() },
@@ -268,7 +304,7 @@ async function draw(form: QForm, employeeId: string, answers: Answers, catalog: 
     const chosen = chooseCharacter(shown, answers, null, secure)!;
     const tier = drawTier(catalog.tiers, trial ? {} : taken, secure);
     const match = figures ? await matchFigure(form.id, catalog, chosen.id, answers, trial) : null;
-    if (figures && !match) throw new ServiceError(409, "Semua tokoh sudah dipakai tiga orang. Hubungi admin WAM untuk menambah tokoh.");
+    if (figures && !match) throw new ServiceError(409, "Semua tokoh sudah dipakai. Hubungi admin WAM untuk menambah tokoh.");
     let look: Look = { background: 1, accent: 1, stickers: [] };
     if (!match) {
       look = drawLook(parts, secure);
@@ -373,7 +409,46 @@ export async function ensureCard(form: QForm, employeeId: string, answers: Answe
   if (!row) row = await draw(form, employeeId, answers, catalog);
   else if (figureMode(catalog) && !row.figure_id) row = await giveFigure(form, row, answers, catalog);
   else if (form.status === "draf" || editable(form)) row = await follow(form, row, answers, catalog);
-  return viewOf(row, catalog);
+  return mine(form, row, catalog);
+}
+
+/**
+ * The one re-roll of my figure (v3, Hanung 16 Nov 2026), while Admin WAM keeps it open: a figure
+ * drawn with crypto randomness from the free ones of my persona (else from every free one). One
+ * update lets the old figure go and takes the new one, and only while I still hold the old one,
+ * so a second tap never re-rolls twice; the unique indexes refuse a figure someone took a moment
+ * ago, which is drawn again. The level and the number stay; the result is final.
+ */
+export async function rerollCard(form: Pick<QForm, "id">, employeeId: string): Promise<CardView> {
+  const catalog = await catalogOf(form.id);
+  if (!catalog || !figureMode(catalog)) throw new ServiceError(409, "Kartu tokoh belum siap.");
+  const client = createPrivilegedClient();
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const row = await personCard(form.id, employeeId, catalog);
+    if (!row || row.trial || !row.figure_id) throw new ServiceError(409, "Kartumu belum keluar, jadi belum bisa di-re-roll.");
+    const state = rerollOf(row, await rerollUntil(form.id));
+    if (state.state === "used") throw new ServiceError(409, "Kamu sudah memakai jatah re-roll.");
+    if (state.state === "closed") throw new ServiceError(409, "Re-roll tokoh sedang tidak dibuka.");
+    const [{ used }, answers] = await Promise.all([figuresTaken(form.id), figureAnswers(form.id, [employeeId])]);
+    const pick = rerollFigure(row.card_id, catalog.figures, answers.get(employeeId) ?? {}, used, row.figure_id, secure);
+    if (!pick) throw new ServiceError(409, "Tidak ada tokoh lain yang masih kosong.");
+    const persona = catalog.characters.find(item => item.id === row.card_id);
+    const from = catalog.figures.find(item => item.id === row.figure_id)?.key ?? row.figure_id;
+    const at = new Date().toISOString();
+    const combo = figureCombo(pick.figure.id, 1);
+    const roll: Roll = { ...row.roll, reroll: { at, from, to: pick.figure.key, score: pick.score } };
+    const { data, error } = await client.from("cq_person_cards")
+      .update({ figure_id: pick.figure.id, figure_slot: 1, reason: reasonText(persona?.class ?? "", pick.figure.name, pick.why), combo, dna: dnaOf(combo), roll, updated_at: at })
+      .eq("form_id", form.id).eq("employee_id", employeeId).eq("figure_id", row.figure_id).eq("trial", false)
+      .select(columnsFor(catalog)).maybeSingle();
+    if (error) { if (error.code === "23505") continue; failed(error); }
+    // No row: another tap re-rolled a moment ago; the loop reads the card again and says so.
+    if (!data) continue;
+    const view = await mine(form, data as unknown as PersonCardRow, catalog);
+    if (!view) break;
+    return view;
+  }
+  throw new ServiceError(503, "Re-roll belum dapat dijalankan. Coba lagi sebentar lagi.");
 }
 
 /** After an answer changed: an existing card's character follows it. Never draws, never fails the answer. */

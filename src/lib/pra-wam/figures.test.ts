@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { figureOfFile, figureScore, pickFigure, reasonText, type Figure } from "./figures";
+import { figureOfFile, figureScore, pickFigure, rarityOf, reasonText, rerollFigure, type Figure } from "./figures";
 
 const figure = (key: string, personaId: string, rest: Partial<Figure> = {}): Figure => ({
   id: key, number: 1, key, name: key, personaId, costume: "", hobbies: [], activities: [], energy: "", genre: "",
-  indonesian: false, funny: false, quote: null, hidden: false, image: null, stored: false, ...rest,
+  indonesian: false, funny: false, quote: null, hidden: false, image: null, stored: false, legendImage: null, ...rest,
 });
 const first = (n: number) => { void n; return 0; };
 const hillary = figure("edmund-hillary", "garda", { name: "Edmund Hillary", hobbies: ["Olahraga & outdoor"], activities: ["Outdoor"], energy: "Kelompok kecil" });
@@ -20,25 +20,40 @@ describe("matching a figure", () => {
     expect(figureScore(figure("x", "p", { hobbies: ["Lainnya"] }), { "17": ["Lainnya: memancing"] }).score).toBe(0);
   });
 
-  it("picks the best figure of the persona, then any with a place when the persona's are taken twice", () => {
+  it("gives one person a figure: the persona's best free one, then the best free one of any persona", () => {
     expect(pickFigure("garda", [ramsay, hillary, mercury], answers, {}, first)?.figure.key).toBe("edmund-hillary");
-    // Hillary is taken twice: Ramsay, still of the persona, though he scores less.
-    expect(pickFigure("garda", [ramsay, hillary, mercury], answers, { "edmund-hillary": 2 }, first)?.figure.key).toBe("gordon-ramsay");
-    // Every figure of the persona taken twice: the best of the rest.
-    expect(pickFigure("garda", [ramsay, hillary, mercury], answers, { "edmund-hillary": 2, "gordon-ramsay": 2 }, first)?.figure.key).toBe("freddie-mercury");
-    // Every figure has two: a third person may have one, the persona's best first.
-    expect(pickFigure("garda", [ramsay, hillary], answers, { "edmund-hillary": 2, "gordon-ramsay": 2 }, first)?.figure.key).toBe("edmund-hillary");
-    expect(pickFigure("garda", [ramsay, hillary], answers, { "edmund-hillary": 3, "gordon-ramsay": 2 }, first)?.figure.key).toBe("gordon-ramsay");
-    expect(pickFigure("garda", [ramsay, hillary], answers, { "edmund-hillary": 3, "gordon-ramsay": 3 }, first)).toBeNull();
+    // Hillary is taken: Ramsay, still of the persona, though he scores less.
+    expect(pickFigure("garda", [ramsay, hillary, mercury], answers, { "edmund-hillary": 1 }, first)?.figure.key).toBe("gordon-ramsay");
+    // Every figure of the persona taken: the best of the rest.
+    expect(pickFigure("garda", [ramsay, hillary, mercury], answers, { "edmund-hillary": 1, "gordon-ramsay": 1 }, first)?.figure.key).toBe("freddie-mercury");
+    // Every figure taken: none.
+    expect(pickFigure("garda", [ramsay, hillary], answers, { "edmund-hillary": 1, "gordon-ramsay": 1 }, first)).toBeNull();
     expect(pickFigure("garda", [{ ...hillary, hidden: true }, ramsay], answers, {}, first)?.figure.key).toBe("gordon-ramsay");
+    // Without an answer at 37 the genre just does not count.
+    expect(figureScore(mercury, { "17": ["Musik"] }).score).toBe(2);
   });
 
-  it("in a tie, gives a figure nobody has yet before drawing", () => {
+  it("draws between figures that tie", () => {
     const a = figure("a", "garda"), b = figure("b", "garda");
     const last = (n: number) => n - 1;
     expect(pickFigure("garda", [a, b], {}, { a: 1 }, first)?.figure.key).toBe("b");
     const tie = pickFigure("garda", [a, b], {}, {}, last);
     expect([tie?.figure.key, tie?.tied]).toEqual(["b", ["a", "b"]]);
+  });
+
+  it("re-rolls to a free figure of the persona at random, else any free one, never the one held", () => {
+    const pool = [hillary, ramsay, mercury];
+    // Held: Hillary. Ramsay is the only other free garda.
+    expect(rerollFigure("garda", pool, answers, { "edmund-hillary": 1 }, "edmund-hillary", first)?.figure.key).toBe("gordon-ramsay");
+    // Ramsay taken too: a free figure of another persona.
+    expect(rerollFigure("garda", pool, answers, { "edmund-hillary": 1, "gordon-ramsay": 1 }, "edmund-hillary", first)?.figure.key).toBe("freddie-mercury");
+    expect(rerollFigure("garda", pool, answers, { "edmund-hillary": 1, "gordon-ramsay": 1, "freddie-mercury": 1 }, "edmund-hillary", first)).toBeNull();
+    // The reason still comes from the answers.
+    expect(rerollFigure("garda", pool, answers, { "edmund-hillary": 1, "gordon-ramsay": 1 }, "edmund-hillary", first)?.why).toEqual(["suka musik", "suka musik rock"]);
+  });
+
+  it("reads the rarity as 0 to 4", () => {
+    expect([rarityOf({ key: "common", sort: 0 }), rarityOf({ key: "epic", sort: 3 }), rarityOf({ key: "legendary", sort: 4 }), rarityOf({ key: "baru", sort: 9 })]).toEqual([0, 3, 4, 4]);
   });
 
   it("says why, as the handoff's sentence", () => {
@@ -48,9 +63,10 @@ describe("matching a figure", () => {
   });
 
   it("knows a figure's picture by its key or its number", () => {
-    const figures = [{ key: "ki-hajar-dewantara", number: 1 }, { key: "affandi", number: 7 }];
+    const figures = [{ key: "ki-hajar-dewantara", number: 1 }, { key: "affandi", number: 7 }, { key: "chrisye", number: 100 }];
     expect(figureOfFile("Ki-Hajar-Dewantara.PNG", figures)?.number).toBe(1);
     expect(figureOfFile("tokoh-07.webp", figures)?.key).toBe("affandi");
+    expect(figureOfFile("tokoh-100.png", figures)?.key).toBe("chrisye");
     expect(figureOfFile("karakter-01.webp", figures)).toBeNull();
     expect(figureOfFile("affandi.gif", figures)).toBeNull();
   });

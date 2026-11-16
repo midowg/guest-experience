@@ -67,7 +67,7 @@ it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts w
   window.localStorage.setItem("wam-cq-card-open:f2", "1");
   const tokoh: CardView = {
     ...card, character: { ...card.character, key: "garda", class: "Garda Depan", title: "Yang maju duluan", partner: { name: "Kirana", class: "Penyihir Ide" } },
-    figure: { id: "f", key: "edmund-hillary", name: "Edmund Hillary", costume: "Jaket pendaki, kapak es", quote: null, image: null },
+    figure: { id: "f", key: "edmund-hillary", name: "Edmund Hillary", costume: "Jaket pendaki, kapak es", quote: null, image: null, legend: false, legendClass: null },
     reason: "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan dan suka olahraga & outdoor.", colors: ["#C2303F", "#6E1023"],
   };
   const { container } = render(<CardReveal formId="f2" initial={tokoh} nickname="Dewi" hasPhoto={false} />);
@@ -93,4 +93,38 @@ it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts w
   // jsdom has no PointerEvent with coordinates: a mouse event named pointermove stands in.
   act(() => { flip.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 100, clientY: 50 })); });
   expect(flip.dataset.tilt).toBeUndefined();
+});
+
+it("re-rolls the figure once, after asking, and shows the new card to open again (v3)", async () => {
+  window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+  window.localStorage.setItem("wam-cq-card-open:f3", "1");
+  const base: CardView = {
+    ...card, character: { ...card.character, key: "garda", class: "Garda Depan" },
+    figure: { id: "f", key: "edmund-hillary", name: "Edmund Hillary", costume: "", quote: null, image: null, legend: false, legendClass: null },
+    reason: "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan.", colors: ["#C2303F", "#6E1023"],
+    reroll: { state: "open", until: "2026-11-23T14:00:00.000Z" },
+  };
+  const next: CardView = { ...base, figure: { ...base.figure!, id: "g", key: "susi-susanti", name: "Susi Susanti" }, reason: "Kamu dapat Susi Susanti karena kamu tipe Garda Depan.", reroll: { state: "used", until: null } };
+  let patches = 0;
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+    if (url === praWamApi.questionnaireCard && init.method === "PATCH") patches++;
+    return new Response(JSON.stringify({ ok: true, data: { card: next }, message: "Tokoh barumu: Susi Susanti." }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }));
+  const { container } = render(<CardReveal formId="f3" initial={base} nickname="Dewi" hasPhoto={false} />);
+  expect(await screen.findByText("Kurang sreg dengan tokohmu?")).toBeTruthy();
+  // Epic: the moving rarity layers and seven stars.
+  expect(container.querySelector("[class*='edge']")).toBeTruthy();
+  expect(container.querySelectorAll("[class*='spark'] i")).toHaveLength(7);
+  // The first tap only asks; Batal steps back.
+  fireEvent.click(screen.getByRole("button", { name: /Re-roll tokoh \(1x\)/ }));
+  expect(patches).toBe(0);
+  fireEvent.click(screen.getByRole("button", { name: "Batal" }));
+  fireEvent.click(screen.getByRole("button", { name: /Re-roll tokoh \(1x\)/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Ya, undi ulang sekarang/ }));
+  // The new card comes back closed, to open again.
+  fireEvent.click(await screen.findByRole("button", { name: "Buka kartu karaktermu" }));
+  expect(await screen.findByText("Dewi, kamu dapat Susi Susanti")).toBeTruthy();
+  expect(patches).toBe(1);
+  expect(screen.getByText(/Kamu sudah memakai jatah re-roll\. Susi Susanti sekarang tokohmu/)).toBeTruthy();
+  expect(screen.queryByText("Kurang sreg dengan tokohmu?")).toBeNull();
 });

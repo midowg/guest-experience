@@ -18,7 +18,7 @@ const data: AdminCards = {
     parts: [{ kind: "latar", number: 1, name: "Senja Ungu", image: null, stored: false }, { kind: "stiker", number: 12, name: "Logo W", image: null, stored: false }],
     figures: [], figuresReady: false,
   },
-  questions: [], drawn: [], willChange: 0, following: false,
+  questions: [], drawn: [], willChange: 0, following: false, rerollUntil: null,
 };
 
 it("uploads every picked file whose name matches a slot, and says which were skipped", async () => {
@@ -37,7 +37,7 @@ it("with tokoh cards, shows only the figures' pictures and the levels, uploads f
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
   const { adminRequest } = await import("@/components/admin/shared/api");
-  const figure = { id: "00000000-0000-4000-8000-0000000000f1", number: 1, key: "edmund-hillary", name: "Edmund Hillary", personaId: data.catalog.characters[0].id, costume: "", hobbies: [], activities: [], energy: "", genre: "", indonesian: false, funny: false, quote: null, hidden: false, image: "/figur/edmund-hillary.webp", stored: false };
+  const figure = { id: "00000000-0000-4000-8000-0000000000f1", number: 1, key: "edmund-hillary", name: "Edmund Hillary", personaId: data.catalog.characters[0].id, costume: "", hobbies: [], activities: [], energy: "", genre: "", indonesian: false, funny: false, quote: null, hidden: false, image: "/figur/edmund-hillary.webp", stored: false, legendImage: "/figur/leg/edmund-hillary.webp" };
   const tokoh: AdminCards = { ...data, catalog: { ...data.catalog, characters: [{ ...data.catalog.characters[0], image: "/x.webp", stored: true }], parts: [{ ...data.catalog.parts[0], stored: true }], figures: [figure], figuresReady: true } };
   const { container } = render(<CardCatalog initial={tokoh} />);
   // The personas work behind the card; the old backgrounds, accents and stickers are not used.

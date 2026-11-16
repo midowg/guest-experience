@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { Answers } from "./questionnaire";
 
 /*
@@ -7,20 +8,21 @@ import type { Answers } from "./questionnaire";
  *   1. The persona: the 8 characters' score rules, as before (chooseCharacter in cards.ts).
  *   2. The figure, inside that persona: +2 for each of its hobbies chosen at 17, +2 for each of its
  *      activities chosen at 21, +1 when its energy is the answer at 20, +1 when its music genre is
- *      chosen at 37. Only figures with a place left (two people each) take part; when the persona
- *      has none left, every figure with a place does. Once every figure has two, a third person
- *      may have one (13 Nov 2026, the owner's choice, for more than 96 people), the same way.
- *   3. A tie: a figure nobody has yet goes first, then a draw.
+ *      chosen at 37 (no answer at 37: no genre score). One person per figure (v3, 16 Nov 2026:
+ *      100 figures, "1 dari 1"): only figures nobody has take part; when the persona has none
+ *      left, every free figure does.
+ *   3. A tie: a draw.
  *   4. The reason on the card: "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan, suka
  *      olahraga & outdoor, paling menikmati kegiatan outdoor dan nyaman di kelompok kecil."
  * Only the answers to 17, 20, 21 and 37 are read here (34 and 35 through the persona); health,
  * HR-only and anonymous answers never.
  */
 
-export const FIGURE_QUOTA = 2;
-/** The most people a figure may have, once every figure has FIGURE_QUOTA (migration 202611130011). */
-export const FIGURE_MAX = 3;
+/** How many people a figure may have (v3, 16 Nov 2026): one, so every card is "1 dari 1". */
+export const FIGURE_QUOTA = 1;
 export const FIGURES_MIGRATION = "202611130010_wam_figures.sql";
+/** The 100 figures, the one-per-figure quota and the re-roll window (16 Nov 2026). */
+export const FIGURES_V3_MIGRATION = "202611160010_wam_figures_v3.sql";
 /** The questions a figure is matched on, by their fixed keys. */
 export const FIGURE_KEYS = { hobbies: "17", energy: "20", activities: "21", genre: "37" } as const;
 
@@ -30,6 +32,8 @@ export type Figure = {
   indonesian: boolean; funny: boolean; quote: string | null; hidden: boolean;
   /** Where the app reads the picture, or null; `stored` says whether it is in storage. */
   image: string | null; stored: boolean;
+  /** Its Legendary RPG form (v3, 16 Nov 2026), shipped with the app; null when there is none. */
+  legendImage: string | null;
 };
 export type Random = (n: number) => number;
 
@@ -39,6 +43,26 @@ export const personaColors: Record<string, [string, string]> = {
   pemantik: ["#E0408F", "#8E1A55"], pengintai: ["#56A3EE", "#1C5797"], penyembuh: ["#F2A38A", "#B9563F"], penghibur: ["#F08A3C", "#A9461A"],
 };
 export const colorsOf = (personaKey: string): [string, string] => personaColors[personaKey] ?? ["#3A6FBF", "#1B2C66"];
+
+/** The RPG class of each persona's Legendary form (Hanung, 16 Nov 2026). */
+export const legendClasses: Record<string, string> = {
+  garda: "Paladin", penyihir: "Archmage", siasat: "Grand Tactician", penjaga: "Guardian Monk",
+  pemantik: "Blazing Champion", pengintai: "Ranger", penyembuh: "Healer Cleric", penghibur: "Minstrel Bard",
+};
+
+/** Admin WAM opens the re-roll until a moment, or closes it (null). */
+export const rerollWindowSchema = z.object({ rerollUntil: z.iso.datetime({ offset: true }).nullable() });
+export type RerollWindowInput = z.infer<typeof rerollWindowSchema>;
+
+/** How many stars each rarity has on the card, Common to Legendary (handoff v3). */
+export const SPARK_COUNT = [0, 2, 4, 7, 10] as const;
+
+/** The rarity as 0 (Common) to 4 (Legendary), for the effects on the card. */
+const rarityKeys = ["common", "uncommon", "rare", "epic", "legendary"];
+export function rarityOf(tier: { key: string; sort: number }): 0 | 1 | 2 | 3 | 4 {
+  const known = rarityKeys.indexOf(tier.key);
+  return Math.max(0, Math.min(4, known >= 0 ? known : tier.sort)) as 0 | 1 | 2 | 3 | 4;
+}
 
 const activityPhrases: Record<string, string> = {
   "outdoor": "kegiatan outdoor", "games kompetitif": "games kompetitif", "diskusi": "diskusi", "kreatif / seni": "kegiatan kreatif",
@@ -66,25 +90,37 @@ export function figureScore(figure: Pick<Figure, "hobbies" | "activities" | "ene
   return { score, why };
 }
 
+/** The shown figures nobody has yet, the persona's own first (all free ones when it has none left). */
+function freeFigures(personaId: string, figures: readonly Figure[], used: Record<string, number>): Figure[] {
+  const open = figures.filter(figure => !figure.hidden && (used[figure.id] ?? 0) < FIGURE_QUOTA);
+  const own = open.filter(figure => figure.personaId === personaId);
+  return own.length ? own : open;
+}
+
 /**
  * The figure for someone of this persona. `used` counts the people who have each figure (by id).
- * Null only when every figure is taken three times.
+ * Null only when every figure is taken.
  */
 export function pickFigure(personaId: string, figures: readonly Figure[], answers: Answers, used: Record<string, number>, pick: Random): { figure: Figure; score: number; why: string[]; tied: string[] } | null {
-  const shown = figures.filter(figure => !figure.hidden);
-  // Two people a figure first; a third only once every figure has two.
-  const under = (limit: number) => shown.filter(figure => (used[figure.id] ?? 0) < limit);
-  const open = under(FIGURE_QUOTA).length ? under(FIGURE_QUOTA) : under(FIGURE_MAX);
-  const own = open.filter(figure => figure.personaId === personaId);
-  const pool = own.length ? own : open;
+  const pool = freeFigures(personaId, figures, used);
   if (!pool.length) return null;
   const scored = pool.map(figure => ({ figure, ...figureScore(figure, answers) }));
   const best = Math.max(...scored.map(item => item.score));
-  let top = scored.filter(item => item.score === best);
-  const free = top.filter(item => !used[item.figure.id]);
-  if (free.length) top = free;
+  const top = scored.filter(item => item.score === best);
   const chosen = top[pick(top.length)];
   return { ...chosen, tied: top.map(item => item.figure.key) };
+}
+
+/**
+ * The re-roll (once per person, v3, 16 Nov 2026): a figure drawn at random from the free ones of
+ * the same persona, else from every free one; never the one held now. The answers only shape the
+ * reason on the card. Null when no figure is free.
+ */
+export function rerollFigure(personaId: string, figures: readonly Figure[], answers: Answers, used: Record<string, number>, currentId: string, pick: Random): { figure: Figure; score: number; why: string[] } | null {
+  const pool = freeFigures(personaId, figures, { ...used, [currentId]: FIGURE_QUOTA }).filter(figure => figure.id !== currentId);
+  if (!pool.length) return null;
+  const figure = pool[pick(pool.length)];
+  return { figure, ...figureScore(figure, answers) };
 }
 
 /** "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan, suka …, … dan …." */
@@ -102,6 +138,6 @@ export function figureOfFile<T extends Pick<Figure, "key" | "number">>(name: str
   const match = /^(.+)\.(webp|png|jpe?g)$/i.exec(name.trim());
   if (!match) return null;
   const base = match[1].toLowerCase();
-  const numbered = /^tokoh-(\d{1,2})$/.exec(base);
+  const numbered = /^tokoh-(\d{1,3})$/.exec(base);
   return figures.find(figure => numbered ? figure.number === Number(numbered[1]) : figure.key === base) ?? null;
 }

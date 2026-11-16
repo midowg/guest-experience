@@ -1,4 +1,5 @@
 import { serialLabel } from "@/lib/pra-wam/cards";
+import { rarityOf, SPARK_COUNT } from "@/lib/pra-wam/figures";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 import { body, display } from "./font";
 
@@ -13,6 +14,12 @@ import { body, display } from "./font";
  * the figure fills the card on its persona's colour, the figure's name, the persona and the
  * number at the bottom, the rarity label bottom right; a figure without its picture yet is a
  * silhouette with "Figur menyusul". The back is blue with a big "?".
+ *
+ * v3 (16 Nov 2026, Hanung): the rarity shows on the picture itself, no frame (rarityFx): Uncommon
+ * a white shine and 2 stars, Rare a rainbow shine and 4, Epic a purple aura and 7, Legendary a thin
+ * gold layer, a gold name, 10 gold stars and the figure's RPG form with "WUJUD LEGENDARY". Every card
+ * is "1 dari 1". The wallpaper is the figure full-art: its edges stretched to the phone's height,
+ * the top clear for the clock, only a faint "WAM 2026 · #seri" at the bottom.
  */
 
 export const CARD = { width: 1080, height: 1350 } as const;
@@ -95,13 +102,63 @@ function silhouette(context: CanvasRenderingContext2D, name: string, x: number, 
 type FigureCard = CardView & { figure: NonNullable<CardView["figure"]> };
 const withFigure = (card: CardView): card is FigureCard => !!card.figure;
 
+const GOLD = ["#FFF4C9", "#FFD45C", "#E3A82B", "#FFE89A"] as const;
+/** Where the stars sit on the picture (share of width and height, size as a share of width). */
+const SPARKS: readonly [number, number, number][] = [[.12, .1, .05], [.86, .16, .04], [.91, .44, .055], [.07, .46, .035], [.16, .66, .04], [.8, .06, .03], [.5, .05, .032], [.9, .64, .035], [.3, .2, .025], [.7, .3, .028]];
+const SPARK_COLOR = ["", "#D9FFF1", "#DDF0FF", "#E6C4FF", "#FFE27A"] as const;
+
+function sparkle(g: CanvasRenderingContext2D, x: number, y: number, radius: number, color: string) {
+  g.save(); g.translate(x, y); g.beginPath();
+  for (let index = 0; index < 8; index++) {
+    const angle = index * Math.PI / 4 - Math.PI / 2, reach = index % 2 ? radius * 0.3 : radius;
+    g.lineTo(Math.cos(angle) * reach, Math.sin(angle) * reach);
+  }
+  g.closePath(); g.shadowColor = color; g.shadowBlur = radius * 1.2; g.fillStyle = color; g.fill();
+  g.fillStyle = "#fff"; g.beginPath(); g.arc(0, 0, radius * 0.12, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+
+/** The rarity on the picture, without a frame (handoff v3 `rarityFx`): drawn into the PNG and the wallpaper too. */
+function rarityFx(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, rarity: number, color: string) {
+  if (rarity < 1) return;
+  if (rarity === 4) {
+    g.save(); g.globalCompositeOperation = "soft-light"; g.globalAlpha = 0.42;
+    const gold = g.createLinearGradient(x, y, x + w, y + h);
+    gold.addColorStop(0, GOLD[0]); gold.addColorStop(0.45, GOLD[2]); gold.addColorStop(1, GOLD[3]);
+    g.fillStyle = gold; g.fillRect(x, y, w, h); g.restore();
+  }
+  if (rarity >= 3) {
+    const aura = g.createRadialGradient(x + w / 2, y + h * 0.45, Math.min(w, h) * 0.32, x + w / 2, y + h * 0.45, Math.max(w, h) * 0.72);
+    aura.addColorStop(0, "rgba(0,0,0,0)"); aura.addColorStop(1, rarity === 4 ? GOLD[1] : color);
+    g.save(); g.globalCompositeOperation = "screen"; g.globalAlpha = rarity === 4 ? 0.55 : 0.6; g.fillStyle = aura; g.fillRect(x, y, w, h); g.restore();
+  }
+  g.save(); g.globalCompositeOperation = "screen";
+  const streak = g.createLinearGradient(x, y + h * 0.05, x + w, y + h * 0.55);
+  const strength = rarity >= 3 ? 0.32 : rarity === 2 ? 0.3 : 0.24, rainbow = rarity >= 2 ? 0.6 : 0;
+  streak.addColorStop(0.3, "rgba(255,255,255,0)"); streak.addColorStop(0.42, `rgba(255,120,220,${strength * rainbow})`);
+  streak.addColorStop(0.5, `rgba(255,255,255,${strength})`); streak.addColorStop(0.58, `rgba(120,230,255,${strength * rainbow})`); streak.addColorStop(0.7, "rgba(255,255,255,0)");
+  g.fillStyle = streak; g.fillRect(x, y, w, h); g.restore();
+  for (const [sx, sy, size] of SPARKS.slice(0, SPARK_COUNT[rarity])) sparkle(g, x + sx * w, y + sy * h, size * w, SPARK_COLOR[rarity]);
+}
+
+/** The name's fill: gold for Legendary, a purple glow for Epic, cream otherwise. */
+function nameFill(g: CanvasRenderingContext2D, rarity: number, y: number) {
+  if (rarity === 4) {
+    const gold = g.createLinearGradient(0, y - 60, 0, y);
+    gold.addColorStop(0, GOLD[0]); gold.addColorStop(0.5, GOLD[1]); gold.addColorStop(1, GOLD[2]);
+    g.fillStyle = gold; g.shadowColor = "rgba(227,168,43,.8)"; g.shadowBlur = 24;
+  } else if (rarity === 3) { g.fillStyle = CREAM; g.shadowColor = "#C37BFF"; g.shadowBlur = 28; } else { g.fillStyle = CREAM; g.shadowBlur = 0; }
+}
+
 /** The tokoh card's front, 1080 × 1350. */
 async function drawFigureFront(card: FigureCard, scale: number): Promise<HTMLCanvasElement> {
   const [image] = await Promise.all([loadImage(card.figure.image), fontsReady()]);
   const { width: W, height: H } = CARD;
   const [canvas, g] = canvasOf(W, H, scale);
+  const rarity = rarityOf(card.tier);
   personaBackground(g, card.colors, W, H);
   if (image) cover(g, image, 0, 0, W, H, 0.2); else silhouette(g, card.figure.name, 140, 60, 800, 980);
+  rarityFx(g, 0, 0, W, H - 300, rarity, card.tier.color);
   const fade = g.createLinearGradient(0, H - 360, 0, H);
   fade.addColorStop(0, "rgba(20,19,37,0)"); fade.addColorStop(1, "rgba(20,19,37,.78)");
   g.fillStyle = fade; g.fillRect(0, H - 360, W, 360);
@@ -110,9 +167,17 @@ async function drawFigureFront(card: FigureCard, scale: number): Promise<HTMLCan
   let size = 64;
   g.font = fontOf(size, true);
   while (g.measureText(name).width > W - 112 && size > 36) { size -= 2; g.font = fontOf(size, true); }
-  g.fillText(name, 56, H - 150, W - 112);
-  g.font = fontOf(36); g.fillStyle = "rgba(255,248,233,.92)"; g.fillText(card.character.class, 58, H - 96);
-  g.font = fontOf(30); g.fillStyle = "rgba(255,248,233,.75)"; g.fillText(`${YEAR_LABEL}  ·  ${serialLabel(card.serial)}`, 58, H - 50);
+  g.save(); nameFill(g, rarity, H - 150); g.fillText(name, 56, H - 150, W - 112); g.restore();
+  if (card.figure.legend) {
+    g.save(); g.font = fontOf(28, true);
+    const lw = g.measureText("WUJUD LEGENDARY").width + 40;
+    const gold = g.createLinearGradient(56, 0, 56 + lw, 0);
+    gold.addColorStop(0, GOLD[1]); gold.addColorStop(0.5, GOLD[0]); gold.addColorStop(1, GOLD[2]);
+    g.fillStyle = gold; rounded(g, 56, H - 262, lw, 46, 23); g.fill();
+    g.fillStyle = INK; g.textBaseline = "middle"; g.fillText("WUJUD LEGENDARY", 76, H - 238); g.restore();
+  }
+  g.font = fontOf(36); g.fillStyle = "rgba(255,248,233,.92)"; g.fillText(card.character.class, 58, H - 96, W - 400);
+  g.font = fontOf(30); g.fillStyle = "rgba(255,248,233,.75)"; g.fillText(`${YEAR_LABEL}  ·  ${serialLabel(card.serial)}${card.trial ? "" : "  ·  1 dari 1"}`, 58, H - 50);
   g.font = fontOf(30);
   const label = card.tier.name.toUpperCase();
   const tw = g.measureText(label).width + 44, tx = W - 56 - tw, ty = H - 96;
@@ -139,21 +204,35 @@ async function drawFigureBack(card: CardView, scale: number): Promise<HTMLCanvas
   return canvas;
 }
 
-/** The tokoh card as a phone wallpaper, 1080 × 2340: the card in the middle, the top clear for the clock. */
+/**
+ * The tokoh card as a phone wallpaper, 1080 × 2340, full-art without a frame (handoff v3 `drawWall`):
+ * the figure's top and bottom rows stretched up and down, the figure in the middle fading into
+ * them, the top clear for the clock, the rarity on it, and only a faint "WAM 2026 · #seri" below.
+ */
 async function drawFigureWallpaper(card: FigureCard): Promise<HTMLCanvasElement> {
-  const front = await drawFigureFront(card, 1);
+  const [image] = await Promise.all([loadImage(card.figure.image), fontsReady()]);
   const { width: W, height: H } = WALL;
   const [canvas, g] = canvasOf(W, H);
-  personaBackground(g, card.colors, W, H);
-  const shade = g.createLinearGradient(0, 0, 0, H);
-  shade.addColorStop(0, "rgba(20,19,37,.45)"); shade.addColorStop(0.3, "rgba(20,19,37,0)"); shade.addColorStop(1, "rgba(20,19,37,.6)");
-  g.fillStyle = shade; g.fillRect(0, 0, W, H);
-  const x = 100, y = 760, w = 880, h = 1100;
-  g.save(); g.shadowColor = card.tier.color; g.shadowBlur = card.tier.sort >= 2 ? 90 : 40; g.fillStyle = card.tier.color; rounded(g, x - 8, y - 8, w + 16, h + 16, 52); g.fill(); g.restore();
-  g.save(); rounded(g, x, y, w, h, 44); g.clip(); g.drawImage(front, x, y, w, h); g.restore();
-  g.lineWidth = 6; g.strokeStyle = CREAM; rounded(g, x, y, w, h, 44); g.stroke();
-  g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = card.tier.color; g.font = fontOf(36);
-  g.fillText(`${YEAR_LABEL}  ·  ${card.tier.name.toUpperCase()}  ·  ${serialLabel(card.serial)}`, W / 2, 1990);
+  const top = 720, tall = 1350;
+  if (image) {
+    const scale = Math.max(W / image.width, tall / image.height), sw = W / scale, sh = tall / scale;
+    const sx = (image.width - sw) / 2, sy = (image.height - sh) * 0.2, edge = Math.round(sh * 0.03), middle = top + tall / 2;
+    g.drawImage(image, sx, sy + edge, sw, 2, 0, 0, W, middle);
+    g.drawImage(image, sx, sy + sh - edge - 2, sw, 2, 0, middle, W, H - middle);
+    const [art, ag] = canvasOf(W, tall);
+    cover(ag, image, 0, 0, W, tall, 0.2);
+    ag.globalCompositeOperation = "destination-in";
+    const mask = ag.createLinearGradient(0, 0, 0, tall);
+    mask.addColorStop(0, "rgba(0,0,0,0)"); mask.addColorStop(0.1, "#000"); mask.addColorStop(0.9, "#000"); mask.addColorStop(1, "rgba(0,0,0,0)");
+    ag.fillStyle = mask; ag.fillRect(0, 0, W, tall);
+    g.drawImage(art, 0, top);
+  } else {
+    personaBackground(g, card.colors, W, H);
+    silhouette(g, card.figure.name, 140, top + 60, 800, 980);
+  }
+  rarityFx(g, 0, 0, W, H, rarityOf(card.tier), card.tier.color);
+  g.textAlign = "center"; g.textBaseline = "alphabetic"; g.fillStyle = "rgba(255,255,255,.55)"; g.font = fontOf(26);
+  g.fillText(`${YEAR_LABEL}  ·  ${serialLabel(card.serial)}`, W / 2, H - 150);
   return canvas;
 }
 
