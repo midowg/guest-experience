@@ -1,0 +1,205 @@
+"use client";
+
+import "@fontsource/inter/800.css";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { ArrowLeft, Check, CircleAlert, CircleCheck, Circle, Eye, EyeOff } from "lucide-react";
+import { errorText as wamErrorText, PraWamApiError, praWamRequest } from "@/components/pra-wam/api";
+import { passwordRules } from "@/lib/pra-wam/password";
+import { RESET_NOTE_MAX } from "@/lib/pra-wam/reset-requests";
+import { praWamApi, WELLBEING_PATH, wellbeingPath } from "@/lib/routes";
+import { ThemeBoot, useTheme } from "./context";
+import { cx } from "./parts";
+import css from "./wellbeing.module.css";
+
+/*
+ * Masuk (17 Nov 2026): Wellbeing's own sign-in, with the WAM account (email or nama panggilan,
+ * one password for WAM, Booking Kantor and Wellbeing) through the same WAM APIs as Booking.
+ * "Lupa password?" sends the same reset request to the admin WAM, here on the page; after the
+ * first password, the person may pick a new one (or skip), as in Booking.
+ */
+
+type View = "login" | "forgot" | "forgot-sent" | "new-password";
+
+/** On a phone the keyboard would jump up at once; focus the first field only with a mouse or trackpad. */
+const focusIfDesk = (element: HTMLElement | null) => { if (window.matchMedia?.("(pointer: fine)").matches) element?.focus(); };
+
+/** Only a Wellbeing address may be the way back. */
+const safeNext = (next: string | null) => next && next.startsWith(WELLBEING_PATH) && !next.startsWith("//") ? next : wellbeingPath.home;
+
+/** The five dots, one per dimension. */
+export function WellbeingMark({ className }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
+    <circle cx="24" cy="9" r="6" fill="var(--d-physical)" /><circle cx="38.3" cy="19.4" r="6" fill="var(--d-emotional)" />
+    <circle cx="32.8" cy="36.1" r="6" fill="var(--d-social)" /><circle cx="15.2" cy="36.1" r="6" fill="var(--d-financial)" />
+    <circle cx="9.7" cy="19.4" r="6" fill="var(--d-spiritual)" />
+  </svg>;
+}
+
+function Frame({ title, lead, children, foot }: { title: string; lead?: string; children: ReactNode; foot?: ReactNode }) {
+  const [theme] = useTheme();
+  return <div className={cx(css.tokens, css.login)} data-theme={theme === "system" ? undefined : theme} suppressHydrationWarning>
+    <ThemeBoot />
+    <main className={css.loginColumn}>
+      <WellbeingMark className={css.logo} />
+      <h1 className={css.title} style={{ marginTop: 20 }}>{title}</h1>
+      {lead && <p className={css.muted} style={{ marginTop: 4 }}>{lead}</p>}
+      {children}
+      <p className={cx(css.loginFoot, css.caption, css.faint)}>{foot ?? <>Satu akun untuk WAM, Booking Kantor, dan Wellbeing.</>}</p>
+    </main>
+  </div>;
+}
+
+const Problem = ({ text }: { text: string }) => <div className={cx(css.note, css.noteErr)} role="alert"><CircleAlert size={20} aria-hidden="true" /><span>{text}</span></div>;
+
+function Secret({ id, label, value, onChange, autoComplete, error, placeholder }: { id: string; label: string; value: string; onChange: (value: string) => void; autoComplete: string; error?: string; placeholder?: string }) {
+  const [show, setShow] = useState(false);
+  return <div className={css.field}>
+    <label className={css.fieldLabel} htmlFor={id}>{label}</label>
+    <div className={css.inputWrap}>
+      <input id={id} className={css.input} type={show ? "text" : "password"} autoComplete={autoComplete} placeholder={placeholder} value={value}
+        onChange={event => onChange(event.target.value)} aria-invalid={!!error} style={{ paddingRight: 52 }} />
+      <button type="button" className={css.pwToggle} onClick={() => setShow(!show)} aria-pressed={show} aria-label={show ? `Sembunyikan ${label.toLowerCase()}` : `Tampilkan ${label.toLowerCase()}`}>
+        {show ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+      </button>
+    </div>
+    {error && <span className={css.errText}><CircleAlert size={14} aria-hidden="true" />{error}</span>}
+  </div>;
+}
+
+export function WellbeingLogin({ next }: { next: string | null }) {
+  const router = useRouter();
+  const [view, setView] = useState<View>("login");
+  const [user, setUser] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const first = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (view === "login") focusIfDesk(first.current); }, [view]);
+  // Lupa password and Buat password baru have their own history entry: Back returns to Masuk.
+  useEffect(() => {
+    const onPop = () => { if (!window.history.state?.wbLogin) setView("login"); };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const openView = (target: Exclude<View, "login">) => {
+    if (window.history.state?.wbLogin) window.history.replaceState({ ...window.history.state, wbLogin: target }, "");
+    else window.history.pushState({ ...window.history.state, wbLogin: target }, "");
+    setView(target);
+  };
+  const backToLogin = () => { setError(null); if (window.history.state?.wbLogin) window.history.back(); else setView("login"); };
+  const goNext = () => { router.refresh(); router.replace(safeNext(next)); };
+
+  async function signIn(event: FormEvent) {
+    event.preventDefault();
+    if (!user.trim() || !password) { setError("Isi email atau nama panggilan, dan password."); return; }
+    setBusy(true); setError(null);
+    try {
+      const result = await praWamRequest<{ askNewPassword: boolean }>(praWamApi.login, { method: "POST", json: { email: user.trim(), password } });
+      if (result.data?.askNewPassword) { setBusy(false); openView("new-password"); return; }
+      goNext();
+    } catch (problem) { setError(wamErrorText(problem)); setBusy(false); }
+  }
+
+  if (view === "forgot" || view === "forgot-sent") return <Forgot initial={user} sent={view === "forgot-sent"} onSent={() => openView("forgot-sent")} onBack={backToLogin} />;
+  if (view === "new-password") return <NewPassword current={password} onDone={goNext} />;
+
+  return <Frame title="Wellbeing" lead="Masuk dengan akun WAM kamu.">
+    <form className={css.loginForm} onSubmit={signIn} noValidate>
+      {error && <Problem text={error} />}
+      <div className={css.field}>
+        <label className={css.fieldLabel} htmlFor="wb-user">Email atau nama panggilan</label>
+        <input ref={first} id="wb-user" className={css.input} name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="mis. dewi"
+          value={user} onChange={event => setUser(event.target.value)} />
+      </div>
+      <Secret id="wb-password" label="Password" value={password} onChange={setPassword} autoComplete="current-password" placeholder="Password" />
+      <button type="submit" className={cx(css.btn, css.btnPrimary, css.block)} aria-busy={busy}>{busy ? <><span className={css.spin} aria-hidden="true" />Masuk…</> : "Masuk"}</button>
+      <div className={css.center} style={{ marginTop: 8 }}><button type="button" className={css.link} onClick={() => { setError(null); openView("forgot"); }}>Lupa password?</button></div>
+    </form>
+  </Frame>;
+}
+
+/** Lupa password: a request to the admin WAM to reset to the first password (the same answer for every account). */
+function Forgot({ initial, sent, onSent, onBack }: { initial: string; sent: boolean; onSent: () => void; onBack: () => void }) {
+  const [user, setUser] = useState(initial);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<{ text: string; field?: string } | null>(null);
+  const [answer, setAnswer] = useState("");
+  const first = useRef<HTMLInputElement>(null);
+  useEffect(() => { focusIfDesk(first.current); }, []);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!user.trim()) { setError({ text: "", field: "Isi email kantor atau nama panggilan." }); return; }
+    setBusy(true); setError(null);
+    try {
+      const result = await praWamRequest<{ sent: boolean }>(praWamApi.forgot, { method: "POST", json: { email: user.trim(), note } });
+      setAnswer(result.message); onSent();
+    } catch (problem) { setError({ text: wamErrorText(problem), field: problem instanceof PraWamApiError ? problem.fieldErrors?.email?.[0] : undefined }); }
+    finally { setBusy(false); }
+  }
+
+  const back = <button type="button" className={cx(css.btn, css.btnText, css.block)} style={{ marginTop: 8 }} onClick={onBack}><ArrowLeft size={18} aria-hidden="true" />Kembali ke Masuk</button>;
+  if (sent) return <Frame title="Permintaan terkirim">
+    <div className={cx(css.note, css.noteOk)} role="status" style={{ marginTop: 28 }}><CircleCheck size={20} aria-hidden="true" />
+      <span>{answer || "Permintaan tercatat. Bila akun ini terdaftar, admin WAM akan mengatur ulang password-mu ke password awal."}</span></div>
+    <p className={css.muted} style={{ marginTop: 16 }}>Setelah direset, masuk dengan password awal lalu buat password baru.</p>
+    {back}
+  </Frame>;
+  return <Frame title="Lupa password" lead="Kirim permintaan ke admin WAM. Password-mu akan diatur ulang ke password awal.">
+    <form className={css.loginForm} onSubmit={submit} noValidate>
+      {/* Said once: on the field when it is about the field, else above the form. */}
+      {error?.text && error.text !== error.field && <Problem text={error.text} />}
+      <div className={css.field}>
+        <label className={css.fieldLabel} htmlFor="wb-forgot-user">Email kantor atau nama panggilan</label>
+        <input ref={first} id="wb-forgot-user" className={css.input} autoComplete="username" autoCapitalize="none" spellCheck={false} value={user}
+          onChange={event => setUser(event.target.value)} aria-invalid={!!error?.field} />
+        {error?.field && <span className={css.errText}><CircleAlert size={14} aria-hidden="true" />{error.field}</span>}
+      </div>
+      <div className={css.field}>
+        <label className={css.fieldLabel} htmlFor="wb-forgot-note">Catatan untuk admin <span className={css.faint}>(boleh kosong)</span></label>
+        <textarea id="wb-forgot-note" className={css.input} maxLength={RESET_NOTE_MAX} value={note} onChange={event => setNote(event.target.value)} />
+      </div>
+      <button type="submit" className={cx(css.btn, css.btnPrimary, css.block)} aria-busy={busy}>{busy ? <><span className={css.spin} aria-hidden="true" />Mengirim…</> : "Kirim permintaan"}</button>
+      {back}
+    </form>
+  </Frame>;
+}
+
+/** Right after the first password: a new one (the rules ticked as they type), or skip for now. */
+function NewPassword({ current, onDone }: { current: string; onDone: () => void }) {
+  const [form, setForm] = useState({ next: "", confirm: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fields, setFields] = useState<Record<string, string>>({});
+  const rules = [
+    ...passwordRules.map(rule => ({ id: rule.id, label: rule.label, ok: rule.test(form.next) })),
+    { id: "differs", label: "Berbeda dari password awal", ok: form.next.length > 0 && form.next !== current },
+    { id: "same", label: "Diulang sama persis", ok: form.confirm.length > 0 && form.confirm === form.next },
+  ];
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (rules.some(rule => !rule.ok)) { setError("Password baru belum memenuhi semua syarat di bawah."); return; }
+    setBusy(true); setError(null); setFields({});
+    try { await praWamRequest(praWamApi.password, { method: "POST", json: { current, next: form.next, confirm: form.confirm } }); onDone(); }
+    catch (problem) {
+      if (problem instanceof PraWamApiError && problem.fieldErrors) setFields(Object.fromEntries(Object.entries(problem.fieldErrors).map(([key, list]) => [key, list[0]])));
+      setError(wamErrorText(problem)); setBusy(false);
+    }
+  }
+
+  return <Frame title="Buat password baru" lead="Kamu masuk dengan password awal. Sebaiknya ganti sekarang.">
+    <form className={css.loginForm} onSubmit={submit} noValidate>
+      {error && <Problem text={error} />}
+      <Secret id="wb-next" label="Password baru" value={form.next} onChange={value => setForm({ ...form, next: value })} autoComplete="new-password" error={fields.next} />
+      <Secret id="wb-confirm" label="Ulangi password baru" value={form.confirm} onChange={value => setForm({ ...form, confirm: value })} autoComplete="new-password" error={fields.confirm} />
+      <ul className={css.rules} aria-label="Syarat password">{rules.map(rule => <li key={rule.id} data-ok={rule.ok}>
+        {rule.ok ? <Check size={16} aria-hidden="true" /> : <Circle size={16} aria-hidden="true" />}{rule.label}<span className="sr-only">{rule.ok ? " (terpenuhi)" : " (belum)"}</span>
+      </li>)}</ul>
+      <button type="submit" className={cx(css.btn, css.btnPrimary, css.block)} aria-busy={busy}>{busy ? <><span className={css.spin} aria-hidden="true" />Menyimpan…</> : "Simpan password"}</button>
+      <button type="button" className={cx(css.btn, css.btnText, css.block)} style={{ marginTop: 8 }} onClick={onDone}>Lewati, atur nanti</button>
+    </form>
+  </Frame>;
+}
