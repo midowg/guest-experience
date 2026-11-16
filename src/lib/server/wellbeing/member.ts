@@ -14,7 +14,7 @@ import { databaseError } from "../http";
 import type { Member } from "../pra-wam/session";
 import { isR2Configured, presignUpload, removeObjects, verifyUpload } from "../r2";
 import { board, ledgerItems, placeOf, streakDays, streakStart, weekSeries, type LedgerActivity, type LedgerEntry } from "./member-rules";
-import { afterCursor, cursorOf, db, fail, missing, readAll, readSettings, readTotals, waiting, withPhotoUrls, zeroDims, type Row, type Totals } from "./shared";
+import { afterDayCursor, dayCursorOf, db, fail, missing, readAll, readSettings, readTotals, waiting, withPhotoUrls, zeroDims, type Row, type Totals } from "./shared";
 import { isOwnUploadKey, uploadKeyFor, uploadToken, uploadTokenMatches } from "./uploads";
 
 /*
@@ -128,12 +128,14 @@ const blockedText = (limit: Limit) => (limit === "day" ? "Sudah dicatat hari ini
 
 export async function catalog(member: Member, now = new Date()): Promise<WbAppCatalog> {
   const today = wibToday(now), month = monthRange(today);
+  // This month (limits) and the longest backdate window (one per day), whichever starts earlier.
+  const since = [month.from, addDays(today, -60)].sort()[0];
   const client = db();
   const [types, settings, logged] = await Promise.all([
     client.from("wb_activity_types").select(TYPE_COLUMNS).eq("active", true),
     readSettings(),
     readAll((from, to) => client.from("wb_activities").select("id,type_code,happened_on").eq("employee_id", member.id).neq("status", "rejected")
-      .gte("happened_on", month.from).lte("happened_on", month.to).order("id").range(from, to)),
+      .gte("happened_on", since).lte("happened_on", month.to).order("id").range(from, to)),
   ]);
   const rules = rulesOf(settings.settings);
   for (const error of [types.error, logged.error]) if (error) { if (missing(error)) return { migrated: false, daily: [], sports: [], rules, today }; databaseError(error); }
@@ -147,7 +149,8 @@ export async function catalog(member: Member, now = new Date()): Promise<WbAppCa
     const limit = (row.limit_per as Limit | null) ?? null;
     return {
       code: row.code as string, dimension: row.dimension_id as DimensionId, name: row.name as string, mode: row.points_mode as WbCatalogDaily["mode"], points: row.points as number,
-      limit, proofHint: (row.proof_hint as string) ?? "", blocked: limit && limitReached(limit, today, datesOf.get(row.code as string) ?? []) ? blockedText(limit) : null,
+      limit, proofHint: (row.proof_hint as string) ?? "", blocked: limit === "month" && limitReached(limit, today, datesOf.get(row.code as string) ?? []) ? blockedText(limit) : null,
+      loggedOn: [...new Set((datesOf.get(row.code as string) ?? []).filter(date => date >= addDays(today, -rules.backdateDays)))].sort(),
     };
   });
   const sports = rows.filter(row => row.kind === "sport").map((row): WbCatalogSport => ({ code: row.code as string, name: row.name as string, proofHint: (row.proof_hint as string) ?? "" }));
@@ -157,18 +160,19 @@ export async function catalog(member: Member, now = new Date()): Promise<WbAppCa
 /* ---------- Riwayat ---------- */
 
 export async function myActivities(member: Member, filter: WbMyActivityFilter, before?: string): Promise<WbMyActivityPage> {
-  let request = db().from("wb_activities").select(MY_COLUMNS).eq("employee_id", member.id).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(PAGE_SIZE + 1);
+  let request = db().from("wb_activities").select(MY_COLUMNS).eq("employee_id", member.id)
+    .order("happened_on", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(PAGE_SIZE + 1);
   // Sports are the sport.* codes (as in Admin Periksa); those from Strava have their own tab.
   if (filter === "daily") request = request.not("type_code", "like", "sport.%");
   if (filter === "sport") request = request.like("type_code", "sport.%").neq("source", "strava");
   if (filter === "strava") request = request.eq("source", "strava");
-  if (before) request = request.or(afterCursor(before));
+  if (before) request = request.or(afterDayCursor(before));
   const { data, error } = await request;
   if (error) { if (missing(error)) return { migrated: false, items: [], next: null }; databaseError(error); }
   const rows = ((data ?? []) as unknown as Row[]).map(toMine);
   const more = rows.length > PAGE_SIZE;
   const items = more ? rows.slice(0, PAGE_SIZE) : rows;
-  return { migrated: true, items: await withPhotoUrls(items), next: more ? cursorOf(items.at(-1)!) : null };
+  return { migrated: true, items: await withPhotoUrls(items), next: more ? dayCursorOf(items.at(-1)!) : null };
 }
 
 /** One of my activities; someone else's (or none) is 404. */

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { notFound, redirect } from "next/navigation";
 import { WellbeingApp } from "@/components/wellbeing/WellbeingApp";
 import { WELLBEING_PATH, wellbeingPath } from "@/lib/routes";
@@ -7,6 +7,8 @@ import { currentMember } from "@/lib/server/pra-wam/session";
 import { WELLBEING_SECTIONS, type WbMe } from "@/lib/wellbeing/app-types";
 
 export const dynamic = "force-dynamic";
+/** A phone app: drawn under the notch (safe areas in CSS), and the keyboard shrinks the page so sheets keep their buttons in view. */
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
 export const metadata: Metadata = { title: { absolute: "Wellbeing" }, applicationName: "Wellbeing", robots: { index: false, follow: false } };
 
 /**

@@ -66,7 +66,9 @@ export type WbHome = {
 /** GET /api/wellbeing/catalog */
 export type WbCatalogDaily = { code: string; dimension: DimensionId; name: string; mode: Exclude<PointsMode, "kcal">; points: number; limit: Limit | null; proofHint: string;
   /** Why it cannot be logged today (limit reached), or null. */
-  blocked: string | null };
+  blocked: string | null;
+  /** Days (within the backdate window and this month) it is already logged and counted: one per day, so the app warns before any upload. */
+  loggedOn: string[] };
 export type WbCatalogSport = { code: string; name: string; proofHint: string };
 export type WbAppCatalog = { migrated: boolean; daily: WbCatalogDaily[]; sports: WbCatalogSport[]; rules: WbRules; today: string };
 

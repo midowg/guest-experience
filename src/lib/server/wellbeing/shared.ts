@@ -21,6 +21,14 @@ export type Row = Record<string, unknown>;
  */
 const CURSOR = /^(\d{4}-\d{2}-\d{2}[T ][0-9:.]+(?:Z|[+-]\d{2}(?::?\d{2})?)?)~([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 export const cursorOf = (row: { createdAt: string; id: string }) => `${row.createdAt}~${row.id}`;
+/** Riwayat's cursor: the day first ("<date>~<created_at>~<id>"), for a list ordered by day, then time, then id. */
+export const dayCursorOf = (row: { date: string; createdAt: string; id: string }) => `${row.date}~${row.createdAt}~${row.id}`;
+export function afterDayCursor(cursor: string): string {
+  const day = /^(\d{4}-\d{2}-\d{2})~(.+)$/.exec(cursor);
+  if (!day || Number.isNaN(Date.parse(`${day[1]}T00:00:00Z`))) throw new ServiceError(422, "Halaman berikutnya tidak dikenali. Muat ulang daftarnya.");
+  const [, time, id] = /^created_at\.lt\."([^"]+)",and\(created_at\.eq\."[^"]+",id\.lt\.([0-9a-f-]+)\)$/.exec(afterCursor(day[2]))!;
+  return `happened_on.lt.${day[1]},and(happened_on.eq.${day[1]},created_at.lt."${time}"),and(happened_on.eq.${day[1]},created_at.eq."${time}",id.lt.${id})`;
+}
 /** The PostgREST `or` filter for "after this cursor" in a newest-first list, or a 422 for a cursor that is not ours. */
 export function afterCursor(cursor: string): string {
   const match = CURSOR.exec(cursor);
