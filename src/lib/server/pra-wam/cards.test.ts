@@ -42,7 +42,8 @@ function query(table: string) {
   };
   const builder = {
     select: () => builder, order: () => builder, limit: () => builder, neq: () => builder, in: () => builder,
-    eq: (key: string, value: unknown) => { filters.push(row => row[key] === value); return builder; },
+    // "roll->reroll->>at" reads inside a JSON column, as PostgREST does.
+    eq: (key: string, value: unknown) => { filters.push(row => key.split(/->>?/).reduce<unknown>((at, part) => (at as Row | undefined)?.[part], row) === value); return builder; },
     is: (key: string, value: unknown) => { filters.push(row => (row[key] ?? null) === value); return builder; },
     not: (key: string, _op: string, value: unknown) => { filters.push(row => (row[key] ?? null) !== value); return builder; },
     insert: (row: Row) => { op = "insert"; payload = row; return builder; },
@@ -55,6 +56,13 @@ function query(table: string) {
 }
 vi.mock("../supabase/admin", () => ({ createPrivilegedClient: () => ({ from: query }) }));
 vi.mock("server-only", () => ({}));
+// Admin WAM's side (cards-admin) needs the form and nothing else of these here.
+vi.mock("./questionnaire", () => ({
+  currentForm: async () => ({ id: "f1", name: "Kuesioner", slug: "kuesioner", oldSlugs: [], status: "buka", intro: "", cardText: "", minutes: 15, editUntil: null, stayDeleteOn: null, hrAccess: [], audience: "semua", audienceIds: [] }),
+  formContent: async () => ({ sections: [], questions: [] }), questionnaireWaiting: () => new Error("menunggu"),
+}));
+vi.mock("./appraisal", () => ({ listPeople: async () => [] }));
+vi.mock("../r2", () => ({ isR2Configured: () => false, presignUpload: vi.fn(), removeObjects: vi.fn(), verifyUpload: vi.fn() }));
 
 const { ensureCard, followAnswers, myCard, rerollCard } = await import("./cards");
 
@@ -208,6 +216,24 @@ describe("kartu tokoh dunia", () => {
       await expect(rerollCard(form(), "p1")).rejects.toThrow("sudah memakai jatah");
       // Edmund Hillary is free again for the next person.
       expect((await ensureCard(form(), "p3", outdoorsy))?.figure?.key).toBe("edmund-hillary");
+    });
+
+    it("can be given back by Admin WAM: the figure stays, the person may re-roll again, the record keeps both", async () => {
+      open();
+      const { resetReroll } = await import("./cards-admin");
+      await ensureCard(form(), "00000000-0000-4000-8000-000000000001", outdoorsy);
+      await expect(resetReroll("00000000-0000-4000-8000-000000000001")).rejects.toThrow("belum memakai re-roll");
+      const first = await rerollCard(form(), "00000000-0000-4000-8000-000000000001");
+      expect(await resetReroll("00000000-0000-4000-8000-000000000001")).toBe(first.figure?.key);
+      const given = await myCard(form(), "00000000-0000-4000-8000-000000000001");
+      expect([given?.figure?.key, given?.reroll?.state]).toEqual([first.figure?.key, "open"]);
+      const second = await rerollCard(form(), "00000000-0000-4000-8000-000000000001");
+      expect(second.figure?.key).not.toBe(first.figure?.key);
+      expect(second.reroll?.state).toBe("used");
+      const roll = db.cq_person_cards[0].roll as { reroll: { from: string }; rerolls: { from: string; resetAt: string }[] };
+      expect(roll.rerolls).toHaveLength(1);
+      expect(roll.rerolls[0]).toMatchObject({ from: "edmund-hillary", to: first.figure?.key });
+      expect(roll.reroll.from).toBe(first.figure?.key);
     });
 
     it("says so when no other figure is free, and never for a trial card", async () => {

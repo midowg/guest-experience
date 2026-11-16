@@ -102,6 +102,29 @@ export async function adminCards(): Promise<AdminCards | null> {
   return { catalog, questions, drawn, willChange, following, rerollUntil: until };
 }
 
+/**
+ * Gives one person their re-roll again (16 Nov 2026, the owner's request): their figure, rarity and
+ * number stay; only "re-rolled" goes, kept in the record (roll.rerolls) for Admin WAM. The figure
+ * before it is not given back: someone may have it by now. They may re-roll while it is open.
+ */
+export async function resetReroll(employeeId: string): Promise<string> {
+  const form = await formOrWait();
+  const client = createPrivilegedClient();
+  const { data, error } = await client.from("cq_person_cards").select("roll").eq("form_id", form.id).eq("employee_id", employeeId).eq("trial", false).maybeSingle();
+  if (error) failed(error);
+  const roll = (data as { roll: Roll } | null)?.roll;
+  if (!roll) throw new ServiceError(404, "Kartu orang ini tidak ditemukan. Muat ulang halaman.");
+  if (!roll.reroll) throw new ServiceError(409, "Orang ini belum memakai re-roll.");
+  const { reroll, ...rest } = roll;
+  const next: Roll = { ...rest, rerolls: [...(roll.rerolls ?? []), { ...reroll, resetAt: new Date().toISOString() }].slice(-10) };
+  // Only while it is still the same re-roll: two admins at once give it back once.
+  const { data: updated, error: updateError } = await client.from("cq_person_cards").update({ roll: next })
+    .eq("form_id", form.id).eq("employee_id", employeeId).eq("trial", false).eq("roll->reroll->>at", reroll.at).select("employee_id");
+  if (updateError) failed(updateError);
+  if (!updated?.length) throw new ServiceError(409, "Kartu ini baru saja berubah. Muat ulang halaman.");
+  return reroll.to;
+}
+
 /** Opens the one re-roll per person until a moment, or closes it (v3, Hanung 16 Nov 2026). */
 export async function saveRerollWindow(input: RerollWindowInput): Promise<void> {
   const form = await formOrWait();

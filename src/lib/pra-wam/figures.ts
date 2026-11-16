@@ -53,6 +53,8 @@ export const legendClasses: Record<string, string> = {
 /** Admin WAM opens the re-roll until a moment, or closes it (null). */
 export const rerollWindowSchema = z.object({ rerollUntil: z.iso.datetime({ offset: true }).nullable() });
 export type RerollWindowInput = z.infer<typeof rerollWindowSchema>;
+/** Admin WAM gives one person their re-roll again (16 Nov 2026). */
+export const rerollResetSchema = z.object({ resetReroll: z.uuid() });
 
 /** How many stars each rarity has on the card, Common to Legendary (handoff v3). */
 export const SPARK_COUNT = [0, 2, 4, 7, 10] as const;

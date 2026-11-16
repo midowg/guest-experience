@@ -53,3 +53,25 @@ it("with tokoh cards, shows only the figures' pictures and the levels, uploads f
   fireEvent.click(await screen.findByRole("button", { name: "Hapus gambar" }));
   await waitFor(() => expect(adminRequest).toHaveBeenCalledWith("/api/admin/wam/questionnaire/cards/art", { method: "DELETE" }));
 });
+
+it("gives one person their re-roll again, after asking (16 Nov 2026)", async () => {
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); };
+  const { adminRequest } = await import("@/components/admin/shared/api");
+  const figure = { id: "00000000-0000-4000-8000-0000000000f1", number: 1, key: "edmund-hillary", name: "Edmund Hillary", personaId: data.catalog.characters[0].id, costume: "", hobbies: [], activities: [], energy: "", genre: "", indonesian: false, funny: false, quote: null, hidden: false, image: "/figur/edmund-hillary.webp", stored: false, legendImage: null };
+  const other = { ...figure, id: "00000000-0000-4000-8000-0000000000f2", number: 2, key: "affandi", name: "Affandi" };
+  const employeeId = "00000000-0000-4000-8000-0000000000aa";
+  const roll = { at: "2026-11-16T03:00:00.000Z", odds: {}, caps: {}, taken: {}, number: 1, landed: "common", passed: [], tier: "common", scores: {}, tied: [], character: "penghibur", look: { background: 1, accent: 1, stickers: [] },
+    reroll: { at: "2026-11-16T05:00:00.000Z", from: "edmund-hillary", to: "affandi", score: 0 } };
+  const tokoh: AdminCards = {
+    ...data, catalog: { ...data.catalog, figures: [figure, other], figuresReady: true },
+    drawn: [{ employeeId, name: "Dewi", department: "", serial: 1, trial: false, characterId: data.catalog.characters[0].id, tierKey: "common", drawnAt: roll.at, roll, dna: "a1", figureId: other.id, reason: null }],
+  };
+  render(<CardCatalog initial={tokoh} />);
+  expect(screen.getByText(/1 dari 1 orang sudah memakai re-roll/)).toBeTruthy();
+  expect(screen.getByText(/Edmund Hillary → Affandi/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Beri re-roll lagi" }));
+  const dialog = await screen.findByRole("dialog", { name: /Beri Dewi re-roll lagi/ });
+  fireEvent.click(Array.from(dialog.querySelectorAll("button")).find(button => button.textContent === "Beri re-roll lagi")!);
+  await waitFor(() => expect(adminRequest).toHaveBeenCalledWith("/api/admin/wam/questionnaire/cards", { method: "PATCH", body: JSON.stringify({ resetReroll: employeeId }) }));
+});

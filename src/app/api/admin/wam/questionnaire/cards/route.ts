@@ -1,9 +1,9 @@
 import { characterSchema } from "@/lib/pra-wam/cards";
-import { rerollWindowSchema } from "@/lib/pra-wam/figures";
+import { rerollResetSchema, rerollWindowSchema } from "@/lib/pra-wam/figures";
 import { requireApiAdmin } from "@/lib/server/admin-session";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { cardsWaiting } from "@/lib/server/pra-wam/cards";
-import { adminCards, createCharacter, saveRerollWindow } from "@/lib/server/pra-wam/cards-admin";
+import { adminCards, createCharacter, resetReroll, saveRerollWindow } from "@/lib/server/pra-wam/cards-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +17,20 @@ export async function GET() {
   });
 }
 
-/** PATCH: open the one re-roll per person until a moment, or close it (any admin). */
+/**
+ * PATCH (any admin): { rerollUntil } opens the one re-roll per person until a moment, or closes
+ * it; { resetReroll: employeeId } gives one person their re-roll again.
+ */
 export async function PATCH(request: Request) {
   return handle(async () => {
     await requireApiAdmin();
     checkOrigin(request);
-    const input = validate(rerollWindowSchema, await readJson(request, 2_000));
+    const body = await readJson(request, 2_000);
+    if (body && typeof body === "object" && "resetReroll" in body) {
+      await resetReroll(validate(rerollResetSchema, body).resetReroll);
+      return success({ cards: await adminCards() }, "Re-roll diberikan lagi. Orang ini bisa re-roll sekali lagi selama re-roll dibuka.");
+    }
+    const input = validate(rerollWindowSchema, body);
     await saveRerollWindow(input);
     return success({ cards: await adminCards() }, input.rerollUntil ? "Re-roll dibuka." : "Re-roll ditutup.");
   });

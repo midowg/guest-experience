@@ -124,6 +124,8 @@ export type Roll = {
   figure?: { key: string; score: number; tied: string[]; at: string };
   /** The one re-roll (v3): when, and the figure before and after. Never shown to staff. */
   reroll?: { at: string; from: string; to: string; score: number };
+  /** Re-rolls Admin WAM gave back (resetAt), so the person could re-roll again. Never shown to staff. */
+  rerolls?: { at: string; from: string; to: string; score: number; resetAt: string }[];
 };
 
 export const PERSON_COLUMNS = "employee_id,card_id,tier_key,background,accent,stickers,serial,trial,combo,dna,roll,drawn_at";

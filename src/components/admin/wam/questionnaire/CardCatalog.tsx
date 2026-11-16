@@ -51,6 +51,16 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
     });
   }
   const trials = data.drawn.length - real.length;
+  const figureName = (key: string) => catalog.figures.find(figure => figure.key === key)?.name ?? key;
+
+  /** One person may re-roll again (their figure, rarity and number stay). */
+  async function giveReroll(employeeId: string, name: string) {
+    if (!(await confirm({ title: `Beri ${name} re-roll lagi?`, body: "Tokohnya sekarang tetap sampai dia re-roll lagi. Tokoh sebelumnya tidak dikembalikan. Rarity dan nomor kartu tetap. Re-roll hanya bisa dipakai selama waktu re-roll dibuka.", confirmLabel: "Beri re-roll lagi" }))) return;
+    await run(`reroll:${employeeId}`, async () => {
+      const result = await adminRequest<{ cards: AdminCards }>(praWamCardsApi.catalog, { method: "PATCH", body: JSON.stringify({ resetReroll: employeeId }) });
+      return { message: result.message ?? "Tersimpan.", cards: result.data?.cards };
+    });
+  }
 
   async function reload() {
     const result = await adminRequest<AdminCards>(praWamCardsApi.catalog);
@@ -173,7 +183,9 @@ export function CardCatalog({ initial }: { initial: AdminCards }) {
               <p>Angka undian {roll.number} dari 0–{ODDS_TOTAL - 1}, jatuh di {tierOf.get(roll.landed)?.name ?? roll.landed}{roll.passed?.length ? `, turun karena batas penuh: ${roll.passed.map(key => tierOf.get(key)?.name ?? key).join(", ")}` : ""}.</p>
               <p>Karakter saat diundi: {named(roll.character)}{roll.tied?.length > 1 ? `, diundi di antara yang seri: ${roll.tied.map(named).join(", ")}` : ""}.</p>
               {roll.figure ? <p>Tokoh: {catalog.figures.find(figure => figure.key === roll.figure!.key)?.name ?? roll.figure.key}, skor {roll.figure.score}{roll.figure.tied.length > 1 ? `, diundi di antara yang seri: ${roll.figure.tied.map(key => catalog.figures.find(figure => figure.key === key)?.name ?? key).join(", ")}` : ""}.{card.reason ? ` ${card.reason}` : ""}</p> : null}
-              {roll.reroll ? <p>Re-roll {when(roll.reroll.at)}: {catalog.figures.find(figure => figure.key === roll.reroll!.from)?.name ?? roll.reroll.from} → {catalog.figures.find(figure => figure.key === roll.reroll!.to)?.name ?? roll.reroll.to}.</p> : null}
+              {roll.rerolls?.map(done => <p key={done.at}>Re-roll {when(done.at)}: {figureName(done.from)} → {figureName(done.to)} (diberikan lagi {when(done.resetAt)}).</p>)}
+              {roll.reroll ? <p>Re-roll {when(roll.reroll.at)}: {figureName(roll.reroll.from)} → {figureName(roll.reroll.to)}.{" "}
+                <Button type="button" variant="secondary" disabled={!!busy} onClick={() => void giveReroll(card.employeeId, card.name)}>Beri re-roll lagi</Button></p> : null}
               {roll.changes?.length ? <p>Berganti karakter: {roll.changes.map(change => `${named(change.from)} → ${named(change.to)}${change.kept ? " (dibatalkan, kombinasi sudah dipakai)" : ""}`).join("; ")}.</p> : null}
               <p className={styles.muted}>DNA {card.dna}</p>
             </details></td>
