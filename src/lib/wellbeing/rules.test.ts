@@ -20,6 +20,8 @@ describe("dates", () => {
     expect(dateProblem("2026-11-23", "2026-11-16", 7)).toMatch(/setelah hari ini/);
     expect(dateProblem("2026-13-01", "2026-11-16", 7)).toMatch(/tidak valid/);
     expect(dateProblem("2026-11-15", "2026-11-16", 0)).toMatch(/hari ini/);
+    // 17 Nov 2026: a date that does not exist is refused, not passed on to the database.
+    expect(dateProblem("2026-02-30", "2026-03-03", 7)).toMatch(/tidak valid/);
   });
   it("counts the WIB day, not UTC", () => {
     expect(wibToday(new Date("2026-11-15T18:30:00Z"))).toBe("2026-11-16");

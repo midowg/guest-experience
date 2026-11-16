@@ -8,7 +8,7 @@ const query = z.object({
   filter: z.enum(ACTIVITY_FILTERS).default("unchecked"),
   kind: z.enum(ACTIVITY_KINDS).default("all"),
   q: z.string().trim().max(80).optional(),
-  before: z.iso.datetime({ offset: true }).optional(),
+  before: z.string().max(120).optional(),
   employee: z.uuid().optional(),
 });
 

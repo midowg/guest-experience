@@ -70,7 +70,7 @@ export type WbCatalogDaily = { code: string; dimension: DimensionId; name: strin
 export type WbCatalogSport = { code: string; name: string; proofHint: string };
 export type WbAppCatalog = { migrated: boolean; daily: WbCatalogDaily[]; sports: WbCatalogSport[]; rules: WbRules; today: string };
 
-/** GET /api/wellbeing/activities?filter=all|daily|sport|strava&before=<createdAt> (20 per page, newest first) */
+/** GET /api/wellbeing/activities?filter=all|daily|sport|strava&before=<the previous page's `next`> (20 per page, newest first) */
 export type WbMyActivityFilter = "all" | "daily" | "sport" | "strava";
 export type WbMyActivityPage = { migrated: boolean; items: WbMyActivity[]; next: string | null };
 

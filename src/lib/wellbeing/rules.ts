@@ -71,7 +71,7 @@ export const previousMonth = (date: string) => monthRange(shift(`${date.slice(0,
 
 /** Why an activity date is refused, or null when it may be logged today. */
 export function dateProblem(date: string, today: string, backdateDays: number): string | null {
-  if (!DAY.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) return "Tanggal tidak valid.";
+  if (!DAY.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`)) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) return "Tanggal tidak valid.";
   if (date > today) return "Tanggal tidak boleh setelah hari ini.";
   if (date < shift(today, -backdateDays)) return backdateDays === 0 ? "Hanya bisa mencatat untuk hari ini." : `Paling lama ${backdateDays} hari ke belakang.`;
   return null;
@@ -142,4 +142,65 @@ export function rank<T extends { points: number }>(rows: readonly T[]): (T & { r
     if (row.points !== last) { place = index + 1; last = row.points; }
     return { ...row, rank: place };
   });
+}
+
+/*
+ * The employee app (/wellbeing, 17 Nov 2026): proof photos and the "Catat" form. The server checks
+ * the same rules again with the programme's settings (logValues) and the employee's own history.
+ */
+
+/** The most proof photos one activity may carry (the database allows 5). */
+export const MAX_PHOTOS = 5;
+/** One proof photo: a phone photo or screenshot, at most 8 MB. */
+export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+// No HEIC (17 Nov 2026): browsers other than Safari cannot show it in Periksa; with these types a phone sends JPEG.
+export const PHOTO_MIMES = ["image/jpeg", "image/png", "image/webp"] as const;
+export type PhotoMime = (typeof PHOTO_MIMES)[number];
+/** Fewer steps than this is not a day's walk worth logging. */
+export const MIN_STEPS = 100;
+
+export const uploadStartSchema = z.object({
+  mime: z.enum(PHOTO_MIMES, { message: "Foto harus JPG, PNG, atau WebP." }),
+  size: z.number().int().min(1, "Berkas kosong.").max(MAX_PHOTO_BYTES, "Foto lebih dari 8 MB."),
+});
+export type UploadStartInput = z.infer<typeof uploadStartSchema>;
+
+const unknownUpload = "Unggahan tidak dikenali. Unggah ulang fotonya.";
+const uploadedPhotoSchema = uploadStartSchema.extend({
+  key: z.string().max(200, unknownUpload),
+  token: z.string().regex(/^\d{10,13}\.[0-9a-f]{64}$/, unknownUpload),
+});
+
+export const logSchema = z.object({
+  code: z.string().trim().regex(/^[a-z]+\.[a-z0-9_]{2,60}$/, "Pilih kegiatannya."),
+  date: z.string().regex(DAY, "Tanggal tidak valid."),
+  steps: z.number().int("Jumlah langkah harus bilangan bulat.").min(0).max(200000, "Jumlah langkah terlalu besar.").nullish(),
+  kcal: z.number().min(0).max(20000, "Kalori terlalu besar.").nullish(),
+  minutes: z.number().int("Durasi dalam menit, bilangan bulat.").min(1, "Durasi minimal 1 menit.").max(1440, "Durasi paling lama 1440 menit (sehari).").nullish(),
+  note: z.string().trim().max(500, "Catatan paling banyak 500 karakter.").default(""),
+  photos: z.array(uploadedPhotoSchema).min(1, "Lampirkan minimal satu foto bukti.").max(MAX_PHOTOS, `Paling banyak ${MAX_PHOTOS} foto.`),
+  force: z.boolean().default(false),
+}).superRefine((value, ctx) => {
+  if (new Set(value.photos.map(photo => photo.key)).size !== value.photos.length) ctx.addIssue({ code: "custom", path: ["photos"], message: "Ada foto yang terkirim dua kali." });
+});
+export type LogInput = z.infer<typeof logSchema>;
+
+const count = (value: number) => value.toLocaleString("id-ID");
+
+/**
+ * What a log stores for its type's points mode, or the field errors: steps for a steps type
+ * (MIN_STEPS to maxSteps), kcal for a kcal type (1 to maxKcal, rounded; minutes optional), nothing
+ * for a fixed type (anything else sent is dropped).
+ */
+export function logValues(mode: PointsMode, input: Pick<LogInput, "steps" | "kcal" | "minutes">, settings: Pick<WellbeingSettings, "maxKcal" | "maxSteps">):
+  { ok: true; steps: number | null; kcal: number | null; minutes: number | null } | { ok: false; fieldErrors: Record<string, string[]> } {
+  if (mode === "fixed") return { ok: true, steps: null, kcal: null, minutes: null };
+  if (mode === "steps") {
+    const steps = input.steps ?? null;
+    const problem = steps === null ? "Isi jumlah langkahnya." : steps < MIN_STEPS ? `Langkah minimal ${count(MIN_STEPS)}.` : steps > settings.maxSteps ? `Paling banyak ${count(settings.maxSteps)} langkah sehari.` : null;
+    return problem ? { ok: false, fieldErrors: { steps: [problem] } } : { ok: true, steps, kcal: null, minutes: null };
+  }
+  const kcal = input.kcal === null || input.kcal === undefined ? null : Math.round(input.kcal);
+  const problem = kcal === null ? "Isi kalori yang terbakar." : kcal < 1 ? "Kalori minimal 1." : kcal > settings.maxKcal ? `Paling banyak ${count(settings.maxKcal)} kkal untuk satu olahraga.` : null;
+  return problem ? { ok: false, fieldErrors: { kcal: [problem] } } : { ok: true, steps: null, kcal, minutes: input.minutes ?? null };
 }

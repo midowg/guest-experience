@@ -1,6 +1,6 @@
 import "server-only";
 import { wibDate } from "@/lib/pra-wam/appraisal";
-import { BOOKING_PATH, bookingPath, praWamPath, wamAdminPath, wellbeingAdminPath } from "@/lib/routes";
+import { BOOKING_PATH, bookingPath, praWamPath, wamAdminPath, WELLBEING_PATH, wellbeingAdminPath, wellbeingPath } from "@/lib/routes";
 import { currentPhase } from "./pra-wam/events";
 import { openResetRequestCount } from "./pra-wam/reset-requests";
 
@@ -8,7 +8,8 @@ import { openResetRequestCount } from "./pra-wam/reset-requests";
  * The standalone apps (10 Nov 2026): the ones that run on their own at a fixed address, apart from
  * the events and their invitations: WAM, Booking Kantor and TV Announcement. They head the admin's
  * event list in one "Aplikasi" section, with the Your Visit guide beside them. Wellbeing joined on
- * 16 Nov 2026 (its employee app comes later; until then the card opens the admin).
+ * 16 Nov 2026; since 17 Nov 2026 its card opens the employee app (/wellbeing), which is not yet
+ * announced: the old app stays the official one until then.
  */
 export type StandaloneApp = {
   key: "wam" | "booking" | "tv" | "wellbeing";
@@ -56,9 +57,9 @@ export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]>
     },
     {
       key: "wellbeing", name: "Wellbeing", eyebrow: "Program karyawan",
-      status: "Admin siap · aplikasi karyawan menyusul", address: wellbeingAdminPath(),
-      description: "Program wellbeing kantor: karyawan mencatat aktivitas per dimensi dan mengumpulkan poin. Admin memeriksa aktivitas, memberi poin ke banyak orang, dan melihat juara bulanan.",
-      open: { label: "Buka admin", href: wellbeingAdminPath() }, manage: { label: "Kelola Wellbeing", href: wellbeingAdminPath() },
+      status: "Aplikasi karyawan · belum diumumkan", address: WELLBEING_PATH,
+      description: "Program wellbeing kantor: karyawan masuk dengan akun WAM, mencatat aktivitas per dimensi, dan mengumpulkan poin. Admin memeriksa aktivitas, memberi poin ke banyak orang, dan melihat juara bulanan.",
+      open: { label: "Buka aplikasi", href: wellbeingPath.home }, manage: { label: "Kelola Wellbeing", href: wellbeingAdminPath() },
     },
   ];
 }

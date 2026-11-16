@@ -1,11 +1,12 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { DIMENSIONS, MIGRATION_WELLBEING, defaultSettings, monthRange, previousMonth, rank, wibToday, type CatalogItemInput, type DimensionId, type PointBatchInput, type ReviewInput } from "@/lib/wellbeing/rules";
+import { DIMENSIONS, defaultSettings, monthRange, previousMonth, rank, wibToday, type CatalogItemInput, type DimensionId, type PointBatchInput, type ReviewInput } from "@/lib/wellbeing/rules";
 import type { WbActivity, WbActivityPage, WbBatchResult, WbCatalog, WbCatalogItem, WbChampion, WbOverview, WbPeople, WbPersonDetail, WbPointEntry, WbSettingsView } from "@/lib/wellbeing/types";
 import { currentAdmin } from "../admin-actor";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
+import { afterCursor, cursorOf, missing, readTotals, waiting, withPhotoUrls, type Totals } from "./shared";
 
 /*
  * Admin Wellbeing's data (16 Nov 2026, migration 202611160050). Every read answers `migrated: false`
@@ -22,8 +23,6 @@ export async function wellbeingActor(): Promise<Actor> {
   return { name: actor?.kind === "super" ? "Super admin" : actor?.name || "Admin", employeeId: actor?.kind === "person" ? actor.employeeId : undefined };
 }
 
-const missing = (error: { code?: string; message?: string } | null) => !!error && (["PGRST205", "PGRST202", "42P01", "42883"].includes(error.code ?? "") || /wb_[a-z_]+/.test(error.message ?? "") && /does not exist|could not find/i.test(error.message ?? ""));
-const waiting = () => new ServiceError(503, `Wellbeing menunggu migrasi ${MIGRATION_WELLBEING}. Minta pemilik menjalankannya di Supabase SQL Editor.`);
 const fail = (error: { code?: string; message: string }): never => { if (missing(error)) throw waiting(); return databaseError(error); };
 const zeroDims = (): Record<DimensionId, number> => ({ physical: 0, emotional: 0, social: 0, financial: 0, spiritual: 0 });
 const db = () => createPrivilegedClient();
@@ -31,6 +30,7 @@ const db = () => createPrivilegedClient();
 const ACTIVITY_COLUMNS = "id,employee_id,type_code,dimension_id,happened_on,source,title,steps,kcal,minutes,distance_m,note,photos,points_claimed,points,status,review_reason,checked,reviewed_by_name,reviewed_at,created_at,"
   + "type:wb_activity_types(name,kind),person:employees!wb_activities_employee_id_fkey(full_name,nickname,department)";
 
+/** Mapped as stored; the list functions then make the photos ready to show (signPhotos). */
 function toActivity(row: Row): WbActivity {
   const type = (row.type ?? {}) as Row, person = (row.person ?? {}) as Row;
   return {
@@ -45,12 +45,10 @@ function toActivity(row: Row): WbActivity {
   };
 }
 
-type Totals = { employee_id: string; dimension_id: DimensionId | null; points: number; activities: number };
-async function totals(from: string | null, to: string | null): Promise<{ migrated: boolean; rows: Totals[] }> {
-  const { data, error } = await db().rpc("wb_totals", { p_from: from, p_to: to });
-  if (error) { if (missing(error)) return { migrated: false, rows: [] }; databaseError(error); }
-  return { migrated: true, rows: ((data ?? []) as Row[]).map(row => ({ employee_id: row.employee_id as string, dimension_id: (row.dimension_id as DimensionId | null) ?? null, points: Number(row.points), activities: Number(row.activities) })) };
-}
+/** Proof photos ready to show; a key that cannot be signed stays as it is (Periksa shows "Foto belum bisa ditampilkan"). */
+const signPhotos = (items: WbActivity[]) => withPhotoUrls(items, { keepUnsigned: true });
+
+const totals = readTotals;
 
 type Person = { id: string; full_name: string; nickname: string; department: string; position: string; active: boolean };
 async function employees(): Promise<Person[]> {
@@ -97,7 +95,7 @@ export async function wellbeingOverview(now = new Date()): Promise<WbOverview> {
     return best ? [{ ...champion(best.id, best.points), dimension }] : [];
   });
   return {
-    migrated: true, today, unchecked: unchecked.count ?? 0, uncheckedPreview: ((preview.data ?? []) as unknown as Row[]).map(toActivity), todayActivities: todayCount.count ?? 0,
+    migrated: true, today, unchecked: unchecked.count ?? 0, uncheckedPreview: await signPhotos(((preview.data ?? []) as unknown as Row[]).map(toActivity)), todayActivities: todayCount.count ?? 0,
     month: { ...month, points: [...monthBy.values()].reduce((sum, value) => sum + value.points, 0), people: [...monthBy.values()].filter(value => value.points !== 0).length, activities: [...monthBy.values()].reduce((sum, value) => sum + value.activities, 0) },
     lastMonth: { ...last, overall, byDimension },
     participants: people.filter(person => person.active).length,
@@ -113,7 +111,7 @@ export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
 export async function listActivities(query: { filter: ActivityFilter; kind: ActivityKind; q?: string; before?: string; employeeId?: string }, limit = 24): Promise<WbActivityPage> {
   const client = db();
-  let request = client.from("wb_activities").select(ACTIVITY_COLUMNS).order("created_at", { ascending: false }).limit(limit + 1);
+  let request = client.from("wb_activities").select(ACTIVITY_COLUMNS).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(limit + 1);
   if (query.filter === "unchecked") request = request.eq("checked", false);
   if (query.filter === "adjusted" || query.filter === "rejected") request = request.eq("status", query.filter);
   if (query.kind === "strava") request = request.eq("source", "strava");
@@ -121,10 +119,11 @@ export async function listActivities(query: { filter: ActivityFilter; kind: Acti
   if (query.kind === "sport") request = request.like("type_code", "sport.%");
   if (query.kind === "daily") request = request.not("type_code", "like", "sport.%");
   if (query.employeeId) request = request.eq("employee_id", query.employeeId);
-  if (query.before) request = request.lt("created_at", query.before);
+  if (query.before) request = request.or(afterCursor(query.before));
   if (query.q?.trim()) {
-    const term = query.q.trim().replace(/[%,()]/g, " ");
-    const { data: found, error } = await client.from("employees").select("id").or(`full_name.ilike.%${term}%,nickname.ilike.%${term}%,department.ilike.%${term}%`).limit(200);
+    const term = query.q.trim().replace(/[^\p{L}\p{N} .'-]/gu, " ").replace(/\s+/g, " ").trim();
+    if (!term) return { migrated: true, items: [], next: null, unchecked: 0 };
+    const { data: found, error } = await client.from("employees").select("id").or(`full_name.ilike."*${term}*",nickname.ilike."*${term}*",department.ilike."*${term}*"`).limit(200);
     if (error) databaseError(error);
     const ids = (found ?? []).map(row => row.id as string);
     if (!ids.length) return { migrated: true, items: [], next: null, unchecked: 0 };
@@ -135,7 +134,7 @@ export async function listActivities(query: { filter: ActivityFilter; kind: Acti
   const rows = ((data ?? []) as unknown as Row[]).map(toActivity);
   const more = rows.length > limit;
   const items = more ? rows.slice(0, limit) : rows;
-  return { migrated: true, items, next: more ? items.at(-1)!.createdAt : null, unchecked: unchecked.count ?? 0 };
+  return { migrated: true, items: await signPhotos(items), next: more ? cursorOf(items.at(-1)!) : null, unchecked: unchecked.count ?? 0 };
 }
 
 export async function reviewActivity(id: string, input: ReviewInput, actor: Actor): Promise<WbActivity> {
@@ -145,7 +144,8 @@ export async function reviewActivity(id: string, input: ReviewInput, actor: Acto
   }).eq("id", id).select(ACTIVITY_COLUMNS).maybeSingle();
   if (error) fail(error);
   if (!data) throw new ServiceError(404, "Aktivitas tidak ditemukan.");
-  return toActivity(data as unknown as Row);
+  const [activity] = await signPhotos([toActivity(data as unknown as Row)]);
+  return activity;
 }
 
 /* ---------- Karyawan ---------- */
@@ -179,7 +179,7 @@ export async function personDetail(id: string, now = new Date()): Promise<WbPers
   const allOne = byPerson(all.rows.filter(row => row.employee_id === id)).get(id), monthOne = byPerson(inMonth.rows.filter(row => row.employee_id === id)).get(id);
   return {
     migrated: true, ...base, total: allOne?.points ?? 0, month: monthOne?.points ?? 0, dims: allOne?.dims ?? zeroDims(), monthDims: monthOne?.dims ?? zeroDims(),
-    activities: ((activities.data ?? []) as unknown as Row[]).map(toActivity),
+    activities: await signPhotos(((activities.data ?? []) as unknown as Row[]).map(toActivity)),
     entries: ((entries.data ?? []) as Row[]).map((row): WbPointEntry => ({ id: row.id as string, batchId: row.batch_id as string, points: row.points as number, dimension: (row.dimension_id as DimensionId | null) ?? null, reason: row.reason as string, date: row.happened_on as string, by: (row.created_by_name as string) || "Admin", createdAt: row.created_at as string, voided: !!row.voided_at })),
   };
 }
@@ -188,9 +188,13 @@ export async function personDetail(id: string, now = new Date()): Promise<WbPers
 export async function addPoints(input: PointBatchInput, actor: Actor): Promise<WbBatchResult> {
   const client = db();
   const ids = [...new Set(input.employeeIds)];
-  const { data: found, error: lookup } = await client.from("employees").select("id").in("id", ids);
-  if (lookup) databaseError(lookup);
-  if ((found ?? []).length !== ids.length) throw new ServiceError(422, "Ada orang yang tidak ditemukan di Data karyawan. Muat ulang lalu pilih lagi.");
+  let foundCount = 0;
+  for (let at = 0; at < ids.length; at += 100) {
+    const { data: found, error: lookup } = await client.from("employees").select("id").in("id", ids.slice(at, at + 100));
+    if (lookup) databaseError(lookup);
+    foundCount += (found ?? []).length;
+  }
+  if (foundCount !== ids.length) throw new ServiceError(422, "Ada orang yang tidak ditemukan di Data karyawan. Muat ulang lalu pilih lagi.");
   const batchId = randomUUID();
   const { error } = await client.from("wb_point_entries").insert(ids.map(employeeId => ({
     employee_id: employeeId, points: input.points, dimension_id: input.dimension, reason: input.reason, happened_on: input.date, kind: "admin",
@@ -239,17 +243,22 @@ export async function createCatalogItem(input: CatalogItemInput): Promise<WbCata
   const client = db();
   const row = catalogRow(input);
   const prefix = input.kind === "sport" ? "sport" : row.dimension_id;
-  let code = `${prefix}.${slug(input.name)}`;
+  const base = slug(input.name).length >= 2 ? slug(input.name) : `${slug(input.name)}_kegiatan`.replace(/^_/, "");
+  let code = `${prefix}.${base}`;
   const { data: taken, error: lookup } = await client.from("wb_activity_types").select("code").like("code", `${code}%`);
   if (lookup) fail(lookup);
   const used = new Set((taken ?? []).map(item => item.code as string));
-  for (let n = 2; used.has(code); n++) code = `${prefix}.${slug(input.name).slice(0, 36)}_${n}`;
+  for (let n = 2; used.has(code); n++) code = `${prefix}.${base.slice(0, 36)}_${n}`;
   const { data, error } = await client.from("wb_activity_types").insert({ code, ...row, sort_order: 500 }).select(CATALOG_COLUMNS).single();
   if (error) fail(error);
   return toItem(data as Row);
 }
 
 export async function updateCatalogItem(code: string, input: CatalogItemInput): Promise<WbCatalogItem> {
+  const { data: current, error: read } = await db().from("wb_activity_types").select("kind").eq("code", code).maybeSingle();
+  if (read) fail(read);
+  if (!current) throw new ServiceError(404, "Jenis kegiatan tidak ditemukan.");
+  if (current.kind !== input.kind) throw new ServiceError(422, "Harian atau olahraga tidak bisa diubah. Buat kegiatan baru, lalu nonaktifkan yang ini.", { kind: ["Tidak bisa diubah."] });
   const { data, error } = await db().from("wb_activity_types").update(catalogRow(input)).eq("code", code).select(CATALOG_COLUMNS).maybeSingle();
   if (error) fail(error);
   if (!data) throw new ServiceError(404, "Jenis kegiatan tidak ditemukan.");

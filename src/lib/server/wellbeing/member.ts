@@ -1,0 +1,316 @@
+import "server-only";
+import { randomUUID } from "node:crypto";
+import { kindFromMime } from "@/lib/image-signature";
+import { praWamSecret } from "@/lib/pra-wam/session-token";
+import type {
+  WbAppCatalog, WbBoard, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLogResult, WbMe, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbRules, WbUploadStart,
+} from "@/lib/wellbeing/app-types";
+import {
+  DIMENSIONS, MAX_PHOTOS, addDays, claimedPoints, countedPoints, dateProblem, limitReached, logValues, monthRange, previousMonth, wibToday,
+  type DimensionId, type Limit, type LogInput, type PointsMode, type ReviewStatus, type UploadStartInput, type WellbeingSettings,
+} from "@/lib/wellbeing/rules";
+import { ServiceError } from "../config";
+import { databaseError } from "../http";
+import type { Member } from "../pra-wam/session";
+import { isR2Configured, presignUpload, removeObjects, verifyUpload } from "../r2";
+import { board, ledgerItems, placeOf, streakDays, streakStart, weekSeries, type LedgerActivity, type LedgerEntry } from "./member-rules";
+import { afterCursor, cursorOf, db, fail, missing, readAll, readSettings, readTotals, waiting, withPhotoUrls, zeroDims, type Row, type Totals } from "./shared";
+import { isOwnUploadKey, uploadKeyFor, uploadToken, uploadTokenMatches } from "./uploads";
+
+/*
+ * Wellbeing for employees (17 Nov 2026): what /api/wellbeing/* reads and writes for the signed-in
+ * WAM account, always only that person's own activities (the board shows everyone's points, names
+ * and departments). Contract: src/lib/wellbeing/app-types.ts. Before migration 202611160050 every
+ * read answers `migrated: false` with empty data, and every write says it waits for the migration.
+ */
+
+export const MY_ACTIVITY_FILTERS = ["all", "daily", "sport", "strava"] as const satisfies readonly WbMyActivityFilter[];
+export const BOARD_PERIODS = ["month", "all"] as const;
+export const BOARD_DIMENSIONS = ["all", ...DIMENSIONS] as const;
+const PAGE_SIZE = 20;
+const RECENT = 5;
+/** Days of history read at a time for the streak; an older window only while the streak reaches back that far. */
+const STREAK_WINDOW = 60;
+
+const MY_COLUMNS = "id,type_code,dimension_id,happened_on,source,title,steps,kcal,minutes,distance_m,note,photos,points_claimed,points,status,review_reason,created_at,type:wb_activity_types(name,kind)";
+
+const storageNotReady = () => new ServiceError(503, "Penyimpanan foto belum siap. Coba lagi nanti, atau kabari admin Wellbeing.");
+const loginNotReady = () => new ServiceError(503, "Login belum disiapkan. Isi WAM_SESSION_SECRET pada server.");
+
+const toMe = (member: Member): WbMe => ({ id: member.id, name: member.name, nickname: member.nickname, department: member.department, position: member.position });
+const rulesOf = (settings: WellbeingSettings): WbRules => ({ backdateDays: settings.backdateDays, maxKcal: settings.maxKcal, maxSteps: settings.maxSteps, maxPhotos: MAX_PHOTOS });
+const nullableNumber = (value: unknown) => (value === null || value === undefined ? null : Number(value));
+
+function toMine(row: Row): WbMyActivity {
+  const type = (row.type ?? {}) as Row;
+  const typeCode = row.type_code as string, typeName = (type.name as string | undefined) ?? typeCode, status = row.status as ReviewStatus;
+  return {
+    id: row.id as string, typeCode, typeName, kind: (type.kind as "daily" | "sport" | undefined) ?? (typeCode.startsWith("sport.") ? "sport" : "daily"),
+    dimension: row.dimension_id as DimensionId, date: row.happened_on as string, source: row.source as WbMyActivity["source"], title: (row.title as string) || typeName,
+    steps: nullableNumber(row.steps), kcal: nullableNumber(row.kcal), minutes: nullableNumber(row.minutes), distanceM: nullableNumber(row.distance_m),
+    note: (row.note as string) ?? "", photos: (row.photos as string[] | null) ?? [], pointsClaimed: row.points_claimed as number,
+    points: countedPoints(status, row.points as number), status, reason: (row.review_reason as string | null) ?? null, createdAt: row.created_at as string,
+  };
+}
+
+type Person = { id: string; full_name: string; nickname: string | null; department: string | null; active: boolean };
+async function people(): Promise<Person[]> {
+  const { rows, error } = await readAll((from, to) => db().from("employees").select("id,full_name,nickname,department,active").order("full_name").order("id").range(from, to));
+  if (error) databaseError(error);
+  return rows as unknown as Person[];
+}
+/** What colleagues see on the board: the nama panggilan, else the full name. */
+const boardName = (person: Person) => person.nickname?.trim() || person.full_name;
+
+/* ---------- Beranda ---------- */
+
+const emptyTotals = (today: string): WbHome["totals"] => ({ points: 0, monthPoints: 0, rank: null, of: 0, streak: 0, week: weekSeries([], today) });
+
+/** My counted activities per day from today back, as far as the streak needs (and at least the week). */
+async function countedDays(employeeId: string, today: string): Promise<{ date: string; points: number }[] | null> {
+  const days: { date: string; points: number }[] = [];
+  let to = today;
+  for (let window = 0; window < 12; window++) {
+    const from = addDays(to, -(STREAK_WINDOW - 1));
+    const { rows, error } = await readAll((start, end) => db().from("wb_activities").select("id,happened_on,points").eq("employee_id", employeeId).neq("status", "rejected")
+      .gte("happened_on", from).lte("happened_on", to).order("happened_on", { ascending: false }).order("id").range(start, end));
+    if (error) { if (missing(error)) return null; databaseError(error); }
+    days.push(...rows.map(row => ({ date: row.happened_on as string, points: Number(row.points) })));
+    const start = streakStart(days.map(day => day.date), today);
+    // The streak starts after the first day read: it is whole. Otherwise read the window before.
+    if (!start || start > from) break;
+    to = addDays(from, -1);
+  }
+  return days;
+}
+
+/** My totals (all time, this month, place, streak, week) and this month's points per dimension; null before the migration. */
+async function myTotals(employeeId: string, now: Date): Promise<{ totals: WbHome["totals"]; dims: Record<DimensionId, number> } | null> {
+  const today = wibToday(now), month = monthRange(today);
+  const [all, inMonth, everyone, days] = await Promise.all([readTotals(null, null), readTotals(month.from, month.to), people(), countedDays(employeeId, today)]);
+  if (!all.migrated || !inMonth.migrated || !days) return null;
+  const sum = (rows: Totals[]) => rows.reduce((total, row) => total + row.points, 0);
+  const monthBy = new Map<string, number>();
+  for (const row of inMonth.rows) monthBy.set(row.employee_id, (monthBy.get(row.employee_id) ?? 0) + row.points);
+  const dims = zeroDims();
+  for (const row of inMonth.rows) if (row.employee_id === employeeId && row.dimension_id) dims[row.dimension_id] += row.points;
+  const active = everyone.filter(person => person.active);
+  return {
+    totals: {
+      points: sum(all.rows.filter(row => row.employee_id === employeeId)),
+      monthPoints: monthBy.get(employeeId) ?? 0,
+      rank: placeOf(active.map(person => ({ id: person.id, points: monthBy.get(person.id) ?? 0 })), employeeId),
+      of: active.length,
+      streak: streakDays(days.map(day => day.date), today),
+      week: weekSeries(days, today),
+    },
+    dims,
+  };
+}
+
+export async function home(member: Member, now = new Date()): Promise<WbHome> {
+  const today = wibToday(now);
+  const [settings, summary, recent] = await Promise.all([
+    readSettings(),
+    myTotals(member.id, now),
+    db().from("wb_activities").select(MY_COLUMNS).eq("employee_id", member.id).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(RECENT),
+  ]);
+  const base = { me: toMe(member), today, rules: rulesOf(settings.settings) };
+  if (recent.error && !missing(recent.error)) databaseError(recent.error);
+  if (!settings.migrated || !summary || recent.error) return { migrated: false, ...base, totals: emptyTotals(today), dims: zeroDims(), recent: [] };
+  return { migrated: true, ...base, totals: summary.totals, dims: summary.dims, recent: await withPhotoUrls(((recent.data ?? []) as unknown as Row[]).map(toMine)) };
+}
+
+/* ---------- Catat: the catalogue ---------- */
+
+const TYPE_COLUMNS = "code,dimension_id,kind,name,points_mode,points,limit_per,proof_hint,active,sort_order";
+const blockedText = (limit: Limit) => (limit === "day" ? "Sudah dicatat hari ini. Kegiatan ini hanya sekali sehari." : "Sudah dicatat bulan ini. Kegiatan ini hanya sekali sebulan.");
+
+export async function catalog(member: Member, now = new Date()): Promise<WbAppCatalog> {
+  const today = wibToday(now), month = monthRange(today);
+  const client = db();
+  const [types, settings, logged] = await Promise.all([
+    client.from("wb_activity_types").select(TYPE_COLUMNS).eq("active", true),
+    readSettings(),
+    readAll((from, to) => client.from("wb_activities").select("id,type_code,happened_on").eq("employee_id", member.id).neq("status", "rejected")
+      .gte("happened_on", month.from).lte("happened_on", month.to).order("id").range(from, to)),
+  ]);
+  const rules = rulesOf(settings.settings);
+  for (const error of [types.error, logged.error]) if (error) { if (missing(error)) return { migrated: false, daily: [], sports: [], rules, today }; databaseError(error); }
+  if (!settings.migrated) return { migrated: false, daily: [], sports: [], rules, today };
+  const datesOf = new Map<string, string[]>();
+  for (const row of logged.rows) datesOf.set(row.type_code as string, [...(datesOf.get(row.type_code as string) ?? []), row.happened_on as string]);
+  const order = (row: Row) => `${row.kind === "sport" ? 9 : DIMENSIONS.indexOf(row.dimension_id as DimensionId)}-${String(row.sort_order).padStart(6, "0")}-${row.name}`;
+  const rows = ((types.data ?? []) as Row[]).sort((a, b) => order(a).localeCompare(order(b), "id"));
+  // A daily type counted by kcal has no place in the daily list (the screens log kcal as a sport).
+  const daily = rows.filter(row => row.kind === "daily" && row.points_mode !== "kcal").map((row): WbCatalogDaily => {
+    const limit = (row.limit_per as Limit | null) ?? null;
+    return {
+      code: row.code as string, dimension: row.dimension_id as DimensionId, name: row.name as string, mode: row.points_mode as WbCatalogDaily["mode"], points: row.points as number,
+      limit, proofHint: (row.proof_hint as string) ?? "", blocked: limit && limitReached(limit, today, datesOf.get(row.code as string) ?? []) ? blockedText(limit) : null,
+    };
+  });
+  const sports = rows.filter(row => row.kind === "sport").map((row): WbCatalogSport => ({ code: row.code as string, name: row.name as string, proofHint: (row.proof_hint as string) ?? "" }));
+  return { migrated: true, daily, sports, rules, today };
+}
+
+/* ---------- Riwayat ---------- */
+
+export async function myActivities(member: Member, filter: WbMyActivityFilter, before?: string): Promise<WbMyActivityPage> {
+  let request = db().from("wb_activities").select(MY_COLUMNS).eq("employee_id", member.id).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(PAGE_SIZE + 1);
+  // Sports are the sport.* codes (as in Admin Periksa); those from Strava have their own tab.
+  if (filter === "daily") request = request.not("type_code", "like", "sport.%");
+  if (filter === "sport") request = request.like("type_code", "sport.%").neq("source", "strava");
+  if (filter === "strava") request = request.eq("source", "strava");
+  if (before) request = request.or(afterCursor(before));
+  const { data, error } = await request;
+  if (error) { if (missing(error)) return { migrated: false, items: [], next: null }; databaseError(error); }
+  const rows = ((data ?? []) as unknown as Row[]).map(toMine);
+  const more = rows.length > PAGE_SIZE;
+  const items = more ? rows.slice(0, PAGE_SIZE) : rows;
+  return { migrated: true, items: await withPhotoUrls(items), next: more ? cursorOf(items.at(-1)!) : null };
+}
+
+/** One of my activities; someone else's (or none) is 404. */
+export async function myActivity(member: Member, id: string): Promise<WbMyActivity> {
+  const none = new ServiceError(404, "Aktivitas tidak ditemukan.");
+  const { data, error } = await db().from("wb_activities").select(MY_COLUMNS).eq("id", id).eq("employee_id", member.id).maybeSingle();
+  if (error) { if (missing(error)) throw none; databaseError(error); }
+  if (!data) throw none;
+  const [activity] = await withPhotoUrls([toMine(data as unknown as Row)]);
+  return activity;
+}
+
+/* ---------- Catat: proof photos and the log ---------- */
+
+/** Step one for each proof photo: a key of the server's choosing, a ten-minute upload address, and its token. */
+export async function startUpload(member: Member, input: UploadStartInput, now = new Date()): Promise<WbUploadStart> {
+  if (!isR2Configured()) throw storageNotReady();
+  const secret = praWamSecret();
+  if (!secret) throw loginNotReady();
+  if (!(await readSettings()).migrated) throw waiting();
+  const photo = { key: uploadKeyFor(member.id, randomUUID(), input.mime), mime: input.mime, size: input.size };
+  return { key: photo.key, uploadUrl: await presignUpload(photo.key, photo.mime, photo.size), token: uploadToken(secret, photo, member.id, now.getTime()) };
+}
+
+const conflict = (code: "limit" | "same_day" | "strava_twin", message: string) => new ServiceError(409, message, { code: [code] });
+const refused = (field: string, message: string) => new ServiceError(422, message, { [field]: [message] });
+
+/**
+ * Catat: one activity, counted at once (approved, not yet checked by an admin). Refused when the
+ * type is gone, the date is outside the window, a value is out of range, a photo is not this
+ * person's agreed upload, or (409) the limit is reached, the daily type is already there that
+ * day, or a sport is already in from Strava that day (sent again with force to log it anyway).
+ *
+ * The uploaded photos are kept after a refusal the person can correct (fields, 409), so the same
+ * form can be sent again; they are deleted when they fail the photo check or saving fails.
+ */
+export async function logActivity(member: Member, input: LogInput, now = new Date()): Promise<WbLogResult> {
+  const secret = praWamSecret();
+  if (input.photos.some(photo => !isOwnUploadKey(photo.key, member.id, photo.mime) || !uploadTokenMatches(secret, photo.token, photo, member.id, now.getTime()))) {
+    throw refused("photos", "Foto bukti tidak dikenali atau sudah kedaluwarsa. Unggah ulang fotonya.");
+  }
+  if (!isR2Configured()) throw storageNotReady();
+  const keys = input.photos.map(photo => photo.key);
+  // Only keys checked above (this person's folder) are ever deleted.
+  const discard = () => removeObjects(keys).catch(() => undefined);
+
+  const client = db();
+  const today = wibToday(now);
+  const [settingsRead, typeRead] = await Promise.all([readSettings(), client.from("wb_activity_types").select(TYPE_COLUMNS).eq("code", input.code).maybeSingle()]);
+  if (typeRead.error) fail(typeRead.error);
+  if (!settingsRead.migrated) throw waiting();
+  const type = typeRead.data as Row | null;
+  if (!type || !type.active) throw refused("code", "Kegiatan ini sudah tidak tersedia. Muat ulang daftar kegiatan.");
+  const settings = settingsRead.settings;
+  const problem = dateProblem(input.date, today, settings.backdateDays);
+  if (problem) throw refused("date", problem);
+  const mode = type.points_mode as PointsMode;
+  const values = logValues(mode, input, settings);
+  if (!values.ok) throw new ServiceError(422, Object.values(values.fieldErrors)[0][0], values.fieldErrors);
+
+  // This type in the activity's month (limits, the same day, Strava), and the photos not used before.
+  const month = monthRange(input.date);
+  const [history, reused] = await Promise.all([
+    readAll((from, to) => client.from("wb_activities").select("id,happened_on,source").eq("employee_id", member.id).eq("type_code", input.code).neq("status", "rejected")
+      .gte("happened_on", month.from).lte("happened_on", month.to).order("id").range(from, to)),
+    client.from("wb_activities").select("id").eq("employee_id", member.id).overlaps("photos", keys).limit(1),
+  ]);
+  if (history.error) fail(history.error);
+  if (reused.error) fail(reused.error);
+  if (reused.data?.length) throw refused("photos", "Foto ini sudah dipakai untuk aktivitas lain. Unggah foto baru.");
+  const dates = history.rows.map(row => row.happened_on as string);
+  const limit = (type.limit_per as Limit | null) ?? null;
+  if (limit && limitReached(limit, input.date, dates)) {
+    throw conflict("limit", limit === "day" ? "Kegiatan ini hanya sekali sehari dan sudah tercatat pada tanggal itu." : "Kegiatan ini hanya sekali sebulan dan sudah tercatat bulan itu.");
+  }
+  if (type.kind === "daily" && dates.includes(input.date)) throw conflict("same_day", "Kegiatan ini sudah kamu catat pada tanggal itu.");
+  if (type.kind === "sport" && !input.force && history.rows.some(row => row.source === "strava" && row.happened_on === input.date)) {
+    throw conflict("strava_twin", `Pada tanggal itu sudah ada ${type.name as string} dari Strava. Kalau ini olahraga yang berbeda, kirim sekali lagi.`);
+  }
+
+  try {
+    await Promise.all(input.photos.map(photo => verifyUpload(photo.key, photo.size, [kindFromMime(photo.mime) ?? "jpeg"])));
+  } catch (error) {
+    await discard();
+    throw error;
+  }
+  const points = claimedPoints(mode, type.points as number, values, settings);
+  const { data, error } = await client.from("wb_activities").insert({
+    employee_id: member.id, type_code: type.code, dimension_id: type.dimension_id, happened_on: input.date, source: "manual", title: String(type.name).slice(0, 200),
+    steps: values.steps, kcal: values.kcal, minutes: values.minutes, note: input.note, photos: keys, points_claimed: points, points, status: "approved", checked: false,
+  }).select(MY_COLUMNS).single();
+  if (error) {
+    // Two sends at once: the unique index (202611170001) lets one through; the other is the same log.
+    if (error.code === "23505") throw conflict("same_day", "Kegiatan ini sudah kamu catat pada tanggal itu.");
+    await discard();
+    fail(error);
+  }
+  const [activity] = await withPhotoUrls([toMine(data as unknown as Row)]);
+  const summary = await myTotals(member.id, now);
+  return { activity, totals: summary?.totals ?? emptyTotals(today) };
+}
+
+/* ---------- Peringkat ---------- */
+
+export async function leaderboard(member: Member, period: "month" | "all", dim: DimensionId | "all", now = new Date()): Promise<WbBoard> {
+  const today = wibToday(now);
+  const range = period === "month" ? monthRange(today) : null, last = previousMonth(today);
+  const [everyone, sums, lastSums] = await Promise.all([people(), readTotals(range?.from ?? null, range?.to ?? null), readTotals(last.from, last.to)]);
+  const active = everyone.filter(person => person.active);
+  if (!sums.migrated || !lastSums.migrated) return { migrated: false, period, dim, items: [], me: null, of: active.length, lastMonthChampion: null };
+  const pointsBy = (rows: Totals[]) => {
+    const out = new Map<string, number>();
+    for (const row of rows) if (dim === "all" || row.dimension_id === dim) out.set(row.employee_id, (out.get(row.employee_id) ?? 0) + row.points);
+    return out;
+  };
+  const current = pointsBy(sums.rows), before = pointsBy(lastSums.rows);
+  const row = (person: Person, points: Map<string, number>) => ({ id: person.id, name: boardName(person), department: person.department ?? "", points: points.get(person.id) ?? 0 });
+  const { items, me } = board(active.map(person => row(person, current)), member.id);
+  // Last month's champion stays the champion after leaving, as in Admin Wellbeing.
+  const champion = board(everyone.map(person => row(person, before)), member.id, 1).items[0] ?? null;
+  return { migrated: true, period, dim, items, me, of: active.length, lastMonthChampion: champion };
+}
+
+/* ---------- Riwayat poin ---------- */
+
+export async function ledger(member: Member): Promise<WbLedger> {
+  const client = db();
+  const [activities, entries] = await Promise.all([
+    readAll((from, to) => client.from("wb_activities").select("id,happened_on,created_at,title,type_code,dimension_id,source,steps,kcal,minutes,points,status,type:wb_activity_types(name)")
+      .eq("employee_id", member.id).neq("status", "rejected").order("happened_on", { ascending: false }).order("id").range(from, to)),
+    readAll((from, to) => client.from("wb_point_entries").select("id,happened_on,created_at,reason,points,dimension_id,kind")
+      .eq("employee_id", member.id).is("voided_at", null).order("happened_on", { ascending: false }).order("id").range(from, to)),
+  ]);
+  for (const read of [activities, entries]) if (read.error) { if (missing(read.error)) return { migrated: false, items: [], total: 0 }; databaseError(read.error); }
+  const done: LedgerActivity[] = activities.rows.map(row => ({
+    date: row.happened_on as string, createdAt: row.created_at as string, title: (row.title as string) ?? "", typeName: (((row.type ?? {}) as Row).name as string | undefined) ?? (row.type_code as string),
+    dimension: row.dimension_id as DimensionId, source: row.source as LedgerActivity["source"], steps: nullableNumber(row.steps), kcal: nullableNumber(row.kcal), minutes: nullableNumber(row.minutes),
+    points: Number(row.points), status: row.status as ReviewStatus,
+  }));
+  const given: LedgerEntry[] = entries.rows.map(row => ({
+    date: row.happened_on as string, createdAt: row.created_at as string, reason: row.reason as string, points: Number(row.points),
+    dimension: (row.dimension_id as DimensionId | null) ?? null, kind: row.kind === "import" ? "import" : "admin",
+  }));
+  return { migrated: true, ...ledgerItems(done, given) };
+}

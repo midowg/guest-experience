@@ -34,7 +34,10 @@ const file = name => path.join(dir, "csv", `${name}_rows.csv`);
 
 const DIMS = ["physical", "emotional", "social", "financial", "spiritual"];
 const PROGRAM_START = "2026-05-22";
-const TEST_BEFORE = "2025-12-31T17:00:00Z"; // 1 Jan 2026 00:00 WIB
+const TEST_BEFORE = Date.parse("2025-12-31T17:00:00Z"); // 1 Jan 2026 00:00 WIB
+/** The export writes "2025-12-30 13:40:53.92+00": make it ISO ("T", "+00:00") before comparing instants. */
+const instant = text => Date.parse(String(text).replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00"));
+const isTest = row => instant(row.created_at) < TEST_BEFORE;
 const wibDate = iso => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 const slug = text => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 50) || "kegiatan";
 const uuidOf = key => { const h = crypto.createHash("sha1").update(`wellbeing-import:${key}`).digest("hex"); return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`; };
@@ -86,7 +89,7 @@ for (const t of oldTypes) {
 }
 
 /* ---------- activities ---------- */
-const report = { skipped: [], legacyTypes: [], photosCut: 0, unknownPeople: new Map() };
+const report = { skipped: [], legacyTypes: [], photosCut: 0, zero: 0, unknownPeople: new Map() };
 const activities = [], stepFixes = [];
 for (const a of oldActs) {
   const employee = employeeOf.get(a.user_id);
@@ -129,7 +132,8 @@ for (const a of oldActs) {
 /* ---------- admin points ---------- */
 const entries = [], testRows = [];
 for (const p of oldAdj) {
-  if (p.created_at < TEST_BEFORE) { testRows.push(p); continue; }
+  if (isTest(p)) { testRows.push(p); continue; }
+  if (!int(p.points)) { report.zero++; continue; } // 0 points change nothing (and the table refuses 0)
   const employee = employeeOf.get(p.user_id);
   if (!employee) { report.unknownPeople.set(p.user_id, (report.unknownPeople.get(p.user_id) ?? 0) + 1); continue; }
   const attendance = /^Activity Attendance \[([0-9a-f-]+)/.exec(p.reason ?? "");
@@ -146,7 +150,7 @@ for (const p of oldAdj) {
 const people = new Map();
 const person = id => { if (!people.has(id)) people.set(id, { old: id, name: profileName.get(id), oldSteps: 0, oldActPts: 0, oldAdj: 0, testAdj: 0, newAct: 0, newEntries: 0, acts: 0 }); return people.get(id); };
 for (const a of oldActs) { const p = person(a.user_id); p.oldSteps += int(a.steps) ?? 0; if (a.review_status === "approved") p.oldActPts += int(a.activity_points) ?? 0; }
-for (const a of oldAdj) { const p = person(a.user_id); p.oldAdj += int(a.points) ?? 0; if (a.created_at < TEST_BEFORE) p.testAdj += int(a.points) ?? 0; }
+for (const a of oldAdj) { const p = person(a.user_id); p.oldAdj += int(a.points) ?? 0; if (isTest(a)) p.testAdj += int(a.points) ?? 0; }
 for (const a of activities) { const p = person(a._old); p.acts++; if (a.status !== "rejected") p.newAct += a.points; }
 for (const e of [...entries, ...stepFixes]) person(e._old).newEntries += e.points;
 const reconcile = [];
@@ -158,6 +162,28 @@ for (const p of people.values()) {
   if (employee && p.diff !== 0) reconcile.push({ legacy_id: `reconcile:${p.old}`, employee_id: employee, points: p.diff, dimension_id: null, reason: "Penyesuaian pindah data (hitungan langkah aplikasi lama)", happened_on: PROGRAM_START, kind: "import", batch_id: uuidOf("reconcile"), created_by_name: "Pindah data", created_at: new Date().toISOString() });
 }
 
+/* ---------- check every row against the table rules before anything is written ---------- */
+const problems = [];
+const typeCodes = new Set([...catalog.values()].map(t => t.code));
+for (const t of catalog.values()) {
+  if (!/^[a-z]+\.[a-z0-9_]{2,60}$/.test(t.code)) problems.push(`kode katalog tidak sah: ${t.code}`);
+  if (t.points_mode === "fixed" && t.points < 1) problems.push(`poin tetap 0: ${t.code}`);
+}
+for (const a of activities) {
+  if (!typeCodes.has(a.type_code)) problems.push(`aktivitas ${a.legacy_id}: jenis ${a.type_code} tidak ada`);
+  if (a.points < 0 || a.points > 100000 || a.points_claimed < 0) problems.push(`aktivitas ${a.legacy_id}: poin ${a.points}`);
+  if (a.steps != null && (a.steps < 0 || a.steps > 200000)) problems.push(`aktivitas ${a.legacy_id}: langkah ${a.steps}`);
+  if (a.kcal != null && (a.kcal < 0 || a.kcal > 20000)) problems.push(`aktivitas ${a.legacy_id}: kalori ${a.kcal}`);
+  if (a.minutes != null && (a.minutes < 0 || a.minutes > 1440)) a.minutes = Math.min(1440, Math.max(0, a.minutes));
+  if (a.distance_m != null && (a.distance_m < 0 || a.distance_m > 1000000)) a.distance_m = null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(a.happened_on)) problems.push(`aktivitas ${a.legacy_id}: tanggal ${a.happened_on}`);
+}
+for (const e of [...entries, ...stepFixes, ...reconcile]) {
+  if (!e.points || e.points < -100000 || e.points > 100000) problems.push(`poin ${e.legacy_id}: ${e.points}`);
+  if (!e.reason || e.reason.trim().length < 2) problems.push(`poin ${e.legacy_id}: alasan kosong`);
+}
+if (problems.length) { console.error(`Berhenti: ${problems.length} baris tidak sesuai aturan tabel, tidak ada yang ditulis.\n- ${problems.slice(0, 30).join("\n- ")}`); process.exit(1); }
+
 /* ---------- report ---------- */
 const rows = [...people.values()].filter(p => p.oldTotal || p.acts).sort((a, b) => b.target - a.target);
 const sum = (list, key) => list.reduce((s, x) => s + (x[key] ?? 0), 0);
@@ -167,7 +193,7 @@ const lines = [
   `- Aktivitas: ${activities.length} diimpor dari ${oldActs.length} (${activities.filter(a => a.status === "rejected").length} ditolak/dibatalkan, ${activities.filter(a => a.source === "strava").length} dari Strava, ${activities.filter(a => !a.checked).length} ditandai belum diperiksa: 7 hari terakhir).`,
   `- Koreksi langkah admin lama ("Manual Adjustment"): ${stepFixes.length} jadi poin admin (${sum(stepFixes, "points")} poin); ${report.skipped.length} catatan 0 poin dilewati.`,
   `- Dilewati: ${[...report.unknownPeople.values()].reduce((s, n) => s + n, 0)} baris milik ${report.unknownPeople.size} profil yang sudah dihapus di aplikasi lama atau tanpa pasangan karyawan.`,
-  `- Penyesuaian poin: ${entries.length} diimpor, ${testRows.length} data uji sebelum 1 Jan 2026 tidak diimpor (${sum(testRows.map(t => ({ p: int(t.points) })), "p")} poin).`,
+  `- Penyesuaian poin: ${entries.length} diimpor, ${testRows.length} data uji sebelum 1 Jan 2026 tidak diimpor (${sum(testRows.map(t => ({ p: int(t.points) })), "p")} poin), ${report.zero} bernilai 0 dilewati.`,
   `- Penyesuaian pindah data (langkah dari aktivitas ditolak dan pembulatan, seperti hitungan aplikasi lama): ${reconcile.length} orang, total ${sum(reconcile, "points")} poin.`,
   `- Foto: ${activities.reduce((s, a) => s + a.photos.length, 0)} tautan (dipakai langsung dari bucket lama); ${report.photosCut} aktivitas punya lebih dari 5 foto (dipotong jadi 5).`,
   report.legacyTypes.length ? `- Jenis lama yang tidak ada di katalog (dibuat nonaktif): ${report.legacyTypes.join("; ")}` : "- Semua aktivitas cocok dengan katalog.",
@@ -182,25 +208,27 @@ if (!apply) { console.log("\nUji kering: tidak ada yang ditulis. Tambahkan --app
 /* ---------- write (only with --apply) ---------- */
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SECRET_KEY, { auth: { persistSession: false } });
 const must = (result, what) => { if (result.error) { console.error(`Gagal ${what}:`, result.error.message); process.exit(1); } return result.data; };
+/** Every row of a query, 1000 at a time (PostgREST answers at most 1000 per request). */
+const all = async (query, what) => { const rows = []; for (let from = 0; ; from += 1000) { const page = must(await query().range(from, from + 999), what); rows.push(...page); if (page.length < 1000) return rows; } };
 const strip = row => Object.fromEntries(Object.entries(row).filter(([key]) => !key.startsWith("_")));
 const chunks = (list, size = 400) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, i * size + size));
 
 // 1. Catalogue: upsert ours, then remove the first seed's rows nothing uses and the old app does not have.
 must(await db.from("wb_activity_types").upsert([...catalog.values()].map(t => ({ ...t, updated_at: new Date().toISOString() })), { onConflict: "code" }), "menyimpan katalog");
-const existingTypes = must(await db.from("wb_activity_types").select("code"), "membaca katalog").map(t => t.code);
-const usedTypes = new Set(must(await db.from("wb_activities").select("type_code"), "membaca aktivitas").map(a => a.type_code));
+const existingTypes = (await all(() => db.from("wb_activity_types").select("code").order("code"), "membaca katalog")).map(t => t.code);
+const usedTypes = new Set((await all(() => db.from("wb_activities").select("type_code").order("id"), "membaca aktivitas")).map(a => a.type_code));
 const extra = existingTypes.filter(code => ![...catalog.values()].some(t => t.code === code));
 const removable = extra.filter(code => !usedTypes.has(code));
 if (removable.length) must(await db.from("wb_activity_types").delete().in("code", removable), "merapikan katalog");
 if (extra.length - removable.length) must(await db.from("wb_activity_types").update({ active: false }).in("code", extra.filter(code => usedTypes.has(code))), "menonaktifkan katalog lama");
 
 // 2. Activities by legacy_id: insert new, update existing (data only; `checked` stays as tested), delete gone.
-const haveActs = new Map(must(await db.from("wb_activities").select("id,legacy_id").not("legacy_id", "is", null), "membaca aktivitas impor").map(r => [Number(r.legacy_id), r.id]));
+const haveActs = new Map((await all(() => db.from("wb_activities").select("id,legacy_id").not("legacy_id", "is", null).order("id"), "membaca aktivitas impor")).map(r => [Number(r.legacy_id), r.id]));
 const newActs = activities.filter(a => !haveActs.has(a.legacy_id)).map(strip);
 for (const part of chunks(newActs)) must(await db.from("wb_activities").insert(part), "menyimpan aktivitas");
 let updated = 0;
 for (const a of activities.filter(a => haveActs.has(a.legacy_id))) {
-  const { checked: _checked, created_at: _created, ...data } = strip(a);
+  const data = strip(a); delete data.checked; delete data.created_at; // keep the tested `checked` and the old time
   must(await db.from("wb_activities").update({ ...data, updated_at: new Date().toISOString() }).eq("id", haveActs.get(a.legacy_id)), "memperbarui aktivitas"); updated++;
 }
 const keepActs = new Set(activities.map(a => a.legacy_id));
@@ -209,10 +237,10 @@ for (const part of chunks(goneActs)) must(await db.from("wb_activities").delete(
 
 // 3. Admin points and the reconciliation, the same way.
 const allEntries = [...entries, ...stepFixes, ...reconcile];
-const haveEntries = new Map(must(await db.from("wb_point_entries").select("id,legacy_id").not("legacy_id", "is", null), "membaca poin impor").map(r => [r.legacy_id, r.id]));
+const haveEntries = new Map((await all(() => db.from("wb_point_entries").select("id,legacy_id").not("legacy_id", "is", null).order("id"), "membaca poin impor")).map(r => [r.legacy_id, r.id]));
 for (const part of chunks(allEntries.filter(e => !haveEntries.has(e.legacy_id)).map(strip))) must(await db.from("wb_point_entries").insert(part), "menyimpan poin");
 for (const e of allEntries.filter(e => haveEntries.has(e.legacy_id))) {
-  const { created_at: _created, ...data } = strip(e);
+  const data = strip(e); delete data.created_at;
   must(await db.from("wb_point_entries").update({ ...data, voided_at: null, voided_by_name: null }).eq("id", haveEntries.get(e.legacy_id)), "memperbarui poin");
 }
 const keepEntries = new Set(allEntries.map(e => e.legacy_id));
