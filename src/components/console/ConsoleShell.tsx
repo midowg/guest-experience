@@ -76,7 +76,8 @@ function Side(props: SideProps) {
           </button>
           <ul id={listId} className={css.groupList} hidden={!open} aria-label={rail ? group.label : undefined}>
             {group.items.map(item => <li key={item.key}>
-              <a href={item.href} className={css.item} aria-current={item.key === current ? "page" : undefined} title={rail ? item.label : undefined}>
+              <a href={item.href} className={css.item} aria-current={item.key === current ? "page" : undefined} title={rail ? item.label : undefined}
+                onClick={variant === "drawer" ? props.onClose : undefined}>
                 {item.icon && <span className={css.itemIcon} aria-hidden="true">{item.icon}</span>}
                 <span className={css.itemLabel}>{item.label}</span>
                 {item.badge && <span className={css.badge}>{item.badge}<span className="sr-only"> {item.badgeLabel ?? "menunggu"}</span></span>}

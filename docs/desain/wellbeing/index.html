@@ -1,0 +1,2138 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F7F9">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Wellbeing kantor: catat aktivitas, kumpulkan poin, tukar rewards.">
+<title>Wellbeing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0&icon_names=account_balance_wallet,add,add_a_photo,add_circle,alternate_email,arrow_back,badge,bolt,calendar_today,cancel,check,check_circle,checkroom,chevron_right,close,cloud_off,directions_bike,directions_run,directions_walk,diversity_3,edit_note,error,event_available,fitness_center,flag,history,home,image,info,leaderboard,link_off,local_cafe,local_drink,local_fire_department,logout,notes,photo_camera,pool,psychology,receipt_long,redeem,refresh,restart_alt,savings,schedule,science,self_improvement,spa,sports_gymnastics,sports_soccer,sports_tennis,sync,toll,trending_up,tune,umbrella,verified,visibility,visibility_off,warning,wifi_off&display=block">
+<style>
+/* =====================================================================
+   Wellbeing — prototipe UI (16 Nov 2026)
+   Gaya: brain/aturan/desain-ui.md (HIG + Material 3). Satu berkas, tanpa build.
+   Semua data lewat lapisan `api` tiruan di bawah; ganti ke fetch() ke API asli.
+   ===================================================================== */
+:root{
+  --font:'Plus Jakarta Sans',Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --frame:#E9ECF1;
+  --bg:#F6F7F9; --surface:#FFFFFF; --surface-2:#F1F3F6; --outline:#E4E7EC;
+  --text:#111827; --text-2:#4B5563; --text-3:#6B7280;
+  --primary:#2F6FEB; --on-primary:#FFFFFF; --primary-c:#E3ECFD; --on-primary-c:#1D4ED8; --link:#2563EB;
+  --pos:#15803D;
+  --success:#16A34A; --success-c:#DCFCE7; --on-success-c:#166534;
+  --warning:#D97706; --warning-c:#FEF3C7; --on-warning-c:#92400E;
+  --error:#DC2626; --error-c:#FEE2E2; --on-error-c:#991B1B;
+  --inverse:#1F2937; --on-inverse:#F9FAFB;
+  --strava:#FC4C02;
+  --d-physical:#0D9488; --d-physical-c:#CCFBF1;
+  --d-emotional:#7C3AED; --d-emotional-c:#EDE9FE;
+  --d-social:#EA580C; --d-social-c:#FFEDD5;
+  --d-financial:#2F6FEB; --d-financial-c:#E3ECFD;
+  --d-spiritual:#DB2777; --d-spiritual-c:#FCE7F3;
+  --coin:#D97706;
+  --scrim:rgba(17,24,39,.42);
+  --shimmer:rgba(255,255,255,.65);
+  --shadow-float:0 8px 24px rgba(17,24,39,.12),0 2px 6px rgba(17,24,39,.06);
+  --ease:cubic-bezier(.2,0,0,1); --ease-out:cubic-bezier(.05,.7,.1,1); --ease-in:cubic-bezier(.3,0,.8,.15);
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  --bar-h:56px; --nav-h:68px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --frame:#07090C;
+    --bg:#0E1116; --surface:#171B22; --surface-2:#1F242D; --outline:#2A303A;
+    --text:#F3F4F6; --text-2:#C2C8D0; --text-3:#8B93A0;
+    --primary:#8AB4F8; --on-primary:#0E1116; --primary-c:rgba(138,180,248,.16); --on-primary-c:#B9D2FB; --link:#8AB4F8;
+    --pos:#4ADE80;
+    --success:#4ADE80; --success-c:rgba(74,222,128,.14); --on-success-c:#86EFAC;
+    --warning:#FBBF24; --warning-c:rgba(251,191,36,.14); --on-warning-c:#FCD34D;
+    --error:#F87171; --error-c:rgba(248,113,113,.14); --on-error-c:#FCA5A5;
+    --inverse:#F3F4F6; --on-inverse:#111827;
+    --d-physical:#5EEAD4; --d-physical-c:rgba(94,234,212,.14);
+    --d-emotional:#C4B5FD; --d-emotional-c:rgba(196,181,253,.14);
+    --d-social:#FDBA74; --d-social-c:rgba(253,186,116,.14);
+    --d-financial:#8AB4F8; --d-financial-c:rgba(138,180,248,.14);
+    --d-spiritual:#F9A8D4; --d-spiritual-c:rgba(249,168,212,.14);
+    --coin:#FBBF24;
+    --scrim:rgba(0,0,0,.6);
+    --shimmer:rgba(255,255,255,.06);
+    --shadow-float:0 8px 24px rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --frame:#07090C;
+  --bg:#0E1116; --surface:#171B22; --surface-2:#1F242D; --outline:#2A303A;
+  --text:#F3F4F6; --text-2:#C2C8D0; --text-3:#8B93A0;
+  --primary:#8AB4F8; --on-primary:#0E1116; --primary-c:rgba(138,180,248,.16); --on-primary-c:#B9D2FB; --link:#8AB4F8;
+  --pos:#4ADE80;
+  --success:#4ADE80; --success-c:rgba(74,222,128,.14); --on-success-c:#86EFAC;
+  --warning:#FBBF24; --warning-c:rgba(251,191,36,.14); --on-warning-c:#FCD34D;
+  --error:#F87171; --error-c:rgba(248,113,113,.14); --on-error-c:#FCA5A5;
+  --inverse:#F3F4F6; --on-inverse:#111827;
+  --d-physical:#5EEAD4; --d-physical-c:rgba(94,234,212,.14);
+  --d-emotional:#C4B5FD; --d-emotional-c:rgba(196,181,253,.14);
+  --d-social:#FDBA74; --d-social-c:rgba(253,186,116,.14);
+  --d-financial:#8AB4F8; --d-financial-c:rgba(138,180,248,.14);
+  --d-spiritual:#F9A8D4; --d-spiritual-c:rgba(249,168,212,.14);
+  --coin:#FBBF24;
+  --scrim:rgba(0,0,0,.6);
+  --shimmer:rgba(255,255,255,.06);
+  --shadow-float:0 8px 24px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+
+/* ---------- dasar ---------- */
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font);font-size:15px;line-height:1.45;color:var(--text);background:var(--frame);
+  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;
+  overflow:hidden;overscroll-behavior:none}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+[hidden]{display:none!important}
+.block{display:block}.center{text-align:center}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.ms{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;font-size:24px;line-height:1;
+  letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;
+  font-feature-settings:'liga';-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased;
+  font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;width:1em;height:1em;overflow:hidden;flex:none;
+  -webkit-user-select:none;user-select:none;vertical-align:middle}
+.ms.fill{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+.ms.sm{font-size:20px}.ms.xs{font-size:16px}.ms.lg{font-size:32px}.ms.xl{font-size:44px}
+
+.t-display{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.08;font-variant-numeric:tabular-nums}
+.t-title{font-size:28px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+.t-headline{font-size:22px;font-weight:700;line-height:1.25}
+.t-sub{font-size:17px;font-weight:600;line-height:1.3}
+.t-label{font-size:13px;font-weight:600}
+.caption{font-size:12px}
+.muted{color:var(--text-2)}.faint{color:var(--text-3)}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- kerangka aplikasi ---------- */
+#app{position:fixed;inset:0;margin:0 auto;max-width:440px;background:var(--bg);overflow:hidden;isolation:isolate}
+@media (min-width:600px) and (min-height:640px){
+  #app{top:24px;bottom:24px;border-radius:28px;border:1px solid var(--outline);box-shadow:0 24px 64px rgba(17,24,39,.16)}
+}
+.screens{position:absolute;inset:0}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);will-change:transform}
+.screen.is-push{z-index:5;box-shadow:-12px 0 32px rgba(17,24,39,.10)}
+.screen.under{visibility:hidden}
+.bar{flex:none;height:calc(var(--bar-h) + var(--safe-t));padding:var(--safe-t) 8px 0 4px;display:flex;align-items:center;gap:4px;
+  background:var(--bg);border-bottom:1px solid transparent;transition:border-color .2s var(--ease);position:relative;z-index:2}
+.is-tab .bar{padding-left:16px}
+.bar.scrolled{border-bottom-color:var(--outline)}
+.bar-title{flex:1;min-width:0;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .2s var(--ease)}
+.bar.always .bar-title,.bar.scrolled .bar-title{opacity:1}
+.bar-actions{display:flex;align-items:center;gap:4px}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;position:relative;scrollbar-width:none}
+.scroll::-webkit-scrollbar,.sheet-body::-webkit-scrollbar{display:none}
+.content{padding:0 16px calc(var(--nav-h) + var(--safe-b) + 32px)}
+.is-push .content{padding-bottom:calc(var(--safe-b) + 32px)}
+.large-title{font-size:28px;font-weight:800;letter-spacing:-.01em;line-height:1.15;padding:0 0 16px}
+
+.ptr{position:absolute;top:calc(var(--bar-h) + var(--safe-t) - 40px);left:50%;transform:translate(-50%,0);width:40px;height:40px;border-radius:999px;
+  background:var(--surface);box-shadow:var(--shadow-float);display:grid;place-items:center;color:var(--primary);opacity:0;z-index:3;pointer-events:none}
+.ptr.spinning .ms{animation:rot .8s linear infinite}
+
+@keyframes push-in{from{transform:translateX(100%)}to{transform:none}}
+@keyframes push-under{from{transform:none}to{transform:translateX(-24%)}}
+@keyframes pop-out{from{transform:none}to{transform:translateX(100%)}}
+@keyframes pop-under{from{transform:translateX(-24%)}to{transform:none}}
+@keyframes fade-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.anim-push-in{animation:push-in .34s var(--ease-out) both}
+.anim-push-under{animation:push-under .34s var(--ease-out) both}
+.anim-pop-out{animation:pop-out .28s var(--ease) both}
+.anim-pop-under{animation:pop-under .28s var(--ease) both}
+.anim-fade{animation:fade-up .22s var(--ease) both}
+
+/* tab bar (Material 3 navigation bar) */
+.tabbar{position:absolute;left:0;right:0;bottom:0;z-index:3;height:calc(var(--nav-h) + var(--safe-b));padding-bottom:var(--safe-b);
+  background:var(--surface);border-top:1px solid var(--outline);display:grid;grid-template-columns:repeat(5,1fr);align-items:center}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:60px;font-size:12px;font-weight:600;color:var(--text-2)}
+.tab .ind{width:56px;height:32px;border-radius:999px;display:grid;place-items:center;transition:background .2s var(--ease),transform .15s var(--ease)}
+.tab:active .ind{transform:scale(.92)}
+.tab[aria-current="page"]{color:var(--text)}
+.tab[aria-current="page"] .ind{background:var(--primary-c);color:var(--on-primary-c)}
+.tab[aria-current="page"] .ms{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+.tab-catat{color:var(--text)}
+.tab-catat .ind{background:var(--primary);color:var(--on-primary)}
+#app.no-nav .tabbar{visibility:hidden}
+
+/* ---------- komponen ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border-radius:12px;
+  font-weight:600;font-size:15px;transition:background .15s var(--ease),transform .15s var(--ease),opacity .15s;white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--primary);color:var(--on-primary)}
+.btn-tonal{background:var(--primary-c);color:var(--on-primary-c)}
+.btn-outline{border:1px solid var(--outline);background:var(--surface);color:var(--text)}
+.btn-strava{background:var(--strava);color:#fff}
+.btn-danger{background:var(--error);color:#fff}
+.btn-text{color:var(--link);padding:0 12px}
+.btn-text.danger{color:var(--error)}
+.btn.block{width:100%}
+.btn[disabled],.btn.is-busy{opacity:.55;pointer-events:none}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.icon-btn{width:44px;height:44px;border-radius:999px;display:grid;place-items:center;color:var(--text);flex:none;transition:background .15s}
+.icon-btn:active{background:var(--surface-2)}
+.link{color:var(--link);font-weight:600;font-size:13px;min-height:44px;padding:0 4px;display:inline-flex;align-items:center}
+.pressable{transition:background .15s var(--ease),transform .15s var(--ease)}
+.pressable:active{transform:scale(.985)}
+
+.avatar{width:36px;height:36px;border-radius:999px;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none;
+  background:var(--av-bg,var(--primary-c));color:var(--av-fg,var(--on-primary-c))}
+.avatar.sm{width:32px;height:32px;font-size:12px}
+.avatar.lg{width:44px;height:44px;font-size:15px}
+.avatar.xl{width:80px;height:80px;font-size:26px}
+.av-physical{--av-bg:var(--d-physical-c);--av-fg:var(--d-physical)}
+.av-emotional{--av-bg:var(--d-emotional-c);--av-fg:var(--d-emotional)}
+.av-social{--av-bg:var(--d-social-c);--av-fg:var(--d-social)}
+.av-financial{--av-bg:var(--d-financial-c);--av-fg:var(--d-financial)}
+.av-spiritual{--av-bg:var(--d-spiritual-c);--av-fg:var(--d-spiritual)}
+.bar-avatar{width:44px;height:44px;display:grid;place-items:center;border-radius:999px}
+
+.card{background:var(--surface);border:1px solid var(--outline);border-radius:16px}
+.card.pad{padding:16px}
+.list{overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:10px 16px;text-align:left;position:relative;color:var(--text)}
+.row.tall{align-items:flex-start;padding-top:14px;padding-bottom:14px}
+.list > .row + .row::before,.list > .row + .row-wrap::before,.list > .row-wrap + .row::before{content:'';position:absolute;top:0;left:68px;right:0;border-top:1px solid var(--outline)}
+button.row:active,a.row:active{background:var(--surface-2)}
+.row[disabled]{opacity:.55;cursor:default}
+.lead{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none;background:var(--surface-2);color:var(--text-2)}
+.lead.lg{width:48px;height:48px;border-radius:14px}
+.lead.sm{width:32px;height:32px;border-radius:10px}
+.lead.sm .ms{font-size:18px}
+.d-physical{background:var(--d-physical-c);color:var(--d-physical)}
+.d-emotional{background:var(--d-emotional-c);color:var(--d-emotional)}
+.d-social{background:var(--d-social-c);color:var(--d-social)}
+.d-financial{background:var(--d-financial-c);color:var(--d-financial)}
+.d-spiritual{background:var(--d-spiritual-c);color:var(--d-spiritual)}
+.tone-primary{background:var(--primary-c);color:var(--on-primary-c)}
+.tone-strava{background:var(--strava);color:#fff}
+.tone-coin{background:var(--warning-c);color:var(--coin)}
+.row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row-title{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrap{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.row-meta{font-size:13px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-meta.wrap{white-space:normal}
+.row-trail{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none;text-align:right}
+.pts{font-weight:700;color:var(--pos);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pts.neg{color:var(--error)}
+.pts.muted{color:var(--text-3);text-decoration:line-through;font-weight:600}
+.chev{color:var(--text-3)}
+
+.pill{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:600;
+  background:var(--surface-2);color:var(--text-2);white-space:nowrap}
+.pill .ms{font-size:14px}
+.pill.ok{background:var(--success-c);color:var(--on-success-c)}
+.pill.warn{background:var(--warning-c);color:var(--on-warning-c)}
+.pill.err{background:var(--error-c);color:var(--on-error-c)}
+.pill.info{background:var(--primary-c);color:var(--on-primary-c)}
+
+.seg{display:flex;background:var(--surface-2);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;min-height:36px;border-radius:9px;font-size:13px;font-weight:600;color:var(--text-2);transition:background .15s,color .15s}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(17,24,39,.08),0 0 0 1px var(--outline)}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:2px 16px 2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--outline);background:var(--surface);
+  font-size:13px;font-weight:600;color:var(--text-2);display:inline-flex;align-items:center;gap:6px}
+.chip .ms{font-size:18px}
+.chip[aria-pressed="true"]{background:var(--primary-c);border-color:transparent;color:var(--on-primary-c)}
+
+.sec{margin-top:28px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;min-height:32px}
+.group-label{font-size:13px;font-weight:600;color:var(--text-2);margin:24px 4px 8px}
+
+.note{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--surface-2);font-size:13px;color:var(--text-2);margin-top:16px}
+.note .ms{flex:none;margin-top:-1px}
+.note.info{background:var(--primary-c);color:var(--on-primary-c)}
+.note.warn{background:var(--warning-c);color:var(--on-warning-c)}
+.note.err{background:var(--error-c);color:var(--on-error-c)}
+.note.ok{background:var(--success-c);color:var(--on-success-c)}
+.note b{font-weight:700}
+.note .note-act{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+
+.bar-meter{height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-top:6px}
+.bar-meter i{display:block;height:100%;border-radius:999px;transition:width .4s var(--ease)}
+
+.spin{width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:rot .7s linear infinite;flex:none;display:inline-block}
+.spin.lg{width:36px;height:36px;border-width:3px}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+.sk{background:var(--surface-2);border-radius:8px;position:relative;overflow:hidden}
+.sk::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,var(--shimmer),transparent);animation:shimmer 1.3s infinite}
+@keyframes shimmer{to{transform:translateX(100%)}}
+.sk-line{height:12px;border-radius:6px}
+.sk-row{display:flex;gap:12px;align-items:center;padding:12px 16px}
+.sk-row .sk-av{width:40px;height:40px;border-radius:12px}
+
+.empty{padding:40px 24px;text-align:center;color:var(--text-2)}
+.empty .lead{margin:0 auto 12px;width:56px;height:56px;border-radius:16px}
+.state{padding:48px 24px;text-align:center}
+.state .lead{margin:0 auto 16px;width:56px;height:56px;border-radius:16px}
+.state p{margin:6px 0 20px;color:var(--text-2)}
+
+/* ---------- beranda ---------- */
+.greet{padding:0 0 16px}
+.hero{background:var(--primary-c);border-radius:24px;padding:20px}
+.hero-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.hero .t-label{color:var(--on-primary-c)}
+.rank{background:var(--surface);border-radius:16px;padding:8px 14px;display:flex;flex-direction:column;align-items:center;min-width:76px}
+.rank b{font-size:22px;font-weight:800;line-height:1.1}
+.rank span{font-size:12px;color:var(--text-2)}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.stat{background:var(--surface);border-radius:12px;padding:10px;display:flex;gap:8px;align-items:center;min-width:0}
+.stat b{display:block;font-size:15px;font-weight:700;white-space:nowrap}
+.stat span{font-size:12px;color:var(--text-2)}
+.ic-coin{color:var(--coin)}.ic-fire{color:var(--d-social)}.ic-up{color:var(--pos)}
+.spark{display:flex;align-items:flex-end;gap:6px;height:92px;margin-top:16px}
+.spark-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%}
+.spark-bar{width:100%;max-width:30px;border-radius:6px;background:color-mix(in srgb,var(--primary) 30%,transparent);transition:height .4s var(--ease)}
+.spark-col.is-today .spark-bar{background:var(--primary)}
+.spark-col span{font-size:12px;color:var(--on-primary-c)}
+.spark-col.is-today span{font-weight:700}
+.dimline{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.dimline b{font-variant-numeric:tabular-nums;font-size:15px}
+.hscroll{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;padding:2px 16px 4px;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.qmini{flex:0 0 76%;scroll-snap-align:start;padding:14px;text-align:left;display:flex;flex-direction:column;gap:8px;min-height:132px}
+.qmini h3{font-size:15px;font-weight:600;line-height:1.35}
+.qmini .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-2)}
+.banner{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:16px;width:100%;text-align:left;margin-bottom:12px}
+.banner.warn{background:var(--warning-c);color:var(--on-warning-c)}
+.banner.tip{background:var(--surface);border:1px solid var(--outline)}
+.banner .row-main b{font-size:14px}
+.banner .row-main span{font-size:13px}
+
+/* ---------- quest ---------- */
+.qcard{display:flex;flex-direction:column;gap:8px;padding:16px;text-align:left;width:100%;margin-bottom:12px}
+.qcard h3{font-size:16px;font-weight:600;line-height:1.35}
+.qtop{display:flex;align-items:center;gap:8px}
+.qtop .caption{flex:1;color:var(--text-2);font-weight:600}
+.qfoot{display:flex;gap:16px;font-size:13px;color:var(--text-2);flex-wrap:wrap}
+.qfoot span{display:inline-flex;align-items:center;gap:4px}
+.qfoot .soon{color:var(--on-warning-c);font-weight:600}
+
+/* ---------- peringkat ---------- */
+.podium{display:grid;grid-template-columns:1fr 1.1fr 1fr;align-items:end;gap:8px;margin:20px 0 16px}
+.pod{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;min-width:0}
+.pod .nm{font-size:13px;font-weight:600;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pod .pp{font-size:12px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.pod .base{width:100%;border-radius:12px 12px 4px 4px;background:var(--surface);border:1px solid var(--outline);display:grid;place-items:center;font-weight:800;font-size:20px;color:var(--text-2)}
+.pod.r1 .base{height:96px;background:var(--primary-c);border-color:transparent;color:var(--on-primary-c)}
+.pod.r2 .base{height:72px}.pod.r3 .base{height:56px}
+.pod.is-me .nm{color:var(--link)}
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 16px;min-height:60px;position:relative}
+.list > .lb-row + .lb-row::before{content:'';position:absolute;top:0;left:56px;right:0;border-top:1px solid var(--outline)}
+.lb-rank{width:28px;text-align:center;font-weight:700;color:var(--text-2);font-variant-numeric:tabular-nums;flex:none}
+.lb-row.is-me{background:var(--primary-c)}
+.me-sticky{position:sticky;bottom:calc(var(--nav-h) + var(--safe-b) + 12px);margin-top:16px;border-radius:16px;background:var(--surface);border:1px solid var(--outline);box-shadow:var(--shadow-float);z-index:1}
+
+/* ---------- rewards ---------- */
+.wallet{display:flex;align-items:center;gap:14px;padding:16px;border-radius:20px;background:var(--warning-c);margin-bottom:16px}
+.wallet b{font-size:28px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.wallet .caption{color:var(--on-warning-c);font-weight:600}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.ritem{display:flex;flex-direction:column;gap:8px;padding:12px;text-align:left}
+.ritem .thumb{aspect-ratio:4/3;border-radius:12px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-2)}
+.ritem .thumb .ms{font-size:40px}
+.ritem h3{font-size:14px;font-weight:600;line-height:1.35;min-height:38px}
+.ritem .cost{display:flex;align-items:center;gap:4px;font-weight:700;font-variant-numeric:tabular-nums}
+.ritem .cost .ms{font-size:18px;color:var(--coin)}
+.ritem .sub{font-size:12px;color:var(--text-2)}
+.ritem.short .sub{color:var(--on-warning-c)}
+
+/* ---------- profil & pengaturan ---------- */
+.profile-head{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:8px 0 20px}
+.stats3{display:grid;grid-template-columns:repeat(3,1fr)}
+.stats3 > div{padding:14px 8px;text-align:center}
+.stats3 > div + div{border-left:1px solid var(--outline)}
+.stats3 b{display:block;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.stats3 span{font-size:12px;color:var(--text-2)}
+.setting{padding:14px 16px}
+.setting + .setting{border-top:1px solid var(--outline)}
+.setting .lbl{font-size:13px;font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.setting .help{margin-top:6px}
+.switch{width:52px;height:32px;border-radius:999px;background:var(--surface-2);border:1px solid var(--outline);position:relative;flex:none;transition:background .2s}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:999px;background:var(--text-3);transition:transform .2s var(--ease),background .2s}
+.switch[aria-checked="true"]{background:var(--primary);border-color:transparent}
+.switch[aria-checked="true"]::after{transform:translateX(20px);background:var(--on-primary)}
+.check{position:relative;display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:12px;border:1px solid var(--outline);background:var(--surface);
+  margin-top:16px;cursor:pointer;font-size:14px;line-height:1.45;transition:border-color .15s}
+.check input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.check .box{width:24px;height:24px;border-radius:7px;border:2px solid var(--text-3);display:grid;place-items:center;flex:none;color:transparent;margin-top:1px;
+  transition:background .15s,border-color .15s,color .15s}
+.check .box .ms{font-size:18px;font-variation-settings:'FILL' 0,'wght' 600,'GRAD' 0,'opsz' 20}
+.check input:checked + .box{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.check input:focus-visible + .box{outline:2px solid var(--primary);outline-offset:2px}
+.check.invalid{border-color:var(--error)}
+.check.invalid .box{border-color:var(--error)}
+.proto-tag{font-size:11px;font-weight:700;color:var(--on-warning-c);background:var(--warning-c);padding:2px 8px;border-radius:999px}
+
+/* ---------- strava ---------- */
+.sv-hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:12px 0 8px}
+.sv-mark{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:var(--strava);color:#fff}
+.sv-mark.sm{width:40px;height:40px;border-radius:12px}
+.sv-mark.lg{width:72px;height:72px;border-radius:20px}
+.sv-mark.lg .ms{font-size:36px}
+.benefits{list-style:none;margin-top:16px}
+.benefits li{display:flex;gap:12px;align-items:flex-start;padding:10px 0}
+.benefits .ms{color:var(--strava)}
+
+/* ---------- lembar (bottom sheet) ---------- */
+.sheet-root{position:absolute;inset:0;z-index:10}
+.scrim{position:absolute;inset:0;background:var(--scrim);opacity:0;transition:opacity .3s var(--ease)}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:calc(100% - 40px - var(--safe-t));background:var(--surface);border-radius:24px 24px 0 0;
+  display:flex;flex-direction:column;transform:translateY(100%);transition:transform .36s var(--ease-out);padding-bottom:var(--safe-b);outline:none}
+.sheet.tall{height:calc(100% - 40px - var(--safe-t))}
+.sheet-root.open .scrim{opacity:1}
+.sheet-root.open .sheet{transform:none}
+.sheet-root.closing .sheet{transition:transform .24s var(--ease-in)}
+.sheet-root.closing .scrim{transition:opacity .24s var(--ease-in)}
+.grab{display:grid;place-items:center;height:22px;flex:none;touch-action:none;cursor:grab}
+.grab span{width:36px;height:4px;border-radius:2px;background:var(--outline)}
+.sheet-head{display:flex;align-items:center;gap:4px;padding:0 8px 4px;min-height:48px;flex:none;touch-action:none}
+.sheet-head .sheet-title{flex:1;min-width:0;padding-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet-head [data-sheet-back]:not([hidden]) + .sheet-title{padding-left:0}
+.sheet-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:4px 16px 20px;overscroll-behavior:contain;scrollbar-width:none}
+.sheet-foot{flex:none;padding:12px 16px 16px;border-top:1px solid var(--outline)}
+.sheet-foot .note{margin:0 0 12px}
+.step{animation:fade-up .2s var(--ease) both}
+.step-fwd{animation:step-fwd .28s var(--ease-out) both}
+.step-back{animation:step-back .28s var(--ease-out) both}
+@keyframes step-fwd{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes step-back{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+.progress{height:4px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:var(--primary);transition:width .3s var(--ease)}
+
+.opt{display:flex;gap:14px;align-items:center;padding:16px;border-radius:16px;border:1px solid var(--outline);background:var(--surface);text-align:left;width:100%;margin-top:12px}
+.opt .row-main{gap:4px}
+.opt .row-main span{font-size:13px;color:var(--text-2)}
+.sum{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.sum b.wrap{font-size:15px}
+
+.field{display:flex;flex-direction:column;gap:6px;margin-top:18px}
+.field .lbl{font-size:13px;font-weight:600;color:var(--text-2)}
+.input{min-height:48px;width:100%;border-radius:12px;border:1px solid var(--outline);background:var(--surface);padding:0 14px;font-size:16px;color:var(--text);
+  -webkit-appearance:none;appearance:none;transition:border-color .15s}
+.input:focus{outline:2px solid var(--primary);outline-offset:-1px;border-color:transparent}
+.input.invalid{border-color:var(--error)}
+textarea.input{min-height:92px;padding:12px 14px;resize:none;line-height:1.45}
+input[type="date"].input{display:block}
+.input-wrap{position:relative}
+.input-wrap .input{padding-right:76px}
+.suffix{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text-3);pointer-events:none}
+.pw-toggle{position:absolute;right:2px;top:50%;transform:translateY(-50%)}
+.help{font-size:12px;color:var(--text-3)}
+.err-text{font-size:12px;color:var(--error);font-weight:600;display:flex;gap:4px;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid2 .field{margin-top:18px}
+.sport-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sport{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:72px;border-radius:12px;border:1px solid var(--outline);
+  background:var(--surface);font-size:12px;font-weight:600;color:var(--text-2);transition:background .15s,border-color .15s}
+.sport[aria-pressed="true"]{background:var(--d-physical-c);border-color:var(--d-physical);color:var(--text)}
+.sport[aria-pressed="true"] .ms{color:var(--d-physical)}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ph{aspect-ratio:1;border-radius:12px;overflow:hidden;position:relative;background:var(--surface-2);display:grid;place-items:center;color:var(--text-3)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph .rm{position:absolute;top:4px;right:4px;width:32px;height:32px;border-radius:999px;background:rgba(17,24,39,.64);color:#fff;display:grid;place-items:center}
+.ph .rm::after{content:'';position:absolute;inset:-6px}
+.ph .rm .ms{font-size:18px}
+.ph-add{border:1.5px dashed var(--outline);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  color:var(--text-2);font-size:12px;font-weight:600}
+.ph-add.invalid{border-color:var(--error);color:var(--error)}
+.done{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:28px 8px 8px}
+.done-mark{width:88px;height:88px;border-radius:999px;background:var(--success-c);color:var(--success);display:grid;place-items:center;margin-bottom:10px;
+  animation:pop .45s var(--ease-out) both}
+.done-mark .ms{font-size:48px;font-variation-settings:'FILL' 1,'wght' 600,'GRAD' 0,'opsz' 48}
+@keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.06);opacity:1}100%{transform:scale(1)}}
+.done-pts{font-size:32px;font-weight:800;color:var(--pos);margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.detail-rows{margin-top:16px}
+.detail-rows .row{min-height:52px}
+.kv{display:flex;justify-content:space-between;gap:16px;width:100%}
+.kv span:first-child{color:var(--text-2)}
+.kv span:last-child{font-weight:600;text-align:right}
+
+/* ---------- toast & banner luring ---------- */
+.toast-host{position:absolute;left:16px;right:16px;bottom:calc(var(--nav-h) + var(--safe-b) + 12px);z-index:20;display:flex;flex-direction:column;align-items:center;pointer-events:none}
+#app.no-nav .toast-host,#app.has-sheet .toast-host{bottom:calc(var(--safe-b) + 16px)}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:10px;min-height:48px;padding:10px 8px 10px 14px;border-radius:12px;background:var(--inverse);color:var(--on-inverse);
+  box-shadow:var(--shadow-float);font-size:14px;font-weight:500;max-width:100%;animation:fade-up .22s var(--ease-out) both}
+.toast.out{animation:toast-out .2s var(--ease-in) both}
+@keyframes toast-out{to{opacity:0;transform:translateY(8px)}}
+.toast > span:not(.ms){flex:1;padding-right:6px}
+.toast.success .ms{color:#4ADE80}.toast.error .ms{color:#F87171}.toast.warning .ms{color:#FBBF24}
+:root[data-theme="dark"] .toast.success .ms{color:var(--success)}
+.toast-act{color:#8AB4F8;font-weight:700;font-size:14px;padding:0 10px;min-height:36px}
+.offline{position:absolute;left:0;right:0;top:0;z-index:15;padding:calc(var(--safe-t) + 6px) 16px 6px;background:var(--inverse);color:var(--on-inverse);font-size:13px;font-weight:600;
+  display:flex;gap:8px;align-items:center;justify-content:center}
+
+/* ---------- masuk ---------- */
+.login{position:absolute;inset:0;z-index:30;background:var(--bg);overflow-y:auto;display:flex;flex-direction:column;
+  padding:calc(var(--safe-t) + 56px) 24px calc(var(--safe-b) + 24px)}
+.login form{margin-top:28px}
+.login .foot{margin-top:auto;padding-top:24px;text-align:center}
+.logo{width:56px;height:56px}
+.overlay{position:absolute;inset:0;z-index:25;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  text-align:center;padding:24px;animation:fade-up .2s var(--ease) both}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="screens" id="screens"></div>
+  <nav class="tabbar" id="tabbar" aria-label="Menu utama" hidden>
+    <a class="tab" href="#/beranda" data-tab="beranda"><span class="ind"><span class="ms" aria-hidden="true">home</span></span><span>Beranda</span></a>
+    <a class="tab" href="#/quest" data-tab="quest"><span class="ind"><span class="ms" aria-hidden="true">flag</span></span><span>Quest</span></a>
+    <button class="tab tab-catat" type="button" data-action="catat"><span class="ind"><span class="ms" aria-hidden="true">add</span></span><span>Catat</span></button>
+    <a class="tab" href="#/peringkat" data-tab="peringkat"><span class="ind"><span class="ms" aria-hidden="true">leaderboard</span></span><span>Peringkat</span></a>
+    <a class="tab" href="#/rewards" data-tab="rewards"><span class="ind"><span class="ms" aria-hidden="true">redeem</span></span><span>Rewards</span></a>
+  </nav>
+  <div class="toast-host" id="toasts" role="status" aria-live="polite"></div>
+  <div class="offline" id="offline" hidden><span class="ms sm" aria-hidden="true">wifi_off</span>Kamu sedang offline. Data dari terakhir dibuka.</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   KONTRAK API (yang nanti dibuat di Journey, prefix /api/wellbeing)
+   Semua dipanggil lewat `api` di bawah. Di prototipe, `server()` meniru
+   jawabannya dari data contoh di localStorage.
+
+   POST /login                      {user, password} -> {me}
+   GET  /me                         -> {me, totals, strava}
+   GET  /home                       -> {me, totals, dims[], quests[], recent[], strava}
+   GET  /catalog                    -> {daily[]}   (jenis kegiatan + poin + batas)
+   GET  /activities?filter&page     -> {items[], hasMore}
+   GET  /activities/:id             -> {activity}
+   POST /activities                 {kind, code|sport, date, steps?, kcal?, minutes?, note, photos, force?}
+                                    -> {activity, totals}   409 = sudah dicatat / mirip Strava
+   GET  /quests                     -> {active[], done[]}
+   POST /quests/:id/claim           {proof} -> {quest, totals}
+   GET  /leaderboard?period&dim     -> {items[], me, of}
+   GET  /rewards                    -> {coins, items[], redemptions[]}
+   POST /rewards/:id/redeem         -> {redemption, coins}
+   GET  /ledger?type=points|coins   -> {items[]}
+   GET  /strava                     -> {state, athlete, lastSync, connectedAt, brokenSince, share, consentAt, recent[]}
+   POST /strava/connect             {consent} -> {added[]}   (asli: redirect ke OAuth Strava)
+                                    422 kalau belum setuju poin Strava tampil di peringkat
+   POST /strava/share               {on} -> {share}   (tarik/beri lagi persetujuan peringkat)
+   POST /strava/sync                -> {added[], lastSync}
+   POST /strava/disconnect          -> {ok}
+   ===================================================================== */
+
+/* ---------- util ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const I = (name, cls = '') => `<span class="ms ${cls}" aria-hidden="true">${name}</span>`;
+const nf = new Intl.NumberFormat('id-ID');
+const n = v => nf.format(Math.round(v || 0));
+const sum = arr => arr.reduce((a, b) => a + (b || 0), 0);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const clone = o => JSON.parse(JSON.stringify(o));
+const TZ = 'Asia/Jakarta';
+const isoOf = d => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const today = () => isoOf(new Date());
+const addDays = (iso, k) => { const d = new Date(iso + 'T12:00:00+07:00'); d.setUTCDate(d.getUTCDate() + k); return isoOf(d); };
+const dateObj = iso => new Date(iso + 'T12:00:00+07:00');
+const fmt = (iso, o) => new Intl.DateTimeFormat('id-ID', { timeZone: TZ, ...o }).format(dateObj(iso));
+const monthKey = iso => iso.slice(0, 7);
+const dayLabel = iso => {
+  const t = today();
+  if (iso === t) return 'Hari ini';
+  if (iso === addDays(t, -1)) return 'Kemarin';
+  return fmt(iso, { weekday: 'short', day: 'numeric', month: 'short' });
+};
+const daysBetween = (a, b) => Math.round((dateObj(b) - dateObj(a)) / 86400000);
+const timeAgo = ts => {
+  const m = Math.round((Date.now() - ts) / 60000);
+  if (m < 1) return 'baru saja';
+  if (m < 60) return `${m} menit lalu`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  return `${Math.round(h / 24)} hari lalu`;
+};
+const hourWIB = () => Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
+const greet = () => { const h = hourWIB(); return h < 11 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 18 ? 'Selamat sore' : 'Selamat malam'; };
+const readLS = k => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+const writeLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* penyimpanan tidak tersedia */ } };
+const removeLS = k => { try { localStorage.removeItem(k); } catch { /* abaikan */ } };
+const haptic = () => { try { if (navigator.vibrate && navigator.userActivation?.hasBeenActive) navigator.vibrate(12); } catch { /* abaikan */ } };
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const initials = name => name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+const avClass = name => 'av-' + DIMS[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % DIMS.length].id;
+
+/* ---------- metadata tampilan (bukan data) ---------- */
+const DIMS = [
+  { id: 'physical', name: 'Fisik', icon: 'directions_run' },
+  { id: 'emotional', name: 'Emosional', icon: 'psychology' },
+  { id: 'social', name: 'Sosial', icon: 'diversity_3' },
+  { id: 'financial', name: 'Finansial', icon: 'savings' },
+  { id: 'spiritual', name: 'Spiritual', icon: 'spa' },
+];
+const DIM = Object.fromEntries(DIMS.map(d => [d.id, d]));
+const SPORTS = [
+  { code: 'running', name: 'Lari', icon: 'directions_run' },
+  { code: 'cycling', name: 'Sepeda', icon: 'directions_bike' },
+  { code: 'swimming', name: 'Renang', icon: 'pool' },
+  { code: 'workout', name: 'Workout', icon: 'fitness_center' },
+  { code: 'badminton', name: 'Badminton', icon: 'sports_tennis' },
+  { code: 'futsal', name: 'Futsal', icon: 'sports_soccer' },
+  { code: 'walking', name: 'Jalan', icon: 'directions_walk' },
+  { code: 'other', name: 'Lainnya', icon: 'sports_gymnastics' },
+];
+const SPORT = Object.fromEntries(SPORTS.map(s => [s.code, s]));
+const PROOF = {
+  photo: { icon: 'photo_camera', label: 'Bukti foto' },
+  text: { icon: 'notes', label: 'Tulisan singkat' },
+  instagram: { icon: 'alternate_email', label: 'Akun Instagram' },
+};
+const actIcon = a => a.kind === 'sport' ? (SPORT[a.sport]?.icon || 'fitness_center') : a.code === 'physical.steps' ? 'directions_walk' : DIM[a.dim].icon;
+const BACKDATE_DAYS = 7;
+const MAX_KCAL = 3000;
+const MAX_PHOTOS = 5;
+
+/* =====================================================================
+   SERVER TIRUAN  (hapus seluruh bagian ini saat memakai API asli)
+   ===================================================================== */
+const CATALOG = [
+  ['physical.steps', 'physical', 'Langkah harian', 0, 'Screenshot jumlah langkah dari aplikasi ponsel', 'day'],
+  ['emotional.konsultasi_coaching', 'emotional', 'Konsultasi / Coaching / Mentoring', 150, 'Foto, screenshot, atau bukti partisipasi'],
+  ['emotional.nonton_film_dokumenter', 'emotional', 'Menonton Film / Dokumenter (1,5-2,5 Jam)', 100, 'Foto, screenshot, atau bukti partisipasi'],
+  ['emotional.sharing_session', 'emotional', 'Sharing Session', 80, 'Foto, screenshot, atau bukti partisipasi'],
+  ['emotional.seminar_mental_health', 'emotional', 'Seminar Mengenai Mental Health', 120, 'Foto, screenshot, atau bukti partisipasi'],
+  ['emotional.meditasi', 'emotional', 'Meditasi', 70, 'Foto, screenshot, atau bukti partisipasi'],
+  ['emotional.baca_buku_fisik', 'emotional', 'Membaca 1 Buku Fisik (Novel, Fiction, Action, Thriller, Biography, Komik)', 300, 'Foto, screenshot, atau bukti partisipasi dan rangkuman'],
+  ['emotional.baca_ebook', 'emotional', 'Membaca 1 Buku E-Book (Novel, Fiction, Action, Thriller, Biography, Komik)', 300, 'Foto, screenshot, atau bukti partisipasi dan rangkuman'],
+  ['emotional.podcast', 'emotional', 'Mendengarkan Podcast', 80, 'Foto, screenshot, atau bukti partisipasi dan rangkuman'],
+  ['social.hobi', 'social', 'Penyaluran Hobi / Minat Non Physical, Non Spiritual', 150, 'Foto, screenshot, atau bukti partisipasi'],
+  ['social.donor_darah', 'social', 'Donor Darah', 200, 'Kartu donor atau sertifikat'],
+  ['social.buddy_program', 'social', 'Buddy Program', 80, 'Foto, screenshot, atau bukti partisipasi'],
+  ['social.training_skills', 'social', 'Mengikuti Training Berkaitan dengan Hard Skills & Soft Skills', 120, 'Sertifikat atau foto kegiatan dan rangkuman'],
+  ['financial.tabungan_emas', 'financial', 'Membuka Tabungan Emas', 150, 'Screenshot/bukti transaksi', 'month'],
+  ['financial.tabungan_deposito', 'financial', 'Membuka Tabungan Deposito', 300, 'Screenshot/bukti transaksi', 'month'],
+  ['financial.tabungan_saham', 'financial', 'Membuka Tabungan Saham / Reksadana', 300, 'Screenshot/bukti transaksi', 'month'],
+  ['financial.tabungan_crypto', 'financial', 'Membuka Tabungan Crypto', 300, 'Screenshot/bukti transaksi', 'month'],
+  ['financial.program_tabungan', 'financial', 'Membuat Program Tabungan Tertentu', 300, 'Foto, screenshot, atau bukti partisipasi', 'month'],
+  ['financial.asuransi', 'financial', 'Membeli Asuransi (di Luar BPJS Kes / Ketenagakerjaan)', 300, 'Screenshot/bukti transaksi', 'month'],
+  ['financial.koperasi', 'financial', 'Mengikuti Koperasi (Membuka Tabungan / Mengikuti Kegiatan)', 300, 'Foto, screenshot, atau bukti partisipasi', 'month'],
+  ['spiritual.kajian_rohani', 'spiritual', 'Mengikuti Kajian Rohani', 80, 'Foto, screenshot, atau bukti partisipasi'],
+  ['spiritual.pelayanan', 'spiritual', 'Pelayanan', 100, 'Foto, screenshot, atau bukti partisipasi'],
+  ['spiritual.bakti_sosial', 'spiritual', 'Bakti Sosial', 100, 'Foto, screenshot, atau bukti partisipasi'],
+  ['spiritual.hari_besar', 'spiritual', 'Perayaan Hari Besar Keagamaan', 80, 'Foto, screenshot, atau bukti partisipasi'],
+  ['spiritual.donasi', 'spiritual', 'Donasi', 100, 'Foto, screenshot, atau bukti partisipasi'],
+  ['spiritual.csr', 'spiritual', 'CSR', 100, 'Foto, screenshot, atau bukti partisipasi'],
+].map(([code, dim, name, points, proof, limit]) => ({ code, dim, name, points, proof, limit: limit || null, steps: code === 'physical.steps' }));
+const CAT = Object.fromEntries(CATALOG.map(c => [c.code, c]));
+
+function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+function seedDB() {
+  const t = today(), d = k => addDays(t, -k);
+  let id = 5000;
+  const A = o => ({ id: String(++id), status: 'approved', source: 'manual', photos: 1, note: '', minutes: null, distanceKm: null, ...o });
+  const D = (k, code, extra = {}) => A({ date: d(k), kind: 'daily', code, dim: CAT[code].dim, name: CAT[code].name, points: CAT[code].points, ...extra });
+  const S = (k, sport, name, kcal, extra = {}) => A({ date: d(k), kind: 'sport', sport, dim: 'physical', name, kcal, points: kcal, ...extra });
+  const activities = [
+    S(0, 'running', 'Lari pagi', 412, { source: 'strava', distanceKm: 5.2, minutes: 34, photos: 0 }),
+    D(0, 'emotional.meditasi'),
+    D(1, 'physical.steps', { steps: 9120, points: 912, name: 'Langkah harian' }),
+    D(1, 'spiritual.kajian_rohani'),
+    S(2, 'cycling', 'Gowes sore', 618, { source: 'strava', distanceKm: 18.4, minutes: 55, photos: 0 }),
+    D(2, 'emotional.podcast', { note: 'Podcast soal kebiasaan tidur.' }),
+    D(3, 'social.buddy_program'),
+    S(3, 'badminton', 'Badminton', 450, { points: 300, status: 'adjusted', originalPoints: 450, minutes: 60, reason: 'Kalori disesuaikan dengan durasi 60 menit di foto.' }),
+    D(4, 'financial.tabungan_emas'),
+    S(4, 'running', 'Easy run', 298, { source: 'strava', distanceKm: 3.9, minutes: 26, photos: 0 }),
+    D(5, 'emotional.baca_buku_fisik', { note: 'Atomic Habits, rangkuman di foto kedua.', photos: 2 }),
+    D(5, 'physical.steps', { steps: 7400, points: 740, name: 'Langkah harian' }),
+    D(6, 'social.hobi', { status: 'rejected', reason: 'Foto bukti tidak terbaca. Silakan catat ulang dengan foto yang jelas.' }),
+    S(6, 'swimming', 'Renang', 380, { source: 'strava', distanceKm: 1.0, minutes: 40, photos: 0 }),
+    D(8, 'spiritual.donasi'),
+    S(8, 'futsal', 'Futsal', 520, { minutes: 90 }),
+    D(9, 'emotional.sharing_session'),
+    S(10, 'running', 'Lari malam', 350, { source: 'strava', distanceKm: 4.4, minutes: 29, photos: 0 }),
+    D(11, 'physical.steps', { steps: 8030, points: 803, name: 'Langkah harian' }),
+    D(12, 'social.training_skills'),
+    S(13, 'workout', 'Weight training', 260, { source: 'strava', minutes: 45, photos: 0 }),
+    D(15, 'spiritual.bakti_sosial'),
+    S(16, 'running', 'Long run', 690, { source: 'strava', distanceKm: 8.8, minutes: 58, photos: 0 }),
+    D(18, 'emotional.nonton_film_dokumenter'),
+  ];
+  const quests = [
+    { id: 'q1', title: 'Jalan 8.000 langkah hari ini', dim: 'physical', points: 100, proof: 'photo', ends: d(0), desc: 'Unggah screenshot jumlah langkah dari aplikasi ponsel.' },
+    { id: 'q2', title: 'Tulis satu hal yang kamu syukuri minggu ini', dim: 'emotional', points: 50, proof: 'text', ends: addDays(t, 2), desc: 'Cukup 1-3 kalimat. Tidak dibagikan ke orang lain.' },
+    { id: 'q3', title: 'Makan siang bareng rekan beda divisi', dim: 'social', points: 80, proof: 'photo', ends: addDays(t, 3), desc: 'Foto bersama saat makan siang. Minimal 2 orang dari divisi berbeda.' },
+    { id: 'q4', title: 'Catat pengeluaran selama seminggu', dim: 'financial', points: 120, proof: 'photo', ends: addDays(t, 5), desc: 'Screenshot catatan pengeluaran 7 hari (aplikasi atau tabel).' },
+    { id: 'q5', title: 'Bagikan kegiatan sosialmu di Instagram', dim: 'social', points: 60, proof: 'instagram', ends: addDays(t, 6), desc: 'Unggah ke Instagram, lalu isi akun dan tautan postingannya.' },
+    { id: 'q6', title: 'Meditasi 10 menit', dim: 'emotional', points: 50, proof: 'photo', ends: d(3), claimedAt: d(4), status: 'done' },
+    { id: 'q7', title: 'Bawa bekal sehat 3 hari', dim: 'physical', points: 100, proof: 'photo', ends: d(6), claimedAt: d(7), status: 'done' },
+    { id: 'q8', title: 'Ikut donor darah kantor', dim: 'social', points: 80, proof: 'photo', ends: d(10), claimedAt: d(10), status: 'done' },
+  ].map(q => ({ status: 'active', claimedAt: null, ...q }));
+  const adjustments = [{ id: 'adj1', date: d(9), title: 'Penyesuaian admin: juara lomba 17 Agustus', points: 200, dim: 'social' }];
+  const rewards = [
+    { id: 'r1', name: 'Voucher kopi kantor', cost: 300, stock: 20, icon: 'local_cafe', desc: '1 minuman pilihan di pantry kantor.' },
+    { id: 'r2', name: 'Tumbler', cost: 1200, stock: 6, icon: 'local_drink', desc: 'Tumbler stainless 500 ml.' },
+    { id: 'r3', name: 'Payung lipat', cost: 1500, stock: 4, icon: 'umbrella', desc: 'Payung lipat otomatis.' },
+    { id: 'r4', name: 'Kaos olahraga', cost: 2500, stock: 10, icon: 'checkroom', desc: 'Kaos dry-fit, ukuran S sampai XXL.' },
+    { id: 'r5', name: 'Kelas yoga 1x', cost: 3000, stock: 8, icon: 'self_improvement', desc: 'Satu sesi kelas yoga di studio rekanan.' },
+    { id: 'r6', name: 'Saldo e-wallet Rp50.000', cost: 5000, stock: 3, icon: 'account_balance_wallet', desc: 'Dikirim ke nomor e-wallet yang terdaftar.' },
+  ];
+  const redemptions = [
+    { id: 'rd1', rewardId: 'r1', name: 'Voucher kopi kantor', icon: 'local_cafe', cost: 300, date: d(3), status: 'ready' },
+    { id: 'rd2', rewardId: 'r2', name: 'Tumbler', icon: 'local_drink', cost: 1200, date: d(24), status: 'done' },
+  ];
+  // Orang lain di peringkat (nama rekaan).
+  const first = ['Raka', 'Sinta', 'Bima', 'Nadia', 'Yoga', 'Ayu', 'Fajar', 'Citra', 'Galih', 'Intan', 'Rizky', 'Maya', 'Dimas', 'Laras', 'Hendra', 'Tari', 'Bayu', 'Putri', 'Arif', 'Wulan', 'Eko', 'Rani', 'Teguh', 'Sari'];
+  const last = ['Pratama', 'Maharani', 'Saputra', 'Putri', 'Firmansyah', 'Kartika', 'Nugroho', 'Ananda', 'Ramadhan', 'Permata', 'Hidayat', 'Wijaya', 'Aditya', 'Wulandari', 'Setiawan', 'Amelia', 'Rahman', 'Lestari', 'Kusuma', 'Santoso'];
+  const depts = ['Event', 'Finance', 'Production', 'HR', 'Sales', 'Marketing', 'IT', 'Creative', 'GA', 'Account'];
+  const r = rng(20261116), used = new Set(['Dewi Lestari']), people = [];
+  const totalsTop = [18920, 16450, 15310, 14780, 13900, 12950];
+  while (people.length < 47) {
+    const name = `${first[Math.floor(r() * first.length)]} ${last[Math.floor(r() * last.length)]}`;
+    if (used.has(name)) continue;
+    used.add(name);
+    const i = people.length;
+    const total = i < totalsTop.length ? totalsTop[i] : Math.round(12200 - (i - 6) * 230 - r() * 180);
+    const w = DIMS.map(() => 0.4 + r());
+    const ws = sum(w);
+    people.push({ id: 'p' + i, name, dept: depts[Math.floor(r() * depts.length)], total, month: Math.round(total * (.3 + r() * .35)),
+      w: Object.fromEntries(DIMS.map((dm, k) => [dm.id, w[k] / ws])) });
+  }
+  const db = {
+    v: 1,
+    me: { name: 'Dewi Lestari', nickname: 'Dewi', department: 'Creative', position: 'Graphic Designer' },
+    basePoints: 0, baseSpent: 0, baseSince: d(30), bestStreak: 12,
+    baseDims: { physical: .5, emotional: .2, social: .12, financial: .1, spiritual: .08 },
+    activities, quests, adjustments, rewards, redemptions, people,
+    strava: { state: 'connected', athlete: 'Dewi Lestari', connectedAt: d(40), lastSync: Date.now() - 6 * 60000, brokenSince: null, share: true, consentAt: d(40) },
+  };
+  // Saldo awal (dipindah dari aplikasi lama) dibuat supaya total = 12.480 poin, 3.150 koin.
+  const raw = computeTotals(db);
+  db.basePoints = 12480 - raw.points;
+  db.baseSpent = (12480 - 3150) - sum(redemptions.map(x => x.cost));
+  return db;
+}
+
+let DB = readLS('wb-proto-db-v1') || null;
+if (!DB || DB.v !== 1) { DB = seedDB(); writeLS('wb-proto-db-v1', DB); }
+const saveDB = () => writeLS('wb-proto-db-v1', DB);
+
+function counted(db) { return db.activities.filter(a => a.status !== 'rejected'); }
+function computeTotals(db) {
+  const acts = counted(db);
+  const questPts = sum(db.quests.filter(q => q.status === 'done').map(q => q.points));
+  const points = db.basePoints + sum(acts.map(a => a.points)) + questPts + sum(db.adjustments.map(a => a.points));
+  const spent = db.baseSpent + sum(db.redemptions.map(r => r.cost));
+  return { points, coins: points - spent };
+}
+function dayPoints(db, iso) {
+  return sum(counted(db).filter(a => a.date === iso).map(a => a.points)) + sum(db.quests.filter(q => q.status === 'done' && q.claimedAt === iso).map(q => q.points));
+}
+function streakOf(db) {
+  let s = 0, day = today();
+  if (dayPoints(db, day) === 0) day = addDays(day, -1);
+  while (dayPoints(db, day) > 0) { s++; day = addDays(day, -1); }
+  return s;
+}
+function monthDims(db) {
+  const m = monthKey(today()), out = Object.fromEntries(DIMS.map(d => [d.id, 0]));
+  counted(db).filter(a => monthKey(a.date) === m).forEach(a => { out[a.dim] += a.points; });
+  db.quests.filter(q => q.status === 'done' && q.claimedAt && monthKey(q.claimedAt) === m).forEach(q => { out[q.dim] += q.points; });
+  db.adjustments.filter(a => monthKey(a.date) === m).forEach(a => { out[a.dim] += a.points; });
+  return out;
+}
+function allDims(db) {
+  const out = Object.fromEntries(DIMS.map(d => [d.id, Math.round(db.basePoints * db.baseDims[d.id])]));
+  counted(db).forEach(a => { out[a.dim] += a.points; });
+  db.quests.filter(q => q.status === 'done').forEach(q => { out[q.dim] += q.points; });
+  db.adjustments.forEach(a => { out[a.dim] += a.points; });
+  return out;
+}
+// Aturan Strava: data Strava seseorang hanya boleh terlihat orang lain dengan persetujuannya.
+const sharesStrava = db => db.strava.state !== 'none' && db.strava.share !== false;
+function board(db, period, dim) {
+  const md = monthDims(db), ad = allDims(db), t = computeTotals(db);
+  let mePts = period === 'month' ? (dim === 'all' ? sum(Object.values(md)) : md[dim]) : (dim === 'all' ? t.points : ad[dim]);
+  const stravaHidden = !sharesStrava(db);
+  if (stravaHidden && (dim === 'all' || dim === 'physical')) {
+    const m = monthKey(today());
+    mePts -= sum(counted(db).filter(a => a.source === 'strava' && (period === 'all' || monthKey(a.date) === m)).map(a => a.points));
+  }
+  const others = db.people.map(p => ({ id: p.id, name: p.name, dept: p.dept,
+    points: period === 'month' ? (dim === 'all' ? p.month : Math.round(p.month * p.w[dim])) : (dim === 'all' ? p.total : Math.round(p.total * p.w[dim])) }));
+  const all = [...others, { id: 'me', name: db.me.name, dept: db.me.department, points: mePts, me: true }]
+    .sort((a, b) => b.points - a.points).map((x, i) => ({ ...x, rank: i + 1 }));
+  return { items: all.slice(0, 30), me: all.find(x => x.me), of: all.length, stravaHidden: stravaHidden && db.strava.state !== 'none' };
+}
+function totalsFull(db) {
+  const t = computeTotals(db), b = board(db, 'all', 'all');
+  const week = Array.from({ length: 7 }, (_, i) => { const date = addDays(today(), i - 6); return { date, points: dayPoints(db, date) }; });
+  return { ...t, rank: b.me.rank, of: b.of, streak: streakOf(db), bestStreak: Math.max(db.bestStreak, streakOf(db)), week, weekTotal: sum(week.map(w => w.points)) };
+}
+const sortedActs = db => [...db.activities].sort((a, b) => b.date.localeCompare(a.date) || Number(b.id) - Number(a.id));
+function stravaView(db) {
+  const s = db.strava;
+  // Webhook asli membuat "sinkron terakhir" selalu baru; ditiru di sini.
+  if (s.state === 'connected' && Date.now() - s.lastSync > 12 * 60000) s.lastSync = Date.now() - Math.round(2 + Math.random() * 8) * 60000;
+  return { state: s.state, athlete: s.athlete, lastSync: s.lastSync, connectedAt: s.connectedAt, brokenSince: s.brokenSince,
+    share: sharesStrava(db), consentAt: s.consentAt || null,
+    recent: sortedActs(db).filter(a => a.source === 'strava' && (s.state !== 'broken' || !s.brokenSince || a.date < s.brokenSince)).slice(0, 5) };
+}
+function blockedReason(db, c, date) {
+  if (c.limit === 'month') {
+    const hit = db.activities.find(a => a.code === c.code && a.status !== 'rejected' && monthKey(a.date) === monthKey(date));
+    if (hit) return 'Sudah dicatat bulan ini';
+  }
+  return null;
+}
+class ApiError extends Error { constructor(message, status = 400, code = '') { super(message); this.status = status; this.code = code; } }
+
+function server(method, path, body = {}) {
+  const url = new URL(path, 'http://x'), p = url.pathname, q = url.searchParams;
+  const route = `${method} ${p}`;
+  let m;
+  if (route === 'POST /login') {
+    if (!body.user || !body.password) throw new ApiError('Isi email atau nama panggilan, dan password.', 422);
+    if (body.password === 'salah') throw new ApiError('Email/nama panggilan atau password salah.', 401);
+    return { me: DB.me };
+  }
+  if (route === 'GET /me') return { me: DB.me, totals: totalsFull(DB), strava: stravaView(DB) };
+  if (route === 'GET /home') {
+    const md = monthDims(DB);
+    return { me: DB.me, totals: totalsFull(DB), dims: DIMS.map(d => ({ id: d.id, points: md[d.id] })),
+      quests: DB.quests.filter(x => x.status === 'active' && x.ends >= today()).sort((a, b) => a.ends.localeCompare(b.ends)).slice(0, 3),
+      recent: sortedActs(DB).slice(0, 5), strava: stravaView(DB) };
+  }
+  if (route === 'GET /catalog') return { daily: CATALOG.map(c => ({ ...c, blocked: blockedReason(DB, c, today()) })) };
+  if (route === 'GET /activities') {
+    const f = q.get('filter') || 'all', page = Number(q.get('page') || 1), size = 12;
+    const all = sortedActs(DB).filter(a => f === 'all' || (f === 'daily' && a.kind === 'daily') || (f === 'sport' && a.kind === 'sport' && a.source === 'manual') || (f === 'strava' && a.source === 'strava'));
+    return { items: all.slice((page - 1) * size, page * size), hasMore: all.length > page * size, total: all.length };
+  }
+  if ((m = p.match(/^\/activities\/(\w+)$/)) && method === 'GET') {
+    const a = DB.activities.find(x => x.id === m[1]);
+    if (!a) throw new ApiError('Aktivitas tidak ditemukan.', 404);
+    return { activity: a };
+  }
+  if (route === 'POST /activities') {
+    const t = today();
+    if (!body.date || body.date > t) throw new ApiError('Tanggal tidak boleh setelah hari ini.', 422);
+    if (daysBetween(body.date, t) > BACKDATE_DAYS) throw new ApiError(`Tanggal paling lama ${BACKDATE_DAYS} hari ke belakang.`, 422);
+    if (!body.photos) throw new ApiError('Tambahkan minimal 1 foto bukti.', 422);
+    let a;
+    if (body.kind === 'daily') {
+      const c = CAT[body.code];
+      if (!c) throw new ApiError('Jenis kegiatan tidak dikenal.', 422);
+      const why = blockedReason(DB, c, body.date);
+      if (why) throw new ApiError(`${c.name}: ${why.toLowerCase()}.`, 409, 'limit');
+      if (DB.activities.some(x => x.code === c.code && x.date === body.date && x.status !== 'rejected')) throw new ApiError('Kegiatan ini sudah dicatat di tanggal yang sama.', 409, 'same_day');
+      const steps = c.steps ? Number(body.steps) : null;
+      if (c.steps && !(steps >= 100 && steps <= 60000)) throw new ApiError('Jumlah langkah 100 sampai 60.000.', 422);
+      a = { kind: 'daily', code: c.code, dim: c.dim, name: c.name, points: c.steps ? Math.floor(steps / 10) : c.points, steps };
+    } else {
+      const s = SPORT[body.sport];
+      if (!s) throw new ApiError('Pilih jenis olahraga.', 422);
+      const kcal = Number(body.kcal);
+      if (!(kcal >= 1 && kcal <= MAX_KCAL)) throw new ApiError(`Kalori 1 sampai ${n(MAX_KCAL)} kkal per aktivitas.`, 422);
+      const twin = DB.activities.find(x => x.source === 'strava' && x.date === body.date && x.sport === body.sport && x.status !== 'rejected');
+      if (twin && !body.force) throw new ApiError(`Sudah ada "${twin.name}" dari Strava di tanggal ini (${n(twin.points)} poin). Kalau itu aktivitas yang sama, tidak perlu dicatat lagi.`, 409, 'strava_twin');
+      a = { kind: 'sport', sport: s.code, dim: 'physical', name: s.name === 'Lainnya' ? 'Olahraga' : s.name, kcal, points: kcal, minutes: Number(body.minutes) || null };
+    }
+    const act = { id: String(Date.now()), date: body.date, source: 'manual', status: 'approved', photos: body.photos, note: String(body.note || '').slice(0, 300), distanceKm: null, minutes: null, ...a };
+    DB.activities.push(act);
+    return { activity: act, totals: totalsFull(DB) };
+  }
+  if (route === 'GET /quests') {
+    const t = today();
+    return { active: DB.quests.filter(x => x.status === 'active' && x.ends >= t).sort((a, b) => a.ends.localeCompare(b.ends)),
+      done: DB.quests.filter(x => x.status === 'done').sort((a, b) => b.claimedAt.localeCompare(a.claimedAt)) };
+  }
+  if ((m = p.match(/^\/quests\/(\w+)\/claim$/)) && method === 'POST') {
+    const qq = DB.quests.find(x => x.id === m[1]);
+    if (!qq) throw new ApiError('Quest tidak ditemukan.', 404);
+    if (qq.status === 'done') throw new ApiError('Quest ini sudah kamu klaim.', 409);
+    if (qq.ends < today()) throw new ApiError('Quest sudah berakhir.', 409);
+    if (qq.proof === 'photo' && !body.photos) throw new ApiError('Tambahkan foto bukti.', 422);
+    if (qq.proof === 'text' && String(body.text || '').trim().length < 10) throw new ApiError('Tulis minimal 10 huruf.', 422);
+    if (qq.proof === 'instagram' && (!body.account || !body.link)) throw new ApiError('Isi akun Instagram dan tautan postingan.', 422);
+    qq.status = 'done'; qq.claimedAt = today();
+    return { quest: qq, totals: totalsFull(DB) };
+  }
+  if (route === 'GET /leaderboard') return board(DB, q.get('period') || 'month', q.get('dim') || 'all');
+  if (route === 'GET /rewards') return { coins: computeTotals(DB).coins, items: DB.rewards, redemptions: [...DB.redemptions].sort((a, b) => b.date.localeCompare(a.date)) };
+  if ((m = p.match(/^\/rewards\/(\w+)\/redeem$/)) && method === 'POST') {
+    const rw = DB.rewards.find(x => x.id === m[1]);
+    if (!rw) throw new ApiError('Reward tidak ditemukan.', 404);
+    if (rw.stock < 1) throw new ApiError('Stok habis.', 409);
+    if (computeTotals(DB).coins < rw.cost) throw new ApiError('Koin belum cukup.', 409);
+    rw.stock -= 1;
+    const rd = { id: 'rd' + Date.now(), rewardId: rw.id, name: rw.name, icon: rw.icon, cost: rw.cost, date: today(), status: 'processing' };
+    DB.redemptions.push(rd);
+    return { redemption: rd, coins: computeTotals(DB).coins };
+  }
+  if (route === 'GET /ledger') {
+    const type = q.get('type') || 'points';
+    if (type === 'points') {
+      const items = [
+        ...counted(DB).map(a => ({ date: a.date, title: a.name, sub: a.source === 'strava' ? 'Strava' : DIM[a.dim].name, amount: a.points, icon: actIcon(a), dim: a.dim })),
+        ...DB.quests.filter(x => x.status === 'done').map(x => ({ date: x.claimedAt, title: x.title, sub: 'Quest', amount: x.points, icon: 'flag', dim: x.dim })),
+        ...DB.adjustments.map(x => ({ date: x.date, title: x.title, sub: 'Admin', amount: x.points, icon: 'tune', dim: x.dim })),
+        { date: DB.baseSince, title: 'Poin dari aplikasi lama', sub: 'Dipindah saat peralihan', amount: DB.basePoints, icon: 'history', dim: null },
+      ].sort((a, b) => b.date.localeCompare(a.date));
+      return { items };
+    }
+    const t = computeTotals(DB);
+    const earnedSince = t.points - DB.basePoints;
+    const items = [
+      ...DB.redemptions.map(r => ({ date: r.date, title: `Tukar ${r.name}`, sub: 'Rewards', amount: -r.cost, icon: 'redeem' })),
+      { date: today(), title: 'Koin dari poin baru', sub: '1 poin = 1 koin', amount: earnedSince, icon: 'add_circle' },
+      { date: DB.baseSince, title: 'Koin dari aplikasi lama', sub: 'Dipindah saat peralihan', amount: DB.basePoints - DB.baseSpent, icon: 'history' },
+    ].sort((a, b) => b.date.localeCompare(a.date));
+    return { items };
+  }
+  if (route === 'GET /strava') return stravaView(DB);
+  if (route === 'POST /strava/sync') {
+    if (DB.strava.state !== 'connected') throw new ApiError('Strava belum tersambung.', 409);
+    const added = [];
+    if (Math.random() < .5) {
+      const a = { id: String(Date.now()), date: today(), kind: 'sport', sport: 'walking', dim: 'physical', name: 'Jalan sore', kcal: 186, points: 186, source: 'strava', status: 'approved', photos: 0, note: '', distanceKm: 2.6, minutes: 31 };
+      DB.activities.push(a); added.push(a);
+    }
+    DB.strava.lastSync = Date.now();
+    return { added, lastSync: DB.strava.lastSync };
+  }
+  if (route === 'POST /strava/connect') {
+    const was = DB.strava.state, s = DB.strava;
+    if (was === 'none' && !body.consent) throw new ApiError('Centang persetujuan dulu untuk menyambungkan Strava.', 422, 'consent');
+    if (body.consent) { s.share = true; s.consentAt = today(); }
+    s.state = 'connected'; s.lastSync = Date.now(); s.athlete = DB.me.name;
+    if (was === 'none') s.connectedAt = today();
+    const since = was === 'broken' && s.brokenSince ? s.brokenSince : addDays(today(), -3);
+    const added = [
+      { id: String(Date.now()), date: since, kind: 'sport', sport: 'running', dim: 'physical', name: 'Lari pagi', kcal: 402, points: 402, source: 'strava', status: 'approved', photos: 0, note: '', distanceKm: 5.0, minutes: 33 },
+      { id: String(Date.now() + 1), date: addDays(since, 1) > today() ? since : addDays(since, 1), kind: 'sport', sport: 'cycling', dim: 'physical', name: 'Gowes ke kantor', kcal: 288, points: 288, source: 'strava', status: 'approved', photos: 0, note: '', distanceKm: 9.1, minutes: 32 },
+    ];
+    DB.activities.push(...added);
+    s.brokenSince = null;
+    return { added };
+  }
+  if (route === 'POST /strava/share') {
+    if (DB.strava.state === 'none') throw new ApiError('Strava belum tersambung.', 409);
+    DB.strava.share = !!body.on;
+    if (body.on) DB.strava.consentAt = today();
+    return { share: DB.strava.share };
+  }
+  if (route === 'POST /strava/disconnect') { Object.assign(DB.strava, { state: 'none', brokenSince: null, share: false, consentAt: null }); return { ok: true }; }
+  throw new ApiError(`Tidak ada rute ${route}`, 404);
+}
+
+/* ---------- pengaturan prototipe ---------- */
+const settings = Object.assign({ theme: 'system', net: 'normal', fail: false }, readLS('wb-proto-settings') || {});
+const saveSettings = () => writeLS('wb-proto-settings', settings);
+const LATENCY = { fast: [60, 160], normal: [320, 820], slow: [1400, 2600] };
+
+/* =====================================================================
+   LAPISAN API — satu-satunya tempat yang diganti untuk API asli:
+     request: (method, path, body) => fetch('/api/wellbeing' + path, {...}).then(...)
+   ===================================================================== */
+const api = {
+  async request(method, path, body) {
+    const [lo, hi] = LATENCY[settings.net] || LATENCY.normal;
+    await sleep(lo + Math.random() * (hi - lo));
+    if (!navigator.onLine) throw new ApiError('Kamu sedang offline.', 0, 'offline');
+    if (settings.fail && Math.random() < .6) throw new ApiError('Server belum bisa dihubungi. Coba lagi sebentar.', 503, 'network');
+    const res = server(method, path, body ? clone(body) : undefined);
+    saveDB();
+    return clone(res);
+  },
+  get(path) { return this.request('GET', path); },
+  post(path, body) { return this.request('POST', path, body || {}); },
+  /** Unggah satu foto. Asli: minta URL unggah (R2) lalu PUT berkasnya. */
+  async upload(file) {
+    const [lo, hi] = LATENCY[settings.net] || LATENCY.normal;
+    await sleep(lo + Math.random() * (hi - lo));
+    if (settings.fail && Math.random() < .3) throw new ApiError('Foto gagal diunggah. Coba lagi.', 503, 'network');
+    return { key: 'wb/' + Date.now() + '-' + (file.name || 'foto') };
+  },
+};
+
+/* ---------- cache (tampil dulu dari cache, lalu diperbarui) ---------- */
+const cache = new Map();
+const PHOTOS = {}; // id aktivitas -> URL foto lokal (hanya sesi ini)
+function findActivity(id) {
+  for (const v of cache.values()) {
+    const list = v?.items || v?.recent;
+    const hit = Array.isArray(list) && list.find(x => x && x.id === id && x.kind);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/* =====================================================================
+   NAVIGASI (stack seperti aplikasi native, tanpa muat ulang halaman)
+   ===================================================================== */
+const app = $('#app'), screensEl = $('#screens'), tabbar = $('#tabbar');
+const ROUTES = {
+  beranda: { tab: true, title: 'Beranda', mount: mountHome },
+  quest: { tab: true, title: 'Quest', mount: mountQuests },
+  peringkat: { tab: true, title: 'Peringkat', mount: mountBoard },
+  rewards: { tab: true, title: 'Rewards', mount: mountRewards },
+  riwayat: { title: 'Riwayat aktivitas', mount: mountHistory },
+  profil: { title: 'Profil', mount: mountProfile },
+  strava: { title: 'Strava', mount: mountStrava },
+  ledger: { title: 'Riwayat poin & koin', mount: mountLedger },
+};
+const tabCtx = {};
+let stack = [];
+let histIndex = 0;
+let SESSION = readLS('wb-proto-session');
+
+function parseHash() {
+  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const name = ROUTES[parts[0]] ? parts[0] : 'beranda';
+  return { name, params: parts.slice(1) };
+}
+function barAvatar() {
+  const nm = SESSION?.me?.name || 'Saya';
+  return `<button class="bar-avatar" data-nav="profil" aria-label="Profil"><span class="avatar sm ${avClass(nm)}">${esc(initials(nm))}</span></button>`;
+}
+function createCtx(name, params) {
+  const r = ROUTES[name];
+  const el = document.createElement('section');
+  el.className = 'screen ' + (r.tab ? 'is-tab' : 'is-push');
+  el.setAttribute('aria-label', r.title);
+  el.innerHTML = `
+    <header class="bar ${r.tab ? '' : 'always'}">
+      ${r.tab ? '' : `<button class="icon-btn" data-action="back" aria-label="Kembali">${I('arrow_back')}</button>`}
+      <h1 class="bar-title">${esc(r.title)}</h1>
+      <div class="bar-actions">${r.tab ? barAvatar() : ''}</div>
+    </header>
+    <div class="ptr">${I('refresh', 'sm')}</div>
+    <main class="scroll"><div class="content"></div></main>`;
+  const ctx = { name, params, route: r, el, content: $('.content', el), scroller: $('.scroll', el), bar: $('.bar', el), state: {}, reload: null };
+  el.__ctx = ctx;
+  const th = r.tab ? 36 : 2;
+  ctx.scroller.addEventListener('scroll', () => ctx.bar.classList.toggle('scrolled', ctx.scroller.scrollTop > th), { passive: true });
+  setupPullToRefresh(ctx);
+  return ctx;
+}
+function animate(el, cls, done) {
+  el.classList.remove('anim-push-in', 'anim-push-under', 'anim-pop-out', 'anim-pop-under', 'anim-fade');
+  void el.offsetWidth;
+  el.classList.add(cls);
+  let fin = false;
+  const end = () => {
+    if (fin) return; fin = true;
+    el.removeEventListener('animationend', onEnd);
+    if (cls !== 'anim-push-under') el.classList.remove(cls);
+    done && done();
+  };
+  const onEnd = e => { if (e.target === el) end(); };
+  el.addEventListener('animationend', onEnd);
+  setTimeout(end, 480);
+}
+function setTabbar(name) {
+  $$('.tab[data-tab]', tabbar).forEach(a => { if (a.dataset.tab === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+}
+function showTab(name, anim = true) {
+  const prev = stack[0];
+  if (prev && prev.name === name) { prev.scroller.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' }); return; }
+  let ctx = tabCtx[name];
+  if (!ctx) { ctx = tabCtx[name] = createCtx(name, []); screensEl.appendChild(ctx.el); ctx.route.mount(ctx); }
+  else { ctx.el.hidden = false; ctx.reload && ctx.reload(); }
+  stack.slice(1).forEach(c => c.el.remove());
+  if (prev && prev !== ctx) prev.el.hidden = true;
+  stack = [ctx];
+  if (anim) animate(ctx.el, 'anim-fade');
+  setTabbar(name);
+  app.classList.remove('no-nav'); tabbar.inert = false;
+}
+function pushScreen(name, params, anim = true) {
+  const under = stack[stack.length - 1];
+  const ctx = createCtx(name, params);
+  screensEl.appendChild(ctx.el);
+  ctx.route.mount(ctx);
+  stack.push(ctx);
+  app.classList.add('no-nav'); tabbar.inert = true;
+  if (anim && under) {
+    animate(ctx.el, 'anim-push-in');
+    animate(under.el, 'anim-push-under', () => { if (stack.includes(ctx)) under.el.classList.add('under'); });
+  } else if (under) under.el.classList.add('under');
+}
+function popScreen(anim = true) {
+  if (stack.length < 2) return;
+  const top = stack.pop(), under = stack[stack.length - 1];
+  under.el.classList.remove('under');
+  under.reload && under.reload();
+  if (anim) { animate(top.el, 'anim-pop-out', () => top.el.remove()); animate(under.el, 'anim-pop-under'); }
+  else { top.el.remove(); under.el.classList.remove('anim-push-under'); }
+  if (stack.length === 1) { app.classList.remove('no-nav'); tabbar.inert = false; }
+}
+function go(name, params = []) {
+  const r = ROUTES[name];
+  if (!r) return;
+  if (r.tab) {
+    if (stack.length > 1) return;
+    history.replaceState({ i: histIndex }, '', '#/' + name);
+    showTab(name);
+  } else {
+    histIndex++;
+    history.pushState({ i: histIndex }, '', '#/' + [name, ...params].join('/'));
+    pushScreen(name, params);
+  }
+}
+function goBack() { if (histIndex > 0) history.back(); else popScreen(); }
+addEventListener('popstate', e => {
+  if (currentSheet) { currentSheet._finish(); return; }
+  const i = e.state?.i ?? 0;
+  if (i < histIndex) { const times = histIndex - i; histIndex = i; for (let k = 0; k < times; k++) popScreen(k === times - 1); }
+  else if (i > histIndex) { histIndex = i; const { name, params } = parseHash(); if (!ROUTES[name].tab) pushScreen(name, params); }
+});
+
+/* ---------- memuat data ke layar ---------- */
+async function loadInto(ctx, key, render, skeleton, target) {
+  const host = target || ctx.content;
+  const cached = cache.get(key);
+  if (cached) render(cached); else host.innerHTML = skeleton();
+  try {
+    const data = await api.get(key);
+    const changed = !cached || JSON.stringify(cached) !== JSON.stringify(data);
+    cache.set(key, data);
+    if (ctx.el.isConnected && changed) render(data);
+    return data;
+  } catch (e) {
+    if (!ctx.el.isConnected) return null;
+    if (!cached) {
+      host.innerHTML = errorState(e.message);
+      $('[data-retry]', host)?.addEventListener('click', () => loadInto(ctx, key, render, skeleton, target));
+    } else toast('Belum bisa memperbarui. Yang tampil data terakhir.', 'warning');
+    return null;
+  }
+}
+function errorState(msg) {
+  return `<div class="state"><div class="lead d-social">${I('cloud_off')}</div><h2 class="t-sub">Belum bisa dimuat</h2><p>${esc(msg)}</p><button class="btn btn-tonal" data-retry>${I('refresh', 'sm')}Coba lagi</button></div>`;
+}
+const afterMutation = () => {
+  // Data berubah: semua layar yang terbuka diperbarui di latar (tanpa kerangka loading).
+  [...new Set([...Object.values(tabCtx), ...stack])].forEach(c => { if (c.el.isConnected && !c.el.hidden && c.reload) c.reload(); });
+};
+function setupPullToRefresh(ctx) {
+  const sc = ctx.scroller, ind = $('.ptr', ctx.el);
+  let y0 = null, dy = 0, busy = false;
+  sc.addEventListener('touchstart', e => { if (busy || sc.scrollTop > 0) { y0 = null; return; } y0 = e.touches[0].clientY; dy = 0; }, { passive: true });
+  sc.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    dy = e.touches[0].clientY - y0;
+    const p = Math.max(0, Math.min(dy, 120));
+    ind.style.opacity = Math.min(1, p / 64);
+    ind.style.transform = `translate(-50%, ${p * .6}px) rotate(${p * 3}deg)`;
+  }, { passive: true });
+  sc.addEventListener('touchend', async () => {
+    if (y0 === null) return;
+    y0 = null;
+    if (dy > 72 && ctx.reload) {
+      busy = true; ind.classList.add('spinning'); ind.style.transform = 'translate(-50%, 44px)'; haptic();
+      try { await ctx.reload(); } finally { busy = false; ind.classList.remove('spinning'); ind.style.transform = ''; ind.style.opacity = 0; }
+    } else { ind.style.transform = ''; ind.style.opacity = 0; }
+  });
+}
+
+/* ---------- kerangka loading ---------- */
+const skLine = (w, h = 12, extra = '') => `<div class="sk sk-line" style="width:${w};height:${h}px;${extra}"></div>`;
+const skRows = k => `<div class="card list">${Array.from({ length: k }, () => `<div class="sk-row"><div class="sk sk-av"></div><div style="flex:1;display:grid;gap:8px">${skLine('62%')}${skLine('38%', 10)}</div>${skLine('44px')}</div>`).join('')}</div>`;
+const skHome = () => `<div class="greet">${skLine('40%', 12)}<div style="height:10px"></div>${skLine('64%', 26)}</div>
+  <div class="sk" style="height:268px;border-radius:24px"></div>
+  <div class="sec">${skLine('42%', 16, 'margin-bottom:12px')}${skRows(5)}</div>`;
+const skTitle = t => `<h1 class="large-title">${esc(t)}</h1>`;
+const skCards = k => Array.from({ length: k }, () => `<div class="sk" style="height:132px;border-radius:16px;margin-bottom:12px"></div>`).join('');
+
+/* ---------- lembar bawah ---------- */
+let currentSheet = null;
+function openSheet({ tall = false, label = 'Lembar', onClose } = {}) {
+  if (currentSheet) currentSheet.destroy();
+  const root = document.createElement('div');
+  root.className = 'sheet-root';
+  root.innerHTML = `<div class="scrim" data-sheet-close></div>
+    <section class="sheet ${tall ? 'tall' : ''}" role="dialog" aria-modal="true" aria-label="${esc(label)}" tabindex="-1">
+      <div class="grab" aria-hidden="true"><span></span></div>
+      <header class="sheet-head">
+        <button class="icon-btn" data-sheet-back hidden aria-label="Kembali">${I('arrow_back')}</button>
+        <h2 class="sheet-title t-sub"></h2>
+        <button class="icon-btn" data-sheet-close aria-label="Tutup">${I('close')}</button>
+      </header>
+      <div class="sheet-body"></div>
+      <footer class="sheet-foot" hidden></footer>
+    </section>`;
+  const el = $('.sheet', root);
+  const lastFocus = document.activeElement;
+  app.appendChild(root);
+  app.classList.add('has-sheet');
+  screensEl.inert = true; tabbar.inert = true;
+  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('open')));
+  history.pushState({ i: histIndex, sheet: true }, '', location.href);
+  let closed = false;
+  const waiters = [];
+  const s = {
+    root, el, body: $('.sheet-body', root), foot: $('.sheet-foot', root), backFn: null,
+    setTitle(t) { $('.sheet-title', root).textContent = t || ''; },
+    setBack(fn) { this.backFn = fn; $('[data-sheet-back]', root).hidden = !fn; },
+    setBody(html, dir) { this.body.innerHTML = `<div class="step ${dir ? 'step-' + dir : ''}">${html}</div>`; this.body.scrollTop = 0; },
+    setFoot(html) { this.foot.innerHTML = html || ''; this.foot.hidden = !html; },
+    close() {
+      if (closed) return Promise.resolve();
+      return new Promise(res => { waiters.push(res); if (history.state && history.state.sheet) history.back(); else s._finish(); });
+    },
+    _finish() {
+      if (closed) return;
+      closed = true;
+      root.classList.remove('open'); root.classList.add('closing');
+      app.classList.remove('has-sheet');
+      screensEl.inert = false; tabbar.inert = stack.length > 1;
+      if (currentSheet === s) currentSheet = null;
+      onClose && onClose();
+      setTimeout(() => root.remove(), 260);
+      lastFocus && lastFocus.focus && lastFocus.focus({ preventScroll: true });
+      waiters.forEach(w => w());
+    },
+    destroy() {
+      closed = true; root.remove(); app.classList.remove('has-sheet');
+      screensEl.inert = false; tabbar.inert = stack.length > 1;
+      if (history.state && history.state.sheet) history.replaceState({ i: histIndex }, '', location.href);
+      if (currentSheet === s) currentSheet = null;
+    },
+  };
+  // Tarik ke bawah untuk menutup.
+  let y0 = null, dy = 0, t0 = 0;
+  const drag = $$('.grab, .sheet-head', root);
+  drag.forEach(h => h.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    y0 = e.clientY; dy = 0; t0 = performance.now(); el.style.transition = 'none'; h.setPointerCapture(e.pointerId);
+  }));
+  drag.forEach(h => h.addEventListener('pointermove', e => { if (y0 === null) return; dy = Math.max(0, e.clientY - y0); el.style.transform = `translateY(${dy}px)`; }));
+  drag.forEach(h => h.addEventListener('pointerup', () => {
+    if (y0 === null) return;
+    const v = dy / Math.max(1, performance.now() - t0);
+    y0 = null; el.style.transition = ''; el.style.transform = '';
+    if (dy > 110 || v > .6) s.close();
+  }));
+  currentSheet = s;
+  setTimeout(() => el.focus({ preventScroll: true }), 60);
+  return s;
+}
+function confirmSheet({ title, body, ok, danger = false }) {
+  return new Promise(resolve => {
+    let result = false;
+    const sh = openSheet({ label: title, onClose: () => resolve(result) });
+    sh.setTitle(title);
+    sh.setBody(`<p class="muted">${body}</p>`);
+    sh.setFoot(`<div class="btn-row"><button class="btn btn-outline" data-sheet-close>Batal</button><button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-ok>${esc(ok)}</button></div>`);
+    $('[data-ok]', sh.foot).addEventListener('click', () => { result = true; sh.close(); });
+  });
+}
+function overlay(html) {
+  const el = document.createElement('div');
+  el.className = 'overlay'; el.setAttribute('role', 'status'); el.innerHTML = html;
+  app.appendChild(el);
+  return { set(h) { el.innerHTML = h; }, close() { el.remove(); } };
+}
+
+/* ---------- toast ---------- */
+let toastTimer = null;
+function toast(msg, type = '', action) {
+  const host = $('#toasts');
+  host.innerHTML = '';
+  const icon = { success: 'check_circle', error: 'error', warning: 'warning', info: 'info' }[type];
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.innerHTML = `${icon ? I(icon, 'sm') : ''}<span>${esc(msg)}</span>${action ? `<button class="toast-act">${esc(action.label)}</button>` : ''}`;
+  if (action) $('.toast-act', el).addEventListener('click', () => { el.remove(); action.run(); });
+  host.appendChild(el);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 220); }, action ? 5000 : 3200);
+}
+
+/* ---------- potongan tampilan ---------- */
+function pointsTag(a) {
+  if (a.status === 'rejected') return `<span class="pill err">Ditolak</span>`;
+  if (a.status === 'adjusted') return `<b class="pts">+${n(a.points)}</b><span class="pill warn">Diubah admin</span>`;
+  return `<b class="pts">+${n(a.points)}</b>`;
+}
+function actMeta(a) {
+  if (a.kind === 'sport') {
+    const bits = [a.source === 'strava' ? 'Strava' : 'Olahraga'];
+    if (a.distanceKm) bits.push(`${String(a.distanceKm).replace('.', ',')} km`);
+    if (a.minutes) bits.push(`${a.minutes} mnt`);
+    return bits.join(' · ');
+  }
+  if (a.steps) return `${n(a.steps)} langkah`;
+  return DIM[a.dim].name;
+}
+function actRow(a, withDate = true) {
+  return `<button class="row pressable" data-act="${a.id}">
+    <span class="lead d-${a.dim}">${I(actIcon(a))}</span>
+    <span class="row-main"><span class="row-title">${esc(a.name)}</span><span class="row-meta">${esc(actMeta(a))}${withDate ? ' · ' + dayLabel(a.date) : ''}</span></span>
+    <span class="row-trail">${pointsTag(a)}</span></button>`;
+}
+function endsLabel(iso) {
+  const k = daysBetween(today(), iso);
+  if (k <= 0) return { text: 'Berakhir hari ini', soon: true };
+  if (k === 1) return { text: 'Berakhir besok', soon: true };
+  return { text: `Sisa ${k} hari`, soon: false };
+}
+function stravaBanner(s) {
+  if (!s) return '';
+  if (s.state === 'broken') return `<button class="banner warn pressable" data-nav="strava">${I('link_off')}<span class="row-main"><b>Strava terputus</b><span>Aktivitas sejak ${fmt(s.brokenSince, { day: 'numeric', month: 'short' })} belum masuk. Sambungkan ulang.</span></span>${I('chevron_right')}</button>`;
+  if (s.state === 'none') return `<button class="banner tip pressable" data-nav="strava"><span class="sv-mark sm">${I('directions_run', 'sm')}</span><span class="row-main"><b>Sambungkan Strava</b><span class="muted">Olahraga yang direkam Strava masuk otomatis.</span></span>${I('chevron_right', 'chev')}</button>`;
+  return '';
+}
+function countUp(el, from, to) {
+  if (!el || reduceMotion()) return;
+  const t0 = performance.now(), dur = 650;
+  const step = now => { const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = n(from + (to - from) * e); if (p < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+/* =====================================================================
+   LAYAR: BERANDA
+   ===================================================================== */
+function mountHome(ctx) {
+  const render = d => {
+    const t = d.totals, prev = ctx.state.points;
+    const maxW = Math.max(1, ...t.week.map(w => w.points));
+    const maxD = Math.max(1, ...d.dims.map(x => x.points));
+    ctx.content.innerHTML = `
+      <div class="greet"><p class="caption muted">${fmt(today(), { weekday: 'long', day: 'numeric', month: 'long' })}</p><p class="t-title">${greet()}, ${esc(d.me.nickname)}</p></div>
+      ${stravaBanner(d.strava)}
+      <section class="hero" aria-label="Ringkasan poin">
+        <div class="hero-row">
+          <div><p class="t-label">Total poin</p><p class="t-display js-points">${n(t.points)}</p></div>
+          <button class="rank pressable" data-go-tab="peringkat" aria-label="Peringkat ${t.rank} dari ${t.of}"><b>#${t.rank}</b><span>dari ${t.of}</span></button>
+        </div>
+        <div class="hero-stats">
+          <div class="stat">${I('toll', 'sm ic-coin')}<div><b class="tnum">${n(t.coins)}</b><span>koin</span></div></div>
+          <div class="stat">${I('local_fire_department', 'sm ic-fire fill')}<div><b>${t.streak} hari</b><span>streak</span></div></div>
+          <div class="stat">${I('trending_up', 'sm ic-up')}<div><b class="tnum">+${n(t.weekTotal)}</b><span>7 hari</span></div></div>
+        </div>
+        <div class="spark" role="img" aria-label="Poin 7 hari terakhir: ${t.week.map(w => n(w.points)).join(', ')}">
+          ${t.week.map(w => `<div class="spark-col ${w.date === today() ? 'is-today' : ''}"><div class="spark-bar" style="height:${Math.max(4, Math.round(w.points / maxW * 60))}px"></div><span>${fmt(w.date, { weekday: 'short' }).replace('.', '')}</span></div>`).join('')}
+        </div>
+      </section>
+      <section class="sec">
+        <div class="sec-head"><h2 class="t-sub">Dimensi bulan ini</h2></div>
+        <div class="card list">${d.dims.map(x => `<div class="row"><span class="lead d-${x.id}">${I(DIM[x.id].icon)}</span>
+          <span class="row-main"><span class="dimline"><span class="row-title">${DIM[x.id].name}</span><b>${n(x.points)}</b></span>
+          <span class="bar-meter" aria-hidden="true"><i style="width:${Math.round(x.points / maxD * 100)}%;background:var(--d-${x.id})"></i></span></span></div>`).join('')}</div>
+      </section>
+      <section class="sec">
+        <div class="sec-head"><h2 class="t-sub">Quest aktif</h2><button class="link" data-go-tab="quest">Lihat semua</button></div>
+        ${d.quests.length ? `<div class="hscroll">${d.quests.map(q => { const e = endsLabel(q.ends); return `<button class="card qmini pressable" data-quest="${q.id}">
+          <div class="qtop"><span class="lead sm d-${q.dim}">${I(DIM[q.dim].icon)}</span><span class="caption">${DIM[q.dim].name}</span><span class="pill info">+${n(q.points)}</span></div>
+          <h3>${esc(q.title)}</h3><div class="foot"><span class="${e.soon ? 'soon' : ''}">${I('schedule', 'xs')} ${e.text}</span></div></button>`; }).join('')}</div>`
+          : `<div class="card empty">Belum ada quest aktif.</div>`}
+      </section>
+      <section class="sec">
+        <div class="sec-head"><h2 class="t-sub">Aktivitas terakhir</h2><button class="link" data-nav="riwayat">Lihat semua</button></div>
+        ${d.recent.length ? `<div class="card list">${d.recent.map(a => actRow(a)).join('')}</div>` : `<div class="card empty"><div class="lead tone-primary">${I('edit_note')}</div>Belum ada aktivitas. Tekan <b>Catat</b> untuk mulai.</div>`}
+      </section>`;
+    if (prev != null && prev !== t.points) countUp($('.js-points', ctx.content), prev, t.points);
+    ctx.state.points = t.points;
+  };
+  ctx.reload = () => loadInto(ctx, '/home', render, skHome);
+  ctx.reload();
+}
+
+/* =====================================================================
+   LAYAR: RIWAYAT AKTIVITAS (filter + muat bertahap)
+   ===================================================================== */
+function mountHistory(ctx) {
+  const st = ctx.state; st.filter = st.filter || 'all';
+  const FILTERS = [['all', 'Semua'], ['daily', 'Harian'], ['sport', 'Olahraga'], ['strava', 'Strava']];
+  ctx.content.innerHTML = `<div class="seg" role="group" aria-label="Filter" style="margin:4px 0 16px">${FILTERS.map(([k, l]) => `<button data-f="${k}" aria-pressed="${st.filter === k}">${l}</button>`).join('')}</div><div class="js-list"></div><div class="js-more"></div>`;
+  const listEl = $('.js-list', ctx.content), moreEl = $('.js-more', ctx.content);
+  let items = [], page = 1, hasMore = false, loading = false, io = null;
+  const group = arr => {
+    const out = []; let cur = null;
+    arr.forEach(a => { if (!cur || cur.date !== a.date) { cur = { date: a.date, items: [] }; out.push(cur); } cur.items.push(a); });
+    return out;
+  };
+  const draw = () => {
+    if (!items.length) { listEl.innerHTML = `<div class="card empty"><div class="lead tone-primary">${I('history')}</div>Belum ada aktivitas di sini.</div>`; moreEl.innerHTML = ''; return; }
+    listEl.innerHTML = group(items).map(g => `<div class="group-label" style="margin-top:${g === undefined ? 0 : 16}px">${dayLabel(g.date)}${g.date !== today() && g.date !== addDays(today(), -1) ? '' : ' · ' + fmt(g.date, { day: 'numeric', month: 'short' })}</div><div class="card list">${g.items.map(a => actRow(a, false)).join('')}</div>`).join('');
+    listEl.firstElementChild && (listEl.firstElementChild.style.marginTop = '0');
+    moreEl.innerHTML = hasMore ? `<div class="js-sentinel" style="padding:16px 0">${skRows(2)}</div>` : `<p class="caption faint center" style="padding:20px 0">Sudah semua</p>`;
+    if (hasMore) observe();
+  };
+  const observe = () => {
+    io && io.disconnect();
+    const sen = $('.js-sentinel', moreEl);
+    if (!sen) return;
+    io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) loadMore(); }, { root: ctx.scroller, rootMargin: '200px' });
+    io.observe(sen);
+  };
+  const key = (f, pg) => `/activities?filter=${f}&page=${pg}`;
+  const loadFirst = () => loadInto(ctx, key(st.filter, 1), d => { items = d.items; page = 1; hasMore = d.hasMore; draw(); }, () => skRows(6), listEl);
+  const loadMore = async () => {
+    if (loading || !hasMore) return;
+    loading = true;
+    try { const d = await api.get(key(st.filter, page + 1)); cache.set(key(st.filter, page + 1), d); page++; items = items.concat(d.items); hasMore = d.hasMore; draw(); }
+    catch (e) { moreEl.innerHTML = `<div class="center" style="padding:12px 0"><button class="btn btn-tonal js-retry-more">${I('refresh', 'sm')}Muat lagi</button></div>`; $('.js-retry-more', moreEl).addEventListener('click', loadMore); }
+    finally { loading = false; }
+  };
+  ctx.content.addEventListener('click', e => {
+    const b = e.target.closest('[data-f]');
+    if (!b || b.dataset.f === st.filter) return;
+    st.filter = b.dataset.f;
+    $$('[data-f]', ctx.content).forEach(x => x.setAttribute('aria-pressed', x.dataset.f === st.filter));
+    moreEl.innerHTML = '';
+    loadFirst();
+  });
+  ctx.reload = loadFirst;
+  loadFirst();
+}
+
+/* ---------- lembar detail aktivitas ---------- */
+function openActivity(id) {
+  const sh = openSheet({ label: 'Detail aktivitas' });
+  const draw = a => {
+    const dim = DIM[a.dim];
+    const urls = PHOTOS[a.id] || [];
+    const photoTiles = a.photos ? `<div class="field"><span class="lbl">Foto bukti</span><div class="photos">${Array.from({ length: a.photos }, (_, i) => urls[i] ? `<div class="ph"><img src="${urls[i]}" alt="Foto bukti ${i + 1}"></div>` : `<div class="ph">${I('image')}</div>`).join('')}</div></div>` : '';
+    sh.setTitle('');
+    sh.setBody(`
+      <div class="sum" style="padding:0"><span class="lead lg d-${a.dim}">${I(actIcon(a))}</span><div class="row-main"><b class="t-sub wrap">${esc(a.name)}</b><span class="row-meta">${dayLabel(a.date)} · ${fmt(a.date, { day: 'numeric', month: 'long', year: 'numeric' })}</span></div></div>
+      ${a.status === 'rejected' ? `<div class="note err">${I('cancel', 'sm')}<span><b>Ditolak admin.</b> ${esc(a.reason)} Poin tidak dihitung.</span></div>` : ''}
+      ${a.status === 'adjusted' ? `<div class="note warn">${I('tune', 'sm')}<span><b>Poin diubah admin</b> dari ${n(a.originalPoints)} jadi ${n(a.points)}. ${esc(a.reason)}</span></div>` : ''}
+      <div class="card list detail-rows">
+        <div class="row"><span class="kv"><span>Poin</span><span class="${a.status === 'rejected' ? 'faint' : 'pts'}">${a.status === 'rejected' ? '0' : '+' + n(a.points)}</span></span></div>
+        <div class="row"><span class="kv"><span>Dimensi</span><span>${dim.name}</span></span></div>
+        ${a.kind === 'sport' ? `<div class="row"><span class="kv"><span>Kalori</span><span>${n(a.kcal)} kkal</span></span></div>` : ''}
+        ${a.distanceKm ? `<div class="row"><span class="kv"><span>Jarak</span><span>${String(a.distanceKm).replace('.', ',')} km</span></span></div>` : ''}
+        ${a.minutes ? `<div class="row"><span class="kv"><span>Durasi</span><span>${a.minutes} menit</span></span></div>` : ''}
+        ${a.steps ? `<div class="row"><span class="kv"><span>Langkah</span><span>${n(a.steps)}</span></span></div>` : ''}
+        <div class="row"><span class="kv"><span>Sumber</span><span>${a.source === 'strava' ? 'Strava (otomatis)' : 'Dicatat sendiri'}</span></span></div>
+      </div>
+      ${a.note ? `<div class="field"><span class="lbl">Catatan</span><p>${esc(a.note)}</p></div>` : ''}
+      ${photoTiles}
+      ${a.status === 'rejected' ? `<button class="btn btn-tonal block js-redo" style="margin-top:20px">${I('edit_note', 'sm')}Catat ulang</button>` : ''}`);
+    const redo = $('.js-redo', sh.body);
+    if (redo) redo.addEventListener('click', async () => { await sh.close(); openCatat({ code: a.code }); });
+  };
+  const known = findActivity(id);
+  if (known) draw(known); else { sh.setTitle('Detail aktivitas'); sh.setBody(skRows(4)); }
+  api.get('/activities/' + id).then(d => { if (sh.root.isConnected) draw(d.activity); }).catch(e => { if (!known && sh.root.isConnected) sh.setBody(errorState(e.message)); });
+}
+
+/* =====================================================================
+   CATAT AKTIVITAS (lembar bertahap)
+   ===================================================================== */
+function photoBlock(photos, hint, invalid) {
+  return `<div class="field"><span class="lbl">Foto bukti</span>
+    <div class="photos js-photos">${photoTiles(photos, invalid)}</div>
+    <span class="help">${esc(hint)}. Maksimal ${MAX_PHOTOS} foto.</span>
+    <span class="err-text js-err-photos" ${invalid ? '' : 'hidden'}>${I('error', 'xs')}Tambahkan minimal 1 foto.</span>
+    <button type="button" class="link js-sample" style="align-self:flex-start">${I('science', 'xs')}&nbsp;Pakai foto contoh <span class="proto-tag" style="margin-left:6px">prototipe</span></button>
+    <input type="file" accept="image/*" multiple hidden class="js-file"></div>`;
+}
+function photoTiles(photos, invalid) {
+  return photos.map((p, i) => `<div class="ph"><img src="${p.url}" alt="Foto ${i + 1}"><button type="button" class="rm" data-rm="${i}" aria-label="Hapus foto ${i + 1}">${I('close')}</button></div>`).join('')
+    + (photos.length < MAX_PHOTOS ? `<button type="button" class="ph ph-add ${invalid ? 'invalid' : ''}" data-add-photo>${I('add_a_photo')}<span>Tambah</span></button>` : '');
+}
+function samplePhoto(label) {
+  return new Promise(res => {
+    const c = document.createElement('canvas'); c.width = 480; c.height = 480;
+    const g = c.getContext('2d');
+    const hue = Math.floor(Math.random() * 360);
+    g.fillStyle = `hsl(${hue} 45% 86%)`; g.fillRect(0, 0, 480, 480);
+    g.fillStyle = `hsl(${hue} 40% 38%)`; g.font = '600 34px sans-serif'; g.textAlign = 'center';
+    g.fillText('Foto contoh', 240, 230); g.font = '400 24px sans-serif'; g.fillText(label.slice(0, 28), 240, 272);
+    c.toBlob(b => res({ name: 'contoh.png', size: b.size, url: URL.createObjectURL(b) }), 'image/png');
+  });
+}
+function bindPhotos(sh, st, label, onChange) {
+  const refresh = () => {
+    const host = $('.js-photos', sh.body);
+    if (host) host.innerHTML = photoTiles(st.photos, false);
+    const err = $('.js-err-photos', sh.body); if (err && st.photos.length) err.hidden = true;
+    onChange && onChange();
+  };
+  sh.body.addEventListener('click', async e => {
+    if (e.target.closest('[data-add-photo]')) { $('.js-file', sh.body)?.click(); return; }
+    const rm = e.target.closest('[data-rm]');
+    if (rm) { const [p] = st.photos.splice(Number(rm.dataset.rm), 1); if (p) URL.revokeObjectURL(p.url); refresh(); return; }
+    if (e.target.closest('.js-sample') && st.photos.length < MAX_PHOTOS) { st.photos.push(await samplePhoto(label())); refresh(); }
+  });
+  sh.body.addEventListener('change', e => {
+    if (!e.target.matches('.js-file')) return;
+    const files = [...e.target.files].slice(0, MAX_PHOTOS - st.photos.length);
+    files.forEach(f => st.photos.push({ name: f.name, size: f.size, url: URL.createObjectURL(f) }));
+    e.target.value = '';
+    refresh();
+  });
+}
+const dateField = v => `<label class="field"><span class="lbl">Tanggal</span><input class="input" type="date" name="date" value="${v}" min="${addDays(today(), -BACKDATE_DAYS)}" max="${today()}"><span class="help">Hari ini sampai ${BACKDATE_DAYS} hari ke belakang.</span></label>`;
+
+function openCatat(preset = {}) {
+  const fresh = () => ({ step: 'kind', kind: null, dim: null, code: null, sport: null, date: today(), steps: '', kcal: '', minutes: '', note: '', photos: [], saving: false, error: null, errorCode: null, prog: null, progress: '', result: null, tried: false });
+  let st = fresh();
+  const keep = new Set();
+  const sh = openSheet({ tall: true, label: 'Catat aktivitas', onClose: () => st.photos.forEach(p => { if (!keep.has(p.url)) URL.revokeObjectURL(p.url); }) });
+  let cat = cache.get('/catalog');
+  const loadCatalog = () => api.get('/catalog').then(c => { cache.set('/catalog', c); cat = c; if (['dim', 'type'].includes(st.step) && sh.root.isConnected) draw(null); }).catch(e => { if (!cat && ['dim', 'type'].includes(st.step)) sh.setBody(errorState(e.message)); });
+  loadCatalog();
+  const home = () => cache.get('/home');
+  const typeOf = () => cat?.daily.find(x => x.code === st.code) || CAT[st.code];
+  const preview = () => {
+    if (st.kind === 'daily') { const t = typeOf(); return t?.steps ? Math.floor((Number(st.steps) || 0) / 10) : t?.points || 0; }
+    if (st.kind === 'sport') return Math.min(Number(st.kcal) || 0, MAX_KCAL);
+    return 0;
+  };
+
+  const draw = dir => ({ kind: drawKind, dim: drawDim, type: drawType, detail: drawDetail, sport: drawSport, done: drawDone }[st.step])(dir);
+
+  function drawKind(dir) {
+    sh.setTitle('Catat aktivitas'); sh.setBack(null);
+    const s = home()?.strava;
+    const hint = !s ? '' : s.state === 'connected'
+      ? `<div class="note info">${I('bolt', 'sm')}<span><b>Strava tersambung.</b> Olahraga yang direkam Strava masuk sendiri, tidak perlu dicatat di sini.</span></div>`
+      : s.state === 'broken'
+        ? `<div class="note warn">${I('link_off', 'sm')}<span><b>Strava terputus.</b> Sambungkan ulang di Profil supaya olahraga masuk otomatis.</span></div>`
+        : `<div class="note">${I('info', 'sm')}<span>Pakai Strava? Sambungkan di Profil, olahraga yang direkam masuk otomatis.</span></div>`;
+    sh.setBody(`<p class="muted">Pilih jenis catatan.</p>
+      <button class="opt pressable" data-kind="daily"><span class="lead lg tone-primary">${I('edit_note')}</span><span class="row-main"><b class="t-sub">Kegiatan harian</b><span>Emosional, sosial, finansial, spiritual, dan langkah. Poin tetap per kegiatan.</span></span>${I('chevron_right', 'chev')}</button>
+      <button class="opt pressable" data-kind="sport"><span class="lead lg d-physical">${I('fitness_center')}</span><span class="row-main"><b class="t-sub">Olahraga</b><span>Lari, sepeda, renang, badminton, dan lainnya. 1 kkal = 1 poin.</span></span>${I('chevron_right', 'chev')}</button>
+      ${hint}`, dir);
+    sh.setFoot('');
+  }
+  function drawDim(dir) {
+    sh.setTitle('Kegiatan harian'); sh.setBack(() => { st.step = 'kind'; draw('back'); });
+    sh.setFoot('');
+    if (!cat) { sh.setBody(skRows(5), dir); return; }
+    sh.setBody(`<p class="muted">Pilih dimensi.</p><div class="card list" style="margin-top:12px">${DIMS.map(d => {
+      const k = cat.daily.filter(t => t.dim === d.id).length;
+      return `<button class="row pressable" data-dim="${d.id}"><span class="lead d-${d.id}">${I(d.icon)}</span><span class="row-main"><span class="row-title">${d.name}</span><span class="row-meta">${d.id === 'physical' ? 'Langkah harian' : k + ' kegiatan'}</span></span>${I('chevron_right', 'chev')}</button>`;
+    }).join('')}</div>`, dir);
+  }
+  function drawType(dir) {
+    const d = DIM[st.dim];
+    sh.setTitle(d.name); sh.setBack(() => { st.step = 'dim'; draw('back'); });
+    sh.setFoot('');
+    if (!cat) { sh.setBody(skRows(5), dir); return; }
+    const list = cat.daily.filter(t => t.dim === st.dim);
+    sh.setBody(`<p class="muted">Pilih kegiatan.</p><div class="card list" style="margin-top:12px">${list.map(t => `
+      <button class="row tall pressable" data-code="${t.code}" ${t.blocked ? 'disabled aria-disabled="true"' : ''}>
+        <span class="lead d-${t.dim}">${I(t.steps ? 'directions_walk' : d.icon)}</span>
+        <span class="row-main"><span class="row-title wrap">${esc(t.name)}</span>
+          <span class="row-meta wrap">${t.blocked ? `<b style="color:var(--on-warning-c)">${esc(t.blocked)}</b>` : esc(t.proof)}${!t.blocked && t.limit ? ` · ${t.limit === 'month' ? '1x per bulan' : '1x per hari'}` : ''}</span></span>
+        <span class="row-trail">${t.steps ? '<span class="caption muted">10 langkah<br>= 1 poin</span>' : `<b class="pts">+${n(t.points)}</b>`}</span></button>`).join('')}</div>
+      ${st.dim === 'physical' ? `<div class="note">${I('info', 'sm')}<span>Lari, sepeda, renang, dan lainnya dicatat lewat <b>Olahraga</b>; poinnya dari kalori.</span></div>` : ''}`, dir);
+  }
+  function drawDetail(dir) {
+    const t = typeOf(), d = DIM[t.dim];
+    sh.setTitle('Detail'); sh.setBack(() => { st.step = 'type'; draw('back'); });
+    sh.setBody(`
+      <div class="card sum"><span class="lead d-${t.dim}">${I(t.steps ? 'directions_walk' : d.icon)}</span><div class="row-main"><b class="wrap">${esc(t.name)}</b><span class="row-meta">${d.name}</span></div>${t.steps ? '' : `<b class="pts">+${n(t.points)}</b>`}</div>
+      ${dateField(st.date)}
+      ${t.steps ? `<label class="field"><span class="lbl">Jumlah langkah</span><div class="input-wrap"><input class="input" name="steps" inputmode="numeric" autocomplete="off" placeholder="mis. 8000" value="${esc(st.steps)}"><span class="suffix">langkah</span></div><span class="help js-steps-help">${st.steps ? `= ${n(preview())} poin` : '10 langkah = 1 poin'}</span><span class="err-text js-err-steps" hidden>${I('error', 'xs')}Isi 100 sampai 60.000 langkah.</span></label>` : ''}
+      ${photoBlock(st.photos, t.proof, false)}
+      <label class="field"><span class="lbl">Catatan <span class="faint">(opsional)</span></span><textarea class="input" name="note" maxlength="300" placeholder="Ceritakan singkat kegiatannya">${esc(st.note)}</textarea></label>`, dir);
+    foot();
+  }
+  function drawSport(dir) {
+    sh.setTitle('Olahraga'); sh.setBack(() => { st.step = 'kind'; draw('back'); });
+    sh.setBody(`
+      <div class="field" style="margin-top:4px"><span class="lbl">Jenis olahraga</span>
+        <div class="sport-grid" role="group" aria-label="Jenis olahraga">${SPORTS.map(s => `<button type="button" class="sport" data-sport="${s.code}" aria-pressed="${st.sport === s.code}">${I(s.icon)}<span>${s.name}</span></button>`).join('')}</div>
+        <span class="err-text js-err-sport" hidden>${I('error', 'xs')}Pilih jenis olahraga.</span></div>
+      ${dateField(st.date)}
+      <div class="grid2">
+        <label class="field"><span class="lbl">Kalori</span><div class="input-wrap"><input class="input" name="kcal" inputmode="numeric" autocomplete="off" placeholder="0" value="${esc(st.kcal)}"><span class="suffix">kkal</span></div></label>
+        <label class="field"><span class="lbl">Durasi <span class="faint">(opsional)</span></span><div class="input-wrap"><input class="input" name="minutes" inputmode="numeric" autocomplete="off" placeholder="0" value="${esc(st.minutes)}"><span class="suffix">menit</span></div></label>
+      </div>
+      <span class="help" style="display:block;margin-top:6px">Kalori dari jam tangan atau aplikasi olahraga. 1 kkal = 1 poin, maksimal ${n(MAX_KCAL)}.</span>
+      <span class="err-text js-err-kcal" hidden style="margin-top:4px">${I('error', 'xs')}Isi kalori 1 sampai ${n(MAX_KCAL)}.</span>
+      ${photoBlock(st.photos, 'Foto layar jam atau aplikasi yang menunjukkan kalori', false)}
+      <label class="field"><span class="lbl">Catatan <span class="faint">(opsional)</span></span><textarea class="input" name="note" maxlength="300" placeholder="mis. Main badminton bareng tim">${esc(st.note)}</textarea></label>`, dir);
+    foot();
+  }
+  function drawDone() {
+    const a = st.result.activity, t = st.result.totals;
+    sh.setTitle(''); sh.setBack(null);
+    sh.setBody(`<div class="done">
+      <div class="done-mark">${I('check')}</div>
+      <h3 class="t-headline">Tercatat</h3>
+      <p class="muted">${esc(a.name)} · ${dayLabel(a.date)}</p>
+      <p class="done-pts">+${n(a.points)} poin</p>
+      <p class="muted">Total poinmu sekarang <b>${n(t.points)}</b> · ${n(t.coins)} koin</p>
+    </div>
+    <div class="note">${I('verified', 'sm')}<span>Poin langsung masuk. Admin bisa memeriksa bukti; kalau ada yang diubah atau ditolak, alasannya muncul di Riwayat.</span></div>`, 'fwd');
+    sh.setFoot(`<div class="btn-row"><button class="btn btn-outline js-again">Catat lagi</button><button class="btn btn-primary" data-sheet-close>Selesai</button></div>`);
+  }
+  function foot() {
+    if (st.step === 'done') return;
+    const pts = preview();
+    let warn = '';
+    if (st.error && st.errorCode === 'strava_twin') warn = `<div class="note warn">${I('warning', 'sm')}<span>${esc(st.error)}<span class="note-act"><button class="btn btn-outline js-force" style="min-height:40px">Tetap simpan</button></span></span></div>`;
+    else if (st.error) warn = `<div class="note err">${I('error', 'sm')}<span>${esc(st.error)}</span></div>`;
+    sh.setFoot(`${warn}${st.saving && st.prog != null ? `<div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(st.prog * 100)}"><i style="width:${Math.round(st.prog * 100)}%"></i></div>` : ''}
+      <button class="btn btn-primary block js-save ${st.saving ? 'is-busy' : ''}" ${st.saving ? 'aria-busy="true"' : ''}>${st.saving ? `<span class="spin"></span>${esc(st.progress || 'Menyimpan…')}` : `Simpan${pts ? ` · +${n(pts)} poin` : ''}`}</button>`);
+  }
+  function showErr(sel, on) { const el = $(sel, sh.body); if (el) el.hidden = !on; }
+  function validate() {
+    let ok = true;
+    const t = st.kind === 'daily' ? typeOf() : null;
+    if (st.kind === 'sport') {
+      const s = !!st.sport; showErr('.js-err-sport', !s); ok = ok && s;
+      const k = Number(st.kcal) >= 1 && Number(st.kcal) <= MAX_KCAL; showErr('.js-err-kcal', !k); $('[name=kcal]', sh.body)?.classList.toggle('invalid', !k); ok = ok && k;
+    }
+    if (t?.steps) { const v = Number(st.steps) >= 100 && Number(st.steps) <= 60000; showErr('.js-err-steps', !v); $('[name=steps]', sh.body)?.classList.toggle('invalid', !v); ok = ok && v; }
+    const ph = st.photos.length > 0; showErr('.js-err-photos', !ph); $('[data-add-photo]', sh.body)?.classList.toggle('invalid', !ph); ok = ok && ph;
+    if (!ok) { const first = $$('.err-text:not([hidden])', sh.body)[0]; first && first.closest('.field, .err-text').scrollIntoView({ block: 'center', behavior: reduceMotion() ? 'auto' : 'smooth' }); }
+    return ok;
+  }
+  async function save(force = false) {
+    if (st.saving) return;
+    st.tried = true;
+    if (!validate()) return;
+    st.saving = true; st.error = null; st.errorCode = null; st.prog = 0; foot();
+    try {
+      for (let i = 0; i < st.photos.length; i++) {
+        st.progress = `Mengunggah foto ${i + 1} dari ${st.photos.length}…`; st.prog = i / st.photos.length; foot();
+        await api.upload(st.photos[i]);
+      }
+      st.prog = 1; st.progress = 'Menyimpan…'; foot();
+      const body = st.kind === 'daily'
+        ? { kind: 'daily', code: st.code, date: st.date, steps: Number(st.steps) || null, note: st.note, photos: st.photos.length }
+        : { kind: 'sport', sport: st.sport, date: st.date, kcal: Number(st.kcal), minutes: Number(st.minutes) || null, note: st.note, photos: st.photos.length, force };
+      const res = await api.post('/activities', body);
+      st.photos.forEach(p => keep.add(p.url));
+      PHOTOS[res.activity.id] = st.photos.map(p => p.url);
+      st.result = res; st.saving = false; st.step = 'done';
+      cache.delete('/catalog'); cat = null; loadCatalog();
+      draw('fwd'); haptic();
+      afterMutation();
+    } catch (e) {
+      st.saving = false; st.prog = null; st.error = e.message; st.errorCode = e.code; foot();
+    }
+  }
+
+  sh.body.addEventListener('click', e => {
+    const k = e.target.closest('[data-kind]');
+    if (k) { st.kind = k.dataset.kind; st.step = st.kind === 'daily' ? 'dim' : 'sport'; draw('fwd'); return; }
+    const d = e.target.closest('[data-dim]');
+    if (d) { st.dim = d.dataset.dim; st.step = 'type'; draw('fwd'); return; }
+    const c = e.target.closest('[data-code]');
+    if (c && !c.disabled) { if (st.code !== c.dataset.code) { st.steps = ''; } st.code = c.dataset.code; st.step = 'detail'; draw('fwd'); return; }
+    const s = e.target.closest('[data-sport]');
+    if (s) {
+      st.sport = s.dataset.sport;
+      $$('[data-sport]', sh.body).forEach(b => b.setAttribute('aria-pressed', b.dataset.sport === st.sport));
+      showErr('.js-err-sport', false); st.error = null; foot(); return;
+    }
+  });
+  sh.body.addEventListener('input', e => {
+    const nm = e.target.name;
+    if (!nm) return;
+    if (['steps', 'kcal', 'minutes'].includes(nm)) e.target.value = e.target.value.replace(/\D/g, '').slice(0, 5);
+    st[nm] = e.target.value;
+    if (nm === 'steps') { const h = $('.js-steps-help', sh.body); if (h) h.textContent = st.steps ? `= ${n(preview())} poin` : '10 langkah = 1 poin'; }
+    if (st.tried) validate();
+    if (['steps', 'kcal', 'date'].includes(nm)) { st.error = null; foot(); }
+  });
+  bindPhotos(sh, st, () => (st.kind === 'sport' ? SPORT[st.sport]?.name : typeOf()?.name) || 'Aktivitas', () => { if (st.tried) validate(); });
+  sh.foot.addEventListener('click', e => {
+    if (e.target.closest('.js-save')) save(false);
+    else if (e.target.closest('.js-force')) save(true);
+    else if (e.target.closest('.js-again')) { st = Object.assign(st, fresh()); draw('back'); }
+  });
+  sh.el.addEventListener('click', e => { if (e.target.closest('[data-sheet-back]') && sh.backFn) sh.backFn(); });
+
+  if (preset.code && CAT[preset.code]) { st.kind = 'daily'; st.dim = CAT[preset.code].dim; st.code = preset.code; st.step = 'detail'; }
+  draw(null);
+}
+
+/* =====================================================================
+   LAYAR: QUEST
+   ===================================================================== */
+function mountQuests(ctx) {
+  const st = ctx.state; st.tab = st.tab || 'active';
+  const render = d => {
+    const list = st.tab === 'active' ? d.active : d.done;
+    ctx.content.innerHTML = `${skTitle('Quest')}
+      <div class="seg" role="group" aria-label="Status quest" style="margin-bottom:16px">
+        <button data-t="active" aria-pressed="${st.tab === 'active'}">Aktif (${d.active.length})</button>
+        <button data-t="done" aria-pressed="${st.tab === 'done'}">Selesai (${d.done.length})</button></div>
+      ${list.length ? list.map(q => {
+        const e = q.status === 'done' ? null : endsLabel(q.ends);
+        return `<button class="card qcard pressable" data-quest="${q.id}">
+          <div class="qtop"><span class="lead sm d-${q.dim}">${I(DIM[q.dim].icon)}</span><span class="caption">${DIM[q.dim].name}</span>
+            ${q.status === 'done' ? `<span class="pill ok">${I('check_circle')} +${n(q.points)}</span>` : `<span class="pill info">+${n(q.points)} poin</span>`}</div>
+          <h3>${esc(q.title)}</h3>
+          <div class="qfoot">${q.status === 'done'
+            ? `<span>${I('event_available', 'xs')} Diklaim ${dayLabel(q.claimedAt).toLowerCase()}</span>`
+            : `<span class="${e.soon ? 'soon' : ''}">${I('schedule', 'xs')} ${e.text}</span><span>${I(PROOF[q.proof].icon, 'xs')} ${PROOF[q.proof].label}</span>`}</div></button>`;
+      }).join('') : `<div class="card empty"><div class="lead tone-primary">${I('flag')}</div>${st.tab === 'active' ? 'Belum ada quest aktif. Quest baru muncul di sini.' : 'Belum ada quest yang selesai.'}</div>`}`;
+  };
+  ctx.content.addEventListener('click', e => {
+    const b = e.target.closest('[data-t]');
+    if (b && b.dataset.t !== st.tab) { st.tab = b.dataset.t; const d = cache.get('/quests'); if (d) render(d); }
+  });
+  ctx.reload = () => loadInto(ctx, '/quests', render, () => `${skTitle('Quest')}<div class="sk" style="height:44px;border-radius:12px;margin-bottom:16px"></div>${skCards(4)}`);
+  ctx.reload();
+}
+function openQuest(id) {
+  const all = cache.get('/quests') || {}, h = cache.get('/home') || {};
+  const q = [...(all.active || []), ...(all.done || []), ...(h.quests || [])].find(x => x.id === id);
+  if (!q) return;
+  const st = { photos: [], text: '', account: '', link: '', saving: false, error: null, tried: false };
+  const sh = openSheet({ label: q.title, onClose: () => st.photos.forEach(p => URL.revokeObjectURL(p.url)) });
+  const e = endsLabel(q.ends);
+  const proofField = () => q.proof === 'photo' ? photoBlock(st.photos, 'Foto atau screenshot sesuai petunjuk', false)
+    : q.proof === 'text' ? `<label class="field"><span class="lbl">Tulisanmu</span><textarea class="input" name="text" maxlength="500" placeholder="Tulis di sini…">${esc(st.text)}</textarea><span class="err-text js-err-text" hidden>${I('error', 'xs')}Tulis minimal 10 huruf.</span></label>`
+      : `<label class="field"><span class="lbl">Akun Instagram</span><input class="input" name="account" placeholder="@akunmu" autocomplete="off" value="${esc(st.account)}"></label>
+         <label class="field"><span class="lbl">Tautan postingan</span><input class="input" name="link" type="url" inputmode="url" placeholder="https://instagram.com/p/…" value="${esc(st.link)}"><span class="err-text js-err-ig" hidden>${I('error', 'xs')}Isi akun dan tautan postingan.</span></label>`;
+  const head = `<div class="qtop"><span class="lead sm d-${q.dim}">${I(DIM[q.dim].icon)}</span><span class="caption" style="flex:1;color:var(--text-2);font-weight:600">${DIM[q.dim].name}</span></div>
+    <h3 class="t-headline" style="margin-top:10px">${esc(q.title)}</h3>${q.desc ? `<p class="muted" style="margin-top:6px">${esc(q.desc)}</p>` : ''}
+    <div class="card list detail-rows">
+      <div class="row"><span class="kv"><span>Poin</span><span class="pts">+${n(q.points)}</span></span></div>
+      <div class="row"><span class="kv"><span>${q.status === 'done' ? 'Diklaim' : 'Berakhir'}</span><span>${q.status === 'done' ? fmt(q.claimedAt, { weekday: 'long', day: 'numeric', month: 'short' }) : `${fmt(q.ends, { weekday: 'long', day: 'numeric', month: 'short' })} · ${e.text.toLowerCase()}`}</span></span></div>
+      <div class="row"><span class="kv"><span>Bukti</span><span>${PROOF[q.proof].label}</span></span></div>
+    </div>`;
+  const foot = () => sh.setFoot(q.status === 'done' ? '' : `${st.error ? `<div class="note err">${I('error', 'sm')}<span>${esc(st.error)}</span></div>` : ''}<button class="btn btn-primary block js-claim ${st.saving ? 'is-busy' : ''}">${st.saving ? '<span class="spin"></span>Mengirim…' : `Klaim · +${n(q.points)} poin`}</button>`);
+  sh.setTitle('Quest');
+  sh.setBody(head + (q.status === 'done' ? `<div class="note ok">${I('check_circle', 'sm')}<span>Quest selesai. Poin sudah masuk.</span></div>` : proofField()));
+  foot();
+  const validate = () => {
+    let ok = true;
+    if (q.proof === 'photo') { ok = st.photos.length > 0; showE('.js-err-photos', !ok); $('[data-add-photo]', sh.body)?.classList.toggle('invalid', !ok); }
+    if (q.proof === 'text') { ok = st.text.trim().length >= 10; showE('.js-err-text', !ok); }
+    if (q.proof === 'instagram') { ok = !!st.account.trim() && /^https?:\/\//.test(st.link.trim()); showE('.js-err-ig', !ok); }
+    return ok;
+  };
+  const showE = (sel, on) => { const el = $(sel, sh.body); if (el) el.hidden = !on; };
+  sh.body.addEventListener('input', ev => { if (ev.target.name) { st[ev.target.name] = ev.target.value; if (st.tried) validate(); } });
+  if (q.proof === 'photo') bindPhotos(sh, st, () => q.title, () => { if (st.tried) validate(); });
+  sh.foot.addEventListener('click', async ev => {
+    if (!ev.target.closest('.js-claim') || st.saving) return;
+    st.tried = true;
+    if (!validate()) return;
+    st.saving = true; st.error = null; foot();
+    try {
+      for (const p of st.photos) await api.upload(p);
+      const r = await api.post(`/quests/${q.id}/claim`, { photos: st.photos.length, text: st.text, account: st.account, link: st.link });
+      haptic();
+      sh.setBody(`<div class="done"><div class="done-mark">${I('check')}</div><h3 class="t-headline">Quest selesai</h3><p class="muted">${esc(q.title)}</p><p class="done-pts">+${n(q.points)} poin</p><p class="muted">Total poinmu sekarang <b>${n(r.totals.points)}</b></p></div>`, 'fwd');
+      sh.setFoot(`<button class="btn btn-primary block" data-sheet-close>Selesai</button>`);
+      afterMutation();
+    } catch (err) { st.saving = false; st.error = err.message; foot(); }
+  });
+}
+
+/* =====================================================================
+   LAYAR: PERINGKAT
+   ===================================================================== */
+function mountBoard(ctx) {
+  const st = ctx.state; st.period = st.period || 'month'; st.dim = st.dim || 'all';
+  ctx.content.innerHTML = `${skTitle('Peringkat')}
+    <div class="seg" role="group" aria-label="Periode"><button data-p="month" aria-pressed="${st.period === 'month'}">Bulan ini</button><button data-p="all" aria-pressed="${st.period === 'all'}">Sepanjang waktu</button></div>
+    <div class="chips" role="group" aria-label="Dimensi" style="margin-top:12px">
+      <button class="chip" data-d="all" aria-pressed="${st.dim === 'all'}">Semua</button>
+      ${DIMS.map(d => `<button class="chip" data-d="${d.id}" aria-pressed="${st.dim === d.id}">${I(d.icon)}${d.name}</button>`).join('')}</div>
+    <div class="js-board"></div>`;
+  const host = $('.js-board', ctx.content);
+  const person = (x, cls = '') => `<span class="avatar ${cls} ${avClass(x.name)}">${esc(initials(x.name))}</span>`;
+  const render = d => {
+    const top = d.items.slice(0, 3), rest = d.items.slice(3);
+    const order = [top[1], top[0], top[2]].filter(Boolean);
+    host.innerHTML = `
+      ${d.stravaHidden ? `<button class="banner tip pressable" data-nav="strava" style="margin-top:16px;margin-bottom:0">${I('visibility_off', 'chev')}<span class="row-main"><b>Poin Stravamu tidak dihitung di sini</b><span class="muted">Ubah di Profil → Strava.</span></span>${I('chevron_right', 'chev')}</button>` : ''}
+      <div class="podium" aria-label="Tiga teratas">${order.map(x => `<div class="pod r${x.rank} ${x.me ? 'is-me' : ''}">${person(x, 'lg')}<span class="nm">${esc(x.me ? 'Kamu' : x.name.split(' ')[0])}</span><span class="pp">${n(x.points)}</span><div class="base">${x.rank}</div></div>`).join('')}</div>
+      <div class="card list">${rest.map(x => `<div class="lb-row ${x.me ? 'is-me' : ''}"><span class="lb-rank">${x.rank}</span>${person(x)}<span class="row-main"><span class="row-title">${esc(x.me ? x.name + ' (kamu)' : x.name)}</span><span class="row-meta">${esc(x.dept)}</span></span><b class="tnum">${n(x.points)}</b></div>`).join('')}</div>
+      ${d.me.rank > 3 ? `<div class="me-sticky lb-row is-me" style="border-radius:16px" aria-hidden="true"><span class="lb-rank">${d.me.rank}</span>${person(d.me)}<span class="row-main"><span class="row-title">Kamu</span><span class="row-meta">dari ${d.of} orang</span></span><b class="tnum">${n(d.me.points)}</b></div>` : ''}`;
+    // Baris "Kamu" yang menempel hanya muncul kalau baris aslinya tidak terlihat.
+    ctx.state.io && ctx.state.io.disconnect();
+    const mine = $('.list .lb-row.is-me', host), sticky = $('.me-sticky', host);
+    if (sticky && mine) {
+      ctx.state.io = new IntersectionObserver(es => { sticky.hidden = es[0].isIntersecting; }, { root: ctx.scroller, rootMargin: `0px 0px -${80}px 0px` });
+      ctx.state.io.observe(mine);
+    }
+  };
+  const sk = () => `<div class="podium">${[72, 96, 56].map(h => `<div class="pod"><div class="sk" style="width:44px;height:44px;border-radius:999px"></div>${skLine('60%', 10)}<div class="sk" style="width:100%;height:${h}px;border-radius:12px 12px 4px 4px"></div></div>`).join('')}</div>${skRows(6)}`;
+  const load = () => loadInto(ctx, `/leaderboard?period=${st.period}&dim=${st.dim}`, render, sk, host);
+  ctx.content.addEventListener('click', e => {
+    const p = e.target.closest('[data-p]'), d = e.target.closest('[data-d]');
+    if (p && p.dataset.p !== st.period) { st.period = p.dataset.p; $$('[data-p]', ctx.content).forEach(b => b.setAttribute('aria-pressed', b.dataset.p === st.period)); load(); }
+    if (d && d.dataset.d !== st.dim) { st.dim = d.dataset.d; $$('[data-d]', ctx.content).forEach(b => b.setAttribute('aria-pressed', b.dataset.d === st.dim)); load(); }
+  });
+  ctx.reload = load;
+  load();
+}
+
+/* =====================================================================
+   LAYAR: REWARDS
+   ===================================================================== */
+const REDEEM_STATUS = { processing: ['Diproses', 'info'], ready: ['Siap diambil', 'warn'], done: ['Selesai', 'ok'] };
+function mountRewards(ctx) {
+  const st = ctx.state; st.tab = st.tab || 'shop';
+  const render = d => {
+    ctx.content.innerHTML = `${skTitle('Rewards')}
+      <div class="wallet"><span class="lead lg tone-coin" style="background:var(--surface)">${I('toll', 'fill')}</span><div style="flex:1"><span class="caption">Koinmu</span><br><b>${n(d.coins)}</b></div><button class="link" data-nav="ledger" data-params="coins">Riwayat</button></div>
+      <div class="seg" role="group" aria-label="Rewards"><button data-t="shop" aria-pressed="${st.tab === 'shop'}">Tukar</button><button data-t="mine" aria-pressed="${st.tab === 'mine'}">Penukaranku (${d.redemptions.length})</button></div>
+      ${st.tab === 'shop' ? `<div class="rgrid">${d.items.map(r => {
+        const short = Math.max(0, r.cost - d.coins);
+        return `<button class="card ritem pressable ${short ? 'short' : ''}" data-reward="${r.id}"><div class="thumb">${I(r.icon)}</div><h3>${esc(r.name)}</h3><span class="cost">${I('toll', 'fill')}${n(r.cost)}</span><span class="sub">${r.stock < 1 ? 'Stok habis' : short ? `Kurang ${n(short)} koin` : `Sisa ${r.stock}`}</span></button>`;
+      }).join('')}</div><div class="note">${I('info', 'sm')}<span>1 poin = 1 koin. Menukar koin tidak mengurangi poin dan peringkatmu.</span></div>`
+      : (d.redemptions.length ? `<div class="card list" style="margin-top:16px">${d.redemptions.map(r => `<div class="row"><span class="lead tone-coin">${I(r.icon)}</span><span class="row-main"><span class="row-title">${esc(r.name)}</span><span class="row-meta">${dayLabel(r.date)} · ${n(r.cost)} koin</span></span><span class="pill ${REDEEM_STATUS[r.status][1]}">${REDEEM_STATUS[r.status][0]}</span></div>`).join('')}</div>
+        <div class="note">${I('info', 'sm')}<span>HR menghubungimu saat barang siap diambil.</span></div>` : `<div class="card empty" style="margin-top:16px"><div class="lead tone-coin">${I('redeem')}</div>Belum ada penukaran.</div>`)}`;
+  };
+  ctx.content.addEventListener('click', e => {
+    const b = e.target.closest('[data-t]');
+    if (b && b.dataset.t !== st.tab) { st.tab = b.dataset.t; const d = cache.get('/rewards'); if (d) render(d); }
+  });
+  ctx.reload = () => loadInto(ctx, '/rewards', render, () => `${skTitle('Rewards')}<div class="sk" style="height:84px;border-radius:20px;margin-bottom:16px"></div><div class="sk" style="height:44px;border-radius:12px"></div><div class="rgrid">${Array.from({ length: 4 }, () => '<div class="sk" style="height:196px;border-radius:16px"></div>').join('')}</div>`);
+  ctx.reload();
+}
+function openReward(id) {
+  const d = cache.get('/rewards');
+  const r = d?.items.find(x => x.id === id);
+  if (!r) return;
+  const short = Math.max(0, r.cost - d.coins);
+  const sh = openSheet({ label: r.name });
+  let saving = false, error = null;
+  sh.setTitle('Tukar koin');
+  sh.setBody(`<div class="ritem" style="padding:0"><div class="thumb" style="aspect-ratio:16/9">${I(r.icon, 'xl')}</div></div>
+    <h3 class="t-headline" style="margin-top:16px">${esc(r.name)}</h3><p class="muted" style="margin-top:4px">${esc(r.desc)}</p>
+    <div class="card list detail-rows">
+      <div class="row"><span class="kv"><span>Harga</span><span>${n(r.cost)} koin</span></span></div>
+      <div class="row"><span class="kv"><span>Koinmu</span><span>${n(d.coins)}</span></span></div>
+      <div class="row"><span class="kv"><span>Sisa setelah tukar</span><span>${short ? '-' : n(d.coins - r.cost)}</span></span></div>
+      <div class="row"><span class="kv"><span>Stok</span><span>${r.stock}</span></span></div>
+    </div>`);
+  const foot = () => sh.setFoot(`${error ? `<div class="note err">${I('error', 'sm')}<span>${esc(error)}</span></div>` : ''}${short || r.stock < 1
+    ? `<button class="btn btn-primary block" disabled>${r.stock < 1 ? 'Stok habis' : `Koin kurang ${n(short)}`}</button>`
+    : `<button class="btn btn-primary block js-redeem ${saving ? 'is-busy' : ''}">${saving ? '<span class="spin"></span>Menukar…' : `Tukar ${n(r.cost)} koin`}</button>`}`);
+  foot();
+  sh.foot.addEventListener('click', async e => {
+    if (!e.target.closest('.js-redeem') || saving) return;
+    saving = true; error = null; foot();
+    try {
+      const res = await api.post(`/rewards/${r.id}/redeem`);
+      haptic();
+      sh.setBody(`<div class="done"><div class="done-mark">${I('check')}</div><h3 class="t-headline">Penukaran dicatat</h3><p class="muted">${esc(r.name)}</p><p class="muted" style="margin-top:8px">HR akan menghubungimu untuk pengambilan. Sisa koin <b>${n(res.coins)}</b>.</p></div>`, 'fwd');
+      sh.setFoot(`<button class="btn btn-primary block" data-sheet-close>Selesai</button>`);
+      afterMutation();
+    } catch (err) { saving = false; error = err.message; foot(); }
+  });
+}
+
+/* =====================================================================
+   LAYAR: PROFIL
+   ===================================================================== */
+const STRAVA_LABEL = { connected: ['Tersambung', 'ok'], broken: ['Perlu sambung ulang', 'warn'], none: ['Belum tersambung', ''] };
+function mountProfile(ctx) {
+  const render = d => {
+    const me = d.me, t = d.totals, sv = STRAVA_LABEL[d.strava.state];
+    ctx.content.innerHTML = `
+      <div class="profile-head"><span class="avatar xl ${avClass(me.name)}">${esc(initials(me.name))}</span>
+        <h2 class="t-headline" style="margin-top:8px">${esc(me.name)}</h2><p class="muted">${esc(me.department)} · ${esc(me.position)}</p>
+        <p class="caption faint">${I('badge', 'xs')} Data dari akun WAM</p></div>
+      <div class="card stats3"><div><b>${n(t.points)}</b><span>poin</span></div><div><b>${n(t.coins)}</b><span>koin</span></div><div><b>${t.bestStreak} hari</b><span>streak terbaik</span></div></div>
+      <div class="group-label">Aktivitas</div>
+      <div class="card list">
+        <button class="row pressable" data-nav="strava"><span class="sv-mark sm">${I('directions_run', 'sm')}</span><span class="row-main"><span class="row-title">Strava</span><span class="row-meta">${d.strava.state === 'connected' ? 'Sinkron ' + timeAgo(d.strava.lastSync) : d.strava.state === 'broken' ? 'Aktivitas baru tidak masuk' : 'Olahraga masuk otomatis'}</span></span>${sv[1] ? `<span class="pill ${sv[1]}">${sv[0]}</span>` : ''}${I('chevron_right', 'chev')}</button>
+        <button class="row pressable" data-nav="riwayat"><span class="lead tone-primary">${I('history')}</span><span class="row-main"><span class="row-title">Riwayat aktivitas</span></span>${I('chevron_right', 'chev')}</button>
+        <button class="row pressable" data-nav="ledger" data-params="points"><span class="lead tone-coin">${I('receipt_long')}</span><span class="row-main"><span class="row-title">Riwayat poin & koin</span></span>${I('chevron_right', 'chev')}</button>
+      </div>
+      <div class="group-label">Tampilan</div>
+      <div class="card"><div class="setting"><div class="lbl">Tema</div>
+        <div class="seg" role="group" aria-label="Tema">${[['system', 'Sistem'], ['light', 'Terang'], ['dark', 'Gelap']].map(([k, l]) => `<button data-set="theme" data-v="${k}" aria-pressed="${settings.theme === k}">${l}</button>`).join('')}</div></div></div>
+      <div class="group-label" style="display:flex;align-items:center;gap:8px">Pengaturan uji <span class="proto-tag">prototipe</span></div>
+      <div class="card">
+        <div class="setting"><div class="lbl">Kecepatan jaringan</div>
+          <div class="seg" role="group" aria-label="Kecepatan jaringan">${[['fast', 'Cepat'], ['normal', 'Normal'], ['slow', 'Lambat']].map(([k, l]) => `<button data-set="net" data-v="${k}" aria-pressed="${settings.net === k}">${l}</button>`).join('')}</div>
+          <p class="help">Meniru lama jawaban server, supaya loading terlihat.</p></div>
+        <div class="setting"><div class="lbl"><span>Server sering gagal</span><button class="switch" role="switch" data-set="fail" aria-checked="${settings.fail}" aria-label="Server sering gagal"></button></div>
+          <p class="help">Untuk melihat pesan gagal dan tombol coba lagi.</p></div>
+        <div class="setting"><div class="lbl">Status Strava</div>
+          <div class="seg" role="group" aria-label="Status Strava">${[['connected', 'Tersambung'], ['broken', 'Terputus'], ['none', 'Belum']].map(([k, l]) => `<button data-set="strava" data-v="${k}" aria-pressed="${d.strava.state === k}">${l}</button>`).join('')}</div></div>
+        <div class="setting"><button class="btn btn-outline block js-reset">${I('restart_alt', 'sm')}Kembalikan data contoh</button></div>
+      </div>
+      <button class="btn btn-text danger block js-logout" style="margin-top:20px">${I('logout', 'sm')}Keluar</button>
+      <p class="caption faint center" style="margin-top:8px">Wellbeing · prototipe 16 Nov 2026</p>`;
+  };
+  ctx.content.addEventListener('click', async e => {
+    const s = e.target.closest('[data-set]');
+    if (s) {
+      const k = s.dataset.set;
+      if (k === 'theme') { settings.theme = s.dataset.v; applyTheme(); }
+      if (k === 'net') settings.net = s.dataset.v;
+      if (k === 'fail') settings.fail = !settings.fail;
+      if (k === 'strava') {
+        const v = s.dataset.v;
+        DB.strava.state = v; DB.strava.brokenSince = v === 'broken' ? addDays(today(), -2) : null;
+        DB.strava.share = v !== 'none'; DB.strava.consentAt = v === 'none' ? null : (DB.strava.consentAt || addDays(today(), -40));
+        if (v === 'connected') DB.strava.lastSync = Date.now() - 4 * 60000;
+        saveDB(); cache.delete('/strava'); cache.delete('/home');
+      }
+      saveSettings();
+      if (k === 'strava') { ctx.reload(); afterMutation(); } else { const d = cache.get('/me'); if (d) render(d); }
+      return;
+    }
+    if (e.target.closest('.js-reset')) {
+      if (!await confirmSheet({ title: 'Kembalikan data contoh?', body: 'Semua catatan, klaim, dan penukaran yang kamu buat di prototipe ini dihapus.', ok: 'Kembalikan', danger: true })) return;
+      DB = seedDB(); saveDB(); cache.clear(); toast('Data contoh dikembalikan.', 'success'); afterMutation(); return;
+    }
+    if (e.target.closest('.js-logout')) {
+      if (!await confirmSheet({ title: 'Keluar dari Wellbeing?', body: 'Kamu bisa masuk lagi dengan akun WAM yang sama.', ok: 'Keluar' })) return;
+      removeLS('wb-proto-session'); SESSION = null; cache.clear();
+      location.hash = ''; location.reload();
+    }
+  });
+  ctx.reload = () => loadInto(ctx, '/me', render, () => `<div class="profile-head"><div class="sk" style="width:80px;height:80px;border-radius:999px"></div>${skLine('50%', 18)}${skLine('36%')}</div><div class="sk" style="height:72px;border-radius:16px"></div><div style="height:24px"></div>${skRows(3)}`);
+  ctx.reload();
+}
+
+/* =====================================================================
+   LAYAR: STRAVA
+   ===================================================================== */
+function mountStrava(ctx) {
+  let syncing = false;
+  const render = d => {
+    const since = d.connectedAt ? fmt(d.connectedAt, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    if (d.state === 'connected') {
+      ctx.content.innerHTML = `
+        <div class="card sum" style="margin-top:4px"><span class="sv-mark">${I('directions_run')}</span><div class="row-main"><b class="t-sub">Strava tersambung</b><span class="row-meta">${esc(d.athlete)}</span></div><span class="pill ok">${I('check_circle')}Aktif</span></div>
+        <div class="card list detail-rows">
+          <div class="row"><span class="lead tone-primary">${I('bolt')}</span><span class="row-main"><span class="row-title">Masuk otomatis</span><span class="row-meta wrap">Aktivitas baru di Strava masuk dalam beberapa menit, tanpa perlu membuka aplikasi ini.</span></span></div>
+          <div class="row"><span class="lead">${I('sync')}</span><span class="row-main"><span class="row-title">Sinkron terakhir</span><span class="row-meta">${timeAgo(d.lastSync)}</span></span></div>
+          <div class="row"><span class="lead">${I('calendar_today')}</span><span class="row-main"><span class="row-title">Tersambung sejak</span><span class="row-meta">${since}</span></span></div>
+        </div>
+        <button class="btn btn-tonal block js-sync ${syncing ? 'is-busy' : ''}" style="margin-top:16px">${syncing ? '<span class="spin"></span>Menyinkronkan…' : `${I('sync', 'sm')}Sinkronkan sekarang`}</button>
+        <p class="help center" style="margin-top:8px">Pakai ini kalau ada aktivitas yang belum muncul setelah 15 menit.</p>
+        <div class="group-label">Privasi</div>
+        <div class="card"><div class="setting">
+          <div class="lbl" style="margin-bottom:0"><span style="font-size:15px;color:var(--text)">Poin Strava di peringkat</span><button class="switch js-share" role="switch" aria-checked="${d.share}" aria-label="Poin Strava di peringkat"></button></div>
+          <p class="help" style="margin-top:6px">${d.share
+            ? `Rekan kerja melihat total poinmu, termasuk poin dari Strava. Detail aktivitas (rute, jarak, waktu) tetap hanya untukmu.${d.consentAt ? ` Disetujui ${fmt(d.consentAt, { day: 'numeric', month: 'long', year: 'numeric' })}.` : ''}`
+            : 'Poin Strava tetap masuk ke total poinmu, tapi tidak dihitung di peringkat.'}</p></div></div>
+        <div class="sec"><div class="sec-head"><h2 class="t-sub">Dari Strava</h2></div>
+          ${d.recent.length ? `<div class="card list">${d.recent.map(a => actRow(a)).join('')}</div>` : '<div class="card empty">Belum ada aktivitas dari Strava.</div>'}</div>
+        <button class="btn btn-text danger block js-disconnect" style="margin-top:16px">Putuskan Strava</button>`;
+    } else if (d.state === 'broken') {
+      ctx.content.innerHTML = `
+        <div class="sv-hero"><span class="sv-mark lg">${I('link_off')}</span><h2 class="t-headline">Strava terputus</h2></div>
+        <div class="note warn">${I('warning', 'sm')}<span><b>Sejak ${fmt(d.brokenSince, { weekday: 'long', day: 'numeric', month: 'short' })}</b> Strava menolak akses (password Strava diganti atau izin dicabut). Aktivitas sejak itu belum masuk.</span></div>
+        <button class="btn btn-strava block js-connect" style="margin-top:20px">Sambungkan ulang Strava</button>
+        <p class="help center" style="margin-top:8px">Setelah tersambung, aktivitas yang tertinggal diambil otomatis.</p>
+        <div class="sec"><div class="sec-head"><h2 class="t-sub">Terakhir masuk</h2></div>
+          ${d.recent.length ? `<div class="card list">${d.recent.slice(0, 3).map(a => actRow(a)).join('')}</div>` : ''}</div>`;
+    } else {
+      ctx.content.innerHTML = `
+        <div class="sv-hero"><span class="sv-mark lg">${I('directions_run')}</span><h2 class="t-headline">Sambungkan Strava</h2><p class="muted">Olahraga yang direkam Strava masuk otomatis ke Wellbeing.</p></div>
+        <ul class="benefits">
+          <li>${I('bolt')}<span><b>Masuk sendiri</b><br><span class="muted">Dalam beberapa menit setelah aktivitas tersimpan di Strava.</span></span></li>
+          <li>${I('local_fire_department')}<span><b>1 kkal = 1 poin</b><br><span class="muted">Sama seperti olahraga yang dicatat manual.</span></span></li>
+          <li>${I('history')}<span><b>Tidak ada yang tertinggal</b><br><span class="muted">Aktivitas sejak awal bulan ikut diambil saat pertama tersambung.</span></span></li>
+        </ul>
+        <div class="note info">${I('info', 'sm')}<span>Di halaman izin Strava, biarkan izin <b>melihat aktivitas</b> tetap tercentang. Tanpa izin itu aktivitas tidak bisa diambil.</span></div>
+        <label class="check js-consent-box"><input type="checkbox" class="js-consent"><span class="box">${I('check')}</span>
+          <span>Saya setuju <b>poin</b> dari aktivitas Strava saya ikut dihitung di <b>peringkat</b> dan terlihat oleh rekan kerja. Detail aktivitas (rute, jarak, waktu) tetap hanya terlihat oleh saya. Persetujuan ini bisa saya tarik kapan saja.</span></label>
+        <span class="err-text js-err-consent" hidden style="margin-top:6px">${I('error', 'xs')}Centang persetujuan dulu untuk menyambungkan.</span>
+        <button class="btn btn-strava block js-connect" style="margin-top:20px">Sambungkan dengan Strava</button>
+        <p class="help center" style="margin-top:8px">Satu akun Strava hanya untuk satu karyawan.</p>`;
+    }
+  };
+  ctx.content.addEventListener('click', async e => {
+    if (e.target.closest('.js-sync') && !syncing) {
+      syncing = true; render(cache.get('/strava'));
+      try {
+        const r = await api.post('/strava/sync');
+        toast(r.added.length ? `${r.added.length} aktivitas baru masuk (+${n(sum(r.added.map(a => a.points)))} poin).` : 'Sudah terbaru. Tidak ada aktivitas baru.', r.added.length ? 'success' : '');
+        if (r.added.length) haptic();
+        afterMutation();
+      } catch (err) { toast(err.message, 'error', { label: 'Coba lagi', run: () => $('.js-sync', ctx.content)?.click() }); }
+      finally { syncing = false; const d = cache.get('/strava'); if (d && ctx.el.isConnected) render(d); ctx.reload(); }
+      return;
+    }
+    if (e.target.closest('.js-share')) {
+      const sw = e.target.closest('.js-share'), on = sw.getAttribute('aria-checked') !== 'true';
+      if (!on && !await confirmSheet({ title: 'Keluarkan poin Strava dari peringkat?', body: 'Poin Strava tetap masuk ke total poinmu, tapi tidak dihitung di peringkat dan rekan kerja tidak melihatnya. Bisa dinyalakan lagi kapan saja.', ok: 'Keluarkan' })) return;
+      sw.setAttribute('aria-checked', String(on)); sw.classList.add('is-busy');
+      try { await api.post('/strava/share', { on }); toast(on ? 'Poin Strava ikut dihitung di peringkat.' : 'Poin Strava tidak lagi dihitung di peringkat.'); afterMutation(); }
+      catch (err) { sw.setAttribute('aria-checked', String(!on)); toast(err.message, 'error'); }
+      finally { sw.classList.remove('is-busy'); }
+      return;
+    }
+    if (e.target.closest('.js-connect')) {
+      const box = $('.js-consent', ctx.content);
+      if (box && !box.checked) {
+        $('.js-consent-box', ctx.content).classList.add('invalid'); $('.js-err-consent', ctx.content).hidden = false;
+        $('.js-consent-box', ctx.content).scrollIntoView({ block: 'center', behavior: reduceMotion() ? 'auto' : 'smooth' });
+        return;
+      }
+      const ov = overlay(`<span class="sv-mark lg">${I('directions_run')}</span><p class="t-sub">Membuka Strava…</p><p class="muted">Di aplikasi asli, halaman izin Strava terbuka di sini lalu kembali otomatis.</p>`);
+      await sleep(1300);
+      ov.set(`<span class="spin lg" style="color:var(--strava)"></span><p class="t-sub">Mengambil aktivitas…</p><p class="muted">Aktivitas yang tertinggal sedang dimasukkan.</p>`);
+      try {
+        const r = await api.post('/strava/connect', { consent: !!box?.checked });
+        ov.close();
+        toast(`Strava tersambung. ${r.added.length} aktivitas masuk (+${n(sum(r.added.map(a => a.points)))} poin).`, 'success');
+        haptic(); afterMutation();
+      } catch (err) { ov.close(); toast(err.message, 'error'); }
+      return;
+    }
+    if (e.target.closest('.js-disconnect')) {
+      if (!await confirmSheet({ title: 'Putuskan Strava?', body: 'Aktivitas yang sudah masuk tetap tersimpan beserta poinnya. Aktivitas baru tidak masuk lagi sampai kamu menyambung ulang.', ok: 'Putuskan', danger: true })) return;
+      try { await api.post('/strava/disconnect'); toast('Strava diputus.'); afterMutation(); }
+      catch (err) { toast(err.message, 'error'); }
+    }
+  });
+  ctx.content.addEventListener('change', e => {
+    if (!e.target.matches('.js-consent') || !e.target.checked) return;
+    $('.js-consent-box', ctx.content).classList.remove('invalid'); $('.js-err-consent', ctx.content).hidden = true;
+  });
+  ctx.reload = () => loadInto(ctx, '/strava', render, () => `<div class="sk" style="height:72px;border-radius:16px;margin-top:4px"></div><div style="height:16px"></div>${skRows(3)}<div style="height:16px"></div><div class="sk" style="height:48px;border-radius:12px"></div>`);
+  ctx.reload();
+}
+
+/* =====================================================================
+   LAYAR: RIWAYAT POIN & KOIN
+   ===================================================================== */
+function mountLedger(ctx) {
+  const st = ctx.state; st.type = ctx.params[0] === 'coins' ? 'coins' : 'points';
+  ctx.content.innerHTML = `<div class="seg" role="group" aria-label="Jenis" style="margin:4px 0 16px"><button data-ty="points" aria-pressed="${st.type === 'points'}">Poin</button><button data-ty="coins" aria-pressed="${st.type === 'coins'}">Koin</button></div><div class="js-led"></div>`;
+  const host = $('.js-led', ctx.content);
+  const render = d => {
+    host.innerHTML = `<div class="card list">${d.items.map(x => `<div class="row"><span class="lead ${x.dim ? 'd-' + x.dim : x.amount < 0 ? 'tone-coin' : 'tone-primary'}">${I(x.icon)}</span><span class="row-main"><span class="row-title">${esc(x.title)}</span><span class="row-meta">${esc(x.sub)} · ${dayLabel(x.date)}</span></span><b class="pts ${x.amount < 0 ? 'neg' : ''}">${x.amount < 0 ? '−' : '+'}${n(Math.abs(x.amount))}</b></div>`).join('')}</div>
+      ${st.type === 'coins' ? `<div class="note">${I('info', 'sm')}<span>Koin bertambah sebanyak poin yang kamu dapat, dan berkurang saat ditukar.</span></div>` : ''}`;
+  };
+  const load = () => loadInto(ctx, `/ledger?type=${st.type}`, render, () => skRows(7), host);
+  ctx.content.addEventListener('click', e => {
+    const b = e.target.closest('[data-ty]');
+    if (b && b.dataset.ty !== st.type) { st.type = b.dataset.ty; $$('[data-ty]', ctx.content).forEach(x => x.setAttribute('aria-pressed', x.dataset.ty === st.type)); load(); }
+  });
+  ctx.reload = load;
+  load();
+}
+
+/* =====================================================================
+   MASUK (akun WAM)
+   ===================================================================== */
+function showLogin() {
+  const el = document.createElement('div');
+  el.className = 'login';
+  el.innerHTML = `
+    <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="9" r="6" fill="var(--d-physical)"/><circle cx="38.3" cy="19.4" r="6" fill="var(--d-emotional)"/>
+      <circle cx="32.8" cy="36.1" r="6" fill="var(--d-social)"/><circle cx="15.2" cy="36.1" r="6" fill="var(--d-financial)"/>
+      <circle cx="9.7" cy="19.4" r="6" fill="var(--d-spiritual)"/></svg>
+    <h1 class="t-title" style="margin-top:20px">Wellbeing</h1>
+    <p class="muted" style="margin-top:4px">Masuk dengan akun WAM kamu.</p>
+    <form novalidate>
+      <label class="field"><span class="lbl">Email atau nama panggilan</span><input class="input" name="user" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="mis. dewi"></label>
+      <label class="field"><span class="lbl">Password</span><div class="input-wrap"><input class="input" name="password" type="password" autocomplete="current-password" placeholder="Password"><button type="button" class="icon-btn pw-toggle" aria-label="Tampilkan password">${I('visibility')}</button></div></label>
+      <div class="js-err"></div>
+      <button class="btn btn-primary block js-submit" style="margin-top:24px">Masuk</button>
+      <div class="center" style="margin-top:8px"><button type="button" class="link js-forgot">Lupa password?</button></div>
+    </form>
+    <p class="foot caption faint">Satu akun untuk WAM, Booking Kantor, dan Wellbeing.<br>Prototipe: isi apa saja; password <b>salah</b> untuk melihat pesan gagal.</p>`;
+  app.appendChild(el);
+  const form = $('form', el), btn = $('.js-submit', el), err = $('.js-err', el), pw = $('[name=password]', el);
+  $('.pw-toggle', el).addEventListener('click', e => {
+    const show = pw.type === 'password'; pw.type = show ? 'text' : 'password';
+    e.currentTarget.innerHTML = I(show ? 'visibility_off' : 'visibility');
+    e.currentTarget.setAttribute('aria-label', show ? 'Sembunyikan password' : 'Tampilkan password');
+  });
+  $('.js-forgot', el).addEventListener('click', () => toast('Minta reset ke admin WAM: password dikembalikan ke password awal.', 'info'));
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const user = form.user.value.trim(), password = pw.value;
+    err.innerHTML = '';
+    btn.classList.add('is-busy'); btn.innerHTML = '<span class="spin"></span>Masuk…';
+    try {
+      const r = await api.post('/login', { user, password });
+      SESSION = { me: r.me, at: Date.now() }; writeLS('wb-proto-session', SESSION);
+      el.style.transition = 'opacity .25s'; el.style.opacity = '0';
+      startApp();
+      setTimeout(() => el.remove(), 260);
+    } catch (ex) {
+      err.innerHTML = `<div class="note err">${I('error', 'sm')}<span>${esc(ex.message)}</span></div>`;
+      btn.classList.remove('is-busy'); btn.textContent = 'Masuk';
+    }
+  });
+  setTimeout(() => form.user.focus(), 100);
+}
+
+/* =====================================================================
+   AKSI GLOBAL + MULAI
+   ===================================================================== */
+document.addEventListener('click', e => {
+  const t = e.target.closest('a[data-tab], [data-nav], [data-go-tab], [data-action], [data-act], [data-quest], [data-reward], [data-sheet-close]');
+  if (!t) return;
+  if (t.matches('a[data-tab]')) { e.preventDefault(); go(t.dataset.tab); return; }
+  if (t.hasAttribute('data-sheet-close')) { currentSheet && currentSheet.close(); return; }
+  if (t.dataset.nav) { go(t.dataset.nav, (t.dataset.params || '').split('/').filter(Boolean)); return; }
+  if (t.dataset.goTab) { go(t.dataset.goTab); return; }
+  if (t.dataset.action === 'back') { goBack(); return; }
+  if (t.dataset.action === 'catat') { openCatat(); return; }
+  if (t.dataset.act) { openActivity(t.dataset.act); return; }
+  if (t.dataset.quest) { openQuest(t.dataset.quest); return; }
+  if (t.dataset.reward) { openReward(t.dataset.reward); }
+});
+// Ambil data lebih dulu saat jari menyentuh tab, supaya terasa instan.
+const PREFETCH = { beranda: '/home', quest: '/quests', peringkat: '/leaderboard?period=month&dim=all', rewards: '/rewards' };
+tabbar.addEventListener('pointerdown', e => {
+  const a = e.target.closest('[data-tab]'); const key = a && PREFETCH[a.dataset.tab];
+  if (key && !cache.has(key)) api.get(key).then(d => cache.set(key, d)).catch(() => {});
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && currentSheet) currentSheet.close(); });
+const syncOnline = () => { $('#offline').hidden = navigator.onLine; };
+addEventListener('online', () => { syncOnline(); toast('Kembali online.', 'success'); afterMutation(); });
+addEventListener('offline', syncOnline);
+
+function applyTheme() {
+  const r = document.documentElement;
+  if (settings.theme === 'system') delete r.dataset.theme; else r.dataset.theme = settings.theme;
+  const dark = settings.theme === 'dark' || (settings.theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  $('meta[name="theme-color"]').setAttribute('content', dark ? '#0E1116' : '#F6F7F9');
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
+
+function startApp() {
+  tabbar.hidden = false;
+  const { name, params } = parseHash();
+  if (!ROUTES[name].tab) {
+    history.replaceState({ i: 0 }, '', '#/beranda'); histIndex = 0; showTab('beranda', false);
+    histIndex = 1; history.pushState({ i: 1 }, '', '#/' + [name, ...params].join('/')); pushScreen(name, params, false);
+  } else {
+    history.replaceState({ i: 0 }, '', '#/' + name); histIndex = 0; showTab(name, false);
+  }
+}
+
+applyTheme();
+syncOnline();
+if (SESSION) startApp(); else showLogin();
+})();
+</script>
+</body>
+</html>

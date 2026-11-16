@@ -104,3 +104,19 @@ describe("tidyGrant", () => {
     expect(grantEventsLabel({ apps: ["wam"], allEvents: false, eventIds: [] })).toBe("—");
   });
 });
+
+describe("Wellbeing (16 Nov 2026)", () => {
+  it("opens Admin Wellbeing and its API only with its own grant", () => {
+    expect(areaOfPath("/admin/wellbeing")).toBe("wellbeing");
+    expect(areaOfPath("/admin/wellbeing/periksa")).toBe("wellbeing");
+    expect(areaOfPath("/api/admin/wellbeing/activities")).toBe("wellbeing");
+    expect(areaOfPath("/admin/wellbeingx")).toBeNull();
+    expect(mayOpenArea({ employeeId: "e1", apps: ["wellbeing"], allEvents: false, eventIds: [] }, "wellbeing")).toBe(true);
+    expect(mayOpenArea({ employeeId: "e1", apps: ["wam", "tv"], allEvents: false, eventIds: [] }, "wellbeing")).toBe(false);
+  });
+  it("shows the Wellbeing card to whoever has it", () => {
+    expect(showsAppCard({ apps: ["wellbeing"] }, "wellbeing")).toBe(true);
+    expect(showsAppCard({ apps: ["wam"] }, "wellbeing")).toBe(false);
+    expect(showsAppCard(null, "wellbeing")).toBe(true);
+  });
+});

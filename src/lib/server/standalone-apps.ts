@@ -1,16 +1,17 @@
 import "server-only";
 import { wibDate } from "@/lib/pra-wam/appraisal";
-import { BOOKING_PATH, bookingPath, praWamPath, wamAdminPath } from "@/lib/routes";
+import { BOOKING_PATH, bookingPath, praWamPath, wamAdminPath, wellbeingAdminPath } from "@/lib/routes";
 import { currentPhase } from "./pra-wam/events";
 import { openResetRequestCount } from "./pra-wam/reset-requests";
 
 /**
  * The standalone apps (10 Nov 2026): the ones that run on their own at a fixed address, apart from
  * the events and their invitations: WAM, Booking Kantor and TV Announcement. They head the admin's
- * event list in one "Aplikasi" section, with the Your Visit guide beside them.
+ * event list in one "Aplikasi" section, with the Your Visit guide beside them. Wellbeing joined on
+ * 16 Nov 2026 (its employee app comes later; until then the card opens the admin).
  */
 export type StandaloneApp = {
-  key: "wam" | "booking" | "tv";
+  key: "wam" | "booking" | "tv" | "wellbeing";
   name: string;
   /** What kind of app, on its preview. */
   eyebrow: string;
@@ -52,6 +53,12 @@ export async function standaloneApps(now = new Date()): Promise<StandaloneApp[]>
       status: "TV kantor", address: "/tv",
       description: "Kendali signage TV kantor: alamat tiap TV, jadwal ruang hari ini dan minggu ini, gambar pengumuman dan durasinya, mode, serta QR. Semua bisa diatur sendiri.",
       open: { label: "Buka tayangan", href: "/tv" }, manage: { label: "Atur TV", href: wamAdminPath.tv },
+    },
+    {
+      key: "wellbeing", name: "Wellbeing", eyebrow: "Program karyawan",
+      status: "Admin siap · aplikasi karyawan menyusul", address: wellbeingAdminPath(),
+      description: "Program wellbeing kantor: karyawan mencatat aktivitas per dimensi dan mengumpulkan poin. Admin memeriksa aktivitas, memberi poin ke banyak orang, dan melihat juara bulanan.",
+      open: { label: "Buka admin", href: wellbeingAdminPath() }, manage: { label: "Kelola Wellbeing", href: wellbeingAdminPath() },
     },
   ];
 }

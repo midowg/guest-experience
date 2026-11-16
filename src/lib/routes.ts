@@ -602,3 +602,51 @@ export const tvAdminPath = {
   look: `${TV_ADMIN}/tampilan`,
   preview: `${TV_ADMIN}/pratinjau`,
 };
+
+/*
+ * Admin Wellbeing (16 Nov 2026, docs/rancangan-wellbeing.md): the office wellbeing programme's admin,
+ * one client app (no page load between its menus). Hari ini (what needs doing), Periksa (activities
+ * to check), Karyawan (points per person, Tambah poin to many), Pengaturan (catalogue and rules).
+ */
+export const WELLBEING_ADMIN = "/admin/wellbeing";
+export const WELLBEING_ADMIN_SECTIONS = ["hari-ini", "periksa", "karyawan", "pengaturan"] as const;
+export type WellbeingAdminSection = (typeof WELLBEING_ADMIN_SECTIONS)[number];
+export const wellbeingAdminPath = (section: WellbeingAdminSection = "hari-ini") => section === "hari-ini" ? WELLBEING_ADMIN : `${WELLBEING_ADMIN}/${section}`;
+const WELLBEING_ADMIN_API = "/api/admin/wellbeing";
+export const wellbeingAdminApi = {
+  overview: `${WELLBEING_ADMIN_API}/overview`,
+  activities: (query: Record<string, string | undefined> = {}) => {
+    const search = new URLSearchParams(Object.entries(query).filter((entry): entry is [string, string] => !!entry[1])).toString();
+    return `${WELLBEING_ADMIN_API}/activities${search ? `?${search}` : ""}`;
+  },
+  activity: (id: string) => `${WELLBEING_ADMIN_API}/activities/${id}`,
+  people: (period: "month" | "all") => `${WELLBEING_ADMIN_API}/people?period=${period}`,
+  person: (id: string) => `${WELLBEING_ADMIN_API}/people/${id}`,
+  points: `${WELLBEING_ADMIN_API}/points`,
+  pointBatch: (batchId: string, employeeId?: string) => `${WELLBEING_ADMIN_API}/points/${batchId}${employeeId ? `?employee=${employeeId}` : ""}`,
+  catalog: `${WELLBEING_ADMIN_API}/catalog`,
+  catalogItem: (code: string) => `${WELLBEING_ADMIN_API}/catalog/${encodeURIComponent(code)}`,
+  settings: `${WELLBEING_ADMIN_API}/settings`,
+};
+
+/*
+ * Wellbeing for employees (17 Nov 2026): one client app at /wellbeing (Beranda, Riwayat, Peringkat,
+ * Profil; Catat is a sheet), signed in with the WAM account on its own page /wellbeing/masuk.
+ */
+export const WELLBEING_PATH = "/wellbeing";
+export const wellbeingPath = {
+  home: WELLBEING_PATH,
+  section: (section: "beranda" | "riwayat" | "peringkat" | "profil") => section === "beranda" ? WELLBEING_PATH : `${WELLBEING_PATH}/${section}`,
+  login: (next?: string) => `${WELLBEING_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
+};
+const WELLBEING_API = "/api/wellbeing";
+export const wellbeingApi = {
+  home: `${WELLBEING_API}/home`,
+  catalog: `${WELLBEING_API}/catalog`,
+  activities: (filter: string, before?: string) => `${WELLBEING_API}/activities?filter=${filter}${before ? `&before=${enc(before)}` : ""}`,
+  activity: (id: string) => `${WELLBEING_API}/activities/${id}`,
+  log: `${WELLBEING_API}/activities`,
+  uploads: `${WELLBEING_API}/uploads`,
+  leaderboard: (period: "month" | "all", dim: string) => `${WELLBEING_API}/leaderboard?period=${period}&dim=${dim}`,
+  ledger: `${WELLBEING_API}/ledger`,
+};

@@ -3,7 +3,7 @@
 import { EventPreview } from "./EventPreview";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, CalendarCheck, CalendarDays, Copy, DoorOpen, ExternalLink, EyeOff, Hourglass, Images, KeyRound, LayoutGrid, MoreHorizontal, Pencil, Plus, Settings, Sparkles, Star, StarOff, Globe, Trash2, Tv, X } from "lucide-react";
+import { Archive, CalendarCheck, CalendarDays, Copy, DoorOpen, ExternalLink, EyeOff, HeartPulse, Hourglass, Images, KeyRound, LayoutGrid, MoreHorizontal, Pencil, Plus, Settings, Sparkles, Star, StarOff, Globe, Trash2, Tv, X } from "lucide-react";
 import { Button, ButtonLink, Notice } from "@/components/ui";
 import type { EventPhase, EventRecord, StaffMember } from "@/lib/types";
 import { formatDate, formatTime } from "@/lib/format";
@@ -22,6 +22,7 @@ const appLooks: Record<StandaloneApp["key"], { Icon: typeof Tv; background: stri
   wam: { Icon: Sparkles, background: "linear-gradient(135deg, #0b1230, #2a1f5c)", color: "#f4f1ff", accent: "#f2c46d" },
   booking: { Icon: DoorOpen, background: "linear-gradient(135deg, #0f3b3a, #146c66)", color: "#effaf8", accent: "#9be7d8" },
   tv: { Icon: Tv, background: "linear-gradient(135deg, #10203d, #1d4f91)", color: "#eef4ff", accent: "#8cc2ff" },
+  wellbeing: { Icon: HeartPulse, background: "linear-gradient(135deg, #0d3b35, #0d7c72)", color: "#ecfbf8", accent: "#7fd3c9" },
 };
 
 const kinds = { kunjungan: "Welcome", acara: "Acara", program: "Program", handbook: "Handbook", kartu: "Kartu", eguide: "E-Guide", csr: "Friday Sharing (CSR)", panduan: "Panduan lokasi" } as const;
@@ -181,7 +182,7 @@ export function EventList({ events, featuredId, phases = {}, superAdmin, disable
     </div>}
     {(apps.length > 0 || guides.length > 0) && <section className="stack" aria-labelledby="apps-title">
       <h2 id="apps-title" className={styles.groupTitle}><LayoutGrid size={20} aria-hidden="true" /> Aplikasi <span>{apps.length + guides.length}</span></h2>
-      <p className="field-hint">Aplikasi mandiri di luar acara, masing-masing di alamat tetap: WAM, Booking Kantor, TV Announcement, dan panduan Your Visit di <strong>{PLACE_GUIDE_PATH}</strong> (yang tayang adalah panduan terbaru yang terbit).</p>
+      <p className="field-hint">Aplikasi mandiri di luar acara, masing-masing di alamat tetap: WAM, Booking Kantor, TV Announcement, Wellbeing, dan panduan Your Visit di <strong>{PLACE_GUIDE_PATH}</strong> (yang tayang adalah panduan terbaru yang terbit).</p>
       <ul className={styles.eventList}>{apps.map(appCard)}{guides.map(card)}</ul>
     </section>}
     {creating && <CreateEventDialog events={events} disabledModules={disabledModules} templates={templates} canStartBlank={!!superAdmin} staff={staff} onClose={() => setCreating(false)} />}
