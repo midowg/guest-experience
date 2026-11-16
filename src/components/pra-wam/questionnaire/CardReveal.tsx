@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { Dices, Download, ImageIcon, RotateCcw, Share2, Smartphone, UserRound, X } from "lucide-react";
+import { ArrowLeft, Dices, Download, ImageIcon, RotateCcw, Share2, Smartphone, UserRound, X } from "lucide-react";
 import { oddsLabel, serialLabel } from "@/lib/pra-wam/cards";
 import { rarityOf, SPARK_COUNT } from "@/lib/pra-wam/figures";
 import { encodeWithinLimit, PHOTO_SIDE } from "@/lib/pra-wam/photo";
@@ -134,8 +134,8 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
   const [note, setNote] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [burst, setBurst] = useState(false);
   const [flash, setFlash] = useState(false);
-  /** The re-roll: "ask" once tapped (Ya / Batal), "busy" while the server draws, "done" when the new card is in. */
-  const [reroll, setReroll] = useState<"" | "ask" | "busy" | "done">("");
+  /** The re-roll: "dialog" while its dialog is up, "done" once the new card is in. */
+  const [reroll, setReroll] = useState<"" | "dialog" | "done">("");
   const [confirm, confirmElement] = useConfirm();
   const confetti = useRef<HTMLCanvasElement>(null);
   const started = useRef(false);
@@ -184,22 +184,14 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
     if (!reducedMotion() && confetti.current) throwConfetti(confetti.current, card.tier.color, level);
   }
 
-  /** The one re-roll: the server draws the new figure; its card comes back closed, to open again. */
-  async function rerollFigure() {
-    if (reroll !== "ask") { setReroll("ask"); return; }
-    setReroll("busy"); setNote(null);
-    try {
-      const view = (await praWamRequest<{ card: CardView }>(praWamApi.questionnaireCard, { method: "PATCH" })).data.card;
-      setCard(view);
-      const faces = await facesOf(view);
-      setFront(faces.front); setBack(faces.back);
-      setBurst(false); setReroll("done");
-      setPhase({ kind: "closed" });
-      window.scrollTo?.({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
-    } catch (error) {
-      setReroll("");
-      setNote({ tone: "error", text: errorText(error) });
-    }
+  /**
+   * The re-roll's dialog closed. With a new card (drawn there, opened or not), the page shows it
+   * only now, open, so nothing below the card gives the new figure away before its flip.
+   */
+  function rerolled(view: CardView | null, faces: { front: string; back: string } | null) {
+    if (!view || !faces) { setReroll(""); return; }
+    setCard(view); setFront(faces.front); setBack(faces.back);
+    setReroll("done"); setPhase({ kind: "open" });
   }
 
   function replay() { setBurst(false); setPhase({ kind: "closed" }); window.scrollTo?.({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" }); }
@@ -261,7 +253,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
   const rarity = figure ? rarityOf(card.tier) : 0;
   const { flip, listen, ...tiltEvents } = tilt;
   return <div className={`${styles.reveal} ${burst ? styles.burst : ""}`} style={{ ["--glow" as string]: card.tier.color }}>
-    {(!settled || reroll === "done") && <p className={styles.hint} aria-live="polite">{phase.kind === "closed" ? reroll === "done" ? "Tokoh barumu sudah diundi. Ketuk kartunya untuk membuka." : `${figure ? "Rarity" : "Level"} sudah diundi. Siapa tahu kamu dapat Legendary.` : ""}</p>}
+    {!settled && <p className={styles.hint} aria-live="polite">{phase.kind === "closed" ? `${figure ? "Rarity" : "Level"} sudah diundi. Siapa tahu kamu dapat Legendary.` : ""}</p>}
     {flash && <div className={styles.flash} aria-hidden />}
     <div ref={flip} className={`${styles.flip} ${open ? styles.open : ""} ${phase.kind === "opening" ? styles.charge : ""}`} {...tiltEvents}
       onClick={() => { if (open) void listen(); }}>
@@ -311,12 +303,12 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
           <h2 id="cq-card-reroll" className={styles.heading}>Kurang sreg dengan tokohmu?</h2>
           <p className={styles.small}>Kamu boleh re-roll tokoh <b>satu kali</b>{card.reroll.until ? `, sampai ${dateLabel(card.reroll.until)} WIB` : ""}. Tokoh baru diundi dari tokoh yang masih tersedia di tipe {card.character.class}. Hasilnya wajib diterima, jadi bisa lebih cocok atau malah kurang. Rarity <b>{card.tier.name}</b> dan nomor kartumu tetap.</p>
           <div className={styles.row}>
-            {reroll === "ask" && <button type="button" className={`${styles.btn} ${styles.text}`} onClick={() => setReroll("")}>Batal</button>}
-            <button type="button" className={`${styles.btn} ${reroll === "ask" ? styles.primary : ""}`} onClick={() => void rerollFigure()} disabled={reroll === "busy" || !!busy}>
-              <Dices aria-hidden />{reroll === "busy" ? "Mengundi…" : reroll === "ask" ? "Ya, undi ulang sekarang" : "Re-roll tokoh (1x)"}
+            <button type="button" className={styles.btn} onClick={() => { setNote(null); setReroll("dialog"); }} disabled={reroll === "dialog" || !!busy}>
+              <Dices aria-hidden />Re-roll tokoh (1x)
             </button>
           </div>
         </section>}
+        {reroll === "dialog" && <RerollDialog card={card} nickname={name} onClose={rerolled} />}
         {(card.reroll?.state === "used" || reroll === "done") && <section className={styles.panel} aria-labelledby="cq-card-rerolled">
           <h2 id="cq-card-rerolled" className={styles.heading}>Re-roll tokoh</h2>
           <p className={styles.small}>Kamu sudah memakai jatah re-roll. {figure.name} sekarang tokohmu, edisi 1 dari 1.</p>
@@ -383,16 +375,96 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
 }
 
 /**
+ * The re-roll in its own dialog (16 Nov 2026, the owner's choice): first what it means and "Ya, undi
+ * ulang sekarang", then the new card face down to tap and open, as the first time; Kembali closes
+ * it at any step. Nothing about the new figure shows before its flip.
+ */
+function RerollDialog({ card, nickname, onClose }: { card: CardView; nickname: string; onClose: (view: CardView | null, faces: { front: string; back: string } | null) => void }) {
+  type Step = { kind: "ask" } | { kind: "busy" } | { kind: "error"; text: string } | { kind: "closed" | "opening" | "open"; view: CardView; faces: { front: string; back: string } };
+  const [step, setStep] = useState<Step>({ kind: "ask" });
+  const [flash, setFlash] = useState(false);
+  const confetti = useRef<HTMLCanvasElement>(null);
+  // Not while the server draws: the new figure is about to be mine, so the page must get it.
+  const close = () => { if (step.kind !== "busy") onClose("view" in step ? step.view : null, "faces" in step ? step.faces : null); };
+
+  async function draw() {
+    setStep({ kind: "busy" });
+    try {
+      const view = (await praWamRequest<{ card: CardView }>(praWamApi.questionnaireCard, { method: "PATCH" })).data.card;
+      setStep({ kind: "closed", view, faces: await facesOf(view) });
+    } catch (error) {
+      setStep({ kind: "error", text: errorText(error) });
+    }
+  }
+
+  async function open() {
+    if (step.kind !== "closed") return;
+    const { view, faces } = step;
+    const level = rarityOf(view.tier);
+    setStep({ kind: "opening", view, faces });
+    buzz(level >= 3 ? [20, 60, 20, 60, 20, 60, 80] : [20, 80, 20, 80, 40]);
+    await wait(level === 4 ? 2200 : level === 3 ? 1700 : 1300);
+    if (level >= 3 && !reducedMotion()) { setFlash(true); window.setTimeout(() => setFlash(false), 950); }
+    setStep({ kind: "open", view, faces });
+    buzz(level >= 3 ? [60, 40, 120] : 60);
+    await wait(620);
+    if (!reducedMotion() && confetti.current) throwConfetti(confetti.current, view.tier.color, level);
+  }
+
+  const back = <button type="button" className={`${styles.btn} ${styles.text}`} onClick={close} autoFocus><ArrowLeft aria-hidden />Kembali</button>;
+  return <SavedDialog onClose={close} label="Re-roll tokoh">
+    <div className={styles.sheet} style={{ ["--glow" as string]: "view" in step ? step.view.tier.color : card.tier.color }}>
+      {flash && <div className={styles.flash} aria-hidden />}
+      {(step.kind === "ask" || step.kind === "busy") && <>
+        <h2 className={styles.heading}>Re-roll tokoh</h2>
+        <p>Tokohmu sekarang dilepas dan tokoh baru diundi dari tokoh yang masih tersedia di tipe {card.character.class}. Hasilnya wajib diterima dan tidak bisa kembali ke tokoh lama. Rarity <b>{card.tier.name}</b> dan nomor kartumu tetap.</p>
+        <div className={styles.row}>
+          {back}
+          <button type="button" className={`${styles.btn} ${styles.primary}`} onClick={() => void draw()} disabled={step.kind === "busy"}><Dices aria-hidden />{step.kind === "busy" ? "Mengundi…" : "Ya, undi ulang sekarang"}</button>
+        </div>
+      </>}
+      {step.kind === "error" && <>
+        <p className={styles.problem} role="alert">{step.text}</p>
+        <div className={styles.row}>{back}</div>
+      </>}
+      {(step.kind === "closed" || step.kind === "opening" || step.kind === "open") && <>
+        <p className={styles.hint} aria-live="polite">{step.kind === "open" ? "" : "Tokoh barumu sudah diundi. Ketuk kartunya untuk membuka."}</p>
+        <div className={`${styles.flip} ${step.kind === "open" ? styles.open : ""} ${step.kind === "opening" ? styles.charge : ""}`}>
+          <div className={styles.inner}>
+            <button type="button" className={`${styles.face} ${styles.down}`} onClick={() => void open()} disabled={step.kind !== "closed"} aria-label="Buka tokoh barumu" tabIndex={step.kind === "open" ? -1 : 0} aria-hidden={step.kind === "open" || undefined}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas; next/image cannot help */}
+              <img src={step.faces.back} alt="" />
+              <span className={styles.tap}>Ketuk untuk membuka</span>
+            </button>
+            <div className={`${styles.face} ${styles.up} ${styles[`r${rarityOf(step.view.tier)}`]}`} aria-hidden={step.kind !== "open" || undefined}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas; next/image cannot help */}
+              {step.kind === "open" && <img src={step.faces.front} alt={`Kartu ${step.view.figure?.name ?? ""}, ${step.view.tier.name}`} />}
+              {step.kind === "open" && <RarityLayers rarity={rarityOf(step.view.tier)} />}
+            </div>
+          </div>
+          <canvas className={styles.confetti} ref={confetti} aria-hidden />
+        </div>
+        {step.kind === "open" && <div className={styles.banner} role="status">
+          <strong>{nickname}, tokoh barumu {step.view.figure?.name}</strong>
+          {step.view.reason && <span>{step.view.reason}</span>}
+        </div>}
+        <div className={styles.row}>{back}</div>
+      </>}
+    </div>
+  </SavedDialog>;
+}
+
+/**
  * The picture to keep, in a modal <dialog>: the top layer, so the questionnaire's bar and dock
  * never cover it. Escape or a tap outside closes it.
  */
-function SavedDialog({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+function SavedDialog({ onClose, children, label = "Gambar siap disimpan" }: { onClose: () => void; children: ReactNode; label?: string }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
     if (dialog && !dialog.open) dialog.showModal?.();
   }, []);
-  return <dialog ref={ref} className={styles.overlay} aria-label="Gambar siap disimpan" onClose={onClose} onCancel={event => { event.preventDefault(); onClose(); }}
+  return <dialog ref={ref} className={styles.overlay} aria-label={label} onClose={onClose} onCancel={event => { event.preventDefault(); onClose(); }}
     onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
     {children}
   </dialog>;

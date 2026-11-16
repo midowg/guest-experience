@@ -115,16 +115,25 @@ it("re-rolls the figure once, after asking, and shows the new card to open again
   // Epic: the moving rarity layers and seven stars.
   expect(container.querySelector("[class*='edge']")).toBeTruthy();
   expect(container.querySelectorAll("[class*='spark'] i")).toHaveLength(7);
-  // The first tap only asks; Batal steps back.
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+  // Re-roll opens a dialog; Kembali steps back without drawing.
   fireEvent.click(screen.getByRole("button", { name: /Re-roll tokoh \(1x\)/ }));
+  expect(screen.getByRole("dialog", { name: "Re-roll tokoh" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Kembali" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(patches).toBe(0);
-  fireEvent.click(screen.getByRole("button", { name: "Batal" }));
   fireEvent.click(screen.getByRole("button", { name: /Re-roll tokoh \(1x\)/ }));
   fireEvent.click(screen.getByRole("button", { name: /Ya, undi ulang sekarang/ }));
-  // The new card comes back closed, to open again.
-  fireEvent.click(await screen.findByRole("button", { name: "Buka kartu karaktermu" }));
-  expect(await screen.findByText("Dewi, kamu dapat Susi Susanti")).toBeTruthy();
+  // The new card waits face down in the dialog; the page below still shows the old one.
+  const flipNew = await screen.findByRole("button", { name: "Buka tokoh barumu" });
   expect(patches).toBe(1);
-  expect(screen.getByText(/Kamu sudah memakai jatah re-roll\. Susi Susanti sekarang tokohmu/)).toBeTruthy();
+  expect(screen.queryByText(/Susi Susanti/)).toBeNull();
+  expect(screen.getByText("Dewi, kamu dapat Edmund Hillary")).toBeTruthy();
+  fireEvent.click(flipNew);
+  expect(await screen.findByText("Dewi, tokoh barumu Susi Susanti")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Kembali" }));
+  // Back on the page: the new card, open, and the re-roll used.
+  expect(await screen.findByText("Dewi, kamu dapat Susi Susanti")).toBeTruthy();
+  expect(screen.getByText(/Kamu sudah memakai jatah re-roll. Susi Susanti sekarang tokohmu/)).toBeTruthy();
   expect(screen.queryByText("Kurang sreg dengan tokohmu?")).toBeNull();
 });
