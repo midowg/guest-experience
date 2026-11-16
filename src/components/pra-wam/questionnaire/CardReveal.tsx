@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { ArrowLeft, Dices, Download, ImageIcon, RotateCcw, Share2, Smartphone, UserRound, X } from "lucide-react";
+import { ArrowLeft, Dices, Download, RotateCcw, Share2, UserRound, X } from "lucide-react";
 import { oddsLabel, serialLabel } from "@/lib/pra-wam/cards";
 import { rarityOf, SPARK_COUNT } from "@/lib/pra-wam/figures";
 import { encodeWithinLimit, PHOTO_SIDE } from "@/lib/pra-wam/photo";
@@ -23,10 +23,19 @@ import styles from "./card.module.css";
  * v3 (16 Nov 2026, Hanung): the rarity moves on the open card (a light ring turning on the edge,
  * a sweeping glare, rising sparks, stars; Epic and Legendary float), Epic and Legendary take
  * longer to open with a flash of the screen, Legendary throws gold confetti. Once Admin WAM opens
- * the re-roll, the opened card offers one re-roll of the figure; the new card is opened again.
+ * the re-roll, the opened card offers one re-roll of the figure, in its own dialog.
+ *
+ * v4 (handoff "undian kartu", approved by Hanung 16 Nov 2026): "Kartumu sudah siap." and "Ambil
+ * bungkus kartuku", then a card pack with a face to tap three times (it squashes, winces and
+ * sparkles; the second tap lets out the rarity's light, the only hint before it opens; Epic and
+ * Legendary make it tremble first), the card jumps out, wobbles, turns open with a bounce, the
+ * rarity stamp falls, and a short result: the name, the rarity, the persona, "1 dari 1", the
+ * complement, save and wallpaper, "Kenapa …?", the re-roll and "Buka ulang" (the opening again,
+ * never a new draw). "Lewati animasi" is always there; reduced motion goes straight to the result.
+ * Everything is drawn on the server before; the page only shows it.
  */
 
-type Phase = { kind: "printing"; step: number } | { kind: "closed" } | { kind: "opening" } | { kind: "open" } | { kind: "error"; text: string };
+type Phase = { kind: "printing"; step: number } | { kind: "ready" } | { kind: "pack"; taps: number } | { kind: "emerging"; wobble: boolean } | { kind: "open" } | { kind: "error"; text: string };
 type Saved = { url: string; blob: Blob; filename: string; caption: string; tall?: boolean };
 
 const openedKey = (formId: string) => `wam-cq-card-open:${formId}`;
@@ -36,6 +45,48 @@ const reducedMotion = () => typeof window === "undefined" || typeof window.match
 const wait = (ms: number) => new Promise(resolve => window.setTimeout(resolve, reducedMotion() ? 0 : ms));
 const buzz = (pattern: number | number[]) => { try { navigator.vibrate?.(pattern); } catch { /* not on this phone */ } };
 const STEPS = ["Membaca jawabanmu", "Mencocokkan tokoh", "Mengundi rarity"];
+/** What the pack says on each tap. */
+const WORDS = [["Eh?", "Hihi!", "Duk!"], ["Aduh!", "Geli!", "Lagi!"], ["Brett!", "Yeay!", "Taraa!"]];
+const pickOne = (list: readonly string[]) => list[Math.floor(Math.random() * list.length)];
+
+/** Little stars flying out of a point of the stage (decoration only, not React's). */
+function sparkBurst(layer: HTMLElement, x: number, y: number, count: number, color: string) {
+  if (reducedMotion()) return;
+  for (let index = 0; index < count; index++) {
+    const star = document.createElement("i");
+    star.className = styles.pop;
+    const angle = Math.random() * Math.PI * 2, reach = 60 + Math.random() * 80;
+    star.style.setProperty("--pc", index % 3 === 0 ? "#fff" : color);
+    star.style.setProperty("--x0", `${x - 9}px`); star.style.setProperty("--y0", `${y - 9}px`);
+    star.style.setProperty("--x1", `${x - 9 + Math.cos(angle) * reach}px`); star.style.setProperty("--y1", `${y - 9 + Math.sin(angle) * reach}px`);
+    layer.appendChild(star);
+    window.setTimeout(() => star.remove(), 800);
+  }
+}
+/** A word popping up from the pack ("Aduh!"). */
+function popWord(layer: HTMLElement, x: number, y: number, text: string) {
+  if (reducedMotion()) return;
+  const word = document.createElement("span");
+  word.className = styles.word; word.textContent = text;
+  word.style.left = `${x}px`; word.style.top = `${y}px`; word.style.setProperty("--rt", `${Math.random() * 20 - 10}deg`);
+  layer.appendChild(word);
+  window.setTimeout(() => word.remove(), 850);
+}
+
+/** The card pack: blue foil with a cheeky face, crimped ends, a tear line that lets the rarity's light out. */
+function PackArt({ leak = 0 }: { leak?: number }) {
+  return <>
+    <span className={styles.packBody} />
+    <span className={`${styles.crimp} ${styles.crimpBottom}`} />
+    <span className={styles.tear}><span className={styles.crimp} /></span>
+    <span className={styles.leak} style={{ opacity: leak }} />
+    <span className={styles.pface}>
+      <i className={`${styles.cheek} ${styles.left}`} /><i className={`${styles.eye} ${styles.left}`} /><i className={`${styles.eye} ${styles.right}`} /><i className={`${styles.cheek} ${styles.right}`} /><i className={styles.mouth} />
+    </span>
+    <span className={styles.packLabel}>KARTU TOKOH<small>WAM 2026 · 1 dari 1</small></span>
+  </>;
+}
+
 /** Rising sparks per rarity, Common to Legendary (handoff v3). */
 const RISING = [0, 8, 12, 18, 26];
 const dateLabel = (iso: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso));
@@ -122,7 +173,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
   formId: string; initial: CardView | null; nickname: string; hasPhoto: boolean;
   /** The card is here (drawn now or before): the questionnaire locks the answers once it is a real one. */
   onReady?: (card: CardView) => void;
-  /** Shown without the printing and the flip (the read-only view after the deadline). */
+  /** Shown open with its result at once (the read-only view); "Buka ulang" still plays the opening. */
   settled?: boolean;
 }) {
   const [card, setCard] = useState<CardView | null>(initial);
@@ -132,16 +183,22 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
   const [saved, setSaved] = useState<Saved | null>(null);
   const [busy, setBusy] = useState("");
   const [note, setNote] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
-  const [burst, setBurst] = useState(false);
+  /** The stamp has fallen and the result shows (right away when settled or opened before). */
+  const [stamped, setStamped] = useState(!!settled);
   const [flash, setFlash] = useState(false);
+  const [tapLine, setTapLine] = useState("Ketuk bungkusnya!");
   /** The re-roll: "dialog" while its dialog is up, "done" once the new card is in. */
   const [reroll, setReroll] = useState<"" | "dialog" | "done">("");
   const [confirm, confirmElement] = useConfirm();
   const confetti = useRef<HTMLCanvasElement>(null);
+  const pack = useRef<HTMLButtonElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const fx = useRef<HTMLDivElement>(null);
   const started = useRef(false);
+  const opening = useRef(false);
   const tilt = useTilt(phase.kind === "open");
 
-  // Draw (or fetch) the card, paint both faces, then show the back, or the front if opened before here.
+  // Draw (or fetch) the card, paint both faces, then the opener, or the card open if opened before here.
   const prepare = useCallback(async () => {
     setPhase({ kind: "printing", step: 0 });
     try {
@@ -152,7 +209,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
       const faces = await facesOf(view);
       setFront(faces.front); setBack(faces.back);
       await ticks; await wait(450);
-      setPhase(remembered(formId) ? { kind: "open" } : { kind: "closed" });
+      if (remembered(formId)) { setStamped(true); setPhase({ kind: "open" }); } else setPhase({ kind: "ready" });
     } catch (error) {
       setPhase({ kind: "error", text: errorText(error) });
     }
@@ -162,26 +219,73 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    if (settled && initial) { void drawFront(initial).then(face => setFront(face.toDataURL("image/png"))).catch(() => undefined); return; }
+    if (settled && initial) { void facesOf(initial).then(faces => { setFront(faces.front); setBack(faces.back); }).catch(() => undefined); return; }
     // Starts the draw once: its state changes come from the request and the drawing, not this effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void prepare();
   }, [initial, prepare, settled]);
 
-  async function reveal() {
-    if (!card || phase.kind !== "closed") return;
-    const level = card.figure ? rarityOf(card.tier) : Math.min(4, card.tier.sort);
-    setPhase({ kind: "opening" });
-    buzz(level >= 3 ? [20, 60, 20, 60, 20, 60, 80] : [20, 80, 20, 80, 40]);
-    // Epic and Legendary take longer, then the screen flashes in their colour.
-    await wait(level === 4 ? 2200 : level === 3 ? 1700 : 1300);
-    if (level >= 3 && !reducedMotion()) { setFlash(true); window.setTimeout(() => setFlash(false), 950); }
+  const level = card ? card.figure ? rarityOf(card.tier) : Math.min(4, card.tier.sort) : 0;
+
+  /** "Ambil bungkus kartuku" (and "Buka ulang"): the pack to tap three times; under reduced motion the card opens at once. */
+  function takePack() {
+    setStamped(false); setTapLine("Ketuk bungkusnya!"); opening.current = false;
+    if (reducedMotion()) { void finish(); return; }
+    setPhase({ kind: "pack", taps: 0 });
+    window.scrollTo?.({ top: 0, behavior: "smooth" });
+  }
+
+  /** One tap on the pack: it squashes, winces and sparkles; the second lets out the rarity's light, the third tears it open. */
+  async function tapPack() {
+    if (!card || phase.kind !== "pack" || opening.current) return;
+    const element = pack.current, host = stage.current, layer = fx.current;
+    const taps = phase.taps + 1;
+    setPhase({ kind: "pack", taps });
+    if (element && host && layer) {
+      const box = element.getBoundingClientRect(), frame = host.getBoundingClientRect();
+      const x = box.left - frame.left + box.width / 2, y = box.top - frame.top + box.height * 0.45;
+      element.classList.remove(styles.squash); void element.offsetWidth; element.classList.add(styles.squash, styles.hit);
+      window.setTimeout(() => element.classList.remove(styles.hit), 260);
+      sparkBurst(layer, x, y, 6 + taps * 4, taps >= 2 ? card.tier.color : "#FFC94A");
+      popWord(layer, x + (Math.random() * 80 - 40), y - 90, pickOne(WORDS[Math.min(taps, 3) - 1]));
+    }
+    buzz(30 + taps * 20);
+    if (taps === 1) setTapLine("Lagi! Bungkusnya mulai goyang.");
+    if (taps === 2) setTapLine("Satu kali lagi...");
+    if (taps < 3) return;
+    opening.current = true;
+    setTapLine(level >= 3 ? "Eh, kok bersinar terang?" : "Brett!");
+    if (element && level >= 3) {
+      element.classList.remove(styles.squash); element.classList.add(styles.jitter, styles.scared);
+      buzz([30, 50, 30, 50, 30, 50, 80]);
+      await wait(level === 4 ? 1500 : 1000);
+      element.classList.remove(styles.jitter);
+    }
+    element?.classList.add(styles.rip);
+    if (element && host && layer) {
+      const box = element.getBoundingClientRect(), frame = host.getBoundingClientRect();
+      sparkBurst(layer, box.left - frame.left + box.width / 2, box.top - frame.top + box.height * 0.45 - 110, 18, card.tier.color);
+    }
+    buzz(80);
+    if (level >= 3) { setFlash(true); window.setTimeout(() => setFlash(false), 950); }
+    await wait(380);
+    setPhase({ kind: "emerging", wobble: false });
+    await wait(650);
+    setPhase({ kind: "emerging", wobble: true });
+    await wait(level === 4 ? 900 : level === 3 ? 650 : 420);
+    await finish();
+  }
+
+  /** The card turns open with a bounce, confetti flies, the rarity stamp falls, then the result. */
+  async function finish() {
+    if (!card) return;
     setPhase({ kind: "open" });
     buzz(level >= 3 ? [60, 40, 120] : 60);
     remember(formId);
-    await wait(620);
-    setBurst(true);
+    await wait(700);
     if (!reducedMotion() && confetti.current) throwConfetti(confetti.current, card.tier.color, level);
+    setStamped(true);
+    buzz(40);
   }
 
   /**
@@ -191,10 +295,8 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
   function rerolled(view: CardView | null, faces: { front: string; back: string } | null) {
     if (!view || !faces) { setReroll(""); return; }
     setCard(view); setFront(faces.front); setBack(faces.back);
-    setReroll("done"); setPhase({ kind: "open" });
+    setReroll("done"); setStamped(true); setPhase({ kind: "open" });
   }
-
-  function replay() { setBurst(false); setPhase({ kind: "closed" }); window.scrollTo?.({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" }); }
 
   async function saveImage(kind: "kartu" | "wallpaper") {
     if (!card) return;
@@ -247,116 +349,96 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
     <ol className={styles.psteps}>{STEPS.map((step, index) => <li key={step} className={phase.kind === "printing" && phase.step > index ? styles.ok : ""}>{step}</li>)}</ol>
   </div>;
 
+  if (phase.kind === "ready") return <div className={`${styles.reveal} ${styles.opener}`}>
+    <div className={styles.miniPack} aria-hidden><div className={styles.miniPackInner}><PackArt /></div></div>
+    <p className={styles.ptitle}>Kartumu sudah siap.</p>
+    <p className={styles.lead}>Tokoh-tokoh ini dulu membentuk hari esok mereka. Sekarang giliranmu. Buka kartumu dan kenali peranmu di tim.</p>
+    <button type="button" className={`${styles.btn} ${styles.primary}`} onClick={takePack}>Ambil bungkus kartuku</button>
+  </div>;
+
   const open = phase.kind === "open";
+  const packing = phase.kind === "pack" || phase.kind === "emerging";
+  const showCard = phase.kind !== "pack";
   const name = nickname || "Kamu";
   const figure = card.figure;
+  const shownName = figure?.name ?? card.character.name;
   const rarity = figure ? rarityOf(card.tier) : 0;
+  const lit = (phase.kind === "pack" && phase.taps >= 2) || !packing;
   const { flip, listen, ...tiltEvents } = tilt;
-  return <div className={`${styles.reveal} ${burst ? styles.burst : ""}`} style={{ ["--glow" as string]: card.tier.color }}>
-    {!settled && <p className={styles.hint} aria-live="polite">{phase.kind === "closed" ? `${figure ? "Rarity" : "Level"} sudah diundi. Siapa tahu kamu dapat Legendary.` : ""}</p>}
+  return <div ref={stage} className={`${styles.reveal} ${styles.draw} ${lit ? styles.lit : ""}`} style={{ ["--glow" as string]: card.tier.color, ["--pc" as string]: card.colors[0] }}>
+    <div className={styles.bgdots} aria-hidden />
+    <div ref={fx} className={styles.fxLayer} aria-hidden />
     {flash && <div className={styles.flash} aria-hidden />}
-    <div ref={flip} className={`${styles.flip} ${open ? styles.open : ""} ${phase.kind === "opening" ? styles.charge : ""}`} {...tiltEvents}
-      onClick={() => { if (open) void listen(); }}>
-      <div className={styles.rays} aria-hidden />
-      <div className={styles.inner}>
-        <button type="button" className={`${styles.face} ${styles.down}`} onClick={() => void reveal()} disabled={phase.kind !== "closed"} aria-label="Buka kartu karaktermu" tabIndex={open ? -1 : 0} aria-hidden={open || undefined}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas or served privately by this site; next/image cannot help */}
-          {back && <img src={back} alt="" />}
-          <span className={styles.tap}>Ketuk untuk membuka</span>
-        </button>
-        <div className={`${styles.face} ${styles.up} ${figure ? styles[`r${rarity}`] : ""}`} aria-hidden={!open || undefined}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas or served privately by this site; next/image cannot help */}
-          {front && <img src={front} alt={figure ? `Kartu ${figure.name}, ${card.character.class}, ${card.tier.name}, nomor ${serialLabel(card.serial)}` : `Kartu ${card.character.name}, level ${card.tier.name}, nomor ${serialLabel(card.serial)}`} />}
-          {figure && <span className={styles.shine} aria-hidden />}
-          {figure && <RarityLayers rarity={rarity} />}
+
+    {packing && <div className={`${styles.packZone} ${phase.kind === "emerging" ? styles.float : ""}`}>
+      <button ref={pack} type="button" className={`${styles.pack} ${phase.kind === "emerging" ? styles.gone : ""}`} onClick={() => void tapPack()} disabled={phase.kind !== "pack"}
+        aria-label="Bungkus kartu. Ketuk tiga kali untuk membuka.">
+        <PackArt leak={phase.kind === "pack" && phase.taps >= 2 ? (level >= 2 ? 0.8 : 0.45) : phase.kind === "emerging" ? 1 : 0} />
+      </button>
+      <div>
+        <p className={styles.tapLine} aria-live="polite">{tapLine}</p>
+        <div className={styles.tapDots} aria-hidden>{[0, 1, 2].map(index => <i key={index} className={phase.kind === "pack" && phase.taps > index || phase.kind === "emerging" ? styles.on : ""} />)}</div>
+        {phase.kind === "pack" && <p className={styles.center}><button type="button" className={`${styles.btn} ${styles.text} ${styles.skip}`} onClick={() => { opening.current = true; void finish(); }}>Lewati animasi</button></p>}
+      </div>
+    </div>}
+
+    {showCard && <div className={`${styles.cardZone} ${phase.kind === "emerging" ? styles.emerge : ""} ${phase.kind === "emerging" && phase.wobble ? styles.wobble : ""}`}>
+      <div ref={flip} className={`${styles.flip} ${styles.springy} ${open ? styles.open : ""}`} {...tiltEvents} onClick={() => { if (open) void listen(); }}>
+        <div className={styles.rays} aria-hidden />
+        <div className={styles.inner}>
+          <div className={`${styles.face} ${styles.down}`} aria-hidden>
+            {/* eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas or served privately by this site; next/image cannot help */}
+            {back && <img src={back} alt="" />}
+          </div>
+          <div className={`${styles.face} ${styles.up} ${figure ? styles[`r${rarity}`] : ""}`} aria-hidden={!open || undefined}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- card art drawn on canvas or served privately by this site; next/image cannot help */}
+            {front && open && <img src={front} alt={figure ? `Kartu ${figure.name}, ${card.character.class}, ${card.tier.name}, nomor ${serialLabel(card.serial)}` : `Kartu ${card.character.name}, level ${card.tier.name}, nomor ${serialLabel(card.serial)}`} />}
+            {figure && <span className={styles.shine} aria-hidden />}
+            {figure && open && <RarityLayers rarity={rarity} />}
+          </div>
         </div>
       </div>
+      <span className={`${styles.stamp} ${rarity === 4 ? styles.stampGold : ""} ${stamped ? styles.stampOn : ""}`} aria-hidden>{card.tier.name}</span>
       <canvas className={styles.confetti} ref={confetti} aria-hidden />
-    </div>
-    {open && figure && !settled && <p className={styles.tiltHint}>Geser kartu atau miringkan HP untuk melihat kilapnya.</p>}
+    </div>}
+    {open && stamped && figure && <p className={styles.tiltHint}>Geser kartu atau miringkan HP untuk melihat kilapnya.</p>}
 
-    {open && <>
-      <div className={`${styles.banner} ${rarity === 4 ? styles.goldBanner : ""}`} role="status">
-        <b style={{ background: card.tier.color }}>{card.tier.name}</b>
-        {card.tier.line && <span>{card.tier.line}</span>}
-        <strong>{name}, kamu {figure ? `dapat ${figure.name}` : card.character.name}</strong>
+    {open && stamped && <div className={styles.res} role="status">
+      <div><p className={styles.resWho}>{name}, kamu dapat</p><p className={`${styles.resName} ${rarity === 4 ? styles.goldName : ""}`}>{shownName}</p></div>
+      <p className={styles.resTier}>{card.tier.name}.{card.tier.line ? ` ${card.tier.line}` : ""}{figure?.legend ? " Tokohmu tampil dalam wujud kelas RPG." : ""}</p>
+      <div className={styles.pills}>
+        <span className={`${styles.pill} ${styles.personaPill}`}>{card.character.class}</span>
+        <span className={styles.pill}>{serialLabel(card.serial)}{card.trial ? "" : " · 1 dari 1"}</span>
+        {card.character.partner && <span className={styles.pill}>Pelengkapmu: {card.character.partner.class}</span>}
       </div>
       {card.trial && <p className={styles.trial}>Kartu uji dari pratinjau draf: tanpa nomor, tidak dihitung. Saat kuesioner dibuka, kartumu diundi ulang sungguhan.</p>}
-      <div className={styles.actions}>
-        <button type="button" className={`${styles.btn} ${styles.primary}`} onClick={() => void applyAsPhoto()} disabled={!!busy}><UserRound aria-hidden />{busy === "foto" ? "Menyimpan…" : "Pakai jadi foto profil"}</button>
-        <button type="button" className={styles.btn} onClick={() => void saveImage("kartu")} disabled={!!busy}><ImageIcon aria-hidden />{busy === "kartu" ? "Membuat…" : "Simpan kartu"}</button>
-        <button type="button" className={styles.btn} onClick={() => void saveImage("wallpaper")} disabled={!!busy}><Smartphone aria-hidden />{busy === "wallpaper" ? "Membuat…" : "Jadikan wallpaper"}</button>
-        {!settled && <button type="button" className={`${styles.btn} ${styles.text}`} onClick={replay}><RotateCcw aria-hidden />Ulangi animasi</button>}
+      <div className={styles.acts}>
+        <button type="button" className={`${styles.btn} ${styles.primary}`} onClick={() => void saveImage("kartu")} disabled={!!busy}>{busy === "kartu" ? "Membuat…" : "Simpan kartu"}</button>
+        <button type="button" className={styles.btn} onClick={() => void saveImage("wallpaper")} disabled={!!busy}>{busy === "wallpaper" ? "Membuat…" : "Jadikan wallpaper"}</button>
       </div>
       <p className={note?.tone === "error" ? styles.problem : styles.done} aria-live="polite">{note?.text}</p>
-
-      {figure ? <>
-        <section className={styles.panel} aria-labelledby="cq-card-who">
-          <p className={styles.who}>{name}, tokohmu</p>
-          <h2 id="cq-card-who" className={styles.name}>{figure.name}</h2>
-          {card.reason && <p>{card.reason}</p>}
-          {figure.legend && <p className={styles.role}>Wujud Legendary: {figure.legendClass ?? "kelas RPG"}.</p>}
-          {figure.costume && <p className={styles.small}>Figurnya: {figure.costume.charAt(0).toLowerCase() + figure.costume.slice(1)}.</p>}
-          {figure.quote && <blockquote className={styles.small}>{figure.quote}</blockquote>}
-        </section>
-        {card.reroll?.state === "open" && reroll !== "done" && <section className={styles.panel} aria-labelledby="cq-card-reroll">
-          <h2 id="cq-card-reroll" className={styles.heading}>Kurang sreg dengan tokohmu?</h2>
-          <p className={styles.small}>Kamu boleh re-roll tokoh <b>satu kali</b>{card.reroll.until ? `, sampai ${dateLabel(card.reroll.until)} WIB` : ""}. Tokoh baru diundi dari tokoh yang masih tersedia di tipe {card.character.class}. Hasilnya wajib diterima, jadi bisa lebih cocok atau malah kurang. Rarity <b>{card.tier.name}</b> dan nomor kartumu tetap.</p>
-          <div className={styles.row}>
-            <button type="button" className={styles.btn} onClick={() => { setNote(null); setReroll("dialog"); }} disabled={reroll === "dialog" || !!busy}>
-              <Dices aria-hidden />Re-roll tokoh (1x)
-            </button>
-          </div>
-        </section>}
-        {reroll === "dialog" && <RerollDialog card={card} nickname={name} onClose={rerolled} />}
-        {(card.reroll?.state === "used" || reroll === "done") && <section className={styles.panel} aria-labelledby="cq-card-rerolled">
-          <h2 id="cq-card-rerolled" className={styles.heading}>Re-roll tokoh</h2>
-          <p className={styles.small}>Kamu sudah memakai jatah re-roll. {figure.name} sekarang tokohmu, edisi 1 dari 1.</p>
-        </section>}
-        <section className={styles.panel} aria-labelledby="cq-card-role">
-          <p className={styles.who}>Tipemu</p>
-          <h2 id="cq-card-role" className={styles.name}>{card.character.class}</h2>
-          {card.character.title && <p className={styles.role}>{card.character.title}.</p>}
-          {card.character.description && <p>{card.character.description}</p>}
-          {card.character.powers.length > 0 && <ul className={styles.powers} aria-label="Kekuatan">{card.character.powers.map(power => <li key={power}>{power}</li>)}</ul>}
-          {card.character.partner && <p className={styles.small}>Partner ideal: <b>{card.character.partner.class}</b></p>}
-        </section>
-        <section className={styles.panel} aria-labelledby="cq-card-traits">
-          <h2 id="cq-card-traits" className={styles.heading}>Trait kartumu</h2>
-          <p className={styles.small}>Tokoh dan tipe dicocokkan dari jawabanmu. Rarity diundi terpisah, sekali, lalu kartunya dikunci. Setiap tokoh hanya dimiliki satu orang, jadi kartumu edisi 1 dari 1. Tokoh boleh di-re-roll sekali saat dibuka, rarity tetap.</p>
-          <dl className={styles.traits}>
-            <div><dt>Tokoh</dt><dd>{figure.name}</dd><span>Dicocokkan dari jawabanmu</span></div>
-            <div><dt>Peran</dt><dd>{card.character.class}</dd><span>Dari peranmu di tim</span></div>
-            <div className={card.tier.sort >= 3 ? styles.rare : ""}><dt>Rarity</dt><dd>{card.tier.name}</dd><span>Peluang {oddsLabel(card.tier.odds)}, diundi terpisah</span></div>
-            <div><dt>Nomor</dt><dd>{serialLabel(card.serial)}</dd><span>Urutan selesai mengisi</span></div>
-            <div><dt>Edisi</dt><dd>1 dari 1</dd><span>Satu tokoh, satu orang</span></div>
-          </dl>
-          <p className={styles.dna}>DNA kartu {card.dna}</p>
-        </section>
-      </> : <>
-      <section className={styles.panel} aria-labelledby="cq-card-who">
-        <p className={styles.who}>{name}, karaktermu</p>
-        <h2 id="cq-card-who" className={styles.name}>{card.character.name}</h2>
-        <p className={styles.role}>Peran: {card.character.class}{card.character.figure ? ` (${card.character.figure})` : ""}.{card.character.title ? ` ${card.character.title}` : ""}</p>
-        {card.character.description && <p>{card.character.description}</p>}
+      <details className={styles.info}>
+        <summary>Kenapa {shownName}?</summary>
+        {card.reason && <p>{card.reason}</p>}
+        {figure?.legend && <p><b>Wujud Legendary:</b> {figure.legendClass ?? "kelas RPG"}.</p>}
+        {figure?.costume && <p className={styles.small}>Figurnya: {figure.costume.charAt(0).toLowerCase() + figure.costume.slice(1)}.</p>}
+        {figure?.quote && <blockquote className={styles.small}>{figure.quote}</blockquote>}
+        <p><b>{card.character.class}:</b> {[card.character.title, card.character.description].filter(Boolean).join(". ")}</p>
         {card.character.powers.length > 0 && <ul className={styles.powers} aria-label="Kekuatan">{card.character.powers.map(power => <li key={power}>{power}</li>)}</ul>}
-        {card.character.partner && <p className={styles.small}>Partner ideal: <b>{card.character.partner.class}</b> ({card.character.partner.name})</p>}
-      </section>
-
-      <section className={styles.panel} aria-labelledby="cq-card-traits">
-        <h2 id="cq-card-traits" className={styles.heading}>Trait kartumu</h2>
-        <p className={styles.small}>Karakter dipilih dari jawabanmu. Level, latar kartu, dan stiker diundi acak sekali, lalu dikunci. Kombinasinya tidak sama dengan kartu rekan lain.</p>
-        <dl className={styles.traits}>
-          <div><dt>Karakter</dt><dd>{card.character.name}</dd><span>Dipilih dari jawabanmu</span></div>
-          <div className={card.tier.sort >= 3 ? styles.rare : ""}><dt>Level</dt><dd>{card.tier.name}</dd><span>Peluang {oddsLabel(card.tier.odds)}, diundi terpisah</span></div>
-          <div><dt>Latar</dt><dd>{card.background.name}</dd><span>Punggung kartu dan wallpaper</span></div>
-          <div><dt>Stiker</dt><dd>{card.stickers.length ? card.stickers.map(sticker => sticker.name).join(" + ") : "Tanpa stiker"}</dd><span>0 sampai 2 stiker</span></div>
-          <div><dt>Nomor</dt><dd>{serialLabel(card.serial)}</dd><span>Urutan selesai mengisi</span></div>
-        </dl>
+        <p className={styles.small}>Tokoh dan tipe dicocokkan dari jawabanmu. Rarity diundi terpisah (peluang {card.tier.name} {oddsLabel(card.tier.odds)}), sekali, lalu dikunci. {figure ? "Setiap tokoh hanya dimiliki satu orang." : ""}</p>
         <p className={styles.dna}>DNA kartu {card.dna}</p>
-      </section>
-      </>}
-    </>}
+      </details>
+      <div className={styles.rr}>
+        {figure && card.reroll?.state === "open" && reroll !== "done" && <>
+          <p className={styles.small}>Kurang sreg? Kamu boleh re-roll tokoh sekali{card.reroll.until ? `, sampai ${dateLabel(card.reroll.until)} WIB` : ""}. Rarity {card.tier.name} tetap milikmu.</p>
+          <button type="button" className={styles.btn} onClick={() => { setNote(null); setReroll("dialog"); }} disabled={reroll === "dialog" || !!busy}><Dices aria-hidden />Re-roll tokoh (1x)</button>
+        </>}
+        {figure && (card.reroll?.state === "used" || reroll === "done") && <p className={styles.small}>Jatah re-roll sudah dipakai. {figure.name} sekarang tokohmu.</p>}
+        <button type="button" className={`${styles.btn} ${styles.text}`} onClick={() => void applyAsPhoto()} disabled={!!busy}><UserRound aria-hidden />{busy === "foto" ? "Menyimpan…" : "Pakai jadi foto profil"}</button>
+        <button type="button" className={`${styles.btn} ${styles.text}`} onClick={takePack}><RotateCcw aria-hidden />Buka ulang</button>
+      </div>
+      {reroll === "dialog" && <RerollDialog card={card} nickname={name} onClose={rerolled} />}
+    </div>}
 
     {saved && <SavedDialog onClose={closeSaved}>
       <div className={`${styles.sheet} ${saved.tall ? styles.tall : ""}`}>

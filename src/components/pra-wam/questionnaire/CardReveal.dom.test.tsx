@@ -31,38 +31,64 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-it("asks the server for the card once, shows its back, and opens it with a tap", async () => {
+const motion = (reduced: boolean) => { window.matchMedia = ((query: string) => ({ matches: reduced, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia; };
+
+it("asks the server for the card once, then the pack: tapped three times, or skipped, it opens to the result (v4)", async () => {
+  // Printing without waiting; the pack with motion on.
+  motion(true);
   render(<CardReveal formId="f1" initial={null} nickname="Dewi" hasPhoto={false} />);
   expect(screen.getByText("Kartumu sedang dicetak")).toBeTruthy();
-  const back = await screen.findByRole("button", { name: "Buka kartu karaktermu" });
+  expect(await screen.findByText("Kartumu sudah siap.")).toBeTruthy();
   expect(posts).toBe(1);
-  fireEvent.click(back);
-  expect(await screen.findByText("Dewi, kamu Urban DJ")).toBeTruthy();
-  expect(screen.getByText("Langka. Sekitar 1 dari 14 orang.")).toBeTruthy();
-  expect(screen.getByText("#007")).toBeTruthy();
+  motion(false);
+  fireEvent.click(screen.getByRole("button", { name: "Ambil bungkus kartuku" }));
+  const pack = screen.getByRole("button", { name: "Bungkus kartu. Ketuk tiga kali untuk membuka." });
+  fireEvent.click(pack);
+  expect(await screen.findByText("Lagi! Bungkusnya mulai goyang.")).toBeTruthy();
+  fireEvent.click(pack);
+  expect(await screen.findByText("Satu kali lagi...")).toBeTruthy();
+  // Nothing about the card shows before it opens.
+  expect(screen.queryByText("Urban DJ")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Lewati animasi" }));
+  expect(await screen.findByText("Urban DJ")).toBeTruthy();
+  expect(screen.getByText("Dewi, kamu dapat")).toBeTruthy();
+  expect(screen.getByText("Epic. Langka. Sekitar 1 dari 14 orang.")).toBeTruthy();
+  expect(screen.getByText("#007 · 1 dari 1")).toBeTruthy();
+  expect(screen.getByText("Pelengkapmu: Penyembuh Hati")).toBeTruthy();
   expect(screen.getByText("DNA kartu a1b2c3d4e5")).toBeTruthy();
   expect(window.localStorage.getItem("wam-cq-card-open:f1")).toBe("1");
+  // "Buka ulang" plays the opening again; it never draws again.
+  fireEvent.click(screen.getByRole("button", { name: /Buka ulang/ }));
+  expect(screen.getByRole("button", { name: "Bungkus kartu. Ketuk tiga kali untuk membuka." })).toBeTruthy();
   expect(posts).toBe(1);
 });
 
+it("goes straight to the result under reduced motion", async () => {
+  motion(true);
+  render(<CardReveal formId="f4" initial={card} nickname="Dewi" hasPhoto={false} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Ambil bungkus kartuku" }));
+  expect(await screen.findByText("Urban DJ")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Bungkus kartu/ })).toBeNull();
+});
+
 it("shows a card opened before on this device open, without asking for a new draw", async () => {
+  motion(true);
   window.localStorage.setItem("wam-cq-card-open:f1", "1");
   render(<CardReveal formId="f1" initial={card} nickname="Dewi" hasPhoto />);
-  expect(await screen.findByText("Dewi, kamu Urban DJ")).toBeTruthy();
+  expect(await screen.findByText("Urban DJ")).toBeTruthy();
   expect(posts).toBe(0);
   expect(screen.getByRole("button", { name: /Pakai jadi foto profil/ })).toBeTruthy();
 });
 
 it("says plainly when the card cannot be drawn yet, and can try again", async () => {
+  motion(true);
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: false, message: "Selesaikan dulu semua bagian wajib, lalu kartumu dibuka." }), { status: 409, headers: { "Content-Type": "application/json" } })));
   render(<CardReveal formId="f1" initial={null} nickname="Dewi" hasPhoto={false} />);
   expect(await screen.findByText("Selesaikan dulu semua bagian wajib, lalu kartumu dibuka.")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Coba lagi" })).toBeTruthy();
 });
 
-it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts with a finger, with holo from Rare up", async () => {
-  const motion = (reduced: boolean) => { window.matchMedia = ((query: string) => ({ matches: reduced, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia; };
-  // Printing and opening without waiting (reduced motion); the tilt is tried with motion on below.
+it("shows a tokoh card's result: the figure, why, the persona and its complement; it tilts with a finger, with holo", async () => {
   motion(true);
   window.localStorage.setItem("wam-cq-card-open:f2", "1");
   const tokoh: CardView = {
@@ -71,13 +97,13 @@ it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts w
     reason: "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan dan suka olahraga & outdoor.", colors: ["#C2303F", "#6E1023"],
   };
   const { container } = render(<CardReveal formId="f2" initial={tokoh} nickname="Dewi" hasPhoto={false} />);
-  expect(await screen.findByText("Dewi, kamu dapat Edmund Hillary")).toBeTruthy();
+  expect(await screen.findByText("Edmund Hillary")).toBeTruthy();
+  expect(screen.getByText("Kenapa Edmund Hillary?")).toBeTruthy();
   expect(screen.getByText(tokoh.reason!)).toBeTruthy();
   expect(screen.getByText("Figurnya: jaket pendaki, kapak es.")).toBeTruthy();
-  expect(screen.getAllByText("Garda Depan").length).toBeGreaterThan(0);
-  expect(screen.getByText("Rarity")).toBeTruthy();
-  expect(screen.queryByText("Latar")).toBeNull();
-  // Epic: shine and holo.
+  expect(screen.getByText("Garda Depan")).toBeTruthy();
+  expect(screen.getByText("Pelengkapmu: Penyihir Ide")).toBeTruthy();
+  expect(container.querySelector("[class*='stampOn']")?.textContent).toBe("Epic");
   expect(container.querySelector("[class*='holo']")).toBeTruthy();
   motion(false);
   const flip = container.querySelector("[class*='flip']") as HTMLDivElement;
@@ -90,13 +116,12 @@ it("opens a tokoh card: the figure, why, the persona, and the traits; it tilts w
   expect(flip.dataset.tilt).toBeUndefined();
   // Under reduced motion it stays still.
   motion(true);
-  // jsdom has no PointerEvent with coordinates: a mouse event named pointermove stands in.
   act(() => { flip.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 100, clientY: 50 })); });
   expect(flip.dataset.tilt).toBeUndefined();
 });
 
-it("re-rolls the figure once, after asking, and shows the new card to open again (v3)", async () => {
-  window.matchMedia = ((query: string) => ({ matches: true, media: query, addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+it("re-rolls the figure once in a dialog, and the page shows the new figure only after it (v3)", async () => {
+  motion(true);
   window.localStorage.setItem("wam-cq-card-open:f3", "1");
   const base: CardView = {
     ...card, character: { ...card.character, key: "garda", class: "Garda Depan" },
@@ -111,7 +136,7 @@ it("re-rolls the figure once, after asking, and shows the new card to open again
     return new Response(JSON.stringify({ ok: true, data: { card: next }, message: "Tokoh barumu: Susi Susanti." }), { status: 200, headers: { "Content-Type": "application/json" } });
   }));
   const { container } = render(<CardReveal formId="f3" initial={base} nickname="Dewi" hasPhoto={false} />);
-  expect(await screen.findByText("Kurang sreg dengan tokohmu?")).toBeTruthy();
+  expect(await screen.findByText(/Kurang sreg\? Kamu boleh re-roll tokoh sekali/)).toBeTruthy();
   // Epic: the moving rarity layers and seven stars.
   expect(container.querySelector("[class*='edge']")).toBeTruthy();
   expect(container.querySelectorAll("[class*='spark'] i")).toHaveLength(7);
@@ -128,12 +153,12 @@ it("re-rolls the figure once, after asking, and shows the new card to open again
   const flipNew = await screen.findByRole("button", { name: "Buka tokoh barumu" });
   expect(patches).toBe(1);
   expect(screen.queryByText(/Susi Susanti/)).toBeNull();
-  expect(screen.getByText("Dewi, kamu dapat Edmund Hillary")).toBeTruthy();
+  expect(screen.getByText("Edmund Hillary")).toBeTruthy();
   fireEvent.click(flipNew);
   expect(await screen.findByText("Dewi, tokoh barumu Susi Susanti")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Kembali" }));
   // Back on the page: the new card, open, and the re-roll used.
-  expect(await screen.findByText("Dewi, kamu dapat Susi Susanti")).toBeTruthy();
-  expect(screen.getByText(/Kamu sudah memakai jatah re-roll. Susi Susanti sekarang tokohmu/)).toBeTruthy();
-  expect(screen.queryByText("Kurang sreg dengan tokohmu?")).toBeNull();
+  expect(await screen.findByText("Susi Susanti")).toBeTruthy();
+  expect(screen.getByText("Jatah re-roll sudah dipakai. Susi Susanti sekarang tokohmu.")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Re-roll tokoh \(1x\)/ })).toBeNull();
 });
