@@ -52,6 +52,8 @@ export function Questionnaire({ form, sections, questions, departments, people, 
   const anonymousIds = useMemo(() => new Set(sections.filter(section => section.anonymous).map(section => section.id)), [sections]);
   const names = useMemo(() => new Map(people.map(person => [person.id, person.name])), [people]);
 
+  // My real card is out (16 Nov 2026): the answers are locked, so no way back into them.
+  const [cardOut, setCardOut] = useState(!!drawnCard && !drawnCard.trial);
   const [answers, setAnswers] = useState<Answers>(initial.answers);
   const [draft, setDraft] = useState<Answers>({});
   const [anonymousSent, setAnonymousSent] = useState(initial.anonymousSent);
@@ -194,7 +196,7 @@ export function Questionnaire({ form, sections, questions, departments, people, 
 
   /** A section's number at the top: straight to its first card (its intro when it has none). */
   function pick(sectionId: string) {
-    if (sending) return;
+    if (sending || cardOut) return;
     const first = steps.findIndex(item => item.kind === "question" && item.section.id === sectionId);
     const target = first >= 0 ? first : steps.findIndex(item => item.id === `intro:${sectionId}`);
     if (target < 0 || target === index) return;
@@ -269,9 +271,9 @@ export function Questionnaire({ form, sections, questions, departments, people, 
           <p className={styles.lead}>Terima kasih sudah bercerita, {nickname || "kamu"}.</p>
           {saving
             ? <p className={styles.hint} aria-live="polite">Menyimpan jawaban terakhir…</p>
-            : <CardReveal formId={form.id} initial={drawnCard} nickname={nickname} hasPhoto={hasPhoto} />}
+            : <CardReveal formId={form.id} initial={drawnCard} nickname={nickname} hasPhoto={hasPhoto} onReady={view => { if (!view.trial) setCardOut(true); }} />}
           {!preview && !saving && <p className={styles.hint}><a href={praWamPath.colleagues}>Lihat kartu rekan-rekanmu</a></p>}
-          {form.editUntil && <p className={styles.hint}>Jawabanmu masih bisa diubah sampai {deadlineLabel(form.editUntil)}, kecuali bagian anonim. Kartumu sudah dikunci: tokoh, rarity, dan nomornya tetap.</p>}
+          {!preview && <p className={styles.hint}>Kartumu sudah keluar, jadi jawabanmu sekarang dikunci dan tidak bisa diubah lagi.</p>}
         </section>}
         {step.kind === "done" && !progress.done && <section className={card} aria-labelledby="cq-heading">
           <h1 id="cq-heading" ref={heading} tabIndex={-1}>Hampir selesai</h1>
@@ -289,7 +291,7 @@ export function Questionnaire({ form, sections, questions, departments, people, 
     </div>}
 
     <nav className={`${styles.wrap} ${styles.dock}`} aria-label="Navigasi kartu">
-      {step.kind !== "welcome" && <button type="button" className={`${styles.btn} ${styles.icon}`} aria-label="Kembali" onClick={() => go(index - 1, true)}><ArrowLeft aria-hidden /></button>}
+      {step.kind !== "welcome" && !cardOut && <button type="button" className={`${styles.btn} ${styles.icon}`} aria-label="Kembali" onClick={() => go(index - 1, true)}><ArrowLeft aria-hidden /></button>}
       {step.kind === "question" && !step.question.required && !answered(seen[step.question.key]) && !(step.section.anonymous && step.lastOfSection) &&
         <button type="button" className={`${styles.btn} ${styles.text}`} onClick={() => go(index + 1)}>Lewati</button>}
       <span className={styles.grow} />

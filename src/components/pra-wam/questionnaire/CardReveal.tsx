@@ -86,8 +86,10 @@ function useTilt(open: boolean) {
   return { flip, onPointerMove, onPointerLeave: reset, onPointerCancel: reset, onPointerUp, listen };
 }
 
-export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
+export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onReady }: {
   formId: string; initial: CardView | null; nickname: string; hasPhoto: boolean;
+  /** The card is here (drawn now or before): the questionnaire locks the answers once it is a real one. */
+  onReady?: (card: CardView) => void;
   /** Shown without the printing and the flip (the read-only view after the deadline). */
   settled?: boolean;
 }) {
@@ -111,6 +113,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
       const ticks = (async () => { for (let step = 1; step <= STEPS.length; step++) { await wait(650); setPhase(current => current.kind === "printing" ? { kind: "printing", step } : current); } })();
       const view = initial ?? (await praWamRequest<{ card: CardView }>(praWamApi.questionnaireCard, { method: "POST" })).data.card;
       setCard(view);
+      onReady?.(view);
       const [face, cover] = await Promise.all([drawFront(view), drawBack(view)]);
       setFront(face.toDataURL("image/png"));
       setBack(cover.toDataURL("image/jpeg", 0.9));
@@ -119,7 +122,8 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled }: {
     } catch (error) {
       setPhase({ kind: "error", text: errorText(error) });
     }
-  }, [formId, initial]);
+  // The draw runs once (started), so a new onReady never draws again.
+  }, [formId, initial, onReady]);
 
   useEffect(() => {
     if (started.current) return;

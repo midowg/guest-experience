@@ -14,9 +14,14 @@ export function answerText(question: QQuestion, value: AnswerValue | undefined, 
   return question.matrixRows.filter(row => value[row]).map(row => `${row}: ${value[row]}`).join("\n");
 }
 
-/** After the deadline or once HR closes it: my answers per section, nothing to change. */
-export function ReadOnlyAnswers({ name, home, sections, questions, answers, anonymousSent, slots, people, card }: {
+/**
+ * After the deadline or once HR closes it, or once my card is out (`finished`, 16 Nov 2026): my
+ * answers per section, nothing to change.
+ */
+export function ReadOnlyAnswers({ name, home, sections, questions, answers, anonymousSent, slots, people, card, finished = false }: {
   name: string; home: string; sections: QSection[]; questions: QQuestion[]; answers: Answers; anonymousSent: boolean; slots: Slot[];
+  /** Still open, but I finished and my card is out: locked for me. */
+  finished?: boolean;
   people: { id: string; name: string }[];
   /** My character card, shown open, when I have one. */
   card?: { formId: string; view: CardView; nickname: string; hasPhoto: boolean } | null;
@@ -26,8 +31,8 @@ export function ReadOnlyAnswers({ name, home, sections, questions, answers, anon
     <Top name={name} home={home} slots={slots} status={<><b>Jawabanmu</b><span><Lock size={14} aria-hidden /> hanya baca</span></>} />
     <main className={`${styles.wrap} ${styles.answers}`}>
       <section className={`${styles.card} ${styles.closed}`}>
-        <h1>Kuesioner sudah ditutup</h1>
-        <p className={styles.lead}>Terima kasih. Jawabanmu tidak bisa diubah lagi. Ini yang kamu isi.</p>
+        <h1>{finished ? "Kuesionermu sudah selesai" : "Kuesioner sudah ditutup"}</h1>
+        <p className={styles.lead}>{finished ? "Terima kasih. Kartumu sudah keluar, jadi jawabanmu dikunci. Ini yang kamu isi." : "Terima kasih. Jawabanmu tidak bisa diubah lagi. Ini yang kamu isi."}</p>
         <a className={`${styles.btn} ${styles.primary}`} href={home}>Ke Beranda</a>
       </section>
       {card && <CardReveal formId={card.formId} initial={card.view} nickname={card.nickname} hasPhoto={card.hasPhoto} settled />}

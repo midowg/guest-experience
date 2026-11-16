@@ -49,6 +49,12 @@ const primary = (name: string | RegExp) => fireEvent.click(screen.getByRole("but
 const answerSaves = () => calls.filter(call => call.url === praWamApi.questionnaireAnswer);
 
 describe("the questionnaire", () => {
+  it("once my real card is out, the numbers at the top no longer lead back into the answers", () => {
+    render(<Questionnaire {...props()} card={{ trial: false } as unknown as NonNullable<QuestionnaireProps["card"]>} />);
+    primary(/Ke bagian 2, Anonim/);
+    expect(heading()).toContain("Hai, Dewi!");
+  });
+
   it("goes straight to a section from its number at the top, to check an answer without Kembali card by card", () => {
     render(<Questionnaire {...props()} />);
     primary("Mulai");

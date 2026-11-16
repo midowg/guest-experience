@@ -68,6 +68,16 @@ beforeEach(() => {
 const written = (table: string, op?: string) => writes.filter(write => write.table === table && (!op || write.op === op));
 
 describe("saveAnswer", () => {
+  it("refuses once my card is out, for an answer and for the anonymous part, but not while Admin WAM tries the draft", async () => {
+    tables.cq_person_cards = { data: { employee_id: me }, error: null };
+    await expect(saveAnswer(me, "1", "Dewi")).rejects.toMatchObject({ status: 409, message: "Kartumu sudah keluar, jadi jawabanmu dikunci dan tidak bisa diubah lagi." });
+    await expect(submitAnonymous(me, { D2: "x" })).rejects.toMatchObject({ status: 409 });
+    expect(written("cq_answers")).toEqual([]);
+    current = { ...form, status: "draf" };
+    await saveAnswer(me, "1", "Dewi", { preview: true });
+    expect(written("cq_answers")).not.toEqual([]);
+  });
+
   it("refuses a draft, a closed form and one past its deadline, without writing", async () => {
     current = { ...form, status: "draf" };
     await expect(saveAnswer(me, "1", "Dewi")).rejects.toMatchObject({ status: 404 });

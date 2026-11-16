@@ -43,7 +43,22 @@ async function openForm(employeeId: string, preview = false): Promise<QForm> {
   }
   if (!preview && !inAudience(form, employeeId)) throw new ServiceError(404, "Kuesioner ini tidak dibuka untukmu.");
   if (!editable(form)) throw new ServiceError(409, "Kuesioner sudah ditutup. Jawaban tidak bisa diubah lagi.");
+  if (!preview && await hasRealCard(form.id, employeeId)) throw new ServiceError(409, CARD_LOCK_TEXT);
   return form;
+}
+
+export const CARD_LOCK_TEXT = "Kartumu sudah keluar, jadi jawabanmu dikunci dan tidak bisa diubah lagi.";
+
+/**
+ * Whether this person's card is out (16 Nov 2026, the owner's decision): finished and given a card,
+ * their answers are locked. A trial card from the draft does not count; Admin WAM's Hapus jawaban
+ * removes the card and opens the questionnaire again.
+ */
+export async function hasRealCard(formId: string, employeeId: string): Promise<boolean> {
+  const { data, error } = await createPrivilegedClient().from("cq_person_cards").select("employee_id").eq("form_id", formId).eq("employee_id", employeeId).eq("trial", false).maybeSingle();
+  // Before the cards' migration there are none to lock with.
+  if (error) { if (["42P01", "PGRST205"].includes(error.code ?? "")) return false; failed(error); }
+  return !!data;
 }
 
 /** Sections and questions people see: no hidden ones, and none whose answers were deleted on the stay date (see purge.ts). */

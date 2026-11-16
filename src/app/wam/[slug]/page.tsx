@@ -52,8 +52,10 @@ export default async function QuestionnairePage({ params }: Params) {
   const people = staff.filter(person => person.id !== member.id);
   const nickname = member.nickname || member.name.split(" ")[0];
 
-  if (!preview && !editable(form)) {
-    return <ReadOnlyAnswers name={form.name} home={praWamPath.home} sections={content.sections} questions={content.questions}
+  // Closed, past the deadline, or my card is out (16 Nov 2026): my answers, read only.
+  const locked = !preview && !!card && !card.trial;
+  if (!preview && (!editable(form) || locked)) {
+    return <ReadOnlyAnswers finished={editable(form) && locked} name={form.name} home={praWamPath.home} sections={content.sections} questions={content.questions}
       answers={mine.answers} anonymousSent={mine.anonymousSent} slots={sectionsDone(content, mine.answers, mine.anonymousSent)} people={people}
       card={card && { formId: form.id, view: card, nickname, hasPhoto: !!member.photo }} />;
   }
