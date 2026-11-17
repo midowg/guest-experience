@@ -7,6 +7,7 @@ import { load, prefetch, revalidate, useResource } from "@/components/app-shell/
 import { ToastProvider, useToast } from "@/components/app-shell/Toast";
 import { WELLBEING_PATH } from "@/lib/routes";
 import { WELLBEING_SECTIONS, type WbMe, type WbMyActivity, type WellbeingSection } from "@/lib/wellbeing/app-types";
+import { wlmTitle } from "@/lib/wellbeing/brand";
 import { realApi, type BoardDim, type BoardPeriod, type WellbeingApi } from "./api";
 import { Board, BoardSheet } from "./Board";
 import { CatatSheet } from "./CatatSheet";
@@ -153,7 +154,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
   useEffect(() => {
     if (shownOnce.current && shownOnce.current !== section) refreshShown(section);
     shownOnce.current = section;
-    document.title = `${titles[section]} · WLM`;
+    document.title = wlmTitle(section === "beranda" ? undefined : titles[section]);
   }, [section]);
 
   // Back online: say so, and refresh.

@@ -5,11 +5,13 @@ import { WELLBEING_PATH, wellbeingPath } from "@/lib/routes";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { currentMember } from "@/lib/server/pra-wam/session";
 import { WELLBEING_SECTIONS, type WbMe } from "@/lib/wellbeing/app-types";
+import { wlmMetadata } from "@/lib/wellbeing/brand";
 
 export const dynamic = "force-dynamic";
 /** A phone app: drawn under the notch (safe areas in CSS), and the keyboard shrinks the page so sheets keep their buttons in view. */
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
-export const metadata: Metadata = { title: { absolute: "WLM" }, applicationName: "WLM", robots: { index: false, follow: false } };
+/** "WLM Werkudara" in the tab (the app then names the section: "Peringkat · WLM Werkudara"); a shared link shows what WLM is. */
+export const metadata: Metadata = wlmMetadata();
 
 /**
  * Wellbeing for employees (17 Nov 2026): one page for /wlm and its sections (Beranda,

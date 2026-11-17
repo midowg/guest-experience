@@ -147,8 +147,26 @@ aplikasi tetap jalan dan menyimpan tanpa jam.
   aplikasi lama), admin di `/admin/wlm`. Tautan lama `/wellbeing` dan `/admin/wellbeing` dialihkan ke sana
   (`next.config.ts`). API tetap `/api/wellbeing` dan `/api/admin/wellbeing`; akses admin tetap aplikasi
   "Wellbeing".
-- **Halaman masuk** mengikuti aplikasi lama: selalu gelap dengan cahaya ungu dan oranye, tulisan besar **WLM**
-  dan "Balance Within. Impact Beyond.", tombol warna aksen aplikasi.
+- **Halaman masuk** desain baru (18 Nov 2026), tidak lagi meniru aplikasi lama:
+  - Hanya tulisan **WLM** besar (huruf angka papan skor) dalam pita lima warna dimensi, "Werkudara Life Mode",
+    dan garis lima warna.
+  - Warna mengikuti tema aplikasi (Otomatis / Terang / Gelap, pilihan yang sama dengan di Profil), termasuk bilah
+    status HP.
+  - Form di kartu, diawali **Masuk dengan akun WAM** (email atau nama panggilan, password yang sama dengan aplikasi
+    WAM). Tanpa slogan.
+  - Gerakan sekali jalan, sekitar 1,5 detik, dengan CSS (Remotion untuk membuat video, terlalu berat untuk halaman
+    masuk):
+    - Huruf naik satu per satu, warna mengalir melintas sekali lalu berhenti.
+    - "Werkudara Life Mode" merapat dari renggang, garis tumbuh dari tengah, lalu kartu naik.
+    - Pesan salah bergetar sekali tiap mencoba.
+    - Semua gerakan mati bila HP diatur mengurangi gerakan.
+- **Nama dan tautan:**
+  - Tab bernama "WLM Werkudara" (bagian lain "Peringkat · WLM Werkudara"), dengan ikon WLM sendiri.
+  - Nama di layar utama HP: "WLM".
+  - Tautan yang dibagikan menampilkan kartu WLM: tulisan WLM berwarna, apa aplikasinya, dan "Masuk dengan akun WAM".
+    Hurufnya (Barlow Condensed, Plus Jakarta Sans) diambil dari Google Fonts saat gambar dibuat; bila gagal, gambar
+    tetap jadi dengan huruf bawaan.
+  - Ketiganya dari `src/lib/wellbeing/brand.ts` dan `src/lib/server/wlm-preview.tsx`.
 - **Periksa** (admin):
   - Status jadi tab dengan jumlahnya.
   - Jenis pindah ke tombol **Filter** (menu dengan ikon).

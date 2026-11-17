@@ -626,31 +626,86 @@ input[type="date"].input { display: block; }
   .pressable:active, .btn:active, .tab:active .tabInd { transform: none; }
 }
 
-/* ---------- WLM sign-in (18 Nov 2026): the old app's look, always dark ---------- */
-.login[data-theme="dark"] {
+/*
+ * ---------- WLM sign-in (18 Nov 2026, second take) ----------
+ * Only the name WLM, in the five dimension colours (each theme's own shades), on the app's background:
+ * it follows the theme like the app. A soft light of the same colours sits behind the name. The form is
+ * a card. The entrance plays once: letters rise one by one, the colours flow across once and settle,
+ * "Werkudara Life Mode" draws in from wide to tight, a five-colour line grows from the centre, then the
+ * card rises. Nothing moves with reduced motion.
+ */
+@property --wlm-flow { syntax: "<percentage>"; inherits: true; initial-value: 0%; }
+.login { isolation: isolate; overflow-x: hidden; background: var(--bg); }
+.login::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(70% 55% at 0% 0%, rgba(124, 58, 237, .30), transparent 70%),
-    radial-gradient(60% 50% at 100% 8%, rgba(234, 88, 12, .24), transparent 72%),
-    radial-gradient(80% 40% at 50% 110%, rgba(197, 242, 58, .08), transparent 70%),
-    #0A0A0B;
+    radial-gradient(50% 26% at 32% 14%, var(--d-physical-c), transparent 72%),
+    radial-gradient(46% 24% at 70% 12%, var(--d-emotional-c), transparent 72%),
+    radial-gradient(60% 30% at 50% 26%, var(--d-social-c), transparent 75%);
+  opacity: .9;
 }
-.login[data-theme="dark"] .loginColumn { background: transparent; }
+.login .loginColumn { background: transparent; padding-top: calc(var(--safe-t) + 48px); }
 @media (min-width: 600px) and (min-height: 700px) {
-  .login[data-theme="dark"] .loginColumn { border: 0; box-shadow: none; padding: 32px; max-width: 400px; }
+  .login .loginColumn { border: 0; box-shadow: none; padding: 32px; max-width: 420px; }
 }
-.wlmHero { display: grid; justify-items: center; gap: 6px; padding-top: 24px; text-align: center; }
-.wlmMark {
-  margin: 0; font-size: 64px; font-weight: 800; line-height: 1; letter-spacing: -3px;
-  background: linear-gradient(135deg, #FFFFFF 0%, #C9CED8 45%, #6B7280 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+.wlmHero { display: grid; justify-items: center; text-align: center; }
+.wlmTitle { margin: 0; line-height: 1; }
+/* The name: three letters, one colour band across them (each letter shows its third of it). */
+.wlmWord {
+  /* Ends on the last colour (no wrap back to the first, which muddied the M's edge). */
+  --wlm-band: linear-gradient(100deg, var(--d-physical), var(--d-financial) 25%, var(--d-emotional) 50%, var(--d-spiritual) 75%, var(--d-social));
+  display: inline-flex; gap: .02em; font-family: var(--font-num); font-weight: 700; font-size: 132px; line-height: .86; letter-spacing: 0;
 }
-.wlmTag { margin: 4px 0 0; color: #9CA3AF; font-size: 15px; font-weight: 300; letter-spacing: .4px; }
+.wlmLetterBox { display: inline-block; overflow: hidden; padding: 0 .02em .04em; }
+.wlmLetter {
+  display: inline-block; color: transparent; background: var(--wlm-band); background-size: 300% 100%; background-repeat: repeat-x;
+  background-position: calc(var(--i) * 50% + var(--wlm-flow)) 0; -webkit-background-clip: text; background-clip: text;
+}
+.wlmWord[data-animated] .wlmLetter {
+  animation: wlmLetterRise .7s cubic-bezier(.2, .9, .25, 1.15) both, wlmFlow 2.2s cubic-bezier(.45, 0, .2, 1) both;
+  animation-delay: calc(var(--i) * 90ms), .25s;
+}
+@keyframes wlmLetterRise { from { transform: translateY(105%) rotate(4deg); } }
+@keyframes wlmFlow { from { --wlm-flow: -150%; } }
+.wlmName { margin: 14px 0 0; font-size: 12px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: var(--text-2); animation: wlmTrack .9s .45s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes wlmTrack { from { opacity: 0; letter-spacing: .7em; } }
+/* Five short bars in the dimension colours, grown from the centre. */
+.wlmLine { display: flex; gap: 4px; margin-top: 16px; transform-origin: center; animation: wlmGrow .6s .75s cubic-bezier(.2, .8, .2, 1) both; }
+.wlmLine i { width: 22px; height: 4px; border-radius: 999px; }
+.wlmLine i:nth-child(1) { background: var(--d-physical); }
+.wlmLine i:nth-child(2) { background: var(--d-emotional); }
+.wlmLine i:nth-child(3) { background: var(--d-social); }
+.wlmLine i:nth-child(4) { background: var(--d-financial); }
+.wlmLine i:nth-child(5) { background: var(--d-spiritual); }
+@keyframes wlmGrow { from { transform: scaleX(0); opacity: 0; } }
 .wlmLead { margin: 20px 0 0; color: var(--text-2); font-size: 14px; }
-.wlmSmall {
-  margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -1px; line-height: 1;
-  background: linear-gradient(135deg, #FFFFFF 0%, #6B7280 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
-  width: max-content;
+@keyframes wlmRise { from { opacity: 0; transform: translateY(14px); } }
+/* The card: how to get in, then the form. */
+.loginCard {
+  margin-top: 32px; padding: 16px 16px 12px; border-radius: 24px; background: var(--surface); border: 1px solid var(--outline); box-shadow: 0 12px 40px rgba(13, 19, 33, .08);
+  animation: wlmRise .6s .9s var(--ease-out) both;
 }
-@media (forced-colors: active) { .wlmMark, .wlmSmall { color: CanvasText; background: none; } }
+.loginCard .loginForm { margin-top: 18px; }
+.wamNote { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 16px; background: var(--primary-c); color: var(--on-primary-c); }
+.wamNoteIcon { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex: none; background: var(--primary); color: var(--on-primary); }
+.wamNote > span:last-child { display: flex; flex-direction: column; gap: 2px; padding-top: 1px; }
+.wamNote b { font-size: 15px; font-weight: 700; color: var(--text); }
+.wamNote small { font-size: 13px; line-height: 1.45; color: var(--text-2); }
+.loginProblem { animation: wlmShake .4s cubic-bezier(.36, .07, .19, .97) both; }
+@keyframes wlmShake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+/* A short phone: a smaller name, so the form and Masuk stay in view. */
+@media (max-height: 720px) {
+  .login .loginColumn { padding-top: calc(var(--safe-t) + 24px); }
+  .wlmWord { font-size: 96px; }
+  .loginCard { margin-top: 22px; }
+}
+/* The other steps (Lupa password, password baru): the name small above the title. */
+.wlmSmall { font-size: 34px; }
+.wlmSmall .wlmLetterBox { padding-bottom: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .wlmWord[data-animated] .wlmLetter, .wlmName, .wlmLine, .loginCard, .loginProblem { animation: none; }
+}
+@media (forced-colors: active) { .wlmLetter { color: CanvasText; background: none; } }
 
 /* ---------- Foto profil (18 Nov 2026) ---------- */
 .avatar[data-photo="true"] { overflow: hidden; background: var(--surface-2); }

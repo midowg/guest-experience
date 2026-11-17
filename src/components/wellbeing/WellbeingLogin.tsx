@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Check, CircleAlert, CircleCheck, Circle, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Check, CircleAlert, CircleCheck, Circle, Eye, EyeOff, KeyRound } from "lucide-react";
 import { errorText as wamErrorText, PraWamApiError, praWamRequest } from "@/components/pra-wam/api";
 import { passwordRules } from "@/lib/pra-wam/password";
 import { RESET_NOTE_MAX } from "@/lib/pra-wam/reset-requests";
 import { praWamApi, WELLBEING_PATH, wellbeingPath } from "@/lib/routes";
+import { ThemeBoot, useTheme, type ThemeChoice } from "./context";
 import { fontVars } from "./font";
 import { cx } from "./parts";
 import css from "./wellbeing.module.css";
@@ -26,42 +27,76 @@ const focusIfDesk = (element: HTMLElement | null) => { if (window.matchMedia?.("
 /** Only a Wellbeing address may be the way back. */
 const safeNext = (next: string | null) => next && next.startsWith(WELLBEING_PATH) && !next.startsWith("//") ? next : wellbeingPath.home;
 
-/** The five dots, one per dimension. */
-export function WellbeingMark({ className }: { className?: string }) {
-  return <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
-    <circle cx="24" cy="9" r="6" fill="var(--d-physical)" /><circle cx="38.3" cy="19.4" r="6" fill="var(--d-emotional)" />
-    <circle cx="32.8" cy="36.1" r="6" fill="var(--d-social)" /><circle cx="15.2" cy="36.1" r="6" fill="var(--d-financial)" />
-    <circle cx="9.7" cy="19.4" r="6" fill="var(--d-spiritual)" />
-  </svg>;
-}
-
 /**
- * WLM (18 Nov 2026): the sign-in looks like the old app's (Werkudara Life Mode): always dark, a
- * soft purple and orange glow, the big "WLM" with "Balance Within. Impact Beyond.". The sign-in
- * itself carries the big name (`hero`); the other steps a small one above their title.
+ * WLM, Journey's own sign-in (18 Nov 2026, second take): only the name WLM, big, in the colours of the
+ * five dimensions; the page follows the app's theme (Otomatis / Terang / Gelap, the same choice as in
+ * Profil), and says plainly how to get in: the WAM account. No mark, no slogan.
+ *
+ * Motion, played once on the sign-in (about 1.5 s) and never with reduced motion: the letters rise one
+ * by one, the colours flow across them once and settle, "Werkudara Life Mode" draws in from wide to
+ * tight, a line in the five colours grows from the centre, then the card rises.
  */
 export const WLM_NAME = "WLM";
-export const WLM_TAGLINE = "Balance Within. Impact Beyond.";
+export const WLM_FULL_NAME = "Werkudara Life Mode";
+
+/** The name in the five dimension colours, one colour band across the three letters. `animated`: the entrance. */
+export function WlmWordmark({ className, animated = false }: { className?: string; animated?: boolean }) {
+  return <span className={cx(css.wlmWord, className)} data-animated={animated || undefined} aria-hidden="true">
+    {[...WLM_NAME].map((letter, index) => <span key={index} className={css.wlmLetterBox}>
+      <span className={css.wlmLetter} style={{ "--i": index } as React.CSSProperties}>{letter}</span>
+    </span>)}
+  </span>;
+}
+
+/** The phone's status bar in the page's colour (it follows the theme, and the system's on Otomatis). */
+function useStatusBar(theme: ThemeChoice) {
+  useEffect(() => {
+    const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+    const paint = () => {
+      const dark = theme === "dark" || (theme === "system" && !!media?.matches);
+      let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+      if (!meta) { meta = document.createElement("meta"); meta.name = "theme-color"; document.head.appendChild(meta); }
+      meta.content = dark ? "#0A0E15" : "#F3F4F6";
+    };
+    paint();
+    if (theme !== "system" || !media?.addEventListener) return;
+    media.addEventListener("change", paint);
+    return () => media.removeEventListener("change", paint);
+  }, [theme]);
+}
 
 function Frame({ title, lead, hero = false, children, foot }: { title: string; lead?: string; hero?: boolean; children: ReactNode; foot?: ReactNode }) {
-  return <div className={cx(css.tokens, css.login, fontVars)} data-theme="dark">
+  const [theme] = useTheme();
+  useStatusBar(theme);
+  return <div className={cx(css.tokens, css.login, fontVars)} data-theme={theme === "system" ? undefined : theme} suppressHydrationWarning>
+    <ThemeBoot />
     <main className={css.loginColumn}>
       {hero ? <header className={css.wlmHero}>
-        <h1 className={css.wlmMark} aria-label={`${WLM_NAME}, Werkudara Life Mode. ${title}`}>{WLM_NAME}</h1>
-        <p className={css.wlmTag}>{WLM_TAGLINE}</p>
+        <h1 className={css.wlmTitle} aria-label={`${WLM_NAME}, ${WLM_FULL_NAME}. ${title}`}><WlmWordmark animated /></h1>
+        <p className={css.wlmName} aria-hidden="true">{WLM_FULL_NAME}</p>
+        <span className={css.wlmLine} aria-hidden="true"><i /><i /><i /><i /><i /></span>
         {lead && <p className={css.wlmLead}>{lead}</p>}
       </header> : <>
-        <p className={css.wlmSmall} aria-hidden="true">{WLM_NAME}</p>
+        <WlmWordmark className={css.wlmSmall} />
         <h1 className={css.title} style={{ marginTop: 16 }}>{title}</h1>
         {lead && <p className={css.muted} style={{ marginTop: 4 }}>{lead}</p>}
       </>}
-      {children}
-      <p className={cx(css.loginFoot, css.caption, css.faint)}>{foot ?? <>Satu akun untuk WAM, Booking Kantor, dan WLM.</>}</p>
+      {hero ? <div className={css.loginCard}>{children}</div> : children}
+      <p className={cx(css.loginFoot, css.caption, css.faint)}>{foot ?? <>Program wellbeing karyawan Werkudara</>}</p>
     </main>
   </div>;
 }
 
-const Problem = ({ text }: { text: string }) => <div className={cx(css.note, css.noteErr)} role="alert"><CircleAlert size={20} aria-hidden="true" /><span>{text}</span></div>;
+/** Said above the form; it shakes a little when it (re)appears, so a wrong password is noticed. */
+const Problem = ({ text }: { text: string }) => <div className={cx(css.note, css.noteErr, css.loginProblem)} role="alert"><CircleAlert size={20} aria-hidden="true" /><span>{text}</span></div>;
+
+/** How to get in, said plainly: the WAM account (no WAM slogan). */
+function WamNote() {
+  return <div className={css.wamNote}>
+    <span className={css.wamNoteIcon} aria-hidden="true"><KeyRound size={20} /></span>
+    <span><b>Masuk dengan akun WAM</b><small>Email atau nama panggilan, dan password yang sama dengan aplikasi WAM.</small></span>
+  </div>;
+}
 
 function Secret({ id, label, value, onChange, autoComplete, error, placeholder }: { id: string; label: string; value: string; onChange: (value: string) => void; autoComplete: string; error?: string; placeholder?: string }) {
   const [show, setShow] = useState(false);
@@ -85,6 +120,8 @@ export function WellbeingLogin({ next }: { next: string | null }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Each try replays the note's shake, also when the same message comes again.
+  const [tries, setTries] = useState(0);
   const first = useRef<HTMLInputElement>(null);
   useEffect(() => { if (view === "login") focusIfDesk(first.current); }, [view]);
   // Lupa password and Buat password baru have their own history entry: Back returns to Masuk.
@@ -103,6 +140,7 @@ export function WellbeingLogin({ next }: { next: string | null }) {
 
   async function signIn(event: FormEvent) {
     event.preventDefault();
+    setTries(count => count + 1);
     if (!user.trim() || !password) { setError("Isi email atau nama panggilan, dan password."); return; }
     setBusy(true); setError(null);
     try {
@@ -115,9 +153,10 @@ export function WellbeingLogin({ next }: { next: string | null }) {
   if (view === "forgot" || view === "forgot-sent") return <Forgot initial={user} sent={view === "forgot-sent"} onSent={() => openView("forgot-sent")} onBack={backToLogin} />;
   if (view === "new-password") return <NewPassword current={password} onDone={goNext} />;
 
-  return <Frame hero title="Masuk" lead="Masuk dengan akun WAM kamu.">
+  return <Frame hero title="Masuk">
+    <WamNote />
     <form className={css.loginForm} onSubmit={signIn} noValidate>
-      {error && <Problem text={error} />}
+      {error && <Problem key={tries} text={error} />}
       <div className={css.field}>
         <label className={css.fieldLabel} htmlFor="wb-user">Email atau nama panggilan</label>
         <input ref={first} id="wb-user" className={css.input} name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="mis. dewi"
