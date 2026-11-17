@@ -33,6 +33,10 @@ import styles from "./card.module.css";
  * complement, save and wallpaper, "Kenapa …?", the re-roll and "Buka ulang" (the opening again,
  * never a new draw). "Lewati animasi" is always there; reduced motion goes straight to the result.
  * Everything is drawn on the server before; the page only shows it.
+ *
+ * Voucher re-roll (18 Nov 2026): re-roll vouchers bought in WLM's Hadiah show under the card as
+ * "Pakai voucher re-roll" / "Pakai voucher Legendary", usable any time (also when the re-roll is
+ * closed or used); each opens the same re-roll dialog with the voucher.
  */
 
 type Phase = { kind: "printing"; step: number } | { kind: "ready" } | { kind: "pack"; taps: number } | { kind: "emerging"; wobble: boolean } | { kind: "open" } | { kind: "error"; text: string };
@@ -189,6 +193,8 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
   const [tapLine, setTapLine] = useState("Ketuk bungkusnya!");
   /** The re-roll: "dialog" while its dialog is up, "done" once the new card is in. */
   const [reroll, setReroll] = useState<"" | "dialog" | "done">("");
+  /** The voucher the re-roll dialog uses (null: the one free re-roll). */
+  const [voucher, setVoucher] = useState<{ id: string; legendary: boolean } | null>(null);
   const [confirm, confirmElement] = useConfirm();
   const confetti = useRef<HTMLCanvasElement>(null);
   const pack = useRef<HTMLButtonElement>(null);
@@ -293,9 +299,12 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
    * only now, open, so nothing below the card gives the new figure away before its flip.
    */
   function rerolled(view: CardView | null, faces: { front: string; back: string } | null) {
+    const usedVoucher = !!voucher;
+    setVoucher(null);
     if (!view || !faces) { setReroll(""); return; }
     setCard(view); setFront(faces.front); setBack(faces.back);
-    setReroll("done"); setStamped(true); setPhase({ kind: "open" });
+    // A voucher leaves the free re-roll as it was.
+    setReroll(usedVoucher ? "" : "done"); setStamped(true); setPhase({ kind: "open" });
   }
 
   async function saveImage(kind: "kartu" | "wallpaper") {
@@ -426,10 +435,12 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
           <button type="button" className={styles.btn} onClick={() => { setNote(null); setReroll("dialog"); }} disabled={reroll === "dialog" || !!busy}><Dices aria-hidden />Re-roll tokoh (1x)</button>
         </>}
         {figure && (card.reroll?.state === "used" || reroll === "done") && <p className={styles.small}>Jatah re-roll sudah dipakai. {figure.name} sekarang tokohmu.</p>}
+        {figure && !card.trial && (card.vouchers?.length ?? 0) > 0 && <VoucherOffer vouchers={card.vouchers!} disabled={reroll === "dialog" || !!busy}
+          onUse={ticket => { setNote(null); setVoucher(ticket); setReroll("dialog"); }} />}
         <button type="button" className={`${styles.btn} ${styles.text}`} onClick={() => void applyAsPhoto()} disabled={!!busy}><UserRound aria-hidden />{busy === "foto" ? "Menyimpan…" : "Pakai jadi foto profil"}</button>
         <button type="button" className={`${styles.btn} ${styles.text}`} onClick={takePack}><RotateCcw aria-hidden />Buka ulang</button>
       </div>
-      {reroll === "dialog" && <RerollDialog card={card} nickname={name} onClose={rerolled} />}
+      {reroll === "dialog" && <RerollDialog card={card} nickname={name} ticket={voucher} onClose={rerolled} />}
     </div>}
 
     {saved && <SavedDialog onClose={closeSaved}>
@@ -554,7 +565,19 @@ function FigureProfileSections({ card, name, rerolled }: { card: CardView; name:
  * ulang sekarang", then the new card face down to tap and open, as the first time; Kembali closes
  * it at any step. Nothing about the new figure shows before its flip.
  */
-function RerollDialog({ card, nickname, onClose }: { card: CardView; nickname: string; onClose: (view: CardView | null, faces: { front: string; back: string } | null) => void }) {
+/** My re-roll vouchers from WLM's Hadiah: one button for Legendary and one for a plain re-roll, with how many are left. */
+function VoucherOffer({ vouchers, disabled, onUse }: { vouchers: { id: string; legendary: boolean }[]; disabled: boolean; onUse: (ticket: { id: string; legendary: boolean }) => void }) {
+  const legend = vouchers.filter(item => item.legendary), plain = vouchers.filter(item => !item.legendary);
+  // A no-break hyphen keeps "re-roll" on one line.
+  const count = [legend.length && `${legend.length} voucher Legendary`, plain.length && `${plain.length} voucher re‑roll`].filter(Boolean).join(" dan ");
+  return <div className={styles.voucherBox}>
+    <p className={styles.small}>Kamu punya {count} dari Hadiah WLM. Bisa dipakai kapan saja.</p>
+    {legend[0] && <button type="button" className={`${styles.btn} ${styles.primary}`} onClick={() => onUse(legend[0])} disabled={disabled}><Sparkles aria-hidden />Pakai voucher Legendary</button>}
+    {plain[0] && <button type="button" className={styles.btn} onClick={() => onUse(plain[0])} disabled={disabled}><Dices aria-hidden />Pakai voucher re-roll</button>}
+  </div>;
+}
+
+function RerollDialog({ card, nickname, ticket = null, onClose }: { card: CardView; nickname: string; ticket?: { id: string; legendary: boolean } | null; onClose: (view: CardView | null, faces: { front: string; back: string } | null) => void }) {
   type Step = { kind: "ask" } | { kind: "busy" } | { kind: "error"; text: string } | { kind: "closed" | "opening" | "open"; view: CardView; faces: { front: string; back: string } };
   const [step, setStep] = useState<Step>({ kind: "ask" });
   const [flash, setFlash] = useState(false);
@@ -565,7 +588,7 @@ function RerollDialog({ card, nickname, onClose }: { card: CardView; nickname: s
   async function draw() {
     setStep({ kind: "busy" });
     try {
-      const view = (await praWamRequest<{ card: CardView }>(praWamApi.questionnaireCard, { method: "PATCH" })).data.card;
+      const view = (await praWamRequest<{ card: CardView }>(praWamApi.questionnaireCard, ticket ? { method: "PATCH", json: { ticket: ticket.id } } : { method: "PATCH" })).data.card;
       setStep({ kind: "closed", view, faces: await facesOf(view) });
     } catch (error) {
       setStep({ kind: "error", text: errorText(error) });
@@ -587,12 +610,15 @@ function RerollDialog({ card, nickname, onClose }: { card: CardView; nickname: s
   }
 
   const back = <button type="button" className={`${styles.btn} ${styles.text}`} onClick={close} autoFocus><ArrowLeft aria-hidden />Kembali</button>;
-  return <SavedDialog onClose={close} label="Re-roll tokoh">
+  const heading = ticket ? ticket.legendary ? "Pakai voucher Legendary" : "Pakai voucher re-roll" : "Re-roll tokoh";
+  return <SavedDialog onClose={close} label={heading}>
     <div className={styles.sheet} style={{ ["--glow" as string]: "view" in step ? step.view.tier.color : card.tier.color }}>
       {flash && <div className={styles.flash} aria-hidden />}
       {(step.kind === "ask" || step.kind === "busy") && <>
-        <h2 className={styles.heading}>Re-roll tokoh</h2>
-        <p>Tokohmu sekarang dilepas dan tokoh baru diundi dari tokoh yang masih tersedia di tipe {card.character.class}. Rarity juga diundi ulang (sekarang <b>{card.tier.name}</b>), jadi bisa naik atau turun. Hasilnya wajib diterima dan tidak bisa kembali ke kartu lama. Nomor kartumu tetap.</p>
+        <h2 className={styles.heading}>{heading}</h2>
+        <p>Tokohmu sekarang dilepas dan tokoh baru diundi dari tokoh yang masih tersedia di tipe {card.character.class}. {ticket?.legendary
+          ? <>Rarity-nya <b>pasti Legendary</b>.</>
+          : <>Rarity juga diundi ulang (sekarang <b>{card.tier.name}</b>), jadi bisa naik atau turun.</>} Hasilnya wajib diterima dan tidak bisa kembali ke kartu lama. Nomor kartumu tetap.{ticket ? " Satu voucher terpakai." : ""}</p>
         <div className={styles.row}>
           {back}
           <button type="button" className={`${styles.btn} ${styles.primary}`} onClick={() => void draw()} disabled={step.kind === "busy"}><Dices aria-hidden />{step.kind === "busy" ? "Mengundi…" : "Ya, undi ulang sekarang"}</button>

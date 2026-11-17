@@ -15,6 +15,9 @@
 .strong { font-weight: 600; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .actions { display: flex; gap: 6px; justify-content: flex-end; white-space: nowrap; }
+/* A cell stays a table cell, so its row line meets the others (18 Nov 2026); the buttons sit side by side. */
+.table td.actions { display: table-cell; text-align: right; }
+.table td.actions > * + * { margin-left: 6px; }
 .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8125rem; color: var(--cs-muted); }
 
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 12px; }
@@ -62,7 +65,8 @@
   .table tr { border: 1px solid var(--cs-line); border-radius: 12px; background: var(--cs-surface); margin-bottom: 10px; padding: 6px 0; }
   .table td { border: 0; padding: 6px 14px; display: grid; grid-template-columns: 7.5rem 1fr; gap: 8px; justify-items: start; align-items: baseline; }
   .table td::before { content: attr(data-label); color: var(--cs-muted); font-size: 0.8125rem; }
-  .table td.actions { display: flex; justify-content: flex-start; }
+  .table td.actions { display: flex; justify-content: flex-start; flex-wrap: wrap; }
+  .table td.actions > * + * { margin-left: 0; }
   .table td.actions::before { content: none; }
   .nowrap { white-space: normal; }
 }

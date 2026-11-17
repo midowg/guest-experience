@@ -237,6 +237,39 @@ sekali (item permainan); fitur ini dibangun ulang sesuai keputusan pemilik:
   Fotonya tautan lama (i.ibb.co) sampai dipindah ke R2 oleh `scripts/wellbeing-storage.mjs`. Item permainan acara
   (Avatar/Background Reroll, Reveal Spot Clues) tidak dibawa.
 
+## Voucher re-roll (18 Nov 2026, uji coba)
+
+Hadiah bisa berupa voucher untuk re-roll kartu tokoh di kuesioner WAM. Keputusan pemilik:
+
+- **Jenis hadiah** di editor Hadiah (semua admin WLM):
+  - **Barang**: alur biasa (diajukan, disetujui, diserahkan).
+  - **Voucher re-roll tokoh**: tokoh dan rarity diundi ulang, sama seperti re-roll dari Admin WAM.
+  - **Voucher re-roll Legendary**: tokoh diundi ulang, rarity pasti Legendary.
+- **Tanpa persetujuan admin.** Klaim voucher langsung berstatus Diserahkan (oleh "Otomatis") dan poinnya langsung
+  terpotong dari saldo. Karyawan ditanya sekali lagi sebelum klaim, karena voucher tidak bisa dibatalkan sendiri.
+- **Syarat klaim**, dicek dalam satu transaksi oleh fungsi `wb_claim_reroll`:
+  - stok, batas per orang, dan saldo seperti hadiah barang;
+  - kartu tokohnya sudah keluar (bukan kartu uji);
+  - untuk Legendary: tempat Legendary masih ada.
+- **Kuota Legendary tetap berlaku.** Kartu Legendary orang lain ditambah voucher Legendary yang belum dipakai dihitung
+  terhadap batas Legendary di Admin WAM. Kalau penuh, voucher Legendary tidak bisa diklaim dan poin tidak terpotong.
+  Voucher Legendary yang belum dipakai menahan satu tempat, jadi undian kartu baru tidak mengambilnya.
+- **Dipakai di kartu tokoh.** Setelah klaim, tombol **Buka kartu tokoh** membuka alamat kuesioner. Di bawah kartu
+  muncul **Pakai voucher Legendary** atau **Pakai voucher re-roll**, membuka dialog re-roll yang sama. Voucher bisa
+  dipakai kapan saja: juga saat re-roll dari Admin WAM tutup, dan juga kalau jatah re-roll gratisnya sudah dipakai.
+  Re-roll gratis tidak ikut terpakai.
+- **Klaim saya** menulis "Belum dipakai" dengan tautan **Pakai di kartu tokoh**, atau "Sudah dipakai".
+- **Super admin → Voucher re-roll** (menu Uji coba) menampilkan semua voucher, asal (Hadiah atau diberi manual),
+  dan perubahannya (tokoh dan rarity sebelum → sesudah). Tindakannya:
+  - **Batalkan voucher** (belum dipakai): poinnya kembali, klaim jadi Ditolak dengan alasan yang dibaca karyawan.
+  - **Kembalikan poin** (sudah dipakai): kartu tetap, poin kembali.
+  - **Kembalikan kartu**: kartu kembali ke tokoh dan rarity sebelum voucher. Hanya bisa selama kartunya belum
+    berubah lagi dan tokoh lamanya belum dipakai orang lain.
+  - **Beri voucher**: tanpa poin, biasa atau Legendary (Legendary hanya bila tempatnya masih ada).
+- **Data:** migrasi `202611180003_wellbeing_reroll_voucher.sql` (kolom `wb_rewards.kind`, tabel
+  `wb_reroll_tickets`, fungsi `wb_claim_reroll`; `wb_request_reward` menolak voucher). Sebelum migrasi dijalankan,
+  Hadiah tetap jalan seperti biasa dan pilihan voucher di editor nonaktif.
+
 ## Strava
 
 Satu aplikasi Strava API milik kantor (aplikasi yang sama dengan aplikasi lama; kuncinya `STRAVA_CLIENT_ID` dan

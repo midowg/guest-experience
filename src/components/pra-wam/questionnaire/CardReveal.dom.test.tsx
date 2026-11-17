@@ -181,3 +181,41 @@ it("re-rolls the figure once in a dialog, and the page shows the new figure only
   expect(screen.getByText("Jatah re-roll sudah dipakai. Susi Susanti sekarang tokohmu.")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Re-roll tokoh \(1x\)/ })).toBeNull();
 });
+
+it("uses a re-roll voucher from WLM's Hadiah any time, Legendary included, and keeps the free re-roll as it was (18 Nov 2026)", async () => {
+  motion(true);
+  window.localStorage.setItem("wam-cq-card-open:f4", "1");
+  const ticket = "7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d";
+  const base: CardView = {
+    ...card, character: { ...card.character, key: "garda", class: "Garda Depan" },
+    figure: { id: "f", key: "edmund-hillary", name: "Edmund Hillary", costume: "", quote: null, image: null, legend: false, legendClass: null },
+    reason: "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan.", colors: ["#C2303F", "#6E1023"],
+    // The free re-roll is used and closed; the vouchers still work.
+    reroll: { state: "used", until: null }, vouchers: [{ id: ticket, legendary: true }, { id: "8b2c3d4e-5f60-4b7c-8d8e-0f1a2b3c4d5e", legendary: false }],
+  };
+  const next: CardView = { ...base, figure: { ...base.figure!, id: "g", key: "susi-susanti", name: "Susi Susanti", legend: true },
+    tier: { key: "legendary", name: "Legendary", color: "#FFC94A", line: "Paling langka.", odds: 300, sort: 4 }, vouchers: [{ id: "8b2c3d4e-5f60-4b7c-8d8e-0f1a2b3c4d5e", legendary: false }] };
+  const sent: { body: string | null; type: string | null }[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+    if (url === praWamApi.questionnaireCard && init.method === "PATCH") sent.push({ body: (init.body as string) ?? null, type: new Headers(init.headers).get("Content-Type") });
+    return new Response(JSON.stringify({ ok: true, data: { card: next }, message: "Tokoh barumu: Susi Susanti." }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }));
+  render(<CardReveal formId="f4" initial={base} nickname="Dewi" hasPhoto={false} />);
+  expect(await screen.findByText("Kamu punya 1 voucher Legendary dan 1 voucher re‑roll dari Hadiah WLM. Bisa dipakai kapan saja.")).toBeTruthy();
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+  fireEvent.click(screen.getByRole("button", { name: "Pakai voucher Legendary" }));
+  const asked = screen.getByRole("dialog", { name: "Pakai voucher Legendary" });
+  expect(asked.textContent).toContain("pasti Legendary");
+  expect(asked.textContent).toContain("Satu voucher terpakai.");
+  fireEvent.click(screen.getByRole("button", { name: /Ya, undi ulang sekarang/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Buka tokoh barumu" }));
+  // The voucher goes with the request; the free re-roll is not asked for.
+  expect(sent).toEqual([{ body: JSON.stringify({ ticket }), type: "application/json" }]);
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 2500)); });
+  fireEvent.click(screen.getByRole("button", { name: "Kembali" }));
+  expect(await screen.findByText("Susi Susanti")).toBeTruthy();
+  // One voucher left; the free re-roll still reads as used.
+  expect(screen.getByText("Kamu punya 1 voucher re‑roll dari Hadiah WLM. Bisa dipakai kapan saja.")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Pakai voucher Legendary" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Pakai voucher re-roll" })).toBeTruthy();
+});

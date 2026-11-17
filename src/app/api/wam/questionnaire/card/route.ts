@@ -1,7 +1,8 @@
+import { z } from "zod";
 import { managesApp } from "@/lib/pra-wam/roles";
 import { seesQuestionnaire } from "@/lib/pra-wam/questionnaire";
 import { ServiceError } from "@/lib/server/config";
-import { checkOrigin, handle, success } from "@/lib/server/http";
+import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { cardsWaiting, ensureCard, myCard, rerollCard } from "@/lib/server/pra-wam/cards";
 import { currentForm } from "@/lib/server/pra-wam/questionnaire";
 import { completedNow, myAnswers } from "@/lib/server/pra-wam/questionnaire-answers";
@@ -42,15 +43,19 @@ export async function POST(request: Request) {
   });
 }
 
+const rerollSchema = z.object({ ticket: z.uuid("Voucher tidak dikenali.").nullable().default(null) });
+
 /**
- * PATCH: re-roll my card's figure, once, while Admin WAM keeps the re-roll open (v3, 16 Nov 2026).
- * The new figure is final; the rarity and the number stay.
+ * PATCH: re-roll my card's figure, once, while Admin WAM keeps the re-roll open (v3, 16 Nov 2026);
+ * or with { ticket }, one of my re-roll vouchers from WLM's Hadiah, any time (18 Nov 2026).
+ * The new figure is final; the number stays.
  */
 export async function PATCH(request: Request) {
   return handle(async () => {
     const member = await requireApiMember();
     checkOrigin(request);
-    const card = await rerollCard(await formFor(member), member.id);
+    const { ticket } = request.headers.get("content-type")?.startsWith("application/json") ? validate(rerollSchema, await readJson(request, 1_000)) : { ticket: null };
+    const card = await rerollCard(await formFor(member), member.id, ticket);
     return success({ card }, `Tokoh barumu: ${card.figure?.name ?? "siap"}.`);
   });
 }

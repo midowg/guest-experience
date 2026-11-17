@@ -1,6 +1,6 @@
 "use client";
 
-import { defaultAppControls, monthRange, previousMonth, rank, wibToday, type AppControls, type ClaimStatus, type DimensionId, type ReviewInput } from "@/lib/wellbeing/rules";
+import { defaultAppControls, monthRange, previousMonth, rank, wibToday, type AppControls, type ClaimStatus, type DimensionId, type ReviewInput, type RewardKind } from "@/lib/wellbeing/rules";
 import type { WbActivity, WbAdminClaim, WbAdminReward, WbCatalogItem, WbOverview, WbPeople, WbPersonDetail, WbPersonRow, WbRewardsAdmin, WbSettingsView } from "@/lib/wellbeing/types";
 
 /*
@@ -88,13 +88,15 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
   const refuse = (status: number, message: string) => new Response(JSON.stringify({ ok: false, message }), { status, headers: { "Content-Type": "application/json" } });
 
   // Hadiah (18 Nov 2026): three prizes, claims waiting and done.
-  type MockReward = { id: string; title: string; description: string; photos: string[]; cost: number; stock: number | null; perPerson: number; active: boolean; updatedAt: string; updatedBy: string | null };
+  type MockReward = { id: string; title: string; description: string; photos: string[]; cost: number; stock: number | null; perPerson: number; active: boolean; updatedAt: string; updatedBy: string | null; kind: RewardKind };
   let uploads = 0;
   let rewards: MockReward[] = [
     { id: "30000000-0000-4000-8000-0000000000a1", title: "Voucher Decathlon Rp250.000", description: "Voucher belanja Decathlon, berlaku 6 bulan.", photos: ["wellbeing/hadiah/a1.jpg"], cost: 35000, stock: 4, perPerson: 1, active: true, updatedAt: `${day(3)}T03:00:00.000Z`, updatedBy: "Meida" },
     { id: "30000000-0000-4000-8000-0000000000a2", title: "Tumbler Hydro Flask 32 oz", description: "Botol minum baja tahan karat.", photos: ["wellbeing/hadiah/a2.jpg", "wellbeing/hadiah/a2b.jpg"], cost: 30000, stock: 2, perPerson: 1, active: true, updatedAt: `${day(3)}T03:00:00.000Z`, updatedBy: "Meida" },
     { id: "30000000-0000-4000-8000-0000000000a3", title: "Jam olahraga Garmin", description: "Dibawa dari aplikasi lama, cek dulu sebelum dinyalakan.", photos: [], cost: 300000, stock: 1, perPerson: 1, active: false, updatedAt: `${day(1)}T03:00:00.000Z`, updatedBy: "Pindah data" },
-  ];
+    // Voucher re-roll (18 Nov 2026).
+    { id: "30000000-0000-4000-8000-0000000000a4", title: "Voucher re-roll Legendary", description: "Undi ulang tokoh kartu WAM, rarity pasti Legendary.", photos: [], cost: 25000, stock: 3, perPerson: 1, active: true, updatedAt: `${day(0)}T03:00:00.000Z`, updatedBy: "Meida", kind: "reroll_legendary" as RewardKind },
+  ].map(item => ({ kind: "barang" as RewardKind, ...item }));
   const rewardPhoto = (key: string) => photo(key.includes("a1") ? "Voucher" : "Tumbler", key.includes("a1") ? "250K" : "32oz");
   const claims: WbAdminClaim[] = [
     { id: "30000000-0000-4000-8000-0000000000c1", rewardId: rewards[0].id, rewardTitle: rewards[0].title, rewardPhoto: null, employeeId: people[1].id, employeeName: people[1].nickname, department: people[1].department, cost: 35000, status: "requested", note: "", reason: null, createdAt: `${day(0)}T02:10:00.000Z`, decidedBy: null, decidedAt: null, deliveredBy: null, deliveredAt: null },
@@ -107,12 +109,12 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
   const rewardsView = (): WbRewardsAdmin => {
     const counts = { requested: 0, approved: 0, delivered: 0, rejected: 0, cancelled: 0 } as Record<ClaimStatus, number>;
     for (const claim of claims) counts[claim.status] += 1;
-    return { migrated: !options.notReady, rewards: rewards.map(rewardOf), claims: claims.map(claim => ({ ...claim, rewardPhoto: rewards.find(item => item.id === claim.rewardId)?.photos[0] ? rewardPhoto(rewards.find(item => item.id === claim.rewardId)!.photos[0]) : null })), counts };
+    return { migrated: !options.notReady, rewards: rewards.map(rewardOf), claims: claims.map(claim => ({ ...claim, rewardPhoto: rewards.find(item => item.id === claim.rewardId)?.photos[0] ? rewardPhoto(rewards.find(item => item.id === claim.rewardId)!.photos[0]) : null })), counts, vouchersReady: !options.notReady };
   };
   const saveReward = (item: MockReward | null, body: Record<string, unknown>): MockReward => {
     const next: MockReward = { id: item?.id ?? `30000000-0000-4000-8000-${String(Date.now()).slice(-12)}`, title: String(body.title), description: String(body.description ?? ""),
       photos: ((body.photos as { key: string }[] | undefined) ?? []).map(entry => entry.key), cost: Number(body.cost), stock: body.stock === null ? null : Number(body.stock), perPerson: Number(body.perPerson), active: !!body.active,
-      updatedAt: new Date().toISOString(), updatedBy: "Admin (pratinjau)" };
+      updatedAt: new Date().toISOString(), updatedBy: "Admin (pratinjau)", kind: (body.kind as RewardKind | undefined) ?? "barang" };
     rewards = item ? rewards.map(entry => entry.id === item.id ? next : entry) : [next, ...rewards];
     return next;
   };

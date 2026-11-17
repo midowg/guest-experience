@@ -1,5 +1,5 @@
 import type { WbClaim, WbReward, WbSaldo } from "@/lib/wellbeing/app-types";
-import { claimHolds, rewardState, type ClaimStatus, type PhotoMime } from "@/lib/wellbeing/rules";
+import { claimHolds, rewardState, type ClaimStatus, type PhotoMime, type RewardKind, type TicketStatus } from "@/lib/wellbeing/rules";
 import type { WbAdminClaim } from "@/lib/wellbeing/types";
 
 /*
@@ -20,10 +20,12 @@ export const isRewardPhotoKey = (key: string, mime: PhotoMime) => KEY.test(key) 
 /** The upload token's subject for reward photos (uploads.ts signs it in place of an employee). */
 export const REWARD_UPLOAD_SUBJECT = "hadiah";
 
-export type ClaimRefusal = { code: "balance" | "sold_out" | "limit" | "unavailable"; message: string };
-/** wb_request_reward's refusals (raise exception 'reward_…') in words for the employee; null for any other error. */
+export type ClaimRefusal = { code: "balance" | "sold_out" | "limit" | "unavailable" | "no_card" | "legend_full"; message: string };
+/** wb_request_reward's and wb_claim_reroll's refusals (raise exception 'reward_…') in words for the employee; null for any other error. */
 export function claimRefusal(message: string | undefined): ClaimRefusal | null {
   const text = message ?? "";
+  if (text.includes("reward_no_card")) return { code: "no_card", message: "Kartu tokohmu belum keluar. Selesaikan kuesioner WAM dulu, lalu klaim voucher ini." };
+  if (text.includes("reward_legend_full")) return { code: "legend_full", message: "Tempat Legendary sudah penuh, jadi voucher ini belum bisa diklaim. Poinmu tidak terpotong." };
   if (text.includes("reward_balance")) return { code: "balance", message: "Saldo poinmu belum cukup untuk hadiah ini." };
   if (text.includes("reward_sold_out")) return { code: "sold_out", message: "Hadiah ini sudah habis diklaim." };
   if (text.includes("reward_limit")) return { code: "limit", message: "Kamu sudah mengklaim hadiah ini sebanyak batasnya." };
@@ -37,22 +39,22 @@ export function saldoFrom(earned: number, claims: readonly { status: ClaimStatus
   return { earned, held, available: earned - held };
 }
 
-/** A reward for the employee app: what is left, how many I hold, and what I can do. */
-export function toReward(row: Row, photos: string[], taken: number, mine: number, available: number): WbReward {
+/** A reward for the employee app: what is left, how many I hold, and what I can do (a voucher may be blocked: no card, no Legendary place). */
+export function toReward(row: Row, photos: string[], taken: number, mine: number, available: number, blocked: "no_card" | "legend_full" | null = null): WbReward {
   const stock = row.stock === null || row.stock === undefined ? null : Number(row.stock);
   const cost = Number(row.cost), perPerson = Number(row.per_person);
   return {
-    id: row.id as string, title: row.title as string, description: (row.description as string) ?? "", photos, cost,
+    id: row.id as string, title: row.title as string, description: (row.description as string) ?? "", photos, cost, kind: (row.kind as RewardKind | undefined) ?? "barang",
     left: stock === null ? null : Math.max(0, stock - taken), perPerson, mine,
-    state: rewardState({ cost, stock, taken, perPerson, mine, available }),
+    state: rewardState({ cost, stock, taken, perPerson, mine, available, blocked }),
   };
 }
 
-export function toClaim(row: Row, photo: string | null): WbClaim {
+export function toClaim(row: Row, photo: string | null, voucher: { legendary: boolean; status: TicketStatus } | null = null): WbClaim {
   return {
     id: row.id as string, rewardId: row.reward_id as string, title: row.reward_title as string, photo, cost: Number(row.cost), status: row.status as ClaimStatus,
     note: (row.note as string) ?? "", reason: (row.reason as string | null) ?? null, createdAt: row.created_at as string,
-    decidedAt: (row.decided_at as string | null) ?? null, deliveredAt: (row.delivered_at as string | null) ?? null,
+    decidedAt: (row.decided_at as string | null) ?? null, deliveredAt: (row.delivered_at as string | null) ?? null, voucher,
   };
 }
 

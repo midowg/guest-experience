@@ -279,6 +279,20 @@ export function logValues(mode: PointsMode, input: Pick<LogInput, "steps" | "kca
 export const MIGRATION_WELLBEING_REWARDS = "202611180001_wellbeing_rewards.sql";
 export const MAX_REWARD_PHOTOS = 6;
 
+/*
+ * Voucher re-roll (18 Nov 2026, migration 202611180003): a reward may be a voucher that re-rolls the WAM
+ * questionnaire's tokoh card. Claimed at once (no admin); the points are spent then; the re-roll is a
+ * ticket used on the card page. Legendary: the rarity is Legendary, within the Legendary quota.
+ */
+export const MIGRATION_WELLBEING_VOUCHERS = "202611180003_wellbeing_reroll_voucher.sql";
+export const REWARD_KINDS = ["barang", "reroll", "reroll_legendary"] as const;
+export type RewardKind = (typeof REWARD_KINDS)[number];
+export const rewardKindLabels: Record<RewardKind, string> = { barang: "Barang", reroll: "Voucher re-roll tokoh", reroll_legendary: "Voucher re-roll Legendary" };
+export const isVoucher = (kind: RewardKind) => kind !== "barang";
+/** A voucher ticket: not used yet, used on the card, or cancelled by super admin. */
+export const TICKET_STATUSES = ["open", "used", "revoked"] as const;
+export type TicketStatus = (typeof TICKET_STATUSES)[number];
+
 /**
  * A claim's life: requested (points held, waiting for the admin), approved, delivered (handed over), or
  * rejected (with a reason) / cancelled (by the employee while it waits): the last two give the points back.
@@ -297,11 +311,13 @@ export function saldoOf(earned: number, claims: readonly { status: ClaimStatus; 
   return { earned, held, available: earned - held };
 }
 
-export type RewardState = "available" | "short" | "sold_out" | "limit";
+/** no_card: a voucher, and my tokoh card is not out yet; legend_full: a Legendary voucher, and no Legendary place is left. */
+export type RewardState = "available" | "short" | "sold_out" | "limit" | "no_card" | "legend_full";
 /** What a reward is for this person now (the server checks it again, in one transaction, on a claim). */
-export function rewardState(input: { cost: number; stock: number | null; taken: number; perPerson: number; mine: number; available: number }): RewardState {
+export function rewardState(input: { cost: number; stock: number | null; taken: number; perPerson: number; mine: number; available: number; blocked?: "no_card" | "legend_full" | null }): RewardState {
   if (input.mine >= input.perPerson) return "limit";
   if (input.stock !== null && input.taken >= input.stock) return "sold_out";
+  if (input.blocked) return input.blocked;
   return input.available >= input.cost ? "available" : "short";
 }
 
@@ -324,6 +340,7 @@ export const rewardInputSchema = z.object({
   stock: z.number().int().min(0, "Stok tidak boleh minus.").max(100_000, "Stok terlalu besar.").nullable(),
   perPerson: z.number().int().min(1, "Batas per orang minimal 1.").max(100, "Batas per orang paling banyak 100."),
   active: z.boolean(),
+  kind: z.enum(REWARD_KINDS).default("barang"),
 }).superRefine((value, ctx) => {
   if (new Set(value.photos.map(photo => photo.key)).size !== value.photos.length) ctx.addIssue({ code: "custom", path: ["photos"], message: "Ada foto yang terpasang dua kali." });
 });
@@ -342,3 +359,27 @@ export const claimDecisionSchema = z.object({
   if (value.action === "reject" && value.reason.length < 2) ctx.addIssue({ code: "custom", path: ["reason"], message: "Tulis alasan penolakan (dibaca karyawan)." });
 });
 export type ClaimDecisionInput = z.infer<typeof claimDecisionSchema>;
+
+/* ---------- Super admin → Voucher re-roll (18 Nov 2026) ---------- */
+
+/** Give a voucher by hand, without points (a correction, or a prize given outside Hadiah). */
+export const voucherGrantSchema = z.object({
+  employeeId: z.string().uuid("Pilih karyawan dari daftar."),
+  legendary: z.boolean().default(false),
+  note: z.string().trim().max(300, "Catatan paling banyak 300 karakter.").default(""),
+});
+export type VoucherGrantInput = z.infer<typeof voucherGrantSchema>;
+
+/**
+ * revoke: cancel a voucher not used yet (its points go back); refund: give a voucher's points back
+ * (the card stays); restore: put the card back as it was before the voucher's re-roll.
+ */
+export const VOUCHER_ACTIONS = ["revoke", "refund", "restore"] as const;
+export type VoucherAction = (typeof VOUCHER_ACTIONS)[number];
+export const voucherActionSchema = z.object({
+  action: z.enum(VOUCHER_ACTIONS),
+  reason: z.string().trim().max(300, "Alasan paling banyak 300 karakter.").default(""),
+}).superRefine((value, ctx) => {
+  if (value.action !== "restore" && value.reason.length < 2) ctx.addIssue({ code: "custom", path: ["reason"], message: "Tulis alasannya (dibaca karyawan di Klaim saya)." });
+});
+export type VoucherActionInput = z.infer<typeof voucherActionSchema>;

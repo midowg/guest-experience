@@ -317,6 +317,45 @@ describe("WellbeingApp", () => {
     expect(within(dialog()).getByRole("region", { name: "Saldo poin" }).textContent).toContain(before.toLocaleString("id-ID"));
   });
 
+  it("claims a re-roll voucher at once after asking once more, then opens the tokoh card (voucher re-roll, 18 Nov 2026)", async () => {
+    app();
+    fireEvent.click(await screen.findByRole("button", { name: /Buka Hadiah$/ }, { timeout: 3000 }));
+    const grid = await within(dialog()).findByRole("list", { name: "Daftar hadiah" });
+    fireEvent.click(within(grid).getByRole("button", { name: "Voucher re-roll tokoh, 5.000 poin, Bisa diklaim" }));
+    expect(await within(dialog()).findByText(/Langsung aktif, tanpa menunggu admin/)).toBeTruthy();
+    expect(within(dialog()).queryByLabelText(/Catatan untuk admin/)).toBeNull();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Klaim voucher · 5.000 poin" }));
+    // Asked once more: the points go at once and it cannot be cancelled.
+    expect(within(dialog()).getByText(/langsung terpotong dan voucher tidak bisa dibatalkan/)).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Ya, klaim" }));
+    expect(await within(dialog()).findByText("Voucher re-roll aktif", {}, { timeout: 3000 })).toBeTruthy();
+    expect(within(dialog()).getByRole("link", { name: "Buka kartu tokoh" }).getAttribute("href")).toBe("/wam/kuesioner");
+    // Klaim saya: not used yet, with the way to the card, and nothing to cancel.
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Nanti saja" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: /Buka Hadiah$/ }));
+    fireEvent.click(await within(dialog()).findByRole("button", { name: "Klaim saya" }));
+    const mine = within(within(dialog()).getByRole("list", { name: "Klaim saya" })).getAllByRole("listitem")[0];
+    expect(within(mine).getByText("Belum dipakai")).toBeTruthy();
+    expect(within(mine).getByRole("link", { name: "Pakai di kartu tokoh" }).getAttribute("href")).toBe("/wam/kuesioner");
+    expect(within(mine).queryByRole("button", { name: "Batalkan" })).toBeNull();
+  });
+
+  it("keeps a voucher from being claimed before the tokoh card is out, or when Legendary is full", async () => {
+    app(mockApi({ latency: [0, 0], noCard: true }));
+    fireEvent.click(await screen.findByRole("button", { name: /Buka Hadiah$/ }, { timeout: 3000 }));
+    const grid = await within(dialog()).findByRole("list", { name: "Daftar hadiah" });
+    fireEvent.click(within(grid).getByRole("button", { name: "Voucher re-roll tokoh, 5.000 poin, Kartu tokoh belum keluar" }));
+    expect(await within(dialog()).findByText(/Selesaikan kuesioner WAM dulu/)).toBeTruthy();
+    expect((within(dialog()).getByRole("button", { name: "Kartu tokohmu belum keluar" }) as HTMLButtonElement).disabled).toBe(true);
+    cleanup(); clearResources("wbapp:");
+    app(mockApi({ latency: [0, 0], legendFull: true }));
+    fireEvent.click(await screen.findByRole("button", { name: /Buka Hadiah$/ }, { timeout: 3000 }));
+    const list = await within(dialog()).findByRole("list", { name: "Daftar hadiah" });
+    expect(within(list).getByRole("button", { name: "Voucher re-roll Legendary, 25.000 poin, Legendary penuh" })).toBeTruthy();
+    expect(within(list).getByRole("button", { name: "Voucher re-roll tokoh, 5.000 poin, Bisa diklaim" })).toBeTruthy();
+  });
+
   it("says where the save leaves me in the race", async () => {
     app(mockApi({ latency: [0, 0], empty: true }));
     await screen.findByText("Total poin");

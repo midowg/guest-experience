@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { ConsoleShell, PageHeader } from "@/components/console";
 import { AdminGrants } from "@/components/admin/super/AdminGrants";
 import { AccessLogTable } from "@/components/admin/super/AccessLogTable";
+import { RerollVouchers } from "@/components/admin/super/RerollVouchers";
 import admin from "@/components/admin/admin.module.css";
 import type { AccessEntry } from "@/lib/server/access-log";
 
@@ -11,10 +12,29 @@ const A = "0b6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c11", B = "1b6f3c1e-8a1d-4c4a-9f00-0
 const E1 = "5a6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c01", E2 = "5a6f3c1e-8a1d-4c4a-9f00-0d8e2b7a1c02";
 const log = (id: number, patch: Partial<AccessEntry>): AccessEntry => ({ id, at: `2026-11-13T0${id}:15:00Z`, kind: "login_success", ip: "180.244.12.9", country: "ID", region: "JK", city: "Jakarta", user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36", device_id: "9c1d2e3f-0000-4000-8000-000000000001", new_device: false, role: "admin", employee_id: A, actor: "Dewi Lestari", ...patch });
 
-/** Layout check for Super admin → Akses admin and Log akses without signing in (?bagian=log). Buttons call the real API, which refuses without a super admin session. */
+/** Layout check for Super admin → Akses admin, Log akses (?bagian=log) and Voucher re-roll (?bagian=voucher) without signing in. Buttons call the real API, which refuses without a super admin session. */
 export default async function DevAdminAccessPage({ searchParams }: { searchParams: Promise<{ bagian?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const logOnly = (await searchParams).bagian === "log";
+  const part = (await searchParams).bagian;
+  const logOnly = part === "log";
+  // Voucher re-roll (18 Nov 2026): one unused, one used with what it changed, one given by hand and cancelled.
+  if (part === "voucher") {
+    const claim = (title: string, cost: number) => ({ id: "c0000000-0000-4000-8000-000000000001", title, cost, status: "delivered" as const });
+    const empty = { usedAt: null, before: null, after: null, restorable: false, revokedAt: null, revokedBy: null, revokeReason: null, restoredAt: null, restoredBy: null, note: "", givenBy: null };
+    const vouchers = [
+      { ...empty, id: "a0000000-0000-4000-8000-000000000001", employeeId: A, employeeName: "Dewi", department: "Center of Excellence", legendary: false, status: "open" as const, createdAt: "2026-11-18T03:00:00.000Z", claim: claim("Voucher re-roll tokoh", 5000) },
+      { ...empty, id: "a0000000-0000-4000-8000-000000000002", employeeId: B, employeeName: "Raja", department: "Human Resources & General Affair", legendary: true, status: "used" as const, createdAt: "2026-11-17T08:00:00.000Z", claim: claim("Voucher re-roll Legendary", 25000),
+        usedAt: "2026-11-17T08:05:00.000Z", before: { figure: "Ki Hajar Dewantara", tier: "Rare" }, after: { figure: "Susi Susanti", tier: "Legendary" }, restorable: true },
+      { ...empty, id: "a0000000-0000-4000-8000-000000000003", employeeId: C, employeeName: "Rara", department: "", legendary: false, status: "revoked" as const, createdAt: "2026-11-16T02:00:00.000Z", claim: null, givenBy: "Super admin", note: "Pengganti voucher gagal",
+        revokedAt: "2026-11-16T04:00:00.000Z", revokedBy: "Super admin", revokeReason: "Salah orang" },
+    ];
+    const people = [{ id: A, name: "Dewi Lestari", nickname: "Dewi", department: "Center of Excellence", category: "karyawan", hasCard: true }, { id: B, name: "Raja Damai Sejahtera Waruwu", nickname: "Raja", department: "Human Resources & General Affair", category: "karyawan", hasCard: false }];
+    return <ConsoleShell theme="admin" area="Super admin" storageKey="dev-super" className={admin.shell} person={{ name: "Super admin", sub: "Werkudara" }}
+      groups={[{ label: "Uji coba", items: [{ key: "voucher", label: "Voucher re-roll", href: "/dev-preview/akses-admin?bagian=voucher" }] }]} current="voucher" pageTitle="Voucher re-roll">
+      <PageHeader title="Voucher re-roll" subtitle="Voucher re-roll kartu tokoh dari Hadiah WLM. Batalkan, kembalikan poin atau kartu, atau beri voucher tanpa poin." />
+      <RerollVouchers initial={{ migrated: true, vouchers, people, legend: { name: "Legendary", cap: 3, cards: 2, reserved: 0 } }} />
+    </ConsoleShell>;
+  }
   return <ConsoleShell theme="admin" area="Super admin" storageKey="dev-super" className={admin.shell} person={{ name: "Super admin", sub: "Werkudara" }}
     groups={[{ label: "Keamanan", items: [{ key: "admin", label: "Akses admin", href: "/dev-preview/akses-admin" }, { key: "akses", label: "Log akses", href: "/dev-preview/akses-admin?bagian=log" }] }]}
     current={logOnly ? "akses" : "admin"} pageTitle={logOnly ? "Log akses" : "Akses admin"}>

@@ -1,4 +1,4 @@
-import type { ClaimStatus, DimensionId, Limit, PointsMode, RewardState, ReviewStatus } from "./rules";
+import type { ClaimStatus, DimensionId, Limit, PointsMode, RewardKind, RewardState, ReviewStatus, TicketStatus } from "./rules";
 
 /*
  * Wellbeing for employees (/wellbeing, 17 Nov 2026): what /api/wellbeing/* answers with. Shared by
@@ -120,14 +120,19 @@ export type WbLedger = { migrated: boolean; items: WbLedgerItem[]; total: number
  */
 export type WbSaldo = { earned: number; held: number; available: number };
 export type WbReward = { id: string; title: string; description: string; photos: string[]; cost: number;
+  /** A prize, or a voucher that re-rolls the tokoh card (claimed at once, 18 Nov 2026). */
+  kind: RewardKind;
   /** null: no limit; otherwise how many are still there. */
   left: number | null; perPerson: number;
   /** My claims of it that hold points. */
   mine: number; state: RewardState };
 export type WbClaim = { id: string; rewardId: string; title: string; photo: string | null; cost: number; status: ClaimStatus; note: string;
   /** The admin's reason when rejected. */
-  reason: string | null; createdAt: string; decidedAt: string | null; deliveredAt: string | null };
-export type WbRewards = { migrated: boolean; saldo: WbSaldo; rewards: WbReward[]; claims: WbClaim[] };
+  reason: string | null; createdAt: string; decidedAt: string | null; deliveredAt: string | null;
+  /** A voucher's re-roll ticket: Legendary or not, and whether it is used (null for a prize). */
+  voucher: { legendary: boolean; status: TicketStatus } | null };
+/** cardUrl: where my tokoh card is (the WAM questionnaire), to use a voucher; null when there is none. */
+export type WbRewards = { migrated: boolean; saldo: WbSaldo; rewards: WbReward[]; claims: WbClaim[]; cardUrl: string | null };
 export type WbClaimResult = { claim: WbClaim; saldo: WbSaldo };
 
 /*

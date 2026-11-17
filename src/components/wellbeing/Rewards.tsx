@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronRight, CircleX, Gift, ImageOff, PackageCheck, Undo2, Wallet } from "lucide-react";
+import { Check, ChevronRight, CircleX, Dices, Gift, ImageOff, PackageCheck, Sparkles, Undo2, Wallet } from "lucide-react";
 import { Panel } from "@/components/app-shell/Panel";
 import { revalidate, setResource, useResource } from "@/components/app-shell/resource";
 import { useToast } from "@/components/app-shell/Toast";
 import type { WbClaim, WbReward, WbRewards, WbSaldo } from "@/lib/wellbeing/app-types";
-import { claimHolds, claimStatusLabels, rewardState, type ClaimStatus } from "@/lib/wellbeing/rules";
+import { claimHolds, claimStatusLabels, isVoucher, rewardState, type ClaimStatus } from "@/lib/wellbeing/rules";
 import { errorText, WellbeingApiError } from "./api";
 import { keys, useWellbeing } from "./context";
 import { formatDate, num } from "./format";
@@ -18,6 +18,10 @@ import css from "./wellbeing.module.css";
  * up. One tall sheet: the saldo (points minus what my claims hold; the board never changes), the
  * rewards, a reward's detail (photos, description, stock) with Ajukan klaim, and Klaim saya (status,
  * the admin's reason, Batalkan while it waits). Opened from Beranda's saldo card and from Profil.
+ *
+ * Voucher re-roll (18 Nov 2026): a reward may re-roll the WAM tokoh card. Claimed at once (asked once
+ * more first, as the points go and it cannot be cancelled), then "Buka kartu tokoh" opens the card,
+ * where the voucher is used. Klaim saya says whether each voucher is used.
  */
 
 type Tab = "hadiah" | "klaim";
@@ -40,6 +44,8 @@ export function RewardsSheet({ open, tab, onClose }: { open: boolean; tab: Tab; 
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  // A voucher asks once more before the points go (it cannot be cancelled).
+  const [asking, setAsking] = useState(false);
   // Each opening starts at the list, on the tab it was opened for.
   const [wasOpen, setWasOpen] = useState(open);
   if (open !== wasOpen) { setWasOpen(open); if (open) { setView(tab); setStep({ kind: "list" }); setProblem(null); } }
@@ -49,12 +55,12 @@ export function RewardsSheet({ open, tab, onClose }: { open: boolean; tab: Tab; 
   const top = useRef<HTMLDivElement>(null);
   const stepKey = `${step.kind}:${step.kind === "detail" ? step.id : ""}:${view}`;
   useEffect(() => { top.current?.scrollIntoView?.({ block: "start" }); }, [stepKey]);
-  const openReward = (id: string) => { setStep({ kind: "detail", id }); setNote(""); setProblem(null); };
+  const openReward = (id: string) => { setStep({ kind: "detail", id }); setNote(""); setProblem(null); setAsking(false); };
 
   async function claim(target: WbReward) {
-    setBusy(true); setProblem(null);
+    setBusy(true); setProblem(null); setAsking(false);
     try {
-      const result = await api.claimReward({ rewardId: target.id, note: note.trim() });
+      const result = await api.claimReward({ rewardId: target.id, note: isVoucher(target.kind) ? "" : note.trim() });
       // The saldo, the reward's stock and mine, and Klaim saya change at once; then the server's answer.
       setResource<WbRewards>(keys.rewards, current => current && {
         ...current, saldo: result.saldo, claims: [result.claim, ...current.claims],
@@ -81,13 +87,21 @@ export function RewardsSheet({ open, tab, onClose }: { open: boolean; tab: Tab; 
     } catch (error) { toast({ message: errorText(error), tone: "bad" }); revalidate(keys.rewards); }
   }
 
-  const title = step.kind === "detail" ? reward?.title ?? "Hadiah" : step.kind === "sent" ? "Klaim terkirim" : "Hadiah";
+  const title = step.kind === "detail" ? reward?.title ?? "Hadiah" : step.kind === "sent" ? step.claim.voucher ? "Voucher aktif" : "Klaim terkirim" : "Hadiah";
   const back = step.kind === "detail" ? () => setStep({ kind: "list" }) : undefined;
 
   let body: React.ReactNode, footer: React.ReactNode = undefined;
   if (!data) body = rewards.error ? <ErrorState message={rewards.error} onRetry={() => void rewards.reload()} /> : <SkRows rows={4} />;
   else if (!data.migrated) body = <Preparing />;
-  else if (step.kind === "sent") {
+  else if (step.kind === "sent" && step.claim.voucher) {
+    body = <VoucherSent claim={step.claim} />;
+    footer = <div className={css.btnRow}>
+      <button type="button" className={cx(css.btn, css.btnOutline)} onClick={onClose}>Nanti saja</button>
+      {data.cardUrl
+        ? <a className={cx(css.btn, css.btnPrimary)} href={data.cardUrl}><Dices size={20} aria-hidden="true" />Buka kartu tokoh</a>
+        : <button type="button" className={cx(css.btn, css.btnPrimary)} onClick={onClose}>Selesai</button>}
+    </div>;
+  } else if (step.kind === "sent") {
     body = <div className={css.done} role="status">
       <div className={css.doneMark}><Check size={48} strokeWidth={2.5} aria-hidden="true" /></div>
       <h3 className={css.headline}>Permintaan terkirim</h3>
@@ -103,7 +117,15 @@ export function RewardsSheet({ open, tab, onClose }: { open: boolean; tab: Tab; 
     if (!reward) body = <Empty icon={<Gift size={24} aria-hidden="true" />}>Hadiah ini sudah tidak tersedia.</Empty>;
     else {
       body = <RewardDetail reward={reward} saldo={data.saldo} note={note} onNote={setNote} problem={problem} />;
-      footer = <ClaimBar reward={reward} saldo={data.saldo} busy={busy} onClaim={() => void claim(reward)} />;
+      footer = isVoucher(reward.kind) && asking
+        ? <div className={css.claimConfirm} role="group" aria-label="Konfirmasi klaim voucher">
+            <p>{num(reward.cost)}{" "}poin langsung terpotong dan voucher tidak bisa dibatalkan.</p>
+            <div className={css.btnRow}>
+              <button type="button" className={cx(css.btn, css.btnOutline)} onClick={() => setAsking(false)} disabled={busy}>Batal</button>
+              <button type="button" className={cx(css.btn, css.btnPrimary)} onClick={() => void claim(reward)} aria-busy={busy} disabled={busy} autoFocus>{busy ? "Mengklaim…" : "Ya, klaim"}</button>
+            </div>
+          </div>
+        : <ClaimBar reward={reward} saldo={data.saldo} busy={busy} onClaim={() => isVoucher(reward.kind) ? setAsking(true) : void claim(reward)} />;
     }
   } else {
     const waiting = data.claims.filter(item => item.status === "requested" || item.status === "approved").length;
@@ -117,7 +139,7 @@ export function RewardsSheet({ open, tab, onClose }: { open: boolean; tab: Tab; 
             </ul>
           : <div style={{ marginTop: 16 }}><Empty icon={<Gift size={24} aria-hidden="true" />}>Belum ada hadiah. Admin akan menambahkannya.</Empty></div>
         : data.claims.length
-          ? <ul className={cx(css.card, css.list, css.claimList)} aria-label="Klaim saya">{data.claims.map(item => <ClaimRow key={item.id} claim={item} onCancel={() => cancel(item)} />)}</ul>
+          ? <ul className={cx(css.card, css.list, css.claimList)} aria-label="Klaim saya">{data.claims.map(item => <ClaimRow key={item.id} claim={item} cardUrl={data.cardUrl} onCancel={() => cancel(item)} />)}</ul>
           : <div style={{ marginTop: 16 }}><Empty icon={<PackageCheck size={24} aria-hidden="true" />}>Belum ada klaim. Pilih hadiah di tab Hadiah.</Empty></div>}
     </>;
   }
@@ -140,14 +162,30 @@ export function SaldoCard({ saldo, action }: { saldo: WbSaldo; action?: React.Re
   </section>;
 }
 
+/** A reward's state in a few words (the list and the screen reader). */
+function stateTextOf(reward: WbReward, saldo: WbSaldo) {
+  switch (reward.state) {
+    case "available": return "Bisa diklaim";
+    case "sold_out": return "Habis";
+    case "limit": return "Sudah kamu klaim";
+    case "no_card": return "Kartu tokoh belum keluar";
+    case "legend_full": return "Legendary penuh";
+    default: return `Kurang ${num(shortBy(reward, saldo))} poin`;
+  }
+}
+
+/** A voucher without a photo: the dice, gold for Legendary. */
+const VoucherArt = ({ reward, size = 32 }: { reward: WbReward; size?: number }) => <span className={css.voucherArt} data-legend={reward.kind === "reroll_legendary" || undefined} aria-hidden="true">
+  <Dices size={size} />{reward.kind === "reroll_legendary" && <Sparkles size={Math.round(size * 0.5)} className={css.voucherSpark} />}
+</span>;
+
 function RewardCard({ reward, saldo, onOpen }: { reward: WbReward; saldo: WbSaldo; onOpen: () => void }) {
-  const short = shortBy(reward, saldo);
-  const stateText = reward.state === "available" ? "Bisa diklaim" : reward.state === "sold_out" ? "Habis" : reward.state === "limit" ? "Sudah kamu klaim" : `Kurang ${num(short)} poin`;
+  const stateText = stateTextOf(reward, saldo);
   return <button type="button" className={css.rewardCard} data-state={reward.state} onClick={onOpen}
     aria-label={`${reward.title}, ${num(reward.cost)} poin, ${stateText}`}>
     <span className={css.rewardPhoto}>
       {/* eslint-disable-next-line @next/next/no-img-element -- signed storage addresses */}
-      {reward.photos[0] ? <img src={reward.photos[0]} alt="" loading="lazy" /> : <Gift size={32} aria-hidden="true" />}
+      {reward.photos[0] ? <img src={reward.photos[0]} alt="" loading="lazy" /> : isVoucher(reward.kind) ? <VoucherArt reward={reward} /> : <Gift size={32} aria-hidden="true" />}
       {reward.left !== null && reward.state !== "sold_out" && <span className={css.rewardLeft}>Sisa {num(reward.left)}</span>}
     </span>
     <span className={css.rewardBody}>
@@ -169,14 +207,19 @@ function RewardDetail({ reward, saldo, note, onNote, problem }: { reward: WbRewa
           {/* eslint-disable-next-line @next/next/no-img-element -- signed storage addresses */}
           {reward.photos.map((url, index) => <img key={url} src={url} alt={`Foto ${index + 1} dari ${reward.photos.length}: ${reward.title}`} loading={index ? "lazy" : "eager"} />)}
         </div>
-      : <div className={cx(css.rewardGallery, css.rewardNoPhoto)}><ImageOff size={32} aria-hidden="true" /></div>}
+      : <div className={cx(css.rewardGallery, css.rewardNoPhoto)}>{isVoucher(reward.kind) ? <VoucherArt reward={reward} size={48} /> : <ImageOff size={32} aria-hidden="true" />}</div>}
     {reward.photos.length > 1 && <p className={cx(css.caption, css.faint, css.center)} style={{ marginTop: 6 }}>Geser untuk melihat {reward.photos.length} foto</p>}
     <div className={css.rewardHead}>
       <span className={css.rewardCost} style={{ fontSize: 30 }}>{num(reward.cost)}<small> poin</small></span>
       {reward.state === "available" && <span className={cx(css.pill, css.pillOk)}>Bisa diklaim</span>}
       {reward.state === "sold_out" && <span className={cx(css.pill, css.pillErr)}>Habis</span>}
       {reward.state === "limit" && <span className={cx(css.pill, css.pillInfo)}>Sudah kamu klaim</span>}
+      {(reward.state === "no_card" || reward.state === "legend_full") && <span className={cx(css.pill, css.pillWarn)}>{stateTextOf(reward, saldo)}</span>}
     </div>
+    {isVoucher(reward.kind) && <p className={cx(css.note, css.noteInfo)}><Dices size={20} aria-hidden="true" /><span>
+      <b>Langsung aktif, tanpa menunggu admin.</b> Poin terpotong saat klaim. Pakai di kartu tokoh WAM-mu kapan saja: tokoh diundi ulang{reward.kind === "reroll_legendary" ? <> dan rarity <b>pasti Legendary</b></> : " dan rarity juga diundi ulang, jadi bisa naik atau turun"}. Hasilnya wajib diterima.</span></p>}
+    {reward.state === "no_card" && <p className={cx(css.note, css.noteWarn)}><CircleX size={20} aria-hidden="true" /><span>Kartu tokohmu belum keluar. Selesaikan kuesioner WAM dulu, lalu klaim voucher ini.</span></p>}
+    {reward.state === "legend_full" && <p className={cx(css.note, css.noteWarn)}><CircleX size={20} aria-hidden="true" /><span>Semua tempat Legendary sudah terisi, jadi voucher ini belum bisa diklaim.</span></p>}
     {reward.state === "short" && <div className={css.rewardShort}>
       <div className={css.chaseLine}><span>Saldomu {num(saldo.available)} poin</span><b>Kurang {num(short)}</b></div>
       <div className={css.standBar} aria-hidden="true"><i style={{ width: `${Math.max(4, Math.min(100, Math.round(Math.max(0, saldo.available) / reward.cost * 100)))}%` }} /></div>
@@ -187,7 +230,7 @@ function RewardDetail({ reward, saldo, note, onNote, problem }: { reward: WbRewa
       <Fact label="Batas per orang" value={`${num(reward.perPerson)} kali${reward.mine ? ` (sudah ${num(reward.mine)})` : ""}`} />
       {reward.state === "available" && <Fact label="Saldo setelah klaim" value={`${num(saldo.available - reward.cost)} poin`} />}
     </div>
-    {reward.state === "available" && <div className={css.field}>
+    {reward.state === "available" && !isVoucher(reward.kind) && <div className={css.field}>
       <label className={css.fieldLabel} htmlFor="reward-note">Catatan untuk admin <span className={css.faint}>(opsional)</span></label>
       <textarea id="reward-note" className={cx(css.input, css.textarea)} rows={2} maxLength={300} value={note} onChange={event => onNote(event.target.value)} placeholder="mis. ukuran atau warna" />
     </div>}
@@ -200,17 +243,36 @@ function Fact({ label, value }: { label: string; value: string }) {
 }
 
 function ClaimBar({ reward, saldo, busy, onClaim }: { reward: WbReward; saldo: WbSaldo; busy: boolean; onClaim: () => void }) {
+  const voucher = isVoucher(reward.kind);
   if (reward.state === "available") return <button type="button" className={cx(css.btn, css.btnPrimary, css.block)} onClick={onClaim} aria-busy={busy} disabled={busy}>
-    <Gift size={20} aria-hidden="true" />{busy ? "Mengirim…" : `Ajukan klaim · ${num(reward.cost)} poin`}</button>;
-  const text = reward.state === "sold_out" ? "Hadiah ini sudah habis" : reward.state === "limit" ? "Kamu sudah mengklaim hadiah ini" : `Kumpulkan ${num(shortBy(reward, saldo))} poin lagi`;
+    {voucher ? <Dices size={20} aria-hidden="true" /> : <Gift size={20} aria-hidden="true" />}{busy ? "Mengirim…" : `${voucher ? "Klaim voucher" : "Ajukan klaim"} · ${num(reward.cost)} poin`}</button>;
+  const text = reward.state === "sold_out" ? "Hadiah ini sudah habis" : reward.state === "limit" ? "Kamu sudah mengklaim hadiah ini"
+    : reward.state === "no_card" ? "Kartu tokohmu belum keluar" : reward.state === "legend_full" ? "Tempat Legendary sudah penuh" : `Kumpulkan ${num(shortBy(reward, saldo))} poin lagi`;
   return <button type="button" className={cx(css.btn, css.btnTonal, css.block)} disabled>{text}</button>;
 }
 
-function ClaimRow({ claim, onCancel }: { claim: WbClaim; onCancel: () => Promise<void> }) {
+/** After a voucher claim: it is active, the points are spent, and where to use it. */
+function VoucherSent({ claim }: { claim: WbClaim }) {
+  return <div className={css.done} role="status">
+    <div className={cx(css.doneMark, claim.voucher?.legendary && css.doneMarkGold)}><Dices size={48} strokeWidth={2.2} aria-hidden="true" /></div>
+    <h3 className={css.headline}>{claim.voucher?.legendary ? "Voucher Legendary aktif" : "Voucher re-roll aktif"}</h3>
+    <p className={css.muted}>{claim.title}</p>
+    <p className={cx(css.note, css.noteInfo)} style={{ textAlign: "left" }}><Wallet size={20} aria-hidden="true" />
+      <span><b>{num(claim.cost)}{" "}poin</b> dipakai dari saldomu. Buka kartu tokohmu di WAM, lalu tekan <b>Pakai voucher</b>. Vouchernya bisa dipakai kapan saja. Peringkatmu tidak berubah.</span></p>
+  </div>;
+}
+
+const voucherLabel = { open: "Belum dipakai", used: "Sudah dipakai", revoked: "Dibatalkan" } as const;
+const voucherTone = { open: css.pillInfo, used: css.pillOk, revoked: "" } as const;
+
+function ClaimRow({ claim, cardUrl, onCancel }: { claim: WbClaim; cardUrl: string | null; onCancel: () => Promise<void> }) {
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
-  const when = claim.status === "delivered" && claim.deliveredAt ? `Diserahkan ${formatDate(claim.deliveredAt.slice(0, 10), { day: "numeric", month: "short" })}`
+  const when = claim.voucher ? `Diklaim ${formatDate(claim.createdAt.slice(0, 10), { day: "numeric", month: "short" })}`
+    : claim.status === "delivered" && claim.deliveredAt ? `Diserahkan ${formatDate(claim.deliveredAt.slice(0, 10), { day: "numeric", month: "short" })}`
     : `Diajukan ${formatDate(claim.createdAt.slice(0, 10), { day: "numeric", month: "short" })}`;
+  // A voucher still holding its points shows its ticket (used or not); a refunded one shows Ditolak and the reason.
+  const ticket = claim.voucher && claimHolds(claim.status) ? claim.voucher.status : null;
   return <li className={cx(css.row, css.rowTall)}>
     <span className={css.claimPhoto}>
       {/* eslint-disable-next-line @next/next/no-img-element -- signed storage addresses */}
@@ -222,6 +284,7 @@ function ClaimRow({ claim, onCancel }: { claim: WbClaim; onCancel: () => Promise
       <span className={css.rowMetaWrap}>{when} · {num(claim.cost)}{" "}poin{claimHolds(claim.status) ? "" : " · kembali ke saldo"}</span>
       {claim.status === "rejected" && claim.reason && <span className={css.claimReason}>Alasan: {claim.reason}</span>}
       {claim.note && <span className={css.rowMetaWrap}>Catatanmu: {claim.note}</span>}
+      {ticket === "open" && cardUrl && <a className={cx(css.btn, css.btnText, css.claimCancel)} href={cardUrl}><Dices size={16} aria-hidden="true" />Pakai di kartu tokoh</a>}
       {claim.status === "requested" && (asking
         ? <span className={css.claimAsk}>
             <span>Batalkan klaim ini?</span>
@@ -230,7 +293,9 @@ function ClaimRow({ claim, onCancel }: { claim: WbClaim; onCancel: () => Promise
           </span>
         : <button type="button" className={cx(css.btn, css.btnText, css.claimCancel)} onClick={() => setAsking(true)}><Undo2 size={16} aria-hidden="true" />Batalkan</button>)}
     </span>
-    <span className={cx(css.pill, statusTone[claim.status])}>{claimStatusLabels[claim.status]}</span>
+    {ticket
+      ? <span className={cx(css.pill, voucherTone[ticket])}>{voucherLabel[ticket]}</span>
+      : <span className={cx(css.pill, statusTone[claim.status])}>{claimStatusLabels[claim.status]}</span>}
   </li>;
 }
 

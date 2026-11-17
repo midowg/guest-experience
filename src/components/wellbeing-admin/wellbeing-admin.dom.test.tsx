@@ -187,4 +187,20 @@ describe("Admin Wellbeing", () => {
     fireEvent.click(within(edit).getByRole("button", { name: "Ya, hapus" }));
     expect((await within(edit).findByRole("alert")).textContent).toMatch(/Matikan Aktif/);
   });
+
+  it("makes a reward a re-roll voucher, said to need no admin (voucher re-roll, 18 Nov 2026)", async () => {
+    open("hadiah");
+    fireEvent.click(await screen.findByRole("button", { name: /^Katalog/ }, { timeout: 3000 }));
+    const catalog = await screen.findByRole("list", { name: "Katalog hadiah" });
+    expect(within(within(catalog).getByRole("button", { name: "Ubah Voucher re-roll Legendary" })).getByText("Re-roll Legendary")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tambah hadiah" }));
+    const panel = await screen.findByRole("dialog");
+    fireEvent.change(within(panel).getByLabelText("Nama hadiah"), { target: { value: "Voucher re-roll tokoh" } });
+    fireEvent.change(within(panel).getByLabelText(/^Jenis hadiah/), { target: { value: "reroll" } });
+    expect(within(panel).getByText(/tanpa persetujuan admin/)).toBeTruthy();
+    fireEvent.change(within(panel).getByLabelText("Harga (poin)"), { target: { value: "5000" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "Simpan" }));
+    expect(await screen.findByText("Hadiah disimpan sebagai draf (belum tampil).")).toBeTruthy();
+    expect(within(within(screen.getByRole("list", { name: "Katalog hadiah" })).getByRole("button", { name: "Ubah Voucher re-roll tokoh" })).getByText("Re-roll")).toBeTruthy();
+  });
 });

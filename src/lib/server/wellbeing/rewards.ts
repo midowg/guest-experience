@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import type { WbClaimResult, WbRewards, WbSaldo } from "@/lib/wellbeing/app-types";
 import {
-  CLAIM_STATUSES, MIGRATION_WELLBEING_REWARDS, claimActionFrom, claimActionTo,
-  type ClaimDecisionInput, type ClaimRequestInput, type ClaimStatus, type RewardInput, type UploadStartInput,
+  CLAIM_STATUSES, MIGRATION_WELLBEING_REWARDS, MIGRATION_WELLBEING_VOUCHERS, claimActionFrom, claimActionTo, isVoucher,
+  type ClaimDecisionInput, type ClaimRequestInput, type ClaimStatus, type RewardInput, type RewardKind, type UploadStartInput,
 } from "@/lib/wellbeing/rules";
 import type { WbAdminClaim, WbAdminReward, WbRewardUpload, WbRewardsAdmin } from "@/lib/wellbeing/types";
 import { ServiceError } from "../config";
@@ -15,6 +15,7 @@ import type { Actor } from "./admin";
 import { REWARD_PHOTO_PREFIX, REWARD_UPLOAD_SUBJECT, claimCounts, claimRefusal, isRewardPhotoKey, rewardPhotoKey, saldoFrom, toAdminClaim, toClaim, toReward } from "./rewards-rules";
 import { db, missing, photoUrls, readAll, readTotals, type Row } from "./shared";
 import { uploadToken, uploadTokenMatches } from "./uploads";
+import { claimVoucherRow, ticketsOfClaims, voucherContext, vouchersReady, type VoucherContext } from "./vouchers";
 
 /*
  * Hadiah (18 Nov 2026, migration 202611180001, docs/rancangan-wellbeing.md "Hadiah"): employees trade
@@ -24,6 +25,9 @@ import { uploadToken, uploadTokenMatches } from "./uploads";
  */
 
 const REWARD_COLUMNS = "id,title,description,photos,cost,stock,per_person,active,sort,updated_at,updated_by_name";
+/** With the reward's kind once the voucher migration ran (202611180003); before it every reward is a prize. */
+const rewardColumns = (vouchers: boolean) => vouchers ? `${REWARD_COLUMNS},kind` : REWARD_COLUMNS;
+const kindOf = (row: Row): RewardKind => (row.kind as RewardKind | undefined) ?? "barang";
 const CLAIM_COLUMNS = "id,reward_id,employee_id,cost,reward_title,status,note,reason,decided_by_name,decided_at,delivered_by_name,delivered_at,created_at";
 const HOLDING: ClaimStatus[] = ["requested", "approved", "delivered"];
 const RECENT_CLAIMS = 200;
@@ -49,16 +53,22 @@ async function mySaldo(employeeId: string): Promise<WbSaldo> {
   return saldoFrom(earned.earned, ((claims.data ?? []) as Row[]).map(row => ({ status: row.status as ClaimStatus, cost: Number(row.cost) })));
 }
 
+/** A voucher's state for me: no card yet, or (Legendary) no Legendary place left; null when it may be claimed. */
+const blockedFor = (kind: RewardKind, context: VoucherContext | null) => !isVoucher(kind) ? null
+  : !context?.hasCard ? "no_card" as const : kind === "reroll_legendary" && context.legendFull ? "legend_full" as const : null;
+
 /** GET /api/wellbeing/rewards: my saldo, the rewards that are on, and my claims (newest first). */
 export async function myRewards(member: Member): Promise<WbRewards> {
+  const vouchers = await vouchersReady();
   const [rewardsRead, mineRead, holdingRead, earned] = await Promise.all([
-    db().from("wb_rewards").select(REWARD_COLUMNS).eq("active", true).order("sort").order("cost").order("id"),
+    db().from("wb_rewards").select(rewardColumns(vouchers)).eq("active", true).order("sort").order("cost").order("id"),
     db().from("wb_reward_claims").select(CLAIM_COLUMNS).eq("employee_id", member.id).order("created_at", { ascending: false }).order("id").limit(RECENT_CLAIMS),
     readAll((from, to) => db().from("wb_reward_claims").select("reward_id,status").in("status", HOLDING).order("id").range(from, to)),
     myEarned(member.id),
   ]);
-  for (const read of [rewardsRead.error, mineRead.error, holdingRead.error]) if (read) { if (missing(read)) return { migrated: false, saldo: emptySaldo, rewards: [], claims: [] }; databaseError(read); }
-  if (!earned.migrated) return { migrated: false, saldo: emptySaldo, rewards: [], claims: [] };
+  const notYet: WbRewards = { migrated: false, saldo: emptySaldo, rewards: [], claims: [], cardUrl: null };
+  for (const read of [rewardsRead.error, mineRead.error, holdingRead.error]) if (read) { if (missing(read)) return notYet; databaseError(read); }
+  if (!earned.migrated) return notYet;
   const mine = (mineRead.data ?? []) as Row[];
   // The saldo counts every claim of mine that holds points, not only the latest shown.
   const holdingMine = mine.length < RECENT_CLAIMS ? mine : ((await db().from("wb_reward_claims").select("status,cost").eq("employee_id", member.id).in("status", HOLDING)).data ?? []) as Row[];
@@ -66,28 +76,47 @@ export async function myRewards(member: Member): Promise<WbRewards> {
   const { taken } = claimCounts(holdingRead.rows as { reward_id: string; status: ClaimStatus }[]);
   const myCount = new Map<string, number>();
   for (const row of mine) if (HOLDING.includes(row.status as ClaimStatus)) myCount.set(row.reward_id as string, (myCount.get(row.reward_id as string) ?? 0) + 1);
-  const rewardRows = (rewardsRead.data ?? []) as Row[];
-  const rewards = await Promise.all(rewardRows.map(async row => toReward(row, await photoUrls((row.photos as string[] | null) ?? []), taken.get(row.id as string) ?? 0, myCount.get(row.id as string) ?? 0, saldo.available)));
+  const rewardRows = (rewardsRead.data ?? []) as unknown as Row[];
+  // Vouchers: whether my card is out and a Legendary place is left, and each voucher claim's ticket.
+  const tickets = await ticketsOfClaims(mine.map(row => row.id as string));
+  const context = vouchers && (rewardRows.some(row => isVoucher(kindOf(row))) || tickets.size) ? await voucherContext(member.id) : null;
+  const rewards = await Promise.all(rewardRows.map(async row => toReward(row, await photoUrls((row.photos as string[] | null) ?? []), taken.get(row.id as string) ?? 0, myCount.get(row.id as string) ?? 0, saldo.available, blockedFor(kindOf(row), context))));
   // A claim's picture: its reward's first photo (also for rewards that are off now).
   const missingIds = [...new Set(mine.map(row => row.reward_id as string))].filter(id => !rewardRows.some(row => row.id === id));
   const others = missingIds.length ? ((await db().from("wb_rewards").select("id,photos").in("id", missingIds)).data ?? []) as Row[] : [];
   const photoOf = await firstPhotos([...rewardRows, ...others]);
-  return { migrated: true, saldo, rewards, claims: mine.map(row => toClaim(row, photoOf.get(row.reward_id as string) ?? null)) };
+  return { migrated: true, saldo, rewards, claims: mine.map(row => toClaim(row, photoOf.get(row.reward_id as string) ?? null, tickets.get(row.id as string) ?? null)), cardUrl: context?.cardUrl ?? null };
+}
+
+/** A refusal raised by wb_request_reward or wb_claim_reroll, in words (409), or a database error. */
+function refuse(error: { code?: string; message: string }): never {
+  const refusal = claimRefusal(error.message);
+  if (refusal) throw new ServiceError(409, refusal.message, { code: [refusal.code] });
+  return databaseError(error);
 }
 
 /** POST /api/wellbeing/rewards/claims: ask for a reward; the points are held at once (409 with the reason when it cannot be). */
 export async function requestReward(member: Member, input: ClaimRequestInput): Promise<WbClaimResult> {
-  const { data, error } = await db().rpc("wb_request_reward", { p_employee: member.id, p_reward: input.rewardId, p_note: input.note });
-  if (error) {
-    if (missing(error) || /wb_request_reward/.test(error.message ?? "")) throw waitingRewards();
-    const refusal = claimRefusal(error.message);
-    if (refusal) throw new ServiceError(409, refusal.message, { code: [refusal.code] });
-    databaseError(error);
+  const vouchers = await vouchersReady();
+  const found = await db().from("wb_rewards").select(vouchers ? "id,photos,kind" : "id,photos").eq("id", input.rewardId).maybeSingle();
+  if (found.error) failRewards(found.error);
+  const reward = found.data as Row | null;
+  let row: Row;
+  // A voucher (18 Nov 2026): handed over at once with its ticket, no admin.
+  if (reward && isVoucher(kindOf(reward))) {
+    try { row = await claimVoucherRow(member.id, input.rewardId); }
+    catch (error) { if (error instanceof ServiceError) throw error; refuse(error as { code?: string; message: string }); }
+  } else {
+    const { data, error } = await db().rpc("wb_request_reward", { p_employee: member.id, p_reward: input.rewardId, p_note: input.note });
+    if (error) {
+      if (missing(error) || /wb_request_reward/.test(error.message ?? "")) throw waitingRewards();
+      refuse(error);
+    }
+    row = (Array.isArray(data) ? data[0] : data) as Row;
   }
-  const row = (Array.isArray(data) ? data[0] : data) as Row;
-  const reward = await db().from("wb_rewards").select("id,photos").eq("id", input.rewardId).maybeSingle();
-  const photo = reward.data ? (await firstPhotos([reward.data as Row])).get(input.rewardId) ?? null : null;
-  return { claim: toClaim(row, photo), saldo: await mySaldo(member.id) };
+  const photo = reward ? (await firstPhotos([reward])).get(input.rewardId) ?? null : null;
+  const voucher = reward && isVoucher(kindOf(reward)) ? { legendary: kindOf(reward) === "reroll_legendary", status: "open" as const } : null;
+  return { claim: toClaim(row, photo, voucher), saldo: await mySaldo(member.id) };
 }
 
 /** POST /api/wellbeing/rewards/claims/<id>: cancel my claim while it still waits (the points come back). */
@@ -115,7 +144,7 @@ async function adminRewardOf(row: Row, counts: ReturnType<typeof claimCounts>): 
   const urls = await Promise.all(keys.map(async key => (await photoUrls([key]))[0] ?? null));
   return {
     id: row.id as string, title: row.title as string, description: (row.description as string) ?? "", photos: keys.map((key, index) => ({ key, url: urls[index] })),
-    cost: Number(row.cost), stock: row.stock === null || row.stock === undefined ? null : Number(row.stock), perPerson: Number(row.per_person), active: row.active as boolean,
+    cost: Number(row.cost), stock: row.stock === null || row.stock === undefined ? null : Number(row.stock), perPerson: Number(row.per_person), active: row.active as boolean, kind: kindOf(row),
     taken: counts.taken.get(row.id as string) ?? 0, waiting: counts.waiting.get(row.id as string) ?? 0,
     updatedAt: row.updated_at as string, updatedBy: (row.updated_by_name as string | null) ?? null,
   };
@@ -125,21 +154,22 @@ const emptyCounts = (): Record<ClaimStatus, number> => Object.fromEntries(CLAIM_
 
 /** GET /api/admin/wellbeing/rewards: every reward, the claims (all still waiting, and the latest others), and how many in each status. */
 export async function adminRewards(): Promise<WbRewardsAdmin> {
+  const vouchersOn = await vouchersReady();
   const [rewardsRead, statusRead, openRead, latestRead] = await Promise.all([
-    db().from("wb_rewards").select(REWARD_COLUMNS).order("active", { ascending: false }).order("sort").order("cost").order("id"),
+    db().from("wb_rewards").select(rewardColumns(vouchersOn)).order("active", { ascending: false }).order("sort").order("cost").order("id"),
     readAll((from, to) => db().from("wb_reward_claims").select("reward_id,status").order("id").range(from, to)),
     readAll((from, to) => db().from("wb_reward_claims").select(ADMIN_CLAIM_COLUMNS).in("status", ["requested", "approved"]).order("created_at").order("id").range(from, to)),
     db().from("wb_reward_claims").select(ADMIN_CLAIM_COLUMNS).in("status", ["delivered", "rejected", "cancelled"]).order("updated_at", { ascending: false }).order("id").limit(RECENT_CLAIMS),
   ]);
-  for (const read of [rewardsRead.error, statusRead.error, openRead.error, latestRead.error]) if (read) { if (missing(read)) return { migrated: false, rewards: [], claims: [], counts: emptyCounts() }; databaseError(read); }
+  for (const read of [rewardsRead.error, statusRead.error, openRead.error, latestRead.error]) if (read) { if (missing(read)) return { migrated: false, rewards: [], claims: [], counts: emptyCounts(), vouchersReady: false }; databaseError(read); }
   const statuses = statusRead.rows as { reward_id: string; status: ClaimStatus }[];
   const counts = claimCounts(statuses);
   const byStatus = emptyCounts();
   for (const row of statuses) byStatus[row.status] += 1;
-  const rewardRows = (rewardsRead.data ?? []) as Row[];
+  const rewardRows = (rewardsRead.data ?? []) as unknown as Row[];
   const photoOf = await firstPhotos(rewardRows);
   const claims = [...openRead.rows, ...((latestRead.data ?? []) as Row[])].map(row => toAdminClaim(row, photoOf.get(row.reward_id as string) ?? null));
-  return { migrated: true, rewards: await Promise.all(rewardRows.map(row => adminRewardOf(row, counts))), claims, counts: byStatus };
+  return { migrated: true, rewards: await Promise.all(rewardRows.map(row => adminRewardOf(row, counts))), claims, counts: byStatus, vouchersReady: vouchersOn };
 }
 
 /** POST /api/admin/wellbeing/rewards/uploads: a key of the server's choosing for one reward photo, its upload address (ten minutes) and token. */
@@ -172,10 +202,14 @@ async function checkedPhotos(input: RewardInput, kept: readonly string[], now: D
   return input.photos.map(photo => photo.key);
 }
 
-const rowOf = (input: RewardInput, photos: string[], actor: Actor) => ({
-  title: input.title, description: input.description, photos, cost: input.cost, stock: input.stock, per_person: input.perPerson, active: input.active,
-  updated_at: new Date().toISOString(), updated_by_name: actor.name.slice(0, 150),
-});
+/** The row to store; the kind only once the voucher migration ran (a voucher before it waits for the migration). */
+function rowOf(input: RewardInput, photos: string[], actor: Actor, vouchers: boolean) {
+  if (!vouchers && isVoucher(input.kind)) throw new ServiceError(503, `Voucher re-roll menunggu migrasi ${MIGRATION_WELLBEING_VOUCHERS}. Minta pemilik menjalankannya di Supabase SQL Editor.`);
+  return {
+    title: input.title, description: input.description, photos, cost: input.cost, stock: input.stock, per_person: input.perPerson, active: input.active,
+    ...(vouchers ? { kind: input.kind } : {}), updated_at: new Date().toISOString(), updated_by_name: actor.name.slice(0, 150),
+  };
+}
 /** Only our own reward photos are ever deleted from storage (links of prizes from the old app are left alone). */
 const ownKeys = (keys: readonly string[]) => keys.filter(key => key.startsWith(REWARD_PHOTO_PREFIX));
 
@@ -186,10 +220,12 @@ async function viewOf(row: Row): Promise<WbAdminReward> {
 }
 
 export async function createReward(input: RewardInput, actor: Actor, now = new Date()): Promise<WbAdminReward> {
+  const vouchers = await vouchersReady();
+  const row = rowOf(input, [], actor, vouchers);
   const photos = await checkedPhotos(input, [], now);
-  const { data, error } = await db().from("wb_rewards").insert(rowOf(input, photos, actor)).select(REWARD_COLUMNS).single();
+  const { data, error } = await db().from("wb_rewards").insert({ ...row, photos }).select(rewardColumns(vouchers)).single();
   if (error) { await removeObjects(ownKeys(photos)).catch(() => undefined); failRewards(error); }
-  return viewOf(data as Row);
+  return viewOf(data as unknown as Row);
 }
 
 export async function updateReward(id: string, input: RewardInput, actor: Actor, now = new Date()): Promise<WbAdminReward> {
@@ -197,12 +233,14 @@ export async function updateReward(id: string, input: RewardInput, actor: Actor,
   if (current.error) failRewards(current.error);
   if (!current.data) throw new ServiceError(404, "Hadiah tidak ditemukan.");
   const before = ((current.data as Row).photos as string[] | null) ?? [];
+  const vouchers = await vouchersReady();
+  const row = rowOf(input, [], actor, vouchers);
   const photos = await checkedPhotos(input, before, now);
-  const { data, error } = await db().from("wb_rewards").update(rowOf(input, photos, actor)).eq("id", id).select(REWARD_COLUMNS).single();
+  const { data, error } = await db().from("wb_rewards").update({ ...row, photos }).eq("id", id).select(rewardColumns(vouchers)).single();
   if (error) failRewards(error);
   // Photos taken off the reward: removed from storage once the reward no longer points at them.
   await removeObjects(ownKeys(before.filter(key => !photos.includes(key)))).catch(() => undefined);
-  return viewOf(data as Row);
+  return viewOf(data as unknown as Row);
 }
 
 /** DELETE: only a reward nobody ever claimed (a claimed one is switched off instead, so its history stays). */

@@ -10,7 +10,7 @@ import { revalidate, setResource, useResource } from "@/components/app-shell/res
 import { useToast } from "@/components/app-shell/Toast";
 import { compressImage } from "@/lib/compress-image";
 import { wellbeingAdminApi } from "@/lib/routes";
-import { MAX_REWARD_PHOTOS, MIGRATION_WELLBEING_REWARDS, PHOTO_MIMES, claimStatusLabels, type ClaimAction, type ClaimStatus, type PhotoMime, type RewardInput } from "@/lib/wellbeing/rules";
+import { MAX_REWARD_PHOTOS, MIGRATION_WELLBEING_REWARDS, MIGRATION_WELLBEING_VOUCHERS, PHOTO_MIMES, REWARD_KINDS, claimStatusLabels, isVoucher, rewardKindLabels, type ClaimAction, type ClaimStatus, type PhotoMime, type RewardInput, type RewardKind } from "@/lib/wellbeing/rules";
 import type { WbAdminClaim, WbAdminReward, WbRewardUpload, WbRewardsAdmin } from "@/lib/wellbeing/types";
 import { points, send, wb } from "./api";
 import { Empty, LoadError, Refreshing } from "./parts";
@@ -53,7 +53,7 @@ export function RewardsView() {
     </div>
     {!data ? rewards.error ? <LoadError message={rewards.error} onRetry={() => void rewards.reload()} /> : <SkeletonRows rows={5} />
       : shown === "permintaan" ? <Claims data={data} /> : <Catalog data={data} onEdit={setEditing} />}
-    <RewardPanel reward={editing} onClose={() => setEditing(null)} />
+    <RewardPanel reward={editing} vouchersReady={!!data?.vouchersReady} onClose={() => setEditing(null)} />
   </>;
 }
 
@@ -152,7 +152,8 @@ function Catalog({ data, onEdit }: { data: WbRewardsAdmin; onEdit: (reward: WbAd
         <span className={css.rewardImage}>
           {/* eslint-disable-next-line @next/next/no-img-element -- signed storage addresses */}
           {reward.photos[0]?.url ? <img src={reward.photos[0].url} alt="" loading="lazy" /> : <Gift size={28} aria-hidden="true" />}
-          <span className={css.rewardBadge}><Pill tone={reward.active ? "ok" : "neutral"}>{reward.active ? "Aktif" : "Draf"}</Pill></span>
+          <span className={css.rewardBadge}><Pill tone={reward.active ? "ok" : "neutral"}>{reward.active ? "Aktif" : "Draf"}</Pill>
+            {isVoucher(reward.kind) && <Pill tone={reward.kind === "reroll_legendary" ? "brass" : "purple"}>{reward.kind === "reroll_legendary" ? "Re-roll Legendary" : "Re-roll"}</Pill>}</span>
           {reward.photos.length > 1 && <span className={css.rewardCount}>{reward.photos.length} foto</span>}
         </span>
         <span className={css.rewardInfo}>
@@ -171,11 +172,17 @@ function Catalog({ data, onEdit }: { data: WbRewardsAdmin; onEdit: (reward: WbAd
 /* ---------- the editor ---------- */
 
 type DraftPhoto = { key: string; url: string | null; upload?: { mime: PhotoMime; size: number; token: string } };
-type Draft = { title: string; description: string; cost: string; stock: string; perPerson: string; active: boolean; photos: DraftPhoto[] };
+type Draft = { title: string; description: string; cost: string; stock: string; perPerson: string; active: boolean; photos: DraftPhoto[]; kind: RewardKind };
 const draftOf = (reward: WbAdminReward | "new" | null): Draft => !reward || reward === "new"
-  ? { title: "", description: "", cost: "", stock: "", perPerson: "1", active: false, photos: [] }
+  ? { title: "", description: "", cost: "", stock: "", perPerson: "1", active: false, photos: [], kind: "barang" }
   : { title: reward.title, description: reward.description, cost: String(reward.cost), stock: reward.stock === null ? "" : String(reward.stock), perPerson: String(reward.perPerson), active: reward.active,
-      photos: reward.photos.map(photo => ({ key: photo.key, url: photo.url })) };
+      photos: reward.photos.map(photo => ({ key: photo.key, url: photo.url })), kind: reward.kind };
+/** What each kind does, under Jenis hadiah (voucher re-roll, 18 Nov 2026). */
+const kindHelp: Record<RewardKind, string> = {
+  barang: "Diajukan karyawan, lalu admin menyetujui dan menyerahkan.",
+  reroll: "Langsung aktif saat diklaim, poin langsung terpotong, tanpa persetujuan admin. Karyawan memakainya di kartu tokoh WAM: tokoh dan rarity diundi ulang.",
+  reroll_legendary: "Langsung aktif saat diklaim, tanpa persetujuan admin. Tokoh diundi ulang dan rarity pasti Legendary. Tidak bisa diklaim kalau tempat Legendary sudah penuh (poin tidak terpotong).",
+};
 const digits = (value: string, max: number) => value.replace(/\D/g, "").slice(0, max);
 
 /** One photo up: smaller first, an address from the server, then PUT (the dev preview's "mock:" addresses skip the network). */
@@ -190,7 +197,7 @@ async function uploadRewardPhoto(file: File): Promise<DraftPhoto> {
   return { key: start.key, url: URL.createObjectURL(small), upload: { mime, size: small.size, token: start.token } };
 }
 
-function RewardPanel({ reward, onClose }: { reward: WbAdminReward | "new" | null; onClose: () => void }) {
+function RewardPanel({ reward, vouchersReady, onClose }: { reward: WbAdminReward | "new" | null; vouchersReady: boolean; onClose: () => void }) {
   const toast = useToast();
   const [draft, setDraft] = useState<Draft>(() => draftOf(reward));
   const [shown, setShown] = useState(reward);
@@ -227,7 +234,7 @@ function RewardPanel({ reward, onClose }: { reward: WbAdminReward | "new" | null
     if (!Number(draft.perPerson)) return setProblem("Batas per orang minimal 1.");
     const input: RewardInput = {
       title: draft.title.trim(), description: draft.description.trim(), cost: Number(draft.cost), stock: draft.stock === "" ? null : Number(draft.stock), perPerson: Number(draft.perPerson), active: draft.active,
-      photos: draft.photos.map(photo => photo.upload ? { key: photo.key, upload: photo.upload } : { key: photo.key }),
+      photos: draft.photos.map(photo => photo.upload ? { key: photo.key, upload: photo.upload } : { key: photo.key }), kind: draft.kind,
     };
     setBusy("save");
     try {
@@ -266,6 +273,11 @@ function RewardPanel({ reward, onClose }: { reward: WbAdminReward | "new" | null
     </>}>
     <form className={css.form} onSubmit={event => { event.preventDefault(); void save(); }}>
       <label className={css.field}><span>Nama hadiah</span><input className={css.input} value={draft.title} maxLength={120} onChange={event => set("title", event.target.value)} autoFocus={isNew} /></label>
+      <label className={css.field}><span>Jenis hadiah</span>
+        <select className={css.select} value={draft.kind} onChange={event => set("kind", event.target.value as RewardKind)} aria-describedby="reward-kind-help">
+          {REWARD_KINDS.map(kind => <option key={kind} value={kind} disabled={isVoucher(kind) && !vouchersReady && draft.kind !== kind}>{rewardKindLabels[kind]}</option>)}
+        </select>
+        <small className={css.help} id="reward-kind-help">{kindHelp[draft.kind]}{!vouchersReady ? ` Voucher re-roll menunggu migrasi ${MIGRATION_WELLBEING_VOUCHERS}.` : ""}</small></label>
       <div className={css.field}>
         <span>Foto ({draft.photos.length}/{MAX_REWARD_PHOTOS})</span>
         <ul className={css.photoGrid} aria-label="Foto hadiah">

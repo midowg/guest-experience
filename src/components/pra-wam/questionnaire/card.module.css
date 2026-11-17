@@ -237,6 +237,9 @@
 .info p { margin: 0; max-width: none; }
 .rr { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
 .rr > p { width: 100%; margin: 0; max-width: none; }
+/* Voucher re-roll (18 Nov 2026): the vouchers from WLM's Hadiah, on their own full-width line. */
+.voucherBox { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.voucherBox > p { width: 100%; margin: 0; max-width: none; }
 
 @keyframes dr_bob { 0%, 100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-10px) rotate(1.5deg); } }
 @keyframes dr_sweep { 0%, 30% { transform: translateX(-60%); } 70%, 100% { transform: translateX(60%); } }
@@ -322,7 +325,7 @@
 .charTop span { font-family: var(--font-display); letter-spacing: .02em; opacity: .9; }
 .charMain { position: relative; z-index: 1; padding: var(--space-lg) var(--space-md) 0; display: grid; gap: var(--space-md); }
 /* On the deep colour: the words outside the white panels are light. */
-.charPage .resWho, .charPage .resTier, .charPage .tiltHint, .charPage .rr > p, .charPage .done { color: rgba(255, 255, 255, .82); }
+.charPage .resWho, .charPage .resTier, .charPage .tiltHint, .charPage .rr > p, .charPage .voucherBox > p, .charPage .done { color: rgba(255, 255, 255, .82); }
 .charPage .resName:not(.goldName) { color: #fff; }
 .charPage .pill:not(.personaPill), .charPage .acts .btn:not(.primary), .charPage .answersLink { color: var(--ink); }
 .charPage .goldName { background: linear-gradient(90deg, #FFE89A, #F0BB3E, #FFF4C9); -webkit-background-clip: text; background-clip: text; color: transparent; }

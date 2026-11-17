@@ -1,4 +1,4 @@
-import type { AppControls, ClaimStatus, DimensionId, Limit, PointsMode, ReviewStatus } from "./rules";
+import type { AppControls, ClaimStatus, DimensionId, Limit, PointsMode, ReviewStatus, RewardKind, TicketStatus } from "./rules";
 
 /** What the Admin Wellbeing API answers with (shared by the server and the screens). */
 
@@ -115,10 +115,32 @@ export type WbStravaAdmin = {
 export type WbAdminRewardPhoto = { key: string; url: string | null };
 export type WbAdminReward = { id: string; title: string; description: string; photos: WbAdminRewardPhoto[]; cost: number; stock: number | null; perPerson: number;
   active: boolean;
+  /** A prize, or a re-roll voucher (claimed at once). vouchersReady: false until migration 202611180003. */
+  kind: RewardKind;
   /** Claims that hold points (requested, approved, delivered), and of those still waiting for a decision. */
   taken: number; waiting: number; updatedAt: string; updatedBy: string | null };
 export type WbAdminClaim = { id: string; rewardId: string; rewardTitle: string; rewardPhoto: string | null; employeeId: string; employeeName: string; department: string;
   cost: number; status: ClaimStatus; note: string; reason: string | null; createdAt: string; decidedBy: string | null; decidedAt: string | null; deliveredBy: string | null; deliveredAt: string | null };
-export type WbRewardsAdmin = { migrated: boolean; rewards: WbAdminReward[]; claims: WbAdminClaim[]; counts: Record<ClaimStatus, number> };
+export type WbRewardsAdmin = { migrated: boolean; rewards: WbAdminReward[]; claims: WbAdminClaim[]; counts: Record<ClaimStatus, number>;
+  /** Whether rewards may be re-roll vouchers (migration 202611180003 ran). */
+  vouchersReady: boolean };
+
+/*
+ * Super admin → Voucher re-roll (18 Nov 2026): every ticket, newest first, with where it came from and
+ * what it did to the card, and the Legendary quota.
+ */
+export type WbVoucherCard = { figure: string; tier: string };
+export type WbVoucher = {
+  id: string; employeeId: string; employeeName: string; department: string; legendary: boolean; status: TicketStatus; note: string; createdAt: string;
+  /** From Hadiah (the claim, its title, price and status), or given by hand (givenBy). */
+  claim: { id: string; title: string; cost: number; status: ClaimStatus } | null; givenBy: string | null;
+  usedAt: string | null; before: WbVoucherCard | null; after: WbVoucherCard | null;
+  /** The card may go back: it still shows the voucher's figure and was not put back already. */
+  restorable: boolean;
+  revokedAt: string | null; revokedBy: string | null; revokeReason: string | null; restoredAt: string | null; restoredBy: string | null };
+export type WbVoucherPerson = { id: string; name: string; nickname: string; department: string; category: string; hasCard: boolean };
+export type WbVouchersAdmin = { migrated: boolean; vouchers: WbVoucher[]; people: WbVoucherPerson[];
+  /** Legendary places: the cap (null: none), cards holding it, and unused Legendary vouchers holding one. */
+  legend: { name: string; cap: number | null; cards: number; reserved: number } | null };
 /** POST /api/admin/wellbeing/rewards/uploads { mime, size }: where to PUT one reward photo, and its token. */
 export type WbRewardUpload = { key: string; uploadUrl: string; token: string };

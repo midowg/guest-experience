@@ -39,7 +39,7 @@ async function figures(): Promise<Seed[]> {
     .map(([, number, key, name, persona, costume]) => ({ number: Number(number), key, name: name.replace(/''/g, "'"), persona, costume: costume.replace(/''/g, "'") }));
 }
 
-function cardOf(seed: Seed, tier: (typeof tierList)[number], serial: number, picture = true, reroll = false): CardView {
+function cardOf(seed: Seed, tier: (typeof tierList)[number], serial: number, picture = true, reroll = false, vouchers = false): CardView {
   const persona = personas[seed.persona] ?? personas.garda;
   const legend = tier.key === "legendary";
   return {
@@ -53,6 +53,8 @@ function cardOf(seed: Seed, tier: (typeof tierList)[number], serial: number, pic
     reason: `Kamu dapat ${seed.name} karena kamu tipe ${persona.class}.`,
     colors: colorsOf(seed.persona),
     ...(reroll ? { reroll: { state: "open" as const, until: "2026-11-23T14:00:00.000Z" } } : {}),
+    // Voucher re-roll from WLM's Hadiah (18 Nov 2026, ?voucher=1).
+    ...(vouchers ? { vouchers: [{ id: "7a1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d", legendary: true }, { id: "8b2c3d4e-5f60-4b7c-8d8e-0f1a2b3c4d5e", legendary: false }] } : {}),
     profile: profileOf(seed.key),
     // A sample of what the server sends for my own card: what the tokoh is matched on, against made-up answers.
     match: { items: [{ label: "Hobi", value: "Seni & kerajinan", mine: true }, { label: "Kegiatan favorit", value: "Kreatif / seni", mine: true }, { label: "Gaya berkumpul", value: "Kelompok kecil", mine: false }], role: ["Pencetus ide"] },
@@ -62,11 +64,11 @@ function cardOf(seed: Seed, tier: (typeof tierList)[number], serial: number, pic
 /**
  * Layout check for the tokoh card (handoff 12 Nov 2026) without signing in, with the pictures
  * shipped in public/figur. One card to open: ?tokoh=freddie-mercury&rarity=legendary (?gambar=0
- * for the silhouette, ?reroll=1 with the re-roll offered). Every card at once: ?semua=1.
+ * for the silhouette, ?reroll=1 with the re-roll offered, ?voucher=1 with re-roll vouchers). Every card at once: ?semua=1.
  */
-export default async function DevFigureCardPage({ searchParams }: { searchParams: Promise<{ tokoh?: string; rarity?: string; gambar?: string; semua?: string; reroll?: string; halaman?: string }> }) {
+export default async function DevFigureCardPage({ searchParams }: { searchParams: Promise<{ tokoh?: string; rarity?: string; gambar?: string; semua?: string; reroll?: string; voucher?: string; halaman?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { tokoh = "edmund-hillary", rarity = "rare", gambar, semua, reroll, halaman } = await searchParams;
+  const { tokoh = "edmund-hillary", rarity = "rare", gambar, semua, reroll, voucher, halaman } = await searchParams;
   const all = await figures();
 
   if (semua) return <QuestionnaireApp>
@@ -84,13 +86,13 @@ export default async function DevFigureCardPage({ searchParams }: { searchParams
   </QuestionnaireApp>;
 
   const seed = all.find(item => item.key === tokoh) ?? all[0];
-  const card = cardOf(seed, tiers[rarity as keyof typeof tiers] ?? tiers.rare, 12, gambar !== "0", !!reroll);
+  const card = cardOf(seed, tiers[rarity as keyof typeof tiers] ?? tiers.rare, 12, gambar !== "0", !!reroll, !!voucher);
   // The page of my tokoh, as staff see it once the card is out (?halaman=1).
   if (halaman) return <CharacterPage formId={`dev-${seed.key}-${rarity}-${gambar ?? ""}`} card={card} nickname="Dewi" hasPhoto={false} home="#" answers="#" />;
   return <QuestionnaireApp>
     <main style={{ maxWidth: 480, margin: "0 auto", padding: 16 }}>
       <p style={{ margin: "0 0 12px" }}><a href="?semua=1">Lihat semua {all.length} kartu</a></p>
-      <CardReveal key={`${seed.key}-${rarity}-${gambar}-${reroll}`} formId={`dev-${seed.key}-${rarity}-${gambar ?? ""}`} initial={card} nickname="Dewi" hasPhoto={false} />
+      <CardReveal key={`${seed.key}-${rarity}-${gambar}-${reroll}-${voucher}`} formId={`dev-${seed.key}-${rarity}-${gambar ?? ""}`} initial={card} nickname="Dewi" hasPhoto={false} />
     </main>
   </QuestionnaireApp>;
 }

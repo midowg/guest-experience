@@ -11,6 +11,7 @@ import { praWamApi } from "@/lib/routes";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
+import { legendReserved, legendTierOf, openTickets, recordTicket, releaseTicket, takeTicket, type OpenTicket, type TicketResult } from "./reroll-tickets";
 
 /*
  * Character cards (migration 202611040013), on the server: the catalog HR keeps, drawing a
@@ -130,6 +131,8 @@ export type Roll = {
   reroll?: RerollRecord;
   /** Re-rolls Admin WAM gave back (resetAt), so the person could re-roll again. Never shown to staff. */
   rerolls?: (RerollRecord & { resetAt: string })[];
+  /** Re-rolls with a voucher from WLM's Hadiah (18 Nov 2026), each with its ticket. Never shown to staff. */
+  vouchers?: (RerollRecord & { ticket: string; restoredAt?: string })[];
 };
 
 export const PERSON_COLUMNS = "employee_id,card_id,tier_key,background,accent,stickers,serial,trial,combo,dna,roll,drawn_at";
@@ -161,6 +164,8 @@ export type CardView = {
   colors: [string, string];
   /** My own card only: whether I may re-roll its figure now (once, while Admin WAM keeps it open). */
   reroll?: Reroll;
+  /** My own card only: my re-roll vouchers from WLM's Hadiah not used yet (18 Nov 2026), usable any time. */
+  vouchers?: OpenTicket[];
   /**
    * My own card only (17 Nov 2026): what the figure is matched on, each with whether I chose it
    * too, and my answer on my role in the team (which picks "Tipemu").
@@ -259,7 +264,8 @@ async function mine(form: Pick<QForm, "id">, row: PersonCardRow, catalog: Catalo
   const match = figure ? { items: figureMatches(figure, answers), role: chosen(answers[ROLE_KEY]) } : undefined;
   const profile = figure ? profileOf(figure.key) : null;
   if (row.trial) return { ...view, match, profile };
-  return { ...view, match, profile, reroll: rerollOf(row, await rerollUntil(form.id)) };
+  const [until, vouchers] = await Promise.all([rerollUntil(form.id), openTickets(row.employee_id)]);
+  return { ...view, match, profile, reroll: rerollOf(row, until), vouchers };
 }
 
 /** Until when Admin WAM keeps the re-roll open (migration 202611160010); null when closed or before it. */
@@ -334,6 +340,8 @@ async function draw(form: QForm, employeeId: string, answers: Answers, catalog: 
     const rows = (others ?? []) as { tier_key: string; combo: string; serial: number }[];
     const taken: Record<string, number> = {};
     for (const row of rows) taken[row.tier_key] = (taken[row.tier_key] ?? 0) + 1;
+    // Legendary places held by unused Legendary vouchers count as taken (18 Nov 2026).
+    if (!trial) await reserveLegends(taken, form.id, catalog, employeeId);
     const used = new Set(rows.map(row => row.combo));
 
     const chosen = chooseCharacter(shown, answers, null, secure)!;
@@ -447,6 +455,13 @@ export async function ensureCard(form: QForm, employeeId: string, answers: Answe
   return mine(form, row, catalog);
 }
 
+/** Adds the Legendary places that unused Legendary vouchers of other people hold to the cards taken. */
+async function reserveLegends(taken: Record<string, number>, formId: string, catalog: Pick<Catalog, "tiers">, employeeId: string): Promise<void> {
+  const legend = legendTierOf(catalog.tiers);
+  const reserved = await legendReserved(formId, legend, employeeId).catch(() => 0);
+  if (legend && reserved) taken[legend] = (taken[legend] ?? 0) + reserved;
+}
+
 /**
  * The one re-roll of my figure (v3, Hanung 16 Nov 2026), while Admin WAM keeps it open: a figure
  * drawn with crypto randomness from the free ones of my persona (else from every free one), and
@@ -454,44 +469,99 @@ export async function ensureCard(form: QForm, employeeId: string, answers: Answe
  * card not counted. One update lets the old figure go and takes the new one, and only while I
  * still hold the old one, so a second tap never re-rolls twice; the unique indexes refuse a figure
  * someone took a moment ago, which is drawn again. The number stays; the result is final.
+ *
+ * With a voucher (18 Nov 2026, WLM's Hadiah): any time, also when the re-roll is closed or used;
+ * the ticket is taken first (so it is used once), and given back if the re-roll cannot happen.
+ * A Legendary voucher makes the rarity Legendary (its place was held when it was claimed); the
+ * card before is kept in the ticket, so super admin can put it back.
  */
-export async function rerollCard(form: Pick<QForm, "id">, employeeId: string): Promise<CardView> {
+export async function rerollCard(form: Pick<QForm, "id">, employeeId: string, ticketId: string | null = null): Promise<CardView> {
   const catalog = await catalogOf(form.id);
   if (!catalog || !figureMode(catalog)) throw new ServiceError(409, "Kartu tokoh belum siap.");
   const client = createPrivilegedClient();
-  for (let attempt = 0; attempt < 6; attempt++) {
-    const row = await personCard(form.id, employeeId, catalog);
-    if (!row || row.trial || !row.figure_id) throw new ServiceError(409, "Kartumu belum keluar, jadi belum bisa di-re-roll.");
-    const state = rerollOf(row, await rerollUntil(form.id));
-    if (state.state === "used") throw new ServiceError(409, "Kamu sudah memakai jatah re-roll.");
-    if (state.state === "closed") throw new ServiceError(409, "Re-roll tokoh sedang tidak dibuka.");
-    const [{ used }, answers, gender] = await Promise.all([figuresTaken(form.id), figureAnswers(form.id, [employeeId]), genderOfPerson(employeeId)]);
-    // Of my gender first, as the first draw (17 Nov 2026).
-    const pick = rerollFigure(row.card_id, catalog.figures, answers.get(employeeId) ?? {}, used, row.figure_id, secure, gender);
-    if (!pick) throw new ServiceError(409, "Tidak ada tokoh lain yang masih kosong.");
-    const persona = catalog.characters.find(item => item.id === row.card_id);
-    const from = catalog.figures.find(item => item.id === row.figure_id)?.key ?? row.figure_id;
-    const at = new Date().toISOString();
-    const combo = figureCombo(pick.figure.id, 1);
-    // The rarity again, within the caps; my own card leaves its level first.
-    const { data: others, error: othersError } = await client.from("cq_person_cards").select("tier_key").eq("form_id", form.id).eq("trial", false).neq("employee_id", employeeId);
-    if (othersError) failed(othersError);
-    const taken: Record<string, number> = {};
-    for (const other of (others ?? []) as { tier_key: string }[]) taken[other.tier_key] = (taken[other.tier_key] ?? 0) + 1;
-    const tier = drawTier(catalog.tiers, taken, secure);
-    const roll: Roll = { ...row.roll, reroll: { at, from, to: pick.figure.key, score: pick.score, tierFrom: row.tier_key, tierTo: tier.key, tierRoll: tier.roll } };
-    const { data, error } = await client.from("cq_person_cards")
-      .update({ figure_id: pick.figure.id, figure_slot: 1, tier_key: tier.key, reason: reasonText(persona?.class ?? "", pick.figure.name, pick.why), combo, dna: dnaOf(combo), roll, updated_at: at })
-      .eq("form_id", form.id).eq("employee_id", employeeId).eq("figure_id", row.figure_id).eq("trial", false)
-      .select(columnsFor(catalog)).maybeSingle();
-    if (error) { if (error.code === "23505") continue; failed(error); }
-    // No row: another tap re-rolled a moment ago; the loop reads the card again and says so.
-    if (!data) continue;
-    const view = await mine(form, data as unknown as PersonCardRow, catalog);
-    if (!view) break;
-    return view;
+  const first = await personCard(form.id, employeeId, catalog);
+  if (!first || first.trial || !first.figure_id) throw new ServiceError(409, "Kartumu belum keluar, jadi belum bisa di-re-roll.");
+  const legend = legendTierOf(catalog.tiers);
+  const ticket = ticketId ? await takeTicket(employeeId, ticketId, form.id) : null;
+  let done = false;
+  try {
+    if (ticket?.legendary && !legend) throw new ServiceError(409, "Level Legendary belum ada di katalog kartu. Hubungi admin WAM.");
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const row = await personCard(form.id, employeeId, catalog);
+      if (!row || row.trial || !row.figure_id) throw new ServiceError(409, "Kartumu belum keluar, jadi belum bisa di-re-roll.");
+      if (!ticket) {
+        const state = rerollOf(row, await rerollUntil(form.id));
+        if (state.state === "used") throw new ServiceError(409, "Kamu sudah memakai jatah re-roll.");
+        if (state.state === "closed") throw new ServiceError(409, "Re-roll tokoh sedang tidak dibuka.");
+      }
+      const [{ used }, answers, gender] = await Promise.all([figuresTaken(form.id), figureAnswers(form.id, [employeeId]), genderOfPerson(employeeId)]);
+      // Of my gender first, as the first draw (17 Nov 2026).
+      const pick = rerollFigure(row.card_id, catalog.figures, answers.get(employeeId) ?? {}, used, row.figure_id, secure, gender);
+      if (!pick) throw new ServiceError(409, "Tidak ada tokoh lain yang masih kosong.");
+      const persona = catalog.characters.find(item => item.id === row.card_id);
+      const fromFigure = catalog.figures.find(item => item.id === row.figure_id);
+      const from = fromFigure?.key ?? row.figure_id;
+      const at = new Date().toISOString();
+      const combo = figureCombo(pick.figure.id, 1);
+      // The rarity: Legendary for a Legendary voucher; otherwise drawn again within the caps, my own card leaving its level first.
+      let tier: { key: string; roll: number | null };
+      if (ticket?.legendary) tier = { key: legend!, roll: null };
+      else {
+        const { data: others, error: othersError } = await client.from("cq_person_cards").select("tier_key").eq("form_id", form.id).eq("trial", false).neq("employee_id", employeeId);
+        if (othersError) failed(othersError);
+        const taken: Record<string, number> = {};
+        for (const other of (others ?? []) as { tier_key: string }[]) taken[other.tier_key] = (taken[other.tier_key] ?? 0) + 1;
+        await reserveLegends(taken, form.id, catalog, employeeId);
+        tier = drawTier(catalog.tiers, taken, secure);
+      }
+      const record: RerollRecord = { at, from, to: pick.figure.key, score: pick.score, tierFrom: row.tier_key, tierTo: tier.key, ...(tier.roll === null ? {} : { tierRoll: tier.roll }) };
+      const roll: Roll = ticket
+        ? { ...row.roll, vouchers: [...(row.roll.vouchers ?? []), { ...record, ticket: ticket.id }].slice(-20) }
+        : { ...row.roll, reroll: record };
+      // The card as it is now, read before the update (to put it back later).
+      const before: TicketResult["before"] = { figure_id: row.figure_id, figure_slot: row.figure_slot ?? null, tier_key: row.tier_key, reason: row.reason ?? null, combo: row.combo, dna: row.dna };
+      const { data, error } = await client.from("cq_person_cards")
+        .update({ figure_id: pick.figure.id, figure_slot: 1, tier_key: tier.key, reason: reasonText(persona?.class ?? "", pick.figure.name, pick.why), combo, dna: dnaOf(combo), roll, updated_at: at })
+        .eq("form_id", form.id).eq("employee_id", employeeId).eq("figure_id", row.figure_id).eq("trial", false)
+        .select(columnsFor(catalog)).maybeSingle();
+      if (error) { if (error.code === "23505") continue; failed(error); }
+      // No row: another tap re-rolled a moment ago; the loop reads the card again and says so.
+      if (!data) continue;
+      done = true;
+      if (ticket) await recordTicket(ticket.id, {
+        before, from, to: pick.figure.key, fromId: before.figure_id, toId: pick.figure.id, tierFrom: before.tier_key, tierTo: tier.key, tierRoll: tier.roll,
+      });
+      const view = await mine(form, data as unknown as PersonCardRow, catalog);
+      if (!view) break;
+      return view;
+    }
+    throw new ServiceError(503, "Re-roll belum dapat dijalankan. Coba lagi sebentar lagi.");
+  } finally {
+    if (ticket && !done) await releaseTicket(ticket.id);
   }
-  throw new ServiceError(503, "Re-roll belum dapat dijalankan. Coba lagi sebentar lagi.");
+}
+
+/**
+ * Super admin puts a card back as it was before a voucher's re-roll (18 Nov 2026): only while the
+ * card still shows the voucher's figure, and only if nobody took the old figure since (the unique
+ * index refuses it). The number stays.
+ */
+export async function restoreVoucherCard(formId: string, employeeId: string, ticketId: string, result: TicketResult): Promise<void> {
+  const catalog = await catalogOf(formId);
+  if (!catalog || !figureMode(catalog)) throw new ServiceError(409, "Kartu tokoh belum siap.");
+  const row = await personCard(formId, employeeId, catalog);
+  if (!row || row.trial || row.figure_id !== result.toId) throw new ServiceError(409, "Kartunya sudah berubah lagi sejak voucher ini dipakai, jadi tidak bisa dikembalikan dari sini.");
+  const at = new Date().toISOString();
+  const roll: Roll = { ...row.roll, vouchers: (row.roll.vouchers ?? []).map(item => item.ticket === ticketId ? { ...item, restoredAt: at } : item) };
+  const { before } = result;
+  const { data, error } = await createPrivilegedClient().from("cq_person_cards")
+    .update({ figure_id: before.figure_id, figure_slot: before.figure_slot, tier_key: before.tier_key, reason: before.reason, combo: before.combo, dna: before.dna, roll, updated_at: at })
+    .eq("form_id", formId).eq("employee_id", employeeId).eq("figure_id", result.toId).eq("trial", false).select("employee_id");
+  if (error) {
+    if (error.code === "23505") throw new ServiceError(409, "Tokoh lamanya sudah dipakai orang lain, jadi kartunya tidak bisa dikembalikan.");
+    failed(error);
+  }
+  if (!data?.length) throw new ServiceError(409, "Kartunya baru saja berubah. Muat ulang daftarnya.");
 }
 
 /** After an answer changed: an existing card's character follows it. Never draws, never fails the answer. */

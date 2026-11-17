@@ -848,3 +848,12 @@ input[type="date"].input { display: block; }
 .claimCancel { align-self: flex-start; min-height: 44px; margin: 0 0 -8px -12px; gap: 6px; font-size: 14px; }
 .claimAsk { display: flex; align-items: center; flex-wrap: wrap; gap: 0 4px; margin: 4px 0 -8px; font-size: 13px; color: var(--text-2); }
 .claimAsk .btn { min-height: 44px; font-size: 14px; }
+
+/* ---------- Voucher re-roll (18 Nov 2026): the dice on ink, gold for Legendary; the claim asked once more ---------- */
+.voucherArt { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(120% 90% at 30% 20%, var(--ink-2), var(--ink)); color: var(--volt); }
+.voucherArt[data-legend] { background: radial-gradient(120% 90% at 30% 20%, #4A3200, #1C1300); color: var(--gold-ink); }
+.rewardNoPhoto { position: relative; }
+.voucherSpark { position: absolute; top: 18%; right: 22%; }
+.doneMarkGold { background: var(--gold-c); color: var(--gold); }
+.claimConfirm { display: grid; gap: 10px; }
+.claimConfirm > p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text-2); text-align: center; }

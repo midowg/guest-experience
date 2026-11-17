@@ -77,7 +77,11 @@ export const superAdminPath = {
   access: "/admin/akses",
   /** Akses admin (13 Nov 2026): who signs in to the admin with their own account, and what they open. */
   admins: "/admin/super/admin",
+  /** Voucher re-roll (18 Nov 2026): every re-roll voucher from WLM's Hadiah, to cancel, refund, restore, or give. */
+  vouchers: "/admin/super/voucher",
 };
+/** Super admin's voucher re-roll: the list (GET), a voucher by hand (POST), or one voucher's correction (POST <id>). */
+export const vouchersApi = (id?: string) => id ? `/api/admin/vouchers/${id}` : "/api/admin/vouchers";
 /** The super admin's grants: the list, or one person's (PUT to save, DELETE to revoke). */
 export const adminGrantsApi = (employeeId?: string) => employeeId ? `/api/admin/grants/${employeeId}` : "/api/admin/grants";
 export const ADMIN_LOGIN = "/admin/login";

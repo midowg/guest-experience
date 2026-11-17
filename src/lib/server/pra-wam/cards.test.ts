@@ -65,7 +65,7 @@ vi.mock("./questionnaire", () => ({
 vi.mock("./appraisal", () => ({ listPeople: async () => [] }));
 vi.mock("../r2", () => ({ isR2Configured: () => false, presignUpload: vi.fn(), removeObjects: vi.fn(), verifyUpload: vi.fn() }));
 
-const { ensureCard, followAnswers, myCard, rerollCard } = await import("./cards");
+const { ensureCard, followAnswers, myCard, rerollCard, restoreVoucherCard } = await import("./cards");
 
 const form = (status: QForm["status"] = "buka"): QForm => ({ id: "f1", name: "Kuesioner", slug: "kuesioner", oldSlugs: [], status, intro: "", cardText: "", minutes: 15, editUntil: null, stayDeleteOn: null, hrAccess: [], audience: "semua", audienceIds: [] });
 const tier = (key: string, odds: number, sort: number, max_cards: number | null = null) => ({ form_id: "f1", key, name: key, color: "#AEB7C7", odds, max_cards, line: "", sort });
@@ -258,6 +258,59 @@ describe("kartu tokoh dunia", () => {
       expect(after.tier.key).toBe("legendary");
       expect(after.figure?.legend).toBe(true);
       expect(db.cq_person_cards[0]).toMatchObject({ tier_key: "legendary", serial: 1 });
+    });
+
+    describe("with a voucher from WLM's Hadiah (18 Nov 2026)", () => {
+      const ticket = (id: string, employee: string, legendary = false) => ({ id, employee_id: employee, legendary, status: "open", claim_id: null, result: null, form_id: null, used_at: null, created_at: "2026-11-18T03:00:00.000Z" });
+
+      it("re-rolls any time (the free one closed), uses the ticket once, and keeps the card before", async () => {
+        const before = await ensureCard(form(), "p1", outdoorsy);
+        db.wb_reroll_tickets = [ticket("t1", "p1"), ticket("t2", "p2")];
+        expect((await myCard(form(), "p1"))?.vouchers).toEqual([{ id: "t1", legendary: false }]);
+        const after = await rerollCard(form(), "p1", "t1");
+        expect(after.figure?.key).not.toBe(before?.figure?.key);
+        expect(after.serial).toBe(before?.serial);
+        // The free re-roll is untouched; the voucher is gone from the card.
+        expect(after.reroll).toEqual({ state: "closed", until: null });
+        expect(after.vouchers).toEqual([]);
+        expect(db.wb_reroll_tickets[0]).toMatchObject({ status: "used", form_id: "f1", result: { from: "edmund-hillary", to: after.figure?.key, before: { figure_id: "edmund-hillary", tier_key: before?.tier.key } } });
+        const roll = db.cq_person_cards[0].roll as { reroll?: unknown; vouchers: { ticket: string; from: string }[] };
+        expect(roll.reroll).toBeUndefined();
+        expect(roll.vouchers).toEqual([expect.objectContaining({ ticket: "t1", from: "edmund-hillary" })]);
+        // Used once; another person's ticket is not mine.
+        await expect(rerollCard(form(), "p1", "t1")).rejects.toThrow("sudah dipakai atau dibatalkan");
+        await expect(rerollCard(form(), "p1", "t2")).rejects.toThrow("sudah dipakai atau dibatalkan");
+      });
+
+      it("makes the rarity Legendary with a Legendary voucher, and gives the ticket back when no figure is free", async () => {
+        db.cq_tiers = [tier("common", 10_000, 0), tier("legendary", 0, 4, 1)];
+        await ensureCard(form(), "p1", outdoorsy);
+        db.wb_reroll_tickets = [ticket("t1", "p1", true), ticket("t3", "p1")];
+        const after = await rerollCard(form(), "p1", "t1");
+        expect([after.tier.key, after.figure?.legend]).toEqual(["legendary", true]);
+        db.cq_figures = db.cq_figures.filter(figure => figure.id === after.figure?.id);
+        await expect(rerollCard(form(), "p1", "t3")).rejects.toThrow("Tidak ada tokoh lain");
+        expect(db.wb_reroll_tickets[1]).toMatchObject({ status: "open", used_at: null });
+      });
+
+      it("holds a Legendary place for an unused Legendary voucher, so a draw does not take it", async () => {
+        db.cq_tiers = [tier("common", 0, 0), tier("legendary", 10_000, 4, 1)];
+        db.wb_reroll_tickets = [ticket("t9", "p9", true)];
+        expect((await ensureCard(form(), "p1", outdoorsy))?.tier.key).toBe("common");
+        db.wb_reroll_tickets = [];
+        expect((await ensureCard(form(), "p2", outdoorsy))?.tier.key).toBe("legendary");
+      });
+
+      it("puts the card back for super admin, only while it still shows the voucher's figure", async () => {
+        const before = await ensureCard(form(), "p1", outdoorsy);
+        db.wb_reroll_tickets = [ticket("t1", "p1")];
+        await rerollCard(form(), "p1", "t1");
+        const result = db.wb_reroll_tickets[0].result as Parameters<typeof restoreVoucherCard>[3];
+        await restoreVoucherCard("f1", "p1", "t1", result);
+        expect(db.cq_person_cards[0]).toMatchObject({ figure_id: "edmund-hillary", tier_key: before?.tier.key, serial: before?.serial });
+        expect((db.cq_person_cards[0].roll as { vouchers: { restoredAt?: string }[] }).vouchers[0].restoredAt).toBeTruthy();
+        await expect(restoreVoucherCard("f1", "p1", "t1", result)).rejects.toThrow("sudah berubah lagi");
+      });
     });
 
     it("says so when no other figure is free, and never for a trial card", async () => {

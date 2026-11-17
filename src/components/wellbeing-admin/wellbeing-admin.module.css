@@ -438,7 +438,7 @@ textarea.input { min-height: 5.5rem; padding: .625rem .875rem; resize: vertical;
 .rewardImage { position: relative; aspect-ratio: 4 / 3; overflow: hidden; display: grid; place-items: center; background: #fff; border-bottom: 1px solid var(--cs-line); color: var(--cs-subtle); }
 .rewardImage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: .75rem; box-sizing: border-box; display: block; }
 .rewardCard[data-off="true"] .rewardImage img { opacity: .55; filter: grayscale(.6); }
-.rewardBadge { position: absolute; left: .625rem; top: .625rem; }
+.rewardBadge { position: absolute; left: .625rem; top: .625rem; right: .625rem; display: flex; flex-wrap: wrap; gap: .375rem; pointer-events: none; }
 .rewardCount { position: absolute; right: .625rem; bottom: .625rem; padding: 2px 8px; border-radius: 999px; background: rgba(0, 0, 0, .6); color: #fff; font-size: .75rem; font-weight: 700; }
 .rewardInfo { display: grid; gap: .25rem; padding: .75rem .875rem .875rem; flex: 1; align-content: start; }
 .rewardName { font-size: 1rem; line-height: 1.35; min-height: 2.7em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
