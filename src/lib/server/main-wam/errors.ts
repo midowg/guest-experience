@@ -13,7 +13,16 @@ export type DbError = { code?: string; message?: string };
 const CODES = ["42P01", "PGRST205", "42703", "PGRST204", "42883", "PGRST202"];
 
 /** A Main WAM table or column that is not there yet. */
-export const mwMissing = (error: DbError | null | undefined) => !!error && (CODES.includes(error.code ?? "") || /\bmw_/.test(error.message ?? ""));
+export function mwMissing(error: DbError | null | undefined): boolean {
+  if (!error) return false;
+  const code = error.code ?? "";
+  if (CODES.includes(code)) return true;
+  // A coded refusal (23505 unik, 23514 check, 23503 FK, P0001 raise …) is a real answer, never "menunggu migrasi".
+  if (code) return false;
+  // No code (a bare PostgREST message): only "this mw_ thing does not exist" counts.
+  const message = error.message ?? "";
+  return /\bmw_/.test(message) && /does not exist|could not find|schema cache/i.test(message);
+}
 
 export const mwWaiting = (migration = MAIN_WAM_MIGRATION) => new ServiceError(503, `Main WAM menunggu migrasi ${migration}.`);
 

@@ -1,0 +1,121 @@
+/*
+ * Momen (M01–M03): the stack on the dark viewer (prototype .wam-stackview, .wam-stackcard,
+ * .wam-react, .wam-camerabtn). Tokens only. The card is 4:5 and as large as the space allows (the
+ * deck is a size container), so short phones keep the actions in view without scrolling.
+ */
+/* --mw-reserve: what is not the deck on a phone screen: the large title bar (72), the filters (56), the
+   line under the cards (32), the actions (92) and the tab bar (64); opened from the gallery the bar is
+   56 and there are no filters. The deck takes the rest, so the actions stay in view on a short phone. */
+.view { --mw-reserve: 316px; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0 var(--mw-space-16); color: var(--mw-media-on); }
+.viewGaleri { --mw-reserve: 244px; }
+.filter { display: flex; align-items: center; gap: var(--mw-space-12); min-height: var(--mw-touch); }
+.filter > :first-child { flex: 1 1 auto; min-width: 0; }
+.filterChip { flex: 0 1 auto; min-width: 0; max-width: 40%; }
+.banner { margin-top: var(--mw-space-12); }
+
+/* Galeri mode: the frame's bar is replaced by ‹ "Galeri · Kelompokku" and "4 dari 21". */
+.ownBar { padding-top: var(--mw-safe-top); }
+.ownCount { font: var(--mw-type-label); color: var(--mw-inverse-on-surface-2); font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: var(--mw-space-8); }
+
+/* As tall as a full-width 4:5 card (+16 for the cards peeking behind), smaller on a short screen; what is
+   left goes above the actions (they stay at the thumb). */
+.deck {
+  position: relative; min-height: 240px; margin-top: var(--mw-space-12); outline: none;
+  flex: 0 0 min(
+    calc((min(100vw, var(--mw-column)) - var(--mw-space-48)) * 1.25 + var(--mw-space-16)),
+    calc(100dvh - var(--mw-reserve) - var(--mw-safe-top) - var(--mw-safe-bottom))
+  );
+}
+/* The size container is absolutely placed: its height is known before its cards are laid out (a flex
+   item's is not, in Chromium, and the cards would resolve 100cqh to 0). */
+.deckInner { position: absolute; inset: 0; container-type: size; }
+.deck:focus-visible { outline: 2px solid var(--mw-media-on); outline-offset: 4px; border-radius: var(--mw-radius-24); }
+.pile {
+  --w: min(calc(100cqw - var(--mw-space-16)), calc((100cqh - var(--mw-space-16)) * 0.8));
+  position: relative; width: var(--w); aspect-ratio: 4 / 5; margin-left: calc((100cqw - var(--mw-space-16) - var(--w)) / 2);
+}
+
+.card {
+  position: absolute; inset: 0; z-index: 2; border-radius: var(--mw-radius-24); overflow: hidden; background: var(--mw-inverse-surface);
+  touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  transition: transform 260ms var(--mw-ease-standard), filter 260ms var(--mw-ease-standard), opacity 160ms linear;
+}
+.card[data-place="next"] { z-index: 1; transform: translateX(var(--mw-space-12)) rotate(3deg) scale(0.95); filter: brightness(0.62); pointer-events: none; }
+.card[data-place="later"] { z-index: 0; transform: translateX(var(--mw-space-20)) rotate(6deg) scale(0.9); filter: brightness(0.4); pointer-events: none; }
+.card[data-dragging] { transition: none; will-change: transform; cursor: grabbing; }
+.fill { position: absolute; inset: 0; }
+.photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; -webkit-user-drag: none; }
+.photo[data-loaded="false"] { opacity: 0; }
+.photo[data-loaded="true"] { opacity: 1; transition: opacity 200ms linear; }
+
+.info {
+  position: absolute; left: var(--mw-space-8); bottom: var(--mw-space-8); z-index: 3; display: flex; align-items: center; gap: var(--mw-space-8);
+  max-width: calc(100% - var(--mw-space-16)); padding: var(--mw-space-8) var(--mw-space-16) var(--mw-space-8) var(--mw-space-8);
+  border-radius: var(--mw-radius-full); background: var(--mw-media-scrim); color: var(--mw-media-on); pointer-events: none;
+}
+.who { min-width: 0; display: flex; flex-direction: column; }
+.name { font: var(--mw-type-body-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta { font: var(--mw-type-body-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lock { flex: none; width: 16px; height: 16px; }
+
+/* One tap on a side of the photo: the button alternative to swiping (WCAG 2.5.1 / 2.5.7). */
+.tap { position: absolute; top: 0; bottom: 0; z-index: 2; width: 36%; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tap:focus-visible { outline: 3px solid var(--mw-media-on); outline-offset: -6px; border-radius: var(--mw-radius-24); }
+.tapPrev { left: 0; }
+.tapNext { right: 0; }
+.tap:disabled { cursor: default; }
+
+.burst { position: absolute; left: 50%; top: 50%; z-index: 4; width: 96px; height: 96px; margin: -48px 0 0 -48px; color: var(--mw-media-on); fill: var(--mw-media-on); pointer-events: none; animation: burst 700ms var(--mw-ease-decelerate) forwards; }
+@keyframes burst { 0% { transform: scale(0.4); opacity: 0; } 25% { transform: scale(1.1); opacity: 0.95; } 70% { transform: scale(1); opacity: 0.95; } 100% { transform: scale(1); opacity: 0; } }
+
+/* A panel in the card's place: loading, empty, all seen, hidden. */
+.panel {
+  position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--mw-space-12);
+  padding: var(--mw-space-24); border-radius: var(--mw-radius-24); text-align: center; background: var(--mw-inverse-surface); color: var(--mw-inverse-on-surface);
+}
+.panelTitle { margin: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); text-wrap: balance; }
+.panelBody { margin: 0; max-width: 280px; font: var(--mw-type-body); color: var(--mw-inverse-on-surface-2); text-wrap: balance; }
+.panelActions { align-self: stretch; display: flex; flex-direction: column; gap: var(--mw-space-8); margin-top: var(--mw-space-12); }
+
+.hint {
+  display: flex; align-items: center; justify-content: center; gap: var(--mw-space-8); min-height: var(--mw-space-20); margin-top: var(--mw-space-12);
+  font: var(--mw-type-caption); color: var(--mw-inverse-on-surface-2); text-align: center;
+}
+.hint > svg { flex: none; width: 16px; height: 16px; }
+.count { display: inline-flex; align-items: center; gap: var(--mw-space-4); font: var(--mw-type-label); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.count > svg { width: 16px; height: 16px; }
+
+.actions { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; margin-top: auto; padding: var(--mw-space-16) 0 var(--mw-space-12); }
+.actions > :first-child { justify-self: start; }
+.actions > :last-child { justify-self: end; }
+.react {
+  display: inline-flex; align-items: center; gap: var(--mw-space-8); height: var(--mw-touch); min-width: var(--mw-touch); padding: 0 var(--mw-space-16) 0 var(--mw-space-12);
+  border: 0; border-radius: var(--mw-radius-full); background: var(--mw-ondark-fill); color: var(--mw-media-on); font: var(--mw-type-label-lg); font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.react > svg { width: 24px; height: 24px; transition: transform var(--mw-motion-press); }
+.react[aria-pressed="true"] > svg { color: var(--mw-inverse-error); fill: currentColor; }
+.react:active > svg { transform: scale(0.85); }
+.react:focus-visible { outline: 2px solid var(--mw-media-on); outline-offset: 2px; }
+.camera {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--mw-space-64); height: var(--mw-space-64); border-radius: var(--mw-radius-full);
+  background: var(--mw-primary); color: var(--mw-on-primary); transition: background-color var(--mw-motion-press);
+}
+.camera > svg { width: 28px; height: 28px; }
+.camera:active { background: var(--mw-primary-strong); }
+.camera:focus-visible { outline: 2px solid var(--mw-media-on); outline-offset: 3px; }
+
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* No throw, no tilt: the next photo simply fades in. */
+  .card { transition: none; }
+  .card[data-place="front"] { animation: fade 120ms linear; }
+  .burst { animation: none; opacity: 0; }
+  .photo[data-loaded="true"] { transition: none; }
+  .react > svg { transition: none; }
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* The panel takes swipes and side taps like a card; its own buttons stay above the tap areas. */
+.panelInner { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-12); width: 100%; pointer-events: none; }
+.panelInner a, .panelInner button { pointer-events: auto; }

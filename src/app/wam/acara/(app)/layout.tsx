@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import { MomenQueueRunner } from "@/components/main-wam/momen/upload/QueueRunner";
+import { AbsenQueue } from "@/components/main-wam/modul/absen/AbsenQueue";
 import { MainWamShell } from "@/components/main-wam/shell";
 import { mainWamGate } from "@/lib/main-wam/access";
 import { homeGreeting } from "@/lib/main-wam/greeting";
+import { moduleOn } from "@/lib/main-wam/modules";
 import { unreadCount } from "@/lib/server/pra-wam/announcements";
 import { readMainWamSettings } from "@/lib/server/main-wam/settings";
 import { mainWamViewer } from "@/lib/server/main-wam/viewer";
@@ -25,5 +28,9 @@ export default async function MainWamAppLayout({ children }: { children: ReactNo
   const unread = await unreadCount(viewer.id).catch(() => 0);
   return <MainWamShell greeting={homeGreeting(new Date(), viewer.name, settings.event)} unread={unread}>
     {children}
+    {/* Check-ins scanned offline go out from any screen once the phone is back online (agen D). */}
+    {moduleOn(settings.modules, "absen") && <AbsenQueue />}
+    {/* Photos taken offline go out (and say "2 foto terkirim") from any screen (agen B, U03). */}
+    <MomenQueueRunner />
   </MainWamShell>;
 }

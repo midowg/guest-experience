@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { MainWamShell } from "@/components/main-wam/shell";
+// Theme first: its reset must load before the kit's component CSS (same order as the real layout).
 import { MainWamTheme } from "@/components/main-wam/theme";
+import { MainWamShell } from "@/components/main-wam/shell";
 import { homeGreeting } from "@/lib/main-wam/greeting";
 import { sampleSettings, sampleTime, sampleViewer } from "@/lib/main-wam/sample";
 import { mainWamScreen } from "@/lib/main-wam/screen";

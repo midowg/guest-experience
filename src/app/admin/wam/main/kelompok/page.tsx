@@ -1,25 +1,38 @@
 import { AdminShell, SetupNotice } from "@/components/admin/shared/AdminShell";
-import { PageHeader, PageTabs } from "@/components/console";
-import { Notice } from "@/components/ui";
+import { ActivityGroupsEditor } from "@/components/admin/wam/main-wam/isi/ActivityGroupsEditor";
+import { GroupsEditor } from "@/components/admin/wam/main-wam/isi/GroupsEditor";
 import { WamAdminFrame } from "@/components/admin/wam/WamAdminFrame";
-import { mainWamContentTabs } from "@/components/admin/wam/main-wam/tabs";
 import { wamCrumbs } from "@/components/admin/wam/sections";
+import { eventDates } from "@/lib/main-wam/rundown";
 import { isSupabaseConfigured } from "@/lib/server/config";
 import { requireAdminPage } from "@/lib/server/admin-session";
+import { adminPeople } from "@/lib/server/main-wam/admin/common";
+import { adminActivityGroups, adminGroups } from "@/lib/server/main-wam/admin/groups";
+import { adminSessions } from "@/lib/server/main-wam/admin/sessions";
+import { mainWamSettingsState, readMainWamSettings } from "@/lib/server/main-wam/settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Kelompok · Main WAM · Admin WAM" };
 
 /**
- * Admin WAM → Main WAM → Kelompok. PLACEHOLDER (fondasi): owner agen E, docs/main-wam/KONTRAK.md §6.
- * Kelompok (nomor, nama, koordinator, anggota), terbitkan kelompok, dan kelompok kegiatan per sesi (?tab=kegiatan).
+ * Admin WAM → Main WAM → Kelompok (agen E, docs/main-wam/KONTRAK.md §6): kelompok, and with
+ * ?tab=kegiatan the kelompok kegiatan per session (?sesi= opens one). Any Admin WAM admin.
  */
-export default async function KelompokAdminPage() {
+export default async function KelompokAdminPage({ searchParams }: { searchParams: Promise<{ tab?: string; sesi?: string }> }) {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
+  const { tab, sesi } = await searchParams;
+  const [settings, people] = await Promise.all([mainWamSettingsState().catch(() => readMainWamSettings()), adminPeople()]);
+  if (tab === "kegiatan") {
+    const [groups, sessions] = await Promise.all([adminActivityGroups(), adminSessions()]);
+    return <WamAdminFrame current="mw-kelompok">
+      <ActivityGroupsEditor initial={groups.data} migrated={groups.migrated && settings.migrated} sessions={sessions.data} people={people} dates={eventDates(settings.event)}
+        firstSession={sesi ?? null} crumbs={wamCrumbs("mw-kelompok", "Kelompok kegiatan")} title="Main WAM · Kelompok" />
+    </WamAdminFrame>;
+  }
+  const groups = await adminGroups();
   return <WamAdminFrame current="mw-kelompok">
-    <PageHeader crumbs={wamCrumbs("mw-kelompok")} title="Main WAM · Kelompok" subtitle="Kelompok (nomor, nama, koordinator, anggota), terbitkan kelompok, dan kelompok kegiatan per sesi (?tab=kegiatan)." />
-    <PageTabs tabs={mainWamContentTabs} current="kelompok" label="Isi acara" />
-    <Notice tone="info">Halaman ini sedang dibangun.</Notice>
+    <GroupsEditor initial={groups.data} migrated={groups.migrated && settings.migrated} people={people} published={settings.groupsPublished}
+      crumbs={wamCrumbs("mw-kelompok")} title="Main WAM · Kelompok" />
   </WamAdminFrame>;
 }

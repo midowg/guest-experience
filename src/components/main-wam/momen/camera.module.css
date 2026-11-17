@@ -1,0 +1,74 @@
+/*
+ * Kamera (U01–U05) and its pre-permission (O04), prototype .wam-camera, .wam-shutter. Tokens only.
+ * The viewfinder is 4:5 like the stack card and as large as the screen allows (a size container),
+ * so the chips and the shutter stay in view on short phones.
+ */
+.screen {
+  flex: 1 1 auto; min-height: 100dvh; display: flex; flex-direction: column; padding: var(--mw-safe-top) var(--mw-space-16) 0;
+  background: var(--mw-camera); color: var(--mw-media-on);
+}
+/* The kit's toasts sit on the bottom of the viewfinder here, above the chips and the shutter. */
+:global(:root:has([data-momen-camera])) { --mw-toast-bottom: 176px; }
+
+.bar { display: flex; align-items: center; justify-content: space-between; height: var(--mw-topbar-h); margin: 0 calc(-1 * var(--mw-space-8)); }
+.stage { position: relative; flex: 1 1 auto; min-height: 220px; }
+.stageInner { position: absolute; inset: 0; container-type: size; }
+.view {
+  --w: min(calc(100cqw + var(--mw-space-32)), calc(100cqh * 0.8));
+  position: relative; width: var(--w); aspect-ratio: 4 / 5; margin-left: calc((100cqw - var(--w)) / 2); border-radius: var(--mw-radius-24); overflow: hidden;
+  background: var(--mw-inverse-surface);
+}
+.video, .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.mirror { transform: scaleX(-1); }
+.fill { position: absolute; inset: 0; }
+.off {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--mw-space-12);
+  padding: var(--mw-space-24); text-align: center; background: var(--mw-inverse-surface); color: var(--mw-inverse-on-surface);
+}
+.offTitle { margin: 0; font: var(--mw-type-headline); letter-spacing: var(--mw-ls-headline); }
+.offBody { margin: 0; font: var(--mw-type-body); color: var(--mw-inverse-on-surface-2); text-wrap: balance; }
+.offAction { margin-top: var(--mw-space-8); }
+.status { position: absolute; top: var(--mw-space-12); left: 50%; z-index: 2; transform: translateX(-50%); white-space: nowrap; }
+
+.dock { display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-24); padding: var(--mw-space-24) 0 calc(var(--mw-safe-bottom) + var(--mw-space-16)); }
+.controls { align-self: stretch; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; justify-items: center; }
+.gallery {
+  position: relative; display: block; width: var(--mw-touch); height: var(--mw-touch); padding: 0; border: 0; border-radius: var(--mw-radius-12);
+  box-shadow: 0 0 0 2px var(--mw-media-on); overflow: hidden; cursor: pointer; background: var(--mw-inverse-surface);
+}
+.gallery:focus-visible, .shutter:focus-visible { outline: 2px solid var(--mw-media-on); outline-offset: 4px; }
+.galleryImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* ShutterButton: ring 76 + fill 60; pressed the fill shrinks; disabled dimmed. */
+.shutter {
+  position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 76px; height: 76px; padding: 0; border: 0; border-radius: var(--mw-radius-full);
+  background: none; box-shadow: inset 0 0 0 4px var(--mw-media-on); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.shutter::before { content: ""; width: 60px; height: 60px; border-radius: var(--mw-radius-full); background: var(--mw-media-on); transition: transform var(--mw-motion-press); }
+.shutter:active::before, .shutter[aria-busy="true"]::before { transform: scale(0.86); }
+.shutter:disabled { box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--mw-media-on) 28%, transparent); cursor: default; }
+.shutter:disabled::before { background: color-mix(in srgb, var(--mw-media-on) 20%, transparent); }
+.hidden { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* O04: the pre-permission, light, before the dark camera. */
+.izin { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: var(--mw-bg); color: var(--mw-text-1); }
+.izinBody { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: var(--mw-space-24); width: 100%; max-width: var(--mw-column); margin: 0 auto;
+  padding: calc(var(--mw-safe-top) + var(--mw-space-16)) var(--mw-space-16) var(--mw-space-24); }
+.izinTitle { margin: var(--mw-space-16) 0 0; font: var(--mw-type-title); letter-spacing: var(--mw-ls-title); }
+.ill { display: flex; align-items: center; justify-content: center; gap: var(--mw-space-24); padding: var(--mw-space-24); border-radius: var(--mw-radius-16); background: var(--mw-camera); color: var(--mw-media-on); }
+.scan { position: relative; flex: none; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; color: var(--mw-inverse-on-surface-2); }
+.scan > svg { width: 96px; height: 96px; }
+.corner { position: absolute; width: 40px; height: 40px; border: 4px solid var(--mw-media-on); }
+.tl { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: var(--mw-radius-24); }
+.tr { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: var(--mw-radius-24); }
+.bl { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: var(--mw-radius-24); }
+.br { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: var(--mw-radius-24); }
+.thumb { position: relative; flex: none; width: 96px; height: 96px; border-radius: var(--mw-radius-12); overflow: hidden; }
+.bullets { display: flex; flex-direction: column; gap: var(--mw-space-16); margin: 0; padding: 0; list-style: none; }
+.bullets > li { display: flex; align-items: center; gap: var(--mw-space-12); font: var(--mw-type-body); }
+.izinBar { width: 100%; max-width: var(--mw-column); margin: 0 auto; }
+
+.steps { margin: 0; padding-left: var(--mw-space-20); display: flex; flex-direction: column; gap: var(--mw-space-8); font: var(--mw-type-body); color: var(--mw-text-1); }
+.note { margin: 0; font: var(--mw-type-body-small); color: var(--mw-text-2); }
+
+@media (prefers-reduced-motion: reduce) { .shutter::before { transition: none; } }

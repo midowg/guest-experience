@@ -1,0 +1,74 @@
+import type { PhotoAudience, PhotoStatus } from "../types";
+
+/*
+ * Momen's own types (area B, docs/main-wam/KONTRAK.md §6): what the stack (M01–M03), the gallery
+ * (M05), the camera's queue (U01–U04) and the Mozaik (M06) exchange with the server. Shared types
+ * (MwPhoto, PhotoAudience, ReportReason) stay in ../types.ts.
+ */
+
+/** The views of Momen: Semua, Kelompokku and (gallery only) Fotoku. */
+export const FEED_VIEWS = ["semua", "kelompok", "saya"] as const;
+export type FeedView = (typeof FEED_VIEWS)[number];
+
+/** One session's id, "umum" (photos without a session), or null (every session). */
+export type SessionFilter = string | null;
+export const UMUM = "umum";
+
+/** A photo as the stack and the gallery show it. */
+export type FeedPhoto = {
+  id: string;
+  owner: { id: string; name: string; photo: string | null };
+  /** "Kelompok 2 · Kawi", or the department before kelompok are published. */
+  ownerGroup: string;
+  audience: PhotoAudience;
+  sessionId: string | null;
+  width: number;
+  height: number;
+  /** Taken on the phone (a queued photo keeps its own time): the time shown. */
+  takenAt: string;
+  /** Shown to others from here; the order of the lists. */
+  visibleAt: string;
+  status: PhotoStatus;
+  hearts: number;
+  hearted: boolean;
+  seen: boolean;
+  mine: boolean;
+  /** Short-lived storage addresses: the small copy (grid, stack under it) and the large one. */
+  src: { kecil: string | null; besar: string | null };
+};
+
+/** One page of a view; `next` continues it (null at the end); `total` on the first page. */
+export type FeedPage = { items: FeedPhoto[]; next: string | null; total: number | null };
+/** "Saring sesi": photos per session in a view (null = Umum). */
+export type SessionCount = { sessionId: string | null; photos: number };
+/** What GET photos answers. */
+export type FeedAnswer = FeedPage & { sessions: SessionCount[] | null; migrated: boolean };
+
+/** Step one of an upload: where to put the three files, or the photo already kept (a retry). */
+export type UploadStart =
+  | { kind: "unggah"; id: string; token: string; uploads: { besar: string; kecil: string; ubin: string } }
+  | { kind: "selesai"; id: string; visibleAt: string };
+/** Step two: the photo is kept. */
+export type UploadDone = { id: string; visibleAt: string };
+
+/** One tile of the Mozaik. */
+export type MosaicTile = { cell: number; id: string; src: string | null; mine: boolean };
+/**
+ * The Mozaik as the app (and later the venue TV) draws it. `cells` has one character per cell, row
+ * by row: the letter it belongs to ("W", "2"), "#" inside a picture mask, "." outside the letters.
+ */
+export type MosaicManifest = {
+  version: string;
+  columns: number;
+  rows: number;
+  cells: string;
+  tiles: MosaicTile[];
+  filled: number;
+  total: number;
+  /** How many people's photos are in it. */
+  people: number;
+  mine: number;
+  updatedAt: string;
+  complete: boolean;
+  migrated: boolean;
+};

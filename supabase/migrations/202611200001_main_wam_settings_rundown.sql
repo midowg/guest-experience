@@ -21,6 +21,8 @@ create table public.mw_settings (
   event_name text not null default 'WAM 2026' check (char_length(btrim(event_name)) between 2 and 80),
   venue text not null default '' check (char_length(venue) <= 150),
   hotel text not null default '' check (char_length(hotel) <= 150),
+  -- Info acara: the hotel's street address (L03/Info acara).
+  hotel_address text not null default '' check (char_length(hotel_address) <= 300),
   check_in_at timestamptz,
   check_out_at timestamptz,
   -- {"kamar": employee id, "perjalanan": ..., "umum": ...}: who "Hubungi" calls.

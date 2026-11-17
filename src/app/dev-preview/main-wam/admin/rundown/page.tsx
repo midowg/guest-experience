@@ -1,0 +1,24 @@
+import { notFound } from "next/navigation";
+import { RundownEditor } from "@/components/admin/wam/main-wam/isi/RundownEditor";
+import { sampleAdminGuides, sampleAdminLog, sampleAdminPeople, sampleAdminSessions, sampleAdminSettings } from "@/lib/main-wam/admin/sample";
+import { eventDates } from "@/lib/main-wam/rundown";
+import { AdminPreviewFrame, previewFlags } from "../Frame";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * Admin WAM → Main WAM → Rundown without signing in (404 in production): ?hari=1–4, ?isi=kosong,
+ * ?migrasi=belum. Saving calls the real API (refused without a session).
+ */
+export default async function DevAdminRundown({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  if (process.env.NODE_ENV === "production") notFound();
+  const params = await searchParams;
+  const { waiting, empty } = previewFlags(params);
+  const dates = eventDates(sampleAdminSettings().event);
+  const day = Math.min(Math.max(Number(params.hari) || 2, 1), dates.length);
+  return <AdminPreviewFrame current="mw-isi">
+    <RundownEditor key={`${params.hari}-${params.isi}-${params.migrasi}`} initial={empty || waiting ? [] : sampleAdminSessions()} migrated={!waiting} dates={dates} people={sampleAdminPeople}
+      guides={sampleAdminGuides.map(guide => ({ id: guide.id, title: guide.title, kind: guide.kind }))} log={sampleAdminLog} today={dates[day - 1]}
+      crumbs={[{ label: "Admin WAM", href: "#" }, { label: "Main WAM" }, { label: "Isi acara", href: "#" }, { label: "Rundown" }]} title="Main WAM · Rundown" />
+  </AdminPreviewFrame>;
+}

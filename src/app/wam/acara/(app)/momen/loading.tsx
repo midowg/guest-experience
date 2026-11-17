@@ -1,13 +1,6 @@
-import { ScreenContent } from "@/components/main-wam/shell";
-import { Skeleton, SkeletonGroup } from "@/components/main-wam/ui";
+import { StackSkeleton } from "@/components/main-wam/momen/Skeletons";
 
-/** Momen while it loads, inside the frame (the bars stay). Owner B (momen): shape it like the screen. */
+/** Momen while it loads: the filter row, a card-shaped block and the actions, inside the dark frame. */
 export default function Loading() {
-  return <ScreenContent>
-    <SkeletonGroup label="Memuat momen">
-      <Skeleton shape="block" height={160} />
-      <Skeleton width="60%" />
-      <Skeleton width="80%" />
-    </SkeletonGroup>
-  </ScreenContent>;
+  return <StackSkeleton />;
 }

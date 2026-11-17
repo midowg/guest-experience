@@ -1,10 +1,10 @@
 import { wibDate } from "@/lib/pra-wam/appraisal";
-import { eventDayLabel } from "./rundown";
+import { eventDay, eventDayLabel } from "./rundown";
 import type { MainWamEventInfo } from "./types";
 
 /*
- * Beranda's head (P01): "Selamat pagi · Sel, 5 Jan", the nama panggilan, and "Hari ke-2 dari 4"
- * during the event. WIB. Pure.
+ * Beranda's head (P01): "Selamat pagi", the nama panggilan, and "Hari ke-2 dari 4" during the event.
+ * Outside the event days there is no day line, so the kicker carries the date: "Selamat pagi · Sel, 5 Jan". WIB. Pure.
  */
 
 const hourWib = (now: Date) => Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Asia/Jakarta" }).format(now));
@@ -20,6 +20,11 @@ export const shortDay = (now: Date) => new Intl.DateTimeFormat("id-ID", { weekda
 
 /** What the shell's greeting takes (ShellGreeting of the UI kit). */
 export function homeGreeting(now: Date, name: string, event: Pick<MainWamEventInfo, "startDate" | "endDate">): { kicker: string; name: string; day?: string } {
-  const day = eventDayLabel(wibDate(now.toISOString()), event);
-  return { kicker: `${salam(now)} · ${shortDay(now)}`, name, ...(day ? { day } : {}) };
+  const date = wibDate(now.toISOString());
+  const label = eventDayLabel(date, event);
+  if (!label) return { kicker: `${salam(now)} · ${shortDay(now)}`, name };
+  // WAM: the first day is the trip there, the last the trip home (P02: "Hari ke-1 dari 4 · Berangkat").
+  const found = eventDay(date, event);
+  const trip = found && found.of > 1 ? (found.day === 1 ? " · Berangkat" : found.day === found.of ? " · Pulang" : "") : "";
+  return { kicker: salam(now), name, day: label + trip };
 }

@@ -12,10 +12,10 @@
   --cs-subtle: #636d7c;
   --cs-primary: #1551a0; --cs-primary-hover: #0f3f80; --cs-on-primary: #fff; --cs-primary-soft: #eaf0f8;
   --cs-strong: #1e2733; --cs-on-strong: #fff; --cs-hover: rgba(30, 39, 51, .06);
-  --cs-ok-bg: #e3f1e8; --cs-ok-fg: #2e7d4f; --cs-warn-bg: #fbefd9; --cs-warn-fg: #8f5600;
+  --cs-ok-bg: #e3f1e8; --cs-ok-fg: #276b43; --cs-warn-bg: #fbefd9; --cs-warn-fg: #8f5600;
   --cs-bad-bg: #f8e3e7; --cs-bad-fg: #9a273d; --cs-blue-bg: #eaf0f8; --cs-blue-fg: #0f3f80;
   --cs-brass-bg: #f6eedd; --cs-brass-fg: #6e5321; --cs-purple-bg: #efe8fa; --cs-purple-fg: #6d3fc0;
-  --cs-teal-bg: #e0f3f1; --cs-teal-fg: #0d7c72; --cs-neutral-bg: #f6f7f9; --cs-neutral-fg: #5b6573;
+  --cs-teal-bg: #e0f3f1; --cs-teal-fg: #0b6b62; --cs-neutral-bg: #f6f7f9; --cs-neutral-fg: #5b6573;
   --cs-scrim: rgba(17, 24, 46, .45); --cs-shadow: 0 24px 64px rgba(17, 24, 46, .28); --cs-raise: 0 1px 2px rgba(17, 24, 46, .1);
   color-scheme: light;
 }
@@ -29,7 +29,7 @@
   --cs-ok-bg: var(--pw-success-soft); --cs-ok-fg: var(--pw-success); --cs-warn-bg: var(--pw-warning-soft); --cs-warn-fg: var(--pw-warning);
   --cs-bad-bg: var(--pw-danger-soft); --cs-bad-fg: var(--pw-danger); --cs-blue-bg: var(--pw-primary-soft); --cs-blue-fg: var(--pw-primary-hover);
   --cs-brass-bg: var(--pw-brass-soft); --cs-brass-fg: var(--pw-on-brass-soft);
-  --cs-purple-bg: #efe8fa; --cs-purple-fg: #6d3fc0; --cs-teal-bg: #e0f3f1; --cs-teal-fg: #0d7c72;
+  --cs-purple-bg: #efe8fa; --cs-purple-fg: #6d3fc0; --cs-teal-bg: #e0f3f1; --cs-teal-fg: #0b6b62;
   --cs-neutral-bg: color-mix(in srgb, var(--pw-page) 55%, var(--pw-surface)); --cs-neutral-fg: var(--pw-muted);
   --cs-scrim: rgba(11, 21, 38, .45); --cs-shadow: var(--pw-shadow); --cs-raise: 0 1px 2px rgba(11, 21, 38, .12);
 }

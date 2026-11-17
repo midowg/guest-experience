@@ -1,0 +1,26 @@
+/*
+ * Detail sesi's card of rows (P04): agen B's "Foto sesi ini" (a kit ListRow) and "Info lainnya",
+ * which folds open. As the kit's List, but a sheet's <dialog> inside it is left alone (no divider,
+ * no position), so the contact sheet can live next to its row. Tokens only.
+ */
+.list {
+  display: flex; flex-direction: column; min-width: 0; overflow: hidden; border-radius: var(--mw-radius-16);
+  background: var(--mw-surface); border: 1px solid var(--mw-outline);
+}
+.list > :not(dialog) { position: relative; }
+.list > :not(dialog) ~ :not(dialog)::before { content: ""; position: absolute; top: 0; right: 0; left: 68px; height: 1px; background: var(--mw-outline); pointer-events: none; }
+.list:not(:has(> :not(dialog))) { display: none; }
+
+.item { display: flex; flex-direction: column; min-width: 0; }
+.row {
+  display: flex; align-items: center; gap: var(--mw-space-12); width: 100%; min-height: 56px; padding: var(--mw-space-16);
+  border: 0; background: none; font: inherit; text-align: left; color: var(--mw-text-1); cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--mw-motion-press);
+}
+.row:active { background-color: var(--mw-press); }
+@media (hover: hover) { .row:hover { background-color: var(--mw-press); } }
+.row:focus-visible { outline-offset: -4px; }
+.text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.title { font: var(--mw-type-body-strong); }
+.sub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.chevron { flex: none; width: 20px; height: 20px; color: var(--mw-text-3); }

@@ -26,7 +26,7 @@ describe("Main WAM's frame, from the address alone", () => {
       [mainWamPath.session("s1"), "agenda", "Detail sesi", mainWamPath.agenda()],
       [mainWamPath.notifications, "beranda", "Notifikasi", mainWamPath.home],
       [mainWamPath.gallery(), "momen", "Galeri", mainWamPath.moments()],
-      [mainWamPath.mosaic(), "momen", "Mozaik", mainWamPath.moments()],
+      [mainWamPath.mosaic(), "momen", "Mozaik WAM 2026", mainWamPath.moments()],
       [mainWamPath.groupRoom, "saya", "Kelompok & kamar", mainWamPath.me],
       [mainWamPath.travel("pulang"), "saya", "Perjalanan", mainWamPath.me],
       [mainWamPath.guides, "saya", "Panduan", mainWamPath.me],

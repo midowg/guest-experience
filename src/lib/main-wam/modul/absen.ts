@@ -1,0 +1,146 @@
+import { z } from "zod";
+import { MAIN_WAM_PATH } from "@/lib/routes";
+import { checkInState, checkInWindow, dayWord, wibDate, wibTime } from "../rundown";
+import type { MwSession } from "../types";
+
+/*
+ * Absen QR in Main WAM (A01–A05; aturan-wam §7): a session marked "pakai absen" takes check-ins by
+ * its printed QR from 30 minutes before its start to 30 minutes after its end (checkInWindow,
+ * fondasi rundown.ts). BOD do not check in. The QR holds mainWamPath.checkIn(token): the phone's own
+ * camera opens it, the in-app scanner reads it. Pure: the server and the screens share these.
+ */
+
+/** The migration of agen D (Silent Meeting's send, the approval's rule). */
+export const MODUL_MIGRATION = "202611200401_main_wam_modul.sql";
+
+/** A session's QR token (mw_sessions.qr_token): 20–64 URL-safe characters, as newQrToken makes them. */
+export const QR_TOKEN = /^[A-Za-z0-9_-]{20,64}$/;
+export const isQrToken = (value: string) => QR_TOKEN.test(value);
+
+/**
+ * The token of a scanned text, when it is a Main WAM check-in address of this site; null for any
+ * other QR (another site, Pra WAM's, a plain text), so a stray QR never sends the person elsewhere.
+ */
+export function tokenFromScan(text: string, origin: string): string | null {
+  let url: URL;
+  try { url = new URL(text.trim(), origin); } catch { return null; }
+  if (url.origin !== origin) return null;
+  const prefix = `${MAIN_WAM_PATH}/absen/`;
+  if (!url.pathname.startsWith(prefix)) return null;
+  const token = decodeURIComponent(url.pathname.slice(prefix.length).replace(/\/+$/, ""));
+  return isQrToken(token) ? token : null;
+}
+
+/**
+ * A scan queued while offline keeps the time it was scanned ("Dikirim otomatis dengan jam scan
+ * 07.52"), within limits: not ahead of the server (2 minutes for a phone's clock) and not older
+ * than 6 hours. Otherwise the server's time counts.
+ */
+export const SCAN_FUTURE_MS = 2 * 60_000;
+export const SCAN_MAX_AGE_MS = 6 * 60 * 60_000;
+export function acceptedScanTime(scannedAt: string | null | undefined, now: Date): Date {
+  const at = scannedAt ? Date.parse(scannedAt) : NaN;
+  if (!Number.isFinite(at)) return now;
+  if (at > now.getTime() + SCAN_FUTURE_MS || at < now.getTime() - SCAN_MAX_AGE_MS) return now;
+  return new Date(Math.min(at, now.getTime()));
+}
+
+/** POST body of a check-in: nothing, or the time of a scan that was queued offline. */
+export const checkInBodySchema = z.object({ scannedAt: z.iso.datetime({ offset: true, message: "Jam scan tidak dikenali." }).optional() }).strict();
+
+/** What a scan did (A02 tercatat/sudah, A03 belum, A04 tutup, and the rest). */
+export type CheckInSession = Pick<MwSession, "id" | "title" | "place">;
+export type CheckInOutcome =
+  | { kind: "tercatat" | "sudah"; session: CheckInSession; checkedInAt: string }
+  | { kind: "belum"; session: CheckInSession; opens: string; closes: string }
+  | { kind: "tutup"; session: CheckInSession; closes: string }
+  /** Not a session that takes check-ins (draft, cancelled, not "pakai absen"). */
+  | { kind: "tanpa-absen"; session: CheckInSession }
+  /** BOD do not check in (aturan-wam §7). */
+  | { kind: "bod" }
+  /** No session has this QR (an old QR replaced by "Buat QR baru", or a mistyped address). */
+  | { kind: "tidak-dikenal" };
+
+/** The window of a session as the outcome tells it. */
+export function windowOutcome(session: MwSession, at: Date): CheckInOutcome | null {
+  const state = checkInState(session, at);
+  const { opens, closes } = checkInWindow(session);
+  const named = { id: session.id, title: session.title, place: session.place };
+  if (state === "belum") return { kind: "belum", session: named, opens, closes };
+  if (state === "tutup") return { kind: "tutup", session: named, closes };
+  return null;
+}
+
+/** "07.52" today, "Sel, 5 Jan · 12.30" another day. */
+export function clockWhen(iso: string, now: Date): string {
+  const time = wibTime(iso).replace(":", ".");
+  const date = wibDate(iso);
+  return date === wibDate(now.toISOString()) ? time : `${dayWord(date, wibDate(now.toISOString()))} · ${time}`;
+}
+
+export type OutcomeText = { tone: "success" | "warning" | "error" | "neutral"; icon: "check" | "clock" | "timer-off" | "info" | "qr"; title: string; sub: string; body: string };
+
+/** The words of A02–A04 and the other outcomes (SPEC revisi: one sentence, no pill). */
+export function outcomeText(outcome: CheckInOutcome, now: Date): OutcomeText {
+  switch (outcome.kind) {
+    case "tercatat": return { tone: "success", icon: "check", title: "Absen tercatat", sub: `${outcome.session.title} · ${clockWhen(outcome.checkedInAt, now)}`, body: "" };
+    case "sudah": return { tone: "success", icon: "check", title: "Sudah tercatat", sub: `${outcome.session.title} · ${clockWhen(outcome.checkedInAt, now)}`, body: "" };
+    case "belum": return { tone: "warning", icon: "clock", title: "Absen belum dibuka", sub: outcome.session.title, body: `Dibuka ${clockWhen(outcome.opens, now)}. Scan lagi nanti.` };
+    case "tutup": return { tone: "error", icon: "timer-off", title: "Absen sudah ditutup", sub: outcome.session.title, body: `Ditutup ${clockWhen(outcome.closes, now)}. Kalau kamu hadir, minta panitia mencatat.` };
+    case "tanpa-absen": return { tone: "neutral", icon: "info", title: "Sesi ini tanpa absen", sub: outcome.session.title, body: "Tidak perlu scan." };
+    case "bod": return { tone: "neutral", icon: "info", title: "Tidak perlu absen", sub: "", body: "BOD tidak absen." };
+    case "tidak-dikenal": return { tone: "neutral", icon: "qr", title: "QR tidak dikenali", sub: "", body: "Minta QR yang baru ke panitia." };
+  }
+}
+
+/** A scan kept on the phone while offline (localStorage), sent when there is signal. */
+export const queuedScanSchema = z.object({
+  token: z.string().regex(QR_TOKEN),
+  scannedAt: z.iso.datetime({ offset: true }),
+  /** The session the scanner showed as now ("Pemaparan departemen"), for A02 offline. */
+  title: z.string().max(150).default(""),
+});
+export type QueuedScan = z.infer<typeof queuedScanSchema>;
+export const SCAN_QUEUE_KEY = "mw-absen-antre";
+
+/** The queue as stored: unknown or broken entries are dropped, the same token once (the first scan). */
+export function readQueue(raw: string | null): QueuedScan[] {
+  if (!raw) return [];
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); } catch { return []; }
+  if (!Array.isArray(parsed)) return [];
+  const seen = new Set<string>();
+  const out: QueuedScan[] = [];
+  for (const item of parsed) {
+    const result = queuedScanSchema.safeParse(item);
+    if (!result.success || seen.has(result.data.token)) continue;
+    seen.add(result.data.token);
+    out.push(result.data);
+  }
+  return out.slice(0, 20);
+}
+export function addToQueue(queue: readonly QueuedScan[], scan: QueuedScan): QueuedScan[] {
+  return queue.some(item => item.token === scan.token) ? [...queue] : [...queue, scan].slice(-20);
+}
+
+/**
+ * The Absen card of Detail sesi (slot SessionAbsen, P04 + P04__status) for a participant:
+ * open → the Absen button; present → "Hadir 07.52"; missed → "Tidak tercatat hadir"; before the
+ * window → nothing. Cancelled sessions and sessions without absen show nothing.
+ */
+export type AbsenCard =
+  | { kind: "none" }
+  | { kind: "buka"; closes: string }
+  | { kind: "hadir"; at: string }
+  | { kind: "terlewat" };
+export function absenCard(session: Pick<MwSession, "status" | "usesAttendance" | "startsAt" | "endsAt">, checkedInAt: string | null, now: Date): AbsenCard {
+  if (session.status !== "terbit" || !session.usesAttendance) return { kind: "none" };
+  if (checkedInAt) return { kind: "hadir", at: checkedInAt };
+  const state = checkInState(session, now);
+  if (state === "buka") return { kind: "buka", closes: checkInWindow(session).closes };
+  if (state === "tutup") return { kind: "terlewat" };
+  return { kind: "none" };
+}
+
+/** "Hadir 07.52". */
+export const presentLabel = (at: string) => `Hadir ${wibTime(at).replace(":", ".")}`;

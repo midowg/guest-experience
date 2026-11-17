@@ -45,7 +45,7 @@ describe("Main WAM's settings from the database", () => {
     expect(settings.event.name).toBe("WAM 2026");
     expect(settings.event.checkInAt).toBeNull();
     expect(parseModules(null)).toEqual(defaultSettings().modules);
-    expect(parseModuleConfig({ mozaik: { columns: 1, rows: 500 } }).mozaik).toEqual({ columns: 40, rows: 15 });
+    expect(parseModuleConfig({ mozaik: { columns: 1, rows: 500 } }).mozaik).toEqual({ columns: 30, rows: 20 });
     expect(parseTheme({ displayFont: "Comic Sans; } body {" }).displayFont).toBeNull();
     // A row that exists but is empty: migrated, defaults.
     expect(settingsFromRow(null).migrated).toBe(true);

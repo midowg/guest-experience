@@ -1,19 +1,17 @@
-import { CalendarDays } from "lucide-react";
-import { ScreenContent } from "@/components/main-wam/shell";
-import { EmptyState } from "@/components/main-wam/ui";
+import { AgendaScreen } from "@/components/main-wam/peserta/agenda/AgendaScreen";
+import { hhmm } from "@/lib/main-wam/peserta/format";
 import { mainWamPath } from "@/lib/routes";
 import { requireMainWamPage } from "@/lib/server/main-wam/gate";
+import { loadAgenda } from "@/lib/server/main-wam/peserta/agenda";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Agenda · WAM", robots: { index: false } };
 
-/**
- * P03 Agenda. PLACEHOLDER (fondasi): owner A (peserta), see docs/main-wam/KONTRAK.md §6.
- * Replace the body; keep requireMainWamPage first (the gate, checked by acara-pages.test.ts).
- */
-export default async function AgendaPage() {
-  await requireMainWamPage(mainWamPath.agenda());
-  return <ScreenContent>
-    <EmptyState icon={<CalendarDays />} title="Agenda">Sedang disiapkan.</EmptyState>
-  </ScreenContent>;
+/** P03 Agenda: the day in the address (?hari=1–4), else today. Owner A (peserta); the gate first. */
+export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ hari?: string | string[] }> }) {
+  const { hari } = await searchParams;
+  const context = await requireMainWamPage(mainWamPath.agenda(Number(Array.isArray(hari) ? hari[0] : hari) || undefined));
+  const now = new Date();
+  const data = await loadAgenda(context, hari, now);
+  return <AgendaScreen {...data} since={hhmm(now.toISOString())} />;
 }

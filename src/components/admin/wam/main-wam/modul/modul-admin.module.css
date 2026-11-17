@@ -1,0 +1,30 @@
+/* Admin WAM → Main WAM → Awarding and Silent Meeting (agen D). Console tokens only (--cs-*). */
+.stack { display: grid; gap: 16px; }
+.note { margin: 0; color: var(--cs-muted); font-size: 14px; }
+.small { color: var(--cs-muted); font-size: 12px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 8px; color: var(--cs-muted); font-size: 13px; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.form { display: grid; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--cs-line); }
+.formGrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.form :global(.field) { margin: 0; }
+.check { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; cursor: pointer; }
+.check input { width: 20px; height: 20px; accent-color: var(--cs-primary); }
+.rows { display: grid; margin: 0; padding: 0; list-style: none; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 6px 0; border-top: 1px solid var(--cs-line); }
+.row:first-child { border-top: 0; }
+.rowText { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.rowText > span:first-child { font-size: 14px; font-weight: 700; }
+.rowText > span + span { color: var(--cs-muted); font-size: 12px; }
+.rowText :global(.input) { min-height: 36px; font-size: 13px; }
+.votes { flex: none; min-width: 4.5rem; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+.rank { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--cs-brass-bg); color: var(--cs-brass-fg); font-size: 12px; font-weight: 700; }
+.iconButtons { display: flex; gap: 4px; flex: none; }
+.pick { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.pick :global(.field) { flex: 1 1 16rem; margin: 0; }
+.photos { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.photo { position: relative; display: grid; gap: 4px; font-size: 12px; cursor: pointer; }
+.photo img, .photo .noImage { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; border: 1px solid var(--cs-line); background: var(--cs-line); }
+.photo input { position: absolute; top: 6px; left: 6px; width: 20px; height: 20px; accent-color: var(--cs-primary); }
+.photo:has(input:checked) img { outline: 3px solid var(--cs-primary); outline-offset: -3px; }
+.warn { margin: 0; color: var(--cs-warn-fg); font-size: 13px; }

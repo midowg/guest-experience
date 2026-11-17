@@ -1,0 +1,54 @@
+import "server-only";
+import { mainWamCan } from "@/lib/main-wam/access";
+import {
+  announcementCandidates, homeCardView, nextChangeAt, nowView, pickCard, silentCandidates, surveyCandidate, travelCandidate, votingCandidates,
+  type HomeCandidate, type HomeData,
+} from "@/lib/main-wam/peserta/home";
+import { wibDate } from "@/lib/main-wam/rundown";
+import type { MwSession } from "@/lib/main-wam/types";
+import { pinnedForMe } from "../notes";
+import { attendanceOf, awardCategories, listTrips, seatsOf, shownSessions, silentQuestions, votedCategories } from "../read";
+import type { MainWamContext } from "../gate";
+
+/*
+ * Beranda's data (P01/P02), for the page and GET mainWamApi.home: the Sekarang card and the one
+ * contextual card, from fondasi's readers. Each part reads only what it can show: the module is
+ * on and the role takes part (BOD do not check in, send Silent Meeting or vote), and the trips only
+ * on the first and last day. A part that fails is left out; the page still shows the rest.
+ */
+
+export type { HomeData };
+
+const none = <T>(value: T) => () => value;
+
+export async function loadHome({ viewer, settings }: MainWamContext, now: Date): Promise<HomeData> {
+  const modules = settings.modules;
+  const absenOn = modules.absen && mainWamCan(viewer, "absen");
+  const today = wibDate(now.toISOString());
+  const travelDay = today === settings.event.startDate || today === settings.event.endDate;
+
+  const [sessionsRead, attendance, pinned, questions, categories, voted, trips, seats] = await Promise.all([
+    shownSessions().then(read => ({ ...read, failed: false })).catch(() => ({ data: [] as MwSession[], migrated: true, failed: true })),
+    absenOn ? attendanceOf({ employeeId: viewer.id }).then(read => read.data).catch(none([])) : Promise.resolve([]),
+    pinnedForMe(viewer.id, now).catch(none([])),
+    modules.silent && mainWamCan(viewer, "silent-kirim") ? silentQuestions().then(read => read.data).catch(none([])) : Promise.resolve([]),
+    modules.voting && mainWamCan(viewer, "voting") ? awardCategories().then(read => read.data).catch(none([])) : Promise.resolve([]),
+    modules.voting && mainWamCan(viewer, "voting") ? votedCategories(viewer.id).then(read => read.data).catch(none(new Set<string>())) : Promise.resolve(new Set<string>()),
+    travelDay ? listTrips().then(read => read.data).catch(none([])) : Promise.resolve([]),
+    travelDay ? seatsOf(viewer.id).then(read => read.data).catch(none([])) : Promise.resolve([]),
+  ]);
+  const sessions = sessionsRead.data;
+  const checkedIn = new Map(attendance.map(row => [row.sessionId, row.checkedInAt]));
+  const view = nowView({ sessions, now, event: settings.event, absenOn, checkedIn });
+  const session = view.kind === "sesi" ? sessions.find(item => item.id === view.sessionId) ?? null : null;
+
+  const candidates: HomeCandidate[] = [
+    ...announcementCandidates(pinned, now),
+    ...silentCandidates(questions, sessions, now),
+    ...votingCandidates(categories, voted, now),
+    ...[travelCandidate(trips, seats, now), surveyCandidate(settings.moduleConfig.survei.formSlug, sessions, now)].filter((card): card is HomeCandidate => !!card),
+  ];
+  const picked = pickCard(candidates, modules, now);
+  const refreshAt = nextChangeAt(sessions, now, [...pinned.map(note => note.pinnedUntil), ...candidates.map(card => card.until)]);
+  return { migrated: sessionsRead.migrated && settings.migrated, now: view, session, card: picked ? homeCardView(picked, now) : null, refreshAt, failed: sessionsRead.failed };
+}

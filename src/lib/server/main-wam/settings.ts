@@ -14,7 +14,7 @@ import { mwFail, mwMissing } from "./errors";
  * Main WAM hidden), so Pra WAM never stops working because of Main WAM.
  */
 
-const COLUMNS = "mode,modules,module_config,theme,event_name,venue,hotel,check_in_at,check_out_at,contacts,groups_published_at,carbon,updated_at";
+const COLUMNS = "mode,modules,module_config,theme,event_name,venue,hotel,hotel_address,check_in_at,check_out_at,contacts,groups_published_at,carbon,updated_at";
 
 /** WAM's dates from pw_events (kind wam), the one source Pra WAM's countdown also reads. */
 async function wamDates(): Promise<{ startDate: string; endDate: string } | null> {

@@ -67,7 +67,10 @@ describe("Beranda's greeting", () => {
     expect(salam(new Date("2027-01-05T16:00:00+07:00"))).toBe("Selamat sore");
     expect(salam(new Date("2027-01-05T19:00:00+07:00"))).toBe("Selamat malam");
     expect(homeGreeting(new Date("2027-01-05T07:40:00+07:00"), "Rani", { startDate: "2027-01-04", endDate: "2027-01-07" }))
-      .toEqual({ kicker: "Selamat pagi · Sel, 5 Jan", name: "Rani", day: "Hari ke-2 dari 4" });
-    expect(homeGreeting(new Date("2026-12-01T07:40:00+07:00"), "Rani", { startDate: "2027-01-04", endDate: "2027-01-07" })).not.toHaveProperty("day");
+      .toEqual({ kicker: "Selamat pagi", name: "Rani", day: "Hari ke-2 dari 4" });
+    expect(homeGreeting(new Date("2026-12-01T07:40:00+07:00"), "Rani", { startDate: "2027-01-04", endDate: "2027-01-07" }))
+      .toEqual({ kicker: "Selamat pagi · Sel, 1 Des", name: "Rani" });
+    expect(homeGreeting(new Date("2027-01-04T05:05:00+07:00"), "Rani", { startDate: "2027-01-04", endDate: "2027-01-07" }).day).toBe("Hari ke-1 dari 4 · Berangkat");
+    expect(homeGreeting(new Date("2027-01-07T09:00:00+07:00"), "Rani", { startDate: "2027-01-04", endDate: "2027-01-07" }).day).toBe("Hari ke-4 dari 4 · Pulang");
   });
 });

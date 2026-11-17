@@ -12,6 +12,7 @@ export const mainWamContentTabs: readonly PageTab[] = [
   { key: "kamar", label: "Kamar", href: mainWamAdminPath.rooms },
   { key: "perjalanan", label: "Perjalanan", href: mainWamAdminPath.travel },
   { key: "panduan", label: "Panduan", href: mainWamAdminPath.guides },
+  { key: "info", label: "Info acara", href: mainWamAdminPath.eventInfo },
 ];
 export const mainWamModuleTabs: readonly PageTab[] = [
   { key: "awarding", label: "Awarding", href: mainWamAdminPath.awards },

@@ -558,7 +558,8 @@ export const mainWamApi = {
   /** DELETE: Batalkan (within 5 s) or Hapus foto (owner). */
   photo: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}`,
   /** GET: the photo's file, small (stack, grid) or large; a redirect to storage. */
-  photoFile: (id: string, size: "kecil" | "besar" = "besar") => `${MAIN_WAM_API}/momen/${enc(id)}/berkas${mwQuery({ ukuran: size })}`,
+  /** kecil = 480 px, besar = 1600 px, ubin = 160 px (Mozaik). */
+  photoFile: (id: string, size: "kecil" | "besar" | "ubin" = "besar") => `${MAIN_WAM_API}/momen/${enc(id)}/berkas${mwQuery({ ukuran: size })}`,
   /** PUT: suka; DELETE: batal suka. */
   photoHeart: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}/hati`,
   /** POST {reason, note}: Laporkan foto (M04); DELETE: Tampilkan lagi (for the reporter). */
@@ -618,6 +619,8 @@ export const mainWamAdminPath = {
   rooms: `${MAIN_WAM_ADMIN}/kamar`,
   travel: `${MAIN_WAM_ADMIN}/perjalanan`,
   guides: `${MAIN_WAM_ADMIN}/panduan`,
+  /** Hotel, alamat, check-in/out, kontak panitia, tagihan hotel (Jejak karbon). */
+  eventInfo: `${MAIN_WAM_ADMIN}/info-acara`,
   /* D · modul acara */
   awards: `${MAIN_WAM_ADMIN}/awarding`,
   silent: `${MAIN_WAM_ADMIN}/silent-meeting`,

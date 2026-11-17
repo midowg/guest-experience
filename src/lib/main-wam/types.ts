@@ -69,6 +69,8 @@ export type MainWamEventInfo = {
   venue: string;
   /** "Hotel (contoh), Kota Batu". */
   hotel: string;
+  /** The hotel's street address (Admin WAM → Info acara); "" when not filled in. */
+  address: string;
   checkInAt: string | null;
   checkOutAt: string | null;
 };

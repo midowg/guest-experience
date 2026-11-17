@@ -17,10 +17,10 @@ export const MAIN_WAM_MODULES_MIGRATION = "202611200003_main_wam_modules.sql";
 
 /** WAM 2026 as the brief has it; pw_events (kind wam) overrides the dates when it is there. */
 export const DEFAULT_EVENT: MainWamEventInfo = {
-  name: "WAM 2026", startDate: "2027-01-04", endDate: "2027-01-07", venue: "Kota Batu", hotel: "", checkInAt: null, checkOutAt: null,
+  name: "WAM 2026", startDate: "2027-01-04", endDate: "2027-01-07", venue: "Kota Batu", hotel: "", address: "", checkInAt: null, checkOutAt: null,
 };
 export const DEFAULT_MODULES: ModuleSwitches = Object.fromEntries(MAIN_WAM_MODULES.map(key => [key, false])) as ModuleSwitches;
-export const DEFAULT_MODULE_CONFIG: ModuleConfig = { survei: { formSlug: null }, mozaik: { columns: 40, rows: 15 } };
+export const DEFAULT_MODULE_CONFIG: ModuleConfig = { survei: { formSlug: null }, mozaik: { columns: 30, rows: 20 } };
 export const DEFAULT_THEME_SETTINGS: MainWamThemeSettings = { colors: {}, displayFont: null, images: {} };
 export const DEFAULT_CONTACTS: MainWamContacts = { kamar: null, perjalanan: null, umum: null };
 export const DEFAULT_CARBON: CarbonInputs = { listrikKwh: null, airM3: null, lpgKg: null, sampahKg: null, final: false };
@@ -97,7 +97,7 @@ export function parseCarbon(value: unknown): CarbonInputs {
 
 /** The columns of mw_settings as Supabase returns them. */
 export type SettingsRow = {
-  mode?: unknown; modules?: unknown; module_config?: unknown; theme?: unknown; event_name?: unknown; venue?: unknown; hotel?: unknown;
+  mode?: unknown; modules?: unknown; module_config?: unknown; theme?: unknown; event_name?: unknown; venue?: unknown; hotel?: unknown; hotel_address?: unknown;
   check_in_at?: unknown; check_out_at?: unknown; contacts?: unknown; groups_published_at?: unknown; carbon?: unknown; updated_at?: unknown;
 };
 
@@ -125,6 +125,7 @@ export function settingsFromRow(row: SettingsRow | null, dates?: { startDate: st
       name: text(row.event_name, event.name, 80),
       venue: text(row.venue, event.venue),
       hotel: text(row.hotel, event.hotel),
+      address: text(row.hotel_address, event.address, 300),
       checkInAt: instant(row.check_in_at),
       checkOutAt: instant(row.check_out_at),
     },

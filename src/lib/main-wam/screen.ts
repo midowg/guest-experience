@@ -52,7 +52,7 @@ export function mainWamScreen(pathname: string): MainWamScreen | null {
       if (!second) return { tab: "momen", level: "akar", title: "Momen", dark: true };
       if (second === "kamera") return { tab: "momen", level: "tugas", title: "Kamera", back: momen, dark: true };
       if (second === "galeri") return { tab: "momen", level: "detail", title: "Galeri", back: momen };
-      if (second === "mozaik") return { tab: "momen", level: "detail", title: "Mozaik", back: momen };
+      if (second === "mozaik") return { tab: "momen", level: "detail", title: "Mozaik WAM 2026", back: momen };
       return { tab: "momen", level: "detail", title: "Momen", back: momen };
     case "saya": {
       if (!second) return { tab: "saya", level: "akar", title: "Saya" };

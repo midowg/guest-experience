@@ -1,0 +1,130 @@
+import "server-only";
+import { canSee } from "@/lib/main-wam/momen/access";
+import { GALLERY_PAGE, parsePhotoId, parseSession, parseView, STACK_PAGE } from "@/lib/main-wam/momen/filters";
+import { countTotals, sessionChoice, type SessionChoice } from "@/lib/main-wam/momen/sessions";
+import { UMUM, type FeedPhoto, type FeedView, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
+import type { MwSession, PhotoAudience, PhotoStatus, ViewerGroup } from "@/lib/main-wam/types";
+import type { MainWamContext } from "../gate";
+import { allSessions } from "../read";
+import { feedPhotos, listFeed, photoRecord, sessionCounts } from "./feed";
+
+/*
+ * What each Momen screen needs from the server for its first paint (the client continues with the
+ * APIs): the stack (M01–M03), the gallery (M05), the camera (U01). The pages pass these to their
+ * client components; the dev previews build the same shapes from sample data.
+ */
+
+type Search = Record<string, string | string[] | undefined>;
+
+/** Published sessions, as the sheets need them (no more fields than that). */
+async function publishedSessions(): Promise<MwSession[]> {
+  const sessions = await allSessions().catch(() => ({ data: [] as MwSession[], migrated: false }));
+  return sessions.data.filter(session => session.status === "terbit");
+}
+
+const titleOf = (session: SessionFilter, sessions: readonly { id: string; title: string }[]) =>
+  session === UMUM ? "Umum" : session ? sessions.find(entry => entry.id === session)?.title ?? null : null;
+
+export type StackScreen = {
+  mode: "baru" | "sesi" | "galeri";
+  view: "semua" | "kelompok";
+  session: SessionFilter;
+  sessionTitle: string | null;
+  items: FeedPhoto[];
+  next: string | null;
+  total: number;
+  startIndex: number;
+  offset: number;
+  counts: SessionCount[] | null;
+  sessions: SessionChoice[];
+  group: ViewerGroup | null;
+  groupsPublished: boolean;
+  mozaik: boolean;
+  migrated: boolean;
+  anyPhotos: boolean;
+  own: { id: string; status: PhotoStatus; reason: string } | null;
+  eventName: string;
+  nowIso: string;
+};
+
+export async function stackScreen(context: MainWamContext, search: Search, now = new Date()): Promise<StackScreen> {
+  const { viewer, settings } = context;
+  const view = parseView(search.lihat, false) as "semua" | "kelompok";
+  const session = parseSession(search.sesi);
+  const foto = parsePhotoId(search.foto);
+  const [sessions, counts] = await Promise.all([publishedSessions(), sessionCounts(context, view)]);
+  const base = {
+    view, session, sessionTitle: titleOf(session, sessions), counts, sessions: sessions.map(entry => sessionChoice(entry, now)), group: viewer.group,
+    groupsPublished: settings.groupsPublished, mozaik: settings.modules.mozaik, anyPhotos: countTotals(counts ?? []).all > 0, own: null, eventName: settings.event.name, nowIso: now.toISOString(),
+  };
+
+  // Opened at one photo (Galeri, Mozaik, a note about one's own photo).
+  const photo = foto ? await photoRecord(foto).catch(() => null) : null;
+  if (photo && canSee(viewer, photo, now)) {
+    if (photo.ownerId === viewer.id && photo.status !== "tampil") {
+      const [item] = await feedPhotos([{
+        id: photo.id, owner_id: photo.ownerId, audience: photo.audience, group_id: photo.groupId, session_id: photo.sessionId, width: photo.width, height: photo.height,
+        taken_at: photo.takenAt, visible_at: photo.visibleAt, status: photo.status, file_key: photo.fileKey, thumb_key: photo.thumbKey, hearts: 0, hearted: false, seen: true, total: 1,
+      }], context);
+      return { ...base, mode: "galeri", items: [item], next: null, total: 1, startIndex: 0, offset: 0, migrated: settings.migrated, own: { id: photo.id, status: photo.status, reason: "" } };
+    }
+    const cursor = { at: photo.visibleAt, id: photo.id };
+    const [older, newer] = await Promise.all([
+      listFeed(context, { view, session, mode: "semua", cursor, direction: "older_incl", limit: STACK_PAGE }),
+      listFeed(context, { view, session, mode: "semua", cursor, direction: "newer", limit: 60 }),
+    ]);
+    if (older.items.some(item => item.id === photo.id)) {
+      const before = [...newer.items].reverse();
+      return {
+        ...base, mode: "galeri", items: [...before, ...older.items], next: older.next, total: newer.total + older.total, startIndex: before.length,
+        offset: Math.max(0, newer.total - before.length), migrated: settings.migrated && older.migrated,
+      };
+    }
+  }
+
+  if (session) {
+    const page = await listFeed(context, { view, session, mode: "semua", limit: STACK_PAGE });
+    return { ...base, mode: "sesi", items: page.items, next: page.next, total: page.total, startIndex: 0, offset: 0, migrated: settings.migrated && page.migrated };
+  }
+  const page = await listFeed(context, { view, session: null, mode: "baru", limit: STACK_PAGE });
+  return { ...base, mode: "baru", items: page.items, next: page.next, total: page.total, startIndex: 0, offset: 0, migrated: settings.migrated && page.migrated };
+}
+
+export type GalleryScreen = {
+  view: FeedView; session: SessionFilter; sessionTitle: string | null; items: FeedPhoto[]; next: string | null; total: number; counts: SessionCount[] | null;
+  sessions: SessionChoice[]; group: ViewerGroup | null; groupsPublished: boolean; mozaik: boolean; migrated: boolean; nowIso: string;
+};
+
+export async function galleryScreen(context: MainWamContext, search: Search, now = new Date()): Promise<GalleryScreen> {
+  const { viewer, settings } = context;
+  const view = parseView(search.lihat);
+  const session = parseSession(search.sesi);
+  const [sessions, counts, page] = await Promise.all([
+    publishedSessions(), sessionCounts(context, view), listFeed(context, { view, session, mode: "semua", limit: GALLERY_PAGE }),
+  ]);
+  return {
+    view, session, sessionTitle: titleOf(session, sessions), items: page.items, next: page.next, total: page.total, counts, sessions: sessions.map(entry => sessionChoice(entry, now)),
+    group: viewer.group, groupsPublished: settings.groupsPublished, mozaik: settings.modules.mozaik, migrated: settings.migrated && page.migrated, nowIso: now.toISOString(),
+  };
+}
+
+export type CameraScreenData = {
+  sessions: MwSession[]; nowIso: string; group: ViewerGroup | null; groupsPublished: boolean; mozaik: boolean; absen: boolean; migrated: boolean;
+  initialAudience: PhotoAudience | null; initialSession: string | null;
+};
+
+/** The camera: the sessions it can tag (only what a sheet row needs), the person's kelompok, the address's choices. */
+export async function cameraScreen(context: MainWamContext, search: Search, now = new Date()): Promise<CameraScreenData> {
+  const { viewer, settings } = context;
+  const sessions = (await publishedSessions()).map(session => ({
+    ...session, place: "", mapGuideId: null, dresscode: "", bring: "", lineup: [], meal: "", contactId: null, description: "", changedAt: null, changedBy: null,
+  }));
+  // Before area B's migration the camera says "menunggu pembaruan sistem" (its uploads would wait anyway).
+  const probe = await listFeed(context, { view: "saya", session: null, mode: "semua", limit: 1 });
+  const sesi = parseSession(search.sesi);
+  const untuk = Array.isArray(search.untuk) ? search.untuk[0] : search.untuk;
+  return {
+    sessions, nowIso: now.toISOString(), group: viewer.group, groupsPublished: settings.groupsPublished, mozaik: settings.modules.mozaik, absen: settings.modules.absen,
+    migrated: settings.migrated && probe.migrated, initialAudience: untuk === "kelompok" ? "kelompok" : untuk === "semua" ? "semua" : null, initialSession: sesi,
+  };
+}

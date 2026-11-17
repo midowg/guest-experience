@@ -1,0 +1,136 @@
+import type { ReactNode } from "react";
+import { notFound } from "next/navigation";
+import { DevFrame } from "@/components/main-wam/dev/DevFrame";
+import { MomenCard } from "@/components/main-wam/momen/BerandaMomen";
+import { CameraScreen, type CameraDemo } from "@/components/main-wam/momen/CameraScreen";
+import { Gallery, type GalleryProps } from "@/components/main-wam/momen/Gallery";
+import { Mosaic } from "@/components/main-wam/momen/Mosaic";
+import { MomenStack, type MomenStackProps, type StackDemo } from "@/components/main-wam/momen/MomenStack";
+import { GallerySkeleton, MosaicSkeleton, StackSkeleton } from "@/components/main-wam/momen/Skeletons";
+import { ScreenContent } from "@/components/main-wam/shell";
+import { List, ListRow } from "@/components/main-wam/ui";
+import { Images } from "lucide-react";
+import { sessionChoice } from "@/lib/main-wam/momen/sessions";
+import { SAMPLE_TOTAL, sampleFeedKelompok, sampleFeedSemua, sampleGalleryKelompok, sampleGalleryMine, sampleMosaic, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
+import { sampleSessionIds, sampleSessions, sampleTime, sampleViewer } from "@/lib/main-wam/sample";
+import { mainWamPath } from "@/lib/routes";
+import { DemoToast } from "./DemoToast";
+
+export const dynamic = "force-dynamic";
+
+/*
+ * Area B's screens and states with sample data, in the real frame (DevFrame), no sign-in, 404 in
+ * production: /dev-preview/main-wam/momen?layar=<id>. Ids follow the prototype (M01, M01-sesi, …).
+ */
+
+const LAYAR = [
+  "M01", "M01-sesi", "M01-pilih-sesi", "M01-memuat", "M01-kosong", "M01-offline", "M01-aksi-orang", "M01-aksi-sendiri", "M01-hapus", "M01-disembunyikan", "M01-disembunyikan-panitia",
+  "M02", "M02-kosong", "M02-belum-terbit", "M02-dari-galeri", "M03", "M04",
+  "M05", "M05-kelompok", "M05-fotoku", "M05-sesi", "M05-kosong", "M05-memuat",
+  "M06", "M06-tandai", "M06-tandai-kosong", "M06-memuat", "M06-lengkap",
+  "U01", "U01-umum", "U01-pilih-sesi", "U01-untuk", "U02", "U02-kelompok", "U02-dibatalkan", "U03", "U03-online", "U04", "U04-ditolak", "U05", "O04", "U-hp",
+  "P01-kartu", "P04-baris", "M01-memuat-halaman",
+] as const;
+
+const pemaparanNow = sampleTime("pemaparan");
+const sessions = sampleSessions.filter(session => session.status === "terbit");
+const choices = (now: Date) => sessions.map(session => sessionChoice(session, now));
+
+function stack(over: Partial<MomenStackProps> & { demo?: StackDemo } = {}): MomenStackProps {
+  return {
+    mode: "baru", view: "semua", session: null, sessionTitle: null, items: sampleFeedSemua, next: null, total: 24, startIndex: 2, offset: 0,
+    counts: sampleSessionCounts, sessions: choices(pemaparanNow), group: sampleViewer("peserta").group, groupsPublished: true, mozaik: true, migrated: true,
+    anyPhotos: true, own: null, eventName: "WAM 2026", nowIso: pemaparanNow.toISOString(), ...over,
+  };
+}
+function gallery(over: Partial<GalleryProps> = {}): GalleryProps {
+  return {
+    view: "semua", session: null, sessionTitle: null, items: [...sampleFeedSemua, ...sampleGalleryKelompok].map(photo => ({ ...photo, seen: true })), next: null, total: SAMPLE_TOTAL,
+    counts: sampleSessionCounts, sessions: choices(pemaparanNow), group: sampleViewer("peserta").group, groupsPublished: true, mozaik: true, migrated: true, nowIso: pemaparanNow.toISOString(), ...over,
+  };
+}
+
+export default async function DevMomen({ searchParams }: { searchParams: Promise<{ layar?: string }> }) {
+  if (process.env.NODE_ENV === "production") notFound();
+  const { layar: asked } = await searchParams;
+  const layar = (LAYAR as readonly string[]).includes(asked ?? "") ? asked! : "M01";
+  const viewer = sampleViewer("peserta");
+  const at = (path: string, children: ReactNode, waktu = "pemaparan") => <DevFrame path={path} waktu={waktu}>{children}</DevFrame>;
+
+  /* M01–M04: the stack. */
+  const momen = mainWamPath.moments();
+  switch (layar) {
+    case "M01": return at(momen, <MomenStack {...stack({ demo: { hint: true } })} />);
+    case "M01-sesi": return at(momen, <MomenStack {...stack({ mode: "sesi", session: sampleSessionIds.pemaparan, sessionTitle: "Pemaparan departemen", items: sampleFeedSemua.slice(8), startIndex: 0, demo: {} })} />);
+    case "M01-pilih-sesi": return at(momen, <MomenStack {...stack({ demo: { sheet: "sesi" } })} />);
+    case "M01-memuat": return at(momen, <MomenStack {...stack({ demo: { loading: true } })} />);
+    case "M01-memuat-halaman": return at(momen, <StackSkeleton />);
+    case "M01-kosong": return at(momen, <MomenStack {...stack({ items: [], total: 0, anyPhotos: false, demo: {} })} />);
+    case "M01-offline": return at(momen, <MomenStack {...stack({ demo: { offline: true } })} />);
+    case "M01-aksi-orang": return at(momen, <MomenStack {...stack({ demo: { sheet: "pilihan" } })} />);
+    case "M01-aksi-sendiri": return at(momen, <MomenStack {...stack({ items: sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true } : photo)), demo: { sheet: "pilihan" } })} />);
+    case "M01-hapus": return at(momen, <MomenStack {...stack({ items: sampleFeedSemua.map((photo, index) => (index === 2 ? { ...photo, mine: true } : photo)), demo: { sheet: "hapus" } })} />);
+    case "M01-disembunyikan": return at(momen, <><MomenStack {...stack({ demo: { hiddenForMe: true } })} /><DemoToast text="Laporan terkirim. Terima kasih." tone="success" /></>);
+    case "M01-disembunyikan-panitia": return at(mainWamPath.moments({ foto: sampleFeedSemua[0].id }), <MomenStack {...stack({
+      mode: "galeri", items: [{ ...sampleFeedSemua[0], mine: true, status: "disembunyikan" }], total: 1, startIndex: 0, own: { id: sampleFeedSemua[0].id, status: "disembunyikan", reason: "" }, demo: {},
+    })} />);
+    case "M02": return at(momen, <MomenStack {...stack({ view: "kelompok", items: sampleFeedKelompok, total: 5, startIndex: 1, demo: {} })} />);
+    case "M02-kosong": return at(momen, <MomenStack {...stack({ view: "kelompok", items: [], total: 0, anyPhotos: false, demo: {} })} />);
+    case "M02-belum-terbit": return at(momen, <MomenStack {...stack({ view: "kelompok", items: [], total: 0, group: null, groupsPublished: false, demo: {} })} />);
+    case "M02-dari-galeri": return at(mainWamPath.moments({ lihat: "kelompok", foto: sampleGalleryKelompok[3].id }), <MomenStack {...stack({
+      mode: "galeri", view: "kelompok", items: sampleGalleryKelompok, total: 21, startIndex: 3, demo: {},
+    })} />, "pemaparan");
+    case "M03": return at(momen, <MomenStack {...stack({ startIndex: 24, demo: {} })} />);
+    case "M04": return at(momen, <MomenStack {...stack({ demo: { sheet: "lapor" } })} />);
+  }
+
+  /* M05: Galeri. */
+  const galeri = mainWamPath.gallery();
+  switch (layar) {
+    case "M05": return at(galeri, <Gallery {...gallery()} />);
+    case "M05-kelompok": return at(galeri, <Gallery {...gallery({ view: "kelompok", items: sampleGalleryKelompok, total: 21 })} />);
+    case "M05-fotoku": return at(galeri, <Gallery {...gallery({ view: "saya", items: sampleGalleryMine, total: 6 })} />);
+    case "M05-sesi": return at(galeri, <Gallery {...gallery({ session: sampleSessionIds["team-building"], sessionTitle: "Team building", items: sampleFeedSemua.slice(0, 6), total: 38 })} />);
+    case "M05-kosong": return at(galeri, <Gallery {...gallery({ session: sampleSessionIds.bns, sessionTitle: "Batu Night Spectacular", items: [], total: 0 })} />);
+    case "M05-memuat": return at(galeri, <GallerySkeleton />);
+  }
+
+  /* M06: Mozaik. */
+  const mozaik = mainWamPath.mosaic();
+  switch (layar) {
+    case "M06": return at(mozaik, <Mosaic initial={sampleMosaic()} mark={false} title="Mozaik WAM 2026" demo />);
+    case "M06-tandai": return at(mozaik, <Mosaic initial={sampleMosaic()} mark title="Mozaik WAM 2026" demo />);
+    case "M06-tandai-kosong": return at(mozaik, <Mosaic initial={sampleMosaic(0.52, 0)} mark title="Mozaik WAM 2026" demo />);
+    case "M06-memuat": return at(mozaik, <MosaicSkeleton />);
+    case "M06-lengkap": return at(mozaik, <Mosaic initial={sampleMosaic(1)} mark={false} title="Mozaik WAM 2026" demo />);
+  }
+
+  /* U01–U05, O04: the camera at Team building (15.20). */
+  const kamera = mainWamPath.camera();
+  const teamNow = sampleTime("teamBuilding");
+  const camera = (demo: CameraDemo, over: { initialSession?: string | null; initialAudience?: "semua" | "kelompok"; now?: Date } = {}) => <CameraScreen
+    sessions={sessions} nowIso={(over.now ?? teamNow).toISOString()} group={viewer.group} groupsPublished mozaik absen migrated
+    initialAudience={over.initialAudience ?? "semua"} initialSession={over.initialSession ?? null} demo={demo} />;
+  switch (layar) {
+    case "U01": return at(kamera, camera({ phase: "kamera", live: "contoh" }), "teamBuilding");
+    case "U01-umum": return at(kamera, camera({ phase: "kamera", live: "contoh" }, { now: new Date("2027-01-05T14:45:00+07:00") }), "teamBuilding");
+    case "U01-pilih-sesi": return at(kamera, camera({ phase: "kamera", live: "contoh", sheet: "sesi" }), "teamBuilding");
+    case "U01-untuk": return at(kamera, camera({ phase: "kamera", live: "contoh", sheet: "untuk" }), "teamBuilding");
+    case "U02": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text="Terkirim ke semua peserta" action="Batalkan" timer thumb /></>, "teamBuilding");
+    case "U02-kelompok": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" }, { initialAudience: "kelompok" })}<DemoToast text="Terkirim ke Kelompok 4" action="Batalkan" timer thumb /></>, "teamBuilding");
+    case "U02-dibatalkan": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text="Foto dibatalkan" tone="info" /></>, "teamBuilding");
+    case "U03": return at(kamera, <>{camera({ phase: "kamera", live: "contoh", pill: 2, offline: true })}<DemoToast text="Akan terkirim saat online" action="Batalkan" thumb /></>, "teamBuilding");
+    case "U03-online": return at(momen, <><MomenStack {...stack({ demo: {} })} /><DemoToast text="2 foto terkirim" tone="success" /></>);
+    case "U04": return at(kamera, <>{camera({ phase: "kamera", live: "contoh" })}<DemoToast text="3 foto terkirim ke semua" action="Batalkan" timer thumb /></>, "teamBuilding");
+    case "U04-ditolak": return at(kamera, camera({ phase: "kamera", live: "contoh", sheet: "galeri" }), "teamBuilding");
+    case "U05": return at(kamera, camera({ phase: "kamera", live: "ditolak" }), "teamBuilding");
+    case "U-hp": return at(kamera, camera({ phase: "kamera", live: "hp" }), "teamBuilding");
+    case "O04": return at(kamera, camera({ phase: "izin" }), "pagi");
+  }
+
+  /* The slots on other areas' screens. */
+  if (layar === "P01-kartu") return at(mainWamPath.home, <ScreenContent><MomenCard photos={[null, null, null]} sub="12 foto baru" runner={false} /></ScreenContent>);
+  return at(mainWamPath.session(sampleSessionIds.pemaparan), <ScreenContent><List>
+    <ListRow icon={<Images />} title="Foto sesi ini" value={24} href={mainWamPath.moments({ sesi: sampleSessionIds.pemaparan })} />
+  </List></ScreenContent>);
+}

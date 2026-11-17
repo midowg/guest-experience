@@ -1,0 +1,182 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { Camera, Hourglass, Images, Lock, RotateCcw, Trash2, Users } from "lucide-react";
+import { Button, ConfirmDialog, EmptyState, FilterChip, List, ListRow, Pill, PhotoFill, Pressable, Segmented, Sheet, useToast } from "@/components/main-wam/ui";
+import { ScreenContent, Stack } from "@/components/main-wam/shell";
+import { errorText, praWamRequest } from "@/components/pra-wam/api";
+import { UMUM } from "@/lib/main-wam/momen/types";
+import type { QueueItem } from "@/lib/main-wam/momen/queue";
+import type { SessionChoice } from "@/lib/main-wam/momen/sessions";
+import { groupLabel, photoAlt } from "@/lib/main-wam/momen/stack";
+import type { FeedAnswer, FeedPhoto, FeedView, SessionCount, SessionFilter } from "@/lib/main-wam/momen/types";
+import type { ViewerGroup } from "@/lib/main-wam/types";
+import { mainWamApi, mainWamPath } from "@/lib/routes";
+import { SessionFilterSheet } from "./MomenSheets";
+import { MomenQueueRunner, useMomenQueue } from "./upload/QueueRunner";
+import { momenQueue } from "./upload/sender";
+import css from "./gallery.module.css";
+
+export type GalleryProps = {
+  view: FeedView;
+  session: SessionFilter;
+  sessionTitle: string | null;
+  items: FeedPhoto[];
+  next: string | null;
+  total: number;
+  counts: SessionCount[] | null;
+  sessions: SessionChoice[];
+  group: ViewerGroup | null;
+  groupsPublished: boolean;
+  mozaik: boolean;
+  migrated: boolean;
+  nowIso: string;
+};
+
+const tone = (id: string) => ((parseInt(id.replace(/[^0-9a-f]/gi, "").slice(-4) || "0", 16) % 6) + 1) as 1 | 2 | 3 | 4 | 5 | 6;
+
+/** A queued photo's small copy, shown from this phone while it waits (object URL, freed after). */
+function QueuedTile({ item, onOpen }: { item: QueueItem; onOpen: () => void }) {
+  const url = useMemo(() => URL.createObjectURL(new Blob([item.kecil], { type: "image/jpeg" })), [item.kecil]);
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  const label = item.state === "gagal" ? "Gagal" : "Antre";
+  return <button type="button" className={css.tile} onClick={onOpen} aria-label={`Fotomu, ${item.state === "gagal" ? "belum terkirim" : "menunggu dikirim"}`}>
+    {/* eslint-disable-next-line @next/next/no-img-element -- a photo on this phone */}
+    <img className={css.img} src={url} alt="" />
+    <span className={css.state} aria-hidden>{label}</span>
+  </button>;
+}
+
+/**
+ * M05 Galeri: Semua / Kelompokku / Fotoku and "Semua sesi ▾", a grid of three (keyset pages as it
+ * scrolls, or Muat lagi). A tap opens the stack at that photo; in Fotoku it opens the photo's sheet
+ * (Hapus foto), and photos still waiting on this phone come first, marked Antre or Gagal. A lock =
+ * only for the kelompok.
+ */
+export function Gallery(props: GalleryProps) {
+  const { view, session, sessionTitle, group } = props;
+  const router = useRouter();
+  const toast = useToast();
+  const now = useMemo(() => new Date(props.nowIso), [props.nowIso]);
+  const [items, setItems] = useState(props.items);
+  const [next, setNext] = useState(props.next);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [mine, setMine] = useState<FeedPhoto | null>(null);
+  const [queued, setQueued] = useState<QueueItem | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [removed, setRemoved] = useState(0);
+  const sentinel = useRef<HTMLDivElement>(null);
+  const queue = useMomenQueue();
+
+  // A new filter remounts this (the page keys it), so the server's first page is the start.
+
+  const loadMore = useCallback(async () => {
+    if (!next || loading) return;
+    setLoading(true);
+    try {
+      const { data } = await praWamRequest<FeedAnswer>(mainWamApi.photos({ lihat: view === "semua" ? undefined : view, sesi: session ?? undefined, sebelum: next }));
+      setItems(list => [...list, ...data.items.filter(item => !list.some(other => other.id === item.id))]);
+      setNext(data.next);
+      setFailed(false);
+    } catch { setFailed(true); } finally { setLoading(false); }
+  }, [next, loading, view, session]);
+
+  useEffect(() => {
+    const element = sentinel.current;
+    if (!element || !next || failed || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) void loadMore(); }, { rootMargin: "600px 0px" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [next, failed, loadMore]);
+
+  function filterTo(nextView: FeedView, nextSession: SessionFilter) {
+    router.replace(mainWamPath.gallery({ lihat: nextView === "semua" ? undefined : nextView, sesi: nextSession ?? undefined }), { scroll: false });
+  }
+
+  async function removeMine() {
+    if (!mine) return;
+    setDeleting(true);
+    try {
+      await praWamRequest(mainWamApi.photo(mine.id), { method: "DELETE" });
+      setItems(list => list.filter(item => item.id !== mine.id));
+      setRemoved(count => count + 1);
+      setConfirm(false); setMine(null);
+      toast.show({ text: "Foto dihapus", tone: "success" });
+    } catch (error) { toast.show({ text: errorText(error), tone: "error" }); } finally { setDeleting(false); }
+  }
+
+  const total = Math.max(0, props.total - removed);
+  const caption = session
+    ? `${session === UMUM ? "Umum" : sessionTitle ?? "Sesi"} · ${total} foto`
+    : view === "kelompok" && group ? `${total} foto · ${groupLabel(group)}` : `${total} foto`;
+  const waiting = view === "saya" ? queue.items.filter(item => !session || (session === UMUM ? !item.sessionId : item.sessionId === session)) : [];
+
+  let body: ReactNode;
+  if (!props.migrated) body = <EmptyState icon={Hourglass} title="Menunggu pembaruan sistem">Galeri bisa dibuka setelah sistem diperbarui.</EmptyState>;
+  else if (view === "kelompok" && !group) body = <EmptyState icon={Users} title={props.groupsPublished ? "Kamu belum masuk kelompok" : "Kelompok belum diterbitkan panitia"} />;
+  else if (!items.length && !waiting.length) {
+    body = <EmptyState icon={Images} title={session ? "Belum ada foto di sesi ini" : view === "saya" ? "Belum ada fotomu" : view === "kelompok" ? "Kelompokmu belum punya foto" : "Belum ada foto"}
+      action={view === "saya" ? <Button variant="tonal" size="m" icon={Camera} href={mainWamPath.camera()}>Ambil foto</Button> : undefined} />;
+  } else {
+    body = <>
+      <ul className={css.grid} aria-label="Foto">
+        {waiting.map(item => <li key={item.clientId}><QueuedTile item={item} onOpen={() => setQueued(item)} /></li>)}
+        {items.map(photo => {
+          const alt = photo.mine ? "Fotomu" : `Foto oleh ${photo.owner.name}`;
+          const label = `${alt}${photo.audience === "kelompok" ? ", hanya kelompok" : ""}${photo.status !== "tampil" ? ", sedang disembunyikan" : ""}`;
+          const inner = <>
+            <PhotoFill tone={tone(photo.id)} className={css.fill} />
+            {/* eslint-disable-next-line @next/next/no-img-element -- short-lived storage addresses from the server */}
+            {photo.src.kecil && <img className={css.img} src={photo.src.kecil} alt="" loading="lazy" decoding="async" />}
+            {photo.audience === "kelompok" && <span className={css.badge} aria-hidden><Lock /></span>}
+            {photo.status !== "tampil" && <span className={css.state} aria-hidden>{photo.status === "ditinjau" ? "Ditinjau" : "Disembunyikan"}</span>}
+          </>;
+          return <li key={photo.id}>
+            {view === "saya"
+              ? <Pressable className={css.tile} onClick={() => setMine(photo)} aria-label={label} title={photoAlt(photo, now)}>{inner}</Pressable>
+              : <Pressable className={css.tile} href={mainWamPath.moments({ lihat: view === "kelompok" ? "kelompok" : undefined, sesi: session ?? undefined, foto: photo.id })} aria-label={label}>{inner}</Pressable>}
+          </li>;
+        })}
+      </ul>
+      {next && <div ref={sentinel} className={css.sentinel} aria-hidden />}
+      {next && <div className={css.more}><Button variant="text" loading={loading} loadingLabel="Memuat…" onClick={() => { setFailed(false); void loadMore(); }}>{failed ? "Coba lagi" : "Muat lagi"}</Button></div>}
+    </>;
+  }
+
+  return <ScreenContent>
+    <MomenQueueRunner />
+    <Stack>
+      <Segmented label="Saring Galeri" value={view} onChange={value => filterTo(value, session)}
+        options={[{ value: "semua", label: "Semua" }, { value: "kelompok", label: "Kelompokku" }, { value: "saya", label: "Fotoku" }]} />
+      <div className={css.bar}>
+        <FilterChip menu name="Saring sesi" className={css.chip} active={session !== null} expanded={picking} disabled={!props.counts} onClick={() => setPicking(true)}>
+          {session === UMUM ? "Umum" : sessionTitle ?? "Semua sesi"}
+        </FilterChip>
+        {props.migrated && !(view === "kelompok" && !group) && total > 0 && <span className={css.caption}>{caption}</span>}
+      </div>
+      {body}
+    </Stack>
+
+    {props.counts && <SessionFilterSheet open={picking} onClose={() => setPicking(false)} sessions={props.sessions} counts={props.counts} value={session} now={now} onChange={value => filterTo(view, value)} />}
+    <Sheet open={!!mine && !confirm} onClose={() => setMine(null)} title="Fotomu" flush>
+      {mine && mine.status !== "tampil" && <div style={{ padding: "0 var(--mw-space-16) var(--mw-space-8)" }}>
+        <Pill tone="warning">{mine.status === "ditinjau" ? "Ditinjau panitia" : "Disembunyikan panitia"}</Pill>
+      </div>}
+      <List plain inset={68} label="Pilihan foto">
+        <ListRow icon={<Trash2 className={css.danger} />} title={<span className={css.danger}>Hapus foto</span>} chevron={false} onClick={() => setConfirm(true)} />
+      </List>
+    </Sheet>
+    <ConfirmDialog open={confirm} onCancel={() => setConfirm(false)} onConfirm={removeMine} tone="danger" icon={<Trash2 />} title="Hapus foto ini?"
+      body={props.mozaik ? "Foto hilang dari Momen dan Mozaik." : "Foto hilang dari Momen."} confirmLabel="Hapus foto" busy={deleting} busyLabel="Menghapus…" />
+    <Sheet open={!!queued} onClose={() => setQueued(null)} title="Fotomu" subtitle={queued?.state === "gagal" ? queued.error ?? "Belum terkirim." : "Menunggu sinyal. Terkirim sendiri saat online."} flush>
+      <List plain inset={68} label="Pilihan foto">
+        {queued?.state === "gagal" && <ListRow icon={<RotateCcw />} title="Coba lagi" chevron={false} onClick={() => { void momenQueue().retry(queued.clientId); setQueued(null); }} />}
+        <ListRow icon={<Trash2 className={css.danger} />} title={<span className={css.danger}>Batalkan</span>} chevron={false} onClick={() => { if (queued) void momenQueue().discard(queued.clientId); setQueued(null); }} />
+      </List>
+    </Sheet>
+  </ScreenContent>;
+}
