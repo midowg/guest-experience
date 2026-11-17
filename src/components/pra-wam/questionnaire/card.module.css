@@ -302,7 +302,7 @@
  * glow of its rarity, a sprinkle of stars, and light where the words are.
  */
 /* Edge to edge: out past the questionnaire frame's side padding, and down to the bottom of the screen. */
-.charPage { position: relative; flex: 1 0 auto; min-height: 100dvh; overflow: hidden; padding-bottom: var(--space-2xl);
+.charPage { position: relative; flex: 1 0 auto; min-height: 100dvh; overflow: hidden; padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   margin-inline: calc(-1 * max(var(--space-md), env(safe-area-inset-left, 0px))) calc(-1 * max(var(--space-md), env(safe-area-inset-right, 0px)));
   padding-inline: max(0px, env(safe-area-inset-left, 0px)) max(0px, env(safe-area-inset-right, 0px)); padding-top: env(safe-area-inset-top, 0px);
   background-color: #fff;
