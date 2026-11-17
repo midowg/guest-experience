@@ -72,7 +72,8 @@
 .toolbar .select { width: auto; min-width: 11rem; }
 
 /* Periksa (18 Nov 2026): status tabs, then search, Filter (Jenis) and Tampilan (Kartu or Daftar). */
-.dimPill.dimPill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px 3px 8px; line-height: 1.25; }
+/* Never squeezed: a dimension's name ("Fisik", "Emosional") is never cut to "F…". */
+.dimPill.dimPill { display: inline-flex; flex: none; align-items: center; gap: 5px; padding: 3px 10px 3px 8px; line-height: 1.25; white-space: nowrap; }
 .dimPill > svg { flex: none; }
 .dimPill > span { overflow: hidden; text-overflow: ellipsis; }
 
@@ -89,9 +90,11 @@
 .statusCount { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; box-sizing: border-box; background: var(--cs-warn-bg); color: var(--cs-warn-fg); font-size: 12px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
 .statusCount[data-zero="true"] { background: var(--cs-ok-bg); color: var(--cs-ok-fg); }
 
-.reviewFind { flex: 1 1 28rem; display: flex; align-items: center; justify-content: flex-end; gap: .5rem; min-width: 0; }
-.reviewFind > label:first-child { flex: 1 1 14rem; width: auto; max-width: 20rem; min-width: 0; }
+/* Search on the left, Filter and Tampilan on the right: on its own line too (a laptop) it starts at the edge, not floating mid-line. */
+.reviewFind { flex: 1 1 28rem; display: flex; align-items: center; gap: .5rem; min-width: 0; }
+.reviewFind > label:first-child { flex: 1 1 14rem; width: auto; max-width: 24rem; min-width: 0; }
 .menuBox { position: relative; flex: none; }
+.reviewFind > .menuBox { margin-left: auto; }
 .filterButton { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px 0 14px; border: 1px solid var(--cs-line); border-radius: 12px; box-sizing: border-box; background: var(--cs-surface); color: var(--cs-text); font: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: background-color .16s, border-color .16s, box-shadow .16s; }
 .filterButton:hover { background: var(--cs-surface-2); }
 .filterButton > svg { flex: none; }
@@ -127,15 +130,19 @@
 .cardPick { display: grid; place-items: center; flex: none; width: 2.75rem; height: 2.75rem; margin: -.5rem -.25rem -.5rem -.5rem; cursor: pointer; }
 .cardPick input, .pickAll input { width: 1.25rem; height: 1.25rem; accent-color: var(--cs-primary); cursor: pointer; }
 .cardHead { display: flex; align-items: center; gap: .75rem; }
-.cardWho { flex: 1; min-width: 0; display: grid; }
-.cardWho strong, .cardWho small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cardWho small { color: var(--cs-subtle); font-size: .8125rem; }
+.cardWho { flex: 1; min-width: 0; display: grid; gap: 1px; }
+/* Who (Kartu and Daftar): the name with the day and time beside it; the department under it, on up to two lines. */
+.whoLine { display: flex; align-items: baseline; gap: .5rem; min-width: 0; }
+.whoLine strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.whoLine small { flex: none; color: var(--cs-subtle); font-size: .8125rem; white-space: nowrap; }
+.whoDept { color: var(--cs-subtle); font-size: .8125rem; line-height: 1.3; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cardBody { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: .875rem; }
 .cardWhat { display: grid; align-content: start; gap: .5rem; min-width: 0; }
-.cardWhat > strong { font-size: 1rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cardWhat > strong { font-size: 1rem; line-height: 1.35; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 /* The dimension, then the facts with a dot between them. */
 .cardMeta { display: flex; flex-wrap: wrap; align-items: center; gap: .375rem .5rem; color: var(--cs-muted); font-size: .8125rem; line-height: 1.3; }
-.note { margin: 0; color: var(--cs-muted); font-style: italic; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* The employee's note in full (it helps judge the proof; at most 500 characters), long words broken. */
+.note { margin: 0; color: var(--cs-muted); font-style: italic; line-height: 1.45; overflow-wrap: anywhere; }
 .proof { position: relative; display: grid; place-items: center; flex: none; width: 5.5rem; height: 5.5rem; border-radius: .75rem; overflow: hidden; background: var(--cs-fill); color: var(--cs-subtle); }
 .proof[data-size="sm"] { width: 2.75rem; height: 2.75rem; border-radius: .5rem; }
 .proof[data-empty="true"] { border: 1px dashed var(--cs-line); background: transparent; box-sizing: border-box; }
@@ -172,10 +179,10 @@ button.proof { padding: 0; border: 0; font: inherit; cursor: pointer; }
 .more { display: flex; justify-content: center; padding: 1.5rem 0; }
 
 /* Daftar: one row each in one box; the buttons are icons with their name as a tooltip. */
-.rows { display: grid; border: 1px solid var(--cs-line); border-radius: 1rem; background: var(--cs-surface); overflow: hidden; }
+.rows { container-type: inline-size; display: grid; border: 1px solid var(--cs-line); border-radius: 1rem; background: var(--cs-surface); overflow: hidden; }
 .row {
   display: grid; align-items: center; column-gap: .875rem; padding: .5rem 1rem .5rem .375rem; outline: none;
-  grid-template-columns: 2.75rem 2.25rem minmax(8rem, 12rem) minmax(0, 1fr) 2.75rem 6.5rem 8.5rem;
+  grid-template-columns: 2.75rem 2.25rem minmax(10rem, 15rem) minmax(12rem, 1fr) 2.75rem 6.5rem 8.5rem;
   grid-template-areas: "pick av who what proof score acts" ". . . extra extra extra extra" "edit edit edit edit edit edit edit";
 }
 .row + .row { border-top: 1px solid var(--cs-line); }
@@ -185,11 +192,10 @@ button.proof { padding: 0; border: 0; font: inherit; cursor: pointer; }
 .row:focus-visible { box-shadow: inset 0 0 0 2px var(--cs-primary); }
 .row > .cardPick { grid-area: pick; width: 2.75rem; margin: 0; }
 .row > :nth-child(2) { grid-area: av; }
-.rowWho { grid-area: who; display: grid; min-width: 0; }
-.rowWho strong, .rowWho small, .rowWhat > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rowWho small { color: var(--cs-subtle); font-size: .8125rem; }
+.rowWho { grid-area: who; display: grid; gap: 1px; min-width: 0; }
 .rowWhat { grid-area: what; display: grid; gap: .25rem; min-width: 0; }
-.rowWhat > strong { font-size: .9375rem; }
+/* The activity's name on up to two lines (the whole of it in the tooltip). */
+.rowWhat > strong { font-size: .9375rem; line-height: 1.35; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .row > .proof { grid-area: proof; }
 .rowScore { grid-area: score; display: grid; justify-items: end; gap: .25rem; text-align: right; }
 .rowScore .cardPoints { justify-items: end; min-width: 0; }
@@ -197,9 +203,21 @@ button.proof { padding: 0; border: 0; font: inherit; cursor: pointer; }
 .rowActions { grid-area: acts; display: grid; grid-auto-flow: column; grid-auto-columns: 2.5rem; gap: .375rem; justify-content: end; }
 .rowActions > button { width: 2.5rem; min-width: 0; padding: 0; }
 .rowExtra { grid-area: extra; display: grid; gap: .375rem; padding: .125rem 0 .375rem; }
-.rowExtra .note { -webkit-line-clamp: 1; }
 .rowEditor { grid-area: edit; padding: 0 .5rem .5rem 5.875rem; max-width: 44rem; }
 .rowEditor .editor { margin-top: .25rem; }
+/*
+ * A narrower list (a laptop, or the menu open on a small desktop): one line no longer leaves the activity
+ * room, so each row takes two: who, points and buttons on top; the activity and its proof under them.
+ */
+@container (max-width: 64rem) {
+  .row {
+    grid-template-columns: 2.75rem 2.25rem minmax(0, 1fr) auto auto; align-items: start; row-gap: .375rem; padding: .625rem 1rem .625rem .375rem;
+    grid-template-areas: "pick av who score acts" ". . what what proof" ". . extra extra extra" "edit edit edit edit edit";
+  }
+  .row > .proof { justify-self: end; }
+  .rowScore { align-self: center; }
+  .rowActions { align-self: center; }
+}
 
 /* A phone: the Filter and Tampilan buttons as icons next to the search; rows in three lines. */
 @media (max-width: 40rem) {

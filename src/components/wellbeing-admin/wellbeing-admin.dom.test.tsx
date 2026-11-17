@@ -56,6 +56,22 @@ describe("Admin Wellbeing", () => {
     await waitFor(() => expect(screen.getAllByRole("checkbox", { name: /^Pilih aktivitas/ })).toHaveLength(before));
   });
 
+  it("keeps Periksa's texts whole: the department on its own line, units with their numbers, the full title and note (18 Nov 2026)", async () => {
+    open("periksa");
+    const card = (await screen.findAllByRole("article", { name: /^Dewi, Running/ }, { timeout: 3000 }))[0];
+    // The name with the day and time beside it; the department alone under it (it may take two lines, never cut with the time).
+    const department = within(card).getByText("Center of Excellence");
+    expect(department.textContent).toBe("Center of Excellence");
+    expect(within(card).getByText("Dewi").nextElementSibling?.textContent).toMatch(/^Hari ini/);
+    // A number and its unit never part: no-break spaces, also before each dot.
+    // (The raw text: the matcher's default would turn the no-break spaces into plain ones.)
+    expect(within(card).getAllByText((_, element) => element?.tagName === "SPAN" && element.textContent === "Running · 412 kkal · 28 menit · 5,2 km")).toHaveLength(1);
+    // The note is there in full, and the title carries its whole text as a tooltip.
+    expect(within(card).getByText("“Lari pagi keliling Renon”")).toBeTruthy();
+    const long = (await screen.findAllByTitle("Spa atau body treatment (Perawatan Wajah, Badan, Potong Rambut)"))[0];
+    expect(long.textContent).toBe("Spa atau body treatment (Perawatan Wajah, Badan, Potong Rambut)");
+  });
+
   it("opens Unduh Excel for the ticked activities, and says it when the file cannot be made", async () => {
     open("periksa");
     const boxes = await screen.findAllByRole("checkbox", { name: /^Pilih aktivitas/ }, { timeout: 3000 });

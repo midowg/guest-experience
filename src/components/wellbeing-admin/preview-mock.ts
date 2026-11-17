@@ -12,10 +12,11 @@ import type { WbActivity, WbCatalogItem, WbOverview, WbPeople, WbPersonDetail, W
 
 const DIMS: DimensionId[] = ["physical", "emotional", "social", "financial", "spiritual"];
 const zero = (): Record<DimensionId, number> => ({ physical: 0, emotional: 0, social: 0, financial: 0, spiritual: 0 });
+// Departments as long as the real ones (up to 34 characters, 18 Nov 2026), so the layout is checked against them.
 const NAMES = [
-  ["Raka Contoh", "Raka", "Event"], ["Bima Rekaan", "Bima", "Production"], ["Yoga Sampel", "Yoga", "Account"], ["Intan Contoh", "Intan", "Marketing"],
-  ["Nadia Contoh", "Nadia", "Account"], ["Sinta Sampel", "Sinta", "GA"], ["Citra Sampel", "Citra", "Event"], ["Galih Rekaan", "Galih", "Creative"],
-  ["Rizky Sampel", "Rizky", "Finance"], ["Ayu Rekaan", "Ayu", "Event"], ["Fajar Contoh", "Fajar", "Production"], ["Dewi Contoh", "Dewi", "Creative"],
+  ["Raka Contoh", "Raka", "Brand Event & Experience Team"], ["Bima Rekaan", "Bima", "Production"], ["Yoga Sampel", "Yoga", "Business & Administrative Services"], ["Intan Contoh", "Intan", "Marketing"],
+  ["Nadia Contoh", "Nadia", "Account"], ["Sinta Sampel", "Sinta", "Human Resources & General Affair"], ["Citra Sampel", "Citra", "Event"], ["Galih Rekaan", "Galih", "Art & Creative Support"],
+  ["Rizky Sampel", "Rizky", "Corporate Finance Controller"], ["Ayu Rekaan", "Ayu", "Event"], ["Fajar Contoh", "Fajar", "Production"], ["Dewi Contoh", "Dewi", "Center of Excellence"],
 ] as const;
 const people = NAMES.map(([name, nickname, department], index) => ({ id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`, name, nickname, department, active: index !== 10 }));
 
@@ -29,8 +30,10 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
   const day = (back: number) => { const date = new Date(`${today}T12:00:00Z`); date.setUTCDate(date.getUTCDate() - back); return date.toISOString().slice(0, 10); };
   const types: [string, string, DimensionId, "daily" | "sport", number][] = [
     ["sport.running", "Running", "physical", "sport", 0], ["sport.cycling", "Cycling", "physical", "sport", 0], ["sport.badminton", "Badminton", "physical", "sport", 0],
-    ["physical.steps", "Langkah harian", "physical", "daily", 0], ["emotional.meditasi", "Meditasi", "emotional", "daily", 70], ["emotional.podcast", "Mendengarkan Podcast", "emotional", "daily", 80],
-    ["social.buddy_program", "Buddy Program", "social", "daily", 80], ["financial.tabungan_emas", "Membuka Tabungan Emas", "financial", "daily", 150], ["spiritual.kajian", "Mengikuti Kajian Rohani", "spiritual", "daily", 80],
+    ["physical.steps", "Langkah harian", "physical", "daily", 0], ["emotional.meditasi", "Meditasi", "emotional", "daily", 70], ["emotional.podcast", "Mendengarkan Podcast (tidak potongan video)", "emotional", "daily", 80],
+    ["social.buddy_program", "Buddy Program", "social", "daily", 80], ["financial.tabungan_emas", "Membuka Tabungan Emas", "financial", "daily", 150], ["spiritual.kajian", "Kajian Rohani, Ruwatan, Melukat, Retret, Ziarah", "spiritual", "daily", 80],
+    // The longest names in the real catalogue (up to 63 characters).
+    ["emotional.spa", "Spa atau body treatment (Perawatan Wajah, Badan, Potong Rambut)", "emotional", "daily", 100],
   ];
   let serial = 0;
   const activity = (who: number, code: string, back: number, extra: Partial<WbActivity> = {}): WbActivity => {
@@ -50,6 +53,7 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
     activity(3, "physical.steps", 0, { steps: 9128 }),
     activity(0, "sport.badminton", 0, { kcal: 520, minutes: 90, time: "16:30", note: "Main badminton bareng tim Event, tiga set lalu lanjut latihan smash dan drop shot sampai lapangan tutup" }),
     activity(5, "emotional.meditasi", 1, {}),
+    activity(2, "emotional.spa", 1, { time: "19:40", note: "Potong rambut dan creambath setelah acara" }),
     activity(7, "sport.cycling", 1, { kcal: 618, minutes: 55, distanceM: 18400, source: "strava", photos: [] }),
     activity(2, "emotional.podcast", 1, { note: "Episode tentang kebiasaan tidur" }),
     activity(8, "financial.tabungan_emas", 2, {}),

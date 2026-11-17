@@ -374,10 +374,11 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
     else if (key === "k" || key === "arrowup") { event.preventDefault(); onMove(event.currentTarget, -1); }
   }
 
+  // A number and its unit never part at the end of a line ("5,2 km", not "5,2" then "km"): no-break spaces.
   const facts = [
-    item.kcal != null && `${points(item.kcal)} kkal`, item.steps != null && `${points(item.steps)} langkah`,
-    item.minutes != null && `${item.minutes} menit`, item.distanceM != null && `${(item.distanceM / 1000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} km`,
-    item.source === "strava" && "dari Strava", item.source === "import" && "dari aplikasi lama",
+    item.kcal != null && `${points(item.kcal)} kkal`, item.steps != null && `${points(item.steps)} langkah`,
+    item.minutes != null && `${item.minutes} menit`, item.distanceM != null && `${(item.distanceM / 1000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} km`,
+    item.source === "strava" && "dari Strava", item.source === "import" && "dari aplikasi lama",
   ].filter(Boolean) as string[];
   const name = item.employeeNickname || item.employeeName;
   const when = `${dayLabel(item.date, today)}${item.time ? ` ${item.time.replace(":", ".")}` : ""}`;
@@ -416,12 +417,18 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
     {item.status === "adjusted" && item.pointsClaimed !== item.points && <small>dari {points(item.pointsClaimed)}</small>}
     {item.status === "rejected" && <small>tidak dihitung</small>}
   </span>;
-  // The facts as one line of text, so a dot never starts a wrapped line.
-  const details = [item.title && item.title !== item.typeName ? item.typeName : null, ...facts].filter(Boolean).join(" · ");
+  // The facts as one text; a no-break space before each dot, so a dot never starts a wrapped line.
+  const details = [item.title && item.title !== item.typeName ? item.typeName : null, ...facts].filter(Boolean).join(" · ");
   const meta = <span className={css.cardMeta}>
     <DimensionPill dimension={item.dimension} />
     {details && <span>{details}</span>}
   </span>;
+  const title = item.title || item.typeName;
+  // Who: the name with the day and time beside it, the department under it (two lines when it is long, never cut to one).
+  const who = (className: string) => <div className={className}>
+    <span className={css.whoLine}><strong>{name}</strong><small>{when}</small></span>
+    <small className={css.whoDept}>{item.department || "-"}</small>
+  </div>;
   const common = {
     "data-card": true, tabIndex: 0, onKeyDown: onKey, "data-status": item.status, "data-picked": picked,
     "aria-label": `${name}, ${item.typeName}, ${item.points} poin${picked ? ", dipilih" : ""}`,
@@ -431,8 +438,8 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
   if (row) return <article className={css.row} {...common}>
     {pick}
     <Avatar name={item.employeeName || name} size={36} />
-    <div className={css.rowWho}><strong>{name}</strong><small>{item.department || "-"} · {when}</small></div>
-    <div className={css.rowWhat}><strong>{item.title || item.typeName}</strong>{meta}</div>
+    {who(css.rowWho)}
+    <div className={css.rowWhat}><strong title={title}>{title}</strong>{meta}</div>
     <Proof photos={item.photos} size="sm" onOpen={() => setViewing(0)} />
     <div className={css.rowScore}>{pointsView}{status}</div>
     <span className={css.rowActions}>{mode === "view" ? actions : null}</span>
@@ -448,12 +455,12 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
     <header className={css.cardHead}>
       {pick}
       <Avatar name={item.employeeName || name} size={40} />
-      <div className={css.cardWho}><strong>{name}</strong><small>{item.department || "-"} · {when}</small></div>
+      {who(css.cardWho)}
       {status}
     </header>
     <div className={css.cardBody}>
       <div className={css.cardWhat}>
-        <strong>{item.title || item.typeName}</strong>
+        <strong title={title}>{title}</strong>
         {meta}
         {item.note && <p className={css.note}>“{item.note}”</p>}
       </div>

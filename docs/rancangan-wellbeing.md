@@ -177,6 +177,15 @@ aplikasi tetap jalan dan menyimpan tanpa jam.
   - Di HP: Filter dan Tampilan jadi ikon di sebelah pencarian, tab "Belum diperiksa" tertulis "Belum".
   - Pintasan keyboard tidak lagi di subjudul. Ada tombol **Pintasan** (atau tekan `?`), hanya di perangkat
     dengan keyboard dan mouse.
+  - Teks tidak terpotong atau keluar (18 Nov 2026, diaudit di 1024, 1280, 1440, 1920 px, Kartu dan Daftar, dengan
+    nama departemen dan kegiatan sepanjang aslinya):
+    - Nama dengan hari dan jam di sampingnya, departemen di bawahnya (boleh dua baris).
+    - Judul kegiatan sampai dua baris, lengkapnya di tooltip.
+    - Catatan karyawan tampil penuh. Pil dimensi tidak pernah terpotong.
+    - Angka tetap bersama satuannya, dan titik pemisah tidak memulai baris.
+    - Daftar yang sempit (laptop) memakai dua baris per aktivitas: orang, poin, dan tombol di atas; kegiatan dan
+      bukti di bawah.
+    - Pencarian di kiri, Filter dan Tampilan di kanan.
 - **Foto profil** (Profil → foto atau baris Foto profil) memakai foto akun WAM, jadi satu foto untuk WLM, WAM,
   dan Booking Kantor. Pilihannya:
   - **Pakai kartu tokoh WAM**: kartu dipotong bulat dengan warna persona, sama dengan "Jadikan foto profil" di
