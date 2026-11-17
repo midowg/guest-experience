@@ -95,12 +95,19 @@ it("shows a tokoh card's result: the figure, why, the persona and its complement
     ...card, character: { ...card.character, key: "garda", class: "Garda Depan", title: "Yang maju duluan", partner: { name: "Kirana", class: "Penyihir Ide" } },
     figure: { id: "f", key: "edmund-hillary", name: "Edmund Hillary", costume: "Jaket pendaki, kapak es", quote: null, image: null, legend: false, legendClass: null },
     reason: "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan dan suka olahraga & outdoor.", colors: ["#C2303F", "#6E1023"],
+    match: { items: [{ label: "Hobi", value: "Olahraga & outdoor", mine: true }, { label: "Kegiatan favorit", value: "Outdoor", mine: false }], role: ["Eksekutor"] },
   };
   const { container } = render(<CardReveal formId="f2" initial={tokoh} nickname="Dewi" hasPhoto={false} />);
   expect(await screen.findByText("Edmund Hillary")).toBeTruthy();
-  expect(screen.getByText("Kenapa Edmund Hillary?")).toBeTruthy();
-  expect(screen.getByText(tokoh.reason!)).toBeTruthy();
-  expect(screen.getByText("Figurnya: jaket pendaki, kapak es.")).toBeTruthy();
+  // Layout A: who the tokoh is, the achievement and influence, what of my answers they share, my type.
+  expect(screen.getByRole("heading", { name: "Siapa Edmund Hillary" })).toBeTruthy();
+  expect(screen.getByText(/puncak Everest pada 1953/)).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Kehebatannya" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Pengaruhnya" })).toBeTruthy();
+  expect(screen.getByText("1 dari 2 hal yang disukai Edmund Hillary juga kamu pilih di kuesioner.")).toBeTruthy();
+  expect(screen.getByText(/Eksekutor/)).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Tipemu: Garda Depan" })).toBeTruthy();
+  expect(screen.getByText(/Figurnya: jaket pendaki, kapak es./)).toBeTruthy();
   expect(screen.getByText("Garda Depan")).toBeTruthy();
   expect(screen.getByText("Pelengkapmu: Penyihir Ide")).toBeTruthy();
   expect(container.querySelector("[class*='stampOn']")?.textContent).toBe("Epic");

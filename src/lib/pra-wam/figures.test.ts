@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { figureOfFile, figureScore, pickFigure, rarityOf, reasonText, rerollFigure, type Figure } from "./figures";
+import { chosen, figureMatches, figureOfFile, figureScore, pickFigure, rarityOf, reasonText, rerollFigure, type Figure } from "./figures";
 
 const figure = (key: string, personaId: string, rest: Partial<Figure> = {}): Figure => ({
   id: key, number: 1, key, name: key, personaId, costume: "", hobbies: [], activities: [], energy: "", genre: "",
@@ -50,6 +50,16 @@ describe("matching a figure", () => {
     expect(rerollFigure("garda", pool, answers, { "edmund-hillary": 1, "gordon-ramsay": 1, "freddie-mercury": 1 }, "edmund-hillary", first)).toBeNull();
     // The reason still comes from the answers.
     expect(rerollFigure("garda", pool, answers, { "edmund-hillary": 1, "gordon-ramsay": 1 }, "edmund-hillary", first)?.why).toEqual(["suka musik", "suka musik rock"]);
+  });
+
+  it("lists what a figure is matched on, each with whether I chose it", () => {
+    expect(figureMatches(mercury, answers)).toEqual([
+      { label: "Hobi", value: "Musik", mine: true },
+      { label: "Kegiatan favorit", value: "Musik / karaoke", mine: false },
+      { label: "Gaya berkumpul", value: "Kelompok besar", mine: false },
+      { label: "Musik", value: "Rock", mine: true },
+    ]);
+    expect(chosen(["Pencetus ide", "Lainnya: tukang kopi"])).toEqual(["Pencetus ide"]);
   });
 
   it("reads the rarity as 0 to 4", () => {

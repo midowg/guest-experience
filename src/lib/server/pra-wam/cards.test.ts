@@ -282,6 +282,8 @@ describe("kartu tokoh dunia", () => {
     expect(card).toMatchObject({ serial: 9, tier: { key: "epic" }, figure: { key: "gordon-ramsay" } });
     expect(db.cq_person_cards[0]).toMatchObject({ figure_id: "gordon-ramsay", figure_slot: 1 });
     expect(await myCard(form(), "old")).toEqual(card);
+    // What the figure is matched on, against my own answers.
+    expect(card?.match?.items).toEqual([{ label: "Hobi", value: "Kuliner & masak", mine: true }]);
   });
 
   it("draws an anime character as before when the catalog has no figures", async () => {

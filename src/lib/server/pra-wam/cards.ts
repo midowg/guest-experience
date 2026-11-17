@@ -4,7 +4,7 @@ import {
   CARDS_MIGRATION, chooseCharacter, comboOf, drawLook, drawTier, partKinds, scoresOf,
   type ArtKind, type Character, type Look, type Part, type PartKind, type Tier,
 } from "@/lib/pra-wam/cards";
-import { colorsOf, FIGURE_KEYS, legendClasses, pickFigure, rarityOf, reasonText, rerollFigure, type Figure } from "@/lib/pra-wam/figures";
+import { chosen, colorsOf, FIGURE_KEYS, figureMatches, legendClasses, pickFigure, rarityOf, reasonText, rerollFigure, ROLE_KEY, type Figure, type MatchItem } from "@/lib/pra-wam/figures";
 import { editable, type Answers, type QForm } from "@/lib/pra-wam/questionnaire";
 import { praWamApi } from "@/lib/routes";
 import { ServiceError } from "../config";
@@ -160,6 +160,11 @@ export type CardView = {
   colors: [string, string];
   /** My own card only: whether I may re-roll its figure now (once, while Admin WAM keeps it open). */
   reroll?: Reroll;
+  /**
+   * My own card only (17 Nov 2026): what the figure is matched on, each with whether I chose it
+   * too, and my answer on my role in the team (which picks "Tipemu").
+   */
+  match?: { items: MatchItem[]; role: string[] };
 };
 /** "open" until `until`; "used" once done; "closed" while Admin WAM has not opened it (or it ended). */
 export type Reroll = { state: "open" | "used" | "closed"; until: string | null };
@@ -197,12 +202,12 @@ async function personCard(formId: string, employeeId: string, catalog: Pick<Cata
   return data as PersonCardRow | null;
 }
 
-/** The answers a figure is matched on (17, 20, 21, 37), by question key: nothing else is read. */
+/** The answers a figure is matched on (17, 20, 21, 37) and the role in the team (34), by question key: nothing else is read. */
 async function figureAnswers(formId: string, employeeIds: readonly string[]): Promise<Map<string, Answers>> {
   const out = new Map<string, Answers>();
   if (!employeeIds.length) return out;
   const client = createPrivilegedClient();
-  const { data: questions, error } = await client.from("cq_questions").select("id,key").eq("form_id", formId).in("key", Object.values(FIGURE_KEYS));
+  const { data: questions, error } = await client.from("cq_questions").select("id,key").eq("form_id", formId).in("key", [...Object.values(FIGURE_KEYS), ROLE_KEY]);
   if (error) failed(error);
   const keyOf = new Map(((questions ?? []) as { id: string; key: string }[]).map(question => [question.id, question.key]));
   if (!keyOf.size) return out;
@@ -244,8 +249,13 @@ export async function myCard(form: Pick<QForm, "id">, employeeId: string): Promi
 /** My own card's view, with whether I may re-roll it. */
 async function mine(form: Pick<QForm, "id">, row: PersonCardRow, catalog: Catalog): Promise<CardView | null> {
   const view = viewOf(row, catalog);
-  if (!view?.figure || row.trial) return view;
-  return { ...view, reroll: rerollOf(row, await rerollUntil(form.id)) };
+  if (!view?.figure) return view;
+  const figure = catalog.figures.find(item => item.id === row.figure_id);
+  // Only my own answers that a figure is matched on (and my role); never health, HR-only or anonymous ones.
+  const answers = (await figureAnswers(form.id, [row.employee_id]).catch(() => new Map<string, Answers>())).get(row.employee_id) ?? {};
+  const match = figure ? { items: figureMatches(figure, answers), role: chosen(answers[ROLE_KEY]) } : undefined;
+  if (row.trial) return { ...view, match };
+  return { ...view, match, reroll: rerollOf(row, await rerollUntil(form.id)) };
 }
 
 /** Until when Admin WAM keeps the re-roll open (migration 202611160010); null when closed or before it. */
