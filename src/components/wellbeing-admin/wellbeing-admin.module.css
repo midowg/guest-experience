@@ -89,7 +89,7 @@
 .note { margin: 0; color: var(--cs-muted); font-style: italic; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .photos { display: flex; gap: .5rem; flex-wrap: wrap; }
 .photo { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border-radius: .625rem; overflow: hidden; background: var(--cs-fill); color: var(--cs-subtle); }
-.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo img, .photo video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .photoMissing { border: 1px dashed var(--cs-line); background: transparent; }
 .reason { margin: 0; padding: .625rem .75rem; border-radius: .625rem; background: var(--tone-bg); color: var(--tone-fg); font-size: .875rem; line-height: 1.45; }
 .reason small { opacity: .85; }

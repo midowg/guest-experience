@@ -157,8 +157,37 @@ berubah, menghapus yang sudah tidak ada. Profil lama dicocokkan ke Data karyawan
 (`scripts/wellbeing-match-employees.mjs`). Total poin tiap orang dibuat sama dengan aplikasi lama (tanpa data uji
 Desember 2025). Token Strava baru dipindah saat peralihan.
 
+### Storage (18 Nov 2026)
+
+Foto bukti hasil impor awalnya tautan ke bucket publik `quest-proofs` project lama. Supaya project lama bisa
+diarsipkan, `scripts/wellbeing-storage.mjs` memindahkannya ke R2 Journey:
+
+- **Foto bukti:** tiap tautan lama di `wb_activities.photos` diunduh, dicek jenisnya dari byte awal (foto, atau
+  video MP4/MOV yang dulu dipakai sebagai bukti dan sekarang diputar di aplikasi), disimpan sebagai
+  `wellbeing/<karyawan>/<id tetap>.<ext>`, dicek ukurannya, lalu tautan diganti kunci baru. Daftar tautan lama ke
+  kunci baru ada di `foto-pindah.csv` (folder ekspor); impor ulang memakainya supaya tautan lama tidak kembali.
+  Uji kering 18 Nov: 2.167 tautan, semua masih bisa diunduh dan dikenali (2.161 foto, 6 video), total 4,5 GB.
+- **Arsip (`--arsip`):** semua bucket dan berkas project lama (termasuk yang tidak dipakai aktivitas) ke R2
+  `arsip/wellbeing-lama/<bucket>/<path>`, di luar `wellbeing/` sehingga tidak pernah ditampilkan. Foto bukti yang
+  sudah pindah tidak disimpan dua kali. Daftar lengkap dengan sha256 di `arsip-storage.csv`.
+- Tidak ada yang dihapus dari project lama oleh skrip.
+
 ## Peralihan
 
 1. Uji di Journey dengan salinan data (aplikasi lama tetap resmi).
-2. Hari H: aplikasi lama dikunci, impor terakhir, aplikasi Strava dipindah, alamat lama dialihkan ke
-   `journey.werkudara.group/wellbeing`, lalu diumumkan.
+2. Hari H, berurutan:
+   1. Aplikasi lama dikunci (tidak bisa mencatat), supaya tidak ada data baru di sana.
+   2. Ekspor terakhir: `ekspor-semua.sql` di SQL Editor project lama, simpan sebagai `semua-tabel.csv`.
+   3. Impor terakhir: `node --env-file=.env scripts/wellbeing-import.mjs <folder> --semua` (uji kering), cek
+      `impor-laporan.md` (total tiap orang sama dengan aplikasi lama), lalu ulangi dengan `--apply`.
+   4. Foto: `node --env-file=.env scripts/wellbeing-storage.mjs <folder>` (uji kering), lalu `--apply`. Selesai bila
+      tertulis **tautan lama tersisa di Journey: 0**. Buka beberapa aktivitas lama di Admin Periksa: foto tampil.
+      `.env` perlu `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (sama dengan Vercel).
+   5. Arsip storage: pemilik mengisi sementara kunci project lama di `akses.env`, jalankan `--arsip --apply`,
+      lalu kosongkan lagi `akses.env`.
+   6. Arsip database: `semua-tabel.csv` (semua tabel, tanpa kolom rahasia) sudah cukup sebagai catatan. Kalau
+      ingin salinan yang bisa dipulihkan utuh, unduh juga dump database (`supabase db dump` atau `pg_dump` dengan
+      kata sandi database project lama). Simpan folder ekspor ini di tempat arsip kantor.
+   7. Aplikasi Strava dipindah, alamat lama dialihkan ke `journey.werkudara.group/wellbeing`, lalu diumumkan.
+3. Project Supabase lama: dijeda (pause) dulu setelah langkah di atas selesai, bukan langsung dihapus. Hapus hanya
+   setelah beberapa minggu tanpa masalah dan arsip sudah diperiksa.

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { appControlsOf, appControlsSchema, claimedPoints, controlsForApp, countedPoints, dateProblem, defaultAppControls, defaultSettings, limitReached, monthRange, pointBatchSchema, previousMonth, rank, reviewSchema, wibToday } from "./rules";
+import { appControlsOf, appControlsSchema, claimedPoints, controlsForApp, countedPoints, dateProblem, defaultAppControls, defaultSettings, isVideoProof, limitReached, monthRange, pointBatchSchema, previousMonth, rank, reviewSchema, wibToday } from "./rules";
+
+describe("video proofs (18 Nov 2026)", () => {
+  it("knows a video by its name, also in a signed address", () => {
+    expect(isVideoProof("https://x.r2.cloudflarestorage.com/b/wellbeing/a/b.mp4?X-Amz-Signature=1")).toBe(true);
+    expect(isVideoProof("https://old.supabase.co/storage/v1/object/public/quest-proofs/a/1-1.MOV")).toBe(true);
+    expect(isVideoProof("https://x/wellbeing/a/b.jpg?X-Amz-Signature=mp4")).toBe(false);
+    expect(isVideoProof("wellbeing/a/b.png")).toBe(false);
+  });
+});
 
 describe("claimedPoints", () => {
   it("uses the fixed points, steps / 10, or kcal within the caps", () => {

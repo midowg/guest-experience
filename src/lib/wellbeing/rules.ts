@@ -220,6 +220,8 @@ export const MAX_PHOTOS = 5;
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 // No HEIC (17 Nov 2026): browsers other than Safari cannot show it in Periksa; with these types a phone sends JPEG.
 export const PHOTO_MIMES = ["image/jpeg", "image/png", "image/webp"] as const;
+/** A proof that is a short video (a few from the old app, moved with scripts/wellbeing-storage.mjs): shown with a player, not as a picture. */
+export const isVideoProof = (url: string) => /\.(mp4|mov|webm)(?:$|[?#])/i.test(url);
 export type PhotoMime = (typeof PHOTO_MIMES)[number];
 /** Fewer steps than this is not a day's walk worth logging. */
 export const MIN_STEPS = 100;

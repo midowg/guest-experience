@@ -56,6 +56,9 @@ const oldAdj = table("point_adjustments");
 const oldEvents = table("admin_activities");
 const oldProfiles = table("profiles").map(p => ({ id: p.id, username: p.username, full_name: p.full_name })); // nothing secret kept
 const matches = readCsv(path.join(dir, "cocok-karyawan.csv"));
+// Photos already moved to Journey's storage (scripts/wellbeing-storage.mjs, 18 Nov 2026): old link -> key.
+const movedFile = path.join(dir, "foto-pindah.csv");
+const movedPhotos = new Map(fs.existsSync(movedFile) ? readCsv(movedFile).map(row => [row.url, row.key]) : []);
 
 const dimOf = Object.fromEntries(oldDims.map(d => [d.id, DIMS.includes(d.name) ? d.name : d.name === "mental" ? "emotional" : null]));
 const employeeOf = new Map(matches.filter(m => m.employee_id).map(m => [m.old_id, m.employee_id]));
@@ -117,6 +120,8 @@ for (const a of oldActs) {
   const status = a.review_status === "approved" ? "approved" : "rejected";
   let photos = parseArray(a.proof_urls); if (!photos.length && a.proof_url) photos = [a.proof_url];
   if (photos.length > 5) { report.photosCut++; photos = photos.slice(0, 5); }
+  // Already moved to Journey's storage (wellbeing-storage.mjs): its key, not the old link again.
+  photos = photos.map(url => movedPhotos.get(url) ?? url);
   const recent = Date.now() - Date.parse(a.created_at) < 7 * 86400000;
   activities.push({
     legacy_id: Number(a.id), employee_id: employee, type_code: type.code, dimension_id: type.kind === "sport" ? "physical" : dimension,
@@ -198,7 +203,7 @@ const lines = [
   `- Dilewati: ${[...report.unknownPeople.values()].reduce((s, n) => s + n, 0)} baris milik ${report.unknownPeople.size} profil yang sudah dihapus di aplikasi lama atau tanpa pasangan karyawan.`,
   `- Penyesuaian poin: ${entries.length} diimpor, ${testRows.length} data uji sebelum 1 Jan 2026 tidak diimpor (${sum(testRows.map(t => ({ p: int(t.points) })), "p")} poin), ${report.zero} bernilai 0 dilewati.`,
   `- Penyesuaian pindah data (langkah dari aktivitas ditolak dan pembulatan, seperti hitungan aplikasi lama): ${reconcile.length} orang, total ${sum(reconcile, "points")} poin.`,
-  `- Foto: ${activities.reduce((s, a) => s + a.photos.length, 0)} tautan (dipakai langsung dari bucket lama); ${report.photosCut} aktivitas punya lebih dari 5 foto (dipotong jadi 5).`,
+  `- Foto: ${activities.reduce((s, a) => s + a.photos.length, 0)} (sudah di storage Journey: ${activities.reduce((s, a) => s + a.photos.filter(p => !/^https?:\/\//i.test(p)).length, 0)}; sisanya tautan ke bucket lama, pindahkan dengan scripts/wellbeing-storage.mjs); ${report.photosCut} aktivitas punya lebih dari 5 foto (dipotong jadi 5).`,
   report.legacyTypes.length ? `- Jenis lama yang tidak ada di katalog (dibuat nonaktif): ${report.legacyTypes.join("; ")}` : "- Semua aktivitas cocok dengan katalog.",
   "", "| Nama (aplikasi lama) | Aktivitas | Total lama | Data uji | Target | Aktivitas baru | Poin admin | Penyesuaian | Total baru |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
   ...rows.map(p => `| ${p.name ?? "(profil sudah dihapus)"}${employeeOf.get(p.old) ? "" : " ⚠ tidak diimpor"} | ${p.acts} | ${p.oldTotal} | ${p.testAdj || ""} | ${p.target} | ${p.newAct} | ${p.newEntries} | ${p.diff || ""} | ${employeeOf.get(p.old) ? p.newAct + p.newEntries + p.diff : "-"} |`),

@@ -8,7 +8,7 @@ import { SkeletonRows } from "@/components/app-shell/Panel";
 import { revalidate, setResource, useResource } from "@/components/app-shell/resource";
 import { useToast } from "@/components/app-shell/Toast";
 import { wellbeingAdminApi } from "@/lib/routes";
-import { rejectReasons, wibToday, type ReviewInput } from "@/lib/wellbeing/rules";
+import { isVideoProof, rejectReasons, wibToday, type ReviewInput } from "@/lib/wellbeing/rules";
 import type { WbActivity, WbActivityPage, WbCheckResult } from "@/lib/wellbeing/types";
 import { dayLabel, points, send, wb, type ActivityQuery } from "./api";
 import { DimensionPill, Empty, LoadError, Refreshing, WaitingMigration } from "./parts";
@@ -207,9 +207,11 @@ function ActivityCard({ item, today, picked, onPick, onReview, onMove }: { item:
     </div>
     {item.photos.length > 0 && <div className={css.photos}>
       {item.photos.map((photo, index) => /^https?:\/\//.test(photo)
-        ? <a key={photo} href={photo} target="_blank" rel="noopener noreferrer" className={css.photo} aria-label={`Foto bukti ${index + 1} (tab baru)`}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- proof photos come from storage, any size */}
-          <img src={photo} alt="" loading="lazy" />
+        ? <a key={photo} href={photo} target="_blank" rel="noopener noreferrer" className={css.photo} aria-label={`${isVideoProof(photo) ? "Video" : "Foto"} bukti ${index + 1} (tab baru)`}>
+          {isVideoProof(photo)
+            ? <video src={photo} muted playsInline preload="metadata" aria-hidden="true" />
+            // eslint-disable-next-line @next/next/no-img-element -- proof photos come from storage, any size
+            : <img src={photo} alt="" loading="lazy" />}
         </a>
         : <span key={photo} className={`${css.photo} ${css.photoMissing}`} title="Foto belum bisa ditampilkan"><ImageOff size={20} aria-hidden="true" /></span>)}
     </div>}

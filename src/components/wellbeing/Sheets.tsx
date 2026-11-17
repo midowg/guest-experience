@@ -5,7 +5,7 @@ import { Activity, Check, CircleX, Dumbbell, ImageOff, LogOut, Moon, NotebookPen
 import { Panel } from "@/components/app-shell/Panel";
 import { load } from "@/components/app-shell/resource";
 import type { WbMyActivity } from "@/lib/wellbeing/app-types";
-import { dimensionLabels, wibToday } from "@/lib/wellbeing/rules";
+import { dimensionLabels, isVideoProof, wibToday } from "@/lib/wellbeing/rules";
 import { keys, useTheme, useWellbeing, type CatatPreset, type ThemeChoice } from "./context";
 import { activityTitle, clockLabel, dayLabel, distance, formatDate, num, sourceLabels } from "./format";
 import { ActivityLead, cx, Sk } from "./parts";
@@ -68,9 +68,11 @@ export function ActivitySheet({ activity, onClose, onRedo }: { activity: WbMyAct
         <span className={css.fieldLabel}>Foto bukti</span>
         <div className={css.photos}>
           {photos
-            ? photos.map((url, index) => <button key={url} type="button" className={css.photoLink} onClick={() => setViewing(index)} aria-label={`Lihat foto bukti ${index + 1}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- signed storage addresses, shown as they are */}
-                <img src={url} alt={`Foto bukti ${index + 1}`} loading="lazy" />
+            ? photos.map((url, index) => <button key={url} type="button" className={css.photoLink} onClick={() => setViewing(index)} aria-label={`Lihat ${isVideoProof(url) ? "video" : "foto"} bukti ${index + 1}`}>
+                {isVideoProof(url)
+                  ? <video src={url} muted playsInline preload="metadata" aria-hidden="true" />
+                  // eslint-disable-next-line @next/next/no-img-element -- signed storage addresses, shown as they are
+                  : <img src={url} alt={`Foto bukti ${index + 1}`} loading="lazy" />}
               </button>)
             : item.photos.map((url, index) => current?.failed
               ? <span key={index} className={css.ph}><ImageOff size={24} aria-hidden="true" /></span>
@@ -102,8 +104,10 @@ function PhotoViewer({ url, index, count, onClose }: { url: string; index: numbe
       <span>{index + 1} dari {count}</span>
       <button ref={closeButton} type="button" className={css.viewerClose} onClick={back} aria-label="Tutup foto"><X size={24} aria-hidden="true" /></button>
     </div>
-    {/* eslint-disable-next-line @next/next/no-img-element -- a signed storage address */}
-    <img src={url} alt={`Foto bukti ${index + 1}`} className={css.viewerImage} />
+    {isVideoProof(url)
+      ? <video src={url} controls playsInline className={css.viewerImage} aria-label={`Video bukti ${index + 1}`} />
+      // eslint-disable-next-line @next/next/no-img-element -- a signed storage address
+      : <img src={url} alt={`Foto bukti ${index + 1}`} className={css.viewerImage} />}
   </div>;
 }
 
