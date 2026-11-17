@@ -305,8 +305,10 @@ function Proof({ photos, size, onOpen }: { photos: readonly string[]; size: "md"
 /** All proofs of one activity, large, one at a time: ← → or the buttons to move, Esc to close, each also in a new tab. */
 function ProofViewer({ proofs, start, onClose }: { proofs: readonly string[]; start: number; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const closer = useRef<HTMLButtonElement>(null);
   const [at, setAt] = useState(start);
-  useEffect(() => { const dialog = ref.current; if (dialog && !dialog.open) dialog.showModal(); }, []);
+  // Opened with the focus on Tutup (not on the link), so Esc, Enter or ← → work at once.
+  useEffect(() => { const dialog = ref.current; if (dialog && !dialog.open) dialog.showModal(); closer.current?.focus(); }, []);
   const url = proofs[at], video = isVideoProof(url), what = `${video ? "Video" : "Foto"} bukti ${at + 1} dari ${proofs.length}`;
   const move = (step: number) => setAt(current => (current + step + proofs.length) % proofs.length);
   return <dialog ref={ref} className={css.viewer} aria-label={what} onClose={onClose}
@@ -319,7 +321,7 @@ function ProofViewer({ proofs, start, onClose }: { proofs: readonly string[]; st
       <header className={css.viewerHead}>
         <strong>{what}</strong>
         <a href={url} target="_blank" rel="noopener noreferrer" className={css.viewerLink}><ExternalLink size={16} aria-hidden="true" /><span>Buka di tab baru</span></a>
-        <button type="button" className={css.viewerClose} onClick={() => ref.current?.close()} aria-label="Tutup"><X size={20} aria-hidden="true" /></button>
+        <button ref={closer} type="button" className={css.viewerClose} onClick={() => ref.current?.close()} aria-label="Tutup"><X size={20} aria-hidden="true" /></button>
       </header>
       <div className={css.viewerStage}>
         {video ? <video key={url} src={url} controls playsInline preload="metadata" />
