@@ -271,3 +271,25 @@
 .matchOn { color: var(--ink) !important; }
 .matchOn .matchMark { background: #d8f0e1; box-shadow: inset 0 0 0 2px #1d6b3e; color: #1d6b3e; }
 .matchMark svg { width: 14px; height: 14px; }
+
+/* The profile in tabs, in the card's colours (17 Nov 2026): the persona's colour, gold for Legendary. */
+.profile { --tone: var(--pc, var(--accent)); --tone-ink: color-mix(in oklab, var(--tone) 62%, #141325); }
+.profileGold { --tone: #E3A82B; }
+.profileTabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 999px; background: color-mix(in oklab, var(--tone) 16%, #fff); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--tone) 40%, transparent); }
+.profileTabs button { min-height: 40px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-weight: 700; font-size: var(--text-sm); color: var(--ink-2); cursor: pointer; }
+.profileTabs button:focus-visible { outline: 3px solid var(--tone-ink); outline-offset: 1px; }
+.profileTabs .tabOn { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px var(--tone-ink), 2px 3px 0 var(--tone-ink); }
+.profilePanel { display: grid; gap: 12px; animation: dr_rise .35s ease-out both; }
+.profile .prof { background: color-mix(in oklab, var(--tone) 9%, var(--paper-3)); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--tone) 32%, transparent); }
+.profile .profTitle svg { color: var(--tone-ink); }
+.profile .tag { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--tone) 45%, transparent); }
+.profile .matchOn .matchMark { background: color-mix(in oklab, var(--tone) 25%, #fff); box-shadow: inset 0 0 0 2px var(--tone-ink); color: var(--tone-ink); }
+.profile .matches li em { color: var(--tone-ink); }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.facts > div { display: grid; padding: 8px 10px; border-radius: 14px; background: #fff; box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--tone) 30%, transparent); min-width: 0; }
+.facts dt { font-size: var(--text-xs); color: var(--muted); }
+.facts dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.facts span { font-size: var(--text-xs); color: var(--ink-2); }
+@media (prefers-reduced-motion: reduce) { .profilePanel { animation: none; } }
+.profile .profTitle { color: var(--tone-ink); }
+.personaPill { background: color-mix(in oklab, var(--pc) 22%, #fff); color: color-mix(in oklab, var(--pc) 62%, #141325); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--pc) 62%, #141325); }
