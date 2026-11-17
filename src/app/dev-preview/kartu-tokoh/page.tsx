@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { CardImage } from "@/components/pra-wam/colleagues/CardImage";
 import { QuestionnaireApp } from "@/components/pra-wam/questionnaire/Frame";
 import { CardReveal } from "@/components/pra-wam/questionnaire/CardReveal";
+import { CharacterPage } from "@/components/pra-wam/questionnaire/CharacterPage";
+import { profileOf } from "@/lib/pra-wam/figure-profiles";
 import { colorsOf, legendClasses } from "@/lib/pra-wam/figures";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 
@@ -51,6 +53,7 @@ function cardOf(seed: Seed, tier: (typeof tierList)[number], serial: number, pic
     reason: `Kamu dapat ${seed.name} karena kamu tipe ${persona.class}.`,
     colors: colorsOf(seed.persona),
     ...(reroll ? { reroll: { state: "open" as const, until: "2026-11-23T14:00:00.000Z" } } : {}),
+    profile: profileOf(seed.key),
     // A sample of what the server sends for my own card: what the tokoh is matched on, against made-up answers.
     match: { items: [{ label: "Hobi", value: "Seni & kerajinan", mine: true }, { label: "Kegiatan favorit", value: "Kreatif / seni", mine: true }, { label: "Gaya berkumpul", value: "Kelompok kecil", mine: false }], role: ["Pencetus ide"] },
   };
@@ -61,9 +64,9 @@ function cardOf(seed: Seed, tier: (typeof tierList)[number], serial: number, pic
  * shipped in public/figur. One card to open: ?tokoh=freddie-mercury&rarity=legendary (?gambar=0
  * for the silhouette, ?reroll=1 with the re-roll offered). Every card at once: ?semua=1.
  */
-export default async function DevFigureCardPage({ searchParams }: { searchParams: Promise<{ tokoh?: string; rarity?: string; gambar?: string; semua?: string; reroll?: string }> }) {
+export default async function DevFigureCardPage({ searchParams }: { searchParams: Promise<{ tokoh?: string; rarity?: string; gambar?: string; semua?: string; reroll?: string; halaman?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
-  const { tokoh = "edmund-hillary", rarity = "rare", gambar, semua, reroll } = await searchParams;
+  const { tokoh = "edmund-hillary", rarity = "rare", gambar, semua, reroll, halaman } = await searchParams;
   const all = await figures();
 
   if (semua) return <QuestionnaireApp>
@@ -82,6 +85,8 @@ export default async function DevFigureCardPage({ searchParams }: { searchParams
 
   const seed = all.find(item => item.key === tokoh) ?? all[0];
   const card = cardOf(seed, tiers[rarity as keyof typeof tiers] ?? tiers.rare, 12, gambar !== "0", !!reroll);
+  // The page of my tokoh, as staff see it once the card is out (?halaman=1).
+  if (halaman) return <CharacterPage formId={`dev-${seed.key}-${rarity}-${gambar ?? ""}`} card={card} nickname="Dewi" hasPhoto={false} home="#" answers="#" />;
   return <QuestionnaireApp>
     <main style={{ maxWidth: 480, margin: "0 auto", padding: 16 }}>
       <p style={{ margin: "0 0 12px" }}><a href="?semua=1">Lihat semua {all.length} kartu</a></p>

@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { ArrowLeft, Check, Dices, Download, Globe2, IdCard, Link2, RotateCcw, Share2, Shirt, Sparkles, Trophy, UserRound, X } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, Dices, Download, Globe2, IdCard, Lightbulb, Link2, RotateCcw, Share2, Shirt, Sparkles, Trophy, UserRound, X } from "lucide-react";
 import { oddsLabel, serialLabel } from "@/lib/pra-wam/cards";
-import { profileOf } from "@/lib/pra-wam/figure-profiles";
 import { rarityOf, SPARK_COUNT } from "@/lib/pra-wam/figures";
 import { encodeWithinLimit, PHOTO_SIDE } from "@/lib/pra-wam/photo";
 import type { CardView } from "@/lib/server/pra-wam/cards";
@@ -469,7 +468,7 @@ const PROFILE_TABS: { id: ProfileTab; label: string }[] = [
 function FigureProfileSections({ card, name, rerolled }: { card: CardView; name: string; rerolled: boolean }) {
   const [tab, setTab] = useState<ProfileTab>("tokoh");
   const figure = card.figure;
-  const profile = figure ? profileOf(figure.key) : null;
+  const profile = figure ? card.profile ?? null : null;
   const items = card.match?.items ?? [];
   const shared = items.filter(item => item.mine).length;
   const tabs = figure ? PROFILE_TABS : PROFILE_TABS.filter(item => item.id !== "tokoh" && item.id !== "cocok");
@@ -498,8 +497,13 @@ function FigureProfileSections({ card, name, rerolled }: { card: CardView; name:
             <p>{profile.who}</p>
             <p className={styles.tags}>{profile.tags.map(tag => <span key={tag} className={styles.tag}>{tag}</span>)}</p>
           </Section>
-          <Section icon={<Trophy aria-hidden />} title="Kehebatannya"><p>{profile.feat}</p></Section>
+          {profile.story && <Section icon={<BookOpen aria-hidden />} title="Kisahnya"><p>{profile.story}</p></Section>}
+          <Section icon={<Trophy aria-hidden />} title="Kehebatannya">
+            {profile.feats?.length ? <ul className={styles.feats}>{profile.feats.map(feat => <li key={feat}>{feat}</li>)}</ul> : <p>{profile.feat}</p>}
+          </Section>
           <Section icon={<Globe2 aria-hidden />} title="Pengaruhnya"><p>{profile.impact}</p></Section>
+          {profile.lesson && <Section icon={<Sparkles aria-hidden />} title="Yang bisa kamu bawa"><p>{profile.lesson}</p></Section>}
+          {profile.fact && <Section icon={<Lightbulb aria-hidden />} title="Tahukah kamu?"><p>{profile.fact}</p></Section>}
         </> : <p className={styles.small}>Profil {figure.name} sedang disiapkan.</p>}
         <Section icon={<Shirt aria-hidden />} title="Figurnya">
           {figure.costume && <p>{figure.costume.charAt(0).toUpperCase() + figure.costume.slice(1)}.</p>}

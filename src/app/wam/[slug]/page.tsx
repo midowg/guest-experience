@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
+import { CharacterPage } from "@/components/pra-wam/questionnaire/CharacterPage";
 import { Questionnaire } from "@/components/pra-wam/questionnaire/Questionnaire";
 import { ReadOnlyAnswers } from "@/components/pra-wam/questionnaire/ReadOnly";
 import { sectionsDone } from "@/components/pra-wam/questionnaire/steps";
@@ -52,9 +53,13 @@ export default async function QuestionnairePage({ params }: Params) {
   const people = staff.filter(person => person.id !== member.id);
   const nickname = member.nickname || member.name.split(" ")[0];
 
-  // Closed, past the deadline, or my card is out (16 Nov 2026): my answers, read only.
+  // My card is out (16 Nov 2026): the page of my tokoh (17 Nov 2026); my answers on their own page.
   const locked = !preview && !!card && !card.trial;
-  if (!preview && (!editable(form) || locked)) {
+  if (locked && card) {
+    return <CharacterPage formId={form.id} card={card} nickname={nickname} hasPhoto={!!member.photo} home={praWamPath.home} answers={`${praWamPath.questionnaire(form.slug)}/jawaban`} />;
+  }
+  // Closed or past the deadline without a card: my answers, read only.
+  if (!preview && !editable(form)) {
     return <ReadOnlyAnswers finished={editable(form) && locked} name={form.name} home={praWamPath.home} sections={content.sections} questions={content.questions}
       answers={mine.answers} anonymousSent={mine.anonymousSent} slots={sectionsDone(content, mine.answers, mine.anonymousSent)} people={people}
       card={card && { formId: form.id, view: card, nickname, hasPhoto: !!member.photo }} />;
