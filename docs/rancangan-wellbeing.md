@@ -161,7 +161,8 @@ aplikasi tetap jalan dan menyimpan tanpa jam.
     - Pesan salah bergetar sekali tiap mencoba.
     - Semua gerakan mati bila HP diatur mengurangi gerakan.
 - **Nama dan tautan:**
-  - Tab bernama "WLM Werkudara" (bagian lain "Peringkat · WLM Werkudara"), dengan ikon WLM sendiri.
+  - Tab bernama "WLM" saja (WLM sudah singkatan dari Werkudara Life Mode; bagian lain "Peringkat · WLM"), dengan
+    ikon WLM sendiri. Judul kartu share juga "WLM".
   - Nama di layar utama HP: "WLM".
   - Tautan yang dibagikan menampilkan kartu WLM: tulisan WLM berwarna, apa aplikasinya, dan "Masuk dengan akun WAM".
     Hurufnya (Barlow Condensed, Plus Jakarta Sans) diambil dari Google Fonts saat gambar dibuat; bila gagal, gambar

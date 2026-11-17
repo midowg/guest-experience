@@ -43,11 +43,12 @@ describe("WLM sign-in", () => {
     expect(request.fn).not.toHaveBeenCalled();
   });
 
-  it("names the tab WLM Werkudara and gives a shared link its card", () => {
-    expect(wlmTitle()).toBe("WLM Werkudara");
-    expect(wlmTitle("Peringkat")).toBe("Peringkat · WLM Werkudara");
+  it("names the tab WLM (it already stands for Werkudara Life Mode) and gives a shared link its card", () => {
+    expect(wlmTitle()).toBe("WLM");
+    expect(wlmTitle("Peringkat")).toBe("Peringkat · WLM");
     const meta = wlmMetadata("Masuk");
-    expect(meta.title).toEqual({ absolute: "Masuk · WLM Werkudara" });
+    expect(meta.title).toEqual({ absolute: "Masuk · WLM" });
+    expect(JSON.stringify(meta)).not.toMatch(/WLM Werkudara/);
     expect(meta.openGraph).toMatchObject({ title: WLM_TITLE, description: WLM_DESCRIPTION, images: [{ url: "/wlm/opengraph-image", width: 1200, height: 630 }] });
     expect(meta.twitter).toMatchObject({ card: "summary_large_image" });
     expect(meta.icons).toMatchObject({ icon: [{ url: "/wlm/icon" }], apple: [{ url: "/wlm/apple-icon" }] });

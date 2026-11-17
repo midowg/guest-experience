@@ -10,7 +10,7 @@ import { currentMember } from "@/lib/server/pra-wam/session";
 export const dynamic = "force-dynamic";
 /** A phone app: drawn under the notch (safe areas in CSS), and the keyboard shrinks the page so sheets keep their buttons in view. */
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content", themeColor: "#0A0E15" };
-/** "Masuk · WLM Werkudara" in the tab; a shared link shows what WLM is and that it opens with the WAM account. */
+/** "Masuk · WLM" in the tab; a shared link shows what WLM is and that it opens with the WAM account. */
 export const metadata: Metadata = wlmMetadata("Masuk");
 
 /**

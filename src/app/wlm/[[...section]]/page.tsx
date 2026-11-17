@@ -10,7 +10,7 @@ import { wlmMetadata } from "@/lib/wellbeing/brand";
 export const dynamic = "force-dynamic";
 /** A phone app: drawn under the notch (safe areas in CSS), and the keyboard shrinks the page so sheets keep their buttons in view. */
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
-/** "WLM Werkudara" in the tab (the app then names the section: "Peringkat · WLM Werkudara"); a shared link shows what WLM is. */
+/** "WLM" in the tab (the app then names the section: "Peringkat · WLM"); a shared link shows what WLM is. */
 export const metadata: Metadata = wlmMetadata();
 
 /**
