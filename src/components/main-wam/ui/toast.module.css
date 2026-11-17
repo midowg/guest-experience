@@ -1,0 +1,41 @@
+/* Toast (DS §6.6, .wam-toast, --timer). Tokens only. */
+.viewport {
+  position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); width: min(100% - 32px, var(--mw-column) - 32px);
+  bottom: calc(var(--mw-toast-bottom, var(--mw-space-16)) + var(--mw-safe-bottom));
+  display: flex; flex-direction: column; gap: var(--mw-space-8); pointer-events: none;
+}
+.toast {
+  position: relative; overflow: hidden; width: 100%; display: flex; align-items: center; gap: var(--mw-space-12); min-height: 48px; padding: var(--mw-space-12) var(--mw-space-16);
+  border-radius: var(--mw-radius-12); background: var(--mw-inverse-surface); color: var(--mw-inverse-on-surface); box-shadow: var(--mw-elev-2);
+  pointer-events: auto;
+}
+.toast > svg { flex: none; width: 20px; height: 20px; color: var(--mw-inverse-primary); }
+.success > svg { color: var(--mw-inverse-success); }
+.error > svg { color: var(--mw-inverse-error); }
+.thumb { flex: none; position: relative; width: var(--mw-space-32); height: 40px; border-radius: var(--mw-radius-4); overflow: hidden; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.text { flex: 1 1 auto; min-width: 0; font: var(--mw-type-body); }
+.sub { display: block; font: var(--mw-type-body-small); color: var(--mw-inverse-on-surface-2); }
+.action {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: var(--mw-touch); min-width: var(--mw-touch);
+  margin: -10px -8px -10px 0; padding: 0 var(--mw-space-8); border-radius: var(--mw-radius-8);
+  font: var(--mw-type-label-lg); color: var(--mw-inverse-primary); white-space: nowrap; cursor: pointer;
+}
+.action:active { background: color-mix(in srgb, var(--mw-inverse-on-surface) 10%, transparent); }
+.action:focus-visible { outline-color: var(--mw-inverse-primary); }
+/* Remaining time of the undo window, shrinking to nothing; pauses with the timer. */
+.timer {
+  position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--mw-inverse-primary); transform-origin: left center;
+  animation: mw-toast-timer var(--mw-toast-ms, 5000ms) linear forwards;
+}
+.paused .timer { animation-play-state: paused; }
+@keyframes mw-toast-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: mw-toast-in 200ms var(--mw-ease-decelerate); }
+}
+/* Reduced motion: the bar steps down once a second instead of sliding. */
+@media (prefers-reduced-motion: reduce) {
+  .timer { animation-timing-function: steps(var(--mw-toast-steps, 5), end); }
+}
+@keyframes mw-toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }

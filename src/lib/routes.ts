@@ -145,6 +145,11 @@ export const PRA_WAM_PATH = "/wam";
 const WAM_API = "/api/wam";
 export const praWamPath = {
   home: PRA_WAM_PATH,
+  /**
+   * Pra WAM's Beranda while Main WAM is on (mode uji for a penguji, mode semua for everyone), when /wam
+   * itself opens Main WAM (docs/main-wam/KONTRAK.md §2): Pra WAM stays reachable by its address.
+   */
+  homePra: `${PRA_WAM_PATH}?versi=pra`,
   /** "Apa itu WAM?": the text written in Admin WAM, opened from Beranda. */
   about: `${PRA_WAM_PATH}/about`,
   /** The same page opened from Pengaturan, so its back arrow returns there. */
@@ -443,6 +448,221 @@ export const praWamAboutApi = "/api/admin/wam/about";
 export const praWamSettingsApi = "/api/admin/wam/settings";
 /** Admin WAM → Tema aplikasi (any admin). */
 export const praWamThemeApi = "/api/admin/wam/theme";
+
+/*
+ * Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): the app during WAM itself (4–7 Jan 2027), inside
+ * /wam with the same account and the same session, hidden until Admin WAM → Main WAM → Pengaturan
+ * turns it on. Every page and API of every screen is listed here at once, so the agents building the
+ * screens never edit this file: a new address is a change to the contract (KONTRAK §5).
+ * Areas: A peserta, B momen, C panitia/BOD, D modul, E admin; fondasi for what is shared.
+ */
+export const MAIN_WAM_PATH = `${PRA_WAM_PATH}/acara`;
+const MAIN_WAM_API = `${WAM_API}/acara`;
+/** "?a=1&b=2" from the values that are set, or "". */
+const mwQuery = (values: Record<string, string | number | undefined | null | false>) => {
+  const search = new URLSearchParams(Object.entries(values).filter((entry): entry is [string, string | number] => entry[1] !== undefined && entry[1] !== null && entry[1] !== false && entry[1] !== "").map(([key, value]) => [key, String(value)])).toString();
+  return search ? `?${search}` : "";
+};
+export type MainWamMomentsFilter = { lihat?: "semua" | "kelompok"; sesi?: string; foto?: string };
+export type MainWamGalleryFilter = { lihat?: "semua" | "kelompok" | "saya"; sesi?: string };
+export const mainWamPath = {
+  /* A · peserta */
+  /** Beranda (P01/P02; BOD B01 and panitia K01 add their card). */
+  home: MAIN_WAM_PATH,
+  /** O02 Masuk, Main WAM's own sign-in (same account and API as WAM); `next` is where to go after. */
+  login: (next?: string) => `${MAIN_WAM_PATH}/masuk${next ? `?next=${enc(next)}` : ""}`,
+  /** O03 Izin notifikasi, once after the first sign-in. */
+  onboarding: `${MAIN_WAM_PATH}/mulai`,
+  /** N01 Notifikasi, from the bell on Beranda only. */
+  notifications: `${MAIN_WAM_PATH}/notifikasi`,
+  /** P03 Agenda, on a day of the event (1–4; none = today, or day 1 before the event). */
+  agenda: (day?: number) => `${MAIN_WAM_PATH}/agenda${mwQuery({ hari: day })}`,
+  /** P04 Detail sesi. */
+  session: (id: string) => `${MAIN_WAM_PATH}/agenda/${enc(id)}`,
+  /** P05 Saya (BOD: P05B with Akses MCP). */
+  me: `${MAIN_WAM_PATH}/saya`,
+  /** L01 Kelompok & kamar. */
+  groupRoom: `${MAIN_WAM_PATH}/saya/kelompok`,
+  /** L03 Perjalanan, berangkat (default) or pulang. */
+  travel: (direction?: "berangkat" | "pulang") => `${MAIN_WAM_PATH}/saya/perjalanan${mwQuery({ arah: direction === "pulang" ? "pulang" : undefined })}`,
+  /** L04 Panduan: Denah, Hotel & fasilitas, Dress code, Tata tertib. */
+  guides: `${MAIN_WAM_PATH}/saya/panduan`,
+  guide: (slug: string) => `${MAIN_WAM_PATH}/saya/panduan/${enc(slug)}`,
+  /** S02 Pengaturan: Notifikasi (izin di HP ini), Ganti password, versi. */
+  settings: `${MAIN_WAM_PATH}/saya/pengaturan`,
+
+  /* B · momen */
+  /** M01–M03 Momen, the stack: Semua or Kelompokku, one session, opening at one photo. */
+  moments: (filter: MainWamMomentsFilter = {}) => `${MAIN_WAM_PATH}/momen${mwQuery(filter)}`,
+  /** U01–U05 Kamera: `sesi` overrides the automatic tag ("umum" = no tag). */
+  camera: (filter: { sesi?: string; untuk?: "semua" | "kelompok" } = {}) => `${MAIN_WAM_PATH}/momen/kamera${mwQuery(filter)}`,
+  /** M05 Galeri: Semua, Kelompokku or Fotoku, one session. */
+  gallery: (filter: MainWamGalleryFilter = {}) => `${MAIN_WAM_PATH}/momen/galeri${mwQuery(filter)}`,
+  /** M06 Mozaik; `mark` turns "Tandai fotoku" on. */
+  mosaic: (mark = false) => `${MAIN_WAM_PATH}/momen/mozaik${mwQuery({ tandai: mark ? "1" : undefined })}`,
+
+  /* C · panitia and BOD */
+  /** K02 Rundown live, on a day (1–4). */
+  rundownLive: (day?: number) => `${MAIN_WAM_PATH}/kelola/rundown${mwQuery({ hari: day })}`,
+  /** K05 Absen sesi: who is present, Catat hadir. */
+  attendanceManual: (sessionId?: string) => `${MAIN_WAM_PATH}/kelola/absen${mwQuery({ sesi: sessionId })}`,
+  /** K06 Kirim pengumuman. */
+  announce: `${MAIN_WAM_PATH}/kelola/pengumuman`,
+  /** K08 Moderasi Momen: Dilaporkan (default) or Disembunyikan. */
+  moderation: (tab?: "dilaporkan" | "disembunyikan") => `${MAIN_WAM_PATH}/kelola/moderasi${mwQuery({ lihat: tab === "disembunyikan" ? tab : undefined })}`,
+  /** B02 Kehadiran (BOD), on a day (1–4). */
+  attendanceSummary: (day?: number) => `${MAIN_WAM_PATH}/ringkasan/kehadiran${mwQuery({ hari: day })}`,
+
+  /* D · modul */
+  /** A01 Scan QR absen in the app. */
+  scan: `${MAIN_WAM_PATH}/absen`,
+  /** What a session's printed QR holds: A02 tercatat, A03 belum dibuka, A04 sudah ditutup. */
+  checkIn: (token: string) => `${MAIN_WAM_PATH}/absen/${enc(token)}`,
+  /** T01–T03 Silent Meeting (the open one, or the one of a session). */
+  silentMeeting: (sessionId?: string) => `${MAIN_WAM_PATH}/silent-meeting${mwQuery({ sesi: sessionId })}`,
+  /** V01 Awarding: the categories. */
+  awards: `${MAIN_WAM_PATH}/awarding`,
+  /** V02 Pilih nominasi in one category. */
+  awardCategory: (id: string) => `${MAIN_WAM_PATH}/awarding/${enc(id)}`,
+  /** B05 Rekap Silent Meeting (BOD). */
+  silentRecap: `${MAIN_WAM_PATH}/ringkasan/silent-meeting`,
+  /** B06 Persetujuan awarding (BOD). */
+  awardApproval: `${MAIN_WAM_PATH}/ringkasan/awarding`,
+};
+export const mainWamApi = {
+  /* fondasi */
+  /** GET: one image of the theme (KV slot), through this site; no sign-in (the splash shows before it). */
+  themeImage: (slot: string, version?: string) => `${MAIN_WAM_API}/tema/${enc(slot)}${mwQuery({ v: version })}`,
+
+  /* A · peserta (sign-in, password, push and profile photo stay on praWamApi) */
+  /** GET: what Beranda shows, for a refresh in place. */
+  home: `${MAIN_WAM_API}/beranda`,
+  /** GET: the rundown of the four days (published sessions). */
+  agenda: `${MAIN_WAM_API}/agenda`,
+  /** GET: one session's detail (P04). */
+  session: (id: string) => `${MAIN_WAM_API}/agenda/${enc(id)}`,
+  /** GET: my notifications; POST {id?}: mark one, or all, read. */
+  notifications: `${MAIN_WAM_API}/notifikasi`,
+  /** GET: a guide's file (Denah, PDF), a redirect to storage. */
+  guideFile: (id: string) => `${MAIN_WAM_API}/panduan/${enc(id)}/berkas`,
+
+  /* B · momen */
+  /** GET: the stack or the gallery (?lihat=&sesi=&sebelum=). */
+  photos: (filter: MainWamGalleryFilter & { sebelum?: string } = {}) => `${MAIN_WAM_API}/momen${mwQuery(filter)}`,
+  /** POST {clientId, audience, sessionId, size, width, height, takenAt}: an upload address for one photo. */
+  photoStart: `${MAIN_WAM_API}/momen/unggah`,
+  /** POST {key, token, …}: the photo is uploaded; check it and keep it. */
+  photoConfirm: `${MAIN_WAM_API}/momen/simpan`,
+  /** POST {ids}: photos the person has seen in the stack. */
+  photosSeen: `${MAIN_WAM_API}/momen/dilihat`,
+  /** DELETE: Batalkan (within 5 s) or Hapus foto (owner). */
+  photo: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}`,
+  /** GET: the photo's file, small (stack, grid) or large; a redirect to storage. */
+  photoFile: (id: string, size: "kecil" | "besar" = "besar") => `${MAIN_WAM_API}/momen/${enc(id)}/berkas${mwQuery({ ukuran: size })}`,
+  /** PUT: suka; DELETE: batal suka. */
+  photoHeart: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}/hati`,
+  /** POST {reason, note}: Laporkan foto (M04); DELETE: Tampilkan lagi (for the reporter). */
+  photoReport: (id: string) => `${MAIN_WAM_API}/momen/${enc(id)}/laporan`,
+  /** GET: the mosaic's tiles and progress. */
+  mosaic: `${MAIN_WAM_API}/mozaik`,
+
+  /* C · panitia and BOD */
+  /** PATCH {startsAt, endsAt, shift, notify, place, status}: Ubah jam (K03), panitia. */
+  rundownSession: (id: string) => `${MAIN_WAM_API}/kelola/rundown/${enc(id)}`,
+  /** GET: Riwayat perubahan of the rundown. */
+  rundownLog: `${MAIN_WAM_API}/kelola/rundown/riwayat`,
+  /** GET: who is present at a session; POST {employeeId, present}: Catat hadir (K05). */
+  attendance: (sessionId: string) => `${MAIN_WAM_API}/kelola/absen/${enc(sessionId)}`,
+  /** GET: sent announcements; POST: send one (K06). */
+  announcements: `${MAIN_WAM_API}/kelola/pengumuman`,
+  /** PATCH {pinnedUntil}: unpin; DELETE: remove. */
+  announcement: (id: string) => `${MAIN_WAM_API}/kelola/pengumuman/${enc(id)}`,
+  /** GET: reported and hidden photos (K08). */
+  moderation: `${MAIN_WAM_API}/kelola/moderasi`,
+  /** POST {action: "sembunyikan" | "tampilkan"}. */
+  moderatePhoto: (id: string) => `${MAIN_WAM_API}/kelola/moderasi/${enc(id)}`,
+  /** GET: BOD's Ringkasan (at most 4 rows). */
+  summary: `${MAIN_WAM_API}/ringkasan`,
+
+  /* D · modul */
+  /** POST: check in with a session's QR token (A01 → A02/A03/A04). */
+  checkIn: (token: string) => `${MAIN_WAM_API}/absen/${enc(token)}`,
+  /** GET: a session's QR as a PDF to print; POST: a new QR (the printed one stops working). Panitia. */
+  sessionQr: (sessionId: string) => `${MAIN_WAM_API}/kelola/qr/${enc(sessionId)}`,
+  /** GET: the Silent Meeting open now (or of ?sesi=), with its state. */
+  silent: `${MAIN_WAM_API}/silent-meeting`,
+  /** POST {questionId, topic, body}: one anonymous feedback (T01). */
+  silentFeedback: `${MAIN_WAM_API}/silent-meeting/masukan`,
+  /** POST {action: "buka" | "tutup" | "otomatis"}: panitia opens or closes it (K02 row). */
+  silentControl: (questionId: string) => `${MAIN_WAM_API}/silent-meeting/${enc(questionId)}/kontrol`,
+  /** GET: the anonymous recap (BOD, from 5 feedbacks). */
+  silentRecap: `${MAIN_WAM_API}/silent-meeting/rekap`,
+  /** GET: categories, nominees, my votes (and for BOD the counts). */
+  awards: `${MAIN_WAM_API}/awarding`,
+  /** PUT {nomineeId}: my vote in one category (changeable until it closes). */
+  vote: (categoryId: string) => `${MAIN_WAM_API}/awarding/${enc(categoryId)}/suara`,
+  /** POST {nomineeId}: a BOD approves the winner. */
+  approveAward: (categoryId: string) => `${MAIN_WAM_API}/awarding/${enc(categoryId)}/setujui`,
+};
+
+/** Admin WAM → Main WAM: Pengaturan (fondasi), Isi acara (E), Modul acara (D). */
+const MAIN_WAM_ADMIN = `${WAM_ADMIN}/main`;
+export const mainWamAdminPath = {
+  /** Mode acara, penguji, modul on/off, tema (fondasi). */
+  settings: `${MAIN_WAM_ADMIN}/pengaturan`,
+  /* E · isi acara */
+  rundown: `${MAIN_WAM_ADMIN}/rundown`,
+  groups: `${MAIN_WAM_ADMIN}/kelompok`,
+  /** Kelompok, tab Kelompok kegiatan (pos, angkot, meja). */
+  activityGroups: `${MAIN_WAM_ADMIN}/kelompok?tab=kegiatan`,
+  rooms: `${MAIN_WAM_ADMIN}/kamar`,
+  travel: `${MAIN_WAM_ADMIN}/perjalanan`,
+  guides: `${MAIN_WAM_ADMIN}/panduan`,
+  /* D · modul acara */
+  awards: `${MAIN_WAM_ADMIN}/awarding`,
+  silent: `${MAIN_WAM_ADMIN}/silent-meeting`,
+};
+const MAIN_WAM_ADMIN_API = "/api/admin/wam/main";
+export const mainWamAdminApi = {
+  /* fondasi */
+  /** PUT {mode?, modules?, moduleConfig?, theme?}: Pengaturan. */
+  settings: `${MAIN_WAM_ADMIN_API}/pengaturan`,
+  /** POST {employeeId}: add a penguji. */
+  testers: `${MAIN_WAM_ADMIN_API}/penguji`,
+  /** DELETE: remove one penguji. */
+  tester: (employeeId: string) => `${MAIN_WAM_ADMIN_API}/penguji/${enc(employeeId)}`,
+  /** POST {slot, mime, size}: an upload address for one KV image. */
+  themeImageStart: `${MAIN_WAM_ADMIN_API}/tema/unggah`,
+  /** POST {slot, key, token, mime, size}: the image is uploaded; check it and use it. */
+  themeImageConfirm: `${MAIN_WAM_ADMIN_API}/tema/simpan`,
+  /** DELETE: empty one KV slot. */
+  themeImage: (slot: string) => `${MAIN_WAM_ADMIN_API}/tema/${enc(slot)}`,
+  /* E · isi acara */
+  sessions: `${MAIN_WAM_ADMIN_API}/sesi`,
+  session: (id: string) => `${MAIN_WAM_ADMIN_API}/sesi/${enc(id)}`,
+  groups: `${MAIN_WAM_ADMIN_API}/kelompok`,
+  group: (id: string) => `${MAIN_WAM_ADMIN_API}/kelompok/${enc(id)}`,
+  groupMembers: (id: string) => `${MAIN_WAM_ADMIN_API}/kelompok/${enc(id)}/anggota`,
+  activityGroups: `${MAIN_WAM_ADMIN_API}/kelompok-kegiatan`,
+  activityGroup: (id: string) => `${MAIN_WAM_ADMIN_API}/kelompok-kegiatan/${enc(id)}`,
+  /** PUT {floor, note}: a room of HR's pairing (Kuesioner → Kamar). */
+  roomDetail: (roomId: string) => `${MAIN_WAM_ADMIN_API}/kamar/${enc(roomId)}`,
+  trips: `${MAIN_WAM_ADMIN_API}/perjalanan`,
+  trip: (id: string) => `${MAIN_WAM_ADMIN_API}/perjalanan/${enc(id)}`,
+  tripSeats: (id: string) => `${MAIN_WAM_ADMIN_API}/perjalanan/${enc(id)}/kursi`,
+  guides: `${MAIN_WAM_ADMIN_API}/panduan`,
+  guide: (id: string) => `${MAIN_WAM_ADMIN_API}/panduan/${enc(id)}`,
+  guideFileStart: `${MAIN_WAM_ADMIN_API}/panduan/unggah`,
+  guideFileConfirm: `${MAIN_WAM_ADMIN_API}/panduan/simpan`,
+  /** PUT {name, venue, hotel, checkInAt, checkOutAt, contacts, groupsPublished, carbon}: the event's facts (E). */
+  eventInfo: `${MAIN_WAM_ADMIN_API}/info-acara`,
+  /* D · modul acara */
+  awardCategories: `${MAIN_WAM_ADMIN_API}/awarding`,
+  awardCategory: (id: string) => `${MAIN_WAM_ADMIN_API}/awarding/${enc(id)}`,
+  awardNominees: (id: string) => `${MAIN_WAM_ADMIN_API}/awarding/${enc(id)}/nominasi`,
+  silentQuestions: `${MAIN_WAM_ADMIN_API}/silent-meeting`,
+  silentQuestion: (id: string) => `${MAIN_WAM_ADMIN_API}/silent-meeting/${enc(id)}`,
+};
 
 /*
  * Booking Kantor (10 Nov 2026): the office's own booking app, outside WAM, replacing

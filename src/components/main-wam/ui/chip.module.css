@@ -1,0 +1,63 @@
+/* Chip (.wam-chip), FilterChip (.wam-chip--filter, --menu, --ondark), TagChip (.wam-tagchip). Tokens only. */
+.chip {
+  position: relative; flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-4); max-width: 100%;
+  height: 32px; padding: 0 var(--mw-space-12); border-radius: var(--mw-radius-8);
+  background: var(--mw-surface-2); color: var(--mw-text-2); font: var(--mw-type-label); white-space: nowrap;
+}
+.chip > svg { flex: none; width: 16px; height: 16px; }
+.chipOndark { background: var(--mw-ondark-fill); color: var(--mw-media-on); }
+/* An info chip that is a link: 44 touch area around the 32 chip. */
+.chipLink { flex: none; display: inline-flex; align-items: center; min-height: var(--mw-touch); -webkit-tap-highlight-color: transparent; }
+
+/* FilterChip: 36 tall, touch 44; selected = primary container with a check. */
+.filter {
+  position: relative; flex: none; display: inline-flex; align-items: center; gap: var(--mw-space-4); min-width: 0; max-width: 100%;
+  height: 36px; padding: 0 var(--mw-space-12); border-radius: var(--mw-radius-8);
+  background: var(--mw-surface); color: var(--mw-text-2); box-shadow: inset 0 0 0 1px var(--mw-outline-2);
+  font: var(--mw-type-label); white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--mw-motion-fast);
+}
+.filter::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+.filter > svg { flex: none; width: 16px; height: 16px; }
+.filter:has(> svg:first-child) { padding-left: var(--mw-space-8); }
+.filter[aria-pressed="true"], .selected { background: var(--mw-primary-container); color: var(--mw-on-primary-container); box-shadow: none; }
+.filter:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
+@media (hover: hover) { .filter:not(:disabled):hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); } }
+.filter:disabled { color: var(--mw-disabled-fg); cursor: default; background-image: none; }
+.menu { padding-right: var(--mw-space-8); }
+.menu > svg:last-child { margin-left: 2px; }
+.value { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.filterOndark { background: var(--mw-ondark-fill); color: var(--mw-media-on); box-shadow: none; }
+.filterOndark[aria-pressed="true"], .filterOndark.selected { background: var(--mw-media-on); color: var(--mw-media-ink); }
+.filterOndark:not([aria-pressed="true"]):not(.selected):active { background: var(--mw-ondark-fill-pressed); }
+@media (hover: hover) { .filterOndark:not(:disabled):not([aria-pressed="true"]):not(.selected):hover { background-image: none; background-color: var(--mw-ondark-fill-pressed); } }
+
+/* Rows of chips: hscroll goes to the screen edge and scrolls; wrap wraps. */
+.scroll { display: flex; gap: var(--mw-space-8); overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * var(--mw-space-16)); padding: var(--mw-space-4) var(--mw-space-16); }
+.scroll::-webkit-scrollbar { display: none; }
+.wrap { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mw-space-8); }
+
+/* TagChip on the dark camera: "Untuk: Semua ▾", "Sesi: Team building ✕". 36 tall, touch 44, round. */
+.tag {
+  position: relative; flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; gap: var(--mw-space-4);
+  height: 36px; padding: 0 var(--mw-space-12); border-radius: var(--mw-radius-full);
+  background: var(--mw-ondark-fill); color: var(--mw-media-on); font: var(--mw-type-label); white-space: nowrap;
+}
+.tag svg { flex: none; width: 16px; height: 16px; }
+/* The 36 chip answers a touch 44 tall. */
+a.tag::after, button.tag::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+a.tag, button.tag { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tagMain { position: relative; min-width: 0; display: inline-flex; align-items: center; gap: var(--mw-space-4); height: 100%; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tagMain::after { content: ""; position: absolute; left: 0; right: 0; top: -4px; bottom: -4px; }
+.tagLabel { flex: none; font: var(--mw-type-body-small); color: var(--mw-media-on-2); }
+.tagValue { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tagClearable { padding-right: 0; }
+.tagClear {
+  position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px;
+  margin-left: calc(-1 * var(--mw-space-4)); border-radius: var(--mw-radius-full); color: inherit; cursor: pointer;
+}
+.tagClear::after { content: ""; position: absolute; inset: -4px; }
+.tagClear:active, .tagMain:active { opacity: 0.72; }
+.tagRow { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--mw-space-8); }
+
+@media (prefers-reduced-motion: reduce) { .filter { transition: none; } }

@@ -1,0 +1,320 @@
+/*
+ * Main WAM tokens (DESIGN_SYSTEM.md v1, prototipe/wam.css §1). Everything lives on the theme root
+ * (.root, carrying data-main-wam), so nothing leaks into Pra WAM or the rest of Journey.
+ * Name map from the prototype: --color-X → --mw-X (--color-text-2 → --mw-text-2,
+ * --color-event-accent → --mw-accent), --text-X → --mw-type-X, --ls-X → --mw-ls-X,
+ * --space-N → --mw-space-N, --radius-N → --mw-radius-N, --elev-N → --mw-elev-N.
+ * Theme slots (KV) are read from --mw-kv-* that <MainWamTheme> writes; without them the neutral
+ * default below applies. Components never write a hex colour, a font size or a shadow of their own.
+ */
+.root {
+  /* 1.1 Netral */
+  --mw-bg: #F6F7F9;
+  --mw-surface: #FFFFFF;
+  --mw-surface-2: #F1F3F6;
+  --mw-outline: #E4E7EC;
+  --mw-outline-2: #D0D5DD;
+  --mw-outline-strong: #868E9C;
+  --mw-text-1: #111827;
+  --mw-text-2: #4B5563;
+  --mw-text-3: #6B7280;
+  --mw-disabled-bg: #F1F3F6;
+  --mw-disabled-fg: #9CA3AF;
+  --mw-press: rgb(17 24 39 / 0.06);
+
+  /* 1.2 Brand (slot tema) */
+  --mw-primary: var(--mw-kv-primary, #2F6FEB);
+  --mw-primary-strong: var(--mw-kv-primary-strong, #1D4ED8);
+  --mw-on-primary: var(--mw-kv-on-primary, #FFFFFF);
+  --mw-primary-container: var(--mw-kv-primary-container, #E3ECFD);
+  --mw-on-primary-container: var(--mw-kv-on-primary-container, #1D4ED8);
+  --mw-focus: var(--mw-primary);
+
+  /* 1.3 Semantik (info = primary) */
+  --mw-success: #16A34A;
+  --mw-success-container: #DCFCE7;
+  --mw-on-success-container: #166534;
+  --mw-warning: #D97706;
+  --mw-warning-container: #FEF3C7;
+  --mw-on-warning-container: #92400E;
+  --mw-error: #DC2626;
+  --mw-error-container: #FEE2E2;
+  --mw-on-error-container: #991B1B;
+  --mw-on-error: #FFFFFF;
+  --mw-error-pressed: #B91C1C;
+
+  /* 1.4 Aksen kategori (modul) */
+  --mw-momen: #7C3AED;
+  --mw-momen-container: #EDE9FE;
+  --mw-on-momen-container: #5B21B6;
+  --mw-emisi: #0D9488;
+  --mw-emisi-container: #CCFBF1;
+  --mw-on-emisi-container: #115E59;
+  --mw-wellbeing: #2F6FEB;
+  --mw-wellbeing-container: #E3ECFD;
+  --mw-on-wellbeing-container: #1D4ED8;
+  --mw-awarding: #EA580C;
+  --mw-awarding-container: #FFEDD5;
+  --mw-on-awarding-container: #9A3412;
+  --mw-chart-emisi-1: #115E59;
+  --mw-chart-emisi-2: #0D9488;
+  --mw-chart-emisi-3: #5EEAD4;
+
+  /* 1.5 Acara (slot tema KV), inverse, media */
+  --mw-accent: var(--mw-kv-accent, #1E3A5F);
+  --mw-on-accent: var(--mw-kv-on-accent, #FFFFFF);
+  --mw-on-accent-2: var(--mw-kv-on-accent-2, #C9D6E8);
+  --mw-accent-container: var(--mw-kv-accent-container, #E6EDF5);
+  --mw-on-accent-container: var(--mw-kv-on-accent-container, #1E3A5F);
+  --mw-inverse-surface: #1F2937;
+  --mw-inverse-on-surface: #F9FAFB;
+  --mw-inverse-on-surface-2: #D1D5DB;
+  --mw-inverse-primary: #8AB4F8;
+  --mw-inverse-success: #4ADE80;
+  --mw-inverse-error: #F87171;
+  --mw-media-scrim: rgb(17 24 39 / 0.6);
+  --mw-media-on: #FFFFFF;
+  /* Secondary text, dark text on a white chip, and accent text on dark media: the same in both modes. */
+  --mw-media-on-2: #D1D5DB;
+  --mw-media-ink: #111827;
+  --mw-media-primary: #8AB4F8;
+  --mw-overlay-scrim: rgb(17 24 39 / 0.5);
+  --mw-overlay-camera: rgb(0 0 0 / 0.55);
+  --mw-camera: #111827;
+  --mw-viewer: #000000;
+  /* On a dark plain surface (Momen, kamera): white at 14 % and the like (wam.css §13 --ondark). */
+  --mw-ondark-fill: color-mix(in srgb, var(--mw-media-on) 14%, transparent);
+  --mw-ondark-fill-pressed: color-mix(in srgb, var(--mw-media-on) 24%, transparent);
+  --mw-ondark-line: color-mix(in srgb, var(--mw-media-on) 12%, transparent);
+
+  /* 2. Tipografi: font: var(--mw-type-…) + letter-spacing: var(--mw-ls-…) */
+  --mw-font-sans: var(--mw-font-jakarta, "Plus Jakarta Sans"), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mw-display-font: var(--mw-kv-display-font, var(--mw-font-sans));
+  --mw-type-display: 800 40px/48px var(--mw-display-font);
+  --mw-type-title: 700 28px/36px var(--mw-display-font);
+  --mw-type-headline: 700 22px/28px var(--mw-display-font);
+  --mw-type-subtitle: 600 17px/24px var(--mw-font-sans);
+  --mw-type-body: 400 15px/22px var(--mw-font-sans);
+  --mw-type-body-strong: 600 15px/22px var(--mw-font-sans);
+  --mw-type-body-long: 400 15px/24px var(--mw-font-sans);
+  --mw-type-body-small: 400 13px/18px var(--mw-font-sans);
+  --mw-type-label-lg: 600 15px/20px var(--mw-font-sans);
+  --mw-type-label: 600 13px/18px var(--mw-font-sans);
+  --mw-type-caption: 500 12px/16px var(--mw-font-sans);
+  --mw-type-caption-strong: 600 12px/16px var(--mw-font-sans);
+  --mw-type-stat-xl: 800 48px/52px var(--mw-font-sans);
+  --mw-type-stat-l: 800 32px/40px var(--mw-font-sans);
+  --mw-type-stat-m: 700 20px/24px var(--mw-font-sans);
+  --mw-ls-display: -0.8px;
+  --mw-ls-title: -0.4px;
+  --mw-ls-headline: -0.2px;
+  --mw-ls-stat-xl: -1px;
+  --mw-ls-stat-l: -0.6px;
+  --mw-ls-stat-m: -0.2px;
+
+  /* 3. Spasi (kelipatan 4) */
+  --mw-space-4: 4px;
+  --mw-space-8: 8px;
+  --mw-space-12: 12px;
+  --mw-space-16: 16px;
+  --mw-space-20: 20px;
+  --mw-space-24: 24px;
+  --mw-space-32: 32px;
+  --mw-space-48: 48px;
+  --mw-space-64: 64px;
+
+  /* 4.1 Radius */
+  --mw-radius-4: 4px;
+  --mw-radius-8: 8px;
+  --mw-radius-12: 12px;
+  --mw-radius-16: 16px;
+  --mw-radius-24: 24px;
+  --mw-radius-full: 999px;
+
+  /* 4.2 Elevasi (hanya elemen mengambang) */
+  --mw-elev-0: none;
+  --mw-elev-1: 0 1px 2px 0 rgb(17 24 39 / 0.06), 0 1px 3px 0 rgb(17 24 39 / 0.10);
+  --mw-elev-2: 0 4px 12px 0 rgb(17 24 39 / 0.08), 0 2px 4px 0 rgb(17 24 39 / 0.06);
+  --mw-elev-3: 0 12px 32px 0 rgb(17 24 39 / 0.16);
+
+  /* 7.1 Gerak */
+  --mw-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --mw-ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --mw-ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --mw-motion-press: 100ms var(--mw-ease-standard);
+  --mw-motion-fast: 150ms var(--mw-ease-standard);
+  --mw-motion-base: 200ms var(--mw-ease-standard);
+  --mw-motion-expand: 250ms var(--mw-ease-decelerate);
+
+  /* 3.2 Bingkai (tanpa area aman; area aman lewat --mw-safe-*) */
+  --mw-touch: 44px;
+  --mw-topbar-h: 56px;
+  --mw-topbar-large-h: 64px;
+  --mw-nav-h: 64px;
+  --mw-safe-top: env(safe-area-inset-top, 0px);
+  --mw-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mw-safe-left: env(safe-area-inset-left, 0px);
+  --mw-safe-right: env(safe-area-inset-right, 0px);
+  /* Lebar kolom aplikasi di layar lebar (kolom tengah selebar ponsel). */
+  --mw-column: 480px;
+
+  /* Slot gambar KV (none = tanpa gambar; tata letak tetap rapi tanpa gambar) */
+  --mw-image-splash: none;
+  --mw-image-home-header: none;
+  --mw-image-pattern: none;
+  --mw-image-mosaic: none;
+
+  /* Placeholder foto (gradasi netral, bukan foto orang) */
+  --mw-ph-1: linear-gradient(135deg, #DDE3EA 0%, #C7D0DB 100%);
+  --mw-ph-2: linear-gradient(135deg, #E8E2D9 0%, #D2C8BB 100%);
+  --mw-ph-3: linear-gradient(135deg, #DCE5DF 0%, #C3D2C8 100%);
+  --mw-ph-4: linear-gradient(135deg, #E3E1EB 0%, #CBC8DA 100%);
+  --mw-ph-5: linear-gradient(135deg, #DAE4EE 0%, #C0D0DF 100%);
+  --mw-ph-6: linear-gradient(135deg, #ECE4DE 0%, #D8CBC1 100%);
+
+  color-scheme: light;
+  font: var(--mw-type-body);
+  color: var(--mw-text-1);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+/*
+ * 1.6 Mode gelap (DESIGN_SYSTEM.md, "catatan, belum digambar"): token disiapkan, layar belum
+ * dirancang untuknya. Slot KV terang tidak dipakai di sini; aksen gelap punya nilainya sendiri.
+ */
+.root[data-mw-mode="dark"] {
+  --mw-bg: #0E1116;
+  --mw-surface: #171B22;
+  --mw-surface-2: #1F242D;
+  --mw-outline: #2A303A;
+  --mw-outline-2: #353C48;
+  --mw-outline-strong: #6B7482;
+  --mw-text-1: #F3F4F6;
+  --mw-text-2: #C2C8D0;
+  --mw-text-3: #8B93A0;
+  --mw-disabled-bg: #1F242D;
+  --mw-disabled-fg: #6B7482;
+  --mw-press: rgb(243 244 246 / 0.08);
+  --mw-primary: #8AB4F8;
+  --mw-primary-strong: #8AB4F8;
+  --mw-on-primary: #0B1B3A;
+  --mw-primary-container: #1E3A6E;
+  --mw-on-primary-container: #D6E3FC;
+  --mw-success: #4ADE80;
+  --mw-success-container: #14381F;
+  --mw-on-success-container: #BBF7D0;
+  --mw-warning: #FBBF24;
+  --mw-warning-container: #3D2E0A;
+  --mw-on-warning-container: #FDE68A;
+  --mw-error: #F87171;
+  --mw-error-container: #4A1C1C;
+  --mw-on-error-container: #FECACA;
+  --mw-on-error: #0E1116;
+  --mw-error-pressed: #FCA5A5;
+  --mw-momen: #C4B5FD;
+  --mw-momen-container: #3B2A6B;
+  --mw-on-momen-container: #E9DDFF;
+  --mw-emisi: #5EEAD4;
+  --mw-emisi-container: #11403B;
+  --mw-on-emisi-container: #C9F5EC;
+  --mw-awarding: #FDBA74;
+  --mw-awarding-container: #4A2A14;
+  --mw-on-awarding-container: #FFDCC4;
+  --mw-wellbeing: #8AB4F8;
+  --mw-wellbeing-container: #1E3A6E;
+  --mw-on-wellbeing-container: #D6E3FC;
+  --mw-accent: #9DB7D9;
+  --mw-on-accent: #0E1116;
+  --mw-on-accent-2: #1F2937;
+  --mw-accent-container: #1E2A3A;
+  --mw-on-accent-container: #C9D6E8;
+  --mw-inverse-surface: #E5E7EB;
+  --mw-inverse-on-surface: #111827;
+  --mw-inverse-on-surface-2: #374151;
+  --mw-inverse-primary: #1D4ED8;
+  --mw-inverse-success: #166534;
+  --mw-inverse-error: #991B1B;
+  --mw-elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --mw-elev-2: 0 4px 12px 0 rgb(0 0 0 / 0.45);
+  --mw-elev-3: 0 12px 32px 0 rgb(0 0 0 / 0.55);
+  color-scheme: dark;
+}
+
+/* Ikuti perangkat: sama dengan blok gelap di atas (dua blok harus sama). */
+@media (prefers-color-scheme: dark) {
+  .root[data-mw-mode="system"] {
+    --mw-bg: #0E1116;
+    --mw-surface: #171B22;
+    --mw-surface-2: #1F242D;
+    --mw-outline: #2A303A;
+    --mw-outline-2: #353C48;
+    --mw-outline-strong: #6B7482;
+    --mw-text-1: #F3F4F6;
+    --mw-text-2: #C2C8D0;
+    --mw-text-3: #8B93A0;
+    --mw-disabled-bg: #1F242D;
+    --mw-disabled-fg: #6B7482;
+    --mw-press: rgb(243 244 246 / 0.08);
+    --mw-primary: #8AB4F8;
+    --mw-primary-strong: #8AB4F8;
+    --mw-on-primary: #0B1B3A;
+    --mw-primary-container: #1E3A6E;
+    --mw-on-primary-container: #D6E3FC;
+    --mw-success: #4ADE80;
+    --mw-success-container: #14381F;
+    --mw-on-success-container: #BBF7D0;
+    --mw-warning: #FBBF24;
+    --mw-warning-container: #3D2E0A;
+    --mw-on-warning-container: #FDE68A;
+    --mw-error: #F87171;
+    --mw-error-container: #4A1C1C;
+    --mw-on-error-container: #FECACA;
+    --mw-on-error: #0E1116;
+    --mw-error-pressed: #FCA5A5;
+    --mw-momen: #C4B5FD;
+    --mw-momen-container: #3B2A6B;
+    --mw-on-momen-container: #E9DDFF;
+    --mw-emisi: #5EEAD4;
+    --mw-emisi-container: #11403B;
+    --mw-on-emisi-container: #C9F5EC;
+    --mw-awarding: #FDBA74;
+    --mw-awarding-container: #4A2A14;
+    --mw-on-awarding-container: #FFDCC4;
+    --mw-wellbeing: #8AB4F8;
+    --mw-wellbeing-container: #1E3A6E;
+    --mw-on-wellbeing-container: #D6E3FC;
+    --mw-accent: #9DB7D9;
+    --mw-on-accent: #0E1116;
+    --mw-on-accent-2: #1F2937;
+    --mw-accent-container: #1E2A3A;
+    --mw-on-accent-container: #C9D6E8;
+    --mw-inverse-surface: #E5E7EB;
+    --mw-inverse-on-surface: #111827;
+    --mw-inverse-on-surface-2: #374151;
+    --mw-inverse-primary: #1D4ED8;
+    --mw-inverse-success: #166534;
+    --mw-inverse-error: #991B1B;
+    --mw-elev-1: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --mw-elev-2: 0 4px 12px 0 rgb(0 0 0 / 0.45);
+    --mw-elev-3: 0 12px 32px 0 rgb(0 0 0 / 0.55);
+    color-scheme: dark;
+  }
+}
+
+/*
+ * Reset ringan, hanya di dalam Main WAM (globals.css memberi h1/h2 font judul Journey, tautan biru
+ * bergaris, dan cincin fokus 3 px). :where() menjaga spesifisitas rendah supaya kelas komponen menang.
+ */
+.root :where(*, *::before, *::after) { box-sizing: border-box; }
+.root :where(h1, h2, h3, h4, h5, h6, p, ul, ol, li, figure, blockquote, dl, dd) { margin: 0; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; }
+.root :where(ul, ol) { list-style: none; }
+.root :where(button, input, textarea, select) { font: inherit; color: inherit; letter-spacing: inherit; margin: 0; }
+.root :where(button) { background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; -webkit-tap-highlight-color: transparent; }
+.root :where(a) { color: inherit; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.root :where(img, svg) { display: block; max-width: 100%; }
+.root :focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
+.root :where(button:disabled) { cursor: default; }
+

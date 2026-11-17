@@ -17,6 +17,8 @@ describe("the address", () => {
     expect(slugProblem("kuesioner")).toBeNull();
     expect(slugProblem("book")).toMatch(/sudah dipakai/);
     expect(reservedSlugs).toContain("settings");
+    // Main WAM lives at /wam/acara (17 Nov 2026).
+    expect(slugProblem("acara")).toMatch(/sudah dipakai/);
     expect(slugProblem("ab")).toMatch(/3–40/);
     expect(slugProblem("-cerita")).toMatch(/3–40/);
     expect(slugProblem("cerita--kita")).toMatch(/berurutan/);

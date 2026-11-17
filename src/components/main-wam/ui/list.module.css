@@ -1,0 +1,46 @@
+/* List (.wam-list), ListRow (.wam-row), StatRow (.wam-bod-row). Tokens only. */
+.list {
+  display: flex; flex-direction: column; min-width: 0; overflow: hidden; border-radius: var(--mw-radius-16);
+  background: var(--mw-surface); border: 1px solid var(--mw-outline); --mw-divider-inset: 68px;
+}
+.plain { background: transparent; border: 0; border-radius: 0; }
+.inset16 { --mw-divider-inset: 16px; }
+.inset0 { --mw-divider-inset: 0px; }
+.list > * { position: relative; }
+.list > * + *::before { content: ""; position: absolute; top: 0; right: 0; left: var(--mw-divider-inset); height: 1px; background: var(--mw-outline); pointer-events: none; }
+/* Bleeds to the screen edge inside a padded parent (a sheet's body). */
+.bleed { margin-left: calc(-1 * var(--mw-space-16)); margin-right: calc(-1 * var(--mw-space-16)); }
+
+.row {
+  position: relative; display: flex; align-items: center; gap: var(--mw-space-12); width: 100%; min-height: 56px;
+  padding: var(--mw-space-16); text-align: left; color: var(--mw-text-1); transition: background-color var(--mw-motion-press);
+}
+a.row, button.row { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+a.row:active, button.row:active { background-color: var(--mw-press); }
+@media (hover: hover) { a.row:hover, button.row:hover { background-color: var(--mw-press); } }
+.lead { flex: none; display: flex; align-items: center; color: var(--mw-text-2); }
+.text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.title { font: var(--mw-type-body-strong); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sub { font: var(--mw-type-body-small); color: var(--mw-text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.trail { flex: none; display: flex; align-items: center; gap: var(--mw-space-4); color: var(--mw-text-3); }
+.trail > svg { width: 20px; height: 20px; }
+.value { font: var(--mw-type-body); color: var(--mw-text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.row[aria-disabled="true"] .title, .row[aria-disabled="true"] .sub, .row:disabled .title, .row:disabled .sub { color: var(--mw-disabled-fg); }
+.row:disabled, .row[aria-disabled="true"] { cursor: default; background: none; }
+
+/* StatRow (BOD Ringkasan): 84 tall, value Stat M at the end; static = no chevron, value still aligned. */
+.stat { position: relative; display: flex; align-items: center; gap: var(--mw-space-12); width: 100%; min-height: 84px; padding: var(--mw-space-16); text-align: left; color: var(--mw-text-1); }
+a.stat, button.stat { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--mw-motion-press); }
+a.stat:active, button.stat:active { background-color: var(--mw-press); }
+@media (hover: hover) { a.stat:hover, button.stat:hover { background-color: var(--mw-press); } }
+.statText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.statTitle { font: var(--mw-type-body-strong); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.statSub { font: var(--mw-type-body-small); color: var(--mw-text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.statStatus { align-self: flex-start; margin-top: var(--mw-space-8); }
+.statEnd { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: var(--mw-space-4); }
+.statValue { font: var(--mw-type-stat-m); letter-spacing: var(--mw-ls-stat-m); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.statUnit { margin-left: var(--mw-space-4); font: var(--mw-type-label); letter-spacing: 0; color: var(--mw-text-2); }
+.statChev { flex: none; width: 20px; height: 20px; color: var(--mw-text-3); margin-left: -4px; }
+.statStatic { padding-right: calc(var(--mw-space-16) + var(--mw-space-24) + var(--mw-space-4)); }
+
+@media (prefers-reduced-motion: reduce) { .row, a.stat, button.stat { transition: none; } }

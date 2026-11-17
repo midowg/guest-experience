@@ -1,6 +1,6 @@
-import { Archive, CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, Map as MapIcon, Palette, Plug, Send, Tv, UsersRound, type LucideIcon } from "lucide-react";
+import { Archive, CalendarRange, ClipboardList, Info, KeyRound, LayoutDashboard, ListChecks, Map as MapIcon, Palette, Plug, Send, SlidersHorizontal, Trophy, Tv, UsersRound, type LucideIcon } from "lucide-react";
 import { MCP_ADMIN_PATH } from "@/lib/pra-wam/mcp";
-import { wamAdminPath } from "@/lib/routes";
+import { mainWamAdminPath, wamAdminPath } from "@/lib/routes";
 
 /*
  * Admin WAM's sections, in menu order. The menu, the Ringkasan cards and the page titles all read
@@ -8,7 +8,9 @@ import { wamAdminPath } from "@/lib/routes";
  * one entry here, its path in wamAdminPath and its page under src/app/admin/wam/. A new group
  * name starts a new group in the menu.
  */
-export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner";
+export type WamSectionKey = "ringkasan" | "akun" | "reset" | "mcp" | "acara" | "about" | "tema" | "ruang" | "tv" | "telegram" | "arsip" | "kuesioner"
+  // Main WAM (17 Nov 2026, docs/main-wam/KONTRAK.md): Pengaturan (fondasi), Isi acara and its tabs (agen E), Modul acara and its tab (agen D).
+  | "mw-pengaturan" | "mw-isi" | "mw-kelompok" | "mw-kamar" | "mw-perjalanan" | "mw-panduan" | "mw-modul" | "mw-silent";
 export type WamSection = {
   key: WamSectionKey;
   label: string;
@@ -41,6 +43,15 @@ export const wamSections: readonly WamSection[] = [
   { key: "kuesioner", label: "Kuesioner", group: "Untuk peserta", href: wamAdminPath.questionnaire.content, icon: ClipboardList, summary: "Isi, pengaturan, progres, rekap, dan ekspor kuesioner personal." },
   { key: "about", label: "Apa itu WAM", group: "Untuk peserta", href: wamAdminPath.about, icon: Info, summary: "Teks penjelasan WAM di Beranda peserta." },
   { key: "tv", label: "TV Announcement", group: "Untuk peserta", href: wamAdminPath.tv, icon: Tv, summary: "TV kantor: jadwal ruang hari ini dan gambar pengumuman, berganti otomatis." },
+  // Main WAM: the app during WAM itself, hidden until its mode is switched (17 Nov 2026).
+  { key: "mw-pengaturan", label: "Pengaturan", group: "Main WAM", href: mainWamAdminPath.settings, icon: SlidersHorizontal, summary: "Mode acara, penguji, modul yang aktif, dan tema Main WAM." },
+  { key: "mw-isi", label: "Isi acara", group: "Main WAM", href: mainWamAdminPath.rundown, icon: ListChecks, summary: "Rundown, kelompok, kamar, perjalanan, dan panduan untuk peserta." },
+  { key: "mw-kelompok", label: "Kelompok", group: "Main WAM", href: mainWamAdminPath.groups, icon: ListChecks, summary: "Kelompok, koordinator, anggota, dan kelompok kegiatan.", owner: "mw-isi" },
+  { key: "mw-kamar", label: "Kamar", group: "Main WAM", href: mainWamAdminPath.rooms, icon: ListChecks, summary: "Lantai dan catatan kamar dari pembagian kamar HR.", owner: "mw-isi" },
+  { key: "mw-perjalanan", label: "Perjalanan", group: "Main WAM", href: mainWamAdminPath.travel, icon: ListChecks, summary: "Kumpul, kereta, shuttle, dan kursi tiap orang.", owner: "mw-isi" },
+  { key: "mw-panduan", label: "Panduan", group: "Main WAM", href: mainWamAdminPath.guides, icon: ListChecks, summary: "Denah, hotel dan fasilitas, dress code, tata tertib.", owner: "mw-isi" },
+  { key: "mw-modul", label: "Modul acara", group: "Main WAM", href: mainWamAdminPath.awards, icon: Trophy, summary: "Kategori dan nominasi Awarding, pertanyaan Silent Meeting." },
+  { key: "mw-silent", label: "Silent Meeting", group: "Main WAM", href: mainWamAdminPath.silent, icon: Trophy, summary: "Pertanyaan Silent Meeting per sesi.", owner: "mw-modul" },
   { key: "tema", label: "Tema aplikasi", group: "Pengaturan", href: wamAdminPath.theme, icon: Palette, summary: "Tema WAM untuk semua orang: Dream Out Loud atau Werkudara." },
   { key: "mcp", label: "Akses MCP", group: "Pengaturan", href: MCP_ADMIN_PATH, icon: Plug, summary: "Siapa boleh menghubungkan Claude atau ChatGPT ke data WAM, dan panggilan terakhir." },
 ];

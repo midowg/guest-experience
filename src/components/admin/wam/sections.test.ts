@@ -13,13 +13,18 @@ describe("Admin WAM sections", () => {
   });
 
   it("leave units and positions to Data karyawan", () => {
-    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "ruang", "arsip", "telegram", "kuesioner", "about", "tv", "tema", "mcp"]);
+    expect(wamSections.map(section => section.key)).toEqual(["ringkasan", "akun", "reset", "acara", "ruang", "arsip", "telegram", "kuesioner", "about", "tv",
+      "mw-pengaturan", "mw-isi", "mw-kelompok", "mw-kamar", "mw-perjalanan", "mw-panduan", "mw-modul", "mw-silent", "tema", "mcp"]);
     expect(Object.values(wamAdminPath)).not.toContain("/admin/wam/unit");
   });
 
   it("group the menu in the order the sections are listed, leaving tab-only pages out", () => {
     const groups = wamGroups();
-    expect(groups.map(group => group.label)).toEqual(["Ikhtisar", "Orang", "Acara dan meeting", "Untuk peserta", "Pengaturan"]);
+    expect(groups.map(group => group.label)).toEqual(["Ikhtisar", "Orang", "Acara dan meeting", "Untuk peserta", "Main WAM", "Pengaturan"]);
+    // Main WAM: three menu items, the content pages as tabs of Isi acara and Modul acara.
+    expect(groups.find(group => group.label === "Main WAM")!.sections.map(section => section.key)).toEqual(["mw-pengaturan", "mw-isi", "mw-modul"]);
+    expect(wamMenuKey("mw-kamar")).toBe("mw-isi");
+    expect(wamMenuKey("mw-silent")).toBe("mw-modul");
     expect(groups.flatMap(group => group.sections)).toEqual(wamSections.filter(section => !section.owner));
     expect(groups.find(group => group.label === "Orang")!.sections.map(section => section.key)).toEqual(["akun"]);
     // Rarely touched settings at the bottom, Akses MCP last.

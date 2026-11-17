@@ -1,0 +1,26 @@
+/* Pieces several kit components share. Tokens only (theme.module.css). */
+
+/* Read by screen readers, not shown. */
+.srOnly { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Spinner: loader-circle turning (800 ms linear); still with reduced motion. */
+.spin { animation: mw-spin 800ms linear infinite; }
+@keyframes mw-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+/* Photo placeholder (no photos of people): neutral gradient + soft light, prototipe .wam-ph. */
+.ph {
+  position: relative; overflow: hidden; display: block;
+  background: radial-gradient(circle at 28% 72%, rgb(255 255 255 / 0.38) 0, rgb(255 255 255 / 0) 42%),
+              radial-gradient(circle at 78% 26%, rgb(17 24 39 / 0.06) 0, rgb(17 24 39 / 0) 38%),
+              var(--mw-ph-bg, var(--mw-ph-1));
+}
+.ph1 { --mw-ph-bg: var(--mw-ph-1); }
+.ph2 { --mw-ph-bg: var(--mw-ph-2); }
+.ph3 { --mw-ph-bg: var(--mw-ph-3); }
+.ph4 { --mw-ph-bg: var(--mw-ph-4); }
+.ph5 { --mw-ph-bg: var(--mw-ph-5); }
+.ph6 { --mw-ph-bg: var(--mw-ph-6); }
+
+/* A real photo inside a placeholder frame. */
+.photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }

@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FRIDAY_SHARING_PATH, WELCOME_PATH, absolute, thanksPath, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, photoDownloadPath, posterPath, praWamPath, ticketPath } from "./routes";
+import { FRIDAY_SHARING_PATH, WELCOME_PATH, absolute, thanksPath, adminApi, adminEventPath, calendarPath, eventPath, galleryPath, guestApi, invitationPath, mainWamAdminApi, mainWamAdminPath, mainWamApi, mainWamPath, photoDownloadPath, posterPath, praWamPath, ticketPath } from "./routes";
 
 const legacy = { id: "e1", slug: "kunjungan-sinar" };
 const short = { ...legacy, code: "AB23CD" };
@@ -79,6 +79,54 @@ describe("WAM addresses", () => {
     expect(praWamPath.appraisal("2026-11-05")).toBe("/wam/book?date=2026-11-05");
     expect(praWamPath.appraisal("2026-11-05", "b-1")).toBe("/wam/book?date=2026-11-05&booking=b-1");
     expect(praWamPath.appraisal(undefined, "b 1")).toBe("/wam/book?booking=b+1");
+  });
+});
+
+describe("Main WAM addresses (docs/main-wam/KONTRAK.md §5)", () => {
+  it("live under /wam/acara, with filters in the query", () => {
+    expect(mainWamPath.home).toBe("/wam/acara");
+    expect(mainWamPath.login("/wam/acara/absen/t1")).toBe("/wam/acara/masuk?next=%2Fwam%2Facara%2Fabsen%2Ft1");
+    expect(mainWamPath.agenda()).toBe("/wam/acara/agenda");
+    expect(mainWamPath.agenda(2)).toBe("/wam/acara/agenda?hari=2");
+    expect(mainWamPath.session("a b")).toBe("/wam/acara/agenda/a%20b");
+    expect(mainWamPath.travel()).toBe("/wam/acara/saya/perjalanan");
+    expect(mainWamPath.travel("pulang")).toBe("/wam/acara/saya/perjalanan?arah=pulang");
+    expect(mainWamPath.moments()).toBe("/wam/acara/momen");
+    expect(mainWamPath.moments({ lihat: "kelompok", sesi: "s1" })).toBe("/wam/acara/momen?lihat=kelompok&sesi=s1");
+    expect(mainWamPath.camera({ sesi: "umum" })).toBe("/wam/acara/momen/kamera?sesi=umum");
+    expect(mainWamPath.gallery({ lihat: "saya" })).toBe("/wam/acara/momen/galeri?lihat=saya");
+    expect(mainWamPath.mosaic(true)).toBe("/wam/acara/momen/mozaik?tandai=1");
+    expect(mainWamPath.moderation()).toBe("/wam/acara/kelola/moderasi");
+    expect(mainWamPath.moderation("disembunyikan")).toBe("/wam/acara/kelola/moderasi?lihat=disembunyikan");
+    expect(mainWamPath.checkIn("tok_1")).toBe("/wam/acara/absen/tok_1");
+    expect(mainWamPath.silentMeeting("s1")).toBe("/wam/acara/silent-meeting?sesi=s1");
+  });
+
+  it("keep every page address unique", () => {
+    const pages = Object.values(mainWamPath).map(value => typeof value === "function" ? (value as (arg?: never) => string)() : value);
+    expect(new Set(pages).size).toBe(pages.length);
+    for (const page of pages) expect(page.startsWith("/wam/acara")).toBe(true);
+  });
+
+  it("put the APIs under /api/wam/acara and Admin WAM's under /api/admin/wam/main", () => {
+    expect(mainWamApi.themeImage("splash", "17")).toBe("/api/wam/acara/tema/splash?v=17");
+    expect(mainWamApi.photos({ lihat: "kelompok", sebelum: "x" })).toBe("/api/wam/acara/momen?lihat=kelompok&sebelum=x");
+    expect(mainWamApi.photoFile("p1", "kecil")).toBe("/api/wam/acara/momen/p1/berkas?ukuran=kecil");
+    expect(mainWamApi.vote("c1")).toBe("/api/wam/acara/awarding/c1/suara");
+    for (const value of Object.values(mainWamApi)) {
+      const path = typeof value === "function" ? (value as (arg: string) => string)("x") : value;
+      expect(path.startsWith("/api/wam/acara/")).toBe(true);
+    }
+    for (const value of Object.values(mainWamAdminApi)) {
+      const path = typeof value === "function" ? (value as (arg: string) => string)("x") : value;
+      expect(path.startsWith("/api/admin/wam/main/")).toBe(true);
+    }
+    for (const value of Object.values(mainWamAdminPath)) expect(value.startsWith("/admin/wam/main/")).toBe(true);
+  });
+
+  it("keep Pra WAM's Beranda reachable while Main WAM is on", () => {
+    expect(praWamPath.homePra).toBe("/wam?versi=pra");
+    expect(praWamPath.home).toBe("/wam");
   });
 });
 

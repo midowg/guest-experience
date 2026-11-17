@@ -1,0 +1,27 @@
+import { MAIN_WAM_MODULES, type MainWamModule, type ModuleSwitches } from "./types";
+
+/*
+ * The modules an admin switches on (Admin WAM → Main WAM → Pengaturan). A module that is off leaves
+ * no trace: no Beranda card, no action in a session, no row in BOD's Ringkasan, its pages 404 and
+ * its APIs refuse (gate.ts requireModule). Pure.
+ */
+
+export const moduleInfo: Record<MainWamModule, { label: string; hint: string }> = {
+  absen: { label: "Absen QR", hint: "Scan QR di sesi yang ditandai pakai absen; panitia bisa mencatat manual." },
+  voting: { label: "Voting Awarding", hint: "Kartu Beranda saat voting dibuka, aksi di sesi Awarding, persetujuan BOD." },
+  silent: { label: "Silent Meeting", hint: "Masukan tanpa nama, dibuka dan ditutup mengikuti jam sesinya." },
+  survei: { label: "Survei", hint: "Kartu Beranda yang menaut ke kuesioner yang dipilih." },
+  mozaik: { label: "Mozaik", hint: "Tombol Mozaik di Momen: foto untuk semua menyusun tulisan acara." },
+  karbon: { label: "Jejak karbon", hint: "Satu baris angka di Ringkasan BOD, dihitung dari data acara." },
+};
+
+export const moduleOn = (modules: ModuleSwitches, key: MainWamModule) => modules[key] === true;
+
+/** The modules that are on, in the fixed order. */
+export const activeModules = (modules: ModuleSwitches): MainWamModule[] => MAIN_WAM_MODULES.filter(key => modules[key]);
+
+/** "Absen QR, Mozaik" or "Belum ada modul". */
+export function activeModulesLabel(modules: ModuleSwitches): string {
+  const on = activeModules(modules);
+  return on.length ? on.map(key => moduleInfo[key].label).join(", ") : "Belum ada modul";
+}

@@ -1,0 +1,57 @@
+/* Field + Input/TextArea (.wam-field, .wam-input), isian pilih (.wam-select), DayTabs (.wam-tabs). Tokens only. */
+.field { display: flex; flex-direction: column; gap: var(--mw-space-8); min-width: 0; }
+.label { font: var(--mw-type-label); color: var(--mw-text-1); }
+.optional { color: var(--mw-text-2); font-weight: 500; }
+.help { margin-top: calc(-1 * var(--mw-space-4)); display: flex; align-items: flex-start; gap: var(--mw-space-4); font: var(--mw-type-caption); color: var(--mw-text-2); }
+.help > svg { flex: none; width: 16px; height: 16px; }
+.error { color: var(--mw-on-error-container); }
+.foot { margin-top: calc(-1 * var(--mw-space-4)); display: flex; justify-content: space-between; gap: var(--mw-space-8); }
+.foot > div { display: flex; flex-direction: column; gap: var(--mw-space-4); min-width: 0; }
+.foot .help { margin-top: 0; }
+.count { margin-left: auto; font: var(--mw-type-caption); color: var(--mw-text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.countOver { color: var(--mw-on-error-container); }
+
+.box {
+  display: flex; align-items: center; gap: var(--mw-space-8); min-height: 48px; padding: 0 var(--mw-space-16); width: 100%;
+  border-radius: var(--mw-radius-12); background: var(--mw-surface); box-shadow: inset 0 0 0 1px var(--mw-outline-strong); color: var(--mw-text-1);
+}
+.box > svg { flex: none; width: 20px; height: 20px; color: var(--mw-text-3); }
+.box:focus-within { box-shadow: inset 0 0 0 2px var(--mw-primary); }
+.boxError, .boxError:focus-within { box-shadow: inset 0 0 0 2px var(--mw-error); }
+.boxDisabled { background: var(--mw-surface-2); box-shadow: inset 0 0 0 1px var(--mw-outline); color: var(--mw-text-3); }
+.control {
+  flex: 1 1 auto; min-width: 0; height: 46px; padding: 0; border: 0; outline: 0; background: transparent;
+  font: var(--mw-type-body); color: inherit;
+}
+.control::placeholder { color: var(--mw-text-3); opacity: 1; }
+.area { align-items: flex-start; min-height: 120px; padding: var(--mw-space-12) var(--mw-space-16); }
+.area .control { height: auto; min-height: 96px; font: var(--mw-type-body-long); resize: vertical; }
+.suffix { flex: none; font: var(--mw-type-body); color: var(--mw-text-2); white-space: nowrap; }
+/* Search: soft fill, no line. */
+.search { min-height: 44px; background: var(--mw-surface-2); box-shadow: none; }
+.search > svg { color: var(--mw-text-2); }
+.search .control { height: 44px; }
+.search .control::placeholder { color: var(--mw-text-2); }
+
+/* A field that opens a sheet of choices: looks like an input, ends with ▾. */
+.select { text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.select:focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
+.selectValue { flex: 1 1 auto; min-width: 0; font: var(--mw-type-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.placeholder { color: var(--mw-text-3); }
+.select > svg:last-child { color: var(--mw-text-2); }
+
+/* DayTabs: the four event days. Chosen = inverse surface (not primary, so it does not compete with the screen's action). */
+.tabs { display: flex; gap: var(--mw-space-8); }
+.tab {
+  flex: 1 1 0; min-width: 0; height: 56px; border-radius: var(--mw-radius-12); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--mw-surface); box-shadow: inset 0 0 0 1px var(--mw-outline); color: var(--mw-text-1); text-decoration: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: background-color var(--mw-motion-base);
+}
+.tabDay { display: inline-flex; align-items: center; gap: var(--mw-space-4); font: var(--mw-type-caption); color: var(--mw-text-2); white-space: nowrap; }
+.tabDate { font: var(--mw-type-label); color: var(--mw-text-1); white-space: nowrap; }
+.today .tabDay::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--mw-primary); }
+.tab[aria-current], .tab[aria-pressed="true"] { background: var(--mw-inverse-surface); box-shadow: none; }
+.tab[aria-current] .tabDay, .tab[aria-pressed="true"] .tabDay { color: var(--mw-inverse-on-surface-2); }
+.tab[aria-current] .tabDate, .tab[aria-pressed="true"] .tabDate { color: var(--mw-inverse-on-surface); }
+.today.tab[aria-current] .tabDay::before, .today.tab[aria-pressed="true"] .tabDay::before { background: var(--mw-inverse-primary); }
+@media (prefers-reduced-motion: reduce) { .tab { transition: none; } }

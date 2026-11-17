@@ -23,6 +23,7 @@ import { bookingOpenFor } from "@/lib/server/pra-wam/events";
 import { myAgenda } from "@/lib/server/pra-wam/quick-actions";
 import { myOpenRequests, openRequestCount } from "@/lib/server/pra-wam/requests";
 import { requireMemberPage } from "@/lib/server/pra-wam/session";
+import { redirectToMainWam } from "@/lib/server/main-wam/gate";
 import base from "@/components/pra-wam/pra-wam.module.css";
 import own from "@/components/pra-wam/desktop/home.module.css";
 import sc from "@/components/pra-wam/self-check-in.module.css";
@@ -57,8 +58,10 @@ function dayWordFor(today: string) {
  * open, else the next thing, with "Saya hadir" and "Scan QR" for a session (SelfCheckIn, hero).
  * ?absen=1 (Aksi cepat's "Saya hadir") opens "Kamu hadir di mana?" at once.
  */
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string; item?: string; session?: string; absen?: string }> }) {
-  const { date: tanggal, item: asked, session: older, absen } = await searchParams;
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string; item?: string; session?: string; absen?: string; versi?: string }> }) {
+  const { date: tanggal, item: asked, session: older, absen, versi } = await searchParams;
+  // Main WAM (docs/main-wam/KONTRAK.md §2): /wam opens it once it is on for this person; mode pra (the default) changes nothing.
+  await redirectToMainWam({ versi });
   const member = await requireMemberPage(praWamPath.home);
   // "Akun BOD langsung ke Ringkasan" (Penpot "Panduan · BOD").
   if (bodOnly(member)) redirect(praWamPath.dashboard);

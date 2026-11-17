@@ -1,0 +1,67 @@
+/* Card (.wam-card), IconBox (.wam-iconbox), SectionHeader, Divider. Tokens only. */
+.card {
+  position: relative; min-width: 0; display: flex; flex-direction: column; gap: var(--mw-space-12); padding: var(--mw-space-16);
+  border-radius: var(--mw-radius-16); background: var(--mw-surface); border: 1px solid var(--mw-outline); color: var(--mw-text-1);
+  text-align: left; transition: transform var(--mw-motion-press), background-color var(--mw-motion-press);
+}
+.tonal { background: var(--mw-surface-2); border-color: transparent; }
+.momen { background: var(--mw-momen-container); border-color: transparent; }
+.emisi { background: var(--mw-emisi-container); border-color: transparent; }
+.wellbeing { background: var(--mw-wellbeing-container); border-color: transparent; }
+.awarding { background: var(--mw-awarding-container); border-color: transparent; }
+.role { border-color: var(--mw-primary); }
+.accent { background: var(--mw-accent); border-color: transparent; color: var(--mw-on-accent); }
+.flush { padding: 0; gap: 0; overflow: hidden; }
+.pressable { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pressable:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); transform: scale(0.98); }
+@media (hover: hover) { .pressable:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); } }
+
+.head { display: flex; align-items: center; gap: var(--mw-space-12); min-width: 0; }
+.headText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.headTitle { font: var(--mw-type-body-strong); }
+.headSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.headEnd { flex: none; display: flex; align-items: center; gap: var(--mw-space-4); }
+.title { font: var(--mw-type-subtitle); }
+.body { font: var(--mw-type-body); color: var(--mw-text-2); }
+
+/* IconBox: 40 r12 on surface-2 (neutral in lists and tiles; category colour only on module cards). */
+.box { flex: none; width: 40px; height: 40px; border-radius: var(--mw-radius-12); display: flex; align-items: center; justify-content: center; background: var(--mw-surface-2); color: var(--mw-text-1); }
+.box > svg { width: 24px; height: 24px; }
+.boxSmIcon > svg { width: 20px; height: 20px; }
+.round { border-radius: var(--mw-radius-full); }
+.b48 { width: 48px; height: 48px; }
+.b64 { width: 64px; height: 64px; color: var(--mw-text-2); }
+.b64 > svg { width: 32px; height: 32px; }
+.b96 { width: 96px; height: 96px; color: var(--mw-text-2); }
+.b96 > svg { width: 56px; height: 56px; }
+.boxPrimary { background: var(--mw-primary-container); color: var(--mw-on-primary-container); }
+.boxSuccess { background: var(--mw-success-container); color: var(--mw-on-success-container); }
+.boxWarning { background: var(--mw-warning-container); color: var(--mw-on-warning-container); }
+.boxError { background: var(--mw-error-container); color: var(--mw-on-error-container); }
+.boxMomen { background: var(--mw-momen-container); color: var(--mw-on-momen-container); }
+.boxEmisi { background: var(--mw-emisi-container); color: var(--mw-on-emisi-container); }
+.boxWellbeing { background: var(--mw-wellbeing-container); color: var(--mw-on-wellbeing-container); }
+.boxAwarding { background: var(--mw-awarding-container); color: var(--mw-on-awarding-container); }
+.boxOndark { background: var(--mw-ondark-fill); color: var(--mw-media-on); }
+
+/* SectionHeader: title (+ sub) and a text link, 44 tall. */
+.section { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); min-height: var(--mw-touch); }
+.sectionText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.sectionTitle { font: var(--mw-type-subtitle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sectionSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
+.link {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--mw-space-4);
+  min-height: var(--mw-touch); min-width: var(--mw-touch); padding: 0 var(--mw-space-4); margin: 0 calc(-1 * var(--mw-space-4));
+  font: var(--mw-type-label); color: var(--mw-primary-strong); white-space: nowrap; border-radius: var(--mw-radius-8);
+}
+.link > svg { width: 16px; height: 16px; }
+@media (hover: hover) { .link:hover { text-decoration: underline; text-underline-offset: 0.2em; } }
+
+.divider { flex: none; align-self: stretch; height: 1px; border: 0; margin: 0; background: var(--mw-outline); }
+.inset16 { margin-left: var(--mw-space-16); }
+.inset68 { margin-left: 68px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card { transition: none; }
+  .pressable:active { transform: none; }
+}

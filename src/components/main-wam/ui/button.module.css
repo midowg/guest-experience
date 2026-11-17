@@ -1,0 +1,72 @@
+/* Button (DS §6.2, wam.css .wam-btn) and IconButton (.wam-iconbtn). Tokens only. */
+.btn {
+  position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--mw-space-8);
+  height: 48px; min-width: var(--mw-touch); padding: 0 var(--mw-space-20); border-radius: var(--mw-radius-12);
+  font: var(--mw-type-label-lg); white-space: nowrap; text-decoration: none; cursor: pointer;
+  transition: background-color var(--mw-motion-press), transform var(--mw-motion-press);
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.btn > svg { flex: none; width: 20px; height: 20px; }
+.label { min-width: 0; overflow: hidden; text-overflow: clip; }
+
+/* M: 40 tall, the touch area stays 44. */
+.m { height: 40px; padding: 0 var(--mw-space-16); }
+.m::after { content: ""; position: absolute; left: 0; right: 0; top: -2px; bottom: -2px; }
+.block { display: flex; width: 100%; }
+
+.primary { background: var(--mw-primary); color: var(--mw-on-primary); }
+.primary:active { background: var(--mw-primary-strong); }
+.secondary { background: var(--mw-surface); color: var(--mw-text-1); box-shadow: inset 0 0 0 1px var(--mw-outline-2); }
+.tonal { background: var(--mw-primary-container); color: var(--mw-on-primary-container); }
+.text { background: transparent; color: var(--mw-primary-strong); padding: 0 var(--mw-space-12); }
+.danger { background: var(--mw-error); color: var(--mw-on-error); }
+.danger:active { background: var(--mw-error-pressed); }
+.dangerOutline { background: var(--mw-surface); color: var(--mw-on-error-container); box-shadow: inset 0 0 0 1px var(--mw-error); }
+.dangerText { background: transparent; color: var(--mw-on-error-container); padding: 0 var(--mw-space-12); }
+.ondark { background: var(--mw-ondark-fill); color: var(--mw-media-on); }
+.ondark:active { background: var(--mw-ondark-fill-pressed); }
+.secondary:active, .tonal:active, .text:active, .dangerOutline:active, .dangerText:active { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
+
+@media (hover: hover) {
+  .primary:hover { background: var(--mw-primary-strong); }
+  .danger:hover { background: var(--mw-error-pressed); }
+  .secondary:hover, .tonal:hover, .text:hover, .dangerOutline:hover, .dangerText:hover { background-image: linear-gradient(var(--mw-press), var(--mw-press)); }
+  .ondark:hover { background: var(--mw-ondark-fill-pressed); }
+}
+
+/* Disabled: disabled colours, not opacity (PM 14 Nov). Text buttons stay transparent. */
+.btn:disabled, .btn[aria-disabled="true"] { background: var(--mw-disabled-bg); background-image: none; color: var(--mw-disabled-fg); box-shadow: none; cursor: default; }
+.text:disabled, .text[aria-disabled="true"], .dangerText:disabled, .dangerText[aria-disabled="true"] { background: transparent; }
+/* Busy: looks as it was, not pressable, keeps focus (aria-busy, never disabled, so focus stays). */
+.btn[aria-busy="true"] { cursor: progress; }
+
+/* IconButton: 44 (or 56), round. */
+.icon {
+  position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: var(--mw-touch); height: var(--mw-touch); border-radius: var(--mw-radius-full); color: var(--mw-icon-fg, var(--mw-text-1)); background: transparent;
+  cursor: pointer; transition: background-color var(--mw-motion-press); -webkit-tap-highlight-color: transparent;
+}
+.icon > svg { width: 24px; height: 24px; }
+.icon56 { width: 56px; height: 56px; }
+.iconTonal { background: var(--mw-surface-2); }
+.iconFilled { background: var(--mw-primary); color: var(--mw-on-primary); }
+.iconFilled:active { background: var(--mw-primary-strong); }
+.iconOnmedia { background: var(--mw-media-scrim); color: var(--mw-media-on); }
+.iconOndark { background: var(--mw-ondark-fill); color: var(--mw-media-on); }
+.iconStandard:active, .iconTonal:active { background-image: linear-gradient(var(--mw-icon-press, var(--mw-press)), var(--mw-icon-press, var(--mw-press))); }
+.iconOndark:active { background: var(--mw-ondark-fill-pressed); }
+@media (hover: hover) {
+  .iconStandard:hover, .iconTonal:hover { background-image: linear-gradient(var(--mw-icon-press, var(--mw-press)), var(--mw-icon-press, var(--mw-press))); }
+  .iconOndark:hover { background: var(--mw-ondark-fill-pressed); }
+}
+.icon:disabled, .icon[aria-disabled="true"] { color: var(--mw-disabled-fg); cursor: default; background-image: none; }
+.iconFilled:disabled, .iconFilled[aria-disabled="true"] { background: var(--mw-disabled-bg); }
+.iconOndark:disabled, .iconOndark[aria-disabled="true"] { background: color-mix(in srgb, var(--mw-media-on) 6%, transparent); color: color-mix(in srgb, var(--mw-media-on) 32%, transparent); }
+/* Pressed toggle (liked): filled heart in error red. */
+.icon[aria-pressed="true"].liked { color: var(--mw-error); }
+.icon[aria-pressed="true"].liked > svg { fill: currentColor; }
+.icon > .badge { position: absolute; left: 34px; top: 10px; transform: translate(-50%, -50%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .icon { transition: none; }
+}
