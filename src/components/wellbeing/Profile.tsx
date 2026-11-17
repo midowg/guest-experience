@@ -1,19 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Activity, BadgeCheck, History, LogOut, Receipt, Settings2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Activity, BadgeCheck, CalendarCheck, Flame, History, LogOut, Receipt, Settings2, Sigma } from "lucide-react";
 import { useResource, type Resource } from "@/components/app-shell/resource";
 import type { WbHome, WbLedgerItem } from "@/lib/wellbeing/app-types";
 import { wibToday } from "@/lib/wellbeing/rules";
 import { keys, useTheme, useWellbeing, type ThemeChoice } from "./context";
-import { dayLabel, num, signed } from "./format";
+import { dayLabel, formatDate, num, signed } from "./format";
 import { dimensionIcons, Icon } from "./icons";
 import { Avatar, cx, ErrorState, NavRow, Preparing, Seg, Sk, SkRows, StaleBar } from "./parts";
+import { recordsOf } from "./race";
 import css from "./wellbeing.module.css";
 
 /*
- * Profil (17 Nov 2026): who I am (from the WAM account), my numbers, every point that counts for
- * me (Riwayat poin), Strava (being prepared), the theme, and Keluar.
+ * Profil (17 Nov 2026; records 18 Nov 2026): who I am (from the WAM account), my records (total,
+ * best month, longest streak), every point that counts for me (Riwayat poin), Strava (being
+ * prepared), the theme, and Keluar.
  */
 
 const THEMES = [["system", "Sistem"], ["light", "Terang"], ["dark", "Gelap"]] as const;
@@ -27,6 +29,7 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
   const today = wibToday();
   const totals = home.data?.totals;
   const person = home.data?.me ?? me;
+  const records = useMemo(() => ledger.data?.migrated ? recordsOf(ledger.data.items) : null, [ledger.data]);
 
   return <>
     <div className={css.profileHead}>
@@ -35,10 +38,15 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
       <p className={css.muted}>{[person.department, person.position].filter(Boolean).join(" · ") || "Karyawan"}</p>
       <p className={cx(css.caption, css.faint)}><BadgeCheck size={14} aria-hidden="true" />Data dari akun WAM</p>
     </div>
-    <div className={cx(css.card, css.stats3)} aria-label="Ringkasan">
-      {totals
-        ? <><div><b>{num(totals.points)}</b><span>total poin</span></div><div><b>{num(totals.monthPoints)}</b><span>bulan ini</span></div><div><b>{num(totals.streak)} hari</b><span>streak</span></div></>
-        : [0, 1, 2].map(index => <div key={index} style={{ display: "grid", justifyItems: "center", gap: 8 }}><Sk width={56} height={18} /><Sk width={48} height={10} /></div>)}
+    <h2 className={css.groupLabel} style={{ marginTop: 0 }}>Rekor</h2>
+    <div className={cx(css.card, css.records)}>
+      <div><span><Sigma size={14} aria-hidden="true" />Total poin</span>{totals ? <><b>{num(totals.points)}</b><small>bulan ini {num(totals.monthPoints)}</small></> : <><Sk width={64} height={22} /><Sk width={48} height={10} /></>}</div>
+      <div><span><CalendarCheck size={14} aria-hidden="true" />Bulan terbaik</span>{records
+        ? records.bestMonth ? <><b>{num(records.bestMonth.points)}</b><small>{formatDate(`${records.bestMonth.month}-15`, { month: "long", year: "numeric" })}</small></> : <><b>–</b><small>belum ada</small></>
+        : <><Sk width={64} height={22} /><Sk width={48} height={10} /></>}</div>
+      <div><span><Flame size={14} aria-hidden="true" />Streak terlama</span>{records
+        ? <><b>{num(records.longestStreak)} hari</b><small>sekarang {num(totals?.streak ?? 0)} hari</small></>
+        : <><Sk width={64} height={22} /><Sk width={48} height={10} /></>}</div>
     </div>
 
     <h2 className={css.groupLabel}>Aktivitas</h2>

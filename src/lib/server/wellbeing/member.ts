@@ -282,7 +282,7 @@ export async function leaderboard(member: Member, period: "month" | "all", dim: 
   const range = period === "month" ? monthRange(today) : null, last = previousMonth(today);
   const [everyone, sums, lastSums] = await Promise.all([people(), readTotals(range?.from ?? null, range?.to ?? null), readTotals(last.from, last.to)]);
   const active = everyone.filter(person => person.active);
-  if (!sums.migrated || !lastSums.migrated) return { migrated: false, period, dim, items: [], me: null, of: active.length, lastMonthChampion: null };
+  if (!sums.migrated || !lastSums.migrated) return { migrated: false, period, dim, items: [], me: null, of: active.length, lastMonthChampion: null, near: [], ahead: null };
   const pointsBy = (rows: Totals[]) => {
     const out = new Map<string, number>();
     for (const row of rows) if (dim === "all" || row.dimension_id === dim) out.set(row.employee_id, (out.get(row.employee_id) ?? 0) + row.points);
@@ -290,10 +290,10 @@ export async function leaderboard(member: Member, period: "month" | "all", dim: 
   };
   const current = pointsBy(sums.rows), before = pointsBy(lastSums.rows);
   const row = (person: Person, points: Map<string, number>) => ({ id: person.id, name: boardName(person), department: person.department ?? "", points: points.get(person.id) ?? 0 });
-  const { items, me } = board(active.map(person => row(person, current)), member.id);
+  const { items, me, near, ahead } = board(active.map(person => row(person, current)), member.id);
   // Last month's champion stays the champion after leaving, as in Admin Wellbeing.
   const champion = board(everyone.map(person => row(person, before)), member.id, 1).items[0] ?? null;
-  return { migrated: true, period, dim, items, me, of: active.length, lastMonthChampion: champion };
+  return { migrated: true, period, dim, items, me, of: active.length, lastMonthChampion: champion, near, ahead };
 }
 
 /* ---------- Riwayat poin ---------- */

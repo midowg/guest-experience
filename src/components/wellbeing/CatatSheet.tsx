@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronRight, CircleAlert, Dumbbell, ImagePlus, Info, NotebookPen, TriangleAlert, X } from "lucide-react";
+import { Check, ChevronRight, CircleAlert, Crown, Dumbbell, ImagePlus, Info, NotebookPen, TrendingUp, TriangleAlert, X } from "lucide-react";
 import { Panel } from "@/components/app-shell/Panel";
 import { revalidate, setResource, useResource } from "@/components/app-shell/resource";
-import type { WbCatalogDaily, WbHome, WbLogResult, WbRules, WbUploadedPhoto } from "@/lib/wellbeing/app-types";
+import type { WbBoardRow, WbCatalogDaily, WbHome, WbLogResult, WbRules, WbUploadedPhoto } from "@/lib/wellbeing/app-types";
 import { addDays, dateProblem, DIMENSIONS, dimensionLabels, MIN_STEPS, PHOTO_MIMES, STEPS_PER_POINT, wibToday, type DimensionId } from "@/lib/wellbeing/rules";
 import { errorText, isCancelled, uploadPhoto, WellbeingApiError } from "./api";
 import { keys, reducedMotion, useWellbeing, type CatatPreset } from "./context";
-import { ALREADY_LOGGED, catatErrors, dayLabel, firstError, num, previewPoints, type CatatErrors, type CatatField } from "./format";
+import { ALREADY_LOGGED, catatErrors, dayLabel, firstError, firstName, num, previewPoints, type CatatErrors, type CatatField } from "./format";
 import { dimensionIcons, Icon, sportIcon } from "./icons";
 import { cx, ErrorState, Preparing, SkRows } from "./parts";
 import css from "./wellbeing.module.css";
@@ -50,6 +50,8 @@ function startDate(preset: CatatPreset | null) {
 export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; preset: CatatPreset | null; onClose: () => void; onSaved: () => void }) {
   const { api } = useWellbeing();
   const catalog = useResource(open ? keys.catalog : null, () => api.catalog());
+  // The month's board (shared with Beranda): after a save, how far the one to catch still is.
+  const monthBoard = useResource(open ? keys.board("month", "all") : null, () => api.leaderboard("month", "all"));
   const cat = catalog.data;
   const rules = cat?.rules ?? DEFAULT_RULES;
   const today = useMemo(() => cat?.today ?? wibToday(), [cat?.today]);
@@ -66,7 +68,8 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
   const [serverErrors, setServerErrors] = useState<CatatErrors>({});
   const [problem, setProblem] = useState<Problem | null>(null);
   const [saving, setSaving] = useState<{ label: string; progress: number } | null>(null);
-  const [result, setResult] = useState<WbLogResult | null>(null);
+  // rankBefore: my place before this save (null: none yet; undefined: Beranda had not loaded). ahead: the one I was chasing.
+  const [result, setResult] = useState<(WbLogResult & { rankBefore: number | null | undefined; ahead: WbBoardRow | null }) | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const doneHeading = useRef<HTMLHeadingElement>(null);
   const abort = useRef<AbortController | null>(null);
@@ -178,10 +181,11 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
         ...(force ? { force: true } : {}),
       }, { signal: controller.signal });
       abort.current = null;
-      setResult(answer); setSaving(null); goStep("done", "fwd");
+      // Beranda changes at once (the place before is kept, to tell a climb); then every screen refreshes from the server.
+      let rankBefore = undefined as number | null | undefined;
+      setResource<WbHome>(keys.home, current => { rankBefore = current ? current.totals.rank : undefined; return current && { ...current, totals: answer.totals, recent: [answer.activity, ...current.recent.filter(item => item.id !== answer.activity.id)].slice(0, 5) }; });
+      setResult({ ...answer, rankBefore, ahead: monthBoard.data?.migrated ? monthBoard.data.ahead : null }); setSaving(null); goStep("done", "fwd");
       onSaved();
-      // Beranda changes at once; then every screen refreshes from the server.
-      setResource<WbHome>(keys.home, current => current && { ...current, totals: answer.totals, recent: [answer.activity, ...current.recent.filter(item => item.id !== answer.activity.id)].slice(0, 5) });
       revalidate(keys.all);
       try { if (navigator.vibrate && navigator.userActivation?.hasBeenActive) navigator.vibrate(12); } catch { /* no vibration */ }
     } catch (error) {
@@ -328,6 +332,7 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
         <p className={css.muted}>{result.activity.title || result.activity.typeName} · {dayLabel(result.activity.date, today)}</p>
         <p className={css.donePts}>+{num(result.activity.points)} poin</p>
         <p className={css.muted}>Total poinmu sekarang <b>{num(result.totals.points)}</b></p>
+        <RankAfter result={result} />
       </div>
       <p className={css.note}><Info size={20} aria-hidden="true" /><span>Poin langsung masuk. Admin bisa memeriksa bukti; kalau ada yang diubah atau ditolak, alasannya muncul di Riwayat.</span></p>
     </>;
@@ -399,4 +404,18 @@ function Photos({ photos, max, hint, error, busy, onAdd, onRemove }: { photos: P
     <span className={css.help} id="catat-photos-help">{hint}. Minimal 1, maksimal {num(max)} foto.</span>
     <FieldError text={error} />
   </div>;
+}
+
+/** After a save: a climb (or the first place, or entering the board), else how far the one to catch still is. */
+function RankAfter({ result }: { result: WbLogResult & { rankBefore: number | null | undefined; ahead: WbBoardRow | null } }) {
+  const { rank, of, monthPoints } = result.totals;
+  if (rank == null) return null;
+  const climbed = result.rankBefore === null || (result.rankBefore !== undefined && rank < result.rankBefore);
+  // #1 may be shared (a tie): "di #1", not "memimpin".
+  if (rank === 1) return <p className={css.rankUp}><Crown size={18} aria-hidden="true" />{climbed ? "Naik ke #1 bulan ini" : "Kamu di #1 bulan ini"}</p>;
+  if (climbed) return <p className={css.rankUp}><TrendingUp size={18} aria-hidden="true" />{result.rankBefore == null ? `Masuk peringkat: #${num(rank)} bulan ini` : `Naik ke #${num(rank)} bulan ini`}</p>;
+  const gap = result.ahead && result.rankBefore === rank ? result.ahead.points - monthPoints : 0;
+  return <p className={cx(css.caption, css.muted)} style={{ marginTop: 8 }}>
+    Peringkatmu bulan ini <b>#{num(rank)}</b> dari {num(of)}{gap > 0 && result.ahead ? <>; <b>{num(gap)} poin</b> lagi menyalip {firstName(result.ahead.name)}</> : null}
+  </p>;
 }

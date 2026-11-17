@@ -15,6 +15,9 @@ vi.mock("next/navigation", async () => {
   };
 });
 
+// next/font only runs inside Next's compiler.
+vi.mock("./font", () => ({ fontVars: "" }));
+
 beforeAll(() => {
   // jsdom has no modal dialogs, observers, object URLs or media queries; enough of each for the app.
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
@@ -192,6 +195,38 @@ describe("WellbeingApp", () => {
     fireEvent.click(await within(dialog()).findByRole("button", { name: "Tetap simpan" }, { timeout: 3000 }));
     expect(await within(dialog()).findByText("+300 poin", {}, { timeout: 3000 })).toBeTruthy();
     expect(log.mock.lastCall?.[0]).toEqual(expect.objectContaining({ code: "sport.running", kcal: 300, force: true }));
+  });
+
+  it("shows the month as a race: my place, the one to catch, and who is around me (18 Nov 2026)", async () => {
+    app();
+    const race = await screen.findByRole("region", { name: /^Balapan / });
+    // The place reads "Peringkat #16" (the word for screen readers only).
+    expect(race.querySelector("p")?.textContent).toMatch(/^Peringkat #\d+$/);
+    expect(within(race).getByText(/^dari \d+ karyawan/)).toBeTruthy();
+    expect(within(race).getByText(/Sisa \d+ hari|Hari terakhir/)).toBeTruthy();
+    expect(await within(race).findByText(/^Kejar/)).toBeTruthy();
+    expect(within(race).getByText("poin lagi")).toBeTruthy();
+    const around = await screen.findByRole("region", { name: "Di sekitarmu" });
+    const rows = within(around).getAllByRole("listitem");
+    expect(rows).toHaveLength(5);
+    expect(rows.filter(row => row.getAttribute("aria-current") === "true")).toHaveLength(1);
+  });
+
+  it("invites a new person into the race instead of showing a place", async () => {
+    app(mockApi({ latency: [0, 0], empty: true }));
+    const race = await screen.findByRole("region", { name: /^Balapan / });
+    expect(within(race).getByText("Belum masuk peringkat")).toBeTruthy();
+    expect(within(race).getByRole("button", { name: "Catat aktivitas" })).toBeTruthy();
+    expect(await screen.findByRole("region", { name: "Teratas bulan ini" })).toBeTruthy();
+  });
+
+  it("says where the save leaves me in the race", async () => {
+    app(mockApi({ latency: [0, 0], empty: true }));
+    await screen.findByText("Total poin");
+    await openDaily("Emosional", "Sharing Session");
+    addPhoto();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +80 poin" }));
+    expect(await within(dialog()).findByText(/^Masuk peringkat: #\d+ bulan ini$/, {}, { timeout: 3000 })).toBeTruthy();
   });
 
   it("shows Coba lagi when Beranda cannot load, and loads on retry", async () => {

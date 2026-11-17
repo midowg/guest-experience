@@ -1,6 +1,5 @@
 "use client";
 
-import "@fontsource/inter/800.css";
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { History as HistoryIcon, House, Plus, Trophy, UserRound, WifiOff } from "lucide-react";
@@ -11,6 +10,7 @@ import { WELLBEING_SECTIONS, type WbMe, type WbMyActivity, type WbMyActivityFilt
 import { realApi, type BoardDim, type BoardPeriod, type WellbeingApi } from "./api";
 import { Board } from "./Board";
 import { CatatSheet } from "./CatatSheet";
+import { fontVars } from "./font";
 import { keys, reducedMotion, ThemeBoot, useOnline, useTheme, WellbeingContext, type CatatPreset, type WellbeingActions } from "./context";
 import { History } from "./History";
 import { Home } from "./Home";
@@ -53,7 +53,7 @@ export function WellbeingApp({ me, api = realApi, basePath = WELLBEING_PATH }: {
       const dark = theme === "dark" || (theme === "system" && !!media?.matches);
       let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
       if (!meta) { meta = document.createElement("meta"); meta.name = "theme-color"; document.head.appendChild(meta); }
-      meta.content = dark ? "#0E1116" : "#F6F7F9";
+      meta.content = dark ? "#0A0E15" : "#F3F4F6";
     };
     paint();
     if (theme !== "system" || !media?.addEventListener) return;
@@ -61,7 +61,7 @@ export function WellbeingApp({ me, api = realApi, basePath = WELLBEING_PATH }: {
     return () => media.removeEventListener("change", paint);
   }, [theme]);
   // The toasts sit inside the themed frame, above the tab bar.
-  return <div className={cx(css.tokens, css.app)} data-theme={theme === "system" ? undefined : theme} suppressHydrationWarning>
+  return <div className={cx(css.tokens, css.app, fontVars)} data-theme={theme === "system" ? undefined : theme} suppressHydrationWarning>
     <ThemeBoot />
     <ToastProvider><App me={me} api={api} basePath={basePath} /></ToastProvider>
   </div>;

@@ -1,6 +1,5 @@
 "use client";
 
-import "@fontsource/inter/800.css";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowLeft, Check, CircleAlert, CircleCheck, Circle, Eye, EyeOff } from "lucide-react";
@@ -9,6 +8,7 @@ import { passwordRules } from "@/lib/pra-wam/password";
 import { RESET_NOTE_MAX } from "@/lib/pra-wam/reset-requests";
 import { praWamApi, WELLBEING_PATH, wellbeingPath } from "@/lib/routes";
 import { ThemeBoot, useTheme } from "./context";
+import { fontVars } from "./font";
 import { cx } from "./parts";
 import css from "./wellbeing.module.css";
 
@@ -38,7 +38,7 @@ export function WellbeingMark({ className }: { className?: string }) {
 
 function Frame({ title, lead, children, foot }: { title: string; lead?: string; children: ReactNode; foot?: ReactNode }) {
   const [theme] = useTheme();
-  return <div className={cx(css.tokens, css.login)} data-theme={theme === "system" ? undefined : theme} suppressHydrationWarning>
+  return <div className={cx(css.tokens, css.login, fontVars)} data-theme={theme === "system" ? undefined : theme} suppressHydrationWarning>
     <ThemeBoot />
     <main className={css.loginColumn}>
       <WellbeingMark className={css.logo} />

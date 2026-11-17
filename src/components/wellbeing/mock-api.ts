@@ -1,7 +1,7 @@
 "use client";
 
 import type { WbAppCatalog, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbRules } from "@/lib/wellbeing/app-types";
-import { addDays, claimedPoints, dateProblem, DIMENSIONS, dimensionLabels, limitReached, MIN_STEPS, monthRange, rank, wibToday, type DimensionId, type Limit } from "@/lib/wellbeing/rules";
+import { addDays, aroundMe, claimedPoints, dateProblem, DIMENSIONS, dimensionLabels, limitReached, MIN_STEPS, monthRange, rank, wibToday, type DimensionId, type Limit } from "@/lib/wellbeing/rules";
 import { cancelledError, WellbeingApiError, type BoardDim, type BoardPeriod, type RequestOptions, type WellbeingApi } from "./api";
 
 /*
@@ -229,7 +229,7 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
     const ranked: WbBoardRow[] = rank(rows);
     const champions = rank(people.map(person => ({ employeeId: person.id, name: person.name, department: person.department, me: false,
       points: dim === "all" ? sum(Object.values(person.lastMonth)) : person.lastMonth[dim] })));
-    return { migrated: true, period, dim, items: ranked.slice(0, 30), me: ranked.find(row => row.me) ?? null, of: people.length + 1, lastMonthChampion: champions[0] ?? null };
+    return { migrated: true, period, dim, items: ranked.slice(0, 30), me: ranked.find(row => row.me) ?? null, of: people.length + 1, lastMonthChampion: champions[0] ?? null, ...aroundMe(ranked) };
   }
 
   function streak() {
@@ -323,7 +323,7 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       activities.push(activity);
       return { activity, totals: totals() };
     }, 0.2, request),
-    leaderboard: (period, dim) => call(() => notReady ? { migrated: false, period, dim, items: [], me: null, of: 0, lastMonthChampion: null } : board(period, dim)),
+    leaderboard: (period, dim) => call(() => notReady ? { migrated: false, period, dim, items: [], me: null, of: 0, lastMonthChampion: null, near: [], ahead: null } : board(period, dim)),
     ledger: () => call<WbLedger>(() => {
       if (notReady) return { migrated: false, items: [], total: 0 };
       const items: WbLedgerItem[] = [

@@ -2,10 +2,11 @@
 
 import type { ReactNode } from "react";
 import { ChevronRight, CloudOff, Hourglass, RefreshCw } from "lucide-react";
-import type { WbMyActivity } from "@/lib/wellbeing/app-types";
+import type { WbBoardRow, WbMyActivity } from "@/lib/wellbeing/app-types";
 import type { DimensionId } from "@/lib/wellbeing/rules";
 import { activityMeta, activityTitle, dayLabel, initials, num, toneOf } from "./format";
 import { activityIcon, Icon } from "./icons";
+import { medalOf } from "./race";
 import css from "./wellbeing.module.css";
 
 export const cx = (...names: (string | false | null | undefined)[]) => names.filter(Boolean).join(" ");
@@ -98,6 +99,22 @@ export function ActivityRow({ activity, today, withDate = true, onOpen }: { acti
     </span>
     <span className={css.rowTrail}><PointsTrail activity={activity} /></span>
   </button>;
+}
+
+/**
+ * One person on a leaderboard (Beranda's "Di sekitarmu", Peringkat): the place (a medal disc for the
+ * top three, the number always on it), the name with "(kamu)" kept whole, a line under it, the points.
+ */
+export function LeaderRow({ row, meta, rowRef }: { row: WbBoardRow; meta?: string; rowRef?: (element: HTMLElement | null) => void }) {
+  return <li ref={rowRef} className={css.lbRow} data-me={row.me} aria-current={row.me ? "true" : undefined}>
+    <span className={css.lbRank} data-medal={medalOf(row.rank) ?? undefined}><span className="sr-only">Peringkat </span>{row.rank}</span>
+    <Avatar name={row.name} />
+    <span className={css.rowMain}>
+      <span className={css.lbName}><span className={css.rowTitle}>{row.name}</span>{row.me && <span className={css.meTag}>kamu</span>}</span>
+      {meta && <span className={css.rowMeta}>{meta}</span>}
+    </span>
+    <b className={css.lbPts}>{num(row.points)}<span className="sr-only"> poin</span></b>
+  </li>;
 }
 
 /** A row that leads somewhere (Profil). */

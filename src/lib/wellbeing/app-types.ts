@@ -89,7 +89,11 @@ export type WbLogResult = { activity: WbMyActivity; totals: WbHome["totals"] };
 
 /** GET /api/wellbeing/leaderboard?period=month|all&dim=all|<dimension> */
 export type WbBoardRow = { rank: number; employeeId: string; name: string; department: string; points: number; me: boolean };
-export type WbBoard = { migrated: boolean; period: "month" | "all"; dim: DimensionId | "all"; items: WbBoardRow[]; me: WbBoardRow | null; of: number; lastMonthChampion: WbBoardRow | null };
+export type WbBoard = { migrated: boolean; period: "month" | "all"; dim: DimensionId | "all";
+  /** The top 30. */
+  items: WbBoardRow[]; me: WbBoardRow | null; of: number; lastMonthChampion: WbBoardRow | null;
+  /** Around me (two above, two below; also past the top 30), and the nearest person with more points (18 Nov 2026). Empty / null when I have no points. */
+  near: WbBoardRow[]; ahead: WbBoardRow | null };
 
 /** GET /api/wellbeing/ledger: every point that counts for me, newest first (activities and admin points). */
 export type WbLedgerItem = { date: string; title: string; sub: string; points: number; kind: "activity" | "admin" | "import"; dimension: DimensionId | null };

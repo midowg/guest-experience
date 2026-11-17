@@ -144,6 +144,20 @@ export function rank<T extends { points: number }>(rows: readonly T[]): (T & { r
   });
 }
 
+/**
+ * Who is around me on a ranked list (18 Nov 2026), for "Di sekitarmu" and "Kejar #n" on Beranda:
+ * up to two above and two below (five in all; more of one side at either end), and the nearest
+ * person with more points than me (the one to catch; ties share my place, so they do not count).
+ */
+export function aroundMe<T extends { points: number; me: boolean }>(rows: readonly T[]): { near: T[]; ahead: T | null } {
+  const at = rows.findIndex(row => row.me);
+  if (at < 0) return { near: [], ahead: null };
+  const start = Math.max(0, Math.min(at - 2, rows.length - 5));
+  let ahead: T | null = null;
+  for (let index = at - 1; index >= 0 && !ahead; index--) if (rows[index].points > rows[at].points) ahead = rows[index];
+  return { near: rows.slice(start, start + 5), ahead };
+}
+
 /*
  * The employee app (/wellbeing, 17 Nov 2026): proof photos and the "Catat" form. The server checks
  * the same rules again with the programme's settings (logValues) and the employee's own history.

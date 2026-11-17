@@ -47,6 +47,19 @@ describe("board", () => {
     expect(board(people, "d", 2).me).toMatchObject({ rank: 4 });
     expect(board(people, "e").me).toBeNull();
   });
+  it("gives who is around me, also past the top rows, and the nearest one with more points (18 Nov 2026)", () => {
+    const many = Array.from({ length: 40 }, (_, index) => ({ id: `p${index}`, name: `Orang ${String(index).padStart(2, "0")}`, department: "", points: 1000 - index * 10 }));
+    const deep = board(many, "p35");
+    expect(deep.items).toHaveLength(30);
+    expect(deep.near.map(row => row.rank)).toEqual([34, 35, 36, 37, 38]);
+    expect(deep.ahead).toMatchObject({ employeeId: "p34", rank: 35 });
+    expect(board(many, "p0").near.map(row => row.rank)).toEqual([1, 2, 3, 4, 5]);
+    expect(board(many, "p0").ahead).toBeNull();
+    expect(board(many, "p39").near.map(row => row.rank)).toEqual([36, 37, 38, 39, 40]);
+    // Ties share my place: the one to catch is the nearest with more points.
+    expect(board(people, "c").ahead).toMatchObject({ employeeId: "b", rank: 1 });
+    expect(board(people, "e")).toMatchObject({ near: [], ahead: null });
+  });
   it("gives the same place on Beranda as on the board (17 Nov 2026)", () => {
     expect(placeOf(people, "a")).toBe(2);
     expect(placeOf(people, "d")).toBe(4);
