@@ -138,7 +138,7 @@ function Standing({ board, period }: { board: WbBoard; period: BoardPeriod }) {
     </div>
     {chase.kind === "chase" && <div className={css.standChase}>
       <div className={css.chaseLine}>
-        <span><Target size={16} aria-hidden="true" /><span className={css.chaseWho}>Kejar <b>#{chase.ahead.rank} {chase.ahead.me ? "Kamu" : firstName(chase.ahead.name)}</b></span></span>
+        <span><Target size={16} aria-hidden="true" /><span className={css.chaseWho}>Kejar <b>#{chase.ahead.rank} {firstName(chase.ahead.name)}</b></span></span>
         <span className={css.standGap}>{num(chase.gap)}<small>poin lagi</small></span>
       </div>
       {/* Where I stand between the one behind me and the one ahead. */}

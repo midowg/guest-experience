@@ -62,6 +62,22 @@ sentuh, mode gelap).
   Condensed, teks Plus Jakarta Sans. Warna utama lama (biru) bentrok dengan warna dimensi Finansial, jadi diganti.
 - API: `GET /api/wellbeing/leaderboard` kini juga mengirim `near` (sekitarku) dan `ahead` (yang dikejar).
 
+### Halaman Peringkat (18 Nov 2026)
+
+Halaman menampilkan beberapa saja, sisanya di **Lihat semua peringkat** (lembar bawah). Urutannya:
+
+1. **Arena** (permukaan gelap): nama balapan ("Balapan November · Fisik"), sisa hari, hadiah bila diisi admin,
+   lalu podium tiga teratas di bawah cahaya emas: #1 di tengah dengan mahkota, foto lebih besar, poin emas dan
+   pil **Unggul N** (selisih dari #2). Nama lengkap, departemen, dan angka peringkat di tiap podium (bukan warna saja).
+2. **Posisimu**: peringkat besar (berwarna medali bila di podium), poin, **Kejar #n** dengan bilah jarak,
+   "N poin lagi ke podium", atau "Kamu memimpin, unggul N poin". Belum punya poin: ajakan dan tombol Catat.
+3. **Mengejar podium**: #4 sampai #8, lalu (bila lebih ke bawah) satu di atasmu, kamu, dan satu di bawahmu.
+4. **Lihat semua peringkat**: semua yang punya poin; baris "Kamu" tetap di bawah lembar dan mengantar ke posisimu.
+5. Juara bulan lalu di akhir.
+
+Sejak ini API mengirim **semua** yang punya poin di `items` (dulu 30 teratas); aplikasi yang memakai jawaban lama
+tetap menampilkan baris di sekitarmu dari `near`.
+
 ## Catat dari foto (18 Nov 2026)
 
 Karyawan tidak perlu mengetik angka: pilih **Dari foto bukti**, unggah screenshot aplikasi atau foto layar

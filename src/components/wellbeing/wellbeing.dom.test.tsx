@@ -223,6 +223,45 @@ describe("WellbeingApp", () => {
     expect(await screen.findByRole("region", { name: "Teratas bulan ini" })).toBeTruthy();
   });
 
+  it("shows Peringkat as a race: the podium, my place, the chasers, and the rest under Lihat semua (18 Nov 2026)", async () => {
+    window.history.replaceState(null, "", "/wellbeing/peringkat");
+    app();
+    // The top three in rank order (the grid puts #1 in the middle), #1 with its lead.
+    const podium = await screen.findByRole("list", { name: "Tiga teratas" });
+    const top = within(podium).getAllByRole("listitem");
+    expect(top.map(item => /Peringkat (\d+):/.exec(item.textContent ?? "")?.[1])).toEqual(["1", "2", "3"]);
+    expect(within(top[0]).getByText(/^Unggul [\d.]+$/)).toBeTruthy();
+    // My place: the one to catch, and how far the podium is (the sample person is past #8).
+    const standing = screen.getByRole("region", { name: "Posisimu bulan ini" });
+    expect(within(standing).getByText(/^Kejar/)).toBeTruthy();
+    expect(within(standing).getByText("lagi ke podium", { exact: false })).toBeTruthy();
+    // #4 to #8, then the one above me, me and the one below; not the whole list.
+    const chasers = screen.getByRole("region", { name: "Mengejar podium" });
+    const rows = within(chasers).getAllByRole("listitem");
+    const ranks = rows.map(row => Number(/^Peringkat (\d+)/.exec(row.textContent ?? "")?.[1]));
+    expect(ranks.slice(0, 5)).toEqual([4, 5, 6, 7, 8]);
+    expect(rows).toHaveLength(8);
+    const mine = rows.find(row => row.getAttribute("aria-current") === "true")!;
+    expect(ranks[rows.indexOf(mine) - 1]).toBe(ranks[rows.indexOf(mine)] - 1);
+
+    fireEvent.click(within(chasers).getByRole("button", { name: "Lihat semua peringkat" }));
+    const sheet = await screen.findByRole("dialog");
+    const count = Number(/· (\d+) karyawan berpoin/.exec(sheet.textContent ?? "")?.[1]);
+    expect(count).toBeGreaterThan(rows.length + 3);
+    expect(within(sheet).getAllByRole("listitem")).toHaveLength(count);
+    // My row stays under the list.
+    expect(within(sheet).getByRole("button", { name: /^Posisimu: peringkat \d+, [\d.]+ poin, [\d.]+ poin lagi ke #\d+\. Tampilkan di daftar$/ })).toBeTruthy();
+  });
+
+  it("invites me onto Peringkat when I have no points yet", async () => {
+    window.history.replaceState(null, "", "/wellbeing/peringkat");
+    app(mockApi({ latency: [0, 0], empty: true }));
+    const standing = await screen.findByRole("region", { name: "Posisimu bulan ini" });
+    expect(within(standing).getByText("Belum masuk peringkat")).toBeTruthy();
+    fireEvent.click(within(standing).getByRole("button", { name: "Catat aktivitas" }));
+    expect(await within(dialog()).findByText("Kegiatan harian")).toBeTruthy();
+  });
+
   it("says where the save leaves me in the race", async () => {
     app(mockApi({ latency: [0, 0], empty: true }));
     await screen.findByText("Total poin");

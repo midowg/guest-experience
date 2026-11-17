@@ -403,8 +403,9 @@ button.row:disabled { opacity: .55; cursor: default; }
 .pod[data-slot="0"] .podName { font-size: 15px; }
 .pod[data-me="true"] .podName { color: var(--volt); }
 .podDept { font-size: 11px; color: var(--on-ink-2); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.podPts { font-family: var(--font-num); font-weight: 700; font-size: 22px; line-height: 1.1; color: var(--on-ink); font-variant-numeric: tabular-nums; margin-top: 4px; white-space: nowrap; }
-.pod[data-slot="0"] .podPts { font-size: 30px; color: var(--gold-ink); }
+/* Big totals (all time) on a small phone: the number shrinks a little and "poin" may drop under it. */
+.podPts { font-family: var(--font-num); font-weight: 700; font-size: clamp(18px, 5.6vw, 22px); line-height: 1.1; color: var(--on-ink); font-variant-numeric: tabular-nums; margin-top: 4px; max-width: 100%; }
+.pod[data-slot="0"] .podPts { font-size: clamp(24px, 7.6vw, 30px); color: var(--gold-ink); }
 .podPts small { font-family: var(--font); font-size: 11px; font-weight: 600; color: var(--on-ink-2); }
 .podLead { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--volt-soft); color: var(--volt); font-size: 12px; font-weight: 700; margin-top: 4px; white-space: nowrap; }
 .podBase { width: 100%; margin-top: 10px; border-radius: 14px 14px 0 0; display: grid; place-items: center; font-family: var(--font-num); font-weight: 700; font-size: 40px; line-height: 1; color: var(--medal);
