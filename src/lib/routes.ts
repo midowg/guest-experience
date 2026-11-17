@@ -609,7 +609,7 @@ export const tvAdminPath = {
  * to check), Karyawan (points per person, Tambah poin to many), Pengaturan (catalogue and rules).
  */
 export const WELLBEING_ADMIN = "/admin/wellbeing";
-export const WELLBEING_ADMIN_SECTIONS = ["hari-ini", "periksa", "karyawan", "pengaturan"] as const;
+export const WELLBEING_ADMIN_SECTIONS = ["hari-ini", "periksa", "karyawan", "laporan", "pengaturan"] as const;
 export type WellbeingAdminSection = (typeof WELLBEING_ADMIN_SECTIONS)[number];
 export const wellbeingAdminPath = (section: WellbeingAdminSection = "hari-ini") => section === "hari-ini" ? WELLBEING_ADMIN : `${WELLBEING_ADMIN}/${section}`;
 const WELLBEING_ADMIN_API = "/api/admin/wellbeing";
@@ -620,6 +620,10 @@ export const wellbeingAdminApi = {
     return `${WELLBEING_ADMIN_API}/activities${search ? `?${search}` : ""}`;
   },
   activity: (id: string) => `${WELLBEING_ADMIN_API}/activities/${id}`,
+  /** POST { ids, checked }: Konfirmasi yang dipilih (17 Nov 2026). */
+  check: `${WELLBEING_ADMIN_API}/activities/check`,
+  /** POST the choice, answers the .xlsx (17 Nov 2026). */
+  export: `${WELLBEING_ADMIN_API}/export`,
   people: (period: "month" | "all") => `${WELLBEING_ADMIN_API}/people?period=${period}`,
   person: (id: string) => `${WELLBEING_ADMIN_API}/people/${id}`,
   points: `${WELLBEING_ADMIN_API}/points`,
@@ -627,6 +631,8 @@ export const wellbeingAdminApi = {
   catalog: `${WELLBEING_ADMIN_API}/catalog`,
   catalogItem: (code: string) => `${WELLBEING_ADMIN_API}/catalog/${encodeURIComponent(code)}`,
   settings: `${WELLBEING_ADMIN_API}/settings`,
+  /** PUT: Kontrol aplikasi karyawan (17 Nov 2026). */
+  appControls: `${WELLBEING_ADMIN_API}/settings/app`,
 };
 
 /*

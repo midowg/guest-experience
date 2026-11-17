@@ -6,7 +6,7 @@ import type {
   WbAppCatalog, WbBoard, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLogResult, WbMe, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbRules, WbUploadStart,
 } from "@/lib/wellbeing/app-types";
 import {
-  DIMENSIONS, MAX_PHOTOS, addDays, claimedPoints, countedPoints, dateProblem, limitReached, logValues, monthRange, previousMonth, wibToday,
+  DIMENSIONS, MAX_PHOTOS, addDays, claimedPoints, controlsForApp, countedPoints, dateProblem, defaultAppControls, limitReached, logValues, monthRange, previousMonth, wibToday,
   type DimensionId, type Limit, type LogInput, type PointsMode, type ReviewStatus, type UploadStartInput, type WellbeingSettings,
 } from "@/lib/wellbeing/rules";
 import { ServiceError } from "../config";
@@ -14,7 +14,7 @@ import { databaseError } from "../http";
 import type { Member } from "../pra-wam/session";
 import { isR2Configured, presignUpload, removeObjects, verifyUpload } from "../r2";
 import { board, ledgerItems, placeOf, streakDays, streakStart, weekSeries, type LedgerActivity, type LedgerEntry } from "./member-rules";
-import { afterDayCursor, dayCursorOf, db, fail, missing, readAll, readSettings, readTotals, waiting, withPhotoUrls, zeroDims, type Row, type Totals } from "./shared";
+import { afterDayCursor, dayCursorOf, db, fail, missing, readAll, readSettings, readTotals, timeOf, waiting, withPhotoUrls, withTime, withTimeColumn, zeroDims, type Row, type Totals } from "./shared";
 import { isOwnUploadKey, uploadKeyFor, uploadToken, uploadTokenMatches } from "./uploads";
 
 /*
@@ -40,13 +40,15 @@ const loginNotReady = () => new ServiceError(503, "Login belum disiapkan. Isi WA
 const toMe = (member: Member): WbMe => ({ id: member.id, name: member.name, nickname: member.nickname, department: member.department, position: member.position });
 const rulesOf = (settings: WellbeingSettings): WbRules => ({ backdateDays: settings.backdateDays, maxKcal: settings.maxKcal, maxSteps: settings.maxSteps, maxPhotos: MAX_PHOTOS });
 const nullableNumber = (value: unknown) => (value === null || value === undefined ? null : Number(value));
+/** "HH:MM" now in WIB. */
+const wibClock = (at: Date) => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(at);
 
 function toMine(row: Row): WbMyActivity {
   const type = (row.type ?? {}) as Row;
   const typeCode = row.type_code as string, typeName = (type.name as string | undefined) ?? typeCode, status = row.status as ReviewStatus;
   return {
     id: row.id as string, typeCode, typeName, kind: (type.kind as "daily" | "sport" | undefined) ?? (typeCode.startsWith("sport.") ? "sport" : "daily"),
-    dimension: row.dimension_id as DimensionId, date: row.happened_on as string, source: row.source as WbMyActivity["source"], title: (row.title as string) || typeName,
+    dimension: row.dimension_id as DimensionId, date: row.happened_on as string, time: timeOf(row), source: row.source as WbMyActivity["source"], title: (row.title as string) || typeName,
     steps: nullableNumber(row.steps), kcal: nullableNumber(row.kcal), minutes: nullableNumber(row.minutes), distanceM: nullableNumber(row.distance_m),
     note: (row.note as string) ?? "", photos: (row.photos as string[] | null) ?? [], pointsClaimed: row.points_claimed as number,
     points: countedPoints(status, row.points as number), status, reason: (row.review_reason as string | null) ?? null, createdAt: row.created_at as string,
@@ -113,9 +115,9 @@ export async function home(member: Member, now = new Date()): Promise<WbHome> {
   const [settings, summary, recent] = await Promise.all([
     readSettings(),
     myTotals(member.id, now),
-    db().from("wb_activities").select(MY_COLUMNS).eq("employee_id", member.id).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(RECENT),
+    withTimeColumn(on => db().from("wb_activities").select(withTime(MY_COLUMNS, on)).eq("employee_id", member.id).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(RECENT)),
   ]);
-  const base = { me: toMe(member), today, rules: rulesOf(settings.settings) };
+  const base = { me: toMe(member), today, rules: rulesOf(settings.settings), controls: controlsForApp(settings.app, today) };
   if (recent.error && !missing(recent.error)) databaseError(recent.error);
   if (!settings.migrated || !summary || recent.error) return { migrated: false, ...base, totals: emptyTotals(today), dims: zeroDims(), recent: [] };
   return { migrated: true, ...base, totals: summary.totals, dims: summary.dims, recent: await withPhotoUrls(((recent.data ?? []) as unknown as Row[]).map(toMine)) };
@@ -137,9 +139,9 @@ export async function catalog(member: Member, now = new Date()): Promise<WbAppCa
     readAll((from, to) => client.from("wb_activities").select("id,type_code,happened_on").eq("employee_id", member.id).neq("status", "rejected")
       .gte("happened_on", since).lte("happened_on", month.to).order("id").range(from, to)),
   ]);
-  const rules = rulesOf(settings.settings);
-  for (const error of [types.error, logged.error]) if (error) { if (missing(error)) return { migrated: false, daily: [], sports: [], rules, today }; databaseError(error); }
-  if (!settings.migrated) return { migrated: false, daily: [], sports: [], rules, today };
+  const rules = rulesOf(settings.settings), controls = controlsForApp(settings.app ?? defaultAppControls, today);
+  for (const error of [types.error, logged.error]) if (error) { if (missing(error)) return { migrated: false, daily: [], sports: [], rules, today, controls }; databaseError(error); }
+  if (!settings.migrated) return { migrated: false, daily: [], sports: [], rules, today, controls };
   const datesOf = new Map<string, string[]>();
   for (const row of logged.rows) datesOf.set(row.type_code as string, [...(datesOf.get(row.type_code as string) ?? []), row.happened_on as string]);
   const order = (row: Row) => `${row.kind === "sport" ? 9 : DIMENSIONS.indexOf(row.dimension_id as DimensionId)}-${String(row.sort_order).padStart(6, "0")}-${row.name}`;
@@ -154,20 +156,22 @@ export async function catalog(member: Member, now = new Date()): Promise<WbAppCa
     };
   });
   const sports = rows.filter(row => row.kind === "sport").map((row): WbCatalogSport => ({ code: row.code as string, name: row.name as string, proofHint: (row.proof_hint as string) ?? "" }));
-  return { migrated: true, daily, sports, rules, today };
+  return { migrated: true, daily, sports, rules, today, controls };
 }
 
 /* ---------- Riwayat ---------- */
 
 export async function myActivities(member: Member, filter: WbMyActivityFilter, before?: string): Promise<WbMyActivityPage> {
-  let request = db().from("wb_activities").select(MY_COLUMNS).eq("employee_id", member.id)
-    .order("happened_on", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(PAGE_SIZE + 1);
-  // Sports are the sport.* codes (as in Admin Periksa); those from Strava have their own tab.
-  if (filter === "daily") request = request.not("type_code", "like", "sport.%");
-  if (filter === "sport") request = request.like("type_code", "sport.%").neq("source", "strava");
-  if (filter === "strava") request = request.eq("source", "strava");
-  if (before) request = request.or(afterDayCursor(before));
-  const { data, error } = await request;
+  const { data, error } = await withTimeColumn(on => {
+    let request = db().from("wb_activities").select(withTime(MY_COLUMNS, on)).eq("employee_id", member.id)
+      .order("happened_on", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(PAGE_SIZE + 1);
+    // Sports are the sport.* codes (as in Admin Periksa); those from Strava have their own tab.
+    if (filter === "daily") request = request.not("type_code", "like", "sport.%");
+    if (filter === "sport") request = request.like("type_code", "sport.%").neq("source", "strava");
+    if (filter === "strava") request = request.eq("source", "strava");
+    if (before) request = request.or(afterDayCursor(before));
+    return request;
+  });
   if (error) { if (missing(error)) return { migrated: false, items: [], next: null }; databaseError(error); }
   const rows = ((data ?? []) as unknown as Row[]).map(toMine);
   const more = rows.length > PAGE_SIZE;
@@ -178,7 +182,7 @@ export async function myActivities(member: Member, filter: WbMyActivityFilter, b
 /** One of my activities; someone else's (or none) is 404. */
 export async function myActivity(member: Member, id: string): Promise<WbMyActivity> {
   const none = new ServiceError(404, "Aktivitas tidak ditemukan.");
-  const { data, error } = await db().from("wb_activities").select(MY_COLUMNS).eq("id", id).eq("employee_id", member.id).maybeSingle();
+  const { data, error } = await withTimeColumn(on => db().from("wb_activities").select(withTime(MY_COLUMNS, on)).eq("id", id).eq("employee_id", member.id).maybeSingle());
   if (error) { if (missing(error)) throw none; databaseError(error); }
   if (!data) throw none;
   const [activity] = await withPhotoUrls([toMine(data as unknown as Row)]);
@@ -224,11 +228,16 @@ export async function logActivity(member: Member, input: LogInput, now = new Dat
   const [settingsRead, typeRead] = await Promise.all([readSettings(), client.from("wb_activity_types").select(TYPE_COLUMNS).eq("code", input.code).maybeSingle()]);
   if (typeRead.error) fail(typeRead.error);
   if (!settingsRead.migrated) throw waiting();
+  // Catat paused by the admin (a data move, a fix): the photos may be sent again later.
+  const paused = controlsForApp(settingsRead.app, today).pausedMessage;
+  if (paused) throw new ServiceError(503, paused);
   const type = typeRead.data as Row | null;
   if (!type || !type.active) throw refused("code", "Kegiatan ini sudah tidak tersedia. Muat ulang daftar kegiatan.");
   const settings = settingsRead.settings;
   const problem = dateProblem(input.date, today, settings.backdateDays);
   if (problem) throw refused("date", problem);
+  // A time later today has not happened yet (a few minutes of clock difference are let through).
+  if (input.time && input.date === today && input.time > wibClock(new Date(now.getTime() + 5 * 60_000))) throw refused("time", "Jam itu belum lewat hari ini.");
   const mode = type.points_mode as PointsMode;
   const values = logValues(mode, input, settings);
   if (!values.ok) throw new ServiceError(422, Object.values(values.fieldErrors)[0][0], values.fieldErrors);
@@ -260,10 +269,12 @@ export async function logActivity(member: Member, input: LogInput, now = new Dat
     throw error;
   }
   const points = claimedPoints(mode, type.points as number, values, settings);
-  const { data, error } = await client.from("wb_activities").insert({
-    employee_id: member.id, type_code: type.code, dimension_id: type.dimension_id, happened_on: input.date, source: "manual", title: String(type.name).slice(0, 200),
+  // The time is kept once migration 202611170002 is in; before it, the log is saved without it.
+  const { data, error } = await withTimeColumn(on => client.from("wb_activities").insert({
+    employee_id: member.id, type_code: type.code, dimension_id: type.dimension_id, happened_on: input.date, ...(on && input.time ? { happened_time: input.time } : {}),
+    source: "manual", title: String(type.name).slice(0, 200),
     steps: values.steps, kcal: values.kcal, minutes: values.minutes, note: input.note, photos: keys, points_claimed: points, points, status: "approved", checked: false,
-  }).select(MY_COLUMNS).single();
+  }).select(withTime(MY_COLUMNS, on)).single());
   if (error) {
     // Two sends at once: the unique index (202611170001) lets one through; the other is the same log.
     if (error.code === "23505") throw conflict("same_day", "Kegiatan ini sudah kamu catat pada tanggal itu.");

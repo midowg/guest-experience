@@ -20,6 +20,10 @@ describe("the .xlsx writer", () => {
     const file = writeXlsx([{ name: "A", rows: [["x"], ["=HYPERLINK(\"http://contoh.invalid\")", "bel\u0007l"]] }]);
     expect(readXlsx(file)[0].rows[1]).toEqual(["=HYPERLINK(\"http://contoh.invalid\")", "bell"]);
   });
+  it("writes numbers as number cells, so a report can be summed (17 Nov 2026)", () => {
+    const file = writeXlsx([{ name: "Poin", rows: [["Nama", "Poin"], ["Ayu", 412], ["Budi", 0], ["Citra", null], ["Dewi", -50]] }]);
+    expect(readXlsx(file)[0].rows.map(row => row[1] ?? "")).toEqual(["Poin", "412", "0", "", "-50"]);
+  });
   it("makes sheet names valid and unique", () => {
     expect(sheetNames(["Bagian: A/B", "bagian  a b", "", "x".repeat(40), "x".repeat(40)])).toEqual([
       "Bagian A B", "bagian a b (2)", "Lembar", "x".repeat(31), `${"x".repeat(27)} (2)`,

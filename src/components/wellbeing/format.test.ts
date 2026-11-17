@@ -8,7 +8,7 @@ const rules: WbRules = { backdateDays: 7, maxKcal: 3000, maxSteps: 60000, maxPho
 const today = "2026-11-17";
 const draft = (change: Partial<CatatDraft> = {}): CatatDraft => ({ kind: "daily", code: "emotional.meditasi", mode: "fixed", fixedPoints: 70, date: today, steps: "", kcal: "", minutes: "", photos: 1, ...change });
 const activity = (change: Partial<WbMyActivity>): WbMyActivity => ({
-  id: "a", typeCode: "emotional.meditasi", typeName: "Meditasi", kind: "daily", dimension: "emotional", date: today, source: "manual", title: "Meditasi",
+  id: "a", typeCode: "emotional.meditasi", typeName: "Meditasi", kind: "daily", dimension: "emotional", date: today, time: null, source: "manual", title: "Meditasi",
   steps: null, kcal: null, minutes: null, distanceM: null, note: "", photos: [], pointsClaimed: 70, points: 70, status: "approved", reason: null, createdAt: "2026-11-17T01:00:00.000Z", ...change,
 });
 

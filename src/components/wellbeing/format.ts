@@ -25,6 +25,10 @@ export const weekday = (date: string) => formatDate(date, { weekday: "short" }).
 /** The hour now in WIB, 0 to 23. */
 export const wibHour = (now: Date) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", hourCycle: "h23" }).format(now));
 export const currentWibHour = () => wibHour(new Date());
+/** "HH:MM" now in WIB. */
+export const currentWibClock = (now = new Date()) => new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
+/** "06:05" → "06.05", the Indonesian way. */
+export const clockLabel = (time: string | null | undefined) => time ? time.replace(":", ".") : "";
 export const greeting = (hour: number) => hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
 
 /** "Dewi Contoh" → "DC". */
@@ -70,20 +74,24 @@ export function mergePages(first: readonly WbMyActivity[], more: readonly WbMyAc
 
 export type CatatKind = "daily" | "sport";
 export type CatatDraft = { kind: CatatKind; code: string | null; mode: "fixed" | "steps" | "kcal"; fixedPoints: number; date: string; steps: string; kcal: string; minutes: string; photos: number;
+  /** "HH:MM", optional (17 Nov 2026). */
+  time?: string;
   /** Days this daily type is already logged (one per day); a sport has none. */
   loggedOn?: readonly string[] };
 export const ALREADY_LOGGED = "Sudah kamu catat pada tanggal ini. Pilih tanggal lain.";
-export type CatatField = "sport" | "date" | "steps" | "kcal" | "minutes" | "photos";
+export type CatatField = "sport" | "date" | "time" | "steps" | "kcal" | "minutes" | "photos";
 export type CatatErrors = Partial<Record<CatatField, string>>;
 
 const whole = (value: string) => /^\d+$/.test(value.trim()) ? Number(value) : Number.NaN;
 
 /** What is wrong with the form, per field (empty when it may be sent). */
-export function catatErrors(draft: CatatDraft, rules: WbRules, today: string): CatatErrors {
+export function catatErrors(draft: CatatDraft, rules: WbRules, today: string, now = currentWibClock()): CatatErrors {
   const errors: CatatErrors = {};
   if (draft.kind === "sport" && !draft.code) errors.sport = "Pilih jenis olahraga.";
   const date = dateProblem(draft.date, today, rules.backdateDays) ?? (draft.loggedOn?.includes(draft.date) ? ALREADY_LOGGED : null);
   if (date) errors.date = date;
+  if (draft.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.time)) errors.time = "Jam tidak valid.";
+  else if (draft.time && draft.date === today && draft.time > now) errors.time = "Jam itu belum lewat hari ini.";
   if (draft.mode === "steps") {
     const steps = whole(draft.steps);
     if (!draft.steps.trim()) errors.steps = "Isi jumlah langkah.";
@@ -110,4 +118,4 @@ export function previewPoints(draft: Pick<CatatDraft, "mode" | "fixedPoints" | "
 
 /** The first field with a problem, in the order they appear on the form. */
 export const firstError = (errors: CatatErrors): CatatField | null =>
-  (["sport", "date", "steps", "kcal", "minutes", "photos"] as const).find(field => errors[field]) ?? null;
+  (["sport", "date", "time", "steps", "kcal", "minutes", "photos"] as const).find(field => errors[field]) ?? null;

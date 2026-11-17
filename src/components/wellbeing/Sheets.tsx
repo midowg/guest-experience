@@ -7,7 +7,7 @@ import { load } from "@/components/app-shell/resource";
 import type { WbMyActivity } from "@/lib/wellbeing/app-types";
 import { dimensionLabels, wibToday } from "@/lib/wellbeing/rules";
 import { keys, useTheme, useWellbeing, type CatatPreset, type ThemeChoice } from "./context";
-import { activityTitle, dayLabel, distance, formatDate, num, sourceLabels } from "./format";
+import { activityTitle, clockLabel, dayLabel, distance, formatDate, num, sourceLabels } from "./format";
 import { ActivityLead, cx, Sk } from "./parts";
 import css from "./wellbeing.module.css";
 
@@ -47,7 +47,7 @@ export function ActivitySheet({ activity, onClose, onRedo }: { activity: WbMyAct
         <ActivityLead activity={item} size="lg" />
         <div className={css.rowMain}>
           <b className={cx(css.sub, css.wrap)}>{activityTitle(item)}</b>
-          <span className={css.rowMeta}>{dayLabel(item.date, today)} · {formatDate(item.date, { day: "numeric", month: "long", year: "numeric" })}</span>
+          <span className={css.rowMeta}>{dayLabel(item.date, today)} · {formatDate(item.date, { day: "numeric", month: "long", year: "numeric" })}{item.time ? ` · pukul ${clockLabel(item.time)}` : ""}</span>
         </div>
       </div>
       {item.status === "rejected" && <p className={cx(css.note, css.noteErr)}><CircleX size={20} aria-hidden="true" /><span><b>Ditolak admin.</b> {item.reason ?? ""} Poin tidak dihitung.</span></p>}

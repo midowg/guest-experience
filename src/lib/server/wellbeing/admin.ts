@@ -1,12 +1,12 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { DIMENSIONS, defaultSettings, monthRange, previousMonth, rank, wibToday, type CatalogItemInput, type DimensionId, type PointBatchInput, type ReviewInput } from "@/lib/wellbeing/rules";
+import { DIMENSIONS, MIGRATION_WELLBEING_APP, appControlsOf, defaultAppControls, defaultSettings, monthRange, previousMonth, rank, wibToday, type AppControls, type CatalogItemInput, type DimensionId, type PointBatchInput, type ReviewInput } from "@/lib/wellbeing/rules";
 import type { WbActivity, WbActivityPage, WbBatchResult, WbCatalog, WbCatalogItem, WbChampion, WbOverview, WbPeople, WbPersonDetail, WbPointEntry, WbSettingsView } from "@/lib/wellbeing/types";
 import { currentAdmin } from "../admin-actor";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
-import { afterCursor, cursorOf, missing, readTotals, waiting, withPhotoUrls, type Totals } from "./shared";
+import { afterCursor, cursorOf, missing, readSettingsRow, readTotals, timeOf, waiting, withPhotoUrls, withTime, withTimeColumn, type Totals } from "./shared";
 
 /*
  * Admin Wellbeing's data (16 Nov 2026, migration 202611160050). Every read answers `migrated: false`
@@ -27,17 +27,17 @@ const fail = (error: { code?: string; message: string }): never => { if (missing
 const zeroDims = (): Record<DimensionId, number> => ({ physical: 0, emotional: 0, social: 0, financial: 0, spiritual: 0 });
 const db = () => createPrivilegedClient();
 
-const ACTIVITY_COLUMNS = "id,employee_id,type_code,dimension_id,happened_on,source,title,steps,kcal,minutes,distance_m,note,photos,points_claimed,points,status,review_reason,checked,reviewed_by_name,reviewed_at,created_at,"
+export const ACTIVITY_COLUMNS = "id,employee_id,type_code,dimension_id,happened_on,source,title,steps,kcal,minutes,distance_m,note,photos,points_claimed,points,status,review_reason,checked,reviewed_by_name,reviewed_at,created_at,"
   + "type:wb_activity_types(name,kind),person:employees!wb_activities_employee_id_fkey(full_name,nickname,department)";
 
 /** Mapped as stored; the list functions then make the photos ready to show (signPhotos). */
-function toActivity(row: Row): WbActivity {
+export function toActivity(row: Row): WbActivity {
   const type = (row.type ?? {}) as Row, person = (row.person ?? {}) as Row;
   return {
     id: row.id as string, employeeId: row.employee_id as string,
     employeeName: (person.full_name as string) ?? "", employeeNickname: (person.nickname as string) ?? "", department: (person.department as string) ?? "",
     typeCode: row.type_code as string, typeName: (type.name as string) ?? (row.type_code as string), kind: (type.kind as "daily" | "sport") ?? "daily",
-    dimension: row.dimension_id as DimensionId, date: row.happened_on as string, source: row.source as WbActivity["source"], title: (row.title as string) ?? "",
+    dimension: row.dimension_id as DimensionId, date: row.happened_on as string, time: timeOf(row), source: row.source as WbActivity["source"], title: (row.title as string) ?? "",
     steps: (row.steps as number | null) ?? null, kcal: (row.kcal as number | null) ?? null, minutes: (row.minutes as number | null) ?? null, distanceM: (row.distance_m as number | null) ?? null,
     note: (row.note as string) ?? "", photos: (row.photos as string[]) ?? [], pointsClaimed: row.points_claimed as number, points: row.points as number,
     status: row.status as WbActivity["status"], reason: (row.review_reason as string | null) ?? null, checked: row.checked as boolean,
@@ -50,8 +50,8 @@ const signPhotos = (items: WbActivity[]) => withPhotoUrls(items, { keepUnsigned:
 
 const totals = readTotals;
 
-type Person = { id: string; full_name: string; nickname: string; department: string; position: string; active: boolean };
-async function employees(): Promise<Person[]> {
+export type Person = { id: string; full_name: string; nickname: string; department: string; position: string; active: boolean };
+export async function employees(): Promise<Person[]> {
   const { data, error } = await db().from("employees").select("id,full_name,nickname,department,position,active").order("full_name");
   if (error) databaseError(error);
   return (data ?? []) as Person[];
@@ -78,7 +78,7 @@ export async function wellbeingOverview(now = new Date()): Promise<WbOverview> {
   const client = db();
   const [unchecked, preview, todayCount, monthTotals, lastTotals, people] = await Promise.all([
     client.from("wb_activities").select("id", { count: "exact", head: true }).eq("checked", false),
-    client.from("wb_activities").select(ACTIVITY_COLUMNS).eq("checked", false).order("created_at", { ascending: false }).limit(5),
+    withTimeColumn(on => client.from("wb_activities").select(withTime(ACTIVITY_COLUMNS, on)).eq("checked", false).order("created_at", { ascending: false }).limit(5)),
     client.from("wb_activities").select("id", { count: "exact", head: true }).eq("happened_on", today),
     totals(month.from, month.to),
     totals(last.from, last.to),
@@ -111,25 +111,29 @@ export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
 export async function listActivities(query: { filter: ActivityFilter; kind: ActivityKind; q?: string; before?: string; employeeId?: string }, limit = 24): Promise<WbActivityPage> {
   const client = db();
-  let request = client.from("wb_activities").select(ACTIVITY_COLUMNS).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(limit + 1);
-  if (query.filter === "unchecked") request = request.eq("checked", false);
-  if (query.filter === "adjusted" || query.filter === "rejected") request = request.eq("status", query.filter);
-  if (query.kind === "strava") request = request.eq("source", "strava");
-  // Sports are the sport.* codes; everything else is a daily activity.
-  if (query.kind === "sport") request = request.like("type_code", "sport.%");
-  if (query.kind === "daily") request = request.not("type_code", "like", "sport.%");
-  if (query.employeeId) request = request.eq("employee_id", query.employeeId);
-  if (query.before) request = request.or(afterCursor(query.before));
+  let ids: string[] | null = null;
   if (query.q?.trim()) {
     const term = query.q.trim().replace(/[^\p{L}\p{N} .'-]/gu, " ").replace(/\s+/g, " ").trim();
     if (!term) return { migrated: true, items: [], next: null, unchecked: 0 };
     const { data: found, error } = await client.from("employees").select("id").or(`full_name.ilike."*${term}*",nickname.ilike."*${term}*",department.ilike."*${term}*"`).limit(200);
     if (error) databaseError(error);
-    const ids = (found ?? []).map(row => row.id as string);
+    ids = (found ?? []).map(row => row.id as string);
     if (!ids.length) return { migrated: true, items: [], next: null, unchecked: 0 };
-    request = request.in("employee_id", ids);
   }
-  const [{ data, error }, unchecked] = await Promise.all([request, client.from("wb_activities").select("id", { count: "exact", head: true }).eq("checked", false)]);
+  const list = (on: boolean) => {
+    let request = client.from("wb_activities").select(withTime(ACTIVITY_COLUMNS, on)).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(limit + 1);
+    if (query.filter === "unchecked") request = request.eq("checked", false);
+    if (query.filter === "adjusted" || query.filter === "rejected") request = request.eq("status", query.filter);
+    if (query.kind === "strava") request = request.eq("source", "strava");
+    // Sports are the sport.* codes; everything else is a daily activity.
+    if (query.kind === "sport") request = request.like("type_code", "sport.%");
+    if (query.kind === "daily") request = request.not("type_code", "like", "sport.%");
+    if (query.employeeId) request = request.eq("employee_id", query.employeeId);
+    if (query.before) request = request.or(afterCursor(query.before));
+    if (ids) request = request.in("employee_id", ids);
+    return request;
+  };
+  const [{ data, error }, unchecked] = await Promise.all([withTimeColumn(list), client.from("wb_activities").select("id", { count: "exact", head: true }).eq("checked", false)]);
   if (error) { if (missing(error)) return { migrated: false, items: [], next: null, unchecked: 0 }; databaseError(error); }
   const rows = ((data ?? []) as unknown as Row[]).map(toActivity);
   const more = rows.length > limit;
@@ -138,10 +142,10 @@ export async function listActivities(query: { filter: ActivityFilter; kind: Acti
 }
 
 export async function reviewActivity(id: string, input: ReviewInput, actor: Actor): Promise<WbActivity> {
-  const { data, error } = await db().from("wb_activities").update({
+  const { data, error } = await withTimeColumn(on => db().from("wb_activities").update({
     status: input.status, points: input.points, review_reason: input.status === "approved" ? null : input.reason, checked: input.checked,
     reviewed_by: actor.employeeId ?? null, reviewed_by_name: actor.name.slice(0, 150), reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-  }).eq("id", id).select(ACTIVITY_COLUMNS).maybeSingle();
+  }).eq("id", id).select(withTime(ACTIVITY_COLUMNS, on)).maybeSingle());
   if (error) fail(error);
   if (!data) throw new ServiceError(404, "Aktivitas tidak ditemukan.");
   const [activity] = await signPhotos([toActivity(data as unknown as Row)]);
@@ -169,7 +173,7 @@ export async function personDetail(id: string, now = new Date()): Promise<WbPers
   const month = monthRange(wibToday(now));
   const [all, inMonth, activities, entries] = await Promise.all([
     totals(null, null), totals(month.from, month.to),
-    client.from("wb_activities").select(ACTIVITY_COLUMNS).eq("employee_id", id).order("happened_on", { ascending: false }).order("created_at", { ascending: false }).limit(30),
+    withTimeColumn(on => client.from("wb_activities").select(withTime(ACTIVITY_COLUMNS, on)).eq("employee_id", id).order("happened_on", { ascending: false }).order("created_at", { ascending: false }).limit(30)),
     client.from("wb_point_entries").select("id,batch_id,points,dimension_id,reason,happened_on,created_by_name,created_at,voided_at").eq("employee_id", id).order("created_at", { ascending: false }).limit(30),
   ]);
   const base = { person: { id: person.id as string, name: person.full_name as string, nickname: (person.nickname as string) ?? "", department: (person.department as string) ?? "", position: (person.position as string) ?? "", active: person.active as boolean } };
@@ -266,10 +270,42 @@ export async function updateCatalogItem(code: string, input: CatalogItemInput): 
 }
 
 export async function wellbeingSettings(): Promise<WbSettingsView> {
-  const { data, error } = await db().from("wb_settings").select("backdate_days,max_kcal,max_steps,program_start,updated_at,updated_by_name").eq("id", 1).maybeSingle();
-  if (error) { if (missing(error)) return { migrated: false, ...defaultSettings, updatedBy: null, updatedAt: null }; databaseError(error); }
-  if (!data) return { migrated: true, ...defaultSettings, updatedBy: null, updatedAt: null };
-  return { migrated: true, backdateDays: data.backdate_days as number, maxKcal: data.max_kcal as number, maxSteps: data.max_steps as number, programStart: data.program_start as string, updatedBy: (data.updated_by_name as string | null) ?? null, updatedAt: (data.updated_at as string | null) ?? null };
+  const { data, error, appReady } = await readSettingsRow("backdate_days,max_kcal,max_steps,program_start,updated_at,updated_by_name");
+  if (error) { if (missing(error)) return { migrated: false, ...defaultSettings, updatedBy: null, updatedAt: null, app: defaultAppControls, appReady: false }; databaseError(error); }
+  if (!data) return { migrated: true, ...defaultSettings, updatedBy: null, updatedAt: null, app: defaultAppControls, appReady };
+  return {
+    migrated: true, backdateDays: data.backdate_days as number, maxKcal: data.max_kcal as number, maxSteps: data.max_steps as number, programStart: data.program_start as string,
+    updatedBy: (data.updated_by_name as string | null) ?? null, updatedAt: (data.updated_at as string | null) ?? null, app: appControlsOf(data.app), appReady,
+  };
+}
+
+/** Kontrol aplikasi karyawan (17 Nov 2026): saved whole; waits for migration 202611170002. */
+export async function saveAppControls(input: AppControls, actor: Actor): Promise<WbSettingsView> {
+  const current = await wellbeingSettings();
+  if (!current.migrated) throw waiting();
+  if (!current.appReady) throw new ServiceError(503, `Kontrol aplikasi menunggu migrasi ${MIGRATION_WELLBEING_APP}. Minta pemilik menjalankannya di Supabase SQL Editor; aturan pencatatan tetap bisa diubah.`);
+  const { error } = await db().from("wb_settings").upsert({ id: 1, app: input, updated_at: new Date().toISOString(), updated_by_name: actor.name.slice(0, 150) }, { onConflict: "id" });
+  if (error) fail(error);
+  return wellbeingSettings();
+}
+
+/* ---------- Periksa: many at once (17 Nov 2026) ---------- */
+
+/**
+ * Mark the ticked activities as checked (Oke for all of them), or back to not checked (Urungkan).
+ * Only the status "diperiksa" changes, never the points or the decision; activities already so are
+ * left alone, and the answer names the ones that changed (what Urungkan sends back).
+ */
+export async function checkActivities(ids: readonly string[], checked: boolean, actor: Actor): Promise<{ changed: string[] }> {
+  const now = new Date().toISOString();
+  let request = db().from("wb_activities").update(checked
+    ? { checked: true, reviewed_by: actor.employeeId ?? null, reviewed_by_name: actor.name.slice(0, 150), reviewed_at: now, updated_at: now }
+    // Back to not checked: only approved ones (a rejection or a change of points keeps its reviewer and reason).
+    : { checked: false, reviewed_by: null, reviewed_by_name: null, reviewed_at: null, updated_at: now }).in("id", [...ids]).eq("checked", !checked);
+  if (!checked) request = request.eq("status", "approved");
+  const { data, error } = await request.select("id");
+  if (error) fail(error);
+  return { changed: ((data ?? []) as Row[]).map(row => row.id as string) };
 }
 
 export async function saveWellbeingSettings(input: { backdateDays: number; maxKcal: number; maxSteps: number }, actor: Actor): Promise<WbSettingsView> {

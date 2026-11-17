@@ -1,6 +1,6 @@
 "use client";
 
-import type { WbAppCatalog, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbRules } from "@/lib/wellbeing/app-types";
+import type { WbAppCatalog, WbAppControls, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbRules } from "@/lib/wellbeing/app-types";
 import { addDays, aroundMe, claimedPoints, dateProblem, DIMENSIONS, dimensionLabels, limitReached, MIN_STEPS, monthRange, rank, wibToday, type DimensionId, type Limit } from "@/lib/wellbeing/rules";
 import { cancelledError, WellbeingApiError, type BoardDim, type BoardPeriod, type RequestOptions, type WellbeingApi } from "./api";
 
@@ -26,6 +26,8 @@ export type MockOptions = {
   latency?: [number, number];
   /** Before the database migration: every answer says migrated: false. */
   notReady?: boolean;
+  /** What Admin Wellbeing → Aplikasi karyawan has set (17 Nov 2026); defaults without it. */
+  controls?: Partial<WbAppControls>;
 };
 
 export const sampleMe: WbMe = { id: "00000000-0000-4000-8000-0000000000aa", name: "Dewi Contoh", nickname: "Dewi", department: "Creative", position: "Graphic Designer" };
@@ -126,7 +128,7 @@ function seedActivities(today: string, stravaTwin: boolean): WbMyActivity[] {
   };
   const base = (daysBack: number) => {
     const date = addDays(today, -daysBack);
-    return { id: `act-${String(list.length + 1).padStart(4, "0")}`, date, source: (daysBack > 10 ? "import" : "manual") as WbMyActivity["source"], createdAt: createdAt(date), note: "", reason: null, status: "approved" as const, distanceM: null, minutes: null, steps: null, kcal: null };
+    return { id: `act-${String(list.length + 1).padStart(4, "0")}`, date, time: null as string | null, source: (daysBack > 10 ? "import" : "manual") as WbMyActivity["source"], createdAt: createdAt(date), note: "", reason: null, status: "approved" as const, distanceM: null, minutes: null, steps: null, kcal: null };
   };
   const addDaily = (daysBack: number, code: string, extra: Partial<WbMyActivity> & { photoCount?: number } = {}) => {
     const type = typeOf(code)!;
@@ -144,7 +146,7 @@ function seedActivities(today: string, stravaTwin: boolean): WbMyActivity[] {
   };
 
   // The last week, by hand: every state the screens show.
-  addSport(0, "running", "Lari pagi", 412, { minutes: 34, distanceM: 5200 });
+  addSport(0, "running", "Lari pagi", 412, { minutes: 34, distanceM: 5200, time: "06:05" });
   addDaily(0, "emotional.meditasi");
   addDaily(1, "physical.steps", { steps: 9120 });
   addDaily(1, "spiritual.kajian");
@@ -229,7 +231,7 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
     const ranked: WbBoardRow[] = rank(rows);
     const champions = rank(people.map(person => ({ employeeId: person.id, name: person.name, department: person.department, me: false,
       points: dim === "all" ? sum(Object.values(person.lastMonth)) : person.lastMonth[dim] })));
-    return { migrated: true, period, dim, items: ranked.slice(0, 30), me: ranked.find(row => row.me) ?? null, of: people.length + 1, lastMonthChampion: champions[0] ?? null, ...aroundMe(ranked) };
+    return { migrated: true, period, dim, items: ranked, me: ranked.find(row => row.me) ?? null, of: people.length + 1, lastMonthChampion: champions[0] ?? null, ...aroundMe(ranked) };
   }
 
   function streak() {
@@ -253,11 +255,12 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
   // As the server: only a monthly limit blocks a type; one per day is told by loggedOn.
   const blockedText = "Sudah dicatat bulan ini. Kegiatan ini hanya sekali sebulan.";
   const notReady = !!options.notReady;
+  const controls: WbAppControls = { announcement: null, prize: null, photoReading: true, pausedMessage: null, ...options.controls };
 
   return {
-    home: () => call(() => ({ migrated: !notReady, me: sampleMe, today, totals: totals(), dims: myDims("month"), recent: notReady ? [] : newest().slice(0, 5), rules: RULES })),
-    catalog: () => call<WbAppCatalog>(() => notReady ? { migrated: false, today, rules: RULES, sports: [], daily: [] } : ({
-      migrated: true, today, rules: RULES, sports: SPORTS,
+    home: () => call(() => ({ migrated: !notReady, me: sampleMe, today, totals: totals(), dims: myDims("month"), recent: notReady ? [] : newest().slice(0, 5), rules: RULES, controls })),
+    catalog: () => call<WbAppCatalog>(() => notReady ? { migrated: false, today, rules: RULES, sports: [], daily: [], controls } : ({
+      migrated: true, today, rules: RULES, sports: SPORTS, controls,
       daily: DAILY.map(item => ({
         ...item,
         blocked: item.limit === "month" && limitReached("month", today, loggedDates(item.code)) ? blockedText : null,
@@ -291,6 +294,7 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       return { key, uploadUrl: `mock:${key}`, token: `mock-token-${uploads}` };
     }, 0.25, request),
     log: (input: WbLogInput, request) => call(() => {
+      if (controls.pausedMessage) throw new WellbeingApiError(controls.pausedMessage, 503);
       const dailyType = DAILY.find(item => item.code === input.code);
       const sportType = SPORTS.find(item => item.code === input.code);
       if (!dailyType && !sportType) throw new WellbeingApiError("Jenis kegiatan tidak dikenal.", 422);
@@ -300,7 +304,7 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       if (input.photos.length > RULES.maxPhotos) throw new WellbeingApiError(`Maksimal ${RULES.maxPhotos} foto.`, 422, { photos: [`Maksimal ${RULES.maxPhotos} foto.`] });
       const note = input.note.trim().slice(0, 300);
       let activity: WbMyActivity;
-      const common = { id: `act-new-${Date.now()}`, date: input.date, source: "manual" as const, note, reason: null, status: "approved" as const, distanceM: null, createdAt: new Date().toISOString() };
+      const common = { id: `act-new-${Date.now()}`, date: input.date, time: input.time ?? null, source: "manual" as const, note, reason: null, status: "approved" as const, distanceM: null, createdAt: new Date().toISOString() };
       if (dailyType) {
         if (dailyType.limit === "month" && limitReached("month", input.date, loggedDates(dailyType.code))) throw new WellbeingApiError(`${dailyType.name}: sudah dicatat bulan itu.`, 409, { code: ["limit"] });
         // One per day for every daily type.

@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, ClipboardCheck, ClipboardCopy, Plus, Trophy, Users } from "lucide-react";
+import { Activity, ClipboardCheck, ClipboardCopy, FileSpreadsheet, Plus, Trophy, Users } from "lucide-react";
 import { Avatar, Card, ConsoleButton, ListRow, PageHeader, RowList, StatCard, StatRow } from "@/components/console";
 import { Skeleton } from "@/components/app-shell/Panel";
 import { useResource } from "@/components/app-shell/resource";
 import { useToast } from "@/components/app-shell/Toast";
-import { wellbeingAdminPath } from "@/lib/routes";
 import { dimensionLabels } from "@/lib/wellbeing/rules";
 import type { WbOverview } from "@/lib/wellbeing/types";
 import { dayLabel, longDate, monthName, points, wb } from "./api";
@@ -17,11 +16,14 @@ import css from "./wellbeing-admin.module.css";
 /** Hari ini: what needs doing first, then this month in numbers and last month's champions (for the prizes). */
 export function TodayView() {
   const overview = useResource(wb.overview.key, wb.overview.fetch);
-  const { openPoints } = useWbActions();
+  const { openPoints, openExport } = useWbActions();
   const data = overview.data;
   return <>
     <PageHeader title="Hari ini" subtitle={data ? longDate(data.today) : " "}
-      actions={<ConsoleButton variant="primary" icon={<Plus size={18} aria-hidden="true" />} onClick={() => openPoints()}>Tambah poin</ConsoleButton>} />
+      actions={<>
+        <ConsoleButton icon={<FileSpreadsheet size={18} aria-hidden="true" />} onClick={() => openExport({ data: "people" })}>Unduh rekap</ConsoleButton>
+        <ConsoleButton variant="primary" icon={<Plus size={18} aria-hidden="true" />} onClick={() => openPoints()}>Tambah poin</ConsoleButton>
+      </>} />
     <Refreshing on={overview.refreshing} />
     {overview.error && !data ? <LoadError message={overview.error} onRetry={() => void overview.reload()} />
       : !data ? <TodaySkeleton /> : <TodayBody data={data} />}
@@ -37,6 +39,7 @@ function TodaySkeleton() {
 
 function TodayBody({ data }: { data: WbOverview }) {
   const toast = useToast();
+  const { pathOf: wellbeingAdminPath } = useWbActions();
   const [copied, setCopied] = useState(false);
   const champions = [
     ...data.lastMonth.overall.map((row, index) => `${index + 1}. ${row.name} (${row.department || "-"}): ${points(row.points)} poin`),
@@ -64,7 +67,7 @@ function TodayBody({ data }: { data: WbOverview }) {
         {data.uncheckedPreview.map(item => { const { Icon, tone } = dimensionLook[item.dimension]; return <ListRow key={item.id} href={wellbeingAdminPath("periksa")}
           icon={<Icon size={20} />} tone={tone}
           title={`${item.employeeNickname || item.employeeName} · ${item.typeName}`}
-          sub={`${dimensionLabels[item.dimension]} · ${dayLabel(item.date, data.today)}`}
+          sub={`${dimensionLabels[item.dimension]} · ${dayLabel(item.date, data.today)}${item.time ? ` ${item.time.replace(":", ".")}` : ""}`}
           trailing={<strong className={css.pts}>+{points(item.points)}</strong>} />; })}
       </RowList> : <Empty title="Tidak ada yang menunggu">Aktivitas baru dari karyawan muncul di sini. Semuanya langsung dihitung; periksa buktinya bila sempat.</Empty>}
     </Card>

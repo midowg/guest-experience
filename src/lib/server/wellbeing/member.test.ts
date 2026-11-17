@@ -8,6 +8,8 @@ import type { Member } from "../pra-wam/session";
 type Row = Record<string, unknown>;
 let tables: Record<string, Row[]>;
 let missingTables = false;
+/** Before migration 202611170002: no happened_time column. */
+let noTimeColumn = false;
 const removed: string[][] = [];
 let verifyFails = false;
 
@@ -17,8 +19,11 @@ function query(table: string) {
   let payload: Row | null = null;
   let single = false;
   let slice: [number, number] | null = null;
+  let columns = "";
   const run = () => {
     if (missingTables && table.startsWith("wb_")) return { data: null, error: { code: "PGRST205", message: `Could not find the table 'public.${table}' in the schema cache` } };
+    if (noTimeColumn && table === "wb_activities" && op === "insert" && payload && "happened_time" in payload) return { data: null, error: { code: "PGRST204", message: "Could not find the 'happened_time' column of 'wb_activities' in the schema cache" } };
+    if (noTimeColumn && table === "wb_activities" && columns.includes("happened_time")) return { data: null, error: { code: "42703", message: "column wb_activities.happened_time does not exist" } };
     const rows = tables[table] ?? (tables[table] = []);
     if (op === "insert") {
       const type = tables.wb_activity_types.find(item => item.code === payload!.type_code)!;
@@ -31,7 +36,7 @@ function query(table: string) {
     return { data: single ? found[0] ?? null : found, error: null };
   };
   const builder = {
-    select: () => builder, order: () => builder,
+    select: (list?: string) => { columns = list ?? ""; return builder; }, order: () => builder,
     eq: (key: string, value: unknown) => { filters.push(row => row[key] === value); return builder; },
     neq: (key: string, value: unknown) => { filters.push(row => row[key] !== value); return builder; },
     gte: (key: string, value: string) => { filters.push(row => String(row[key]) >= value); return builder; },
@@ -70,7 +75,8 @@ vi.mock("../r2", () => ({
   verifyUpload: vi.fn(async () => { if (verifyFails) throw Object.assign(new Error("Berkas belum terunggah. Coba unggah ulang."), { status: 422 }); return "jpeg"; }),
 }));
 
-const { home, leaderboard, logActivity, startUpload } = await import("./member");
+const { home, leaderboard, logActivity, myActivities, startUpload } = await import("./member");
+const { resetTimeColumn } = await import("./shared");
 const { ServiceError } = await import("../config");
 const { logSchema } = await import("@/lib/wellbeing/rules");
 
@@ -93,7 +99,8 @@ async function refusal(promise: Promise<unknown>) {
 
 beforeEach(() => {
   process.env.WAM_SESSION_SECRET = "s".repeat(40);
-  missingTables = false; verifyFails = false; removed.length = 0;
+  missingTables = false; noTimeColumn = false; verifyFails = false; removed.length = 0;
+  resetTimeColumn();
   tables = {
     wb_settings: [{ id: 1, backdate_days: 7, max_kcal: 3000, max_steps: 60000, program_start: "2026-05-22" }],
     wb_activity_types: [
@@ -120,6 +127,23 @@ describe("Catat", () => {
     expect(tables.wb_activities[0]).toMatchObject({ employee_id: me.id, checked: false, kcal: null, minutes: null });
     expect(result.totals).toMatchObject({ points: 912, monthPoints: 912, rank: 1, of: 2, streak: 1 });
     expect(result.totals.week.at(-1)).toEqual({ date: "2026-11-17", points: 912 });
+  });
+
+  it("keeps the time of day when given, refuses one later today, and saves without it before migration 202611170002", async () => {
+    // now is 10:00 WIB.
+    expect((await log(me, { code: "sport.running", kcal: 300, time: "06:05" })).activity).toMatchObject({ time: "06:05", kcal: 300 });
+    expect(tables.wb_activities[0]).toMatchObject({ happened_time: "06:05" });
+    expect(await refusal(log(me, { code: "sport.running", kcal: 200, time: "11:30" }))).toMatchObject({ status: 422, fieldErrors: { time: ["Jam itu belum lewat hari ini."] } });
+    expect((await log(me, { code: "sport.running", kcal: 200, time: "21:00", date: "2026-11-16" })).activity.time).toBe("21:00");
+    expect((await log(me, { code: "emotional.meditasi" })).activity.time).toBeNull();
+
+    noTimeColumn = true; resetTimeColumn();
+    const saved = await log(me, { code: "sport.running", kcal: 150, time: "07:00", date: "2026-11-15" });
+    expect(saved.activity).toMatchObject({ kcal: 150, time: null });
+    expect(tables.wb_activities.at(-1)).not.toHaveProperty("happened_time");
+    const page = await myActivities(me, "all");
+    expect(page.migrated).toBe(true);
+    expect(page.items).toHaveLength(4);
   });
 
   it("refuses a second log past the limit (409 limit) and the same daily activity on the same day (409 same_day), keeping the photos", async () => {

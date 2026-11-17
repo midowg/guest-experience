@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimedPoints, countedPoints, dateProblem, defaultSettings, limitReached, monthRange, pointBatchSchema, previousMonth, rank, reviewSchema, wibToday } from "./rules";
+import { appControlsOf, appControlsSchema, claimedPoints, controlsForApp, countedPoints, dateProblem, defaultAppControls, defaultSettings, limitReached, monthRange, pointBatchSchema, previousMonth, rank, reviewSchema, wibToday } from "./rules";
 
 describe("claimedPoints", () => {
   it("uses the fixed points, steps / 10, or kcal within the caps", () => {
@@ -65,5 +65,22 @@ describe("point batches", () => {
 describe("rank", () => {
   it("shares a place on ties", () => {
     expect(rank([{ points: 5 }, { points: 9 }, { points: 9 }, { points: 1 }]).map(row => row.rank)).toEqual([1, 1, 3, 4]);
+  });
+});
+
+describe("app controls (17 Nov 2026)", () => {
+  it("fills in defaults for anything missing or broken in the stored value", () => {
+    expect(appControlsOf(null)).toEqual(defaultAppControls);
+    expect(appControlsOf({ prize: "Voucher", photoReading: "ya", logging: { paused: true } })).toEqual({ ...defaultAppControls, prize: "Voucher" });
+  });
+  it("shows the announcement only while on and not past its day, and pauses Catat with a message", () => {
+    const controls = { ...defaultAppControls, announcement: { on: true, title: "Ditutup 30 Nov", message: "", until: "2026-11-30" }, prize: "  ", logging: { paused: true, message: "" } };
+    expect(controlsForApp(controls, "2026-11-30")).toEqual({ announcement: { title: "Ditutup 30 Nov", message: "" }, prize: null, photoReading: true, pausedMessage: "Pencatatan sedang dijeda admin. Coba lagi nanti." });
+    expect(controlsForApp(controls, "2026-12-01").announcement).toBeNull();
+    expect(controlsForApp({ ...controls, announcement: { ...controls.announcement, on: false } }, "2026-11-17").announcement).toBeNull();
+  });
+  it("refuses an announcement turned on with nothing to say", () => {
+    expect(appControlsSchema.safeParse({ ...defaultAppControls, announcement: { on: true, title: " ", message: "", until: null } }).success).toBe(false);
+    expect(appControlsSchema.safeParse({ ...defaultAppControls, announcement: { on: true, title: "Halo", message: "", until: null } }).success).toBe(true);
   });
 });

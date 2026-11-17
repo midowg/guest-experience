@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronRight, CloudOff, Hourglass, RefreshCw } from "lucide-react";
 import type { WbBoardRow, WbMyActivity } from "@/lib/wellbeing/app-types";
 import type { DimensionId } from "@/lib/wellbeing/rules";
-import { activityMeta, activityTitle, dayLabel, initials, num, toneOf } from "./format";
+import { activityMeta, activityTitle, clockLabel, dayLabel, initials, num, toneOf } from "./format";
 import { activityIcon, Icon } from "./icons";
 import { medalOf } from "./race";
 import css from "./wellbeing.module.css";
@@ -108,12 +108,13 @@ export function ActivityLead({ activity, size }: { activity: WbMyActivity; size?
 /** One activity in a list; opens its detail. */
 export function ActivityRow({ activity, today, withDate = true, onOpen }: { activity: WbMyActivity; today: string; withDate?: boolean; onOpen: (activity: WbMyActivity) => void }) {
   const status = activity.status === "rejected" ? ", ditolak" : activity.status === "adjusted" ? ", diubah admin" : "";
+  const when = [withDate ? dayLabel(activity.date, today) : "", clockLabel(activity.time)].filter(Boolean).join(" ");
   return <button type="button" className={cx(css.row, css.pressable)} onClick={() => onOpen(activity)}
-    aria-label={`${activityTitle(activity)}, ${activityMeta(activity)}${withDate ? `, ${dayLabel(activity.date, today)}` : ""}, ${activity.status === "rejected" ? "0" : `+${num(activity.points)}`} poin${status}`}>
+    aria-label={`${activityTitle(activity)}, ${activityMeta(activity)}${when ? `, ${when}` : ""}, ${activity.status === "rejected" ? "0" : `+${num(activity.points)}`} poin${status}`}>
     <ActivityLead activity={activity} />
     <span className={css.rowMain}>
       <span className={css.rowTitle}>{activityTitle(activity)}</span>
-      <span className={css.rowMeta}>{activityMeta(activity)}{withDate ? ` · ${dayLabel(activity.date, today)}` : ""}</span>
+      <span className={css.rowMeta}>{activityMeta(activity)}{when ? ` · ${when}` : ""}</span>
     </span>
     <span className={css.rowTrail}><PointsTrail activity={activity} /></span>
   </button>;

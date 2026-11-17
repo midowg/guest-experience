@@ -34,9 +34,10 @@ export type BoardPerson = { id: string; name: string; department: string; points
 
 /**
  * Peringkat: everyone with points above zero, highest first, ties sharing a place (1, 2, 2, 4) and
- * listed by name. `me` is the signed-in person's row (null without points); `top` rows are listed.
+ * listed by name. `me` is the signed-in person's row (null without points); `top` rows are listed
+ * (all of them unless given: the app shows a few and the rest under Lihat semua, 18 Nov 2026).
  */
-export function board(people: readonly BoardPerson[], meId: string, top = 30): { items: WbBoardRow[]; me: WbBoardRow | null; near: WbBoardRow[]; ahead: WbBoardRow | null } {
+export function board(people: readonly BoardPerson[], meId: string, top = Number.POSITIVE_INFINITY):{ items: WbBoardRow[]; me: WbBoardRow | null; near: WbBoardRow[]; ahead: WbBoardRow | null } {
   const ordered = people.filter(person => person.points > 0).sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, "id"));
   const rows: WbBoardRow[] = rank(ordered).map(person => ({ rank: person.rank, employeeId: person.id, name: person.name, department: person.department, points: person.points, me: person.id === meId }));
   return { items: rows.slice(0, top), me: rows.find(row => row.me) ?? null, ...aroundMe(rows) };

@@ -8,8 +8,10 @@
  *
  *   node --env-file=.env scripts/wellbeing-import.mjs D:\projects\produk\wellbeing-export            (uji kering)
  *   node --env-file=.env scripts/wellbeing-import.mjs D:\projects\produk\wellbeing-export --apply    (menulis)
+ *   ... D:\projects\produk\wellbeing-export --semua [--apply]   (dari semua-tabel.csv, lihat di bawah)
  *
- * Masukan (folder ekspor, di luar repo): csv/*_rows.csv dari dashboard Supabase lama, dan
+ * Masukan (folder ekspor, di luar repo): csv/*_rows.csv dari dashboard Supabase lama, atau dengan --semua
+ * semua-tabel.csv (hasil ekspor-semua.sql di SQL Editor: semua tabel sekali jalan, 17 Nov 2026), dan
  * cocok-karyawan.csv (hasil scripts/wellbeing-match-employees.mjs). Kolom rahasia profil tidak dibaca.
  * Keluaran: <folder>/impor-laporan.md (berisi nama, jadi tetap di luar repo).
  *
@@ -25,12 +27,13 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
-import { parseArray, readCsv } from "./wellbeing-csv.mjs";
+import { parseArray, readAllTables, readCsv } from "./wellbeing-csv.mjs";
 
 const dir = process.argv[2];
 const apply = process.argv.includes("--apply");
-if (!dir) { console.error("Pakai: node --env-file=.env scripts/wellbeing-import.mjs <folder ekspor> [--apply]"); process.exit(1); }
-const file = name => path.join(dir, "csv", `${name}_rows.csv`);
+if (!dir) { console.error("Pakai: node --env-file=.env scripts/wellbeing-import.mjs <folder ekspor> [--semua] [--apply]"); process.exit(1); }
+const everything = process.argv.includes("--semua") ? readAllTables(path.join(dir, "semua-tabel.csv")) : null;
+const table = name => everything ? everything.get(name) ?? [] : readCsv(path.join(dir, "csv", `${name}_rows.csv`));
 
 const DIMS = ["physical", "emotional", "social", "financial", "spiritual"];
 const PROGRAM_START = "2026-05-22";
@@ -46,12 +49,12 @@ const int = value => { const n = num(value); return n == null || Number.isNaN(n)
 const clip = (text, max) => text == null ? null : String(text).slice(0, max);
 
 /* ---------- read ---------- */
-const oldDims = readCsv(file("dimensions"));
-const oldTypes = readCsv(file("activity_types"));
-const oldActs = readCsv(file("activities"));
-const oldAdj = readCsv(file("point_adjustments"));
-const oldEvents = readCsv(file("admin_activities"));
-const oldProfiles = readCsv(file("profiles")).map(p => ({ id: p.id, username: p.username, full_name: p.full_name })); // nothing secret kept
+const oldDims = table("dimensions");
+const oldTypes = table("activity_types");
+const oldActs = table("activities");
+const oldAdj = table("point_adjustments");
+const oldEvents = table("admin_activities");
+const oldProfiles = table("profiles").map(p => ({ id: p.id, username: p.username, full_name: p.full_name })); // nothing secret kept
 const matches = readCsv(path.join(dir, "cocok-karyawan.csv"));
 
 const dimOf = Object.fromEntries(oldDims.map(d => [d.id, DIMS.includes(d.name) ? d.name : d.name === "mental" ? "emotional" : null]));

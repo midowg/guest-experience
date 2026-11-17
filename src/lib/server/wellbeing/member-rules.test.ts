@@ -49,7 +49,8 @@ describe("board", () => {
   });
   it("gives who is around me, also past the top rows, and the nearest one with more points (18 Nov 2026)", () => {
     const many = Array.from({ length: 40 }, (_, index) => ({ id: `p${index}`, name: `Orang ${String(index).padStart(2, "0")}`, department: "", points: 1000 - index * 10 }));
-    const deep = board(many, "p35");
+    expect(board(many, "p35").items).toHaveLength(40);
+    const deep = board(many, "p35", 30);
     expect(deep.items).toHaveLength(30);
     expect(deep.near.map(row => row.rank)).toEqual([34, 35, 36, 37, 38]);
     expect(deep.ahead).toMatchObject({ employeeId: "p34", rank: 35 });

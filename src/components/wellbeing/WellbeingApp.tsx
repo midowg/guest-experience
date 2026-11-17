@@ -8,7 +8,7 @@ import { ToastProvider, useToast } from "@/components/app-shell/Toast";
 import { WELLBEING_PATH } from "@/lib/routes";
 import { WELLBEING_SECTIONS, type WbMe, type WbMyActivity, type WellbeingSection } from "@/lib/wellbeing/app-types";
 import { realApi, type BoardDim, type BoardPeriod, type WellbeingApi } from "./api";
-import { Board } from "./Board";
+import { Board, BoardSheet } from "./Board";
 import { CatatSheet } from "./CatatSheet";
 import { fontVars } from "./font";
 import { keys, reducedMotion, ThemeBoot, useOnline, useTheme, WellbeingContext, type CatatPreset, type WellbeingActions } from "./context";
@@ -35,7 +35,7 @@ export function sectionOf(pathname: string, base = WELLBEING_PATH): WellbeingSec
 }
 const pathOf = (section: WellbeingSection, base: string) => section === "beranda" ? base : `${base}/${section}`;
 
-type Sheet = { kind: "catat"; preset: CatatPreset | null } | { kind: "detail"; activity: WbMyActivity } | { kind: "strava" } | { kind: "theme" } | { kind: "signout" };
+type Sheet = { kind: "catat"; preset: CatatPreset | null } | { kind: "detail"; activity: WbMyActivity } | { kind: "strava" } | { kind: "theme" } | { kind: "board" } | { kind: "signout" };
 
 /** Wait until the closed sheet's history entry is gone, so the next sheet's entry is not taken back with it. */
 const historySettled = () => new Promise<void>(resolve => {
@@ -136,6 +136,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
     openActivity: activity => void show({ kind: "detail", activity }),
     openStrava: () => void show({ kind: "strava" }),
     openTheme: () => void show({ kind: "theme" }),
+    openBoard: () => void show({ kind: "board" }),
     askSignOut: () => void show({ kind: "signout" }),
   }), [api, me, go, show]);
 
@@ -174,7 +175,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
             <History active={section === "riwayat"} filter={historyFilter} onFilter={setHistoryFilter} />
           </Screen>}
           {visited.includes("peringkat") && <Screen title="Peringkat" active={section === "peringkat"} refreshing={false} onRefresh={() => refresh("peringkat")} scrollRef={element => { scrollers.current.peringkat = element; }}>
-            <Board active={section === "peringkat"} period={board.period} dim={board.dim} onChange={setBoard} />
+            <Board period={board.period} dim={board.dim} onChange={setBoard} />
           </Screen>}
           {visited.includes("profil") && <Screen title="Profil" active={section === "profil"} refreshing={false} onRefresh={() => refresh("profil")} scrollRef={element => { scrollers.current.profil = element; }}>
             <Profile home={home} />
@@ -199,6 +200,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
       <ActivitySheet activity={sheet?.kind === "detail" ? sheet.activity : null} onClose={close} onRedo={preset => void show({ kind: "catat", preset })} />
       <StravaSheet open={sheet?.kind === "strava"} onClose={close} onLogSport={() => void show({ kind: "catat", preset: { kind: "sport" } })} />
       <ThemeSheet open={sheet?.kind === "theme"} onClose={close} />
+      <BoardSheet open={sheet?.kind === "board"} period={board.period} dim={board.dim} onClose={close} />
       <SignOutSheet open={sheet?.kind === "signout"} onClose={close} />
   </WellbeingContext.Provider>;
 }

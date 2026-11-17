@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Check, ImageOff, Pencil, Undo2, X } from "lucide-react";
+import { Check, CheckCheck, FileSpreadsheet, ImageOff, Pencil, Undo2, X } from "lucide-react";
 import { Avatar, ConsoleButton, FilterChips, PageHeader, Pill, SearchField, SegmentedControl } from "@/components/console";
 import { errorMessage } from "@/components/admin/shared/api";
 import { SkeletonRows } from "@/components/app-shell/Panel";
@@ -9,15 +9,19 @@ import { revalidate, setResource, useResource } from "@/components/app-shell/res
 import { useToast } from "@/components/app-shell/Toast";
 import { wellbeingAdminApi } from "@/lib/routes";
 import { rejectReasons, wibToday, type ReviewInput } from "@/lib/wellbeing/rules";
-import type { WbActivity, WbActivityPage } from "@/lib/wellbeing/types";
+import type { WbActivity, WbActivityPage, WbCheckResult } from "@/lib/wellbeing/types";
 import { dayLabel, points, send, wb, type ActivityQuery } from "./api";
 import { DimensionPill, Empty, LoadError, Refreshing, WaitingMigration } from "./parts";
+import { useWbActions } from "./WellbeingAdmin";
 import css from "./wellbeing-admin.module.css";
 
 /*
  * Periksa (16 Nov 2026): every activity already counts; here an admin looks at the proof. Oke marks
  * it checked, Ubah poin sets other points, Tolak counts nothing; the employee reads the reason.
  * Each action happens at once with Urungkan in the toast. On a laptop: O, U, T, and J/K to move.
+ *
+ * Many at once (17 Nov 2026): tick cards (or X, or Pilih semua), then Konfirmasi marks every ticked one
+ * that is not yet checked as checked (Urungkan sets them back), and Unduh Excel exports the ticked ones.
  */
 
 const stateOf = (item: WbActivity): ReviewInput => ({ status: item.status, points: item.points, reason: item.reason, checked: item.checked });
@@ -30,12 +34,21 @@ export function ReviewView() {
   const page = useResource(source.key, source.fetch);
   const [more, setMore] = useState<{ key: string; items: WbActivity[]; next: string | null; loading: boolean }>({ key: "", items: [], next: null, loading: false });
   const toast = useToast();
+  const { openExport } = useWbActions();
   const today = useMemo(() => wibToday(), []);
   const list = useRef<HTMLDivElement>(null);
+  // Ticked cards belong to one list: a new filter or search starts with none.
+  const [picked, setPicked] = useState<{ key: string; ids: string[] }>({ key: "", ids: [] });
+  const [confirming, setConfirming] = useState(false);
 
   const extra = more.key === source.key ? more : { key: source.key, items: [], next: page.data?.next ?? null, loading: false };
   const items = [...(page.data?.items ?? []), ...extra.items.filter(item => !(page.data?.items ?? []).some(first => first.id === item.id))];
   const next = extra.items.length ? extra.next : page.data?.next ?? null;
+  const selected = picked.key === source.key ? picked.ids.filter(id => items.some(item => item.id === id)) : [];
+  const toConfirm = items.filter(item => selected.includes(item.id) && !item.checked);
+  const allPicked = items.length > 0 && selected.length === items.length;
+  const toggle = (id: string) => setPicked({ key: source.key, ids: selected.includes(id) ? selected.filter(other => other !== id) : [...selected, id] });
+  const pickAll = () => setPicked({ key: source.key, ids: allPicked ? [] : items.map(item => item.id) });
 
   function replace(updated: WbActivity) {
     const drop = (query.filter === "unchecked" && updated.checked) || (query.filter === "adjusted" && updated.status !== "adjusted") || (query.filter === "rejected" && updated.status !== "rejected");
@@ -57,6 +70,35 @@ export function ReviewView() {
     revalidate(source.key);
     toast({ message: "Dikembalikan seperti semula.", tone: "info" });
   }
+  /** Konfirmasi: every ticked activity not yet checked becomes checked, at once; Urungkan sets exactly those back. */
+  async function confirmPicked() {
+    const ids = toConfirm.map(item => item.id);
+    if (!ids.length || confirming) return;
+    setConfirming(true);
+    try {
+      // The server takes 200 at a time; a bigger selection goes in parts, one answer for all.
+      const done: string[] = [];
+      for (let start = 0; start < ids.length; start += 200) done.push(...(await send<WbCheckResult>(wellbeingAdminApi.check, "POST", { ids: ids.slice(start, start + 200), checked: true })).data.changed);
+      const data = { changed: done }, message = done.length ? `${done.length} aktivitas ditandai sudah diperiksa.` : "Semua yang dipilih sudah diperiksa.";
+      const changed = new Set(data.changed);
+      const mark = (item: WbActivity) => changed.has(item.id) ? { ...item, checked: true } : item;
+      const keep = (item: WbActivity) => !(query.filter === "unchecked" && changed.has(item.id));
+      setResource<WbActivityPage>(source.key, current => current && { ...current, items: current.items.filter(keep).map(mark), unchecked: Math.max(0, current.unchecked - changed.size) });
+      setMore(current => current.key === source.key ? { ...current, items: current.items.filter(keep).map(mark) } : current);
+      setPicked({ key: source.key, ids: [] });
+      revalidate("wb:overview"); revalidate("wb:people");
+      toast({ message, tone: "ok", action: data.changed.length ? { label: "Urungkan", run: () => void undoConfirm(data.changed) } : undefined });
+    } catch (error) { toast({ message: errorMessage(error), tone: "bad" }); }
+    finally { setConfirming(false); }
+  }
+  async function undoConfirm(ids: string[]) {
+    try {
+      for (let start = 0; start < ids.length; start += 200) await send<WbCheckResult>(wellbeingAdminApi.check, "POST", { ids: ids.slice(start, start + 200), checked: false });
+      revalidate(source.key); revalidate("wb:overview"); revalidate("wb:people");
+      toast({ message: "Dikembalikan ke belum diperiksa.", tone: "info" });
+    } catch (error) { toast({ message: errorMessage(error), tone: "bad" }); }
+  }
+
   async function loadMore() {
     if (!next) return;
     setMore({ ...extra, key: source.key, loading: true });
@@ -72,7 +114,8 @@ export function ReviewView() {
 
   const unchecked = page.data?.unchecked;
   return <>
-    <PageHeader title="Periksa" subtitle="Semua aktivitas sudah dihitung. Lihat buktinya; ubah poin atau tolak bila tidak sesuai. Pintasan: O oke · U ubah · T tolak · J/K pindah." />
+    <PageHeader title="Periksa" subtitle="Semua aktivitas sudah dihitung. Lihat buktinya; ubah poin atau tolak bila tidak sesuai. Pintasan: O oke · U ubah · T tolak · X pilih · J/K pindah."
+      actions={<ConsoleButton icon={<FileSpreadsheet size={18} aria-hidden="true" />} onClick={() => openExport({ data: "activities", status: query.filter, kind: query.kind })}>Unduh Excel</ConsoleButton>} />
     <div className={css.toolbar}>
       <FilterChips label="Status" value={query.filter} onChange={filter => setQuery(current => ({ ...current, filter }))} chips={[
         { value: "unchecked", label: "Belum diperiksa", count: unchecked },
@@ -91,14 +134,26 @@ export function ReviewView() {
       : !page.data ? <SkeletonRows rows={6} />
       : !items.length ? <Empty title={query.filter === "unchecked" ? "Semua sudah diperiksa" : "Tidak ada aktivitas"}>
           {query.filter === "unchecked" ? "Aktivitas baru dari karyawan akan muncul di sini." : "Coba ubah saringan atau kata pencarian."}</Empty>
-      : <div ref={list} className={css.cards}>
-          {items.map(item => <ActivityCard key={item.id} item={item} today={today} onReview={next => review(item, next)} onMove={move} />)}
-        </div>}
+      : <>
+          <div className={css.pickBar} data-active={selected.length > 0} role="region" aria-label="Pilihan">
+            <label className={css.pickAll}><input type="checkbox" checked={allPicked} ref={element => { if (element) element.indeterminate = selected.length > 0 && !allPicked; }} onChange={pickAll} />
+              {selected.length ? `${selected.length} dipilih` : `Pilih semua (${items.length})`}</label>
+            {selected.length > 0 && <span className={css.pickActions}>
+              <ConsoleButton onClick={() => setPicked({ key: source.key, ids: [] })}>Batal</ConsoleButton>
+              <ConsoleButton icon={<FileSpreadsheet size={18} aria-hidden="true" />} onClick={() => openExport({ ids: selected })}>Unduh Excel</ConsoleButton>
+              <ConsoleButton variant="primary" icon={<CheckCheck size={18} aria-hidden="true" />} disabled={!toConfirm.length || confirming} onClick={() => void confirmPicked()}
+                title={toConfirm.length ? undefined : "Yang dipilih sudah diperiksa semua"}>{confirming ? "Menyimpan…" : `Konfirmasi ${toConfirm.length || ""}`.trim()}</ConsoleButton>
+            </span>}
+          </div>
+          <div ref={list} className={css.cards}>
+            {items.map(item => <ActivityCard key={item.id} item={item} today={today} picked={selected.includes(item.id)} onPick={() => toggle(item.id)} onReview={next => review(item, next)} onMove={move} />)}
+          </div>
+        </>}
     {next && <div className={css.more}><ConsoleButton onClick={() => void loadMore()} disabled={extra.loading}>{extra.loading ? "Memuat…" : "Muat lagi"}</ConsoleButton></div>}
   </>;
 }
 
-function ActivityCard({ item, today, onReview, onMove }: { item: WbActivity; today: string; onReview: (next: ReviewInput) => Promise<void>; onMove: (from: HTMLElement, step: 1 | -1) => void }) {
+function ActivityCard({ item, today, picked, onPick, onReview, onMove }: { item: WbActivity; today: string; picked: boolean; onPick: () => void; onReview: (next: ReviewInput) => Promise<void>; onMove: (from: HTMLElement, step: 1 | -1) => void }) {
   const [mode, setMode] = useState<"view" | "adjust" | "reject">("view");
   const [busy, setBusy] = useState(false);
   const [value, setValue] = useState(String(item.points));
@@ -127,6 +182,7 @@ function ActivityCard({ item, today, onReview, onMove }: { item: WbActivity; tod
     if (key === "o") { event.preventDefault(); ok(); }
     else if (key === "u") { event.preventDefault(); setReason(""); setMode("adjust"); }
     else if (key === "t") { event.preventDefault(); setReason(""); setMode("reject"); }
+    else if (key === "x") { event.preventDefault(); onPick(); }
     else if (key === "j" || key === "arrowdown") { event.preventDefault(); onMove(event.currentTarget, 1); }
     else if (key === "k" || key === "arrowup") { event.preventDefault(); onMove(event.currentTarget, -1); }
   }
@@ -137,10 +193,11 @@ function ActivityCard({ item, today, onReview, onMove }: { item: WbActivity; tod
     item.source === "strava" && "dari Strava", item.source === "import" && "dari aplikasi lama",
   ].filter(Boolean) as string[];
   const name = item.employeeNickname || item.employeeName;
-  return <article className={css.card} data-card tabIndex={0} onKeyDown={onKey} data-status={item.status} aria-label={`${name}, ${item.typeName}, ${item.points} poin`}>
+  return <article className={css.card} data-card tabIndex={0} onKeyDown={onKey} data-status={item.status} data-picked={picked} aria-label={`${name}, ${item.typeName}, ${item.points} poin${picked ? ", dipilih" : ""}`}>
     <header className={css.cardHead}>
+      <label className={css.cardPick}><input type="checkbox" checked={picked} onChange={onPick} aria-label={`Pilih aktivitas ${name}, ${item.typeName}`} /></label>
       <Avatar name={item.employeeName || name} size={40} />
-      <div className={css.cardWho}><strong>{name}</strong><small>{item.department || "-"} · {dayLabel(item.date, today)}</small></div>
+      <div className={css.cardWho}><strong>{name}</strong><small>{item.department || "-"} · {dayLabel(item.date, today)}{item.time ? ` ${item.time.replace(":", ".")}` : ""}</small></div>
       {item.status === "rejected" ? <Pill tone="bad">Ditolak</Pill> : item.status === "adjusted" ? <Pill tone="warn">Diubah</Pill> : item.checked ? <Pill tone="ok">Diperiksa</Pill> : null}
     </header>
     <div className={css.cardWhat}>

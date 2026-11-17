@@ -40,6 +40,57 @@ export const settingsSchema = z.object({
   maxSteps: z.number().int().min(1000).max(200000),
 });
 
+/* ---------- Kontrol aplikasi karyawan (17 Nov 2026, migration 202611170002) ---------- */
+
+export const MIGRATION_WELLBEING_APP = "202611170002_wellbeing_time_app.sql";
+
+/**
+ * What Admin Wellbeing → Pengaturan → Aplikasi karyawan sets for the employee app. Only what an admin
+ * really needs to steer the programme: an announcement on Beranda, this month's prize (shown with the
+ * race), reading proof photos on the phone (off if it misbehaves on some phones), and pausing Catat
+ * with a message (during a data move or a fix). Rules (backdate, caps) stay in Aturan pencatatan.
+ */
+export const appControlsSchema = z.object({
+  announcement: z.object({
+    on: z.boolean(),
+    title: z.string().trim().max(80, "Judul paling banyak 80 karakter."),
+    message: z.string().trim().max(300, "Isi paling banyak 300 karakter."),
+    /** The last day it shows (WIB), or null for until it is turned off. */
+    until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal tidak valid.").nullable(),
+  }),
+  prize: z.string().trim().max(160, "Hadiah paling banyak 160 karakter."),
+  photoReading: z.boolean(),
+  logging: z.object({ paused: z.boolean(), message: z.string().trim().max(200, "Pesan paling banyak 200 karakter.") }),
+}).superRefine((value, ctx) => {
+  if (value.announcement.on && !value.announcement.title && !value.announcement.message) ctx.addIssue({ code: "custom", path: ["announcement", "title"], message: "Isi judul atau isi pengumuman." });
+});
+export type AppControls = z.infer<typeof appControlsSchema>;
+export const defaultAppControls: AppControls = { announcement: { on: false, title: "", message: "", until: null }, prize: "", photoReading: true, logging: { paused: false, message: "" } };
+
+/** The stored value (any shape, from an older version or none) as complete controls: what is not valid falls back to the default. */
+export function appControlsOf(raw: unknown): AppControls {
+  const value = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const part = <T,>(schema: z.ZodType<T>, input: unknown, fallback: T): T => { const parsed = schema.safeParse(input); return parsed.success ? parsed.data : fallback; };
+  return {
+    announcement: part(z.object({ on: z.boolean(), title: z.string().max(80), message: z.string().max(300), until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable() }), value.announcement, defaultAppControls.announcement),
+    prize: part(z.string().max(160), value.prize, ""),
+    photoReading: part(z.boolean(), value.photoReading, true),
+    logging: part(z.object({ paused: z.boolean(), message: z.string().max(200) }), value.logging, defaultAppControls.logging),
+  };
+}
+
+/** What the employee app shows: the announcement only while on and not past its day. */
+export function controlsForApp(controls: AppControls, today: string): { announcement: { title: string; message: string } | null; prize: string | null; photoReading: boolean; pausedMessage: string | null } {
+  const { announcement } = controls;
+  const showing = announcement.on && (announcement.title || announcement.message) && (!announcement.until || announcement.until >= today);
+  return {
+    announcement: showing ? { title: announcement.title, message: announcement.message } : null,
+    prize: controls.prize.trim() || null,
+    photoReading: controls.photoReading,
+    pausedMessage: controls.logging.paused ? controls.logging.message.trim() || "Pencatatan sedang dijeda admin. Coba lagi nanti." : null,
+  };
+}
+
 /** Steps become points at 10 steps a point (as in the old app). */
 export const STEPS_PER_POINT = 10;
 
@@ -188,6 +239,8 @@ const uploadedPhotoSchema = uploadStartSchema.extend({
 export const logSchema = z.object({
   code: z.string().trim().regex(/^[a-z]+\.[a-z0-9_]{2,60}$/, "Pilih kegiatannya."),
   date: z.string().regex(DAY, "Tanggal tidak valid."),
+  /** The time of day (WIB), optional (17 Nov 2026). */
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Jam tidak valid.").nullish(),
   steps: z.number().int("Jumlah langkah harus bilangan bulat.").min(0).max(200000, "Jumlah langkah terlalu besar.").nullish(),
   kcal: z.number().min(0).max(20000, "Kalori terlalu besar.").nullish(),
   minutes: z.number().int("Durasi dalam menit, bilangan bulat.").min(1, "Durasi minimal 1 menit.").max(1440, "Durasi paling lama 1440 menit (sehari).").nullish(),

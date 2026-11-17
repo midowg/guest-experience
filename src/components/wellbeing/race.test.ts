@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 import type { WbBoardRow, WbLedgerItem } from "@/lib/wellbeing/app-types";
-import { chaseOf, daysLeft, daysLeftLabel, medalOf, nearBeyond, rankTrend, recordsOf } from "./race";
+import { boardView, chaseOf, daysLeft, daysLeftLabel, medalOf, rankTrend, recordsOf } from "./race";
 
 const row = (rank: number, points: number, me = false, id = `p${rank}${me ? "me" : ""}`): WbBoardRow => ({ rank, employeeId: id, name: `Orang ${rank}`, department: "", points, me });
 
@@ -39,11 +39,29 @@ describe("board helpers", () => {
   it("gives medals to the top three only", () => {
     expect([1, 2, 3, 4].map(medalOf)).toEqual(["gold", "silver", "bronze", null]);
   });
-  it("lists the rows around me that the top list leaves out", () => {
-    const top = Array.from({ length: 30 }, (_, index) => row(index + 1, 1000 - index));
-    const near = [row(30, 971), row(31, 960), row(32, 950, true), row(33, 940), row(34, 930)];
-    expect(nearBeyond({ items: top, near: near.map((item, index) => index === 0 ? top[29] : item) }).map(item => item.rank)).toEqual([31, 32, 33, 34]);
-    expect(nearBeyond({ items: top, near: top.slice(0, 5) })).toEqual([]);
+  it("shows the podium, the chasers to #8 and the rows around me; the rest wait for Lihat semua (18 Nov 2026)", () => {
+    const everyone = Array.from({ length: 40 }, (_, index) => row(index + 1, 1000 - index * 10, index === 19));
+    const me = everyone[19];
+    const view = boardView({ items: everyone, me, near: everyone.slice(17, 22) });
+    expect(view.podium.map(item => item.rank)).toEqual([1, 2, 3]);
+    expect(view.chasers.map(item => item.rank)).toEqual([4, 5, 6, 7, 8]);
+    expect(view.mine.map(item => item.rank)).toEqual([19, 20, 21]);
+    expect(view.podiumGap).toBe(980 - 810);
+    expect(view.hidden).toBe(40 - 11);
+    // Among the chasers: nothing more around me.
+    const fifth = everyone.map(item => ({ ...item, me: item.rank === 5 }));
+    expect(boardView({ items: fifth, me: fifth[4], near: fifth.slice(2, 7) })).toMatchObject({ mine: [], podiumGap: 20 });
+    // On the podium: no gap to it. Last on the board: the one above and me.
+    const second = everyone.map(item => ({ ...item, me: item.rank === 2 }));
+    expect(boardView({ items: second, me: second[1], near: second.slice(0, 4) }).podiumGap).toBeNull();
+    const last = everyone.map(item => ({ ...item, me: item.rank === 40 }));
+    expect(boardView({ items: last, me: last[39], near: last.slice(35) }).mine.map(item => item.rank)).toEqual([39, 40]);
+    // An older answer with only the top 30: the rows around me come from near.
+    const top = everyone.slice(0, 30).map(item => ({ ...item, me: false }));
+    const deep = [row(31, 690), row(32, 680, true), row(33, 670)];
+    expect(boardView({ items: top, me: deep[1], near: deep }).mine.map(item => item.rank)).toEqual([31, 32, 33]);
+    // Without points: the list, no place of mine.
+    expect(boardView({ items: top, me: null, near: [] })).toMatchObject({ mine: [], podiumGap: null, hidden: 22 });
   });
 });
 

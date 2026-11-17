@@ -40,11 +40,29 @@ export function chaseOf(board: Pick<WbBoard, "me" | "ahead" | "items" | "near">)
 export type Medal = "gold" | "silver" | "bronze";
 export const medalOf = (rank: number): Medal | null => rank === 1 ? "gold" : rank === 2 ? "silver" : rank === 3 ? "bronze" : null;
 
-/** The rows around me that the top list does not already show (I am past the top 30). */
-export const nearBeyond = (board: Pick<WbBoard, "items" | "near">) => {
-  const shown = new Set(board.items.map(row => row.employeeId));
-  return board.near.filter(row => !shown.has(row.employeeId));
-};
+/**
+ * What Peringkat shows on the page (18 Nov 2026), the rest waiting behind Lihat semua: the podium
+ * (the first three rows), the chasers up to place `upTo`, and, when I am further down, the one
+ * above me, me and the one below. `podiumGap` is how far I am from the podium (null on it, or
+ * without points); `hidden` is how many rows only the full list shows.
+ */
+export function boardView(board: Pick<WbBoard, "items" | "me" | "near">, upTo = 8) {
+  const podium = board.items.slice(0, 3);
+  const chasers = board.items.slice(3, upTo);
+  const shown = new Set([...podium, ...chasers].map(row => row.employeeId));
+  let mine: WbBoardRow[] = [];
+  if (board.me && !shown.has(board.me.employeeId)) {
+    // The full list when it has me; an older answer listed only the top 30, so then the rows around me.
+    const pool = board.items.some(row => row.me) ? board.items : board.near;
+    const at = pool.findIndex(row => row.me);
+    mine = pool.slice(Math.max(0, at - 1), at + 2).filter(row => !shown.has(row.employeeId));
+  }
+  const last = podium.at(-1);
+  const podiumGap = board.me && last && board.me.rank > 3 ? Math.max(0, last.points - board.me.points) : null;
+  const listed = new Set([...shown, ...mine.map(row => row.employeeId)]);
+  const hidden = board.items.filter(row => !listed.has(row.employeeId)).length;
+  return { podium, chasers, mine, podiumGap, hidden };
+}
 
 /** Profil's records, from every point that counts for me: the best month, and the longest run of days with an activity. */
 export function recordsOf(items: readonly WbLedgerItem[]): { bestMonth: { month: string; points: number } | null; longestStreak: number } {

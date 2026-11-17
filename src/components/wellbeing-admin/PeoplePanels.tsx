@@ -154,7 +154,7 @@ export function PersonPanel({ id, onClose }: { id: string | null; onClose: () =>
         <h3 className={css.subhead}>Aktivitas terakhir</h3>
         {data.activities.length ? <ul className={css.miniList}>
           {data.activities.map(item => <li key={item.id}>
-            <span><strong>{item.title || item.typeName}</strong><small>{dimensionLabels[item.dimension]} · {dayLabel(item.date, today)}{item.reason ? ` · ${item.reason}` : ""}</small></span>
+            <span><strong>{item.title || item.typeName}</strong><small>{dimensionLabels[item.dimension]} · {dayLabel(item.date, today)}{item.time ? ` ${item.time.replace(":", ".")}` : ""}{item.reason ? ` · ${item.reason}` : ""}</small></span>
             {item.status === "rejected" ? <Pill tone="bad">Ditolak</Pill> : <strong className={css.pts}>+{points(item.points)}</strong>}
           </li>)}
         </ul> : <Empty title="Belum ada aktivitas" />}

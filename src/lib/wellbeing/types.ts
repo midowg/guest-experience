@@ -1,4 +1,4 @@
-import type { DimensionId, Limit, PointsMode, ReviewStatus } from "./rules";
+import type { AppControls, DimensionId, Limit, PointsMode, ReviewStatus } from "./rules";
 
 /** What the Admin Wellbeing API answers with (shared by the server and the screens). */
 
@@ -15,6 +15,8 @@ export type WbActivity = {
   kind: "daily" | "sport";
   dimension: DimensionId;
   date: string;
+  /** "HH:MM" (WIB) when known (17 Nov 2026). */
+  time: string | null;
   source: WbSource;
   title: string;
   steps: number | null;
@@ -88,6 +90,10 @@ export type WbCatalogItem = {
 };
 export type WbCatalog = { migrated: boolean; items: WbCatalogItem[] };
 
-export type WbSettingsView = { migrated: boolean; backdateDays: number; maxKcal: number; maxSteps: number; programStart: string; updatedBy: string | null; updatedAt: string | null };
+export type WbSettingsView = { migrated: boolean; backdateDays: number; maxKcal: number; maxSteps: number; programStart: string; updatedBy: string | null; updatedAt: string | null;
+  /** Kontrol aplikasi karyawan (17 Nov 2026); appReady false before migration 202611170002 (the defaults show, saving waits). */
+  app: AppControls; appReady: boolean };
+/** POST /api/admin/wellbeing/activities/check: the activities whose "diperiksa" changed (the others were already so). */
+export type WbCheckResult = { changed: string[] };
 
 export type WbBatchResult = { batchId: string; count: number; points: number };

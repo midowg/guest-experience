@@ -69,6 +69,16 @@ jam, dan form terbuka sudah terisi (jenis olahraga atau Langkah harian, tanggal,
 Kolom yang terisi dari foto ditandai sampai diubah; karyawan memeriksa lalu menyimpan. Foto yang sama
 langsung jadi bukti. Foto yang ditambahkan di tengah form juga dibaca, tapi hanya mengisi yang masih kosong.
 
+Setelah foto terbaca muncul **satu layar Periksa hasil foto** (17 Nov 2026): foto di atas, di bawahnya semua
+hasil bacaan yang bisa langsung dikoreksi (Kegiatan dalam satu pilihan untuk olahraga dan kegiatan harian,
+Tanggal, **Jam**, Kalori dan Durasi atau Jumlah langkah, Catatan/nama acara dari foto mis. "Morning Run"), lalu
+Simpan. Tanpa pindah-pindah langkah.
+
+**Jam kegiatan** (opsional) ada di semua form Catat dan terisi dari foto bila layarnya menulis jam
+("at 6:05 AM", "pukul 06.05", "16/11/2026 07.10"); jam ponsel di pojok layar tidak dihitung. Jam disimpan di
+kolom `wb_activities.happened_time` (migrasi `202611170002_wellbeing_time_app.sql`). Sebelum migrasi itu dijalankan,
+aplikasi tetap jalan dan menyimpan tanpa jam.
+
 - **Mesin:** Tesseract (`tesseract.js` 7.0.0) berjalan di HP karyawan. Foto **tidak dikirim** ke layanan lain
   untuk dibaca, gratis. Mesin dan model bahasa Inggris (±7 MB, dari CDN jsDelivr pada versi yang terkunci)
   diunduh sekali saat pertama dipakai, lalu tersimpan di browser.
@@ -84,6 +94,24 @@ langsung jadi bukti. Foto yang ditambahkan di tengah form juga dibaca, tapi hany
   pilihan Otomatis/Terang/Gelap, Keluar). Riwayat tidak lagi diulang di Profil.
 - Riwayat: satu-satunya tempat riwayat, dengan chip Semua, Harian, Olahraga, Strava, dan **Dari admin**
   (poin acara kantor, koreksi, dan saldo dari aplikasi lama).
+
+## Admin: Laporan, konfirmasi massal, kontrol aplikasi (17 Nov 2026)
+
+- **Periksa:** centang kartu (atau tombol X, atau Pilih semua), lalu **Konfirmasi** menandai semua yang
+  dipilih sebagai sudah diperiksa sekaligus, dengan Urungkan. Poin dan keputusan tidak berubah. Yang dipilih juga
+  bisa langsung diunduh sebagai Excel. Kartu dalam satu baris sama tinggi dan tombolnya sama lebar.
+- **Laporan** (menu baru): tiga laporan Excel (.xlsx) dengan pilihan periode (bulan ini, bulan lalu, rentang
+  tanggal, semua) dan saringan: Rekap poin per karyawan, Daftar aktivitas, Poin dari admin. Angka berupa angka
+  sungguhan di Excel (bisa dijumlah); lembar Keterangan mencatat periode, saringan, waktu, dan siapa yang
+  mengunduh. Ada ringkasan bulan ini dan poin per dimensi.
+- **Pengaturan → Aplikasi karyawan** (dikurasi: hanya yang memang perlu dikendalikan admin): pengumuman di
+  Beranda (bisa ditutup karyawan, muncul lagi kalau diubah, bisa diberi tanggal akhir), teks hadiah bulan ini
+  (di kartu balapan dan Peringkat), baca data dari foto aktif/mati, dan jeda pencatatan dengan pesan.
+  Tidak dibuat: menyembunyikan peringkat, mengubah warna, batas foto (dibatasi database 5), Strava (belum ada).
+  Disimpan di `wb_settings.app` (migrasi `202611170002_wellbeing_time_app.sql`); sebelum migrasi aplikasi
+  memakai bawaan.
+- Pratinjau tanpa login: `/dev-preview/wellbeing-admin` (data contoh di browser; Unduh Excel hanya di admin
+  sungguhan).
 
 ## Strava
 

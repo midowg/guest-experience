@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, ShieldCheck, Zap } from "lucide-react";
+import { Megaphone, PauseCircle, Plus, ScanText, ShieldCheck, Smartphone, Trophy, Zap } from "lucide-react";
 import { Card, ConsoleButton, ConsoleButtonLink, PageHeader, Pill } from "@/components/console";
 import { errorMessage } from "@/components/admin/shared/api";
 import { Panel, SkeletonRows } from "@/components/app-shell/Panel";
 import { revalidate, setResource, useResource } from "@/components/app-shell/resource";
 import { useToast } from "@/components/app-shell/Toast";
 import { superAdminPath, wellbeingAdminApi } from "@/lib/routes";
-import { DIMENSIONS, dimensionLabels, type CatalogItemInput, type DimensionId, type Limit, type PointsMode } from "@/lib/wellbeing/rules";
+import { DIMENSIONS, MIGRATION_WELLBEING_APP, dimensionLabels, wibToday, type AppControls, type CatalogItemInput, type DimensionId, type Limit, type PointsMode } from "@/lib/wellbeing/rules";
 import type { WbCatalog, WbCatalogItem, WbSettingsView } from "@/lib/wellbeing/types";
 import { points, send, wb } from "./api";
 import { DimensionIcon, LoadError, Refreshing, WaitingMigration } from "./parts";
 import css from "./wellbeing-admin.module.css";
 
-/** Pengaturan (16 Nov 2026): the rules, the activity catalogue, Strava, and who may open this admin. */
+/** Pengaturan (16 Nov 2026; Aplikasi karyawan 17 Nov 2026): what the employee app shows, the rules, the activity catalogue, Strava, and who may open this admin. */
 export function SettingsView() {
   const catalog = useResource(wb.catalog.key, wb.catalog.fetch);
   const [editing, setEditing] = useState<WbCatalogItem | "new" | null>(null);
@@ -23,10 +23,11 @@ export function SettingsView() {
     { key: "sport", label: "Olahraga", dimension: "physical", items: (catalog.data?.items ?? []).filter(item => item.kind === "sport") },
   ];
   return <>
-    <PageHeader title="Pengaturan" subtitle="Aturan pencatatan dan daftar kegiatan yang bisa dicatat karyawan." />
+    <PageHeader title="Pengaturan" subtitle="Apa yang tampil di aplikasi karyawan, aturan pencatatan, dan daftar kegiatan yang bisa dicatat." />
     <Refreshing on={catalog.refreshing} />
     {catalog.data && !catalog.data.migrated && <WaitingMigration />}
     <div className={css.stack}>
+      <AppCard />
       <RulesCard />
       <Card title="Kegiatan yang bisa dicatat">
         <div className={css.rowEnd}><ConsoleButton variant="primary" icon={<Plus size={18} aria-hidden="true" />} onClick={() => setEditing("new")}>Tambah kegiatan</ConsoleButton></div>
@@ -60,13 +61,84 @@ export function SettingsView() {
   </>;
 }
 
+/**
+ * Aplikasi karyawan: what an admin may steer in the employee app, and nothing more (curated 17 Nov
+ * 2026): an announcement on Beranda, this month's prize (with the race), reading proof photos on the
+ * phone, and pausing Catat with a message. Changes show on the app's next refresh.
+ */
+function AppCard() {
+  const settings = useResource(wb.settings.key, wb.settings.fetch);
+  const data = settings.data;
+  return <Card title="Aplikasi karyawan">
+    {settings.error && !data ? <LoadError message={settings.error} onRetry={() => void settings.reload()} />
+      : !data ? <SkeletonRows rows={4} />
+      : <AppForm key={`${data.appReady}-${JSON.stringify(data.app)}`} data={data} />}
+  </Card>;
+}
+
+function AppForm({ data }: { data: WbSettingsView }) {
+  const toast = useToast();
+  const [form, setForm] = useState<AppControls>(data.app);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState("");
+  const changed = JSON.stringify(form) !== JSON.stringify(data.app);
+  const ready = data.migrated && data.appReady;
+  const today = wibToday();
+  async function save() {
+    setProblem("");
+    if (form.announcement.on && !form.announcement.title.trim() && !form.announcement.message.trim()) return setProblem("Isi judul atau isi pengumuman, atau matikan pengumuman.");
+    setBusy(true);
+    try {
+      const { data: saved, message } = await send<WbSettingsView>(wellbeingAdminApi.appControls, "PUT", form);
+      setResource<WbSettingsView>(wb.settings.key, () => saved);
+      toast({ message, tone: "ok" });
+    } catch (error) { setProblem(errorMessage(error)); }
+    finally { setBusy(false); }
+  }
+  const announce = <K extends keyof AppControls["announcement"]>(key: K, value: AppControls["announcement"][K]) => setForm(current => ({ ...current, announcement: { ...current.announcement, [key]: value } }));
+  return <form className={css.form} onSubmit={event => { event.preventDefault(); void save(); }}>
+    {!ready && <div className={css.notice} data-tone="warn" role="status"><Smartphone size={20} aria-hidden="true" />
+      <div><strong>Menunggu migrasi.</strong> Aplikasi karyawan memakai pengaturan bawaan (tanpa pengumuman, baca foto aktif, Catat terbuka) sampai <code>{MIGRATION_WELLBEING_APP}</code> dijalankan pemilik.</div></div>}
+    <fieldset className={css.controlGroup} disabled={!ready}>
+      <legend><Megaphone size={18} aria-hidden="true" />Pengumuman di Beranda</legend>
+      <label className={css.switchRow}><input type="checkbox" checked={form.announcement.on} onChange={event => announce("on", event.target.checked)} />
+        <span><strong>Tampilkan pengumuman</strong><small>Kartu di atas Beranda. Karyawan bisa menutupnya; pengumuman yang diubah muncul lagi.</small></span></label>
+      <div className={css.fieldRow}>
+        <label className={css.field}><span>Judul</span><input className={css.input} value={form.announcement.title} maxLength={80} placeholder="mis. Balapan November ditutup 30 Nov" onChange={event => announce("title", event.target.value)} /></label>
+        <label className={css.field}><span>Tampil sampai (opsional)</span><input className={css.input} type="date" value={form.announcement.until ?? ""} min={today} onChange={event => announce("until", event.target.value || null)} /></label>
+      </div>
+      <label className={css.field}><span>Isi</span><textarea className={css.input} rows={3} value={form.announcement.message} maxLength={300} placeholder="Ajakan, aturan baru, atau jadwal acara kantor" onChange={event => announce("message", event.target.value)} /></label>
+    </fieldset>
+    <fieldset className={css.controlGroup} disabled={!ready}>
+      <legend><Trophy size={18} aria-hidden="true" />Hadiah bulan ini</legend>
+      <label className={css.field}><span>Teks hadiah</span>
+        <input className={css.input} value={form.prize} maxLength={160} placeholder="mis. Juara 1 voucher Decathlon Rp250 rb" onChange={event => setForm(current => ({ ...current, prize: event.target.value }))} />
+        <small className={css.help}>Tampil di kartu balapan Beranda dan di Peringkat. Kosongkan untuk menyembunyikan.</small></label>
+    </fieldset>
+    <fieldset className={css.controlGroup} disabled={!ready}>
+      <legend><ScanText size={18} aria-hidden="true" />Catat</legend>
+      <label className={css.switchRow}><input type="checkbox" checked={form.photoReading} onChange={event => setForm(current => ({ ...current, photoReading: event.target.checked }))} />
+        <span><strong>Baca data dari foto bukti</strong><small>Pilihan “Dari foto bukti” dan isian otomatis. Matikan bila bermasalah di HP tertentu; karyawan tetap bisa mengisi sendiri.</small></span></label>
+      <label className={css.switchRow}><input type="checkbox" checked={form.logging.paused} onChange={event => setForm(current => ({ ...current, logging: { ...current.logging, paused: event.target.checked } }))} />
+        <span><strong><PauseCircle size={16} aria-hidden="true" className={css.inlineIcon} />Jeda pencatatan</strong><small>Karyawan tidak bisa mencatat sementara (mis. saat pindah data). Poin dan riwayat tetap terlihat.</small></span></label>
+      {form.logging.paused && <label className={css.field}><span>Pesan untuk karyawan</span>
+        <input className={css.input} value={form.logging.message} maxLength={200} placeholder="mis. Pencatatan dibuka lagi Senin pukul 08.00." onChange={event => setForm(current => ({ ...current, logging: { ...current.logging, message: event.target.value } }))} /></label>}
+    </fieldset>
+    {problem && <p className={css.problem} role="alert">{problem}</p>}
+    <div className={css.rowEnd}>
+      {data.updatedBy && <small className={css.help}>Terakhir diubah oleh {data.updatedBy}</small>}
+      <ConsoleButton type="submit" variant="primary" disabled={!ready || !changed || busy}>{busy ? "Menyimpan…" : "Simpan pengaturan aplikasi"}</ConsoleButton>
+    </div>
+  </form>;
+}
+
 function RulesCard() {
   const settings = useResource(wb.settings.key, wb.settings.fetch);
   const data = settings.data;
   return <Card title="Aturan pencatatan">
     {settings.error && !data ? <LoadError message={settings.error} onRetry={() => void settings.reload()} />
       : !data ? <SkeletonRows rows={2} />
-      : <RulesForm key={`${data.updatedAt}-${data.backdateDays}-${data.maxKcal}-${data.maxSteps}`} data={data} />}
+      : <RulesForm key={`${data.backdateDays}-${data.maxKcal}-${data.maxSteps}`} data={data} />}
   </Card>;
 }
 

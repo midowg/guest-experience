@@ -1,12 +1,14 @@
 import { deflateRawSync } from "node:zlib";
 
 /*
- * A small .xlsx writer for exports: text cells only, a bold frozen header row, column widths. An
- * .xlsx file is a zip of XML parts, so this needs nothing beyond Node. Every cell is an inline
+ * A small .xlsx writer for exports: text cells, a bold frozen header row, column widths. An
+ * .xlsx file is a zip of XML parts, so this needs nothing beyond Node. Every text cell is an inline
  * string, never a formula, so an answer that starts with "=" stays text when the file is opened.
+ * A number (17 Nov 2026, for reports) is a real number cell, so Excel can sum it; null is empty.
  */
 
-export type SheetOut = { name: string; rows: string[][]; widths?: number[] };
+export type Cell = string | number | null;
+export type SheetOut = { name: string; rows: Cell[][]; widths?: number[] };
 
 const escapeXml = (text: string) => text
   // XML 1.0 has no place for most control characters; Excel refuses a file that holds one.
@@ -37,6 +39,7 @@ function sheetXml(sheet: SheetOut): string {
   const width = Math.max(1, ...sheet.rows.map(row => row.length));
   const widths = Array.from({ length: width }, (_, index) => sheet.widths?.[index] ?? 24);
   const rows = sheet.rows.map((row, r) => `<row r="${r + 1}">${row.map((value, c) => {
+    if (typeof value === "number") return Number.isFinite(value) ? `<c r="${column(c)}${r + 1}"${r === 0 ? ' s="1"' : ' s="2"'}><v>${value}</v></c>` : "";
     if (!value) return "";
     const text = escapeXml(value.length > MAX_CELL ? `${value.slice(0, MAX_CELL - 1)}…` : value);
     return `<c r="${column(c)}${r + 1}" t="inlineStr"${r === 0 ? ' s="1"' : ' s="2"'}><is><t xml:space="preserve">${text}</t></is></c>`;

@@ -27,12 +27,12 @@ describe("toNumber", () => {
 describe("readProof", () => {
   it("reads a daily steps screen and leaves out the goal (Samsung Health)", () => {
     const text = "09:41\nHari ini\nLangkah\n9.128 / 10.000 langkah\n6,12 km  312 kkal\nAktivitas lainnya";
-    expect(readProof(text, context)).toEqual({ kind: "daily", code: "physical.steps", date: "2026-11-18", steps: 9128, kcal: 312, minutes: null });
+    expect(readProof(text, context)).toEqual({ kind: "daily", code: "physical.steps", date: "2026-11-18", time: null, steps: 9128, kcal: 312, minutes: null, title: null });
   });
 
   it("reads a run with glued units and a pace that is not a duration (Strava, English)", () => {
     const text = "Morning Run\nNov 17, 2026 at 6:05 AM\nDistance\n5.20km\nPace\n5:23 /km\nMoving Time\n28:01\nCalories\n412Cal\nElevation 18m";
-    expect(readProof(text, context)).toEqual({ kind: "sport", code: "sport.running", date: "2026-11-17", steps: null, kcal: 412, minutes: 28 });
+    expect(readProof(text, context)).toEqual({ kind: "sport", code: "sport.running", date: "2026-11-17", time: "06:05", steps: null, kcal: 412, minutes: 28, title: "Morning Run" });
   });
 
   it("prefers active calories over the total, and reads h:mm:ss (Apple Watch)", () => {
@@ -79,8 +79,18 @@ describe("readProof", () => {
       .toMatchObject({ kind: "sport", code: "sport.swimming", date: "2026-11-17", kcal: 455, minutes: 65 });
   });
 
+  it("reads the time of day only where the screen says so, and the activity's own name (17 Nov 2026)", () => {
+    expect(readProof("Morning Run\nNov 17, 2026 at 6:05 AM\nCalories\n412 Cal", context)).toMatchObject({ time: "06:05", title: "Morning Run" });
+    expect(readProof("Renang kolam\n16/11/2026 07.10\nKalori 455 kkal", context)).toMatchObject({ time: "07:10", title: "Renang kolam" });
+    expect(readProof("Badminton sore\npukul 16.30 WIB\n520 kkal", context)).toMatchObject({ time: "16:30", title: "Badminton sore" });
+    expect(readProof("Yoga\n7:15 pm\n180 kcal", context)).toMatchObject({ time: "19:15", title: null });
+    // The phone's clock, a duration and a pace are not the time of day.
+    expect(readProof("09:41\nRunning\nTime 28:01\nPace 5:23 /km\n300 kcal", context).time).toBeNull();
+    expect(readProof("Running\nDurasi 1:02:45\n300 kcal", context).time).toBeNull();
+  });
+
   it("gives nothing for a photo without data", () => {
-    expect(readProof("", context)).toEqual({ kind: null, code: null, date: null, steps: null, kcal: null, minutes: null });
+    expect(readProof("", context)).toEqual({ kind: null, code: null, date: null, time: null, steps: null, kcal: null, minutes: null, title: null });
     expect(readProof("Foto bersama tim di taman", context)).toMatchObject({ kind: null });
   });
 });

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, ChevronRight, Crown, Flag, Flame, History, Info, NotebookPen, Plus, Target, Timer } from "lucide-react";
+import { ArrowUp, ChevronRight, Crown, Flag, Flame, Gift, History, Info, Megaphone, NotebookPen, Plus, Target, Timer, X } from "lucide-react";
 import { useResource, type Resource } from "@/components/app-shell/resource";
-import type { WbBoard, WbBoardRow, WbHome } from "@/lib/wellbeing/app-types";
+import type { WbAppControls, WbBoard, WbBoardRow, WbHome } from "@/lib/wellbeing/app-types";
 import { addDays, DIMENSIONS, dimensionLabels } from "@/lib/wellbeing/rules";
 import { keys, reducedMotion, useWellbeing } from "./context";
 import { currentWibHour, firstName, formatDate, greeting, num, weekday } from "./format";
@@ -36,6 +36,7 @@ export function Home({ home }: { home: Resource<WbHome> }) {
       <p className={css.greetTitle}>{greeting(hour)}, {nickname}</p>
     </div>
     {!data.migrated && <div className={cx(css.note, css.noteInfo)} style={{ marginTop: 0, marginBottom: 16 }}><Info size={20} aria-hidden="true" /><span><b>Wellbeing sedang disiapkan.</b> Poin dan peringkat muncul di sini setelah siap.</span></div>}
+    {data.controls?.announcement && <Announcement announcement={data.controls.announcement} />}
 
     <RaceCard data={data} board={board.data?.migrated ? board.data : null} boardLoading={!board.data && !board.error} />
     <Around board={board.data?.migrated ? board.data : null} />
@@ -95,6 +96,7 @@ function RaceCard({ data, board, boardLoading }: { data: WbHome; board: WbBoard 
       </div>
       <div className={css.racePts}><b><CountUp value={totals.monthPoints} /></b><span>poin bulan ini</span></div>
     </div>
+    {data.controls?.prize && <p className={css.racePrize}><Gift size={16} aria-hidden="true" /><span>Hadiah: <b>{data.controls.prize}</b></span></p>}
 
     {totals.rank == null
       ? <div className={css.chase}>
@@ -128,6 +130,19 @@ function RaceCard({ data, board, boardLoading }: { data: WbHome; board: WbBoard 
       <div className={css.raceTotal}><span>Total poin</span><b>{num(totals.points)}</b></div>
       <button type="button" className={css.raceLink} onClick={() => go("peringkat")}>Lihat peringkat<ChevronRight size={16} aria-hidden="true" /></button>
     </div>
+  </section>;
+}
+
+/** The admin's announcement (Admin Wellbeing → Aplikasi karyawan); closed on this device until it changes. */
+function Announcement({ announcement }: { announcement: NonNullable<WbAppControls["announcement"]> }) {
+  const key = `wellbeing-announcement:${[...`${announcement.title}\n${announcement.message}`].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) | 0, 7)}`;
+  const [closed, setClosed] = useState(() => { try { return window.localStorage.getItem(key) === "1"; } catch { return false; } });
+  if (closed) return null;
+  return <section className={css.announce} aria-label="Pengumuman">
+    <span className={css.announceIcon} aria-hidden="true"><Megaphone size={20} /></span>
+    <div className={css.rowMain}>{announcement.title && <b>{announcement.title}</b>}{announcement.message && <p>{announcement.message}</p>}</div>
+    <button type="button" className={css.announceClose} aria-label="Tutup pengumuman" onClick={() => { setClosed(true); try { window.localStorage.setItem(key, "1"); } catch { /* storage unavailable: closed for this visit */ } }}>
+      <X size={20} aria-hidden="true" /></button>
   </section>;
 }
 

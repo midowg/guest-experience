@@ -15,9 +15,13 @@ export type ProofReading = {
   kind: "sport" | "daily" | null;
   code: string | null;
   date: string | null;
+  /** "HH:MM" when the screen gives the time of day (17 Nov 2026). */
+  time: string | null;
   steps: number | null;
   kcal: number | null;
   minutes: number | null;
+  /** The activity's own name on the screen ("Morning Run"), for the note. */
+  title: string | null;
 };
 
 /* ---------- numbers ---------- */
@@ -155,9 +159,9 @@ const GENERIC = new Set(["lainnya", "others", "other", "olahraga", "sport", "spo
 const words = (text: string) => ` ${text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
 const has = (haystack: string, word: string) => haystack.includes(` ${word} `);
 
-function sportIn(text: string, sports: ProofContext["sports"]): string | null {
+function sportIn(text: string, sports: ProofContext["sports"]): { code: string; term: string } | null {
   const plain = words(text);
-  let best: { code: string; at: number } | null = null;
+  let best: { code: string; at: number; term: string } | null = null;
   for (const sport of sports) {
     const own = words(`${sport.code.replace(/^sport\./, "").replace(/[_-]/g, " ")} ${sport.name}`);
     // The sport's own name first, then the words of its kind.
@@ -169,26 +173,69 @@ function sportIn(text: string, sports: ProofContext["sports"]): string | null {
       if (term.length < 3) continue;
       const found = plain.indexOf(` ${words(term).trim()} `);
       const at = found + penalty;
-      if (found >= 0 && (!best || at < best.at)) best = { code: sport.code, at };
+      if (found >= 0 && (!best || at < best.at)) best = { code: sport.code, at, term };
     }
   }
-  return best?.code ?? null;
+  return best ? { code: best.code, term: best.term } : null;
 }
 
 const STOPWORDS = new Set(["mengikuti", "kegiatan", "harian", "kantor", "dengan", "untuk", "bersama", "dalam", "online", "offline", "lainnya"]);
 /** A daily type whose name is on the screen (most of its own words), e.g. a podcast app for "Mendengarkan Podcast". */
-function dailyIn(text: string, daily: ProofContext["daily"]): string | null {
+function dailyIn(text: string, daily: ProofContext["daily"]): { code: string; term: string } | null {
   const plain = words(text);
-  let best: { code: string; score: number } | null = null;
+  let best: { code: string; score: number; term: string } | null = null;
   for (const item of daily) {
     if (item.mode === "steps") continue;
     const own = words(item.name).trim().split(" ").filter(word => word.length >= 4 && !STOPWORDS.has(word));
     if (!own.length) continue;
-    const hit = own.filter(word => has(plain, word)).length;
-    const score = hit / own.length;
-    if (hit && score >= 0.5 && (!best || score > best.score)) best = { code: item.code, score };
+    const hits = own.filter(word => has(plain, word));
+    const score = hits.length / own.length;
+    if (hits.length && score >= 0.5 && (!best || score > best.score)) best = { code: item.code, score, term: hits[0] };
   }
-  return best?.code ?? null;
+  return best ? { code: best.code, term: best.term } : null;
+}
+
+/* ---------- the time of day, and the activity's own name ---------- */
+
+const clock = (hour: number, minute: number, half?: string) => {
+  let h = hour;
+  if (half === "pm" && h < 12) h += 12;
+  if (half === "am" && h === 12) h = 0;
+  return h <= 23 && minute <= 59 ? `${String(h).padStart(2, "0")}:${String(minute).padStart(2, "0")}` : null;
+};
+
+/**
+ * When it happened, only where the screen says so: "at 6:05 am", "pukul 06.05", "07:10 wib", "6:05 pm",
+ * or a time right after a date ("16/11/2026 07.10", "17 nov 2026, 06:05"). A bare "09:41" (the phone's
+ * clock at the top) or a duration is not a time of day.
+ */
+function timeIn(text: string): string | null {
+  const after = "(?![:.]\\d)(?!\\s*(?:\\/|per\\b|km|mi\\b))";
+  const patterns = [
+    new RegExp(`\\b(?:at|pukul|pkl\\.?|jam)\\s*(\\d{1,2})[:.](\\d{2})${after}(?:\\s*(am|pm))?`),
+    new RegExp(`\\b(\\d{1,2})[:.](\\d{2})\\s*(am|pm)\\b`),
+    // An empty third group, so every pattern ends with hour, minute, am/pm.
+    new RegExp(`\\b(\\d{1,2})[:.](\\d{2})${after}\\s*wib\\b()`),
+    new RegExp(`(?:\\b\\d{1,2}[/.-]\\d{1,2}[/.-](?:\\d{4}|\\d{2})|\\b\\d{1,2}\\s+${MONTH_WORD},?(?:\\s+\\d{4})?|\\b${MONTH_WORD}\\s+\\d{1,2},?(?:\\s+\\d{4})?)[,\\s]+(?:at\\s+|pukul\\s+)?(\\d{1,2})[:.](\\d{2})${after}(?:\\s*(am|pm))?`),
+  ];
+  for (const pattern of patterns) {
+    const match = pattern.exec(text);
+    if (!match) continue;
+    // The last pattern has the date's own groups first: the time is in the last three.
+    const [hour, minute, half] = match.slice(-3);
+    const found = clock(Number(hour), Number(minute), half);
+    if (found) return found;
+  }
+  return null;
+}
+
+/** The line that named the activity ("Morning Run", "Renang kolam"), for the note; not when it only repeats the type. */
+function titleIn(raw: string, term: string, typeName: string | undefined): string | null {
+  const line = raw.split(/\r?\n/).map(item => item.replace(/\s+/g, " ").trim()).find(item => has(words(item), words(term).trim()));
+  if (!line) return null;
+  const clean = line.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N})]+$/gu, "").slice(0, 80);
+  if (clean.length < 3 || words(clean) === words(typeName ?? "")) return null;
+  return clean;
 }
 
 /* ---------- all together ---------- */
@@ -207,16 +254,18 @@ export function readProof(raw: string, context: ProofContext): ProofReading {
   const kcal = kcalRaw == null ? null : Math.round(kcalRaw);
   const minutes = minutesIn(text);
   const date = dateIn(text, context);
+  const time = timeIn(text);
   const sport = sportIn(text, context.sports);
+  const sportName = sport ? context.sports.find(item => item.code === sport.code)?.name : undefined;
   const stepsType = context.daily.find(item => item.mode === "steps")?.code ?? null;
-  const walking = !!sport && /walk|jalan/.test(`${sport} ${context.sports.find(item => item.code === sport)?.name ?? ""}`.toLowerCase());
+  const walking = !!sport && /walk|jalan/.test(`${sport.code} ${sportName ?? ""}`.toLowerCase());
 
-  const base = { date, steps, kcal, minutes };
+  const base = { date, time, steps, kcal, minutes, title: null };
   // A walk with steps and no kcal counts best as daily steps (points from the steps).
-  if (sport && !(walking && steps && stepsType && kcal == null)) return { ...base, kind: "sport", code: sport };
+  if (sport && !(walking && steps && stepsType && kcal == null)) return { ...base, kind: "sport", code: sport.code, title: titleIn(raw, sport.term, sportName) };
   if (steps != null && stepsType) return { ...base, kind: "daily", code: stepsType };
   if (kcal != null) return { ...base, kind: "sport", code: null };
   const daily = dailyIn(text, context.daily);
-  if (daily) return { ...base, kind: "daily", code: daily };
+  if (daily) return { ...base, kind: "daily", code: daily.code, title: titleIn(raw, daily.term, context.daily.find(item => item.code === daily.code)?.name) };
   return { ...base, kind: null, code: null };
 }

@@ -334,6 +334,18 @@ button.row:disabled { opacity: .55; cursor: default; }
 .raceTotal > b { font-family: var(--font-num); font-weight: 700; font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .raceLink { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 0 0 8px; color: var(--volt); font-size: 13px; font-weight: 700; }
 
+/* This month's prize on the race card (Admin Wellbeing → Aplikasi karyawan). */
+.racePrize { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 12px; border-radius: 12px; background: var(--ink-2); color: var(--on-ink-2); font-size: 13px; }
+.racePrize svg { color: var(--gold-ink); flex: none; }
+.racePrize b { color: var(--on-ink); }
+/* The admin's announcement at the top of Beranda. */
+.announce { display: flex; gap: 12px; align-items: flex-start; padding: 12px 4px 12px 14px; margin-bottom: 16px; border-radius: 16px; background: var(--primary-c); color: var(--on-primary-c); }
+.announceIcon { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex: none; background: var(--primary); color: var(--on-primary); margin-top: 2px; }
+.announce .rowMain { gap: 2px; padding-top: 2px; }
+.announce b { color: var(--text); font-size: 15px; }
+.announce p { font-size: 14px; color: var(--text-2); line-height: 1.45; white-space: pre-line; }
+.announceClose { width: 44px; height: 44px; margin: -8px 0; border-radius: 999px; display: grid; place-items: center; flex: none; color: var(--text-2); }
+
 /* 7 hari terakhir: points a day (value on top), today marked, and the streak under it. */
 .week { display: flex; align-items: flex-end; gap: 6px; height: 128px; }
 .weekCol { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; height: 100%; }
@@ -362,31 +374,75 @@ button.row:disabled { opacity: .55; cursor: default; }
 /* ---------- peringkat ---------- */
 .raceInfo { display: flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 13px; color: var(--text-2); }
 .raceInfo b { color: var(--text); }
-.champion { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--gold-c); color: var(--on-gold-c); margin-top: 12px; }
+.champion { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--gold-c); color: var(--on-gold-c); margin-top: 28px; }
 .championMark { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none; background: var(--gold); color: #0E1525; }
 .champion .rowMain > span:first-child { font-size: 12px; font-weight: 700; }
 .champion .rowTitle { color: var(--text); }
 .champion .rowMeta { color: var(--on-gold-c); }
-.stage { background: var(--ink); color: var(--on-ink); border: 1px solid var(--ink-edge); border-radius: 24px; padding: 36px 12px 0; margin: 16px 0; overflow: hidden; }
-.podium { display: grid; grid-template-columns: 1fr 1.12fr 1fr; align-items: end; gap: 8px; }
-.pod { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-width: 0; grid-row: 1; }
+/* The arena: the race's name, days left and prize, and the top three on a podium under a gold light. */
+.arena { position: relative; overflow: hidden; isolation: isolate; background: var(--ink); color: var(--on-ink); border: 1px solid var(--ink-edge); border-radius: 24px; padding: 14px 12px 0; margin-top: 16px; }
+.arena::before { content: ""; position: absolute; z-index: -1; inset: 0;
+  background: radial-gradient(46% 34% at 50% 34%, rgba(244, 197, 66, .26), transparent 72%), repeating-conic-gradient(from 0deg at 50% 34%, rgba(255, 255, 255, .05) 0 4deg, transparent 4deg 14deg);
+  -webkit-mask-image: radial-gradient(64% 52% at 50% 34%, #000 25%, transparent 78%); mask-image: radial-gradient(64% 52% at 50% 34%, #000 25%, transparent 78%); }
+.arena .raceTop { padding: 0 6px; }
+.arena .racePrize { margin: 10px 6px 0; }
+.podium { list-style: none; margin: 0; padding: 44px 0 0; display: grid; grid-template-columns: 1fr 1.2fr 1fr; align-items: end; gap: 8px; }
+.pod { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; min-width: 0; grid-row: 1; }
 .pod[data-slot="0"] { grid-column: 2; }
 .pod[data-slot="1"] { grid-column: 1; }
 .pod[data-slot="2"] { grid-column: 3; }
-.podAv { position: relative; border-radius: 999px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--medal, var(--on-ink-3)); margin-bottom: 6px; }
-.pod[data-medal="gold"] { --medal: var(--gold-ink); }
-.pod[data-medal="silver"] { --medal: var(--silver-ink); }
-.pod[data-medal="bronze"] { --medal: var(--bronze-ink); }
-.podCrown { position: absolute; left: 50%; top: -24px; transform: translateX(-50%); color: var(--gold-ink); }
-.pod[data-medal="gold"] .avatar { width: 60px; height: 60px; font-size: 18px; }
-.podName { font-size: 13px; font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--on-ink); }
+.pod[data-medal="gold"] { --medal: var(--gold-ink); --medal-glow: rgba(244, 197, 66, .42); }
+.pod[data-medal="silver"] { --medal: var(--silver-ink); --medal-glow: rgba(205, 213, 224, .22); }
+.pod[data-medal="bronze"] { --medal: var(--bronze-ink); --medal-glow: rgba(227, 154, 98, .28); }
+.podAv { position: relative; border-radius: 999px; margin-bottom: 10px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--medal), 0 0 22px 4px var(--medal-glow); }
+.pod[data-slot="0"] .podAv { box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--medal), 0 0 44px 12px var(--medal-glow); }
+.podCrown { position: absolute; left: 50%; top: -32px; transform: translateX(-50%); color: var(--gold-ink); filter: drop-shadow(0 2px 8px rgba(244, 197, 66, .55)); animation: crown 3.2s ease-in-out infinite; }
+@keyframes crown { 50% { transform: translate(-50%, -3px); } }
+.podName { font-size: 13px; font-weight: 700; line-height: 1.25; max-width: 100%; color: var(--on-ink); overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pod[data-slot="0"] .podName { font-size: 15px; }
 .pod[data-me="true"] .podName { color: var(--volt); }
-.podPts { font-family: var(--font-num); font-weight: 700; font-size: 20px; line-height: 1.1; color: var(--on-ink); font-variant-numeric: tabular-nums; }
-.podBase { width: 100%; margin-top: 6px; border-radius: 12px 12px 0 0; background: var(--ink-2); border-top: 3px solid var(--medal); display: grid; place-items: center;
-  font-family: var(--font-num); font-weight: 700; font-size: 30px; color: var(--medal); transform-origin: bottom; animation: rise .6s var(--ease-out) both; }
-.pod[data-medal="gold"] .podBase { height: 92px; animation-delay: .12s; }
-.pod[data-medal="silver"] .podBase { height: 70px; }
-.pod[data-medal="bronze"] .podBase { height: 54px; animation-delay: .06s; }
+.podDept { font-size: 11px; color: var(--on-ink-2); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.podPts { font-family: var(--font-num); font-weight: 700; font-size: 22px; line-height: 1.1; color: var(--on-ink); font-variant-numeric: tabular-nums; margin-top: 4px; white-space: nowrap; }
+.pod[data-slot="0"] .podPts { font-size: 30px; color: var(--gold-ink); }
+.podPts small { font-family: var(--font); font-size: 11px; font-weight: 600; color: var(--on-ink-2); }
+.podLead { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; background: var(--volt-soft); color: var(--volt); font-size: 12px; font-weight: 700; margin-top: 4px; white-space: nowrap; }
+.podBase { width: 100%; margin-top: 10px; border-radius: 14px 14px 0 0; display: grid; place-items: center; font-family: var(--font-num); font-weight: 700; font-size: 40px; line-height: 1; color: var(--medal);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--medal) 24%, var(--ink-2)), var(--ink-2) 80%); box-shadow: inset 0 3px 0 var(--medal); transform-origin: bottom; animation: rise .6s var(--ease-out) both; }
+.pod[data-medal="gold"] .podBase { height: 108px; font-size: 56px; animation-delay: .12s; }
+.pod[data-medal="silver"] .podBase { height: 80px; }
+.pod[data-medal="bronze"] .podBase { height: 62px; animation-delay: .06s; }
+
+/* Posisimu: my place, the one to catch, how far the podium is. */
+.standing { margin-top: 12px; padding: 14px 16px 16px; }
+.standTop { display: flex; align-items: center; gap: 14px; }
+.standRank { min-width: 64px; height: 64px; padding: 0 10px; border-radius: 18px; display: flex; align-items: center; justify-content: center; flex: none; background: var(--ink); color: var(--on-ink); border: 1px solid var(--ink-edge);
+  font-family: var(--font-num); font-weight: 700; font-size: 36px; line-height: 1; font-variant-numeric: tabular-nums; }
+.standRank > span[aria-hidden] { font-size: 22px; color: var(--volt); margin-right: 1px; }
+.standRank[data-medal] { color: #0E1525; border-color: transparent; }
+.standRank[data-medal] > span[aria-hidden] { color: rgba(14, 21, 37, .6); }
+.standRank[data-medal="gold"] { background: var(--gold-ink); box-shadow: 0 4px 16px rgba(244, 197, 66, .35); }
+.standRank[data-medal="silver"] { background: var(--silver-ink); }
+.standRank[data-medal="bronze"] { background: var(--bronze-ink); }
+.standRank[data-empty="true"] { background: var(--surface-2); color: var(--text-3); border-color: transparent; }
+.standLabel { font-size: 12px; font-weight: 700; color: var(--text-2); line-height: 1.3; }
+.standPts { font-family: var(--font-num); font-weight: 700; font-size: 28px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.standPts small { font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text-2); }
+.standEmpty { font-size: 17px; font-weight: 700; line-height: 1.3; }
+.standChase { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--outline); }
+.standing .chaseLine { color: var(--text-2); }
+.standing .chaseLine b { color: var(--text); }
+.standGap { font-family: var(--font-num); font-weight: 700; font-size: 22px; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.standGap small { font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--text-2); margin-left: 4px; }
+.standBar { height: 8px; border-radius: 999px; background: var(--surface-2); margin-top: 10px; overflow: hidden; }
+.standBar > i { display: block; height: 100%; border-radius: inherit; background: var(--primary); transform-origin: left; animation: grow .7s var(--ease-out) both; }
+.standLine { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; font-size: 13px; line-height: 1.45; color: var(--text-2); }
+.standLine svg { flex: none; margin-top: 1px; color: var(--text-2); }
+.standLine b { color: var(--text); }
+.standLine svg[data-tone="gold"] { color: var(--gold); }
+.standLine svg[data-tone="silver"] { color: var(--silver); }
+.standLine svg[data-tone="bronze"] { color: var(--bronze); }
+.standing .btn { margin-top: 14px; }
 .lbRow { display: flex; align-items: center; gap: 12px; padding: 10px 16px; min-height: 60px; position: relative; }
 .list > .lbRow + .lbRow::before { content: ""; position: absolute; top: 0; left: 56px; right: 0; border-top: 1px solid var(--outline); }
 .lbRank { width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; font-family: var(--font-num); font-weight: 700; font-size: 20px; color: var(--text-2); font-variant-numeric: tabular-nums; flex: none; }
@@ -400,9 +456,12 @@ button.row:disabled { opacity: .55; cursor: default; }
 .lbPts { font-family: var(--font-num); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; flex: none; }
 .lbRow[data-me="true"] { background: var(--primary-c); box-shadow: inset 3px 0 0 var(--primary); }
 .lbRow[data-me="true"] .lbRank:not([data-medal]) { color: var(--text); }
-.gapNote { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 0; color: var(--text-3); font-size: 12px; }
-.meSticky { position: sticky; bottom: 12px; margin-top: 16px; border-radius: 16px; background: linear-gradient(var(--primary-c), var(--primary-c)), var(--surface); border: 1px solid var(--outline); box-shadow: var(--shadow-float); z-index: 1; }
-.meSticky[data-shown="false"] { visibility: hidden; }
+.lbList { list-style: none; margin: 0; padding: 0; }
+/* The rows between the chasers and the ones around me are left out. */
+.lbGap { display: flex; justify-content: center; padding: 4px 0; color: var(--text-3); background: var(--surface-2); }
+.allBtn { margin-top: 12px; }
+/* My row under Lihat semua (a tap scrolls to my place). */
+.mineFoot { width: 100%; border-radius: 14px; text-align: left; }
 
 /* ---------- profil ---------- */
 .profileHead { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 8px 0 20px; }
@@ -457,8 +516,16 @@ button.row:disabled { opacity: .55; cursor: default; }
 .scanFrame img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .scanLine { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--volt); box-shadow: 0 0 12px 2px var(--volt-soft), 0 0 2px var(--volt); animation: scanMove 1.6s var(--ease) infinite alternate; }
 @keyframes scanMove { to { top: calc(100% - 3px); } }
+/* Periksa hasil foto: the photo read, and what it gave. */
+.reviewHead { display: flex; gap: 14px; align-items: flex-start; padding: 12px; border-radius: 16px; background: var(--primary-c); color: var(--on-primary-c); }
+.reviewHead .sub { display: inline-flex; align-items: center; gap: 6px; }
+.reviewHead .rowMetaWrap { color: var(--text); font-weight: 600; }
+.reviewPhoto { width: 72px; height: 96px; flex: none; border-radius: 12px; object-fit: cover; object-position: top; background: var(--surface-2); display: grid; place-items: center; color: var(--text-3); border: 1px solid var(--outline); }
+.input.select { padding-right: 40px; background-image: linear-gradient(45deg, transparent 50%, var(--text-2) 50%), linear-gradient(135deg, var(--text-2) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size: 6px 6px; background-repeat: no-repeat; }
+.input.select[data-auto="true"] { background-color: var(--primary-c); }
 /* A field filled from the photo, until it is edited. */
-.input[data-auto="true"] { border-color: var(--primary); background: var(--primary-c); }
+.input[data-auto="true"] { border-color: var(--primary); background-color: var(--primary-c); }
 .sport[data-auto="true"] { box-shadow: 0 0 0 2px var(--primary); }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin-top: 18px; min-width: 0; }
@@ -529,7 +596,7 @@ input[type="date"].input { display: block; }
 .rules li[data-ok="true"] { color: var(--on-success-c); }
 
 @media (prefers-reduced-motion: reduce) {
-  .screen[data-active="true"], .step, .step[data-dir], .doneMark, .sk::after, .ptr[data-spinning="true"] svg, .spin, .chaseBar > i, .weekBar, .podBase, .rankUp, .scanLine { animation: none; }
+  .screen[data-active="true"], .step, .step[data-dir], .doneMark, .sk::after, .ptr[data-spinning="true"] svg, .spin, .chaseBar > i, .weekBar, .podBase, .podCrown, .standBar > i, .rankUp, .scanLine { animation: none; }
   .tabInd, .meter > i, .progress > i, .phBar > i, .bar, .barTitle, .pressable { transition: none; }
   .pressable:active, .btn:active, .tab:active .tabInd { transform: none; }
 }

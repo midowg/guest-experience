@@ -232,15 +232,19 @@ describe("WellbeingApp", () => {
     expect(await within(dialog()).findByText(/^Masuk peringkat: #\d+ bulan ini$/, {}, { timeout: 3000 })).toBeTruthy();
   });
 
-  it("logs from a photo: the form opens filled from what was read, marked, to check and save (18 Nov 2026)", async () => {
-    ocr.text = "Morning Run\nHari ini\nMoving Time\n28:01\nCalories\n412Cal";
+  it("logs from a photo on one review screen: everything read is filled and marked, to correct and save (17 Nov 2026)", async () => {
+    ocr.text = "Morning Run\nHari ini at 6:05 AM\nMoving Time\n28:01\nCalories\n412Cal";
     app();
     await screen.findByText("Total poin");
     fireEvent.click(screen.getByRole("button", { name: "Catat" }));
     fireEvent.click(await within(dialog()).findByRole("button", { name: /^Dari foto bukti/ }));
     addPhoto(photo("strava.png"));
     expect(await within(dialog()).findByText(/Running · 412 kkal · 28 menit/, {}, { timeout: 3000 })).toBeTruthy();
-    expect(within(dialog()).getByRole("button", { name: "Running" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(dialog()).getByRole("heading", { name: "Periksa hasil foto" })).toBeTruthy();
+    expect((within(dialog()).getByLabelText("Kegiatan") as HTMLSelectElement).value).toBe("sport.running");
+    expect((within(dialog()).getByLabelText(/^Jam/) as HTMLInputElement).value).toBe("06:05");
+    expect((within(dialog()).getByLabelText(/^Durasi/) as HTMLInputElement).value).toBe("28");
+    expect((within(dialog()).getByLabelText(/^Catatan/) as HTMLTextAreaElement).value).toBe("Morning Run");
     const kcal = within(dialog()).getByLabelText("Kalori") as HTMLInputElement;
     expect(kcal.value).toBe("412");
     expect(kcal.dataset.auto).toBe("true");
@@ -261,7 +265,10 @@ describe("WellbeingApp", () => {
     fireEvent.click(await within(dialog()).findByRole("button", { name: /^Dari foto bukti/ }));
     addPhoto();
     expect((await within(dialog()).findByLabelText("Jumlah langkah", {}, { timeout: 3000 }) as HTMLInputElement).value).toBe("9128");
-    expect(within(dialog()).getByText("Langkah harian")).toBeTruthy();
+    expect((within(dialog()).getByLabelText("Kegiatan") as HTMLSelectElement).value).toBe("physical.steps");
+    // Another kind is one choice away, on the same screen.
+    fireEvent.change(within(dialog()).getByLabelText("Kegiatan"), { target: { value: "sport.walking" } });
+    expect(within(dialog()).getByLabelText("Kalori")).toBeTruthy();
 
     cleanup(); clearResources("wbapp:");
     ocr.text = "Foto bersama tim";
@@ -307,6 +314,32 @@ describe("WellbeingApp", () => {
     app();
     fireEvent.click(await screen.findByRole("button", { name: "Dari admin" }));
     expect(await screen.findByText("Hadir Friday Sharing")).toBeTruthy();
+  });
+
+  it("follows Admin Wellbeing → Aplikasi karyawan: announcement (closable), prize, photo reading off, Catat paused (17 Nov 2026)", async () => {
+    const announcement = { title: "Balapan ditutup 30 Nov", message: "Juara diumumkan Jumat." };
+    app(mockApi({ latency: [0, 0], controls: { announcement, prize: "Voucher olahraga", photoReading: false } }));
+    const notice = await screen.findByRole("region", { name: "Pengumuman" });
+    expect(within(notice).getByText("Balapan ditutup 30 Nov")).toBeTruthy();
+    expect(screen.getByText("Voucher olahraga")).toBeTruthy();
+    fireEvent.click(within(notice).getByRole("button", { name: "Tutup pengumuman" }));
+    expect(screen.queryByRole("region", { name: "Pengumuman" })).toBeNull();
+    // Photo reading off: only the manual ways in.
+    fireEvent.click(screen.getByRole("button", { name: "Catat" }));
+    expect(await within(dialog()).findByText("Kegiatan harian")).toBeTruthy();
+    expect(within(dialog()).queryByRole("button", { name: /^Dari foto bukti/ })).toBeNull();
+
+    // Closed on this device: it stays closed on the next visit; a changed one shows again.
+    cleanup(); clearResources("wbapp:");
+    app(mockApi({ latency: [0, 0], controls: { announcement } }));
+    await screen.findByText("Total poin");
+    expect(screen.queryByRole("region", { name: "Pengumuman" })).toBeNull();
+    cleanup(); clearResources("wbapp:");
+    app(mockApi({ latency: [0, 0], controls: { announcement: { ...announcement, message: "Juara diumumkan Senin." }, pausedMessage: "Dibuka lagi Senin pukul 08.00." } }));
+    expect(await screen.findByRole("region", { name: "Pengumuman" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Catat" }));
+    expect(await within(dialog()).findByText("Dibuka lagi Senin pukul 08.00.")).toBeTruthy();
+    expect(within(dialog()).queryByText("Kegiatan harian")).toBeNull();
   });
 
   it("shows Coba lagi when Beranda cannot load, and loads on retry", async () => {

@@ -22,6 +22,8 @@ export type WbMyActivity = {
   kind: "daily" | "sport";
   dimension: DimensionId;
   date: string;
+  /** "HH:MM" (WIB) when known, else null (17 Nov 2026). */
+  time: string | null;
   source: "manual" | "strava" | "import";
   title: string;
   steps: number | null;
@@ -39,8 +41,16 @@ export type WbMyActivity = {
   createdAt: string;
 };
 
+/**
+ * What Admin Wellbeing → Aplikasi karyawan sets (17 Nov 2026): an announcement on Beranda (only while
+ * on and not past its day), this month's prize, reading proof photos on the phone, and Catat paused
+ * (with the admin's message). Defaults before migration 202611170002.
+ */
+export type WbAppControls = { announcement: { title: string; message: string } | null; prize: string | null; photoReading: boolean; pausedMessage: string | null };
+
 /** GET /api/wellbeing/home */
 export type WbHome = {
+  controls: WbAppControls;
   migrated: boolean;
   me: WbMe;
   today: string;
@@ -70,7 +80,7 @@ export type WbCatalogDaily = { code: string; dimension: DimensionId; name: strin
   /** Days (within the backdate window and this month) it is already logged and counted: one per day, so the app warns before any upload. */
   loggedOn: string[] };
 export type WbCatalogSport = { code: string; name: string; proofHint: string };
-export type WbAppCatalog = { migrated: boolean; daily: WbCatalogDaily[]; sports: WbCatalogSport[]; rules: WbRules; today: string };
+export type WbAppCatalog = { migrated: boolean; daily: WbCatalogDaily[]; sports: WbCatalogSport[]; rules: WbRules; today: string; controls: WbAppControls };
 
 /** GET /api/wellbeing/activities?filter=all|daily|sport|strava&before=<the previous page's `next`> (20 per page, newest first) */
 export type WbMyActivityFilter = "all" | "daily" | "sport" | "strava";
@@ -84,13 +94,13 @@ export type WbUploadedPhoto = { key: string; mime: string; size: number; token: 
  * POST /api/wellbeing/activities. `steps` for a steps type, `kcal` (and optional `minutes`) for a sport.
  * 409 with fieldErrors.code = ["limit" | "same_day" | "strava_twin"]; "strava_twin" may be sent again with force: true.
  */
-export type WbLogInput = { code: string; date: string; steps?: number | null; kcal?: number | null; minutes?: number | null; note: string; photos: WbUploadedPhoto[]; force?: boolean };
+export type WbLogInput = { code: string; date: string; time?: string | null; steps?: number | null; kcal?: number | null; minutes?: number | null; note: string; photos: WbUploadedPhoto[]; force?: boolean };
 export type WbLogResult = { activity: WbMyActivity; totals: WbHome["totals"] };
 
 /** GET /api/wellbeing/leaderboard?period=month|all&dim=all|<dimension> */
 export type WbBoardRow = { rank: number; employeeId: string; name: string; department: string; points: number; me: boolean };
 export type WbBoard = { migrated: boolean; period: "month" | "all"; dim: DimensionId | "all";
-  /** The top 30. */
+  /** Everyone with points (the top 30 before 18 Nov 2026). */
   items: WbBoardRow[]; me: WbBoardRow | null; of: number; lastMonthChampion: WbBoardRow | null;
   /** Around me (two above, two below; also past the top 30), and the nearest person with more points (18 Nov 2026). Empty / null when I have no points. */
   near: WbBoardRow[]; ahead: WbBoardRow | null };

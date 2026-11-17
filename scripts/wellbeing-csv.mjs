@@ -29,6 +29,32 @@ export function parseCsv(text) {
 
 export const readCsv = file => parseCsv(fs.readFileSync(file, "utf8").replace(/^﻿/, ""));
 
+/**
+ * Every table at once (17 Nov 2026): the result of ekspor-semua.sql (columns tabel, bagian, jumlah, isi =
+ * a JSON array of rows), as a Map of table -> rows shaped like the dashboard's CSV export, so the import
+ * reads both the same way: text values, null for empty, "true"/"false", arrays as JSON text, and times as
+ * "2026-05-22 10:00:00.12+00".
+ */
+export function readAllTables(file) {
+  const asCsv = value => {
+    if (value === null || value === undefined || value === "") return null;
+    if (typeof value === "boolean") return value ? "true" : "false";
+    if (typeof value === "number") return String(value);
+    if (typeof value === "object") return JSON.stringify(value);
+    const time = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?)\+00:00$/.exec(value);
+    return time ? `${time[1]} ${time[2]}+00` : value;
+  };
+  const tables = new Map();
+  for (const part of readCsv(file)) {
+    const rows = JSON.parse(part.isi);
+    if (rows.length !== Number(part.jumlah)) throw new Error(`${part.tabel} bagian ${part.bagian}: ${rows.length} baris, seharusnya ${part.jumlah}`);
+    const list = tables.get(part.tabel) ?? [];
+    for (const row of rows) list.push(Object.fromEntries(Object.entries(row).map(([key, value]) => [key, asCsv(value)])));
+    tables.set(part.tabel, list);
+  }
+  return tables;
+}
+
 /** A Postgres array literal as the dashboard exports it: {a,b} or ["a","b"]. */
 export function parseArray(value) {
   if (!value) return [];
