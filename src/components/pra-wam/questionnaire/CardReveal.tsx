@@ -430,7 +430,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
       </details>
       <div className={styles.rr}>
         {figure && card.reroll?.state === "open" && reroll !== "done" && <>
-          <p className={styles.small}>Kurang sreg? Kamu boleh re-roll tokoh sekali{card.reroll.until ? `, sampai ${dateLabel(card.reroll.until)} WIB` : ""}. Rarity {card.tier.name} tetap milikmu.</p>
+          <p className={styles.small}>Kurang sreg? Kamu boleh re-roll tokoh sekali{card.reroll.until ? `, sampai ${dateLabel(card.reroll.until)} WIB` : ""}. Tokoh dan rarity-nya diundi ulang, jadi bisa naik atau turun.</p>
           <button type="button" className={styles.btn} onClick={() => { setNote(null); setReroll("dialog"); }} disabled={reroll === "dialog" || !!busy}><Dices aria-hidden />Re-roll tokoh (1x)</button>
         </>}
         {figure && (card.reroll?.state === "used" || reroll === "done") && <p className={styles.small}>Jatah re-roll sudah dipakai. {figure.name} sekarang tokohmu.</p>}
@@ -499,7 +499,7 @@ function RerollDialog({ card, nickname, onClose }: { card: CardView; nickname: s
       {flash && <div className={styles.flash} aria-hidden />}
       {(step.kind === "ask" || step.kind === "busy") && <>
         <h2 className={styles.heading}>Re-roll tokoh</h2>
-        <p>Tokohmu sekarang dilepas dan tokoh baru diundi dari tokoh yang masih tersedia di tipe {card.character.class}. Hasilnya wajib diterima dan tidak bisa kembali ke tokoh lama. Rarity <b>{card.tier.name}</b> dan nomor kartumu tetap.</p>
+        <p>Tokohmu sekarang dilepas dan tokoh baru diundi dari tokoh yang masih tersedia di tipe {card.character.class}. Rarity juga diundi ulang (sekarang <b>{card.tier.name}</b>), jadi bisa naik atau turun. Hasilnya wajib diterima dan tidak bisa kembali ke kartu lama. Nomor kartumu tetap.</p>
         <div className={styles.row}>
           {back}
           <button type="button" className={`${styles.btn} ${styles.primary}`} onClick={() => void draw()} disabled={step.kind === "busy"}><Dices aria-hidden />{step.kind === "busy" ? "Mengundi…" : "Ya, undi ulang sekarang"}</button>
@@ -510,7 +510,7 @@ function RerollDialog({ card, nickname, onClose }: { card: CardView; nickname: s
         <div className={styles.row}>{back}</div>
       </>}
       {(step.kind === "closed" || step.kind === "opening" || step.kind === "open") && <>
-        <p className={styles.hint} aria-live="polite">{step.kind === "open" ? "" : "Tokoh barumu sudah diundi. Ketuk kartunya untuk membuka."}</p>
+        <p className={styles.hint} aria-live="polite">{step.kind === "open" ? "" : "Kartu barumu sudah diundi. Ketuk kartunya untuk membuka."}</p>
         <div className={`${styles.flip} ${step.kind === "open" ? styles.open : ""} ${step.kind === "opening" ? styles.charge : ""}`}>
           <div className={styles.inner}>
             <button type="button" className={`${styles.face} ${styles.down}`} onClick={() => void open()} disabled={step.kind !== "closed"} aria-label="Buka tokoh barumu" tabIndex={step.kind === "open" ? -1 : 0} aria-hidden={step.kind === "open" || undefined}>
@@ -527,6 +527,7 @@ function RerollDialog({ card, nickname, onClose }: { card: CardView; nickname: s
           <canvas className={styles.confetti} ref={confetti} aria-hidden />
         </div>
         {step.kind === "open" && <div className={styles.banner} role="status">
+          <b style={{ background: step.view.tier.color }}>{step.view.tier.name}</b>
           <strong>{nickname}, tokoh barumu {step.view.figure?.name}</strong>
           {step.view.reason && <span>{step.view.reason}</span>}
         </div>}

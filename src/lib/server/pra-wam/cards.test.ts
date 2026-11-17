@@ -41,7 +41,8 @@ function query(table: string) {
     return { data: single ? found[0] ?? null : found, error: null };
   };
   const builder = {
-    select: () => builder, order: () => builder, limit: () => builder, neq: () => builder, in: () => builder,
+    select: () => builder, order: () => builder, limit: () => builder, in: () => builder,
+    neq: (key: string, value: unknown) => { filters.push(row => row[key] !== value); return builder; },
     // "roll->reroll->>at" reads inside a JSON column, as PostgREST does.
     eq: (key: string, value: unknown) => { filters.push(row => key.split(/->>?/).reduce<unknown>((at, part) => (at as Row | undefined)?.[part], row) === value); return builder; },
     is: (key: string, value: unknown) => { filters.push(row => (row[key] ?? null) === value); return builder; },
@@ -202,17 +203,17 @@ describe("kartu tokoh dunia", () => {
       expect((await myCard(form(), "p1"))?.reroll).toEqual({ state: "open", until: "2999-01-01T00:00:00.000Z" });
     });
 
-    it("lets the old figure go, takes a free one, keeps the rarity and the number, and only once", async () => {
+    it("lets the old figure go, takes a free one, draws the rarity again, keeps the number, and only once", async () => {
       open();
       const before = await ensureCard(form(), "p1", outdoorsy);
       await ensureCard(form(), "p2", outdoorsy);
       const after = await rerollCard(form(), "p1");
       // Gordon Ramsay is taken: the persona has no other free figure, so a free one of any persona.
       expect(after.figure?.key).toBe("affandi");
-      expect([after.serial, after.tier.key]).toEqual([before?.serial, before?.tier.key]);
+      expect(after.serial).toBe(before?.serial);
       expect(after.reroll).toEqual({ state: "used", until: null });
       expect(db.cq_person_cards[0]).toMatchObject({ figure_id: "affandi", figure_slot: 1, combo: "tokoh|affandi|1" });
-      expect((db.cq_person_cards[0].roll as { reroll: { from: string; to: string } }).reroll).toMatchObject({ from: "edmund-hillary", to: "affandi" });
+      expect((db.cq_person_cards[0].roll as { reroll: { from: string; to: string } }).reroll).toMatchObject({ from: "edmund-hillary", to: "affandi", tierFrom: before?.tier.key, tierTo: after.tier.key });
       await expect(rerollCard(form(), "p1")).rejects.toThrow("sudah memakai jatah");
       // Edmund Hillary is free again for the next person.
       expect((await ensureCard(form(), "p3", outdoorsy))?.figure?.key).toBe("edmund-hillary");
@@ -234,6 +235,18 @@ describe("kartu tokoh dunia", () => {
       expect(roll.rerolls).toHaveLength(1);
       expect(roll.rerolls[0]).toMatchObject({ from: "edmund-hillary", to: first.figure?.key });
       expect(roll.reroll.from).toBe(first.figure?.key);
+    });
+
+    it("draws the rarity again with the odds and the caps, the person's own card not counted (17 Nov 2026)", async () => {
+      open();
+      db.cq_tiers = [tier("common", 10_000, 0), tier("legendary", 0, 4, 1)];
+      expect((await ensureCard(form(), "p1", outdoorsy))?.tier.key).toBe("common");
+      // Now the draw lands on Legendary, capped at one: p1's own Common does not take the place.
+      db.cq_tiers = [tier("common", 0, 0), tier("legendary", 10_000, 4, 1)];
+      const after = await rerollCard(form(), "p1");
+      expect(after.tier.key).toBe("legendary");
+      expect(after.figure?.legend).toBe(true);
+      expect(db.cq_person_cards[0]).toMatchObject({ tier_key: "legendary", serial: 1 });
     });
 
     it("says so when no other figure is free, and never for a trial card", async () => {
