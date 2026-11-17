@@ -273,7 +273,7 @@
 .matchMark svg { width: 14px; height: 14px; }
 
 /* The profile in tabs, in the card's colours (17 Nov 2026): the persona's colour, gold for Legendary. */
-.profile { --tone: var(--pc, var(--accent)); --tone-ink: color-mix(in oklab, var(--tone) 62%, #141325); }
+.profile { --tone: var(--stage-tone, var(--pc, var(--accent))); --tone-ink: color-mix(in oklab, var(--tone) 62%, #141325); }
 .profileGold { --tone: #E3A82B; }
 .profileTabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 999px; background: color-mix(in oklab, var(--tone) 16%, #fff); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--tone) 40%, transparent); }
 .profileTabs button { min-height: 40px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-weight: 700; font-size: var(--text-sm); color: var(--ink-2); cursor: pointer; }
@@ -292,4 +292,7 @@
 .facts span { font-size: var(--text-xs); color: var(--ink-2); }
 @media (prefers-reduced-motion: reduce) { .profilePanel { animation: none; } }
 .profile .profTitle { color: var(--tone-ink); }
-.personaPill { background: color-mix(in oklab, var(--pc) 22%, #fff); color: color-mix(in oklab, var(--pc) 62%, #141325); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--pc) 62%, #141325); }
+.personaPill { background: color-mix(in oklab, var(--stage-tone, var(--pc)) 22%, #fff); color: color-mix(in oklab, var(--stage-tone, var(--pc)) 62%, #141325); box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--stage-tone, var(--pc)) 62%, #141325); }
+
+/* Once open, the wash behind the card takes the page's one tone, and only behind the card (17 Nov 2026). */
+.lit.opened .bgdots { inset: -20px -16px auto; height: 640px; background: radial-gradient(ellipse 75% 330px at 50% 300px, color-mix(in oklab, var(--stage-tone) 26%, transparent) 0, transparent 100%); }

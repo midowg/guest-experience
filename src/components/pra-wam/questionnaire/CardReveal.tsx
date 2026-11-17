@@ -366,7 +366,9 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
   const rarity = figure ? rarityOf(card.tier) : 0;
   const lit = (phase.kind === "pack" && phase.taps >= 2) || !packing;
   const { flip, listen, ...tiltEvents } = tilt;
-  return <div ref={stage} className={`${styles.reveal} ${styles.draw} ${lit ? styles.lit : ""}`} style={{ ["--glow" as string]: card.tier.color, ["--pc" as string]: card.colors[0] }}>
+  // One tone for the open card's page (17 Nov 2026): the persona's colour, gold for Legendary; the rarity's colour stays on the pack's light, the ring, the stamp and the rays.
+  const tone = rarity === 4 ? "#E3A82B" : card.colors[0];
+  return <div ref={stage} className={`${styles.reveal} ${styles.draw} ${lit ? styles.lit : ""} ${open ? styles.opened : ""}`} style={{ ["--glow" as string]: card.tier.color, ["--pc" as string]: card.colors[0], ["--stage-tone" as string]: tone }}>
     <div className={styles.bgdots} aria-hidden />
     <div ref={fx} className={styles.fxLayer} aria-hidden />
     {flash && <div className={styles.flash} aria-hidden />}
