@@ -152,8 +152,8 @@ aplikasi tetap jalan dan menyimpan tanpa jam.
     dan garis lima warna.
   - Warna mengikuti tema aplikasi (Otomatis / Terang / Gelap, pilihan yang sama dengan di Profil), termasuk bilah
     status HP.
-  - Form di kartu, diawali **Masuk dengan akun WAM** (email atau nama panggilan, password yang sama dengan aplikasi
-    WAM). Tanpa slogan.
+  - Form di kartu, diawali satu baris kecil "Masuk dengan akun WAM" (bukan sorotan utama). Tanpa slogan, dan tanpa
+    kata "karyawan" (di bawah: "Program wellbeing Werkudara", juga di kartu share).
   - Gerakan sekali jalan, sekitar 1,5 detik, dengan CSS (Remotion untuk membuat video, terlalu berat untuk halaman
     masuk):
     - Huruf naik satu per satu, warna mengalir melintas sekali lalu berhenti.

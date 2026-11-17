@@ -685,12 +685,10 @@ input[type="date"].input { display: block; }
   margin-top: 32px; padding: 16px 16px 12px; border-radius: 24px; background: var(--surface); border: 1px solid var(--outline); box-shadow: 0 12px 40px rgba(13, 19, 33, .08);
   animation: wlmRise .6s .9s var(--ease-out) both;
 }
-.loginCard .loginForm { margin-top: 18px; }
-.wamNote { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 16px; background: var(--primary-c); color: var(--on-primary-c); }
-.wamNoteIcon { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex: none; background: var(--primary); color: var(--on-primary); }
-.wamNote > span:last-child { display: flex; flex-direction: column; gap: 2px; padding-top: 1px; }
-.wamNote b { font-size: 15px; font-weight: 700; color: var(--text); }
-.wamNote small { font-size: 13px; line-height: 1.45; color: var(--text-2); }
+.loginCard .loginForm { margin-top: 4px; }
+/* A quiet line at the top of the card, not a highlight. */
+.wamNote { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 4px 0 2px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.wamNote svg { color: var(--text-3); }
 .loginProblem { animation: wlmShake .4s cubic-bezier(.36, .07, .19, .97) both; }
 @keyframes wlmShake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
 /* A short phone: a smaller name, so the form and Masuk stay in view. */

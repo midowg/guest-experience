@@ -7,7 +7,7 @@ import { previewSize } from "./link-preview";
  * emosional, sosial, finansial, spiritual), here on the app's dark background.
  */
 
-const INK = "#0A0E15", VOLT = "#C5F23A", ON_INK = "#F4F6FA", ON_INK_2 = "#AFB8C8", ON_INK_3 = "#8691A5";
+const INK = "#0A0E15", ON_INK = "#F4F6FA", ON_INK_2 = "#AFB8C8", ON_INK_3 = "#8691A5";
 const DIMENSIONS = [
   { name: "Fisik", color: "#5EEAD4" }, { name: "Emosional", color: "#C4B5FD" }, { name: "Sosial", color: "#FDBA74" },
   { name: "Finansial", color: "#8AB4F8" }, { name: "Spiritual", color: "#F9A8D4" },
@@ -19,7 +19,7 @@ const TEXT = {
   full: "WERKUDARA LIFE MODE",
   lead: "Catat aktivitas, kumpulkan poin, dan kejar peringkat bulanan.",
   cta: "Masuk dengan akun WAM",
-  foot: "Program wellbeing karyawan Werkudara",
+  foot: "Program wellbeing Werkudara",
 };
 
 /**
@@ -79,7 +79,8 @@ export async function wlmPreview() {
         </div>
         <div style={{ display: "flex", fontFamily: SANS, fontSize: 46, fontWeight: 700, lineHeight: 1.2, maxWidth: 1000 }}>{TEXT.lead}</div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", fontFamily: SANS, padding: "14px 30px", borderRadius: 999, background: VOLT, color: "#0E1525", fontSize: 28, fontWeight: 700 }}>{TEXT.cta}</div>
+          {/* Said quietly, as on the sign-in (not a highlight). */}
+          <div style={{ display: "flex", fontFamily: SANS, fontSize: 26, fontWeight: 700, color: ON_INK_2 }}>{TEXT.cta}</div>
           <div style={{ display: "flex", fontFamily: SANS, fontSize: 26, fontWeight: 400, color: ON_INK_3 }}>{TEXT.foot}</div>
         </div>
       </div>

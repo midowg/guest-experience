@@ -1,7 +1,7 @@
 import { previewSize } from "@/lib/server/link-preview";
 import { wlmPreview } from "@/lib/server/wlm-preview";
 
-export const alt = "WLM Werkudara: aplikasi wellbeing karyawan Werkudara. Masuk dengan akun WAM.";
+export const alt = "WLM Werkudara: aplikasi wellbeing Werkudara. Masuk dengan akun WAM.";
 export const size = previewSize;
 export const contentType = "image/png";
 

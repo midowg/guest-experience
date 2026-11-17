@@ -82,7 +82,7 @@ function Frame({ title, lead, hero = false, children, foot }: { title: string; l
         {lead && <p className={css.muted} style={{ marginTop: 4 }}>{lead}</p>}
       </>}
       {hero ? <div className={css.loginCard}>{children}</div> : children}
-      <p className={cx(css.loginFoot, css.caption, css.faint)}>{foot ?? <>Program wellbeing karyawan Werkudara</>}</p>
+      <p className={cx(css.loginFoot, css.caption, css.faint)}>{foot ?? <>Program wellbeing Werkudara</>}</p>
     </main>
   </div>;
 }
@@ -90,12 +90,9 @@ function Frame({ title, lead, hero = false, children, foot }: { title: string; l
 /** Said above the form; it shakes a little when it (re)appears, so a wrong password is noticed. */
 const Problem = ({ text }: { text: string }) => <div className={cx(css.note, css.noteErr, css.loginProblem)} role="alert"><CircleAlert size={20} aria-hidden="true" /><span>{text}</span></div>;
 
-/** How to get in, said plainly: the WAM account (no WAM slogan). */
+/** How to get in, said quietly at the top of the card (not a highlight): the WAM account. */
 function WamNote() {
-  return <div className={css.wamNote}>
-    <span className={css.wamNoteIcon} aria-hidden="true"><KeyRound size={20} /></span>
-    <span><b>Masuk dengan akun WAM</b><small>Email atau nama panggilan, dan password yang sama dengan aplikasi WAM.</small></span>
-  </div>;
+  return <p className={css.wamNote}><KeyRound size={15} aria-hidden="true" />Masuk dengan akun WAM</p>;
 }
 
 function Secret({ id, label, value, onChange, autoComplete, error, placeholder }: { id: string; label: string; value: string; onChange: (value: string) => void; autoComplete: string; error?: string; placeholder?: string }) {
