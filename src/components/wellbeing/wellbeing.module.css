@@ -358,8 +358,14 @@ button.row:disabled { opacity: .55; cursor: default; }
 .weekCol[data-today="true"] .weekBar { background: var(--primary); border: 0; }
 .weekCol[data-today="true"] .weekVal, .weekCol[data-today="true"] span:last-child { color: var(--text); font-weight: 700; }
 @keyframes rise { from { transform: scaleY(.1); } }
-.streak { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--outline); }
-.streakCount { font-weight: 700; font-size: 15px; display: flex; align-items: baseline; gap: 6px; color: var(--text-2); }
+/*
+ * The flame, the count and Catat sekarang. On a narrow phone (iPhone SE) the button does not fit beside
+ * the text: it drops to its own full-width row instead of squeezing the count into three lines.
+ */
+.streak { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--outline); }
+.streak > .rowMain { flex: 1 1 150px; }
+.streak > .btn { flex: 1 0 auto; }
+.streakCount { font-weight: 700; font-size: 15px; display: flex; align-items: baseline; gap: 6px; color: var(--text-2); white-space: nowrap; }
 .streakCount > b { font-family: var(--font-num); font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text-3); }
 .streak[data-lit="true"] .streakCount { color: var(--text); }
 .streak[data-lit="true"] .streakCount > b { color: var(--streak-ink); }
