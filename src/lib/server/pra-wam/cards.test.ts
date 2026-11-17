@@ -284,6 +284,8 @@ describe("kartu tokoh dunia", () => {
     expect(await myCard(form(), "old")).toEqual(card);
     // What the figure is matched on, against my own answers.
     expect(card?.match?.items).toEqual([{ label: "Hobi", value: "Kuliner & masak", mine: true }]);
+    // Only my own tokoh's profile comes with the card.
+    expect(card?.profile?.who).toContain("Gordon Ramsay");
   });
 
   it("draws an anime character as before when the catalog has no figures", async () => {

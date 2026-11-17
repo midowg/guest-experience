@@ -5,6 +5,7 @@ import {
   type ArtKind, type Character, type Look, type Part, type PartKind, type Tier,
 } from "@/lib/pra-wam/cards";
 import { chosen, colorsOf, FIGURE_KEYS, figureMatches, legendClasses, pickFigure, rarityOf, reasonText, rerollFigure, ROLE_KEY, type Figure, type MatchItem } from "@/lib/pra-wam/figures";
+import { profileOf, type FigureProfile } from "@/lib/pra-wam/figure-profiles";
 import { editable, type Answers, type QForm } from "@/lib/pra-wam/questionnaire";
 import { praWamApi } from "@/lib/routes";
 import { ServiceError } from "../config";
@@ -165,6 +166,8 @@ export type CardView = {
    * too, and my answer on my role in the team (which picks "Tipemu").
    */
   match?: { items: MatchItem[]; role: string[] };
+  /** My own card only: who the tokoh is (figure-profiles.ts), so the phone gets one profile, not all 100. */
+  profile?: FigureProfile | null;
 };
 /** "open" until `until`; "used" once done; "closed" while Admin WAM has not opened it (or it ended). */
 export type Reroll = { state: "open" | "used" | "closed"; until: string | null };
@@ -254,8 +257,9 @@ async function mine(form: Pick<QForm, "id">, row: PersonCardRow, catalog: Catalo
   // Only my own answers that a figure is matched on (and my role); never health, HR-only or anonymous ones.
   const answers = (await figureAnswers(form.id, [row.employee_id]).catch(() => new Map<string, Answers>())).get(row.employee_id) ?? {};
   const match = figure ? { items: figureMatches(figure, answers), role: chosen(answers[ROLE_KEY]) } : undefined;
-  if (row.trial) return { ...view, match };
-  return { ...view, match, reroll: rerollOf(row, await rerollUntil(form.id)) };
+  const profile = figure ? profileOf(figure.key) : null;
+  if (row.trial) return { ...view, match, profile };
+  return { ...view, match, profile, reroll: rerollOf(row, await rerollUntil(form.id)) };
 }
 
 /** Until when Admin WAM keeps the re-roll open (migration 202611160010); null when closed or before it. */

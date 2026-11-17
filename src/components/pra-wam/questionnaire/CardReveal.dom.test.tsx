@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { CardView } from "@/lib/server/pra-wam/cards";
+import { profileOf } from "@/lib/pra-wam/figure-profiles";
 import { praWamApi } from "@/lib/routes";
 import { CardReveal } from "./CardReveal";
 
@@ -98,6 +99,7 @@ it("shows a tokoh card's result: the figure, why, the persona and its complement
     figure: { id: "f", key: "edmund-hillary", name: "Edmund Hillary", costume: "Jaket pendaki, kapak es", quote: null, image: null, legend: false, legendClass: null },
     reason: "Kamu dapat Edmund Hillary karena kamu tipe Garda Depan dan suka olahraga & outdoor.", colors: ["#C2303F", "#6E1023"],
     match: { items: [{ label: "Hobi", value: "Olahraga & outdoor", mine: true }, { label: "Kegiatan favorit", value: "Outdoor", mine: false }], role: ["Eksekutor"] },
+    profile: profileOf("edmund-hillary"),
   };
   const { container } = render(<CardReveal formId="f2" initial={tokoh} nickname="Dewi" hasPhoto={false} />);
   expect(await screen.findByText("Edmund Hillary")).toBeTruthy();
@@ -106,6 +108,8 @@ it("shows a tokoh card's result: the figure, why, the persona and its complement
   expect(screen.getByText(/puncak Everest pada 1953/)).toBeTruthy();
   expect(screen.getByRole("heading", { name: "Kehebatannya" })).toBeTruthy();
   expect(screen.getByRole("heading", { name: "Pengaruhnya" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Kisahnya" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Yang bisa kamu bawa" })).toBeTruthy();
   expect(screen.getByText(/Jaket pendaki, kapak es./)).toBeTruthy();
   // The tabs: Cocok compares the tokoh with my answers; Tipemu is my type; arrow keys move between them.
   expect(screen.getAllByRole("tab").map(tab => tab.textContent)).toEqual(["Tokoh", "Cocok", "Tipemu", "Kartu"]);
