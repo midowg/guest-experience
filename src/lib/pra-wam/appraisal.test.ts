@@ -133,3 +133,13 @@ describe("a booking on a day gone (a record)", () => {
     expect(isRecordDate(today, now, later)).toBe(false);
   });
 });
+
+describe("Booking ruangan di luar WAM (purpose: lain)", () => {
+  it("allows free hours: outside 07.00–22.00, more than 4 hours, and weekends", () => {
+    expect(bookingProblems({ date: "2026-11-07", roomId: "r1", start: "10:00", end: "11:00", purpose: "lain" }, now)).toEqual({});
+    expect(bookingProblems({ date: "2026-11-05", roomId: "r1", start: "08:00", end: "17:00", purpose: "lain" }, now)).toEqual({});
+    expect(bookingProblems({ date: "2026-11-05", roomId: "r1", start: "06:00", end: "07:00", purpose: "lain" }, now)).toEqual({});
+    expect(bookingProblems({ date: "2026-11-05", roomId: "r1", start: "20:00", end: "23:00", purpose: "lain" }, now)).toEqual({});
+  });
+});
+

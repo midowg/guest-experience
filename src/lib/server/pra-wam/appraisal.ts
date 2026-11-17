@@ -308,7 +308,7 @@ export async function saveBooking(input: BookingInput, viewer: Member, options: 
     if (/ROOM_NOT_BOOKABLE/.test(error.message)) throw new ServiceError(422, office ? "Ruangan ini tidak bisa dipesan." : "Ruang ini tidak bisa dipesan untuk appraisal.", { roomId: ["Pilih ruang lain."] });
     if (/BOOKING_DAILY_LIMIT/.test(error.message)) throw new ServiceError(409, `Kamu sudah punya ${office ? officeRules.maxPerDay : appraisalRules.maxPerDay} booking aktif pada hari itu. Batalkan salah satu dulu.`);
     if (/NOT_FOUND/.test(error.message)) throw new ServiceError(404, "Booking tidak ditemukan atau sudah dibatalkan.");
-    if (error.code === "23514") throw new ServiceError(422, outside ? "Tanggal atau jam tidak bisa disimpan. Booking di luar kantor harus dalam satu hari." : `Jam di luar ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)} Senin–Jumat, atau lebih dari 4 jam.`);
+    if (error.code === "23514") throw new ServiceError(422, outside ? "Tanggal atau jam tidak bisa disimpan. Booking di luar kantor harus dalam satu hari." : input.purpose === "lain" ? `Booking ruangan di luar WAM di luar jam ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)} atau lebih dari 4 jam menunggu migrasi database.` : `Jam di luar ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)} Senin–Jumat, atau lebih dari 4 jam.`);
     if (error.code === "23503") throw new ServiceError(422, "Ada partisipan atau ruang yang tidak dikenal. Muat ulang halaman.");
     fail(error);
   }

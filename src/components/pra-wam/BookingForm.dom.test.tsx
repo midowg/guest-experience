@@ -71,7 +71,7 @@ it("opens a booking being changed at the summary, each step one tap away", () =>
   expect(screen.getByRole("heading", { name: "Periksa lalu simpan" })).toBeTruthy();
   expect(screen.getByText("Arjuna", { selector: "dd" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Ubah waktu" }));
-  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Kapan?" }));
+  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Keperluan dan waktu" }));
   lanjut();
   expect(screen.getByRole("heading", { name: "Periksa lalu simpan" })).toBeTruthy();
   expect(screen.getByRole("button", { name: /Simpan perubahan/ })).toBeTruthy();
@@ -373,10 +373,11 @@ it("books a room for something outside WAM: its name typed, no HOD or ITEM, the 
   const onSaved = vi.fn();
   request.mockResolvedValue({ data: {}, message: "Ruang dibooking." });
   renderForm({ onSaved, hod: { departments: [{ id: "it", name: "IT", heads: [{ id: "p1", name: "Budi" }] }], ownUnits: ["it"] } });
-  lanjut();
+  // 17 Nov 2026: the purpose is the first choice, before the time.
   expect(screen.getByRole("button", { name: /Meeting WAM/ }).getAttribute("aria-pressed")).toBe("true");
   fireEvent.click(screen.getByRole("button", { name: /Di luar WAM/ }));
   expect(screen.getByText(/tanpa absen dan tanpa MoM/)).toBeTruthy();
+  lanjut();
   // A typed name, not the list of WAM meetings.
   const name = screen.getByLabelText("Nama kegiatan") as HTMLInputElement;
   expect(name.tagName).toBe("INPUT");
@@ -390,3 +391,16 @@ it("books a room for something outside WAM: its name typed, no HOD or ITEM, the 
   await vi.waitFor(() => expect(onSaved).toHaveBeenCalled());
   expect(request.mock.calls[0][1]).toMatchObject({ method: "POST", json: { title: "Meeting klien PT Sinar", purpose: "lain", roomId: "kecil" } });
 });
+
+it("opens the hours on the first step once Di luar WAM is chosen: longer than 4 hours", () => {
+  renderForm();
+  const durations = () => Array.from((screen.getByLabelText("Durasi") as HTMLSelectElement).options).map(option => option.value);
+  expect(durations()).not.toContain("300");
+  fireEvent.click(screen.getByRole("button", { name: /Di luar WAM/ }));
+  expect(screen.getByRole("button", { name: /Di luar WAM/ }).getAttribute("aria-pressed")).toBe("true");
+  expect(durations()).toContain("300");
+  // Back to Meeting WAM: the office's hours again.
+  fireEvent.click(screen.getByRole("button", { name: /Meeting WAM/ }));
+  expect(durations()).not.toContain("300");
+});
+

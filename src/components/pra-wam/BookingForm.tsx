@@ -129,6 +129,12 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   function choosePurpose(next: BookingPurpose) {
     if (next === purpose) return;
     if (next === "lain" && as !== "pribadi") chooseAs("pribadi");
+    if (next === "wam" && draft.roomId !== OUTSIDE_ROOM) {
+      const office = slotTimes(false).slice(0, -1).filter(time => new Date(wibInstant(draft.date, time)) > bookingClock(draft.date, nowDate));
+      const keepHours = office.includes(draft.start) && durationsFrom(draft.start, false).includes(length);
+      set({ purpose: next, ...(keepHours ? {} : hoursFrom(office[0] ?? appraisalRules.open, false)) });
+      return;
+    }
     set({ purpose: next });
   }
   function chooseAs(next: "pribadi" | "hod" | "item") {
@@ -187,11 +193,12 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const record = isRecordDate(draft.date, nowDate, draft.start);
   const clock = bookingClock(draft.date, nowDate, draft.start);
   const outside = draft.roomId === OUTSIDE_ROOM;
-  const slots = slotTimes(outside);
+  const freeHours = outside || purpose === "lain";
+  const slots = slotTimes(freeHours);
   const startsOn = (date: string) => slots.slice(0, -1).filter(time => new Date(wibInstant(date, time)) > (pastToday && date === wibDate(now) ? new Date(0) : bookingClock(date, nowDate)));
   const starts = startsOn(draft.date);
   const length = clockMinutes(draft.end) - clockMinutes(draft.start);
-  const lengths = durationsFrom(draft.start, outside);
+  const lengths = durationsFrom(draft.start, freeHours);
   const chosen = { startsAt: wibInstant(draft.date, draft.start), endsAt: wibInstant(draft.date, draft.end) };
   const hours = `${clockLabel(draft.start)}–${clockLabel(draft.end)}`;
 
@@ -236,7 +243,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
   // The date strip: the whole window, past days greyed out; the chosen day recounted from its bookings.
   const today = wibDate(now);
-  const stripDays = outside ? periodAllDates() : [...new Set([...periodDates(), ...dates])].sort();
+  const stripDays = freeHours ? periodAllDates() : [...new Set([...periodDates(), ...dates])].sort();
   const daySummary = dayKnown
     ? { ...summary, ...daySummaries([draft.date], rooms, others.map(booking => ({ roomId: booking.roomId, startsAt: booking.startsAt, endsAt: booking.endsAt, session: booking.isSession })), clock) }
     : summary;
@@ -269,7 +276,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
   const countLine = guests.size ? `Kamu + ${guests.size} orang = ${peopleLabel(count)}` : "Kamu saja = 1 orang";
 
   /** Keeps the length when the start moves, shortened only to end by closing. */
-  function hoursFrom(start: string, away = outside) {
+  function hoursFrom(start: string, away = freeHours) {
     const options = durationsFrom(start, away);
     const keep = options.includes(length) ? length : options.filter(item => item <= Math.max(length, appraisalRules.stepMinutes)).at(-1) ?? options[0] ?? appraisalRules.stepMinutes;
     return { start, end: minutesClock(clockMinutes(start) + keep) };
@@ -284,7 +291,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     }))) return;
     if (isRecordDate(date, nowDate) && as !== "pribadi") chooseAs("pribadi");
     // A weekend has no rooms: picked on the month calendar, it books "Di luar kantor".
-    if (!outside && !isWorkday(date)) { set({ date, roomId: OUTSIDE_ROOM }); return; }
+    if (!freeHours && !isWorkday(date)) { set({ date, roomId: OUTSIDE_ROOM }); return; }
     const open = startsOn(date);
     set({ date, ...(open.includes(draft.start) || !open.length ? {} : hoursFrom(open[0])) });
   }
@@ -428,7 +435,19 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
     {error && <Notice tone="error">{error}</Notice>}
 
     <section {...stepProps(0)}>
-      {heading(0, "Kapan?")}
+      {heading(0, "Keperluan dan waktu")}
+      {/* 17 Nov 2026: the purpose comes first, from Book and Timeline alike: outside WAM opens the
+          hours (any hour, weekends, more than 4 hours) before the time is picked. */}
+      <div className={css.asSwitch} role="group" aria-label="Keperluan">
+        <span className={styles.label}>Keperluan</span>
+        <div className={css.where}>
+          <button type="button" aria-pressed={purpose === "wam"} onClick={() => choosePurpose("wam")}><Users size={18} aria-hidden />Meeting WAM</button>
+          <button type="button" aria-pressed={purpose === "lain"} onClick={() => choosePurpose("lain")}><Briefcase size={18} aria-hidden />Di luar WAM</button>
+        </div>
+        <p className={styles.hint}>{purpose === "lain"
+          ? "Untuk keperluan lain, misalnya tamu klien atau interview: jam bebas (00.00–23.30), boleh lebih dari 4 jam, dan boleh akhir pekan. Tetap masuk jadwal ruang dan kalender, tanpa absen dan tanpa MoM."
+          : `Meeting WAM di ruang kantor: ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam, dengan absen dan MoM.`}</p>
+      </div>
       {datePicker === "month"
         // The month as on Timeline (9 Nov 2026): the forums' bars instead of free/full dots; a day picks the date.
         ? <div role="group" aria-label="Tanggal"><TimelineMonth entries={timeline} today={today} open={draft.date} range={{ from: appraisalRules.periodStart, to: appraisalRules.periodEnd }}
@@ -463,7 +482,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         </div>
       </div>
       <p className={css.span} role="status"><Clock size={18} aria-hidden />{dayLabel(draft.date)} · {hours}{length > 0 ? ` (${durationLabel(length)})` : ""}</p>
-      {starts.length === 0 && <Notice tone="info">{outside ? "Hari ini sudah lewat. Pilih tanggal lain." : "Jam operasional hari ini sudah lewat. Pilih tanggal lain."}</Notice>}
+      {starts.length === 0 && <Notice tone="info">{freeHours ? "Hari ini sudah lewat. Pilih tanggal lain." : "Jam operasional hari ini sudah lewat. Pilih tanggal lain."}</Notice>}
       {draft.date === today && !pastToday && <button type="button" className={css.pastLink} onClick={() => { void (async () => {
         if (!(await confirm({
           title: "Pilih jam yang sudah lewat?",
@@ -473,9 +492,12 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
         setPastToday(true);
         if (as !== "pribadi") chooseAs("pribadi");
       })(); }}>Meeting-nya sudah lewat hari ini? Pilih jam yang sudah lewat</button>}
+      {/* Di luar WAM says its hours under Keperluan above; only the place is left to mention. */}
       <p className={styles.hint}>{outside
         ? "Di luar kantor: boleh akhir pekan, jam berapa pun hari itu (sampai 23.30), dan lebih dari 4 jam. Nama tempat diisi di langkah Tempat."
-        : `Ruang kantor ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam. Di luar kantor dipilih di langkah Tempat.`}</p>
+        : purpose === "lain"
+          ? "Ruang dipilih di langkah Tempat; Di luar kantor juga bisa dipilih di sana."
+          : `Ruang kantor ${clockLabel(appraisalRules.open)}–${clockLabel(appraisalRules.close)}, Senin–Jumat, 30 menit sampai 4 jam. Di luar kantor dipilih di langkah Tempat.`}</p>
       {/* The day's rooms and bookings while the date is picked (11 Nov 2026), as on Timeline, so no going back there. */}
       <div className={css.dayRooms} aria-label={`Jadwal ruang ${dayLabel(draft.date)}`} role="region">
         <p className={styles.label}>Jadwal ruang · {dayLabel(draft.date)}</p>
@@ -486,17 +508,7 @@ export function BookingForm({ editId, initial, dates, now, rooms, people, viewer
 
     <section {...stepProps(1)}>
       {heading(1, "Kegiatan apa?")}
-      {/* 13 Nov 2026: a room may be booked for something outside WAM; it stays on the schedule, without check-in or MoM. */}
-      <div className={css.asSwitch} role="group" aria-label="Keperluan">
-        <span className={styles.label}>Keperluan</span>
-        <div className={css.where}>
-          <button type="button" aria-pressed={purpose === "wam"} onClick={() => choosePurpose("wam")}><Users size={18} aria-hidden />Meeting WAM</button>
-          <button type="button" aria-pressed={purpose === "lain"} onClick={() => choosePurpose("lain")}><Briefcase size={18} aria-hidden />Di luar WAM</button>
-        </div>
-        <p className={styles.hint}>{purpose === "lain"
-          ? "Untuk keperluan lain, misalnya tamu klien atau interview. Tetap masuk jadwal ruang dan kalender, tanpa absen dan tanpa MoM."
-          : "Meeting WAM memakai absen dan MoM seperti biasa."}</p>
-      </div>
+      {/* Outside WAM (chosen on the first step): its name typed; Meeting WAM: picked from the forums. */}
       {purpose === "lain" ? <div>
         <label className={styles.label} htmlFor={`${uid}-title`}>Nama kegiatan</label>
         <input id={`${uid}-title`} className="input" maxLength={120} value={draft.title} placeholder="Misalnya Meeting klien PT Sinar" aria-invalid={!!fieldErrors.title} aria-describedby={described("title")}

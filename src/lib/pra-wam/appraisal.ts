@@ -172,16 +172,17 @@ const appraisalPeriod: BookingPeriod = { start: appraisalRules.periodStart, end:
 
 /**
  * The rules a booking must meet, as field errors; empty when it may be saved. `now` decides "past".
- * An outside booking (roomId OUTSIDE_ROOM) may be on a weekend, at any hour of the day and longer
- * than 4 hours; the period, the half hours and "one day" still hold.
+ * An outside booking (roomId OUTSIDE_ROOM) or a booking outside WAM (purpose "lain") may be on a
+ * weekend, at any hour of the day and longer than 4 hours; the period, the half hours and "one day" still hold.
  */
-export function bookingProblems(input: Pick<BookingInput, "date" | "start" | "end"> & { roomId?: string }, now: Date, period: BookingPeriod = appraisalPeriod): Record<string, string> {
+export function bookingProblems(input: Pick<BookingInput, "date" | "start" | "end"> & { roomId?: string; purpose?: BookingPurpose }, now: Date, period: BookingPeriod = appraisalPeriod): Record<string, string> {
   const problems: Record<string, string> = {};
   const outside = input.roomId === OUTSIDE_ROOM;
-  const hours = outside ? OUTSIDE_HOURS : appraisalRules;
-  const times = slotTimes(outside);
+  const freeHours = outside || input.purpose === "lain";
+  const hours = freeHours ? OUTSIDE_HOURS : appraisalRules;
+  const times = slotTimes(freeHours);
   if (input.date < period.start || input.date > period.end) problems.date = period.message;
-  else if (!outside && !isWorkday(input.date)) problems.date = "Ruang hanya bisa dipesan Senin–Jumat. Di luar kantor boleh akhir pekan.";
+  else if (!freeHours && !isWorkday(input.date)) problems.date = "Ruang hanya bisa dipesan Senin–Jumat. Di luar kantor boleh akhir pekan.";
   const step = appraisalRules.stepMinutes;
   const label = (minutes: number) => fromMinutes(minutes).replace(":", ".");
   const [open, close] = [toMinutes(hours.open), toMinutes(hours.close)];
@@ -190,7 +191,7 @@ export function bookingProblems(input: Pick<BookingInput, "date" | "start" | "en
   const minutes = toMinutes(input.end) - toMinutes(input.start);
   if (!problems.start && !problems.end) {
     if (minutes <= 0) problems.end = "Jam selesai harus setelah jam mulai.";
-    else if (!outside && minutes > appraisalRules.maxMinutes) problems.end = "Paling lama 4 jam.";
+    else if (!freeHours && minutes > appraisalRules.maxMinutes) problems.end = "Paling lama 4 jam.";
   }
   if (!problems.date && !problems.start && new Date(wibInstant(input.date, input.start)) < now) problems.start = "Jam ini sudah lewat.";
   return problems;
