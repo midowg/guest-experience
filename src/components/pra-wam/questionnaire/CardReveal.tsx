@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { ArrowLeft, Check, Dices, Download, Globe2, Link2, RotateCcw, Share2, Sparkles, Trophy, UserRound, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { ArrowLeft, Check, Dices, Download, Globe2, IdCard, Link2, RotateCcw, Share2, Shirt, Sparkles, Trophy, UserRound, X } from "lucide-react";
 import { oddsLabel, serialLabel } from "@/lib/pra-wam/cards";
 import { profileOf } from "@/lib/pra-wam/figure-profiles";
 import { rarityOf, SPARK_COUNT } from "@/lib/pra-wam/figures";
@@ -452,49 +452,94 @@ function Section({ icon, title, children }: { icon: ReactNode; title: string; ch
   return <section className={styles.prof} aria-label={title}><h3 className={styles.profTitle}>{icon}{title}</h3>{children}</section>;
 }
 
+type ProfileTab = "tokoh" | "cocok" | "tipe" | "kartu";
+const PROFILE_TABS: { id: ProfileTab; label: string }[] = [
+  { id: "tokoh", label: "Tokoh" }, { id: "cocok", label: "Cocok" }, { id: "tipe", label: "Tipemu" }, { id: "kartu", label: "Kartu" },
+];
+
 /**
- * Who the tokoh is and why it is mine (17 Nov 2026, the owner's choice of layout A): all open, top
- * to bottom: who they are, their greatest achievement, their influence, what of my answers they
- * share, and my type. The profile is a draft HR checks (figure-profiles.ts); a tokoh without one
- * shows the rest.
+ * Who the tokoh is and why it is mine (17 Nov 2026, the owner's choice): tabs, in the colours of
+ * my card (the persona's colour, the rarity's for the highlights): Tokoh (who they are, their
+ * achievement, their influence, the figure), Cocok (what of my answers they share), Tipemu (my
+ * type and its complement), Kartu (rarity, number, edition). The profile is a draft HR checks
+ * (figure-profiles.ts); a tokoh without one shows the rest.
  */
 function FigureProfileSections({ card, name, rerolled }: { card: CardView; name: string; rerolled: boolean }) {
+  const [tab, setTab] = useState<ProfileTab>("tokoh");
   const figure = card.figure;
   const profile = figure ? profileOf(figure.key) : null;
   const items = card.match?.items ?? [];
   const shared = items.filter(item => item.mine).length;
-  return <div className={styles.profile}>
-    {profile && figure && <>
-      <Section icon={<UserRound aria-hidden />} title={`Siapa ${figure.name}`}>
-        <p>{profile.who}</p>
-        <p className={styles.tags}>{profile.tags.map(tag => <span key={tag} className={styles.tag}>{tag}</span>)}</p>
-        {figure.legend && <p className={styles.small}>Di kartumu ia tampil dalam wujud Legendary: <b>{figure.legendClass ?? "kelas RPG"}</b>.</p>}
-      </Section>
-      <Section icon={<Trophy aria-hidden />} title="Kehebatannya"><p>{profile.feat}</p></Section>
-      <Section icon={<Globe2 aria-hidden />} title="Pengaruhnya"><p>{profile.impact}</p></Section>
-    </>}
-    {figure && <Section icon={<Link2 aria-hidden />} title="Kenapa cocok denganmu">
-      {items.length > 0 && <ul className={styles.matches}>
-        {items.map(item => <li key={`${item.label}-${item.value}`} className={item.mine ? styles.matchOn : ""}>
-          <span className={styles.matchMark} aria-hidden>{item.mine ? <Check /> : null}</span>
-          <span><b>{item.label}:</b> {item.value}{item.mine ? <em> · kamu juga</em> : ""}</span>
-        </li>)}
-        {card.match && card.match.role.length > 0 && <li className={styles.matchOn}>
-          <span className={styles.matchMark} aria-hidden><Check /></span>
-          <span><b>Peranmu di tim:</b> {card.match.role.join(", ")} <em>· jadi tipemu {card.character.class}</em></span>
-        </li>}
-      </ul>}
-      {items.length > 0 && <p className={styles.small}>{shared ? `${shared} dari ${items.length} hal yang disukai ${figure.name} juga kamu pilih di kuesioner.` : `${figure.name} punya kesukaan yang berbeda darimu.`}{rerolled ? " Tokoh ini datang dari re-roll, jadi diundi acak dari tokoh yang masih tersedia." : ""}</p>}
-      {!items.length && card.reason && <p>{card.reason}</p>}
-    </Section>}
-    <Section icon={<Sparkles aria-hidden />} title={`Tipemu: ${card.character.class}`}>
-      {card.character.title && <p><b>{card.character.title}.</b></p>}
-      {card.character.description && <p>{card.character.description}</p>}
-      {card.character.powers.length > 0 && <ul className={styles.powers} aria-label="Kekuatan">{card.character.powers.map(power => <li key={power}>{power}</li>)}</ul>}
-      {card.character.partner && <p className={styles.small}>Pelengkapmu: <b>{card.character.partner.class}</b>. Kamu paling klop kerja bareng tipe ini.</p>}
-    </Section>
-    <p className={styles.small}>{name}, tokoh dan tipe dicocokkan dari jawabanmu. Rarity diundi terpisah (peluang {card.tier.name} {oddsLabel(card.tier.odds)}).{figure ? " Setiap tokoh hanya dimiliki satu orang." : ""}{figure?.costume ? ` Figurnya: ${figure.costume.charAt(0).toLowerCase() + figure.costume.slice(1)}.` : ""}</p>
-    <p className={styles.dna}>DNA kartu {card.dna}</p>
+  const tabs = figure ? PROFILE_TABS : PROFILE_TABS.filter(item => item.id !== "tokoh" && item.id !== "cocok");
+  const current = tabs.some(item => item.id === tab) ? tab : tabs[0].id;
+  const tabsRef = useRef<HTMLDivElement>(null);
+  /** Arrow keys move between the tabs, as a tab list should. */
+  function onKey(event: ReactKeyboardEvent<HTMLDivElement>) {
+    const index = tabs.findIndex(item => item.id === current);
+    const next = event.key === "ArrowRight" ? index + 1 : event.key === "ArrowLeft" ? index - 1 : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : null;
+    if (next === null) return;
+    event.preventDefault();
+    const target = tabs[(next + tabs.length) % tabs.length];
+    setTab(target.id);
+    tabsRef.current?.querySelector<HTMLButtonElement>(`[data-tab="${target.id}"]`)?.focus();
+  }
+  return <div className={`${styles.profile} ${rarityOf(card.tier) === 4 ? styles.profileGold : ""}`}>
+    <div ref={tabsRef} className={styles.profileTabs} role="tablist" aria-label="Tentang kartumu" onKeyDown={onKey}>
+      {tabs.map(item => <button key={item.id} type="button" role="tab" data-tab={item.id} id={`cq-tab-${item.id}`} aria-controls={`cq-panel-${item.id}`}
+        aria-selected={current === item.id} tabIndex={current === item.id ? 0 : -1} className={current === item.id ? styles.tabOn : ""} onClick={() => setTab(item.id)}>{item.label}</button>)}
+    </div>
+
+    <div role="tabpanel" id={`cq-panel-${current}`} aria-labelledby={`cq-tab-${current}`} className={styles.profilePanel}>
+      {current === "tokoh" && figure && <>
+        {profile ? <>
+          <Section icon={<UserRound aria-hidden />} title={`Siapa ${figure.name}`}>
+            <p>{profile.who}</p>
+            <p className={styles.tags}>{profile.tags.map(tag => <span key={tag} className={styles.tag}>{tag}</span>)}</p>
+          </Section>
+          <Section icon={<Trophy aria-hidden />} title="Kehebatannya"><p>{profile.feat}</p></Section>
+          <Section icon={<Globe2 aria-hidden />} title="Pengaruhnya"><p>{profile.impact}</p></Section>
+        </> : <p className={styles.small}>Profil {figure.name} sedang disiapkan.</p>}
+        <Section icon={<Shirt aria-hidden />} title="Figurnya">
+          {figure.costume && <p>{figure.costume.charAt(0).toUpperCase() + figure.costume.slice(1)}.</p>}
+          {figure.legend && <p>Kartumu Legendary, jadi {figure.name} tampil dalam wujud kelas RPG: <b>{figure.legendClass ?? "kelas RPG"}</b>.</p>}
+          {figure.quote && <blockquote className={styles.small}>{figure.quote}</blockquote>}
+          <p className={styles.small}>Figur mainan berwajah umum, dikenali dari kostum dan aksesorinya.</p>
+        </Section>
+      </>}
+
+      {current === "cocok" && figure && <Section icon={<Link2 aria-hidden />} title={`Kamu dan ${figure.name}`}>
+        {items.length > 0 && <ul className={styles.matches}>
+          {items.map(item => <li key={`${item.label}-${item.value}`} className={item.mine ? styles.matchOn : ""}>
+            <span className={styles.matchMark} aria-hidden>{item.mine ? <Check /> : null}</span>
+            <span><b>{item.label}:</b> {item.value}{item.mine ? <em> · kamu juga</em> : ""}</span>
+          </li>)}
+          {card.match && card.match.role.length > 0 && <li className={styles.matchOn}>
+            <span className={styles.matchMark} aria-hidden><Check /></span>
+            <span><b>Peranmu di tim:</b> {card.match.role.join(", ")} <em>· jadi tipemu {card.character.class}</em></span>
+          </li>}
+        </ul>}
+        {items.length > 0 && <p className={styles.small}>{shared ? `${shared} dari ${items.length} hal yang disukai ${figure.name} juga kamu pilih di kuesioner.` : `${figure.name} punya kesukaan yang berbeda darimu.`}{rerolled ? " Tokoh ini datang dari re-roll, jadi diundi acak dari tokoh yang masih tersedia." : ""}</p>}
+        {card.reason && <p>{card.reason}</p>}
+      </Section>}
+
+      {current === "tipe" && <Section icon={<Sparkles aria-hidden />} title={`Tipemu: ${card.character.class}`}>
+        {card.character.title && <p><b>{card.character.title}.</b></p>}
+        {card.character.description && <p>{card.character.description}</p>}
+        {card.character.powers.length > 0 && <ul className={styles.powers} aria-label="Kekuatan">{card.character.powers.map(power => <li key={power}>{power}</li>)}</ul>}
+        {card.character.partner && <p>Pelengkapmu: <b>{card.character.partner.class}</b>. Kamu paling klop kerja bareng tipe ini.</p>}
+        <p className={styles.small}>{name}, tipemu dihitung dari peranmu di tim, hobi, kegiatan favorit, gaya berkumpul, dan kesiapan aktivitas fisik.</p>
+      </Section>}
+
+      {current === "kartu" && <Section icon={<IdCard aria-hidden />} title="Kartumu">
+        <dl className={styles.facts}>
+          <div><dt>Rarity</dt><dd>{card.tier.name}</dd><span>Peluang {oddsLabel(card.tier.odds)}{card.tier.line ? `. ${card.tier.line}` : ""}</span></div>
+          <div><dt>Nomor</dt><dd>{serialLabel(card.serial)}</dd><span>Urutan selesai mengisi</span></div>
+          {figure && <div><dt>Edisi</dt><dd>1 dari 1</dd><span>Setiap tokoh hanya dimiliki satu orang</span></div>}
+          <div><dt>DNA kartu</dt><dd>{card.dna}</dd><span>Sidik unik kartumu</span></div>
+        </dl>
+        <p className={styles.small}>Tokoh dan tipe dicocokkan dari jawabanmu. Rarity diundi terpisah di server, sekali, lalu dikunci.</p>
+      </Section>}
+    </div>
   </div>;
 }
 

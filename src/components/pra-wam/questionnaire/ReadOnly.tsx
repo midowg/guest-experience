@@ -36,8 +36,10 @@ export function ReadOnlyAnswers({ name, home, sections, questions, answers, anon
         <a className={`${styles.btn} ${styles.primary}`} href={home}>Ke Beranda</a>
       </section>
       {card && <CardReveal formId={card.formId} initial={card.view} nickname={card.nickname} hasPhoto={card.hasPhoto} settled />}
-      {visibleContent({ sections, questions }, answers).map(({ section, questions: shown }) => <section key={section.id} className={styles.card} aria-labelledby={`cq-${section.id}`}>
-        <h2 id={`cq-${section.id}`}>{section.title}</h2>
+      {/* The answers, each part folded at first (17 Nov 2026): the card comes first, the page stays short. */}
+      <h2 className={styles.answersHeading}>Jawaban kuesionermu</h2>
+      {visibleContent({ sections, questions }, answers).map(({ section, questions: shown }) => <details key={section.id} className={`${styles.card} ${styles.fold}`}>
+        <summary><span className={styles.foldTitle}>{section.title}</span><span className={styles.foldCount}>{section.anonymous ? "Anonim" : `${shown.length} pertanyaan`}</span></summary>
         {section.anonymous
           ? <p className={styles.lead}>{anonymousSent ? "Sudah terkirim tanpa nama. Jawabannya tidak tersimpan bersama namamu, jadi tidak ditampilkan di sini." : "Tidak dikirim."}</p>
           : <dl>
@@ -49,7 +51,7 @@ export function ReadOnlyAnswers({ name, home, sections, questions, answers, anon
               </div>;
             })}
           </dl>}
-      </section>)}
+      </details>)}
     </main>
   </QuestionnaireApp>;
 }

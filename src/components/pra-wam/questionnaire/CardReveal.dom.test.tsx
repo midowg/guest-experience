@@ -55,7 +55,9 @@ it("asks the server for the card once, then the pack: tapped three times, or ski
   expect(screen.getByText("Epic. Langka. Sekitar 1 dari 14 orang.")).toBeTruthy();
   expect(screen.getByText("#007 · 1 dari 1")).toBeTruthy();
   expect(screen.getByText("Pelengkapmu: Penyembuh Hati")).toBeTruthy();
-  expect(screen.getByText("DNA kartu a1b2c3d4e5")).toBeTruthy();
+  // A card without a figure: Tipemu and Kartu tabs; the DNA under Kartu.
+  fireEvent.click(screen.getByRole("tab", { name: "Kartu" }));
+  expect(screen.getByText("a1b2c3d4e5")).toBeTruthy();
   expect(window.localStorage.getItem("wam-cq-card-open:f1")).toBe("1");
   // "Buka ulang" plays the opening again; it never draws again.
   fireEvent.click(screen.getByRole("button", { name: /Buka ulang/ }));
@@ -104,10 +106,16 @@ it("shows a tokoh card's result: the figure, why, the persona and its complement
   expect(screen.getByText(/puncak Everest pada 1953/)).toBeTruthy();
   expect(screen.getByRole("heading", { name: "Kehebatannya" })).toBeTruthy();
   expect(screen.getByRole("heading", { name: "Pengaruhnya" })).toBeTruthy();
+  expect(screen.getByText(/Jaket pendaki, kapak es./)).toBeTruthy();
+  // The tabs: Cocok compares the tokoh with my answers; Tipemu is my type; arrow keys move between them.
+  expect(screen.getAllByRole("tab").map(tab => tab.textContent)).toEqual(["Tokoh", "Cocok", "Tipemu", "Kartu"]);
+  fireEvent.click(screen.getByRole("tab", { name: "Cocok" }));
   expect(screen.getByText("1 dari 2 hal yang disukai Edmund Hillary juga kamu pilih di kuesioner.")).toBeTruthy();
   expect(screen.getByText(/Eksekutor/)).toBeTruthy();
+  expect(screen.getByText(tokoh.reason!)).toBeTruthy();
+  fireEvent.keyDown(screen.getByRole("tab", { name: "Cocok" }), { key: "ArrowRight" });
+  expect(screen.getByRole("tab", { name: "Tipemu" }).getAttribute("aria-selected")).toBe("true");
   expect(screen.getByRole("heading", { name: "Tipemu: Garda Depan" })).toBeTruthy();
-  expect(screen.getByText(/Figurnya: jaket pendaki, kapak es./)).toBeTruthy();
   expect(screen.getByText("Garda Depan")).toBeTruthy();
   expect(screen.getByText("Pelengkapmu: Penyihir Ide")).toBeTruthy();
   expect(container.querySelector("[class*='stampOn']")?.textContent).toBe("Epic");
