@@ -51,6 +51,8 @@ function cardOf(seed: Seed, tier: (typeof tierList)[number], serial: number, pic
     reason: `Kamu dapat ${seed.name} karena kamu tipe ${persona.class}.`,
     colors: colorsOf(seed.persona),
     ...(reroll ? { reroll: { state: "open" as const, until: "2026-11-23T14:00:00.000Z" } } : {}),
+    // A sample of what the server sends for my own card: what the tokoh is matched on, against made-up answers.
+    match: { items: [{ label: "Hobi", value: "Seni & kerajinan", mine: true }, { label: "Kegiatan favorit", value: "Kreatif / seni", mine: true }, { label: "Gaya berkumpul", value: "Kelompok kecil", mine: false }], role: ["Pencetus ide"] },
   };
 }
 

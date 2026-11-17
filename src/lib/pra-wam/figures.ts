@@ -25,6 +25,8 @@ export const FIGURES_MIGRATION = "202611130010_wam_figures.sql";
 export const FIGURES_V3_MIGRATION = "202611160010_wam_figures_v3.sql";
 /** The questions a figure is matched on, by their fixed keys. */
 export const FIGURE_KEYS = { hobbies: "17", energy: "20", activities: "21", genre: "37" } as const;
+/** The role in the team (34), which mostly picks the persona; shown on the card as "Tipemu". */
+export const ROLE_KEY = "34";
 
 export type Figure = {
   id: string; number: number; key: string; name: string; personaId: string; costume: string;
@@ -80,6 +82,22 @@ const plain = (text: string) => text.toLocaleLowerCase("id").replace(/\s+/g, "")
 const listOf = (value: Answers[string] | undefined): string[] => (Array.isArray(value) ? value : typeof value === "string" && value ? [value] : []);
 const has = (answer: Answers[string] | undefined, option: string) => !!option && listOf(answer).some(given => plain(given) === plain(option));
 const phrase = (map: Record<string, string>, option: string) => map[option.toLocaleLowerCase("id").replace(/\s+/g, " ").trim()] ?? option.toLocaleLowerCase("id");
+
+/** One thing a figure is matched on, and whether my answers have it too. */
+export type MatchItem = { label: string; value: string; mine: boolean };
+
+/** What a figure is matched on, each with whether I chose it (for "Kenapa cocok denganmu"). */
+export function figureMatches(figure: Pick<Figure, "hobbies" | "activities" | "energy" | "genre">, answers: Answers): MatchItem[] {
+  return [
+    ...figure.hobbies.map(hobby => ({ label: "Hobi", value: hobby, mine: has(answers[FIGURE_KEYS.hobbies], hobby) })),
+    ...figure.activities.map(activity => ({ label: "Kegiatan favorit", value: activity, mine: has(answers[FIGURE_KEYS.activities], activity) })),
+    ...(figure.energy ? [{ label: "Gaya berkumpul", value: figure.energy, mine: has(answers[FIGURE_KEYS.energy], figure.energy) }] : []),
+    ...(figure.genre && figure.genre.toLocaleLowerCase("id") !== "lainnya" ? [{ label: "Musik", value: figure.genre, mine: has(answers[FIGURE_KEYS.genre], figure.genre) }] : []),
+  ];
+}
+
+/** My answers to a question as a list, without written-in "Lainnya: …" text. */
+export const chosen = (value: Answers[string] | undefined): string[] => listOf(value).filter(item => !/^lainnya:/i.test(item));
 
 /** A figure's score for these answers, and what matched, in words for the reason. */
 export function figureScore(figure: Pick<Figure, "hobbies" | "activities" | "energy" | "genre">, answers: Answers): { score: number; why: string[] } {
