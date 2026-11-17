@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { archiveKey, csvText, isLink, movePhotos, photoKey, rewardPhotoKeyOf, sniffKind } from "../../scripts/wellbeing-storage-lib.mjs";
+import { archiveKey, csvText, isLink, movePhotos, photoKey, rewardPhotoKeyOf, smallPhotoFiles, sniffKind } from "../../scripts/wellbeing-storage-lib.mjs";
 
 /* Moving the old Wellbeing app's storage into Journey (scripts/wellbeing-storage.mjs, 18 Nov 2026). */
 
@@ -48,5 +48,14 @@ describe("wellbeing storage move", () => {
 
   it("writes the list as CSV with every field quoted (links may hold commas)", () => {
     expect(csvText(["url", "bytes"], [{ url: 'https://x/a,b"c.jpg', bytes: 12 }])).toBe('"url","bytes"\n"https://x/a,b""c.jpg","12"\n');
+  });
+
+  it("pairs each old link with its small version (--foto, 18 Nov 2026)", () => {
+    const files = smallPhotoFiles([
+      { tautan_asal: "https://old.example/quest-proofs/a.png", berkas_kecil: "Dewi Contoh\\2026-06-01 Morning Run.jpg" },
+      { tautan_asal: "https://old.example/quest-proofs/b.jpg", berkas_kecil: "" },
+      { tautan_asal: "wellbeing/x/y.jpg", berkas_kecil: "Z\\y.jpg" },
+    ], "D:\\ekspor\\foto-kecil\\");
+    expect([...files]).toEqual([["https://old.example/quest-proofs/a.png", "D:\\ekspor\\foto-kecil/Dewi Contoh/2026-06-01 Morning Run.jpg"]]);
   });
 });

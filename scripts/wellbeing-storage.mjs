@@ -5,6 +5,12 @@
  *   node --env-file=.env scripts/wellbeing-storage.mjs <folder ekspor>                    uji kering foto bukti
  *   node --env-file=.env scripts/wellbeing-storage.mjs <folder ekspor> --apply            salin foto + ganti tautan
  *   node --env-file=.env scripts/wellbeing-storage.mjs <folder ekspor> --arsip [--apply]  semua isi storage lama
+ *   ... <folder ekspor> --foto <folder foto kecil> [--apply]   foto bukti dari versi kecil yang sudah disiapkan
+ *
+ * --foto (18 Nov 2026): yang diunggah ke R2 bukan foto asli dari project lama, tapi versi kecilnya di folder itu
+ * (sisi terpanjang 1.600 px, JPEG, paling besar 600 KB; video dan HEIC apa adanya), dipasangkan lewat
+ * <folder foto kecil>/daftar-foto-kecil.csv (kolom tautan_asal dan berkas_kecil). Tautan tanpa versi kecil
+ * tetap diunduh dari aslinya. Kunci, cek ukuran, penggantian tautan, dan foto-pindah.csv sama seperti biasa.
  *
  * 1. Foto bukti (bawaan). Tiap foto aktivitas di Journey (wb_activities.photos) yang masih berupa tautan ke
  *    storage aplikasi lama diunduh, dicek benar foto (byte awalnya), disimpan di R2 Journey sebagai
@@ -29,12 +35,18 @@ import path from "node:path";
 import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createClient } from "@supabase/supabase-js";
 import { readCsv } from "./wellbeing-csv.mjs";
-import { archiveKey, csvText, isLink, KINDS, megabytes, movePhotos, photoKey, rewardPhotoKeyOf, sniffKind } from "./wellbeing-storage-lib.mjs";
+import { archiveKey, csvText, isLink, KINDS, megabytes, movePhotos, photoKey, rewardPhotoKeyOf, smallPhotoFiles, sniffKind } from "./wellbeing-storage-lib.mjs";
 
 const dir = process.argv[2];
 const apply = process.argv.includes("--apply");
 const archive = process.argv.includes("--arsip");
-if (!dir || dir.startsWith("--")) { console.error("Pakai: node --env-file=.env scripts/wellbeing-storage.mjs <folder ekspor> [--arsip] [--apply]"); process.exit(1); }
+if (!dir || dir.startsWith("--")) { console.error("Pakai: node --env-file=.env scripts/wellbeing-storage.mjs <folder ekspor> [--foto <folder foto kecil>] [--arsip] [--apply]"); process.exit(1); }
+// --foto: the small versions to upload instead of the originals (link -> local file).
+const smallDir = process.argv.includes("--foto") ? process.argv[process.argv.indexOf("--foto") + 1] : null;
+if (process.argv.includes("--foto") && (!smallDir || smallDir.startsWith("--") || !fs.existsSync(path.join(smallDir, "daftar-foto-kecil.csv")))) {
+  console.error("--foto perlu folder yang berisi daftar-foto-kecil.csv."); process.exit(1);
+}
+const small = smallDir ? smallPhotoFiles(readCsv(path.join(smallDir, "daftar-foto-kecil.csv")), smallDir) : null;
 
 const env = process.env;
 if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SECRET_KEY) { console.error("NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SECRET_KEY (Journey) belum ada di .env."); process.exit(1); }
@@ -96,10 +108,27 @@ const hosts = new Map(); for (const url of links.keys()) { const host = new URL(
 
 console.log(`Foto bukti dan hadiah: ${links.size} tautan lama di ${activities.length} aktivitas dan ${rewards.length} hadiah (${[...hosts].map(([host, n]) => `${host}: ${n}`).join(", ") || "-"}).`);
 const problems = [], kinds = new Map();
-let bytesTotal = 0, copied = 0, already = 0;
+let bytesTotal = 0, copied = 0, already = 0, fromSmall = 0, fromOriginal = 0;
+/** The small version of this link (--foto), or null; a listed file that is missing is a problem, not a silent fallback. */
+const smallOf = url => {
+  const local = small?.get(url);
+  if (local && !fs.existsSync(local)) throw final(`versi kecil tidak ada: ${local}`);
+  return local ?? null;
+};
 
 await pool([...links], 8, async ([url, employeeId]) => {
   try {
+    const local = smallOf(url);
+    if (!apply && local) {
+      // Read only: the small file's first bytes say what it is; its size is what will be uploaded.
+      const bytes = fs.readFileSync(local);
+      const kind = sniffKind(new Uint8Array(bytes.subarray(0, 32)));
+      if (!kind) throw final("versi kecil bukan foto atau video yang dikenal");
+      kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
+      bytesTotal += bytes.length; fromSmall++;
+      if (r2 && (await sizeInR2(keyFor(employeeId, url, KINDS[kind].ext))) != null) already++;
+      return;
+    }
     if (!apply) {
       // Read only: the first bytes say whether it is still there and a photo; the size comes with them.
       const res = await retry(async () => {
@@ -113,17 +142,19 @@ await pool([...links], 8, async ([url, employeeId]) => {
       if (!kind) throw final("bukan foto atau video yang dikenal");
       kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
       bytesTotal += Number(/\/(\d+)$/.exec(res.headers.get("content-range") ?? "")?.[1] ?? res.headers.get("content-length") ?? 0);
+      fromOriginal++;
       if (r2 && (await sizeInR2(keyFor(employeeId, url, KINDS[kind].ext))) != null) already++;
       return;
     }
     const known = manifest.get(url);
     if (known && (await sizeInR2(known.key)) === Number(known.bytes)) { already++; bytesTotal += Number(known.bytes); kinds.set(known.kind, (kinds.get(known.kind) ?? 0) + 1); return; }
-    const bytes = await retry(async () => {
+    const bytes = local ? new Uint8Array(fs.readFileSync(local)) : await retry(async () => {
       const answer = await fetch(url, { signal: AbortSignal.timeout(120_000) });
       if (answer.status === 404 || answer.status === 400) throw final(`tidak ada (${answer.status})`);
       if (!answer.ok) throw new Error(`HTTP ${answer.status}`);
       return new Uint8Array(await answer.arrayBuffer());
     });
+    if (local) fromSmall++; else fromOriginal++;
     const kind = sniffKind(bytes);
     if (!kind) throw final("bukan foto atau video yang dikenal");
     const key = keyFor(employeeId, url, KINDS[kind].ext);
@@ -138,6 +169,7 @@ await pool([...links], 8, async ([url, employeeId]) => {
 });
 
 console.log(`  jenis: ${[...kinds].map(([kind, n]) => `${kind} ${n}`).join(", ") || "-"}; ukuran ${megabytes(bytesTotal)}`);
+if (small) console.log(`  dari versi kecil (--foto): ${fromSmall}; dari aslinya: ${fromOriginal}`);
 if (!apply) console.log(r2 ? `  sudah ada di R2 Journey: ${already}` : "  (R2 belum diisi di .env: belum bisa dicek mana yang sudah tersalin)");
 else console.log(`  disalin ke R2: ${copied}, sudah ada sebelumnya: ${already}`);
 if (problems.length) { console.log(`  BERMASALAH ${problems.length} (tetap memakai tautan lama, ikut hilang saat project lama diarsipkan):`); for (const line of problems) console.log(`    - ${line}`); }

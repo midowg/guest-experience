@@ -68,3 +68,16 @@ export function csvText(columns, rows) {
 
 /** "1,5 MB" for a report. */
 export const megabytes = bytes => `${(bytes / 1048576).toLocaleString("id-ID", { maximumFractionDigits: 1 })} MB`;
+
+/**
+ * --foto (18 Nov 2026): the small versions made beforehand, from daftar-foto-kecil.csv (tautan_asal, berkas_kecil):
+ * old link -> the local file under `dir`. Rows without a small file are left out (their original is used).
+ */
+export function smallPhotoFiles(rows, dir) {
+  const out = new Map();
+  for (const row of rows) {
+    const url = row.tautan_asal?.trim(), file = row.berkas_kecil?.trim();
+    if (url && file && isLink(url)) out.set(url, `${dir.replace(/[\\/]+$/, "")}/${file.replace(/\\/g, "/")}`);
+  }
+  return out;
+}
