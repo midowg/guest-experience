@@ -306,9 +306,12 @@
   margin-inline: calc(-1 * max(var(--space-md), env(safe-area-inset-left, 0px))) calc(-1 * max(var(--space-md), env(safe-area-inset-right, 0px)));
   padding-inline: max(0px, env(safe-area-inset-left, 0px)) max(0px, env(safe-area-inset-right, 0px)); padding-top: env(safe-area-inset-top, 0px);
   background-color: #fff;
+  /* One deep colour of the persona all the way down (17 Nov 2026), lighter where the card is, with its rarity's glow behind it. */
   background:
-    radial-gradient(ellipse 90% 380px at 50% 260px, color-mix(in oklab, var(--glow) 34%, transparent), transparent 70%),
-    linear-gradient(180deg, color-mix(in oklab, var(--tone-deep) 92%, #000) 0, var(--tone-deep) 120px, color-mix(in oklab, var(--stage-tone) 75%, var(--tone-deep)) 250px, color-mix(in oklab, var(--stage-tone) 18%, #fff) 450px, color-mix(in oklab, var(--stage-tone) 7%, #fff) 800px, #fff 1300px); }
+    radial-gradient(ellipse 85% 300px at 50% 250px, color-mix(in oklab, var(--glow) 38%, transparent), transparent 72%),
+    radial-gradient(ellipse 120% 520px at 50% 220px, color-mix(in oklab, var(--stage-tone) 55%, var(--tone-deep)), transparent 75%),
+    linear-gradient(180deg, color-mix(in oklab, var(--tone-deep) 80%, #000) 0, var(--tone-deep) 360px, color-mix(in oklab, var(--tone-deep) 70%, #0b0b14) 100%);
+  background-color: color-mix(in oklab, var(--tone-deep) 70%, #0b0b14); color: #fff; }
 .charStars { position: absolute; inset: 0 0 auto; height: 520px; pointer-events: none; opacity: .55;
   background-image: radial-gradient(1.5px 1.5px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 28% 8%, #fff 50%, transparent 51%), radial-gradient(2px 2px at 82% 14%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 66% 30%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 92% 42%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 6% 48%, #fff 50%, transparent 51%), radial-gradient(2px 2px at 46% 4%, #fff 50%, transparent 51%);
   background-size: 260px 260px; animation: charTwinkle 6s ease-in-out infinite alternate; }
@@ -317,8 +320,22 @@
 .charTop a { display: inline-flex; align-items: center; gap: 6px; color: #fff; font-weight: 700; text-decoration: none; min-height: 44px; }
 .charTop a svg { width: 20px; height: 20px; }
 .charTop span { font-family: var(--font-display); letter-spacing: .02em; opacity: .9; }
-.charMain { position: relative; z-index: 1; padding: 0 var(--space-md); display: grid; gap: var(--space-md); }
+.charMain { position: relative; z-index: 1; padding: var(--space-lg) var(--space-md) 0; display: grid; gap: var(--space-md); }
+/* On the deep colour: the words outside the white panels are light. */
+.charPage .resWho, .charPage .resTier, .charPage .tiltHint, .charPage .rr > p, .charPage .done { color: rgba(255, 255, 255, .82); }
+.charPage .resName:not(.goldName) { color: #fff; }
+.charPage .pill:not(.personaPill), .charPage .acts .btn:not(.primary), .charPage .answersLink { color: var(--ink); }
+.charPage .goldName { background: linear-gradient(90deg, #FFE89A, #F0BB3E, #FFF4C9); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.charPage .rr .btn.text { color: #fff; text-decoration-color: rgba(255, 255, 255, .45); }
+.charPage .problem { color: #ffd2c9; }
+.charPage .profile .prof { background: #fff; box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--tone) 35%, transparent); color: var(--ink); }
+.charPage .profile > .small, .charPage .profile > .dna { color: rgba(255, 255, 255, .7); }
+.charPage .profileTabs { background: rgba(255, 255, 255, .14); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .28); }
+.charPage .profileTabs button { color: rgba(255, 255, 255, .85); }
+.charPage .profileTabs .tabOn { color: var(--ink); }
+.charPage .trial { color: #5c4100; }
 .charMain .draw.opened .bgdots { display: none; }
+.charPage .answersLink { box-shadow: 3px 4px 0 rgba(0, 0, 0, .35); }
 .answersLink { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 var(--space-lg); border-radius: 999px; font-weight: 700; color: var(--ink); text-decoration: none; background: #fff; box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--stage-tone) 62%, #141325), 3px 4px 0 color-mix(in oklab, var(--stage-tone) 62%, #141325); justify-self: center; }
 .answersLink svg { width: 20px; height: 20px; }
 @media (prefers-reduced-motion: reduce) { .charStars { animation: none; } }
