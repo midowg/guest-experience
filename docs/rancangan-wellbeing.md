@@ -154,17 +154,27 @@ aplikasi tetap jalan dan menyimpan tanpa jam.
     status HP.
   - Form di kartu, diawali satu baris kecil "Masuk dengan akun WAM" (bukan sorotan utama). Tanpa slogan, dan tanpa
     kata "karyawan" (di bawah: "Program wellbeing Werkudara", juga di kartu share).
-  - Gerakan sekali jalan, sekitar 1,5 detik, dengan CSS (Remotion untuk membuat video, terlalu berat untuk halaman
-    masuk):
-    - Huruf naik satu per satu, warna mengalir melintas sekali lalu berhenti.
+  - Gerakan masuk sekali jalan, sekitar 2 detik, dengan CSS (Remotion untuk membuat video, terlalu berat untuk
+    halaman masuk):
+    - Huruf naik satu per satu, lalu kilau terang menyapu W, L, M bergantian. Warnanya tidak berubah.
     - "Werkudara Life Mode" merapat dari renggang, garis tumbuh dari tengah, lalu kartu naik.
     - Pesan salah bergetar sekali tiap mencoba.
-    - Semua gerakan mati bila HP diatur mengurangi gerakan.
+  - Versi "wow" (18 Nov 2026), dari acuan sign-in aurora-glass dan poster brand olahraga:
+    - Latar aurora lima warna dimensi yang bergeser sangat pelan, dengan butiran halus. Ikut tema: pastel di terang,
+      lebih dalam di gelap.
+    - Di belakang WLM ada dua baris kata besar bergaris tepi yang berjalan berlawanan arah: lima dimensi, dan
+      aktivitas (lari, yoga, meditasi, menabung, berbagi, bersepeda, renang).
+    - WLM berpendar lembut dalam warnanya sendiri.
+    - Form di kartu kaca buram dengan tepi gradasi warna. Kolom isian tetap padat (tidak kaca di atas kaca) supaya
+      kontrasnya tetap. Tombol Masuk berpendar warnanya.
+  - Semua gerakan, termasuk aurora dan kata berjalan, mati bila HP diatur mengurangi gerakan.
 - **Nama dan tautan:**
   - Tab bernama "WLM" saja (WLM sudah singkatan dari Werkudara Life Mode; bagian lain "Peringkat · WLM"), dengan
     ikon WLM sendiri. Judul kartu share juga "WLM".
   - Nama di layar utama HP: "WLM".
-  - Tautan yang dibagikan menampilkan kartu WLM: tulisan WLM berwarna, apa aplikasinya, dan "Masuk dengan akun WAM".
+  - Tautan yang dibagikan menampilkan kartu WLM persegi (1:1, 1080 × 1080, supaya pratinjau kecil WhatsApp yang
+    dipotong persegi tetap menampilkan semuanya): tulisan WLM berwarna di depan kata lima dimensi yang samar, apa
+    aplikasinya, dan "Masuk dengan akun WAM".
     Hurufnya (Barlow Condensed, Plus Jakarta Sans) diambil dari Google Fonts saat gambar dibuat; bila gagal, gambar
     tetap jadi dengan huruf bawaan.
   - Ketiganya dari `src/lib/wellbeing/brand.ts` dan `src/lib/server/wlm-preview.tsx`.

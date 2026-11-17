@@ -65,11 +65,33 @@ function useStatusBar(theme: ThemeChoice) {
   }, [theme]);
 }
 
+/* The words that run behind the name: the five dimensions, and what people do for them. */
+const RUN_DIMENSIONS = "Fisik · Emosional · Sosial · Finansial · Spiritual · ";
+const RUN_ACTIVITIES = "Lari · Yoga · Meditasi · Menabung · Berbagi · Bersepeda · Renang · ";
+
+/**
+ * Behind everything (decoration, hidden from screen readers): an aurora of the five dimension colours
+ * drifting slowly, a fine grain, and on the sign-in two rows of big outlined words running opposite ways
+ * behind the name, like a sports poster. All of it still with reduced motion.
+ */
+function Backdrop({ hero }: { hero: boolean }) {
+  return <div className={css.wlmBackdrop} aria-hidden="true">
+    {[1, 2, 3, 4].map(n => <i key={n} className={css.wlmBlob} data-n={n} />)}
+    {hero && <div className={css.wlmRun}>
+      {[RUN_DIMENSIONS, RUN_ACTIVITIES].map((words, row) => <div key={row} className={css.wlmRunRow} data-row={row}>
+        {/* The words twice, so the row loops without a gap. */}
+        <span>{words.repeat(2)}</span><span>{words.repeat(2)}</span>
+      </div>)}
+    </div>}
+  </div>;
+}
+
 function Frame({ title, lead, hero = false, children, foot }: { title: string; lead?: string; hero?: boolean; children: ReactNode; foot?: ReactNode }) {
   const [theme] = useTheme();
   useStatusBar(theme);
   return <div className={cx(css.tokens, css.login, fontVars)} data-theme={theme === "system" ? undefined : theme} suppressHydrationWarning>
     <ThemeBoot />
+    <Backdrop hero={hero} />
     <main className={css.loginColumn}>
       {hero ? <header className={css.wlmHero}>
         <h1 className={css.wlmTitle} aria-label={`${WLM_NAME}, ${WLM_FULL_NAME}. ${title}`}><WlmWordmark animated /></h1>

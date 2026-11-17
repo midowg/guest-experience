@@ -14,7 +14,8 @@ export const WLM_DESCRIPTION = "Aplikasi wellbeing Werkudara: catat aktivitas fi
 export const wlmTitle = (page?: string) => page ? `${page} · ${WLM_TITLE}` : WLM_TITLE;
 
 /** The pictures, drawn by src/app/wlm/{opengraph-image,icon,apple-icon}.tsx (named here: a page's own openGraph and the root's icons would hide them). */
-const SHARE_IMAGE = { url: "/wlm/opengraph-image", width: 1200, height: 630, alt: "WLM: aplikasi wellbeing Werkudara. Masuk dengan akun WAM." };
+// Square (1080 × 1080): the small preview in WhatsApp is a square crop, so a square card shows whole.
+const SHARE_IMAGE = { url: "/wlm/opengraph-image", width: 1080, height: 1080, alt: "WLM: aplikasi wellbeing Werkudara. Masuk dengan akun WAM." };
 
 /** Metadata for a WLM page: its tab title and icon, the share card (title, text, picture), and the home-screen name and icon. */
 export function wlmMetadata(page?: string): Metadata {
@@ -24,7 +25,8 @@ export function wlmMetadata(page?: string): Metadata {
     applicationName: WLM_TITLE,
     icons: { icon: [{ url: "/wlm/icon", type: "image/png", sizes: "64x64" }], apple: [{ url: "/wlm/apple-icon", type: "image/png", sizes: "180x180" }] },
     openGraph: { title: WLM_TITLE, description: WLM_DESCRIPTION, siteName: WLM_TITLE, type: "website", locale: "id_ID", images: [SHARE_IMAGE] },
-    twitter: { card: "summary_large_image", title: WLM_TITLE, description: WLM_DESCRIPTION, images: [SHARE_IMAGE.url] },
+    // "summary": the card type for a square picture (summary_large_image wants a wide one).
+    twitter: { card: "summary", title: WLM_TITLE, description: WLM_DESCRIPTION, images: [SHARE_IMAGE.url] },
     appleWebApp: { capable: true, title: WLM_SHORT, statusBarStyle: "black-translucent" },
     robots: { index: false, follow: false },
   };

@@ -49,8 +49,9 @@ describe("WLM sign-in", () => {
     const meta = wlmMetadata("Masuk");
     expect(meta.title).toEqual({ absolute: "Masuk · WLM" });
     expect(JSON.stringify(meta)).not.toMatch(/WLM Werkudara/);
-    expect(meta.openGraph).toMatchObject({ title: WLM_TITLE, description: WLM_DESCRIPTION, images: [{ url: "/wlm/opengraph-image", width: 1200, height: 630 }] });
-    expect(meta.twitter).toMatchObject({ card: "summary_large_image" });
+    // A square picture, so the small (square) preview shows all of it.
+    expect(meta.openGraph).toMatchObject({ title: WLM_TITLE, description: WLM_DESCRIPTION, images: [{ url: "/wlm/opengraph-image", width: 1080, height: 1080 }] });
+    expect(meta.twitter).toMatchObject({ card: "summary" });
     expect(meta.icons).toMatchObject({ icon: [{ url: "/wlm/icon" }], apple: [{ url: "/wlm/apple-icon" }] });
     expect(WLM_DESCRIPTION).toMatch(/akun WAM/);
   });
