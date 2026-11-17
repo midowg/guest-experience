@@ -7,6 +7,8 @@ import css from "./wellbeing.module.css";
 /*
  * One tab of the app (17 Nov 2026): a bar whose title appears once the large title has scrolled
  * away, and its own scroll area, so each tab keeps where it was. Pull down at the top to refresh.
+ * The bar floats over the scroll area (18 Nov 2026): at the top nothing is reserved for it, so the
+ * page starts right under the phone's status bar.
  * Tabs stay mounted; an inactive one is hidden and inert (see WellbeingApp).
  */
 export function Screen({ title, active, onRefresh, refreshing, scrollRef, children }: {
@@ -52,7 +54,7 @@ export function Screen({ title, active, onRefresh, refreshing, scrollRef, childr
     </div>
     <div className={css.scroll} data-scroller=""
       ref={element => { scroller.current = element; scrollRef(element); }}
-      onScroll={event => { const next = event.currentTarget.scrollTop > 36; if (next !== scrolled) setScrolled(next); }}
+      onScroll={event => { const next = event.currentTarget.scrollTop > 40; if (next !== scrolled) setScrolled(next); }}
       onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={() => void onTouchEnd()} onTouchCancel={() => { start.current = null; setPulling({ distance: 0, spinning: false }); }}>
       <div className={css.content}>{children}</div>
     </div>

@@ -130,20 +130,22 @@
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
 .screen[data-active="false"] { visibility: hidden; pointer-events: none; }
 .screen[data-active="true"] { animation: fadeUp .22s var(--ease) both; }
-.bar { flex: none; height: calc(var(--bar-h) + var(--safe-t)); padding: var(--safe-t) 8px 0 16px; display: flex; align-items: center; gap: 8px;
-  background: var(--bg); border-bottom: 1px solid transparent; transition: border-color .2s var(--ease); position: relative; z-index: 2; }
-.bar[data-scrolled="true"] { border-bottom-color: var(--outline); }
+/* The bar floats over the tab (18 Nov 2026): no empty band above the page; it shows, frosted with its title,
+   only once the large title has scrolled under it. Nothing in it is tappable, so taps pass through. */
+.bar { position: absolute; top: 0; left: 0; right: 0; z-index: 2; height: calc(var(--bar-h) + var(--safe-t)); padding: var(--safe-t) 8px 0 16px; display: flex; align-items: center; gap: 8px;
+  background: transparent; border-bottom: 1px solid transparent; pointer-events: none; transition: background-color .2s var(--ease), border-color .2s var(--ease); }
+.bar[data-scrolled="true"] { background: color-mix(in srgb, var(--bg) 86%, transparent); -webkit-backdrop-filter: saturate(1.6) blur(16px); backdrop-filter: saturate(1.6) blur(16px); border-bottom-color: var(--outline); }
 .barTitle { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity .2s var(--ease); }
 .bar[data-scrolled="true"] .barTitle { opacity: 1; }
 .barBusy { width: 44px; height: 44px; display: grid; place-items: center; color: var(--text-3); }
 .scroll { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; position: relative; scrollbar-width: none; }
 .scroll::-webkit-scrollbar { display: none; }
 /* One pixel taller than the screen, so the app's own pull-to-refresh works on a short tab. */
-.content { padding: 0 16px 32px; min-height: calc(100% + 1px); }
+.content { padding: calc(var(--safe-t) + 20px) 16px 32px; min-height: calc(100% + 1px); }
 /* The page itself never bounces or pull-reloads under the app. */
 :global(html):has(.app), :global(body):has(.app) { overscroll-behavior: none; }
 .largeTitle { font-size: 28px; font-weight: 800; letter-spacing: -.01em; line-height: 1.15; padding: 0 0 16px; }
-.ptr { position: absolute; top: calc(var(--bar-h) + var(--safe-t) - 40px); left: 50%; transform: translate(-50%, 0); width: 40px; height: 40px; border-radius: 999px;
+.ptr { position: absolute; top: calc(var(--safe-t) - 28px); left: 50%; transform: translate(-50%, 0); width: 40px; height: 40px; border-radius: 999px;
   background: var(--surface); box-shadow: var(--shadow-float); display: grid; place-items: center; color: var(--primary); opacity: 0; z-index: 3; pointer-events: none; }
 .ptr[data-spinning="true"] svg { animation: rot .8s linear infinite; }
 
