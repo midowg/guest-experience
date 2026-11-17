@@ -308,7 +308,7 @@ export function CardReveal({ formId, initial, nickname, hasPhoto, settled, onRea
       if (!blob) throw new Error("Gambar belum dapat dibuat di browser ini.");
       setSaved(kind === "kartu"
         ? { url: URL.createObjectURL(blob), blob, filename: card.figure ? "kartu-tokoh-wam-2026.png" : "kartu-karakter-wam-2026.png", caption: "Kartu 1080 × 1350, siap dibagikan." }
-        : { url: URL.createObjectURL(blob), blob, filename: "wallpaper-wam-2026.png", caption: "Wallpaper HP 1080 × 2340. Bagian atas sengaja kosong untuk jam layar kunci.", tall: true });
+        : { url: URL.createObjectURL(blob), blob, filename: "wallpaper-wam-2026.png", caption: `Wallpaper HP ${canvas.width} × ${canvas.height}, pas dengan layar HP-mu. Bagian atas sengaja kosong untuk jam layar kunci.`, tall: true });
     } catch (error) {
       setNote({ tone: "error", text: errorText(error) });
     } finally {
