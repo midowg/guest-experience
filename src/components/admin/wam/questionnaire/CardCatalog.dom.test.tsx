@@ -75,3 +75,12 @@ it("gives one person their re-roll again, after asking (16 Nov 2026)", async () 
   fireEvent.click(Array.from(dialog.querySelectorAll("button")).find(button => button.textContent === "Beri re-roll lagi")!);
   await waitFor(() => expect(adminRequest).toHaveBeenCalledWith("/api/admin/wam/questionnaire/cards", { method: "PATCH", body: JSON.stringify({ resetReroll: employeeId }) }));
 });
+
+it("shows every figure's Legendary RPG form, which ships with the app", () => {
+  const figure = { id: "00000000-0000-4000-8000-0000000000f1", number: 7, key: "affandi", name: "Affandi", personaId: data.catalog.characters[0].id, costume: "", hobbies: [], activities: [], energy: "", genre: "", indonesian: true, funny: false, quote: null, hidden: false, image: "/figur/affandi.webp", stored: false, legendImage: "/figur/leg/affandi.webp" };
+  const { container } = render(<CardCatalog initial={{ ...data, catalog: { ...data.catalog, figures: [figure], figuresReady: true } }} />);
+  expect(screen.getByRole("heading", { name: "Wujud Legendary" })).toBeTruthy();
+  expect(container.querySelector("img[src='/figur/leg/affandi.webp']")).toBeTruthy();
+  // The persona "penghibur" plays the Minstrel Bard.
+  expect(screen.getByText(/Minstrel Bard/)).toBeTruthy();
+});

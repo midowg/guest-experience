@@ -10,7 +10,7 @@ import {
   artKindLabels, ODDS_TOTAL, oddsLabel, partKinds, serialLabel, slotOfFile,
   type ArtKind, type Character, type CharacterInput, type Tier,
 } from "@/lib/pra-wam/cards";
-import { figureOfFile } from "@/lib/pra-wam/figures";
+import { figureOfFile, legendClasses } from "@/lib/pra-wam/figures";
 import { fromZoneInput, toZoneInput } from "@/lib/format";
 import { praWamCardsApi } from "@/lib/routes";
 import type { AdminCards } from "@/lib/server/pra-wam/cards-admin";
@@ -304,6 +304,17 @@ function Pictures({ data, busy, setBusy, setMessage, reload }: { data: AdminCard
         </li>)}
       </ul>
     </div>)}
+    {catalog.figures.some(figure => figure.legendImage) && <div className={styles.slotGroup}>
+      <h4>Wujud Legendary</h4>
+      <p className={styles.muted}>Kartu Legendary otomatis memakai wujud kelas RPG tokohnya (handoff 16 Nov 2026). Gambarnya ikut di aplikasi, jadi tidak perlu diunggah.</p>
+      <ul className={styles.slots}>
+        {catalog.figures.filter(figure => figure.legendImage).map(figure => <li key={`leg-${figure.id}`} className={styles.slot}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- shipped with the app in public/figur/leg; next/image cannot help in this grid */}
+          <span className={`${styles.slotArt} ${styles.tall}`}><img src={figure.legendImage!} alt="" loading="lazy" /></span>
+          <span className={styles.slotName}>{String(figure.number).padStart(2, "0")} · {figure.name}<br />{legendClasses[catalog.characters.find(character => character.id === figure.personaId)?.key ?? ""] ?? "Legendary"}</span>
+        </li>)}
+      </ul>
+    </div>}
   </section>;
 }
 
