@@ -24,6 +24,21 @@ import { body, display } from "./font";
 
 export const CARD = { width: 1080, height: 1350 } as const;
 export const WALL = { width: 1080, height: 2340 } as const;
+export type WallSize = { width: number; height: number };
+
+/**
+ * The wallpaper for this phone (17 Nov 2026): 1080 wide and as tall as the phone's screen is
+ * shaped, so it fills the screen with nothing at the sides. A computer (no touch screen) gets the
+ * usual 1080 × 2340; an unusual shape is kept between 16:10 and 1:2.5.
+ */
+export function phoneWall(): WallSize {
+  if (typeof window === "undefined" || !window.screen) return { ...WALL };
+  const touch = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+  const short = Math.min(window.screen.width, window.screen.height), long = Math.max(window.screen.width, window.screen.height);
+  if (!touch || !short || !long) return { ...WALL };
+  const shape = Math.min(2.5, Math.max(1.6, long / short));
+  return { width: WALL.width, height: Math.round(WALL.width * shape) };
+}
 export const YEAR_LABEL = "WAM 2026";
 const CREAM = "#FFF8E9", INK = "#141325";
 
@@ -205,15 +220,17 @@ async function drawFigureBack(card: CardView, scale: number): Promise<HTMLCanvas
 }
 
 /**
- * The tokoh card as a phone wallpaper, 1080 × 2340, full-art without a frame (handoff v3 `drawWall`):
- * the figure's top and bottom rows stretched up and down, the figure in the middle fading into
- * them, the top clear for the clock, the rarity on it, and only a faint "WAM 2026 · #seri" below.
+ * The tokoh card as a phone wallpaper, as tall as this phone's screen (1080 × 2340 on a computer),
+ * full-art without a frame (handoff v3 `drawWall`): the figure's top and bottom rows stretched up
+ * and down to the screen's edges, the figure in the middle fading into them, the top clear for the
+ * clock, the rarity on it, and only a faint "WAM 2026 · #seri" below.
  */
-async function drawFigureWallpaper(card: FigureCard): Promise<HTMLCanvasElement> {
+async function drawFigureWallpaper(card: FigureCard, size: WallSize): Promise<HTMLCanvasElement> {
   const [image] = await Promise.all([loadImage(card.figure.image), fontsReady()]);
-  const { width: W, height: H } = WALL;
+  const { width: W, height: H } = size;
   const [canvas, g] = canvasOf(W, H);
-  const top = 720, tall = 1350;
+  // The figure 4:5 across the width, about a third down (720 of 2340), never running off the bottom.
+  const tall = 1350, top = Math.round(Math.max(0, Math.min(H * 0.31, H - tall - 150)));
   if (image) {
     const scale = Math.max(W / image.width, tall / image.height), sw = W / scale, sh = tall / scale;
     const sx = (image.width - sw) / 2, sy = (image.height - sh) * 0.2, edge = Math.round(sh * 0.03), middle = top + tall / 2;
@@ -283,10 +300,10 @@ export async function drawBack(card: CardView, scale = 0.6): Promise<HTMLCanvasE
 }
 
 /** A phone wallpaper, 1080 × 2340: the card in the middle, the top left clear for the clock. */
-export async function drawWallpaper(card: CardView): Promise<HTMLCanvasElement> {
-  if (withFigure(card)) return drawFigureWallpaper(card);
+export async function drawWallpaper(card: CardView, size: WallSize = phoneWall()): Promise<HTMLCanvasElement> {
+  if (withFigure(card)) return drawFigureWallpaper(card, size);
   const art = await pictures(card);
-  const { width: W, height: H } = WALL;
+  const { width: W, height: H } = size;
   const [canvas, g] = canvasOf(W, H);
   if (art.background) cover(g, art.background, 0, 0, W, H); else plain(g, "#3A2E6E", 0, 0, W, H);
   if (art.character) {
@@ -295,7 +312,8 @@ export async function drawWallpaper(card: CardView): Promise<HTMLCanvasElement> 
   const shade = g.createLinearGradient(0, 0, 0, H);
   shade.addColorStop(0, "rgba(20,19,37,.55)"); shade.addColorStop(0.32, "rgba(20,19,37,0)"); shade.addColorStop(0.78, "rgba(20,19,37,0)"); shade.addColorStop(1, "rgba(20,19,37,.75)");
   g.fillStyle = shade; g.fillRect(0, 0, W, H);
-  const x = 70, y = 740, w = 940, h = 1210;
+  // Laid out for 2340 tall; a shorter phone moves the card and its name up with it.
+  const x = 70, w = 940, h = 1210, y = Math.round(Math.min(740 * H / 2340, H - h - 260));
   const rare = card.tier.sort >= 2; // Rare and above glow brighter
   g.save(); g.shadowColor = card.tier.color; g.shadowBlur = rare ? 90 : 40; g.fillStyle = card.tier.color; rounded(g, x - 8, y - 8, w + 16, h + 16, 52); g.fill(); g.restore();
   g.save(); rounded(g, x, y, w, h, 44); g.clip();
@@ -305,8 +323,8 @@ export async function drawWallpaper(card: CardView): Promise<HTMLCanvasElement> 
   const spots = [[x - 30, y - 60, 170], [x + w - 150, y + h - 110, 170]];
   art.stickers.forEach((image, index) => { const [sx, sy, side] = spots[index]; g.drawImage(image, sx, sy, side, side); });
   g.textAlign = "center"; g.textBaseline = "middle";
-  g.fillStyle = CREAM; g.font = fontOf(66, true); g.fillText(card.character.name.toUpperCase(), W / 2, 2045, W - 120);
-  g.fillStyle = card.tier.color; g.font = fontOf(36); g.fillText(`${YEAR_LABEL}  ·  ${card.tier.name.toUpperCase()}  ·  ${serialLabel(card.serial)}`, W / 2, 2112);
+  g.fillStyle = CREAM; g.font = fontOf(66, true); g.fillText(card.character.name.toUpperCase(), W / 2, y + h + 95, W - 120);
+  g.fillStyle = card.tier.color; g.font = fontOf(36); g.fillText(`${YEAR_LABEL}  ·  ${card.tier.name.toUpperCase()}  ·  ${serialLabel(card.serial)}`, W / 2, y + h + 162);
   return canvas;
 }
 
