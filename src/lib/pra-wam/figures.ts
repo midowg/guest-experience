@@ -36,7 +36,21 @@ export type Figure = {
   image: string | null; stored: boolean;
   /** Its Legendary RPG form (v3, 16 Nov 2026), shipped with the app; null when there is none. */
   legendImage: string | null;
+  /** The tokoh's gender, L or P as in Data karyawan (17 Nov 2026); from figureGender. */
+  gender?: Gender;
 };
+export type Gender = "L" | "P";
+
+/** The 24 women among the 100 tokoh; every other tokoh is a man (17 Nov 2026). */
+const WOMEN = new Set([
+  "serena-williams", "susi-susanti", "cut-nyak-dhien", "jeanne-darc", "frida-kahlo", "marie-curie", "amelia-earhart", "katherine-johnson",
+  "hedy-lamarr", "audrey-hepburn", "oprah-winfrey", "wangari-maathai", "simone-biles", "ada-lovelace", "agatha-christie", "maria-montessori",
+  "r-a-kartini", "putri-diana", "florence-nightingale", "dolly-parton", "jane-goodall", "bunda-teresa", "dewi-sartika", "kim-kardashian",
+]);
+/** A tokoh's gender by its key. */
+export const figureGender = (key: string): Gender => (WOMEN.has(key) ? "P" : "L");
+/** A person's gender as Data karyawan keeps it ("L", "P", or empty when not filled). */
+export const genderFrom = (value: unknown): Gender | null => (value === "L" || value === "P" ? value : null);
 export type Random = (n: number) => number;
 
 /** The persona's background on the card, light to dark (the handoff's colours). */
@@ -110,9 +124,19 @@ export function figureScore(figure: Pick<Figure, "hobbies" | "activities" | "ene
   return { score, why };
 }
 
-/** The shown figures nobody has yet, the persona's own first (all free ones when it has none left). */
-function freeFigures(personaId: string, figures: readonly Figure[], used: Record<string, number>): Figure[] {
+/**
+ * The shown figures nobody has yet. With my gender (17 Nov 2026, the owner's choice: gender first):
+ * those of my gender and my persona, else of my gender in any persona; only when no figure of my
+ * gender is free, as before: my persona's, else all free ones.
+ */
+function freeFigures(personaId: string, figures: readonly Figure[], used: Record<string, number>, gender: Gender | null = null): Figure[] {
   const open = figures.filter(figure => !figure.hidden && (used[figure.id] ?? 0) < FIGURE_QUOTA);
+  if (gender) {
+    const mine = open.filter(figure => figure.gender === gender);
+    const mineOwn = mine.filter(figure => figure.personaId === personaId);
+    if (mineOwn.length) return mineOwn;
+    if (mine.length) return mine;
+  }
   const own = open.filter(figure => figure.personaId === personaId);
   return own.length ? own : open;
 }
@@ -121,8 +145,8 @@ function freeFigures(personaId: string, figures: readonly Figure[], used: Record
  * The figure for someone of this persona. `used` counts the people who have each figure (by id).
  * Null only when every figure is taken.
  */
-export function pickFigure(personaId: string, figures: readonly Figure[], answers: Answers, used: Record<string, number>, pick: Random): { figure: Figure; score: number; why: string[]; tied: string[] } | null {
-  const pool = freeFigures(personaId, figures, used);
+export function pickFigure(personaId: string, figures: readonly Figure[], answers: Answers, used: Record<string, number>, pick: Random, gender: Gender | null = null): { figure: Figure; score: number; why: string[]; tied: string[] } | null {
+  const pool = freeFigures(personaId, figures, used, gender);
   if (!pool.length) return null;
   const scored = pool.map(figure => ({ figure, ...figureScore(figure, answers) }));
   const best = Math.max(...scored.map(item => item.score));
@@ -136,8 +160,8 @@ export function pickFigure(personaId: string, figures: readonly Figure[], answer
  * the same persona, else from every free one; never the one held now. The answers only shape the
  * reason on the card. Null when no figure is free.
  */
-export function rerollFigure(personaId: string, figures: readonly Figure[], answers: Answers, used: Record<string, number>, currentId: string, pick: Random): { figure: Figure; score: number; why: string[] } | null {
-  const pool = freeFigures(personaId, figures, { ...used, [currentId]: FIGURE_QUOTA }).filter(figure => figure.id !== currentId);
+export function rerollFigure(personaId: string, figures: readonly Figure[], answers: Answers, used: Record<string, number>, currentId: string, pick: Random, gender: Gender | null = null): { figure: Figure; score: number; why: string[] } | null {
+  const pool = freeFigures(personaId, figures, { ...used, [currentId]: FIGURE_QUOTA }, gender).filter(figure => figure.id !== currentId);
   if (!pool.length) return null;
   const figure = pool[pick(pool.length)];
   return { figure, ...figureScore(figure, answers) };

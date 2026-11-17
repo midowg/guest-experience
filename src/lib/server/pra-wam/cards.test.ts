@@ -185,6 +185,17 @@ describe("kartu tokoh dunia", () => {
     expect((db.cq_person_cards[0].roll as { figure: { key: string; score: number } }).figure).toMatchObject({ key: "edmund-hillary", score: 4 });
   });
 
+  it("gives a figure of the person's gender from Data karyawan first (17 Nov 2026)", async () => {
+    db.cq_figures.push(figure("susi-susanti", 4, "garda", { name: "Susi Susanti" }));
+    db.employees = [{ id: "p1", gender: "P" }, { id: "p2", gender: "" }];
+    // A woman of Garda gets Susi, though Hillary matches her answers better.
+    const card = await ensureCard(form(), "p1", outdoorsy);
+    expect(card?.figure?.key).toBe("susi-susanti");
+    expect((db.cq_person_cards[0].roll as { figure: { gender: string } }).figure.gender).toBe("P");
+    // Gender not filled in: as before.
+    expect((await ensureCard(form(), "p2", outdoorsy))?.figure?.key).toBe("edmund-hillary");
+  });
+
   it("shows a Legendary card's RPG form", async () => {
     db.cq_tiers = [tier("legendary", 10_000, 4)];
     const card = await ensureCard(form(), "p1", outdoorsy);
