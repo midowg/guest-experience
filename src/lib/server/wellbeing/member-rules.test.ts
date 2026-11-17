@@ -42,6 +42,11 @@ describe("board", () => {
     expect(me).toMatchObject({ employeeId: "c", rank: 2, points: 900, me: true });
     expect(items.filter(row => row.me)).toHaveLength(1);
   });
+  it("carries each person's profile photo, and none for initials (18 Nov 2026)", () => {
+    const { items } = board(people.map(person => person.id === "b" ? { ...person, photo: "/api/wam/photo/b?v=1" } : { ...person, photo: null }), "c");
+    expect(items[0]).toMatchObject({ employeeId: "b", photo: "/api/wam/photo/b?v=1" });
+    expect("photo" in items[1]).toBe(false);
+  });
   it("lists only the top rows but still gives my place, and none without points", () => {
     expect(board(people, "d", 2).items).toHaveLength(2);
     expect(board(people, "d", 2).me).toMatchObject({ rank: 4 });

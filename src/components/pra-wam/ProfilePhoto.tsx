@@ -43,7 +43,7 @@ export async function decode(file: File): Promise<{ source: CanvasImageSource; w
 }
 
 /** The middle square at 320 × 320, as small as it needs to be. */
-async function shrink(file: File): Promise<{ blob: Blob; mime: PhotoMime }> {
+export async function shrink(file: File): Promise<{ blob: Blob; mime: PhotoMime }> {
   const picture = await decode(file);
   try {
     const canvas = document.createElement("canvas");

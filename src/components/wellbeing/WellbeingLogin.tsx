@@ -7,7 +7,6 @@ import { errorText as wamErrorText, PraWamApiError, praWamRequest } from "@/comp
 import { passwordRules } from "@/lib/pra-wam/password";
 import { RESET_NOTE_MAX } from "@/lib/pra-wam/reset-requests";
 import { praWamApi, WELLBEING_PATH, wellbeingPath } from "@/lib/routes";
-import { ThemeBoot, useTheme } from "./context";
 import { fontVars } from "./font";
 import { cx } from "./parts";
 import css from "./wellbeing.module.css";
@@ -36,16 +35,28 @@ export function WellbeingMark({ className }: { className?: string }) {
   </svg>;
 }
 
-function Frame({ title, lead, children, foot }: { title: string; lead?: string; children: ReactNode; foot?: ReactNode }) {
-  const [theme] = useTheme();
-  return <div className={cx(css.tokens, css.login, fontVars)} data-theme={theme === "system" ? undefined : theme} suppressHydrationWarning>
-    <ThemeBoot />
+/**
+ * WLM (18 Nov 2026): the sign-in looks like the old app's (Werkudara Life Mode): always dark, a
+ * soft purple and orange glow, the big "WLM" with "Balance Within. Impact Beyond.". The sign-in
+ * itself carries the big name (`hero`); the other steps a small one above their title.
+ */
+export const WLM_NAME = "WLM";
+export const WLM_TAGLINE = "Balance Within. Impact Beyond.";
+
+function Frame({ title, lead, hero = false, children, foot }: { title: string; lead?: string; hero?: boolean; children: ReactNode; foot?: ReactNode }) {
+  return <div className={cx(css.tokens, css.login, fontVars)} data-theme="dark">
     <main className={css.loginColumn}>
-      <WellbeingMark className={css.logo} />
-      <h1 className={css.title} style={{ marginTop: 20 }}>{title}</h1>
-      {lead && <p className={css.muted} style={{ marginTop: 4 }}>{lead}</p>}
+      {hero ? <header className={css.wlmHero}>
+        <h1 className={css.wlmMark} aria-label={`${WLM_NAME}, Werkudara Life Mode. ${title}`}>{WLM_NAME}</h1>
+        <p className={css.wlmTag}>{WLM_TAGLINE}</p>
+        {lead && <p className={css.wlmLead}>{lead}</p>}
+      </header> : <>
+        <p className={css.wlmSmall} aria-hidden="true">{WLM_NAME}</p>
+        <h1 className={css.title} style={{ marginTop: 16 }}>{title}</h1>
+        {lead && <p className={css.muted} style={{ marginTop: 4 }}>{lead}</p>}
+      </>}
       {children}
-      <p className={cx(css.loginFoot, css.caption, css.faint)}>{foot ?? <>Satu akun untuk WAM, Booking Kantor, dan Wellbeing.</>}</p>
+      <p className={cx(css.loginFoot, css.caption, css.faint)}>{foot ?? <>Satu akun untuk WAM, Booking Kantor, dan WLM.</>}</p>
     </main>
   </div>;
 }
@@ -104,7 +115,7 @@ export function WellbeingLogin({ next }: { next: string | null }) {
   if (view === "forgot" || view === "forgot-sent") return <Forgot initial={user} sent={view === "forgot-sent"} onSent={() => openView("forgot-sent")} onBack={backToLogin} />;
   if (view === "new-password") return <NewPassword current={password} onDone={goNext} />;
 
-  return <Frame title="Wellbeing" lead="Masuk dengan akun WAM kamu.">
+  return <Frame hero title="Masuk" lead="Masuk dengan akun WAM kamu.">
     <form className={css.loginForm} onSubmit={signIn} noValidate>
       {error && <Problem text={error} />}
       <div className={css.field}>

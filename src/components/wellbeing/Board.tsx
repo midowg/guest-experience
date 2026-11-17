@@ -10,7 +10,7 @@ import type { BoardDim, BoardPeriod } from "./api";
 import { keys, reducedMotion, useWellbeing } from "./context";
 import { firstName, formatDate, num } from "./format";
 import { dimensionIcons, Icon } from "./icons";
-import { Avatar, Chips, cx, Empty, ErrorState, LeaderRow, Preparing, Seg, Sk, SkRows, StaleBar } from "./parts";
+import { Avatar, Chips, cx, Empty, ErrorState, LeaderRow, Preparing, Seg, Sk, SkRows, StaleBar, useRowPhoto } from "./parts";
 import { boardView, chaseOf, daysLeftLabel, medalOf } from "./race";
 import css from "./wellbeing.module.css";
 
@@ -74,6 +74,7 @@ export function Board({ period, dim, onChange }: { period: BoardPeriod; dim: Boa
 /** The race's name, its days left and prize, and the top three on a lit podium. */
 function Arena({ board, period, dim, today, prize }: { board: WbBoard; period: BoardPeriod; dim: BoardDim; today: string; prize: string | null }) {
   const { podium } = boardView(board);
+  const photoOf = useRowPhoto();
   const [first, second] = board.items;
   const lead = first && second && first.points > second.points ? first.points - second.points : null;
   const title = `${period === "month" ? `Balapan ${formatDate(today, { month: "long" })}` : "Sepanjang waktu"}${dim === "all" ? "" : ` · ${dimensionLabels[dim]}`}`;
@@ -89,7 +90,7 @@ function Arena({ board, period, dim, today, prize }: { board: WbBoard; period: B
       {podium.map((row, slot) => <li key={row.employeeId} className={css.pod} data-medal={medalOf(row.rank) ?? "bronze"} data-slot={slot} data-me={row.me}>
         <span className={css.podAv}>
           {slot === 0 && row.rank === 1 && <Crown size={26} className={css.podCrown} aria-hidden="true" />}
-          <Avatar name={row.name} size={slot === 0 ? "xl" : "lg"} />
+          <Avatar name={row.name} photo={photoOf(row)} size={slot === 0 ? "xl" : "lg"} />
         </span>
         <span className="sr-only">Peringkat {row.rank}: </span>
         <span className={css.podName}>{row.me ? "Kamu" : row.name}</span>
@@ -211,13 +212,14 @@ function AllRanks({ board }: { board: WbBoard }) {
 /** My row under the full list: always in sight; a tap scrolls the list to my place. */
 function MineFoot({ board }: { board: WbBoard }) {
   const me = board.me;
+  const photoOf = useRowPhoto();
   if (!me) return null;
   const gap = board.ahead ? `${num(board.ahead.points - me.points)} poin lagi ke #${board.ahead.rank}` : me.rank === 1 ? "Di puncak" : "";
   return <button type="button" className={cx(css.lbRow, css.mineFoot, css.pressable)} data-me="true"
     aria-label={`Posisimu: peringkat ${me.rank}, ${num(me.points)} poin${gap ? `, ${gap}` : ""}. Tampilkan di daftar`}
     onClick={() => document.getElementById(MINE_ID)?.scrollIntoView({ block: "center", behavior: reducedMotion() ? "auto" : "smooth" })}>
     <span className={css.lbRank} data-medal={medalOf(me.rank) ?? undefined}>{me.rank}</span>
-    <Avatar name={me.name} />
+    <Avatar name={me.name} photo={photoOf(me)} />
     <span className={css.rowMain}><span className={css.rowTitle}>Kamu</span>{gap && <span className={css.rowMeta}>{gap}</span>}</span>
     <b className={css.lbPts}>{num(me.points)}</b>
   </button>;

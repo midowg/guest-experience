@@ -17,7 +17,8 @@ export const dimensionLook: Record<DimensionId, { tone: ConsoleTone; Icon: typeo
 
 export function DimensionPill({ dimension }: { dimension: DimensionId }) {
   const { tone, Icon } = dimensionLook[dimension];
-  return <Pill tone={tone}><Icon size={14} aria-hidden="true" />{dimensionLabels[dimension]}</Pill>;
+  // Icon and name with an even gap, both centred on the pill's line (18 Nov 2026).
+  return <Pill tone={tone} className={css.dimPill}><Icon size={14} strokeWidth={2.25} aria-hidden="true" /><span>{dimensionLabels[dimension]}</span></Pill>;
 }
 
 export function DimensionIcon({ dimension, size = 40 }: { dimension: DimensionId; size?: number }) {

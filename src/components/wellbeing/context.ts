@@ -30,6 +30,10 @@ export type WellbeingActions = {
   openActivity: (activity: WbMyActivity) => void;
   openStrava: () => void;
   openTheme: () => void;
+  /** Foto profil: a photo, or my WAM character card made into one (18 Nov 2026). */
+  openPhoto: () => void;
+  /** After Foto profil saved or removed: the new address (null for initials), shown at once. */
+  setPhoto: (photo: string | null) => void;
   /** Peringkat's full list (Lihat semua), for the period and dimension on screen. */
   openBoard: () => void;
   askSignOut: () => void;
@@ -37,7 +41,7 @@ export type WellbeingActions = {
 const noop = () => {};
 export const WellbeingContext = createContext<WellbeingActions>({
   api: realApi, me: { id: "", name: "", nickname: "", department: "", position: "" },
-  go: noop, openCatat: noop, openActivity: noop, openStrava: noop, openTheme: noop, openBoard: noop, askSignOut: noop,
+  go: noop, openCatat: noop, openActivity: noop, openStrava: noop, openTheme: noop, openPhoto: noop, setPhoto: noop, openBoard: noop, askSignOut: noop,
 });
 export const useWellbeing = () => useContext(WellbeingContext);
 

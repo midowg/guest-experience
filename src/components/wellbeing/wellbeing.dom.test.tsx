@@ -20,6 +20,11 @@ vi.mock("./font", () => ({ fontVars: "" }));
 // Tesseract (WebAssembly) does not run in jsdom: the text a photo "has" is set per test.
 const ocr = vi.hoisted(() => ({ text: "", fail: false }));
 vi.mock("./ocr", () => ({ readPhotoText: async () => { if (ocr.fail) throw new Error("offline"); return ocr.text; } }));
+// jsdom has no canvas: the card is "drawn" as a tiny picture (Foto profil, 18 Nov 2026).
+vi.mock("@/components/pra-wam/questionnaire/cardArt", () => ({
+  drawAvatar: async () => ({ toBlob: (done: (blob: Blob) => void, type: string) => done(new Blob(["kartu"], { type })) }),
+  blobOf: (canvas: { toBlob: (done: (blob: Blob | null) => void, type: string) => void }, type: string) => new Promise<Blob | null>(resolve => canvas.toBlob(resolve, type)),
+}));
 
 beforeAll(() => {
   // jsdom has no modal dialogs, observers, object URLs or media queries; enough of each for the app.
@@ -36,7 +41,7 @@ beforeAll(() => {
   window.history.replaceState = (...args: Parameters<History["replaceState"]>) => { replace(...args); notify(); };
   window.addEventListener("popstate", notify);
 });
-beforeEach(() => { window.history.replaceState(null, "", "/wellbeing"); ocr.text = ""; ocr.fail = false; });
+beforeEach(() => { window.history.replaceState(null, "", "/wlm"); ocr.text = ""; ocr.fail = false; });
 afterEach(() => { cleanup(); clearResources("wbapp:"); window.localStorage.clear(); });
 
 const fast = () => mockApi({ latency: [0, 0] });
@@ -55,9 +60,9 @@ async function openDaily(dimension: string, type: string) {
 
 describe("sectionOf", () => {
   it("reads the tab from the address, Beranda by default", () => {
-    expect(sectionOf("/wellbeing")).toBe("beranda");
-    expect(sectionOf("/wellbeing/peringkat")).toBe("peringkat");
-    expect(sectionOf("/wellbeing/apa")).toBe("beranda");
+    expect(sectionOf("/wlm")).toBe("beranda");
+    expect(sectionOf("/wlm/peringkat")).toBe("peringkat");
+    expect(sectionOf("/wlm/apa")).toBe("beranda");
     expect(sectionOf("/dev-preview/wellbeing/profil", "/dev-preview/wellbeing")).toBe("profil");
   });
 });
@@ -70,7 +75,7 @@ describe("WellbeingApp", () => {
     expect(within(menu).getByRole("link", { name: "Beranda" }).getAttribute("aria-current")).toBe("page");
 
     fireEvent.click(within(menu).getByRole("link", { name: "Riwayat" }));
-    expect(window.location.pathname).toBe("/wellbeing/riwayat");
+    expect(window.location.pathname).toBe("/wlm/riwayat");
     await screen.findByRole("group", { name: "Jenis riwayat" });
     expect(within(menu).getByRole("link", { name: "Riwayat" }).getAttribute("aria-current")).toBe("page");
     // Beranda stays mounted (its data and scroll kept), only hidden.
@@ -87,12 +92,12 @@ describe("WellbeingApp", () => {
     fireEvent.click(within(menu).getByRole("link", { name: "Riwayat" }));
     fireEvent.click(within(menu).getByRole("link", { name: "Peringkat" }));
     fireEvent.click(within(menu).getByRole("link", { name: "Profil" }));
-    expect(window.location.pathname).toBe("/wellbeing/profil");
+    expect(window.location.pathname).toBe("/wlm/profil");
     expect(window.history.length).toBe(before + 1);
     await screen.findByText("Rekor");
 
     act(() => { window.history.back(); });
-    await waitFor(() => expect(window.location.pathname).toBe("/wellbeing"));
+    await waitFor(() => expect(window.location.pathname).toBe("/wlm"));
     expect(within(menu).getByRole("link", { name: "Beranda" }).getAttribute("aria-current")).toBe("page");
   });
 
@@ -224,7 +229,7 @@ describe("WellbeingApp", () => {
   });
 
   it("shows Peringkat as a race: the podium, my place, the chasers, and the rest under Lihat semua (18 Nov 2026)", async () => {
-    window.history.replaceState(null, "", "/wellbeing/peringkat");
+    window.history.replaceState(null, "", "/wlm/peringkat");
     app();
     // The top three in rank order (the grid puts #1 in the middle), #1 with its lead.
     const podium = await screen.findByRole("list", { name: "Tiga teratas" });
@@ -254,7 +259,7 @@ describe("WellbeingApp", () => {
   });
 
   it("invites me onto Peringkat when I have no points yet", async () => {
-    window.history.replaceState(null, "", "/wellbeing/peringkat");
+    window.history.replaceState(null, "", "/wlm/peringkat");
     app(mockApi({ latency: [0, 0], empty: true }));
     const standing = await screen.findByRole("region", { name: "Posisimu bulan ini" });
     expect(within(standing).getByText("Belum masuk peringkat")).toBeTruthy();
@@ -362,7 +367,7 @@ describe("WellbeingApp", () => {
   });
 
   it("picks the theme in a sheet from a settings row, as phones do", async () => {
-    window.history.replaceState(null, "", "/wellbeing/profil");
+    window.history.replaceState(null, "", "/wlm/profil");
     const { container } = app();
     fireEvent.click(await screen.findByRole("button", { name: /^Tema: Otomatis/ }));
     fireEvent.click(await within(dialog()).findByRole("radio", { name: /^Gelap/ }));
@@ -373,8 +378,42 @@ describe("WellbeingApp", () => {
     expect(screen.queryByText("Riwayat aktivitas")).toBeNull();
   });
 
+  it("makes the WAM character card the profile photo: preview first, then shown at once (18 Nov 2026)", async () => {
+    window.history.replaceState(null, "", "/wlm/profil");
+    const saved: string[] = [];
+    const api = fast();
+    const savePhoto = api.savePhoto;
+    api.savePhoto = async (blob, mime, onProgress) => { saved.push(mime); return savePhoto(blob, mime, onProgress); };
+    app(api);
+    fireEvent.click(await screen.findByRole("button", { name: "Tambah foto profil" }));
+    // The card is drawn into a round photo and offered with its figure and rarity.
+    fireEvent.click(await within(dialog()).findByRole("button", { name: "Pakai kartu tokoh WAM: Ada Lovelace, Rare" }));
+    expect(await within(dialog()).findByRole("img", { name: "Pratinjau foto profil" })).toBeTruthy();
+    expect(saved).toEqual([]);
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Pakai foto ini" }));
+    expect(await screen.findByText("Foto profilmu sekarang kartu tokohmu.")).toBeTruthy();
+    expect(saved).toHaveLength(1);
+    // Saved: the button now changes the photo, and Hapus foto is offered.
+    fireEvent.click(await screen.findByRole("button", { name: "Ganti foto profil" }));
+    fireEvent.click(await within(dialog()).findByRole("button", { name: "Hapus foto" }));
+    fireEvent.click(within(dialog()).getAllByRole("button", { name: "Hapus foto" }).at(-1)!);
+    // Initials again (its toast waits behind the one before).
+    expect(await screen.findByRole("button", { name: "Tambah foto profil" })).toBeTruthy();
+  });
+
+  it("says when there is no WAM card yet, and still offers a photo from the gallery", async () => {
+    window.history.replaceState(null, "", "/wlm/profil");
+    app(mockApi({ latency: [0, 0], noCard: true }));
+    fireEvent.click(await screen.findByRole("button", { name: "Tambah foto profil" }));
+    expect(await within(dialog()).findByText("Belum ada kartu. Selesaikan kuesioner WAM dulu.")).toBeTruthy();
+    expect((within(dialog()).getByRole("button", { name: /Pakai kartu tokoh WAM/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(within(dialog()).getByRole("button", { name: /Pilih dari galeri/ })).toBeTruthy();
+    // A computer (no touch screen): no "Ambil foto".
+    expect(within(dialog()).queryByRole("button", { name: /Ambil foto/ })).toBeNull();
+  });
+
   it("shows points from an admin under Riwayat › Dari admin", async () => {
-    window.history.replaceState(null, "", "/wellbeing/riwayat");
+    window.history.replaceState(null, "", "/wlm/riwayat");
     app();
     fireEvent.click(await screen.findByRole("button", { name: "Dari admin" }));
     expect(await screen.findByText("Hadir Friday Sharing")).toBeTruthy();

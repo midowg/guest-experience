@@ -1,6 +1,10 @@
 "use client";
 
+import { praWamRequest, PraWamApiError } from "@/components/pra-wam/api";
+import { uploadProfilePhoto } from "@/components/pra-wam/photoUpload";
 import { compressImage } from "@/lib/compress-image";
+import type { PhotoMime } from "@/lib/pra-wam/photo";
+import type { CardView } from "@/lib/server/pra-wam/cards";
 import { praWamApi, wellbeingApi, wellbeingPath } from "@/lib/routes";
 import type { WbAppCatalog, WbBoard, WbHome, WbLedger, WbLogInput, WbLogResult, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbUploadedPhoto, WbUploadStart } from "@/lib/wellbeing/app-types";
 import type { DimensionId } from "@/lib/wellbeing/rules";
@@ -28,6 +32,12 @@ export type WellbeingApi = {
   ledger(): Promise<WbLedger>;
   /** Ends the WAM session and leaves for the sign-in page. */
   signOut(): Promise<void>;
+  /** My WAM character card, to use as my profile photo; null without one (18 Nov 2026). */
+  myCard(): Promise<CardView | null>;
+  /** A ready square photo (320 × 320, at most 200 KB) as my WAM profile photo, with progress; answers its address. */
+  savePhoto(blob: Blob, mime: PhotoMime, onProgress: (share: number) => void): Promise<string | null>;
+  /** My profile photo removed: initials again. */
+  removePhoto(): Promise<void>;
 };
 
 /** A refused request: the server's message, its status, and per-field messages (fieldErrors.code for 409s). */
@@ -94,6 +104,14 @@ export const realApi: WellbeingApi = {
     try { await fetch(praWamApi.logout, { method: "POST", credentials: "same-origin" }); } catch { /* the cookie may already be gone */ }
     window.location.assign(wellbeingPath.login());
   },
+  // The profile photo is the WAM account's: the same APIs as WAM's Profil (one photo everywhere).
+  myCard: async () => {
+    try { return (await praWamRequest<{ card: CardView | null }>(praWamApi.questionnaireCard)).data.card ?? null; }
+    // No questionnaire open for me (404), or the cards are not installed yet (503): no card.
+    catch (error) { if (error instanceof PraWamApiError && (error.status === 404 || error.status === 503)) return null; throw error; }
+  },
+  savePhoto: (blob, mime, onProgress) => uploadProfilePhoto(blob, mime, onProgress),
+  removePhoto: async () => { await praWamRequest(praWamApi.photo, { method: "DELETE" }); },
 };
 
 const wait = (ms: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {

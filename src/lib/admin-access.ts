@@ -13,7 +13,7 @@ export const ADMIN_PATH_HEADER = "x-wk-admin-path";
 
 // "kuesioner" (14 Nov 2026, migration 202611140001): the WAM questionnaire inside Admin WAM, given
 // on its own, for Admin WAM holders too (Admin WAM alone no longer opens it).
-// "wellbeing" (16 Nov 2026, migration 202611160050): Admin Wellbeing at /admin/wellbeing.
+// "wellbeing" (16 Nov 2026, migration 202611160050): Admin Wellbeing at /admin/wlm (was /admin/wellbeing, which redirects).
 export const ADMIN_APPS = ["acara", "friday_sharing", "your_visit", "wam", "kuesioner", "tv", "wellbeing"] as const;
 export type AdminApp = (typeof ADMIN_APPS)[number];
 export const ADMIN_KUESIONER_MIGRATION = "202611140001_admin_grants_kuesioner.sql";
@@ -69,7 +69,7 @@ const areas: [RegExp, AdminArea][] = [
   [/^\/admin\/wam\/kuesioner(\/|$)/, "kuesioner"],
   [/^\/admin\/wam(\/|$)/, "wam"],
   [/^\/admin\/tv(\/|$)/, "tv"],
-  [/^\/admin\/wellbeing(\/|$)/, "wellbeing"],
+  [/^\/admin\/(wlm|wellbeing)(\/|$)/, "wellbeing"],
   [/^\/admin\/friday-sharing(\/|$)/, "friday_sharing"],
   [/^\/admin\/your-visit(\/|$)/, "your_visit"],
   [/^\/admin\/(acara|checkin|events|hero-preview|pratinjau-langsung)(\/|$)/, "events"],

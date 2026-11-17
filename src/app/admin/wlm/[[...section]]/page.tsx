@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin Wellbeing", robots: { index: false, follow: false } };
 
 /**
- * Admin Wellbeing (16 Nov 2026): one page for every address under /admin/wellbeing. The server only
+ * Admin Wellbeing (16 Nov 2026): one page for every address under /admin/wlm. The server only
  * checks the admin (and its Wellbeing grant, from the path); the client app moves between its menus
  * and loads data through /api/admin/wellbeing without another page load.
  */

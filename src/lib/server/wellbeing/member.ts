@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { kindFromMime } from "@/lib/image-signature";
+import { photoPath } from "@/lib/pra-wam/photo";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import type {
   WbAppCatalog, WbBoard, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLogResult, WbMe, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbRules, WbUploadStart,
@@ -37,7 +38,7 @@ const MY_COLUMNS = "id,type_code,dimension_id,happened_on,source,title,steps,kca
 const storageNotReady = () => new ServiceError(503, "Penyimpanan foto belum siap. Coba lagi nanti, atau kabari admin Wellbeing.");
 const loginNotReady = () => new ServiceError(503, "Login belum disiapkan. Isi WAM_SESSION_SECRET pada server.");
 
-const toMe = (member: Member): WbMe => ({ id: member.id, name: member.name, nickname: member.nickname, department: member.department, position: member.position });
+const toMe = (member: Member): WbMe => ({ id: member.id, name: member.name, nickname: member.nickname, department: member.department, position: member.position, photo: member.photo });
 const rulesOf = (settings: WellbeingSettings): WbRules => ({ backdateDays: settings.backdateDays, maxKcal: settings.maxKcal, maxSteps: settings.maxSteps, maxPhotos: MAX_PHOTOS });
 const nullableNumber = (value: unknown) => (value === null || value === undefined ? null : Number(value));
 /** "HH:MM" now in WIB. */
@@ -63,6 +64,24 @@ async function people(): Promise<Person[]> {
 }
 /** What colleagues see on the board: the nama panggilan, else the full name. */
 const boardName = (person: Person) => person.nickname?.trim() || person.full_name;
+
+/**
+ * Everyone's profile photo (18 Nov 2026): the WAM account's photo (a photo, or the WAM character
+ * card made into one), as the app address the board's avatars load. Without photos (before the
+ * WAM photo migration, or any error) the board shows initials, as before.
+ */
+async function photos(): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  try {
+    const { rows, error } = await readAll((from, to) => db().from("pw_accounts").select("employee_id,photo_key,photo_updated_at").eq("active", true).not("photo_key", "is", null).order("employee_id").range(from, to));
+    if (error) return out;
+    for (const row of rows as unknown as { employee_id: string; photo_key: string | null; photo_updated_at: string | null }[]) {
+      const path = photoPath({ id: row.employee_id, photoKey: row.photo_key, photoUpdatedAt: row.photo_updated_at });
+      if (path) out.set(row.employee_id, path);
+    }
+  } catch { /* initials */ }
+  return out;
+}
 
 /* ---------- Beranda ---------- */
 
@@ -291,7 +310,7 @@ export async function logActivity(member: Member, input: LogInput, now = new Dat
 export async function leaderboard(member: Member, period: "month" | "all", dim: DimensionId | "all", now = new Date()): Promise<WbBoard> {
   const today = wibToday(now);
   const range = period === "month" ? monthRange(today) : null, last = previousMonth(today);
-  const [everyone, sums, lastSums] = await Promise.all([people(), readTotals(range?.from ?? null, range?.to ?? null), readTotals(last.from, last.to)]);
+  const [everyone, sums, lastSums, photoOf] = await Promise.all([people(), readTotals(range?.from ?? null, range?.to ?? null), readTotals(last.from, last.to), photos()]);
   const active = everyone.filter(person => person.active);
   if (!sums.migrated || !lastSums.migrated) return { migrated: false, period, dim, items: [], me: null, of: active.length, lastMonthChampion: null, near: [], ahead: null };
   const pointsBy = (rows: Totals[]) => {
@@ -300,7 +319,7 @@ export async function leaderboard(member: Member, period: "month" | "all", dim: 
     return out;
   };
   const current = pointsBy(sums.rows), before = pointsBy(lastSums.rows);
-  const row = (person: Person, points: Map<string, number>) => ({ id: person.id, name: boardName(person), department: person.department ?? "", points: points.get(person.id) ?? 0 });
+  const row = (person: Person, points: Map<string, number>) => ({ id: person.id, name: boardName(person), department: person.department ?? "", points: points.get(person.id) ?? 0, photo: photoOf.get(person.id) ?? null });
   const { items, me, near, ahead } = board(active.map(person => row(person, current)), member.id);
   // Last month's champion stays the champion after leaving, as in Admin Wellbeing.
   const champion = board(everyone.map(person => row(person, before)), member.id, 1).items[0] ?? null;

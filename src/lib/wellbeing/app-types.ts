@@ -9,7 +9,8 @@ import type { DimensionId, Limit, PointsMode, ReviewStatus } from "./rules";
  * Dates are YYYY-MM-DD in WIB; points are whole numbers.
  */
 
-export type WbMe = { id: string; name: string; nickname: string; department: string; position: string };
+/** `photo`: the WAM account's profile photo (its app address), or null for initials (18 Nov 2026). */
+export type WbMe = { id: string; name: string; nickname: string; department: string; position: string; photo?: string | null };
 
 /** Programme rules the screens need (from wb_settings). */
 export type WbRules = { backdateDays: number; maxKcal: number; maxSteps: number; maxPhotos: number };
@@ -98,7 +99,8 @@ export type WbLogInput = { code: string; date: string; time?: string | null; ste
 export type WbLogResult = { activity: WbMyActivity; totals: WbHome["totals"] };
 
 /** GET /api/wellbeing/leaderboard?period=month|all&dim=all|<dimension> */
-export type WbBoardRow = { rank: number; employeeId: string; name: string; department: string; points: number; me: boolean };
+/** `photo`: the person's WAM profile photo, or null for initials (18 Nov 2026). */
+export type WbBoardRow = { rank: number; employeeId: string; name: string; department: string; points: number; me: boolean; photo?: string | null };
 export type WbBoard = { migrated: boolean; period: "month" | "all"; dim: DimensionId | "all";
   /** Everyone with points (the top 30 before 18 Nov 2026). */
   items: WbBoardRow[]; me: WbBoardRow | null; of: number; lastMonthChampion: WbBoardRow | null;

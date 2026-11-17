@@ -8,12 +8,18 @@ describe("the way back after signing in (17 Nov 2026)", () => {
     expect(safePraWamNext("/wellbeing")).toBe("/wellbeing");
     expect(safePraWamNext("/wellbeing/peringkat")).toBe("/wellbeing/peringkat");
     expect(safePraWamNext("/wellbeing?tab=1")).toBe("/wellbeing?tab=1");
+    // WLM's address since 18 Nov 2026.
+    expect(safePraWamNext("/wlm")).toBe("/wlm");
+    expect(safePraWamNext("/wlm/profil")).toBe("/wlm/profil");
   });
   it("refuses sign-in pages, look-alikes and other sites", () => {
     expect(safePraWamNext("/wellbeing/masuk")).toBeNull();
     expect(safePraWamNext("/wellbeing/masuk?next=/wellbeing")).toBeNull();
     expect(safePraWamNext("/wam/login")).toBeNull();
     expect(safePraWamNext("/wellbeingx")).toBeNull();
+    expect(safePraWamNext("/wlm/masuk")).toBeNull();
+    expect(safePraWamNext("/wlmx")).toBeNull();
+    expect(safePraWamNext("/admin/wlm")).toBeNull();
     expect(safePraWamNext("//evil.example/wellbeing")).toBeNull();
     expect(safePraWamNext("/wellbeing\\..\\admin")).toBeNull();
     expect(safePraWamNext("/admin/wellbeing")).toBeNull();

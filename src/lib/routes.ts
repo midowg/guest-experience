@@ -608,7 +608,8 @@ export const tvAdminPath = {
  * one client app (no page load between its menus). Hari ini (what needs doing), Periksa (activities
  * to check), Karyawan (points per person, Tambah poin to many), Pengaturan (catalogue and rules).
  */
-export const WELLBEING_ADMIN = "/admin/wellbeing";
+// The address is /admin/wlm (WLM, the programme's name, 18 Nov 2026); /admin/wellbeing redirects here.
+export const WELLBEING_ADMIN = "/admin/wlm";
 export const WELLBEING_ADMIN_SECTIONS = ["hari-ini", "periksa", "karyawan", "laporan", "pengaturan"] as const;
 export type WellbeingAdminSection = (typeof WELLBEING_ADMIN_SECTIONS)[number];
 export const wellbeingAdminPath = (section: WellbeingAdminSection = "hari-ini") => section === "hari-ini" ? WELLBEING_ADMIN : `${WELLBEING_ADMIN}/${section}`;
@@ -636,10 +637,11 @@ export const wellbeingAdminApi = {
 };
 
 /*
- * Wellbeing for employees (17 Nov 2026): one client app at /wellbeing (Beranda, Riwayat, Peringkat,
- * Profil; Catat is a sheet), signed in with the WAM account on its own page /wellbeing/masuk.
+ * Wellbeing for employees (17 Nov 2026): one client app at /wlm (Beranda, Riwayat, Peringkat,
+ * Profil; Catat is a sheet), signed in with the WAM account on its own page /wlm/masuk. WLM
+ * (Werkudara Life Mode) is the programme's name, as in the old app; /wellbeing redirects here (18 Nov 2026).
  */
-export const WELLBEING_PATH = "/wellbeing";
+export const WELLBEING_PATH = "/wlm";
 export const wellbeingPath = {
   home: WELLBEING_PATH,
   section: (section: "beranda" | "riwayat" | "peringkat" | "profil") => section === "beranda" ? WELLBEING_PATH : `${WELLBEING_PATH}/${section}`,

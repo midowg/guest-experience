@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Activity, BadgeCheck, CalendarCheck, Flame, LogOut, Sigma } from "lucide-react";
+import { Activity, BadgeCheck, CalendarCheck, Camera, Flame, LogOut, Sigma } from "lucide-react";
 import { useResource, type Resource } from "@/components/app-shell/resource";
 import type { WbHome } from "@/lib/wellbeing/app-types";
 import { keys, useTheme, useWellbeing } from "./context";
@@ -18,7 +18,7 @@ import css from "./wellbeing.module.css";
  * the Riwayat tab only.
  */
 export function Profile({ home }: { home: Resource<WbHome> }) {
-  const { api, me, openStrava, openTheme, askSignOut } = useWellbeing();
+  const { api, me, openStrava, openTheme, openPhoto, askSignOut } = useWellbeing();
   // Every point that counts, read only for the records here (Riwayat shows the list).
   const ledger = useResource(keys.ledger, () => api.ledger());
   const [theme] = useTheme();
@@ -29,7 +29,11 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
 
   return <>
     <div className={css.profileHead}>
-      <Avatar name={person.name} size="xl" />
+      {/* Foto profil (18 Nov 2026): a tap on the photo, or its row under Pengaturan. */}
+      <button type="button" className={css.avatarEdit} onClick={openPhoto} aria-label={me.photo ? "Ganti foto profil" : "Tambah foto profil"}>
+        <Avatar name={person.name} photo={me.photo} size="xl" />
+        <span className={css.avatarBadge} aria-hidden="true"><Camera size={16} /></span>
+      </button>
       <h2 className={css.headline} style={{ marginTop: 8 }}>{person.name}</h2>
       <p className={css.muted}>{[person.department, person.position].filter(Boolean).join(" · ") || "Karyawan"}</p>
       <p className={cx(css.caption, css.faint)}><BadgeCheck size={14} aria-hidden="true" />Data dari akun WAM</p>
@@ -47,6 +51,7 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
 
     <h2 className={css.groupLabel}>Pengaturan</h2>
     <div className={cx(css.card, css.list)}>
+      <NavRow lead={<Avatar name={person.name} photo={me.photo} size="lg" />} title="Foto profil" meta="Foto, atau kartu tokoh WAM-mu" onClick={openPhoto} />
       <NavRow lead={<span className={css.stravaMark}><Activity size={20} aria-hidden="true" /></span>} title="Strava" meta="Sambungan sedang disiapkan" onClick={openStrava} />
       <NavRow lead={<span className={cx(css.lead, css.tonePrimary)}><themeNow.icon size={22} aria-hidden="true" /></span>} title="Tema"
         trail={<span className={css.rowValue}>{themeNow.label}</span>} onClick={openTheme} ariaLabel={`Tema: ${themeNow.label}. Ubah`} />
@@ -58,6 +63,6 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
         <span className={css.rowMain}><span className={css.rowTitle}>Keluar</span></span>
       </button>
     </div>
-    <p className={cx(css.caption, css.faint, css.center, css.footNote)}>Wellbeing · Werkudara Group</p>
+    <p className={cx(css.caption, css.faint, css.center, css.footNote)}>WLM · Werkudara Life Mode</p>
   </>;
 }

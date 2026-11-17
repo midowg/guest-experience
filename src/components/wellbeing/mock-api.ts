@@ -3,6 +3,7 @@
 import type { WbAppCatalog, WbAppControls, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbRules } from "@/lib/wellbeing/app-types";
 import { addDays, aroundMe, claimedPoints, dateProblem, DIMENSIONS, dimensionLabels, limitReached, MIN_STEPS, monthRange, rank, wibToday, type DimensionId, type Limit } from "@/lib/wellbeing/rules";
 import { cancelledError, WellbeingApiError, type BoardDim, type BoardPeriod, type RequestOptions, type WellbeingApi } from "./api";
+import type { CardView } from "@/lib/server/pra-wam/cards";
 
 /*
  * Sample data for /dev-preview/wellbeing (17 Nov 2026): the whole Wellbeing app without a session
@@ -30,7 +31,19 @@ export type MockOptions = {
   controls?: Partial<WbAppControls>;
   /** Nothing logged today yet: the streak runs to yesterday and its flame is off (18 Nov 2026). */
   notToday?: boolean;
+  /** No WAM character card yet (the questionnaire not finished), for Foto profil (18 Nov 2026). */
+  noCard?: boolean;
 };
+
+/** A sample WAM character card (a figure picture shipped in public/figur), for Foto profil. */
+export const sampleCard = (): CardView => ({
+  serial: 7, trial: false, dna: "a1b2c3d4e5", drawnAt: "2026-11-13T03:00:00.000Z",
+  character: { id: "penyihir", key: "penyihir", name: "Penyihir Ide", figure: "", class: "Penyihir Ide", title: "Yang mengubah ide biasa jadi luar biasa", description: "", powers: [], image: null, partner: null },
+  tier: { key: "rare", name: "Rare", color: "#449DFF", line: "", odds: 1800, sort: 2 },
+  background: { number: 1, name: "", image: null }, accent: { number: 1, name: "", image: null }, stickers: [],
+  figure: { id: "ada-lovelace", key: "ada-lovelace", name: "Ada Lovelace", costume: "", quote: null, image: "/figur/ada-lovelace.webp", legend: false, legendClass: null },
+  reason: null, colors: ["#6D3FD1", "#24124F"],
+});
 
 export const sampleMe: WbMe = { id: "00000000-0000-4000-8000-0000000000aa", name: "Dewi Contoh", nickname: "Dewi", department: "Creative", position: "Graphic Designer" };
 
@@ -341,5 +354,13 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
       return { migrated: true, items, total: sum(items.map(item => item.points)) };
     }),
     signOut: async () => { await sleep(options.latency?.[0] ?? 300); options.onSignOut?.(); },
+    myCard: () => call(() => options.noCard ? null : sampleCard()),
+    // The preview keeps the picture in the browser: its address is the picture itself.
+    savePhoto: async (blob, _mime, onProgress) => {
+      for (let step = 1; step <= 4; step++) { await sleep(options.latency?.[0] ?? 120); onProgress(step / 4); }
+      return URL.createObjectURL(blob);
+    },
+    // The sample answers go through JSON, as the server's do: null, then nothing.
+    removePhoto: () => call(() => null).then(() => undefined),
   };
 }

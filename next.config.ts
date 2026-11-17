@@ -36,6 +36,11 @@ const config: NextConfig = {
       { source: "/wam/appraisal", destination: "/wam/book", permanent: true },
       // Lemari MoM was renamed Arsip MoM (12 Nov 2026) the day it opened.
       { source: "/admin/wam/lemari-mom", destination: "/admin/wam/arsip-mom", permanent: true },
+      // Wellbeing moved to /wlm (WLM, the programme's name, 18 Nov 2026); older links keep working.
+      { source: "/wellbeing", destination: "/wlm", permanent: false },
+      { source: "/wellbeing/:path*", destination: "/wlm/:path*", permanent: false },
+      { source: "/admin/wellbeing", destination: "/admin/wlm", permanent: false },
+      { source: "/admin/wellbeing/:path*", destination: "/admin/wlm/:path*", permanent: false },
     ];
   },
   async headers() {

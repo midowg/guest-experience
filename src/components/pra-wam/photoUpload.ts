@@ -29,11 +29,13 @@ export function putProblem(status: number): string | null {
  * A ready photo (320 × 320, at most 200 KB) as my profile photo: the server agrees the upload,
  * the browser puts it in storage, the server checks and keeps it. Progress ends at 1 while saving.
  */
-export async function uploadProfilePhoto(blob: Blob, mime: PhotoMime, onProgress: (share: number) => void = () => undefined): Promise<void> {
+export async function uploadProfilePhoto(blob: Blob, mime: PhotoMime, onProgress: (share: number) => void = () => undefined): Promise<string | null> {
   const agreed = { mime, size: blob.size };
   const start = await praWamRequest<{ key: string; uploadUrl: string; token: string }>(praWamApi.photoStart, { method: "POST", json: agreed });
   const problem = putProblem(await putFile(start.data.uploadUrl, blob, mime, share => onProgress(Math.min(share, 0.99))));
   if (problem) throw new PraWamApiError(problem);
   onProgress(1);
-  await praWamRequest(praWamApi.photoConfirm, { method: "POST", json: { ...agreed, key: start.data.key, token: start.data.token } });
+  // The new photo's app address (WLM shows it at once, without a page load).
+  const saved = await praWamRequest<{ photo: string | null } | null>(praWamApi.photoConfirm, { method: "POST", json: { ...agreed, key: start.data.key, token: start.data.token } });
+  return saved.data?.photo ?? null;
 }

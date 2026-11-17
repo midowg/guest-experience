@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronRight, CloudOff, Hourglass, RefreshCw } from "lucide-react";
 import type { WbBoardRow, WbMyActivity } from "@/lib/wellbeing/app-types";
 import type { DimensionId } from "@/lib/wellbeing/rules";
+import { useWellbeing } from "./context";
 import { activityMeta, activityTitle, clockLabel, dayLabel, initials, num, toneOf } from "./format";
 import { activityIcon, Icon } from "./icons";
 import { medalOf } from "./race";
@@ -62,9 +63,23 @@ export function Empty({ icon, children, action }: { icon: ReactNode; children: R
   </div>;
 }
 
-/** A person's round mark: initials on a steady colour. */
-export function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg" | "xl" }) {
-  return <span className={cx(css.avatar, size === "lg" && css.avatarLg, size === "xl" && css.avatarXl)} data-dim={toneOf(name)} aria-hidden="true">{initials(name)}</span>;
+/**
+ * A person's round mark: their WAM profile photo (a photo or their character card, 18 Nov 2026),
+ * else initials on a steady colour; a photo that does not load falls back to the initials.
+ */
+export function Avatar({ name, photo, size = "md" }: { name: string; photo?: string | null; size?: "md" | "lg" | "xl" }) {
+  const [broken, setBroken] = useState<string | null>(null);
+  const shown = photo && photo !== broken ? photo : null;
+  return <span className={cx(css.avatar, size === "lg" && css.avatarLg, size === "xl" && css.avatarXl)} data-dim={toneOf(name)} data-photo={shown ? "true" : undefined} aria-hidden="true">
+    {/* eslint-disable-next-line @next/next/no-img-element -- the WAM photo route answers a redirect to storage */}
+    {shown ? <img src={shown} alt="" loading="lazy" decoding="async" onError={() => setBroken(shown)} /> : initials(name)}
+  </span>;
+}
+
+/** A board row's photo: mine from Foto profil at once (the board catches up on its next refresh). */
+export function useRowPhoto() {
+  const { me } = useWellbeing();
+  return (row: WbBoardRow) => row.me ? me.photo ?? null : row.photo ?? null;
 }
 
 /**
@@ -125,9 +140,10 @@ export function ActivityRow({ activity, today, withDate = true, onOpen }: { acti
  * top three, the number always on it), the name with "(kamu)" kept whole, a line under it, the points.
  */
 export function LeaderRow({ row, meta, rowRef }: { row: WbBoardRow; meta?: string; rowRef?: (element: HTMLElement | null) => void }) {
+  const photoOf = useRowPhoto();
   return <li ref={rowRef} className={css.lbRow} data-me={row.me} aria-current={row.me ? "true" : undefined}>
     <span className={css.lbRank} data-medal={medalOf(row.rank) ?? undefined}><span className="sr-only">Peringkat </span>{row.rank}</span>
-    <Avatar name={row.name} />
+    <Avatar name={row.name} photo={photoOf(row)} />
     <span className={css.rowMain}>
       <span className={css.lbName}><span className={css.rowTitle}>{row.name}</span>{row.me && <span className={css.meTag}>kamu</span>}</span>
       {meta && <span className={css.rowMeta}>{meta}</span>}

@@ -68,6 +68,38 @@ describe("Admin Wellbeing", () => {
     expect(await within(panel).findByText(/berkas Excel dibuat oleh server/)).toBeTruthy();
   });
 
+  it("shows Periksa as Daftar, filters Jenis from the Filter menu, and lists the shortcuts on ? (18 Nov 2026)", async () => {
+    open("periksa");
+    await screen.findAllByRole("checkbox", { name: /^Pilih aktivitas/ }, { timeout: 3000 });
+    expect(screen.getAllByText("Meditasi").length).toBeGreaterThan(0);
+    // Daftar: one row each, the buttons as icons named for screen readers.
+    fireEvent.click(screen.getByRole("button", { name: "Daftar" }));
+    expect(screen.getByRole("button", { name: "Daftar" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getAllByRole("button", { name: "Oke" }).length).toBeGreaterThan(0);
+    // Jenis in the Filter menu: Olahraga leaves the daily ones out.
+    fireEvent.click(screen.getByRole("button", { name: "Filter jenis: Semua jenis" }));
+    fireEvent.click(within(screen.getByRole("menu", { name: "Jenis aktivitas" })).getByRole("menuitemradio", { name: /Olahraga/ }));
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(screen.getByRole("button", { name: "Filter jenis: Olahraga" })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText("Meditasi")).toBeNull());
+    // "?" opens the shortcuts (not while typing in the search).
+    fireEvent.keyDown(screen.getByRole("searchbox", { name: "Cari nama atau divisi" }), { key: "?" });
+    expect(screen.queryByRole("dialog", { name: "Pintasan keyboard" })).toBeNull();
+    fireEvent.keyDown(document.body, { key: "?" });
+    expect(screen.getByRole("dialog", { name: "Pintasan keyboard" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Kartu" }));
+  });
+
+  it("opens every proof of an activity in the viewer, one at a time (18 Nov 2026)", async () => {
+    open("periksa");
+    const proofs = await screen.findAllByRole("button", { name: /^Lihat (foto bukti|\d+ bukti)/ }, { timeout: 3000 });
+    fireEvent.click(proofs[0]);
+    const viewer = await screen.findByRole("dialog", { name: /bukti 1 dari \d+/ });
+    expect(within(viewer).getByRole("link", { name: "Buka di tab baru" })).toBeTruthy();
+    fireEvent.click(within(viewer).getByRole("button", { name: "Tutup" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /bukti 1 dari/ })).toBeNull());
+  });
+
   it("chooses a report and its period in Laporan", async () => {
     open("laporan");
     const cards = await screen.findAllByRole("button", { name: "Unduh Excel" });

@@ -30,7 +30,7 @@ export function weekSeries(rows: readonly { date: string; points: number }[], to
   return Array.from({ length: 7 }, (_, index) => { const date = addDays(today, index - 6); return { date, points: sums.get(date) ?? 0 }; });
 }
 
-export type BoardPerson = { id: string; name: string; department: string; points: number };
+export type BoardPerson = { id: string; name: string; department: string; points: number; photo?: string | null };
 
 /**
  * Peringkat: everyone with points above zero, highest first, ties sharing a place (1, 2, 2, 4) and
@@ -39,7 +39,8 @@ export type BoardPerson = { id: string; name: string; department: string; points
  */
 export function board(people: readonly BoardPerson[], meId: string, top = Number.POSITIVE_INFINITY):{ items: WbBoardRow[]; me: WbBoardRow | null; near: WbBoardRow[]; ahead: WbBoardRow | null } {
   const ordered = people.filter(person => person.points > 0).sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, "id"));
-  const rows: WbBoardRow[] = rank(ordered).map(person => ({ rank: person.rank, employeeId: person.id, name: person.name, department: person.department, points: person.points, me: person.id === meId }));
+  const rows: WbBoardRow[] = rank(ordered).map(person => ({ rank: person.rank, employeeId: person.id, name: person.name, department: person.department, points: person.points, me: person.id === meId,
+    ...(person.photo ? { photo: person.photo } : {}) }));
   return { items: rows.slice(0, top), me: rows.find(row => row.me) ?? null, ...aroundMe(rows) };
 }
 

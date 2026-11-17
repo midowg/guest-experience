@@ -34,7 +34,7 @@ versi Journey stabil.
 
 ## Cara dibangun (standar rasa aplikasi mobile)
 
-- Satu aplikasi klien per bagian: `/wellbeing/[[...]]` (karyawan) dan `/admin/wellbeing/[[...]]` (admin). Server
+- Satu aplikasi klien per bagian: `/wlm/[[...]]` (karyawan) dan `/admin/wlm/[[...]]` (admin). Server
   hanya memeriksa sesi; pindah menu, filter, dan detail terjadi di browser tanpa muat ulang halaman.
 - Data lewat `/api/wellbeing/*` dan `/api/admin/wellbeing/*`, disimpan di cache klien (tampil dulu, diperbarui di
   latar). Formulir dan detail di lembar/panel. Komponen bersama: `src/components/app-shell/`.
@@ -140,6 +140,34 @@ aplikasi tetap jalan dan menyimpan tanpa jam.
   memakai bawaan.
 - Pratinjau tanpa login: `/dev-preview/wellbeing-admin` (data contoh di browser; Unduh Excel hanya di admin
   sungguhan).
+
+## WLM: alamat, halaman masuk, Periksa, foto profil (18 Nov 2026)
+
+- **Alamat:** aplikasi karyawan di `journey.werkudara.group/wlm` (WLM = Werkudara Life Mode, nama program di
+  aplikasi lama), admin di `/admin/wlm`. Tautan lama `/wellbeing` dan `/admin/wellbeing` dialihkan ke sana
+  (`next.config.ts`). API tetap `/api/wellbeing` dan `/api/admin/wellbeing`; akses admin tetap aplikasi
+  "Wellbeing".
+- **Halaman masuk** mengikuti aplikasi lama: selalu gelap dengan cahaya ungu dan oranye, tulisan besar **WLM**
+  dan "Balance Within. Impact Beyond.", tombol warna aksen aplikasi.
+- **Periksa** (admin):
+  - Status jadi tab dengan jumlahnya.
+  - Jenis pindah ke tombol **Filter** (menu dengan ikon).
+  - Tampilan **Kartu** atau **Daftar**, diingat per perangkat. Kartu: satu susunan untuk semua (foto bukti di
+    kanan, poin dan tombol di bawah, tombol sama lebar). Daftar: satu baris per aktivitas, tombol berupa ikon
+    dengan nama untuk pembaca layar.
+  - Di HP: Filter dan Tampilan jadi ikon di sebelah pencarian, tab "Belum diperiksa" tertulis "Belum".
+  - Pintasan keyboard tidak lagi di subjudul. Ada tombol **Pintasan** (atau tekan `?`), hanya di perangkat
+    dengan keyboard dan mouse.
+- **Foto profil** (Profil → foto atau baris Foto profil) memakai foto akun WAM, jadi satu foto untuk WLM, WAM,
+  dan Booking Kantor. Pilihannya:
+  - **Pakai kartu tokoh WAM**: kartu dipotong bulat dengan warna persona, sama dengan "Jadikan foto profil" di
+    WAM.
+  - **Ambil foto**: hanya di layar sentuh.
+  - **Pilih dari galeri**.
+  - **Hapus foto**.
+
+  Pilihan tampil sebagai pratinjau bulat dulu (kartu dengan cincin warna rarity), baru disimpan setelah
+  "Pakai foto ini". Peringkat menampilkan foto profil semua orang (inisial bila belum ada).
 
 ## Strava
 

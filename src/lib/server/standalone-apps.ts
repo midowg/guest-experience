@@ -8,7 +8,7 @@ import { openResetRequestCount } from "./pra-wam/reset-requests";
  * The standalone apps (10 Nov 2026): the ones that run on their own at a fixed address, apart from
  * the events and their invitations: WAM, Booking Kantor and TV Announcement. They head the admin's
  * event list in one "Aplikasi" section, with the Your Visit guide beside them. Wellbeing joined on
- * 16 Nov 2026; since 17 Nov 2026 its card opens the employee app (/wellbeing), which is not yet
+ * 16 Nov 2026; since 17 Nov 2026 its card opens the employee app (/wlm since 18 Nov 2026), which is not yet
  * announced: the old app stays the official one until then.
  */
 export type StandaloneApp = {

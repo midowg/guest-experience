@@ -17,6 +17,7 @@ import { Home } from "./Home";
 import { cx } from "./parts";
 import { Profile } from "./Profile";
 import { Screen } from "./Screen";
+import { PhotoSheet } from "./PhotoSheet";
 import { ActivitySheet, SignOutSheet, StravaSheet, ThemeSheet } from "./Sheets";
 import css from "./wellbeing.module.css";
 
@@ -35,7 +36,7 @@ export function sectionOf(pathname: string, base = WELLBEING_PATH): WellbeingSec
 }
 const pathOf = (section: WellbeingSection, base: string) => section === "beranda" ? base : `${base}/${section}`;
 
-type Sheet = { kind: "catat"; preset: CatatPreset | null } | { kind: "detail"; activity: WbMyActivity } | { kind: "strava" } | { kind: "theme" } | { kind: "board" } | { kind: "signout" };
+type Sheet = { kind: "catat"; preset: CatatPreset | null } | { kind: "detail"; activity: WbMyActivity } | { kind: "strava" } | { kind: "theme" } | { kind: "photo" } | { kind: "board" } | { kind: "signout" };
 
 /** Wait until the closed sheet's history entry is gone, so the next sheet's entry is not taken back with it. */
 const historySettled = () => new Promise<void>(resolve => {
@@ -75,6 +76,10 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
   const [board, setBoard] = useState<{ period: BoardPeriod; dim: BoardDim }>({ period: "month", dim: "all" });
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  // My profile photo: from the page, then whatever Foto profil saved (no page load).
+  const [photo, setPhotoNow] = useState<string | null>(me.photo ?? null);
+  const setPhoto = useCallback((next: string | null) => { setPhotoNow(next); revalidate("wbapp:board"); }, []);
+  const meNow = useMemo(() => ({ ...me, photo }), [me, photo]);
   const [catatRound, setCatatRound] = useState(0);
   // Catat keeps its draft when closed by accident; it starts fresh after a save, or for a preset.
   const catatSaved = useRef(false);
@@ -131,14 +136,16 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
   const close = useCallback(() => setSheet(null), []);
 
   const actions = useMemo<WellbeingActions>(() => ({
-    api, me, go,
+    api, me: meNow, go,
     openCatat: preset => void show({ kind: "catat", preset: preset ?? null }),
     openActivity: activity => void show({ kind: "detail", activity }),
     openStrava: () => void show({ kind: "strava" }),
     openTheme: () => void show({ kind: "theme" }),
+    openPhoto: () => void show({ kind: "photo" }),
+    setPhoto,
     openBoard: () => void show({ kind: "board" }),
     askSignOut: () => void show({ kind: "signout" }),
-  }), [api, me, go, show]);
+  }), [api, meNow, go, show, setPhoto]);
 
   // Coming back to a tab shows what it had at once and refreshes it quietly.
   const refreshShown = useEffectEvent((target: WellbeingSection) => { void refresh(target); });
@@ -146,7 +153,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
   useEffect(() => {
     if (shownOnce.current && shownOnce.current !== section) refreshShown(section);
     shownOnce.current = section;
-    document.title = `${titles[section]} · Wellbeing`;
+    document.title = `${titles[section]} · WLM`;
   }, [section]);
 
   // Back online: say so, and refresh.
@@ -200,6 +207,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
       <ActivitySheet activity={sheet?.kind === "detail" ? sheet.activity : null} onClose={close} onRedo={preset => void show({ kind: "catat", preset })} />
       <StravaSheet open={sheet?.kind === "strava"} onClose={close} onLogSport={() => void show({ kind: "catat", preset: { kind: "sport" } })} />
       <ThemeSheet open={sheet?.kind === "theme"} onClose={close} />
+      <PhotoSheet open={sheet?.kind === "photo"} onClose={close} />
       <BoardSheet open={sheet?.kind === "board"} period={board.period} dim={board.dim} onClose={close} />
       <SignOutSheet open={sheet?.kind === "signout"} onClose={close} />
   </WellbeingContext.Provider>;

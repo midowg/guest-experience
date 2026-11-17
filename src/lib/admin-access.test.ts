@@ -111,6 +111,10 @@ describe("Wellbeing (16 Nov 2026)", () => {
     expect(areaOfPath("/admin/wellbeing/periksa")).toBe("wellbeing");
     expect(areaOfPath("/api/admin/wellbeing/activities")).toBe("wellbeing");
     expect(areaOfPath("/admin/wellbeingx")).toBeNull();
+    // Its address since 18 Nov 2026 (/admin/wellbeing redirects there).
+    expect(areaOfPath("/admin/wlm")).toBe("wellbeing");
+    expect(areaOfPath("/admin/wlm/periksa")).toBe("wellbeing");
+    expect(areaOfPath("/admin/wlmx")).toBeNull();
     expect(mayOpenArea({ employeeId: "e1", apps: ["wellbeing"], allEvents: false, eventIds: [] }, "wellbeing")).toBe(true);
     expect(mayOpenArea({ employeeId: "e1", apps: ["wam", "tv"], allEvents: false, eventIds: [] }, "wellbeing")).toBe(false);
   });

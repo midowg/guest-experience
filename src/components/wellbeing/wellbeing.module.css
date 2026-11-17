@@ -625,3 +625,44 @@ input[type="date"].input { display: block; }
   .tabInd, .meter > i, .progress > i, .phBar > i, .bar, .barTitle, .pressable { transition: none; }
   .pressable:active, .btn:active, .tab:active .tabInd { transform: none; }
 }
+
+/* ---------- WLM sign-in (18 Nov 2026): the old app's look, always dark ---------- */
+.login[data-theme="dark"] {
+  background:
+    radial-gradient(70% 55% at 0% 0%, rgba(124, 58, 237, .30), transparent 70%),
+    radial-gradient(60% 50% at 100% 8%, rgba(234, 88, 12, .24), transparent 72%),
+    radial-gradient(80% 40% at 50% 110%, rgba(197, 242, 58, .08), transparent 70%),
+    #0A0A0B;
+}
+.login[data-theme="dark"] .loginColumn { background: transparent; }
+@media (min-width: 600px) and (min-height: 700px) {
+  .login[data-theme="dark"] .loginColumn { border: 0; box-shadow: none; padding: 32px; max-width: 400px; }
+}
+.wlmHero { display: grid; justify-items: center; gap: 6px; padding-top: 24px; text-align: center; }
+.wlmMark {
+  margin: 0; font-size: 64px; font-weight: 800; line-height: 1; letter-spacing: -3px;
+  background: linear-gradient(135deg, #FFFFFF 0%, #C9CED8 45%, #6B7280 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.wlmTag { margin: 4px 0 0; color: #9CA3AF; font-size: 15px; font-weight: 300; letter-spacing: .4px; }
+.wlmLead { margin: 20px 0 0; color: var(--text-2); font-size: 14px; }
+.wlmSmall {
+  margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -1px; line-height: 1;
+  background: linear-gradient(135deg, #FFFFFF 0%, #6B7280 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  width: max-content;
+}
+@media (forced-colors: active) { .wlmMark, .wlmSmall { color: CanvasText; background: none; } }
+
+/* ---------- Foto profil (18 Nov 2026) ---------- */
+.avatar[data-photo="true"] { overflow: hidden; background: var(--surface-2); }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
+.avatarEdit { position: relative; display: inline-grid; padding: 0; border: 0; border-radius: 999px; background: none; color: inherit; cursor: pointer; }
+.avatarEdit:focus-visible { outline: 3px solid var(--focus); outline-offset: 6px; }
+.avatarBadge { position: absolute; right: -2px; bottom: 2px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 3px var(--bg); }
+.photoPreview { display: grid; justify-items: center; gap: 10px; padding: 4px 0 16px; }
+.photoPreview p { margin: 0; max-width: 30ch; }
+.photoBig { display: block; width: 168px; height: 168px; border-radius: 999px; overflow: hidden; background: var(--surface-2); box-shadow: 0 0 0 4px var(--bg), 0 0 0 7px var(--outline); }
+.photoBig[data-ring="true"] { box-shadow: 0 0 0 4px var(--bg), 0 0 0 7px var(--ring); }
+.photoBig img, .cardThumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cardThumb { display: block; flex: none; width: 44px; height: 44px; border-radius: 999px; overflow: hidden; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ring, var(--outline)); }
+.row:disabled { cursor: default; }
+.row:disabled .rowTitle { color: var(--text-3); }
