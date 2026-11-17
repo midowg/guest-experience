@@ -8,7 +8,6 @@ import { AdminApiError, adminRequest, errorMessage } from "@/components/admin/sh
 import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { DISPLAY_FONTS } from "@/components/main-wam/theme/tokens";
 import { moduleInfo } from "@/lib/main-wam/modules";
-import { MAIN_WAM_MIGRATION } from "@/lib/main-wam/settings";
 import { THEME_IMAGE_BYTES, THEME_IMAGE_TYPES, type ThemeImageMime } from "@/lib/main-wam/theme-image";
 import {
   MAIN_WAM_MODES, MAIN_WAM_MODULES, THEME_IMAGE_SLOTS, mainWamModeLabels, themeImageLabels,
@@ -65,7 +64,7 @@ export function MainWamSettings({ initial, testers: firstTesters, testersMigrate
     <PageHeader crumbs={crumbs} title={title}
       subtitle="Main WAM adalah aplikasi selama acara WAM, tersembunyi sampai modenya diubah di sini."
       actions={<ConsoleButtonLink href={mainWamPath.home} target="_blank" rel="noopener" icon={<ExternalLink size={18} aria-hidden />}>Buka Main WAM<span className="sr-only"> (tab baru)</span></ConsoleButtonLink>} />
-    {!settings.migrated && <Notice tone="warning">Pengaturan Main WAM menunggu migrasi {MAIN_WAM_MIGRATION}. Sampai saat itu Main WAM tersembunyi untuk semua orang dan pengaturan belum bisa disimpan.</Notice>}
+    {!settings.migrated && <Notice tone="warning">Pengaturan Main WAM menunggu pembaruan sistem. Sampai saat itu Main WAM tersembunyi untuk semua orang dan pengaturan belum bisa disimpan. Hubungi tim CoE.</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone} role={message.tone === "error" ? "alert" : "status"}>{message.text}</Notice>}</div>
     <div className={css.grid}>
       <ModeCard id={`${id}-mode`} mode={settings.mode} locked={locked} busy={busy === "mode"} onSave={mode => run("mode", apply({ mode }))} />
@@ -213,7 +212,7 @@ function ThemeCard({ id, settings, locked, busy, storage, run, onSaved }: {
       <ConsoleButton variant={changed ? "primary" : "secondary"} disabled={locked || !changed || COLOR_FIELDS.some(field => !valid(colors[field.key]))} onClick={() => void saveTheme()}>{busy === "tema" ? "Menyimpan…" : "Simpan tema"}</ConsoleButton>
     </div>
     <h3 className={css.note}>Gambar KV</h3>
-    {!storage && <Notice tone="warning">Penyimpanan gambar belum disiapkan (R2), jadi gambar belum bisa diunggah.</Notice>}
+    {!storage && <Notice tone="warning">Gambar KV belum bisa diunggah karena penyimpanan berkas belum disiapkan. Hubungi tim CoE.</Notice>}
     <ul className={css.slots}>
       {THEME_IMAGE_SLOTS.map(slot => {
         const image = settings.theme.images[slot];

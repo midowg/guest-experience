@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 const idOf = async ({ params }: Params) => validate(z.uuid("Pertanyaan tidak dikenali."), (await params).id);
 
-/** PATCH: the question, its session, topics, Tutup otomatis (question and session stay once feedback came in). */
+/** PATCH: the question, its session, topics (all stay once it opened). */
 export async function PATCH(request: Request, context: Params) {
   return handle(async () => {
     await requireApiAdmin();
@@ -18,7 +18,7 @@ export async function PATCH(request: Request, context: Params) {
   });
 }
 
-/** DELETE: a question without feedback. */
+/** DELETE: a question that has not opened. */
 export async function DELETE(request: Request, context: Params) {
   return handle(async () => {
     await requireApiAdmin();

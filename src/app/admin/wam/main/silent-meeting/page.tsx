@@ -11,13 +11,13 @@ import { adminSilent } from "@/lib/server/main-wam/modul/admin";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Silent Meeting · Main WAM · Admin WAM" };
 
-/** Admin WAM → Main WAM → Silent Meeting (agen D): one question per session, topics, Tutup otomatis. */
+/** Admin WAM → Main WAM → Silent Meeting (agen D): one question per session and its topics. */
 export default async function SilentMeetingAdminPage() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
   const data = await adminSilent();
   return <WamAdminFrame current="mw-silent">
-    <PageHeader crumbs={wamCrumbs("mw-silent")} title="Main WAM · Silent Meeting" subtitle="Pertanyaan per sesi, topik, dan tutup otomatis. Masukan tidak pernah tampil di sini." />
+    <PageHeader crumbs={wamCrumbs("mw-silent")} title="Main WAM · Silent Meeting" subtitle="Pertanyaan per sesi dan topiknya. Masukan tidak pernah tampil di sini." />
     <PageTabs tabs={mainWamModuleTabs} current="silent-meeting" label="Modul acara" />
     <SilentAdmin initial={data} />
   </WamAdminFrame>;

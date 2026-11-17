@@ -10,6 +10,7 @@ import { myCheckIn, presentCount } from "@/lib/server/main-wam/modul/absen";
 import { awardsShown } from "@/lib/server/main-wam/modul/awards";
 import { panitiaContact } from "@/lib/server/main-wam/modul/contact";
 import { silentNow } from "@/lib/server/main-wam/modul/silent";
+import { surveyFor } from "@/lib/server/main-wam/survey";
 import { AbsenView, ModuleActionView, type AbsenSlot, type ModuleSlot } from "./SessionViews";
 
 /*
@@ -70,10 +71,9 @@ export async function moduleSlot({ session, context, now }: { session: MwSession
       actions.action = { kind: "link", label: "Lihat pemenang", href: mainWamPath.awards, icon: "trophy" };
     }
   }
-  const survey = settings.moduleConfig.survei.formSlug;
-  if (session.module === "survei" && settings.modules.survei && survey && now.getTime() >= Date.parse(session.startsAt)) {
-    actions.action = { kind: "link", label: "Isi survei", href: praWamPath.questionnaire(survey), icon: "survei", primary: true };
-  }
+  // Survei (R7): the shared rule of Beranda (module on, a form, open now, not filled in yet).
+  const survey = session.module === "survei" ? await surveyFor(context, [session], now, session.id).catch(() => null) : null;
+  if (survey) actions.action = { kind: "link", label: "Isi survei", href: praWamPath.questionnaire(survey.formSlug), icon: "survei", primary: true };
   return actions;
 }
 

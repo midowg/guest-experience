@@ -1,5 +1,5 @@
 import { mainWamCan } from "@/lib/main-wam/access";
-import { rankTally, voteCard } from "@/lib/main-wam/modul/awards";
+import { closedTally, voteCard } from "@/lib/main-wam/modul/awards";
 import { handle, success } from "@/lib/server/http";
 import { requireModuleApi } from "@/lib/server/main-wam/gate";
 import { awardsShown, myVotes, nomineeViews, voteCounts } from "@/lib/server/main-wam/modul/awards";
@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET: the categories (published, not computed) with their nominees and this person's own votes.
- * Counts only for the BOD (aggregates, no voters); never the running count to anyone else. A winner
+ * Counts only for the BOD (aggregates, no voters), and only once voting closed (audit M1); never a
+ * running count to anyone. A winner
  * shows to everyone once approved and announced.
  */
 export async function GET() {
@@ -28,7 +29,7 @@ export async function GET() {
           announceAt: category.announceAt, card, myVote: mine.get(category.id) ?? null,
           nominees: category.nominees.map(nominee => nominees.get(nominee.id)).filter(Boolean),
           ...(card.kind === "diumumkan" ? { winner: nominees.get(card.nomineeId) ?? null } : {}),
-          ...(counts ? { tally: rankTally(category.nominees, counts.get(category.id) ?? new Map()).map(row => ({ nomineeId: row.nominee.id, votes: row.votes, rank: row.rank })), approval: approvals.get(category.id) ?? null } : {}),
+          ...(counts ? { tally: closedTally(category, counts.get(category.id), now)?.rows ?? null, approval: approvals.get(category.id) ?? null } : {}),
         };
       }),
     }, "");

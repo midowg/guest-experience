@@ -5,6 +5,9 @@
 .progressLabel { display: flex; align-items: center; gap: var(--mw-space-4); min-width: 0; font: var(--mw-type-label); color: var(--mw-text-1); }
 .progressLabel > svg { flex: none; width: 16px; height: 16px; color: var(--mw-text-2); }
 .progressValue { font: var(--mw-type-body-small); color: var(--mw-text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* labelSize="subtitle": the progress is the screen's main number (M06 Mozaik "312 dari 600 foto · 52%"). */
+.progressSubtitle .progressLabel, .progressSubtitle .progressValue { font: var(--mw-type-subtitle); color: var(--mw-text-1); }
+.progressSubtitle .progressLabel > svg { width: 20px; height: 20px; }
 .progress { position: relative; display: block; height: 8px; border-radius: var(--mw-radius-full); background: var(--mw-outline); overflow: hidden; }
 .thin { height: 4px; }
 .bar { display: block; height: 100%; border-radius: inherit; background: var(--mw-primary); transition: width var(--mw-motion-expand); }
@@ -49,6 +52,22 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
 .done .sessionTitle { color: var(--mw-text-2); }
 .cancelled .sessionTitle { color: var(--mw-text-2); text-decoration: line-through; }
 .cancelled .start { color: var(--mw-text-3); }
+/*
+ * Under 300 px (a phone at zoom 200 %): the time goes on a line of its own ("08.00–12.00", the
+ * chevron at its end), the title and place get the full width under it, the rail steps aside,
+ * and a pill may wrap (T-P03).
+ */
+@media (max-width: 299.98px) {
+  .session { flex-wrap: wrap; column-gap: var(--mw-space-8); row-gap: var(--mw-space-4); padding: var(--mw-space-12); }
+  .time { order: 0; flex: 1 1 auto; width: auto; flex-direction: row; flex-wrap: wrap; align-items: baseline; }
+  .end::before { content: "–" / ""; }
+  .rail { display: none; }
+  .trail { order: 1; }
+  .sessionBody { order: 2; flex: 1 1 100%; }
+  .sessionBody > * { max-width: 100%; }
+  .sessionBody [class] { white-space: normal; }
+  .place > span { white-space: nowrap; }
+}
 @keyframes mw-ring {
   0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--mw-primary) 30%, transparent); }
   50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--mw-primary) 10%, transparent); }
@@ -68,14 +87,15 @@ a.session:active, button.session:active { background-image: linear-gradient(var(
 .tileBadge { flex: none; margin-right: var(--mw-space-4); }
 
 /* StackPreview: three small tilted photos, the words, a tonal "Lihat". */
-.peek { display: flex; flex-direction: row; align-items: center; gap: var(--mw-space-16); min-width: 0; color: var(--mw-text-1); text-align: left; border-radius: var(--mw-radius-12); }
+/* When the words do not fit beside the photos (zoom 200 %), they go under them, then "Lihat"; nothing leaves the card. */
+.peek { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--mw-space-8) var(--mw-space-16); min-width: 0; color: var(--mw-text-1); text-align: left; border-radius: var(--mw-radius-12); }
 a.peek, button.peek { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .fan { position: relative; flex: none; width: 76px; height: 72px; }
 .fanPhoto { position: absolute; top: var(--mw-space-4); left: 18px; width: 40px; height: var(--mw-space-48); border-radius: var(--mw-radius-8); box-shadow: 0 0 0 2px var(--mw-surface); overflow: hidden; }
 .fanPhoto:nth-child(1) { transform: translateX(calc(-1 * var(--mw-space-16))) rotate(-10deg); }
 .fanPhoto:nth-child(2) { z-index: 1; transform: translateY(var(--mw-space-4)); }
 .fanPhoto:nth-child(3) { transform: translateX(var(--mw-space-16)) rotate(10deg); }
-.peekText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.peekText { flex: 1 1 96px; min-width: 0; display: flex; flex-direction: column; }
 .peekTitle { font: var(--mw-type-body-strong); }
 .peekSub { font: var(--mw-type-body-small); color: var(--mw-text-2); }
 /* Looks like a tonal M button; the whole row is the link, so this is not a second control. */

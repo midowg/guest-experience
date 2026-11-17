@@ -24,7 +24,7 @@ export default async function KelompokAdminPage({ searchParams }: { searchParams
   const { tab, sesi } = await searchParams;
   const [settings, people] = await Promise.all([mainWamSettingsState().catch(() => readMainWamSettings()), adminPeople()]);
   if (tab === "kegiatan") {
-    const [groups, sessions] = await Promise.all([adminActivityGroups(), adminSessions()]);
+    const [groups, sessions] = await Promise.all([adminActivityGroups(), adminSessions({ usage: false })]);
     return <WamAdminFrame current="mw-kelompok">
       <ActivityGroupsEditor initial={groups.data} migrated={groups.migrated && settings.migrated} sessions={sessions.data} people={people} dates={eventDates(settings.event)}
         firstSession={sesi ?? null} crumbs={wamCrumbs("mw-kelompok", "Kelompok kegiatan")} title="Main WAM · Kelompok" />

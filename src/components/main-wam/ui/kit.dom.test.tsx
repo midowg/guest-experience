@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -329,5 +330,129 @@ describe("TextField and DayTabs", () => {
     expect(today.getAttribute("aria-pressed")).toBe("false");
     fireEvent.click(today);
     expect(onSelect).toHaveBeenCalledWith("2");
+  });
+});
+
+/* ---------- Focus rings, button labels, progress labels (CSS read as text: jsdom has no cascade) ---------- */
+
+const cssText = (file: string) => readFileSync(new URL(file, import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+/** The declarations of the rule whose selector list contains `selector` exactly. */
+function rule(file: string, selector: string): string {
+  for (const match of cssText(file).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    // Commas at the top level only (not those inside :is(…)).
+    if (match[1].split(/,(?![^(]*\))/).map(part => part.trim()).includes(selector)) return match[2];
+  }
+  throw new Error(`${selector} not in ${file}`);
+}
+/** Specificity [ids, classes, elements] of one simple selector chain (enough for the kit's rules). */
+function specificity(selector: string): [number, number, number] {
+  let rest = selector;
+  let total: [number, number, number] = [0, 0, 0];
+  const add = (other: [number, number, number]) => { total = [total[0] + other[0], total[1] + other[1], total[2] + other[2]]; };
+  rest = rest.replace(/:(is|not|has)\(([^()]*)\)/g, (_, _kind, args: string) => {
+    const best = args.split(",").map(arg => specificity(arg.trim())).sort((a, b) => b[0] - a[0] || b[1] - a[1] || b[2] - a[2])[0];
+    add(best);
+    return "";
+  }).replace(/:where\([^()]*\)/g, "");
+  add([(rest.match(/#[\w-]+/g) ?? []).length, (rest.match(/\.[\w-]+|\[[^\]]+\]|:(?!:)[\w-]+/g) ?? []).length,
+    (rest.replace(/\[[^\]]+\]|::?[\w-]+|[.#][\w-]+/g, " ").match(/(^|[\s>+~])[a-z][\w-]*/gi) ?? []).length]);
+  return total;
+}
+const beats = (a: [number, number, number], b: [number, number, number]) => a[0] > b[0] || (a[0] === b[0] && (a[1] > b[1] || (a[1] === b[1] && a[2] > b[2])));
+const THEME_RING = specificity(".root :focus-visible");
+
+describe("Kit fixes: focus rings", () => {
+  it("a text field has one ring: the box draws it, the control none (theme outline beaten)", async () => {
+    const { TextField } = await import("./Form");
+    const formCss = (await import("./form.module.css")).default;
+    render(<TextField label="Judul" />);
+    const input = screen.getByRole("textbox", { name: "Judul" });
+    // `.box > .control` applies: the control sits right in the box.
+    expect(input.className).toContain(formCss.control);
+    expect(input.parentElement!.className).toContain(formCss.box);
+    expect(rule("./form.module.css", ".box > .control:focus-visible")).toMatch(/outline:\s*none/);
+    expect(beats(specificity(".box > .control:focus-visible"), THEME_RING)).toBe(true);
+    expect(rule("./form.module.css", ".box:focus-within")).toMatch(/inset 0 0 0 2px var\(--mw-primary\)/);
+    // The select field (a button that is the box) also keeps one ring.
+    expect(rule("./form.module.css", ".box.select:focus-visible")).toMatch(/outline:\s*none/);
+    expect(beats(specificity(".box.select:focus-visible"), THEME_RING)).toBe(true);
+  });
+
+  it("an error field still shows focus (the red line alone would look the same)", () => {
+    const idle = rule("./form.module.css", ".boxError");
+    const focused = rule("./form.module.css", ".boxError:focus-within");
+    expect(focused).not.toBe(idle);
+    expect(focused).toMatch(/var\(--mw-error\)/);
+  });
+
+  it("focus moved by script: headings (tabindex -1) and quiet focus draw no ring; everything else keeps it", () => {
+    const heading = '.root :is(h1, h2, h3, h4, h5, h6, main)[tabindex="-1"]:focus';
+    expect(rule("../theme/theme.module.css", heading)).toMatch(/outline:\s*none/);
+    expect(beats(specificity(heading), THEME_RING)).toBe(true);
+    expect(rule("../theme/theme.module.css", ".root [data-mw-quiet-focus]:focus-visible")).toMatch(/outline:\s*none/);
+    expect(beats(specificity(".root [data-mw-quiet-focus]:focus-visible"), THEME_RING)).toBe(true);
+    expect(rule("../theme/theme.module.css", ".root :focus-visible")).toMatch(/outline:\s*2px solid var\(--mw-focus\)/);
+  });
+
+  it("the sheet title is a script focus target (tabindex -1), so the heading rule covers it", () => {
+    render(<Sheet open onClose={() => {}} title="Ubah jam" history={false}><p>Isi</p></Sheet>);
+    const title = screen.getByRole("heading", { name: "Ubah jam" });
+    expect(title.tagName).toBe("H2");
+    expect(title.getAttribute("tabindex")).toBe("-1");
+    expect(document.activeElement).toBe(title);
+  });
+});
+
+describe("Kit fixes: ConfirmDialog Batal", () => {
+  it("is a text button (no line), as in the prototype (T01-buang, P05-keluar)", async () => {
+    const buttonCss = (await import("./button.module.css")).default;
+    render(<ConfirmDialog open tone="danger" title="Keluar dari WAM?" confirmLabel="Keluar" onCancel={() => {}} onConfirm={() => {}} history={false} />);
+    const cancel = screen.getByRole("button", { name: "Batal" });
+    expect(cancel.className).toContain(buttonCss.text);
+    expect(cancel.className).not.toContain(buttonCss.secondary);
+    expect(rule("./button.module.css", ".text")).not.toMatch(/box-shadow|border:/);
+  });
+});
+
+describe("Kit fixes: button labels are never cut", () => {
+  it("the label wraps (two lines, the button grows) instead of being clipped", async () => {
+    const { Button } = await import("./Button");
+    const buttonCss = (await import("./button.module.css")).default;
+    render(<div style={{ width: 120 }}><Button variant="secondary" size="m">Tampilkan lagi</Button></div>);
+    const button = screen.getByRole("button", { name: "Tampilkan lagi" });
+    expect(button.className).toContain(buttonCss.m);
+    const label = button.querySelector(`.${buttonCss.label}`)!;
+    expect(label.textContent).toBe("Tampilkan lagi");
+    const labelRule = rule("./button.module.css", ".label");
+    expect(labelRule).not.toMatch(/overflow:\s*hidden|text-overflow|white-space:\s*nowrap/);
+    expect(labelRule).toMatch(/overflow-wrap:\s*break-word/);
+    const btn = rule("./button.module.css", ".btn");
+    expect(btn).not.toMatch(/white-space:\s*nowrap/);
+    expect(btn).not.toMatch(/(^|[\s;])height:\s*48px/);
+    expect(btn).toMatch(/min-height:\s*48px/);
+    expect(btn).toMatch(/height:\s*fit-content/);
+  });
+
+  it("M keeps a 44 touch area: 40 high at least, plus 2 above and below", () => {
+    expect(rule("./button.module.css", ".m")).toMatch(/min-height:\s*40px/);
+    const after = rule("./button.module.css", ".m::after");
+    expect(after).toMatch(/top:\s*-2px/);
+    expect(after).toMatch(/bottom:\s*-2px/);
+  });
+});
+
+describe("Kit fixes: ProgressBar label size", () => {
+  it("Label 13 by default; labelSize=subtitle puts label and value in Subtitle 17 (M06)", async () => {
+    const { ProgressBar } = await import("./Data");
+    const dataCss = (await import("./data.module.css")).default;
+    const { rerender } = render(<ProgressBar label="312 dari 600 foto" value={312} max={600} valueText="52%" />);
+    const box = () => screen.getByRole("progressbar", { name: "312 dari 600 foto" }).parentElement!;
+    expect(box().className).not.toContain(dataCss.progressSubtitle);
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toBe("52%");
+    rerender(<ProgressBar label="312 dari 600 foto" value={312} max={600} valueText="52%" labelSize="subtitle" />);
+    expect(box().className).toContain(dataCss.progressSubtitle);
+    expect(rule("./data.module.css", ".progressSubtitle .progressLabel")).toMatch(/var\(--mw-type-subtitle\)/);
+    expect(rule("./data.module.css", ".progressSubtitle .progressValue")).toMatch(/var\(--mw-text-1\)/);
+    expect(rule("./data.module.css", ".progressLabel")).toMatch(/var\(--mw-type-label\)/);
   });
 });

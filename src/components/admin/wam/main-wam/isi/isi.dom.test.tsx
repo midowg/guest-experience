@@ -3,7 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { sampleAdminGroups, sampleAdminGuides, sampleAdminLog, sampleAdminPeople, sampleAdminSessions, sampleAdminSettings } from "@/lib/main-wam/admin/sample";
 import { samplePeople, sampleSessionIds } from "@/lib/main-wam/sample";
 import { eventDates } from "@/lib/main-wam/rundown";
-import { mainWamAdminApi } from "@/lib/routes";
+import { mainWamAdminApi, wamAdminPath } from "@/lib/routes";
+import { AdminApiError } from "@/components/admin/shared/api";
 
 const request = vi.fn();
 vi.mock("@/components/admin/shared/api", async importOriginal => ({ ...(await importOriginal<object>()), adminRequest: (...args: unknown[]) => request(...args) }));
@@ -39,10 +40,65 @@ describe("Rundown", () => {
     expect(screen.getByRole("list", { name: /Rundown Hari 4/ }).textContent).toContain("Pasar Among Tani");
   });
 
-  it("says plainly when the rundown waits for the system update, and locks adding", () => {
+  it("says plainly when the rundown waits for the system update, without file names, and locks adding (audit T-A01)", () => {
     rundown({ initial: [], migrated: false });
-    expect(screen.getByText(/menunggu pembaruan sistem/)).toBeTruthy();
+    const notice = screen.getByText(/menunggu pembaruan sistem/);
+    expect(notice.textContent).toBe("Rundown menunggu pembaruan sistem, jadi isinya belum bisa disimpan. Hubungi tim CoE.");
+    expect(document.body.textContent).not.toMatch(/migrasi|\.sql|2026112/);
     expect((screen.getByRole("button", { name: "Tambah sesi" }) as HTMLButtonElement).disabled).toBe(true);
+    // The empty state's title is the page's next heading (h2 under h1).
+    expect(screen.getByRole("heading", { level: 2, name: "Rundown belum bisa diisi" })).toBeTruthy();
+  });
+
+  it("turns Hapus off for a session with absen and photos, says why, and offers Batalkan instead (audit M4)", async () => {
+    rundown();
+    const hapus = screen.getByRole("button", { name: "Hapus Pemaparan departemen" });
+    expect(hapus.getAttribute("aria-disabled")).toBe("true");
+    expect(hapus.getAttribute("title")).toBe("Tidak bisa dihapus: sudah punya 96 absen dan 12 foto Momen. Pakai Batalkan.");
+    expect(document.getElementById(hapus.getAttribute("aria-describedby")!)!.textContent).toMatch(/sudah punya 96 absen dan 12 foto Momen/);
+    fireEvent.click(hapus);
+    const dialog = await screen.findByRole("dialog", { name: "Sesi ini tidak bisa dihapus" });
+    expect(dialog.textContent).toContain("Pemaparan departemen sudah punya 96 absen dan 12 foto Momen.");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Batalkan sesi" }));
+    const sheet = await screen.findByRole("dialog", { name: "Batalkan sesi" });
+    expect((within(sheet).getByRole("radio", { name: "Batal" }) as HTMLInputElement).checked).toBe(true);
+    expect(within(sheet).getByText(/Status: Terbit jadi Batal/)).toBeTruthy();
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("names the Silent Meeting and Awarding that keep a session (no feedback count)", () => {
+    rundown();
+    expect(screen.getByRole("button", { name: "Hapus Silent Meeting" }).getAttribute("title")).toBe("Tidak bisa dihapus: sudah punya 41 absen dan pertanyaan Silent Meeting. Pakai Batalkan.");
+  });
+
+  it("asks before deleting a session without records, saying its kelompok kegiatan go with it", async () => {
+    request.mockResolvedValue({ message: "Sesi dihapus.", data: { sessions: sampleAdminSessions() } });
+    rundown();
+    const hapus = screen.getByRole("button", { name: "Hapus Team building" });
+    expect(hapus.getAttribute("aria-disabled")).toBeNull();
+    fireEvent.click(hapus);
+    const dialog = await screen.findByRole("dialog", { name: "Hapus sesi?" });
+    expect(dialog.textContent).toContain("6 kelompok kegiatannya ikut terhapus.");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Hapus sesi" }));
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+    expect(request.mock.calls[0]).toEqual([mainWamAdminApi.session(sampleSessionIds["team-building"]), { method: "DELETE", body: undefined }]);
+  });
+
+  it("moves sessions with the versions on screen; a refusal shows inside the sheet, which stays open (audit S7)", async () => {
+    request.mockRejectedValue(new AdminApiError("Pemaparan departemen baru saja diubah orang lain (mungkin lewat Rundown live), jadi tidak ada yang digeser.", undefined, 409));
+    rundown();
+    fireEvent.click(screen.getByRole("button", { name: "Geser jam" }));
+    const sheet = screen.getByRole("dialog", { name: "Geser jam" });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Pilih Pemaparan departemen dan sesudahnya" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: /^Geser \d+ sesi$/ }));
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+    const body = JSON.parse((request.mock.calls[0][1] as { body: string }).body);
+    const pemaparan = sampleAdminSessions().find(session => session.id === sampleSessionIds.pemaparan)!;
+    expect(body).toMatchObject({ action: "geser", minutes: 30 });
+    expect(body.items[0]).toEqual({ id: pemaparan.id, version: pemaparan.version });
+    expect(body).not.toHaveProperty("ids");
+    expect((await within(sheet).findByRole("alert")).textContent).toMatch(/baru saja diubah orang lain/);
+    expect(screen.getByRole("dialog", { name: "Geser jam" })).toBeTruthy();
   });
 
   it("logs and tells participants when a published session's time changes", async () => {
@@ -140,6 +196,14 @@ describe("Info acara", () => {
     expect(request.mock.calls[0][0]).toBe(mainWamAdminApi.eventInfo);
     expect(JSON.parse((request.mock.calls[0][1] as { body: string }).body)).toMatchObject({ address: "Jl. Contoh No. 2, Kota Batu", checkIn: { date: "2027-01-04", time: "15:30" } });
     expect(await within(hotel).findByRole("button", { name: "Tersimpan" })).toBeTruthy();
+  });
+
+  it("names where the event's dates come from, without another event's name (audit T-A02)", () => {
+    render(<EventInfoEditor initial={sampleAdminSettings()} people={sampleAdminPeople} crumbs={[]} title="Main WAM · Info acara" />);
+    const acara = screen.getByRole("region", { name: "Acara" });
+    expect(acara.textContent).toContain("Tanggal acara: Sen, 4 Jan sampai Kam, 7 Jan. Diatur di Acara dan modul.");
+    expect(acara.textContent).not.toContain("WAM 2027");
+    expect(within(acara).getByRole("link", { name: "Acara dan modul" }).getAttribute("href")).toBe(wamAdminPath.events);
   });
 
   it("lets the hotel bills be final only with all four", () => {

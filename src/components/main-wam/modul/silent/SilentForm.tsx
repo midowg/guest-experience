@@ -12,7 +12,7 @@ import { Result } from "../Result";
 import { useOnline } from "../useOnline";
 import css from "../modul.module.css";
 
-type Sent = { sent: number; remaining: number };
+type Sent = { remaining: number };
 
 function loadDraft(questionId: string) {
   try { return readDraft(window.localStorage.getItem(draftKey(questionId))); } catch { return { topic: "", body: "" }; }
@@ -29,7 +29,9 @@ function saveDraft(questionId: string, draft: { topic: string; body: string }) {
  * written (it survives a closed tab, no signal, and the Silent Meeting closing mid-sentence), and
  * leaves the phone only when sent, without the person. Back with text asks first (T01-buang).
  * Closing while writing (by the clock or by panitia, T01-ditutup) keeps the text and says so.
- * `preview` opens a dialog or a state without a server (dev-preview).
+ * Once shown open, it tells the server (a request of its own, never with a feedback) that this person
+ * opened the form: the recap needs 5 different people (audit H1). `preview` opens a dialog or a state
+ * without a server (dev-preview).
  */
 export function SilentForm({ view, remaining: initialRemaining, preview }: {
   view: SilentView;
@@ -45,7 +47,7 @@ export function SilentForm({ view, remaining: initialRemaining, preview }: {
   const [sending, setSending] = useState(!!preview?.sending);
   const [error, setError] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"buang" | "ditutup" | null>(preview?.dialog ?? null);
-  const [done, setDone] = useState<Sent | null>(preview?.sent ? { sent: 1, remaining: initialRemaining - 1 } : null);
+  const [done, setDone] = useState<Sent | null>(preview?.sent ? { remaining: initialRemaining - 1 } : null);
   const [remaining, setRemaining] = useState(initialRemaining);
   const [closed, setClosed] = useState(false);
   const loaded = useRef(!!preview);
@@ -62,6 +64,23 @@ export function SilentForm({ view, remaining: initialRemaining, preview }: {
     setBody(draft.body); setTopic(view.question.topics.includes(draft.topic) ? draft.topic : "");
   }, [questionId, view.question.topics]);
   useEffect(() => { if (loaded.current && !preview) saveDraft(questionId, { topic, body }); }, [questionId, topic, body, preview]);
+
+  // "I opened the form" (the threshold's 5 people): once per screen, when there is signal; the server
+  // keeps it once per person per question. Never sent with the text, and failures are quiet.
+  const opened = useRef(!!preview);
+  useEffect(() => {
+    if (opened.current) return;
+    const tell = () => {
+      if (opened.current || !navigator.onLine) return;
+      opened.current = true;
+      modulRequest(mainWamApi.silent, { method: "POST", json: { questionId } }).catch(problem => {
+        if (problem instanceof ModulError && problem.offline) opened.current = false;
+      });
+    };
+    tell();
+    window.addEventListener("online", tell);
+    return () => window.removeEventListener("online", tell);
+  }, [questionId]);
 
   // Closing by the clock while the screen is open: the text stays, the person is told.
   useEffect(() => {
@@ -126,7 +145,7 @@ export function SilentForm({ view, remaining: initialRemaining, preview }: {
   const note = !online
     ? <span className={css.offlineNote}><CloudOff aria-hidden />Butuh sinyal. Tulisanmu tetap di sini.</span>
     : closed ? "Sudah ditutup. Tulisanmu tetap di HP ini."
-      : remaining <= 0 ? "Kamu sudah mengirim semua masukan untuk sesi ini." : undefined;
+      : remaining <= 0 ? "Sudah banyak terkirim. Tunggu beberapa menit untuk mengirim lagi." : undefined;
 
   return <>
     {top()}

@@ -3,21 +3,23 @@ import { canOpenFile } from "@/lib/main-wam/momen/access";
 import { ServiceError } from "../../config";
 import type { MainWamContext } from "../gate";
 import { photoRecord } from "./feed";
-import { storageReady, viewAddress } from "./storage";
+import { redirectSeconds, storageReady, viewAddress, type PhotoSize } from "./storage";
 
-/** The sizes a photo is kept in: kecil (480 px), besar (1600 px), ubin (160 px square, Mozaik). */
-export type PhotoSize = "kecil" | "besar" | "ubin";
+export type { PhotoSize } from "./storage";
 export const parsePhotoSize = (raw: string | null): PhotoSize => (raw === "kecil" || raw === "ubin" ? raw : "besar");
 
 /**
  * A short-lived storage address of one photo's file (mainWamApi.photoFile): for whoever sees the
  * photo, and for panitia (K08 shows reported and hidden photos through it). Anyone else: 404.
+ * How long it works depends on the size (storage.ts VIEW_POLICY: besar 15 minutes at most).
  */
-export async function photoFileAddress(context: MainWamContext, id: string, size: PhotoSize): Promise<string> {
+export async function photoFileAddress(context: MainWamContext, id: string, size: PhotoSize): Promise<{ address: string; cacheSeconds: number }> {
   const photo = await photoRecord(id);
   if (!photo || !canOpenFile(context.viewer, photo) || !storageReady()) throw new ServiceError(404, "Foto tidak ditemukan.");
   const key = size === "ubin" ? photo.tileKey ?? photo.thumbKey ?? photo.fileKey : size === "kecil" ? photo.thumbKey ?? photo.fileKey : photo.fileKey;
-  const address = await viewAddress(key);
+  // A photo without its own tile or small copy is served from a larger file, with that file's lifetime.
+  const served: PhotoSize = key === photo.fileKey ? "besar" : key === photo.thumbKey ? "kecil" : "ubin";
+  const address = await viewAddress(key, served);
   if (!address) throw new ServiceError(404, "Foto tidak ditemukan.");
-  return address;
+  return { address, cacheSeconds: redirectSeconds(served) };
 }

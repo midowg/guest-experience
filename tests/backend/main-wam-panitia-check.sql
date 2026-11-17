@@ -2,13 +2,15 @@
 -- Migration 202611200301 (Main WAM, panitia): a session's version moves on every change; Rundown
 -- live saves times for several sessions at once, refuses a stale version (two panitia at once),
 -- skips rows without a real change, never touches drafts, and logs who changed what; moderation
--- decisions refuse a photo another panitia already handled, delete only a hidden photo, and keep
--- their log after the photo is gone; nothing is readable or callable with the public roles.
+-- decisions refuse a photo another panitia already handled, delete only a hidden photo, keep the
+-- reason panitia gave (audit L8), handle the reports by the log on Tampilkan lagi while each
+-- reporter's own hide stays (audit R17), and keep their log after the photo is gone; nothing is
+-- readable or callable with the public roles.
 begin;
 set local role service_role;
 do $$
 declare
-  dimas uuid; rani uuid;
+  dimas uuid; rani uuid; sari uuid;
   pemaparan uuid; makan uuid; draft uuid;
   v1 timestamptz; v2 timestamptz; v_makan timestamptz; v_after timestamptz;
   photo uuid; other_photo uuid; owner_back uuid; row_back jsonb;
@@ -16,6 +18,7 @@ declare
 begin
   insert into public.employees (full_name, nickname) values ('Dimas Contoh Panitia', 'Dimas') returning id into dimas;
   insert into public.employees (full_name, nickname) values ('Rani Contoh Panitia', 'Rani') returning id into rani;
+  insert into public.employees (full_name, nickname) values ('Sari Contoh Panitia', 'Sari') returning id into sari;
 
   insert into public.mw_sessions (title, status, starts_at, ends_at, place) values ('Pemaparan departemen', 'terbit', '2027-01-05 08:00+07', '2027-01-05 12:00+07', 'Aula Utama') returning id, updated_at into pemaparan, v1;
   insert into public.mw_sessions (title, kind, status, starts_at, ends_at) values ('Makan siang', 'makan', 'terbit', '2027-01-05 12:00+07', '2027-01-05 13:00+07') returning id, updated_at into makan, v_makan;
@@ -88,7 +91,8 @@ begin
   insert into public.mw_photos (owner_id, client_id, file_key, thumb_key, size, width, height, status)
     values (rani, gen_random_uuid(), 'main-wam/momen/' || gen_random_uuid() || '.jpg', null, 1000, 800, 1000, 'ditinjau') returning id into photo;
   insert into public.mw_photos (owner_id, client_id, file_key, size, width, height) values (rani, gen_random_uuid(), 'main-wam/momen/' || gen_random_uuid() || '.jpg', 1000, 800, 1000) returning id into other_photo;
-  insert into public.mw_photo_reports (photo_id, reporter_id, reason) values (photo, dimas, 'tidak_setuju');
+  insert into public.mw_photo_reports (photo_id, reporter_id, reason, created_at) values (photo, dimas, 'tidak_setuju', now() - interval '5 minutes');
+  insert into public.mw_photo_reports (photo_id, reporter_id, reason, created_at) values (photo, sari, 'tidak_pantas', now() - interval '4 minutes');
 
   begin
     perform * from public.mw_moderate_photo(photo, 'sembunyikan', 'tampil', dimas, '');
@@ -100,18 +104,36 @@ begin
     raise exception 'UNEXPECTED: Hapus before it is hidden';
   exception when raise_exception then if sqlerrm <> 'PHOTO_INVALID' then raise; end if;
   end;
-  select out_owner into owner_back from public.mw_moderate_photo(photo, 'sembunyikan', 'ditinjau', dimas, 'Ada rekan yang keberatan.');
+  select out_owner into owner_back from public.mw_moderate_photo(photo, 'sembunyikan', 'ditinjau', dimas, 'Tidak pantas · Ada nomor kamar');
   if owner_back <> rani then raise exception 'the owner should come back (for the notice)'; end if;
   if (select status from public.mw_photos where id = photo) <> 'disembunyikan' or (select hidden_by from public.mw_photos where id = photo) <> dimas then raise exception 'photo not hidden by Dimas'; end if;
-  if (select reports from public.mw_moderation_log where photo_id = photo and action = 'sembunyikan') <> 1 then raise exception 'the decision should be logged with its reports'; end if;
+  if (select reports from public.mw_moderation_log where photo_id = photo and action = 'sembunyikan') <> 2 then raise exception 'the decision should be logged with its reports'; end if;
+  -- L8: the reason panitia gave is kept (log and the photo), a long one cut at 300.
+  if (select reason from public.mw_moderation_log where photo_id = photo and action = 'sembunyikan') <> 'Tidak pantas · Ada nomor kamar' then raise exception 'the reason should be logged'; end if;
+  if (select hidden_reason from public.mw_photos where id = photo) <> 'Tidak pantas · Ada nomor kamar' then raise exception 'the photo should keep why it is hidden'; end if;
 
+  -- Rani's own Tampilkan lagi (as a reporter would) must survive panitia's decision; Sari's own hide too.
+  update public.mw_photo_reports set unhidden_at = now() - interval '1 minute' where photo_id = photo and reporter_id = dimas;
   perform * from public.mw_moderate_photo(photo, 'tampilkan', 'disembunyikan', dimas, '');
   if (select status from public.mw_photos where id = photo) <> 'tampil' or (select hidden_by from public.mw_photos where id = photo) is not null then raise exception 'photo not shown again'; end if;
+  if (select hidden_reason from public.mw_photos where id = photo) <> '' then raise exception 'shown again: no hidden reason'; end if;
+  -- R17: Tampilkan lagi handles the reports through the log: every report is older than the decision
+  -- (panitia's queue is empty for it), the reports stay, and each reporter's own choice is untouched.
+  if exists (select 1 from public.mw_photo_reports r where r.photo_id = photo
+             and r.created_at > (select max(acted_at) from public.mw_moderation_log where photo_id = photo and action in ('sembunyikan', 'tampilkan'))) then
+    raise exception 'after Tampilkan lagi no report should be newer than the last decision';
+  end if;
+  if (select count(*) from public.mw_photo_reports where photo_id = photo) <> 2 then raise exception 'the reports should stay after Tampilkan lagi'; end if;
+  if (select unhidden_at from public.mw_photo_reports where photo_id = photo and reporter_id = sari) is not null then raise exception 'a reporter''s own hide is theirs, not panitia''s'; end if;
+  if (select unhidden_at from public.mw_photo_reports where photo_id = photo and reporter_id = dimas) is null then raise exception 'a reporter''s own Tampilkan lagi must stay'; end if;
+  if (select reason from public.mw_moderation_log where photo_id = photo and action = 'tampilkan') <> '' then raise exception 'Tampilkan lagi has no reason'; end if;
   perform * from public.mw_moderate_photo(photo, 'sembunyikan', 'tampil', dimas, '');
   select out_row into row_back from public.mw_moderate_photo(photo, 'hapus', 'disembunyikan', dimas, '');
   if row_back ->> 'file_key' is null then raise exception 'the storage keys should come back after Hapus'; end if;
   if exists (select 1 from public.mw_photos where id = photo) or exists (select 1 from public.mw_photo_reports where photo_id = photo) then raise exception 'Hapus should delete the photo and its reports'; end if;
   if (select count(*) from public.mw_moderation_log where photo_id = photo) <> 4 then raise exception 'the log should outlive the photo'; end if;
+  perform * from public.mw_moderate_photo(other_photo, 'sembunyikan', 'tampil', dimas, repeat('x', 400));
+  if (select char_length(reason) from public.mw_moderation_log where photo_id = other_photo) <> 300 then raise exception 'a long reason should be cut at 300'; end if;
   begin
     perform * from public.mw_moderate_photo(photo, 'tampilkan', 'disembunyikan', dimas, '');
     raise exception 'UNEXPECTED: a deleted photo';

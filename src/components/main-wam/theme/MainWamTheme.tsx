@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { mainWamFontVars } from "./font";
 import css from "./theme.module.css";
-import { resolveTheme, themeVars, type DisplayFont, type MainWamThemeInput, type ResolvedTheme } from "./tokens";
+import { PAGE_COLORS, resolveTheme, themeVars, type DisplayFont, type MainWamThemeInput, type ResolvedTheme } from "./tokens";
 
 export type MainWamMode = "light" | "dark" | "system";
 
@@ -14,10 +14,10 @@ const DISPLAY_FONT_VARS: Record<DisplayFont, string | null> = { "plus-jakarta-sa
  * too (wamBodyStyle); `html body:has(…)` outranks it while Main WAM is on screen and stops applying
  * the moment it leaves, so it never leaks. Fixed values only: the background is not a theme slot.
  */
-const PAGE_STYLE = "html body:has([data-main-wam]){background:#F6F7F9;color-scheme:light}"
-  + "html body:has([data-main-wam][data-mw-mode=dark]){background:#0E1116;color-scheme:dark}"
-  + "@media (prefers-color-scheme:dark){html body:has([data-main-wam][data-mw-mode=system]){background:#0E1116;color-scheme:dark}}"
-  + "html body:has([data-mw-tone=dark]){background:#000}";
+const PAGE_STYLE = `html body:has([data-main-wam]){background:${PAGE_COLORS.light};color-scheme:light}`
+  + `html body:has([data-main-wam][data-mw-mode=dark]){background:${PAGE_COLORS.dark};color-scheme:dark}`
+  + `@media (prefers-color-scheme:dark){html body:has([data-main-wam][data-mw-mode=system]){background:${PAGE_COLORS.dark};color-scheme:dark}}`
+  + `html body:has([data-mw-tone=dark]){background:${PAGE_COLORS.media}}`;
 
 /**
  * Main WAM's theme root: every token (theme.module.css) and the font live under it, and the admin's

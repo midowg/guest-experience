@@ -1,5 +1,6 @@
 import { reportReasonLabels, type PhotoStatus, type ReportReason } from "../types";
 import { dayClock } from "./format";
+import { MODERATION_NOTE_MAX, type ModerationReason } from "./schemas";
 
 /*
  * Moderasi Momen (K08): which reported photos wait for panitia, and how a card reads. A photo waits
@@ -49,6 +50,8 @@ export type ModerationCard = {
   /** Hidden by panitia: who and when (Disembunyikan tab). */
   hiddenBy: string | null;
   hiddenAt: string | null;
+  /** Why, as the panitia gave it (other panitia only); "" without a reason. */
+  hiddenReason?: string;
 };
 
 /** "Hana · Kelompok 7 · 09.40" (another day: "· Sen, 4 Jan · 20.15"). */
@@ -59,6 +62,25 @@ export type ModerationAction = "sembunyikan" | "tampilkan" | "hapus";
 export function allowedActions(status: PhotoStatus, waiting: boolean): ModerationAction[] {
   if (status === "disembunyikan") return ["tampilkan", "hapus"];
   return waiting ? ["sembunyikan", "tampilkan"] : ["sembunyikan"];
+}
+
+/** The quick reasons panitia can pick for Sembunyikan and Hapus (audit L8). */
+export const moderationReasonLabels: Record<ModerationReason, string> = {
+  keberatan: "Ada yang keberatan",
+  tidak_pantas: "Tidak pantas",
+  data_pribadi: "Data pribadi",
+};
+
+/** What mw_moderation_log.reason keeps: "Tidak pantas · Ada nomor kamar", the note alone, or "" (no reason given). */
+export function moderationReason(reason: ModerationReason | null | undefined, note: string | null | undefined): string {
+  const text = (note ?? "").replace(/\s+/g, " ").trim().slice(0, MODERATION_NOTE_MAX);
+  return [reason ? moderationReasonLabels[reason] : "", text].filter(Boolean).join(" · ");
+}
+
+/** "Disembunyikan Dimas · 09.05 · Tidak pantas" (the Disembunyikan tab). */
+export function hiddenLine(card: Pick<ModerationCard, "hiddenBy" | "hiddenAt" | "hiddenReason">, now: Date): string {
+  if (!card.hiddenAt) return "";
+  return [card.hiddenBy ? `Disembunyikan ${card.hiddenBy}` : "Disembunyikan", dayClock(card.hiddenAt, now), card.hiddenReason || null].filter(Boolean).join(" · ");
 }
 
 /** The words the uploader receives (lonceng, and a push for a hidden photo: notePushTopic). */

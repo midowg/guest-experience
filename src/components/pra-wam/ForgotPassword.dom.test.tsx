@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { praWamPath } from "@/lib/routes";
 import { ForgotPasswordForm } from "./ForgotPassword";
 
@@ -24,7 +24,9 @@ it("sends the email and note, then says the request went to the admin and what c
   fireEvent.click(button);
 
   const heading = await screen.findByRole("heading", { name: "Permintaan terkirim ke admin WAM" });
-  expect(document.activeElement).toBe(heading);
+  // Focus moves to the heading in an effect after it renders: wait for it (under a loaded full run
+  // the effect can land a tick after the heading appears; audit R18).
+  await waitFor(() => expect(document.activeElement).toBe(heading));
   expect(bodies).toEqual([{ email: "nama@werkudara.com", note: "Lupa setelah ganti HP" }]);
   expect(screen.getByText("Buat password baru saat diminta.")).toBeTruthy();
   expect(screen.getByRole("link", { name: "Kembali ke halaman masuk" }).getAttribute("href")).toBe(praWamPath.login());

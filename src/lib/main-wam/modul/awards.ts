@@ -7,7 +7,8 @@ import type { MwAwardApproval, MwAwardCategory, MwAwardNominee } from "../types"
  * Voting Awarding (V01, V02, B06; RISET §6, KONTRAK §8): categories with nominees; one vote per
  * person per category, changeable until it closes, never for oneself; the window by the server's
  * clock (the database repeats it). A vote is secret, not anonymous: only aggregates leave the
- * server, to the BOD (and Admin WAM), never the running count to participants. The BOD approve the
+ * server, to the BOD and Admin WAM, and only once voting closed (closedTally, audit M1); never a
+ * running count to anyone. The BOD approve the
  * winner before it is announced. Computed categories (otomatis, "Tim paling kompak" from Wellbeing
  * points) are not shown anywhere until Wellbeing comes from Journey. Pure.
  */
@@ -87,6 +88,21 @@ export function rankTally(nominees: readonly MwAwardNominee[], counts: ReadonlyM
   return rows.map(row => ({ ...row, rank: 1 + rows.filter(other => other.votes > row.votes).length }));
 }
 export const totalVotes = (rows: readonly TallyRow[]) => rows.reduce((sum, row) => sum + row.votes, 0);
+
+/**
+ * The count of a voting category for the BOD and Admin WAM: only once it has closed (audit M1:
+ * nobody sees a running count, so nobody follows the crowd). Null while open, before, or not voted.
+ */
+export function closedTally(category: MwAwardCategory, counts: ReadonlyMap<string, number> | undefined, now: Date): { total: number; rows: { nomineeId: string; votes: number; rank: number }[] } | null {
+  if (category.method !== "voting" || votingState(category, now) !== "tutup") return null;
+  const rows = rankTally(category.nominees, counts ?? new Map());
+  return { total: totalVotes(rows), rows: rows.map(row => ({ nomineeId: row.nominee.id, votes: row.votes, rank: row.rank })) };
+}
+/** Only the counts of closed voting categories (category → nominee → votes), for the BOD's screen. */
+export function closedCounts(categories: readonly MwAwardCategory[], counts: ReadonlyMap<string, ReadonlyMap<string, number>>, now: Date): Record<string, Record<string, number>> {
+  return Object.fromEntries(categories.filter(category => closedTally(category, counts.get(category.id), now))
+    .map(category => [category.id, Object.fromEntries(counts.get(category.id) ?? new Map())]));
+}
 /** More than one nominee shares the top (the BOD decide; RISET §6). */
 export const topTied = (rows: readonly TallyRow[]) => rows.filter(row => row.rank === 1 && row.votes > 0).length > 1;
 

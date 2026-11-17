@@ -13,9 +13,10 @@ import { groupLabel, photoAlt } from "@/lib/main-wam/momen/stack";
 import type { FeedAnswer, FeedPhoto, FeedView, SessionCount, SessionFilter } from "@/lib/main-wam/momen/types";
 import type { ViewerGroup } from "@/lib/main-wam/types";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
-import { SessionFilterSheet } from "./MomenSheets";
+import { refusedForGood, SessionFilterSheet } from "./MomenSheets";
 import { MomenQueueRunner, useMomenQueue } from "./upload/QueueRunner";
 import { momenQueue } from "./upload/sender";
+import { useFreshAddress } from "./useFreshAddress";
 import css from "./gallery.module.css";
 
 export type GalleryProps = {
@@ -35,6 +36,14 @@ export type GalleryProps = {
 };
 
 const tone = (id: string) => ((parseInt(id.replace(/[^0-9a-f]/gi, "").slice(-4) || "0", 16) % 6) + 1) as 1 | 2 | 3 | 4 | 5 | 6;
+
+/** A kept photo's small copy in the grid (a fresh address once, when the list's one has run out). */
+function GridImg({ photo }: { photo: FeedPhoto }) {
+  const small = useFreshAddress(photo.id, "kecil", photo.src.kecil);
+  if (!small.src) return null;
+  // eslint-disable-next-line @next/next/no-img-element -- short-lived storage addresses from the server
+  return <img className={css.img} src={small.src} alt="" loading="lazy" decoding="async" onError={small.onError} />;
+}
 
 /** A queued photo's small copy, shown from this phone while it waits (object URL, freed after). */
 function QueuedTile({ item, onOpen }: { item: QueueItem; onOpen: () => void }) {
@@ -106,12 +115,17 @@ export function Gallery(props: GalleryProps) {
       setRemoved(count => count + 1);
       setConfirm(false); setMine(null);
       toast.show({ text: "Foto dihapus", tone: "success" });
-    } catch (error) { toast.show({ text: errorText(error), tone: "error" }); } finally { setDeleting(false); }
+    } catch (error) {
+      // 409: the photo stays (nominated for Awarding); trying again would not change it.
+      if (refusedForGood(error)) { setConfirm(false); setMine(null); }
+      toast.show({ text: errorText(error), tone: "error" });
+    } finally { setDeleting(false); }
   }
 
   const total = Math.max(0, props.total - removed);
+  // A long session name gives way; the count always shows ("Batu Night Spect… · 0 foto").
   const caption = session
-    ? `${session === UMUM ? "Umum" : sessionTitle ?? "Sesi"} · ${total} foto`
+    ? <><span className={css.captionName}>{session === UMUM ? "Umum" : sessionTitle ?? "Sesi"}</span><span className={css.captionCount}>{` · ${total} foto`}</span></>
     : view === "kelompok" && group ? `${total} foto · ${groupLabel(group)}` : `${total} foto`;
   const waiting = view === "saya" ? queue.items.filter(item => !session || (session === UMUM ? !item.sessionId : item.sessionId === session)) : [];
 
@@ -119,8 +133,11 @@ export function Gallery(props: GalleryProps) {
   if (!props.migrated) body = <EmptyState icon={Hourglass} title="Menunggu pembaruan sistem">Galeri bisa dibuka setelah sistem diperbarui.</EmptyState>;
   else if (view === "kelompok" && !group) body = <EmptyState icon={Users} title={props.groupsPublished ? "Kamu belum masuk kelompok" : "Kelompok belum diterbitkan panitia"} />;
   else if (!items.length && !waiting.length) {
-    body = <EmptyState icon={Images} title={session ? "Belum ada foto di sesi ini" : view === "saya" ? "Belum ada fotomu" : view === "kelompok" ? "Kelompokmu belum punya foto" : "Belum ada foto"}
-      action={view === "saya" ? <Button variant="tonal" size="m" icon={Camera} href={mainWamPath.camera()}>Ambil foto</Button> : undefined} />;
+    // Filtered to a session without photos: a way back to every session (audit T-M02).
+    const action = session
+      ? <Button variant="text" onClick={() => filterTo(view, null)}>Semua sesi</Button>
+      : view === "saya" ? <Button variant="tonal" size="m" icon={Camera} href={mainWamPath.camera()}>Ambil foto</Button> : undefined;
+    body = <EmptyState icon={Images} title={session ? "Belum ada foto di sesi ini" : view === "saya" ? "Belum ada fotomu" : view === "kelompok" ? "Kelompokmu belum punya foto" : "Belum ada foto"} action={action} />;
   } else {
     body = <>
       <ul className={css.grid} aria-label="Foto">
@@ -130,8 +147,7 @@ export function Gallery(props: GalleryProps) {
           const label = `${alt}${photo.audience === "kelompok" ? ", hanya kelompok" : ""}${photo.status !== "tampil" ? ", sedang disembunyikan" : ""}`;
           const inner = <>
             <PhotoFill tone={tone(photo.id)} className={css.fill} />
-            {/* eslint-disable-next-line @next/next/no-img-element -- short-lived storage addresses from the server */}
-            {photo.src.kecil && <img className={css.img} src={photo.src.kecil} alt="" loading="lazy" decoding="async" />}
+            <GridImg photo={photo} />
             {photo.audience === "kelompok" && <span className={css.badge} aria-hidden><Lock /></span>}
             {photo.status !== "tampil" && <span className={css.state} aria-hidden>{photo.status === "ditinjau" ? "Ditinjau" : "Disembunyikan"}</span>}
           </>;
@@ -156,7 +172,8 @@ export function Gallery(props: GalleryProps) {
         <FilterChip menu name="Saring sesi" className={css.chip} active={session !== null} expanded={picking} disabled={!props.counts} onClick={() => setPicking(true)}>
           {session === UMUM ? "Umum" : sessionTitle ?? "Semua sesi"}
         </FilterChip>
-        {props.migrated && !(view === "kelompok" && !group) && total > 0 && <span className={css.caption}>{caption}</span>}
+        {/* With a session chosen the count shows even at 0 ("Batu Night Spectacular · 0 foto", audit T-M02). */}
+        {props.migrated && !(view === "kelompok" && !group) && (total > 0 || !!session) && <span className={css.caption}>{caption}</span>}
       </div>
       {body}
     </Stack>

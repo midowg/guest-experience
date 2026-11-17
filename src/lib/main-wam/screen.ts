@@ -17,7 +17,8 @@ import { MAIN_WAM_PATH, mainWamPath } from "@/lib/routes";
 export const MAIN_WAM_TABS = ["beranda", "agenda", "momen", "saya"] as const;
 export type MainWamTab = (typeof MAIN_WAM_TABS)[number];
 export type MainWamLevel = "akar" | "detail" | "tugas";
-export type MainWamScreen = { tab: MainWamTab | null; level: MainWamLevel; title: string; back?: { href: string; title: string }; dark?: boolean };
+/** `title` "" = a bar without a title (revisi 16 Nov "Kepala tanpa judul"); `label` then names the screen for screen readers. */
+export type MainWamScreen = { tab: MainWamTab | null; level: MainWamLevel; title: string; label?: string; back?: { href: string; title: string }; dark?: boolean };
 
 /** The four tabs, in order: label, address and the Lucide icon name (SPEC §0.3). */
 export const mainWamTabs: { key: MainWamTab; label: string; href: string; icon: "house" | "calendar-days" | "images" | "user-round" }[] = [
@@ -47,7 +48,8 @@ export function mainWamScreen(pathname: string): MainWamScreen | null {
     case "masuk": return null;
     case "mulai": return { tab: null, level: "tugas", title: "Notifikasi" };
     case "notifikasi": return { tab: "beranda", level: "detail", title: "Notifikasi", back: home };
-    case "agenda": return second ? { tab: "agenda", level: "detail", title: "Detail sesi", back: agenda } : { tab: "agenda", level: "akar", title: "Agenda" };
+    // P04: the bar has only ‹ (revisi 16 Nov); the session's own title is the screen's headline.
+    case "agenda": return second ? { tab: "agenda", level: "detail", title: "", label: "Detail sesi", back: agenda } : { tab: "agenda", level: "akar", title: "Agenda" };
     case "momen":
       if (!second) return { tab: "momen", level: "akar", title: "Momen", dark: true };
       if (second === "kamera") return { tab: "momen", level: "tugas", title: "Kamera", back: momen, dark: true };
@@ -66,7 +68,7 @@ export function mainWamScreen(pathname: string): MainWamScreen | null {
       return { tab: "beranda", level: "detail", title: titles[second] ?? "Kelola", back: home };
     }
     case "ringkasan": {
-      const titles: Record<string, string> = { kehadiran: "Kehadiran", "silent-meeting": "Rekap Silent Meeting", awarding: "Persetujuan awarding" };
+      const titles: Record<string, string> = { kehadiran: "Kehadiran", "silent-meeting": "Rekap Silent Meeting", awarding: "Awarding" };
       return { tab: "beranda", level: "detail", title: titles[second] ?? "Ringkasan", back: home };
     }
     case "absen": return { tab: "agenda", level: "tugas", title: "Absen", back: agenda };

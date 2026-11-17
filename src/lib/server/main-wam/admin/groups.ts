@@ -3,8 +3,8 @@ import type { ActivityImport, ActivityInput, GroupImport, GroupInput, MembersInp
 import { ACTIVITY_GROUP_COLUMNS, activityGroupFromRow, GROUP_COLUMNS, groupFromRow } from "@/lib/main-wam/rows";
 import type { MwActivityGroup, MwGroup } from "@/lib/main-wam/types";
 import { isSupabaseConfigured, ServiceError } from "../../config";
-import { mwMissing, mwWaiting, type Read } from "../errors";
-import { adminFail, assertPeople, db, rpcFail } from "./common";
+import { mwMissing, type Read } from "../errors";
+import { adminFail, adminWaiting, assertPeople, db, rpcFail } from "./common";
 
 /*
  * Admin WAM → Main WAM → Kelompok (agen E): kelompok and their members (one kelompok per person,
@@ -21,7 +21,7 @@ export async function adminGroups(): Promise<Read<MwGroup[]>> {
 }
 async function groupsOrWait(): Promise<MwGroup[]> {
   const { data, migrated } = await adminGroups();
-  if (!migrated) throw mwWaiting();
+  if (!migrated) throw adminWaiting();
   return data;
 }
 
@@ -77,7 +77,7 @@ export async function adminActivityGroups(): Promise<Read<MwActivityGroup[]>> {
 }
 async function activityOrWait(): Promise<MwActivityGroup[]> {
   const { data, migrated } = await adminActivityGroups();
-  if (!migrated) throw mwWaiting();
+  if (!migrated) throw adminWaiting();
   return data;
 }
 const activityRefusals = (label?: string) => ({

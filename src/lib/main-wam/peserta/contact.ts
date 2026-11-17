@@ -7,7 +7,7 @@
 /** A person to call: nama panggilan, what they do here, and their links (none without a number). */
 export type Contact = { id: string; name: string; role: string; photo: string | null; tel: string | null; whatsapp: string | null };
 
-/** Digits in the international form WhatsApp wants: "0812-3456 789" → "628123456789"; null when it is not a phone number. */
+/** Digits in the international form WhatsApp wants: "0800-0000 0001" → "6280000000001"; null when it is not a phone number. */
 export function phoneDigits(raw: string | null | undefined): string | null {
   if (!raw) return null;
   let digits = raw.replace(/[^\d+]/g, "");

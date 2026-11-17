@@ -1,6 +1,5 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { cache } from "react";
 import { notFound } from "next/navigation";
 import { moduleAllows, type MainWamAction } from "@/lib/main-wam/access";
 import type { MainWamModule } from "@/lib/main-wam/types";
@@ -11,8 +10,9 @@ import type { MainWamContext } from "../gate";
 
 /*
  * What every panitia and BOD screen of area C shares on the server: who may (a tool that is not for
- * the person does not exist: 404, also in the API, KONTRAK §9 #4), a rate limit per person, and the
- * people of the event.
+ * the person does not exist: 404, also in the API, KONTRAK §9 #4), a rate limit per person, and
+ * kelompok labels. The people of the event are fondasi's (people.ts: mainWamAttendees,
+ * mainWamEventPeople), one definition for every count (audit R5).
  */
 
 export const db = () => createPrivilegedClient();
@@ -35,31 +35,6 @@ export async function limitPerPerson(scope: string, employeeId: string, limit: n
   const { data, error } = await db().rpc("consume_rate_limit", { p_key: key, p_limit: limit, p_window_seconds: 600 });
   if (error) databaseError(error);
   if (!data) throw new ServiceError(429, "Terlalu sering dalam waktu singkat. Tunggu beberapa menit lalu coba lagi.");
-}
-
-/**
- * The people of the event: everyone with an active WAM account (and an active Data karyawan row),
- * the same people "Semua" reaches in mode semua; `bod` apart, as BOD do not check in.
- */
-async function eventPeopleUncached(): Promise<{ ids: string[]; bod: Set<string>; panitia: Set<string> }> {
-  const ids: string[] = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await db().from("pw_accounts").select("employee_id,employees!inner(active)").eq("active", true).eq("employees.active", true).order("employee_id").range(from, from + 999);
-    if (error) databaseError(error);
-    ids.push(...(data ?? []).map(row => row.employee_id as string));
-    if ((data?.length ?? 0) < 1000) break;
-  }
-  const { data: roles, error } = await db().from("pw_roles").select("employee_id,role").in("role", ["bod", "panitia"]);
-  if (error) databaseError(error);
-  const of = (role: string) => new Set((roles ?? []).filter(row => row.role === role).map(row => row.employee_id as string));
-  return { ids, bod: of("bod"), panitia: of("panitia") };
-}
-export const eventPeople = cache(eventPeopleUncached);
-
-/** Who checks in: the event's people minus BOD. */
-export async function expectedAttendees(): Promise<string[]> {
-  const { ids, bod } = await eventPeople();
-  return ids.filter(id => !bod.has(id));
 }
 
 /** "Kelompok 4" per person, from fondasi's kelompok (empty before they are set). */

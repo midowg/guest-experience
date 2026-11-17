@@ -111,12 +111,11 @@ export function awardFromRow(row: Row): MwAwardCategory {
   };
 }
 
-export const SILENT_COLUMNS = "id,session_id,question,topics,override,override_at,override_by,auto_close";
+export const SILENT_COLUMNS = "id,session_id,question,topics,opened_at,closed_at";
 export function silentFromRow(row: Row): MwSilentQuestion {
   return {
     id: str(row.id), sessionId: str(row.session_id), question: str(row.question), topics: Array.isArray(row.topics) ? row.topics.filter((topic): topic is string => typeof topic === "string") : [],
-    override: row.override === "buka" || row.override === "tutup" ? row.override : null, overrideAt: strOrNull(row.override_at), overrideBy: strOrNull(row.override_by),
-    autoClose: row.auto_close !== false,
+    openedAt: strOrNull(row.opened_at), closedAt: strOrNull(row.closed_at),
   };
 }
 

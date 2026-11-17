@@ -3,9 +3,8 @@ import { eventInfoColumns, type EventInfoInput } from "@/lib/main-wam/admin/even
 import { wibInstant } from "@/lib/main-wam/rundown";
 import type { MainWamSettings } from "@/lib/main-wam/types";
 import { ServiceError } from "../../config";
-import { mwWaiting } from "../errors";
 import { mainWamSettingsState, writeSettingsColumns } from "../settings";
-import { adminFail, assertPeople, db } from "./common";
+import { adminFail, adminWaiting, assertPeople, db } from "./common";
 
 /*
  * Admin WAM → Main WAM → Info acara (agen E): the event's facts on fondasi's settings row
@@ -16,7 +15,7 @@ import { adminFail, assertPeople, db } from "./common";
 
 export async function saveEventInfo(input: EventInfoInput): Promise<MainWamSettings> {
   const current = await mainWamSettingsState();
-  if (!current.migrated) throw mwWaiting();
+  if (!current.migrated) throw adminWaiting();
   if (input.contacts) await assertPeople([input.contacts.kamar, input.contacts.perjalanan, input.contacts.umum]);
   const checkIn = input.checkIn !== undefined ? (input.checkIn ? wibInstant(input.checkIn.date, input.checkIn.time) : null) : current.event.checkInAt;
   const checkOut = input.checkOut !== undefined ? (input.checkOut ? wibInstant(input.checkOut.date, input.checkOut.time) : null) : current.event.checkOutAt;

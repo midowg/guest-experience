@@ -7,6 +7,6 @@ export const metadata = { title: "Izin notifikasi · WAM", robots: { index: fals
 
 /** O03 Izin notifikasi, once after the first sign-in on a phone (Masuk sends here). Owner A (peserta); the gate first. */
 export default async function OnboardingPage() {
-  const { viewer } = await requireMainWamPage(mainWamPath.onboarding);
-  return <OnboardingScreen name={viewer.name} />;
+  const { viewer, settings } = await requireMainWamPage(mainWamPath.onboarding);
+  return <OnboardingScreen name={viewer.name} modules={settings.modules} />;
 }

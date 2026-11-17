@@ -192,7 +192,9 @@ export function MosaicCanvas({ manifest, mark, zoom, onZoom, focus, label }: {
 
   const tags = mark ? mine.map((cell, index) => { const { x, y } = cellAt(cell); return { cell, n: index + 1, x: x + geometry.cell / 2, y }; }) : [];
   return <div className={css.wrap}>
-    <div ref={box} className={css.box} data-zoomed={zoom > 1 || undefined} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd}>
+    {/* Zoomed in, the canvas scrolls: focusable, so the arrow keys move it too (audit T-M04, WCAG 2.1.1). */}
+    <div ref={box} className={css.box} data-zoomed={zoom > 1 || undefined} role="region" aria-label="Kanvas mozaik" tabIndex={zoom > 1 ? 0 : undefined}
+      onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd}>
       <div className={css.inner} style={{ width: width || "100%", height: height || "100%" }}>
         <canvas ref={canvas} className={css.canvas} role="img" aria-label={label} />
         {tags.map(tag => <span key={tag.cell} className={css.tag} style={{ left: tag.x, top: tag.y }} aria-hidden>{tag.n}</span>)}

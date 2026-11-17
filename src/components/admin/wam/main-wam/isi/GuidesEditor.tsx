@@ -2,19 +2,17 @@
 
 import { useId, useState } from "react";
 import { BookOpen, ExternalLink, FileText, ImagePlus, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
-import { buttonClass, ConsoleButton, PageHeader, PageTabs, Pill, type Crumb } from "@/components/console";
+import { buttonClass, ConsoleButton, PageHeader, Pill, type Crumb } from "@/components/console";
 import { Notice } from "@/components/ui";
 import { AdminApiError, adminRequest } from "@/components/admin/shared/api";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { putFile, putProblem } from "@/components/pra-wam/photoUpload";
 import { fileLabel, GUIDE_FILE_BYTES, GUIDE_FILE_TYPES, guideInputSchema, STARTER_GUIDES, type GuideFileMime, type GuideInput } from "@/lib/main-wam/admin/guides";
 import { guideKindLabels } from "@/lib/main-wam/admin/labels";
-import { MAIN_WAM_MIGRATION } from "@/lib/main-wam/settings";
 import { GUIDE_KINDS, type GuideKind, type MwGuide } from "@/lib/main-wam/types";
 import { mainWamAdminApi } from "@/lib/routes";
-import { mainWamContentTabs } from "../tabs";
-import { described, Field, MessageLine, NumberInput, SwitchRow, useRun, Waiting, type Message, type Problems } from "./fields";
-import { Sheet } from "./Sheet";
+import { ContentTabs, described, Field, MessageLine, NumberInput, SwitchRow, useRun, Waiting, type Message, type Problems } from "./fields";
+import { Sheet, SheetError } from "./Sheet";
 import css from "./isi.module.css";
 
 type Board = { guides: MwGuide[]; links: Record<string, string>; storage: boolean; id?: string };
@@ -61,12 +59,12 @@ export function GuidesEditor({ initial, migrated, crumbs, title }: { initial: Bo
     return "Empat panduan dibuat sebagai draf. Isi lalu terbitkan.";
   });
 
-  return <div className={css.page}>
+  return <SheetError.Provider value={message?.tone === "error" ? message.text : null}><div className={css.page}>
     <PageHeader crumbs={crumbs} title={title} subtitle="Isi Saya → Panduan di aplikasi peserta. Yang belum terbit hanya terlihat di sini."
       actions={<ConsoleButton variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!migrated} onClick={() => setSheet({ type: "edit", guide: null })}>Tambah panduan</ConsoleButton>} />
-    <PageTabs tabs={mainWamContentTabs} current="panduan" label="Isi acara" />
-    {!migrated && <Waiting what="Panduan" migration={MAIN_WAM_MIGRATION} />}
-    {migrated && !board.storage && <Notice tone="warning">Penyimpanan berkas belum disiapkan (R2), jadi gambar dan PDF belum bisa diunggah. Teks tetap bisa diisi.</Notice>}
+    <ContentTabs current="panduan" />
+    {!migrated && <Waiting what="Panduan" />}
+    {migrated && !board.storage && <Notice tone="warning">Gambar dan PDF belum bisa diunggah karena penyimpanan berkas belum disiapkan. Teks tetap bisa diisi. Hubungi tim CoE.</Notice>}
     <MessageLine message={message} />
 
     {guides.length ? <ul className={css.grid} aria-label="Daftar panduan">
@@ -92,7 +90,7 @@ export function GuidesEditor({ initial, migrated, crumbs, title }: { initial: Bo
       </li>)}
     </ul> : <div className={css.empty}>
       <BookOpen size={24} aria-hidden />
-      <h3>{migrated ? "Belum ada panduan" : "Panduan belum bisa diisi"}</h3>
+      <h2>{migrated ? "Belum ada panduan" : "Panduan belum bisa diisi"}</h2>
       <p>{migrated ? "Mulai dengan empat panduan yang dipakai peserta: Denah venue, Hotel & fasilitas, Dress code per hari, Tata tertib kegiatan." : "Halaman ini terbuka lagi setelah pembaruan sistem dijalankan."}</p>
       {migrated && <div className={css.emptyActions}>
         <ConsoleButton variant="primary" icon={<Sparkles size={18} aria-hidden />} disabled={busy !== null} onClick={() => void starters()}>{busy === "mulai" ? "Membuat…" : "Buat empat panduan"}</ConsoleButton>
@@ -122,7 +120,7 @@ export function GuidesEditor({ initial, migrated, crumbs, title }: { initial: Bo
         return "Berkas panduan tersimpan.";
       })} />}
     {confirmDialog}
-  </div>;
+  </div></SheetError.Provider>;
 }
 
 function GuideSheet({ guide, link, storage, nextSort, busy, onClose, onSave, onUpload }: {

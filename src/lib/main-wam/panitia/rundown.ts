@@ -1,7 +1,7 @@
 import type { SilentState } from "../module-state";
 import { hasEnded, isRunning, sessionEnd, timeRange, wibDate, wibInstant } from "../rundown";
 import type { MwSession, RundownChange, SessionKind, SessionStatus } from "../types";
-import { clock, clockMinutes, formatMinutes, parseClock, signedDuration } from "./format";
+import { clock, clockMinutes, formatMinutes, parseClock, shortDate, signedDuration } from "./format";
 
 /*
  * Rundown live (K02) and Ubah jam (K03): what a row shows and offers, and how a new time moves the
@@ -17,7 +17,8 @@ export type LiveSession = Pick<MwSession, "id" | "title" | "kind" | "status" | "
   /** Its Silent Meeting while module silent is on. */
   silent: LiveSilent | null;
 };
-export type LiveSilent = { questionId: string; state: SilentState; count: number; override: "buka" | "tutup" | null };
+/** A Silent Meeting row: its state; a count only once closed for good and from 5 feedbacks of 5 people (audit H2). */
+export type LiveSilent = { questionId: string; state: SilentState; count: number | null };
 
 export type RowState = "cancelled" | "done" | "live" | "upcoming";
 export function rowState(session: Pick<MwSession, "status" | "startsAt" | "endsAt">, now: Date): RowState {
@@ -26,18 +27,19 @@ export function rowState(session: Pick<MwSession, "status" | "startsAt" | "endsA
   return isRunning(session, now) ? "live" : "upcoming";
 }
 
-/** The Silent Meeting button of a row: Buka before or while it is closed within its hours, Tutup while open. */
-export function silentAction(silent: LiveSilent, session: Pick<MwSession, "startsAt" | "endsAt" | "status">, now: Date): "buka" | "tutup" | null {
+/** The Silent Meeting button of a row: Buka before it opens, Tutup while open, nothing once closed (closed is final). */
+export function silentAction(silent: LiveSilent, session: Pick<MwSession, "status">): "buka" | "tutup" | null {
   if (session.status !== "terbit") return null;
   if (silent.state === "buka") return "tutup";
   if (silent.state === "belum") return "buka";
-  return now.getTime() < Date.parse(sessionEnd(session)) ? "buka" : null;
+  return null;
 }
 
-/** "Belum dibuka", "Dibuka · 41 masukan", "Ditutup · 47 masukan". */
+/** "Belum dibuka", "Dibuka" (never a count while open), "Ditutup · 47 masukan" or "Ditutup". */
 export function silentLabel(silent: LiveSilent): string {
   if (silent.state === "belum") return "Belum dibuka";
-  return `${silent.state === "buka" ? "Dibuka" : "Ditutup"} · ${silent.count} masukan`;
+  if (silent.state === "buka") return "Dibuka";
+  return silent.count === null ? "Ditutup" : `Ditutup · ${silent.count} masukan`;
 }
 
 /* ── Ubah jam ─────────────────────────────────────────────────────────────────────────────────── */
@@ -73,7 +75,18 @@ export type ShiftPlan = {
   moved: { id: string; startsAt: string; endsAt: string | null }[];
   changed: boolean;
   ok: boolean;
+  /**
+   * The end is on the next WIB day (a Selesai at or before Mulai: 21.00–00.30, audit R10):
+   * "Selesai besok, Rab, 6 Jan · 00.30". Null when it ends on its own day.
+   */
+  nextDay: string | null;
+  /** Simpan asks first: the new end is on the next day and the session did not end on the next day before. */
+  confirmNextDay: boolean;
 };
+
+/** The longest a session that runs past midnight may last (12.00–11.00 is a typo, not 23 hours). */
+export const MAX_OVERNIGHT_MINUTES = 12 * 60;
+const DAY_MS = 86_400_000;
 
 const shifted = (iso: string | null, delta: number) => (iso ? new Date(ms(iso) + delta).toISOString() : null);
 
@@ -109,13 +122,17 @@ export function planShift<T extends Timed>(session: T, sameDay: readonly T[], ty
   const was = timeRange(session);
   const startMinutes = parseClock(typed.start);
   const endMinutes = session.endsAt || typed.end.trim() ? parseClock(typed.end) : null;
-  const empty: ShiftPlan = { startsAt: null, endsAt: null, delta: 0, help: `Tadinya ${was}`, shiftLabel: null, rows: [], error: null, errorField: null, moved: [], changed: false, ok: false };
+  const empty: ShiftPlan = { startsAt: null, endsAt: null, delta: 0, help: `Tadinya ${was}`, shiftLabel: null, rows: [], error: null, errorField: null, moved: [], changed: false, ok: false, nextDay: null, confirmNextDay: false };
   if (startMinutes === null) return { ...empty, error: "Tulis jam seperti 08.00.", errorField: "start" };
   if ((session.endsAt || typed.end.trim()) && endMinutes === null) return { ...empty, error: "Tulis jam seperti 12.30.", errorField: "end" };
-  if (endMinutes !== null && endMinutes <= startMinutes) return { ...empty, error: "Jam selesai harus setelah jam mulai.", errorField: "end" };
+  // A Selesai at or before Mulai ends the next day (21.00–00.30), up to 12 hours long; longer is a typo.
+  const overnight = endMinutes !== null && endMinutes <= startMinutes;
+  if (overnight && endMinutes + 24 * 60 - startMinutes > MAX_OVERNIGHT_MINUTES) return { ...empty, error: "Jam selesai harus setelah jam mulai.", errorField: "end" };
 
   const startsAt = new Date(wibInstant(date, formatMinutes(startMinutes).replace(".", ":"))).toISOString();
-  const endsAt = endMinutes === null ? null : new Date(wibInstant(date, formatMinutes(endMinutes).replace(".", ":"))).toISOString();
+  const endsAt = endMinutes === null ? null : new Date(ms(wibInstant(date, formatMinutes(endMinutes).replace(".", ":"))) + (overnight ? DAY_MS : 0)).toISOString();
+  const nextDay = overnight && endsAt ? `Selesai besok, ${shortDate(wibDate(endsAt))} · ${clock(endsAt)}` : null;
+  const wasOvernight = !!session.endsAt && wibDate(session.endsAt) !== date;
   const delta = session.endsAt && endsAt ? ms(endsAt) - ms(session.endsAt) : ms(startsAt) - ms(session.startsAt);
   const changed = startsAt !== new Date(session.startsAt).toISOString() || (endsAt ?? null) !== (session.endsAt ? new Date(session.endsAt).toISOString() : null);
   const chosen = checked ?? defaultShift(session, later, startsAt, endsAt, delta);
@@ -148,7 +165,7 @@ export function planShift<T extends Timed>(session: T, sameDay: readonly T[], ty
   const ok = changed && !error && allRows.every(row => !row.clash);
   const shift = signedDuration(delta);
   return {
-    startsAt, endsAt, delta, changed, ok, moved, rows, error, errorField: error ? "start" : null,
+    startsAt, endsAt, delta, changed, ok, moved, rows, error, errorField: error ? "start" : null, nextDay, confirmNextDay: changed && overnight && !wasOvernight,
     help: changed && delta !== 0 ? `Tadinya ${was} · ${shift}` : `Tadinya ${was}`,
     shiftLabel: movesOthers && rows.length ? `Sesi berikutnya ikut bergeser ${shift}` : null,
   };

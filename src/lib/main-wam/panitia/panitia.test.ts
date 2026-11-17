@@ -3,9 +3,9 @@ import { mainWamPath } from "@/lib/routes";
 import { sampleAwards, sampleSession, sampleSessionIds, sampleSessions, sampleSettings } from "../sample";
 import type { MwAwardApproval } from "../types";
 import { attentionItems, kelolaTiles, requiredOpen, silentWaitingToday } from "./attention";
-import { attendeeLine, mayRecord, pickAttendanceSession, presentLine, searchAttendees, splitAttendance, windowCaption, type AttendeeRow } from "./attendance";
+import { attendeeLine, mayRecord, mayUndo, pickAttendanceSession, presentLine, searchAttendees, splitAttendance, windowCaption, type AttendeeRow } from "./attendance";
 import { clock, dayClock, editedLabel, parseClock, signedDuration } from "./format";
-import { allowedActions, ownerLine, reasonLines, reportNotes, waitingPhotos, type ModerationReport } from "./moderation";
+import { allowedActions, hiddenLine, moderationReason, ownerLine, reasonLines, reportNotes, waitingPhotos, type ModerationReport } from "./moderation";
 import { announceSchema, moderateSchema, presentSchema, rundownChangeSchema } from "./schemas";
 import { awardStatus, dayAverage, departmentStats, sessionStats, summaryRows } from "./summary";
 
@@ -35,6 +35,10 @@ describe("Absen sesi (K05)", () => {
     expect(present.map(presentLine)).toEqual(["07.52 · Scan QR", "08.10 · Dicatat panitia"]);
     expect(attendeeLine(rows[0])).toBe("Art & Creative Support · Kelompok 4");
     expect(attendeeLine(rows[4])).toBe("CoE");
+  });
+
+  it("lets panitia take back only what panitia recorded, never a QR scan (audit L8)", () => {
+    expect(rows.filter(mayUndo).map(item => item.name)).toEqual(["Sari"]);
   });
 
   it("finds by name, department or kelompok, accents and case ignored", () => {
@@ -87,6 +91,17 @@ describe("Moderasi Momen (K08)", () => {
     expect(allowedActions("tampil", true)).toEqual(["sembunyikan", "tampilkan"]);
     expect(allowedActions("disembunyikan", false)).toEqual(["tampilkan", "hapus"]);
   });
+
+  it("keeps the reason panitia gave, a quick choice and/or a short note, for the log (audit L8)", () => {
+    expect(moderationReason("tidak_pantas", "  Ada nomor\n kamar  ")).toBe("Tidak pantas · Ada nomor kamar");
+    expect(moderationReason(null, "Diminta yang ada di foto")).toBe("Diminta yang ada di foto");
+    expect(moderationReason("keberatan", "")).toBe("Ada yang keberatan");
+    expect(moderationReason(null, "   ")).toBe("");
+    expect(moderationReason("data_pribadi", "x".repeat(250)).length).toBe("Data pribadi · ".length + 200);
+    const hidden = { hiddenBy: "Dimas", hiddenAt: at("09:05").toISOString(), hiddenReason: "Tidak pantas" };
+    expect(hiddenLine(hidden, at("10:15"))).toBe("Disembunyikan Dimas · 09.05 · Tidak pantas");
+    expect(hiddenLine({ ...hidden, hiddenBy: null, hiddenReason: "" }, at("10:15"))).toBe("Disembunyikan · 09.05");
+  });
 });
 
 describe("Kehadiran (B02) and Ringkasan (B01)", () => {
@@ -127,7 +142,7 @@ describe("Kehadiran (B02) and Ringkasan (B01)", () => {
   });
 
   it("builds at most four rows in order, and no row for a module that is off (prototype B01, B01__status)", () => {
-    const input = { modules, attendance: { percent: 93, day: 3 }, awards: { pending: 2, approved: 1 }, silentFeedback: 47, carbon: 13.6 };
+    const input = { modules, attendance: { percent: 93, day: 3 }, awards: { pending: 2, approved: 1 }, silentFeedback: 47, carbonKg: 13_640 };
     const rows = summaryRows(input);
     expect(rows.map(row => [row.title, row.value])).toEqual([
       ["Kehadiran hari ini", { kind: "angka", value: "93%" }],
@@ -137,8 +152,22 @@ describe("Kehadiran (B02) and Ringkasan (B01)", () => {
     ]);
     expect(rows.map(row => row.href)).toEqual([mainWamPath.attendanceSummary(3), mainWamPath.awardApproval, mainWamPath.silentRecap, null]);
     expect(summaryRows({ ...input, modules: { ...modules, voting: false, karbon: false } }).map(row => row.key)).toEqual(["kehadiran", "silent"]);
-    expect(summaryRows({ ...input, attendance: { percent: null, day: 1 }, awards: { pending: 0, approved: 0 }, silentFeedback: 0, carbon: null }).map(row => row.value.kind)).toEqual(["kosong", "kosong", "kosong", "kosong"]);
+    expect(summaryRows({ ...input, attendance: { percent: null, day: 1 }, awards: { pending: 0, approved: 0 }, silentFeedback: 0, carbonKg: null }).map(row => row.value.kind)).toEqual(["kosong", "kosong", "kosong", "kosong"]);
+    // While a Silent Meeting is open its row says Dibuka, never a count (audit H2).
+    expect(summaryRows({ ...input, silentOpen: true }).find(row => row.key === "silent")).toMatchObject({ value: { kind: "pill", text: "Dibuka" } });
     expect(summaryRows({ ...input, awards: { pending: 0, approved: 3 } })[1].value).toEqual({ kind: "pill", tone: "success", text: "Beres" });
+  });
+
+  it("writes a small Jejak karbon in kilograms, never 0,0 t (audit R16)", () => {
+    const input = { modules, attendance: { percent: 93, day: 3 }, awards: { pending: 2, approved: 1 }, silentFeedback: 47 };
+    const karbon = (carbonKg: number) => summaryRows({ ...input, carbonKg }).find(row => row.key === "karbon")!;
+    expect(karbon(45.6).value).toEqual({ kind: "angka", value: "46", unit: "kg CO₂e" });
+    expect(karbon(0.3).value).toEqual({ kind: "angka", value: "<1", unit: "kg CO₂e" });
+    expect(karbon(99.4).value).toEqual({ kind: "angka", value: "99", unit: "kg CO₂e" });
+    // From 0,1 t on: tonnes with one decimal.
+    expect(karbon(99.6).value).toEqual({ kind: "angka", value: "0,1", unit: "t CO₂e" });
+    expect(karbon(13_640).value).toEqual({ kind: "angka", value: "13,6", unit: "t CO₂e" });
+    expect(karbon(1_240_000).value).toEqual({ kind: "angka", value: "1.240,0", unit: "t CO₂e" });
   });
 });
 
@@ -173,6 +202,11 @@ describe("API input", () => {
     expect(presentSchema.safeParse({ employeeId: "bukan-uuid", present: true }).success).toBe(false);
     expect(moderateSchema.safeParse({ action: "hapus", from: "disembunyikan" }).success).toBe(true);
     expect(moderateSchema.safeParse({ action: "blokir", from: "tampil" }).success).toBe(false);
+    // The reason is optional; a quick choice must be one of the list, the note at most 200 characters.
+    expect(moderateSchema.parse({ action: "sembunyikan", from: "ditinjau" })).toEqual({ action: "sembunyikan", from: "ditinjau", reason: null, note: "" });
+    expect(moderateSchema.parse({ action: "sembunyikan", from: "ditinjau", reason: "tidak_pantas", note: " Ada nomor kamar " })).toMatchObject({ reason: "tidak_pantas", note: "Ada nomor kamar" });
+    expect(moderateSchema.safeParse({ action: "sembunyikan", from: "ditinjau", reason: "spam" }).success).toBe(false);
+    expect(moderateSchema.safeParse({ action: "hapus", from: "disembunyikan", note: "x".repeat(201) }).error?.issues[0].message).toBe("Catatan paling panjang 200 karakter.");
   });
 
   it("asks for a title, keeps the limits, and needs a choice for kelompok or departemen", () => {

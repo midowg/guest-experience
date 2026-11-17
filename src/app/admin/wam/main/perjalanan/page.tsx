@@ -17,7 +17,7 @@ export const metadata = { title: "Perjalanan · Main WAM · Admin WAM" };
 export default async function PerjalananAdminPage() {
   await requireAdminPage();
   if (!isSupabaseConfigured()) return <AdminShell><SetupNotice /></AdminShell>;
-  const [settings, board, sessions, people] = await Promise.all([mainWamSettingsState().catch(() => readMainWamSettings()), adminTrips(), adminSessions(), adminPeople()]);
+  const [settings, board, sessions, people] = await Promise.all([mainWamSettingsState().catch(() => readMainWamSettings()), adminTrips(), adminSessions({ usage: false }), adminPeople()]);
   return <WamAdminFrame current="mw-perjalanan">
     <TripsEditor initial={{ trips: board.trips, seats: board.seats }} migrated={board.migrated && settings.migrated} sessions={sessions.data} people={people}
       dates={eventDates(settings.event)} crumbs={wamCrumbs("mw-perjalanan")} title="Main WAM · Perjalanan" />

@@ -49,7 +49,7 @@ export function RingkasanCard({ rows, children }: { rows: SummaryRow[]; children
     <div className={css.cardHead}><h2 id="mw-ringkasan" className={css.cardTitle}>Ringkasan</h2></div>
     {children}
     {rows.length > 0 && <List plain bleed>
-      {rows.map(row => <StatRow key={row.key} icon={SUMMARY_ICON[row.key]} title={row.title} href={row.href ?? undefined} aria-label={row.label}
+      {rows.map(row => <StatRow key={row.key} icon={SUMMARY_ICON[row.key]} title={row.title} href={row.href ?? undefined}
         value={<SummaryValue row={row} />} unit={row.value.kind === "angka" ? row.value.unit : undefined} />)}
     </List>}
   </Card>;

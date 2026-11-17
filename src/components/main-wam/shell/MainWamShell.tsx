@@ -119,7 +119,7 @@ export function MainWamShell({ children, greeting, unread = 0, badges, screen: f
     } else {
       const task = screen.level === "tugas";
       top = <div className={cx(css.top, css.topSticky)} data-scrolled={scrolled || undefined}>
-        <TopBar variant="back" title={screen.title} tone={tone} actions={actions}
+        <TopBar variant="back" title={screen.title} label={screen.label} tone={tone} actions={actions}
           backHref={screen.back?.href ?? mainWamPath.home} onBack={goBack}
           backLabel={task ? "Tutup" : "Kembali"} backIcon={task ? <X /> : undefined} />
       </div>;

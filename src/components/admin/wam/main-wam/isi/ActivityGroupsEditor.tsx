@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useMemo, useState } from "react";
 import { ClipboardPaste, MapPinned, Pencil, Plus, Trash2 } from "lucide-react";
-import { ConsoleButton, PageHeader, PageTabs, Pill, type Crumb } from "@/components/console";
+import { ConsoleButton, PageHeader, Pill, type Crumb } from "@/components/console";
 import { adminRequest } from "@/components/admin/shared/api";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import {
@@ -10,16 +10,14 @@ import {
 } from "@/lib/main-wam/admin/groups";
 import { activityKindLabels } from "@/lib/main-wam/admin/labels";
 import type { AdminPerson } from "@/lib/main-wam/admin/people";
-import { MAIN_WAM_MIGRATION } from "@/lib/main-wam/settings";
 import { timeRange, wibDate } from "@/lib/main-wam/rundown";
 import { ACTIVITY_GROUP_KINDS, type ActivityGroupKind, type MwActivityGroup, type MwSession } from "@/lib/main-wam/types";
 import { mainWamAdminApi } from "@/lib/routes";
-import { mainWamContentTabs } from "../tabs";
-import { Choice, dayOptionLabel, described, Field, MessageLine, NumberInput, useRun, Waiting, type Message, type Problems } from "./fields";
+import { Choice, ContentTabs, dayOptionLabel, described, Field, MessageLine, NumberInput, useRun, Waiting, type Message, type Problems } from "./fields";
 import { GroupSubtabs } from "./GroupsEditor";
 import { PasteSheet } from "./PasteSheet";
 import { PeoplePicker } from "./PeoplePicker";
-import { Sheet } from "./Sheet";
+import { Sheet, SheetError } from "./Sheet";
 import css from "./isi.module.css";
 
 type SheetState = { type: "edit"; group: MwActivityGroup | null } | { type: "import" } | null;
@@ -59,15 +57,15 @@ export function ActivityGroupsEditor({ initial, migrated, sessions, people, date
     await run(`hapus-${group.id}`, async () => { const result = await send(mainWamAdminApi.activityGroup(group.id), "DELETE"); apply(result.data!); return result.message; });
   }
 
-  return <div className={css.page}>
+  return <SheetError.Provider value={message?.tone === "error" ? message.text : null}><div className={css.page}>
     <PageHeader crumbs={crumbs} title={title} subtitle="Pos team building, angkot trekking, meja gala: siapa di mana, per sesi."
       actions={<>
         <ConsoleButton icon={<ClipboardPaste size={18} aria-hidden />} disabled={!migrated || !session} onClick={() => setSheet({ type: "import" })}>Impor</ConsoleButton>
         <ConsoleButton variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!migrated || !session} onClick={() => setSheet({ type: "edit", group: null })}>Tambah</ConsoleButton>
       </>} />
-    <PageTabs tabs={mainWamContentTabs} current="kelompok" label="Isi acara" />
+    <ContentTabs current="kelompok" />
     <GroupSubtabs current="kegiatan" />
-    {!migrated && <Waiting what="Kelompok kegiatan" migration={MAIN_WAM_MIGRATION} />}
+    {!migrated && <Waiting what="Kelompok kegiatan" />}
     <MessageLine message={message} />
 
     {choices.length ? <>
@@ -103,7 +101,7 @@ export function ActivityGroupsEditor({ initial, migrated, sessions, people, date
         })}
       </ul> : <div className={css.empty}>
         <MapPinned size={24} aria-hidden />
-        <h3>Belum ada kelompok kegiatan di sesi ini</h3>
+        <h2>Belum ada kelompok kegiatan di sesi ini</h2>
         <p>Tempel pembagian dari Excel (kelompok kegiatan, nama karyawan), atau tambah satu per satu.</p>
         {migrated && <div className={css.emptyActions}>
           <ConsoleButton variant="primary" icon={<ClipboardPaste size={18} aria-hidden />} onClick={() => setSheet({ type: "import" })}>Impor</ConsoleButton>
@@ -111,7 +109,7 @@ export function ActivityGroupsEditor({ initial, migrated, sessions, people, date
         </div>}
       </div>}
     </> : <div className={css.empty}>
-      <h3>Belum ada sesi</h3>
+      <h2>Belum ada sesi</h2>
       <p>Kelompok kegiatan dibuat per sesi. Isi rundown dulu.</p>
     </div>}
 
@@ -139,7 +137,7 @@ export function ActivityGroupsEditor({ initial, migrated, sessions, people, date
         return result.message;
       })} />}
     {confirmDialog}
-  </div>;
+  </div></SheetError.Provider>;
 }
 
 function ActivitySheet({ group, session, here, people, kind: firstKind, busy, onClose, onSave }: {

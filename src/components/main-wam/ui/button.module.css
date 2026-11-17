@@ -1,16 +1,18 @@
 /* Button (DS §6.2, wam.css .wam-btn) and IconButton (.wam-iconbtn). Tokens only. */
 .btn {
   position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--mw-space-8);
-  height: 48px; min-width: var(--mw-touch); padding: 0 var(--mw-space-20); border-radius: var(--mw-radius-12);
-  font: var(--mw-type-label-lg); white-space: nowrap; text-decoration: none; cursor: pointer;
+  /* 48 tall. A label longer than the room it gets (a narrow card, two buttons side by side) wraps to a
+     second line and the button grows; it is never cut. fit-content, not auto: a row does not stretch it. */
+  height: fit-content; min-height: 48px; min-width: var(--mw-touch); padding: var(--mw-space-4) var(--mw-space-20); border-radius: var(--mw-radius-12);
+  font: var(--mw-type-label-lg); text-align: center; text-decoration: none; cursor: pointer;
   transition: background-color var(--mw-motion-press), transform var(--mw-motion-press);
   -webkit-tap-highlight-color: transparent; user-select: none;
 }
 .btn > svg { flex: none; width: 20px; height: 20px; }
-.label { min-width: 0; overflow: hidden; text-overflow: clip; }
+.label { min-width: 0; overflow-wrap: break-word; text-wrap: balance; }
 
 /* M: 40 tall, the touch area stays 44. */
-.m { height: 40px; padding: 0 var(--mw-space-16); }
+.m { min-height: 40px; padding: var(--mw-space-4) var(--mw-space-16); }
 .m::after { content: ""; position: absolute; left: 0; right: 0; top: -2px; bottom: -2px; }
 .block { display: flex; width: 100%; }
 

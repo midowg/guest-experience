@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect, useId, useRef, type FormEvent, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { createContext, useContext, useEffect, useId, useRef, type FormEvent, type ReactNode } from "react";
+import { AlertCircle, X } from "lucide-react";
 import css from "./isi.module.css";
+
+/**
+ * The last action's refusal while a sheet is open (the page's own message line is under the modal):
+ * an editor provides its error, every sheet shows it above its buttons, read out at once.
+ */
+export const SheetError = createContext<string | null>(null);
 
 /**
  * Tambah and Ubah of the isi acara pages (aturan-wam §9: one sheet with one Simpan): a native
  * <dialog> from the side on a laptop, from the bottom on a phone. The page under it is inert; the
  * focus goes to the title and comes back to the opener; Esc, the dimmed page and ✕ close it
- * (nothing is saved). `busy` keeps it open while saving.
+ * (nothing is saved). `busy` keeps it open while saving; a refusal (SheetError) shows in the sheet.
  */
 export function Sheet({ title, subtitle, wide = false, busy = false, onClose, onSubmit, footer, children }: {
   title: string; subtitle?: ReactNode; wide?: boolean; busy?: boolean;
@@ -17,6 +23,7 @@ export function Sheet({ title, subtitle, wide = false, busy = false, onClose, on
   const ref = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const id = useId();
+  const error = useContext(SheetError);
   const busyRef = useRef(busy);
   useEffect(() => { busyRef.current = busy; }, [busy]);
   const close = useRef(onClose);
@@ -44,7 +51,10 @@ export function Sheet({ title, subtitle, wide = false, busy = false, onClose, on
         <button type="button" className={css.iconButton} onClick={() => { if (!busyRef.current) close.current(); }} aria-label="Tutup" disabled={busy}><X size={22} aria-hidden /></button>
       </header>
       <div className={css.sheetBody}>{children}</div>
-      <footer className={css.sheetFoot}>{footer}</footer>
+      <footer className={css.sheetFoot}>
+        <p className={css.sheetError} role="alert">{error && !busy ? <><AlertCircle size={18} aria-hidden />{error}</> : null}</p>
+        {footer}
+      </footer>
     </form>
   </dialog>;
 }

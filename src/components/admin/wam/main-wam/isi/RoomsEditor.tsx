@@ -2,15 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { BedDouble, Check } from "lucide-react";
-import { ConsoleButton, ConsoleButtonLink, FilterChips, PageHeader, PageTabs, Pill, SearchField, type Crumb } from "@/components/console";
+import { ConsoleButton, ConsoleButtonLink, FilterChips, PageHeader, Pill, SearchField, type Crumb } from "@/components/console";
 import { Notice } from "@/components/ui";
 import { adminRequest } from "@/components/admin/shared/api";
 import { fold } from "@/lib/main-wam/admin/tsv";
-import { MAIN_WAM_MIGRATION } from "@/lib/main-wam/settings";
 import type { AdminRoom, AdminRoomBoard } from "@/lib/server/main-wam/admin/rooms";
 import { mainWamAdminApi } from "@/lib/routes";
-import { mainWamContentTabs } from "../tabs";
-import { MessageLine, useRun, Waiting, type Message } from "./fields";
+import { ContentTabs, MessageLine, useRun, Waiting, type Message } from "./fields";
 import css from "./isi.module.css";
 
 type Filter = "semua" | "tanpa-lantai" | "kosong";
@@ -43,9 +41,9 @@ export function RoomsEditor({ board, eventEnd, stay, hrRoomsHref, infoHref, crum
   return <div className={css.page}>
     <PageHeader crumbs={crumbs} title={title} subtitle="Pembagian kamar dari HR, ditambah lantai dan catatan untuk peserta."
       actions={<ConsoleButtonLink href={hrRoomsHref} icon={<BedDouble size={18} aria-hidden />}>Atur pembagian</ConsoleButtonLink>} />
-    <PageTabs tabs={mainWamContentTabs} current="kamar" label="Isi acara" />
-    {!board.migrated && <Waiting what="Lantai dan catatan kamar" migration={MAIN_WAM_MIGRATION} />}
-    {!board.stayReady && <Notice tone="warning">Pembagian kamar HR menunggu pembaruan sistem (migrasi 202611050001_wam_stay_rooms.sql).</Notice>}
+    <ContentTabs current="kamar" />
+    {!board.migrated && <Waiting what="Lantai dan catatan kamar" />}
+    {!board.stayReady && <Notice tone="warning">Pembagian kamar HR menunggu pembaruan sistem. Hubungi tim CoE.</Notice>}
     {purgeSoon && <Notice tone="warning">Pembagian kamar dihapus otomatis pada {day(board.form!.stayDeleteOn!)} (Kuesioner → Pengaturan), sebelum acara selesai. Ubah tanggalnya ke sesudah {day(eventEnd)} supaya peserta tetap melihat kamarnya.</Notice>}
     <MessageLine message={message} />
 
@@ -78,7 +76,7 @@ export function RoomsEditor({ board, eventEnd, stay, hrRoomsHref, infoHref, crum
       </ul>
     </> : <div className={css.empty}>
       <BedDouble size={24} aria-hidden />
-      <h3>Belum ada pembagian kamar</h3>
+      <h2>Belum ada pembagian kamar</h2>
       <p>HR mengisi kamar dan penghuninya di Kuesioner → Kamar. Lantai dan catatan diisi di sini sesudahnya.</p>
       <div className={css.emptyActions}><ConsoleButtonLink href={hrRoomsHref}>Buka Kuesioner → Kamar</ConsoleButtonLink></div>
     </div>}

@@ -1,8 +1,8 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { sampleFeedKelompok, sampleFeedSemua, sampleMosaic, sampleSessionCounts } from "@/lib/main-wam/momen/sample";
 import { sessionChoice } from "@/lib/main-wam/momen/sessions";
-import { sampleSessions, sampleViewer } from "@/lib/main-wam/sample";
+import { sampleSessionIds, sampleSessions, sampleViewer } from "@/lib/main-wam/sample";
 import { mainWamApi } from "@/lib/routes";
 import { ToastProvider } from "@/components/main-wam/ui";
 
@@ -19,6 +19,10 @@ const { ReportSheet } = await import("./MomenSheets");
 const { MomenStack } = await import("./MomenStack");
 const { CameraScreen } = await import("./CameraScreen");
 const { Mosaic } = await import("./Mosaic");
+const { MosaicCanvas } = await import("./MosaicCanvas");
+const { Gallery } = await import("./Gallery");
+const { StackSkeleton } = await import("./Skeletons");
+const { ActionsSlotContext } = await import("@/components/main-wam/shell/ShellSlots");
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
@@ -134,6 +138,78 @@ describe("the camera", () => {
     expect(screen.getByRole("heading", { name: "Izinkan kamera" })).toBeTruthy();
     expect(screen.getByText("Scan QR absen")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Nanti" })).toBeTruthy();
+  });
+});
+
+describe("fixes after the audit", () => {
+  const galleryProps = {
+    view: "semua" as const, session: sampleSessionIds.bns, sessionTitle: "Batu Night Spectacular", items: [], next: null, total: 0, counts: sampleSessionCounts,
+    sessions: sampleSessions.map(session => sessionChoice(session, now)), group: sampleViewer("peserta").group, groupsPublished: true, mozaik: true, migrated: true, nowIso: now.toISOString(),
+  };
+
+  it("T-M02: a gallery filtered to a session without photos says 0 foto and offers every session", () => {
+    render(<ToastProvider><Gallery {...galleryProps} /></ToastProvider>);
+    expect(screen.getByRole("heading", { name: "Belum ada foto di sesi ini" })).toBeTruthy();
+    expect(document.body.textContent).toContain("Batu Night Spectacular\u00a0· 0 foto");
+    fireEvent.click(screen.getByRole("button", { name: "Semua sesi" }));
+    expect(replace).toHaveBeenCalledWith("/wam/acara/momen/galeri", { scroll: false });
+  });
+
+  it("T-M02: the stack filtered to a session without photos offers every session too", () => {
+    render(<ToastProvider><MomenStack mode="sesi" view="semua" session={sampleSessionIds.bns} sessionTitle="Batu Night Spectacular" items={[]} next={null} total={0} startIndex={0} offset={0}
+      counts={sampleSessionCounts} sessions={[]} group={null} groupsPublished mozaik migrated anyPhotos={false} own={null} eventName="WAM 2026" nowIso={now.toISOString()} demo={{}} /></ToastProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Semua sesi" }));
+    expect(replace).toHaveBeenCalledWith("/wam/acara/momen", { scroll: false });
+  });
+
+  it("M3: Hapus foto of a nominated photo (409) closes the dialog and says why", async () => {
+    request.mockImplementationOnce(async () => { throw Object.assign(new Error("Foto ini masuk nominasi Awarding, jadi tidak bisa dihapus."), { name: "PraWamApiError", status: 409 }); });
+    const mine = { ...sampleFeedSemua[0], mine: true };
+    render(<ToastProvider><Gallery {...galleryProps} view="saya" session={null} sessionTitle={null} items={[mine]} total={1} /></ToastProvider>);
+    fireEvent.click(screen.getByRole("button", { name: /^Fotomu/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Hapus foto" }));
+    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Hapus foto" }));
+    await waitFor(() => expect(request).toHaveBeenCalledWith(mainWamApi.photo(mine.id), { method: "DELETE" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(screen.getByText("Gagal.")).toBeTruthy();
+  });
+
+  it("L5: a large photo whose short-lived address ran out is fetched once more through the server", () => {
+    const photo = { ...sampleFeedSemua[0], src: { kecil: "https://r2.example/a-kecil.jpg?sig=1", besar: "https://r2.example/a.jpg?sig=1" } };
+    render(<StackDeck items={[photo, ...sampleFeedSemua.slice(1)]} index={0} onIndex={() => undefined} onLike={() => undefined} now={now} label="Momen" describe={() => ""} />);
+    const front = screen.getByRole("group");
+    const big = () => front.querySelector<HTMLImageElement>("img[data-loaded]")!;
+    const small = () => front.querySelector<HTMLImageElement>("img:not([data-loaded])")!;
+    expect(big().getAttribute("src")).toBe(photo.src.besar);
+    fireEvent.error(big());
+    expect(big().getAttribute("src")).toBe(mainWamApi.photoFile(photo.id, "besar"));
+    // A second error stays (hidden or deleted meanwhile): no loop.
+    fireEvent.error(big());
+    expect(big().getAttribute("src")).toBe(mainWamApi.photoFile(photo.id, "besar"));
+    fireEvent.error(small());
+    expect(small().getAttribute("src")).toBe(mainWamApi.photoFile(photo.id, "kecil"));
+  });
+
+  it("T-M04: the zoomed canvas is a named region the keyboard can reach and scroll", () => {
+    const { rerender } = render(<MosaicCanvas manifest={sampleMosaic()} mark={false} zoom={1} onZoom={() => undefined} focus={null} label="Mozaik" />);
+    const region = screen.getByRole("region", { name: "Kanvas mozaik" });
+    expect(region.hasAttribute("tabindex")).toBe(false);
+    rerender(<MosaicCanvas manifest={sampleMosaic()} mark={false} zoom={2} onZoom={() => undefined} focus={null} label="Mozaik" />);
+    expect(screen.getByRole("region", { name: "Kanvas mozaik" }).getAttribute("tabindex")).toBe("0");
+  });
+
+  it("T-M05: while Momen loads, Galeri and Mozaik hold their place beside the title", () => {
+    const slot = document.createElement("div");
+    document.body.append(slot);
+    render(<ActionsSlotContext.Provider value={slot}><StackSkeleton /></ActionsSlotContext.Provider>);
+    expect(slot.querySelectorAll("[aria-hidden] > *")).toHaveLength(2);
+    slot.remove();
+  });
+
+  it("M06: the progress is the screen's main number (ProgressBar labelSize=subtitle)", async () => {
+    const dataCss = (await import("@/components/main-wam/ui/data.module.css")).default;
+    render(<ToastProvider><Mosaic initial={sampleMosaic()} mark={false} title="Mozaik WAM 2026" demo /></ToastProvider>);
+    expect(screen.getByRole("progressbar").parentElement!.className).toContain(dataCss.progressSubtitle);
   });
 });
 

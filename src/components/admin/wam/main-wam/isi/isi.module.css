@@ -20,6 +20,17 @@
 .days { flex: 1 1 20rem; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .days::-webkit-scrollbar { display: none; }
 .days > div { min-width: max-content; }
+/* A phone: the four days as a 2 × 2 grid, every day in sight (audit T-A04). */
+@media (max-width: 639.98px) {
+  .days { flex-basis: 100%; overflow: visible; }
+  .days > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; width: 100%; box-sizing: border-box; }
+  .days > div > * { justify-content: center; }
+}
+/* The isi acara tabs: on a phone they wrap to a second line instead of running off the edge (audit T-A04). */
+@media (max-width: 639.98px) {
+  .tabStrip nav { overflow: visible; }
+  .tabStrip nav ul { flex-wrap: wrap; gap: 0 20px; min-width: 0; }
+}
 .timeline { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
 .slot { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 12px; position: relative; padding-bottom: 12px; }
 .slot::before { content: ""; position: absolute; left: calc(7.5rem + 5px); top: 22px; bottom: 0; width: 2px; background: var(--cs-line); }
@@ -56,6 +67,9 @@
 .iconButton:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
 .iconButton:disabled { opacity: .45; cursor: not-allowed; }
 .iconDanger:hover:not(:disabled) { border-color: var(--cs-bad-fg); background: var(--cs-bad-bg); color: var(--cs-bad-fg); }
+/* Hapus that cannot work (the session already has absen, photos, Silent Meeting or Awarding): looks off, still says why when pressed. */
+.iconOff { opacity: .45; }
+.iconOff:hover:not(:disabled) { opacity: .7; border-color: var(--cs-line); background: var(--cs-surface-2); }
 .textButton { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--cs-primary); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
 .textButton:hover:not(:disabled) { background: var(--cs-primary-soft); }
 .textButton:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
@@ -65,7 +79,7 @@
 
 /* ---------- Empty and waiting ---------- */
 .empty { display: grid; justify-items: start; gap: 8px; padding: 20px; border: 1px dashed var(--cs-line); border-radius: 16px; background: var(--cs-surface-2); }
-.empty h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--cs-text); }
+.empty h2, .empty h3 { margin: 0; font-size: 16px; font-weight: 800; color: var(--cs-text); }
 .empty p { margin: 0; color: var(--cs-muted); font-size: 14px; }
 .emptyActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 
@@ -122,6 +136,10 @@
 .sheetBody { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 20px; padding: 16px 24px 24px; overflow-y: auto; overscroll-behavior: contain; }
 .sheetFoot { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--cs-line); background: var(--cs-surface); }
 .sheetFoot .push { margin-right: auto; }
+/* A refusal while the sheet is open, above its buttons (empty: takes no room). */
+.sheetError { display: flex; align-items: flex-start; gap: 8px; flex: 1 1 100%; margin: 0; color: var(--cs-bad-fg); font-size: 14px; font-weight: 600; line-height: 1.45; }
+.sheetError:empty { display: none; }
+.sheetError > svg { flex: none; margin-top: 1px; }
 @media (max-width: 639.98px) { .sheetHead, .sheetBody, .sheetFoot { padding-left: 16px; padding-right: 16px; } }
 
 /* ---------- Form ---------- */
@@ -146,6 +164,7 @@
 button.segment { border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 700; color: var(--cs-muted); }
 button.segment[aria-pressed="true"] { background: var(--cs-surface); color: var(--cs-primary); box-shadow: var(--cs-raise); }
 button.segment:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 1px; }
+@media (pointer: coarse), (max-width: 37.5rem) { .segment { min-height: 44px; } }
 .switchRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 12px; border: 1px solid var(--cs-line); border-radius: 12px; cursor: pointer; }
 .switchRow > span { display: grid; gap: 2px; min-width: 0; }
 .switchRow strong { font-size: 14px; }

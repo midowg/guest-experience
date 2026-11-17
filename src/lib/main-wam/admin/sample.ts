@@ -4,7 +4,7 @@ import {
 } from "../sample";
 import type { MainWamSettings } from "../types";
 import type { AdminPerson } from "./people";
-import type { AdminSession } from "./rundown";
+import type { AdminSession, SessionUsage } from "./rundown";
 
 /*
  * Sample data of Admin WAM → Main WAM's isi acara pages, for dev-preview and tests only (agen E).
@@ -16,12 +16,18 @@ export const sampleAdminPeople: AdminPerson[] = Object.values(samplePeople)
   .map(person => ({ id: person.id, fullName: person.fullName, name: person.name, department: person.department }))
   .sort((a, b) => a.fullName.localeCompare(b.fullName, "id"));
 
-/** The rundown as the admin sees it: the changed schedule, two drafts, one cancelled. */
+/** What a few sample sessions already have (Hapus is then Batalkan); the rest have nothing. */
+const sampleUsage: Record<string, Partial<SessionUsage>> = {
+  wellness: { photos: 8 }, pemaparan: { attendance: 96, photos: 12 }, silent: { silent: true, attendance: 41 }, "team-building": { activityGroups: 6 }, gala: { awards: 2, photos: 30 },
+};
+const NOTHING: SessionUsage = { attendance: 0, photos: 0, silent: false, awards: 0, activityGroups: 0 };
+
+/** The rundown as the admin sees it: the changed schedule, two drafts, one cancelled, and what each already has. */
 export function sampleAdminSessions(): AdminSession[] {
   const draftKeys = new Set(["refleksi", "pasar"]);
-  return sampleSessionsChanged().map(plain => {
-    const session: AdminSession = { ...plain, version: null };
-    const key = Object.keys(sampleSessionIds).find(name => sampleSessionIds[name] === session.id) ?? "";
+  return sampleSessionsChanged().map((plain, index) => {
+    const key = Object.keys(sampleSessionIds).find(name => sampleSessionIds[name] === plain.id) ?? "";
+    const session: AdminSession = { ...plain, version: `2026-11-17T03:20:${String(index).padStart(2, "0")}.123456+00:00`, usage: { ...NOTHING, ...sampleUsage[key] } };
     if (draftKeys.has(key)) return { ...session, status: "draf" as const };
     if (key === "bns") return { ...session, status: "batal" as const };
     if (key === "pemaparan") return { ...session, mapGuideId: sampleGuides[0].id };

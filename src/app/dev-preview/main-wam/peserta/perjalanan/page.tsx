@@ -20,7 +20,7 @@ export default async function PreviewTravel({ searchParams }: { searchParams: Pr
   const viewer = previewViewer("peserta");
   const trips = params.status === "kosong" ? [] : sampleTrips;
   const seats = sampleSeats.filter(seat => seat.employeeId === viewer.id);
-  const bima = { id: samplePeople.bima.id, name: "Bima", role: "Koordinator", photo: null, ...contactLinks("0812-9999-0000") };
+  const bima = { id: samplePeople.bima.id, name: "Bima", role: "Koordinator", photo: null, ...contactLinks("0800-0000-0003") };
   return <Frame path={mainWamPath.travel()} now={now}>
     <TravelScreen initial={travelDirection(params.arah, now, sampleSettings().event)}
       labels={{ berangkat: directionLabel("berangkat", sampleTrips), pulang: directionLabel("pulang", sampleTrips) }}

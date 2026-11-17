@@ -1,39 +1,50 @@
 import { describe, expect, it } from "vitest";
-import { silentClosesAt, silentRecapReady, silentState, votingState } from "./module-state";
+import { silentClosesAt, silentRecapReady, silentShownCount, silentState, votingState } from "./module-state";
 import { notePushTopic, announcementKind } from "./notify";
 import { homeGreeting, salam } from "./greeting";
 import { NOTE_KINDS } from "./types";
 
 const session = { startsAt: "2027-01-05T13:00:00+07:00", endsAt: "2027-01-05T14:30:00+07:00", status: "terbit" as const };
 const at = (time: string) => new Date(`2027-01-05T${time}:00+07:00`);
-const follow = { override: null, autoClose: true };
+const follow = { openedAt: null, closedAt: null };
+const openedEarly = { openedAt: "2027-01-05T05:40:00Z", closedAt: null };
+const closed = { openedAt: null, closedAt: "2027-01-05T06:20:00Z" };
 
 describe("Silent Meeting opens and closes with its session", () => {
-  it("follows the session's hours by itself", () => {
+  it("follows the session's hours by itself, and always says when it closes", () => {
     expect(silentState(follow, session, at("12:59"))).toBe("belum");
     expect(silentState(follow, session, at("13:00"))).toBe("buka");
     expect(silentState(follow, session, at("14:29"))).toBe("buka");
     expect(silentState(follow, session, at("14:30"))).toBe("tutup");
     expect(Date.parse(silentClosesAt(follow, session)!)).toBe(Date.parse("2027-01-05T14:30:00+07:00"));
+    expect(Date.parse(silentClosesAt(openedEarly, session)!)).toBe(Date.parse("2027-01-05T14:30:00+07:00"));
   });
 
   it("lets panitia open it early or close it early", () => {
-    expect(silentState({ override: "buka", autoClose: true }, session, at("12:40"))).toBe("buka");
-    expect(silentState({ override: "tutup", autoClose: true }, session, at("13:30"))).toBe("tutup");
-    expect(silentClosesAt({ override: "tutup", autoClose: true }, session)).toBeNull();
+    expect(silentState(openedEarly, session, at("12:40"))).toBe("buka");
+    expect(silentState(closed, session, at("13:30"))).toBe("tutup");
+    expect(silentClosesAt(closed, session)).toBeNull();
   });
 
-  it("stays open past the end only without Tutup otomatis", () => {
-    expect(silentState({ override: "buka", autoClose: true }, session, at("15:00"))).toBe("tutup");
-    expect(silentState({ override: "buka", autoClose: false }, session, at("15:00"))).toBe("buka");
-    expect(silentClosesAt({ override: "buka", autoClose: false }, session)).toBeNull();
+  it("closes at the end even when opened early, and once closed never opens again", () => {
+    expect(silentState(openedEarly, session, at("14:30"))).toBe("tutup");
+    // Closed by panitia, then the session's hours move later: still closed.
+    expect(silentState(closed, { ...session, endsAt: "2027-01-05T18:00:00+07:00" }, at("15:00"))).toBe("tutup");
+    expect(silentState({ ...closed, openedAt: "2027-01-05T05:40:00Z" }, session, at("13:30"))).toBe("tutup");
   });
 
   it("is closed with a cancelled session, and shows BOD the recap from 5 feedbacks", () => {
-    expect(silentState({ override: "buka", autoClose: false }, { ...session, status: "batal" }, at("13:30"))).toBe("tutup");
-    expect(silentState({ override: "buka", autoClose: false }, { ...session, status: "draf" }, at("13:30"))).toBe("belum");
+    expect(silentState(openedEarly, { ...session, status: "batal" }, at("13:30"))).toBe("tutup");
+    expect(silentState(openedEarly, { ...session, status: "draf" }, at("13:30"))).toBe("belum");
     expect(silentRecapReady(4)).toBe(false);
     expect(silentRecapReady(5)).toBe(true);
+  });
+
+  it("shows a count only once closed for good, from 5 feedbacks of 5 people who opened it", () => {
+    expect(silentShownCount(null)).toBeNull();
+    expect(silentShownCount({ feedback: 47, openers: 41 })).toBe(47);
+    expect(silentShownCount({ feedback: 4, openers: 30 })).toBeNull();
+    expect(silentShownCount({ feedback: 12, openers: 4 })).toBeNull();
   });
 });
 

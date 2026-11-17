@@ -40,7 +40,7 @@ export function rundownSessions(variant: "awal" | "disimpan" | "silent-dibuka" =
   const base = variant === "awal" ? sampleSessions : sampleSessionsChanged();
   return liveOfDay(base, D2).map(session => {
     const silent = session.id === sampleSessionIds.silent
-      ? { questionId: sampleSilentQuestion.id, state: variant === "silent-dibuka" ? "buka" as const : "belum" as const, count: variant === "silent-dibuka" ? 41 : 0, override: null }
+      ? { questionId: sampleSilentQuestion.id, state: variant === "silent-dibuka" ? "buka" as const : "belum" as const, count: null }
       : null;
     if (session.id === sampleSessionIds.bns) return live({ ...session, changedAt: at(D2, "08:05") }, silent, "Dimas");
     return live(session, silent, session.changedBy ? "Dimas" : null);
@@ -109,7 +109,7 @@ export const moderationReported: ModerationCard[] = [
   card("gilang", 1, at(D1, "20:15"), { reasons: ["Lainnya"], notes: ["Ada nomor kamar terlihat."] }),
 ];
 export const moderationHidden: ModerationCard[] = [
-  card("nina", 11, at(D2, "08:30"), { status: "disembunyikan", reports: 2, reasons: ["Tidak pantas atau menyinggung · 2"], hiddenBy: "Dimas", hiddenAt: at(D2, "09:05") }),
+  card("nina", 11, at(D2, "08:30"), { status: "disembunyikan", reports: 2, reasons: ["Tidak pantas atau menyinggung · 2"], hiddenBy: "Dimas", hiddenAt: at(D2, "09:05"), hiddenReason: "Tidak pantas" }),
 ];
 
 /* ── K01 and B01 ──────────────────────────────────────────────────────────────────────────────── */
@@ -119,12 +119,14 @@ export const panitiaHome = {
   attention: attentionItems({ modules, reported: 3, required: [{ session: sampleSession("pemaparan"), present: 112, expected: 120 }], silent: [{ session: sampleSession("silent"), day: 2 }] }),
 };
 
-const summaryBase: SummaryInput = { modules, attendance: { percent: 93, day: 3 }, awards: { pending: 2, approved: 1 }, silentFeedback: 47, carbon: 13.6 };
+const summaryBase: SummaryInput = { modules, attendance: { percent: 93, day: 3 }, awards: { pending: 2, approved: 1 }, silentFeedback: 47, carbonKg: 13_640 };
 export const bodRows = {
   biasa: summaryRows(summaryBase),
-  kosong: summaryRows({ ...summaryBase, attendance: { percent: 96, day: 1 }, awards: { pending: 0, approved: 0 }, silentFeedback: 0, carbon: null }),
+  kosong: summaryRows({ ...summaryBase, attendance: { percent: 96, day: 1 }, awards: { pending: 0, approved: 0 }, silentFeedback: 0, carbonKg: null }),
   beres: summaryRows({ ...summaryBase, awards: { pending: 0, approved: 3 } }).filter(row => row.key === "awarding"),
   modulMati: summaryRows({ ...summaryBase, modules: { ...modules, voting: false, karbon: false } }),
+  /** A small total (a trial run, before trips and rooms are in): kilograms, never "0,0 t" (audit R16). */
+  karbonKecil: summaryRows({ ...summaryBase, carbonKg: 45.6 }).filter(row => row.key === "karbon"),
 };
 
 /* ── B02 Kehadiran ────────────────────────────────────────────────────────────────────────────── */

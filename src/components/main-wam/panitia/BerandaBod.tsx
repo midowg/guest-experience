@@ -18,7 +18,7 @@ import { RetryBanner } from "./RetryBanner";
  */
 export async function BerandaBod({ context, now }: { context: MainWamContext; now: Date }) {
   if (!moduleAllows(context.viewer, "ringkasan", context.settings.modules)) return null;
-  const rowCount = summaryRows({ modules: context.settings.modules, attendance: { percent: null, day: null }, awards: { pending: 0, approved: 0 }, silentFeedback: 0, carbon: null }).length;
+  const rowCount = summaryRows({ modules: context.settings.modules, attendance: { percent: null, day: null }, awards: { pending: 0, approved: 0 }, silentFeedback: 0, carbonKg: null }).length;
   if (!rowCount) return null;
   return <Suspense fallback={<RingkasanSkeleton rows={rowCount} />}><Ringkasan context={context} now={now} /></Suspense>;
 }

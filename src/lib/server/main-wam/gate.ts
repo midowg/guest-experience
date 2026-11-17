@@ -1,13 +1,13 @@
 import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { mainWamGate, moduleAllows, opensMainWamHome, type MainWamAction } from "@/lib/main-wam/access";
-import { MAIN_WAM_MODULES, type MainWamModule, type MainWamSettings, type MainWamViewer, type ModuleSwitches } from "@/lib/main-wam/types";
+import type { MainWamModule, MainWamSettings, MainWamViewer } from "@/lib/main-wam/types";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import { mainWamPath, praWamPath } from "@/lib/routes";
 import { ServiceError } from "../config";
 import { currentMember } from "../pra-wam/session";
 import { readMainWamSettings } from "./settings";
-import { mainWamViewer, testsMainWam } from "./viewer";
+import { mainWamViewer, testsMainWam, viewerRoom } from "./viewer";
 
 /*
  * The gate of Main WAM (docs/main-wam/KONTRAK.md §3). Every Main WAM page calls requireMainWamPage
@@ -20,19 +20,42 @@ export type MainWamContext = { viewer: MainWamViewer; settings: MainWamSettings 
 
 const notThere = () => new ServiceError(404, "Halaman tidak ditemukan.");
 
-/** For pages: the person and the settings, or the sign-in page (coming back here), or not found. */
+/** Saya and the screens under it (Kelompok & kamar, Perjalanan) show the room; nothing else reads it (audit S5). */
+const showsRoom = (here: string) => here === mainWamPath.me || here.startsWith(`${mainWamPath.me}/`) || here.startsWith(`${mainWamPath.me}?`);
+
+/**
+ * For pages: the person and the settings, or the sign-in page (coming back here), or not found.
+ * The viewer's room is filled on Saya and below only (null elsewhere).
+ */
 export async function requireMainWamPage(here: string): Promise<MainWamContext> {
-  const [settings, viewer] = await Promise.all([readMainWamSettings(), mainWamViewer()]);
+  const read = readMainWamSettings();
+  const [settings, viewer] = await Promise.all([read, mainWamViewer(read)]);
   const gate = mainWamGate(settings.mode, viewer);
   if (gate.kind === "login") redirect(gate.page === "main" ? mainWamPath.login(here) : praWamPath.login(here));
   if (gate.kind === "tutup" || !viewer) notFound();
-  return { viewer, settings };
+  if (!showsRoom(here)) return { viewer, settings };
+  return { viewer: { ...viewer, room: await viewerRoom(viewer.id) }, settings };
+}
+
+/**
+ * Whether this request may see anything of Main WAM (its theme, KV, frame, loading screens; audit
+ * M6): in mode semua everyone (the sign-in page too), otherwise a signed-in penguji only. Never
+ * throws: false on any failure, so Main WAM stays hidden.
+ */
+export async function mainWamShown(): Promise<boolean> {
+  try {
+    const read = readMainWamSettings();
+    const [settings, viewer] = await Promise.all([read, mainWamViewer(read)]);
+    const gate = mainWamGate(settings.mode, viewer);
+    return gate.kind === "masuk" || (gate.kind === "login" && gate.page === "main");
+  } catch { return false; }
 }
 
 /** For APIs: 401 without a session, 404 when Main WAM is not on for the person. */
 export async function requireMainWamApi(): Promise<MainWamContext> {
   if (!praWamSecret()) throw new ServiceError(503, "Login WAM belum disiapkan. Isi WAM_SESSION_SECRET (acak, minimal 32 karakter) pada server.");
-  const [settings, viewer] = await Promise.all([readMainWamSettings(), mainWamViewer()]);
+  const read = readMainWamSettings();
+  const [settings, viewer] = await Promise.all([read, mainWamViewer(read)]);
   const gate = mainWamGate(settings.mode, viewer);
   if (gate.kind === "login") throw new ServiceError(401, "Sesi berakhir. Masuk kembali sebelum melanjutkan.");
   if (gate.kind === "tutup" || !viewer) throw notThere();
@@ -60,13 +83,12 @@ export async function requireActionPage(action: MainWamAction, here: string): Pr
   return context;
 }
 
-// The role check alone, with every module on: tells "not for your role" (403) from "module off" (404).
-const ALL_ON = Object.fromEntries(MAIN_WAM_MODULES.map(key => [key, true])) as ModuleSwitches;
-
-/** An action's API: 404 while its module is off, 403 for a role that may not. */
+/**
+ * An action's API: 404 for anyone it is not for, a role that may not as well as a module that is off
+ * (KONTRAK §9 #4: one answer for "not for you", so nobody learns that a BOD or panitia endpoint exists).
+ */
 export async function requireActionApi(action: MainWamAction): Promise<MainWamContext> {
   const context = await requireMainWamApi();
-  if (!moduleAllows(context.viewer, action, ALL_ON)) throw new ServiceError(403, "Akunmu tidak bisa melakukan ini.");
   if (!moduleAllows(context.viewer, action, context.settings.modules)) throw notThere();
   return context;
 }

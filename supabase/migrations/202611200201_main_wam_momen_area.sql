@@ -11,8 +11,11 @@
 --      everyone (status ditinjau) until panitia decide (K08, area C).
 --   6. mw_mosaic_place: fills empty mosaic cells, in a fixed seeded order, with photos for everyone
 --      at least 5 minutes old; stable (a placed photo never moves), atomic under concurrent polls.
+--   7. mw_mosaic_version: a fingerprint of the tiles shown, for the Mozaik's ETag before its manifest.
+-- Files (app, not here): uploads go to tmp/main-wam/momen/ and are copied to main-wam/momen/ when
+-- kept; the R2 bucket needs a lifecycle rule on tmp/ (KONTRAK §10).
 -- Server only (service role): functions are not callable with the public keys.
--- ROLLBACK (by hand): drop function mw_mosaic_place(integer[], integer), mw_photo_report(uuid, uuid, text, text, integer),
+-- ROLLBACK (by hand): drop function mw_mosaic_version(integer), mw_mosaic_place(integer[], integer), mw_photo_report(uuid, uuid, text, text, integer),
 --   mw_photo_session_counts(uuid, uuid, text), mw_photo_feed(uuid, uuid, text, uuid, boolean, boolean, timestamptz, uuid, text, integer),
 --   mw_photos_for(uuid, uuid, text); drop index mw_photos_owner_feed, mw_photo_reports_reporter; alter table mw_photos drop column tile_key.
 begin;
@@ -187,15 +190,33 @@ begin
 end;
 $$;
 
+/*
+ * Mozaik: a fingerprint of what the manifest shows (each cell below p_total with its photo, when the
+ * photo is shown and has a tile: the same rows the manifest reads). The app makes the ETag from it
+ * before building the manifest (audit R3), so an unchanged mosaic is answered 304 without signing a
+ * single tile address. Changes when a tile is placed, freed, hidden (ditinjau) or shown again.
+ */
+create function public.mw_mosaic_version(p_total integer)
+returns text
+language sql stable
+set search_path = public
+as $$
+  select md5(coalesce(string_agg(t.tile::text || ':' || t.photo_id::text, ',' order by t.tile), ''))
+  from public.mw_mosaic_tiles t join public.mw_photos p on p.id = t.photo_id
+  where t.tile < p_total and p.status = 'tampil' and p.tile_key is not null
+$$;
+
 revoke all on function public.mw_photos_for(uuid, uuid, text) from public, anon, authenticated;
 revoke all on function public.mw_photo_feed(uuid, uuid, text, uuid, boolean, boolean, timestamptz, uuid, text, integer) from public, anon, authenticated;
 revoke all on function public.mw_photo_session_counts(uuid, uuid, text) from public, anon, authenticated;
 revoke all on function public.mw_photo_report(uuid, uuid, text, text, integer) from public, anon, authenticated;
 revoke all on function public.mw_mosaic_place(integer[], integer) from public, anon, authenticated;
+revoke all on function public.mw_mosaic_version(integer) from public, anon, authenticated;
 grant execute on function public.mw_photos_for(uuid, uuid, text) to service_role;
 grant execute on function public.mw_photo_feed(uuid, uuid, text, uuid, boolean, boolean, timestamptz, uuid, text, integer) to service_role;
 grant execute on function public.mw_photo_session_counts(uuid, uuid, text) to service_role;
 grant execute on function public.mw_photo_report(uuid, uuid, text, text, integer) to service_role;
 grant execute on function public.mw_mosaic_place(integer[], integer) to service_role;
+grant execute on function public.mw_mosaic_version(integer) to service_role;
 
 commit;

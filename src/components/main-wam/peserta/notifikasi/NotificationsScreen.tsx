@@ -26,8 +26,8 @@ const subscribeHash = (onChange: () => void) => {
 const readHash = () => decodeURIComponent(window.location.hash.slice(1));
 
 /**
- * Notifikasi (N01, revisi 16 Nov): Hari ini and Sebelumnya, one line per note (unread: a dot and
- * bold). A tap opens where it points; a panitia's announcement opens in a sheet with its full text,
+ * Notifikasi (N01, revisi 16 Nov): Hari ini and Sebelumnya, one row per note saying the news itself
+ * ("Pemaparan selesai 12.30", at most two lines; unread: a dot and bold). A tap opens where it points; a panitia's announcement opens in a sheet with its full text,
  * which has its own address (#kabar-<id>, so Beranda's pinned banner opens it and Back closes it).
  * Opening the screen marks everything read; the bell's count follows on the next refresh.
  */
@@ -70,7 +70,7 @@ export function NotificationsScreen({ migrated, today, earlier, unread, preview 
         const inner = <>
           {row.unread && <span className={css.notifDot} role="img" aria-label="Belum dibaca" />}
           <IconBox icon={<Icon />} tone={TONE[row.kind]} smallIcon />
-          <span className={css.notifText}><span className={css.notifTitle}>{row.title}</span><span className={css.notifTime}>{row.time}</span></span>
+          <span className={css.notifText}><span className={css.notifTitle}>{row.line}</span><span className={css.notifTime}>{row.time}</span></span>
         </>;
         const className = `${css.notifRow} ${row.unread ? css.notifUnread : ""}`;
         return row.href

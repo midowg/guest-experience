@@ -33,6 +33,9 @@ type AreaProps = Common & { multiline: true } & Omit<TextareaHTMLAttributes<HTML
  * (never colour alone), and what was typed is never lost on an error. `multiline` for a text area,
  * `search` for the soft search look, `suffix` for a unit ("menit").
  */
+/** "1.000": the counter's numbers as Indonesian writes them (T01: "90/1.000", T-D02). */
+const count = (value: number) => value.toLocaleString("id-ID");
+
 export function TextField(props: InputProps | AreaProps) {
   const { label, optional, help, error, showCount, countMax, icon, className, ...rest } = props;
   const id = useId();
@@ -71,7 +74,7 @@ export function TextField(props: InputProps | AreaProps) {
         {help && <p id={helpId} className={css.help}>{help}</p>}
       </div>
       {showCount && max !== undefined && <span className={cx(css.count, over && css.countOver)} aria-live="polite">
-        {length}/{max}<span className={shared.srOnly}> karakter</span>
+        {count(length)}/{count(max)}<span className={shared.srOnly}> karakter</span>
       </span>}
     </div>}
   </div>;

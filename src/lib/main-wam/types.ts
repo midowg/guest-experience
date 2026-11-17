@@ -119,6 +119,10 @@ export type MainWamViewer = {
   /** On the penguji list, or panitia/admin (who always test). */
   tester: boolean;
   group: ViewerGroup | null;
+  /**
+   * The room, filled only on the screens that show it (Saya and below: requireMainWamPage reads it
+   * there); null everywhere else, APIs included (audit S5). Elsewhere: viewerRoom(id), viewer.ts.
+   */
   room: ViewerRoom | null;
 };
 
@@ -253,6 +257,9 @@ export type MwGuide = {
 /** What a Main WAM note is about (mw_notes.kind): its icon in N01 and its push topic. */
 export const NOTE_KINDS = ["pengumuman", "jadwal", "absen", "momen", "kamar", "silent", "voting", "survei", "lain"] as const;
 export type NoteKind = (typeof NOTE_KINDS)[number];
+/** How a note reads on Beranda's banner and in N01: plain news, or a change to act on (noteTone, notify.ts). */
+export const NOTE_TONES = ["info", "warning"] as const;
+export type NoteTone = (typeof NOTE_TONES)[number];
 /** Who a panitia's announcement is for (K06). */
 export type AnnouncementAudience =
   | { type: "semua" }
@@ -272,7 +279,11 @@ export type MwNotification = {
   pinnedUntil: string | null;
   /** A Pra WAM note (no Main WAM metadata): shown plainly. */
   fromPraWam: boolean;
+  /** Info or warning (a schedule change, or a panitia's announcement marked so); filled by the readers in notes.ts. */
+  tone?: NoteTone;
 };
+/** A pengumuman penting still pinned (pinnedForMe): always with its tone, for Beranda's banner. */
+export type PinnedNote = MwNotification & { pinnedUntil: string; tone: NoteTone };
 
 /* ── Momen ────────────────────────────────────────────────────────────────────────────────────── */
 
@@ -332,15 +343,17 @@ export type MwAwardCategory = {
 };
 export type MwAwardApproval = { categoryId: string; nomineeId: string; approvedBy: string; approvedAt: string };
 
-/** A Silent Meeting question, open with its session's hours unless panitia overrides. */
+/**
+ * A Silent Meeting question: open from its session's start to its end. Panitia may open it before
+ * the start and close it before the end, each once; closed is final (never opens again).
+ */
 export type MwSilentQuestion = {
   id: string;
   sessionId: string;
   question: string;
   topics: string[];
-  override: "buka" | "tutup" | null;
-  overrideAt: string | null;
-  overrideBy: string | null;
-  /** "Tutup otomatis" at the session's end (panitia may switch it off to keep it open). */
-  autoClose: boolean;
+  /** "Buka sekarang" before the start (set once). */
+  openedAt: string | null;
+  /** Closed for good: "Tutup sekarang", or stamped once its hours passed. */
+  closedAt: string | null;
 };

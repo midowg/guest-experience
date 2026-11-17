@@ -24,17 +24,20 @@ describe("Rundown live rows", () => {
     expect(rowState({ ...pemaparan, status: "batal" }, now)).toBe("cancelled");
   });
 
-  it("offers Buka before and Tutup while a Silent Meeting is open", () => {
+  it("offers Buka before and Tutup while a Silent Meeting is open, nothing once closed (closed is final)", () => {
     const silent = sampleSession("silent");
-    const base: LiveSilent = { questionId: "q", state: "belum", count: 0, override: null };
-    expect(silentAction(base, silent, at("10:15"))).toBe("buka");
-    expect(silentAction({ ...base, state: "buka", count: 41 }, silent, at("14:00"))).toBe("tutup");
-    expect(silentAction({ ...base, state: "tutup", override: "tutup" }, silent, at("14:00"))).toBe("buka");
-    expect(silentAction({ ...base, state: "tutup", count: 47 }, silent, at("15:00"))).toBeNull();
-    expect(silentAction(base, { ...silent, status: "batal" }, at("10:15"))).toBeNull();
+    const base: LiveSilent = { questionId: "q", state: "belum", count: null };
+    expect(silentAction(base, silent)).toBe("buka");
+    expect(silentAction({ ...base, state: "buka" }, silent)).toBe("tutup");
+    // Closed by panitia before its end: never Buka again.
+    expect(silentAction({ ...base, state: "tutup" }, silent)).toBeNull();
+    expect(silentAction({ ...base, state: "tutup", count: 47 }, silent)).toBeNull();
+    expect(silentAction(base, { ...silent, status: "batal" })).toBeNull();
     expect(silentLabel(base)).toBe("Belum dibuka");
-    expect(silentLabel({ ...base, state: "buka", count: 41 })).toBe("Dibuka · 41 masukan");
+    // While open: no count, only its state.
+    expect(silentLabel({ ...base, state: "buka" })).toBe("Dibuka");
     expect(silentLabel({ ...base, state: "tutup", count: 47 })).toBe("Ditutup · 47 masukan");
+    expect(silentLabel({ ...base, state: "tutup" })).toBe("Ditutup");
   });
 });
 
@@ -101,6 +104,26 @@ describe("Ubah jam (K03)", () => {
     const withParallel = planShift(pemaparan, [...day2, parallel], { start: "08.00", end: "12.30" }, null);
     expect(withParallel.rows.find(row => row.title === "Sesi paralel")).toMatchObject({ checked: false, clash: false });
     expect(laterSessions(pemaparan, [...day2, parallel]).map(session => session.title)).toContain("Sesi paralel");
+  });
+
+  it("runs past midnight: Selesai at or before Mulai ends the next day, and asks first (audit R10)", () => {
+    const late: MwSession = { ...sampleSession("bns"), startsAt: at("21:00").toISOString(), endsAt: at("23:00").toISOString() };
+    const plan = planShift(late, [late], { start: "21.00", end: "00.30" }, null);
+    expect(plan).toMatchObject({ ok: true, error: null, nextDay: "Selesai besok, Rab, 6 Jan · 00.30", confirmNextDay: true, help: "Tadinya 21.00–23.00 · +90 menit" });
+    expect(plan.endsAt).toBe(at("00:30", "2027-01-06").toISOString());
+    // Already past midnight: the same times are no change, a new start keeps the next-day end without asking again.
+    const overnight: MwSession = { ...late, endsAt: plan.endsAt };
+    expect(typedTimes(overnight)).toEqual({ start: "21.00", end: "00.30" });
+    expect(planShift(overnight, [overnight], typedTimes(overnight), null)).toMatchObject({ changed: false, nextDay: "Selesai besok, Rab, 6 Jan · 00.30" });
+    expect(planShift(overnight, [overnight], { start: "21.30", end: "00.30" }, null)).toMatchObject({ ok: true, confirmNextDay: false, delta: 0 });
+    // Back on its own day: no next-day note.
+    expect(planShift(overnight, [overnight], { start: "21.00", end: "23.30" }, null)).toMatchObject({ ok: true, nextDay: null, confirmNextDay: false });
+    // At most 12 hours; longer (or the same time) is a typo.
+    expect(planShift(late, [late], { start: "20.00", end: "08.00" }, null).ok).toBe(true);
+    expect(planShift(late, [late], { start: "21.00", end: "09.30" }, null)).toMatchObject({ ok: false, error: "Jam selesai harus setelah jam mulai.", errorField: "end" });
+    expect(planShift(late, [late], { start: "21.00", end: "21.00" }, null)).toMatchObject({ ok: false, errorField: "end" });
+    // A same-day change never asks.
+    expect(planShift(pemaparan, day2, { start: "08.00", end: "12.30" }, null)).toMatchObject({ nextDay: null, confirmNextDay: false });
   });
 
   it("writes the notice as the new times", () => {

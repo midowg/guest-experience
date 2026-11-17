@@ -3,6 +3,7 @@ import { approveSchema } from "@/lib/main-wam/modul/awards";
 import { checkOrigin, handle, readJson, success, validate } from "@/lib/server/http";
 import { requireActionApi } from "@/lib/server/main-wam/gate";
 import { approveWinner } from "@/lib/server/main-wam/modul/awards";
+import { limitPerson } from "@/lib/server/main-wam/modul/rate";
 
 export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
@@ -14,6 +15,7 @@ export async function POST(request: Request, { params }: Params) {
     checkOrigin(request);
     const categoryId = validate(z.uuid("Kategori tidak dikenali."), (await params).id);
     const { nomineeId } = validate(approveSchema, await readJson(request, 1_000));
+    await limitPerson("setujui", viewer.id, 20);
     return success(await approveWinner(categoryId, nomineeId, viewer, new Date()), "Panitia diberi kabar.");
   });
 }

@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { wibDate, wibTime } from "../rundown";
 
 /*
  * Admin WAM → Main WAM → Modul acara (agen D): what an admin prepares before the event. Awarding:
  * categories (voted or judged), their window and announcement, the nominees (people, Momen photos,
- * or a kelompok/department by name). Silent Meeting: one question per session, its topics, and
- * whether it closes with the session. Pure: zod schemas the API and the forms share.
+ * or a kelompok/department by name). Silent Meeting: one question per session and its topics (it
+ * opens and closes with its session). Pure: zod schemas the API and the forms share.
  * Computed categories ("otomatis", from Wellbeing points) are not offered: Wellbeing is not built.
  */
 
@@ -55,12 +56,24 @@ export const nomineesSchema = z.object({ nominees: z.array(nomineeSchema).max(40
   .refine(value => new Set(value.nominees.map(item => item.employeeId ?? item.photoId ?? item.label.toLowerCase())).size === value.nominees.length, { message: "Ada nominasi yang sama dua kali." });
 export type NomineeInput = z.infer<typeof nomineeSchema>;
 
+const dayOf = (iso: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${wibDate(iso)}T12:00:00Z`));
+const clockOf = (iso: string) => wibTime(iso).replace(":", ".");
+/** "Rab, 6 Jan · 08.00" (WIB), "–" without a time (UX T-A03). */
+export const adminWhen = (iso: string | null) => (iso ? `${dayOf(iso)} · ${clockOf(iso)}` : "–");
+/** "Rab, 6 Jan · 08.00–15.00" the same day, else both ends in full. */
+export function adminRange(from: string | null, to: string | null): string {
+  if (!from || !to) return `${adminWhen(from)} – ${adminWhen(to)}`;
+  return wibDate(from) === wibDate(to) ? `${dayOf(from)} · ${clockOf(from)}–${clockOf(to)}` : `${adminWhen(from)} – ${adminWhen(to)}`;
+}
+
+/** The words of a module waiting for its migration, without its name (UX T-A01). */
+export const WAITING_TEXT = "Fitur ini menunggu pembaruan sistem. Hubungi tim CoE.";
+
 export const DEFAULT_TOPICS = ["Cara kerja", "Komunikasi", "Kesejahteraan", "Lainnya"];
 export const silentQuestionSchema = z.object({
   sessionId: z.uuid("Pilih sesinya."),
   question: z.string().trim().min(5, "Pertanyaan minimal 5 huruf.").max(300, "Pertanyaan paling banyak 300 karakter."),
   topics: z.array(z.string().trim().min(1, "Topik tidak boleh kosong.").max(40, "Topik paling banyak 40 karakter.")).max(8, "Paling banyak 8 topik.").default(DEFAULT_TOPICS)
     .refine(list => new Set(list.map(topic => topic.toLowerCase())).size === list.length, "Ada topik yang sama dua kali."),
-  autoClose: z.boolean().default(true),
 }).strict();
 export type SilentQuestionInput = z.infer<typeof silentQuestionSchema>;

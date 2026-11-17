@@ -9,24 +9,27 @@ import css from "./data.module.css";
 /**
  * ProgressBar (DS #30) with its label and value above it: role="progressbar" with the numbers and
  * the label as its name, so the value is never colour alone. `thin` 4 high; a module colour on
- * its own module card only.
+ * its own module card only. Label `Label` 13 + value `Body/Small` (DS); `labelSize="subtitle"` puts
+ * both in `Subtitle` 17, text/1, when the progress is the screen's main number (M06 Mozaik).
  */
-export function ProgressBar({ value, max = 100, label, valueText, icon, tone = "primary", thin, className }: {
+export function ProgressBar({ value, max = 100, label, valueText, icon, tone = "primary", thin, labelSize = "label", className }: {
   value: number;
   max?: number;
-  /** Spoken name, and shown above the bar unless `hideLabel`. */
+  /** Spoken name, and shown above the bar. */
   label: string;
   /** Shown at the right ("842 / 1.200 foto") and said instead of the percentage. */
   valueText?: string;
   icon?: IconProp;
   tone?: "primary" | "momen" | "emisi" | "awarding" | "success";
   thin?: boolean;
+  /** "label" (13, default) or "subtitle" (17, label and value, M06). */
+  labelSize?: "label" | "subtitle";
   className?: string;
 }) {
   const safeMax = max > 0 ? max : 100;
   const clamped = Math.min(Math.max(value, 0), safeMax);
   const percent = Math.round((clamped / safeMax) * 1000) / 10;
-  return <div className={cx(css.progressBox, className)}>
+  return <div className={cx(css.progressBox, labelSize === "subtitle" && css.progressSubtitle, className)}>
     <div className={css.progressHead}>
       <span className={css.progressLabel}><KitIcon icon={icon} />{label}</span>
       {valueText && <span className={css.progressValue} aria-hidden>{valueText}</span>}
@@ -90,7 +93,8 @@ export function ShortcutGrid({ children, label, className }: { children: ReactNo
 
 /**
  * A Kelola shortcut (§10.7, T41): icon and label in a row, 64 tall, a count on the right. The count
- * is said with the label ("Moderasi, 3 menunggu").
+ * is said after the label ("Moderasi, 3 menunggu"): the name starts with the words on screen, so a
+ * voice command "Ketuk Moderasi" finds it (WCAG 2.5.3); the badge itself is not read.
  */
 export function ShortcutTile({ icon, label, badge, badgeLabel = "menunggu", href, onClick, className }: Pick<ActionProps, "href" | "onClick"> & {
   icon: IconProp;
@@ -100,9 +104,9 @@ export function ShortcutTile({ icon, label, badge, badgeLabel = "menunggu", href
   badgeLabel?: string;
   className?: string;
 }) {
-  return <Pressable href={href} onClick={onClick} asButton className={cx(css.tile, className)} aria-label={badge ? `${label}, ${badge} ${badgeLabel}` : undefined}>
+  return <Pressable href={href} onClick={onClick} asButton className={cx(css.tile, className)}>
     <IconBox icon={icon} />
-    <span className={css.tileLabel}>{label}</span>
+    <span className={css.tileLabel}>{label}{!!badge && <span className={shared.srOnly}>{`, ${badge} ${badgeLabel}`}</span>}</span>
     {!!badge && <Badge count={badge} className={css.tileBadge} />}
   </Pressable>;
 }

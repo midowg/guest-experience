@@ -2,6 +2,9 @@
 .bar { display: flex; align-items: center; justify-content: space-between; gap: var(--mw-space-8); min-width: 0; }
 .chip { flex: 0 1 auto; min-width: 0; max-width: 60%; }
 .caption { flex: 0 1 auto; min-width: 0; font: var(--mw-type-caption); color: var(--mw-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.caption:has(.captionName) { display: flex; }
+.captionName { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.captionCount { flex: none; }
 .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--mw-space-4); margin: 0; padding: 0; list-style: none; }
 .tile {
   position: relative; display: block; width: 100%; aspect-ratio: 1; padding: 0; border: 0; border-radius: var(--mw-radius-8); overflow: hidden;

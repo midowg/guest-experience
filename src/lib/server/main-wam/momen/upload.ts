@@ -9,15 +9,16 @@ import { mwFail, type DbError } from "../errors";
 import type { MainWamContext } from "../gate";
 import { allSessions } from "../read";
 import { personLimit, photoRecord } from "./feed";
-import { checkUploaded, keysOf, photoIdFor, removePhotoFiles, storageReady, tokenMatches, uploadAddresses, uploadToken } from "./storage";
+import { checkUploaded, keepUploaded, photoIdFor, removePhotoFiles, removeUploads, storageReady, tokenMatches, uploadAddresses, uploadToken, type PhotoKeys } from "./storage";
 
 /*
  * Sending a Momen photo (U01–U04, KONTRAK §8): two steps, as the MoM photos.
  *   1. start: the server checks who sends (kelompok published for "Kelompokku", the limits), picks
- *      the files (from the owner and the phone's clientId) and signs three uploads (type and size).
+ *      the files (from the owner and the phone's clientId) and signs three uploads (type and size)
+ *      under tmp/ (audit L4: what is never kept is deleted by the bucket's lifecycle rule).
  *   2. the browser puts the three JPEGs straight into storage (never through this server).
- *   3. confirm: the server checks the token, the sizes and the first bytes, then keeps the photo;
- *      others see it 5 seconds later (Batalkan).
+ *   3. confirm: the server checks the token, the sizes and the first bytes, copies the files to the
+ *      photo's own keys, keeps the photo and removes the uploads; others see it 5 seconds later (Batalkan).
  * Every step can run again: a photo sent twice (a retry, a queue after a lost answer) is kept once.
  */
 
@@ -76,8 +77,16 @@ export async function confirmUpload(context: MainWamContext, input: PhotoConfirm
   if (kept) return { id: kept.id, visibleAt: kept.visibleAt };
   const groupId = groupFor(context, input.audience);
   const sessionId = await keptSession(input.sessionId);
-  await checkUploaded(id, sizes);
-  const keys = keysOf(id);
+  // A repeat that lost the race (an answer lost, the queue sent it again): the first one kept the
+  // photo and removed the uploads, so this one finds them gone. Its answer is the kept photo.
+  const keptMeanwhile = async () => { const again = await photoRecord(id); return again ? { id: again.id, visibleAt: again.visibleAt } : null; };
+  try {
+    await checkUploaded(id, sizes);
+  } catch (error) { const again = await keptMeanwhile(); if (again) return again; throw error; }
+  let keys: PhotoKeys;
+  try {
+    keys = await keepUploaded(id);
+  } catch (error) { const again = await keptMeanwhile(); if (again) return again; throw error; }
   const { data, error } = await db().from("mw_photos").insert({
     id, owner_id: context.viewer.id, client_id: input.clientId.toLowerCase(), audience: input.audience, group_id: groupId, session_id: sessionId,
     file_key: keys.besar, thumb_key: keys.kecil, tile_key: keys.ubin, size: input.size, width: input.width, height: input.height,
@@ -85,17 +94,24 @@ export async function confirmUpload(context: MainWamContext, input: PhotoConfirm
   }).select("id,visible_at").single();
   if (error) {
     // The same photo confirmed twice at once: the first one kept it.
-    if (error.code === "23505") { const again = await photoRecord(id); if (again) return { id: again.id, visibleAt: again.visibleAt }; }
+    if (error.code === "23505") { const again = await keptMeanwhile(); if (again) { await removeUploads(id); return again; } }
     await removePhotoFiles(id);
     mwFail(error as DbError, MOMEN_AREA_MIGRATION);
   }
+  // Kept: the uploads under tmp/ are no longer needed (if this fails, the lifecycle rule removes them).
+  await removeUploads(id);
   return { id: data.id as string, visibleAt: data.visible_at as string };
 }
 
+/** Audit M3: a photo nominated for Awarding cannot be deleted (its votes and the BOD's approval would go). */
+export const NOMINATED_PHOTO = "Foto ini masuk nominasi Awarding, jadi tidak bisa dihapus.";
+
 /**
- * Batalkan (within the 5 seconds), Hapus foto (the owner), or K08 Hapus (panitia): the row and its
- * three files go, and with them its hearts, reports and Mozaik cell. A photo cancelled before it was
- * kept: the sender names its clientId, and only its own files are removed.
+ * Batalkan (within the 5 seconds) or Hapus foto, by the photo's owner only: the row and its three
+ * files go, and with them its hearts, reports and Mozaik cell. Panitia remove others' photos through
+ * moderation (K08, mw_moderate_photo: hidden first, logged, the owner told), never here (audit M2).
+ * A photo cancelled before it was kept: the sender names its clientId, and only its own files
+ * (kept or still uploaded) are removed. A nominated photo stays: 409 (the database refuses, 23503).
  */
 export async function deletePhoto(context: MainWamContext, id: string, clientId?: string): Promise<void> {
   const photo = await photoRecord(id);
@@ -103,8 +119,15 @@ export async function deletePhoto(context: MainWamContext, id: string, clientId?
     if (clientId && photoIdFor(context.viewer.id, clientId) === id.toLowerCase()) { await removePhotoFiles(id.toLowerCase()); return; }
     throw new ServiceError(404, "Foto tidak ditemukan.");
   }
-  if (!canDelete(context.viewer, photo)) throw new ServiceError(canSee(context.viewer, photo) ? 403 : 404, canSee(context.viewer, photo) ? "Hanya pemilik foto yang bisa menghapusnya." : "Foto tidak ditemukan.");
+  if (!canDelete(context.viewer, photo)) {
+    // Someone else's photo: 403 when the person sees it (panitia included), else nothing about it.
+    if (canSee(context.viewer, photo)) throw new ServiceError(403, "Hanya pemilik foto yang bisa menghapusnya.");
+    throw new ServiceError(404, "Foto tidak ditemukan.");
+  }
   const { error } = await db().from("mw_photos").delete().eq("id", photo.id);
-  if (error) mwFail(error as DbError, MOMEN_AREA_MIGRATION);
+  if (error) {
+    if (error.code === "23503") throw new ServiceError(409, NOMINATED_PHOTO);
+    mwFail(error as DbError, MOMEN_AREA_MIGRATION);
+  }
   await removePhotoFiles(photo.id, [photo.fileKey, photo.thumbKey, photo.tileKey]);
 }

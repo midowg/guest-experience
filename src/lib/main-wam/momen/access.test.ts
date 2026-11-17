@@ -40,9 +40,12 @@ describe("one photo's access", () => {
     expect(moderates(rani)).toBe(false);
   });
 
-  it("lets the owner and panitia delete; anyone who sees it (not the owner) report", () => {
+  it("lets only the owner delete (panitia go through moderation); anyone who sees it (not the owner) report", () => {
     expect(canDelete({ ...rani, id: "sari" }, photo())).toBe(true);
-    expect(canDelete(panitia, photo())).toBe(true);
+    // Audit M2: panitia may see and open the file of any photo, but not delete it here.
+    expect(canDelete(panitia, photo())).toBe(false);
+    expect(canDelete(panitia, photo({ audience: "kelompok", groupId: "g4" }))).toBe(false);
+    expect(canDelete({ ...panitia, id: "sari" }, photo())).toBe(true);
     expect(canDelete(rani, photo())).toBe(false);
     expect(canReport(rani, photo(), now)).toBe(true);
     expect(canReport({ ...rani, id: "sari" }, photo(), now)).toBe(false);

@@ -23,7 +23,8 @@ describe("Main WAM's frame, from the address alone", () => {
 
   it("keeps the bottom bar on detail screens, with the tab they belong to and a way back", () => {
     const cases: [string, string, string, string][] = [
-      [mainWamPath.session("s1"), "agenda", "Detail sesi", mainWamPath.agenda()],
+      // P04: a bar without a title (revisi 16 Nov); its name for screen readers is the label.
+      [mainWamPath.session("s1"), "agenda", "", mainWamPath.agenda()],
       [mainWamPath.notifications, "beranda", "Notifikasi", mainWamPath.home],
       [mainWamPath.gallery(), "momen", "Galeri", mainWamPath.moments()],
       [mainWamPath.mosaic(), "momen", "Mozaik WAM 2026", mainWamPath.moments()],
@@ -37,7 +38,8 @@ describe("Main WAM's frame, from the address alone", () => {
       [mainWamPath.moderation("disembunyikan"), "beranda", "Moderasi Momen", mainWamPath.home],
       [mainWamPath.attendanceSummary(), "beranda", "Kehadiran", mainWamPath.home],
       [mainWamPath.silentRecap, "beranda", "Rekap Silent Meeting", mainWamPath.home],
-      [mainWamPath.awardApproval, "beranda", "Persetujuan awarding", mainWamPath.home],
+      // B06 (revisi 16 Nov, T-K05): "Awarding".
+      [mainWamPath.awardApproval, "beranda", "Awarding", mainWamPath.home],
       [mainWamPath.awards, "beranda", "Awarding", mainWamPath.home],
     ];
     for (const [path, tab, title, back] of cases) {
@@ -47,6 +49,10 @@ describe("Main WAM's frame, from the address alone", () => {
       expect(showsBottomBar(screen), path).toBe(true);
       expect(showsBell(screen), path).toBe(false);
     }
+  });
+
+  it("names a screen whose bar has no title (P04 Detail sesi)", () => {
+    expect(at(mainWamPath.session("s1"))).toMatchObject({ title: "", label: "Detail sesi" });
   });
 
   it("drops the bottom bar on task screens (camera, scan, forms)", () => {

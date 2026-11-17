@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { MapPin, Clock } from "lucide-react";
 import type { ReactNode } from "react";
 import { DevFrame } from "@/components/main-wam/dev/DevFrame";
+import { BerandaScreen } from "@/components/main-wam/peserta/beranda/BerandaScreen";
 import { AbsenManual } from "@/components/main-wam/panitia/AbsenManual";
 import { AnnounceForm } from "@/components/main-wam/panitia/AnnounceForm";
 import { KelolaCards, RingkasanCard, RingkasanSkeleton } from "@/components/main-wam/panitia/BerandaCards";
@@ -10,8 +10,12 @@ import { Moderation } from "@/components/main-wam/panitia/Moderation";
 import { RundownLive } from "@/components/main-wam/panitia/RundownLive";
 import { AbsenSkeleton, AnnounceSkeleton, KehadiranSkeleton, ModerationSkeleton, RundownSkeleton } from "@/components/main-wam/panitia/Skeletons";
 import { ScreenContent } from "@/components/main-wam/shell";
-import { Banner, Card, StatusPill, Text } from "@/components/main-wam/ui";
+import { Banner, Text } from "@/components/main-wam/ui";
+import { clock } from "@/lib/main-wam/panitia/format";
+import { sampleTime, sampleViewer } from "@/lib/main-wam/sample";
 import { mainWamPath } from "@/lib/routes";
+import { previewHome } from "../peserta/sample";
+import { AbsenStandIn, MomenStandIn } from "../peserta/standins";
 import { PreviewApi } from "./PreviewApi";
 import {
   announceSample, attendanceData, attendanceDaySample, bodRows, moderationHidden, moderationReported, panitiaHome, rundownHistory, rundownSessions, sampleDays,
@@ -21,14 +25,14 @@ export const dynamic = "force-dynamic";
 
 const at = (time: string, date = "2027-01-05") => `${date}T${time}:00+07:00`;
 
-/** Beranda's Sekarang card stands in for agen A's (only to place area C's cards as on the prototype). */
-function NowStandIn({ title, time, place }: { title: string; time: string; place: string }) {
-  return <Card>
-    <span><StatusPill status="live" /></span>
-    <Text as="h2" variant="headline">{title}</Text>
-    <Text variant="body" color="2"><Clock aria-hidden width={16} height={16} /> {time}</Text>
-    <Text variant="body" color="2"><MapPin aria-hidden width={16} height={16} /> {place}</Text>
-  </Card>;
+/**
+ * Beranda whole, as the app draws it ((app)/page.tsx): agen A's BerandaScreen with its preview data,
+ * area C's card in the role's slot, Absen and Momen as A's stand-ins (audit T-K04).
+ */
+function Beranda({ peran, waktu, card }: { peran: "panitia" | "bod"; waktu: string; card: ReactNode }) {
+  const now = sampleTime(waktu);
+  return <BerandaScreen data={previewHome(now, sampleViewer(peran))} serverNow={now.toISOString()} since={clock(now.toISOString())} live={false}
+    slots={{ absen: <AbsenStandIn />, panitia: peran === "panitia" ? card : null, bod: peran === "bod" ? card : null, momen: <MomenStandIn /> }} />;
 }
 
 type Screen = { path: string; peran: string; waktu?: string; body: ReactNode };
@@ -41,10 +45,8 @@ export default async function DevMainWamPanitia({ searchParams }: { searchParams
   if (process.env.NODE_ENV === "production") notFound();
   const { layar = "k01", varian = "" } = await searchParams;
   const screens: Record<string, () => Screen> = {
-    k01: () => ({ path: mainWamPath.home, peran: "panitia", waktu: "panitia", body: <ScreenContent>
-      <NowStandIn title="Pemaparan departemen" time="08.00–12.00" place="Aula Utama" />
-      <KelolaCards tiles={panitiaHome.tiles} attention={varian === "tenang" ? [] : panitiaHome.attention} />
-    </ScreenContent> }),
+    k01: () => ({ path: mainWamPath.home, peran: "panitia", waktu: "panitia", body:
+      <Beranda peran="panitia" waktu="panitia" card={<KelolaCards tiles={panitiaHome.tiles} attention={varian === "tenang" ? [] : panitiaHome.attention} />} /> }),
     k02: () => {
       if (varian === "memuat") return { path: mainWamPath.rundownLive(2), peran: "panitia", body: <RundownSkeleton /> };
       const variant = varian === "disimpan" || varian === "tanpa-kabar" ? "disimpan" : varian === "silent-dibuka" ? "silent-dibuka" : "awal";
@@ -72,10 +74,10 @@ export default async function DevMainWamPanitia({ searchParams }: { searchParams
       : { path: mainWamPath.moderation(), peran: "panitia", body: <PreviewApi>
         <Moderation migrated now={at("10:16")} reported={varian === "kosong" ? [] : moderationReported} hidden={moderationHidden} tab={varian === "disembunyikan" ? "disembunyikan" : "dilaporkan"} />
       </PreviewApi> },
-    b01: () => ({ path: mainWamPath.home, peran: "bod", waktu: "bod", body: <ScreenContent>
-      <NowStandIn title="Refleksi & arah bersama" time="16.00–17.30" place="Aula Utama" />
-      {varian === "status"
-        ? <>
+    b01: () => ({ path: mainWamPath.home, peran: "bod", waktu: "bod", body: varian !== "status"
+      ? <Beranda peran="bod" waktu="bod" card={<RingkasanCard rows={bodRows.biasa} />} />
+      // The card's states one under the other (not a screen of its own).
+      : <ScreenContent>
           <Text variant="caption-strong" color="2">Ringkasan · memuat</Text>
           <RingkasanSkeleton rows={4} />
           <Text variant="caption-strong" color="2">Ringkasan · belum ada data (Sen, 4 Jan)</Text>
@@ -84,11 +86,11 @@ export default async function DevMainWamPanitia({ searchParams }: { searchParams
           <RingkasanCard rows={bodRows.beres} />
           <Text variant="caption-strong" color="2">Ringkasan · modul Voting dan Jejak karbon mati</Text>
           <RingkasanCard rows={bodRows.modulMati} />
+          <Text variant="caption-strong" color="2">Ringkasan · Jejak karbon di bawah 0,1 t (kg)</Text>
+          <RingkasanCard rows={bodRows.karbonKecil} />
           <Text variant="caption-strong" color="2">Ringkasan · menunggu pembaruan sistem</Text>
           <RingkasanCard rows={[]}><Banner tone="info" title="Menunggu pembaruan sistem">Ringkasan tampil setelah pembaruan sistem dijalankan.</Banner></RingkasanCard>
-        </>
-        : <RingkasanCard rows={bodRows.biasa} />}
-    </ScreenContent> }),
+      </ScreenContent> }),
     b02: () => varian === "memuat"
       ? { path: mainWamPath.attendanceSummary(3), peran: "bod", body: <KehadiranSkeleton /> }
       : { path: mainWamPath.attendanceSummary(3), peran: "bod", body: <Kehadiran data={varian === "kosong" ? { ...attendanceDaySample, average: null, firstStart: "06.00", departments: [], sessions: attendanceDaySample.sessions.map(session => ({ ...session, percent: null, state: "upcoming" as const })) } : attendanceDaySample} /> },

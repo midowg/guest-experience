@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 // Theme first: its reset must load before the kit's component CSS (same order as the real layout).
 import { MainWamTheme } from "@/components/main-wam/theme";
 import { MainWamShell } from "@/components/main-wam/shell";
+import { mainWamRole } from "@/lib/main-wam/access";
 import { homeGreeting } from "@/lib/main-wam/greeting";
 import { sampleSettings, sampleTime, sampleViewer } from "@/lib/main-wam/sample";
 import { mainWamScreen } from "@/lib/main-wam/screen";
@@ -32,7 +33,7 @@ export function DevFrame({ path, peran, waktu, unread = 3, theme, children }: {
   const viewer = sampleViewer(peran);
   const screen = mainWamScreen(path.split(/[?#]/)[0]);
   return <MainWamTheme theme={theme} mode="light">
-    <MainWamShell screen={screen} unread={unread} greeting={homeGreeting(sampleTime(waktu), viewer.name, sampleSettings().event)}>
+    <MainWamShell screen={screen} unread={unread} greeting={homeGreeting(sampleTime(waktu), viewer.name, sampleSettings().event, mainWamRole(viewer))}>
       {children}
     </MainWamShell>
   </MainWamTheme>;

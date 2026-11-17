@@ -1,5 +1,5 @@
 import type { PushTopic } from "@/lib/pra-wam/push";
-import type { NoteKind } from "./types";
+import type { NoteKind, NoteTone } from "./types";
 
 /*
  * Main WAM's notifications go through WAM's one inbox (pw_announcements + pw_notification_receipts,
@@ -28,6 +28,21 @@ export const noteIcon: Record<NoteKind, string> = {
   pengumuman: "megaphone", jadwal: "calendar-clock", absen: "circle-check", momen: "heart", kamar: "key-round",
   silent: "lock", voting: "trophy", survei: "clipboard-list", lain: "bell",
 };
+
+/** Words in a title that say something changed: a time, a place, a cancellation. */
+const CHANGE = /\b(berubah|diubah|perubahan|pindah|dipindah|dipindahkan|mundur|dimundurkan|dimajukan|batal|dibatalkan|ditunda)\b/i;
+
+/**
+ * A note's tone (Beranda's banner, N01's icon): the one panitia chose (mw_notes.tone), else a
+ * warning for a schedule change (kind jadwal, or an announcement whose title says something
+ * changed: "Jam kumpul berubah", P02__status), else info.
+ */
+export function noteTone(note: { kind: NoteKind; title: string; tone?: string | null }): NoteTone {
+  if (note.tone === "info" || note.tone === "warning") return note.tone;
+  if (note.kind === "jadwal") return "warning";
+  if (note.kind === "pengumuman" && CHANGE.test(note.title)) return "warning";
+  return "info";
+}
 
 /** pw_announcements.kind allows only these two; a panitia's announcement is "pengumuman", the app's own notes "sesi". */
 export const announcementKind = (kind: NoteKind): "pengumuman" | "sesi" => (kind === "pengumuman" ? "pengumuman" : "sesi");

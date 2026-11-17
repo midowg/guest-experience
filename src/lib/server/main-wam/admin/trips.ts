@@ -3,8 +3,8 @@ import { tripRow, type SeatsInput, type TripInput } from "@/lib/main-wam/admin/t
 import { TRIP_COLUMNS, TRIP_SEAT_COLUMNS, tripFromRow, tripSeatFromRow } from "@/lib/main-wam/rows";
 import type { MwTrip, MwTripSeat } from "@/lib/main-wam/types";
 import { isSupabaseConfigured, ServiceError } from "../../config";
-import { mwMissing, mwWaiting } from "../errors";
-import { adminFail, assertPeople, db, rpcFail } from "./common";
+import { mwMissing } from "../errors";
+import { adminFail, adminWaiting, assertPeople, db, rpcFail } from "./common";
 
 /*
  * Admin WAM → Main WAM → Perjalanan (agen E): the steps there and back, their coordinator and
@@ -25,7 +25,7 @@ export async function adminTrips(): Promise<TripBoard> {
 }
 async function boardOrWait(): Promise<TripBoard> {
   const board = await adminTrips();
-  if (!board.migrated) throw mwWaiting();
+  if (!board.migrated) throw adminWaiting();
   return board;
 }
 

@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import { Eye, EyeOff, Image as ImageIcon, ShieldAlert, Trash2 } from "lucide-react";
 import { ScreenContent, Stack } from "@/components/main-wam/shell";
-import { Banner, Button, Card, ConfirmDialog, PhotoFill, Pill, Segmented, Sheet, StatusPill, useToast } from "@/components/main-wam/ui";
-import { dayClock } from "@/lib/main-wam/panitia/format";
-import { ownerLine, type ModerationCard } from "@/lib/main-wam/panitia/moderation";
+import { Banner, Button, Card, ChipRow, FilterChip, PhotoFill, Pill, Segmented, Sheet, StatusPill, TextField, useToast } from "@/components/main-wam/ui";
+import { hiddenLine, moderationReason, moderationReasonLabels, ownerLine, type ModerationCard } from "@/lib/main-wam/panitia/moderation";
+import { MODERATION_NOTE_MAX, MODERATION_REASONS, type ModerationReason } from "@/lib/main-wam/panitia/schemas";
 import { mainWamPath } from "@/lib/routes";
 import type { ModerationData } from "@/lib/server/main-wam/panitia/moderation";
 import { errorText, PanitiaError, useLiveRefresh, useOnline, usePanitiaApi, useServerState } from "./api";
@@ -13,12 +13,14 @@ import { EmptyBlock } from "./parts";
 import css from "./panitia.module.css";
 
 type Tab = "dilaporkan" | "disembunyikan";
-type Pending = { kind: "sembunyikan" | "hapus"; card: ModerationCard } | null;
+type Asking = "sembunyikan" | "hapus";
+type Why = { reason: ModerationReason | null; note: string };
 
 /**
  * K08 Moderasi Momen: Dilaporkan (photos with a report panitia have not decided on: Sembunyikan,
- * Tampilkan lagi) and Disembunyikan (Tampilkan lagi, Hapus). Sembunyikan and Hapus ask first; the
- * uploader is told, reporters are never named. Tapping a photo shows it larger in a sheet.
+ * Tampilkan lagi) and Disembunyikan (Tampilkan lagi, Hapus). Sembunyikan and Hapus ask first, with an
+ * optional short reason (a quick choice and/or a note) that only panitia see (audit L8); the uploader
+ * is told in fixed words, reporters are never named. Tapping a photo shows it larger in a sheet.
  */
 export function Moderation(props: ModerationData & { tab?: Tab }) {
   const api = usePanitiaApi();
@@ -27,11 +29,15 @@ export function Moderation(props: ModerationData & { tab?: Tab }) {
   const [reported, setReported] = useServerState(props.reported);
   const [hidden, setHidden] = useServerState(props.hidden);
   const [tab, setTab] = useState<Tab>(props.tab ?? "dilaporkan");
-  const [pending, setPending] = useState<Pending>(null);
+  // The decision being asked (the sheet stays mounted with its last card, so focus goes back on close).
+  const [asking, setAsking] = useState<Asking | null>(null);
+  const [subject, setSubject] = useState<ModerationCard | null>(null);
+  const [why, setWhy] = useState<Why>({ reason: null, note: "" });
   const [viewing, setViewing] = useState<ModerationCard | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const now = useMemo(() => new Date(props.now), [props.now]);
-  useLiveRefresh(api.refresh, 60_000, pending !== null || viewing !== null || busy !== null);
+  useLiveRefresh(api.refresh, 60_000, asking !== null || viewing !== null || busy !== null);
+  const ask = (kind: Asking, card: ModerationCard) => { setSubject(card); setWhy({ reason: null, note: "" }); setAsking(kind); };
 
   function switchTab(next: Tab) {
     setTab(next);
@@ -39,20 +45,23 @@ export function Moderation(props: ModerationData & { tab?: Tab }) {
     window.history.replaceState(window.history.state, "", mainWamPath.moderation(next));
   }
 
-  async function decide(card: ModerationCard, action: "sembunyikan" | "tampilkan" | "hapus") {
+  async function decide(card: ModerationCard, action: "sembunyikan" | "tampilkan" | "hapus", given?: Why) {
     if (busy) return;
     setBusy(card.id);
     try {
-      await api.moderate(card.id, { action, from: card.status });
+      const note = given?.note.trim() ?? "";
+      await api.moderate(card.id, action === "tampilkan" || !given ? { action, from: card.status } : { action, from: card.status, reason: given.reason, note });
       setReported(current => current.filter(item => item.id !== card.id));
-      if (action === "sembunyikan") setHidden(current => [{ ...card, status: "disembunyikan", hiddenAt: new Date().toISOString(), hiddenBy: null }, ...current]);
+      if (action === "sembunyikan") {
+        setHidden(current => [{ ...card, status: "disembunyikan", hiddenAt: new Date().toISOString(), hiddenBy: null, hiddenReason: moderationReason(given?.reason, note) }, ...current]);
+      }
       else setHidden(current => current.filter(item => item.id !== card.id));
       toast.show({ text: action === "sembunyikan" ? "Foto disembunyikan" : action === "hapus" ? "Foto dihapus" : "Foto tampil lagi", tone: "success" });
       api.refresh();
     } catch (error) {
       toast.show({ text: errorText(error), tone: "error" });
       if (error instanceof PanitiaError && (error.status === 409 || error.status === 404)) api.refresh();
-    } finally { setBusy(null); setPending(null); }
+    } finally { setBusy(null); setAsking(null); }
   }
 
   const list = tab === "dilaporkan" ? reported : hidden;
@@ -66,20 +75,36 @@ export function Moderation(props: ModerationData & { tab?: Tab }) {
       : <Stack>
         {list.map(card => <ReportCard key={card.id} card={card} now={now} busy={busy === card.id} disabled={busy !== null && busy !== card.id}
           onView={() => setViewing(card)}
-          onHide={() => setPending({ kind: "sembunyikan", card })}
+          onHide={() => ask("sembunyikan", card)}
           onShow={() => decide(card, "tampilkan")}
-          onDelete={() => setPending({ kind: "hapus", card })} />)}
+          onDelete={() => ask("hapus", card)} />)}
       </Stack>}
 
-    <ConfirmDialog open={pending?.kind === "sembunyikan"} onCancel={() => setPending(null)} onConfirm={() => pending && decide(pending.card, "sembunyikan")} busy={busy !== null} busyLabel="Menyembunyikan…"
-      tone="danger" icon={EyeOff} title="Sembunyikan foto ini?" body="Pengunggah diberi kabar." confirmLabel="Sembunyikan" />
-    <ConfirmDialog open={pending?.kind === "hapus"} onCancel={() => setPending(null)} onConfirm={() => pending && decide(pending.card, "hapus")} busy={busy !== null} busyLabel="Menghapus…"
-      tone="danger" icon={Trash2} title="Hapus foto ini?" body="Foto hilang untuk semua dan tidak bisa dikembalikan. Pengunggah diberi kabar." confirmLabel="Hapus foto" />
+    <Sheet open={asking !== null && subject !== null} onClose={() => setAsking(null)} locked={busy !== null}
+      title={asking === "hapus" ? "Hapus foto ini?" : "Sembunyikan foto ini?"}
+      subtitle={asking === "hapus" ? "Foto hilang untuk semua dan tidak bisa dikembalikan. Pengunggah diberi kabar." : "Pengunggah diberi kabar dengan alasan: Ada rekan yang tidak setuju."}
+      footer={<>
+        <Button block variant="danger" icon={asking === "hapus" ? <Trash2 /> : <EyeOff />} loading={busy !== null} loadingLabel={asking === "hapus" ? "Menghapus…" : "Menyembunyikan…"}
+          onClick={() => subject && asking && decide(subject, asking, why)}>{asking === "hapus" ? "Hapus foto" : "Sembunyikan"}</Button>
+        <Button block variant="text" onClick={() => setAsking(null)} disabled={busy !== null}>Batal</Button>
+      </>}>
+      <div className={css.sheetBody}>
+        <div className={css.group}>
+          <span className={css.groupLabel} aria-hidden>Alasan<span className={css.optional}> (opsional)</span></span>
+          <ChipRow label="Alasan (opsional)">
+            {MODERATION_REASONS.map(reason => <FilterChip key={reason} selected={why.reason === reason}
+              onClick={() => setWhy(current => ({ ...current, reason: current.reason === reason ? null : reason }))}>{moderationReasonLabels[reason]}</FilterChip>)}
+          </ChipRow>
+        </div>
+        <TextField label="Catatan" optional help="Hanya panitia yang melihat." value={why.note} maxLength={MODERATION_NOTE_MAX} showCount
+          onChange={event => setWhy(current => ({ ...current, note: event.target.value }))} autoComplete="off" />
+      </div>
+    </Sheet>
     <Sheet open={viewing !== null} onClose={() => setViewing(null)} title={viewing ? `Foto dari ${viewing.owner}` : "Foto"} subtitle={viewing ? ownerLine(viewing, now) : undefined}>
       {viewing?.large
         // eslint-disable-next-line @next/next/no-img-element -- a short-lived signed storage address, shown as it is
         ? <img className={css.viewer} src={viewing.large} alt={`Foto dari ${viewing.owner}`} />
-        : <EmptyBlock icon={<ImageIcon />} title="Foto belum dapat ditampilkan." />}
+        : <EmptyBlock icon={<ImageIcon />} title="Foto belum dapat ditampilkan." level={3} />}
     </Sheet>
   </ScreenContent>;
 }
@@ -104,7 +129,7 @@ export function ReportCard({ card, now, busy, disabled, onView, onHide, onShow, 
           {card.reasons.map(reason => <span key={reason} className={css.reportReason}>{reason}</span>)}
         </span>
         {card.notes.map(note => <p key={note} className={css.reportNote}>&ldquo;{note}&rdquo;</p>)}
-        {isHidden && card.hiddenAt && <span className={css.reportReason}>{[card.hiddenBy ? `Disembunyikan ${card.hiddenBy}` : "Disembunyikan", dayClock(card.hiddenAt, now)].join(" · ")}</span>}
+        {isHidden && card.hiddenAt && <span className={css.reportReason}>{hiddenLine(card, now)}</span>}
       </div>
     </div>
     <div className={css.actions}>

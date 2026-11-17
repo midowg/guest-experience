@@ -8,8 +8,8 @@
 --      sessions at once, in one transaction, checks every version, stamps "diubah <siapa> · jam",
 --      and writes Riwayat perubahan.
 --   3. mw_moderation_log + mw_moderate_photo: panitia's decisions on reported photos (siapa, kapan,
---      apa), in one step with the photo's status, refused when another panitia decided first. The
---      log outlives a deleted photo (no foreign key on the photo).
+--      apa, and the optional reason panitia gave), in one step with the photo's status, refused when
+--      another panitia decided first. The log outlives a deleted photo (no foreign key on the photo).
 -- Server only (service role). Needs 202611200001 and 202611200002.
 -- ROLLBACK (by hand): drop function mw_moderate_photo, mw_rundown_change; drop table mw_moderation_log;
 --   drop trigger mw_sessions_version on mw_sessions; drop function mw_sessions_version.
@@ -89,6 +89,8 @@ create table public.mw_moderation_log (
   action text not null check (action in ('sembunyikan', 'tampilkan', 'hapus')),
   -- The status the photo had before (tampil, ditinjau, disembunyikan).
   from_status text not null check (from_status in ('tampil', 'ditinjau', 'disembunyikan')),
+  -- Why, as panitia gave it for Sembunyikan or Hapus (a quick choice and/or a note; '' = none given).
+  -- Panitia only: never shown to the uploader or the reporters.
   reason text not null default '' check (char_length(reason) <= 300),
   -- How many reports it had at the decision.
   reports integer not null default 0 check (reports >= 0),
@@ -98,10 +100,16 @@ create table public.mw_moderation_log (
 create index mw_moderation_log_photo on public.mw_moderation_log (photo_id, acted_at desc);
 
 /*
- * One decision. p_from is the status the panitia saw: when the photo is no longer in it, another
- * panitia decided first (PHOTO_HANDLED). Sembunyikan from tampil or ditinjau; Tampilkan lagi from
- * any status (it also marks the reports as handled); Hapus only once hidden. Returns the owner and
- * the row as it was (its storage keys, to delete the files after a Hapus, whichever key columns the
+ * One decision, with p_reason (kept in the log and, for Sembunyikan, as the photo's hidden_reason).
+ * p_from is the status the panitia saw: when the photo is no longer in it, another panitia decided
+ * first (PHOTO_HANDLED). Sembunyikan from tampil or ditinjau; Hapus only once hidden; Tampilkan lagi
+ * from any status: the photo is shown to everyone again and its reports count as handled by this
+ * log entry. The reports themselves stay (who reported, for the count; Momen's threshold does not
+ * hide the photo again, 202611200201), and panitia's queue lists only a report newer than the last
+ * decision (waitingPhotos, src/lib/main-wam/panitia/moderation.ts), so a new report brings it back.
+ * Each reporter keeps it hidden for themself until they choose "Tampilkan lagi" on their own
+ * (mw_photo_reports.unhidden_at): their choice, not panitia's (audit R17). Returns the owner and the
+ * row as it was (its storage keys, to delete the files after a Hapus, whichever key columns the
  * table has). Errors: PHOTO_GONE, PHOTO_HANDLED, PHOTO_INVALID.
  */
 create or replace function public.mw_moderate_photo(p_photo uuid, p_action text, p_from text, p_by uuid, p_reason text default '')

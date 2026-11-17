@@ -38,6 +38,9 @@ export function PhotoOptionsSheet({ open, onClose, owner, mine, onReport, onDele
   </Sheet>;
 }
 
+/** A refusal trying again would not change (409: a photo nominated for Awarding stays): the dialog closes. */
+export const refusedForGood = (error: unknown) => (error as { status?: unknown } | null)?.status === 409;
+
 /** Hapus foto ini? (M01__status#hapus). */
 export function DeletePhotoDialog({ open, busy, mozaik, onCancel, onConfirm }: { open: boolean; busy: boolean; mozaik: boolean; onCancel: () => void; onConfirm: () => void }) {
   return <ConfirmDialog open={open} onCancel={onCancel} onConfirm={onConfirm} tone="danger" icon={<Trash2 />} title="Hapus foto ini?"

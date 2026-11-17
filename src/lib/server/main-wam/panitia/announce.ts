@@ -6,9 +6,9 @@ import { databaseError } from "../../http";
 import { mwMissing } from "../errors";
 import type { MainWamContext } from "../gate";
 import { mainWamAudience, sendMainWamNote } from "../notes";
-import { mainWamPeople } from "../people";
+import { mainWamEventPeople, mainWamPeople } from "../people";
 import { listGroups } from "../read";
-import { db, eventPeople } from "./common";
+import { db } from "./common";
 import { waitingUpdate } from "./rundown";
 
 /*
@@ -29,7 +29,7 @@ export type AnnounceData = { migrated: boolean; counts: AudienceCounts; sent: Se
 
 /** How many each choice reaches now (within the people Main WAM is on for). */
 async function audienceCounts(context: MainWamContext): Promise<AudienceCounts> {
-  const [within, people, groups, roles] = await Promise.all([mainWamAudience(context.settings), mainWamPeople(), listGroups(), eventPeople()]);
+  const [within, people, groups, roles] = await Promise.all([mainWamAudience(context.settings), mainWamPeople(), listGroups(), mainWamEventPeople()]);
   const inside = new Set(within);
   const departments = new Map<string, number>();
   for (const id of within) {

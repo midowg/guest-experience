@@ -14,7 +14,7 @@ import css from "../modul.module.css";
 
 export type ApprovalData = {
   categories: MwAwardCategory[];
-  /** Votes per nominee (category → nominee → count), aggregates only. */
+  /** Votes per nominee (category → nominee → count), aggregates only, of closed voting only (audit M1). */
   counts: Record<string, Record<string, number>>;
   nominees: Record<string, NomineeView>;
   approvals: Record<string, MwAwardApproval>;
@@ -27,7 +27,8 @@ const short = (nominee: NomineeView | undefined) => (nominee ? (nominee.kind ===
 const clock = (iso: string) => wibTime(iso).replace(":", ".");
 
 /**
- * B06 Persetujuan awarding (BOD): per category the count (aggregates, no voters), "Setujui <top>"
+ * B06 Persetujuan awarding (BOD): per closed category the count (aggregates, no voters; nothing
+ * while voting is open, audit M1), "Setujui <top>"
  * or "Pilih lain" (a sheet of every nominee), and once approved who did and when. A tie at the top
  * asks the BOD to choose. Panitia are told after each approval (toast "Panitia diberi kabar.").
  */
@@ -79,7 +80,9 @@ export function AwardApproval({ data, now: nowIso, preview }: { data: ApprovalDa
         const voting = category.method === "voting";
         const total = totalVotes(rows);
         const state = approvalCard(category, approvalMap.get(category.id), now);
-        const sub = voting ? `${total.toLocaleString("id-ID")} suara` : methodLabel(category);
+        // A count only once voting closed; while open or before, how it is decided.
+        const counted = voting && state.kind !== "voting-buka" && state.kind !== "voting-belum";
+        const sub = counted ? `${total.toLocaleString("id-ID")} suara` : methodLabel(category);
         const photos = category.nomineeKind === "foto";
         if (state.kind === "disetujui") {
           const winner = nominee(state.approval.nomineeId);
@@ -106,7 +109,7 @@ export function AwardApproval({ data, now: nowIso, preview }: { data: ApprovalDa
               </div>;
             })}</div>
             : <div className={css.rankRows}>{top.map(row => <Ranked key={row.nominee.id} nominee={nominee(row.nominee.id)} rank={row.rank} votes={row.votes} />)}</div>)}
-          {voting && state.kind !== "voting-belum" && total === 0 && <p className={css.cardNote}>Belum ada suara.</p>}
+          {counted && total === 0 && <p className={css.cardNote}>Belum ada suara.</p>}
           {state.kind === "perlu" && <div className={css.cardActions}>
             {voting && top[0] && !tied
               ? <>
@@ -118,7 +121,7 @@ export function AwardApproval({ data, now: nowIso, preview }: { data: ApprovalDa
                 <Button variant="tonal" block onClick={() => setPicking(category.id)}>Pilih pemenang</Button>
               </>}
           </div>}
-          {state.kind === "voting-buka" && <p className={css.cardNote}>{`Bisa disetujui setelah ${when(state.closesAt, now)}.`}</p>}
+          {state.kind === "voting-buka" && <p className={css.cardNote}>{`Perolehan suara dan persetujuan setelah ${when(state.closesAt, now)}.`}</p>}
         </Card>;
       })}
     </Stack>

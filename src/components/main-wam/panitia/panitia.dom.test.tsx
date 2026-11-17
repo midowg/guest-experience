@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ToastProvider } from "@/components/main-wam/ui";
 import { mainWamPath } from "@/lib/routes";
 import { sampleSessionIds } from "@/lib/main-wam/sample";
@@ -41,6 +41,8 @@ function fakeApi(overrides: Partial<PanitiaApi> = {}): PanitiaApi {
     ...overrides,
   };
 }
+/** Lets the kit's history steps finish (jsdom moves through history asynchronously, as browsers do). */
+const settle = (ms = 40) => act(() => new Promise<void>(resolve => { window.setTimeout(resolve, ms); }));
 const withApi = (api: PanitiaApi, node: ReactNode) => render(<ToastProvider><PanitiaApiContext.Provider value={api}>{node}</PanitiaApiContext.Provider></ToastProvider>);
 const rundown = (api: PanitiaApi, variant: "awal" | "silent-dibuka" = "awal", now = "2027-01-05T10:15:00+07:00") => withApi(api,
   <RundownLive migrated day={2} days={sampleDays(2, mainWamPath.rundownLive)} sessions={rundownSessions(variant)} history={rundownHistory} recipients={122} now={now} me="Dimas" />);
@@ -98,13 +100,92 @@ describe("Rundown live (K02) and Ubah jam (K03)", () => {
     expect(api.refresh).toHaveBeenCalled();
   });
 
+  it("hands focus back to the row's Ubah jam when the sheet closes, and starts over when it opens again (audit T-K01)", async () => {
+    rundown(fakeApi());
+    const opener = screen.getByRole("button", { name: "Ubah jam Pemaparan departemen" });
+    opener.focus();
+    fireEvent.click(opener);
+    const sheet = screen.getByRole("dialog", { name: "Ubah jam · Pemaparan departemen" });
+    expect(sheet.contains(document.activeElement)).toBe(true);
+    fireEvent.change(within(sheet).getByLabelText("Selesai"), { target: { value: "12.30" } });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Batal" }));
+    expect(screen.queryByRole("dialog", { name: "Ubah jam · Pemaparan departemen" })).toBeNull();
+    expect(document.activeElement).toBe(opener);
+    await settle();
+    // Esc closes too, and focus comes back the same way; the typed time is not kept.
+    fireEvent.click(opener);
+    const again = screen.getByRole("dialog", { name: "Ubah jam · Pemaparan departemen" });
+    expect((within(again).getByLabelText("Selesai") as HTMLInputElement).value).toBe("12.00");
+    fireEvent.keyDown(again, { key: "Escape" });
+    expect(document.activeElement).toBe(opener);
+    await settle();
+    expect((window.history.state as { mwSheet?: string } | null)?.mwSheet).toBeUndefined();
+  });
+
+  it("goes from the session menu straight to a dialog or a sheet, without a stand-in (afterModal removed)", async () => {
+    const api = fakeApi();
+    rundown(api);
+    const menu = screen.getByRole("button", { name: "Pilihan sesi Makan siang" });
+    menu.focus();
+    fireEvent.click(menu);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Makan siang" })).getByRole("button", { name: "Batalkan sesi" }));
+    await settle();
+    // The menu let go of its history entry; the dialog took it over and is still open.
+    expect(screen.queryByRole("dialog", { name: "Makan siang" })).toBeNull();
+    const dialog = screen.getByRole("alertdialog", { name: "Batalkan sesi ini?" });
+    expect((window.history.state as { mwSheet?: string } | null)?.mwSheet).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Kembali" }));
+    expect(document.activeElement).toBe(menu);
+    await settle();
+    expect((window.history.state as { mwSheet?: string } | null)?.mwSheet).toBeUndefined();
+
+    fireEvent.click(menu);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Makan siang" })).getByRole("button", { name: "Pindah tempat" }));
+    await settle(80);
+    const sheet = screen.getByRole("dialog", { name: "Pindah tempat · Makan siang" });
+    fireEvent.change(within(sheet).getByLabelText("Tempat"), { target: { value: "Lawn" } });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Simpan" }));
+    await waitFor(() => expect(api.changeSession).toHaveBeenCalledWith(sampleSessionIds["makan-siang-2"], expect.objectContaining({ action: "tempat", place: "Lawn" })));
+  });
+
+  it("runs past midnight: Selesai at or before Mulai ends the next day, after asking (audit R10)", async () => {
+    const api = fakeApi();
+    rundown(api);
+    fireEvent.click(screen.getByRole("button", { name: "Ubah jam Batu Night Spectacular" }));
+    const sheet = screen.getByRole("dialog", { name: "Ubah jam · Batu Night Spectacular" });
+    fireEvent.change(within(sheet).getByLabelText("Selesai"), { target: { value: "00.30" } });
+    expect(within(sheet).getByText("Selesai besok, Rab, 6 Jan · 00.30")).toBeTruthy();
+    expect(within(sheet).queryByText("Jam selesai harus setelah jam mulai.")).toBeNull();
+    fireEvent.click(within(sheet).getByRole("button", { name: "Simpan" }));
+    const ask = screen.getByRole("alertdialog", { name: "Selesai keesokan harinya?" });
+    expect(within(ask).getByText("Batu Night Spectacular selesai Rab, 6 Jan · 00.30.")).toBeTruthy();
+    expect(api.changeSession).not.toHaveBeenCalled();
+    // Batal goes back to the sheet, nothing saved.
+    fireEvent.click(within(ask).getByRole("button", { name: "Batal" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Ubah jam · Batu Night Spectacular" })).toBeTruthy();
+    fireEvent.click(within(sheet).getByRole("button", { name: "Simpan" }));
+    fireEvent.click(within(screen.getByRole("alertdialog", { name: "Selesai keesokan harinya?" })).getByRole("button", { name: "Simpan" }));
+    await waitFor(() => expect(api.changeSession).toHaveBeenCalledWith(sampleSessionIds.bns, expect.objectContaining({
+      action: "jam", startsAt: new Date("2027-01-05T19:30:00+07:00").toISOString(), endsAt: new Date("2027-01-06T00:30:00+07:00").toISOString(),
+    })));
+    // Longer than 12 hours is a typo.
+    fireEvent.click(screen.getByRole("button", { name: "Ubah jam Batu Night Spectacular" }));
+    const typo = screen.getByRole("dialog", { name: "Ubah jam · Batu Night Spectacular" });
+    fireEvent.change(within(typo).getByLabelText("Selesai"), { target: { value: "11.00" } });
+    expect(within(typo).getByText("Jam selesai harus setelah jam mulai.")).toBeTruthy();
+  });
+
   it("closes an open Silent Meeting only after asking (area D's control)", async () => {
     const api = fakeApi();
     rundown(api, "silent-dibuka", "2027-01-05T14:40:00+07:00");
-    expect(screen.getByText("Dibuka · 41 masukan")).toBeTruthy();
+    // While open: its state only, never a count (audit H2).
+    expect(screen.getByText("Dibuka")).toBeTruthy();
+    expect(screen.queryByText(/masukan/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Tutup Silent Meeting" }));
     const dialog = screen.getByRole("alertdialog", { name: "Tutup sekarang?" });
-    expect(within(dialog).getByText("Peserta tidak bisa mengirim masukan lagi.")).toBeTruthy();
+    // Closing is final, and the dialog says so.
+    expect(within(dialog).getByText("Peserta tidak bisa mengirim masukan lagi. Silent Meeting tidak bisa dibuka lagi.")).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "Tutup" }));
     await waitFor(() => expect(api.silent).toHaveBeenCalledWith(expect.any(String), "tutup"));
   });
@@ -136,6 +217,36 @@ describe("Absen sesi (K05)", () => {
   });
 });
 
+describe("Absen sesi: Batalkan hadir (audit L8)", () => {
+  it("offers Batalkan hadir only for someone panitia recorded, never for a QR scan", async () => {
+    const data = attendanceData();
+    const sari = data.rows.find(row => row.name === "Sari")!;
+    const api = fakeApi({ setPresent: vi.fn(async () => ({ rows: data.rows.map(row => row.id === sari.id ? { ...row, checkedInAt: null, method: null } : row) })) });
+    withApi(api, <AbsenManual {...data} initialTab="hadir" />);
+    // Rani scanned the QR herself: her row is not a button.
+    expect(screen.getByText("Rani")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Rani/ })).toBeNull();
+    expect(screen.getByText("Ketuk nama yang dicatat panitia untuk membatalkan. Scan QR tidak bisa dibatalkan.")).toBeTruthy();
+    // Sari was recorded by panitia: her row opens Batalkan hadir; its name is what it shows (WCAG 2.5.3).
+    const row = screen.getByRole("button", { name: /^Sari/ });
+    expect(row.getAttribute("aria-label")).toBeNull();
+    fireEvent.click(row);
+    fireEvent.click(within(screen.getByRole("alertdialog", { name: "Batalkan hadir Sari?" })).getByRole("button", { name: "Batalkan hadir" }));
+    await waitFor(() => expect(api.setPresent).toHaveBeenCalledWith(data.session!.id, { employeeId: sari.id, present: false }));
+    await waitFor(() => expect(screen.getByText("Sari kembali ke Belum hadir")).toBeTruthy());
+  });
+
+  it("puts the row back and says why when the server refuses (a QR scan came in meanwhile)", async () => {
+    const data = attendanceData();
+    const api = fakeApi({ setPresent: vi.fn(async () => { throw new PanitiaError("Sari absen lewat scan QR. Absen ini tidak bisa dibatalkan panitia.", 409); }) });
+    withApi(api, <AbsenManual {...data} initialTab="hadir" />);
+    fireEvent.click(screen.getByRole("button", { name: /^Sari/ }));
+    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Batalkan hadir" }));
+    await waitFor(() => expect(screen.getByText("Sari absen lewat scan QR. Absen ini tidak bisa dibatalkan panitia.")).toBeTruthy());
+    expect(screen.getByText("08.10 · Dicatat panitia")).toBeTruthy();
+  });
+});
+
 describe("Kirim pengumuman (K06)", () => {
   it("asks for a title, then asks before sending to everyone", async () => {
     const api = fakeApi();
@@ -152,6 +263,26 @@ describe("Kirim pengumuman (K06)", () => {
     await waitFor(() => expect(screen.getByText("Terkirim ke 122 orang")).toBeTruthy());
     expect(api.announce).toHaveBeenCalledWith({ title: "Team building mulai 15.00 di Lawn", body: "Pakai kaos kelompok dan sepatu olahraga.", audience: { type: "semua" }, pinnedUntil: null });
     expect(api.navigate).toHaveBeenCalledWith(mainWamPath.home);
+  });
+
+  it("goes from a sent announcement straight to Hapus, and Batal hands focus back (afterModal removed)", async () => {
+    const api = fakeApi();
+    withApi(api, <AnnounceForm {...announceSample} now="2027-01-05T10:28:00+07:00" />);
+    const item = announceSample.sent[0];
+    const opener = screen.getByRole("button", { name: new RegExp(`^${item.title}`) });
+    opener.focus();
+    fireEvent.click(opener);
+    fireEvent.click(within(screen.getByRole("dialog", { name: item.title })).getByRole("button", { name: "Hapus" }));
+    await settle();
+    const dialog = screen.getByRole("alertdialog", { name: "Hapus pengumuman ini?" });
+    expect(screen.queryByRole("dialog", { name: item.title })).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Batal" }));
+    expect(document.activeElement).toBe(opener);
+    await settle();
+    fireEvent.click(opener);
+    fireEvent.click(within(screen.getByRole("dialog", { name: item.title })).getByRole("button", { name: "Hapus" }));
+    fireEvent.click(within(screen.getByRole("alertdialog", { name: "Hapus pengumuman ini?" })).getByRole("button", { name: "Hapus pengumuman" }));
+    await waitFor(() => expect(api.removeAnnouncement).toHaveBeenCalledWith(item.id));
   });
 
   it("sends to the chosen kelompok and pins until a time", async () => {
@@ -171,19 +302,49 @@ describe("Kirim pengumuman (K06)", () => {
 });
 
 describe("Moderasi Momen (K08)", () => {
-  it("hides only after asking and moves the card to Disembunyikan; shows again at once", async () => {
+  it("hides only after asking, with an optional reason, and moves the card to Disembunyikan; shows again at once", async () => {
     const api = fakeApi();
     withApi(api, <Moderation migrated now="2027-01-05T10:16:00+07:00" reported={moderationReported} hidden={moderationHidden} />);
     expect(screen.getByRole("radio", { name: "Dilaporkan (3)" })).toBeTruthy();
     expect(screen.getByText("Hana · Kelompok 7 · 09.40")).toBeTruthy();
     expect(screen.getByText("Saya ada di foto ini dan tidak setuju · 2")).toBeTruthy();
     fireEvent.click(within(screen.getByRole("article", { name: "Foto dari Hana" })).getByRole("button", { name: "Sembunyikan" }));
-    fireEvent.click(within(screen.getByRole("alertdialog", { name: "Sembunyikan foto ini?" })).getByRole("button", { name: "Sembunyikan" }));
+    const ask = screen.getByRole("dialog", { name: "Sembunyikan foto ini?" });
+    expect(within(ask).getByText("Pengunggah diberi kabar dengan alasan: Ada rekan yang tidak setuju.")).toBeTruthy();
+    // A quick reason (one at a time) and a note, both optional (audit L8).
+    const reasons = within(ask).getByRole("group", { name: "Alasan (opsional)" });
+    fireEvent.click(within(reasons).getByRole("button", { name: "Data pribadi" }));
+    fireEvent.click(within(reasons).getByRole("button", { name: "Tidak pantas" }));
+    expect(within(reasons).getByRole("button", { name: "Tidak pantas" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(reasons).getByRole("button", { name: "Data pribadi" }).getAttribute("aria-pressed")).toBe("false");
+    fireEvent.change(within(ask).getByLabelText(/Catatan/), { target: { value: " Ada nomor kamar " } });
+    fireEvent.click(within(ask).getByRole("button", { name: "Sembunyikan" }));
     await waitFor(() => expect(screen.getByRole("radio", { name: "Disembunyikan (2)" })).toBeTruthy());
-    expect(api.moderate).toHaveBeenCalledWith(moderationReported[0].id, { action: "sembunyikan", from: "ditinjau" });
+    expect(api.moderate).toHaveBeenCalledWith(moderationReported[0].id, { action: "sembunyikan", from: "ditinjau", reason: "tidak_pantas", note: "Ada nomor kamar" });
+    fireEvent.click(screen.getByRole("radio", { name: "Disembunyikan (2)" }));
+    expect(screen.getByText(/^Disembunyikan · .+ · Tidak pantas · Ada nomor kamar$/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "Dilaporkan (2)" }));
     fireEvent.click(within(screen.getByRole("article", { name: "Foto dari Putri" })).getByRole("button", { name: "Tampilkan lagi" }));
     await waitFor(() => expect(screen.getByText("Foto tampil lagi")).toBeTruthy());
     expect(api.moderate).toHaveBeenLastCalledWith(moderationReported[1].id, { action: "tampilkan", from: "tampil" });
+  });
+
+  it("deletes without a reason too, and the hidden card says who hid it and why", async () => {
+    const api = fakeApi();
+    withApi(api, <Moderation migrated now="2027-01-05T10:16:00+07:00" reported={[]} hidden={moderationHidden} tab="disembunyikan" />);
+    expect(screen.getByText("Disembunyikan Dimas · 09.05 · Tidak pantas")).toBeTruthy();
+    const opener = within(screen.getByRole("article", { name: "Foto dari Nina" })).getByRole("button", { name: "Hapus" });
+    opener.focus();
+    fireEvent.click(opener);
+    const ask = screen.getByRole("dialog", { name: "Hapus foto ini?" });
+    // Batal: nothing happens, focus back on Hapus.
+    fireEvent.click(within(ask).getByRole("button", { name: "Batal" }));
+    expect(api.moderate).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(opener);
+    fireEvent.click(opener);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Hapus foto ini?" })).getByRole("button", { name: "Hapus foto" }));
+    await waitFor(() => expect(screen.getByText("Foto dihapus")).toBeTruthy());
+    expect(api.moderate).toHaveBeenCalledWith(moderationHidden[0].id, { action: "hapus", from: "disembunyikan", reason: null, note: "" });
   });
 
   it("says Tidak ada laporan. when the queue is empty", () => {
@@ -195,7 +356,7 @@ describe("Moderasi Momen (K08)", () => {
 describe("Beranda cards (K01, B01)", () => {
   it("draws Kelola and Perlu perhatian as links, with the reports said in words", () => {
     render(<KelolaCards tiles={panitiaHome.tiles} attention={panitiaHome.attention} />);
-    expect(screen.getByRole("link", { name: "Moderasi, 3 laporan" }).getAttribute("href")).toBe(mainWamPath.moderation());
+    expect(screen.getByRole("link", { name: /^Moderasi\s*, 3 laporan$/ }).getAttribute("href")).toBe(mainWamPath.moderation());
     expect(screen.getByRole("link", { name: /8 orang belum absen/ }).getAttribute("href")).toBe(mainWamPath.attendanceManual(sampleSessionIds.pemaparan));
     cleanup();
     render(<KelolaCards tiles={panitiaHome.tiles} attention={[]} />);
@@ -204,12 +365,19 @@ describe("Beranda cards (K01, B01)", () => {
 
   it("draws Ringkasan's rows; Jejak karbon is a number, not a link", () => {
     render(<RingkasanCard rows={bodRows.biasa} />);
-    expect(screen.getByRole("link", { name: "Kehadiran hari ini, 93%" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Awarding perlu persetujuan, 2" }).getAttribute("href")).toBe(mainWamPath.awardApproval);
+    // A row's name is its visible text, no separate label (WCAG 2.5.3, audit T-S05).
+    expect(screen.getByRole("link", { name: /^Kehadiran hari ini\s*93%$/ }).getAttribute("aria-label")).toBeNull();
+    expect(screen.getByRole("link", { name: /^Awarding perlu persetujuan\s*2$/ }).getAttribute("href")).toBe(mainWamPath.awardApproval);
     expect(screen.getByText("13,6")).toBeTruthy();
     expect(screen.queryByRole("link", { name: /Jejak karbon/ })).toBeNull();
     cleanup();
     render(<RingkasanCard rows={bodRows.kosong} />);
     expect(screen.getAllByText("Belum ada").length).toBe(3);
+    cleanup();
+    // A small Jejak karbon is in kilograms, never "0,0 t" (audit R16).
+    render(<RingkasanCard rows={bodRows.karbonKecil} />);
+    expect(screen.getByText("46")).toBeTruthy();
+    expect(screen.getByText("kg CO₂e")).toBeTruthy();
+    expect(screen.queryByText("0,0")).toBeNull();
   });
 });

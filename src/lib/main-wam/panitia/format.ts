@@ -60,3 +60,13 @@ export const percent = (part: number, whole: number) => (whole > 0 ? Math.round(
 
 /** Tonnes with one decimal, Indonesian style: 13.6 → "13,6". */
 export const tonnes = (value: number) => value.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+/**
+ * Jejak karbon for a person to read: tonnes with one decimal from 0,1 t ("13,6 t CO₂e"), kilograms
+ * below it ("45 kg CO₂e"), so a small total never reads "0,0 t" (audit R16).
+ */
+export function carbonAmount(kg: number): { value: string; unit: string } {
+  const wholeKg = Math.round(kg);
+  if (wholeKg >= 100) return { value: tonnes(Math.round(kg / 100) / 10), unit: "t CO₂e" };
+  return { value: wholeKg < 1 ? "<1" : count(wholeKg), unit: "kg CO₂e" };
+}

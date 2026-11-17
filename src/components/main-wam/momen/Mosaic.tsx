@@ -113,7 +113,7 @@ export function Mosaic({ initial, mark: markAtStart, title, demo }: { initial: M
         <p className={css.caption}>Foto baru tetap tampil di Momen.</p>
       </div>
       : <div className={css.progress}>
-        <ProgressBar label={`${number(manifest.filled)} dari ${number(manifest.total)} foto`} valueText={`${percent}%`} value={manifest.filled} max={manifest.total} />
+        <ProgressBar labelSize="subtitle" label={`${number(manifest.filled)} dari ${number(manifest.total)} foto`} valueText={`${percent}%`} value={manifest.filled} max={manifest.total} />
         <p className={css.caption}>{number(manifest.people)} orang ikut menyusun · diperbarui {wibTime(manifest.updatedAt).replace(":", ".")}</p>
       </div>}
 

@@ -74,5 +74,11 @@ export function pickAttendanceSession<T extends Pick<MwSession, "id" | "startsAt
   return [...sorted].reverse().find(session => Date.parse(sessionEnd(session)) <= now.getTime()) ?? sorted[0];
 }
 
+/**
+ * Panitia may take back only what panitia recorded ("Dicatat panitia"): a person's own QR scan
+ * stays (audit L8).
+ */
+export const mayUndo = (row: Pick<AttendeeRow, "checkedInAt" | "method">) => !!row.checkedInAt && row.method === "manual";
+
 /** Panitia may record someone present from the moment the window opens (also after it closes: a correction). */
 export const mayRecord = (session: Pick<MwSession, "startsAt" | "endsAt">, now: Date) => checkInState(session, now) !== "belum";

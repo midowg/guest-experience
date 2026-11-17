@@ -1,5 +1,5 @@
 import "server-only";
-import { silentState } from "@/lib/main-wam/module-state";
+import { silentShownCount, silentState, type SilentResult } from "@/lib/main-wam/module-state";
 import { clock, shortDate } from "@/lib/main-wam/panitia/format";
 import { describeChange, liveOfDay, planShift, scheduleNotice, type LiveSession } from "@/lib/main-wam/panitia/rundown";
 import type { RundownChangeInput } from "@/lib/main-wam/panitia/schemas";
@@ -13,7 +13,7 @@ import { mwMissing } from "../errors";
 import type { MainWamContext } from "../gate";
 import { mainWamAudience, sendMainWamNote } from "../notes";
 import { mainWamPeople } from "../people";
-import { rundownLog, silentFeedbackCount, silentQuestions } from "../read";
+import { rundownLog, silentQuestions, silentResults } from "../read";
 import { db } from "./common";
 
 /*
@@ -63,15 +63,15 @@ export async function rundownLiveData(context: MainWamContext, asked: string | n
   const { settings } = context;
   const day = agendaDay(asked, wibDate(now.toISOString()), settings.event);
   const date = eventDates(settings.event)[day - 1];
-  const [sessions, people, log, audience, questions] = await Promise.all([
+  const [sessions, people, log, audience, questions, results] = await Promise.all([
     sessionsWithVersion(), mainWamPeople(), rundownLog(undefined, 50),
     mainWamAudience(settings).then(ids => ids.length).catch(() => 0),
     settings.modules.silent ? silentQuestions() : Promise.resolve({ data: [], migrated: true }),
+    // Counts of closed Silent Meetings only (never of an open one, audit H2).
+    settings.modules.silent ? silentResults().catch(() => ({ data: new Map<string, SilentResult>(), migrated: false })) : Promise.resolve({ data: new Map<string, SilentResult>(), migrated: true }),
   ]);
   const nameOf = (id: string | null) => (id ? people.get(id)?.name ?? null : null);
   const ofDay = date ? liveOfDay(sessions.data, date) : [];
-  const counts = new Map(await Promise.all(questions.data.filter(question => ofDay.some(session => session.id === question.sessionId))
-    .map(async question => [question.id, (await silentFeedbackCount(question.id)).data] as const)));
   const titles = new Map(sessions.data.map(session => [session.id, session.title]));
   return {
     migrated: sessions.migrated, day, now: now.toISOString(), recipients: audience,
@@ -81,7 +81,7 @@ export async function rundownLiveData(context: MainWamContext, asked: string | n
       return {
         id: session.id, title: session.title, kind: session.kind, status: session.status, startsAt: session.startsAt, endsAt: session.endsAt,
         place: session.place, optional: session.optional, changedAt: session.changedAt, version: session.version, changedByName: nameOf(session.changedBy),
-        silent: question ? { questionId: question.id, state: silentState(question, session, now), count: counts.get(question.id) ?? 0, override: question.override } : null,
+        silent: question ? { questionId: question.id, state: silentState(question, session, now), count: silentShownCount(results.data.get(question.id)) } : null,
       };
     }),
     history: log.data.map(entry => ({

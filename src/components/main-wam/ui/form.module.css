@@ -16,8 +16,13 @@
   border-radius: var(--mw-radius-12); background: var(--mw-surface); box-shadow: inset 0 0 0 1px var(--mw-outline-strong); color: var(--mw-text-1);
 }
 .box > svg { flex: none; width: 20px; height: 20px; color: var(--mw-text-3); }
+/* The box draws the focus ring (inset 2, primary). The control in it draws none (the theme's
+   :focus-visible outline would be a second ring inside the first). (0,3,0) beats the theme. */
 .box:focus-within { box-shadow: inset 0 0 0 2px var(--mw-primary); }
-.boxError, .boxError:focus-within { box-shadow: inset 0 0 0 2px var(--mw-error); }
+.box > .control:focus, .box > .control:focus-visible, .box.select:focus-visible { outline: none; }
+.boxError { box-shadow: inset 0 0 0 2px var(--mw-error); }
+/* Error and focused: the red line stays, a soft red halo shows that it has focus. */
+.boxError:focus-within { box-shadow: inset 0 0 0 2px var(--mw-error), 0 0 0 4px color-mix(in srgb, var(--mw-error) 28%, transparent); }
 .boxDisabled { background: var(--mw-surface-2); box-shadow: inset 0 0 0 1px var(--mw-outline); color: var(--mw-text-3); }
 .control {
   flex: 1 1 auto; min-width: 0; height: 46px; padding: 0; border: 0; outline: 0; background: transparent;
@@ -35,7 +40,6 @@
 
 /* A field that opens a sheet of choices: looks like an input, ends with ▾. */
 .select { text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.select:focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
 .selectValue { flex: 1 1 auto; min-width: 0; font: var(--mw-type-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .placeholder { color: var(--mw-text-3); }
 .select > svg:last-child { color: var(--mw-text-2); }

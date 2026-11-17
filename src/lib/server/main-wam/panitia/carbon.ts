@@ -4,7 +4,8 @@ import { wibDate } from "@/lib/main-wam/rundown";
 import type { MainWamSettings } from "@/lib/main-wam/types";
 import { currentForm } from "../../pra-wam/questionnaire";
 import { allSessions, listTrips } from "../read";
-import { db, eventPeople } from "./common";
+import { mainWamEventPeople } from "../people";
+import { db } from "./common";
 
 /*
  * Jejak karbon from what Admin WAM already holds (no form for anyone): the event's people, the
@@ -35,11 +36,11 @@ async function seatsPerTrip(): Promise<Map<string, number>> {
 
 export async function carbonForEvent(settings: MainWamSettings): Promise<CarbonResult | null> {
   try {
-    const [people, rooms, trips, seats, sessions] = await Promise.all([eventPeople(), roomsInUse(), listTrips(), seatsPerTrip(), allSessions()]);
+    const [people, rooms, trips, seats, sessions] = await Promise.all([mainWamEventPeople(), roomsInUse(), listTrips(), seatsPerTrip(), allSessions()]);
     const first = settings.event.checkInAt ? wibDate(settings.event.checkInAt) : settings.event.startDate;
     const last = settings.event.checkOutAt ? wibDate(settings.event.checkOutAt) : settings.event.endDate;
     const result = carbonEstimate(carbonDataFrom({
-      people: people.ids.length, rooms, nights: nightsBetween(first, last), trips: trips.data, seats, sessions: sessions.data, bills: settings.carbon,
+      people: people.accounts.length, rooms, nights: nightsBetween(first, last), trips: trips.data, seats, sessions: sessions.data, bills: settings.carbon,
     }));
     return result.empty ? null : result;
   } catch { return null; }

@@ -2,10 +2,11 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ToastProvider } from "@/components/main-wam/ui";
 import { draftKey } from "@/lib/main-wam/modul/silent";
-import { at, sampleNominees, sampleSilentView } from "@/lib/main-wam/modul/sample";
+import { at, sampleNominees, sampleRecap, sampleSilentView } from "@/lib/main-wam/modul/sample";
 import { sampleAwards } from "@/lib/main-wam/sample";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import { NomineePicker } from "./awards/NomineePicker";
+import { SilentRecapView } from "./bod/SilentRecapView";
 import { AbsenView, ModuleActionView } from "./SessionViews";
 import { SilentForm } from "./silent/SilentForm";
 
@@ -45,8 +46,11 @@ const renderForm = (remaining = 10) => render(<ToastProvider><SilentForm view={v
 
 describe("Kirim masukan (Silent Meeting)", () => {
   it("keeps Kirim off while empty, sends the text and topic without a name, and shows Masukan terkirim", async () => {
-    answer = () => ({ status: 200, body: { ok: true, data: { sent: 1, remaining: 9 }, message: "Masukan terkirim." } });
+    answer = () => ({ status: 200, body: { ok: true, data: { remaining: 9 }, message: "Masukan terkirim." } });
     renderForm();
+    // Opening the form is told on its own, with the question only (the threshold's 5 people, audit H1).
+    await waitFor(() => expect(calls).toEqual([{ url: mainWamApi.silent, method: "POST", body: { questionId: view.question.id } }]));
+    calls = [];
     expect(screen.getByText("Dibuka · sampai 15.00")).toBeTruthy();
     const send = screen.getByRole("button", { name: "Kirim" });
     expect(send).toHaveProperty("disabled", true);
@@ -102,7 +106,7 @@ describe("Kirim masukan (Silent Meeting)", () => {
     renderForm(0);
     fireEvent.change(screen.getByLabelText("Masukanmu"), { target: { value: "Lagi" } });
     expect(screen.getByRole("button", { name: "Kirim" })).toHaveProperty("disabled", true);
-    expect(screen.getByText("Kamu sudah mengirim semua masukan untuk sesi ini.")).toBeTruthy();
+    expect(screen.getByText("Sudah banyak terkirim. Tunggu beberapa menit untuk mengirim lagi.")).toBeTruthy();
   });
 });
 
@@ -162,5 +166,29 @@ describe("Detail sesi slots", () => {
     render(<ToastProvider><ModuleActionView slot={{ action: { kind: "silent-buka", href: mainWamPath.silentMeeting("s"), closesAt: "2027-01-05T08:00:00Z" }, qr: null }} /></ToastProvider>);
     expect(screen.getByText("Tanpa nama · sampai 15.00")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Kirim masukan" }).getAttribute("href")).toBe(mainWamPath.silentMeeting("s"));
+  });
+});
+
+describe("Rekap Silent Meeting (B05)", () => {
+  it("shows no number while open, nor once closed below 5 of 5 (audit H2)", () => {
+    const { rerender } = render(<SilentRecapView recap={sampleRecap("buka")} />);
+    expect(screen.getByText("Rekap tampil setelah ditutup")).toBeTruthy();
+    expect(screen.queryByText(/^\d+ masukan$/)).toBeNull();
+    rerender(<SilentRecapView recap={sampleRecap(false)} />);
+    expect(screen.getByText("Masukan belum cukup untuk rekap")).toBeTruthy();
+    expect(screen.queryByText(/^\d+ masukan$/)).toBeNull();
+  });
+
+  it("shows 20 at a time with Tampilkan lagi, and the topic filter on top (UX T-K02)", () => {
+    render(<SilentRecapView recap={sampleRecap(true)} />);
+    expect(screen.getByText("47 masukan")).toBeTruthy();
+    expect(screen.getAllByRole("article")).toHaveLength(20);
+    fireEvent.click(screen.getByRole("button", { name: "Tampilkan lagi (27)" }));
+    expect(screen.getAllByRole("article")).toHaveLength(40);
+    fireEvent.click(screen.getByRole("button", { name: "Tampilkan lagi (7)" }));
+    expect(screen.getAllByRole("article")).toHaveLength(47);
+    expect(screen.queryByRole("button", { name: /Tampilkan lagi/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Lainnya" }));
+    expect(screen.getAllByRole("article")).toHaveLength(5);
   });
 });

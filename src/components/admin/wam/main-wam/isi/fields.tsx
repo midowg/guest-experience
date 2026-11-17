@@ -1,11 +1,13 @@
 "use client";
 
 import { useId, useMemo, useState, type ReactNode } from "react";
+import { PageTabs } from "@/components/console";
 import { Notice } from "@/components/ui";
 import { AdminApiError, errorMessage } from "@/components/admin/shared/api";
 import type { AdminPerson } from "@/lib/main-wam/admin/people";
 import { shortDate } from "@/lib/main-wam/admin/labels";
 import { amountText, parseAmount } from "@/lib/main-wam/admin/tsv";
+import { mainWamContentTabs } from "../tabs";
 import css from "./isi.module.css";
 
 /* Small form pieces shared by the isi acara sheets (agen E). Labels above, errors in words. */
@@ -135,7 +137,18 @@ export function useRun(setMessage: (message: Message) => void) {
   return { busy, run };
 }
 
-/** "Main WAM menunggu pembaruan sistem": before the migration nothing can be saved, the page says so plainly. */
-export function Waiting({ what, migration }: { what: string; migration: string }) {
-  return <Notice tone="warning">{what} menunggu pembaruan sistem (migrasi {migration}). Sampai itu dijalankan, isinya belum bisa disimpan.</Notice>;
+/**
+ * "Menunggu pembaruan sistem": before the migration nothing can be saved, and the page says so in
+ * plain words, without file names (audit T-A01; the server's log names the migration).
+ */
+export function Waiting({ what }: { what: string }) {
+  return <Notice tone="warning">{what} menunggu pembaruan sistem, jadi isinya belum bisa disimpan. Hubungi tim CoE.</Notice>;
+}
+
+/**
+ * The isi acara tabs (Rundown · Kelompok · Kamar · Perjalanan · Panduan · Info acara). On a phone
+ * they wrap to a second line instead of running off the edge unseen (audit T-A04).
+ */
+export function ContentTabs({ current }: { current: string }) {
+  return <div className={css.tabStrip}><PageTabs tabs={mainWamContentTabs} current={current} label="Isi acara" /></div>;
 }

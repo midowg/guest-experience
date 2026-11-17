@@ -25,14 +25,24 @@ export function BerandaSkeleton() {
   </ScreenContent>;
 }
 
+/**
+ * Agenda's own shape (audit T-P04): the four day tabs (56 high, in the same bar as the real ones)
+ * and rows as tall as SessionRow (72: start and end time, the rail's dot, title and place), so
+ * nothing moves when the day comes in.
+ */
 export function AgendaSkeleton() {
   return <ScreenContent>
     <SkeletonGroup label="Memuat agenda" className={css.skeletonStack}>
-      <Skeleton shape="block" height={56} />
-      <div className={css.skeletonRows}>
-        {[70, 55, 80, 60, 65].map((width, index) => <div key={index} className={css.skeletonRow}>
-          <Skeleton width={44} />
-          <span><Skeleton width={`${width}%`} /><Skeleton width={`${width - 25}%`} /></span>
+      <div className={css.dayBar}>
+        <div className={`${css.dayTabs} ${css.skeletonTabs}`}>
+          {[0, 1, 2, 3].map(day => <Skeleton key={day} shape="block" height={56} />)}
+        </div>
+      </div>
+      <div className={css.skeletonSessions}>
+        {[70, 55, 80, 60, 65].map((width, index) => <div key={index} className={css.skeletonSession}>
+          <span className={css.skeletonTime}><Skeleton width={40} /><Skeleton width={34} height={12} /></span>
+          <span className={css.skeletonDot}><Skeleton shape="circle" width={12} height={12} /></span>
+          <span className={css.skeletonBody}><Skeleton width={`${width}%`} height={18} /><Skeleton width={`${width - 25}%`} /></span>
         </div>)}
       </div>
     </SkeletonGroup>

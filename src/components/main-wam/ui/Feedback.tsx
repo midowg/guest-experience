@@ -1,12 +1,13 @@
 import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
-import { ChevronRight, CircleAlert, CircleCheck, Info, LoaderCircle, TriangleAlert, WifiOff } from "lucide-react";
+import { ChevronRight, CircleAlert, CircleCheck, CloudOff, Info, LoaderCircle, TriangleAlert } from "lucide-react";
 import { IconBox } from "./Card";
 import { cx, KitIcon, Pressable, type ActionProps, type IconProp } from "./Pressable";
 import shared from "./shared.module.css";
 import css from "./feedback.module.css";
 
 export type BannerTone = "info" | "offline" | "warning" | "error" | "success";
-const BANNER_ICON: Record<BannerTone, IconProp> = { info: Info, offline: WifiOff, warning: TriangleAlert, error: CircleAlert, success: CircleCheck };
+/** Offline = cloud-off everywhere (DESIGN_SYSTEM §0.3; Beranda and Agenda draw the same). */
+const BANNER_ICON: Record<BannerTone, IconProp> = { info: Info, offline: CloudOff, warning: TriangleAlert, error: CircleAlert, success: CircleCheck };
 
 /**
  * Banner (DS #39): something the person should know on this screen, pushed in under the top bar

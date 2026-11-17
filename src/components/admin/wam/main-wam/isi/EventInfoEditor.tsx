@@ -1,16 +1,14 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Card, ConsoleButton, PageHeader, PageTabs, Pill, type Crumb } from "@/components/console";
+import { Card, ConsoleButton, PageHeader, Pill, type Crumb } from "@/components/console";
 import { adminRequest } from "@/components/admin/shared/api";
 import { shortDate } from "@/lib/main-wam/admin/labels";
 import { carbonFilled, carbonInputSchema, eventInfoOf, eventInfoSchema, type EventInfoInput } from "@/lib/main-wam/admin/event-info";
 import type { AdminPerson } from "@/lib/main-wam/admin/people";
-import { MAIN_WAM_MIGRATION } from "@/lib/main-wam/settings";
 import type { CarbonInputs, MainWamContacts, MainWamSettings } from "@/lib/main-wam/types";
-import { mainWamAdminApi } from "@/lib/routes";
-import { mainWamContentTabs } from "../tabs";
-import { described, Field, MessageLine, NumberInput, PersonSelect, problemsOf, SwitchRow, useRun, Waiting, type Message, type Problems } from "./fields";
+import { mainWamAdminApi, wamAdminPath } from "@/lib/routes";
+import { ContentTabs, described, Field, MessageLine, NumberInput, PersonSelect, problemsOf, SwitchRow, useRun, Waiting, type Message, type Problems } from "./fields";
 import css from "./isi.module.css";
 
 type Stay = { date: string; time: string } | null;
@@ -91,8 +89,8 @@ export function EventInfoEditor({ initial, people, crumbs, title }: { initial: M
 
   return <div className={css.page}>
     <PageHeader crumbs={crumbs} title={title} subtitle="Hotel, check-in dan check-out, kontak panitia, dan tagihan hotel untuk Jejak karbon." />
-    <PageTabs tabs={mainWamContentTabs} current="info" label="Isi acara" />
-    {!settings.migrated && <Waiting what="Info acara" migration={MAIN_WAM_MIGRATION} />}
+    <ContentTabs current="info" />
+    {!settings.migrated && <Waiting what="Info acara" />}
     <MessageLine message={message} />
     <div className={css.cards}>
       <Card title="Acara" id={`${id}-acara`}>
@@ -102,7 +100,7 @@ export function EventInfoEditor({ initial, people, crumbs, title }: { initial: M
         <Field id={`${id}-venue`} label="Kota" optional error={problems.venue}>
           <input className="input" {...described(`${id}-venue`, problems.venue)} value={event.venue} maxLength={150} placeholder="mis. Kota Batu" disabled={!settings.migrated} onChange={change => { setEvent({ ...event, venue: change.target.value }); setProblems({}); }} />
         </Field>
-        <p className={css.small}>Tanggal acara: {shortDate(settings.event.startDate)} sampai {shortDate(settings.event.endDate)}, dari Acara dan modul (WAM 2027).</p>
+        <p className={css.small}>Tanggal acara: {shortDate(settings.event.startDate)} sampai {shortDate(settings.event.endDate)}. Diatur di <a href={wamAdminPath.events}>Acara dan modul</a>.</p>
         <div className={css.cardActions}>
           {saveButton("acara", () => void save("acara", event))}
         </div>

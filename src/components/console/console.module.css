@@ -229,7 +229,11 @@
 /* Touch screens: every control is at least 44 px tall. */
 @media (pointer: coarse) {
   .item, .search, .button, .searchInput, .chip { min-height: 44px; }
-  .segment { min-height: 38px; }
+}
+/* Phones (a touch screen, or a narrow window): segmented choices and the menu's group titles are
+   touch targets too (audit Main WAM T-A05); a laptop with a mouse keeps the compact sizes. */
+@media (pointer: coarse), (max-width: 37.5rem) {
+  .segment, .groupHead { min-height: 44px; }
 }
 
 /* ---------- Pills and avatars ---------- */

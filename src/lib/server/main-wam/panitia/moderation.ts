@@ -1,5 +1,5 @@
 import "server-only";
-import { reasonLines, reportNotes, waitingPhotos, ownerNotice, type ModerationCard, type ModerationDecision, type ModerationReport } from "@/lib/main-wam/panitia/moderation";
+import { moderationReason, reasonLines, reportNotes, waitingPhotos, ownerNotice, type ModerationCard, type ModerationDecision, type ModerationReport } from "@/lib/main-wam/panitia/moderation";
 import type { ModerateInput } from "@/lib/main-wam/panitia/schemas";
 import { REPORT_REASONS, type PhotoStatus, type ReportReason } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
@@ -18,16 +18,16 @@ import { waitingUpdate } from "./rundown";
  * Moderasi Momen (K08) on the server. Momen (area B) files reports and hides a photo for everyone at
  * its third reporter (status ditinjau); panitia decide here: Sembunyikan, Tampilkan lagi, and Hapus
  * once hidden. Each decision goes through mw_moderate_photo (migration 202611200301): one step with
- * the photo's status, logged (siapa, kapan, apa), refused when another panitia decided first. The
- * uploader is told; reporters are never named. Photos are private: the cards carry short-lived
+ * the photo's status, logged (siapa, kapan, apa, and the optional reason the panitia gave: audit L8),
+ * refused when another panitia decided first. The uploader is told in fixed words (ownerNotice), never
+ * the panitia's reason; reporters are never named. Photos are private: the cards carry short-lived
  * storage addresses made here.
  */
 
 const LINK_SECONDS = 10 * 60;
-const HIDE_REASON = "Ada rekan yang keberatan.";
 
 type ReportRow = { photo_id: string; reason: string; note: string; created_at: string };
-type PhotoRow = { id: string; owner_id: string; created_at: string; status: PhotoStatus; file_key: string; thumb_key: string | null; hidden_by: string | null; hidden_at: string | null };
+type PhotoRow = { id: string; owner_id: string; created_at: string; status: PhotoStatus; file_key: string; thumb_key: string | null; hidden_by: string | null; hidden_at: string | null; hidden_reason: string | null };
 const asReport = (row: ReportRow): ModerationReport => ({
   photoId: row.photo_id, reason: (REPORT_REASONS as readonly string[]).includes(row.reason) ? row.reason as ReportReason : "lainnya", note: row.note ?? "", createdAt: row.created_at,
 });
@@ -65,7 +65,7 @@ export async function moderationData(now = new Date()): Promise<ModerationData> 
   if (!ids.length) return { migrated: true, reported: [], hidden: [], now: now.toISOString() };
 
   const [{ data: photos, error }, { data: allReports, error: reportsError }, people, groups] = await Promise.all([
-    db().from("mw_photos").select("id,owner_id,created_at,status,file_key,thumb_key,hidden_by,hidden_at").in("id", ids),
+    db().from("mw_photos").select("id,owner_id,created_at,status,file_key,thumb_key,hidden_by,hidden_at,hidden_reason").in("id", ids),
     db().from("mw_photo_reports").select("photo_id,reason,note,created_at").in("photo_id", ids).limit(5000),
     mainWamPeople(), listGroups(),
   ]);
@@ -84,6 +84,7 @@ export async function moderationData(now = new Date()): Promise<ModerationData> 
       id: photo.id, owner: people.get(photo.owner_id)?.name ?? "Tanpa nama", group: labels.get(photo.owner_id) ?? null, createdAt: photo.created_at, status: photo.status,
       reports: reports.length, reasons: reasonLines(reports), notes: reportNotes(reports), thumb, large,
       hiddenBy: photo.status === "disembunyikan" && photo.hidden_by ? people.get(photo.hidden_by)?.name ?? null : null, hiddenAt: photo.status === "disembunyikan" ? photo.hidden_at : null,
+      hiddenReason: photo.status === "disembunyikan" ? photo.hidden_reason ?? "" : "",
       latest: Math.max(0, ...reports.map(report => Date.parse(report.createdAt))),
     };
   }));
@@ -95,9 +96,10 @@ export async function moderationData(now = new Date()): Promise<ModerationData> 
   };
 }
 
-/** A panitia's decision on one photo; the uploader is told. */
+/** A panitia's decision on one photo, with the reason they gave (Sembunyikan, Hapus); the uploader is told. */
 export async function moderatePhoto(context: MainWamContext, id: string, input: ModerateInput): Promise<void> {
-  const { data, error } = await db().rpc("mw_moderate_photo", { p_photo: id, p_action: input.action, p_from: input.from, p_by: context.viewer.id, p_reason: input.action === "tampilkan" ? "" : HIDE_REASON });
+  const reason = input.action === "tampilkan" ? "" : moderationReason(input.reason, input.note);
+  const { data, error } = await db().rpc("mw_moderate_photo", { p_photo: id, p_action: input.action, p_from: input.from, p_by: context.viewer.id, p_reason: reason });
   if (error) {
     if (mwMissing(error)) throw waitingUpdate();
     if (error.message === "PHOTO_GONE") throw new ServiceError(404, "Foto ini sudah tidak ada.");

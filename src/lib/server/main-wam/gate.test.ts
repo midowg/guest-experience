@@ -17,7 +17,8 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/lib/pra-wam/session-token", () => ({ praWamSecret: () => "x".repeat(40) }));
 vi.mock("./settings", () => ({ readMainWamSettings: async () => { if (settingsFail) throw new Error("db down"); return settings; } }));
-vi.mock("./viewer", () => ({ mainWamViewer: async () => viewer, testsMainWam: async () => tester }));
+const viewerRoom = vi.fn(async () => ({ id: "r1", name: "208", kind: "kamar", floor: "2", note: "", people: [] }));
+vi.mock("./viewer", () => ({ mainWamViewer: async () => viewer, testsMainWam: async () => tester, viewerRoom }));
 vi.mock("../pra-wam/session", () => ({ currentMember: async () => member }));
 
 const gate = await import("./gate");
@@ -68,6 +69,45 @@ describe("a Main WAM page", () => {
   });
 });
 
+describe("the room (S5: read only where it shows)", () => {
+  it("Saya and below get the room; every other page leaves it null and never reads it", async () => {
+    withMode("semua");
+    viewer = person([], false);
+    viewerRoom.mockClear();
+    expect((await gate.requireMainWamPage(mainWamPath.agenda())).viewer.room).toBeNull();
+    expect((await gate.requireMainWamPage(mainWamPath.home)).viewer.room).toBeNull();
+    expect(viewerRoom).not.toHaveBeenCalled();
+    for (const here of [mainWamPath.me, mainWamPath.groupRoom, mainWamPath.travel("pulang")]) {
+      expect((await gate.requireMainWamPage(here)).viewer.room).toMatchObject({ name: "208" });
+    }
+    expect(viewerRoom).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("whether Main WAM shows at all (M6: theme, KV, frame, loading)", () => {
+  it("mode pra/uji: only to a signed-in penguji; never to a stranger or another member", async () => {
+    for (const mode of ["pra", "uji"] as const) {
+      withMode(mode);
+      viewer = null;
+      expect(await gate.mainWamShown()).toBe(false);
+      viewer = person([], false);
+      expect(await gate.mainWamShown()).toBe(false);
+      viewer = person(["panitia"], true);
+      expect(await gate.mainWamShown()).toBe(true);
+    }
+  });
+
+  it("mode semua: to everyone, the sign-in page too; on a failure: hidden", async () => {
+    withMode("semua");
+    viewer = null;
+    expect(await gate.mainWamShown()).toBe(true);
+    viewer = person([], false);
+    expect(await gate.mainWamShown()).toBe(true);
+    settingsFail = true;
+    expect(await gate.mainWamShown()).toBe(false);
+  });
+});
+
 describe("a Main WAM API", () => {
   it("answers 401 without a session and 404 where Main WAM is not on", async () => {
     withMode("semua");
@@ -79,13 +119,17 @@ describe("a Main WAM API", () => {
     expect(await status(gate.requireMainWamApi())).toBe(200);
   });
 
-  it("answers 404 for a module that is off (no trace) and 403 for a role that may not", async () => {
+  it("answers 404 for anyone it is not for: a module that is off, and a role that may not (one answer, no trace)", async () => {
     withMode("semua");
     viewer = person(["bod"], false);
     expect(await status(gate.requireModuleApi("silent"))).toBe(404);
-    expect(await status(gate.requireActionApi("silent-kirim"))).toBe(403);
+    expect(await status(gate.requireActionApi("silent-kirim"))).toBe(404);
     withMode("semua", { silent: true });
-    expect(await status(gate.requireActionApi("silent-kirim"))).toBe(403);
+    expect(await status(gate.requireActionApi("silent-kirim"))).toBe(404);
+    viewer = person([], false);
+    expect(await status(gate.requireActionApi("silent-kontrol"))).toBe(404);
+    expect(await status(gate.requireActionApi("silent-rekap"))).toBe(404);
+    viewer = person(["bod"], false);
     expect(await status(gate.requireActionApi("silent-rekap"))).toBe(200);
     viewer = person([], false);
     expect(await status(gate.requireActionApi("silent-kirim"))).toBe(200);

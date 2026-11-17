@@ -9,7 +9,7 @@ import { ANNOUNCE_BODY_MAX, ANNOUNCE_TITLE_MAX, announceSchema, type AnnounceInp
 import { wibDate, wibInstant } from "@/lib/main-wam/rundown";
 import { mainWamPath } from "@/lib/routes";
 import type { AnnounceData, SentAnnouncement } from "@/lib/server/main-wam/panitia/announce";
-import { afterModal, errorText, PanitiaError, usePanitiaApi } from "./api";
+import { errorText, PanitiaError, usePanitiaApi } from "./api";
 import { CheckboxRow } from "./parts";
 import css from "./panitia.module.css";
 
@@ -186,7 +186,7 @@ export function AnnounceForm({ migrated, counts, sent: initialSent, now: nowIso 
       subtitle={opened ? [opened.by ? `dikirim ${opened.by}` : "dikirim", dayClock(opened.at, now), opened.audience].filter(Boolean).join(" · ") : undefined}
       footer={opened && <>
         {pinned(opened) && <Button block variant="secondary" loading={working} loadingLabel="Menyimpan…" onClick={() => act("unpin")}>Lepas dari Beranda</Button>}
-        <Button block variant="danger-outline" icon={<Trash2 />} disabled={working} onClick={() => { const item = opened; afterModal(() => setOpened(null), () => { setOpened(item); setRemoving(true); }); }}>Hapus</Button>
+        <Button block variant="danger-outline" icon={<Trash2 />} disabled={working} onClick={() => setRemoving(true)}>Hapus</Button>
       </>}>
       {opened?.body ? <Text variant="body-long">{opened.body}</Text> : <Text variant="body" color="2">Tanpa isi.</Text>}
     </Sheet>

@@ -1,8 +1,10 @@
 import { pickHomeCard, type HomeCardCandidate } from "../home-card";
+import { noteTone } from "../notify";
 import { silentClosesAt, silentState, votingState } from "../module-state";
 import { checkInWindow, dayWord, eventDay, hasEnded, isLive, isRunning, nowCard, sessionEnd, timeRange, wibDate, type NowCard } from "../rundown";
-import type { MainWamEventInfo, ModuleSwitches, MwAwardCategory, MwNotification, MwSession, MwSilentQuestion, MwTrip, MwTripSeat } from "../types";
+import type { MainWamEventInfo, ModuleSwitches, MwAwardCategory, MwNotification, MwSession, MwSilentQuestion, MwTrip, MwTripSeat, NoteTone } from "../types";
 import { hhmm, untilLabel } from "./format";
+import type { SurveyOpen } from "./survey";
 
 /*
  * Beranda (P01/P02, revisi 16 Nov): at most four blocks: the head (the shell's), the Sekarang card,
@@ -98,13 +100,17 @@ export const placeLine = (session: Pick<MwSession, "place" | "optional">) =>
 
 /* ── The contextual card ──────────────────────────────────────────────────────────────────────── */
 
-/** A candidate with the instant its sub line counts to ("sampai 15.00"). */
-export type HomeCandidate = HomeCardCandidate & { until?: string | null };
+/** A candidate with the instant its sub line counts to ("sampai 15.00"), and a survey's minutes ("5 menit"). */
+export type HomeCandidate = HomeCardCandidate & { until?: string | null; minutes?: number | null };
 
-/** Pengumuman penting still pinned (newest first, as the server reads them). */
+/**
+ * Pengumuman penting still pinned (newest first, as the server reads them), with their tone
+ * (pinnedForMe's; noteTone of the fondasi when a reader left it out): warning for a change such as
+ * "Jam kumpul berubah" (P02__status), else info.
+ */
 export function announcementCandidates(pinned: readonly MwNotification[], now: Date): HomeCandidate[] {
   return pinned.filter(note => note.kind === "pengumuman" && note.pinnedUntil && Date.parse(note.pinnedUntil) > now.getTime())
-    .map(note => ({ kind: "pengumuman", id: note.id, title: note.title, body: note.body, pinnedUntil: note.pinnedUntil! }));
+    .map(note => ({ kind: "pengumuman", id: note.id, title: note.title, body: note.body, pinnedUntil: note.pinnedUntil!, tone: note.tone ?? noteTone(note) }));
 }
 
 /** Silent Meeting questions open now (silentState of the fondasi: session hours, panitia's override). */
@@ -160,11 +166,13 @@ export function travelCandidate(trips: readonly MwTrip[], seats: readonly MwTrip
   return null;
 }
 
-/** Survei: open during the session that carries it (module survei), when a questionnaire is chosen. */
-export function surveyCandidate(formSlug: string | null, sessions: readonly MwSession[], now: Date): HomeCandidate | null {
-  if (!formSlug) return null;
-  const session = sessions.filter(isLive).find(item => item.module === "survei" && isRunning(item, now));
-  return session ? { kind: "survei", formSlug, title: "Survei evaluasi", until: sessionEnd(session) } : null;
+/**
+ * Survei: the card while the survey is open for this person (surveyFor / the one rule in
+ * survey.ts, audit R7: from its session's start until the questionnaire closes or the event ends,
+ * gone once they sent it).
+ */
+export function surveyCandidate(open: SurveyOpen | null): HomeCandidate | null {
+  return open ? { kind: "survei", formSlug: open.formSlug, title: "Survei evaluasi", until: open.until, minutes: open.minutes } : null;
 }
 
 /** The one card (pickHomeCard of the fondasi: order, and no card of a module that is off). */
@@ -172,7 +180,7 @@ export const pickCard = (candidates: readonly HomeCandidate[], modules: ModuleSw
   pickHomeCard(candidates, modules, now) as HomeCandidate | null;
 
 export type HomeCardView =
-  | { kind: "pengumuman"; id: string; title: string; body: string }
+  | { kind: "pengumuman"; id: string; title: string; body: string; tone: NoteTone }
   | { kind: "silent" | "voting" | "berangkat" | "survei"; title: string; sub: string; action: string; target: { silentSession?: string; survey?: string; direction?: "berangkat" | "pulang" } };
 
 /** "sampai 15.00", or with the day when it closes on another day. */
@@ -185,7 +193,7 @@ const capital = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 /** What the chosen card says (P01__status): title, one line, and its button. */
 export function homeCardView(card: HomeCandidate, now: Date): HomeCardView {
   switch (card.kind) {
-    case "pengumuman": return { kind: "pengumuman", id: card.id, title: card.title, body: card.body };
+    case "pengumuman": return { kind: "pengumuman", id: card.id, title: card.title, body: card.body, tone: card.tone ?? "info" };
     case "silent": {
       const until = untilWords(now, card.until);
       return { kind: "silent", title: "Silent Meeting dibuka", sub: until ? `Tanpa nama · ${until}` : "Tanpa nama", action: "Kirim masukan", target: { silentSession: card.sessionId } };
@@ -198,7 +206,8 @@ export function homeCardView(card: HomeCandidate, now: Date): HomeCardView {
       return { kind: "berangkat", title: card.startsAt ? `${card.title} · ${hhmm(card.startsAt)}` : card.title, sub: card.seat, action: "Lihat tiket", target: { direction: card.direction } };
     case "survei": {
       const until = untilWords(now, card.until);
-      return { kind: "survei", title: `${card.title} dibuka`, sub: until ? capital(until) : "", action: "Isi survei", target: { survey: card.formSlug } };
+      const sub = [card.minutes ? `${card.minutes} menit` : "", until ?? ""].filter(Boolean).join(" · ");
+      return { kind: "survei", title: `${card.title} dibuka`, sub: capital(sub), action: "Isi survei", target: { survey: card.formSlug } };
     }
   }
 }
@@ -213,6 +222,8 @@ export type HomeData = {
   card: HomeCardView | null;
   /** The next moment the cards change by themselves (for a refresh while Beranda is open). */
   refreshAt: string | null;
+  /** The server's clock when this was read: the phone counts `refreshAt` from it, not from its own clock (audit S6). */
+  serverNow: string;
   /** The rundown could not be read: the card says so, with "Coba lagi". */
   failed: boolean;
 };

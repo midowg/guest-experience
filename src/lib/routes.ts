@@ -568,7 +568,7 @@ export const mainWamApi = {
   mosaic: `${MAIN_WAM_API}/mozaik`,
 
   /* C · panitia and BOD */
-  /** PATCH {startsAt, endsAt, shift, notify, place, status}: Ubah jam (K03), panitia. */
+  /** PATCH {action: "jam" | "tempat" | "batal" | "kembali", version, …}: Ubah jam (K03), pindah tempat, batal/kembalikan; panitia. `version` = updated_at (409 bila sudah berubah). */
   rundownSession: (id: string) => `${MAIN_WAM_API}/kelola/rundown/${enc(id)}`,
   /** GET: Riwayat perubahan of the rundown. */
   rundownLog: `${MAIN_WAM_API}/kelola/rundown/riwayat`,
@@ -580,7 +580,7 @@ export const mainWamApi = {
   announcement: (id: string) => `${MAIN_WAM_API}/kelola/pengumuman/${enc(id)}`,
   /** GET: reported and hidden photos (K08). */
   moderation: `${MAIN_WAM_API}/kelola/moderasi`,
-  /** POST {action: "sembunyikan" | "tampilkan"}. */
+  /** POST {action: "sembunyikan" | "tampilkan" | "hapus", from}: keputusan moderasi (K08), panitia; hapus hanya foto yang sudah disembunyikan. */
   moderatePhoto: (id: string) => `${MAIN_WAM_API}/kelola/moderasi/${enc(id)}`,
   /** GET: BOD's Ringkasan (at most 4 rows). */
   summary: `${MAIN_WAM_API}/ringkasan`,
@@ -590,11 +590,11 @@ export const mainWamApi = {
   checkIn: (token: string) => `${MAIN_WAM_API}/absen/${enc(token)}`,
   /** GET: a session's QR as a PDF to print; POST: a new QR (the printed one stops working). Panitia. */
   sessionQr: (sessionId: string) => `${MAIN_WAM_API}/kelola/qr/${enc(sessionId)}`,
-  /** GET: the Silent Meeting open now (or of ?sesi=), with its state. */
+  /** GET: the Silent Meeting open now (or of ?sesi=), with its state; POST {questionId}: record that I opened the form (an opener, kept apart from what is sent). */
   silent: `${MAIN_WAM_API}/silent-meeting`,
   /** POST {questionId, topic, body}: one anonymous feedback (T01). */
   silentFeedback: `${MAIN_WAM_API}/silent-meeting/masukan`,
-  /** POST {action: "buka" | "tutup" | "otomatis"}: panitia opens or closes it (K02 row). */
+  /** POST {action: "buka" | "tutup"}: panitia opens it early or closes it for good (K02 row); once closed it never opens again. */
   silentControl: (questionId: string) => `${MAIN_WAM_API}/silent-meeting/${enc(questionId)}/kontrol`,
   /** GET: the anonymous recap (BOD, from 5 feedbacks). */
   silentRecap: `${MAIN_WAM_API}/silent-meeting/rekap`,

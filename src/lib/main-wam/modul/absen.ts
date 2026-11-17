@@ -33,16 +33,19 @@ export function tokenFromScan(text: string, origin: string): string | null {
 
 /**
  * A scan queued while offline keeps the time it was scanned ("Dikirim otomatis dengan jam scan
- * 07.52"), within limits: not ahead of the server (2 minutes for a phone's clock) and not older
- * than 6 hours. Otherwise the server's time counts.
+ * 07.52") only when that time is inside the session's check-in window AND at most 30 minutes before
+ * the server's time (audit M5: a photo of the printed QR, sent hours later with a time inside the
+ * session, is refused), and not ahead of the server (2 minutes for a phone's clock). Otherwise the
+ * server's time counts, and the window is checked against it.
  */
 export const SCAN_FUTURE_MS = 2 * 60_000;
-export const SCAN_MAX_AGE_MS = 6 * 60 * 60_000;
-export function acceptedScanTime(scannedAt: string | null | undefined, now: Date): Date {
+export const SCAN_MAX_AGE_MS = 30 * 60_000;
+export function acceptedScanTime(scannedAt: string | null | undefined, now: Date, session: Pick<MwSession, "startsAt" | "endsAt">): Date {
   const at = scannedAt ? Date.parse(scannedAt) : NaN;
   if (!Number.isFinite(at)) return now;
   if (at > now.getTime() + SCAN_FUTURE_MS || at < now.getTime() - SCAN_MAX_AGE_MS) return now;
-  return new Date(Math.min(at, now.getTime()));
+  const claimed = new Date(Math.min(at, now.getTime()));
+  return checkInState(session, claimed) === "buka" ? claimed : now;
 }
 
 /** POST body of a check-in: nothing, or the time of a scan that was queued offline. */

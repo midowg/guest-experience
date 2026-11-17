@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { CloudOff, RotateCw } from "lucide-react";
 import { untilLabel } from "@/lib/main-wam/peserta/format";
+import { REFRESH_JITTER_MS, refreshDelay } from "@/lib/main-wam/peserta/refresh";
 import { Banner, Button, EmptyState } from "@/components/main-wam/ui";
 
 /*
@@ -44,16 +45,21 @@ export function Until({ at, serverNow, initial }: { at: string; serverNow: strin
   return <>{text}</>;
 }
 
-/** Refreshes the screen once at `at` (a session starts, absen opens), when that is within 12 hours. */
-export function RefreshAt({ at }: { at: string | null }) {
+/**
+ * Refreshes the screen once at `at` (a session starts, absen opens), when that is within 12 hours:
+ * by the server's clock (`serverNow`, the phone's own may be off) and 0–20 seconds late at random,
+ * so phones do not all ask at once (audit S6). Each refresh brings a new `serverNow`, which sets the
+ * timer again even when `at` stays the same.
+ */
+export function RefreshAt({ at, serverNow }: { at: string | null; serverNow: string }) {
   const router = useRouter();
   useEffect(() => {
-    if (!at) return;
-    const wait = Date.parse(at) - Date.now() + 1_000;
-    if (!(wait > 0) || wait > 12 * 3_600_000) return;
+    const offset = Date.parse(serverNow) - Date.now();
+    const wait = refreshDelay(at, offset, Date.now(), Math.random() * REFRESH_JITTER_MS);
+    if (wait === null) return;
     const timer = window.setTimeout(() => router.refresh(), wait);
     return () => window.clearTimeout(timer);
-  }, [at, router]);
+  }, [at, serverNow, router]);
   return null;
 }
 

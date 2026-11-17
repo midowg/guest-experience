@@ -2,7 +2,8 @@
 -- Migration 202611200201 (Main WAM area B, Momen + Mozaik): who sees which photo (kelompok photos only
 -- for their kelompok, Batalkan's 5 seconds, reported photos hidden for the reporter), keyset paging
 -- of the stack and the gallery, the session counts, reports (one per person, the third hides the
--- photo once), the mosaic's stable placement, and that none of it is open to the public keys.
+-- photo once), the mosaic's stable placement and its version (ETag), a nominated photo that cannot
+-- be deleted (with 202611200003), and that none of it is open to the public keys.
 begin;
 set local role service_role;
 do $$
@@ -10,7 +11,7 @@ declare
   rani uuid; sari uuid; dimas uuid; bima uuid; ayu uuid; yoga uuid;
   g4 uuid; g2 uuid; team uuid; pem uuid;
   p_old uuid; p_mid uuid; p_new uuid; p_k4 uuid; p_k2 uuid; p_rani uuid; p_fresh uuid; p_hidden uuid;
-  r record; n integer; ids uuid[];
+  r record; n integer; ids uuid[]; v1 text; v2 text; cat uuid; msg text;
   base timestamptz := now() - interval '2 hours';
 begin
   insert into public.employees (full_name, nickname) values ('Rani Contoh Momen', 'Rani') returning id into rani;
@@ -148,17 +149,52 @@ begin
   end if;
   if exists (select 1 from public.mw_mosaic_tiles where photo_id in (p_k4, p_fresh, p_hidden, p_k2)) then raise exception 'a photo that should not be in the mosaic'; end if;
   if public.mw_mosaic_place(array[7, 3, 5, 1, 2, 9, 4], 300) <> 0 then raise exception 'placing again should place nothing'; end if;
+  -- The version (the ETag, audit R3): the same while nothing changes; only cells inside the grid count.
+  v1 := public.mw_mosaic_version(100);
+  if v1 !~ '^[0-9a-f]{32}$' or public.mw_mosaic_version(100) <> v1 then raise exception 'the version should be stable: %', v1; end if;
+  if public.mw_mosaic_version(6) = v1 then raise exception 'cell 7 is outside a grid of 6 and should not count'; end if;
   -- A photo deleted frees its cell, which the next photo fills; the others stay where they are.
   delete from public.mw_photos where id = p_new;
+  if public.mw_mosaic_version(100) = v1 then raise exception 'a tile gone should change the version'; end if;
   update public.mw_photos set created_at = base, visible_at = base + interval '1 minute' where id = p_fresh;
   n := public.mw_mosaic_place(array[7, 3, 5, 1, 2, 9, 4], 300);
   if n <> 1 or (select photo_id from public.mw_mosaic_tiles where tile = 5) <> p_fresh then raise exception 'the freed cell should take the next photo'; end if;
   if (select tile from public.mw_mosaic_tiles where photo_id = p_old) <> 7 then raise exception 'a placed photo moved'; end if;
+  v2 := public.mw_mosaic_version(100);
+  if v2 = v1 then raise exception 'another photo in cell 5 should change the version'; end if;
+  -- In review (third report): out of the manifest, so out of the version; shown again: the same as before.
+  update public.mw_photos set status = 'ditinjau' where id = p_old;
+  if public.mw_mosaic_version(100) = v2 then raise exception 'a tile in review should change the version'; end if;
+  update public.mw_photos set status = 'tampil' where id = p_old;
+  if public.mw_mosaic_version(100) <> v2 then raise exception 'shown again: the version should come back'; end if;
   -- Hidden for good by panitia: its cell is freed on the next placement.
   update public.mw_photos set status = 'disembunyikan' where id = p_mid;
   perform public.mw_mosaic_place(array[7, 3, 5, 1, 2, 9, 4], 300);
   if exists (select 1 from public.mw_mosaic_tiles where photo_id = p_mid) then raise exception 'a photo hidden by panitia kept its cell'; end if;
-  raise notice 'PASS: the mosaic places photos in a stable order';
+  raise notice 'PASS: the mosaic places photos in a stable order, its version follows the tiles';
+
+  -- Audit M3: a photo nominated for Awarding is not deleted (Hapus foto answers 409 on 23503), and
+  -- its nomination stays; no longer nominated, it is deleted with its hearts and its mosaic cell.
+  insert into public.mw_award_categories (title, method, nominee_kind) values ('Foto terbaik uji', 'juri', 'foto') returning id into cat;
+  insert into public.mw_award_nominees (category_id, photo_id) values (cat, p_old);
+  insert into public.mw_photo_hearts (photo_id, employee_id) values (p_old, rani);
+  begin
+    delete from public.mw_photos where id = p_old;
+    raise exception 'UNEXPECTED: a nominated photo deleted';
+  exception when foreign_key_violation then
+    get stacked diagnostics msg = returned_sqlstate;
+    if msg <> '23503' then raise exception 'expected 23503, got %', msg; end if;
+  end;
+  if not exists (select 1 from public.mw_photos where id = p_old) or not exists (select 1 from public.mw_award_nominees where photo_id = p_old)
+    or not exists (select 1 from public.mw_mosaic_tiles where photo_id = p_old) then
+    raise exception 'the nominated photo, its nomination or its cell went';
+  end if;
+  delete from public.mw_award_nominees where category_id = cat;
+  delete from public.mw_photos where id = p_old;
+  if exists (select 1 from public.mw_photo_hearts where photo_id = p_old) or exists (select 1 from public.mw_mosaic_tiles where photo_id = p_old) then
+    raise exception 'hearts and the mosaic cell should go with the photo';
+  end if;
+  raise notice 'PASS: a nominated photo cannot be deleted (23503)';
 end $$;
 reset role;
 
@@ -168,6 +204,8 @@ do $$ begin
   begin perform * from public.mw_photo_feed(gen_random_uuid(), null, 'semua', null, false, false, null, null, 'older', 10); raise exception 'UNEXPECTED: anon reads the feed';
   exception when insufficient_privilege then null; end;
   begin perform public.mw_mosaic_place(array[1], 0); raise exception 'UNEXPECTED: anon places mosaic tiles';
+  exception when insufficient_privilege then null; end;
+  begin perform public.mw_mosaic_version(100); raise exception 'UNEXPECTED: anon reads the mosaic version';
   exception when insufficient_privilege then null; end;
   raise notice 'PASS: Momen functions closed to anon';
 end $$;

@@ -8,8 +8,10 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * DELETE (optional {clientId}): Batalkan or Hapus foto by its owner, or Hapus by panitia (K08). With
- * the clientId, an upload cancelled before it was kept has its files removed.
+ * DELETE (optional {clientId}): Batalkan or Hapus foto, by the photo's owner only (403 for someone
+ * who sees it, 404 otherwise). Panitia remove others' photos through moderation (K08,
+ * mainWamApi.moderatePhoto), never here (audit M2). A photo nominated for Awarding: 409 (audit M3).
+ * With the clientId, an upload cancelled before it was kept has its files removed.
  */
 export async function DELETE(request: Request, { params }: Params) {
   return handle(async () => {

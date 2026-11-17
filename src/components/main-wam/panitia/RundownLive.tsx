@@ -8,7 +8,7 @@ import { count, dayClock, editedLabel } from "@/lib/main-wam/panitia/format";
 import { rowState, silentAction, silentLabel, type LiveSession, type ShiftPlan } from "@/lib/main-wam/panitia/rundown";
 import { timeRange } from "@/lib/main-wam/rundown";
 import type { RundownDay, RundownHistory } from "@/lib/server/main-wam/panitia/rundown";
-import { afterModal, errorText, useLiveRefresh, useOnline, usePanitiaApi, useServerState, type RundownChangeAnswer } from "./api";
+import { errorText, useLiveRefresh, useOnline, usePanitiaApi, useServerState, type RundownChangeAnswer } from "./api";
 import { UbahJamSheet } from "./UbahJamSheet";
 import css from "./panitia.module.css";
 
@@ -50,14 +50,18 @@ export function RundownLive(props: RundownLiveProps) {
   const [place, setPlace] = useState("");
   const [notify, setNotify] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
+  // The session Ubah jam was last opened for: its sheet stays mounted after closing, so focus goes
+  // back to that row's "Ubah jam" (audit T-K01).
+  const [timeFor, setTimeFor] = useState<string | null>(null);
   const now = useMemo(() => new Date(props.now), [props.now]);
   const refresh = useCallback(() => api.refresh(), [api]);
   useLiveRefresh(refresh, 60_000, open !== null || busy);
 
   const selected = open && "id" in open ? sessions.find(session => session.id === open.id) ?? null : null;
+  const timeSession = timeFor ? sessions.find(session => session.id === timeFor) ?? null : null;
   const close = () => { setOpen(null); setFailure(null); };
-  // From the menu sheet to the next sheet or dialog, after the menu has let go of its history entry.
-  const next = (target: Open) => afterModal(() => setOpen(null), () => setOpen(target));
+  // From the menu sheet straight to the next sheet or dialog: the kit hands over history and focus.
+  const next = (target: Open) => setOpen(target);
   const stamp = (session: LiveSession, patch: Partial<LiveSession>, versions: Record<string, string>): LiveSession =>
     ({ ...session, ...patch, version: versions[session.id] ?? session.version, changedAt: new Date().toISOString(), changedByName: props.me });
 
@@ -99,7 +103,8 @@ export function RundownLive(props: RundownLiveProps) {
     setBusy(true);
     try {
       await api.silent(session.silent.questionId, action);
-      setSessions(current => current.map(item => item.id === session.id && item.silent ? { ...item, silent: { ...item.silent, state: action === "buka" ? "buka" : "tutup", override: action } } : item));
+      // No count here: it shows only after the next read, once closed for good (audit H2).
+      setSessions(current => current.map(item => item.id === session.id && item.silent ? { ...item, silent: { ...item.silent, state: action === "buka" ? "buka" : "tutup", count: null } } : item));
       close();
       toast.show({ text: action === "buka" ? "Silent Meeting dibuka" : "Silent Meeting ditutup", tone: "success" });
       api.refresh();
@@ -118,12 +123,12 @@ export function RundownLive(props: RundownLiveProps) {
       ? <EmptyState icon={<CalendarClock />} title="Belum ada sesi di hari ini." size="s">Rundown diisi lewat Admin WAM.</EmptyState>
       : <List inset={16} label="Sesi">
         {sessions.map(session => <RundownRow key={session.id} session={session} now={now} busy={busy}
-          onTime={() => setOpen({ kind: "jam", id: session.id })}
+          onTime={() => { setTimeFor(session.id); setOpen({ kind: "jam", id: session.id }); }}
           onMenu={() => { setPlace(session.place); setNotify(true); setOpen({ kind: "menu", id: session.id }); }}
           onSilent={action => (action === "tutup" ? setOpen({ kind: "tutup", id: session.id }) : silent(session, "buka"))} />)}
       </List>}
 
-    {open?.kind === "jam" && selected && <UbahJamSheet session={selected} sameDay={sessions} recipients={props.recipients} api={api} onClose={close} onSaved={savedTimes} />}
+    {timeSession && <UbahJamSheet open={open?.kind === "jam"} session={timeSession} sameDay={sessions} recipients={props.recipients} api={api} onClose={close} onSaved={savedTimes} />}
 
     <Sheet open={open?.kind === "menu" && !!selected} onClose={close} title={selected?.title ?? "Sesi"} subtitle={selected ? timeRange(selected) : undefined} flush>
       <List plain inset={68} label="Pilihan sesi">
@@ -153,7 +158,7 @@ export function RundownLive(props: RundownLiveProps) {
     <ConfirmDialog open={open?.kind === "kembali" && !!selected} onCancel={close} onConfirm={() => change("kembali")} busy={busy} busyLabel="Menyimpan…"
       title="Kembalikan sesi ini?" body={failure ?? "Sesi tampil lagi di Agenda. Peserta diberi kabar."} confirmLabel="Kembalikan" />
     <ConfirmDialog open={open?.kind === "tutup" && !!selected} onCancel={close} onConfirm={() => selected && silent(selected, "tutup")} busy={busy} busyLabel="Menutup…" tone="danger" icon={Lock}
-      title="Tutup sekarang?" body="Peserta tidak bisa mengirim masukan lagi." confirmLabel="Tutup" />
+      title="Tutup sekarang?" body="Peserta tidak bisa mengirim masukan lagi. Silent Meeting tidak bisa dibuka lagi." confirmLabel="Tutup" />
 
     <Sheet open={open?.kind === "riwayat"} onClose={close} title="Riwayat perubahan" flush>
       {props.history.length === 0
@@ -175,7 +180,7 @@ export function RundownRow({ session, now, busy, onTime, onMenu, onSilent }: {
   onTime: () => void; onMenu: () => void; onSilent: (action: "buka" | "tutup") => void;
 }) {
   const state = rowState(session, now);
-  const silentState = session.silent ? silentAction(session.silent, session, now) : null;
+  const silentState = session.silent ? silentAction(session.silent, session) : null;
   const live = state === "live" || session.silent?.state === "buka";
   const place = session.optional ? `Opsional · ${session.place}` : session.place;
   return <div id={`sesi-${session.id}`} className={[css.rrow, live && state !== "cancelled" ? css.rrowLive : "", state === "done" ? css.rrowDone : "", state === "cancelled" ? css.rrowCancelled : ""].filter(Boolean).join(" ")}>

@@ -1,5 +1,6 @@
 import { safePraWamNext } from "@/lib/pra-wam/next-path";
 import { mainWamPath, praWamPath } from "@/lib/routes";
+import type { ModuleSwitches } from "../types";
 
 /*
  * Masuk (O02) and Izin notifikasi (O03, revisi 16 Nov): after the first sign-in on a phone, O03
@@ -17,4 +18,19 @@ export function afterSignIn(next: string | null | undefined, opts: { askNewPassw
   const asked = safePraWamNext(next) ?? mainWamPath.home;
   const target = !opts.onboarded && asked === mainWamPath.home ? mainWamPath.onboarding : asked;
   return opts.askNewPassword ? praWamPath.newPassword(target) : target;
+}
+
+/** One of O03's three reasons to allow notifications. */
+export type OnboardingReason = "jadwal" | "absen" | "kumpul";
+
+/**
+ * What O03 shows (audit T-P02, "modul mati tanpa jejak", ANALISA §3): the example note and the
+ * reasons name only modules that are on. "Absen dibuka" only with Absen QR; the example note is
+ * the prototype's Silent Meeting one only while Silent Meeting is on, else a plain session.
+ */
+export function onboardingNews(modules: Pick<ModuleSwitches, "absen" | "silent">): { example: { title: string; body: string }; reasons: OnboardingReason[] } {
+  return {
+    example: { title: "Jadwal berubah", body: modules.silent ? "Silent Meeting mundur ke 13.30." : "Team building mundur ke 15.30." },
+    reasons: modules.absen ? ["jadwal", "absen", "kumpul"] : ["jadwal", "kumpul"],
+  };
 }

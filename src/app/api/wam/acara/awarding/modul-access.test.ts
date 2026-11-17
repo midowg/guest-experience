@@ -3,10 +3,11 @@ import { defaultSettings } from "@/lib/main-wam/settings";
 import type { MainWamSettings, MainWamViewer, ModuleSwitches } from "@/lib/main-wam/types";
 
 /*
- * Who reaches agen D's APIs (KONTRAK §3), through the real gate: nobody signed in → 401; a module
- * that is off → 404 for everyone (no trace); a role that may not → 403 (BOD do not vote or send
- * Silent Meeting feedback; participants do not open or close it, read the recap, approve, or open
- * a session's QR). Admin WAM's module APIs need the admin session. The work itself is mocked.
+ * Who reaches agen D's APIs (KONTRAK §3), through the real gate: nobody signed in → 401; anyone it
+ * is not for → 404, one answer (audit L10, KONTRAK §9 #4): a module that is off, and a role that may
+ * not (BOD do not vote, send or open Silent Meeting feedback; participants do not open or close it,
+ * read the recap, approve, or open a session's QR). Admin WAM's module APIs need the admin session.
+ * The work itself is mocked.
  */
 
 const state = vi.hoisted(() => ({ settings: null as unknown as MainWamSettings, viewer: null as MainWamViewer | null, admin: true, calls: [] as string[] }));
@@ -27,8 +28,8 @@ vi.mock("@/lib/server/main-wam/modul/absen", () => ({
   sessionQrSheet: record("qrSheet", new Uint8Array([37, 80, 68, 70])),
 }));
 vi.mock("@/lib/server/main-wam/modul/silent", () => ({
-  silentNow: record("silentNow", { view: null, migrated: true }), mySentCount: record("sent", 0),
-  sendSilentFeedback: record("feedback", { sent: 1, remaining: 9 }), controlSilent: record("control", {}), silentCounts: record("counts", { count: 0, people: 0 }),
+  silentNow: record("silentNow", { view: null, migrated: true }), sendsLeft: () => 10, recordOpener: record("opener"),
+  sendSilentFeedback: record("feedback", { remaining: 9 }), controlSilent: record("control", { view: null, count: null }),
   silentRecap: record("recap", { recap: null, migrated: true }),
 }));
 vi.mock("@/lib/server/main-wam/modul/awards", () => ({
@@ -63,6 +64,7 @@ async function routes() {
     qrGet: () => qr.GET(req("GET"), p({ sesiId: ID })),
     qrNew: () => qr.POST(req("POST", {}), p({ sesiId: ID })),
     silent: () => silent.GET(req("GET")),
+    opened: () => silent.POST(req("POST", { questionId: ID })),
     feedback: () => feedback.POST(req("POST", { questionId: ID, topic: "", body: "Rapat terlalu panjang." })),
     control: () => control.POST(req("POST", { action: "buka" }), p({ id: ID })),
     recap: () => recap.GET(),
@@ -88,15 +90,12 @@ describe("agen D's participant APIs", () => {
     expect(state.calls).toEqual([]);
   });
 
-  it("do not exist while their module is off (a role's own action: 404; another role's: 403 as always)", async () => {
+  it("do not exist while their module is off, for every role: one answer, 404", async () => {
     withModules({});
-    const off = { absen: 404, qrGet: 404, qrNew: 404, silent: 404, awards: 404 };
-    state.viewer = person([]);
-    expect(await statuses()).toEqual({ ...off, feedback: 404, vote: 404, control: 403, recap: 403, approve: 403 });
-    state.viewer = person(["panitia"]);
-    expect(await statuses()).toEqual({ ...off, feedback: 404, vote: 404, control: 404, recap: 403, approve: 403 });
-    state.viewer = person(["bod"]);
-    expect(await statuses()).toEqual({ ...off, feedback: 403, vote: 403, control: 403, recap: 404, approve: 404 });
+    for (const roles of [[], ["panitia"], ["bod"]] as MainWamViewer["roles"][]) {
+      state.viewer = person(roles);
+      expect(Object.values(await statuses()).every(status => status === 404)).toBe(true);
+    }
     expect(state.calls).toEqual([]);
   });
 
@@ -107,20 +106,20 @@ describe("agen D's participant APIs", () => {
     expect(await statuses(["awards", "silent", "feedback", "absen"])).toEqual({ awards: 404, silent: 200, feedback: 200, absen: 200 });
   });
 
-  it("let a participant check in, send feedback and vote, but nothing of panitia or BOD", async () => {
-    expect(await statuses()).toEqual({ absen: 200, qrGet: 403, qrNew: 403, silent: 200, feedback: 200, control: 403, recap: 403, awards: 200, vote: 200, approve: 403 });
+  it("let a participant check in, send feedback and vote; panitia's and BOD's endpoints do not exist for them (404, not 403)", async () => {
+    expect(await statuses()).toEqual({ absen: 200, qrGet: 404, qrNew: 404, silent: 200, opened: 200, feedback: 200, control: 404, recap: 404, awards: 200, vote: 200, approve: 404 });
   });
 
   it("let panitia open or close Silent Meeting and handle the session's QR", async () => {
     state.viewer = person(["panitia"]);
-    expect(await statuses(["control", "qrGet", "qrNew", "recap", "approve"])).toEqual({ control: 200, qrGet: 200, qrNew: 200, recap: 403, approve: 403 });
+    expect(await statuses(["control", "qrGet", "qrNew", "recap", "approve"])).toEqual({ control: 200, qrGet: 200, qrNew: 200, recap: 404, approve: 404 });
     state.viewer = person(["admin"]);
     expect(await statuses(["control", "qrGet"])).toEqual({ control: 200, qrGet: 200 });
   });
 
-  it("let the BOD read the recap and approve, but not vote or send feedback", async () => {
+  it("let the BOD read the recap and approve, but not vote, send feedback or count as an opener", async () => {
     state.viewer = person(["bod"]);
-    expect(await statuses(["recap", "approve", "vote", "feedback", "control", "qrGet"])).toEqual({ recap: 200, approve: 200, vote: 403, feedback: 403, control: 403, qrGet: 403 });
+    expect(await statuses(["recap", "approve", "vote", "feedback", "opened", "control", "qrGet"])).toEqual({ recap: 200, approve: 200, vote: 404, feedback: 404, opened: 404, control: 404, qrGet: 404 });
     state.calls = [];
     // A BOD's scan is answered ("tidak perlu absen"), never refused with an error.
     expect((await (await routes()).absen()).status).toBe(200);
@@ -132,6 +131,11 @@ describe("agen D's participant APIs", () => {
     expect((await all.POST(foreign)).status).toBe(403);
     expect((await all.POST(req("POST", { questionId: ID, body: "Hai", employeeId: ID }))).status).toBe(422);
     expect((await all.POST(req("POST", { questionId: ID, body: "   " }))).status).toBe(422);
+    // panitia's control no longer takes "otomatis" (it could open a closed one again).
+    state.viewer = person(["panitia"]);
+    const control = await import("../silent-meeting/[id]/kontrol/route");
+    expect((await control.POST(req("POST", { action: "otomatis" }), p({ id: ID }))).status).toBe(422);
+    state.viewer = person([]);
     const vote = await import("./[id]/suara/route");
     expect((await vote.PUT(req("PUT", { nomineeId: "bukan" }), p({ id: ID }))).status).toBe(422);
     expect(state.calls).not.toContain("feedback");

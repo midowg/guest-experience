@@ -18,7 +18,7 @@ export default async function PreviewSaya({ searchParams }: { searchParams: Prom
   const now = previewTime({ waktu: params.waktu ?? "pemaparan" });
   const viewer = previewViewer(params.peran);
   if (params.status === "memuat") return <Frame path={mainWamPath.me} peran={params.peran} now={now}><ListSkeleton label="Memuat saya" /></Frame>;
-  const help = { id: samplePeople.dimas.id, name: "Dimas", role: "Panitia", photo: null, ...contactLinks("0812-3456-7890") };
+  const help = { id: samplePeople.dimas.id, name: "Dimas", role: "Panitia", photo: null, ...contactLinks("0800-0000-0001") };
   const room = params.status === "tanpa-kamar" || !viewer.room ? null : roomRow(viewer.room);
   const open = params.buka === "foto" || params.buka === "bantuan" || params.buka === "keluar" ? params.buka : null;
   return <Frame path={mainWamPath.me} peran={params.peran} now={now}>

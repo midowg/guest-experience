@@ -30,11 +30,15 @@ export function CheckboxRow({ title, sub, checked, onToggle, error, id }: { titl
   </button>;
 }
 
-/** An empty state with its icon in a status colour ("Semua sudah hadir." in green). */
-export function EmptyBlock({ icon, tone = "neutral", title, children }: { icon: IconProp; tone?: IconBoxTone; title: ReactNode; children?: ReactNode }) {
+/**
+ * An empty state with its icon in a status colour ("Semua sudah hadir." in green). Its title is an
+ * h2 (the page's h1 is in the top bar); `level={3}` inside a section that has its own h2 or in a sheet.
+ */
+export function EmptyBlock({ icon, tone = "neutral", title, level = 2, children }: { icon: IconProp; tone?: IconBoxTone; title: ReactNode; level?: 2 | 3; children?: ReactNode }) {
+  const Heading = level === 3 ? "h3" : "h2";
   return <div className={css.empty}>
     <IconBox icon={icon} size={64} round tone={tone} />
-    <h3 className={css.emptyTitle}>{title}</h3>
+    <Heading className={css.emptyTitle}>{title}</Heading>
     {children}
   </div>;
 }

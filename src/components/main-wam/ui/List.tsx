@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { IconBox } from "./Card";
 import { cx, Pressable, type ActionProps, type IconProp } from "./Pressable";
 import css from "./list.module.css";
+import shared from "./shared.module.css";
 
 /**
  * A card of rows with dividers (DS #23). The dividers start after the icon (68) by default;
@@ -28,9 +29,10 @@ export function List({ children, inset = 68, plain, bleed, as = "div", label, cl
  * One row (DS #23): an icon (neutral box) or any leading element (Avatar), a title (≤ 2 lines),
  * an optional line under it, a value, and something at the end (a Pill, a Badge, a Switch, a Text
  * button). A link or a button when it has `href`/`onClick` (then a chevron by default), otherwise a
- * plain row.
+ * plain row. Its name is its words; to say more ("Ketuk untuk membatalkan"), use `spoken`, not an
+ * aria-label that rewords what is on screen (WCAG 2.5.3, T-S05).
  */
-export function ListRow({ icon, leading, title, sub, value, trailing, chevron, disabled, className, href, external, onClick, ...aria }: ActionProps & AriaAttributes & {
+export function ListRow({ icon, leading, title, sub, value, trailing, chevron, disabled, spoken, className, href, external, onClick, ...aria }: ActionProps & AriaAttributes & {
   icon?: IconProp;
   /** Anything before the text instead of an icon (e.g. <Avatar />). */
   leading?: ReactNode;
@@ -42,6 +44,8 @@ export function ListRow({ icon, leading, title, sub, value, trailing, chevron, d
   /** Show › at the end. Default: when the row is a link or button. */
   chevron?: boolean;
   disabled?: boolean;
+  /** Said after the row's words, for screen readers only (", ketuk untuk membatalkan"). */
+  spoken?: string;
   className?: string;
 }) {
   const pressable = !!(href || onClick);
@@ -54,15 +58,17 @@ export function ListRow({ icon, leading, title, sub, value, trailing, chevron, d
       {trailing}
       {showChevron && <ChevronRight aria-hidden />}
     </span>}
+    {spoken && <span className={shared.srOnly}>{`, ${spoken}`}</span>}
   </Pressable>;
 }
 
 /**
  * A BOD Ringkasan row (DS #45, max 4 on the card): icon, title, line, a big value with a small
  * unit, and a status pill under the text. Pressable rows end in ›; without href/onClick it is the
- * static variant (Jejak karbon) with its value still aligned with the others.
+ * static variant (Jejak karbon) with its value still aligned with the others. Its name is its
+ * words (title, line, value); `spoken` adds to it for screen readers only (WCAG 2.5.3, T-S05).
  */
-export function StatRow({ icon, title, sub, value, unit, status, className, href, external, onClick, ...aria }: ActionProps & AriaAttributes & {
+export function StatRow({ icon, title, sub, value, unit, status, spoken, className, href, external, onClick, ...aria }: ActionProps & AriaAttributes & {
   icon: IconProp;
   title: ReactNode;
   sub?: ReactNode;
@@ -71,6 +77,8 @@ export function StatRow({ icon, title, sub, value, unit, status, className, href
   unit?: ReactNode;
   /** A Pill under the text ("2 perlu persetujuan"). */
   status?: ReactNode;
+  /** Said after the row's words, for screen readers only. */
+  spoken?: string;
   className?: string;
 }) {
   const pressable = !!(href || onClick);
@@ -83,5 +91,6 @@ export function StatRow({ icon, title, sub, value, unit, status, className, href
     </span>
     <span className={css.statEnd}><span className={css.statValue}>{value}{unit && <span className={css.statUnit}>{unit}</span>}</span></span>
     {pressable && <ChevronRight aria-hidden className={css.statChev} />}
+    {spoken && <span className={shared.srOnly}>{`, ${spoken}`}</span>}
   </Pressable>;
 }

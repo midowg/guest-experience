@@ -5,6 +5,7 @@ import { Heart, Lock } from "lucide-react";
 import { Avatar, PhotoFill } from "@/components/main-wam/ui";
 import { photoAlt, photoMeta, swipeDecision, TAP_SLOP } from "@/lib/main-wam/momen/stack";
 import type { FeedPhoto } from "@/lib/main-wam/momen/types";
+import { useFreshAddress } from "./useFreshAddress";
 import css from "./momen.module.css";
 
 /*
@@ -19,18 +20,22 @@ import css from "./momen.module.css";
 const tone = (id: string) => ((parseInt(id.replace(/[^0-9a-f]/gi, "").slice(-4) || "0", 16) % 6) + 1) as 1 | 2 | 3 | 4 | 5 | 6;
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-/** The picture of a card: the small copy at once, the large one over it when it has loaded. */
+/**
+ * The picture of a card: the small copy at once, the large one over it when it has loaded. The
+ * addresses are short-lived (the large one 10–15 minutes, audit L5): when one has run out (the
+ * stack left open a while), it is fetched once more through the server, which signs a fresh one.
+ */
 function CardPhoto({ photo, large, alt }: { photo: FeedPhoto; large: boolean; alt: string }) {
   const [loaded, setLoaded] = useState<string | null>(null);
-  const small = photo.src.kecil;
-  const big = large ? photo.src.besar : null;
+  const small = useFreshAddress(photo.id, "kecil", photo.src.kecil);
+  const big = useFreshAddress(photo.id, "besar", large ? photo.src.besar : null);
   return <>
     <PhotoFill tone={tone(photo.id)} className={css.fill} />
     {/* eslint-disable-next-line @next/next/no-img-element -- short-lived storage addresses from the server */}
-    {small && <img className={css.photo} src={small} alt={big ? "" : alt} draggable={false} decoding="async" />}
+    {small.src && <img className={css.photo} src={small.src} alt={big.src ? "" : alt} draggable={false} decoding="async" onError={small.onError} />}
     {/* eslint-disable-next-line @next/next/no-img-element -- as above */}
-    {big && <img className={css.photo} src={big} alt={alt} draggable={false} decoding="async" fetchPriority="high"
-      data-loaded={loaded === big || !small ? "true" : "false"} onLoad={() => setLoaded(big)} />}
+    {big.src && <img className={css.photo} src={big.src} alt={alt} draggable={false} decoding="async" fetchPriority="high"
+      data-loaded={loaded === big.src || !small.src ? "true" : "false"} onLoad={() => setLoaded(big.src)} onError={big.onError} />}
   </>;
 }
 

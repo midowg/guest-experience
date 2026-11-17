@@ -1,12 +1,13 @@
 import { z } from "zod";
-import { THEME_IMAGE_SLOTS, type MainWamThemeInput, type MainWamThemeSettings, type ThemeImageSlot } from "./types";
+import { THEME_IMAGE_SLOTS, type MainWamMode, type MainWamThemeInput, type MainWamThemeSettings, type ThemeImageSlot } from "./types";
 import { mainWamApi } from "@/lib/routes";
 
 /*
  * Main WAM's KV images (Admin WAM → Main WAM → Pengaturan → Tema): one picture per slot, uploaded in
  * two steps to private storage like TV pictures (start: the server names the key and signs the
- * size; confirm: the first bytes are checked), and served through this site to everyone, signed
- * in or not (the splash shows before signing in). Pure: shared by the admin page and the server.
+ * size; confirm: the first bytes are checked), and served through this site (themeImageAudience):
+ * the splash and the icon to everyone in mode semua (they show before signing in), everything else
+ * only to whom Main WAM is shown and to Admin WAM. Pure: shared by the admin page and the server.
  */
 
 export const THEME_IMAGE_TYPES = { "image/webp": "webp", "image/png": "png", "image/jpeg": "jpg" } as const;
@@ -32,4 +33,16 @@ export const themeImageConfirmSchema = themeImageStartSchema.extend({
 export function themeInputOf(theme: MainWamThemeSettings): MainWamThemeInput {
   const images = Object.fromEntries(THEME_IMAGE_SLOTS.map(slot => [slot, theme.images[slot] ? mainWamApi.themeImage(slot, theme.images[slot]!.version) : null]));
   return { ...theme.colors, displayFont: theme.displayFont, images };
+}
+
+/** The slots shown before signing in (the splash on Masuk, the icon), so public once Main WAM is open to everyone. */
+export const PUBLIC_THEME_SLOTS: readonly ThemeImageSlot[] = ["splash", "icon"];
+
+/**
+ * Who may fetch a KV image (audit M6/R9): "public" (anyone, cacheable by anyone) for the splash and
+ * the icon in mode semua; otherwise "member" (whom Main WAM is shown to, or Admin WAM), never a
+ * stranger while Main WAM is hidden.
+ */
+export function themeImageAudience(mode: MainWamMode, slot: ThemeImageSlot): "public" | "member" {
+  return mode === "semua" && PUBLIC_THEME_SLOTS.includes(slot) ? "public" : "member";
 }

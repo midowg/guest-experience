@@ -64,7 +64,9 @@ it("lists penguji, adds one picked by name and removes one", async () => {
 
 it("waits for the migration: nothing can be saved", () => {
   draw({ ...settings, migrated: false });
-  expect(screen.getByText(/menunggu migrasi 202611200001/)).toBeTruthy();
+  // Plain words, no file name (audit R13, T-A01).
+  expect(screen.getByText(/Pengaturan Main WAM menunggu pembaruan sistem\..*Hubungi tim CoE\./)).toBeTruthy();
+  expect(screen.queryByText(/202611200001|migrasi/)).toBeNull();
   // The radios sit in a disabled fieldset.
   expect(screen.getByRole("radio", { name: /Main WAM \(uji\)/ }).matches(":disabled")).toBe(true);
   expect((screen.getByRole("switch", { name: "Absen QR" }) as HTMLInputElement).disabled).toBe(true);

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
 import { IconButton } from "./Button";
 import { cx, type ActionProps, type IconProp } from "./Pressable";
+import shared from "./shared.module.css";
 import css from "./topbar.module.css";
 
 type Common = {
@@ -20,13 +21,16 @@ type Common = {
  * TopBar (DS #3), one per screen, at the top of the screen's content:
  * - `variant="large"` (default): a tab's root (Agenda, Momen, Saya): Title 28, actions at the end.
  * - `variant="back"`: a detail or task screen: ‹ (to `backHref`, or `onBack`), the title left-aligned
- *   after it, 0–2 actions. A task screen may use ✕ instead (`backIcon`, `backLabel="Tutup"`).
+ *   after it, 0–2 actions. A task screen may use ✕ instead (`backIcon`, `backLabel="Tutup"`). An
+ *   empty title draws no heading; `label` then names the screen for screen readers (hidden h1).
  * - `variant="home"`: Beranda: greeting, name, "Hari ke-2 dari 4", the bell at the end. No avatar.
  * The page's h1 is in it. Safe area is the shell's job.
  */
 export function TopBar(props: Common & (
   | { variant?: "large"; title: ReactNode }
-  | { variant: "back"; title: ReactNode; backHref?: string; onBack?: ActionProps["onClick"]; backLabel?: string; backIcon?: IconProp }
+  | { variant: "back"; title: ReactNode; backHref?: string; onBack?: ActionProps["onClick"]; backLabel?: string; backIcon?: IconProp;
+      /** The screen's name for screen readers when the bar shows no title (P04: "Detail sesi"); without either, no h1 here. */
+      label?: string }
   | { variant: "home"; kicker: ReactNode; name: ReactNode; day?: ReactNode }
 )) {
   const { actions, tone = "default", sticky, scrolled, className } = props;
@@ -36,7 +40,10 @@ export function TopBar(props: Common & (
       <div className={css.start}>
         {(props.backHref || props.onBack) && <IconButton icon={props.backIcon ?? <ChevronLeft />} label={props.backLabel ?? "Kembali"} href={props.backHref} onClick={props.onBack} />}
       </div>
-      <h1 className={css.backTitle}>{props.title}</h1>
+      {props.title
+        ? <h1 className={css.backTitle}>{props.title}</h1>
+        // "Kepala tanpa judul" (revisi 16 Nov): the column stays; the name is for screen readers only, never an empty h1.
+        : <span className={css.backTitle}>{props.label && <h1 className={shared.srOnly}>{props.label}</h1>}</span>}
       <div className={css.end}>{actions}</div>
     </header>;
   }

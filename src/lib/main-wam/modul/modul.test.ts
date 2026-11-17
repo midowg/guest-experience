@@ -5,11 +5,12 @@ import type { MwAwardApproval, MwAwardCategory, MwSession } from "../types";
 import {
   absenCard, acceptedScanTime, addToQueue, checkInBodySchema, outcomeText, presentLabel, readQueue, tokenFromScan, windowOutcome,
 } from "./absen";
+import { adminRange, adminWhen, silentQuestionSchema } from "./admin";
 import {
-  approvalCard, approvalRefusal, isAnnounced, nextAnnouncement, rankTally, shownCategories, topTied, totalVotes, voteCard, voteRefusal, votableNominees, waitingCount,
+  approvalCard, approvalRefusal, closedCounts, closedTally, isAnnounced, nextAnnouncement, rankTally, shownCategories, topTied, totalVotes, voteCard, voteRefusal, votableNominees, waitingCount,
 } from "./awards";
 import {
-  controlPatch, NO_TOPIC, openBanner, openPill, participantMessage, pickSilent, readDraft, recapReady, shuffle, silentControlSchema, silentFeedbackSchema, topicCounts,
+  controlRefusal, NO_TOPIC, openBanner, openerMessage, openPill, pickSilent, readDraft, recapReady, shuffle, silentControlSchema, silentFeedbackSchema, silentOpenSchema, topicCounts,
 } from "./silent";
 
 /* Status jendela waktu (absen, Silent Meeting, voting) and the rules the screens and APIs share. */
@@ -41,15 +42,38 @@ describe("Absen QR", () => {
 
   it("keeps a queued scan's own time within limits, never the phone's future", () => {
     const now = at("2027-01-05", "08:00");
-    expect(acceptedScanTime("2027-01-05T07:52:00+07:00", now).toISOString()).toBe(at("2027-01-05", "07:52").toISOString());
-    expect(acceptedScanTime("2027-01-05T08:01:00+07:00", now).toISOString()).toBe(now.toISOString());
-    expect(acceptedScanTime("2027-01-05T08:10:00+07:00", now)).toBe(now);
-    expect(acceptedScanTime("2027-01-05T01:00:00+07:00", now)).toBe(now);
-    expect(acceptedScanTime(undefined, now)).toBe(now);
-    expect(acceptedScanTime("bukan", now)).toBe(now);
+    expect(acceptedScanTime("2027-01-05T07:52:00+07:00", now, pemaparan).toISOString()).toBe(at("2027-01-05", "07:52").toISOString());
+    expect(acceptedScanTime("2027-01-05T08:01:00+07:00", now, pemaparan).toISOString()).toBe(now.toISOString());
+    expect(acceptedScanTime("2027-01-05T08:10:00+07:00", now, pemaparan)).toBe(now);
+    expect(acceptedScanTime("2027-01-05T01:00:00+07:00", now, pemaparan)).toBe(now);
+    expect(acceptedScanTime(undefined, now, pemaparan)).toBe(now);
+    expect(acceptedScanTime("bukan", now, pemaparan)).toBe(now);
     expect(checkInBodySchema.safeParse({ scannedAt: "2027-01-05T07:52:00+07:00" }).success).toBe(true);
     expect(checkInBodySchema.safeParse({ scannedAt: "kemarin" }).success).toBe(false);
     expect(checkInBodySchema.safeParse({ employeeId: "x" }).success).toBe(false);
+  });
+
+  it("keeps a queued scan's time only inside the window and at most 30 minutes old (audit M5)", () => {
+    // Pemaparan 08.00–12.00: absen 07.30–12.30.
+    const window = (scanned: string, sent: string) => {
+      const now = at("2027-01-05", sent);
+      const accepted = acceptedScanTime(`2027-01-05T${scanned}:00+07:00`, now, pemaparan);
+      return { accepted: accepted.toISOString() === at("2027-01-05", scanned).toISOString(), outcome: windowOutcome(pemaparan, accepted)?.kind ?? "tercatat" };
+    };
+    // Exactly 30 minutes old: kept. 30 minutes and a second: the server's time instead.
+    expect(window("12:20", "12:50")).toEqual({ accepted: true, outcome: "tercatat" });
+    expect(acceptedScanTime("2027-01-05T12:19:59+07:00", at("2027-01-05", "12:50"), pemaparan)).toEqual(at("2027-01-05", "12:50"));
+    expect(window("12:19", "12:50")).toEqual({ accepted: false, outcome: "tutup" });
+    // The audit's case: hours after the window closed, a time in the middle of the session.
+    expect(window("10:00", "17:30")).toEqual({ accepted: false, outcome: "tutup" });
+    // Inside 30 minutes but outside the window (before it opened): the server's time counts.
+    expect(window("07:29", "07:40")).toEqual({ accepted: false, outcome: "tercatat" });
+    expect(window("07:30", "07:40")).toEqual({ accepted: true, outcome: "tercatat" });
+    // The window's last minute (12.30) is inside; one minute after it is not.
+    expect(window("12:30", "12:45")).toEqual({ accepted: true, outcome: "tercatat" });
+    expect(window("12:31", "12:45")).toEqual({ accepted: false, outcome: "tutup" });
+    // Too old while the window is still open: recorded at the server's time, not the claimed one.
+    expect(acceptedScanTime("2027-01-05T08:00:00+07:00", at("2027-01-05", "09:00"), pemaparan)).toEqual(at("2027-01-05", "09:00"));
   });
 
   it("says what happened in one sentence (A02–A04)", () => {
@@ -84,13 +108,14 @@ describe("Silent Meeting", () => {
   const session = sampleSession("silent"); // Sel, 5 Jan 13.00–14.30
   const question = sampleSilentQuestion;
 
-  it("opens and closes with its session, and panitia's override wins", () => {
+  it("opens and closes with its session; panitia opens it early or closes it early, and closed is final", () => {
     expect(pickSilent([question], sampleSessions, at("2027-01-05", "12:59"))?.state).toBe("belum");
     expect(pickSilent([question], sampleSessions, at("2027-01-05", "13:45"))?.state).toBe("buka");
     expect(pickSilent([question], sampleSessions, at("2027-01-05", "14:30"))?.state).toBe("tutup");
-    expect(pickSilent([{ ...question, override: "buka", overrideAt: "x" }], sampleSessions, at("2027-01-05", "12:00"))?.state).toBe("buka");
-    expect(pickSilent([{ ...question, override: "tutup", overrideAt: "x" }], sampleSessions, at("2027-01-05", "13:45"))?.state).toBe("tutup");
-    expect(pickSilent([{ ...question, override: "buka", overrideAt: "x", autoClose: false }], sampleSessions, at("2027-01-05", "18:00"))?.state).toBe("buka");
+    expect(pickSilent([{ ...question, openedAt: "2027-01-05T05:00:00Z" }], sampleSessions, at("2027-01-05", "12:00"))?.state).toBe("buka");
+    expect(pickSilent([{ ...question, closedAt: "2027-01-05T06:40:00Z" }], sampleSessions, at("2027-01-05", "13:45"))?.state).toBe("tutup");
+    // Opened early still closes at its end.
+    expect(pickSilent([{ ...question, openedAt: "2027-01-05T05:00:00Z" }], sampleSessions, at("2027-01-05", "18:00"))?.state).toBe("tutup");
     // A draft session's question does not exist for the app.
     const drafts: MwSession[] = sampleSessions.map(item => (item.id === session.id ? { ...item, status: "draf" } : item));
     expect(pickSilent([question], drafts, at("2027-01-05", "13:45"))).toBeNull();
@@ -105,18 +130,29 @@ describe("Silent Meeting", () => {
     expect(pickSilent([other, question], sampleSessions, at("2027-01-07", "18:00"), "lain")).toBeNull();
   });
 
-  it("tells when it closes", () => {
+  it("tells when it closes, also when panitia opened it early (R1)", () => {
     const view = pickSilent([question], sampleSessions, at("2027-01-05", "13:45"))!;
     expect(openBanner(view)).toBe("Dibuka · sampai 14.30");
     expect(openPill(view)).toBe("Tanpa nama · sampai 14.30");
+    expect(openBanner(pickSilent([{ ...question, openedAt: "2027-01-05T05:00:00Z" }], sampleSessions, at("2027-01-05", "12:00"))!)).toBe("Dibuka · sampai 14.30");
     expect(openBanner({ closesAt: null })).toBe("Dibuka");
   });
 
-  it("shows the recap only once closed, from 5 feedbacks and 5 people", () => {
-    expect(recapReady({ state: "tutup" }, 5, 5)).toBe(true);
-    expect(recapReady({ state: "tutup" }, 12, 4)).toBe(false);
-    expect(recapReady({ state: "tutup" }, 4, 4)).toBe(false);
-    expect(recapReady({ state: "buka" }, 47, 40)).toBe(false);
+  it("shows the recap only once closed, from 5 feedbacks and 5 people who opened it", () => {
+    expect(recapReady({ state: "tutup" }, { feedback: 5, openers: 5 })).toBe(true);
+    expect(recapReady({ state: "tutup" }, { feedback: 12, openers: 4 })).toBe(false);
+    expect(recapReady({ state: "tutup" }, { feedback: 4, openers: 40 })).toBe(false);
+    expect(recapReady({ state: "tutup" }, null)).toBe(false);
+    expect(recapReady({ state: "buka" }, { feedback: 47, openers: 40 })).toBe(false);
+  });
+
+  it("lets panitia open it only before it opens and close it only while open: a closed one never opens again (audit H2)", () => {
+    expect(controlRefusal("belum", "buka")).toBeNull();
+    expect(controlRefusal("buka", "tutup")).toBeNull();
+    expect(controlRefusal("tutup", "buka")).toEqual({ status: 409, message: "Silent Meeting yang sudah ditutup tidak bisa dibuka lagi." });
+    expect(controlRefusal("buka", "buka")?.status).toBe(409);
+    expect(controlRefusal("tutup", "tutup")?.status).toBe(409);
+    expect(controlRefusal("belum", "tutup")?.status).toBe(409);
   });
 
   it("validates a feedback and a control", () => {
@@ -125,11 +161,13 @@ describe("Silent Meeting", () => {
     expect(silentFeedbackSchema.safeParse({ questionId: question.id, body: "x".repeat(1001) }).success).toBe(false);
     expect(silentFeedbackSchema.safeParse({ questionId: question.id, body: "Halo", employeeId: "aku" }).success).toBe(false);
     expect(silentControlSchema.safeParse({ action: "buka" }).success).toBe(true);
+    expect(silentControlSchema.safeParse({ action: "tutup" }).success).toBe(true);
+    // "otomatis" (back to the hours after a close) is gone: it could open a closed one again.
+    expect(silentControlSchema.safeParse({ action: "otomatis" }).success).toBe(false);
     expect(silentControlSchema.safeParse({ action: "hapus" }).success).toBe(false);
-    const now = new Date("2027-01-05T06:00:00Z");
-    expect(controlPatch("buka", "dimas", now)).toEqual({ override: "buka", override_at: now.toISOString(), override_by: "dimas" });
-    expect(controlPatch("otomatis", "dimas", now)).toEqual({ override: null, override_at: null, override_by: null });
-    expect(participantMessage("q", "e")).toBe("mw-silent\0q\0e");
+    expect(silentOpenSchema.safeParse({ questionId: question.id }).success).toBe(true);
+    expect(silentOpenSchema.safeParse({ questionId: question.id, body: "x" }).success).toBe(false);
+    expect(openerMessage("q", "e")).toBe("mw-silent-open\0q\0e");
   });
 
   it("shuffles without losing anything and counts per topic", () => {
@@ -195,6 +233,17 @@ describe("Voting Awarding", () => {
     expect(topTied(rankTally(suportif.nominees, new Map()))).toBe(false);
   });
 
+  it("shows the count per nominee, to the BOD and Admin WAM, only once voting closed (audit M1)", () => {
+    const counts = new Map([[sari.id, 31]]);
+    expect(closedTally(suportif, counts, at("2027-01-06", "10:00"))).toBeNull();
+    expect(closedTally(suportif, counts, at("2027-01-06", "07:00"))).toBeNull();
+    expect(closedTally(juri, counts, at("2027-01-06", "16:00"))).toBeNull();
+    expect(closedTally(suportif, counts, at("2027-01-06", "15:00"))).toMatchObject({ total: 31, rows: [{ nomineeId: sari.id, votes: 31, rank: 1 }, expect.anything(), expect.anything(), expect.anything(), expect.anything()] });
+    const all = new Map([[suportif.id, counts], [foto.id, new Map([[foto.nominees[0].id, 4]])]]);
+    expect(closedCounts(sampleAwards, all, at("2027-01-06", "10:00"))).toEqual({});
+    expect(Object.keys(closedCounts(sampleAwards, all, at("2027-01-06", "16:00")))).toEqual([suportif.id, foto.id]);
+  });
+
   it("lets the BOD approve only once voting has closed", () => {
     expect(approvalCard(suportif, null, at("2027-01-06", "10:00"))).toMatchObject({ kind: "voting-buka" });
     expect(approvalCard(suportif, null, at("2027-01-06", "16:00")).kind).toBe("perlu");
@@ -206,5 +255,19 @@ describe("Voting Awarding", () => {
     expect(approvalRefusal(suportif, sari.id, at("2027-01-06", "15:00"))).toBeNull();
     expect(approvalRefusal(suportif, juri.nominees[0].id, at("2027-01-06", "16:00"))?.status).toBe(422);
     expect(approvalRefusal({ ...juri, method: "otomatis" }, juri.nominees[0].id, at("2027-01-06", "16:00"))?.status).toBe(404);
+  });
+});
+
+describe("Admin WAM modul", () => {
+  it("writes times as people read them (T-A03)", () => {
+    expect(adminWhen("2027-01-06T01:00:00Z")).toBe("Rab, 6 Jan · 08.00");
+    expect(adminRange("2027-01-06T01:00:00Z", "2027-01-06T08:00:00Z")).toBe("Rab, 6 Jan · 08.00–15.00");
+    expect(adminRange("2027-01-06T01:00:00Z", "2027-01-07T08:00:00Z")).toBe("Rab, 6 Jan · 08.00 – Kam, 7 Jan · 15.00");
+    expect(adminWhen(null)).toBe("–");
+  });
+
+  it("no longer takes Tutup otomatis: every Silent Meeting closes at its session's end", () => {
+    expect(silentQuestionSchema.safeParse({ sessionId: "00000000-0000-4000-8000-000000000001", question: "Apa yang perlu diubah?" }).success).toBe(true);
+    expect(silentQuestionSchema.safeParse({ sessionId: "00000000-0000-4000-8000-000000000001", question: "Apa yang perlu diubah?", autoClose: false }).success).toBe(false);
   });
 });

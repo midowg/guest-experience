@@ -3,21 +3,19 @@
 import { useCallback, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { ClipboardPaste, Eye, EyeOff, Pencil, Plus, Trash2, UsersRound } from "lucide-react";
-import { ConsoleButton, PageHeader, PageTabs, Pill, type Crumb } from "@/components/console";
+import { ConsoleButton, PageHeader, Pill, type Crumb } from "@/components/console";
 import { adminRequest } from "@/components/admin/shared/api";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import {
   groupByPerson, groupColumnLabels, groupInputSchema, groupLabel, movesOut, nextGroupNumber, parseGroupPaste, ungrouped, type GroupInput, type GroupPaste, type GroupPasteRow,
 } from "@/lib/main-wam/admin/groups";
 import type { AdminPerson } from "@/lib/main-wam/admin/people";
-import { MAIN_WAM_MIGRATION } from "@/lib/main-wam/settings";
 import type { MainWamSettings, MwGroup } from "@/lib/main-wam/types";
 import { mainWamAdminApi, mainWamAdminPath } from "@/lib/routes";
-import { mainWamContentTabs } from "../tabs";
-import { described, Field, MessageLine, NumberInput, useRun, Waiting, type Message, type Problems } from "./fields";
+import { ContentTabs, described, Field, MessageLine, NumberInput, useRun, Waiting, type Message, type Problems } from "./fields";
 import { PasteSheet } from "./PasteSheet";
 import { PeoplePicker } from "./PeoplePicker";
-import { Sheet } from "./Sheet";
+import { Sheet, SheetError } from "./Sheet";
 import css from "./isi.module.css";
 
 type SheetState = { type: "edit"; group: MwGroup | null } | { type: "import" } | null;
@@ -69,15 +67,15 @@ export function GroupsEditor({ initial, migrated, people, published: firstPublis
   }
   const parse = useCallback((text: string) => parseGroupPaste(text, { people, groups }), [people, groups]);
 
-  return <div className={css.page}>
+  return <SheetError.Provider value={message?.tone === "error" ? message.text : null}><div className={css.page}>
     <PageHeader crumbs={crumbs} title={title} subtitle="Kelompok tampil di aplikasi peserta setelah diterbitkan."
       actions={<>
         <ConsoleButton icon={<ClipboardPaste size={18} aria-hidden />} disabled={!migrated} onClick={() => setSheet({ type: "import" })}>Impor</ConsoleButton>
         <ConsoleButton variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!migrated} onClick={() => setSheet({ type: "edit", group: null })}>Tambah kelompok</ConsoleButton>
       </>} />
-    <PageTabs tabs={mainWamContentTabs} current="kelompok" label="Isi acara" />
+    <ContentTabs current="kelompok" />
     <GroupSubtabs current="kelompok" />
-    {!migrated && <Waiting what="Kelompok" migration={MAIN_WAM_MIGRATION} />}
+    {!migrated && <Waiting what="Kelompok" />}
     <MessageLine message={message} />
 
     <div className={css.toolbar}>
@@ -122,7 +120,7 @@ export function GroupsEditor({ initial, migrated, people, published: firstPublis
       })}
     </ul> : <div className={css.empty}>
       <UsersRound size={24} aria-hidden />
-      <h3>{migrated ? "Belum ada kelompok" : "Kelompok belum bisa diisi"}</h3>
+      <h2>{migrated ? "Belum ada kelompok" : "Kelompok belum bisa diisi"}</h2>
       <p>{migrated ? "Tempel pembagian kelompok dari Excel (nomor, nama kelompok, nama karyawan, koordinator), atau tambah satu per satu." : "Halaman ini terbuka lagi setelah pembaruan sistem dijalankan."}</p>
       {migrated && <div className={css.emptyActions}>
         <ConsoleButton variant="primary" icon={<ClipboardPaste size={18} aria-hidden />} onClick={() => setSheet({ type: "import" })}>Impor</ConsoleButton>
@@ -158,7 +156,7 @@ export function GroupsEditor({ initial, migrated, people, published: firstPublis
         return result.message;
       })} />}
     {confirmDialog}
-  </div>;
+  </div></SheetError.Provider>;
 }
 
 /** Tambah kelompok / Ubah kelompok: nomor, nama, anggota, koordinator; one Simpan. */

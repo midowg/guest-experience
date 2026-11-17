@@ -11,7 +11,7 @@ import { mainWamPath } from "@/lib/routes";
 import { rateLimitSecret, ServiceError } from "../../config";
 import { databaseError } from "../../http";
 import { createPrivilegedClient } from "../../supabase/admin";
-import { mwFail, mwMissing, type DbError } from "../errors";
+import { mwFail, mwMissing, mwWaiting, type DbError } from "../errors";
 import type { MainWamContext } from "../gate";
 import { trySendMainWamNote } from "../notes";
 import { mainWamPeople } from "../people";
@@ -27,7 +27,8 @@ import { viewAddress } from "./storage";
 
 const db = () => createPrivilegedClient();
 const oneOf = <T extends string>(values: readonly T[], value: unknown, fallback: T): T => (values.includes(value as T) ? (value as T) : fallback);
-const waiting = () => new ServiceError(503, `Momen menunggu pembaruan sistem (migrasi ${MOMEN_AREA_MIGRATION}).`);
+/** Before migration 202611200201: a plain 503 for the person; the migration's name goes to the server log only (audit R13). */
+const waiting = () => mwWaiting(MOMEN_AREA_MIGRATION);
 
 export type FeedRow = {
   id: string; owner_id: string; audience: string; group_id: string | null; session_id: string | null; width: number; height: number;
@@ -52,7 +53,8 @@ export async function feedPhotos(rows: FeedRow[], context: MainWamContext, now =
   const [people, groups] = await Promise.all([mainWamPeople(), ownerGroups(context.settings.groupsPublished)]);
   return Promise.all(rows.map(async row => {
     const person = people.get(row.owner_id);
-    const [kecil, besar] = await Promise.all([viewAddress(row.thumb_key ?? row.file_key, now), viewAddress(row.file_key, now)]);
+    // The small copy keeps its address for the hour (the grid stays cached); the large one closes within 15 minutes (audit L5).
+    const [kecil, besar] = await Promise.all([row.thumb_key ? viewAddress(row.thumb_key, "kecil", now) : viewAddress(row.file_key, "besar", now), viewAddress(row.file_key, "besar", now)]);
     return {
       id: row.id, owner: { id: row.owner_id, name: person?.name ?? "Rekan", photo: person?.photo ?? null },
       ownerGroup: groups.get(row.owner_id) ?? person?.department ?? "",

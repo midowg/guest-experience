@@ -5,7 +5,7 @@ import { adminSilent, createQuestion } from "@/lib/server/main-wam/modul/admin";
 
 export const dynamic = "force-dynamic";
 
-/** GET: the Silent Meeting questions with how many sent (never the text). */
+/** GET: the Silent Meeting questions with their state; how many sent only once closed from 5 feedbacks of 5 people (never the text). */
 export async function GET() {
   return handle(async () => {
     await requireApiAdmin();
@@ -13,7 +13,7 @@ export async function GET() {
   });
 }
 
-/** POST {sessionId, question, topics, autoClose}: one question for one session. */
+/** POST {sessionId, question, topics}: one question for one session. */
 export async function POST(request: Request) {
   return handle(async () => {
     await requireApiAdmin();

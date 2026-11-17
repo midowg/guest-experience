@@ -1,34 +1,58 @@
 import "server-only";
-import { createHmac } from "node:crypto";
+import { createHmac, hkdfSync } from "node:crypto";
+import { silentShownCount, type SilentResult } from "@/lib/main-wam/module-state";
 import { MODUL_MIGRATION } from "@/lib/main-wam/modul/absen";
 import {
-  controlPatch, participantMessage, pickSilent, recapReady, shuffle, SILENT_MAX_SENDS, topicCounts, type SilentAction, type SilentFeedbackInput, type SilentRecap, type SilentView,
+  controlRefusal, openerMessage, pickSilent, recapReady, shuffle, SILENT_KEY_INFO, SILENT_SEND_LIMIT, SILENT_SEND_WINDOW_MS, topicCounts,
+  type SilentAction, type SilentFeedbackInput, type SilentRecap, type SilentView,
 } from "@/lib/main-wam/modul/silent";
-import { SILENT_COLUMNS, silentFromRow } from "@/lib/main-wam/rows";
 import type { MainWamViewer } from "@/lib/main-wam/types";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import { mainWamPath } from "@/lib/routes";
 import { ServiceError } from "../../config";
-import { databaseError } from "../../http";
 import { createPrivilegedClient } from "../../supabase/admin";
-import { mwFail, mwMissing, mwWaiting } from "../errors";
+import { mwFail, mwWaiting, type DbError } from "../errors";
 import { trySendMainWamNote } from "../notes";
-import { allSessions, silentQuestions } from "../read";
+import { allSessions, silentQuestions, silentResults } from "../read";
+import { limitInMemory, remainingInMemory } from "./memory-limit";
 
 /*
- * Silent Meeting on the server (T01–T03, B05; KONTRAK §8, RISET §7). Feedback is written by
- * mw_silent_send (migration 202611200401): the text and the sender's count in one statement, the
- * count under an HMAC of the person, never linked to the text. Nothing here logs a feedback's text
- * with its sender. The open state is the server's (silentState); the database repeats it.
+ * Silent Meeting on the server (T01–T03, B05; KONTRAK §8, RISET §7; audit H1, H2, L7, L12).
+ * - A send writes one feedback and nothing else (mw_silent_send, migration 202611200401): no person,
+ *   no count, no time, and no other row in its transaction. Its limit per person is in this
+ *   instance's memory only (memory-limit.ts).
+ * - Who opened the form is a separate request when T01 loads (mw_silent_open), under an HMAC with a
+ *   key of Silent Meeting's own (silentKey), once per question.
+ * - No count of an open Silent Meeting leaves here: counts come from mw_silent_results, which only
+ *   has closed ones, and are shown only through silentShownCount (5 feedbacks of 5 people).
+ * - Closed is final: panitia's "buka" is refused once it closed, here and in the database.
+ * - Nothing here logs; the database answers expected refusals with a word, not an error, so no
+ *   failed statement carrying the text reaches its log.
  */
 
 const db = () => createPrivilegedClient();
+const FUNCTION_MISSING = ["42883", "PGRST202"];
+const failed = (error: DbError): never => {
+  if (FUNCTION_MISSING.includes(error.code ?? "")) throw mwWaiting(MODUL_MIGRATION);
+  return mwFail(error, MODUL_MIGRATION);
+};
 
-/** HMAC-SHA256(WAM_SESSION_SECRET, "mw-silent\0" + question + "\0" + person), hex 64 (KONTRAK §8). */
-export function participantKey(questionId: string, employeeId: string): string {
-  const secret = praWamSecret();
+/**
+ * Silent Meeting's own key (audit L7): HKDF-SHA256 of MW_SILENT_SECRET when set (at least 32
+ * characters; keep it for the whole event), else of WAM_SESSION_SECRET, with info "mw-silent-v1".
+ * Rotating the session secret then never changes who counts as a different opener.
+ */
+export function silentKey(): Buffer {
+  const own = process.env.MW_SILENT_SECRET?.trim() ?? "";
+  if (own && own.length < 32) throw new ServiceError(503, "Silent Meeting belum disiapkan. MW_SILENT_SECRET minimal 32 karakter.");
+  const secret = own || praWamSecret();
   if (!secret) throw new ServiceError(503, "Login WAM belum disiapkan.");
-  return createHmac("sha256", secret).update(participantMessage(questionId, employeeId)).digest("hex");
+  return Buffer.from(hkdfSync("sha256", secret, Buffer.alloc(0), SILENT_KEY_INFO, 32));
+}
+
+/** HMAC-SHA256(silentKey, "mw-silent-open\0" + question + "\0" + person), hex 64 (KONTRAK §8). */
+export function openerKey(questionId: string, employeeId: string): string {
+  return createHmac("sha256", silentKey()).update(openerMessage(questionId, employeeId)).digest("hex");
 }
 
 /** The Silent Meeting a screen shows (of a session, or the open/next/last one), with its state now. */
@@ -45,84 +69,110 @@ export async function silentById(questionId: string, now: Date): Promise<SilentV
   return question ? pickSilent([question], sessions.data, now, question.sessionId) : null;
 }
 
-/** How many feedbacks this person has sent to a question (0 before the migration). */
-export async function mySentCount(questionId: string, employeeId: string): Promise<number> {
-  const { data, error } = await db().from("mw_silent_participation").select("sent").eq("question_id", questionId).eq("participant_key", participantKey(questionId, employeeId)).maybeSingle();
-  if (error) { if (mwMissing(error)) return 0; databaseError(error); }
-  return (data as { sent: number } | null)?.sent ?? 0;
+/** The counts of a question closed for good, or null (open, not yet, or before the migration). */
+async function resultOf(questionId: string): Promise<SilentResult | null> {
+  const { data } = await silentResults();
+  return data.get(questionId) ?? null;
 }
 
-/** How many feedbacks, and from how many people. */
-export async function silentCounts(questionId: string): Promise<{ count: number; people: number }> {
-  const [feedback, people] = await Promise.all([
-    db().from("mw_silent_feedback").select("id", { count: "exact", head: true }).eq("question_id", questionId),
-    db().from("mw_silent_participation").select("participant_key", { count: "exact", head: true }).eq("question_id", questionId),
-  ]);
-  if (feedback.error) { if (mwMissing(feedback.error)) return { count: 0, people: 0 }; databaseError(feedback.error); }
-  return { count: feedback.count ?? 0, people: people.error ? 0 : people.count ?? 0 };
+/** The one number anyone sees (T03, BOD): the feedbacks of a closed one with 5 feedbacks of 5 people, else null. */
+export async function silentShownCountOf(view: Pick<SilentView, "state" | "question">): Promise<number | null> {
+  return view.state === "tutup" ? silentShownCount(await resultOf(view.question.id)) : null;
 }
 
 const closed = () => new ServiceError(409, "Silent Meeting sudah ditutup. Tulisanmu tetap di HP ini.");
+const notYet = () => new ServiceError(409, "Silent Meeting belum dibuka.");
+const notFound = () => new ServiceError(404, "Silent Meeting tidak ditemukan.");
+const sendScope = (questionId: string) => `silent-kirim\0${questionId}`;
 
-/** T01 → T02: one anonymous feedback. Returns how many this person has sent and may still send. */
-export async function sendSilentFeedback(input: SilentFeedbackInput, viewer: Pick<MainWamViewer, "id">, now: Date): Promise<{ sent: number; remaining: number }> {
+/** How many more this person may send now (this instance's memory; the screen hides Tulis lagi at 0). */
+export const sendsLeft = (questionId: string, viewer: Pick<MainWamViewer, "id">) => remainingInMemory(sendScope(questionId), viewer.id, SILENT_SEND_LIMIT);
+
+/**
+ * T01 loaded while open: this person opened the form (once per question; the threshold's "5
+ * different people"). A separate request from any send, so no feedback shares its transaction.
+ */
+export async function recordOpener(questionId: string, viewer: Pick<MainWamViewer, "id">, now: Date): Promise<void> {
+  const view = await silentById(questionId, now);
+  if (!view) throw notFound();
+  if (view.state === "belum") throw notYet();
+  if (view.state === "tutup") throw closed();
+  limitInMemory("silent-buka", `${questionId}\0${viewer.id}`, 30, SILENT_SEND_WINDOW_MS, now.getTime());
+  const { data, error } = await db().rpc("mw_silent_open", { p_question: questionId, p_opener: openerKey(questionId, viewer.id) });
+  if (error) failed(error);
+  if (data === "closed") throw closed();
+  if (data === "unknown") throw notFound();
+  if (data !== "ok") throw new ServiceError(503, "Belum berhasil. Coba lagi sebentar.");
+}
+
+/** T01 → T02: one anonymous feedback. Returns how many more this person may send now. */
+export async function sendSilentFeedback(input: SilentFeedbackInput, viewer: Pick<MainWamViewer, "id">, now: Date): Promise<{ remaining: number }> {
   const view = await silentById(input.questionId, now);
-  if (!view) throw new ServiceError(404, "Silent Meeting tidak ditemukan.");
-  if (view.state === "belum") throw new ServiceError(409, "Silent Meeting belum dibuka.");
+  if (!view) throw notFound();
+  if (view.state === "belum") throw notYet();
   if (view.state === "tutup") throw closed();
   if (input.topic && !view.question.topics.includes(input.topic)) throw new ServiceError(422, "Pilih topik dari daftar.");
-  const { data, error } = await db().rpc("mw_silent_send", {
-    p_question: input.questionId, p_participant: participantKey(input.questionId, viewer.id), p_topic: input.topic, p_body: input.body, p_max: SILENT_MAX_SENDS,
-  });
-  if (error) {
-    const message = error.message ?? "";
-    if (/silent_closed/.test(message)) throw closed();
-    if (/silent_limit/.test(message)) throw new ServiceError(429, `Kamu sudah mengirim ${SILENT_MAX_SENDS} masukan untuk Silent Meeting ini.`);
-    if (/silent_topic/.test(message)) throw new ServiceError(422, "Pilih topik dari daftar.");
-    if (/silent_unknown/.test(message)) throw new ServiceError(404, "Silent Meeting tidak ditemukan.");
-    if (["42883", "PGRST202"].includes(error.code ?? "")) throw mwWaiting(MODUL_MIGRATION);
-    mwFail(error, MODUL_MIGRATION);
+  const { remaining } = limitInMemory(sendScope(input.questionId), viewer.id, SILENT_SEND_LIMIT, SILENT_SEND_WINDOW_MS, now.getTime());
+  const { data, error } = await db().rpc("mw_silent_send", { p_question: input.questionId, p_topic: input.topic, p_body: input.body });
+  if (error) failed(error);
+  switch (data) {
+    case "ok": return { remaining };
+    case "closed": throw closed();
+    case "topic": throw new ServiceError(422, "Pilih topik dari daftar.");
+    case "invalid": throw new ServiceError(422, "Tulis masukanmu dulu, paling banyak 1.000 karakter.");
+    case "unknown": throw notFound();
+    case "full": throw new ServiceError(409, "Silent Meeting ini sudah menerima masukan terbanyak.");
+    default: throw new ServiceError(503, "Belum berhasil. Coba lagi sebentar.");
   }
-  const sent = typeof data === "number" ? data : Number(data) || 1;
-  return { sent, remaining: Math.max(0, SILENT_MAX_SENDS - sent) };
 }
 
 /**
- * Panitia opens or closes it by hand, or hands it back to the session's hours (K02's row, agen C,
- * calls this through mainWamApi.silentControl). Opening by hand tells everyone (the hours open it
- * without a note: that needs a scheduled job, KONTRAK §10).
+ * Panitia's hand (K02's row, agen C, through mainWamApi.silentControl): "buka" before the start
+ * (once; everyone is told, at most once per question), "tutup" while open (final, then counted and
+ * shuffled). A closed one never opens again. Answers its state, and a count only once closed with
+ * 5 feedbacks of 5 people.
  */
-export async function controlSilent(questionId: string, action: SilentAction, viewer: Pick<MainWamViewer, "id">, now: Date): Promise<SilentView> {
+export async function controlSilent(questionId: string, action: SilentAction, viewer: Pick<MainWamViewer, "id">, now: Date): Promise<{ view: SilentView; count: number | null }> {
   const before = await silentById(questionId, now);
-  if (!before) throw new ServiceError(404, "Silent Meeting tidak ditemukan.");
-  const { data, error } = await db().from("mw_silent_questions").update({ ...controlPatch(action, viewer.id, now), updated_at: now.toISOString() }).eq("id", questionId).select(SILENT_COLUMNS).maybeSingle();
-  if (error) mwFail(error);
-  if (!data) throw new ServiceError(404, "Silent Meeting tidak ditemukan.");
-  const sessions = await allSessions();
-  const after = pickSilent([silentFromRow(data as Record<string, unknown>)], sessions.data, now, before.session.id)!;
-  if (before.state !== "buka" && after.state === "buka") {
+  if (!before) throw notFound();
+  const refused = controlRefusal(before.state, action);
+  if (refused) throw new ServiceError(refused.status, refused.message);
+  const { data, error } = await db().rpc("mw_silent_control", { p_question: questionId, p_action: action, p_by: viewer.id });
+  if (error) failed(error);
+  if (data === "unknown") throw notFound();
+  if (data === "final") throw new ServiceError(409, action === "buka" ? "Silent Meeting yang sudah ditutup tidak bisa dibuka lagi." : "Silent Meeting sudah ditutup.");
+  if (data === "already_open") throw new ServiceError(409, "Silent Meeting sudah dibuka.");
+  if (data === "not_open") throw notYet();
+  if (data !== "opened" && data !== "closed") throw new ServiceError(503, "Belum berhasil. Coba lagi sebentar.");
+  const after = (await silentById(questionId, now)) ?? before;
+  // Only the one transition from not opened to opened tells everyone: at most once per question.
+  if (data === "opened") {
     await trySendMainWamNote({
       kind: "silent", title: "Silent Meeting dibuka", body: `${after.question.question} Kirim masukan tanpa nama.`,
       to: { audience: { type: "semua" } }, link: mainWamPath.silentMeeting(after.session.id), by: viewer.id, tag: `sesi-${after.session.id}`, except: viewer.id,
     });
   }
-  return after;
+  return { view: after, count: data === "closed" ? await silentShownCountOf(after) : null };
 }
 
 export type { SilentRecap };
 
-/** B05 for the BOD: the last closed Silent Meeting (or the open one, waiting), with its recap when ready. */
+/**
+ * B05 for the BOD: the last closed Silent Meeting (or the open one, waiting). Its feedback, shuffled
+ * and without time, and its count only once closed for good with 5 feedbacks of 5 people.
+ */
 export async function silentRecap(now: Date): Promise<{ recap: SilentRecap | null; migrated: boolean }> {
   const [questions, sessions] = await Promise.all([silentQuestions(), allSessions()]);
   const views = questions.data.map(question => pickSilent([question], sessions.data, now, question.sessionId)).filter((view): view is SilentView => !!view && view.state !== "belum");
   const closedViews = views.filter(view => view.state === "tutup").sort((a, b) => Date.parse(b.session.startsAt) - Date.parse(a.session.startsAt));
   const view = closedViews[0] ?? views.find(item => item.state === "buka") ?? null;
   if (!view) return { recap: null, migrated: questions.migrated };
-  const { count, people } = await silentCounts(view.question.id);
-  const ready = recapReady(view, count, people);
-  if (!ready) return { recap: { view, count, people, ready, topics: [], items: [] }, migrated: true };
+  const waiting: SilentRecap = { view, ready: false, count: null, topics: [], items: [] };
+  if (view.state !== "tutup") return { recap: waiting, migrated: true };
+  const result = await resultOf(view.question.id);
+  if (!result || !recapReady(view, result)) return { recap: waiting, migrated: true };
   const { data, error } = await db().from("mw_silent_feedback").select("id,topic,body").eq("question_id", view.question.id).limit(2000);
-  if (error) mwFail(error);
+  if (error) failed(error);
   const items = shuffle((data ?? []) as { id: string; topic: string; body: string }[]);
-  return { recap: { view, count, people, ready, topics: topicCounts(items, view.question.topics), items }, migrated: true };
+  return { recap: { view, ready: true, count: result.feedback, topics: topicCounts(items, view.question.topics), items }, migrated: true };
 }

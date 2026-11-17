@@ -116,12 +116,23 @@ describe("the contextual card", () => {
     expect(travelCandidate(sampleTrips, seats, at("2027-01-05", "08:00"))).toBeNull();
   });
 
-  it("survey: during its session, when a questionnaire is chosen", () => {
+  it("survey (R7): the card follows the one rule (survey.ts), with its minutes and closing time", () => {
     const now = at("2027-01-07", "08:10");
-    const card = surveyCandidate("survei-wam", sampleSessions, now)!;
-    expect(homeCardView(card, now)).toEqual({ kind: "survei", title: "Survei evaluasi dibuka", sub: "Sampai 09.30", action: "Isi survei", target: { survey: "survei-wam" } });
-    expect(surveyCandidate(null, sampleSessions, now)).toBeNull();
-    expect(surveyCandidate("survei-wam", sampleSessions, at("2027-01-07", "10:00"))).toBeNull();
+    const card = surveyCandidate({ formSlug: "survei-wam", sessionId: sampleSessionIds.penutupan, until: "2027-01-07T12:00:00+07:00", minutes: 5 })!;
+    expect(homeCardView(card, now)).toEqual({ kind: "survei", title: "Survei evaluasi dibuka", sub: "5 menit · sampai 12.00", action: "Isi survei", target: { survey: "survei-wam" } });
+    expect(homeCardView(surveyCandidate({ formSlug: "s", sessionId: "x", until: null, minutes: null })!, now)).toMatchObject({ sub: "" });
+    expect(surveyCandidate(null)).toBeNull();
+  });
+
+  it("a pinned announcement keeps its tone (F's pinnedForMe); without one, noteTone decides (P02__status: a change is a warning)", () => {
+    const now = at("2027-01-04", "05:00");
+    const note = { ...sampleNotifications[0], pinnedUntil: "2027-01-04T07:00:00+07:00" };
+    const [warned] = announcementCandidates([{ ...note, title: "Pengumuman", tone: "warning" }], now);
+    expect(homeCardView(warned, now)).toMatchObject({ kind: "pengumuman", tone: "warning" });
+    const [plain] = announcementCandidates([{ ...note, title: "Bawa jaket", tone: "info" }], now);
+    expect(homeCardView(plain, now)).toMatchObject({ tone: "info" });
+    const [guessed] = announcementCandidates([{ ...note, title: "Jam kumpul berubah", tone: undefined }], now);
+    expect(homeCardView(guessed, now)).toMatchObject({ tone: "warning" });
   });
 
   it("the order: pengumuman > silent > voting > berangkat > survei; nothing without candidates", () => {

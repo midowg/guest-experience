@@ -21,10 +21,10 @@ export function sampleSilentView(moment: "belum" | "buka" | "tutup", question: P
   return pickSilent([{ ...sampleSilentQuestion, ...question }], sessions, now)!;
 }
 
-/** B05: 47 feedbacks from 41 people (19 · 14 · 9 · 5), or only 3 (B05__status). */
-export function sampleRecap(ready = true): SilentRecap {
-  const view = sampleSilentView("tutup");
-  if (!ready) return { view, count: 3, people: 3, ready: false, topics: [], items: [] };
+/** B05: 47 feedbacks from 41 people (19 · 14 · 9 · 5); "kurang" closed below 5 of 5; "buka" still open (no count either way). */
+export function sampleRecap(ready: boolean | "buka" = true): SilentRecap {
+  const view = sampleSilentView(ready === "buka" ? "buka" : "tutup");
+  if (ready !== true) return { view, ready: false, count: null, topics: [], items: [] };
   const extra = [
     { topic: "Cara kerja", body: "Dokumen proyek tersebar di banyak tempat. Satu folder bersama saja." },
     { topic: "Komunikasi", body: "Keputusan rapat sering tidak sampai ke tim lapangan." },
@@ -39,7 +39,7 @@ export function sampleRecap(ready = true): SilentRecap {
   }
   // The prototype's three first, as drawn; the rest after.
   const first = sampleSilentFeedback.map((item, index) => ({ id: `contoh-${index}`, ...item }));
-  return { view, count: 47, people: 41, ready: true, topics: topicCounts(items, view.question.topics), items: [...first, ...items.slice(3)] };
+  return { view, ready: true, count: 47, topics: topicCounts(items, view.question.topics), items: [...first, ...items.slice(3)] };
 }
 
 /** Every nominee of the sample categories as the screens show them. */

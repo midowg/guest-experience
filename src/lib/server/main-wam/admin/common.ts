@@ -1,11 +1,10 @@
 import "server-only";
-import { MAIN_WAM_ADMIN_MIGRATION } from "@/lib/main-wam/admin/labels";
 import type { AdminPerson } from "@/lib/main-wam/admin/people";
-import { MAIN_WAM_MIGRATION } from "@/lib/main-wam/settings";
+import { IN_USE_REFUSAL, shiftConflict } from "@/lib/main-wam/admin/rundown";
 import { ServiceError } from "../../config";
 import { createPrivilegedClient } from "../../supabase/admin";
 import { currentAdmin } from "../../admin-session";
-import { mwFail, type DbError } from "../errors";
+import { mwMissing, type DbError } from "../errors";
 import { mainWamPeople } from "../people";
 
 /*
@@ -26,27 +25,42 @@ const FUNCTION_MESSAGES: Record<string, [number, string]> = {
   MW_DUPLICATE_MEMBER: [409, "Satu orang hanya boleh di satu kelompok."],
   MW_DUPLICATE_GROUP: [409, "Ada nomor kelompok yang tertulis dua kali."],
   MW_BAD_INPUT: [422, "Tidak ada baris yang bisa disimpan."],
+  MW_SESSION_IN_USE: [409, IN_USE_REFUSAL],
+  MW_SESSION_CHANGED: [409, shiftConflict()],
 };
 
 export type Refusals = { duplicate?: string; inUse?: string; invalid?: string; notFound?: string };
 
 /**
- * A write the database refused, as the admin should read it; a missing table, column or function
- * is "menunggu migrasi" (fondasi's tables: 202611200001; E's functions: 202611200501).
+ * Before Main WAM's migrations, or a database that does not answer: said plainly to the admin,
+ * without file names or system words (audit T-A01). What the database said goes to the server's
+ * log for the CoE team, never to the page.
  */
-export function adminFail(error: DbError, refusals: Refusals = {}, migration = MAIN_WAM_MIGRATION): never {
+export const WAITING_MESSAGE = "Fitur ini menunggu pembaruan sistem. Hubungi tim CoE.";
+export const adminWaiting = () => new ServiceError(503, WAITING_MESSAGE);
+const NOT_SAVED = "Perubahan belum bisa disimpan. Coba lagi sebentar lagi; bila masih gagal, hubungi tim CoE.";
+const logged = (what: string, error: DbError) => console.error(`main-wam admin: ${what}`, error.code ?? "", error.message ?? "");
+
+/**
+ * A write the database refused, as the admin should read it; a missing table, column or function
+ * is "menunggu pembaruan sistem" (fondasi's tables: 202611200001–0003; E's functions: 202611200501).
+ */
+export function adminFail(error: DbError, refusals: Refusals = {}): never {
   const known = FUNCTION_MESSAGES[error.message ?? ""];
   if (known) throw new ServiceError(known[0], known[1]);
   if (error.code === "P0002") throw new ServiceError(404, refusals.notFound ?? "Data tidak ditemukan. Muat ulang halaman.");
   if (error.code === "23505") throw new ServiceError(409, refusals.duplicate ?? "Data yang sama sudah ada.");
   if (error.code === "23503") throw new ServiceError(409, refusals.inUse ?? "Data ini masih dipakai di bagian lain, atau orangnya tidak ada di Data karyawan.");
   if (error.code === "23514" || error.code === "22P02" || error.code === "22007" || error.code === "23502") throw new ServiceError(422, refusals.invalid ?? "Isian belum sesuai aturan. Periksa lagi lalu simpan.");
-  return mwFail(error, migration);
+  if (mwMissing(error)) { logged("menunggu migrasi", error); throw adminWaiting(); }
+  logged("database menolak", error);
+  throw new ServiceError(503, NOT_SAVED);
 }
+/** E's function itself is missing (migration 202611200501 not run yet). */
+export const functionMissing = (error: DbError) => error.code === "42883" || error.code === "PGRST202";
 /** For writers that call E's functions (migration 202611200501). */
 export const rpcFail = (error: DbError, refusals: Refusals = {}): never => {
-  // The function itself is missing: E's migration; a table in it: still the fondasi's.
-  if (error.code === "42883" || error.code === "PGRST202") return mwFail(error, MAIN_WAM_ADMIN_MIGRATION);
+  if (functionMissing(error)) { logged("menunggu migrasi 202611200501", error); throw adminWaiting(); }
   return adminFail(error, refusals);
 };
 

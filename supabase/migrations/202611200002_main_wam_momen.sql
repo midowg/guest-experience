@@ -44,6 +44,8 @@ create index mw_photos_session on public.mw_photos (session_id, visible_at desc,
 create index mw_photos_review on public.mw_photos (status) where status <> 'tampil';
 create index mw_photos_owner on public.mw_photos (owner_id, created_at desc);
 create index mw_photos_group on public.mw_photos (group_id, visible_at desc) where group_id is not null;
+-- Every foreign key has an index led by it (audit L1).
+create index mw_photos_hidden_by on public.mw_photos (hidden_by) where hidden_by is not null;
 
 create table public.mw_photo_hearts (
   photo_id uuid not null references public.mw_photos (id) on delete cascade,
@@ -75,6 +77,8 @@ create table public.mw_photo_seen (
   seen_at timestamptz not null default now(),
   primary key (employee_id, photo_id)
 );
+-- Removing a photo finds its "seen" rows by the photo (audit L1: ±240 000 rows at 2 000 photos × 120 people).
+create index mw_photo_seen_photo on public.mw_photo_seen (photo_id);
 
 /* Mozaik: which photo fills which tile (row-major index of the grid in module_config.mozaik). */
 create table public.mw_mosaic_tiles (

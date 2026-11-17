@@ -1,4 +1,4 @@
-import { ScreenContent } from "@/components/main-wam/shell";
+import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
 import { Skeleton, SkeletonGroup } from "@/components/main-wam/ui";
 import stack from "./momen.module.css";
 import camera from "./camera.module.css";
@@ -10,9 +10,13 @@ import mosaic from "./mosaic.module.css";
  * shape of its screen, so nothing jumps when it arrives.
  */
 
-/** M01 memuat: the filter row, the card as a panel with a spinner place, the actions. */
+/** M01 memuat: Galeri and Mozaik beside the title (audit T-M05), the filter row, the card as a panel with a spinner place, the actions. */
 export function StackSkeleton() {
+  const chip = { borderRadius: "var(--mw-radius-12)", opacity: 0.25 };
   return <div className={stack.view}>
+    <ShellActions>
+      <span className={stack.skeletonChips} aria-hidden><Skeleton shape="block" width={81} height={32} style={chip} /><Skeleton shape="block" width={88} height={32} style={chip} /></span>
+    </ShellActions>
     <SkeletonGroup label="Memuat momen" style={{ display: "contents" }}>
       <div className={stack.filter}><Skeleton shape="block" height={40} style={{ flex: 1, borderRadius: 999, opacity: 0.25 }} /><Skeleton shape="block" width={128} height={36} style={{ borderRadius: 999, opacity: 0.25 }} /></div>
       <div className={stack.deck}><div className={stack.deckInner}><div className={stack.pile}><div className={stack.panel} /></div></div></div>

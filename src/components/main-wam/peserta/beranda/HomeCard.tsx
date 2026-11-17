@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { ClipboardList, ExternalLink, Lock, Megaphone, TrainFront, Trophy } from "lucide-react";
+import { CalendarClock, ClipboardList, ExternalLink, Lock, Megaphone, TrainFront, Trophy } from "lucide-react";
 import type { HomeCardView } from "@/lib/main-wam/peserta/home";
 import { noteHash } from "@/lib/main-wam/peserta/notifications";
 import { mainWamPath, praWamPath } from "@/lib/routes";
@@ -15,11 +15,13 @@ const LOOK = {
 
 /**
  * The one contextual card under Sekarang (P01__status): a pinned announcement as a banner (to its
- * sheet in Notifikasi), or Silent Meeting / voting / the travel day / the survey with one tonal button.
+ * sheet in Notifikasi; a change such as "Kumpul jadi 05.30" as a warning with the schedule icon,
+ * P02__status), or Silent Meeting / voting / the travel day / the survey with one tonal button.
  */
 export function HomeCard({ card }: { card: HomeCardView }) {
   if (card.kind === "pengumuman") {
-    return <Banner tone="info" icon={<Megaphone />} title={card.title} href={`${mainWamPath.notifications}#${noteHash(card.id)}`}>{card.body}</Banner>;
+    const warning = card.tone === "warning";
+    return <Banner tone={warning ? "warning" : "info"} icon={warning ? <CalendarClock /> : <Megaphone />} title={card.title} href={`${mainWamPath.notifications}#${noteHash(card.id)}`}>{card.body}</Banner>;
   }
   const look = LOOK[card.kind];
   const href = card.kind === "silent" ? mainWamPath.silentMeeting(card.target.silentSession)

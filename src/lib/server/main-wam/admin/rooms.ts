@@ -3,7 +3,7 @@ import { ServiceError, isSupabaseConfigured } from "../../config";
 import { currentForm } from "../../pra-wam/questionnaire";
 import { mwMissing } from "../errors";
 import { mainWamPeople } from "../people";
-import { adminFail, db } from "./common";
+import { adminFail, adminWaiting, db } from "./common";
 
 /*
  * Admin WAM → Main WAM → Kamar (agen E). The rooms and who shares them come from HR's pairing
@@ -76,7 +76,7 @@ export async function saveRoomDetail(roomId: string, input: { floor: string; not
   const form = await currentForm();
   if (!form) throw new ServiceError(404, "Pembagian kamar belum ada. Isi dulu di Kuesioner → Kamar.");
   const { data: room, error: roomError } = await db().from("cq_stay_rooms").select("id").eq("id", roomId).eq("form_id", form.id).maybeSingle();
-  if (roomError) { if (stayMissing(roomError)) throw new ServiceError(503, "Kamar menunggu migrasi 202611050001_wam_stay_rooms.sql."); adminFail(roomError); }
+  if (roomError) { if (stayMissing(roomError)) throw adminWaiting(); adminFail(roomError); }
   if (!room) throw new ServiceError(404, "Kamar tidak ditemukan. Muat ulang halaman.");
   const { error } = await db().from("mw_stay_room_details").upsert({ room_id: roomId, floor: input.floor, note: input.note, updated_at: new Date().toISOString() }, { onConflict: "room_id" });
   if (error) adminFail(error, { invalid: "Lantai paling panjang 40 karakter, catatan 200." });

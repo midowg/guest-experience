@@ -21,7 +21,7 @@ export function AgendaScreen({ migrated, days, day, rows, anyPublished, since, f
   const next = day < days.length ? mainWamPath.agenda(day + 1) : null;
   return <ScreenContent>
     <div className={css.dayBar}>
-      <DayTabs current={String(day)} days={days.map(item => ({ key: item.key, day: item.day, date: item.date, today: item.today, href: mainWamPath.agenda(item.number) }))} />
+      <DayTabs className={css.dayTabs} current={String(day)} days={days.map(item => ({ key: item.key, day: item.day, date: item.date, today: item.today, href: mainWamPath.agenda(item.number) }))} />
     </div>
     <OfflineBanner since={since} force={forceOffline} />
     <DaySwipe prev={prev} next={next} className={css.daySwipe}>

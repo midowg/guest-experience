@@ -1,7 +1,7 @@
 import "server-only";
-import { announcementKind, notePushTopic } from "@/lib/main-wam/notify";
+import { announcementKind, notePushTopic, noteTone } from "@/lib/main-wam/notify";
 import { NOTE_KIND } from "@/lib/main-wam/rows";
-import type { AnnouncementAudience, MainWamSettings, MwNotification, NoteKind } from "@/lib/main-wam/types";
+import type { AnnouncementAudience, MainWamSettings, MwNotification, NoteKind, NoteTone, PinnedNote } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { ServiceError } from "../config";
 import { databaseError } from "../http";
@@ -9,6 +9,7 @@ import { createPrivilegedClient } from "../supabase/admin";
 import { listEvents } from "../pra-wam/events";
 import { schedulePush } from "../pra-wam/push";
 import { mwFail, mwMissing } from "./errors";
+import { mainWamEventPeople } from "./people";
 import { readMainWamSettings, testerIds } from "./settings";
 
 /*
@@ -23,30 +24,19 @@ const db = () => createPrivilegedClient();
 
 async function wamEventId(): Promise<string> {
   const wam = (await listEvents()).events.find(event => event.kind === "wam");
-  if (!wam) throw new ServiceError(503, "Acara WAM 2027 belum tersedia (pw_events).");
+  if (!wam) throw new ServiceError(503, "Acara WAM 2027 belum disiapkan. Hubungi tim CoE.");
   return wam.id;
 }
 
-/** Everyone with an active WAM account (and an active Data karyawan row). */
-async function activeAccountIds(): Promise<string[]> {
-  const ids: string[] = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await db().from("pw_accounts").select("employee_id,employees!inner(active)").eq("active", true).eq("employees.active", true).order("employee_id").range(from, from + 999);
-    if (error) databaseError(error);
-    ids.push(...(data ?? []).map(row => row.employee_id as string));
-    if ((data?.length ?? 0) < 1000) break;
-  }
-  return ids;
-}
-
-/** Who Main WAM is on for now: everyone in mode semua; else the penguji (listed, panitia, admin). */
+/**
+ * Who Main WAM is on for now, among everyone with an active WAM account (people.ts, the one list):
+ * everyone in mode semua; else the penguji (listed, panitia, admin).
+ */
 export async function mainWamAudience(settings?: MainWamSettings): Promise<string[]> {
-  const mode = (settings ?? await readMainWamSettings()).mode;
-  const everyone = await activeAccountIds();
-  if (mode === "semua") return everyone;
-  const [listed, { data: roles }] = await Promise.all([testerIds(), db().from("pw_roles").select("employee_id").in("role", ["panitia", "admin"])]);
-  const testers = new Set([...listed, ...(roles ?? []).map(row => row.employee_id as string)]);
-  return everyone.filter(id => testers.has(id));
+  const [{ mode }, people] = await Promise.all([settings ?? readMainWamSettings(), mainWamEventPeople()]);
+  if (mode === "semua") return [...people.accounts];
+  const listed = await testerIds();
+  return people.accounts.filter(id => listed.has(id) || people.panitia.has(id) || people.admin.has(id));
 }
 
 /** Who an announcement's audience means now, within Main WAM's audience. */
@@ -55,10 +45,7 @@ export async function resolveAudience(audience: AnnouncementAudience, settings?:
   const keep = (ids: string[]) => [...new Set(ids)].filter(id => within.has(id));
   switch (audience.type) {
     case "semua": return { ids: [...within], label: "Semua peserta" };
-    case "panitia": {
-      const { data } = await db().from("pw_roles").select("employee_id").eq("role", "panitia");
-      return { ids: keep((data ?? []).map(row => row.employee_id as string)), label: "Panitia" };
-    }
+    case "panitia": return { ids: keep([...(await mainWamEventPeople()).panitia]), label: "Panitia" };
     case "kelompok": {
       const [{ data: members }, { data: groups }] = await Promise.all([
         db().from("mw_group_members").select("employee_id").in("group_id", audience.groupIds),
@@ -91,22 +78,29 @@ export type NoteInput = {
   except?: string;
   /** For kind momen: a photo hidden by panitia (pushed; likes are not). */
   photoHidden?: boolean;
+  /** Beranda's banner: warning for a change to act on; none = the app decides (noteTone). */
+  tone?: NoteTone;
 };
 
 /** Writes the note to every recipient's bell and pushes it; how many got it. Throws (503 before the migration). */
 export async function sendMainWamNote(input: NoteInput): Promise<number> {
   const settings = await readMainWamSettings();
-  const resolved = "audience" in input.to ? await resolveAudience(input.to.audience, settings) : { ids: input.to.people, label: input.to.label };
-  const within = "audience" in input.to ? null : new Set(await mainWamAudience(settings));
+  const [resolved, within, eventId] = await Promise.all([
+    "audience" in input.to ? resolveAudience(input.to.audience, settings) : { ids: input.to.people, label: input.to.label },
+    "audience" in input.to ? null : mainWamAudience(settings).then(ids => new Set(ids)),
+    // No recipients is said first (422); the missing event only matters when there are some.
+    wamEventId().catch((error: unknown) => ({ error })),
+  ]);
   const ids = resolved.ids.filter(id => id !== input.except && (!within || within.has(id)));
   if (!ids.length) throw new ServiceError(422, "Belum ada penerima untuk pilihan ini.");
+  if (typeof eventId !== "string") throw eventId.error;
   const { data, error } = await db().from("pw_announcements")
-    .insert({ event_id: await wamEventId(), kind: announcementKind(input.kind), title: input.title, body: input.body, audience_label: resolved.label.slice(0, 300), created_by: input.by })
+    .insert({ event_id: eventId, kind: announcementKind(input.kind), title: input.title, body: input.body, audience_label: resolved.label.slice(0, 300), created_by: input.by })
     .select("id").single();
   if (error) databaseError(error);
   const link = input.link ?? "";
   const { error: noteError } = await db().from("mw_notes").insert({
-    announcement_id: data.id, kind: input.kind, link, pinned_until: input.pinnedUntil ?? null,
+    announcement_id: data.id, kind: input.kind, link, pinned_until: input.pinnedUntil ?? null, tone: input.tone ?? null,
     audience: "audience" in input.to ? input.to.audience : { type: "orang" }, updated_by: input.by,
   });
   if (noteError) { await db().from("pw_announcements").delete().eq("id", data.id); mwFail(noteError); }
@@ -123,37 +117,62 @@ export async function trySendMainWamNote(input: NoteInput): Promise<number> {
   try { return await sendMainWamNote(input); } catch { return 0; }
 }
 
-type NoteRow = { id: string; title: string; body: string; created_at: string; mw_notes: { kind: string; link: string; pinned_until: string | null } | { kind: string; link: string; pinned_until: string | null }[] | null };
-const noteOf = (row: NoteRow) => (Array.isArray(row.mw_notes) ? row.mw_notes[0] ?? null : row.mw_notes);
+type NoteMeta = { kind: string; link: string; pinned_until: string | null; tone: string | null };
+type NoteRow = {
+  id: string; title: string; body: string; created_at: string;
+  pw_notification_receipts: { read_at: string | null } | { read_at: string | null }[] | null;
+  mw_notes?: NoteMeta | NoteMeta[] | null;
+};
+const one = <T,>(value: T | T[] | null | undefined): T | null => (Array.isArray(value) ? value[0] ?? null : value ?? null);
+const NOTE_META = "mw_notes(kind,link,pinned_until,tone)";
 
-/** The person's notifications (Main WAM's and Pra WAM's), newest first, and how many are unread. */
-export async function myMainWamNotifications(employeeId: string): Promise<{ items: MwNotification[]; unread: number; migrated: boolean }> {
-  const { data: receipts, error } = await db().from("pw_notification_receipts").select("announcement_id,read_at").eq("employee_id", employeeId).limit(1000);
-  if (error) { if (mwMissing(error) || error.code === "42P01" || error.code === "PGRST205") return { items: [], unread: 0, migrated: false }; databaseError(error); }
-  const ids = (receipts ?? []).map(receipt => receipt.announcement_id as string);
-  if (!ids.length) return { items: [], unread: 0, migrated: true };
-  const select = (withNotes: boolean) => db().from("pw_announcements").select(withNotes ? "id,title,body,created_at,mw_notes(kind,link,pinned_until)" : "id,title,body,created_at")
-    .in("id", ids.slice(0, 300)).order("created_at", { ascending: false }).limit(100);
-  let { data, error: noteError } = await select(true);
-  // Before Main WAM's migration: Pra WAM's notes, plainly.
-  if (noteError && mwMissing(noteError)) ({ data, error: noteError } = await select(false));
-  if (noteError) databaseError(noteError);
-  const readAt = new Map((receipts ?? []).map(receipt => [receipt.announcement_id as string, (receipt.read_at as string | null) ?? null]));
-  const items = ((data ?? []) as unknown as NoteRow[]).map(row => {
-    const note = noteOf(row);
-    return {
-      id: row.id, kind: note ? NOTE_KIND(note.kind) : "lain", title: row.title, body: row.body, createdAt: row.created_at, readAt: readAt.get(row.id) ?? null,
-      link: note?.link || null, pinnedUntil: note?.pinned_until ?? null, fromPraWam: !note,
-    } satisfies MwNotification;
-  });
-  return { items, unread: (receipts ?? []).filter(receipt => !receipt.read_at).length, migrated: true };
+function itemOf(row: NoteRow): MwNotification {
+  const note = one(row.mw_notes);
+  const kind = note ? NOTE_KIND(note.kind) : "lain";
+  return {
+    id: row.id, kind, title: row.title, body: row.body, createdAt: row.created_at, readAt: one(row.pw_notification_receipts)?.read_at ?? null,
+    link: note?.link || null, pinnedUntil: note?.pinned_until ?? null, fromPraWam: !note, tone: noteTone({ kind, title: row.title, tone: note?.tone }),
+  };
 }
 
-/** Pengumuman penting still pinned for this person now, newest first (Beranda's banner). */
-export async function pinnedForMe(employeeId: string, now = new Date()): Promise<MwNotification[]> {
+/**
+ * The person's notifications (Main WAM's and Pra WAM's), the newest 100 first, and how many are
+ * unread. One query from the announcements through the person's receipts, ordered by the
+ * announcement's time (audit S8: never a cut of receipts in no order, which could drop the newest).
+ */
+export async function myMainWamNotifications(employeeId: string): Promise<{ items: MwNotification[]; unread: number; migrated: boolean }> {
+  const inbox = (withNotes: boolean) => db().from("pw_announcements")
+    .select(`id,title,body,created_at,pw_notification_receipts!inner(read_at)${withNotes ? `,${NOTE_META}` : ""}`)
+    .eq("pw_notification_receipts.employee_id", employeeId)
+    .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(100);
+  const [first, unread] = await Promise.all([
+    inbox(true),
+    db().from("pw_notification_receipts").select("announcement_id", { count: "exact", head: true }).eq("employee_id", employeeId).is("read_at", null),
+  ]);
+  let { data, error } = first;
+  // Before Main WAM's migration: Pra WAM's notes, plainly.
+  if (error && mwMissing(error)) ({ data, error } = await inbox(false));
+  if (error || unread.error) {
+    const failed = error ?? unread.error!;
+    if (mwMissing(failed)) return { items: [], unread: 0, migrated: false };
+    databaseError(failed);
+  }
+  return { items: ((data ?? []) as unknown as NoteRow[]).map(itemOf), unread: unread.count ?? 0, migrated: true };
+}
+
+/**
+ * Pengumuman penting still pinned for this person now, newest first (Beranda's banner), each with
+ * its tone. Read on their own (the pin's index), so a long inbox never pushes a pinned one out (S8).
+ */
+export async function pinnedForMe(employeeId: string, now = new Date()): Promise<PinnedNote[]> {
   try {
-    const { items } = await myMainWamNotifications(employeeId);
-    return items.filter(item => item.kind === "pengumuman" && item.pinnedUntil && Date.parse(item.pinnedUntil) > now.getTime());
+    const { data, error } = await db().from("pw_announcements")
+      .select("id,title,body,created_at,pw_notification_receipts!inner(read_at),mw_notes!inner(kind,link,pinned_until,tone)")
+      .eq("pw_notification_receipts.employee_id", employeeId).eq("mw_notes.kind", "pengumuman").gt("mw_notes.pinned_until", now.toISOString())
+      .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(20);
+    if (error) return [];
+    return ((data ?? []) as unknown as NoteRow[]).map(itemOf)
+      .filter((item): item is PinnedNote => item.kind === "pengumuman" && !!item.pinnedUntil && Date.parse(item.pinnedUntil) > now.getTime());
   } catch { return []; }
 }
 

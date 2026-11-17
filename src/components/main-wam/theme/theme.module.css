@@ -318,5 +318,11 @@
 :where(.root) a { color: inherit; text-decoration: none; -webkit-tap-highlight-color: transparent; }
 :where(.root) :is(img, svg) { display: block; max-width: 100%; }
 .root :focus-visible { outline: 2px solid var(--mw-focus); outline-offset: 2px; }
+/* Focus moved by script to something that is not a control (a sheet's title, <main> after the skip
+   link): it is there for screen readers, not a Tab stop, so no ring. (0,3,1) beats the rule above. */
+.root :is(h1, h2, h3, h4, h5, h6, main)[tabindex="-1"]:focus { outline: none; }
+/* A control focused by script after a tap (ui/useModal.ts quietFocus: Batal when a dialog opens, the
+   opener when it closes): no ring until a key is pressed, as the browser does for a tap. */
+.root [data-mw-quiet-focus]:focus-visible { outline: none; }
 :where(.root) button:disabled { cursor: default; }
 

@@ -10,14 +10,14 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ sesiId: string }> };
 const origin = (request: Request) => process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
 
-/** Panitia and Admin WAM only, while module Absen QR is on. */
+/** Panitia and Admin WAM only, while module Absen QR is on; 404 for anyone else (one answer for "not for you", KONTRAK §9 #4). */
 async function panitia() {
   const context = await requireModuleApi("absen");
-  if (!mainWamCan(context.viewer, "kelola")) throw new ServiceError(403, "Hanya panitia yang bisa membuka QR absen.");
+  if (!mainWamCan(context.viewer, "kelola")) throw new ServiceError(404, "Halaman tidak ditemukan.");
   return context;
 }
 
-/** GET: the session's QR on an A5 page, to print or show on a screen (the same QR until renewed). */
+/** GET: the session's QR on an A5 page, to print or show on a screen (the same QR until renewed). Writes nothing (R15). */
 export async function GET(request: Request, { params }: Params) {
   return handle(async () => {
     await panitia();

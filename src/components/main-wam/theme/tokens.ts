@@ -209,3 +209,23 @@ export function themeVars(theme: ResolvedTheme): Record<string, string> {
   }
   return vars;
 }
+
+/**
+ * The page behind the app in each mode (theme.module.css --mw-bg; Momen and the camera are black).
+ * Fixed, not a theme slot: the body's colour (MainWamTheme) and the phone's status bar
+ * (theme-color, mainWamThemeColor) both read it, so the bar and the page are one surface.
+ */
+export const PAGE_COLORS = { light: "#F6F7F9", dark: "#0E1116", media: "#000000" } as const;
+
+/**
+ * `theme-color` for the phone's status and address bar (Next's Viewport.themeColor), one entry per
+ * device scheme, in the mode the app is drawn in: light everywhere for "light" (Main WAM's designed
+ * mode, even on a phone set to dark), light and dark for "system".
+ */
+export function mainWamThemeColor(mode: "light" | "dark" | "system" = "light"): { media: string; color: string }[] {
+  const on = (dark: boolean) => (mode === "dark" || (mode === "system" && dark) ? PAGE_COLORS.dark : PAGE_COLORS.light);
+  return [
+    { media: "(prefers-color-scheme: light)", color: on(false) },
+    { media: "(prefers-color-scheme: dark)", color: on(true) },
+  ];
+}

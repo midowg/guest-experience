@@ -28,7 +28,11 @@
 .sheetBody { display: flex; flex-direction: column; gap: var(--mw-space-16); }
 .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--mw-space-12); }
 .help { margin-top: calc(-1 * var(--mw-space-8)); font: var(--mw-type-caption); color: var(--mw-text-2); }
+/* "Selesai besok, Rab, 6 Jan · 00.30" under the help line (a session past midnight). */
+.nextDay { display: flex; align-items: flex-start; gap: var(--mw-space-4); margin-top: calc(-1 * var(--mw-space-8)); font: var(--mw-type-body-small); color: var(--mw-text-1); }
+.nextDay > svg { flex: none; width: 16px; height: 16px; margin-top: 2px; color: var(--mw-text-2); }
 .groupLabel { font: var(--mw-type-label); color: var(--mw-text-1); }
+.optional { color: var(--mw-text-2); font-weight: 500; }
 .group { display: flex; flex-direction: column; gap: var(--mw-space-8); }
 .errorText { display: flex; align-items: flex-start; gap: var(--mw-space-4); font: var(--mw-type-caption); color: var(--mw-error); }
 .errorText > svg { flex: none; width: 16px; height: 16px; margin-top: 1px; }
@@ -81,19 +85,24 @@
 .emptyTitle { font: var(--mw-type-subtitle); color: var(--mw-text-1); }
 
 /* Moderasi Momen: a report card (thumbnail 96 × 120 at the left, the actions under both). */
-.report { display: flex; align-items: flex-start; gap: var(--mw-space-12); }
+/* Narrow (zoom 200%): the text goes under the thumbnail rather than squeezing beside it. */
+.report { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--mw-space-12); }
 .thumb { position: relative; flex: none; width: 96px; height: 120px; border-radius: var(--mw-radius-12); overflow: hidden; padding: 0; border: 0; background: none; cursor: pointer; }
 .thumb > span { position: absolute; inset: 0; }
 .thumbIcon { position: absolute; left: 50%; top: 50%; width: 28px; height: 28px; transform: translate(-50%, -50%); color: var(--mw-text-3); }
-.reportText { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--mw-space-8); }
+.reportText { flex: 1 1 140px; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: var(--mw-space-8); }
 .reportWho { font: var(--mw-type-label); color: var(--mw-text-1); }
 .reportCount { display: flex; flex-direction: column; }
 .reportStrong { font: var(--mw-type-body-strong); color: var(--mw-text-1); }
 .reportReason { font: var(--mw-type-body-small); color: var(--mw-text-2); }
 .reportNote { font: var(--mw-type-body-small); color: var(--mw-text-1); overflow-wrap: anywhere; }
-.actions { display: flex; gap: var(--mw-space-8); }
-.actions > * { flex: 1 1 0; min-width: 0; }
-/* Two M buttons side by side on a 390 phone: less side padding, so "Tampilkan lagi" is never cut (the kit clips a long label). */
+/*
+ * Two M buttons side by side on a 390 phone (equal halves); when a label would not fit whole (320 px,
+ * zoom), the second goes to its own row instead of a word breaking in the middle (KIT §1.6).
+ */
+.actions { display: flex; flex-wrap: wrap; gap: var(--mw-space-8); }
+.actions > * { flex: 1 1 0; min-width: fit-content; max-width: 100%; }
+/* Less side padding, so both still fit side by side at 390. */
 .actions > [class] { padding-left: var(--mw-space-8); padding-right: var(--mw-space-8); }
 .viewer { display: block; width: 100%; max-height: 70vh; object-fit: contain; border-radius: var(--mw-radius-12); background: var(--mw-surface-2); }
 

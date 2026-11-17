@@ -5,6 +5,10 @@ import type { MainWamSettings, MainWamThemeInput, ThemeImageSlot } from "@/lib/m
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import { ServiceError } from "../config";
 import { isR2Configured, presignUpload, readObject, removeObjects, verifyUpload } from "../r2";
+import { mayOpenArea } from "@/lib/admin-access";
+import { currentAdmin } from "../admin-actor";
+import { mwWaiting } from "./errors";
+import { requireMainWamApi } from "./gate";
 import { readMainWamSettings, writeSettingsColumns, mainWamSettingsState } from "./settings";
 
 /*
@@ -19,7 +23,7 @@ export async function mainWamThemeInput(): Promise<MainWamThemeInput> {
 }
 
 const TOKEN_SECONDS = 15 * 60;
-const notReady = () => new ServiceError(503, "Penyimpanan gambar belum disiapkan. Isi R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, dan R2_BUCKET.");
+const notReady = () => new ServiceError(503, "Gambar KV belum bisa diunggah karena penyimpanan berkas belum disiapkan. Hubungi tim CoE.");
 
 function signature(key: string, input: ThemeImageStart, expires: number): string {
   const secret = praWamSecret();
@@ -37,7 +41,7 @@ export function themeTokenMatches(token: string, key: string, input: ThemeImageS
 /** Step one: where to put the image, and a token to confirm it with. */
 export async function startThemeImage(input: ThemeImageStart): Promise<{ key: string; uploadUrl: string; token: string }> {
   if (!isR2Configured()) throw notReady();
-  if (!(await mainWamSettingsState()).migrated) throw new ServiceError(503, "Tema Main WAM menunggu migrasi 202611200001_main_wam_settings_rundown.sql.");
+  if (!(await mainWamSettingsState()).migrated) throw mwWaiting();
   const key = themeImageKey(input.slot, randomUUID(), input.mime);
   const expires = Math.floor(Date.now() / 1000) + TOKEN_SECONDS;
   return { key, uploadUrl: await presignUpload(key, input.mime, input.size), token: `${expires}.${signature(key, input, expires)}` };
@@ -69,11 +73,36 @@ export async function removeThemeImage(slot: ThemeImageSlot): Promise<MainWamSet
   return saved;
 }
 
-/** The bytes of a slot's image, for mainWamApi.themeImage; null when the slot is empty. */
-export async function themeImageFile(slot: ThemeImageSlot): Promise<{ bytes: Uint8Array; type: string } | null> {
+/*
+ * The KV's bytes kept in this server's memory by their storage key (audit L3): a key is never
+ * reused (a new image is a new key), so a kept copy is never stale, and the splash on every phone
+ * does not read storage (up to 4 MB) each time. At most KEEP images (one per slot, plus the one
+ * just replaced).
+ */
+const KEEP = 8;
+const kept = new Map<string, { bytes: Uint8Array; type: string }>();
+
+/** The bytes of a slot's saved image (`image` from the settings: key, mime); null when storage has none. */
+export async function themeImageBytes(image: { key: string; mime: string }): Promise<{ bytes: Uint8Array; type: string } | null> {
   if (!isR2Configured()) return null;
-  const image = (await readMainWamSettings()).theme.images[slot];
-  if (!image) return null;
+  const known = kept.get(image.key);
+  if (known) return known;
   const found = await readObject(image.key);
-  return found ? { bytes: found.bytes, type: image.mime || found.type } : null;
+  if (!found) return null;
+  const file = { bytes: found.bytes, type: image.mime || found.type };
+  kept.set(image.key, file);
+  while (kept.size > KEEP) kept.delete(kept.keys().next().value!);
+  return file;
+}
+
+/**
+ * Whether this request may fetch a KV image that is not public (themeImageAudience "member"):
+ * someone Main WAM is on for (the gate's own answer), or Admin WAM (Pengaturan's preview). Never throws.
+ */
+export async function mayOpenThemeImages(): Promise<boolean> {
+  try { await requireMainWamApi(); return true; } catch { /* not someone Main WAM is on for */ }
+  try {
+    const actor = await currentAdmin();
+    return !!actor && (actor.kind !== "person" || mayOpenArea(actor.grant, "wam"));
+  } catch { return false; }
 }

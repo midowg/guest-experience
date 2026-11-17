@@ -1,6 +1,7 @@
 import "server-only";
 import { categoryRow, type AwardCategoryInput, type NomineeInput, type SilentQuestionInput } from "@/lib/main-wam/modul/admin";
-import { rankTally, totalVotes } from "@/lib/main-wam/modul/awards";
+import { closedTally } from "@/lib/main-wam/modul/awards";
+import { silentShownCount, silentState, type SilentState } from "@/lib/main-wam/module-state";
 import { AWARD_COLUMNS, awardFromRow, SILENT_COLUMNS, silentFromRow } from "@/lib/main-wam/rows";
 import type { MwAwardApproval, MwAwardCategory, MwSession, MwSilentQuestion } from "@/lib/main-wam/types";
 import { ServiceError } from "../../config";
@@ -9,15 +10,15 @@ import { isR2Configured, presignDownload } from "../../r2";
 import { createPrivilegedClient } from "../../supabase/admin";
 import { mwFail, mwMissing } from "../errors";
 import { mainWamPeople } from "../people";
-import { allSessions, awardApprovals, awardCategories, listGroups, silentQuestions } from "../read";
+import { allSessions, awardApprovals, awardCategories, listGroups, silentQuestions, silentResults } from "../read";
 import { voteCounts } from "./awards";
-import { silentCounts } from "./silent";
 
 /*
  * Admin WAM → Main WAM → Awarding and Silent Meeting (agen D). Every caller has passed
- * requireAdminPage/requireApiAdmin. Admins see full names (aturan-wam §4) and the counts per
- * nominee (aggregates, never who voted for whom); of Silent Meeting only how many sent, never the
- * text (that is the BOD's recap).
+ * requireAdminPage/requireApiAdmin. Admins see full names (aturan-wam §4); the counts per nominee
+ * (aggregates, never who voted for whom) only once voting closed, as the BOD (audit M1); of Silent
+ * Meeting its state, and how many sent only once closed for good from 5 feedbacks of 5 people
+ * (audit H2), never the text (that is the BOD's recap).
  */
 
 const db = () => createPrivilegedClient();
@@ -59,15 +60,15 @@ async function likedPhotos(limit = 60): Promise<AdminPhoto[]> {
   return photos.sort((a, b) => b.hearts - a.hearts);
 }
 
-/** Everything the Awarding page needs, in one round of reads. */
-export async function adminAwards(): Promise<AdminAwards> {
+/** Everything the Awarding page needs, in one round of reads. Counts only of closed voting (audit M1). */
+export async function adminAwards(now = new Date()): Promise<AdminAwards> {
   const [categories, approvals, counts, sessions, people, groups, photos] = await Promise.all([
     awardCategories(true), awardApprovals(), voteCounts(), allSessions(), mainWamPeople(), listGroups(), likedPhotos(),
   ]);
   const active = [...people.values()].filter(person => person.active).sort((a, b) => a.fullName.localeCompare(b.fullName, "id"));
-  const tallies = categories.data.filter(category => category.method === "voting").map(category => {
-    const rows = rankTally(category.nominees, counts.get(category.id) ?? new Map());
-    return { categoryId: category.id, total: totalVotes(rows), rows: rows.map(row => ({ nomineeId: row.nominee.id, votes: row.votes, rank: row.rank })) };
+  const tallies = categories.data.flatMap(category => {
+    const tally = closedTally(category, counts.get(category.id), now);
+    return tally ? [{ categoryId: category.id, ...tally }] : [];
   });
   return {
     migrated: categories.migrated,
@@ -121,12 +122,25 @@ export async function deleteCategory(id: string): Promise<void> {
   if (error) mwFail(error);
 }
 
+/** Photos that may be nominated: shown to everyone (not a kelompok's, not hidden), so every voter can open them (R8). */
+async function nominablePhotos(ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const { data, error } = await db().from("mw_photos").select("id").in("id", ids).eq("status", "tampil").eq("audience", "semua");
+  if (error) mwFail(error);
+  return new Set(((data ?? []) as { id: string }[]).map(row => row.id));
+}
+
 /**
  * Replaces the nominees (the list's order is the order shown). Nominees that already have votes
- * stay: removing one would drop its votes, so it is refused.
+ * stay: removing one would drop its votes, so it is refused. A new photo nominee is a photo for
+ * everyone, still shown.
  */
 export async function setNominees(categoryId: string, nominees: NomineeInput[]): Promise<MwAwardCategory> {
   const category = await categoryById(categoryId);
+  const current = new Set(category.nominees.map(nominee => nominee.photoId).filter((id): id is string => !!id));
+  const newPhotos = nominees.map(item => item.photoId).filter((id): id is string => !!id && !current.has(id));
+  const allowed = await nominablePhotos(newPhotos);
+  if (newPhotos.some(id => !allowed.has(id))) throw new ServiceError(422, "Foto ini tidak bisa dinominasikan. Pilih foto Momen untuk semua yang masih tampil.");
   const keyOf = (item: { employeeId: string | null; photoId: string | null; label: string }) => item.employeeId ?? item.photoId ?? item.label.toLowerCase();
   const wanted = new Map(nominees.map((item, index) => [keyOf(item), { item, index }]));
   const counts = (await voteCounts()).get(categoryId) ?? new Map<string, number>();
@@ -151,26 +165,52 @@ export async function setNominees(categoryId: string, nominees: NomineeInput[]):
 
 /* ── Silent Meeting ─────────────────────────────────────────────────────────────────────────────── */
 
+export type AdminSilentQuestion = MwSilentQuestion & {
+  state: SilentState | null;
+  /** Feedbacks, only once closed for good from 5 feedbacks of 5 people; never while open (audit H2). */
+  count: number | null;
+  /** Opened (or closed after it opened): its question, topics and session stay, and it is not deleted. */
+  locked: boolean;
+};
 export type AdminSilent = {
   migrated: boolean;
-  questions: (MwSilentQuestion & { count: number; people: number })[];
+  questions: AdminSilentQuestion[];
   sessions: Pick<MwSession, "id" | "title" | "startsAt" | "endsAt" | "status" | "module">[];
 };
 
-export async function adminSilent(): Promise<AdminSilent> {
-  const [questions, sessions] = await Promise.all([silentQuestions(), allSessions()]);
-  const counted = await Promise.all(questions.data.map(async question => ({ ...question, ...(await silentCounts(question.id)) })));
+const LOCKED = "Silent Meeting ini sudah dibuka, jadi pertanyaan, topik, dan sesinya tetap.";
+/** Its state, and whether it has opened (cancelled before it ever opened is not locked for deleting). */
+function questionState(question: MwSilentQuestion, session: MwSession | undefined, now: Date) {
+  const state = session ? silentState(question, session, now) : null;
+  const opened = !!question.openedAt || !!question.closedAt || (!!session && session.status === "terbit" && now.getTime() >= Date.parse(session.startsAt));
+  return { state, edit: state !== null && state !== "belum", remove: state === "buka" || (state === "tutup" && opened) };
+}
+
+export async function adminSilent(now = new Date()): Promise<AdminSilent> {
+  const [questions, sessions, results] = await Promise.all([silentQuestions(), allSessions(), silentResults()]);
+  const byId = new Map(sessions.data.map(session => [session.id, session]));
   return {
     migrated: questions.migrated,
-    questions: counted,
+    questions: questions.data.map(question => {
+      const { state, edit } = questionState(question, byId.get(question.sessionId), now);
+      return { ...question, state, count: state === "tutup" ? silentShownCount(results.data.get(question.id)) : null, locked: edit };
+    }),
     sessions: sessions.data.filter(session => session.status !== "batal").map(({ id, title, startsAt, endsAt, status, module }) => ({ id, title, startsAt, endsAt, status, module })),
   };
 }
 
-const questionRow = (input: SilentQuestionInput) => ({ session_id: input.sessionId, question: input.question, topics: input.topics, auto_close: input.autoClose, updated_at: new Date().toISOString() });
+async function questionNow(id: string, now: Date) {
+  const [questions, sessions] = await Promise.all([silentQuestions(), allSessions()]);
+  const question = questions.data.find(item => item.id === id);
+  if (!question) throw new ServiceError(404, "Pertanyaan tidak ditemukan.");
+  return { question, ...questionState(question, sessions.data.find(session => session.id === question.sessionId), now) };
+}
+
+const questionRow = (input: SilentQuestionInput) => ({ session_id: input.sessionId, question: input.question, topics: input.topics, updated_at: new Date().toISOString() });
 function questionFail(error: { code?: string; message?: string }): never {
   if (error.code === "23505") throw new ServiceError(409, "Sesi ini sudah punya pertanyaan Silent Meeting.");
   if (error.code === "23503") throw new ServiceError(422, "Sesi tidak ditemukan.");
+  if (/silent_locked|silent_final/.test(error.message ?? "")) throw new ServiceError(409, LOCKED);
   mwFail(error);
 }
 
@@ -180,24 +220,24 @@ export async function createQuestion(input: SilentQuestionInput): Promise<MwSile
   return silentFromRow(data as Record<string, unknown>);
 }
 
-export async function updateQuestion(id: string, input: SilentQuestionInput): Promise<MwSilentQuestion> {
+/** Before it opens: anything. Once it opened: nothing (the database refuses it too), so a closed one cannot be moved to reopen. */
+export async function updateQuestion(id: string, input: SilentQuestionInput, now = new Date()): Promise<MwSilentQuestion> {
   if (!isId(id)) throw new ServiceError(404, "Pertanyaan tidak ditemukan.");
-  const { count } = await silentCounts(id);
-  if (count > 0) {
-    const { data: current } = await db().from("mw_silent_questions").select("session_id,question").eq("id", id).maybeSingle();
-    const row = current as { session_id: string; question: string } | null;
-    if (row && (row.session_id !== input.sessionId || row.question !== input.question)) throw new ServiceError(409, "Sudah ada masukan, jadi pertanyaan dan sesinya tidak bisa diubah.");
-  }
+  const { question, edit } = await questionNow(id, now);
+  const same = question.sessionId === input.sessionId && question.question === input.question && question.topics.join("\n") === input.topics.join("\n");
+  if (edit && !same) throw new ServiceError(409, LOCKED);
+  if (edit) return question;
   const { data, error } = await db().from("mw_silent_questions").update(questionRow(input)).eq("id", id).select(SILENT_COLUMNS).maybeSingle();
   if (error) questionFail(error);
   if (!data) throw new ServiceError(404, "Pertanyaan tidak ditemukan.");
   return silentFromRow(data as Record<string, unknown>);
 }
 
-export async function deleteQuestion(id: string): Promise<void> {
+/** Only before it ever opened: its feedback is never deleted with it. */
+export async function deleteQuestion(id: string, now = new Date()): Promise<void> {
   if (!isId(id)) throw new ServiceError(404, "Pertanyaan tidak ditemukan.");
-  const { count } = await silentCounts(id);
-  if (count > 0) throw new ServiceError(409, "Sudah ada masukan. Pertanyaan ini tidak bisa dihapus.");
+  const { remove } = await questionNow(id, now);
+  if (remove) throw new ServiceError(409, "Silent Meeting ini sudah dibuka, jadi pertanyaannya tidak bisa dihapus.");
   const { error } = await db().from("mw_silent_questions").delete().eq("id", id);
   if (error) mwFail(error);
 }

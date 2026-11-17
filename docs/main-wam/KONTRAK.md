@@ -25,7 +25,7 @@ sampai admin menyalakannya. Ditulis agen fondasi, 17 Nov 2026.
 
 | Lapisan | Lokasi | Isi |
 | --- | --- | --- |
-| Halaman | `src/app/wam/acara/` | `layout.tsx` (tema), `not-found.tsx`, `masuk/` (O02), `(app)/layout.tsx` (gate + kerangka), `(app)/**` semua layar |
+| Halaman | `src/app/wam/acara/` | `layout.tsx` (tema dan `theme-color`, hanya bila Main WAM tampil untuk orangnya), `not-found.tsx`, `masuk/` (O02), `(app)/layout.tsx` (gate + kerangka), `(app)/error.tsx` (galat layar di dalam kerangka), `(app)/**` semua layar |
 | API peserta | `src/app/api/wam/acara/**` | per area (§6) |
 | Admin | `src/app/admin/wam/main/**`, `src/app/api/admin/wam/main/**` | Admin WAM → Main WAM |
 | Logika murni | `src/lib/main-wam/*.ts` (fondasi), `src/lib/main-wam/<area>/` (agen) | tipe, aturan, data contoh; dites vitest |
@@ -33,7 +33,7 @@ sampai admin menyalakannya. Ditulis agen fondasi, 17 Nov 2026.
 | Komponen | `src/components/main-wam/{ui,theme,shell}` (UI KIT), `dev/` (fondasi), `<area>/` (agen) | |
 | Admin komponen | `src/components/admin/wam/main-wam/` (fondasi), `.../main-wam/<isi|modul>/` (agen E, D) | |
 | Pratinjau | `src/app/dev-preview/main-wam/<area>/` | tanpa login, 404 di produksi |
-| Migrasi | `supabase/migrations/202611200001–0003_*.sql` + `tests/backend/main-wam-check.sql` | fondasi |
+| Migrasi | `supabase/migrations/202611200001–0003_*.sql` + `tests/backend/main-wam-check.sql` | fondasi (0003 milik modul) |
 
 ## 2. Arsitektur rute
 
@@ -43,10 +43,10 @@ ada (`src/app/wam/layout.tsx`), dengan layout sendiri:
 ```
 src/app/wam/layout.tsx              (sudah ada) service worker, WamNavigator, manifest, tema Pra WAM
 ├─ (app)/...                        Pra WAM, tidak berubah (kecuali / → lihat di bawah)
-└─ acara/layout.tsx                 tema Main WAM (MainWamTheme dari pengaturan)
-   ├─ not-found.tsx                 404 netral: "Halaman tidak ditemukan" → Kembali ke WAM
+└─ acara/layout.tsx                 tema Main WAM (MainWamTheme), hanya untuk yang boleh melihat Main WAM (M6)
+   ├─ not-found.tsx                 404 Main WAM untuk penguji/mode semua; selain itu 404 situs biasa
    ├─ masuk/page.tsx                O02 Masuk (tanpa kerangka, tanpa gate)
-   └─ (app)/layout.tsx              gate + MainWamShell (bilah atas, 4 tab, toast)
+   └─ (app)/layout.tsx              gate + MainWamShell (bilah atas, 4 tab, toast); error.tsx di dalamnya
       ├─ page.tsx                   Beranda            ├─ momen/...    B
       ├─ agenda/..., saya/...       A                  ├─ kelola/...   C
       ├─ notifikasi/, mulai/        A                  ├─ ringkasan/.. C, D
@@ -93,12 +93,19 @@ perilaku pengalihan login yang sudah ada.
 
 | Fungsi | Untuk | Hasil |
 | --- | --- | --- |
-| `requireMainWamPage(here)` | setiap halaman | `{ viewer, settings }`; belum login → login; bukan untuknya → `notFound()` |
+| `requireMainWamPage(here)` | setiap halaman | `{ viewer, settings }`; belum login → login; bukan untuknya → `notFound()`. `viewer.room` hanya diisi untuk `here` di bawah `/wam/acara/saya` (null di tempat lain) |
 | `requireModulePage(module, here)` | halaman modul | + modul mati → `notFound()` |
 | `requireActionPage(action, here)` | alat peran (panitia, BOD) dan aksi modul | + bukan perannya atau modul mati → `notFound()` |
 | `requireMainWamApi()` | setiap API | 401 tanpa sesi, 404 bila Main WAM bukan untuknya |
 | `requireModuleApi(module)` | API modul | + 404 bila modul mati |
-| `requireActionApi(action)` | API peran/aksi | + 403 bukan perannya, 404 modul mati |
+| `requireActionApi(action)` | API peran/aksi | + 404 bukan perannya **atau** modul mati (satu jawaban untuk "bukan untukmu", §9 #4; audit L10) |
+
+**Tidak ada apa pun dari Main WAM sebelum gate (audit M6).** `mainWamShown()` (gate.ts) = mode `semua`, atau
+penguji yang sudah login. Hanya bila benar: `acara/layout.tsx` memasang tema (warna, KV, `theme-color`), dan
+`not-found.tsx` memakai tampilan Main WAM; bila salah, layar apa adanya dan 404 situs biasa. Belum login di
+mode `pra`/`uji`: `(app)/layout.tsx` tidak menggambar kerangka, layar, atau `loading.tsx`, hanya
+`SignInFirst` (kit shell) yang membawa ke login WAM dengan alamat persis. KV (`mainWamApi.themeImage`)
+juga mengikuti aturan ini (§5).
 
 Layout `(app)` juga memeriksa gate (tidak menggambar kerangka untuk orang yang bukan haknya), tetapi
 **bukan satu-satunya**: layout tidak dirender ulang saat navigasi (dokumen Next 16 `authentication.md`,
@@ -125,24 +132,28 @@ Akses MCP tetap seperti sekarang (`mayUseMcp`, `mcpAccessOf`); di Main WAM hanya
 
 ### 4.1 Tabel (awalan `mw_`, semua server-only: RLS on, revoke `public, anon, authenticated`, grant `service_role`)
 
+Setiap kunci asing tabel fondasi (0001, 0002) punya indeks yang diawali kolomnya (audit L1, dites
+`main-wam-check.sql`). Setiap migrasi Main WAM menulis revoke per tabel/fungsi sendiri. Audit L2 (`alter default privileges`)
+sengaja tidak dipasang: itu mengubah perilaku semua migrasi tim lain di proyek Supabase yang sama (keputusan PM).
+
 | Tabel | Isi | Catatan |
 | --- | --- | --- |
 | `mw_settings` (1 baris) | `mode`, `modules` jsonb, `module_config` jsonb (`survei.formSlug`, `mozaik.columns/rows`), `theme` jsonb (`colors`, `displayFont`, `images[slot] = {key, version, mime}`), `event_name`, `venue`, `hotel`, `check_in_at`, `check_out_at`, `contacts` jsonb (`kamar`, `perjalanan`, `umum` = employee id), `groups_published_at`, `carbon` jsonb (tagihan hotel sesudah acara) | tanggal acara dibaca dari `pw_events` (kind `wam`), satu sumber dengan hitung mundur Pra WAM |
 | `mw_testers` | penguji tambahan | |
 | `mw_sessions` | rundown: `title`, `kind` (`sesi`/`makan`/`perjalanan`), `status` (`draf`/`terbit`/`batal`), `starts_at`, `ends_at` (boleh kosong = 30 menit), `place`, `map_guide_id`, `dresscode`, `bring`, `lineup` jsonb, `meal`, `contact_id`, `uses_attendance`, `required`, `optional`, `module` (`silent`/`voting`/`survei`), `description`, `sort`, `qr_token`, `changed_at/by` | makan tidak boleh pakai absen; wajib harus pakai absen. **Setiap sesi terbit = tag foto** (`mw_photos.session_id`; kosong = Umum) |
 | `mw_rundown_log` | riwayat perubahan: `changes` jsonb `[{field, from, to}]`, `notified`, `recipients`, `changed_by`, `changed_at` | "diubah Dimas · 10.20" |
-| `mw_attendance` | `(session_id, employee_id)` unik, `method` `qr`/`manual`, `recorded_by` | |
+| `mw_attendance` | `(session_id, employee_id)` unik, `method` `qr`/`manual`, `recorded_by` | absen manual baru wajib menyebut pencatat (trigger); pencatat dihapus → `recorded_by` null, absennya tetap (audit L1) |
 | `mw_groups`, `mw_group_members` | kelompok (nomor, nama), anggota (satu kelompok per orang), satu koordinator | tampil ke peserta setelah `groups_published_at` |
 | `mw_activity_groups`, `mw_activity_group_members` | kelompok kegiatan per sesi (`pos`/`angkot`/`meja`/`lain`), satu per orang per sesi | |
 | `mw_stay_room_details` | `floor`, `note` per kamar | **kamar = pembagian kamar HR** (`cq_stay_rooms`/`cq_stay_members`, Admin WAM → Kuesioner → Kamar, kapasitas 1–8, terbit lewat `rooms_published_at`) |
 | `mw_trips`, `mw_trip_seats` | langkah berangkat/pulang (`kumpul`/`kereta`/`bus`/`tiba`/`lain`), kursi/kendaraan per orang, `distance_km`, `vehicles` (Jejak karbon) | |
 | `mw_guides` | panduan: `slug`, `kind` (`denah`/`hotel`/`dresscode`/`tata_tertib`/`lain`), `title`, `body` teks, berkas opsional di R2 `main-wam/panduan/…`, `published` | |
-| `mw_notes` | metadata notifikasi Main WAM di atas `pw_announcements`: `kind`, `link` (`/wam/acara…`), `pinned_until` (pengumuman penting), `audience` jsonb | |
+| `mw_notes` | metadata notifikasi Main WAM di atas `pw_announcements`: `kind`, `link` (`/wam/acara…`), `pinned_until` (pengumuman penting), `tone` (`info`/`warning`, kosong = aturan `noteTone`), `audience` jsonb | |
 | `mw_photos` | `owner_id`, `client_id` (idempoten per HP), `audience` (`semua`/`kelompok` + `group_id`), `session_id`, `file_key`/`thumb_key` (R2 `main-wam/momen/…`), ukuran, `taken_at`, `created_at`, `visible_at` (= +5 detik), `status` (`tampil`/`ditinjau`/`disembunyikan`), `hidden_*` | kelompok yang punya foto tidak bisa dihapus |
 | `mw_photo_hearts`, `mw_photo_reports`, `mw_photo_seen` | hati; laporan (unik per pelapor, `lainnya` wajib catatan, `unhidden_at` = "Tampilkan lagi" untuk pelapor); foto yang sudah dilihat | |
 | `mw_mosaic_tiles` | ubin → foto (satu foto satu ubin) | |
 | `mw_award_categories`, `mw_award_nominees`, `mw_award_votes`, `mw_award_approvals` | kategori (`voting`/`juri`/`otomatis`, jendela, diumumkan), nominasi (orang/foto/label), satu suara per orang per kategori (bisa diubah), persetujuan BOD | trigger: suara hanya di jendela kategori voting terbit, tidak untuk diri sendiri (orang atau pemilik foto), jam server |
-| `mw_silent_questions`, `mw_silent_feedback`, `mw_silent_participation` | satu pertanyaan per sesi, `override` `buka`/`tutup`, `auto_close`; masukan **tanpa orang, tanpa waktu**, id acak; partisipasi = HMAC orang + jumlah kiriman | trigger: masukan hanya saat dibuka (aturan sama dengan `silentState`) |
+| `mw_silent_questions`, `mw_silent_feedback`, `mw_silent_openers` | satu pertanyaan per sesi, `opened_at`/`closed_at` (Buka/Tutup sekarang, masing-masing sekali; tutup final), `finalized_at` + `feedback_count`/`opener_count` (diisi saat tutup final); masukan **tanpa orang, tanpa waktu**, id acak; pembuka = HMAC orang, sekali per pertanyaan, tanpa waktu, dihapus saat tutup final | `mw_silent_state` (sama dengan `silentState`); trigger: masukan dan pembuka hanya saat dibuka, tutup tidak bisa dibatalkan, pertanyaan/sesi/topik tetap setelah dibuka, jam sesi digeser setelah tutup tidak membuka lagi; FK sesi `restrict` |
 
 **Memakai ulang atau membuat baru:**
 - **Rundown: tabel baru `mw_sessions`, bukan `pw_sessions`.** Pra WAM membaca `pw_sessions` tanpa
@@ -159,7 +170,8 @@ Akses MCP tetap seperti sekarang (`mayUseMcp`, `mcpAccessOf`); di Main WAM hanya
   survei/kamar/foto disembunyikan → `forum` (tidak di jam tenang), hati → lonceng saja.
 - **Login, sesi, password, push, foto profil**: semua dipakai ulang lewat `praWamApi` (§5).
 - **R2**: helper `src/lib/server/r2.ts` (`presignUpload`, `verifyUpload`, `presignDownload`, `readObject`,
-  `removeObjects`). Prefix: `main-wam/momen/` (B), `main-wam/panduan/` (E), `main-wam/tema/` (fondasi).
+  `removeObjects`). Prefix: `main-wam/momen/` (B; unggahan sementara di `tmp/main-wam/momen/`, §8, §10),
+  `main-wam/panduan/` (E), `main-wam/tema/` (fondasi).
 - **Survei**: tanpa tabel; `module_config.survei.formSlug` menunjuk kuesioner (`cq_forms`) yang sudah ada.
 - **Jejak karbon**: tanpa tabel isian; dihitung dari peserta, kamar-malam (kamar HR × malam), perjalanan
   (`distance_km`, `vehicles`), porsi (sesi `makan`), dan `mw_settings.carbon` (tagihan hotel, diisi di admin).
@@ -173,7 +185,7 @@ Akses MCP tetap seperti sekarang (`mayUseMcp`, `mcpAccessOf`); di Main WAM hanya
 `fullName`, `department`, `photo`, `roles`, `tester`, `group`, `room`), `ViewerGroup`, `ViewerRoom`,
 `MwPerson`, `MwSession`, `LineupItem`, `RundownChange`, `MwAttendance`, `MwGroup`, `MwActivityGroup`,
 `MwTrip`, `MwTripSeat`, `MwGuide`, `NoteKind`, `AnnouncementAudience`, `MwNotification`, `MwPhoto`,
-`PhotoAudience`, `PhotoStatus`, `ReportReason` (+ `reportReasonLabels`), `MwAwardCategory`,
+`NoteTone` (`info`/`warning`), `PinnedNote`, `PhotoAudience`, `PhotoStatus`, `ReportReason` (+ `reportReasonLabels`), `MwAwardCategory`,
 `MwAwardNominee`, `MwAwardApproval`, `MwSilentQuestion`. Tipe khusus area ditaruh di folder area.
 
 ### 4.3 Logika murni bersama (`src/lib/main-wam/`, semuanya dites)
@@ -182,15 +194,15 @@ Akses MCP tetap seperti sekarang (`mayUseMcp`, `mcpAccessOf`); di Main WAM hanya
 | --- | --- |
 | `access.ts` | `mainWamGate`, `opensMainWamHome`, `isTester`, `mainWamRole`, `mainWamCan`, `moduleAllows`, `liveForEveryone` |
 | `rundown.ts` | `sessionEnd`, `isRunning`, `byStart`, `eventDates`, `eventDay`, `eventDayLabel` ("Hari ke-2 dari 4"), `agendaDay`, `sessionsOfDay`, `nowAndNext`, `checkInWindow`, `checkInState`, `nowCard` (kartu Sekarang), `autoTag` (tag kamera), `tagChoices`, `dayWord`, `timeRange` |
-| `home-card.ts` | `pickHomeCard` (pengumuman penting > Silent Meeting dibuka > voting dibuka > hari berangkat > survei; modul mati dibuang) |
-| `module-state.ts` | `silentState`, `silentClosesAt`, `silentRecapReady` (≥ 5), `votingState` |
+| `home-card.ts` | `pickHomeCard` (pengumuman penting > Silent Meeting dibuka > voting dibuka > hari berangkat > survei; modul mati dibuang); kandidat pengumuman membawa `tone` |
+| `module-state.ts` | `silentState` (tutup final), `silentClosesAt` (selalu akhir sesi sampai ditutup), `silentRecapReady` (≥ 5), `SilentResult`, `silentShownCount` (jumlah hanya setelah tutup final, ≥ 5 masukan dan ≥ 5 pembuka), `votingState` |
 | `modules.ts` | `moduleInfo`, `moduleOn`, `activeModules` |
-| `screen.ts` | `mainWamScreen(pathname)` (tab, level akar/detail/tugas, judul, kembali, gelap), `mainWamTabs`, `showsBottomBar`, `showsBell` — dibaca shell UI KIT |
-| `notify.ts` | `notePushTopic`, `noteIcon`, `announcementKind` |
-| `greeting.ts` | `homeGreeting`, `salam` |
+| `screen.ts` | `mainWamScreen(pathname)` (tab, level akar/detail/tugas, judul, `label` untuk judul kosong, kembali, gelap), `mainWamTabs`, `showsBottomBar`, `showsBell` — dibaca shell UI KIT. P04 tanpa judul (label "Detail sesi"); B06 "Awarding" |
+| `notify.ts` | `notePushTopic`, `noteIcon`, `announcementKind`, `noteTone` (pilihan panitia; selain itu `warning` untuk jadwal atau judul yang menyebut perubahan: berubah, diubah, pindah, mundur, batal, ditunda…) |
+| `greeting.ts` | `homeGreeting(now, name, event, role?)` (panitia: "Hari ke-2 dari 4 · Panitia"), `salam` |
 | `settings.ts` | `defaultSettings`, `settingsFromRow`, `settingsInputSchema`, `settingsPatch`, nama migrasi |
 | `rows.ts` | pemetaan baris → tipe + daftar kolom (`SESSION_COLUMNS`, …) |
-| `theme-image.ts` | skema unggah KV, `themeInputOf` |
+| `theme-image.ts` | skema unggah KV, `themeInputOf`, `themeImageAudience` (siapa boleh mengambil slot di mode itu) |
 | `sample.ts` | data contoh (§7) |
 
 ### 4.4 Server bersama (`src/lib/server/main-wam/`)
@@ -198,13 +210,19 @@ Akses MCP tetap seperti sekarang (`mayUseMcp`, `mcpAccessOf`); di Main WAM hanya
 | Berkas | Fungsi |
 | --- | --- |
 | `settings.ts` | `readMainWamSettings()` (bawaan saat gagal/sebelum migrasi), `mainWamSettingsState()`, `saveMainWamSettings`, `writeSettingsColumns` (untuk E: info acara, carbon, groups_published_at, contacts), `testerIds`, `listTesters`, `addTester`, `removeTester` |
-| `viewer.ts` | `mainWamViewer()`, `viewerOf(member)`, `groupOf`, `roomOf`, `testsMainWam` |
-| `gate.ts` | §3, plus `mainWamHomeTarget`, `redirectToMainWam`, tipe `MainWamContext` |
-| `people.ts` | `mainWamPeople()` (nama panggilan, departemen, foto), `personOf(id)` |
-| `read.ts` | `allSessions`, `shownSessions`, `sessionById`, `rundownLog`, `attendanceOf`, `listGroups`, `activityGroups`, `listTrips`, `seatsOf`, `listGuides`, `guideBySlug`, `guideFileKey`, `photoById`, `photosForEveryoneSince`, `awardCategories`, `awardApprovals`, `votedCategories`, `silentQuestions`, `silentFeedbackCount` — semuanya `{ data, migrated }` |
-| `notes.ts` | `sendMainWamNote` (lonceng + push, hanya ke yang Main WAM-nya menyala), `trySendMainWamNote`, `mainWamAudience`, `resolveAudience`, `myMainWamNotifications`, `pinnedForMe`, `markMainWamRead` |
-| `theme.ts` | `mainWamThemeInput()`, `startThemeImage`, `confirmThemeImage`, `removeThemeImage`, `themeImageFile` |
-| `errors.ts` | `mwMissing`, `mwWaiting`, `mwFail`, tipe `Read<T>` |
+| `viewer.ts` | `mainWamViewer(settings?)` (ringan: identitas, peran, penguji, kelompok; `room` null), `viewerOf(member)`, `groupOf` (satu kueri), `viewerRoom(id)` (kamar, cache per permintaan; hanya untuk layar yang menampilkannya), `testsMainWam` |
+| `gate.ts` | §3, plus `mainWamShown`, `mainWamHomeTarget`, `redirectToMainWam`, tipe `MainWamContext` |
+| `people.ts` | `mainWamPeople()` (nama panggilan, departemen, foto), `personOf(id)`, `mainWamEventPeople()` (akun WAM aktif + set `bod`/`panitia`/`admin`), `mainWamAttendees()` = **orang acara**: akun WAM aktif kecuali BOD (satu definisi untuk absen, Kehadiran, "Hadir 96 dari 120"; audit R5) |
+| `read.ts` | `allSessions`, `shownSessions`, `sessionById`, `rundownLog`, `attendanceOf`, `listGroups`, `activityGroups`, `listTrips`, `seatsOf`, `listGuides`, `guideBySlug`, `guideFileKey`, `photoById`, `photosForEveryoneSince`, `awardCategories`, `awardApprovals`, `votedCategories`, `silentQuestions`, `silentResults` (jumlah pertanyaan yang sudah tutup final saja; tampilkan lewat `silentShownCount`) — semuanya `{ data, migrated }` |
+| `notes.ts` | `sendMainWamNote` (lonceng + push, hanya ke yang Main WAM-nya menyala; `tone` opsional), `trySendMainWamNote`, `mainWamAudience`, `resolveAudience`, `myMainWamNotifications` (100 terbaru menurut waktu pengumuman, audit S8), `pinnedForMe` → `PinnedNote[]` dengan `tone` (kueri sendiri, tidak pernah terpotong), `markMainWamRead` |
+| `theme.ts` | `mainWamThemeInput()`, `startThemeImage`, `confirmThemeImage`, `removeThemeImage`, `themeImageBytes` (disimpan di memori per kunci R2), `mayOpenThemeImages` |
+| `errors.ts` | `mwMissing` (juga PGRST200 untuk embed tabel `mw_`), `mwWaiting` (503 "Fitur ini menunggu pembaruan sistem. Hubungi tim CoE."; nama migrasi hanya ke log server), `mwFail`, tipe `Read<T>` |
+| `survey.ts` (milik A) | `surveyFor`: berkas bersama milik A, dipakai Beranda (A) dan aksi P04 (D). Aturan murninya di `src/lib/main-wam/peserta/survey.ts` |
+
+`read.ts` memakai `cache()` untuk pembaca yang dipanggil berulang dalam satu render (`allSessions`, `listGroups`,
+`listTrips`, `seatsOf`, `listGuides`, `awardCategories`, `awardApprovals`, `votedCategories`, `silentQuestions`,
+`silentResults`). `cache()` React hanya berlaku saat render halaman; di route handler setiap panggilan membaca
+ulang, jadi baca-setelah-tulis di API tetap segar.
 
 Pembaca dasar tidak memeriksa siapa yang meminta; pemanggil sudah lewat gate dan menyaring sendiri
 (mis. peserta tidak melihat draf, kelompok hanya setelah terbit, foto `kelompok` hanya anggota).
@@ -227,7 +245,7 @@ fondasi (atau PM), sebut di laporan. Pemetaan layar ke kerangka ada di `screen.t
 
 | Area | Kunci |
 | --- | --- |
-| fondasi | `themeImage(slot, v)` (publik) |
+| fondasi | `themeImage(slot, v)`: mode `semua` → `splash`/`icon` publik; lainnya hanya untuk yang melihat Main WAM dan Admin WAM; `v` harus versi aktif (selain itu 404 `no-store`); cache 1 hari |
 | A | `home`, `agenda`, `session(id)`, `notifications`, `guideFile(id)`; login/password/push/foto profil tetap `praWamApi` |
 | B | `photos(filter)`, `photoStart`, `photoConfirm`, `photosSeen`, `photo(id)`, `photoFile(id, ukuran)`, `photoHeart(id)`, `photoReport(id)`, `mosaic` |
 | C | `rundownSession(id)`, `rundownLog`, `attendance(sesiId)`, `announcements`, `announcement(id)`, `moderation`, `moderatePhoto(id)`, `summary` |
@@ -294,7 +312,15 @@ milik D), tanpa mengimpor kode area lain.
 ## 8. Aturan kerja bersama
 
 - **Sebelum migrasi**: baca dengan pembaca fondasi (`migrated: false` → tampilkan "menunggu pembaruan
-  sistem" yang ramah, bukan galat); penulis melempar `mwWaiting(migrasi)`.
+  sistem" yang ramah, bukan galat); penulis melempar `mwWaiting(migrasi)`. Peserta dan admin hanya membaca
+  "Fitur ini menunggu pembaruan sistem. Hubungi tim CoE."; nama berkas migrasi hanya di log server
+  (`console.warn`) dan di `docs/go-live-internal.md` (audit R13, T-A01).
+- **Orang acara**: hitungan peserta (absen, Kehadiran, "Hadir x dari y", persen) selalu dari
+  `mainWamAttendees()`; penerima kabar dari `mainWamAudience()`. Keduanya dari `mainWamEventPeople()`.
+- **Gate ringan**: halaman dan API tidak membaca kamar. Butuh kamar di luar Saya: `viewerRoom(viewer.id)`.
+- **Pengumuman tersemat**: `pinnedForMe` membawa `tone`; Banner memakai nadanya (`warning` untuk perubahan).
+- **Galat layar**: `(app)/error.tsx` menangkap layar tanpa `error.tsx` sendiri, di dalam kerangka, dengan
+  "Coba lagi" dan "Ke Beranda" (`ScreenFailed`).
 - **Waktu**: semua jam WIB lewat `rundown.ts` (`wibDate`, `wibTime`, `wibInstant`); aturan jendela
   (absen, Silent Meeting, voting) memakai jam server; basis data mengulang aturan voting dan Silent Meeting.
 - **Nama**: rekan = `name` (nama panggilan) dari `mainWamPeople`/`personOf`; admin = `fullName`.
@@ -303,13 +329,79 @@ milik D), tanpa mengimpor kode area lain.
 - **Foto Momen**: unggah dua langkah seperti foto MoM (server memberi kunci + presigned PUT dengan tipe dan
   ukuran ditandatangani, browser PUT ke R2, server cek byte awal); `client_id` dari HP untuk antrean offline;
   file disajikan lewat server (`photoFile` → URL sementara), R2 tetap privat.
-- **Silent Meeting**: masukan tidak pernah disimpan atau di-log bersama orang; partisipasi pakai
-  `HMAC-SHA256(WAM_SESSION_SECRET, "mw-silent\0" + questionId + "\0" + employeeId)` (hex 64); BOD baru
-  melihat rekap dari 5 masukan dan 5 orang; urutan acak.
-- **Voting**: rahasia, bukan anonim; hanya agregat yang keluar dari server, perolehan sementara tidak
-  ditampilkan ke peserta.
+  - Unggahan masuk ke `tmp/main-wam/momen/`; "simpan" menyalin ke `main-wam/momen/` (dengan
+    `Cache-Control: private, max-age=31536000, immutable`) lalu menghapus unggahannya. Unggahan yang tidak pernah
+    disimpan dihapus aturan lifecycle R2 (§10, audit L4).
+  - Umur URL tampil per ukuran (`VIEW_POLICY`, `src/lib/server/main-wam/momen/storage.ts`, audit L5, R3):
+    `besar` sama selama 5 menit dan berlaku 15 menit (foto yang disembunyikan panitia atau bukan kelompoknya lagi
+    tidak bisa dibuka besar lebih dari 15 menit); `kecil` sama selama 1 jam, berlaku 2 jam (cache kisi Galeri);
+    `ubin` Mozaik sama sepanjang hari (berganti 03.00 WIB), berlaku 2 hari (HP dan TV mengunduh ubin sekali sehari).
+    Redirect `photoFile` boleh dipakai ulang browser 5 menit (`besar`) atau 50 menit (`kecil`, `ubin`).
+    Diterima: ubin 160 px (hanya foto untuk Semua) yang sudah diterima seseorang tetap bisa dibuka sampai 2 hari
+    meski fotonya disembunyikan; ubin itu hilang dari Mozaik pada polling berikutnya.
+  - Klien yang menyimpan daftar lama (tumpukan dibiarkan terbuka) memuat ulang gambar yang URL-nya kedaluwarsa
+    sekali lewat `photoFile` (`useFreshAddress`).
+  - Hapus foto lewat API Momen hanya untuk pemiliknya; panitia lewat moderasi C (`mw_moderate_photo`, tercatat,
+    pemilik diberi kabar). Foto yang masuk nominasi Awarding tidak bisa dihapus: 409 "Foto ini masuk nominasi
+    Awarding, jadi tidak bisa dihapus." (FK `on delete restrict`, 23503; audit M2, M3).
+  - Mozaik: ETag dihitung sebelum manifest dari `mw_mosaic_version` (sidik ubin) + sumber sel + hari ubin +
+    orang. Polling yang tidak berubah dijawab 304 tanpa presign (audit R3).
+- **Silent Meeting** (audit H1, H2, L3, L7, L12; migrasi 0003 + 0401):
+  - **Buka dan tutup.** Dibuka otomatis di jam mulai sesi, ditutup di jam selesai. Panitia boleh "Buka
+    sekarang" sebelum jam mulai dan "Tutup sekarang" sebelum jam selesai, masing-masing sekali. **Tutup
+    bersifat final**: setelah tertutup (oleh panitia, oleh jam, atau sesi dibatalkan setelah mulai),
+    Silent Meeting tidak bisa dibuka lagi. Aturan ini ditolak di server (`controlRefusal`) dan di DB
+    (`mw_silent_control`, trigger `mw_silent_question_guard`). `mw_silent_session_moved` mencap tutup
+    sebelum jam atau status sesi berubah. Aksi `otomatis` dan "Tutup otomatis" dihapus. Kabar "Silent
+    Meeting dibuka" hanya untuk Buka sekarang, jadi paling banyak sekali per pertanyaan.
+  - **Kiriman.** `mw_silent_send(question, topic, body)` hanya menyisipkan isi, dalam transaksinya
+    sendiri. Tidak ada baris lain yang mengenali orang (HMAC, batas laju, log, notifikasi) di transaksi
+    itu. Batas per orang (10 kiriman per 10 menit per pertanyaan) ada di memori tiap instans server
+    (`modul/memory-limit.ts`, best effort, kunci di-hash dengan kunci acak per proses) dan tidak pernah
+    ditulis ke DB.
+  - **Pembuka.** Saat T01 tampil dibuka, HP mengirim permintaan terpisah (`POST mainWamApi.silent`
+    `{questionId}`). `mw_silent_open` lalu meng-upsert `HMAC-SHA256(K, "mw-silent-open\0" + questionId +
+    "\0" + employeeId)` (hex 64), sekali per orang per pertanyaan, hanya selama dibuka. Kuncinya
+    `K = HKDF-SHA256(MW_SILENT_SECRET, atau WAM_SESSION_SECRET bila kosong; salt kosong; info
+    "mw-silent-v1"; 32 byte)`. **Isi `MW_SILENT_SECRET` (≥ 32 karakter) di produksi dan jangan dirotasi
+    selama acara.** Kalau dirotasi, orang yang sama terhitung dua kali.
+  - **Jumlah.** Selama dibuka, tidak ada jumlah masukan atau pembuka di API mana pun (kontrol, Rundown
+    live, Ringkasan BOD, admin). Yang boleh hanya status "Dibuka". Jumlah hanya dari `silentResults()`
+    (`mw_silent_results`, berisi pertanyaan tertutup saja) lewat `silentShownCount`, yaitu setelah tutup
+    final dan hanya bila ada ≥ 5 masukan dan ≥ 5 pembuka. Rekap BOD memakai ambang yang sama.
+  - **Tutup final** (`mw_silent_finalize`, dijalankan oleh Tutup panitia, dan oleh `mw_silent_results`
+    untuk yang tertutup oleh jam): semua masukan pertanyaan itu ditulis ulang dalam urutan acak dalam
+    satu transaksi (satu `xmin` untuk semua, urutan fisik acak, id baru). Jumlahnya disimpan di
+    pertanyaan, lalu baris pembuka dihapus.
+  - **Log.** Tidak ada `console.*` atau log server yang membawa isi atau kunci. Penolakan yang wajar
+    dijawab fungsi DB dengan kata (`closed`, `topic`, `invalid`, …), bukan galat. Akibatnya pernyataan
+    yang gagal, beserta parameternya, tidak masuk log Postgres.
+  - **Model ancaman yang tersisa.**
+    - BOD, panitia, dan admin aplikasi tidak bisa menghubungkan masukan dengan orang. Jumlah tidak
+      terlihat selama dibuka dan tutup itu final, jadi tidak ada selisih rekap yang bisa dipakai.
+    - Admin DB yang sengaja menganalisis urutan fisik baris **selama dibuka**: tiap masukan punya
+      `xmin`/`ctid` sendiri. Urutannya bisa dibandingkan dengan baris lain yang punya jam (foto, hati,
+      absen), dan dengan baris pembuka. Pembuka bisa dicocokkan ke orang bila ia juga memegang rahasia
+      server. Hasilnya hanya **dugaan** ("ditulis setelah X, Y, dan Z membuka formulir, sekitar 13.42").
+      Untuk dua penulis yang mengirim berdekatan, hasilnya tidak pasti.
+    - Admin DB **setelah tutup final**: urutan dan `xmin` sudah seragam, dan pembuka sudah dihapus. Versi
+      baris lama masih ada di disk sampai autovacuum membersihkannya. Membacanya butuh akses superuser
+      (`pageinspect`), yang tidak dimiliki pengguna Supabase biasa.
+    - Log platform (Vercel, Supabase API) mencatat siapa memanggil endpoint kirim dan kapan, tanpa isi.
+      Bila digabung dengan akses DB selama dibuka, dugaan di atas bisa menjadi lebih kuat. Batasi siapa
+      yang memegang akses DB dan log selama acara.
+    - Setelan `log_parameter_max_length_on_error` di Supabase belum diperiksa (bawaan Postgres: 0).
+- **Voting**: rahasia, bukan anonim; hanya agregat yang keluar dari server. Perolehan per nominasi baru
+  tampil ke BOD dan Admin WAM setelah voting ditutup (`closedTally`, `closedCounts`; audit M1), dan tidak
+  pernah ke peserta. Setujui pemenang yang sama sekali lagi tidak mengirim kabar lagi (audit L3).
+- **Absen QR offline**: `scannedAt` dari antrean HP diterima hanya bila ada di dalam jendela absen sesi
+  itu **dan** paling lama 30 menit sebelum jam server (audit M5). Selain itu jam server yang dipakai.
+  Antrean menghapus scan hanya bila server menjawab hasil, atau menolak dengan alasan tetap (404/422).
+  Scan yang lain disimpan dan dicoba lagi (audit T1).
 - **Tampilan**: komponen UI KIT, token `--mw-*`, tanpa hex di komponen; target sentuh ≥ 44; status
   selalu kata; gestur geser punya tombol; `loading.tsx` per layar; detail dalam sheet bila cocok.
+  Nama aksesibel baris/kartu = kata yang tampil; tambahan untuk pembaca layar lewat `spoken`
+  (`ListRow`, `StatRow`), bukan `aria-label` yang menyusun ulang (WCAG 2.5.3, audit T-S05).
 - **Tes**: `npx vitest run src/lib/main-wam src/lib/server/main-wam src/app/wam/acara` dan folder areamu;
   `npx tsc --noEmit`; `npx eslint <berkasmu>`; uji SQL area di `tests/backend/main-wam-<area>-check.sql`.
 
@@ -329,11 +421,18 @@ milik D), tanpa mengimpor kode area lain.
 | 10 | Pengaturan satu baris dengan jsonb tervalidasi di aplikasi (`settingsFromRow`) | baris rusak tidak pernah menghentikan halaman; modul/tema bisa bertambah tanpa migrasi |
 | 11 | Tanggal acara dari `pw_events` (kind `wam`) | satu sumber dengan hitung mundur Pra WAM |
 | 12 | Aturan voting dan Silent Meeting juga di basis data (trigger, jam server) | integritas tidak bergantung pada UI (RISET §6, §7) |
-| 13 | Silent Meeting tanpa orang, tanpa waktu, id v4; partisipasi HMAC terpisah; ambang 5 | ambang industri 5 (Microsoft Viva Glint, Culture Amp); UUIDv7/stempel waktu membocorkan (RFC 9562); RISET §7 |
+| 13 | Silent Meeting tanpa orang, tanpa waktu, id v4; kiriman sendirian di transaksinya; pembuka HMAC dengan kunci turunan sendiri, di permintaan terpisah; ambang 5 masukan dan 5 pembuka | ambang industri 5 (Microsoft Viva Glint, Culture Amp); UUIDv7/stempel waktu membocorkan (RFC 9562); `xmin`/`ctid` menautkan baris satu transaksi (audit H1); RISET §7 |
+| 18 | Tutup Silent Meeting bersifat final; tanpa jumlah selama dibuka; masukan diacak ulang saat tutup final | dibuka lagi + hitungan langsung membuka penulis satu masukan dari selisih rekap (audit H2) |
+| 19 | "Bukan untukmu" selalu 404, juga untuk peran yang salah | tidak membocorkan endpoint BOD/panitia (audit L10) |
 | 14 | Foto: `client_id` unik per pemilik, `visible_at` = +5 detik, indeks keyset `(visible_at, id)` | antrean offline tanpa foto ganda (RISET §3); Batalkan 5 detik; tanpa OFFSET (use-the-index-luke) |
-| 15 | Gambar KV lewat situs (publik, alamat berversi, cache immutable) | splash tampil sebelum login; R2 tetap privat; ganti gambar = alamat baru |
+| 15 | Gambar KV lewat situs, alamat berversi; publik hanya `splash`/`icon` di mode `semua`; versi lain 404; cache 1 hari (bukan immutable setahun); byte disimpan di memori server | splash tampil sebelum login; R2 tetap privat; KV tidak bocor sebelum peluncuran (audit M6, R9, L6, L3) |
 | 16 | `/wam` → Main WAM dengan pengalihan di Beranda Pra WAM; Pra WAM di `?versi=pra` | Pra WAM tidak dihapus; mode bawaan tidak mengubah apa pun (dites) |
 | 17 | Admin Main WAM di bawah `/admin/wam/main`, hak akses "Admin WAM" | tanpa grant/migrasi baru; tab-halaman agar menu tidak membengkak |
+| 20 | Tema, KV, kerangka, dan `loading.tsx` Main WAM hanya setelah gate (`mainWamShown`); belum login di `pra`/`uji` → `SignInFirst` | tampilan acara tidak sampai ke orang yang bukan penguji (audit M6, §9 #6) |
+| 21 | Gate ringan; kamar dibaca malas hanya di Saya dan turunannya; viewer memakai bacaan pengaturan milik gate | ±15 kueri dalam 6 putaran per permintaan menjadi 6 kueri dalam 3 putaran (`gate-cost.test.ts`, audit S5) |
+| 22 | Satu definisi orang acara: `mainWamAttendees()` | tiga hitungan berbeda membuat "Hadir 96 dari 120" beda dengan Kehadiran B02 (audit R5) |
+| 23 | Pesan "menunggu pembaruan sistem" tanpa nama migrasi | istilah teknis tidak untuk peserta/admin; nama berkas di log server (audit R13, T-A01) |
+| 24 | Tanpa `alter default privileges` (audit L2 ditolak) | berlaku untuk seluruh proyek Supabase, termasuk migrasi tim lain; revoke per objek di tiap migrasi Main WAM sudah diuji (`main-wam-check.sql`) |
 
 ## 10. Belum diputuskan / perlu tindak lanjut
 
@@ -341,9 +440,30 @@ milik D), tanpa mengimpor kode area lain.
   iOS tidak mengganti ikon setelah dipasang (RISET §5): tetapkan ikon sebelum mengajak peserta memasang.
 - **Push otomatis saat Silent Meeting/voting dibuka oleh jam** (tanpa aksi panitia) butuh pemicu
   terjadwal (cron); saat ini kabar hanya bisa dikirim saat panitia bertindak.
-- **Cache pengaturan lintas permintaan** (tag + `revalidateTag`) belum dipakai: satu kueri per permintaan
-  cukup untuk ±120 orang.
+- **Cache pengaturan dan daftar orang lintas permintaan** (tag + `revalidateTag`, atau TTL 60 detik) belum
+  dipakai. Gate kini 6 kueri per permintaan (S5); `mainWamPeople()` (nama dan foto semua orang) masih dibaca
+  per permintaan di layar yang memakainya.
+- **`theme-color` Momen dan kamera**: halaman bertema terang memakai `#F6F7F9`; layar gelap (Momen, kamera)
+  boleh memperbarui meta ke hitam saat dibuka (milik B, belum dikerjakan).
+- **`acara/error.tsx` untuk Masuk** (T-S02): Masuk belum punya batas galat sendiri; galatnya jatuh ke halaman
+  galat situs.
+- **Pengumuman bernada peringatan dari K06**: `NoteInput.tone` sudah ada; K06 (C) belum memberi pilihan,
+  jadi nada mengikuti `noteTone` (judul yang menyebut perubahan).
 - **Offline untuk panduan dan data pribadi** (RISET §12) perlu persetujuan, karena `sw.js` sengaja tidak
   menyimpan halaman pribadi.
+- **Aturan lifecycle R2 untuk unggahan sementara (wajib sebelum Momen dipakai, disetel pemilik sekali).**
+  Foto Momen diunggah ke `tmp/main-wam/momen/` dan baru dipindah ke `main-wam/momen/` saat disimpan. Unggahan
+  yang tidak pernah disimpan (aplikasi ditutup di tengah kirim, galat jaringan, penyalahgunaan) tinggal di
+  `tmp/`. Kode tidak bisa menyetel aturan bucket (token R2 aplikasi hanya baca/tulis objek), jadi pemilik
+  menambah satu aturan:
+  1. Dashboard Cloudflare → **R2 object storage** → pilih bucket yang dipakai aplikasi (nilai `R2_BUCKET`).
+  2. **Settings** → **Object Lifecycle Rules** → **Add rule**.
+  3. Nama: `hapus-unggahan-sementara`. Prefix: `tmp/` (dengan garis miring). Aksi: hapus objek setelah **1** hari.
+  4. **Save changes**. Periksa di daftar aturan bahwa prefiksnya `tmp/`, bukan kosong (kosong = semua foto terhapus).
+  - Lewat Wrangler (sama hasilnya): `npx wrangler r2 bucket lifecycle add <R2_BUCKET> hapus-unggahan-sementara tmp/ --expire-days 1`,
+    lalu `npx wrangler r2 bucket lifecycle list <R2_BUCKET>`.
+  - Cloudflare menghapus objek biasanya dalam 24 jam setelah umurnya lewat, jadi unggahan yatim hidup paling lama
+    ±2 hari. Prefiks `tmp/` boleh dipakai fitur lain untuk unggahan sementara.
+  - Tanpa aturan ini Momen tetap berjalan, hanya unggahan yatim tidak pernah terhapus (audit L4).
 - **Uji SQL lama yang gagal** (bukan Main WAM, juga gagal tanpa migrasi Main WAM): `pra-wam-appraisal`,
   `pw-tv`, `pw-tv-playlist`, `pw-tv-welcome`, `rsvp-needs`, `wam-cards`, `wam-questionnaire`.

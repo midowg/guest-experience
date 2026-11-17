@@ -7,16 +7,17 @@ import { ServiceError } from "../../config";
 import { databaseError } from "../../http";
 import { mwMissing } from "../errors";
 import type { MainWamContext } from "../gate";
-import { mainWamPeople } from "../people";
+import { mainWamAttendees, mainWamPeople } from "../people";
 import { allSessions, attendanceOf, listGroups, sessionById } from "../read";
-import { db, expectedAttendees, groupLabels } from "./common";
+import { db, groupLabels } from "./common";
 import { waitingUpdate } from "./rundown";
 
 /*
- * Absen manual (K05): who is expected at a session that takes attendance (everyone of the event
- * but BOD), who is present and how (Scan QR, Dicatat panitia), and "Catat hadir" with its undo. The
+ * Absen manual (K05): who is expected at a session that takes attendance (mainWamAttendees: every
+ * active WAM account but BOD, the one count of audit R5), who is present and how (Scan QR, Dicatat panitia), and "Catat hadir" with its undo. The
  * same rule as Pra WAM's (src/lib/server/pra-wam/attendance.ts setPresent): one row per person per
- * session, manual names who recorded it, a second "Catat hadir" keeps the first record.
+ * session, manual names who recorded it, a second "Catat hadir" keeps the first record. Its undo
+ * removes only a record panitia made: a QR scan is the person's own and stays (audit L8).
  */
 
 export type AttendanceSessionOption = { id: string; title: string; time: string; day: string; required: boolean };
@@ -36,7 +37,7 @@ async function attendanceSessions(): Promise<{ data: MwSession[]; migrated: bool
 
 /** Everyone expected at a session, with their check-in (one query for the session's rows). */
 export async function sessionRows(sessionId: string): Promise<{ rows: AttendeeRow[]; migrated: boolean }> {
-  const [expected, people, groups, present] = await Promise.all([expectedAttendees(), mainWamPeople(), listGroups(), attendanceOf({ sessionId })]);
+  const [expected, people, groups, present] = await Promise.all([mainWamAttendees(), mainWamPeople(), listGroups(), attendanceOf({ sessionId })]);
   const labels = groupLabels(groups.data);
   const byPerson = new Map(present.data.map(row => [row.employeeId, row]));
   // Someone recorded who is not (or no longer) on the list still counts as present.
@@ -65,7 +66,8 @@ export async function attendanceData(asked: string | undefined, now = new Date()
 
 /**
  * Catat hadir (present) or its undo (not present), by a panitia. Before the window opens it is
- * refused (a mistake on a session that has not started); after it closes it is a correction.
+ * refused (a mistake on a session that has not started); after it closes it is a correction. The
+ * undo deletes only a manual record; a QR scan is refused with 409 (nothing to log, nothing removed).
  */
 export async function setAttendance(context: MainWamContext, sessionId: string, employeeId: string, present: boolean, now = new Date()): Promise<{ rows: AttendeeRow[] }> {
   const session = await sessionById(sessionId);
@@ -79,8 +81,14 @@ export async function setAttendance(context: MainWamContext, sessionId: string, 
       .upsert({ session_id: sessionId, employee_id: employeeId, method: "manual", recorded_by: context.viewer.id, checked_in_at: now.toISOString() }, { onConflict: "session_id,employee_id", ignoreDuplicates: true });
     if (error) { if (mwMissing(error)) throw waitingUpdate(); if (error.code === "23503") throw new ServiceError(422, "Orang ini tidak dikenal. Muat ulang halaman."); databaseError(error); }
   } else {
-    const { error } = await client.from("mw_attendance").delete().eq("session_id", sessionId).eq("employee_id", employeeId);
+    // In one statement: a QR row is never touched, even when it came in after the screen was drawn.
+    const { data: removed, error } = await client.from("mw_attendance").delete().eq("session_id", sessionId).eq("employee_id", employeeId).eq("method", "manual").select("employee_id");
     if (error) { if (mwMissing(error)) throw waitingUpdate(); databaseError(error); }
+    if (!removed?.length) {
+      const { data: scanned, error: readError } = await client.from("mw_attendance").select("method").eq("session_id", sessionId).eq("employee_id", employeeId).maybeSingle();
+      if (readError) databaseError(readError);
+      if (scanned?.method === "qr") throw new ServiceError(409, `${person.name} absen lewat scan QR. Absen ini tidak bisa dibatalkan panitia.`);
+    }
   }
   return { rows: (await sessionRows(sessionId)).rows };
 }

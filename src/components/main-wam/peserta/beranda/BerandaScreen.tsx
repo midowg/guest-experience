@@ -33,6 +33,6 @@ export function BerandaScreen({ data, serverNow, since, slots, live = true, forc
     {slots.bod}
     {data.card && <HomeCard card={data.card} />}
     {slots.momen}
-    {live && <RefreshAt at={data.refreshAt} />}
+    {live && <RefreshAt at={data.refreshAt} serverNow={serverNow} />}
   </ScreenContent>;
 }

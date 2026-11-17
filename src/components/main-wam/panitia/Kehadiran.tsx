@@ -1,6 +1,6 @@
 import { ChevronRight, Lock, UserCheck } from "lucide-react";
 import { ScreenContent, ScreenSection } from "@/components/main-wam/shell";
-import { Banner, Card, DayTabs, EmptyState, List, Pill, ProgressBar, SectionHeader, StatusPill, Text } from "@/components/main-wam/ui";
+import { Banner, Card, DayTabs, EmptyState, List, Pill, ProgressBar, SectionHeader, SrOnly, StatusPill, Text } from "@/components/main-wam/ui";
 import { count } from "@/lib/main-wam/panitia/format";
 import type { AttendanceDay } from "@/lib/server/main-wam/panitia/summary";
 import Link from "next/link";
@@ -26,15 +26,15 @@ export function Kehadiran({ data }: { data: AttendanceDay }) {
         <ScreenSection label="Per sesi">
           <SectionHeader title="Per sesi" />
           <List inset={16} label="Kehadiran per sesi">
-            {data.sessions.map(session => <Link key={session.id} href={session.href} className={`${css.att} ${session.percent === null ? css.attNoBar : ""}`}
-              aria-label={`${session.title}, ${session.time}, ${session.percent === null ? "belum mulai" : `${session.percent}% hadir`}`}>
+            {/* The link's name is its visible text (WCAG 2.5.3, audit T-S05), "hadir" added for screen readers. */}
+            {data.sessions.map(session => <Link key={session.id} href={session.href} className={`${css.att} ${session.percent === null ? css.attNoBar : ""}`}>
               <span className={css.attTop}>
                 <span className={css.attText}>
                   <span className={css.attTitle}>{session.title}</span>
                   <span className={css.attMeta}><span>{session.time}</span>{session.state === "live" && <StatusPill status="live" />}</span>
                 </span>
                 <span className={css.attEnd}>
-                  {session.percent === null ? <Pill>Belum mulai</Pill> : <span className={css.attValue}>{session.percent}%</span>}
+                  {session.percent === null ? <Pill>Belum mulai</Pill> : <span className={css.attValue}>{session.percent}%<SrOnly> hadir</SrOnly></span>}
                   <ChevronRight aria-hidden />
                 </span>
               </span>

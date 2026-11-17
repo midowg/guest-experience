@@ -28,10 +28,17 @@ vi.mock("@/lib/server/main-wam/momen/feed", () => ({
 vi.mock("@/lib/server/main-wam/momen/upload", () => ({
   startUpload: async () => { calls.push("start"); return { kind: "selesai", id: "x", visibleAt: "y" }; },
   confirmUpload: async () => ({ id: "x", visibleAt: "y" }),
-  deletePhoto: async () => { calls.push("delete"); },
+  deletePhoto: async () => { calls.push("delete"); const refusal = deleteRefusal; deleteRefusal = null; if (refusal) throw refusal; },
 }));
-vi.mock("@/lib/server/main-wam/momen/mosaic", () => ({ mosaicManifest: async () => ({ version: "v1", tiles: [], migrated: true }) }));
-vi.mock("@/lib/server/main-wam/momen/files", () => ({ parsePhotoSize: () => "kecil", photoFileAddress: async () => "https://r2.example/x.jpg?sig" }));
+let deleteRefusal: ServiceError | null = null;
+vi.mock("@/lib/server/main-wam/momen/mosaic", () => ({
+  mosaicHead: async () => { calls.push("mosaicHead"); return { version: "v1", migrated: true }; },
+  mosaicManifest: async (_context: unknown, _now: Date, head: { version: string }) => { calls.push("mosaicManifest"); return { version: head.version, tiles: [], migrated: true }; },
+}));
+vi.mock("@/lib/server/main-wam/momen/files", () => ({
+  parsePhotoSize: (raw: string | null) => (raw === "kecil" || raw === "ubin" ? raw : "besar"),
+  photoFileAddress: async (_context: unknown, _id: string, size: string) => ({ address: `https://r2.example/x-${size}.jpg?sig`, cacheSeconds: size === "besar" ? 300 : 3000 }),
+}));
 
 const feedRoute = await import("./route");
 const startRoute = await import("./unggah/route");
@@ -94,8 +101,45 @@ describe("Momen APIs check what they are sent", () => {
     const file = await fileRoute.GET(new Request(`${site}/x?ukuran=kecil`), params());
     expect(file.status).toBe(302);
     expect(file.headers.get("location")).toContain("r2.example");
+    expect(file.headers.get("cache-control")).toBe("private, max-age=3000");
     const mosaic = await mosaicRoute.GET(new Request(`${site}/api/wam/acara/mozaik`));
     expect(mosaic.headers.get("etag")).toBe('"v1"');
     expect((await mosaicRoute.GET(new Request(`${site}/api/wam/acara/mozaik`, { headers: { "if-none-match": '"v1"' } }))).status).toBe(304);
+  });
+
+  it("let the browser reuse a large photo's redirect 5 minutes only (audit L5)", async () => {
+    const file = await fileRoute.GET(new Request(`${site}/x?ukuran=besar`), params());
+    expect(file.headers.get("location")).toContain("x-besar.jpg");
+    expect(file.headers.get("cache-control")).toBe("private, max-age=300");
+  });
+
+  it("answer an unchanged Mozaik 304 without building the manifest (audit R3)", async () => {
+    for (const header of ['"v1"', 'W/"v1"', '"v0", "v1"', "*"]) {
+      calls.length = 0;
+      const answer = await mosaicRoute.GET(new Request(`${site}/api/wam/acara/mozaik`, { headers: { "if-none-match": header } }));
+      expect(answer.status).toBe(304);
+      expect(answer.headers.get("etag")).toBe('"v1"');
+      expect(calls).toEqual(["mosaicHead"]);
+    }
+    calls.length = 0;
+    const changed = await mosaicRoute.GET(new Request(`${site}/api/wam/acara/mozaik`, { headers: { "if-none-match": '"v0"' } }));
+    expect(changed.status).toBe(200);
+    expect(calls).toEqual(["mosaicHead", "mosaicManifest"]);
+    expect((await changed.json()).data.version).toBe("v1");
+  });
+});
+
+describe("Momen's DELETE", () => {
+  it("passes the owner's request on and answers the server's refusal as is (403 not the owner, 409 nominated)", async () => {
+    deleteRefusal = new ServiceError(403, "Hanya pemilik foto yang bisa menghapusnya.");
+    const forbidden = await photoRoute.DELETE(new Request(`${site}/x`, { method: "DELETE", headers: { origin: site } }), params());
+    expect(forbidden.status).toBe(403);
+    deleteRefusal = new ServiceError(409, "Foto ini masuk nominasi Awarding, jadi tidak bisa dihapus.");
+    const nominated = await photoRoute.DELETE(new Request(`${site}/x`, { method: "DELETE", headers: { origin: site } }), params());
+    expect(nominated.status).toBe(409);
+    expect((await nominated.json()).message).toBe("Foto ini masuk nominasi Awarding, jadi tidak bisa dihapus.");
+    expect((await photoRoute.DELETE(new Request(`${site}/x`, { method: "DELETE", headers: { origin: site } }), params())).status).toBe(200);
+    // A change from another site never reaches it.
+    expect((await photoRoute.DELETE(new Request(`${site}/x`, { method: "DELETE", headers: { origin: "https://evil.example" } }), params())).status).toBe(403);
   });
 });

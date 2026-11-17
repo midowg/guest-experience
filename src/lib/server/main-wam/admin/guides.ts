@@ -6,8 +6,8 @@ import type { MwGuide } from "@/lib/main-wam/types";
 import { praWamSecret } from "@/lib/pra-wam/session-token";
 import { isSupabaseConfigured, ServiceError } from "../../config";
 import { isR2Configured, presignDownload, presignUpload, removeObjects, uploadedStart, verifyUpload } from "../../r2";
-import { mwMissing, mwWaiting } from "../errors";
-import { adminFail, db } from "./common";
+import { mwMissing } from "../errors";
+import { adminFail, adminWaiting, db } from "./common";
 
 /*
  * Admin WAM → Main WAM → Panduan (agen E): the guides (drafts too), and their file (an image or a
@@ -35,7 +35,7 @@ export async function adminGuides(): Promise<GuideBoard> {
 }
 async function boardOrWait(): Promise<GuideBoard> {
   const board = await adminGuides();
-  if (!board.migrated) throw mwWaiting();
+  if (!board.migrated) throw adminWaiting();
   return board;
 }
 
@@ -82,11 +82,11 @@ export async function deleteGuide(id: string): Promise<GuideBoard> {
 /* ── Berkas ───────────────────────────────────────────────────────────────────────────────────── */
 
 const TOKEN_SECONDS = 15 * 60;
-const notReady = () => new ServiceError(503, "Penyimpanan berkas belum disiapkan. Isi R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, dan R2_BUCKET.");
+const notReady = () => new ServiceError(503, "Gambar dan PDF belum bisa diunggah karena penyimpanan berkas belum disiapkan. Hubungi tim CoE.");
 
 function signature(key: string, input: GuideFileStart, expires: number): string {
   const secret = praWamSecret();
-  if (!secret) throw new ServiceError(503, "Login WAM belum disiapkan.");
+  if (!secret) throw new ServiceError(503, "Unggahan berkas belum bisa dipakai. Hubungi tim CoE.");
   return createHmac("sha256", secret).update(`mw-panduan\0${input.guideId}\0${key}\0${input.size}\0${input.mime}\0${expires}`).digest("hex");
 }
 export function guideTokenMatches(token: string, key: string, input: GuideFileStart, now = Date.now()): boolean {

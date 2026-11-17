@@ -1,23 +1,25 @@
 import "server-only";
 import { attentionItems, kelolaTiles, requiredOpen, silentWaitingToday, type AttentionItem, type KelolaTile } from "@/lib/main-wam/panitia/attention";
 import { awardStatus, dayAverage, departmentStats, sessionStats, summaryRows, type SessionStat, type SummaryRow } from "@/lib/main-wam/panitia/summary";
-import { silentState } from "@/lib/main-wam/module-state";
+import { silentShownCount, silentState } from "@/lib/main-wam/module-state";
 import { agendaDay, eventDates, eventDay, timeRange, wibDate } from "@/lib/main-wam/rundown";
 import type { MwSession } from "@/lib/main-wam/types";
 import { mainWamPath } from "@/lib/routes";
 import { databaseError } from "../../http";
 import { mwMissing } from "../errors";
 import type { MainWamContext } from "../gate";
-import { mainWamPeople } from "../people";
-import { allSessions, awardApprovals, awardCategories, silentQuestions } from "../read";
+import { mainWamAttendees, mainWamPeople } from "../people";
+import { allSessions, awardApprovals, awardCategories, silentQuestions, silentResults } from "../read";
 import { carbonForEvent } from "./carbon";
-import { db, expectedAttendees } from "./common";
+import { db } from "./common";
 import { waitingCount } from "./moderation";
 import { eventDayTabs, type RundownDay } from "./rundown";
 
 /*
  * BOD's Ringkasan (B01) and Kehadiran (B02), and panitia's cards on Beranda (K01): aggregates
  * only. Check-ins of a day are read in one query (the day's sessions at once), never per person.
+ * "Orang acara" is fondasi's mainWamAttendees (every active WAM account but BOD), the same count
+ * as Absen sesi and Detail sesi (audit R5).
  */
 
 /** Who checked in at each of these sessions (one query). */
@@ -41,7 +43,7 @@ export async function bodSummary(context: MainWamContext, now = new Date()): Pro
   const { modules, event } = context.settings;
   const today = wibDate(now.toISOString());
   const day = eventDay(today, event)?.day ?? null;
-  const [sessions, expected] = await Promise.all([allSessions(), modules.absen ? expectedAttendees() : Promise.resolve([] as string[])]);
+  const [sessions, expected] = await Promise.all([allSessions(), modules.absen ? mainWamAttendees() : Promise.resolve([] as string[])]);
 
   const attendance = async () => {
     if (!modules.absen || day === null) return { percent: null, day };
@@ -54,17 +56,23 @@ export async function bodSummary(context: MainWamContext, now = new Date()): Pro
     const [categories, approvals] = await Promise.all([awardCategories(), awardApprovals()]);
     return awardStatus(categories.data, approvals.data, now);
   };
+  // Silent Meeting: "Dibuka" while one is open, never a count then; afterwards only the counts of
+  // those closed for good with 5 feedbacks of 5 people (audit H2).
   const silent = async () => {
-    if (!modules.silent) return 0;
-    const { count: total, error } = await db().from("mw_silent_feedback").select("id", { count: "exact", head: true });
-    if (error) { if (mwMissing(error)) return 0; databaseError(error); }
-    return total ?? 0;
+    if (!modules.silent) return { feedback: 0, open: false };
+    const [questions, results] = await Promise.all([silentQuestions(), silentResults()]);
+    const open = questions.data.some(question => {
+      const session = sessions.data.find(item => item.id === question.sessionId);
+      return !!session && silentState(question, session, now) === "buka";
+    });
+    const feedback = questions.data.reduce((sum, question) => sum + (silentShownCount(results.data.get(question.id)) ?? 0), 0);
+    return { feedback, open };
   };
-  const carbon = async () => (modules.karbon ? (await carbonForEvent(context.settings))?.tonnes ?? null : null);
+  const carbon = async () => (modules.karbon ? (await carbonForEvent(context.settings))?.kg ?? null : null);
   const [attendanceValue, awardValue, silentValue, carbonValue] = await Promise.all([attendance(), awards(), silent(), carbon()]);
   return {
     migrated: sessions.migrated,
-    rows: summaryRows({ modules, attendance: attendanceValue, awards: awardValue, silentFeedback: silentValue, carbon: carbonValue }),
+    rows: summaryRows({ modules, attendance: attendanceValue, awards: awardValue, silentFeedback: silentValue.feedback, silentOpen: silentValue.open, carbonKg: carbonValue }),
   };
 }
 
@@ -88,7 +96,7 @@ export async function attendanceDay(context: MainWamContext, asked: string | num
   const { event } = context.settings;
   const day = agendaDay(asked, wibDate(now.toISOString()), event);
   const date = eventDates(event)[day - 1] ?? "";
-  const [sessions, expected, people] = await Promise.all([allSessions(), expectedAttendees(), mainWamPeople()]);
+  const [sessions, expected, people] = await Promise.all([allSessions(), mainWamAttendees(), mainWamPeople()]);
   const ofDay = attendanceOfDate(sessions.data, date);
   const { present, migrated } = await presentBySession(ofDay.map(session => session.id));
   const stats = sessionStats(ofDay, present, expected, now);
@@ -118,7 +126,7 @@ export async function panitiaHome(context: MainWamContext, now = new Date()): Pr
     if (!modules.absen) return [];
     const open = requiredOpen(sessions.data, now);
     if (!open.length) return [];
-    const [expected, { present }] = await Promise.all([expectedAttendees(), presentBySession(open.map(session => session.id))]);
+    const [expected, { present }] = await Promise.all([mainWamAttendees(), presentBySession(open.map(session => session.id))]);
     const everyone = new Set(expected);
     return open.map(session => ({ session, expected: everyone.size, present: [...(present.get(session.id) ?? [])].filter(id => everyone.has(id)).length }));
   };

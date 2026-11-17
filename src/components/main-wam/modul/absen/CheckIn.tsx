@@ -8,10 +8,10 @@ import { clockWhen, outcomeText, type CheckInOutcome, type OutcomeText } from "@
 import type { PanitiaContact } from "@/lib/main-wam/modul/contact";
 import { mainWamPath } from "@/lib/routes";
 import { ContactSheet } from "../ContactSheet";
-import { errorText, ModulError } from "../request";
+import { errorText } from "../request";
 import { Result } from "../Result";
 import { AbsenQueue } from "./AbsenQueue";
-import { enqueueScan, sendScan } from "./queue";
+import { enqueueScan, retryable, sendScan } from "./queue";
 import css from "../modul.module.css";
 
 const ICONS: Record<OutcomeText["icon"], typeof CircleCheck> = { check: CircleCheck, clock: Clock, "timer-off": TimerOff, info: Info, qr: QrCode };
@@ -54,8 +54,9 @@ type State = { kind: "kirim" } | { kind: "hasil"; outcome: CheckInOutcome } | { 
 
 /**
  * What a session's printed QR opens (A02–A04): the check-in is sent from the screen (a POST, never
- * on page load, so a prefetch can never record anyone), then its answer shows. No signal: the scan
- * is kept with its time (A02 offline).
+ * on page load, so a prefetch can never record anyone), then its answer shows. No signal, or no
+ * answer of ours (busy, a hotel Wi-Fi's login page): the scan is kept with its time and sent later
+ * (A02 offline, audit T1). Only a refusal of ours shows as a failure.
  */
 export function CheckIn({ token, contact }: { token: string; contact: PanitiaContact | null }) {
   const [state, setState] = useState<State>({ kind: "kirim" });
@@ -68,7 +69,7 @@ export function CheckIn({ token, contact }: { token: string; contact: PanitiaCon
     try {
       setState({ kind: "hasil", outcome: await sendScan(token) });
     } catch (error) {
-      if (error instanceof ModulError && error.offline) { enqueueScan({ token, scannedAt: at, title: "" }); setState({ kind: "tersimpan", at }); return; }
+      if (retryable(error)) { enqueueScan({ token, scannedAt: at, title: "" }); setState({ kind: "tersimpan", at }); return; }
       setState({ kind: "gagal", message: errorText(error) });
     }
   }

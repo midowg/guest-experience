@@ -4,6 +4,7 @@ import {
   ACTIVITY_GROUP_COLUMNS, activityGroupFromRow, AWARD_COLUMNS, awardFromRow, GROUP_COLUMNS, groupFromRow, GUIDE_COLUMNS, guideFromRow, PHOTO_COLUMNS, photoFromRow,
   RUNDOWN_LOG_COLUMNS, rundownChangeFromRow, SESSION_COLUMNS, sessionFromRow, SILENT_COLUMNS, silentFromRow, TRIP_COLUMNS, TRIP_SEAT_COLUMNS, tripFromRow, tripSeatFromRow,
 } from "@/lib/main-wam/rows";
+import type { SilentResult } from "@/lib/main-wam/module-state";
 import { byStart } from "@/lib/main-wam/rundown";
 import type {
   MwActivityGroup, MwAttendance, MwAwardApproval, MwAwardCategory, MwGroup, MwGuide, MwPhoto, MwSession, MwSilentQuestion, MwTrip, MwTripSeat, RundownChange, TripDirection,
@@ -104,29 +105,33 @@ export async function activityGroups(filter: { sessionId?: string; employeeId?: 
 
 /* ── Perjalanan ───────────────────────────────────────────────────────────────────────────────── */
 
-/** The steps there (berangkat) or back (pulang), or both, in order. */
-export async function listTrips(direction?: TripDirection): Promise<Read<MwTrip[]>> {
+async function listTripsUncached(direction: TripDirection | "beide"): Promise<Read<MwTrip[]>> {
   let query = db().from("mw_trips").select(TRIP_COLUMNS).order("sort").order("starts_at").limit(200);
-  if (direction) query = query.eq("direction", direction);
+  if (direction !== "beide") query = query.eq("direction", direction);
   const { data, error } = await query;
   return settle(error, [] as MwTrip[]) ?? { data: (data ?? []).map(row => tripFromRow(row)), migrated: true };
 }
+const listTripsCached = cache(listTripsUncached);
+/** The steps there (berangkat) or back (pulang), or both, in order. */
+export const listTrips = (direction?: TripDirection) => listTripsCached(direction ?? "beide");
 
 /** A person's seats and vehicles, every step. */
-export async function seatsOf(employeeId: string): Promise<Read<MwTripSeat[]>> {
+export const seatsOf = cache(async (employeeId: string): Promise<Read<MwTripSeat[]>> => {
   const { data, error } = await db().from("mw_trip_seats").select(TRIP_SEAT_COLUMNS).eq("employee_id", employeeId).limit(100);
   return settle(error, [] as MwTripSeat[]) ?? { data: (data ?? []).map(row => tripSeatFromRow(row)), migrated: true };
-}
+});
 
 /* ── Panduan ──────────────────────────────────────────────────────────────────────────────────── */
 
-/** The guides, published only unless `all` (Admin WAM). */
-export async function listGuides(all = false): Promise<Read<MwGuide[]>> {
+async function listGuidesUncached(all: boolean): Promise<Read<MwGuide[]>> {
   let query = db().from("mw_guides").select(GUIDE_COLUMNS).order("sort").order("title").limit(100);
   if (!all) query = query.eq("published", true);
   const { data, error } = await query;
   return settle(error, [] as MwGuide[]) ?? { data: (data ?? []).map(row => guideFromRow(row)), migrated: true };
 }
+const listGuidesCached = cache(listGuidesUncached);
+/** The guides, published only unless `all` (Admin WAM). */
+export const listGuides = (all = false) => listGuidesCached(all);
 
 /** One published guide by its address (null when there is none). */
 export async function guideBySlug(slug: string): Promise<MwGuide | null> {
@@ -165,39 +170,48 @@ export const momenWaiting = () => mwWaiting(MAIN_WAM_MOMEN_MIGRATION);
 
 /* ── Modul ────────────────────────────────────────────────────────────────────────────────────── */
 
-/** Award categories with their nominees, published only unless `all`. */
-export async function awardCategories(all = false): Promise<Read<MwAwardCategory[]>> {
+async function awardCategoriesUncached(all: boolean): Promise<Read<MwAwardCategory[]>> {
   let query = db().from("mw_award_categories").select(AWARD_COLUMNS).order("sort").order("title").limit(50);
   if (!all) query = query.eq("published", true);
   const { data, error } = await query;
   return settle(error, [] as MwAwardCategory[]) ?? { data: (data ?? []).map(row => awardFromRow(row as Record<string, unknown>)), migrated: true };
 }
+const awardCategoriesCached = cache(awardCategoriesUncached);
+/** Award categories with their nominees, published only unless `all`; once per request (Beranda panitia asks twice). */
+export const awardCategories = (all = false) => awardCategoriesCached(all);
 
 /** The BOD's approvals, by category. */
-export async function awardApprovals(): Promise<Read<MwAwardApproval[]>> {
+export const awardApprovals = cache(async (): Promise<Read<MwAwardApproval[]>> => {
   const { data, error } = await db().from("mw_award_approvals").select("category_id,nominee_id,approved_by,approved_at").limit(50);
   return settle(error, [] as MwAwardApproval[]) ?? {
-    data: (data ?? []).map(row => ({ categoryId: row.category_id, nomineeId: row.nominee_id, approvedBy: row.approved_by, approvedAt: row.approved_at })), migrated: true,
+    data: (data ?? []).map(row => ({ categoryId: row.category_id, nomineeId: row.nominee_id, approvedBy: row.approved_by ?? "", approvedAt: row.approved_at })), migrated: true,
   };
-}
+});
 
 /** The categories a person has voted in (no nominee: a vote is secret, the person sees their own through D's API). */
-export async function votedCategories(employeeId: string): Promise<Read<Set<string>>> {
+export const votedCategories = cache(async (employeeId: string): Promise<Read<Set<string>>> => {
   const { data, error } = await db().from("mw_award_votes").select("category_id").eq("voter_id", employeeId).limit(50);
   return settle(error, new Set<string>()) ?? { data: new Set((data ?? []).map(row => row.category_id as string)), migrated: true };
-}
+});
 
-/** Every Silent Meeting question (one per session). */
-export async function silentQuestions(): Promise<Read<MwSilentQuestion[]>> {
+/** Every Silent Meeting question (one per session); once per request. */
+export const silentQuestions = cache(async (): Promise<Read<MwSilentQuestion[]>> => {
   const { data, error } = await db().from("mw_silent_questions").select(SILENT_COLUMNS).limit(50);
   return settle(error, [] as MwSilentQuestion[]) ?? { data: (data ?? []).map(row => silentFromRow(row)), migrated: true };
-}
+});
 
-/** How many feedbacks a question has (BOD's Ringkasan row, K02's count). */
-export async function silentFeedbackCount(questionId: string): Promise<Read<number>> {
-  const { count, error } = await db().from("mw_silent_feedback").select("id", { count: "exact", head: true }).eq("question_id", questionId);
-  return settle(error, 0) ?? { data: count ?? 0, migrated: true };
-}
+/**
+ * The counts of every Silent Meeting closed for good (question id → feedbacks, openers), by
+ * mw_silent_results, which first finalizes any that closed since (shuffle, counts kept). There is
+ * never a count of an open one (audit H2): show a number only through silentShownCount.
+ */
+export const silentResults = cache(async (): Promise<Read<Map<string, SilentResult>>> => {
+  const { data, error } = await db().rpc("mw_silent_results");
+  return settle(error, new Map<string, SilentResult>()) ?? {
+    data: new Map(((data ?? []) as { question_id: string; feedback_count: number; opener_count: number }[]).map(row => [row.question_id, { feedback: row.feedback_count, openers: row.opener_count }])),
+    migrated: true,
+  };
+});
 
 /** Writers of the modules before their migration. */
 export const modulesWaiting = () => mwWaiting(MAIN_WAM_MODULES_MIGRATION);

@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import type { AttendeeRow } from "@/lib/main-wam/panitia/attendance";
-import type { AnnounceInput, ModerateInput, PresentInput, RundownChangeInput } from "@/lib/main-wam/panitia/schemas";
+import type { AnnounceInput, ModerateRequest, PresentInput, RundownChangeInput } from "@/lib/main-wam/panitia/schemas";
 import { mainWamApi } from "@/lib/routes";
 
 /*
@@ -49,7 +49,7 @@ export type PanitiaApi = {
   announce: (input: AnnounceInput) => Promise<{ count: number }>;
   unpin: (id: string) => Promise<void>;
   removeAnnouncement: (id: string) => Promise<void>;
-  moderate: (id: string, input: ModerateInput) => Promise<void>;
+  moderate: (id: string, input: ModerateRequest) => Promise<void>;
   /** The server's latest for this screen (router.refresh). */
   refresh: () => void;
   navigate: (href: string) => void;
@@ -89,22 +89,6 @@ export function useServerState<T>(value: T): [T, Dispatch<SetStateAction<T>>] {
   const [state, setState] = useState(value);
   if (seen !== value) { setSeen(value); setState(value); }
   return [state, setState];
-}
-
-/**
- * From one sheet or dialog straight to another (a menu → Pindah tempat; a detail → Hapus): the kit's
- * modals each own a history entry, and the first one takes its entry back asynchronously when it
- * closes, which would close the second one too. So: close the first, and open the next once its
- * history step is done (popstate), or at once when it held no entry.
- */
-export function afterModal(close: () => void, next: () => void): void {
-  const holding = typeof window !== "undefined" && !!(window.history.state as { mwSheet?: string } | null)?.mwSheet;
-  close();
-  if (!holding) { next(); return; }
-  let done = false;
-  const go = () => { if (done) return; done = true; window.removeEventListener("popstate", go); window.clearTimeout(timer); next(); };
-  window.addEventListener("popstate", go);
-  const timer = window.setTimeout(go, 1500);
 }
 
 /** False while the phone says it is offline (shown as a banner; data already on screen stays). */

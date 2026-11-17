@@ -11,7 +11,7 @@ import { stackCount, stackCountSpoken, type StackMode } from "@/lib/main-wam/mom
 import { UMUM, type FeedAnswer, type FeedPhoto, type SessionCount, type SessionFilter } from "@/lib/main-wam/momen/types";
 import type { PhotoStatus, ViewerGroup } from "@/lib/main-wam/types";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
-import { DeletePhotoDialog, PhotoOptionsSheet, ReportSheet, SessionFilterSheet } from "./MomenSheets";
+import { DeletePhotoDialog, PhotoOptionsSheet, refusedForGood, ReportSheet, SessionFilterSheet } from "./MomenSheets";
 import { StackDeck } from "./StackDeck";
 import { MomenQueueRunner } from "./upload/QueueRunner";
 import css from "./momen.module.css";
@@ -175,7 +175,11 @@ export function MomenStack(props: MomenStackProps) {
       setItems(list => list.filter(item => item.id !== current.id));
       setSheet(null);
       toast.show({ text: "Foto dihapus", tone: "success" });
-    } catch (error) { toast.show({ text: errorText(error), tone: "error" }); } finally { setDeleting(false); }
+    } catch (error) {
+      // 409: the photo stays (nominated for Awarding); trying again would not change it.
+      if (refusedForGood(error)) setSheet(null);
+      toast.show({ text: errorText(error), tone: "error" });
+    } finally { setDeleting(false); }
   }
 
   /* What stands in the front card's place. */
@@ -203,7 +207,9 @@ export function MomenStack(props: MomenStackProps) {
     panel = view === "kelompok"
       ? <><IconBox icon={Images} size={64} round tone="ondark" /><h2 className={css.panelTitle}>Kelompokmu belum punya foto</h2></>
       : <><IconBox icon={Images} size={64} round tone="ondark" /><h2 className={css.panelTitle}>{session ? "Belum ada foto di sesi ini" : "Belum ada foto"}</h2>
-        {!session && <p className={css.panelBody}>Jadi yang pertama memotret {props.eventName}.</p>}</>;
+        {session
+          ? <Button variant="ondark" size="m" onClick={() => filterTo(view, null)}>Semua sesi</Button>
+          : <p className={css.panelBody}>Jadi yang pertama memotret {props.eventName}.</p>}</>;
   } else if (!current && next) {
     panel = loadError
       ? <><IconBox icon={CloudOff} size={64} round tone="ondark" /><h2 className={css.panelTitle}>Foto belum dapat dimuat</h2><Button variant="ondark" size="m" onClick={() => { setLoadError(false); void loadMore(); }}>Coba lagi</Button></>

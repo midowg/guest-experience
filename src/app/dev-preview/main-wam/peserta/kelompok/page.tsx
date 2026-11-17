@@ -25,7 +25,7 @@ export default async function PreviewGroupRoom({ searchParams }: { searchParams:
   const room = params.kamar === "5" ? sampleRoom5 : sampleRoom3;
   const people = new Map(samplePeopleList().map(person => [person.id, person]));
   const group = params.status === "kelompok-belum" ? null : { title: "Kelompok 4 · Arjuno", size: sampleGroup4.members.length, members: memberRows(sampleGroup4, people, viewer.id) };
-  const roomHelp = { id: samplePeople.putri.id, name: "Putri", role: "Panitia kamar", photo: null, ...contactLinks("0813-1111-2222") };
+  const roomHelp = { id: samplePeople.putri.id, name: "Putri", role: "Panitia kamar", photo: null, ...contactLinks("0800-0000-0002") };
   return <Frame path={mainWamPath.groupRoom} now={now}>
     <GroupRoomScreen room={params.status === "kamar-belum" ? null : { name: room.name, sub: roomSub(room), note: room.note, people: room.people }}
       stay={{ checkIn: stayTime(settings.event.checkInAt), checkOut: stayTime(settings.event.checkOutAt) }}

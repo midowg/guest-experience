@@ -1,4 +1,4 @@
-import type { MainWamModule, ModuleSwitches } from "./types";
+import type { MainWamModule, ModuleSwitches, NoteTone } from "./types";
 
 /*
  * Beranda's one contextual card (P01 revisi 16 Nov): at most one card under Sekarang, the first that
@@ -12,7 +12,8 @@ import type { MainWamModule, ModuleSwitches } from "./types";
  */
 
 export type HomeCardCandidate =
-  | { kind: "pengumuman"; id: string; title: string; body: string; pinnedUntil: string }
+  /** `tone` from pinnedForMe: the banner's tone (warning: "Jam kumpul berubah", P02__status). */
+  | { kind: "pengumuman"; id: string; title: string; body: string; pinnedUntil: string; tone?: NoteTone }
   | { kind: "silent"; questionId: string; sessionId: string; closesAt: string }
   | { kind: "voting"; categoryId: string; title: string; closesAt: string | null }
   | { kind: "berangkat"; direction: "berangkat" | "pulang"; tripId: string; title: string; startsAt: string | null; seat: string }

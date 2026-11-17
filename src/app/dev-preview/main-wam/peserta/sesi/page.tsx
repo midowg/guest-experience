@@ -27,7 +27,7 @@ export default async function PreviewSession({ searchParams }: { searchParams: P
   const found = previewSessions(now).find(session => session.id === sampleSessionIds[key])!;
   const session = params.status === "batal" ? { ...found, status: "batal" as const } : found;
   const dimas = samplePeople.dimas;
-  const contact = { id: dimas.id, name: dimas.name, role: "Panitia", photo: null, ...contactLinks("0812-3456-7890") };
+  const contact = { id: dimas.id, name: dimas.name, role: "Panitia", photo: null, ...contactLinks("0800-0000-0001") };
   const view = sessionView(session, now, previewLog(now), true);
   const photos = { pemaparan: 24, "team-building": 38 }[key] ?? 0;
   const started = Date.parse(session.startsAt) <= now.getTime();

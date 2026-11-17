@@ -57,9 +57,16 @@ describe("Kartu Sekarang", () => {
   });
 
   it("the contextual card: a pinned announcement opens its sheet in Notifikasi; Silent Meeting its screen", () => {
-    const { unmount } = render(<HomeCard card={{ kind: "pengumuman", id: "abc", title: "Ke Aula Utama lewat lobby timur", body: "Lift barat sedang dirawat." }} />);
+    const { unmount } = render(<HomeCard card={{ kind: "pengumuman", id: "abc", title: "Ke Aula Utama lewat lobby timur", body: "Lift barat sedang dirawat.", tone: "info" }} />);
     expect(screen.getByRole("link").getAttribute("href")).toBe(`${mainWamPath.notifications}#kabar-abc`);
+    expect(screen.getByRole("link").className).not.toMatch(/warning/);
+    expect(screen.getByRole("link").querySelector("svg.lucide-megaphone")).toBeTruthy();
     unmount();
+    // P02__status: a changed gathering time reads as a warning, with the schedule icon.
+    const warned = render(<HomeCard card={{ kind: "pengumuman", id: "k", title: "Kumpul jadi 05.30", body: "Tadinya 05.45.", tone: "warning" }} />);
+    expect(screen.getByRole("link", { name: /Kumpul jadi 05\.30/ }).className).toMatch(/warning/);
+    expect(screen.getByRole("link").querySelector("svg.lucide-calendar-clock")).toBeTruthy();
+    warned.unmount();
     render(<HomeCard card={{ kind: "silent", title: "Silent Meeting dibuka", sub: "Tanpa nama · sampai 15.00", action: "Kirim masukan", target: { silentSession: "s1" } }} />);
     expect(screen.getByRole("link", { name: "Kirim masukan" }).getAttribute("href")).toBe(mainWamPath.silentMeeting("s1"));
   });
@@ -68,7 +75,7 @@ describe("Kartu Sekarang", () => {
 describe("Info lainnya", () => {
   it("is closed until tapped, then shows the order, the snacks and the panitia to call", () => {
     render(<InfoLainnya sub="Urutan, konsumsi, panitia" lineup={[{ time: "08.00", label: "Sales & Marketing" }]} meal="10.00 Rehat"
-      contact={{ id: "d", name: "Dimas", role: "Panitia", photo: null, tel: "tel:+6281", whatsapp: "https://wa.me/6281" }} />);
+      contact={{ id: "d", name: "Dimas", role: "Panitia", photo: null, tel: "tel:+6280000000001", whatsapp: "https://wa.me/6280000000001" }} />);
     const toggle = screen.getByRole("button", { name: /Info lainnya/ });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByText("Sales & Marketing").closest("[hidden]")).toBeTruthy();
@@ -77,7 +84,7 @@ describe("Info lainnya", () => {
     expect(screen.getByText("Sales & Marketing").closest("[hidden]")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Hubungi Dimas" }));
     expect(screen.getByRole("dialog", { name: "Hubungi panitia" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /WhatsApp/ }).getAttribute("href")).toBe("https://wa.me/6281");
+    expect(screen.getByRole("link", { name: /WhatsApp/ }).getAttribute("href")).toBe("https://wa.me/6280000000001");
   });
 });
 
@@ -90,6 +97,11 @@ describe("Notifikasi", () => {
     vi.useFakeTimers();
     render(<NotificationsScreen migrated {...grouped} unread={3} />);
     expect(screen.getAllByRole("img", { name: "Belum dibaca" })).toHaveLength(3);
+    // T-P01: each row says its news; the two kinds' own words are not what the rows say.
+    expect(screen.getByRole("button", { name: /Pemaparan selesai 12\.30/ })).toBeTruthy();
+    for (const text of ["Dimas dan 4 lainnya menyukai fotomu", "Absen tercatat: Pemaparan departemen", "Kamarmu siap: Kamar 208, lantai 2"]) expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.queryByText("Jadwal berubah")).toBeNull();
+    expect(screen.queryByText("Momen")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Team building mulai 15.00 di Lawn/ }));
     expect(window.location.hash).toBe(`#kabar-${sampleNotifications[0].id}`);
     expect(screen.getByRole("dialog", { name: "Team building mulai 15.00 di Lawn" }).textContent).toContain("Pakai kaos tim");
@@ -136,7 +148,7 @@ describe("Saya", () => {
 
 describe("Masuk", () => {
   const fill = () => {
-    fireEvent.change(screen.getByLabelText("Email atau nama panggilan"), { target: { value: "rani@contoh.id" } });
+    fireEvent.change(screen.getByLabelText("Email atau nama panggilan"), { target: { value: "rani@example.com" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "rahasia-1" } });
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
   };
@@ -177,9 +189,124 @@ describe("Masuk", () => {
     render(<LoginScreen next={mainWamPath.home} eventName="WAM 2026" />);
     fireEvent.click(screen.getByRole("button", { name: "Lupa password?" }));
     const dialog = screen.getByRole("dialog", { name: "Minta reset password" });
-    fireEvent.change(dialog.querySelector("input")!, { target: { value: "rani@contoh.id" } });
+    fireEvent.change(dialog.querySelector("input")!, { target: { value: "rani@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "Kirim permintaan" }));
     expect(await screen.findByText("Permintaan terkirim ke panitia.")).toBeTruthy();
-    expect(fetch).toHaveBeenCalledWith(praWamApi.forgot, expect.objectContaining({ body: JSON.stringify({ email: "rani@contoh.id" }) }));
+    expect(fetch).toHaveBeenCalledWith(praWamApi.forgot, expect.objectContaining({ body: JSON.stringify({ email: "rani@example.com" }) }));
+  });
+});
+
+describe("Izin notifikasi (T-P02): only modules that are on", () => {
+  it("Absen QR and Silent Meeting off: no Absen reason, no Silent Meeting in the example", async () => {
+    const { OnboardingScreen } = await import("./mulai/OnboardingScreen");
+    const { unmount } = render(<OnboardingScreen name="Rani" modules={{ absen: false, silent: false }} preview={{ push: "off" }} />);
+    expect(screen.getByText("Panggilan kumpul")).toBeTruthy();
+    expect(screen.queryByText("Absen dibuka")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/Silent Meeting/);
+    expect(screen.getByText("Team building mundur ke 15.30.")).toBeTruthy();
+    unmount();
+    render(<OnboardingScreen name="Rani" modules={{ absen: true, silent: true }} preview={{ push: "off" }} />);
+    expect(screen.getByText("Absen dibuka")).toBeTruthy();
+    expect(screen.getByText("Silent Meeting mundur ke 13.30.")).toBeTruthy();
+  });
+});
+
+describe("RefreshAt (S6): the server's clock, spread out, set again after each refresh", () => {
+  it("a phone 2 minutes fast still refreshes when the session really starts, 0–20 s late", async () => {
+    const { RefreshAt } = await import("./Live");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-01-05T08:02:00+07:00"));
+    const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const at = "2027-01-05T08:01:00+07:00";
+    const { rerender } = render(<RefreshAt at={at} serverNow="2027-01-05T08:00:00+07:00" />);
+    // By the server, 60 s to go, + 1 s, + 10 s spread. (By the phone's own clock it had already passed: the old code never refreshed.)
+    act(() => { vi.advanceTimersByTime(70_999); });
+    expect(router.refresh).not.toHaveBeenCalled();
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(router.refresh).toHaveBeenCalledTimes(1);
+    // The refresh came back with the same change still ahead (a new serverNow): the timer is set again.
+    rerender(<RefreshAt at={at} serverNow="2027-01-05T08:00:50+07:00" />);
+    act(() => { vi.advanceTimersByTime(21_000); });
+    expect(router.refresh).toHaveBeenCalledTimes(2);
+    random.mockRestore();
+  });
+});
+
+describe("O01 Splash", () => {
+  const props = { title: "WAM 2026", subtitle: "Werkudara Annual Meeting 2026", dates: "4–7 Januari 2027", image: false };
+  const hydrate = async () => {
+    vi.resetModules();
+    const { Splash } = await import("./masuk/Splash");
+    const { renderToString } = await import("react-dom/server");
+    const { hydrateRoot } = await import("react-dom/client");
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    container.innerHTML = renderToString(<Splash {...props} />);
+    const root = await act(async () => hydrateRoot(container, <Splash {...props} />));
+    return { container, root, splash: () => container.querySelector("[data-testid=splash]") };
+  };
+  beforeEach(() => { sessionStorage.clear(); });
+
+  it("opens the app (server page): the event's name, long name and dates; gone by 0.7 s after load, Masuk never waits", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(performance, "now").mockReturnValue(100);
+    const { splash, root, container } = await hydrate();
+    expect(splash()?.textContent).toBe("WAM 2026Werkudara Annual Meeting 20264–7 Januari 2027");
+    expect(splash()?.getAttribute("aria-hidden")).toBe("true");
+    act(() => { vi.advanceTimersByTime(599); });
+    expect(splash()).toBeTruthy();
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(splash()).toBeNull();
+    root.unmount(); container.remove();
+    vi.restoreAllMocks();
+  });
+
+  it("once per session, a key or a tap lifts it, and an in-app navigation never shows it", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(performance, "now").mockReturnValue(100);
+    const first = await hydrate();
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(first.splash()).toBeNull();
+    first.root.unmount(); first.container.remove();
+    // The next page load in this session: gone as soon as the page is ready.
+    const again = await hydrate();
+    act(() => { vi.advanceTimersByTime(0); });
+    expect(again.splash()).toBeNull();
+    again.root.unmount(); again.container.remove();
+    sessionStorage.clear();
+    const tapped = await hydrate();
+    fireEvent.pointerDown(tapped.splash()!);
+    expect(tapped.splash()).toBeNull();
+    tapped.root.unmount(); tapped.container.remove();
+    // Drawn on the client (Masuk reached inside the app): no splash.
+    const { Splash } = await import("./masuk/Splash");
+    render(<Splash {...props} />);
+    expect(screen.queryByTestId("splash")).toBeNull();
+    vi.restoreAllMocks();
+  });
+
+  it("with Admin WAM's splash image: the image alone (from the theme), no words over it", async () => {
+    const { Splash } = await import("./masuk/Splash");
+    render(<Splash {...props} image hold />);
+    expect(screen.getByTestId("splash").textContent).toBe("");
+    expect(screen.getByTestId("splash").className).toMatch(/splashImage/);
+  });
+});
+
+describe("Agenda (T-P03, T-P04)", () => {
+  it("while loading: four day tabs and rows as tall as a session row, in the real bar", async () => {
+    const { AgendaSkeleton } = await import("./Skeletons");
+    const { container } = render(<AgendaSkeleton />);
+    expect(container.querySelectorAll("[class*=skeletonTabs] > *")).toHaveLength(4);
+    expect(container.querySelector("[class*=dayBar] [class*=dayTabs]")).toBeTruthy();
+    expect(container.querySelectorAll("[class*=skeletonSessions] > *")).toHaveLength(5);
+  });
+
+  it("the day tabs carry the class that puts them in two rows at zoom 200%", async () => {
+    const { AgendaScreen } = await import("./agenda/AgendaScreen");
+    const { agendaDays } = await import("@/lib/main-wam/peserta/agenda");
+    render(<AgendaScreen migrated days={agendaDays({ startDate: "2027-01-04", endDate: "2027-01-07" }, "2027-01-05")} day={2} rows={[]} anyPublished since="07.38" />);
+    expect(screen.getByRole("navigation", { name: "Hari acara" }).className).toMatch(/dayTabs/);
+    expect(screen.getAllByRole("link", { name: /Hari \d/ })).toHaveLength(4);
   });
 });

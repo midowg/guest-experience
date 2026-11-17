@@ -28,7 +28,10 @@ warna hex, ukuran huruf, bayangan, atau komponen tiruan sendiri. Butuh yang belu
 5. **Judul halaman (h1) ada di bilah atas shell.** Isi layar mulai dari `h2` (`SectionHeader`,
    `<Text as="h2">`).
 6. **Satu tombol primary per layar.** Aksi lain secondary, tonal, atau text. Label 1–2 kata, tidak
-   boleh terpotong; tombol nonaktif selalu dengan alasan di dekatnya.
+   boleh terpotong; tombol nonaktif selalu dengan alasan di dekatnya. Kalau ruangnya kurang (dua tombol
+   sejajar di kartu sempit), label membungkus jadi dua baris dan tombol meninggi; satu kata yang tetap
+   tidak muat dipatah di tengah kata (terlihat, tidak disembunyikan). Di layar < 360 px lebih baik
+   barisnya dibungkus (`flex-wrap: wrap`) daripada memaksa dua tombol berdampingan.
 7. **Aksi berisiko** (hapus, sembunyikan, tutup Silent Meeting, kirim kabar ke semua) lewat
    `ConfirmDialog`; label aksi menyebut hasilnya ("Hapus foto", bukan "Ya").
 8. **Status selalu kata** (+ ikon atau titik), tidak pernah warna saja: `StatusPill`, `Pill`.
@@ -41,6 +44,11 @@ warna hex, ukuran huruf, bayangan, atau komponen tiruan sendiri. Butuh yang belu
 12. **Aksesibilitas**: target sentuh ≥ 44 (sudah di kit), kontras ≥ 4,5 (dicek otomatis di galeri, terang
     dan gelap), fokus terlihat, `prefers-reduced-motion` dihormati, setiap gestur geser punya tombol
     (sheet: ✕; tumpukan Momen: ketuk sisi foto / tombol).
+13. **Cincin fokus**: tema memberi `:focus-visible` 2 px `--mw-focus` (offset 2) ke semua kontrol. Jangan
+    menambah cincin kedua. Isian: kotaknya yang bercincin (inset 2), kontrol di dalamnya tidak. Tujuan
+    fokus lewat skrip yang bukan kontrol (judul sheet, `<main>`) diberi `tabIndex={-1}` dan tanpa cincin
+    (aturan tema untuk `h1`–`h6`/`main[tabindex="-1"]`). Fokus lewat skrip setelah ketukan pakai
+    `quietFocus(el)` (`ui/useModal.ts`): tanpa cincin sampai ada tombol keyboard ditekan.
 
 ## 2. Tema dan token
 
@@ -100,15 +108,23 @@ di-host situs ini, fallback disesuaikan (tanpa loncatan teks). Tes yang merender
 | --- | --- | --- |
 | `akar` Beranda | sapaan, nama (h1), "Hari ke-2 dari 4", lonceng (satu-satunya) | ya |
 | `akar` lain | judul besar (h1); bilah ringkas muncul setelah judul tergulir | ya |
-| `detail` | ‹ Kembali + judul (h1), lengket, garis saat tergulir | ya, tab induk menyala |
+| `detail` | ‹ Kembali + judul (h1), lengket, garis saat tergulir. Judul kosong (P04): hanya ‹, h1 tersembunyi dari `screen.label` | ya, tab induk menyala |
 | `tugas` | ✕ Tutup + judul | tidak (pakai `ActionBar`) |
 | `tugas` + gelap (kamera) | tidak ada (kamera punya bilahnya) | tidak |
 
 Momen (`dark`) membuat latar, bilah atas, dan bilah bawah gelap. ‹/✕ kembali ke layar sebelumnya bila
 ada riwayat di aplikasi, kalau tidak ke `back.href` (dibuka dari notifikasi atau QR). Toast
 (`ToastProvider`) ada di shell, di atas bilah bawah. Area aman iPhone (atas, bawah, kiri, kanan) sudah
-diberi padding. Di layar ≥ 600 px aplikasi tetap satu kolom selebar ponsel (480) di tengah; sheet dari
-kanan mulai 1024 px. Kembali ke aplikasi setelah > 60 detik di latar: `router.refresh()` (angka lonceng).
+diberi padding. Di layar ≥ 600 px aplikasi tetap satu kolom selebar ponsel (480) di tengah, dan sheet tetap
+di dalam kolom itu (dari bawah, selebar kolom; T-M03). Di bawah 240 px (zoom 200 %) bilah bawah hanya ikon;
+katanya tetap untuk pembaca layar. Tautan "Lewati ke isi" setinggi 44. Kembali ke aplikasi setelah > 60 detik
+di latar: `router.refresh()` (angka lonceng).
+
+Juga dari shell (fondasi):
+- `ScreenFailed({ reset })`: tampilan `(app)/error.tsx` (galat tak terduga di layar mana pun), di dalam
+  kerangka, dengan "Coba lagi" (`router.refresh()` + `reset`) dan "Ke Beranda".
+- `SignInFirst`: dipasang `(app)/layout.tsx` untuk orang yang belum login di mode `pra`/`uji`; tidak
+  menggambar apa pun dan membawa ke login WAM dengan alamat persis (audit M6).
 
 Yang bisa dilakukan layar:
 
@@ -138,7 +154,7 @@ menjadi tautan atau tombol; tanpa keduanya ia hanya tampilan.
 
 | Komponen | Prop utama | Kapan |
 | --- | --- | --- |
-| `Button` | `variant`: `primary` · `secondary` · `tonal` · `text` · `danger` · `danger-outline` · `danger-text` · `ondark`; `size` `l` (48) / `m` (40, sentuh 44); `block`; `icon`; `loading` + `loadingLabel`; `disabled`; `type`; `href` | aksi. `loading`: spinner, klik diabaikan, fokus tetap (aria-busy), submit tidak terkirim dua kali |
+| `Button` | `variant`: `primary` · `secondary` · `tonal` · `text` · `danger` · `danger-outline` · `danger-text` · `ondark`; `size` `l` (48) / `m` (40, sentuh 44); `block`; `icon`; `loading` + `loadingLabel`; `disabled`; `type`; `href` | aksi. `loading`: spinner, klik diabaikan, fokus tetap (aria-busy), submit tidak terkirim dua kali. Tinggi minimum 48/40; label yang tidak muat membungkus (tombol meninggi), tidak dipotong |
 | `IconButton` | `icon`, **`label`** (wajib, nama yang dibacakan), `variant` `standard` · `tonal` · `filled` · `onmedia` · `ondark`, `size` 44/56, `pressed` (+ `liked` = hati merah), `badge` (angka atau `"dot"`) | aksi tanpa teks. Sertakan jumlah di `label` ("Notifikasi, 3 belum dibaca") |
 | `TextLink` | `href`/`onClick`, `chevron` | "Lihat semua", "Semua" |
 
@@ -157,13 +173,18 @@ menjadi tautan atau tombol; tanpa keduanya ia hanya tampilan.
 | `IconBox` | `icon`, `tone`, `size` 40/48/64/96, `round`, `smallIcon` | ikon dalam kotak lembut |
 | `SectionHeader` | `title`, `sub`, `action {label, href|onClick}`, `level` | judul bagian + "Lihat semua" |
 | `List` | `inset` 68 (bawaan, sesudah ikon) · 16 · 0, `plain` (tanpa kartu, di sheet), `bleed`, `label` | wadah baris berpemisah |
-| `ListRow` | `icon` atau `leading` (Avatar), `title` (≤ 2 baris), `sub`, `value`, `trailing` (Pill, Badge, Switch), `chevron` (bawaan saat bisa diketuk), `disabled` | baris menu, info, pengaturan |
-| `StatRow` | `icon`, `title`, `sub`, `value`, `unit`, `status` (Pill), `href`/`onClick` | Ringkasan BOD (maks 4). Tanpa href = statis (Jejak karbon), nilai tetap sejajar |
-| `ShortcutGrid` + `ShortcutTile` | `icon`, `label`, `badge`, `badgeLabel` | Kelola panitia 2 × 2 (Rundown live, Absen, Pengumuman, Moderasi) |
-| `SessionList` + `SessionRow` | `start`, `end`, `title`, `place`, `status` `upcoming` · `live` · `done` · `cancelled`, `checkedIn`, `extra` (Chip Absen, StatusPill changed), `href` | Agenda. `live` menyala + "Sedang berlangsung"; `cancelled` dicoret, "Dibatalkan", tidak bisa dibuka |
-| `StackPreview` | `photos` (≤ 3, `{src}`), `title`, `sub`, `cta`, `href` | kartu Momen di Beranda (satu tautan) |
+| `ListRow` | `icon` atau `leading` (Avatar), `title` (≤ 2 baris), `sub`, `value`, `trailing` (Pill, Badge, Switch), `chevron` (bawaan saat bisa diketuk), `disabled`, `spoken` | baris menu, info, pengaturan |
+| `StatRow` | `icon`, `title`, `sub`, `value`, `unit`, `status` (Pill), `href`/`onClick`, `spoken` | Ringkasan BOD (maks 4). Tanpa href = statis (Jejak karbon), nilai tetap sejajar |
+| `ShortcutGrid` + `ShortcutTile` | `icon`, `label`, `badge`, `badgeLabel` | Kelola panitia 2 × 2 (Rundown live, Absen, Pengumuman, Moderasi). Nama: label lalu ", 3 laporan" tersembunyi; lencana tidak dibaca |
+| `SessionList` + `SessionRow` | `start`, `end`, `title`, `place`, `status` `upcoming` · `live` · `done` · `cancelled`, `checkedIn`, `extra` (Chip Absen, StatusPill changed), `href` | Agenda. `live` menyala + "Sedang berlangsung"; `cancelled` dicoret, "Dibatalkan", tidak bisa dibuka. Di bawah 300 px (zoom 200 %): jam satu baris "08.00–12.00" dengan › di ujungnya, judul selebar baris di bawahnya, tanpa rel |
+| `StackPreview` | `photos` (≤ 3, `{src}`), `title`, `sub`, `cta`, `href` | kartu Momen di Beranda (satu tautan). Saat sempit, teks lalu "Lihat" turun ke baris berikutnya |
 | `PhotoFill` | `photo {src, alt}`, `tone` 1–6 | foto atau placeholder netral, mengisi kotaknya |
 | `Divider` | `inset` 16/68 | garis 1 px |
+
+**Nama aksesibel (WCAG 2.5.3, T-S05).** Nama baris dan kartu yang bisa diketuk = kata yang tampil, berurutan.
+Jangan memberi `aria-label` yang menyusun ulang teks layar ("Kehadiran hari ini, 93%" padahal tampil
+"Kehadiran hari ini · 93%"). Untuk keterangan tambahan pakai `spoken` (`ListRow`, `StatRow`), yang dibaca
+sesudah kata yang tampil: `<ListRow title="Rani" sub="07.52 · Scan QR" spoken="ketuk untuk membatalkan" … />`.
 
 ```tsx
 <List>
@@ -184,7 +205,7 @@ menjadi tautan atau tombol; tanpa keduanya ia hanya tampilan.
 | `FilterChip` | `selected` (aria-pressed, centang); atau `menu` + `name` + `expanded` + `active`; `tone="dark"` | saring daftar; `menu` = "Semua sesi ▾" yang membuka sheet pilihan |
 | `ChipRow` | `scroll` (geser ke tepi layar) atau bungkus; `label` | deretan chip |
 | `TagChip` + `TagChipRow` | `label` ("Untuk:"), `value`, `onClick`/`href`, `onClear` + `clearLabel`, `expanded` | tag di kamera gelap ("Sesi: Team building ✕") |
-| `Segmented` | `options [{value, label, icon?, disabled?}]`, `value`, `onChange`, **`label`**, `tone` | 2–4 tampilan satu daftar (Semua / Kelompokku). Radio group: panah memilih, Home/End |
+| `Segmented` | `options [{value, label, icon?, disabled?}]`, `value`, `onChange`, **`label`**, `tone` | 2–4 tampilan satu daftar (Semua / Kelompokku). Radio group: panah memilih, Home/End. Lebar segmen mengikuti katanya; label yang tetap tidak muat membungkus ke baris kedua (tidak pernah "Kelompo…"), tinggi tetap ≥ 44 |
 | `Switch` | `checked`, `onChange`, `label` (atau `labelledBy`) | nyala/mati langsung berlaku |
 | `SwitchRow` | `title`, `sub`, `checked`, `onChange`, `inList` | sakelar berteks ("Kabari peserta"); seluruh baris bisa diketuk |
 
@@ -201,7 +222,7 @@ menjadi tautan atau tombol; tanpa keduanya ia hanya tampilan.
 
 | Komponen | Prop utama | Kapan |
 | --- | --- | --- |
-| `TextField` | `label` (wajib, di atas), `optional`, `help`, `error` (kata; memberi `aria-invalid`), `icon`, `suffix` ("menit"), `search`, `multiline`, `showCount` + `maxLength`/`countMax`, plus prop `<input>`/`<textarea>` biasa | form pendek (pengumuman, masukan, laporan). Isian tidak hilang saat galat |
+| `TextField` | `label` (wajib, di atas), `optional`, `help`, `error` (kata; memberi `aria-invalid`), `icon`, `suffix` ("menit"), `search`, `multiline`, `showCount` + `maxLength`/`countMax` (angka bertitik: "90/1.000"), plus prop `<input>`/`<textarea>` biasa | form pendek (pengumuman, masukan, laporan). Isian tidak hilang saat galat. Fokus: satu cincin di kotak (inset 2 primary); isian bergalat tetap bergaris merah + lingkar merah lembut saat fokus |
 | `SelectField` | `label`, `value`, `placeholder`, `onClick` (buka sheet) atau `href`, `expanded`, `error`, `help` | pilihan yang dibuka di sheet ("isian pilih") |
 | `DayTabs` | `days [{key, day, date, today?, href?}]`, `current`, `onSelect` | 4 hari acara di Agenda/Rundown. Dengan `href` = tautan (`mainWamPath.agenda(n)`, aria-current), tanpa = tombol (aria-pressed) |
 
@@ -210,17 +231,17 @@ menjadi tautan atau tombol; tanpa keduanya ia hanya tampilan.
 | Komponen | Prop utama | Kapan |
 | --- | --- | --- |
 | `StatusPill` | `status`: `live` · `next` · `notStarted` · `done` · `notOpen` · `open` · `present` · `sent` · `approved` · `changed` · `pending` · `hidden` · `cancelled`; `children` mengganti kata ("Hadir 07.52") | status baku, kata dan warnanya tetap |
-| `Pill` | `tone` `neutral` · `active` · `success` · `warning` · `error` · `momen` · `emisi` · `awarding` · `onmedia` · `primary`; `icon`; `dot`; `pulse` | status lain, 1–2 kata |
+| `Pill` | `tone` `neutral` · `active` · `success` · `warning` · `error` · `momen` · `emisi` · `awarding` · `onmedia` · `primary`; `icon`; `dot`; `pulse` | status lain, 1–2 kata. Tidak pernah melebihi wadahnya: bila wadah lebih sempit, katanya membungkus |
 | `Badge` | `count` (> 99 jadi "99+") atau `dot`; `label` bila berdiri sendiri | angka di ikon/tab/tile |
 | `Avatar` | `name` (inisial), `photo`, `size` 24/32/40/48/64, `label` bila berdiri sendiri | orang; dekoratif bila namanya tertulis di sebelah |
-| `ProgressBar` | `value`, `max`, **`label`**, `valueText` ("842 / 1.200 foto"), `icon`, `tone`, `thin` | kemajuan (Mozaik, kehadiran); `role="progressbar"` |
+| `ProgressBar` | `value`, `max`, **`label`**, `valueText` ("842 / 1.200 foto"), `icon`, `tone`, `thin`, `labelSize` `label` (13, bawaan) / `subtitle` (17, label dan nilai text/1) | kemajuan (Mozaik, kehadiran); `role="progressbar"`. `subtitle` bila kemajuannya angka utama layar (M06: "312 dari 600 foto · 52%") |
 | `Text` | `variant` (15 gaya DS §2), `color` (`1` `2` `3` `primary` `success` `warning` `error` `on-accent` `on-accent-2` `media` `media-2` `inverse-2`), `as`, `clamp` (2 baris), `ellipsis` | teks lepas dengan token |
 
 ### Umpan balik dan lapisan
 
 | Komponen | Prop utama | Kapan |
 | --- | --- | --- |
-| `Banner` | `tone` `info` · `offline` · `warning` · `error` · `success`; `title`; isi; `icon`; `action {label, onClick}`; `href` (seluruh banner tautan, ›) | info di atas isi layar, mendorong isi (tidak menutupi): offline, pengumuman penting, jam berubah, gagal + "Coba lagi" |
+| `Banner` | `tone` `info` · `offline` (ikon `cloud-off`) · `warning` · `error` · `success`; `title`; isi; `icon`; `action {label, onClick}`; `href` (seluruh banner tautan, ›). Pengumuman tersemat: `tone={note.tone}` dari `pinnedForMe` | info di atas isi layar, mendorong isi (tidak menutupi): offline, pengumuman penting, jam berubah, gagal + "Coba lagi" |
 | `EmptyState` | `icon`, `title`, isi, `action` (Button), `size` `m`/`s` (di kartu), `tone` `dark`, `headingLevel` | kosong, tanpa koneksi, izin ditolak |
 | `Skeleton` + `SkeletonGroup` | `shape` `line` · `title` · `circle` · `box` · `photo` · `card` · `block`; `width`, `height`; grup memberi `aria-busy` + label | `loading.tsx` per bagian (bentuknya mengikuti layar) |
 | `Spinner` | `size` 20/24, `label` | tunggu > 300 ms yang bukan satu bagian |
@@ -229,15 +250,31 @@ menjadi tautan atau tombol; tanpa keduanya ia hanya tampilan.
 | `ConfirmDialog` | `open`, `onCancel`, `onConfirm`, `title` (pertanyaan), `body` (akibat), `confirmLabel` (hasil), `tone` `primary`/`danger` (+ ikon), `busy` + `busyLabel` | konfirmasi aksi berisiko |
 | `useToast()` | `show({ text, sub, tone, action {label, onAction}, duration, timer, thumb, onTimeout })` → id; `dismiss(id)` | konfirmasi singkat. 4 dtk, 6 dtk dengan aksi. Galat yang perlu tindakan = Banner |
 | `ToastPreview` | tampilan statis toast | galeri |
-| `TopBar` | `variant` `large` · `back` · `home`, `tone`, `actions`, `sticky`, `scrolled` | dipakai shell; layar biasanya tidak memakainya langsung |
+| `TopBar` | `variant` `large` · `back` · `home`, `tone`, `actions`, `sticky`, `scrolled`; `back`: `label` (nama layar untuk pembaca layar bila `title` kosong; tanpa keduanya tidak ada h1 kosong) | dipakai shell; layar biasanya tidak memakainya langsung |
 | `ActionBar` | `note`, `row` | aksi utama layar tugas, lengket di bawah, dengan area aman |
 
 Perilaku Sheet dan ConfirmDialog (`ui/useModal.ts`): `<dialog>` native + `showModal()` (halaman di
-bawahnya inert); fokus pindah ke judul (ConfirmDialog: ke **Batal**) dan kembali ke pembuka saat tutup;
-Tab/Shift+Tab berputar di dalam; Esc, ✕, ketuk area redup, dan **tombol Back HP** menutup (sheet memegang
-satu entri riwayat selama terbuka; ditutup cara lain, entri itu diambil kembali). Halaman di bawah tidak
-ikut tergulir. `locked`/`busy`: tetap terbuka. Sheet ditarik ke bawah lewat pegangan juga menutup (HP);
-✕ adalah alternatif tombolnya. Sheet selalu terang, juga di atas layar Momen.
+bawahnya inert); fokus pindah ke judul (ConfirmDialog: ke **Batal**) dan kembali ke pembuka saat tutup,
+tanpa cincin bila dibuka dengan ketukan, dengan cincin bila dengan keyboard; Tab/Shift+Tab berputar di
+dalam (radio roving yang `tabindex=-1` bukan perhentian, jadi Tab dari radio terpilih kembali ke ✕; T-M01);
+sheet yang dirender bersyarat (`{open && <Sheet open …/>}`) lalu dilepas juga mengembalikan fokus ke
+pembukanya bila fokus masih di dalamnya (T-K01); Esc, ✕, ketuk area redup, dan **tombol Back HP** menutup. Halaman di bawah tidak ikut tergulir.
+`locked`/`busy`: tetap terbuka (Back mengembalikan entrinya). Sheet ditarik ke bawah lewat pegangan juga
+menutup (HP); ✕ adalah alternatif tombolnya. Sheet selalu terang, juga di atas layar Momen.
+
+Riwayat: setiap modal yang terbuka memegang satu entri (`{ mwSheet: key }`), lewat satu antrean bersama
+untuk semua Sheet dan ConfirmDialog. Popstate hanya menutup modal yang entrinya ditinggalkan (Back
+menutup yang teratas saja). Ditutup cara lain: entrinya diambil kembali sesaat kemudian; modal yang
+dibuka sebelum itu memakai entri yang sama (tanpa langkah riwayat), yang dibuka saat langkah mundur
+sedang berjalan menunggu langkah itu selesai. Entri yang tertinggal (misalnya pindah halaman saat sheet
+terbuka) dilewati saat Back sampai di sana. Jadi **menutup satu modal lalu langsung membuka yang lain
+aman**, di tick yang sama maupun sesudahnya; tidak perlu pengganjal (pengganjal `afterModal` sudah
+dicabut):
+
+```tsx
+// Menu sesi → Pindah tempat: cukup ganti state-nya.
+<ListRow title="Pindah tempat" onClick={() => setOpen("tempat")} />   // open: "menu" → "tempat"
+```
 
 Toast: dibacakan sopan (`role="status"`), galat langsung (`role="alert"`). Waktu berhenti selama jari,
 penunjuk, atau fokus ada di toast (WCAG 2.2.1), lalu melanjutkan sisanya. Pola "Terkirim · Batalkan":
@@ -265,9 +302,14 @@ Sheet pilih sesi (contoh di galeri):
 
 ## 5. Tes
 
+- Aksesibilitas dan tata letak sempit (fase 4): `ui/a11y.dom.test.tsx` (axe `label-content-name-mismatch`,
+  Tab melewati radio roving, fokus kembali saat sheet dilepas, aturan CSS 320 px/zoom/desktop);
+  `shell/failed.dom.test.tsx` (`(app)/error.tsx`, `SignInFirst`).
 - Pola `*.dom.test.tsx` (vitest + testing-library, jsdom). Contoh: `ui/kit.dom.test.tsx`,
   `shell/shell.dom.test.tsx`, `theme/MainWamTheme.dom.test.tsx`; token: `theme/tokens.test.ts`.
 - jsdom tidak punya dialog modal: stub `HTMLDialogElement.prototype.showModal/close` (lihat `kit.dom.test.tsx`).
+- Riwayat dan modal berantai: `ui/modal.dom.test.tsx` (jsdom melangkah di riwayat secara asinkron seperti
+  peramban; tunggu dengan timer nyata, mis. 40 ms, sebelum memeriksa).
 - Mock `next/link` menjadi `<a>` dan `next/navigation` (`usePathname`, `useRouter`) bila merender shell.
 - Toast dengan `vi.useFakeTimers()`.
 - Cek tampilan: Playwright Python headless 390 × 844 @2x di halaman dev-preview.

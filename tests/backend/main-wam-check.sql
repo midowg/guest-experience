@@ -2,7 +2,7 @@
 -- Migrations 202611200001–0003: Main WAM's tables. One settings row; the rundown's rules (a meal
 -- takes no check-in, wajib needs absen); one kelompok and one kelompok kegiatan per person per
 -- session; photos for a kelompok carry it and are kept once per phone id; a vote's nominee belongs
--- to its category; Silent Meeting feedback stores no person; nothing is readable but by the server.
+-- to its category; Silent Meeting feedback stores no person and closed is final; nothing is readable but by the server.
 begin;
 set local role service_role;
 do $$
@@ -153,31 +153,45 @@ begin
   exception when raise_exception then if sqlerrm <> 'vote_closed' then raise; end if; end;
   insert into public.mw_award_approvals (category_id, nominee_id, approved_by) values (category, nominee, arman);
 
-  -- Silent Meeting: one question per session; feedback without a person.
+  -- Silent Meeting: one question per session; feedback and openers without a person or a time;
+  -- panitia's opening and closing each once, and closed is final.
   insert into public.mw_silent_questions (session_id, question) values (pemaparan, 'Apa yang perlu kita ubah tahun depan?') returning id into q;
   begin insert into public.mw_silent_questions (session_id, question) values (pemaparan, 'Pertanyaan kedua di sesi yang sama'); raise exception 'UNEXPECTED: two questions in one session';
   exception when unique_violation then null; end;
-  begin update public.mw_silent_questions set override = 'buka' where id = q; raise exception 'UNEXPECTED: an override without its time';
+  begin update public.mw_silent_questions set opened_by = dimas where id = q; raise exception 'UNEXPECTED: who opened it without when';
   exception when check_violation then null; end;
-  -- Its session is in 2027: not open yet, so no feedback.
+  begin update public.mw_silent_questions set feedback_count = 3 where id = q; raise exception 'UNEXPECTED: a count before it closed';
+  exception when check_violation then null; end;
+  -- Its session is in 2027: not open yet, so no feedback and no opener.
   begin insert into public.mw_silent_feedback (question_id, body) values (q, 'Terlalu awal.'); raise exception 'UNEXPECTED: feedback before it opens';
   exception when raise_exception then if sqlerrm <> 'silent_closed' then raise; end if; end;
-  -- Panitia opens it now (and keeps it open past the end).
-  update public.mw_silent_questions set override = 'buka', override_at = now(), override_by = dimas, auto_close = false where id = q;
+  begin insert into public.mw_silent_openers (question_id, opener_key) values (q, repeat('ab', 32)); raise exception 'UNEXPECTED: an opener before it opens';
+  exception when raise_exception then if sqlerrm <> 'silent_closed' then raise; end if; end;
+  -- Panitia opens it now ("Buka sekarang"), once.
+  update public.mw_silent_questions set opened_at = now(), opened_by = dimas where id = q;
   insert into public.mw_silent_feedback (question_id, topic, body) values (q, 'Cara kerja', 'Rapat mingguan terlalu panjang.');
-  insert into public.mw_silent_participation (question_id, participant_key) values (q, repeat('ab', 32));
-  begin insert into public.mw_silent_participation (question_id, participant_key) values (q, 'rani'); raise exception 'UNEXPECTED: a participant key that is not a keyed hash';
+  insert into public.mw_silent_openers (question_id, opener_key) values (q, repeat('ab', 32));
+  begin insert into public.mw_silent_openers (question_id, opener_key) values (q, 'rani'); raise exception 'UNEXPECTED: an opener key that is not a keyed hash';
   exception when check_violation then null; end;
   begin insert into public.mw_silent_feedback (question_id, body) values (q, '   '); raise exception 'UNEXPECTED: empty feedback';
   exception when check_violation then null; end;
-  -- Closed by panitia: no more.
-  update public.mw_silent_questions set override = 'tutup', override_at = now() where id = q;
+  begin update public.mw_silent_questions set opened_at = null, opened_by = null where id = q; raise exception 'UNEXPECTED: an early opening undone';
+  exception when raise_exception then if sqlerrm <> 'silent_final' then raise; end if; end;
+  begin update public.mw_silent_questions set question = 'Pertanyaan lain setelah dibuka' where id = q; raise exception 'UNEXPECTED: the question changed once open';
+  exception when raise_exception then if sqlerrm <> 'silent_locked' then raise; end if; end;
+  -- Closed by panitia: no more feedback, and it never opens again.
+  update public.mw_silent_questions set closed_at = now(), closed_by = dimas where id = q;
   begin insert into public.mw_silent_feedback (question_id, body) values (q, 'Terlambat.'); raise exception 'UNEXPECTED: feedback after closing';
+  exception when raise_exception then if sqlerrm <> 'silent_closed' then raise; end if; end;
+  begin update public.mw_silent_questions set closed_at = null, closed_by = null where id = q; raise exception 'UNEXPECTED: a closed Silent Meeting opened again';
+  exception when raise_exception then if sqlerrm <> 'silent_final' then raise; end if; end;
+  begin insert into public.mw_silent_openers (question_id, opener_key) values (q, repeat('cd', 32)); raise exception 'UNEXPECTED: an opener after closing';
   exception when raise_exception then if sqlerrm <> 'silent_closed' then raise; end if; end;
   if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'mw_silent_feedback'
     and column_name not in ('id', 'question_id', 'topic', 'body')) then raise exception 'Silent Meeting feedback should store no person, device or time'; end if;
-  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'mw_silent_participation'
-    and column_name not in ('question_id', 'participant_key', 'sent')) then raise exception 'Silent Meeting participation should store no person or time'; end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'mw_silent_openers'
+    and column_name not in ('question_id', 'opener_key')) then raise exception 'Silent Meeting openers should store no person or time'; end if;
+  if to_regclass('public.mw_silent_participation') is not null then raise exception 'no count per sender should be kept'; end if;
 
   raise notice 'PASS: Main WAM settings, rundown, kelompok, perjalanan, panduan, notes, Momen, Awarding and Silent Meeting hold their rules';
 end $$;
@@ -204,6 +218,46 @@ begin
     exception when insufficient_privilege then null; end;
   end loop;
   raise notice 'PASS: Main WAM is server only for authenticated';
+end $$;
+reset role;
+-- Audit L1: every foreign key of a fondasi table (0001, 0002) has an index led by its column, and
+-- removing a panitia who recorded a manual check-in keeps the check-in (recorded_by set null).
+do $$
+declare missing text; checked int;
+begin
+  select string_agg(format('%s.%s', c.conrelid::regclass, a.attname), ', ') filter (where not exists (select 1 from pg_index i where i.indrelid = c.conrelid and i.indkey[0] = c.conkey[1])),
+    count(*) into missing, checked
+  from pg_constraint c
+  join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+  where c.contype = 'f' and array_length(c.conkey, 1) = 1
+    and c.conrelid::regclass::text in ('mw_testers', 'mw_guides', 'mw_sessions', 'mw_rundown_log', 'mw_attendance', 'mw_groups', 'mw_group_members',
+      'mw_activity_groups', 'mw_activity_group_members', 'mw_stay_room_details', 'mw_trips', 'mw_trip_seats', 'mw_notes',
+      'mw_photos', 'mw_photo_hearts', 'mw_photo_reports', 'mw_photo_seen', 'mw_mosaic_tiles');
+  if checked < 30 then raise exception 'the foreign key check looked at % keys only', checked; end if;
+  if missing is not null then raise exception 'foreign keys without an index: %', missing; end if;
+  if (select confdeltype from pg_constraint where conrelid = 'public.mw_attendance'::regclass and contype = 'f'
+      and conkey = array[(select attnum from pg_attribute where attrelid = 'public.mw_attendance'::regclass and attname = 'recorded_by')]) <> 'n' then
+    raise exception 'mw_attendance.recorded_by should be on delete set null';
+  end if;
+  raise notice 'PASS: fondasi foreign keys are indexed; recorded_by is set null';
+end $$;
+
+set local role service_role;
+do $$
+declare s uuid; rani uuid; dimas uuid;
+begin
+  insert into public.employees (full_name, nickname) values ('Rani L1', 'Rani') returning id into rani;
+  insert into public.employees (full_name, nickname) values ('Dimas L1', 'Dimas') returning id into dimas;
+  insert into public.mw_sessions (title, status, starts_at, uses_attendance) values ('Sesi L1', 'terbit', '2027-01-05 08:00+07', true) returning id into s;
+  insert into public.mw_attendance (session_id, employee_id, method, recorded_by) values (s, rani, 'manual', dimas);
+  begin insert into public.mw_attendance (session_id, employee_id, method, recorded_by) values (s, dimas, 'qr', rani); raise exception 'UNEXPECTED: a QR check-in with a recorder';
+  exception when check_violation then null; end;
+  delete from public.employees where id = dimas;
+  if (select recorded_by from public.mw_attendance where session_id = s and employee_id = rani) is not null
+    or not exists (select 1 from public.mw_attendance where session_id = s and employee_id = rani and method = 'manual') then
+    raise exception 'the manual check-in should stay, without its recorder';
+  end if;
+  raise notice 'PASS: removing who recorded a manual check-in keeps the check-in';
 end $$;
 reset role;
 

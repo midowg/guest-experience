@@ -12,8 +12,8 @@ const told = (recipients: number) => (recipients ? ` Kabar terkirim ke ${recipie
 
 /**
  * POST Admin WAM → Main WAM → Rundown (any Admin WAM admin): {action: "tambah", session} adds one;
- * {action: "impor", sessions} saves a checked paste (all or nothing); {action: "geser", ids,
- * minutes, notify} moves several. Each answers with the whole rundown.
+ * {action: "impor", sessions} saves a checked paste (all or nothing); {action: "geser", items
+ * [{id, version}], minutes, notify} moves several, each from the version the page saw moves several. Each answers with the whole rundown.
  */
 export async function POST(request: Request) {
   return handle(async () => {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       return success(result, `${result.added} sesi ditambahkan dari spreadsheet.`);
     }
     if (input.notify) await enforceRateLimit(request, "mw-admin-kabar", 30);
-    const result = await shiftSessions(input.ids, input.minutes, { notify: input.notify, by: (await adminActor()).employeeId });
-    return success(result, `${input.ids.length} sesi digeser ${minutesLabel(input.minutes)}.${told(result.recipients)}`);
+    const result = await shiftSessions(input.items, input.minutes, { notify: input.notify, by: (await adminActor()).employeeId });
+    return success(result, `${input.items.length} sesi digeser ${minutesLabel(input.minutes)}.${told(result.recipients)}`);
   });
 }

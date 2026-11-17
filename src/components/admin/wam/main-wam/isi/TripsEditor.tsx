@@ -2,20 +2,18 @@
 
 import { useCallback, useId, useMemo, useState } from "react";
 import { Armchair, Building2, Bus, ClipboardPaste, Leaf, MapPin, Pencil, Plus, Footprints, TrainFront, Trash2, X } from "lucide-react";
-import { ConsoleButton, PageHeader, PageTabs, Pill, type Crumb } from "@/components/console";
+import { ConsoleButton, PageHeader, Pill, type Crumb } from "@/components/console";
 import { adminRequest } from "@/components/admin/shared/api";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { shortDate, tripDirectionLabels, tripKindLabels } from "@/lib/main-wam/admin/labels";
 import type { AdminPerson } from "@/lib/main-wam/admin/people";
 import { blankTrip, carbonLine, parseSeatPaste, seatColumnLabels, tripInputSchema, tripToInput, type SeatPaste, type SeatsInput, type TripInput } from "@/lib/main-wam/admin/trips";
-import { MAIN_WAM_MIGRATION } from "@/lib/main-wam/settings";
 import { timeRange, wibDate, wibTime } from "@/lib/main-wam/rundown";
 import { TRIP_DIRECTIONS, TRIP_KINDS, type MwSession, type MwTrip, type MwTripSeat, type TripDirection, type TripKind } from "@/lib/main-wam/types";
 import { mainWamAdminApi } from "@/lib/routes";
-import { mainWamContentTabs } from "../tabs";
-import { Choice, DaySelect, dayOptionLabel, described, Field, MessageLine, NumberInput, PersonSelect, SwitchRow, useRun, Waiting, type Message, type Problems } from "./fields";
+import { Choice, ContentTabs, dayOptionLabel, DaySelect, described, Field, MessageLine, NumberInput, PersonSelect, SwitchRow, useRun, Waiting, type Message, type Problems } from "./fields";
 import { PasteSheet } from "./PasteSheet";
-import { Sheet } from "./Sheet";
+import { Sheet, SheetError } from "./Sheet";
 import css from "./isi.module.css";
 
 type Board = { trips: MwTrip[]; seats: MwTripSeat[] };
@@ -51,10 +49,10 @@ export function TripsEditor({ initial, migrated, sessions, people, dates, crumbs
   }
   const parse = useCallback((text: string) => parseSeatPaste(text, people), [people]);
 
-  return <div className={css.page}>
+  return <SheetError.Provider value={message?.tone === "error" ? message.text : null}><div className={css.page}>
     <PageHeader crumbs={crumbs} title={title} subtitle="Langkah berangkat dan pulang, kursi tiap orang, dan data untuk Jejak karbon." />
-    <PageTabs tabs={mainWamContentTabs} current="perjalanan" label="Isi acara" />
-    {!migrated && <Waiting what="Perjalanan" migration={MAIN_WAM_MIGRATION} />}
+    <ContentTabs current="perjalanan" />
+    {!migrated && <Waiting what="Perjalanan" />}
     <MessageLine message={message} />
 
     <section className={css.item} aria-labelledby="mw-karbon">
@@ -127,7 +125,7 @@ export function TripsEditor({ initial, migrated, sessions, people, dates, crumbs
         return result.message;
       })} />}
     {confirmDialog}
-  </div>;
+  </div></SheetError.Provider>;
 }
 
 function TripSheet({ trip, direction, trips, sessions, people, dates, busy, onClose, onSave }: {

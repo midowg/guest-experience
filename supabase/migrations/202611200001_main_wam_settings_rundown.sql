@@ -5,7 +5,7 @@
 -- details on top of HR's room pairing (cq_stay_rooms), the way there and back, the guides, and Main
 -- WAM's metadata on WAM's one inbox (pw_announcements). Every table is server only (service role).
 -- Needs 202611030001 (employees), 202611040006 (pw_announcements), 202611050001 (cq_stay_rooms).
--- ROLLBACK (by hand): drop the tables below in reverse order.
+-- ROLLBACK (by hand): drop the tables below in reverse order, then function mw_attendance_recorder().
 begin;
 
 /* Settings: one row. Mode pra (the default) keeps Main WAM hidden; see src/lib/main-wam/access.ts. */
@@ -105,6 +105,10 @@ create table public.mw_sessions (
   constraint mw_sessions_required_attendance check (not required or uses_attendance)
 );
 create index mw_sessions_time on public.mw_sessions (starts_at, sort);
+-- Every foreign key has an index led by it (audit L1): removing a person or a guide never scans the table.
+create index mw_sessions_map_guide on public.mw_sessions (map_guide_id) where map_guide_id is not null;
+create index mw_sessions_contact on public.mw_sessions (contact_id) where contact_id is not null;
+create index mw_sessions_changed_by on public.mw_sessions (changed_by) where changed_by is not null;
 
 /* Riwayat perubahan of Rundown live: what changed, whether people were told, by whom. */
 create table public.mw_rundown_log (
@@ -119,6 +123,7 @@ create table public.mw_rundown_log (
 );
 create index mw_rundown_log_session on public.mw_rundown_log (session_id, changed_at desc);
 create index mw_rundown_log_time on public.mw_rundown_log (changed_at desc);
+create index mw_rundown_log_changed_by on public.mw_rundown_log (changed_by) where changed_by is not null;
 
 /* Absen: one check-in per person per session, by QR or recorded by panitia (K05). */
 create table public.mw_attendance (
@@ -126,11 +131,26 @@ create table public.mw_attendance (
   employee_id uuid not null references public.employees (id) on delete cascade,
   checked_in_at timestamptz not null default now(),
   method text not null check (method in ('qr', 'manual')),
-  recorded_by uuid references public.employees (id),
+  -- Who recorded a manual check-in; kept as null when that person leaves Data karyawan (audit L1:
+  -- removing a panitia who recorded one never fails), so a manual one may have none.
+  recorded_by uuid references public.employees (id) on delete set null,
   primary key (session_id, employee_id),
-  constraint mw_attendance_manual check ((method = 'manual') = (recorded_by is not null))
+  constraint mw_attendance_manual check (method = 'manual' or recorded_by is null)
 );
 create index mw_attendance_person on public.mw_attendance (employee_id);
+create index mw_attendance_recorded_by on public.mw_attendance (recorded_by) where recorded_by is not null;
+-- A new manual check-in names who recorded it; only a later removal of that person empties it.
+create function public.mw_attendance_recorder() returns trigger
+language plpgsql set search_path = public, pg_temp as $$
+begin
+  if new.method = 'manual' and new.recorded_by is null then
+    raise exception 'mw_attendance_manual: a manual check-in names who recorded it' using errcode = '23514';
+  end if;
+  return new;
+end $$;
+create trigger mw_attendance_recorder before insert or update of method on public.mw_attendance
+  for each row execute function public.mw_attendance_recorder();
+revoke all on function public.mw_attendance_recorder() from public, anon, authenticated;
 
 /* Kelompok: "Kelompok 4 · Arjuno", one per person, at most one koordinator. */
 create table public.mw_groups (
@@ -201,6 +221,8 @@ create table public.mw_trips (
   updated_at timestamptz not null default now()
 );
 create index mw_trips_order on public.mw_trips (direction, sort, starts_at);
+create index mw_trips_coordinator on public.mw_trips (coordinator_id) where coordinator_id is not null;
+create index mw_trips_session on public.mw_trips (session_id) where session_id is not null;
 create table public.mw_trip_seats (
   trip_id uuid not null references public.mw_trips (id) on delete cascade,
   employee_id uuid not null references public.employees (id) on delete cascade,
@@ -220,12 +242,16 @@ create table public.mw_notes (
   kind text not null default 'lain' check (kind in ('pengumuman', 'jadwal', 'absen', 'momen', 'kamar', 'silent', 'voting', 'survei', 'lain')),
   link text not null default '' check (link = '' or link ~ '^/wam/acara($|[/?#])'),
   pinned_until timestamptz,
+  -- Beranda's banner: 'warning' for a change to act on, 'info' otherwise; null = the app decides
+  -- (noteTone: kind jadwal or a title saying something changed is a warning).
+  tone text check (tone in ('info', 'warning')),
   -- {"type": "semua"} | {"type": "kelompok", "groupIds": []} | {"type": "departemen", "departments": []} | {"type": "panitia"}
   audience jsonb not null default '{"type": "semua"}'::jsonb check (jsonb_typeof(audience) = 'object' and audience ? 'type'),
   updated_by uuid references public.employees (id) on delete set null,
   updated_at timestamptz
 );
 create index mw_notes_pinned on public.mw_notes (pinned_until) where pinned_until is not null;
+create index mw_notes_updated_by on public.mw_notes (updated_by) where updated_by is not null;
 
 alter table public.mw_settings enable row level security;
 alter table public.mw_testers enable row level security;

@@ -25,14 +25,18 @@ function changeValue(field: RundownChange["changes"][number]["field"], value: st
 }
 const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(iso)).replace(":", ".");
 
-/** Tambah sesi / Ubah sesi: one sheet, one Simpan; "Kabari peserta" when a published session's time, place or status changes. */
-export function SessionSheet({ session, dates, date, people, guides, names, log, busy, nextSort, onClose, onSave }: {
-  session: MwSession | null; dates: readonly string[]; date: string; people: readonly AdminPerson[]; guides: readonly GuideOption[]; names: Map<string, string>;
+/**
+ * Tambah sesi / Ubah sesi: one sheet, one Simpan; "Kabari peserta" when a published session's time,
+ * place or status changes. `cancel`: opened from "Batalkan sesi" (a session that cannot be deleted),
+ * with the status already Batal.
+ */
+export function SessionSheet({ session, cancel = false, dates, date, people, guides, names, log, busy, nextSort, onClose, onSave }: {
+  session: MwSession | null; cancel?: boolean; dates: readonly string[]; date: string; people: readonly AdminPerson[]; guides: readonly GuideOption[]; names: Map<string, string>;
   log: readonly RundownChange[]; busy: boolean; nextSort: number;
   onClose: () => void; onSave: (input: SessionInput, notify: boolean, changes: RundownChange["changes"]) => Promise<boolean>;
 }) {
   const id = useId();
-  const [draft, setDraft] = useState<SessionInput>(() => (session ? sessionToInput(session) : blankSession(date, nextSort)));
+  const [draft, setDraft] = useState<SessionInput>(() => (session ? { ...sessionToInput(session), ...(cancel ? { status: "batal" as const } : {}) } : blankSession(date, nextSort)));
   const [lineup, setLineup] = useState(() => lineupToText(draft.lineup));
   const [problems, setProblems] = useState<Problems>({});
   const [notify, setNotify] = useState(true);
@@ -60,7 +64,7 @@ export function SessionSheet({ session, dates, date, people, guides, names, log,
     </Field>;
   const denah = guides.filter(guide => guide.kind === "denah");
 
-  return <Sheet title={session ? "Ubah sesi" : "Tambah sesi"} subtitle={session ? session.title : "Sesi baru tersimpan sebagai draf sampai statusnya Terbit."} busy={busy} onClose={onClose} onSubmit={submit}
+  return <Sheet title={cancel ? "Batalkan sesi" : session ? "Ubah sesi" : "Tambah sesi"} subtitle={session ? session.title : "Sesi baru tersimpan sebagai draf sampai statusnya Terbit."} busy={busy} onClose={onClose} onSubmit={submit}
     footer={<>
       <ConsoleButton disabled={busy} onClick={onClose}>Batal</ConsoleButton>
       <ConsoleButton type="submit" variant="primary" disabled={busy}>{busy ? "Menyimpan…" : session ? "Simpan" : "Tambah sesi"}</ConsoleButton>

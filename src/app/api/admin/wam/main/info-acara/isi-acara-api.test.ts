@@ -49,7 +49,7 @@ async function calls() {
   return {
     createSession: (origin?: string) => sesi.POST(send("POST", { action: "tambah", session }, origin)),
     importSessions: (origin?: string) => sesi.POST(send("POST", { action: "impor", sessions: [session] }, origin)),
-    shiftSessions: (origin?: string) => sesi.POST(send("POST", { action: "geser", ids: [ID], minutes: 30, notify: true }, origin)),
+    shiftSessions: (origin?: string) => sesi.POST(send("POST", { action: "geser", items: [{ id: ID, version: "2026-12-01T00:00:00+00:00" }], minutes: 30, notify: true }, origin)),
     updateSession: (origin?: string) => sesiId.PUT(send("PUT", { session, notify: false }, origin), params("id")),
     copySession: (origin?: string) => sesiId.POST(send("POST", { date: null }, origin), params("id")),
     deleteSession: (origin?: string) => sesiId.DELETE(send("DELETE", undefined, origin), params("id")),
@@ -109,7 +109,10 @@ describe("Admin WAM → Main WAM → isi acara APIs", () => {
     const bad = [
       await sesi.POST(send("POST", { action: "tambah", session: { ...session, end: "07:00" } })),
       await sesi.POST(send("POST", { action: "tambah", session: { ...session, kind: "makan", usesAttendance: true } })),
-      await sesi.POST(send("POST", { action: "geser", ids: [ID], minutes: 7, notify: false })),
+      await sesi.POST(send("POST", { action: "geser", items: [{ id: ID, version: "2026-12-01T00:00:00+00:00" }], minutes: 7, notify: false })),
+      // Geser jam without the version the page saw (audit S7).
+      await sesi.POST(send("POST", { action: "geser", ids: [ID], minutes: 30, notify: false })),
+      await sesi.POST(send("POST", { action: "geser", items: [{ id: ID }], minutes: 30, notify: false })),
       await sesi.POST(send("POST", { action: "hapus-semua" })),
       await kelompok.POST(send("POST", { action: "impor", groups: [{ number: 1, name: "A", employeeIds: [PERSON], coordinatorId: null }, { number: 2, name: "B", employeeIds: [PERSON], coordinatorId: null }] })),
       await anggota.PUT(send("PUT", { employeeIds: [PERSON], coordinatorId: ID }), params("id")),
@@ -119,7 +122,7 @@ describe("Admin WAM → Main WAM → isi acara APIs", () => {
       await unggah.POST(send("POST", { guideId: ID, mime: "image/gif", size: 10 })),
     ];
     for (const response of bad) expect(response.status).toBe(422);
-    const body = await bad[4].json();
+    const body = await bad[6].json();
     expect(body.fieldErrors["groups.1.employeeIds"]).toEqual(["Satu orang hanya boleh di satu kelompok."]);
     expect(state.calls).toEqual([]);
   });

@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { CircleCheck, QrCode, Search, UserCheck } from "lucide-react";
 import { ScreenContent, ShellActions } from "@/components/main-wam/shell";
 import { Avatar, Banner, Button, ConfirmDialog, EmptyState, IconButton, List, ListRow, Segmented, SelectField, Sheet, SrOnly, Text, TextField, useToast } from "@/components/main-wam/ui";
-import { attendeeLine, presentLine, searchAttendees, splitAttendance, type AttendeeRow } from "@/lib/main-wam/panitia/attendance";
+import { attendeeLine, mayUndo, presentLine, searchAttendees, splitAttendance, type AttendeeRow } from "@/lib/main-wam/panitia/attendance";
 import { count } from "@/lib/main-wam/panitia/format";
 import { mainWamApi, mainWamPath } from "@/lib/routes";
 import type { AttendanceData } from "@/lib/server/main-wam/panitia/attendance";
@@ -17,8 +17,9 @@ type Tab = "belum" | "hadir";
 /**
  * K05 Absen sesi: one session that takes attendance (picked in a sheet), "112 dari 120 hadir",
  * Belum hadir / Hadir, Cari nama, "Catat hadir" (with Urungkan), and on the Hadir tab how each one
- * checked in (Scan QR, Dicatat panitia); tapping a present person offers "Batalkan hadir". Scans
- * show here within 20 seconds; "Tampilkan QR sesi" is area D's printable QR.
+ * checked in (Scan QR, Dicatat panitia); tapping someone panitia recorded offers "Batalkan hadir"
+ * (a QR scan is the person's own and cannot be taken back here: audit L8). Scans show here within
+ * 20 seconds; "Tampilkan QR sesi" is area D's printable QR.
  */
 export function AbsenManual(props: AttendanceData & { initialTab?: Tab }) {
   const api = usePanitiaApi();
@@ -33,6 +34,7 @@ export function AbsenManual(props: AttendanceData & { initialTab?: Tab }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
   const pending = useRef(0);
+  const undoHint = useId();
 
   const poll = useCallback(() => {
     if (!session || pending.current > 0) return;
@@ -82,6 +84,7 @@ export function AbsenManual(props: AttendanceData & { initialTab?: Tab }) {
         options={[{ value: "belum", label: `Belum hadir (${count(absent.length)})` }, { value: "hadir", label: `Hadir (${count(present.length)})` }]} />
       <TextField label={<SrOnly>Cari nama</SrOnly>} className={css.noLabel} search icon={<Search />} placeholder="Cari nama" value={query} onChange={event => setQuery(event.target.value)} type="search" enterKeyHint="search" autoComplete="off" />
       {!session.canRecord && tab === "belum" && <Text variant="caption" color="2">Catat hadir bisa setelah absen dibuka.</Text>}
+      {tab === "hadir" && present.length > 0 && <Text id={undoHint} variant="caption" color="2">Ketuk nama yang dicatat panitia untuk membatalkan. Scan QR tidak bisa dibatalkan.</Text>}
       {shown.length > 0
         ? <List label={tab === "belum" ? "Belum hadir" : "Hadir"}>
           {shown.map(person => tab === "belum"
@@ -89,14 +92,14 @@ export function AbsenManual(props: AttendanceData & { initialTab?: Tab }) {
               trailing={<Button variant="secondary" size="m" loading={busy === person.id} disabled={!session.canRecord || (busy !== null && busy !== person.id)} onClick={() => record(person, true)}
                 aria-label={`Catat hadir ${person.name}`}>Catat hadir</Button>} />
             : <ListRow key={person.id} leading={<Avatar name={person.name} photo={person.photo} />} title={person.name} sub={presentLine(person)} chevron={false}
-              trailing={<CircleCheck className={css.ok} role="img" aria-label="Hadir" />} onClick={() => setCancel(person)}
-              aria-label={`${person.name}, ${presentLine(person)}. Ketuk untuk membatalkan`} />)}
+              trailing={<CircleCheck className={css.ok} role="img" aria-label="Hadir" />}
+              {...(mayUndo(person) ? { onClick: () => setCancel(person), "aria-describedby": undoHint } : {})} />)}
         </List>
         : query.trim()
-          ? <EmptyBlock icon={<Search />} title="Tidak ada nama yang cocok." />
+          ? <EmptyBlock icon={<Search />} title="Tidak ada nama yang cocok." level={3} />
           : tab === "belum"
-            ? <EmptyBlock icon={<CircleCheck />} tone="success" title="Semua sudah hadir." />
-            : <EmptyBlock icon={<UserCheck />} title="Belum ada yang hadir." />}
+            ? <EmptyBlock icon={<CircleCheck />} tone="success" title="Semua sudah hadir." level={3} />
+            : <EmptyBlock icon={<UserCheck />} title="Belum ada yang hadir." level={3} />}
     </div>
 
     <Sheet open={picking} onClose={() => setPicking(false)} title="Pilih sesi" flush history={false}>

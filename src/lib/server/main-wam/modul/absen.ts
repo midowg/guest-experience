@@ -11,14 +11,16 @@ import { databaseError } from "../../http";
 import { sessionQrPdf } from "../../pra-wam/qr-pdf";
 import { createPrivilegedClient } from "../../supabase/admin";
 import { mwFail, mwMissing } from "../errors";
+import { mainWamAttendees } from "../people";
 import { allSessions, attendanceOf } from "../read";
 
 /*
  * Absen QR (A01–A04, aturan-wam §7) on Main WAM's own rundown (mw_sessions, mw_attendance), with
  * Pra WAM's pieces reused: the QR token (newQrToken), the printed A5 sheet (sessionQrPdf) and the
  * window (30 minutes either side, fondasi checkInWindow). Nothing here touches pw_sessions.
- * The window holds by the server's clock; a scan queued offline keeps its own time within limits
- * (acceptedScanTime). One row per person per session, so a second scan answers "sudah".
+ * The window holds by the server's clock; a scan queued offline keeps its own time only inside the
+ * window and at most 30 minutes old (acceptedScanTime, audit M5). One row per person per session, so
+ * a second scan answers "sudah".
  */
 
 const db = () => createPrivilegedClient();
@@ -47,7 +49,7 @@ export async function checkInWithQr(token: string, viewer: Pick<MainWamViewer, "
   if (session.status !== "terbit" || !session.usesAttendance) return { kind: "tanpa-absen", session: named(session) };
   const existing = await myCheckIn(session.id, viewer.id);
   if (existing) return { kind: "sudah", session: named(session), checkedInAt: existing };
-  const at = acceptedScanTime(options.scannedAt, options.now);
+  const at = acceptedScanTime(options.scannedAt, options.now, session);
   const refused = windowOutcome(session, at);
   if (refused) return refused;
   const { data, error } = await db().from("mw_attendance")
@@ -59,18 +61,25 @@ export async function checkInWithQr(token: string, viewer: Pick<MainWamViewer, "
   return { kind: "tercatat", session: named(session), checkedInAt: saved[0].checked_in_at };
 }
 
-/** "Hadir 96 dari 120" (BOD in Detail sesi): present, and everyone who checks in (active accounts, not BOD). */
+/**
+ * "Hadir 96 dari 120" (BOD in Detail sesi): of the people of the event (mainWamAttendees, audit R5:
+ * active WAM accounts, not BOD), how many checked in. Null when it cannot be read.
+ */
 export async function presentCount(sessionId: string): Promise<{ present: number; expected: number } | null> {
-  const [present, accounts, bod] = await Promise.all([
-    db().from("mw_attendance").select("employee_id", { count: "exact", head: true }).eq("session_id", sessionId),
-    db().from("pw_accounts").select("employee_id,employees!inner(active)", { count: "exact", head: true }).eq("active", true).eq("employees.active", true),
-    db().from("pw_roles").select("employee_id", { count: "exact", head: true }).eq("role", "bod"),
+  const [present, attendees] = await Promise.all([
+    db().from("mw_attendance").select("employee_id").eq("session_id", sessionId).limit(5000),
+    mainWamAttendees().catch(() => null),
   ]);
-  if (present.error || accounts.error) return null;
-  return { present: present.count ?? 0, expected: Math.max(0, (accounts.count ?? 0) - (bod.error ? 0 : bod.count ?? 0)) };
+  if (present.error || !attendees) return null;
+  const everyone = new Set(attendees);
+  return { present: ((present.data ?? []) as { employee_id: string }[]).filter(row => everyone.has(row.employee_id)).length, expected: everyone.size };
 }
 
-/** A session's QR token, made the first time panitia asks for it; `renew` replaces it (printed sheets stop working). */
+/**
+ * A session's QR token (made by Admin WAM when the session is saved with "pakai absen", R15). Reading
+ * it writes nothing: without one, panitia are told to save the session again. `renew` replaces it
+ * (printed sheets stop working; POST only).
+ */
 export async function sessionQrToken(sessionId: string, renew = false): Promise<{ token: string; session: MwSession }> {
   const { data, error } = await db().from("mw_sessions").select(`${SESSION_COLUMNS},qr_token`).eq("id", sessionId).maybeSingle();
   if (error) mwFail(error);
@@ -78,7 +87,10 @@ export async function sessionQrToken(sessionId: string, renew = false): Promise<
   const row = data as Record<string, unknown> & { qr_token: string | null };
   const session = sessionFromRow(row);
   if (!session.usesAttendance) throw new ServiceError(409, "Sesi ini tidak memakai absen. Tandai pakai absen di Admin WAM → Rundown.");
-  if (row.qr_token && !renew) return { token: row.qr_token, session };
+  if (!renew) {
+    if (!row.qr_token) throw new ServiceError(409, "QR belum dibuat. Simpan ulang sesi dengan Pakai absen di Admin WAM → Rundown.");
+    return { token: row.qr_token, session };
+  }
   const token = newQrToken(size => randomBytes(size));
   const { error: saveError } = await db().from("mw_sessions").update({ qr_token: token, updated_at: new Date().toISOString() }).eq("id", sessionId);
   if (saveError) mwFail(saveError);

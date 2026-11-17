@@ -110,6 +110,11 @@
 .bars { display: flex; flex-direction: column; gap: var(--mw-space-16); }
 .feedbackBody { margin: 0; font: var(--mw-type-body-long); color: var(--mw-text-1); white-space: pre-wrap; overflow-wrap: anywhere; }
 .feedbackTopic { display: flex; }
+/* B05's topic filter stays under the compact bar while the feedback scrolls (UX T-K02). */
+.stickyFilter {
+  position: sticky; top: calc(var(--mw-safe-top) + var(--mw-topbar-h)); z-index: 5;
+  margin: calc(-1 * var(--mw-space-8)) calc(-1 * var(--mw-space-16)) 0; padding: var(--mw-space-8) var(--mw-space-16); background: var(--mw-bg);
+}
 .rankRows { display: flex; flex-direction: column; gap: var(--mw-space-16); margin-top: var(--mw-space-4); }
 .rankRow { display: flex; align-items: center; gap: var(--mw-space-12); }
 .rankBadge { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--mw-warning-container); color: var(--mw-on-warning-container); font: var(--mw-type-caption-strong); }

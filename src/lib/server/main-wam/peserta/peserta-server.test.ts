@@ -29,11 +29,13 @@ const read = {
 vi.mock("../read", () => read);
 const pinnedForMe = vi.fn(async () => sampleNotifications);
 vi.mock("../notes", () => ({ pinnedForMe, myMainWamNotifications: async () => ({ items: sampleNotifications, unread: 3, migrated: true }) }));
+const surveyFor = vi.fn<(...args: unknown[]) => Promise<{ formSlug: string; sessionId: string; until: string | null; minutes: number | null } | null>>(async () => null);
+vi.mock("../survey", () => ({ surveyFor }));
 vi.mock("../people", () => ({ mainWamPeople: async () => new Map(samplePeopleList().map(person => [person.id, person])) }));
 vi.mock("../../pra-wam/mcp", () => ({ mcpAccessOf: async () => ({ granted: true, hasKey: true, lastUsedAt: null }) }));
 const phoneQuery = vi.fn();
 vi.mock("../../supabase/admin", () => ({
-  createPrivilegedClient: () => ({ from: () => ({ select: () => ({ in: (_column: string, ids: string[]) => ({ limit: async () => { phoneQuery(ids); return { data: ids.map(id => ({ id, phone: "0812-3456-7890" })), error: null }; } }) }) }) }),
+  createPrivilegedClient: () => ({ from: () => ({ select: () => ({ in: (_column: string, ids: string[]) => ({ limit: async () => { phoneQuery(ids); return { data: ids.map(id => ({ id, phone: "0800-0000-0001" })), error: null }; } }) }) }) }),
 }));
 
 const { loadHome } = await import("./home");
@@ -79,6 +81,26 @@ describe("Beranda's loader", () => {
     expect(data.card).toMatchObject({ kind: "berangkat", title: "Kereta ke Malang · 06.30" });
   });
 
+  it("Survei (R7): the card is what surveyFor says (the one rule), with this person's context; a failure leaves it out", async () => {
+    pinnedForMe.mockResolvedValueOnce([]);
+    surveyFor.mockResolvedValueOnce({ formSlug: "survei-wam", sessionId: "s", until: "2027-01-07T12:00:00+07:00", minutes: 5 });
+    const now = at("2027-01-07", "08:30");
+    const data = await loadHome(context(sampleViewers.peserta), now);
+    expect(surveyFor).toHaveBeenCalledWith(expect.objectContaining({ viewer: sampleViewers.peserta }), sampleSessions, now);
+    expect(data.card).toMatchObject({ kind: "survei", sub: "5 menit · sampai 12.00", target: { survey: "survei-wam" } });
+    pinnedForMe.mockResolvedValueOnce([]);
+    surveyFor.mockResolvedValueOnce(null);
+    expect((await loadHome(context(sampleViewers.peserta), now)).card).toBeNull();
+    pinnedForMe.mockResolvedValueOnce([]);
+    surveyFor.mockRejectedValueOnce(new Error("db"));
+    expect((await loadHome(context(sampleViewers.peserta), now)).card).toBeNull();
+  });
+
+  it("sends the server's clock with the data (S6: the phone counts refreshAt from it)", async () => {
+    const now = at("2027-01-05", "07:30");
+    expect((await loadHome(context(sampleViewers.peserta), now)).serverNow).toBe(now.toISOString());
+  });
+
   it("a failing part is left out; a failing rundown says so", async () => {
     read.silentQuestions.mockRejectedValueOnce(new Error("db"));
     pinnedForMe.mockRejectedValueOnce(new Error("db"));
@@ -93,7 +115,7 @@ describe("Agenda and Detail sesi", () => {
     read.sessionById.mockResolvedValueOnce({ ...sampleSessions[9], status: "draf" });
     expect(await loadSession(context(sampleViewers.peserta), sampleSessions[9].id, at("2027-01-05", "10:05"))).toBeNull();
     const found = await loadSession(context(sampleViewers.peserta), sampleSessions[9].id, at("2027-01-05", "10:05"));
-    expect(found?.contact).toMatchObject({ name: "Dimas", whatsapp: "https://wa.me/6281234567890" });
+    expect(found?.contact).toMatchObject({ name: "Dimas", whatsapp: "https://wa.me/6280000000001" });
     expect(found?.denah).toEqual({ slug: "denah-venue" });
   });
 
@@ -130,6 +152,6 @@ describe("Saya's loaders", () => {
     const map = await contactsOf([{ id: dimas, role: "Panitia" }, { id: dimas, role: "Lain" }, { id: null, role: "x" }, { id: "not-an-id", role: "x" }]);
     expect(phoneQuery).toHaveBeenCalledTimes(1);
     expect(phoneQuery).toHaveBeenCalledWith([dimas]);
-    expect([...map.values()]).toEqual([expect.objectContaining({ name: "Dimas", role: "Panitia", tel: "tel:+6281234567890" })]);
+    expect([...map.values()]).toEqual([expect.objectContaining({ name: "Dimas", role: "Panitia", tel: "tel:+6280000000001" })]);
   });
 });

@@ -27,7 +27,8 @@ describe("database rows to Main WAM's types", () => {
     expect(guideFromRow({ id: "g", slug: "hotel", title: "Hotel" }).file).toBeNull();
     expect(photoFromRow({ id: "p", owner_id: "rani", audience: "kelompok", group_id: "g4", status: "ditinjau", width: 1600, height: 2000 })).toMatchObject({ audience: "kelompok", groupId: "g4", status: "ditinjau", sessionId: null });
     expect(rundownChangeFromRow({ id: "l", session_id: "s", changes: [{ field: "endsAt", from: "a", to: "b" }, { field: "harga" }], notified: true, recipients: 122 }).changes).toEqual([{ field: "endsAt", from: "a", to: "b" }]);
-    expect(silentFromRow({ id: "q", session_id: "s", question: "Apa?", topics: ["Cara kerja", 3], override: "buka", auto_close: false })).toMatchObject({ topics: ["Cara kerja"], override: "buka", autoClose: false });
+    expect(silentFromRow({ id: "q", session_id: "s", question: "Apa?", topics: ["Cara kerja", 3], opened_at: "2027-01-05T05:40:00Z", closed_at: null }))
+      .toEqual({ id: "q", sessionId: "s", question: "Apa?", topics: ["Cara kerja"], openedAt: "2027-01-05T05:40:00Z", closedAt: null });
     const award = awardFromRow({ id: "c", title: "Rekan", method: "voting", nominee_kind: "orang", published: true, mw_award_nominees: [{ id: "n2", category_id: "c", label: "B", sort: 2 }, { id: "n1", category_id: "c", label: "A", sort: 1 }] });
     expect(award.nominees.map(nominee => nominee.id)).toEqual(["n1", "n2"]);
   });

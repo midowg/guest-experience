@@ -415,17 +415,25 @@ Diatur di **Admin WAM → TV Announcement**; migrasi `202611100003_pw_tv.sql`.
   permintaan dibungkus `cache()` (mis. `listPeople`, `listLeads`, `seniorIds`).
 - Kolom baru selalu dibaca dengan cadangan sampai migrasinya pasti sudah diterapkan (lihat §1).
 
-## 11. Main WAM (17 Nov 2026, fondasi)
+## 11. Main WAM (17–18 Nov 2026, dibangun lengkap, tersembunyi)
 
 Aplikasi selama acara WAM (4–7 Jan 2027) di `/wam/acara`, akun dan sesi yang sama. Kontrak lengkap:
-`docs/main-wam/KONTRAK.md`; komponen: `docs/main-wam/KIT.md`.
+`docs/main-wam/KONTRAK.md`; komponen: `docs/main-wam/KIT.md`; status dan langkah menyalakan:
+`docs/main-wam/STATUS.md`. Desain sumber: `D:\projects\events\2027-01-werkudara-wam\aplikasi\` (prototipe, SPEC,
+`ANALISA_FITUR_16NOV.md`).
 
 | Hal | Aturan |
 | --- | --- |
 | Mode acara | Admin WAM → Main WAM → Pengaturan: **Pra WAM** (bawaan; Main WAM hanya untuk penguji lewat alamatnya), **Main WAM (uji)** (penguji membuka Main WAM dari `/wam`, yang lain tetap Pra WAM), **Main WAM (semua)** (`/wam` membuka Main WAM; Pra WAM tetap di `/wam?versi=pra` dan alamat lainnya). Penguji: Admin WAM, panitia, dan daftar yang dipilih admin. |
 | Tersembunyi | Bukan untuk orang itu, atau modulnya mati: halaman 404 dan API 404, tanpa kartu, aksi, atau baris. Setiap halaman dan API memeriksa sendiri (ada tes). |
 | Data | Tabel `mw_*` (migrasi `202611200001–0003`). Rundown di `mw_sessions` (tidak di `pw_sessions`, supaya tidak tampil di Pra WAM). Kamar = pembagian kamar HR. Notifikasi lewat kotak masuk WAM yang sama (`pw_announcements`) dan Web Push yang ada, tanpa topik baru. |
-| Tema | Warna, huruf judul, dan gambar KV per slot dari Pengaturan; bawaannya tema netral DESIGN_SYSTEM. Gambar KV di R2 privat, disajikan lewat situs. |
+| Tema | Warna, huruf judul, dan gambar KV per slot dari Pengaturan; bawaannya tema netral DESIGN_SYSTEM. Gambar KV di R2 privat, disajikan lewat situs (hanya splash/ikon publik di mode semua; versi harus cocok). |
+| Data (lanjutan) | Migrasi area `202611200101`, `0201`, `0301`, `0401`, `0501`: semuanya dijalankan berurutan dalam satu kali jalan (lihat `go-live-internal.md`). |
+| Silent Meeting | Isi masukan tidak pernah disimpan bersama orang, waktu, atau kunci orang (tidak ada baris lain di transaksi yang sama). "Pembuka" (HMAC, kunci `MW_SILENT_SECRET` atau turunan `WAM_SESSION_SECRET`) dicatat terpisah saat formulir dibuka. Tutup bersifat final; selama dibuka tidak ada jumlah di mana pun; rekap BOD hanya bila ≥ 5 masukan dan ≥ 5 pembuka, urutan diacak. |
+| Voting | Satu suara per orang per kategori, bukan untuk diri sendiri, di dalam jendela (dijaga basis data dengan jam server). Perolehan hanya untuk BOD dan admin, dan baru setelah voting ditutup. |
+| Momen | Foto terkirim saat dijepret (Batalkan 5 detik), antre offline (IndexedDB, `client_id`), unggah langsung ke R2 (`tmp/` lalu dipindah saat disimpan). Hapus hanya oleh pemiliknya; panitia lewat Moderasi (tercatat, alasan opsional). Foto yang masuk nominasi tidak bisa dihapus. 3 pelapor → disembunyikan untuk ditinjau. |
+| Absen | Per sesi yang ditandai "pakai absen" di Rundown admin (token QR dibuat saat itu). Scan offline dikirim belakangan hanya bila jam scan di dalam jendela dan paling lama 30 menit sebelumnya. Panitia hanya bisa membatalkan absen manual. |
+| Hitungan orang | "Orang acara" = akun WAM aktif kecuali BOD (`mainWamAttendees`), sama di semua layar. |
 
 ## Dokumen terkait
 

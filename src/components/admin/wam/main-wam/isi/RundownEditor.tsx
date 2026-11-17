@@ -2,23 +2,22 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { CalendarPlus, ClipboardPaste, Copy, MapPin, MoveVertical, Pencil, Plus, Shirt, Trash2 } from "lucide-react";
-import { ConsoleButton, PageHeader, PageTabs, Pill, SegmentedControl, type Crumb } from "@/components/console";
+import { ConsoleButton, PageHeader, Pill, SegmentedControl, type Crumb } from "@/components/console";
 import { adminRequest } from "@/components/admin/shared/api";
 import { useConfirm } from "@/components/pra-wam/ConfirmDialog";
 import { sessionKindLabels, sessionModuleLabels, sessionStatusLabels, shortDate } from "@/lib/main-wam/admin/labels";
 import type { AdminPerson } from "@/lib/main-wam/admin/people";
-import { overlaps, parseRundownPaste, RUNDOWN_COLUMN_ORDER, rundownColumnLabels, type AdminSession, type SessionInput } from "@/lib/main-wam/admin/rundown";
-import { MAIN_WAM_MIGRATION } from "@/lib/main-wam/settings";
+import { keepsData, overlaps, parseRundownPaste, RUNDOWN_COLUMN_ORDER, rundownColumnLabels, usageWords, type AdminSession, type SessionInput } from "@/lib/main-wam/admin/rundown";
 import { byStart, timeRange, wibDate, wibTime } from "@/lib/main-wam/rundown";
 import type { MwSession, RundownChange } from "@/lib/main-wam/types";
 import { mainWamAdminApi } from "@/lib/routes";
-import { mainWamContentTabs } from "../tabs";
-import { dayOptionLabel, MessageLine, useRun, Waiting, type Message } from "./fields";
+import { ContentTabs, dayOptionLabel, MessageLine, useRun, Waiting, type Message } from "./fields";
 import { PasteSheet } from "./PasteSheet";
 import { CopySheet, SessionSheet, ShiftSheet, type GuideOption } from "./RundownSheets";
+import { SheetError } from "./Sheet";
 import css from "./isi.module.css";
 
-type SheetState = { type: "edit"; session: AdminSession | null } | { type: "import" } | { type: "shift" } | { type: "copy"; session: AdminSession } | null;
+type SheetState = { type: "edit"; session: AdminSession | null; cancel?: boolean } | { type: "import" } | { type: "shift" } | { type: "copy"; session: AdminSession } | null;
 type SessionsAnswer = { sessions: AdminSession[]; recipients?: number; id?: string };
 
 const statusTone = { draf: "neutral", terbit: "ok", batal: "bad" } as const;
@@ -28,8 +27,11 @@ const dot = (time: string) => time.replace(":", ".");
  * Admin WAM → Main WAM → Rundown (agen E): the four days as a timeline, one day at a time; Tambah
  * and Ubah in a sheet (everything Detail sesi shows: tempat + denah, dresscode, yang perlu dibawa,
  * urutan tampil, konsumsi, kontak panitia, absen, wajib, modul, status), Salin to a day, Geser jam
- * for several sessions, and Impor from a pasted sheet with every row checked first. A change to a
- * published session is logged ("diubah oleh") and can be told to participants.
+ * for several sessions (each from the version on screen: a session changed in Rundown live since is
+ * not moved, audit S7), and Impor from a pasted sheet with every row checked first. A change to a
+ * published session is logged ("diubah oleh") and can be told to participants. Hapus is off for a
+ * session that already has absen, photos, Silent Meeting or Awarding: it says why and offers
+ * Batalkan instead (audit M4).
  */
 export function RundownEditor({ initial, migrated, dates, people, guides, log: initialLog, today, crumbs, title }: {
   initial: AdminSession[]; migrated: boolean; dates: readonly string[]; people: readonly AdminPerson[]; guides: readonly GuideOption[];
@@ -67,9 +69,20 @@ export function RundownEditor({ initial, migrated, dates, people, guides, log: i
     });
   }
   async function remove(session: AdminSession) {
+    if (keepsData(session.usage)) {
+      // Hapus is off: say why, and offer Batalkan (the records stay, participants see it crossed out).
+      if (session.status === "batal") { setMessage({ tone: "warning", text: `${session.title} sudah dibatalkan dan tetap di rundown (dicoret), karena sudah punya ${usageWords(session.usage)}.` }); return; }
+      const cancel = await confirm({
+        title: "Sesi ini tidak bisa dihapus", confirmLabel: "Batalkan sesi", cancelLabel: "Tutup",
+        body: `${session.title} sudah punya ${usageWords(session.usage)}. Batalkan sesinya: catatannya tetap ada dan peserta melihatnya dicoret di Agenda.`,
+      });
+      if (cancel) setSheet({ type: "edit", session, cancel: true });
+      return;
+    }
+    const groups = session.usage?.activityGroups ?? 0;
     const ok = await confirm({
       title: "Hapus sesi?", confirmLabel: "Hapus sesi", danger: true,
-      body: session.status === "draf" ? `${session.title} dihapus dari rundown.` : `${session.title} sudah terbit. Kalau acaranya batal, lebih baik ubah statusnya menjadi Batal supaya peserta melihatnya dicoret. Hapus tetap?`,
+      body: `${session.status === "draf" ? `${session.title} dihapus dari rundown.` : `${session.title} sudah terbit. Kalau acaranya batal, lebih baik ubah statusnya menjadi Batal supaya peserta melihatnya dicoret. Hapus tetap?`}${groups ? ` ${groups} kelompok kegiatannya ikut terhapus.` : ""}`,
     });
     if (ok) await run(`hapus-${session.id}`, async () => { const result = await send(mainWamAdminApi.session(session.id), "DELETE"); apply(result.data!); return result.message; });
   }
@@ -78,14 +91,14 @@ export function RundownEditor({ initial, migrated, dates, people, guides, log: i
   const { terbit, draf } = counts(ofDay);
   const parse = useCallback((text: string) => parseRundownPaste(text, { dates, people, existing: sessions, sortFrom: sessions.length }), [dates, people, sessions]);
 
-  return <div className={css.page}>
+  return <SheetError.Provider value={message?.tone === "error" ? message.text : null}><div className={css.page}>
     <PageHeader crumbs={crumbs} title={title} subtitle="Sesi empat hari acara. Yang terbit tampil di Agenda peserta; draf hanya di sini."
       actions={<>
         <ConsoleButton icon={<ClipboardPaste size={18} aria-hidden />} disabled={!migrated} onClick={() => setSheet({ type: "import" })}>Impor</ConsoleButton>
         <ConsoleButton variant="primary" icon={<Plus size={18} aria-hidden />} disabled={!migrated} onClick={() => setSheet({ type: "edit", session: null })}>Tambah sesi</ConsoleButton>
       </>} />
-    <PageTabs tabs={mainWamContentTabs} current="rundown" label="Isi acara" />
-    {!migrated && <Waiting what="Rundown" migration={MAIN_WAM_MIGRATION} />}
+    <ContentTabs current="rundown" />
+    {!migrated && <Waiting what="Rundown" />}
     <MessageLine message={message} />
 
     <div className={css.toolbar}>
@@ -105,7 +118,7 @@ export function RundownEditor({ initial, migrated, dates, people, guides, log: i
       {ofDay.map(session => <SessionRow key={session.id} session={session} names={names} clash={clashing.has(session.id)} busy={busy !== null}
         onEdit={() => setSheet({ type: "edit", session })} onCopy={() => setSheet({ type: "copy", session })} onDelete={() => void remove(session)} />)}
     </ol> : <div className={css.empty}>
-      <h3>{migrated ? "Belum ada sesi di hari ini" : "Rundown belum bisa diisi"}</h3>
+      <h2>{migrated ? "Belum ada sesi di hari ini" : "Rundown belum bisa diisi"}</h2>
       <p>{migrated ? "Tambah satu per satu, atau tempel rundown dari Excel sekaligus." : "Halaman ini terbuka lagi setelah pembaruan sistem dijalankan."}</p>
       {migrated && <div className={css.emptyActions}>
         <ConsoleButton variant="primary" icon={<CalendarPlus size={18} aria-hidden />} onClick={() => setSheet({ type: "edit", session: null })}>Tambah sesi</ConsoleButton>
@@ -120,13 +133,15 @@ export function RundownEditor({ initial, migrated, dates, people, guides, log: i
         onEdit={() => setSheet({ type: "edit", session })} onCopy={() => setSheet({ type: "copy", session })} onDelete={() => void remove(session)} />)}</ol>
     </section>}
 
-    {sheet?.type === "edit" && <SessionSheet session={sheet.session} dates={dates} date={date} people={people} guides={guides} names={names}
+    {sheet?.type === "edit" && <SessionSheet key={`${sheet.session?.id ?? "baru"}-${sheet.cancel ? "batal" : ""}`} session={sheet.session} cancel={sheet.cancel} dates={dates} date={date} people={people} guides={guides} names={names}
       log={sheet.session ? log.filter(entry => entry.sessionId === sheet.session!.id) : []} busy={busy === "simpan"}
       nextSort={ofDay.length ? Math.max(...ofDay.map(item => item.sort)) + 1 : 0}
       onClose={() => setSheet(null)} onSave={(input, notify, changes) => save(sheet.session, input, notify, changes)} />}
     {sheet?.type === "shift" && <ShiftSheet sessions={ofDay} dayLabel={dayOptionLabel(dates, date)} busy={busy === "geser"} onClose={() => setSheet(null)}
       onSave={(ids, minutes, notify) => run("geser", async () => {
-        const result = await send(mainWamAdminApi.sessions, "POST", { action: "geser", ids, minutes, notify });
+        // Each with the version on screen: one changed since (Rundown live) is refused, nothing moves.
+        const items = ids.map(id => ({ id, version: sessions.find(session => session.id === id)?.version ?? "" }));
+        const result = await send(mainWamAdminApi.sessions, "POST", { action: "geser", items, minutes, notify });
         apply(result.data!);
         setSheet(null);
         return result.message;
@@ -153,12 +168,15 @@ export function RundownEditor({ initial, migrated, dates, people, guides, log: i
         return answer.message;
       })} />}
     {confirmDialog}
-  </div>;
+  </div></SheetError.Provider>;
 }
 
 function SessionRow({ session, names, clash, busy, showDate = false, onEdit, onCopy, onDelete }: {
-  session: MwSession; names: Map<string, string>; clash: boolean; busy: boolean; showDate?: boolean; onEdit: () => void; onCopy: () => void; onDelete: () => void;
+  session: AdminSession; names: Map<string, string>; clash: boolean; busy: boolean; showDate?: boolean; onEdit: () => void; onCopy: () => void; onDelete: () => void;
 }) {
+  // Kept: Hapus looks off and says why (hover, screen reader); pressing it explains and offers Batalkan.
+  const kept = keepsData(session.usage);
+  const reasonId = `hapus-${session.id}`;
   const start = dot(wibTime(session.startsAt));
   const end = session.endsAt ? dot(wibTime(session.endsAt)) : null;
   const changedBy = session.changedBy ? names.get(session.changedBy) ?? "admin" : "admin";
@@ -188,7 +206,12 @@ function SessionRow({ session, names, clash, busy, showDate = false, onEdit, onC
       <div className={css.actions}>
         <button type="button" className={css.iconButton} onClick={onEdit} disabled={busy} aria-label={`Ubah ${session.title}`} title="Ubah"><Pencil size={18} aria-hidden /></button>
         <button type="button" className={css.iconButton} onClick={onCopy} disabled={busy} aria-label={`Salin ${session.title}`} title="Salin"><Copy size={18} aria-hidden /></button>
-        <button type="button" className={`${css.iconButton} ${css.iconDanger}`} onClick={onDelete} disabled={busy} aria-label={`Hapus ${session.title}`} title="Hapus"><Trash2 size={18} aria-hidden /></button>
+        {kept
+          ? <button type="button" className={`${css.iconButton} ${css.iconOff}`} onClick={onDelete} disabled={busy} aria-disabled aria-label={`Hapus ${session.title}`} aria-describedby={reasonId}
+            title={`Tidak bisa dihapus: sudah punya ${usageWords(session.usage)}. Pakai Batalkan.`}>
+            <Trash2 size={18} aria-hidden /><span id={reasonId} className="sr-only">Tidak bisa dihapus: sudah punya {usageWords(session.usage)}. Pakai Batalkan.</span>
+          </button>
+          : <button type="button" className={`${css.iconButton} ${css.iconDanger}`} onClick={onDelete} disabled={busy} aria-label={`Hapus ${session.title}`} title="Hapus"><Trash2 size={18} aria-hidden /></button>}
       </div>
     </article>
   </li>;

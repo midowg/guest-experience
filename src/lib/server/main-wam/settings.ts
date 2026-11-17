@@ -6,7 +6,7 @@ import { isSupabaseConfigured, ServiceError } from "../config";
 import { databaseError } from "../http";
 import { createPrivilegedClient } from "../supabase/admin";
 import { listEvents } from "../pra-wam/events";
-import { mwFail, mwMissing } from "./errors";
+import { mwFail, mwMissing, mwWaiting } from "./errors";
 
 /*
  * Main WAM's settings (mw_settings, one row) and its penguji (mw_testers). Read once per request.
@@ -48,7 +48,7 @@ export const readMainWamSettings = cache(async (): Promise<MainWamSettings> => {
 /** Admin WAM → Main WAM → Pengaturan: mode, modules, module settings, theme colours and font. */
 export async function saveMainWamSettings(input: SettingsInput): Promise<MainWamSettings> {
   const current = await readSettingsUncached();
-  if (!current.migrated) throw new ServiceError(503, "Pengaturan Main WAM menunggu migrasi 202611200001_main_wam_settings_rundown.sql.");
+  if (!current.migrated) throw mwWaiting();
   if (input.moduleConfig?.survei?.formSlug) {
     const { data } = await createPrivilegedClient().from("cq_forms").select("id").eq("slug", input.moduleConfig.survei.formSlug).maybeSingle();
     if (!data) throw new ServiceError(422, "Kuesioner dengan alamat itu tidak ditemukan.", { formSlug: ["Kuesioner dengan alamat itu tidak ditemukan."] });

@@ -48,10 +48,48 @@ export const sessionInputSchema = z.object({
 export type SessionInput = z.infer<typeof sessionInputSchema>;
 
 /**
- * A session as the admin edits it: with its row version (updated_at; agen C's trigger moves it on
- * every change), so a save never overwrites a change made in Rundown live in the meantime.
+ * What a session already has (mw_admin_session_usage): absen, Momen photos tagged to it, a Silent
+ * Meeting question (only yes or no: no feedback count before it is final), Awarding categories,
+ * and kelompok kegiatan (these go with it when it is deleted).
  */
-export type AdminSession = MwSession & { version: string | null };
+export type SessionUsage = { attendance: number; photos: number; silent: boolean; awards: number; activityGroups: number };
+
+/**
+ * A session as the admin edits it: with its row version (updated_at; agen C's trigger moves it on
+ * every change), so a save never overwrites a change made in Rundown live in the meantime; and
+ * what it already has (null when that is not known yet), so Hapus is offered only where it works.
+ */
+export type AdminSession = MwSession & { version: string | null; usage: SessionUsage | null };
+
+/* ── Hapus atau Batalkan (audit M4) ───────────────────────────────────────────────────────────── */
+
+/** "a", "a dan b", "a, b, dan c". */
+export function listWords(items: readonly string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  if (items.length === 2) return `${items[0]} dan ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, dan ${items.at(-1)}`;
+}
+const count = (value: number) => value.toLocaleString("id-ID");
+
+/** What keeps a session from being deleted, in words ("12 absen dan 3 foto Momen"); empty when nothing does. */
+export function usageWords(usage: SessionUsage | null): string {
+  if (!usage) return "";
+  return listWords([
+    usage.attendance ? `${count(usage.attendance)} absen` : "",
+    usage.photos ? `${count(usage.photos)} foto Momen` : "",
+    usage.silent ? "pertanyaan Silent Meeting" : "",
+    usage.awards ? `${count(usage.awards)} kategori Awarding` : "",
+  ].filter(Boolean));
+}
+
+/** Whether Hapus would lose something people made (absen, photos, Silent Meeting, Awarding). */
+export const keepsData = (usage: SessionUsage | null) => !!usageWords(usage);
+
+/** The refusal of Hapus for a session that has something. */
+export const deleteRefusal = (usage: SessionUsage | null) => `Sesi ini sudah punya ${usageWords(usage) || "absen, foto, Silent Meeting, atau Awarding"}. Pakai Batalkan.`;
+
+/** The same when the database refused (its foreign keys) and what it had is not known. */
+export const IN_USE_REFUSAL = deleteRefusal(null);
 
 /** A new session's defaults. */
 export const blankSession = (date: string, sort = 0): SessionInput => ({
@@ -130,11 +168,21 @@ export function changeNote(before: Pick<MwSession, "title" | "startsAt" | "endsA
 
 /* ── Geser jam ────────────────────────────────────────────────────────────────────────────────── */
 
+/**
+ * Geser jam: each session with the version the admin saw (audit S7), so a session changed in
+ * Rundown live in the meantime is not moved from its old time.
+ */
 export const shiftSchema = z.object({
-  ids: z.array(z.uuid()).min(1, "Pilih sesi yang digeser.").max(200),
+  items: z.array(z.object({ id: z.uuid(), version: z.string().min(1, "Muat ulang halaman, lalu geser lagi.").max(40) }))
+    .min(1, "Pilih sesi yang digeser.").max(200)
+    .refine(items => new Set(items.map(item => item.id)).size === items.length, "Ada sesi yang terpilih dua kali."),
   minutes: z.number().int().min(-720, "Paling jauh 12 jam.").max(720, "Paling jauh 12 jam.").refine(value => value !== 0, "Isi berapa menit.").refine(value => value % 5 === 0, "Geser dalam kelipatan 5 menit."),
   notify: z.boolean(),
 });
+
+/** Geser jam refused: one of the sessions changed since the page loaded; nothing moved. */
+export const shiftConflict = (title?: string) =>
+  `${title ? `${title} baru saja` : "Ada sesi yang baru saja"} diubah orang lain (mungkin lewat Rundown live), jadi tidak ada yang digeser. Muat ulang halaman untuk melihat jam terbarunya, lalu geser lagi.`;
 
 const plus = (iso: string, minutes: number) => new Date(Date.parse(iso) + minutes * 60_000).toISOString();
 /** A session moved by some minutes (end with it). */

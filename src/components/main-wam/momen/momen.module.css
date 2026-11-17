@@ -119,3 +119,6 @@
 /* The panel takes swipes and side taps like a card; its own buttons stay above the tap areas. */
 .panelInner { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: var(--mw-space-12); width: 100%; pointer-events: none; }
 .panelInner a, .panelInner button { pointer-events: auto; }
+
+/* Loading (audit T-M05): Galeri and Mozaik beside the title hold their place, as the chips do (32 high in a 44 target, 4 apart). */
+.skeletonChips { display: flex; align-items: center; gap: var(--mw-space-4); height: var(--mw-touch); }

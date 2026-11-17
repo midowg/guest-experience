@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { sampleSession, sampleSessions } from "../sample";
 import { sampleAdminPeople } from "./sample";
 import {
-  blankSession, changeNote, inputTimes, lineupFromText, lineupToText, minutesLabel, overlaps, parseRundownPaste, scheduleChanges, sessionInputSchema, sessionRow,
-  sessionToInput, shifted, shiftNote, shiftSchema,
+  blankSession, changeNote, deleteRefusal, IN_USE_REFUSAL, inputTimes, keepsData, lineupFromText, lineupToText, listWords, minutesLabel, overlaps, parseRundownPaste,
+  scheduleChanges, sessionInputSchema, sessionRow, sessionToInput, shiftConflict, shifted, shiftNote, shiftSchema, usageWords,
 } from "./rundown";
 import { sessionsPostSchema } from "./requests";
 
@@ -72,11 +72,20 @@ describe("geser jam", () => {
     expect(shiftNote([sampleSession("silent")], 30).body).toBe("Silent Meeting mundur 30 menit: 13.30–15.00.");
     expect(shiftNote([sampleSession("team-building"), sampleSession("makan-siang-2")], -15).body).toBe("2 sesi maju 15 menit, mulai Makan siang 11.45–12.45.");
   });
-  it("accepts 5-minute steps up to 12 hours, never zero", () => {
+  it("accepts 5-minute steps up to 12 hours, never zero, each session with the version the page saw (audit S7)", () => {
     const id = sampleSession("silent").id;
-    expect(shiftSchema.safeParse({ ids: [id], minutes: 30, notify: true }).success).toBe(true);
-    for (const minutes of [0, 7, 725, -800]) expect(shiftSchema.safeParse({ ids: [id], minutes, notify: false }).success).toBe(false);
-    expect(shiftSchema.safeParse({ ids: [], minutes: 30, notify: false }).success).toBe(false);
+    const items = [{ id, version: "2026-12-01T00:00:00.123456+00:00" }];
+    expect(shiftSchema.safeParse({ items, minutes: 30, notify: true }).success).toBe(true);
+    for (const minutes of [0, 7, 725, -800]) expect(shiftSchema.safeParse({ items, minutes, notify: false }).success).toBe(false);
+    expect(shiftSchema.safeParse({ items: [], minutes: 30, notify: false }).success).toBe(false);
+    // Without versions, or the same session twice: refused.
+    expect(shiftSchema.safeParse({ ids: [id], minutes: 30, notify: false }).success).toBe(false);
+    expect(shiftSchema.safeParse({ items: [{ id, version: "" }], minutes: 30, notify: false }).success).toBe(false);
+    expect(shiftSchema.safeParse({ items: [...items, ...items], minutes: 30, notify: false }).success).toBe(false);
+  });
+  it("says a refused Geser jam plainly, naming the session when known", () => {
+    expect(shiftConflict("Pemaparan departemen")).toBe("Pemaparan departemen baru saja diubah orang lain (mungkin lewat Rundown live), jadi tidak ada yang digeser. Muat ulang halaman untuk melihat jam terbarunya, lalu geser lagi.");
+    expect(shiftConflict()).toMatch(/^Ada sesi yang baru saja diubah orang lain/);
   });
   it("flags sessions that overlap in the same place (meals and cancelled left out)", () => {
     const pemaparan = sampleSession("pemaparan");
@@ -130,5 +139,25 @@ describe("impor rundown", () => {
     expect(sessionsPostSchema.safeParse({ action: "impor", sessions: [input] }).success).toBe(true);
     expect(sessionsPostSchema.safeParse({ action: "impor", sessions: [] }).success).toBe(false);
     expect(sessionsPostSchema.safeParse({ action: "hapus-semua" }).success).toBe(false);
+  });
+});
+
+describe("Hapus or Batalkan (audit M4)", () => {
+  const none = { attendance: 0, photos: 0, silent: false, awards: 0, activityGroups: 0 };
+  it("lists in Indonesian", () => {
+    expect(listWords([])).toBe("");
+    expect(listWords(["a"])).toBe("a");
+    expect(listWords(["a", "b"])).toBe("a dan b");
+    expect(listWords(["a", "b", "c"])).toBe("a, b, dan c");
+  });
+  it("names what keeps a session, kelompok kegiatan not among them", () => {
+    expect(usageWords({ ...none, attendance: 1240, photos: 3, silent: true, awards: 2 })).toBe("1.240 absen, 3 foto Momen, pertanyaan Silent Meeting, dan 2 kategori Awarding");
+    expect(keepsData({ ...none, activityGroups: 6 })).toBe(false);
+    expect(keepsData({ ...none, silent: true })).toBe(true);
+    expect(keepsData(null)).toBe(false);
+  });
+  it("refuses with what it has and the way out", () => {
+    expect(deleteRefusal({ ...none, attendance: 12 })).toBe("Sesi ini sudah punya 12 absen. Pakai Batalkan.");
+    expect(IN_USE_REFUSAL).toBe("Sesi ini sudah punya absen, foto, Silent Meeting, atau Awarding. Pakai Batalkan.");
   });
 });

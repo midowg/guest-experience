@@ -5,8 +5,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Card, ConsoleButton, Pill } from "@/components/console";
 import { Notice } from "@/components/ui";
 import { adminRequest, errorMessage } from "@/components/admin/shared/api";
-import { ADMIN_METHODS, ADMIN_NOMINEE_KINDS, nomineeKindLabels, type AwardCategoryInput, type NomineeInput } from "@/lib/main-wam/modul/admin";
-import { MODUL_MIGRATION } from "@/lib/main-wam/modul/absen";
+import { ADMIN_METHODS, ADMIN_NOMINEE_KINDS, adminRange, adminWhen, nomineeKindLabels, WAITING_TEXT, type AwardCategoryInput, type NomineeInput } from "@/lib/main-wam/modul/admin";
 import { methodLabel } from "@/lib/main-wam/modul/awards";
 import { votingState } from "@/lib/main-wam/module-state";
 import { wibDate, wibTime } from "@/lib/main-wam/rundown";
@@ -20,16 +19,17 @@ type Message = { tone: "success" | "error"; text: string } | null;
 /** "2027-01-06T08:00" (WIB, for <input type="datetime-local">) ↔ an ISO instant. */
 export const toLocal = (iso: string | null) => (iso ? `${wibDate(iso)}T${wibTime(iso)}` : "");
 export const fromLocal = (value: string) => (value ? `${value}:00+07:00` : null);
-const stamp = (iso: string | null) => (iso ? `${wibDate(iso).slice(8, 10)}/${wibDate(iso).slice(5, 7)} ${wibTime(iso).replace(":", ".")}` : "–");
+const stamp = adminWhen;
 
 const methodWords: Record<(typeof ADMIN_METHODS)[number], string> = { voting: "Voting karyawan", juri: "Juri BOD" };
 
 /**
  * Admin WAM → Main WAM → Awarding (agen D): categories (voted or judged), their window and
- * announcement time, the nominees (people, Momen photos, a kelompok or a department), and the
- * count per nominee with the BOD's approval. Never who voted for whom.
+ * announcement time, the nominees (people, Momen photos, a kelompok or a department), and, once
+ * voting closed, the count per nominee with the BOD's approval (audit M1: no running count, as the
+ * BOD). Never who voted for whom.
  */
-export function AwardsAdmin({ initial }: { initial: AdminAwards }) {
+export function AwardsAdmin({ initial, now: nowIso }: { initial: AdminAwards; /** Preview only: the moment shown. */ now?: string }) {
   const [data, setData] = useState(initial);
   const [message, setMessage] = useState<Message>(null);
   const [editing, setEditing] = useState<string | "baru" | null>(null);
@@ -50,14 +50,14 @@ export function AwardsAdmin({ initial }: { initial: AdminAwards }) {
   }
 
   return <div className={css.stack}>
-    {!data.migrated && <Notice tone="warning">Awarding menunggu migrasi Main WAM (202611200003 dan {MODUL_MIGRATION}). Sampai saat itu kategori belum bisa disimpan.</Notice>}
+    {!data.migrated && <Notice tone="warning">{WAITING_TEXT}</Notice>}
     <div aria-live="polite">{message && <Notice tone={message.tone}>{message.text}</Notice>}</div>
-    <p className={css.note}>Peserta memilih satu nominasi per kategori selama voting dibuka (bisa diubah sampai ditutup, tidak bisa memilih diri sendiri). Perolehan suara tidak tampil ke peserta; BOD menyetujui pemenang di aplikasi sebelum diumumkan.</p>
+    <p className={css.note}>Peserta memilih satu nominasi per kategori selama voting dibuka (bisa diubah sampai ditutup, tidak bisa memilih diri sendiri). Perolehan suara tampil di sini dan ke BOD setelah voting ditutup, tidak pernah ke peserta. BOD menyetujui pemenang di aplikasi sebelum diumumkan.</p>
     {data.categories.map(category => {
       const tally = data.tallies.find(item => item.categoryId === category.id);
       const approval = data.approvals.find(item => item.categoryId === category.id);
       const nominee = (id: string) => nomineeLabel(category, id, data);
-      const state = category.method === "voting" ? votingState(category, new Date()) : null;
+      const state = category.method === "voting" ? votingState(category, nowIso ? new Date(nowIso) : new Date()) : null;
       return <Card key={category.id} title={category.title} id={`kategori-${category.id}`}>
         <div className={css.badges}>
           <Pill tone={category.published ? "ok" : "neutral"}>{category.published ? "Terbit" : "Draf"}</Pill>
@@ -66,7 +66,7 @@ export function AwardsAdmin({ initial }: { initial: AdminAwards }) {
           {approval && <Pill tone="brass">Disetujui BOD</Pill>}
         </div>
         <p className={css.meta}>
-          {category.method === "voting" && <span>Voting {stamp(category.opensAt)} – {stamp(category.closesAt)}</span>}
+          {category.method === "voting" && <span>Voting {adminRange(category.opensAt, category.closesAt)}</span>}
           <span>Diumumkan {stamp(category.announceAt)}</span>
           <span>Sesi: {category.sessionId ? sessions.get(category.sessionId)?.title ?? "–" : "–"}</span>
           <span>Nominasi: {nomineeKindLabels[category.nomineeKind]} ({category.nominees.length})</span>
@@ -80,6 +80,7 @@ export function AwardsAdmin({ initial }: { initial: AdminAwards }) {
           </li>)}
         </ul>}
         {tally && <p className={css.small}>{tally.total} suara masuk. Hanya jumlah per nominasi; siapa memilih siapa tidak ditampilkan.</p>}
+        {!tally && (state === "buka" || state === "belum") && <p className={css.small}>Perolehan suara tampil setelah voting ditutup.</p>}
         {editing === category.id && <CategoryForm category={category} data={data} busy={busy} onCancel={() => setEditing(null)}
           onSave={input => run(async () => (await adminRequest(mainWamAdminApi.awardCategory(category.id), { method: "PATCH", body: JSON.stringify(input) })).message).then(ok => { if (ok) setEditing(null); })} />}
         {nominating === category.id && <NomineesForm category={category} data={data} busy={busy} onCancel={() => setNominating(null)}

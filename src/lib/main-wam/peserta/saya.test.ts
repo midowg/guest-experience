@@ -8,7 +8,7 @@ import type { MwNotification } from "../types";
 import { contactLinks, phoneDigits } from "./contact";
 import { dateLabel, dayTime, durationLabel, untilLabel } from "./format";
 import { denahFor, fileShown, guideLine, paragraphs, shownGuides } from "./guides";
-import { groupNotifications, noteHash, noteTarget } from "./notifications";
+import { firstSentence, groupNotifications, noteHash, noteLine, noteTarget } from "./notifications";
 import { afterSignIn } from "./onboarding";
 import { activityRows, memberRows, profileLine, roomRow, roomSub, roomWith, stayTime } from "./saya";
 import { coordinatorOf, directionLabel, ticketOf, travelDirection, travelSteps } from "./travel";
@@ -113,8 +113,27 @@ describe("Notifikasi", () => {
       ["Absen", "07.52", false], ["Jalan ke Aula Utama lewat lobby timur", "07.10", false],
     ]);
     expect(earlier.map(row => [row.title, row.time])).toEqual([["Kamar", "Sen, 4 Jan"]]);
+    // T-P01: the row says the news, not its kind.
+    expect([...today, ...earlier].map(row => row.line)).toEqual([
+      "Team building mulai 15.00 di Lawn", "Pemaparan selesai 12.30", "Dimas dan 4 lainnya menyukai fotomu",
+      "Absen tercatat: Pemaparan departemen", "Jalan ke Aula Utama lewat lobby timur", "Kamarmu siap: Kamar 208, lantai 2",
+    ]);
     expect(today[0]).toMatchObject({ href: null, meta: "Pengumuman panitia · 10.30" });
     expect(earlier[0].meta).toBe("Kamar · Sen, 4 Jan · 15.10");
+  });
+
+  it("T-P01: a title that only names the kind gives way to the text; a title that says something stays", () => {
+    const note = (kind: MwNotification["kind"], title: string, body: string, fromPraWam = false) => ({ kind, title, body, fromPraWam });
+    expect(noteLine(note("jadwal", "Jadwal berubah", "Pemaparan departemen: 08.00–12.30 (tadinya 08.00–12.00). Makan siang mundur."))).toBe("Pemaparan departemen: 08.00–12.30 (tadinya 08.00–12.00)");
+    expect(noteLine(note("jadwal", "Tempat berubah", "Makan siang pindah ke Resto Lawn."))).toBe("Makan siang pindah ke Resto Lawn");
+    expect(noteLine(note("jadwal", "Sesi dibatalkan", "Trekking (Rab, 6 Jan 06.00–09.00) dibatalkan."))).toBe("Trekking (Rab, 6 Jan 06.00–09.00) dibatalkan");
+    expect(noteLine(note("momen", "Fotomu disembunyikan sementara", "Ada rekan yang melaporkan fotomu."))).toBe("Fotomu disembunyikan sementara");
+    expect(noteLine(note("silent", "Silent Meeting dibuka", "Apa yang perlu diubah? Kirim masukan tanpa nama."))).toBe("Silent Meeting dibuka");
+    expect(noteLine(note("pengumuman", "Kumpul di lobby", "Bawa jaket."))).toBe("Kumpul di lobby");
+    expect(noteLine(note("lain", "Kabar", "", false))).toBe("Kabar");
+    expect(noteLine(note("lain", "Info", "Kartu tokoh sudah keluar.", true))).toBe("Info");
+    expect(firstSentence("Apa yang perlu diubah? Kirim masukan.")).toBe("Apa yang perlu diubah?");
+    expect(firstSentence("Mulai 12.30 di Aula")).toBe("Mulai 12.30 di Aula");
   });
 
   it("follows only addresses inside Main WAM", () => {
@@ -155,12 +174,12 @@ describe("words and contacts", () => {
   });
 
   it("turn a number into a call and a WhatsApp chat, or nothing", () => {
-    expect(phoneDigits("0812-3456-7890")).toBe("6281234567890");
-    expect(phoneDigits("+62 812 3456 7890")).toBe("6281234567890");
-    expect(phoneDigits("812 3456 7890")).toBe("6281234567890");
+    expect(phoneDigits("0800-0000-0001")).toBe("6280000000001");
+    expect(phoneDigits("+62 800 0000 0001")).toBe("6280000000001");
+    expect(phoneDigits("800 0000 0001")).toBe("6280000000001");
     expect(phoneDigits("")).toBeNull();
     expect(phoneDigits("12")).toBeNull();
-    expect(contactLinks("0812-3456-7890")).toEqual({ tel: "tel:+6281234567890", whatsapp: "https://wa.me/6281234567890" });
+    expect(contactLinks("0800-0000-0001")).toEqual({ tel: "tel:+6280000000001", whatsapp: "https://wa.me/6280000000001" });
     expect(contactLinks(null)).toEqual({ tel: null, whatsapp: null });
   });
 });

@@ -52,9 +52,22 @@ export type AnnounceInput = z.infer<typeof announceSchema>;
 /** PATCH mainWamApi.announcement(id): Lepas dari Beranda. */
 export const announcementPatchSchema = z.object({ pinnedUntil: z.null() });
 
-/** POST mainWamApi.moderatePhoto(id): the decision and the status the panitia saw (someone else may have decided first). */
+/** Quick reasons for Sembunyikan and Hapus (labels: moderationReasonLabels). */
+export const MODERATION_REASONS = ["keberatan", "tidak_pantas", "data_pribadi"] as const;
+export type ModerationReason = (typeof MODERATION_REASONS)[number];
+export const MODERATION_NOTE_MAX = 200;
+/**
+ * POST mainWamApi.moderatePhoto(id): the decision and the status the panitia saw (someone else may
+ * have decided first), and why: a quick reason and/or a short note, both optional (audit L8; kept in
+ * mw_moderation_log.reason, never shown to the uploader or the reporters).
+ */
 export const moderateSchema = z.object({
   action: z.enum(["sembunyikan", "tampilkan", "hapus"], { message: "Tindakan tidak dikenali." }),
   from: z.enum(PHOTO_STATUSES),
+  reason: z.enum(MODERATION_REASONS, { message: "Alasan tidak dikenali." }).nullable().default(null),
+  note: z.string().trim().max(MODERATION_NOTE_MAX, `Catatan paling panjang ${MODERATION_NOTE_MAX} karakter.`).default(""),
 });
+/** What the server works with (after defaults). */
 export type ModerateInput = z.infer<typeof moderateSchema>;
+/** What a screen sends (reason and note may be left out). */
+export type ModerateRequest = z.input<typeof moderateSchema>;

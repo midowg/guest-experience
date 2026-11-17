@@ -105,6 +105,91 @@ begin
   exception when no_data_found then null; end;
   raise notice 'PASS: Main WAM admin sets kelompok, kelompok kegiatan and kursi as a whole';
 end $$;
+
+-- Hapus sesi (audit M4) and Geser jam (audit S7).
+do $$
+declare
+  rani uuid; sari uuid;
+  kosong uuid; absen uuid; foto uuid; silent uuid; award uuid; draf uuid; geser uuid;
+  u record; v1 timestamptz; v2 timestamptz; was timestamptz; n integer;
+begin
+  insert into public.employees (full_name, nickname) values ('Rani Contoh Hapus', 'Rani') returning id into rani;
+  insert into public.employees (full_name, nickname) values ('Sari Contoh Hapus', 'Sari') returning id into sari;
+  insert into public.mw_sessions (title, status, starts_at) values ('Kosong', 'terbit', '2027-01-05 08:00+07') returning id into kosong;
+  insert into public.mw_sessions (title, status, starts_at, uses_attendance) values ('Dengan absen', 'terbit', '2027-01-05 09:00+07', true) returning id into absen;
+  insert into public.mw_sessions (title, status, starts_at) values ('Dengan foto', 'terbit', '2027-01-05 10:00+07') returning id into foto;
+  insert into public.mw_sessions (title, status, starts_at) values ('Dengan Silent Meeting', 'terbit', '2027-01-05 11:00+07') returning id into silent;
+  insert into public.mw_sessions (title, status, starts_at) values ('Dengan Awarding', 'terbit', '2027-01-06 19:00+07') returning id into award;
+  insert into public.mw_attendance (session_id, employee_id, method) values (absen, rani, 'qr'), (absen, sari, 'qr');
+  insert into public.mw_photos (owner_id, client_id, session_id, file_key, size, width, height, status)
+    values (rani, gen_random_uuid(), foto, 'main-wam/momen/' || gen_random_uuid() || '.jpg', 100, 10, 10, 'disembunyikan');
+  insert into public.mw_silent_questions (session_id, question) values (silent, 'Apa yang perlu diubah?');
+  insert into public.mw_award_categories (title, session_id) values ('Rekan paling suportif', award), ('Foto terbaik', award);
+  insert into public.mw_activity_groups (session_id, kind, label) values (kosong, 'pos', 'Pos 1');
+
+  -- What each session has: absen and photos counted (any photo status), Silent Meeting only as yes/no.
+  select * into u from public.mw_admin_session_usage(array[absen]);
+  if u.attendance <> 2 or u.photos <> 0 or u.silent or u.awards <> 0 then raise exception 'two absen expected, got %', u; end if;
+  select * into u from public.mw_admin_session_usage(array[foto]);
+  if u.photos <> 1 then raise exception 'one (hidden) photo expected, got %', u; end if;
+  select * into u from public.mw_admin_session_usage(array[silent]);
+  if not u.silent then raise exception 'a Silent Meeting question expected'; end if;
+  select * into u from public.mw_admin_session_usage(array[award]);
+  if u.awards <> 2 then raise exception 'two Awarding categories expected, got %', u; end if;
+  select * into u from public.mw_admin_session_usage(array[kosong]);
+  if u.attendance + u.photos + u.awards <> 0 or u.silent or u.activity_groups <> 1 then raise exception 'Kosong has only a kelompok kegiatan, got %', u; end if;
+  select count(*) into n from public.mw_admin_session_usage();
+  if n <> (select count(*) from public.mw_sessions) then raise exception 'every session expected without a list'; end if;
+
+  -- Hapus is refused for each of them, and nothing is deleted.
+  foreach kosong in array array[absen, foto, silent, award] loop
+    begin perform public.mw_admin_delete_session(kosong); raise exception 'UNEXPECTED: a session in use was deleted';
+    exception when raise_exception then if sqlerrm <> 'MW_SESSION_IN_USE' then raise; end if; end;
+  end loop;
+  if (select count(*) from public.mw_attendance where session_id = absen) <> 2 then raise exception 'the absen must stay'; end if;
+  if (select session_id from public.mw_photos where owner_id = rani) <> foto then raise exception 'the photo keeps its tag'; end if;
+  -- The database itself refuses deleting a session under a Silent Meeting or an Awarding category (D-sec's
+  -- foreign keys): the server turns 23503 into "Pakai Batalkan".
+  begin delete from public.mw_sessions where id = silent; raise exception 'UNEXPECTED: Silent Meeting deleted with its session';
+  exception when foreign_key_violation then null; end;
+  begin delete from public.mw_sessions where id = award; raise exception 'UNEXPECTED: Awarding category lost its session';
+  exception when foreign_key_violation then null; end;
+  -- A session without any of those is deleted, its kelompok kegiatan with it.
+  select id into kosong from public.mw_sessions where title = 'Kosong';
+  perform public.mw_admin_delete_session(kosong);
+  if exists (select 1 from public.mw_sessions where id = kosong) or exists (select 1 from public.mw_activity_groups where session_id = kosong) then
+    raise exception 'Kosong and its kelompok kegiatan should be gone';
+  end if;
+  begin perform public.mw_admin_delete_session(kosong); raise exception 'UNEXPECTED: deleted twice';
+  exception when no_data_found then null; end;
+
+  -- Geser jam: each session only at the version the admin saw; all or nothing.
+  insert into public.mw_sessions (title, status, starts_at, ends_at) values ('Draf geser', 'draf', '2027-01-07 08:00+07', '2027-01-07 09:00+07') returning id into draf;
+  insert into public.mw_sessions (title, status, starts_at) values ('Terbit geser', 'terbit', '2027-01-07 10:00+07') returning id into geser;
+  select updated_at into v1 from public.mw_sessions where id = draf;
+  select updated_at into v2 from public.mw_sessions where id = geser;
+  n := (select count(*) from public.mw_admin_shift_sessions(jsonb_build_array(jsonb_build_object('id', draf, 'version', v1), jsonb_build_object('id', geser, 'version', v2)), 30, rani));
+  if n <> 2 then raise exception 'two sessions moved expected, got %', n; end if;
+  if (select starts_at from public.mw_sessions where id = draf) <> '2027-01-07 08:30+07' or (select ends_at from public.mw_sessions where id = draf) <> '2027-01-07 09:30+07' then
+    raise exception 'the draft should be 08.30–09.30';
+  end if;
+  if (select ends_at from public.mw_sessions where id = geser) is not null then raise exception 'a moment without an end stays without one'; end if;
+  if (select changed_at from public.mw_sessions where id = draf) is not null then raise exception 'a draft is not marked diubah'; end if;
+  if (select changed_by from public.mw_sessions where id = geser) <> rani then raise exception 'the published one is marked diubah Rani'; end if;
+  -- Rundown live changed "Terbit geser" since: the admin's old version is refused, the draft does not move either.
+  was := (select starts_at from public.mw_sessions where id = draf);
+  select updated_at into v1 from public.mw_sessions where id = draf;
+  begin
+    perform public.mw_admin_shift_sessions(jsonb_build_array(jsonb_build_object('id', draf, 'version', v1), jsonb_build_object('id', geser, 'version', v2)), 15, rani);
+    raise exception 'UNEXPECTED: an old version moved';
+  exception when raise_exception then if sqlerrm <> 'MW_SESSION_CHANGED' then raise; end if; end;
+  if (select starts_at from public.mw_sessions where id = draf) <> was then raise exception 'a refused Geser jam must not move anything'; end if;
+  begin perform public.mw_admin_shift_sessions(jsonb_build_array(jsonb_build_object('id', gen_random_uuid(), 'version', v1)), 15, rani); raise exception 'UNEXPECTED: an unknown session';
+  exception when no_data_found then null; end;
+  begin perform public.mw_admin_shift_sessions(jsonb_build_array(jsonb_build_object('id', draf, 'version', v1)), 0, rani); raise exception 'UNEXPECTED: zero minutes';
+  exception when raise_exception then if sqlerrm <> 'MW_BAD_INPUT' then raise; end if; end;
+  raise notice 'PASS: Main WAM admin refuses Hapus for a session in use and Geser jam over a newer change';
+end $$;
 reset role;
 
 -- Only the server may call them.
@@ -112,7 +197,8 @@ do $$
 declare fn text;
 begin
   foreach fn in array array['mw_admin_set_group_members(uuid,uuid[],uuid)', 'mw_admin_import_groups(jsonb)', 'mw_admin_set_activity_members(uuid,uuid[])',
-    'mw_admin_import_activity_groups(uuid,jsonb)', 'mw_admin_set_trip_seats(uuid,jsonb,boolean)'] loop
+    'mw_admin_import_activity_groups(uuid,jsonb)', 'mw_admin_set_trip_seats(uuid,jsonb,boolean)', 'mw_admin_session_usage(uuid[])',
+    'mw_admin_delete_session(uuid)', 'mw_admin_shift_sessions(jsonb,integer,uuid)'] loop
     if has_function_privilege('anon', 'public.' || fn, 'execute') or has_function_privilege('authenticated', 'public.' || fn, 'execute') then
       raise exception '% must not be callable by anon or authenticated', fn;
     end if;

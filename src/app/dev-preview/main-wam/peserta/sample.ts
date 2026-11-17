@@ -3,6 +3,7 @@ import {
   announcementCandidates, homeCardView, nextChangeAt, nowView, pickCard, silentCandidates, surveyCandidate, travelCandidate, votingCandidates,
   type HomeCandidate, type HomeData,
 } from "@/lib/main-wam/peserta/home";
+import { eventEndsAt, surveyOpen, surveyStarted, type SurveyForm } from "@/lib/main-wam/peserta/survey";
 import { wibDate } from "@/lib/main-wam/rundown";
 import {
   sampleAttendance, sampleAwards, sampleNotifications, sampleSeats, sampleSessionIds, sampleSessions, sampleSessionsChanged, sampleSettings,
@@ -62,7 +63,14 @@ export function previewNotifications(now: Date, readAll = false): MwNotification
 export type PreviewCard = "pengumuman" | "silent" | "voting" | "berangkat" | "survei" | "tanpa";
 
 /** Beranda at `now` for `viewer`, built by the same functions as the server's loadHome. */
-export function previewHome(now: Date, viewer: MainWamViewer, settings: MainWamSettings = sampleSettings(), force?: PreviewCard | null): HomeData {
+/** The sample questionnaire behind module survei: open, 5 minutes, answers until Kam 12.00 (P01__status "sampai 12.00"). */
+export const previewSurveyForm: SurveyForm = { slug: "survei-wam", status: "buka", editUntil: at(DAYS[3], "12:00"), minutes: 5 };
+
+/**
+ * Beranda at `now` for `viewer`, built by the same functions as the server's loadHome. `surveyDone`:
+ * the person already sent the survey (its card is gone).
+ */
+export function previewHome(now: Date, viewer: MainWamViewer, settings: MainWamSettings = sampleSettings(), force?: PreviewCard | null, surveyDone = false): HomeData {
   const sessions = previewSessions(now);
   const absenOn = settings.modules.absen && mainWamCan(viewer, "absen");
   const checkedIn = new Map(sampleAttendance.filter(row => row.employeeId === viewer.id && Date.parse(row.checkedInAt) <= now.getTime()).map(row => [row.sessionId, row.checkedInAt]));
@@ -72,14 +80,20 @@ export function previewHome(now: Date, viewer: MainWamViewer, settings: MainWamS
     ...announcementCandidates(pinned, now),
     ...(mainWamCan(viewer, "silent-kirim") ? silentCandidates([sampleSilentQuestion], sessions, now) : []),
     ...(mainWamCan(viewer, "voting") ? votingCandidates(sampleAwards, new Set(), now) : []),
-    ...[travelCandidate(sampleTrips, sampleSeats.filter(seat => seat.employeeId === viewer.id), now), surveyCandidate(settings.moduleConfig.survei.formSlug, sessions, now)].filter((card): card is HomeCandidate => !!card),
+    ...[travelCandidate(sampleTrips, sampleSeats.filter(seat => seat.employeeId === viewer.id), now), surveyCandidate(previewSurvey(settings, sessions, now, surveyDone))].filter((card): card is HomeCandidate => !!card),
   ];
   const forced = force === "tanpa" ? null : force ? candidates.find(card => card.kind === force) ?? null : undefined;
   const picked = forced !== undefined ? forced : pickCard(candidates, settings.modules, now);
   return {
     migrated: true, now: view, session: view.kind === "sesi" ? sessions.find(item => item.id === view.sessionId) ?? null : null,
-    card: picked ? homeCardView(picked, now) : null, refreshAt: nextChangeAt(sessions, now), failed: false,
+    card: picked ? homeCardView(picked, now) : null, refreshAt: nextChangeAt(sessions, now), serverNow: now.toISOString(), failed: false,
   };
+}
+
+/** The survey as surveyFor decides it, with the sample questionnaire (`done`: already sent). */
+export function previewSurvey(settings: MainWamSettings, sessions: readonly MwSession[], now: Date, done = false, sessionId?: string) {
+  const start = surveyStarted({ formSlug: settings.moduleConfig.survei.formSlug, moduleOn: settings.modules.survei, sessions, now, eventEnd: eventEndsAt(settings.event.endDate), sessionId });
+  return surveyOpen(start, { form: previewSurveyForm, done, now });
 }
 
 export const previewViewer = (peran?: string) => sampleViewer(peran);

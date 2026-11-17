@@ -212,7 +212,7 @@ export const sampleAwards: MwAwardCategory[] = [
 
 export const sampleSilentQuestion: MwSilentQuestion = {
   id: uid(13, 1), sessionId: sampleSessionIds.silent, question: "Apa yang perlu kita ubah supaya kerja tahun depan lebih ringan?",
-  topics: ["Cara kerja", "Komunikasi", "Kesejahteraan", "Lainnya"], override: null, overrideAt: null, overrideBy: null, autoClose: true,
+  topics: ["Cara kerja", "Komunikasi", "Kesejahteraan", "Lainnya"], openedAt: null, closedAt: null,
 };
 export const sampleSilentFeedback = [
   { topic: "Cara kerja", body: "Rapat mingguan terlalu panjang. Usul: maksimal 30 menit dan notulen dikirim hari itu juga." },

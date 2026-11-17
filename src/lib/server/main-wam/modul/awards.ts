@@ -22,18 +22,26 @@ const db = () => createPrivilegedClient();
 
 export type { NomineeView };
 
+type NominatedPhoto = { id: string; owner_id: string; status: string; audience: string };
+async function nominatedPhotos(categories: readonly MwAwardCategory[]): Promise<NominatedPhoto[]> {
+  const ids = [...new Set(categories.flatMap(category => category.nominees.map(nominee => nominee.photoId).filter((id): id is string => !!id)))];
+  if (!ids.length) return [];
+  const { data, error } = await db().from("mw_photos").select("id,owner_id,status,audience").in("id", ids);
+  if (error) { if (mwMissing(error)) return []; databaseError(error); }
+  return (data ?? []) as NominatedPhoto[];
+}
+
 /** The owners of nominated Momen photos (for "not your own photo" and the caption "Dimas"). */
 export async function photoOwners(categories: readonly MwAwardCategory[]): Promise<Map<string, string>> {
-  const ids = [...new Set(categories.flatMap(category => category.nominees.map(nominee => nominee.photoId).filter((id): id is string => !!id)))];
-  if (!ids.length) return new Map();
-  const { data, error } = await db().from("mw_photos").select("id,owner_id").in("id", ids);
-  if (error) { if (mwMissing(error)) return new Map(); databaseError(error); }
-  return new Map(((data ?? []) as { id: string; owner_id: string }[]).map(row => [row.id, row.owner_id]));
+  return new Map((await nominatedPhotos(categories)).map(row => [row.id, row.owner_id]));
 }
 
 /** Every nominee of these categories as shown (one read of people and photo owners, no N+1). */
 export async function nomineeViews(categories: readonly MwAwardCategory[]): Promise<{ nominees: Map<string, NomineeView>; owners: Map<string, string> }> {
-  const [people, owners] = await Promise.all([mainWamPeople(), photoOwners(categories)]);
+  const [people, photos] = await Promise.all([mainWamPeople(), nominatedPhotos(categories)]);
+  const owners = new Map(photos.map(row => [row.id, row.owner_id]));
+  // Only a photo everyone may open gets a picture (R8): one hidden since, or a kelompok's, shows none, never a 404.
+  const viewable = new Set(photos.filter(row => row.status === "tampil" && row.audience === "semua").map(row => row.id));
   const person = (id: string | null | undefined): MwPerson | null => {
     const found = id ? people.get(id) : undefined;
     return found ? { id: found.id, name: found.name, department: found.department, photo: found.photo } : null;
@@ -45,7 +53,7 @@ export async function nomineeViews(categories: readonly MwAwardCategory[]): Prom
       nominees.set(nominee.id, { id: nominee.id, kind: "orang", name: who?.name ?? (nominee.label || "Rekan"), department: who?.department ?? "", photo: who?.photo ?? null, reason: nominee.reason, ownerId: nominee.employeeId, image: null });
     } else if (nominee.photoId) {
       const owner = owners.get(nominee.photoId) ?? null;
-      nominees.set(nominee.id, { id: nominee.id, kind: "foto", name: person(owner)?.name ?? "Foto Momen", department: "", photo: null, reason: nominee.reason || nominee.label, ownerId: owner, image: mainWamApi.photoFile(nominee.photoId, "kecil") });
+      nominees.set(nominee.id, { id: nominee.id, kind: "foto", name: person(owner)?.name ?? "Foto Momen", department: "", photo: null, reason: nominee.reason || nominee.label, ownerId: owner, image: viewable.has(nominee.photoId) ? mainWamApi.photoFile(nominee.photoId, "kecil") : null });
     } else {
       nominees.set(nominee.id, { id: nominee.id, kind: "label", name: nominee.label, department: "", photo: null, reason: nominee.reason, ownerId: null, image: null });
     }
@@ -100,10 +108,13 @@ export async function castVote(categoryId: string, nomineeId: string, viewer: Pi
 
 /** B06: a BOD approves the winner (voting: once it closed; jury: any time). Panitia hear of it. */
 export async function approveWinner(categoryId: string, nomineeId: string, viewer: Pick<MainWamViewer, "id" | "name">, now: Date): Promise<MwAwardApproval> {
-  const { categories } = await awardsShown();
+  const { categories, approvals } = await awardsShown();
   const category = categories.find(item => item.id === categoryId);
   const refused = approvalRefusal(category, nomineeId, now);
   if (refused) throw new ServiceError(refused.status, refused.message);
+  // The same winner approved again: nothing changes and nobody is told twice (audit L3).
+  const before = approvals.get(categoryId);
+  if (before && before.nomineeId === nomineeId) return before;
   const { data, error } = await db().from("mw_award_approvals")
     .upsert({ category_id: categoryId, nominee_id: nomineeId, approved_by: viewer.id, approved_at: now.toISOString() }, { onConflict: "category_id" })
     .select("category_id,nominee_id,approved_by,approved_at").single();

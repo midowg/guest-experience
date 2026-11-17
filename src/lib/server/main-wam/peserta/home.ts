@@ -9,6 +9,7 @@ import type { MwSession } from "@/lib/main-wam/types";
 import { pinnedForMe } from "../notes";
 import { attendanceOf, awardCategories, listTrips, seatsOf, shownSessions, silentQuestions, votedCategories } from "../read";
 import type { MainWamContext } from "../gate";
+import { surveyFor } from "../survey";
 
 /*
  * Beranda's data (P01/P02), for the page and GET mainWamApi.home: the Sekarang card and the one
@@ -21,7 +22,8 @@ export type { HomeData };
 
 const none = <T>(value: T) => () => value;
 
-export async function loadHome({ viewer, settings }: MainWamContext, now: Date): Promise<HomeData> {
+export async function loadHome(context: MainWamContext, now: Date): Promise<HomeData> {
+  const { viewer, settings } = context;
   const modules = settings.modules;
   const absenOn = modules.absen && mainWamCan(viewer, "absen");
   const today = wibDate(now.toISOString());
@@ -40,15 +42,17 @@ export async function loadHome({ viewer, settings }: MainWamContext, now: Date):
   const sessions = sessionsRead.data;
   const checkedIn = new Map(attendance.map(row => [row.sessionId, row.checkedInAt]));
   const view = nowView({ sessions, now, event: settings.event, absenOn, checkedIn });
+  // Survei reads the questionnaire only once its session has started (surveyFor, audit R7).
+  const survey = await surveyFor(context, sessions, now).catch(() => null);
   const session = view.kind === "sesi" ? sessions.find(item => item.id === view.sessionId) ?? null : null;
 
   const candidates: HomeCandidate[] = [
     ...announcementCandidates(pinned, now),
     ...silentCandidates(questions, sessions, now),
     ...votingCandidates(categories, voted, now),
-    ...[travelCandidate(trips, seats, now), surveyCandidate(settings.moduleConfig.survei.formSlug, sessions, now)].filter((card): card is HomeCandidate => !!card),
+    ...[travelCandidate(trips, seats, now), surveyCandidate(survey)].filter((card): card is HomeCandidate => !!card),
   ];
   const picked = pickCard(candidates, modules, now);
   const refreshAt = nextChangeAt(sessions, now, [...pinned.map(note => note.pinnedUntil), ...candidates.map(card => card.until)]);
-  return { migrated: sessionsRead.migrated && settings.migrated, now: view, session, card: picked ? homeCardView(picked, now) : null, refreshAt, failed: sessionsRead.failed };
+  return { migrated: sessionsRead.migrated && settings.migrated, now: view, session, card: picked ? homeCardView(picked, now) : null, refreshAt, serverNow: now.toISOString(), failed: sessionsRead.failed };
 }
