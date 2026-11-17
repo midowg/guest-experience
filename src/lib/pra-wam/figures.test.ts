@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chosen, figureMatches, figureOfFile, figureScore, pickFigure, rarityOf, reasonText, rerollFigure, type Figure } from "./figures";
+import { chosen, figureGender, figureMatches, figureOfFile, figureScore, pickFigure, rarityOf, reasonText, rerollFigure, type Figure } from "./figures";
 
 const figure = (key: string, personaId: string, rest: Partial<Figure> = {}): Figure => ({
   id: key, number: 1, key, name: key, personaId, costume: "", hobbies: [], activities: [], energy: "", genre: "",
@@ -50,6 +50,24 @@ describe("matching a figure", () => {
     expect(rerollFigure("garda", pool, answers, { "edmund-hillary": 1, "gordon-ramsay": 1, "freddie-mercury": 1 }, "edmund-hillary", first)).toBeNull();
     // The reason still comes from the answers.
     expect(rerollFigure("garda", pool, answers, { "edmund-hillary": 1, "gordon-ramsay": 1 }, "edmund-hillary", first)?.why).toEqual(["suka musik", "suka musik rock"]);
+  });
+
+  it("gives a figure of my gender first: my persona's, then any persona's, then (none free) as before", () => {
+    const susi = figure("susi-susanti", "garda", { gender: "P", hobbies: ["Olahraga & outdoor"] });
+    const kahlo = figure("frida-kahlo", "penyihir", { gender: "P" });
+    const pool = [{ ...hillary, gender: "L" as const }, { ...ramsay, gender: "L" as const }, susi, kahlo];
+    // A woman of Garda: Susi, though Hillary scores more.
+    expect(pickFigure("garda", pool, answers, {}, first, "P")?.figure.key).toBe("susi-susanti");
+    // Susi taken: a woman of another persona before a man of her own.
+    expect(pickFigure("garda", pool, answers, { "susi-susanti": 1 }, first, "P")?.figure.key).toBe("frida-kahlo");
+    // No woman free: as before, the persona's best.
+    expect(pickFigure("garda", pool, answers, { "susi-susanti": 1, "frida-kahlo": 1 }, first, "P")?.figure.key).toBe("edmund-hillary");
+    // A man; and someone whose gender is not filled in: as before.
+    expect(pickFigure("garda", pool, answers, {}, first, "L")?.figure.key).toBe("edmund-hillary");
+    expect(pickFigure("garda", pool, answers, {}, first, null)?.figure.key).toBe("edmund-hillary");
+    // The re-roll too.
+    expect(rerollFigure("garda", pool, answers, { "edmund-hillary": 1 }, "edmund-hillary", first, "P")?.figure.key).toBe("susi-susanti");
+    expect([figureGender("ada-lovelace"), figureGender("bung-tomo")]).toEqual(["P", "L"]);
   });
 
   it("lists what a figure is matched on, each with whether I chose it", () => {

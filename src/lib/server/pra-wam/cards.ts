@@ -4,7 +4,7 @@ import {
   CARDS_MIGRATION, chooseCharacter, comboOf, drawLook, drawTier, partKinds, scoresOf,
   type ArtKind, type Character, type Look, type Part, type PartKind, type Tier,
 } from "@/lib/pra-wam/cards";
-import { chosen, colorsOf, FIGURE_KEYS, figureMatches, legendClasses, pickFigure, rarityOf, reasonText, rerollFigure, ROLE_KEY, type Figure, type MatchItem } from "@/lib/pra-wam/figures";
+import { chosen, colorsOf, FIGURE_KEYS, figureGender, figureMatches, genderFrom, legendClasses, pickFigure, rarityOf, reasonText, rerollFigure, ROLE_KEY, type Figure, type Gender, type MatchItem } from "@/lib/pra-wam/figures";
 import { profileOf, type FigureProfile } from "@/lib/pra-wam/figure-profiles";
 import { editable, type Answers, type QForm } from "@/lib/pra-wam/questionnaire";
 import { praWamApi } from "@/lib/routes";
@@ -92,7 +92,7 @@ export async function catalogOf(formId: string): Promise<Catalog | null> {
       energy: row.energy, genre: row.genre, indonesian: row.indonesian, funny: row.funny, quote: row.quote, hidden: row.hidden,
       // A picture uploaded in Admin WAM wins; until then the handoff's picture that ships with the app.
       image: row.image_key ? artUrl("tokoh", row.id, row.image_key, row.image_updated_at) : builtInFigure(row.key), stored: !!row.image_key,
-      legendImage: builtInLegend(row.key),
+      legendImage: builtInLegend(row.key), gender: figureGender(row.key),
     })),
     figuresReady: !figures.error,
   };
@@ -121,8 +121,8 @@ export type Roll = {
   number: number; landed: string; passed: string[]; tier: string;
   scores: Record<string, number>; tied: string[]; character: string; look: Look;
   changes?: { at: string; from: string; to: string; kept?: "bentrok" }[];
-  /** The figure matched (its key), how it scored, and the figures tied with it. */
-  figure?: { key: string; score: number; tied: string[]; at: string };
+  /** The figure matched (its key), how it scored, the figures tied with it, and my gender then (17 Nov 2026). */
+  figure?: { key: string; score: number; tied: string[]; at: string; gender?: Gender | null };
   /**
    * The one re-roll (v3): when, the figure before and after, and (17 Nov 2026) the rarity before
    * and after with its draw. Never shown to staff.
@@ -288,18 +288,28 @@ async function figuresTaken(formId: string): Promise<{ used: Record<string, numb
   return { used, places };
 }
 
-/** A figure for someone of this persona (place 1: one person per figure), or null when every figure is taken. */
-async function matchFigure(formId: string, catalog: Catalog, personaId: string, answers: Answers, trial: boolean) {
-  const { used, places } = trial ? { used: {}, places: new Set<string>() } : await figuresTaken(formId);
+/** My gender in Data karyawan (L or P), or null when not filled or before its migration (202611060007). */
+async function genderOfPerson(employeeId: string): Promise<Gender | null> {
+  const { data, error } = await createPrivilegedClient().from("employees").select("gender").eq("id", employeeId).maybeSingle();
+  if (error) return null;
+  return genderFrom((data as { gender?: unknown } | null)?.gender);
+}
+
+/**
+ * A figure for someone of this persona (place 1: one person per figure), of their gender first
+ * (17 Nov 2026), or null when every figure is taken.
+ */
+async function matchFigure(formId: string, catalog: Catalog, personaId: string, answers: Answers, trial: boolean, employeeId: string) {
+  const [{ used, places }, gender] = await Promise.all([trial ? { used: {}, places: new Set<string>() } : figuresTaken(formId), genderOfPerson(employeeId)]);
   const persona = catalog.characters.find(item => item.id === personaId);
-  const match = pickFigure(personaId, catalog.figures, answers, used, secure);
+  const match = pickFigure(personaId, catalog.figures, answers, used, secure, gender);
   if (!match) return null;
   // Place 1 only (v3): the database refuses a taken one, so a clash draws again.
   const slot = 1;
   if (places.has(`${match.figure.id}|${slot}`)) return null;
   return {
     figure: match.figure, slot, reason: reasonText(persona?.class ?? "", match.figure.name, match.why),
-    record: { key: match.figure.key, score: match.score, tied: match.tied, at: new Date().toISOString() },
+    record: { key: match.figure.key, score: match.score, tied: match.tied, at: new Date().toISOString(), gender },
   };
 }
 
@@ -328,7 +338,7 @@ async function draw(form: QForm, employeeId: string, answers: Answers, catalog: 
 
     const chosen = chooseCharacter(shown, answers, null, secure)!;
     const tier = drawTier(catalog.tiers, trial ? {} : taken, secure);
-    const match = figures ? await matchFigure(form.id, catalog, chosen.id, answers, trial) : null;
+    const match = figures ? await matchFigure(form.id, catalog, chosen.id, answers, trial, employeeId) : null;
     if (figures && !match) throw new ServiceError(409, "Semua tokoh sudah dipakai. Hubungi admin WAM untuk menambah tokoh.");
     let look: Look = { background: 1, accent: 1, stickers: [] };
     if (!match) {
@@ -373,7 +383,7 @@ async function draw(form: QForm, employeeId: string, answers: Answers, catalog: 
 async function giveFigure(form: Pick<QForm, "id">, row: PersonCardRow, answers: Answers, catalog: Catalog): Promise<PersonCardRow> {
   const client = createPrivilegedClient();
   for (let attempt = 0; attempt < 6; attempt++) {
-    const match = await matchFigure(form.id, catalog, row.card_id, answers, row.trial);
+    const match = await matchFigure(form.id, catalog, row.card_id, answers, row.trial, row.employee_id);
     if (!match) return row;
     const combo = row.trial ? `uji|${row.employee_id}` : figureCombo(match.figure.id, match.slot);
     const roll: Roll = { ...row.roll, figure: match.record };
@@ -455,8 +465,9 @@ export async function rerollCard(form: Pick<QForm, "id">, employeeId: string): P
     const state = rerollOf(row, await rerollUntil(form.id));
     if (state.state === "used") throw new ServiceError(409, "Kamu sudah memakai jatah re-roll.");
     if (state.state === "closed") throw new ServiceError(409, "Re-roll tokoh sedang tidak dibuka.");
-    const [{ used }, answers] = await Promise.all([figuresTaken(form.id), figureAnswers(form.id, [employeeId])]);
-    const pick = rerollFigure(row.card_id, catalog.figures, answers.get(employeeId) ?? {}, used, row.figure_id, secure);
+    const [{ used }, answers, gender] = await Promise.all([figuresTaken(form.id), figureAnswers(form.id, [employeeId]), genderOfPerson(employeeId)]);
+    // Of my gender first, as the first draw (17 Nov 2026).
+    const pick = rerollFigure(row.card_id, catalog.figures, answers.get(employeeId) ?? {}, used, row.figure_id, secure, gender);
     if (!pick) throw new ServiceError(409, "Tidak ada tokoh lain yang masih kosong.");
     const persona = catalog.characters.find(item => item.id === row.card_id);
     const from = catalog.figures.find(item => item.id === row.figure_id)?.key ?? row.figure_id;
