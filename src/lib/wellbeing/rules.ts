@@ -273,3 +273,72 @@ export function logValues(mode: PointsMode, input: Pick<LogInput, "steps" | "kca
   const problem = kcal === null ? "Isi kalori yang terbakar." : kcal < 1 ? "Kalori minimal 1." : kcal > settings.maxKcal ? `Paling banyak ${count(settings.maxKcal)} kkal untuk satu olahraga.` : null;
   return problem ? { ok: false, fieldErrors: { kcal: [problem] } } : { ok: true, steps: null, kcal, minutes: input.minutes ?? null };
 }
+
+/* ---------- Hadiah (18 Nov 2026, migration 202611180001) ---------- */
+
+export const MIGRATION_WELLBEING_REWARDS = "202611180001_wellbeing_rewards.sql";
+export const MAX_REWARD_PHOTOS = 6;
+
+/**
+ * A claim's life: requested (points held, waiting for the admin), approved, delivered (handed over), or
+ * rejected (with a reason) / cancelled (by the employee while it waits): the last two give the points back.
+ */
+export const CLAIM_STATUSES = ["requested", "approved", "delivered", "rejected", "cancelled"] as const;
+export type ClaimStatus = (typeof CLAIM_STATUSES)[number];
+export const claimStatusLabels: Record<ClaimStatus, string> = {
+  requested: "Diajukan", approved: "Disetujui", delivered: "Diserahkan", rejected: "Ditolak", cancelled: "Dibatalkan",
+};
+/** The claims that hold points (and count against the stock and the per-person limit). */
+export const claimHolds = (status: ClaimStatus) => status === "requested" || status === "approved" || status === "delivered";
+
+/** The saldo: every point that counts (the board's total), minus what open and handed-over claims hold. */
+export function saldoOf(earned: number, claims: readonly { status: ClaimStatus; cost: number }[]) {
+  const held = claims.filter(claim => claimHolds(claim.status)).reduce((sum, claim) => sum + claim.cost, 0);
+  return { earned, held, available: earned - held };
+}
+
+export type RewardState = "available" | "short" | "sold_out" | "limit";
+/** What a reward is for this person now (the server checks it again, in one transaction, on a claim). */
+export function rewardState(input: { cost: number; stock: number | null; taken: number; perPerson: number; mine: number; available: number }): RewardState {
+  if (input.mine >= input.perPerson) return "limit";
+  if (input.stock !== null && input.taken >= input.stock) return "sold_out";
+  return input.available >= input.cost ? "available" : "short";
+}
+
+/** An admin's next steps for a claim: approve or reject a request, hand over a request or an approved one. */
+export const CLAIM_ACTIONS = ["approve", "deliver", "reject"] as const;
+export type ClaimAction = (typeof CLAIM_ACTIONS)[number];
+export const claimActionFrom: Record<ClaimAction, ClaimStatus[]> = { approve: ["requested"], deliver: ["requested", "approved"], reject: ["requested", "approved"] };
+export const claimActionTo: Record<ClaimAction, ClaimStatus> = { approve: "approved", deliver: "delivered", reject: "rejected" };
+
+const rewardPhotoSchema = z.object({
+  key: z.string().min(1).max(500),
+  /** Only for a photo uploaded just now (its upload is checked); kept photos have none. */
+  upload: uploadStartSchema.extend({ token: z.string().regex(/^\d{10,13}\.[0-9a-f]{64}$/, "Unggahan tidak dikenali. Unggah ulang fotonya.") }).optional(),
+});
+export const rewardInputSchema = z.object({
+  title: z.string().trim().min(2, "Isi nama hadiah.").max(120, "Nama hadiah paling banyak 120 karakter."),
+  description: z.string().trim().max(2000, "Keterangan paling banyak 2.000 karakter.").default(""),
+  photos: z.array(rewardPhotoSchema).max(MAX_REWARD_PHOTOS, `Paling banyak ${MAX_REWARD_PHOTOS} foto.`).default([]),
+  cost: z.number().int("Harga dalam poin, bilangan bulat.").min(1, "Harga minimal 1 poin.").max(10_000_000, "Harga terlalu besar."),
+  stock: z.number().int().min(0, "Stok tidak boleh minus.").max(100_000, "Stok terlalu besar.").nullable(),
+  perPerson: z.number().int().min(1, "Batas per orang minimal 1.").max(100, "Batas per orang paling banyak 100."),
+  active: z.boolean(),
+}).superRefine((value, ctx) => {
+  if (new Set(value.photos.map(photo => photo.key)).size !== value.photos.length) ctx.addIssue({ code: "custom", path: ["photos"], message: "Ada foto yang terpasang dua kali." });
+});
+export type RewardInput = z.infer<typeof rewardInputSchema>;
+
+export const claimRequestSchema = z.object({
+  rewardId: z.string().uuid("Hadiah tidak dikenali."),
+  note: z.string().trim().max(300, "Catatan paling banyak 300 karakter.").default(""),
+});
+export type ClaimRequestInput = z.infer<typeof claimRequestSchema>;
+
+export const claimDecisionSchema = z.object({
+  action: z.enum(CLAIM_ACTIONS),
+  reason: z.string().trim().max(300, "Alasan paling banyak 300 karakter.").default(""),
+}).superRefine((value, ctx) => {
+  if (value.action === "reject" && value.reason.length < 2) ctx.addIssue({ code: "custom", path: ["reason"], message: "Tulis alasan penolakan (dibaca karyawan)." });
+});
+export type ClaimDecisionInput = z.infer<typeof claimDecisionSchema>;

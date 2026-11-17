@@ -1,7 +1,7 @@
 "use client";
 
-import { defaultAppControls, monthRange, previousMonth, rank, wibToday, type AppControls, type DimensionId, type ReviewInput } from "@/lib/wellbeing/rules";
-import type { WbActivity, WbCatalogItem, WbOverview, WbPeople, WbPersonDetail, WbPersonRow, WbSettingsView } from "@/lib/wellbeing/types";
+import { defaultAppControls, monthRange, previousMonth, rank, wibToday, type AppControls, type ClaimStatus, type DimensionId, type ReviewInput } from "@/lib/wellbeing/rules";
+import type { WbActivity, WbAdminClaim, WbAdminReward, WbCatalogItem, WbOverview, WbPeople, WbPersonDetail, WbPersonRow, WbRewardsAdmin, WbSettingsView } from "@/lib/wellbeing/types";
 
 /*
  * Admin Wellbeing on sample data (17 Nov 2026), for /dev-preview/wellbeing-admin only: the page's
@@ -87,6 +87,36 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
   const ok = (data: unknown, message = "OK") => new Response(JSON.stringify({ ok: true, data, message }), { headers: { "Content-Type": "application/json" } });
   const refuse = (status: number, message: string) => new Response(JSON.stringify({ ok: false, message }), { status, headers: { "Content-Type": "application/json" } });
 
+  // Hadiah (18 Nov 2026): three prizes, claims waiting and done.
+  type MockReward = { id: string; title: string; description: string; photos: string[]; cost: number; stock: number | null; perPerson: number; active: boolean; updatedAt: string; updatedBy: string | null };
+  let uploads = 0;
+  let rewards: MockReward[] = [
+    { id: "30000000-0000-4000-8000-0000000000a1", title: "Voucher Decathlon Rp250.000", description: "Voucher belanja Decathlon, berlaku 6 bulan.", photos: ["wellbeing/hadiah/a1.jpg"], cost: 35000, stock: 4, perPerson: 1, active: true, updatedAt: `${day(3)}T03:00:00.000Z`, updatedBy: "Meida" },
+    { id: "30000000-0000-4000-8000-0000000000a2", title: "Tumbler Hydro Flask 32 oz", description: "Botol minum baja tahan karat.", photos: ["wellbeing/hadiah/a2.jpg", "wellbeing/hadiah/a2b.jpg"], cost: 30000, stock: 2, perPerson: 1, active: true, updatedAt: `${day(3)}T03:00:00.000Z`, updatedBy: "Meida" },
+    { id: "30000000-0000-4000-8000-0000000000a3", title: "Jam olahraga Garmin", description: "Dibawa dari aplikasi lama, cek dulu sebelum dinyalakan.", photos: [], cost: 300000, stock: 1, perPerson: 1, active: false, updatedAt: `${day(1)}T03:00:00.000Z`, updatedBy: "Pindah data" },
+  ];
+  const rewardPhoto = (key: string) => photo(key.includes("a1") ? "Voucher" : "Tumbler", key.includes("a1") ? "250K" : "32oz");
+  const claims: WbAdminClaim[] = [
+    { id: "30000000-0000-4000-8000-0000000000c1", rewardId: rewards[0].id, rewardTitle: rewards[0].title, rewardPhoto: null, employeeId: people[1].id, employeeName: people[1].nickname, department: people[1].department, cost: 35000, status: "requested", note: "", reason: null, createdAt: `${day(0)}T02:10:00.000Z`, decidedBy: null, decidedAt: null, deliveredBy: null, deliveredAt: null },
+    { id: "30000000-0000-4000-8000-0000000000c2", rewardId: rewards[1].id, rewardTitle: rewards[1].title, rewardPhoto: null, employeeId: people[0].id, employeeName: people[0].nickname, department: people[0].department, cost: 30000, status: "requested", note: "Warna hitam kalau ada", reason: null, createdAt: `${day(1)}T07:40:00.000Z`, decidedBy: null, decidedAt: null, deliveredBy: null, deliveredAt: null },
+    { id: "30000000-0000-4000-8000-0000000000c3", rewardId: rewards[0].id, rewardTitle: rewards[0].title, rewardPhoto: null, employeeId: people[2].id, employeeName: people[2].nickname, department: people[2].department, cost: 35000, status: "delivered", note: "", reason: null, createdAt: `${day(9)}T04:00:00.000Z`, decidedBy: "Meida", decidedAt: `${day(8)}T04:00:00.000Z`, deliveredBy: "Meida", deliveredAt: `${day(7)}T04:00:00.000Z` },
+  ];
+  const holds = (status: ClaimStatus) => status === "requested" || status === "approved" || status === "delivered";
+  const rewardOf = (item: MockReward): WbAdminReward => ({ ...item, photos: item.photos.map(key => ({ key, url: rewardPhoto(key) })),
+    taken: claims.filter(claim => claim.rewardId === item.id && holds(claim.status)).length, waiting: claims.filter(claim => claim.rewardId === item.id && (claim.status === "requested" || claim.status === "approved")).length });
+  const rewardsView = (): WbRewardsAdmin => {
+    const counts = { requested: 0, approved: 0, delivered: 0, rejected: 0, cancelled: 0 } as Record<ClaimStatus, number>;
+    for (const claim of claims) counts[claim.status] += 1;
+    return { migrated: !options.notReady, rewards: rewards.map(rewardOf), claims: claims.map(claim => ({ ...claim, rewardPhoto: rewards.find(item => item.id === claim.rewardId)?.photos[0] ? rewardPhoto(rewards.find(item => item.id === claim.rewardId)!.photos[0]) : null })), counts };
+  };
+  const saveReward = (item: MockReward | null, body: Record<string, unknown>): MockReward => {
+    const next: MockReward = { id: item?.id ?? `30000000-0000-4000-8000-${String(Date.now()).slice(-12)}`, title: String(body.title), description: String(body.description ?? ""),
+      photos: ((body.photos as { key: string }[] | undefined) ?? []).map(entry => entry.key), cost: Number(body.cost), stock: body.stock === null ? null : Number(body.stock), perPerson: Number(body.perPerson), active: !!body.active,
+      updatedAt: new Date().toISOString(), updatedBy: "Admin (pratinjau)" };
+    rewards = item ? rewards.map(entry => entry.id === item.id ? next : entry) : [next, ...rewards];
+    return next;
+  };
+
   const original = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, window.location.href);
@@ -131,6 +161,28 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
       if (!settings.appReady) return refuse(503, "Kontrol aplikasi menunggu migrasi 202611170002_wellbeing_time_app.sql.");
       settings.app = body as unknown as AppControls; settings.updatedBy = "Admin (pratinjau)"; settings.updatedAt = new Date().toISOString();
       return ok(settings, "Pengaturan aplikasi karyawan disimpan.");
+    }
+    // Hadiah (18 Nov 2026).
+    if (path === "/rewards" && method === "GET") return ok(rewardsView());
+    if (path === "/rewards/uploads" && method === "POST") { uploads += 1; const key = `wellbeing/hadiah/30000000-0000-4000-8000-${String(uploads).padStart(12, "0")}.${body.mime === "image/png" ? "png" : body.mime === "image/webp" ? "webp" : "jpg"}`; return ok({ key, uploadUrl: `mock:${key}`, token: `${Math.floor(Date.now() / 1000) + 3600}.${"0".repeat(64)}` }); }
+    if (path === "/rewards" && method === "POST") { const item = saveReward(null, body); return ok(rewardOf(item), item.active ? "Hadiah ditambahkan dan tampil di aplikasi karyawan." : "Hadiah disimpan sebagai draf (belum tampil)."); }
+    const reward = /^\/rewards\/([0-9a-f-]{36})$/.exec(path);
+    if (reward && method === "PATCH") { const item = rewards.find(entry => entry.id === reward[1]); if (!item) return refuse(404, "Hadiah tidak ditemukan."); return ok(rewardOf(saveReward(item, body)), "Hadiah disimpan."); }
+    if (reward && method === "DELETE") {
+      if (claims.some(claim => claim.rewardId === reward[1])) return refuse(409, "Hadiah ini sudah pernah diklaim. Matikan Aktif saja supaya tidak tampil lagi; riwayat klaimnya tetap ada.");
+      rewards = rewards.filter(entry => entry.id !== reward[1]); return ok({ deleted: true }, "Hadiah dihapus.");
+    }
+    const claim = /^\/rewards\/claims\/([0-9a-f-]{36})$/.exec(path);
+    if (claim && method === "POST") {
+      const item = claims.find(entry => entry.id === claim[1]);
+      if (!item) return refuse(404, "Klaim tidak ditemukan.");
+      const action = body.action as "approve" | "deliver" | "reject";
+      const from = action === "approve" ? ["requested"] : ["requested", "approved"];
+      if (!from.includes(item.status)) return refuse(409, "Status klaim ini sudah berubah. Muat ulang daftarnya.");
+      const at = new Date().toISOString();
+      if (action === "deliver") Object.assign(item, { status: "delivered", deliveredBy: "Admin (pratinjau)", deliveredAt: at });
+      else Object.assign(item, { status: action === "approve" ? "approved" : "rejected", decidedBy: "Admin (pratinjau)", decidedAt: at, reason: action === "reject" ? String(body.reason ?? "") : null });
+      return ok({ ...item }, action === "approve" ? "Klaim disetujui." : action === "deliver" ? "Hadiah ditandai sudah diserahkan." : "Klaim ditolak. Poinnya kembali ke saldo karyawan.");
     }
     if (path === "/export") return refuse(501, "Pratinjau tanpa database: berkas Excel dibuat oleh server di admin sungguhan.");
     // Strava (18 Nov 2026): keys and table ready, no webhook yet; Aktifkan webhook needs the real Strava.

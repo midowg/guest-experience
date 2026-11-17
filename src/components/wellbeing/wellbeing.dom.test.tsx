@@ -292,6 +292,30 @@ describe("WellbeingApp", () => {
     await waitFor(() => expect(screen.getByText("Hari ini sudah tercatat. Lanjutkan besok.")).toBeTruthy());
   });
 
+  it("trades the saldo for a reward: the saldo card, a claim held from the saldo, and Batalkan while it waits (18 Nov 2026)", async () => {
+    app();
+    const card = await screen.findByRole("button", { name: /^Saldo poin [\d.]+\. .+\. Buka Hadiah$/ }, { timeout: 3000 });
+    const before = Number(/^Saldo poin ([\d.]+)/.exec(card.getAttribute("aria-label") ?? "")![1].replace(/\./g, ""));
+    fireEvent.click(card);
+    const grid = await within(dialog()).findByRole("list", { name: "Daftar hadiah" });
+    // Short of points: how many more; enough: Bisa diklaim.
+    expect(within(grid).getByRole("button", { name: /^Jam olahraga Garmin, 300\.000 poin, Kurang [\d.]+ poin$/ })).toBeTruthy();
+    fireEvent.click(within(grid).getByRole("button", { name: "Kelas yoga satu bulan, 15.000 poin, Bisa diklaim" }));
+    fireEvent.change(await within(dialog()).findByLabelText(/Catatan untuk admin/), { target: { value: "Jadwal Sabtu pagi" } });
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Ajukan klaim · 15.000 poin" }));
+    expect(await within(dialog()).findByText("Permintaan terkirim", {}, { timeout: 3000 })).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Lihat klaim saya" }));
+    // The points are held: the saldo is 15.000 less; Klaim saya has it waiting, with my note.
+    expect(within(dialog()).getByRole("region", { name: "Saldo poin" }).textContent).toContain((before - 15000).toLocaleString("id-ID"));
+    const mine = within(within(dialog()).getByRole("list", { name: "Klaim saya" })).getAllByRole("listitem")[0];
+    expect(within(mine).getByText("Diajukan")).toBeTruthy();
+    expect(within(mine).getByText("Catatanmu: Jadwal Sabtu pagi")).toBeTruthy();
+    fireEvent.click(within(mine).getByRole("button", { name: "Batalkan" }));
+    fireEvent.click(within(mine).getByRole("button", { name: "Ya, batalkan" }));
+    expect(await within(mine).findByText("Dibatalkan", {}, { timeout: 3000 })).toBeTruthy();
+    expect(within(dialog()).getByRole("region", { name: "Saldo poin" }).textContent).toContain(before.toLocaleString("id-ID"));
+  });
+
   it("says where the save leaves me in the race", async () => {
     app(mockApi({ latency: [0, 0], empty: true }));
     await screen.findByText("Total poin");

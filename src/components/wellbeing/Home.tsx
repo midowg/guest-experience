@@ -11,6 +11,7 @@ import { dimensionIcons, Icon } from "./icons";
 import { StreakFlame } from "./Flame";
 import { ActivityRow, cx, Empty, ErrorState, LeaderRow, Sk, SkRows, StaleBar } from "./parts";
 import { chaseOf, daysLeftLabel, litToday, rankTrend } from "./race";
+import { RewardsCard } from "./Rewards";
 import css from "./wellbeing.module.css";
 
 /*
@@ -40,6 +41,8 @@ export function Home({ home }: { home: Resource<WbHome> }) {
     {data.controls?.announcement && <Announcement announcement={data.controls.announcement} />}
 
     <RaceCard data={data} board={board.data?.migrated ? board.data : null} boardLoading={!board.data && !board.error} />
+    {/* Hadiah (18 Nov 2026): the saldo and the nearest reward, once the admin has put rewards up. */}
+    <RewardsCard />
     <Around board={board.data?.migrated ? board.data : null} />
     <Week data={data} />
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Activity, BadgeCheck, CalendarCheck, Camera, Flame, LogOut, Sigma } from "lucide-react";
+import { Activity, BadgeCheck, CalendarCheck, Camera, Flame, Gift, LogOut, Sigma } from "lucide-react";
 import { useResource, type Resource } from "@/components/app-shell/resource";
 import type { WbHome } from "@/lib/wellbeing/app-types";
 import { keys, useTheme, useWellbeing } from "./context";
@@ -19,11 +19,13 @@ import css from "./wellbeing.module.css";
  * the Riwayat tab only.
  */
 export function Profile({ home }: { home: Resource<WbHome> }) {
-  const { api, me, openStrava, openTheme, openPhoto, askSignOut } = useWellbeing();
+  const { api, me, openStrava, openTheme, openPhoto, openRewards, askSignOut } = useWellbeing();
   // Every point that counts, read only for the records here (Riwayat shows the list).
   const ledger = useResource(keys.ledger, () => api.ledger());
   // Strava's state on its row: Belum tersambung, Tersambung · sinkron …, Perlu sambung ulang (18 Nov 2026).
   const strava = useResource(keys.strava, () => api.strava());
+  const rewards = useResource(keys.rewards, () => api.rewards()).data;
+  const waiting = rewards?.claims.filter(claim => claim.status === "requested" || claim.status === "approved").length ?? 0;
   const [theme] = useTheme();
   const totals = home.data?.totals;
   const person = home.data?.me ?? me;
@@ -50,6 +52,14 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
       <div><span><Flame size={14} aria-hidden="true" />Streak terlama</span>{records
         ? <><b>{num(records.longestStreak)} hari</b><small>sekarang {num(totals?.streak ?? 0)} hari</small></>
         : <><Sk width={64} height={22} /><Sk width={48} height={10} /></>}</div>
+    </div>
+
+    {/* Hadiah (18 Nov 2026): the saldo and my claims, in the same sheet as Beranda's saldo card. */}
+    <h2 className={css.groupLabel}>Hadiah</h2>
+    <div className={cx(css.card, css.list)}>
+      <NavRow lead={<span className={cx(css.lead, css.toneGold)}><Gift size={22} aria-hidden="true" /></span>} title="Hadiah & klaim saya"
+        meta={rewards?.migrated ? `Saldo ${num(rewards.saldo.available)} poin${waiting ? ` · ${num(waiting)} klaim diproses` : ""}` : "Tukar poin dengan hadiah"}
+        onClick={() => openRewards(waiting ? "klaim" : "hadiah")} />
     </div>
 
     <h2 className={css.groupLabel}>Pengaturan</h2>

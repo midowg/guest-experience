@@ -610,7 +610,8 @@ export const tvAdminPath = {
  */
 // The address is /admin/wlm (WLM, the programme's name, 18 Nov 2026); /admin/wellbeing redirects here.
 export const WELLBEING_ADMIN = "/admin/wlm";
-export const WELLBEING_ADMIN_SECTIONS = ["hari-ini", "periksa", "karyawan", "laporan", "pengaturan"] as const;
+// Hadiah (18 Nov 2026): the rewards and the claims to decide.
+export const WELLBEING_ADMIN_SECTIONS = ["hari-ini", "periksa", "karyawan", "hadiah", "laporan", "pengaturan"] as const;
 export type WellbeingAdminSection = (typeof WELLBEING_ADMIN_SECTIONS)[number];
 export const wellbeingAdminPath = (section: WellbeingAdminSection = "hari-ini") => section === "hari-ini" ? WELLBEING_ADMIN : `${WELLBEING_ADMIN}/${section}`;
 const WELLBEING_ADMIN_API = "/api/admin/wellbeing";
@@ -636,6 +637,14 @@ export const wellbeingAdminApi = {
   appControls: `${WELLBEING_ADMIN_API}/settings/app`,
   /** GET the office's Strava app; POST Aktifkan webhook (18 Nov 2026). */
   strava: `${WELLBEING_ADMIN_API}/strava`,
+  /** Hadiah (18 Nov 2026): GET everything, POST a new reward. */
+  rewards: `${WELLBEING_ADMIN_API}/rewards`,
+  /** PATCH (change) or DELETE (never claimed) one reward. */
+  reward: (id: string) => `${WELLBEING_ADMIN_API}/rewards/${id}`,
+  /** POST { mime, size }: where to upload one reward photo. */
+  rewardUploads: `${WELLBEING_ADMIN_API}/rewards/uploads`,
+  /** POST { action, reason }: approve, hand over, or reject a claim. */
+  claim: (id: string) => `${WELLBEING_ADMIN_API}/rewards/claims/${id}`,
 };
 
 /*
@@ -668,4 +677,10 @@ export const wellbeingApi = {
   stravaSync: `${WELLBEING_API}/strava/sync`,
   /** Strava's webhook (its check and its events). */
   stravaWebhook: `${WELLBEING_API}/strava/webhook`,
+  /** Hadiah (18 Nov 2026): my saldo, the rewards, my claims. */
+  rewards: `${WELLBEING_API}/rewards`,
+  /** POST { rewardId, note }: ask for a reward. */
+  claims: `${WELLBEING_API}/rewards/claims`,
+  /** POST: cancel my claim while it waits. */
+  claim: (id: string) => `${WELLBEING_API}/rewards/claims/${id}`,
 };

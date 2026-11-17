@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { ClipboardCheck, Crown, FileSpreadsheet, House, Settings2, Users } from "lucide-react";
+import { ClipboardCheck, Crown, FileSpreadsheet, Gift, House, Settings2, Users } from "lucide-react";
 import { ConsoleLogoutButton, ConsoleShell, ConsoleTheme, type ConsoleNavGroup } from "@/components/console";
 import admin from "@/components/admin/admin.module.css";
 import { prefetch, useResource } from "@/components/app-shell/resource";
@@ -13,6 +13,7 @@ import { ExportPanel, LaporanView, type ExportPreset } from "./LaporanView";
 import { PeopleView } from "./PeopleView";
 import { PersonPanel, PointsPanel } from "./PeoplePanels";
 import { ReviewView } from "./ReviewView";
+import { RewardsView } from "./RewardsView";
 import { SettingsView } from "./SettingsView";
 import { TodayView } from "./TodayView";
 import css from "./wellbeing-admin.module.css";
@@ -24,7 +25,7 @@ import css from "./wellbeing-admin.module.css";
  * Every address still opens directly (the page is a catch-all), and Back/Forward work.
  */
 
-const labels: Record<WellbeingAdminSection, string> = { "hari-ini": "Hari ini", periksa: "Periksa", karyawan: "Karyawan", laporan: "Laporan", pengaturan: "Pengaturan" };
+const labels: Record<WellbeingAdminSection, string> = { "hari-ini": "Hari ini", periksa: "Periksa", karyawan: "Karyawan", hadiah: "Hadiah", laporan: "Laporan", pengaturan: "Pengaturan" };
 export const sectionOf = (pathname: string, base = WELLBEING_ADMIN): WellbeingAdminSection | null => {
   if (pathname === base || pathname === `${base}/`) return "hari-ini";
   if (!pathname.startsWith(`${base}/`)) return null;
@@ -37,6 +38,7 @@ const warm: Record<WellbeingAdminSection, () => void> = {
   "hari-ini": () => prefetch(wb.overview.key, wb.overview.fetch),
   periksa: () => { const r = wb.activities({ filter: "unchecked", kind: "all", q: "" }); prefetch(r.key, r.fetch); },
   karyawan: () => { const r = wb.people("month"); prefetch(r.key, r.fetch); },
+  hadiah: () => prefetch(wb.rewards.key, wb.rewards.fetch),
   laporan: () => { prefetch(wb.overview.key, wb.overview.fetch); const r = wb.people("month"); prefetch(r.key, r.fetch); },
   pengaturan: () => { prefetch(wb.catalog.key, wb.catalog.fetch); prefetch(wb.settings.key, wb.settings.fetch); },
 };
@@ -57,6 +59,8 @@ export function WellbeingAdmin({ person, basePath = WELLBEING_ADMIN }: { person:
   const pathOf = useMemo(() => pathIn(basePath), [basePath]);
   const [exporting, setExporting] = useState<{ open: boolean; preset: ExportPreset; round: number }>({ open: false, preset: {}, round: 0 });
   const overview = useResource(wb.overview.key, wb.overview.fetch);
+  // Hadiah: the claims waiting for a decision, as the menu's badge (18 Nov 2026).
+  const rewards = useResource(wb.rewards.key, wb.rewards.fetch);
   const [points, setPoints] = useState<{ open: boolean; ids: string[]; round: number }>({ open: false, ids: [], round: 0 });
   const [personId, setPersonId] = useState<string | null>(null);
 
@@ -92,15 +96,17 @@ export function WellbeingAdmin({ person, basePath = WELLBEING_ADMIN }: { person:
   useEffect(() => { document.title = `${labels[section]} · Admin Wellbeing`; }, [section]);
 
   const unchecked = overview.data?.unchecked ?? 0;
+  const requested = rewards.data?.counts.requested ?? 0;
   const nav: ConsoleNavGroup[] = useMemo(() => [
     { label: "Wellbeing", items: [
       { key: "hari-ini", label: "Hari ini", href: pathOf("hari-ini"), icon: <House size={20} /> },
       { key: "periksa", label: "Periksa", href: pathOf("periksa"), icon: <ClipboardCheck size={20} />, ...(unchecked ? { badge: String(unchecked), badgeLabel: "belum diperiksa" } : {}) },
       { key: "karyawan", label: "Karyawan", href: pathOf("karyawan"), icon: <Users size={20} /> },
+      { key: "hadiah", label: "Hadiah", href: pathOf("hadiah"), icon: <Gift size={20} />, ...(requested ? { badge: String(requested), badgeLabel: "klaim menunggu" } : {}) },
       { key: "laporan", label: "Laporan", href: pathOf("laporan"), icon: <FileSpreadsheet size={20} /> },
       { key: "pengaturan", label: "Pengaturan", href: pathOf("pengaturan"), icon: <Settings2 size={20} /> },
     ] },
-  ], [unchecked, pathOf]);
+  ], [unchecked, requested, pathOf]);
 
   const actions = useMemo<Actions>(() => ({
     openPoints: (ids = []) => setPoints(current => ({ open: true, ids, round: current.round + 1 })), openPerson: id => setPersonId(id), go, pathOf,
@@ -109,6 +115,7 @@ export function WellbeingAdmin({ person, basePath = WELLBEING_ADMIN }: { person:
   let view: ReactNode;
   if (section === "periksa") view = <ReviewView />;
   else if (section === "karyawan") view = <PeopleView />;
+  else if (section === "hadiah") view = <RewardsView />;
   else if (section === "laporan") view = <LaporanView />;
   else if (section === "pengaturan") view = <SettingsView />;
   else view = <TodayView />;

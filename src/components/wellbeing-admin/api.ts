@@ -2,7 +2,7 @@
 
 import { adminRequest } from "@/components/admin/shared/api";
 import { wellbeingAdminApi } from "@/lib/routes";
-import type { WbActivityPage, WbCatalog, WbOverview, WbPeople, WbPersonDetail, WbSettingsView, WbStravaAdmin } from "@/lib/wellbeing/types";
+import type { WbActivityPage, WbCatalog, WbOverview, WbPeople, WbPersonDetail, WbRewardsAdmin, WbSettingsView, WbStravaAdmin } from "@/lib/wellbeing/types";
 
 /** Admin Wellbeing's data keys (resource.ts) and how each is fetched. All start with "wb:" so one revalidate refreshes them. */
 export type ActivityQuery = { filter: "unchecked" | "all" | "adjusted" | "rejected"; kind: "all" | "daily" | "sport" | "strava"; q: string };
@@ -20,6 +20,8 @@ export const wb = {
   catalog: { key: "wb:catalog", fetch: () => get<WbCatalog>(wellbeingAdminApi.catalog) },
   settings: { key: "wb:settings", fetch: () => get<WbSettingsView>(wellbeingAdminApi.settings) },
   strava: { key: "wb:strava", fetch: () => get<WbStravaAdmin>(wellbeingAdminApi.strava) },
+  /** Hadiah (18 Nov 2026): rewards, claims, counts. */
+  rewards: { key: "wb:rewards", fetch: () => get<WbRewardsAdmin>(wellbeingAdminApi.rewards) },
 };
 
 /** A write: JSON in, the API's `{ data, message }` out (throws AdminApiError with the message). */

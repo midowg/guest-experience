@@ -1,7 +1,7 @@
 "use client";
 
-import type { WbAppCatalog, WbAppControls, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbRules, WbStrava, WbStravaSync } from "@/lib/wellbeing/app-types";
-import { addDays, aroundMe, claimedPoints, dateProblem, DIMENSIONS, dimensionLabels, limitReached, MIN_STEPS, monthRange, rank, wibToday, type DimensionId, type Limit } from "@/lib/wellbeing/rules";
+import type { WbAppCatalog, WbAppControls, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbClaim, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbReward, WbRewards, WbRules, WbSaldo, WbStrava, WbStravaSync } from "@/lib/wellbeing/app-types";
+import { addDays, aroundMe, claimedPoints, claimHolds, dateProblem, dimensionLabels, DIMENSIONS, limitReached, MIN_STEPS, monthRange, rank, rewardState, saldoOf, wibToday, type DimensionId, type Limit } from "@/lib/wellbeing/rules";
 import { cancelledError, WellbeingApiError, type BoardDim, type BoardPeriod, type RequestOptions, type WellbeingApi } from "./api";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 
@@ -280,6 +280,26 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
     : { ready: true, connected: true, status: strava.state === "reconnect" ? "reconnect" : "ok", athleteName: "Dewi C.", connectedAt: "2026-11-03T02:00:00.000Z", lastSyncAt: strava.lastSyncAt,
       lastError: strava.state === "reconnect" ? "Strava menolak sambungan (dicabut atau kedaluwarsa). Sambungkan ulang." : null, private: true };
 
+  // Hadiah (18 Nov 2026): sample prizes, others' claims (taken), and my claims; the saldo follows my all-time points.
+  const rewardItems = [
+    { id: "00000000-0000-4000-8000-0000000000b1", title: "Voucher Decathlon Rp250.000", description: "Voucher belanja Decathlon, bisa dipakai di semua toko Decathlon Indonesia.\nBerlaku 6 bulan sejak diserahkan.",
+      photos: photos(2, "Voucher Decathlon", 3), cost: 35000, stock: 4 as number | null, taken: 1, perPerson: 1 },
+    { id: "00000000-0000-4000-8000-0000000000b2", title: "Tumbler Hydro Flask 32 oz", description: "Botol minum baja tahan karat, menjaga dingin 24 jam. Warna dipilih saat penyerahan.",
+      photos: photos(3, "Tumbler", 7), cost: 30000, stock: 2, taken: 0, perPerson: 1 },
+    { id: "00000000-0000-4000-8000-0000000000b3", title: "Kelas yoga satu bulan", description: "Empat kali kelas yoga di studio mitra kantor.", photos: photos(1, "Kelas yoga", 11), cost: 15000, stock: null, taken: 3, perPerson: 2 },
+    { id: "00000000-0000-4000-8000-0000000000b4", title: "Jam olahraga Garmin", description: "Jam pintar untuk lari dan bersepeda, lengkap dengan GPS.", photos: photos(2, "Garmin", 17), cost: 300000, stock: 1, taken: 0, perPerson: 1 },
+  ];
+  const claims: WbClaim[] = notReady || options.empty ? [] : [{
+    id: "00000000-0000-4000-8000-0000000000c1", rewardId: rewardItems[2].id, title: rewardItems[2].title, photo: rewardItems[2].photos[0], cost: 15000, status: "delivered", note: "",
+    reason: null, createdAt: `${addDays(today, -20)}T03:00:00.000Z`, decidedAt: `${addDays(today, -19)}T03:00:00.000Z`, deliveredAt: `${addDays(today, -18)}T03:00:00.000Z`,
+  }];
+  const saldo = (): WbSaldo => saldoOf(myPoints("all", "all"), claims);
+  const rewardView = (item: (typeof rewardItems)[number]): WbReward => {
+    const mine = claims.filter(claim => claim.rewardId === item.id && claimHolds(claim.status)).length, taken = item.taken + mine;
+    return { id: item.id, title: item.title, description: item.description, photos: item.photos, cost: item.cost, left: item.stock === null ? null : Math.max(0, item.stock - taken), perPerson: item.perPerson, mine,
+      state: rewardState({ cost: item.cost, stock: item.stock, taken, perPerson: item.perPerson, mine, available: saldo().available }) };
+  };
+
   return {
     home: () => call(() => ({ migrated: !notReady, me: sampleMe, today, totals: totals(), dims: myDims("month"), recent: notReady ? [] : newest().slice(0, 5), rules: RULES, controls })),
     catalog: () => call<WbAppCatalog>(() => notReady ? { migrated: false, today, rules: RULES, sports: [], daily: [], controls } : ({
@@ -379,5 +399,26 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
     }),
     stravaDisconnect: () => call<WbStrava>(() => { strava.state = "none"; return stravaNow(); }),
     stravaConnect: () => { strava.state = "ok"; strava.lastSyncAt = new Date().toISOString(); },
+    rewards: () => call<WbRewards>(() => notReady ? { migrated: false, saldo: { earned: 0, held: 0, available: 0 }, rewards: [], claims: [] }
+      : { migrated: true, saldo: saldo(), rewards: rewardItems.map(rewardView), claims: [...claims].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) }),
+    claimReward: ({ rewardId, note }) => call(() => {
+      const item = rewardItems.find(entry => entry.id === rewardId);
+      if (!item) throw new WellbeingApiError("Hadiah ini sudah tidak tersedia. Muat ulang daftarnya.", 409, { code: ["unavailable"] });
+      const view = rewardView(item);
+      if (view.state === "limit") throw new WellbeingApiError("Kamu sudah mengklaim hadiah ini sebanyak batasnya.", 409, { code: ["limit"] });
+      if (view.state === "sold_out") throw new WellbeingApiError("Hadiah ini sudah habis diklaim.", 409, { code: ["sold_out"] });
+      if (view.state === "short") throw new WellbeingApiError("Saldo poinmu belum cukup untuk hadiah ini.", 409, { code: ["balance"] });
+      const claim: WbClaim = { id: `00000000-0000-4000-8000-${String(Date.now()).slice(-12).padStart(12, "0")}`, rewardId, title: item.title, photo: item.photos[0] ?? null, cost: item.cost,
+        status: "requested", note: note.trim().slice(0, 300), reason: null, createdAt: new Date().toISOString(), decidedAt: null, deliveredAt: null };
+      claims.push(claim);
+      return { claim, saldo: saldo() };
+    }, 0.15),
+    cancelClaim: id => call(() => {
+      const claim = claims.find(entry => entry.id === id);
+      if (!claim) throw new WellbeingApiError("Klaim tidak ditemukan.", 404);
+      if (claim.status !== "requested") throw new WellbeingApiError("Klaim ini sudah diproses admin, jadi tidak bisa dibatalkan lagi.", 409);
+      claim.status = "cancelled";
+      return { claim, saldo: saldo() };
+    }, 0.15),
   };
 }

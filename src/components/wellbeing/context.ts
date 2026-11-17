@@ -18,6 +18,8 @@ export const keys = {
   board: (period: BoardPeriod, dim: BoardDim) => `wbapp:board:${period}:${dim}`,
   ledger: "wbapp:ledger",
   strava: "wbapp:strava",
+  /** Hadiah (18 Nov 2026): saldo, rewards, my claims. */
+  rewards: "wbapp:rewards",
 };
 
 /** Opens Catat at a kind of activity (Catat ulang, or Catat olahraga from the Strava card). */
@@ -37,12 +39,14 @@ export type WellbeingActions = {
   setPhoto: (photo: string | null) => void;
   /** Peringkat's full list (Lihat semua), for the period and dimension on screen. */
   openBoard: () => void;
+  /** Hadiah (18 Nov 2026): the rewards, or my claims. */
+  openRewards: (tab?: "hadiah" | "klaim") => void;
   askSignOut: () => void;
 };
 const noop = () => {};
 export const WellbeingContext = createContext<WellbeingActions>({
   api: realApi, me: { id: "", name: "", nickname: "", department: "", position: "" },
-  go: noop, openCatat: noop, openActivity: noop, openStrava: noop, openTheme: noop, openPhoto: noop, setPhoto: noop, openBoard: noop, askSignOut: noop,
+  go: noop, openCatat: noop, openActivity: noop, openStrava: noop, openTheme: noop, openPhoto: noop, setPhoto: noop, openBoard: noop, openRewards: noop, askSignOut: noop,
 });
 export const useWellbeing = () => useContext(WellbeingContext);
 

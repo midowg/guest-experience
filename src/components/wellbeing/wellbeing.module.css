@@ -779,3 +779,62 @@ input[type="date"].input { display: block; }
 .stravaPoints b { color: var(--text); }
 .stravaPowered { margin: 16px 0 0; text-align: center; font-size: 12px; letter-spacing: .02em; color: var(--text-3); }
 .stravaPowered b { color: var(--strava); font-weight: 800; }
+
+/* ---------- hadiah (18 Nov 2026) ---------- */
+.toneGold { background: var(--gold-c); color: var(--on-gold-c); }
+/* The saldo on an ink card (the sheet), and as a row-card under the race on Beranda. */
+.saldo { position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;
+  background: var(--ink); color: var(--on-ink); border: 1px solid var(--ink-edge); border-radius: 20px; padding: 16px 18px; }
+.saldo::before { content: ""; position: absolute; z-index: -1; width: 200px; height: 200px; right: -60px; top: -80px; border-radius: 50%; background: radial-gradient(closest-side, rgba(244, 197, 66, .22), transparent); }
+.saldoMain { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.saldoLabel { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--on-ink-2); }
+.saldoLabel svg { color: var(--gold-ink); }
+.saldoValue { font-family: var(--font-num); font-weight: 700; font-size: 44px; line-height: 1; font-variant-numeric: tabular-nums; }
+.saldoMeta { font-size: 12px; color: var(--on-ink-2); }
+.saldoCard { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px; padding: 12px 14px; border-radius: 16px; text-align: left;
+  background: var(--surface); border: 1px solid var(--outline); color: var(--text); min-height: 64px; }
+.saldoCard:active { background: var(--surface-2); }
+.saldoIcon { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; flex: none; background: var(--gold-c); color: var(--on-gold-c); }
+.saldoCardLabel { font-size: 12px; font-weight: 700; color: var(--text-2); }
+.saldoCardValue { font-family: var(--font-num); font-weight: 700; font-size: 24px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.saldoCardValue small, .rewardCost small { font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--text-2); }
+
+/* The rewards: two to a row, photo on top. */
+.rewardGrid { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.rewardCard { display: flex; flex-direction: column; width: 100%; height: 100%; text-align: left; border-radius: 16px; overflow: hidden; background: var(--surface); border: 1px solid var(--outline); color: var(--text); }
+.rewardCard:active { transform: scale(.98); }
+.rewardPhoto { position: relative; display: grid; place-items: center; aspect-ratio: 1; background: var(--surface-2); color: var(--text-3); }
+.rewardPhoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rewardCard[data-state="sold_out"] .rewardPhoto img { filter: grayscale(1); opacity: .6; }
+.rewardLeft { position: absolute; left: 8px; top: 8px; height: 24px; padding: 0 8px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 11px; font-weight: 700;
+  background: rgba(14, 21, 37, .78); color: #fff; }
+.rewardBody { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 12px; flex: 1; }
+.rewardTitle { font-size: 14px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rewardCost { font-family: var(--font-num); font-weight: 700; font-size: 20px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.rewardBar { display: block; height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.rewardBar > i { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
+.rewardState { font-size: 12px; font-weight: 600; color: var(--text-2); margin-top: auto; }
+.rewardCard[data-state="available"] .rewardState { color: var(--on-success-c); }
+.rewardCard[data-state="sold_out"] .rewardState { color: var(--error); }
+
+/* A reward's detail: its photos side by side (swipe), then the price and the facts. */
+.rewardGallery { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; border-radius: 16px; scrollbar-width: none; }
+.rewardGallery::-webkit-scrollbar { display: none; }
+.rewardGallery img { flex: 0 0 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 16px; scroll-snap-align: center; background: var(--surface-2); }
+.rewardGallery:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.rewardNoPhoto { aspect-ratio: 4 / 3; display: grid; place-items: center; background: var(--surface-2); color: var(--text-3); }
+.rewardHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.rewardShort { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); }
+.rewardShort .chaseLine { color: var(--text-2); }
+.rewardShort .chaseLine b { color: var(--text); }
+.rewardText { margin-top: 12px; font-size: 15px; line-height: 1.55; color: var(--text); white-space: pre-line; }
+.textarea { min-height: 72px; padding: 12px 14px; resize: vertical; line-height: 1.45; }
+
+/* Klaim saya. */
+.claimList { list-style: none; margin: 16px 0 0; padding: 0; }
+.claimPhoto { width: 48px; height: 48px; border-radius: 12px; overflow: hidden; flex: none; display: grid; place-items: center; background: var(--surface-2); color: var(--text-3); }
+.claimPhoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.claimReason { font-size: 13px; color: var(--on-error-c); background: var(--error-c); border-radius: 8px; padding: 6px 8px; margin-top: 4px; }
+.claimCancel { align-self: flex-start; min-height: 44px; margin: 0 0 -8px -12px; gap: 6px; font-size: 14px; }
+.claimAsk { display: flex; align-items: center; flex-wrap: wrap; gap: 0 4px; margin: 4px 0 -8px; font-size: 13px; color: var(--text-2); }
+.claimAsk .btn { min-height: 44px; font-size: 14px; }

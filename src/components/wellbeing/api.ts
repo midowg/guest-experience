@@ -6,7 +6,7 @@ import { compressImage } from "@/lib/compress-image";
 import type { PhotoMime } from "@/lib/pra-wam/photo";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 import { praWamApi, wellbeingApi, wellbeingPath } from "@/lib/routes";
-import type { WbAppCatalog, WbBoard, WbHome, WbLedger, WbLogInput, WbLogResult, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbStrava, WbStravaSync, WbUploadedPhoto, WbUploadStart } from "@/lib/wellbeing/app-types";
+import type { WbAppCatalog, WbBoard, WbClaimResult, WbHome, WbLedger, WbLogInput, WbLogResult, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbRewards, WbStrava, WbStravaSync, WbUploadedPhoto, WbUploadStart } from "@/lib/wellbeing/app-types";
 import type { DimensionId } from "@/lib/wellbeing/rules";
 
 /*
@@ -46,6 +46,12 @@ export type WellbeingApi = {
   stravaDisconnect(): Promise<WbStrava>;
   /** Off to Strava's page to allow WLM (a page visit; Strava comes back to Profil). */
   stravaConnect(): void;
+  /** Hadiah (18 Nov 2026): my saldo, the rewards that are on, my claims. */
+  rewards(): Promise<WbRewards>;
+  /** Ask for a reward (409 with code "balance" | "sold_out" | "limit" | "unavailable"). */
+  claimReward(input: { rewardId: string; note: string }): Promise<WbClaimResult>;
+  /** Cancel my claim while it waits. */
+  cancelClaim(id: string): Promise<WbClaimResult>;
 };
 
 /** A refused request: the server's message, its status, and per-field messages (fieldErrors.code for 409s). */
@@ -124,6 +130,9 @@ export const realApi: WellbeingApi = {
   stravaSync: () => request<WbStravaSync>(wellbeingApi.stravaSync, { method: "POST" }),
   stravaDisconnect: () => request<WbStrava>(wellbeingApi.strava, { method: "DELETE" }),
   stravaConnect: () => window.location.assign(wellbeingApi.stravaConnect),
+  rewards: () => request<WbRewards>(wellbeingApi.rewards),
+  claimReward: input => request<WbClaimResult>(wellbeingApi.claims, { method: "POST", json: input }),
+  cancelClaim: id => request<WbClaimResult>(wellbeingApi.claim(id), { method: "POST" }),
 };
 
 const wait = (ms: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {

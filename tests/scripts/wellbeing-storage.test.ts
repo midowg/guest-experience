@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { archiveKey, csvText, isLink, movePhotos, photoKey, sniffKind } from "../../scripts/wellbeing-storage-lib.mjs";
+import { archiveKey, csvText, isLink, movePhotos, photoKey, rewardPhotoKeyOf, sniffKind } from "../../scripts/wellbeing-storage-lib.mjs";
 
 /* Moving the old Wellbeing app's storage into Journey (scripts/wellbeing-storage.mjs, 18 Nov 2026). */
 
@@ -27,6 +27,10 @@ describe("wellbeing storage move", () => {
     expect(key).toMatch(new RegExp(`^wellbeing/${EMPLOYEE}/[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}\\.jpg$`));
     expect(photoKey(EMPLOYEE, OLD, "jpg")).toBe(key);
     expect(photoKey(EMPLOYEE, OLD.replace("-0.jpg", "-1.jpg"), "jpg")).not.toBe(key);
+    // A reward photo link (Hadiah, 18 Nov 2026): under wellbeing/hadiah/, fixed by the link too.
+    const reward = rewardPhotoKeyOf("https://i.ibb.co.com/abc/tumbler.webp", "webp");
+    expect(reward).toMatch(/^wellbeing\/hadiah\/[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}\.webp$/);
+    expect(rewardPhotoKeyOf("https://i.ibb.co.com/abc/tumbler.webp", "webp")).toBe(reward);
     // The archive is outside wellbeing/: never signed or shown by the app.
     expect(archiveKey("quest-proofs", "/activity-proofs/a.jpg")).toBe("arsip/wellbeing-lama/quest-proofs/activity-proofs/a.jpg");
   });

@@ -45,6 +45,12 @@ export function photoKey(employeeId, url, ext) {
   return `wellbeing/${employeeId}/${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}.${ext}`;
 }
 
+/** A reward's photo brought over as a link (Hadiah, 18 Nov 2026): wellbeing/hadiah/<id fixed by the link>.<ext>, like the admin's uploads. */
+export function rewardPhotoKeyOf(url, ext) {
+  const h = crypto.createHash("sha1").update(`wellbeing-hadiah:${url}`).digest("hex");
+  return `wellbeing/hadiah/${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}.${ext}`;
+}
+
 /** Where any old storage object is kept for the archive: outside wellbeing/, so the app never shows it. */
 export const archiveKey = (bucket, objectPath) => `arsip/wellbeing-lama/${bucket}/${objectPath.replace(/^\/+/, "")}`;
 

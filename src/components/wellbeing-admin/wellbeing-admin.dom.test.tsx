@@ -144,4 +144,46 @@ describe("Admin Wellbeing", () => {
     fireEvent.click(screen.getByRole("button", { name: "Simpan pengaturan aplikasi" }));
     expect(await screen.findByText("Pengaturan aplikasi karyawan disimpan.")).toBeTruthy();
   });
+
+  it("decides claims in Hadiah: approve, hand over, reject only with a reason (18 Nov 2026)", async () => {
+    open("hadiah");
+    // The menu's badge counts the claims waiting; Permintaan opens on Diajukan.
+    const list = await screen.findByRole("list", { name: "Klaim diajukan" }, { timeout: 3000 });
+    expect(screen.getByRole("link", { name: /Hadiah/ }).textContent).toMatch(/2/);
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    fireEvent.click(within(rows[0]).getByRole("button", { name: "Setujui" }));
+    expect(await screen.findByText("Klaim disetujui.")).toBeTruthy();
+    // Rejecting asks for the reason the employee reads.
+    const second = within(screen.getByRole("list", { name: "Klaim diajukan" })).getAllByRole("listitem")[0];
+    fireEvent.click(within(second).getByRole("button", { name: "Tolak" }));
+    fireEvent.click(within(second).getByRole("button", { name: "Tolak klaim" }));
+    expect(within(second).getByRole("alert").textContent).toMatch(/alasan/i);
+    fireEvent.change(within(second).getByLabelText(/Alasan penolakan/), { target: { value: "Stok di toko habis" } });
+    fireEvent.click(within(second).getByRole("button", { name: "Tolak klaim" }));
+    expect(await screen.findByText("Klaim ditolak. Poinnya kembali ke saldo karyawan.")).toBeTruthy();
+    // The approved one is handed over from Disetujui.
+    fireEvent.click(screen.getByRole("button", { name: /^Disetujui/ }));
+    fireEvent.click(within(await screen.findByRole("list", { name: "Klaim disetujui" })).getByRole("button", { name: "Tandai diserahkan" }));
+    expect(await screen.findByText("Hadiah ditandai sudah diserahkan.")).toBeTruthy();
+  });
+
+  it("adds a reward as a draft in Katalog, and keeps a claimed one from being deleted (18 Nov 2026)", async () => {
+    open("hadiah");
+    fireEvent.click(await screen.findByRole("button", { name: /^Katalog/ }, { timeout: 3000 }));
+    expect(await screen.findByRole("list", { name: "Katalog hadiah" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Tambah hadiah" }));
+    const panel = await screen.findByRole("dialog");
+    fireEvent.change(within(panel).getByLabelText("Nama hadiah"), { target: { value: "Kelas yoga sebulan" } });
+    fireEvent.change(within(panel).getByLabelText("Harga (poin)"), { target: { value: "15000" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "Simpan" }));
+    expect(await screen.findByText("Hadiah disimpan sebagai draf (belum tampil).")).toBeTruthy();
+    expect(within(screen.getByRole("list", { name: "Katalog hadiah" })).getByRole("button", { name: "Ubah Kelas yoga sebulan" })).toBeTruthy();
+    // A reward someone claimed: switch it off instead.
+    fireEvent.click(screen.getByRole("button", { name: "Ubah Voucher Decathlon Rp250.000" }));
+    const edit = await screen.findByRole("dialog");
+    fireEvent.click(within(edit).getByRole("button", { name: "Hapus" }));
+    fireEvent.click(within(edit).getByRole("button", { name: "Ya, hapus" }));
+    expect((await within(edit).findByRole("alert")).textContent).toMatch(/Matikan Aktif/);
+  });
 });

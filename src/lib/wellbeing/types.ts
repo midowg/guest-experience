@@ -1,4 +1,4 @@
-import type { AppControls, DimensionId, Limit, PointsMode, ReviewStatus } from "./rules";
+import type { AppControls, ClaimStatus, DimensionId, Limit, PointsMode, ReviewStatus } from "./rules";
 
 /** What the Admin Wellbeing API answers with (shared by the server and the screens). */
 
@@ -106,3 +106,19 @@ export type WbStravaAdmin = {
   configured: boolean; migrated: boolean; callbackUrl: string; connected: number; reconnect: number;
   subscription: { id: number; callbackUrl: string } | null; subscriptionError: string | null;
 };
+
+/*
+ * Hadiah (18 Nov 2026, migration 202611180001). GET /api/admin/wellbeing/rewards: every reward (photos as
+ * stored keys with a ready address each), the claims (all that still wait, and the latest 200 others),
+ * and how many claims are in each status.
+ */
+export type WbAdminRewardPhoto = { key: string; url: string | null };
+export type WbAdminReward = { id: string; title: string; description: string; photos: WbAdminRewardPhoto[]; cost: number; stock: number | null; perPerson: number;
+  active: boolean;
+  /** Claims that hold points (requested, approved, delivered), and of those still waiting for a decision. */
+  taken: number; waiting: number; updatedAt: string; updatedBy: string | null };
+export type WbAdminClaim = { id: string; rewardId: string; rewardTitle: string; rewardPhoto: string | null; employeeId: string; employeeName: string; department: string;
+  cost: number; status: ClaimStatus; note: string; reason: string | null; createdAt: string; decidedBy: string | null; decidedAt: string | null; deliveredBy: string | null; deliveredAt: string | null };
+export type WbRewardsAdmin = { migrated: boolean; rewards: WbAdminReward[]; claims: WbAdminClaim[]; counts: Record<ClaimStatus, number> };
+/** POST /api/admin/wellbeing/rewards/uploads { mime, size }: where to PUT one reward photo, and its token. */
+export type WbRewardUpload = { key: string; uploadUrl: string; token: string };

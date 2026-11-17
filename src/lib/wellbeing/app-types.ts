@@ -1,4 +1,4 @@
-import type { DimensionId, Limit, PointsMode, ReviewStatus } from "./rules";
+import type { ClaimStatus, DimensionId, Limit, PointsMode, RewardState, ReviewStatus } from "./rules";
 
 /*
  * Wellbeing for employees (/wellbeing, 17 Nov 2026): what /api/wellbeing/* answers with. Shared by
@@ -110,6 +110,25 @@ export type WbBoard = { migrated: boolean; period: "month" | "all"; dim: Dimensi
 /** GET /api/wellbeing/ledger: every point that counts for me, newest first (activities and admin points). */
 export type WbLedgerItem = { date: string; title: string; sub: string; points: number; kind: "activity" | "admin" | "import"; dimension: DimensionId | null };
 export type WbLedger = { migrated: boolean; items: WbLedgerItem[]; total: number };
+
+/*
+ * Hadiah (18 Nov 2026, migration 202611180001). GET /api/wellbeing/rewards: the saldo (points that count,
+ * minus what my open and handed-over claims hold; the board never changes), the rewards that are on,
+ * and my claims, newest first. Photos are ready-to-show addresses (signed, ~1 hour).
+ * POST /api/wellbeing/rewards/claims { rewardId, note } asks for one (409 with fieldErrors.code
+ * ["balance" | "sold_out" | "limit" | "unavailable"]); POST /api/wellbeing/rewards/claims/<id> cancels mine while it waits.
+ */
+export type WbSaldo = { earned: number; held: number; available: number };
+export type WbReward = { id: string; title: string; description: string; photos: string[]; cost: number;
+  /** null: no limit; otherwise how many are still there. */
+  left: number | null; perPerson: number;
+  /** My claims of it that hold points. */
+  mine: number; state: RewardState };
+export type WbClaim = { id: string; rewardId: string; title: string; photo: string | null; cost: number; status: ClaimStatus; note: string;
+  /** The admin's reason when rejected. */
+  reason: string | null; createdAt: string; decidedAt: string | null; deliveredAt: string | null };
+export type WbRewards = { migrated: boolean; saldo: WbSaldo; rewards: WbReward[]; claims: WbClaim[] };
+export type WbClaimResult = { claim: WbClaim; saldo: WbSaldo };
 
 /*
  * Client app entry points (agreed names, so pages and components meet):

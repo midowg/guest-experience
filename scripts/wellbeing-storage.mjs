@@ -12,6 +12,8 @@
  *    kunci baru. Bisa diulang: kunci yang sudah ada dengan ukuran sama dilewati. Daftar tautan lama -> kunci
  *    baru ditulis ke <folder>/foto-pindah.csv; wellbeing-import.mjs memakainya supaya impor ulang tidak
  *    mengembalikan tautan lama. Uji kering hanya membaca: tiap tautan dicoba (32 byte pertama), tanpa menulis.
+ *    Hadiah (18 Nov 2026): foto hadiah yang masih tautan (hadiah lama yang dibawa sebagai draf) ikut
+ *    disalin, ke wellbeing/hadiah/<id tetap dari tautan>.<ext>, lalu tautannya di wb_rewards diganti.
  * 2. --arsip. Semua bucket dan berkas storage lama (juga yang tidak dipakai aktivitas: avatar, berkas acara)
  *    disalin ke R2 arsip/wellbeing-lama/<bucket>/<path>, di luar wellbeing/ sehingga tidak pernah ditampilkan
  *    aplikasi. Daftar di <folder>/arsip-storage.csv. Perlu kunci project lama di <folder>/akses.env
@@ -27,7 +29,7 @@ import path from "node:path";
 import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { createClient } from "@supabase/supabase-js";
 import { readCsv } from "./wellbeing-csv.mjs";
-import { archiveKey, csvText, isLink, KINDS, megabytes, movePhotos, photoKey, sniffKind } from "./wellbeing-storage-lib.mjs";
+import { archiveKey, csvText, isLink, KINDS, megabytes, movePhotos, photoKey, rewardPhotoKeyOf, sniffKind } from "./wellbeing-storage-lib.mjs";
 
 const dir = process.argv[2];
 const apply = process.argv.includes("--apply");
@@ -82,11 +84,17 @@ async function all(query, label) {
 const manifestFile = path.join(dir, "foto-pindah.csv");
 const manifest = new Map(fs.existsSync(manifestFile) ? readCsv(manifestFile).map(row => [row.url, row]) : []);
 const activities = (await all(() => db.from("wb_activities").select("id,employee_id,photos").order("id"), "membaca aktivitas")).filter(a => (a.photos ?? []).some(isLink));
-const links = new Map(); // url -> the employee whose activity has it (for the key)
+// Hadiah (18 Nov 2026): prizes brought over from the old app keep their photo links until moved here too.
+const rewardsRead = await db.from("wb_rewards").select("id,photos").order("id");
+const rewards = rewardsRead.error ? [] : (rewardsRead.data ?? []).filter(r => (r.photos ?? []).some(isLink));
+if (rewardsRead.error) console.log(`(Hadiah dilewati: ${rewardsRead.error.message})`);
+const links = new Map(); // url -> the employee whose activity has it, or "hadiah" (for the key)
 for (const a of activities) for (const url of a.photos.filter(isLink)) if (!links.has(url)) links.set(url, a.employee_id);
+for (const r of rewards) for (const url of r.photos.filter(isLink)) if (!links.has(url)) links.set(url, "hadiah");
+const keyFor = (owner, url, ext) => owner === "hadiah" ? rewardPhotoKeyOf(url, ext) : photoKey(owner, url, ext);
 const hosts = new Map(); for (const url of links.keys()) { const host = new URL(url).host; hosts.set(host, (hosts.get(host) ?? 0) + 1); }
 
-console.log(`Foto bukti: ${links.size} tautan lama di ${activities.length} aktivitas (${[...hosts].map(([host, n]) => `${host}: ${n}`).join(", ") || "-"}).`);
+console.log(`Foto bukti dan hadiah: ${links.size} tautan lama di ${activities.length} aktivitas dan ${rewards.length} hadiah (${[...hosts].map(([host, n]) => `${host}: ${n}`).join(", ") || "-"}).`);
 const problems = [], kinds = new Map();
 let bytesTotal = 0, copied = 0, already = 0;
 
@@ -105,7 +113,7 @@ await pool([...links], 8, async ([url, employeeId]) => {
       if (!kind) throw final("bukan foto atau video yang dikenal");
       kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
       bytesTotal += Number(/\/(\d+)$/.exec(res.headers.get("content-range") ?? "")?.[1] ?? res.headers.get("content-length") ?? 0);
-      if (r2 && (await sizeInR2(photoKey(employeeId, url, KINDS[kind].ext))) != null) already++;
+      if (r2 && (await sizeInR2(keyFor(employeeId, url, KINDS[kind].ext))) != null) already++;
       return;
     }
     const known = manifest.get(url);
@@ -118,7 +126,7 @@ await pool([...links], 8, async ([url, employeeId]) => {
     });
     const kind = sniffKind(bytes);
     if (!kind) throw final("bukan foto atau video yang dikenal");
-    const key = photoKey(employeeId, url, KINDS[kind].ext);
+    const key = keyFor(employeeId, url, KINDS[kind].ext);
     if ((await sizeInR2(key)) === bytes.length) already++;
     else { await putR2(key, bytes, KINDS[kind].mime, url); copied++; }
     kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
@@ -144,8 +152,18 @@ if (apply) {
     const { error } = await db.from("wb_activities").update({ photos: next.photos }).eq("id", a.id);
     if (error) problems.push(`aktivitas ${a.id}: ${error.message}`); else updated++;
   });
-  const after = (await all(() => db.from("wb_activities").select("photos").order("id"), "memeriksa ulang")).flatMap(a => (a.photos ?? []).filter(isLink));
-  console.log(`  aktivitas diperbarui: ${updated}; daftar: ${manifestFile}`);
+  let rewardsUpdated = 0;
+  for (const r of rewards) {
+    const next = movePhotos(r.photos, moved);
+    if (!next.changed) continue;
+    const { error } = await db.from("wb_rewards").update({ photos: next.photos }).eq("id", r.id);
+    if (error) problems.push(`hadiah ${r.id}: ${error.message}`); else rewardsUpdated++;
+  }
+  const after = [
+    ...(await all(() => db.from("wb_activities").select("photos").order("id"), "memeriksa ulang")).flatMap(a => (a.photos ?? []).filter(isLink)),
+    ...(rewardsRead.error ? [] : ((await db.from("wb_rewards").select("photos")).data ?? []).flatMap(r => (r.photos ?? []).filter(isLink))),
+  ];
+  console.log(`  aktivitas diperbarui: ${updated}, hadiah diperbarui: ${rewardsUpdated}; daftar: ${manifestFile}`);
   console.log(`  TAUTAN LAMA TERSISA DI JOURNEY: ${after.length}${after.length ? " (jalankan lagi, atau lihat yang bermasalah)" : " (foto bukti tidak lagi bergantung pada project lama)"}`);
 }
 

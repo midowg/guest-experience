@@ -403,3 +403,37 @@ textarea.input { min-height: 5.5rem; padding: .625rem .875rem; resize: vertical;
 .check[data-ok="true"] > svg { color: var(--cs-ok-fg); }
 .check > span:not(.sr-only) { display: grid; gap: .125rem; min-width: 0; }
 .check small { color: var(--cs-muted); font-size: .8125rem; line-height: 1.45; overflow-wrap: anywhere; }
+
+/* ---------- Hadiah (18 Nov 2026) ---------- */
+.claimRows { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+.claimRow { display: flex; gap: .875rem; align-items: flex-start; flex-wrap: wrap; padding: .875rem 1rem; border-radius: 16px; background: var(--cs-surface); border: 1px solid var(--cs-line); }
+.claimThumb { width: 56px; height: 56px; flex: none; border-radius: 12px; overflow: hidden; display: grid; place-items: center; background: var(--cs-fill); color: var(--cs-subtle); }
+.claimThumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.claimMain { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: .25rem; }
+.claimHead { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+.claimHead strong { font-size: 1rem; }
+.claimWho { color: var(--cs-text); }
+.claimNote { font-size: .875rem; color: var(--cs-muted); background: var(--cs-fill); border-radius: 8px; padding: .375rem .625rem; }
+.claimReject { display: grid; gap: .5rem; margin-top: .5rem; }
+.claimActions { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; justify-content: flex-end; margin-left: auto; }
+.rewardCards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.rewardCard { display: flex; flex-direction: column; width: 100%; height: 100%; padding: 0; text-align: left; border-radius: 16px; overflow: hidden; background: var(--cs-surface); border: 1px solid var(--cs-line); color: var(--cs-text); font: inherit; cursor: pointer; transition: border-color .16s, box-shadow .16s; }
+.rewardCard:hover { border-color: var(--cs-primary); box-shadow: var(--cs-raise); }
+.rewardCard:focus-visible { outline: 2px solid var(--cs-primary); outline-offset: 2px; }
+.rewardCard[data-off="true"] .rewardImage img { opacity: .55; filter: grayscale(.6); }
+.rewardImage { position: relative; aspect-ratio: 4 / 3; display: grid; place-items: center; background: var(--cs-fill); color: var(--cs-subtle); }
+.rewardImage img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rewardCount { position: absolute; right: 8px; bottom: 8px; padding: 2px 8px; border-radius: 999px; background: rgba(0, 0, 0, .6); color: #fff; font-size: .75rem; font-weight: 700; }
+.rewardInfo { display: flex; flex-direction: column; gap: .25rem; padding: .75rem .875rem .875rem; }
+.rewardPrice { font-weight: 800; font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+.photoGrid { list-style: none; margin: .25rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: .5rem; }
+.photoTile { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; background: var(--cs-fill); display: grid; place-items: center; color: var(--cs-subtle); }
+.photoTile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photoTile:first-child { box-shadow: inset 0 0 0 2px var(--cs-primary); }
+.photoTools { position: absolute; inset: auto 4px 4px; display: flex; justify-content: space-between; }
+.photoTools button { width: 32px; height: 32px; border-radius: 999px; border: 0; display: grid; place-items: center; background: rgba(0, 0, 0, .62); color: #fff; cursor: pointer; }
+.photoTools button:disabled { opacity: .35; cursor: default; }
+.photoTools button::after { content: ""; position: absolute; inset: -6px; }
+.photoTools button { position: relative; }
+.photoAdd { width: 100%; aspect-ratio: 1; border-radius: 12px; border: 1.5px dashed var(--cs-line); background: transparent; color: var(--cs-muted); display: grid; place-items: center; align-content: center; gap: .25rem; font: inherit; font-size: .8125rem; font-weight: 700; cursor: pointer; }
+.photoAdd:disabled { opacity: .6; cursor: progress; }

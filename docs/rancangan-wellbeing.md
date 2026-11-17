@@ -12,8 +12,9 @@ versi Journey stabil.
 - Dibangun di dalam Journey, seperti Booking Kantor: karyawan masuk dengan **akun WAM**; akses admin diberikan per
   orang di Super admin → Akses admin (aplikasi "Wellbeing").
 - Versi pertama hanya fitur yang benar-benar dipakai di aplikasi lama (dilihat dari datanya): pencatatan, riwayat,
-  peringkat, periksa oleh admin, dan tambah poin ke banyak orang. **Quest, streak bonus, penghargaan bulanan, dan
-  rewards/koin ditunda** (tidak pernah dipakai). Hadiah diberikan ke juara peringkat di luar aplikasi.
+  peringkat, periksa oleh admin, dan tambah poin ke banyak orang. **Quest, streak bonus, dan penghargaan bulanan
+  ditunda** (tidak pernah dipakai). Rewards/koin semula juga ditunda; sejak 18 Nov 2026 dibangun sebagai **Hadiah**
+  (lihat bagian Hadiah).
 - Pencatatan **langsung dihitung**; admin memeriksa belakangan (Oke / Ubah poin / Tolak, dengan alasan yang dibaca
   karyawan). Tanggal depan ditolak; mundur paling lama sesuai aturan (bawaan 7 hari).
 - Katalog kegiatan mengikuti katalog yang sedang dipakai di aplikasi lama (nama, dimensi, poin), bisa diubah admin.
@@ -29,7 +30,8 @@ versi Journey stabil.
 | Leaderboard (Overall/Steps/Quests) | **Peringkat**: bulan ini / sepanjang waktu, per dimensi |
 | Profil, kartu ID, dompet koin | **Profil** (data dari akun WAM, riwayat poin) |
 | Strava | Dibangun ulang (lihat di bawah) |
-| Quest, rewards, gacha, QR spot, pesan antar rekan, survei, Apple Health, city tour | Ditunda / dibuang |
+| Rewards, dompet koin, klaim | **Hadiah**: saldo poin, klaim diajukan lalu diputuskan admin (18 Nov 2026) |
+| Quest, gacha (avatar/background reroll, petunjuk spot), QR spot, pesan antar rekan, survei, Apple Health, city tour | Ditunda / dibuang |
 | Admin 15 tab | 4 menu: **Hari ini, Periksa, Karyawan, Pengaturan** |
 
 ## Cara dibangun (standar rasa aplikasi mobile)
@@ -206,6 +208,34 @@ aplikasi tetap jalan dan menyimpan tanpa jam.
 
   Pilihan tampil sebagai pratinjau bulat dulu (kartu dengan cincin warna rarity), baru disimpan setelah
   "Pakai foto ini". Peringkat menampilkan foto profil semua orang (inisial bila belum ada).
+
+## Hadiah (18 Nov 2026)
+
+Karyawan menukar poin dengan hadiah yang dipasang admin. Aplikasi lama punya rewards dan koin, tapi hanya terpakai
+sekali (item permainan); fitur ini dibangun ulang sesuai keputusan pemilik:
+
+- **Saldo, bukan peringkat.** Saldo poin = semua poin yang dihitung (total di Peringkat) dikurangi poin yang ditahan
+  klaim (Diajukan, Disetujui, Diserahkan). Menukar hadiah **tidak** mengurangi total poin maupun peringkat.
+- **Alur klaim.** Karyawan menekan Ajukan klaim: poin langsung ditahan. Admin memutuskan: **Setujui**, **Tandai
+  diserahkan** (bisa langsung dari Diajukan), atau **Tolak** dengan alasan yang dibaca karyawan; ditolak atau
+  dibatalkan (karyawan bisa Batalkan selama masih Diajukan) mengembalikan poinnya ke saldo.
+- **Aturan tiap hadiah** (Admin WLM → Hadiah → Katalog): nama, keterangan, sampai 6 foto (diunggah ke storage
+  Journey, urutan bisa diatur, foto pertama tampil di daftar), harga dalam poin, stok (kosong = tanpa batas), batas
+  per orang, Aktif. Hadiah baru tersimpan sebagai draf sampai Aktif dinyalakan. Hadiah yang pernah diklaim tidak bisa
+  dihapus, hanya dimatikan; klaim menyimpan harga dan nama saat diajukan.
+- **Aman dari ketuk dua kali.** Fungsi database `wb_request_reward` mengecek aktif, stok, batas per orang, dan saldo
+  dalam satu transaksi yang dikunci per orang dan per hadiah (migrasi `202611180001_wellbeing_rewards.sql`, uji di
+  `tests/backend/wellbeing-rewards-check.sql`).
+- **Letak di aplikasi karyawan.** Kartu saldo di Beranda (di bawah kartu balapan; muncul setelah ada hadiah aktif,
+  dengan "N hadiah bisa kamu klaim" atau "Kurang N poin untuk ..."), dan baris **Hadiah & klaim saya** di Profil.
+  Keduanya membuka lembar Hadiah: saldo, daftar hadiah (foto, harga, Bisa diklaim / Kurang N poin / Habis / Sudah kamu
+  klaim), detail dengan galeri foto dan catatan untuk admin, lalu **Klaim saya** dengan status dan alasan.
+- **Admin.** Menu **Hadiah** dengan angka klaim yang menunggu: Permintaan (Diajukan, Disetujui, Diserahkan, Ditolak &
+  batal) dan Katalog.
+- **Hadiah lama** dibawa sebagai draf nonaktif oleh `scripts/wellbeing-rewards-import.mjs` (setelah migrasi): Hydroflask
+  Tumbler 32 Oz (100.000 poin, stok 1), Voucher Decathlon 250k (35.000, stok 4), Garmin Sport Watch (300.000, stok 1).
+  Fotonya tautan lama (i.ibb.co) sampai dipindah ke R2 oleh `scripts/wellbeing-storage.mjs`. Item permainan acara
+  (Avatar/Background Reroll, Reveal Spot Clues) tidak dibawa.
 
 ## Strava
 
