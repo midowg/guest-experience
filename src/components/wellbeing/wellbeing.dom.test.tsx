@@ -17,6 +17,9 @@ vi.mock("next/navigation", async () => {
 
 // next/font only runs inside Next's compiler.
 vi.mock("./font", () => ({ fontVars: "" }));
+// Tesseract (WebAssembly) does not run in jsdom: the text a photo "has" is set per test.
+const ocr = vi.hoisted(() => ({ text: "", fail: false }));
+vi.mock("./ocr", () => ({ readPhotoText: async () => { if (ocr.fail) throw new Error("offline"); return ocr.text; } }));
 
 beforeAll(() => {
   // jsdom has no modal dialogs, observers, object URLs or media queries; enough of each for the app.
@@ -33,7 +36,7 @@ beforeAll(() => {
   window.history.replaceState = (...args: Parameters<History["replaceState"]>) => { replace(...args); notify(); };
   window.addEventListener("popstate", notify);
 });
-beforeEach(() => { window.history.replaceState(null, "", "/wellbeing"); });
+beforeEach(() => { window.history.replaceState(null, "", "/wellbeing"); ocr.text = ""; ocr.fail = false; });
 afterEach(() => { cleanup(); clearResources("wbapp:"); window.localStorage.clear(); });
 
 const fast = () => mockApi({ latency: [0, 0] });
@@ -68,7 +71,7 @@ describe("WellbeingApp", () => {
 
     fireEvent.click(within(menu).getByRole("link", { name: "Riwayat" }));
     expect(window.location.pathname).toBe("/wellbeing/riwayat");
-    await screen.findByRole("group", { name: "Jenis aktivitas" });
+    await screen.findByRole("group", { name: "Jenis riwayat" });
     expect(within(menu).getByRole("link", { name: "Riwayat" }).getAttribute("aria-current")).toBe("page");
     // Beranda stays mounted (its data and scroll kept), only hidden.
     expect(document.querySelector('section[aria-label="Beranda"]')?.getAttribute("aria-hidden")).toBe("true");
@@ -86,7 +89,7 @@ describe("WellbeingApp", () => {
     fireEvent.click(within(menu).getByRole("link", { name: "Profil" }));
     expect(window.location.pathname).toBe("/wellbeing/profil");
     expect(window.history.length).toBe(before + 1);
-    await screen.findByText("Riwayat poin");
+    await screen.findByText("Rekor");
 
     act(() => { window.history.back(); });
     await waitFor(() => expect(window.location.pathname).toBe("/wellbeing"));
@@ -227,6 +230,83 @@ describe("WellbeingApp", () => {
     addPhoto();
     fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +80 poin" }));
     expect(await within(dialog()).findByText(/^Masuk peringkat: #\d+ bulan ini$/, {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  it("logs from a photo: the form opens filled from what was read, marked, to check and save (18 Nov 2026)", async () => {
+    ocr.text = "Morning Run\nHari ini\nMoving Time\n28:01\nCalories\n412Cal";
+    app();
+    await screen.findByText("Total poin");
+    fireEvent.click(screen.getByRole("button", { name: "Catat" }));
+    fireEvent.click(await within(dialog()).findByRole("button", { name: /^Dari foto bukti/ }));
+    addPhoto(photo("strava.png"));
+    expect(await within(dialog()).findByText(/Running · 412 kkal · 28 menit/, {}, { timeout: 3000 })).toBeTruthy();
+    expect(within(dialog()).getByRole("button", { name: "Running" }).getAttribute("aria-pressed")).toBe("true");
+    const kcal = within(dialog()).getByLabelText("Kalori") as HTMLInputElement;
+    expect(kcal.value).toBe("412");
+    expect(kcal.dataset.auto).toBe("true");
+    // The photo read is already the proof.
+    expect(within(dialog()).getByAltText("Foto bukti 1")).toBeTruthy();
+    // Corrected by hand: no longer marked as read.
+    fireEvent.change(kcal, { target: { value: "400" } });
+    expect(kcal.dataset.auto).toBeUndefined();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +400 poin" }));
+    expect(await within(dialog()).findByText("+400 poin", {}, { timeout: 3000 })).toBeTruthy();
+  });
+
+  it("reads steps from a photo into Langkah harian, and keeps the photo when nothing is read", async () => {
+    ocr.text = "Hari ini\n9.128 / 10.000 langkah";
+    app();
+    await screen.findByText("Total poin");
+    fireEvent.click(screen.getByRole("button", { name: "Catat" }));
+    fireEvent.click(await within(dialog()).findByRole("button", { name: /^Dari foto bukti/ }));
+    addPhoto();
+    expect((await within(dialog()).findByLabelText("Jumlah langkah", {}, { timeout: 3000 }) as HTMLInputElement).value).toBe("9128");
+    expect(within(dialog()).getByText("Langkah harian")).toBeTruthy();
+
+    cleanup(); clearResources("wbapp:");
+    ocr.text = "Foto bersama tim";
+    app();
+    await screen.findByText("Total poin");
+    fireEvent.click(screen.getByRole("button", { name: "Catat" }));
+    fireEvent.click(await within(dialog()).findByRole("button", { name: /^Dari foto bukti/ }));
+    addPhoto();
+    expect(await within(dialog()).findByText(/Tidak ada data yang terbaca dari foto/, {}, { timeout: 3000 })).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole("button", { name: /^Olahraga/ }));
+    expect(await within(dialog()).findByAltText("Foto bukti 1")).toBeTruthy();
+  });
+
+  it("reads a photo added in the form, filling only what is still empty", async () => {
+    ocr.text = "Badminton\n2 jam\n640 kkal";
+    app();
+    await screen.findByText("Total poin");
+    fireEvent.click(screen.getByRole("button", { name: "Catat" }));
+    fireEvent.click(await within(dialog()).findByRole("button", { name: /^Olahraga/ }));
+    fireEvent.click(await within(dialog()).findByRole("button", { name: "Running" }));
+    fireEvent.change(within(dialog()).getByLabelText(/^Durasi/), { target: { value: "45" } });
+    addPhoto(photo("jam.png"));
+    await waitFor(() => expect((within(dialog()).getByLabelText("Kalori") as HTMLInputElement).value).toBe("640"));
+    // The sport chosen and the duration typed stay as they were.
+    expect(within(dialog()).getByRole("button", { name: "Running" }).getAttribute("aria-pressed")).toBe("true");
+    expect((within(dialog()).getByLabelText(/^Durasi/) as HTMLInputElement).value).toBe("45");
+  });
+
+  it("picks the theme in a sheet from a settings row, as phones do", async () => {
+    window.history.replaceState(null, "", "/wellbeing/profil");
+    const { container } = app();
+    fireEvent.click(await screen.findByRole("button", { name: /^Tema: Otomatis/ }));
+    fireEvent.click(await within(dialog()).findByRole("radio", { name: /^Gelap/ }));
+    await waitFor(() => expect(container.firstElementChild?.getAttribute("data-theme")).toBe("dark"));
+    expect(screen.getByRole("button", { name: /^Tema: Gelap/ })).toBeTruthy();
+    // History lives in Riwayat only.
+    expect(screen.queryByText("Riwayat poin")).toBeNull();
+    expect(screen.queryByText("Riwayat aktivitas")).toBeNull();
+  });
+
+  it("shows points from an admin under Riwayat › Dari admin", async () => {
+    window.history.replaceState(null, "", "/wellbeing/riwayat");
+    app();
+    fireEvent.click(await screen.findByRole("button", { name: "Dari admin" }));
+    expect(await screen.findByText("Hadir Friday Sharing")).toBeTruthy();
   });
 
   it("shows Coba lagi when Beranda cannot load, and loads on retry", async () => {

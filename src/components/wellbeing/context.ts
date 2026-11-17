@@ -29,12 +29,13 @@ export type WellbeingActions = {
   openCatat: (preset?: CatatPreset) => void;
   openActivity: (activity: WbMyActivity) => void;
   openStrava: () => void;
+  openTheme: () => void;
   askSignOut: () => void;
 };
 const noop = () => {};
 export const WellbeingContext = createContext<WellbeingActions>({
   api: realApi, me: { id: "", name: "", nickname: "", department: "", position: "" },
-  go: noop, openCatat: noop, openActivity: noop, openStrava: noop, askSignOut: noop,
+  go: noop, openCatat: noop, openActivity: noop, openStrava: noop, openTheme: noop, askSignOut: noop,
 });
 export const useWellbeing = () => useContext(WellbeingContext);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronRight, CloudOff, Hourglass, RefreshCw } from "lucide-react";
 import type { WbBoardRow, WbMyActivity } from "@/lib/wellbeing/app-types";
 import type { DimensionId } from "@/lib/wellbeing/rules";
@@ -67,6 +67,24 @@ export function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg"
   return <span className={cx(css.avatar, size === "lg" && css.avatarLg, size === "xl" && css.avatarXl)} data-dim={toneOf(name)} aria-hidden="true">{initials(name)}</span>;
 }
 
+/**
+ * A row of filter chips that scrolls sideways (Riwayat, Peringkat): its far edge fades while more
+ * chips are hidden there, and stops fading at the end, so the last chip is never covered.
+ */
+export function Chips({ label, children, style }: { label: string; children: ReactNode; style?: React.CSSProperties }) {
+  const row = useRef<HTMLDivElement>(null);
+  const [atEnd, setAtEnd] = useState(false);
+  const measure = () => { const element = row.current; if (element) setAtEnd(element.scrollLeft + element.clientWidth >= element.scrollWidth - 24); };
+  useEffect(() => {
+    const element = row.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => { setAtEnd(element.scrollLeft + element.clientWidth >= element.scrollWidth - 24); });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return <div ref={row} className={css.chips} role="group" aria-label={label} style={style} data-end={atEnd} onScroll={measure}>{children}</div>;
+}
+
 /** Segmented buttons (one choice), with aria-pressed. */
 export function Seg<T extends string>({ label, value, options, onChange, style }: { label: string; value: T; options: readonly (readonly [T, string])[]; onChange: (value: T) => void; style?: React.CSSProperties }) {
   return <div className={css.seg} role="group" aria-label={label} style={style}>
@@ -118,8 +136,8 @@ export function LeaderRow({ row, meta, rowRef }: { row: WbBoardRow; meta?: strin
 }
 
 /** A row that leads somewhere (Profil). */
-export function NavRow({ lead, title, meta, trail, onClick }: { lead: ReactNode; title: string; meta?: string; trail?: ReactNode; onClick: () => void }) {
-  return <button type="button" className={cx(css.row, css.pressable)} onClick={onClick}>
+export function NavRow({ lead, title, meta, trail, onClick, ariaLabel }: { lead: ReactNode; title: string; meta?: string; trail?: ReactNode; onClick: () => void; ariaLabel?: string }) {
+  return <button type="button" className={cx(css.row, css.pressable)} onClick={onClick} aria-label={ariaLabel} aria-haspopup="dialog">
     {lead}
     <span className={css.rowMain}><span className={css.rowTitle}>{title}</span>{meta && <span className={css.rowMeta}>{meta}</span>}</span>
     {trail}

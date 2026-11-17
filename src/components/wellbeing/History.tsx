@@ -1,22 +1,26 @@
 "use client";
 
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
-import { History as HistoryIcon, RefreshCw } from "lucide-react";
+import { History as HistoryIcon, Receipt, RefreshCw, Settings2 } from "lucide-react";
 import { useResource } from "@/components/app-shell/resource";
-import type { WbMyActivity, WbMyActivityFilter } from "@/lib/wellbeing/app-types";
+import type { WbLedgerItem, WbMyActivity, WbMyActivityFilter } from "@/lib/wellbeing/app-types";
 import { addDays, wibToday } from "@/lib/wellbeing/rules";
 import { errorText, WellbeingApiError } from "./api";
 import { keys, useWellbeing } from "./context";
-import { dayLabel, formatDate, groupByDay, mergePages } from "./format";
-import { ActivityRow, cx, Empty, ErrorState, Preparing, Seg, SkRows, StaleBar } from "./parts";
+import { dayLabel, formatDate, groupByDay, mergePages, signed } from "./format";
+import { dimensionIcons, Icon } from "./icons";
+import { ActivityRow, Chips, cx, Empty, ErrorState, Preparing, SkRows, StaleBar } from "./parts";
 import css from "./wellbeing.module.css";
 
 /*
- * Riwayat (17 Nov 2026): every activity of mine, by day, filtered by Semua / Harian / Olahraga /
- * Strava. The first 20 come from the cache at once; more load as the list nears its end.
+ * Riwayat (17 Nov 2026; Dari admin 18 Nov 2026): every activity of mine, by day, filtered by Semua /
+ * Harian / Olahraga / Strava, and the points an admin gave or corrected (Dari admin, also the
+ * balance from the old app). The one place for history: Profil no longer lists it. The first 20
+ * activities come from the cache at once; more load as the list nears its end.
  */
 
-const FILTERS = [["all", "Semua"], ["daily", "Harian"], ["sport", "Olahraga"], ["strava", "Strava"]] as const;
+export type HistoryFilter = WbMyActivityFilter | "admin";
+const FILTERS: readonly (readonly [HistoryFilter, string])[] = [["all", "Semua"], ["daily", "Harian"], ["sport", "Olahraga"], ["strava", "Strava"], ["admin", "Dari admin"]];
 const emptyText: Record<WbMyActivityFilter, string> = {
   all: "Belum ada aktivitas. Tekan Catat untuk mulai.",
   daily: "Belum ada kegiatan harian.",
@@ -26,7 +30,50 @@ const emptyText: Record<WbMyActivityFilter, string> = {
 
 type More = { key: string; base: string; items: WbMyActivity[]; next: string | null; loading: boolean; failed: string | null };
 
-export function History({ active, filter, onFilter }: { active: boolean; filter: WbMyActivityFilter; onFilter: (filter: WbMyActivityFilter) => void }) {
+export function History({ active, filter, onFilter }: { active: boolean; filter: HistoryFilter; onFilter: (filter: HistoryFilter) => void }) {
+  return <>
+    <p className={css.largeTitle} aria-hidden="true">Riwayat</p>
+    <Chips label="Jenis riwayat" style={{ marginBottom: 16 }}>
+      {FILTERS.map(([value, label]) => <button key={value} type="button" className={css.chip} aria-pressed={filter === value} onClick={() => { if (filter !== value) onFilter(value); }}>{label}</button>)}
+    </Chips>
+    {filter === "admin" ? <AdminPoints /> : <Activities active={active} filter={filter} />}
+  </>;
+}
+
+/** Points from an admin (given to many people, or a correction) and the old app's balance, newest first. */
+function AdminPoints() {
+  const { api } = useWellbeing();
+  const ledger = useResource(keys.ledger, () => api.ledger());
+  const today = useMemo(() => wibToday(), []);
+  const items = useMemo(() => (ledger.data?.items ?? []).filter(item => item.kind !== "activity"), [ledger.data]);
+  return <>
+    <StaleBar show={!!ledger.refreshError} onRetry={() => void ledger.reload()} />
+    {!ledger.data
+      ? ledger.error ? <ErrorState message={ledger.error} onRetry={() => void ledger.reload()} /> : <SkRows rows={4} />
+      : !ledger.data.migrated ? <Preparing />
+      : !items.length
+        ? <Empty icon={<Settings2 size={24} aria-hidden="true" />}>Belum ada poin dari admin. Poin acara kantor dan koreksi dari admin muncul di sini.</Empty>
+        : <>
+            <ul className={cx(css.card, css.list)} style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label="Poin dari admin">
+              {items.map((item, index) => <LedgerRow key={`${item.date}-${index}`} item={item} today={today} />)}
+            </ul>
+            <p className={cx(css.caption, css.muted, css.center)} style={{ padding: "16px 0" }}>Jumlah dari admin: <b className={css.tnum}>{signed(items.reduce((sum, item) => sum + item.points, 0))}</b> poin</p>
+          </>}
+  </>;
+}
+
+function LedgerRow({ item, today }: { item: WbLedgerItem; today: string }) {
+  const lead = item.dimension
+    ? <span className={css.lead} data-dim={item.dimension}><Icon of={dimensionIcons[item.dimension]} size={22} /></span>
+    : <span className={cx(css.lead, item.kind === "admin" ? css.toneWarn : css.tonePrimary)}>{item.kind === "admin" ? <Settings2 size={22} aria-hidden="true" /> : <Receipt size={22} aria-hidden="true" />}</span>;
+  return <li className={css.row}>
+    {lead}
+    <span className={css.rowMain}><span className={cx(css.rowTitle, css.wrap)}>{item.title}</span><span className={css.rowMeta}>{item.sub ? `${item.sub} · ` : ""}{dayLabel(item.date, today)}</span></span>
+    <b className={cx(css.pts, item.points < 0 && css.ptsNeg)}>{signed(item.points)}<span className="sr-only"> poin</span></b>
+  </li>;
+}
+
+function Activities({ active, filter }: { active: boolean; filter: WbMyActivityFilter }) {
   const { api, openActivity } = useWellbeing();
   const key = keys.activities(filter);
   const page = useResource(key, () => api.activities(filter));
@@ -73,8 +120,6 @@ export function History({ active, filter, onFilter }: { active: boolean; filter:
   }, [active, next, failed]);
 
   return <>
-    <p className={css.largeTitle} aria-hidden="true">Riwayat</p>
-    <Seg label="Jenis aktivitas" value={filter} options={FILTERS} onChange={onFilter} style={{ margin: "0 0 16px" }} />
     <StaleBar show={!!page.refreshError} onRetry={() => void page.reload()} />
     {!page.data
       ? page.error ? <ErrorState message={page.error} onRetry={() => void page.reload()} /> : <SkRows rows={6} />

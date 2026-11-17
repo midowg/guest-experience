@@ -62,6 +62,29 @@ sentuh, mode gelap).
   Condensed, teks Plus Jakarta Sans. Warna utama lama (biru) bentrok dengan warna dimensi Finansial, jadi diganti.
 - API: `GET /api/wellbeing/leaderboard` kini juga mengirim `near` (sekitarku) dan `ahead` (yang dikejar).
 
+## Catat dari foto (18 Nov 2026)
+
+Karyawan tidak perlu mengetik angka: pilih **Dari foto bukti**, unggah screenshot aplikasi atau foto layar
+jam, dan form terbuka sudah terisi (jenis olahraga atau Langkah harian, tanggal, langkah, kalori, durasi).
+Kolom yang terisi dari foto ditandai sampai diubah; karyawan memeriksa lalu menyimpan. Foto yang sama
+langsung jadi bukti. Foto yang ditambahkan di tengah form juga dibaca, tapi hanya mengisi yang masih kosong.
+
+- **Mesin:** Tesseract (`tesseract.js` 7.0.0) berjalan di HP karyawan. Foto **tidak dikirim** ke layanan lain
+  untuk dibaca, gratis. Mesin dan model bahasa Inggris (±7 MB, dari CDN jsDelivr pada versi yang terkunci)
+  diunduh sekali saat pertama dipakai, lalu tersimpan di browser.
+- **Pembaca:** `src/components/wellbeing/read-proof.ts` mengubah teks foto jadi data: angka ribuan/desimal
+  gaya Indonesia dan Inggris, target ("/ 10.000") dan jam layar tidak dihitung, label Indonesia/Inggris,
+  tanggal hanya dalam batas hari mundur, jenis olahraga dicocokkan dengan katalog.
+- **Batas:** akurasi tergantung foto (buram, miring, tulisan kecil). Yang tidak terbaca dibiarkan kosong dan
+  diisi sendiri; data tetap diperiksa admin seperti biasa.
+
+## Profil dan Riwayat (18 Nov 2026)
+
+- Profil: rekor, lalu daftar pengaturan seperti di HP (Strava, Tema dengan pilihannya di kanan dan lembar
+  pilihan Otomatis/Terang/Gelap, Keluar). Riwayat tidak lagi diulang di Profil.
+- Riwayat: satu-satunya tempat riwayat, dengan chip Semua, Harian, Olahraga, Strava, dan **Dari admin**
+  (poin acara kantor, koreksi, dan saldo dari aplikasi lama).
+
 ## Strava
 
 Satu aplikasi Strava API milik kantor; tiap karyawan menyambungkan akun Strava-nya sendiri. Aturan Strava sejak

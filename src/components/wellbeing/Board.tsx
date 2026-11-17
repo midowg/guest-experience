@@ -9,7 +9,7 @@ import type { BoardDim, BoardPeriod } from "./api";
 import { keys, useWellbeing } from "./context";
 import { firstName, formatDate, num } from "./format";
 import { dimensionIcons, Icon } from "./icons";
-import { Avatar, cx, Empty, ErrorState, LeaderRow, Preparing, Seg, Sk, SkRows, StaleBar } from "./parts";
+import { Avatar, Chips, cx, Empty, ErrorState, LeaderRow, Preparing, Seg, Sk, SkRows, StaleBar } from "./parts";
 import { daysLeftLabel, medalOf, nearBeyond } from "./race";
 import css from "./wellbeing.module.css";
 
@@ -33,12 +33,12 @@ export function Board({ active, period, dim, onChange }: { active: boolean; peri
   return <>
     <p className={css.largeTitle} aria-hidden="true">Peringkat</p>
     <Seg label="Periode" value={period} options={PERIODS} onChange={next => onChange({ period: next, dim })} />
-    <div className={css.chips} role="group" aria-label="Dimensi" style={{ marginTop: 12 }}>
+    <Chips label="Dimensi" style={{ marginTop: 12 }}>
       <button type="button" className={css.chip} aria-pressed={dim === "all"} onClick={() => onChange({ period, dim: "all" })}>Semua</button>
       {DIMENSIONS.map(dimension => <button key={dimension} type="button" className={css.chip} aria-pressed={dim === dimension} onClick={() => onChange({ period, dim: dimension })}>
         <Icon of={dimensionIcons[dimension]} size={18} />{dimensionLabels[dimension]}
       </button>)}
-    </div>
+    </Chips>
     {period === "month" && <p className={css.raceInfo}><Timer size={16} aria-hidden="true" /><span>Berakhir <b>{formatDate(monthRange(today).to, { day: "numeric", month: "long" })}</b> · {daysLeftLabel(today).toLowerCase()}</span></p>}
     <div style={{ marginTop: 12 }}><StaleBar show={!!board.refreshError} onRetry={() => void board.reload()} /></div>
     {!data

@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Activity, CircleX, Dumbbell, ImageOff, LogOut, NotebookPen, SlidersHorizontal, X } from "lucide-react";
+import { Activity, Check, CircleX, Dumbbell, ImageOff, LogOut, Moon, NotebookPen, SlidersHorizontal, Smartphone, Sun, X, type LucideIcon } from "lucide-react";
 import { Panel } from "@/components/app-shell/Panel";
 import { load } from "@/components/app-shell/resource";
 import type { WbMyActivity } from "@/lib/wellbeing/app-types";
 import { dimensionLabels, wibToday } from "@/lib/wellbeing/rules";
-import { keys, useWellbeing, type CatatPreset } from "./context";
+import { keys, useTheme, useWellbeing, type CatatPreset, type ThemeChoice } from "./context";
 import { activityTitle, dayLabel, distance, formatDate, num, sourceLabels } from "./format";
 import { ActivityLead, cx, Sk } from "./parts";
 import css from "./wellbeing.module.css";
@@ -121,6 +121,27 @@ export function StravaSheet({ open, onClose, onLogSport }: { open: boolean; onCl
       <span className={cx(css.stravaMark, css.stravaMarkLg)}><Activity size={36} aria-hidden="true" /></span>
       <h3 className={css.headline}>Sambungan Strava sedang disiapkan</h3>
       <p className={css.muted}>Sampai siap, olahraga dicatat lewat Catat → Olahraga.</p>
+    </div>
+  </Panel>;
+}
+
+/** Tema, as a phone's settings do it: three choices, the current one ticked; a tap applies it at once. */
+export const THEME_OPTIONS: { value: ThemeChoice; label: string; meta: string; icon: LucideIcon }[] = [
+  { value: "system", label: "Otomatis", meta: "Sama dengan pengaturan HP", icon: Smartphone },
+  { value: "light", label: "Terang", meta: "Selalu terang", icon: Sun },
+  { value: "dark", label: "Gelap", meta: "Selalu gelap, nyaman di malam hari", icon: Moon },
+];
+
+export function ThemeSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [theme, setTheme] = useTheme();
+  return <Panel open={open} onClose={onClose} title="Tema" variant="sheet">
+    <div className={cx(css.card, css.list)} role="radiogroup" aria-label="Tema">
+      {THEME_OPTIONS.map(option => <button key={option.value} type="button" role="radio" aria-checked={theme === option.value} className={cx(css.row, css.pressable)}
+        onClick={() => { setTheme(option.value); onClose(); }}>
+        <span className={cx(css.lead, css.tonePrimary)}><option.icon size={22} aria-hidden="true" /></span>
+        <span className={css.rowMain}><span className={css.rowTitle}>{option.label}</span><span className={css.rowMeta}>{option.meta}</span></span>
+        <span className={css.radioMark} aria-hidden="true">{theme === option.value && <Check size={18} strokeWidth={3} />}</span>
+      </button>)}
     </div>
   </Panel>;
 }

@@ -6,18 +6,18 @@ import { History as HistoryIcon, House, Plus, Trophy, UserRound, WifiOff } from 
 import { load, prefetch, revalidate, useResource } from "@/components/app-shell/resource";
 import { ToastProvider, useToast } from "@/components/app-shell/Toast";
 import { WELLBEING_PATH } from "@/lib/routes";
-import { WELLBEING_SECTIONS, type WbMe, type WbMyActivity, type WbMyActivityFilter, type WellbeingSection } from "@/lib/wellbeing/app-types";
+import { WELLBEING_SECTIONS, type WbMe, type WbMyActivity, type WellbeingSection } from "@/lib/wellbeing/app-types";
 import { realApi, type BoardDim, type BoardPeriod, type WellbeingApi } from "./api";
 import { Board } from "./Board";
 import { CatatSheet } from "./CatatSheet";
 import { fontVars } from "./font";
 import { keys, reducedMotion, ThemeBoot, useOnline, useTheme, WellbeingContext, type CatatPreset, type WellbeingActions } from "./context";
-import { History } from "./History";
+import { History, type HistoryFilter } from "./History";
 import { Home } from "./Home";
 import { cx } from "./parts";
 import { Profile } from "./Profile";
 import { Screen } from "./Screen";
-import { ActivitySheet, SignOutSheet, StravaSheet } from "./Sheets";
+import { ActivitySheet, SignOutSheet, StravaSheet, ThemeSheet } from "./Sheets";
 import css from "./wellbeing.module.css";
 
 /*
@@ -35,7 +35,7 @@ export function sectionOf(pathname: string, base = WELLBEING_PATH): WellbeingSec
 }
 const pathOf = (section: WellbeingSection, base: string) => section === "beranda" ? base : `${base}/${section}`;
 
-type Sheet = { kind: "catat"; preset: CatatPreset | null } | { kind: "detail"; activity: WbMyActivity } | { kind: "strava" } | { kind: "signout" };
+type Sheet = { kind: "catat"; preset: CatatPreset | null } | { kind: "detail"; activity: WbMyActivity } | { kind: "strava" } | { kind: "theme" } | { kind: "signout" };
 
 /** Wait until the closed sheet's history entry is gone, so the next sheet's entry is not taken back with it. */
 const historySettled = () => new Promise<void>(resolve => {
@@ -72,7 +72,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
   const section = sectionOf(pathname, basePath);
   const [visited, setVisited] = useState<WellbeingSection[]>([section]);
   if (!visited.includes(section)) setVisited([...visited, section]);
-  const [historyFilter, setHistoryFilter] = useState<WbMyActivityFilter>("all");
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
   const [board, setBoard] = useState<{ period: BoardPeriod; dim: BoardDim }>({ period: "month", dim: "all" });
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [catatRound, setCatatRound] = useState(0);
@@ -90,7 +90,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
     const homeSource = [keys.home, () => api.home()] as const;
     const list: Record<WellbeingSection, (readonly [string, () => Promise<unknown>])[]> = {
       beranda: [homeSource],
-      riwayat: [[keys.activities(historyFilter), () => api.activities(historyFilter)]],
+      riwayat: [historyFilter === "admin" ? [keys.ledger, () => api.ledger()] : [keys.activities(historyFilter), () => api.activities(historyFilter)]],
       peringkat: [[keys.board(board.period, board.dim), () => api.leaderboard(board.period, board.dim)]],
       profil: [homeSource, [keys.ledger, () => api.ledger()]],
     };
@@ -135,6 +135,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
     openCatat: preset => void show({ kind: "catat", preset: preset ?? null }),
     openActivity: activity => void show({ kind: "detail", activity }),
     openStrava: () => void show({ kind: "strava" }),
+    openTheme: () => void show({ kind: "theme" }),
     askSignOut: () => void show({ kind: "signout" }),
   }), [api, me, go, show]);
 
@@ -197,6 +198,7 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
       <CatatSheet key={catatRound} open={sheet?.kind === "catat"} preset={sheet?.kind === "catat" ? sheet.preset : null} onClose={close} onSaved={() => { catatSaved.current = true; }} />
       <ActivitySheet activity={sheet?.kind === "detail" ? sheet.activity : null} onClose={close} onRedo={preset => void show({ kind: "catat", preset })} />
       <StravaSheet open={sheet?.kind === "strava"} onClose={close} onLogSport={() => void show({ kind: "catat", preset: { kind: "sport" } })} />
+      <ThemeSheet open={sheet?.kind === "theme"} onClose={close} />
       <SignOutSheet open={sheet?.kind === "signout"} onClose={close} />
   </WellbeingContext.Provider>;
 }
