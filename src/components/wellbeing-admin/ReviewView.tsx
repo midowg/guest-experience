@@ -377,7 +377,8 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
   // A number and its unit never part at the end of a line ("5,2 km", not "5,2" then "km"): no-break spaces.
   const facts = [
     item.kcal != null && `${points(item.kcal)} kkal`, item.steps != null && `${points(item.steps)} langkah`,
-    item.minutes != null && `${item.minutes} menit`, item.distanceM != null && `${(item.distanceM / 1000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} km`,
+    // Zero minutes or metres (activities from the old app often have them) say nothing: not shown.
+    !!item.minutes && `${item.minutes} menit`, !!item.distanceM && `${(item.distanceM / 1000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} km`,
     item.source === "strava" && "dari Strava", item.source === "import" && "dari aplikasi lama",
   ].filter(Boolean) as string[];
   const name = item.employeeNickname || item.employeeName;
@@ -413,7 +414,7 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
     <strong>{item.status === "rejected" ? "Alasan ditolak" : "Alasan diubah"}:</strong> {item.reason}{item.reviewedBy && <small> · oleh {item.reviewedBy}</small>}
   </p>;
   const pointsView = <span className={css.cardPoints}>
-    <strong className={item.status === "rejected" ? css.ptsOff : css.pts}>+{points(item.points)}</strong>
+    <strong className={item.status === "rejected" ? css.ptsOff : item.points === 0 ? css.ptsZero : css.pts}>+{points(item.points)}</strong>
     {item.status === "adjusted" && item.pointsClaimed !== item.points && <small>dari {points(item.pointsClaimed)}</small>}
     {item.status === "rejected" && <small>tidak dihitung</small>}
   </span>;
@@ -424,10 +425,12 @@ function ActivityItem({ layout, item, today, picked, onPick, onReview, onMove }:
     {details && <span>{details}</span>}
   </span>;
   const title = item.title || item.typeName;
-  // Who: the name with the day and time beside it, the department under it (two lines when it is long, never cut to one).
+  // Who: the name with the day and time beside it; under it the full name (when the shown name is a nickname, so
+  // the avatar's initials and two people with one nickname make sense) and the department, as in Karyawan.
+  const fullName = item.employeeNickname && item.employeeNickname !== item.employeeName ? item.employeeName : "";
   const who = (className: string) => <div className={className}>
     <span className={css.whoLine}><strong>{name}</strong><small>{when}</small></span>
-    <small className={css.whoDept}>{item.department || "-"}</small>
+    <small className={css.whoDept}>{[fullName, item.department].filter(Boolean).join(" · ") || "-"}</small>
   </div>;
   const common = {
     "data-card": true, tabIndex: 0, onKeyDown: onKey, "data-status": item.status, "data-picked": picked,

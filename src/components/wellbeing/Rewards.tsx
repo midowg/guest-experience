@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, CircleX, Gift, ImageOff, PackageCheck, Undo2, Wallet } from "lucide-react";
 import { Panel } from "@/components/app-shell/Panel";
 import { revalidate, setResource, useResource } from "@/components/app-shell/resource";
@@ -45,6 +45,10 @@ export function RewardsSheet({ open, tab, onClose }: { open: boolean; tab: Tab; 
   if (open !== wasOpen) { setWasOpen(open); if (open) { setView(tab); setStep({ kind: "list" }); setProblem(null); } }
 
   const reward = step.kind === "detail" ? data?.rewards.find(item => item.id === step.id) ?? null : null;
+  // Each step (list, a reward, sent) and each tab starts at the top, not where the list was scrolled to.
+  const top = useRef<HTMLDivElement>(null);
+  const stepKey = `${step.kind}:${step.kind === "detail" ? step.id : ""}:${view}`;
+  useEffect(() => { top.current?.scrollIntoView?.({ block: "start" }); }, [stepKey]);
   const openReward = (id: string) => { setStep({ kind: "detail", id }); setNote(""); setProblem(null); };
 
   async function claim(target: WbReward) {
@@ -119,6 +123,7 @@ export function RewardsSheet({ open, tab, onClose }: { open: boolean; tab: Tab; 
   }
 
   return <Panel open={open} onClose={onClose} title={title} variant="sheet" tall onBack={back} backLabel="Kembali ke daftar hadiah" focusKey={step.kind} locked={busy} footer={footer}>
+    <div ref={top} />
     {body}
   </Panel>;
 }
@@ -177,7 +182,7 @@ function RewardDetail({ reward, saldo, note, onNote, problem }: { reward: WbRewa
       <div className={css.standBar} aria-hidden="true"><i style={{ width: `${Math.max(4, Math.min(100, Math.round(Math.max(0, saldo.available) / reward.cost * 100)))}%` }} /></div>
     </div>}
     {reward.description && <p className={css.rewardText}>{reward.description}</p>}
-    <div className={cx(css.card, css.list, css.detailRows)}>
+    <div className={cx(css.card, css.list, css.detailRows, css.factList)}>
       <Fact label="Sisa stok" value={reward.left === null ? "Tanpa batas" : `${num(reward.left)}`} />
       <Fact label="Batas per orang" value={`${num(reward.perPerson)} kali${reward.mine ? ` (sudah ${num(reward.mine)})` : ""}`} />
       {reward.state === "available" && <Fact label="Saldo setelah klaim" value={`${num(saldo.available - reward.cost)} poin`} />}
@@ -213,7 +218,8 @@ function ClaimRow({ claim, onCancel }: { claim: WbClaim; onCancel: () => Promise
     </span>
     <span className={css.rowMain}>
       <span className={cx(css.rowTitle, css.wrap)}>{claim.title}</span>
-      <span className={css.rowMeta}>{when} · {num(claim.cost)} poin{claimHolds(claim.status) ? "" : " · kembali ke saldo"}</span>
+      {/* A no-break space keeps the number with "poin" when the line wraps. */}
+      <span className={css.rowMetaWrap}>{when} · {num(claim.cost)}{" "}poin{claimHolds(claim.status) ? "" : " · kembali ke saldo"}</span>
       {claim.status === "rejected" && claim.reason && <span className={css.claimReason}>Alasan: {claim.reason}</span>}
       {claim.note && <span className={css.rowMetaWrap}>Catatanmu: {claim.note}</span>}
       {claim.status === "requested" && (asking

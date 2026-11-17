@@ -59,9 +59,10 @@ describe("Admin Wellbeing", () => {
   it("keeps Periksa's texts whole: the department on its own line, units with their numbers, the full title and note (18 Nov 2026)", async () => {
     open("periksa");
     const card = (await screen.findAllByRole("article", { name: /^Dewi, Running/ }, { timeout: 3000 }))[0];
-    // The name with the day and time beside it; the department alone under it (it may take two lines, never cut with the time).
-    const department = within(card).getByText("Center of Excellence");
-    expect(department.textContent).toBe("Center of Excellence");
+    // The name with the day and time beside it; under it the full name (the avatar's initials) and the department
+    // (it may take two lines, never cut with the time).
+    const department = within(card).getByText("Dewi Contoh · Center of Excellence");
+    expect(department.textContent).toBe("Dewi Contoh · Center of Excellence");
     expect(within(card).getByText("Dewi").nextElementSibling?.textContent).toMatch(/^Hari ini/);
     // A number and its unit never part: no-break spaces, also before each dot.
     // (The raw text: the matcher's default would turn the no-break spaces into plain ones.)

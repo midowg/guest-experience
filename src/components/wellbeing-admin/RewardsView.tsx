@@ -77,13 +77,14 @@ function Claims({ data }: { data: WbRewardsAdmin }) {
       ? <Empty icon={<PackageCheck size={24} aria-hidden="true" />} title={filter === "requested" ? "Tidak ada klaim yang menunggu" : "Belum ada klaim di sini"}>
           {filter === "requested" ? "Klaim baru dari karyawan muncul di sini." : null}</Empty>
       : <ul className={css.claimRows} aria-label={`Klaim ${tabs.find(item => item.value === filter)?.label.toLowerCase()}`}>
-          {items.map(claim => <ClaimRow key={claim.id} claim={claim} />)}
+          {/* The tab already says the status; only Ditolak & batal mixes two, so only there each row says which. */}
+          {items.map(claim => <ClaimRow key={claim.id} claim={claim} showStatus={filter === "closed"} />)}
         </ul>}
     {filter !== "requested" && filter !== "approved" && <p className={css.help} style={{ marginTop: ".75rem" }}>Yang tampil: 200 klaim terakhir yang sudah selesai.</p>}
   </>;
 }
 
-function ClaimRow({ claim }: { claim: WbAdminClaim }) {
+function ClaimRow({ claim, showStatus }: { claim: WbAdminClaim; showStatus: boolean }) {
   const toast = useToast();
   const [busy, setBusy] = useState<ClaimAction | null>(null);
   const [rejecting, setRejecting] = useState(false);
@@ -112,9 +113,9 @@ function ClaimRow({ claim }: { claim: WbAdminClaim }) {
     <div className={css.claimMain}>
       <div className={css.claimHead}>
         <strong>{claim.rewardTitle}</strong>
-        <Pill tone={claimTone[claim.status]}>{claimStatusLabels[claim.status]}</Pill>
+        {showStatus && <Pill tone={claimTone[claim.status]}>{claimStatusLabels[claim.status]}</Pill>}
       </div>
-      <span className={css.claimWho}>{claim.employeeName}{claim.department ? ` · ${claim.department}` : ""} · <b>{points(claim.cost)} poin</b></span>
+      <span className={css.claimWho}><strong>{claim.employeeName}</strong>{claim.department ? ` · ${claim.department}` : ""}</span>
       <span className={css.help}>Diajukan {when(claim.createdAt)}
         {claim.decidedAt && claim.status !== "cancelled" ? ` · ${claim.status === "rejected" ? "ditolak" : "disetujui"} ${claim.decidedBy ?? ""} ${when(claim.decidedAt)}` : ""}
         {claim.deliveredAt ? ` · diserahkan ${claim.deliveredBy ?? ""} ${when(claim.deliveredAt)}` : ""}</span>
@@ -130,11 +131,14 @@ function ClaimRow({ claim }: { claim: WbAdminClaim }) {
       </div>}
       {problem && <p className={css.problem} role="alert">{problem}</p>}
     </div>
-    {open && !rejecting && <div className={css.claimActions}>
-      {claim.status === "requested" && <ConsoleButton icon={<Check size={18} aria-hidden="true" />} onClick={() => void decide("approve")} disabled={!!busy}>{busy === "approve" ? "Menyetujui…" : "Setujui"}</ConsoleButton>}
-      <ConsoleButton variant="primary" icon={<PackageCheck size={18} aria-hidden="true" />} onClick={() => void decide("deliver")} disabled={!!busy}>{busy === "deliver" ? "Menyimpan…" : "Tandai diserahkan"}</ConsoleButton>
-      <ConsoleButton icon={<X size={18} aria-hidden="true" />} onClick={() => setRejecting(true)} disabled={!!busy}>Tolak</ConsoleButton>
-    </div>}
+    <div className={css.claimSide}>
+      <span className={css.claimCost}>{points(claim.cost)}<small> poin</small></span>
+      {open && !rejecting && <div className={css.claimActions}>
+        <ConsoleButton icon={<X size={18} aria-hidden="true" />} onClick={() => setRejecting(true)} disabled={!!busy}>Tolak</ConsoleButton>
+        {claim.status === "requested" && <ConsoleButton icon={<Check size={18} aria-hidden="true" />} onClick={() => void decide("approve")} disabled={!!busy}>{busy === "approve" ? "Menyetujui…" : "Setujui"}</ConsoleButton>}
+        <ConsoleButton variant="primary" icon={<PackageCheck size={18} aria-hidden="true" />} onClick={() => void decide("deliver")} disabled={!!busy}>{busy === "deliver" ? "Menyimpan…" : "Tandai diserahkan"}</ConsoleButton>
+      </div>}
+    </div>
   </li>;
 }
 
@@ -148,10 +152,11 @@ function Catalog({ data, onEdit }: { data: WbRewardsAdmin; onEdit: (reward: WbAd
         <span className={css.rewardImage}>
           {/* eslint-disable-next-line @next/next/no-img-element -- signed storage addresses */}
           {reward.photos[0]?.url ? <img src={reward.photos[0].url} alt="" loading="lazy" /> : <Gift size={28} aria-hidden="true" />}
+          <span className={css.rewardBadge}><Pill tone={reward.active ? "ok" : "neutral"}>{reward.active ? "Aktif" : "Draf"}</Pill></span>
           {reward.photos.length > 1 && <span className={css.rewardCount}>{reward.photos.length} foto</span>}
         </span>
         <span className={css.rewardInfo}>
-          <span className={css.claimHead}><strong>{reward.title}</strong><Pill tone={reward.active ? "ok" : "neutral"}>{reward.active ? "Aktif" : "Draf"}</Pill></span>
+          <strong className={css.rewardName}>{reward.title}</strong>
           <span className={css.rewardPrice}>{points(reward.cost)} poin</span>
           <span className={css.help}>
             {reward.stock === null ? `${points(reward.taken)} diklaim · stok tanpa batas` : `${points(reward.taken)} dari ${points(reward.stock)} diklaim`}
@@ -262,7 +267,7 @@ function RewardPanel({ reward, onClose }: { reward: WbAdminReward | "new" | null
     <form className={css.form} onSubmit={event => { event.preventDefault(); void save(); }}>
       <label className={css.field}><span>Nama hadiah</span><input className={css.input} value={draft.title} maxLength={120} onChange={event => set("title", event.target.value)} autoFocus={isNew} /></label>
       <div className={css.field}>
-        <span>Foto ({draft.photos.length}/{MAX_REWARD_PHOTOS}) <small className={css.help}>Foto pertama tampil di daftar.</small></span>
+        <span>Foto ({draft.photos.length}/{MAX_REWARD_PHOTOS})</span>
         <ul className={css.photoGrid} aria-label="Foto hadiah">
           {draft.photos.map((photo, index) => <li key={photo.key} className={css.photoTile}>
             {/* eslint-disable-next-line @next/next/no-img-element -- local previews and signed storage addresses */}
@@ -278,12 +283,14 @@ function RewardPanel({ reward, onClose }: { reward: WbAdminReward | "new" | null
           </li>}
         </ul>
         <input ref={picker} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden data-testid="reward-file" onChange={event => void addPhotos(event.target.files)} />
+        <small className={css.help}>Foto pertama (bergaris biru) tampil di daftar. Foto produk berlatar putih tampil paling rapi.</small>
       </div>
       <label className={css.field}><span>Keterangan (dibaca karyawan)</span>
         <textarea className={css.input} rows={4} value={draft.description} maxLength={2000} onChange={event => set("description", event.target.value)} placeholder="Apa hadiahnya, cara dan waktu penyerahan, masa berlaku" /></label>
       <div className={css.fieldRow}>
         <label className={css.field}><span>Harga (poin)</span><input className={css.input} inputMode="numeric" value={draft.cost} onChange={event => set("cost", digits(event.target.value, 8))} /></label>
-        <label className={css.field}><span>Stok <small className={css.help}>kosong = tanpa batas</small></span><input className={css.input} inputMode="numeric" value={draft.stock} onChange={event => set("stock", digits(event.target.value, 6))} /></label>
+        <label className={css.field}><span>Stok</span><input className={css.input} inputMode="numeric" value={draft.stock} placeholder="Tanpa batas" aria-describedby="reward-stock-help" onChange={event => set("stock", digits(event.target.value, 6))} />
+          <small className={css.help} id="reward-stock-help">Kosongkan bila tanpa batas.</small></label>
       </div>
       <label className={css.field}><span>Batas per orang</span><input className={css.input} inputMode="numeric" value={draft.perPerson} onChange={event => set("perPerson", digits(event.target.value, 3))} /></label>
       <label className={css.switchRow}><input type="checkbox" checked={draft.active} onChange={event => set("active", event.target.checked)} />

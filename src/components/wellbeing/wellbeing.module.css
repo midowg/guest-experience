@@ -803,8 +803,9 @@ input[type="date"].input { display: block; }
 .rewardGrid { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .rewardCard { display: flex; flex-direction: column; width: 100%; height: 100%; text-align: left; border-radius: 16px; overflow: hidden; background: var(--surface); border: 1px solid var(--outline); color: var(--text); }
 .rewardCard:active { transform: scale(.98); }
-.rewardPhoto { position: relative; display: grid; place-items: center; aspect-ratio: 1; background: var(--surface-2); color: var(--text-3); }
-.rewardPhoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Prize photos are mostly product shots on white: shown whole on white, never cropped. */
+.rewardPhoto { position: relative; display: grid; place-items: center; aspect-ratio: 1; background: #fff; color: var(--text-3); border-bottom: 1px solid var(--outline); overflow: hidden; }
+.rewardPhoto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 10px; box-sizing: border-box; display: block; }
 .rewardCard[data-state="sold_out"] .rewardPhoto img { filter: grayscale(1); opacity: .6; }
 .rewardLeft { position: absolute; left: 8px; top: 8px; height: 24px; padding: 0 8px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 11px; font-weight: 700;
   background: rgba(14, 21, 37, .78); color: #fff; }
@@ -820,7 +821,7 @@ input[type="date"].input { display: block; }
 /* A reward's detail: its photos side by side (swipe), then the price and the facts. */
 .rewardGallery { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; border-radius: 16px; scrollbar-width: none; }
 .rewardGallery::-webkit-scrollbar { display: none; }
-.rewardGallery img { flex: 0 0 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 16px; scroll-snap-align: center; background: var(--surface-2); }
+.rewardGallery img { flex: 0 0 100%; aspect-ratio: 4 / 3; object-fit: contain; padding: 12px; box-sizing: border-box; border-radius: 16px; scroll-snap-align: center; background: #fff; border: 1px solid var(--outline); }
 .rewardGallery:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .rewardNoPhoto { aspect-ratio: 4 / 3; display: grid; place-items: center; background: var(--surface-2); color: var(--text-3); }
 .rewardHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
@@ -833,7 +834,10 @@ input[type="date"].input { display: block; }
 /* Klaim saya. */
 .claimList { list-style: none; margin: 16px 0 0; padding: 0; }
 .claimPhoto { width: 48px; height: 48px; border-radius: 12px; overflow: hidden; flex: none; display: grid; place-items: center; background: var(--surface-2); color: var(--text-3); }
-.claimPhoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.claimPhoto img { width: 100%; height: 100%; object-fit: contain; padding: 3px; box-sizing: border-box; display: block; }
+.claimPhoto:has(img) { background: #fff; border: 1px solid var(--outline); }
+/* Facts without a lead icon: the divider runs from the text, not from where an icon would be. */
+.list.factList > .row + .row::before { left: 16px; }
 .claimReason { font-size: 13px; color: var(--on-error-c); background: var(--error-c); border-radius: 8px; padding: 6px 8px; margin-top: 4px; }
 .claimCancel { align-self: flex-start; min-height: 44px; margin: 0 0 -8px -12px; gap: 6px; font-size: 14px; }
 .claimAsk { display: flex; align-items: center; flex-wrap: wrap; gap: 0 4px; margin: 4px 0 -8px; font-size: 13px; color: var(--text-2); }
