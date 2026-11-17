@@ -62,6 +62,18 @@ sentuh, mode gelap).
   Condensed, teks Plus Jakarta Sans. Warna utama lama (biru) bentrok dengan warna dimensi Finansial, jadi diganti.
 - API: `GET /api/wellbeing/leaderboard` kini juga mengirim `near` (sekitarku) dan `ahead` (yang dikejar).
 
+### Api streak (18 Nov 2026)
+
+Seperti Duolingo: di Beranda (bawah grafik 7 hari) ada api di samping jumlah hari beruntun.
+
+- **Menyala** (oranye, bergoyang pelan, dengan cahaya) bila hari ini sudah ada aktivitas yang dihitung:
+  "Hari ini sudah tercatat. Lanjutkan besok."
+- **Garis abu-abu saja** (seperti mati) bila hari ini belum: angka streak ikut abu-abu, "Belum tercatat hari ini."
+  dan tombol Catat sekarang. Belum punya streak: "Catat hari ini untuk menyalakan api."
+- Aktivitas pertama hari itu menyalakan api: layar Tercatat menampilkan "N hari beruntun · api hari ini menyala"
+  dengan animasi menyala, dan api di Beranda ikut menyala. Tanpa animasi bila HP diatur mengurangi gerakan.
+- Pratinjau: `/dev-preview/wellbeing?belumhariini=1` (hari ini belum tercatat).
+
 ### Halaman Peringkat (18 Nov 2026)
 
 Halaman menampilkan beberapa saja, sisanya di **Lihat semua peringkat** (lembar bawah). Urutannya:

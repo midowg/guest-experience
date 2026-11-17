@@ -10,8 +10,10 @@ import { errorText, isCancelled, uploadPhoto, WellbeingApiError } from "./api";
 import { keys, reducedMotion, useWellbeing, type CatatPreset } from "./context";
 import { ALREADY_LOGGED, catatErrors, clockLabel, dayLabel, firstError, firstName, formatDate, num, previewPoints, type CatatErrors, type CatatField } from "./format";
 import { dimensionIcons, Icon, sportIcon } from "./icons";
+import { StreakFlame } from "./Flame";
 import { readPhotoText, type OcrStage } from "./ocr";
 import { cx, ErrorState, Preparing, SkRows } from "./parts";
+import { litToday } from "./race";
 import { readProof, type ProofReading } from "./read-proof";
 import css from "./wellbeing.module.css";
 
@@ -83,7 +85,8 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
   const [problem, setProblem] = useState<Problem | null>(null);
   const [saving, setSaving] = useState<{ label: string; progress: number } | null>(null);
   // rankBefore: my place before this save (null: none yet; undefined: Beranda had not loaded). ahead: the one I was chasing.
-  const [result, setResult] = useState<(WbLogResult & { rankBefore: number | null | undefined; ahead: WbBoardRow | null }) | null>(null);
+  // lit: this save lit today's streak flame (the first activity of the day), as Duolingo celebrates it.
+  const [result, setResult] = useState<(WbLogResult & { rankBefore: number | null | undefined; ahead: WbBoardRow | null; lit: boolean }) | null>(null);
   const [reading, setReading] = useState<Reading | null>(null);
   const [fromPhoto, setFromPhoto] = useState<FromPhoto | null>(null);
   const [scanNote, setScanNote] = useState<string | null>(null);
@@ -287,9 +290,15 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
       }, { signal: controller.signal });
       abort.current = null;
       // Beranda changes at once (the place before is kept, to tell a climb); then every screen refreshes from the server.
-      let rankBefore = undefined as number | null | undefined;
-      setResource<WbHome>(keys.home, current => { rankBefore = current ? current.totals.rank : undefined; return current && { ...current, totals: answer.totals, recent: [answer.activity, ...current.recent.filter(item => item.id !== answer.activity.id)].slice(0, 5) }; });
-      setResult({ ...answer, rankBefore, ahead: monthBoard.data?.migrated ? monthBoard.data.ahead : null }); setSaving(null); goStep("done", "fwd");
+      let rankBefore = undefined as number | null | undefined, litBefore = true;
+      setResource<WbHome>(keys.home, current => {
+        rankBefore = current ? current.totals.rank : undefined;
+        // Unknown before (Beranda had not loaded): no celebration rather than a wrong one.
+        litBefore = current ? litToday(current.totals, today) : true;
+        return current && { ...current, totals: answer.totals, recent: [answer.activity, ...current.recent.filter(item => item.id !== answer.activity.id)].slice(0, 5) };
+      });
+      const lit = !litBefore && litToday(answer.totals, today);
+      setResult({ ...answer, rankBefore, ahead: monthBoard.data?.migrated ? monthBoard.data.ahead : null, lit }); setSaving(null); goStep("done", "fwd");
       onSaved();
       revalidate(keys.all);
       try { if (navigator.vibrate && navigator.userActivation?.hasBeenActive) navigator.vibrate(12); } catch { /* no vibration */ }
@@ -526,6 +535,7 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
         <p className={css.donePts}>+{num(result.activity.points)} poin</p>
         <p className={css.muted}>Total poinmu sekarang <b>{num(result.totals.points)}</b></p>
         <RankAfter result={result} />
+        {result.lit && <p className={css.streakUp}><StreakFlame lit ignite size={30} /><span><b>{num(result.totals.streak)}</b> hari beruntun · api hari ini menyala</span></p>}
       </div>
       <p className={css.note}><Info size={20} aria-hidden="true" /><span>Poin langsung masuk. Admin bisa memeriksa bukti; kalau ada yang diubah atau ditolak, alasannya muncul di Riwayat.</span></p>
     </>;

@@ -15,7 +15,7 @@ const SECTIONS = ["riwayat", "peringkat", "profil"];
  * · ?kosong=1 a brand-new person · ?kembar=1 a Strava Running yesterday (log Running for yesterday to see
  * "Tetap simpan") · ?belumsiap=1 before the migration (migrated: false) · ?masuk=1 the sign-in page instead
  * (it calls the real WAM sign-in API) · ?pengumuman=1 an announcement and a prize · ?jeda=1 Catat paused ·
- * ?tanpafoto=1 photo reading off.
+ * ?tanpafoto=1 photo reading off · ?belumhariini=1 nothing logged today (the streak flame is off; log one to light it).
  */
 export default async function DevWellbeingPage({ params, searchParams }: {
   params: Promise<{ section?: string[] }>;
@@ -32,5 +32,5 @@ export default async function DevWellbeingPage({ params, searchParams }: {
     ...(on("jeda") ? { pausedMessage: "Pencatatan dibuka lagi Senin pukul 08.00 setelah pindah data." } : {}),
     ...(on("tanpafoto") ? { photoReading: false } : {}),
   };
-  return <WellbeingPreview options={{ slow: on("lambat"), fail: on("gagal"), empty: on("kosong"), stravaTwin: on("kembar"), notReady: on("belumsiap"), controls }} login={on("masuk")} />;
+  return <WellbeingPreview options={{ slow: on("lambat"), fail: on("gagal"), empty: on("kosong"), stravaTwin: on("kembar"), notReady: on("belumsiap"), notToday: on("belumhariini"), controls }} login={on("masuk")} />;
 }

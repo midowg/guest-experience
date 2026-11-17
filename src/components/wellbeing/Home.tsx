@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, ChevronRight, Crown, Flag, Flame, Gift, History, Info, Megaphone, NotebookPen, Plus, Target, Timer, X } from "lucide-react";
+import { ArrowUp, ChevronRight, Crown, Flag, Gift, History, Info, Megaphone, NotebookPen, Plus, Target, Timer, X } from "lucide-react";
 import { useResource, type Resource } from "@/components/app-shell/resource";
 import type { WbAppControls, WbBoard, WbBoardRow, WbHome } from "@/lib/wellbeing/app-types";
 import { addDays, DIMENSIONS, dimensionLabels } from "@/lib/wellbeing/rules";
 import { keys, reducedMotion, useWellbeing } from "./context";
 import { currentWibHour, firstName, formatDate, greeting, num, weekday } from "./format";
 import { dimensionIcons, Icon } from "./icons";
+import { StreakFlame } from "./Flame";
 import { ActivityRow, cx, Empty, ErrorState, LeaderRow, Sk, SkRows, StaleBar } from "./parts";
-import { chaseOf, daysLeftLabel, rankTrend } from "./race";
+import { chaseOf, daysLeftLabel, litToday, rankTrend } from "./race";
 import css from "./wellbeing.module.css";
 
 /*
@@ -168,8 +169,12 @@ function Week({ data }: { data: WbHome }) {
   const { week, streak } = data.totals;
   const total = week.reduce((sum, day) => sum + day.points, 0);
   const maxDay = Math.max(1, ...week.map(day => day.points));
-  const todayPoints = week.find(day => day.date === data.today)?.points ?? 0;
-  const atRisk = streak > 0 && todayPoints <= 0;
+  const lit = litToday(data.totals, data.today);
+  const atRisk = streak > 0 && !lit;
+  // The flame lights up (once) when today's first activity comes in while Beranda is open.
+  const [wasLit, setWasLit] = useState(lit);
+  const [ignite, setIgnite] = useState(false);
+  if (lit !== wasLit) { setWasLit(lit); setIgnite(lit); }
   return <section className={css.sec} aria-labelledby="week-title">
     <div className={css.secHead}><h2 className={css.sub} id="week-title">7 hari terakhir</h2>{total > 0 ? <b className={css.pts}>+{num(total)} poin</b> : <span className={cx(css.caption, css.muted)}>0 poin</span>}</div>
     <div className={cx(css.card, css.pad)}>
@@ -180,13 +185,16 @@ function Week({ data }: { data: WbHome }) {
           <span aria-hidden="true">{weekday(day.date)}</span>
         </div>)}
       </div>
-      <div className={css.streak}>
-        <span className={css.streakIcon} data-off={streak <= 0}><Flame size={20} aria-hidden="true" /></span>
+      {/* Duolingo-style: the flame burns once today is logged; an outline only (off) until then. */}
+      <div className={css.streak} data-lit={lit}>
+        <StreakFlame lit={lit} ignite={ignite} />
         <span className={css.rowMain}>
-          <span><b>{streak > 0 ? `${num(streak)} hari beruntun` : "Belum ada streak"}</b></span>
-          <span className={css.rowMetaWrap}>{atRisk ? "Catat hari ini supaya streak tidak putus." : streak > 0 ? "Pertahankan: satu aktivitas sehari." : "Catat hari ini untuk memulai."}</span>
+          {streak > 0
+            ? <span className={css.streakCount}><b>{num(streak)}</b> hari beruntun</span>
+            : <span className={css.streakCount}>Belum ada streak</span>}
+          <span className={css.rowMetaWrap}>{lit ? "Hari ini sudah tercatat. Lanjutkan besok." : atRisk ? "Belum tercatat hari ini." : "Catat hari ini untuk menyalakan api."}</span>
         </span>
-        {(atRisk || streak <= 0) && <button type="button" className={cx(css.btn, css.btnPrimary)} onClick={() => openCatat()}>Catat sekarang</button>}
+        {!lit && <button type="button" className={cx(css.btn, css.btnPrimary)} onClick={() => openCatat()}>Catat sekarang</button>}
       </div>
     </div>
   </section>;

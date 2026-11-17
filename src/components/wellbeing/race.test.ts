@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 import type { WbBoardRow, WbLedgerItem } from "@/lib/wellbeing/app-types";
-import { boardView, chaseOf, daysLeft, daysLeftLabel, medalOf, rankTrend, recordsOf } from "./race";
+import { boardView, chaseOf, daysLeft, daysLeftLabel, litToday, medalOf, rankTrend, recordsOf } from "./race";
 
 const row = (rank: number, points: number, me = false, id = `p${rank}${me ? "me" : ""}`): WbBoardRow => ({ rank, employeeId: id, name: `Orang ${rank}`, department: "", points, me });
 
@@ -36,6 +36,13 @@ describe("chase", () => {
 });
 
 describe("board helpers", () => {
+  it("lights the streak flame only once today has points (18 Nov 2026)", () => {
+    const week = (todayPoints: number) => [{ date: "2026-11-16", points: 80 }, { date: "2026-11-17", points: todayPoints }];
+    expect(litToday({ streak: 3, week: week(80) }, "2026-11-17")).toBe(true);
+    expect(litToday({ streak: 2, week: week(0) }, "2026-11-17")).toBe(false);
+    // Admin points today without an activity: no streak, no flame.
+    expect(litToday({ streak: 0, week: week(100) }, "2026-11-17")).toBe(false);
+  });
   it("gives medals to the top three only", () => {
     expect([1, 2, 3, 4].map(medalOf)).toEqual(["gold", "silver", "bronze", null]);
   });

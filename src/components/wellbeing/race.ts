@@ -37,6 +37,10 @@ export function chaseOf(board: Pick<WbBoard, "me" | "ahead" | "items" | "near">)
   return { kind: "lead", runnerUp, margin: runnerUp ? me.points - runnerUp.points : me.points };
 }
 
+/** The streak's flame is lit once today has a counted activity (the streak then runs through today). */
+export const litToday = (totals: { streak: number; week: { date: string; points: number }[] }, today: string) =>
+  totals.streak > 0 && (totals.week.find(day => day.date === today)?.points ?? 0) > 0;
+
 export type Medal = "gold" | "silver" | "bronze";
 export const medalOf = (rank: number): Medal | null => rank === 1 ? "gold" : rank === 2 ? "silver" : rank === 3 ? "bronze" : null;
 

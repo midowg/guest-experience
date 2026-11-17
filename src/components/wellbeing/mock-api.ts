@@ -28,6 +28,8 @@ export type MockOptions = {
   notReady?: boolean;
   /** What Admin Wellbeing → Aplikasi karyawan has set (17 Nov 2026); defaults without it. */
   controls?: Partial<WbAppControls>;
+  /** Nothing logged today yet: the streak runs to yesterday and its flame is off (18 Nov 2026). */
+  notToday?: boolean;
 };
 
 export const sampleMe: WbMe = { id: "00000000-0000-4000-8000-0000000000aa", name: "Dewi Contoh", nickname: "Dewi", department: "Creative", position: "Graphic Designer" };
@@ -192,7 +194,7 @@ const historyOrder = (a: WbMyActivity, b: WbMyActivity) => b.date.localeCompare(
 export function mockApi(options: MockOptions = {}): WellbeingApi {
   const today = wibToday();
   const people = seedPeople();
-  const activities: WbMyActivity[] = options.empty ? [] : seedActivities(today, !!options.stravaTwin);
+  const activities: WbMyActivity[] = options.empty ? [] : seedActivities(today, !!options.stravaTwin).filter(item => !options.notToday || item.date !== today);
   const admin: Admin[] = options.empty ? [] : [{ date: addDays(today, -12), title: "Hadir Friday Sharing", points: 100, dimension: "social" }];
   const importBase = options.empty ? 0 : 6150;
   let uploads = 0;

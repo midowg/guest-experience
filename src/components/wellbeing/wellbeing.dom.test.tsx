@@ -262,6 +262,31 @@ describe("WellbeingApp", () => {
     expect(await within(dialog()).findByText("Kegiatan harian")).toBeTruthy();
   });
 
+  it("burns the streak flame once today is logged, an outline until then, and lights it on the first save of the day (18 Nov 2026)", async () => {
+    const { unmount } = app();
+    const lit = (await screen.findByText("hari beruntun", { exact: false })).closest("div")!;
+    expect(lit.getAttribute("data-lit")).toBe("true");
+    expect(within(lit).getByText("Hari ini sudah tercatat. Lanjutkan besok.")).toBeTruthy();
+    expect(within(lit).queryByRole("button", { name: "Catat sekarang" })).toBeNull();
+    unmount(); clearResources("wbapp:");
+
+    app(mockApi({ latency: [0, 0], notToday: true }));
+    const off = (await screen.findByText("hari beruntun", { exact: false })).closest("div")!;
+    expect(off.getAttribute("data-lit")).toBe("false");
+    expect(within(off).getByText("Belum tercatat hari ini.")).toBeTruthy();
+    const streak = Number(within(off).getByText(/^\d+$/).textContent);
+    fireEvent.click(within(off).getByRole("button", { name: "Catat sekarang" }));
+    fireEvent.click(await within(dialog()).findByText("Kegiatan harian"));
+    fireEvent.click(await within(dialog()).findByText("Emosional"));
+    fireEvent.click(await within(dialog()).findByText("Sharing Session"));
+    addPhoto();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Simpan · +80 poin" }));
+    const done = await within(dialog()).findByText("hari beruntun · api hari ini menyala", { exact: false }, { timeout: 3000 });
+    expect(done.closest("p")?.textContent).toBe(`${streak + 1} hari beruntun · api hari ini menyala`);
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Selesai" }));
+    await waitFor(() => expect(screen.getByText("Hari ini sudah tercatat. Lanjutkan besok.")).toBeTruthy());
+  });
+
   it("says where the save leaves me in the race", async () => {
     app(mockApi({ latency: [0, 0], empty: true }));
     await screen.findByText("Total poin");

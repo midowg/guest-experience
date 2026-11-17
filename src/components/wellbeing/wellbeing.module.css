@@ -28,6 +28,7 @@
   --strava: #FC4C02;
   /* Medals for the top three, each with its number or name beside it (never colour alone). -ink: on ink surfaces. */
   --gold: #D69A00; --gold-c: #FFF3D1; --on-gold-c: #6E4800; --gold-ink: #F4C542;
+  --streak-ink: #C25400;
   --silver: #8E99AA; --silver-c: #EDF0F4; --on-silver-c: #3D4757; --silver-ink: #CDD5E0;
   --bronze: #B9682C; --bronze-c: #FBE8D8; --on-bronze-c: #763B10; --bronze-ink: #E39A62;
   --up-ink: #C5F23A; --down-ink: #FCA5A5;
@@ -65,7 +66,7 @@
     --warning: #FBBF24; --warning-c: rgba(251, 191, 36, .14); --on-warning-c: #FCD34D;
     --error: #F87171; --error-c: rgba(248, 113, 113, .14); --on-error-c: #FCA5A5;
     --inverse: #F3F4F6; --on-inverse: #111827;
-    --gold-c: rgba(244, 197, 66, .14); --on-gold-c: #F4C542; --silver-c: rgba(205, 213, 224, .12); --on-silver-c: #CDD5E0; --bronze-c: rgba(227, 154, 98, .14); --on-bronze-c: #E9A877;
+    --gold-c: rgba(244, 197, 66, .14); --on-gold-c: #F4C542; --silver-c: rgba(205, 213, 224, .12); --on-silver-c: #CDD5E0; --bronze-c: rgba(227, 154, 98, .14); --on-bronze-c: #E9A877; --streak-ink: #FFA51F;
     --d-physical: #5EEAD4; --d-physical-c: rgba(94, 234, 212, .14);
     --d-emotional: #C4B5FD; --d-emotional-c: rgba(196, 181, 253, .14);
     --d-social: #FDBA74; --d-social-c: rgba(253, 186, 116, .14);
@@ -91,7 +92,7 @@
   --warning: #FBBF24; --warning-c: rgba(251, 191, 36, .14); --on-warning-c: #FCD34D;
   --error: #F87171; --error-c: rgba(248, 113, 113, .14); --on-error-c: #FCA5A5;
   --inverse: #F3F4F6; --on-inverse: #111827;
-  --gold-c: rgba(244, 197, 66, .14); --on-gold-c: #F4C542; --silver-c: rgba(205, 213, 224, .12); --on-silver-c: #CDD5E0; --bronze-c: rgba(227, 154, 98, .14); --on-bronze-c: #E9A877;
+  --gold-c: rgba(244, 197, 66, .14); --on-gold-c: #F4C542; --silver-c: rgba(205, 213, 224, .12); --on-silver-c: #CDD5E0; --bronze-c: rgba(227, 154, 98, .14); --on-bronze-c: #E9A877; --streak-ink: #FFA51F;
   --d-physical: #5EEAD4; --d-physical-c: rgba(94, 234, 212, .14);
   --d-emotional: #C4B5FD; --d-emotional-c: rgba(196, 181, 253, .14);
   --d-social: #FDBA74; --d-social-c: rgba(253, 186, 116, .14);
@@ -357,10 +358,28 @@ button.row:disabled { opacity: .55; cursor: default; }
 .weekCol[data-today="true"] .weekBar { background: var(--primary); border: 0; }
 .weekCol[data-today="true"] .weekVal, .weekCol[data-today="true"] span:last-child { color: var(--text); font-weight: 700; }
 @keyframes rise { from { transform: scaleY(.1); } }
-.streak { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--outline); }
-.streakIcon { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex: none; background: var(--d-social-c); color: var(--d-social); }
-.streakIcon[data-off="true"] { background: var(--surface-2); color: var(--text-3); }
-.streak .rowMain b { font-weight: 700; }
+.streak { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--outline); }
+.streakCount { font-weight: 700; font-size: 15px; display: flex; align-items: baseline; gap: 6px; color: var(--text-2); }
+.streakCount > b { font-family: var(--font-num); font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text-3); }
+.streak[data-lit="true"] .streakCount { color: var(--text); }
+.streak[data-lit="true"] .streakCount > b { color: var(--streak-ink); }
+
+/*
+ * The streak flame: lit, it flickers (the outer flame and the inner one at their own pace, from the
+ * base) over a soft glow; off, only its outline in grey. `data-ignite` lights it once.
+ */
+.flame { position: relative; display: inline-grid; place-items: center; flex: none; isolation: isolate; }
+.flame svg { display: block; overflow: visible; }
+.flame[data-lit="false"] .flameOuter { stroke: var(--text-3); stroke-width: 2.2; stroke-linejoin: round; }
+.flame[data-lit="true"]::before { content: ""; position: absolute; z-index: -1; left: -30%; right: -30%; top: 20%; bottom: -12%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 140, 0, .38), transparent); animation: flameGlow 1.8s ease-in-out infinite; }
+.flame[data-lit="true"] .flameOuter { transform-box: fill-box; transform-origin: 50% 100%; animation: flameOuter 1.7s ease-in-out infinite; }
+.flame[data-lit="true"] .flameInner { transform-box: fill-box; transform-origin: 50% 100%; animation: flameInner 1.1s ease-in-out infinite; }
+.flame[data-ignite="true"] svg { animation: flameIgnite .8s cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes flameOuter { 0%, 100% { transform: scale(1, 1) skewX(0deg); } 30% { transform: scale(.97, 1.05) skewX(-2deg); } 65% { transform: scale(1.02, .97) skewX(1.5deg); } }
+@keyframes flameInner { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(.9, 1.12); } }
+@keyframes flameGlow { 0%, 100% { opacity: .75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes flameIgnite { 0% { transform: scale(.3); opacity: 0; } 55% { transform: scale(1.22); opacity: 1; } 100% { transform: scale(1); } }
 .streak .btn { min-height: 40px; padding: 0 14px; position: relative; }
 .streak .btn::after { content: ""; position: absolute; inset: -4px 0; }
 
@@ -568,6 +587,10 @@ input[type="date"].input { display: block; }
 /* After a save: the place this month, and a climb when there is one. */
 .rankUp { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 14px; border-radius: 999px; background: var(--ink-pill); border: 1px solid var(--ink-edge); color: var(--on-ink); font-weight: 700; font-size: 14px; margin-top: 8px; animation: pop .45s .25s var(--ease-out) both; }
 .rankUp svg { color: var(--volt); }
+/* After the day's first activity: the streak flame lights up. */
+.streakUp { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 16px 4px 10px; border-radius: 999px; margin-top: 10px; font-size: 14px; font-weight: 600; color: var(--text);
+  background: color-mix(in srgb, #FF8A00 14%, var(--surface)); animation: pop .45s .35s var(--ease-out) both; }
+.streakUp b { font-family: var(--font-num); font-size: 20px; color: var(--streak-ink); }
 .detailRows { margin-top: 16px; }
 .detailRows .row { min-height: 52px; }
 .kv { display: flex; justify-content: space-between; gap: 16px; width: 100%; }
@@ -597,7 +620,8 @@ input[type="date"].input { display: block; }
 .rules li[data-ok="true"] { color: var(--on-success-c); }
 
 @media (prefers-reduced-motion: reduce) {
-  .screen[data-active="true"], .step, .step[data-dir], .doneMark, .sk::after, .ptr[data-spinning="true"] svg, .spin, .chaseBar > i, .weekBar, .podBase, .podCrown, .standBar > i, .rankUp, .scanLine { animation: none; }
+  .screen[data-active="true"], .step, .step[data-dir], .doneMark, .sk::after, .ptr[data-spinning="true"] svg, .spin, .chaseBar > i, .weekBar, .podBase, .podCrown, .standBar > i, .rankUp, .streakUp, .scanLine { animation: none; }
+  .flame[data-lit]::before, .flame[data-lit] .flameOuter, .flame[data-lit] .flameInner, .flame[data-ignite] svg { animation: none; }
   .tabInd, .meter > i, .progress > i, .phBar > i, .bar, .barTitle, .pressable { transition: none; }
   .pressable:active, .btn:active, .tab:active .tabInd { transform: none; }
 }
