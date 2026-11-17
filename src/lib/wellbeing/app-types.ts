@@ -120,3 +120,15 @@ export type WbLedger = { migrated: boolean; items: WbLedgerItem[]; total: number
  */
 export const WELLBEING_SECTIONS = ["beranda", "riwayat", "peringkat", "profil"] as const;
 export type WellbeingSection = (typeof WELLBEING_SECTIONS)[number];
+
+/**
+ * GET /api/wellbeing/strava (18 Nov 2026): my Strava connection. `ready` false while the office's Strava
+ * app or the migration is missing; `status` "reconnect" when Strava refused the tokens; `private` when
+ * "Only you" activities are counted too.
+ */
+export type WbStrava = {
+  ready: boolean; connected: boolean; status: "ok" | "reconnect" | null; athleteName: string;
+  connectedAt: string | null; lastSyncAt: string | null; lastError: string | null; private: boolean;
+};
+/** POST /api/wellbeing/strava/sync: activities newly counted, of those Strava listed since the month began. */
+export type WbStravaSync = { added: number; seen: number };

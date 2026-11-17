@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Activity, Check, CircleX, Dumbbell, ImageOff, LogOut, Moon, NotebookPen, SlidersHorizontal, Smartphone, Sun, X, type LucideIcon } from "lucide-react";
+import { Check, CircleX, ImageOff, LogOut, Moon, NotebookPen, SlidersHorizontal, Smartphone, Sun, X, type LucideIcon } from "lucide-react";
 import { Panel } from "@/components/app-shell/Panel";
 import { load } from "@/components/app-shell/resource";
 import type { WbMyActivity } from "@/lib/wellbeing/app-types";
@@ -113,20 +113,6 @@ function PhotoViewer({ url, index, count, onClose }: { url: string; index: numbe
 
 function Kv({ label, value }: { label: string; value: React.ReactNode }) {
   return <div className={css.row}><span className={css.kv}><span>{label}</span><span>{value}</span></span></div>;
-}
-
-export function StravaSheet({ open, onClose, onLogSport }: { open: boolean; onClose: () => void; onLogSport: () => void }) {
-  return <Panel open={open} onClose={onClose} title="Strava" variant="sheet"
-    footer={<div className={css.btnRow}>
-      <button type="button" className={cx(css.btn, css.btnOutline)} onClick={onClose}>Tutup</button>
-      <button type="button" className={cx(css.btn, css.btnPrimary)} onClick={onLogSport}><Dumbbell size={20} aria-hidden="true" />Catat olahraga</button>
-    </div>}>
-    <div className={css.svHero}>
-      <span className={cx(css.stravaMark, css.stravaMarkLg)}><Activity size={36} aria-hidden="true" /></span>
-      <h3 className={css.headline}>Sambungan Strava sedang disiapkan</h3>
-      <p className={css.muted}>Sampai siap, olahraga dicatat lewat Catat → Olahraga.</p>
-    </div>
-  </Panel>;
 }
 
 /** Tema, as a phone's settings do it: three choices, the current one ticked; a tap applies it at once. */

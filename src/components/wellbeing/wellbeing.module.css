@@ -725,3 +725,13 @@ input[type="date"].input { display: block; }
 .cardThumb { display: block; flex: none; width: 44px; height: 44px; border-radius: 999px; overflow: hidden; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ring, var(--outline)); }
 .row:disabled { cursor: default; }
 .row:disabled .rowTitle { color: var(--text-3); }
+
+/* ---------- Strava (18 Nov 2026): its orange for its own button, "Powered by Strava" ---------- */
+.btnStrava { background: var(--strava); color: #fff; }
+.btnStrava:disabled { opacity: .7; }
+.stravaPoints { list-style: none; margin: 16px 0 12px; padding: 0; display: grid; gap: 12px; }
+.stravaPoints li { display: flex; gap: 12px; align-items: flex-start; line-height: 1.45; color: var(--text-2); }
+.stravaPoints li > svg { flex: none; margin-top: 1px; color: var(--strava); }
+.stravaPoints b { color: var(--text); }
+.stravaPowered { margin: 16px 0 0; text-align: center; font-size: 12px; letter-spacing: .02em; color: var(--text-3); }
+.stravaPowered b { color: var(--strava); font-weight: 800; }

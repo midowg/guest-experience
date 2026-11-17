@@ -376,3 +376,12 @@ textarea.input { min-height: 5.5rem; padding: .625rem .875rem; resize: vertical;
 .viewerNav > :last-child { justify-self: end; }
 .viewerNav > span { color: var(--cs-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
 @media (max-width: 30rem) { .viewerLink span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } }
+
+/* Pengaturan → Strava (18 Nov 2026): what is ready, each with its own line. */
+.checks { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--cs-line); border-radius: .875rem; overflow: hidden; }
+.check { display: flex; align-items: flex-start; gap: .75rem; padding: .75rem 1rem; }
+.check + .check { border-top: 1px solid var(--cs-line); }
+.check > svg { flex: none; margin-top: 2px; color: var(--cs-warn-fg); }
+.check[data-ok="true"] > svg { color: var(--cs-ok-fg); }
+.check > span:not(.sr-only) { display: grid; gap: .125rem; min-width: 0; }
+.check small { color: var(--cs-muted); font-size: .8125rem; line-height: 1.45; overflow-wrap: anywhere; }

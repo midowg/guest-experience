@@ -412,6 +412,33 @@ describe("WellbeingApp", () => {
     expect(within(dialog()).queryByRole("button", { name: /Ambil foto/ })).toBeNull();
   });
 
+  it("connects Strava from Profil: what is shared first, then the account, Sinkronkan sekarang and Putuskan (18 Nov 2026)", async () => {
+    window.history.replaceState(null, "", "/wlm/profil");
+    app();
+    fireEvent.click((await screen.findByText("Belum tersambung")).closest("button")!);
+    expect(await within(dialog()).findByText(/Yang tampil ke rekan hanya total poin/)).toBeTruthy();
+    expect(within(dialog()).getByText(/kamu setuju poin dari aktivitas Strava-mu ikut dihitung/)).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Sambungkan Strava" }));
+    expect(await within(dialog()).findByText("Dewi C.")).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Sinkronkan sekarang" }));
+    expect(await screen.findByText("Sudah terbaru. Tidak ada aktivitas baru.")).toBeTruthy();
+    // Putuskan asks first; the counted activities stay.
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Putuskan" }));
+    expect(within(dialog()).getByText(/Yang sudah masuk tetap dihitung/)).toBeTruthy();
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Putuskan" }));
+    expect(await within(dialog()).findByRole("button", { name: "Sambungkan Strava" })).toBeTruthy();
+  });
+
+  it("says how connecting went after coming back from Strava, and asks to reconnect when Strava refused", async () => {
+    window.history.replaceState(null, "", "/wlm/profil?strava=dipakai");
+    app(mockApi({ latency: [0, 0], strava: "reconnect" }));
+    expect(await screen.findByText("Akun Strava ini sudah tersambung ke karyawan lain.")).toBeTruthy();
+    expect(window.location.search).toBe("");
+    fireEvent.click((await screen.findByText("Perlu sambung ulang")).closest("button")!);
+    expect(await within(dialog()).findByText(/Sambungan terputus/)).toBeTruthy();
+    expect(within(dialog()).getByRole("button", { name: "Sambungkan ulang" })).toBeTruthy();
+  });
+
   it("shows points from an admin under Riwayat › Dari admin", async () => {
     window.history.replaceState(null, "", "/wlm/riwayat");
     app();

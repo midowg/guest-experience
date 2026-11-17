@@ -190,11 +190,44 @@ aplikasi tetap jalan dan menyimpan tanpa jam.
 
 ## Strava
 
-Satu aplikasi Strava API milik kantor; tiap karyawan menyambungkan akun Strava-nya sendiri. Aturan Strava sejak
-Juni 2026: pemilik aplikasi wajib berlangganan Strava; aplikasi baru 1 atlet, naik sendiri ke 10, lebih dari itu
-lewat review; data Strava seseorang hanya tampil ke orang itu kecuali ia setuju (peringkat hanya total poin, dengan
-persetujuan saat menyambung). Sambungan baru (webhook, token per orang) dibangun setelah aplikasi Strava API kantor
-siap; sampai itu olahraga dicatat lewat Catat → Olahraga.
+Satu aplikasi Strava API milik kantor (aplikasi yang sama dengan aplikasi lama; kuncinya `STRAVA_CLIENT_ID` dan
+`STRAVA_CLIENT_SECRET` di Vercel). Tiap karyawan menyambungkan akun Strava-nya sendiri.
+
+Aturan Strava sejak Juni 2026:
+- Pemilik aplikasi wajib berlangganan Strava.
+- Aplikasi baru 1 atlet, naik sendiri ke 10; lebih dari itu lewat review.
+- Data Strava seseorang hanya tampil ke orang itu kecuali ia setuju. Di WLM, Peringkat hanya total poin, dengan
+  persetujuan saat menyambung.
+
+Dibangun 18 Nov 2026:
+
+- **Menyambung** (Profil → Strava): lembar menjelaskan apa yang dibagikan, lalu ke halaman Strava (izin
+  `read,activity:read_all`).
+  - Kembali ke `/api/wellbeing/strava/callback`, lalu ke Profil dengan hasilnya.
+  - `state` bertanda tangan (15 menit, untuk orang yang memulai).
+  - Izin aktivitas wajib dicentang.
+  - Satu akun Strava untuk satu karyawan.
+- **Token:** disimpan terenkripsi di `wb_strava_links` (migrasi `202611180002_wellbeing_strava.sql`), hanya
+  server.
+  - Refresh satu proses sekaligus; refresh token baru selalu disimpan.
+  - Ditolak Strava: status **Perlu sambung ulang** di Profil.
+- **Aktivitas:**
+  - Webhook (`/api/wellbeing/strava/webhook`, satu per aplikasi, diaktifkan sekali dari Admin → Pengaturan → Strava)
+    memasukkan aktivitas baru, diubah, atau dihapus.
+  - Saat baru tersambung dan lewat **Sinkronkan sekarang**, aktivitas sejak awal bulan dibaca ulang.
+  - Isi webhook tidak dipercaya: aktivitas selalu dibaca dari Strava dengan token pemiliknya, dihapus hanya kalau
+    Strava bilang sudah tidak ada.
+- **Poin:** kalori 1:1 (batas harian). Jenis olahraga Strava dipetakan ke katalog; sisanya Olahraga lain.
+  - Keputusan admin (Ubah poin, Tolak) tidak ditimpa sinkron.
+  - Poin yang berubah setelah diperiksa kembali ke Belum diperiksa.
+- **Putuskan:** token dicabut di Strava (`/oauth/revoke`); aktivitas yang sudah masuk tetap dihitung.
+- **Siapkan sekali:**
+  1. Callback Domain aplikasi Strava = `journey.werkudara.group`.
+  2. Kunci di Vercel.
+  3. Migrasi.
+  4. Aktifkan webhook di Admin → Pengaturan → Strava.
+- **Data lama:** aktivitas dari Strava di aplikasi lama berhenti 12 Jul 2026. Dugaan: langganan pemilik aplikasi
+  berhenti. Token aplikasi lama belum dipindah (karyawan menyambung ulang, atau dipindah saat peralihan).
 
 ## Pindah data lama
 

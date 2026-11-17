@@ -119,3 +119,14 @@ export function previewPoints(draft: Pick<CatatDraft, "mode" | "fixedPoints" | "
 /** The first field with a problem, in the order they appear on the form. */
 export const firstError = (errors: CatatErrors): CatatField | null =>
   (["sport", "date", "time", "steps", "kcal", "minutes", "photos"] as const).find(field => errors[field]) ?? null;
+
+/** "baru saja", "5 menit lalu", "2 jam lalu", "kemarin", else the date (Strava's last sync, 18 Nov 2026). */
+export function sinceLabel(iso: string | null | undefined, now = Date.now()): string {
+  if (!iso) return "belum pernah";
+  const minutes = Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
+  if (minutes < 1) return "baru saja";
+  if (minutes < 60) return `${minutes} menit lalu`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} jam lalu`;
+  return hours < 48 ? "kemarin" : formatDate(iso.slice(0, 10), { day: "numeric", month: "short" });
+}

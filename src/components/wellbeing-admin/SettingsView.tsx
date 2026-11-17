@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Megaphone, PauseCircle, Plus, ScanText, ShieldCheck, Smartphone, Trophy, Zap } from "lucide-react";
+import { CheckCircle2, CircleAlert, Megaphone, PauseCircle, Plus, ScanText, ShieldCheck, Smartphone, Trophy, Zap } from "lucide-react";
 import { Card, ConsoleButton, ConsoleButtonLink, PageHeader, Pill } from "@/components/console";
 import { errorMessage } from "@/components/admin/shared/api";
 import { Panel, SkeletonRows } from "@/components/app-shell/Panel";
@@ -9,7 +9,8 @@ import { revalidate, setResource, useResource } from "@/components/app-shell/res
 import { useToast } from "@/components/app-shell/Toast";
 import { superAdminPath, wellbeingAdminApi } from "@/lib/routes";
 import { DIMENSIONS, MIGRATION_WELLBEING_APP, dimensionLabels, wibToday, type AppControls, type CatalogItemInput, type DimensionId, type Limit, type PointsMode } from "@/lib/wellbeing/rules";
-import type { WbCatalog, WbCatalogItem, WbSettingsView } from "@/lib/wellbeing/types";
+import { MIGRATION_STRAVA } from "@/lib/wellbeing/strava";
+import type { WbCatalog, WbCatalogItem, WbSettingsView, WbStravaAdmin } from "@/lib/wellbeing/types";
 import { points, send, wb } from "./api";
 import { DimensionIcon, LoadError, Refreshing, WaitingMigration } from "./parts";
 import css from "./wellbeing-admin.module.css";
@@ -49,9 +50,7 @@ export function SettingsView() {
             </ul>
           </section>)}
       </Card>
-      <Card title="Strava">
-        <p className={css.text}><Zap size={18} aria-hidden="true" className={css.inlineIcon} />Sambungan Strava dibangun ulang di tahap berikutnya: aktivitas masuk otomatis lewat webhook, status sambungan tiap karyawan terlihat di sini. Aplikasi Strava API perlu pemiliknya (akun Strava berlangganan) sebelum bisa dipindah.</p>
-      </Card>
+      <StravaCard />
       <Card title="Siapa yang boleh membuka admin ini">
         <p className={css.text}><ShieldCheck size={18} aria-hidden="true" className={css.inlineIcon} />Super admin memberi akses <strong>Wellbeing</strong> per orang di Super admin → Akses admin.</p>
         <div className={css.rowEnd}><ConsoleButtonLink href={superAdminPath.admins}>Buka Akses admin</ConsoleButtonLink></div>
@@ -59,6 +58,60 @@ export function SettingsView() {
     </div>
     <CatalogPanel item={editing} onClose={() => setEditing(null)} />
   </>;
+}
+
+/**
+ * Strava (18 Nov 2026): the office's Strava app as Journey sees it: its keys (Vercel), the migration, the
+ * webhook (one per Strava app; Aktifkan webhook once), and how many employees are connected.
+ */
+function StravaCard() {
+  const strava = useResource(wb.strava.key, wb.strava.fetch);
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const data = strava.data;
+  async function subscribe() {
+    setBusy(true);
+    try {
+      const { data: next, message } = await send<WbStravaAdmin>(wellbeingAdminApi.strava, "POST");
+      setResource<WbStravaAdmin>(wb.strava.key, () => next);
+      toast({ message, tone: "ok" });
+    } catch (error) { toast({ message: errorMessage(error), tone: "bad" }); }
+    finally { setBusy(false); }
+  }
+  const elsewhere = !!data?.subscription && data.subscription.callbackUrl !== data.callbackUrl;
+  return <Card title="Strava">
+    {strava.error && !data ? <LoadError message={strava.error} onRetry={() => void strava.reload()} />
+      : !data ? <SkeletonRows rows={3} />
+      : <div className={css.stack}>
+        <ul className={css.checks}>
+          <StravaCheck ok={data.configured} title="Kunci aplikasi Strava"
+            detail={data.configured ? "STRAVA_CLIENT_ID dan STRAVA_CLIENT_SECRET terbaca di server." : "Isi STRAVA_CLIENT_ID dan STRAVA_CLIENT_SECRET di Vercel (Environment Variables), lalu deploy ulang."} />
+          <StravaCheck ok={data.migrated} title="Database"
+            detail={data.migrated ? "Tabel sambungan Strava siap." : `Jalankan migrasi ${MIGRATION_STRAVA} di Supabase SQL Editor.`} />
+          <StravaCheck ok={!!data.subscription && !elsewhere} title="Webhook"
+            detail={elsewhere ? `Mengarah ke alamat lain (${data.subscription?.callbackUrl}). Satu aplikasi Strava hanya punya satu webhook.`
+              : data.subscription ? "Aktif. Aktivitas baru masuk beberapa saat setelah tersimpan di Strava."
+              : data.subscriptionError ?? "Belum aktif. Tanpa webhook, aktivitas baru hanya masuk saat karyawan menekan Sinkronkan sekarang."} />
+        </ul>
+        <ul className={css.dimTiles}>
+          <li><small>Tersambung</small><strong>{points(data.connected)}</strong></li>
+          <li><small>Perlu sambung ulang</small><strong>{points(data.reconnect)}</strong></li>
+        </ul>
+        <p className={css.help}><Zap size={16} aria-hidden="true" className={css.inlineIcon} />Di strava.com/settings/api, <strong>Authorization Callback Domain</strong> harus <code>{hostOf(data.callbackUrl)}</code>. Pemilik aplikasi Strava wajib berlangganan Strava.</p>
+        {!data.subscription && <div className={css.rowEnd}>
+          <ConsoleButton variant="primary" icon={<Zap size={18} aria-hidden="true" />} disabled={!data.configured || !data.migrated || busy} onClick={() => void subscribe()}>{busy ? "Menghubungi Strava…" : "Aktifkan webhook"}</ConsoleButton>
+        </div>}
+      </div>}
+  </Card>;
+}
+const hostOf = (url: string) => { try { return new URL(url).hostname; } catch { return url; } };
+
+function StravaCheck({ ok, title, detail }: { ok: boolean; title: string; detail: string }) {
+  return <li className={css.check} data-ok={ok}>
+    {ok ? <CheckCircle2 size={20} aria-hidden="true" /> : <CircleAlert size={20} aria-hidden="true" />}
+    <span><strong>{title}</strong><small>{detail}</small></span>
+    <span className="sr-only">{ok ? "siap" : "belum siap"}</span>
+  </li>;
 }
 
 /**

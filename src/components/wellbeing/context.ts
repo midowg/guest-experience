@@ -17,6 +17,7 @@ export const keys = {
   activity: (id: string) => `wbapp:activity:${id}`,
   board: (period: BoardPeriod, dim: BoardDim) => `wbapp:board:${period}:${dim}`,
   ledger: "wbapp:ledger",
+  strava: "wbapp:strava",
 };
 
 /** Opens Catat at a kind of activity (Catat ulang, or Catat olahraga from the Strava card). */

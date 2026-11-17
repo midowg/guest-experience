@@ -19,7 +19,8 @@ import { cx } from "./parts";
 import { Profile } from "./Profile";
 import { Screen } from "./Screen";
 import { PhotoSheet } from "./PhotoSheet";
-import { ActivitySheet, SignOutSheet, StravaSheet, ThemeSheet } from "./Sheets";
+import { ActivitySheet, SignOutSheet, ThemeSheet } from "./Sheets";
+import { STRAVA_RESULTS, StravaSheet } from "./StravaSheet";
 import css from "./wellbeing.module.css";
 
 /*
@@ -119,6 +120,21 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
     } else if (section === "beranda") window.history.pushState({ wbTab: true }, "", href);
     else window.history.replaceState({ wbTab: true }, "", href);
   }, [section, basePath]);
+
+  // Back from Strava's page (?strava=…, 18 Nov 2026): say how it went, drop it from the address, and once
+  // connected refresh what the first sync brings in (it runs on the server after the answer).
+  const stravaResult = useEffectEvent(() => {
+    const url = new URL(window.location.href);
+    const result = url.searchParams.get("strava");
+    if (!result) return;
+    url.searchParams.delete("strava");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
+    const said = STRAVA_RESULTS[result] ?? STRAVA_RESULTS.gagal;
+    toast({ message: said.message, tone: said.tone });
+    revalidate(keys.strava);
+    if (result === "tersambung") setTimeout(() => revalidate(keys.all), 6_000);
+  });
+  useEffect(() => { stravaResult(); }, []);
 
   // Opened straight on a tab (a link, a reload): put Beranda under it, so Back still goes there first.
   const underlayBeranda = useEffectEvent(() => {

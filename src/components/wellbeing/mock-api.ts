@@ -1,6 +1,6 @@
 "use client";
 
-import type { WbAppCatalog, WbAppControls, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbRules } from "@/lib/wellbeing/app-types";
+import type { WbAppCatalog, WbAppControls, WbBoard, WbBoardRow, WbCatalogDaily, WbCatalogSport, WbHome, WbLedger, WbLedgerItem, WbLogInput, WbMe, WbMyActivity, WbMyActivityFilter, WbRules, WbStrava, WbStravaSync } from "@/lib/wellbeing/app-types";
 import { addDays, aroundMe, claimedPoints, dateProblem, DIMENSIONS, dimensionLabels, limitReached, MIN_STEPS, monthRange, rank, wibToday, type DimensionId, type Limit } from "@/lib/wellbeing/rules";
 import { cancelledError, WellbeingApiError, type BoardDim, type BoardPeriod, type RequestOptions, type WellbeingApi } from "./api";
 import type { CardView } from "@/lib/server/pra-wam/cards";
@@ -33,6 +33,8 @@ export type MockOptions = {
   notToday?: boolean;
   /** No WAM character card yet (the questionnaire not finished), for Foto profil (18 Nov 2026). */
   noCard?: boolean;
+  /** Strava (18 Nov 2026): not set up by the office yet, not connected (the default), connected, or refused by Strava. */
+  strava?: "off" | "none" | "ok" | "reconnect";
 };
 
 /** A sample WAM character card (a figure picture shipped in public/figur), for Foto profil. */
@@ -271,6 +273,12 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
   const blockedText = "Sudah dicatat bulan ini. Kegiatan ini hanya sekali sebulan.";
   const notReady = !!options.notReady;
   const controls: WbAppControls = { announcement: null, prize: null, photoReading: true, pausedMessage: null, ...options.controls };
+  const strava = { state: options.strava ?? "none", lastSyncAt: options.strava === "ok" ? new Date(Date.now() - 25 * 60_000).toISOString() : null as string | null };
+  const stravaNow = (): WbStrava => strava.state === "off"
+    ? { ready: false, connected: false, status: null, athleteName: "", connectedAt: null, lastSyncAt: null, lastError: null, private: false }
+    : strava.state === "none" ? { ready: true, connected: false, status: null, athleteName: "", connectedAt: null, lastSyncAt: null, lastError: null, private: false }
+    : { ready: true, connected: true, status: strava.state === "reconnect" ? "reconnect" : "ok", athleteName: "Dewi C.", connectedAt: "2026-11-03T02:00:00.000Z", lastSyncAt: strava.lastSyncAt,
+      lastError: strava.state === "reconnect" ? "Strava menolak sambungan (dicabut atau kedaluwarsa). Sambungkan ulang." : null, private: true };
 
   return {
     home: () => call(() => ({ migrated: !notReady, me: sampleMe, today, totals: totals(), dims: myDims("month"), recent: notReady ? [] : newest().slice(0, 5), rules: RULES, controls })),
@@ -362,5 +370,14 @@ export function mockApi(options: MockOptions = {}): WellbeingApi {
     },
     // The sample answers go through JSON, as the server's do: null, then nothing.
     removePhoto: () => call(() => null).then(() => undefined),
+    // Strava in the preview: connecting happens at once (no Strava page), syncing finds nothing new.
+    strava: () => call<WbStrava>(() => stravaNow()),
+    stravaSync: () => call<WbStravaSync>(() => {
+      if (strava.state !== "ok") throw new WellbeingApiError("Sambungan Strava terputus. Sambungkan ulang di Profil.", 409);
+      strava.lastSyncAt = new Date().toISOString();
+      return { added: 0, seen: 3 };
+    }),
+    stravaDisconnect: () => call<WbStrava>(() => { strava.state = "none"; return stravaNow(); }),
+    stravaConnect: () => { strava.state = "ok"; strava.lastSyncAt = new Date().toISOString(); },
   };
 }

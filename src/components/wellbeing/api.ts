@@ -6,7 +6,7 @@ import { compressImage } from "@/lib/compress-image";
 import type { PhotoMime } from "@/lib/pra-wam/photo";
 import type { CardView } from "@/lib/server/pra-wam/cards";
 import { praWamApi, wellbeingApi, wellbeingPath } from "@/lib/routes";
-import type { WbAppCatalog, WbBoard, WbHome, WbLedger, WbLogInput, WbLogResult, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbUploadedPhoto, WbUploadStart } from "@/lib/wellbeing/app-types";
+import type { WbAppCatalog, WbBoard, WbHome, WbLedger, WbLogInput, WbLogResult, WbMyActivity, WbMyActivityFilter, WbMyActivityPage, WbStrava, WbStravaSync, WbUploadedPhoto, WbUploadStart } from "@/lib/wellbeing/app-types";
 import type { DimensionId } from "@/lib/wellbeing/rules";
 
 /*
@@ -38,6 +38,14 @@ export type WellbeingApi = {
   savePhoto(blob: Blob, mime: PhotoMime, onProgress: (share: number) => void): Promise<string | null>;
   /** My profile photo removed: initials again. */
   removePhoto(): Promise<void>;
+  /** My Strava connection (18 Nov 2026). */
+  strava(): Promise<WbStrava>;
+  /** Sinkronkan sekarang: this month's Strava activities read again. */
+  stravaSync(): Promise<WbStravaSync>;
+  /** Putuskan Strava; answers the connection after. */
+  stravaDisconnect(): Promise<WbStrava>;
+  /** Off to Strava's page to allow WLM (a page visit; Strava comes back to Profil). */
+  stravaConnect(): void;
 };
 
 /** A refused request: the server's message, its status, and per-field messages (fieldErrors.code for 409s). */
@@ -61,7 +69,7 @@ const UPLOAD_TIMEOUT = 60_000;
 export const cancelledError = () => new WellbeingApiError("Dibatalkan.", 0, undefined, true);
 export const isCancelled = (error: unknown) => error instanceof WellbeingApiError && error.cancelled;
 
-async function request<T>(url: string, init: { method?: "GET" | "POST"; json?: unknown; signal?: AbortSignal } = {}): Promise<T> {
+async function request<T>(url: string, init: { method?: "GET" | "POST" | "DELETE"; json?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   if (init.signal?.aborted) throw cancelledError();
   // Given up after 30 seconds, or at once on Batalkan.
   const controller = new AbortController();
@@ -112,6 +120,10 @@ export const realApi: WellbeingApi = {
   },
   savePhoto: (blob, mime, onProgress) => uploadProfilePhoto(blob, mime, onProgress),
   removePhoto: async () => { await praWamRequest(praWamApi.photo, { method: "DELETE" }); },
+  strava: () => request<WbStrava>(wellbeingApi.strava),
+  stravaSync: () => request<WbStravaSync>(wellbeingApi.stravaSync, { method: "POST" }),
+  stravaDisconnect: () => request<WbStrava>(wellbeingApi.strava, { method: "DELETE" }),
+  stravaConnect: () => window.location.assign(wellbeingApi.stravaConnect),
 };
 
 const wait = (ms: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {

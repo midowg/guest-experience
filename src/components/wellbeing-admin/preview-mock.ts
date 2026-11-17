@@ -129,6 +129,9 @@ export function installAdminMock(options: { notReady?: boolean } = {}) {
       return ok(settings, "Pengaturan aplikasi karyawan disimpan.");
     }
     if (path === "/export") return refuse(501, "Pratinjau tanpa database: berkas Excel dibuat oleh server di admin sungguhan.");
+    // Strava (18 Nov 2026): keys and table ready, no webhook yet; Aktifkan webhook needs the real Strava.
+    if (path === "/strava" && method === "GET") return ok({ configured: true, migrated: true, callbackUrl: `${window.location.origin}/api/wellbeing/strava/webhook`, connected: 6, reconnect: 1, subscription: null, subscriptionError: null });
+    if (path === "/strava" && method === "POST") return refuse(501, "Pratinjau tanpa Strava: webhook diaktifkan dari admin sungguhan.");
     if (path === "/points" && method === "POST") return ok({ batchId: "20000000-0000-4000-8000-000000000001", count: (body.employeeIds as string[]).length, points: body.points }, "Poin ditambahkan (pratinjau).");
     return refuse(404, "Tidak ada di pratinjau.");
   };

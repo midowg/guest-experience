@@ -634,6 +634,8 @@ export const wellbeingAdminApi = {
   settings: `${WELLBEING_ADMIN_API}/settings`,
   /** PUT: Kontrol aplikasi karyawan (17 Nov 2026). */
   appControls: `${WELLBEING_ADMIN_API}/settings/app`,
+  /** GET the office's Strava app; POST Aktifkan webhook (18 Nov 2026). */
+  strava: `${WELLBEING_ADMIN_API}/strava`,
 };
 
 /*
@@ -657,4 +659,13 @@ export const wellbeingApi = {
   uploads: `${WELLBEING_API}/uploads`,
   leaderboard: (period: "month" | "all", dim: string) => `${WELLBEING_API}/leaderboard?period=${period}&dim=${dim}`,
   ledger: `${WELLBEING_API}/ledger`,
+  /** Strava (18 Nov 2026). GET my connection, DELETE Putuskan. */
+  strava: `${WELLBEING_API}/strava`,
+  /** GET (a page visit): off to Strava's page to allow WLM; Strava comes back to stravaCallback. */
+  stravaConnect: `${WELLBEING_API}/strava/connect`,
+  stravaCallback: `${WELLBEING_API}/strava/callback`,
+  /** POST: Sinkronkan sekarang. */
+  stravaSync: `${WELLBEING_API}/strava/sync`,
+  /** Strava's webhook (its check and its events). */
+  stravaWebhook: `${WELLBEING_API}/strava/webhook`,
 };

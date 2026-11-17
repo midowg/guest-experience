@@ -97,3 +97,12 @@ export type WbSettingsView = { migrated: boolean; backdateDays: number; maxKcal:
 export type WbCheckResult = { changed: string[] };
 
 export type WbBatchResult = { batchId: string; count: number; points: number };
+
+/**
+ * GET /api/admin/wellbeing/strava (18 Nov 2026): the office's Strava app: keys set in Vercel, the
+ * migration, the webhook subscription (one per app) and how many employees are connected.
+ */
+export type WbStravaAdmin = {
+  configured: boolean; migrated: boolean; callbackUrl: string; connected: number; reconnect: number;
+  subscription: { id: number; callbackUrl: string } | null; subscriptionError: string | null;
+};

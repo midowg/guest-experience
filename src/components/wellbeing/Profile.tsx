@@ -9,6 +9,7 @@ import { formatDate, num } from "./format";
 import { Avatar, cx, NavRow, Sk } from "./parts";
 import { recordsOf } from "./race";
 import { THEME_OPTIONS } from "./Sheets";
+import { stravaMeta } from "./StravaSheet";
 import css from "./wellbeing.module.css";
 
 /*
@@ -21,6 +22,8 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
   const { api, me, openStrava, openTheme, openPhoto, askSignOut } = useWellbeing();
   // Every point that counts, read only for the records here (Riwayat shows the list).
   const ledger = useResource(keys.ledger, () => api.ledger());
+  // Strava's state on its row: Belum tersambung, Tersambung · sinkron …, Perlu sambung ulang (18 Nov 2026).
+  const strava = useResource(keys.strava, () => api.strava());
   const [theme] = useTheme();
   const totals = home.data?.totals;
   const person = home.data?.me ?? me;
@@ -52,7 +55,7 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
     <h2 className={css.groupLabel}>Pengaturan</h2>
     <div className={cx(css.card, css.list)}>
       <NavRow lead={<Avatar name={person.name} photo={me.photo} size="lg" />} title="Foto profil" meta="Foto, atau kartu tokoh WAM-mu" onClick={openPhoto} />
-      <NavRow lead={<span className={css.stravaMark}><Activity size={20} aria-hidden="true" /></span>} title="Strava" meta="Sambungan sedang disiapkan" onClick={openStrava} />
+      <NavRow lead={<span className={css.stravaMark}><Activity size={20} aria-hidden="true" /></span>} title="Strava" meta={stravaMeta(strava.data)} onClick={openStrava} />
       <NavRow lead={<span className={cx(css.lead, css.tonePrimary)}><themeNow.icon size={22} aria-hidden="true" /></span>} title="Tema"
         trail={<span className={css.rowValue}>{themeNow.label}</span>} onClick={openTheme} ariaLabel={`Tema: ${themeNow.label}. Ubah`} />
     </div>
