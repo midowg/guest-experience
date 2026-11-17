@@ -20,6 +20,13 @@ import css from "./wellbeing.module.css";
  * Refused by Strava: Sambungkan ulang. Strava's brand rules: its orange, "Powered by Strava".
  */
 
+/**
+ * Strava is closed to employees for now (18 Nov 2026): Profil shows it as Segera hadir (no sheet,
+ * no call to the server), Catat and Riwayat say it is coming. The server side stays built; set this
+ * to true once the Strava app and its keys are ready.
+ */
+export const STRAVA_OPEN = false;
+
 /** What Profil says after coming back from Strava (?strava=…). */
 export const STRAVA_RESULTS: Record<string, { message: string; tone: "ok" | "info" | "bad" }> = {
   tersambung: { message: "Strava tersambung. Aktivitas bulan ini sedang dimasukkan.", tone: "ok" },

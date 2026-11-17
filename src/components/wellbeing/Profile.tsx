@@ -9,7 +9,7 @@ import { formatDate, num } from "./format";
 import { Avatar, cx, NavRow, Sk } from "./parts";
 import { recordsOf } from "./race";
 import { THEME_OPTIONS } from "./Sheets";
-import { stravaMeta } from "./StravaSheet";
+import { STRAVA_OPEN, stravaMeta } from "./StravaSheet";
 import css from "./wellbeing.module.css";
 
 /*
@@ -19,11 +19,9 @@ import css from "./wellbeing.module.css";
  * the Riwayat tab only.
  */
 export function Profile({ home }: { home: Resource<WbHome> }) {
-  const { api, me, openStrava, openTheme, openPhoto, openRewards, askSignOut } = useWellbeing();
+  const { api, me, openTheme, openPhoto, openRewards, askSignOut } = useWellbeing();
   // Every point that counts, read only for the records here (Riwayat shows the list).
   const ledger = useResource(keys.ledger, () => api.ledger());
-  // Strava's state on its row: Belum tersambung, Tersambung · sinkron …, Perlu sambung ulang (18 Nov 2026).
-  const strava = useResource(keys.strava, () => api.strava());
   const rewards = useResource(keys.rewards, () => api.rewards()).data;
   const waiting = rewards?.claims.filter(claim => claim.status === "requested" || claim.status === "approved").length ?? 0;
   const [theme] = useTheme();
@@ -65,7 +63,7 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
     <h2 className={css.groupLabel}>Pengaturan</h2>
     <div className={cx(css.card, css.list)}>
       <NavRow lead={<Avatar name={person.name} photo={me.photo} size="lg" />} title="Foto profil" meta="Foto, atau kartu tokoh WAM-mu" onClick={openPhoto} />
-      <NavRow lead={<span className={css.stravaMark}><Activity size={20} aria-hidden="true" /></span>} title="Strava" meta={stravaMeta(strava.data)} onClick={openStrava} />
+      {STRAVA_OPEN ? <StravaRow /> : <StravaSoon />}
       <NavRow lead={<span className={cx(css.lead, css.tonePrimary)}><themeNow.icon size={22} aria-hidden="true" /></span>} title="Tema"
         trail={<span className={css.rowValue}>{themeNow.label}</span>} onClick={openTheme} ariaLabel={`Tema: ${themeNow.label}. Ubah`} />
     </div>
@@ -78,4 +76,20 @@ export function Profile({ home }: { home: Resource<WbHome> }) {
     </div>
     <p className={cx(css.caption, css.faint, css.center, css.footNote)}>WLM · Werkudara Life Mode</p>
   </>;
+}
+
+/** Strava's row once it is open: Belum tersambung, Tersambung · sinkron …, Perlu sambung ulang (18 Nov 2026). */
+function StravaRow() {
+  const { api, openStrava } = useWellbeing();
+  const strava = useResource(keys.strava, () => api.strava());
+  return <NavRow lead={<span className={css.stravaMark}><Activity size={20} aria-hidden="true" /></span>} title="Strava" meta={stravaMeta(strava.data)} onClick={openStrava} />;
+}
+
+/** Strava while it is closed (18 Nov 2026): a plain row, not a button, with Segera hadir. */
+function StravaSoon() {
+  return <div className={cx(css.row, css.rowSoon)}>
+    <span className={cx(css.stravaMark, css.stravaSoon)}><Activity size={20} aria-hidden="true" /></span>
+    <span className={css.rowMain}><span className={css.rowTitle}>Strava</span><span className={css.rowMetaWrap}>Masih dikerjakan</span></span>
+    <span className={cx(css.pill, css.pillInfo)}>Segera hadir</span>
+  </div>;
 }

@@ -4,6 +4,7 @@ import { clearResources } from "@/components/app-shell/resource";
 import { WellbeingApiError, type WellbeingApi } from "./api";
 import { mockApi, sampleMe } from "./mock-api";
 import { sectionOf, WellbeingApp } from "./WellbeingApp";
+import { STRAVA_OPEN } from "./StravaSheet";
 
 // usePathname follows the address, as Next does after history.pushState / replaceState.
 const route = vi.hoisted(() => ({ listeners: new Set<() => void>() }));
@@ -436,7 +437,20 @@ describe("WellbeingApp", () => {
     expect(within(dialog()).queryByRole("button", { name: /Ambil foto/ })).toBeNull();
   });
 
-  it("connects Strava from Profil: what is shared first, then the account, Sinkronkan sekarang and Putuskan (18 Nov 2026)", async () => {
+  it("shows Strava as Segera hadir in Profil while it is closed, with no sheet and no call (18 Nov 2026)", async () => {
+    if (STRAVA_OPEN) return;
+    window.history.replaceState(null, "", "/wlm/profil");
+    const api = mockApi({ latency: [0, 0] });
+    const strava = vi.spyOn(api, "strava");
+    app(api);
+    const soon = await screen.findByText("Segera hadir");
+    expect(soon.closest("button")).toBeNull();
+    expect(screen.getByText("Masih dikerjakan")).toBeTruthy();
+    expect(strava).not.toHaveBeenCalled();
+  });
+
+  // The Strava sheet itself, for when STRAVA_OPEN is true again.
+  it.runIf(STRAVA_OPEN)("connects Strava from Profil: what is shared first, then the account, Sinkronkan sekarang and Putuskan (18 Nov 2026)", async () => {
     window.history.replaceState(null, "", "/wlm/profil");
     app();
     fireEvent.click((await screen.findByText("Belum tersambung")).closest("button")!);
@@ -453,7 +467,7 @@ describe("WellbeingApp", () => {
     expect(await within(dialog()).findByRole("button", { name: "Sambungkan Strava" })).toBeTruthy();
   });
 
-  it("says how connecting went after coming back from Strava, and asks to reconnect when Strava refused", async () => {
+  it.runIf(STRAVA_OPEN)("says how connecting went after coming back from Strava, and asks to reconnect when Strava refused", async () => {
     window.history.replaceState(null, "", "/wlm/profil?strava=dipakai");
     app(mockApi({ latency: [0, 0], strava: "reconnect" }));
     expect(await screen.findByText("Akun Strava ini sudah tersambung ke karyawan lain.")).toBeTruthy();

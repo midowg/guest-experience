@@ -242,6 +242,13 @@ sekali (item permainan); fitur ini dibangun ulang sesuai keputusan pemilik:
 Satu aplikasi Strava API milik kantor (aplikasi yang sama dengan aplikasi lama; kuncinya `STRAVA_CLIENT_ID` dan
 `STRAVA_CLIENT_SECRET` di Vercel). Tiap karyawan menyambungkan akun Strava-nya sendiri.
 
+**Ditutup dulu (18 Nov 2026):** `STRAVA_OPEN = false` di `StravaSheet.tsx`.
+- Profil menampilkan baris Strava abu-abu dengan **Segera hadir**, bukan tombol. Lembar Strava tidak dipasang
+  dan aplikasi tidak bertanya ke server soal Strava.
+- Catat dan Riwayat › Strava menulis "Sinkron Strava segera hadir". Aktivitas Strava dari aplikasi lama tetap
+  tampil di Riwayat.
+- Server Strava tetap terpasang. Buka lagi dengan `STRAVA_OPEN = true` setelah aplikasi Strava dan kuncinya siap.
+
 Aturan Strava sejak Juni 2026:
 - Pemilik aplikasi wajib berlangganan Strava.
 - Aplikasi baru 1 atlet, naik sendiri ke 10; lebih dari itu lewat review.

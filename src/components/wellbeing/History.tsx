@@ -25,7 +25,7 @@ const emptyText: Record<WbMyActivityFilter, string> = {
   all: "Belum ada aktivitas. Tekan Catat untuk mulai.",
   daily: "Belum ada kegiatan harian.",
   sport: "Belum ada olahraga yang dicatat sendiri.",
-  strava: "Belum ada aktivitas dari Strava. Sambungan Strava sedang disiapkan.",
+  strava: "Belum ada aktivitas dari Strava. Sinkron Strava segera hadir.",
 };
 
 type More = { key: string; base: string; items: WbMyActivity[]; next: string | null; loading: boolean; failed: string | null };

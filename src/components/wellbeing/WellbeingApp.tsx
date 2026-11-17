@@ -20,7 +20,7 @@ import { Profile } from "./Profile";
 import { Screen } from "./Screen";
 import { PhotoSheet } from "./PhotoSheet";
 import { ActivitySheet, SignOutSheet, ThemeSheet } from "./Sheets";
-import { STRAVA_RESULTS, StravaSheet } from "./StravaSheet";
+import { STRAVA_OPEN, STRAVA_RESULTS, StravaSheet } from "./StravaSheet";
 import { RewardsSheet } from "./Rewards";
 import css from "./wellbeing.module.css";
 
@@ -224,7 +224,8 @@ function App({ me, api, basePath }: { me: WbMe; api: WellbeingApi; basePath: str
 
       <CatatSheet key={catatRound} open={sheet?.kind === "catat"} preset={sheet?.kind === "catat" ? sheet.preset : null} onClose={close} onSaved={() => { catatSaved.current = true; }} />
       <ActivitySheet activity={sheet?.kind === "detail" ? sheet.activity : null} onClose={close} onRedo={preset => void show({ kind: "catat", preset })} />
-      <StravaSheet open={sheet?.kind === "strava"} onClose={close} onLogSport={() => void show({ kind: "catat", preset: { kind: "sport" } })} />
+      {/* Strava closed for now (18 Nov 2026): no sheet, so nothing asks the server about it. */}
+      {STRAVA_OPEN && <StravaSheet open={sheet?.kind === "strava"} onClose={close} onLogSport={() => void show({ kind: "catat", preset: { kind: "sport" } })} />}
       <ThemeSheet open={sheet?.kind === "theme"} onClose={close} />
       <PhotoSheet open={sheet?.kind === "photo"} onClose={close} />
       <BoardSheet open={sheet?.kind === "board"} period={board.period} dim={board.dim} onClose={close} />

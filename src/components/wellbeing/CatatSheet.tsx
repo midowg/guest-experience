@@ -358,7 +358,7 @@ export function CatatSheet({ open, preset, onClose, onSaved }: { open: boolean; 
         <span className={css.rowMain}><b className={css.sub}>Olahraga</b><span>Lari, sepeda, renang, badminton, dan lainnya. 1 kkal = 1 poin.</span></span>
         <ChevronRight size={20} className={css.chev} aria-hidden="true" />
       </button>
-      <p className={css.note}><Info size={20} aria-hidden="true" /><span>Sambungan Strava sedang disiapkan. Sementara ini, olahraga dicatat lewat <b>Olahraga</b>.</span></p>
+      <p className={css.note}><Info size={20} aria-hidden="true" /><span>Sinkron Strava segera hadir. Sementara ini, olahraga dicatat lewat <b>Olahraga</b>.</span></p>
     </>;
   } else if (step === "scan") {
     title = "Membaca foto"; onBack = () => leaveScan("Foto tetap terlampir: pilih jenis kegiatan, lalu isi datanya.");
