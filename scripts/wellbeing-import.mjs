@@ -231,7 +231,20 @@ if (removable.length) must(await db.from("wb_activity_types").delete().in("code"
 if (extra.length - removable.length) must(await db.from("wb_activity_types").update({ active: false }).in("code", extra.filter(code => usedTypes.has(code))), "menonaktifkan katalog lama");
 
 // 2. Activities by legacy_id: insert new, update existing (data only; `checked` stays as tested), delete gone.
-const haveActs = new Map((await all(() => db.from("wb_activities").select("id,legacy_id").not("legacy_id", "is", null).order("id"), "membaca aktivitas impor")).map(r => [Number(r.legacy_id), r.id]));
+// A Strava activity the WLM Strava sync already brought in (no legacy_id, the same Strava id: someone
+// connected Strava in WLM before this run) is adopted, not inserted again, which the unique
+// (source, external_id) would refuse: it takes the old id and is then updated like any imported row
+// (the old app stays the truth until the cutover). Strava activities the old app never had stay WLM's own.
+const oldStrava = new Map(activities.filter(a => a.source === "strava" && a.external_id).map(a => [a.external_id, a]));
+let adopted = 0;
+for (const part of chunks([...oldStrava.keys()])) {
+  const synced = must(await db.from("wb_activities").select("id,external_id").eq("source", "strava").is("legacy_id", null).in("external_id", part), "membaca aktivitas Strava dari WLM");
+  for (const row of synced) {
+    must(await db.from("wb_activities").update({ legacy_id: oldStrava.get(row.external_id).legacy_id }).eq("id", row.id), "mengambil alih aktivitas Strava dari WLM");
+    adopted++;
+  }
+}
+const haveActs =new Map((await all(() => db.from("wb_activities").select("id,legacy_id").not("legacy_id", "is", null).order("id"), "membaca aktivitas impor")).map(r => [Number(r.legacy_id), r.id]));
 const newActs = activities.filter(a => !haveActs.has(a.legacy_id)).map(strip);
 for (const part of chunks(newActs)) must(await db.from("wb_activities").insert(part), "menyimpan aktivitas");
 let updated = 0;
@@ -255,4 +268,4 @@ const keepEntries = new Set(allEntries.map(e => e.legacy_id));
 const goneEntries = [...haveEntries.keys()].filter(id => !keepEntries.has(id));
 for (const part of chunks(goneEntries)) must(await db.from("wb_point_entries").delete().in("legacy_id", part), "menghapus poin yang sudah tidak ada");
 
-console.log(`\nDitulis: katalog ${catalog.size} (dirapikan ${removable.length}), aktivitas +${newActs.length} / diperbarui ${updated} / dihapus ${goneActs.length}, poin +${allEntries.filter(e => !haveEntries.has(e.legacy_id)).length} / dihapus ${goneEntries.length}.`);
+console.log(`\nDitulis: katalog ${catalog.size} (dirapikan ${removable.length}), aktivitas +${newActs.length} / diperbarui ${updated} (${adopted} dari sinkron Strava WLM diambil alih) / dihapus ${goneActs.length}, poin +${allEntries.filter(e => !haveEntries.has(e.legacy_id)).length} / dihapus ${goneEntries.length}.`);
